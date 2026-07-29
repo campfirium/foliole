@@ -8,6 +8,7 @@ const common = fs.readFileSync('.github/workflows/hosted-quality-common.yml', 'u
 const ios = fs.readFileSync('.github/workflows/hosted-quality-ios.yml', 'utf8');
 const remote = fs.readFileSync('.github/workflows/remote-quality.yml', 'utf8');
 const t5 = fs.readFileSync('.github/workflows/t5-nightly-remote-quality.yml', 'utf8');
+const npmHardening = fs.readFileSync('scripts/npm-hardening-check.sh', 'utf8');
 const handoffEvents = fs.readFileSync('scripts/github-desktop-handoff-events.mjs', 'utf8');
 
 describe('hosted quality workflow contracts', () => {
@@ -130,6 +131,17 @@ describe('hosted quality workflow contracts', () => {
     const acceptance = core.split('  windows-acceptance:')[1].split('  android-quality:')[0];
     expect(acceptance).not.toContain('android-quality');
     expect(acceptance).not.toContain('ios-contract');
+  });
+
+  it('activates and verifies the pinned npm before dependency hardening', () => {
+    const staticJob = common.split('  full-static:')[1].split('  full-tests:')[0];
+    const activate = 'run: node scripts/quality/pinned-npm.mjs activate';
+    expect(staticJob).toContain(activate);
+    expect(staticJob.indexOf(activate)).toBeLessThan(staticJob.indexOf('run: npm ci'));
+    expect(staticJob.indexOf('run: npm ci')).toBeLessThan(
+      staticJob.indexOf('run: npm run deps:hardening:check')
+    );
+    expect(npmHardening).toContain('node scripts/quality/pinned-npm.mjs verify');
   });
 
   it('uploads logs for every stable hosted quality domain', () => {

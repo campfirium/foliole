@@ -55,6 +55,9 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Activate pinned npm
+        if: inputs.scope == 'desktop'
+        run: node scripts/quality/pinned-npm.mjs activate
       - name: Verify fixed Windows x64 context
         id: context
         env:

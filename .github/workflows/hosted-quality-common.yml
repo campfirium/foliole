@@ -77,6 +77,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Activate pinned npm
+        run: node scripts/quality/pinned-npm.mjs activate
       - name: Install dependencies
         run: npm ci
       - name: Run dependency hardening checks

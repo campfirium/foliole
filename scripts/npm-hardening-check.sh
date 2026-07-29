@@ -11,6 +11,8 @@ TIMEOUT_RUNNER="${SCRIPT_DIR}/run-with-timeout.mjs"
 
 echo "[npm-hardening] checking repository dependency guardrails"
 
+node scripts/quality/pinned-npm.mjs verify
+
 save_exact="$(npm config get save-exact)"
 if [[ "${save_exact}" != "true" ]]; then
   echo "[npm-hardening] save-exact is not enabled"

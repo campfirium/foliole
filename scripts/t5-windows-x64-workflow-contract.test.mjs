@@ -38,6 +38,7 @@ describe('T5 Windows quality workflow contract', () => {
 
   it('keeps fast Windows core separate from native acceptance', () => {
     const commands = [
+      'run: node scripts/quality/pinned-npm.mjs activate',
       'run: npm ci',
       'run: npm run deps:hardening:check',
       'npm run electron:rebuild:native',
@@ -61,6 +62,7 @@ describe('T5 Windows quality workflow contract', () => {
     );
     expect(windowsJob).not.toContain('npm run build');
     expect(windowsJob).not.toContain('npm run electron:compile');
+    expect(windowsJob).toContain("if: inputs.scope == 'desktop'");
     expect(acceptanceJob).toContain('needs: [common-quality, windows-quality]');
     expect(acceptanceJob).not.toContain('android-quality');
     expect(acceptanceJob).not.toContain('ios-contract');
