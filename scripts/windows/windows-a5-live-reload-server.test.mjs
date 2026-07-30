@@ -32,6 +32,8 @@ it('injects a build identity beacon and accepts only the matching load', () => {
   const injectedScript = tags.find(({ tag }) => tag === 'script').children;
   expect(injectedScript).toContain('companion-bottom-tab-bar');
   expect(injectedScript).toContain('MutationObserver');
+  expect(injectedScript).toContain('getBoundingClientRect');
+  expect(injectedScript).toContain('setTimeout');
   expect(injectedScript).toContain('requestAnimationFrame(()=>requestAnimationFrame(report))');
   expect(injectedScript).toContain("addEventListener('unhandledrejection'");
   expect(injectedScript).toContain("event.filename||'unknown'");
