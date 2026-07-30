@@ -66,6 +66,7 @@ describe('Windows DEV fixed device action', () => {
     expect(deploy.options.env.FOLIOLE_ANDROID_ADB_SERVER_PORT).toBe(WINDOWS_DEV_ADB_PORT);
     expect(deploy.options.env.ANDROID_USER_HOME).toBe(paths.signingHome);
     expect(calls[0].options.env).not.toHaveProperty('ANDROID_USER_HOME');
+    expect(calls[0].options.env).not.toHaveProperty('ANDROID_ADB_SERVER_PORT');
   });
 
   it('maps an offline fixed device to 69 and still stops the action-owned server', async () => {

@@ -34,10 +34,14 @@ export function assertFixedDevice(output) {
 }
 
 function actionEnv(paths) {
-  return { ...process.env, ANDROID_ADB_SERVER_PORT: WINDOWS_DEV_ADB_PORT,
-    ANDROID_HOME: paths.androidSdk, ANDROID_SDK_ROOT: paths.androidSdk,
-    FOLIOLE_ANDROID_ADB_SERVER_PORT: WINDOWS_DEV_ADB_PORT, JAVA_HOME: paths.javaHome,
+  return { ...process.env, ANDROID_HOME: paths.androidSdk, ANDROID_SDK_ROOT: paths.androidSdk,
+    JAVA_HOME: paths.javaHome,
     Path: `${path.win32.dirname(paths.systemNode)};${process.env.Path || process.env.PATH || ''}` };
+}
+
+function helperEnv(env) {
+  return { ...env, ANDROID_ADB_SERVER_PORT: WINDOWS_DEV_ADB_PORT,
+    FOLIOLE_ANDROID_ADB_SERVER_PORT: WINDOWS_DEV_ADB_PORT };
 }
 
 async function runDataProtection(execute, paths, mode, manifest, env) {
@@ -45,7 +49,8 @@ async function runDataProtection(execute, paths, mode, manifest, env) {
   return checked(execute, paths.systemNode, [script, '--mode', mode, '--adb', paths.adbPath,
     '--serial', WINDOWS_DEV_A5_SERIAL, '--app-id', APP_ID,
     '--backup-root', paths.protectionBackups, '--manifest', manifest],
-  { env, timeoutCode: `data_${mode}_timeout`, timeoutMs: 5 * 60_000, windowsHide: true }, `data-${mode}`);
+  { env: helperEnv(env), timeoutCode: `data_${mode}_timeout`, timeoutMs: 5 * 60_000,
+    windowsHide: true }, `data-${mode}`);
 }
 
 async function deploy(execute, paths, evidenceRoot, env) {
@@ -56,7 +61,7 @@ async function deploy(execute, paths, evidenceRoot, env) {
   const action = await checked(execute, 'powershell.exe', ['-NoProfile', '-NonInteractive',
     '-ExecutionPolicy', 'Bypass', '-File', script, '-WindowsWorkDir', paths.repoRoot,
     '-TargetSerial', WINDOWS_DEV_A5_SERIAL, '-StopGradleDaemon'],
-  { env: { ...env, ANDROID_USER_HOME: paths.signingHome }, timeoutCode: 'deploy_timeout',
+  { env: { ...helperEnv(env), ANDROID_USER_HOME: paths.signingHome }, timeoutCode: 'deploy_timeout',
     timeoutMs: 20 * 60_000, windowsHide: true }, 'deploy');
   const after = await runDataProtection(execute, paths, 'check', manifest, env);
   return `${before.output}${action.output}${after.output}`;
