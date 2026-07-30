@@ -6,7 +6,9 @@
 
 - 当前仓库是多平台单仓：`Electron + React + TypeScript + Vite + Capacitor`；主要宿主与表面为 `electron/`、`android/`、`src/app/`、`src/companion/`、`src/shared/platform/`。
 - 默认在 `dev` 主干按 Track-Based 连续小步推进；不创建 feature branch / worktree，除非用户明确要求。
-- 创建 Foliole 新 Codex 任务时，若用户未明确要求 worktree，必须使用 saved project 的 `local` 环境；不得采用 `create_thread` 工具对 Git 仓库“默认 worktree”的通用建议。
+- 创建或交接 Foliole Codex 任务只能走 Codex Desktop 正常任务入口：`list_projects` 定位 saved project，`create_thread` 显式使用 `environment.type = local` 并发送完整首条提示，`wait_threads` 等待就绪，`set_thread_title` 命名，`read_thread` 确认首条用户消息与 assistant 正文可读，最后才可 `navigate_to_codex_page`；不得采用 Git 仓库默认 worktree。
+- 禁止启用或恢复 `task-seed-queue`，也禁止通过 queue runner、App Server `thread/start`、`codex://threads/...` deep link 或其他后台 thread 注入创建 / 交接任务。仅有 thread id、侧栏标题、open request 或成功跳转不算创建成功；正文未通过 `read_thread` 验证时必须归档该任务并改走正常任务入口，不得向用户交付空白任务。
+- 用户要求继续某个平台的产品主线时，创建任务前必须先按该平台局部 `AGENTS.md` 区分产品实现、验收证据与宿主控制流；不得仅凭未勾选 checkbox 或未标 `done` 状态把验收 / 控制任务包装成产品代码任务。
 - 单次只交付一个可运行、可验证、可回退的能力闭环；闭环以用户可验收行为、数据语义或迁移语义为边界，不以文件、函数、测试断言、提交数量或“超过 3 个文件”为边界。
 - 能力闭环必须覆盖本轮承诺所需的入口、模型、消费侧、必要持久化、边界防护和验证；新增功能覆盖用户入口、状态模型、业务行为、失败或空状态，Bug 修复覆盖现象确认、根因修复、回归验证和用户可见结果恢复。
 - 禁止混入无关重构，也禁止把同一闭环拆成微任务；同一闭环内必要的模型、入口、消费侧、测试、边界防护和生成物更新必须一起收口。

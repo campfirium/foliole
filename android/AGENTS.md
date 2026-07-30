@@ -7,6 +7,7 @@
 
 ## Android Host Rules
 
+- 用户说“继续 Android / 安卓主线”或“继续 Android / 安卓代码”时，默认只选择新增或修复 Android / companion 产品能力的实施闭环；`device evidence`、`manual acceptance`、`golden journey`、`post-acceptance` 以及 Windows DEV controller / device adapter / workflow 均不算产品代码，只有用户明确点名验收或控制流时才能作为任务目标。创建任务前必须读取目标 seed / plan 的 Task、Out Of Scope 与剩余 checkbox；若剩余项仅为验收或证据，必须报告“实现已完成，剩余为验收”，不得创建成代码任务。
 - Android 是正式宿主，不是临时试验目录；相关规则必须按宿主标准执行。
 - Android 宿主优先通过 `Capacitor` 承载 companion Web 产物；禁止把共享业务逻辑直接写进 `android/**`。
 - `android/` 只承载原生宿主工程、Gradle、Manifest、资源、平台权限与平台插件集成。
