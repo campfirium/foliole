@@ -6,8 +6,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const COMMIT_SHA = /^[0-9a-f]{40}$/u;
 export const WINDOWS_DEV_SOURCE_REF = 'refs/heads/dev';
+export const WINDOWS_DEV_ACTIONS = ['build', 'deploy', 'verify'];
+const WINDOWS_DEV_REMOTE_ACTION = 'C:/dev/foliole-android-lab-preview/scripts/windows/windows-dev-action.ps1';
 
 function execute(command, args, options = {}) {
   return new Promise((resolve, reject) => {
@@ -30,16 +31,18 @@ export function parseWindowsDevControlArgs(argv, env = process.env) {
   if (!host || !/^[A-Za-z0-9._\\-]+@[A-Za-z0-9.-]+$/u.test(host)) {
     throw new Error('--host user@host or FOLIOLE_WINDOWS_DEV_SSH is required');
   }
-  if (args.length !== 1 || args[0] !== 'push') throw new Error('Windows DEV control only accepts push');
-  return { host };
+  if (args.length !== 1 || !WINDOWS_DEV_ACTIONS.includes(args[0])) {
+    throw new Error('Windows DEV control only accepts build, deploy, or verify');
+  }
+  return { action: args[0], host };
 }
 
-export function windowsDevPushSpec(host, commitSha, env = process.env, home = os.homedir()) {
+export function windowsDevPushSpec(host, env = process.env, home = os.homedir()) {
   const key = env.FOLIOLE_WINDOWS_DEV_GIT_SSH_KEY
     || path.join(home, '.ssh', 'agent', 'foliole-windows-android-lab-git');
   if (/['\0\r\n]/u.test(key)) throw new Error('Windows DEV Git key path contains unsupported characters');
   return {
-    args: ['push', '--porcelain', `${host}:foliole-dev.git`, `${commitSha}:${WINDOWS_DEV_SOURCE_REF}`],
+    args: ['push', '--porcelain', `${host}:foliole-dev.git`, `dev:${WINDOWS_DEV_SOURCE_REF}`],
     env: {
       ...env,
       GIT_SSH_COMMAND: `ssh -i '${key}' -o BatchMode=yes -o IdentitiesOnly=yes `
@@ -48,19 +51,26 @@ export function windowsDevPushSpec(host, commitSha, env = process.env, home = os
   };
 }
 
+export function windowsDevSshSpec(host, action, env = process.env, home = os.homedir()) {
+  const key = env.FOLIOLE_WINDOWS_DEV_SSH_KEY
+    || path.join(home, '.ssh', 'agent', 'foliole-windows-android-lab');
+  return ['-T', '-i', key, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=15',
+    '-o', 'IdentitiesOnly=yes', '-o', 'StrictHostKeyChecking=yes', host,
+    'powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+    '-File', WINDOWS_DEV_REMOTE_ACTION, action];
+}
+
 export async function runWindowsDevControl({
   argv = process.argv.slice(2), env = process.env,
-  executeGit = (args, options) => execute('git', args, options), stdout = process.stdout
+  executeGit = (args, options) => execute('git', args, options),
+  executeSsh = (args, options) => execute('ssh', args, options), stdout = process.stdout
 } = {}) {
-  const { host } = parseWindowsDevControlArgs(argv, env);
-  const branch = String(await executeGit(['branch', '--show-current'], { env })).trim();
-  if (branch !== 'dev') throw new Error('Windows DEV source push requires the dev branch');
-  const commitSha = String(await executeGit(['rev-parse', '--verify', 'HEAD'], { env })).trim();
-  if (!COMMIT_SHA.test(commitSha)) throw new Error('Windows DEV source commit is invalid');
-  const spec = windowsDevPushSpec(host, commitSha, env);
+  const { action, host } = parseWindowsDevControlArgs(argv, env);
+  const spec = windowsDevPushSpec(host, env);
   await executeGit(spec.args, { env: spec.env });
-  const result = { commitSha, operation: 'push', ref: WINDOWS_DEV_SOURCE_REF, schemaVersion: 1 };
-  stdout.write(`${JSON.stringify(result)}\n`);
+  const remoteOutput = await executeSsh(windowsDevSshSpec(host, action, env), { env });
+  const result = { action, operation: 'complete', ref: WINDOWS_DEV_SOURCE_REF };
+  if (remoteOutput) stdout.write(remoteOutput);
   return result;
 }
 

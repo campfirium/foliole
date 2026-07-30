@@ -7,6 +7,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { executeBounded } from './windows-bounded-process.mjs';
+import { runWindowsDevDeviceAction } from './windows-dev-device-action.mjs';
 import { windowsDevPaths } from './windows-dev-paths.mjs';
 
 const BUILD_COMMAND = 'call .\\gradlew.bat --no-daemon assembleDebugAndroidTest';
@@ -72,17 +73,10 @@ async function assertRepoPreflight(execute, paths, fsApi) {
 }
 
 async function pullFastForward(execute, paths) {
-  const beforeHead = await gitValue(execute, paths, ['rev-parse', 'HEAD']);
-  const beforeStatus = await gitValue(execute, paths, ['status', '--porcelain=v1', '--untracked-files=no']);
   const pull = await execute(paths.gitPath, [
     '-C', paths.repoRoot, 'pull', '--ff-only', 'lan', 'dev'
   ], { cwd: paths.repoRoot, timeoutCode: 'pull_timeout', timeoutMs: PULL_TIMEOUT_MS, windowsHide: true });
-  if (pull.code === 0) return { beforeHead, beforeStatus };
-  const afterHead = await gitValue(execute, paths, ['rev-parse', 'HEAD']);
-  const afterStatus = await gitValue(execute, paths, ['status', '--porcelain=v1', '--untracked-files=no']);
-  if (beforeHead !== afterHead || beforeStatus !== afterStatus) {
-    throw failure('Failed pull changed the Windows working repository', 125, 'pull-mutated-state');
-  }
+  if (pull.code === 0) return;
   const detail = pull.lines?.at(-1) || pull.stderr || `git pull exited ${pull.code}`;
   throw failure(String(detail).trim(), 64, 'pull');
 }
@@ -99,9 +93,9 @@ async function snapshotProcesses(execute, paths) {
 
 function evidenceContext(paths, now, id, fsApi) {
   const runId = `${now().toISOString().replace(/[-:.TZ]/gu, '')}-${id().slice(0, 8)}`;
-  const root = path.join(paths.repoRoot, '.tmp', 'artifacts', 'windows-dev-build', runId);
+  const root = path.join(paths.repoRoot, '.tmp', 'artifacts', 'windows-dev-action', runId);
   fsApi.mkdirSync(root, { recursive: true });
-  return { logPath: path.join(root, 'build.log'), runId, summaryPath: path.join(root, 'summary.json') };
+  return { logPath: path.join(root, 'action.log'), root, runId, summaryPath: path.join(root, 'summary.json') };
 }
 
 function writeJson(fsApi, filePath, value) {
@@ -109,41 +103,47 @@ function writeJson(fsApi, filePath, value) {
 }
 
 export async function runWindowsDevBuild({
-  execute = executeBounded, fsApi = fs, id = randomUUID, now = () => new Date(),
+  action = 'build', execute = executeBounded, fsApi = fs, id = randomUUID, now = () => new Date(),
   paths = windowsDevPaths(), platform = process.platform
 } = {}) {
   const startedAt = now().toISOString();
   let context;
   let directChildPid = null;
   try {
-    if (platform !== 'win32') throw failure('Windows DEV build requires Windows', 64, 'platform');
+    if (platform !== 'win32') throw failure('Windows DEV action requires Windows', 64, 'platform');
+    if (!['build', 'deploy', 'verify'].includes(action)) throw failure('Unknown Windows DEV action', 64, 'request');
     context = evidenceContext(paths, now, id, fsApi);
-    for (const filePath of [paths.systemNode, paths.systemNpm, paths.gitPath]) {
+    const requiredTools = [paths.systemNode, paths.systemNpm, paths.gitPath,
+      ...(action === 'build' ? [] : [paths.adbPath])];
+    for (const filePath of requiredTools) {
       if (!fsApi.existsSync(filePath)) throw failure(`Required tool is missing: ${filePath}`, 64, 'preflight');
     }
     await assertRepoPreflight(execute, paths, fsApi);
     const residualBefore = await snapshotProcesses(execute, paths);
-    if (residualBefore.length > 0) throw failure('Repository-owned build process is already running', 73, 'residual');
-    const { beforeHead: beforeSha } = await pullFastForward(execute, paths);
-    const afterSha = await gitValue(execute, paths, ['rev-parse', 'HEAD']);
-    const remoteSha = await gitValue(execute, paths, ['rev-parse', 'refs/remotes/lan/dev']);
-    if (afterSha !== remoteSha) throw failure('Windows HEAD does not match lan/dev', 64, 'revision');
+    if (residualBefore.length > 0) throw failure('Repository-owned action process is already running', 73, 'residual');
+    await pullFastForward(execute, paths);
     const signing = verifySigningIdentity(paths, fsApi);
-    const build = await execute('cmd.exe', ['/d', '/s', '/c', BUILD_COMMAND], {
-      cwd: path.join(paths.repoRoot, 'android'),
-      env: { ...process.env, ANDROID_HOME: paths.androidSdk, ANDROID_SDK_ROOT: paths.androidSdk,
-        ANDROID_USER_HOME: paths.signingHome, JAVA_HOME: paths.javaHome },
-      onSpawn: (child) => { directChildPid = child.pid; }, platform,
-      timeoutCode: 'build_timeout', timeoutMs: BUILD_TIMEOUT_MS, windowsHide: true
-    });
-    fsApi.writeFileSync(context.logPath, build.output, 'utf8');
-    if (build.code !== 0 || !build.output.includes('BUILD SUCCESSFUL')) {
-      throw Object.assign(failure('Gradle did not reach BUILD SUCCESSFUL', 74, 'build'), { result: build });
+    let output;
+    if (action === 'build') {
+      const build = await execute('cmd.exe', ['/d', '/s', '/c', BUILD_COMMAND], {
+        cwd: path.join(paths.repoRoot, 'android'),
+        env: { ...process.env, ANDROID_HOME: paths.androidSdk, ANDROID_SDK_ROOT: paths.androidSdk,
+          ANDROID_USER_HOME: paths.signingHome, JAVA_HOME: paths.javaHome },
+        onSpawn: (child) => { directChildPid = child.pid; }, platform,
+        timeoutCode: 'build_timeout', timeoutMs: BUILD_TIMEOUT_MS, windowsHide: true
+      });
+      if (build.code !== 0 || !build.output.includes('BUILD SUCCESSFUL')) {
+        throw Object.assign(failure('Gradle did not reach BUILD SUCCESSFUL', 74, 'build'), { result: build });
+      }
+      output = build.output;
+    } else {
+      output = await runWindowsDevDeviceAction({ action, evidenceRoot: context.root, execute, paths });
     }
-    const summary = { action: 'build', beforeSha, completedAt: now().toISOString(), directChildPid,
-      exitCode: 0, head: afterSha, logPath: context.logPath, repoRoot: paths.repoRoot,
+    fsApi.writeFileSync(context.logPath, output, 'utf8');
+    const summary = { action, completedAt: now().toISOString(), directChildPid,
+      exitCode: 0, logPath: context.logPath, repoRoot: paths.repoRoot,
       resultStatus: 'success', runId: context.runId, schemaVersion: 1, signingSha256: signing.sha256,
-      startedAt, timeoutMs: BUILD_TIMEOUT_MS };
+      startedAt };
     writeJson(fsApi, context.summaryPath, summary);
     return { exitCode: 0, summary, summaryPath: context.summaryPath };
   } catch (error) {
@@ -151,7 +151,7 @@ export async function runWindowsDevBuild({
     if (context && error.result?.output && !fsApi.existsSync(context.logPath)) {
       fsApi.writeFileSync(context.logPath, error.result.output, 'utf8');
     }
-    const summary = { action: 'build', completedAt: now().toISOString(), directChildPid, exitCode,
+    const summary = { action, completedAt: now().toISOString(), directChildPid, exitCode,
       failureStage: error.stage || 'entry', message: error.message, resultStatus: 'failure',
       runId: context?.runId ?? null, schemaVersion: 1, startedAt };
     if (context) writeJson(fsApi, context.summaryPath, summary);
@@ -160,9 +160,11 @@ export async function runWindowsDevBuild({
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
-  const result = await runWindowsDevBuild();
+  const args = process.argv.slice(2);
+  const action = args.length === 0 ? 'build' : args.length === 1 ? args[0] : 'invalid';
+  const result = await runWindowsDevBuild({ action });
   const label = result.exitCode === 0 ? 'OK' : 'FAILED';
   const stream = result.exitCode === 0 ? console.log : console.error;
-  stream(`[windows-dev-build] status: ${label} exit=${result.exitCode} evidence=${result.summaryPath ?? '-'}`);
+  stream(`[windows-dev-action] status: ${label} exit=${result.exitCode} evidence=${result.summaryPath ?? '-'}`);
   process.exitCode = result.exitCode;
 }

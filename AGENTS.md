@@ -50,9 +50,9 @@
 
 ## Windows Command Boundary
 
-- Windows 开发动作的唯一源码真相是动作发起时 Mac 当前 `dev` 的最新已提交 HEAD；controller 自动把该 HEAD fast-forward push 到 LAN Git，Windows 单一普通 `dev` 仓库自动执行 `git pull --ff-only` 后再动作。调用方不得挑选、传入或绑定目标 SHA；实际 SHA 只由框架记录为运行证据。
-- Windows 本地仓库同时服务 Windows 桌面与 A5 Android 开发；Windows 不提交或推送源码上游，不建立 candidate、scratch、preview / WSL mirror 或按请求 SHA 切换的第二份源码现场。拉取失败直接报告，不自动 reset、重建、修复或合并源码。
-- 普通 Windows 终端诊断走局域网 SSH；A5 设备动作只走消费同一 Windows `dev` 仓库的固定 device adapter。adapter 尚未收口时停止设备动作，不恢复旧 scheduled Lab、第二 checkout 或 request-SHA 控制面；具体边界按 `electron/AGENTS.md` 与 `android/AGENTS.md` 执行。
+- Windows 开发使用普通 `dev` Git 流程：Mac controller 把 `dev` push 到 LAN Git，Windows 单一普通 `dev` 仓库执行 `git pull --ff-only lan dev` 后再动作；不解析、传递、保存、回传或比对 SHA，Git 失败直接报告。
+- Windows 本地仓库同时服务 Windows 桌面与 A5 Android 开发；Windows 不提交或推送源码上游，不建立 candidate、scratch、preview / WSL mirror 或第二份源码现场。拉取失败直接报告，不自动 reset、重建、修复或合并源码。
+- 普通 Windows 终端诊断走局域网 SSH；A5 设备动作只走消费同一 Windows `dev` 仓库的固定 device adapter。adapter 尚未收口时停止设备动作，不恢复旧 scheduled Lab、第二 checkout 或 SHA 控制面；具体边界按 `electron/AGENTS.md` 与 `android/AGENTS.md` 执行。
 - Windows 原生命令默认用已存在的 `npm` / `node` / 项目脚本入口执行；不得把多步验证长期写成内联 PowerShell / cmd 片段。
 - 复杂 Windows 命令若涉及多层引号、环境变量、重定向、后台进程、native exe、`cmd.exe` / PowerShell 交叉调用或 stdout 可靠性判断，优先写成仓库内 Node runner 或已提交脚本；临时诊断必须把 stdout、stderr、exit code 写入 `.tmp/` 后再读取，不得只凭空 stdout 或空日志判定成功。
 - 临时 Playwright / browser 验收、生产站点 browser probe、HTTP server + browser 脚本必须通过 `node scripts/with-resource-gate.mjs preview -- <command...>` 执行；Node REPL 只用于短探针，长流程必须转成仓库脚本。只清理 runner 自己启动的子进程树，不按进程名全机杀 `node.exe` / `msedge.exe`。

@@ -21,6 +21,7 @@ export function windowsDevPaths({
   const gitRoot = path.win32.join(appData, 'Foliole', 'windows-dev-git');
   const oldLabRoot = path.win32.join(appData, 'Foliole', 'windows-android-lab');
   return {
+    adbPath: path.win32.join(appData, 'Android', 'Sdk', 'platform-tools', 'adb.exe'),
     androidSdk: path.win32.join(appData, 'Android', 'Sdk'),
     authorizedKeys: 'C:\\ProgramData\\ssh\\administrators_authorized_keys',
     bareRepository: path.win32.join(gitRoot, 'repository.git'),
@@ -31,6 +32,7 @@ export function windowsDevPaths({
     oldBareRepository: path.win32.join(oldLabRoot, 'repository.git'),
     oldConfig: path.win32.join(oldLabRoot, 'config.json'),
     oldLabRoot,
+    protectionBackups: path.win32.join(oldLabRoot, 'protection', 'backups'),
     receiver: path.win32.join(gitRoot, 'receive.mjs'),
     repoRoot,
     signingHome: path.win32.join(oldLabRoot, 'signing', 'android-user-home'),

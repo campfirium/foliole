@@ -46,12 +46,9 @@ function successfulExecutor(paths, overrides = {}) {
     }
     if (args.includes('--show-toplevel')) return result(paths.repoRoot);
     if (args.includes('--show-current')) return result('dev');
-    if (args.includes('status')) return result(overrides.status ?? '');
     if (args.includes('pull') && overrides.pullFailure) {
       return { code: 1, lines: ['pull blocked'], output: '', stderr: 'pull blocked', stdout: '' };
     }
-    if (args.includes('refs/remotes/lan/dev')) return result('b'.repeat(40));
-    if (args.includes('HEAD')) return result(args.includes('pull') ? '' : overrides.head ?? 'b'.repeat(40));
     return result('');
   });
   return { calls, execute };
@@ -80,18 +77,17 @@ describe('Windows DEV foreground build', () => {
       cwd: path.join(paths.repoRoot, 'android'), timeoutMs: 20 * 60_000
     });
     expect(build.options.env.ANDROID_USER_HOME).toBe(paths.signingHome);
-    expect(run.summary).toMatchObject({ directChildPid: 77, head: 'b'.repeat(40), resultStatus: 'success' });
+    expect(run.summary).toMatchObject({ action: 'build', directChildPid: 77, resultStatus: 'success' });
   });
 
-  it('leaves HEAD and tracked changes unchanged when pull is blocked', async () => {
+  it('stops before Gradle when pull is blocked', async () => {
     const { paths } = fixture();
     const { calls, execute } = successfulExecutor(paths, {
-      pullFailure: true, status: ' M android/file'
+      pullFailure: true
     });
     const run = await runWindowsDevBuild({ execute, paths, platform: 'win32' });
     expect(run).toMatchObject({ exitCode: 64, summary: { failureStage: 'pull' } });
     expect(calls.some(({ args }) => args.includes('pull'))).toBe(true);
-    expect(calls.filter(({ args }) => args.includes('HEAD'))).toHaveLength(2);
     expect(calls.some(({ command }) => command === 'cmd.exe')).toBe(false);
   });
 
@@ -106,6 +102,7 @@ describe('Windows DEV foreground build', () => {
 
 it('holds a FileShare.None lock and invokes only absolute system Node', () => {
   const source = fs.readFileSync('scripts/windows/windows-dev-build.ps1', 'utf8');
+  const actionSource = fs.readFileSync('scripts/windows/windows-dev-action.ps1', 'utf8');
   expect(source).toContain('[System.IO.FileShare]::None');
   expect(source).toContain('C:\\Program Files\\nodejs\\node.exe');
   expect(source).toContain('[Console]::Error.WriteLine');
@@ -113,4 +110,7 @@ it('holds a FileShare.None lock and invokes only absolute system Node', () => {
   expect(source).toContain('windows-dev-build.mjs');
   expect(source).not.toContain('Write-Error');
   expect(source).not.toContain('windows-android-lab\\runtime');
+  expect(actionSource).toContain('[ValidateSet("build", "deploy", "verify")]');
+  expect(actionSource).toContain('[System.IO.FileShare]::None');
+  expect(actionSource).toContain('& $systemNode $runner $Action');
 });
