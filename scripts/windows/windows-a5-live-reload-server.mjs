@@ -58,7 +58,7 @@ export function createA5LiveReloadPlugin({ buildIdentity, onDeviceLoad }) {
     },
     transformIndexHtml: {
       order: 'post',
-      handler() {
+      handler(html) {
         const script = [
           '(()=>{let observer=null;',
           `const identity=${encodedIdentity};`,
@@ -69,10 +69,13 @@ export function createA5LiveReloadPlugin({ buildIdentity, onDeviceLoad }) {
           "if(ready()){finish();return;}observer=new MutationObserver(()=>{if(ready())finish();});",
           "observer.observe(document.documentElement,{childList:true,subtree:true});})();"
         ].join('');
-        return [
-          { attrs: { content: buildIdentity, name: 'foliole-a5-dev-build' }, tag: 'meta', injectTo: 'head' },
-          { children: script, tag: 'script', injectTo: 'body' }
-        ];
+        return {
+          html: html.replace('<script type="module" src="/@vite/client"></script>', ''),
+          tags: [
+            { attrs: { content: buildIdentity, name: 'foliole-a5-dev-build' }, tag: 'meta', injectTo: 'head' },
+            { children: script, tag: 'script', injectTo: 'body' }
+          ]
+        };
       }
     }
   };
@@ -89,10 +92,10 @@ export async function startWindowsA5LiveReloadServer({
   const tracker = createLoadTracker(buildIdentity, now);
   const server = await createServerImpl({
     configFile: path.join(repoRoot, 'vite.companion.config.ts'),
+    oxc: { target: 'chrome64' },
     plugins: [createA5LiveReloadPlugin({ buildIdentity, onDeviceLoad: tracker.record })],
     server: {
-      hmr: { clientPort: WINDOWS_A5_LIVE_RELOAD_PORT, host: '127.0.0.1', protocol: 'ws' },
-      host: '127.0.0.1', port: WINDOWS_A5_LIVE_RELOAD_PORT, strictPort: true
+      hmr: false, host: '127.0.0.1', port: WINDOWS_A5_LIVE_RELOAD_PORT, strictPort: true
     }
   });
   try {
@@ -104,7 +107,6 @@ export async function startWindowsA5LiveReloadServer({
   return {
     buildIdentity,
     close: () => server.close(),
-    reload: () => server.ws.send({ path: '*', type: 'full-reload' }),
     url: WINDOWS_A5_LIVE_RELOAD_URL,
     waitForDeviceLoad: (afterSequence = 0) => tracker.wait(afterSequence, timeoutMs)
   };

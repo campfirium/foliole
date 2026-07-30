@@ -16,7 +16,11 @@ it('injects a build identity beacon and accepts only the matching load', () => {
   const plugin = createA5LiveReloadPlugin({ buildIdentity: 'dev-123', onDeviceLoad: (value) => loads.push(value) || true });
   const middlewares = { use: vi.fn() };
   plugin.configureServer({ middlewares });
-  const tags = plugin.transformIndexHtml.handler();
+  const transformed = plugin.transformIndexHtml.handler(
+    '<script type="module" src="/@vite/client"></script><main>Companion</main>'
+  );
+  const tags = transformed.tags;
+  expect(transformed.html).toBe('<main>Companion</main>');
   expect(tags).toContainEqual(expect.objectContaining({
     attrs: { content: 'dev-123', name: 'foliole-a5-dev-build' }, tag: 'meta'
   }));
@@ -31,7 +35,7 @@ it('injects a build identity beacon and accepts only the matching load', () => {
   expect(loads).toHaveLength(1);
 });
 
-it('owns ready, reload, device identity, and cleanup in one foreground lifecycle', async () => {
+it('owns compatible source transforms, device identity, and cleanup in one foreground lifecycle', async () => {
   const runtime = new EventEmitter();
   const middlewares = { use: vi.fn() };
   const server = {
@@ -46,16 +50,15 @@ it('owns ready, reload, device identity, and cleanup in one foreground lifecycle
   const live = await startWindowsA5LiveReloadServer({
     buildIdentity: 'dev-456', createServerImpl, repoRoot: 'C:\\dev\\foliole'
   });
-  expect(createServerImpl.mock.calls[0][0].server).toMatchObject({
-    host: '127.0.0.1', port: WINDOWS_A5_LIVE_RELOAD_PORT, strictPort: true
+  expect(createServerImpl.mock.calls[0][0]).toMatchObject({
+    oxc: { target: 'chrome64' },
+    server: { hmr: false, host: '127.0.0.1', port: WINDOWS_A5_LIVE_RELOAD_PORT, strictPort: true }
   });
   const loaded = live.waitForDeviceLoad();
   middlewares.use.mock.calls[0][0](
     request('/__foliole_a5_dev_loaded__?identity=dev-456'), { end: vi.fn() }, vi.fn()
   );
   await expect(loaded).resolves.toMatchObject({ buildIdentity: 'dev-456', sequence: 1 });
-  live.reload();
-  expect(server.ws.send).toHaveBeenCalledWith({ path: '*', type: 'full-reload' });
   await live.close();
   expect(server.close).toHaveBeenCalledOnce();
 });

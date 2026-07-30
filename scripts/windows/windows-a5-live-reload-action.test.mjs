@@ -38,7 +38,7 @@ function createExecutor(evidenceRoot) {
 function createServer(overrides = {}) {
   let sequence = 0;
   return {
-    close: vi.fn(async () => {}), reload: vi.fn(), url: 'http://127.0.0.1:24605',
+    close: vi.fn(async () => {}), url: 'http://127.0.0.1:24605',
     waitForDeviceLoad: vi.fn(async () => ({ sequence: sequence += 1 })), ...overrides
   };
 }
@@ -57,7 +57,8 @@ it('loads and reloads the installed shell without Gradle or APK install', async 
     '-P', '5037', '-s', '87a33a4b', 'reverse',
     `tcp:${WINDOWS_A5_LIVE_RELOAD_PORT}`, `tcp:${WINDOWS_A5_LIVE_RELOAD_PORT}`
   ]);
-  expect(server.reload).toHaveBeenCalledOnce();
+  expect(calls.filter(({ args }) => args.includes('force-stop'))).toHaveLength(2);
+  expect(calls.filter(({ args }) => args.includes('start'))).toHaveLength(2);
   expect(verifyForeground).toHaveBeenCalledOnce();
   expect(calls.flatMap(({ args }) => args)).not.toContain('install');
   expect(calls.flatMap(({ args }) => args).join(' ')).not.toMatch(/gradle/iu);
