@@ -34,6 +34,8 @@ it('injects a build identity beacon and accepts only the matching load', () => {
   expect(injectedScript).toContain('MutationObserver');
   expect(injectedScript).toContain('requestAnimationFrame(()=>requestAnimationFrame(report))');
   expect(injectedScript).toContain("addEventListener('unhandledrejection'");
+  expect(injectedScript).toContain("event.filename||'unknown'");
+  expect(injectedScript).toContain('reason&&reason.stack');
   expect(injectedScript).not.toContain('?.');
   expect(() => new Script(injectedScript)).not.toThrow();
   const handler = middlewares.use.mock.calls[0][0];
