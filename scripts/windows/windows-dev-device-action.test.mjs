@@ -139,6 +139,23 @@ describe('Windows DEV fixed device action', () => {
     expect(calls.some(({ command }) => command === 'powershell.exe')).toBe(false);
     expect(calls.flatMap(({ args }) => args).join(' ')).not.toMatch(/install|gradle/iu);
   });
+
+  it('routes capture annotation through the fixed instrumentation action', async () => {
+    const { evidenceRoot, paths } = fixture();
+    const { execute } = successfulExecutor(paths);
+    const runCaptureAnnotation = vi.fn(async () => ({
+      captureAnnotation: { buildIdentity: 'capture-run', manifestPath: 'manifest.json' }, output: 'ok\n'
+    }));
+    const runLiveReload = successfulLiveReload();
+    await expect(runWindowsDevDeviceAction({
+      action: 'capture-annotation', buildIdentity: 'capture-run', evidenceRoot, execute, paths,
+      runCaptureAnnotation, runLiveReload
+    })).resolves.toMatchObject({ captureAnnotation: { buildIdentity: 'capture-run' } });
+    expect(runCaptureAnnotation).toHaveBeenCalledWith(expect.objectContaining({
+      adbPort: WINDOWS_DEV_ADB_PORT, buildIdentity: 'capture-run', serial: WINDOWS_DEV_A5_SERIAL
+    }));
+    expect(runLiveReload).not.toHaveBeenCalled();
+  });
 });
 
 it('requires the exact A5 serial to be ready', () => {

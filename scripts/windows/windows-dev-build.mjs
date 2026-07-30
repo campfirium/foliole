@@ -13,6 +13,7 @@ import { windowsDevPaths } from './windows-dev-paths.mjs';
 
 const BUILD_COMMAND = 'call .\\gradlew.bat --no-daemon assembleDebugAndroidTest';
 const BUILD_TIMEOUT_MS = 20 * 60_000;
+const WINDOWS_DEV_ACTIONS = ['appearance', 'build', 'capture-annotation', 'deploy', 'live', 'secondary', 'verify'];
 
 function failure(message, exitCode, stage) {
   return Object.assign(new Error(message), { exitCode, stage });
@@ -90,7 +91,7 @@ export async function runWindowsDevBuild({
   let directChildPid = null;
   try {
     if (platform !== 'win32') throw failure('Windows DEV action requires Windows', 64, 'platform');
-    if (!['appearance', 'build', 'deploy', 'live', 'secondary', 'verify'].includes(action)) throw failure('Unknown Windows DEV action', 64, 'request');
+    if (!WINDOWS_DEV_ACTIONS.includes(action)) throw failure('Unknown Windows DEV action', 64, 'request');
     context = evidenceContext(paths, now, id, fsApi);
     const requiredTools = [paths.systemNode,
       ...(['build', 'deploy'].includes(action) ? [paths.systemNpmCli] : []),
@@ -100,7 +101,7 @@ export async function runWindowsDevBuild({
     }
     const residualBefore = await snapshotProcesses(execute, paths);
     if (residualBefore.length > 0) throw failure('Repository-owned action process is already running', 73, 'residual');
-    const signing = verifySigningIdentity(paths, fsApi);
+    const signing = action === 'capture-annotation' ? null : verifySigningIdentity(paths, fsApi);
     let output = '';
     if (['build', 'deploy'].includes(action)) {
       output += await prepareHost({ execute, fsApi, paths });
@@ -118,7 +119,8 @@ export async function runWindowsDevBuild({
         throw Object.assign(failure('Gradle did not reach BUILD SUCCESSFUL', 74, 'build'), { result: build });
       }
       output += build.output;
-    } else {
+    }
+    if (action !== 'build') {
       actionResult = await deviceAction({
         action, buildIdentity: context.runId, evidenceRoot: context.root, execute, paths
       });
@@ -127,8 +129,10 @@ export async function runWindowsDevBuild({
     fsApi.writeFileSync(context.logPath, output, 'utf8');
     const summary = { action, completedAt: now().toISOString(), directChildPid,
       exitCode: 0, logPath: context.logPath, repoRoot: paths.repoRoot,
-      resultStatus: 'success', runId: context.runId, schemaVersion: 1, signingSha256: signing.sha256,
+      resultStatus: 'success', runId: context.runId, schemaVersion: 1,
+      ...(signing ? { signingSha256: signing.sha256 } : {}),
       startedAt, ...(actionResult?.liveReload ? { liveReload: actionResult.liveReload } : {}) };
+    if (actionResult?.captureAnnotation) summary.captureAnnotation = actionResult.captureAnnotation;
     writeJson(fsApi, context.summaryPath, summary);
     return { exitCode: 0, summary, summaryPath: context.summaryPath };
   } catch (error) {
@@ -139,6 +143,7 @@ export async function runWindowsDevBuild({
     const summary = { action, completedAt: now().toISOString(), directChildPid, exitCode,
       failureStage: error.stage || 'entry', message: error.message, resultStatus: 'failure',
       runId: context?.runId ?? null, schemaVersion: 1, startedAt,
+      ...(error.installedPackages ? { installedPackages: error.installedPackages } : {}),
       ...(error.liveReload ? { liveReload: error.liveReload } : {}) };
     if (context) writeJson(fsApi, context.summaryPath, summary);
     return { exitCode, summary, summaryPath: context?.summaryPath ?? null };
@@ -154,6 +159,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
   if (result.exitCode !== 0) stream(formatWindowsDevFailure(result.summary));
   if (result.summary.liveReload) {
     stream(`[windows-dev-action] live identity=${result.summary.liveReload.buildIdentity} screenshot=${result.summary.liveReload.screenshotPath}`);
+  }
+  if (result.summary.captureAnnotation) {
+    stream(`[windows-dev-action] capture-annotation identity=${result.summary.captureAnnotation.buildIdentity} manifest=${result.summary.captureAnnotation.manifestPath}`);
   }
   stream(`[windows-dev-action] status: ${label} exit=${result.exitCode} evidence=${result.summaryPath ?? '-'}`);
   process.exitCode = result.exitCode;

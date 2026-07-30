@@ -6,7 +6,8 @@ import path from 'node:path';
 import { expect, it, vi } from 'vitest';
 
 import {
-  parseWindowsDevControlArgs, parseWindowsDevLiveEvidence, runWindowsDevControl,
+  parseWindowsDevCaptureAnnotationEvidence, parseWindowsDevControlArgs,
+  parseWindowsDevLiveEvidence, runWindowsDevControl,
   windowsDevPushSpec, windowsDevScpSpec, windowsDevSshSpec
 } from './windows-dev-control.mjs';
 
@@ -26,11 +27,13 @@ it('accepts only fixed actions with an explicit LAN host', () => {
     .toMatchObject({ action: 'appearance' });
   expect(parseWindowsDevControlArgs(['--host', 'v\\dev@192.168.0.11', 'secondary'], {}))
     .toMatchObject({ action: 'secondary' });
+  expect(parseWindowsDevControlArgs(['--host', 'v\\dev@192.168.0.11', 'capture-annotation'], {}))
+    .toMatchObject({ action: 'capture-annotation' });
   expect(() => parseWindowsDevControlArgs(['--host', 'v\\dev@192.168.0.11', 'push'], {}))
-    .toThrow('only accepts appearance, build, deploy, live, secondary, or verify');
+    .toThrow('only accepts appearance, build, capture-annotation, deploy, live, secondary, or verify');
   expect(() => parseWindowsDevControlArgs([
     '--host', 'v\\dev@192.168.0.11', 'verify', '--commit', 'a'.repeat(40)
-  ], {})).toThrow('only accepts appearance, build, deploy, live, secondary, or verify');
+  ], {})).toThrow('only accepts appearance, build, capture-annotation, deploy, live, secondary, or verify');
 });
 
 it('pushes dev and then invokes the fixed Windows action', async () => {
@@ -89,6 +92,23 @@ it('copies live screenshot evidence after the fixed foreground action', async ()
   });
   expect(result).toMatchObject({ action: 'live', screenshotPath: expect.stringContaining('dev-2.png') });
   expect(executeScp).toHaveBeenCalledOnce();
+  fs.rmSync(repoRoot, { force: true, recursive: true });
+});
+
+it('copies only the fixed capture annotation evidence allowlist', async () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-dev-capture-'));
+  const remoteRoot = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/capture-1';
+  const output = `[windows-dev-action] capture-annotation identity=capture-1 manifest=${remoteRoot}/capture-annotation-manifest.json\n`;
+  const executeScp = vi.fn(async (args) => { fs.writeFileSync(args.at(-1), 'evidence'); return ''; });
+  const result = await runWindowsDevControl({
+    argv: ['--host', 'v\\dev@192.168.0.11', 'capture-annotation'], env: {},
+    executeGit: vi.fn(async () => ''), executeScp, executeSsh: vi.fn(async () => output),
+    repoRoot, stdout: { write: vi.fn() }
+  });
+  expect(result).toMatchObject({ action: 'capture-annotation', manifestPath: expect.stringContaining('capture-annotation-manifest.json') });
+  expect(executeScp).toHaveBeenCalledTimes(4);
+  expect(executeScp.mock.calls.flat().flat().join(' ')).not.toMatch(/\.db(?:\s|$)/u);
+  expect(parseWindowsDevCaptureAnnotationEvidence(output)).toEqual({ buildIdentity: 'capture-1', remoteRoot });
   fs.rmSync(repoRoot, { force: true, recursive: true });
 });
 
