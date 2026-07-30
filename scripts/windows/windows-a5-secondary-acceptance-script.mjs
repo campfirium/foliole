@@ -27,8 +27,10 @@ export function runA5SecondaryAcceptance(config, acceptSearch) {
     throw new Error(`Timed out waiting for ${label}`);
   };
   const click = async (element, label) => {
-    if (!visible(element)) throw new Error(`Missing visible ${label}`);
+    if (!element) throw new Error(`Missing ${label}`);
     element.scrollIntoView({ block: 'center' });
+    await sleep(50);
+    if (!visible(element)) throw new Error(`Missing visible ${label}`);
     element.click();
     await sleep(150);
   };
@@ -37,7 +39,7 @@ export function runA5SecondaryAcceptance(config, acceptSearch) {
   const articleExit = () => closestButton('.fixed.top-0 svg.lucide-chevron-left');
   const directoryRows = () => Array.from(
     document.querySelectorAll('[data-testid^="companion-directory-node-"]')
-  ).filter(visible);
+  );
   const rowId = (row) => row.getAttribute('data-testid');
   const rowTitle = (row) => {
     const title = row.querySelector('span.block.truncate');
@@ -91,7 +93,7 @@ export function runA5SecondaryAcceptance(config, acceptSearch) {
   async function findReadableLeaf(depth = 0, path = []) {
     const candidates = directoryRows().map((row) => ({ id: rowId(row), title: rowTitle(row) }));
     for (const candidate of candidates) {
-      const row = firstVisible(`[data-testid="${candidate.id}"]`);
+      const row = document.querySelector(`[data-testid="${candidate.id}"]`);
       const before = directorySignature();
       await click(row, `directory row ${candidate.id}`);
       await waitFor(
@@ -152,7 +154,7 @@ export function runA5SecondaryAcceptance(config, acceptSearch) {
     await click(firstVisible('[role="dialog"] button'), 'Font sheet close');
     await exitArticle();
     await click(await waitFor(
-      () => firstVisible(`[data-testid="${leaf.leafId}"]`), 'accepted leaf row'
+      () => document.querySelector(`[data-testid="${leaf.leafId}"]`), 'accepted leaf row'
     ), 'accepted leaf row');
     await waitFor(readingRoot, 'reopened readable article');
     const hydrated = typography();
@@ -164,7 +166,7 @@ export function runA5SecondaryAcceptance(config, acceptSearch) {
 
   async function returnToDirectoryRoot(leaf, rootIds) {
     await exitArticle();
-    const parentHasLeaf = Boolean(firstVisible(`[data-testid="${leaf.leafId}"]`));
+    const parentHasLeaf = Boolean(document.querySelector(`[data-testid="${leaf.leafId}"]`));
     let backCount = 0;
     while (topBack()) {
       await click(topBack(), 'breadcrumb parent');
