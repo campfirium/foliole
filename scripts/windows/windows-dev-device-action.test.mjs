@@ -113,6 +113,19 @@ describe('Windows DEV fixed device action', () => {
     expect(calls.some(({ command }) => command === 'powershell.exe')).toBe(false);
     expect(calls.flatMap(({ args }) => args).join(' ')).not.toMatch(/install|gradle/iu);
   });
+
+  it('routes fixed Appearance acceptance through the renderer-only live surface', async () => {
+    const { evidenceRoot, paths } = fixture();
+    const { calls, execute } = successfulExecutor(paths);
+    const runLiveReload = successfulLiveReload();
+    await runWindowsDevDeviceAction({
+      action: 'appearance', buildIdentity: 'dev-appearance', evidenceRoot, execute, paths,
+      runLiveReload
+    });
+    expect(runLiveReload).toHaveBeenCalledWith(expect.objectContaining({ surface: 'appearance' }));
+    expect(calls.some(({ command }) => command === 'powershell.exe')).toBe(false);
+    expect(calls.flatMap(({ args }) => args).join(' ')).not.toMatch(/install|gradle/iu);
+  });
 });
 
 it('requires the exact A5 serial to be ready', () => {

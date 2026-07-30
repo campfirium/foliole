@@ -51,8 +51,10 @@ describe('CompanionSettingsShellContent', () => {
   it('opens the web-preview custom CSS management surface', () => {
     render(<SettingsHarness />);
 
+    expect(screen.getByTestId('companion-settings-appearance')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Customize Topic reading/ }));
     expect(screen.getByText('Custom CSS snippets')).toBeInTheDocument();
+    expect(screen.getByTestId('companion-custom-css-settings')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add snippet' })).toBeInTheDocument();
   });
 

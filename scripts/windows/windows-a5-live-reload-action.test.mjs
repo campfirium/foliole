@@ -47,12 +47,14 @@ it('loads and reloads the installed shell without Gradle or APK install', async 
   const { evidenceRoot, paths } = fixture();
   const { calls, execute } = createExecutor(evidenceRoot);
   const server = createServer();
+  const startServer = vi.fn(async () => server);
   const verifyForeground = vi.fn(async () => {});
   const run = await runWindowsA5LiveReload({
     adbPort: '5037', buildIdentity: 'dev-1', env: {}, evidenceRoot, execute, paths,
-    serial: '87a33a4b', startServer: vi.fn(async () => server), verifyForeground
+    serial: '87a33a4b', startServer, surface: 'appearance', verifyForeground
   });
   expect(run.liveReload).toMatchObject({ buildIdentity: 'dev-1', deviceLoads: 2 });
+  expect(startServer).toHaveBeenCalledWith(expect.objectContaining({ surface: 'appearance' }));
   expect(calls.map(({ args }) => args)).toContainEqual([
     '-P', '5037', '-s', '87a33a4b', 'reverse',
     `tcp:${WINDOWS_A5_LIVE_RELOAD_PORT}`, `tcp:${WINDOWS_A5_LIVE_RELOAD_PORT}`

@@ -23,6 +23,7 @@ export function CompanionListRow(props: {
   meta?: ReactNode;
   onClick(): void;
   subtitle?: ReactNode;
+  testId?: string;
   title: ReactNode;
   titleClassName?: string;
 }) {
@@ -33,6 +34,7 @@ export function CompanionListRow(props: {
       className={`group flex min-h-14 w-full items-center gap-3 border-b border-companion-divider px-1 py-3 text-left transition-colors focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-companion-accent ${
         props.isCurrent ? 'bg-companion-subtle' : 'bg-transparent hover:bg-companion-subtle/60 active:bg-companion-subtle/80'
       }`}
+      data-testid={props.testId}
       onClick={props.onClick}
       type="button"
     >

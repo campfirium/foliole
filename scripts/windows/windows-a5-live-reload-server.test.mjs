@@ -64,6 +64,20 @@ it('includes a bounded WebView error in a visible readiness timeout', async () =
   await live.close();
 });
 
+it('navigates only the fixed Appearance acceptance surface before reporting ready', () => {
+  const plugin = createA5LiveReloadPlugin({
+    buildIdentity: 'dev-appearance', onDeviceError: vi.fn(), onDeviceLoad: vi.fn(), surface: 'appearance'
+  });
+  const script = plugin.transformIndexHtml.handler('<main></main>').tags.at(-1).children;
+  expect(script).toContain('companion-custom-css-settings');
+  expect(script).toContain('companion-settings-appearance');
+  expect(script).toContain('companion-tab-settings');
+  expect(script).toContain('companion-top-bar-left-action');
+  expect(script).toContain('companion-top-bar-back');
+  expect(script.indexOf('companion-top-bar-back')).toBeLessThan(script.indexOf('companion-tab-settings'));
+  expect(() => new Script(script)).not.toThrow();
+});
+
 it('owns compatible source transforms, device identity, and cleanup in one foreground lifecycle', async () => {
   const runtime = new EventEmitter();
   const middlewares = { use: vi.fn() };

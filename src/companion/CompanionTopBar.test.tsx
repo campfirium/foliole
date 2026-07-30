@@ -16,6 +16,7 @@ function expectStatusSlotInBackRow() {
   );
 
   expect(screen.getByRole('button', { name: 'Settings' }).closest('div')).toContainElement(screen.getByText('Sync status'));
+  expect(screen.getByRole('button', { name: 'Settings' })).toHaveAttribute('data-testid', 'companion-top-bar-back');
   expect(screen.getByRole('heading', { name: 'Device sync' })).toBeInTheDocument();
 }
 
@@ -54,6 +55,7 @@ describe('CompanionTopBar', () => {
     );
 
     expect(container.querySelector('header')?.className).toContain('pb-2');
+    expect(screen.getByRole('button', { name: 'Exit' })).toHaveAttribute('data-testid', 'companion-top-bar-left-action');
     expect(screen.getByRole('button', { name: 'Exit' }).className).toContain('h-9');
   });
 });

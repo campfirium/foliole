@@ -12,6 +12,7 @@ function SettingsListItem(props: {
   detail: string;
   Icon: LucideIcon;
   onClick(): void;
+  testId?: string;
   title: string;
 }) {
   return (
@@ -21,6 +22,7 @@ function SettingsListItem(props: {
       Icon={props.Icon}
       onClick={props.onClick}
       subtitle={props.detail}
+      testId={props.testId}
       title={props.title}
     />
   );
@@ -50,6 +52,7 @@ function DataAppearanceSettingsSection(props: {
         Icon={Palette}
         detail={t('companion.settings.appearance.detail')}
         onClick={props.onOpenAppearance}
+        testId="companion-settings-appearance"
         title={t('companion.settings.appearance.title')}
       />
     </SettingsListSection>

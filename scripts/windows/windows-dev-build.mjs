@@ -90,7 +90,7 @@ export async function runWindowsDevBuild({
   let directChildPid = null;
   try {
     if (platform !== 'win32') throw failure('Windows DEV action requires Windows', 64, 'platform');
-    if (!['build', 'deploy', 'live', 'verify'].includes(action)) throw failure('Unknown Windows DEV action', 64, 'request');
+    if (!['appearance', 'build', 'deploy', 'live', 'verify'].includes(action)) throw failure('Unknown Windows DEV action', 64, 'request');
     context = evidenceContext(paths, now, id, fsApi);
     const requiredTools = [paths.systemNode,
       ...(['build', 'deploy'].includes(action) ? [paths.systemNpmCli] : []),

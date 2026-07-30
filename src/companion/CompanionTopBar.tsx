@@ -12,12 +12,13 @@ type TopBarAction = {
   onClick(): void;
 };
 
-function TopBarIconButton(props: TopBarAction & { density: 'compact' | 'normal' }) {
+function TopBarIconButton(props: TopBarAction & { density: 'compact' | 'normal'; testId?: string }) {
   const Icon = props.icon;
   return (
     <button
       aria-label={props.label}
       className={`${props.density === 'compact' ? 'h-9 w-9' : 'h-10 w-10'} inline-flex items-center justify-center rounded-md text-companion-text-secondary transition hover:bg-bg-subtle/60 hover:text-foreground`}
+      data-testid={props.testId}
       onClick={props.onClick}
       type="button"
     >
@@ -36,7 +37,7 @@ function TopBarBackRow(props: {
   const t = useTranslation();
   return (
     <div className={`flex ${props.density === 'compact' ? 'min-h-9' : 'min-h-10'} items-center justify-between gap-3 ${props.hasTitleRow ? props.density === 'compact' ? 'mb-2' : 'mb-3' : ''}`}>
-      <button aria-label={props.backLabel ?? t('companion.back')} className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-companion-text-secondary transition hover:text-foreground" onClick={props.onBack} type="button">
+      <button aria-label={props.backLabel ?? t('companion.back')} className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-companion-text-secondary transition hover:text-foreground" data-testid="companion-top-bar-back" onClick={props.onBack} type="button">
         <ArrowLeft className="h-6 w-6 shrink-0" />
       </button>
       {props.rightSlot ? <div className="flex shrink-0 items-center gap-1">{props.rightSlot}</div> : null}
@@ -104,7 +105,7 @@ export function CompanionTopBar(props: {
       {hasTitleRow ? (
         <div className={`flex ${density === 'compact' ? 'min-h-9' : 'min-h-10'} items-center justify-between gap-3`}>
           <div className="flex w-10 justify-start">
-            {props.leftAction ? <TopBarIconButton {...props.leftAction} density={density} /> : null}
+            {props.leftAction ? <TopBarIconButton {...props.leftAction} density={density} testId="companion-top-bar-left-action" /> : null}
           </div>
           {props.title ? (
             <h1 className="min-w-0 flex-1 truncate text-center text-2xl font-semibold leading-tight text-foreground">{props.title}</h1>

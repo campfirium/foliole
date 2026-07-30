@@ -53,8 +53,11 @@ function createLoadTracker(buildIdentity, now) {
   };
 }
 
-export function createA5LiveReloadPlugin({ buildIdentity, onDeviceError, onDeviceLoad }) {
+export function createA5LiveReloadPlugin({ buildIdentity, onDeviceError, onDeviceLoad, surface = 'current' }) {
   const encodedIdentity = JSON.stringify(buildIdentity);
+  const readySelector = surface === 'appearance'
+    ? '[data-testid="companion-custom-css-settings"]'
+    : '[data-testid="companion-bottom-tab-bar"]';
   return {
     name: 'foliole-a5-live-reload-identity',
     configureServer(server) {
@@ -79,12 +82,20 @@ export function createA5LiveReloadPlugin({ buildIdentity, onDeviceError, onDevic
           "(event.filename||'unknown')+':'+(event.lineno||0)+':'+(event.colno||0)));",
           "addEventListener('unhandledrejection',(event)=>{const reason=event.reason;",
           "fail(reason&&reason.stack?reason.stack:(reason&&reason.message?reason.message:reason));});",
-          "const ready=()=>Boolean(document.querySelector('[data-testid=\"companion-bottom-tab-bar\"]'));",
+          `const ready=()=>Boolean(document.querySelector(${JSON.stringify(readySelector)}));`,
           `const report=()=>fetch('${LOADED_PATH}?identity='+encodeURIComponent(identity),`,
           "{cache:'no-store'}).catch(()=>{});",
           'const finish=()=>{if(observer)observer.disconnect();requestAnimationFrame(()=>requestAnimationFrame(report));};',
-          "if(ready()){finish();return;}observer=new MutationObserver(()=>{if(ready())finish();});",
-          "observer.observe(document.documentElement,{childList:true,subtree:true});})();"
+          "const click=(selector)=>{const target=document.querySelector(selector);",
+          "if(!target)return false;target.click();return true;};",
+          `const advance=()=>{if(ready()){finish();return;}if(${JSON.stringify(surface)}==='appearance'){`,
+          "if(click('[data-testid=\"companion-settings-appearance\"]'))return;",
+          "if(click('[data-testid=\"companion-top-bar-back\"]'))return;",
+          "if(click('[data-testid=\"companion-tab-settings\"]'))return;",
+          "if(click('[data-testid=\"companion-top-bar-left-action\"]'))return;",
+          '}};',
+          'observer=new MutationObserver(advance);',
+          "observer.observe(document.documentElement,{childList:true,subtree:true});advance();})();"
         ].join('');
         return {
           html: html.replace('<script type="module" src="/@vite/client"></script>', ''),
@@ -103,15 +114,17 @@ export async function startWindowsA5LiveReloadServer({
   createServerImpl = createServer,
   now = () => new Date(),
   repoRoot,
+  surface = 'current',
   timeoutMs = 45_000
 }) {
   if (!IDENTITY_PATTERN.test(buildIdentity || '')) throw liveReloadError('Invalid DEV build identity');
+  if (!['appearance', 'current'].includes(surface)) throw liveReloadError('Invalid DEV acceptance surface');
   const tracker = createLoadTracker(buildIdentity, now);
   const server = await createServerImpl({
     configFile: path.join(repoRoot, 'vite.companion.config.ts'),
     oxc: { target: 'chrome64' },
     plugins: [createA5LiveReloadPlugin({
-      buildIdentity, onDeviceError: tracker.recordError, onDeviceLoad: tracker.record
+      buildIdentity, onDeviceError: tracker.recordError, onDeviceLoad: tracker.record, surface
     })],
     server: {
       hmr: false, host: '127.0.0.1', port: WINDOWS_A5_LIVE_RELOAD_PORT, strictPort: true

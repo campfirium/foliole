@@ -52,12 +52,13 @@ export async function runWindowsA5LiveReload({
   paths,
   serial,
   startServer = startWindowsA5LiveReloadServer,
+  surface = 'current',
   verifyForeground
 }) {
   let primaryError = null;
   let reverseConfigured = false;
   let result;
-  const server = await startServer({ buildIdentity, repoRoot: paths.repoRoot });
+  const server = await startServer({ buildIdentity, repoRoot: paths.repoRoot, surface });
   try {
     const installed = await checked(execute, paths.adbPath, adbArgs(adbPort, serial,
       ['shell', 'pm', 'path', APP_ID]), adbOptions(env, 'live-package'), 'live-package');

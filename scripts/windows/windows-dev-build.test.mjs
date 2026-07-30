@@ -89,7 +89,7 @@ describe('Windows DEV foreground build', () => {
     expect(calls.some(({ command }) => command === 'cmd.exe')).toBe(false);
   });
 
-  it('keeps renderer-only live action out of build, sync, Gradle, and install', async () => {
+  it.each(['appearance', 'live'])('keeps renderer-only %s action out of build, sync, Gradle, and install', async (action) => {
     const { paths } = fixture();
     const { calls, execute } = successfulExecutor(paths);
     const prepareHost = vi.fn();
@@ -98,11 +98,11 @@ describe('Windows DEV foreground build', () => {
       output: 'live ok\n'
     }));
     const run = await runWindowsDevBuild({
-      action: 'live', deviceAction, execute, paths, platform: 'win32', prepareHost
+      action, deviceAction, execute, paths, platform: 'win32', prepareHost
     });
     expect(run).toMatchObject({
       exitCode: 0,
-      summary: { action: 'live', liveReload: { deviceLoads: 2 }, resultStatus: 'success' }
+      summary: { action, liveReload: { deviceLoads: 2 }, resultStatus: 'success' }
     });
     expect(prepareHost).not.toHaveBeenCalled();
     expect(calls.some(({ command }) => command === 'cmd.exe')).toBe(false);
@@ -137,7 +137,7 @@ it('holds a FileShare.None lock and invokes only absolute system Node', () => {
   expect(source).toContain('windows-dev-build.mjs');
   expect(source).not.toContain('Write-Error');
   expect(source).not.toContain('windows-android-lab\\runtime');
-  expect(actionSource).toContain('[ValidateSet("build", "deploy", "live", "verify")]');
+  expect(actionSource).toContain('[ValidateSet("appearance", "build", "deploy", "live", "verify")]');
   expect(actionSource).toContain('[System.IO.FileShare]::None');
   expect(actionSource.indexOf('& $systemNode $puller')).toBeLessThan(actionSource.indexOf('& $systemNode $runner $Action'));
   expect(actionSource).toContain('& $systemNode $runner $Action');

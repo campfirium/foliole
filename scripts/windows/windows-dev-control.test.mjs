@@ -17,11 +17,13 @@ it('accepts only fixed actions with an explicit LAN host', () => {
     .toMatchObject({ action: 'deploy' });
   expect(parseWindowsDevControlArgs(['--host', 'v\\dev@192.168.0.11', 'live'], {}))
     .toMatchObject({ action: 'live' });
+  expect(parseWindowsDevControlArgs(['--host', 'v\\dev@192.168.0.11', 'appearance'], {}))
+    .toMatchObject({ action: 'appearance' });
   expect(() => parseWindowsDevControlArgs(['--host', 'v\\dev@192.168.0.11', 'push'], {}))
-    .toThrow('only accepts build, deploy, live, or verify');
+    .toThrow('only accepts appearance, build, deploy, live, or verify');
   expect(() => parseWindowsDevControlArgs([
     '--host', 'v\\dev@192.168.0.11', 'verify', '--commit', 'a'.repeat(40)
-  ], {})).toThrow('only accepts build, deploy, live, or verify');
+  ], {})).toThrow('only accepts appearance, build, deploy, live, or verify');
 });
 
 it('pushes dev and then invokes the fixed Windows action', async () => {
