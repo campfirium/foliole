@@ -36,6 +36,7 @@ export function terminateProcessTree(pid, {
 
 export function executeBounded(command, args, {
   lineLimit = DEFAULT_LINE_LIMIT,
+  onSpawn = () => {},
   platform = process.platform,
   spawnImpl = spawn,
   terminateTree = terminateProcessTree,
@@ -46,6 +47,7 @@ export function executeBounded(command, args, {
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0) throw new Error('timeoutMs must be a positive integer');
   return new Promise((resolve, reject) => {
     const child = spawnImpl(command, args, { ...options, shell: false, stdio: ['ignore', 'pipe', 'pipe'] });
+    onSpawn(child);
     const lines = [];
     let output = '';
     let stderr = '';

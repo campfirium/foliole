@@ -27,6 +27,17 @@ it('terminates a timed out command tree and reports the stage error code', async
   expect(terminateTree).toHaveBeenCalledWith(42, { platform: process.platform });
 });
 
+it('reports the direct child immediately after spawn', async () => {
+  const child = hangingChild();
+  const onSpawn = vi.fn();
+  const running = executeBounded('builder.exe', [], {
+    onSpawn, spawnImpl: () => child, timeoutMs: 1_000
+  });
+  expect(onSpawn).toHaveBeenCalledWith(child);
+  child.emit('close', 0, null);
+  await expect(running).resolves.toMatchObject({ code: 0 });
+});
+
 it('uses taskkill with the child-tree flags on Windows', () => {
   const runCommand = vi.fn(() => ({ status: 0, stderr: '', stdout: '' }));
   terminateProcessTree(77, { platform: 'win32', runCommand });

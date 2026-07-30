@@ -16,7 +16,7 @@
 - 除原生权限、生命周期、intent、插件接缝与设备集成这类宿主特有能力外，Android 相关需求默认都应先复用或抽取 `src/shared/**` / `src/features/**` / 共享 contract；不得因为入口发生在 Android 就把节点列表、跳转逻辑、浏览语义、状态切换等非原生专属能力落到 Android / companion 私有实现。
 - Android 首轮交付优先验证存储、生命周期、同步入口与真实数据复习闭环；不得先扩展桌面级 UI 宽度或复杂编辑表面。
 - Android 权限、生命周期、文件访问、分享、intent、插件接缝改动，必须先核对 Capacitor 官方文档与 Android 官方文档。
-- 实体 Windows Android Lab 是 Android 原生宿主与 A5 设备操作的唯一执行端；Mac 只允许编辑源码、运行不启动 Android 宿主的静态 / TypeScript 测试，以及通过 `scripts/windows/windows-android-lab-control.mjs` 发送 commit-bound、受审计的 controller request。Mac 不得启动本地 ADB、Gradle、Android Studio、模拟器或 scrcpy。
+- 实体 Windows 开发机是 Android 原生宿主与 A5 设备操作的唯一执行端；Mac 只允许编辑源码、运行不启动 Android 宿主的静态 / TypeScript 测试，以及通过 `scripts/windows/windows-dev-control.mjs` 推送当前已提交 `dev`。设备 mutation 在固定 device adapter 收口前仍可使用既有受审计 Lab request。Mac 不得启动本地 ADB、Gradle、Android Studio、模拟器或 scrcpy。
 
 ## Legacy E-Reader Compatibility
 
@@ -41,7 +41,7 @@
 - Android 原生壳新增配置、权限或插件接入时，必须同步检查 `scripts/android/**` 现有工作流是否需要更新。
 - 除非用户明确要求，不得把 Android 特有实现回写成全仓默认路径。
 - Android / companion 侧凡会写入移动端 SQLite 的同步、复习、资源落库、cursor、配对或 workspace sync metadata 路径，必须经共享的 companion sync writer queue 串行化；已处在同一个 writer task 内部的内部 cursor 保存不得再次嵌套排队，避免自锁。
-- 实体 Windows Android Lab 使用普通本地 Git 仓库作为 A5 开发现场；Mac 推送当前已提交 `dev` 后，Windows 只做 fast-forward pull，再运行既有 A5 开发动作。Windows 不得提交 / 推送源码上游；Lab 仍使用独立 key、task、状态和证据根，禁止开放任意远程 shell。
+- 实体 Windows 开发机使用普通本地 `dev` Git 仓库作为 A5 开发现场；Mac 推送当前已提交 `dev` 后，Windows 只做 `git pull --ff-only lan dev`，再运行前台 build 或固定 A5 adapter。Windows 不得提交 / 推送源码上游；Git receive 使用独立 forced-command key，日常诊断与前台动作使用既有普通 SSH shell，不建立第二套源码或控制仓库。
 
 ## Validation
 
