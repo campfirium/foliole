@@ -25,6 +25,7 @@ function createLoadTracker(buildIdentity, now) {
   let sequence = 0;
   const waiters = [];
   const inputWaiters = [];
+  const timers = new Set();
   return {
     record(request) {
       const url = new URL(request.url, WINDOWS_A5_LIVE_RELOAD_URL);
@@ -43,12 +44,14 @@ function createLoadTracker(buildIdentity, now) {
       if (latest && latest.sequence > afterSequence) return Promise.resolve(latest);
       return new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
+          timers.delete(timer);
           const index = waiters.indexOf(onLoad);
           if (index >= 0) waiters.splice(index, 1);
           const detail = latestError ? `: ${latestError}` : '';
           reject(liveReloadError(`A5 did not load the current DEV build before timeout${detail}`, 'live-load'));
         }, timeoutMs);
-        const onLoad = (receipt) => { clearTimeout(timer); resolve(receipt); };
+        timers.add(timer);
+        const onLoad = (receipt) => { clearTimeout(timer); timers.delete(timer); resolve(receipt); };
         waiters.push(onLoad);
       });
     },
@@ -71,11 +74,21 @@ function createLoadTracker(buildIdentity, now) {
     waitForInput(timeoutMs) {
       if (latestInput) return Promise.resolve(latestInput);
       return new Promise((resolve, reject) => {
-        const timer = setTimeout(() => reject(liveReloadError(
-          'A5 did not request the bounded Search input action before timeout', 'live-input'
-        )), timeoutMs);
-        inputWaiters.push((point) => { clearTimeout(timer); resolve(point); });
+        const timer = setTimeout(() => {
+          timers.delete(timer);
+          reject(liveReloadError(
+            'A5 did not request the bounded Search input action before timeout', 'live-input'
+          ));
+        }, timeoutMs);
+        timers.add(timer);
+        inputWaiters.push((point) => {
+          clearTimeout(timer); timers.delete(timer); resolve(point);
+        });
       });
+    },
+    dispose() {
+      for (const timer of timers) clearTimeout(timer);
+      timers.clear();
     }
   };
 }
@@ -188,7 +201,7 @@ export async function startWindowsA5LiveReloadServer({
   }
   return {
     buildIdentity,
-    close: () => server.close(),
+    close: () => { tracker.dispose(); return server.close(); },
     url: WINDOWS_A5_LIVE_RELOAD_URL,
     waitForDeviceInput: () => tracker.waitForInput(timeoutMs),
     waitForDeviceLoad: (afterSequence = 0) => tracker.wait(afterSequence, timeoutMs)

@@ -60,12 +60,19 @@ export function runA5SecondaryAcceptance(config, acceptSearch) {
     });
 
   async function reachRootDirectory() {
+    await waitFor(() => (
+      document.querySelector('[data-testid="companion-tab-browse"]')
+      || document.querySelector('[data-testid="companion-top-bar-left-action"]')
+      || document.querySelector('[data-testid="companion-top-bar-back"]')
+      || document.querySelector('svg.lucide-chevron-left')
+      || document.querySelector('svg.lucide-x')
+    ), 'navigable companion surface', 15_000);
     for (let attempt = 0; attempt < 6; attempt += 1) {
       if (firstVisible('[data-testid="companion-tab-browse"]')) break;
       const exit = articleExit()
+        || document.querySelector('[data-testid="companion-top-bar-left-action"]')
         || closestButton('svg.lucide-x')
-        || firstVisible('[data-testid="companion-top-bar-left-action"]')
-        || topBack();
+        || document.querySelector('[data-testid="companion-top-bar-back"]');
       if (!exit) throw new Error(`Cannot return to the companion tab shell: ${JSON.stringify(visibleButtonSummary())}`);
       await click(exit, 'surface exit');
     }

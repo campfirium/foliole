@@ -91,6 +91,7 @@ it('injects only the bounded secondary-surface scenario and accepts its semantic
   plugin.configureServer({ middlewares });
   const script = plugin.transformIndexHtml.handler('<main></main>').tags.at(-1).children;
   expect(script).toContain('companion-directory-node-');
+  expect(script).toContain('navigable companion surface');
   expect(script).toContain('svg.lucide-x');
   expect(script).toContain('companion-search-input');
   expect(script).toContain('bounded-dev-rejection');
