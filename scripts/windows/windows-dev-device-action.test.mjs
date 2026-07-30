@@ -91,4 +91,5 @@ describe('Windows DEV fixed device action', () => {
 it('requires the exact A5 serial to be ready', () => {
   expect(() => assertFixedDevice('other\tdevice\n')).toThrow('is absent');
   expect(() => assertFixedDevice(`${WINDOWS_DEV_A5_SERIAL}\tunauthorized\n`)).toThrow('unauthorized');
+  expect(() => assertFixedDevice(`${WINDOWS_DEV_A5_SERIAL}    device product:marble\n`)).not.toThrow();
 });

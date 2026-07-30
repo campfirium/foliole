@@ -26,10 +26,10 @@ async function checked(execute, command, args, options, stage, exitCode = 74) {
 }
 
 export function assertFixedDevice(output) {
-  const row = String(output || '').split(/\r?\n/u).map((line) => line.trim())
-    .find((line) => line.startsWith(`${WINDOWS_DEV_A5_SERIAL}\t`));
+  const row = String(output || '').split(/\r?\n/u).map((line) => line.trim().split(/\s+/u))
+    .find(([serial]) => serial === WINDOWS_DEV_A5_SERIAL);
   if (!row) throw failure(`Fixed Android device ${WINDOWS_DEV_A5_SERIAL} is absent`, 69, 'device');
-  const state = row.split(/\s+/u)[1];
+  const state = row[1];
   if (state !== 'device') throw failure(`Fixed Android device ${WINDOWS_DEV_A5_SERIAL} is ${state}`, 69, 'device');
 }
 
