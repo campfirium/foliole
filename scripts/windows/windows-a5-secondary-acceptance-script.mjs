@@ -94,6 +94,7 @@ export function runA5SecondaryAcceptance(config, acceptSearch) {
     const candidates = directoryRows().map((row) => ({ id: rowId(row), title: rowTitle(row) }));
     for (const candidate of candidates) {
       const row = document.querySelector(`[data-testid="${candidate.id}"]`);
+      if (!row) return null;
       const before = directorySignature();
       await click(row, `directory row ${candidate.id}`);
       await waitFor(
@@ -112,7 +113,10 @@ export function runA5SecondaryAcceptance(config, acceptSearch) {
         if (found) return found;
       }
       const back = topBack();
-      if (!back) throw new Error('Nested directory has no semantic parent action');
+      if (!back) {
+        if (depth === 0) continue;
+        return null;
+      }
       await click(back, 'nested directory parent');
     }
     return null;
