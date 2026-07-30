@@ -92,6 +92,22 @@ it('surfaces remote output before rejecting missing live evidence', async () => 
   expect(stdout.write).toHaveBeenCalledWith('[windows-dev-action] status: OK\n');
 });
 
+it('copies fixed screenshot evidence from a failed live lifecycle before rejecting', async () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-dev-control-failure-'));
+  const remotePath = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/dev-3/a5-live.png';
+  const output = `[windows-dev-action] live identity=dev-3 screenshot=${remotePath}\n`;
+  const executeScp = vi.fn(async (args) => { fs.writeFileSync(args.at(-1), 'png'); return ''; });
+  const remoteError = Object.assign(new Error('remote failed'), { output });
+  await expect(runWindowsDevControl({
+    argv: ['--host', 'v\\dev@192.168.0.11', 'live'], env: {}, executeGit: vi.fn(async () => ''),
+    executeScp, executeSsh: vi.fn(async () => { throw remoteError; }),
+    repoRoot, stdout: { write: vi.fn() }
+  })).rejects.toThrow('remote failed');
+  expect(executeScp).toHaveBeenCalledOnce();
+  expect(fs.existsSync(path.join(repoRoot, '.tmp', 'artifacts', 'a5-live-reload', 'dev-3.png'))).toBe(true);
+  fs.rmSync(repoRoot, { force: true, recursive: true });
+});
+
 it('does not resolve or compare commit identifiers', () => {
   const source = fs.readFileSync('scripts/windows/windows-dev-control.mjs', 'utf8');
   expect(source).not.toMatch(/rev-parse|show-current|commitSha|COMMIT_SHA/u);

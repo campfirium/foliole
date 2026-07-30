@@ -20,9 +20,12 @@ function execute(command, args, options = {}) {
     child.stdout.on('data', (chunk) => { stdout += chunk; });
     child.stderr.on('data', (chunk) => { stderr += chunk; });
     child.on('error', reject);
-    child.on('close', (code) => code === 0
-      ? resolve(stdout)
-      : reject(new Error(stderr.trim() || `${command} exited ${code}`)));
+    child.on('close', (code) => {
+      if (code === 0) return resolve(stdout);
+      const error = new Error(stderr.trim() || `${command} exited ${code}`);
+      error.output = `${stdout}${stderr}`;
+      reject(error);
+    });
   });
 }
 
@@ -89,8 +92,15 @@ export async function runWindowsDevControl({
   const { action, host } = parseWindowsDevControlArgs(argv, env);
   const spec = windowsDevPushSpec(host, env);
   await executeGit(spec.args, { env: spec.env });
-  const remoteOutput = await executeSsh(windowsDevSshSpec(host, action, env), { env });
-  if (remoteOutput) stdout.write(remoteOutput);
+  let remoteError = null;
+  let remoteOutput = '';
+  try {
+    remoteOutput = await executeSsh(windowsDevSshSpec(host, action, env), { env });
+  } catch (error) {
+    remoteError = error;
+    remoteOutput = error.output || error.message;
+  }
+  if (remoteOutput && !remoteError) stdout.write(remoteOutput);
   const result = { action, operation: 'complete', ref: WINDOWS_DEV_SOURCE_REF };
   if (['deploy', 'live'].includes(action)) {
     const evidence = parseWindowsDevLiveEvidence(remoteOutput);
@@ -100,6 +110,7 @@ export async function runWindowsDevControl({
     await executeScp(windowsDevScpSpec(host, evidence.remotePath, screenshotPath, env), { env });
     result.screenshotPath = screenshotPath;
   }
+  if (remoteError) throw remoteError;
   return result;
 }
 

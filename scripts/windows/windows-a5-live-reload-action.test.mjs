@@ -72,10 +72,17 @@ it('removes reverse and closes the server after a device load failure', async ()
   const { calls, execute } = createExecutor(evidenceRoot);
   const failure = Object.assign(new Error('load timeout'), { exitCode: 74, stage: 'live-load' });
   const server = createServer({ waitForDeviceLoad: vi.fn(async () => { throw failure; }) });
-  await expect(runWindowsA5LiveReload({
-    adbPort: '5037', buildIdentity: 'dev-2', env: {}, evidenceRoot, execute, paths,
-    serial: '87a33a4b', startServer: vi.fn(async () => server), verifyForeground: vi.fn()
-  })).rejects.toMatchObject({ stage: 'live-load' });
+  let received;
+  try {
+    await runWindowsA5LiveReload({
+      adbPort: '5037', buildIdentity: 'dev-2', env: {}, evidenceRoot, execute, paths,
+      serial: '87a33a4b', startServer: vi.fn(async () => server), verifyForeground: vi.fn()
+    });
+  } catch (error) { received = error; }
+  expect(received).toMatchObject({
+    stage: 'live-load',
+    liveReload: { buildIdentity: 'dev-2', screenshotPath: path.join(evidenceRoot, 'a5-live.png') }
+  });
   expect(calls.some(({ args }) => args.includes('--remove'))).toBe(true);
   expect(server.close).toHaveBeenCalledOnce();
 });

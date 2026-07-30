@@ -84,6 +84,14 @@ export async function runWindowsA5LiveReload({
     };
   } catch (error) {
     primaryError = error;
+    try {
+      const screenshotPath = await captureScreenshot(
+        execute, paths, env, adbPort, serial, evidenceRoot
+      );
+      primaryError.liveReload = { buildIdentity, screenshotPath, serverUrl: server.url };
+    } catch {
+      // Preserve the primary lifecycle failure when diagnostic capture is unavailable.
+    }
   }
   let cleanupError = null;
   if (reverseConfigured) {

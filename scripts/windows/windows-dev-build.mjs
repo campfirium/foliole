@@ -138,7 +138,8 @@ export async function runWindowsDevBuild({
     }
     const summary = { action, completedAt: now().toISOString(), directChildPid, exitCode,
       failureStage: error.stage || 'entry', message: error.message, resultStatus: 'failure',
-      runId: context?.runId ?? null, schemaVersion: 1, startedAt };
+      runId: context?.runId ?? null, schemaVersion: 1, startedAt,
+      ...(error.liveReload ? { liveReload: error.liveReload } : {}) };
     if (context) writeJson(fsApi, context.summaryPath, summary);
     return { exitCode, summary, summaryPath: context?.summaryPath ?? null };
   }
