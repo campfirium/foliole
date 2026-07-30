@@ -108,7 +108,9 @@ it('holds a FileShare.None lock and invokes only absolute system Node', () => {
   const source = fs.readFileSync('scripts/windows/windows-dev-build.ps1', 'utf8');
   expect(source).toContain('[System.IO.FileShare]::None');
   expect(source).toContain('C:\\Program Files\\nodejs\\node.exe');
+  expect(source).toContain('[Console]::Error.WriteLine');
   expect(source).toContain('exit 73');
   expect(source).toContain('windows-dev-build.mjs');
+  expect(source).not.toContain('Write-Error');
   expect(source).not.toContain('windows-android-lab\\runtime');
 });

@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
 if ($args.Count -ne 0) {
-  Write-Error "Windows DEV build accepts no arguments."
+  [Console]::Error.WriteLine("Windows DEV build accepts no arguments.")
   exit 64
 }
 
@@ -12,7 +12,7 @@ $lockPath = Join-Path $env:LOCALAPPDATA "Foliole\windows-dev-control\build.lock"
 $lockDirectory = Split-Path -Parent $lockPath
 
 if (-not (Test-Path -LiteralPath $systemNode -PathType Leaf)) {
-  Write-Error "System Node is missing at $systemNode"
+  [Console]::Error.WriteLine("System Node is missing at $systemNode")
   exit 64
 }
 
@@ -25,7 +25,7 @@ try {
     [System.IO.FileShare]::None
   )
 } catch [System.IO.IOException] {
-  Write-Error "Another Windows DEV build owns the foreground slot."
+  [Console]::Error.WriteLine("Another Windows DEV build owns the foreground slot.")
   exit 73
 }
 
