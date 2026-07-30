@@ -22,7 +22,7 @@ function SettingsListItem(props: {
       Icon={props.Icon}
       onClick={props.onClick}
       subtitle={props.detail}
-      testId={props.testId}
+      {...(props.testId ? { testId: props.testId } : {})}
       title={props.title}
     />
   );

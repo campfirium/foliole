@@ -30,7 +30,8 @@ it('injects a build identity beacon and accepts only the matching load', () => {
     attrs: { content: 'dev-123', name: 'foliole-a5-dev-build' }, tag: 'meta'
   }));
   const injectedScript = tags.find(({ tag }) => tag === 'script').children;
-  expect(injectedScript).toContain('companion-bottom-tab-bar');
+  expect(injectedScript).toContain('companion-scroll-container');
+  expect(injectedScript).not.toContain('companion-bottom-tab-bar');
   expect(injectedScript).toContain('MutationObserver');
   expect(injectedScript).toContain('getBoundingClientRect');
   expect(injectedScript).toContain('setTimeout');

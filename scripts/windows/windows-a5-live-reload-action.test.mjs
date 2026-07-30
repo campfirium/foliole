@@ -43,7 +43,7 @@ function createServer(overrides = {}) {
   };
 }
 
-it('loads and reloads the installed shell without Gradle or APK install', async () => {
+it('loads the installed shell once without Gradle or APK install', async () => {
   const { evidenceRoot, paths } = fixture();
   const { calls, execute } = createExecutor(evidenceRoot);
   const server = createServer();
@@ -53,14 +53,14 @@ it('loads and reloads the installed shell without Gradle or APK install', async 
     adbPort: '5037', buildIdentity: 'dev-1', env: {}, evidenceRoot, execute, paths,
     serial: '87a33a4b', startServer, surface: 'appearance', verifyForeground
   });
-  expect(run.liveReload).toMatchObject({ buildIdentity: 'dev-1', deviceLoads: 2 });
+  expect(run.liveReload).toMatchObject({ buildIdentity: 'dev-1', deviceLoads: 1 });
   expect(startServer).toHaveBeenCalledWith(expect.objectContaining({ surface: 'appearance' }));
   expect(calls.map(({ args }) => args)).toContainEqual([
     '-P', '5037', '-s', '87a33a4b', 'reverse',
     `tcp:${WINDOWS_A5_LIVE_RELOAD_PORT}`, `tcp:${WINDOWS_A5_LIVE_RELOAD_PORT}`
   ]);
-  expect(calls.filter(({ args }) => args.includes('force-stop'))).toHaveLength(2);
-  expect(calls.filter(({ args }) => args.includes('start'))).toHaveLength(2);
+  expect(calls.filter(({ args }) => args.includes('force-stop'))).toHaveLength(1);
+  expect(calls.filter(({ args }) => args.includes('start'))).toHaveLength(1);
   expect(verifyForeground).toHaveBeenCalledOnce();
   expect(calls.flatMap(({ args }) => args)).not.toContain('install');
   expect(calls.flatMap(({ args }) => args).join(' ')).not.toMatch(/gradle/iu);

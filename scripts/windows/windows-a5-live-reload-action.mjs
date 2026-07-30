@@ -73,18 +73,12 @@ export async function runWindowsA5LiveReload({
     await checked(execute, paths.adbPath, adbArgs(adbPort, serial,
       ['shell', 'am', 'start', '-n', COMPONENT]), adbOptions(env, 'live-launch'), 'live-launch');
     const launched = await firstLoad;
-    const reloadedPromise = server.waitForDeviceLoad(launched.sequence);
-    await checked(execute, paths.adbPath, adbArgs(adbPort, serial,
-      ['shell', 'am', 'force-stop', APP_ID]), adbOptions(env, 'live-reload'), 'live-reload');
-    await checked(execute, paths.adbPath, adbArgs(adbPort, serial,
-      ['shell', 'am', 'start', '-n', COMPONENT]), adbOptions(env, 'live-reload'), 'live-reload');
-    const reloaded = await reloadedPromise;
     await verifyForeground();
     const screenshotPath = await captureScreenshot(
       execute, paths, env, adbPort, serial, evidenceRoot
     );
     result = {
-      buildIdentity, deviceLoads: reloaded.sequence, screenshotPath, serverUrl: server.url
+      buildIdentity, deviceLoads: launched.sequence, screenshotPath, serverUrl: server.url
     };
   } catch (error) {
     primaryError = error;

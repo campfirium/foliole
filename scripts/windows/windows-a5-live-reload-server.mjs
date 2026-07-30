@@ -57,7 +57,7 @@ export function createA5LiveReloadPlugin({ buildIdentity, onDeviceError, onDevic
   const encodedIdentity = JSON.stringify(buildIdentity);
   const readySelector = surface === 'appearance'
     ? '[data-testid="companion-custom-css-settings"]'
-    : '[data-testid="companion-bottom-tab-bar"]';
+    : '[data-testid="companion-scroll-container"]';
   return {
     name: 'foliole-a5-live-reload-identity',
     configureServer(server) {
