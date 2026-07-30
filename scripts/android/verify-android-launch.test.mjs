@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -8,6 +9,11 @@ import {
 } from './verify-android-launch.mjs';
 
 describe('verify-android-launch helpers', () => {
+  it('uses the cross-platform direct CLI entry contract', () => {
+    const source = fs.readFileSync('scripts/android/verify-android-launch.mjs', 'utf8');
+    expect(source).toContain('pathToFileURL(path.resolve(process.argv[1])).href');
+  });
+
   it('extracts top resumed activity from modern dumpsys output', () => {
     const output = [
       'topResumedActivity=ActivityRecord{123 u0 com.foliole.android/.MainActivity t12}',

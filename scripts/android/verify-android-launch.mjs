@@ -1,6 +1,8 @@
 /* global console, process, setTimeout */
 
 import { execFile } from 'node:child_process';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
@@ -191,6 +193,6 @@ async function main() {
   console.log(`[android-launch-check] focusedWindow=${result.state.focusedWindow}`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   await main();
 }

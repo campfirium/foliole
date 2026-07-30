@@ -14,6 +14,7 @@ describe('Android device data protection', () => {
 
     expect(existenceCheck).toBeGreaterThan(-1);
     expect(databaseRead).toBeGreaterThan(existenceCheck);
+    expect(source).toContain('pathToFileURL(path.resolve(process.argv[1])).href');
   });
 
   it('fails closed when a protection snapshot cannot prove a readable database', () => {

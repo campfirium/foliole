@@ -5,6 +5,7 @@ import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
+import { pathToFileURL } from 'node:url';
 import { backupDatabase, writeManifest } from './android-data-backup-files.mjs';
 import { assertReadableDatabase } from './android-data-protection-validation.mjs';
 import { classifyInstallerClearAppDataEvents } from './android-install-events.mjs';
@@ -232,6 +233,6 @@ async function main() {
   console.log(JSON.stringify(snapshot, null, 2));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   await main();
 }
