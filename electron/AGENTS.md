@@ -40,9 +40,9 @@
 
 ## Windows Native Shell Policy
 
-- Windows 开发机使用普通局域网 SSH 进入 PowerShell；Mac 只通过 `node scripts/windows/windows-dev-control.mjs --host <host> push` 把当前已提交 `dev` 快进推到独立 forced-command Git receiver，Windows 单仓再运行 `scripts/windows/windows-dev-build.ps1` 做 `pull --ff-only lan dev` 与前台 build。
-- Windows DEV receiver 与 build 只允许使用 `C:\Program Files\nodejs\node.exe`，不得回退到旧 Lab runtime、PATH 自动发现或 portable Node。旧 scheduled Lab 在迁移完成前仅保留既有设备能力，不参与新 source/build 验收。
-- 仍需旧 Lab 的设备自动化必须绑定 Mac 本次推送的 commit 和目标 A5 identity；诊断脚本只写入当前 run evidence sandbox。清数据、re-pair、Lab 根外读取、提权、防火墙或系统级修改必须在执行前返回 `approval_required`，不得提供远程 approval bypass。
+- Windows 开发机使用普通局域网 SSH 进入 PowerShell；Mac 通过 `node scripts/windows/windows-dev-control.mjs --host <host> push` 自动解析并快进推送当前 `dev` 的最新已提交 HEAD，Windows 单仓再运行 `scripts/windows/windows-dev-build.ps1` 做 `pull --ff-only lan dev` 与前台 build。调用方不传目标 SHA；push/build 摘要记录实际 SHA 供审计。
+- Windows DEV receiver 与 build 只允许使用 `C:\Program Files\nodejs\node.exe`，不得回退到旧 Lab runtime、PATH 自动发现或 portable Node。旧 scheduled Lab、旧 receiver 与第二 checkout 不作为 source/build 或 A5 设备 fallback。
+- A5 设备自动化必须由固定 device adapter 消费 Windows 单仓 fast-forward 后的最新 `dev` 和目标 A5 identity；调用方不选或手填 commit，实际执行 SHA 由 adapter 自动记录。adapter 尚未可用时停止设备动作，不恢复旧 Lab request。清数据、re-pair、Lab 根外读取、提权、防火墙或系统级修改必须在执行前返回 `approval_required`，不得提供远程 approval bypass。
 - Windows 原生 Codex 会话可以使用 PowerShell 作为默认交互 shell，但 PowerShell 只用于短命令、文件读取、状态检查和运行已存在脚本；不得把 PowerShell 当成通用脚本语言来内联复杂流程。
 - 涉及环境变量、后台进程、重定向、路径拼接、Electron 启动或多步 Windows 命令时，必须优先写成 Node `.mjs` runner；确实需要 Windows 宿主能力时，使用已提交的 `.ps1` / `.cmd` 文件入口，并通过简单 `-File` 或脚本路径调用。
 - Windows 原生 Codex 检查或控制 Windows Electron dev runtime 时，优先使用 `npm run windows:client:native -- <status|start|stop|restart|full-restart>`；该入口参照既有 ready marker / bridge marker 信任语义，但用 Node 原生进程控制直接启动 `electron-dev-native.mjs`，避免旧 PowerShell client wrapper 和 inline command 转义。

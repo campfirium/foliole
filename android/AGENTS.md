@@ -16,7 +16,7 @@
 - 除原生权限、生命周期、intent、插件接缝与设备集成这类宿主特有能力外，Android 相关需求默认都应先复用或抽取 `src/shared/**` / `src/features/**` / 共享 contract；不得因为入口发生在 Android 就把节点列表、跳转逻辑、浏览语义、状态切换等非原生专属能力落到 Android / companion 私有实现。
 - Android 首轮交付优先验证存储、生命周期、同步入口与真实数据复习闭环；不得先扩展桌面级 UI 宽度或复杂编辑表面。
 - Android 权限、生命周期、文件访问、分享、intent、插件接缝改动，必须先核对 Capacitor 官方文档与 Android 官方文档。
-- 实体 Windows 开发机是 Android 原生宿主与 A5 设备操作的唯一执行端；Mac 只允许编辑源码、运行不启动 Android 宿主的静态 / TypeScript 测试，以及通过 `scripts/windows/windows-dev-control.mjs` 推送当前已提交 `dev`。设备 mutation 在固定 device adapter 收口前仍可使用既有受审计 Lab request。Mac 不得启动本地 ADB、Gradle、Android Studio、模拟器或 scrcpy。
+- 实体 Windows 开发机是 Android 原生宿主与 A5 设备操作的唯一执行端；Mac 只允许编辑源码、运行不启动 Android 宿主的静态 / TypeScript 测试，以及通过 `scripts/windows/windows-dev-control.mjs` 推送当前已提交 `dev`。设备 mutation 只走固定 device adapter；adapter 尚未收口时停止，不恢复旧 Lab request、第二 checkout 或 SHA 选择入口。Mac 不得启动本地 ADB、Gradle、Android Studio、模拟器或 scrcpy。
 
 ## Legacy E-Reader Compatibility
 
@@ -41,16 +41,17 @@
 - Android 原生壳新增配置、权限或插件接入时，必须同步检查 `scripts/android/**` 现有工作流是否需要更新。
 - 除非用户明确要求，不得把 Android 特有实现回写成全仓默认路径。
 - Android / companion 侧凡会写入移动端 SQLite 的同步、复习、资源落库、cursor、配对或 workspace sync metadata 路径，必须经共享的 companion sync writer queue 串行化；已处在同一个 writer task 内部的内部 cursor 保存不得再次嵌套排队，避免自锁。
-- 实体 Windows 开发机使用普通本地 `dev` Git 仓库作为 A5 开发现场；Mac 推送当前已提交 `dev` 后，Windows 只做 `git pull --ff-only lan dev`，再运行前台 build 或固定 A5 adapter。Windows 不得提交 / 推送源码上游；Git receive 使用独立 forced-command key，日常诊断与前台动作使用既有普通 SSH shell，不建立第二套源码或控制仓库。
+- 实体 Windows 开发机使用普通本地 `dev` Git 仓库作为 A5 开发现场；每次动作由 Mac controller 自动推送当前 `dev` 的最新已提交 HEAD，Windows 只做 `git pull --ff-only lan dev`，再运行前台 build 或固定 A5 adapter。调用方不选择目标 revision，实际 SHA 只写入运行证据。Windows 不得提交 / 推送源码上游；Git receive 使用独立 forced-command key，日常诊断与前台动作使用既有普通 SSH shell，不建立第二套源码或控制仓库。
+- 固定 ADB port 是 device adapter 的命令 contract，不是常驻 server contract；普通 SSH 动作必须在同一前台生命周期内以固定 port 和显式 serial 完成冷启动、设备操作与收口，不得要求 ADB server 跨 SSH 会话存活，也不得为保活引入 detached process、logon task、service、broker、无线或 GUI fallback。
 
 ## Validation
 
-- Android / Capacitor 相关改动默认先执行覆盖本轮能力闭环的最小验证；A5 日常开发验收优先走 Windows Lab DEV mode（companion dev server、reverse、app restart，必要时 cap sync + Gradle + install），CI 级 clean / bundled / release-like 终检只在发布、T5 或用户明确要求时升级。只有当能力闭环触及移动宿主根链路、Capacitor 宿主 / bridge 主链路、共享层 / 依赖、跨宿主联动、或你无法用相关验证证明影响已被覆盖时，才升级为 `npm run quality:android`、`npm run quality:shared` 或 `npm run quality:release`；`npm run quality:full` 只覆盖仓库级 JS/TS、桌面构建与 companion Web 构建，不跑 Android 原生宿主检查。
-- 若改动触及 Android 权限、生命周期、Capacitor 插件、intent、安装 / 启动链路，或问题只会在模拟器 / 设备上暴露，必须将已提交的 clean `dev` 精确 HEAD 通过 Windows Android Lab 固定 LAN ref 交给 Windows 执行对应 `quality:android:device` / preview；Mac 本地不得替代该验收。
-- Android 设备 serial、ADB、Gradle、安装、启动、截图、logcat、数据保护与镜像窗口只由 Windows worker 解析和执行；Mac controller 不接受任意远程 shell、working-tree 传输或“唯一 ready 设备”推断。
+- Android / Capacitor 相关改动默认先执行覆盖本轮能力闭环的最小验证；A5 日常开发验收走 Windows 固定 DEV device adapter（companion dev server、reverse、app restart，必要时 cap sync + Gradle + install），CI 级 clean / bundled / release-like 终检只在发布、T5 或用户明确要求时升级。只有当能力闭环触及移动宿主根链路、Capacitor 宿主 / bridge 主链路、共享层 / 依赖、跨宿主联动、或你无法用相关验证证明影响已被覆盖时，才升级为 `npm run quality:android`、`npm run quality:shared` 或 `npm run quality:release`；`npm run quality:full` 只覆盖仓库级 JS/TS、桌面构建与 companion Web 构建，不跑 Android 原生宿主检查。
+- 若改动触及 Android 权限、生命周期、Capacitor 插件、intent、安装 / 启动链路，或问题只会在模拟器 / 设备上暴露，必须由 controller 自动把 Mac 当前 `dev` 的最新已提交 HEAD 推给 Windows，再执行对应 `quality:android:device` / preview；不要求 working tree clean，也不要求调用方手工绑定 SHA，Mac 本地不得替代该验收。
+- Android 设备 serial、ADB、Gradle、安装、启动、截图、logcat、数据保护与镜像窗口只由 Windows 固定 device adapter 解析和执行；Mac controller 不接受任意远程 shell、working-tree 传输或“唯一 ready 设备”推断。
 - Android 调试命令不得批量弹出终端窗口：自动化验证、ADB、PowerShell、Node、bash、截图、sync、deploy 等后台步骤必须使用隐藏窗口或无窗口进程；只有用户明确要操作手机时，才允许打开一个可见的 `scrcpy` 设备镜像窗口。
-- Android companion UI 的人工验收默认以 Windows Lab 连接的 A5 真机为准；Windows worker 运行 `android:preview` 或 `quality:android:device` 并回传结构化状态、截图与日志，Mac 只负责发起和读取 evidence。
+- Android companion UI 的人工验收默认以 Windows 固定 device adapter 连接的 A5 真机为准；adapter 运行 `android:preview` 或 `quality:android:device` 并回传结构化状态、截图与日志，Mac 只负责发起和读取 evidence。
 - 高频 companion UI 迭代需要真实 WebView、SQLite 或 Capacitor bridge 时，也由 Windows device adapter 运行 dev-server preview；它不替代 Windows 上最终的 `android:preview` / `quality:android:device` 验收。
 - `npm run android:web:dev` 是跨宿主前台 companion Web 诊断入口；`android:preview:dev-server` 的 detached companion service 只由 Windows device adapter 管理，两者不得共用后台 service 或 PID/state 协议。
 - `npm run android:preview:lite` 仍属于 Windows 真机预览链路的轻参数包装，不是浏览器 Web 轻量预览。
-- Windows worker 内部继续使用 `package.json` 中已有的 `npm run quality:android*` 与 `npm run android:*`；Mac 只使用受限 Windows Android Lab controller，不直接运行这些宿主脚本，也不口头推荐裸 Gradle、adb 或 Capacitor 命令。
+- Windows device adapter 内部继续使用 `package.json` 中已有的 `npm run quality:android*` 与 `npm run android:*`；Mac 只使用受限 DEV controller，不直接运行这些宿主脚本，也不口头推荐裸 Gradle、adb 或 Capacitor 命令。

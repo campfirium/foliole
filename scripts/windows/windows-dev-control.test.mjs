@@ -11,6 +11,9 @@ it('accepts only push with an explicit LAN host', () => {
     .toEqual({ host: 'v\\dev@192.168.0.11' });
   expect(() => parseWindowsDevControlArgs(['--host', 'v\\dev@192.168.0.11', 'build'], {}))
     .toThrow('only accepts push');
+  expect(() => parseWindowsDevControlArgs([
+    '--host', 'v\\dev@192.168.0.11', 'push', '--commit', 'a'.repeat(40)
+  ], {})).toThrow('only accepts push');
 });
 
 it('pushes the current dev commit to refs/heads/dev through the fixed receiver name', async () => {
@@ -29,6 +32,7 @@ it('pushes the current dev commit to refs/heads/dev through the fixed receiver n
   expect(calls.at(-1)).toEqual([
     'push', '--porcelain', 'v\\dev@192.168.0.11:foliole-dev.git', `${sha}:refs/heads/dev`
   ]);
+  expect(calls.some((args) => args.includes('status'))).toBe(false);
 });
 
 it('uses only the dedicated Git key and strict host checking', () => {
