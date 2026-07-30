@@ -2,7 +2,6 @@ import { registerPlugin } from '@capacitor/core';
 
 import type { NativeCompanionBootstrapState } from '../../../lib/platform/nativeCompanionContract';
 
-import { initializeIosCompanionDatabase } from './companion/runtime/iosCompanionDatabaseBootstrap';
 import { getCompanionRuntimeCapability, requireAvailableCompanionRuntime } from './companionRuntimeCapabilities';
 
 const WEB_DEVICE_ID_KEY = 'foliole-companion-web-device-id';
@@ -102,7 +101,11 @@ export async function loadCompanionBootstrapState(): Promise<NativeCompanionBoot
   if (!result) {
     throw new Error('Native companion bootstrap returned an invalid payload.');
   }
-  return runtime.kind === 'ios-native' ? initializeIosCompanionDatabase(result) : result;
+  if (runtime.kind !== 'ios-native') {
+    return result;
+  }
+  const { initializeIosCompanionDatabase } = await import('./companion/runtime/iosCompanionDatabaseBootstrap');
+  return initializeIosCompanionDatabase(result);
 }
 
 export { normalizeCompanionBootstrapState };
