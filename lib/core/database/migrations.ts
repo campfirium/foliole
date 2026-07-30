@@ -1,9 +1,10 @@
+import { DATABASE_SCHEMA_VERSION } from './databaseSchemaVersion.js';
 import { readUserVersion, setUserVersion } from './databaseUserVersion.js';
 import { DESKTOP_FRESH_SCHEMA_STATEMENTS } from './desktopFreshSchemaStatements.js';
 import type { DatabaseConnectionLike, DatabaseMigrationTarget } from './migrationTypes.js';
 import { applyNumberedSchemaMigrations } from './numberedMigrations.js';
 
-export const DATABASE_SCHEMA_VERSION = 62;
+export { DATABASE_SCHEMA_VERSION } from './databaseSchemaVersion.js';
 
 const LEGACY_REBUILD_REQUIRED_MESSAGE =
   'existing database schema is no longer supported; reset foliole.db and initialize fresh schema';

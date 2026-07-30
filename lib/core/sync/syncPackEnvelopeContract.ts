@@ -1,4 +1,4 @@
-import { DATABASE_SCHEMA_VERSION } from '../database/migrations.js';
+import { DATABASE_SCHEMA_VERSION } from '../database/databaseSchemaVersion.js';
 
 import { SYNC_PACK_TABLE_NAMES } from './syncPackManifest.js';
 import {

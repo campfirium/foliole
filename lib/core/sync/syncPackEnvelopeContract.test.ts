@@ -2,7 +2,7 @@
 
 import { expect, it } from 'vitest';
 
-import { DATABASE_SCHEMA_VERSION } from '../database/migrations.js';
+import { DATABASE_SCHEMA_VERSION } from '../database/databaseSchemaVersion.js';
 
 import {
   SYNC_PACK_ENVELOPE_CONTRACT,
