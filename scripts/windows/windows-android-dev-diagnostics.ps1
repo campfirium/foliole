@@ -70,10 +70,10 @@ function Get-ListeningPorts {
     })
 }
 
-function Get-AdbProcesses($Listeners) {
+function Get-AdbProcesses([AllowEmptyCollection()][object[]]$ListenerRecords = @()) {
   $ids = @(Get-CimInstance Win32_Process -Filter "Name = 'adb.exe'" -ErrorAction Stop |
     ForEach-Object { [int]$_.ProcessId })
-  $listenerIds = @($Listeners | ForEach-Object { [int]$_.owningProcess })
+  $listenerIds = @($ListenerRecords | ForEach-Object { [int]$_.owningProcess })
   return @(@($ids + $listenerIds) | Sort-Object -Unique | ForEach-Object {
     $record = Get-ProcessRecord $_ $true
     if ($record.name -ieq "adb.exe") { $record }
@@ -167,7 +167,7 @@ function Get-SshSessionSummary {
 }
 
 if (!(Test-Path -LiteralPath $RepoRoot -PathType Container)) { throw "Repository root is missing" }
-$listeners = Get-ListeningPorts
+$listeners = @(Get-ListeningPorts)
 $pnpDevices = @(Get-CimInstance Win32_PnPEntity -ErrorAction Stop |
   Where-Object { $_.PNPClass -in @("AndroidUsbDeviceClass", "USB", "WPD") } |
   ForEach-Object {
@@ -176,7 +176,7 @@ $pnpDevices = @(Get-CimInstance Win32_PnPEntity -ErrorAction Stop |
 
 [ordered]@{
   adbClient = Get-AdbClientRecord
-  adbProcesses = @(Get-AdbProcesses $listeners)
+  adbProcesses = @(Get-AdbProcesses -ListenerRecords $listeners)
   authorizedKeys = Get-AuthorizedKeysSummary
   capturedAt = [DateTime]::UtcNow.ToString("o")
   listeners = @($listeners)

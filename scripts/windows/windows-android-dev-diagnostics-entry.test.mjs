@@ -129,6 +129,8 @@ describe('Windows Android DEV diagnostic entry', () => {
     expect(powershell).toContain('Get-CimInstance Win32_PnPEntity');
     expect(powershell).toContain('Get-ScheduledTask -ErrorAction Stop');
     expect(powershell).toContain('resolutionSource = "local-app-data-android-sdk"');
+    expect(powershell).toContain('$listeners = @(Get-ListeningPorts)');
+    expect(powershell).toContain('[AllowEmptyCollection()][object[]]$ListenerRecords = @()');
     expect(powershell).not.toContain('Get-Command adb.exe');
     expect(powershell).not.toMatch(/kill-server|start-server|\badb(?:\.exe)?\s+connect\b|Restart-Service|Register-ScheduledTask/iu);
     expect(entry).toContain("'.tmp', 'artifacts', 'windows-android-dev'");
