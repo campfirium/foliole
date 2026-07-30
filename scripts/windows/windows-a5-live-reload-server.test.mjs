@@ -1,6 +1,7 @@
 // @vitest-environment node
 
 import { EventEmitter } from 'node:events';
+import { Script } from 'node:vm';
 import { expect, it, vi } from 'vitest';
 
 import {
@@ -13,7 +14,11 @@ function request(url) {
 
 it('injects a build identity beacon and accepts only the matching load', () => {
   const loads = [];
-  const plugin = createA5LiveReloadPlugin({ buildIdentity: 'dev-123', onDeviceLoad: (value) => loads.push(value) || true });
+  const errors = [];
+  const plugin = createA5LiveReloadPlugin({
+    buildIdentity: 'dev-123', onDeviceError: (value) => errors.push(value) || true,
+    onDeviceLoad: (value) => loads.push(value) || true
+  });
   const middlewares = { use: vi.fn() };
   plugin.configureServer({ middlewares });
   const transformed = plugin.transformIndexHtml.handler(
@@ -28,12 +33,33 @@ it('injects a build identity beacon and accepts only the matching load', () => {
   expect(injectedScript).toContain('companion-bottom-tab-bar');
   expect(injectedScript).toContain('MutationObserver');
   expect(injectedScript).toContain('requestAnimationFrame(()=>requestAnimationFrame(report))');
+  expect(injectedScript).toContain("addEventListener('unhandledrejection'");
   expect(injectedScript).not.toContain('?.');
+  expect(() => new Script(injectedScript)).not.toThrow();
   const handler = middlewares.use.mock.calls[0][0];
   const response = { end: vi.fn(), statusCode: 0 };
   handler(request('/__foliole_a5_dev_loaded__?identity=dev-123'), response, vi.fn());
   expect(response.statusCode).toBe(204);
   expect(loads).toHaveLength(1);
+  handler(request('/__foliole_a5_dev_error__?identity=dev-123&message=parse'), response, vi.fn());
+  expect(errors).toHaveLength(1);
+});
+
+it('includes a bounded WebView error in a visible readiness timeout', async () => {
+  const middlewares = { use: vi.fn() };
+  const server = { close: vi.fn(async () => {}), listen: vi.fn(async () => {}), middlewares };
+  const live = await startWindowsA5LiveReloadServer({
+    buildIdentity: 'dev-error', createServerImpl: vi.fn(async (config) => {
+      config.plugins.at(-1).configureServer(server);
+      return server;
+    }), repoRoot: 'C:\\dev\\foliole', timeoutMs: 5
+  });
+  middlewares.use.mock.calls[0][0](
+    request('/__foliole_a5_dev_error__?identity=dev-error&message=Unexpected%20token'),
+    { end: vi.fn() }, vi.fn()
+  );
+  await expect(live.waitForDeviceLoad()).rejects.toThrow('Unexpected token');
+  await live.close();
 });
 
 it('owns compatible source transforms, device identity, and cleanup in one foreground lifecycle', async () => {

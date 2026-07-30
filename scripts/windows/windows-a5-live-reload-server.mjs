@@ -8,6 +8,7 @@ export const WINDOWS_A5_LIVE_RELOAD_PORT = 24605;
 export const WINDOWS_A5_LIVE_RELOAD_URL = `http://127.0.0.1:${WINDOWS_A5_LIVE_RELOAD_PORT}`;
 
 const LOADED_PATH = '/__foliole_a5_dev_loaded__';
+const ERROR_PATH = '/__foliole_a5_dev_error__';
 const IDENTITY_PATTERN = /^[A-Za-z0-9.-]{1,96}$/u;
 
 function liveReloadError(message, stage = 'live-server') {
@@ -16,6 +17,7 @@ function liveReloadError(message, stage = 'live-server') {
 
 function createLoadTracker(buildIdentity, now) {
   let latest = null;
+  let latestError = null;
   let sequence = 0;
   const waiters = [];
   return {
@@ -35,23 +37,32 @@ function createLoadTracker(buildIdentity, now) {
         const timer = setTimeout(() => {
           const index = waiters.indexOf(onLoad);
           if (index >= 0) waiters.splice(index, 1);
-          reject(liveReloadError('A5 did not load the current DEV build before timeout', 'live-load'));
+          const detail = latestError ? `: ${latestError}` : '';
+          reject(liveReloadError(`A5 did not load the current DEV build before timeout${detail}`, 'live-load'));
         }, timeoutMs);
         const onLoad = (receipt) => { clearTimeout(timer); resolve(receipt); };
         waiters.push(onLoad);
       });
+    },
+    recordError(request) {
+      const url = new URL(request.url, WINDOWS_A5_LIVE_RELOAD_URL);
+      if (url.searchParams.get('identity') !== buildIdentity) return false;
+      latestError = String(url.searchParams.get('message') || 'unknown WebView error').slice(0, 300);
+      return true;
     }
   };
 }
 
-export function createA5LiveReloadPlugin({ buildIdentity, onDeviceLoad }) {
+export function createA5LiveReloadPlugin({ buildIdentity, onDeviceError, onDeviceLoad }) {
   const encodedIdentity = JSON.stringify(buildIdentity);
   return {
     name: 'foliole-a5-live-reload-identity',
     configureServer(server) {
       server.middlewares.use((request, response, next) => {
-        if (!request.url?.startsWith(LOADED_PATH)) return next();
-        const accepted = onDeviceLoad(request);
+        const isLoad = request.url?.startsWith(LOADED_PATH);
+        const isError = request.url?.startsWith(ERROR_PATH);
+        if (!isLoad && !isError) return next();
+        const accepted = isLoad ? onDeviceLoad(request) : onDeviceError(request);
         response.statusCode = accepted ? 204 : 409;
         response.end();
       });
@@ -62,6 +73,10 @@ export function createA5LiveReloadPlugin({ buildIdentity, onDeviceLoad }) {
         const script = [
           '(()=>{let observer=null;',
           `const identity=${encodedIdentity};`,
+          `const fail=(value)=>fetch('${ERROR_PATH}?identity='+encodeURIComponent(identity)+`,
+          "'&message='+encodeURIComponent(String(value).slice(0,300)),{cache:'no-store'}).catch(()=>{});",
+          "addEventListener('error',(event)=>fail(event.message||'window error'));",
+          "addEventListener('unhandledrejection',(event)=>fail(event.reason&&event.reason.message?event.reason.message:event.reason));",
           "const ready=()=>Boolean(document.querySelector('[data-testid=\"companion-bottom-tab-bar\"]'));",
           `const report=()=>fetch('${LOADED_PATH}?identity='+encodeURIComponent(identity),`,
           "{cache:'no-store'}).catch(()=>{});",
@@ -93,7 +108,9 @@ export async function startWindowsA5LiveReloadServer({
   const server = await createServerImpl({
     configFile: path.join(repoRoot, 'vite.companion.config.ts'),
     oxc: { target: 'chrome64' },
-    plugins: [createA5LiveReloadPlugin({ buildIdentity, onDeviceLoad: tracker.record })],
+    plugins: [createA5LiveReloadPlugin({
+      buildIdentity, onDeviceError: tracker.recordError, onDeviceLoad: tracker.record
+    })],
     server: {
       hmr: false, host: '127.0.0.1', port: WINDOWS_A5_LIVE_RELOAD_PORT, strictPort: true
     }
