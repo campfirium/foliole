@@ -2,6 +2,9 @@
 
 export async function runA5SecondarySearchAcceptance(config, helpers, leafTitle) {
   const { click, firstVisible, record, waitFor } = helpers;
+  const currentViewportHeight = () => Math.min(
+    innerHeight, visualViewport ? visualViewport.height : innerHeight
+  );
 
   function setSearchQuery(input, value) {
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
@@ -35,16 +38,18 @@ export async function runA5SecondarySearchAcceptance(config, helpers, leafTitle)
   );
   const input = firstVisible('[data-testid="companion-search-input"]', surface);
   const rect = input.getBoundingClientRect();
+  const baselineViewportHeight = currentViewportHeight();
   const dpr = devicePixelRatio || 1;
   const x = Math.round((rect.left + rect.width / 2) * dpr);
   const y = Math.round((rect.top + rect.height / 2) * dpr);
   await fetch(`${config.inputPath}?identity=${encodeURIComponent(config.identity)}&x=${x}&y=${y}`);
   await waitFor(() => document.activeElement === input, 'focused Search input');
-  const viewport = await waitFor(() => (
-    visualViewport && visualViewport.height < innerHeight - 80 ? visualViewport : null
-  ), 'Android soft keyboard', 8_000);
+  const viewportHeight = await waitFor(() => {
+    const height = currentViewportHeight();
+    return height < baselineViewportHeight - 80 ? height : null;
+  }, 'Android soft keyboard', 8_000);
   const bar = firstVisible('[data-testid="companion-bottom-tab-bar"]');
-  if (!bar || input.getBoundingClientRect().bottom > viewport.height) {
+  if (!bar || input.getBoundingClientRect().bottom > viewportHeight) {
     throw new Error('Search input or return navigation is obstructed by the soft keyboard');
   }
 
@@ -73,6 +78,6 @@ export async function runA5SecondarySearchAcceptance(config, helpers, leafTitle)
   } finally { capacitor.nativePromise = originalNativePromise; }
   record('search', {
     empty: true, error: true, errorMode: 'bounded-dev-rejection',
-    keyboard: true, loading: true, results
+    keyboard: true, keyboardViewportHeight: viewportHeight, loading: true, results
   });
 }
