@@ -86,6 +86,9 @@ export function runA5SecondaryAcceptance(config, acceptSearch) {
   }
 
   async function exitArticle() {
+    if (!articleExit() && readingRoot()) {
+      await click(readingRoot(), 'article chrome reveal');
+    }
     await click(await waitFor(articleExit, 'article exit'), 'article exit');
     await waitFor(() => directoryRows().length > 0, 'directory after article exit');
   }
@@ -99,15 +102,17 @@ export function runA5SecondaryAcceptance(config, acceptSearch) {
       await click(row, `directory row ${candidate.id}`);
       try {
         await waitFor(
-          () => articleExit() || directorySignature() !== before,
+          () => readingRoot() || directorySignature() !== before,
           `directory transition for ${candidate.id}`,
           2_000
         );
       } catch {
         continue;
       }
-      if (articleExit()) {
-        if (depth > 0 && readingRoot()) {
+      if (readingRoot()) {
+        if (!articleExit()) await click(readingRoot(), 'article chrome reveal');
+        await waitFor(articleExit, 'article exit action');
+        if (depth > 0) {
           return { leafId: candidate.id, leafTitle: candidate.title, path: [...path, candidate.title] };
         }
         await exitArticle();
