@@ -73,9 +73,17 @@ it('loads the installed shell once without Gradle or APK install', async () => {
 
 it('runs the bounded secondary acceptance and stores its receipt', async () => {
   const { evidenceRoot, paths } = fixture();
-  const { calls, execute } = createExecutor(evidenceRoot);
+  const { calls, execute: baseExecute } = createExecutor(evidenceRoot);
   const acceptance = { identity: 'dev-secondary', receipts: [{ step: 'search' }], status: 'passed' };
-  const server = createServer({ waitForDeviceLoad: vi.fn(async () => ({ acceptance, sequence: 1 })) });
+  let resolveLoad;
+  const server = createServer({
+    waitForDeviceLoad: vi.fn(() => new Promise((resolve) => { resolveLoad = resolve; }))
+  });
+  const execute = vi.fn(async (command, args, options) => {
+    const result = await baseExecute(command, args, options);
+    if (args.includes('tap')) resolveLoad({ acceptance, sequence: 1 });
+    return result;
+  });
   const run = await runWindowsA5LiveReload({
     adbPort: '5037', buildIdentity: 'dev-secondary', env: {}, evidenceRoot, execute, paths,
     serial: '87a33a4b', startServer: vi.fn(async () => server), surface: 'secondary',
@@ -85,6 +93,28 @@ it('runs the bounded secondary acceptance and stores its receipt', async () => {
     '-P', '5037', '-s', '87a33a4b', 'shell', 'input', 'tap', '120', '240'
   ]);
   expect(JSON.parse(fs.readFileSync(run.liveReload.acceptancePath, 'utf8'))).toEqual(acceptance);
+});
+
+it('captures a secondary scenario failure that occurs before the input checkpoint', async () => {
+  const { evidenceRoot, paths } = fixture();
+  const { calls, execute } = createExecutor(evidenceRoot);
+  const failure = Object.assign(new Error('cannot exit current surface'), {
+    exitCode: 74, stage: 'live-load'
+  });
+  const server = createServer({
+    waitForDeviceInput: vi.fn(() => new Promise(() => {})),
+    waitForDeviceLoad: vi.fn(async () => { throw failure; })
+  });
+  await expect(runWindowsA5LiveReload({
+    adbPort: '5037', buildIdentity: 'dev-secondary-failure', env: {}, evidenceRoot, execute, paths,
+    serial: '87a33a4b', startServer: vi.fn(async () => server), surface: 'secondary',
+    verifyForeground: vi.fn(async () => {})
+  })).rejects.toMatchObject({
+    stage: 'live-load',
+    liveReload: { screenshotPath: path.join(evidenceRoot, 'a5-live.png') }
+  });
+  expect(calls.some(({ args }) => args.includes('--remove'))).toBe(true);
+  expect(server.close).toHaveBeenCalledOnce();
 });
 
 it('removes reverse and closes the server after a device load failure', async () => {

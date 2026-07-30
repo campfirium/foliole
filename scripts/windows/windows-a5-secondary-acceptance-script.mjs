@@ -52,6 +52,7 @@ export function runA5SecondaryAcceptance(config, acceptSearch) {
     for (let attempt = 0; attempt < 6; attempt += 1) {
       if (firstVisible('[data-testid="companion-tab-browse"]')) break;
       const exit = articleExit()
+        || closestButton('svg.lucide-x')
         || firstVisible('[data-testid="companion-top-bar-left-action"]')
         || topBack();
       if (!exit) throw new Error('Cannot return to the companion tab shell');

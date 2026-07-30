@@ -72,16 +72,33 @@ export async function runWindowsA5LiveReload({
     reverseConfigured = true;
     await checked(execute, paths.adbPath, adbArgs(adbPort, serial,
       ['shell', 'am', 'force-stop', APP_ID]), adbOptions(env, 'live-launch'), 'live-launch');
-    const firstLoad = server.waitForDeviceLoad();
+    const loadOutcome = server.waitForDeviceLoad().then(
+      (loaded) => ({ loaded }), (error) => ({ error })
+    );
     await checked(execute, paths.adbPath, adbArgs(adbPort, serial,
       ['shell', 'am', 'start', '-n', COMPONENT]), adbOptions(env, 'live-launch'), 'live-launch');
+    let launched;
     if (surface === 'secondary') {
-      const point = await server.waitForDeviceInput();
-      await checked(execute, paths.adbPath, adbArgs(adbPort, serial,
-        ['shell', 'input', 'tap', String(point.x), String(point.y)]),
-      adbOptions(env, 'live-input'), 'live-input');
+      const inputOutcome = server.waitForDeviceInput().then(
+        (point) => ({ point }), (error) => ({ error })
+      );
+      const next = await Promise.race([loadOutcome, inputOutcome]);
+      if (next.error) throw next.error;
+      if (next.loaded) launched = next.loaded;
+      else {
+        const point = next.point;
+        await checked(execute, paths.adbPath, adbArgs(adbPort, serial,
+          ['shell', 'input', 'tap', String(point.x), String(point.y)]),
+        adbOptions(env, 'live-input'), 'live-input');
+        const afterInput = await loadOutcome;
+        if (afterInput.error) throw afterInput.error;
+        launched = afterInput.loaded;
+      }
+    } else {
+      const outcome = await loadOutcome;
+      if (outcome.error) throw outcome.error;
+      launched = outcome.loaded;
     }
-    const launched = await firstLoad;
     await verifyForeground();
     const screenshotPath = await captureScreenshot(
       execute, paths, env, adbPort, serial, evidenceRoot
