@@ -8,6 +8,7 @@ import {
   queryMainWindowMaximized,
   restartMainWindowDevApp,
   restartMainWindowApp,
+  setMainWindowNativeControlsVisible,
   toggleMainWindowDevTools,
   toggleMainWindowMaximize
 } from './windowControls';
@@ -43,6 +44,8 @@ it('reports unavailable controls outside desktop runtime', async () => {
 
   expect(isWindowControlsAvailable()).toBe(false);
   await expect(queryMainWindowMaximized()).resolves.toBe(false);
+  await expect(setMainWindowNativeControlsVisible(false)).resolves.toBeUndefined();
+  expect(invoke).not.toHaveBeenCalled();
 });
 
 it('uses runtime invoke for window commands and electron bridge for resize events', async () => {
@@ -57,6 +60,7 @@ it('uses runtime invoke for window commands and electron bridge for resize event
   await minimizeMainWindow();
   await restartMainWindowApp();
   await restartMainWindowDevApp();
+  await setMainWindowNativeControlsVisible(false);
   await toggleMainWindowDevTools();
   await toggleMainWindowMaximize();
   await closeMainWindow();
@@ -66,9 +70,10 @@ it('uses runtime invoke for window commands and electron bridge for resize event
   expect(invoke).toHaveBeenNthCalledWith(2, 'window_minimize');
   expect(invoke).toHaveBeenNthCalledWith(3, 'window_restart_app');
   expect(invoke).toHaveBeenNthCalledWith(4, 'window_restart_dev_app');
-  expect(invoke).toHaveBeenNthCalledWith(5, 'window_toggle_dev_tools');
-  expect(invoke).toHaveBeenNthCalledWith(6, 'window_toggle_maximize');
-  expect(invoke).toHaveBeenNthCalledWith(7, 'window_close');
+  expect(invoke).toHaveBeenNthCalledWith(5, 'window_set_native_controls_visible', { visible: false });
+  expect(invoke).toHaveBeenNthCalledWith(6, 'window_toggle_dev_tools');
+  expect(invoke).toHaveBeenNthCalledWith(7, 'window_toggle_maximize');
+  expect(invoke).toHaveBeenNthCalledWith(8, 'window_close');
   expect(onWindowResized).toHaveBeenCalledTimes(1);
 });
 
@@ -87,6 +92,7 @@ it('uses runtime invoke for window commands when desktop bridge is available', a
   await minimizeMainWindow();
   await restartMainWindowApp();
   await restartMainWindowDevApp();
+  await setMainWindowNativeControlsVisible(true);
   await toggleMainWindowDevTools();
   await toggleMainWindowMaximize();
   await closeMainWindow();
@@ -95,7 +101,8 @@ it('uses runtime invoke for window commands when desktop bridge is available', a
   expect(invoke).toHaveBeenNthCalledWith(2, 'window_minimize');
   expect(invoke).toHaveBeenNthCalledWith(3, 'window_restart_app');
   expect(invoke).toHaveBeenNthCalledWith(4, 'window_restart_dev_app');
-  expect(invoke).toHaveBeenNthCalledWith(5, 'window_toggle_dev_tools');
-  expect(invoke).toHaveBeenNthCalledWith(6, 'window_toggle_maximize');
-  expect(invoke).toHaveBeenNthCalledWith(7, 'window_close');
+  expect(invoke).toHaveBeenNthCalledWith(5, 'window_set_native_controls_visible', { visible: true });
+  expect(invoke).toHaveBeenNthCalledWith(6, 'window_toggle_dev_tools');
+  expect(invoke).toHaveBeenNthCalledWith(7, 'window_toggle_maximize');
+  expect(invoke).toHaveBeenNthCalledWith(8, 'window_close');
 });

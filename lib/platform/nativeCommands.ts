@@ -134,6 +134,7 @@ export const NATIVE_COMMANDS = {
   windowMinimize: 'window_minimize',
   windowRestartDevApp: 'window_restart_dev_app',
   windowRestartApp: 'window_restart_app',
+  windowSetNativeControlsVisible: 'window_set_native_controls_visible',
   windowToggleDevTools: 'window_toggle_dev_tools',
   windowToggleMaximize: 'window_toggle_maximize',
   loadWorkspaceListSnapshot: 'load_workspace_list_snapshot',

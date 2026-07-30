@@ -15,6 +15,54 @@ const READING_LINE = 'The reading smoke line should remain visible after the imp
 const SELECTION_SCREENSHOT = path.resolve(
   '.tmp/artifacts/desktop-acceptance/immersive-reading-selection.png'
 );
+const NATIVE_CONTROLS_SCREENSHOT = path.resolve(
+  '.tmp/artifacts/desktop-acceptance/immersive-reading-native-controls-hidden.png'
+);
+
+async function installNativeControlsVisibilitySpy(desktopApp: ElectronApplication) {
+  return desktopApp.evaluate(({ BrowserWindow }) => {
+    if (process.platform !== 'darwin') return false;
+    const window = BrowserWindow.getAllWindows()[0];
+    if (!window) throw new Error('missing main window for native-control visibility spy');
+    const scope = globalThis as typeof globalThis & {
+      __folioleNativeControlsVisibilitySpy?: {
+        calls: boolean[];
+        original: typeof window.setWindowButtonVisibility;
+        window: Electron.BrowserWindow;
+      };
+    };
+    const original = window.setWindowButtonVisibility;
+    const calls: boolean[] = [];
+    scope.__folioleNativeControlsVisibilitySpy = { calls, original, window };
+    window.setWindowButtonVisibility = (visible) => {
+      calls.push(visible);
+      original.call(window, visible);
+    };
+    return true;
+  });
+}
+
+async function readNativeControlsVisibilityCalls(desktopApp: ElectronApplication) {
+  return desktopApp.evaluate(() =>
+    (globalThis as typeof globalThis & {
+      __folioleNativeControlsVisibilitySpy?: { calls: boolean[] };
+    }).__folioleNativeControlsVisibilitySpy?.calls ?? []);
+}
+
+async function restoreNativeControlsVisibilitySpy(desktopApp: ElectronApplication) {
+  await desktopApp.evaluate(() => {
+    const scope = globalThis as typeof globalThis & {
+      __folioleNativeControlsVisibilitySpy?: {
+        original: Electron.BrowserWindow['setWindowButtonVisibility'];
+        window: Electron.BrowserWindow;
+      };
+    };
+    const state = scope.__folioleNativeControlsVisibilitySpy;
+    if (!state) return;
+    state.window.setWindowButtonVisibility = state.original;
+    delete scope.__folioleNativeControlsVisibilitySpy;
+  });
+}
 
 async function installImportFixtureSelection(desktopApp: ElectronApplication) {
   await desktopApp.evaluate(({ dialog }, fixturePath) => {
@@ -98,18 +146,36 @@ async function dragAcrossReadingLine(desktopWindow: Page) {
 test('keeps F11 as immersive reading in the desktop host', async ({
   desktopApp,
   desktopWindow
-}) => {
+}, testInfo) => {
   await expectWorkspaceShell(desktopWindow);
 
   const importedNodeId = await importFixture(desktopApp, desktopWindow);
   await openImportedNode(desktopWindow, importedNodeId);
 
   await expect(desktopWindow.locator('.prompt-editor-host')).toContainText(READING_LINE);
+  const nativeControlsSpyInstalled = await installNativeControlsVisibilitySpy(desktopApp);
+  try {
+    await desktopWindow.keyboard.press('F11');
+    await desktopWindow.locator('.prompt-editor-host .cm-scroller').waitFor({ state: 'visible' });
+    await expect(desktopWindow.locator('.prompt-editor-host')).toContainText(READING_LINE);
+    await expect(desktopWindow.getByLabel('Window controls')).toHaveCount(0);
+    if (nativeControlsSpyInstalled) {
+      await expect.poll(() => readNativeControlsVisibilityCalls(desktopApp)).toContain(false);
+    }
+    await mkdir(path.dirname(NATIVE_CONTROLS_SCREENSHOT), { recursive: true });
+    await desktopWindow.screenshot({ path: NATIVE_CONTROLS_SCREENSHOT });
+    await testInfo.attach('immersive-reading-native-controls-hidden', {
+      contentType: 'image/png',
+      path: NATIVE_CONTROLS_SCREENSHOT
+    });
 
-  await desktopWindow.keyboard.press('F11');
-  await desktopWindow.locator('.prompt-editor-host .cm-scroller').waitFor({ state: 'visible' });
-  await expect(desktopWindow.locator('.prompt-editor-host')).toContainText(READING_LINE);
-  await expect(desktopWindow.getByLabel('Window controls')).toHaveCount(0);
+    await desktopWindow.keyboard.press('Escape');
+    if (nativeControlsSpyInstalled) {
+      await expect.poll(() => readNativeControlsVisibilityCalls(desktopApp)).toContain(true);
+    }
+  } finally {
+    await restoreNativeControlsVisibilitySpy(desktopApp);
+  }
 });
 
 test('keeps an explicit text selection visible in immersive reading', async ({

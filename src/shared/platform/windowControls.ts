@@ -37,6 +37,12 @@ export async function queryMainWindowMaximized() {
   }
 }
 
+export async function setMainWindowNativeControlsVisible(visible: boolean) {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) return;
+  await runtimeInvoke(NATIVE_COMMANDS.windowSetNativeControlsVisible, { visible });
+}
+
 export async function onMainWindowResized(handler: () => void): Promise<WindowResizeUnlisten> {
   const bridge = getElectronBridge();
   if (!bridge) {

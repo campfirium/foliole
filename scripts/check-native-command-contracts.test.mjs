@@ -68,6 +68,7 @@ async function writeBaseFixture(repoRoot, overrides = {}) {
     'storageCommandSupport.ts',
     'storageReadCommands.ts',
     'storageSyncCommands.ts',
+    'windowControlCommands.ts',
     'windowCommands.ts'
   ]) {
     await writeFixtureFile(repoRoot, `electron/ipc/${file}`, '');
@@ -122,7 +123,7 @@ describe('check-native-command-contracts', () => {
         void NATIVE_COMMANDS.loadThing;
       `
     });
-    await writeFixtureFile(repoRoot, 'electron/ipc/assistantLocalHistoryCommands.ts', `
+    await writeFixtureFile(repoRoot, 'electron/ipc/windowControlCommands.ts', `
       import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
       void NATIVE_COMMANDS.applyThing;
     `);

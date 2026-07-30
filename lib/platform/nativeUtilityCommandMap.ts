@@ -105,6 +105,10 @@ export type NativeUtilityCommandMap = {
     args: undefined;
     result: null;
   };
+  [NATIVE_COMMANDS.windowSetNativeControlsVisible]: {
+    args: { visible: boolean };
+    result: null;
+  };
   [NATIVE_COMMANDS.windowToggleDevTools]: {
     args: undefined;
     result: null;

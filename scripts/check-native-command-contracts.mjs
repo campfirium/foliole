@@ -47,6 +47,7 @@ const ELECTRON_HANDLER_FILES = [
   'electron/ipc/storageSettingsCommands.ts',
   'electron/ipc/storageSyncCommands.ts',
   'electron/ipc/updateCommands.ts',
+  'electron/ipc/windowControlCommands.ts',
   'electron/ipc/windowCommands.ts'
 ];
 const REGISTRY_FILE = 'electron/ipc/nativeCommandRegistry.ts';

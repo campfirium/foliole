@@ -1,10 +1,8 @@
-import { BrowserWindow, app, shell } from 'electron';
+import { app, shell } from 'electron';
 
 import { normalizeOpenExternalUrl } from '../../lib/platform/externalUrl.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { resolveFolioleAppVersion } from '../appVersion.js';
-import { isAppQuittingForBackgroundPresence } from '../backgroundPresence.js';
-import { requestDevShellRestart } from '../devShellRestartRequest.js';
 import { copyDiagnosticReport } from '../diagnostics/diagnosticBundle.js';
 import { runFolioleCliInstallAction } from '../folioleCliInstallation.js';
 import { getGlobalClipShortcutStatus } from '../globalClipShortcut.js';
@@ -16,7 +14,6 @@ import {
 } from '../loginItemSettings.js';
 import { preflightMacosGlobalClipPermission } from '../macosGlobalClipCopy.js';
 import { appendReadingPositionTraceRecord } from '../readingPositionTraceLog.js';
-import { allowWindowCloseWithoutReadingProgressFlush, flushWindowReadingProgress } from '../readingProgressWindowFlush.js';
 
 import { asString, asStringArray } from './commandParsers.js';
 import type { InvokeContext } from './commands.js';
@@ -28,6 +25,7 @@ import { resolveAllowedLocalOpenPath } from './localOpenPathGuard.js';
 import { syncAppMenuState } from './menu.js';
 import { resolveAppPaths } from './paths.js';
 import { handleSplitTopicPreferencesCommand } from './splitTopicPreferencesCommands.js';
+import { handleWindowControlCommand, resolveTargetWindow } from './windowControlCommands.js';
 
 function asShortcutAccelerators(value: unknown) {
   if (!Array.isArray(value)) {
@@ -42,86 +40,6 @@ function asShortcutAccelerators(value: unknown) {
       };
     })
     .filter((item) => item.accelerator.trim() && item.commandId.trim());
-}
-
-function resolveTargetWindow(context?: InvokeContext) {
-  if (context?.sender) {
-    const window = BrowserWindow.fromWebContents(context.sender);
-    if (window) {
-      return window;
-    }
-  }
-  return BrowserWindow.getFocusedWindow();
-}
-
-async function closeWindowToBackground(window: BrowserWindow | null) {
-  if (!window || process.platform !== 'win32' || isAppQuittingForBackgroundPresence()) {
-    return false;
-  }
-  await flushWindowReadingProgress(window);
-  if (!window.isDestroyed()) {
-    window.hide();
-  }
-  return true;
-}
-
-async function handleWindowCommand(request: InvokeRequest, context?: InvokeContext): Promise<unknown> {
-  const window = resolveTargetWindow(context);
-  if (request.command === NATIVE_COMMANDS.windowMinimize) {
-    window?.minimize();
-    return null;
-  }
-  if (request.command === NATIVE_COMMANDS.windowRestartApp) {
-    if (window) {
-      await flushWindowReadingProgress(window);
-      allowWindowCloseWithoutReadingProgressFlush(window);
-    }
-    app.relaunch();
-    app.exit(0);
-    return null;
-  }
-  if (request.command === NATIVE_COMMANDS.windowRestartDevApp) {
-    if (window) {
-      await flushWindowReadingProgress(window);
-      allowWindowCloseWithoutReadingProgressFlush(window);
-    }
-    if (requestDevShellRestart({ reason: 'in-app-dev-restart' })) {
-      app.exit(0);
-      return null;
-    }
-    app.relaunch();
-    app.exit(0);
-    return null;
-  }
-  if (request.command === NATIVE_COMMANDS.windowToggleDevTools) {
-    if (app.isPackaged) {
-      return null;
-    }
-    window?.webContents.toggleDevTools();
-    return null;
-  }
-  if (request.command === NATIVE_COMMANDS.windowToggleMaximize) {
-    if (!window) {
-      return null;
-    }
-    if (window.isMaximized()) {
-      window.unmaximize();
-    } else {
-      window.maximize();
-    }
-    return null;
-  }
-  if (request.command === NATIVE_COMMANDS.windowClose) {
-    if (await closeWindowToBackground(window)) {
-      return null;
-    }
-    window?.close();
-    return null;
-  }
-  if (request.command === NATIVE_COMMANDS.windowIsMaximized) {
-    return Boolean(window?.isMaximized());
-  }
-  return undefined;
 }
 
 export function getDesktopHostCapabilities(
@@ -230,5 +148,5 @@ export async function handleWindowAndUtilityCommand(request: InvokeRequest, cont
   if (utilityResult !== undefined) {
     return utilityResult;
   }
-  return handleWindowCommand(request, context);
+  return handleWindowControlCommand(request, context);
 }

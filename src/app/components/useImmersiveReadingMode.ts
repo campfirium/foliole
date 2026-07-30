@@ -15,6 +15,8 @@ import {
   useImmersiveScrollSync,
   useReadingSelectionState
 } from './immersiveReadingScrollSync';
+import { useImmersiveSelectionRestoreSuppression } from './useImmersiveSelectionRestoreSuppression';
+import { useImmersiveWindowChrome } from './useImmersiveWindowChrome';
 
 function useImmersiveLifecycleReset(
   props: Pick<
@@ -141,19 +143,6 @@ function useImmersiveReadingPositionSync(args: {
   );
 }
 
-function useSelectionRestoreSuppression(props: Pick<ImmersiveReadingModeSource, 'isImmersiveMode'>) {
-  const shouldSuppressSelectionRestoreRef = useRef(false);
-  useEffect(() => {
-    shouldSuppressSelectionRestoreRef.current = false;
-  }, [props.isImmersiveMode]);
-  return {
-    shouldSuppressSelectionRestore: () => shouldSuppressSelectionRestoreRef.current,
-    suppressNextSelectionRestore: () => {
-      shouldSuppressSelectionRestoreRef.current = true;
-    }
-  };
-}
-
 function useImmersiveEditingFocusEffect(
   editorAdapterRef: ImmersiveReadingModeSource['editorAdapterRef'],
   isImmersiveEditing: boolean,
@@ -174,7 +163,8 @@ export function useImmersiveReadingMode(props: ImmersiveReadingModeSource) {
   const exitImmersiveModeRef = useRef(props.onExitImmersiveMode);
   const shouldSkipNextScrollSyncRef = useRef(false);
   const wasImmersiveModeRef = useRef(props.isImmersiveMode);
-  const selectionRestoreSuppression = useSelectionRestoreSuppression(props);
+  useImmersiveWindowChrome(props.isImmersiveMode);
+  const selectionRestoreSuppression = useImmersiveSelectionRestoreSuppression(props);
   const readableNodeIds = useMemo(
     () =>
       props.isImmersiveMode
