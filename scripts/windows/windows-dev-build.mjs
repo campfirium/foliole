@@ -9,7 +9,7 @@ import { pathToFileURL } from 'node:url';
 import { executeBounded } from './windows-bounded-process.mjs';
 import { windowsDevPaths } from './windows-dev-paths.mjs';
 
-const BUILD_COMMAND = '"gradlew.bat" --no-daemon assembleDebugAndroidTest';
+const BUILD_COMMAND = 'call .\\gradlew.bat --no-daemon assembleDebugAndroidTest';
 const BUILD_TIMEOUT_MS = 20 * 60_000;
 const PULL_TIMEOUT_MS = 5 * 60_000;
 

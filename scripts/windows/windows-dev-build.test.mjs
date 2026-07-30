@@ -73,7 +73,9 @@ describe('Windows DEV foreground build', () => {
     expect(calls.find(({ args }) => args.includes('pull')).args)
       .toEqual(['-C', paths.repoRoot, 'pull', '--ff-only', 'lan', 'dev']);
     const build = calls.find(({ command }) => command === 'cmd.exe');
-    expect(build.args).toEqual(['/d', '/s', '/c', '"gradlew.bat" --no-daemon assembleDebugAndroidTest']);
+    expect(build.args).toEqual([
+      '/d', '/s', '/c', 'call .\\gradlew.bat --no-daemon assembleDebugAndroidTest'
+    ]);
     expect(build.options).toMatchObject({
       cwd: path.join(paths.repoRoot, 'android'), timeoutMs: 20 * 60_000
     });
