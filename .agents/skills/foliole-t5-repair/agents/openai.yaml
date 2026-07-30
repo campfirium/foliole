@@ -1,4 +1,4 @@
 interface:
   display_name: "Foliole T5 Repair"
-  short_description: "Repair T5 failures and close local quality gaps"
-  default_prompt: "Use $foliole-t5-repair to repair and verify this Foliole T5 run, then audit local detection gaps and open separate tasks for confirmed coverage gaps."
+  short_description: "Repair one T5 sample and commit locally"
+  default_prompt: "Use $foliole-t5-repair to repair one failed Foliole T5 sample locally, verify and commit the scoped fix, then audit local detection gaps without pushing."

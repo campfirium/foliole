@@ -1,11 +1,11 @@
 ---
 name: foliole-t5-repair
-description: Diagnose, repair, and verify one failed Foliole T5 quality run from a handoff locator, then audit why local quality did not catch each failure and open separate visible repair tasks for confirmed local gate coverage gaps. Use when a Codex Desktop task names a Foliole T5 run ID, failed T5 workflow, nightly remote-quality failure, or asks the visible controller to take over T5 repair.
+description: Diagnose, locally repair, verify, and commit one failed Foliole T5 quality sample from a handoff locator, then audit why local quality did not catch each failure and open separate visible tasks for confirmed local gate coverage gaps. Use when a Codex Desktop task names a Foliole T5 run ID, failed T5 workflow, nightly remote-quality failure, or asks the visible controller to take over T5 repair.
 ---
 
 # Foliole T5 Repair
 
-Act as the single visible controller for one complete T5 repair session. Treat the handoff payload as a locator, not as failure evidence. Read the run, repository history, and working tree directly before judging the failure.
+Act as the single visible controller for the local repair of one failed T5 sample. Treat the handoff payload as a locator, not as failure evidence. Read the run, repository history, and working tree directly before judging the failure. T5 is a rolling health stream: this task owns the failures observed in its run, not remote branch publication or a fixed-SHA full-green campaign.
 
 ## Establish the source of truth
 
@@ -43,15 +43,14 @@ The visible controller owns root-cause judgment, integration, conflict review, f
 2. Run the narrowest relevant local tests first, following repository quality and host-verification rules.
 3. Review the integrated diff and confirm that unrelated working-tree changes were not absorbed.
 4. Stop for genuine product judgment, missing permission, write-scope expansion, ownership conflict, or an external dependency. A refined hypothesis or intermediate red check is not a stop condition.
-5. Obtain explicit user authorization before committing or pushing.
-6. Before rechecking, inspect active and pending T5 and Remote Quality runs. Never dispatch while either workflow has a nonterminal run. If a scheduled T5 will validate the authorized repair SHA, use that complete run instead of dispatching Remote Quality.
-7. Otherwise run `node scripts/quality/remote-quality.mjs --scope full` from this controller and wait until every job reaches a terminal state. Do not dispatch another T5 workflow as the repair recheck, and do not start a second recheck while the prior one is active.
-8. The Remote Quality dispatcher hard-refuses a new run while T5 or Remote Quality is active, and both workflows share a non-canceling concurrency group to close scheduling races. A scheduled T5 skips a duplicate completed full Remote validation for the same SHA. Do not cancel a run merely because one job failed; collect the complete run. Cancel only with explicit user authorization or when the run is deliberately superseded and its remaining evidence is no longer required.
-9. Route a related remote red result back to its existing worker and continue until full quality is green or a genuine stop condition is reached.
+5. Resolve every root-cause family exposed by the observed run. Keep iterating locally until each reproducible original failure is green or a genuine stop condition is reached.
+6. An automated T5 monitor handoff that identifies the run and states that the handoff is only a locator carries standing authorization to create one local commit containing only the verified in-scope repair. Use `$commit-note`; do not absorb unrelated dirty files or hunks. For other invocations, obtain explicit commit authorization.
+7. Never push, dispatch Remote Quality, dispatch another T5, freeze `dev`, or wait for a later hosted run from this repair task. Normal development publication will eventually carry the local commit to remote `dev`; the next scheduled T5 is a separate rolling health sample and may create a new repair task.
+8. Complete the repair lane when all failures from this observed run are locally resolved, risk-matched local validation is green, the integrated diff is clean, and the scoped repair is committed locally.
 
 ## Audit local detection after repair
 
-Begin this prevention audit only after the immediate repair is committed, pushed, and proven by a green full Remote Quality or scheduled T5 recheck. Do not analyze local coverage or create coverage tasks while the root cause, repair diff, or remote result is still unsettled. The visible controller owns the audit; do not ask a repair worker to judge whether its own failure should have been caught locally.
+Treat prevention as a separate post-commit lane that does not block repair completion. Begin it only after the immediate repair is locally verified and committed. Do not analyze local coverage or create coverage tasks while the root cause or repair diff is unsettled. The visible controller owns the audit; do not ask a repair worker to judge whether its own failure should have been caught locally.
 
 1. For every resolved root-cause family, identify the narrow local command that reproduces it and trace whether normal changed-file, fast-quality, pre-push, or host-specific routing would have run that command for the target diff.
 2. Classify the result as exactly one of:
@@ -62,8 +61,8 @@ Begin this prevention audit only after the immediate repair is committed, pushed
 3. Record the counterfactual evidence: the triggering files, the check that should have caught them, the route that skipped them, and why the comparison case stayed green. Do not label a gap from timing alone or from a broad gate that happened not to be run.
 4. When `local-gate-coverage-gap` is confirmed, create a separate visible Codex Desktop task to close it. Use `create_thread`, the saved Foliole project, and the `local` environment; never request a default worktree. Group gaps that share one checker or routing root cause, and create at most one task per non-overlapping coverage family.
 5. Give each coverage task the immutable run URL and SHA, raw failed checks, the counterfactual evidence, ownership limited to checker/routing/contract-test files, forbidden product-repair files, and this acceptance contract: the triggering diff now selects the intended local check and a regression test locks that route. The task must not commit, push, or dispatch hosted quality without authorization in that task.
-6. Wait for successful task creation and initial progress; task creation alone is not evidence that the gap is fixed. Do not open a coverage task for `local-validation-missed`, `hosted-only-by-design`, or `pre-existing-or-external`; report the evidence instead.
-7. If task creation is unavailable, expose that boundary and wait rather than silently folding the prevention work into the completed T5 repair.
+6. Wait for successful task creation and initial progress when the tool is available; task creation alone is not evidence that the gap is fixed. Do not open a coverage task for `local-validation-missed`, `hosted-only-by-design`, or `pre-existing-or-external`; report the evidence instead.
+7. If task creation is unavailable, report the prevention lane as `waiting-for-task-creation` and finish the repair task. Do not fold prevention implementation into the completed repair.
 
 An explicit invocation of `$foliole-t5-repair` includes authorization for these bounded local-coverage tasks. If the skill was triggered implicitly, obtain user authorization before creating them. Coverage tasks are user-owned sibling tasks, not internal workers; the visible controller must not absorb or stage their changes.
 
@@ -74,11 +73,10 @@ Keep delivery and repair status distinct:
 - `waiting-for-read-approval`: the visible task exists, but GitHub evidence has not been read.
 - `investigating`: complete run evidence is being triaged.
 - `repairing`: one or more root-cause families are being repaired.
-- `waiting-for-write-approval`: local repair is verified and awaits commit or push authorization.
-- `rechecking`: full Remote Quality is running for the authorized immutable SHA.
-- `auditing-local-coverage`: the repair recheck is green and the post-repair local-detection audit is running.
-- `complete`: all in-scope failures are resolved, the full recheck is green, and every resolved failure family has been classified by the post-repair audit.
+- `committing`: the locally verified repair is being isolated and committed.
+- `auditing-local-coverage`: the local repair commit exists and the post-repair local-detection audit is running.
+- `complete`: all failures observed in the run are locally resolved, risk-matched local validation is green, and the scoped repair is committed locally.
 
-Track the prevention lane separately as `auditing`, `not-a-gap`, `task-created`, or `waiting-for-task-creation`. `complete` additionally requires every confirmed local gate coverage gap to have a successfully created task, but does not require those user-owned sibling tasks to finish.
+Track the prevention lane separately as `auditing`, `not-a-gap`, `task-created`, or `waiting-for-task-creation`. Prevention status never blocks repair state `complete`.
 
 Never describe `thread created`, `Desktop opened`, or `prompt delivered` as T5 processing progress.
