@@ -122,7 +122,10 @@ it('fails closed on a mismatched receipt token and still force-stops the app', a
   await expect(runWindowsA5CaptureAnnotation({
     adbPort: '5037', buildIdentity: 'run-12345678', env: {}, evidenceRoot, execute,
     paths, protectData: vi.fn(), serial: '87a33a4b'
-  })).rejects.toMatchObject({ stage: 'instrumentation-evidence' });
+  })).rejects.toMatchObject({
+    result: { stdout: expect.stringContaining('folioleActionReceipt') },
+    stage: 'instrumentation-evidence'
+  });
   expect(execute.mock.calls.some(([, args]) => args.includes('force-stop'))).toBe(true);
   expect(fs.existsSync(path.join(evidenceRoot, 'capture-annotation-manifest.json'))).toBe(false);
 });

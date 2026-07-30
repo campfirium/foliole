@@ -162,7 +162,12 @@ export async function runWindowsA5CaptureAnnotation({
       '-e', 'expectedValue', buildIdentity, '-e', 'timeoutMs', '30000',
       '-e', 'class', TEST_CLASS, TEST_RUNNER
     ], commandOptions(env, 'capture_instrumentation_timeout', 3 * 60_000), 'instrumentation');
-    const evidence = parseCaptureAnnotationInstrumentation(instrumentation.stdout, buildIdentity);
+    let evidence;
+    try { evidence = parseCaptureAnnotationInstrumentation(instrumentation.stdout, buildIdentity); }
+    catch (error) {
+      error.result = instrumentation;
+      throw error;
+    }
     writeJson(fsApi, artifacts['capture-annotation-receipt.json'], evidence.receipt);
     writeJson(fsApi, artifacts['capture-annotation-semantic-snapshot.json'], evidence.semanticSnapshot);
     await checked(execute, paths.adbPath,
