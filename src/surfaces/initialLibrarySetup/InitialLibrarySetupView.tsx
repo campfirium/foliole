@@ -1,13 +1,13 @@
 import { LoaderCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import folioleLeafUrl from '../../assets/brand/foliole-leaf-tight.svg?url';
-import type { NativeInitialLibrarySetupState } from '../../lib/platform/nativeInitialLibrarySetupContract';
+import folioleLeafUrl from '../../../assets/brand/foliole-leaf-tight.svg?url';
+import type { NativeInitialLibrarySetupState } from '../../../lib/platform/nativeInitialLibrarySetupContract';
 import {
   chooseInitialLibraryLocation,
   confirmInitialLibrarySetup,
   loadInitialLibrarySetup
-} from '../shared/platform/initialLibrarySetupRuntime';
+} from '../../shared/platform/initialLibrarySetupRuntime';
 
 import './initialLibrarySetup.css';
 

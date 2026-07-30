@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   load: vi.fn()
 }));
 
-vi.mock('../shared/platform/initialLibrarySetupRuntime', () => ({
+vi.mock('../../shared/platform/initialLibrarySetupRuntime', () => ({
   chooseInitialLibraryLocation: mocks.choose,
   confirmInitialLibrarySetup: mocks.confirm,
   loadInitialLibrarySetup: mocks.load

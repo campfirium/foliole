@@ -2,7 +2,6 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 
 import './app/styles.css';
-import { renderInitialLibrarySetup } from './initialLibrarySetup/renderInitialLibrarySetup';
 import { syncAppSettingsWithRuntime } from './shared/platform/appSettingsSync';
 import {
   reportRuntimeAppReady,
@@ -18,6 +17,7 @@ import { renderStartupErrorView } from './shared/ui/StartupSurface';
 import { bootstrapApp } from './startupBootstrap';
 import { createStartupErrorActions, resolveStartupView } from './startupViewMode';
 import { registerStartupWatchdog } from './startupWatchdog';
+import { renderInitialLibrarySetup } from './surfaces/initialLibrarySetup/renderInitialLibrarySetup';
 
 const ROOT_ID = 'root';
 const STARTUP_RESOURCE_SAMPLE_LIMIT = 16;
