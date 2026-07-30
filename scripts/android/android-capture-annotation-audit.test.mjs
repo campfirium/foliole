@@ -2,7 +2,7 @@
 
 import { expect, it } from 'vitest';
 
-import { auditCaptureAnnotationDatabase } from './windows-android-lab-capture-annotation-audit.mjs';
+import { auditCaptureAnnotationDatabase } from './android-capture-annotation-audit.mjs';
 
 function databaseFixture(overrides = {}) {
   const rows = {

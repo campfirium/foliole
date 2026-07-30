@@ -2,8 +2,8 @@ import type { ReviewSchedulerSettings } from '../../lib/core/review/settings.ts'
 import { advanceReadingScheduleCoreFields } from '../../src/features/review/model/unifiedPushQueueRules.ts';
 
 import type {
-  AcceptanceSession, ExpectedAction, ReadingAuditState, ReviewAuditState
-} from './windows-android-lab-review-audit-types.ts';
+  ExpectedAction, ReadingAuditState, ReviewAuditSession, ReviewAuditState
+} from './android-review-audit-types.ts';
 
 export interface TransitionIssue { code: string; error: string; name: string }
 
@@ -69,7 +69,7 @@ function validateFsrs(before: ReviewAuditState, current: ReviewAuditState, expec
 }
 
 export function validateCaptureTransition(
-  session: AcceptanceSession,
+  session: ReviewAuditSession,
   current: ReviewAuditState,
   settings: ReviewSchedulerSettings
 ): TransitionIssue[] {
@@ -126,7 +126,7 @@ function persistenceView(state: ReviewAuditState) {
   };
 }
 
-export function validateRestartPersistence(session: AcceptanceSession, current: ReviewAuditState): TransitionIssue[] {
+export function validateRestartPersistence(session: ReviewAuditSession, current: ReviewAuditState): TransitionIssue[] {
   if (!session.captured) return [{
     code: 'review_capture_state_missing', error: 'capture must complete before restart audit', name: 'transition.restart'
   }];

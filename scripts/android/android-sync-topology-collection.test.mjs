@@ -5,9 +5,9 @@ import { describe, expect, it } from 'vitest';
 import {
   extractSyncStateFromSqliteBytes,
   parseAndroidSharedPreferences
-} from './windows-android-lab-sync-topology-collect.mjs';
+} from './android-sync-topology.mjs';
 
-describe('Windows Android Lab sync topology collection', () => {
+describe('Android sync topology source parsing', () => {
   it('parses Android SharedPreferences values without pairing secret exposure', () => {
     expect(parseAndroidSharedPreferences(`
       <map>

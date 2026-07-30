@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS, normalizeReviewSchedulerSettings } from '../../lib/core/review/settings.ts';
 
-import { selectReviewAcceptanceObjects } from './windows-android-lab-review-selection.ts';
+import { selectReviewAcceptanceObjects } from './android-review-selection.ts';
 
 const roots = [];
 const NOW = '2026-07-26T00:00:00.000Z';
@@ -18,7 +18,7 @@ const NOW = '2026-07-26T00:00:00.000Z';
 afterEach(() => roots.splice(0).forEach((root) => fs.rmSync(root, { force: true, recursive: true })));
 
 function createDatabase() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-android-lab-review-selection-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'android-review-selection-'));
   roots.push(root);
   const db = new Database(path.join(root, 'review.db'));
   db.exec(`
@@ -49,7 +49,7 @@ function insertNode(db, args) {
   db.prepare('INSERT INTO node_order VALUES (?, ?)').run(args.id, args.position);
 }
 
-describe('Windows Android lab on-demand Review scenario selection', () => {
+describe('Android Review acceptance selection', () => {
   it('treats Android body blob data as readable Topic content for the shared planner', () => {
     const db = createDatabase();
     insertNode(db, { id: 'fsrs-1', kind: 'item', position: 0, reveal: 'answer' });

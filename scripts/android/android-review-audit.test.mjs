@@ -12,7 +12,7 @@ import {
   DEFAULT_REVIEW_SCHEDULER_SETTINGS, getReviewSchedulerVersion, normalizeReviewSchedulerSettings
 } from '../../lib/core/review/settings';
 import { advanceReadingScheduleCoreFields } from '../../src/features/review/model/unifiedPushQueueRules';
-import { auditAndroidReviewDatabase } from './windows-android-lab-review-audit';
+import { auditAndroidReviewDatabase } from './android-review-audit';
 
 const roots = [];
 const NOW = '2026-07-26T00:00:00.000Z';
@@ -26,7 +26,7 @@ const context = {
 afterEach(() => roots.splice(0).forEach((root) => fs.rmSync(root, { force: true, recursive: true })));
 
 function createDatabase(settings = SETTINGS_INPUT) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-android-lab-review-audit-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'android-review-audit-'));
   roots.push(root);
   const databasePath = path.join(root, 'review.db');
   const db = new Database(databasePath);
@@ -80,12 +80,11 @@ function insertNode(db, { id, kind, position, reveal }) {
 }
 
 function prepare(databasePath) {
-  const audit = auditAndroidReviewDatabase({ context, databasePath, now: NOW });
+  const audit = auditAndroidReviewDatabase({ checkpoint: 'prepare', databasePath, now: NOW });
   return {
     audit,
     session: {
-      baseline: audit.current, commitSha: context.commitSha, deploymentRunId: context.deploymentRunId,
-      deviceIdentity: context.deviceIdentity,
+      baseline: audit.current,
       expectedActions: audit.selected.expectedActions,
       fsrsNodeId: audit.selected.fsrsNodeId,
       fsrsNodeIds: audit.selected.fsrsNodeIds,
@@ -146,12 +145,11 @@ function applyExpectedActions(databasePath, session, omittedAction = null) {
 
 function capture(databasePath, session) {
   return auditAndroidReviewDatabase({
-    context: { ...context, checkpoint: 'capture', runId: '1001-aaaaaaaaaaaa-capture' },
-    databasePath, session
+    checkpoint: 'capture', databasePath, session
   });
 }
 
-describe('Windows Android lab on-demand Review audit', () => {
+describe('Android Review audit', () => {
   it('uses shared planner identities and emits a redacted prepare baseline', () => {
     const databasePath = createDatabase();
     const { audit } = prepare(databasePath);
@@ -201,15 +199,14 @@ describe('Windows Android lab on-demand Review audit', () => {
     const { session } = prepare(databasePath);
     applyExpectedActions(databasePath, session);
     const captured = capture(databasePath, session).current;
-    const restartContext = { ...context, checkpoint: 'restart', runId: '1002-aaaaaaaaaaaa-restart' };
     expect(auditAndroidReviewDatabase({
-      context: restartContext, databasePath, session: { ...session, captured }
+      checkpoint: 'restart', databasePath, session: { ...session, captured }
     }).resultStatus).toBe('success');
     const db = new Database(databasePath);
     db.prepare('UPDATE node_review SET reps = reps - 1 WHERE node_id = ?').run(session.fsrsNodeId);
     db.close();
     expect(auditAndroidReviewDatabase({
-      context: restartContext, databasePath, session: { ...session, captured }
+      checkpoint: 'restart', databasePath, session: { ...session, captured }
     }).errorCode).toBe('review_restart_rollback');
   });
 

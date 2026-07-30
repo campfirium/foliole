@@ -10,7 +10,7 @@ import {
 
 import type {
   FsrsAuditState, OutgoingState, ReadingAuditState, ReviewAuditState, Section
-} from './windows-android-lab-review-audit-types.ts';
+} from './android-review-audit-types.ts';
 
 type Sqlite = InstanceType<typeof Database>;
 const DEFAULT_SIGNATURE = getReviewSchedulerSettingsSignature(DEFAULT_REVIEW_SCHEDULER_SETTINGS);

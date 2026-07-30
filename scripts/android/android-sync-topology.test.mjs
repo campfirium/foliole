@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { diagnoseWindowsAndroidLabSyncTopology } from './windows-android-lab-sync-topology.mjs';
+import { diagnoseAndroidSyncTopology } from './android-sync-topology.mjs';
 
 const pairingState = {
   device_id: 'a5-device',
@@ -13,9 +13,9 @@ const pairingState = {
   remote_peer_platform: 'Windows'
 };
 
-describe('Windows Android Lab sync topology', () => {
+describe('Android sync topology', () => {
   it('requires reverse only when a loopback endpoint points at the Windows sync peer', () => {
-    expect(diagnoseWindowsAndroidLabSyncTopology({
+    expect(diagnoseAndroidSyncTopology({
       executorDeviceId: 'a5-device',
       pairingState,
       syncState: { endpoint_url: 'http://127.0.0.1:38641', sync_events: [] },
@@ -29,7 +29,7 @@ describe('Windows Android Lab sync topology', () => {
   });
 
   it('forbids reverse for an explicit LAN endpoint even when Windows is the sync peer', () => {
-    expect(diagnoseWindowsAndroidLabSyncTopology({
+    expect(diagnoseAndroidSyncTopology({
       executorDeviceId: 'a5-device',
       pairingState,
       syncState: {
@@ -46,7 +46,7 @@ describe('Windows Android Lab sync topology', () => {
   });
 
   it('blocks loopback reverse when the Windows client is not the paired sync peer', () => {
-    expect(diagnoseWindowsAndroidLabSyncTopology({
+    expect(diagnoseAndroidSyncTopology({
       executorDeviceId: 'a5-device',
       pairingState,
       syncState: { endpoint_url: 'http://10.0.2.2:38641', sync_events: [] },

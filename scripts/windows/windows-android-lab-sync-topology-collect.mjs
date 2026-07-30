@@ -2,10 +2,13 @@
 /* global console, process */
 
 import { execFile } from 'node:child_process';
-import { Buffer } from 'node:buffer';
 import { promisify } from 'node:util';
 
-import { diagnoseWindowsAndroidLabSyncTopology } from './windows-android-lab-sync-topology.mjs';
+import {
+  diagnoseAndroidSyncTopology,
+  extractSyncStateFromSqliteBytes,
+  parseAndroidSharedPreferences
+} from '../android/android-sync-topology.mjs';
 
 const execFileAsync = promisify(execFile);
 const APP_ID = 'com.foliole.android';
@@ -14,68 +17,6 @@ const PAIRING_PREFS = 'shared_prefs/foliole_companion_pairing.xml';
 
 function trimText(value) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function unescapeXml(value) {
-  return value
-    .replaceAll('&quot;', '"')
-    .replaceAll('&apos;', "'")
-    .replaceAll('&lt;', '<')
-    .replaceAll('&gt;', '>')
-    .replaceAll('&amp;', '&');
-}
-
-export function parseAndroidSharedPreferences(xml) {
-  const values = {};
-  const pattern = /<string\s+name="([^"]+)">([\s\S]*?)<\/string>|<int\s+name="([^"]+)"\s+value="([^"]*)"\s*\/>/gu;
-  for (const match of String(xml || '').matchAll(pattern)) {
-    const key = match[1] || match[3];
-    const value = match[2] ?? match[4];
-    values[unescapeXml(key)] = unescapeXml(value);
-  }
-  return values;
-}
-
-function balancedJsonArray(text, start) {
-  let depth = 0;
-  let inString = false;
-  let escaped = false;
-  for (let index = start; index < text.length; index += 1) {
-    const char = text[index];
-    if (inString) {
-      escaped = char === '\\' && !escaped;
-      if (char === '"' && !escaped) inString = false;
-      if (char !== '\\') escaped = false;
-      continue;
-    }
-    if (char === '"') inString = true;
-    if (char === '[') depth += 1;
-    if (char === ']') {
-      depth -= 1;
-      if (depth === 0) return text.slice(start, index + 1);
-    }
-  }
-  return null;
-}
-
-export function extractSyncStateFromSqliteBytes(buffer) {
-  const text = Buffer.isBuffer(buffer) ? buffer.toString('utf8') : String(buffer || '');
-  const endpointMatch = /workspace_sync_endpoint_url[\s\S]{0,320}?(https?:\/\/[^\s"'<>]+\b)/u.exec(text);
-  const eventKeyIndex = text.indexOf('workspace_sync_events');
-  const arrayStart = eventKeyIndex >= 0 ? text.indexOf('[', eventKeyIndex) : -1;
-  const eventsJson = arrayStart >= 0 ? balancedJsonArray(text, arrayStart) : null;
-  let syncEvents = [];
-  try {
-    const parsed = eventsJson ? JSON.parse(eventsJson) : [];
-    syncEvents = Array.isArray(parsed) ? parsed : [];
-  } catch {
-    syncEvents = [];
-  }
-  return {
-    endpoint_url: trimText(endpointMatch?.[1]),
-    extraction_mode: 'sqlite-text-scan',
-    sync_events: syncEvents
-  };
 }
 
 function pairingStateFromPrefs(values) {
@@ -124,7 +65,7 @@ async function collectTopology() {
   const pairingState = pairingStateFromPrefs(parseAndroidSharedPreferences(pairingXml));
   const syncState = extractSyncStateFromSqliteBytes(await readAndroidDatabase(adbPath, serial));
   const executorDeviceId = trimText(await adb(adbPath, serial, ['shell', 'getprop', 'ro.serialno']));
-  return diagnoseWindowsAndroidLabSyncTopology({
+  return diagnoseAndroidSyncTopology({
     executorDeviceId,
     pairingState,
     syncState,

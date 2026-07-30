@@ -1,14 +1,6 @@
 export type AuditPhase = 'prepare' | 'capture' | 'restart';
 export type ReviewAction = 'grade' | 'read' | 'later' | 'dismiss';
 
-export interface AuditContext {
-  checkpoint: AuditPhase;
-  commitSha: string;
-  deploymentRunId: string;
-  deviceIdentity: string;
-  runId: string;
-}
-
 export interface OutgoingState {
   recordPresent: boolean;
   stateSeq: number | null;
@@ -61,12 +53,9 @@ export interface ExpectedAction {
   nodeId: string;
 }
 
-export interface AcceptanceSession {
+export interface ReviewAuditSession {
   baseline: ReviewAuditState;
   captured?: ReviewAuditState;
-  commitSha: string;
-  deploymentRunId: string;
-  deviceIdentity: string;
   expectedActions: ExpectedAction[];
   fsrsNodeId: string;
   fsrsNodeIds?: string[];

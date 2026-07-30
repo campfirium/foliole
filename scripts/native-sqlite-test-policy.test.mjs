@@ -72,11 +72,11 @@ describe('native sqlite test policy', () => {
     expect(controlledElectronSqliteTests).toContain('scripts/ios/ios-database-upgrade-acceptance-fixture.test.mjs');
   });
 
-  it('keeps the Windows Android Lab Review audit on the Electron ABI test entry', () => {
-    expect(controlledElectronSqliteTests).toContain('scripts/windows/windows-android-lab-review-audit.test.mjs');
+  it('keeps the Android Review audit on the Electron ABI test entry', () => {
+    expect(controlledElectronSqliteTests).toContain('scripts/android/android-review-audit.test.mjs');
   });
 
-  it('keeps the Windows Android Lab Review selection on the Electron ABI test entry', () => {
-    expect(controlledElectronSqliteTests).toContain('scripts/windows/windows-android-lab-review-selection.test.mjs');
+  it('keeps the Android Review selection on the Electron ABI test entry', () => {
+    expect(controlledElectronSqliteTests).toContain('scripts/android/android-review-selection.test.mjs');
   });
 });

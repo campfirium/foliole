@@ -8,10 +8,10 @@ import path from 'node:path';
 import { clearTimeout, setTimeout } from 'node:timers';
 import { pathToFileURL } from 'node:url';
 
+import { nativeUiSummary } from '../android/android-native-ui-summary.mjs';
+import { resolveUiAutomationTestClass } from '../android/android-ui-scenario.mjs';
 import { terminateProcessTree } from './windows-bounded-process.mjs';
-import { nativeUiSummary } from './windows-android-lab-native-ui-summary.mjs';
 import { createUiAutomationProgress, redactedUiProgressArgs } from './windows-android-lab-ui-progress.mjs';
-import { resolveUiAutomationTestClass } from './windows-android-lab-ui-scenario.mjs';
 
 const APP_ID = 'com.foliole.android';
 const TEST_RUNNER = `${APP_ID}.test/androidx.test.runner.AndroidJUnitRunner`;

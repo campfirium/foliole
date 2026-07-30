@@ -7,7 +7,7 @@ import {
 import type { ReviewSchedulerSettings } from '../../lib/core/review/settings.ts';
 import { buildReviewQueuePlan, type ReviewQueueNode } from '../../src/store/reviewQueuePlanner.ts';
 
-import type { ExpectedAction } from './windows-android-lab-review-audit-types.ts';
+import type { ExpectedAction } from './android-review-audit-types.ts';
 
 type Sqlite = InstanceType<typeof Database>;
 const BODY_BLOB_DATA = 'CAST(cbd.data AS TEXT)';

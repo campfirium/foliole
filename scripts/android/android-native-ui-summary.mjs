@@ -1,3 +1,5 @@
+/* Pure Android acceptance summary; no device or run-lifecycle access. */
+
 export function nativeUiSummary(xml, size, inputState) {
   const nodes = [];
   for (const match of String(xml).matchAll(/<node\s+([^>]+)>?/gu)) {

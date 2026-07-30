@@ -1,3 +1,5 @@
+/* Pure mapping from stable UI scenario identity to instrumentation test class. */
+
 const APP_ID = 'com.foliole.android';
 export const CAPTURE_ANNOTATION_SCENARIO_ID = 'companion-capture-annotation-persistence';
 
