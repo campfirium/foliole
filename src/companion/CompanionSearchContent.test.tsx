@@ -40,6 +40,8 @@ describe('CompanionSearchContent presentation', () => {
   it('renders a compact idle search surface', () => {
     renderWithLocalization(<CompanionSearchContent />);
 
+    expect(screen.getByTestId('companion-search-input')).toBeInTheDocument();
+    expect(screen.getByTestId('companion-search-input').closest('section')).toHaveAttribute('data-search-status', 'idle');
     expect(screen.getByRole('heading', { name: 'Search' })).toBeInTheDocument();
     expect(screen.getByText('Local search')).toBeInTheDocument();
     expect(screen.getByText('Topics and synced reading materials on this device.')).toBeInTheDocument();
@@ -104,7 +106,9 @@ describe('CompanionSearchContent states and actions', () => {
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search topics' }), { target: { value: 'alpha' } });
 
     expect(screen.getByText('Searching...')).toBeInTheDocument();
+    expect(screen.getByTestId('companion-search-input').closest('section')).toHaveAttribute('data-search-status', 'loading');
     searchFailure.reject?.();
     expect(await screen.findByText('Search failed on this device.')).toBeInTheDocument();
+    expect(screen.getByTestId('companion-search-input').closest('section')).toHaveAttribute('data-search-status', 'error');
   });
 });

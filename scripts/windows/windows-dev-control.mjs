@@ -8,7 +8,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 export const WINDOWS_DEV_SOURCE_REF = 'refs/heads/dev';
-export const WINDOWS_DEV_ACTIONS = ['appearance', 'build', 'deploy', 'live', 'verify'];
+export const WINDOWS_DEV_ACTIONS = ['appearance', 'build', 'deploy', 'live', 'secondary', 'verify'];
 const WINDOWS_DEV_REMOTE_ACTION = 'C:/dev/foliole-android-lab-preview/scripts/windows/windows-dev-action.ps1';
 const WINDOWS_DEV_EVIDENCE_PREFIX = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/';
 
@@ -37,7 +37,7 @@ export function parseWindowsDevControlArgs(argv, env = process.env) {
     throw new Error('--host user@host or FOLIOLE_WINDOWS_DEV_SSH is required');
   }
   if (args.length !== 1 || !WINDOWS_DEV_ACTIONS.includes(args[0])) {
-    throw new Error('Windows DEV control only accepts appearance, build, deploy, live, or verify');
+    throw new Error('Windows DEV control only accepts appearance, build, deploy, live, secondary, or verify');
   }
   return { action: args[0], host };
 }
@@ -102,7 +102,7 @@ export async function runWindowsDevControl({
   }
   if (remoteOutput && !remoteError) stdout.write(remoteOutput);
   const result = { action, operation: 'complete', ref: WINDOWS_DEV_SOURCE_REF };
-  if (['appearance', 'deploy', 'live'].includes(action)) {
+  if (['appearance', 'deploy', 'live', 'secondary'].includes(action)) {
     const evidence = parseWindowsDevLiveEvidence(remoteOutput);
     const evidenceRoot = path.join(repoRoot, '.tmp', 'artifacts', 'a5-live-reload');
     fsApi.mkdirSync(evidenceRoot, { recursive: true });

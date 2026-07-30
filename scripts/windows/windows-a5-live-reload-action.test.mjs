@@ -39,6 +39,7 @@ function createServer(overrides = {}) {
   let sequence = 0;
   return {
     close: vi.fn(async () => {}), url: 'http://127.0.0.1:24605',
+    waitForDeviceInput: vi.fn(async () => ({ x: 120, y: 240 })),
     waitForDeviceLoad: vi.fn(async () => ({ sequence: sequence += 1 })), ...overrides
   };
 }
@@ -68,6 +69,22 @@ it('loads the installed shell once without Gradle or APK install', async () => {
     '-P', '5037', '-s', '87a33a4b', 'reverse', '--remove', `tcp:${WINDOWS_A5_LIVE_RELOAD_PORT}`
   ]);
   expect(server.close).toHaveBeenCalledOnce();
+});
+
+it('runs the bounded secondary acceptance and stores its receipt', async () => {
+  const { evidenceRoot, paths } = fixture();
+  const { calls, execute } = createExecutor(evidenceRoot);
+  const acceptance = { identity: 'dev-secondary', receipts: [{ step: 'search' }], status: 'passed' };
+  const server = createServer({ waitForDeviceLoad: vi.fn(async () => ({ acceptance, sequence: 1 })) });
+  const run = await runWindowsA5LiveReload({
+    adbPort: '5037', buildIdentity: 'dev-secondary', env: {}, evidenceRoot, execute, paths,
+    serial: '87a33a4b', startServer: vi.fn(async () => server), surface: 'secondary',
+    verifyForeground: vi.fn(async () => {})
+  });
+  expect(calls.map(({ args }) => args)).toContainEqual([
+    '-P', '5037', '-s', '87a33a4b', 'shell', 'input', 'tap', '120', '240'
+  ]);
+  expect(JSON.parse(fs.readFileSync(run.liveReload.acceptancePath, 'utf8'))).toEqual(acceptance);
 });
 
 it('removes reverse and closes the server after a device load failure', async () => {

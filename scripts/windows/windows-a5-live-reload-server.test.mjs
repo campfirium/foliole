@@ -81,6 +81,30 @@ it('navigates only the fixed Appearance acceptance surface before reporting read
   expect(() => new Script(script)).not.toThrow();
 });
 
+it('injects only the bounded secondary-surface scenario and accepts its semantic input point', () => {
+  const inputs = [];
+  const plugin = createA5LiveReloadPlugin({
+    buildIdentity: 'dev-secondary', onDeviceError: vi.fn(),
+    onDeviceInput: (value) => inputs.push(value) || true, onDeviceLoad: vi.fn(), surface: 'secondary'
+  });
+  const middlewares = { use: vi.fn() };
+  plugin.configureServer({ middlewares });
+  const script = plugin.transformIndexHtml.handler('<main></main>').tags.at(-1).children;
+  expect(script).toContain('companion-directory-node-');
+  expect(script).toContain('companion-search-input');
+  expect(script).toContain('bounded-dev-rejection');
+  expect(script).not.toContain('?.');
+  expect(script).not.toContain(':has(');
+  expect(() => new Script(script)).not.toThrow();
+  const response = { end: vi.fn(), statusCode: 0 };
+  middlewares.use.mock.calls[0][0](
+    request('/__foliole_a5_dev_input__?identity=dev-secondary&x=120&y=240'),
+    response, vi.fn()
+  );
+  expect(response.statusCode).toBe(204);
+  expect(inputs).toHaveLength(1);
+});
+
 it('owns compatible source transforms, device identity, and cleanup in one foreground lifecycle', async () => {
   const runtime = new EventEmitter();
   const middlewares = { use: vi.fn() };

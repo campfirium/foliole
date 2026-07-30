@@ -126,6 +126,19 @@ describe('Windows DEV fixed device action', () => {
     expect(calls.some(({ command }) => command === 'powershell.exe')).toBe(false);
     expect(calls.flatMap(({ args }) => args).join(' ')).not.toMatch(/install|gradle/iu);
   });
+
+  it('routes secondary-surface acceptance through the bounded live surface', async () => {
+    const { evidenceRoot, paths } = fixture();
+    const { calls, execute } = successfulExecutor(paths);
+    const runLiveReload = successfulLiveReload();
+    await runWindowsDevDeviceAction({
+      action: 'secondary', buildIdentity: 'dev-secondary', evidenceRoot, execute, paths,
+      runLiveReload
+    });
+    expect(runLiveReload).toHaveBeenCalledWith(expect.objectContaining({ surface: 'secondary' }));
+    expect(calls.some(({ command }) => command === 'powershell.exe')).toBe(false);
+    expect(calls.flatMap(({ args }) => args).join(' ')).not.toMatch(/install|gradle/iu);
+  });
 });
 
 it('requires the exact A5 serial to be ready', () => {

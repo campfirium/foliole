@@ -4,11 +4,14 @@ import path from 'node:path';
 
 import { createServer } from 'vite';
 
+import { buildA5SecondaryAcceptanceScript } from './windows-a5-secondary-acceptance-script.mjs';
+
 export const WINDOWS_A5_LIVE_RELOAD_PORT = 24605;
 export const WINDOWS_A5_LIVE_RELOAD_URL = `http://127.0.0.1:${WINDOWS_A5_LIVE_RELOAD_PORT}`;
 
 const LOADED_PATH = '/__foliole_a5_dev_loaded__';
 const ERROR_PATH = '/__foliole_a5_dev_error__';
+const INPUT_PATH = '/__foliole_a5_dev_input__';
 const IDENTITY_PATTERN = /^[A-Za-z0-9.-]{1,96}$/u;
 
 function liveReloadError(message, stage = 'live-server') {
@@ -18,15 +21,20 @@ function liveReloadError(message, stage = 'live-server') {
 function createLoadTracker(buildIdentity, now) {
   let latest = null;
   let latestError = null;
+  let latestInput = null;
   let sequence = 0;
   const waiters = [];
+  const inputWaiters = [];
   return {
     record(request) {
       const url = new URL(request.url, WINDOWS_A5_LIVE_RELOAD_URL);
       if (url.searchParams.get('identity') !== buildIdentity) return false;
       latest = {
         buildIdentity, loadedAt: now().toISOString(), sequence: sequence += 1,
-        userAgent: String(request.headers['user-agent'] || '').slice(0, 300)
+        userAgent: String(request.headers['user-agent'] || '').slice(0, 300),
+        ...(url.searchParams.get('acceptance')
+          ? { acceptance: JSON.parse(url.searchParams.get('acceptance')) }
+          : {})
       };
       for (const waiter of waiters.splice(0)) waiter(latest);
       return true;
@@ -49,11 +57,32 @@ function createLoadTracker(buildIdentity, now) {
       if (url.searchParams.get('identity') !== buildIdentity) return false;
       latestError = String(url.searchParams.get('message') || 'unknown WebView error').slice(0, 300);
       return true;
+    },
+    recordInput(request) {
+      const url = new URL(request.url, WINDOWS_A5_LIVE_RELOAD_URL);
+      if (url.searchParams.get('identity') !== buildIdentity) return false;
+      const x = Number.parseInt(url.searchParams.get('x') || '', 10);
+      const y = Number.parseInt(url.searchParams.get('y') || '', 10);
+      if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || y < 0) return false;
+      latestInput = { x, y };
+      for (const waiter of inputWaiters.splice(0)) waiter(latestInput);
+      return true;
+    },
+    waitForInput(timeoutMs) {
+      if (latestInput) return Promise.resolve(latestInput);
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(liveReloadError(
+          'A5 did not request the bounded Search input action before timeout', 'live-input'
+        )), timeoutMs);
+        inputWaiters.push((point) => { clearTimeout(timer); resolve(point); });
+      });
     }
   };
 }
 
-export function createA5LiveReloadPlugin({ buildIdentity, onDeviceError, onDeviceLoad, surface = 'current' }) {
+export function createA5LiveReloadPlugin({
+  buildIdentity, onDeviceError, onDeviceInput = () => false, onDeviceLoad, surface = 'current'
+}) {
   const encodedIdentity = JSON.stringify(buildIdentity);
   const readySelector = surface === 'appearance'
     ? '[data-testid="companion-custom-css-settings"]'
@@ -64,8 +93,11 @@ export function createA5LiveReloadPlugin({ buildIdentity, onDeviceError, onDevic
       server.middlewares.use((request, response, next) => {
         const isLoad = request.url?.startsWith(LOADED_PATH);
         const isError = request.url?.startsWith(ERROR_PATH);
-        if (!isLoad && !isError) return next();
-        const accepted = isLoad ? onDeviceLoad(request) : onDeviceError(request);
+        const isInput = request.url?.startsWith(INPUT_PATH);
+        if (!isLoad && !isError && !isInput) return next();
+        const accepted = isLoad
+          ? onDeviceLoad(request)
+          : isError ? onDeviceError(request) : onDeviceInput(request);
         response.statusCode = accepted ? 204 : 409;
         response.end();
       });
@@ -73,6 +105,19 @@ export function createA5LiveReloadPlugin({ buildIdentity, onDeviceError, onDevic
     transformIndexHtml: {
       order: 'post',
       handler(html) {
+        if (surface === 'secondary') {
+          const scenario = buildA5SecondaryAcceptanceScript({
+            identity: buildIdentity, inputPath: INPUT_PATH
+          });
+          const script = `(()=>{const fail=(value)=>fetch('${ERROR_PATH}?identity='+encodeURIComponent(${encodedIdentity})+'&message='+encodeURIComponent(String(value).slice(0,300)),{cache:'no-store'}).catch(()=>{});${scenario}.then((result)=>fetch('${LOADED_PATH}?identity='+encodeURIComponent(${encodedIdentity})+'&acceptance='+encodeURIComponent(JSON.stringify(result)),{cache:'no-store'})).catch(fail);})();`;
+          return {
+            html: html.replace('<script type="module" src="/@vite/client"></script>', ''),
+            tags: [
+              { attrs: { content: buildIdentity, name: 'foliole-a5-dev-build' }, tag: 'meta', injectTo: 'head' },
+              { children: script, tag: 'script', injectTo: 'body' }
+            ]
+          };
+        }
         const script = [
           '(()=>{let observer=null;',
           `const identity=${encodedIdentity};`,
@@ -122,13 +167,14 @@ export async function startWindowsA5LiveReloadServer({
   timeoutMs = 45_000
 }) {
   if (!IDENTITY_PATTERN.test(buildIdentity || '')) throw liveReloadError('Invalid DEV build identity');
-  if (!['appearance', 'current'].includes(surface)) throw liveReloadError('Invalid DEV acceptance surface');
+  if (!['appearance', 'current', 'secondary'].includes(surface)) throw liveReloadError('Invalid DEV acceptance surface');
   const tracker = createLoadTracker(buildIdentity, now);
   const server = await createServerImpl({
     configFile: path.join(repoRoot, 'vite.companion.config.ts'),
     oxc: { target: 'chrome64' },
     plugins: [createA5LiveReloadPlugin({
-      buildIdentity, onDeviceError: tracker.recordError, onDeviceLoad: tracker.record, surface
+      buildIdentity, onDeviceError: tracker.recordError, onDeviceInput: tracker.recordInput,
+      onDeviceLoad: tracker.record, surface
     })],
     server: {
       hmr: false, host: '127.0.0.1', port: WINDOWS_A5_LIVE_RELOAD_PORT, strictPort: true
@@ -144,6 +190,7 @@ export async function startWindowsA5LiveReloadServer({
     buildIdentity,
     close: () => server.close(),
     url: WINDOWS_A5_LIVE_RELOAD_URL,
+    waitForDeviceInput: () => tracker.waitForInput(timeoutMs),
     waitForDeviceLoad: (afterSequence = 0) => tracker.wait(afterSequence, timeoutMs)
   };
 }

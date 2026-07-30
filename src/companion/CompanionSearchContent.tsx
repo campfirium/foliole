@@ -26,7 +26,7 @@ export function CompanionSearchContent(props: {
   const searchState = useCompanionSearch(query);
 
   return (
-    <section className="px-1 pb-4 pt-3">
+    <section className="px-1 pb-4 pt-3" data-search-status={searchState.status}>
       <CompanionScreenHeader title={t('companion.tabs.search')} />
       <label className="block">
         <span className="sr-only">{t('companion.search.label')}</span>
@@ -35,6 +35,7 @@ export function CompanionSearchContent(props: {
             'h-11 w-full rounded-md border border-companion-divider bg-companion-content px-4 text-base text-foreground transition placeholder:text-companion-text-secondary',
             appInputBorderFocusVisibleClassName
           )}
+          data-testid="companion-search-input"
           onChange={(event) => setQuery(event.target.value)}
           placeholder={t('companion.search.placeholder')}
           type="search"

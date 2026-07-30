@@ -58,7 +58,10 @@ export async function runWindowsA5LiveReload({
   let primaryError = null;
   let reverseConfigured = false;
   let result;
-  const server = await startServer({ buildIdentity, repoRoot: paths.repoRoot, surface });
+  const server = await startServer({
+    buildIdentity, repoRoot: paths.repoRoot, surface,
+    timeoutMs: surface === 'secondary' ? 120_000 : 45_000
+  });
   try {
     const installed = await checked(execute, paths.adbPath, adbArgs(adbPort, serial,
       ['shell', 'pm', 'path', APP_ID]), adbOptions(env, 'live-package'), 'live-package');
@@ -72,13 +75,28 @@ export async function runWindowsA5LiveReload({
     const firstLoad = server.waitForDeviceLoad();
     await checked(execute, paths.adbPath, adbArgs(adbPort, serial,
       ['shell', 'am', 'start', '-n', COMPONENT]), adbOptions(env, 'live-launch'), 'live-launch');
+    if (surface === 'secondary') {
+      const point = await server.waitForDeviceInput();
+      await checked(execute, paths.adbPath, adbArgs(adbPort, serial,
+        ['shell', 'input', 'tap', String(point.x), String(point.y)]),
+      adbOptions(env, 'live-input'), 'live-input');
+    }
     const launched = await firstLoad;
     await verifyForeground();
     const screenshotPath = await captureScreenshot(
       execute, paths, env, adbPort, serial, evidenceRoot
     );
+    let acceptancePath;
+    if (surface === 'secondary') {
+      if (launched.acceptance?.status !== 'passed') {
+        throw failure('A5 secondary acceptance did not report passed', 'live-acceptance');
+      }
+      acceptancePath = path.join(evidenceRoot, 'secondary-acceptance.json');
+      fs.writeFileSync(acceptancePath, `${JSON.stringify(launched.acceptance, null, 2)}\n`, 'utf8');
+    }
     result = {
-      buildIdentity, deviceLoads: launched.sequence, screenshotPath, serverUrl: server.url
+      buildIdentity, deviceLoads: launched.sequence, screenshotPath, serverUrl: server.url,
+      ...(acceptancePath ? { acceptancePath } : {})
     };
   } catch (error) {
     primaryError = error;

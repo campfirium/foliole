@@ -112,7 +112,8 @@ export async function runWindowsDevDeviceAction({
         : '';
       const live = await runLiveReload({
         adbPort: WINDOWS_DEV_ADB_PORT, buildIdentity, env, evidenceRoot, execute, paths,
-        serial: WINDOWS_DEV_A5_SERIAL, surface: action === 'appearance' ? 'appearance' : 'current',
+        serial: WINDOWS_DEV_A5_SERIAL,
+        surface: action === 'appearance' ? 'appearance' : action === 'secondary' ? 'secondary' : 'current',
         verifyForeground: () => verify(execute, paths, env)
       });
       actionResult = { ...live, output: `${deployOutput}${live.output}` };
