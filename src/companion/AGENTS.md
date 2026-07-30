@@ -32,5 +32,5 @@
 
 - companion 改动默认先执行覆盖本轮能力闭环的最小验证；只有当能力闭环触及移动共享 bridge、Capacitor / Android 宿主主链路、共享层 / 依赖、跨宿主联动、或你无法用相关验证证明影响已被覆盖时，才升级为 `npm run quality:android`、`npm run quality:shared` 或 `npm run quality:full`。
 - `npm run android:web:dev` 是跨宿主前台 companion Web 入口，只作为空态壳层或启动烟测的可选诊断；它运行在 `web-preview` bootstrap 下，`database_ready` 为 `false`，不创建 detached service 或 PID/state，不作为 Android companion UI 人工验收路线。
-- 真实 A5 宿主只通过 `scripts/windows/windows-dev-control.mjs` 的 fixed `deploy` / `verify` 接入。若任务必须验收真实 companion 内容、持久化结果或 Android WebView CSS，现有动作不足时必须停下重新评估，不得直接调用 adb、Gradle 或另建真机入口。
+- 真实 A5 宿主只通过 `scripts/windows/windows-dev-control.mjs` 的 fixed action 接入，renderer/native 路由与验收证据要求由 `android/AGENTS.md` 统一维护。若现有动作不足以验收真实 companion 内容、持久化结果或 Android WebView CSS，必须停下重新评估，不得直接调用 adb、Gradle 或另建真机入口。
 - companion UI 最终验收的真机 L1 触发条件由 `android/AGENTS.md` 维护；凡需要查看真实 companion 内容、持久化结果或 Android WebView CSS 兼容，仍必须按该规则走真机最终 L1。

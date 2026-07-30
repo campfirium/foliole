@@ -42,12 +42,21 @@ function successfulExecutor(paths, overrides = {}) {
   return { calls, execute };
 }
 
+function successfulLiveReload() {
+  return vi.fn(async ({ buildIdentity }) => ({
+    liveReload: { buildIdentity, deviceLoads: 2, screenshotPath: 'a5-live.png' },
+    output: 'live ok\n'
+  }));
+}
+
 describe('Windows DEV fixed device action', () => {
   it('deploys only to fixed port and serial with data protection and cleanup', async () => {
     const { evidenceRoot, paths } = fixture();
     const { calls, execute } = successfulExecutor(paths);
-    await expect(runWindowsDevDeviceAction({ action: 'deploy', evidenceRoot, execute, paths }))
-      .resolves.toContain('ok');
+    await expect(runWindowsDevDeviceAction({
+      action: 'deploy', buildIdentity: 'dev-1', evidenceRoot, execute, paths,
+      runLiveReload: successfulLiveReload()
+    })).resolves.toMatchObject({ output: expect.stringContaining('ok') });
     const adbCalls = calls.filter(({ command }) => command === paths.adbPath).map(({ args }) => args);
     expect(adbCalls[0]).toEqual(['-P', WINDOWS_DEV_ADB_PORT, 'start-server']);
     expect(adbCalls).toContainEqual([
@@ -72,6 +81,7 @@ describe('Windows DEV fixed device action', () => {
     expect(deploy.options.env.ANDROID_USER_HOME).toBe(paths.signingHome);
     expect(calls[0].options.env).not.toHaveProperty('ANDROID_USER_HOME');
     expect(calls[0].options.env).not.toHaveProperty('ANDROID_ADB_SERVER_PORT');
+    expect(calls.flatMap(({ args }) => args)).not.toContain('installDebug');
   });
 
   it('maps an offline fixed device to 69 and still stops the action-owned server', async () => {
@@ -91,6 +101,17 @@ describe('Windows DEV fixed device action', () => {
     const verify = calls.find(({ args }) => args.some((arg) => String(arg).includes('verify-android-launch.mjs')));
     expect(verify.args).toContain(WINDOWS_DEV_A5_SERIAL);
     expect(verify.args).toContain(WINDOWS_DEV_ADB_PORT);
+  });
+
+  it('routes renderer-only live action without PowerShell deploy or APK install', async () => {
+    const { evidenceRoot, paths } = fixture();
+    const { calls, execute } = successfulExecutor(paths);
+    await runWindowsDevDeviceAction({
+      action: 'live', buildIdentity: 'dev-2', evidenceRoot, execute, paths,
+      runLiveReload: successfulLiveReload()
+    });
+    expect(calls.some(({ command }) => command === 'powershell.exe')).toBe(false);
+    expect(calls.flatMap(({ args }) => args).join(' ')).not.toMatch(/install|gradle/iu);
   });
 });
 

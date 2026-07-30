@@ -52,7 +52,7 @@
 
 - Windows 开发使用普通 `dev` Git 流程：Mac controller 把 `dev` push 到 LAN Git，Windows 单一普通 `dev` 仓库执行 `git pull --ff-only lan dev` 后再动作；不解析、传递、保存、回传或比对 SHA，Git 失败直接报告。
 - Windows 本地仓库同时服务 Windows 桌面与 A5 Android 开发；Windows 不提交或推送源码上游，不建立 candidate、scratch 或第二份源码现场。拉取失败直接报告，不自动 reset、重建、修复或合并源码。
-- 普通 Windows 终端诊断走局域网 SSH；A5 设备动作只允许由 `scripts/windows/windows-dev-control.mjs` 的 `deploy` / `verify` 触发同一 Windows `dev` 仓库内的固定 adapter。不得绕过该入口建立其他设备控制面；具体边界按 `electron/AGENTS.md` 与 `android/AGENTS.md` 执行。
+- 普通 Windows 终端诊断走局域网 SSH；A5 设备动作只允许由 `scripts/windows/windows-dev-control.mjs` 的固定动作触发同一 Windows `dev` 仓库内的 adapter。不得绕过该入口建立其他设备控制面；动作集合与具体边界按 `electron/AGENTS.md` 与 `android/AGENTS.md` 执行。
 - Windows 原生命令默认用已存在的 `npm` / `node` / 项目脚本入口执行；不得把多步验证长期写成内联 PowerShell / cmd 片段。
 - 复杂 Windows 命令若涉及多层引号、环境变量、重定向、后台进程、native exe、`cmd.exe` / PowerShell 交叉调用或 stdout 可靠性判断，优先写成仓库内 Node runner 或已提交脚本；临时诊断必须把 stdout、stderr、exit code 写入 `.tmp/` 后再读取，不得只凭空 stdout 或空日志判定成功。
 - 临时 Playwright / browser 验收、生产站点 browser probe、HTTP server + browser 脚本必须通过 `node scripts/with-resource-gate.mjs preview -- <command...>` 执行；Node REPL 只用于短探针，长流程必须转成仓库脚本。只清理 runner 自己启动的子进程树，不按进程名全机杀 `node.exe` / `msedge.exe`。

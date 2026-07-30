@@ -1,10 +1,13 @@
 // @vitest-environment node
 
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { expect, it, vi } from 'vitest';
 
 import {
-  parseWindowsDevControlArgs, runWindowsDevControl, windowsDevPushSpec, windowsDevSshSpec
+  parseWindowsDevControlArgs, parseWindowsDevLiveEvidence, runWindowsDevControl,
+  windowsDevPushSpec, windowsDevScpSpec, windowsDevSshSpec
 } from './windows-dev-control.mjs';
 
 it('accepts only fixed actions with an explicit LAN host', () => {
@@ -12,11 +15,13 @@ it('accepts only fixed actions with an explicit LAN host', () => {
     .toEqual({ action: 'build', host: 'v\\dev@192.168.0.11' });
   expect(parseWindowsDevControlArgs(['--host', 'v\\dev@192.168.0.11', 'deploy'], {}))
     .toMatchObject({ action: 'deploy' });
+  expect(parseWindowsDevControlArgs(['--host', 'v\\dev@192.168.0.11', 'live'], {}))
+    .toMatchObject({ action: 'live' });
   expect(() => parseWindowsDevControlArgs(['--host', 'v\\dev@192.168.0.11', 'push'], {}))
-    .toThrow('only accepts build, deploy, or verify');
+    .toThrow('only accepts build, deploy, live, or verify');
   expect(() => parseWindowsDevControlArgs([
     '--host', 'v\\dev@192.168.0.11', 'verify', '--commit', 'a'.repeat(40)
-  ], {})).toThrow('only accepts build, deploy, or verify');
+  ], {})).toThrow('only accepts build, deploy, live, or verify');
 });
 
 it('pushes dev and then invokes the fixed Windows action', async () => {
@@ -47,6 +52,35 @@ it('uses only the ordinary SSH key and fixed remote action path', () => {
   expect(spec).toContain('/Users/dev/.ssh/agent/foliole-windows-android-lab');
   expect(spec).toContain('C:/dev/foliole-android-lab-preview/scripts/windows/windows-dev-action.ps1');
   expect(spec.at(-1)).toBe('deploy');
+});
+
+it('copies only fixed live evidence with the ordinary SSH identity', () => {
+  const remotePath = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/dev-1/a5-live.png';
+  const spec = windowsDevScpSpec('v\\dev@192.168.0.11', remotePath, '/repo/a5.png', {}, '/Users/dev');
+  expect(spec).toContain('/Users/dev/.ssh/agent/foliole-windows-android-lab');
+  expect(spec.at(-2)).toBe(`v\\dev@192.168.0.11:${remotePath}`);
+  expect(spec.at(-1)).toBe('/repo/a5.png');
+  expect(parseWindowsDevLiveEvidence(
+    `[windows-dev-action] live identity=dev-1 screenshot=${remotePath}\n`
+  )).toEqual({ buildIdentity: 'dev-1', remotePath });
+  expect(() => parseWindowsDevLiveEvidence(
+    '[windows-dev-action] live identity=dev-1 screenshot=C:/Users/dev/private.png\n'
+  )).toThrow('escaped its fixed evidence root');
+});
+
+it('copies live screenshot evidence after the fixed foreground action', async () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-dev-control-'));
+  const remotePath = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/dev-2/a5-live.png';
+  const executeScp = vi.fn(async (args) => { fs.writeFileSync(args.at(-1), 'png'); return ''; });
+  const result = await runWindowsDevControl({
+    argv: ['--host', 'v\\dev@192.168.0.11', 'live'], env: {}, executeGit: vi.fn(async () => ''),
+    executeScp, executeSsh: vi.fn(async () =>
+      `[windows-dev-action] live identity=dev-2 screenshot=${remotePath}\n`),
+    repoRoot, stdout: { write: vi.fn() }
+  });
+  expect(result).toMatchObject({ action: 'live', screenshotPath: expect.stringContaining('dev-2.png') });
+  expect(executeScp).toHaveBeenCalledOnce();
+  fs.rmSync(repoRoot, { force: true, recursive: true });
 });
 
 it('does not resolve or compare commit identifiers', () => {

@@ -19,14 +19,14 @@ function fixture() {
   const signingKeystore = path.join(signingHome, 'debug.keystore');
   const signingManifest = path.join(root, 'signing', 'identity.json');
   const paths = {
-    androidSdk: path.join(root, 'sdk'), gitPath: path.join(root, 'git.exe'),
+    adbPath: path.join(root, 'adb.exe'), androidSdk: path.join(root, 'sdk'), gitPath: path.join(root, 'git.exe'),
     javaHome: path.join(root, 'jbr'), repoRoot, signingHome, signingKeystore,
-    signingManifest, systemNode: path.join(root, 'node.exe'), systemNpm: path.join(root, 'npm.cmd')
+    signingManifest, systemNode: path.join(root, 'node.exe'), systemNpmCli: path.join(root, 'npm-cli.js')
   };
   for (const directory of [repoRoot, signingHome, paths.androidSdk, paths.javaHome]) {
     fs.mkdirSync(directory, { recursive: true });
   }
-  for (const file of [paths.gitPath, paths.systemNode, paths.systemNpm]) fs.writeFileSync(file, 'tool');
+  for (const file of [paths.adbPath, paths.gitPath, paths.systemNode, paths.systemNpmCli]) fs.writeFileSync(file, 'tool');
   fs.writeFileSync(signingKeystore, 'keystore');
   const digest = createHash('sha256').update('keystore').digest('hex');
   fs.writeFileSync(signingManifest, JSON.stringify({
@@ -64,7 +64,7 @@ describe('Windows DEV foreground build', () => {
     const { calls, execute } = successfulExecutor(paths);
     const run = await runWindowsDevBuild({
       execute, id: () => '12345678-rest', now: () => new Date('2026-07-30T00:00:00Z'), paths,
-      platform: 'win32'
+      platform: 'win32', prepareHost: vi.fn(async () => 'prepared\n')
     });
     expect(run.exitCode).toBe(0);
     expect(calls.find(({ args }) => args.includes('pull')).args)
@@ -78,6 +78,7 @@ describe('Windows DEV foreground build', () => {
     });
     expect(build.options.env.ANDROID_USER_HOME).toBe(paths.signingHome);
     expect(run.summary).toMatchObject({ action: 'build', directChildPid: 77, resultStatus: 'success' });
+    expect(fs.readFileSync(run.summary.logPath, 'utf8')).toContain('prepared');
   });
 
   it('stops before Gradle when pull is blocked', async () => {
@@ -85,7 +86,9 @@ describe('Windows DEV foreground build', () => {
     const { calls, execute } = successfulExecutor(paths, {
       pullFailure: true
     });
-    const run = await runWindowsDevBuild({ execute, paths, platform: 'win32' });
+    const run = await runWindowsDevBuild({
+      execute, paths, platform: 'win32', prepareHost: vi.fn()
+    });
     expect(run).toMatchObject({ exitCode: 64, summary: { failureStage: 'pull' } });
     expect(calls.some(({ args }) => args.includes('pull'))).toBe(true);
     expect(calls.some(({ command }) => command === 'cmd.exe')).toBe(false);
@@ -94,9 +97,48 @@ describe('Windows DEV foreground build', () => {
   it('fails closed when a repository-owned Java process already exists', async () => {
     const { paths } = fixture();
     const { calls, execute } = successfulExecutor(paths, { residual: '[{"ProcessId":42}]' });
-    const run = await runWindowsDevBuild({ execute, paths, platform: 'win32' });
+    const run = await runWindowsDevBuild({
+      execute, paths, platform: 'win32', prepareHost: vi.fn()
+    });
     expect(run).toMatchObject({ exitCode: 73, summary: { failureStage: 'residual' } });
     expect(calls.some(({ command }) => command === 'cmd.exe')).toBe(false);
+  });
+
+  it('keeps renderer-only live action out of build, sync, Gradle, and install', async () => {
+    const { paths } = fixture();
+    const { calls, execute } = successfulExecutor(paths);
+    const prepareHost = vi.fn();
+    const deviceAction = vi.fn(async ({ buildIdentity }) => ({
+      liveReload: { buildIdentity, deviceLoads: 2, screenshotPath: 'a5-live.png' },
+      output: 'live ok\n'
+    }));
+    const run = await runWindowsDevBuild({
+      action: 'live', deviceAction, execute, paths, platform: 'win32', prepareHost
+    });
+    expect(run).toMatchObject({
+      exitCode: 0,
+      summary: { action: 'live', liveReload: { deviceLoads: 2 }, resultStatus: 'success' }
+    });
+    expect(prepareHost).not.toHaveBeenCalled();
+    expect(calls.some(({ command }) => command === 'cmd.exe')).toBe(false);
+    expect(calls.flatMap(({ args }) => args).join(' ')).not.toMatch(/gradle|install|android:web:build/iu);
+  });
+
+  it('prepares current companion assets before native deploy can install', async () => {
+    const { paths } = fixture();
+    const { execute } = successfulExecutor(paths);
+    const order = [];
+    const prepareHost = vi.fn(async () => { order.push('prepare'); return 'prepared\n'; });
+    const deviceAction = vi.fn(async () => {
+      order.push('deploy');
+      return { liveReload: { buildIdentity: 'dev-3' }, output: 'deployed\n' };
+    });
+    const run = await runWindowsDevBuild({
+      action: 'deploy', deviceAction, execute, paths, platform: 'win32', prepareHost
+    });
+    expect(run.exitCode).toBe(0);
+    expect(order).toEqual(['prepare', 'deploy']);
+    expect(fs.readFileSync(run.summary.logPath, 'utf8')).toBe('prepared\ndeployed\n');
   });
 });
 
@@ -110,7 +152,7 @@ it('holds a FileShare.None lock and invokes only absolute system Node', () => {
   expect(source).toContain('windows-dev-build.mjs');
   expect(source).not.toContain('Write-Error');
   expect(source).not.toContain('windows-android-lab\\runtime');
-  expect(actionSource).toContain('[ValidateSet("build", "deploy", "verify")]');
+  expect(actionSource).toContain('[ValidateSet("build", "deploy", "live", "verify")]');
   expect(actionSource).toContain('[System.IO.FileShare]::None');
   expect(actionSource).toContain('& $systemNode $runner $Action');
 });

@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
 
-import capacitorConfig from '../capacitor.config.ts';
+import capacitorConfig, { createCapacitorConfig } from '../capacitor.config.ts';
 import companionViteConfig, { unwrapCssCascadeLayersForLegacyWebView } from '../vite.companion.config.ts';
 import demoViteConfig, {
   demoManifestPlugin,
@@ -14,6 +14,7 @@ import demoViteConfig, {
 } from '../vite.demo.config.ts';
 import viteConfig from '../vite.config.ts';
 import { injectDefaultStartupSkeletonHtml, resolveViteHmrSetting } from '../vite.shared.ts';
+import { WINDOWS_A5_LIVE_RELOAD_URL } from './windows/windows-a5-live-reload-server.mjs';
 
 const normalizePath = (value) => String(value).replaceAll('\\', '/');
 const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
@@ -85,6 +86,14 @@ describe('vite config', () => {
   it('initializes the Android Capacitor SQLite plugin without encrypted database setup', () => {
     expect(capacitorConfig.plugins?.CapacitorSQLite).toMatchObject({
       androidIsEncryption: false
+    });
+  });
+
+  it('keeps live reload out of normal builds and enables it only for the fixed A5 DEV sync', () => {
+    expect(createCapacitorConfig({}).server).toBeUndefined();
+    expect(createCapacitorConfig({ FOLIOLE_ANDROID_DEV_LIVE_RELOAD: '1' }).server).toEqual({
+      cleartext: true,
+      url: WINDOWS_A5_LIVE_RELOAD_URL
     });
   });
 

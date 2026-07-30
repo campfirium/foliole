@@ -3,6 +3,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { runWindowsA5LiveReload } from './windows-a5-live-reload-action.mjs';
+
 export const WINDOWS_DEV_ADB_PORT = '5037';
 export const WINDOWS_DEV_A5_SERIAL = '87a33a4b';
 const APP_ID = 'com.foliole.android';
@@ -80,11 +82,13 @@ async function verify(execute, paths, env) {
   return result.output;
 }
 
-export async function runWindowsDevDeviceAction({ action, evidenceRoot, execute, paths }) {
+export async function runWindowsDevDeviceAction({
+  action, buildIdentity, evidenceRoot, execute, paths, runLiveReload = runWindowsA5LiveReload
+}) {
   const env = actionEnv(paths);
   let started = false;
   let primaryError = null;
-  let output = '';
+  let actionResult = { output: '' };
   try {
     await checked(execute, paths.adbPath, ['-P', WINDOWS_DEV_ADB_PORT, 'start-server'],
       { env, timeoutCode: 'adb_start_timeout', timeoutMs: 30_000, windowsHide: true }, 'adb-start');
@@ -100,9 +104,19 @@ export async function runWindowsDevDeviceAction({ action, evidenceRoot, execute,
       ['-P', WINDOWS_DEV_ADB_PORT, '-s', WINDOWS_DEV_A5_SERIAL, 'get-state'],
       { env, timeoutCode: 'device_timeout', timeoutMs: 30_000, windowsHide: true }, 'device', 69);
     if (state.stdout.trim() !== 'device') throw failure('Fixed Android device is not ready', 69, 'device');
-    output = action === 'deploy'
-      ? await deploy(execute, paths, evidenceRoot, env)
-      : await verify(execute, paths, env);
+    if (action === 'verify') {
+      actionResult = { output: await verify(execute, paths, env) };
+    } else {
+      const deployOutput = action === 'deploy'
+        ? await deploy(execute, paths, evidenceRoot, env)
+        : '';
+      const live = await runLiveReload({
+        adbPort: WINDOWS_DEV_ADB_PORT, buildIdentity, env, evidenceRoot, execute, paths,
+        serial: WINDOWS_DEV_A5_SERIAL,
+        verifyForeground: () => verify(execute, paths, env)
+      });
+      actionResult = { ...live, output: `${deployOutput}${live.output}` };
+    }
   } catch (error) { primaryError = error; }
   if (started) {
     try {
@@ -111,5 +125,5 @@ export async function runWindowsDevDeviceAction({ action, evidenceRoot, execute,
     } catch (error) { throw failure(error.message, 125, 'adb-cleanup', error.result); }
   }
   if (primaryError) throw primaryError;
-  return output;
+  return actionResult;
 }

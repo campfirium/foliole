@@ -4,7 +4,7 @@ import path from 'node:path';
 
 export const WINDOWS_DEV_REPO_ROOT = 'C:\\dev\\foliole-android-lab-preview';
 export const WINDOWS_DEV_SYSTEM_NODE = 'C:\\Program Files\\nodejs\\node.exe';
-export const WINDOWS_DEV_SYSTEM_NPM = 'C:\\Program Files\\nodejs\\npm.cmd';
+export const WINDOWS_DEV_SYSTEM_NPM_CLI = 'C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js';
 
 function required(value, name) {
   if (!value) throw new Error(`${name} is required`);
@@ -39,6 +39,6 @@ export function windowsDevPaths({
     signingKeystore: path.win32.join(oldLabRoot, 'signing', 'android-user-home', 'debug.keystore'),
     signingManifest: path.win32.join(oldLabRoot, 'signing', 'identity.json'),
     systemNode: WINDOWS_DEV_SYSTEM_NODE,
-    systemNpm: WINDOWS_DEV_SYSTEM_NPM
+    systemNpmCli: WINDOWS_DEV_SYSTEM_NPM_CLI
   };
 }

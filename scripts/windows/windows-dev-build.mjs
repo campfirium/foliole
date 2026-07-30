@@ -7,6 +7,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { executeBounded } from './windows-bounded-process.mjs';
+import { prepareWindowsAndroidDebugHost } from './windows-android-host-prepare.mjs';
 import { runWindowsDevDeviceAction } from './windows-dev-device-action.mjs';
 import { windowsDevPaths } from './windows-dev-paths.mjs';
 
@@ -103,17 +104,19 @@ function writeJson(fsApi, filePath, value) {
 }
 
 export async function runWindowsDevBuild({
-  action = 'build', execute = executeBounded, fsApi = fs, id = randomUUID, now = () => new Date(),
-  paths = windowsDevPaths(), platform = process.platform
+  action = 'build', deviceAction = runWindowsDevDeviceAction, execute = executeBounded,
+  fsApi = fs, id = randomUUID, now = () => new Date(), paths = windowsDevPaths(),
+  platform = process.platform, prepareHost = prepareWindowsAndroidDebugHost
 } = {}) {
   const startedAt = now().toISOString();
   let context;
   let directChildPid = null;
   try {
     if (platform !== 'win32') throw failure('Windows DEV action requires Windows', 64, 'platform');
-    if (!['build', 'deploy', 'verify'].includes(action)) throw failure('Unknown Windows DEV action', 64, 'request');
+    if (!['build', 'deploy', 'live', 'verify'].includes(action)) throw failure('Unknown Windows DEV action', 64, 'request');
     context = evidenceContext(paths, now, id, fsApi);
-    const requiredTools = [paths.systemNode, paths.systemNpm, paths.gitPath,
+    const requiredTools = [paths.systemNode, paths.gitPath,
+      ...(['build', 'deploy'].includes(action) ? [paths.systemNpmCli] : []),
       ...(action === 'build' ? [] : [paths.adbPath])];
     for (const filePath of requiredTools) {
       if (!fsApi.existsSync(filePath)) throw failure(`Required tool is missing: ${filePath}`, 64, 'preflight');
@@ -123,7 +126,11 @@ export async function runWindowsDevBuild({
     if (residualBefore.length > 0) throw failure('Repository-owned action process is already running', 73, 'residual');
     await pullFastForward(execute, paths);
     const signing = verifySigningIdentity(paths, fsApi);
-    let output;
+    let output = '';
+    if (['build', 'deploy'].includes(action)) {
+      output += await prepareHost({ execute, fsApi, paths });
+    }
+    let actionResult = null;
     if (action === 'build') {
       const build = await execute('cmd.exe', ['/d', '/s', '/c', BUILD_COMMAND], {
         cwd: path.join(paths.repoRoot, 'android'),
@@ -135,15 +142,18 @@ export async function runWindowsDevBuild({
       if (build.code !== 0 || !build.output.includes('BUILD SUCCESSFUL')) {
         throw Object.assign(failure('Gradle did not reach BUILD SUCCESSFUL', 74, 'build'), { result: build });
       }
-      output = build.output;
+      output += build.output;
     } else {
-      output = await runWindowsDevDeviceAction({ action, evidenceRoot: context.root, execute, paths });
+      actionResult = await deviceAction({
+        action, buildIdentity: context.runId, evidenceRoot: context.root, execute, paths
+      });
+      output += actionResult.output;
     }
     fsApi.writeFileSync(context.logPath, output, 'utf8');
     const summary = { action, completedAt: now().toISOString(), directChildPid,
       exitCode: 0, logPath: context.logPath, repoRoot: paths.repoRoot,
       resultStatus: 'success', runId: context.runId, schemaVersion: 1, signingSha256: signing.sha256,
-      startedAt };
+      startedAt, ...(actionResult?.liveReload ? { liveReload: actionResult.liveReload } : {}) };
     writeJson(fsApi, context.summaryPath, summary);
     return { exitCode: 0, summary, summaryPath: context.summaryPath };
   } catch (error) {
@@ -165,6 +175,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
   const result = await runWindowsDevBuild({ action });
   const label = result.exitCode === 0 ? 'OK' : 'FAILED';
   const stream = result.exitCode === 0 ? console.log : console.error;
+  if (result.summary.liveReload) {
+    stream(`[windows-dev-action] live identity=${result.summary.liveReload.buildIdentity} screenshot=${result.summary.liveReload.screenshotPath}`);
+  }
   stream(`[windows-dev-action] status: ${label} exit=${result.exitCode} evidence=${result.summaryPath ?? '-'}`);
   process.exitCode = result.exitCode;
 }

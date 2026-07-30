@@ -40,14 +40,14 @@
 
 ## Windows Native Shell Policy
 
-- Windows 开发机使用普通局域网 SSH 进入 PowerShell；Mac 通过 `node scripts/windows/windows-dev-control.mjs --host <host> <build|deploy|verify>` 对 LAN Git 做普通 `dev` push，Windows 单仓再执行 `git pull --ff-only lan dev` 与固定前台动作。入口不解析或比对 SHA。
+- Windows 开发机使用普通局域网 SSH 进入 PowerShell；Mac 通过 `node scripts/windows/windows-dev-control.mjs --host <host> <build|deploy|live|verify>` 对 LAN Git 做普通 `dev` push，Windows 单仓再执行 `git pull --ff-only lan dev` 与固定前台动作。入口不解析或比对 SHA。
 - Windows DEV receiver 与 build 只允许使用 `C:\Program Files\nodejs\node.exe`，不得回退到 PATH 自动发现、portable Node、第二 checkout 或其他 source/build 控制面。
-- A5 设备自动化必须由 Mac DEV controller 的 `deploy` / `verify` 调用固定 device adapter，消费 Windows 单仓 pull 后的 `dev` 和固定 A5 identity。清数据、re-pair、既定数据根外读取、提权、防火墙或系统级修改必须在执行前返回 `approval_required`，不得提供 direct device CLI 或远程 approval bypass。
+- A5 设备自动化必须由 Mac DEV controller 的 `deploy` / `live` / `verify` 调用固定 device adapter，消费 Windows 单仓 pull 后的 `dev` 和固定 A5 identity。清数据、re-pair、既定数据根外读取、提权、防火墙或系统级修改必须在执行前返回 `approval_required`，不得提供 direct device CLI 或远程 approval bypass。
 - Windows 原生 Codex 会话可以使用 PowerShell 作为默认交互 shell，但 PowerShell 只用于短命令、文件读取、状态检查和运行已存在脚本；不得把 PowerShell 当成通用脚本语言来内联复杂流程。
 - 涉及环境变量、后台进程、重定向、路径拼接、Electron 启动或多步 Windows 命令时，必须优先写成 Node `.mjs` runner；确实需要 Windows 宿主能力时，使用已提交的 `.ps1` / `.cmd` 文件入口，并通过简单 `-File` 或脚本路径调用。
 - Windows 原生 Codex 检查或控制 Windows Electron dev runtime 时，优先使用 `npm run windows:client:native -- <status|start|stop|restart|full-restart>`；该入口参照既有 ready marker / bridge marker 信任语义，但用 Node 原生进程控制直接启动 `electron-dev-native.mjs`，避免旧 PowerShell client wrapper 和 inline command 转义。
 - Windows 原生 Codex 会话直接站在 Windows checkout 内诊断时，使用 `npm run windows:preview:native`；该入口复用既有 client control、restart intent、renderer reload intent、ready marker 与 native ABI preflight 语义。
-- Windows 使用一个普通 `dev` Git 仓库作为 Windows 桌面与 A5 Android 的开发现场；每次动作前只做 `git pull --ff-only lan dev`，Windows desktop dev 负责 native client runtime，A5 build / deploy / verify 由固定 Android device adapter 负责。
+- Windows 使用一个普通 `dev` Git 仓库作为 Windows 桌面与 A5 Android 的开发现场；每次动作前只做 `git pull --ff-only lan dev`，Windows desktop dev 负责 native client runtime，A5 build / deploy / live / verify 由固定 Android device adapter 负责。
 - Windows 本地仓库不得 commit / push 回 `dev` 或任何源码上游；Git 无法快进时直接报告，由人按普通本地开发方式处理，不在自动化中加入源码保护、stash、reset、重建或 repair。
 - Windows 原生 Codex 需要快速确认本机环境与脚本入口时，优先使用 `npm run windows:native:check`；该入口覆盖 native preflight 与核心路径测试，不替代本轮能力闭环所需的最小相关验证。
 - `electron-dev-native.mjs` 只负责设置 Windows 原生试点的独立 userData / session，然后复用已验证的 `scripts/electron-dev.mjs`；不得为原生试点另写一套 Electron/Vite 启动协议，除非先证明旧 dev runner 在 Windows 原生下不可用。

@@ -2,13 +2,15 @@
 /* global console, process */
 
 import { spawn } from 'node:child_process';
+import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 export const WINDOWS_DEV_SOURCE_REF = 'refs/heads/dev';
-export const WINDOWS_DEV_ACTIONS = ['build', 'deploy', 'verify'];
+export const WINDOWS_DEV_ACTIONS = ['build', 'deploy', 'live', 'verify'];
 const WINDOWS_DEV_REMOTE_ACTION = 'C:/dev/foliole-android-lab-preview/scripts/windows/windows-dev-action.ps1';
+const WINDOWS_DEV_EVIDENCE_PREFIX = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/';
 
 function execute(command, args, options = {}) {
   return new Promise((resolve, reject) => {
@@ -32,7 +34,7 @@ export function parseWindowsDevControlArgs(argv, env = process.env) {
     throw new Error('--host user@host or FOLIOLE_WINDOWS_DEV_SSH is required');
   }
   if (args.length !== 1 || !WINDOWS_DEV_ACTIONS.includes(args[0])) {
-    throw new Error('Windows DEV control only accepts build, deploy, or verify');
+    throw new Error('Windows DEV control only accepts build, deploy, live, or verify');
   }
   return { action: args[0], host };
 }
@@ -60,16 +62,43 @@ export function windowsDevSshSpec(host, action, env = process.env, home = os.hom
     '-File', WINDOWS_DEV_REMOTE_ACTION, action];
 }
 
+export function parseWindowsDevLiveEvidence(output) {
+  const match = /^\[windows-dev-action\] live identity=([A-Za-z0-9.-]{1,96}) screenshot=([^\r\n]+)$/mu.exec(output);
+  if (!match) throw new Error('Windows DEV live action did not report screenshot evidence');
+  const normalized = match[2].replaceAll('\\', '/');
+  const expected = `${WINDOWS_DEV_EVIDENCE_PREFIX}${match[1]}/a5-live.png`;
+  if (normalized !== expected) throw new Error('Windows DEV live screenshot path escaped its fixed evidence root');
+  return { buildIdentity: match[1], remotePath: normalized };
+}
+
+export function windowsDevScpSpec(host, remotePath, localPath, env = process.env, home = os.homedir()) {
+  const key = env.FOLIOLE_WINDOWS_DEV_SSH_KEY
+    || path.join(home, '.ssh', 'agent', 'foliole-windows-android-lab');
+  return ['-q', '-i', key, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=15',
+    '-o', 'IdentitiesOnly=yes', '-o', 'StrictHostKeyChecking=yes',
+    `${host}:${remotePath}`, localPath];
+}
+
 export async function runWindowsDevControl({
   argv = process.argv.slice(2), env = process.env,
   executeGit = (args, options) => execute('git', args, options),
-  executeSsh = (args, options) => execute('ssh', args, options), stdout = process.stdout
+  executeScp = (args, options) => execute('scp', args, options),
+  executeSsh = (args, options) => execute('ssh', args, options), fsApi = fs,
+  repoRoot = process.cwd(), stdout = process.stdout
 } = {}) {
   const { action, host } = parseWindowsDevControlArgs(argv, env);
   const spec = windowsDevPushSpec(host, env);
   await executeGit(spec.args, { env: spec.env });
   const remoteOutput = await executeSsh(windowsDevSshSpec(host, action, env), { env });
   const result = { action, operation: 'complete', ref: WINDOWS_DEV_SOURCE_REF };
+  if (['deploy', 'live'].includes(action)) {
+    const evidence = parseWindowsDevLiveEvidence(remoteOutput);
+    const evidenceRoot = path.join(repoRoot, '.tmp', 'artifacts', 'a5-live-reload');
+    fsApi.mkdirSync(evidenceRoot, { recursive: true });
+    const screenshotPath = path.join(evidenceRoot, `${evidence.buildIdentity}.png`);
+    await executeScp(windowsDevScpSpec(host, evidence.remotePath, screenshotPath, env), { env });
+    result.screenshotPath = screenshotPath;
+  }
   if (remoteOutput) stdout.write(remoteOutput);
   return result;
 }
