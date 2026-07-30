@@ -25,7 +25,7 @@ const WINDOWS_CI_PATTERN =
 const WINDOWS_CI_ONLY_PATTERN = /^scripts\/windows\/windows-ci-/u;
 const WINDOWS_VALIDATION_KIT_PATTERN = /^scripts\/windows\/windows-(?:native-mouse-click|validation-)/u;
 const WINDOWS_DEVICE_PATTERN =
-  /^scripts\/windows\/(?:hidden-native|visible-native|windows-android-dev-server|windows-client-native|windows-preview-native)/u;
+  /^scripts\/windows\/(?:hidden-native|visible-native|windows-android-dev-(?:diagnostics|server)|windows-client-native|windows-preview-native)/u;
 const WINDOWS_ASSET_PATTERN = /^(?:scripts\/windows\/|scripts\/android\/windows-|scripts\/android\/open-foliole-android-)/u;
 const MACOS_ASSET_PATTERN = /^scripts\/macos\//u;
 
@@ -146,7 +146,7 @@ export const CAPABILITY_CONTRACTS = [
   }
 ];
 
-export const SCRIPT_ASSET_INVENTORY_SHA256 = 'dfe64ba0431897fd696321051ef9afed8e4e53ebd4787c4299dd6bc2b48f67fc';
+export const SCRIPT_ASSET_INVENTORY_SHA256 = '3ec45bd3fa55584b9d8cec8e6ead98171586867a9ea3ca28feed95c60bed2bc6';
 
 function normalizeScriptPath(filePath) {
   return filePath.replaceAll('\\', '/').replace(/^\.\//u, '').trim();
