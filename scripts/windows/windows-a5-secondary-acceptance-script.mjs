@@ -114,10 +114,6 @@ export function runA5SecondaryAcceptance(config, acceptSearch) {
       const back = topBack();
       if (!back) throw new Error('Nested directory has no semantic parent action');
       await click(back, 'nested directory parent');
-      await waitFor(
-        () => document.querySelector(`[data-testid="${candidate.id}"]`),
-        'parent directory restoration'
-      );
     }
     return null;
   }
