@@ -28,6 +28,7 @@ it('injects a build identity beacon and accepts only the matching load', () => {
   expect(injectedScript).toContain('companion-bottom-tab-bar');
   expect(injectedScript).toContain('MutationObserver');
   expect(injectedScript).toContain('requestAnimationFrame(()=>requestAnimationFrame(report))');
+  expect(injectedScript).not.toContain('?.');
   const handler = middlewares.use.mock.calls[0][0];
   const response = { end: vi.fn(), statusCode: 0 };
   handler(request('/__foliole_a5_dev_loaded__?identity=dev-123'), response, vi.fn());

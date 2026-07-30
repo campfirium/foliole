@@ -65,7 +65,7 @@ export function createA5LiveReloadPlugin({ buildIdentity, onDeviceLoad }) {
           "const ready=()=>Boolean(document.querySelector('[data-testid=\"companion-bottom-tab-bar\"]'));",
           `const report=()=>fetch('${LOADED_PATH}?identity='+encodeURIComponent(identity),`,
           "{cache:'no-store'}).catch(()=>{});",
-          'const finish=()=>{observer?.disconnect();requestAnimationFrame(()=>requestAnimationFrame(report));};',
+          'const finish=()=>{if(observer)observer.disconnect();requestAnimationFrame(()=>requestAnimationFrame(report));};',
           "if(ready()){finish();return;}observer=new MutationObserver(()=>{if(ready())finish();});",
           "observer.observe(document.documentElement,{childList:true,subtree:true});})();"
         ].join('');
