@@ -5,7 +5,7 @@
 ## Project Baseline And Work Unit
 
 - 当前仓库是多平台单仓：`Electron + React + TypeScript + Vite + Capacitor`；主要宿主与表面为 `electron/`、`android/`、`src/app/`、`src/companion/`、`src/shared/platform/`。
-- 默认在 `dev` 主干按 Track-Based 连续小步推进；不创建 feature branch / worktree，除非用户明确要求。工作树已有改动时，先按当前方案、任务目标与 diff 语义判定归属：同一 Track 或前序未提交成果继续纳入当前闭环，不得仅因 dirty working tree 或同文件重叠停工；只有确认属于无关并行工作且无法安全隔离时才停止。
+- 默认在 `dev` 主干按 Track-Based 连续小步推进；不创建 feature branch / worktree，除非用户明确要求。
 - 创建 Foliole 新 Codex 任务时，若用户未明确要求 worktree，必须使用 saved project 的 `local` 环境；不得采用 `create_thread` 工具对 Git 仓库“默认 worktree”的通用建议。
 - 单次只交付一个可运行、可验证、可回退的能力闭环；闭环以用户可验收行为、数据语义或迁移语义为边界，不以文件、函数、测试断言、提交数量或“超过 3 个文件”为边界。
 - 能力闭环必须覆盖本轮承诺所需的入口、模型、消费侧、必要持久化、边界防护和验证；新增功能覆盖用户入口、状态模型、业务行为、失败或空状态，Bug 修复覆盖现象确认、根因修复、回归验证和用户可见结果恢复。
