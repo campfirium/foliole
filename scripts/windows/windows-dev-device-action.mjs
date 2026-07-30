@@ -36,8 +36,7 @@ export function assertFixedDevice(output) {
 function actionEnv(paths) {
   return { ...process.env, ANDROID_ADB_SERVER_PORT: WINDOWS_DEV_ADB_PORT,
     ANDROID_HOME: paths.androidSdk, ANDROID_SDK_ROOT: paths.androidSdk,
-    ANDROID_USER_HOME: paths.signingHome, FOLIOLE_ANDROID_ADB_SERVER_PORT: WINDOWS_DEV_ADB_PORT,
-    JAVA_HOME: paths.javaHome,
+    FOLIOLE_ANDROID_ADB_SERVER_PORT: WINDOWS_DEV_ADB_PORT, JAVA_HOME: paths.javaHome,
     Path: `${path.win32.dirname(paths.systemNode)};${process.env.Path || process.env.PATH || ''}` };
 }
 
@@ -57,7 +56,8 @@ async function deploy(execute, paths, evidenceRoot, env) {
   const action = await checked(execute, 'powershell.exe', ['-NoProfile', '-NonInteractive',
     '-ExecutionPolicy', 'Bypass', '-File', script, '-WindowsWorkDir', paths.repoRoot,
     '-TargetSerial', WINDOWS_DEV_A5_SERIAL, '-StopGradleDaemon'],
-  { env, timeoutCode: 'deploy_timeout', timeoutMs: 20 * 60_000, windowsHide: true }, 'deploy');
+  { env: { ...env, ANDROID_USER_HOME: paths.signingHome }, timeoutCode: 'deploy_timeout',
+    timeoutMs: 20 * 60_000, windowsHide: true }, 'deploy');
   const after = await runDataProtection(execute, paths, 'check', manifest, env);
   return `${before.output}${action.output}${after.output}`;
 }

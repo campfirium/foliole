@@ -64,6 +64,8 @@ describe('Windows DEV fixed device action', () => {
     const deploy = calls.find(({ command }) => command === 'powershell.exe');
     expect(deploy.args).toContain(WINDOWS_DEV_A5_SERIAL);
     expect(deploy.options.env.FOLIOLE_ANDROID_ADB_SERVER_PORT).toBe(WINDOWS_DEV_ADB_PORT);
+    expect(deploy.options.env.ANDROID_USER_HOME).toBe(paths.signingHome);
+    expect(calls[0].options.env).not.toHaveProperty('ANDROID_USER_HOME');
   });
 
   it('maps an offline fixed device to 69 and still stops the action-owned server', async () => {
