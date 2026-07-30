@@ -1,6 +1,6 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 
-import { buildCanonicalNodeSyncPayload } from './nodeSyncHash.js';
+import { buildCanonicalNodeSyncPayload } from './nodeSyncPayload.js';
 import type { WorkspaceNodeSnapshot } from './workspaceSnapshotHelpers.js';
 
 function serialize(value: unknown) {
