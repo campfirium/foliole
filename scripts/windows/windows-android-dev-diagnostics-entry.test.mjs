@@ -22,7 +22,7 @@ function snapshot(listeners = []) {
   };
   return normalizeHostSnapshot({
     adbClient: { ...process, owner: null, parentProcessId: null, processId: null,
-      resolutionSource: 'legacy-lab-config', sessionId: null },
+      resolutionSource: 'local-app-data-android-sdk', sessionId: null },
     adbProcesses: [process], authorizedKeys: { entries: [{ forcedCommand: false, keySha256: 'fingerprint',
       keyType: 'ssh-ed25519', restrictions: ['no-port-forwarding'] }], path: 'C:\\ProgramData\\ssh\\keys' },
     capturedAt: '2026-07-30T00:00:00.000Z', listeners,
@@ -64,7 +64,7 @@ describe('Windows Android DEV diagnostic entry', () => {
       status: 'present', transports: [{ serial: '87a33a4b', state: 'device' }]
     });
     expect(result.summary.transportsByPort['5601']).toEqual({ port: 5601, status: 'not-listening' });
-    expect(result.summary.adbClient.resolutionSource).toBe('legacy-lab-config');
+    expect(result.summary.adbClient.resolutionSource).toBe('local-app-data-android-sdk');
     expect(result.summary.oldRuntime.entries[0].length).toBeNull();
     expect(stdout.value()).toContain('status: OK evidence=');
     expect(JSON.parse(fs.readFileSync(result.evidencePath, 'utf8'))).toMatchObject({ resultStatus: 'success' });
@@ -128,7 +128,7 @@ describe('Windows Android DEV diagnostic entry', () => {
     expect(powershell).toContain('Get-NetTCPConnection -State Listen');
     expect(powershell).toContain('Get-CimInstance Win32_PnPEntity');
     expect(powershell).toContain('Get-ScheduledTask -ErrorAction Stop');
-    expect(powershell).toContain('resolutionSource = "legacy-lab-config"');
+    expect(powershell).toContain('resolutionSource = "local-app-data-android-sdk"');
     expect(powershell).not.toContain('Get-Command adb.exe');
     expect(powershell).not.toMatch(/kill-server|start-server|\badb(?:\.exe)?\s+connect\b|Restart-Service|Register-ScheduledTask/iu);
     expect(entry).toContain("'.tmp', 'artifacts', 'windows-android-dev'");

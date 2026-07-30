@@ -44,11 +44,7 @@ function Get-ProcessRecord([int]$ProcessId, [bool]$RequireImage) {
 }
 
 function Get-AdbClientRecord {
-  $configPath = Join-Path $env:LOCALAPPDATA "Foliole\windows-android-lab\config.json"
-  if (!(Test-Path -LiteralPath $configPath -PathType Leaf)) { throw "Legacy Android Lab config is required to identify the ADB client" }
-  $config = Get-Content -LiteralPath $configPath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
-  if ([string]::IsNullOrWhiteSpace([string]$config.adbPath)) { throw "Legacy Android Lab config does not identify the ADB client" }
-  $imagePath = Get-CanonicalFile ([string]$config.adbPath)
+  $imagePath = Get-CanonicalFile (Join-Path $env:LOCALAPPDATA "Android\Sdk\platform-tools\adb.exe")
   return [ordered]@{
     imagePath = $imagePath
     imageSha256 = Get-Sha256 $imagePath
@@ -56,7 +52,7 @@ function Get-AdbClientRecord {
     owner = $null
     parentProcessId = $null
     processId = $null
-    resolutionSource = "legacy-lab-config"
+    resolutionSource = "local-app-data-android-sdk"
     sessionId = $null
   }
 }
