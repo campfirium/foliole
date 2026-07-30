@@ -111,6 +111,18 @@ function createCollectionSnapshot(): WorkspaceSnapshot {
   };
 }
 
+function createTopicContainerSnapshot(): WorkspaceSnapshot {
+  const snapshot = createCollectionSnapshot();
+  snapshot.nodeOrder.push('topic-child');
+  snapshot.nodesById['topic-child'] = {
+    ...snapshot.nodesById['topic-a']!,
+    id: 'topic-child',
+    parentNodeId: 'topic-a',
+    title: 'Nested topic'
+  };
+  return snapshot;
+}
+
 describe('CompanionDirectoryContent external article exit', () => {
   it('uses the article exit callback so the shell can restore navigation state', () => {
     mocks.useCompanionExternalDirectory.mockReturnValue(externalDirectory);
@@ -155,6 +167,30 @@ describe('CompanionDirectoryContent virtual article selection', () => {
 
     expect(onSelectNode).toHaveBeenCalledWith('topic-a');
     expect(onChangeSelection).not.toHaveBeenCalled();
+  });
+
+  it('drills into a Topic container instead of leaving the Directory row inert', () => {
+    mocks.useCompanionExternalDirectory.mockReturnValue({ entries: [], folders: [] });
+    mocks.useCompanionExternalDocument.mockReturnValue(null);
+    const onChangeSelection = vi.fn<(selection: CompanionDirectorySelection) => void>();
+    const onSelectNode = vi.fn();
+
+    render(
+      <CompanionDirectoryContent
+        onChangeSelection={onChangeSelection}
+        onExitArticle={vi.fn()}
+        onSelectNode={onSelectNode}
+        selection={{ kind: 'virtual', nodeId: 'collection-guide' }}
+        snapshot={createTopicContainerSnapshot()}
+        sortDirection="asc"
+        sortKey="name"
+      />
+    );
+
+    fireEvent.click(screen.getByText('Alpha'));
+
+    expect(onSelectNode).toHaveBeenCalledWith('topic-a');
+    expect(onChangeSelection).toHaveBeenCalledWith({ kind: 'virtual', nodeId: 'topic-a' });
   });
 
 });

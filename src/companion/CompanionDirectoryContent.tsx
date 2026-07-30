@@ -69,11 +69,11 @@ function useCompanionDirectorySections(args: {
 }
 
 function resolveItemSelection(item: DirectoryListItem): CompanionDirectorySelection {
-  if ((item.source === 'internal' || item.source === 'virtual') && item.kind === 'folder') {
+  if (item.source === 'internal' || item.source === 'virtual') {
     return { kind: item.source, nodeId: item.nodeId };
   }
   if (item.source === 'trashRoot') return { kind: 'trash' };
-  if (item.source === 'trash' && item.kind === 'folder') return { kind: 'trashFolder', nodeId: item.nodeId };
+  if (item.source === 'trash') return { kind: 'trashFolder', nodeId: item.nodeId };
   if (item.source === 'externalFolder') return { folderId: item.nodeId, kind: 'externalFolder' };
   if (item.source === 'externalDirectory') {
     return {
@@ -84,6 +84,24 @@ function resolveItemSelection(item: DirectoryListItem): CompanionDirectorySelect
   }
   if (item.source === 'externalDocument') return { documentId: item.documentId, kind: 'externalDocument' };
   return { kind: 'root' };
+}
+
+function isDirectoryContainer(
+  item: DirectoryListItem,
+  props: Pick<CompanionDirectoryContentProps, 'snapshot' | 'sortDirection' | 'sortKey'>
+) {
+  if (item.kind === 'folder') return true;
+  if (item.source === 'internal' || item.source === 'virtual') {
+    return Boolean(resolveCompanionFolderViewByNodeId(
+      props.snapshot, item.nodeId, props.sortKey, props.sortDirection
+    ));
+  }
+  if (item.source === 'trash') {
+    return Boolean(resolveCompanionTrashFolderViewByNodeId(
+      props.snapshot, item.nodeId, props.sortKey, props.sortDirection
+    ));
+  }
+  return false;
 }
 
 function CompanionDirectoryListContent(props: {
@@ -140,12 +158,7 @@ export function CompanionDirectoryContent(props: CompanionDirectoryContentProps)
     ) {
       props.onSelectNode(item.nodeId);
     }
-    if (
-      item.source === 'trash' && item.kind !== 'folder' ||
-      (item.source === 'internal' || item.source === 'virtual') && item.kind !== 'folder'
-    ) {
-      return;
-    }
+    if (!isDirectoryContainer(item, props)) return;
     props.onChangeSelection(resolveItemSelection(item));
   };
 
