@@ -89,7 +89,7 @@ it('previews split Topics and leaves storage untouched when canceled', async () 
   expect(preview.getAllByText('Beta')).toHaveLength(1);
   expect(preview.getByText('Body')).toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('switch', { name: 'Keep delimiter' }));
+  fireEvent.click(screen.getByRole('switch', { name: /^Keep delimiter/ }));
   fireEvent.change(screen.getByRole('textbox', { name: 'Delimiter' }), { target: { value: '#' } });
   await waitFor(() => expect(preview.getByText('#')).toBeInTheDocument());
 
@@ -168,7 +168,7 @@ it('restores only device preferences, keeps Before and After blank, and preserve
   await waitFor(() => expect(screen.getByRole('radio', { name: 'Keep' })).toBeChecked());
   expect(screen.getByLabelText('Before')).toHaveValue('');
   expect(screen.getByLabelText('After')).toHaveValue('');
-  expect(screen.getByRole('switch', { name: 'Keep delimiter' })).toBeChecked();
+  expect(screen.getByRole('switch', { name: /^Keep delimiter/ })).toBeChecked();
   fireEvent.click(screen.getByRole('button', { name: 'Split Topic' }));
 
   await waitFor(() => expect(saveSplitTopicWorkspaceMutation).toHaveBeenCalledTimes(1));

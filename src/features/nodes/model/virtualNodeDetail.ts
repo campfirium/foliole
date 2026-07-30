@@ -3,6 +3,7 @@ import {
   type VirtualNodeFilter
 } from '../../../../lib/core/nodes/virtualNodeFilter';
 import {
+  createVirtualNodeResultResolver,
   resolveVirtualNodeResultIds
 } from '../../../../lib/core/nodes/virtualNodeResults';
 
@@ -53,15 +54,17 @@ export function buildVirtualNodeResultIndex(args: {
   const countById = new Map<string, number>();
   const resultIdsByVirtualId = new Map<string, string[]>();
   const rootResultIdSet = new Set<string>();
+  const resolveResultIds = createVirtualNodeResultResolver({
+    nodeOrder: args.nodeOrder,
+    nodesById: args.nodesById
+  });
   for (const nodeId of args.nodeOrder) {
     const node = args.nodesById[nodeId];
     if (!isVirtualNode(node)) continue;
-    const resultIds = resolveVirtualNodeResultIds({
+    const resultIds = resolveResultIds({
       activeNodeId: nodeId,
       filter: node.virtualFilter,
-      manualChildOrder: node.manualChildOrder,
-      nodeOrder: args.nodeOrder,
-      nodesById: args.nodesById
+      manualChildOrder: node.manualChildOrder
     });
     resultIdsByVirtualId.set(nodeId, resultIds);
     if (resultIds.length > 0) countById.set(nodeId, resultIds.length);

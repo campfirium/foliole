@@ -139,16 +139,16 @@ it('throws on unsupported command', async () => {
   );
 });
 
-it('selects a Markdown or TXT file through the native import command', async () => {
+it('selects Markdown metadata without preloading file content', async () => {
   await expect(handleInvokeRequest({ command: 'select_import_text_file', args: {} })).resolves.toEqual({
-    content: '# Imported title\nBody',
+    content: '',
     file_name: 'inbox.md',
     file_path: '/tmp/inbox.md',
     kind: 'markdown'
   });
 
   expect(showOpenDialog).toHaveBeenCalledTimes(1);
-  expect(readFile).toHaveBeenCalledWith('/tmp/inbox.md', 'utf8');
+  expect(readFile).not.toHaveBeenCalled();
 });
 
 it('selects a directory through the native utility command', async () => {
@@ -186,27 +186,27 @@ it('returns null when native import selection is cancelled', async () => {
   expect(readFile).not.toHaveBeenCalled();
 });
 
-it('classifies TXT imports as text through the native import command', async () => {
+it('classifies TXT metadata without preloading file content', async () => {
   showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/inbox.txt'] });
   readFile.mockResolvedValue('Plain text body');
 
   await expect(handleInvokeRequest({ command: 'select_import_text_file', args: {} })).resolves.toEqual({
-    content: 'Plain text body',
+    content: '',
     file_name: 'inbox.txt',
     file_path: '/tmp/inbox.txt',
     kind: 'text'
   });
 
-  expect(readFile).toHaveBeenCalledWith('/tmp/inbox.txt', 'utf8');
+  expect(readFile).not.toHaveBeenCalled();
 });
 
-it('converts HTML files into markdown-compatible content through the native import command', async () => {
+it('defers HTML conversion until the native import command runs', async () => {
   showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/inbox.html'] });
   readFile.mockResolvedValue('<h2>Imported</h2><p><strong>Bold</strong> text</p>');
   runPreparedImport.mockReturnValue(importedHtmlResult);
 
   await expect(handleInvokeRequest({ command: 'select_import_text_file', args: {} })).resolves.toEqual({
-    content: '## Imported\n\n**Bold** text',
+    content: '',
     file_name: 'inbox.html',
     file_path: '/tmp/inbox.html',
     kind: 'html'

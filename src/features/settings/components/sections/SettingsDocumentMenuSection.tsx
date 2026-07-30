@@ -55,7 +55,7 @@ function DocumentMenuSeparatorButton(props: {
       aria-label={t('settings.documentMenu.separatorBefore', { label: props.label })}
       aria-pressed={separatorEnabled}
       className={[
-        'absolute left-settings-panel-x right-settings-panel-x top-0 z-10 h-5 -translate-y-1/2 cursor-pointer bg-transparent p-0',
+        'absolute left-settings-panel-x right-settings-panel-x top-0 z-local-control h-5 -translate-y-1/2 cursor-pointer bg-transparent p-0',
         'before:absolute before:left-0 before:right-0 before:top-1/2 before:border-t before:transition-colors',
         'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
         separatorEnabled
