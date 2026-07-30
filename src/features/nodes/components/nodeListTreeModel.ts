@@ -95,7 +95,15 @@ function useNodeListTreeControllers(args: {
     trashedNodeIds: args.trashedNodeIds
   });
 
-  useEffect(() => onWindowEscape(contextMenu.closeContextMenu), [contextMenu]);
+  useEffect(() => {
+    if (!contextMenu.contextMenuMode) {
+      return undefined;
+    }
+    return onWindowEscape(() => {
+      contextMenu.closeContextMenu();
+      return true;
+    });
+  }, [contextMenu.closeContextMenu, contextMenu.contextMenuMode]);
 
   return { collapse, contextMenu, handleSelectNode };
 }

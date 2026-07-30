@@ -44,6 +44,14 @@ async function openSplitTopicDialog(page: import('@playwright/test').Page) {
   return dialog;
 }
 
+async function closeSplitTopicDialogWithEscape(page: import('@playwright/test').Page, dialog: import('@playwright/test').Locator) {
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  expect(await page.evaluate((nodeId) =>
+    globalThis.window?.__folioleWorkspaceDebug?.getNode(nodeId)?.trashed ?? null,
+  SOURCE_TOPIC_ID)).toBe(false);
+}
+
 async function readNode(page: import('@playwright/test').Page, title: string) {
   return page.evaluate((targetTitle) => {
     const api = globalThis.window?.__folioleWorkspaceDebug;
@@ -58,6 +66,9 @@ test('previews and confirms Split Topic from the command palette', async ({ desk
   await seedSplitTopic(desktopWindow);
 
   let dialog = await openSplitTopicDialog(desktopWindow);
+  await closeSplitTopicDialogWithEscape(desktopWindow, dialog);
+
+  dialog = await openSplitTopicDialog(desktopWindow);
   await dialog.getByRole('textbox', { name: 'Delimiter' }).fill('---split---');
   await expect(dialog.getByRole('region', { name: 'Preview' })).toContainText(FIRST_TITLE);
   await expect(dialog.getByRole('region', { name: 'Preview' })).toContainText(SECOND_TITLE);

@@ -1,7 +1,8 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../../shared/localization/testLocalization';
+import { onWindowEscape } from '../../../shared/platform/keyboard';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import type { WorkspaceListNode, WorkspaceListNodesById } from '../model/workspaceListNode';
 
@@ -52,4 +53,29 @@ it('renders every row immediately when virtualization is disabled', () => {
   expect(screen.getByRole('treeitem', { name: 'folder-119' })).toBeInTheDocument();
   expect(screen.getByRole('treeitem', { name: 'folder-119' }).querySelector('[data-node-tree-chevron-placeholder="true"]')).toBeNull();
   expect(container.querySelector('[data-virtual-list="true"]')).toBeNull();
+});
+
+it('leaves Escape available when the context menu is closed', () => {
+  const outerEscape = vi.fn();
+  const unlistenOuterEscape = onWindowEscape(outerEscape);
+
+  renderWithLocalization(
+    <NodeListTree
+      activeNodeId={null}
+      isTrashViewOpen={false}
+      isVirtualViewOpen={false}
+      nodeOrder={['folder-a']}
+      nodesById={{ 'folder-a': createNode('folder-a') }}
+      onOpenMoveToNode={vi.fn()}
+      onOpenNotesView={vi.fn()}
+      onSelectNode={vi.fn()}
+      onSelectTrashNode={vi.fn()}
+      selectedTrashNodeId={null}
+    />
+  );
+
+  fireEvent.keyDown(window, { key: 'Escape' });
+
+  expect(outerEscape).toHaveBeenCalledTimes(1);
+  unlistenOuterEscape();
 });
