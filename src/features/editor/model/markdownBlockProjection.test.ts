@@ -74,6 +74,18 @@ describe('markdownBlockProjection', () => {
   });
 });
 
+describe('markdown blockquote line classes', () => {
+  it('projects the quote gutter onto every line in a blockquote', () => {
+    const text = '> - First\n> - Second\n> - Third\n\n> Quoted\nlazy continuation';
+
+    expect(
+      collectMarkdownLineClassRanges(text)
+        .filter(({ className }) => className === 'cm-line-quote')
+        .map(({ from }) => from)
+    ).toEqual([0, 10, 21, 32, 41]);
+  });
+});
+
 describe('markdownBlockProjection shared tree reuse', () => {
   it('collects offset block projections from a shared tree without reparsing', () => {
     const text = '# Title\nSetext\n---\n> Quote\n- Item\n- [x] Done\n1. Ordered';

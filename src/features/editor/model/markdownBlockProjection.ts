@@ -54,6 +54,21 @@ function setLineClass(
   lineClasses.set(from, { className, from, priority });
 }
 
+function setBlockquoteLineClasses(args: {
+  lineClasses: Map<number, MarkdownLineClassRange>;
+  node: MarkdownSyntaxNode;
+  offset: number;
+  source: string;
+}) {
+  let lineFrom = findLineStart(args.source, args.node.from);
+  while (lineFrom < args.node.to) {
+    setLineClass(args.lineClasses, args.offset + lineFrom, 'cm-line-quote', LINE_CLASS_PRIORITIES.quote);
+    const lineEnd = args.source.indexOf('\n', lineFrom);
+    if (lineEnd < 0) break;
+    lineFrom = lineEnd + 1;
+  }
+}
+
 function findChild(node: MarkdownSyntaxNode, name: string) {
   for (let child = node.firstChild; child; child = child.nextSibling) {
     if (child.name === name) return child;
@@ -170,7 +185,7 @@ function visitLineClassNodes(args: {
   const from = args.offset + (args.node.name === 'LenientStrongATXHeading' ? findLineStart(args.source, args.node.from) : args.node.from);
   const headingLineClass = resolveMarkdownHeadingLineClass(args.node, args.source);
   if (headingLineClass) setLineClass(args.lineClasses, from, headingLineClass, LINE_CLASS_PRIORITIES.heading);
-  if (args.node.name === 'Blockquote') setLineClass(args.lineClasses, from, 'cm-line-quote', LINE_CLASS_PRIORITIES.quote);
+  if (args.node.name === 'Blockquote') setBlockquoteLineClasses(args);
   if (args.node.name === 'ListItem' && args.parentName === 'BulletList') {
     const className = findChild(args.node, 'Task') ? 'cm-line-list-unordered cm-line-task-list' : 'cm-line-list-unordered';
     setLineClass(args.lineClasses, from, className, findChild(args.node, 'Task') ? LINE_CLASS_PRIORITIES.taskList : LINE_CLASS_PRIORITIES.unorderedList);
