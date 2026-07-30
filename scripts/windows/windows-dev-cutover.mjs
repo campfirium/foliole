@@ -15,6 +15,7 @@ import { windowsDevPaths } from './windows-dev-paths.mjs';
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const REPO_ROOT = path.resolve(path.dirname(SCRIPT_PATH), '../..');
+const DEV_FETCH_SPEC = '+refs/heads/dev:refs/remotes/lan/dev';
 
 function commandFailure(message, stage = 'command') {
   return Object.assign(new Error(message), { exitCode: 74, stage });
@@ -59,6 +60,16 @@ function backupPath(paths) {
   return path.join(paths.gitRoot, 'cutover-backup.json');
 }
 
+function setRemoteFetch(paths, fetchSpecs) {
+  if (!Array.isArray(fetchSpecs) || fetchSpecs.length === 0) {
+    throw commandFailure('remote fetch backup is missing', 'rollback');
+  }
+  git(paths, ['config', '--replace-all', 'remote.lan.fetch', fetchSpecs[0]]);
+  for (const fetchSpec of fetchSpecs.slice(1)) {
+    git(paths, ['config', '--add', 'remote.lan.fetch', fetchSpec]);
+  }
+}
+
 function inspect(paths) {
   const receiverSource = sourceReceiver();
   const authorizedText = fs.readFileSync(paths.authorizedKeys, 'utf8');
@@ -94,6 +105,7 @@ function createBackup(paths, inspected) {
     hook: fs.readFileSync(path.join(paths.oldBareRepository, 'hooks', 'pre-receive'), 'utf8'),
     manifest: manifestExists ? fs.readFileSync(paths.signingManifest, 'utf8') : null,
     oldBranch: inspected.snapshot.branch,
+    oldFetch: git(paths, ['config', '--get-all', 'remote.lan.fetch']).split(/\r?\n/u),
     oldRefSha: inspected.snapshot.oldRefSha,
     oldRemote: inspected.snapshot.remoteUrl,
     schemaVersion: 1
@@ -112,7 +124,8 @@ function applyCutover(paths, inspected) {
   writeAtomic(paths.signingManifest, `${JSON.stringify(inspected.signing, null, 2)}\n`);
   git(paths, ['branch', '-m', 'dev']);
   git(paths, ['remote', 'set-url', 'lan', paths.bareRepository]);
-  git(paths, ['fetch', 'lan', 'dev']);
+  setRemoteFetch(paths, [DEV_FETCH_SPEC]);
+  git(paths, ['fetch', 'lan', DEV_FETCH_SPEC]);
   git(paths, ['branch', '--set-upstream-to=lan/dev', 'dev']);
   writeAtomic(paths.authorizedKeys, `${inspected.key.lines.join('\n')}\n`);
   secureAuthorizedKeys(paths);
@@ -136,6 +149,7 @@ function rollbackCutover(paths) {
   secureAuthorizedKeys(paths);
   if (git(paths, ['branch', '--show-current']) === 'dev') git(paths, ['branch', '-m', backup.oldBranch]);
   git(paths, ['remote', 'set-url', 'lan', backup.oldRemote]);
+  setRemoteFetch(paths, backup.oldFetch);
   writeAtomic(path.join(paths.bareRepository, 'hooks', 'pre-receive'), backup.hook);
   git(paths, ['update-ref', '-d', 'refs/heads/dev'], paths.bareRepository);
   if (fs.existsSync(paths.receiver)) fs.unlinkSync(paths.receiver);
