@@ -21,6 +21,7 @@ function safeProcess(value = {}) {
     owner: text(value.owner),
     parentProcessId: integer(value.parentProcessId),
     processId: integer(value.processId),
+    resolutionSource: text(value.resolutionSource),
     sessionId: integer(value.sessionId)
   };
 }
