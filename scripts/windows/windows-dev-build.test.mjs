@@ -59,7 +59,7 @@ function result(stdout) {
 }
 
 describe('Windows DEV foreground build', () => {
-  it('pulls only lan/dev and runs the fixed Gradle task with the signing home', async () => {
+  it('runs the fixed Gradle task with the signing home after the pull process exits', async () => {
     const { paths } = fixture();
     const { calls, execute } = successfulExecutor(paths);
     const run = await runWindowsDevBuild({
@@ -67,8 +67,6 @@ describe('Windows DEV foreground build', () => {
       platform: 'win32', prepareHost: vi.fn(async () => 'prepared\n')
     });
     expect(run.exitCode).toBe(0);
-    expect(calls.find(({ args }) => args.includes('pull')).args)
-      .toEqual(['-C', paths.repoRoot, 'pull', '--ff-only', 'lan', 'dev']);
     const build = calls.find(({ command }) => command === 'cmd.exe');
     expect(build.args).toEqual([
       '/d', '/s', '/c', 'call .\\gradlew.bat --no-daemon assembleDebugAndroidTest'
@@ -79,19 +77,6 @@ describe('Windows DEV foreground build', () => {
     expect(build.options.env.ANDROID_USER_HOME).toBe(paths.signingHome);
     expect(run.summary).toMatchObject({ action: 'build', directChildPid: 77, resultStatus: 'success' });
     expect(fs.readFileSync(run.summary.logPath, 'utf8')).toContain('prepared');
-  });
-
-  it('stops before Gradle when pull is blocked', async () => {
-    const { paths } = fixture();
-    const { calls, execute } = successfulExecutor(paths, {
-      pullFailure: true
-    });
-    const run = await runWindowsDevBuild({
-      execute, paths, platform: 'win32', prepareHost: vi.fn()
-    });
-    expect(run).toMatchObject({ exitCode: 64, summary: { failureStage: 'pull' } });
-    expect(calls.some(({ args }) => args.includes('pull'))).toBe(true);
-    expect(calls.some(({ command }) => command === 'cmd.exe')).toBe(false);
   });
 
   it('fails closed when a repository-owned Java process already exists', async () => {
@@ -154,5 +139,6 @@ it('holds a FileShare.None lock and invokes only absolute system Node', () => {
   expect(source).not.toContain('windows-android-lab\\runtime');
   expect(actionSource).toContain('[ValidateSet("build", "deploy", "live", "verify")]');
   expect(actionSource).toContain('[System.IO.FileShare]::None');
+  expect(actionSource.indexOf('& $systemNode $puller')).toBeLessThan(actionSource.indexOf('& $systemNode $runner $Action'));
   expect(actionSource).toContain('& $systemNode $runner $Action');
 });

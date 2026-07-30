@@ -13,7 +13,6 @@ import { windowsDevPaths } from './windows-dev-paths.mjs';
 
 const BUILD_COMMAND = 'call .\\gradlew.bat --no-daemon assembleDebugAndroidTest';
 const BUILD_TIMEOUT_MS = 20 * 60_000;
-const PULL_TIMEOUT_MS = 5 * 60_000;
 
 function failure(message, exitCode, stage) {
   return Object.assign(new Error(message), { exitCode, stage });
@@ -54,34 +53,6 @@ async function checked(execute, command, args, options, stage, exitCode = 74) {
   return result;
 }
 
-async function gitValue(execute, paths, args, stage = 'repo') {
-  const result = await checked(execute, paths.gitPath, ['-C', paths.repoRoot, ...args], {
-    cwd: paths.repoRoot, timeoutCode: `${stage}_timeout`, timeoutMs: PULL_TIMEOUT_MS,
-    windowsHide: true
-  }, stage, 64);
-  return result.stdout.trim();
-}
-
-async function assertRepoPreflight(execute, paths, fsApi) {
-  const actual = fsApi.realpathSync.native(await gitValue(execute, paths, ['rev-parse', '--show-toplevel']));
-  const expected = fsApi.realpathSync.native(paths.repoRoot);
-  if (actual.toLowerCase() !== expected.toLowerCase()) {
-    throw failure('Windows DEV script and Git top-level differ', 64, 'repo');
-  }
-  if (await gitValue(execute, paths, ['branch', '--show-current']) !== 'dev') {
-    throw failure('Windows DEV repository must stay on dev', 64, 'repo');
-  }
-}
-
-async function pullFastForward(execute, paths) {
-  const pull = await execute(paths.gitPath, [
-    '-C', paths.repoRoot, 'pull', '--ff-only', 'lan', 'dev'
-  ], { cwd: paths.repoRoot, timeoutCode: 'pull_timeout', timeoutMs: PULL_TIMEOUT_MS, windowsHide: true });
-  if (pull.code === 0) return;
-  const detail = pull.lines?.at(-1) || pull.stderr || `git pull exited ${pull.code}`;
-  throw failure(String(detail).trim(), 64, 'pull');
-}
-
 async function snapshotProcesses(execute, paths) {
   const script = path.join(paths.repoRoot, 'scripts', 'windows', 'windows-dev-process-snapshot.ps1');
   const result = await checked(execute, 'powershell.exe', [
@@ -115,16 +86,14 @@ export async function runWindowsDevBuild({
     if (platform !== 'win32') throw failure('Windows DEV action requires Windows', 64, 'platform');
     if (!['build', 'deploy', 'live', 'verify'].includes(action)) throw failure('Unknown Windows DEV action', 64, 'request');
     context = evidenceContext(paths, now, id, fsApi);
-    const requiredTools = [paths.systemNode, paths.gitPath,
+    const requiredTools = [paths.systemNode,
       ...(['build', 'deploy'].includes(action) ? [paths.systemNpmCli] : []),
       ...(action === 'build' ? [] : [paths.adbPath])];
     for (const filePath of requiredTools) {
       if (!fsApi.existsSync(filePath)) throw failure(`Required tool is missing: ${filePath}`, 64, 'preflight');
     }
-    await assertRepoPreflight(execute, paths, fsApi);
     const residualBefore = await snapshotProcesses(execute, paths);
     if (residualBefore.length > 0) throw failure('Repository-owned action process is already running', 73, 'residual');
-    await pullFastForward(execute, paths);
     const signing = verifySigningIdentity(paths, fsApi);
     let output = '';
     if (['build', 'deploy'].includes(action)) {

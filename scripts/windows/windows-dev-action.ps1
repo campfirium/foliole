@@ -6,6 +6,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $systemNode = "C:\Program Files\nodejs\node.exe"
+$puller = Join-Path $PSScriptRoot "windows-dev-pull.mjs"
 $runner = Join-Path $PSScriptRoot "windows-dev-build.mjs"
 $lockPath = Join-Path $env:LOCALAPPDATA "Foliole\windows-dev-control\build.lock"
 $lockDirectory = Split-Path -Parent $lockPath
@@ -29,8 +30,12 @@ try {
 }
 
 try {
-  & $systemNode $runner $Action
+  & $systemNode $puller
   $runnerExit = $LASTEXITCODE
+  if ($runnerExit -eq 0) {
+    & $systemNode $runner $Action
+    $runnerExit = $LASTEXITCODE
+  }
 } finally {
   $lock.Dispose()
 }

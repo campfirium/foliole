@@ -59,8 +59,16 @@ export function createA5LiveReloadPlugin({ buildIdentity, onDeviceLoad }) {
     transformIndexHtml: {
       order: 'post',
       handler() {
-        const script = `fetch('${LOADED_PATH}?identity='+encodeURIComponent(${encodedIdentity}),` +
-          "{cache:'no-store'}).catch(()=>{});";
+        const script = [
+          '(()=>{let observer=null;',
+          `const identity=${encodedIdentity};`,
+          "const ready=()=>Boolean(document.querySelector('[data-testid=\"companion-bottom-tab-bar\"]'));",
+          `const report=()=>fetch('${LOADED_PATH}?identity='+encodeURIComponent(identity),`,
+          "{cache:'no-store'}).catch(()=>{});",
+          'const finish=()=>{observer?.disconnect();requestAnimationFrame(()=>requestAnimationFrame(report));};',
+          "if(ready()){finish();return;}observer=new MutationObserver(()=>{if(ready())finish();});",
+          "observer.observe(document.documentElement,{childList:true,subtree:true});})();"
+        ].join('');
         return [
           { attrs: { content: buildIdentity, name: 'foliole-a5-dev-build' }, tag: 'meta', injectTo: 'head' },
           { children: script, tag: 'script', injectTo: 'body' }
