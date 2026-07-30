@@ -31,6 +31,7 @@ vi.mock('../../../../shared/platform/updateCheck', async (importOriginal) => {
   };
 });
 
+import { NATIVE_COMMANDS } from '../../../../../lib/platform/nativeCommands';
 import type { NativeInvoke } from '../../../../../lib/platform/nativeContract';
 import { APP_COMMAND_IDS } from '../../../../shared/commands/ids';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../../shared/config/appSettings';
@@ -86,6 +87,9 @@ it('runs support commands from About settings', async () => {
 it('opens update details when a manual update check finds an available release', async () => {
   updateCheckMock.resultStatus = 'available';
   desktopUpdateMock.state = { phase: 'idle', version: undefined };
+  window.electronAPI!.invoke = vi.fn(async (command: string) =>
+    command === NATIVE_COMMANDS.appGetVersion ? '0.7.0' : null
+  ) as unknown as NativeInvoke;
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.updateCheckState, JSON.stringify({
     cachedManifest: {
       releases: [
@@ -107,6 +111,7 @@ it('opens update details when a manual update check finds an available release',
   }));
   renderWithLocalization(<SettingsAboutSection />);
 
+  expect(await screen.findByText('Version 0.7.0')).toBeInTheDocument();
   fireEvent.click(await screen.findByRole('button', { name: 'Check for Updates' }));
 
   expect(await screen.findByRole('dialog', { name: 'Update details' })).toBeInTheDocument();

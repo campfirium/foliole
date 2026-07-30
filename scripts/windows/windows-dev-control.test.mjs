@@ -10,6 +10,11 @@ import {
   windowsDevPushSpec, windowsDevScpSpec, windowsDevSshSpec
 } from './windows-dev-control.mjs';
 
+const TEST_HOME = '/Users/dev';
+const TEST_WINDOWS_DEV_SSH_KEY = path.join(
+  TEST_HOME, '.ssh', 'agent', 'foliole-windows-android-lab'
+);
+
 it('accepts only fixed actions with an explicit LAN host', () => {
   expect(parseWindowsDevControlArgs(['--host', 'v\\dev@192.168.0.11', 'build'], {}))
     .toEqual({ action: 'build', host: 'v\\dev@192.168.0.11' });
@@ -52,16 +57,16 @@ it('uses only the dedicated Git key and strict host checking', () => {
 });
 
 it('uses only the ordinary SSH key and fixed remote action path', () => {
-  const spec = windowsDevSshSpec('v\\dev@192.168.0.11', 'deploy', {}, '/Users/dev');
-  expect(spec).toContain('/Users/dev/.ssh/agent/foliole-windows-android-lab');
+  const spec = windowsDevSshSpec('v\\dev@192.168.0.11', 'deploy', {}, TEST_HOME);
+  expect(spec).toContain(TEST_WINDOWS_DEV_SSH_KEY);
   expect(spec).toContain('C:/dev/foliole-android-lab-preview/scripts/windows/windows-dev-action.ps1');
   expect(spec.at(-1)).toBe('deploy');
 });
 
 it('copies only fixed live evidence with the ordinary SSH identity', () => {
   const remotePath = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/dev-1/a5-live.png';
-  const spec = windowsDevScpSpec('v\\dev@192.168.0.11', remotePath, '/repo/a5.png', {}, '/Users/dev');
-  expect(spec).toContain('/Users/dev/.ssh/agent/foliole-windows-android-lab');
+  const spec = windowsDevScpSpec('v\\dev@192.168.0.11', remotePath, '/repo/a5.png', {}, TEST_HOME);
+  expect(spec).toContain(TEST_WINDOWS_DEV_SSH_KEY);
   expect(spec.at(-2)).toBe(`v\\dev@192.168.0.11:${remotePath}`);
   expect(spec.at(-1)).toBe('/repo/a5.png');
   expect(parseWindowsDevLiveEvidence(
