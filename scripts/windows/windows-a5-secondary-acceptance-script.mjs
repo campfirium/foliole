@@ -77,8 +77,8 @@ export function runA5SecondaryAcceptance(config, acceptSearch) {
       await click(exit, 'surface exit');
     }
     await click(await waitFor(
-      () => firstVisible('[data-testid="companion-tab-browse"]'), 'Browse tab'
-    ), 'Browse tab');
+      () => firstVisible('[data-testid="companion-tab-shortcut"]'), 'Directory shortcut tab'
+    ), 'Directory shortcut tab');
     while (topBack()) await click(topBack(), 'directory parent');
     await waitFor(() => directoryRows().length > 0, 'root directory rows');
   }
