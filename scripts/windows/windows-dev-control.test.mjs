@@ -112,6 +112,17 @@ it('copies fixed screenshot evidence from a failed live lifecycle before rejecti
   fs.rmSync(repoRoot, { force: true, recursive: true });
 });
 
+it('preserves a remote failure when it exits before screenshot evidence', async () => {
+  const stdout = { write: vi.fn() };
+  const output = '[windows-dev-action] failure stage=request message=Unknown Windows DEV action\n';
+  const remoteError = Object.assign(new Error('remote failed'), { output });
+  await expect(runWindowsDevControl({
+    argv: ['--host', 'v\\dev@192.168.0.11', 'secondary'], env: {},
+    executeGit: vi.fn(async () => ''), executeSsh: vi.fn(async () => { throw remoteError; }), stdout
+  })).rejects.toBe(remoteError);
+  expect(stdout.write).toHaveBeenCalledWith(output);
+});
+
 it('does not resolve or compare commit identifiers', () => {
   const source = fs.readFileSync('scripts/windows/windows-dev-control.mjs', 'utf8');
   expect(source).not.toMatch(/rev-parse|show-current|commitSha|COMMIT_SHA/u);

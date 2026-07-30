@@ -100,10 +100,15 @@ export async function runWindowsDevControl({
     remoteError = error;
     remoteOutput = error.output || error.message;
   }
-  if (remoteOutput && !remoteError) stdout.write(remoteOutput);
+  if (remoteOutput) stdout.write(remoteOutput);
   const result = { action, operation: 'complete', ref: WINDOWS_DEV_SOURCE_REF };
   if (['appearance', 'deploy', 'live', 'secondary'].includes(action)) {
-    const evidence = parseWindowsDevLiveEvidence(remoteOutput);
+    let evidence;
+    try { evidence = parseWindowsDevLiveEvidence(remoteOutput); }
+    catch (error) {
+      if (remoteError) throw remoteError;
+      throw error;
+    }
     const evidenceRoot = path.join(repoRoot, '.tmp', 'artifacts', 'a5-live-reload');
     fsApi.mkdirSync(evidenceRoot, { recursive: true });
     const screenshotPath = path.join(evidenceRoot, `${evidence.buildIdentity}.png`);
