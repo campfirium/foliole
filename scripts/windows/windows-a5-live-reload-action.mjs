@@ -106,7 +106,8 @@ export async function runWindowsA5LiveReload({
     let acceptancePath;
     if (surface === 'secondary') {
       if (launched.acceptance?.status !== 'passed') {
-        throw failure('A5 secondary acceptance did not report passed', 'live-acceptance');
+        const detail = String(launched.acceptance?.error || 'unknown acceptance failure').slice(0, 500);
+        throw failure(`A5 secondary acceptance failed: ${detail}`, 'live-acceptance');
       }
       acceptancePath = path.join(evidenceRoot, 'secondary-acceptance.json');
       fs.writeFileSync(acceptancePath, `${JSON.stringify(launched.acceptance, null, 2)}\n`, 'utf8');

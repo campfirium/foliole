@@ -109,7 +109,7 @@ export function createA5LiveReloadPlugin({
           const scenario = buildA5SecondaryAcceptanceScript({
             identity: buildIdentity, inputPath: INPUT_PATH
           });
-          const script = `(()=>{const fail=(value)=>fetch('${ERROR_PATH}?identity='+encodeURIComponent(${encodedIdentity})+'&message='+encodeURIComponent(String(value).slice(0,300)),{cache:'no-store'}).catch(()=>{});${scenario}.then((result)=>fetch('${LOADED_PATH}?identity='+encodeURIComponent(${encodedIdentity})+'&acceptance='+encodeURIComponent(JSON.stringify(result)),{cache:'no-store'})).catch(fail);})();`;
+          const script = `(()=>{const report=(result)=>fetch('${LOADED_PATH}?identity='+encodeURIComponent(${encodedIdentity})+'&acceptance='+encodeURIComponent(JSON.stringify(result)),{cache:'no-store'});${scenario}.then(report).catch((error)=>report({identity:${encodedIdentity},status:'failed',error:String(error).slice(0,1200)}));})();`;
           return {
             html: html.replace('<script type="module" src="/@vite/client"></script>', ''),
             tags: [

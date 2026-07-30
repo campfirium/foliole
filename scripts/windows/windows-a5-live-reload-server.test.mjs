@@ -94,6 +94,7 @@ it('injects only the bounded secondary-surface scenario and accepts its semantic
   expect(script).toContain('svg.lucide-x');
   expect(script).toContain('companion-search-input');
   expect(script).toContain('bounded-dev-rejection');
+  expect(script).toContain("status:'failed'");
   expect(script).not.toContain('?.');
   expect(script).not.toContain(':has(');
   expect(() => new Script(script)).not.toThrow();

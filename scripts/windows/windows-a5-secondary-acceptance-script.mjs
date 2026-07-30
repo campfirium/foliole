@@ -47,6 +47,17 @@ export function runA5SecondaryAcceptance(config, acceptSearch) {
   };
   const directorySignature = () => directoryRows().map(rowId).join('|');
   const topBack = () => firstVisible('[data-testid="companion-top-bar-back"]');
+  const visibleButtonSummary = () => Array.from(document.querySelectorAll('button'))
+    .filter(visible)
+    .slice(0, 12)
+    .map((button) => {
+      const icon = button.querySelector('svg');
+      return {
+        ariaLabel: button.getAttribute('aria-label'),
+        iconClass: icon ? icon.getAttribute('class') : null,
+        testId: button.getAttribute('data-testid')
+      };
+    });
 
   async function reachRootDirectory() {
     for (let attempt = 0; attempt < 6; attempt += 1) {
@@ -55,7 +66,7 @@ export function runA5SecondaryAcceptance(config, acceptSearch) {
         || closestButton('svg.lucide-x')
         || firstVisible('[data-testid="companion-top-bar-left-action"]')
         || topBack();
-      if (!exit) throw new Error('Cannot return to the companion tab shell');
+      if (!exit) throw new Error(`Cannot return to the companion tab shell: ${JSON.stringify(visibleButtonSummary())}`);
       await click(exit, 'surface exit');
     }
     await click(await waitFor(
