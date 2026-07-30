@@ -134,8 +134,8 @@ export function planTransportProbes(snapshot) {
 }
 
 export function parseAdbDevicesLong(payload) {
-  return String(payload || '').split(/\r?\n/u).filter(Boolean).map((line) => {
-    const match = /^(\S+)\t(\S+)(?:\s+(.*))?$/u.exec(line);
+  return String(payload || '').split(/\r?\n/u).map((line) => line.trim()).filter(Boolean).map((line) => {
+    const match = /^(\S+)\s+(\S+)(?:\s+(.*))?$/u.exec(line);
     if (!match) throw new Error('ADB devices-l returned an invalid transport row');
     const details = Object.fromEntries((match[3] || '').split(/\s+/u).filter(Boolean).map((part) => {
       const index = part.indexOf(':');

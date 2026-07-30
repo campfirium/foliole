@@ -109,7 +109,9 @@ async function collectTransportResults(snapshot, query) {
   const results = [];
   for (const plan of plans) {
     if (plan.status !== 'probe-ready') { results.push(plan); continue; }
-    const transports = parseAdbDevicesLong(await query(plan.address, plan.port));
+    let transports;
+    try { transports = parseAdbDevicesLong(await query(plan.address, plan.port)); }
+    catch (error) { throw diagnosticError(redactDiagnosticText(error.message), 74, 'adb-probe'); }
     results.push({ port: plan.port, status: transports.length > 0 ? 'present' : 'empty', transports });
   }
   return results;

@@ -95,7 +95,10 @@ describe('Windows Android DEV diagnostic probe contract', () => {
     expect(parseAdbDevicesLong('87a33A4b\tdevice product:A5 model:BOOX transport_id:7\r\n')).toEqual([{
       details: { model: 'BOOX', product: 'A5', transport_id: '7' }, serial: '87a33A4b', state: 'device'
     }]);
-    expect(() => parseAdbDevicesLong('malformed transport row')).toThrow('invalid transport row');
+    expect(parseAdbDevicesLong('serial-with-case   unauthorized usb:1-2')).toEqual([{
+      details: { 'usb': '1-2' }, serial: 'serial-with-case', state: 'unauthorized'
+    }]);
+    expect(() => parseAdbDevicesLong('malformed')).toThrow('invalid transport row');
   });
 
   it('marks a probed port when its listener identity changes', () => {

@@ -87,6 +87,17 @@ describe('Windows Android DEV diagnostic entry', () => {
     expect(JSON.parse(fs.readFileSync(result.evidencePath, 'utf8')).message).not.toContain('AAAAAAAA');
   });
 
+  it('maps an existing-server query failure to the fixed child failure exit', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-android-dev-diagnostic-probe-failure-'));
+    const current = snapshot([{ localAddress: '127.0.0.1', localPort: 5037, owningProcess: 41, state: 'Listen' }]);
+    const result = await runWindowsAndroidDevDiagnostics({
+      argv: [], id: () => 'probeerr-rest', now: () => new Date('2026-07-30T01:02:03.000Z'), platform: 'win32',
+      query: async () => { throw new Error('server closed'); }, resolveRepo: () => repoAt(root),
+      snapshot: () => current, stderr: captureStream().stream, stdout: captureStream().stream
+    });
+    expect(result).toMatchObject({ exitCode: 74, summary: { failureStage: 'adb-probe' } });
+  });
+
   it('speaks host:devices-l directly to an existing server without an adb process launch', async () => {
     const socket = new EventEmitter();
     let request = '';
