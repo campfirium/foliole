@@ -4,6 +4,8 @@
 import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
+import { isCommitOnRemote } from './remote-commit.mjs';
+
 const NUMBERED_SUBJECT = /^(\d{6})\s+\S/;
 const ZERO_SHA = /^0{40}$/;
 const COMMIT_CONTEXT_PREFIX = '# foliole-commit-context: ';
@@ -127,12 +129,6 @@ function readSubjects(revision) {
   return runGit(['log', '--first-parent', '--reverse', '--pretty=%s', revision]).split('\n').filter(Boolean);
 }
 
-function isAlreadyOnRemote(revision) {
-  return runGit(['for-each-ref', '--contains', revision, '--format=%(refname)', 'refs/remotes'])
-    .split('\n')
-    .some(Boolean);
-}
-
 function getMaxSequence(subjects) {
   const numbers = subjects.map(parseNumberedSubject).filter((value) => value !== null);
   return numbers.length > 0 ? Math.max(...numbers) : 0;
@@ -173,7 +169,7 @@ function checkPrePush(input) {
       continue;
     }
     if (ZERO_SHA.test(update.remoteSha)) {
-      if (isAlreadyOnRemote(update.localSha)) continue;
+      if (isCommitOnRemote(update.localSha)) continue;
       checkContinuousSubjects(readSubjects(update.localSha), update.remoteRef);
       continue;
     }

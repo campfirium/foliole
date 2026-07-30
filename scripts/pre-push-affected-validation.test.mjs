@@ -66,6 +66,25 @@ async function commitAll(repoDir, message) {
 }
 
 describe('pre-push affected validation', () => {
+  it('does not revalidate history when a new branch points to an already-pushed commit', async () => {
+    const repoDir = await createRepo();
+    try {
+      await mkdir(path.join(repoDir, 'electron', 'database'), { recursive: true });
+      await writeFile(path.join(repoDir, 'electron', 'database', 'syncPackBuilder.ts'), 'export const value = 1;\n');
+      const localSha = await commitAll(repoDir, '000001 remote history');
+      await runCommand('git', ['update-ref', 'refs/remotes/origin/dev', localSha], repoDir);
+
+      const result = await runCommand('node', [AFFECTED_VALIDATION_SCRIPT], repoDir, {
+        input: `refs/heads/release/1.0.0 ${localSha} refs/heads/release/1.0.0 ${'0'.repeat(40)}\n`
+      });
+
+      expect(result.code, result.stderr).toBe(0);
+      await expect(readFile(path.join(repoDir, 'calls.log'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+    } finally {
+      await rm(repoDir, { recursive: true, force: true });
+    }
+  }, AFFECTED_VALIDATION_TIMEOUT_MS);
+
   it('runs sync-pack tests when pushed commits affect sync-pack files', async () => {
     const repoDir = await createRepo();
     try {

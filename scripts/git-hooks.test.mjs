@@ -15,6 +15,7 @@ const FILE_BUDGET_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'check-file-budg
 const AFFECTED_VALIDATION_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'pre-push-affected-validation.mjs');
 const CRITICAL_TEST_ROUTES_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-critical-test-routes.mjs');
 const SEQUENCE_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'git', 'check-commit-sequence.mjs');
+const REMOTE_COMMIT_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'git', 'remote-commit.mjs');
 const PATH_DOMAINS_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'lib', 'path-domains.mjs');
 const PATH_DOMAIN_REGISTRY_PATH = path.join(REPO_ROOT, 'scripts', 'lib', 'path-domain-registry.mjs');
 const HOOK_INTEGRATION_TIMEOUT_MS = 30_000;
@@ -53,6 +54,7 @@ async function createRepo() {
   await mkdir(path.join(repoDir, 'scripts', 'lib'), { recursive: true });
   await mkdir(path.join(repoDir, 'scripts', 'quality'), { recursive: true });
   await copyFile(SEQUENCE_SCRIPT_PATH, path.join(repoDir, 'scripts', 'git', 'check-commit-sequence.mjs'));
+  await copyFile(REMOTE_COMMIT_SCRIPT_PATH, path.join(repoDir, 'scripts', 'git', 'remote-commit.mjs'));
   await copyFile(FILE_BUDGET_SCRIPT_PATH, path.join(repoDir, 'scripts', 'check-file-budget.mjs'));
   await copyFile(AFFECTED_VALIDATION_SCRIPT_PATH, path.join(repoDir, 'scripts', 'pre-push-affected-validation.mjs'));
   await copyFile(CRITICAL_TEST_ROUTES_SCRIPT_PATH, path.join(repoDir, 'scripts', 'quality', 'quality-critical-test-routes.mjs'));
