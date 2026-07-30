@@ -181,7 +181,7 @@ it('holds a FileShare.None lock and invokes only absolute system Node', () => {
   expect(source).toContain('windows-dev-build.mjs');
   expect(source).not.toContain('Write-Error');
   expect(source).not.toContain('windows-android-lab\\runtime');
-  expect(actionSource).toContain('[ValidatePattern("^[a-z]+$")]');
+  expect(actionSource).toContain('[ValidatePattern("^[a-z]+(?:-[a-z]+)*$")]');
   expect(actionSource).not.toContain('ValidateSet');
   expect(actionSource).toContain('[System.IO.FileShare]::None');
   expect(actionSource.indexOf('& $systemNode $puller')).toBeLessThan(actionSource.indexOf('& $systemNode $runner $Action'));
