@@ -13,7 +13,9 @@ export const CAPTURE_ANNOTATION_EVIDENCE_FILES = [
 
 const APP_ID = 'com.foliole.android';
 const TEST_APP_ID = `${APP_ID}.test`;
-const TEST_CLASS = `${APP_ID}.FolioleCompanionWebViewAutomationTest#persistsCaptureClozeAndNoteAfterRestart`;
+const TEST_CLASS_NAME = `${APP_ID}.FolioleCompanionWebViewAutomationTest`;
+const TEST_METHOD = 'persistsCaptureClozeAndNoteAfterRestart';
+const TEST_CLASS = `${TEST_CLASS_NAME}#${TEST_METHOD}`;
 const TEST_RUNNER = `${TEST_APP_ID}/androidx.test.runner.AndroidJUnitRunner`;
 const TEST_RUNNER_IDENTITY = `instrumentation:${TEST_RUNNER} (target=${APP_ID})`;
 
@@ -117,7 +119,21 @@ async function requireInstalledScenario({ adbPort, env, execute, paths, serial }
     error.installedPackages = installedPackages;
     throw error;
   }
-  return installedPackages;
+  const inventory = await checked(execute, paths.adbPath, [
+    '-P', adbPort, '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',
+    '-e', 'log', 'true', '-e', 'class', TEST_CLASS_NAME, TEST_RUNNER
+  ], commandOptions(env, 'capture_test_inventory_timeout', 60_000), 'installed-test-inventory');
+  const installedTestMethods = String(inventory.stdout).split(/\r?\n/u)
+    .filter((line) => line.startsWith('INSTRUMENTATION_STATUS: test='))
+    .map((line) => line.slice('INSTRUMENTATION_STATUS: test='.length).trim()).filter(Boolean);
+  if (!installedTestMethods.includes(TEST_METHOD)) {
+    const discovered = installedTestMethods.join(',') || 'none';
+    const error = failure(`Required installed test method is unavailable; discovered=${discovered}`,
+      'installed-test-inventory', inventory);
+    error.installedPackages = installedPackages;
+    throw error;
+  }
+  return { installedPackages, installedTestMethods };
 }
 
 function auditSnapshot({ auditDatabase, fsApi, openDatabase, snapshotManifest, token }) {
@@ -150,12 +166,15 @@ export async function runWindowsA5CaptureAnnotation({
   const snapshotManifest = path.join(evidenceRoot, 'capture-annotation-database-snapshot.json');
   const snapshotRoot = path.join(evidenceRoot, 'capture-annotation-database');
   let installedPackages;
+  let installedTestMethods;
   let instrumentationStarted = false;
   let primaryError = null;
   let quiesced = false;
   let result;
   try {
-    installedPackages = await requireInstalledScenario({ adbPort, env, execute, paths, serial });
+    ({ installedPackages, installedTestMethods } = await requireInstalledScenario({
+      adbPort, env, execute, paths, serial
+    }));
     instrumentationStarted = true;
     const instrumentation = await checked(execute, paths.adbPath, [
       '-P', adbPort, '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',
@@ -182,7 +201,7 @@ export async function runWindowsA5CaptureAnnotation({
         CAPTURE_ANNOTATION_EVIDENCE_FILES.slice(1).map((name) => [name, name])
       ), completedAt: new Date().toISOString(), nodes: {
         capture: audit.capture, cloze: audit.cloze, note: audit.note
-      }, installedPackages, resultStatus: 'success', runId: buildIdentity, schemaVersion: 1,
+      }, installedPackages, installedTestMethods, resultStatus: 'success', runId: buildIdentity, schemaVersion: 1,
       serial, testClass: TEST_CLASS, token: buildIdentity
     };
     writeJson(fsApi, artifacts['capture-annotation-manifest.json'], manifest);

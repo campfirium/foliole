@@ -44,6 +44,10 @@ function packageDetails(packageName) {
   ].join('\n');
 }
 
+function testInventory(methods = ['persistsCaptureClozeAndNoteAfterRestart']) {
+  return methods.map((method) => `INSTRUMENTATION_STATUS: test=${method}`).join('\n');
+}
+
 function auditSummary(token) {
   return {
     capture: { currentVersionId: 'v-capture', deviceId: 'device-a5', nodeId: 'capture', parentNodeId: 'special-inbox' },
@@ -64,7 +68,8 @@ it('uses only installed packages, runs one fixed restart scenario, and writes bo
     if (args.includes('instrumentation')) {
       stdout = 'instrumentation:com.foliole.android.test/androidx.test.runner.AndroidJUnitRunner (target=com.foliole.android)\n';
     }
-    if (args.includes('instrument')) stdout = instrumentationOutput('run-12345678');
+    if (args.includes('log')) stdout = testInventory();
+    else if (args.includes('instrument')) stdout = instrumentationOutput('run-12345678');
     return { code: 0, lines: [], output: stdout, stderr: '', stdout };
   });
   const protectData = vi.fn(async (mode, manifest, backupRoot) => {
@@ -87,7 +92,7 @@ it('uses only installed packages, runs one fixed restart scenario, and writes bo
     .toEqual(['com.foliole.android', 'com.foliole.android.test']);
   expect(adbArgs.filter((args) => args.includes('path')).map((args) => args.at(-1)))
     .toEqual(['com.foliole.android', 'com.foliole.android.test']);
-  expect(adbArgs.find((args) => args.includes('instrument'))).toEqual([
+  expect(adbArgs.find((args) => args.includes('instrument') && !args.includes('log'))).toEqual([
     '-P', '5037', '-s', '87a33a4b', 'shell', 'am', 'instrument', '-w', '-r',
     '-e', 'expectedValue', 'run-12345678', '-e', 'timeoutMs', '30000', '-e', 'class',
     'com.foliole.android.FolioleCompanionWebViewAutomationTest#persistsCaptureClozeAndNoteAfterRestart',
@@ -101,7 +106,8 @@ it('uses only installed packages, runs one fixed restart scenario, and writes bo
     action: 'capture-annotation', installedPackages: {
       main: { packageName: 'com.foliole.android', versionCode: '42', versionName: '0.4.2' },
       test: { packageName: 'com.foliole.android.test', versionCode: '42', versionName: '0.4.2' }
-    }, nodes: { capture: { nodeId: 'capture' }, cloze: { nodeId: 'cloze' } },
+    }, installedTestMethods: ['persistsCaptureClozeAndNoteAfterRestart'],
+    nodes: { capture: { nodeId: 'capture' }, cloze: { nodeId: 'cloze' } },
     resultStatus: 'success', runId: 'run-12345678', token: 'run-12345678'
   });
   expect(database.close).toHaveBeenCalledOnce();
@@ -116,7 +122,8 @@ it('fails closed on a mismatched receipt token and still force-stops the app', a
     if (args.includes('instrumentation')) {
       stdout = 'instrumentation:com.foliole.android.test/androidx.test.runner.AndroidJUnitRunner (target=com.foliole.android)\n';
     }
-    if (args.includes('instrument')) stdout = instrumentationOutput('other-token');
+    if (args.includes('log')) stdout = testInventory();
+    else if (args.includes('instrument')) stdout = instrumentationOutput('other-token');
     return { code: 0, lines: [], output: stdout, stderr: '', stdout };
   });
   await expect(runWindowsA5CaptureAnnotation({
@@ -151,6 +158,28 @@ it('stops before instrumentation when the installed runner is unavailable', asyn
   });
   expect(execute.mock.calls.some(([, args]) => args.includes('instrument'))).toBe(false);
   expect(execute.mock.calls.some(([, args]) => args.includes('force-stop'))).toBe(false);
+});
+
+it('does not execute tests when the installed package lacks the fixed method', async () => {
+  const { evidenceRoot, paths } = fixture();
+  const execute = vi.fn(async (_command, args) => {
+    let stdout = 'Success\n';
+    if (args.includes('dumpsys')) stdout = packageDetails(args.at(-1));
+    if (args.includes('path')) stdout = `package:/data/app/${args.at(-1)}/base.apk\n`;
+    if (args.includes('instrumentation')) {
+      stdout = 'instrumentation:com.foliole.android.test/androidx.test.runner.AndroidJUnitRunner (target=com.foliole.android)\n';
+    }
+    if (args.includes('log')) stdout = testInventory(['performsBoundedSemanticAction']);
+    return { code: 0, lines: [], output: stdout, stderr: '', stdout };
+  });
+  await expect(runWindowsA5CaptureAnnotation({
+    adbPort: '5037', buildIdentity: 'run-12345678', env: {}, evidenceRoot, execute,
+    paths, protectData: vi.fn(), serial: '87a33a4b'
+  })).rejects.toMatchObject({
+    message: expect.stringContaining('discovered=performsBoundedSemanticAction'),
+    stage: 'installed-test-inventory'
+  });
+  expect(execute.mock.calls.filter(([, args]) => args.includes('instrument'))).toHaveLength(1);
 });
 
 it('rejects instrumentation that lacks the Android success code', () => {
