@@ -9,27 +9,18 @@ import {
 } from './android-sync-audit.mjs';
 
 describe('Android sync audit host boundary', () => {
-  it('requires an explicit local Android database copy on Darwin', () => {
+  it('requires an explicit local Android database copy on every host', () => {
     const options = parseArgs([]);
 
-    expect(() => assertAndroidAuditHost(options, 'darwin')).toThrow('Pass --android-db');
-    expect(() => assertAndroidAuditHost(
-      { ...options, androidDb: '/local/android.db' },
-      'darwin'
-    )).not.toThrow();
+    expect(() => assertAndroidAuditHost(options)).toThrow('Pass --android-db');
+    expect(() => assertAndroidAuditHost({ ...options, androidDb: '/local/android.db' })).not.toThrow();
   });
 
-  it('rejects Darwin before desktop database or adb resolution', async () => {
+  it('rejects missing local input before desktop database resolution', async () => {
     await expect(runAudit({
-      adb: '/missing/adb',
       androidDb: '',
       desktopDb: '/missing/desktop.db',
-      keep: false,
-      platform: 'darwin'
-    })).rejects.toThrow('scripts/windows/windows-android-lab-control.mjs');
-  });
-
-  it('preserves device-backed audits on Windows', () => {
-    expect(() => assertAndroidAuditHost({ androidDb: '' }, 'win32')).not.toThrow();
+      keep: false
+    })).rejects.toThrow('Pass --android-db');
   });
 });

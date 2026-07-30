@@ -11,7 +11,7 @@ if [[ ! -f "package.json" ]]; then
   exit 1
 fi
 
-target="${1:-}"; usage="Usage: bash scripts/quality/quality-gate-target.sh <desktop|android|android-device|shared|shared-static|shared-test|shared-quality-tests|shared-build|full|release|release-core|release-hosted-common|release-hosted-common-build|release-windows-core|release-static|release-tests|release-build|release-script-preview|release-base|release-windows-tail|release-android-tail|release-ios-tail|release-tooling|release-preview-recovery|release-android-host> [--fail-fast]"
+target="${1:-}"; usage="Usage: bash scripts/quality/quality-gate-target.sh <desktop|android|shared|shared-static|shared-test|shared-quality-tests|shared-build|full|release|release-core|release-hosted-common|release-hosted-common-build|release-windows-core|release-static|release-tests|release-build|release-script-preview|release-base|release-windows-tail|release-android-tail|release-ios-tail|release-tooling|release-preview-recovery|release-android-host> [--fail-fast]"
 QUALITY_GATE_COLLECT_FAILURES=1
 case "${2:-}" in
   --fail-fast) QUALITY_GATE_COLLECT_FAILURES=0 ;;
@@ -108,13 +108,6 @@ case "${target}" in
     run_gate_steps check:android-boundary lint:android:full typecheck:android test:android
     run_quality_script_gate_steps_if_related "${changed_files_for_skip_lint}"
     run_gate_steps android:sync android:host:lint android:host:test
-    ;;
-  android-device)
-    run_renderer_guards_if_present
-    run_repository_root_boundary_check_if_present
-    run_gate_steps check:android-boundary lint:android:full typecheck:android test:android
-    run_quality_script_gate_steps_if_related "${changed_files_for_skip_lint}"
-    run_gate_steps android:sync android:host:lint android:host:test android:emulator android:host:device-test
     ;;
   shared)
     run_shared_static_gate_steps

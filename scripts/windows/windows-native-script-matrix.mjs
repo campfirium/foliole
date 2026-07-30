@@ -14,7 +14,6 @@ export const WINDOWS_NATIVE_MAIN_SCRIPTS = [
   'test:files',
   'windows:native:check',
   'windows:client:native',
-  'windows:android:dev-server',
   'windows:preview:native',
   'quality:fast',
   'quality:fast:native',

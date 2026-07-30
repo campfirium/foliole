@@ -18,30 +18,6 @@ export const SYNC_PACK_PATH_PATTERN = /^(lib\/core\/sync\/syncPack|electron\/dat
 export const ANDROID_CONTRACT_PATH_PATTERN = /^lib\/core\/database\/androidCompanion.*\.ts$/u;
 export const ANDROID_SYNC_BOUNDARY_PATH_PATTERN =
   /^(lib\/core\/database\/androidCompanion.*\.ts|android\/app\/src\/main\/assets\/companion-.*\.json|android\/app\/src\/main\/java\/com\/foliole\/android\/FolioleCompanionSync.*\.java)/u;
-export const ANDROID_DEV_SERVER_INSTALL_PATH_PATTERN =
-  /^(android\/(?:app\/|gradle\/|build\.gradle|settings\.gradle|gradle\.properties|variables\.gradle|gradlew(?:\.bat)?)|capacitor\.config\.ts|package\.json|package-lock\.json)/u;
-
-export const ANDROID_DEV_SERVER_RESTART_PATHS = [
-  'scripts/android/android-preview-dev-server.sh',
-  'scripts/android/windows-cap-sync-dev-server.ps1',
-  'scripts/android/windows-dev-server-launch.ps1',
-  'scripts/android/windows-deploy-app.sh',
-  'scripts/windows/windows-android-dev-server.mjs',
-  'vite.companion.config.ts'
-];
-
-export const ANDROID_DEV_SERVER_WEB_PATHS = [
-  'src/companion/',
-  'src/shared/',
-  'src/features/',
-  'lib/',
-  'src/app/styles.css',
-  'src/app/tokens/',
-  'src/app/generated/appearance-colors.css',
-  'index.html',
-  'public/'
-];
-
 export const LINT_SCOPE_PATHS = {
   desktop: [
     'src/app/',

@@ -1,7 +1,9 @@
 function Resolve-AndroidDeviceSerialFromAdbDevices {
   param(
     [object[]]$DeviceLines,
-    [string]$TargetSerial = ""
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [string]$TargetSerial
   )
 
   foreach ($line in $DeviceLines) {
@@ -14,15 +16,13 @@ function Resolve-AndroidDeviceSerialFromAdbDevices {
     if ($parts.Count -lt 2) {
       continue
     }
-    if (![string]::IsNullOrWhiteSpace($TargetSerial) -and $parts[0] -ne $TargetSerial) {
+    if ($parts[0] -ne $TargetSerial) {
       continue
     }
     if ($parts[1] -eq "device") {
       return $parts[0]
     }
-    if (![string]::IsNullOrWhiteSpace($TargetSerial)) {
-      throw "Android device ${TargetSerial} is $($parts[1]). Unlock the device and allow USB debugging."
-    }
+    throw "Android device ${TargetSerial} is $($parts[1]). Unlock the device and allow USB debugging."
   }
 
   return $null

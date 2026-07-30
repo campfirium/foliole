@@ -7,30 +7,37 @@ import { runInherited } from './android-host-process.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
-async function runSync(env) {
-  let code = await runInherited('npm', ['run', 'android:web:build'], { cwd: REPO_ROOT, env });
+async function runSync(env, runner) {
+  let code = await runner('npm', ['run', 'android:web:build'], { cwd: REPO_ROOT, env });
   if (code !== 0) return code;
   const capCli = path.join(REPO_ROOT, 'node_modules', '@capacitor', 'cli', 'bin', 'capacitor');
-  code = await runInherited(process.execPath, [capCli, 'sync', 'android'], { cwd: REPO_ROOT, env });
+  code = await runner(process.execPath, [capCli, 'sync', 'android'], { cwd: REPO_ROOT, env });
   if (code === 0) console.log('[android-cap-sync] status: SYNCED');
   return code;
 }
 
-function runGradle(args, env) {
+function runGradle(args, env, runner) {
   if (args.length === 0) {
     console.error('[android-gradle-check] missing Gradle task.');
     return 2;
   }
-  return runInherited('./gradlew', ['--no-daemon', ...args], {
+  return runner('./gradlew', ['--no-daemon', ...args], {
     cwd: path.join(REPO_ROOT, 'android'),
     env
   });
 }
 
-export function runNativeLinuxAndroidHost(command, args, env = process.env) {
-  if (command === 'sync') return runSync(env);
-  if (command === 'gradle') return runGradle(args, env);
-  console.error(`[android-host] unsupported native Linux command: ${command || '<missing>'}`);
+export function runNativeLinuxAndroidHost(command, args, options = {}) {
+  const env = options.env ?? process.env;
+  const platform = options.platform ?? process.platform;
+  const runner = options.runner ?? runInherited;
+  if (platform !== 'linux') {
+    console.error('[native-linux-host] hosted Android checks require Linux.');
+    return 2;
+  }
+  if (command === 'sync') return runSync(env, runner);
+  if (command === 'gradle') return runGradle(args, env, runner);
+  console.error(`[native-linux-host] unsupported command: ${command || '<missing>'}`);
   return 2;
 }
 

@@ -1,7 +1,4 @@
 // @vitest-environment node
-/* global process */
-
-import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -18,10 +15,6 @@ const roots = [];
 const NOW = '2026-07-26T00:00:00.000Z';
 const SETTINGS_INPUT = { ...DEFAULT_REVIEW_SCHEDULER_SETTINGS, desiredRetention: 0.85 };
 const SETTINGS = normalizeReviewSchedulerSettings(SETTINGS_INPUT);
-const context = {
-  checkpoint: 'prepare', commitSha: 'a'.repeat(40), deploymentRunId: '900-aaaaaaaaaaaa',
-  deviceIdentity: 'A5-STABLE', runId: '1000-aaaaaaaaaaaa-prepare'
-};
 
 afterEach(() => roots.splice(0).forEach((root) => fs.rmSync(root, { force: true, recursive: true })));
 
@@ -210,20 +203,4 @@ describe('Android Review audit', () => {
     }).errorCode).toBe('review_restart_rollback');
   });
 
-  it('writes scheduler failure evidence before the CLI exits nonzero', () => {
-    const databasePath = createDatabase(null);
-    const output = path.join(path.dirname(databasePath), 'review-audit.json');
-    const result = spawnSync(process.execPath, [
-      '--experimental-strip-types', path.resolve('scripts/windows/windows-android-lab-review-audit.ts'),
-      '--checkpoint', 'prepare', '--commit', context.commitSha, '--database', databasePath,
-      '--deployment-run', context.deploymentRunId, '--device', context.deviceIdentity,
-      '--output', output, '--run', context.runId
-    ], { cwd: process.cwd(), encoding: 'utf8', env: process.env });
-    expect(result.status).not.toBe(0);
-    if (!fs.existsSync(output)) throw new Error(result.stderr || result.stdout || 'audit output missing');
-    expect(JSON.parse(fs.readFileSync(output, 'utf8'))).toMatchObject({
-      pairing: { status: 'available' }, resultStatus: 'failure', scheduler: { status: 'missing' },
-      sync: { status: 'available' }
-    });
-  });
 });

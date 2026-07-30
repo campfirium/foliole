@@ -51,8 +51,8 @@
 ## Windows Command Boundary
 
 - Windows 开发使用普通 `dev` Git 流程：Mac controller 把 `dev` push 到 LAN Git，Windows 单一普通 `dev` 仓库执行 `git pull --ff-only lan dev` 后再动作；不解析、传递、保存、回传或比对 SHA，Git 失败直接报告。
-- Windows 本地仓库同时服务 Windows 桌面与 A5 Android 开发；Windows 不提交或推送源码上游，不建立 candidate、scratch、preview / WSL mirror 或第二份源码现场。拉取失败直接报告，不自动 reset、重建、修复或合并源码。
-- 普通 Windows 终端诊断走局域网 SSH；A5 设备动作只走消费同一 Windows `dev` 仓库的固定 device adapter。adapter 尚未收口时停止设备动作，不恢复旧 scheduled Lab、第二 checkout 或 SHA 控制面；具体边界按 `electron/AGENTS.md` 与 `android/AGENTS.md` 执行。
+- Windows 本地仓库同时服务 Windows 桌面与 A5 Android 开发；Windows 不提交或推送源码上游，不建立 candidate、scratch 或第二份源码现场。拉取失败直接报告，不自动 reset、重建、修复或合并源码。
+- 普通 Windows 终端诊断走局域网 SSH；A5 设备动作只允许由 `scripts/windows/windows-dev-control.mjs` 的 `deploy` / `verify` 触发同一 Windows `dev` 仓库内的固定 adapter。不得绕过该入口建立其他设备控制面；具体边界按 `electron/AGENTS.md` 与 `android/AGENTS.md` 执行。
 - Windows 原生命令默认用已存在的 `npm` / `node` / 项目脚本入口执行；不得把多步验证长期写成内联 PowerShell / cmd 片段。
 - 复杂 Windows 命令若涉及多层引号、环境变量、重定向、后台进程、native exe、`cmd.exe` / PowerShell 交叉调用或 stdout 可靠性判断，优先写成仓库内 Node runner 或已提交脚本；临时诊断必须把 stdout、stderr、exit code 写入 `.tmp/` 后再读取，不得只凭空 stdout 或空日志判定成功。
 - 临时 Playwright / browser 验收、生产站点 browser probe、HTTP server + browser 脚本必须通过 `node scripts/with-resource-gate.mjs preview -- <command...>` 执行；Node REPL 只用于短探针，长流程必须转成仓库脚本。只清理 runner 自己启动的子进程树，不按进程名全机杀 `node.exe` / `msedge.exe`。
@@ -97,7 +97,7 @@
 - 不允许通过降低检查标准过关；验证前必须从 `package.json` / `npm run` 确认真实入口，当前仓库以 `npm` 为准，不用不存在的 `npm test` 兜底。
 - 凡本轮改动会进入应用运行时或改变用户可见行为，必须完成一次受影响宿主的可见验收；桌面任务默认以当前 Codex 所在的原生桌面宿主完成本轮主验收，只有用户明确指定其他宿主、行为属于其他平台专属边界、发布 / 安装包验收或跨宿主承诺时，才追加对应宿主验收。文件预算、窄测试、lint、typecheck、copy guard、运行时快检等前置验证必须先按改动范围完成，不得用宿主可见验收替代前置红灯修复。
 - 宿主可见验收的具体入口由受影响宿主规则决定：桌面按 `electron/AGENTS.md` 选择 Hidden Native 或可见原生自动验收；Android / iOS / companion 按对应局部规则选择等价宿主验收。只改文档、agent 规则、只读诊断、测试代码或脚本内部逻辑，且不改变应用运行时行为时，可跳过宿主可见验收，但最终汇报必须写明跳过原因。
-- 默认先执行覆盖本轮能力闭环的最小相关前置验证；只有能力闭环范围或技术风险超过相关验证覆盖面时，才升级到 `quality:desktop`、`quality:android`、`quality:android:device`、`quality:shared`、`quality:full`、`quality:release` 或 `quality:fast`。
+- 默认先执行覆盖本轮能力闭环的最小相关前置验证；只有能力闭环范围或技术风险超过相关验证覆盖面时，才升级到 `quality:desktop`、`quality:android`、`quality:shared`、`quality:full`、`quality:release` 或 `quality:fast`。
 - 少量明确测试文件优先 `npm run test:files -- <file...>`，变更范围干净且需要按 diff 自动选测时用 `npm run test:changed`。
 - 新增功能或改变既有可观察行为时，必须按 `.lab/specs/_governance/test-drift-prevention-expectation.md` 定位并维护对应测试 contract；自动化测试只锁定独立于当前实现方式仍需长期成立的产品行为、数据语义、交互结果与失败边界，断言数量不作为完成标准，也不得以此降低稳定 contract 的应有覆盖。
 - 可复现 Bug 只有在根因违反了可稳定自动化表达的长期 contract 时，才新增或更新对应回归测试；决定不新增或更新时，最终汇报必须说明为何不构成稳定 contract，或为何现有基础设施无法可靠覆盖。不得仅因现场问题可复现，就用 DOM 顺序、坐标、像素、当前文案分组或组件层级断言固化偶然排版与实现结构。纯文案、纯视觉编排、纯静态样式或测试基础设施无法可靠覆盖的宿主行为，不新增这类断言，必须按受影响宿主规则完成可见验收；若视觉问题影响可点击、可达性、遮挡或其他交互结果，仍属于交互 contract，不得归入纯视觉豁免。已有稳定 contract 可以自动化覆盖时，不得仅以手工检查替代。
@@ -108,7 +108,7 @@
 - npm 默认保留 7 天 release-age 安全窗口；但 Dependabot / GitHub Advisory / `npm audit` 已明确报出的漏洞修复必须定向绕过该窗口，只允许更新被点名的漏洞包或其必要传递依赖，并用 `npm ls <package> --all` 与 `npm audit --omit=dev` 复验。禁止用等待窗口期作为安全告警处理结论。
 - `it.skip` / `test.skip` 必须紧邻 `// SKIP: <reason> | <date YYYY-MM-DD> | revive: <condition>`；看到超过 30 天的 stale `SKIP` 必须复查能否恢复。
 - E2E（Playwright）不进入任何质量闸；它作为宿主可见验收单独执行。桌面日常 agent 自动化验收优先按 `electron/AGENTS.md` 使用不干扰用户桌面的 Playwright 入口，人工预览仍按下表执行。
-- Windows Android Lab 日常按 DEV-first 远程工作站使用：Windows native dev 与 A5 Android dev-server 预览优先服务开发调试；CI 级 clean / bundled / release-like 终检默认由 GitHub / T5 或明确触发的重模式承担，不得把旧 final acceptance 作为默认 Android Lab 验收。
+- Windows Android 日常按 DEV-first 远程工作站使用：Windows native dev 与 A5 fixed deploy / verify 服务开发调试；CI 级 clean / bundled / release-like 终检默认由 GitHub / T5 或明确触发的重模式承担，不得恢复通用设备 runner 或 detached preview 服务。
 - 普通开发任务只跑改动相关的最小本地验证，不默认等待 hosted 中度或重度质检；每日两次 T5 负责常规 full hosted 兜底。`node scripts/quality/remote-quality.mjs --scope <desktop|shared|android|ios|full>` 仅用于 T5 修复后的即时复验、发布流程或用户明确要求，并且只验证远端不可变 SHA、显示唯一 run URL、等待结果并在失败时读取日志。不得为触发质检隐式 commit / push，目标 SHA 不在远端时必须停下等待授权，不得回退到其他 SHA。
 - 运行命令后若工具返回非终态、无新增输出、仅 heartbeat / progress，或 agent 准备汇报“仍在运行 / 继续等 / 再查一次”，必须触发 `$quiet-wait`；后续用 waiter 接管等待，不得用 agent 回合继续守进程。
 - `copy:guard` 默认只报告 warning；若它报 warning，修复前先读 `.lab/specs/_product/terminology-and-copy.md`，禁止机械替换。

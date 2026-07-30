@@ -28,7 +28,6 @@ const controlledElectronSqliteTests = [
   'electron/sync/syncPackPushAcksExecutor.test.ts',
   'scripts/demo/export-demo-pack.test.mjs',
   'scripts/android/schema-inventory.test.mjs',
-  'scripts/android/android-reset-sync-data.test.mjs',
   'scripts/android/android-sync-audit-core.test.mjs',
   'scripts/android/android-sync-cleanup-device-private.test.mjs',
   'scripts/ios/ios-database-upgrade-acceptance-fixture.test.mjs',

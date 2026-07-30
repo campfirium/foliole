@@ -28,7 +28,7 @@ describe('script domain registry', () => {
     expect(classifyScriptAsset('scripts/windows/windows-validation-kit-runner.mjs')).toMatchObject({
       placements: ['windows-ci', 'windows-device', 'windows-only']
     });
-    expect(classifyScriptAsset('scripts/android/windows-open.ps1')).toMatchObject({
+    expect(classifyScriptAsset('scripts/android/windows-deploy-app.ps1')).toMatchObject({
       placements: ['windows-device', 'windows-only']
     });
     expect(classifyScriptAsset('scripts/lib/path-domains.mjs')).toMatchObject({
@@ -37,7 +37,7 @@ describe('script domain registry', () => {
     expect(classifyScriptAsset('scripts/macos/electron-dev-preview.mjs')).toMatchObject({
       placements: ['macos-only']
     });
-    expect(classifyScriptAsset('scripts/macos/android/android-host.mjs')).toMatchObject({
+    expect(classifyScriptAsset('scripts/macos/macos-electron-dev.mjs')).toMatchObject({
       placements: ['macos-only']
     });
   });
@@ -92,18 +92,13 @@ describe('script domain registry', () => {
       reason: 'unsupported-platform'
     });
     expect(renderCapabilityCommand(resolveCapabilityContract('android:host:test')))
-      .toBe('node scripts/android/android-host.mjs gradle testDebugUnitTest');
-    expect(resolveCapabilityAdapter('android:control', 'darwin')).toEqual({
-      ok: false,
-      reason: 'unsupported-platform'
+      .toBe('node scripts/android/native-linux-host.mjs gradle testDebugUnitTest');
+    expect(resolveCapabilityAdapter('android:host:test', 'win32')).toEqual({
+      ok: false, reason: 'unsupported-platform'
     });
     expect(resolveCapabilityAdapter('android:web:dev', 'darwin')).toMatchObject({
       ok: true,
       placements: ['shared-core']
-    });
-    expect(resolveCapabilityAdapter('windows:android:dev-server', 'win32')).toMatchObject({
-      ok: true,
-      placements: ['windows-device', 'windows-only']
     });
   });
 });

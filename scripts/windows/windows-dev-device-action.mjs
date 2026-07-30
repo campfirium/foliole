@@ -63,7 +63,7 @@ async function deploy(execute, paths, evidenceRoot, env) {
   const script = path.join(paths.repoRoot, 'scripts', 'android', 'windows-deploy-app.ps1');
   const action = await checked(execute, 'powershell.exe', ['-NoProfile', '-NonInteractive',
     '-ExecutionPolicy', 'Bypass', '-File', script, '-WindowsWorkDir', paths.repoRoot,
-    '-TargetSerial', WINDOWS_DEV_A5_SERIAL, '-StopGradleDaemon'],
+    '-TargetSerial', WINDOWS_DEV_A5_SERIAL, '-NodeExe', paths.systemNode, '-StopGradleDaemon'],
   { env: { ...helperEnv(env), ANDROID_USER_HOME: paths.signingHome }, timeoutCode: 'deploy_timeout',
     timeoutMs: 20 * 60_000, windowsHide: true }, 'deploy');
   const after = await runDataProtection(execute, paths, 'check', manifest, env);

@@ -10,7 +10,6 @@ DEFAULT_QUALITY_GATE_TIMEOUT_SECONDS=600
 DEFAULT_QUALITY_GATE_TEST_TIMEOUT_SECONDS=0
 DEFAULT_ANDROID_SYNC_TIMEOUT_SECONDS=1200
 DEFAULT_ANDROID_HOST_TIMEOUT_SECONDS=1200
-DEFAULT_ANDROID_HOST_DEVICE_TEST_TIMEOUT_SECONDS=1800
 
 if [[ -z "${QUALITY_GATE_RUN_ID:-}" ]]; then
   QUALITY_GATE_RUN_ID="$(date +%Y%m%d-%H%M%S)-$$"
@@ -82,9 +81,6 @@ resolve_quality_gate_timeout_fallback() {
   case "${script_name}" in
     android:sync)
       printf '%s' "${QUALITY_GATE_TIMEOUT_SECONDS:-${DEFAULT_ANDROID_SYNC_TIMEOUT_SECONDS}}"
-      ;;
-    android:host:device-test)
-      printf '%s' "${QUALITY_GATE_TIMEOUT_SECONDS:-${DEFAULT_ANDROID_HOST_DEVICE_TEST_TIMEOUT_SECONDS}}"
       ;;
     android:host:lint|android:host:test)
       printf '%s' "${QUALITY_GATE_TIMEOUT_SECONDS:-${DEFAULT_ANDROID_HOST_TIMEOUT_SECONDS}}"

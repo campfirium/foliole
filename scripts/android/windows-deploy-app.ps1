@@ -7,11 +7,20 @@ param(
   [int]$LaunchTimeoutSeconds = 20,
   [int]$LaunchStabilitySeconds = 4,
   [int]$DevReverseSyncPort = 38641,
-  [string]$TargetSerial = "",
+  [Parameter(Mandatory = $true)]
+  [ValidateNotNullOrEmpty()]
+  [string]$TargetSerial,
+  [Parameter(Mandatory = $true)]
+  [ValidateNotNullOrEmpty()]
+  [string]$NodeExe,
   [switch]$StopGradleDaemon
 )
 
 $ErrorActionPreference = "Stop"
+if ([string]::IsNullOrWhiteSpace($env:FOLIOLE_ANDROID_ADB_SERVER_PORT)) {
+  throw "FOLIOLE_ANDROID_ADB_SERVER_PORT is required."
+}
+$env:ANDROID_ADB_SERVER_PORT = $env:FOLIOLE_ANDROID_ADB_SERVER_PORT
 
 function Write-Info {
   param([string]$Message)
@@ -20,9 +29,7 @@ function Write-Info {
 
 function Invoke-AdbCommand {
   param([string]$AdbPath, [string[]]$Arguments)
-  if (![string]::IsNullOrWhiteSpace($env:FOLIOLE_ANDROID_ADB_SERVER_PORT)) {
-    $Arguments = @("-P", $env:FOLIOLE_ANDROID_ADB_SERVER_PORT) + $Arguments
-  }
+  $Arguments = @("-P", $env:FOLIOLE_ANDROID_ADB_SERVER_PORT) + $Arguments
   $out = [System.IO.Path]::GetTempFileName(); $err = [System.IO.Path]::GetTempFileName()
   try {
     $process = Start-Process -FilePath $AdbPath -ArgumentList $Arguments -Wait -PassThru -WindowStyle Hidden -RedirectStandardOutput $out -RedirectStandardError $err
@@ -83,25 +90,6 @@ function Resolve-SdkRoot {
   throw "Android SDK not found. Install Android SDK first."
 }
 
-function Resolve-NodeExe {
-  $npmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
-  $npmSiblingNode = if ($null -ne $npmCommand) { Join-Path (Split-Path -Parent $npmCommand.Source) "node.exe" } else { "" }
-  $candidates = @(
-    (Get-Command node.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue),
-    $npmSiblingNode,
-    "$env:ProgramFiles\nodejs\node.exe",
-    "$env:LOCALAPPDATA\Programs\nodejs\node.exe"
-  ) | Where-Object { $_ -and $_.Trim().Length -gt 0 }
-
-  foreach ($candidate in $candidates) {
-    if (Test-Path -Path $candidate) {
-      return $candidate
-    }
-  }
-
-  throw "node.exe not found. Install Node.js first."
-}
-
 function Stop-GradleWrapperDaemon {
   Write-Info "stopping Gradle daemon"
   $process = Start-Process -FilePath "cmd.exe" -ArgumentList @("/d", "/c", "call .\gradlew.bat --stop") -Wait -PassThru -WindowStyle Hidden
@@ -142,9 +130,6 @@ $sdkRoot = Resolve-SdkRoot
 $env:JAVA_HOME = $javaHome
 $env:ANDROID_HOME = $sdkRoot
 $env:ANDROID_SDK_ROOT = $sdkRoot
-if (![string]::IsNullOrWhiteSpace($env:FOLIOLE_ANDROID_ADB_SERVER_PORT)) {
-  $env:ANDROID_ADB_SERVER_PORT = $env:FOLIOLE_ANDROID_ADB_SERVER_PORT
-}
 $env:Path = "$javaHome\bin;$sdkRoot\platform-tools;$sdkRoot\emulator;$env:Path"
 
 $adbPath = Join-Path $sdkRoot "platform-tools\adb.exe"
@@ -152,7 +137,9 @@ if (!(Test-Path -Path $adbPath)) {
   throw "adb not found. Install Android platform-tools first."
 }
 
-$nodeExe = Resolve-NodeExe
+if (!(Test-Path -Path $NodeExe)) {
+  throw "Required system Node executable not found: $NodeExe"
+}
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $adbDeviceScript = Join-Path $repoRoot "scripts\android\windows-adb-device.ps1"
 $debugBuildScript = Join-Path $repoRoot "scripts\android\windows-deploy-debug-build.ps1"
@@ -181,9 +168,7 @@ if (!(Test-Path -Path $androidDir)) {
 
 Write-Info "waiting for ready device"
 Invoke-AdbCommand -AdbPath $adbPath -Arguments @("start-server") *> $null
-if (![string]::IsNullOrWhiteSpace($TargetSerial)) {
-  Write-Info "target device: $TargetSerial"
-}
+Write-Info "target device: $TargetSerial"
 $serial = Wait-ForDeviceReady -AdbPath $adbPath -TargetSerial $TargetSerial -TimeoutSeconds $BootTimeoutSeconds
 if ($null -eq $serial) {
   throw "No ready Android device found within ${BootTimeoutSeconds}s."

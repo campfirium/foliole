@@ -163,43 +163,6 @@ describe('quality-gate-target.sh', () => {
     }
   }, 60000);
 
-  it('runs the android device gate including emulator and connected test', async () => {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
-    try {
-      await writePackageJson(tempRoot, {
-        'lint:android:full': 'node -e "console.log(\'android full lint ok\')"',
-        'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
-        'test:android': 'node -e "console.log(\'android test ok\')"',
-        'android:sync': 'node -e "console.log(\'android sync ok\')"',
-        'android:host:lint': 'node -e "console.log(\'android host lint ok\')"',
-        'android:host:test': 'node -e "console.log(\'android host test ok\')"',
-        'android:emulator': 'node -e "console.log(\'android emulator ok\')"',
-        'android:host:device-test': 'node -e "console.log(\'android connected test ok\')"'
-      });
-      await writeRepositoryRootBoundaryScript(tempRoot);
-
-      const result = await runTargetGate(tempRoot, 'android-device');
-
-      expect(result.code).toBe(0);
-      for (const scriptName of [
-        'lint:android:full',
-        'typecheck:android',
-        'test:android',
-        ...QUALITY_SCRIPT_STEPS,
-        'android:sync',
-        'android:host:lint',
-        'android:host:test',
-        'android:emulator',
-        'android:host:device-test'
-      ]) expectStep(result.stdout, scriptName);
-      expectNoQualityMonolithStep(result.stdout);
-      expect(result.stdout).toContain('repository root boundary ok');
-      expect(result.stdout).toContain('[quality-gate:android-device] all checks passed.');
-    } finally {
-      await rm(tempRoot, { recursive: true, force: true });
-    }
-  }, 60000);
-
   it('runs the shared gate without requiring android host test', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
     try {

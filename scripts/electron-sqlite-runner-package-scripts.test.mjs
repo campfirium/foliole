@@ -17,7 +17,6 @@ const SQLITE_SCRIPT_COMMANDS = [
   'sqlite:restore',
   'sqlite:prune-search-invalidations',
   'oneoff:sqlite:node-kind-report',
-  'android:reset-sync-data',
   'android:sync:audit',
   'android:sync:scenario'
 ];

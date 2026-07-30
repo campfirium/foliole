@@ -25,7 +25,7 @@ const WINDOWS_CI_PATTERN =
 const WINDOWS_CI_ONLY_PATTERN = /^scripts\/windows\/windows-ci-/u;
 const WINDOWS_VALIDATION_KIT_PATTERN = /^scripts\/windows\/windows-(?:native-mouse-click|validation-)/u;
 const WINDOWS_DEVICE_PATTERN =
-  /^scripts\/windows\/(?:hidden-native|visible-native|windows-android-dev-(?:diagnostics|server)|windows-client-native|windows-preview-native)/u;
+  /^scripts\/windows\/(?:hidden-native|visible-native|windows-android-dev-diagnostics|windows-client-native|windows-preview-native)/u;
 const WINDOWS_ASSET_PATTERN = /^(?:scripts\/windows\/|scripts\/android\/windows-|scripts\/android\/open-foliole-android-)/u;
 const MACOS_ASSET_PATTERN = /^scripts\/macos\//u;
 
@@ -98,42 +98,20 @@ export const CAPABILITY_CONTRACTS = [
     platforms: ['darwin']
   })),
   ...[
-    ['android:open', ['open']],
-    ['android:control', ['control']],
     ['android:sync', ['sync']],
     ['android:host:lint', ['gradle', 'lint']],
-    ['android:host:test', ['gradle', 'testDebugUnitTest']],
-    ['android:host:device-test', ['gradle', 'connectedDebugAndroidTest']],
-    ['android:host:device-test:class', ['gradle', 'connectedDebugAndroidTest', '--class']],
-    ['android:emulator', ['emulator']],
-    ['android:logcat', ['logcat']],
-    ['android:preview:lite', ['preview-lite']],
-    ['android:screenshot', ['screenshot']]
+    ['android:host:test', ['gradle', 'testDebugUnitTest']]
   ].map(([name, args]) => ({
-    adapter: { args: ['scripts/android/android-host.mjs', ...args], bin: 'node' },
-    adapterPath: 'scripts/android/android-host.mjs',
+    adapter: { args: ['scripts/android/native-linux-host.mjs', ...args], bin: 'node' },
+    adapterPath: 'scripts/android/native-linux-host.mjs',
     name,
     placements: ['shared-core'],
-    platforms: ['linux', 'win32']
+    platforms: ['linux']
   })),
-  {
-    adapter: { args: ['scripts/preview/preview-dedupe.mjs', 'android', '--', 'node', 'scripts/android/android-host.mjs', 'preview'], bin: 'node' },
-    adapterPath: 'scripts/android/android-host.mjs',
-    name: 'android:preview',
-    placements: ['shared-core'],
-    platforms: ['linux', 'win32']
-  },
   {
     adapter: { args: ['scripts/windows/windows-preview-native-entry.mjs'], bin: 'node' },
     adapterPath: 'scripts/windows/windows-preview-native-entry.mjs',
     name: 'windows:preview:native',
-    placements: ['windows-device', 'windows-only'],
-    platforms: ['win32']
-  },
-  {
-    adapter: { args: ['scripts/windows/windows-android-dev-server.mjs'], bin: 'node' },
-    adapterPath: 'scripts/windows/windows-android-dev-server.mjs',
-    name: 'windows:android:dev-server',
     placements: ['windows-device', 'windows-only'],
     platforms: ['win32']
   },
@@ -146,7 +124,7 @@ export const CAPABILITY_CONTRACTS = [
   }
 ];
 
-export const SCRIPT_ASSET_INVENTORY_SHA256 = '3ec45bd3fa55584b9d8cec8e6ead98171586867a9ea3ca28feed95c60bed2bc6';
+export const SCRIPT_ASSET_INVENTORY_SHA256 = '1d91132efe70b69ad79625510345bce59e0dc1e24295f248b63c21669cf55b5e';
 
 function normalizeScriptPath(filePath) {
   return filePath.replaceAll('\\', '/').replace(/^\.\//u, '').trim();

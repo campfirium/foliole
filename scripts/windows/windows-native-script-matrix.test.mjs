@@ -31,6 +31,7 @@ describe('windows native script matrix', () => {
     const byName = new Map(matrix.map((row) => [row.name, row]));
 
     expect(byName.get('windows:preview:native')?.classification).toBe('windows-native-main');
+    expect(byName.has('windows:android:dev-server')).toBe(false);
     expect(byName.get('quality:fast')?.nativeAlternative).toBe('');
     expect(byName.has('desktop:test:windows')).toBe(false);
   });
