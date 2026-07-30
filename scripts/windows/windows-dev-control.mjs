@@ -90,6 +90,7 @@ export async function runWindowsDevControl({
   const spec = windowsDevPushSpec(host, env);
   await executeGit(spec.args, { env: spec.env });
   const remoteOutput = await executeSsh(windowsDevSshSpec(host, action, env), { env });
+  if (remoteOutput) stdout.write(remoteOutput);
   const result = { action, operation: 'complete', ref: WINDOWS_DEV_SOURCE_REF };
   if (['deploy', 'live'].includes(action)) {
     const evidence = parseWindowsDevLiveEvidence(remoteOutput);
@@ -99,7 +100,6 @@ export async function runWindowsDevControl({
     await executeScp(windowsDevScpSpec(host, evidence.remotePath, screenshotPath, env), { env });
     result.screenshotPath = screenshotPath;
   }
-  if (remoteOutput) stdout.write(remoteOutput);
   return result;
 }
 

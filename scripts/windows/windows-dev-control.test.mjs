@@ -83,6 +83,15 @@ it('copies live screenshot evidence after the fixed foreground action', async ()
   fs.rmSync(repoRoot, { force: true, recursive: true });
 });
 
+it('surfaces remote output before rejecting missing live evidence', async () => {
+  const stdout = { write: vi.fn() };
+  await expect(runWindowsDevControl({
+    argv: ['--host', 'v\\dev@192.168.0.11', 'live'], env: {}, executeGit: vi.fn(async () => ''),
+    executeSsh: vi.fn(async () => '[windows-dev-action] status: OK\n'), stdout
+  })).rejects.toThrow('did not report screenshot evidence');
+  expect(stdout.write).toHaveBeenCalledWith('[windows-dev-action] status: OK\n');
+});
+
 it('does not resolve or compare commit identifiers', () => {
   const source = fs.readFileSync('scripts/windows/windows-dev-control.mjs', 'utf8');
   expect(source).not.toMatch(/rev-parse|show-current|commitSha|COMMIT_SHA/u);
