@@ -10,23 +10,31 @@ import {
   type PanelBodyCall
 } from './DocumentSourceUpdatePanel.testSupport';
 
-const { documentPanelBodyMock, overviewRulerMock } = vi.hoisted(() => ({
+const { documentPanelBodyMock, documentPanelBodyMountCounter, overviewRulerMock } = vi.hoisted(() => ({
   documentPanelBodyMock: vi.fn((props: unknown) => {
     void props;
     return <div data-testid="document-panel-body" />;
   }),
+  documentPanelBodyMountCounter: { value: 0 },
   overviewRulerMock: vi.fn((props: unknown) => {
     void props;
     return <div data-testid="overview-ruler" />;
   })
 }));
 
-vi.mock('./DocumentPanelBody', () => ({
-  DocumentPanelBody: (props: unknown) => {
+vi.mock('./DocumentPanelBody', async () => {
+  const React = await import('react');
+  return { DocumentPanelBody: (props: unknown) => {
+    const mountIdRef = React.useRef(0);
+    if (mountIdRef.current === 0) mountIdRef.current = ++documentPanelBodyMountCounter.value;
     documentPanelBodyMock(props);
-    return <div data-testid="document-panel-body" />;
-  }
-}));
+    return <div
+      data-content={(props as PanelBodyCall).editorContent}
+      data-mount-id={mountIdRef.current}
+      data-testid="document-panel-body"
+    />;
+  } };
+});
 
 vi.mock('./SourceUpdateOverviewRuler', () => ({
   SourceUpdateOverviewRuler: (props: unknown) => {
@@ -35,12 +43,12 @@ vi.mock('./SourceUpdateOverviewRuler', () => ({
   }
 }));
 
-function renderManualPanel(manualContent: string, options: {
+function createManualPanel(manualContent: string, options: {
   onManualContentChange?: (content: string) => void;
   onManualSaveAsTopic?: () => Promise<void>;
   onManualSetAsBody?: () => Promise<void>;
 } = {}) {
-  return renderWithLocalization(
+  return (
     <DocumentSourceUpdatePanel
       comparisonMode="manual"
       comparisonSource="manual"
@@ -62,6 +70,10 @@ function renderManualPanel(manualContent: string, options: {
       updatedHighlightCount={0}
     />
   );
+}
+
+function renderManualPanel(manualContent: string, options: Parameters<typeof createManualPanel>[1] = {}) {
+  return renderWithLocalization(createManualPanel(manualContent, options));
 }
 
 describe('DocumentSourceUpdatePanel manual draft', () => {
@@ -128,30 +140,22 @@ describe('DocumentSourceUpdatePanel live editor actions', () => {
     const view = renderManualPanel('Initial draft');
     const firstRightPane = (documentPanelBodyMock.mock.calls[1]?.[0] ?? {}) as PanelBodyCall;
     act(() => firstRightPane.onEditorChange?.('Locally edited draft'));
-    view.rerender(
-      <DocumentSourceUpdatePanel
-        comparisonMode="manual"
-        comparisonSource="manual"
-        currentContent="alpha\nbeta"
-        currentHighlightCount={0}
-        currentNodeId="node-1"
-        documentMaxWidth={760}
-        editorAppearanceKey="appearance-1"
-        manualContent="Locally edited draft"
-        onCurrentContentChange={() => undefined}
-        onManualContentChange={() => undefined}
-        onManualSaveAsTopic={async () => undefined}
-        onManualSetAsBody={async () => undefined}
-        onOpenChange={() => undefined}
-        onSourceChange={() => undefined}
-        open
-        sourceAvailable={false}
-        updatedContent="Locally edited draft"
-        updatedHighlightCount={0}
-      />
-    );
+    view.rerender(createManualPanel('Locally edited draft'));
     const latestRightPane = (documentPanelBodyMock.mock.calls.at(-1)?.[0] ?? {}) as PanelBodyCall;
     expect(latestRightPane.editorContent).toBe('Initial draft');
+  });
+
+  it('applies externally restored draft content without remounting the right editor', async () => {
+    const view = renderManualPanel('Initial draft');
+    const initialRightPane = screen.getAllByTestId('document-panel-body')[1];
+    const initialMountId = initialRightPane?.getAttribute('data-mount-id');
+
+    view.rerender(createManualPanel('Restored draft'));
+    await act(async () => undefined);
+
+    const restoredRightPane = screen.getAllByTestId('document-panel-body')[1];
+    expect(restoredRightPane).toHaveAttribute('data-content', 'Restored draft');
+    expect(restoredRightPane).toHaveAttribute('data-mount-id', initialMountId);
   });
 
   it('reads the live editor document before an explicit manual action', async () => {

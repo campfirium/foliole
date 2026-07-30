@@ -16,11 +16,15 @@ const REPLACEMENT_CONTENT = 'Replacement body from the temporary comparison view
 const CHILD_CONTENT = 'Alternative child Topic from the temporary comparison view.';
 const LONG_CURRENT_CONTENT = Array.from(
   { length: 60 },
-  (_, index) => `Current paragraph ${index}: material for a sustained editing comparison.`
+  (_, index) => index === 0
+    ? `> - ${'当前主题里的中英文混排内容需要在对比面板的可用宽度内稳定换行 Coding Agent TL EM '.repeat(12)}`
+    : `Current paragraph ${index}: material for a sustained editing comparison.`
 ).join('\n');
 const LONG_MANUAL_CONTENT = Array.from(
   { length: 120 },
-  (_, index) => `Pasted paragraph ${index}: revised material for a sustained editing comparison.`
+  (_, index) => index === 0
+    ? `> - ${'粘贴改稿里的中英文混排内容需要在右侧面板的可用宽度内稳定换行 Coding Agent TL EM '.repeat(12)}`
+    : `Pasted paragraph ${index}: revised material for a sustained editing comparison.`
 ).join('\n');
 
 async function seedTopic(desktopWindow: Page, content = CURRENT_CONTENT) {
@@ -180,6 +184,7 @@ test('contiguous temporary comparison diff lines only round their outer edges', 
 test('long temporary comparison remains editable after diff rendering', async ({ desktopApp, desktopWindow }) => {
   test.setTimeout(90_000);
   await expectWorkspaceShell(desktopWindow);
+  await desktopWindow.setViewportSize({ height: 576, width: 1024 });
   await seedTopic(desktopWindow, LONG_CURRENT_CONTENT);
   await seedPendingSource(desktopApp);
   await openSeededTopic(desktopWindow);
@@ -204,6 +209,23 @@ test('long temporary comparison remains editable after diff rendering', async ({
   await expect(editor).toContainText('R0 R1 R2 R3 R4');
   await expect(currentEditor).toContainText('L0 L1 L2 L3 L4');
   await expect(dialog.locator('.cm-diff-line').first()).toBeVisible();
+  const editorLayouts = await dialog.locator('.markdown-editor-host').evaluateAll((hosts) => hosts.map((host) => {
+    const content = host.querySelector<HTMLElement>('.cm-content');
+    const scroller = host.querySelector<HTMLElement>('.cm-scroller');
+    return {
+      contentWidth: content?.getBoundingClientRect().width ?? 0,
+      hostWidth: host.getBoundingClientRect().width,
+      scrollClientWidth: scroller?.clientWidth ?? 0,
+      scrollWidth: scroller?.scrollWidth ?? 0
+    };
+  }));
+  editorLayouts.forEach((layout) => {
+    expect(layout.contentWidth).toBeLessThanOrEqual(layout.hostWidth + 1);
+    expect(layout.scrollWidth).toBeLessThanOrEqual(layout.scrollClientWidth + 1);
+  });
+  await dialog.locator('.cm-scroller').evaluateAll((scrollers) => scrollers.forEach((scroller) => {
+    scroller.scrollTop = 0;
+  }));
   const screenshotPath = path.resolve(
     '.tmp/artifacts/desktop-acceptance/temporary-comparison-long-editing.png'
   );

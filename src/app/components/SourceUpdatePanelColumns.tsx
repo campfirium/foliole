@@ -60,6 +60,7 @@ function PaneLabel({ mode, title }: { mode: string; title: string }) {
 
 interface PreviewDocumentPaneProps {
   content: string;
+  externalContentVersion?: string;
   currentNodeId: string | null;
   documentMaxWidth: number;
   editorAppearanceKey: string;
@@ -72,6 +73,7 @@ interface PreviewDocumentPaneProps {
 
 function PreviewDocumentPaneSurface({
   content,
+  externalContentVersion,
   currentNodeId,
   documentMaxWidth,
   editorAppearanceKey,
@@ -81,12 +83,15 @@ function PreviewDocumentPaneSurface({
   onReady,
   readOnly
 }: PreviewDocumentPaneProps) {
-  const initialContentRef = useRef(content);
+  const contentSnapshotRef = useRef({ content, externalContentVersion });
+  if (contentSnapshotRef.current.externalContentVersion !== externalContentVersion) {
+    contentSnapshotRef.current = { content, externalContentVersion };
+  }
   return (
     <DocumentPanelBody
       documentMaxWidth={documentMaxWidth}
       editorAppearanceKey={editorAppearanceKey}
-      editorContent={initialContentRef.current}
+      editorContent={contentSnapshotRef.current.content}
       editorNodeId={currentNodeId}
       hasAnswerSection={false}
       onAnswerChange={() => undefined}
@@ -111,6 +116,7 @@ const PreviewDocumentPane = memo(
   (previous, next) => previous.currentNodeId === next.currentNodeId
     && previous.documentMaxWidth === next.documentMaxWidth
     && previous.editorAppearanceKey === next.editorAppearanceKey
+    && previous.externalContentVersion === next.externalContentVersion
     && previous.hideScrollbar === next.hideScrollbar
     && previous.readOnly === next.readOnly
     && (!next.readOnly || previous.content === next.content)
@@ -121,13 +127,12 @@ function SourceUpdatePaneBody(props: {
   labelMode: string;
   labelTitle: string;
   paneProps: ComponentProps<typeof PreviewDocumentPane>;
-  resetKey?: string;
 }) {
   return (
     <section className={props.className}>
       <PaneLabel mode={props.labelMode} title={props.labelTitle} />
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        <PreviewDocumentPane key={props.resetKey} {...props.paneProps} />
+      <div className="flex min-h-0 min-w-0 w-full flex-1 overflow-hidden">
+        <PreviewDocumentPane {...props.paneProps} />
       </div>
     </section>
   );
@@ -154,6 +159,7 @@ function buildUpdatedPaneProps(props: SourceUpdatePanelColumnsProps): ComponentP
     documentMaxWidth: props.props.documentMaxWidth,
     editorAppearanceKey: `${props.props.editorAppearanceKey}-source-update-reference`,
     editorDiffDecorations: props.updatedMeasuredHighlights ?? props.lineHighlights.updated,
+    externalContentVersion: `${props.props.comparisonMode}-${props.props.updatedExternalVersion}`,
     onChange: isManual ? props.props.onManualContentChange : () => undefined,
     onReady: props.handleUpdatedEditorReady,
     readOnly: !isManual
@@ -183,7 +189,6 @@ export function SourceUpdatePanelColumns(props: SourceUpdatePanelColumnsProps) {
             ? 'desktop.sourceUpdate.manual.title'
             : 'desktop.sourceUpdate.updated.title')}
           paneProps={updatedPaneProps}
-          resetKey={`${props.props.comparisonMode}-${props.props.updatedExternalVersion}`}
         />
         <section className={OVERVIEW_PANE_CLASS_NAME}>
           <SourceUpdateOverviewRuler

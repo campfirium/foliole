@@ -121,7 +121,7 @@ export function DocumentPanelBody({
   });
   return (
     <div
-      className={cn('flex min-h-0 flex-1 pl-4 pr-0 pt-2 pb-0 max-[1080px]:pl-2 max-[1080px]:pr-0 max-[1080px]:pt-2 max-[1080px]:pb-0')}
+      className={cn('flex min-h-0 min-w-0 w-full flex-1 pl-4 pr-0 pt-2 pb-0 max-[1080px]:pl-2 max-[1080px]:pr-0 max-[1080px]:pt-2 max-[1080px]:pb-0')}
       ref={layoutRef}
     >
       {renderDocumentPanelBodyLayout(bodyProps)}
