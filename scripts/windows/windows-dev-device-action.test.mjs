@@ -51,6 +51,9 @@ describe('Windows DEV fixed device action', () => {
     const adbCalls = calls.filter(({ command }) => command === paths.adbPath).map(({ args }) => args);
     expect(adbCalls[0]).toEqual(['-P', WINDOWS_DEV_ADB_PORT, 'start-server']);
     expect(adbCalls).toContainEqual([
+      '-P', WINDOWS_DEV_ADB_PORT, '-s', WINDOWS_DEV_A5_SERIAL, 'wait-for-device'
+    ]);
+    expect(adbCalls).toContainEqual([
       '-P', WINDOWS_DEV_ADB_PORT, '-s', WINDOWS_DEV_A5_SERIAL, 'get-state'
     ]);
     expect(adbCalls.at(-1)).toEqual(['-P', WINDOWS_DEV_ADB_PORT, 'kill-server']);

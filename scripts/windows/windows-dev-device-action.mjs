@@ -81,6 +81,9 @@ export async function runWindowsDevDeviceAction({ action, evidenceRoot, execute,
     await checked(execute, paths.adbPath, ['-P', WINDOWS_DEV_ADB_PORT, 'start-server'],
       { env, timeoutCode: 'adb_start_timeout', timeoutMs: 30_000, windowsHide: true }, 'adb-start');
     started = true;
+    await checked(execute, paths.adbPath,
+      ['-P', WINDOWS_DEV_ADB_PORT, '-s', WINDOWS_DEV_A5_SERIAL, 'wait-for-device'],
+      { env, timeoutCode: 'device_timeout', timeoutMs: 45_000, windowsHide: true }, 'device', 69);
     const devices = await checked(execute, paths.adbPath,
       ['-P', WINDOWS_DEV_ADB_PORT, 'devices', '-l'],
       { env, timeoutCode: 'device_timeout', timeoutMs: 30_000, windowsHide: true }, 'device', 69);
