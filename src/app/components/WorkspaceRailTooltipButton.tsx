@@ -1,4 +1,9 @@
-import type { ComponentPropsWithoutRef } from 'react';
+import { useCallback, useState } from 'react';
+import type {
+  ComponentPropsWithoutRef,
+  MouseEvent,
+  PointerEvent
+} from 'react';
 
 import {
   AppIconButton,
@@ -12,12 +17,33 @@ type WorkspaceRailTooltipButtonProps = ComponentPropsWithoutRef<typeof AppIconBu
 export const WORKSPACE_RAIL_BUTTON_FOCUS_CLASS_NAME =
   'focus-visible:bg-foreground/[0.06]';
 
-export function WorkspaceRailTooltipButton(props: WorkspaceRailTooltipButtonProps) {
+export function WorkspaceRailTooltipButton({
+  onClick,
+  onPointerDown,
+  ...props
+}: WorkspaceRailTooltipButtonProps) {
+  const [open, setOpen] = useState(false);
+  const closeTooltip = useCallback(() => setOpen(false), []);
+  const handlePointerDown = useCallback((event: PointerEvent<HTMLButtonElement>) => {
+    closeTooltip();
+    onPointerDown?.(event);
+  }, [closeTooltip, onPointerDown]);
+  const handleClick = useCallback((event: MouseEvent<HTMLButtonElement>) => {
+    closeTooltip();
+    event.currentTarget.blur();
+    onClick?.(event);
+  }, [closeTooltip, onClick]);
+
   return (
-    <AppTooltip>
+    <AppTooltip open={open} onOpenChange={setOpen}>
       <AppTooltipTrigger asChild>
         <span className="inline-flex">
-          <AppIconButton focusRing="none" {...props} />
+          <AppIconButton
+            focusRing="none"
+            onClick={handleClick}
+            onPointerDown={handlePointerDown}
+            {...props}
+          />
         </span>
       </AppTooltipTrigger>
       <AppTooltipContent side="right" sideOffset={8}>

@@ -194,6 +194,7 @@ if quality_gate_should_print_step; then
 fi
 
 run_quality_gate_fast_t0_static_guards
+run_quality_gate_fast_global_static_guards
 
 if [[ "${level}" =~ ^(full|desktop|shared|android|ios)$ ]]; then
   run_critical_tests_if_needed "${all_changed}"

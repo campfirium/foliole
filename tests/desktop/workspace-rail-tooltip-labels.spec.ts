@@ -1,7 +1,7 @@
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
-test('workspace rail command palette tooltip uses localized copy', async ({ desktopWindow }, testInfo) => {
+test('workspace rail command palette tooltip uses localized copy and closes on command', async ({ desktopWindow }, testInfo) => {
   await desktopWindow.evaluate(() => {
     window.localStorage.setItem('foliole-app-language', 'zh-Hans');
     window.localStorage.setItem('foliole-workspace-rail-items', JSON.stringify([
@@ -15,8 +15,8 @@ test('workspace rail command palette tooltip uses localized copy', async ({ desk
         visible: true
       }
     ]));
-    window.location.reload();
   });
+  await desktopWindow.reload();
   await expectWorkspaceShell(desktopWindow);
   const ribbon = desktopWindow.getByRole('region', { name: /Left toolbar|左侧工具栏/ });
   const commandPaletteButton = ribbon.getByRole('button', { name: '命令面板' });
@@ -29,6 +29,14 @@ test('workspace rail command palette tooltip uses localized copy', async ({ desk
   const screenshotPath = '.tmp/artifacts/workspace-rail-command-palette-tooltip.png';
   await testInfo.attach('workspace-rail-command-palette-tooltip', {
     body: await desktopWindow.screenshot({ path: screenshotPath }),
+    contentType: 'image/png'
+  });
+
+  await commandPaletteButton.click();
+  await expect(tooltip).toBeHidden();
+  const closedScreenshotPath = '.tmp/artifacts/workspace-rail-command-palette-tooltip-closed.png';
+  await testInfo.attach('workspace-rail-command-palette-tooltip-closed', {
+    body: await desktopWindow.screenshot({ path: closedScreenshotPath }),
     contentType: 'image/png'
   });
 });

@@ -74,7 +74,7 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
   'desktop.splitTopic.failed': 'Split Topic failed.',
   'desktop.splitTopic.footerText': 'After',
   'desktop.splitTopic.headerText': 'Before',
-  'desktop.splitTopic.keepDelimiter': 'Keep delimiter with each Topic',
+  'desktop.splitTopic.keepDelimiter': 'Keep delimiter',
   'desktop.splitTopic.keep': 'Keep',
   'desktop.splitTopic.originalTopic': 'Original Topic',
   'desktop.splitTopic.preferencesFailed': 'Topics were split, but preferences could not be saved.',

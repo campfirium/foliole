@@ -44,7 +44,7 @@ function Install-DebugBuild {
     throw "Debug APK was not generated: $apkPath"
   }
   Write-Info "installing debug APK"
-  $arguments = @("-s", $Serial, "install", "-r", $apkPath)
+  $arguments = @("-s", $Serial, "install", "--no-incremental", "-r", $apkPath)
   if (![string]::IsNullOrWhiteSpace($env:FOLIOLE_ANDROID_ADB_SERVER_PORT)) {
     $arguments = @("-P", $env:FOLIOLE_ANDROID_ADB_SERVER_PORT) + $arguments
   }

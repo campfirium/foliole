@@ -66,8 +66,13 @@ describe('windows-deploy-app.sh', () => {
     expect(cacheScript).toContain('android-install-cache.json');
     expect(script).toContain('install cache: HIT apk=$apkHash versionCode=$installedVersionCode');
     expect(script).toContain('Install-DebugBuild -AdbPath $adbPath -AndroidDir $androidDir -Serial $serial');
+    expect(script).toContain('function Stop-AppProcess');
+    expect(script).toContain('"am", "force-stop", $PackageName');
+    expect(script.indexOf('Stop-AppProcess -AdbPath $adbPath -Serial $serial -PackageName $AppId'))
+      .toBeLessThan(script.indexOf('Write-Info "launching activity: $MainActivity"'));
     expect(buildScript).toContain('gradlew.bat --no-daemon assembleDebug');
-    expect(buildScript).toContain('"install", "-r", $apkPath');
+    expect(buildScript).toContain('"install", "--no-incremental", "-r", $apkPath');
+    expect(buildScript).toContain('Invoke-DeployProcess -FilePath $AdbPath -ArgumentList $arguments -TimeoutSeconds $InstallTimeoutSeconds');
     expect(script).toContain('$nativeSourcesHash = Get-NativeSourcesHash -AndroidDir $androidDir');
     expect(script).toContain('Test-InstallCacheHit -ApkHash $apkHash -NativeSourcesHash $nativeSourcesHash -Serial $serial -VersionCode $installedVersionCode -WebAssetsHash $webAssetsHash -WindowsWorkDir $WindowsWorkDir');
     expect(script).toContain('Write-InstallCache -ApkHash $apkHash -NativeSourcesHash $nativeSourcesHash -Serial $serial -VersionCode $installedVersionCode -WebAssetsHash $webAssetsHash -WindowsWorkDir $WindowsWorkDir');
@@ -98,7 +103,7 @@ describe('windows-deploy-app.sh', () => {
     expect(script).not.toContain('| Out-Null');
   });
 
-  it('runs Gradle through a hidden cmd process', async () => {
+  it('runs Gradle and adb install through hidden timeout-bound processes', async () => {
     const script = await readFile(DEPLOY_PS_SCRIPT, 'utf8');
     const buildScript = await readFile(DEPLOY_BUILD_SCRIPT, 'utf8');
 

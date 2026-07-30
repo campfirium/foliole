@@ -48,6 +48,7 @@ describe('iOS foreground sync lifecycle acceptance', () => {
     expect(shell).not.toContain('tryForegroundAutoSync');
     expect(runner.match(/shell readiness', 60_000/g)).toHaveLength(2);
     expect(runner).toContain('timeoutMs = 20_000');
+    expect(runner).toMatch(/terminate[^\n]+com\.apple\.Preferences[^\n]+\n[^\n]+launch[^\n]+com\.apple\.Preferences/);
   });
 
   it('sanitizes ordinary assets and enables only the reviewed lifecycle scenario', () => {

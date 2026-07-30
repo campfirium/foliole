@@ -58,19 +58,13 @@ async function createFixture(overrides = {}) {
     'storageLocalFileCommands.ts', 'storageNodeMutationCommands.ts', 'storageReadCommands.ts',
     'storageSettingsCommands.ts', 'storageSyncCommands.ts', 'windowCommands.ts'
   ]) await write(repoRoot, `electron/ipc/${file}`);
-  await write(repoRoot, '.lab/specs/shared/platform/native-command-contract-map.md', overrides.inventory ?? `
-    | Command | Notes |
-    | --- | --- |
-    | \`load_thing\` | covered |
-    | \`apply_thing\` | covered |
-  `);
   return repoRoot;
 }
 
 afterAll(async () => Promise.all(tempDirs.map((dir) => rm(dir, { recursive: true, force: true }))));
 
 describe('native command registry contract checks', () => {
-  it('reports duplicate registry entries and stale inventory commands', async () => {
+  it('reports duplicate registry entries', async () => {
     const repoRoot = await createFixture({
       registry: `
         import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
@@ -79,16 +73,14 @@ describe('native command registry contract checks', () => {
           { command: NATIVE_COMMANDS.loadThing, route: 'storage', capability: 'read' },
           { command: NATIVE_COMMANDS.applyThing, route: 'storage', capability: 'dataMutation' }
         ];
-      `,
-      inventory: `| Command | Notes |\n| --- | --- |\n| \`load_thing\` | covered |\n| \`apply_thing\` | covered |\n| \`removed_thing\` | stale |`
+      `
     });
     expect(inspectNativeCommandContracts({ repoRoot }).violations).toEqual([
-      'duplicate native command registry entry: loadThing',
-      'stale inventory entry: removed_thing'
+      'duplicate native command registry entry: loadThing'
     ]);
   });
 
-  it('reports missing capability and false handler gaps', async () => {
+  it('reports missing registry capabilities', async () => {
     const repoRoot = await createFixture({
       registry: `
         import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
@@ -96,12 +88,10 @@ describe('native command registry contract checks', () => {
           { command: NATIVE_COMMANDS.loadThing, route: 'storage' },
           { command: NATIVE_COMMANDS.applyThing, route: 'storage', capability: 'dataMutation' }
         ];
-      `,
-      inventory: `| Command | Notes |\n| --- | --- |\n| \`load_thing\` | covered |\n| \`apply_thing\` | missing-handler: \`apply_thing\` |`
+      `
     });
     expect(inspectNativeCommandContracts({ repoRoot }).violations).toEqual([
-      'missing native command registry capability: loadThing',
-      'handler exists but inventory declares missing-handler: applyThing (apply_thing)'
+      'missing native command registry capability: loadThing'
     ]);
   });
 });

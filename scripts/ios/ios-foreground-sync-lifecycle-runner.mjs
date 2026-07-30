@@ -148,6 +148,7 @@ function bootAndInstall(options, udid) {
 async function enterBackground(options, udid, resultPath, deltas, previous = { pause_count: 0 }) {
   const before = readObservations(options).foreground_sync_lifecycle.request_count;
   recordAction(options, 'background', 'launch-settings');
+  runAllowFailure(options, 'xcrun', ['simctl', 'terminate', udid, 'com.apple.Preferences']);
   run(options, 'xcrun', ['simctl', 'launch', udid, 'com.apple.Preferences']);
   const lifecycle = await waitForBridge(options, resultPath,
     (value) => value.phase === 'background' && value.pause_count > (previous.pause_count ?? 0), 'Capacitor pause');

@@ -74,7 +74,7 @@ export const ZH_HANS_DESKTOP_NAVIGATION_TRANSLATIONS: Partial<Record<Translation
   'desktop.splitTopic.failed': '拆分主题失败。',
   'desktop.splitTopic.footerText': '之后添加',
   'desktop.splitTopic.headerText': '之前添加',
-  'desktop.splitTopic.keepDelimiter': '把分隔符保留在每个主题里',
+  'desktop.splitTopic.keepDelimiter': '保留分隔符',
   'desktop.splitTopic.keep': '保留',
   'desktop.splitTopic.originalTopic': '原主题',
   'desktop.splitTopic.preferencesFailed': '主题已拆分，但偏好未能保存。',

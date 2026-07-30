@@ -97,7 +97,9 @@ describe('check-structure-boundary', () => {
 
     expect(cliResult.exitCode).toBe(1);
     expect(stdout.chunks.join('')).toBe('');
-    expect(stderr.chunks.join('')).toContain('fallback-directory=src/utils');
-    expect(stderr.chunks.join('')).toContain('.lab/specs/architecture/transition-directory-boundary.md');
+    const output = stderr.chunks.join('');
+    expect(output).toContain('fallback-directory=src/utils');
+    expect(output).toContain('place new surfaces under src/surfaces/<surface>');
+    expect(output).not.toContain('.lab');
   });
 });

@@ -50,8 +50,6 @@ const ELECTRON_HANDLER_FILES = [
   'electron/ipc/windowCommands.ts'
 ];
 const REGISTRY_FILE = 'electron/ipc/nativeCommandRegistry.ts';
-const INVENTORY_FILE = '.lab/specs/shared/platform/native-command-contract-map.md';
-const LEGACY_INVENTORY_COMMANDS = new Set(['assistant_delete_thread_index']);
 
 function resolveRepoRoot() {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -96,23 +94,6 @@ function collectReferencedCommandKeys(repoRoot, files) {
   return references;
 }
 
-function collectInventory(repoRoot) {
-  const inventoryPath = path.join(repoRoot, INVENTORY_FILE);
-  if (!fs.existsSync(inventoryPath)) {
-    return {
-      commandValues: null,
-      explicitMissingHandlers: new Set()
-    };
-  }
-  const source = fs.readFileSync(inventoryPath, 'utf8');
-  return {
-    explicitMissingHandlers: new Set(
-      [...source.matchAll(/missing-handler:\s*`([^`]+)`/g)].map((match) => match[1])
-    ),
-    commandValues: new Set([...source.matchAll(/`([a-z][a-z0-9_]+)`/g)].map((match) => match[1]))
-  };
-}
-
 function missingEntries(expected, actual) {
   return expected.filter((item) => !actual.has(item));
 }
@@ -129,29 +110,18 @@ function formatViolation(kind, entries) {
 export function inspectNativeCommandContracts({ repoRoot = resolveRepoRoot() } = {}) {
   const commands = collectCommandDefinitions(repoRoot);
   const commandKeys = commands.map((command) => command.key);
-  const commandValues = commands.map((command) => command.value);
   const contractKeys = collectReferencedCommandKeys(repoRoot, CONTRACT_FILES);
   const handlerKeys = collectReferencedCommandKeys(repoRoot, ELECTRON_HANDLER_FILES);
   const registry = collectRegistry(repoRoot);
   const registryKeys = new Set(registry.map((entry) => entry.key));
-  const inventory = collectInventory(repoRoot);
 
   const missingContractKeys = missingEntries(commandKeys, contractKeys);
   const missingRegistryKeys = missingEntries(commandKeys, registryKeys);
   const duplicateRegistryKeys = duplicateEntries(registry.map((entry) => entry.key));
   const missingRegistryRoutes = registry.filter((entry) => !entry.route).map((entry) => entry.key);
   const missingRegistryCapabilities = registry.filter((entry) => !entry.capability).map((entry) => entry.key);
-  const missingInventoryValues = inventory.commandValues ? missingEntries(commandValues, inventory.commandValues) : [];
-  const staleInventoryValues = inventory.commandValues
-    ? [...inventory.commandValues].filter(
-        (value) => !commandValues.includes(value) && !LEGACY_INVENTORY_COMMANDS.has(value)
-      )
-    : [];
   const missingHandlerKeys = commands
-    .filter((command) => !handlerKeys.has(command.key) && !inventory.explicitMissingHandlers.has(command.value))
-    .map((command) => `${command.key} (${command.value})`);
-  const conflictingHandlerGaps = commands
-    .filter((command) => handlerKeys.has(command.key) && inventory.explicitMissingHandlers.has(command.value))
+    .filter((command) => !handlerKeys.has(command.key))
     .map((command) => `${command.key} (${command.value})`);
 
   const violations = [
@@ -160,15 +130,11 @@ export function inspectNativeCommandContracts({ repoRoot = resolveRepoRoot() } =
     ...formatViolation('duplicate native command registry entry', duplicateRegistryKeys),
     ...formatViolation('missing native command registry route', missingRegistryRoutes),
     ...formatViolation('missing native command registry capability', missingRegistryCapabilities),
-    ...formatViolation('missing inventory entry', missingInventoryValues),
-    ...formatViolation('stale inventory entry', staleInventoryValues),
-    ...formatViolation('missing electron handler or explicit gap', missingHandlerKeys),
-    ...formatViolation('handler exists but inventory declares missing-handler', conflictingHandlerGaps)
+    ...formatViolation('missing electron handler', missingHandlerKeys)
   ];
 
   return {
     commandCount: commands.length,
-    explicitMissingHandlerCount: inventory.explicitMissingHandlers.size,
     ok: violations.length === 0,
     violations
   };
@@ -176,9 +142,7 @@ export function inspectNativeCommandContracts({ repoRoot = resolveRepoRoot() } =
 
 function printResult(result, { stdout = process.stdout, stderr = process.stderr } = {}) {
   if (result.ok) {
-    stdout.write(
-      `[check-native-command-contracts] status: OK commands=${result.commandCount} explicitMissingHandlers=${result.explicitMissingHandlerCount}\n`
-    );
+    stdout.write(`[check-native-command-contracts] status: OK commands=${result.commandCount}\n`);
     return;
   }
   stderr.write(`[check-native-command-contracts] status: VIOLATION violations=${result.violations.length}\n`);

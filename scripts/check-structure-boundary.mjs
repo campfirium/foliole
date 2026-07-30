@@ -5,7 +5,6 @@ import { fileURLToPath } from 'node:url';
 
 const ALLOWED_SRC_DIRECTORIES = new Set(['app', 'companion', 'demo', 'features', 'shared', 'store', 'surfaces', 'test']);
 const BLOCKED_FALLBACK_DIRECTORIES = new Set(['common', 'lib', 'utils']);
-const RULE_SOURCE = '.lab/specs/architecture/transition-directory-boundary.md';
 
 function resolveRepoRoot() {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -17,7 +16,7 @@ function toViolation(name) {
   return {
     kind,
     path: relativePath,
-    message: `${relativePath} is not an allowed top-level src directory; place new surfaces under src/surfaces/<surface> and follow ${RULE_SOURCE}`
+    message: `${relativePath} is not an allowed top-level src directory; place new surfaces under src/surfaces/<surface>`
   };
 }
 

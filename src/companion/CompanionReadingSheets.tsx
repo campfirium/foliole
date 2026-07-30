@@ -42,6 +42,15 @@ function ReadingActionRow(props: {
   );
 }
 
+function ReadingRestoreErrorMessage() {
+  const t = useTranslation();
+  return (
+    <p className="border-b border-companion-divider py-3 text-sm text-error" role="status">
+      {t('companion.reading.restoreError')}
+    </p>
+  );
+}
+
 export function ReadingActionsSheet(props: {
   onFindInDocument(): void;
   onOpenChange(open: boolean): void;
@@ -55,11 +64,14 @@ export function ReadingActionsSheet(props: {
     props.onOpenChange(false);
     props.onOpenReadingSheet(sheet);
   };
-  const restoreFromTrash = () => {
+  const restoreFromTrash = async () => {
     setRestoreError(false);
-    Promise.resolve(props.onRestoreFromTrash?.())
-      .then(() => props.onOpenChange(false))
-      .catch(() => setRestoreError(true));
+    try {
+      await props.onRestoreFromTrash?.();
+      props.onOpenChange(false);
+    } catch {
+      setRestoreError(true);
+    }
   };
   return (
     <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.actions')}>
@@ -86,16 +98,12 @@ export function ReadingActionsSheet(props: {
         />
         {props.onRestoreFromTrash ? (
           <>
+            {restoreError ? <ReadingRestoreErrorMessage /> : null}
             <ReadingActionRow
               icon={<RotateCcw aria-hidden="true" className="h-5 w-5" />}
               label={t('companion.reading.restoreFromTrash')}
               onClick={restoreFromTrash}
             />
-            {restoreError ? (
-              <p className="border-b border-companion-divider py-3 text-sm text-error">
-                {t('companion.reading.restoreError')}
-              </p>
-            ) : null}
           </>
         ) : null}
       </div>

@@ -17,7 +17,6 @@ async function createFixtureRoot() {
   tempDirs.push(repoRoot);
   await mkdir(path.join(repoRoot, 'lib/platform'), { recursive: true });
   await mkdir(path.join(repoRoot, 'electron/ipc'), { recursive: true });
-  await mkdir(path.join(repoRoot, '.lab/specs/shared/platform'), { recursive: true });
   return repoRoot;
 }
 
@@ -97,17 +96,6 @@ async function writeBaseFixture(repoRoot, overrides = {}) {
       ];
     `
   );
-  await writeFixtureFile(
-    repoRoot,
-    '.lab/specs/shared/platform/native-command-contract-map.md',
-    overrides.inventory ??
-      `
-      | Command | Notes |
-      | --- | --- |
-      | \`load_thing\` | covered |
-      | \`apply_thing\` | covered |
-    `
-  );
 }
 
 afterAll(async () => {
@@ -115,7 +103,7 @@ afterAll(async () => {
 });
 
 describe('check-native-command-contracts', () => {
-  it('passes when command constants, maps, handlers and inventory are aligned', async () => {
+  it('passes when command constants, maps, registry and handlers are aligned', async () => {
     const repoRoot = await createFixtureRoot();
     await writeBaseFixture(repoRoot);
 
@@ -160,7 +148,7 @@ describe('check-native-command-contracts', () => {
     expect(inspectNativeCommandContracts({ repoRoot })).toMatchObject({ ok: true, violations: [] });
   });
 
-  it('reports missing contract map, inventory and handler coverage', async () => {
+  it('reports missing contract map, registry and handler coverage', async () => {
     const repoRoot = await createFixtureRoot();
     await writeBaseFixture(repoRoot, {
       contract: `
@@ -180,55 +168,29 @@ describe('check-native-command-contracts', () => {
         export const NATIVE_COMMAND_REGISTRY = [
           { command: NATIVE_COMMANDS.loadThing, route: 'storage', capability: 'read' }
         ];
-      `,
-      inventory: `
-        | Command | Notes |
-        | --- | --- |
-        | \`load_thing\` | covered |
       `
     });
 
     expect(inspectNativeCommandContracts({ repoRoot }).violations).toEqual([
       'missing contract map entry: applyThing',
       'missing native command registry entry: applyThing',
-      'missing inventory entry: apply_thing',
-      'missing electron handler or explicit gap: applyThing (apply_thing)'
+      'missing electron handler: applyThing (apply_thing)'
     ]);
   });
 
-  it('allows a documented missing Electron handler gap', async () => {
-    const repoRoot = await createFixtureRoot();
-    await writeBaseFixture(repoRoot, {
-      handlers: `
-        import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
-        export function handle(command) {
-          if (command === NATIVE_COMMANDS.loadThing) return 'thing';
-        }
-      `,
-      inventory: `
-        | Command | Notes |
-        | --- | --- |
-        | \`load_thing\` | covered |
-        | \`apply_thing\` | missing-handler: \`apply_thing\` |
-      `
-    });
-
-    expect(inspectNativeCommandContracts({ repoRoot })).toMatchObject({
-      explicitMissingHandlerCount: 1,
-      ok: true
-    });
-  });
-
-  it('does not require the optional inventory file to run contract checks', async () => {
+  it('ignores .lab documents entirely', async () => {
     const repoRoot = await createFixtureRoot();
     await writeBaseFixture(repoRoot);
-    await rm(path.join(repoRoot, '.lab/specs/shared/platform/native-command-contract-map.md'), { force: true });
+    await mkdir(path.join(repoRoot, '.lab/specs/shared/platform'), { recursive: true });
+    await writeFixtureFile(repoRoot, '.lab/specs/shared/platform/native-command-contract-map.md', `
+      missing-handler: \`apply_thing\`
+      unknown command: \`stale_thing\`
+    `);
 
     expect(inspectNativeCommandContracts({ repoRoot })).toMatchObject({
       commandCount: 2,
-      explicitMissingHandlerCount: 0,
-      ok: true
+      ok: true,
+      violations: []
     });
   });
-
 });

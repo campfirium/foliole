@@ -18,6 +18,20 @@ run_quality_gate_fast_t0_static_guards() {
   fi
 }
 
+run_quality_gate_fast_global_static_guards() {
+  if [[ -f "scripts/check-native-command-contracts.mjs" ]]; then
+    run_quality_gate_script "quality-gate-fast" "${pm}" "check:native-contracts"
+  fi
+
+  if [[ -f "scripts/check-layer-dependency-boundary.mjs" ]]; then
+    run_quality_gate_command \
+      "quality-gate-fast" \
+      "layer-dependency-boundary" \
+      "layer dependency boundary" \
+      node scripts/check-layer-dependency-boundary.mjs
+  fi
+}
+
 run_quality_gate_fast_light_mid_static_guards() {
   if [[ -f "scripts/check-ui-copy-guard.mjs" ]]; then
     run_quality_gate_script "quality-gate-fast" "${pm}" "copy:guard"
@@ -29,13 +43,5 @@ run_quality_gate_fast_light_mid_static_guards() {
 
   if [[ -f "scripts/check-windows-console-policy.mjs" ]]; then
     run_quality_gate_script "quality-gate-fast" "${pm}" "windows:console:guard"
-  fi
-
-  if [[ -f "scripts/check-layer-dependency-boundary.mjs" ]]; then
-    run_quality_gate_command \
-      "quality-gate-fast" \
-      "layer-dependency-boundary" \
-      "layer dependency boundary" \
-      node scripts/check-layer-dependency-boundary.mjs
   fi
 }

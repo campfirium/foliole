@@ -45,6 +45,12 @@ function Get-InstalledVersionCode {
   return $match.Groups[1].Value
 }
 
+function Stop-AppProcess {
+  param([string]$AdbPath, [string]$Serial, [string]$PackageName)
+  Write-Info "force-stopping app before launch"
+  Invoke-AdbCommand -AdbPath $AdbPath -Arguments @("-s", $Serial, "shell", "am", "force-stop", $PackageName) *> $null
+}
+
 function Resolve-JavaHome {
   $candidates = @(
     $env:JAVA_HOME,
@@ -208,6 +214,7 @@ if ($DevReverseSyncPort -gt 0) {
   }
 }
 
+Stop-AppProcess -AdbPath $adbPath -Serial $serial -PackageName $AppId
 Write-Info "launching activity: $MainActivity"
 Invoke-AdbCommand -AdbPath $adbPath -Arguments @("-s", $serial, "shell", "am", "start", "-n", "$AppId/$MainActivity")
 if (Test-LastCommandFailed) {

@@ -55,6 +55,21 @@ function assertLocalRestoreApplied(
   }
 }
 
+async function assertLocalRestoreCanApply(
+  port: DbPort,
+  operation: SyncNodeApplyOperation | undefined,
+  records: NativeSyncNodeRecord[]
+) {
+  if (operation !== 'local_restore') return;
+  for (const record of records) {
+    const localNode = await loadLocalNodeSyncState(port, record.object_id);
+    const decision = decideIncomingNodeApply(localNode, record, operation);
+    if (decision === 'block_incoming' || decision === 'record_conflict') {
+      throw new Error('local_restore_not_applied');
+    }
+  }
+}
+
 async function queryOne<T extends DbRow>(port: DbPort, sql: string, params: readonly (string | number | bigint | Uint8Array | null)[] = []) {
   const rows = await port.query<T>(sql, params);
   return rows[0] ?? null;
@@ -109,6 +124,7 @@ export async function applySyncNodesWithDbPort(
   const preparedTextBodyHashes = await prepareSyncNodeTextBodyHashes(ordered, options);
   const invalidatedAt = new Date().toISOString();
 
+  await assertLocalRestoreCanApply(port, options.operation, ordered);
   await port.transaction(async (tx) => {
     for (const record of ordered) {
       if (await handleTombstoneGuard({ record, result, tx })) {

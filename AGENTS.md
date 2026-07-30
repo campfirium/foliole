@@ -5,7 +5,7 @@
 ## Project Baseline And Work Unit
 
 - 当前仓库是多平台单仓：`Electron + React + TypeScript + Vite + Capacitor`；主要宿主与表面为 `electron/`、`android/`、`src/app/`、`src/companion/`、`src/shared/platform/`。
-- 默认在 `dev` 主干按 Track-Based 连续小步推进；不创建 feature branch / worktree，除非用户明确要求。
+- 默认在 `dev` 主干按 Track-Based 连续小步推进；不创建 feature branch / worktree，除非用户明确要求。工作树已有改动时，先按当前方案、任务目标与 diff 语义判定归属：同一 Track 或前序未提交成果继续纳入当前闭环，不得仅因 dirty working tree 或同文件重叠停工；只有确认属于无关并行工作且无法安全隔离时才停止。
 - 创建 Foliole 新 Codex 任务时，若用户未明确要求 worktree，必须使用 saved project 的 `local` 环境；不得采用 `create_thread` 工具对 Git 仓库“默认 worktree”的通用建议。
 - 单次只交付一个可运行、可验证、可回退的能力闭环；闭环以用户可验收行为、数据语义或迁移语义为边界，不以文件、函数、测试断言、提交数量或“超过 3 个文件”为边界。
 - 能力闭环必须覆盖本轮承诺所需的入口、模型、消费侧、必要持久化、边界防护和验证；新增功能覆盖用户入口、状态模型、业务行为、失败或空状态，Bug 修复覆盖现象确认、根因修复、回归验证和用户可见结果恢复。
@@ -125,7 +125,7 @@
 
 - Demo 可见验收优先复用当前已打开的 Demo 窗口 / 标签页并执行刷新；若没有可刷新目标或当前工具无法控制该窗口，最终汇报必须明确 Demo 可见刷新未完成及原因，不得用 Hidden Native 或普通桌面 smoke 替代。
 
-最终汇报默认使用 `C / V / R / pushed`：`C` 写用户问题恢复与已确认根因，`V` 写前置验证、宿主可见验收、人工确认项的执行状态或跳过原因，`R` 只写真正剩余风险；没有风险时省略 `R`。不列内部字段、数据库对象或可选后续，除非用户追问或验证失败。
+最终汇报默认使用 `C / V / R / pushed`：`C` 写用户可用结果与已确认根因；`V` 只用自然语言写验证结论、必要证据或必要的跳过原因，合并同类成功项，默认不展开命令清单、workflow 阶段、内部判断、已消解阻塞或证据台账，仅在验证失败、用户追问或审计要求时展开；`R` 只写真正剩余风险，没有风险时省略。不列内部字段、数据库对象或可选后续。
 - 最终汇报引用本地截图、录屏、日志、HTML、Markdown 或其他生成物证据时，必须写成可点击 Markdown 文件链接，使用绝对路径；路径含空格时用尖括号包裹。禁止只写裸 Windows 路径或把路径包在代码反引号里。若需要直接展示图片，使用 Markdown 图片语法并填绝对路径。
 
 ## Decision Escalation And Official Sources

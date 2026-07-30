@@ -47,6 +47,26 @@ describe('ReadingActionsSheet', () => {
     expect(await screen.findByText('This topic could not be restored on this device.')).toBeInTheDocument();
     await waitFor(() => expect(onOpenChange).not.toHaveBeenCalledWith(false));
   });
+
+  it('keeps a synchronously failed trash restore visible in the actions sheet', async () => {
+    const onOpenChange = vi.fn();
+    render(
+      <ReadingActionsSheet
+        onFindInDocument={vi.fn()}
+        onOpenChange={onOpenChange}
+        onOpenReadingSheet={vi.fn()}
+        onRestoreFromTrash={() => {
+          throw new Error('local_restore_not_applied');
+        }}
+        open
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Restore from Trash' }));
+
+    expect(await screen.findByText('This topic could not be restored on this device.')).toBeInTheDocument();
+    await waitFor(() => expect(onOpenChange).not.toHaveBeenCalledWith(false));
+  });
 });
 
 describe('ReadingHighlightSheet', () => {
