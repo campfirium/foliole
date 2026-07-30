@@ -20,6 +20,27 @@ const NODE_LIST_COLLAPSE_CONTRACT_TESTS = [
   'src/features/nodes/components/NodeListCollapseState.test.tsx'
 ];
 
+const DOCUMENT_HEADER_MENU_PROVIDER_CONTRACT_TESTS = [
+  'src/app/components/DocumentPanelHeader.test.tsx'
+];
+
+const VIRTUAL_NODE_RESULT_INDEX_CONTRACT_TESTS = [
+  'src/features/nodes/model/virtualNodeResultIndex.test.ts'
+];
+
+const IMPORT_SELECTION_CONTRACT_TESTS = [
+  'electron/ipc/commands.window-and-utility.test.ts'
+];
+
+const Z_INDEX_TOKEN_CONTRACT_TESTS = [
+  'src/app/zIndexTokenBoundary.test.ts'
+];
+
+const PINNED_NPM_WORKFLOW_CONTRACT_TESTS = [
+  'scripts/quality/pinned-npm.test.mjs',
+  'scripts/t5-nightly-remote-quality-workflow-contract.test.mjs'
+];
+
 export const CRITICAL_TEST_ROUTES = [
   {
     triggers: [
@@ -44,6 +65,44 @@ export const CRITICAL_TEST_ROUTES = [
       /^src\/features\/nodes\/components\/nodeListTreeModel\.ts$/u
     ],
     tests: NODE_LIST_COLLAPSE_CONTRACT_TESTS
+  },
+  {
+    triggers: [
+      /^src\/app\/AppProviders\.tsx$/u,
+      /^src\/app\/components\/DocumentPanelHeaderActions\.tsx$/u,
+      /^src\/features\/settings\/context\/DocumentHeaderMenuSettingsProvider\.tsx$/u,
+      /^src\/features\/settings\/context\/documentHeaderMenuSettingsContext\.ts$/u,
+      /^src\/test\/setup\.ts$/u
+    ],
+    tests: DOCUMENT_HEADER_MENU_PROVIDER_CONTRACT_TESTS
+  },
+  {
+    triggers: [
+      /^lib\/core\/nodes\/virtualNodeResults\.ts$/u,
+      /^src\/features\/nodes\/model\/virtualNodeDetail\.ts$/u
+    ],
+    tests: VIRTUAL_NODE_RESULT_INDEX_CONTRACT_TESTS
+  },
+  {
+    triggers: [
+      /^electron\/ipc\/importTextFile\.ts$/u
+    ],
+    tests: IMPORT_SELECTION_CONTRACT_TESTS
+  },
+  {
+    triggers: [
+      /^src\/features\/settings\/components\/sections\/SettingsDocumentMenuSection\.tsx$/u
+    ],
+    tests: Z_INDEX_TOKEN_CONTRACT_TESTS
+  },
+  {
+    triggers: [
+      /^(?:package|package-lock)\.json$/u,
+      /^\.github\/workflows\/hosted-quality-common\.yml$/u,
+      /^scripts\/npm-hardening-check\.sh$/u,
+      /^scripts\/quality\/pinned-npm\.mjs$/u
+    ],
+    tests: PINNED_NPM_WORKFLOW_CONTRACT_TESTS
   }
 ];
 
