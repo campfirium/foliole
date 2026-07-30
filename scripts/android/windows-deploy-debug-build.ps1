@@ -12,8 +12,10 @@ function Invoke-DeployProcess {
       Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
       throw "$FilePath timed out after ${TimeoutSeconds}s."
     }
+    $process.WaitForExit()
+    $exitCode = $process.ExitCode
     Get-Content -Path $out, $err -ErrorAction SilentlyContinue
-    if ($process.ExitCode -ne 0) { exit $process.ExitCode }
+    if ($exitCode -ne 0) { throw "$FilePath exited with code $exitCode." }
   } finally {
     Remove-Item -Path $out, $err -ErrorAction SilentlyContinue
   }
