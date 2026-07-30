@@ -56,6 +56,10 @@ describe('Windows DEV fixed device action', () => {
     expect(adbCalls).toContainEqual([
       '-P', WINDOWS_DEV_ADB_PORT, '-s', WINDOWS_DEV_A5_SERIAL, 'get-state'
     ]);
+    expect(adbCalls).toContainEqual([
+      '-P', WINDOWS_DEV_ADB_PORT, '-s', WINDOWS_DEV_A5_SERIAL,
+      'shell', 'am', 'force-stop', 'com.foliole.android'
+    ]);
     expect(adbCalls.at(-1)).toEqual(['-P', WINDOWS_DEV_ADB_PORT, 'kill-server']);
     const protection = calls.filter(({ args }) => args.some((arg) => String(arg).includes('android-device-data-protection.mjs')));
     expect(protection).toHaveLength(2);

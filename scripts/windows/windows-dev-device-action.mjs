@@ -56,6 +56,9 @@ async function runDataProtection(execute, paths, mode, manifest, env) {
 async function deploy(execute, paths, evidenceRoot, env) {
   fs.mkdirSync(paths.protectionBackups, { recursive: true });
   const manifest = path.join(evidenceRoot, 'data-protection.json');
+  await checked(execute, paths.adbPath, ['-P', WINDOWS_DEV_ADB_PORT,
+    '-s', WINDOWS_DEV_A5_SERIAL, 'shell', 'am', 'force-stop', APP_ID],
+  { env, timeoutCode: 'data_quiesce_timeout', timeoutMs: 30_000, windowsHide: true }, 'data-quiesce');
   const before = await runDataProtection(execute, paths, 'backup', manifest, env);
   const script = path.join(paths.repoRoot, 'scripts', 'android', 'windows-deploy-app.ps1');
   const action = await checked(execute, 'powershell.exe', ['-NoProfile', '-NonInteractive',
