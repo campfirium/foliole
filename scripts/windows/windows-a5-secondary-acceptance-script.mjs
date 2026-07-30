@@ -47,7 +47,7 @@ export function runA5SecondaryAcceptance(config, acceptSearch) {
       ? title.textContent.trim()
       : row.textContent ? row.textContent.trim() : '';
   };
-  const directorySignature = () => directoryRows().map(rowId).join('|');
+  const directorySignature = () => directoryRows().map(rowId).sort().join('|');
   const topBack = () => firstVisible('[data-testid="companion-top-bar-back"]');
   const visibleButtonSummary = () => Array.from(document.querySelectorAll('button'))
     .filter(visible)
