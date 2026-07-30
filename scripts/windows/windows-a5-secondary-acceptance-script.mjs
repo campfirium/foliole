@@ -97,10 +97,15 @@ export function runA5SecondaryAcceptance(config, acceptSearch) {
       if (!row) return null;
       const before = directorySignature();
       await click(row, `directory row ${candidate.id}`);
-      await waitFor(
-        () => articleExit() || directorySignature() !== before,
-        `directory transition for ${candidate.id}`
-      );
+      try {
+        await waitFor(
+          () => articleExit() || directorySignature() !== before,
+          `directory transition for ${candidate.id}`,
+          2_000
+        );
+      } catch {
+        continue;
+      }
       if (articleExit()) {
         if (depth > 0 && readingRoot()) {
           return { leafId: candidate.id, leafTitle: candidate.title, path: [...path, candidate.title] };
