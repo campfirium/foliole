@@ -1,6 +1,8 @@
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { supportsCompanionAppDataClear } from '../shared/platform/companionAppDataRuntimeRepository';
 
+import { useOptionalCompanionCustomCss } from './CompanionCustomCssProvider';
+import { CompanionCustomCssSettingsContent } from './CompanionCustomCssSettingsContent';
 import {
   CompanionPlaceholderSettingsContent,
   CompanionSettingsDetail,
@@ -44,6 +46,25 @@ type CompanionSettingsContentProps = {
   workspaceSync: WorkspaceSync;
 };
 
+function CompanionAppearanceSettingsDetail(props: Pick<CompanionSettingsContentProps, 'onBackToSettingsList'>) {
+  const t = useTranslation();
+  const customCss = useOptionalCompanionCustomCss();
+  if (customCss?.isSupported) {
+    return (
+      <CompanionSettingsDetail onBack={props.onBackToSettingsList} page="appearance" title={t('companion.settings.appearance.title')}>
+        <CompanionCustomCssSettingsContent />
+      </CompanionSettingsDetail>
+    );
+  }
+  return renderPlaceholderSettingsDetail({
+    detail: t('companion.settings.appearance.placeholderDetail'),
+    onBack: props.onBackToSettingsList,
+    page: 'appearance',
+    placeholderTitle: resolvePlaceholderTitle('appearance', t),
+    title: t('companion.settings.appearance.title')
+  });
+}
+
 function CompanionSettingsContentSurface(props: CompanionSettingsContentProps) {
   const t = useTranslation();
   const showStorage = supportsCompanionAppDataClear();
@@ -76,13 +97,7 @@ function CompanionSettingsContentSurface(props: CompanionSettingsContentProps) {
     });
   }
   if (props.settingsPage === 'appearance') {
-    return renderPlaceholderSettingsDetail({
-      detail: t('companion.settings.appearance.detail'),
-      onBack: props.onBackToSettingsList,
-      page: 'appearance',
-      placeholderTitle: resolvePlaceholderTitle('appearance', t),
-      title: t('companion.settings.appearance.title')
-    });
+    return <CompanionAppearanceSettingsDetail onBackToSettingsList={props.onBackToSettingsList} />;
   }
   if (props.settingsPage === 'debug') {
     return renderPlaceholderSettingsDetail({

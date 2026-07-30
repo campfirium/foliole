@@ -1,14 +1,21 @@
-[data-companion-readable-document='true'] :is(.cm-md-highlight, .cm-md-highlight-overlap, .cm-md-anchor-overlap) {
+[data-companion-readable-document='true'] {
+  contain: paint;
+  isolation: isolate;
+  position: relative;
+  z-index: 0;
+}
+
+[data-companion-article-document='true'] :is(.cm-md-highlight, .cm-md-highlight-overlap, .cm-md-anchor-overlap) {
   background-color: var(--app-highlight-surface-color);
   border-radius: var(--radius-sm);
   cursor: pointer;
 }
 
-[data-companion-readable-document='true'] :is(.cm-md-highlight, .cm-md-highlight-overlap, .cm-md-anchor-overlap):is(:hover, .cm-md-highlight-active) {
+[data-companion-article-document='true'] :is(.cm-md-highlight, .cm-md-highlight-overlap, .cm-md-anchor-overlap):is(:hover, .cm-md-highlight-active) {
   background-color: var(--app-highlight-surface-color);
 }
 
-[data-companion-readable-document='true'] .cm-md-cloze {
+[data-companion-article-document='true'] .cm-md-cloze {
   background-color: var(--app-cloze-surface-color);
   border-radius: var(--radius-sm);
 }

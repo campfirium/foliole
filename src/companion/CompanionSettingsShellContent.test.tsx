@@ -12,18 +12,23 @@ vi.mock('../shared/platform/companionAppDataRuntimeRepository', () => ({
   supportsCompanionAppDataClear: appDataRuntime.supportsClear
 }));
 
+import { CompanionCustomCssProvider } from './CompanionCustomCssProvider';
 import { renderCompanionSettingsContent } from './CompanionSettingsShellContent';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 
 function SettingsHarness() {
   const [settingsPage, setSettingsPage] = useState<CompanionSettingsPage>('list');
-  return renderCompanionSettingsContent({
-    onBackToSettingsList: () => setSettingsPage('list'),
-    onOpenSyncSettings: () => setSettingsPage('sync'),
-    onOpenSyncSettingsPage: setSettingsPage,
-    settingsPage,
-    workspaceSync: { state: { sync_onboarding_status: 'pending' } } as never
-  });
+  return (
+    <CompanionCustomCssProvider runtimeKind="web-preview">
+      {renderCompanionSettingsContent({
+        onBackToSettingsList: () => setSettingsPage('list'),
+        onOpenSyncSettings: () => setSettingsPage('sync'),
+        onOpenSyncSettingsPage: setSettingsPage,
+        settingsPage,
+        workspaceSync: { state: { sync_onboarding_status: 'pending' } } as never
+      })}
+    </CompanionCustomCssProvider>
+  );
 }
 
 describe('CompanionSettingsShellContent', () => {
@@ -43,11 +48,12 @@ describe('CompanionSettingsShellContent', () => {
     expect(screen.getByText('Device details are not available yet.')).toBeInTheDocument();
   });
 
-  it('opens the appearance placeholder page', () => {
+  it('opens the web-preview custom CSS management surface', () => {
     render(<SettingsHarness />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Display controls are not available yet/ }));
-    expect(screen.getByText('Display preferences')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Customize Topic reading/ }));
+    expect(screen.getByText('Custom CSS snippets')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add snippet' })).toBeInTheDocument();
   });
 
   it('opens the debug placeholder page', () => {

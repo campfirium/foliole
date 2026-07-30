@@ -17,6 +17,8 @@ describe('CompanionArticleDocument', () => {
     expect(className).toContain('min-h-[calc(100dvh-9rem)]');
     expect(className.indexOf('100vh')).toBeLessThan(className.indexOf('100dvh'));
     expect(surface?.style.getPropertyValue('--document-content-inline-padding')).toBe('0px');
+    expect(surface).toHaveAttribute('data-companion-readable-document', 'true');
+    expect(surface).toHaveAttribute('data-companion-article-document', 'true');
   });
 
   it('keeps review cards free of article viewport minimums', () => {
@@ -25,5 +27,7 @@ describe('CompanionArticleDocument', () => {
     const surface = container.querySelector('section');
     expect(surface).toHaveClass('min-h-0');
     expect(surface?.className).not.toContain('100dvh');
+    expect(surface).not.toHaveAttribute('data-companion-readable-document');
+    expect(surface).toHaveAttribute('data-companion-article-document', 'true');
   });
 });

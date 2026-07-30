@@ -205,7 +205,7 @@ describe('CompanionShell review surfaces', () => {
     expect(screen.getByRole('button', { name: /Connect or refresh this device/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Device details are not available yet/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Storage/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Display controls are not available yet/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Customize Topic reading with saved styles/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Diagnostics/ })).toBeInTheDocument();
     expect(screen.queryByText('Connected')).not.toBeInTheDocument();
 

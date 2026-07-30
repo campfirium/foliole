@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState, type UIEvent as ReactUIEvent
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 
 import { createCompanionCaptureTextSaveHandler } from './companionCaptureTextController';
+import { CompanionCustomCssProvider } from './CompanionCustomCssProvider';
 import type { CompanionTabAction } from './CompanionFloatingBars';
 import { CompanionHandoffReminderRuntime } from './CompanionHandoffReminderRuntime';
 import { useReviewBreadcrumbItems } from './companionReviewBreadcrumbs';
@@ -198,8 +199,13 @@ export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrap
   const model = useCompanionShellModel(props.bootstrapState);
 
   return (
-    <CompanionHandoffReminderRuntime workspaceSync={model.workspaceSync}>
-      <CompanionShellView model={model} />
-    </CompanionHandoffReminderRuntime>
+    <CompanionCustomCssProvider
+      refreshKey={model.workspaceSync.state.last_synced_at}
+      runtimeKind={props.bootstrapState.runtime_kind}
+    >
+      <CompanionHandoffReminderRuntime workspaceSync={model.workspaceSync}>
+        <CompanionShellView model={model} />
+      </CompanionHandoffReminderRuntime>
+    </CompanionCustomCssProvider>
   );
 }

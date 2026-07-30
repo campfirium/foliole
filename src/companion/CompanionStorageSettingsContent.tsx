@@ -12,6 +12,8 @@ import {
   AppDialogTitle
 } from '../shared/ui/Dialog';
 
+import { removeCompanionCustomCssCache } from './companionCustomCssStorage';
+
 function reloadCompanionApp() {
   window.location.reload();
 }
@@ -69,6 +71,7 @@ export function CompanionStorageSettingsContent() {
     setError(null);
     try {
       await clearCompanionAppData();
+      removeCompanionCustomCssCache();
       reloadCompanionApp();
     } catch (clearError) {
       setIsClearing(false);
