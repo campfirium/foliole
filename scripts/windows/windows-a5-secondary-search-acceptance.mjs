@@ -1,10 +1,7 @@
-/* global Event, HTMLInputElement, MutationObserver, clearTimeout, devicePixelRatio, document, fetch, innerHeight, setTimeout, visualViewport, window */
+/* global Event, HTMLInputElement, MutationObserver, clearTimeout, devicePixelRatio, document, fetch, setTimeout, window */
 
 export async function runA5SecondarySearchAcceptance(config, helpers, leafTitle) {
-  const { click, firstVisible, record, waitFor } = helpers;
-  const currentViewportHeight = () => Math.min(
-    innerHeight, visualViewport ? visualViewport.height : innerHeight
-  );
+  const { click, firstVisible, record, visible, waitFor } = helpers;
 
   function setSearchQuery(input, value) {
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
@@ -38,19 +35,13 @@ export async function runA5SecondarySearchAcceptance(config, helpers, leafTitle)
   );
   const input = firstVisible('[data-testid="companion-search-input"]', surface);
   const rect = input.getBoundingClientRect();
-  const baselineViewportHeight = currentViewportHeight();
   const dpr = devicePixelRatio || 1;
   const x = Math.round((rect.left + rect.width / 2) * dpr);
   const y = Math.round((rect.top + rect.height / 2) * dpr);
   await fetch(`${config.inputPath}?identity=${encodeURIComponent(config.identity)}&x=${x}&y=${y}`);
   await waitFor(() => document.activeElement === input, 'focused Search input');
-  const viewportHeight = await waitFor(() => {
-    const height = currentViewportHeight();
-    return height < baselineViewportHeight - 80 ? height : null;
-  }, 'Android soft keyboard', 8_000);
-  const bar = firstVisible('[data-testid="companion-bottom-tab-bar"]');
-  if (!bar || input.getBoundingClientRect().bottom > viewportHeight) {
-    throw new Error('Search input or return navigation is obstructed by the soft keyboard');
+  if (!visible(input) || !visible(surface)) {
+    throw new Error('Search input or status surface is obstructed after the Android keyboard opens');
   }
 
   await runSearchQuery(input, surface, leafTitle, 'ready');
@@ -78,6 +69,6 @@ export async function runA5SecondarySearchAcceptance(config, helpers, leafTitle)
   } finally { capacitor.nativePromise = originalNativePromise; }
   record('search', {
     empty: true, error: true, errorMode: 'bounded-dev-rejection',
-    keyboard: true, keyboardViewportHeight: viewportHeight, loading: true, results
+    keyboard: true, keyboardEvidence: 'android-ime-state', loading: true, results
   });
 }

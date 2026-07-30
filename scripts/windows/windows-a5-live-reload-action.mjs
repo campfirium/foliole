@@ -28,6 +28,18 @@ function adbOptions(env, stage, timeoutMs = 30_000) {
   return { env, timeoutCode: `${stage}_timeout`, timeoutMs, windowsHide: true };
 }
 
+export function isAndroidImeVisible(output) {
+  return /\bmInputShown=true\b|\bmIsInputViewShown=true\b|\bmImeWindowVis=0x3\b/u.test(output);
+}
+
+async function verifySoftKeyboard(execute, paths, env, adbPort, serial) {
+  const state = await checked(execute, paths.adbPath, adbArgs(adbPort, serial,
+    ['shell', 'dumpsys', 'input_method']), adbOptions(env, 'live-input'), 'live-input');
+  if (!isAndroidImeVisible(state.stdout)) {
+    throw failure('A5 software keyboard did not become visible after the fixed input tap', 'live-input');
+  }
+}
+
 async function captureScreenshot(execute, paths, env, adbPort, serial, evidenceRoot) {
   const screenshotPath = path.join(evidenceRoot, 'a5-live.png');
   await checked(execute, paths.adbPath, adbArgs(adbPort, serial,
@@ -90,6 +102,7 @@ export async function runWindowsA5LiveReload({
         await checked(execute, paths.adbPath, adbArgs(adbPort, serial,
           ['shell', 'input', 'tap', String(point.x), String(point.y)]),
         adbOptions(env, 'live-input'), 'live-input');
+        await verifySoftKeyboard(execute, paths, env, adbPort, serial);
         const afterInput = await loadOutcome;
         if (afterInput.error) throw afterInput.error;
         launched = afterInput.loaded;

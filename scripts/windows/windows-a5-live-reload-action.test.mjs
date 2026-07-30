@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, expect, it, vi } from 'vitest';
 
-import { runWindowsA5LiveReload } from './windows-a5-live-reload-action.mjs';
+import { isAndroidImeVisible, runWindowsA5LiveReload } from './windows-a5-live-reload-action.mjs';
 import { WINDOWS_A5_LIVE_RELOAD_PORT } from './windows-a5-live-reload-server.mjs';
 
 const roots = [];
@@ -26,6 +26,7 @@ function createExecutor(evidenceRoot) {
   const execute = vi.fn(async (command, args) => {
     calls.push({ args, command });
     if (args.includes('path')) return success('package:/data/app/base.apk\n');
+    if (args.includes('input_method')) return success('mInputShown=true\n');
     if (args.includes('pull')) {
       fs.mkdirSync(evidenceRoot, { recursive: true });
       fs.writeFileSync(args.at(-1), 'png');
@@ -92,7 +93,17 @@ it('runs the bounded secondary acceptance and stores its receipt', async () => {
   expect(calls.map(({ args }) => args)).toContainEqual([
     '-P', '5037', '-s', '87a33a4b', 'shell', 'input', 'tap', '120', '240'
   ]);
+  expect(calls.map(({ args }) => args)).toContainEqual([
+    '-P', '5037', '-s', '87a33a4b', 'shell', 'dumpsys', 'input_method'
+  ]);
   expect(JSON.parse(fs.readFileSync(run.liveReload.acceptancePath, 'utf8'))).toEqual(acceptance);
+});
+
+it('recognizes visible Android IME state without accepting hidden state', () => {
+  expect(isAndroidImeVisible('mInputShown=true')).toBe(true);
+  expect(isAndroidImeVisible('mIsInputViewShown=true')).toBe(true);
+  expect(isAndroidImeVisible('mImeWindowVis=0x3')).toBe(true);
+  expect(isAndroidImeVisible('mInputShown=false mImeWindowVis=0x0')).toBe(false);
 });
 
 it('captures a secondary scenario failure that occurs before the input checkpoint', async () => {
