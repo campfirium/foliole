@@ -2,6 +2,7 @@ function Invoke-DeployProcess {
   param(
     [string]$FilePath,
     [string[]]$ArgumentList,
+    [string]$SuccessPattern,
     [int]$TimeoutSeconds
   )
 
@@ -14,8 +15,10 @@ function Invoke-DeployProcess {
     }
     $process.WaitForExit()
     $exitCode = $process.ExitCode
-    Get-Content -Path $out, $err -ErrorAction SilentlyContinue
-    if ($exitCode -ne 0) { throw "$FilePath exited with code $exitCode." }
+    $lines = @(Get-Content -Path $out, $err -ErrorAction SilentlyContinue)
+    $lines
+    if ($null -ne $exitCode -and $exitCode -ne 0) { throw "$FilePath exited with code $exitCode." }
+    if (!($lines -match $SuccessPattern)) { throw "$FilePath did not report $SuccessPattern." }
   } finally {
     Remove-Item -Path $out, $err -ErrorAction SilentlyContinue
   }
@@ -25,7 +28,7 @@ function Invoke-GradleAssembleDebug {
   param([string]$AndroidDir, [int]$TimeoutSeconds = 240)
   Push-Location $AndroidDir
   try {
-    Invoke-DeployProcess -FilePath "cmd.exe" -ArgumentList @("/d", "/c", "call .\gradlew.bat --no-daemon assembleDebug") -TimeoutSeconds $TimeoutSeconds
+    Invoke-DeployProcess -FilePath "cmd.exe" -ArgumentList @("/d", "/c", "call .\gradlew.bat --no-daemon assembleDebug") -SuccessPattern "BUILD SUCCESSFUL" -TimeoutSeconds $TimeoutSeconds
   } finally {
     Pop-Location
   }
@@ -50,5 +53,5 @@ function Install-DebugBuild {
   if (![string]::IsNullOrWhiteSpace($env:FOLIOLE_ANDROID_ADB_SERVER_PORT)) {
     $arguments = @("-P", $env:FOLIOLE_ANDROID_ADB_SERVER_PORT) + $arguments
   }
-  Invoke-DeployProcess -FilePath $AdbPath -ArgumentList $arguments -TimeoutSeconds $InstallTimeoutSeconds
+  Invoke-DeployProcess -FilePath $AdbPath -ArgumentList $arguments -SuccessPattern "^Success$" -TimeoutSeconds $InstallTimeoutSeconds
 }

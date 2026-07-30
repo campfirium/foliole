@@ -72,7 +72,7 @@ describe('windows-deploy-app.sh', () => {
       .toBeLessThan(script.indexOf('Write-Info "launching activity: $MainActivity"'));
     expect(buildScript).toContain('gradlew.bat --no-daemon assembleDebug');
     expect(buildScript).toContain('"install", "--no-incremental", "-r", $apkPath');
-    expect(buildScript).toContain('Invoke-DeployProcess -FilePath $AdbPath -ArgumentList $arguments -TimeoutSeconds $InstallTimeoutSeconds');
+    expect(buildScript).toContain('Invoke-DeployProcess -FilePath $AdbPath -ArgumentList $arguments -SuccessPattern "^Success$" -TimeoutSeconds $InstallTimeoutSeconds');
     expect(script).toContain('$nativeSourcesHash = Get-NativeSourcesHash -AndroidDir $androidDir');
     expect(script).toContain('Test-InstallCacheHit -ApkHash $apkHash -NativeSourcesHash $nativeSourcesHash -Serial $serial -VersionCode $installedVersionCode -WebAssetsHash $webAssetsHash -WindowsWorkDir $WindowsWorkDir');
     expect(script).toContain('Write-InstallCache -ApkHash $apkHash -NativeSourcesHash $nativeSourcesHash -Serial $serial -VersionCode $installedVersionCode -WebAssetsHash $webAssetsHash -WindowsWorkDir $WindowsWorkDir');
@@ -108,12 +108,13 @@ describe('windows-deploy-app.sh', () => {
     const buildScript = await readFile(DEPLOY_BUILD_SCRIPT, 'utf8');
 
     expect(buildScript).toContain('Start-Process -FilePath $FilePath -ArgumentList $ArgumentList -PassThru -WindowStyle Hidden -RedirectStandardOutput $out -RedirectStandardError $err');
-    expect(buildScript).toContain('Invoke-DeployProcess -FilePath "cmd.exe" -ArgumentList @("/d", "/c", "call .\\gradlew.bat --no-daemon assembleDebug")');
-    expect(buildScript).toContain('Invoke-DeployProcess -FilePath $AdbPath -ArgumentList $arguments -TimeoutSeconds $InstallTimeoutSeconds');
+    expect(buildScript).toContain('Invoke-DeployProcess -FilePath "cmd.exe" -ArgumentList @("/d", "/c", "call .\\gradlew.bat --no-daemon assembleDebug") -SuccessPattern "BUILD SUCCESSFUL"');
+    expect(buildScript).toContain('Invoke-DeployProcess -FilePath $AdbPath -ArgumentList $arguments -SuccessPattern "^Success$" -TimeoutSeconds $InstallTimeoutSeconds');
     expect(script).toContain('Start-Process -FilePath "cmd.exe" -ArgumentList @("/d", "/c", "call .\\gradlew.bat --stop") -Wait -PassThru -WindowStyle Hidden');
     expect(buildScript).toContain('Get-Content -Path $out, $err -ErrorAction SilentlyContinue');
     expect(script).toContain('if ($process.ExitCode -ne 0)');
     expect(buildScript).toContain('$process.WaitForExit()');
+    expect(buildScript).toContain('if (!($lines -match $SuccessPattern))');
     expect(buildScript).toContain('throw "$FilePath exited with code $exitCode."');
     expect(buildScript).not.toContain('exit $process.ExitCode');
     expect(script.match(/\$global:LASTEXITCODE = \$process\.ExitCode/gu)).toHaveLength(1);
