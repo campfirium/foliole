@@ -1,3 +1,4 @@
+import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -11,6 +12,9 @@ const FIXTURE_PATH = path.resolve(
   'fixtures/main-path-smoke.md'
 );
 const READING_LINE = 'The reading smoke line should remain visible after the imported node opens.';
+const SELECTION_SCREENSHOT = path.resolve(
+  '.tmp/artifacts/desktop-acceptance/immersive-reading-selection.png'
+);
 
 async function installImportFixtureSelection(desktopApp: ElectronApplication) {
   await desktopApp.evaluate(({ dialog }, fixturePath) => {
@@ -63,6 +67,34 @@ async function openImportedNode(desktopWindow: Page, nodeId: string) {
   expect(opened).toBe(true);
 }
 
+async function dragAcrossReadingLine(desktopWindow: Page) {
+  const line = desktopWindow.locator('.prompt-editor-host .cm-line').filter({ hasText: READING_LINE }).first();
+  const points = await line.evaluate((element, expectedText) => {
+    const textNode = Array.from(element.childNodes).find((node) => node.textContent?.includes(expectedText));
+    if (!(textNode instanceof Text)) {
+      throw new Error('missing reading line text node');
+    }
+    const textOffset = textNode.data.indexOf(expectedText);
+    const startRange = document.createRange();
+    startRange.setStart(textNode, textOffset);
+    startRange.setEnd(textNode, textOffset + 1);
+    const endRange = document.createRange();
+    endRange.setStart(textNode, textOffset + expectedText.length - 1);
+    endRange.setEnd(textNode, textOffset + expectedText.length);
+    const startRect = startRange.getBoundingClientRect();
+    const endRect = endRange.getBoundingClientRect();
+    return {
+      end: { x: endRect.right - 1, y: (endRect.top + endRect.bottom) / 2 },
+      start: { x: startRect.left + 1, y: (startRect.top + startRect.bottom) / 2 }
+    };
+  }, READING_LINE);
+
+  await desktopWindow.mouse.move(points.start.x, points.start.y);
+  await desktopWindow.mouse.down();
+  await desktopWindow.mouse.move(points.end.x, points.end.y, { steps: 12 });
+  await desktopWindow.mouse.up();
+}
+
 test('keeps F11 as immersive reading in the desktop host', async ({
   desktopApp,
   desktopWindow
@@ -78,4 +110,50 @@ test('keeps F11 as immersive reading in the desktop host', async ({
   await desktopWindow.locator('.prompt-editor-host .cm-scroller').waitFor({ state: 'visible' });
   await expect(desktopWindow.locator('.prompt-editor-host')).toContainText(READING_LINE);
   await expect(desktopWindow.getByLabel('Window controls')).toHaveCount(0);
+});
+
+test('keeps an explicit text selection visible in immersive reading', async ({
+  desktopApp,
+  desktopWindow
+}) => {
+  await expectWorkspaceShell(desktopWindow);
+  const importedNodeId = await importFixture(desktopApp, desktopWindow);
+  await openImportedNode(desktopWindow, importedNodeId);
+  await expect(desktopWindow.locator('.prompt-editor-host')).toContainText(READING_LINE);
+
+  const normalSelectionBackground = await desktopWindow.locator('.prompt-editor-host .cm-line').first()
+    .evaluate((line) => getComputedStyle(line, '::selection').backgroundColor);
+
+  await desktopWindow.keyboard.press('F11');
+  await desktopWindow.locator('.prompt-editor-host .cm-scroller').waitFor({ state: 'visible' });
+  await dragAcrossReadingLine(desktopWindow);
+  await expect.poll(() => desktopWindow.evaluate(() => {
+    const selection = globalThis.window?.__folioleDebug?.getEditorSelection?.('prompt-editor');
+    return selection ? selection.to - selection.from : 0;
+  })).toBeGreaterThan(0);
+  const selectionState = await desktopWindow.evaluate(() => {
+    const debugApi = globalThis.window?.__folioleDebug;
+    const content = debugApi?.getEditorContent?.('prompt-editor') ?? '';
+    const editor = document.querySelector('.prompt-editor-host .cm-editor') as HTMLElement | null;
+    const line = document.querySelector('.prompt-editor-host .cm-line') as HTMLElement | null;
+    const selection = debugApi.getEditorSelection?.('prompt-editor') ?? null;
+    return {
+      hasParagraphMarker: Boolean(document.querySelector('.prompt-editor-host .cm-paragraph-marker-line')),
+      paragraphMarkerActive: editor?.dataset.paragraphMarkerActive ?? null,
+      selectedText: selection ? content.slice(selection.from, selection.to) : '',
+      selectionBackground: line ? getComputedStyle(line, '::selection').backgroundColor : null
+    };
+  });
+
+  await desktopWindow.waitForTimeout(100);
+  await mkdir(path.dirname(SELECTION_SCREENSHOT), { recursive: true });
+  await desktopWindow.screenshot({ path: SELECTION_SCREENSHOT });
+
+  expect(selectionState).toMatchObject({
+    hasParagraphMarker: true,
+    paragraphMarkerActive: 'false',
+    selectionBackground: normalSelectionBackground
+  });
+  expect(selectionState.selectedText).toContain('reading smoke line should remain visible');
+  expect(selectionState.selectionBackground).not.toBe('rgba(0, 0, 0, 0)');
 });

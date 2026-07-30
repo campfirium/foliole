@@ -12,6 +12,7 @@ import {
   createReadOnlyExtensions,
   createLiveMarkdownReconfigureEffect
 } from './codeMirrorEditorAdapterSupport';
+import { syncParagraphMarkerSelectionVisibility } from './codeMirrorParagraphMarkerState';
 import { createTextAnchorDecorationsExtension } from './codeMirrorTextAnchorState';
 import { editorDiffDecorationsStateField } from './lineDiffDecorations';
 import { createLiveMarkdownExtensions } from './liveMarkdown';
@@ -43,6 +44,9 @@ function createEditorUpdateListener(args: {
   onDocChanged: (content: string | null, meta: EditorDocumentChangeMeta) => void;
 }) {
   return EditorView.updateListener.of((update) => {
+    if (update.selectionSet) {
+      syncParagraphMarkerSelectionVisibility(update.view);
+    }
     if (!update.docChanged) {
       return;
     }
