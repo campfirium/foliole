@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { runWindowsDevBuild } from './windows-dev-build.mjs';
+import { formatWindowsDevFailure, runWindowsDevBuild } from './windows-dev-build.mjs';
 
 const roots = [];
 afterEach(() => roots.splice(0).forEach((root) => fs.rmSync(root, { force: true, recursive: true })));
@@ -141,4 +141,10 @@ it('holds a FileShare.None lock and invokes only absolute system Node', () => {
   expect(actionSource).toContain('[System.IO.FileShare]::None');
   expect(actionSource.indexOf('& $systemNode $puller')).toBeLessThan(actionSource.indexOf('& $systemNode $runner $Action'));
   expect(actionSource).toContain('& $systemNode $runner $Action');
+});
+
+it('formats a single-line bounded remote failure receipt', () => {
+  expect(formatWindowsDevFailure({
+    failureStage: 'live-load', message: `timeout\n${'x'.repeat(600)}`
+  })).toMatch(/^\[windows-dev-action\] failure stage=live-load message=timeout x{1,493}$/u);
 });

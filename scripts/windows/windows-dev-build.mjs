@@ -74,6 +74,12 @@ function writeJson(fsApi, filePath, value) {
   fsApi.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
 }
 
+export function formatWindowsDevFailure(summary) {
+  const stage = String(summary.failureStage || 'entry').replace(/[^A-Za-z0-9_-]/gu, '').slice(0, 48);
+  const message = String(summary.message || 'unknown failure').replace(/[\r\n]+/gu, ' ').slice(0, 500);
+  return `[windows-dev-action] failure stage=${stage || 'entry'} message=${message}`;
+}
+
 export async function runWindowsDevBuild({
   action = 'build', deviceAction = runWindowsDevDeviceAction, execute = executeBounded,
   fsApi = fs, id = randomUUID, now = () => new Date(), paths = windowsDevPaths(),
@@ -144,6 +150,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
   const result = await runWindowsDevBuild({ action });
   const label = result.exitCode === 0 ? 'OK' : 'FAILED';
   const stream = result.exitCode === 0 ? console.log : console.error;
+  if (result.exitCode !== 0) stream(formatWindowsDevFailure(result.summary));
   if (result.summary.liveReload) {
     stream(`[windows-dev-action] live identity=${result.summary.liveReload.buildIdentity} screenshot=${result.summary.liveReload.screenshotPath}`);
   }
