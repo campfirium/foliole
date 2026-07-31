@@ -1,5 +1,5 @@
-name: Release Windows
-run-name: Release Windows ${{ inputs.target_version }} @ ${{ inputs.target_sha }}
+name: T7 Release Windows
+run-name: T7 Release Windows ${{ inputs.target_version }} @ ${{ inputs.target_sha }}
 
 on:
   workflow_dispatch:
@@ -19,6 +19,7 @@ on:
         type: boolean
 
 permissions:
+  actions: read
   contents: write
   id-token: write
   attestations: write
@@ -66,6 +67,24 @@ jobs:
           FOLIOLE_RELEASE_TARGET_SHA: ${{ inputs.target_sha }}
           FOLIOLE_RELEASE_TARGET_VERSION: ${{ inputs.target_version }}
         run: node scripts/release-target-contract.mjs
+
+      - name: Verify T6 hosted quality evidence for artifact-only packaging
+        if: ${{ inputs.artifact_only }}
+        env:
+          FOLIOLE_EVIDENCE_REPOSITORY: ${{ github.repository }}
+          FOLIOLE_EVIDENCE_TARGET_SHA: ${{ inputs.target_sha }}
+          FOLIOLE_EVIDENCE_WORKFLOW: .github/workflows/t6-hosted-quality.yml
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/release-workflow-evidence.mjs
+
+      - name: Verify T7 release candidate evidence for formal packaging
+        if: ${{ !inputs.artifact_only }}
+        env:
+          FOLIOLE_EVIDENCE_REPOSITORY: ${{ github.repository }}
+          FOLIOLE_EVIDENCE_TARGET_SHA: ${{ inputs.target_sha }}
+          FOLIOLE_EVIDENCE_WORKFLOW: .github/workflows/release-candidate-quality.yml
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/release-workflow-evidence.mjs
 
       - name: Install dependencies
         run: npm ci

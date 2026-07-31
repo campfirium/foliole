@@ -44,7 +44,8 @@ describe('Windows release validation kit contract', () => {
     expect(workflow).toContain('FOLIOLE_RELEASE_TARGET_VERSION: ${{ inputs.target_version }}');
     expect(workflow).toContain('FOLIOLE_RELEASE_TARGET_SHA: ${{ inputs.target_sha }}');
     expect(workflow).toContain('node scripts/release-target-contract.mjs');
-    expect(workflow.match(/if: \$\{\{ !inputs\.artifact_only \}\}/gu)).toHaveLength(2);
+    expect(workflow).toContain('name: Verify T7 release candidate evidence for formal packaging\n        if: ${{ !inputs.artifact_only }}');
+    expect(workflow.indexOf('name: Verify T7 release candidate evidence')).toBeLessThan(workflow.indexOf('run: npm ci'));
     expect(workflow.indexOf('if: ${{ !inputs.artifact_only }}')).toBeLessThan(workflow.indexOf('gh release create'));
   });
 

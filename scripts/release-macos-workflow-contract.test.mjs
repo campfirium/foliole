@@ -9,6 +9,7 @@ const parsedWorkflow = parse(workflow);
 
 describe('release macOS workflow contract', () => {
   it('packages only a declared version and exact run SHA on an arm64 runner', () => {
+    expect(parsedWorkflow.name).toBe('T7 Release macOS');
     expect(parsedWorkflow.on.workflow_dispatch.inputs.target_version).toMatchObject({ required: true, type: 'string' });
     expect(parsedWorkflow.on.workflow_dispatch.inputs.target_sha).toMatchObject({ required: true, type: 'string' });
     expect(workflow).toContain('ref: ${{ inputs.target_sha }}');
@@ -19,6 +20,21 @@ describe('release macOS workflow contract', () => {
     expect(workflow).toContain('runs-on: macos-15');
     expect(workflow).toContain('"$(uname -m)" != "arm64"');
     expect(workflow).not.toContain('release_ref:');
+  });
+
+  it('consumes exact T7 RC evidence before dependencies or signing credentials', () => {
+    expect(parsedWorkflow.permissions).toEqual({
+      actions: 'read',
+      'artifact-metadata': 'write',
+      attestations: 'write',
+      contents: 'read',
+      'id-token': 'write'
+    });
+    expect(workflow).toContain('name: Verify T7 release candidate evidence');
+    expect(workflow).toContain('FOLIOLE_EVIDENCE_WORKFLOW: .github/workflows/release-candidate-quality.yml');
+    const evidence = workflow.indexOf('run: node scripts/release-workflow-evidence.mjs');
+    expect(evidence).toBeLessThan(workflow.indexOf('run: npm ci'));
+    expect(evidence).toBeLessThan(workflow.indexOf('name: Install Apple signing and notarization credentials'));
   });
 
   it('installs isolated Apple credentials without publishing them', () => {

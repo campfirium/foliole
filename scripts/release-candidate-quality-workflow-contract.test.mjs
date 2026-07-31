@@ -9,7 +9,7 @@ const parsedWorkflow = parse(workflow);
 
 describe('release candidate quality workflow contract', () => {
   it('validates explicit manual targets and exact release push commits', () => {
-    expect(workflow).toContain('name: Release Candidate Quality');
+    expect(parsedWorkflow.name).toBe('T7 Release Candidate Quality');
     expect(parsedWorkflow.on.workflow_dispatch.inputs.target_version).toMatchObject({ required: true, type: 'string' });
     expect(parsedWorkflow.on.workflow_dispatch.inputs.target_sha).toMatchObject({ required: true, type: 'string' });
     expect(workflow).toContain('"release/**"');
@@ -22,32 +22,33 @@ describe('release candidate quality workflow contract', () => {
     expect(workflow).not.toContain('release_ref:');
   });
 
-  it('runs the full release-base gate on Windows with native sqlite preflight', () => {
+  it('consumes exact T6 evidence before installing or rebuilding', () => {
     expect(workflow).toContain('runs-on: windows-latest');
     expect(workflow).toContain('uses: actions/setup-node@v4');
     expect(workflow).toContain('node-version: 22');
     expect(workflow).toContain('cache: npm');
-    expect(workflow).toContain('run: npm ci');
+    expect(workflow).toContain('name: Verify T6 hosted quality evidence');
+    expect(workflow).toContain('FOLIOLE_EVIDENCE_WORKFLOW: .github/workflows/t6-hosted-quality.yml');
+    expect(workflow).toContain('FOLIOLE_EVIDENCE_TARGET_SHA: ${{ inputs.target_sha || github.sha }}');
+    expect(workflow).toContain('run: node scripts/release-workflow-evidence.mjs');
+    expect(workflow.indexOf('run: node scripts/release-workflow-evidence.mjs')).toBeLessThan(workflow.indexOf('run: npm ci'));
     expect(workflow).toContain('npm run electron:rebuild:native');
     expect(workflow).toContain('node scripts/electron-sqlite-runner.mjs --preflight');
-    expect(workflow.indexOf('npm run electron:rebuild:native')).toBeLessThan(
-      workflow.indexOf('npm run quality:release:base')
-    );
-    expect(workflow).toContain('run: npm run quality:release:base');
+    expect(workflow).not.toContain('quality:release:base');
   });
 
-  it('runs desktop golden journey acceptance after release base quality', () => {
+  it('builds and runs only the desktop golden journey after native preflight', () => {
     expect(workflow).toContain('name: Run desktop golden journey acceptance');
-    expect(workflow).toContain('FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: "1"');
+    expect(workflow).not.toContain('FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD');
     expect(workflow).toContain('run: npm run test:e2e:desktop:rc-golden-journey');
-    expect(workflow.indexOf('run: npm run quality:release:base')).toBeLessThan(
+    expect(workflow.indexOf('npm run electron:rebuild:native')).toBeLessThan(
       workflow.indexOf('run: npm run test:e2e:desktop:rc-golden-journey')
     );
     expect(workflow).not.toContain('continue-on-error: true');
   });
 
   it('stays read-only and does not publish release artifacts', () => {
-    expect(workflow).toContain('permissions:\n  contents: read');
+    expect(parsedWorkflow.permissions).toEqual({ actions: 'read', contents: 'read' });
     expect(workflow).toContain('group: release-candidate-quality-${{ inputs.target_sha || github.sha }}');
     expect(workflow).toContain('cancel-in-progress: false');
     expect(workflow).not.toContain('contents: write');

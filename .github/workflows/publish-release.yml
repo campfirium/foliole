@@ -1,5 +1,5 @@
-name: Publish Release
-run-name: Publish Release ${{ inputs.target_version }} @ ${{ inputs.target_sha }}
+name: T7 Publish Release
+run-name: T7 Publish Release ${{ inputs.target_version }} @ ${{ inputs.target_sha }}
 
 on:
   workflow_dispatch:
@@ -13,11 +13,11 @@ on:
         required: true
         type: string
       macos_run_id:
-        description: "Successful Release macOS run ID"
+        description: "Successful T7 Release macOS run ID"
         required: true
         type: string
       windows_run_id:
-        description: "Successful Release Windows run ID"
+        description: "Successful T7 Release Windows run ID"
         required: true
         type: string
 
@@ -49,28 +49,51 @@ jobs:
           FOLIOLE_RELEASE_TARGET_VERSION: ${{ inputs.target_version }}
         run: node scripts/release-target-contract.mjs
 
-      - name: Verify successful source runs
+      - name: Verify T7 release candidate evidence
+        env:
+          FOLIOLE_EVIDENCE_REPOSITORY: ${{ github.repository }}
+          FOLIOLE_EVIDENCE_TARGET_SHA: ${{ inputs.target_sha }}
+          FOLIOLE_EVIDENCE_WORKFLOW: .github/workflows/release-candidate-quality.yml
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/release-workflow-evidence.mjs
+
+      - name: Verify T7 macOS packaging evidence
+        env:
+          FOLIOLE_EVIDENCE_REPOSITORY: ${{ github.repository }}
+          FOLIOLE_EVIDENCE_RUN_ID: ${{ inputs.macos_run_id }}
+          FOLIOLE_EVIDENCE_TARGET_SHA: ${{ inputs.target_sha }}
+          FOLIOLE_EVIDENCE_WORKFLOW: .github/workflows/release-macos.yml
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/release-workflow-evidence.mjs
+
+      - name: Verify T7 Windows packaging evidence
+        env:
+          FOLIOLE_EVIDENCE_REPOSITORY: ${{ github.repository }}
+          FOLIOLE_EVIDENCE_RUN_ID: ${{ inputs.windows_run_id }}
+          FOLIOLE_EVIDENCE_TARGET_SHA: ${{ inputs.target_sha }}
+          FOLIOLE_EVIDENCE_WORKFLOW: .github/workflows/release-windows.yml
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/release-workflow-evidence.mjs
+
+      - name: Verify source artifacts
         shell: bash
         run: |
           set -euo pipefail
-          target_sha="${{ inputs.target_sha }}"
           macos_run_id="${{ inputs.macos_run_id }}"
           windows_run_id="${{ inputs.windows_run_id }}"
 
           [[ "$macos_run_id" =~ ^[0-9]+$ ]]
           [[ "$windows_run_id" =~ ^[0-9]+$ ]]
 
-          verify_run() {
+          verify_artifact() {
             local run_id="$1" artifact_name="$2"
-            local state artifact_count
-            state="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" --jq '[.status,.conclusion,.head_sha] | @tsv')"
-            [[ "$state" == $'completed\tsuccess\t'"$target_sha" ]]
+            local artifact_count
             artifact_count="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts" --jq "[.artifacts[] | select(.name == \"${artifact_name}\" and .expired == false)] | length")"
             [[ "$artifact_count" == "1" ]]
           }
 
-          verify_run "$macos_run_id" foliole-macos-release
-          verify_run "$windows_run_id" foliole-windows-release
+          verify_artifact "$macos_run_id" foliole-macos-release
+          verify_artifact "$windows_run_id" foliole-windows-release
 
       - name: Download macOS release artifacts
         uses: actions/download-artifact@v5

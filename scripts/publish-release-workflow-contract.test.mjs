@@ -9,14 +9,21 @@ const parsedWorkflow = parse(workflow);
 
 describe('publish release workflow contract', () => {
   it('binds the assembly run and both artifact sets to one version and SHA', () => {
+    expect(parsedWorkflow.name).toBe('T7 Publish Release');
     expect(parsedWorkflow.on.workflow_dispatch.inputs.target_version).toMatchObject({ required: true, type: 'string' });
     expect(parsedWorkflow.on.workflow_dispatch.inputs.target_sha).toMatchObject({ required: true, type: 'string' });
     expect(workflow).toContain('actions: read');
     expect(workflow).toContain('ref: ${{ inputs.target_sha }}');
     expect(workflow).toContain('FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}');
     expect(workflow).toContain('run: node scripts/release-target-contract.mjs');
-    expect(workflow).toContain('completed\\tsuccess\\t');
-    expect(workflow).toContain('$target_sha');
+    expect(parsedWorkflow.permissions).toEqual({ actions: 'read', contents: 'write' });
+    expect(workflow).toContain('FOLIOLE_EVIDENCE_WORKFLOW: .github/workflows/release-candidate-quality.yml');
+    expect(workflow).toContain('FOLIOLE_EVIDENCE_WORKFLOW: .github/workflows/release-macos.yml');
+    expect(workflow).toContain('FOLIOLE_EVIDENCE_WORKFLOW: .github/workflows/release-windows.yml');
+    expect(workflow.match(/run: node scripts\/release-workflow-evidence\.mjs/gu)).toHaveLength(3);
+    expect(workflow.lastIndexOf('run: node scripts/release-workflow-evidence.mjs')).toBeLessThan(
+      workflow.indexOf('uses: actions/download-artifact@v5')
+    );
     expect(workflow).toContain('foliole-macos-release');
     expect(workflow).toContain('foliole-windows-release');
     expect(workflow.match(/run-id: \$\{\{ inputs\./gu)).toHaveLength(2);

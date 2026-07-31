@@ -1,5 +1,5 @@
-name: Release macOS
-run-name: Release macOS ${{ inputs.target_version }} @ ${{ inputs.target_sha }}
+name: T7 Release macOS
+run-name: T7 Release macOS ${{ inputs.target_version }} @ ${{ inputs.target_sha }}
 
 on:
   workflow_dispatch:
@@ -14,6 +14,7 @@ on:
         type: string
 
 permissions:
+  actions: read
   contents: read
   id-token: write
   attestations: write
@@ -53,6 +54,14 @@ jobs:
           FOLIOLE_RELEASE_TARGET_SHA: ${{ inputs.target_sha }}
           FOLIOLE_RELEASE_TARGET_VERSION: ${{ inputs.target_version }}
         run: node scripts/release-target-contract.mjs
+
+      - name: Verify T7 release candidate evidence
+        env:
+          FOLIOLE_EVIDENCE_REPOSITORY: ${{ github.repository }}
+          FOLIOLE_EVIDENCE_TARGET_SHA: ${{ inputs.target_sha }}
+          FOLIOLE_EVIDENCE_WORKFLOW: .github/workflows/release-candidate-quality.yml
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/release-workflow-evidence.mjs
 
       - name: Verify runner architecture
         shell: bash

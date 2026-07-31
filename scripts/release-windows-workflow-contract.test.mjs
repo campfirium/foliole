@@ -9,6 +9,7 @@ const parsedWorkflow = parse(workflow);
 
 describe('release Windows workflow contract', () => {
   it('requires one explicit version and exact SHA for every packaging mode', () => {
+    expect(parsedWorkflow.name).toBe('T7 Release Windows');
     expect(parsedWorkflow.on.workflow_dispatch.inputs.target_version).toMatchObject({ required: true, type: 'string' });
     expect(parsedWorkflow.on.workflow_dispatch.inputs.target_sha).toMatchObject({ required: true, type: 'string' });
     expect(workflow).toContain('ref: ${{ inputs.target_sha }}');
@@ -18,6 +19,21 @@ describe('release Windows workflow contract', () => {
     expect(workflow).toContain('FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}');
     expect(workflow).toContain('run: node scripts/release-target-contract.mjs');
     expect(workflow).not.toContain('release_ref:');
+  });
+
+  it('consumes T6 for artifact-only and T7 RC for formal packaging before npm install', () => {
+    expect(parsedWorkflow.permissions).toEqual({
+      actions: 'read',
+      'artifact-metadata': 'write',
+      attestations: 'write',
+      contents: 'write',
+      'id-token': 'write'
+    });
+    expect(workflow).toContain('name: Verify T6 hosted quality evidence for artifact-only packaging');
+    expect(workflow).toContain('name: Verify T7 release candidate evidence for formal packaging');
+    expect(workflow).toContain('FOLIOLE_EVIDENCE_WORKFLOW: .github/workflows/t6-hosted-quality.yml');
+    expect(workflow).toContain('FOLIOLE_EVIDENCE_WORKFLOW: .github/workflows/release-candidate-quality.yml');
+    expect(workflow.lastIndexOf('run: node scripts/release-workflow-evidence.mjs')).toBeLessThan(workflow.indexOf('run: npm ci'));
   });
 
   it('serializes and creates drafts by the declared version and SHA', () => {
