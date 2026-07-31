@@ -1,0 +1,139 @@
+name: Hosted Portable Quality
+
+on:
+  workflow_call:
+    inputs:
+      target_sha:
+        required: true
+        type: string
+      execution_lane:
+        required: true
+        type: string
+      trigger_ref:
+        required: true
+        type: string
+    outputs:
+      accepted_sha:
+        description: Exact commit accepted by every portable quality bucket
+        value: ${{ jobs.portable-admission.outputs.accepted_sha }}
+
+permissions:
+  contents: read
+
+jobs:
+  portable-tests:
+    name: ${{ matrix.host }} ${{ matrix.domain }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: ${{ matrix.timeout_minutes }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - host: Ubuntu
+            runner: ubuntu-latest
+            domain: desktop-source
+            script: test:release:desktop-src
+            timeout_minutes: 20
+          - host: Ubuntu
+            runner: ubuntu-latest
+            domain: android-source
+            script: test:release:android
+            timeout_minutes: 20
+          - host: Ubuntu
+            runner: ubuntu-latest
+            domain: shared
+            script: test:release:shared
+            timeout_minutes: 20
+          - host: Ubuntu
+            runner: ubuntu-latest
+            domain: electron
+            script: test:desktop:electron
+            timeout_minutes: 20
+          - host: Ubuntu
+            runner: ubuntu-latest
+            domain: quality-tooling
+            script: quality:release:tooling
+            timeout_minutes: 20
+          - host: Windows
+            runner: windows-latest
+            domain: desktop-source
+            script: test:release:desktop-src
+            timeout_minutes: 20
+          - host: Windows
+            runner: windows-latest
+            domain: android-source
+            script: test:release:android
+            timeout_minutes: 20
+          - host: Windows
+            runner: windows-latest
+            domain: shared
+            script: test:release:shared
+            timeout_minutes: 20
+          - host: Windows
+            runner: windows-latest
+            domain: electron
+            script: test:desktop:electron
+            timeout_minutes: 30
+          - host: Windows
+            runner: windows-latest
+            domain: quality-tooling
+            script: quality:release:tooling
+            timeout_minutes: 20
+    env:
+      CI: "true"
+      FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: "1"
+      TARGET_SHA: ${{ inputs.target_sha }}
+    steps:
+      - name: Validate target SHA input
+        run: node -e "if (!/^[0-9a-f]{40}$/.test(process.env.TARGET_SHA ?? '')) throw new Error('target_sha must be a full 40-character lowercase commit SHA')"
+      - name: Check out target snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify checked-out target SHA
+        run: >-
+          node -e "const { execFileSync } = require('node:child_process'); const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(); if (head !== process.env.TARGET_SHA) throw new Error('Checked out SHA does not match TARGET_SHA')"
+      - name: Rebuild Electron native ABI
+        run: npm run electron:rebuild:native
+      - name: Verify Electron sqlite runner
+        run: node scripts/electron-sqlite-runner.mjs --preflight
+      - name: Run canonical test domain
+        run: npm run ${{ matrix.script }}
+      - name: Upload portable test logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: portable-test-${{ matrix.host }}-${{ matrix.domain }}-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          path: |
+            .tmp/logs/quality-gate
+            .tmp/vitest
+          if-no-files-found: ignore
+          retention-days: 14
+
+  portable-admission:
+    name: Portable quality admission
+    if: ${{ always() }}
+    needs: portable-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      accepted_sha: ${{ steps.require-buckets.outputs.accepted_sha }}
+    env:
+      TARGET_SHA: ${{ inputs.target_sha }}
+      TEST_RESULT: ${{ needs.portable-tests.result }}
+    steps:
+      - name: Require every portable bucket
+        id: require-buckets
+        run: |
+          set -euo pipefail
+          node -e 'if (process.env.TEST_RESULT !== "success") throw new Error(`TEST_RESULT=${process.env.TEST_RESULT}`)'
+          echo "accepted_sha=${TARGET_SHA}" >> "$GITHUB_OUTPUT"

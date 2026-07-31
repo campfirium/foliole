@@ -25,8 +25,8 @@ describe('hosted Windows x64 workflow contract', () => {
   });
 
   it('runs Windows core in T5 and native acceptance in T6', () => {
-    expect(t5).toContain('runner: windows-latest');
-    expect(t5).toContain('script: quality:release:windows:core');
+    expect(t5).toContain('runs-on: windows-latest');
+    expect(t5).toContain('run: npm run quality:release:windows:core');
     expect(acceptanceJob).toContain('runs-on: windows-latest');
     expect(acceptanceJob).toContain('npm run build:vite-only');
     expect(acceptanceJob).toContain('npm run electron:compile');

@@ -63,7 +63,7 @@ jobs:
     uses: ./.github/workflows/hosted-quality-full.yml
     with:
       execution_lane: ${{ needs.context.outputs.execution_lane }}
-      target_sha: ${{ needs.context.outputs.target_sha }}
+      target_sha: ${{ needs.t5-baseline.outputs.admitted_sha }}
       trigger_ref: ${{ needs.context.outputs.trigger_ref }}
 
   quality-admission:

@@ -30,7 +30,7 @@ jobs:
   ubuntu-static:
     name: Ubuntu static
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     env:
       TARGET_SHA: ${{ inputs.target_sha }}
     steps:
@@ -71,69 +71,10 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
-  portable-tests:
-    name: ${{ matrix.host }} ${{ matrix.domain }}
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: ${{ matrix.timeout_minutes }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - host: Ubuntu
-            runner: ubuntu-latest
-            domain: desktop-source
-            script: test:release:desktop-src
-            timeout_minutes: 20
-          - host: Ubuntu
-            runner: ubuntu-latest
-            domain: android-source
-            script: test:release:android
-            timeout_minutes: 20
-          - host: Ubuntu
-            runner: ubuntu-latest
-            domain: shared
-            script: test:release:shared
-            timeout_minutes: 20
-          - host: Ubuntu
-            runner: ubuntu-latest
-            domain: electron
-            script: test:desktop:electron
-            timeout_minutes: 20
-          - host: Ubuntu
-            runner: ubuntu-latest
-            domain: quality-tooling
-            script: quality:release:tooling
-            timeout_minutes: 20
-          - host: Windows
-            runner: windows-latest
-            domain: desktop-source
-            script: test:release:desktop-src
-            timeout_minutes: 20
-          - host: Windows
-            runner: windows-latest
-            domain: android-source
-            script: test:release:android
-            timeout_minutes: 20
-          - host: Windows
-            runner: windows-latest
-            domain: shared
-            script: test:release:shared
-            timeout_minutes: 20
-          - host: Windows
-            runner: windows-latest
-            domain: electron
-            script: test:desktop:electron
-            timeout_minutes: 30
-          - host: Windows
-            runner: windows-latest
-            domain: quality-tooling
-            script: quality:release:tooling
-            timeout_minutes: 20
-          - host: Windows
-            runner: windows-latest
-            domain: windows-core
-            script: quality:release:windows:core
-            timeout_minutes: 20
+  windows-core:
+    name: Windows core
+    runs-on: windows-latest
+    timeout-minutes: 10
     env:
       CI: "true"
       FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: "1"
@@ -161,13 +102,13 @@ jobs:
         run: npm run electron:rebuild:native
       - name: Verify Electron sqlite runner
         run: node scripts/electron-sqlite-runner.mjs --preflight
-      - name: Run canonical test domain
-        run: npm run ${{ matrix.script }}
-      - name: Upload test logs
+      - name: Run canonical Windows core quality
+        run: npm run quality:release:windows:core
+      - name: Upload Windows core logs
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: t5-test-${{ matrix.host }}-${{ matrix.domain }}-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          name: t5-windows-core-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
           path: |
             .tmp/logs/quality-gate
             .tmp/vitest
@@ -177,7 +118,7 @@ jobs:
   admission:
     name: T5 Baseline Admission
     if: ${{ always() }}
-    needs: [ubuntu-static, portable-tests]
+    needs: [ubuntu-static, windows-core]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -185,9 +126,9 @@ jobs:
     env:
       STATIC_RESULT: ${{ needs.ubuntu-static.result }}
       TARGET_SHA: ${{ inputs.target_sha }}
-      TEST_RESULT: ${{ needs.portable-tests.result }}
+      WINDOWS_RESULT: ${{ needs.windows-core.result }}
     steps:
-      - name: Require every baseline bucket
+      - name: Require every fast lane
         id: require-buckets
         run: |
           set -euo pipefail

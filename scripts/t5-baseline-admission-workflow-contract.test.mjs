@@ -6,14 +6,9 @@ import { spawnSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
-import { GATE_INTEGRATION_SCRIPT_NAMES } from './script-test-bucket-selection.mjs';
-
 const workflowSource = fs.readFileSync('.github/workflows/t5-baseline-admission.yml', 'utf8');
 const workflow = parse(workflowSource);
-const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-const targetSteps = fs.readFileSync('scripts/quality/quality-gate-target-steps.sh', 'utf8');
-
-const portableScripts = [
+const movedScripts = [
   'test:release:desktop-src',
   'test:release:android',
   'test:release:shared',
@@ -47,34 +42,23 @@ describe('T5 Baseline Admission workflow contract', () => {
     });
   });
 
-  it('runs Ubuntu static and the complete portable matrix without fail-fast cancellation', () => {
-    const matrix = workflow.jobs['portable-tests'].strategy.matrix.include;
+  it('contains exactly the Ubuntu static and Windows core fast lanes', () => {
+    expect(Object.keys(workflow.jobs)).toEqual(['ubuntu-static', 'windows-core', 'admission']);
     expect(workflow.jobs['ubuntu-static']['runs-on']).toBe('ubuntu-latest');
-    expect(workflow.jobs['portable-tests'].strategy['fail-fast']).toBe(false);
-    expect(matrix.filter(({ host }) => host === 'Ubuntu').map(({ script }) => script)).toEqual(portableScripts);
-    expect(matrix.filter(({ host }) => host === 'Windows').map(({ script }) => script)).toEqual([
-      ...portableScripts,
-      'quality:release:windows:core'
-    ]);
-    expect(new Set(matrix.filter(({ host }) => host === 'Ubuntu').map(({ runner }) => runner))).toEqual(
-      new Set(['ubuntu-latest'])
-    );
-    expect(new Set(matrix.filter(({ host }) => host === 'Windows').map(({ runner }) => runner))).toEqual(
-      new Set(['windows-latest'])
-    );
-    expect(matrix.find(({ domain, host }) => host === 'Windows' && domain === 'electron')?.timeout_minutes).toBe(30);
-    expect(matrix.filter(({ domain, host }) => host !== 'Windows' || domain !== 'electron')
-      .every(({ timeout_minutes }) => timeout_minutes === 20)).toBe(true);
+    expect(workflow.jobs['windows-core']['runs-on']).toBe('windows-latest');
+    for (const script of movedScripts) expect(workflowSource).not.toContain(script);
+    expect(workflowSource.match(/quality:release:windows:core/gu)).toHaveLength(1);
+    expect(workflowSource).not.toContain('matrix:');
     expect(workflowSource).not.toContain('paths:');
     expect(workflowSource).not.toContain('paths-ignore:');
     expect(workflowSource).not.toContain('changed-files');
   });
 
-  it('rejects non-SHA inputs and verifies every checkout before quality commands', () => {
-    const staticJob = jobSection('ubuntu-static', 'portable-tests');
-    const testJob = jobSection('portable-tests', 'admission');
-    for (const job of [staticJob, testJob]) {
-      expect(job).toContain("/^[0-9a-f]{40}$/");
+  it('rejects non-SHA inputs and verifies both checkouts before quality commands', () => {
+    const staticJob = jobSection('ubuntu-static', 'windows-core');
+    const windowsJob = jobSection('windows-core', 'admission');
+    for (const job of [staticJob, windowsJob]) {
+      expect(job).toContain('/^[0-9a-f]{40}$/');
       expect(job).toContain('ref: ${{ env.TARGET_SHA }}');
       expect(job).toContain('persist-credentials: false');
       expect(job).toContain("execFileSync('git', ['rev-parse', 'HEAD']");
@@ -91,43 +75,25 @@ describe('T5 Baseline Admission workflow contract', () => {
     expect(workflowSource.match(/Verify checked-out target SHA/gu)).toHaveLength(2);
   });
 
-  it('preserves Common static, all quality tooling buckets, and dynamic integration scripts', () => {
-    const staticJob = jobSection('ubuntu-static', 'portable-tests');
-    const testJob = jobSection('portable-tests', 'admission');
+  it('keeps the complete static and Windows core fast checks', () => {
+    const staticJob = jobSection('ubuntu-static', 'windows-core');
+    const windowsJob = jobSection('windows-core', 'admission');
     expect(staticJob).toContain('node scripts/quality/pinned-npm.mjs activate');
     expect(staticJob).toContain('npm run deps:hardening:check');
     expect(staticJob).toContain('bash scripts/quality/quality-gate-target.sh release-static');
-    expect(testJob).toContain('run: npm run ${{ matrix.script }}');
-    expect(packageJson.scripts['quality:release:tooling']).toBe(
-      'node scripts/quality/quality-command-contracts.mjs allow quality:release:tooling && ' +
-      'bash scripts/quality/quality-gate-target.sh release-tooling'
-    );
-    expect(targetSteps).toContain('release-tooling) run_release_tooling_gate_steps');
-    expect(targetSteps).toContain('run_gate_steps_parallel test:quality:core test:quality:gate $(quality_gate_integration_scripts) test:quality:node');
-    expect(GATE_INTEGRATION_SCRIPT_NAMES).toEqual([
-      'test:quality:gate-integration:target-telemetry',
-      'test:quality:gate-integration:target-collect',
-      'test:quality:gate-integration:target-failures',
-      'test:quality:gate-integration:routing',
-      'test:quality:gate-integration:release-targets',
-      'test:quality:gate-integration:fast-delegation',
-      'test:quality:gate-integration:release-tail',
-      'test:quality:gate-integration:target-core'
-    ]);
-    for (const script of GATE_INTEGRATION_SCRIPT_NAMES) {
-      expect(packageJson.scripts[script]).toBeTruthy();
-    }
+    expect(windowsJob).toContain('npm run quality:release:windows:core');
+    expect(windowsJob).not.toContain('${{ matrix.script }}');
   });
 
-  it('keeps native setup inside the budget and aggregates all bucket results', () => {
-    expect(workflow.jobs['ubuntu-static']['timeout-minutes']).toBe(20);
-    expect(workflow.jobs['portable-tests']['timeout-minutes']).toBe('${{ matrix.timeout_minutes }}');
-    expect(workflow.jobs.admission.needs).toEqual(['ubuntu-static', 'portable-tests']);
+  it('caps both fast lanes at ten minutes and aggregates both results', () => {
+    expect(workflow.jobs['ubuntu-static']['timeout-minutes']).toBe(10);
+    expect(workflow.jobs['windows-core']['timeout-minutes']).toBe(10);
+    expect(workflow.jobs.admission.needs).toEqual(['ubuntu-static', 'windows-core']);
     expect(workflow.jobs.admission.if).toBe('${{ always() }}');
     expect(workflow.jobs.admission.env).toEqual({
       STATIC_RESULT: '${{ needs.ubuntu-static.result }}',
       TARGET_SHA: '${{ inputs.target_sha }}',
-      TEST_RESULT: '${{ needs.portable-tests.result }}'
+      WINDOWS_RESULT: '${{ needs.windows-core.result }}'
     });
     const aggregateCommand = workflow.jobs.admission.steps[0].run;
     const success = spawnSync('bash', ['-c', aggregateCommand], {
@@ -136,22 +102,22 @@ describe('T5 Baseline Admission workflow contract', () => {
         GITHUB_OUTPUT: '/dev/null',
         STATIC_RESULT: 'success',
         TARGET_SHA: 'a'.repeat(40),
-        TEST_RESULT: 'success'
+        WINDOWS_RESULT: 'success'
       }
     });
     const failure = spawnSync('bash', ['-c', aggregateCommand], {
       env: {
         ...process.env,
         GITHUB_OUTPUT: '/dev/null',
-        STATIC_RESULT: 'failure',
+        STATIC_RESULT: 'success',
         TARGET_SHA: 'a'.repeat(40),
-        TEST_RESULT: 'success'
+        WINDOWS_RESULT: 'failure'
       },
       encoding: 'utf8'
     });
     expect(success.status).toBe(0);
     expect(failure.status).toBe(1);
-    expect(failure.stderr).toContain('STATIC_RESULT=failure');
+    expect(failure.stderr).toContain('WINDOWS_RESULT=failure');
     expect(workflow.jobs.admission.outputs.admitted_sha)
       .toBe('${{ steps.require-buckets.outputs.admitted_sha }}');
     expect(workflowSource.match(/npm run electron:rebuild:native/gu)).toHaveLength(2);
@@ -159,7 +125,7 @@ describe('T5 Baseline Admission workflow contract', () => {
     expect(workflowSource).not.toContain('continue-on-error');
   });
 
-  it('excludes product builds, host acceptance, device work, signing, and publishing', () => {
+  it('excludes full aggregation, host acceptance, device work, signing, and publishing', () => {
     for (const excluded of [
       'build:vite-only',
       'electron:compile',
@@ -172,8 +138,6 @@ describe('T5 Baseline Admission workflow contract', () => {
       'npm run package',
       'npm run publish',
       'secrets.'
-    ]) {
-      expect(workflowSource).not.toContain(excluded);
-    }
+    ]) expect(workflowSource).not.toContain(excluded);
   });
 });

@@ -55,5 +55,5 @@ jobs:
     uses: ./.github/workflows/hosted-quality-full.yml
     with:
       execution_lane: dev-remote
-      target_sha: ${{ github.sha }}
+      target_sha: ${{ needs.t5-baseline.outputs.admitted_sha }}
       trigger_ref: ${{ github.ref }}
