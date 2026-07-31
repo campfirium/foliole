@@ -57,8 +57,18 @@ async function expectActiveNode(windowPage: WindowPage, nodeId: string) {
     globalThis.window?.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null)).toBe(nodeId);
 }
 
-async function expectFormulaRegion(windowPage: WindowPage) {
-  await expect(windowPage.locator('.prompt-editor-host .cm-md-formula-cloze-region')).toHaveCount(1);
+async function expectFormulaRegionPresentation(
+  windowPage: WindowPage,
+  expected: { hidden?: string; outlined?: string }
+) {
+  const region = windowPage.locator('.prompt-editor-host .cm-md-formula-cloze-region');
+  await expect(region).toHaveCount(1);
+  if (expected.hidden) {
+    await expect(region).toHaveAttribute('data-md-formula-region-hidden', expected.hidden);
+  }
+  if (expected.outlined) {
+    await expect(region).toHaveAttribute('data-md-formula-region-outlined', expected.outlined);
+  }
 }
 
 async function collectNodeContent(windowPage: WindowPage, nodeId: string) {
@@ -155,18 +165,15 @@ test('keeps a dragged formula cloze visible before and after relaunch', async ({
     const childId = await findFormulaClozeChildId(desktopWindow);
     expect(childId).toBeTruthy();
 
+    await expectFormulaRegionPresentation(desktopWindow, { hidden: 'false', outlined: 'true' });
     const parentState = await collectFormulaRegionState(desktopWindow);
-    expect(parentState.outlined).toBe('true');
-    expect(parentState.hidden).toBe('false');
     expect(parentState.width).toBeGreaterThan(8);
     expect(parentState.height).toBeGreaterThan(8);
 
     await openNode(desktopWindow, childId!);
     await expectActiveNode(desktopWindow, childId!);
-    await expectFormulaRegion(desktopWindow);
+    await expectFormulaRegionPresentation(desktopWindow, { hidden: 'true', outlined: 'false' });
     const childState = await collectFormulaRegionState(desktopWindow);
-    expect(childState.hidden).toBe('true');
-    expect(childState.outlined).toBe('false');
     expect(childState.opacity).toBe('1');
     expect(childState.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
     expect(childState.width).toBeGreaterThan(8);
@@ -177,17 +184,15 @@ test('keeps a dragged formula cloze visible before and after relaunch', async ({
     await expectWorkspaceShell(secondSession.firstWindow);
     await openNode(secondSession.firstWindow, 'playwright-formula-drag-parent');
     await expectActiveNode(secondSession.firstWindow, 'playwright-formula-drag-parent');
-    await expectFormulaRegion(secondSession.firstWindow);
+    await expectFormulaRegionPresentation(secondSession.firstWindow, { outlined: 'true' });
     const parentStateAfterRelaunch = await collectFormulaRegionState(secondSession.firstWindow);
-    expect(parentStateAfterRelaunch.outlined).toBe('true');
     expect(parentStateAfterRelaunch.width).toBeGreaterThan(8);
     expect(parentStateAfterRelaunch.height).toBeGreaterThan(8);
 
     await openNode(secondSession.firstWindow, childId!);
     await expectActiveNode(secondSession.firstWindow, childId!);
-    await expectFormulaRegion(secondSession.firstWindow);
+    await expectFormulaRegionPresentation(secondSession.firstWindow, { hidden: 'true' });
     const childStateAfterRelaunch = await collectFormulaRegionState(secondSession.firstWindow);
-    expect(childStateAfterRelaunch.hidden).toBe('true');
     expect(childStateAfterRelaunch.opacity).toBe('1');
     expect(childStateAfterRelaunch.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
     expect(childStateAfterRelaunch.width).toBeGreaterThan(8);
