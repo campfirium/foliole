@@ -62,6 +62,9 @@ describe('T5 Baseline Admission workflow contract', () => {
     expect(new Set(matrix.filter(({ host }) => host === 'Windows').map(({ runner }) => runner))).toEqual(
       new Set(['windows-latest'])
     );
+    expect(matrix.find(({ domain, host }) => host === 'Windows' && domain === 'electron')?.timeout_minutes).toBe(30);
+    expect(matrix.filter(({ domain, host }) => host !== 'Windows' || domain !== 'electron')
+      .every(({ timeout_minutes }) => timeout_minutes === 20)).toBe(true);
     expect(workflowSource).not.toContain('paths:');
     expect(workflowSource).not.toContain('paths-ignore:');
     expect(workflowSource).not.toContain('changed-files');
@@ -118,7 +121,7 @@ describe('T5 Baseline Admission workflow contract', () => {
 
   it('keeps native setup inside the budget and aggregates all bucket results', () => {
     expect(workflow.jobs['ubuntu-static']['timeout-minutes']).toBe(20);
-    expect(workflow.jobs['portable-tests']['timeout-minutes']).toBe(20);
+    expect(workflow.jobs['portable-tests']['timeout-minutes']).toBe('${{ matrix.timeout_minutes }}');
     expect(workflow.jobs.admission.needs).toEqual(['ubuntu-static', 'portable-tests']);
     expect(workflow.jobs.admission.if).toBe('${{ always() }}');
     expect(workflow.jobs.admission.env).toEqual({
