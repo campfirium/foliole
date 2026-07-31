@@ -10,5 +10,5 @@
   "repository": "campfirium/foliole",
   "limit": 50,
   "dedupeKeyPattern": "foliole:github-issue:{eventId}",
-  "notes": "Consumed by scripts/github-desktop-handoff-monitor.mjs. Opens one Codex Desktop handoff for each newly observed open issue."
+  "notes": "Opens one paused Codex Desktop handoff with the complete issue prompt for each newly observed open issue."
 }
