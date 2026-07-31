@@ -28,6 +28,7 @@ jobs:
       group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-ios-contract-${{ inputs.scope }}
       cancel-in-progress: false
     env:
+      FOLIOLE_IOS_RESOURCE_MODE: full
       TARGET_SHA: ${{ inputs.target_sha }}
     steps:
       - name: Check out target snapshot

@@ -85,6 +85,7 @@ describe('T6 hosted quality workflow contracts', () => {
       'portable-quality', 'common-build', 'windows-acceptance', 'android-host', 'ios-full',
       'full-admission'
     ]);
+    expect(workflows.ios.jobs.contract.env.FOLIOLE_IOS_RESOURCE_MODE).toBe('full');
     const portableScripts = [
       'test:release:android',
       'test:release:shared'
