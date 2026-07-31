@@ -134,6 +134,23 @@ function getMaxSequence(subjects) {
   return numbers.length > 0 ? Math.max(...numbers) : 0;
 }
 
+function readNewBranchSequence(revision) {
+  const commits = runGit([
+    'rev-list',
+    '--first-parent',
+    '--reverse',
+    revision,
+    '--not',
+    '--remotes'
+  ]).split('\n').filter(Boolean);
+  if (commits.length === 0) return { start: 1, subjects: [] };
+  const base = readCommitIdentity(commits[0]).parents[0];
+  return {
+    start: base ? getMaxSequence(readSubjects(base)) + 1 : 1,
+    subjects: readSubjects(base ? `${base}..${revision}` : revision)
+  };
+}
+
 function checkContinuousSubjects(subjects, refName, start = 1) {
   const seen = new Set();
   let expected = start;
@@ -170,7 +187,8 @@ function checkPrePush(input) {
     }
     if (ZERO_SHA.test(update.remoteSha)) {
       if (isCommitOnRemote(update.localSha)) continue;
-      checkContinuousSubjects(readSubjects(update.localSha), update.remoteRef);
+      const sequence = readNewBranchSequence(update.localSha);
+      checkContinuousSubjects(sequence.subjects, update.remoteRef, sequence.start);
       continue;
     }
     const expected = getMaxSequence(readSubjects(update.remoteSha)) + 1;
