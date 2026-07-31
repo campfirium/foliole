@@ -9,6 +9,18 @@ function failure(message, stage) {
   return Object.assign(new Error(message), { exitCode: 74, stage });
 }
 
+function verifyGeneratedConfig(config, liveReload) {
+  if (liveReload) {
+    if (config.server?.url !== WINDOWS_A5_LIVE_RELOAD_URL || config.server?.cleartext !== true) {
+      throw failure('Capacitor sync did not produce the fixed A5 DEV server contract', 'android-cap-sync');
+    }
+    return;
+  }
+  if (config.server !== undefined) {
+    throw failure('Capacitor sync left a DEV server in the bundled Android config', 'android-cap-sync');
+  }
+}
+
 async function checked(execute, command, args, options, stage) {
   const result = await execute(command, args, options);
   if (result.code === 0) return result;
@@ -17,7 +29,7 @@ async function checked(execute, command, args, options, stage) {
 }
 
 export async function prepareWindowsAndroidDebugHost({
-  env = process.env, execute, fsApi = fs, paths
+  env = process.env, execute, fsApi = fs, liveReload = true, paths
 }) {
   const commandEnv = {
     ...env,
@@ -32,7 +44,7 @@ export async function prepareWindowsAndroidDebugHost({
   const capacitorCli = path.join(paths.repoRoot, 'node_modules', '@capacitor', 'cli', 'bin', 'capacitor');
   const sync = await checked(execute, paths.systemNode, [capacitorCli, 'sync', 'android'], {
     ...options,
-    env: { ...commandEnv, FOLIOLE_ANDROID_DEV_LIVE_RELOAD: '1' },
+    env: { ...commandEnv, FOLIOLE_ANDROID_DEV_LIVE_RELOAD: liveReload ? '1' : '0' },
     timeoutCode: 'android_cap_sync_timeout'
   }, 'android-cap-sync');
   const webIndex = path.join(paths.repoRoot, 'android', 'app', 'src', 'main', 'assets', 'public', 'index.html');
@@ -41,8 +53,6 @@ export async function prepareWindowsAndroidDebugHost({
     throw failure('Capacitor sync did not produce Android Web assets and config', 'android-cap-sync');
   }
   const config = JSON.parse(fsApi.readFileSync(configPath, 'utf8').replace(/^\uFEFF/u, ''));
-  if (config.server?.url !== WINDOWS_A5_LIVE_RELOAD_URL || config.server?.cleartext !== true) {
-    throw failure('Capacitor sync did not produce the fixed A5 DEV server contract', 'android-cap-sync');
-  }
+  verifyGeneratedConfig(config, liveReload);
   return `${web.output}${sync.output}`;
 }

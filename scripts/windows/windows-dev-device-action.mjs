@@ -10,6 +10,11 @@ export const WINDOWS_DEV_A5_SERIAL = '87a33a4b';
 const APP_ID = 'com.foliole.android';
 const COMPONENT = `${APP_ID}/com.foliole.android.MainActivity`;
 
+async function runDefaultCaptureAnnotation(options) {
+  const { runWindowsA5CaptureAnnotation } = await import('./windows-a5-capture-annotation-action.mjs');
+  return runWindowsA5CaptureAnnotation(options);
+}
+
 function failure(message, exitCode, stage, result) {
   return Object.assign(new Error(message), { exitCode, result, stage });
 }
@@ -46,11 +51,11 @@ function helperEnv(env) {
     FOLIOLE_ANDROID_ADB_SERVER_PORT: WINDOWS_DEV_ADB_PORT };
 }
 
-async function runDataProtection(execute, paths, mode, manifest, env) {
+async function runDataProtection(execute, paths, mode, manifest, env, backupRoot = paths.protectionBackups) {
   const script = path.join(paths.repoRoot, 'scripts', 'android', 'android-device-data-protection.mjs');
   return checked(execute, paths.systemNode, [script, '--mode', mode, '--adb', paths.adbPath,
     '--serial', WINDOWS_DEV_A5_SERIAL, '--app-id', APP_ID,
-    '--backup-root', paths.protectionBackups, '--manifest', manifest],
+    '--backup-root', backupRoot, '--manifest', manifest],
   { env: helperEnv(env), timeoutCode: `data_${mode}_timeout`, timeoutMs: 5 * 60_000,
     windowsHide: true }, `data-${mode}`);
 }
@@ -83,7 +88,8 @@ async function verify(execute, paths, env) {
 }
 
 export async function runWindowsDevDeviceAction({
-  action, buildIdentity, evidenceRoot, execute, paths, runLiveReload = runWindowsA5LiveReload
+  action, buildIdentity, evidenceRoot, execute, paths,
+  runCaptureAnnotation = runDefaultCaptureAnnotation, runLiveReload = runWindowsA5LiveReload
 }) {
   const env = actionEnv(paths);
   let started = false;
@@ -104,7 +110,14 @@ export async function runWindowsDevDeviceAction({
       ['-P', WINDOWS_DEV_ADB_PORT, '-s', WINDOWS_DEV_A5_SERIAL, 'get-state'],
       { env, timeoutCode: 'device_timeout', timeoutMs: 30_000, windowsHide: true }, 'device', 69);
     if (state.stdout.trim() !== 'device') throw failure('Fixed Android device is not ready', 69, 'device');
-    if (action === 'verify') {
+    if (action === 'capture-annotation') {
+      actionResult = await runCaptureAnnotation({
+        adbPort: WINDOWS_DEV_ADB_PORT, buildIdentity, env, evidenceRoot, execute, paths,
+        protectData: (mode, manifest, backupRoot) => runDataProtection(
+          execute, paths, mode, manifest, env, backupRoot
+        ), serial: WINDOWS_DEV_A5_SERIAL
+      });
+    } else if (action === 'verify') {
       actionResult = { output: await verify(execute, paths, env) };
     } else {
       const deployOutput = action === 'deploy'

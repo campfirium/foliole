@@ -44,6 +44,43 @@ it('builds companion Web, syncs Capacitor with DEV config, and verifies generate
   expect(calls.map(({ args }) => args.join(' ')).join('\n')).not.toMatch(/gradle|install/iu);
 });
 
+it('prepares bundled capture assets without a DEV server contract', async () => {
+  const paths = fixture();
+  const calls = [];
+  const execute = vi.fn(async (command, args, options) => {
+    calls.push({ args, command, options });
+    if (args.includes('sync')) {
+      const assets = path.join(paths.repoRoot, 'android', 'app', 'src', 'main', 'assets');
+      fs.mkdirSync(path.join(assets, 'public'), { recursive: true });
+      fs.writeFileSync(path.join(assets, 'public', 'index.html'), '<main>bundled</main>');
+      fs.writeFileSync(path.join(assets, 'capacitor.config.json'), JSON.stringify({
+        appId: 'com.foliole.android', webDir: 'dist/companion'
+      }));
+    }
+    return { code: 0, lines: [], output: 'ok\n', stderr: '', stdout: 'ok\n' };
+  });
+  await expect(prepareWindowsAndroidDebugHost({ execute, liveReload: false, paths }))
+    .resolves.toBe('ok\nok\n');
+  expect(calls[1].options.env.FOLIOLE_ANDROID_DEV_LIVE_RELOAD).toBe('0');
+});
+
+it('rejects a bundled capture sync that retains the DEV server', async () => {
+  const paths = fixture();
+  const execute = vi.fn(async (_command, args) => {
+    if (args.includes('sync')) {
+      const assets = path.join(paths.repoRoot, 'android', 'app', 'src', 'main', 'assets');
+      fs.mkdirSync(path.join(assets, 'public'), { recursive: true });
+      fs.writeFileSync(path.join(assets, 'public', 'index.html'), '<main>stale</main>');
+      fs.writeFileSync(path.join(assets, 'capacitor.config.json'), JSON.stringify({
+        server: { cleartext: true, url: WINDOWS_A5_LIVE_RELOAD_URL }
+      }));
+    }
+    return { code: 0, lines: [], output: '', stderr: '', stdout: '' };
+  });
+  await expect(prepareWindowsAndroidDebugHost({ execute, liveReload: false, paths }))
+    .rejects.toThrow('left a DEV server');
+});
+
 it('fails closed when sync leaves stale Android assets', async () => {
   const paths = fixture();
   const execute = vi.fn(async () => ({ code: 0, lines: [], output: '', stderr: '', stdout: '' }));

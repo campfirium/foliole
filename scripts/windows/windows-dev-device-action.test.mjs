@@ -103,6 +103,30 @@ describe('Windows DEV fixed device action', () => {
     expect(verify.args).toContain(WINDOWS_DEV_ADB_PORT);
   });
 
+  it('routes capture annotation through the fixed serial, protection helper, and bounded action', async () => {
+    const { evidenceRoot, paths } = fixture();
+    const { calls, execute } = successfulExecutor(paths);
+    const runCaptureAnnotation = vi.fn(async ({ protectData }) => {
+      await protectData('backup', path.join(evidenceRoot, 'protection.json'), path.join(evidenceRoot, 'backup'));
+      return {
+        captureAnnotation: { buildIdentity: 'capture-1', manifestPath: 'manifest.json' },
+        output: 'accepted\n'
+      };
+    });
+    const result = await runWindowsDevDeviceAction({
+      action: 'capture-annotation', buildIdentity: 'capture-1', evidenceRoot, execute, paths,
+      runCaptureAnnotation, runLiveReload: vi.fn()
+    });
+    expect(result.captureAnnotation).toMatchObject({ buildIdentity: 'capture-1' });
+    expect(runCaptureAnnotation).toHaveBeenCalledWith(expect.objectContaining({
+      adbPort: WINDOWS_DEV_ADB_PORT, serial: WINDOWS_DEV_A5_SERIAL
+    }));
+    const protection = calls.find(({ args }) =>
+      args.some((arg) => String(arg).includes('android-device-data-protection.mjs')));
+    expect(protection.args).toContain(path.join(evidenceRoot, 'backup'));
+    expect(calls.at(-1).args).toEqual(['-P', WINDOWS_DEV_ADB_PORT, 'kill-server']);
+  });
+
   it('routes renderer-only live action without PowerShell deploy or APK install', async () => {
     const { evidenceRoot, paths } = fixture();
     const { calls, execute } = successfulExecutor(paths);

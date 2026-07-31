@@ -6,7 +6,8 @@ import path from 'node:path';
 import { expect, it, vi } from 'vitest';
 
 import {
-  parseWindowsDevControlArgs, parseWindowsDevLiveEvidence, runWindowsDevControl,
+  parseWindowsDevCaptureAnnotationEvidence, parseWindowsDevControlArgs,
+  parseWindowsDevLiveEvidence, runWindowsDevControl,
   windowsDevPushSpec, windowsDevScpSpec, windowsDevSshSpec
 } from './windows-dev-control.mjs';
 
@@ -24,13 +25,15 @@ it('accepts only fixed actions with an explicit LAN host', () => {
     .toMatchObject({ action: 'live' });
   expect(parseWindowsDevControlArgs(['--host', 'v\\dev@192.168.0.11', 'appearance'], {}))
     .toMatchObject({ action: 'appearance' });
+  expect(parseWindowsDevControlArgs(['--host', 'v\\dev@192.168.0.11', 'capture-annotation'], {}))
+    .toMatchObject({ action: 'capture-annotation' });
   expect(parseWindowsDevControlArgs(['--host', 'v\\dev@192.168.0.11', 'secondary'], {}))
     .toMatchObject({ action: 'secondary' });
   expect(() => parseWindowsDevControlArgs(['--host', 'v\\dev@192.168.0.11', 'push'], {}))
-    .toThrow('only accepts appearance, build, deploy, live, secondary, or verify');
+    .toThrow('only accepts appearance, build, capture-annotation, deploy, live, secondary, or verify');
   expect(() => parseWindowsDevControlArgs([
     '--host', 'v\\dev@192.168.0.11', 'verify', '--commit', 'a'.repeat(40)
-  ], {})).toThrow('only accepts appearance, build, deploy, live, secondary, or verify');
+  ], {})).toThrow('only accepts appearance, build, capture-annotation, deploy, live, secondary, or verify');
 });
 
 it('pushes dev and then invokes the fixed Windows action', async () => {
@@ -77,6 +80,16 @@ it('copies only fixed live evidence with the ordinary SSH identity', () => {
   )).toThrow('escaped its fixed evidence root');
 });
 
+it('accepts only the fixed capture annotation manifest root', () => {
+  const remoteRoot = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/run-1';
+  expect(parseWindowsDevCaptureAnnotationEvidence(
+    `[windows-dev-action] capture-annotation identity=run-1 manifest=${remoteRoot}/capture-annotation-manifest.json\n`
+  )).toEqual({ buildIdentity: 'run-1', remoteRoot });
+  expect(() => parseWindowsDevCaptureAnnotationEvidence(
+    '[windows-dev-action] capture-annotation identity=run-1 manifest=C:/Users/dev/private.json\n'
+  )).toThrow('escaped its fixed evidence root');
+});
+
 it('copies live screenshot evidence after the fixed foreground action', async () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-dev-control-'));
   const remotePath = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/dev-2/a5-live.png';
@@ -89,6 +102,28 @@ it('copies live screenshot evidence after the fixed foreground action', async ()
   });
   expect(result).toMatchObject({ action: 'live', screenshotPath: expect.stringContaining('dev-2.png') });
   expect(executeScp).toHaveBeenCalledOnce();
+  fs.rmSync(repoRoot, { force: true, recursive: true });
+});
+
+it('copies the complete fixed capture annotation evidence set after remote cleanup', async () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-dev-control-capture-'));
+  const remoteRoot = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/run-2';
+  const executeScp = vi.fn(async (args) => { fs.writeFileSync(args.at(-1), '{}'); return ''; });
+  const result = await runWindowsDevControl({
+    argv: ['--host', 'v\\dev@192.168.0.11', 'capture-annotation'], env: {},
+    executeGit: vi.fn(async () => ''), executeScp,
+    executeSsh: vi.fn(async () =>
+      `[windows-dev-action] capture-annotation identity=run-2 manifest=${remoteRoot}/capture-annotation-manifest.json\n`),
+    repoRoot, stdout: { write: vi.fn() }
+  });
+  expect(result).toMatchObject({
+    action: 'capture-annotation', evidenceRoot: expect.stringContaining('run-2'),
+    manifestPath: expect.stringContaining('capture-annotation-manifest.json')
+  });
+  expect(executeScp).toHaveBeenCalledTimes(6);
+  expect(executeScp.mock.calls.map(([args]) => args.at(-2))).toContain(
+    `v\\dev@192.168.0.11:${remoteRoot}/summary.json`
+  );
   fs.rmSync(repoRoot, { force: true, recursive: true });
 });
 

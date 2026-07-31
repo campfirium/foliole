@@ -123,7 +123,37 @@ describe('Windows DEV foreground build', () => {
     });
     expect(run.exitCode).toBe(0);
     expect(order).toEqual(['prepare', 'deploy']);
+    expect(prepareHost).toHaveBeenCalledWith(expect.objectContaining({ liveReload: true }));
     expect(fs.readFileSync(run.summary.logPath, 'utf8')).toBe('prepared\ndeployed\n');
+  });
+
+  it('prepares and builds matching main and test APKs before fixed capture annotation acceptance', async () => {
+    const { paths } = fixture();
+    const { calls, execute } = successfulExecutor(paths);
+    const prepareHost = vi.fn(async () => 'prepared\n');
+    const deviceAction = vi.fn(async ({ buildIdentity }) => ({
+      captureAnnotation: { buildIdentity, manifestPath: 'capture-annotation-manifest.json' },
+      output: 'accepted\n'
+    }));
+    const run = await runWindowsDevBuild({
+      action: 'capture-annotation', deviceAction, execute, paths, platform: 'win32', prepareHost
+    });
+    const build = calls.find(({ command }) => command === 'cmd.exe');
+    expect(prepareHost).toHaveBeenCalledOnce();
+    expect(prepareHost).toHaveBeenCalledWith(expect.objectContaining({ liveReload: false }));
+    expect(build.args).toEqual([
+      '/d', '/s', '/c', 'call .\\gradlew.bat --no-daemon assembleDebug assembleDebugAndroidTest'
+    ]);
+    expect(build.options.env.ANDROID_USER_HOME).toBe(paths.signingHome);
+    expect(deviceAction).toHaveBeenCalledAfter(prepareHost);
+    expect(run).toMatchObject({
+      exitCode: 0, summary: {
+        action: 'capture-annotation', captureAnnotation: {
+          manifestPath: 'capture-annotation-manifest.json'
+        }, resultStatus: 'success', signingSha256: expect.stringMatching(/^[0-9a-f]{64}$/u)
+      }
+    });
+    expect(fs.readFileSync(run.summary.logPath, 'utf8')).toBe('prepared\nBUILD SUCCESSFUL\naccepted\n');
   });
 });
 
@@ -137,7 +167,7 @@ it('holds a FileShare.None lock and invokes only absolute system Node', () => {
   expect(source).toContain('windows-dev-build.mjs');
   expect(source).not.toContain('Write-Error');
   expect(source).not.toContain('windows-android-lab\\runtime');
-  expect(actionSource).toContain('[ValidatePattern("^[a-z]+$")]');
+  expect(actionSource).toContain('[ValidatePattern("^[a-z]+(?:-[a-z]+)*$")]');
   expect(actionSource).not.toContain('ValidateSet');
   expect(actionSource).toContain('[System.IO.FileShare]::None');
   expect(actionSource.indexOf('& $systemNode $puller')).toBeLessThan(actionSource.indexOf('& $systemNode $runner $Action'));
