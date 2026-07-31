@@ -8,6 +8,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { CAPTURE_ANNOTATION_EVIDENCE_FILES } from './windows-a5-capture-annotation-contract.mjs';
+import { toWindowsDevWireAction } from './windows-dev-action-contract.mjs';
 
 export const WINDOWS_DEV_SOURCE_REF = 'refs/heads/dev';
 export const WINDOWS_DEV_ACTIONS = [
@@ -69,7 +70,7 @@ export function windowsDevSshSpec(host, action, env = process.env, home = os.hom
   return ['-T', '-i', key, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=15',
     '-o', 'IdentitiesOnly=yes', '-o', 'StrictHostKeyChecking=yes', host,
     'powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
-    '-File', WINDOWS_DEV_REMOTE_ACTION, action];
+    '-File', WINDOWS_DEV_REMOTE_ACTION, toWindowsDevWireAction(action)];
 }
 
 export function parseWindowsDevLiveEvidence(output) {

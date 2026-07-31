@@ -66,6 +66,13 @@ it('uses only the ordinary SSH key and fixed remote action path', () => {
   expect(spec.at(-1)).toBe('deploy');
 });
 
+it('uses an alphabetic wire action that an old wrapper can pull before normalizing', () => {
+  const spec = windowsDevSshSpec('v\\dev@192.168.0.11', 'capture-annotation', {}, TEST_HOME);
+  expect(spec.at(-1)).toBe('captureannotation');
+  expect(spec.at(-1)).toMatch(/^[a-z]+$/u);
+  expect(spec).not.toContain('capture-annotation');
+});
+
 it('copies only fixed live evidence with the ordinary SSH identity', () => {
   const remotePath = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/dev-1/a5-live.png';
   const spec = windowsDevScpSpec('v\\dev@192.168.0.11', remotePath, '/repo/a5.png', {}, TEST_HOME);

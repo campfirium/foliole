@@ -8,6 +8,7 @@ import { pathToFileURL } from 'node:url';
 
 import { executeBounded } from './windows-bounded-process.mjs';
 import { prepareWindowsAndroidDebugHost } from './windows-android-host-prepare.mjs';
+import { normalizeWindowsDevAction } from './windows-dev-action-contract.mjs';
 import { runWindowsDevDeviceAction } from './windows-dev-device-action.mjs';
 import { windowsDevPaths } from './windows-dev-paths.mjs';
 
@@ -100,10 +101,11 @@ export function formatWindowsDevFailure(summary) {
 }
 
 export async function runWindowsDevBuild({
-  action = 'build', deviceAction = runWindowsDevDeviceAction, execute = executeBounded,
+  action: requestedAction = 'build', deviceAction = runWindowsDevDeviceAction, execute = executeBounded,
   fsApi = fs, id = randomUUID, now = () => new Date(), paths = windowsDevPaths(),
   platform = process.platform, prepareHost = prepareWindowsAndroidDebugHost
 } = {}) {
+  const action = normalizeWindowsDevAction(requestedAction);
   const startedAt = now().toISOString();
   let context;
   let directChildPid = null;

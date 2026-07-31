@@ -127,7 +127,7 @@ describe('Windows DEV foreground build', () => {
     expect(fs.readFileSync(run.summary.logPath, 'utf8')).toBe('prepared\ndeployed\n');
   });
 
-  it('prepares and builds matching main and test APKs before fixed capture annotation acceptance', async () => {
+  it('normalizes the old-wrapper wire action before fixed capture annotation acceptance', async () => {
     const { paths } = fixture();
     const { calls, execute } = successfulExecutor(paths);
     const prepareHost = vi.fn(async () => 'prepared\n');
@@ -136,7 +136,7 @@ describe('Windows DEV foreground build', () => {
       output: 'accepted\n'
     }));
     const run = await runWindowsDevBuild({
-      action: 'capture-annotation', deviceAction, execute, paths, platform: 'win32', prepareHost
+      action: 'captureannotation', deviceAction, execute, paths, platform: 'win32', prepareHost
     });
     const build = calls.find(({ command }) => command === 'cmd.exe');
     expect(prepareHost).toHaveBeenCalledOnce();
@@ -146,6 +146,7 @@ describe('Windows DEV foreground build', () => {
     ]);
     expect(build.options.env.ANDROID_USER_HOME).toBe(paths.signingHome);
     expect(deviceAction).toHaveBeenCalledAfter(prepareHost);
+    expect(deviceAction).toHaveBeenCalledWith(expect.objectContaining({ action: 'capture-annotation' }));
     expect(run).toMatchObject({
       exitCode: 0, summary: {
         action: 'capture-annotation', captureAnnotation: {
