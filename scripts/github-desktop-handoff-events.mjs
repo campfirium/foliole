@@ -53,14 +53,28 @@ function isFailureRun(config, run) {
 }
 
 
-function recordObservedRun(workflowState, run) {
-  workflowState.runs[String(run.databaseId)] = {
+function isRecordedFailure(config, run) {
+  return run?.status === 'completed' && config.failureConclusions.includes(run.conclusion);
+}
+
+function recordObservedRun(config, workflowState, run, includeExisting) {
+  const runId = String(run.databaseId);
+  const previous = workflowState.runs[runId];
+  const legacyBaseline = workflowState.baselineRunId === runId && previous?.status === 'unknown';
+  const handoffEligible = isFailureRun(config, run)
+    ? includeExisting || previous?.handoffEligible
+      || (workflowState.initialized && !legacyBaseline && !isRecordedFailure(config, previous))
+    : false;
+  const observed = {
     conclusion: run.conclusion ?? '',
+    handoffEligible: Boolean(handoffEligible),
     headBranch: run.headBranch ?? '',
     headSha: run.headSha ?? '',
     observedAt: new Date().toISOString(),
     status: run.status ?? ''
   };
+  workflowState.runs[runId] = observed;
+  return observed;
 }
 
 function prEvent(config, pr, checks, renderTemplate) {
@@ -107,21 +121,11 @@ function listActionEvents(config, state, includeExisting, errors, renderTemplate
       recordMonitorError(errors, 'github-actions', workflow, error);
       continue;
     }
-    const orderedRuns = [...runs].sort((left, right) => (Date.parse(left.createdAt || '') || 0) - (Date.parse(right.createdAt || '') || 0));
-    let reachedBaseline = includeExisting || !workflowState.baselineRunId;
-    for (const run of orderedRuns) {
+    for (const run of runs) {
       if (!allowedBranch(config, run)) continue;
-      const runId = String(run.databaseId);
-      const isBaselineRun = workflowState.baselineRunId && runId === workflowState.baselineRunId;
-      recordObservedRun(workflowState, run);
-      if (!includeExisting && isBaselineRun) {
-        reachedBaseline = true;
-        continue;
-      }
-      if (!reachedBaseline) continue;
+      const observed = recordObservedRun(config, workflowState, run, includeExisting);
       const event = actionRunEvent(config, workflow, run, renderTemplate);
-      const shouldEmit = (includeExisting || workflowState.initialized)
-        && isFailureRun(config, run)
+      const shouldEmit = observed.handoffEligible
         && !state.submitted[event.dedupeKey];
       if (shouldEmit) {
         events.push(event);

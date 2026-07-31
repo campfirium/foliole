@@ -75,6 +75,7 @@ describe('GitHub desktop handoff action events', () => {
       initialized: true,
       latestObservedRunId: '101'
     });
+    expect(listGithubMonitorEvents(config(), state, false, [], renderTemplate)).toEqual([]);
   });
 
   it('emits a running run after it completes as a failure', () => {
@@ -196,5 +197,22 @@ describe('GitHub desktop handoff action events', () => {
     });
     state.submitted[secondEvents[0].dedupeKey] = { emittedAt: '2026-07-05T17:45:22Z' };
     expect(listGithubMonitorEvents(t6Config, state, false, [], renderTemplate)).toEqual([]);
+  });
+
+  it('retries a newly observed failure until event submission is acknowledged', () => {
+    const state = {
+      actions: { [T6_WORKFLOW]: { initialized: true, runs: {} } },
+      issues: {},
+      prs: {},
+      submitted: {}
+    };
+    gh.runs = [run({ databaseId: 203 })];
+
+    const firstEvents = listGithubMonitorEvents(config(), state, false, [], renderTemplate);
+    const retryEvents = listGithubMonitorEvents(config(), state, false, [], renderTemplate);
+
+    expect(firstEvents).toHaveLength(1);
+    expect(retryEvents).toHaveLength(1);
+    expect(retryEvents[0].dedupeKey).toBe('foliole:github-actions:203');
   });
 });
