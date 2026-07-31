@@ -6,6 +6,7 @@
 
 - 当前仓库是多平台单仓：`Electron + React + TypeScript + Vite + Capacitor`；主要宿主与表面为 `electron/`、`android/`、`src/app/`、`src/companion/`、`src/shared/platform/`。
 - 默认在 `dev` 主干按 Track-Based 连续小步推进；不创建 feature branch / worktree，除非用户明确要求。
+- 新建 `release/<version>` 必须先从已推送的 `dev` SHA 建立远端 ref；此后该版本只在 release 修复，不再接收 dev，且只用普通 Git merge 按 first-parent 序号回灌 dev。release 可多次回灌，删除前必须证明最终 tip 已是 dev 的祖先。
 - 创建或交接 Foliole Codex 任务只能走 Codex Desktop 正常任务入口：`list_projects` 定位 saved project，`create_thread` 显式使用 `environment.type = local` 并发送完整首条提示，`wait_threads` 等待就绪，`set_thread_title` 命名，`read_thread` 确认首条用户消息与 assistant 正文可读，最后才可 `navigate_to_codex_page`；不得采用 Git 仓库默认 worktree。
 - 禁止启用或恢复 `task-seed-queue`，也禁止通过 queue runner、App Server `thread/start`、`codex://threads/...` deep link 或其他后台 thread 注入创建 / 交接任务。仅有 thread id、侧栏标题、open request 或成功跳转不算创建成功；正文未通过 `read_thread` 验证时必须归档该任务并改走正常任务入口，不得向用户交付空白任务。
 - 用户要求继续某个平台的产品主线时，创建任务前必须先按该平台局部 `AGENTS.md` 区分产品实现、验收证据与宿主控制流；不得仅凭未勾选 checkbox 或未标 `done` 状态把验收 / 控制任务包装成产品代码任务。
