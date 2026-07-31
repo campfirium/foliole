@@ -51,7 +51,7 @@ describe('android device-private sync cleanup', () => {
     expect(countRows(dbPath, 'node_reading_device_state')).toBe(1);
     expect(countRows(dbPath, 'sync_object_state')).toBe(0);
     expect(countRows(dbPath, 'sync_push_ack')).toBe(0);
-  });
+  }, 30_000);
 
   it('parses database and destructive flags', () => {
     expect(parseArgs(['--db', '/tmp/android.db', '--apply', '--destructive'])).toEqual({

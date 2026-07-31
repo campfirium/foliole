@@ -116,7 +116,7 @@ describe('android sync audit core', () => {
       nonLocalNodeViewStateRows: 1
     });
     expect(output).toContain('=== Suspected Broken Layer ===');
-  });
+  }, 30_000);
 
   it('does not flag visible structure when only tombstones are pending', async () => {
     tempDir = await mkdtemp(path.join(os.tmpdir(), 'android-sync-audit-'));

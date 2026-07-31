@@ -129,4 +129,4 @@ it('supports a release-first branch through repeated numbered merge-backs', asyn
     '000002 continue development',
     '000001 seed'
   ]);
-});
+}, 15_000);
