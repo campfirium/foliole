@@ -4,7 +4,7 @@
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
-import { isCommitOnRemote } from './git/remote-commit.mjs';
+import { findFirstParentRemoteBase } from './git/remote-commit.mjs';
 import { isAndroidSyncBoundaryPath, isSyncPackPath } from './lib/path-domains.mjs';
 
 const ZERO_SHA = /^0{40}$/u;
@@ -47,7 +47,11 @@ function filesForBranchUpdate(update) {
   if (!ZERO_SHA.test(update.remoteSha)) {
     return splitFiles(runGit(['diff', '--name-only', `${update.remoteSha}..${update.localSha}`, '--', '.']));
   }
-  if (isCommitOnRemote(update.localSha)) return [];
+  const remoteBase = findFirstParentRemoteBase(update.localSha);
+  if (remoteBase === update.localSha) return [];
+  if (remoteBase) {
+    return splitFiles(runGit(['diff', '--name-only', `${remoteBase}..${update.localSha}`, '--', '.']));
+  }
   return splitFiles(runGit(['log', '--first-parent', '--format=', '--name-only', update.localSha, '--', '.']));
 }
 

@@ -4,7 +4,7 @@
 import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
-import { isCommitOnRemote } from './remote-commit.mjs';
+import { findFirstParentRemoteBase, isCommitOnRemote } from './remote-commit.mjs';
 
 const NUMBERED_SUBJECT = /^(\d{6})\s+\S/;
 const ZERO_SHA = /^0{40}$/;
@@ -135,16 +135,7 @@ function getMaxSequence(subjects) {
 }
 
 function readNewBranchSequence(revision) {
-  const commits = runGit([
-    'rev-list',
-    '--first-parent',
-    '--reverse',
-    revision,
-    '--not',
-    '--remotes'
-  ]).split('\n').filter(Boolean);
-  if (commits.length === 0) return { start: 1, subjects: [] };
-  const base = readCommitIdentity(commits[0]).parents[0];
+  const base = findFirstParentRemoteBase(revision);
   return {
     start: base ? getMaxSequence(readSubjects(base)) + 1 : 1,
     subjects: readSubjects(base ? `${base}..${revision}` : revision)

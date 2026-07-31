@@ -85,6 +85,27 @@ describe('pre-push affected validation', () => {
     }
   }, AFFECTED_VALIDATION_TIMEOUT_MS);
 
+  it('checks only release files after the pushed dev base', async () => {
+    const repoDir = await createRepo();
+    try {
+      await mkdir(path.join(repoDir, 'electron', 'database'), { recursive: true });
+      await writeFile(path.join(repoDir, 'electron', 'database', 'syncPackBuilder.ts'), 'export const value = 1;\n');
+      const remoteSha = await commitAll(repoDir, '000001 remote history');
+      await runCommand('git', ['update-ref', 'refs/remotes/origin/dev', remoteSha], repoDir);
+      await writeFile(path.join(repoDir, 'RELEASE.md'), '0.7.1\n');
+      const localSha = await commitAll(repoDir, '000002 start release');
+
+      const result = await runCommand('node', [AFFECTED_VALIDATION_SCRIPT], repoDir, {
+        input: `refs/heads/release ${localSha} refs/heads/release ${'0'.repeat(40)}\n`
+      });
+
+      expect(result.code, result.stderr).toBe(0);
+      await expect(readFile(path.join(repoDir, 'calls.log'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+    } finally {
+      await rm(repoDir, { recursive: true, force: true });
+    }
+  }, AFFECTED_VALIDATION_TIMEOUT_MS);
+
   it('runs sync-pack tests when pushed commits affect sync-pack files', async () => {
     const repoDir = await createRepo();
     try {
