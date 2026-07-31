@@ -9,6 +9,7 @@ import { assertQualityCommandAllowed } from '../quality/quality-command-contract
 
 import {
   iosResourceCommand,
+  iosSqliteVitestEnv,
   iosSwiftResourceArgs,
   iosVitestResourceArgs,
   resolveIosResourceMode
@@ -154,11 +155,7 @@ if (vitest.status !== 0) {
   };
   const sqlite = spawnSync(sqliteTask.command, sqliteTask.args, {
     cwd: REPO_ROOT,
-    env: {
-      ...process.env,
-      VITEST_FILE_PARALLELISM: '0',
-      VITEST_MAX_WORKERS: '1'
-    },
+    env: iosSqliteVitestEnv(process.env),
     stdio: 'inherit'
   });
   if (sqlite.error) throw sqlite.error;

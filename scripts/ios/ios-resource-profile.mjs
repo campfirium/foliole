@@ -33,6 +33,15 @@ export function iosVitestResourceArgs(mode) {
   return mode === FULL_MODE ? [] : ['--maxWorkers=1', '--no-file-parallelism'];
 }
 
+export function iosSqliteVitestEnv(env = process.env) {
+  return {
+    ...env,
+    VITEST_FILE_PARALLELISM: '0',
+    VITEST_MAX_WORKERS: '1',
+    VITEST_POOL: 'forks'
+  };
+}
+
 export function iosResourceCommand(command, args, mode, platform = process.platform) {
   if (mode === FULL_MODE || platform !== 'darwin') return { args, command };
   return { args: ['-b', command, ...args], command: '/usr/sbin/taskpolicy' };

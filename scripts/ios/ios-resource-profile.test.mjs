@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   iosResourceCommand,
+  iosSqliteVitestEnv,
   iosSwiftResourceArgs,
   iosVitestResourceArgs,
   iosXcodebuildResourceArgs,
@@ -18,6 +19,12 @@ describe('iOS resource profile', () => {
     expect(iosXcodebuildResourceArgs('background')).toEqual(['-jobs', '1']);
     expect(iosSwiftResourceArgs('background')).toEqual(['--jobs', '1']);
     expect(iosVitestResourceArgs('background')).toEqual(['--maxWorkers=1', '--no-file-parallelism']);
+    expect(iosSqliteVitestEnv({ FOO: 'bar' })).toEqual({
+      FOO: 'bar',
+      VITEST_FILE_PARALLELISM: '0',
+      VITEST_MAX_WORKERS: '1',
+      VITEST_POOL: 'forks'
+    });
     expect(iosResourceCommand('vite', ['build'], 'background', 'darwin')).toEqual({
       args: ['-b', 'vite', 'build'], command: '/usr/sbin/taskpolicy'
     });
