@@ -9,6 +9,12 @@ on:
       scope:
         required: true
         type: string
+      execution_lane:
+        required: true
+        type: string
+      trigger_ref:
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -19,7 +25,9 @@ jobs:
     if: inputs.scope == 'shared'
     uses: ./.github/workflows/hosted-quality-common.yml
     with:
+      execution_lane: ${{ inputs.execution_lane }}
       target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
       scope: ${{ inputs.scope }}
 
   windows-quality:
@@ -28,7 +36,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 120
     concurrency:
-      group: hosted-quality-windows-core-${{ inputs.target_sha }}-${{ inputs.scope }}
+      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-core-windows-${{ inputs.scope }}
       cancel-in-progress: false
     env:
       CI: "true"
@@ -104,7 +112,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     concurrency:
-      group: hosted-quality-android-${{ inputs.target_sha }}-${{ inputs.scope }}
+      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-core-android-${{ inputs.scope }}
       cancel-in-progress: false
     env:
       TARGET_SHA: ${{ inputs.target_sha }}
@@ -148,5 +156,7 @@ jobs:
     if: inputs.scope == 'ios'
     uses: ./.github/workflows/hosted-quality-ios.yml
     with:
+      execution_lane: ${{ inputs.execution_lane }}
       target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
       scope: ${{ inputs.scope }}

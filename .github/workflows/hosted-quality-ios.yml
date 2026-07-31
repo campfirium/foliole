@@ -9,6 +9,12 @@ on:
       scope:
         required: true
         type: string
+      execution_lane:
+        required: true
+        type: string
+      trigger_ref:
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -19,7 +25,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 120
     concurrency:
-      group: hosted-quality-ios-contract-${{ inputs.target_sha }}-${{ inputs.scope }}
+      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-ios-contract-${{ inputs.scope }}
       cancel-in-progress: false
     env:
       TARGET_SHA: ${{ inputs.target_sha }}
@@ -70,7 +76,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 120
     concurrency:
-      group: hosted-quality-ios-simulator-${{ inputs.target_sha }}-${{ matrix.scenario }}
+      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-ios-simulator-${{ matrix.scenario }}
       cancel-in-progress: false
     env:
       FOLIOLE_IOS_ACCEPTANCE_SCENARIO: ${{ matrix.scenario }}

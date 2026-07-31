@@ -9,6 +9,12 @@ on:
       scope:
         required: true
         type: string
+      execution_lane:
+        required: true
+        type: string
+      trigger_ref:
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -20,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     concurrency:
-      group: hosted-quality-shared-${{ inputs.target_sha }}
+      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-common-shared
       cancel-in-progress: false
     env:
       TARGET_SHA: ${{ inputs.target_sha }}

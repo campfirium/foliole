@@ -1,27 +1,32 @@
-name: T7 Release Candidate Quality
-run-name: T7 Release Candidate Quality ${{ inputs.target_version || github.ref_name }} @ ${{ inputs.target_sha || github.sha }}
+name: Release Candidate Quality
+
+run-name: Release Candidate Quality ${{ inputs.target_version }} @ ${{ inputs.target_sha }}
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       target_version:
-        description: "Explicit package version to validate, e.g. 0.7.2"
         required: true
         type: string
       target_sha:
-        description: "Exact 40-character commit SHA to validate"
         required: true
         type: string
-  push:
-    branches:
-      - "release/**"
+      execution_lane:
+        required: true
+        type: string
+      trigger_ref:
+        required: true
+        type: string
+    outputs:
+      accepted_sha:
+        description: Exact release candidate commit accepted by the golden journey
+        value: ${{ jobs.release-candidate-quality.outputs.accepted_sha }}
 
 permissions:
-  actions: read
   contents: read
 
 concurrency:
-  group: release-candidate-quality-${{ inputs.target_sha || github.sha }}
+  group: rc-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-candidate
   cancel-in-progress: false
 
 jobs:
@@ -29,44 +34,42 @@ jobs:
     name: Release candidate quality
     runs-on: windows-latest
     timeout-minutes: 120
-
+    outputs:
+      accepted_sha: ${{ steps.candidate-output.outputs.accepted_sha }}
     steps:
       - name: Check out release candidate
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.target_sha || github.sha }}
+          ref: ${{ inputs.target_sha }}
           fetch-depth: 0
-
+          persist-credentials: false
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-
-      - name: Verify declared release target
+      - name: Verify same-run release candidate context
+        shell: pwsh
         env:
-          FOLIOLE_RELEASE_EVENT_NAME: ${{ github.event_name }}
-          FOLIOLE_RELEASE_REF_NAME: ${{ github.ref_name }}
-          FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}
-          FOLIOLE_RELEASE_TARGET_SHA: ${{ inputs.target_sha || github.sha }}
-          FOLIOLE_RELEASE_TARGET_VERSION: ${{ inputs.target_version }}
-        run: node scripts/release-target-contract.mjs
-
-      - name: Verify T6 hosted quality evidence
-        env:
-          FOLIOLE_EVIDENCE_REPOSITORY: ${{ github.repository }}
-          FOLIOLE_EVIDENCE_TARGET_SHA: ${{ inputs.target_sha || github.sha }}
-          FOLIOLE_EVIDENCE_WORKFLOW: .github/workflows/t6-hosted-quality.yml
-          GITHUB_TOKEN: ${{ github.token }}
-        run: node scripts/release-workflow-evidence.mjs
-
+          RUN_SHA: ${{ github.sha }}
+          TARGET_REF: ${{ inputs.trigger_ref }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+          TARGET_VERSION: ${{ inputs.target_version }}
+        run: |
+          $package = Get-Content package.json | ConvertFrom-Json
+          if ($env:TARGET_REF -ne "refs/heads/release") { throw "Release ref must be refs/heads/release" }
+          if ($env:RUN_SHA -ne $env:TARGET_SHA) { throw "Run SHA does not match target SHA" }
+          if ((git rev-parse HEAD) -ne $env:TARGET_SHA) { throw "Checked out SHA does not match target SHA" }
+          if ($package.version -ne $env:TARGET_VERSION) { throw "Package version does not match target version" }
       - name: Install dependencies
         run: npm ci
-
       - name: Rebuild Electron native modules
         run: |
           npm run electron:rebuild:native
           node scripts/electron-sqlite-runner.mjs --preflight
-
       - name: Run desktop golden journey acceptance
         run: npm run test:e2e:desktop:rc-golden-journey
+      - name: Export accepted release candidate
+        id: candidate-output
+        shell: bash
+        run: echo "accepted_sha=${{ inputs.target_sha }}" >> "$GITHUB_OUTPUT"

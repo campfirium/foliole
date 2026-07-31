@@ -19,7 +19,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: foliole-remote-quality-dev
+  group: remote-quality-dev-remote-${{ github.ref }}-orchestrator
   cancel-in-progress: false
 
 jobs:
@@ -35,7 +35,9 @@ jobs:
     needs: dev-ref
     uses: ./.github/workflows/hosted-quality-core.yml
     with:
+      execution_lane: dev-remote
       target_sha: ${{ github.sha }}
+      trigger_ref: ${{ github.ref }}
       scope: ${{ inputs.scope }}
 
   t5-baseline:
@@ -43,11 +45,15 @@ jobs:
     needs: dev-ref
     uses: ./.github/workflows/t5-baseline-admission.yml
     with:
+      execution_lane: dev-remote
       target_sha: ${{ github.sha }}
+      trigger_ref: ${{ github.ref }}
 
   full-quality:
     if: inputs.scope == 'full' && needs.t5-baseline.result == 'success'
     needs: t5-baseline
     uses: ./.github/workflows/hosted-quality-full.yml
     with:
+      execution_lane: dev-remote
       target_sha: ${{ github.sha }}
+      trigger_ref: ${{ github.ref }}

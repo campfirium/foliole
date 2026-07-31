@@ -132,7 +132,7 @@ describe('electron-builder release packaging config', () => {
     expect(config.linux.category).toBe('Education');
   });
 
-  it('publishes the Windows installer and updater metadata to the GitHub draft release', async () => {
+  it('produces signed Windows installer metadata for same-run T7 assembly', async () => {
     const [config, packageJson, workflowSource] = await Promise.all([
       readBuilderConfig(),
       readPackageJson(),
@@ -150,12 +150,10 @@ describe('electron-builder release packaging config', () => {
     expect(packageJson.scripts['release:windows:package']).toBe('node scripts/windows/package-windows.mjs');
     expect(packageJson.scripts['windows:package:internal']).toBe('node scripts/windows/package-windows.mjs --internal');
     expect(packageJson.scripts['windows:package:internal:install']).toBe('node scripts/windows/package-windows.mjs --internal --install');
-    expect(workflow).toContain('actions: read');
-    expect(workflow).toContain('contents: write');
+    expect(workflow).toContain('contents: read');
     expect(workflow).toContain('id-token: write');
     expect(workflow).toContain('attestations: write');
     expect(workflow).toContain('runs-on: windows-latest');
-    expect(workflow).toContain('GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}');
     expect(workflow).toContain('node scripts/windows/write-artifact-signing-builder-config.mjs');
     expect(workflow).toContain('npm run windows:package');
     expect(workflow).toContain('node scripts/windows/package-windows.mjs --install-existing');
@@ -164,13 +162,11 @@ describe('electron-builder release packaging config', () => {
     expect(workflow).toContain('Set-Content -Path artifacts/windows/SHA256SUMS.txt -Encoding ascii');
     expect(workflow).toContain('actions/attest@v4');
     expect(workflow).toContain('subject-checksums: artifacts/windows/SHA256SUMS.txt');
-    expect(workflow).toContain('gh release create $tagName $installer.FullName $blockmap.FullName $updateMetadata.FullName $checksums.FullName --draft');
-    expect(workflow).toContain('--title $releaseTitle --target $targetCommit --notes-file $notesFile.FullName');
-    expect(workflow).toContain('$reviewedNotesFile = "releases/github/v$version.md"');
-    expect(workflow).toContain('Copy-Item $reviewedNotesFile "artifacts/windows/release-v$version-github-body.md"');
+    expect(workflow).toContain('name: foliole-windows-release');
     expect(workflow).not.toContain('SmartScreen');
     expect(workflow).not.toContain('Advanced provenance check:');
-    expect(workflow).toContain('gh release delete $tagName --yes');
+    expect(workflow).not.toContain('gh release');
+    expect(workflow).not.toContain('contents: write');
     expect(workflow).toContain('artifacts/windows/*.blockmap');
     expect(workflow).toContain('artifacts/windows/latest.yml');
   });

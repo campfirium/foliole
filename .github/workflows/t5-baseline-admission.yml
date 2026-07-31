@@ -1,6 +1,6 @@
 name: T5 Baseline Admission
 
-run-name: T5 Baseline Admission @ ${{ inputs.target_sha }}
+run-name: T5 Baseline Admission (${{ inputs.execution_lane }}) @ ${{ inputs.target_sha }}
 
 on:
   workflow_call:
@@ -8,17 +8,22 @@ on:
       target_sha:
         required: true
         type: string
-  workflow_dispatch:
-    inputs:
-      target_sha:
+      execution_lane:
         required: true
         type: string
+      trigger_ref:
+        required: true
+        type: string
+    outputs:
+      admitted_sha:
+        description: Exact commit admitted by every T5 bucket
+        value: ${{ jobs.admission.outputs.admitted_sha }}
 
 permissions:
   contents: read
 
 concurrency:
-  group: t5-baseline-admission-${{ inputs.target_sha }}
+  group: t5-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-admission
   cancel-in-progress: false
 
 jobs:
@@ -164,10 +169,15 @@ jobs:
     needs: [ubuntu-static, portable-tests]
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      admitted_sha: ${{ steps.require-buckets.outputs.admitted_sha }}
     env:
       STATIC_RESULT: ${{ needs.ubuntu-static.result }}
+      TARGET_SHA: ${{ inputs.target_sha }}
       TEST_RESULT: ${{ needs.portable-tests.result }}
     steps:
       - name: Require every baseline bucket
-        run: >-
+        id: require-buckets
+        run: |
           node -e 'const failed = Object.entries(process.env).filter(([key, value]) => key.endsWith("_RESULT") && value !== "success"); if (failed.length) throw new Error(failed.map(([key, value]) => `${key}=${value}`).join(", "))'
+          echo "admitted_sha=${TARGET_SHA}" >> "$GITHUB_OUTPUT"

@@ -6,6 +6,16 @@ on:
       target_sha:
         required: true
         type: string
+      execution_lane:
+        required: true
+        type: string
+      trigger_ref:
+        required: true
+        type: string
+    outputs:
+      accepted_sha:
+        description: Exact commit admitted by every full-quality job
+        value: ${{ jobs.full-admission.outputs.accepted_sha }}
 
 permissions:
   contents: read
@@ -16,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     concurrency:
-      group: hosted-quality-common-build-${{ inputs.target_sha }}
+      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-full-common-build
       cancel-in-progress: false
     env:
       TARGET_SHA: ${{ inputs.target_sha }}
@@ -52,7 +62,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 120
     concurrency:
-      group: hosted-quality-windows-acceptance-${{ inputs.target_sha }}
+      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-full-windows-acceptance
       cancel-in-progress: false
     env:
       CI: "true"
@@ -136,7 +146,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     concurrency:
-      group: hosted-quality-android-${{ inputs.target_sha }}-full
+      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-full-android-host
       cancel-in-progress: false
     env:
       TARGET_SHA: ${{ inputs.target_sha }}
@@ -177,5 +187,27 @@ jobs:
     name: iOS full quality
     uses: ./.github/workflows/hosted-quality-ios.yml
     with:
+      execution_lane: ${{ inputs.execution_lane }}
       target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
       scope: full
+
+  full-admission:
+    name: Full quality admission
+    if: ${{ always() }}
+    needs: [common-build, windows-acceptance, android-host, ios-full]
+    runs-on: ubuntu-latest
+    outputs:
+      accepted_sha: ${{ steps.require-jobs.outputs.accepted_sha }}
+    steps:
+      - name: Require every full-quality job
+        id: require-jobs
+        env:
+          ANDROID_RESULT: ${{ needs.android-host.result }}
+          COMMON_RESULT: ${{ needs.common-build.result }}
+          IOS_RESULT: ${{ needs.ios-full.result }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+          WINDOWS_RESULT: ${{ needs.windows-acceptance.result }}
+        run: |
+          node -e 'const failed = Object.entries(process.env).filter(([key, value]) => key.endsWith("_RESULT") && value !== "success"); if (failed.length) throw new Error(failed.map(([key, value]) => `${key}=${value}`).join(", "))'
+          echo "accepted_sha=${TARGET_SHA}" >> "$GITHUB_OUTPUT"

@@ -49,6 +49,15 @@ const HOSTED_QUALITY_WORKFLOW_CONTRACT_TESTS = [
   'scripts/t6-hosted-quality-workflow-contract.test.mjs'
 ];
 
+const RELEASE_WORKFLOW_CONTRACT_TESTS = [
+  'scripts/electron-builder-config.test.mjs',
+  'scripts/release-candidate-quality-workflow-contract.test.mjs',
+  'scripts/release-macos-workflow-contract.test.mjs',
+  'scripts/release-windows-workflow-contract.test.mjs',
+  'scripts/t7-release-workflow-contract.test.mjs',
+  'scripts/windows/release-windows-validation-kit-contract.test.mjs'
+];
+
 const HOSTED_QUALITY_HANDOFF_CONTRACT_TESTS = [
   'scripts/github-actions-handoff-policy.test.mjs',
   'scripts/github-desktop-handoff-events.test.mjs',
@@ -123,6 +132,12 @@ export const CRITICAL_TEST_ROUTES = [
       /^scripts\/quality\/t6-hosted-quality-admission\.mjs$/u
     ],
     tests: HOSTED_QUALITY_WORKFLOW_CONTRACT_TESTS
+  },
+  {
+    triggers: [
+      /^\.github\/workflows\/(?:publish-release|release-(?:candidate-quality|macos|windows)|t7-release)\.yml$/u
+    ],
+    tests: RELEASE_WORKFLOW_CONTRACT_TESTS
   },
   {
     triggers: [

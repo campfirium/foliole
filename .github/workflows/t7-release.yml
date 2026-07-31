@@ -1,0 +1,187 @@
+name: T7 Release
+
+run-name: T7 Release @ ${{ github.sha }}
+
+on:
+  push:
+    branches:
+      - release
+    paths-ignore:
+      - "releases/github/**"
+      - "releases/notes/**"
+      - "releases/update-manifest.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-t7-${{ github.ref }}-orchestrator
+  cancel-in-progress: true
+
+jobs:
+  release_context:
+    name: Resolve release identity
+    runs-on: ubuntu-latest
+    outputs:
+      target_sha: ${{ steps.identity.outputs.target_sha }}
+      target_version: ${{ steps.identity.outputs.target_version }}
+      trigger_ref: ${{ steps.identity.outputs.trigger_ref }}
+    steps:
+      - name: Check out release tip
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require the exact release branch and versioned content
+        id: identity
+        env:
+          TARGET_REF: ${{ github.ref }}
+          TARGET_SHA: ${{ github.sha }}
+        run: >-
+          node -e "const fs = require('node:fs'); const cp = require('node:child_process'); const version = JSON.parse(fs.readFileSync('package.json', 'utf8')).version; const head = cp.execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(); if (process.env.TARGET_REF !== 'refs/heads/release') throw new Error('T7 only accepts refs/heads/release'); if (!/^[0-9a-f]{40}$/.test(process.env.TARGET_SHA ?? '') || head !== process.env.TARGET_SHA) throw new Error('T7 event and checkout SHA differ'); if (!/^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(version)) throw new Error('package.json version is invalid'); fs.appendFileSync(process.env.GITHUB_OUTPUT, `target_sha=${head}\ntarget_version=${version}\ntrigger_ref=${process.env.TARGET_REF}\n`);"
+
+  t6_quality:
+    name: T6 hosted quality
+    needs: release_context
+    permissions:
+      actions: read
+      contents: read
+    uses: ./.github/workflows/t6-hosted-quality.yml
+    with:
+      execution_lane: release-t7
+      target_sha: ${{ needs.release_context.outputs.target_sha }}
+      trigger_ref: ${{ needs.release_context.outputs.trigger_ref }}
+
+  release_candidate:
+    name: Release candidate quality
+    needs: [release_context, t6_quality]
+    permissions:
+      contents: read
+    uses: ./.github/workflows/release-candidate-quality.yml
+    with:
+      execution_lane: release-t7
+      target_sha: ${{ needs.t6_quality.outputs.accepted_sha }}
+      target_version: ${{ needs.release_context.outputs.target_version }}
+      trigger_ref: ${{ needs.release_context.outputs.trigger_ref }}
+
+  macos_package:
+    name: macOS package
+    needs: [release_context, release_candidate]
+    permissions:
+      artifact-metadata: write
+      attestations: write
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/release-macos.yml
+    with:
+      execution_lane: release-t7
+      target_sha: ${{ needs.release_candidate.outputs.accepted_sha }}
+      target_version: ${{ needs.release_context.outputs.target_version }}
+      trigger_ref: ${{ needs.release_context.outputs.trigger_ref }}
+    secrets:
+      APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+      APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+      APPLE_NOTARY_API_KEY_BASE64: ${{ secrets.APPLE_NOTARY_API_KEY_BASE64 }}
+      MACOS_CLI_DEVELOPER_ID_PROFILE_BASE64: ${{ secrets.MACOS_CLI_DEVELOPER_ID_PROFILE_BASE64 }}
+      MACOS_DEVELOPER_ID_CERTIFICATE_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_CERTIFICATE_BASE64 }}
+      MACOS_DEVELOPER_ID_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_DEVELOPER_ID_CERTIFICATE_PASSWORD }}
+      MACOS_DEVELOPER_ID_PROFILE_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_PROFILE_BASE64 }}
+
+  windows_package:
+    name: Windows package
+    needs: [release_context, release_candidate]
+    permissions:
+      artifact-metadata: write
+      attestations: write
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/release-windows.yml
+    with:
+      execution_lane: release-t7
+      target_sha: ${{ needs.release_candidate.outputs.accepted_sha }}
+      target_version: ${{ needs.release_context.outputs.target_version }}
+      trigger_ref: ${{ needs.release_context.outputs.trigger_ref }}
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+  assemble_draft:
+    name: Assemble release draft
+    needs: [release_context, macos_package, windows_package]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      actions: read
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      MACOS_SHA: ${{ needs.macos_package.outputs.packaged_sha }}
+      TARGET_SHA: ${{ needs.release_context.outputs.target_sha }}
+      TARGET_VERSION: ${{ needs.release_context.outputs.target_version }}
+      WINDOWS_SHA: ${{ needs.windows_package.outputs.packaged_sha }}
+    steps:
+      - name: Check out release candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release_context.outputs.target_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Download same-run macOS artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: ${{ needs.macos_package.outputs.artifact_name }}
+          path: release-assets/macos
+      - name: Download same-run Windows artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: ${{ needs.windows_package.outputs.artifact_name }}
+          path: release-assets/windows
+      - name: Verify managed release assets
+        run: |
+          set -euo pipefail
+          test "$MACOS_SHA" = "$TARGET_SHA"
+          test "$WINDOWS_SHA" = "$TARGET_SHA"
+          test -f "release-assets/macos/Foliole-${TARGET_VERSION}-mac-arm64.dmg"
+          test -f "release-assets/macos/Foliole-${TARGET_VERSION}-mac-arm64.dmg.blockmap"
+          test -f "release-assets/macos/Foliole-${TARGET_VERSION}-mac-arm64.zip"
+          test -f "release-assets/macos/Foliole-${TARGET_VERSION}-mac-arm64.zip.blockmap"
+          test -f "release-assets/macos/latest-mac.yml"
+          (cd release-assets/macos && sha256sum --check SHA256SUMS.txt)
+          test -f "release-assets/windows/Foliole-Setup-${TARGET_VERSION}-win-x64.exe"
+          test -f "release-assets/windows/Foliole-Setup-${TARGET_VERSION}-win-x64.exe.blockmap"
+          test -f "release-assets/windows/latest.yml"
+          (cd release-assets/windows && sha256sum --check SHA256SUMS.txt)
+          grep -Fq "version: ${TARGET_VERSION}" release-assets/macos/latest-mac.yml
+          grep -Fq "version: ${TARGET_VERSION}" release-assets/windows/latest.yml
+          mv release-assets/macos/SHA256SUMS.txt release-assets/macos/SHA256SUMS-macos.txt
+          mv release-assets/windows/SHA256SUMS.txt release-assets/windows/SHA256SUMS-windows.txt
+      - name: Reconcile the single unpublished draft
+        run: |
+          set -euo pipefail
+          tag="v${TARGET_VERSION}"
+          remote_sha="$(git ls-remote origin refs/heads/release | cut -f1)"
+          test "$remote_sha" = "$TARGET_SHA"
+          other_drafts="$(gh release list --limit 100 --json isDraft,tagName --jq ".[] | select(.isDraft and .tagName != \"${tag}\") | .tagName")"
+          if [[ -n "$other_drafts" ]]; then
+            echo "Another unpublished release draft must be retired first: $other_drafts" >&2
+            exit 1
+          fi
+          if draft_state="$(gh release view "$tag" --json isDraft --jq .isDraft 2>/dev/null)"; then
+            test "$draft_state" = "true"
+            gh release edit "$tag" --target "$TARGET_SHA"
+          else
+            gh release create "$tag" --draft --title "$TARGET_VERSION" --target "$TARGET_SHA" \
+              --notes "Release notes are being prepared outside the product candidate."
+          fi
+          test "$(gh release view "$tag" --json isDraft --jq .isDraft)" = "true"
+          gh release upload "$tag" --clobber \
+            "release-assets/macos/Foliole-${TARGET_VERSION}-mac-arm64.dmg" \
+            "release-assets/macos/Foliole-${TARGET_VERSION}-mac-arm64.dmg.blockmap" \
+            "release-assets/macos/Foliole-${TARGET_VERSION}-mac-arm64.zip" \
+            "release-assets/macos/Foliole-${TARGET_VERSION}-mac-arm64.zip.blockmap" \
+            release-assets/macos/latest-mac.yml release-assets/macos/SHA256SUMS-macos.txt \
+            "release-assets/windows/Foliole-Setup-${TARGET_VERSION}-win-x64.exe" \
+            "release-assets/windows/Foliole-Setup-${TARGET_VERSION}-win-x64.exe.blockmap" \
+            release-assets/windows/latest.yml release-assets/windows/SHA256SUMS-windows.txt

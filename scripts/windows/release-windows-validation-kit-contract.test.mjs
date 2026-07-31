@@ -13,7 +13,7 @@ function expectOrdered(values) {
 }
 
 describe('Windows release validation kit contract', () => {
-  it('builds and verifies the kit before attestation and draft publication', () => {
+  it('builds and verifies the kit before attestation and artifact upload', () => {
     expectOrdered([
       'write-artifact-signing-builder-config.mjs',
       'npm run windows:package',
@@ -23,7 +23,7 @@ describe('Windows release validation kit contract', () => {
       'Generate installer checksum',
       'node scripts/windows/windows-validation-kit-build.mjs build',
       'actions/attest@v4',
-      'gh release create'
+      'Upload installer artifacts'
     ]);
     expect(workflow).toContain('GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}');
     expect(workflow).toContain('GITHUB_RUN_ID: ${{ github.run_id }}');
@@ -32,27 +32,25 @@ describe('Windows release validation kit contract', () => {
   it('uploads the kit with the installer and required updater metadata', () => {
     expect(workflow).toContain('artifacts/windows/validation-kit');
     expect(workflow).toContain('retention-days: 14');
-    expect(workflow).toContain('gh release create $tagName $installer.FullName $blockmap.FullName $updateMetadata.FullName $checksums.FullName --draft');
-    expect(workflow).not.toMatch(/gh release create[^\n]+validation-kit/u);
+    expect(workflow).not.toContain('gh release');
     expect(workflow.match(/permissions:/gu)).toHaveLength(1);
-    expect(workflow.match(/secrets\./gu)).toHaveLength(7);
+    expect(workflow.match(/secrets\./gu)).toHaveLength(6);
   });
 
-  it('supports a fixed-SHA artifact-only run without touching a draft release', () => {
-    expect(workflow).toContain('artifact_only:');
-    expect(workflow).toContain('type: boolean');
-    expect(workflow).toContain('FOLIOLE_RELEASE_TARGET_VERSION: ${{ inputs.target_version }}');
-    expect(workflow).toContain('FOLIOLE_RELEASE_TARGET_SHA: ${{ inputs.target_sha }}');
-    expect(workflow).toContain('node scripts/release-target-contract.mjs');
-    expect(workflow).toContain('name: Verify T7 release candidate evidence for formal packaging\n        if: ${{ !inputs.artifact_only }}');
-    expect(workflow.indexOf('name: Verify T7 release candidate evidence')).toBeLessThan(workflow.indexOf('run: npm ci'));
-    expect(workflow.indexOf('if: ${{ !inputs.artifact_only }}')).toBeLessThan(workflow.indexOf('gh release create'));
+  it('is reusable-only and leaves draft ownership to the T7 assembly job', () => {
+    expect(workflow).toContain('workflow_call:');
+    expect(workflow).not.toContain('workflow_dispatch:');
+    expect(workflow).not.toContain('artifact_only:');
+    expect(workflow).not.toContain('contents: write');
+    expect(workflow).not.toContain('GH_TOKEN');
   });
 
-  it('uses the same immutable target contract for formal and artifact-only modes', () => {
+  it('uses the same immutable target contract throughout the reusable producer', () => {
     expect(workflow).toContain('target_version:');
     expect(workflow).toContain('target_sha:');
     expect(workflow).toContain('ref: ${{ inputs.target_sha }}');
+    expect(workflow).toContain('RUN_SHA: ${{ github.sha }}');
+    expect(workflow).toContain('TARGET_REF: ${{ inputs.trigger_ref }}');
     expect(workflow).not.toContain('release_ref:');
   });
 });

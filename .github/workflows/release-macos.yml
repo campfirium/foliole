@@ -1,27 +1,53 @@
-name: T7 Release macOS
-run-name: T7 Release macOS ${{ inputs.target_version }} @ ${{ inputs.target_sha }}
+name: Release macOS Package
+
+run-name: Release macOS Package ${{ inputs.target_version }} @ ${{ inputs.target_sha }}
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       target_version:
-        description: "Explicit package version to package, e.g. 0.7.2"
         required: true
         type: string
       target_sha:
-        description: "Exact 40-character commit SHA to package"
         required: true
         type: string
+      execution_lane:
+        required: true
+        type: string
+      trigger_ref:
+        required: true
+        type: string
+    secrets:
+      APPLE_API_ISSUER:
+        required: true
+      APPLE_API_KEY_ID:
+        required: true
+      APPLE_NOTARY_API_KEY_BASE64:
+        required: true
+      MACOS_CLI_DEVELOPER_ID_PROFILE_BASE64:
+        required: true
+      MACOS_DEVELOPER_ID_CERTIFICATE_BASE64:
+        required: true
+      MACOS_DEVELOPER_ID_CERTIFICATE_PASSWORD:
+        required: true
+      MACOS_DEVELOPER_ID_PROFILE_BASE64:
+        required: true
+    outputs:
+      artifact_name:
+        description: Same-run macOS package artifact
+        value: ${{ jobs.release-macos.outputs.artifact_name }}
+      packaged_sha:
+        description: Exact commit packaged for macOS
+        value: ${{ jobs.release-macos.outputs.packaged_sha }}
 
 permissions:
-  actions: read
   contents: read
   id-token: write
   attestations: write
   artifact-metadata: write
 
 concurrency:
-  group: release-macos-${{ inputs.target_version }}-${{ inputs.target_sha }}
+  group: package-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-macos
   cancel-in-progress: false
 
 jobs:
@@ -29,40 +55,32 @@ jobs:
     name: Build, sign, notarize, and attest macOS release
     runs-on: macos-15
     timeout-minutes: 60
+    outputs:
+      artifact_name: ${{ steps.package-output.outputs.artifact_name }}
+      packaged_sha: ${{ steps.package-output.outputs.packaged_sha }}
     env:
       APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
       APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
-
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.target_sha }}
           fetch-depth: 0
-
+          persist-credentials: false
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-
-      - name: Verify declared release target
+      - name: Verify same-run macOS package context
         env:
-          FOLIOLE_RELEASE_EVENT_NAME: ${{ github.event_name }}
-          FOLIOLE_RELEASE_REF_NAME: ${{ github.ref_name }}
-          FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}
-          FOLIOLE_RELEASE_TARGET_SHA: ${{ inputs.target_sha }}
-          FOLIOLE_RELEASE_TARGET_VERSION: ${{ inputs.target_version }}
-        run: node scripts/release-target-contract.mjs
-
-      - name: Verify T7 release candidate evidence
-        env:
-          FOLIOLE_EVIDENCE_REPOSITORY: ${{ github.repository }}
-          FOLIOLE_EVIDENCE_TARGET_SHA: ${{ inputs.target_sha }}
-          FOLIOLE_EVIDENCE_WORKFLOW: .github/workflows/release-candidate-quality.yml
-          GITHUB_TOKEN: ${{ github.token }}
-        run: node scripts/release-workflow-evidence.mjs
-
+          RUN_SHA: ${{ github.sha }}
+          TARGET_REF: ${{ inputs.trigger_ref }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+          TARGET_VERSION: ${{ inputs.target_version }}
+        run: >-
+          node -e "const fs = require('node:fs'); const cp = require('node:child_process'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); const head = cp.execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(); if (process.env.TARGET_REF !== 'refs/heads/release') throw new Error('Release ref must be exact'); if (process.env.RUN_SHA !== process.env.TARGET_SHA || head !== process.env.TARGET_SHA) throw new Error('macOS package SHA mismatch'); if (pkg.version !== process.env.TARGET_VERSION) throw new Error('macOS package version mismatch');"
       - name: Verify runner architecture
         shell: bash
         run: |
@@ -71,10 +89,8 @@ jobs:
             echo "The macOS release must run on an arm64 runner." >&2
             exit 1
           fi
-
       - name: Install dependencies
         run: npm ci
-
       - name: Install Apple signing and notarization credentials
         shell: bash
         env:
@@ -120,17 +136,14 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -k "$keychain_password" "$keychain_path"
           security list-keychain -d user -s "$keychain_path"
           security find-identity -v -p codesigning "$keychain_path"
-
       - name: Build, sign, notarize, and verify macOS release
         run: npm run macos:github:notarize
-
       - name: Generate artifact attestation
         uses: actions/attest@v4
         with:
           subject-path: |
             artifacts/macos/github-arm64/*.dmg
             artifacts/macos/github-arm64/*.zip
-
       - name: Upload macOS release artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -143,3 +156,8 @@ jobs:
             artifacts/macos/github-arm64/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 14
+      - name: Export macOS package artifact
+        id: package-output
+        run: |
+          echo "artifact_name=foliole-macos-release" >> "$GITHUB_OUTPUT"
+          echo "packaged_sha=${{ inputs.target_sha }}" >> "$GITHUB_OUTPUT"

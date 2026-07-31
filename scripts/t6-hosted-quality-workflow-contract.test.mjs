@@ -25,77 +25,60 @@ function section(source, jobName, nextJobName) {
   return source.slice(start, end);
 }
 
-function resultFromNeeds(job, results) {
-  const needs = Array.isArray(job.needs) ? job.needs : [job.needs];
-  return needs.every((name) => results[name] === 'success') ? 'queued' : 'skipped';
-}
-
 describe('T6 hosted quality workflow contracts', () => {
-  it('owns the twice-daily and exact-SHA full entry after duplicate suppression', () => {
+  it('keeps standalone dev schedule/manual entry and exposes the same reusable implementation', () => {
+    const callInputs = workflows.t6.on.workflow_call.inputs;
     expect(workflows.t6.name).toBe('T6 Hosted Quality');
-    expect(workflows.t6['run-name']).toBe('T6 Hosted Quality @ ${{ inputs.target_sha || github.sha }}');
     expect(workflows.t6.on.schedule.map(({ cron }) => cron)).toEqual(['40 3 * * *', '40 14 * * *']);
-    expect(workflows.t6.on.workflow_dispatch.inputs.target_sha).toEqual({
-      description: 'Exact dev commit to validate', required: true, type: 'string'
-    });
-    expect(workflows.t6.jobs['schedule-admission'].outputs.should_run)
-      .toBe('${{ steps.admission.outputs.should_run }}');
+    expect(workflows.t6.on.workflow_dispatch).toEqual(null);
+    expect(callInputs.target_sha).toEqual({ required: true, type: 'string' });
+    expect(callInputs.execution_lane).toEqual({ required: true, type: 'string' });
+    expect(callInputs.trigger_ref).toEqual({ required: true, type: 'string' });
+    expect(workflows.t6.on.workflow_call.outputs.accepted_sha.value)
+      .toBe('${{ jobs.quality-admission.outputs.accepted_sha }}');
+    expect(sources.t6).toContain("inputs.execution_lane == '' && github.ref != 'refs/heads/dev'");
+    expect(sources.t6).toContain("github.event_name == 'schedule' && inputs.execution_lane == ''");
     expect(sources.t6).toContain('run: node scripts/quality/t6-hosted-quality-admission.mjs');
-    expect(admission).toContain('Remote Quality (full) @ ${targetSha}');
     expect(admission).toContain('actions/workflows/remote-quality.yml/runs?per_page=100');
   });
 
-  it('starts the T6 heavy reusable workflow only after T5 succeeds', () => {
+  it('requires T5 before full quality and exports their exact shared SHA', () => {
     const baseline = workflows.t6.jobs['t5-baseline'];
-    const heavy = workflows.t6.jobs['full-quality'];
+    const full = workflows.t6.jobs['full-quality'];
+    const gate = workflows.t6.jobs['quality-admission'];
     expect(baseline.uses).toBe('./.github/workflows/t5-baseline-admission.yml');
-    expect(baseline.needs).toBe('schedule-admission');
-    expect(heavy.uses).toBe('./.github/workflows/hosted-quality-full.yml');
-    expect(heavy.needs).toBe('t5-baseline');
-    expect(heavy.if).toBe("needs.t5-baseline.result == 'success'");
-    expect(resultFromNeeds(heavy, { 't5-baseline': 'failure' })).toBe('skipped');
-    expect(resultFromNeeds(heavy, { 't5-baseline': 'success' })).toBe('queued');
+    expect(baseline.needs).toBe('context');
+    expect(baseline.with.execution_lane).toBe('${{ needs.context.outputs.execution_lane }}');
+    expect(full.uses).toBe('./.github/workflows/hosted-quality-full.yml');
+    expect(full.needs).toEqual(['context', 't5-baseline']);
+    expect(full.if).toBe("needs.t5-baseline.result == 'success'");
+    expect(gate.needs).toEqual(['context', 't5-baseline', 'full-quality']);
+    expect(gate.outputs.accepted_sha).toBe('${{ steps.require-chain.outputs.accepted_sha }}');
+    expect(sources.t6).toContain('T5_SHA: ${{ needs.t5-baseline.outputs.admitted_sha }}');
+    expect(sources.t6).toContain('FULL_SHA: ${{ needs.full-quality.outputs.accepted_sha }}');
   });
 
-  it('keeps T4 scoped checks direct while composing the full T5 and T6 chain', () => {
-    const refGuard = workflows.remote.jobs['dev-ref'];
-    const scoped = workflows.remote.jobs['scoped-quality'];
-    const baseline = workflows.remote.jobs['t5-baseline'];
-    const full = workflows.remote.jobs['full-quality'];
-    expect(refGuard.steps[0].if).toBe("github.ref != 'refs/heads/dev'");
-    expect(scoped.if).toBe("inputs.scope != 'full' && needs.dev-ref.result == 'success'");
-    expect(scoped.needs).toBe('dev-ref');
-    expect(scoped.uses).toBe('./.github/workflows/hosted-quality-core.yml');
-    expect(scoped.with.target_sha).toBe('${{ github.sha }}');
-    expect(baseline.if).toBe("inputs.scope == 'full' && needs.dev-ref.result == 'success'");
-    expect(baseline.needs).toBe('dev-ref');
-    expect(baseline.uses).toBe('./.github/workflows/t5-baseline-admission.yml');
-    expect(full.if).toBe("inputs.scope == 'full' && needs.t5-baseline.result == 'success'");
-    expect(full.needs).toBe('t5-baseline');
-    expect(full.uses).toBe('./.github/workflows/hosted-quality-full.yml');
+  it('keeps dev Remote Quality outside formal T6/T7 evidence', () => {
+    const remote = workflows.remote.jobs;
+    expect(remote['dev-ref'].steps[0].if).toBe("github.ref != 'refs/heads/dev'");
+    expect(remote['scoped-quality'].uses).toBe('./.github/workflows/hosted-quality-core.yml');
+    expect(remote['scoped-quality'].with.execution_lane).toBe('dev-remote');
+    expect(remote['scoped-quality'].with.trigger_ref).toBe('${{ github.ref }}');
+    expect(remote['t5-baseline'].uses).toBe('./.github/workflows/t5-baseline-admission.yml');
+    expect(remote['full-quality'].uses).toBe('./.github/workflows/hosted-quality-full.yml');
+    expect(workflows.remote.on.workflow_dispatch.inputs.target_sha).toBeUndefined();
     for (const scope of ['desktop', 'shared', 'android', 'ios', 'full']) {
       expect(workflows.remote.on.workflow_dispatch.inputs.scope.options).toContain(scope);
     }
-    expect(workflows.remote.on.workflow_dispatch.inputs.target_sha).toBeUndefined();
-    expect(workflows.remote['run-name']).toBe('Remote Quality (${{ inputs.scope }}) @ ${{ github.sha }}');
   });
 
-  it('keeps the scoped core small and moves only full heavy work into the T6 tail', () => {
+  it('preserves the complete heavy host and command union', () => {
     expect(Object.keys(workflows.core.jobs)).toEqual([
       'common-quality', 'windows-quality', 'android-quality', 'ios-quality'
     ]);
     expect(Object.keys(workflows.full.jobs)).toEqual([
-      'common-build', 'windows-acceptance', 'android-host', 'ios-full'
+      'common-build', 'windows-acceptance', 'android-host', 'ios-full', 'full-admission'
     ]);
-    expect(Object.keys(workflows.common.jobs)).toEqual(['shared-quality']);
-    expect(workflows.full.jobs['common-build'].needs).toBeUndefined();
-    expect(sources.core).not.toContain("inputs.scope == 'full'");
-    expect(sources.full).not.toContain('release-static');
-    expect(sources.full).not.toContain('test:release:');
-    expect(sources.full).not.toContain('quality:release:windows:core');
-  });
-
-  it('preserves the canonical command and host union across T5 plus T6', () => {
     const hostSources = {
       Ubuntu: `${sources.t5}\n${section(sources.full, 'common-build', 'windows-acceptance')}\n${section(sources.full, 'android-host', 'ios-full')}`,
       Windows: `${sources.t5}\n${section(sources.full, 'windows-acceptance', 'android-host')}`,
@@ -115,28 +98,33 @@ describe('T6 hosted quality workflow contracts', () => {
       ],
       macOS: ['ios:sync:preflight', 'quality:ios:contract', 'ios-bootstrap-acceptance.mjs']
     };
-    for (const [host, expectedCommands] of Object.entries(commands)) {
-      for (const command of expectedCommands) expect(hostSources[host]).toContain(command);
+    for (const [host, expected] of Object.entries(commands)) {
+      for (const command of expected) expect(hostSources[host]).toContain(command);
     }
-    expect(workflows.full.jobs['common-build']['runs-on']).toBe('ubuntu-latest');
-    expect(workflows.full.jobs['android-host']['runs-on']).toBe('ubuntu-latest');
-    expect(workflows.full.jobs['windows-acceptance']['runs-on']).toBe('windows-latest');
-    expect(sources.ios).toContain('runs-on: macos-15');
   });
 
-  it('binds every heavy checkout to the requested SHA under read-only permissions', () => {
+  it('binds heavy jobs to one SHA and lane/ref-scoped concurrency groups', () => {
     for (const workflow of Object.values(workflows)) {
       expect(workflow.permissions).toMatchObject({ contents: 'read' });
     }
+    for (const name of ['common', 'core', 'full', 'ios']) {
+      expect(workflows[name].on.workflow_call.inputs.execution_lane)
+        .toEqual({ required: true, type: 'string' });
+      expect(workflows[name].on.workflow_call.inputs.trigger_ref)
+        .toEqual({ required: true, type: 'string' });
+    }
+    const concurrencySources = `${sources.common}\n${sources.core}\n${sources.full}\n${sources.ios}`;
+    expect(concurrencySources).toContain('${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}');
+    expect(concurrencySources).not.toContain('group: hosted-quality-');
+    expect(workflows.t6.concurrency.group)
+      .toBe("t6-${{ inputs.execution_lane || 'dev-t6' }}-${{ inputs.trigger_ref || github.ref }}-orchestrator");
     expect(sources.full.match(/ref: \$\{\{ env\.TARGET_SHA \}\}/gu)).toHaveLength(3);
     expect(sources.full.match(/persist-credentials: false/gu)).toHaveLength(3);
-    expect(sources.full.match(/Verify target SHA/gu)).toHaveLength(3);
-    expect(workflows.full.jobs['ios-full'].with.target_sha).toBe('${{ inputs.target_sha }}');
-    expect(sources.full).not.toContain('contents: write');
-    expect(sources.full).not.toContain('secrets.');
+    expect(workflows.full.on.workflow_call.outputs.accepted_sha.value)
+      .toBe('${{ jobs.full-admission.outputs.accepted_sha }}');
   });
 
-  it('does not absorb release-only or polling behavior', () => {
+  it('does not absorb packaging, signing, publishing, or polling', () => {
     for (const rejected of [
       'windows:package', 'installed-app-smoke', 'actions/attest', 'gh release',
       'CSC_', 'id-token: write', 'setTimeout', 'poll'

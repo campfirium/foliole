@@ -1,39 +1,55 @@
-name: T7 Release Windows
-run-name: T7 Release Windows ${{ inputs.target_version }} @ ${{ inputs.target_sha }}
+name: Release Windows Package
+
+run-name: Release Windows Package ${{ inputs.target_version }} @ ${{ inputs.target_sha }}
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       target_version:
-        description: "Explicit package version to package, e.g. 0.7.2"
         required: true
         type: string
       target_sha:
-        description: "Exact 40-character commit SHA to package"
         required: true
         type: string
-      artifact_only:
-        description: "Build and upload the installer + validation kit without creating or replacing a draft release"
+      execution_lane:
         required: true
-        default: false
-        type: boolean
+        type: string
+      trigger_ref:
+        required: true
+        type: string
+    secrets:
+      AZURE_CLIENT_ID:
+        required: true
+      AZURE_SUBSCRIPTION_ID:
+        required: true
+      AZURE_TENANT_ID:
+        required: true
+    outputs:
+      artifact_name:
+        description: Same-run Windows package artifact
+        value: ${{ jobs.release-windows.outputs.artifact_name }}
+      packaged_sha:
+        description: Exact commit packaged for Windows
+        value: ${{ jobs.release-windows.outputs.packaged_sha }}
 
 permissions:
-  actions: read
-  contents: write
+  contents: read
   id-token: write
   attestations: write
   artifact-metadata: write
 
 concurrency:
-  group: release-windows-${{ inputs.target_version }}-${{ inputs.target_sha }}
+  group: package-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-windows
   cancel-in-progress: false
 
 jobs:
   release-windows:
-    name: Build and publish Windows installer draft
+    name: Build, sign, install, and attest Windows release
     runs-on: windows-latest
     timeout-minutes: 60
+    outputs:
+      artifact_name: ${{ steps.package-output.outputs.artifact_name }}
+      packaged_sha: ${{ steps.package-output.outputs.packaged_sha }}
     env:
       ARTIFACT_SIGNING_ACCOUNT_NAME: ${{ vars.ARTIFACT_SIGNING_ACCOUNT_NAME }}
       ARTIFACT_SIGNING_CERTIFICATE_PROFILE_NAME: ${{ vars.ARTIFACT_SIGNING_CERTIFICATE_PROFILE_NAME }}
@@ -44,78 +60,53 @@ jobs:
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
       FOLIOLE_WINDOWS_BUILDER_CONFIG: .tmp/electron-builder-artifact-signing.json
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.target_sha }}
           fetch-depth: 0
-
+          persist-credentials: false
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-
-      - name: Verify declared release target
+      - name: Verify same-run Windows package context
+        shell: pwsh
         env:
-          FOLIOLE_RELEASE_EVENT_NAME: ${{ github.event_name }}
-          FOLIOLE_RELEASE_REF_NAME: ${{ github.ref_name }}
-          FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}
-          FOLIOLE_RELEASE_TARGET_SHA: ${{ inputs.target_sha }}
-          FOLIOLE_RELEASE_TARGET_VERSION: ${{ inputs.target_version }}
-        run: node scripts/release-target-contract.mjs
-
-      - name: Verify T6 hosted quality evidence for artifact-only packaging
-        if: ${{ inputs.artifact_only }}
-        env:
-          FOLIOLE_EVIDENCE_REPOSITORY: ${{ github.repository }}
-          FOLIOLE_EVIDENCE_TARGET_SHA: ${{ inputs.target_sha }}
-          FOLIOLE_EVIDENCE_WORKFLOW: .github/workflows/t6-hosted-quality.yml
-          GITHUB_TOKEN: ${{ github.token }}
-        run: node scripts/release-workflow-evidence.mjs
-
-      - name: Verify T7 release candidate evidence for formal packaging
-        if: ${{ !inputs.artifact_only }}
-        env:
-          FOLIOLE_EVIDENCE_REPOSITORY: ${{ github.repository }}
-          FOLIOLE_EVIDENCE_TARGET_SHA: ${{ inputs.target_sha }}
-          FOLIOLE_EVIDENCE_WORKFLOW: .github/workflows/release-candidate-quality.yml
-          GITHUB_TOKEN: ${{ github.token }}
-        run: node scripts/release-workflow-evidence.mjs
-
+          RUN_SHA: ${{ github.sha }}
+          TARGET_REF: ${{ inputs.trigger_ref }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+          TARGET_VERSION: ${{ inputs.target_version }}
+        run: |
+          $package = Get-Content package.json | ConvertFrom-Json
+          if ($env:TARGET_REF -ne "refs/heads/release") { throw "Release ref must be refs/heads/release" }
+          if ($env:RUN_SHA -ne $env:TARGET_SHA) { throw "Run SHA does not match target SHA" }
+          if ((git rev-parse HEAD) -ne $env:TARGET_SHA) { throw "Checked out SHA does not match target SHA" }
+          if ($package.version -ne $env:TARGET_VERSION) { throw "Package version does not match target version" }
       - name: Install dependencies
         run: npm ci
-
       - name: Verify Artifact Signing configuration
         run: node scripts/windows/check-artifact-signing-config.mjs
-
       - name: Authenticate to Azure with OIDC
         uses: azure/login@v3
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
       - name: Prepare Artifact Signing builder config
         run: node scripts/windows/write-artifact-signing-builder-config.mjs
-
       - name: Build and sign Windows installer
         run: npm run windows:package
-
       - name: Verify application and installer signatures
         run: |
           node scripts/windows/verify-artifact-signatures.mjs --root artifacts/windows/win-unpacked --extensions exe --recursive
           node scripts/windows/verify-artifact-signatures.mjs --root artifacts/windows --extensions exe
-
       - name: Install signed Windows installer
         run: node scripts/windows/package-windows.mjs --install-existing
-
       - name: Smoke installed Windows app
         run: node scripts/windows/installed-app-smoke.mjs
-
       - name: Generate installer checksum
         shell: pwsh
         run: |
@@ -123,74 +114,17 @@ jobs:
           if (-not $installer) {
             throw "Windows installer was not generated."
           }
-
           $hash = (Get-FileHash -Algorithm SHA256 $installer.FullName).Hash.ToLowerInvariant()
           "$hash *$($installer.Name)" | Set-Content -Path artifacts/windows/SHA256SUMS.txt -Encoding ascii
-
       - name: Build and verify Windows validation kit
         env:
           GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
           GITHUB_RUN_ID: ${{ github.run_id }}
         run: node scripts/windows/windows-validation-kit-build.mjs build
-
-      - name: Copy reviewed release body
-        if: ${{ !inputs.artifact_only }}
-        shell: pwsh
-        run: |
-          $package = Get-Content package.json | ConvertFrom-Json
-          $version = $package.version
-          $reviewedNotesFile = "releases/github/v$version.md"
-          if (-not (Test-Path $reviewedNotesFile)) {
-            throw "Reviewed GitHub release body was not found: $reviewedNotesFile"
-          }
-          New-Item -ItemType Directory -Force -Path artifacts/windows | Out-Null
-          Copy-Item $reviewedNotesFile "artifacts/windows/release-v$version-github-body.md"
-
       - name: Generate artifact attestation
         uses: actions/attest@v4
         with:
           subject-checksums: artifacts/windows/SHA256SUMS.txt
-
-      - name: Publish installer draft release
-        if: ${{ !inputs.artifact_only }}
-        shell: pwsh
-        run: |
-          $package = Get-Content package.json | ConvertFrom-Json
-          $targetVersion = "${{ inputs.target_version }}"
-          $targetCommit = "${{ inputs.target_sha }}"
-          $tagName = "v$targetVersion"
-          $releaseTitle = $targetVersion
-          $installer = Get-ChildItem -Path artifacts/windows -Filter "*.exe" | Select-Object -First 1
-          if (-not $installer) {
-            throw "Windows installer was not generated."
-          }
-          $blockmap = Get-Item -Path "$($installer.FullName).blockmap"
-          $updateMetadata = Get-Item -Path artifacts/windows/latest.yml
-          $checksums = Get-Item -Path artifacts/windows/SHA256SUMS.txt
-          $notesFile = Get-Item -Path "artifacts/windows/release-v$($package.version)-github-body.md"
-          if (-not $checksums) {
-            throw "Installer checksums were not generated."
-          }
-          if (-not $blockmap -or -not $updateMetadata) {
-            throw "Windows update metadata was not generated."
-          }
-          if (-not $notesFile) {
-            throw "GitHub release body was not copied."
-          }
-
-          $existingDraft = gh release view $tagName --json isDraft --jq ".isDraft" 2>$null
-          if ($LASTEXITCODE -eq 0) {
-            if ($existingDraft -ne "true") {
-              throw "Release $tagName already exists and is not a draft."
-            }
-            gh release delete $tagName --yes
-            if ($LASTEXITCODE -ne 0) {
-              throw "Failed to replace existing draft release $tagName."
-            }
-          }
-
-          gh release create $tagName $installer.FullName $blockmap.FullName $updateMetadata.FullName $checksums.FullName --draft --title $releaseTitle --target $targetCommit --notes-file $notesFile.FullName
-
       - name: Upload installer artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -203,3 +137,9 @@ jobs:
             artifacts/windows/validation-kit
           if-no-files-found: error
           retention-days: 14
+      - name: Export Windows package artifact
+        id: package-output
+        shell: pwsh
+        run: |
+          "artifact_name=foliole-windows-release" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "packaged_sha=${{ inputs.target_sha }}" | Out-File -FilePath $env:GITHUB_OUTPUT -Append

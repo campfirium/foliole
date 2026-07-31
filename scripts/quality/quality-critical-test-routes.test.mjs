@@ -37,6 +37,15 @@ const HOSTED_QUALITY_CONTRACTS = [
   'scripts/t6-hosted-quality-workflow-contract.test.mjs'
 ];
 
+const RELEASE_WORKFLOW_CONTRACTS = [
+  'scripts/electron-builder-config.test.mjs',
+  'scripts/release-candidate-quality-workflow-contract.test.mjs',
+  'scripts/release-macos-workflow-contract.test.mjs',
+  'scripts/release-windows-workflow-contract.test.mjs',
+  'scripts/t7-release-workflow-contract.test.mjs',
+  'scripts/windows/release-windows-validation-kit-contract.test.mjs'
+];
+
 const HOSTED_QUALITY_HANDOFF_CONTRACTS = [
   'scripts/github-actions-handoff-policy.test.mjs',
   'scripts/github-desktop-handoff-events.test.mjs',
@@ -95,6 +104,15 @@ describe('quality critical test routes', () => {
       '.github/workflows/t6-hosted-quality.yml',
       'scripts/quality/t6-hosted-quality-admission.mjs'
     ], existing)).toEqual(HOSTED_QUALITY_CONTRACTS);
+  });
+
+  it('routes every release orchestration surface to the release workflow contracts', () => {
+    expect(resolveCriticalTestFiles([
+      '.github/workflows/release-candidate-quality.yml',
+      '.github/workflows/release-macos.yml',
+      '.github/workflows/release-windows.yml',
+      '.github/workflows/t7-release.yml'
+    ], existing)).toEqual(RELEASE_WORKFLOW_CONTRACTS);
   });
 
   it('routes hosted-quality monitor and controller changes to their shared contract set', () => {

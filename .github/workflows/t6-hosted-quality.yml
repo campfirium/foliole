@@ -1,5 +1,6 @@
 name: T6 Hosted Quality
-run-name: T6 Hosted Quality @ ${{ inputs.target_sha || github.sha }}
+
+run-name: T6 Hosted Quality (${{ inputs.execution_lane || 'dev-t6' }}) @ ${{ inputs.target_sha || github.sha }}
 
 on:
   schedule:
@@ -8,51 +9,103 @@ on:
     # 22:40 Asia/Shanghai, catching the evening work block before midnight.
     - cron: '40 14 * * *'
   workflow_dispatch:
+  workflow_call:
     inputs:
       target_sha:
-        description: Exact dev commit to validate
         required: true
         type: string
+      execution_lane:
+        required: true
+        type: string
+      trigger_ref:
+        required: true
+        type: string
+    outputs:
+      accepted_sha:
+        description: Exact commit admitted by T5 and the full T6 tail
+        value: ${{ jobs.quality-admission.outputs.accepted_sha }}
 
 permissions:
   contents: read
   actions: read
 
 concurrency:
-  group: foliole-hosted-quality-${{ github.ref }}
+  group: t6-${{ inputs.execution_lane || 'dev-t6' }}-${{ inputs.trigger_ref || github.ref }}-orchestrator
   cancel-in-progress: false
 
 jobs:
-  schedule-admission:
-    name: Resolve scheduled validation
+  context:
+    name: Resolve T6 context
     runs-on: ubuntu-latest
     outputs:
-      should_run: ${{ steps.admission.outputs.should_run }}
+      execution_lane: ${{ inputs.execution_lane || 'dev-t6' }}
+      should_run: ${{ steps.scheduled.outputs.should_run || steps.direct.outputs.should_run }}
+      target_sha: ${{ inputs.target_sha || github.sha }}
+      trigger_ref: ${{ inputs.trigger_ref || github.ref }}
     steps:
+      - name: Require dev for a standalone T6 run
+        if: inputs.execution_lane == '' && github.ref != 'refs/heads/dev'
+        run: exit 1
       - name: Check out admission script
         uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.target_sha || github.sha }}
           persist-credentials: false
-
+      - name: Validate internal T6 context
+        env:
+          EXECUTION_LANE: ${{ inputs.execution_lane || 'dev-t6' }}
+          TARGET_SHA: ${{ inputs.target_sha || github.sha }}
+          TRIGGER_REF: ${{ inputs.trigger_ref || github.ref }}
+        run: >-
+          node -e "const sha = process.env.TARGET_SHA ?? ''; const lane = process.env.EXECUTION_LANE ?? ''; const ref = process.env.TRIGGER_REF ?? ''; if (!/^[0-9a-f]{40}$/.test(sha)) throw new Error('T6 target SHA must be exact'); if (!lane || !ref) throw new Error('T6 lane and trigger ref are required');"
       - name: Skip a duplicate scheduled full validation
-        id: admission
+        id: scheduled
+        if: github.event_name == 'schedule' && inputs.execution_lane == ''
         env:
           GH_TOKEN: ${{ github.token }}
-          FOLIOLE_QUALITY_EVENT: ${{ github.event_name }}
+          FOLIOLE_QUALITY_EVENT: schedule
           FOLIOLE_QUALITY_REPOSITORY: ${{ github.repository }}
-          FOLIOLE_QUALITY_TARGET_SHA: ${{ inputs.target_sha || github.sha }}
+          FOLIOLE_QUALITY_TARGET_SHA: ${{ github.sha }}
         run: node scripts/quality/t6-hosted-quality-admission.mjs
+      - name: Admit direct and reusable runs
+        id: direct
+        if: github.event_name != 'schedule' || inputs.execution_lane != ''
+        run: echo "should_run=true" >> "$GITHUB_OUTPUT"
 
   t5-baseline:
-    needs: schedule-admission
-    if: needs.schedule-admission.outputs.should_run == 'true'
+    needs: context
+    if: needs.context.outputs.should_run == 'true'
     uses: ./.github/workflows/t5-baseline-admission.yml
     with:
-      target_sha: ${{ inputs.target_sha || github.sha }}
+      execution_lane: ${{ needs.context.outputs.execution_lane }}
+      target_sha: ${{ needs.context.outputs.target_sha }}
+      trigger_ref: ${{ needs.context.outputs.trigger_ref }}
 
   full-quality:
-    needs: t5-baseline
+    needs: [context, t5-baseline]
     if: needs.t5-baseline.result == 'success'
     uses: ./.github/workflows/hosted-quality-full.yml
     with:
-      target_sha: ${{ inputs.target_sha || github.sha }}
+      execution_lane: ${{ needs.context.outputs.execution_lane }}
+      target_sha: ${{ needs.context.outputs.target_sha }}
+      trigger_ref: ${{ needs.context.outputs.trigger_ref }}
+
+  quality-admission:
+    name: T6 Hosted Quality admission
+    if: ${{ always() && needs.context.outputs.should_run == 'true' }}
+    needs: [context, t5-baseline, full-quality]
+    runs-on: ubuntu-latest
+    outputs:
+      accepted_sha: ${{ steps.require-chain.outputs.accepted_sha }}
+    steps:
+      - name: Require the same successful SHA from T5 and T6
+        id: require-chain
+        env:
+          FULL_RESULT: ${{ needs.full-quality.result }}
+          FULL_SHA: ${{ needs.full-quality.outputs.accepted_sha }}
+          T5_RESULT: ${{ needs.t5-baseline.result }}
+          T5_SHA: ${{ needs.t5-baseline.outputs.admitted_sha }}
+          TARGET_SHA: ${{ needs.context.outputs.target_sha }}
+        run: |
+          node -e "for (const [name, value] of Object.entries({ T5_RESULT: process.env.T5_RESULT, FULL_RESULT: process.env.FULL_RESULT })) if (value !== 'success') throw new Error(`${name}=${value}`); for (const [name, value] of Object.entries({ T5_SHA: process.env.T5_SHA, FULL_SHA: process.env.FULL_SHA })) if (value !== process.env.TARGET_SHA) throw new Error(`${name} does not match T6 target`);"
+          echo "accepted_sha=${TARGET_SHA}" >> "$GITHUB_OUTPUT"

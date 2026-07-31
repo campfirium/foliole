@@ -28,15 +28,21 @@ function jobSection(jobName, nextJobName) {
 }
 
 describe('T5 Baseline Admission workflow contract', () => {
-  it('offers the same required target SHA input to reusable and manual callers', () => {
+  it('is reusable-only and binds admission to an explicit lane, ref, and SHA', () => {
     const expectedInput = { required: true, type: 'string' };
     expect(workflow.on.workflow_call.inputs.target_sha).toEqual(expectedInput);
-    expect(workflow.on.workflow_dispatch.inputs.target_sha).toEqual(expectedInput);
+    expect(workflow.on.workflow_call.inputs.execution_lane).toEqual(expectedInput);
+    expect(workflow.on.workflow_call.inputs.trigger_ref).toEqual(expectedInput);
+    expect(workflow.on.workflow_dispatch).toBeUndefined();
+    expect(workflow.on.workflow_call.outputs.admitted_sha.value)
+      .toBe('${{ jobs.admission.outputs.admitted_sha }}');
     expect(workflow.name).toBe('T5 Baseline Admission');
-    expect(workflow['run-name']).toBe('T5 Baseline Admission @ ${{ inputs.target_sha }}');
+    expect(workflow['run-name']).toBe(
+      'T5 Baseline Admission (${{ inputs.execution_lane }}) @ ${{ inputs.target_sha }}'
+    );
     expect(workflow.permissions).toEqual({ contents: 'read' });
     expect(workflow.concurrency).toEqual({
-      group: 't5-baseline-admission-${{ inputs.target_sha }}',
+      group: 't5-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-admission',
       'cancel-in-progress': false
     });
   });
@@ -117,19 +123,34 @@ describe('T5 Baseline Admission workflow contract', () => {
     expect(workflow.jobs.admission.if).toBe('${{ always() }}');
     expect(workflow.jobs.admission.env).toEqual({
       STATIC_RESULT: '${{ needs.ubuntu-static.result }}',
+      TARGET_SHA: '${{ inputs.target_sha }}',
       TEST_RESULT: '${{ needs.portable-tests.result }}'
     });
     const aggregateCommand = workflow.jobs.admission.steps[0].run;
     const success = spawnSync('bash', ['-c', aggregateCommand], {
-      env: { ...process.env, STATIC_RESULT: 'success', TEST_RESULT: 'success' }
+      env: {
+        ...process.env,
+        GITHUB_OUTPUT: '/dev/null',
+        STATIC_RESULT: 'success',
+        TARGET_SHA: 'a'.repeat(40),
+        TEST_RESULT: 'success'
+      }
     });
     const failure = spawnSync('bash', ['-c', aggregateCommand], {
-      env: { ...process.env, STATIC_RESULT: 'failure', TEST_RESULT: 'success' },
+      env: {
+        ...process.env,
+        GITHUB_OUTPUT: '/dev/null',
+        STATIC_RESULT: 'failure',
+        TARGET_SHA: 'a'.repeat(40),
+        TEST_RESULT: 'success'
+      },
       encoding: 'utf8'
     });
     expect(success.status).toBe(0);
     expect(failure.status).toBe(1);
     expect(failure.stderr).toContain('STATIC_RESULT=failure');
+    expect(workflow.jobs.admission.outputs.admitted_sha)
+      .toBe('${{ steps.require-buckets.outputs.admitted_sha }}');
     expect(workflowSource.match(/npm run electron:rebuild:native/gu)).toHaveLength(2);
     expect(workflowSource.match(/node scripts\/electron-sqlite-runner\.mjs --preflight/gu)).toHaveLength(2);
     expect(workflowSource).not.toContain('continue-on-error');
