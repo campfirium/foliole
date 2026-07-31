@@ -209,7 +209,7 @@ describe('electron-builder release packaging config', () => {
   it('uses a per-user assisted Windows installer with directory choice, default shortcuts, and launch', async () => {
     const config = await readBuilderConfig();
 
-    expect(config.win.artifactName).toBe('${productName}-Setup-${version}-win-${arch}.${ext}');
+    expect(config.win.artifactName).toBe('${productName}-Windows-${arch}-${version}.${ext}');
     expect(config.nsis.oneClick).toBe(false);
     expect(config.nsis.include).toBe('build/installer.nsh');
     expect(config.nsis.allowToChangeInstallationDirectory).toBe(true);

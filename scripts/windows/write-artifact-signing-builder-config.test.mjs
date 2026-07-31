@@ -8,10 +8,12 @@ import { createArtifactSigningBuilderConfig } from './write-artifact-signing-bui
 it('adds Artifact Signing without persisting Azure credentials', () => {
   const env = Object.fromEntries(REQUIRED_ARTIFACT_SIGNING_ENV.map((name) => [name, `configured-${name}`]));
   env.ARTIFACT_SIGNING_ENDPOINT = 'https://eus.codesigning.azure.net/';
-  const config = createArtifactSigningBuilderConfig({ win: { target: ['nsis'] } }, env);
+  const artifactName = '${productName}-Windows-${arch}-${version}.${ext}';
+  const config = createArtifactSigningBuilderConfig({ win: { artifactName, target: ['nsis'] } }, env);
 
   expect(config.forceCodeSigning).toBe(true);
   expect(config.win).toMatchObject({
+    artifactName,
     azureSignOptions: {
       certificateProfileName: env.ARTIFACT_SIGNING_CERTIFICATE_PROFILE_NAME,
       codeSigningAccountName: env.ARTIFACT_SIGNING_ACCOUNT_NAME,

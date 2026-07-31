@@ -47,6 +47,7 @@ describe('GitHub macOS packaging', () => {
     expect(config.electronDist).toBe('.tmp/electron-mas-arm64');
     expect(config.directories.output).toBe('/private/tmp/foliole-github-output');
     expect(config.mac).toMatchObject({
+      artifactName: '${productName}-macOS-${arch}-${version}.${ext}',
       binaries: ['Contents/MacOS/codex', 'Contents/MacOS/Foliole Global Capture'],
       entitlements: 'build/entitlements.mas.plist',
       entitlementsInherit: 'build/entitlements.mas.inherit.plist',
@@ -110,10 +111,10 @@ describe('GitHub macOS packaging', () => {
 
   it('derives exact formal artifact names and rejects a non-DMG checksum target', async () => {
     expect(createGithubArtifactNames('Foliole', '0.6.5')).toEqual([
-      'Foliole-0.6.5-mac-arm64.dmg',
-      'Foliole-0.6.5-mac-arm64.dmg.blockmap',
-      'Foliole-0.6.5-mac-arm64.zip',
-      'Foliole-0.6.5-mac-arm64.zip.blockmap',
+      'Foliole-macOS-arm64-0.6.5.dmg',
+      'Foliole-macOS-arm64-0.6.5.dmg.blockmap',
+      'Foliole-macOS-arm64-0.6.5.zip',
+      'Foliole-macOS-arm64-0.6.5.zip.blockmap',
       'latest-mac.yml',
       'SHA256SUMS.txt'
     ]);
