@@ -1,6 +1,8 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { FormulaClozeCreatePayload } from '../features/formula-cloze/model/formulaCloze';
+import type { Node } from '../features/nodes/model/nodeTypes';
+import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
 
 import { readCachedWorkspaceNodeDocument, resetWorkspaceNodeDocumentCacheForTest } from './workspaceNodeDocumentCache';
 import { useWorkspaceStore } from './workspaceStore';
@@ -12,7 +14,14 @@ const nodeStorage = vi.hoisted(() => ({
   saveNodeOrder: vi.fn()
 }));
 const mutationRepository = vi.hoisted(() => ({
-  syncNodeCreation: vi.fn(async () => null)
+  syncNodeCreation: vi.fn<
+    (
+      node: Node,
+      nodeOrder?: string[],
+      activeNodeId?: string | null,
+      position?: number
+    ) => Promise<WorkspaceNodeMutationPatchResult | null>
+  >(async () => null)
 }));
 
 vi.mock('../../lib/platform/storage', () => ({
