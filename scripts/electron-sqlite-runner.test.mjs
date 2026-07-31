@@ -54,12 +54,23 @@ describe('electron sqlite runner', () => {
   });
 
   it('uses repo-local temp files for sqlite vitest runs only', () => {
-    expect(buildRunnerInvocation('scripts/test-files.mjs', ['electron/mirror/example.test.ts'], 'D:/C/foliole').env).toEqual({
+    const expectedEnv = {
       ELECTRON_RUN_AS_NODE: '1',
       TEMP: path.join('D:/C/foliole', '.tmp', 'electron-sqlite-tmp'),
       TMP: path.join('D:/C/foliole', '.tmp', 'electron-sqlite-tmp'),
       TMPDIR: path.join('D:/C/foliole', '.tmp', 'electron-sqlite-tmp')
-    });
+    };
+    expect(buildRunnerInvocation(
+      'scripts/test-files.mjs', ['electron/mirror/example.test.ts'], 'D:/C/foliole'
+    ).env).toEqual(expectedEnv);
+    expect(buildRunnerInvocation(
+      'scripts/run-vitest-with-summary.mjs',
+      ['report.json', '--', 'electron\\import\\example.test.ts'],
+      'D:/C/foliole'
+    ).env).toEqual(expectedEnv);
+    expect(buildRunnerInvocation(
+      'scripts/run-vitest-with-summary.mjs', ['report.json', '--', 'src/app/example.test.ts'], 'D:/C/foliole'
+    ).env).toEqual({ ELECTRON_RUN_AS_NODE: '1' });
   });
 
   it('inherits child output for normal script runs so large test logs do not fill a sync buffer', () => {
