@@ -13,6 +13,7 @@ import { buildControllerMoveToNodeState } from './appMoveToNodeState';
 import { buildControllerSearchState } from './appSearchState';
 import { useCommandShortcutState } from './reviewHotkeysState';
 import { useAppCommandShortcutDispatcher } from './useAppCommandShortcutDispatcher';
+import { useAppCommandSurfaceShortcuts } from './useAppCommandSurfaceShortcuts';
 import { useFormalImport } from './useFormalImport';
 import { useNativeCommandMenu } from './useNativeCommandMenu';
 
@@ -22,6 +23,16 @@ function useAppCommandShortcuts(args: {
   paletteState: ReturnType<typeof buildControllerPaletteState>;
 }) {
   useNativeCommandMenu(args.paletteState.items, args.paletteState.onRunCommand);
+  useAppCommandSurfaceShortcuts({
+    isCommandPaletteOpen: args.controller.runtime.isCommandPaletteOpen,
+    isSearchPaletteOpen: args.controller.runtime.isSearchPaletteOpen,
+    isSettingsOpen: args.controller.runtime.isSettingsOpen,
+    items: args.paletteState.items,
+    runCommand: args.paletteState.onRunCommand,
+    setIsCommandPaletteOpen: args.controller.runtime.setIsCommandPaletteOpen,
+    setIsSearchPaletteOpen: args.controller.runtime.setIsSearchPaletteOpen,
+    shortcutMap: args.hotkeys.shortcutMap
+  });
   useAppCommandShortcutDispatcher({
     isCommandSurfaceOpen:
       args.controller.runtime.isCommandPaletteOpen ||

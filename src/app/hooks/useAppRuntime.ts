@@ -174,12 +174,7 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
   const moveToNodeSource = useMoveToNodeSourceState(flags.setIsMoveToNodePaletteOpen);
   const settingsRequest = useSettingsRequestState();
   const recentHistory = useRecentHistory();
-  useWindowHotkeys({
-    setIsCommandPaletteOpen: flags.setIsCommandPaletteOpen,
-    setIsGoToNodePaletteOpen: flags.setIsGoToNodePaletteOpen,
-    setIsMoveToNodePaletteOpen: moveToNodeSource.setIsMoveToNodePaletteOpen,
-    setIsSearchPaletteOpen: flags.setIsSearchPaletteOpen
-  });
+  useWindowHotkeys();
 
   useEffect(() => {
     return subscribeOpenClozeGuardSettings(() => {

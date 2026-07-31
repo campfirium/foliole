@@ -1,7 +1,11 @@
 import { render } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
+import { toggleMainWindowDevTools } from '../../shared/platform/windowControls';
+
 import { useWindowHotkeys } from './useAppRuntimeHotkeys';
+
+vi.mock('../../shared/platform/windowControls', () => ({ toggleMainWindowDevTools: vi.fn() }));
 
 function dispatchShortcutFrom(target: HTMLElement, init: KeyboardEventInit) {
   const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init });
@@ -9,39 +13,18 @@ function dispatchShortcutFrom(target: HTMLElement, init: KeyboardEventInit) {
   return event;
 }
 
-function Harness(props: {
-  setIsCommandPaletteOpen?: (update: (open: boolean) => boolean) => void;
-  setIsSearchPaletteOpen?: (update: (open: boolean) => boolean) => void;
-}) {
-  useWindowHotkeys({
-    setIsCommandPaletteOpen: props.setIsCommandPaletteOpen ?? vi.fn(),
-    setIsGoToNodePaletteOpen: vi.fn(),
-    setIsMoveToNodePaletteOpen: vi.fn(),
-    setIsSearchPaletteOpen: props.setIsSearchPaletteOpen ?? vi.fn()
-  });
+function Harness() {
+  useWindowHotkeys(true);
   return <input aria-label="editor target" />;
 }
 
-it('opens the command palette before an editor target can stop shortcut bubbling', () => {
-  const setIsCommandPaletteOpen = vi.fn();
-  render(<Harness setIsCommandPaletteOpen={setIsCommandPaletteOpen} />);
+it('keeps the DevTools shortcut in the window capture handler', () => {
+  render(<Harness />);
   const input = document.querySelector('input')!;
   input.addEventListener('keydown', (event) => event.stopPropagation());
 
-  const event = dispatchShortcutFrom(input, { ctrlKey: true, key: 'p' });
+  const event = dispatchShortcutFrom(input, { ctrlKey: true, key: 'i', shiftKey: true });
 
   expect(event.defaultPrevented).toBe(true);
-  expect(setIsCommandPaletteOpen).toHaveBeenCalledTimes(1);
-});
-
-it('opens workspace search before an editor target can stop shortcut bubbling', () => {
-  const setIsSearchPaletteOpen = vi.fn();
-  render(<Harness setIsSearchPaletteOpen={setIsSearchPaletteOpen} />);
-  const input = document.querySelector('input')!;
-  input.addEventListener('keydown', (event) => event.stopPropagation());
-
-  const event = dispatchShortcutFrom(input, { ctrlKey: true, key: 'k' });
-
-  expect(event.defaultPrevented).toBe(true);
-  expect(setIsSearchPaletteOpen).toHaveBeenCalledTimes(1);
+  expect(toggleMainWindowDevTools).toHaveBeenCalledTimes(1);
 });

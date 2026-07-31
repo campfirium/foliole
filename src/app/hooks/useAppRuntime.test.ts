@@ -1,45 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  isCommandPaletteToggleShortcut,
   isDevToolsToggleShortcut,
-  isSearchPaletteToggleShortcut,
   shouldHandleDevToolsToggleShortcut
 } from './useAppRuntimeHotkeys';
-
-describe('isCommandPaletteToggleShortcut', () => {
-  it('matches Ctrl/Cmd+P and rejects Ctrl/Cmd+K', () => {
-    expect(
-      isCommandPaletteToggleShortcut({
-        altKey: false,
-        ctrlKey: true,
-        key: 'p',
-        metaKey: false,
-        shiftKey: false
-      })
-    ).toBe(true);
-
-    expect(
-      isCommandPaletteToggleShortcut({
-        altKey: false,
-        ctrlKey: false,
-        key: 'P',
-        metaKey: true,
-        shiftKey: false
-      })
-    ).toBe(true);
-
-    expect(
-      isCommandPaletteToggleShortcut({
-        altKey: false,
-        ctrlKey: true,
-        key: 'k',
-        metaKey: false,
-        shiftKey: false
-      })
-    ).toBe(false);
-  });
-});
 
 describe('isDevToolsToggleShortcut', () => {
   it('matches Ctrl+Shift+I and rejects nearby combinations', () => {
@@ -85,39 +49,5 @@ describe('isDevToolsToggleShortcut', () => {
 
     expect(shouldHandleDevToolsToggleShortcut(event, true)).toBe(true);
     expect(shouldHandleDevToolsToggleShortcut(event, false)).toBe(false);
-  });
-});
-
-describe('isSearchPaletteToggleShortcut', () => {
-  it('matches Ctrl/Cmd+K and rejects Ctrl/Cmd+P', () => {
-    expect(
-      isSearchPaletteToggleShortcut({
-        altKey: false,
-        ctrlKey: true,
-        key: 'k',
-        metaKey: false,
-        shiftKey: false
-      })
-    ).toBe(true);
-
-    expect(
-      isSearchPaletteToggleShortcut({
-        altKey: false,
-        ctrlKey: false,
-        key: 'K',
-        metaKey: true,
-        shiftKey: false
-      })
-    ).toBe(true);
-
-    expect(
-      isSearchPaletteToggleShortcut({
-        altKey: false,
-        ctrlKey: true,
-        key: 'p',
-        metaKey: false,
-        shiftKey: false
-      })
-    ).toBe(false);
   });
 });

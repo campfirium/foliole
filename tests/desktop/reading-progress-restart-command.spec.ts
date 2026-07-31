@@ -60,7 +60,7 @@ test('records save and hydrate events across in-app restart', async ({ browserNa
     expect(beforeRestart.scrollTop).toBeGreaterThan(0);
     expect(beforeRestart.nodeViewState?.scrollTop).toBeGreaterThan(0);
 
-    await page.keyboard.press(process.platform === 'darwin' ? 'Meta+P' : 'Control+P');
+    await page.keyboard.press(process.platform === 'darwin' ? 'Meta+Shift+P' : 'Control+P');
     await expect(page.getByRole('dialog', { name: 'Command palette' })).toBeVisible();
     await page.getByRole('textbox', { name: 'Search commands' }).fill('Restart App');
     await page.getByRole('button', { name: 'Restart App' }).click();

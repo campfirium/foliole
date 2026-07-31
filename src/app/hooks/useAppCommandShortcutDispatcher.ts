@@ -11,6 +11,8 @@ const DEDICATED_SHORTCUT_COMMAND_IDS = new Set<string>([
   ...DOCUMENT_SHORTCUT_COMMAND_IDS,
   ...REVIEW_SHORTCUT_COMMAND_IDS,
   APP_COMMAND_IDS.closeSettings,
+  APP_COMMAND_IDS.openCommandPalette,
+  APP_COMMAND_IDS.openWorkspaceSearch,
   APP_COMMAND_IDS.toggleDevTools,
   APP_COMMAND_IDS.toggleImmersiveMode
 ]);

@@ -48,7 +48,7 @@ test('Escape leaves current node editing after command palette closes outside Fl
   await seedCurrentNodeWorkspace(desktopWindow, nodeId);
   await focusPromptEditor(desktopWindow);
 
-  await desktopWindow.keyboard.press('Control+P');
+  await desktopWindow.keyboard.press(process.platform === 'darwin' ? 'Meta+Shift+P' : 'Control+P');
   await expect(desktopWindow.getByRole('textbox', { name: /Search commands|搜索命令/ })).toBeVisible();
   await desktopWindow.keyboard.press('Escape');
   await expect(desktopWindow.getByRole('textbox', { name: /Search commands|搜索命令/ })).toBeHidden();

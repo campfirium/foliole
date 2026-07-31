@@ -1,6 +1,7 @@
 import { render } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
+import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 
 import { useAppCommandShortcutDispatcher } from './useAppCommandShortcutDispatcher';
@@ -226,4 +227,21 @@ it('does not run disabled commands or commands while another command surface is 
 
   expect(dispatchShortcut({ ctrlKey: true, key: 'l' }).defaultPrevented).toBe(false);
   expect(blockedRunCommand).not.toHaveBeenCalled();
+});
+
+it('leaves command surface entry shortcuts to their dedicated capture handler', () => {
+  const runCommand = vi.fn();
+  render(
+    <Harness
+      items={[
+        { enabled: true, id: APP_COMMAND_IDS.openCommandPalette, title: 'Command Palette' },
+        { enabled: true, id: APP_COMMAND_IDS.openWorkspaceSearch, title: 'Search' }
+      ]}
+      runCommand={runCommand}
+    />
+  );
+
+  expect(dispatchShortcut({ ctrlKey: true, key: 'p' }).defaultPrevented).toBe(false);
+  expect(dispatchShortcut({ ctrlKey: true, key: 'k' }).defaultPrevented).toBe(false);
+  expect(runCommand).not.toHaveBeenCalled();
 });
