@@ -1,4 +1,6 @@
 // @vitest-environment node
+import path from 'node:path';
+
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { handleInvokeRequest } from './commands.js';
@@ -70,6 +72,7 @@ const {
   syncAppMenuState: vi.fn(),
   flushAllDirtyNodeSyncVersions: vi.fn(() => ['node-1'])
 }));
+const fixturePath = (name: string) => path.resolve('.tmp', 'commands-window-and-utility', name);
 
 vi.mock('electron', () => ({
   BrowserWindow: {
@@ -127,10 +130,10 @@ vi.mock('./review.js', () => ({
 beforeEach(() => {
   vi.clearAllMocks();
   mockWindow.isMaximized.mockReturnValue(false);
-  showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/inbox.md'] });
+  showOpenDialog.mockResolvedValue({ canceled: false, filePaths: [fixturePath('inbox.md')] });
   readFile.mockResolvedValue('# Imported title\nBody');
-  runPreparedImport.mockReturnValue(importedMarkdownResult);
-  recordPreparedImportFailure.mockReturnValue(failedMarkdownResult);
+  runPreparedImport.mockReturnValue({ ...importedMarkdownResult, sourceLocator: fixturePath('inbox.md') });
+  recordPreparedImportFailure.mockReturnValue({ ...failedMarkdownResult, sourceLocator: fixturePath('inbox.md') });
 });
 
 it('throws on unsupported command', async () => {
@@ -143,7 +146,7 @@ it('selects Markdown metadata without preloading file content', async () => {
   await expect(handleInvokeRequest({ command: 'select_import_text_file', args: {} })).resolves.toEqual({
     content: '',
     file_name: 'inbox.md',
-    file_path: '/tmp/inbox.md',
+    file_path: fixturePath('inbox.md'),
     kind: 'markdown'
   });
 
@@ -152,9 +155,9 @@ it('selects Markdown metadata without preloading file content', async () => {
 });
 
 it('selects a directory through the native utility command', async () => {
-  showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/imports'] });
+  showOpenDialog.mockResolvedValue({ canceled: false, filePaths: [fixturePath('imports')] });
 
-  await expect(handleInvokeRequest({ command: 'select_import_directory', args: {} })).resolves.toBe('/tmp/imports');
+  await expect(handleInvokeRequest({ command: 'select_import_directory', args: {} })).resolves.toBe(fixturePath('imports'));
   expect(showOpenDialog).toHaveBeenCalledTimes(1);
 });
 
@@ -171,7 +174,7 @@ it('runs the unified text import pipeline through the native import command', as
     result_status: 'imported',
     source_fingerprint: 'source-fingerprint',
     source_kind: 'markdown',
-    source_locator: '/tmp/inbox.md',
+    source_locator: fixturePath('inbox.md'),
     source_name: 'inbox.md'
   });
 
@@ -187,13 +190,13 @@ it('returns null when native import selection is cancelled', async () => {
 });
 
 it('classifies TXT metadata without preloading file content', async () => {
-  showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/inbox.txt'] });
+  showOpenDialog.mockResolvedValue({ canceled: false, filePaths: [fixturePath('inbox.txt')] });
   readFile.mockResolvedValue('Plain text body');
 
   await expect(handleInvokeRequest({ command: 'select_import_text_file', args: {} })).resolves.toEqual({
     content: '',
     file_name: 'inbox.txt',
-    file_path: '/tmp/inbox.txt',
+    file_path: fixturePath('inbox.txt'),
     kind: 'text'
   });
 
@@ -201,14 +204,14 @@ it('classifies TXT metadata without preloading file content', async () => {
 });
 
 it('defers HTML conversion until the native import command runs', async () => {
-  showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/inbox.html'] });
+  showOpenDialog.mockResolvedValue({ canceled: false, filePaths: [fixturePath('inbox.html')] });
   readFile.mockResolvedValue('<h2>Imported</h2><p><strong>Bold</strong> text</p>');
-  runPreparedImport.mockReturnValue(importedHtmlResult);
+  runPreparedImport.mockReturnValue({ ...importedHtmlResult, sourceLocator: fixturePath('inbox.html') });
 
   await expect(handleInvokeRequest({ command: 'select_import_text_file', args: {} })).resolves.toEqual({
     content: '',
     file_name: 'inbox.html',
-    file_path: '/tmp/inbox.html',
+    file_path: fixturePath('inbox.html'),
     kind: 'html'
   });
 
@@ -224,7 +227,7 @@ it('defers HTML conversion until the native import command runs', async () => {
     result_status: 'imported',
     source_fingerprint: 'source-fingerprint-html',
     source_kind: 'html',
-    source_locator: '/tmp/inbox.html',
+    source_locator: fixturePath('inbox.html'),
     source_name: 'inbox.html'
   });
 
@@ -232,7 +235,7 @@ it('defers HTML conversion until the native import command runs', async () => {
     expect.objectContaining({
       content: '## Imported\n\n**Bold** text',
       sourceKind: 'html',
-      sourceLocator: '/tmp/inbox.html',
+      sourceLocator: fixturePath('inbox.html'),
       sourceName: 'inbox.html'
     })
   );

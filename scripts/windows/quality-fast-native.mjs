@@ -145,6 +145,8 @@ export async function runQualityT0Native(options = {}) {
   const runner = options.runner ?? runInherited;
   const routeEnv = { ...env, QUALITY_GATE_CHANGED_FILES: toEnvFileList(resolvedChangedFiles) };
 
+  if (options.planOnly) return plan;
+
   console.log(`[quality-fast-native] selected level: ${plan.level || '(unknown)'}`);
   await runNativeT0StaticGuards(routeEnv, runner, runStep);
   if (!HEAVY_LEVELS.has(plan.level)) {
@@ -169,7 +171,12 @@ export async function runQualityT0Native(options = {}) {
 
 async function main() {
   try {
-    await runQualityT0Native();
+    const routeJson = process.argv.slice(2).includes('--route-json');
+    const plan = await runQualityT0Native({ planOnly: routeJson });
+    if (routeJson) {
+      process.stdout.write(`${JSON.stringify(plan)}\n`);
+      return;
+    }
     console.log('[quality-fast-native] all checks passed.');
   } catch (error) {
     console.error(`[quality-fast-native] ${error instanceof Error ? error.message : String(error)}`);

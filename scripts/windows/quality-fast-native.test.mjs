@@ -65,6 +65,15 @@ describe('quality-fast-native Git Bash resolution', () => {
 });
 
 describe('quality-fast-native T0 routing', () => {
+  it('returns the route plan without running checks for route-json mode', async () => {
+    const plan = { changedFiles: ['electron/main.ts'], level: 'desktop', lintTargets: [], relatedTests: [], target: 'quality:desktop' };
+    const runner = vi.fn(async () => 0);
+
+    await expect(runQualityT0Native({ bashExe: GIT_BASH, changedFiles: plan.changedFiles, env: NPM_ENV, plan, planOnly: true, runner }))
+      .resolves.toEqual(plan);
+    expect(runner).not.toHaveBeenCalled();
+  });
+
   it('runs light and mid routes through the native local steps with changed files', async () => {
     const calls = [];
     await runQualityT0Native({
