@@ -1,4 +1,4 @@
 interface:
   display_name: "Foliole Hosted Quality Repair"
-  short_description: "Repair one failed T5, T6, or T7 run locally"
-  default_prompt: "Use $foliole-hosted-quality-repair to classify and repair one failed Foliole hosted-quality run locally, verify and commit the scoped fix, then audit local detection gaps without pushing."
+  short_description: "Repair one independent dev T6 failure"
+  default_prompt: "Use $foliole-hosted-quality-repair to repair one failed independent Foliole dev T6 run locally, or route a release T7 failure back to its existing pinned release task."

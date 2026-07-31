@@ -6,7 +6,8 @@
 
 - 当前仓库是多平台单仓：`Electron + React + TypeScript + Vite + Capacitor`；主要宿主与表面为 `electron/`、`android/`、`src/app/`、`src/companion/`、`src/shared/platform/`。
 - 默认在 `dev` 主干按 Track-Based 连续小步推进；不创建 feature branch / worktree，除非用户明确要求。
-- 新建 `release/<version>` 必须先从已推送的 `dev` SHA 建立远端 ref；此后该版本只在 release 修复，不再接收 dev，且只用普通 Git merge 按 first-parent 序号回灌 dev。release 可多次回灌，删除前必须证明最终 tip 已是 dev 的祖先。
+- 正式发布只使用唯一、短期存在的精确分支 `release`：从已推送的 `dev` 切出，首个 release 提交写入已确定版本，首次 push 自动进入唯一 T7；此后不接收 dev，所有发布修复只落 release，并用普通 Git merge 按 first-parent 顺序回灌 dev。完成公开后元数据与 Pages 核对且最终 tip 已是 dev 祖先后才删除分支；禁止版本化 release 分支、cherry-pick、rebase、force-push 和人类 SHA 编排。
+- 每个 release 只由一个 pinned 发布主任务从切分持有到删分支；T7 及其内层失败回到该任务，不由 monitor 创建 repair 任务。发布文案可在仓库外工作稿和未公开 Draft body 中与技术流程并行，公开必须由用户确认，最终正文归档、notes 与 manifest 只在公开后提交。
 - 创建或交接 Foliole Codex 任务只能走 Codex Desktop 正常任务入口：`list_projects` 定位 saved project，`create_thread` 显式使用 `environment.type = local` 并发送完整首条提示，`wait_threads` 等待就绪，`set_thread_title` 命名，`read_thread` 确认首条用户消息与 assistant 正文可读，最后才可 `navigate_to_codex_page`；不得采用 Git 仓库默认 worktree。
 - 禁止启用或恢复 `task-seed-queue`，也禁止通过 queue runner、App Server `thread/start`、`codex://threads/...` deep link 或其他后台 thread 注入创建 / 交接任务。仅有 thread id、侧栏标题、open request 或成功跳转不算创建成功；正文未通过 `read_thread` 验证时必须归档该任务并改走正常任务入口，不得向用户交付空白任务。
 - 用户要求继续某个平台的产品主线时，创建任务前必须先按该平台局部 `AGENTS.md` 区分产品实现、验收证据与宿主控制流；不得仅凭未勾选 checkbox 或未标 `done` 状态把验收 / 控制任务包装成产品代码任务。
@@ -111,8 +112,8 @@
 - npm 默认保留 7 天 release-age 安全窗口；但 Dependabot / GitHub Advisory / `npm audit` 已明确报出的漏洞修复必须定向绕过该窗口，只允许更新被点名的漏洞包或其必要传递依赖，并用 `npm ls <package> --all` 与 `npm audit --omit=dev` 复验。禁止用等待窗口期作为安全告警处理结论。
 - `it.skip` / `test.skip` 必须紧邻 `// SKIP: <reason> | <date YYYY-MM-DD> | revive: <condition>`；看到超过 30 天的 stale `SKIP` 必须复查能否恢复。
 - E2E（Playwright）不进入任何质量闸；它作为宿主可见验收单独执行。桌面日常 agent 自动化验收优先按 `electron/AGENTS.md` 使用不干扰用户桌面的 Playwright 入口，人工预览仍按下表执行。
-- Windows Android 日常按 DEV-first 远程工作站使用：Windows native dev 与 A5 fixed deploy / verify 服务开发调试；CI 级 clean / bundled / release-like 终检默认由 GitHub T6/T7 或明确触发的重模式承担，不得恢复通用设备 runner 或 detached preview 服务。
-- 普通开发任务只跑改动相关的最小本地验证，不默认等待 hosted 中度或重度质检；每日两次 T6 负责常规 full hosted 兜底。`node scripts/quality/remote-quality.mjs --scope <desktop|shared|android|ios|full>` 仅用于 hosted-quality 失败修复后的即时复验、发布流程或用户明确要求，并且只验证远端不可变 SHA、显示唯一 run URL、等待结果并在失败时读取日志。不得为触发质检隐式 commit / push，目标 SHA 不在远端时必须停下等待授权，不得回退到其他 SHA。
+- Windows Android 日常按 DEV-first 远程工作站使用：Windows native dev 与 A5 fixed deploy / verify 服务开发调试；CI 级 clean / bundled / release-like 终检只由 GitHub hosted lane 承担，不得恢复通用设备 runner 或 detached preview 服务。
+- 本地可发起的质量与发布入口必须由机械登记表按真实执行图分类为 `local-quick`、`hosted-only`、`orchestrator` 或 `release-control`：只有目标和成本启动前有界、无未知聚合、无持久外部 / 发布副作用且不作为 T5/T6/T7 证据的入口可归为 `local-quick`；未登记质量入口一律 `hosted-only`，未登记外部 mutation 一律拒绝。`orchestrator` 只发起 / 观察 GitHub 工作，`release-control` 只允许 pinned 发布主任务执行明确状态转换；具体入口名由本实施方案任务 3 审计回填，完成前发布体系相关未审计入口 fail closed。
 - 运行命令后若工具返回非终态、无新增输出、仅 heartbeat / progress，或 agent 准备汇报“仍在运行 / 继续等 / 再查一次”，必须触发 `$quiet-wait`；后续用 waiter 接管等待，不得用 agent 回合继续守进程。
 - `copy:guard` 默认只报告 warning；若它报 warning，修复前先读 `.lab/specs/_product/terminology-and-copy.md`，禁止机械替换。
 

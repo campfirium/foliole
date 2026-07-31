@@ -1,54 +1,56 @@
 ---
 name: foliole-hosted-quality-repair
-description: Diagnose, classify, locally repair, verify, and commit one failed Foliole T5 admission, T6 hosted-quality, or T7 release workflow run from a handoff locator, then audit local gate coverage gaps. Use when a Codex Desktop task names a failed Foliole hosted-quality run ID, T5/T6/T7 workflow, or asks the visible controller to take over a hosted-quality repair.
+description: Diagnose, locally repair, verify, and commit one failed independent Foliole dev T6 hosted-quality run from a handoff locator; route any release T7 failure back to the existing pinned release task instead of creating a repair task. Use when a Codex Desktop task names a failed Foliole dev T6 run, T7 release run, or asks the visible controller to take over hosted-quality repair.
 ---
 
 # Foliole Hosted Quality Repair
 
-Act as the single visible controller for one failed hosted-quality run. Treat the handoff as a locator, not as failure or stage evidence. Read the run, repository history, and working tree before judging it. Only scheduled T6 is a rolling health stream; independent T5, manual T6, and T7 runs are exact observed runs with no implied successor.
+Act as the single visible repair controller only for an independent `dev` T6 run. A handoff is a locator, not failure or stage evidence.
 
-## Establish the source of truth
+## Route Before Diagnosing
 
-1. Extract the repository, stable workflow file, declared `runTier`, run ID, immutable head SHA, branch, URL, and workspace from the task.
-2. Read the complete run with `gh run view <run-id> --repo <repository> --json jobs,conclusion,event,headBranch,headSha,displayTitle,url,workflowName` and fetch failed-step logs with `gh run view <run-id> --repo <repository> --log-failed`.
-3. If read-only GitHub access requires approval, request only the exact read operation. If the handoff cannot surface approval, set `repairState=waiting-for-read-approval`; do not diagnose from locator fields.
-4. Verify that the returned SHA equals the locator SHA. Stop on mismatch.
+- Read the stable workflow path, run ID, branch, URL, and workspace from the task.
+- If the run is `.github/workflows/t7-release.yml`, has branch `release`, or belongs to a T7 nested/platform stage, do not accept repair ownership, edit code, commit, dispatch, or create another task. Route the run URL and first failed stage to the existing pinned release task.
+- Only an independent `.github/workflows/t6-hosted-quality.yml` run on `dev` is in repair scope.
+- T5 is reusable admission inside T6/T7, not an independent repair stream. A T5 failure inside independent dev T6 is reported as `runTier=T6, failedStage=T5`.
+- Legacy candidate, platform, or assembly workflow names do not establish a separate T7 repair owner.
+
+If the pinned release task cannot be identified, report `repairState=waiting-for-release-owner` and stop. Never create a replacement release task from this skill.
+
+## Establish The Source Of Truth
+
+1. Read the complete run with `gh run view <run-id> --repo <repository> --json jobs,conclusion,event,headBranch,headSha,displayTitle,url,workflowName` and fetch failed-step logs with `gh run view <run-id> --repo <repository> --log-failed`.
+2. If read-only GitHub access requires approval, request only the exact read operation. Without it, set `repairState=waiting-for-read-approval`; do not diagnose from locator fields.
+3. Confirm the returned branch is `dev` and the workflow is the independent T6 entry. Treat any mismatch as a routing failure.
+4. Use the returned commit identity only to correlate the observed run with repository history. Do not make it a human dispatch or branch-control input.
 5. Inspect `git status`, the named commit, and relevant history. Preserve unrelated dirty changes; never switch, reset, or overwrite the workspace to match the run.
+6. Inspect every failed job before editing. Set `failedStage=T5` only for failure in the nested admission chain; otherwise set `failedStage=T6`. Do not guess when evidence is incomplete.
 
-Resolve `runTier` from the stable workflow file, not the display name:
+## Repair
 
-- `.github/workflows/t5-baseline-admission.yml` → `T5`
-- `.github/workflows/t6-hosted-quality.yml` → `T6`
-- `.github/workflows/release-candidate-quality.yml`, `release-windows.yml`, `release-macos.yml`, or `publish-release.yml` → `T7`
+1. Group failures by shared root cause and overlapping write scope.
+2. Implement the smallest complete root-cause repair on `dev`. Do not weaken gates, widen allowlists, delete stable assertions, or replace native/user-path coverage with a narrower mock merely to get green.
+3. Run only checks registered as `local-quick`, starting with the narrowest reproducer. Local green never replaces hosted evidence.
+4. Review the integrated diff and preserve all unrelated changes.
+5. A monitor handoff that names the independent run and states it is a locator authorizes one local commit containing only the verified repair. Use `commit-note`; otherwise obtain explicit commit authorization.
+6. Use only the dev-only `orchestrator` entry recorded by the command registry to request hosted revalidation. Task 3 of the active release-stabilization plan will finalize that concrete entry; until then, do not guess or revive old command names.
+7. Never enter `release`, mutate a Draft, reuse T7 evidence, or transfer the repair to the pinned release task.
 
-Assign `failedStage` only after reading jobs. Independent T5 failures are `T5`. For T6, a failed job in the `t5-baseline` reusable chain is `failedStage=T5`; report `runTier=T6, failedStage=T5` and confirm the T6 `full-quality` heavy job was skipped. Other T6 failures are `T6`. T7 failures are `T7`. If job evidence cannot identify the stage, report `failedStage=unknown` and do not guess.
+Stop for product judgment, external service failure, missing permission, write-scope expansion, or ownership conflict. An intermediate red local check is not itself a stop condition.
 
-## Triage and coordinate
+## Prevention Audit
 
-- Inspect every failed job before editing and group failures by shared root cause, host chain, and overlapping write scope.
-- Use internal collaboration subagents only when the handoff explicitly authorizes them and project rules permit delegation. Create at most one worker per non-overlapping root-cause family with explicit ownership, forbidden overlaps, the narrowest validation, and a return contract of root cause, files changed, evidence, and blockers.
-- Workers must not commit, push, dispatch hosted quality, create tasks, or create more workers. The visible controller owns root-cause judgment, integration, final diff review, and reporting.
-- Do not weaken quality gates, widen allowlists, or flip assertions merely to make checks green. Separate pre-existing or external failures from failures caused by the target SHA.
+After the repair commit, identify the narrow reproducer and whether the changed-file, fast, pre-push, or host routing should have selected it. Classify the root cause as exactly one of:
 
-## Repair and verify
+- `local-validation-missed`
+- `local-gate-coverage-gap`
+- `hosted-only-by-design`
+- `pre-existing-or-external`
 
-1. Implement the smallest complete root-cause repair and run the narrowest relevant local tests first.
-2. Stop for product judgment, external service or signing failures, missing permission, write-scope expansion, or ownership conflict. A refined hypothesis or intermediate red check is not a stop condition.
-3. Resolve every in-scope failure family from the observed run, then review the integrated diff and preserve unrelated changes.
-4. A monitor handoff that identifies the run and says it is only a locator authorizes one local commit containing only the verified repair. Use `$commit-note`; otherwise obtain explicit commit authorization.
-5. Never push, dispatch Remote Quality or another hosted workflow, freeze `dev`, or wait for a later run. Normal development publication owns remote delivery. A later scheduled T6 is a separate rolling sample and every other later run has a separate owner.
-6. Set `repairState=complete` only when every observed in-scope failure is locally resolved, risk-matched validation is green, and the scoped repair is committed locally.
+Report the classification and evidence. Do not automatically create sibling tasks; monitor ownership stays singular.
 
-## Audit local detection after repair
+## Report
 
-Treat prevention as a separate post-commit lane. For each root-cause family, identify the narrow local reproducer and whether changed-file, fast-quality, pre-push, or host routing would have selected it. Classify it as exactly one of `local-validation-missed`, `local-gate-coverage-gap`, `hosted-only-by-design`, or `pre-existing-or-external`.
+Report `runTier`, `failedStage`, `repairState`, and `preventionState` separately. Valid repair states are `waiting-for-read-approval`, `waiting-for-release-owner`, `investigating`, `repairing`, `committing`, `waiting-for-orchestrator`, and `complete`.
 
-For a confirmed `local-gate-coverage-gap`, create at most one separate local Codex Desktop task per non-overlapping checker or routing family. Give it the immutable run URL and SHA, raw failed checks, counterfactual evidence, checker-only ownership, forbidden product-repair files, and a contract that the triggering diff selects the intended check. Do not open coverage tasks for the other classifications or fold prevention work into the completed repair.
-
-An explicit invocation authorizes these bounded local-coverage tasks. If triggered implicitly, obtain authorization first. Coverage tasks are user-owned siblings and must not commit, push, or dispatch hosted quality without authorization in their own task.
-
-## Report controller state
-
-Report `runTier`, `failedStage`, `repairState`, and `preventionState` separately. Valid repair states are `waiting-for-read-approval`, `investigating`, `repairing`, `committing`, `auditing-local-coverage`, and `complete`. Valid prevention states are `auditing`, `not-a-gap`, `task-created`, and `waiting-for-task-creation`; prevention never blocks repair completion.
-
-Never describe `thread created`, `Desktop opened`, or `prompt delivered` as hosted-quality processing progress.
+Set `repairState=complete` only after every observed in-scope dev T6 failure is locally resolved, risk-matched `local-quick` validation is green, the scoped repair is committed, and the registered dev orchestrator has reached its required terminal state. Never describe task creation, Desktop navigation, or prompt delivery as hosted-quality progress.
