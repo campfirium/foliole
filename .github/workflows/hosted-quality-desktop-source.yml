@@ -1,0 +1,109 @@
+name: Hosted Desktop Source Quality
+
+on:
+  workflow_call:
+    inputs:
+      target_sha:
+        required: true
+        type: string
+      execution_lane:
+        required: true
+        type: string
+      trigger_ref:
+        required: true
+        type: string
+    outputs:
+      accepted_sha:
+        description: Exact commit accepted by every desktop source shard
+        value: ${{ jobs.desktop-source-admission.outputs.accepted_sha }}
+
+permissions:
+  contents: read
+
+jobs:
+  desktop-source-tests:
+    name: ${{ matrix.host }} ${{ matrix.shard }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    concurrency:
+      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-desktop-source-${{ matrix.host }}-${{ matrix.shard }}
+      cancel-in-progress: false
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - host: Ubuntu
+            runner: ubuntu-latest
+            shard: one
+          - host: Ubuntu
+            runner: ubuntu-latest
+            shard: two
+          - host: Ubuntu
+            runner: ubuntu-latest
+            shard: three
+          - host: Ubuntu
+            runner: ubuntu-latest
+            shard: four
+          - host: Windows
+            runner: windows-latest
+            shard: one
+          - host: Windows
+            runner: windows-latest
+            shard: two
+          - host: Windows
+            runner: windows-latest
+            shard: three
+          - host: Windows
+            runner: windows-latest
+            shard: four
+    env:
+      CI: "true"
+      TARGET_SHA: ${{ inputs.target_sha }}
+    steps:
+      - name: Validate target SHA input
+        run: node -e "if (!/^[0-9a-f]{40}$/.test(process.env.TARGET_SHA ?? '')) throw new Error('target_sha must be a full 40-character lowercase commit SHA')"
+      - name: Check out target snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify checked-out target SHA
+        run: >-
+          node -e "const { execFileSync } = require('node:child_process'); const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(); if (head !== process.env.TARGET_SHA) throw new Error('Checked out SHA does not match TARGET_SHA')"
+      - name: Run canonical desktop source shard
+        run: npm run test:release:desktop-src -- ${{ matrix.shard }}
+      - name: Upload desktop source test logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-source-${{ matrix.host }}-${{ matrix.shard }}-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          path: .tmp/vitest
+          if-no-files-found: ignore
+          retention-days: 14
+
+  desktop-source-admission:
+    name: Desktop source quality admission
+    if: ${{ always() }}
+    needs: desktop-source-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      accepted_sha: ${{ steps.require-shards.outputs.accepted_sha }}
+    env:
+      SHARD_RESULT: ${{ needs.desktop-source-tests.result }}
+      TARGET_SHA: ${{ inputs.target_sha }}
+    steps:
+      - name: Require every desktop source shard
+        id: require-shards
+        run: |
+          set -euo pipefail
+          node -e 'if (process.env.SHARD_RESULT !== "success") throw new Error(`SHARD_RESULT=${process.env.SHARD_RESULT}`)'
+          echo "accepted_sha=${TARGET_SHA}" >> "$GITHUB_OUTPUT"

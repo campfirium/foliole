@@ -6,6 +6,8 @@ import {
   assertReleaseDesktopSourceBucketCoverage,
   buildReleaseDesktopSourceVitestArgs,
   buildReleaseDesktopSourceBuckets,
+  buildReleaseDesktopSourceShardBuckets,
+  RELEASE_DESKTOP_SOURCE_SHARDS,
   collectReleaseDesktopSourceTestFiles
 } from './run-release-desktop-source-test-bucket.mjs';
 
@@ -27,6 +29,20 @@ it('splits release desktop source tests into bounded buckets', () => {
     'src/startupViewMode.test.ts'
   ]);
   expect(() => assertReleaseDesktopSourceBucketCoverage(files, buckets)).not.toThrow();
+});
+
+it('partitions every isolated desktop source bucket into one hosted shard', () => {
+  const buckets = buildReleaseDesktopSourceBuckets();
+  const sharded = RELEASE_DESKTOP_SOURCE_SHARDS.flatMap((shard) => (
+    buildReleaseDesktopSourceShardBuckets(shard, buckets)
+  ));
+
+  expect(sharded.map(({ label }) => label).sort())
+    .toEqual(buckets.map(({ label }) => label).sort());
+  expect(new Set(sharded.map(({ label }) => label)).size).toBe(buckets.length);
+  expect(RELEASE_DESKTOP_SOURCE_SHARDS.every((shard) => (
+    buildReleaseDesktopSourceShardBuckets(shard, buckets).length > 0
+  ))).toBe(true);
 });
 
 it('rejects missing and duplicate targets', () => {
