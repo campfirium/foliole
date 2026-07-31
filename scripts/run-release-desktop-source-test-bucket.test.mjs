@@ -4,6 +4,7 @@ import { expect, it } from 'vitest';
 
 import {
   assertReleaseDesktopSourceBucketCoverage,
+  buildReleaseDesktopSourceVitestArgs,
   buildReleaseDesktopSourceBuckets,
   collectReleaseDesktopSourceTestFiles
 } from './run-release-desktop-source-test-bucket.mjs';
@@ -34,4 +35,14 @@ it('rejects missing and duplicate targets', () => {
   expect(() => assertReleaseDesktopSourceBucketCoverage(files, [
     { label: 'source-01', targets: [files[0], files[0]] }
   ])).toThrow(/missing: src\/app\/second\.test\.ts[\s\S]*duplicate: src\/app\/first\.test\.ts/u);
+});
+
+it('runs renderer-only source buckets under ordinary Node', () => {
+  const args = buildReleaseDesktopSourceVitestArgs({
+    report: '.tmp/vitest/source.json',
+    targets: ['src/app/App.test.tsx']
+  });
+
+  expect(args[0]).toBe('scripts/run-vitest-with-summary.mjs');
+  expect(args).not.toContain('scripts/electron-sqlite-runner.mjs');
 });

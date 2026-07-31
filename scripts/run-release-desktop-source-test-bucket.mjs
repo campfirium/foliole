@@ -76,9 +76,8 @@ export function assertReleaseDesktopSourceBucketCoverage(files, buckets) {
   }
 }
 
-function runVitest(bucket) {
-  const args = [
-    'scripts/electron-sqlite-runner.mjs',
+export function buildReleaseDesktopSourceVitestArgs(bucket) {
+  return [
     'scripts/run-vitest-with-summary.mjs',
     bucket.report,
     '--',
@@ -89,6 +88,10 @@ function runVitest(bucket) {
     '--testTimeout=15000',
     ...bucket.targets
   ];
+}
+
+function runVitest(bucket) {
+  const args = buildReleaseDesktopSourceVitestArgs(bucket);
   const child = spawn(process.execPath, args, { env: process.env, stdio: 'inherit' });
   return new Promise((resolve) => child.on('close', (code) => resolve(code ?? 1)));
 }
