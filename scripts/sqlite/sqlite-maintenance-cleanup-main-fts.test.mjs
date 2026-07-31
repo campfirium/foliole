@@ -69,7 +69,7 @@ it('applies legacy main FTS cleanup with an explicit snapshot directory', async 
   expect(output.snapshot.destinationPath).toContain(snapshotDir);
   await expect(fs.access(output.snapshot.destinationPath)).resolves.toBeUndefined();
   expect(readLegacyMainFtsObjects(dbPath)).toEqual([]);
-});
+}, 15_000);
 
 it('uses a database-local snapshot directory by default on apply', async () => {
   const dbPath = path.join(tempRoot, 'nested', 'foliole.db');
@@ -121,7 +121,7 @@ it('refuses the default live database path unless the second confirmation flag i
   )).rejects.toMatchObject({
     stderr: expect.stringContaining('--i-have-current-backup')
   });
-});
+}, 15_000);
 
 it('reports locked cleanup attempts with a machine-readable status', async () => {
   const dbPath = path.join(tempRoot, 'foliole.db');

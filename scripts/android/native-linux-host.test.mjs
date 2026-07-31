@@ -30,6 +30,6 @@ describe('native Linux Android host', () => {
     expect(await runNativeLinuxAndroidHost('sync', [], { env: {}, platform: 'linux', runner })).toBe(0);
     expect(runner).toHaveBeenNthCalledWith(1, 'npm', ['run', 'android:web:build'], expect.any(Object));
     expect(runner).toHaveBeenNthCalledWith(2, process.execPath,
-      [expect.stringContaining('@capacitor/cli/bin/capacitor'), 'sync', 'android'], expect.any(Object));
+      [expect.stringMatching(/@capacitor[\\/]cli[\\/]bin[\\/]capacitor$/u), 'sync', 'android'], expect.any(Object));
   });
 });

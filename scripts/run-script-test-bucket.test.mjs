@@ -168,7 +168,7 @@ describe('run-script-test-bucket', () => {
       process.env.SCRIPT_TEST_BUCKET_GATE_TIMEOUT_SECONDS = '7';
       expect(resolveBucketTimeoutSeconds('gate')).toBe(7);
       process.env.SCRIPT_TEST_BUCKET_GATE_TIMEOUT_SECONDS = 'invalid';
-      expect(resolveBucketTimeoutSeconds('gate')).toBe(240);
+      expect(resolveBucketTimeoutSeconds('gate')).toBe(480);
       delete process.env.SCRIPT_TEST_BUCKET_TIMEOUT_SECONDS;
       expect(resolveBucketTimeoutSeconds('gate-integration')).toBe(240);
     } finally {

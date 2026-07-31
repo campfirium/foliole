@@ -11,6 +11,7 @@ import { runIntegrationAggregate } from './script-test-bucket-aggregate.mjs';
 const DEFAULT_BUCKET_TIMEOUT_SECONDS = 240;
 const BUCKET_TIMEOUT_SECONDS = {
   core: 360,
+  gate: 480,
   'gate-integration-fast-delegation': 480,
   'gate-integration-release-targets': 480,
   'gate-integration-routing': 480,

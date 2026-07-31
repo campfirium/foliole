@@ -66,8 +66,8 @@ it('distinguishes installed, moved, and conflicting commands without overwriting
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-cli-install-'));
   roots.push(directory);
   const commandPath = path.join(directory, 'foliole');
-  const oldTarget = '/Applications/Foliole.app/old-cli';
-  const currentTarget = '/Applications/Foliole.app/current-cli';
+  const oldTarget = path.join(directory, 'old-cli');
+  const currentTarget = path.join(directory, 'current-cli');
   const receipt = { bookmark: 'bookmark', directory, target: oldTarget };
 
   await fs.symlink(currentTarget, commandPath);

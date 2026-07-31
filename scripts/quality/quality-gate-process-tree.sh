@@ -91,22 +91,30 @@ sum_process_rss_kb() {
 list_process_group_pids() {
   local pgid="$1"
   quality_gate_has_ps || return 0
-  ps 2>/dev/null | awk -v pgid="${pgid}" 'NR > 1 && $3 == pgid {print $1}'
+  ps -A -o pid= -o pgid= 2>/dev/null | awk -v pgid="${pgid}" '$2 == pgid {print $1}'
+}
+
+list_child_process_pids() {
+  local parent_pid="$1"
+  quality_gate_has_ps || return 0
+  if ps -A -o pid= -o ppid= >/dev/null 2>&1; then
+    ps -A -o pid= -o ppid= 2>/dev/null | awk -v ppid="${parent_pid}" '$2 == ppid {print $1}'
+    return 0
+  fi
+  ps -ef 2>/dev/null | awk -v ppid="${parent_pid}" 'NR > 1 && $3 == ppid {print $2}'
 }
 
 list_process_tree_pids() {
   local root_pid="$1" frontier="${root_pid}"
-  local next pid
+  local children next pid
 
   while [[ -n "${frontier}" ]]; do
     next=""
     for pid in ${frontier}; do
-      quality_gate_has_ps || continue
-      ps 2>/dev/null | awk -v ppid="${pid}" 'NR > 1 && $2 == ppid {print $1}'
-    done | while read -r pid; do
-      [[ -n "${pid}" ]] || continue
-      printf '%s\n' "${pid}"
-      next="${next} ${pid}"
+      children="$(list_child_process_pids "${pid}")"
+      [[ -n "${children}" ]] || continue
+      printf '%s\n' "${children}"
+      next="${next} ${children//$'\n'/ }"
     done
     frontier="${next}"
   done
@@ -161,5 +169,5 @@ resolve_process_group_id() {
     return 0
   fi
 
-  ps 2>/dev/null | awk -v pid="${pid}" 'NR > 1 && $1 == pid {print $3; exit}'
+  ps -A -o pid= -o pgid= 2>/dev/null | awk -v pid="${pid}" '$1 == pid {print $2; exit}'
 }

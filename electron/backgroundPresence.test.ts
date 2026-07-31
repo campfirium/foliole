@@ -137,7 +137,7 @@ it('installs the macOS menu bar capture menu without the Windows click toggle', 
   installBackgroundTray({ captureToInbox, getMainWindow: () => null, openMainWindow, platform: 'darwin' });
 
   const tray = mocks.trayInstances[0]!;
-  expect(mocks.createFromPath).toHaveBeenCalledWith(path.join('/app', 'build', 'FolioleStatusTemplate.png'));
+  expect(mocks.createFromPath).toHaveBeenCalledWith(path.posix.join('/app', 'build', 'FolioleStatusTemplate.png'));
   expect(mocks.setTemplateImage).toHaveBeenCalledWith(true);
   const menu = tray.menu as Array<{ accelerator?: string; click?: () => void; label?: string }>;
   expect(menu.map((item) => item.label).filter(Boolean)).toEqual([
