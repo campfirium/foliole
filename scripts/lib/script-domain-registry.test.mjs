@@ -92,7 +92,10 @@ describe('script domain registry', () => {
       reason: 'unsupported-platform'
     });
     expect(renderCapabilityCommand(resolveCapabilityContract('android:host:test')))
-      .toBe('node scripts/android/native-linux-host.mjs gradle testDebugUnitTest');
+      .toBe(
+        'node scripts/quality/quality-command-contracts.mjs allow android:host:test && ' +
+        'node scripts/android/native-linux-host.mjs gradle testDebugUnitTest'
+      );
     expect(resolveCapabilityAdapter('android:host:test', 'win32')).toEqual({
       ok: false, reason: 'unsupported-platform'
     });

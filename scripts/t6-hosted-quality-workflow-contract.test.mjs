@@ -17,7 +17,6 @@ const sources = {
 const workflows = Object.fromEntries(
   Object.entries(sources).map(([name, source]) => [name, parse(source)])
 );
-const admission = read('scripts/quality/t6-hosted-quality-admission.mjs');
 
 function section(source, jobName, nextJobName) {
   const start = source.indexOf(`  ${jobName}:`);
@@ -26,20 +25,19 @@ function section(source, jobName, nextJobName) {
 }
 
 describe('T6 hosted quality workflow contracts', () => {
-  it('keeps standalone dev schedule/manual entry and exposes the same reusable implementation', () => {
+  it('is reusable-only and exposes the exact admitted SHA', () => {
     const callInputs = workflows.t6.on.workflow_call.inputs;
     expect(workflows.t6.name).toBe('T6 Hosted Quality');
-    expect(workflows.t6.on.schedule.map(({ cron }) => cron)).toEqual(['40 3 * * *', '40 14 * * *']);
-    expect(workflows.t6.on.workflow_dispatch).toEqual(null);
+    expect(workflows.t6.on.schedule).toBeUndefined();
+    expect(workflows.t6.on.workflow_dispatch).toBeUndefined();
     expect(callInputs.target_sha).toEqual({ required: true, type: 'string' });
     expect(callInputs.execution_lane).toEqual({ required: true, type: 'string' });
     expect(callInputs.trigger_ref).toEqual({ required: true, type: 'string' });
     expect(workflows.t6.on.workflow_call.outputs.accepted_sha.value)
       .toBe('${{ jobs.quality-admission.outputs.accepted_sha }}');
-    expect(sources.t6).toContain("inputs.execution_lane == '' && github.ref != 'refs/heads/dev'");
-    expect(sources.t6).toContain("github.event_name == 'schedule' && inputs.execution_lane == ''");
-    expect(sources.t6).toContain('run: node scripts/quality/t6-hosted-quality-admission.mjs');
-    expect(admission).toContain('actions/workflows/remote-quality.yml/runs?per_page=100');
+    expect(sources.t6).not.toContain('schedule:');
+    expect(sources.t6).not.toContain('workflow_dispatch:');
+    expect(sources.t6).not.toContain('hosted-quality-admission.mjs');
   });
 
   it('requires T5 before full quality and exports their exact shared SHA', () => {
@@ -117,7 +115,7 @@ describe('T6 hosted quality workflow contracts', () => {
     expect(concurrencySources).toContain('${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}');
     expect(concurrencySources).not.toContain('group: hosted-quality-');
     expect(workflows.t6.concurrency.group)
-      .toBe("t6-${{ inputs.execution_lane || 'dev-t6' }}-${{ inputs.trigger_ref || github.ref }}-orchestrator");
+      .toBe('t6-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-orchestrator');
     expect(sources.full.match(/ref: \$\{\{ env\.TARGET_SHA \}\}/gu)).toHaveLength(3);
     expect(sources.full.match(/persist-credentials: false/gu)).toHaveLength(3);
     expect(workflows.full.on.workflow_call.outputs.accepted_sha.value)

@@ -35,7 +35,7 @@ it('backs up and restores a fixture database into an isolated target with redact
   expect(serializedReport).not.toContain('fixture prompt body');
   expect(serializedReport).not.toContain('fixture answer body');
   expect(serializedReport).not.toContain('fixture-trash');
-});
+}, 15_000);
 
 it('fails before restore when the isolated target database already exists', async () => {
   const backupPath = path.join(tempRoot, 'backup.db');

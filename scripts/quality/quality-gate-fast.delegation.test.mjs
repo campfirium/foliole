@@ -81,7 +81,7 @@ describe('quality-gate-fast.sh delegation', () => {
     }
   }, 15000);
 
-  it('caps Android path changes locally and defers hosted quality to scheduled T6', async () => {
+  it('caps Android path changes locally and defers hosted quality to scheduled T7', async () => {
     const tempRoot = await createQualityGateTempRoot();
     try {
       await writePackageJson(tempRoot, {
@@ -102,7 +102,7 @@ describe('quality-gate-fast.sh delegation', () => {
 
       expect(result.code, `stdout:\n${result.stdout}\nstderr:\n${result.stderr}`).toBe(0);
       expect(result.stdout).toContain('[quality-gate-fast] selected level: android');
-      expect(result.stdout).toContain('hosted quality deferred to scheduled T6');
+      expect(result.stdout).toContain('hosted quality deferred to scheduled T7 Hosted Quality');
       expect(result.stdout).toContain('android typecheck ok');
       expect(result.stdout).not.toContain('android full lint ok');
       expect(result.stdout).not.toContain('android host test ok');
@@ -125,7 +125,7 @@ describe('quality-gate-fast.sh delegation', () => {
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('[quality-gate-fast] selected level: ios');
-      expect(result.stdout).toContain('hosted quality deferred to scheduled T6');
+      expect(result.stdout).toContain('hosted quality deferred to scheduled T7 Hosted Quality');
       expect(result.stdout).not.toContain('local Simulator should stay unused');
       expect(result.stdout).not.toContain('local iOS contract should stay unused');
     } finally {

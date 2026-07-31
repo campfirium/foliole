@@ -6,7 +6,7 @@ import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const LINTABLE = /\.(?:js|jsx|ts|tsx|cjs|mjs)$/u;
-const GLOB_PATTERN = /[*?\[\]{}]/u;
+const GLOB_PATTERN = /[*?[\]{}]/u;
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 function runGit(args) {

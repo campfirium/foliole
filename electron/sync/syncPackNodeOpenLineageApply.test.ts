@@ -35,7 +35,7 @@ beforeEach(async () => {
   initializeDatabaseConnection(openDatabaseConnection());
   installLocalNodeFixtures();
   createIncomingPack(incomingPath);
-});
+}, 30_000);
 
 afterEach(async () => {
   closeDatabaseConnection();

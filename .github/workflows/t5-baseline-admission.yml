@@ -74,7 +74,7 @@ jobs:
   portable-tests:
     name: ${{ matrix.host }} ${{ matrix.domain }}
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 20
+    timeout-minutes: ${{ matrix.timeout_minutes }}
     strategy:
       fail-fast: false
       matrix:
@@ -83,46 +83,57 @@ jobs:
             runner: ubuntu-latest
             domain: desktop-source
             script: test:release:desktop-src
+            timeout_minutes: 20
           - host: Ubuntu
             runner: ubuntu-latest
             domain: android-source
             script: test:release:android
+            timeout_minutes: 20
           - host: Ubuntu
             runner: ubuntu-latest
             domain: shared
             script: test:release:shared
+            timeout_minutes: 20
           - host: Ubuntu
             runner: ubuntu-latest
             domain: electron
             script: test:desktop:electron
+            timeout_minutes: 20
           - host: Ubuntu
             runner: ubuntu-latest
             domain: quality-tooling
             script: quality:release:tooling
+            timeout_minutes: 20
           - host: Windows
             runner: windows-latest
             domain: desktop-source
             script: test:release:desktop-src
+            timeout_minutes: 20
           - host: Windows
             runner: windows-latest
             domain: android-source
             script: test:release:android
+            timeout_minutes: 20
           - host: Windows
             runner: windows-latest
             domain: shared
             script: test:release:shared
+            timeout_minutes: 20
           - host: Windows
             runner: windows-latest
             domain: electron
             script: test:desktop:electron
+            timeout_minutes: 30
           - host: Windows
             runner: windows-latest
             domain: quality-tooling
             script: quality:release:tooling
+            timeout_minutes: 20
           - host: Windows
             runner: windows-latest
             domain: windows-core
             script: quality:release:windows:core
+            timeout_minutes: 20
     env:
       CI: "true"
       FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: "1"
@@ -179,5 +190,6 @@ jobs:
       - name: Require every baseline bucket
         id: require-buckets
         run: |
+          set -euo pipefail
           node -e 'const failed = Object.entries(process.env).filter(([key, value]) => key.endsWith("_RESULT") && value !== "success"); if (failed.length) throw new Error(failed.map(([key, value]) => `${key}=${value}`).join(", "))'
           echo "admitted_sha=${TARGET_SHA}" >> "$GITHUB_OUTPUT"

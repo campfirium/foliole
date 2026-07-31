@@ -1,15 +1,15 @@
-export const DEV_T6_HANDOFF_POLICY = Object.freeze({
+export const DEV_T7_HANDOFF_POLICY = Object.freeze({
   branch: 'dev',
-  name: 'T6 Hosted Quality',
-  path: '.github/workflows/t6-hosted-quality.yml',
-  runTier: 'T6'
+  name: 'T7 Hosted Quality',
+  path: '.github/workflows/t7-hosted-quality.yml',
+  runTier: 'T7'
 });
 
 export function resolveActionsHandoffPolicy(workflowPath, branch) {
-  if (workflowPath !== DEV_T6_HANDOFF_POLICY.path || branch !== DEV_T6_HANDOFF_POLICY.branch) {
+  if (workflowPath !== DEV_T7_HANDOFF_POLICY.path || branch !== DEV_T7_HANDOFF_POLICY.branch) {
     return null;
   }
-  return DEV_T6_HANDOFF_POLICY;
+  return DEV_T7_HANDOFF_POLICY;
 }
 
 export function buildActionsHandoffIdentity(workflowPath, run) {

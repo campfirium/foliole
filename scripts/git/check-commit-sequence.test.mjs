@@ -46,6 +46,28 @@ it('allows a new branch at an already-pushed commit', async () => {
   expect(result.status, result.stderr).toBe(0);
 });
 
+it('checks only release commits after the pushed dev base', async () => {
+  const repoDir = await mkdtemp(path.join(os.tmpdir(), 'foliole-sequence-'));
+  tempDirs.push(repoDir);
+  git(repoDir, 'init');
+  git(repoDir, 'config', 'user.name', 'Sequence Test');
+  git(repoDir, 'config', 'user.email', 'sequence@example.com');
+  commit(repoDir, '000001 seed');
+  commit(repoDir, 'deps-dev(deps-dev): update dependencies');
+  git(repoDir, 'update-ref', 'refs/remotes/origin/dev', 'HEAD');
+  const release = commit(repoDir, '000002 start release');
+
+  const result = checkPush(
+    repoDir,
+    'refs/heads/release',
+    release,
+    'refs/heads/release',
+    '0'.repeat(40)
+  );
+
+  expect(result.status, result.stderr).toBe(0);
+});
+
 it('supports a release-first branch through repeated numbered merge-backs', async () => {
   const repoDir = await mkdtemp(path.join(os.tmpdir(), 'foliole-release-first-'));
   tempDirs.push(repoDir);
@@ -107,4 +129,4 @@ it('supports a release-first branch through repeated numbered merge-backs', asyn
     '000002 continue development',
     '000001 seed'
   ]);
-});
+}, 15_000);

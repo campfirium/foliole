@@ -192,7 +192,7 @@ if [[ "${level}" =~ ^(full|desktop|shared|android|ios)$ ]]; then
   print_quality_gate_route_plan "${all_changed}" "${level}" \
     | node "${SCRIPT_DIR}/quality-gate-route-json.mjs" \
     | node "${SCRIPT_DIR}/quality-fast-capped.mjs"
-  echo "[quality-gate-fast] hosted quality deferred to scheduled T6; Remote Quality is reserved for repair or explicit rechecks on dev, while release uses T7."
+  echo "[quality-gate-fast] hosted quality deferred to scheduled T7 Hosted Quality; Remote Quality is reserved for repair or explicit rechecks on dev, while releases use T7 Release."
   echo "[quality-gate-fast] capped local checks passed."
   exit 0
 fi
