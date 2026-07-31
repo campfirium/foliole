@@ -15,7 +15,8 @@ const sources = {
   portable: read('.github/workflows/hosted-quality-portable.yml'),
   remote: read('.github/workflows/remote-quality.yml'),
   t5: read('.github/workflows/t5-baseline-admission.yml'),
-  t6: read('.github/workflows/t6-hosted-quality.yml')
+  t6: read('.github/workflows/t6-hosted-quality.yml'),
+  tooling: read('.github/workflows/hosted-quality-tooling.yml')
 };
 const workflows = Object.fromEntries(
   Object.entries(sources).map(([name, source]) => [name, parse(source)])
@@ -86,8 +87,7 @@ describe('T6 hosted quality workflow contracts', () => {
     ]);
     const portableScripts = [
       'test:release:android',
-      'test:release:shared',
-      'quality:release:tooling'
+      'test:release:shared'
     ];
     const portableMatrix = workflows.portable.jobs['portable-tests'].strategy.matrix.include;
     const expectedPortableEntries = ['Ubuntu', 'Windows'].flatMap((host) => (
@@ -118,7 +118,7 @@ describe('T6 hosted quality workflow contracts', () => {
     expect(desktopSourceMatrix.map(({ host, shard }) => `${host}:${shard}`))
       .toEqual(expectedDesktopSourceEntries);
     expect(new Set(desktopSourceMatrix.map(({ host, shard }) => `${host}:${shard}`)).size).toBe(8);
-    expect(`${sources.t6}\n${sources.full}\n${sources.portable}\n${sources.desktopSource}\n${sources.electron}\n${sources.remote}`)
+    expect(`${sources.t6}\n${sources.full}\n${sources.portable}\n${sources.desktopSource}\n${sources.electron}\n${sources.tooling}\n${sources.remote}`)
       .not.toContain('quality:release:windows:core');
     expect(sources.t5.match(/quality:release:windows:core/gu)).toHaveLength(1);
     expect(sources.portable).not.toContain('continue-on-error');
@@ -131,9 +131,11 @@ describe('T6 hosted quality workflow contracts', () => {
       .toBe('./.github/workflows/hosted-quality-electron.yml');
     expect(workflows.portable.jobs['desktop-source-quality'].uses)
       .toBe('./.github/workflows/hosted-quality-desktop-source.yml');
+    expect(workflows.portable.jobs['tooling-quality'].uses)
+      .toBe('./.github/workflows/hosted-quality-tooling.yml');
     const hostSources = {
-      Ubuntu: `${sources.t5}\n${sources.portable}\n${sources.desktopSource}\n${sources.electron}\n${section(sources.full, 'common-build', 'windows-acceptance')}\n${section(sources.full, 'android-host', 'ios-full')}`,
-      Windows: `${sources.t5}\n${sources.portable}\n${sources.desktopSource}\n${sources.electron}\n${section(sources.full, 'windows-acceptance', 'android-host')}`,
+      Ubuntu: `${sources.t5}\n${sources.portable}\n${sources.desktopSource}\n${sources.electron}\n${sources.tooling}\n${section(sources.full, 'common-build', 'windows-acceptance')}\n${section(sources.full, 'android-host', 'ios-full')}`,
+      Windows: `${sources.t5}\n${sources.portable}\n${sources.desktopSource}\n${sources.electron}\n${sources.tooling}\n${section(sources.full, 'windows-acceptance', 'android-host')}`,
       macOS: sources.ios
     };
     const commands = {
@@ -167,7 +169,7 @@ describe('T6 hosted quality workflow contracts', () => {
     expect(workflows.portable.on.workflow_call.outputs.accepted_sha.value)
       .toBe('${{ jobs.portable-admission.outputs.accepted_sha }}');
     expect(workflows.portable.jobs['portable-admission'].needs)
-      .toEqual(['portable-tests', 'desktop-source-quality', 'electron-quality']);
+      .toEqual(['portable-tests', 'desktop-source-quality', 'electron-quality', 'tooling-quality']);
     expect(workflows.portable.jobs['portable-admission'].env.DESKTOP_SOURCE_RESULT)
       .toBe('${{ needs.desktop-source-quality.result }}');
     expect(workflows.portable.jobs['portable-admission'].env.DESKTOP_SOURCE_SHA)
@@ -176,19 +178,23 @@ describe('T6 hosted quality workflow contracts', () => {
       .toBe('${{ needs.electron-quality.result }}');
     expect(workflows.portable.jobs['portable-admission'].env.ELECTRON_SHA)
       .toBe('${{ needs.electron-quality.outputs.accepted_sha }}');
+    expect(workflows.portable.jobs['portable-admission'].env.TOOLING_RESULT)
+      .toBe('${{ needs.tooling-quality.result }}');
+    expect(workflows.portable.jobs['portable-admission'].env.TOOLING_SHA)
+      .toBe('${{ needs.tooling-quality.outputs.accepted_sha }}');
   });
 
   it('binds heavy jobs to one SHA and lane/ref-scoped concurrency groups', () => {
     for (const workflow of Object.values(workflows)) {
       expect(workflow.permissions).toMatchObject({ contents: 'read' });
     }
-    for (const name of ['common', 'core', 'desktopSource', 'electron', 'full', 'ios', 'portable']) {
+    for (const name of ['common', 'core', 'desktopSource', 'electron', 'full', 'ios', 'portable', 'tooling']) {
       expect(workflows[name].on.workflow_call.inputs.execution_lane)
         .toEqual({ required: true, type: 'string' });
       expect(workflows[name].on.workflow_call.inputs.trigger_ref)
         .toEqual({ required: true, type: 'string' });
     }
-    const concurrencySources = `${sources.common}\n${sources.core}\n${sources.full}\n${sources.ios}`;
+    const concurrencySources = `${sources.common}\n${sources.core}\n${sources.full}\n${sources.ios}\n${sources.tooling}`;
     expect(concurrencySources).toContain('${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}');
     expect(concurrencySources).not.toContain('group: hosted-quality-');
     expect(workflows.t6.concurrency.group)
@@ -201,6 +207,8 @@ describe('T6 hosted quality workflow contracts', () => {
     expect(sources.electron.match(/persist-credentials: false/gu)).toHaveLength(1);
     expect(sources.desktopSource.match(/ref: \$\{\{ env\.TARGET_SHA \}\}/gu)).toHaveLength(1);
     expect(sources.desktopSource.match(/persist-credentials: false/gu)).toHaveLength(1);
+    expect(sources.tooling.match(/ref: \$\{\{ env\.TARGET_SHA \}\}/gu)).toHaveLength(1);
+    expect(sources.tooling.match(/persist-credentials: false/gu)).toHaveLength(1);
     expect(workflows.full.on.workflow_call.outputs.accepted_sha.value)
       .toBe('${{ jobs.full-admission.outputs.accepted_sha }}');
   });
@@ -209,7 +217,7 @@ describe('T6 hosted quality workflow contracts', () => {
     for (const rejected of [
       'windows:package', 'installed-app-smoke', 'actions/attest', 'gh release',
       'CSC_', 'id-token: write', 'setTimeout', 'poll'
-    ]) expect(`${sources.t6}\n${sources.full}\n${sources.portable}\n${sources.desktopSource}\n${sources.electron}`).not.toContain(rejected);
+    ]) expect(`${sources.t6}\n${sources.full}\n${sources.portable}\n${sources.desktopSource}\n${sources.electron}\n${sources.tooling}`).not.toContain(rejected);
     expect(fs.existsSync('.github/workflows/t5-nightly-remote-quality.yml')).toBe(false);
     expect(fs.existsSync('scripts/quality/t5-remote-quality-admission.mjs')).toBe(false);
   });

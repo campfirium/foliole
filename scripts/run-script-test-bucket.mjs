@@ -20,7 +20,7 @@ const BUCKET_TIMEOUT_SECONDS = {
 
 function printUsage() {
   console.error(
-    'Usage: node scripts/run-script-test-bucket.mjs <all|core|gate|gate-integration*|node|preview> <report.json>'
+    'Usage: node scripts/run-script-test-bucket.mjs <all|core*|gate*|gate-integration*|node|preview> <report.json>'
   );
 }
 
@@ -89,22 +89,18 @@ function terminateChildTree(child) {
   globalThis.setTimeout(() => child.kill('SIGKILL'), 1000).unref();
 }
 
-export function buildVitestArgs(bucket, reportPath, files) {
-  return [
+function runVitest(bucket, reportPath, files) {
+  const timeoutSeconds = resolveBucketTimeoutSeconds(bucket);
+  const args = [
     'scripts/run-vitest-with-summary.mjs',
     reportPath,
     '--',
     '--silent=passed-only',
     '--pool=threads',
     '--maxWorkers=2',
-    bucket === 'core' ? '--fileParallelism' : '--no-file-parallelism',
+    '--no-file-parallelism',
     ...files
   ];
-}
-
-function runVitest(bucket, reportPath, files) {
-  const timeoutSeconds = resolveBucketTimeoutSeconds(bucket);
-  const args = buildVitestArgs(bucket, reportPath, files);
   const child = spawn(process.execPath, args, { env: process.env, stdio: 'inherit' });
   return new Promise((resolve) => {
     let settled = false;

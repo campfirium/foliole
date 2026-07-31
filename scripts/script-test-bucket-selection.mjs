@@ -55,6 +55,14 @@ export function gateIntegrationScriptName(bucket) {
 
 export const GATE_INTEGRATION_SCRIPT_NAMES = GATE_INTEGRATION_PRIMARY_BUCKETS.map(gateIntegrationScriptName);
 
+export function selectGateIntegrationScriptNames(shard) {
+  const shardIndex = { 'integration-one': 0, 'integration-two': 1 }[shard];
+  if (shardIndex === undefined) {
+    return null;
+  }
+  return GATE_INTEGRATION_SCRIPT_NAMES.filter((_scriptName, index) => index % 2 === shardIndex);
+}
+
 export function isQualityGateTest(filePath) {
   return path.basename(filePath).startsWith('quality-');
 }
@@ -125,6 +133,10 @@ export function selectScriptTestBucketFiles(bucket, files) {
   if (bucket === 'gate') {
     return files.filter((file) => isQualityGateTest(file) && !isQualityGateIntegrationTest(file));
   }
+  if (bucket === 'gate-one' || bucket === 'gate-two') {
+    const shardIndex = bucket === 'gate-one' ? 0 : 1;
+    return selectScriptTestBucketFiles('gate', files).filter((_file, index) => index % 2 === shardIndex);
+  }
   if (bucket === 'gate-integration') {
     return files.filter((file) => isQualityGateTest(file) && isQualityGateIntegrationTest(file));
   }
@@ -139,6 +151,10 @@ export function selectScriptTestBucketFiles(bucket, files) {
   }
   if (bucket === 'core') {
     return files.filter((file) => !isQualityGateTest(file) && !isPreviewDedupeTest(file) && !isNodeOnlyScriptTest(file));
+  }
+  if (bucket === 'core-one' || bucket === 'core-two') {
+    const shardIndex = bucket === 'core-one' ? 0 : 1;
+    return selectScriptTestBucketFiles('core', files).filter((_file, index) => index % 2 === shardIndex);
   }
   return null;
 }
