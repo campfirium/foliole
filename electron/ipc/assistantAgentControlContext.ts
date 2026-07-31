@@ -11,9 +11,14 @@ export function resolveAssistantAgentDescriptorPath(env: NodeJS.ProcessEnv) {
   return env.FOLIOLE_AGENT_DESCRIPTOR?.trim() || getAgentControlSessionDescriptorPath();
 }
 
-export function resolveAssistantAgentControlCliPath(env: NodeJS.ProcessEnv, appRoot = process.cwd()) {
+export function resolveAssistantAgentControlCliPath(
+  env: NodeJS.ProcessEnv,
+  appRoot = process.cwd(),
+  platform = process.platform
+) {
+  const platformPath = platform === 'win32' ? path.win32 : path.posix;
   return env.FOLIOLE_AGENT_CONTROL_CLI?.trim() ||
-    path.resolve(appRoot, 'scripts', 'agent-control', 'foliole-agent.mjs');
+    platformPath.resolve(appRoot, 'scripts', 'agent-control', 'foliole-agent.mjs');
 }
 
 export function resolveAssistantAgentControlCommandPath(
@@ -21,8 +26,9 @@ export function resolveAssistantAgentControlCommandPath(
   appRoot = process.cwd(),
   platform = process.platform
 ) {
-  const directory = path.dirname(resolveAssistantAgentControlCliPath(env, appRoot));
-  return path.join(directory, platform === 'win32' ? 'foliole.cmd' : 'foliole');
+  const platformPath = platform === 'win32' ? path.win32 : path.posix;
+  const directory = platformPath.dirname(resolveAssistantAgentControlCliPath(env, appRoot, platform));
+  return platformPath.join(directory, platform === 'win32' ? 'foliole.cmd' : 'foliole');
 }
 
 export function resolveAssistantAgentControlContext() {

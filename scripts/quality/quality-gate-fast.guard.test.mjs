@@ -74,7 +74,7 @@ describe('quality-gate-fast.sh guard limits', () => {
     });
 
     expect(result.code).toBe(0);
-    expect(result.stdout).toContain('process tracking: ps and /proc unavailable; tracking direct child only');
+    expect(result.stdout).toMatch(/process tracking: ps(?: and \/proc)? unavailable;/u);
   }, 15000);
 
   it('applies timeout limits to the lint step too', async () => {

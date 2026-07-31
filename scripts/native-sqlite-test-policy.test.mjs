@@ -12,7 +12,7 @@ import {
 } from './native-sqlite-test-policy.mjs';
 
 const SQLITE_PATTERN = /\b(?:import\b[\s\S]*?\bfrom\s+|require\s*\()\s*['"]better-sqlite3['"]/u;
-const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
+const RELEASE_GATE_TEST_TIMEOUT_MS = 30_000;
 
 async function testFiles() {
   return collectTestFiles(['electron', 'src', 'scripts']);

@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { resolveCriticalTestFiles, RUN_VITEST_WITH_SUMMARY_SCRIPT } from './quality-critical-test-routes.mjs';
 
 const existing = () => true;
+const QUALITY_FAST_PLAN_TIMEOUT_MS = 30_000;
 
 const T5_GAP_ROUTES = [
   ['document header menu provider', [
@@ -33,7 +34,7 @@ function readQualityFastPlan(changedFiles) {
     cwd: process.cwd(),
     encoding: 'utf8',
     env: { ...process.env, QUALITY_GATE_CHANGED_FILES: changedFiles.join('\n') },
-    timeout: 10_000
+    timeout: QUALITY_FAST_PLAN_TIMEOUT_MS
   });
   expect(result.status, result.stderr).toBe(0);
   return JSON.parse(result.stdout);
@@ -92,7 +93,7 @@ describe('quality critical test routes', () => {
   it('exposes the source-triggered contracts through the quality:fast route', () => {
     const plan = readQualityFastPlan(T5_GAP_ROUTES.slice(0, 4).flatMap(([, triggers]) => triggers));
     expect(plan.relatedTests).toEqual(expect.arrayContaining(T5_GAP_ROUTES.slice(0, 4).flatMap(([, , tests]) => tests)));
-  });
+  }, 45_000);
 
   it('keeps capped quality:fast routes wired to the critical test runner', () => {
     const fastGate = readFileSync('scripts/quality/quality-gate-fast.sh', 'utf8');

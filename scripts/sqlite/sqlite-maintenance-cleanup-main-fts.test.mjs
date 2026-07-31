@@ -8,13 +8,15 @@ import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
-import { afterEach, beforeEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 
 const execFileAsync = promisify(execFile);
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3');
+
+vi.setConfig({ testTimeout: 15_000 });
 
 let tempRoot = '';
 

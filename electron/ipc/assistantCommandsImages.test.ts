@@ -65,7 +65,7 @@ it('sends, stores, reads, and removes a validated image attachment', async () =>
   await sendImage('thread-image');
 
   expect(adapterSendMessage).toHaveBeenCalledWith(expect.objectContaining({
-    imagePaths: [expect.stringMatching(/Workspace\/Attachments\/[a-f0-9]{64}\.png$/u)]
+    imagePaths: [expect.stringMatching(/Workspace[\\/]Attachments[\\/][a-f0-9]{64}\.png$/u)]
   }));
   const imagePath = adapterSendMessage.mock.lastCall?.[0].imagePaths[0] as string;
   const attachmentId = await readAttachmentId('thread-image');

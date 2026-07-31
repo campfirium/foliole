@@ -39,7 +39,7 @@ export function findMacosCodexCommands(env: NodeJS.ProcessEnv) {
   const home = env.HOME?.trim();
   return [
     '/Applications/ChatGPT.app/Contents/Resources/codex',
-    ...(home ? [path.join(home, '.local', 'bin', 'codex')] : []),
+    ...(home ? [path.posix.join(home, '.local', 'bin', 'codex')] : []),
     '/opt/homebrew/bin/codex',
     '/usr/local/bin/codex'
   ];

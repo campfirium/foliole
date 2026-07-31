@@ -24,5 +24,5 @@ export function resolveMasAgentControlSessionPath(options: AgentControlSessionPa
   if (loaded.status !== 'ready') throw new Error(`agent_control_app_group_unavailable: ${loaded.message}`);
   const result = loaded.adapter.appGroupContainerPath(AGENT_CONTROL_APP_GROUP);
   if (!result.ok) throw new Error(`agent_control_app_group_unavailable: ${result.errorCode}`);
-  return path.join(result.path, SESSION_FILE);
+  return path.posix.join(result.path, SESSION_FILE);
 }
