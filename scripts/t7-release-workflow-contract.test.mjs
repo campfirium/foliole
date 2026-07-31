@@ -19,6 +19,9 @@ describe('T7 release workflow contract', () => {
       group: 'release-t7-${{ github.ref }}-orchestrator',
       'cancel-in-progress': true
     });
+    expect(source).toContain('FOLIOLE_RELEASE_REF_NAME: ${{ github.ref_name }}');
+    expect(source).toContain('FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}');
+    expect(source).toContain('node scripts/release-target-contract.mjs >> "$GITHUB_OUTPUT"');
     expect(fs.existsSync('.github/workflows/publish-release.yml')).toBe(false);
   });
 
@@ -54,7 +57,6 @@ describe('T7 release workflow contract', () => {
     expect(source.match(/uses: actions\/download-artifact@v5/gu)).toHaveLength(2);
     expect(source).not.toContain('run-id:');
     expect(source).not.toContain('repository:');
-    expect(source).not.toContain('release-workflow-evidence.mjs');
     expect(source).toContain('test "$MACOS_SHA" = "$TARGET_SHA"');
     expect(source).toContain('test "$WINDOWS_SHA" = "$TARGET_SHA"');
     expect(source.match(/sha256sum --check SHA256SUMS\.txt/gu)).toHaveLength(2);

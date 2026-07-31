@@ -35,7 +35,6 @@ describe('release macOS workflow contract', () => {
     expect(source).toContain('RUN_SHA: ${{ github.sha }}');
     expect(source).toContain('ref: ${{ inputs.target_sha }}');
     expect(source).toContain('"$(uname -m)" != "arm64"');
-    expect(source).not.toContain('release-workflow-evidence.mjs');
   });
 
   it('signs, notarizes, verifies, attests, and uploads updater artifacts only', () => {

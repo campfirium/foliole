@@ -65,7 +65,9 @@ describe('quality command registry', () => {
       ['runner:ios-simulator', new URL('../ios/ios-bootstrap-acceptance.mjs', import.meta.url)],
       ['runner:ios-sqlite-capability', new URL('../sync/ios-capacitor-sqlite-capability-gate.mjs', import.meta.url)],
       ['runner:sql-surface-scan', new URL('../sync/sql-surface-scan.mjs', import.meta.url)],
-      ['runner:android-host-quality', new URL('../android/native-linux-host.mjs', import.meta.url)]
+      ['runner:android-host-quality', new URL('../android/native-linux-host.mjs', import.meta.url)],
+      ['runner:release-target-contract', new URL('../release-target-contract.mjs', import.meta.url)],
+      ['runner:release-manifest-pages', new URL('../prepare-release-manifest-site.mjs', import.meta.url)]
     ]);
     for (const [runner, sourceUrl] of runnerSources) {
       expect(readFileSync(sourceUrl, 'utf8'), runner).toContain(runner);

@@ -32,11 +32,12 @@ export async function createFixture(overrides = {}) {
   await writeJson(rootDir, 'releases/notes/zh-Hans.json', overrides.zhNotes ?? { [version]: { notes: ['修复', '一个修复。'] } });
   await writeFile(join(rootDir, `releases/github/v${version}.md`), '### Fixed\n- A fix.\n');
   await writeFile(
-    join(rootDir, '.github/workflows/release-windows.yml'),
+    join(rootDir, '.github/workflows/t7-release.yml'),
     overrides.releaseWorkflow ?? [
-      'target_version:',
-      'target_sha:',
-      'ref: ${{ inputs.target_sha }}',
+      'branches:',
+      '  - release',
+      'FOLIOLE_RELEASE_REF_NAME: ${{ github.ref_name }}',
+      'FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}',
       'node scripts/release-target-contract.mjs'
     ].join('\n')
   );

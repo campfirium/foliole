@@ -65,7 +65,7 @@ function checkRemoteAssets(candidateJson, phase) {
 }
 
 export function checkGithubReleaseSignals(version, phase, rootDir, commandRunner, localBody) {
-  const candidate = commandRunner('gh', ['release', 'view', `v${version}`, '-R', 'campfirium/foliole', '--json', 'body,isDraft,tagName,url,assets'], rootDir);
+  const candidate = commandRunner('gh', ['release', 'view', `v${version}`, '-R', 'campfirium/foliole', '--json', 'body,isDraft,publishedAt,tagName,url,assets'], rootDir);
   if (candidate.error || candidate.status !== 0) {
     const missing = (candidate.stderr ?? '').toLowerCase().includes('not found');
     if (missing) {
@@ -74,13 +74,18 @@ export function checkGithubReleaseSignals(version, phase, rootDir, commandRunner
     return [classifyGhFailure(candidate)];
   }
   const candidateJson = parseJsonResult(candidate);
+  const isPublished = candidateJson?.isDraft === false && Boolean(candidateJson?.publishedAt);
   const checks = [
     createCheck(candidateJson?.tagName === `v${version}` ? 'PASS' : 'FAIL', 'GitHub release tag', `GitHub release tag is ${candidateJson?.tagName ?? '<unknown>'}.`),
-    createCheck(phase === 'post' ? (candidateJson?.isDraft ? 'FAIL' : 'PASS') : (candidateJson?.isDraft ? 'PASS' : 'WARN'), 'GitHub release draft', `GitHub release draft=${String(candidateJson?.isDraft)}; phase=${phase}.`),
+    createCheck(
+      phase === 'post' ? (isPublished ? 'PASS' : 'FAIL') : (candidateJson?.isDraft ? 'PASS' : 'WARN'),
+      'GitHub release state',
+      `GitHub release draft=${String(candidateJson?.isDraft)} publishedAt=${candidateJson?.publishedAt ?? '<none>'}; phase=${phase}.`
+    ),
     ...checkRemoteBody(candidateJson, localBody, phase),
     ...checkRemoteAssets(candidateJson, phase)
   ];
-  const latest = commandRunner('gh', ['release', 'view', '-R', 'campfirium/foliole', '--json', 'tagName,isDraft,url'], rootDir);
+  const latest = commandRunner('gh', ['release', 'view', '-R', 'campfirium/foliole', '--json', 'tagName,isDraft,publishedAt,url'], rootDir);
   if (latest.error || latest.status !== 0) {
     checks.push(createCheck('UNKNOWN', 'GitHub latest release', `latest release check failed: ${(latest.stderr || latest.stdout || '').trim()}`));
     return checks;

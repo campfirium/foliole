@@ -10,7 +10,6 @@ import {
   createCheck,
   formatReleaseDoctorReport,
   hasFailures,
-  manifestSignalStatus,
   parseArgs,
   runCommand
 } from './release-doctor-core.mjs';
@@ -67,23 +66,23 @@ function checkNotesCatalog(catalog, locale, version) {
   return createCheck('PASS', `${locale} release notes`, `${locale} ${version} notes contain ${entry.notes.length} item(s).`);
 }
 
-function checkManifest(manifest, version, phase) {
+function checkManifest(manifest, version) {
   const checks = [];
   const latestMatches = manifest.latest === version;
   checks.push(createCheck(
-    manifestSignalStatus(phase, latestMatches),
+    latestMatches ? 'PASS' : 'FAIL',
     'manifest latest',
     latestMatches
       ? `manifest latest points to ${version}.`
-      : `manifest latest is ${manifest.latest ?? '<missing>'}; phase=${phase}.`
+      : `manifest latest is ${manifest.latest ?? '<missing>'}; post-public metadata is incomplete.`
   ));
 
   const releases = Array.isArray(manifest.releases) ? manifest.releases : [];
   const entry = releases.find((release) => release?.version === version);
   checks.push(createCheck(
-    manifestSignalStatus(phase, Boolean(entry)),
+    entry ? 'PASS' : 'FAIL',
     'manifest release entry',
-    entry ? `manifest has a ${version} release entry.` : `manifest has no ${version} release entry; phase=${phase}.`
+    entry ? `manifest has a ${version} release entry.` : `manifest has no ${version} release entry.`
   ));
 
   if (entry?.url) {
@@ -98,18 +97,33 @@ function checkManifest(manifest, version, phase) {
 }
 
 function checkReleaseWorkflow(workflowSource, version) {
-  const hasTargetInputs = workflowSource.includes('target_version:') && workflowSource.includes('target_sha:');
-  const checksOutSha = workflowSource.includes('ref: ${{ inputs.target_sha }}');
-  const validatesTarget = workflowSource.includes('node scripts/release-target-contract.mjs');
-  const rejectsLegacyRef = !workflowSource.includes('release_ref:');
-  const status = hasTargetInputs && checksOutSha && validatesTarget && rejectsLegacyRef ? 'PASS' : 'FAIL';
+  const exactBranch = workflowSource.includes('- release') &&
+    workflowSource.includes('FOLIOLE_RELEASE_REF_NAME: ${{ github.ref_name }}');
+  const branchVersion = workflowSource.includes('node scripts/release-target-contract.mjs');
+  const internalIdentity = workflowSource.includes('FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}');
+  const noManualEntry = !workflowSource.includes('workflow_dispatch:');
+  const status = exactBranch && branchVersion && internalIdentity && noManualEntry ? 'PASS' : 'FAIL';
   return createCheck(
     status,
-    'Windows release target',
+    'T7 release identity',
     status === 'PASS'
-      ? `workflow requires version ${version} and an exact matching SHA.`
-      : 'workflow must require target_version plus target_sha and reject movable release refs.'
+      ? `exact release derives version ${version} from branch content and commit identity from its event.`
+      : 'T7 must derive version from exact release branch content without a manual version or SHA entry.'
   );
+}
+
+async function collectPostPublicMetadataChecks(rootDir, version) {
+  const [manifest, enNotes, zhNotes] = await Promise.all([
+    readJsonFile(rootDir, 'releases/update-manifest.json'),
+    readJsonFile(rootDir, 'releases/notes/en.json'),
+    readJsonFile(rootDir, 'releases/notes/zh-Hans.json')
+  ]);
+  return [
+    await checkGithubBody(rootDir, version),
+    checkNotesCatalog(enNotes, 'en', version),
+    checkNotesCatalog(zhNotes, 'zh-Hans', version),
+    ...checkManifest(manifest, version)
+  ];
 }
 
 function checkWorkingTree(rootDir, commandRunner = runCommand) {
@@ -141,21 +155,17 @@ export async function collectReleaseDoctorChecks({
   const phase = args.phase;
   const packageJson = await readJsonFile(rootDir, 'package.json');
   const version = packageJson.version;
-  const localBody = existsSync(join(rootDir, `releases/github/v${version}.md`))
+  const workflow = await readTextFile(rootDir, '.github/workflows/t7-release.yml');
+  const metadataChecks = phase === 'post'
+    ? await collectPostPublicMetadataChecks(rootDir, version)
+    : [];
+  const bodyPath = join(rootDir, `releases/github/v${version}.md`);
+  const localBody = phase === 'post' && existsSync(bodyPath)
     ? await readTextFile(rootDir, `releases/github/v${version}.md`)
     : '';
-  const [manifest, enNotes, zhNotes, workflow] = await Promise.all([
-    readJsonFile(rootDir, 'releases/update-manifest.json'),
-    readJsonFile(rootDir, 'releases/notes/en.json'),
-    readJsonFile(rootDir, 'releases/notes/zh-Hans.json'),
-    readTextFile(rootDir, '.github/workflows/release-windows.yml')
-  ]);
   const checks = [
     ...checkPackage(packageJson),
-    await checkGithubBody(rootDir, version),
-    checkNotesCatalog(enNotes, 'en', version),
-    checkNotesCatalog(zhNotes, 'zh-Hans', version),
-    ...checkManifest(manifest, version, phase),
+    ...metadataChecks,
     checkReleaseWorkflow(workflow, version),
     checkWorkingTree(rootDir, commandRunner),
     ...checkGithubReleaseSignals(version, phase, rootDir, commandRunner, localBody),

@@ -28,7 +28,6 @@ describe('release Windows workflow contract', () => {
     expect(source).toContain('TARGET_REF: ${{ inputs.trigger_ref }}');
     expect(source).toContain('RUN_SHA: ${{ github.sha }}');
     expect(source).toContain('ref: ${{ inputs.target_sha }}');
-    expect(source).not.toContain('release-workflow-evidence.mjs');
     expect(source).not.toContain('artifact_only');
   });
 

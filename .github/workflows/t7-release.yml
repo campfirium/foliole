@@ -36,10 +36,11 @@ jobs:
       - name: Require the exact release branch and versioned content
         id: identity
         env:
-          TARGET_REF: ${{ github.ref }}
-          TARGET_SHA: ${{ github.sha }}
-        run: >-
-          node -e "const fs = require('node:fs'); const cp = require('node:child_process'); const version = JSON.parse(fs.readFileSync('package.json', 'utf8')).version; const head = cp.execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(); if (process.env.TARGET_REF !== 'refs/heads/release') throw new Error('T7 only accepts refs/heads/release'); if (!/^[0-9a-f]{40}$/.test(process.env.TARGET_SHA ?? '') || head !== process.env.TARGET_SHA) throw new Error('T7 event and checkout SHA differ'); if (!/^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(version)) throw new Error('package.json version is invalid'); fs.appendFileSync(process.env.GITHUB_OUTPUT, `target_sha=${head}\ntarget_version=${version}\ntrigger_ref=${process.env.TARGET_REF}\n`);"
+          FOLIOLE_RELEASE_REF_NAME: ${{ github.ref_name }}
+          FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}
+        run: |
+          node scripts/release-target-contract.mjs >> "$GITHUB_OUTPUT"
+          echo "trigger_ref=${{ github.ref }}" >> "$GITHUB_OUTPUT"
 
   t6_quality:
     name: T6 hosted quality

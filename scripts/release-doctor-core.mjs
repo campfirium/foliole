@@ -22,13 +22,6 @@ export function createCheck(status, title, detail) {
   return { detail, status, title };
 }
 
-export function manifestSignalStatus(phase, condition) {
-  if (condition) {
-    return 'PASS';
-  }
-  return phase === 'post' ? 'FAIL' : 'WARN';
-}
-
 function summarizeChecks(checks) {
   const counts = Object.fromEntries(STATUS_ORDER.map((status) => [status, 0]));
   for (const check of checks) {

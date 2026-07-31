@@ -30,7 +30,6 @@ describe('release candidate quality workflow contract', () => {
     expect(source).toContain('RUN_SHA: ${{ github.sha }}');
     expect(source).toContain('TARGET_VERSION: ${{ inputs.target_version }}');
     expect(source).toContain('Checked out SHA does not match target SHA');
-    expect(source).not.toContain('release-workflow-evidence.mjs');
   });
 
   it('preserves the native preflight and desktop golden journey', () => {

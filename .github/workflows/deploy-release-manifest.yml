@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - dev
-      - main
     paths:
       - "releases/**"
       - ".github/workflows/deploy-release-manifest.yml"
@@ -22,13 +21,27 @@ jobs:
     name: Package release manifest
     runs-on: ubuntu-latest
     steps:
+      - name: Require merged dev metadata
+        env:
+          DEPLOY_REF: ${{ github.ref }}
+        run: test "$DEPLOY_REF" = "refs/heads/dev"
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Prepare static files
+      - name: Verify public Release at the workflow boundary
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p _site/releases
-          cp -R releases/. _site/releases/
+          set -euo pipefail
+          latest_version="$(node -p "require('./releases/update-manifest.json').latest")"
+          published_tag="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/v${latest_version}" \
+            --jq 'select(.draft == false and .published_at != null) | .tag_name')"
+          test "$published_tag" = "v${latest_version}"
+
+      - name: Prepare published release metadata
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/prepare-release-manifest-site.mjs
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
