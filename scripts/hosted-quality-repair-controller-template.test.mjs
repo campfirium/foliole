@@ -15,7 +15,7 @@ describe('hosted-quality repair handoff', () => {
     expect(template).toContain('The handoff is only a locator');
     expect(template).toContain('Workflow file: {{workflowPath}}');
     expect(template).toContain('Run tier: {{runTier}}');
-    expect(template).toContain('Read the run, its jobs, and failed logs');
+    expect(template).toContain('read the run, its jobs, and failed logs');
     expect(template).toContain('standing authorization for that commit only, not for a push');
     expect(template).toContain('repairState=waiting-for-dev-delivery');
     expect(template).toContain('registered dev Remote Quality orchestrator');

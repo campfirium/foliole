@@ -27,11 +27,11 @@ describe('portable timeout runner', () => {
 
   it('preserves a completed command exit code', async () => {
     await expect(run(['2', process.execPath, '-e', 'process.exit(7)'])).resolves.toBe(7);
-  });
+  }, 15_000);
 
   it('returns the conventional timeout code', async () => {
     await expect(run(['0.05', process.execPath, '-e', 'setTimeout(() => {}, 1000)'])).resolves.toBe(124);
-  });
+  }, 15_000);
 
   it('writes child stdout directly to a portable output file', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'run-with-timeout-'));

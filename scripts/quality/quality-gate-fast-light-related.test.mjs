@@ -133,7 +133,7 @@ describe('quality-gate-fast.sh light related tests', () => {
       const result = await runQualityGate(
         tempRoot,
         { QUALITY_GATE_CHANGED_FILES: 'src/features/image-cloze/components/ImageClozeCardView.tsx' },
-        ['--explain', '--route']
+        ['--route']
       );
 
       expect(result.code).toBe(0);

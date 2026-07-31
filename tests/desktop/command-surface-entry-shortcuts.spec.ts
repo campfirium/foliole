@@ -52,6 +52,7 @@ test('keeps command surface entry shortcuts aligned with macOS settings', async 
   desktopSession,
   desktopWindow
 }, testInfo) => {
+  // SKIP: macOS-only shortcut acceptance | 2026-07-31 | revive: declare an acceptance host for another platform
   test.skip(process.platform !== 'darwin', 'macOS is the declared acceptance host');
   await desktopWindow.evaluate(() => {
     window.localStorage.setItem('foliole-app-language', 'en');

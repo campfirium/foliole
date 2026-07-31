@@ -43,9 +43,13 @@ describe('Windows Android DEV helper boundary', () => {
   it('exposes only the fixed action gate and hosted Linux Android checks', () => {
     const packageScripts = JSON.parse(source('package.json')).scripts;
     for (const name of RETIRED_PACKAGE_SCRIPTS) expect(packageScripts[name]).toBeUndefined();
-    expect(packageScripts['android:sync']).toBe('node scripts/android/native-linux-host.mjs sync');
-    expect(packageScripts['android:host:lint']).toBe('node scripts/android/native-linux-host.mjs gradle lint');
-    expect(packageScripts['android:host:test']).toBe('node scripts/android/native-linux-host.mjs gradle testDebugUnitTest');
+    const hostedGuard = 'node scripts/quality/quality-command-contracts.mjs allow';
+    expect(packageScripts['android:sync'])
+      .toBe(`${hostedGuard} android:sync && node scripts/android/native-linux-host.mjs sync`);
+    expect(packageScripts['android:host:lint'])
+      .toBe(`${hostedGuard} android:host:lint && node scripts/android/native-linux-host.mjs gradle lint`);
+    expect(packageScripts['android:host:test'])
+      .toBe(`${hostedGuard} android:host:test && node scripts/android/native-linux-host.mjs gradle testDebugUnitTest`);
 
     const controller = source('scripts/windows/windows-dev-control.mjs');
     const adapter = source('scripts/windows/windows-dev-device-action.mjs');

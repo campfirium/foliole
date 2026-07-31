@@ -105,6 +105,10 @@ export const CAPABILITY_CONTRACTS = [
     adapter: { args: ['scripts/android/native-linux-host.mjs', ...args], bin: 'node' },
     adapterPath: 'scripts/android/native-linux-host.mjs',
     name,
+    packageGuard: {
+      args: ['scripts/quality/quality-command-contracts.mjs', 'allow', name],
+      bin: 'node'
+    },
     placements: ['shared-core'],
     platforms: ['linux']
   })),
@@ -187,5 +191,8 @@ export function resolveCapabilityAdapter(name, platform) {
 }
 
 export function renderCapabilityCommand(contract) {
-  return [contract.adapter.bin, ...contract.adapter.args].join(' ');
+  return [contract.packageGuard, contract.adapter]
+    .filter(Boolean)
+    .map((command) => [command.bin, ...command.args].join(' '))
+    .join(' && ');
 }

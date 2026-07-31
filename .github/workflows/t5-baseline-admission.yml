@@ -179,5 +179,6 @@ jobs:
       - name: Require every baseline bucket
         id: require-buckets
         run: |
+          set -euo pipefail
           node -e 'const failed = Object.entries(process.env).filter(([key, value]) => key.endsWith("_RESULT") && value !== "success"); if (failed.length) throw new Error(failed.map(([key, value]) => `${key}=${value}`).join(", "))'
           echo "admitted_sha=${TARGET_SHA}" >> "$GITHUB_OUTPUT"
