@@ -11,16 +11,17 @@ import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const RUNNER = path.join(REPO_ROOT, 'scripts', 'run-vitest-with-summary.mjs');
+const NODE_RUNTIME = process.env.npm_node_execpath?.trim() || process.execPath;
 
 function runSummary(tempRoot, reportPath, exitCode = 1, envOverrides = null, vitestArgs = ['src/Foo.test.ts']) {
   const vitestEnv =
     envOverrides ??
     {
       FAKE_VITEST_EXIT: String(exitCode),
-      VITEST_BIN: process.execPath
+      VITEST_BIN: NODE_RUNTIME
     };
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [RUNNER, reportPath, '--', ...vitestArgs], {
+    const child = spawn(NODE_RUNTIME, [RUNNER, reportPath, '--', ...vitestArgs], {
       cwd: tempRoot,
       env: {
         ...process.env,
