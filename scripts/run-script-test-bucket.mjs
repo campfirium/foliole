@@ -89,18 +89,22 @@ function terminateChildTree(child) {
   globalThis.setTimeout(() => child.kill('SIGKILL'), 1000).unref();
 }
 
-function runVitest(bucket, reportPath, files) {
-  const timeoutSeconds = resolveBucketTimeoutSeconds(bucket);
-  const args = [
+export function buildVitestArgs(bucket, reportPath, files) {
+  return [
     'scripts/run-vitest-with-summary.mjs',
     reportPath,
     '--',
     '--silent=passed-only',
     '--pool=threads',
     '--maxWorkers=2',
-    '--no-file-parallelism',
+    bucket === 'core' ? '--fileParallelism' : '--no-file-parallelism',
     ...files
   ];
+}
+
+function runVitest(bucket, reportPath, files) {
+  const timeoutSeconds = resolveBucketTimeoutSeconds(bucket);
+  const args = buildVitestArgs(bucket, reportPath, files);
   const child = spawn(process.execPath, args, { env: process.env, stdio: 'inherit' });
   return new Promise((resolve) => {
     let settled = false;
