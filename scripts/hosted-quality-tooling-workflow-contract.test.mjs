@@ -35,7 +35,9 @@ it('runs one complete Ubuntu lane and seven lossless Windows tooling segments', 
     expect(targetSteps).toContain(segment);
   }
   expect(targetSteps).toContain('FOLIOLE_QUALITY_TOOLING_SEGMENT');
-  expect(targetSteps).toContain('test:quality:node test:quality:preview');
+  expect(targetSteps).toContain('unset FOLIOLE_QUALITY_TOOLING_SEGMENT');
+  expect(targetSteps).toContain('run_gate_steps test:quality:node test:quality:preview');
+  expect(targetSteps).not.toContain('run_gate_steps_parallel test:quality:node test:quality:preview');
 });
 
 it('is reusable-only and admits only the exact SHA from every segment', () => {

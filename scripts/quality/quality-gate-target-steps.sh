@@ -123,6 +123,14 @@ run_release_script_preview_gate_steps() {
 
 run_quality_tooling_file_shard() {
   local bucket="$1"
+  if [[ "${QUALITY_GATE_TEST_DRY_RUN_STEPS:-0}" == "1" ]]; then
+    if ! is_quality_gate_test_context; then
+      echo "[${prefix}] QUALITY_GATE_TEST_DRY_RUN_STEPS is only allowed in quality gate tests or fixtures."
+      return 1
+    fi
+    echo "[${prefix}] dry-run step: test:quality:${bucket}"
+    return 0
+  fi
   run_quality_gate_command \
     "${prefix}" \
     "test:quality:${bucket}" \
@@ -133,13 +141,14 @@ run_quality_tooling_file_shard() {
 
 run_release_tooling_gate_steps() {
   local segment="${FOLIOLE_QUALITY_TOOLING_SEGMENT:-full}"
+  unset FOLIOLE_QUALITY_TOOLING_SEGMENT
   case "${segment}" in
     full) run_quality_script_gate_steps ;;
     core-one|core-two|gate-one|gate-two) run_quality_tooling_file_shard "${segment}" ;;
     integration-one|integration-two)
       run_gate_steps_parallel $(quality_gate_integration_shard_scripts "${segment}")
       ;;
-    node-preview) run_gate_steps_parallel test:quality:node test:quality:preview ;;
+    node-preview) run_gate_steps test:quality:node test:quality:preview ;;
     *) echo "[${prefix}] unknown quality tooling segment: ${segment}"; return 1 ;;
   esac
 }
