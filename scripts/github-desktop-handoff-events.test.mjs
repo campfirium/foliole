@@ -21,9 +21,7 @@ vi.mock('./github-monitor-gh.mjs', () => ({
 
 const { listGithubMonitorEvents } = await import('./github-desktop-handoff-events.mjs');
 
-const T5_WORKFLOW = '.github/workflows/t5-baseline-admission.yml';
 const T6_WORKFLOW = '.github/workflows/t6-hosted-quality.yml';
-const T7_WORKFLOW = '.github/workflows/release-candidate-quality.yml';
 
 function run(overrides = {}) {
   return {
@@ -98,9 +96,9 @@ describe('GitHub desktop handoff action events', () => {
     });
   });
 
-  it('skips non-dev branches and already submitted failures', () => {
+  it('skips release branches and already submitted dev failures', () => {
     gh.runs = [
-      run({ databaseId: 103, headBranch: 'release/0.6.5' }),
+      run({ databaseId: 103, headBranch: 'release' }),
       run({ databaseId: 104, headBranch: 'dev' })
     ];
     const state = {
@@ -110,14 +108,14 @@ describe('GitHub desktop handoff action events', () => {
       submitted: { 'foliole:github-actions:104': { emittedAt: '2026-07-03T01:00:00Z' } }
     };
 
-    const events = listGithubMonitorEvents(config(), state, false, [], renderTemplate);
+    const events = listGithubMonitorEvents(config({ branches: [] }), state, false, [], renderTemplate);
 
     expect(events).toEqual([]);
     expect(state.actions[T6_WORKFLOW].runs['103']).toBeUndefined();
     expect(state.actions[T6_WORKFLOW].runs['104']).toBeDefined();
   });
 
-  it('emits configured non-hosted action workflows without hosted repair metadata', () => {
+  it('does not emit a configured workflow outside the independent T6 stream', () => {
     gh.runs = [run({
       databaseId: 105,
       headSha: 'barrier-owned',
@@ -132,23 +130,14 @@ describe('GitHub desktop handoff action events', () => {
 
     const events = listGithubMonitorEvents(config({ workflows: ['Other Workflow'] }), state, false, [], renderTemplate);
 
-    expect(events).toHaveLength(1);
-    expect(events[0]).toMatchObject({
-      prompt: 'Actions:Other Workflow:dev:105',
-      runTier: 'Actions',
-      title: 'Foliole Actions failed: Other Workflow'
-    });
-    expect(state.actions['Other Workflow'].runs['105']).toBeDefined();
+    expect(events).toEqual([]);
+    expect(state.actions['Other Workflow'].runs['105']).toBeUndefined();
   });
 
-  it.each([
-    [T5_WORKFLOW, 'T5 Baseline Admission', 'T5'],
-    [T6_WORKFLOW, 'T6 Hosted Quality', 'T6'],
-    [T7_WORKFLOW, 'T7 Release Candidate Quality', 'T7']
-  ])('emits %s failures through the hosted-quality controller', (workflowPath, workflowName, runTier) => {
-    gh.runs = [run({ databaseId: 106, headSha: 'barrier-owned', workflowName })];
+  it('emits only the stable T6 path through the hosted-quality controller', () => {
+    gh.runs = [run({ databaseId: 106, headSha: 'barrier-owned' })];
     const state = {
-      actions: { [workflowPath]: { initialized: true, runs: {} } },
+      actions: { [T6_WORKFLOW]: { initialized: true, runs: {} } },
       issues: {},
       prs: {},
       submitted: {}
@@ -156,15 +145,15 @@ describe('GitHub desktop handoff action events', () => {
 
     const events = listGithubMonitorEvents(config({
       branches: [],
-      workflows: [workflowPath]
+      workflows: [T6_WORKFLOW]
     }), state, false, [], renderTemplate);
 
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({
-      prompt: `${runTier}:${workflowName}:dev:106`,
-      runTier,
-      title: `Foliole ${runTier} hosted quality repair: run 106`,
-      workflowPath
+      prompt: 'T6:T6 Hosted Quality:dev:106',
+      runTier: 'T6',
+      title: 'Foliole T6 hosted quality repair: run 106',
+      workflowPath: T6_WORKFLOW
     });
   });
   it('emits each recurring T6 failure once by run id', () => {

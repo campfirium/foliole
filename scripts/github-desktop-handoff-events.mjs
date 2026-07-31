@@ -3,8 +3,7 @@ import { buildActionsHandoffIdentity } from './github-actions-handoff-policy.mjs
 import { listDependabotAlertEvents } from './github-dependabot-alert-events.mjs';
 import { listPrChecks, recordMonitorError, runGh } from './github-monitor-gh.mjs';
 
-function actionRunEvent(config, workflowSelector, run, renderTemplate) {
-  const identity = buildActionsHandoffIdentity(workflowSelector, run);
+function actionRunEvent(config, workflowSelector, run, renderTemplate, identity) {
   const data = {
     branch: run.headBranch,
     eventId: String(run.databaseId),
@@ -123,11 +122,12 @@ function listActionEvents(config, state, includeExisting, errors, renderTemplate
     }
     for (const run of runs) {
       if (!allowedBranch(config, run)) continue;
+      const identity = buildActionsHandoffIdentity(workflow, run);
+      if (!identity) continue;
       const observed = recordObservedRun(config, workflowState, run, includeExisting);
-      const event = actionRunEvent(config, workflow, run, renderTemplate);
-      const shouldEmit = observed.handoffEligible
-        && !state.submitted[event.dedupeKey];
-      if (shouldEmit) {
+      if (!observed.handoffEligible) continue;
+      const event = actionRunEvent(config, workflow, run, renderTemplate, identity);
+      if (!state.submitted[event.dedupeKey]) {
         events.push(event);
       }
     }

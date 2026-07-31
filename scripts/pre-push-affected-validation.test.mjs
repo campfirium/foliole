@@ -75,7 +75,7 @@ describe('pre-push affected validation', () => {
       await runCommand('git', ['update-ref', 'refs/remotes/origin/dev', localSha], repoDir);
 
       const result = await runCommand('node', [AFFECTED_VALIDATION_SCRIPT], repoDir, {
-        input: `refs/heads/release/1.0.0 ${localSha} refs/heads/release/1.0.0 ${'0'.repeat(40)}\n`
+        input: `refs/heads/release ${localSha} refs/heads/release ${'0'.repeat(40)}\n`
       });
 
       expect(result.code, result.stderr).toBe(0);

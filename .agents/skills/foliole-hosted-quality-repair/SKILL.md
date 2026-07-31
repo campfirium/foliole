@@ -33,8 +33,9 @@ If the pinned release task cannot be identified, report `repairState=waiting-for
 3. Run only checks registered as `local-quick`, starting with the narrowest reproducer. Local green never replaces hosted evidence.
 4. Review the integrated diff and preserve all unrelated changes.
 5. A monitor handoff that names the independent run and states it is a locator authorizes one local commit containing only the verified repair. Use `commit-note`; otherwise obtain explicit commit authorization.
-6. Request hosted revalidation only with `npm run quality:remote -- --scope <desktop|shared|android|ios|full>` while on `dev`. Never pass a SHA; the workflow event derives the internal target commit.
-7. Never enter `release`, mutate a Draft, reuse T7 evidence, or transfer the repair to the pinned release task.
+6. This handoff authorizes the repair commit, not a push. Before revalidation, prove that the repair commit is reachable from remote `dev`. If it is not, set `repairState=waiting-for-dev-delivery` and stop unless the user separately authorizes the push.
+7. Once the repair is reachable from remote `dev`, request hosted revalidation only with `npm run quality:remote -- --scope <desktop|shared|android|ios|full>` while on `dev`, then use `quiet-wait` for the terminal result. Never pass a SHA; the workflow event derives the internal target commit.
+8. Never enter `release`, mutate a Draft, reuse T7 evidence, or transfer the repair to the pinned release task.
 
 Stop for product judgment, external service failure, missing permission, write-scope expansion, or ownership conflict. An intermediate red local check is not itself a stop condition.
 
@@ -51,6 +52,6 @@ Report the classification and evidence. Do not automatically create sibling task
 
 ## Report
 
-Report `runTier`, `failedStage`, `repairState`, and `preventionState` separately. Valid repair states are `waiting-for-read-approval`, `waiting-for-release-owner`, `investigating`, `repairing`, `committing`, `waiting-for-orchestrator`, and `complete`.
+Report `runTier`, `failedStage`, `repairState`, and `preventionState` separately. Valid repair states are `waiting-for-read-approval`, `waiting-for-release-owner`, `investigating`, `repairing`, `committing`, `waiting-for-dev-delivery`, `waiting-for-orchestrator`, and `complete`.
 
 Set `repairState=complete` only after every observed in-scope dev T6 failure is locally resolved, risk-matched `local-quick` validation is green, the scoped repair is committed, and the registered dev orchestrator has reached its required terminal state. Never describe task creation, Desktop navigation, or prompt delivery as hosted-quality progress.
