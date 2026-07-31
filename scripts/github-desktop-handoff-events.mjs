@@ -1,35 +1,28 @@
 import { buildIssueHandoffData, buildPrHandoffData } from './github-desktop-handoff-title.mjs';
+import { buildActionsHandoffIdentity } from './github-actions-handoff-policy.mjs';
 import { listDependabotAlertEvents } from './github-dependabot-alert-events.mjs';
 import { listPrChecks, recordMonitorError, runGh } from './github-monitor-gh.mjs';
 
-const ACTION_WORKFLOW_TIERS = new Map([
-  ['T5 Nightly Remote Quality', 'T5']
-]);
-
-function actionRunEvent(config, run, renderTemplate) {
-  const tier = ACTION_WORKFLOW_TIERS.get(run.workflowName) ?? 'Actions';
+function actionRunEvent(config, workflowSelector, run, renderTemplate) {
+  const identity = buildActionsHandoffIdentity(workflowSelector, run);
   const data = {
     branch: run.headBranch,
-    controllerRole: tier === 'T5' ? 'repair-controller' : '',
-    controllerRunId: tier === 'T5' ? String(run.databaseId) : '',
     eventId: String(run.databaseId),
     headSha: run.headSha,
     repository: config.repository,
     runId: String(run.databaseId),
     runTitle: run.displayTitle,
     source: 'foliole/github-actions',
-    tier,
     triggerEvent: run.event ?? 'unknown',
     url: run.url,
     workflow: run.workflowName,
-    workspace: config.workspace
+    workspace: config.workspace,
+    ...identity
   };
   return {
     dedupeKey: config.dedupeKeyPattern.replace('{eventId}', data.eventId),
     prompt: renderTemplate(config.template, data),
-    title: tier === 'T5'
-      ? `Foliole T5 repair controller: run ${run.databaseId}`
-      : `Foliole ${tier} failed: ${run.workflowName}`,
+    title: identity.handoffTitle,
     ...data,
     ttlSeconds: config.defaultTtlSeconds
   };
@@ -126,7 +119,7 @@ function listActionEvents(config, state, includeExisting, errors, renderTemplate
         continue;
       }
       if (!reachedBaseline) continue;
-      const event = actionRunEvent(config, run, renderTemplate);
+      const event = actionRunEvent(config, workflow, run, renderTemplate);
       const shouldEmit = (includeExisting || workflowState.initialized)
         && isFailureRun(config, run)
         && !state.submitted[event.dedupeKey];

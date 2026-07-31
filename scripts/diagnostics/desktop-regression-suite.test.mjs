@@ -100,13 +100,14 @@ describe('desktop regression suite manifest', () => {
     expect(HIDDEN_MODE_HEALTH_SPECS.some((spec) => regressionSpecs.has(spec))).toBe(false);
   });
 
-  it('formats a markdown table for T0/T5 consumers', () => {
+  it('formats a markdown table for T0/T6 consumers and keeps install checks in T7', () => {
     const output = formatDesktopRegressionSuite();
 
     expect(output).toContain('startup-settings-backups');
     expect(output).toContain('hidden-capable');
     expect(output).toContain('enabled');
     expect(output).toContain('manifest-only; run explicitly before release use');
-    expect(output).toContain('T0, T5');
+    expect(output).toContain('T0, T6');
+    expect(DESKTOP_REGRESSION_SUITE.find((entry) => entry.id === 'installed-app-smoke')?.triggers).toEqual(['T7']);
   });
 });

@@ -9,7 +9,7 @@ import { resolveCriticalTestFiles, RUN_VITEST_WITH_SUMMARY_SCRIPT } from './qual
 const existing = () => true;
 const QUALITY_FAST_PLAN_TIMEOUT_MS = 30_000;
 
-const T5_GAP_ROUTES = [
+const HOSTED_QUALITY_GAP_ROUTES = [
   ['document header menu provider', [
     'src/app/AppProviders.tsx',
     'src/features/settings/context/DocumentHeaderMenuSettingsProvider.tsx',
@@ -35,6 +35,12 @@ const HOSTED_QUALITY_CONTRACTS = [
   'scripts/quality/t6-hosted-quality-admission.test.mjs',
   'scripts/t5-baseline-admission-workflow-contract.test.mjs',
   'scripts/t6-hosted-quality-workflow-contract.test.mjs'
+];
+
+const HOSTED_QUALITY_HANDOFF_CONTRACTS = [
+  'scripts/github-actions-handoff-policy.test.mjs',
+  'scripts/github-desktop-handoff-events.test.mjs',
+  'scripts/hosted-quality-repair-controller-template.test.mjs'
 ];
 
 function readQualityFastPlan(changedFiles) {
@@ -79,7 +85,7 @@ describe('quality critical test routes', () => {
     ]);
   });
 
-  it.each(T5_GAP_ROUTES)('routes the %s triggers to their cross-file contract', (_name, triggers, tests) => {
+  it.each(HOSTED_QUALITY_GAP_ROUTES)('routes the %s triggers to their cross-file contract', (_name, triggers, tests) => {
     expect(resolveCriticalTestFiles(triggers, existing)).toEqual(tests);
   });
 
@@ -89,6 +95,14 @@ describe('quality critical test routes', () => {
       '.github/workflows/t6-hosted-quality.yml',
       'scripts/quality/t6-hosted-quality-admission.mjs'
     ], existing)).toEqual(HOSTED_QUALITY_CONTRACTS);
+  });
+
+  it('routes hosted-quality monitor and controller changes to their shared contract set', () => {
+    expect(resolveCriticalTestFiles([
+      '.agents/skills/foliole-hosted-quality-repair/SKILL.md',
+      '.codex/monitors/templates/github-actions.md',
+      'scripts/github-actions-handoff-policy.mjs'
+    ], existing)).toEqual(HOSTED_QUALITY_HANDOFF_CONTRACTS);
   });
 
   it('deduplicates contracts selected through multiple triggering files', () => {
@@ -107,8 +121,8 @@ describe('quality critical test routes', () => {
   });
 
   it('exposes the source-triggered contracts through the quality:fast route', () => {
-    const plan = readQualityFastPlan(T5_GAP_ROUTES.slice(0, 4).flatMap(([, triggers]) => triggers));
-    expect(plan.relatedTests).toEqual(expect.arrayContaining(T5_GAP_ROUTES.slice(0, 4).flatMap(([, , tests]) => tests)));
+    const plan = readQualityFastPlan(HOSTED_QUALITY_GAP_ROUTES.slice(0, 4).flatMap(([, triggers]) => triggers));
+    expect(plan.relatedTests).toEqual(expect.arrayContaining(HOSTED_QUALITY_GAP_ROUTES.slice(0, 4).flatMap(([, , tests]) => tests)));
   }, 45_000);
 
   it('keeps capped quality:fast routes wired to the critical test runner', () => {

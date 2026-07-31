@@ -111,8 +111,8 @@
 - npm 默认保留 7 天 release-age 安全窗口；但 Dependabot / GitHub Advisory / `npm audit` 已明确报出的漏洞修复必须定向绕过该窗口，只允许更新被点名的漏洞包或其必要传递依赖，并用 `npm ls <package> --all` 与 `npm audit --omit=dev` 复验。禁止用等待窗口期作为安全告警处理结论。
 - `it.skip` / `test.skip` 必须紧邻 `// SKIP: <reason> | <date YYYY-MM-DD> | revive: <condition>`；看到超过 30 天的 stale `SKIP` 必须复查能否恢复。
 - E2E（Playwright）不进入任何质量闸；它作为宿主可见验收单独执行。桌面日常 agent 自动化验收优先按 `electron/AGENTS.md` 使用不干扰用户桌面的 Playwright 入口，人工预览仍按下表执行。
-- Windows Android 日常按 DEV-first 远程工作站使用：Windows native dev 与 A5 fixed deploy / verify 服务开发调试；CI 级 clean / bundled / release-like 终检默认由 GitHub / T5 或明确触发的重模式承担，不得恢复通用设备 runner 或 detached preview 服务。
-- 普通开发任务只跑改动相关的最小本地验证，不默认等待 hosted 中度或重度质检；每日两次 T5 负责常规 full hosted 兜底。`node scripts/quality/remote-quality.mjs --scope <desktop|shared|android|ios|full>` 仅用于 T5 修复后的即时复验、发布流程或用户明确要求，并且只验证远端不可变 SHA、显示唯一 run URL、等待结果并在失败时读取日志。不得为触发质检隐式 commit / push，目标 SHA 不在远端时必须停下等待授权，不得回退到其他 SHA。
+- Windows Android 日常按 DEV-first 远程工作站使用：Windows native dev 与 A5 fixed deploy / verify 服务开发调试；CI 级 clean / bundled / release-like 终检默认由 GitHub T6/T7 或明确触发的重模式承担，不得恢复通用设备 runner 或 detached preview 服务。
+- 普通开发任务只跑改动相关的最小本地验证，不默认等待 hosted 中度或重度质检；每日两次 T6 负责常规 full hosted 兜底。`node scripts/quality/remote-quality.mjs --scope <desktop|shared|android|ios|full>` 仅用于 hosted-quality 失败修复后的即时复验、发布流程或用户明确要求，并且只验证远端不可变 SHA、显示唯一 run URL、等待结果并在失败时读取日志。不得为触发质检隐式 commit / push，目标 SHA 不在远端时必须停下等待授权，不得回退到其他 SHA。
 - 运行命令后若工具返回非终态、无新增输出、仅 heartbeat / progress，或 agent 准备汇报“仍在运行 / 继续等 / 再查一次”，必须触发 `$quiet-wait`；后续用 waiter 接管等待，不得用 agent 回合继续守进程。
 - `copy:guard` 默认只报告 warning；若它报 warning，修复前先读 `.lab/specs/_product/terminology-and-copy.md`，禁止机械替换。
 

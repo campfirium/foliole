@@ -21,6 +21,10 @@ vi.mock('./github-monitor-gh.mjs', () => ({
 
 const { listGithubMonitorEvents } = await import('./github-desktop-handoff-events.mjs');
 
+const T5_WORKFLOW = '.github/workflows/t5-baseline-admission.yml';
+const T6_WORKFLOW = '.github/workflows/t6-hosted-quality.yml';
+const T7_WORKFLOW = '.github/workflows/release-candidate-quality.yml';
+
 function run(overrides = {}) {
   return {
     conclusion: overrides.conclusion ?? 'failure',
@@ -32,7 +36,7 @@ function run(overrides = {}) {
     headSha: overrides.headSha ?? 'abc123',
     status: overrides.status ?? 'completed',
     url: overrides.url ?? 'https://github.com/campfirium/foliole/actions/runs/100',
-    workflowName: overrides.workflowName ?? 'T5 Nightly Remote Quality'
+    workflowName: overrides.workflowName ?? 'T6 Hosted Quality'
   };
 }
 
@@ -46,7 +50,7 @@ function config(overrides = {}) {
       failureConclusions: ['failure', 'timed_out', 'action_required'],
       repository: 'campfirium/foliole',
       template: '.codex/monitors/templates/github-actions.md',
-      workflows: ['T5 Nightly Remote Quality'],
+      workflows: [T6_WORKFLOW],
       workspace: 'D:\\C\\foliole',
       ...overrides
     },
@@ -56,7 +60,7 @@ function config(overrides = {}) {
 }
 
 function renderTemplate(_template, data) {
-  return `${data.tier}:${data.workflow}:${data.branch}:${data.runId}`;
+  return `${data.runTier}:${data.workflow}:${data.branch}:${data.runId}`;
 }
 
 describe('GitHub desktop handoff action events', () => {
@@ -67,7 +71,7 @@ describe('GitHub desktop handoff action events', () => {
     const events = listGithubMonitorEvents(config(), state, false, [], renderTemplate);
 
     expect(events).toEqual([]);
-    expect(state.actions['T5 Nightly Remote Quality']).toMatchObject({
+    expect(state.actions[T6_WORKFLOW]).toMatchObject({
       initialized: true,
       latestObservedRunId: '101'
     });
@@ -84,10 +88,11 @@ describe('GitHub desktop handoff action events', () => {
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({
       branch: 'dev',
-      controllerRole: 'repair-controller',
+      controllerRole: 'hosted-quality-repair-controller',
       controllerRunId: '102',
       dedupeKey: 'foliole:github-actions:102',
-      title: 'Foliole T5 repair controller: run 102',
+      runTier: 'T6',
+      title: 'Foliole T6 hosted quality repair: run 102',
       triggerEvent: 'schedule'
     });
   });
@@ -98,7 +103,7 @@ describe('GitHub desktop handoff action events', () => {
       run({ databaseId: 104, headBranch: 'dev' })
     ];
     const state = {
-      actions: { 'T5 Nightly Remote Quality': { initialized: true, runs: {} } },
+      actions: { [T6_WORKFLOW]: { initialized: true, runs: {} } },
       issues: {},
       prs: {},
       submitted: { 'foliole:github-actions:104': { emittedAt: '2026-07-03T01:00:00Z' } }
@@ -107,11 +112,11 @@ describe('GitHub desktop handoff action events', () => {
     const events = listGithubMonitorEvents(config(), state, false, [], renderTemplate);
 
     expect(events).toEqual([]);
-    expect(state.actions['T5 Nightly Remote Quality'].runs['103']).toBeUndefined();
-    expect(state.actions['T5 Nightly Remote Quality'].runs['104']).toBeDefined();
+    expect(state.actions[T6_WORKFLOW].runs['103']).toBeUndefined();
+    expect(state.actions[T6_WORKFLOW].runs['104']).toBeDefined();
   });
 
-  it('emits configured non-T5 action workflows without T4 barrier suppression', () => {
+  it('emits configured non-hosted action workflows without hosted repair metadata', () => {
     gh.runs = [run({
       databaseId: 105,
       headSha: 'barrier-owned',
@@ -129,67 +134,67 @@ describe('GitHub desktop handoff action events', () => {
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({
       prompt: 'Actions:Other Workflow:dev:105',
-      tier: 'Actions',
+      runTier: 'Actions',
       title: 'Foliole Actions failed: Other Workflow'
     });
     expect(state.actions['Other Workflow'].runs['105']).toBeDefined();
   });
 
-  it('emits T5 nightly remote quality failures as independent handoffs', () => {
-    gh.runs = [run({
-      databaseId: 106,
-      headSha: 'barrier-owned',
-      workflowName: 'T5 Nightly Remote Quality'
-    })];
+  it.each([
+    [T5_WORKFLOW, 'T5 Baseline Admission', 'T5'],
+    [T6_WORKFLOW, 'T6 Hosted Quality', 'T6'],
+    [T7_WORKFLOW, 'T7 Release Candidate Quality', 'T7']
+  ])('emits %s failures through the hosted-quality controller', (workflowPath, workflowName, runTier) => {
+    gh.runs = [run({ databaseId: 106, headSha: 'barrier-owned', workflowName })];
     const state = {
-      actions: { 'T5 Nightly Remote Quality': { initialized: true, runs: {} } },
+      actions: { [workflowPath]: { initialized: true, runs: {} } },
       issues: {},
       prs: {},
       submitted: {}
     };
 
     const events = listGithubMonitorEvents(config({
-      workflows: ['T5 Nightly Remote Quality']
+      branches: [],
+      workflows: [workflowPath]
     }), state, false, [], renderTemplate);
 
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({
-      prompt: 'T5:T5 Nightly Remote Quality:dev:106',
-      tier: 'T5',
-      title: 'Foliole T5 repair controller: run 106'
+      prompt: `${runTier}:${workflowName}:dev:106`,
+      runTier,
+      title: `Foliole ${runTier} hosted quality repair: run 106`,
+      workflowPath
     });
   });
-  it('emits each recurring T5 failure once by run id', () => {
+  it('emits each recurring T6 failure once by run id', () => {
     const state = {
-      actions: { 'T5 Nightly Remote Quality': { initialized: true, runs: {} } },
+      actions: { [T6_WORKFLOW]: { initialized: true, runs: {} } },
       issues: {},
       prs: {},
       submitted: {}
     };
-    const t5Config = config({ workflows: ['T5 Nightly Remote Quality'] });
+    const t6Config = config({ workflows: [T6_WORKFLOW] });
 
     gh.runs = [run({
       createdAt: '2026-07-05T07:29:18Z',
-      databaseId: 201,
-      workflowName: 'T5 Nightly Remote Quality'
+      databaseId: 201
     })];
-    const firstEvents = listGithubMonitorEvents(t5Config, state, false, [], renderTemplate);
+    const firstEvents = listGithubMonitorEvents(t6Config, state, false, [], renderTemplate);
     expect(firstEvents).toHaveLength(1);
     state.submitted[firstEvents[0].dedupeKey] = { emittedAt: '2026-07-05T07:55:22Z' };
 
     gh.runs = [run({
       createdAt: '2026-07-05T17:20:05Z',
       databaseId: 202,
-      headSha: 'def456',
-      workflowName: 'T5 Nightly Remote Quality'
+      headSha: 'def456'
     })];
-    const secondEvents = listGithubMonitorEvents(t5Config, state, false, [], renderTemplate);
+    const secondEvents = listGithubMonitorEvents(t6Config, state, false, [], renderTemplate);
     expect(secondEvents).toHaveLength(1);
     expect(secondEvents[0]).toMatchObject({
       dedupeKey: 'foliole:github-actions:202',
-      tier: 'T5'
+      runTier: 'T6'
     });
     state.submitted[secondEvents[0].dedupeKey] = { emittedAt: '2026-07-05T17:45:22Z' };
-    expect(listGithubMonitorEvents(t5Config, state, false, [], renderTemplate)).toEqual([]);
+    expect(listGithubMonitorEvents(t6Config, state, false, [], renderTemplate)).toEqual([]);
   });
 });

@@ -50,10 +50,10 @@
 
 ## Validation
 
-- Android / Capacitor 相关改动默认先执行覆盖本轮能力闭环的最小验证；A5 日常开发验收由 Mac DEV controller 触发适用的 Windows fixed action，CI 级 clean / bundled / release-like 终检只在发布、T5 或用户明确要求时升级。只有当能力闭环触及移动宿主根链路、Capacitor 宿主 / bridge 主链路、共享层 / 依赖、跨宿主联动、或你无法用相关验证证明影响已被覆盖时，才升级为 `npm run quality:android`、`npm run quality:shared` 或 `npm run quality:release`；`npm run quality:full` 只覆盖仓库级 JS/TS、桌面构建与 companion Web 构建，不跑 Android 原生宿主检查。
+- Android / Capacitor 相关改动默认先执行覆盖本轮能力闭环的最小验证；A5 日常开发验收由 Mac DEV controller 触发适用的 Windows fixed action，CI 级 clean / bundled / release-like 终检只在发布、T6/T7 或用户明确要求时升级。只有当能力闭环触及移动宿主根链路、Capacitor 宿主 / bridge 主链路、共享层 / 依赖、跨宿主联动、或你无法用相关验证证明影响已被覆盖时，才升级为 `npm run quality:android`、`npm run quality:shared` 或 `npm run quality:release`；`npm run quality:full` 只覆盖仓库级 JS/TS、桌面构建与 companion Web 构建，不跑 Android 原生宿主检查。
 - 若改动触及 Android 权限、生命周期、Capacitor 插件、intent、安装 / 启动链路，或问题只会在设备上暴露，必须由 controller 对 LAN Git 做普通 `dev` push，再由 Windows pull 并执行适用的 fixed action；Mac 本地不得替代该验收。现有 fixed actions 无法表达的 instrumentation、清数据、模拟器或可见 UI 验收必须停下重新评估，不得绕过 controller 直接执行。
 - Android 设备 serial、ADB、Gradle、安装、启动、截图、logcat、数据保护与镜像窗口只由 Windows 固定 device adapter 解析和执行；Mac controller 不接受任意远程 shell、working-tree 传输或“唯一 ready 设备”推断。
 - Android 调试命令不得批量弹出终端窗口：自动化验证、ADB、PowerShell、Node、bash、截图、sync、deploy 等后台步骤必须使用隐藏窗口或无窗口进程；只有用户明确要操作手机时，才允许打开一个可见的 `scrcpy` 设备镜像窗口。
 - `npm run android:web:dev` 是跨宿主前台 companion Web 诊断入口，不具备真机、SQLite 或 Capacitor 宿主验收语义，也不得后台化。
-- hosted Linux 的 `android:sync`、`android:host:lint`、`android:host:test` 只服务 GitHub / T5 原生宿主质量检查，不是 Windows 或 A5 设备入口。
+- hosted Linux 的 `android:sync`、`android:host:lint`、`android:host:test` 只服务 GitHub T6 原生宿主质量检查，不是 Windows 或 A5 设备入口。
 - Windows fixed adapter 内部只调用其具名、显式 port / serial 的 purpose-specific helpers；Mac 只使用受限 DEV controller，不直接运行宿主脚本，也不口头推荐裸 Gradle、adb 或 Capacitor 命令。`live` / `deploy` 成功必须给出 A5 实际加载的本轮 DEV build identity 与截图证据，不能只证明 activity 前台。
