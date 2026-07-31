@@ -52,7 +52,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   closeDatabaseConnection();
-  await fs.rm(tempRoot, { recursive: true, force: true });
+  await fs.rm(tempRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
 });
 
 it('returns source update content after the readwise body changes upstream', async () => {
