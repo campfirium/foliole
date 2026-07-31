@@ -21,7 +21,7 @@ vi.mock('./github-monitor-gh.mjs', () => ({
 
 const { listGithubMonitorEvents } = await import('./github-desktop-handoff-events.mjs');
 
-const T6_WORKFLOW = '.github/workflows/t6-hosted-quality.yml';
+const T7_WORKFLOW = '.github/workflows/t7-hosted-quality.yml';
 
 function run(overrides = {}) {
   return {
@@ -34,7 +34,7 @@ function run(overrides = {}) {
     headSha: overrides.headSha ?? 'abc123',
     status: overrides.status ?? 'completed',
     url: overrides.url ?? 'https://github.com/campfirium/foliole/actions/runs/100',
-    workflowName: overrides.workflowName ?? 'T6 Hosted Quality'
+    workflowName: overrides.workflowName ?? 'T7 Hosted Quality'
   };
 }
 
@@ -48,7 +48,7 @@ function config(overrides = {}) {
       failureConclusions: ['failure', 'timed_out', 'action_required'],
       repository: 'campfirium/foliole',
       template: '.codex/monitors/templates/github-actions.md',
-      workflows: [T6_WORKFLOW],
+      workflows: [T7_WORKFLOW],
       workspace: 'D:\\C\\foliole',
       ...overrides
     },
@@ -69,7 +69,7 @@ describe('GitHub desktop handoff action events', () => {
     const events = listGithubMonitorEvents(config(), state, false, [], renderTemplate);
 
     expect(events).toEqual([]);
-    expect(state.actions[T6_WORKFLOW]).toMatchObject({
+    expect(state.actions[T7_WORKFLOW]).toMatchObject({
       initialized: true,
       latestObservedRunId: '101'
     });
@@ -90,8 +90,8 @@ describe('GitHub desktop handoff action events', () => {
       controllerRole: 'hosted-quality-repair-controller',
       controllerRunId: '102',
       dedupeKey: 'foliole:github-actions:102',
-      runTier: 'T6',
-      title: 'Foliole T6 hosted quality repair: run 102',
+      runTier: 'T7',
+      title: 'Foliole T7 hosted quality repair: run 102',
       triggerEvent: 'schedule'
     });
   });
@@ -102,7 +102,7 @@ describe('GitHub desktop handoff action events', () => {
       run({ databaseId: 104, headBranch: 'dev' })
     ];
     const state = {
-      actions: { [T6_WORKFLOW]: { initialized: true, runs: {} } },
+      actions: { [T7_WORKFLOW]: { initialized: true, runs: {} } },
       issues: {},
       prs: {},
       submitted: { 'foliole:github-actions:104': { emittedAt: '2026-07-03T01:00:00Z' } }
@@ -111,11 +111,11 @@ describe('GitHub desktop handoff action events', () => {
     const events = listGithubMonitorEvents(config({ branches: [] }), state, false, [], renderTemplate);
 
     expect(events).toEqual([]);
-    expect(state.actions[T6_WORKFLOW].runs['103']).toBeUndefined();
-    expect(state.actions[T6_WORKFLOW].runs['104']).toBeDefined();
+    expect(state.actions[T7_WORKFLOW].runs['103']).toBeUndefined();
+    expect(state.actions[T7_WORKFLOW].runs['104']).toBeDefined();
   });
 
-  it('does not emit a configured workflow outside the independent T6 stream', () => {
+  it('does not emit a configured workflow outside the independent dev T7 stream', () => {
     gh.runs = [run({
       databaseId: 105,
       headSha: 'barrier-owned',
@@ -134,10 +134,10 @@ describe('GitHub desktop handoff action events', () => {
     expect(state.actions['Other Workflow'].runs['105']).toBeUndefined();
   });
 
-  it('emits only the stable T6 path through the hosted-quality controller', () => {
+  it('emits only the stable T7 Hosted Quality path through the controller', () => {
     gh.runs = [run({ databaseId: 106, headSha: 'barrier-owned' })];
     const state = {
-      actions: { [T6_WORKFLOW]: { initialized: true, runs: {} } },
+      actions: { [T7_WORKFLOW]: { initialized: true, runs: {} } },
       issues: {},
       prs: {},
       submitted: {}
@@ -145,31 +145,31 @@ describe('GitHub desktop handoff action events', () => {
 
     const events = listGithubMonitorEvents(config({
       branches: [],
-      workflows: [T6_WORKFLOW]
+      workflows: [T7_WORKFLOW]
     }), state, false, [], renderTemplate);
 
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({
-      prompt: 'T6:T6 Hosted Quality:dev:106',
-      runTier: 'T6',
-      title: 'Foliole T6 hosted quality repair: run 106',
-      workflowPath: T6_WORKFLOW
+      prompt: 'T7:T7 Hosted Quality:dev:106',
+      runTier: 'T7',
+      title: 'Foliole T7 hosted quality repair: run 106',
+      workflowPath: T7_WORKFLOW
     });
   });
-  it('emits each recurring T6 failure once by run id', () => {
+  it('emits each recurring T7 Hosted Quality failure once by run id', () => {
     const state = {
-      actions: { [T6_WORKFLOW]: { initialized: true, runs: {} } },
+      actions: { [T7_WORKFLOW]: { initialized: true, runs: {} } },
       issues: {},
       prs: {},
       submitted: {}
     };
-    const t6Config = config({ workflows: [T6_WORKFLOW] });
+    const t7Config = config({ workflows: [T7_WORKFLOW] });
 
     gh.runs = [run({
       createdAt: '2026-07-05T07:29:18Z',
       databaseId: 201
     })];
-    const firstEvents = listGithubMonitorEvents(t6Config, state, false, [], renderTemplate);
+    const firstEvents = listGithubMonitorEvents(t7Config, state, false, [], renderTemplate);
     expect(firstEvents).toHaveLength(1);
     state.submitted[firstEvents[0].dedupeKey] = { emittedAt: '2026-07-05T07:55:22Z' };
 
@@ -178,19 +178,19 @@ describe('GitHub desktop handoff action events', () => {
       databaseId: 202,
       headSha: 'def456'
     })];
-    const secondEvents = listGithubMonitorEvents(t6Config, state, false, [], renderTemplate);
+    const secondEvents = listGithubMonitorEvents(t7Config, state, false, [], renderTemplate);
     expect(secondEvents).toHaveLength(1);
     expect(secondEvents[0]).toMatchObject({
       dedupeKey: 'foliole:github-actions:202',
-      runTier: 'T6'
+      runTier: 'T7'
     });
     state.submitted[secondEvents[0].dedupeKey] = { emittedAt: '2026-07-05T17:45:22Z' };
-    expect(listGithubMonitorEvents(t6Config, state, false, [], renderTemplate)).toEqual([]);
+    expect(listGithubMonitorEvents(t7Config, state, false, [], renderTemplate)).toEqual([]);
   });
 
   it('retries a newly observed failure until event submission is acknowledged', () => {
     const state = {
-      actions: { [T6_WORKFLOW]: { initialized: true, runs: {} } },
+      actions: { [T7_WORKFLOW]: { initialized: true, runs: {} } },
       issues: {},
       prs: {},
       submitted: {}

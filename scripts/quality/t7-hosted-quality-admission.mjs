@@ -29,8 +29,19 @@ export function hasCompletedFullRemoteValidation(runs, targetSha) {
   ));
 }
 
-export function shouldRunT6({ eventName, runs, targetSha }) {
+export function shouldRunT7({ eventName, releaseActive, runs, targetSha }) {
+  if (releaseActive) return false;
   return eventName !== 'schedule' || !hasCompletedFullRemoteValidation(runs, targetSha);
+}
+
+async function readReleaseActive(runner, repository) {
+  const result = await runner('gh', [
+    'api', '-H', 'X-GitHub-Api-Version: 2026-03-10',
+    `repos/${repository}/git/ref/heads/release`
+  ]);
+  if (result.code === 0) return true;
+  if (/\b404\b|not found/iu.test(result.stderr || result.stdout)) return false;
+  throw new Error(`failed to read release ref: ${result.stderr || result.stdout}`.trim());
 }
 
 async function readRemoteQualityRuns(runner, repository) {
@@ -48,29 +59,39 @@ async function readRemoteQualityRuns(runner, repository) {
   return payload.workflow_runs;
 }
 
-export async function resolveT6Admission(options = {}) {
+export async function resolveT7Admission(options = {}) {
   const env = options.env ?? process.env;
   const eventName = env.FOLIOLE_QUALITY_EVENT ?? '';
   const targetSha = env.FOLIOLE_QUALITY_TARGET_SHA ?? '';
   const repository = env.FOLIOLE_QUALITY_REPOSITORY ?? '';
-  if (!targetSha || !repository) throw new Error('T6 admission requires repository and target SHA');
+  if (!targetSha || !repository) throw new Error('T7 admission requires repository and target SHA');
+  const runner = options.runner ?? runProcess;
+  const releaseActive = await readReleaseActive(runner, repository);
   const runs = eventName === 'schedule'
-    ? await readRemoteQualityRuns(options.runner ?? runProcess, repository)
+    && !releaseActive
+    ? await readRemoteQualityRuns(runner, repository)
     : [];
-  return shouldRunT6({ eventName, runs, targetSha });
+  return {
+    reason: releaseActive
+      ? 'release-active'
+      : shouldRunT7({ eventName, releaseActive, runs, targetSha })
+        ? 'admitted'
+        : 'duplicate-full-validation',
+    shouldRun: shouldRunT7({ eventName, releaseActive, runs, targetSha })
+  };
 }
 
 async function main() {
-  const shouldRun = await resolveT6Admission();
+  const admission = await resolveT7Admission();
   const outputPath = process.env.GITHUB_OUTPUT;
   if (!outputPath) throw new Error('GITHUB_OUTPUT is required');
-  appendFileSync(outputPath, `should_run=${shouldRun}\n`, 'utf8');
-  console.log(shouldRun ? '[t6-admission] running hosted quality' : '[t6-admission] duplicate full SHA already completed; skipping');
+  appendFileSync(outputPath, `should_run=${admission.shouldRun}\n`, 'utf8');
+  console.log(`[t7-admission] ${admission.reason}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   main().catch((error) => {
-    console.error(`[t6-admission] ${error instanceof Error ? error.message : String(error)}`);
+    console.error(`[t7-admission] ${error instanceof Error ? error.message : String(error)}`);
     process.exitCode = 1;
   });
 }

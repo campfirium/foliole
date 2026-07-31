@@ -1,0 +1,58 @@
+name: T7 Hosted Quality
+
+run-name: T7 Hosted Quality (dev) @ ${{ github.sha }}
+
+on:
+  schedule:
+    # 11:40 Asia/Shanghai, catching the morning work block before noon.
+    - cron: '40 3 * * *'
+    # 22:40 Asia/Shanghai, catching the evening work block before midnight.
+    - cron: '40 14 * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: foliole-t7-exclusive
+  cancel-in-progress: false
+
+jobs:
+  context:
+    name: Resolve dev T7 context
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.admission.outputs.should_run }}
+      target_sha: ${{ github.sha }}
+      trigger_ref: ${{ github.ref }}
+    steps:
+      - name: Require the dev branch
+        if: github.ref != 'refs/heads/dev'
+        run: exit 1
+      - name: Check out T7 admission
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Pause for release or skip duplicate scheduled validation
+        id: admission
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FOLIOLE_QUALITY_EVENT: ${{ github.event_name }}
+          FOLIOLE_QUALITY_REPOSITORY: ${{ github.repository }}
+          FOLIOLE_QUALITY_TARGET_SHA: ${{ github.sha }}
+        run: node scripts/quality/t7-hosted-quality-admission.mjs
+
+  t6_quality:
+    name: T6 hosted quality
+    needs: context
+    if: needs.context.outputs.should_run == 'true'
+    permissions:
+      actions: read
+      contents: read
+    uses: ./.github/workflows/t6-hosted-quality.yml
+    with:
+      execution_lane: dev-t7
+      target_sha: ${{ needs.context.outputs.target_sha }}
+      trigger_ref: ${{ needs.context.outputs.trigger_ref }}

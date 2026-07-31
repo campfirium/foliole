@@ -10,7 +10,7 @@ const ALLOWED_SCOPES = new Set(['android', 'desktop', 'full', 'ios', 'shared']);
 const ACTIVE_RUN_STATUSES = new Set(['in_progress', 'pending', 'queued', 'requested', 'waiting']);
 const PASSING_JOB_CONCLUSIONS = new Set(['neutral', 'skipped', 'success']);
 const POLL_INTERVAL_MS = 15_000;
-const QUALITY_WORKFLOWS = ['remote-quality.yml', 't6-hosted-quality.yml'];
+const QUALITY_WORKFLOWS = ['remote-quality.yml', 't7-hosted-quality.yml'];
 
 export function parseRemoteQualityArgs(args) {
   const result = { scope: '' };
@@ -100,7 +100,7 @@ async function requireHostedQualityIdle(runner, repo, branch, cwd) {
   const details = activeRuns
     .map((run) => `${run.name ?? 'hosted quality'} #${run.run_number ?? run.id} ${run.status} ${run.html_url ?? ''}`.trim())
     .join('\n');
-  throw new Error(`A T6 or Remote Quality run is still active; wait for every job to reach a terminal state before dispatching another run:\n${details}`);
+  throw new Error(`A T7 Hosted Quality or Remote Quality run is still active; wait for every job to reach a terminal state before dispatching another run:\n${details}`);
 }
 
 function isFailedJob(job) {

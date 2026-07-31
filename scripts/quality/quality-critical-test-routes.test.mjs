@@ -26,15 +26,17 @@ const HOSTED_QUALITY_GAP_ROUTES = [
   ['pinned npm workflow', ['package.json', 'package-lock.json'], [
     'scripts/quality/pinned-npm.test.mjs',
     'scripts/t5-baseline-admission-workflow-contract.test.mjs',
-    'scripts/t6-hosted-quality-workflow-contract.test.mjs'
+    'scripts/t6-hosted-quality-workflow-contract.test.mjs',
+    'scripts/t7-hosted-quality-workflow-contract.test.mjs'
   ]]
 ];
 
 const HOSTED_QUALITY_CONTRACTS = [
   'scripts/hosted-windows-x64-workflow-contract.test.mjs',
-  'scripts/quality/t6-hosted-quality-admission.test.mjs',
+  'scripts/quality/t7-hosted-quality-admission.test.mjs',
   'scripts/t5-baseline-admission-workflow-contract.test.mjs',
-  'scripts/t6-hosted-quality-workflow-contract.test.mjs'
+  'scripts/t6-hosted-quality-workflow-contract.test.mjs',
+  'scripts/t7-hosted-quality-workflow-contract.test.mjs'
 ];
 
 const RELEASE_WORKFLOW_CONTRACTS = [
@@ -102,7 +104,8 @@ describe('quality critical test routes', () => {
     expect(resolveCriticalTestFiles([
       '.github/workflows/hosted-quality-core.yml',
       '.github/workflows/t6-hosted-quality.yml',
-      'scripts/quality/t6-hosted-quality-admission.mjs'
+      '.github/workflows/t7-hosted-quality.yml',
+      'scripts/quality/t7-hosted-quality-admission.mjs'
     ], existing)).toEqual(HOSTED_QUALITY_CONTRACTS);
   });
 
