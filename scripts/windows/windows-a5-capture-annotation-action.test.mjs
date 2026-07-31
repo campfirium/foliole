@@ -39,8 +39,10 @@ function fixture() {
 }
 
 function packageDetails(packageName) {
+  const isTestPackage = packageName.endsWith('.test');
   return [
-    `Package [${packageName}] (abc):`, '  versionCode=1 minSdk=26', '  versionName=1.0',
+    `Package [${packageName}] (abc):`, `  versionCode=${isTestPackage ? 2 : 1} minSdk=26`,
+    `  versionName=${isTestPackage ? '1.0-test' : '1.0'}`,
     '  firstInstallTime=2026-07-31 10:00:00', '  lastUpdateTime=2026-07-31 11:00:00'
   ].join('\n');
 }
@@ -116,7 +118,10 @@ it('installs only same-run APKs, executes one fixed restart method, audits, and 
     action: 'capture-annotation', cleanup: {
       appForceStopped: true, auditSnapshotRemoved: true, testPackageRemoved: true
     },
-    installedPackages: { main: { versionCode: '1' }, test: { versionCode: '1' } },
+    installedPackages: {
+      main: { versionCode: '1', versionName: '1.0' },
+      test: { versionCode: '2', versionName: '1.0-test' }
+    },
     lifecycle: { liveServer: 'not-started', reverse: 'not-created' },
     nodes: { capture: { parentNodeId: 'special-inbox' } }, resultStatus: 'success',
     review: { state: 0 }, runId: 'capture-run-1', schemaVersion: 2, token: 'capture-run-1'

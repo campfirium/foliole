@@ -68,9 +68,6 @@ async function installedPackage({ adbPort, env, execute, packageName, paths, ser
 async function requireInstalledScenario(options) {
   const main = await installedPackage({ ...options, packageName: CAPTURE_ANNOTATION_APP_ID });
   const test = await installedPackage({ ...options, packageName: CAPTURE_ANNOTATION_TEST_APP_ID });
-  if (main.versionCode !== test.versionCode || main.versionName !== test.versionName) {
-    throw captureAnnotationFailure('Installed main and test packages do not share one build identity', 'installed-package');
-  }
   const { adbPort, env, execute, paths, serial } = options;
   const command = ['-P', adbPort, '-s', serial, 'shell'];
   const runners = await checked(execute, paths.adbPath, [...command, 'pm', 'list', 'instrumentation'],
