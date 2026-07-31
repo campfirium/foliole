@@ -28,9 +28,6 @@ export const AGENT_CONTROL_HTTP_LIMITS = {
 
 const LOOPBACK_HOST = '127.0.0.1';
 const SESSION_FILE = 'agent-control-session.json';
-const DYNAMIC_PORT_MIN = 49_152;
-const DYNAMIC_PORT_RANGE = 16_384;
-const LISTEN_ATTEMPTS = 8;
 
 let activeServer: http.Server | null = null;
 let activeDescriptor: AgentControlSessionDescriptor | null = null;
@@ -55,32 +52,16 @@ export function createAgentControlHttpServer(options: { appVersion: string; audi
 }
 
 function listen(server: http.Server, port: number) {
-  return listenAttempt(server, port, port === 0 ? LISTEN_ATTEMPTS : 1);
-}
-
-function listenAttempt(server: http.Server, port: number, attempts: number): Promise<number> {
-  const targetPort = port === 0 ? pickDynamicPort() : port;
   return new Promise<number>((resolve, reject) => {
-    const onError = (error: NodeJS.ErrnoException) => {
-      if (port === 0 && error.code === 'EADDRINUSE' && attempts > 1) {
-        void listenAttempt(server, port, attempts - 1).then(resolve, reject);
-        return;
-      }
-      reject(error);
-    };
+    const onError = (error: Error) => reject(error);
     server.once('error', onError);
-    server.listen(targetPort, LOOPBACK_HOST, () => {
+    server.listen(port, LOOPBACK_HOST, () => {
       server.off('error', onError);
       const address = server.address();
-      resolve(typeof address === 'object' && address ? address.port : targetPort);
+      resolve(typeof address === 'object' && address ? address.port : port);
     });
   });
 }
-
-function pickDynamicPort() {
-  return DYNAMIC_PORT_MIN + Math.floor(Math.random() * DYNAMIC_PORT_RANGE);
-}
-
 
 function createFallbackRuntimeIdentity(): AgentControlRuntimeIdentity {
   const startedAt = new Date().toISOString();
