@@ -48,7 +48,6 @@ final class FolioleCompanionCaptureAnnotationScenario {
         String token,
         long timeoutMs
     ) throws Exception {
-        waitForTestId(instrumentation, webView, "companion-directory-node-special-inbox", timeoutMs);
         openCapturedTopic(instrumentation, webView, token, timeoutMs);
         waitForText(instrumentation, webView, CLOZE_TEXT, timeoutMs);
         waitForText(instrumentation, webView, NOTE_TEXT, timeoutMs);
