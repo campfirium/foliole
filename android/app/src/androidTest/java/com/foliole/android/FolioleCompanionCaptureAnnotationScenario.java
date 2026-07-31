@@ -21,7 +21,7 @@ final class FolioleCompanionCaptureAnnotationScenario {
         long timeoutMs
     ) throws Exception {
         assertToken(token);
-        waitForTestId(instrumentation, webView, "companion-capture-open", timeoutMs);
+        FolioleCompanionCaptureNavigation.enterBrowseSurface(instrumentation, webView, timeoutMs);
         perform(instrumentation, webView, "companion-capture-open", "click", "");
         waitForTestId(instrumentation, webView, "companion-capture-text", timeoutMs);
         perform(instrumentation, webView, "companion-capture-text", "input", captureText(token));
@@ -83,7 +83,7 @@ final class FolioleCompanionCaptureAnnotationScenario {
         String token,
         long timeoutMs
     ) throws Exception {
-        waitForTestId(instrumentation, webView, "companion-directory-node-special-inbox", timeoutMs);
+        FolioleCompanionCaptureNavigation.openDirectorySurface(instrumentation, webView, timeoutMs);
         perform(instrumentation, webView, "companion-directory-node-special-inbox", "click", "");
         waitForButtonText(instrumentation, webView, token, timeoutMs);
         evaluate(instrumentation, webView, clickButtonTextScript(token));
@@ -103,7 +103,7 @@ final class FolioleCompanionCaptureAnnotationScenario {
         waitForTestId(instrumentation, webView, "companion-selection-note", timeoutMs);
     }
 
-    private static void perform(
+    static void perform(
         Instrumentation instrumentation,
         WebView webView,
         String testId,
@@ -116,7 +116,7 @@ final class FolioleCompanionCaptureAnnotationScenario {
         if (!receipt.optBoolean("ok")) throw new IllegalStateException("Scenario action failed: " + receipt);
     }
 
-    private static void waitForTestId(
+    static void waitForTestId(
         Instrumentation instrumentation,
         WebView webView,
         String testId,
@@ -171,7 +171,7 @@ final class FolioleCompanionCaptureAnnotationScenario {
         throw new IllegalStateException("Timed out waiting for " + label);
     }
 
-    private static JSONObject evaluate(
+    static JSONObject evaluate(
         Instrumentation instrumentation,
         WebView webView,
         String script
