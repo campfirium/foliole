@@ -38,7 +38,15 @@ const Z_INDEX_TOKEN_CONTRACT_TESTS = [
 
 const PINNED_NPM_WORKFLOW_CONTRACT_TESTS = [
   'scripts/quality/pinned-npm.test.mjs',
-  'scripts/t5-nightly-remote-quality-workflow-contract.test.mjs'
+  'scripts/t5-baseline-admission-workflow-contract.test.mjs',
+  'scripts/t6-hosted-quality-workflow-contract.test.mjs'
+];
+
+const HOSTED_QUALITY_WORKFLOW_CONTRACT_TESTS = [
+  'scripts/hosted-windows-x64-workflow-contract.test.mjs',
+  'scripts/quality/t6-hosted-quality-admission.test.mjs',
+  'scripts/t5-baseline-admission-workflow-contract.test.mjs',
+  'scripts/t6-hosted-quality-workflow-contract.test.mjs'
 ];
 
 export const CRITICAL_TEST_ROUTES = [
@@ -98,11 +106,17 @@ export const CRITICAL_TEST_ROUTES = [
   {
     triggers: [
       /^(?:package|package-lock)\.json$/u,
-      /^\.github\/workflows\/hosted-quality-common\.yml$/u,
       /^scripts\/npm-hardening-check\.sh$/u,
       /^scripts\/quality\/pinned-npm\.mjs$/u
     ],
     tests: PINNED_NPM_WORKFLOW_CONTRACT_TESTS
+  },
+  {
+    triggers: [
+      /^\.github\/workflows\/(?:hosted-quality-(?:common|core|full|ios)|remote-quality|t5-baseline-admission|t6-hosted-quality)\.yml$/u,
+      /^scripts\/quality\/t6-hosted-quality-admission\.mjs$/u
+    ],
+    tests: HOSTED_QUALITY_WORKFLOW_CONTRACT_TESTS
   }
 ];
 

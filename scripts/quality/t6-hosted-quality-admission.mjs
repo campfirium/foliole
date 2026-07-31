@@ -29,7 +29,7 @@ export function hasCompletedFullRemoteValidation(runs, targetSha) {
   ));
 }
 
-export function shouldRunT5({ eventName, runs, targetSha }) {
+export function shouldRunT6({ eventName, runs, targetSha }) {
   return eventName !== 'schedule' || !hasCompletedFullRemoteValidation(runs, targetSha);
 }
 
@@ -48,29 +48,29 @@ async function readRemoteQualityRuns(runner, repository) {
   return payload.workflow_runs;
 }
 
-export async function resolveT5Admission(options = {}) {
+export async function resolveT6Admission(options = {}) {
   const env = options.env ?? process.env;
   const eventName = env.FOLIOLE_QUALITY_EVENT ?? '';
   const targetSha = env.FOLIOLE_QUALITY_TARGET_SHA ?? '';
   const repository = env.FOLIOLE_QUALITY_REPOSITORY ?? '';
-  if (!targetSha || !repository) throw new Error('T5 admission requires repository and target SHA');
+  if (!targetSha || !repository) throw new Error('T6 admission requires repository and target SHA');
   const runs = eventName === 'schedule'
     ? await readRemoteQualityRuns(options.runner ?? runProcess, repository)
     : [];
-  return shouldRunT5({ eventName, runs, targetSha });
+  return shouldRunT6({ eventName, runs, targetSha });
 }
 
 async function main() {
-  const shouldRun = await resolveT5Admission();
+  const shouldRun = await resolveT6Admission();
   const outputPath = process.env.GITHUB_OUTPUT;
   if (!outputPath) throw new Error('GITHUB_OUTPUT is required');
   appendFileSync(outputPath, `should_run=${shouldRun}\n`, 'utf8');
-  console.log(shouldRun ? '[t5-admission] running hosted quality' : '[t5-admission] duplicate full SHA already completed; skipping');
+  console.log(shouldRun ? '[t6-admission] running hosted quality' : '[t6-admission] duplicate full SHA already completed; skipping');
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   main().catch((error) => {
-    console.error(`[t5-admission] ${error instanceof Error ? error.message : String(error)}`);
+    console.error(`[t6-admission] ${error instanceof Error ? error.message : String(error)}`);
     process.exitCode = 1;
   });
 }

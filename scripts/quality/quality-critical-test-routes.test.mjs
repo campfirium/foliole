@@ -25,8 +25,16 @@ const T5_GAP_ROUTES = [
   ], ['src/app/zIndexTokenBoundary.test.ts']],
   ['pinned npm workflow', ['package.json', 'package-lock.json'], [
     'scripts/quality/pinned-npm.test.mjs',
-    'scripts/t5-nightly-remote-quality-workflow-contract.test.mjs'
+    'scripts/t5-baseline-admission-workflow-contract.test.mjs',
+    'scripts/t6-hosted-quality-workflow-contract.test.mjs'
   ]]
+];
+
+const HOSTED_QUALITY_CONTRACTS = [
+  'scripts/hosted-windows-x64-workflow-contract.test.mjs',
+  'scripts/quality/t6-hosted-quality-admission.test.mjs',
+  'scripts/t5-baseline-admission-workflow-contract.test.mjs',
+  'scripts/t6-hosted-quality-workflow-contract.test.mjs'
 ];
 
 function readQualityFastPlan(changedFiles) {
@@ -73,6 +81,14 @@ describe('quality critical test routes', () => {
 
   it.each(T5_GAP_ROUTES)('routes the %s triggers to their cross-file contract', (_name, triggers, tests) => {
     expect(resolveCriticalTestFiles(triggers, existing)).toEqual(tests);
+  });
+
+  it('routes every hosted orchestration surface to the full workflow contract set', () => {
+    expect(resolveCriticalTestFiles([
+      '.github/workflows/hosted-quality-core.yml',
+      '.github/workflows/t6-hosted-quality.yml',
+      'scripts/quality/t6-hosted-quality-admission.mjs'
+    ], existing)).toEqual(HOSTED_QUALITY_CONTRACTS);
   });
 
   it('deduplicates contracts selected through multiple triggering files', () => {

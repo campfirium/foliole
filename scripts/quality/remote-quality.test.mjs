@@ -83,10 +83,10 @@ describe('remote quality dispatcher', () => {
     expect(calls.some((call) => call.args.some((arg) => arg.includes('/actions/runs/42/jobs')))).toBe(true);
   });
 
-  it('refuses to dispatch while T5 or Remote Quality is nonterminal', async () => {
+  it('refuses to dispatch while T6 or Remote Quality is nonterminal', async () => {
     const activeRun = {
       head_branch: 'dev', html_url: 'https://github.test/runs/41',
-      id: 41, name: 'T5 Nightly Remote Quality', run_number: 9, status: 'in_progress'
+      id: 41, name: 'T6 Hosted Quality', run_number: 9, status: 'in_progress'
     };
     const { calls, runner } = createRunner({ activeRuns: [activeRun] });
     await expect(runRemoteQuality({ args: ['--scope', 'full'], runner }))

@@ -27,9 +27,22 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  quality:
+  scoped-quality:
+    if: inputs.scope != 'full'
     uses: ./.github/workflows/hosted-quality-core.yml
     with:
       target_sha: ${{ inputs.target_sha }}
       scope: ${{ inputs.scope }}
-      full_host: all
+
+  t5-baseline:
+    if: inputs.scope == 'full'
+    uses: ./.github/workflows/t5-baseline-admission.yml
+    with:
+      target_sha: ${{ inputs.target_sha }}
+
+  full-quality:
+    if: inputs.scope == 'full' && needs.t5-baseline.result == 'success'
+    needs: t5-baseline
+    uses: ./.github/workflows/hosted-quality-full.yml
+    with:
+      target_sha: ${{ inputs.target_sha }}

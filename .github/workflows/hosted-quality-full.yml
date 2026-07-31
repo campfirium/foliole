@@ -1,4 +1,4 @@
-name: Hosted Quality Core
+name: Hosted Full Quality
 
 on:
   workflow_call:
@@ -6,29 +6,53 @@ on:
       target_sha:
         required: true
         type: string
-      scope:
-        required: true
-        type: string
 
 permissions:
   contents: read
 
 jobs:
-  common-quality:
-    name: Common ${{ inputs.scope }} quality
-    if: inputs.scope == 'shared'
-    uses: ./.github/workflows/hosted-quality-common.yml
-    with:
-      target_sha: ${{ inputs.target_sha }}
-      scope: ${{ inputs.scope }}
+  common-build:
+    name: Common build
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    concurrency:
+      group: hosted-quality-common-build-${{ inputs.target_sha }}
+      cancel-in-progress: false
+    env:
+      TARGET_SHA: ${{ inputs.target_sha }}
+    steps:
+      - name: Check out target snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Verify target SHA
+        run: test "$(git rev-parse HEAD)" = "${TARGET_SHA}"
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run Common build
+        run: bash scripts/quality/quality-gate-target.sh release-hosted-common-build
+      - name: Upload Common build logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: common-build-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          path: .tmp/logs/quality-gate
+          if-no-files-found: ignore
+          retention-days: 14
 
-  windows-quality:
-    name: Windows ${{ inputs.scope }} quality
-    if: inputs.scope == 'desktop'
+  windows-acceptance:
+    name: Windows acceptance
     runs-on: windows-latest
     timeout-minutes: 120
     concurrency:
-      group: hosted-quality-windows-core-${{ inputs.target_sha }}-${{ inputs.scope }}
+      group: hosted-quality-windows-acceptance-${{ inputs.target_sha }}
       cancel-in-progress: false
     env:
       CI: "true"
@@ -52,8 +76,6 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Activate pinned npm
-        run: node scripts/quality/pinned-npm.mjs activate
       - name: Verify fixed Windows x64 context
         id: context
         env:
@@ -62,49 +84,59 @@ jobs:
       - name: Install dependencies
         id: npm_ci
         run: npm ci
-      - name: Run dependency hardening checks
-        id: dependency_hardening
-        run: npm run deps:hardening:check
       - name: Rebuild and verify Electron native ABI
         id: native_abi
         run: |
           npm run electron:rebuild:native
           node scripts/electron-sqlite-runner.mjs --preflight
-      - name: Run desktop quality
-        id: desktop_quality
-        run: npm run quality:desktop
-      - name: Write SHA-bound Windows core evidence
+      - name: Build desktop acceptance outputs
+        id: desktop_build
+        if: ${{ !cancelled() && steps.native_abi.outcome == 'success' }}
+        run: |
+          npm run build:vite-only
+          npm run electron:compile
+      - name: Run canonical Windows host tail
+        id: windows_tail
+        if: ${{ !cancelled() && steps.desktop_build.outcome == 'success' }}
+        run: npm run quality:release:windows:tail
+      - name: Run CI-capable Electron Playwright suite
+        id: playwright
+        if: ${{ !cancelled() && steps.desktop_build.outcome == 'success' }}
+        run: node scripts/windows/windows-ci-playwright-profile.mjs
+      - name: Write SHA-bound Windows acceptance evidence
         if: ${{ always() }}
         env:
           GITHUB_SHA: ${{ env.TARGET_SHA }}
           CONTEXT_OUTCOME: ${{ steps.context.outcome }}
           NPM_CI_OUTCOME: ${{ steps.npm_ci.outcome }}
-          DEPENDENCY_HARDENING_OUTCOME: ${{ steps.dependency_hardening.outcome }}
+          DEPENDENCY_HARDENING_OUTCOME: skipped
           NATIVE_ABI_OUTCOME: ${{ steps.native_abi.outcome }}
-          DESKTOP_BUILD_OUTCOME: skipped
-          DESKTOP_QUALITY_OUTCOME: ${{ steps.desktop_quality.outcome }}
+          DESKTOP_BUILD_OUTCOME: ${{ steps.desktop_build.outcome }}
+          DESKTOP_QUALITY_OUTCOME: skipped
           WINDOWS_CORE_OUTCOME: skipped
-          WINDOWS_TAIL_OUTCOME: skipped
-          PLAYWRIGHT_OUTCOME: skipped
+          WINDOWS_TAIL_OUTCOME: ${{ steps.windows_tail.outcome }}
+          PLAYWRIGHT_OUTCOME: ${{ steps.playwright.outcome }}
         run: node scripts/windows/windows-ci-evidence.mjs write
-      - name: Upload SHA-bound Windows core evidence
+      - name: Upload SHA-bound Windows acceptance evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: windows-core-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          name: windows-acceptance-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
           path: |
             .tmp/artifacts/windows-ci-evidence
+            .tmp/playwright-results/desktop
+            .tmp/playwright-report/desktop
+            .tmp/artifacts/desktop-acceptance
             .tmp/logs/quality-gate
           if-no-files-found: warn
           retention-days: 14
 
-  android-quality:
-    name: Android ${{ inputs.scope }} quality
-    if: inputs.scope == 'android'
+  android-host:
+    name: Android host quality
     runs-on: ubuntu-latest
     timeout-minutes: 120
     concurrency:
-      group: hosted-quality-android-${{ inputs.target_sha }}-${{ inputs.scope }}
+      group: hosted-quality-android-${{ inputs.target_sha }}-full
       cancel-in-progress: false
     env:
       TARGET_SHA: ${{ inputs.target_sha }}
@@ -130,10 +162,8 @@ jobs:
           java-version: '21'
       - name: Install dependencies
         run: npm ci
-      - name: Rebuild Electron native ABI for Android contract tests
-        run: npm run electron:rebuild:native
-      - name: Run Android quality
-        run: npm run quality:android
+      - name: Run canonical Android host tail
+        run: npm run quality:release:android:tail
       - name: Upload Android quality logs
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
@@ -143,10 +173,9 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
-  ios-quality:
-    name: iOS ${{ inputs.scope }} quality
-    if: inputs.scope == 'ios'
+  ios-full:
+    name: iOS full quality
     uses: ./.github/workflows/hosted-quality-ios.yml
     with:
       target_sha: ${{ inputs.target_sha }}
-      scope: ${{ inputs.scope }}
+      scope: full
