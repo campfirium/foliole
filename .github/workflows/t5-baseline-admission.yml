@@ -1,0 +1,173 @@
+name: T5 Baseline Admission
+
+run-name: T5 Baseline Admission @ ${{ inputs.target_sha }}
+
+on:
+  workflow_call:
+    inputs:
+      target_sha:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: t5-baseline-admission-${{ inputs.target_sha }}
+  cancel-in-progress: false
+
+jobs:
+  ubuntu-static:
+    name: Ubuntu static
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TARGET_SHA: ${{ inputs.target_sha }}
+    steps:
+      - name: Validate target SHA input
+        run: node -e "if (!/^[0-9a-f]{40}$/.test(process.env.TARGET_SHA ?? '')) throw new Error('target_sha must be a full 40-character lowercase commit SHA')"
+      - name: Check out target snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Activate pinned npm
+        run: node scripts/quality/pinned-npm.mjs activate
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify checked-out target SHA
+        run: >-
+          node -e "const { execFileSync } = require('node:child_process'); const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(); if (head !== process.env.TARGET_SHA) throw new Error('Checked out SHA does not match TARGET_SHA')"
+      - name: Run dependency hardening checks
+        run: npm run deps:hardening:check
+      - name: Rebuild Electron native ABI
+        run: npm run electron:rebuild:native
+      - name: Verify Electron sqlite runner
+        run: node scripts/electron-sqlite-runner.mjs --preflight
+      - name: Run canonical Common static quality
+        run: bash scripts/quality/quality-gate-target.sh release-static
+      - name: Upload static quality logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: t5-static-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          path: .tmp/logs/quality-gate
+          if-no-files-found: ignore
+          retention-days: 14
+
+  portable-tests:
+    name: ${{ matrix.host }} ${{ matrix.domain }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - host: Ubuntu
+            runner: ubuntu-latest
+            domain: desktop-source
+            script: test:release:desktop-src
+          - host: Ubuntu
+            runner: ubuntu-latest
+            domain: android-source
+            script: test:release:android
+          - host: Ubuntu
+            runner: ubuntu-latest
+            domain: shared
+            script: test:release:shared
+          - host: Ubuntu
+            runner: ubuntu-latest
+            domain: electron
+            script: test:desktop:electron
+          - host: Ubuntu
+            runner: ubuntu-latest
+            domain: quality-tooling
+            script: quality:release:tooling
+          - host: Windows
+            runner: windows-latest
+            domain: desktop-source
+            script: test:release:desktop-src
+          - host: Windows
+            runner: windows-latest
+            domain: android-source
+            script: test:release:android
+          - host: Windows
+            runner: windows-latest
+            domain: shared
+            script: test:release:shared
+          - host: Windows
+            runner: windows-latest
+            domain: electron
+            script: test:desktop:electron
+          - host: Windows
+            runner: windows-latest
+            domain: quality-tooling
+            script: quality:release:tooling
+          - host: Windows
+            runner: windows-latest
+            domain: windows-core
+            script: quality:release:windows:core
+    env:
+      CI: "true"
+      FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: "1"
+      TARGET_SHA: ${{ inputs.target_sha }}
+    steps:
+      - name: Validate target SHA input
+        run: node -e "if (!/^[0-9a-f]{40}$/.test(process.env.TARGET_SHA ?? '')) throw new Error('target_sha must be a full 40-character lowercase commit SHA')"
+      - name: Check out target snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify checked-out target SHA
+        run: >-
+          node -e "const { execFileSync } = require('node:child_process'); const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(); if (head !== process.env.TARGET_SHA) throw new Error('Checked out SHA does not match TARGET_SHA')"
+      - name: Rebuild Electron native ABI
+        run: npm run electron:rebuild:native
+      - name: Verify Electron sqlite runner
+        run: node scripts/electron-sqlite-runner.mjs --preflight
+      - name: Run canonical test domain
+        run: npm run ${{ matrix.script }}
+      - name: Upload test logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: t5-test-${{ matrix.host }}-${{ matrix.domain }}-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          path: |
+            .tmp/logs/quality-gate
+            .tmp/vitest
+          if-no-files-found: ignore
+          retention-days: 14
+
+  admission:
+    name: T5 Baseline Admission
+    if: ${{ always() }}
+    needs: [ubuntu-static, portable-tests]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      STATIC_RESULT: ${{ needs.ubuntu-static.result }}
+      TEST_RESULT: ${{ needs.portable-tests.result }}
+    steps:
+      - name: Require every baseline bucket
+        run: >-
+          node -e 'const failed = Object.entries(process.env).filter(([key, value]) => key.endsWith("_RESULT") && value !== "success"); if (failed.length) throw new Error(failed.map(([key, value]) => `${key}=${value}`).join(", "))'
