@@ -181,7 +181,10 @@ export async function runWindowsA5CaptureAnnotation({
     };
   }
   output.push(cleanup.output || '');
-  if (primaryError) throw primaryError;
+  if (primaryError) {
+    if (!primaryError.result) primaryError.result = { output: output.join('') };
+    throw primaryError;
+  }
   const manifest = {
     action: 'capture-annotation', artifacts: Object.fromEntries(
       CAPTURE_ANNOTATION_EVIDENCE_FILES.slice(1).map((name) => [name, name])

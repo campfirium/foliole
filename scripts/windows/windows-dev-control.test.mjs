@@ -7,7 +7,7 @@ import { expect, it, vi } from 'vitest';
 
 import {
   parseWindowsDevCaptureAnnotationEvidence, parseWindowsDevControlArgs,
-  parseWindowsDevLiveEvidence, runWindowsDevControl,
+  parseWindowsDevFailureEvidence, parseWindowsDevLiveEvidence, runWindowsDevControl,
   windowsDevPushSpec, windowsDevScpSpec, windowsDevSshSpec
 } from './windows-dev-control.mjs';
 
@@ -95,6 +95,9 @@ it('accepts only the fixed capture annotation manifest root', () => {
   expect(() => parseWindowsDevCaptureAnnotationEvidence(
     '[windows-dev-action] capture-annotation identity=run-1 manifest=C:/Users/dev/private.json\n'
   )).toThrow('escaped its fixed evidence root');
+  expect(parseWindowsDevFailureEvidence(
+    `[windows-dev-action] status: FAILED exit=74 evidence=${remoteRoot}\\summary.json\n`
+  )).toEqual({ buildIdentity: 'run-1', remoteRoot });
 });
 
 it('copies live screenshot evidence after the fixed foreground action', async () => {
@@ -131,6 +134,23 @@ it('copies the complete fixed capture annotation evidence set after remote clean
   expect(executeScp.mock.calls.map(([args]) => args.at(-2))).toContain(
     `v\\dev@192.168.0.11:${remoteRoot}/summary.json`
   );
+  fs.rmSync(repoRoot, { force: true, recursive: true });
+});
+
+it('copies only fixed capture failure diagnostics before preserving the remote error', async () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-dev-control-capture-failure-'));
+  const remoteRoot = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/run-3';
+  const output = `[windows-dev-action] status: FAILED exit=74 evidence=${remoteRoot}/summary.json\n`;
+  const remoteError = Object.assign(new Error('remote failed'), { output });
+  const executeScp = vi.fn(async (args) => { fs.writeFileSync(args.at(-1), '{}'); return ''; });
+  await expect(runWindowsDevControl({
+    argv: ['--host', 'v\\dev@192.168.0.11', 'capture-annotation'], env: {},
+    executeGit: vi.fn(async () => ''), executeScp,
+    executeSsh: vi.fn(async () => { throw remoteError; }), repoRoot, stdout: { write: vi.fn() }
+  })).rejects.toBe(remoteError);
+  expect(executeScp.mock.calls.map(([args]) => path.basename(args.at(-1)))).toEqual([
+    'action.log', 'summary.json'
+  ]);
   fs.rmSync(repoRoot, { force: true, recursive: true });
 });
 

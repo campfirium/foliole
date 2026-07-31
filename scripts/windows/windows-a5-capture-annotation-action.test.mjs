@@ -133,10 +133,15 @@ it('installs only same-run APKs, executes one fixed restart method, audits, and 
 it('rejects another run receipt, removes the installed test APK, and writes no success manifest', async () => {
   const { evidenceRoot, paths } = fixture();
   const { calls, execute } = executor('other-run');
-  await expect(runWindowsA5CaptureAnnotation({
-    adbPort: '5037', buildIdentity: 'capture-run-1', env: {}, evidenceRoot, execute,
-    paths, protectData: protection(), serial: '87a33a4b'
-  })).rejects.toMatchObject({ stage: 'instrumentation-evidence' });
+  let failure;
+  try {
+    await runWindowsA5CaptureAnnotation({
+      adbPort: '5037', buildIdentity: 'capture-run-1', env: {}, evidenceRoot, execute,
+      paths, protectData: protection(), serial: '87a33a4b'
+    });
+  } catch (error) { failure = error; }
+  expect(failure).toMatchObject({ stage: 'instrumentation-evidence' });
+  expect(failure.result.output).toContain('folioleActionReceipt');
   expect(calls.some(({ args }) => args.includes('uninstall') && args.includes('com.foliole.android.test'))).toBe(true);
   expect(fs.existsSync(path.join(evidenceRoot, 'capture-annotation-manifest.json'))).toBe(false);
 });

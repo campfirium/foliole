@@ -17,6 +17,7 @@ export const WINDOWS_DEV_ACTIONS = [
 const WINDOWS_DEV_REMOTE_ACTION = 'C:/dev/foliole-android-lab-preview/scripts/windows/windows-dev-action.ps1';
 const WINDOWS_DEV_EVIDENCE_PREFIX = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/';
 const CAPTURE_ANNOTATION_FILES = [...CAPTURE_ANNOTATION_EVIDENCE_FILES, 'summary.json'];
+const CAPTURE_ANNOTATION_FAILURE_FILES = ['action.log', 'summary.json'];
 
 function execute(command, args, options = {}) {
   return new Promise((resolve, reject) => {
@@ -92,6 +93,28 @@ export function parseWindowsDevCaptureAnnotationEvidence(output) {
   return { buildIdentity: match[1], remoteRoot };
 }
 
+export function parseWindowsDevFailureEvidence(output) {
+  const match = /^\[windows-dev-action\] status: FAILED exit=\d+ evidence=([^\r\n]+)$/mu.exec(output);
+  if (!match) throw new Error('Windows DEV action did not report fixed failure evidence');
+  const normalized = match[1].replaceAll('\\', '/');
+  const suffix = '/summary.json';
+  const buildIdentity = normalized.slice(WINDOWS_DEV_EVIDENCE_PREFIX.length, -suffix.length);
+  if (!normalized.startsWith(WINDOWS_DEV_EVIDENCE_PREFIX) || !normalized.endsWith(suffix)
+      || !/^[A-Za-z0-9.-]{1,96}$/u.test(buildIdentity)) {
+    throw new Error('Windows DEV failure evidence escaped its fixed root');
+  }
+  return { buildIdentity, remoteRoot: normalized.slice(0, -suffix.length) };
+}
+
+async function copyCaptureAnnotationFiles({ env, executeScp, fsApi, host, names, remoteRoot, repoRoot }) {
+  const localRoot = path.join(repoRoot, '.tmp', 'artifacts', 'a5-capture-annotation', path.basename(remoteRoot));
+  fsApi.mkdirSync(localRoot, { recursive: true });
+  for (const name of names) {
+    await executeScp(windowsDevScpSpec(host, `${remoteRoot}/${name}`, path.join(localRoot, name), env), { env });
+  }
+  return localRoot;
+}
+
 export function windowsDevScpSpec(host, remotePath, localPath, env = process.env, home = os.homedir()) {
   const key = env.FOLIOLE_WINDOWS_DEV_SSH_KEY
     || path.join(home, '.ssh', 'agent', 'foliole-windows-android-lab');
@@ -122,18 +145,19 @@ export async function runWindowsDevControl({
   const result = { action, operation: 'complete', ref: WINDOWS_DEV_SOURCE_REF };
   if (action === 'capture-annotation') {
     let evidence;
-    try { evidence = parseWindowsDevCaptureAnnotationEvidence(remoteOutput); }
+    try {
+      evidence = remoteError
+        ? parseWindowsDevFailureEvidence(remoteOutput)
+        : parseWindowsDevCaptureAnnotationEvidence(remoteOutput);
+    }
     catch (error) {
       if (remoteError) throw remoteError;
       throw error;
     }
-    const localRoot = path.join(repoRoot, '.tmp', 'artifacts', 'a5-capture-annotation', evidence.buildIdentity);
-    fsApi.mkdirSync(localRoot, { recursive: true });
-    for (const name of CAPTURE_ANNOTATION_FILES) {
-      await executeScp(windowsDevScpSpec(
-        host, `${evidence.remoteRoot}/${name}`, path.join(localRoot, name), env
-      ), { env });
-    }
+    const localRoot = await copyCaptureAnnotationFiles({ env, executeScp, fsApi, host,
+      names: remoteError ? CAPTURE_ANNOTATION_FAILURE_FILES : CAPTURE_ANNOTATION_FILES,
+      remoteRoot: evidence.remoteRoot, repoRoot });
+    if (remoteError) stdout.write(`[windows-dev-control] failure evidence=${localRoot}\n`);
     result.evidenceRoot = localRoot;
     result.manifestPath = path.join(localRoot, CAPTURE_ANNOTATION_FILES[0]);
   }
