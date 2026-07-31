@@ -20,22 +20,25 @@ function expectNoStep(stdout, scriptName) {
 
 describe('quality-gate release split targets', () => {
   it('exposes release core and tail package aliases', () => {
-    expect(packageJson.scripts['quality:release:core']).toBe('bash scripts/quality/quality-gate-target.sh release-core');
-    expect(packageJson.scripts['quality:release:fail-fast']).toBe('bash scripts/quality/quality-gate-target.sh release --fail-fast');
-    expect(packageJson.scripts['quality:release:preview-recovery']).toBe(
-      'bash scripts/quality/quality-gate-target.sh release-preview-recovery'
+    const expectedTargets = {
+      'quality:release:base': 'release-base',
+      'quality:release:core': 'release-core',
+      'quality:release:preview-recovery': 'release-preview-recovery',
+      'quality:release:windows:tail': 'release-windows-tail',
+      'quality:release:android:tail': 'release-android-tail',
+      'quality:release:ios:tail': 'release-ios-tail',
+      'quality:release:tooling': 'release-tooling'
+    };
+    for (const [name, target] of Object.entries(expectedTargets)) {
+      expect(packageJson.scripts[name]).toBe(
+        `node scripts/quality/quality-command-contracts.mjs allow ${name} && ` +
+        `bash scripts/quality/quality-gate-target.sh ${target}`
+      );
+    }
+    expect(packageJson.scripts['quality:release:fail-fast']).toBe(
+      'node scripts/quality/quality-command-contracts.mjs allow quality:release:fail-fast && ' +
+      'bash scripts/quality/quality-gate-target.sh release --fail-fast'
     );
-    expect(packageJson.scripts['quality:release:base']).toBe('bash scripts/quality/quality-gate-target.sh release-base');
-    expect(packageJson.scripts['quality:release:windows:tail']).toBe(
-      'bash scripts/quality/quality-gate-target.sh release-windows-tail'
-    );
-    expect(packageJson.scripts['quality:release:android:tail']).toBe(
-      'bash scripts/quality/quality-gate-target.sh release-android-tail'
-    );
-    expect(packageJson.scripts['quality:release:ios:tail']).toBe(
-      'bash scripts/quality/quality-gate-target.sh release-ios-tail'
-    );
-    expect(packageJson.scripts['quality:release:tooling']).toBe('bash scripts/quality/quality-gate-target.sh release-tooling');
   });
 
   it('keeps release-core isolated from preview recovery and android host checks', async () => {

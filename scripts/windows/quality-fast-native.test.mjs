@@ -3,7 +3,13 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { isRejectedBashPath, parseRoutePlan, resolveGitBash, runQualityT0Native } from './quality-fast-native.mjs';
+import {
+  isRejectedBashPath,
+  parseQualityFastNativeArgs,
+  parseRoutePlan,
+  resolveGitBash,
+  runQualityT0Native
+} from './quality-fast-native.mjs';
 
 const WIN_SEP = String.fromCharCode(92);
 const winPath = (...parts) => parts.join(WIN_SEP);
@@ -13,6 +19,15 @@ const SCOOP_BASH = winPath('C:', 'Users', 'zephu', 'scoop', 'apps', 'git', 'curr
 const NPM_ENV = { npm_execpath: '/npm-cli.js' };
 
 describe('quality-fast-native route parsing', () => {
+  it('rejects removed aggregate overrides and mixed route modes', () => {
+    expect(parseQualityFastNativeArgs([])).toBe('run');
+    expect(parseQualityFastNativeArgs(['--route'])).toBe('route');
+    expect(parseQualityFastNativeArgs(['--route-json'])).toBe('route-json');
+    expect(() => parseQualityFastNativeArgs(['--full'])).toThrow('aggregate quality is hosted-only');
+    expect(() => parseQualityFastNativeArgs(['--release'])).toThrow('aggregate quality is hosted-only');
+    expect(() => parseQualityFastNativeArgs(['--route', '--route-json'])).toThrow('accepts only');
+  });
+
   it('parses heavy route details from the shared route plan output', () => {
     const plan = parseRoutePlan([
       '[quality-gate-route] selected level: desktop',
@@ -128,7 +143,7 @@ describe('quality-fast-native T0 routing', () => {
         }
       });
       expect(logSpy).toHaveBeenCalledWith(
-        '[quality-fast-native] desktop-class change detected -> hosted quality deferred to scheduled T6; Remote Quality is reserved for hosted-quality repair rechecks, releases, or explicit requests.'
+        '[quality-fast-native] desktop-class change detected -> hosted quality deferred to scheduled T6; Remote Quality is reserved for repair or explicit rechecks on dev, while release uses T7.'
       );
     } finally {
       logSpy.mockRestore();
@@ -204,7 +219,7 @@ describe('quality-fast-native T0 routing', () => {
         }
       });
       expect(logSpy).toHaveBeenCalledWith(
-        `[quality-fast-native] ${level}-class change detected -> hosted quality deferred to scheduled T6; Remote Quality is reserved for hosted-quality repair rechecks, releases, or explicit requests.`
+        `[quality-fast-native] ${level}-class change detected -> hosted quality deferred to scheduled T6; Remote Quality is reserved for repair or explicit rechecks on dev, while release uses T7.`
       );
     } finally {
       logSpy.mockRestore();

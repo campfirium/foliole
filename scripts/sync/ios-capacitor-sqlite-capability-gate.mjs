@@ -10,6 +10,9 @@ import {
   iosXcodebuildResourceArgs,
   resolveIosResourceMode
 } from '../ios/ios-resource-profile.mjs';
+import { assertQualityCommandAllowed } from '../quality/quality-command-contracts.mjs';
+
+assertQualityCommandAllowed('runner:ios-sqlite-capability');
 
 // iOS sync work must reuse the shared TS sync core, native command contracts,
 // DbPort semantics, and sync pack capability model.

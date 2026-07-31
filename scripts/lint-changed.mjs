@@ -1,10 +1,12 @@
 /* global console */
 import { spawnSync } from 'node:child_process';
+import { statSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const LINTABLE = /\.(?:js|jsx|ts|tsx|cjs|mjs)$/u;
+const GLOB_PATTERN = /[*?\[\]{}]/u;
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 function runGit(args) {
@@ -22,6 +24,10 @@ function collectChangedFiles() {
 }
 
 function parseArgs(args) {
+  if (args[0] === '--explicit') {
+    if (args.length === 1) throw new Error('lint:files requires one or more explicit file paths');
+    return { files: args.slice(1), scope: '' };
+  }
   if (args[0] !== '--scope') return { files: args, scope: '' };
   if (!args[1]) throw new Error('--scope requires a value');
   return { files: args.slice(2), scope: args[1] };
@@ -32,11 +38,23 @@ async function loadScopeMatcher() {
   return (await import(pathToFileURL(modulePath).href)).pathMatchesLintScope;
 }
 
+function assertBoundedFileTargets(files) {
+  for (const file of files.filter(Boolean)) {
+    if (GLOB_PATTERN.test(file)) throw new Error(`lint targets must be explicit files, not globs: ${file}`);
+    try {
+      if (statSync(file).isDirectory()) throw new Error(`lint targets must be files, not directories: ${file}`);
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith('lint targets must be files')) throw error;
+    }
+  }
+}
+
 export async function resolveLintTargets(args) {
   const { files, scope } = parseArgs(args);
   if (scope && !['desktop', 'android', 'shared'].includes(scope)) throw new Error(`unknown scope: ${scope}`);
   const matcher = scope ? await loadScopeMatcher() : null;
   const source = files.length > 0 ? files : collectChangedFiles();
+  assertBoundedFileTargets(source);
   const targets = source.filter(Boolean).filter((file) => LINTABLE.test(file) && !file.startsWith('node_modules/'));
   return { scope, targets: [...new Set(targets)].filter((file) => !matcher || matcher(scope, file)) };
 }

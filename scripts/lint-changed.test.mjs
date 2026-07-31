@@ -65,10 +65,37 @@ describe('lint-changed.mjs', () => {
     try {
       await writeExecutable(tempRoot, 'node_modules/eslint/bin/eslint.js', eslintFixture(marker));
 
-      const result = await runNode([LINT_CHANGED_SCRIPT, 'src/app/App.tsx', 'README.md'], tempRoot);
+      const result = await runNode([LINT_CHANGED_SCRIPT, '--explicit', 'src/app/App.tsx', 'README.md'], tempRoot);
 
       expect(result.code).toBe(0);
       expect(await readFile(marker, 'utf8')).toBe('--cache\n--cache-location\n.tmp/eslint-cache/changed/\nsrc/app/App.tsx\n');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects the explicit-files entry without a target', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'lint-changed-'));
+    try {
+      const result = await runNode([LINT_CHANGED_SCRIPT, '--explicit'], tempRoot);
+
+      expect(result.code).toBe(1);
+      expect(result.stderr).toContain('lint:files requires one or more explicit file paths');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects directory and glob escalation from explicit lint targets', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'lint-changed-'));
+    try {
+      const directory = await runNode([LINT_CHANGED_SCRIPT, '--explicit', '.'], tempRoot);
+      const glob = await runNode([LINT_CHANGED_SCRIPT, '--explicit', 'src/**/*.ts'], tempRoot);
+
+      expect(directory.code).toBe(1);
+      expect(directory.stderr).toContain('must be files, not directories');
+      expect(glob.code).toBe(1);
+      expect(glob.stderr).toContain('must be explicit files, not globs');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

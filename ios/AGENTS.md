@@ -19,10 +19,10 @@
 ## Validation
 
 - iOS 公开最小流程：`npm run android:web:build`、`npx cap sync ios`、`xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build`。
-- 不需要真实 iOS runtime 的改动先用 `npm run quality:ios:contract`，该入口不得启动 Simulator。开发线程的中度 iOS 质检使用 `node scripts/quality/remote-quality.mjs --scope ios` 跑 hosted contract；自动化 Simulator 全检只进入 `--scope full` 或 T5 nightly full，并用 `npm run quality:ios:full` 解除资源限制。完整验收覆盖 runtime capability、bootstrap、配对 / Keychain、同步状态、sync-pack apply、永久游标、首次建库与进程重启持久化，每个场景使用独立证据目录，只关闭自己启动的设备，不接触正式模拟器应用或真机数据。交互式、视觉、难复现诊断、脚手架修改后的单场景复跑与真机验收仍留在本机；不得为质检隐式 commit / push，目标 SHA 不存在时硬失败。
+- 不需要真实 iOS runtime 的改动先使用登记的显式文件检查；`quality:ios*` 与 `ios:sync:preflight` 均为 hosted-only。开发线程的中度 iOS 质检只在 `dev` 使用 `npm run quality:remote -- --scope ios`；自动化 Simulator 全检只进入 `--scope full` 或 T5 nightly full。内部 target commit 由 workflow 事件决定，人类不得输入 SHA。完整验收覆盖 runtime capability、bootstrap、配对 / Keychain、同步状态、sync-pack apply、永久游标、首次建库与进程重启持久化，每个场景使用独立证据目录，只关闭自己启动的设备，不接触正式模拟器应用或真机数据。交互式、视觉、难复现诊断、脚手架修改后的单场景复跑与真机验收仍留在本机；不得为质检隐式 commit / push。
 - 隔离 Simulator 验收必须保留 Xcode 的本地签名并在安装前验证签名；`CODE_SIGNING_ALLOWED=NO` 只用于不运行 App 的通用编译检查，不得复用其产物验收 Keychain 或可见运行态，否则会产生缺少 entitlement 的假红灯。
 - 需要人工打开工程时使用 `npx cap open ios`；需要模拟器或真机可见验收时使用 `npx cap run ios --target <device-id>`。
 - 宿主或插件变更先完成 companion build 与 `npx cap sync ios`，再执行无签名原生构建；用户可见行为进入 iOS runtime 后必须追加模拟器或真机验收。
-- iOS sync / SQLite 宿主工作开工前，先执行 `npm run ios:sync:preflight`；该入口先跑 SQL surface scan，再跑 macOS / Xcode 环境下的 SQLite capability gate。
+- iOS sync / SQLite 宿主工作开工后，通过 dev-only Remote Quality 的 full scope 请求 `ios:sync:preflight` hosted 证据；该入口先跑 SQL surface scan，再跑 macOS / Xcode 环境下的 SQLite capability gate，不得在普通本地任务执行。
 - 非 iOS 日常质量入口不默认执行 iOS preflight；`sync:sql-surface:scan` 只有在扫描范围出现 `iosRuntime` capability 标记时，才把 iOS runtime 缺口升级为硬失败。
 - 一旦仓库引入新的 iOS 宿主脚本或 npm 入口，本文件必须同步补上对应公开命令、最小验证顺序与预览 / 验收规则。

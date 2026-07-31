@@ -30,6 +30,7 @@ import { runAcceptanceRestart } from './ios-acceptance-restart-runner.mjs';
 import { readAcceptanceScenarioSnapshot } from './ios-acceptance-snapshot.mjs';
 import { resolveAcceptanceScenario } from './ios-sync-pack-acceptance-runner.mjs';
 import { runStandaloneIosAcceptanceScenario } from './ios-standalone-acceptance-runner.mjs';
+import { assertQualityCommandAllowed } from '../quality/quality-command-contracts.mjs';
 
 export { selectSimulator, shouldShutdownSimulator, waitForBootstrapSnapshot };
 
@@ -232,7 +233,10 @@ function captureAllowFailure(command, args) {
 }
 
 const isMain = process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url;
-if (isMain) main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
-  process.exitCode = 1;
-});
+if (isMain) {
+  assertQualityCommandAllowed('runner:ios-simulator');
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  });
+}

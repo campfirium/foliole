@@ -11,7 +11,12 @@ const TARGET_GATE_TIMEOUT_MS = 90_000;
 export function runTargetGate(cwd, target, env = {}) {
   return runManagedCommand('bash', [TARGET_SCRIPT, target], {
     cwd,
-    env: { QUALITY_GATE_LOG_MODE: 'summary', ...env },
+    env: {
+      GITHUB_ACTIONS: 'true',
+      QUALITY_GATE_LOG_MODE: 'summary',
+      RUNNER_ENVIRONMENT: 'github-hosted',
+      ...env
+    },
     label: `quality-gate-target ${target}`,
     timeoutMs: TARGET_GATE_TIMEOUT_MS
   });

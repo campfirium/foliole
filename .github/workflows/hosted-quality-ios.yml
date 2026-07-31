@@ -43,7 +43,7 @@ jobs:
         run: npm run electron:rebuild:native
       - name: Run iOS boundary quality
         if: inputs.scope == 'full'
-        run: npm run check:ios-boundary
+        run: npm run ios:sync:preflight
       - name: Run iOS contract quality
         run: npm run quality:ios:contract
       - name: Upload iOS contract logs

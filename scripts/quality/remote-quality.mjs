@@ -4,18 +4,19 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import { assertQualityCommandAllowed } from './quality-command-contracts.mjs';
+
 const ALLOWED_SCOPES = new Set(['android', 'desktop', 'full', 'ios', 'shared']);
 const ACTIVE_RUN_STATUSES = new Set(['in_progress', 'pending', 'queued', 'requested', 'waiting']);
-const FULL_SHA = /^[0-9a-f]{40}$/u;
 const PASSING_JOB_CONCLUSIONS = new Set(['neutral', 'skipped', 'success']);
 const POLL_INTERVAL_MS = 15_000;
 const QUALITY_WORKFLOWS = ['remote-quality.yml', 't6-hosted-quality.yml'];
 
 export function parseRemoteQualityArgs(args) {
-  const result = { scope: '', sha: '' };
+  const result = { scope: '' };
   for (let index = 0; index < args.length; index += 1) {
     const name = args[index];
-    if (name === '--scope' || name === '--sha') {
+    if (name === '--scope') {
       result[name.slice(2)] = args[index + 1] ?? '';
       index += 1;
     } else {
@@ -145,19 +146,15 @@ export async function runRemoteQuality(options = {}) {
   const repoInfo = JSON.parse(await requireSuccess(
     runner, 'gh', ['repo', 'view', '--json', 'nameWithOwner,defaultBranchRef'], { cwd }
   ));
-  await requireHostedQualityIdle(
-    runner, repoInfo.nameWithOwner, repoInfo.defaultBranchRef.name, cwd
-  );
-  const sha = args.sha || await requireSuccess(runner, 'git', ['rev-parse', 'HEAD'], { cwd });
-  if (!FULL_SHA.test(sha)) throw new Error('Target SHA must be a 40-character lowercase commit SHA');
-  const remoteSha = await requireSuccess(
-    runner, 'gh', ['api', `repos/${repoInfo.nameWithOwner}/commits/${sha}`, '--jq', '.sha'], { cwd }
-  );
-  if (remoteSha !== sha) throw new Error(`Remote commit lookup did not resolve the requested SHA: ${sha}`);
+  const branch = await requireSuccess(runner, 'git', ['branch', '--show-current'], { cwd });
+  if (repoInfo.defaultBranchRef.name !== 'dev' || branch !== 'dev') {
+    throw new Error('Remote Quality is a dev-only orchestrator and requires the local dev branch');
+  }
+  await requireHostedQualityIdle(runner, repoInfo.nameWithOwner, 'dev', cwd);
 
   const payload = JSON.stringify({
-    inputs: { scope: args.scope, target_sha: sha },
-    ref: repoInfo.defaultBranchRef.name
+    inputs: { scope: args.scope },
+    ref: 'dev'
   });
   const dispatch = JSON.parse(await dispatchWorkflow(runner, [
     'api', '--method', 'POST', '-H', 'X-GitHub-Api-Version: 2026-03-10',
@@ -178,13 +175,16 @@ export async function runRemoteQuality(options = {}) {
   if (result.failed) {
     throw new Error(`Remote ${args.scope} quality failed: ${dispatch.html_url}`);
   }
-  console.log(`[remote-quality] ${args.scope} quality passed for ${sha}`);
-  return { runId: dispatch.workflow_run_id, scope: args.scope, sha, url: dispatch.html_url };
+  console.log(`[remote-quality] ${args.scope} quality passed on dev`);
+  return { runId: dispatch.workflow_run_id, scope: args.scope, url: dispatch.html_url };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
-  runRemoteQuality().catch((error) => {
+  try {
+    assertQualityCommandAllowed('runner:remote-quality');
+    await runRemoteQuality();
+  } catch (error) {
     console.error(`[remote-quality] ${error instanceof Error ? error.message : String(error)}`);
     process.exitCode = 1;
-  });
+  }
 }

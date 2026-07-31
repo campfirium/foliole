@@ -21,7 +21,9 @@ describe('iOS Capacitor SQLite capability gate', () => {
       env: {
         ...process.env,
         FOLIOLE_GATE_LOG: fixture.log,
-        PATH: `${fixture.bin}${path.delimiter}${process.env.PATH}`
+        GITHUB_ACTIONS: 'true',
+        PATH: `${fixture.bin}${path.delimiter}${process.env.PATH}`,
+        RUNNER_ENVIRONMENT: 'github-hosted'
       }
     });
 

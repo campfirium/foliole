@@ -35,6 +35,11 @@ trap cleanup_quality_gate_processes EXIT INT TERM
 
 pm="$(resolve_package_manager)"
 
+if [[ "$#" -gt 1 ]] || { [[ "$#" -eq 1 ]] && [[ "$1" != "--route" && "$1" != "--route-json" ]]; }; then
+  echo "[quality-gate-fast] only --route or --route-json is accepted; aggregate quality is hosted-only"
+  exit 2
+fi
+
 run_changed_lint() {
   local lint_targets="$1"
   if [[ -z "${lint_targets}" ]]; then
@@ -162,20 +167,6 @@ if quality_gate_should_print_step && ! has_quality_gate_arg "--route" "$@" && ! 
   echo "[quality-gate-fast] detected package manager: ${pm}"
 fi
 
-if has_quality_gate_arg "--full" "$@"; then
-  if quality_gate_should_print_step; then
-    echo "[quality-gate-fast] forcing full quality gate"
-  fi
-  exec bash "${SCRIPT_DIR}/quality-gate-target.sh" full
-fi
-
-if has_quality_gate_arg "--release" "$@"; then
-  if quality_gate_should_print_step; then
-    echo "[quality-gate-fast] forcing release quality gate"
-  fi
-  exec bash "${SCRIPT_DIR}/quality-gate-target.sh" release
-fi
-
 all_changed="$(collect_changed_files)"
 level="$(resolve_quality_gate_level "${all_changed}")"
 
@@ -201,7 +192,7 @@ if [[ "${level}" =~ ^(full|desktop|shared|android|ios)$ ]]; then
   print_quality_gate_route_plan "${all_changed}" "${level}" \
     | node "${SCRIPT_DIR}/quality-gate-route-json.mjs" \
     | node "${SCRIPT_DIR}/quality-fast-capped.mjs"
-  echo "[quality-gate-fast] hosted quality deferred to scheduled T6; Remote Quality is reserved for hosted-quality repair rechecks, releases, or explicit requests."
+  echo "[quality-gate-fast] hosted quality deferred to scheduled T6; Remote Quality is reserved for repair or explicit rechecks on dev, while release uses T7."
   echo "[quality-gate-fast] capped local checks passed."
   exit 0
 fi

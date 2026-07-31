@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { runInherited } from './android-host-process.mjs';
+import { assertQualityCommandAllowed } from '../quality/quality-command-contracts.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -35,13 +36,16 @@ export function runNativeLinuxAndroidHost(command, args, options = {}) {
     console.error('[native-linux-host] hosted Android checks require Linux.');
     return 2;
   }
-  if (command === 'sync') return runSync(env, runner);
-  if (command === 'gradle') return runGradle(args, env, runner);
+  if (command === 'sync' && args.length === 0) return runSync(env, runner);
+  if (command === 'gradle' && args.length === 1 && ['lint', 'testDebugUnitTest'].includes(args[0])) {
+    return runGradle(args, env, runner);
+  }
   console.error(`[native-linux-host] unsupported command: ${command || '<missing>'}`);
   return 2;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  assertQualityCommandAllowed('runner:android-host-quality');
   const [command = '', ...args] = process.argv.slice(2);
   process.exitCode = await runNativeLinuxAndroidHost(command, args);
 }

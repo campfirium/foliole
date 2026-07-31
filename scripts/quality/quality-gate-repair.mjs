@@ -5,6 +5,8 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { assertQualityCommandAllowed } from './quality-command-contracts.mjs';
+
 const DEFAULT_LOG_ROOT = path.join('.tmp', 'logs', 'quality-gate');
 const FINAL_CONFIRMATION = 'npm run quality:release:base';
 
@@ -189,6 +191,7 @@ export async function runCli(argv = process.argv.slice(2)) {
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  assertQualityCommandAllowed('runner:quality-gate-repair');
   runCli()
     .then((code) => {
       process.exitCode = code;

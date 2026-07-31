@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 
 const PACKAGE_PATH = path.resolve(process.cwd(), 'package.json');
 const RUNNER_PREFIX = 'node scripts/electron-sqlite-runner.mjs ';
+const HOSTED_GUARD = 'node scripts/quality/quality-command-contracts.mjs allow test:changed && ';
 
 const SQLITE_SCRIPT_COMMANDS = [
   'test:changed',
@@ -26,7 +27,13 @@ describe('electron sqlite runner package scripts', () => {
     const manifest = JSON.parse(await readFile(PACKAGE_PATH, 'utf8'));
 
     for (const commandName of SQLITE_SCRIPT_COMMANDS) {
-      expect(manifest.scripts[commandName].startsWith(RUNNER_PREFIX)).toBe(true);
+      const command = commandName === 'test:changed'
+        ? manifest.scripts[commandName].slice(HOSTED_GUARD.length)
+        : manifest.scripts[commandName];
+      if (commandName === 'test:changed') {
+        expect(manifest.scripts[commandName].startsWith(HOSTED_GUARD)).toBe(true);
+      }
+      expect(command.startsWith(RUNNER_PREFIX)).toBe(true);
     }
   });
 });

@@ -131,7 +131,7 @@ describe('quality-gate-fast lib routing', () => {
       expect(result.code, `stdout:\n${result.stdout}\nstderr:\n${result.stderr}`).toBe(0);
       expect(result.stdout).toContain('[quality-gate-fast] selected level: shared');
       expect(result.stdout).toContain('hosted quality deferred to scheduled T6');
-      expect(result.stdout).toContain('Remote Quality is reserved for hosted-quality repair rechecks');
+      expect(result.stdout).toContain('Remote Quality is reserved for repair or explicit rechecks on dev');
       expect(result.stdout).not.toContain('remote quality required');
       expect(result.stdout).toContain('[quality-gate-fast] capped local checks passed.');
       expect(result.stdout).toContain('boundary ok');

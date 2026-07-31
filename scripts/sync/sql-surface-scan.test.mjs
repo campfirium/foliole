@@ -16,7 +16,12 @@ function runScan(rootDir) {
   return new Promise((resolve) => {
     const child = spawn('node', [SCAN_SCRIPT], {
       cwd: REPO_ROOT,
-      env: { ...process.env, SQL_SURFACE_SCAN_ROOTS: rootDir }
+      env: {
+        ...process.env,
+        GITHUB_ACTIONS: 'true',
+        RUNNER_ENVIRONMENT: 'github-hosted',
+        SQL_SURFACE_SCAN_ROOTS: rootDir
+      }
     });
     let stdout = '';
     let stderr = '';

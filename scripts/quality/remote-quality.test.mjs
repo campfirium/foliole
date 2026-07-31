@@ -31,7 +31,7 @@ function createRunner({
   let logsIndex = 0;
   const runner = vi.fn(async (command, args, options = {}) => {
     calls.push({ args, command, options });
-    if (command === 'git') return { code: 0, stderr: '', stdout: `${SHA}\n` };
+    if (command === 'git') return { code: 0, stderr: '', stdout: 'dev\n' };
     if (args[0] === 'auth') return { code: authCode, stderr: authCode ? 'not logged in' : '', stdout: '' };
     if (args[0] === 'repo') {
       return { code: 0, stderr: '', stdout: JSON.stringify({
@@ -64,21 +64,22 @@ function createRunner({
 
 describe('remote quality dispatcher', () => {
   it('accepts only an explicit hosted scope', () => {
-    expect(parseRemoteQualityArgs(['--scope', 'ios'])).toEqual({ scope: 'ios', sha: '' });
+    expect(parseRemoteQualityArgs(['--scope', 'ios'])).toEqual({ scope: 'ios' });
     expect(() => parseRemoteQualityArgs(['--scope', 'mid'])).toThrow('--scope must be');
+    expect(() => parseRemoteQualityArgs(['--scope', 'ios', '--sha', SHA])).toThrow('Unknown argument');
     expect(() => parseRemoteQualityArgs(['--scope', 'ios', '--unknown'])).toThrow('Unknown argument');
   });
 
-  it('verifies the immutable remote SHA, dispatches, and monitors the returned run id', async () => {
+  it('dispatches the selected scope on dev and monitors the returned run id', async () => {
     const { calls, runner } = createRunner();
     await expect(runRemoteQuality({ args: ['--scope', 'desktop'], runner })).resolves.toMatchObject({
-      runId: 42, scope: 'desktop', sha: SHA
+      runId: 42, scope: 'desktop'
     });
     expect(calls[0].args).toEqual(['auth', 'status', '--hostname', 'github.com']);
     const dispatch = calls.find((call) => call.args.includes('--method'));
     expect(dispatch.args).toContain('X-GitHub-Api-Version: 2026-03-10');
     expect(JSON.parse(dispatch.options.input)).toEqual({
-      inputs: { scope: 'desktop', target_sha: SHA }, ref: 'dev'
+      inputs: { scope: 'desktop' }, ref: 'dev'
     });
     expect(calls.some((call) => call.args.some((arg) => arg.includes('/actions/runs/42/jobs')))).toBe(true);
   });
@@ -88,10 +89,10 @@ describe('remote quality dispatcher', () => {
       head_branch: 'dev', html_url: 'https://github.test/runs/41',
       id: 41, name: 'T6 Hosted Quality', run_number: 9, status: 'in_progress'
     };
-    const { calls, runner } = createRunner({ activeRuns: [activeRun] });
+    const { runner } = createRunner({ activeRuns: [activeRun] });
     await expect(runRemoteQuality({ args: ['--scope', 'full'], runner }))
       .rejects.toThrow('wait for every job to reach a terminal state');
-    expect(calls.some((call) => call.args.some((arg) => arg.includes('/dispatches')))).toBe(false);
+    expect(runner.mock.calls.some(([, args]) => args.some((arg) => arg.includes('/dispatches')))).toBe(false);
   });
 
   it('filters active hosted quality to the default branch', () => {
@@ -106,7 +107,7 @@ describe('remote quality dispatcher', () => {
     const { calls, runner } = createRunner({
       jobSnapshots: [[job({ conclusion: 'failure', name: 'Windows core' })]]
     });
-    await expect(runRemoteQuality({ args: ['--scope', 'shared', '--sha', SHA], runner }))
+    await expect(runRemoteQuality({ args: ['--scope', 'shared'], runner }))
       .rejects.toThrow('Remote shared quality failed');
     expect(calls.filter((call) => call.args.some((arg) => arg.includes('/actions/jobs/7/logs')))).toHaveLength(1);
   });
@@ -127,17 +128,19 @@ describe('remote quality dispatcher', () => {
     expect(calls.some((call) => call.args.some((arg) => arg.includes('/actions/jobs/8/logs')))).toBe(false);
   });
 
-  it('hard-fails before dispatch when the commit is not on the remote', async () => {
+  it('hard-fails before dispatch when the local branch is not dev', async () => {
     const { runner } = createRunner();
-    runner.mockImplementationOnce(async () => ({
-      code: 0, stderr: '', stdout: ''
-    }));
-    runner.mockImplementationOnce(async () => ({
-      code: 0, stderr: '', stdout: JSON.stringify({ defaultBranchRef: { name: 'dev' }, nameWithOwner: 'o/r' })
-    }));
-    runner.mockImplementationOnce(async () => ({ code: 0, stderr: '', stdout: `${SHA}\n` }));
-    runner.mockImplementationOnce(async () => ({ code: 1, stderr: 'Not Found', stdout: '' }));
-    await expect(runRemoteQuality({ args: ['--scope', 'full'], runner })).rejects.toThrow('Not Found');
+    runner.mockImplementation(async (command, args) => {
+      if (command === 'git') return { code: 0, stderr: '', stdout: 'release\n' };
+      if (args[0] === 'auth') return { code: 0, stderr: '', stdout: '' };
+      if (args[0] === 'repo') return { code: 0, stderr: '', stdout: JSON.stringify({
+        defaultBranchRef: { name: 'dev' }, nameWithOwner: 'o/r'
+      }) };
+      return { code: 0, stderr: '', stdout: '' };
+    });
+    await expect(runRemoteQuality({ args: ['--scope', 'full'], runner }))
+      .rejects.toThrow('requires the local dev branch');
+    expect(runner.mock.calls.some(([, args]) => args.some((arg) => arg.includes('/dispatches')))).toBe(false);
   });
 
   it('hard-fails before repository lookup when GitHub CLI is not authenticated', async () => {

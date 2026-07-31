@@ -33,7 +33,7 @@ If the pinned release task cannot be identified, report `repairState=waiting-for
 3. Run only checks registered as `local-quick`, starting with the narrowest reproducer. Local green never replaces hosted evidence.
 4. Review the integrated diff and preserve all unrelated changes.
 5. A monitor handoff that names the independent run and states it is a locator authorizes one local commit containing only the verified repair. Use `commit-note`; otherwise obtain explicit commit authorization.
-6. Use only the dev-only `orchestrator` entry recorded by the command registry to request hosted revalidation. Task 3 of the active release-stabilization plan will finalize that concrete entry; until then, do not guess or revive old command names.
+6. Request hosted revalidation only with `npm run quality:remote -- --scope <desktop|shared|android|ios|full>` while on `dev`. Never pass a SHA; the workflow event derives the internal target commit.
 7. Never enter `release`, mutate a Draft, reuse T7 evidence, or transfer the repair to the pinned release task.
 
 Stop for product judgment, external service failure, missing permission, write-scope expansion, or ownership conflict. An intermediate red local check is not itself a stop condition.

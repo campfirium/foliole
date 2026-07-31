@@ -5,6 +5,10 @@ import { delimiter, join, relative } from 'node:path';
 import { cwd, env, exit } from 'node:process';
 import { execFileSync } from 'node:child_process';
 
+import { assertQualityCommandAllowed } from '../quality/quality-command-contracts.mjs';
+
+assertQualityCommandAllowed('runner:sql-surface-scan');
+
 const DEFAULT_ROOTS = [
   'electron/database',
   'electron/sync',

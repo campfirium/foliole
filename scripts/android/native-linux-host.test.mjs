@@ -24,6 +24,15 @@ describe('native Linux Android host', () => {
     }));
   });
 
+  it('rejects unregistered Gradle tasks', async () => {
+    const runner = vi.fn();
+
+    expect(await runNativeLinuxAndroidHost('gradle', ['assembleRelease'], {
+      env: {}, platform: 'linux', runner
+    })).toBe(2);
+    expect(runner).not.toHaveBeenCalled();
+  });
+
   it('builds and syncs companion assets without a Windows device route', async () => {
     const runner = vi.fn().mockResolvedValue(0);
 

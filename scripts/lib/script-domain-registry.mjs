@@ -50,9 +50,9 @@ export const CAPABILITY_CONTRACTS = [
     platforms: ['darwin', 'linux', 'win32']
   },
   {
-    adapter: { args: ['scripts/quality/run-quality-fast.mjs'], bin: 'node' },
-    adapterPath: 'scripts/quality/run-quality-fast.mjs',
-    name: 'quality:fast:native',
+    adapter: { args: ['scripts/quality/remote-quality.mjs'], bin: 'node' },
+    adapterPath: 'scripts/quality/remote-quality.mjs',
+    name: 'quality:remote',
     placements: ['shared-core'],
     platforms: ['darwin', 'linux', 'win32']
   },
@@ -124,7 +124,7 @@ export const CAPABILITY_CONTRACTS = [
   }
 ];
 
-export const SCRIPT_ASSET_INVENTORY_SHA256 = '8fbf34e22ce2d3377c918076f2287c44b99b554cc717bdf2c4f1e67c18c82677';
+export const SCRIPT_ASSET_INVENTORY_SHA256 = '238715c7e791b735bc9abdac787fd5bd7dac135d26d3724b82389a775b924b7d';
 
 function normalizeScriptPath(filePath) {
   return filePath.replaceAll('\\', '/').replace(/^\.\//u, '').trim();

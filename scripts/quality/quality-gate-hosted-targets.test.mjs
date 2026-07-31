@@ -27,9 +27,11 @@ async function runIsolatedTargetGate(target) {
 describe('hosted quality target boundaries', () => {
   it('exposes dedicated Common and Windows aliases', () => {
     expect(packageJson.scripts['quality:release:hosted-common']).toBe(
+      'node scripts/quality/quality-command-contracts.mjs allow quality:release:hosted-common && ' +
       'bash scripts/quality/quality-gate-target.sh release-hosted-common'
     );
     expect(packageJson.scripts['quality:release:windows:core']).toBe(
+      'node scripts/quality/quality-command-contracts.mjs allow quality:release:windows:core && ' +
       'bash scripts/quality/quality-gate-target.sh release-windows-core'
     );
   });

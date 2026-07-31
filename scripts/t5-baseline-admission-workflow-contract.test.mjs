@@ -90,6 +90,7 @@ describe('T5 Baseline Admission workflow contract', () => {
     expect(staticJob).toContain('bash scripts/quality/quality-gate-target.sh release-static');
     expect(testJob).toContain('run: npm run ${{ matrix.script }}');
     expect(packageJson.scripts['quality:release:tooling']).toBe(
+      'node scripts/quality/quality-command-contracts.mjs allow quality:release:tooling && ' +
       'bash scripts/quality/quality-gate-target.sh release-tooling'
     );
     expect(targetSteps).toContain('release-tooling) run_release_tooling_gate_steps');

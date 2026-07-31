@@ -14,6 +14,7 @@ import { QUALITY_SCRIPT_STEPS, expectStep } from './quality-gate-target-test-sup
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const TARGET_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-gate-target.sh');
 const DRY_RUN_ENV = { QUALITY_GATE_TEST_CONTEXT: '1', QUALITY_GATE_TEST_DRY_RUN_STEPS: '1' };
+const HOSTED_ENV = { GITHUB_ACTIONS: 'true', RUNNER_ENVIRONMENT: 'github-hosted' };
 const ok = (message) => `node -e "console.log('${message}')"`;
 
 function runTargetGate(cwd, target, changedFiles) {
@@ -22,6 +23,7 @@ function runTargetGate(cwd, target, changedFiles) {
       cwd,
       env: {
         ...process.env,
+        ...HOSTED_ENV,
         QUALITY_GATE_CHANGED_FILES: changedFiles,
         QUALITY_GATE_LOG_MODE: 'summary',
         ...DRY_RUN_ENV

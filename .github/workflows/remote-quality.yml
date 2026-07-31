@@ -1,15 +1,11 @@
 name: Remote Quality
-run-name: Remote Quality (${{ inputs.scope }}) @ ${{ inputs.target_sha }}
+run-name: Remote Quality (${{ inputs.scope }}) @ ${{ github.sha }}
 
 on:
   workflow_dispatch:
     inputs:
-      target_sha:
-        description: Exact remote commit to validate
-        required: true
-        type: string
       scope:
-        description: Explicit recheck or release quality scope
+        description: Explicit dev recheck scope
         required: true
         type: choice
         options:
@@ -23,26 +19,35 @@ permissions:
   contents: read
 
 concurrency:
-  group: foliole-hosted-quality-${{ github.ref }}
+  group: foliole-remote-quality-dev
   cancel-in-progress: false
 
 jobs:
+  dev-ref:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require the dev branch
+        if: github.ref != 'refs/heads/dev'
+        run: exit 1
+
   scoped-quality:
-    if: inputs.scope != 'full'
+    if: inputs.scope != 'full' && needs.dev-ref.result == 'success'
+    needs: dev-ref
     uses: ./.github/workflows/hosted-quality-core.yml
     with:
-      target_sha: ${{ inputs.target_sha }}
+      target_sha: ${{ github.sha }}
       scope: ${{ inputs.scope }}
 
   t5-baseline:
-    if: inputs.scope == 'full'
+    if: inputs.scope == 'full' && needs.dev-ref.result == 'success'
+    needs: dev-ref
     uses: ./.github/workflows/t5-baseline-admission.yml
     with:
-      target_sha: ${{ inputs.target_sha }}
+      target_sha: ${{ github.sha }}
 
   full-quality:
     if: inputs.scope == 'full' && needs.t5-baseline.result == 'success'
     needs: t5-baseline
     uses: ./.github/workflows/hosted-quality-full.yml
     with:
-      target_sha: ${{ inputs.target_sha }}
+      target_sha: ${{ github.sha }}

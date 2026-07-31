@@ -12,7 +12,12 @@ import { expectNoQualityMonolithStep, expectStep, QUALITY_SCRIPT_STEPS } from '.
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const TARGET_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-gate-target.sh');
-const DRY_RUN_ENV = { QUALITY_GATE_TEST_CONTEXT: '1', QUALITY_GATE_TEST_DRY_RUN_STEPS: '1' };
+const DRY_RUN_ENV = {
+  GITHUB_ACTIONS: 'true',
+  QUALITY_GATE_TEST_CONTEXT: '1',
+  QUALITY_GATE_TEST_DRY_RUN_STEPS: '1',
+  RUNNER_ENVIRONMENT: 'github-hosted'
+};
 
 function runTargetGate(cwd, target) {
   return new Promise((resolve) => {

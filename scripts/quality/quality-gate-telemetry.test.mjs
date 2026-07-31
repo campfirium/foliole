@@ -27,7 +27,12 @@ function runTargetGate(cwd, target) {
   return new Promise((resolve) => {
     const child = spawn('bash', [TARGET_SCRIPT, target], {
       cwd,
-      env: { ...process.env, QUALITY_GATE_LOG_MODE: 'summary' }
+      env: {
+        ...process.env,
+        GITHUB_ACTIONS: 'true',
+        QUALITY_GATE_LOG_MODE: 'summary',
+        RUNNER_ENVIRONMENT: 'github-hosted'
+      }
     });
     let stdout = '';
     let stderr = '';

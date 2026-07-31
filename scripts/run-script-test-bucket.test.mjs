@@ -151,7 +151,8 @@ describe('run-script-test-bucket', () => {
     for (const scriptName of GATE_INTEGRATION_SCRIPT_NAMES) {
       expect(packageJson.scripts[scriptName]).toBeTruthy();
     }
-    expect(packageJson.scripts['test:quality:gate-integration']).not.toContain('&&');
+    expect(packageJson.scripts['test:quality:gate-integration'])
+      .toContain('allow test:quality:gate-integration && node scripts/electron-sqlite-runner.mjs');
     expect(targetSteps).toContain('$(quality_gate_integration_scripts)');
     expect(targetSteps).toContain('run_quality_script_gate_steps()');
     expect(targetSteps).not.toContain('test:quality:gate-integration:target-core test:quality:gate-integration:target-failures');

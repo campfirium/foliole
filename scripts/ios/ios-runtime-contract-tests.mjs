@@ -5,6 +5,8 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
+import { assertQualityCommandAllowed } from '../quality/quality-command-contracts.mjs';
+
 import {
   iosResourceCommand,
   iosSwiftResourceArgs,
@@ -13,6 +15,7 @@ import {
 } from './ios-resource-profile.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+assertQualityCommandAllowed('runner:ios-runtime-contract');
 
 export const IOS_RUNTIME_CONTRACT_TESTS = [
   'src/shared/platform/companionRuntimeCapabilities.test.ts',

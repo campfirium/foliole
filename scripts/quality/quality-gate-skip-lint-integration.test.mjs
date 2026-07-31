@@ -101,7 +101,10 @@ describe('quality gate skip lint integration', () => {
       });
       await writeSkipLintScript(tempRoot, "console.error('skip lint failed'); process.exit(1)\n");
 
-      const result = await runBash([TARGET_SCRIPT, 'full'], tempRoot);
+      const result = await runBash([TARGET_SCRIPT, 'full'], tempRoot, {
+        GITHUB_ACTIONS: 'true',
+        RUNNER_ENVIRONMENT: 'github-hosted'
+      });
 
       expect(result.code).toBe(1);
       expect(result.stdout).toContain('skip lint failed');

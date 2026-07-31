@@ -58,13 +58,17 @@ describe('T6 hosted quality workflow contracts', () => {
   });
 
   it('keeps T4 scoped checks direct while composing the full T5 and T6 chain', () => {
+    const refGuard = workflows.remote.jobs['dev-ref'];
     const scoped = workflows.remote.jobs['scoped-quality'];
     const baseline = workflows.remote.jobs['t5-baseline'];
     const full = workflows.remote.jobs['full-quality'];
-    expect(scoped.if).toBe("inputs.scope != 'full'");
-    expect(scoped.needs).toBeUndefined();
+    expect(refGuard.steps[0].if).toBe("github.ref != 'refs/heads/dev'");
+    expect(scoped.if).toBe("inputs.scope != 'full' && needs.dev-ref.result == 'success'");
+    expect(scoped.needs).toBe('dev-ref');
     expect(scoped.uses).toBe('./.github/workflows/hosted-quality-core.yml');
-    expect(baseline.if).toBe("inputs.scope == 'full'");
+    expect(scoped.with.target_sha).toBe('${{ github.sha }}');
+    expect(baseline.if).toBe("inputs.scope == 'full' && needs.dev-ref.result == 'success'");
+    expect(baseline.needs).toBe('dev-ref');
     expect(baseline.uses).toBe('./.github/workflows/t5-baseline-admission.yml');
     expect(full.if).toBe("inputs.scope == 'full' && needs.t5-baseline.result == 'success'");
     expect(full.needs).toBe('t5-baseline');
@@ -72,6 +76,8 @@ describe('T6 hosted quality workflow contracts', () => {
     for (const scope of ['desktop', 'shared', 'android', 'ios', 'full']) {
       expect(workflows.remote.on.workflow_dispatch.inputs.scope.options).toContain(scope);
     }
+    expect(workflows.remote.on.workflow_dispatch.inputs.target_sha).toBeUndefined();
+    expect(workflows.remote['run-name']).toBe('Remote Quality (${{ inputs.scope }}) @ ${{ github.sha }}');
   });
 
   it('keeps the scoped core small and moves only full heavy work into the T6 tail', () => {
@@ -107,7 +113,7 @@ describe('T6 hosted quality workflow contracts', () => {
         'build:vite-only', 'electron:compile', 'quality:release:windows:tail',
         'windows-ci-playwright-profile.mjs'
       ],
-      macOS: ['check:ios-boundary', 'quality:ios:contract', 'ios-bootstrap-acceptance.mjs']
+      macOS: ['ios:sync:preflight', 'quality:ios:contract', 'ios-bootstrap-acceptance.mjs']
     };
     for (const [host, expectedCommands] of Object.entries(commands)) {
       for (const command of expectedCommands) expect(hostSources[host]).toContain(command);

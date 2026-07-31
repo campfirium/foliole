@@ -38,7 +38,10 @@ describe('iOS resource profile', () => {
 
   it('keeps both public quality commands on the same verification chain', () => {
     const scripts = JSON.parse(fs.readFileSync('package.json', 'utf8')).scripts;
-    expect(scripts['quality:ios:contract']).toBe('node scripts/ios/ios-runtime-contract-tests.mjs');
+    expect(scripts['quality:ios:contract']).toBe(
+      'node scripts/quality/quality-command-contracts.mjs allow quality:ios:contract && ' +
+      'node scripts/ios/ios-runtime-contract-tests.mjs'
+    );
     expect(scripts['quality:ios']).toContain('npm run quality:ios:contract');
     expect(scripts['quality:ios']).toContain('npm run quality:ios:simulator');
     expect(scripts['quality:ios:simulator']).toContain('ios-bootstrap-acceptance.mjs');
@@ -46,8 +49,12 @@ describe('iOS resource profile', () => {
     expect(scripts['quality:ios:simulator']).toContain('FOLIOLE_IOS_ACCEPTANCE_SCENARIO=sync-pack-runtime');
     expect(scripts['quality:ios:simulator']).not.toContain('quality:ios:contract');
     expect(scripts['quality:ios:simulator:full']).toBe(
+      'node scripts/quality/quality-command-contracts.mjs allow quality:ios:simulator:full && ' +
       'FOLIOLE_IOS_RESOURCE_MODE=full npm run quality:ios:simulator'
     );
-    expect(scripts['quality:ios:full']).toBe('FOLIOLE_IOS_RESOURCE_MODE=full npm run quality:ios');
+    expect(scripts['quality:ios:full']).toBe(
+      'node scripts/quality/quality-command-contracts.mjs allow quality:ios:full && ' +
+      'FOLIOLE_IOS_RESOURCE_MODE=full npm run quality:ios'
+    );
   });
 });

@@ -2,6 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+node "${SCRIPT_DIR}/quality-command-contracts.mjs" allow runner:quality-gate-target
 source "${SCRIPT_DIR}/quality-gate-lib.sh"
 source "${SCRIPT_DIR}/quality-gate-fast-routing.sh"
 source "${SCRIPT_DIR}/quality-gate-target-parallel.sh"

@@ -16,7 +16,6 @@ export const WINDOWS_NATIVE_MAIN_SCRIPTS = [
   'windows:client:native',
   'windows:preview:native',
   'quality:fast',
-  'quality:fast:native',
   'test:e2e:desktop:native:hidden',
   'test:e2e:desktop:native:visible',
   'release:windows:package',

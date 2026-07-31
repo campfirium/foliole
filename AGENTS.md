@@ -101,19 +101,19 @@
 - 不允许通过降低检查标准过关；验证前必须从 `package.json` / `npm run` 确认真实入口，当前仓库以 `npm` 为准，不用不存在的 `npm test` 兜底。
 - 凡本轮改动会进入应用运行时或改变用户可见行为，必须完成一次受影响宿主的可见验收；桌面任务默认以当前 Codex 所在的原生桌面宿主完成本轮主验收，只有用户明确指定其他宿主、行为属于其他平台专属边界、发布 / 安装包验收或跨宿主承诺时，才追加对应宿主验收。文件预算、窄测试、lint、typecheck、copy guard、运行时快检等前置验证必须先按改动范围完成，不得用宿主可见验收替代前置红灯修复。
 - 宿主可见验收的具体入口由受影响宿主规则决定：桌面按 `electron/AGENTS.md` 选择 Hidden Native 或可见原生自动验收；Android / iOS / companion 按对应局部规则选择等价宿主验收。只改文档、agent 规则、只读诊断、测试代码或脚本内部逻辑，且不改变应用运行时行为时，可跳过宿主可见验收，但最终汇报必须写明跳过原因。
-- 默认先执行覆盖本轮能力闭环的最小相关前置验证；只有能力闭环范围或技术风险超过相关验证覆盖面时，才升级到 `quality:desktop`、`quality:android`、`quality:shared`、`quality:full`、`quality:release` 或 `quality:fast`。
-- 少量明确测试文件优先 `npm run test:files -- <file...>`，变更范围干净且需要按 diff 自动选测时用 `npm run test:changed`。
+- 普通本地验证先使用登记的 `npm run quality:fast`，或显式目标的 `npm run test:files -- <file...>`、`npm run test:sqlite:electron -- <file...>`、`npm run lint:files -- <file...>`；`test:changed` 与 `quality:desktop`、`quality:android`、`quality:shared`、`quality:full`、`quality:release`、`quality:ios*` 均为 hosted-only，不得在普通本地执行。
+- 少量明确测试文件只使用上述显式 `test:files` / `test:sqlite:electron` 入口；不得用按 diff 自动展开的聚合测试替代窄验证。
 - 新增功能或改变既有可观察行为时，必须按 `.lab/specs/_governance/test-drift-prevention-expectation.md` 定位并维护对应测试 contract；自动化测试只锁定独立于当前实现方式仍需长期成立的产品行为、数据语义、交互结果与失败边界，断言数量不作为完成标准，也不得以此降低稳定 contract 的应有覆盖。
 - 可复现 Bug 只有在根因违反了可稳定自动化表达的长期 contract 时，才新增或更新对应回归测试；决定不新增或更新时，最终汇报必须说明为何不构成稳定 contract，或为何现有基础设施无法可靠覆盖。不得仅因现场问题可复现，就用 DOM 顺序、坐标、像素、当前文案分组或组件层级断言固化偶然排版与实现结构。纯文案、纯视觉编排、纯静态样式或测试基础设施无法可靠覆盖的宿主行为，不新增这类断言，必须按受影响宿主规则完成可见验收；若视觉问题影响可点击、可达性、遮挡或其他交互结果，仍属于交互 contract，不得归入纯视觉豁免。已有稳定 contract 可以自动化覆盖时，不得仅以手工检查替代。
 - 质检发现断言漂移时，不得机械修改预期值。若该断言约束的是需要长期成立的结果，应查明红灯原因再修复；若约束的只是偶然实现或过期表现，则删除该断言。随后先跑失败文件、失败 npm script 或失败 Gradle task 的定向复验，已收敛失败修复后不默认重跑整宿主质量闸。
 - 改动 sync pack manifest / schema / apply 语义，或 `lib/core/sync/syncPack*`、`electron/database/syncPack*`、`electron/sync/syncPack*`、`src/shared/platform/companionSyncPack*`，必须先跑 `npm run test:sync-pack`。
 - 新增文件、拆分文件或修复 `max-lines` / `max-lines-per-function` 后，先跑 `node scripts/check-file-budget.mjs <file...>`，再跑对应窄 scope lint。
-- 新增或升级 npm 依赖时，额外执行 `npm run deps:hardening:check`；`build` 只在用户明确要求或触及依赖 / 构建根链路且必须验证时执行。
+- 新增或升级 npm 依赖时，必须由 GitHub-hosted 质量流程覆盖 `npm run deps:hardening:check`，不得在本地执行；`build` 只在用户明确要求或触及依赖 / 构建根链路且必须验证时执行。
 - npm 默认保留 7 天 release-age 安全窗口；但 Dependabot / GitHub Advisory / `npm audit` 已明确报出的漏洞修复必须定向绕过该窗口，只允许更新被点名的漏洞包或其必要传递依赖，并用 `npm ls <package> --all` 与 `npm audit --omit=dev` 复验。禁止用等待窗口期作为安全告警处理结论。
 - `it.skip` / `test.skip` 必须紧邻 `// SKIP: <reason> | <date YYYY-MM-DD> | revive: <condition>`；看到超过 30 天的 stale `SKIP` 必须复查能否恢复。
 - E2E（Playwright）不进入任何质量闸；它作为宿主可见验收单独执行。桌面日常 agent 自动化验收优先按 `electron/AGENTS.md` 使用不干扰用户桌面的 Playwright 入口，人工预览仍按下表执行。
 - Windows Android 日常按 DEV-first 远程工作站使用：Windows native dev 与 A5 fixed deploy / verify 服务开发调试；CI 级 clean / bundled / release-like 终检只由 GitHub hosted lane 承担，不得恢复通用设备 runner 或 detached preview 服务。
-- 本地可发起的质量与发布入口必须由机械登记表按真实执行图分类为 `local-quick`、`hosted-only`、`orchestrator` 或 `release-control`：只有目标和成本启动前有界、无未知聚合、无持久外部 / 发布副作用且不作为 T5/T6/T7 证据的入口可归为 `local-quick`；未登记质量入口一律 `hosted-only`，未登记外部 mutation 一律拒绝。`orchestrator` 只发起 / 观察 GitHub 工作，`release-control` 只允许 pinned 发布主任务执行明确状态转换；具体入口名由本实施方案任务 3 审计回填，完成前发布体系相关未审计入口 fail closed。
+- `scripts/quality/quality-command-contracts.mjs` 是质量 / 发布命令分类的机械真相；未登记命令拒绝。`npm run quality:remote -- --scope <desktop|shared|android|ios|full>` 是唯一 dev-only hosted recheck orchestrator，禁止 SHA 输入和 release 调用；`release-control:draft-body`、`release-control:abandon-draft`、`release-control:abandon-ref`、`release-control:publish` 只允许 pinned 发布主任务在登记状态下使用。
 - 运行命令后若工具返回非终态、无新增输出、仅 heartbeat / progress，或 agent 准备汇报“仍在运行 / 继续等 / 再查一次”，必须触发 `$quiet-wait`；后续用 waiter 接管等待，不得用 agent 回合继续守进程。
 - `copy:guard` 默认只报告 warning；若它报 warning，修复前先读 `.lab/specs/_product/terminology-and-copy.md`，禁止机械替换。
 

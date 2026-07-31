@@ -82,6 +82,26 @@ export function parseRoutePlan(output) {
   return plan;
 }
 
+export function parseQualityFastNativeArgs(args) {
+  if (args.length === 0) return 'run';
+  if (args.length === 1 && args[0] === '--route') return 'route';
+  if (args.length === 1 && args[0] === '--route-json') return 'route-json';
+  throw new Error('quality:fast accepts only --route or --route-json; aggregate quality is hosted-only');
+}
+
+function printRoutePlan(plan) {
+  console.log(`[quality-gate-route] selected level: ${plan.level}`);
+  console.log(`[quality-gate-route] target: ${plan.target}`);
+  for (const [label, values] of [
+    ['changed files', plan.changedFiles],
+    ['lint targets', plan.lintTargets],
+    ['related tests', plan.relatedTests]
+  ]) {
+    console.log(`[quality-gate-route] ${label}: ${values.length === 0 ? 'none' : ''}`.trimEnd());
+    for (const value of values) console.log(`[quality-gate-route]   ${value}`);
+  }
+}
+
 function toEnvFileList(files) {
   return files.filter(Boolean).join('\n');
 }
@@ -164,17 +184,21 @@ export async function runQualityT0Native(options = {}) {
   });
   console.log(
     `[quality-fast-native] ${plan.level}-class change detected -> hosted quality deferred to scheduled T6; ` +
-    'Remote Quality is reserved for hosted-quality repair rechecks, releases, or explicit requests.'
+    'Remote Quality is reserved for repair or explicit rechecks on dev, while release uses T7.'
   );
   return plan;
 }
 
 async function main() {
   try {
-    const routeJson = process.argv.slice(2).includes('--route-json');
-    const plan = await runQualityT0Native({ planOnly: routeJson });
-    if (routeJson) {
+    const mode = parseQualityFastNativeArgs(process.argv.slice(2));
+    const plan = await runQualityT0Native({ planOnly: mode !== 'run' });
+    if (mode === 'route-json') {
       process.stdout.write(`${JSON.stringify(plan)}\n`);
+      return;
+    }
+    if (mode === 'route') {
+      printRoutePlan(plan);
       return;
     }
     console.log('[quality-fast-native] all checks passed.');
