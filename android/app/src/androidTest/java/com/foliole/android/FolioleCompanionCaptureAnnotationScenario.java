@@ -31,7 +31,7 @@ final class FolioleCompanionCaptureAnnotationScenario {
         navigateToCapturedTopic(instrumentation, webView, token, timeoutMs);
         waitForText(instrumentation, webView, CLOZE_TEXT, timeoutMs);
         createNote(instrumentation, webView, token, timeoutMs);
-        createCloze(instrumentation, webView, timeoutMs);
+        createCloze(instrumentation, webView, token, timeoutMs);
         JSONObject receipt = new JSONObject();
         receipt.put("action", "click");
         receipt.put("captureCreated", true);
@@ -71,11 +71,13 @@ final class FolioleCompanionCaptureAnnotationScenario {
     private static void createCloze(
         Instrumentation instrumentation,
         WebView webView,
+        String token,
         long timeoutMs
     ) throws Exception {
         selectText(instrumentation, webView, CLOZE_TEXT, timeoutMs);
         perform(instrumentation, webView, "companion-selection-cloze", "click", "");
         waitForMissingTestId(instrumentation, webView, "companion-selection-cloze", timeoutMs);
+        waitForButtonText(instrumentation, webView, token, timeoutMs);
     }
 
     private static void navigateToCapturedTopic(

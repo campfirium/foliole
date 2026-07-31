@@ -182,7 +182,7 @@ export async function runWindowsA5CaptureAnnotation({
   }
   output.push(cleanup.output || '');
   if (primaryError) {
-    if (!primaryError.result) primaryError.result = { output: output.join('') };
+    if (!primaryError.result?.output) primaryError.result = { output: output.join('') };
     throw primaryError;
   }
   const manifest = {

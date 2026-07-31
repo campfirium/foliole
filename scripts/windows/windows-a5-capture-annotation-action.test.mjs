@@ -145,3 +145,20 @@ it('rejects another run receipt, removes the installed test APK, and writes no s
   expect(calls.some(({ args }) => args.includes('uninstall') && args.includes('com.foliole.android.test'))).toBe(true);
   expect(fs.existsSync(path.join(evidenceRoot, 'capture-annotation-manifest.json'))).toBe(false);
 });
+
+it('retains fixed instrumentation output when the read-only audit fails', async () => {
+  const { evidenceRoot, paths } = fixture();
+  const { execute } = executor();
+  let failure;
+  try {
+    await runWindowsA5CaptureAnnotation({
+      adbPort: '5037', auditDatabase: vi.fn(() => { throw new Error('Cloze Item was not found'); }),
+      buildIdentity: 'capture-run-1', env: {}, evidenceRoot, execute,
+      openDatabase: vi.fn(() => ({ close: vi.fn() })), paths,
+      protectData: protection(), serial: '87a33a4b'
+    });
+  } catch (error) { failure = error; }
+  expect(failure).toMatchObject({ stage: 'capture-database-audit' });
+  expect(failure.result.output).toContain('folioleActionReceipt');
+  expect(failure.result.output).toContain('Success');
+});
