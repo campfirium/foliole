@@ -2,17 +2,23 @@
 
 import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { parse } from 'yaml';
 
 const workflow = fs.readFileSync('.github/workflows/release-macos.yml', 'utf8');
+const parsedWorkflow = parse(workflow);
 
 describe('release macOS workflow contract', () => {
-  it('packages only an exact checked-out commit on an arm64 runner', () => {
-    expect(workflow).toContain('release_ref:');
-    expect(workflow).toContain('ref: ${{ inputs.release_ref }}');
-    expect(workflow).toContain('^[0-9a-f]{40}$');
-    expect(workflow).toContain('head_sha="$(git rev-parse HEAD)"');
+  it('packages only a declared version and exact run SHA on an arm64 runner', () => {
+    expect(parsedWorkflow.on.workflow_dispatch.inputs.target_version).toMatchObject({ required: true, type: 'string' });
+    expect(parsedWorkflow.on.workflow_dispatch.inputs.target_sha).toMatchObject({ required: true, type: 'string' });
+    expect(workflow).toContain('ref: ${{ inputs.target_sha }}');
+    expect(workflow).toContain('FOLIOLE_RELEASE_TARGET_VERSION: ${{ inputs.target_version }}');
+    expect(workflow).toContain('FOLIOLE_RELEASE_TARGET_SHA: ${{ inputs.target_sha }}');
+    expect(workflow).toContain('FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}');
+    expect(workflow).toContain('run: node scripts/release-target-contract.mjs');
     expect(workflow).toContain('runs-on: macos-15');
     expect(workflow).toContain('"$(uname -m)" != "arm64"');
+    expect(workflow).not.toContain('release_ref:');
   });
 
   it('installs isolated Apple credentials without publishing them', () => {

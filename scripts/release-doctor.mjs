@@ -98,18 +98,17 @@ function checkManifest(manifest, version, phase) {
 }
 
 function checkReleaseWorkflow(workflowSource, version) {
-  const expectedBranch = `release/${version}`;
-  const expectedTag = `v${version}`;
-  const hasBranchGuard = workflowSource.includes('$expectedBranch = "release/$($package.version)"');
-  const hasTagGuard = workflowSource.includes('$expectedTag = "v$($package.version)"');
-  const hasRefInput = workflowSource.includes('release_ref:') && workflowSource.includes('ref: ${{ inputs.release_ref }}');
-  const status = hasBranchGuard && hasTagGuard && hasRefInput ? 'PASS' : 'FAIL';
+  const hasTargetInputs = workflowSource.includes('target_version:') && workflowSource.includes('target_sha:');
+  const checksOutSha = workflowSource.includes('ref: ${{ inputs.target_sha }}');
+  const validatesTarget = workflowSource.includes('node scripts/release-target-contract.mjs');
+  const rejectsLegacyRef = !workflowSource.includes('release_ref:');
+  const status = hasTargetInputs && checksOutSha && validatesTarget && rejectsLegacyRef ? 'PASS' : 'FAIL';
   return createCheck(
     status,
-    'Windows release ref',
+    'Windows release target',
     status === 'PASS'
-      ? `workflow accepts exact ${expectedBranch} or ${expectedTag}.`
-      : 'workflow release_ref guard does not match the expected release branch/tag contract.'
+      ? `workflow requires version ${version} and an exact matching SHA.`
+      : 'workflow must require target_version plus target_sha and reject movable release refs.'
   );
 }
 

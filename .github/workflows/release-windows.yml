@@ -1,10 +1,15 @@
 name: Release Windows
+run-name: Release Windows ${{ inputs.target_version }} @ ${{ inputs.target_sha }}
 
 on:
   workflow_dispatch:
     inputs:
-      release_ref:
-        description: "Fixed release branch/tag, or a 40-character commit SHA in artifact-only mode"
+      target_version:
+        description: "Explicit package version to package, e.g. 0.7.2"
+        required: true
+        type: string
+      target_sha:
+        description: "Exact 40-character commit SHA to package"
         required: true
         type: string
       artifact_only:
@@ -20,7 +25,7 @@ permissions:
   artifact-metadata: write
 
 concurrency:
-  group: release-windows-${{ inputs.release_ref }}
+  group: release-windows-${{ inputs.target_version }}-${{ inputs.target_sha }}
   cancel-in-progress: false
 
 jobs:
@@ -44,49 +49,23 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.release_ref }}
+          ref: ${{ inputs.target_sha }}
           fetch-depth: 0
-
-      - name: Verify fixed release ref
-        shell: pwsh
-        run: |
-          $releaseRef = "${{ inputs.release_ref }}".Trim()
-          if ([string]::IsNullOrWhiteSpace($releaseRef)) {
-            throw "release_ref is required."
-          }
-          $artifactOnly = "${{ inputs.artifact_only }}" -eq "true"
-          $head = (git rev-parse HEAD).Trim()
-          $checkedOutRef = (git rev-parse --verify HEAD).Trim()
-          if ($head -ne $checkedOutRef) {
-            throw "Unable to verify checked out release ref."
-          }
-          if ($artifactOnly) {
-            if ($releaseRef -notmatch "^[0-9a-f]{40}$" -or $head -ne $releaseRef) {
-              throw "artifact-only release_ref must be the exact checked-out 40-character commit SHA."
-            }
-          } else {
-            if (-not ($releaseRef.StartsWith("release/") -or $releaseRef.StartsWith("v"))) {
-              throw "release_ref must be a release branch or version tag."
-            }
-            $package = Get-Content package.json | ConvertFrom-Json
-            $expectedTag = "v$($package.version)"
-            if ($releaseRef.StartsWith("v") -and $releaseRef -ne $expectedTag) {
-              throw "release_ref $releaseRef does not match package version tag $expectedTag."
-            }
-            $expectedBranch = "release/$($package.version)"
-            if ($releaseRef.StartsWith("release/") -and $releaseRef -ne $expectedBranch) {
-              throw "release_ref $releaseRef does not match package version $($package.version)."
-            }
-          }
-          Write-Host "release_ref=$releaseRef"
-          Write-Host "release_commit=$head"
-          Write-Host "artifact_only=$artifactOnly"
 
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+
+      - name: Verify declared release target
+        env:
+          FOLIOLE_RELEASE_EVENT_NAME: ${{ github.event_name }}
+          FOLIOLE_RELEASE_REF_NAME: ${{ github.ref_name }}
+          FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}
+          FOLIOLE_RELEASE_TARGET_SHA: ${{ inputs.target_sha }}
+          FOLIOLE_RELEASE_TARGET_VERSION: ${{ inputs.target_version }}
+        run: node scripts/release-target-contract.mjs
 
       - name: Install dependencies
         run: npm ci
@@ -158,8 +137,10 @@ jobs:
         shell: pwsh
         run: |
           $package = Get-Content package.json | ConvertFrom-Json
-          $tagName = "v$($package.version)"
-          $releaseTitle = $package.version
+          $targetVersion = "${{ inputs.target_version }}"
+          $targetCommit = "${{ inputs.target_sha }}"
+          $tagName = "v$targetVersion"
+          $releaseTitle = $targetVersion
           $installer = Get-ChildItem -Path artifacts/windows -Filter "*.exe" | Select-Object -First 1
           if (-not $installer) {
             throw "Windows installer was not generated."
@@ -189,7 +170,6 @@ jobs:
             }
           }
 
-          $targetCommit = (git rev-parse HEAD).Trim()
           gh release create $tagName $installer.FullName $blockmap.FullName $updateMetadata.FullName $checksums.FullName --draft --title $releaseTitle --target $targetCommit --notes-file $notesFile.FullName
 
       - name: Upload installer artifacts

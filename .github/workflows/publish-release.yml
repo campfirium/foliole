@@ -1,9 +1,14 @@
 name: Publish Release
+run-name: Publish Release ${{ inputs.target_version }} @ ${{ inputs.target_sha }}
 
 on:
   workflow_dispatch:
     inputs:
-      release_ref:
+      target_version:
+        description: "Explicit package version to assemble, e.g. 0.7.2"
+        required: true
+        type: string
+      target_sha:
         description: "Exact 40-character commit SHA targeted by the release"
         required: true
         type: string
@@ -11,16 +16,8 @@ on:
         description: "Successful Release macOS run ID"
         required: true
         type: string
-      macos_sha:
-        description: "Exact commit SHA packaged by the macOS run"
-        required: true
-        type: string
       windows_run_id:
         description: "Successful Release Windows run ID"
-        required: true
-        type: string
-      windows_sha:
-        description: "Exact commit SHA packaged by the Windows run"
         required: true
         type: string
 
@@ -40,36 +37,40 @@ jobs:
       - name: Check out reviewed release metadata
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.release_ref }}
+          ref: ${{ inputs.target_sha }}
+          fetch-depth: 0
 
-      - name: Verify fixed refs and successful source runs
+      - name: Verify declared release target
+        env:
+          FOLIOLE_RELEASE_EVENT_NAME: ${{ github.event_name }}
+          FOLIOLE_RELEASE_REF_NAME: ${{ github.ref_name }}
+          FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}
+          FOLIOLE_RELEASE_TARGET_SHA: ${{ inputs.target_sha }}
+          FOLIOLE_RELEASE_TARGET_VERSION: ${{ inputs.target_version }}
+        run: node scripts/release-target-contract.mjs
+
+      - name: Verify successful source runs
         shell: bash
         run: |
           set -euo pipefail
-          release_ref="${{ inputs.release_ref }}"
+          target_sha="${{ inputs.target_sha }}"
           macos_run_id="${{ inputs.macos_run_id }}"
-          macos_sha="${{ inputs.macos_sha }}"
           windows_run_id="${{ inputs.windows_run_id }}"
-          windows_sha="${{ inputs.windows_sha }}"
 
-          [[ "$release_ref" =~ ^[0-9a-f]{40}$ ]]
-          [[ "$macos_sha" =~ ^[0-9a-f]{40}$ ]]
-          [[ "$windows_sha" =~ ^[0-9a-f]{40}$ ]]
           [[ "$macos_run_id" =~ ^[0-9]+$ ]]
           [[ "$windows_run_id" =~ ^[0-9]+$ ]]
-          [[ "$(git rev-parse HEAD)" == "$release_ref" ]]
 
           verify_run() {
-            local run_id="$1" expected_sha="$2" artifact_name="$3"
+            local run_id="$1" artifact_name="$2"
             local state artifact_count
             state="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" --jq '[.status,.conclusion,.head_sha] | @tsv')"
-            [[ "$state" == $'completed\tsuccess\t'"$expected_sha" ]]
+            [[ "$state" == $'completed\tsuccess\t'"$target_sha" ]]
             artifact_count="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts" --jq "[.artifacts[] | select(.name == \"${artifact_name}\" and .expired == false)] | length")"
             [[ "$artifact_count" == "1" ]]
           }
 
-          verify_run "$macos_run_id" "$macos_sha" foliole-macos-release
-          verify_run "$windows_run_id" "$windows_sha" foliole-windows-release
+          verify_run "$macos_run_id" foliole-macos-release
+          verify_run "$windows_run_id" foliole-windows-release
 
       - name: Download macOS release artifacts
         uses: actions/download-artifact@v5
@@ -93,7 +94,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          version="$(node -p "require('./package.json').version")"
+          version="${{ inputs.target_version }}"
           macos_root=release-assets/macos
           windows_root=release-assets/windows
 
@@ -118,7 +119,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          version="$(node -p "require('./package.json').version")"
+          version="${{ inputs.target_version }}"
           tag="v${version}"
           notes_file="releases/github/${tag}.md"
           test -f "$notes_file"
@@ -135,5 +136,5 @@ jobs:
             release-assets/windows/SHA256SUMS-windows.txt \
             --draft \
             --title "$version" \
-            --target "${{ inputs.release_ref }}" \
+            --target "${{ inputs.target_sha }}" \
             --notes-file "$notes_file"

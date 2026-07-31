@@ -24,9 +24,24 @@ describe('release doctor', () => {
 
     expect(result.phase).toBe('pre');
     expect(findCheck(result, 'package version').status).toBe('PASS');
+    expect(findCheck(result, 'Windows release target').status).toBe('PASS');
     expect(findCheck(result, 'GitHub release remote').status).toBe('SKIPPED');
     expect(hasFailures(result.checks)).toBe(false);
     expect(formatReleaseDoctorReport(result)).toContain(`version=${version} phase=pre`);
+  });
+
+  it('rejects a Windows workflow that treats a movable release ref as package evidence', async () => {
+    const { rootDir } = await createFixture({
+      releaseWorkflow: [
+        'release_ref:',
+        'ref: ${{ inputs.release_ref }}',
+        '$expectedBranch = "release/$($package.version)"'
+      ].join('\n')
+    });
+    const result = await collectReleaseDoctorChecks({ commandRunner: commandRunner(), rootDir });
+
+    expect(findCheck(result, 'Windows release target').status).toBe('FAIL');
+    expect(hasFailures(result.checks)).toBe(true);
   });
 
   it('uses phase to classify manifest publish signals', async () => {

@@ -2,36 +2,29 @@
 
 import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { parse } from 'yaml';
 
 const workflow = fs.readFileSync('.github/workflows/release-windows.yml', 'utf8');
+const parsedWorkflow = parse(workflow);
 
 describe('release Windows workflow contract', () => {
-  it('requires an explicit fixed release ref for manual dispatch', () => {
-    expect(workflow).toContain('release_ref:');
-    expect(workflow).toContain('required: true');
-    expect(workflow).toContain('ref: ${{ inputs.release_ref }}');
+  it('requires one explicit version and exact SHA for every packaging mode', () => {
+    expect(parsedWorkflow.on.workflow_dispatch.inputs.target_version).toMatchObject({ required: true, type: 'string' });
+    expect(parsedWorkflow.on.workflow_dispatch.inputs.target_sha).toMatchObject({ required: true, type: 'string' });
+    expect(workflow).toContain('ref: ${{ inputs.target_sha }}');
     expect(workflow).toContain('fetch-depth: 0');
+    expect(workflow).toContain('FOLIOLE_RELEASE_TARGET_VERSION: ${{ inputs.target_version }}');
+    expect(workflow).toContain('FOLIOLE_RELEASE_TARGET_SHA: ${{ inputs.target_sha }}');
+    expect(workflow).toContain('FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}');
+    expect(workflow).toContain('run: node scripts/release-target-contract.mjs');
+    expect(workflow).not.toContain('release_ref:');
   });
 
-  it('serializes draft release creation by fixed release ref', () => {
-    expect(workflow).toContain('concurrency:');
-    expect(workflow).toContain('group: release-windows-${{ inputs.release_ref }}');
+  it('serializes and creates drafts by the declared version and SHA', () => {
+    expect(workflow).toContain('group: release-windows-${{ inputs.target_version }}-${{ inputs.target_sha }}');
     expect(workflow).toContain('cancel-in-progress: false');
-  });
-
-  it('rejects non-release refs before building artifacts', () => {
-    expect(workflow).toContain('$releaseRef.StartsWith("release/") -or $releaseRef.StartsWith("v")');
-    expect(workflow).toContain('release_ref must be a release branch or version tag.');
-  });
-
-  it('requires release branch refs to exactly match the package version', () => {
-    expect(workflow).toContain('$expectedBranch = "release/$($package.version)"');
-    expect(workflow).toContain('$releaseRef.StartsWith("release/") -and $releaseRef -ne $expectedBranch');
-    expect(workflow).not.toContain('$releaseRef.EndsWith($package.version)');
-  });
-
-  it('creates the draft release against the checked out release commit', () => {
-    expect(workflow).toContain('$targetCommit = (git rev-parse HEAD).Trim()');
+    expect(workflow).toContain('$targetVersion = "${{ inputs.target_version }}"');
+    expect(workflow).toContain('$targetCommit = "${{ inputs.target_sha }}"');
     expect(workflow).toContain('gh release create $tagName');
     expect(workflow).toContain('--target $targetCommit');
   });

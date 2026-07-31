@@ -1,10 +1,15 @@
 name: Release Candidate Quality
+run-name: Release Candidate Quality ${{ inputs.target_version || github.ref_name }} @ ${{ inputs.target_sha || github.sha }}
 
 on:
   workflow_dispatch:
     inputs:
-      release_ref:
-        description: "Fixed release branch or tag to validate, e.g. release/0.6.6 or v0.6.6"
+      target_version:
+        description: "Explicit package version to validate, e.g. 0.7.2"
+        required: true
+        type: string
+      target_sha:
+        description: "Exact 40-character commit SHA to validate"
         required: true
         type: string
   push:
@@ -15,7 +20,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: release-candidate-quality-${{ inputs.release_ref || github.ref }}
+  group: release-candidate-quality-${{ inputs.target_sha || github.sha }}
   cancel-in-progress: false
 
 jobs:
@@ -28,7 +33,7 @@ jobs:
       - name: Check out release candidate
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.release_ref || github.ref }}
+          ref: ${{ inputs.target_sha || github.sha }}
           fetch-depth: 0
 
       - name: Set up Node
@@ -36,6 +41,15 @@ jobs:
         with:
           node-version: 22
           cache: npm
+
+      - name: Verify declared release target
+        env:
+          FOLIOLE_RELEASE_EVENT_NAME: ${{ github.event_name }}
+          FOLIOLE_RELEASE_REF_NAME: ${{ github.ref_name }}
+          FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}
+          FOLIOLE_RELEASE_TARGET_SHA: ${{ inputs.target_sha || github.sha }}
+          FOLIOLE_RELEASE_TARGET_VERSION: ${{ inputs.target_version }}
+        run: node scripts/release-target-contract.mjs
 
       - name: Install dependencies
         run: npm ci

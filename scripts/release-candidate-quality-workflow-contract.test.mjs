@@ -2,18 +2,24 @@
 
 import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { parse } from 'yaml';
 
 const workflow = fs.readFileSync('.github/workflows/release-candidate-quality.yml', 'utf8');
+const parsedWorkflow = parse(workflow);
 
 describe('release candidate quality workflow contract', () => {
-  it('validates explicit release refs and release branch pushes', () => {
+  it('validates explicit manual targets and exact release push commits', () => {
     expect(workflow).toContain('name: Release Candidate Quality');
-    expect(workflow).toContain('workflow_dispatch:');
-    expect(workflow).toContain('release_ref:');
-    expect(workflow).toContain('required: true');
+    expect(parsedWorkflow.on.workflow_dispatch.inputs.target_version).toMatchObject({ required: true, type: 'string' });
+    expect(parsedWorkflow.on.workflow_dispatch.inputs.target_sha).toMatchObject({ required: true, type: 'string' });
     expect(workflow).toContain('"release/**"');
-    expect(workflow).toContain('ref: ${{ inputs.release_ref || github.ref }}');
+    expect(workflow).toContain('ref: ${{ inputs.target_sha || github.sha }}');
+    expect(workflow).toContain('FOLIOLE_RELEASE_TARGET_SHA: ${{ inputs.target_sha || github.sha }}');
+    expect(workflow).toContain('FOLIOLE_RELEASE_TARGET_VERSION: ${{ inputs.target_version }}');
+    expect(workflow).toContain('FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}');
+    expect(workflow).toContain('run: node scripts/release-target-contract.mjs');
     expect(workflow).toContain('fetch-depth: 0');
+    expect(workflow).not.toContain('release_ref:');
   });
 
   it('runs the full release-base gate on Windows with native sqlite preflight', () => {
@@ -42,7 +48,7 @@ describe('release candidate quality workflow contract', () => {
 
   it('stays read-only and does not publish release artifacts', () => {
     expect(workflow).toContain('permissions:\n  contents: read');
-    expect(workflow).toContain('group: release-candidate-quality-${{ inputs.release_ref || github.ref }}');
+    expect(workflow).toContain('group: release-candidate-quality-${{ inputs.target_sha || github.sha }}');
     expect(workflow).toContain('cancel-in-progress: false');
     expect(workflow).not.toContain('contents: write');
     expect(workflow).not.toContain('gh release');

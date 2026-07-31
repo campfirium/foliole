@@ -1,9 +1,14 @@
 name: Release macOS
+run-name: Release macOS ${{ inputs.target_version }} @ ${{ inputs.target_sha }}
 
 on:
   workflow_dispatch:
     inputs:
-      release_ref:
+      target_version:
+        description: "Explicit package version to package, e.g. 0.7.2"
+        required: true
+        type: string
+      target_sha:
         description: "Exact 40-character commit SHA to package"
         required: true
         type: string
@@ -15,7 +20,7 @@ permissions:
   artifact-metadata: write
 
 concurrency:
-  group: release-macos-${{ inputs.release_ref }}
+  group: release-macos-${{ inputs.target_version }}-${{ inputs.target_sha }}
   cancel-in-progress: false
 
 jobs:
@@ -31,30 +36,32 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.release_ref }}
+          ref: ${{ inputs.target_sha }}
           fetch-depth: 0
-
-      - name: Verify fixed release ref and runner architecture
-        shell: bash
-        run: |
-          set -euo pipefail
-          release_ref="${{ inputs.release_ref }}"
-          head_sha="$(git rev-parse HEAD)"
-          if [[ ! "$release_ref" =~ ^[0-9a-f]{40}$ ]] || [[ "$head_sha" != "$release_ref" ]]; then
-            echo "release_ref must be the exact checked-out 40-character commit SHA." >&2
-            exit 1
-          fi
-          if [[ "$(uname -m)" != "arm64" ]]; then
-            echo "The macOS release must run on an arm64 runner." >&2
-            exit 1
-          fi
-          echo "release_commit=$head_sha"
 
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+
+      - name: Verify declared release target
+        env:
+          FOLIOLE_RELEASE_EVENT_NAME: ${{ github.event_name }}
+          FOLIOLE_RELEASE_REF_NAME: ${{ github.ref_name }}
+          FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}
+          FOLIOLE_RELEASE_TARGET_SHA: ${{ inputs.target_sha }}
+          FOLIOLE_RELEASE_TARGET_VERSION: ${{ inputs.target_version }}
+        run: node scripts/release-target-contract.mjs
+
+      - name: Verify runner architecture
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$(uname -m)" != "arm64" ]]; then
+            echo "The macOS release must run on an arm64 runner." >&2
+            exit 1
+          fi
 
       - name: Install dependencies
         run: npm ci

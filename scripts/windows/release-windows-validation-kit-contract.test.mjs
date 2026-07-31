@@ -41,15 +41,17 @@ describe('Windows release validation kit contract', () => {
   it('supports a fixed-SHA artifact-only run without touching a draft release', () => {
     expect(workflow).toContain('artifact_only:');
     expect(workflow).toContain('type: boolean');
-    expect(workflow).toContain('$releaseRef -notmatch "^[0-9a-f]{40}$" -or $head -ne $releaseRef');
-    expect(workflow).toContain('artifact-only release_ref must be the exact checked-out 40-character commit SHA.');
+    expect(workflow).toContain('FOLIOLE_RELEASE_TARGET_VERSION: ${{ inputs.target_version }}');
+    expect(workflow).toContain('FOLIOLE_RELEASE_TARGET_SHA: ${{ inputs.target_sha }}');
+    expect(workflow).toContain('node scripts/release-target-contract.mjs');
     expect(workflow.match(/if: \$\{\{ !inputs\.artifact_only \}\}/gu)).toHaveLength(2);
     expect(workflow.indexOf('if: ${{ !inputs.artifact_only }}')).toBeLessThan(workflow.indexOf('gh release create'));
   });
 
-  it('keeps normal release branch and tag version guards intact', () => {
-    expect(workflow).toContain('release_ref must be a release branch or version tag.');
-    expect(workflow).toContain('does not match package version tag');
-    expect(workflow).toContain('does not match package version');
+  it('uses the same immutable target contract for formal and artifact-only modes', () => {
+    expect(workflow).toContain('target_version:');
+    expect(workflow).toContain('target_sha:');
+    expect(workflow).toContain('ref: ${{ inputs.target_sha }}');
+    expect(workflow).not.toContain('release_ref:');
   });
 });

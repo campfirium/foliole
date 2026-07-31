@@ -31,12 +31,15 @@ export async function createFixture(overrides = {}) {
   await writeJson(rootDir, 'releases/notes/en.json', overrides.enNotes ?? { [version]: { notes: ['Fixed', 'A fix.'] } });
   await writeJson(rootDir, 'releases/notes/zh-Hans.json', overrides.zhNotes ?? { [version]: { notes: ['修复', '一个修复。'] } });
   await writeFile(join(rootDir, `releases/github/v${version}.md`), '### Fixed\n- A fix.\n');
-  await writeFile(join(rootDir, '.github/workflows/release-windows.yml'), [
-    'release_ref:',
-    'ref: ${{ inputs.release_ref }}',
-    '$expectedTag = "v$($package.version)"',
-    '$expectedBranch = "release/$($package.version)"'
-  ].join('\n'));
+  await writeFile(
+    join(rootDir, '.github/workflows/release-windows.yml'),
+    overrides.releaseWorkflow ?? [
+      'target_version:',
+      'target_sha:',
+      'ref: ${{ inputs.target_sha }}',
+      'node scripts/release-target-contract.mjs'
+    ].join('\n')
+  );
   return { rootDir, version };
 }
 
