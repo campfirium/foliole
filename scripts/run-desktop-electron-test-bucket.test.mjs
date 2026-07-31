@@ -1,10 +1,13 @@
 // @vitest-environment node
 
+import fs from 'node:fs';
 import { expect, it } from 'vitest';
 
 import {
   assertDesktopElectronBucketCoverage,
   buildDesktopElectronBuckets,
+  buildDesktopElectronShardBuckets,
+  DESKTOP_ELECTRON_SHARDS,
   collectElectronTestFiles
 } from './run-desktop-electron-test-bucket.mjs';
 
@@ -57,6 +60,26 @@ it('collects every Electron test exactly once', () => {
     collectElectronTestFiles(),
     buildDesktopElectronBuckets()
   )).not.toThrow();
+});
+
+it('partitions every Electron bucket into one hosted shard', () => {
+  const buckets = buildDesktopElectronBuckets();
+  const sharded = DESKTOP_ELECTRON_SHARDS.flatMap((shard) => (
+    buildDesktopElectronShardBuckets(shard, buckets)
+  ));
+
+  expect(sharded.map(({ label }) => label).sort())
+    .toEqual(buckets.map(({ label }) => label).sort());
+  expect(new Set(sharded.map(({ label }) => label)).size).toBe(buckets.length);
+  expect(DESKTOP_ELECTRON_SHARDS.every((shard) => (
+    buildDesktopElectronShardBuckets(shard, buckets).length > 0
+  ))).toBe(true);
+});
+
+it('uses fork workers for Electron native modules', () => {
+  const source = fs.readFileSync('scripts/run-desktop-electron-test-bucket.mjs', 'utf8');
+  expect(source).toContain("'--pool=forks'");
+  expect(source).not.toContain("'--pool=threads'");
 });
 
 it('fails with the missing Electron test path', () => {

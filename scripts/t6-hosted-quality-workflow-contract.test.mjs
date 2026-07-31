@@ -8,6 +8,7 @@ const read = (file) => fs.readFileSync(file, 'utf8');
 const sources = {
   common: read('.github/workflows/hosted-quality-common.yml'),
   core: read('.github/workflows/hosted-quality-core.yml'),
+  electron: read('.github/workflows/hosted-quality-electron.yml'),
   full: read('.github/workflows/hosted-quality-full.yml'),
   ios: read('.github/workflows/hosted-quality-ios.yml'),
   portable: read('.github/workflows/hosted-quality-portable.yml'),
@@ -86,7 +87,6 @@ describe('T6 hosted quality workflow contracts', () => {
       'test:release:desktop-src',
       'test:release:android',
       'test:release:shared',
-      'test:desktop:electron',
       'quality:release:tooling'
     ];
     const portableMatrix = workflows.portable.jobs['portable-tests'].strategy.matrix.include;
@@ -101,11 +101,17 @@ describe('T6 hosted quality workflow contracts', () => {
       .map(({ runner }) => runner))).toEqual(new Set(['ubuntu-latest']));
     expect(new Set(portableMatrix.filter(({ host }) => host === 'Windows')
       .map(({ runner }) => runner))).toEqual(new Set(['windows-latest']));
-    expect(portableMatrix.find(({ domain, host }) => host === 'Windows' && domain === 'electron')
-      ?.timeout_minutes).toBe(30);
-    expect(portableMatrix.filter(({ domain, host }) => host !== 'Windows' || domain !== 'electron')
-      .every(({ timeout_minutes }) => timeout_minutes === 20)).toBe(true);
-    expect(`${sources.t6}\n${sources.full}\n${sources.portable}\n${sources.remote}`)
+    expect(portableMatrix.every(({ timeout_minutes }) => timeout_minutes === 20)).toBe(true);
+    const electronMatrix = workflows.electron.jobs['electron-tests'].strategy.matrix.include;
+    const expectedElectronEntries = ['Ubuntu', 'Windows'].flatMap((host) => (
+      ['database', 'import', 'ipc', 'services'].map((shard) => `${host}:${shard}`)
+    ));
+    const actualElectronEntries = electronMatrix.map(({ host, shard }) => `${host}:${shard}`);
+    expect(actualElectronEntries).toEqual(expectedElectronEntries);
+    expect(new Set(actualElectronEntries).size).toBe(actualElectronEntries.length);
+    expect(workflows.electron.jobs['electron-tests'].strategy['fail-fast']).toBe(false);
+    expect(workflows.electron.jobs['electron-tests']['timeout-minutes']).toBe(20);
+    expect(`${sources.t6}\n${sources.full}\n${sources.portable}\n${sources.electron}\n${sources.remote}`)
       .not.toContain('quality:release:windows:core');
     expect(sources.t5.match(/quality:release:windows:core/gu)).toHaveLength(1);
     expect(sources.portable).not.toContain('continue-on-error');
@@ -114,9 +120,11 @@ describe('T6 hosted quality workflow contracts', () => {
     expect(sources.portable).not.toContain('changed-files');
     expect(workflows.full.jobs['portable-quality'].uses)
       .toBe('./.github/workflows/hosted-quality-portable.yml');
+    expect(workflows.portable.jobs['electron-quality'].uses)
+      .toBe('./.github/workflows/hosted-quality-electron.yml');
     const hostSources = {
-      Ubuntu: `${sources.t5}\n${sources.portable}\n${section(sources.full, 'common-build', 'windows-acceptance')}\n${section(sources.full, 'android-host', 'ios-full')}`,
-      Windows: `${sources.t5}\n${sources.portable}\n${section(sources.full, 'windows-acceptance', 'android-host')}`,
+      Ubuntu: `${sources.t5}\n${sources.portable}\n${sources.electron}\n${section(sources.full, 'common-build', 'windows-acceptance')}\n${section(sources.full, 'android-host', 'ios-full')}`,
+      Windows: `${sources.t5}\n${sources.portable}\n${sources.electron}\n${section(sources.full, 'windows-acceptance', 'android-host')}`,
       macOS: sources.ios
     };
     const commands = {
@@ -149,13 +157,19 @@ describe('T6 hosted quality workflow contracts', () => {
     expect(gate.steps[0].run).toContain('PORTABLE_SHA does not match full-quality target');
     expect(workflows.portable.on.workflow_call.outputs.accepted_sha.value)
       .toBe('${{ jobs.portable-admission.outputs.accepted_sha }}');
+    expect(workflows.portable.jobs['portable-admission'].needs)
+      .toEqual(['portable-tests', 'electron-quality']);
+    expect(workflows.portable.jobs['portable-admission'].env.ELECTRON_RESULT)
+      .toBe('${{ needs.electron-quality.result }}');
+    expect(workflows.portable.jobs['portable-admission'].env.ELECTRON_SHA)
+      .toBe('${{ needs.electron-quality.outputs.accepted_sha }}');
   });
 
   it('binds heavy jobs to one SHA and lane/ref-scoped concurrency groups', () => {
     for (const workflow of Object.values(workflows)) {
       expect(workflow.permissions).toMatchObject({ contents: 'read' });
     }
-    for (const name of ['common', 'core', 'full', 'ios', 'portable']) {
+    for (const name of ['common', 'core', 'electron', 'full', 'ios', 'portable']) {
       expect(workflows[name].on.workflow_call.inputs.execution_lane)
         .toEqual({ required: true, type: 'string' });
       expect(workflows[name].on.workflow_call.inputs.trigger_ref)
@@ -170,6 +184,8 @@ describe('T6 hosted quality workflow contracts', () => {
     expect(sources.full.match(/persist-credentials: false/gu)).toHaveLength(3);
     expect(sources.portable.match(/ref: \$\{\{ env\.TARGET_SHA \}\}/gu)).toHaveLength(1);
     expect(sources.portable.match(/persist-credentials: false/gu)).toHaveLength(1);
+    expect(sources.electron.match(/ref: \$\{\{ env\.TARGET_SHA \}\}/gu)).toHaveLength(1);
+    expect(sources.electron.match(/persist-credentials: false/gu)).toHaveLength(1);
     expect(workflows.full.on.workflow_call.outputs.accepted_sha.value)
       .toBe('${{ jobs.full-admission.outputs.accepted_sha }}');
   });
@@ -178,7 +194,7 @@ describe('T6 hosted quality workflow contracts', () => {
     for (const rejected of [
       'windows:package', 'installed-app-smoke', 'actions/attest', 'gh release',
       'CSC_', 'id-token: write', 'setTimeout', 'poll'
-    ]) expect(`${sources.t6}\n${sources.full}\n${sources.portable}`).not.toContain(rejected);
+    ]) expect(`${sources.t6}\n${sources.full}\n${sources.portable}\n${sources.electron}`).not.toContain(rejected);
     expect(fs.existsSync('.github/workflows/t5-nightly-remote-quality.yml')).toBe(false);
     expect(fs.existsSync('scripts/quality/t5-remote-quality-admission.mjs')).toBe(false);
   });
