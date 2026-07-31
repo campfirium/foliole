@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+import fs from 'node:fs';
 import { expect, it } from 'vitest';
 
 import {
@@ -44,4 +45,14 @@ it('requires a complete installed package identity', () => {
   )).toMatchObject({ packageName: 'com.foliole.android', versionCode: '1', versionName: '1.0' });
   expect(() => parseCaptureAnnotationPackage('com.foliole.android', details, ''))
     .toThrow('identity is incomplete');
+});
+
+it('updates controlled WebView fields through the native setter before input events', () => {
+  const source = fs.readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionWebViewSemanticAdapter.java',
+    'utf8'
+  );
+  const setter = "Object.getOwnPropertyDescriptor(Object.getPrototypeOf(node),'value')";
+  expect(source).toContain(setter);
+  expect(source.indexOf(setter)).toBeLessThan(source.indexOf("dispatchEvent(new Event('input'"));
 });

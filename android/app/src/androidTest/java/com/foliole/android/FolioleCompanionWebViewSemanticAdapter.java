@@ -42,7 +42,11 @@ final class FolioleCompanionWebViewSemanticAdapter {
             "return JSON.stringify({ok:false,code:'target_hidden'});" +
             "if(" + JSONObject.quote(action) + "==='click'){node.click();}" +
             "else if(" + JSONObject.quote(action) + "==='input'){if(!('value' in node))" +
-            "return JSON.stringify({ok:false,code:'target_not_editable'});node.focus();node.value=" + quotedValue + ";" +
+            "return JSON.stringify({ok:false,code:'target_not_editable'});" +
+            "var descriptor=Object.getOwnPropertyDescriptor(Object.getPrototypeOf(node),'value');" +
+            "if(!descriptor||typeof descriptor.set!=='function')" +
+            "return JSON.stringify({ok:false,code:'target_not_editable'});node.focus();" +
+            "descriptor.set.call(node," + quotedValue + ");" +
             "node.dispatchEvent(new Event('input',{bubbles:true}));node.dispatchEvent(new Event('change',{bubbles:true}));}" +
             "else{return JSON.stringify({ok:false,code:'action_unsupported'});}" +
             "return JSON.stringify({ok:true,action:" + JSONObject.quote(action) + ",targetTestId:" + quotedId + "," +

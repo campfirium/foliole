@@ -25,6 +25,7 @@ final class FolioleCompanionCaptureAnnotationScenario {
         perform(instrumentation, webView, "companion-capture-open", "click", "");
         waitForTestId(instrumentation, webView, "companion-capture-text", timeoutMs);
         perform(instrumentation, webView, "companion-capture-text", "input", captureText(token));
+        waitForEnabledTestId(instrumentation, webView, "companion-capture-save", timeoutMs);
         perform(instrumentation, webView, "companion-capture-save", "click", "");
         waitForMissingTestId(instrumentation, webView, "companion-capture-save", timeoutMs);
         openCapturedTopic(instrumentation, webView, token, timeoutMs);
@@ -124,6 +125,16 @@ final class FolioleCompanionCaptureAnnotationScenario {
     ) throws Exception {
         waitFor(instrumentation, webView,
             "document.querySelector('[data-testid=\"" + testId + "\"]')!==null", timeoutMs, "test id " + testId);
+    }
+
+    private static void waitForEnabledTestId(
+        Instrumentation instrumentation,
+        WebView webView,
+        String testId,
+        long timeoutMs
+    ) throws Exception {
+        String selector = "document.querySelector('[data-testid=\"" + testId + "\"]')";
+        waitFor(instrumentation, webView, selector + "&&!" + selector + ".disabled", timeoutMs, "enabled test id " + testId);
     }
 
     private static void waitForMissingTestId(
