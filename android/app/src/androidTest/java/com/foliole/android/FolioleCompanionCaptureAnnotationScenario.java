@@ -28,7 +28,8 @@ final class FolioleCompanionCaptureAnnotationScenario {
         waitForEnabledTestId(instrumentation, webView, "companion-capture-save", timeoutMs);
         perform(instrumentation, webView, "companion-capture-save", "click", "");
         waitForMissingTestId(instrumentation, webView, "companion-capture-save", timeoutMs);
-        openCapturedTopic(instrumentation, webView, token, timeoutMs);
+        navigateToCapturedTopic(instrumentation, webView, token, timeoutMs);
+        waitForText(instrumentation, webView, CLOZE_TEXT, timeoutMs);
         createNote(instrumentation, webView, token, timeoutMs);
         createCloze(instrumentation, webView, timeoutMs);
         JSONObject receipt = new JSONObject();
@@ -48,9 +49,9 @@ final class FolioleCompanionCaptureAnnotationScenario {
         String token,
         long timeoutMs
     ) throws Exception {
-        openCapturedTopic(instrumentation, webView, token, timeoutMs);
-        waitForText(instrumentation, webView, CLOZE_TEXT, timeoutMs);
-        waitForText(instrumentation, webView, NOTE_TEXT, timeoutMs);
+        navigateToCapturedTopic(instrumentation, webView, token, timeoutMs);
+        waitForButtonText(instrumentation, webView, token, timeoutMs);
+        waitForButtonText(instrumentation, webView, NOTE_TEXT, timeoutMs);
     }
 
     private static void createNote(
@@ -77,7 +78,7 @@ final class FolioleCompanionCaptureAnnotationScenario {
         waitForMissingTestId(instrumentation, webView, "companion-selection-cloze", timeoutMs);
     }
 
-    private static void openCapturedTopic(
+    private static void navigateToCapturedTopic(
         Instrumentation instrumentation,
         WebView webView,
         String token,
@@ -87,7 +88,6 @@ final class FolioleCompanionCaptureAnnotationScenario {
         perform(instrumentation, webView, "companion-directory-node-special-inbox", "click", "");
         waitForButtonText(instrumentation, webView, token, timeoutMs);
         evaluate(instrumentation, webView, clickButtonTextScript(token));
-        waitForText(instrumentation, webView, CLOZE_TEXT, timeoutMs);
     }
 
     private static void selectText(
