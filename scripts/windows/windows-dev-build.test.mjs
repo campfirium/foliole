@@ -125,50 +125,6 @@ describe('Windows DEV foreground build', () => {
     expect(order).toEqual(['prepare', 'deploy']);
     expect(fs.readFileSync(run.summary.logPath, 'utf8')).toBe('prepared\ndeployed\n');
   });
-
-  it('runs capture annotation against installed packages without preparing or building Android', async () => {
-    const { paths } = fixture();
-    fs.rmSync(paths.signingKeystore);
-    fs.rmSync(paths.signingManifest);
-    fs.rmSync(paths.systemNpmCli);
-    const { calls, execute } = successfulExecutor(paths);
-    const order = [];
-    const prepareHost = vi.fn();
-    const deviceAction = vi.fn(async () => {
-      order.push('device');
-      return {
-        captureAnnotation: { buildIdentity: 'capture-run', manifestPath: 'manifest.json' },
-        output: 'captured\n'
-      };
-    });
-    const run = await runWindowsDevBuild({
-      action: 'capture-annotation', deviceAction, execute, paths, platform: 'win32', prepareHost
-    });
-    expect(run.exitCode).toBe(0);
-    expect(order).toEqual(['device']);
-    expect(prepareHost).not.toHaveBeenCalled();
-    expect(calls.some(({ command }) => command === 'cmd.exe')).toBe(false);
-    expect(calls.flatMap(({ args }) => args).join(' ')).not.toMatch(/gradle|install|android:web:build/iu);
-    expect(run.summary.captureAnnotation).toMatchObject({ manifestPath: 'manifest.json' });
-    expect(run.summary).not.toHaveProperty('signingSha256');
-  });
-
-  it('preserves installed package identity when capture annotation is blocked', async () => {
-    const { paths } = fixture();
-    const { execute } = successfulExecutor(paths);
-    const installedPackages = { main: { packageName: 'com.foliole.android', versionCode: '42' } };
-    const deviceAction = vi.fn(async () => {
-      throw Object.assign(new Error('test package missing'), {
-        exitCode: 74, installedPackages, stage: 'installed-package'
-      });
-    });
-    const run = await runWindowsDevBuild({
-      action: 'capture-annotation', deviceAction, execute, paths, platform: 'win32'
-    });
-    expect(run).toMatchObject({
-      exitCode: 74, summary: { failureStage: 'installed-package', installedPackages }
-    });
-  });
 });
 
 it('holds a FileShare.None lock and invokes only absolute system Node', () => {
@@ -181,7 +137,7 @@ it('holds a FileShare.None lock and invokes only absolute system Node', () => {
   expect(source).toContain('windows-dev-build.mjs');
   expect(source).not.toContain('Write-Error');
   expect(source).not.toContain('windows-android-lab\\runtime');
-  expect(actionSource).toContain('[ValidatePattern("^[a-z]+(?:-[a-z]+)*$")]');
+  expect(actionSource).toContain('[ValidatePattern("^[a-z]+$")]');
   expect(actionSource).not.toContain('ValidateSet');
   expect(actionSource).toContain('[System.IO.FileShare]::None');
   expect(actionSource.indexOf('& $systemNode $puller')).toBeLessThan(actionSource.indexOf('& $systemNode $runner $Action'));

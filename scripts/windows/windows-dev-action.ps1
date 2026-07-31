@@ -1,6 +1,6 @@
 param(
   [Parameter(Mandatory = $true)]
-  [ValidatePattern("^[a-z]+(?:-[a-z]+)*$")]
+  [ValidatePattern("^[a-z]+$")]
   [string]$Action
 )
 

@@ -3,7 +3,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { runWindowsA5CaptureAnnotation } from './windows-a5-capture-annotation-action.mjs';
 import { runWindowsA5LiveReload } from './windows-a5-live-reload-action.mjs';
 
 export const WINDOWS_DEV_ADB_PORT = '5037';
@@ -47,11 +46,11 @@ function helperEnv(env) {
     FOLIOLE_ANDROID_ADB_SERVER_PORT: WINDOWS_DEV_ADB_PORT };
 }
 
-async function runDataProtection(execute, paths, mode, manifest, env, backupRoot = paths.protectionBackups) {
+async function runDataProtection(execute, paths, mode, manifest, env) {
   const script = path.join(paths.repoRoot, 'scripts', 'android', 'android-device-data-protection.mjs');
   return checked(execute, paths.systemNode, [script, '--mode', mode, '--adb', paths.adbPath,
     '--serial', WINDOWS_DEV_A5_SERIAL, '--app-id', APP_ID,
-    '--backup-root', backupRoot, '--manifest', manifest],
+    '--backup-root', paths.protectionBackups, '--manifest', manifest],
   { env: helperEnv(env), timeoutCode: `data_${mode}_timeout`, timeoutMs: 5 * 60_000,
     windowsHide: true }, `data-${mode}`);
 }
@@ -84,8 +83,7 @@ async function verify(execute, paths, env) {
 }
 
 export async function runWindowsDevDeviceAction({
-  action, buildIdentity, evidenceRoot, execute, paths,
-  runCaptureAnnotation = runWindowsA5CaptureAnnotation, runLiveReload = runWindowsA5LiveReload
+  action, buildIdentity, evidenceRoot, execute, paths, runLiveReload = runWindowsA5LiveReload
 }) {
   const env = actionEnv(paths);
   let started = false;
@@ -106,14 +104,7 @@ export async function runWindowsDevDeviceAction({
       ['-P', WINDOWS_DEV_ADB_PORT, '-s', WINDOWS_DEV_A5_SERIAL, 'get-state'],
       { env, timeoutCode: 'device_timeout', timeoutMs: 30_000, windowsHide: true }, 'device', 69);
     if (state.stdout.trim() !== 'device') throw failure('Fixed Android device is not ready', 69, 'device');
-    if (action === 'capture-annotation') {
-      actionResult = await runCaptureAnnotation({
-        adbPort: WINDOWS_DEV_ADB_PORT, buildIdentity, env, evidenceRoot, execute, paths,
-        protectData: (mode, manifest, backupRoot) => runDataProtection(
-          execute, paths, mode, manifest, env, backupRoot
-        ), serial: WINDOWS_DEV_A5_SERIAL
-      });
-    } else if (action === 'verify') {
+    if (action === 'verify') {
       actionResult = { output: await verify(execute, paths, env) };
     } else {
       const deployOutput = action === 'deploy'

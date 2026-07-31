@@ -8,13 +8,9 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 export const WINDOWS_DEV_SOURCE_REF = 'refs/heads/dev';
-export const WINDOWS_DEV_ACTIONS = ['appearance', 'build', 'capture-annotation', 'deploy', 'live', 'secondary', 'verify'];
+export const WINDOWS_DEV_ACTIONS = ['appearance', 'build', 'deploy', 'live', 'secondary', 'verify'];
 const WINDOWS_DEV_REMOTE_ACTION = 'C:/dev/foliole-android-lab-preview/scripts/windows/windows-dev-action.ps1';
 const WINDOWS_DEV_EVIDENCE_PREFIX = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/';
-const CAPTURE_ANNOTATION_FILES = [
-  'capture-annotation-manifest.json', 'capture-annotation-receipt.json',
-  'capture-annotation-semantic-snapshot.json', 'capture-annotation-db-summary.json'
-];
 
 function execute(command, args, options = {}) {
   return new Promise((resolve, reject) => {
@@ -41,7 +37,7 @@ export function parseWindowsDevControlArgs(argv, env = process.env) {
     throw new Error('--host user@host or FOLIOLE_WINDOWS_DEV_SSH is required');
   }
   if (args.length !== 1 || !WINDOWS_DEV_ACTIONS.includes(args[0])) {
-    throw new Error('Windows DEV control only accepts appearance, build, capture-annotation, deploy, live, secondary, or verify');
+    throw new Error('Windows DEV control only accepts appearance, build, deploy, live, secondary, or verify');
   }
   return { action: args[0], host };
 }
@@ -78,16 +74,6 @@ export function parseWindowsDevLiveEvidence(output) {
   return { buildIdentity: match[1], remotePath: normalized };
 }
 
-export function parseWindowsDevCaptureAnnotationEvidence(output) {
-  const match = /^\[windows-dev-action\] capture-annotation identity=([A-Za-z0-9.-]{1,96}) manifest=([^\r\n]+)$/mu.exec(output);
-  if (!match) throw new Error('Windows DEV capture-annotation action did not report fixed evidence');
-  const remoteRoot = `${WINDOWS_DEV_EVIDENCE_PREFIX}${match[1]}`;
-  if (match[2].replaceAll('\\', '/') !== `${remoteRoot}/capture-annotation-manifest.json`) {
-    throw new Error('Windows DEV capture-annotation manifest escaped its fixed evidence root');
-  }
-  return { buildIdentity: match[1], remoteRoot };
-}
-
 export function windowsDevScpSpec(host, remotePath, localPath, env = process.env, home = os.homedir()) {
   const key = env.FOLIOLE_WINDOWS_DEV_SSH_KEY
     || path.join(home, '.ssh', 'agent', 'foliole-windows-android-lab');
@@ -116,23 +102,6 @@ export async function runWindowsDevControl({
   }
   if (remoteOutput) stdout.write(remoteOutput);
   const result = { action, operation: 'complete', ref: WINDOWS_DEV_SOURCE_REF };
-  if (action === 'capture-annotation') {
-    let evidence;
-    try { evidence = parseWindowsDevCaptureAnnotationEvidence(remoteOutput); }
-    catch (error) {
-      if (remoteError) throw remoteError;
-      throw error;
-    }
-    const localRoot = path.join(repoRoot, '.tmp', 'artifacts', 'a5-capture-annotation', evidence.buildIdentity);
-    fsApi.mkdirSync(localRoot, { recursive: true });
-    for (const name of CAPTURE_ANNOTATION_FILES) {
-      await executeScp(windowsDevScpSpec(
-        host, `${evidence.remoteRoot}/${name}`, path.join(localRoot, name), env
-      ), { env });
-    }
-    result.evidenceRoot = localRoot;
-    result.manifestPath = path.join(localRoot, CAPTURE_ANNOTATION_FILES[0]);
-  }
   if (['appearance', 'deploy', 'live', 'secondary'].includes(action)) {
     let evidence;
     try { evidence = parseWindowsDevLiveEvidence(remoteOutput); }
