@@ -30,6 +30,7 @@ async function renderAutoSyncHook(
     return vi.fn();
   });
   vi.doMock('../shared/platform/appLifecycle', () => ({
+    subscribeNativeAppBackground: vi.fn(async () => vi.fn()),
     subscribeNativeAppForeground
   }));
   const { useForegroundAutoSync } = await import('./useCompanionWorkspaceAutoSync');

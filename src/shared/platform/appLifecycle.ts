@@ -37,3 +37,26 @@ export async function subscribeNativeAppForeground(handler: () => void): Promise
     }
   };
 }
+
+export async function subscribeNativeAppBackground(handler: () => void): Promise<Unsubscribe> {
+  if (!isNativeCompanionRuntime()) {
+    return () => undefined;
+  }
+
+  const unsubscribes = await Promise.all([
+    toUnsubscribe(
+      App.addListener('appStateChange', ({ isActive }) => {
+        if (!isActive) {
+          handler();
+        }
+      })
+    ),
+    toUnsubscribe(App.addListener('pause', handler))
+  ]);
+
+  return () => {
+    for (const unsubscribe of unsubscribes) {
+      unsubscribe();
+    }
+  };
+}
