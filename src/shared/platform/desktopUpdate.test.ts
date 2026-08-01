@@ -73,3 +73,37 @@ it('waits for hydrate before sending a real target check', async () => {
   expect(invoke.mock.calls).toHaveLength(2);
   expect(invoke.mock.calls[1]).toEqual(['desktop_update_check', { targetVersion: '0.7.0' }]);
 });
+
+it('does not let a late command response overwrite a newer main-process event', async () => {
+  let stateHandler: ((state: NativeDesktopUpdateState) => void) | undefined;
+  let resolveCheck = (state: NativeDesktopUpdateState) => state;
+  const invoke = vi.fn((_command: string, args?: { targetVersion?: string }) => {
+    if (!args?.targetVersion) return Promise.resolve({ phase: 'idle' });
+    return new Promise<NativeDesktopUpdateState>((resolve) => {
+      resolveCheck = (nextState) => {
+        resolve(nextState);
+        return nextState;
+      };
+    });
+  });
+  window.electronAPI = {
+    invoke: invoke as unknown as NativeInvoke,
+    onDesktopUpdateState: (handler) => {
+      stateHandler = handler;
+      return () => undefined;
+    },
+    onManagedInboxUpdated: () => () => undefined,
+    onNativeMenuCommand: () => () => undefined,
+    onWindowResized: () => () => undefined
+  };
+  const runtime = await import('./desktopUpdate');
+  await Promise.resolve();
+
+  const check = runtime.checkDesktopUpdate('0.7.0');
+  await vi.waitFor(() => expect(invoke).toHaveBeenCalledTimes(2));
+  stateHandler?.({ phase: 'downloading', version: '0.7.0' });
+  resolveCheck({ phase: 'available', version: '0.7.0' });
+  await check;
+
+  expect(runtime.readDesktopUpdateState()).toEqual({ phase: 'downloading', version: '0.7.0' });
+});

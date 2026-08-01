@@ -6,6 +6,7 @@ import { APP_SETTINGS_STORAGE_KEYS } from '../../../../shared/config/appSettings
 import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
 
 import { SettingsAboutSection } from './SettingsAboutSection';
+import { resolveViewStatus } from './SettingsVersionBlock';
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -35,4 +36,38 @@ it('keeps the current update check description neutral after a successful check'
   expect(screen.getByText('Up to date')).toBeInTheDocument();
   expect(screen.getByText('Current Foliole desktop version.')).toBeInTheDocument();
   expect(screen.queryByText('Foliole is up to date.')).not.toBeInTheDocument();
+});
+
+it('keeps an announced release available after a transient manifest failure', () => {
+  const state = {
+    cachedManifest: null,
+    cachedReleaseNotes: null,
+    dismissedVersion: null,
+    lastCheckedAt: '2026-08-01T00:00:00.000Z',
+    lastCheckStatus: 'failed',
+    lastSeenVersion: '0.7.2',
+    latestReleaseUrl: 'https://github.com/campfirium/foliole/releases/tag/v0.7.2',
+    latestVersion: '0.7.2'
+  } as const;
+
+  expect(resolveViewStatus(state, 'available', false)).toBe('available');
+});
+
+it('does not claim an automatic update is available on an inapplicable distribution', () => {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.updateCheckState, JSON.stringify({
+    cachedManifest: null,
+    cachedReleaseNotes: null,
+    dismissedVersion: null,
+    lastCheckedAt: '2026-08-01T00:00:00.000Z',
+    lastCheckStatus: 'available',
+    lastSeenVersion: '0.7.2',
+    latestReleaseUrl: 'https://github.com/campfirium/foliole/releases/tag/v0.7.2',
+    latestVersion: '0.7.2'
+  }));
+
+  renderWithLocalization(<SettingsAboutSection />);
+
+  expect(screen.getByText('Not checked')).toBeInTheDocument();
+  expect(screen.queryByText('Update available')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'View update details' })).toBeInTheDocument();
 });

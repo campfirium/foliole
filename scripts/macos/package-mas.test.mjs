@@ -100,6 +100,7 @@ it('creates an arm64 MAS config with the official bundle id and signed bundled C
 
   expect(config.appId).toBe('com.campfirium.foliole');
   expect(config.electronDist).toBe('.tmp/electron-mas-arm64');
+  expect(config.extraMetadata.folioleBuildChannel).toBe('mas');
   expect(config.directories.output).toBe('/private/tmp/foliole-mas-development-output');
   expect(config.mac.forceCodeSigning).toBe(true);
   expect(config.mac.target).toEqual(['mas-dev']);

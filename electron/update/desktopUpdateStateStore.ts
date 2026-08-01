@@ -16,6 +16,14 @@ export interface DesktopUpdateStateStore {
   write: (record: DesktopUpdateRecord) => Promise<void>;
 }
 
+export function createDesktopUpdateRecord(
+  checkpoint: DesktopUpdateCheckpoint,
+  installedVersion: string,
+  targetVersion: string
+): DesktopUpdateRecord {
+  return { checkpoint, installedVersion, schemaVersion: 1, targetVersion };
+}
+
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
 }

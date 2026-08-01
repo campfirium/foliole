@@ -1,79 +1,8 @@
-import { expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 
-import { DesktopUpdateService, type DesktopUpdaterAdapter } from './desktopUpdateService.js';
+import { createDesktopUpdateServiceHarness as createHarness } from './desktopUpdateService.testSupport.js';
 
-type StoredRecord = {
-  checkpoint: 'discovered' | 'downloaded';
-  installedVersion: string;
-  schemaVersion: 1;
-  targetVersion: string;
-};
-
-function createStateStore(storedRecord: StoredRecord | null = null) {
-  return {
-    clear: vi.fn(async () => undefined),
-    read: vi.fn(async () => storedRecord),
-    write: vi.fn(async () => undefined)
-  };
-}
-
-function createHarness(options: {
-  applicable?: boolean;
-  currentVersion?: string;
-  isUpdateAvailable?: boolean;
-  providerVersion?: string | null;
-  storedRecord?: StoredRecord | null;
-} = {}) {
-  const listeners = new Map<string, (payload?: Record<string, unknown>) => void>();
-  let resolveDownload: () => void = () => undefined;
-  let rejectDownload: () => void = () => undefined;
-  const downloadUpdate = vi.fn(() => new Promise<string[]>((resolve, reject) => {
-    resolveDownload = () => resolve(['installer']);
-    rejectDownload = () => reject(new Error('download failed'));
-  }));
-  const updater = {
-    allowDowngrade: true,
-    autoDownload: true,
-    autoInstallOnAppQuit: true,
-    checkForUpdates: vi.fn(async () => options.providerVersion === null
-      ? null
-      : {
-          isUpdateAvailable: options.isUpdateAvailable !== false,
-          updateInfo: { version: options.providerVersion ?? '0.7.0' }
-        }),
-    downloadUpdate,
-    on: vi.fn((event: string, listener: (payload?: Record<string, unknown>) => void) => {
-      listeners.set(event, listener);
-    }),
-    quitAndInstall: vi.fn()
-  } satisfies DesktopUpdaterAdapter;
-  const sender = {
-    isDestroyed: vi.fn(() => false),
-    send: vi.fn()
-  };
-  const prepareInstall = vi.fn(async () => true);
-  const loadUpdater = vi.fn(async () => updater);
-  const stateStore = createStateStore(options.storedRecord);
-  const service = new DesktopUpdateService({
-    eventChannel: 'foliole:desktop-update-state',
-    getCurrentVersion: () => options.currentVersion ?? '0.6.0',
-    isApplicable: () => options.applicable !== false,
-    loadUpdater,
-    prepareInstall,
-    stateStore
-  });
-  return {
-    listeners,
-    loadUpdater,
-    prepareInstall,
-    rejectDownload: () => rejectDownload(),
-    resolveDownload: () => resolveDownload(),
-    sender,
-    service,
-    stateStore,
-    updater
-  };
-}
+afterEach(() => vi.useRealTimers());
 
 it('does not load or contact the updater outside applicable packaged desktop builds', async () => {
   const harness = createHarness({ applicable: false });
@@ -84,8 +13,9 @@ it('does not load or contact the updater outside applicable packaged desktop bui
   expect(harness.updater.checkForUpdates).not.toHaveBeenCalled();
 });
 
-it('treats a provider version mismatch as pending assets even when no provider update is available', async () => {
-  const harness = createHarness({ isUpdateAvailable: false, providerVersion: '0.6.0' });
+it('keeps a provider version mismatch pending while bounded asset recovery remains', async () => {
+  vi.useFakeTimers();
+  const harness = createHarness({ isUpdateAvailable: false, providerVersion: '0.6.0', retryDelaysMs: [10] });
 
   await expect(harness.service.check('0.7.0', harness.sender as never)).resolves.toEqual({
     phase: 'pending-asset',
@@ -97,15 +27,19 @@ it('treats a provider version mismatch as pending assets even when no provider u
   expect(harness.updater.allowDowngrade).toBe(false);
 });
 
-it('hydrates a durable candidate without contacting the provider or restoring ready', async () => {
+it('revalidates a durable downloaded candidate through the updater cache before restoring ready', async () => {
   const harness = createHarness({
     storedRecord: { checkpoint: 'downloaded', installedVersion: '0.6.0', schemaVersion: 1, targetVersion: '0.7.0' }
   });
 
-  await expect(harness.service.check('', harness.sender as never)).resolves.toEqual({ phase: 'idle' });
+  await expect(harness.service.check('', harness.sender as never)).resolves.toMatchObject({
+    phase: 'checking', version: '0.7.0'
+  });
+  await vi.waitFor(() => expect(harness.updater.downloadUpdate).toHaveBeenCalledTimes(1));
+  harness.resolveDownload();
+  await vi.waitFor(() => expect(harness.service.getState()).toMatchObject({ phase: 'ready', version: '0.7.0' }));
 
-  expect(harness.updater.checkForUpdates).not.toHaveBeenCalled();
-  expect(harness.updater.downloadUpdate).not.toHaveBeenCalled();
+  expect(harness.updater.checkForUpdates).toHaveBeenCalledTimes(1);
 });
 
 it('clears a durable candidate written by a different installed version', async () => {
@@ -116,7 +50,7 @@ it('clears a durable candidate written by a different installed version', async 
   await harness.service.check('', harness.sender as never);
 
   expect(harness.stateStore.clear).toHaveBeenCalledTimes(1);
-  expect(harness.loadUpdater).not.toHaveBeenCalled();
+  expect(harness.service.getState()).toEqual({ phase: 'idle' });
 });
 
 it('clears a candidate when the fresh manifest reports the installed version', async () => {
@@ -127,16 +61,17 @@ it('clears a candidate when the fresh manifest reports the installed version', a
   await expect(harness.service.check('0.6.0', harness.sender as never)).resolves.toEqual({ phase: 'idle' });
 
   expect(harness.stateStore.clear).toHaveBeenCalledTimes(1);
-  expect(harness.loadUpdater).not.toHaveBeenCalled();
 });
 
-it('clears the candidate when the provider reports no applicable update', async () => {
+it('exits preparation without a user-visible failure when provider recovery is exhausted', async () => {
   const harness = createHarness({ isUpdateAvailable: false });
 
-  await expect(harness.service.check('0.7.0', harness.sender as never)).resolves.toEqual({ phase: 'idle' });
+  await expect(harness.service.check('0.7.0', harness.sender as never)).resolves.toEqual({
+    phase: 'available', version: '0.7.0'
+  });
 
-  expect(harness.stateStore.clear).toHaveBeenCalledTimes(1);
   expect(harness.updater.downloadUpdate).not.toHaveBeenCalled();
+  expect(harness.reportDiagnostic).toHaveBeenCalledWith('desktop_update_check_retry_exhausted');
 });
 
 it('downloads automatically after the provider confirms the gated release', async () => {
@@ -152,17 +87,55 @@ it('downloads automatically after the provider confirms the gated release', asyn
   await vi.waitFor(() => expect(harness.service.getState()).toMatchObject({ phase: 'ready', version: '0.7.0' }));
 });
 
-it('publishes an error when the automatic download fails', async () => {
+it('keeps one target and one download when a newer manifest arrives mid-download', async () => {
+  const harness = createHarness();
+  await harness.service.check('0.7.0', harness.sender as never);
+
+  await expect(harness.service.check('0.8.0', harness.sender as never)).resolves.toMatchObject({
+    phase: 'downloading', version: '0.7.0'
+  });
+
+  expect(harness.updater.checkForUpdates).toHaveBeenCalledTimes(1);
+  expect(harness.updater.downloadUpdate).toHaveBeenCalledTimes(1);
+});
+
+it('keeps the release available without exposing a transient download failure after retries exhaust', async () => {
   const harness = createHarness();
   await harness.service.check('0.7.0', harness.sender as never);
 
   harness.rejectDownload();
 
   await vi.waitFor(() => expect(harness.service.getState()).toEqual({
-    errorCode: 'download-failed',
-    phase: 'error',
+    phase: 'available',
     version: '0.7.0'
   }));
+  expect(harness.reportDiagnostic).toHaveBeenCalledWith('desktop_update_download_retry_exhausted');
+});
+
+it('retries one transient download without creating a parallel download task', async () => {
+  vi.useFakeTimers();
+  const harness = createHarness({ retryDelaysMs: [10] });
+  await harness.service.check('0.7.0', harness.sender as never);
+
+  harness.rejectDownload();
+  await vi.advanceTimersByTimeAsync(10);
+
+  expect(harness.updater.downloadUpdate).toHaveBeenCalledTimes(2);
+  harness.resolveDownload();
+  await vi.waitFor(() => expect(harness.service.getState()).toMatchObject({ phase: 'ready' }));
+});
+
+it('stops immediately on a structural integrity failure and records only its stable category', async () => {
+  const harness = createHarness({ retryDelaysMs: [10] });
+  await harness.service.check('0.7.0', harness.sender as never);
+
+  harness.rejectDownload(new Error('/Users/private/update.zip sha512 checksum mismatch token=secret'));
+
+  await vi.waitFor(() => expect(harness.service.getState()).toEqual({
+    phase: 'available', version: '0.7.0'
+  }));
+  expect(harness.reportDiagnostic).toHaveBeenCalledWith('desktop_update_download_structural');
+  expect(harness.reportDiagnostic).not.toHaveBeenCalledWith(expect.stringContaining('private'));
 });
 
 it('does not download when the durable discovery record cannot be written', async () => {
@@ -170,8 +143,7 @@ it('does not download when the durable discovery record cannot be written', asyn
   harness.stateStore.write.mockRejectedValueOnce(new Error('disk full'));
 
   await expect(harness.service.check('0.7.0', harness.sender as never)).resolves.toEqual({
-    errorCode: 'check-failed',
-    phase: 'error',
+    phase: 'available',
     version: '0.7.0'
   });
 
@@ -186,8 +158,7 @@ it('does not publish ready when the downloaded checkpoint cannot be written', as
   harness.resolveDownload();
 
   await vi.waitFor(() => expect(harness.service.getState()).toEqual({
-    errorCode: 'download-failed',
-    phase: 'error',
+    phase: 'available',
     version: '0.7.0'
   }));
 });
@@ -221,8 +192,8 @@ it('blocks installation when application data cannot be flushed', async () => {
   await vi.waitFor(() => expect(harness.service.getState()).toMatchObject({ phase: 'ready' }));
 
   await expect(harness.service.install()).resolves.toEqual({
-    errorCode: 'install-preparation-failed',
-    phase: 'error',
+    percent: 100,
+    phase: 'ready',
     version: '0.7.0'
   });
   expect(harness.updater.quitAndInstall).not.toHaveBeenCalled();

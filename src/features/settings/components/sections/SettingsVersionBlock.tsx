@@ -24,16 +24,17 @@ import { SettingsUpdateReleaseNotes } from './SettingsUpdateReleaseNotes';
 type ViewStatus = 'available' | 'checking' | 'current' | 'downloading' | 'failed' | 'idle' | 'pending-asset' | 'ready';
 type Translate = ReturnType<typeof useTranslation>;
 
-function resolveViewStatus(state: UpdateCheckState, desktopPhase: string, isChecking: boolean): ViewStatus {
+export function resolveViewStatus(state: UpdateCheckState, desktopPhase: string, isChecking: boolean): ViewStatus {
   if (isChecking || desktopPhase === 'checking') return 'checking';
-  if (state.lastCheckStatus === 'failed' || desktopPhase === 'error') return 'failed';
-  if (state.lastCheckStatus === 'available') {
+  if (state.lastCheckStatus === 'current') return 'current';
+  if (desktopPhase === 'not-applicable') return 'idle';
+  if (state.lastCheckStatus === 'available' || state.latestVersion) {
     if (desktopPhase === 'pending-asset') return 'pending-asset';
     if (desktopPhase === 'downloading') return 'downloading';
     if (desktopPhase === 'ready') return 'ready';
     return 'available';
   }
-  if (state.lastCheckStatus === 'current') return 'current';
+  if (desktopPhase === 'error') return 'idle';
   return 'idle';
 }
 

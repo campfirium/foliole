@@ -98,9 +98,6 @@ function showUpdateCheckNotice(result: UpdateCheckResult, manual: boolean) {
     showAppRuntimeNotice('Foliole is up to date.', 'success');
     return;
   }
-  if (result.status === 'failed') {
-    showAppRuntimeNotice('Could not check for updates.');
-  }
 }
 
 export async function checkForFolioleUpdates(options: { force?: boolean; notify?: boolean } = {}): Promise<UpdateCheckResult> {

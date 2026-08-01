@@ -45,6 +45,7 @@ describe('GitHub macOS packaging', () => {
     });
 
     expect(config.electronDist).toBe('.tmp/electron-mas-arm64');
+    expect(config.extraMetadata.folioleBuildChannel).toBe('github');
     expect(config.directories.output).toBe('/private/tmp/foliole-github-output');
     expect(config.mac).toMatchObject({
       artifactName: '${productName}-macOS-${arch}-${version}.${ext}',

@@ -8,6 +8,7 @@ import { IPC_DESKTOP_UPDATE_STATE_EVENT_CHANNEL } from '../ipc/contracts.js';
 import { flushWindowReadingProgress } from '../readingProgressWindowFlush.js';
 
 import { isDesktopUpdateApplicable } from './desktopUpdateAvailability.js';
+import { readDesktopDistributionChannel } from './desktopUpdateDistribution.js';
 import { DesktopUpdateService, type DesktopUpdaterAdapter } from './desktopUpdateService.js';
 import {
   createDesktopUpdateStateStore,
@@ -33,7 +34,7 @@ function createRuntimeStateStore(): DesktopUpdateStateStore {
 
 function isCurrentBuildApplicable() {
   return isDesktopUpdateApplicable({
-    isMas: process.mas === true,
+    buildChannel: readDesktopDistributionChannel(app.getAppPath()),
     isPackaged: app.isPackaged,
     isWindowsStore: process.windowsStore === true,
     platform: process.platform
@@ -65,3 +66,5 @@ export const desktopUpdateService = new DesktopUpdateService({
   reportDiagnostic: (label) => appendMainProcessDiagnosticLog(label, {}),
   stateStore: createRuntimeStateStore()
 });
+
+void app.whenReady().then(() => desktopUpdateService.start());

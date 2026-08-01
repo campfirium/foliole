@@ -40,6 +40,7 @@ describe('electron-builder release packaging config', () => {
     const config = await readBuilderConfig();
 
     expect(config.asar).toBe(true);
+    expect(config.extraMetadata.folioleBuildChannel).toBe('github');
     expect(config.asarUnpack).toContain('**/node_modules/better-sqlite3/build/Release/*.node');
   });
 

@@ -6,6 +6,9 @@
     "output": "artifacts/windows"
   },
   "electronDist": "node_modules/electron/dist",
+  "extraMetadata": {
+    "folioleBuildChannel": "github"
+  },
   "asar": true,
   "asarUnpack": [
     "**/node_modules/better-sqlite3/build/Release/*.node",

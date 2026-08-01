@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -15,6 +17,7 @@ describe('macOS distribution contract', () => {
     expect(() => assertGithubDistributionContract({
       appId: 'com.campfirium.foliole',
       electronDist: 'node_modules/electron/dist',
+      extraMetadata: { folioleBuildChannel: 'github' },
       mac: {}
     })).toThrow('GitHub packages must use the cached MAS Electron runtime');
   });

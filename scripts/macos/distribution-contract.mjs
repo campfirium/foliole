@@ -24,6 +24,7 @@ function assertCommon(config, channelConfig) {
 }
 
 export function assertGithubDistributionContract(config) {
+  requireContract(config.extraMetadata?.folioleBuildChannel === 'github', 'GitHub build channel changed');
   requireContract(
     typeof config.electronDist === 'string' && path.basename(config.electronDist).startsWith('electron-mas-'),
     'GitHub packages must use the cached MAS Electron runtime'
@@ -41,6 +42,7 @@ export function assertGithubDistributionContract(config) {
 
 export function assertMasDistributionContract(config, mode) {
   const channel = mode === 'development' ? config.masDev : config.mas;
+  requireContract(config.extraMetadata?.folioleBuildChannel === 'mas', 'MAS build channel changed');
   assertCommon(config, channel ?? {});
   requireContract(
     typeof config.electronDist === 'string' && path.basename(config.electronDist).startsWith('electron-mas-'),

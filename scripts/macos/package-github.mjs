@@ -30,6 +30,7 @@ export function createGithubBuilderConfig(base, options) {
     appId: 'com.campfirium.foliole',
     directories: { ...base.directories, output: outputDirectory },
     electronDist: options.electronDist,
+    extraMetadata: { ...(base.extraMetadata ?? {}), folioleBuildChannel: 'github' },
     extraFiles: [
       ...(base.extraFiles ?? []).filter((entry) => entry.from !== 'build/cli'),
       { from: options.codexPath, to: 'MacOS/codex' },

@@ -1,5 +1,5 @@
 interface DesktopUpdateAvailabilityInput {
-  isMas: boolean;
+  buildChannel: 'github' | 'internal' | 'mas' | null;
   isPackaged: boolean;
   isWindowsStore: boolean;
   platform: NodeJS.Platform;
@@ -7,7 +7,7 @@ interface DesktopUpdateAvailabilityInput {
 
 export function isDesktopUpdateApplicable(input: DesktopUpdateAvailabilityInput) {
   return input.isPackaged &&
+    input.buildChannel === 'github' &&
     (input.platform === 'darwin' || input.platform === 'win32') &&
-    !input.isMas &&
     !input.isWindowsStore;
 }
