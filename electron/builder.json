@@ -102,7 +102,7 @@
     "icon": "build/icon.ico",
     "target": ["nsis"],
     "requestedExecutionLevel": "asInvoker",
-    "artifactName": "${productName}-Setup-${version}-win-${arch}.${ext}"
+    "artifactName": "${productName}-Windows-${arch}-${version}.${ext}"
   },
   "nsis": {
     "oneClick": false,

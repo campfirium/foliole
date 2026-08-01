@@ -13,48 +13,84 @@ vi.mock('@capacitor/app', () => ({
 
 vi.mock('./companionBootstrap', () => companionBootstrapState);
 
+async function expectForegroundLifecycleSubscription() {
+  const removeAppState = vi.fn(async () => undefined);
+  const removeResume = vi.fn(async () => undefined);
+  const appStateHandler = vi.fn();
+  const resumeHandler = vi.fn();
+
+  addListener
+    .mockImplementationOnce(async (_eventName: string, listener: (payload: { isActive: boolean }) => void) => {
+      appStateHandler.mockImplementation(listener);
+      return { remove: removeAppState };
+    })
+    .mockImplementationOnce(async (_eventName: string, listener: () => void) => {
+      resumeHandler.mockImplementation(listener);
+      return { remove: removeResume };
+    });
+
+  companionBootstrapState.isNativeCompanionRuntime.mockReturnValue(true);
+
+  const { subscribeNativeAppForeground } = await import('./appLifecycle');
+  const onForeground = vi.fn();
+  const unsubscribe = await subscribeNativeAppForeground(onForeground);
+
+  expect(addListener).toHaveBeenNthCalledWith(1, 'appStateChange', expect.any(Function));
+  expect(addListener).toHaveBeenNthCalledWith(2, 'resume', expect.any(Function));
+
+  appStateHandler({ isActive: false });
+  expect(onForeground).not.toHaveBeenCalled();
+
+  appStateHandler({ isActive: true });
+  resumeHandler();
+  expect(onForeground).toHaveBeenCalledTimes(2);
+
+  unsubscribe();
+  expect(removeAppState).toHaveBeenCalledTimes(1);
+  expect(removeResume).toHaveBeenCalledTimes(1);
+}
+
+async function expectBackgroundLifecycleSubscription() {
+  const removeAppState = vi.fn(async () => undefined);
+  const removePause = vi.fn(async () => undefined);
+  const appStateHandler = vi.fn();
+  const pauseHandler = vi.fn();
+
+  addListener
+    .mockImplementationOnce(async (_eventName: string, listener: (payload: { isActive: boolean }) => void) => {
+      appStateHandler.mockImplementation(listener);
+      return { remove: removeAppState };
+    })
+    .mockImplementationOnce(async (_eventName: string, listener: () => void) => {
+      pauseHandler.mockImplementation(listener);
+      return { remove: removePause };
+    });
+  companionBootstrapState.isNativeCompanionRuntime.mockReturnValue(true);
+
+  const { subscribeNativeAppBackground } = await import('./appLifecycle');
+  const onBackground = vi.fn();
+  const unsubscribe = await subscribeNativeAppBackground(onBackground);
+
+  appStateHandler({ isActive: true });
+  expect(onBackground).not.toHaveBeenCalled();
+  appStateHandler({ isActive: false });
+  pauseHandler();
+  expect(onBackground).toHaveBeenCalledTimes(2);
+
+  unsubscribe();
+  expect(removeAppState).toHaveBeenCalledTimes(1);
+  expect(removePause).toHaveBeenCalledTimes(1);
+}
+
 describe('appLifecycle', () => {
   beforeEach(() => {
     addListener.mockReset();
     companionBootstrapState.isNativeCompanionRuntime.mockReturnValue(false);
   });
 
-  it('subscribes foreground listeners on native companion runtimes', async () => {
-    const removeAppState = vi.fn(async () => undefined);
-    const removeResume = vi.fn(async () => undefined);
-    const appStateHandler = vi.fn();
-    const resumeHandler = vi.fn();
+  it('subscribes foreground listeners on native companion runtimes', expectForegroundLifecycleSubscription);
 
-    addListener
-      .mockImplementationOnce(async (_eventName: string, listener: (payload: { isActive: boolean }) => void) => {
-        appStateHandler.mockImplementation(listener);
-        return { remove: removeAppState };
-      })
-      .mockImplementationOnce(async (_eventName: string, listener: () => void) => {
-        resumeHandler.mockImplementation(listener);
-        return { remove: removeResume };
-      });
-
-    companionBootstrapState.isNativeCompanionRuntime.mockReturnValue(true);
-
-    const { subscribeNativeAppForeground } = await import('./appLifecycle');
-    const onForeground = vi.fn();
-    const unsubscribe = await subscribeNativeAppForeground(onForeground);
-
-    expect(addListener).toHaveBeenNthCalledWith(1, 'appStateChange', expect.any(Function));
-    expect(addListener).toHaveBeenNthCalledWith(2, 'resume', expect.any(Function));
-
-    appStateHandler({ isActive: false });
-    expect(onForeground).not.toHaveBeenCalled();
-
-    appStateHandler({ isActive: true });
-    resumeHandler();
-    expect(onForeground).toHaveBeenCalledTimes(2);
-
-    unsubscribe();
-    expect(removeAppState).toHaveBeenCalledTimes(1);
-    expect(removeResume).toHaveBeenCalledTimes(1);
-  });
+  it('subscribes background listeners on native companion runtimes', expectBackgroundLifecycleSubscription);
 
   it('returns a noop unsubscribe outside native runtime', async () => {
     const { subscribeNativeAppForeground } = await import('./appLifecycle');

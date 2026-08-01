@@ -32,6 +32,7 @@ export type TryForegroundAutoSync = (args: {
 type ForegroundSyncRunnerArgs = {
   cancelled: () => boolean;
   inFlightRef: MutableRefObject<boolean>;
+  isAppActiveRef: MutableRefObject<boolean>;
   isPairingReadyRef: MutableRefObject<boolean>;
   lastCheckedAtRef: MutableRefObject<number>;
   lastForegroundAtRef: MutableRefObject<number>;
@@ -50,6 +51,7 @@ type ForegroundSyncRunnerArgs = {
 export type ForegroundSyncRefs = Pick<
   ForegroundSyncRunnerArgs,
   | 'inFlightRef'
+  | 'isAppActiveRef'
   | 'isPairingReadyRef'
   | 'lastCheckedAtRef'
   | 'lastForegroundAtRef'
@@ -71,7 +73,7 @@ function scheduleRetry(
   runForegroundSyncCheck: RunForegroundSyncCheck,
   outcome: Exclude<ForegroundAutoSyncOutcome, 'completed'>
 ) {
-  if (args.cancelled() || args.retryTimerRef.current) return;
+  if (args.cancelled() || !args.isAppActiveRef.current || args.retryTimerRef.current) return;
   const delay = outcome === 'backlog'
     ? AUTO_SYNC_BACKLOG_CONTINUE_DELAY_MS
     : AUTO_SYNC_RETRY_DELAYS_MS[Math.min(args.retryAttemptRef.current, AUTO_SYNC_RETRY_DELAYS_MS.length - 1)];
@@ -87,6 +89,7 @@ function scheduleRetry(
 }
 
 function shouldStartForegroundSync(args: ForegroundSyncRunnerArgs, reason: ForegroundSyncReason, now: number) {
+  if (!args.isAppActiveRef.current) return false;
   if (!args.isPairingReadyRef.current) return false;
   if (!resolveCompanionWorkspaceSyncEndpoint(args.stateRef.current)) return false;
   if (reason === 'foreground') {

@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef } from 'react';
 
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
-import { subscribeNativeAppForeground } from '../shared/platform/appLifecycle';
+import {
+  subscribeNativeAppBackground,
+  subscribeNativeAppForeground
+} from '../shared/platform/appLifecycle';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 
@@ -18,6 +21,7 @@ import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncE
 
 function useForegroundSyncRefs(isPairingReady: boolean, state: NativeCompanionWorkspaceSyncState) {
   const inFlightRef = useRef(false);
+  const isAppActiveRef = useRef(true);
   const isPairingReadyRef = useRef(isPairingReady);
   const lastCheckedAtRef = useRef(0);
   const lastForegroundAtRef = useRef(0);
@@ -27,6 +31,7 @@ function useForegroundSyncRefs(isPairingReady: boolean, state: NativeCompanionWo
   const stateRef = useRef(state);
   const refs: ForegroundSyncRefs = useMemo(() => ({
     inFlightRef,
+    isAppActiveRef,
     isPairingReadyRef,
     lastCheckedAtRef,
     lastForegroundAtRef,
@@ -77,18 +82,33 @@ export function useForegroundAutoSync(
     runForegroundSyncCheckRef.current = runForegroundSyncCheck;
 
     runForegroundSyncCheck('endpoint-ready');
-    let unsubscribe: (() => void) | null = null;
-    void subscribeNativeAppForeground(() => runForegroundSyncCheck('foreground')).then((nextUnsubscribe) => {
+    let unsubscribeBackground: (() => void) | null = null;
+    let unsubscribeForeground: (() => void) | null = null;
+    void subscribeNativeAppForeground(() => {
+      refs.isAppActiveRef.current = true;
+      runForegroundSyncCheck('foreground');
+    }).then((nextUnsubscribe) => {
       if (cancelled) {
         nextUnsubscribe();
         return;
       }
-      unsubscribe = nextUnsubscribe;
+      unsubscribeForeground = nextUnsubscribe;
+    });
+    void subscribeNativeAppBackground(() => {
+      refs.isAppActiveRef.current = false;
+      clearRetryTimer(refs.retryTimerRef);
+    }).then((nextUnsubscribe) => {
+      if (cancelled) {
+        nextUnsubscribe();
+        return;
+      }
+      unsubscribeBackground = nextUnsubscribe;
     });
     return () => {
       cancelled = true;
       clearRetryTimer(refs.retryTimerRef);
-      unsubscribe?.();
+      unsubscribeBackground?.();
+      unsubscribeForeground?.();
     };
   }, [refs, setError, setReadableArticle, setState, setStatus, tryForegroundAutoSync]);
 }

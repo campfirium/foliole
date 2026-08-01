@@ -44,7 +44,7 @@ describe('Windows validation kit build', () => {
 
   it('builds a hashed minimal kit and rejects identity, Node, or file tampering', () => {
     const artifactRoot = tempRoot('foliole-validation-artifact-');
-    const installerName = 'Foliole-Setup-test-win-x64.exe';
+    const installerName = 'Foliole-Windows-x64-test.exe';
     const installer = Buffer.from('installer');
     const installerHash = createHash('sha256').update(installer).digest('hex');
     fs.writeFileSync(path.join(artifactRoot, installerName), installer);

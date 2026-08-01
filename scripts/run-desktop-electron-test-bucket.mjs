@@ -18,13 +18,14 @@ const IMPORT_CHUNK_SIZE = 2;
 const IPC_CHUNK_SIZE = 10;
 const EPUB_IPC_CHUNK_SIZE = 3;
 const MISSING_REPORT_RETRY_LIMIT = 3;
+export const DESKTOP_ELECTRON_SHARDS = ['database', 'import', 'ipc', 'services'];
 const SINGLE_FILE_IMPORT_BUCKETS = new Set([
   'electron/import/importManagerSettings.test.ts',
   'electron/import/importNodeMutationPatch.test.ts'
 ]);
 
 function printUsage() {
-  console.error('Usage: node scripts/run-desktop-electron-test-bucket.mjs <report.json>');
+  console.error('Usage: node scripts/run-desktop-electron-test-bucket.mjs <report.json> [database|import|ipc|services]');
 }
 
 function toPosix(filePath) {
@@ -109,6 +110,20 @@ export function buildDesktopElectronBuckets() {
   ].filter((bucket) => bucket.targets.length > 0);
 }
 
+function shardForBucket(bucket) {
+  return DESKTOP_ELECTRON_SHARDS.find((shard) => bucket.label.startsWith(shard)) ?? 'services';
+}
+
+export function buildDesktopElectronShardBuckets(shard, buckets = buildDesktopElectronBuckets()) {
+  if (!shard) {
+    return buckets;
+  }
+  if (!DESKTOP_ELECTRON_SHARDS.includes(shard)) {
+    throw new Error(`[desktop-electron-test-bucket] unknown shard: ${shard}`);
+  }
+  return buckets.filter((bucket) => shardForBucket(bucket) === shard);
+}
+
 function formatCoverageFailure(missing, duplicates) {
   const sections = [];
   if (missing.length > 0) {
@@ -145,7 +160,7 @@ function runVitest(reportPath, targets, workers = 2) {
     reportPath,
     '--',
     '--silent=passed-only',
-    '--pool=threads',
+    '--pool=forks',
     `--maxWorkers=${workers}`,
     '--no-file-parallelism',
     '--testTimeout=30000',
@@ -171,14 +186,15 @@ async function runBucket(bucket) {
 }
 
 async function main() {
-  const [reportPath] = process.argv.slice(2);
+  const [reportPath, shard] = process.argv.slice(2);
   if (!reportPath) {
     printUsage();
     return 1;
   }
-  const buckets = buildDesktopElectronBuckets();
+  const allBuckets = buildDesktopElectronBuckets();
+  assertDesktopElectronBucketCoverage(collectElectronTestFiles(), allBuckets);
+  const buckets = buildDesktopElectronShardBuckets(shard, allBuckets);
   removeOldReports(reportPath, buckets);
-  assertDesktopElectronBucketCoverage(collectElectronTestFiles(), buckets);
   combineReports(reportPath, buckets);
   let exitCode = 0;
   for (const bucket of buckets) {

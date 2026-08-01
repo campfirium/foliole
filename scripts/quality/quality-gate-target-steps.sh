@@ -48,6 +48,10 @@ quality_gate_integration_scripts() {
   QUALITY_GATE_BUCKET_SELECTION_PATH="${QUALITY_GATE_LIB_DIR}/../script-test-bucket-selection.mjs" node --input-type=module -e "import('node:url').then(({ pathToFileURL }) => import(pathToFileURL(process.env.QUALITY_GATE_BUCKET_SELECTION_PATH).href)).then((m) => console.log(m.GATE_INTEGRATION_SCRIPT_NAMES.join(' ')))"
 }
 
+quality_gate_integration_shard_scripts() {
+  QUALITY_GATE_BUCKET_SELECTION_PATH="${QUALITY_GATE_LIB_DIR}/../script-test-bucket-selection.mjs" QUALITY_TOOLING_SHARD="$1" node --input-type=module -e "import('node:url').then(({ pathToFileURL }) => import(pathToFileURL(process.env.QUALITY_GATE_BUCKET_SELECTION_PATH).href)).then((m) => console.log(m.selectGateIntegrationScriptNames(process.env.QUALITY_TOOLING_SHARD).join(' ')))"
+}
+
 quality_script_self_tests_changed_files_match() {
   local changed="$1"
   printf '%s\n' "${changed}" | node "${QUALITY_GATE_LIB_DIR}/../script-test-bucket-selection.mjs" changed-files-need-script-tests
@@ -117,8 +121,36 @@ run_release_script_preview_gate_steps() {
   run_gate_steps test:quality:preview
 }
 
+run_quality_tooling_file_shard() {
+  local bucket="$1"
+  if [[ "${QUALITY_GATE_TEST_DRY_RUN_STEPS:-0}" == "1" ]]; then
+    if ! is_quality_gate_test_context; then
+      echo "[${prefix}] QUALITY_GATE_TEST_DRY_RUN_STEPS is only allowed in quality gate tests or fixtures."
+      return 1
+    fi
+    echo "[${prefix}] dry-run step: test:quality:${bucket}"
+    return 0
+  fi
+  run_quality_gate_command \
+    "${prefix}" \
+    "test:quality:${bucket}" \
+    "test:quality:${bucket}" \
+    node scripts/electron-sqlite-runner.mjs scripts/run-script-test-bucket.mjs \
+    "${bucket}" ".tmp/vitest/quality-${bucket}.json"
+}
+
 run_release_tooling_gate_steps() {
-  run_quality_script_gate_steps
+  local segment="${FOLIOLE_QUALITY_TOOLING_SEGMENT:-full}"
+  unset FOLIOLE_QUALITY_TOOLING_SEGMENT
+  case "${segment}" in
+    full) run_quality_script_gate_steps ;;
+    core-one|core-two|gate-one|gate-two) run_quality_tooling_file_shard "${segment}" ;;
+    integration-one|integration-two)
+      run_gate_steps_parallel $(quality_gate_integration_shard_scripts "${segment}")
+      ;;
+    node-preview) run_gate_steps test:quality:node test:quality:preview ;;
+    *) echo "[${prefix}] unknown quality tooling segment: ${segment}"; return 1 ;;
+  esac
 }
 
 run_release_preview_recovery_gate_steps() {

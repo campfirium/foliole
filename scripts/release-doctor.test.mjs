@@ -18,7 +18,7 @@ import {
 } from './release-doctor.test-support.mjs';
 
 const ASSETS = [
-  { name: 'Foliole-Setup-0.9.0-win-x64.exe' },
+  { name: 'Foliole-Windows-x64-0.9.0.exe' },
   { name: 'SHA256SUMS-macos.txt' },
   { name: 'SHA256SUMS-windows.txt' }
 ];

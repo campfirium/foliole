@@ -43,7 +43,7 @@ export function createGithubBuilderConfig(base, options) {
     ],
     mac: {
       ...base.mac,
-      artifactName: '${productName}-${version}-mac-${arch}.${ext}',
+      artifactName: '${productName}-macOS-${arch}-${version}.${ext}',
       binaries: ['Contents/MacOS/codex', 'Contents/MacOS/Foliole Global Capture'],
       entitlements: 'build/entitlements.mas.plist',
       entitlementsInherit: 'build/entitlements.mas.inherit.plist',
@@ -90,7 +90,7 @@ export function hasNotarizationCredentials(env) {
 }
 
 export function createGithubArtifactNames(productName, version, arch = 'arm64') {
-  const baseName = `${productName}-${version}-mac-${arch}`;
+  const baseName = `${productName}-macOS-${arch}-${version}`;
   return [
     `${baseName}.dmg`,
     `${baseName}.dmg.blockmap`,

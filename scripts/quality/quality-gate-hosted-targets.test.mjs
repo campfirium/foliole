@@ -14,11 +14,11 @@ function dryRunSteps(stdout) {
   return [...stdout.matchAll(/dry-run step: ([^\n]+)/gu)].map((match) => match[1]);
 }
 
-async function runIsolatedTargetGate(target) {
+async function runIsolatedTargetGate(target, env = DRY_RUN_ENV) {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-hosted-equivalence-'));
   try {
     await writePackageJson(tempRoot, releaseScripts());
-    return await runTargetGate(tempRoot, target, DRY_RUN_ENV);
+    return await runTargetGate(tempRoot, target, env);
   } finally {
     await rm(tempRoot, { recursive: true, force: true });
   }
@@ -68,6 +68,16 @@ describe('hosted quality target boundaries', () => {
       await rm(tempRoot, { recursive: true, force: true });
     }
   }, 60000);
+
+  it('consumes a hosted tooling segment before child test processes start', async () => {
+    const result = await runIsolatedTargetGate('release-tooling', {
+      ...DRY_RUN_ENV,
+      FOLIOLE_QUALITY_TOOLING_SEGMENT: 'gate-two'
+    });
+
+    expect(result.code).toBe(0);
+    expect(dryRunSteps(result.stdout)).toEqual(['test:quality:gate-two']);
+  });
 
   it('keeps staged Common jobs exactly equivalent to the hosted Common gate', async () => {
     const [original, staticGate, toolingGate, buildGate] = await Promise.all([

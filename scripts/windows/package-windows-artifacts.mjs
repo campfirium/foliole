@@ -24,11 +24,13 @@ export function readPackageVersion(rootDir) {
 }
 
 export function resolveInstallerBaseName(packageVersion) {
-  return `Foliole Setup ${packageVersion}`;
+  return `Foliole-Windows-x64-${packageVersion}`;
 }
 
 function isInstallerArtifact(fileName, packageVersion) {
-  return fileName.endsWith('.exe') && fileName.includes('Foliole') && fileName.includes('Setup') && fileName.includes(packageVersion);
+  if (fileName === `${resolveInstallerBaseName(packageVersion)}.exe`) return true;
+  return fileName.endsWith('.exe') && fileName.includes('Foliole Internal') &&
+    fileName.includes('Setup') && fileName.includes(packageVersion);
 }
 
 export function collectInstallerArtifactPaths(rootDir, packageVersion, outputDir = 'artifacts/windows') {

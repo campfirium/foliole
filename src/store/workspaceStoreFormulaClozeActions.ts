@@ -116,7 +116,12 @@ async function applyCreatedFormulaClozeNode(
   }
   syncWorkspaceNodeDocumentCacheFromNode(node);
   markNodeCreatePending(node.id);
-  const result = await handlers.syncNodeCreation(node, nextNodeOrder, node.id, nextNodeOrder.indexOf(node.id));
+  const result = await handlers.syncNodeCreation(
+    node,
+    nextNodeOrder,
+    node.parentNodeId ?? node.id,
+    nextNodeOrder.indexOf(node.id)
+  );
   if (result) {
     set((state) => createWorkspaceNodeMutationPatchWithLocalSideEffects(state, result, localPatch));
   }

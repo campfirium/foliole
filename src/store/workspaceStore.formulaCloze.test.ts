@@ -1,6 +1,8 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { FormulaClozeCreatePayload } from '../features/formula-cloze/model/formulaCloze';
+import type { Node } from '../features/nodes/model/nodeTypes';
+import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
 
 import { readCachedWorkspaceNodeDocument, resetWorkspaceNodeDocumentCacheForTest } from './workspaceNodeDocumentCache';
 import { useWorkspaceStore } from './workspaceStore';
@@ -11,12 +13,27 @@ const nodeStorage = vi.hoisted(() => ({
   saveNode: vi.fn(),
   saveNodeOrder: vi.fn()
 }));
+const mutationRepository = vi.hoisted(() => ({
+  syncNodeCreation: vi.fn<
+    (
+      node: Node,
+      nodeOrder?: string[],
+      activeNodeId?: string | null,
+      position?: number
+    ) => Promise<WorkspaceNodeMutationPatchResult | null>
+  >(async () => null)
+}));
 
 vi.mock('../../lib/platform/storage', () => ({
   nodeStorage
 }));
 
+vi.mock('./workspaceMutationRepository', () => ({
+  getWorkspaceMutationRepository: () => mutationRepository
+}));
+
 beforeEach(() => {
+  mutationRepository.syncNodeCreation.mockClear();
   useWorkspaceStore.persist.clearStorage();
   resetWorkspaceNodeDocumentCacheForTest();
   useWorkspaceStore.setState({
@@ -97,6 +114,12 @@ it('creates a formula cloze child without storing formula regions as image attac
     content: '$E=mc^2$',
     reveal: '$E=mc^2$'
   });
+  const createCall = mutationRepository.syncNodeCreation.mock.calls[0];
+  expect(createCall?.[0]).toEqual(expect.objectContaining({ id: createdId }));
+  expect(createCall?.[1]).toEqual(expect.arrayContaining(['node-1', createdId]));
+  expect(createCall?.[2]).toBe('node-1');
+  expect(createCall?.[3]).toBe(createCall?.[1]?.indexOf(createdId as string));
+  expect(useWorkspaceStore.getState().activeNodeId).toBe('node-1');
 });
 
 it('rejects a formula cloze without a reusable DOM selection', async () => {

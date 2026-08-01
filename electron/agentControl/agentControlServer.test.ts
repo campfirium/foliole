@@ -2,9 +2,10 @@
 import fs from 'node:fs/promises';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
+import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { getEnabledAgentControlCapabilities } from './agentControlCapabilities.js';
 import {
@@ -15,7 +16,7 @@ import {
 import { AGENT_CONTROL_CAPABILITIES, AGENT_CONTROL_PROTOCOL_VERSION } from './agentControlTypes.js';
 import type { AgentControlAuditEvent } from './agentControlTypes.js';
 
-const testRoot = path.join(process.cwd(), '.tmp', 'artifacts', 'agent-control-tests');
+let testRoot = '';
 
 function descriptorPathFor(name: string) {
   return path.join(testRoot, `${name}-${process.pid}.json`);
@@ -71,6 +72,10 @@ function closeServer(server: http.Server) {
   });
 }
 
+beforeEach(async () => {
+  testRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-agent-control-server-'));
+});
+
 afterEach(async () => {
   await stopAgentControlApiServer();
   await fs.rm(testRoot, { force: true, recursive: true });
@@ -82,6 +87,8 @@ it('starts a loopback-only service and writes a local session descriptor', async
   const descriptor = await readJson(descriptorPath);
 
   expect(status).toMatchObject({ last_error: null, state: 'running' });
+  expect(status.port).toEqual(Number(new URL(String(status.endpoint)).port));
+  expect(status.port).toBeGreaterThan(0);
   expect(status.endpoint).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
   expect(descriptor).toMatchObject({
     capabilities: getEnabledAgentControlCapabilities(),

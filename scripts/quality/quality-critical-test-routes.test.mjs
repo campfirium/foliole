@@ -32,6 +32,7 @@ const HOSTED_QUALITY_GAP_ROUTES = [
 ];
 
 const HOSTED_QUALITY_CONTRACTS = [
+  'scripts/hosted-quality-tooling-workflow-contract.test.mjs',
   'scripts/hosted-windows-x64-workflow-contract.test.mjs',
   'scripts/quality/t7-hosted-quality-admission.test.mjs',
   'scripts/t5-baseline-admission-workflow-contract.test.mjs',
@@ -103,6 +104,7 @@ describe('quality critical test routes', () => {
   it('routes every hosted orchestration surface to the full workflow contract set', () => {
     expect(resolveCriticalTestFiles([
       '.github/workflows/hosted-quality-core.yml',
+      '.github/workflows/hosted-quality-tooling.yml',
       '.github/workflows/t6-hosted-quality.yml',
       '.github/workflows/t7-hosted-quality.yml',
       'scripts/quality/t7-hosted-quality-admission.mjs'

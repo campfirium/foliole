@@ -129,8 +129,8 @@ describe('windows package runner', () => {
       expect(resolveReleaseArtifactPaths(root, '9.8.7')).toEqual([
         join(root, 'artifacts/windows/win-unpacked'),
         join(root, 'artifacts/windows/win-unpacked.tmp'),
-        join(root, 'artifacts/windows/Foliole Setup 9.8.7.exe'),
-        join(root, 'artifacts/windows/Foliole Setup 9.8.7.exe.blockmap'),
+        join(root, 'artifacts/windows/Foliole-Windows-x64-9.8.7.exe'),
+        join(root, 'artifacts/windows/Foliole-Windows-x64-9.8.7.exe.blockmap'),
         join(root, 'artifacts/windows/latest.yml'),
         join(root, 'artifacts/windows/builder-debug.yml')
       ]);
@@ -143,18 +143,18 @@ describe('windows package runner', () => {
     const root = mkdtempSync(join(tmpdir(), 'foliole-package-test-'));
     try {
       mkdirSync(join(root, 'artifacts/windows'), { recursive: true });
-      writeFileSync(join(root, 'artifacts/windows', 'Foliole-Setup-9.8.7-win-x64.exe'), '');
-      writeFileSync(join(root, 'artifacts/windows', 'Foliole-Setup-9.8.7-win-x64.exe.blockmap'), '');
+      writeFileSync(join(root, 'artifacts/windows', 'Foliole-Windows-x64-9.8.7.exe'), '');
+      writeFileSync(join(root, 'artifacts/windows', 'Foliole-Windows-x64-9.8.7.exe.blockmap'), '');
       writeFileSync(join(root, 'artifacts/windows', 'Other-Setup-9.8.7-win-x64.exe'), '');
 
       expect(collectInstallerArtifactPaths(root, '9.8.7')).toEqual([
-        join(root, 'artifacts/windows', 'Foliole-Setup-9.8.7-win-x64.exe')
+        join(root, 'artifacts/windows', 'Foliole-Windows-x64-9.8.7.exe')
       ]);
       expect(resolvePackagedInstallerPath(root, '9.8.7')).toBe(
-        join(root, 'artifacts/windows', 'Foliole-Setup-9.8.7-win-x64.exe')
+        join(root, 'artifacts/windows', 'Foliole-Windows-x64-9.8.7.exe')
       );
       expect(resolveReleaseArtifactPaths(root, '9.8.7')).toContain(
-        join(root, 'artifacts/windows', 'Foliole-Setup-9.8.7-win-x64.exe.blockmap')
+        join(root, 'artifacts/windows', 'Foliole-Windows-x64-9.8.7.exe.blockmap')
       );
     } finally {
       rmSync(root, { force: true, recursive: true });

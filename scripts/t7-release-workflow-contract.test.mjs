@@ -61,6 +61,10 @@ describe('T7 release workflow contract', () => {
     expect(source).toContain('test "$WINDOWS_SHA" = "$TARGET_SHA"');
     expect(source.match(/sha256sum --check SHA256SUMS\.txt/gu)).toHaveLength(2);
     expect(source).toContain('grep -Fq "version: ${TARGET_VERSION}"');
+    expect(source).toContain('Foliole-macOS-arm64-${TARGET_VERSION}.dmg');
+    expect(source).toContain('Foliole-Windows-x64-${TARGET_VERSION}.exe');
+    expect(source.match(/Foliole-\$\{TARGET_VERSION\}-mac-arm64/gu)).toHaveLength(4);
+    expect(source.match(/Foliole-Setup-\$\{TARGET_VERSION\}-win-x64/gu)).toHaveLength(2);
   });
 
   it('guards stale runs and reconciles only an unpublished draft', () => {
@@ -70,8 +74,9 @@ describe('T7 release workflow contract', () => {
     expect(source).toContain('test "$draft_state" = "true"');
     expect(source).toContain('gh release create "$tag" --draft');
     expect(source).toContain('gh release edit "$tag" --target "$TARGET_SHA"');
+    expect(source).toContain('gh release delete-asset "$tag" "$asset" --yes');
     expect(source).toContain('gh release upload "$tag" --clobber');
-    expect(source).not.toContain('gh release delete');
+    expect(source).not.toContain('gh release delete "$tag"');
     expect(source).not.toContain('releases/github/${tag}.md');
   });
 });

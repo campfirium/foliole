@@ -44,6 +44,7 @@ const PINNED_NPM_WORKFLOW_CONTRACT_TESTS = [
 ];
 
 const HOSTED_QUALITY_WORKFLOW_CONTRACT_TESTS = [
+  'scripts/hosted-quality-tooling-workflow-contract.test.mjs',
   'scripts/hosted-windows-x64-workflow-contract.test.mjs',
   'scripts/quality/t7-hosted-quality-admission.test.mjs',
   'scripts/t5-baseline-admission-workflow-contract.test.mjs',
@@ -130,7 +131,7 @@ export const CRITICAL_TEST_ROUTES = [
   },
   {
     triggers: [
-      /^\.github\/workflows\/(?:hosted-quality-(?:common|core|full|ios)|remote-quality|t5-baseline-admission|t6-hosted-quality|t7-hosted-quality)\.yml$/u,
+      /^\.github\/workflows\/(?:hosted-quality-(?:common|core|desktop-source|electron|full|ios|portable|tooling)|remote-quality|t5-baseline-admission|t6-hosted-quality|t7-hosted-quality)\.yml$/u,
       /^scripts\/quality\/t7-hosted-quality-admission\.mjs$/u
     ],
     tests: HOSTED_QUALITY_WORKFLOW_CONTRACT_TESTS

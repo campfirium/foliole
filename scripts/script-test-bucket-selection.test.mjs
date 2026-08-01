@@ -6,11 +6,19 @@ import { spawnSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 
 import {
+  GATE_INTEGRATION_SCRIPT_NAMES,
   changedFilesNeedScriptTests,
   collectScriptTestFiles,
   isScriptTestRootPath,
+  selectGateIntegrationScriptNames,
   selectScriptTestBucketFiles
 } from './script-test-bucket-selection.mjs';
+
+function expectExactPartition(expected, parts) {
+  const flattened = parts.flat();
+  expect([...flattened].sort()).toEqual([...expected].sort());
+  expect(new Set(flattened).size).toBe(flattened.length);
+}
 
 describe('script test bucket root matching', () => {
   it('matches changed files against the script test bucket roots', () => {
@@ -30,6 +38,25 @@ describe('script test bucket root matching', () => {
 
     expect(coreFiles).toContain('scripts/lib/path-domains.test.mjs');
     expect(coreFiles).toContain('scripts/lib/script-domain-registry.test.mjs');
+  });
+
+  it('partitions hosted Windows tooling without missing or duplicating tests', () => {
+    const files = collectScriptTestFiles();
+    const core = selectScriptTestBucketFiles('core', files);
+    const gate = selectScriptTestBucketFiles('gate', files);
+
+    expectExactPartition(core, [
+      selectScriptTestBucketFiles('core-one', files),
+      selectScriptTestBucketFiles('core-two', files)
+    ]);
+    expectExactPartition(gate, [
+      selectScriptTestBucketFiles('gate-one', files),
+      selectScriptTestBucketFiles('gate-two', files)
+    ]);
+    expectExactPartition(GATE_INTEGRATION_SCRIPT_NAMES, [
+      selectGateIntegrationScriptNames('integration-one'),
+      selectGateIntegrationScriptNames('integration-two')
+    ]);
   });
 
   it('exposes changed-file matching through the CLI command', () => {

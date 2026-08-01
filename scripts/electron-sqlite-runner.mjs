@@ -22,7 +22,10 @@ function shouldUseRepoLocalTemp(args = []) {
   if (scriptPath === 'scripts/test-files.mjs') {
     return true;
   }
-  return scriptPath === 'scripts/run-vitest-with-summary.mjs' && args.includes('electron');
+  return scriptPath === 'scripts/run-vitest-with-summary.mjs' && args.some((arg) => {
+    const normalized = arg.replaceAll('\\', '/');
+    return normalized === 'electron' || normalized.startsWith('electron/');
+  });
 }
 
 export function buildElectronNodeEnv(env = process.env, repoRoot = process.cwd(), options = {}) {

@@ -31,11 +31,6 @@ jobs:
         include:
           - host: Ubuntu
             runner: ubuntu-latest
-            domain: desktop-source
-            script: test:release:desktop-src
-            timeout_minutes: 20
-          - host: Ubuntu
-            runner: ubuntu-latest
             domain: android-source
             script: test:release:android
             timeout_minutes: 20
@@ -43,21 +38,6 @@ jobs:
             runner: ubuntu-latest
             domain: shared
             script: test:release:shared
-            timeout_minutes: 20
-          - host: Ubuntu
-            runner: ubuntu-latest
-            domain: electron
-            script: test:desktop:electron
-            timeout_minutes: 20
-          - host: Ubuntu
-            runner: ubuntu-latest
-            domain: quality-tooling
-            script: quality:release:tooling
-            timeout_minutes: 20
-          - host: Windows
-            runner: windows-latest
-            domain: desktop-source
-            script: test:release:desktop-src
             timeout_minutes: 20
           - host: Windows
             runner: windows-latest
@@ -68,16 +48,6 @@ jobs:
             runner: windows-latest
             domain: shared
             script: test:release:shared
-            timeout_minutes: 20
-          - host: Windows
-            runner: windows-latest
-            domain: electron
-            script: test:desktop:electron
-            timeout_minutes: 30
-          - host: Windows
-            runner: windows-latest
-            domain: quality-tooling
-            script: quality:release:tooling
             timeout_minutes: 20
     env:
       CI: "true"
@@ -119,21 +89,57 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+  electron-quality:
+    name: Electron quality
+    uses: ./.github/workflows/hosted-quality-electron.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+
+  desktop-source-quality:
+    name: Desktop source quality
+    uses: ./.github/workflows/hosted-quality-desktop-source.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+
+  tooling-quality:
+    name: Quality tooling
+    uses: ./.github/workflows/hosted-quality-tooling.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+
   portable-admission:
     name: Portable quality admission
     if: ${{ always() }}
-    needs: portable-tests
+    needs: [portable-tests, desktop-source-quality, electron-quality, tooling-quality]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       accepted_sha: ${{ steps.require-buckets.outputs.accepted_sha }}
     env:
+      DESKTOP_SOURCE_RESULT: ${{ needs.desktop-source-quality.result }}
+      DESKTOP_SOURCE_SHA: ${{ needs.desktop-source-quality.outputs.accepted_sha }}
+      ELECTRON_RESULT: ${{ needs.electron-quality.result }}
+      ELECTRON_SHA: ${{ needs.electron-quality.outputs.accepted_sha }}
       TARGET_SHA: ${{ inputs.target_sha }}
       TEST_RESULT: ${{ needs.portable-tests.result }}
+      TOOLING_RESULT: ${{ needs.tooling-quality.result }}
+      TOOLING_SHA: ${{ needs.tooling-quality.outputs.accepted_sha }}
     steps:
       - name: Require every portable bucket
         id: require-buckets
         run: |
           set -euo pipefail
           node -e 'if (process.env.TEST_RESULT !== "success") throw new Error(`TEST_RESULT=${process.env.TEST_RESULT}`)'
+          node -e 'if (process.env.DESKTOP_SOURCE_RESULT !== "success") throw new Error(`DESKTOP_SOURCE_RESULT=${process.env.DESKTOP_SOURCE_RESULT}`)'
+          node -e 'if (process.env.DESKTOP_SOURCE_SHA !== process.env.TARGET_SHA) throw new Error("DESKTOP_SOURCE_SHA does not match portable target")'
+          node -e 'if (process.env.ELECTRON_RESULT !== "success") throw new Error(`ELECTRON_RESULT=${process.env.ELECTRON_RESULT}`)'
+          node -e 'if (process.env.ELECTRON_SHA !== process.env.TARGET_SHA) throw new Error("ELECTRON_SHA does not match portable target")'
+          node -e 'if (process.env.TOOLING_RESULT !== "success") throw new Error(`TOOLING_RESULT=${process.env.TOOLING_RESULT}`)'
+          node -e 'if (process.env.TOOLING_SHA !== process.env.TARGET_SHA) throw new Error("TOOLING_SHA does not match portable target")'
           echo "accepted_sha=${TARGET_SHA}" >> "$GITHUB_OUTPUT"

@@ -7,6 +7,7 @@ import { readFileSync, statSync } from 'node:fs';
 import { controlledElectronSqliteTests } from './native-sqlite-test-policy.mjs';
 const TEST_FILE_PATTERN = /\.test\.(?:mjs|ts|tsx)$/;
 const ELECTRON_SQLITE_TESTS = new Set(controlledElectronSqliteTests);
+const VITEST_POOLS = new Set(['forks', 'threads']);
 const DATABASE_CONNECTION_IMPORT_PATTERN = /\b(?:import\b[\s\S]*?\bfrom\s+|import\s*\()\s*['"](?:\.{1,2}\/(?:[\w.-]+\/)*connection|\.{1,2}\/database\/connection)\.js['"]/u;
 function printUsage() {
   console.error('Usage: npm run test:files -- <file.test.ts|file.test.tsx|file.test.mjs> [...]');
@@ -68,6 +69,14 @@ function normalizePath(filePath) {
   return filePath.replaceAll('\\', '/');
 }
 
+function resolveVitestPool(env) {
+  const pool = env.VITEST_POOL?.trim() || 'threads';
+  if (!VITEST_POOLS.has(pool)) {
+    throw new Error(`[test:files] unsupported VITEST_POOL: ${pool}`);
+  }
+  return pool;
+}
+
 async function runTestFiles(env) {
   const files = process.argv.slice(2);
   if (!validateFiles(files) || !validateElectronSqliteTests(files)) {
@@ -79,7 +88,7 @@ async function runTestFiles(env) {
     '.tmp/vitest/files.json',
     '--',
     '--silent=passed-only',
-    '--pool=threads',
+    `--pool=${resolveVitestPool(env)}`,
     '--maxWorkers=2',
     '--no-file-parallelism',
     ...files.map(normalizePath)

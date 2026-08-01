@@ -20,7 +20,7 @@ const BUCKET_TIMEOUT_SECONDS = {
 
 function printUsage() {
   console.error(
-    'Usage: node scripts/run-script-test-bucket.mjs <all|core|gate|gate-integration*|node|preview> <report.json>'
+    'Usage: node scripts/run-script-test-bucket.mjs <all|core*|gate*|gate-integration*|node|preview> <report.json>'
   );
 }
 

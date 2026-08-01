@@ -13,6 +13,7 @@ import {
 
 const TEST_FILE_PATTERN = /\.test\.(mjs|mts|ts|tsx)$/u;
 const CHUNK_SIZE = 30;
+export const RELEASE_DESKTOP_SOURCE_SHARDS = ['one', 'two', 'three', 'four'];
 const ROOT_TESTS = ['src/startupBootstrap.test.ts', 'src/startupViewMode.test.ts'];
 
 function toPosix(filePath) {
@@ -58,6 +59,17 @@ export function buildReleaseDesktopSourceBuckets(files = collectReleaseDesktopSo
     ...chunkFiles('smoke', 'smoke', smokeFiles, 1),
     ...chunkFiles('root', 'root', rootFiles, ROOT_TESTS.length)
   ];
+}
+
+export function buildReleaseDesktopSourceShardBuckets(shard, buckets) {
+  if (!shard) {
+    return buckets;
+  }
+  const shardIndex = RELEASE_DESKTOP_SOURCE_SHARDS.indexOf(shard);
+  if (shardIndex < 0) {
+    throw new Error(`[release-desktop-source-test-bucket] unknown shard: ${shard}`);
+  }
+  return buckets.filter((_, index) => index % RELEASE_DESKTOP_SOURCE_SHARDS.length === shardIndex);
 }
 
 export function assertReleaseDesktopSourceBucketCoverage(files, buckets) {
@@ -133,14 +145,15 @@ function writeMissingReport(bucket, code) {
 }
 
 async function main() {
-  const [reportPath] = process.argv.slice(2);
+  const [reportPath, shard] = process.argv.slice(2);
   if (!reportPath) {
-    console.error('Usage: node scripts/run-release-desktop-source-test-bucket.mjs <report.json>');
+    console.error('Usage: node scripts/run-release-desktop-source-test-bucket.mjs <report.json> [one|two|three|four]');
     return 1;
   }
   const files = collectReleaseDesktopSourceTestFiles();
-  const buckets = buildReleaseDesktopSourceBuckets(files);
-  assertReleaseDesktopSourceBucketCoverage(files, buckets);
+  const allBuckets = buildReleaseDesktopSourceBuckets(files);
+  assertReleaseDesktopSourceBucketCoverage(files, allBuckets);
+  const buckets = buildReleaseDesktopSourceShardBuckets(shard, allBuckets);
   removeOldReports(reportPath, buckets);
   combineReports(reportPath, buckets);
   let exitCode = 0;

@@ -96,6 +96,7 @@ describe('test-files', () => {
       const vitestArgs = JSON.parse(await readFile(argsPath, 'utf8'));
       expect(vitestArgs).toContain('src/app/components/WorkspaceTopicTreeRows.test.tsx');
       expect(vitestArgs).not.toContain('src\\app\\components\\WorkspaceTopicTreeRows.test.tsx');
+      expect(vitestArgs).toContain('--pool=threads');
       expect(vitestArgs).toContain(`--maxWorkers=${process.env.VITEST_MAX_WORKERS?.trim() || '2'}`);
       if (process.env.VITEST_FILE_PARALLELISM?.trim() === '1' || process.env.VITEST_FILE_PARALLELISM?.trim() === 'true') {
         expect(vitestArgs).not.toContain('--no-file-parallelism');
@@ -104,6 +105,24 @@ describe('test-files', () => {
       }
       expect(vitestArgs).not.toContain('src/app');
       expect(result.stdout).toContain('[vitest-summary] totals: files 1/1 passed, tests 1/1 passed');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('allows native test callers to select process isolation explicitly', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'test-files-forks-'));
+    try {
+      const { argsPath, fakeVitestPath } = await createFakeVitest(tempRoot);
+      const result = await runTestFiles(['src/app/startup.test.ts'], {
+        VITEST_BIN: fakeVitestPath,
+        VITEST_POOL: 'forks'
+      });
+
+      expect(result.code).toBe(0);
+      const vitestArgs = JSON.parse(await readFile(argsPath, 'utf8'));
+      expect(vitestArgs).toContain('--pool=forks');
+      expect(vitestArgs).not.toContain('--pool=threads');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

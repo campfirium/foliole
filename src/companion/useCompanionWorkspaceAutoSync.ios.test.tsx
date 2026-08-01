@@ -17,13 +17,20 @@ vi.mock('@capacitor/app', () => ({ App: appState }));
 
 import { useForegroundAutoSync } from './useCompanionWorkspaceAutoSync';
 
-it('starts and resumes foreground sync on an actual iOS runtime classification', async () => {
+it('cancels failed retries while backgrounded and syncs again on iOS resume', async () => {
+  vi.useFakeTimers();
   let resume: (() => void) | null = null;
+  const appStateHandlers: Array<(state: { isActive: boolean }) => void> = [];
   appState.addListener.mockImplementation(async (eventName: string, listener: () => void) => {
     if (eventName === 'resume') resume = listener;
+    if (eventName === 'appStateChange') {
+      appStateHandlers.push(listener as (state: { isActive: boolean }) => void);
+    }
     return { remove: vi.fn(async () => undefined) };
   });
-  const tryForegroundAutoSync = vi.fn(async () => 'completed' as const);
+  const tryForegroundAutoSync = vi.fn()
+    .mockResolvedValueOnce('failed' as const)
+    .mockResolvedValueOnce('completed' as const);
   const stableCallbacks = {
     setError: vi.fn(),
     setReadableArticle: vi.fn(),
@@ -57,7 +64,15 @@ it('starts and resumes foreground sync on an actual iOS runtime classification',
   expect(capacitorState.getPlatform).toHaveReturnedWith('ios');
   expect(tryForegroundAutoSync).toHaveBeenCalledTimes(1);
   expect(appState.addListener).toHaveBeenCalledWith('appStateChange', expect.any(Function));
+  expect(appState.addListener).toHaveBeenCalledWith('pause', expect.any(Function));
   expect(appState.addListener).toHaveBeenCalledWith('resume', expect.any(Function));
+
+  await act(async () => {
+    for (const handler of appStateHandlers) handler({ isActive: false });
+    await vi.advanceTimersByTimeAsync(2_000);
+  });
+
+  expect(tryForegroundAutoSync).toHaveBeenCalledTimes(1);
 
   await act(async () => {
     resume?.();

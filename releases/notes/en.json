@@ -1,4 +1,15 @@
 {
+  "0.7.1": {
+    "notes": [
+      "New",
+      "Topic comparison view: Compare the current Topic with a pasted draft line by line.",
+      "Topic splitting: Split a long Topic into multiple Topics using a custom delimiter.",
+      "The editor menu can be customized.",
+      "Fixed",
+      "Chapter structure is parsed correctly when importing EPUB files.",
+      "Highlights display correctly in Immersive Reading."
+    ]
+  },
   "0.7.0": {
     "notes": [
       "New",
