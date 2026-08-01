@@ -7,9 +7,10 @@ import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagno
 import { IPC_DESKTOP_UPDATE_STATE_EVENT_CHANNEL } from '../ipc/contracts.js';
 import { flushWindowReadingProgress } from '../readingProgressWindowFlush.js';
 
+import { resolveElectronUpdater } from './desktopUpdateAdapter.js';
 import { isDesktopUpdateApplicable } from './desktopUpdateAvailability.js';
 import { readDesktopDistributionChannel } from './desktopUpdateDistribution.js';
-import { DesktopUpdateService, type DesktopUpdaterAdapter } from './desktopUpdateService.js';
+import { DesktopUpdateService } from './desktopUpdateService.js';
 import {
   createDesktopUpdateStateStore,
   type DesktopUpdateStateStore
@@ -43,7 +44,7 @@ function isCurrentBuildApplicable() {
 
 async function loadUpdater() {
   const updaterModule = await import('electron-updater');
-  return updaterModule.autoUpdater as DesktopUpdaterAdapter;
+  return resolveElectronUpdater(updaterModule);
 }
 
 async function prepareDesktopUpdateInstall() {
@@ -63,6 +64,9 @@ export const desktopUpdateService = new DesktopUpdateService({
   isApplicable: isCurrentBuildApplicable,
   loadUpdater,
   prepareInstall: prepareDesktopUpdateInstall,
-  reportDiagnostic: (label) => appendMainProcessDiagnosticLog(label, {}),
+  reportDiagnostic: (label, payload = {}) => appendMainProcessDiagnosticLog(label, {
+    platform: process.platform,
+    ...payload
+  }),
   stateStore: createRuntimeStateStore()
 });

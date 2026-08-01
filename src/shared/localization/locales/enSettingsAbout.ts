@@ -62,7 +62,7 @@ export const EN_SETTINGS_ABOUT_TRANSLATIONS = {
   'settings.about.update.description.downloading': 'Downloading update: {percent}%.',
   'settings.about.update.description.failed': 'Could not prepare this update.',
   'settings.about.update.description.idle': 'Current Foliole desktop version.',
-  'settings.about.update.description.pending-asset': 'The update is announced; its install files are not public yet.',
+  'settings.about.update.description.pending-asset': 'Foliole is preparing this update in the background.',
   'settings.about.update.description.ready': 'The update is downloaded and ready to install.',
   'settings.about.openReleases': 'Open releases',
   'settings.about.viewUpdateDetails': 'View update details',

@@ -12,7 +12,7 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
   'desktop.workspace.themeActions': 'Workspace theme actions',
   'desktop.workspace.topRailActions': 'Left toolbar top actions',
   'desktop.workspace.bottomRailActions': 'Left toolbar bottom actions',
-  'desktop.workspace.restartAndUpdate': 'Restart and update',
+  'desktop.workspace.restartAndUpdate': 'Restart to install update',
   'desktop.workspace.settings': 'Settings',
   'desktop.workspace.enterFlow': 'Enter Flow',
   'desktop.workspace.leaveFlow': 'Exit Flow',

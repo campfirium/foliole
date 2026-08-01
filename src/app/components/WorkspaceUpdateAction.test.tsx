@@ -36,27 +36,27 @@ it('stays hidden until an update is ready', () => {
   expect(screen.queryByRole('button', { name: 'Restart and update' })).not.toBeInTheDocument();
 });
 
-it('shows a compact green Download action and installs the ready update', () => {
+it('shows a compact neutral CircleArrowDown action and installs the ready update', () => {
   renderWithLocalization(<WorkspaceUpdateAction />);
 
   updateMock.state = { phase: 'ready', version: '0.7.0' };
   act(() => updateMock.subscriber?.());
 
-  const button = screen.getByRole('button', { name: 'Restart and update' });
+  const button = screen.getByRole('button', { name: 'Restart to install update' });
   expect(button.className).toContain('workspace-update-action');
   expect(button.className).toContain('workspace-update-action-nudge');
-  expect(button.querySelector('.lucide-download')).toBeInTheDocument();
+  expect(button.querySelector('.lucide-circle-arrow-down')).toBeInTheDocument();
 
   fireEvent.click(button);
   expect(updateMock.install).toHaveBeenCalledTimes(1);
 });
 
-it('replays the reminder after one hour while the update stays ready', () => {
+it('replays the reminder after one minute while the update stays ready', () => {
   vi.useFakeTimers();
   updateMock.state = { phase: 'ready', version: '0.7.0' };
   renderWithLocalization(<WorkspaceUpdateAction />);
 
-  expect(screen.getByRole('button', { name: 'Restart and update' })).toHaveAttribute('data-nudge-sequence', '0');
-  act(() => vi.advanceTimersByTime(60 * 60 * 1000));
-  expect(screen.getByRole('button', { name: 'Restart and update' })).toHaveAttribute('data-nudge-sequence', '1');
+  expect(screen.getByRole('button', { name: 'Restart to install update' })).toHaveAttribute('data-nudge-sequence', '0');
+  act(() => vi.advanceTimersByTime(60 * 1000));
+  expect(screen.getByRole('button', { name: 'Restart to install update' })).toHaveAttribute('data-nudge-sequence', '1');
 });

@@ -10,6 +10,16 @@ export interface DesktopUpdaterAdapter {
   quitAndInstall: (isSilent?: boolean, isForceRunAfter?: boolean) => void;
 }
 
+interface ElectronUpdaterCommonJsNamespace {
+  default?: { autoUpdater?: DesktopUpdaterAdapter };
+}
+
+export function resolveElectronUpdater(module: unknown) {
+  const updater = (module as ElectronUpdaterCommonJsNamespace).default?.autoUpdater;
+  if (!updater) throw new Error('electron-updater CommonJS default export is unavailable');
+  return updater;
+}
+
 function safeNumber(value: unknown, minimum = 0) {
   return typeof value === 'number' && Number.isFinite(value) ? Math.max(minimum, value) : undefined;
 }

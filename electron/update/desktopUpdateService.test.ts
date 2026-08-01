@@ -69,7 +69,7 @@ it('exits preparation without a user-visible failure when provider recovery is e
   const harness = createHarness({ isUpdateAvailable: false });
 
   await expect(harness.service.check('0.7.0', harness.sender as never)).resolves.toEqual({
-    phase: 'available', version: '0.7.0'
+    errorCode: 'check-failed', phase: 'error', version: '0.7.0'
   });
 
   expect(harness.updater.downloadUpdate).not.toHaveBeenCalled();
@@ -101,15 +101,22 @@ it('keeps one target and one download when a newer manifest arrives mid-download
   expect(harness.updater.downloadUpdate).toHaveBeenCalledTimes(1);
 });
 
-it('keeps the release available without exposing a transient download failure after retries exhaust', async () => {
+it('reaches an explicit terminal state after transient download retries exhaust', async () => {
   const harness = createHarness();
   await harness.service.check('0.7.0', harness.sender as never);
 
   harness.rejectDownload();
 
   await vi.waitFor(() => expect(harness.service.getState()).toEqual({
-    phase: 'available',
+    errorCode: 'download-failed',
+    phase: 'error',
     version: '0.7.0'
+  }));
+  expect(harness.reportDiagnostic).toHaveBeenCalledWith('desktop_update_download_transient', expect.objectContaining({
+    error: expect.objectContaining({ message: 'download failed' }),
+    kind: 'transient',
+    stage: 'download',
+    targetVersion: '0.7.0'
   }));
   expect(harness.reportDiagnostic).toHaveBeenCalledWith('desktop_update_download_retry_exhausted');
 });
@@ -120,6 +127,10 @@ it('retries one transient download without creating a parallel download task', a
   await harness.service.check('0.7.0', harness.sender as never);
 
   harness.rejectDownload();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(harness.service.getState()).toEqual({
+    phase: 'pending-asset', version: '0.7.0'
+  });
   await vi.advanceTimersByTimeAsync(10);
 
   expect(harness.updater.downloadUpdate).toHaveBeenCalledTimes(2);
@@ -127,17 +138,42 @@ it('retries one transient download without creating a parallel download task', a
   await vi.waitFor(() => expect(harness.service.getState()).toMatchObject({ phase: 'ready' }));
 });
 
-it('stops immediately on a structural integrity failure and records only its stable category', async () => {
+it('leaves checking during bounded provider recovery and preserves the original check error', async () => {
+  vi.useFakeTimers();
+  const harness = createHarness({ retryDelaysMs: [10] });
+  const error = new Error('net::ERR_CONNECTION_RESET at /Users/private/latest-mac.yml');
+  harness.updater.checkForUpdates.mockRejectedValueOnce(error);
+
+  await expect(harness.service.check('0.7.0', harness.sender as never)).resolves.toEqual({
+    phase: 'pending-asset', version: '0.7.0'
+  });
+  expect(harness.reportDiagnostic).toHaveBeenCalledWith('desktop_update_check_transient', {
+    error,
+    kind: 'transient',
+    stage: 'check',
+    targetVersion: '0.7.0'
+  });
+
+  await vi.advanceTimersByTimeAsync(10);
+  expect(harness.updater.checkForUpdates).toHaveBeenCalledTimes(2);
+  await vi.waitFor(() => expect(harness.service.getState()).toMatchObject({ phase: 'downloading' }));
+});
+
+it('stops immediately on a structural integrity failure and sends the original error to the redacting sink', async () => {
   const harness = createHarness({ retryDelaysMs: [10] });
   await harness.service.check('0.7.0', harness.sender as never);
 
   harness.rejectDownload(new Error('/Users/private/update.zip sha512 checksum mismatch token=secret'));
 
   await vi.waitFor(() => expect(harness.service.getState()).toEqual({
-    phase: 'available', version: '0.7.0'
+    errorCode: 'download-failed', phase: 'error', version: '0.7.0'
   }));
-  expect(harness.reportDiagnostic).toHaveBeenCalledWith('desktop_update_download_structural');
-  expect(harness.reportDiagnostic).not.toHaveBeenCalledWith(expect.stringContaining('private'));
+  expect(harness.reportDiagnostic).toHaveBeenCalledWith('desktop_update_download_structural', expect.objectContaining({
+    error: expect.any(Error),
+    kind: 'structural',
+    stage: 'download',
+    targetVersion: '0.7.0'
+  }));
 });
 
 it('does not download when the durable discovery record cannot be written', async () => {
@@ -145,7 +181,8 @@ it('does not download when the durable discovery record cannot be written', asyn
   harness.stateStore.write.mockRejectedValueOnce(new Error('disk full'));
 
   await expect(harness.service.check('0.7.0', harness.sender as never)).resolves.toEqual({
-    phase: 'available',
+    errorCode: 'check-failed',
+    phase: 'error',
     version: '0.7.0'
   });
 
@@ -160,7 +197,8 @@ it('does not publish ready when the downloaded checkpoint cannot be written', as
   harness.resolveDownload();
 
   await vi.waitFor(() => expect(harness.service.getState()).toEqual({
-    phase: 'available',
+    errorCode: 'download-failed',
+    phase: 'error',
     version: '0.7.0'
   }));
 });

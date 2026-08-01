@@ -43,7 +43,10 @@ it('writes main process exceptions into the runtime NDJSON log', async () => {
     app_log_dir: logDir
   });
 
-  logMainProcessException('main_uncaught_exception', new Error('sqlite exploded at /Users/alice/private/foliole.db'));
+  logMainProcessException(
+    'main_uncaught_exception',
+    new Error('sqlite exploded at /Users/alice/private/foliole.db token=secret')
+  );
 
   await vi.waitFor(() => {
     const files = fs.readdirSync(logDir);
@@ -58,16 +61,17 @@ it('writes main process exceptions into the runtime NDJSON log', async () => {
     level: 'error',
     payload: {
       error: {
-        message: 'sqlite exploded at [redacted-path]',
+        message: 'sqlite exploded at [redacted-path] token=[redacted-secret]',
         name: 'Error',
         stack: '[redacted-stack]'
       },
-      message: 'sqlite exploded at [redacted-path]',
+      message: 'sqlite exploded at [redacted-path] token=[redacted-secret]',
       name: 'Error'
     },
     source: 'electron.main'
   });
   expect(records[0]).not.toContain('/Users/alice/private/foliole.db');
+  expect(records[0]).not.toContain('token=secret');
 });
 
 it('writes operation failures without embedding the raw error stack', async () => {

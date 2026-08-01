@@ -7,7 +7,7 @@ it('redacts sensitive diagnostic fields while preserving support context', () =>
     action: 'open_external_url',
     absolutePath: '/Users/alice/private/book.md',
     bodyTextSample: 'Private note body',
-    message: 'Failed to read /Users/alice/private/book.md from https://example.test/secret?token=abc',
+    message: 'Failed to read /Users/alice/private/book.md token=abc Authorization: Bearer private-key',
     nested: {
       signature: 'abcdef',
       status: 'failed'
@@ -18,7 +18,7 @@ it('redacts sensitive diagnostic fields while preserving support context', () =>
     action: 'open_external_url',
     absolutePath: '[redacted-path]',
     bodyTextSample: '[redacted-body-sample]',
-    message: 'Failed to read [redacted-path] from [redacted-url]',
+    message: 'Failed to read [redacted-path] token=[redacted-secret] Authorization=[redacted-secret]',
     nested: {
       signature: '[redacted-secret]',
       status: 'failed'

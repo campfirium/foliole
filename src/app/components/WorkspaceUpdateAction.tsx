@@ -1,4 +1,4 @@
-import { Download } from 'lucide-react';
+import { CircleArrowDown } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
@@ -15,7 +15,7 @@ import {
 } from './WorkspaceRailTooltipButton';
 import './WorkspaceUpdateAction.css';
 
-const UPDATE_REMINDER_INTERVAL_MS = 60 * 60 * 1000;
+const UPDATE_REMINDER_INTERVAL_MS = 60 * 1000;
 const UPDATE_BUTTON_CLASS_NAME =
   `workspace-update-action workspace-update-action-nudge ${WORKSPACE_RAIL_BUTTON_FOCUS_CLASS_NAME}`;
 
@@ -42,7 +42,7 @@ export function WorkspaceUpdateAction() {
         <WorkspaceRailTooltipButton
           className={UPDATE_BUTTON_CLASS_NAME}
           data-nudge-sequence={nudgeSequence}
-          icon={<Download aria-hidden="true" size={18} strokeWidth={2} />}
+          icon={<CircleArrowDown aria-hidden="true" size={18} strokeWidth={1.75} />}
           key={`${state.version ?? 'ready'}-${nudgeSequence}`}
           label={label}
           onClick={() => void installDesktopUpdate()}

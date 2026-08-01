@@ -19,7 +19,7 @@ interface DesktopUpdateServiceOptions {
   isApplicable: () => boolean;
   loadUpdater: () => Promise<DesktopUpdaterAdapter>;
   prepareInstall: () => Promise<boolean>;
-  reportDiagnostic?: (label: string) => void;
+  reportDiagnostic?: (label: string, payload?: Record<string, unknown>) => void;
   retryDelaysMs?: readonly number[];
   stateStore: DesktopUpdateStateStore;
 }
@@ -59,7 +59,8 @@ export class DesktopUpdateService {
     const normalizedVersion = targetVersion.trim();
     if (!normalizedVersion) return this.state;
     if (normalizedVersion === this.options.getCurrentVersion()) return this.clearTarget();
-    if (this.state.phase === 'checking' || this.state.phase === 'downloading' || this.state.phase === 'ready') {
+    if (this.state.phase === 'checking' || this.state.phase === 'downloading'
+      || this.state.phase === 'pending-asset' || this.state.phase === 'ready') {
       return this.state;
     }
     await this.beginTarget(normalizedVersion);
@@ -99,7 +100,7 @@ export class DesktopUpdateService {
       ));
     } catch {
       this.options.reportDiagnostic?.('desktop_update_state_write_failed');
-      this.setState({ phase: 'available', version });
+      this.setState({ errorCode: 'check-failed', phase: 'error', version });
       return;
     }
     await this.startCheck(this.operationId, version);
@@ -151,10 +152,12 @@ export class DesktopUpdateService {
   private handleFailure(stage: DesktopUpdateFailureStage, error: unknown, operationId: number, version: string) {
     if (!this.isCurrent(operationId, version)) return;
     const kind = classifyDesktopUpdateFailure(error);
+    this.options.reportDiagnostic?.(desktopUpdateDiagnosticLabel(stage, kind), {
+      error, kind, stage, targetVersion: version
+    });
     if (kind === 'structural') {
-      this.options.reportDiagnostic?.(desktopUpdateDiagnosticLabel(stage, kind));
       this.retry.reset();
-      this.setState({ phase: 'available', version });
+      this.setState({ errorCode: `${stage}-failed`, phase: 'error', version });
       return;
     }
     this.scheduleRecovery(stage, operationId, version);
@@ -162,12 +165,13 @@ export class DesktopUpdateService {
 
   private scheduleRecovery(stage: DesktopUpdateFailureStage, operationId: number, version: string) {
     if (!this.isCurrent(operationId, version)) return;
+    this.setState({ phase: 'pending-asset', version });
     if (!this.retry.schedule(() => {
       if (stage === 'download') void this.startDownload(operationId, version);
       else void this.startCheck(operationId, version);
     })) {
       this.options.reportDiagnostic?.(desktopUpdateDiagnosticLabel(stage, 'retry-exhausted'));
-      this.setState({ phase: 'available', version });
+      this.setState({ errorCode: `${stage}-failed`, phase: 'error', version });
     }
   }
 

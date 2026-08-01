@@ -21,36 +21,37 @@ import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows
 import { SettingsSupportButton } from './SettingsSupportButton';
 import { SettingsUpdateReleaseNotes } from './SettingsUpdateReleaseNotes';
 
-type ViewStatus = 'available' | 'checking' | 'current' | 'downloading' | 'failed' | 'idle' | 'pending-asset' | 'ready';
+type ViewStatus = 'available' | 'checking' | 'current' | 'downloading' | 'idle' | 'pending-asset' | 'ready' | 'released';
 type Translate = ReturnType<typeof useTranslation>;
 
 export function resolveViewStatus(state: UpdateCheckState, desktopPhase: string, isChecking: boolean): ViewStatus {
   if (isChecking || desktopPhase === 'checking') return 'checking';
   if (state.lastCheckStatus === 'current') return 'current';
   if (desktopPhase === 'not-applicable') return 'idle';
+  if (desktopPhase === 'error') return state.latestVersion ? 'released' : 'idle';
   if (state.lastCheckStatus === 'available' || state.latestVersion) {
     if (desktopPhase === 'pending-asset') return 'pending-asset';
     if (desktopPhase === 'downloading') return 'downloading';
     if (desktopPhase === 'ready') return 'ready';
     return 'available';
   }
-  if (desktopPhase === 'error') return 'idle';
   return 'idle';
 }
 
 function statusLabel(status: ViewStatus, t: Translate) {
+  if (status === 'released') return t('settings.about.update.available');
   return t(`settings.about.update.${status}`);
 }
 
 function statusDescription(status: ViewStatus, state: UpdateCheckState, percent: number | undefined, t: Translate) {
   if (status === 'available') return t('settings.about.update.description.available', { version: state.latestVersion ?? '' });
+  if (status === 'released') return t('settings.about.update.description.available', { version: state.latestVersion ?? '' });
   if (status === 'downloading') return t('settings.about.update.description.downloading', { percent: Math.round(percent ?? 0) });
   return t(`settings.about.update.description.${status}`);
 }
 
 function statusTone(status: ViewStatus) {
   if (status === 'available' || status === 'ready') return 'success';
-  if (status === 'failed') return 'error';
   if (status === 'checking' || status === 'downloading' || status === 'pending-asset') return 'info';
   return 'neutral';
 }
@@ -96,7 +97,7 @@ export function SettingsVersionBlock(props: { onRunSupportCommand?: ((commandId:
           {update.desktop.phase === 'ready' ? (
             <SettingsSupportButton onRunAction={() => void installDesktopUpdate()}>{t('settings.about.restartToInstall')}</SettingsSupportButton>
           ) : null}
-          {update.desktop.phase !== 'downloading' && update.desktop.phase !== 'ready' ? (
+          {!['checking', 'downloading', 'pending-asset', 'ready'].includes(update.desktop.phase) ? (
             <SettingsSupportButton onRunAction={() => void handleCheck()}>{t('settings.about.checkForUpdates')}</SettingsSupportButton>
           ) : null}
         </SettingsControlSlot>

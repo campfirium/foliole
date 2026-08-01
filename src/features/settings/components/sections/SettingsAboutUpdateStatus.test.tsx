@@ -53,6 +53,21 @@ it('keeps an announced release available after a transient manifest failure', ()
   expect(resolveViewStatus(state, 'available', false)).toBe('available');
 });
 
+it('keeps a native terminal failure distinct from automatic update success', () => {
+  const state = {
+    cachedManifest: null,
+    cachedReleaseNotes: null,
+    dismissedVersion: null,
+    lastCheckedAt: '2026-08-01T00:00:00.000Z',
+    lastCheckStatus: 'available',
+    lastSeenVersion: '0.7.3',
+    latestReleaseUrl: 'https://github.com/campfirium/foliole/releases/tag/v0.7.3',
+    latestVersion: '0.7.3'
+  } as const;
+
+  expect(resolveViewStatus(state, 'error', false)).toBe('released');
+});
+
 it('does not claim an automatic update is available on an inapplicable distribution', () => {
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.updateCheckState, JSON.stringify({
     cachedManifest: null,

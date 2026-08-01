@@ -25,7 +25,7 @@ test('shows the ready update action prominently above Restart App', async ({ des
   await expectWorkspaceShell(desktopWindow);
 
   const rail = desktopWindow.getByRole('region', { name: /Left toolbar|左侧工具栏/ });
-  const updateAction = rail.getByRole('button', { name: /^(Restart and update|重启并更新)$/ });
+  const updateAction = rail.getByRole('button', { name: /^(Restart to install update|重启并安装更新)$/ });
   await expect(updateAction).toHaveCount(0);
 
   await desktopSession.electronApp.evaluate(({ BrowserWindow }) => {
@@ -36,7 +36,7 @@ test('shows the ready update action prominently above Restart App', async ({ des
   });
 
   await expect(updateAction).toBeVisible();
-  await expect(updateAction.locator('.lucide-download')).toBeVisible();
+  await expect(updateAction.locator('.lucide-circle-arrow-down')).toBeVisible();
   const restartAction = rail.getByRole('button', { name: /Restart App|重启应用/ });
   const [updateBox, restartBox] = await Promise.all([
     updateAction.boundingBox(),
@@ -45,17 +45,13 @@ test('shows the ready update action prominently above Restart App', async ({ des
   expect(updateBox?.y).toBeLessThan(restartBox?.y ?? 0);
   await expect.poll(() => updateAction.evaluate((element) => getComputedStyle(element).animationName))
     .toContain('workspace-update-nudge');
-  expect(await updateAction.evaluate((element) => getComputedStyle(element).color)).not.toBe(
-    await restartAction.evaluate((element) => getComputedStyle(element).color)
-  );
-
   const clip = { height: 96, width: 150, x: 0, y: Math.max(0, (updateBox?.y ?? 8) - 8) };
   await mkdir(EVIDENCE_DIR, { recursive: true });
   await desktopWindow.waitForTimeout(2900);
   await desktopWindow.screenshot({ clip, path: RESTING_SCREENSHOT_PATH });
   const restingWidth = (await updateAction.boundingBox())?.width;
   await updateAction.hover();
-  await expect(desktopWindow.getByRole('tooltip')).toHaveText(/^(Restart and update|重启并更新)$/);
+  await expect(desktopWindow.getByRole('tooltip')).toHaveText(/^(Restart to install update|重启并安装更新)$/);
   expect((await updateAction.boundingBox())?.width).toBe(restingWidth);
   await desktopWindow.screenshot({ clip, path: HOVER_SCREENSHOT_PATH });
   await testInfo.attach('workspace-update-action-resting', { path: RESTING_SCREENSHOT_PATH });

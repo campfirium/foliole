@@ -12,12 +12,14 @@ const BODY_SAMPLE_KEY_PATTERN = /(bodyTextSample|body_text_sample|sample|content
 const URL_VALUE_PATTERN = /\b(?:https?|file):\/\/[^\s"'<>]+/giu;
 const UNIX_PATH_VALUE_PATTERN = /(^|[\s([{])\/(?:Users|home|mnt|tmp|var|etc|proc|sys|dev)\/[^\s"'<>)]*/gu;
 const WINDOWS_PATH_VALUE_PATTERN = /\b[A-Z]:\\[^\s"'<>)]*/giu;
+const INLINE_SECRET_VALUE_PATTERN = /\b(authorization|cookie|password|secret|signature|token)\b\s*[:=]\s*(?:Bearer\s+)?(?:"[^"]*"|'[^']*'|[^\s,;]+)/giu;
 
 function redactStringValue(value: string) {
   return value
     .replace(URL_VALUE_PATTERN, REDACTED_URL)
     .replace(WINDOWS_PATH_VALUE_PATTERN, REDACTED_PATH)
-    .replace(UNIX_PATH_VALUE_PATTERN, (match, prefix: string) => `${prefix}${REDACTED_PATH}`);
+    .replace(UNIX_PATH_VALUE_PATTERN, (match, prefix: string) => `${prefix}${REDACTED_PATH}`)
+    .replace(INLINE_SECRET_VALUE_PATTERN, (_match, key: string) => `${key}=${REDACTED_SECRET}`);
 }
 
 function redactValueForKey(key: string, value: unknown): unknown {
