@@ -7,8 +7,10 @@ afterEach(() => vi.useRealTimers());
 it('does not load or contact the updater outside applicable packaged desktop builds', async () => {
   const harness = createHarness({ applicable: false });
 
+  expect(harness.isApplicable).not.toHaveBeenCalled();
   await expect(harness.service.check('0.7.0', harness.sender as never)).resolves.toEqual({ phase: 'not-applicable' });
 
+  expect(harness.isApplicable).toHaveBeenCalledTimes(1);
   expect(harness.loadUpdater).not.toHaveBeenCalled();
   expect(harness.updater.checkForUpdates).not.toHaveBeenCalled();
 });

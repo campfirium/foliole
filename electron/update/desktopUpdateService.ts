@@ -38,7 +38,7 @@ export class DesktopUpdateService {
   private downloadPromise: Promise<NativeDesktopUpdateState> | null = null;
 
   constructor(private readonly options: DesktopUpdateServiceOptions) {
-    this.state = options.isApplicable() ? IDLE_STATE : NOT_APPLICABLE_STATE;
+    this.state = IDLE_STATE;
     this.retry = new DesktopUpdateRetry(options.retryDelaysMs);
   }
 
