@@ -42,4 +42,7 @@ export function configureDesktopUpdater(
       version: getVersion()
     });
   });
+  updater.on('error', () => publish({
+    errorCode: 'install-failed', phase: 'ready', version: getVersion()
+  }));
 }

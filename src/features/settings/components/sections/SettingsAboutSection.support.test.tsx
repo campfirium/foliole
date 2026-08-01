@@ -44,6 +44,7 @@ import { SettingsAboutSection } from './SettingsAboutSection';
 beforeEach(() => {
   updateCheckMock.resultStatus = 'current';
   desktopUpdateMock.state = { phase: 'not-applicable', version: undefined };
+  desktopUpdateMock.install.mockReset();
   window.localStorage.clear();
   window.localStorage.setItem(APP_LANGUAGE_STORAGE_KEY, 'en');
   window.electronAPI = {
@@ -134,4 +135,21 @@ it('does not require an explicit download action after the desktop updater confi
   renderWithLocalization(<SettingsAboutSection />);
 
   expect(screen.queryByRole('button', { name: 'Download update' })).not.toBeInTheDocument();
+});
+
+it('uses the shared install command and disables it once restart begins', () => {
+  desktopUpdateMock.state = { phase: 'ready', version: '0.7.3' };
+  renderWithLocalization(<SettingsAboutSection />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Restart and install' }));
+  expect(desktopUpdateMock.install).toHaveBeenCalledTimes(1);
+});
+
+it('shows immediate restart feedback in About settings', () => {
+  desktopUpdateMock.state = { phase: 'restarting', version: '0.7.3' };
+  renderWithLocalization(<SettingsAboutSection />);
+
+  expect(screen.getByText('Restarting')).toBeInTheDocument();
+  expect(screen.getByText('Foliole is restarting to finish the update.')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Restarting...' })).toBeDisabled();
 });

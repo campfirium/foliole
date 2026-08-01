@@ -21,11 +21,12 @@ import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows
 import { SettingsSupportButton } from './SettingsSupportButton';
 import { SettingsUpdateReleaseNotes } from './SettingsUpdateReleaseNotes';
 
-type ViewStatus = 'available' | 'checking' | 'current' | 'downloading' | 'idle' | 'pending-asset' | 'ready' | 'released';
+type ViewStatus = 'available' | 'checking' | 'current' | 'downloading' | 'idle' | 'pending-asset' | 'ready' | 'released' | 'restarting';
 type Translate = ReturnType<typeof useTranslation>;
 
 export function resolveViewStatus(state: UpdateCheckState, desktopPhase: string, isChecking: boolean): ViewStatus {
   if (isChecking || desktopPhase === 'checking') return 'checking';
+  if (desktopPhase === 'restarting') return 'restarting';
   if (state.lastCheckStatus === 'current') return 'current';
   if (desktopPhase === 'not-applicable') return 'idle';
   if (desktopPhase === 'error') return state.latestVersion ? 'released' : 'idle';
@@ -52,7 +53,7 @@ function statusDescription(status: ViewStatus, state: UpdateCheckState, percent:
 
 function statusTone(status: ViewStatus) {
   if (status === 'available' || status === 'ready') return 'success';
-  if (status === 'checking' || status === 'downloading' || status === 'pending-asset') return 'info';
+  if (status === 'checking' || status === 'downloading' || status === 'pending-asset' || status === 'restarting') return 'info';
   return 'neutral';
 }
 
@@ -94,10 +95,18 @@ export function SettingsVersionBlock(props: { onRunSupportCommand?: ((commandId:
           {update.manifest.lastCheckStatus === 'available' ? (
             <SettingsSupportButton onRunAction={() => setReleaseNotesOpen(true)}>{t('settings.about.viewUpdateDetails')}</SettingsSupportButton>
           ) : null}
-          {update.desktop.phase === 'ready' ? (
-            <SettingsSupportButton onRunAction={() => void installDesktopUpdate()}>{t('settings.about.restartToInstall')}</SettingsSupportButton>
+          {update.desktop.phase === 'ready' || update.desktop.phase === 'restarting' ? (
+            <SettingsSupportButton onRunAction={update.desktop.phase === 'ready'
+              ? () => void installDesktopUpdate()
+              : undefined}>
+              {t(update.desktop.phase === 'restarting'
+                ? 'settings.about.restarting'
+                : update.desktop.errorCode?.startsWith('install-')
+                  ? 'settings.about.restartFailed'
+                  : 'settings.about.restartToInstall')}
+            </SettingsSupportButton>
           ) : null}
-          {!['checking', 'downloading', 'pending-asset', 'ready'].includes(update.desktop.phase) ? (
+          {!['checking', 'downloading', 'pending-asset', 'ready', 'restarting'].includes(update.desktop.phase) ? (
             <SettingsSupportButton onRunAction={() => void handleCheck()}>{t('settings.about.checkForUpdates')}</SettingsSupportButton>
           ) : null}
         </SettingsControlSlot>

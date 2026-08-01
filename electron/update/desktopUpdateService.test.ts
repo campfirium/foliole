@@ -205,6 +205,10 @@ it('does not publish ready when the downloaded checkpoint cannot be written', as
 
 it('publishes progress and installs only after preparation succeeds', async () => {
   const harness = createHarness();
+  harness.prepareInstall.mockImplementationOnce(async () => {
+    expect(harness.service.getState()).toMatchObject({ phase: 'restarting', version: '0.7.0' });
+    return true;
+  });
   await harness.service.check('0.7.0', harness.sender as never);
 
   harness.listeners.get('download-progress')?.({ percent: 42.3, total: 1000, transferred: 423 });
@@ -219,6 +223,9 @@ it('publishes progress and installs only after preparation succeeds', async () =
     totalBytes: 1000,
     transferredBytes: 423
   }));
+  expect(harness.sender.send).toHaveBeenCalledWith('foliole:desktop-update-state', expect.objectContaining({
+    phase: 'restarting', version: '0.7.0'
+  }));
   expect(harness.prepareInstall).toHaveBeenCalledTimes(1);
   expect(harness.updater.quitAndInstall).toHaveBeenCalledWith(false, true);
   expect(harness.updater.checkForUpdates).toHaveBeenCalledTimes(1);
@@ -232,9 +239,24 @@ it('blocks installation when application data cannot be flushed', async () => {
   await vi.waitFor(() => expect(harness.service.getState()).toMatchObject({ phase: 'ready' }));
 
   await expect(harness.service.install()).resolves.toEqual({
+    errorCode: 'install-preparation-failed',
     percent: 100,
     phase: 'ready',
     version: '0.7.0'
   });
   expect(harness.updater.quitAndInstall).not.toHaveBeenCalled();
+});
+
+it('restores the ready action when Squirrel cannot begin the restart', async () => {
+  const harness = createHarness();
+  await harness.service.check('0.7.0', harness.sender as never);
+  harness.resolveDownload();
+  await vi.waitFor(() => expect(harness.service.getState()).toMatchObject({ phase: 'ready' }));
+
+  await harness.service.install();
+  harness.listeners.get('error')?.(new Error('ShipIt unavailable') as never);
+
+  expect(harness.service.getState()).toMatchObject({
+    errorCode: 'install-failed', phase: 'ready', version: '0.7.0'
+  });
 });

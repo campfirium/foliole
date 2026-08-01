@@ -10,10 +10,14 @@ import {
 } from './desktop-update-compatibility-gate.mjs';
 
 describe('desktop update compatibility gate', () => {
-  it('observes updater errors instead of allowing an unhandled error event to terminate diagnostics', () => {
+  it('delegates networking to a real Electron updater runtime', () => {
     const source = fs.readFileSync('scripts/desktop-update-compatibility-gate.mjs', 'utf8');
-    expect(source).toContain("updater.on('error'");
-    expect(source).toContain('[desktop-update-compatibility] updater error:');
+    const probe = fs.readFileSync('scripts/desktop-update-electron-runtime-probe.cjs', 'utf8');
+    expect(source).toContain('ElectronHttpExecutor');
+    expect(probe).toContain('new updaterModule.MacUpdater()');
+    expect(probe).toContain('new updaterModule.NsisUpdater()');
+    expect(source).not.toContain('ELECTRON_RUN_AS_NODE');
+    expect(`${source}\n${probe}`).not.toContain('NodeHttpExecutor');
   });
 
   it('owns the final process status after a verified gate result', async () => {
