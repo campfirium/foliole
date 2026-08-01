@@ -6,6 +6,7 @@ import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { assertQualityCommandAllowed } from './quality/quality-command-contracts.mjs';
+import { validatePublishedDesktopUpdaterPolicy } from './desktop-update-release-policy.mjs';
 
 const VERSION = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u;
 
@@ -27,6 +28,10 @@ export function validateReleaseManifestPublication({ manifest, release, reposito
   if (release?.tag_name !== expectedTag || release?.draft !== false || !release?.published_at) {
     throw new Error(`${expectedTag} must be an already-published GitHub Release.`);
   }
+  const pendingFirstBaseline = version === '0.7.1' &&
+    manifest.desktopUpdater?.firstCapableVersion === null &&
+    manifest.desktopUpdater?.verifiedBaselineVersion === null;
+  if (!pendingFirstBaseline) validatePublishedDesktopUpdaterPolicy(manifest);
   return { expectedTag, version };
 }
 

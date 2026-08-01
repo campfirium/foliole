@@ -17,6 +17,9 @@ on:
       trigger_ref:
         required: true
         type: string
+      updater_baseline_version:
+        required: true
+        type: string
     secrets:
       AZURE_CLIENT_ID:
         required: true
@@ -103,6 +106,34 @@ jobs:
         run: |
           node scripts/windows/verify-artifact-signatures.mjs --root artifacts/windows/win-unpacked --extensions exe --recursive
           node scripts/windows/verify-artifact-signatures.mjs --root artifacts/windows --extensions exe
+      - name: Verify packaged Windows distribution identity
+        env:
+          TARGET_VERSION: ${{ inputs.target_version }}
+        run: |
+          node scripts/desktop-update-packaged-identity.mjs --version="$env:TARGET_VERSION" --asar=artifacts/windows/win-unpacked/resources/app.asar
+      - name: Check out verified updater baseline
+        if: inputs.updater_baseline_version != ''
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ inputs.updater_baseline_version }}
+          path: .tmp/updater-baseline
+          persist-credentials: false
+      - name: Install verified baseline updater dependencies
+        if: inputs.updater_baseline_version != ''
+        working-directory: .tmp/updater-baseline
+        run: npm ci --ignore-scripts
+      - name: Prove verified Windows baseline consumes same-run update
+        if: inputs.updater_baseline_version != ''
+        env:
+          BASELINE_VERSION: ${{ inputs.updater_baseline_version }}
+          TARGET_VERSION: ${{ inputs.target_version }}
+        shell: pwsh
+        run: |
+          $env:ELECTRON_RUN_AS_NODE = "1"
+          & "node_modules/electron/dist/electron.exe" ".tmp/updater-baseline/scripts/desktop-update-compatibility-gate.mjs" `
+            "--current-version=$env:BASELINE_VERSION" "--target-version=$env:TARGET_VERSION" `
+            "--directory=artifacts/windows"
+          if ($LASTEXITCODE -ne 0) { throw "Windows updater compatibility gate failed." }
       - name: Install signed Windows installer
         run: node scripts/windows/package-windows.mjs --install-existing
       - name: Smoke installed Windows app
@@ -116,6 +147,10 @@ jobs:
           }
           $hash = (Get-FileHash -Algorithm SHA256 $installer.FullName).Hash.ToLowerInvariant()
           "$hash *$($installer.Name)" | Set-Content -Path artifacts/windows/SHA256SUMS.txt -Encoding ascii
+      - name: Verify Windows updater artifacts
+        env:
+          TARGET_VERSION: ${{ inputs.target_version }}
+        run: node scripts/desktop-update-artifact-contract.mjs --platform=windows --version="$env:TARGET_VERSION" --directory=artifacts/windows
       - name: Build and verify Windows validation kit
         env:
           GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}

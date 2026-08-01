@@ -22,6 +22,7 @@ describe('T7 release workflow contract', () => {
     expect(source).toContain('FOLIOLE_RELEASE_REF_NAME: ${{ github.ref_name }}');
     expect(source).toContain('FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}');
     expect(source).toContain('node scripts/release-target-contract.mjs >> "$GITHUB_OUTPUT"');
+    expect(source).toContain('node scripts/desktop-update-release-policy.mjs');
     expect(fs.existsSync('.github/workflows/publish-release.yml')).toBe(false);
   });
 
@@ -37,6 +38,10 @@ describe('T7 release workflow contract', () => {
       .toBe('${{ needs.release_candidate.outputs.accepted_sha }}');
     expect(jobs.windows_package.with.target_sha)
       .toBe('${{ needs.release_candidate.outputs.accepted_sha }}');
+    expect(jobs.macos_package.with.updater_baseline_version)
+      .toBe('${{ needs.release_context.outputs.updater_baseline_version }}');
+    expect(jobs.windows_package.with.updater_baseline_version)
+      .toBe('${{ needs.release_context.outputs.updater_baseline_version }}');
     expect(jobs.assemble_draft.needs)
       .toEqual(['release_context', 'macos_package', 'windows_package']);
   });
@@ -63,6 +68,7 @@ describe('T7 release workflow contract', () => {
     expect(source).toContain('grep -Fq "version: ${TARGET_VERSION}"');
     expect(source).toContain('Foliole-macOS-arm64-${TARGET_VERSION}.dmg');
     expect(source).toContain('Foliole-Windows-x64-${TARGET_VERSION}.exe');
+    expect(source.match(/node scripts\/desktop-update-artifact-contract\.mjs/gu)).toHaveLength(2);
     expect(source.match(/Foliole-\$\{TARGET_VERSION\}-mac-arm64/gu)).toHaveLength(4);
     expect(source.match(/Foliole-Setup-\$\{TARGET_VERSION\}-win-x64/gu)).toHaveLength(2);
   });

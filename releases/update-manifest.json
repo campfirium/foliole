@@ -6,6 +6,11 @@
     "intervalMinutes": 1440,
     "failureRetryMinutes": 15
   },
+  "desktopUpdater": {
+    "firstCapableVersion": null,
+    "manualUpgradeFrom": "0.7.0",
+    "verifiedBaselineVersion": null
+  },
   "releases": [
     {
       "version": "0.7.1",

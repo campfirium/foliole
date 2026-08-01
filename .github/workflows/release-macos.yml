@@ -17,6 +17,9 @@ on:
       trigger_ref:
         required: true
         type: string
+      updater_baseline_version:
+        required: true
+        type: string
     secrets:
       APPLE_API_ISSUER:
         required: true
@@ -138,6 +141,41 @@ jobs:
           security find-identity -v -p codesigning "$keychain_path"
       - name: Build, sign, notarize, and verify macOS release
         run: npm run macos:github:notarize
+      - name: Verify macOS updater artifacts and packaged distribution identity
+        env:
+          TARGET_VERSION: ${{ inputs.target_version }}
+        run: |
+          set -euo pipefail
+          artifact_dir="artifacts/macos/github-arm64"
+          zip_path="$artifact_dir/Foliole-macOS-arm64-${TARGET_VERSION}.zip"
+          extract_root="$RUNNER_TEMP/foliole-update-identity"
+          rm -rf "$extract_root"
+          node scripts/desktop-update-artifact-contract.mjs \
+            --platform=macos --version="$TARGET_VERSION" --directory="$artifact_dir"
+          node scripts/desktop-update-packaged-identity.mjs \
+            --version="$TARGET_VERSION" --macos-zip="$zip_path" --extract-root="$extract_root"
+      - name: Check out verified updater baseline
+        if: inputs.updater_baseline_version != ''
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ inputs.updater_baseline_version }}
+          path: .tmp/updater-baseline
+          persist-credentials: false
+      - name: Install verified baseline updater dependencies
+        if: inputs.updater_baseline_version != ''
+        working-directory: .tmp/updater-baseline
+        run: npm ci --ignore-scripts
+      - name: Prove verified macOS baseline consumes same-run update
+        if: inputs.updater_baseline_version != ''
+        env:
+          BASELINE_VERSION: ${{ inputs.updater_baseline_version }}
+          TARGET_VERSION: ${{ inputs.target_version }}
+        run: |
+          set -euo pipefail
+          ELECTRON_RUN_AS_NODE=1 node_modules/electron/dist/Electron.app/Contents/MacOS/Electron \
+            .tmp/updater-baseline/scripts/desktop-update-compatibility-gate.mjs \
+            --current-version="$BASELINE_VERSION" --target-version="$TARGET_VERSION" \
+            --directory="artifacts/macos/github-arm64"
       - name: Generate artifact attestation
         uses: actions/attest@v4
         with:

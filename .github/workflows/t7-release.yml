@@ -23,6 +23,8 @@ jobs:
     name: Resolve release identity
     runs-on: ubuntu-latest
     outputs:
+      updater_baseline_version: ${{ steps.identity.outputs.baseline_version }}
+      updater_baseline_bootstrap: ${{ steps.identity.outputs.baseline_bootstrap }}
       target_sha: ${{ steps.identity.outputs.target_sha }}
       target_version: ${{ steps.identity.outputs.target_version }}
       trigger_ref: ${{ steps.identity.outputs.trigger_ref }}
@@ -40,6 +42,8 @@ jobs:
           FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}
         run: |
           node scripts/release-target-contract.mjs >> "$GITHUB_OUTPUT"
+          node scripts/desktop-update-release-policy.mjs \
+            --candidate="$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
           echo "trigger_ref=${{ github.ref }}" >> "$GITHUB_OUTPUT"
 
   t6_quality:
@@ -79,6 +83,7 @@ jobs:
       execution_lane: release-t7
       target_sha: ${{ needs.release_candidate.outputs.accepted_sha }}
       target_version: ${{ needs.release_context.outputs.target_version }}
+      updater_baseline_version: ${{ needs.release_context.outputs.updater_baseline_version }}
       trigger_ref: ${{ needs.release_context.outputs.trigger_ref }}
     secrets:
       APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
@@ -102,6 +107,7 @@ jobs:
       execution_lane: release-t7
       target_sha: ${{ needs.release_candidate.outputs.accepted_sha }}
       target_version: ${{ needs.release_context.outputs.target_version }}
+      updater_baseline_version: ${{ needs.release_context.outputs.updater_baseline_version }}
       trigger_ref: ${{ needs.release_context.outputs.trigger_ref }}
     secrets:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -156,6 +162,10 @@ jobs:
           (cd release-assets/windows && sha256sum --check SHA256SUMS.txt)
           grep -Fq "version: ${TARGET_VERSION}" release-assets/macos/latest-mac.yml
           grep -Fq "version: ${TARGET_VERSION}" release-assets/windows/latest.yml
+          node scripts/desktop-update-artifact-contract.mjs \
+            --platform=macos --version="$TARGET_VERSION" --directory=release-assets/macos
+          node scripts/desktop-update-artifact-contract.mjs \
+            --platform=windows --version="$TARGET_VERSION" --directory=release-assets/windows
           mv release-assets/macos/SHA256SUMS.txt release-assets/macos/SHA256SUMS-macos.txt
           mv release-assets/windows/SHA256SUMS.txt release-assets/windows/SHA256SUMS-windows.txt
       - name: Reconcile the single unpublished draft

@@ -14,6 +14,8 @@ describe('deploy release manifest workflow contract', () => {
     expect(source).toContain('test "$DEPLOY_REF" = "refs/heads/dev"');
     expect(source).toContain('releases/tags/v${latest_version}');
     expect(source).toContain('select(.draft == false and .published_at != null)');
+    expect(source).toContain('gh release download "v${latest_version}"');
+    expect(source).toContain('node scripts/desktop-update-artifact-contract.mjs');
     expect(source).toContain('node scripts/prepare-release-manifest-site.mjs');
     expect(source).not.toContain('- main');
   });

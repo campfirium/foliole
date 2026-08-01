@@ -11,6 +11,11 @@ import {
 const VERSION = '0.9.0';
 const REPOSITORY = 'campfirium/foliole';
 const MANIFEST = {
+  desktopUpdater: {
+    firstCapableVersion: VERSION,
+    manualUpgradeFrom: '0.7.0',
+    verifiedBaselineVersion: VERSION
+  },
   latest: VERSION,
   releases: [{
     url: `https://github.com/${REPOSITORY}/releases/tag/v${VERSION}`,
@@ -32,6 +37,26 @@ describe('release manifest Pages preparation', () => {
     })).toEqual({ expectedTag: 'v0.9.0', version: VERSION });
   });
 
+  it('preserves 0.7.1 bootstrap metadata without claiming updater capability', () => {
+    const manifest = {
+      desktopUpdater: {
+        firstCapableVersion: null,
+        manualUpgradeFrom: '0.7.0',
+        verifiedBaselineVersion: null
+      },
+      latest: '0.7.1',
+      releases: [{
+        url: `https://github.com/${REPOSITORY}/releases/tag/v0.7.1`,
+        version: '0.7.1'
+      }]
+    };
+    expect(validateReleaseManifestPublication({
+      manifest,
+      release: { ...RELEASE, tag_name: 'v0.7.1' },
+      repository: REPOSITORY
+    })).toEqual({ expectedTag: 'v0.7.1', version: '0.7.1' });
+  });
+
   it.each([
     ['draft', { ...RELEASE, draft: true }],
     ['missing publication time', { ...RELEASE, published_at: null }],
@@ -47,6 +72,17 @@ describe('release manifest Pages preparation', () => {
       release: RELEASE,
       repository: REPOSITORY
     })).toThrow('must link');
+  });
+
+  it('rejects promotion when updater baseline metadata does not name a public release', () => {
+    expect(() => validateReleaseManifestPublication({
+      manifest: {
+        ...MANIFEST,
+        desktopUpdater: { ...MANIFEST.desktopUpdater, verifiedBaselineVersion: '0.8.0' }
+      },
+      release: RELEASE,
+      repository: REPOSITORY
+    })).toThrow('public manifest releases');
   });
 
   it('queries the official published-release endpoint with explicit API headers', async () => {

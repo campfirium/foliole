@@ -115,6 +115,7 @@ export const HOSTED_RUNNERS = [
   ['runner:sql-surface-scan', 'sql-surface-scan.mjs'],
   ['runner:android-host-quality', 'native-linux-host.mjs hosted quality commands'],
   ['runner:release-target-contract', 'same-run release ref, version, and commit identity validation'],
+  ['runner:desktop-update-release-gate', 'same-run desktop updater identity, metadata, and compatibility validation'],
   ['runner:release-manifest-pages', 'published-release-guarded Pages manifest preparation'],
   ['runner:aggregate-package-check', 'registered non-quality aggregate npm check']
 ];
