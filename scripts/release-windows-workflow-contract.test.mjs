@@ -40,6 +40,7 @@ describe('release Windows workflow contract', () => {
       'desktop-update-packaged-identity.mjs',
       'ref: v${{ inputs.updater_baseline_version }}',
       'desktop-update-compatibility-gate.mjs',
+      'Copy-Item "scripts/desktop-update-compatibility-gate.mjs"',
       'desktop-update-artifact-contract.mjs',
       'node scripts/windows/package-windows.mjs --install-existing',
       'node scripts/windows/installed-app-smoke.mjs',

@@ -129,6 +129,8 @@ jobs:
           TARGET_VERSION: ${{ inputs.target_version }}
         shell: pwsh
         run: |
+          Copy-Item "scripts/desktop-update-compatibility-gate.mjs" `
+            ".tmp/updater-baseline/scripts/desktop-update-compatibility-gate.mjs" -Force
           $env:ELECTRON_RUN_AS_NODE = "1"
           & "node_modules/electron/dist/electron.exe" ".tmp/updater-baseline/scripts/desktop-update-compatibility-gate.mjs" `
             "--current-version=$env:BASELINE_VERSION" "--target-version=$env:TARGET_VERSION" `

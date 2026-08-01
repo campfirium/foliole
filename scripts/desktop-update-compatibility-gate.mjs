@@ -116,6 +116,9 @@ async function createUpdater({ currentVersion, platform, root, updateConfig, url
   updater.autoInstallOnAppQuit = false;
   updater.disableDifferentialDownload = true;
   updater.logger = console;
+  updater.on('error', (error) => {
+    console.error(`[desktop-update-compatibility] updater error: ${error instanceof Error ? error.message : String(error)}`);
+  });
   return updater;
 }
 
