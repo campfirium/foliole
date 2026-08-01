@@ -1,17 +1,24 @@
 {
   "schemaVersion": 1,
   "channel": "alpha",
-  "latest": "0.7.3",
+  "latest": "0.7.4",
   "checkPolicy": {
     "intervalMinutes": 1440,
     "failureRetryMinutes": 15
   },
   "desktopUpdater": {
-    "firstCapableVersion": "0.7.2",
+    "firstCapableVersion": "0.7.4",
     "manualUpgradeFrom": "0.7.0",
-    "verifiedBaselineVersion": "0.7.2"
+    "verifiedBaselineVersion": "0.7.4"
   },
   "releases": [
+    {
+      "version": "0.7.4",
+      "date": "2026-08-01",
+      "platforms": ["macos", "windows"],
+      "severity": "normal",
+      "url": "https://github.com/campfirium/foliole/releases/tag/v0.7.4"
+    },
     {
       "version": "0.7.3",
       "date": "2026-08-01",
