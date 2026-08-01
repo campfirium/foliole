@@ -15,6 +15,7 @@ import {
 } from './release-doctor-core.mjs';
 import {
   checkGithubReleaseSignals,
+  checkSiteSync,
   collectPostPublishChecks
 } from './release-doctor-post-publish.mjs';
 
@@ -169,6 +170,7 @@ export async function collectReleaseDoctorChecks({
     checkReleaseWorkflow(workflow, version),
     checkWorkingTree(rootDir, commandRunner),
     ...checkGithubReleaseSignals(version, phase, rootDir, commandRunner, localBody),
+    ...(phase === 'post' ? checkSiteSync(version, rootDir, commandRunner) : []),
     ...(await collectPostPublishChecks({ fetcher, marketingRoot, phase, version }))
   ];
   return { checks, phase, version };

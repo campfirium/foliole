@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+import { Buffer } from 'node:buffer';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -25,6 +26,10 @@ const ASSETS = [
 
 function githubResponses(version, candidate = {}) {
   const publishedAt = candidate.isDraft === true ? null : '2026-07-31T00:00:00Z';
+  const siteManifest = Buffer.from(JSON.stringify({
+    tag: `v${version}`,
+    version
+  })).toString('base64');
   return {
     [`gh release view v${version} -R campfirium/foliole --json body,isDraft,publishedAt,tagName,url,assets`]: {
       status: 0,
@@ -42,6 +47,16 @@ function githubResponses(version, candidate = {}) {
     'gh release view -R campfirium/foliole --json tagName,isDraft,publishedAt,url': {
       status: 0,
       stdout: JSON.stringify({ isDraft: false, publishedAt, tagName: `v${version}`, url: 'https://example.test' }),
+      stderr: ''
+    },
+    'gh run list --repo campfirium/foliole-site --workflow deploy.yml --event repository_dispatch --limit 1 --json conclusion,url,createdAt': {
+      status: 0,
+      stdout: JSON.stringify([{ conclusion: 'success', createdAt: publishedAt, url: 'https://example.test/site-run' }]),
+      stderr: ''
+    },
+    'gh api repos/campfirium/foliole-site/contents/content/downloads.json?ref=main --jq .content': {
+      status: 0,
+      stdout: siteManifest,
       stderr: ''
     }
   };
@@ -129,9 +144,28 @@ describe('release doctor', () => {
 
     for (const title of [
       'GitHub release body remote', 'GitHub release installer asset',
-      'GitHub release checksum asset', 'Pages manifest latest', 'marketing posting file'
+      'GitHub release checksum asset', 'site release sync run',
+      'site download manifest', 'Pages manifest latest', 'marketing posting file'
     ]) expect(findCheck(result, title).status, title).toBe('PASS');
     expect(hasFailures(result.checks)).toBe(false);
+  });
+
+  it('rejects post-public closeout when the site did not sync the current release', async () => {
+    const fixture = await createFixture();
+    const responses = githubResponses(fixture.version);
+    responses['gh run list --repo campfirium/foliole-site --workflow deploy.yml --event repository_dispatch --limit 1 --json conclusion,url,createdAt'] = {
+      status: 0,
+      stdout: JSON.stringify([{ conclusion: 'failure', url: 'https://example.test/failed-site-run' }]),
+      stderr: ''
+    };
+    const result = await collectReleaseDoctorChecks({
+      argv: ['--phase=post'], commandRunner: commandRunner(responses),
+      fetcher: async () => onlineManifest(fixture.version),
+      marketingRoot: join(fixture.rootDir, 'missing'), rootDir: fixture.rootDir
+    });
+
+    expect(findCheck(result, 'site release sync run').status).toBe('FAIL');
+    expect(hasFailures(result.checks)).toBe(true);
   });
 
   it('keeps the npm script contract registered', async () => {
