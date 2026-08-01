@@ -1,4 +1,9 @@
 {
+  "0.7.3": {
+    "notes": [
+      "Testing automatic update downloads from 0.7.2 to 0.7.3."
+    ]
+  },
   "0.7.2": {
     "notes": [
       "Fixed",

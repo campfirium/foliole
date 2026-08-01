@@ -116,6 +116,9 @@ async function createUpdater({ currentVersion, platform, root, updateConfig, url
   updater.autoInstallOnAppQuit = false;
   updater.disableDifferentialDownload = true;
   updater.logger = console;
+  updater.on('error', (error) => {
+    console.error(`[desktop-update-compatibility] updater error: ${error instanceof Error ? error.message : String(error)}`);
+  });
   return updater;
 }
 
@@ -154,9 +157,16 @@ async function main() {
   console.log(`[desktop-update-compatibility] status: VERIFIED from=${options.currentVersion} to=${result.targetVersion} payload=${result.downloaded.join(',')}`);
 }
 
+export async function runCompatibilityGateCli(execute, runtime = process, logger = console) {
+  try {
+    await execute();
+    runtime.exitCode = 0;
+  } catch (error) {
+    logger.error(`[desktop-update-compatibility] ${error instanceof Error ? error.message : String(error)}`);
+    runtime.exitCode = 1;
+  }
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)) {
-  await main().catch((error) => {
-    console.error(`[desktop-update-compatibility] ${error instanceof Error ? error.message : String(error)}`);
-    process.exitCode = 1;
-  });
+  await runCompatibilityGateCli(main);
 }

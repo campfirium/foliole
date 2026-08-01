@@ -40,12 +40,16 @@ describe('release Windows workflow contract', () => {
       'desktop-update-packaged-identity.mjs',
       'ref: v${{ inputs.updater_baseline_version }}',
       'desktop-update-compatibility-gate.mjs',
+      'Copy-Item "scripts/desktop-update-compatibility-gate.mjs"',
+      'node ".tmp/updater-baseline/scripts/desktop-update-compatibility-gate.mjs"',
       'desktop-update-artifact-contract.mjs',
       'node scripts/windows/package-windows.mjs --install-existing',
       'node scripts/windows/installed-app-smoke.mjs',
       'node scripts/windows/windows-validation-kit-build.mjs build',
       'uses: actions/attest@v4'
     ]) expect(source).toContain(command);
+    expect(source).not.toContain('ELECTRON_RUN_AS_NODE');
+    expect(source).not.toContain('electron.exe');
     expect(source).toContain('name: foliole-windows-release');
   });
 
