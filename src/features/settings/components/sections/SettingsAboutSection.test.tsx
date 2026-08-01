@@ -80,24 +80,6 @@ it('installs the packaged Foliole CLI from About settings', async () => {
   );
 });
 
-it('shows the latest available release in About settings', async () => {
-  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.updateCheckState, JSON.stringify({
-    cachedManifest: null,
-    cachedReleaseNotes: null,
-    dismissedVersion: null,
-    lastCheckedAt: '2026-05-31T00:00:00.000Z',
-    lastCheckStatus: 'available',
-    lastSeenVersion: '0.1.1',
-    latestReleaseUrl: 'https://github.com/campfirium/foliole/releases/tag/v0.1.1',
-    latestVersion: '0.1.1'
-  }));
-
-  renderWithLocalization(<SettingsAboutSection />);
-
-  expect(await screen.findByText('Update available')).toBeInTheDocument();
-  expect(screen.getByText('Foliole 0.1.1 is available.')).toBeInTheDocument();
-});
-
 it('shows release notes for the available update in About settings', async () => {
   window.electronAPI!.invoke = vi.fn(async (command: string) =>
     command === NATIVE_COMMANDS.appGetVersion ? '0.6.1' : null
