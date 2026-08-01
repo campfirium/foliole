@@ -49,6 +49,7 @@ import {
 } from './runtimeMainSupport.js';
 import { resolveRuntimeMode } from './runtimeMode.js';
 import { prepareStartupRendererAppearance } from './startupRendererPreparation.js';
+import { desktopUpdateService } from './update/desktopUpdateRuntime.js';
 import { bindWindowRuntimeDiagnostics, setStartupWindowPresentation } from './windowRuntimeDiagnostics.js';
 import { bindWindowStatePersistence } from './windowStateLifecycle.js';
 
@@ -187,6 +188,7 @@ function installInvokeHandler() {
   );
 }
 
+void app.whenReady().then(() => desktopUpdateService.start());
 installMainLifecycle({
   activateMainWindow: activateRendererInWindow,
   createMainWindow,

@@ -66,5 +66,3 @@ export const desktopUpdateService = new DesktopUpdateService({
   reportDiagnostic: (label) => appendMainProcessDiagnosticLog(label, {}),
   stateStore: createRuntimeStateStore()
 });
-
-void app.whenReady().then(() => desktopUpdateService.start());

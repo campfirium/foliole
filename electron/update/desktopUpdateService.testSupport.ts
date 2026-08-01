@@ -9,6 +9,15 @@ type StoredRecord = {
   targetVersion: string;
 };
 
+interface DesktopUpdateHarnessOptions {
+  applicable?: boolean;
+  currentVersion?: string;
+  isUpdateAvailable?: boolean;
+  providerVersion?: string | null;
+  retryDelaysMs?: readonly number[];
+  storedRecord?: StoredRecord | null;
+}
+
 function createStateStore(storedRecord: StoredRecord | null = null) {
   return {
     clear: vi.fn(async () => undefined),
@@ -17,14 +26,7 @@ function createStateStore(storedRecord: StoredRecord | null = null) {
   };
 }
 
-export function createDesktopUpdateServiceHarness(options: {
-  applicable?: boolean;
-  currentVersion?: string;
-  isUpdateAvailable?: boolean;
-  providerVersion?: string | null;
-  retryDelaysMs?: readonly number[];
-  storedRecord?: StoredRecord | null;
-} = {}) {
+export function createDesktopUpdateServiceHarness(options: DesktopUpdateHarnessOptions = {}) {
   const listeners = new Map<string, (payload?: Record<string, unknown>) => void>();
   let resolveDownload: () => void = () => undefined;
   let rejectDownload: (error?: Error) => void = () => undefined;
@@ -53,10 +55,11 @@ export function createDesktopUpdateServiceHarness(options: {
   const loadUpdater = vi.fn(async () => updater);
   const stateStore = createStateStore(options.storedRecord);
   const reportDiagnostic = vi.fn();
+  const isApplicable = vi.fn(() => options.applicable !== false);
   const service = new DesktopUpdateService({
     eventChannel: 'foliole:desktop-update-state',
     getCurrentVersion: () => options.currentVersion ?? '0.6.0',
-    isApplicable: () => options.applicable !== false,
+    isApplicable,
     loadUpdater,
     prepareInstall,
     reportDiagnostic,
@@ -65,6 +68,7 @@ export function createDesktopUpdateServiceHarness(options: {
   });
   return {
     listeners,
+    isApplicable,
     loadUpdater,
     prepareInstall,
     rejectDownload: (error?: Error) => rejectDownload(error),

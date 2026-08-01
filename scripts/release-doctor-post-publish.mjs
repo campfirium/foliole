@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { existsSync } from 'node:fs';
 import { get } from 'node:https';
 import { join } from 'node:path';
@@ -28,6 +29,61 @@ function classifyGhFailure(result) {
     return createCheck('SKIPPED', 'GitHub release remote', 'gh is not authenticated.');
   }
   return createCheck('UNKNOWN', 'GitHub release remote', `gh release check failed: ${(result.stderr || result.stdout || '').trim()}`);
+}
+
+function siteSyncCommandFailure(result, title) {
+  if (result.error?.code === 'ENOENT') {
+    return createCheck('SKIPPED', title, 'gh is not installed.');
+  }
+  return createCheck(
+    'UNKNOWN',
+    title,
+    (result.stderr || result.stdout || result.error?.message || 'GitHub check failed.').trim()
+  );
+}
+
+export function checkSiteSync(version, rootDir, commandRunner) {
+  const run = commandRunner('gh', [
+    'run', 'list', '--repo', 'campfirium/foliole-site', '--workflow', 'deploy.yml',
+    '--event', 'repository_dispatch', '--limit', '1',
+    '--json', 'conclusion,url,createdAt'
+  ], rootDir);
+  if (run.error || run.status !== 0) {
+    return [siteSyncCommandFailure(run, 'site release sync run')];
+  }
+  const latestRun = parseJsonResult(run)?.[0];
+  const checks = [createCheck(
+    latestRun?.conclusion === 'success' ? 'PASS' : 'FAIL',
+    'site release sync run',
+    latestRun
+      ? `latest repository_dispatch concluded ${latestRun.conclusion || '<pending>'}: ${latestRun.url ?? '<no url>'}`
+      : 'no repository_dispatch deployment run was found.'
+  )];
+
+  const manifest = commandRunner('gh', [
+    'api', 'repos/campfirium/foliole-site/contents/content/downloads.json?ref=main',
+    '--jq', '.content'
+  ], rootDir);
+  if (manifest.error || manifest.status !== 0) {
+    checks.push(siteSyncCommandFailure(manifest, 'site download manifest'));
+    return checks;
+  }
+  let published;
+  try {
+    published = JSON.parse(Buffer.from(manifest.stdout.trim(), 'base64').toString('utf8'));
+  } catch {
+    published = null;
+  }
+  const expectedTag = `v${version}`;
+  const current = published?.version === version && published?.tag === expectedTag;
+  checks.push(createCheck(
+    current ? 'PASS' : 'FAIL',
+    'site download manifest',
+    current
+      ? `site download manifest points to ${expectedTag}.`
+      : `site download manifest points to ${published?.tag ?? '<unreadable>'}; expected ${expectedTag}.`
+  ));
+  return checks;
 }
 
 function checkRemoteBody(candidateJson, localBody, phase) {

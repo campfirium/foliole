@@ -1,4 +1,10 @@
 {
+  "0.7.2": {
+    "notes": [
+      "Fixed",
+      "Addressed reliability issues with background update downloads."
+    ]
+  },
   "0.7.1": {
     "notes": [
       "New",
