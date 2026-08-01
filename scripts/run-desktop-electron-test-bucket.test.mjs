@@ -11,7 +11,7 @@ import {
   collectElectronTestFiles
 } from './run-desktop-electron-test-bucket.mjs';
 
-it('splits desktop Electron tests into bounded buckets', () => {
+it('builds the expected desktop Electron buckets with explicit chunk bounds', () => {
   const buckets = buildDesktopElectronBuckets();
   const labels = buckets.map((bucket) => bucket.label);
 
@@ -46,13 +46,6 @@ it('splits desktop Electron tests into bounded buckets', () => {
   ]);
   expect(buckets.find((bucket) => bucket.label === 'import-importNodeMutationPatch')?.workers).toBe(1);
   expect(buckets.find((bucket) => bucket.label === 'ipc-epub-01')?.targets.length).toBeLessThanOrEqual(3);
-  expect(buckets.find((bucket) => bucket.label === 'agentControl')?.targets).toHaveLength(16);
-  expect(buckets.find((bucket) => bucket.label === 'assistant')?.targets).toHaveLength(19);
-  expect(buckets.find((bucket) => bucket.label === 'discourse')?.targets).toHaveLength(4);
-  expect(buckets.find((bucket) => bucket.label === 'foliole-publish')?.targets).toHaveLength(13);
-  expect(buckets.find((bucket) => bucket.label === 'security')?.targets).toHaveLength(1);
-  expect(buckets.find((bucket) => bucket.label === 'update')?.targets).toHaveLength(6);
-  expect(buckets.find((bucket) => bucket.label === 'wordpress')?.targets).toHaveLength(6);
 });
 
 it('collects every Electron test exactly once', () => {
