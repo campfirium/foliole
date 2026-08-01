@@ -5,6 +5,7 @@ import type { NativeDesktopUpdateState } from '../../../lib/platform/nativeUpdat
 
 afterEach(() => {
   delete window.electronAPI;
+  vi.restoreAllMocks();
   vi.resetModules();
 });
 
@@ -106,4 +107,41 @@ it('does not let a late command response overwrite a newer main-process event', 
   await check;
 
   expect(runtime.readDesktopUpdateState()).toEqual({ phase: 'downloading', version: '0.7.0' });
+});
+
+it('publishes restart feedback synchronously before the native command returns', async () => {
+  let stateHandler: ((state: NativeDesktopUpdateState) => void) | undefined;
+  const frameCallbacks: FrameRequestCallback[] = [];
+  vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+    frameCallbacks.push(callback);
+    return frameCallbacks.length;
+  });
+  const invoke = vi.fn((command: string) => command === 'desktop_update_install'
+    ? new Promise<NativeDesktopUpdateState>(() => undefined)
+    : Promise.resolve({ phase: 'idle' } as NativeDesktopUpdateState));
+  window.electronAPI = {
+    invoke: invoke as unknown as NativeInvoke,
+    onDesktopUpdateState: (handler) => {
+      stateHandler = handler;
+      return () => undefined;
+    },
+    onManagedInboxUpdated: () => () => undefined,
+    onNativeMenuCommand: () => () => undefined,
+    onWindowResized: () => () => undefined
+  };
+  const runtime = await import('./desktopUpdate');
+  runtime.readDesktopUpdateState();
+  await Promise.resolve();
+  stateHandler?.({ phase: 'ready', version: '0.7.3' });
+
+  void runtime.installDesktopUpdate();
+
+  expect(runtime.readDesktopUpdateState()).toEqual({ phase: 'restarting', version: '0.7.3' });
+  expect(invoke).not.toHaveBeenCalledWith('desktop_update_install');
+
+  frameCallbacks.shift()?.(0);
+  expect(invoke).not.toHaveBeenCalledWith('desktop_update_install');
+
+  frameCallbacks.shift()?.(16);
+  await vi.waitFor(() => expect(invoke).toHaveBeenCalledWith('desktop_update_install'));
 });

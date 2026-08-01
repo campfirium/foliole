@@ -129,11 +129,11 @@ jobs:
           TARGET_VERSION: ${{ inputs.target_version }}
         shell: pwsh
         run: |
-          Copy-Item "scripts/desktop-update-compatibility-gate.mjs" `
-            ".tmp/updater-baseline/scripts/desktop-update-compatibility-gate.mjs" -Force
-          node ".tmp/updater-baseline/scripts/desktop-update-compatibility-gate.mjs" `
+          node "scripts/desktop-update-compatibility-gate.mjs" `
             "--current-version=$env:BASELINE_VERSION" "--target-version=$env:TARGET_VERSION" `
-            "--directory=artifacts/windows"
+            "--directory=artifacts/windows" `
+            "--electron=.tmp/updater-baseline/node_modules/electron/dist/electron.exe" `
+            "--updater-module=.tmp/updater-baseline/node_modules/electron-updater"
           if ($LASTEXITCODE -ne 0) { throw "Windows updater compatibility gate failed." }
       - name: Install signed Windows installer
         run: node scripts/windows/package-windows.mjs --install-existing

@@ -79,6 +79,16 @@ export function downloadDesktopUpdate() {
   return invokeUpdateCommand(NATIVE_COMMANDS.desktopUpdateDownload);
 }
 
-export function installDesktopUpdate() {
+function waitForRestartFeedbackPaint() {
+  if (typeof window.requestAnimationFrame !== 'function') return Promise.resolve();
+  return new Promise<void>((resolve) => {
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()));
+  });
+}
+
+export async function installDesktopUpdate() {
+  if (state.phase !== 'ready') return Promise.resolve(state);
+  publish({ ...state, errorCode: undefined, phase: 'restarting' });
+  await waitForRestartFeedbackPaint();
   return invokeUpdateCommand(NATIVE_COMMANDS.desktopUpdateInstall);
 }

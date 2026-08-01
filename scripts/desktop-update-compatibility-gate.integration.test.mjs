@@ -29,19 +29,18 @@ describe.runIf(process.platform === 'darwin')('desktop update compatibility gate
       `sha512: ${sha512}`,
       ''
     ].join('\n'));
-    const executable = 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron';
     const script = 'scripts/desktop-update-compatibility-gate.mjs';
-    const result = await run(executable, [script, '--current-version=0.8.0',
+    const result = await run(process.execPath, [script, '--current-version=0.8.0',
       '--target-version=0.8.1', `--directory=${directory}`], {
       cwd: process.cwd(),
       env: {
         ...process.env,
-        ELECTRON_RUN_AS_NODE: '1',
         GITHUB_ACTIONS: 'true',
         RUNNER_ENVIRONMENT: 'github-hosted'
       },
       timeout: 30_000
     });
     expect(result.stdout).toContain('status: VERIFIED from=0.8.0 to=0.8.1');
+    expect(result.stdout).toContain('updater=MacUpdater executor=ElectronHttpExecutor');
   }, 35_000);
 });

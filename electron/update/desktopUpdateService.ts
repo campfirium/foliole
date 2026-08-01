@@ -76,16 +76,17 @@ export class DesktopUpdateService {
   async install() {
     if (this.state.phase !== 'ready') return this.setInvalidState();
     const readyState = this.state;
+    this.setState({ ...readyState, errorCode: undefined, phase: 'restarting' });
     if (!(await this.options.prepareInstall())) {
       this.options.reportDiagnostic?.('desktop_update_install_preparation_failed');
-      return this.setState(readyState);
+      return this.setState({ ...readyState, errorCode: 'install-preparation-failed' });
     }
     try {
       const updater = await this.ensureUpdater();
       updater.quitAndInstall(false, true);
     } catch {
       this.options.reportDiagnostic?.('desktop_update_install_launch_failed');
-      return this.setState(readyState);
+      return this.setState({ ...readyState, errorCode: 'install-failed' });
     }
     return this.state;
   }
@@ -179,7 +180,8 @@ export class DesktopUpdateService {
     if (this.updater) return this.updater;
     this.updaterPromise ??= this.options.loadUpdater().then((updater) => {
       configureDesktopUpdater(updater, () => this.targetVersion ?? undefined, (state) => {
-        if (this.state.phase === 'downloading') this.setState(state);
+        if (this.state.phase === 'downloading' && state.phase === 'downloading') this.setState(state);
+        if (this.state.phase === 'restarting' && state.errorCode === 'install-failed') this.setState(state);
       });
       this.updater = updater;
       return updater;

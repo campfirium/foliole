@@ -8,11 +8,13 @@ export type NativeDesktopUpdatePhase =
   | 'idle'
   | 'not-applicable'
   | 'pending-asset'
-  | 'ready';
+  | 'ready'
+  | 'restarting';
 
 export type NativeDesktopUpdateErrorCode =
   | 'check-failed'
   | 'download-failed'
+  | 'install-failed'
   | 'install-preparation-failed'
   | 'invalid-command-state';
 

@@ -40,8 +40,9 @@ describe('release Windows workflow contract', () => {
       'desktop-update-packaged-identity.mjs',
       'ref: v${{ inputs.updater_baseline_version }}',
       'desktop-update-compatibility-gate.mjs',
-      'Copy-Item "scripts/desktop-update-compatibility-gate.mjs"',
-      'node ".tmp/updater-baseline/scripts/desktop-update-compatibility-gate.mjs"',
+      'node "scripts/desktop-update-compatibility-gate.mjs"',
+      '--electron=.tmp/updater-baseline/node_modules/electron/dist/electron.exe',
+      '--updater-module=.tmp/updater-baseline/node_modules/electron-updater',
       'desktop-update-artifact-contract.mjs',
       'node scripts/windows/package-windows.mjs --install-existing',
       'node scripts/windows/installed-app-smoke.mjs',
@@ -49,7 +50,6 @@ describe('release Windows workflow contract', () => {
       'uses: actions/attest@v4'
     ]) expect(source).toContain(command);
     expect(source).not.toContain('ELECTRON_RUN_AS_NODE');
-    expect(source).not.toContain('electron.exe');
     expect(source).toContain('name: foliole-windows-release');
   });
 

@@ -21,6 +21,12 @@ import {
   formatInternalBuildVersion,
   writeInternalBuilderConfig
 } from './package-windows-internal-config.mjs';
+import {
+  WINDOWS_ACCEPTANCE_CONFIG,
+  resolveAcceptanceBaselineVersion,
+  resolveWindowsAcceptanceOutputDir,
+  writeWindowsAcceptanceBuilderConfig
+} from './package-windows-acceptance-config.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, '../..');
@@ -145,20 +151,32 @@ async function main() {
   const fromBuilt = resolveBuiltArtifactMode();
   const installExisting = resolveInstallExistingMode();
   const packageVersion = readPackageVersion();
-  const buildVersion = internal ? formatInternalBuildVersion(packageVersion) : packageVersion;
-  const outputDir = internal ? INTERNAL_OUTPUT_DIR : 'artifacts/windows';
+  const acceptanceVersion = resolveAcceptanceBaselineVersion();
+  if (internal && acceptanceVersion) {
+    throw new Error('--internal cannot be combined with --acceptance-baseline-version');
+  }
+  const buildVersion = acceptanceVersion ?? (internal ? formatInternalBuildVersion(packageVersion) : packageVersion);
+  const outputDir = acceptanceVersion
+    ? resolveWindowsAcceptanceOutputDir(acceptanceVersion)
+    : (internal ? INTERNAL_OUTPUT_DIR : 'artifacts/windows');
   if (installExisting) {
     if (internal || fromBuilt) throw new Error('--install-existing cannot be combined with package modes');
-    await installPackagedApp(repoRoot, packageVersion, outputDir);
+    await installPackagedApp(repoRoot, buildVersion, outputDir);
     console.log('[windows-package] status: PACKAGED_AND_INSTALLED');
     return;
   }
-  const steps = createNativePackageSteps(fromBuilt, internal);
+  let builderConfig = resolveBuilderConfig(internal);
+  if (acceptanceVersion) {
+    builderConfig = writeWindowsAcceptanceBuilderConfig(repoRoot, builderConfig, acceptanceVersion);
+    rmSync(resolve(repoRoot, outputDir), { force: true, recursive: true });
+  }
+  const steps = createNativePackageSteps(fromBuilt, internal, builderConfig);
   console.log(`[windows-package] mode: ${mode}`);
   console.log(`[windows-package] channel: ${internal ? 'internal' : 'release'}`);
   console.log(`[windows-package] install: ${install ? 'yes' : 'no'}`);
   console.log(`[windows-package] from-built: ${fromBuilt ? 'yes' : 'no'}`);
   console.log(`[windows-package] build version: ${buildVersion}`);
+  if (acceptanceVersion) console.log(`[windows-package] acceptance config: ${WINDOWS_ACCEPTANCE_CONFIG}`);
   if (internal) {
     writeInternalBuilderConfig(repoRoot, buildVersion);
     rmSync(resolve(repoRoot, INTERNAL_OUTPUT_DIR), { force: true, recursive: true });

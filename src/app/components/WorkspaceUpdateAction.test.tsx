@@ -51,6 +51,22 @@ it('shows a compact neutral CircleArrowDown action and installs the ready update
   expect(updateMock.install).toHaveBeenCalledTimes(1);
 });
 
+it('shows immediate disabled feedback while Foliole restarts', () => {
+  updateMock.state = { phase: 'restarting', version: '0.7.0' };
+  renderWithLocalization(<WorkspaceUpdateAction />);
+
+  const button = screen.getByRole('button', { name: 'Restarting...' });
+  expect(button).toBeDisabled();
+  expect(button.querySelector('.lucide-loader-circle')).toHaveClass('animate-spin');
+});
+
+it('makes a failed restart retryable instead of looking unresponsive', () => {
+  updateMock.state = { errorCode: 'install-failed', phase: 'ready', version: '0.7.0' } as never;
+  renderWithLocalization(<WorkspaceUpdateAction />);
+
+  expect(screen.getByRole('button', { name: 'Restart failed. Try again' })).toBeEnabled();
+});
+
 it('replays the reminder after one minute while the update stays ready', () => {
   vi.useFakeTimers();
   updateMock.state = { phase: 'ready', version: '0.7.0' };
