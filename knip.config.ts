@@ -26,6 +26,7 @@ const config = {
   ignoreBinaries: [
     'cmd.exe',
     'codex',
+    'ditto',
     'git.exe',
     'netstat.exe',
     'powershell.exe',
