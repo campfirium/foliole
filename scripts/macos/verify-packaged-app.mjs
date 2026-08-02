@@ -5,7 +5,9 @@ import { constants } from 'node:fs';
 import { access } from 'node:fs/promises';
 import path from 'node:path';
 
-const APP_GROUP = 'V589TQH334.group.com.campfirium.foliole.agent-control';
+import { verifyPackagedEntitlements } from './packaged-entitlements-contract.mjs';
+import { verifyPackagedVersion } from './verify-packaged-version.mjs';
+
 const TEAM_ID = 'V589TQH334';
 
 function runChecked(label, command, args, run, options = {}) {
@@ -86,6 +88,25 @@ function requireEntitlements(source, names, subject) {
   }
 }
 
+async function verifyDeveloperIdUpdaterRuntime(appPath, run, checkAccess) {
+  const frameworkPath = path.join(appPath, 'Contents/Frameworks/Squirrel.framework');
+  const squirrelPath = path.join(frameworkPath, 'Versions/A/Squirrel');
+  const shipItPath = path.join(frameworkPath, 'Versions/A/Resources/ShipIt');
+  for (const executable of [squirrelPath, shipItPath]) {
+    await checkAccess(executable, constants.X_OK);
+    runChecked('updater executable signature verification', 'codesign', [
+      '--verify', '--strict', executable
+    ], run);
+    const details = runChecked(
+      'updater executable signature inspection', 'codesign', ['-dv', '--verbose=4', executable], run
+    );
+    requireEntitlements(details, [
+      'Authority=Developer ID Application: CAMPFIRIUM LTD',
+      `TeamIdentifier=${TEAM_ID}`
+    ], path.basename(executable));
+  }
+}
+
 export async function verifyPackagedMacosApp(options) {
   const run = options.run ?? spawnSync;
   const checkAccess = options.access ?? access;
@@ -104,6 +125,7 @@ export async function verifyPackagedMacosApp(options) {
   await checkAccess(cliProfilePath);
   await checkAccess(publicLauncherPath, constants.X_OK);
   await checkAccess(cliRuntimePath, constants.X_OK);
+  if (mode === 'developer-id') await verifyDeveloperIdUpdaterRuntime(appPath, run, checkAccess);
   runChecked('app signature verification', 'codesign', ['--verify', '--deep', '--strict', appPath], run);
   const profileAppGroup = 'group.com.campfirium.foliole.agent-control';
   requireProfile(decodeProfile(appProfilePath, run), {
@@ -126,55 +148,39 @@ export async function verifyPackagedMacosApp(options) {
     ['-d', '--entitlements', '-', appPath],
     run
   );
-  requireEntitlements(appEntitlements, [
-    'com.apple.security.app-sandbox',
-    'com.apple.security.application-groups',
-    APP_GROUP,
-    'com.apple.security.files.bookmarks.app-scope',
-    'com.apple.security.files.user-selected.read-write'
-  ], 'packaged app');
   const codexEntitlements = runChecked(
     'Codex entitlement inspection',
     'codesign',
     ['-d', '--entitlements', '-', codexPath],
     run
   );
-  requireEntitlements(codexEntitlements, [
-    'com.apple.security.app-sandbox',
-    'com.apple.security.cs.allow-jit',
-    'com.apple.security.inherit'
-  ], 'packaged Codex');
   const helperEntitlements = runChecked(
     'helper entitlement inspection',
     'codesign',
     ['-d', '--entitlements', '-', helperPath],
     run
   );
-  requireEntitlements(helperEntitlements, [
-    'com.apple.security.app-sandbox',
-    'com.apple.security.inherit'
-  ], 'packaged helper');
   const cliEntitlements = runChecked(
     'CLI entitlement inspection', 'codesign', ['-d', '--entitlements', '-', cliAppPath], run
   );
-  requireEntitlements(cliEntitlements, [
-    'com.apple.security.app-sandbox',
-    'com.apple.security.application-groups',
-    APP_GROUP
-  ], 'packaged CLI');
   const cliRuntimeEntitlements = runChecked(
     'CLI runtime entitlement inspection',
     'codesign',
     ['-d', '--entitlements', '-', cliRuntimePath],
     run
   );
-  requireEntitlements(cliRuntimeEntitlements, [
-    'com.apple.security.app-sandbox',
-    'com.apple.security.cs.allow-jit',
-    'com.apple.security.inherit'
-  ], 'packaged CLI runtime');
+  verifyPackagedEntitlements({
+    app: appEntitlements,
+    cli: cliEntitlements,
+    cliRuntime: cliRuntimeEntitlements,
+    codex: codexEntitlements,
+    helper: helperEntitlements
+  }, mode);
   runChecked('CLI help', publicLauncherPath, ['--help'], run);
   runChecked('CLI version', publicLauncherPath, ['--version'], run);
+  if (options.version) {
+    await verifyPackagedVersion({ appPath, run, version: options.version });
+  }
   if (options.notarized) {
     runChecked('notarization ticket validation', 'xcrun', ['stapler', 'validate', appPath], run);
   }

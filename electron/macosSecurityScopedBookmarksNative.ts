@@ -18,10 +18,14 @@ export type NativeBookmarkResult = NativeBookmarkSuccess | NativeBookmarkFailure
 export type NativeAppGroupContainerResult =
   | { ok: true; path: string }
   | NativeBookmarkFailure;
+export type NativeLegacySafeStorageResult =
+  | { ok: true; plaintext: string }
+  | NativeBookmarkFailure;
 
 export interface MacosSecurityScopedBookmarkAdapter {
   appGroupContainerPath: (identifier: string) => NativeAppGroupContainerResult;
   createAndStart: (filePath: string) => NativeBookmarkResult;
+  decryptLegacyMasSafeStorage: (encrypted: Buffer) => NativeLegacySafeStorageResult;
   resolveAndStart: (bookmark: string) => NativeBookmarkResult;
   stop: (handle: number) => boolean;
 }

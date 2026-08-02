@@ -153,7 +153,8 @@ jobs:
           node scripts/desktop-update-artifact-contract.mjs \
             --platform=macos --version="$TARGET_VERSION" --directory="$artifact_dir"
           node scripts/desktop-update-packaged-identity.mjs \
-            --version="$TARGET_VERSION" --macos-zip="$zip_path" --extract-root="$extract_root"
+            --version="$TARGET_VERSION" --macos-zip="$zip_path" --extract-root="$extract_root" \
+            --notarized
       - name: Check out verified updater baseline
         if: inputs.updater_baseline_version != ''
         uses: actions/checkout@v4
@@ -172,10 +173,11 @@ jobs:
           TARGET_VERSION: ${{ inputs.target_version }}
         run: |
           set -euo pipefail
-          ELECTRON_RUN_AS_NODE=1 node_modules/electron/dist/Electron.app/Contents/MacOS/Electron \
-            .tmp/updater-baseline/scripts/desktop-update-compatibility-gate.mjs \
+          node scripts/desktop-update-compatibility-gate.mjs \
             --current-version="$BASELINE_VERSION" --target-version="$TARGET_VERSION" \
-            --directory="artifacts/macos/github-arm64"
+            --directory="artifacts/macos/github-arm64" \
+            --electron=".tmp/updater-baseline/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron" \
+            --updater-module=".tmp/updater-baseline/node_modules/electron-updater"
       - name: Generate artifact attestation
         uses: actions/attest@v4
         with:

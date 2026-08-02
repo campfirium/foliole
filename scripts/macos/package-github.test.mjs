@@ -7,6 +7,7 @@ import {
   createGithubArtifactNames,
   createGithubBuilderConfig,
   hasNotarizationCredentials,
+  resolveGithubPackageRequest,
   resolveDeveloperIdCliProvisioningProfile,
   resolveDeveloperIdProvisioningProfile,
   writeDmgChecksum
@@ -27,7 +28,7 @@ afterEach(async () => {
 });
 
 describe('GitHub macOS packaging', () => {
-  it('builds signed arm64 DMG and ZIP artifacts with the audited sandbox signing shape', () => {
+  it('builds signed arm64 DMG and ZIP artifacts with the audited direct-distribution signing shape', () => {
     const config = createGithubBuilderConfig({
       directories: { output: 'artifacts/windows' },
       electronDist: 'node_modules/electron/dist',
@@ -36,7 +37,7 @@ describe('GitHub macOS packaging', () => {
       mac: { target: ['dmg'] }
     }, {
       codexPath: '.tmp/codex',
-      electronDist: '.tmp/electron-mas-arm64',
+      electronDist: 'node_modules/electron/dist',
       folioleCliPath: '.tmp/Foliole CLI.app',
       globalCaptureHelperPath: '.tmp/Foliole Global Capture',
       notarize: false,
@@ -44,14 +45,15 @@ describe('GitHub macOS packaging', () => {
       provisioningProfile: '/profiles/foliole-developer-id.provisionprofile'
     });
 
-    expect(config.electronDist).toBe('.tmp/electron-mas-arm64');
+    expect(config.electronDist).toBe('node_modules/electron/dist');
     expect(config.extraMetadata.folioleBuildChannel).toBe('github');
+    expect(config.extraMetadata.version).toBeUndefined();
     expect(config.directories.output).toBe('/private/tmp/foliole-github-output');
     expect(config.mac).toMatchObject({
       artifactName: '${productName}-macOS-${arch}-${version}.${ext}',
       binaries: ['Contents/MacOS/codex', 'Contents/MacOS/Foliole Global Capture'],
-      entitlements: 'build/entitlements.mas.plist',
-      entitlementsInherit: 'build/entitlements.mas.inherit.plist',
+      entitlements: 'build/entitlements.mac.plist',
+      entitlementsInherit: 'build/entitlements.mac.inherit.plist',
       extendInfo: { ElectronTeamID: 'V589TQH334' },
       forceCodeSigning: true,
       hardenedRuntime: true,
@@ -59,6 +61,7 @@ describe('GitHub macOS packaging', () => {
       notarize: false,
       preAutoEntitlements: true,
       provisioningProfile: '/profiles/foliole-developer-id.provisionprofile',
+      sign: 'scripts/macos/sign-github-app.mjs',
       signIgnore: ['Contents/Helpers/Foliole CLI\\.app(?:/|$)'],
       target: ['dmg', 'zip']
     });
@@ -70,7 +73,28 @@ describe('GitHub macOS packaging', () => {
     });
   });
 
-  it('requires an explicit Developer ID sandbox provisioning profile', () => {
+  it('isolates an older acceptance baseline without changing the formal artifact directory', () => {
+    const request = resolveGithubPackageRequest(['--acceptance-baseline-version=0.7.2'], '0.7.4');
+    expect(request).toMatchObject({ acceptanceBaseline: true, version: '0.7.2' });
+    expect(request.targetDirectory).toBe(path.resolve('.tmp/artifacts/macos-github-update-baseline-0.7.2-arm64'));
+    expect(() => resolveGithubPackageRequest([
+      '--acceptance-baseline-version=0.7.4'
+    ], '0.7.4')).toThrow('lower than package.json');
+  });
+
+  it('overrides packaged metadata only when the acceptance version is explicit', () => {
+    const config = createGithubBuilderConfig({
+      directories: {}, electronDist: 'node_modules/electron/dist', extraResources: [], mac: {}
+    }, {
+      codexPath: '.tmp/codex', electronDist: 'node_modules/electron/dist',
+      folioleCliPath: '.tmp/Foliole CLI.app', globalCaptureHelperPath: '.tmp/capture',
+      notarize: false, outputDirectory: '/private/tmp/foliole-github-output',
+      provisioningProfile: '/profiles/app.provisionprofile', version: '0.7.2'
+    });
+    expect(config.extraMetadata).toMatchObject({ folioleBuildChannel: 'github', version: '0.7.2' });
+  });
+
+  it('requires an explicit Developer ID distribution provisioning profile', () => {
     expect(() => resolveDeveloperIdProvisioningProfile({})).toThrow(
       'FOLIOLE_MACOS_DEVELOPER_ID_PROVISIONING_PROFILE'
     );

@@ -12,7 +12,6 @@ import {
 import {
   assertExternalPackageOutput, publishArtifactBatch, withTemporaryPackageOutput
 } from './package-artifact-lifecycle.mjs';
-import { prepareMasElectronRuntime } from './mas-electron-runtime.mjs';
 import { prepareCodexHelper } from './prepare-codex-helper.mjs';
 import { prepareFolioleCli } from './prepare-foliole-cli.mjs';
 import { prepareGlobalCaptureHelper } from './prepare-global-capture-helper.mjs';
@@ -21,6 +20,32 @@ import { verifyPackagedMacosApp } from './verify-packaged-app.mjs';
 const ROOT = path.resolve(import.meta.dirname, '../..');
 const PUBLISHED_DIRECTORY = path.join(ROOT, 'artifacts/macos/github-arm64');
 const DEVELOPER_IDENTITY = 'CAMPFIRIUM LTD (V589TQH334)';
+const STABLE_VERSION_PATTERN = /^\d+\.\d+\.\d+$/u;
+
+function compareVersions(left, right) {
+  const leftParts = left.split('.').map(Number);
+  const rightParts = right.split('.').map(Number);
+  for (let index = 0; index < 3; index += 1) {
+    if (leftParts[index] !== rightParts[index]) return leftParts[index] - rightParts[index];
+  }
+  return 0;
+}
+
+export function resolveGithubPackageRequest(args, currentVersion) {
+  const prefix = '--acceptance-baseline-version=';
+  const argumentsWithVersion = args.filter((argument) => argument.startsWith(prefix));
+  if (argumentsWithVersion.length > 1) throw new Error('Only one acceptance baseline version is allowed');
+  const version = argumentsWithVersion[0]?.slice(prefix.length);
+  if (!version) return { targetDirectory: PUBLISHED_DIRECTORY, version: currentVersion };
+  if (!STABLE_VERSION_PATTERN.test(version) || compareVersions(version, currentVersion) >= 0) {
+    throw new Error('Acceptance baseline version must be a stable version lower than package.json');
+  }
+  return {
+    acceptanceBaseline: true,
+    targetDirectory: path.join(ROOT, `.tmp/artifacts/macos-github-update-baseline-${version}-arm64`),
+    version
+  };
+}
 
 export function createGithubBuilderConfig(base, options) {
   const portableBase = { ...base };
@@ -30,7 +55,11 @@ export function createGithubBuilderConfig(base, options) {
     appId: 'com.campfirium.foliole',
     directories: { ...base.directories, output: outputDirectory },
     electronDist: options.electronDist,
-    extraMetadata: { ...(base.extraMetadata ?? {}), folioleBuildChannel: 'github' },
+    extraMetadata: {
+      ...(base.extraMetadata ?? {}),
+      folioleBuildChannel: 'github',
+      ...(options.version ? { version: options.version } : {})
+    },
     extraFiles: [
       ...(base.extraFiles ?? []).filter((entry) => entry.from !== 'build/cli'),
       { from: options.codexPath, to: 'MacOS/codex' },
@@ -46,8 +75,8 @@ export function createGithubBuilderConfig(base, options) {
       ...base.mac,
       artifactName: '${productName}-macOS-${arch}-${version}.${ext}',
       binaries: ['Contents/MacOS/codex', 'Contents/MacOS/Foliole Global Capture'],
-      entitlements: 'build/entitlements.mas.plist',
-      entitlementsInherit: 'build/entitlements.mas.inherit.plist',
+      entitlements: 'build/entitlements.mac.plist',
+      entitlementsInherit: 'build/entitlements.mac.inherit.plist',
       extendInfo: {
         ...(base.mac?.extendInfo ?? {}),
         ElectronTeamID: 'V589TQH334'
@@ -59,7 +88,7 @@ export function createGithubBuilderConfig(base, options) {
       preAutoEntitlements: true,
       provisioningProfile: options.provisioningProfile,
       signIgnore: ['Contents/Helpers/Foliole CLI\\.app(?:/|$)'],
-      sign: 'scripts/macos/sign-mas-app.mjs',
+      sign: 'scripts/macos/sign-github-app.mjs',
       target: ['dmg', 'zip']
     }
   };
@@ -71,7 +100,7 @@ export function resolveDeveloperIdProvisioningProfile(env = process.env) {
   const configured = env.FOLIOLE_MACOS_DEVELOPER_ID_PROVISIONING_PROFILE?.trim();
   if (configured) return path.resolve(configured);
   throw new Error(
-    'Developer ID sandbox packaging requires FOLIOLE_MACOS_DEVELOPER_ID_PROVISIONING_PROFILE.'
+    'Developer ID packaging requires FOLIOLE_MACOS_DEVELOPER_ID_PROVISIONING_PROFILE.'
   );
 }
 
@@ -125,20 +154,21 @@ async function main() {
   const codexRelease = await loadPinnedCodexHelperRelease();
   const provisioningProfile = resolveDeveloperIdProvisioningProfile();
   const cliProvisioningProfile = resolveDeveloperIdCliProvisioningProfile();
+  const base = JSON.parse(await readFile(path.join(ROOT, 'electron/builder.json'), 'utf8'));
+  const packageMetadata = JSON.parse(await readFile(path.join(ROOT, 'package.json'), 'utf8'));
+  const request = resolveGithubPackageRequest(process.argv.slice(2), packageMetadata.version);
   const codexPath = await prepareCodexHelper({ release: codexRelease });
   console.log(`[codex-helper] build=${codexRelease.version}`);
   const folioleCliPath = await prepareFolioleCli({
-    mode: 'developer-id', provisioningProfile: cliProvisioningProfile
+    mode: 'developer-id', productVersion: request.version,
+    provisioningProfile: cliProvisioningProfile
   });
   const globalCaptureHelperPath = await prepareGlobalCaptureHelper();
-  const electronDist = await prepareMasElectronRuntime();
-  const base = JSON.parse(await readFile(path.join(ROOT, 'electron/builder.json'), 'utf8'));
-  const packageMetadata = JSON.parse(await readFile(path.join(ROOT, 'package.json'), 'utf8'));
-  const artifactNames = createGithubArtifactNames(base.productName, packageMetadata.version);
+  const artifactNames = createGithubArtifactNames(base.productName, request.version);
   const checksum = await runWithCodexHelperRollForward(codexRelease, () => withTemporaryPackageOutput(async (outputDirectory) => {
     const config = createGithubBuilderConfig(base, {
-      codexPath, electronDist, folioleCliPath, globalCaptureHelperPath,
-      notarize, outputDirectory, provisioningProfile
+      codexPath, electronDist: base.electronDist, folioleCliPath, globalCaptureHelperPath,
+      notarize, outputDirectory, provisioningProfile, version: request.version
     });
     const configPath = path.join(outputDirectory, 'electron-builder.json');
     await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`);
@@ -149,13 +179,17 @@ async function main() {
     await verifyPackagedMacosApp({
       appPath: path.join(outputDirectory, 'mac-arm64/Foliole.app'),
       mode: 'developer-id',
-      notarized: notarize
+      notarized: notarize,
+      version: request.version
     });
     const result = await writeDmgChecksum(outputDirectory, artifactNames[0]);
-    await publishArtifactBatch({ names: artifactNames, sourceDirectory: outputDirectory, targetDirectory: PUBLISHED_DIRECTORY });
+    await publishArtifactBatch({
+      names: artifactNames, sourceDirectory: outputDirectory, targetDirectory: request.targetDirectory
+    });
     return result;
   }), { prepareRelease: (release) => prepareCodexHelper({ release }) });
-  console.log(`DMG_READY ${checksum.name} ${checksum.digest}`);
+  const status = request.acceptanceBaseline ? 'ACCEPTANCE_BASELINE_READY' : 'DMG_READY';
+  console.log(`${status} ${checksum.name} ${checksum.digest}`);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)) {

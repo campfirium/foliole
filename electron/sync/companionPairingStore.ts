@@ -6,6 +6,11 @@ import { app, safeStorage } from 'electron';
 
 import type { SyncProtocolDescriptor } from '../../lib/platform/syncProtocolContract.js';
 
+import {
+  PairingStoreDecryptionError,
+  readEncryptedPairingStorePayload
+} from './pairingStoreEncryption.js';
+
 const PAIRED_DEVICE_STORE_FILE = 'companion-paired-devices.bin';
 const CORRUPT_STORE_SUFFIX = '.corrupt-';
 
@@ -26,17 +31,6 @@ interface PairedDeviceStorePayload {
 
 let cachedStore: PairedDeviceStorePayload | null = null;
 let cachedStorePath: string | null = null;
-
-class PairedDeviceStoreUnreadableError extends Error {
-  constructor(
-    message: string,
-    override readonly cause: unknown,
-    readonly storePath: string
-  ) {
-    super(message);
-    this.name = 'PairedDeviceStoreUnreadableError';
-  }
-}
 
 function resolveStorePath() {
   return path.join(app.getPath('userData'), PAIRED_DEVICE_STORE_FILE);
@@ -61,7 +55,7 @@ function readStoreStrict(): PairedDeviceStorePayload {
   }
   ensureEncryptionAvailable();
   const encrypted = fs.readFileSync(storePath);
-  const parsed = readEncryptedStorePayload(encrypted, storePath);
+  const parsed = readEncryptedPairingStorePayload(encrypted, storePath) as Partial<PairedDeviceStorePayload>;
   cachedStore = {
     devices: Array.isArray(parsed.devices) ? parsed.devices.filter(isPairedDeviceRecord) : []
   };
@@ -73,21 +67,12 @@ function readStoreForQuery(): PairedDeviceStorePayload {
   try {
     return readStoreStrict();
   } catch (error) {
-    if (!(error instanceof PairedDeviceStoreUnreadableError)) {
+    if (!(error instanceof PairingStoreDecryptionError)) {
       throw error;
     }
+    if (error.preserveStore) throw error;
     quarantineUnreadableStore(error.storePath, error.cause);
     return { devices: [] };
-  }
-}
-
-function readEncryptedStorePayload(encrypted: Buffer, storePath: string): Partial<PairedDeviceStorePayload> {
-  try {
-    return JSON.parse(safeStorage.decryptString(encrypted)) as Partial<PairedDeviceStorePayload>;
-  } catch (error) {
-    cachedStore = null;
-    cachedStorePath = null;
-    throw new PairedDeviceStoreUnreadableError('Companion paired-device store is unreadable.', error, storePath);
   }
 }
 

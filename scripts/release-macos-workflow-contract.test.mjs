@@ -43,8 +43,12 @@ describe('release macOS workflow contract', () => {
     expect(source).toContain('npm run macos:github:notarize');
     expect(source).toContain('node scripts/desktop-update-artifact-contract.mjs');
     expect(source).toContain('node scripts/desktop-update-packaged-identity.mjs');
+    expect(source).toContain('--notarized');
     expect(source).toContain('ref: v${{ inputs.updater_baseline_version }}');
     expect(source).toContain('desktop-update-compatibility-gate.mjs');
+    expect(source).toContain('--electron=".tmp/updater-baseline/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron"');
+    expect(source).toContain('--updater-module=".tmp/updater-baseline/node_modules/electron-updater"');
+    expect(source).not.toContain('ELECTRON_RUN_AS_NODE');
     expect(source).toContain('uses: actions/attest@v4');
     for (const artifact of ['*.dmg', '*.zip', '*.blockmap', 'latest-mac.yml', 'SHA256SUMS.txt']) {
       expect(source).toContain(artifact);

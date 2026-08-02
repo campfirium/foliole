@@ -1,5 +1,7 @@
 #include <node_api.h>
 
+#include "legacy_safe_storage.h"
+
 #import <Foundation/Foundation.h>
 
 static NSMutableDictionary<NSNumber *, NSURL *> *activeUrls;
@@ -162,10 +164,11 @@ static napi_value Initialize(napi_env env, napi_value exports) {
   napi_property_descriptor properties[] = {
     { "createAndStart", nullptr, CreateAndStart, nullptr, nullptr, nullptr, napi_default, nullptr },
     { "appGroupContainerPath", nullptr, AppGroupContainerPath, nullptr, nullptr, nullptr, napi_default, nullptr },
+    { "decryptLegacyMasSafeStorage", nullptr, DecryptLegacyMasSafeStorage, nullptr, nullptr, nullptr, napi_default, nullptr },
     { "resolveAndStart", nullptr, ResolveAndStart, nullptr, nullptr, nullptr, napi_default, nullptr },
     { "stop", nullptr, StopHandle, nullptr, nullptr, nullptr, napi_default, nullptr }
   };
-  napi_define_properties(env, exports, 4, properties);
+  napi_define_properties(env, exports, 5, properties);
   return exports;
 }
 

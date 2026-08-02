@@ -93,6 +93,23 @@ function resolveRuntimeUserDataPath(args: {
   return resolveFolioleUserDataPaths(args);
 }
 
+function resolvePackagedMacosAppDataRoot(
+  appDataRoot: string,
+  platform: NodeJS.Platform,
+  isPackaged: boolean | undefined
+) {
+  if (platform !== 'darwin' || !isPackaged) return appDataRoot;
+  const containerSuffix = path.join(
+    'Containers', 'com.campfirium.foliole', 'Data', 'Library', 'Application Support'
+  );
+  if (appDataRoot.endsWith(containerSuffix)) return appDataRoot;
+  return path.join(path.dirname(appDataRoot), containerSuffix);
+}
+
+function resolveRuntimeAppDataRoot(app: AppIdentityApi, platform: NodeJS.Platform) {
+  return resolvePackagedMacosAppDataRoot(app.getPath('appData'), platform, app.isPackaged);
+}
+
 function hasFlag(argv: string[], name: string) {
   return argv.includes(name);
 }
@@ -155,7 +172,7 @@ export function configureRuntimeAppIdentity(
   if (libraryHome) {
     env.FOLIOLE_LIBRARY_HOME = libraryHome;
   }
-  const appDataRoot = app.getPath('appData');
+  const appDataRoot = resolveRuntimeAppDataRoot(app, platform);
   const { defaultUserDataPath, userDataPath } = resolveRuntimeUserDataPath({ appDataRoot, env, internalBuild, sandboxRoot });
   const sessionDataPath = resolvePathOverride(env.FOLIOLE_SESSION_DATA_PATH) ?? userDataPath;
   if (previewSandbox && env.FOLIOLE_PREVIEW_SANDBOX_RESET !== '0') {

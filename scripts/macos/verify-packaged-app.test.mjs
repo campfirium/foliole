@@ -7,6 +7,7 @@ const APP_ENTITLEMENTS = [
   'com.apple.security.app-sandbox',
   'com.apple.security.application-groups',
   'V589TQH334.group.com.campfirium.foliole.agent-control',
+  'com.apple.security.cs.allow-jit',
   'com.apple.security.files.bookmarks.app-scope',
   'com.apple.security.files.user-selected.read-write'
 ].join('\n');
@@ -17,6 +18,18 @@ const HELPER_ENTITLEMENTS = [
 const CODEX_ENTITLEMENTS = `${HELPER_ENTITLEMENTS}\ncom.apple.security.cs.allow-jit`;
 const CLI_RUNTIME_ENTITLEMENTS = `${HELPER_ENTITLEMENTS}\ncom.apple.security.cs.allow-jit`;
 const CLI_ENTITLEMENTS = `${APP_ENTITLEMENTS}\ncom.apple.security.application-groups\nV589TQH334.group.com.campfirium.foliole.agent-control`;
+const DIRECT_APP_ENTITLEMENTS = `${APP_ENTITLEMENTS.replace(
+  'com.apple.security.app-sandbox\n',
+  ''
+)}\ncom.apple.security.cs.allow-unsigned-executable-memory`;
+const DIRECT_HELPER_ENTITLEMENTS = [
+  'com.apple.security.cs.allow-jit',
+  'com.apple.security.cs.allow-unsigned-executable-memory'
+].join('\n');
+const DIRECT_CLI_ENTITLEMENTS = [
+  'com.apple.security.application-groups',
+  'V589TQH334.group.com.campfirium.foliole.agent-control'
+].join('\n');
 const TEAM_ID = 'V589TQH334';
 
 function profileFor(path, mode = 'development') {
@@ -40,7 +53,14 @@ function profileFor(path, mode = 'development') {
   </dict></plist>`;
 }
 
-function resolveEntitlements(subject) {
+function resolveEntitlements(subject, mode) {
+  if (mode === 'developer-id') {
+    if (subject.endsWith('/Contents/MacOS/codex')) return DIRECT_HELPER_ENTITLEMENTS;
+    if (subject.endsWith('/Contents/MacOS/foliole-runtime')) return DIRECT_HELPER_ENTITLEMENTS;
+    if (subject.endsWith('Foliole Helper.app')) return DIRECT_HELPER_ENTITLEMENTS;
+    if (subject.endsWith('Foliole CLI.app')) return DIRECT_CLI_ENTITLEMENTS;
+    return DIRECT_APP_ENTITLEMENTS;
+  }
   if (subject.endsWith('/Contents/MacOS/codex')) return CODEX_ENTITLEMENTS;
   if (subject.endsWith('/Contents/MacOS/foliole-runtime')) return CLI_RUNTIME_ENTITLEMENTS;
   if (subject.endsWith('Foliole Helper.app')) return HELPER_ENTITLEMENTS;
@@ -53,7 +73,7 @@ function createRun(options = {}) {
   return vi.fn((command, args) => {
     if (command === 'security') return { status: 0, stdout: profileFor(args.at(-1), mode) };
     if (command === 'codesign' && args.includes('--entitlements')) {
-      return { status: 0, stderr: resolveEntitlements(args.at(-1)) };
+      return { status: 0, stderr: resolveEntitlements(args.at(-1), mode) };
     }
     if (command === 'codesign' && args.includes('-dv')) {
       const bundleId = args.at(-1).endsWith('Foliole CLI.app')
@@ -174,12 +194,31 @@ it('rejects a development profile in a distribution package', async () => {
 });
 
 it('accepts distinct Developer ID profiles and signatures for GitHub distribution', async () => {
+  const checkAccess = vi.fn(async () => undefined);
   await expect(verifyPackagedMacosApp({
-    access: async () => undefined,
+    access: checkAccess,
     appPath: '/artifacts/Foliole.app',
     mode: 'developer-id',
     run: createRun({ mode: 'developer-id', signatureMode: 'developer-id' })
   })).resolves.toBeUndefined();
+  expect(checkAccess).toHaveBeenCalledWith(
+    '/artifacts/Foliole.app/Contents/Frameworks/Squirrel.framework/Versions/A/Squirrel', constants.X_OK
+  );
+  expect(checkAccess).toHaveBeenCalledWith(
+    '/artifacts/Foliole.app/Contents/Frameworks/Squirrel.framework/Versions/A/Resources/ShipIt', constants.X_OK
+  );
+});
+
+it('rejects a Developer ID package without the native Squirrel installer runtime', async () => {
+  const checkAccess = vi.fn(async (file) => {
+    if (file.endsWith('/Squirrel.framework/Versions/A/Squirrel')) throw new Error('missing Squirrel');
+  });
+  await expect(verifyPackagedMacosApp({
+    access: checkAccess,
+    appPath: '/artifacts/Foliole.app',
+    mode: 'developer-id',
+    run: createRun({ mode: 'developer-id', signatureMode: 'developer-id' })
+  })).rejects.toThrow('missing Squirrel');
 });
 
 it('rejects a non-Developer ID profile in a GitHub distribution package', async () => {

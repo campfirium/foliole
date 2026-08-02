@@ -129,15 +129,20 @@ async function assembleAndSign(runtimePath, launcherPath, options) {
   await cp(path.join(ROOT, 'scripts/agent-control'), path.join(resources, 'scripts/agent-control'), {
     recursive: true
   });
-  await copyFile(path.join(ROOT, 'package.json'), path.join(resources, 'package.json'));
+  const packageMetadata = JSON.parse(await readFile(path.join(ROOT, 'package.json'), 'utf8'));
+  if (options.productVersion) packageMetadata.version = options.productVersion;
+  await writeFile(path.join(resources, 'package.json'), `${JSON.stringify(packageMetadata, null, 2)}\n`);
   const bundledRuntime = path.join(APP_OUTPUT, 'Contents/MacOS', RUNTIME_NAME);
+  const entitlementPrefix = options.mode === 'developer-id' ? '.developer-id' : '';
   await copyFile(runtimePath, bundledRuntime);
   await chmod(bundledRuntime, 0o755);
   runChecked('CLI runtime signature', 'codesign', codesignArgs(
-    options.identity, path.join(SOURCE, 'FolioleCliRuntime.entitlements'), bundledRuntime, options.mode
+    options.identity, path.join(SOURCE, `FolioleCliRuntime${entitlementPrefix}.entitlements`),
+    bundledRuntime, options.mode
   ));
   runChecked('CLI wrapper signature', 'codesign', codesignArgs(
-    options.identity, path.join(SOURCE, 'FolioleCli.entitlements'), APP_OUTPUT, options.mode
+    options.identity, path.join(SOURCE, `FolioleCli${entitlementPrefix}.entitlements`),
+    APP_OUTPUT, options.mode
   ));
   runChecked('CLI signature verification', 'codesign', ['--verify', '--deep', '--strict', APP_OUTPUT]);
 }
@@ -163,7 +168,8 @@ export async function prepareFolioleCli(options = {}) {
     ? DEVELOPER_ID_IDENTITY
     : mode === 'distribution' ? DISTRIBUTION_IDENTITY : DEVELOPMENT_IDENTITY;
   await assembleAndSign(runtimePath, launcherPath, {
-    identity, mode, provisioningProfile: options.provisioningProfile
+    identity, mode, productVersion: options.productVersion,
+    provisioningProfile: options.provisioningProfile
   });
   return APP_OUTPUT;
 }

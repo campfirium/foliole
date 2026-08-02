@@ -3,10 +3,12 @@
     {
       "target_name": "foliole_macos_security_bookmarks",
       "sources": [
-        "src/bookmarks.mm"
+        "src/bookmarks.mm",
+        "src/legacy_safe_storage.mm"
       ],
       "libraries": [
-        "-framework Foundation"
+        "-framework Foundation",
+        "-framework Security"
       ],
       "xcode_settings": {
         "CLANG_ENABLE_OBJC_ARC": "YES",

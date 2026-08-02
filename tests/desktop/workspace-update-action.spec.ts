@@ -33,7 +33,6 @@ test('shows the ready update action prominently above Restart App', async ({ des
   });
   await desktopWindow.reload();
   await expectWorkspaceShell(desktopWindow);
-  await desktopWindow.emulateMedia({ reducedMotion: 'reduce' });
 
   const rail = desktopWindow.getByRole('region', { name: /Left toolbar|左侧工具栏/ });
   const updateAction = rail.getByRole('button', { name: /^(Restart to install update|重启并安装更新)$/ });
@@ -51,6 +50,9 @@ test('shows the ready update action prominently above Restart App', async ({ des
   expect(updateBox?.y).toBeLessThan(restartBox?.y ?? 0);
   await expect.poll(() => updateAction.evaluate((element) => getComputedStyle(element).animationName))
     .toContain('workspace-update-nudge');
+  await desktopWindow.emulateMedia({ reducedMotion: 'reduce' });
+  await expect.poll(() => updateAction.evaluate((element) => getComputedStyle(element).animationName))
+    .toBe('none');
   const clip = { height: 96, width: 150, x: 0, y: Math.max(0, (updateBox?.y ?? 8) - 8) };
   await mkdir(EVIDENCE_DIR, { recursive: true });
   await desktopWindow.waitForTimeout(2900);

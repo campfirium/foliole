@@ -210,6 +210,28 @@ it('uses the beta hourly policy to avoid repeated automatic requests', async () 
   expect(getNextUpdateCheckDelayMs()).toBe(30 * 60 * 1000);
 });
 
+it('clears a cached available release after that version is installed', async () => {
+  let installedVersion = '0.1.0';
+  const invoke = vi.fn(async (command: string, args?: unknown) => {
+    void args;
+    return command === 'app_get_version' ? installedVersion : { phase: 'idle' };
+  });
+  window.electronAPI = createMockElectronApi(invoke);
+  vi.mocked(fetch).mockResolvedValue({ json: async () => createManifest(), ok: true } as Response);
+
+  await checkForFolioleUpdates({ force: true });
+  installedVersion = '0.1.3';
+  vi.setSystemTime(new Date('2026-05-31T00:30:00.000Z'));
+
+  await expect(checkForFolioleUpdates()).resolves.toMatchObject({ status: 'current' });
+  expect(readUpdateCheckState()).toMatchObject({
+    lastCheckStatus: 'current',
+    latestReleaseUrl: null,
+    latestVersion: null
+  });
+  expect(fetch).toHaveBeenCalledTimes(3);
+});
+
 it('records failures with a shorter retry delay', async () => {
   vi.mocked(fetch).mockResolvedValue({ ok: false, status: 404 } as Response);
 

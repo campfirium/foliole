@@ -7,6 +7,7 @@ import { openFolioleReleaseLink } from './releaseLinks';
 import { openExternalUrl } from './runtimeExternalNavigation';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from './storage';
 import {
+  compareVersionStrings as compareVersions,
   DEFAULT_UPDATE_STATE,
   getUpdateCheckDelayMs,
   normalizeReleaseNotesCatalog,
@@ -100,13 +101,30 @@ function showUpdateCheckNotice(result: UpdateCheckResult, manual: boolean) {
   }
 }
 
+async function reconcileCachedInstalledRelease(state: UpdateCheckState): Promise<UpdateCheckResult | null> {
+  if (state.lastCheckStatus !== 'available' || !state.latestVersion) return null;
+  const currentVersion = await loadAppVersion();
+  if (compareVersions(currentVersion, state.latestVersion) < 0) {
+    if (readDesktopUpdateState().phase === 'idle') await checkDesktopUpdate(state.latestVersion);
+    return null;
+  }
+  const nextState = {
+    ...state,
+    lastCheckStatus: 'current' as const,
+    latestReleaseUrl: null,
+    latestVersion: null
+  };
+  writeUpdateCheckState(nextState);
+  await checkDesktopUpdate(currentVersion);
+  return { latestRelease: null, state: nextState, status: 'current' };
+}
+
 export async function checkForFolioleUpdates(options: { force?: boolean; notify?: boolean } = {}): Promise<UpdateCheckResult> {
   const state = readUpdateCheckState();
   const now = Date.now();
   if (!shouldRunUpdateCheck(state, now, Boolean(options.force))) {
-    if (state.lastCheckStatus === 'available' && state.latestVersion && readDesktopUpdateState().phase === 'idle') {
-      await checkDesktopUpdate(state.latestVersion);
-    }
+    const reconciled = await reconcileCachedInstalledRelease(state);
+    if (reconciled) return reconciled;
     return { latestRelease: null, state, status: 'skipped' };
   }
 

@@ -10,7 +10,7 @@ const TOOL_ENTITLEMENTS = fileURLToPath(
   new URL('../../build/entitlements.mas.tool.plist', import.meta.url)
 );
 
-export function createMasSignOptions(options) {
+export function createMacSignOptions(options, entitlements = {}) {
   const codexPath = path.join(options.app, 'Contents', 'MacOS', 'codex');
   const globalCaptureHelperPath = path.join(options.app, 'Contents', 'MacOS', 'Foliole Global Capture');
   const optionsForFile = options.optionsForFile;
@@ -30,7 +30,7 @@ export function createMasSignOptions(options) {
             '--identifier',
             POST_EVENT_PROBE_IDENTIFIER
           ],
-          entitlements: TOOL_ENTITLEMENTS
+          entitlements: entitlements.tool ?? TOOL_ENTITLEMENTS
         };
       }
       if (resolvedFilePath !== path.resolve(codexPath)) return fileOptions;
@@ -41,7 +41,7 @@ export function createMasSignOptions(options) {
           '--identifier',
           CODEX_IDENTIFIER
         ],
-        entitlements: CODEX_ENTITLEMENTS
+        entitlements: entitlements.codex ?? CODEX_ENTITLEMENTS
       };
     }
   };
@@ -49,5 +49,7 @@ export function createMasSignOptions(options) {
 
 export default async function signMasApp(options) {
   const { signAsync } = await import('@electron/osx-sign');
-  await signAsync(createMasSignOptions(options));
+  await signAsync(createMacSignOptions(options));
 }
+
+export const createMasSignOptions = createMacSignOptions;
