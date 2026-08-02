@@ -33,6 +33,7 @@ test('shows the ready update action prominently above Restart App', async ({ des
   });
   await desktopWindow.reload();
   await expectWorkspaceShell(desktopWindow);
+  await desktopWindow.emulateMedia({ reducedMotion: 'reduce' });
 
   const rail = desktopWindow.getByRole('region', { name: /Left toolbar|左侧工具栏/ });
   const updateAction = rail.getByRole('button', { name: /^(Restart to install update|重启并安装更新)$/ });

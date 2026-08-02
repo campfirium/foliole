@@ -21,9 +21,3 @@
   40%, 60% { transform: translateY(-11px); }
   50% { transform: translateY(-12px); }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .workspace-update-action-nudge {
-    animation: none;
-  }
-}
