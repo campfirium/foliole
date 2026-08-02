@@ -50,8 +50,6 @@ test('shows the ready update action prominently above Restart App', async ({ des
   expect(updateBox?.y).toBeLessThan(restartBox?.y ?? 0);
   await expect.poll(() => updateAction.evaluate((element) => getComputedStyle(element).animationName))
     .toContain('workspace-update-nudge');
-  await expect.poll(() => updateAction.evaluate((element) => getComputedStyle(element).willChange))
-    .toContain('transform');
   const clip = { height: 96, width: 150, x: 0, y: Math.max(0, (updateBox?.y ?? 8) - 8) };
   await mkdir(EVIDENCE_DIR, { recursive: true });
   await desktopWindow.waitForTimeout(2900);

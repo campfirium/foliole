@@ -1,5 +1,4 @@
 .workspace-update-action-nudge {
-  will-change: transform;
   animation:
     workspace-update-nudge 700ms linear 3,
     workspace-update-settle 700ms linear 2100ms 1;
