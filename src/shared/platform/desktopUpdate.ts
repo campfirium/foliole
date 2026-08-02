@@ -5,6 +5,7 @@ import { getElectronAPI } from './electronApi';
 
 const NOT_APPLICABLE_STATE: NativeDesktopUpdateState = { phase: 'not-applicable' };
 const IDLE_STATE: NativeDesktopUpdateState = { phase: 'idle' };
+const RESTART_FEEDBACK_READABILITY_MS = 1000;
 
 let state = IDLE_STATE;
 let publicationRevision = 0;
@@ -80,9 +81,13 @@ export function downloadDesktopUpdate() {
 }
 
 function waitForRestartFeedbackPaint() {
-  if (typeof window.requestAnimationFrame !== 'function') return Promise.resolve();
+  if (typeof window.requestAnimationFrame !== 'function') {
+    return new Promise<void>((resolve) => window.setTimeout(resolve, RESTART_FEEDBACK_READABILITY_MS));
+  }
   return new Promise<void>((resolve) => {
-    window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()));
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+      window.setTimeout(resolve, RESTART_FEEDBACK_READABILITY_MS);
+    }));
   });
 }
 

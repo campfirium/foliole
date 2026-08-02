@@ -150,6 +150,6 @@ it('shows immediate restart feedback in About settings', () => {
   renderWithLocalization(<SettingsAboutSection />);
 
   expect(screen.getByText('Restarting')).toBeInTheDocument();
-  expect(screen.getByText('Foliole is restarting to finish the update.')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Restarting...' })).toBeDisabled();
+  expect(screen.getByText('Foliole is restarting to finish the update. This may take a moment.')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Restarting… This may take a moment.' })).toBeDisabled();
 });

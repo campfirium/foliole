@@ -16,7 +16,7 @@ export const ZH_HANS_DESKTOP_NAVIGATION_TRANSLATIONS: Partial<Record<Translation
   'desktop.workspace.bottomRailActions': '左侧工具栏底部操作',
   'desktop.workspace.restartAndUpdate': '重启并安装更新',
   'desktop.workspace.restartFailed': '重启失败，请重试',
-  'desktop.workspace.restarting': '正在重启…',
+  'desktop.workspace.restarting': '正在重启，可能需要一点时间…',
   'desktop.workspace.settings': '设置',
   'desktop.workspace.enterFlow': '进入 Flow',
   'desktop.workspace.leaveFlow': '退出 Flow',

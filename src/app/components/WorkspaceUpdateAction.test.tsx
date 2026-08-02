@@ -55,7 +55,7 @@ it('shows immediate disabled feedback while Foliole restarts', () => {
   updateMock.state = { phase: 'restarting', version: '0.7.0' };
   renderWithLocalization(<WorkspaceUpdateAction />);
 
-  const button = screen.getByRole('button', { name: 'Restarting...' });
+  const button = screen.getByRole('button', { name: 'Restarting… This may take a moment.' });
   expect(button).toBeDisabled();
   expect(button.querySelector('.lucide-loader-circle')).toHaveClass('animate-spin');
 });

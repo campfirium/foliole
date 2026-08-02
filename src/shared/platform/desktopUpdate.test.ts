@@ -5,6 +5,7 @@ import type { NativeDesktopUpdateState } from '../../../lib/platform/nativeUpdat
 
 afterEach(() => {
   delete window.electronAPI;
+  vi.useRealTimers();
   vi.restoreAllMocks();
   vi.resetModules();
 });
@@ -109,7 +110,8 @@ it('does not let a late command response overwrite a newer main-process event', 
   expect(runtime.readDesktopUpdateState()).toEqual({ phase: 'downloading', version: '0.7.0' });
 });
 
-it('publishes restart feedback synchronously before the native command returns', async () => {
+it('keeps restart feedback readable before the native command exits the app', async () => {
+  vi.useFakeTimers();
   let stateHandler: ((state: NativeDesktopUpdateState) => void) | undefined;
   const frameCallbacks: FrameRequestCallback[] = [];
   vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
@@ -143,5 +145,8 @@ it('publishes restart feedback synchronously before the native command returns',
   expect(invoke).not.toHaveBeenCalledWith('desktop_update_install');
 
   frameCallbacks.shift()?.(16);
+  expect(invoke).not.toHaveBeenCalledWith('desktop_update_install');
+
+  await vi.runAllTimersAsync();
   await vi.waitFor(() => expect(invoke).toHaveBeenCalledWith('desktop_update_install'));
 });
