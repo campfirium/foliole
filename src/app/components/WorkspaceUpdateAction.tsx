@@ -47,6 +47,7 @@ export function WorkspaceUpdateAction() {
           className={UPDATE_BUTTON_CLASS_NAME}
           data-nudge-sequence={nudgeSequence}
           disabled={restarting}
+          forceTooltipOpen={restarting}
           icon={restarting
             ? <LoaderCircle aria-hidden="true" className="animate-spin" size={18} strokeWidth={1.75} />
             : <CircleArrowDown aria-hidden="true" size={18} strokeWidth={1.75} />}

@@ -12,12 +12,15 @@ import {
   AppTooltipTrigger
 } from '../../shared/ui';
 
-type WorkspaceRailTooltipButtonProps = ComponentPropsWithoutRef<typeof AppIconButton>;
+type WorkspaceRailTooltipButtonProps = ComponentPropsWithoutRef<typeof AppIconButton> & {
+  forceTooltipOpen?: boolean;
+};
 
 export const WORKSPACE_RAIL_BUTTON_FOCUS_CLASS_NAME =
   'focus-visible:bg-foreground/[0.06]';
 
 export function WorkspaceRailTooltipButton({
+  forceTooltipOpen = false,
   onClick,
   onPointerDown,
   ...props
@@ -35,7 +38,12 @@ export function WorkspaceRailTooltipButton({
   }, [closeTooltip, onClick]);
 
   return (
-    <AppTooltip open={open} onOpenChange={setOpen}>
+    <AppTooltip
+      open={forceTooltipOpen || open}
+      onOpenChange={(nextOpen) => {
+        if (!forceTooltipOpen) setOpen(nextOpen);
+      }}
+    >
       <AppTooltipTrigger asChild>
         <span className="inline-flex">
           <AppIconButton

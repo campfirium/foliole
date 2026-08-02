@@ -51,13 +51,14 @@ it('shows a compact neutral CircleArrowDown action and installs the ready update
   expect(updateMock.install).toHaveBeenCalledTimes(1);
 });
 
-it('shows immediate disabled feedback while Foliole restarts', () => {
+it('shows immediate persistent disabled feedback while Foliole restarts', async () => {
   updateMock.state = { phase: 'restarting', version: '0.7.0' };
   renderWithLocalization(<WorkspaceUpdateAction />);
 
   const button = screen.getByRole('button', { name: 'Restarting… This may take a moment.' });
   expect(button).toBeDisabled();
   expect(button.querySelector('.lucide-loader-circle')).toHaveClass('animate-spin');
+  expect(await screen.findByRole('tooltip')).toHaveTextContent('Restarting… This may take a moment.');
 });
 
 it('makes a failed restart retryable instead of looking unresponsive', () => {

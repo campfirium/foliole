@@ -27,3 +27,16 @@ it('closes the rail tooltip when the command runs', async () => {
   expect(onClick).toHaveBeenCalledTimes(1);
   await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
 });
+
+it('keeps forced status feedback visible without hover', async () => {
+  render(
+    <WorkspaceRailTooltipButton
+      disabled
+      forceTooltipOpen
+      icon={<Import aria-hidden="true" size={16} />}
+      label="Restarting… This may take a moment."
+    />
+  );
+
+  expect(await screen.findByRole('tooltip')).toHaveTextContent('Restarting… This may take a moment.');
+});

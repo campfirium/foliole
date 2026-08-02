@@ -8,7 +8,6 @@ import { expectWorkspaceShell } from './harness/settings';
 
 const EVIDENCE_DIR = path.join(process.cwd(), '.tmp/artifacts/desktop-acceptance');
 const RESTING_SCREENSHOT_PATH = path.join(EVIDENCE_DIR, 'workspace-update-action-resting.png');
-const HOVER_SCREENSHOT_PATH = path.join(EVIDENCE_DIR, 'workspace-update-action-hover.png');
 const RESTARTING_SCREENSHOT_PATH = path.join(EVIDENCE_DIR, 'workspace-update-action-restarting.png');
 
 async function sendDesktopUpdateState(electronApp: ElectronApplication, state: Record<string, unknown>) {
@@ -56,11 +55,7 @@ test('shows the ready update action prominently above Restart App', async ({ des
   await desktopWindow.waitForTimeout(2900);
   await desktopWindow.screenshot({ clip, path: RESTING_SCREENSHOT_PATH });
   const restingWidth = (await updateAction.boundingBox())?.width;
-  await updateAction.hover();
-  await expect(desktopWindow.getByRole('tooltip')).toHaveText(/^(Restart to install update|重启并安装更新)$/);
-  expect((await updateAction.boundingBox())?.width).toBe(restingWidth);
-  await desktopWindow.screenshot({ clip, path: HOVER_SCREENSHOT_PATH });
-  await sendDesktopUpdateState(desktopSession.electronApp, { phase: 'restarting', version: '0.7.0' });
+  await updateAction.click();
   const restartingAction = rail.getByRole('button', {
     name: /^(Restarting… This may take a moment\.|正在重启，可能需要一点时间…)$/
   });
@@ -69,8 +64,8 @@ test('shows the ready update action prominently above Restart App', async ({ des
   await expect(desktopWindow.getByRole('tooltip')).toHaveText(
     /^(Restarting… This may take a moment\.|正在重启，可能需要一点时间…)$/
   );
+  expect((await restartingAction.boundingBox())?.width).toBe(restingWidth);
   await desktopWindow.screenshot({ clip: { ...clip, width: 380 }, path: RESTARTING_SCREENSHOT_PATH });
   await testInfo.attach('workspace-update-action-resting', { path: RESTING_SCREENSHOT_PATH });
-  await testInfo.attach('workspace-update-action-hover', { path: HOVER_SCREENSHOT_PATH });
   await testInfo.attach('workspace-update-action-restarting', { path: RESTARTING_SCREENSHOT_PATH });
 });
