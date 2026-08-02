@@ -102,6 +102,7 @@ describe('quality-gate-fast.sh delegation', () => {
 
       expect(result.code, `stdout:\n${result.stdout}\nstderr:\n${result.stderr}`).toBe(0);
       expect(result.stdout).toContain('[quality-gate-fast] selected level: android');
+      expect(result.stdout).toContain('dependency declarations ok');
       expect(result.stdout).toContain('hosted quality deferred to scheduled T7 Hosted Quality');
       expect(result.stdout).toContain('android typecheck ok');
       expect(result.stdout).not.toContain('android full lint ok');
