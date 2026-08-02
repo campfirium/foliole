@@ -39,7 +39,14 @@ it('keeps direct-distribution builds on the existing Foliole container data path
   };
 
   const configured = configureRuntimeAppIdentity(app, vi.fn(), 'darwin', {});
-  const expectedRoot = '/Users/roamer/Library/Containers/com.campfirium.foliole/Data/Library/Application Support';
+  const expectedRoot = path.join(
+    path.dirname(appDataRoot),
+    'Containers',
+    'com.campfirium.foliole',
+    'Data',
+    'Library',
+    'Application Support'
+  );
 
   expect(configured.appDataRoot).toBe(expectedRoot);
   expect(setPath).toHaveBeenCalledWith('userData', path.join(expectedRoot, FOLIOLE_APP_NAME));

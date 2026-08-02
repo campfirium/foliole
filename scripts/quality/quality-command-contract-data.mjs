@@ -23,6 +23,7 @@ export const LOCAL_QUICK_PACKAGES = [
   ['typecheck:android:raw', 'fixed Android TypeScript projects'],
   ['typecheck:shared', 'fixed shared TypeScript project'],
   ['typecheck:shared:raw', 'fixed shared TypeScript project'],
+  ['deps:scan', 'fixed repository dependency and binary declaration scan'],
   ['test:files', 'explicit ordinary test file arguments'],
   ['test:sqlite:electron', 'explicit Electron ABI test file arguments'],
   ['test:sync-pack', 'fixed sync-pack contract suite'],
@@ -31,7 +32,6 @@ export const LOCAL_QUICK_PACKAGES = [
 ];
 
 export const HOSTED_ONLY_PACKAGES = [
-  ['deps:scan', 'repository dependency graph aggregate'],
   ['deps:hardening:check', 'networked dependency audit plus repository graph aggregate'],
   ['validate:desktop:serial', 'desktop serial validation aggregate'],
   ['lint:desktop:full', 'full desktop lint aggregate'],

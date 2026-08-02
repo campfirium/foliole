@@ -19,6 +19,8 @@ run_quality_gate_fast_t0_static_guards() {
 }
 
 run_quality_gate_fast_global_static_guards() {
+  run_quality_gate_script "quality-gate-fast" "${pm}" "deps:scan"
+
   if [[ -f "scripts/check-native-command-contracts.mjs" ]]; then
     run_quality_gate_script "quality-gate-fast" "${pm}" "check:native-contracts"
   fi

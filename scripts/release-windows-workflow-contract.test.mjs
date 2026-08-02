@@ -39,6 +39,8 @@ describe('release Windows workflow contract', () => {
       'verify-artifact-signatures.mjs --root artifacts/windows/win-unpacked',
       'desktop-update-packaged-identity.mjs',
       'ref: v${{ inputs.updater_baseline_version }}',
+      'npm ci --ignore-scripts',
+      'node node_modules/electron/install.js',
       'desktop-update-compatibility-gate.mjs',
       'node "scripts/desktop-update-compatibility-gate.mjs"',
       '--electron=.tmp/updater-baseline/node_modules/electron/dist/electron.exe',

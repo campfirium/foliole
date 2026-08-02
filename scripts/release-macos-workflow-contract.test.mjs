@@ -45,6 +45,8 @@ describe('release macOS workflow contract', () => {
     expect(source).toContain('node scripts/desktop-update-packaged-identity.mjs');
     expect(source).toContain('--notarized');
     expect(source).toContain('ref: v${{ inputs.updater_baseline_version }}');
+    expect(source).toContain('npm ci --ignore-scripts');
+    expect(source).toContain('node node_modules/electron/install.js');
     expect(source).toContain('desktop-update-compatibility-gate.mjs');
     expect(source).toContain('--electron=".tmp/updater-baseline/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron"');
     expect(source).toContain('--updater-module=".tmp/updater-baseline/node_modules/electron-updater"');

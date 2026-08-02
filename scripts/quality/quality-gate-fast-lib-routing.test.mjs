@@ -61,6 +61,7 @@ function runRoutingHelper(expression, env = process.env) {
 async function writePackageJson(rootDir, scripts) {
   const fixtureScripts = {
     'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',
+    'deps:scan': 'node -e "console.log(\'dependency declarations ok\')"',
     ...scripts
   };
   for (const step of QUALITY_SCRIPT_STEPS) {

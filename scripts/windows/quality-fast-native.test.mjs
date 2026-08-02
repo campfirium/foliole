@@ -152,6 +152,7 @@ describe('quality-fast-native T0 routing', () => {
     expect(calls.map((call) => call.label)).toEqual([
       'specialized surface usage',
       'repository root boundary',
+      'deps:scan',
       'scoped lint',
       'typecheck:desktop',
       'related tests',
@@ -190,12 +191,12 @@ describe('quality-fast-native T0 routing', () => {
   });
 
   it.each([
-    ['shared', ['specialized surface usage', 'repository root boundary', 'typecheck:shared'], 'quality:shared'],
-    ['android', ['specialized surface usage', 'repository root boundary', 'typecheck:android'], 'quality:android'],
-    ['ios', ['specialized surface usage', 'repository root boundary'], 'quality:ios:contract'],
+    ['shared', ['specialized surface usage', 'repository root boundary', 'deps:scan', 'typecheck:shared'], 'quality:shared'],
+    ['android', ['specialized surface usage', 'repository root boundary', 'deps:scan', 'typecheck:android'], 'quality:android'],
+    ['ios', ['specialized surface usage', 'repository root boundary', 'deps:scan'], 'quality:ios:contract'],
     [
       'full',
-      ['specialized surface usage', 'repository root boundary', 'typecheck:desktop', 'typecheck:shared', 'typecheck:android'],
+      ['specialized surface usage', 'repository root boundary', 'deps:scan', 'typecheck:desktop', 'typecheck:shared', 'typecheck:android'],
       'quality:full'
     ]
   ])('caps %s routes and reports the deferred comprehensive gate', async (level, expectedTypechecks, deferredGate) => {

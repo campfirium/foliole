@@ -23,9 +23,13 @@ function runBash(args, cwd, env = {}) {
 }
 
 async function writePackageJson(rootDir, scripts) {
+  const fixtureScripts = {
+    'deps:scan': 'node -e "console.log(\'dependency declarations ok\')"',
+    ...scripts
+  };
   await writeFile(
     path.join(rootDir, 'package.json'),
-    `${JSON.stringify({ name: 'quality-gate-skip-lint-fixture', private: true, scripts }, null, 2)}\n`,
+    `${JSON.stringify({ name: 'quality-gate-skip-lint-fixture', private: true, scripts: fixtureScripts }, null, 2)}\n`,
     'utf8'
   );
 }

@@ -47,6 +47,11 @@ describe('quality command registry', () => {
     }
   });
 
+  it('runs declaration scanning locally while keeping network hardening hosted', () => {
+    expect(QUALITY_COMMAND_CONTRACTS.get('deps:scan')?.classification).toBe('local-quick');
+    expect(QUALITY_COMMAND_CONTRACTS.get('deps:hardening:check')?.classification).toBe('hosted-only');
+  });
+
   it('rejects hosted-only entries locally and admits only GitHub-hosted Actions', () => {
     expect(() => assertQualityCommandAllowed('quality:desktop', { env: {} }))
       .toThrow('requires a GitHub-hosted Actions runner');

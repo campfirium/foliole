@@ -1,4 +1,10 @@
 {
+  "0.7.4": {
+    "notes": [
+      "Fixed",
+      "Corrected desktop updater initialization on macOS and Windows."
+    ]
+  },
   "0.7.3": {
     "notes": [
       "Testing automatic update downloads from 0.7.2 to 0.7.3."

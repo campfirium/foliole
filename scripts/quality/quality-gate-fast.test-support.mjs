@@ -150,6 +150,7 @@ export function toFixtureShellPath(filePath) {
 export async function writePackageJson(rootDir, scripts) {
   const fixtureScripts = {
     'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',
+    'deps:scan': 'node -e "console.log(\'dependency declarations ok\')"',
     ...scripts
   };
   for (const bucket of ['test:desktop', 'test:desktop:src', 'test:desktop:electron', 'test:windows:core', 'test:windows:native-preview', 'test:android', 'test:shared', 'test:sync-pack', 'test:quality', 'test:quality:core', 'test:quality:gate', 'test:quality:gate-integration', 'test:quality:gate-integration:routing', 'test:quality:gate-integration:fast-delegation', 'test:quality:gate-integration:targets', 'test:quality:gate-integration:target-core', 'test:quality:gate-integration:target-failures', 'test:quality:gate-integration:target-collect', 'test:quality:gate-integration:target-telemetry', 'test:quality:gate-integration:release-targets', 'test:quality:gate-integration:release-tail', 'test:quality:node', 'test:quality:preview']) {

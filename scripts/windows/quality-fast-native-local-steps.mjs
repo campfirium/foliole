@@ -61,6 +61,7 @@ async function runRelatedTests(plan, env, runner, runStep, splitRelatedTests) {
 export async function runNativeT0StaticGuards(env, runner, runStep) {
   await runOptionalNodeScript('specialized surface usage', 'scripts/check-specialized-surface-usage.mjs', env, runner, runStep);
   await runOptionalNodeScript('repository root boundary', 'scripts/check-repository-root-boundary.mjs', env, runner, runStep);
+  await runOptionalNpmScript('deps:scan', env, runner, runStep);
 }
 
 export async function runNativeLightMidPlan(plan, options) {
