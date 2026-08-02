@@ -17,7 +17,7 @@ import './WorkspaceUpdateAction.css';
 
 const UPDATE_REMINDER_INTERVAL_MS = 60 * 1000;
 const UPDATE_BUTTON_CLASS_NAME =
-  `workspace-update-action workspace-update-action-nudge ${WORKSPACE_RAIL_BUTTON_FOCUS_CLASS_NAME}`;
+  `workspace-update-action ${WORKSPACE_RAIL_BUTTON_FOCUS_CLASS_NAME}`;
 
 export function WorkspaceUpdateAction() {
   const t = useTranslation();
@@ -50,8 +50,13 @@ export function WorkspaceUpdateAction() {
           forceTooltipOpen={restarting}
           icon={restarting
             ? <LoaderCircle aria-hidden="true" className="animate-spin" size={18} strokeWidth={1.75} />
-            : <CircleArrowDown aria-hidden="true" size={18} strokeWidth={1.75} />}
-          key={`${state.version ?? 'ready'}-${nudgeSequence}`}
+            : <CircleArrowDown
+                aria-hidden="true"
+                className="workspace-update-action-nudge"
+                key={`${state.version ?? 'ready'}-${nudgeSequence}`}
+                size={18}
+                strokeWidth={1.75}
+              />}
           label={label}
           onClick={restarting ? undefined : () => void installDesktopUpdate()}
         />
