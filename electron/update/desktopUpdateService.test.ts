@@ -227,7 +227,7 @@ it('publishes progress and installs only after preparation succeeds', async () =
     phase: 'restarting', version: '0.7.0'
   }));
   expect(harness.prepareInstall).toHaveBeenCalledTimes(1);
-  expect(harness.updater.quitAndInstall).toHaveBeenCalledWith(false, true);
+  expect(harness.updater.quitAndInstall).toHaveBeenCalledWith(true, true);
   expect(harness.updater.checkForUpdates).toHaveBeenCalledTimes(1);
 });
 

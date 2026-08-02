@@ -83,7 +83,7 @@ export class DesktopUpdateService {
     }
     try {
       const updater = await this.ensureUpdater();
-      updater.quitAndInstall(false, true);
+      updater.quitAndInstall(true, true);
     } catch {
       this.options.reportDiagnostic?.('desktop_update_install_launch_failed');
       return this.setState({ ...readyState, errorCode: 'install-failed' });
