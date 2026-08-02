@@ -36,7 +36,7 @@ it('stays hidden until an update is ready', () => {
   expect(screen.queryByRole('button', { name: 'Restart and update' })).not.toBeInTheDocument();
 });
 
-it('shows the established animated Download action and installs the ready update', () => {
+it('shows the current CircleArrowDown with the established button nudge', () => {
   renderWithLocalization(<WorkspaceUpdateAction />);
 
   updateMock.state = { phase: 'ready', version: '0.7.0' };
@@ -45,7 +45,7 @@ it('shows the established animated Download action and installs the ready update
   const button = screen.getByRole('button', { name: 'Restart to install update' });
   expect(button.className).toContain('workspace-update-action');
   expect(button.className).toContain('workspace-update-action-nudge');
-  expect(button.querySelector('.lucide-download')).toBeInTheDocument();
+  expect(button.querySelector('.lucide-circle-arrow-down')).toBeInTheDocument();
 
   fireEvent.click(button);
   expect(updateMock.install).toHaveBeenCalledTimes(1);

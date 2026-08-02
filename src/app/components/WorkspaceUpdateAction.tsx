@@ -1,4 +1,4 @@
-import { Download, LoaderCircle } from 'lucide-react';
+import { CircleArrowDown, LoaderCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
@@ -50,7 +50,7 @@ export function WorkspaceUpdateAction() {
           forceTooltipOpen={restarting}
           icon={restarting
             ? <LoaderCircle aria-hidden="true" className="animate-spin" size={18} strokeWidth={1.75} />
-            : <Download aria-hidden="true" size={18} strokeWidth={2} />}
+            : <CircleArrowDown aria-hidden="true" size={18} strokeWidth={1.75} />}
           key={`${state.version ?? 'ready'}-${nudgeSequence}`}
           label={label}
           onClick={restarting ? undefined : () => void installDesktopUpdate()}

@@ -1,12 +1,5 @@
-.workspace-update-action {
-  color: var(--app-accent-color);
-}
-
-.workspace-update-action:hover {
-  color: color-mix(in srgb, var(--app-accent-color) 84%, rgb(var(--color-foreground)) 16%);
-}
-
 .workspace-update-action-nudge {
+  will-change: transform;
   animation:
     workspace-update-nudge 700ms linear 3,
     workspace-update-settle 700ms linear 2100ms 1;
