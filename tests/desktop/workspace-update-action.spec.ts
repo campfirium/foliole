@@ -41,15 +41,14 @@ test('shows the ready update action prominently above Restart App', async ({ des
   await sendDesktopUpdateState(desktopSession.electronApp, { percent: 100, phase: 'ready', version: '0.7.0' });
 
   await expect(updateAction).toBeVisible();
-  await expect(updateAction.locator('.lucide-circle-arrow-down')).toBeVisible();
+  await expect(updateAction.locator('.lucide-download')).toBeVisible();
   const restartAction = rail.getByRole('button', { name: /Restart App|重启应用/ });
   const [updateBox, restartBox] = await Promise.all([
     updateAction.boundingBox(),
     restartAction.boundingBox()
   ]);
   expect(updateBox?.y).toBeLessThan(restartBox?.y ?? 0);
-  await expect.poll(() => updateAction.locator('.lucide-circle-arrow-down')
-    .evaluate((element) => getComputedStyle(element).animationName))
+  await expect.poll(() => updateAction.evaluate((element) => getComputedStyle(element).animationName))
     .toContain('workspace-update-nudge');
   const clip = { height: 96, width: 150, x: 0, y: Math.max(0, (updateBox?.y ?? 8) - 8) };
   await mkdir(EVIDENCE_DIR, { recursive: true });
