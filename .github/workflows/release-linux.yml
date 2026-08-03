@@ -1,0 +1,112 @@
+name: Release Linux Package
+
+run-name: Release Linux Package ${{ inputs.target_version }} @ ${{ inputs.target_sha }}
+
+on:
+  workflow_call:
+    inputs:
+      target_version:
+        required: false
+        default: ''
+        type: string
+      target_sha:
+        required: true
+        type: string
+      execution_lane:
+        required: true
+        type: string
+      trigger_ref:
+        required: true
+        type: string
+      attest_artifact:
+        required: false
+        default: false
+        type: boolean
+    outputs:
+      artifact_name:
+        description: Same-run Linux package artifact
+        value: ${{ jobs.release-linux.outputs.artifact_name }}
+      packaged_sha:
+        description: Exact commit packaged for Linux
+        value: ${{ jobs.release-linux.outputs.packaged_sha }}
+
+concurrency:
+  group: package-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-linux
+  cancel-in-progress: false
+
+jobs:
+  release-linux:
+    name: Build and accept Ubuntu 24.04 x64 AppImage
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    outputs:
+      artifact_name: ${{ steps.package-output.outputs.artifact_name }}
+      packaged_sha: ${{ steps.package-output.outputs.packaged_sha }}
+    env:
+      TARGET_SHA: ${{ inputs.target_sha }}
+    steps:
+      - name: Check out target snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Verify Linux package identity
+        id: identity
+        env:
+          REQUESTED_VERSION: ${{ inputs.target_version }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$(uname -m)" = "x86_64"
+          package_version="$(node -p "require('./package.json').version")"
+          if [[ -n "$REQUESTED_VERSION" ]]; then test "$REQUESTED_VERSION" = "$package_version"; fi
+          echo "target_version=$package_version" >> "$GITHUB_OUTPUT"
+      - name: Install dependencies
+        run: node scripts/quality/hosted-npm-ci.mjs
+      - name: Build the static-runtime Experimental AppImage
+        env:
+          TARGET_VERSION: ${{ steps.identity.outputs.target_version }}
+        run: node scripts/linux/package-linux-appimage.mjs --version="$TARGET_VERSION"
+      - name: Accept the real AppImage under Xvfb
+        env:
+          TARGET_VERSION: ${{ steps.identity.outputs.target_version }}
+        run: >-
+          node scripts/linux/accept-linux-appimage.mjs
+          --directory=artifacts/linux --target-sha="$TARGET_SHA" --version="$TARGET_VERSION"
+      - name: Generate Linux artifact attestation
+        if: inputs.attest_artifact
+        uses: actions/attest@v4
+        with:
+          subject-checksums: artifacts/linux/SHA256SUMS.txt
+      - name: Upload formal Linux release assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: foliole-linux-release
+          path: |
+            artifacts/linux/*.AppImage
+            artifacts/linux/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload Linux acceptance evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-acceptance-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          path: |
+            .tmp/artifacts/linux-appimage-acceptance
+            .tmp/artifacts/desktop-acceptance
+            .tmp/playwright-results/desktop
+            .tmp/playwright-report/desktop
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Export Linux package artifact
+        id: package-output
+        run: |
+          echo "artifact_name=foliole-linux-release" >> "$GITHUB_OUTPUT"
+          echo "packaged_sha=${TARGET_SHA}" >> "$GITHUB_OUTPUT"

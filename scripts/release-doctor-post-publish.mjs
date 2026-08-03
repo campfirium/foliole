@@ -4,6 +4,8 @@ import { get } from 'node:https';
 import { join } from 'node:path';
 
 import { createCheck } from './release-doctor-core.mjs';
+import { hasLinuxExperimentalNotice } from './linux/linux-experimental-copy.mjs';
+import { linuxAppImageName } from './linux/linux-release-contract.mjs';
 
 const MANIFEST_URL = 'https://campfirium.github.io/foliole/releases/update-manifest.json';
 const MARKETING_ROOT = 'D:\\C\\foliole-marketing';
@@ -86,23 +88,30 @@ export function checkSiteSync(version, rootDir, commandRunner) {
   return checks;
 }
 
-function checkRemoteBody(candidateJson, localBody, phase) {
-  if (phase !== 'post') {
-    return [];
-  }
+function checkRemoteBody(candidateJson, localBody, phase, expectsLinux) {
   const remoteBody = normalizeBody(candidateJson?.body);
+  const linuxNotice = expectsLinux
+    ? createCheck(
+        hasLinuxExperimentalNotice(remoteBody) ? 'PASS' : 'FAIL',
+        'Linux Experimental release notice',
+        hasLinuxExperimentalNotice(remoteBody)
+          ? 'release body states the reviewed Linux Experimental boundary.'
+          : 'release body is missing the reviewed Linux Experimental boundary.'
+      )
+    : null;
+  if (phase !== 'post') return linuxNotice ? [linuxNotice] : [];
   const expectedBody = normalizeBody(localBody);
   if (!remoteBody) {
-    return [createCheck('FAIL', 'GitHub release body remote', 'GitHub release body is empty.')];
+    return [createCheck('FAIL', 'GitHub release body remote', 'GitHub release body is empty.'), ...(linuxNotice ? [linuxNotice] : [])];
   }
   return [createCheck(
     remoteBody === expectedBody ? 'PASS' : 'FAIL',
     'GitHub release body remote',
     remoteBody === expectedBody ? 'remote body matches reviewed local body.' : 'remote body differs from reviewed local body.'
-  )];
+  ), ...(linuxNotice ? [linuxNotice] : [])];
 }
 
-function checkRemoteAssets(candidateJson, phase) {
+function checkRemoteAssets(candidateJson, phase, manifestEntry, version) {
   if (phase !== 'post') {
     return [];
   }
@@ -114,13 +123,25 @@ function checkRemoteAssets(candidateJson, phase) {
   const hasPlatformChecksums = ['SHA256SUMS-macos.txt', 'SHA256SUMS-windows.txt']
     .every((name) => assetNames.includes(name));
   const hasChecksum = hasLegacyChecksum || hasPlatformChecksums;
+  const declaresLinux = manifestEntry?.platforms?.includes('linux') === true;
+  const hasLinuxAppImage = assetNames.includes(linuxAppImageName(version));
+  const hasLinuxChecksum = assetNames.includes('SHA256SUMS-linux.txt');
+  const linuxTruthMatches = declaresLinux === hasLinuxAppImage && (!declaresLinux || hasLinuxChecksum)
+    && !assetNames.includes('latest-linux.yml');
   return [
     createCheck(hasInstaller ? 'PASS' : 'FAIL', 'GitHub release installer asset', hasInstaller ? 'Windows installer asset exists.' : 'Windows installer .exe asset is missing.'),
-    createCheck(hasChecksum ? 'PASS' : 'FAIL', 'GitHub release checksum asset', hasChecksum ? 'release checksum assets exist.' : 'release checksum assets are missing.')
+    createCheck(hasChecksum ? 'PASS' : 'FAIL', 'GitHub release checksum asset', hasChecksum ? 'release checksum assets exist.' : 'release checksum assets are missing.'),
+    createCheck(
+      linuxTruthMatches ? 'PASS' : 'FAIL',
+      'Linux manifest and release assets',
+      linuxTruthMatches
+        ? `manifest Linux declaration and Experimental AppImage assets agree for ${version}.`
+        : `manifest Linux declaration and Experimental AppImage assets disagree for ${version}.`
+    )
   ];
 }
 
-export function checkGithubReleaseSignals(version, phase, rootDir, commandRunner, localBody) {
+export function checkGithubReleaseSignals(version, phase, rootDir, commandRunner, localBody, manifestEntry) {
   const candidate = commandRunner('gh', ['release', 'view', `v${version}`, '-R', 'campfirium/foliole', '--json', 'body,isDraft,publishedAt,tagName,url,assets'], rootDir);
   if (candidate.error || candidate.status !== 0) {
     const missing = (candidate.stderr ?? '').toLowerCase().includes('not found');
@@ -131,6 +152,8 @@ export function checkGithubReleaseSignals(version, phase, rootDir, commandRunner
   }
   const candidateJson = parseJsonResult(candidate);
   const isPublished = candidateJson?.isDraft === false && Boolean(candidateJson?.publishedAt);
+  const expectsLinux = manifestEntry?.platforms?.includes('linux') === true
+    || candidateJson?.assets?.some((asset) => asset?.name === linuxAppImageName(version));
   const checks = [
     createCheck(candidateJson?.tagName === `v${version}` ? 'PASS' : 'FAIL', 'GitHub release tag', `GitHub release tag is ${candidateJson?.tagName ?? '<unknown>'}.`),
     createCheck(
@@ -138,8 +161,8 @@ export function checkGithubReleaseSignals(version, phase, rootDir, commandRunner
       'GitHub release state',
       `GitHub release draft=${String(candidateJson?.isDraft)} publishedAt=${candidateJson?.publishedAt ?? '<none>'}; phase=${phase}.`
     ),
-    ...checkRemoteBody(candidateJson, localBody, phase),
-    ...checkRemoteAssets(candidateJson, phase)
+    ...checkRemoteBody(candidateJson, localBody, phase, expectsLinux),
+    ...checkRemoteAssets(candidateJson, phase, manifestEntry, version)
   ];
   const latest = commandRunner('gh', ['release', 'view', '-R', 'campfirium/foliole', '--json', 'tagName,isDraft,publishedAt,url'], rootDir);
   if (latest.error || latest.status !== 0) {

@@ -1,6 +1,5 @@
 // @vitest-environment node
 
-import { Buffer } from 'node:buffer';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -17,6 +16,7 @@ import {
   findCheck,
   onlineManifest
 } from './release-doctor.test-support.mjs';
+import { LINUX_EXPERIMENTAL_NOTICE } from './linux/linux-experimental-copy.mjs';
 
 const ASSETS = [
   { name: 'Foliole-Windows-x64-0.9.0.exe' },
@@ -26,10 +26,6 @@ const ASSETS = [
 
 function githubResponses(version, candidate = {}) {
   const publishedAt = candidate.isDraft === true ? null : '2026-07-31T00:00:00Z';
-  const siteManifest = Buffer.from(JSON.stringify({
-    tag: `v${version}`,
-    version
-  })).toString('base64');
   return {
     [`gh release view v${version} -R campfirium/foliole --json body,isDraft,publishedAt,tagName,url,assets`]: {
       status: 0,
@@ -47,16 +43,6 @@ function githubResponses(version, candidate = {}) {
     'gh release view -R campfirium/foliole --json tagName,isDraft,publishedAt,url': {
       status: 0,
       stdout: JSON.stringify({ isDraft: false, publishedAt, tagName: `v${version}`, url: 'https://example.test' }),
-      stderr: ''
-    },
-    'gh run list --repo campfirium/foliole-site --workflow deploy.yml --event repository_dispatch --limit 1 --json conclusion,url,createdAt': {
-      status: 0,
-      stdout: JSON.stringify([{ conclusion: 'success', createdAt: publishedAt, url: 'https://example.test/site-run' }]),
-      stderr: ''
-    },
-    'gh api repos/campfirium/foliole-site/contents/content/downloads.json?ref=main --jq .content': {
-      status: 0,
-      stdout: siteManifest,
       stderr: ''
     }
   };
@@ -144,28 +130,47 @@ describe('release doctor', () => {
 
     for (const title of [
       'GitHub release body remote', 'GitHub release installer asset',
-      'GitHub release checksum asset', 'site release sync run',
-      'site download manifest', 'Pages manifest latest', 'marketing posting file'
+      'GitHub release checksum asset', 'Linux manifest and release assets',
+      'Pages manifest latest', 'marketing posting file'
     ]) expect(findCheck(result, title).status, title).toBe('PASS');
     expect(hasFailures(result.checks)).toBe(false);
   });
 
-  it('rejects post-public closeout when the site did not sync the current release', async () => {
+  it('rejects a Linux AppImage that is not declared by the release manifest', async () => {
     const fixture = await createFixture();
-    const responses = githubResponses(fixture.version);
-    responses['gh run list --repo campfirium/foliole-site --workflow deploy.yml --event repository_dispatch --limit 1 --json conclusion,url,createdAt'] = {
-      status: 0,
-      stdout: JSON.stringify([{ conclusion: 'failure', url: 'https://example.test/failed-site-run' }]),
-      stderr: ''
-    };
+    const assets = [...ASSETS, { name: `Foliole-Linux-Experimental-x64-${fixture.version}.AppImage` }, { name: 'SHA256SUMS-linux.txt' }];
     const result = await collectReleaseDoctorChecks({
-      argv: ['--phase=post'], commandRunner: commandRunner(responses),
-      fetcher: async () => onlineManifest(fixture.version),
-      marketingRoot: join(fixture.rootDir, 'missing'), rootDir: fixture.rootDir
+      argv: ['--phase=post'], commandRunner: commandRunner(githubResponses(fixture.version, { assets })),
+      fetcher: async () => onlineManifest(fixture.version), rootDir: fixture.rootDir
     });
 
-    expect(findCheck(result, 'site release sync run').status).toBe('FAIL');
-    expect(hasFailures(result.checks)).toBe(true);
+    expect(findCheck(result, 'Linux manifest and release assets').status).toBe('FAIL');
+  });
+
+  it('accepts matching Linux manifest, Experimental assets, and reviewed usage notice', async () => {
+    const version = '0.9.0';
+    const fixture = await createFixture({ manifest: {
+      latest: version,
+      releases: [{
+        platforms: ['linux', 'macos', 'windows'],
+        url: `https://github.com/campfirium/foliole/releases/tag/v${version}`,
+        version
+      }]
+    } });
+    await writeFile(join(fixture.rootDir, `releases/github/v${version}.md`), `${LINUX_EXPERIMENTAL_NOTICE}\n`);
+    const assets = [
+      ...ASSETS,
+      { name: `Foliole-Linux-Experimental-x64-${version}.AppImage` },
+      { name: 'SHA256SUMS-linux.txt' }
+    ];
+    const result = await collectReleaseDoctorChecks({
+      argv: ['--phase=post'],
+      commandRunner: commandRunner(githubResponses(version, { assets, body: LINUX_EXPERIMENTAL_NOTICE })),
+      fetcher: async () => onlineManifest(version), rootDir: fixture.rootDir
+    });
+
+    expect(findCheck(result, 'Linux manifest and release assets').status).toBe('PASS');
+    expect(findCheck(result, 'Linux Experimental release notice').status).toBe('PASS');
   });
 
   it('keeps the npm script contract registered', async () => {
