@@ -15,6 +15,7 @@ import {
 } from './release-doctor-core.mjs';
 import {
   checkGithubReleaseSignals,
+  checkSiteSync,
   collectPostPublishChecks
 } from './release-doctor-post-publish.mjs';
 
@@ -112,8 +113,9 @@ function checkReleaseWorkflow(workflowSource, version) {
   );
 }
 
-async function collectPostPublicMetadataChecks(rootDir, version, manifest) {
-  const [enNotes, zhNotes] = await Promise.all([
+async function collectPostPublicMetadataChecks(rootDir, version) {
+  const [manifest, enNotes, zhNotes] = await Promise.all([
+    readJsonFile(rootDir, 'releases/update-manifest.json'),
     readJsonFile(rootDir, 'releases/notes/en.json'),
     readJsonFile(rootDir, 'releases/notes/zh-Hans.json')
   ]);
@@ -154,10 +156,9 @@ export async function collectReleaseDoctorChecks({
   const phase = args.phase;
   const packageJson = await readJsonFile(rootDir, 'package.json');
   const version = packageJson.version;
-  const manifest = await readJsonFile(rootDir, 'releases/update-manifest.json');
   const workflow = await readTextFile(rootDir, '.github/workflows/t7-release.yml');
   const metadataChecks = phase === 'post'
-    ? await collectPostPublicMetadataChecks(rootDir, version, manifest)
+    ? await collectPostPublicMetadataChecks(rootDir, version)
     : [];
   const bodyPath = join(rootDir, `releases/github/v${version}.md`);
   const localBody = phase === 'post' && existsSync(bodyPath)
@@ -168,8 +169,8 @@ export async function collectReleaseDoctorChecks({
     ...metadataChecks,
     checkReleaseWorkflow(workflow, version),
     checkWorkingTree(rootDir, commandRunner),
-    ...checkGithubReleaseSignals(version, phase, rootDir, commandRunner, localBody,
-      manifest.releases?.find((entry) => entry?.version === version)),
+    ...checkGithubReleaseSignals(version, phase, rootDir, commandRunner, localBody),
+    ...(phase === 'post' ? checkSiteSync(version, rootDir, commandRunner) : []),
     ...(await collectPostPublishChecks({ fetcher, marketingRoot, phase, version }))
   ];
   return { checks, phase, version };

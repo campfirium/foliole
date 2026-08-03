@@ -49,9 +49,6 @@
       "releaseType": "release"
     }
   ],
-  "toolsets": {
-    "appimage": "1.0.3"
-  },
   "files": [
     "build/icon.png",
     "build/icon-macos.png",
@@ -121,7 +118,6 @@
     "shortcutName": "Foliole"
   },
   "linux": {
-    "artifactName": "${productName}-Linux-Experimental-x64-${version}.${ext}",
     "icon": "build/icon.png",
     "target": ["AppImage"],
     "category": "Education"

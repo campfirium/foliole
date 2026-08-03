@@ -43,10 +43,6 @@ function resolveInstalledExePath(env = process.env) {
   return localAppData ? path.win32.join(localAppData, 'Programs', 'Foliole', 'Foliole.exe') : null;
 }
 
-function dirnameHostPath(value) {
-  return isWindowsHostPath(value) ? path.win32.dirname(value) : path.dirname(value);
-}
-
 export function resolveDesktopAppRoot(env = process.env) {
   const configuredRoot = env.FOLIOLE_ELECTRON_APP_ROOT?.trim();
   if (configuredRoot) {
@@ -64,7 +60,7 @@ export function resolveDesktopLaunchTarget(appRoot, existsSync = fs.existsSync, 
     const executablePath = resolveInstalledExePath(env);
     const resolvedExecutablePath = executablePath ? resolveHostPath(executablePath) : null;
     return {
-      appRoot: resolvedExecutablePath ? dirnameHostPath(resolvedExecutablePath) : resolveHostPath(appRoot),
+      appRoot: resolvedExecutablePath ? path.win32.dirname(resolvedExecutablePath) : resolveHostPath(appRoot),
       executablePath: resolvedExecutablePath,
       launchMode: 'installed',
       mainEntry: null,

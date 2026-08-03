@@ -131,8 +131,6 @@ describe('electron-builder release packaging config', () => {
     expect(config.win.requestedExecutionLevel).toBe('asInvoker');
     expect(config.mac.category).toBe('public.app-category.education');
     expect(config.linux.category).toBe('Education');
-    expect(config.linux.artifactName).toBe('${productName}-Linux-Experimental-x64-${version}.${ext}');
-    expect(config.toolsets.appimage).toBe('1.0.3');
   });
 
   it('produces signed Windows installer metadata for same-run T7 assembly', async () => {

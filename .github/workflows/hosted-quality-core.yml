@@ -106,18 +106,6 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-  linux-quality:
-    name: Linux ${{ inputs.scope }} package acceptance
-    if: inputs.scope == 'desktop'
-    permissions:
-      contents: read
-    uses: ./.github/workflows/release-linux.yml
-    with:
-      attest_artifact: false
-      execution_lane: ${{ inputs.execution_lane }}
-      target_sha: ${{ inputs.target_sha }}
-      trigger_ref: ${{ inputs.trigger_ref }}
-
   android-quality:
     name: Android ${{ inputs.scope }} quality
     if: inputs.scope == 'android'
