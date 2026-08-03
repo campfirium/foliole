@@ -1,0 +1,7 @@
+abi <abi/4.0>,
+include <tunables/global>
+
+profile "foliole" "/opt/Foliole/foliole" flags=(unconfined) {
+  userns,
+  include if exists <local/foliole>
+}

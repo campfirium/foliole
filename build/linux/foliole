@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+set -eu
+
+FOLIOLE_INSTALL_ROOT=/opt/Foliole
+export ELECTRON_RUN_AS_NODE=1
+export FOLIOLE_PRODUCT_METADATA_PATH="$FOLIOLE_INSTALL_ROOT/resources/app.asar/package.json"
+exec "$FOLIOLE_INSTALL_ROOT/foliole" \
+  "$FOLIOLE_INSTALL_ROOT/resources/scripts/agent-control/foliole-agent.mjs" "$@"

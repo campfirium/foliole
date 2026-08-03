@@ -50,7 +50,7 @@ export function SettingsCliSection() {
         description={<><span className="block">{row.description}</span><span className="mt-1 block text-foreground/70">{t(feedbackKey)}</span></>}
         title={row.title}
       >
-        <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+        {state.packageManaged ? null : <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
           <SettingsButton
             disabled={state.status === 'conflict'}
             loading={busy}
@@ -59,7 +59,7 @@ export function SettingsCliSection() {
           >
             {t(`settings.about.cli.action.${action}`)}
           </SettingsButton>
-        </SettingsControlSlot>
+        </SettingsControlSlot>}
       </SettingsRow>
     </SettingsSection>
   );

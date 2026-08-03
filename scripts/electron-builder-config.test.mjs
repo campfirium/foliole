@@ -131,6 +131,14 @@ describe('electron-builder release packaging config', () => {
     expect(config.win.requestedExecutionLevel).toBe('asInvoker');
     expect(config.mac.category).toBe('public.app-category.education');
     expect(config.linux.category).toBe('Education');
+    expect(config.linux.target).toEqual(['deb']);
+    expect(config.linux.artifactName).toBe('${productName}-Linux-Experimental-amd64-${version}.${ext}');
+    expect(config.deb).toMatchObject({
+      afterInstall: 'build/linux/after-install.sh',
+      afterRemove: 'build/linux/after-remove.sh',
+      appArmorProfile: 'build/linux/apparmor-profile',
+      packageName: 'foliole'
+    });
   });
 
   it('produces signed Windows installer metadata for same-run T7 assembly', async () => {

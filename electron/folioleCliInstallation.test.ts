@@ -62,6 +62,17 @@ it('resolves the public command inside the packaged CLI wrapper', () => {
   );
 });
 
+it('reports the DEB-managed Linux command without performing install actions', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-linux-cli-'));
+  roots.push(root);
+  Object.defineProperty(process, 'platform', { configurable: true, value: 'linux' });
+
+  await expect(runFolioleCliInstallAction('install', null)).resolves.toMatchObject({
+    commandPath: '/usr/bin/foliole', packageManaged: true, status: 'not_installed'
+  });
+  expect(electronMocks.showOpenDialog).not.toHaveBeenCalled();
+});
+
 it('distinguishes installed, moved, and conflicting commands without overwriting them', async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-cli-install-'));
   roots.push(directory);

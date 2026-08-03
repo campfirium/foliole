@@ -13,6 +13,7 @@ function normalize(value: unknown): NativeFolioleCliInstallState {
     commandPath: typeof record.commandPath === 'string' ? record.commandPath : null,
     error: record.error === 'conflict' || record.error === 'failed'
       ? record.error : null,
+    packageManaged: record.packageManaged === true,
     status: STATUSES.has(record.status as NativeFolioleCliInstallState['status'])
       ? record.status as NativeFolioleCliInstallState['status'] : 'unavailable'
   };

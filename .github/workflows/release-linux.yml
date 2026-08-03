@@ -1,0 +1,140 @@
+name: Release Linux Package
+
+run-name: Release Linux Package ${{ inputs.target_version }} @ ${{ inputs.target_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact dev candidate commit to package and accept
+        required: true
+        type: string
+      target_version:
+        description: Optional package version guard
+        required: false
+        default: ''
+        type: string
+  workflow_call:
+    inputs:
+      target_version:
+        required: false
+        default: ''
+        type: string
+      target_sha:
+        required: true
+        type: string
+      execution_lane:
+        required: true
+        type: string
+      trigger_ref:
+        required: true
+        type: string
+      attest_artifact:
+        required: false
+        default: false
+        type: boolean
+    outputs:
+      artifact_name:
+        description: Same-run Linux package artifact
+        value: ${{ jobs.release-linux.outputs.artifact_name }}
+      packaged_sha:
+        description: Exact commit packaged for Linux
+        value: ${{ jobs.release-linux.outputs.packaged_sha }}
+
+concurrency:
+  group: package-${{ inputs.execution_lane || 'dev-linux-candidate' }}-${{ inputs.trigger_ref || github.ref }}-linux
+  cancel-in-progress: false
+
+permissions:
+  artifact-metadata: write
+  attestations: write
+  contents: read
+  id-token: write
+
+jobs:
+  release-linux:
+    name: Build and accept Ubuntu 24.04 x64 DEB
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    outputs:
+      artifact_name: ${{ steps.package-output.outputs.artifact_name }}
+      packaged_sha: ${{ steps.package-output.outputs.packaged_sha }}
+    env:
+      EXECUTION_LANE: ${{ inputs.execution_lane }}
+      TARGET_SHA: ${{ inputs.target_sha }}
+    steps:
+      - name: Check out target snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.execution_lane == '' && 'dev' || inputs.target_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Verify Linux package identity
+        id: identity
+        env:
+          REQUESTED_VERSION: ${{ inputs.target_version }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
+          if [[ -z "$EXECUTION_LANE" ]]; then
+            test "$GITHUB_EVENT_NAME" = 'workflow_dispatch'
+            test "$GITHUB_REF" = 'refs/heads/dev'
+            git merge-base --is-ancestor "$TARGET_SHA" HEAD
+            git checkout --detach "$TARGET_SHA"
+          fi
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$(uname -m)" = "x86_64"
+          package_version="$(node -p "require('./package.json').version")"
+          if [[ -n "$REQUESTED_VERSION" ]]; then test "$REQUESTED_VERSION" = "$package_version"; fi
+          echo "target_version=$package_version" >> "$GITHUB_OUTPUT"
+      - name: Install package and acceptance dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y apparmor apparmor-utils xvfb
+          node scripts/quality/hosted-npm-ci.mjs
+      - name: Build the Experimental DEB
+        env:
+          TARGET_VERSION: ${{ steps.identity.outputs.target_version }}
+        run: node scripts/linux/package-linux-deb.mjs --version="$TARGET_VERSION"
+      - name: Accept the installed DEB under Xvfb
+        env:
+          TARGET_VERSION: ${{ steps.identity.outputs.target_version }}
+        run: >-
+          node scripts/linux/accept-linux-deb.mjs
+          --directory=artifacts/linux --target-sha="$TARGET_SHA" --version="$TARGET_VERSION"
+      - name: Generate Linux artifact attestation
+        if: inputs.execution_lane != '' && inputs.attest_artifact
+        uses: actions/attest@v4
+        with:
+          subject-checksums: artifacts/linux/SHA256SUMS.txt
+      - name: Upload formal Linux release assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: foliole-linux-release
+          path: |
+            artifacts/linux/*.deb
+            artifacts/linux/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload Linux acceptance evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-acceptance-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          path: |
+            .tmp/artifacts/linux-deb-acceptance
+            .tmp/artifacts/desktop-acceptance
+            .tmp/playwright-results/desktop
+            .tmp/playwright-report/desktop
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Export Linux package artifact
+        id: package-output
+        run: |
+          echo "artifact_name=foliole-linux-release" >> "$GITHUB_OUTPUT"
+          echo "packaged_sha=${TARGET_SHA}" >> "$GITHUB_OUTPUT"

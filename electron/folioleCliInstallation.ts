@@ -11,8 +11,23 @@ type CliAction = 'install' | 'remove' | 'repair' | 'status';
 const RECEIPT_FILE = 'foliole-cli-installation.json';
 
 function result(status: NativeFolioleCliInstallState['status'], commandPath: string | null = null,
-  error: NativeFolioleCliInstallState['error'] = null): NativeFolioleCliInstallState {
-  return { commandPath, error, status };
+  error: NativeFolioleCliInstallState['error'] = null, packageManaged = false): NativeFolioleCliInstallState {
+  return { commandPath, error, packageManaged, status };
+}
+
+const LINUX_CLI_COMMAND = '/usr/bin/foliole';
+const LINUX_CLI_TARGET = '/opt/Foliole/bin/foliole';
+
+async function inspectLinuxPackageCli() {
+  try {
+    await fs.access(LINUX_CLI_COMMAND, constants.X_OK);
+    const target = await fs.realpath(LINUX_CLI_COMMAND);
+    return target === LINUX_CLI_TARGET
+      ? result('installed', LINUX_CLI_COMMAND, null, true)
+      : result('not_installed', LINUX_CLI_COMMAND, 'failed', true);
+  } catch {
+    return result('not_installed', LINUX_CLI_COMMAND, null, true);
+  }
 }
 
 export function resolvePackagedFolioleCliPath(resourcesPath = process.resourcesPath) {
@@ -109,6 +124,7 @@ async function repairOrRemove(action: 'remove' | 'repair', receiptPath: string,
 }
 
 export async function runFolioleCliInstallAction(action: CliAction, window: BrowserWindow | null) {
+  if (process.platform === 'linux' && app.isPackaged) return inspectLinuxPackageCli();
   if (process.platform !== 'darwin' || process.mas !== true || !app.isPackaged) return result('unavailable');
   const currentTarget = resolvePackagedFolioleCliPath();
   try {

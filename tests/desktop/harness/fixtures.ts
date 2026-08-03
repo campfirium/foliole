@@ -12,11 +12,13 @@ import { attachDesktopAcceptanceEvidence } from './acceptanceEvidence';
 
 export type DesktopLaunchTarget = {
   appRoot: string;
-  launchMode: 'args';
-  mainEntry: string;
+  executablePath?: string | null;
+  launchMode: 'args' | 'installed';
+  mainEntry: string | null;
   missingPaths: string[];
-  preloadPath: string;
-  rendererIndexPath: string;
+  preloadPath: string | null;
+  rendererIndexPath: string | null;
+  runtimeStateRoot: string;
 };
 
 export type DesktopSession = {

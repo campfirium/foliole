@@ -212,5 +212,6 @@ export type NativeUtilityCommandMap = {
 export interface NativeFolioleCliInstallState {
   commandPath: string | null;
   error: 'conflict' | 'failed' | null;
+  packageManaged: boolean;
   status: 'cancelled' | 'conflict' | 'installed' | 'not_installed' | 'repair_required' | 'unavailable';
 }

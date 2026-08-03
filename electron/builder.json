@@ -118,9 +118,16 @@
     "shortcutName": "Foliole"
   },
   "linux": {
+    "artifactName": "${productName}-Linux-Experimental-amd64-${version}.${ext}",
     "icon": "build/icon.png",
-    "target": ["AppImage"],
+    "target": ["deb"],
     "category": "Education"
+  },
+  "deb": {
+    "afterInstall": "build/linux/after-install.sh",
+    "afterRemove": "build/linux/after-remove.sh",
+    "appArmorProfile": "build/linux/apparmor-profile",
+    "packageName": "foliole"
   },
   "mac": {
     "icon": "build/icon.icns",

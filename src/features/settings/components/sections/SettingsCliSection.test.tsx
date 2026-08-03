@@ -11,7 +11,9 @@ import { renderWithLocalization } from '../../../../shared/localization/testLoca
 
 import { SettingsCliSection } from './SettingsCliSection';
 
-const state = (status: string, error: string | null = null) => ({ commandPath: null, error, status });
+const state = (status: string, error: string | null = null, packageManaged = false) => ({
+  commandPath: null, error, packageManaged, status
+});
 
 beforeEach(() => {
   runAction.mockReset();
@@ -23,6 +25,14 @@ it('stays hidden when the packaged CLI is unavailable', async () => {
 
   await waitFor(() => expect(runAction).toHaveBeenCalledWith('status'));
   expect(screen.queryByText('Foliole CLI')).not.toBeInTheDocument();
+});
+
+it('reports a package-managed command without offering write actions', async () => {
+  runAction.mockResolvedValue(state('installed', null, true));
+  renderWithLocalization(<SettingsCliSection />);
+
+  expect(await screen.findByText('The foliole command is ready in Terminal.')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /command/i })).not.toBeInTheDocument();
 });
 
 it('keeps the install action after cancellation and disables it on conflict', async () => {
