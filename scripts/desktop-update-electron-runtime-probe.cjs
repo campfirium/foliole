@@ -13,11 +13,13 @@ function required(name) {
   return value;
 }
 
-function createArtifactServer(directory) {
+function createArtifactServer(directory, requestEvidence) {
   return createServer(async (request, response) => {
     try {
-      const name = decodeURIComponent(new URL(request.url || '/', 'http://localhost').pathname.slice(1));
+      const requestUrl = new URL(request.url || '/', 'http://localhost');
+      const name = decodeURIComponent(requestUrl.pathname.slice(1));
       if (!name || name.includes('/') || name.includes('\\')) throw new Error('invalid artifact path');
+      if (name.endsWith('.yml')) requestEvidence.metadataNoCache ||= requestUrl.searchParams.has('noCache');
       const filePath = path.join(directory, name);
       const fileStat = await stat(filePath);
       response.writeHead(200, { 'Accept-Ranges': 'bytes', 'Content-Length': fileStat.size });
@@ -37,7 +39,7 @@ async function listen(server) {
   });
   const address = server.address();
   if (!address || typeof address === 'string') throw new Error('update fixture server has no TCP address.');
-  return `http://127.0.0.1:${address.port}`;
+  return `http://127.0.0.1:${address.port}/`;
 }
 
 function eventOnce(emitter, name, timeoutMs = 90_000) {
@@ -70,18 +72,21 @@ async function run() {
   app.setPath('cache', path.join(harnessRoot, 'cache'));
   if (app.dock) app.dock.hide();
   await app.whenReady();
-  const server = createArtifactServer(artifactDirectory);
+  const requestEvidence = { metadataNoCache: false };
+  const server = createArtifactServer(artifactDirectory, requestEvidence);
   const updater = process.platform === 'darwin'
     ? new updaterModule.MacUpdater()
     : new updaterModule.NsisUpdater();
   try {
-    await writeUpdateConfig(await listen(server));
+    const feedUrl = await listen(server);
+    await writeUpdateConfig(feedUrl);
     updater.forceDevUpdateConfig = true;
     updater.autoDownload = false;
     updater.autoInstallOnAppQuit = false;
     updater.disableDifferentialDownload = true;
     updater.logger = console;
     updater.on('error', (error) => console.error(`[desktop-update-electron-runtime] updater error: ${error.message}`));
+    updater.setFeedURL(feedUrl);
     const check = await updater.checkForUpdates();
     if (check?.updateInfo?.version !== targetVersion) {
       throw new Error(`updater resolved ${check?.updateInfo?.version || '<none>'}; expected ${targetVersion}.`);
@@ -92,6 +97,7 @@ async function run() {
     console.log(`[desktop-update-electron-runtime] ${JSON.stringify({
       downloaded: path.basename(event.downloadedFile),
       executor: updater.httpExecutor?.constructor?.name,
+      metadataNoCache: requestEvidence.metadataNoCache,
       targetVersion: check.updateInfo.version,
       updater: updater.constructor.name
     })}`);

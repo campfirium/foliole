@@ -16,6 +16,8 @@ describe('desktop update compatibility gate', () => {
     expect(source).toContain('ElectronHttpExecutor');
     expect(probe).toContain('new updaterModule.MacUpdater()');
     expect(probe).toContain('new updaterModule.NsisUpdater()');
+    expect(probe).toContain('updater.setFeedURL(feedUrl)');
+    expect(probe).toContain("requestUrl.searchParams.has('noCache')");
     expect(source).not.toContain('ELECTRON_RUN_AS_NODE');
     expect(`${source}\n${probe}`).not.toContain('NodeHttpExecutor');
   });

@@ -2,7 +2,7 @@ import type { WebContents } from 'electron';
 
 import type { NativeDesktopUpdateState } from '../../lib/platform/nativeUpdateContract.js';
 
-import { configureDesktopUpdater, type DesktopUpdaterAdapter } from './desktopUpdateAdapter.js';
+import { bindDesktopUpdaterFeed, configureDesktopUpdater, type DesktopUpdaterAdapter } from './desktopUpdateAdapter.js';
 import { DesktopUpdateCandidate } from './desktopUpdateCandidate.js';
 import {
   classifyDesktopUpdateFailure,
@@ -11,8 +11,6 @@ import {
 } from './desktopUpdateErrorPolicy.js';
 import { DesktopUpdateRetry } from './desktopUpdateRetry.js';
 import { createDesktopUpdateRecord, type DesktopUpdateStateStore } from './desktopUpdateStateStore.js';
-
-export type { DesktopUpdaterAdapter } from './desktopUpdateAdapter.js';
 
 interface DesktopUpdateServiceOptions {
   eventChannel: string;
@@ -120,7 +118,8 @@ export class DesktopUpdateService {
     if (!this.candidate.isCurrent(operationId, version)) return this.state;
     this.setState({ phase: 'checking', version });
     try {
-      const result = await (await this.ensureUpdater()).checkForUpdates();
+      const updater = bindDesktopUpdaterFeed(await this.ensureUpdater(), version);
+      const result = await updater.checkForUpdates();
       if (!this.candidate.isCurrent(operationId, version)) return this.state;
       if (!result?.isUpdateAvailable || result.updateInfo.version !== version) {
         this.setState({ phase: 'pending-asset', version });

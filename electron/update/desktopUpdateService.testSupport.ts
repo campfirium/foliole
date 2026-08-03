@@ -1,6 +1,7 @@
 import { vi } from 'vitest';
 
-import { DesktopUpdateService, type DesktopUpdaterAdapter } from './desktopUpdateService.js';
+import type { DesktopUpdaterAdapter } from './desktopUpdateAdapter.js';
+import { DesktopUpdateService } from './desktopUpdateService.js';
 
 type StoredRecord = {
   checkpoint: 'discovered' | 'downloaded';
@@ -48,7 +49,8 @@ export function createDesktopUpdateServiceHarness(options: DesktopUpdateHarnessO
     on: vi.fn((event: string, listener: (payload?: Record<string, unknown>) => void) => {
       listeners.set(event, listener);
     }),
-    quitAndInstall: vi.fn()
+    quitAndInstall: vi.fn(),
+    setFeedURL: vi.fn()
   } satisfies DesktopUpdaterAdapter;
   const sender = { isDestroyed: vi.fn(() => false), send: vi.fn() };
   const prepareInstall = vi.fn(async () => true);

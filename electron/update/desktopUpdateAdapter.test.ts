@@ -12,7 +12,8 @@ function createUpdater() {
     checkForUpdates: vi.fn(),
     downloadUpdate: vi.fn(),
     on: vi.fn(),
-    quitAndInstall: vi.fn()
+    quitAndInstall: vi.fn(),
+    setFeedURL: vi.fn()
   } satisfies DesktopUpdaterAdapter;
 }
 

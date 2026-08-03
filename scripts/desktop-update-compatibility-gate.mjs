@@ -91,6 +91,7 @@ export async function runCompatibilityGate(options, execute = executeFile) {
     if (evidence.targetVersion !== options.targetVersion) {
       throw new Error(`updater resolved ${evidence.targetVersion ?? '<none>'}; expected ${options.targetVersion}.`);
     }
+    if (!evidence.metadataNoCache) throw new Error('updater metadata request did not include noCache.');
     return evidence;
   } finally {
     await rm(root, { force: true, recursive: true });

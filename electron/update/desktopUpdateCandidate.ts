@@ -1,3 +1,4 @@
+import { isValidDesktopUpdateVersion } from './desktopUpdateFeed.js';
 import { createDesktopUpdateRecord, type DesktopUpdateStateStore } from './desktopUpdateStateStore.js';
 
 function numericVersionParts(version: string) {
@@ -26,7 +27,7 @@ export class DesktopUpdateCandidate {
   ) {}
 
   accepts(version: string) {
-    return !this.version || isNewerVersion(version, this.version);
+    return isValidDesktopUpdateVersion(version) && (!this.version || isNewerVersion(version, this.version));
   }
 
   async activate(version: string, queued = false) {

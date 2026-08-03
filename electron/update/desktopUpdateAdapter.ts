@@ -1,5 +1,7 @@
 import type { NativeDesktopUpdateState } from '../../lib/platform/nativeUpdateContract.js';
 
+import { desktopUpdateFeedUrl } from './desktopUpdateFeed.js';
+
 export interface DesktopUpdaterAdapter {
   autoDownload: boolean;
   autoInstallOnAppQuit: boolean;
@@ -8,6 +10,7 @@ export interface DesktopUpdaterAdapter {
   downloadUpdate: () => Promise<string[]>;
   on: (event: string, listener: (payload?: unknown) => void) => unknown;
   quitAndInstall: (isSilent?: boolean, isForceRunAfter?: boolean) => void;
+  setFeedURL: (options: string) => void;
 }
 
 interface ElectronUpdaterCommonJsNamespace {
@@ -17,6 +20,11 @@ interface ElectronUpdaterCommonJsNamespace {
 export function resolveElectronUpdater(module: unknown) {
   const updater = (module as ElectronUpdaterCommonJsNamespace).default?.autoUpdater;
   if (!updater) throw new Error('electron-updater CommonJS default export is unavailable');
+  return updater;
+}
+
+export function bindDesktopUpdaterFeed(updater: DesktopUpdaterAdapter, version: string) {
+  updater.setFeedURL(desktopUpdateFeedUrl(version));
   return updater;
 }
 
