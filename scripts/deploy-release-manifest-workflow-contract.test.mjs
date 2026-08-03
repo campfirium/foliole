@@ -17,6 +17,7 @@ describe('deploy release manifest workflow contract', () => {
     expect(source).toContain('gh release download "v${latest_version}"');
     expect(source).toContain('node scripts/desktop-update-artifact-contract.mjs');
     expect(source).toContain('node scripts/prepare-release-manifest-site.mjs');
+    expect(workflow.jobs.build.steps.find((step) => step.uses === 'actions/checkout@v4').with['fetch-depth']).toBe(2);
     expect(source).not.toContain('- main');
   });
 });

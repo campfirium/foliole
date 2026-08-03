@@ -20,6 +20,21 @@ export async function createFixture(overrides = {}) {
     },
     version
   });
+  await writeJson(rootDir, '.github/release-platforms.json', overrides.platformRegistry ?? {
+    schemaVersion: 1,
+    platforms: [{
+      id: 'windows', displayName: 'Windows', status: 'active', architectures: ['x64'],
+      deliveryChannel: 'github-release', t7Required: true, artifactContract: 'desktop-updater',
+      managedAssets: ['Foliole-Windows-x64-{version}.exe'],
+      update: { mode: 'electron-updater', baselineVersion: '0.7.2' }
+    }]
+  });
+  await writeJson(rootDir, '.github/release-intent.json', overrides.releaseIntent ?? {
+    schemaVersion: 1,
+    version,
+    selectedPlatforms: ['windows'],
+    scopeBasis: { windows: 'The release contains a Windows fix.' }
+  });
   await writeJson(rootDir, 'releases/update-manifest.json', overrides.manifest ?? {
     latest: version,
     releases: [{
@@ -38,6 +53,7 @@ export async function createFixture(overrides = {}) {
       '  - release',
       'FOLIOLE_RELEASE_REF_NAME: ${{ github.ref_name }}',
       'FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}',
+      'FOLIOLE_RELEASE_EXPECTED_INTENT_DIGEST: expected',
       'node scripts/release-target-contract.mjs'
     ].join('\n')
   );

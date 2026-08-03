@@ -18,6 +18,10 @@ import {
   checkSiteSync,
   collectPostPublishChecks
 } from './release-doctor-post-publish.mjs';
+import {
+  formatReleaseConfirmation,
+  resolveReleasePlatformIdentity
+} from './release-platform-contract.mjs';
 
 export { formatReleaseDoctorReport, hasFailures } from './release-doctor-core.mjs';
 
@@ -102,15 +106,27 @@ function checkReleaseWorkflow(workflowSource, version) {
     workflowSource.includes('FOLIOLE_RELEASE_REF_NAME: ${{ github.ref_name }}');
   const branchVersion = workflowSource.includes('node scripts/release-target-contract.mjs');
   const internalIdentity = workflowSource.includes('FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}');
+  const frozenIntent = workflowSource.includes('FOLIOLE_RELEASE_EXPECTED_INTENT_DIGEST');
   const noManualEntry = !workflowSource.includes('workflow_dispatch:');
-  const status = exactBranch && branchVersion && internalIdentity && noManualEntry ? 'PASS' : 'FAIL';
+  const status = exactBranch && branchVersion && internalIdentity && frozenIntent && noManualEntry ? 'PASS' : 'FAIL';
   return createCheck(
     status,
     'T7 release identity',
     status === 'PASS'
-      ? `exact release derives version ${version} from branch content and commit identity from its event.`
-      : 'T7 must derive version from exact release branch content without a manual version or SHA entry.'
+      ? `exact release freezes version ${version}, platform intent, and event commit identity.`
+      : 'T7 must freeze branch version, platform intent, and event commit identity without manual identity input.'
   );
+}
+
+function checkPlatformIdentity(packageJson, registry, intent) {
+  try {
+    const identity = resolveReleasePlatformIdentity({
+      registry, intent, packageVersion: packageJson.version, sha: 'release-doctor'
+    });
+    return createCheck('PASS', 'platform release identity', formatReleaseConfirmation(identity).replaceAll('\n', '; '));
+  } catch (error) {
+    return createCheck('FAIL', 'platform release identity', error instanceof Error ? error.message : String(error));
+  }
 }
 
 async function collectPostPublicMetadataChecks(rootDir, version) {
@@ -154,7 +170,11 @@ export async function collectReleaseDoctorChecks({
     return { checks: [createCheck('FAIL', 'phase option', args.error)], phase: args.phase };
   }
   const phase = args.phase;
-  const packageJson = await readJsonFile(rootDir, 'package.json');
+  const [packageJson, platformRegistry, releaseIntent] = await Promise.all([
+    readJsonFile(rootDir, 'package.json'),
+    readJsonFile(rootDir, '.github/release-platforms.json'),
+    readJsonFile(rootDir, '.github/release-intent.json')
+  ]);
   const version = packageJson.version;
   const workflow = await readTextFile(rootDir, '.github/workflows/t7-release.yml');
   const metadataChecks = phase === 'post'
@@ -166,6 +186,7 @@ export async function collectReleaseDoctorChecks({
     : '';
   const checks = [
     ...checkPackage(packageJson),
+    checkPlatformIdentity(packageJson, platformRegistry, releaseIntent),
     ...metadataChecks,
     checkReleaseWorkflow(workflow, version),
     checkWorkingTree(rootDir, commandRunner),

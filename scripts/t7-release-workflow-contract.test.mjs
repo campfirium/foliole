@@ -22,6 +22,7 @@ describe('T7 release workflow contract', () => {
     expect(source).toContain('FOLIOLE_RELEASE_REF_NAME: ${{ github.ref_name }}');
     expect(source).toContain('FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}');
     expect(source).toContain('node scripts/release-target-contract.mjs >> "$GITHUB_OUTPUT"');
+    expect(source).toContain('FOLIOLE_RELEASE_EXPECTED_INTENT_DIGEST');
     expect(source).toContain('node scripts/desktop-update-release-policy.mjs');
     expect(fs.existsSync('.github/workflows/publish-release.yml')).toBe(false);
   });
@@ -39,9 +40,13 @@ describe('T7 release workflow contract', () => {
     expect(jobs.windows_package.with.target_sha)
       .toBe('${{ needs.release_candidate.outputs.accepted_sha }}');
     expect(jobs.macos_package.with.updater_baseline_version)
-      .toBe('${{ needs.release_context.outputs.updater_baseline_version }}');
+      .toBe('${{ needs.release_context.outputs.macos_updater_baseline_version }}');
     expect(jobs.windows_package.with.updater_baseline_version)
-      .toBe('${{ needs.release_context.outputs.updater_baseline_version }}');
+      .toBe('${{ needs.release_context.outputs.windows_updater_baseline_version }}');
+    expect(jobs.release_context.outputs.release_scope)
+      .toBe('${{ steps.identity.outputs.release_scope }}');
+    expect(jobs.release_context.outputs.release_intent_digest)
+      .toBe('${{ steps.identity.outputs.release_intent_digest }}');
     expect(jobs.assemble_draft.needs)
       .toEqual(['release_context', 'macos_package', 'windows_package']);
   });

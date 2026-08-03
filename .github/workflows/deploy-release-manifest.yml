@@ -27,6 +27,8 @@ jobs:
         run: test "$DEPLOY_REF" = "refs/heads/dev"
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Verify public Release at the workflow boundary
         env:

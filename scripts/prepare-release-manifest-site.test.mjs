@@ -85,6 +85,24 @@ describe('release manifest Pages preparation', () => {
     })).toThrow('public manifest releases');
   });
 
+  it('rejects edits to already-published platform applicability', () => {
+    const previousManifest = {
+      releases: [{ version: '0.8.0', platforms: ['macos'], notes: ['Original note.'] }]
+    };
+    expect(() => validateReleaseManifestPublication({
+      manifest: {
+        ...MANIFEST,
+        releases: [
+          { version: '0.8.0', platforms: ['windows'], notes: ['Rewritten note.'] },
+          ...MANIFEST.releases
+        ]
+      },
+      previousManifest,
+      release: RELEASE,
+      repository: REPOSITORY
+    })).toThrow('notes and platform applicability are immutable');
+  });
+
   it('queries the official published-release endpoint with explicit API headers', async () => {
     const fetchImpl = vi.fn().mockResolvedValue({ json: async () => RELEASE, ok: true, status: 200 });
     await expect(fetchPublishedRelease({ fetchImpl, repository: REPOSITORY, token: 'token', version: VERSION }))

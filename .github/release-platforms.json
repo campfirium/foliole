@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "platforms": [
+    {
+      "id": "macos",
+      "displayName": "macOS",
+      "status": "active",
+      "architectures": ["arm64"],
+      "deliveryChannel": "github-release",
+      "t7Required": true,
+      "artifactContract": "desktop-updater",
+      "managedAssets": [
+        "Foliole-macOS-arm64-{version}.dmg",
+        "Foliole-macOS-arm64-{version}.dmg.blockmap",
+        "Foliole-macOS-arm64-{version}.zip",
+        "Foliole-macOS-arm64-{version}.zip.blockmap",
+        "latest-mac.yml",
+        "SHA256SUMS-macos.txt"
+      ],
+      "update": {
+        "mode": "electron-updater",
+        "baselineVersion": "0.7.2"
+      }
+    },
+    {
+      "id": "windows",
+      "displayName": "Windows",
+      "status": "active",
+      "architectures": ["x64"],
+      "deliveryChannel": "github-release",
+      "t7Required": true,
+      "artifactContract": "desktop-updater",
+      "managedAssets": [
+        "Foliole-Windows-x64-{version}.exe",
+        "Foliole-Windows-x64-{version}.exe.blockmap",
+        "latest.yml",
+        "SHA256SUMS-windows.txt"
+      ],
+      "update": {
+        "mode": "electron-updater",
+        "baselineVersion": "0.7.2"
+      }
+    }
+  ]
+}

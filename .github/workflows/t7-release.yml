@@ -23,11 +23,14 @@ jobs:
     name: Resolve release identity
     runs-on: ubuntu-latest
     outputs:
-      updater_baseline_version: ${{ steps.identity.outputs.baseline_version }}
-      updater_baseline_bootstrap: ${{ steps.identity.outputs.baseline_bootstrap }}
+      macos_updater_baseline_version: ${{ steps.identity.outputs.macos_updater_baseline_version }}
+      release_hard_gates: ${{ steps.identity.outputs.release_hard_gates }}
+      release_intent_digest: ${{ steps.identity.outputs.release_intent_digest }}
+      release_scope: ${{ steps.identity.outputs.release_scope }}
       target_sha: ${{ steps.identity.outputs.target_sha }}
       target_version: ${{ steps.identity.outputs.target_version }}
       trigger_ref: ${{ steps.identity.outputs.trigger_ref }}
+      windows_updater_baseline_version: ${{ steps.identity.outputs.windows_updater_baseline_version }}
     steps:
       - name: Check out release tip
         uses: actions/checkout@v4
@@ -39,11 +42,12 @@ jobs:
         id: identity
         env:
           FOLIOLE_RELEASE_REF_NAME: ${{ github.ref_name }}
+          FOLIOLE_RELEASE_REQUIRE_FULL_SCOPE: "true"
           FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}
         run: |
           node scripts/release-target-contract.mjs >> "$GITHUB_OUTPUT"
           node scripts/desktop-update-release-policy.mjs \
-            --candidate="$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+            --candidate="$(node -p "require('./package.json').version")" > /dev/null
           echo "trigger_ref=${{ github.ref }}" >> "$GITHUB_OUTPUT"
 
   t6_quality:
@@ -83,7 +87,7 @@ jobs:
       execution_lane: release-t7
       target_sha: ${{ needs.release_candidate.outputs.accepted_sha }}
       target_version: ${{ needs.release_context.outputs.target_version }}
-      updater_baseline_version: ${{ needs.release_context.outputs.updater_baseline_version }}
+      updater_baseline_version: ${{ needs.release_context.outputs.macos_updater_baseline_version }}
       trigger_ref: ${{ needs.release_context.outputs.trigger_ref }}
     secrets:
       APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
@@ -107,7 +111,7 @@ jobs:
       execution_lane: release-t7
       target_sha: ${{ needs.release_candidate.outputs.accepted_sha }}
       target_version: ${{ needs.release_context.outputs.target_version }}
-      updater_baseline_version: ${{ needs.release_context.outputs.updater_baseline_version }}
+      updater_baseline_version: ${{ needs.release_context.outputs.windows_updater_baseline_version }}
       trigger_ref: ${{ needs.release_context.outputs.trigger_ref }}
     secrets:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -125,6 +129,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       MACOS_SHA: ${{ needs.macos_package.outputs.packaged_sha }}
+      RELEASE_INTENT_DIGEST: ${{ needs.release_context.outputs.release_intent_digest }}
       TARGET_SHA: ${{ needs.release_context.outputs.target_sha }}
       TARGET_VERSION: ${{ needs.release_context.outputs.target_version }}
       WINDOWS_SHA: ${{ needs.windows_package.outputs.packaged_sha }}
@@ -135,6 +140,13 @@ jobs:
           ref: ${{ needs.release_context.outputs.target_sha }}
           fetch-depth: 0
           persist-credentials: false
+      - name: Confirm frozen release intent
+        env:
+          FOLIOLE_RELEASE_EXPECTED_INTENT_DIGEST: ${{ env.RELEASE_INTENT_DIGEST }}
+          FOLIOLE_RELEASE_REF_NAME: release
+          FOLIOLE_RELEASE_REQUIRE_FULL_SCOPE: "true"
+          FOLIOLE_RELEASE_RUN_SHA: ${{ env.TARGET_SHA }}
+        run: node scripts/release-target-contract.mjs > /dev/null
       - name: Download same-run macOS artifacts
         uses: actions/download-artifact@v5
         with:

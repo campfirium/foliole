@@ -2,11 +2,16 @@
 /* global console, process */
 
 import { cp, mkdir, readFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { assertQualityCommandAllowed } from './quality/quality-command-contracts.mjs';
 import { validatePublishedDesktopUpdaterPolicy } from './desktop-update-release-policy.mjs';
+import {
+  assertPublishedRecordMapImmutable,
+  assertPublishedReleaseHistoryImmutable
+} from './release-platform-contract.mjs';
 
 const VERSION = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u;
 
@@ -16,7 +21,7 @@ function required(value, name) {
   return normalized;
 }
 
-export function validateReleaseManifestPublication({ manifest, release, repository }) {
+export function validateReleaseManifestPublication({ manifest, previousManifest, release, repository }) {
   const version = required(manifest?.latest, 'manifest latest');
   if (!VERSION.test(version)) throw new Error('manifest latest must be a valid version.');
   const entry = Array.isArray(manifest?.releases)
@@ -28,6 +33,7 @@ export function validateReleaseManifestPublication({ manifest, release, reposito
   if (release?.tag_name !== expectedTag || release?.draft !== false || !release?.published_at) {
     throw new Error(`${expectedTag} must be an already-published GitHub Release.`);
   }
+  if (previousManifest) assertPublishedReleaseHistoryImmutable(previousManifest, manifest);
   const pendingFirstBaseline = version === '0.7.1' &&
     manifest.desktopUpdater?.firstCapableVersion === null &&
     manifest.desktopUpdater?.verifiedBaselineVersion === null;
@@ -60,14 +66,24 @@ export async function prepareReleaseManifestSite({
   }
   const normalizedRepository = required(repository, 'GitHub repository');
   if (!/^[^/\s]+\/[^/\s]+$/u.test(normalizedRepository)) throw new Error('GitHub repository must use owner/name.');
-  const manifest = JSON.parse(await readFile(join(sourceRoot, 'update-manifest.json'), 'utf8'));
+  const [manifest, enNotes, zhNotes] = await Promise.all([
+    readFile(join(sourceRoot, 'update-manifest.json'), 'utf8').then(JSON.parse),
+    readFile(join(sourceRoot, 'notes/en.json'), 'utf8').then(JSON.parse),
+    readFile(join(sourceRoot, 'notes/zh-Hans.json'), 'utf8').then(JSON.parse)
+  ]);
+  const previous = (path) => JSON.parse(execFileSync('git', ['show', `HEAD^:${path}`], { encoding: 'utf8' }));
+  const previousManifest = previous('releases/update-manifest.json');
+  assertPublishedRecordMapImmutable(previous('releases/notes/en.json'), enNotes, 'en release notes');
+  assertPublishedRecordMapImmutable(previous('releases/notes/zh-Hans.json'), zhNotes, 'zh-Hans release notes');
   const release = await fetchPublishedRelease({
     fetchImpl,
     repository: normalizedRepository,
     token,
     version: required(manifest.latest, 'manifest latest')
   });
-  const publication = validateReleaseManifestPublication({ manifest, release, repository: normalizedRepository });
+  const publication = validateReleaseManifestPublication({
+    manifest, previousManifest, release, repository: normalizedRepository
+  });
   await mkdir(dirname(outputRoot), { recursive: true });
   await cp(sourceRoot, outputRoot, { force: true, recursive: true });
   return publication;

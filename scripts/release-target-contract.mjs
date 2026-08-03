@@ -7,6 +7,10 @@ import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { assertQualityCommandAllowed } from './quality/quality-command-contracts.mjs';
+import {
+  assertReleaseIntentDigest,
+  resolveReleasePlatformIdentity
+} from './release-platform-contract.mjs';
 
 const FULL_SHA = /^[0-9a-f]{40}$/u;
 const VERSION = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u;
@@ -37,14 +41,27 @@ export function validateReleaseTarget({
 }
 
 export async function validateCurrentReleaseTarget({ cwd = process.cwd(), env = process.env } = {}) {
-  const packageJson = JSON.parse(await readFile(join(cwd, 'package.json'), 'utf8'));
+  const [packageJson, registry, intent] = await Promise.all([
+    readFile(join(cwd, 'package.json'), 'utf8').then(JSON.parse),
+    readFile(join(cwd, '.github/release-platforms.json'), 'utf8').then(JSON.parse),
+    readFile(join(cwd, '.github/release-intent.json'), 'utf8').then(JSON.parse)
+  ]);
   const headSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd, encoding: 'utf8' }).trim();
-  return validateReleaseTarget({
+  const target = validateReleaseTarget({
     headSha,
     packageVersion: packageJson.version,
     refName: env.FOLIOLE_RELEASE_REF_NAME?.trim(),
     runSha: env.FOLIOLE_RELEASE_RUN_SHA?.trim()
   });
+  const identity = resolveReleasePlatformIdentity({
+    registry, intent, packageVersion: target.version, sha: target.sha
+  });
+  if (env.FOLIOLE_RELEASE_REQUIRE_FULL_SCOPE === 'true' &&
+      identity.intent.selectedPlatforms.join(',') !== identity.activePlatforms.join(',')) {
+    throw new Error('T7 requires every active platform until selective Draft assembly is enabled.');
+  }
+  assertReleaseIntentDigest(identity, env.FOLIOLE_RELEASE_EXPECTED_INTENT_DIGEST?.trim());
+  return { ...target, ...identity };
 }
 
 async function main() {
@@ -52,6 +69,12 @@ async function main() {
   const target = await validateCurrentReleaseTarget();
   console.log(`target_version=${target.version}`);
   console.log(`target_sha=${target.sha}`);
+  console.log(`release_intent_digest=${target.digest}`);
+  console.log(`release_scope=${target.intent.selectedPlatforms.join(',')}`);
+  console.log(`release_hard_gates=${target.hardGatePlatforms.join(',')}`);
+  for (const [platform, baseline] of Object.entries(target.updaterBaselines)) {
+    console.log(`${platform.replaceAll('-', '_')}_updater_baseline_version=${baseline}`);
+  }
 }
 
 if (basename(process.argv[1] ?? '') === basename(fileURLToPath(import.meta.url))) {

@@ -71,6 +71,7 @@ describe('release doctor', () => {
     expect(result.phase).toBe('pre');
     expect(findCheck(result, 'package version').status).toBe('PASS');
     expect(findCheck(result, 'T7 release identity').status).toBe('PASS');
+    expect(findCheck(result, 'platform release identity').status).toBe('PASS');
     expect(findCheck(result, 'GitHub release body')).toBeUndefined();
     expect(findCheck(result, 'manifest latest')).toBeUndefined();
     expect(hasFailures(result.checks)).toBe(false);
@@ -85,6 +86,22 @@ describe('release doctor', () => {
 
     expect(findCheck(result, 'T7 release identity').status).toBe('FAIL');
     expect(hasFailures(result.checks)).toBe(true);
+  });
+
+  it('rejects an intent whose platform scope is outside the registry', async () => {
+    const { rootDir } = await createFixture({
+      releaseIntent: {
+        schemaVersion: 1,
+        version: '0.9.0',
+        selectedPlatforms: ['linux'],
+        scopeBasis: { linux: 'A Linux release.' }
+      }
+    });
+    const result = await collectReleaseDoctorChecks({ commandRunner: commandRunner(), rootDir });
+
+    expect(findCheck(result, 'platform release identity')).toMatchObject({
+      status: 'FAIL', detail: expect.stringContaining('unknown platform linux')
+    });
   });
 
   it('requires body, notes, and manifest only after publication', async () => {
