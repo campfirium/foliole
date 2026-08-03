@@ -48,12 +48,17 @@ function isMissingFile(error: unknown) {
 
 export function createDesktopUpdateStateStore(filePath: string): DesktopUpdateStateStore {
   const temporaryPath = `${filePath}.${process.pid}.tmp`;
-  const clear = async () => {
-    await fs.rm(filePath, { force: true });
+  let mutationQueue: Promise<void> = Promise.resolve();
+  const enqueueMutation = <T>(mutation: () => Promise<T>) => {
+    const result = mutationQueue.then(mutation);
+    mutationQueue = result.then(() => undefined, () => undefined);
+    return result;
   };
+  const clear = () => enqueueMutation(() => fs.rm(filePath, { force: true }));
   return {
     clear,
     async read() {
+      await mutationQueue;
       let content: string;
       try {
         content = await fs.readFile(filePath, 'utf8');
@@ -71,15 +76,17 @@ export function createDesktopUpdateStateStore(filePath: string): DesktopUpdateSt
       await clear();
       return null;
     },
-    async write(record) {
-      await fs.mkdir(path.dirname(filePath), { recursive: true });
-      try {
-        await fs.writeFile(temporaryPath, `${JSON.stringify(record, null, 2)}\n`, { mode: 0o600 });
-        await fs.rename(temporaryPath, filePath);
-      } catch (error) {
-        await fs.rm(temporaryPath, { force: true }).catch(() => undefined);
-        throw error;
-      }
+    write(record) {
+      return enqueueMutation(async () => {
+        await fs.mkdir(path.dirname(filePath), { recursive: true });
+        try {
+          await fs.writeFile(temporaryPath, `${JSON.stringify(record, null, 2)}\n`, { mode: 0o600 });
+          await fs.rename(temporaryPath, filePath);
+        } catch (error) {
+          await fs.rm(temporaryPath, { force: true }).catch(() => undefined);
+          throw error;
+        }
+      });
     }
   };
 }

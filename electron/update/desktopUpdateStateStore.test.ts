@@ -33,6 +33,21 @@ it('atomically writes and reads a versioned recovery record', async () => {
   await expect(fs.readdir(tempRoot)).resolves.toEqual(['desktop-update-state-v1.json']);
 });
 
+it('serializes overlapping mutations and preserves the newest target', async () => {
+  const store = createDesktopUpdateStateStore(filePath);
+  const record = (targetVersion: string) => ({
+    checkpoint: 'discovered' as const,
+    installedVersion: '0.6.0',
+    schemaVersion: 1 as const,
+    targetVersion
+  });
+
+  await Promise.all([store.write(record('0.7.0')), store.write(record('0.9.0'))]);
+
+  await expect(store.read()).resolves.toEqual(record('0.9.0'));
+  await expect(fs.readdir(tempRoot)).resolves.toEqual(['desktop-update-state-v1.json']);
+});
+
 it('removes malformed and unsupported records instead of restoring them', async () => {
   const store = createDesktopUpdateStateStore(filePath);
   await fs.writeFile(filePath, JSON.stringify({ schemaVersion: 2, targetVersion: '0.7.0' }));

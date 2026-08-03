@@ -3,6 +3,7 @@ import type { WebContents } from 'electron';
 import type { NativeDesktopUpdateState } from '../../lib/platform/nativeUpdateContract.js';
 
 import { configureDesktopUpdater, type DesktopUpdaterAdapter } from './desktopUpdateAdapter.js';
+import { DesktopUpdateCandidate } from './desktopUpdateCandidate.js';
 import {
   classifyDesktopUpdateFailure,
   desktopUpdateDiagnosticLabel,
@@ -30,15 +31,15 @@ export class DesktopUpdateService {
   private state: NativeDesktopUpdateState;
   private initializationPromise: Promise<void> | null = null;
   private readonly subscribers = new Set<WebContents>();
-  private targetVersion: string | null = null;
+  private readonly candidate: DesktopUpdateCandidate;
   private updater: DesktopUpdaterAdapter | null = null;
   private updaterPromise: Promise<DesktopUpdaterAdapter> | null = null;
-  private operationId = 0;
   private readonly retry: DesktopUpdateRetry;
   private downloadPromise: Promise<NativeDesktopUpdateState> | null = null;
 
   constructor(private readonly options: DesktopUpdateServiceOptions) {
     this.state = IDLE_STATE;
+    this.candidate = new DesktopUpdateCandidate(options.getCurrentVersion, options.stateStore);
     this.retry = new DesktopUpdateRetry(options.retryDelaysMs);
   }
 
@@ -59,18 +60,16 @@ export class DesktopUpdateService {
     const normalizedVersion = targetVersion.trim();
     if (!normalizedVersion) return this.state;
     if (normalizedVersion === this.options.getCurrentVersion()) return this.clearTarget();
-    if (this.state.phase === 'checking' || this.state.phase === 'downloading'
-      || this.state.phase === 'pending-asset' || this.state.phase === 'ready') {
-      return this.state;
-    }
+    if (!this.candidate.accepts(normalizedVersion)) return this.state;
+    if (this.downloadPromise) return this.queueTargetAfterDownload(normalizedVersion);
     await this.beginTarget(normalizedVersion);
     return this.state;
   }
 
   async download() {
     if (this.state.phase === 'downloading' || this.state.phase === 'ready') return this.state;
-    if (this.state.phase !== 'available' || !this.targetVersion) return this.setInvalidState();
-    return this.startDownload(this.operationId, this.targetVersion);
+    if (this.state.phase !== 'available' || !this.candidate.version) return this.setInvalidState();
+    return this.startDownload(this.candidate.operationId, this.candidate.version);
   }
 
   async install() {
@@ -92,27 +91,37 @@ export class DesktopUpdateService {
   }
 
   private async beginTarget(version: string) {
+    if (!(await this.activateCandidate(version))) return;
+    await this.startCheck(this.candidate.operationId, version);
+  }
+
+  private async queueTargetAfterDownload(version: string) {
+    const activeDownload = this.downloadPromise;
+    if (!(await this.activateCandidate(version, true))) return this.state;
+    void activeDownload?.finally(() => {
+      const queuedVersion = this.candidate.consumeQueuedVersion();
+      if (queuedVersion) void this.startCheck(this.candidate.operationId, queuedVersion);
+    });
+    return this.setState({ phase: 'pending-asset', version });
+  }
+
+  private async activateCandidate(version: string, queued = false) {
     this.retry.reset();
-    this.operationId += 1;
-    this.targetVersion = version;
     try {
-      await this.options.stateStore.write(createDesktopUpdateRecord(
-        'discovered', this.options.getCurrentVersion(), version
-      ));
+      return await this.candidate.activate(version, queued);
     } catch {
       this.options.reportDiagnostic?.('desktop_update_state_write_failed');
       this.setState({ errorCode: 'check-failed', phase: 'error', version });
-      return;
+      return false;
     }
-    await this.startCheck(this.operationId, version);
   }
 
   private async startCheck(operationId: number, version: string) {
-    if (!this.isCurrent(operationId, version)) return this.state;
+    if (!this.candidate.isCurrent(operationId, version)) return this.state;
     this.setState({ phase: 'checking', version });
     try {
       const result = await (await this.ensureUpdater()).checkForUpdates();
-      if (!this.isCurrent(operationId, version)) return this.state;
+      if (!this.candidate.isCurrent(operationId, version)) return this.state;
       if (!result?.isUpdateAvailable || result.updateInfo.version !== version) {
         this.setState({ phase: 'pending-asset', version });
         this.scheduleRecovery('check', operationId, version);
@@ -138,7 +147,7 @@ export class DesktopUpdateService {
   private async runDownload(operationId: number, version: string) {
     try {
       await (await this.ensureUpdater()).downloadUpdate();
-      if (!this.isCurrent(operationId, version)) return this.state;
+      if (!this.candidate.isCurrent(operationId, version)) return this.state;
       await this.options.stateStore.write(createDesktopUpdateRecord(
         'downloaded', this.options.getCurrentVersion(), version
       ));
@@ -151,7 +160,7 @@ export class DesktopUpdateService {
   }
 
   private handleFailure(stage: DesktopUpdateFailureStage, error: unknown, operationId: number, version: string) {
-    if (!this.isCurrent(operationId, version)) return;
+    if (!this.candidate.isCurrent(operationId, version)) return;
     const kind = classifyDesktopUpdateFailure(error);
     this.options.reportDiagnostic?.(desktopUpdateDiagnosticLabel(stage, kind), {
       error, kind, stage, targetVersion: version
@@ -165,7 +174,7 @@ export class DesktopUpdateService {
   }
 
   private scheduleRecovery(stage: DesktopUpdateFailureStage, operationId: number, version: string) {
-    if (!this.isCurrent(operationId, version)) return;
+    if (!this.candidate.isCurrent(operationId, version)) return;
     this.setState({ phase: 'pending-asset', version });
     if (!this.retry.schedule(() => {
       if (stage === 'download') void this.startDownload(operationId, version);
@@ -179,7 +188,7 @@ export class DesktopUpdateService {
   private async ensureUpdater() {
     if (this.updater) return this.updater;
     this.updaterPromise ??= this.options.loadUpdater().then((updater) => {
-      configureDesktopUpdater(updater, () => this.targetVersion ?? undefined, (state) => {
+      configureDesktopUpdater(updater, () => this.candidate.version ?? undefined, (state) => {
         if (this.state.phase === 'downloading' && state.phase === 'downloading') this.setState(state);
         if (this.state.phase === 'restarting' && state.errorCode === 'install-failed') this.setState(state);
       });
@@ -199,22 +208,16 @@ export class DesktopUpdateService {
       const record = await this.options.stateStore.read();
       if (!record) return;
       if (record.installedVersion !== this.options.getCurrentVersion()) return this.clearRecordSafely();
-      this.targetVersion = record.targetVersion;
-      this.operationId += 1;
-      void this.startCheck(this.operationId, record.targetVersion);
+      this.candidate.restore(record.targetVersion);
+      void this.startCheck(this.candidate.operationId, record.targetVersion);
     } catch {
       this.options.reportDiagnostic?.('desktop_update_state_read_failed');
     }
   }
 
-  private isCurrent(operationId: number, version: string) {
-    return this.operationId === operationId && this.targetVersion === version;
-  }
-
   private async clearTarget() {
     this.retry.reset();
-    this.operationId += 1;
-    this.targetVersion = null;
+    this.candidate.clear();
     await this.clearRecordSafely();
     return this.setState(IDLE_STATE);
   }
@@ -228,7 +231,7 @@ export class DesktopUpdateService {
   }
 
   private setInvalidState() {
-    return this.setState({ errorCode: 'invalid-command-state', phase: 'error', version: this.targetVersion ?? undefined });
+    return this.setState({ errorCode: 'invalid-command-state', phase: 'error', version: this.candidate.version ?? undefined });
   }
 
   private setState(state: NativeDesktopUpdateState) {

@@ -89,18 +89,6 @@ it('downloads automatically after the provider confirms the gated release', asyn
   await vi.waitFor(() => expect(harness.service.getState()).toMatchObject({ phase: 'ready', version: '0.7.0' }));
 });
 
-it('keeps one target and one download when a newer manifest arrives mid-download', async () => {
-  const harness = createHarness();
-  await harness.service.check('0.7.0', harness.sender as never);
-
-  await expect(harness.service.check('0.8.0', harness.sender as never)).resolves.toMatchObject({
-    phase: 'downloading', version: '0.7.0'
-  });
-
-  expect(harness.updater.checkForUpdates).toHaveBeenCalledTimes(1);
-  expect(harness.updater.downloadUpdate).toHaveBeenCalledTimes(1);
-});
-
 it('reaches an explicit terminal state after transient download retries exhaust', async () => {
   const harness = createHarness();
   await harness.service.check('0.7.0', harness.sender as never);
