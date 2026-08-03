@@ -62,7 +62,10 @@ function assertInstalledIntegration() {
   const desktop = run('sed', ['-n', '1,120p', '/usr/share/applications/foliole.desktop'], { capture: true });
   if (!desktop.includes('Exec=/opt/Foliole/foliole')) throw new Error('Linux desktop entry points outside /opt/Foliole');
   run('/usr/bin/foliole', ['--help']);
-  run('/usr/bin/python3', ['-m', 'py_compile', '/opt/Foliole/bin/foliole-global-clip']);
+  run('/usr/bin/python3', [
+    '-c', 'import sys; compile(open(sys.argv[1], encoding="utf-8").read(), sys.argv[1], "exec")',
+    '/opt/Foliole/bin/foliole-global-clip'
+  ]);
   run('cmp', ['/opt/Foliole/resources/apparmor-profile', '/etc/apparmor.d/foliole']);
 }
 
