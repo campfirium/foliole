@@ -1,4 +1,3 @@
-title: "[Poll] "
 labels: ["question"]
 body:
   - type: markdown
