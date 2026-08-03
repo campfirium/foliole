@@ -8,7 +8,7 @@ const PINNED_NPM = readPinnedNpm();
 function successfulRunner(version = PINNED_NPM.version) {
   return vi.fn((command, args) => ({
     status: 0,
-    stdout: args[0] === '--version' ? `${version}\n` : '',
+    stdout: args.includes('--version') || args.includes('npm.cmd --version') ? `${version}\n` : '',
     stderr: ''
   }));
 }
@@ -35,5 +35,17 @@ describe('pinned npm quality tooling', () => {
   it('fails closed when the active npm does not match the repository pin', () => {
     expect(() => verifyPinnedNpm({ runner: successfulRunner('0.0.0'), platform: 'linux' }))
       .toThrow(`expected ${PINNED_NPM.descriptor}, received npm@0.0.0`);
+  });
+
+  it('launches Windows command shims through cmd.exe', () => {
+    const runner = successfulRunner();
+
+    activatePinnedNpm({ runner, platform: 'win32', windowsShell: 'cmd.exe' });
+
+    expect(runner.mock.calls.map(([command, args]) => [command, args])).toEqual([
+      ['cmd.exe', ['/d', '/s', '/c', 'corepack.cmd enable npm']],
+      ['cmd.exe', ['/d', '/s', '/c', `corepack.cmd install --global ${PINNED_NPM.descriptor}`]],
+      ['cmd.exe', ['/d', '/s', '/c', 'npm.cmd --version']]
+    ]);
   });
 });

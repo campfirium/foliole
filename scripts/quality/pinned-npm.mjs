@@ -9,7 +9,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, '../..');
-const PIN_PATTERN = /^npm@(\d+\.\d+\.\d+)(?:\+.+)?$/u;
+const PIN_PATTERN = /^npm@(\d+\.\d+\.\d+)(?:\+[A-Za-z0-9.-]+)?$/u;
 
 export function readPinnedNpm(repoRoot = REPO_ROOT) {
   const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
@@ -19,10 +19,6 @@ export function readPinnedNpm(repoRoot = REPO_ROOT) {
   return { descriptor, version: match[1] };
 }
 
-function executable(name, platform) {
-  return platform === 'win32' ? `${name}.cmd` : name;
-}
-
 function runChecked(runner, command, args, options) {
   const result = runner(command, args, options);
   if (result.error) throw result.error;
@@ -30,16 +26,23 @@ function runChecked(runner, command, args, options) {
   return result;
 }
 
+function runExecutable(runner, name, args, options, platform, windowsShell) {
+  if (platform !== 'win32') return runChecked(runner, name, args, options);
+  const commandLine = [`${name}.cmd`, ...args].join(' ');
+  return runChecked(runner, windowsShell, ['/d', '/s', '/c', commandLine], options);
+}
+
 export function verifyPinnedNpm(options = {}) {
   const repoRoot = options.repoRoot ?? REPO_ROOT;
   const runner = options.runner ?? spawnSync;
   const platform = options.platform ?? process.platform;
+  const windowsShell = options.windowsShell ?? process.env.ComSpec ?? 'cmd.exe';
   const log = options.log ?? console.log;
   const pinned = readPinnedNpm(repoRoot);
-  const result = runChecked(runner, executable('npm', platform), ['--version'], {
+  const result = runExecutable(runner, 'npm', ['--version'], {
     cwd: repoRoot,
     encoding: 'utf8'
-  });
+  }, platform, windowsShell);
   const actualVersion = result.stdout.trim();
   if (actualVersion !== pinned.version) {
     throw new Error(`expected ${pinned.descriptor}, received npm@${actualVersion}`);
@@ -52,11 +55,11 @@ export function activatePinnedNpm(options = {}) {
   const repoRoot = options.repoRoot ?? REPO_ROOT;
   const runner = options.runner ?? spawnSync;
   const platform = options.platform ?? process.platform;
+  const windowsShell = options.windowsShell ?? process.env.ComSpec ?? 'cmd.exe';
   const pinned = readPinnedNpm(repoRoot);
-  const command = executable('corepack', platform);
   const runOptions = { cwd: repoRoot, stdio: 'inherit' };
-  runChecked(runner, command, ['enable', 'npm'], runOptions);
-  runChecked(runner, command, ['install', '--global', pinned.descriptor], runOptions);
+  runExecutable(runner, 'corepack', ['enable', 'npm'], runOptions, platform, windowsShell);
+  runExecutable(runner, 'corepack', ['install', '--global', pinned.descriptor], runOptions, platform, windowsShell);
   return verifyPinnedNpm({ ...options, repoRoot, runner, platform });
 }
 
