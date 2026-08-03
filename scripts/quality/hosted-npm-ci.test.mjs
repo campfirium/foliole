@@ -1,7 +1,11 @@
 // @vitest-environment node
 
 import { describe, expect, it, vi } from 'vitest';
-import { isHostedElectronTransferFailure, runHostedNpmCi } from './hosted-npm-ci.mjs';
+import {
+  isHostedElectronTransferFailure,
+  resolveNpmInvocation,
+  runHostedNpmCi
+} from './hosted-npm-ci.mjs';
 
 const HOSTED_ENV = { GITHUB_ACTIONS: 'true', RUNNER_ENVIRONMENT: 'github-hosted' };
 const ELECTRON_FETCH_FAILURE = [
@@ -30,6 +34,19 @@ async function execute(results, options = {}) {
 }
 
 describe('hosted npm ci recovery', () => {
+  it('runs npm CLI through the current Node executable on Windows', () => {
+    expect(resolveNpmInvocation({
+      env: { npm_execpath: 'C:\\node\\node_modules\\npm\\bin\\npm-cli.js' },
+      execPath: 'C:\\node\\node.exe',
+      platform: 'win32'
+    })).toEqual({
+      argsPrefix: ['C:\\node\\node_modules\\npm\\bin\\npm-cli.js'],
+      command: 'C:\\node\\node.exe'
+    });
+    expect(resolveNpmInvocation({ platform: 'linux' }))
+      .toEqual({ argsPrefix: [], command: 'npm' });
+  });
+
   it('runs a successful install once with explicit attempt boundaries', async () => {
     const state = await execute([result(0)]);
     expect(state.runAttempt).toHaveBeenCalledTimes(1);

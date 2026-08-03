@@ -71,13 +71,20 @@ function delay(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-function npmExecutable() {
-  return process.platform === 'win32' ? 'npm.cmd' : 'npm';
+export function resolveNpmInvocation(options = {}) {
+  const platform = options.platform ?? process.platform;
+  if (platform !== 'win32') return { command: 'npm', argsPrefix: [] };
+  const execPath = options.execPath ?? process.execPath;
+  const npmCliPath = options.env?.npm_execpath ?? path.join(
+    path.dirname(execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js'
+  );
+  return { command: execPath, argsPrefix: [npmCliPath] };
 }
 
 function spawnNpmCi({ args, cwd, env }) {
   return new Promise((resolve, reject) => {
-    const child = spawn(npmExecutable(), ['ci', ...args], {
+    const invocation = resolveNpmInvocation({ env });
+    const child = spawn(invocation.command, [...invocation.argsPrefix, 'ci', ...args], {
       cwd: cwd ?? process.cwd(),
       env,
       stdio: ['inherit', 'pipe', 'pipe']
