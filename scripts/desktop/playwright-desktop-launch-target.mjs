@@ -123,6 +123,7 @@ export function createDesktopLaunchOptions(
   }
   return {
     args: createElectronLaunchArgs(target.mainEntry, env, extraArgs),
+    ...(target.launchMode === 'installed' ? { chromiumSandbox: true } : {}),
     cwd: target.appRoot,
     env: launchEnv,
     executablePath: executablePath ? resolveHostPath(executablePath) : undefined,

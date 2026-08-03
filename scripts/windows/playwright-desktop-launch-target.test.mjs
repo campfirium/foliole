@@ -184,6 +184,7 @@ describe('playwright desktop launch target', () => {
       })
     ).toMatchObject({
       args: [],
+      chromiumSandbox: true,
       cwd: 'C:\\Users\\me\\AppData\\Local\\Programs\\Foliole',
       executablePath: installedExe,
       timeout: 12_345
