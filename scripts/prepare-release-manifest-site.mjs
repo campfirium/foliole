@@ -10,8 +10,11 @@ import { assertQualityCommandAllowed } from './quality/quality-command-contracts
 import { validatePublishedDesktopUpdaterPolicy } from './desktop-update-release-policy.mjs';
 import {
   assertPublishedRecordMapImmutable,
-  assertPublishedReleaseHistoryImmutable
+  assertPublishedReleaseHistoryImmutable,
+  resolveReleasePlatformIdentity
 } from './release-platform-contract.mjs';
+import { assertPublishedManifestScope } from './release-publication-contract.mjs';
+import { assertExactReleaseAssets } from './release-asset-contract.mjs';
 
 const VERSION = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u;
 
@@ -21,7 +24,7 @@ function required(value, name) {
   return normalized;
 }
 
-export function validateReleaseManifestPublication({ manifest, previousManifest, release, repository }) {
+export function validateReleaseManifestPublication({ intent, manifest, previousManifest, registry, release, repository }) {
   const version = required(manifest?.latest, 'manifest latest');
   if (!VERSION.test(version)) throw new Error('manifest latest must be a valid version.');
   const entry = Array.isArray(manifest?.releases)
@@ -33,6 +36,11 @@ export function validateReleaseManifestPublication({ manifest, previousManifest,
   if (release?.tag_name !== expectedTag || release?.draft !== false || !release?.published_at) {
     throw new Error(`${expectedTag} must be an already-published GitHub Release.`);
   }
+  const identity = resolveReleasePlatformIdentity({
+    registry, intent, packageVersion: version, sha: release.target_commitish ?? 'published-release'
+  });
+  assertPublishedManifestScope({ identity, manifest, previousManifest });
+  assertExactReleaseAssets(identity, (release.assets ?? []).map((asset) => asset?.name ?? ''));
   if (previousManifest) assertPublishedReleaseHistoryImmutable(previousManifest, manifest);
   const pendingFirstBaseline = version === '0.7.1' &&
     manifest.desktopUpdater?.firstCapableVersion === null &&
@@ -66,10 +74,12 @@ export async function prepareReleaseManifestSite({
   }
   const normalizedRepository = required(repository, 'GitHub repository');
   if (!/^[^/\s]+\/[^/\s]+$/u.test(normalizedRepository)) throw new Error('GitHub repository must use owner/name.');
-  const [manifest, enNotes, zhNotes] = await Promise.all([
+  const [manifest, enNotes, zhNotes, registry, intent] = await Promise.all([
     readFile(join(sourceRoot, 'update-manifest.json'), 'utf8').then(JSON.parse),
     readFile(join(sourceRoot, 'notes/en.json'), 'utf8').then(JSON.parse),
-    readFile(join(sourceRoot, 'notes/zh-Hans.json'), 'utf8').then(JSON.parse)
+    readFile(join(sourceRoot, 'notes/zh-Hans.json'), 'utf8').then(JSON.parse),
+    readFile('.github/release-platforms.json', 'utf8').then(JSON.parse),
+    readFile('.github/release-intent.json', 'utf8').then(JSON.parse)
   ]);
   const previous = (path) => JSON.parse(execFileSync('git', ['show', `HEAD^:${path}`], { encoding: 'utf8' }));
   const previousManifest = previous('releases/update-manifest.json');
@@ -82,7 +92,7 @@ export async function prepareReleaseManifestSite({
     version: required(manifest.latest, 'manifest latest')
   });
   const publication = validateReleaseManifestPublication({
-    manifest, previousManifest, release, repository: normalizedRepository
+    intent, manifest, previousManifest, registry, release, repository: normalizedRepository
   });
   await mkdir(dirname(outputRoot), { recursive: true });
   await cp(sourceRoot, outputRoot, { force: true, recursive: true });

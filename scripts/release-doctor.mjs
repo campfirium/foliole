@@ -22,6 +22,7 @@ import {
   formatReleaseConfirmation,
   resolveReleasePlatformIdentity
 } from './release-platform-contract.mjs';
+import { assertPublishedManifestScope } from './release-publication-contract.mjs';
 
 export { formatReleaseDoctorReport, hasFailures } from './release-doctor-core.mjs';
 
@@ -71,7 +72,7 @@ function checkNotesCatalog(catalog, locale, version) {
   return createCheck('PASS', `${locale} release notes`, `${locale} ${version} notes contain ${entry.notes.length} item(s).`);
 }
 
-function checkManifest(manifest, version) {
+function checkManifest(manifest, version, identity) {
   const checks = [];
   const latestMatches = manifest.latest === version;
   checks.push(createCheck(
@@ -98,6 +99,12 @@ function checkManifest(manifest, version) {
       entry.url === expectedUrl ? `manifest URL matches ${expectedUrl}.` : `manifest URL is ${entry.url}; expected ${expectedUrl}.`
     ));
   }
+  try {
+    assertPublishedManifestScope({ identity, manifest });
+    checks.push(createCheck('PASS', 'manifest release platforms', 'manifest platforms match release intent.'));
+  } catch (error) {
+    checks.push(createCheck('FAIL', 'manifest release platforms', error.message));
+  }
   return checks;
 }
 
@@ -107,8 +114,10 @@ function checkReleaseWorkflow(workflowSource, version) {
   const branchVersion = workflowSource.includes('node scripts/release-target-contract.mjs');
   const internalIdentity = workflowSource.includes('FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}');
   const frozenIntent = workflowSource.includes('FOLIOLE_RELEASE_EXPECTED_INTENT_DIGEST');
+  const publicationPolicy = workflowSource.includes('FOLIOLE_RELEASE_REQUIRE_PUBLICATION_MODE');
   const noManualEntry = !workflowSource.includes('workflow_dispatch:');
-  const status = exactBranch && branchVersion && internalIdentity && frozenIntent && noManualEntry ? 'PASS' : 'FAIL';
+  const status = exactBranch && branchVersion && internalIdentity && frozenIntent && publicationPolicy && noManualEntry
+    ? 'PASS' : 'FAIL';
   return createCheck(
     status,
     'T7 release identity',
@@ -118,18 +127,24 @@ function checkReleaseWorkflow(workflowSource, version) {
   );
 }
 
-function checkPlatformIdentity(packageJson, registry, intent) {
+function resolvePlatformIdentity(packageJson, registry, intent) {
   try {
     const identity = resolveReleasePlatformIdentity({
       registry, intent, packageVersion: packageJson.version, sha: 'release-doctor'
     });
-    return createCheck('PASS', 'platform release identity', formatReleaseConfirmation(identity).replaceAll('\n', '; '));
+    return {
+      check: createCheck('PASS', 'platform release identity', formatReleaseConfirmation(identity).replaceAll('\n', '; ')),
+      identity
+    };
   } catch (error) {
-    return createCheck('FAIL', 'platform release identity', error instanceof Error ? error.message : String(error));
+    return {
+      check: createCheck('FAIL', 'platform release identity', error instanceof Error ? error.message : String(error)),
+      identity: null
+    };
   }
 }
 
-async function collectPostPublicMetadataChecks(rootDir, version) {
+async function collectPostPublicMetadataChecks(rootDir, version, identity) {
   const [manifest, enNotes, zhNotes] = await Promise.all([
     readJsonFile(rootDir, 'releases/update-manifest.json'),
     readJsonFile(rootDir, 'releases/notes/en.json'),
@@ -139,7 +154,7 @@ async function collectPostPublicMetadataChecks(rootDir, version) {
     await checkGithubBody(rootDir, version),
     checkNotesCatalog(enNotes, 'en', version),
     checkNotesCatalog(zhNotes, 'zh-Hans', version),
-    ...checkManifest(manifest, version)
+    ...checkManifest(manifest, version, identity)
   ];
 }
 
@@ -170,15 +185,17 @@ export async function collectReleaseDoctorChecks({
     return { checks: [createCheck('FAIL', 'phase option', args.error)], phase: args.phase };
   }
   const phase = args.phase;
-  const [packageJson, platformRegistry, releaseIntent] = await Promise.all([
+  const [packageJson, platformRegistry, releaseIntent, manifest] = await Promise.all([
     readJsonFile(rootDir, 'package.json'),
     readJsonFile(rootDir, '.github/release-platforms.json'),
-    readJsonFile(rootDir, '.github/release-intent.json')
+    readJsonFile(rootDir, '.github/release-intent.json'),
+    readJsonFile(rootDir, 'releases/update-manifest.json')
   ]);
   const version = packageJson.version;
+  const platform = resolvePlatformIdentity(packageJson, platformRegistry, releaseIntent);
   const workflow = await readTextFile(rootDir, '.github/workflows/t7-release.yml');
-  const metadataChecks = phase === 'post'
-    ? await collectPostPublicMetadataChecks(rootDir, version)
+  const metadataChecks = phase === 'post' && platform.identity
+    ? await collectPostPublicMetadataChecks(rootDir, version, platform.identity)
     : [];
   const bodyPath = join(rootDir, `releases/github/v${version}.md`);
   const localBody = phase === 'post' && existsSync(bodyPath)
@@ -186,13 +203,17 @@ export async function collectReleaseDoctorChecks({
     : '';
   const checks = [
     ...checkPackage(packageJson),
-    checkPlatformIdentity(packageJson, platformRegistry, releaseIntent),
+    platform.check,
     ...metadataChecks,
     checkReleaseWorkflow(workflow, version),
     checkWorkingTree(rootDir, commandRunner),
-    ...checkGithubReleaseSignals(version, phase, rootDir, commandRunner, localBody),
+    ...(platform.identity ? checkGithubReleaseSignals({
+      commandRunner, identity: platform.identity, localBody, manifest, phase, rootDir, version
+    }) : []),
     ...(phase === 'post' ? checkSiteSync(version, rootDir, commandRunner) : []),
-    ...(await collectPostPublishChecks({ fetcher, marketingRoot, phase, version }))
+    ...(platform.identity
+      ? await collectPostPublishChecks({ fetcher, identity: platform.identity, marketingRoot, phase, version })
+      : [])
   ];
   return { checks, phase, version };
 }

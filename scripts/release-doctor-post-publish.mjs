@@ -4,6 +4,8 @@ import { get } from 'node:https';
 import { join } from 'node:path';
 
 import { createCheck } from './release-doctor-core.mjs';
+import { assertExactReleaseAssets } from './release-asset-contract.mjs';
+import { resolveReleasePublication } from './release-publication-contract.mjs';
 
 const MANIFEST_URL = 'https://campfirium.github.io/foliole/releases/update-manifest.json';
 const MARKETING_ROOT = 'D:\\C\\foliole-marketing';
@@ -102,25 +104,24 @@ function checkRemoteBody(candidateJson, localBody, phase) {
   )];
 }
 
-function checkRemoteAssets(candidateJson, phase) {
+function checkRemoteAssets(candidateJson, phase, identity) {
   if (phase !== 'post') {
     return [];
   }
   const assetNames = Array.isArray(candidateJson?.assets)
     ? candidateJson.assets.map((asset) => asset?.name ?? '')
     : [];
-  const hasInstaller = assetNames.some((name) => name.endsWith('.exe'));
-  const hasLegacyChecksum = assetNames.includes('SHA256SUMS.txt');
-  const hasPlatformChecksums = ['SHA256SUMS-macos.txt', 'SHA256SUMS-windows.txt']
-    .every((name) => assetNames.includes(name));
-  const hasChecksum = hasLegacyChecksum || hasPlatformChecksums;
-  return [
-    createCheck(hasInstaller ? 'PASS' : 'FAIL', 'GitHub release installer asset', hasInstaller ? 'Windows installer asset exists.' : 'Windows installer .exe asset is missing.'),
-    createCheck(hasChecksum ? 'PASS' : 'FAIL', 'GitHub release checksum asset', hasChecksum ? 'release checksum assets exist.' : 'release checksum assets are missing.')
-  ];
+  try {
+    assertExactReleaseAssets(identity, assetNames);
+    return [createCheck('PASS', 'GitHub release scoped assets', 'remote assets exactly match release intent.')];
+  } catch (error) {
+    return [createCheck('FAIL', 'GitHub release scoped assets', error.message)];
+  }
 }
 
-export function checkGithubReleaseSignals(version, phase, rootDir, commandRunner, localBody) {
+export function checkGithubReleaseSignals({
+  commandRunner, identity, localBody, manifest, phase, rootDir, version
+}) {
   const candidate = commandRunner('gh', ['release', 'view', `v${version}`, '-R', 'campfirium/foliole', '--json', 'body,isDraft,publishedAt,tagName,url,assets'], rootDir);
   if (candidate.error || candidate.status !== 0) {
     const missing = (candidate.stderr ?? '').toLowerCase().includes('not found');
@@ -139,7 +140,7 @@ export function checkGithubReleaseSignals(version, phase, rootDir, commandRunner
       `GitHub release draft=${String(candidateJson?.isDraft)} publishedAt=${candidateJson?.publishedAt ?? '<none>'}; phase=${phase}.`
     ),
     ...checkRemoteBody(candidateJson, localBody, phase),
-    ...checkRemoteAssets(candidateJson, phase)
+    ...checkRemoteAssets(candidateJson, phase, identity)
   ];
   const latest = commandRunner('gh', ['release', 'view', '-R', 'campfirium/foliole', '--json', 'tagName,isDraft,publishedAt,url'], rootDir);
   if (latest.error || latest.status !== 0) {
@@ -147,7 +148,20 @@ export function checkGithubReleaseSignals(version, phase, rootDir, commandRunner
     return checks;
   }
   const latestJson = parseJsonResult(latest);
-  checks.push(createCheck(latestJson?.tagName === `v${version}` ? 'PASS' : (phase === 'post' ? 'FAIL' : 'WARN'), 'GitHub latest release', `GitHub latest is ${latestJson?.tagName ?? '<unknown>'}; phase=${phase}.`));
+  let expectedLatest;
+  try {
+    if (identity.intent.publicationMode === 'bridge') {
+      expectedLatest = version;
+    } else {
+      const publication = resolveReleasePublication(identity, manifest);
+      expectedLatest = publication.mode === 'scoped' ? publication.bridgeVersion : version;
+    }
+  } catch (error) {
+    checks.push(createCheck('FAIL', 'GitHub latest release', error.message));
+    return checks;
+  }
+  const latestMatches = latestJson?.tagName === `v${expectedLatest}`;
+  checks.push(createCheck(latestMatches ? 'PASS' : (phase === 'post' ? 'FAIL' : 'WARN'), 'GitHub latest release', `GitHub latest is ${latestJson?.tagName ?? '<unknown>'}; expected v${expectedLatest}; phase=${phase}.`));
   return checks;
 }
 
@@ -168,13 +182,14 @@ export async function fetchJson(url = MANIFEST_URL) {
   });
 }
 
-export async function checkOnlineManifest(version, fetcher = fetchJson) {
+export async function checkOnlineManifest(version, identity, fetcher = fetchJson) {
   try {
     const manifest = await fetcher(MANIFEST_URL);
     const release = Array.isArray(manifest.releases) ? manifest.releases.find((entry) => entry?.version === version) : null;
     return [
       createCheck(manifest.latest === version ? 'PASS' : 'FAIL', 'Pages manifest latest', `online latest is ${manifest.latest ?? '<missing>'}.`),
-      createCheck(release?.url === `https://github.com/campfirium/foliole/releases/tag/v${version}` ? 'PASS' : 'FAIL', 'Pages manifest release url', `online release URL is ${release?.url ?? '<missing>'}.`)
+      createCheck(release?.url === `https://github.com/campfirium/foliole/releases/tag/v${version}` ? 'PASS' : 'FAIL', 'Pages manifest release url', `online release URL is ${release?.url ?? '<missing>'}.`),
+      createCheck(JSON.stringify([...(release?.platforms ?? [])].sort()) === JSON.stringify([...identity.intent.selectedPlatforms].sort()) ? 'PASS' : 'FAIL', 'Pages manifest release platforms', `online release platforms are ${(release?.platforms ?? []).join(',') || '<missing>'}.`)
     ];
   } catch (error) {
     return [createCheck('UNKNOWN', 'Pages manifest', `online manifest unavailable: ${error.message}`)];
@@ -192,12 +207,12 @@ export function checkMarketingPosting(version, marketingRoot = MARKETING_ROOT) {
   return createCheck('PASS', 'marketing posting file', `${postingPath} exists.`);
 }
 
-export async function collectPostPublishChecks({ fetcher, marketingRoot, phase, version }) {
+export async function collectPostPublishChecks({ fetcher, identity, marketingRoot, phase, version }) {
   if (phase !== 'post') {
     return [];
   }
   return [
-    ...(await checkOnlineManifest(version, fetcher)),
+    ...(await checkOnlineManifest(version, identity, fetcher)),
     checkMarketingPosting(version, marketingRoot)
   ];
 }

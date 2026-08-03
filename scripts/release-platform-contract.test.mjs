@@ -33,6 +33,7 @@ function intent(selectedPlatforms = ['windows']) {
   return {
     schemaVersion: 1,
     version: '0.8.0',
+    publicationMode: 'scoped',
     selectedPlatforms,
     scopeBasis: Object.fromEntries(selectedPlatforms.map((id) => [id, `${id} is affected.`]))
   };
@@ -57,6 +58,7 @@ describe('platform release contract', () => {
     expect(identity.updaterBaselines).toEqual({ macos: '0.7.2', windows: '0.7.3' });
     expect(identity.managedAssets).toEqual(['Foliole-Windows-x64-0.8.0.exe']);
     expect(formatReleaseConfirmation(identity)).toContain('Platforms: Windows');
+    expect(formatReleaseConfirmation(identity)).toContain('Publication: scoped');
   });
 
   it('accepts Linux only through one explicit registry entry', () => {
@@ -111,6 +113,8 @@ describe('platform release contract', () => {
       .toThrow('baselines on each platform');
     expect(() => resolve({ intent: { ...intent(), scopeBasis: { macos: 'wrong scope' } } }))
       .toThrow('exactly match selectedPlatforms');
+    expect(() => resolve({ intent: { ...intent(), publicationMode: 'unknown' } }))
+      .toThrow('publicationMode must be legacy, bridge, or scoped');
   });
 
   it('binds scope to version and SHA and rejects any later intent drift', () => {

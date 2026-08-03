@@ -25,6 +25,7 @@ jobs:
     outputs:
       macos_updater_baseline_version: ${{ steps.identity.outputs.macos_updater_baseline_version }}
       release_hard_gates: ${{ steps.identity.outputs.release_hard_gates }}
+      release_make_latest: ${{ steps.identity.outputs.release_make_latest }}
       release_intent_digest: ${{ steps.identity.outputs.release_intent_digest }}
       release_scope: ${{ steps.identity.outputs.release_scope }}
       target_sha: ${{ steps.identity.outputs.target_sha }}
@@ -42,7 +43,7 @@ jobs:
         id: identity
         env:
           FOLIOLE_RELEASE_REF_NAME: ${{ github.ref_name }}
-          FOLIOLE_RELEASE_REQUIRE_FULL_SCOPE: "true"
+          FOLIOLE_RELEASE_REQUIRE_PUBLICATION_MODE: "true"
           FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}
         run: |
           node scripts/release-target-contract.mjs >> "$GITHUB_OUTPUT"
@@ -144,7 +145,7 @@ jobs:
         env:
           FOLIOLE_RELEASE_EXPECTED_INTENT_DIGEST: ${{ env.RELEASE_INTENT_DIGEST }}
           FOLIOLE_RELEASE_REF_NAME: release
-          FOLIOLE_RELEASE_REQUIRE_FULL_SCOPE: "true"
+          FOLIOLE_RELEASE_REQUIRE_PUBLICATION_MODE: "true"
           FOLIOLE_RELEASE_RUN_SHA: ${{ env.TARGET_SHA }}
         run: node scripts/release-target-contract.mjs > /dev/null
       - name: Download same-run macOS artifacts
@@ -157,29 +158,13 @@ jobs:
         with:
           name: ${{ needs.windows_package.outputs.artifact_name }}
           path: release-assets/windows
-      - name: Verify managed release assets
+      - name: Verify every hard gate and stage selected assets
         run: |
           set -euo pipefail
           test "$MACOS_SHA" = "$TARGET_SHA"
           test "$WINDOWS_SHA" = "$TARGET_SHA"
-          test -f "release-assets/macos/Foliole-macOS-arm64-${TARGET_VERSION}.dmg"
-          test -f "release-assets/macos/Foliole-macOS-arm64-${TARGET_VERSION}.dmg.blockmap"
-          test -f "release-assets/macos/Foliole-macOS-arm64-${TARGET_VERSION}.zip"
-          test -f "release-assets/macos/Foliole-macOS-arm64-${TARGET_VERSION}.zip.blockmap"
-          test -f "release-assets/macos/latest-mac.yml"
-          (cd release-assets/macos && sha256sum --check SHA256SUMS.txt)
-          test -f "release-assets/windows/Foliole-Windows-x64-${TARGET_VERSION}.exe"
-          test -f "release-assets/windows/Foliole-Windows-x64-${TARGET_VERSION}.exe.blockmap"
-          test -f "release-assets/windows/latest.yml"
-          (cd release-assets/windows && sha256sum --check SHA256SUMS.txt)
-          grep -Fq "version: ${TARGET_VERSION}" release-assets/macos/latest-mac.yml
-          grep -Fq "version: ${TARGET_VERSION}" release-assets/windows/latest.yml
-          node scripts/desktop-update-artifact-contract.mjs \
-            --platform=macos --version="$TARGET_VERSION" --directory=release-assets/macos
-          node scripts/desktop-update-artifact-contract.mjs \
-            --platform=windows --version="$TARGET_VERSION" --directory=release-assets/windows
-          mv release-assets/macos/SHA256SUMS.txt release-assets/macos/SHA256SUMS-macos.txt
-          mv release-assets/windows/SHA256SUMS.txt release-assets/windows/SHA256SUMS-windows.txt
+          node scripts/release-assembly-assets.mjs --version="$TARGET_VERSION" --sha="$TARGET_SHA" \
+            --input-root=release-assets --output-root=release-assets/upload
       - name: Reconcile the single unpublished draft
         run: |
           set -euo pipefail
@@ -200,6 +185,8 @@ jobs:
           fi
           test "$(gh release view "$tag" --json isDraft --jq .isDraft)" = "true"
           existing_assets="$(gh release view "$tag" --json assets --jq '.assets[].name')"
+          mapfile -t managed_assets < <(node scripts/release-asset-contract.mjs managed \
+            --version="$TARGET_VERSION" --sha="$TARGET_SHA")
           legacy_assets=(
             "Foliole-${TARGET_VERSION}-mac-arm64.dmg"
             "Foliole-${TARGET_VERSION}-mac-arm64.dmg.blockmap"
@@ -208,17 +195,18 @@ jobs:
             "Foliole-Setup-${TARGET_VERSION}-win-x64.exe"
             "Foliole-Setup-${TARGET_VERSION}-win-x64.exe.blockmap"
           )
-          for asset in "${legacy_assets[@]}"; do
+          for asset in "${managed_assets[@]}" "${legacy_assets[@]}"; do
             if grep -Fxq "$asset" <<< "$existing_assets"; then
               gh release delete-asset "$tag" "$asset" --yes
             fi
           done
-          gh release upload "$tag" --clobber \
-            "release-assets/macos/Foliole-macOS-arm64-${TARGET_VERSION}.dmg" \
-            "release-assets/macos/Foliole-macOS-arm64-${TARGET_VERSION}.dmg.blockmap" \
-            "release-assets/macos/Foliole-macOS-arm64-${TARGET_VERSION}.zip" \
-            "release-assets/macos/Foliole-macOS-arm64-${TARGET_VERSION}.zip.blockmap" \
-            release-assets/macos/latest-mac.yml release-assets/macos/SHA256SUMS-macos.txt \
-            "release-assets/windows/Foliole-Windows-x64-${TARGET_VERSION}.exe" \
-            "release-assets/windows/Foliole-Windows-x64-${TARGET_VERSION}.exe.blockmap" \
-            release-assets/windows/latest.yml release-assets/windows/SHA256SUMS-windows.txt
+          mapfile -t selected_assets < <(node scripts/release-asset-contract.mjs list \
+            --version="$TARGET_VERSION" --sha="$TARGET_SHA")
+          upload_paths=()
+          for asset in "${selected_assets[@]}"; do
+            upload_paths+=("release-assets/upload/${asset}")
+          done
+          gh release upload "$tag" --clobber "${upload_paths[@]}"
+          gh release view "$tag" --json assets --jq '[.assets[].name]' > release-assets/actual-assets.json
+          node scripts/release-asset-contract.mjs verify --version="$TARGET_VERSION" --sha="$TARGET_SHA" \
+            --actual=release-assets/actual-assets.json

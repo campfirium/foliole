@@ -32,10 +32,12 @@ export async function createFixture(overrides = {}) {
   await writeJson(rootDir, '.github/release-intent.json', overrides.releaseIntent ?? {
     schemaVersion: 1,
     version,
+    publicationMode: 'scoped',
     selectedPlatforms: ['windows'],
     scopeBasis: { windows: 'The release contains a Windows fix.' }
   });
   await writeJson(rootDir, 'releases/update-manifest.json', overrides.manifest ?? {
+    desktopUpdater: { compatibilityBridgeVersion: version },
     latest: version,
     releases: [{
       platforms: ['windows'],
@@ -54,6 +56,7 @@ export async function createFixture(overrides = {}) {
       'FOLIOLE_RELEASE_REF_NAME: ${{ github.ref_name }}',
       'FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}',
       'FOLIOLE_RELEASE_EXPECTED_INTENT_DIGEST: expected',
+      'FOLIOLE_RELEASE_REQUIRE_PUBLICATION_MODE: true',
       'node scripts/release-target-contract.mjs'
     ].join('\n')
   );
@@ -84,6 +87,7 @@ export function onlineManifest(version) {
   return {
     latest: version,
     releases: [{
+      platforms: ['windows'],
       url: `https://github.com/campfirium/foliole/releases/tag/v${version}`,
       version
     }]

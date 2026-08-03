@@ -48,19 +48,16 @@ jobs:
           latest_version="$(node -p "require('./releases/update-manifest.json').latest")"
           root=".tmp/public-update-assets"
           rm -rf "$root"
-          mkdir -p "$root/macos" "$root/windows"
-          gh release download "v${latest_version}" --dir "$root/macos" \
-            --pattern "Foliole-macOS-arm64-${latest_version}.*" \
-            --pattern latest-mac.yml --pattern SHA256SUMS-macos.txt
-          gh release download "v${latest_version}" --dir "$root/windows" \
-            --pattern "Foliole-Windows-x64-${latest_version}.*" \
-            --pattern latest.yml --pattern SHA256SUMS-windows.txt
-          mv "$root/macos/SHA256SUMS-macos.txt" "$root/macos/SHA256SUMS.txt"
-          mv "$root/windows/SHA256SUMS-windows.txt" "$root/windows/SHA256SUMS.txt"
-          node scripts/desktop-update-artifact-contract.mjs \
-            --platform=macos --version="$latest_version" --directory="$root/macos"
-          node scripts/desktop-update-artifact-contract.mjs \
-            --platform=windows --version="$latest_version" --directory="$root/windows"
+          mkdir -p "$root"
+          mapfile -t selected_assets < <(node scripts/release-asset-contract.mjs list \
+            --version="$latest_version")
+          download_args=()
+          for asset in "${selected_assets[@]}"; do
+            download_args+=(--pattern "$asset")
+          done
+          gh release download "v${latest_version}" --dir "$root" "${download_args[@]}"
+          node scripts/release-asset-contract.mjs verify-directory \
+            --version="$latest_version" --directory="$root"
 
       - name: Prepare published release metadata
         env:

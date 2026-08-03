@@ -10,31 +10,55 @@ import {
 
 const VERSION = '0.9.0';
 const REPOSITORY = 'campfirium/foliole';
+const ASSET = `Foliole-Windows-x64-${VERSION}.exe`;
+const REGISTRY = {
+  schemaVersion: 1,
+  platforms: [{
+    id: 'windows', displayName: 'Windows', status: 'active', architectures: ['x64'],
+    deliveryChannel: 'github-release', t7Required: true, artifactContract: 'desktop-updater',
+    managedAssets: ['Foliole-Windows-x64-{version}.exe'],
+    update: { mode: 'electron-updater', baselineVersion: '0.7.2' }
+  }]
+};
+const INTENT = {
+  schemaVersion: 1, version: VERSION, publicationMode: 'bridge', selectedPlatforms: ['windows'],
+  scopeBasis: { windows: 'Windows bridge package.' }
+};
 const MANIFEST = {
   desktopUpdater: {
+    compatibilityBridgeVersion: VERSION,
     firstCapableVersion: VERSION,
     manualUpgradeFrom: '0.7.0',
     verifiedBaselineVersion: VERSION
   },
   latest: VERSION,
   releases: [{
+    platforms: ['windows'],
     url: `https://github.com/${REPOSITORY}/releases/tag/v${VERSION}`,
     version: VERSION
   }]
 };
 const RELEASE = {
+  assets: [{ name: ASSET }],
   draft: false,
   published_at: '2026-07-31T00:00:00Z',
   tag_name: `v${VERSION}`
 };
 
+function validate(overrides = {}) {
+  return validateReleaseManifestPublication({
+    intent: overrides.intent ?? INTENT,
+    manifest: overrides.manifest ?? MANIFEST,
+    previousManifest: overrides.previousManifest,
+    registry: overrides.registry ?? REGISTRY,
+    release: overrides.release ?? RELEASE,
+    repository: REPOSITORY
+  });
+}
+
 describe('release manifest Pages preparation', () => {
   it('accepts only metadata whose latest entry names the published Release', () => {
-    expect(validateReleaseManifestPublication({
-      manifest: MANIFEST,
-      release: RELEASE,
-      repository: REPOSITORY
-    })).toEqual({ expectedTag: 'v0.9.0', version: VERSION });
+    expect(validate()).toEqual({ expectedTag: 'v0.9.0', version: VERSION });
   });
 
   it('preserves 0.7.1 bootstrap metadata without claiming updater capability', () => {
@@ -46,14 +70,14 @@ describe('release manifest Pages preparation', () => {
       },
       latest: '0.7.1',
       releases: [{
+        platforms: ['windows'],
         url: `https://github.com/${REPOSITORY}/releases/tag/v0.7.1`,
         version: '0.7.1'
       }]
     };
-    expect(validateReleaseManifestPublication({
-      manifest,
-      release: { ...RELEASE, tag_name: 'v0.7.1' },
-      repository: REPOSITORY
+    expect(validate({
+      intent: { ...INTENT, version: '0.7.1', publicationMode: 'legacy' }, manifest,
+      release: { ...RELEASE, assets: [{ name: 'Foliole-Windows-x64-0.7.1.exe' }], tag_name: 'v0.7.1' }
     })).toEqual({ expectedTag: 'v0.7.1', version: '0.7.1' });
   });
 
@@ -62,26 +86,22 @@ describe('release manifest Pages preparation', () => {
     ['missing publication time', { ...RELEASE, published_at: null }],
     ['wrong tag', { ...RELEASE, tag_name: 'v0.8.0' }]
   ])('rejects a %s release state', (_label, release) => {
-    expect(() => validateReleaseManifestPublication({ manifest: MANIFEST, release, repository: REPOSITORY }))
+    expect(() => validate({ release }))
       .toThrow('already-published');
   });
 
   it('rejects a manifest URL that does not identify its latest public Release', () => {
-    expect(() => validateReleaseManifestPublication({
-      manifest: { ...MANIFEST, releases: [{ version: VERSION, url: 'https://example.test' }] },
-      release: RELEASE,
-      repository: REPOSITORY
+    expect(() => validate({
+      manifest: { ...MANIFEST, releases: [{ platforms: ['windows'], version: VERSION, url: 'https://example.test' }] }
     })).toThrow('must link');
   });
 
   it('rejects promotion when updater baseline metadata does not name a public release', () => {
-    expect(() => validateReleaseManifestPublication({
+    expect(() => validate({
       manifest: {
         ...MANIFEST,
         desktopUpdater: { ...MANIFEST.desktopUpdater, verifiedBaselineVersion: '0.8.0' }
-      },
-      release: RELEASE,
-      repository: REPOSITORY
+      }
     })).toThrow('public manifest releases');
   });
 
@@ -89,7 +109,7 @@ describe('release manifest Pages preparation', () => {
     const previousManifest = {
       releases: [{ version: '0.8.0', platforms: ['macos'], notes: ['Original note.'] }]
     };
-    expect(() => validateReleaseManifestPublication({
+    expect(() => validate({
       manifest: {
         ...MANIFEST,
         releases: [
@@ -97,10 +117,16 @@ describe('release manifest Pages preparation', () => {
           ...MANIFEST.releases
         ]
       },
-      previousManifest,
-      release: RELEASE,
-      repository: REPOSITORY
+      previousManifest
     })).toThrow('notes and platform applicability are immutable');
+  });
+
+  it('rejects assets or manifest platforms outside the frozen scope', () => {
+    expect(() => validate({ release: { ...RELEASE, assets: [...RELEASE.assets, { name: 'extra.dmg' }] } }))
+      .toThrow('release assets differ from intent');
+    expect(() => validate({
+      manifest: { ...MANIFEST, releases: [{ ...MANIFEST.releases[0], platforms: ['macos'] }] }
+    })).toThrow('platforms must exactly match');
   });
 
   it('queries the official published-release endpoint with explicit API headers', async () => {

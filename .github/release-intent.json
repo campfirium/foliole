@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
   "version": "0.7.4",
+  "publicationMode": "legacy",
   "selectedPlatforms": ["macos", "windows"],
   "scopeBasis": {
     "macos": "The published 0.7.4 release includes the supported macOS updater package.",

@@ -85,6 +85,10 @@ export function validateReleaseIntent(intent, registry, packageVersion) {
   if (intent?.schemaVersion !== 1) throw new Error('release intent schemaVersion must be 1.');
   const version = requireVersion(intent.version, 'release intent version');
   if (version !== packageVersion) throw new Error('release intent version must match package.json version.');
+  const publicationMode = requireString(intent.publicationMode, 'release intent publicationMode');
+  if (!['legacy', 'bridge', 'scoped'].includes(publicationMode)) {
+    throw new Error('release intent publicationMode must be legacy, bridge, or scoped.');
+  }
   const selectedPlatforms = requireStringArray(intent.selectedPlatforms, 'release intent selectedPlatforms');
   const platforms = new Map(registry.platforms.map((platform) => [platform.id, platform]));
   for (const id of selectedPlatforms) {
@@ -102,7 +106,7 @@ export function validateReleaseIntent(intent, registry, packageVersion) {
   const scopeBasis = Object.fromEntries(selectedPlatforms.map((id) => [
     id, requireString(basis[id], `release intent scopeBasis.${id}`)
   ]));
-  return { schemaVersion: 1, version, selectedPlatforms, scopeBasis };
+  return { schemaVersion: 1, version, publicationMode, selectedPlatforms, scopeBasis };
 }
 
 export function resolveReleasePlatformIdentity({ registry: inputRegistry, intent: inputIntent, packageVersion, sha }) {
@@ -132,6 +136,7 @@ export function formatReleaseConfirmation(identity) {
   return [
     `Version: ${identity.intent.version}`,
     `Platforms: ${identity.intent.selectedPlatforms.map((id) => names.get(id)).join(', ')}`,
+    `Publication: ${identity.intent.publicationMode}`,
     `Assets: ${identity.managedAssets.join(', ')}`
   ].join('\n');
 }

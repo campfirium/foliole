@@ -19,12 +19,10 @@ import {
 } from './release-doctor.test-support.mjs';
 
 const ASSETS = [
-  { name: 'Foliole-Windows-x64-0.9.0.exe' },
-  { name: 'SHA256SUMS-macos.txt' },
-  { name: 'SHA256SUMS-windows.txt' }
+  { name: 'Foliole-Windows-x64-0.9.0.exe' }
 ];
 
-function githubResponses(version, candidate = {}) {
+function githubResponses(version, candidate = {}, latestVersion = version) {
   const publishedAt = candidate.isDraft === true ? null : '2026-07-31T00:00:00Z';
   const siteManifest = Buffer.from(JSON.stringify({
     tag: `v${version}`,
@@ -46,7 +44,7 @@ function githubResponses(version, candidate = {}) {
     },
     'gh release view -R campfirium/foliole --json tagName,isDraft,publishedAt,url': {
       status: 0,
-      stdout: JSON.stringify({ isDraft: false, publishedAt, tagName: `v${version}`, url: 'https://example.test' }),
+      stdout: JSON.stringify({ isDraft: false, publishedAt, tagName: `v${latestVersion}`, url: 'https://example.test' }),
       stderr: ''
     },
     'gh run list --repo campfirium/foliole-site --workflow deploy.yml --event repository_dispatch --limit 1 --json conclusion,url,createdAt': {
@@ -93,6 +91,7 @@ describe('release doctor', () => {
       releaseIntent: {
         schemaVersion: 1,
         version: '0.9.0',
+        publicationMode: 'scoped',
         selectedPlatforms: ['linux'],
         scopeBasis: { linux: 'A Linux release.' }
       }
@@ -160,9 +159,9 @@ describe('release doctor', () => {
     });
 
     for (const title of [
-      'GitHub release body remote', 'GitHub release installer asset',
-      'GitHub release checksum asset', 'site release sync run',
-      'site download manifest', 'Pages manifest latest', 'marketing posting file'
+      'GitHub release body remote', 'GitHub release scoped assets',
+      'site release sync run', 'site download manifest', 'Pages manifest latest',
+      'Pages manifest release platforms', 'marketing posting file'
     ]) expect(findCheck(result, title).status, title).toBe('PASS');
     expect(hasFailures(result.checks)).toBe(false);
   });
@@ -183,6 +182,66 @@ describe('release doctor', () => {
 
     expect(findCheck(result, 'site release sync run').status).toBe('FAIL');
     expect(hasFailures(result.checks)).toBe(true);
+  });
+
+  it('accepts a scoped Release while repository latest remains on the bridge', async () => {
+    const version = '0.9.0';
+    const platformRegistry = {
+      schemaVersion: 1,
+      platforms: [
+        {
+          id: 'macos', displayName: 'macOS', status: 'active', architectures: ['arm64'],
+          deliveryChannel: 'github-release', t7Required: true, artifactContract: 'desktop-updater',
+          managedAssets: ['Foliole-macOS-arm64-{version}.dmg'],
+          update: { mode: 'electron-updater', baselineVersion: '0.7.2' }
+        },
+        {
+          id: 'windows', displayName: 'Windows', status: 'active', architectures: ['x64'],
+          deliveryChannel: 'github-release', t7Required: true, artifactContract: 'desktop-updater',
+          managedAssets: ['Foliole-Windows-x64-{version}.exe'],
+          update: { mode: 'electron-updater', baselineVersion: '0.7.2' }
+        }
+      ]
+    };
+    const manifest = {
+      desktopUpdater: { compatibilityBridgeVersion: '0.8.0' }, latest: version,
+      releases: [
+        { version: '0.8.0', platforms: ['macos', 'windows'] },
+        { version, platforms: ['windows'], url: `https://github.com/campfirium/foliole/releases/tag/v${version}` }
+      ]
+    };
+    const fixture = await createFixture({ manifest, platformRegistry });
+    const result = await collectReleaseDoctorChecks({
+      argv: ['--phase=post'],
+      commandRunner: commandRunner(githubResponses(version, {}, '0.8.0')),
+      fetcher: async () => manifest,
+      marketingRoot: join(fixture.rootDir, 'missing'),
+      rootDir: fixture.rootDir
+    });
+
+    expect(findCheck(result, 'GitHub latest release').status).toBe('PASS');
+    expect(findCheck(result, 'GitHub release scoped assets').status).toBe('PASS');
+    expect(findCheck(result, 'Pages manifest release platforms').status).toBe('PASS');
+  });
+
+  it('accepts the first bridge after metadata freezes its version', async () => {
+    const version = '0.9.0';
+    const fixture = await createFixture({
+      releaseIntent: {
+        schemaVersion: 1, version, publicationMode: 'bridge', selectedPlatforms: ['windows'],
+        scopeBasis: { windows: 'Complete bridge.' }
+      }
+    });
+    const result = await collectReleaseDoctorChecks({
+      argv: ['--phase=post'],
+      commandRunner: commandRunner(githubResponses(version)),
+      fetcher: async () => onlineManifest(version),
+      marketingRoot: join(fixture.rootDir, 'missing'),
+      rootDir: fixture.rootDir
+    });
+
+    expect(findCheck(result, 'GitHub latest release').status).toBe('PASS');
+    expect(findCheck(result, 'manifest release platforms').status).toBe('PASS');
   });
 
   it('keeps the npm script contract registered', async () => {

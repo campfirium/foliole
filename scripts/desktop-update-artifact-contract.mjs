@@ -51,8 +51,8 @@ async function digest(filePath, algorithm, encoding) {
   return createHash(algorithm).update(bytes).digest(encoding);
 }
 
-async function validateChecksumFile(directory, target) {
-  const source = (await readFile(path.join(directory, 'SHA256SUMS.txt'), 'utf8')).trim();
+async function validateChecksumFile(directory, target, checksumFile) {
+  const source = (await readFile(path.join(directory, checksumFile), 'utf8')).trim();
   const match = source.match(/^([a-f\d]{64})\s+\*?(.+)$/u);
   if (!match || match[2] !== target) throw new Error(`checksum file must identify ${target}.`);
   const actual = await digest(path.join(directory, target), 'sha256', 'hex');
@@ -68,11 +68,13 @@ function resolveMetadataFile(metadata, target) {
   return entry;
 }
 
-export async function validateDesktopUpdateArtifacts({ directory, platform, version }) {
+export async function validateDesktopUpdateArtifacts({
+  checksumFile = 'SHA256SUMS.txt', directory, platform, version
+}) {
   const expected = expectedArtifacts(platform, version);
   const names = new Set(await readdir(directory));
   for (const name of [expected.checksumTarget, `${expected.checksumTarget}.blockmap`, expected.metadata,
-    expected.updateTarget, `${expected.updateTarget}.blockmap`, 'SHA256SUMS.txt']) {
+    expected.updateTarget, `${expected.updateTarget}.blockmap`, checksumFile]) {
     if (!names.has(name)) throw new Error(`missing ${platform} updater artifact: ${name}`);
   }
   const metadata = parseUpdaterMetadata(await readFile(path.join(directory, expected.metadata), 'utf8'));
@@ -83,7 +85,7 @@ export async function validateDesktopUpdateArtifacts({ directory, platform, vers
   if (entry.sha512 !== await digest(targetPath, 'sha512', 'base64')) {
     throw new Error(`${expected.updateTarget} SHA512 mismatch.`);
   }
-  await validateChecksumFile(directory, expected.checksumTarget);
+  await validateChecksumFile(directory, expected.checksumTarget, checksumFile);
   return { metadata: expected.metadata, target: expected.updateTarget };
 }
 

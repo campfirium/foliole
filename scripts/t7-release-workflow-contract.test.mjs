@@ -23,6 +23,7 @@ describe('T7 release workflow contract', () => {
     expect(source).toContain('FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}');
     expect(source).toContain('node scripts/release-target-contract.mjs >> "$GITHUB_OUTPUT"');
     expect(source).toContain('FOLIOLE_RELEASE_EXPECTED_INTENT_DIGEST');
+    expect(source.match(/FOLIOLE_RELEASE_REQUIRE_PUBLICATION_MODE/gu)).toHaveLength(2);
     expect(source).toContain('node scripts/desktop-update-release-policy.mjs');
     expect(fs.existsSync('.github/workflows/publish-release.yml')).toBe(false);
   });
@@ -47,6 +48,8 @@ describe('T7 release workflow contract', () => {
       .toBe('${{ steps.identity.outputs.release_scope }}');
     expect(jobs.release_context.outputs.release_intent_digest)
       .toBe('${{ steps.identity.outputs.release_intent_digest }}');
+    expect(jobs.release_context.outputs.release_make_latest)
+      .toBe('${{ steps.identity.outputs.release_make_latest }}');
     expect(jobs.assemble_draft.needs)
       .toEqual(['release_context', 'macos_package', 'windows_package']);
   });
@@ -63,19 +66,16 @@ describe('T7 release workflow contract', () => {
     expect(source.match(/contents: write/gu)).toHaveLength(1);
   });
 
-  it('downloads only same-run artifacts and verifies SHA, version, and checksums', () => {
+  it('hard-gates all active producers and stages only the frozen scope', () => {
     expect(source.match(/uses: actions\/download-artifact@v5/gu)).toHaveLength(2);
     expect(source).not.toContain('run-id:');
     expect(source).not.toContain('repository:');
     expect(source).toContain('test "$MACOS_SHA" = "$TARGET_SHA"');
     expect(source).toContain('test "$WINDOWS_SHA" = "$TARGET_SHA"');
-    expect(source.match(/sha256sum --check SHA256SUMS\.txt/gu)).toHaveLength(2);
-    expect(source).toContain('grep -Fq "version: ${TARGET_VERSION}"');
-    expect(source).toContain('Foliole-macOS-arm64-${TARGET_VERSION}.dmg');
-    expect(source).toContain('Foliole-Windows-x64-${TARGET_VERSION}.exe');
-    expect(source.match(/node scripts\/desktop-update-artifact-contract\.mjs/gu)).toHaveLength(2);
-    expect(source.match(/Foliole-\$\{TARGET_VERSION\}-mac-arm64/gu)).toHaveLength(4);
-    expect(source.match(/Foliole-Setup-\$\{TARGET_VERSION\}-win-x64/gu)).toHaveLength(2);
+    expect(source).toContain('node scripts/release-assembly-assets.mjs');
+    expect(source).toContain('--output-root=release-assets/upload');
+    expect(source).toContain('node scripts/release-asset-contract.mjs list');
+    expect(source).toContain('node scripts/release-asset-contract.mjs verify');
   });
 
   it('guards stale runs and reconciles only an unpublished draft', () => {
@@ -87,6 +87,7 @@ describe('T7 release workflow contract', () => {
     expect(source).toContain('gh release edit "$tag" --target "$TARGET_SHA"');
     expect(source).toContain('gh release delete-asset "$tag" "$asset" --yes');
     expect(source).toContain('gh release upload "$tag" --clobber');
+    expect(source).toContain("--jq '[.assets[].name]'");
     expect(source).not.toContain('gh release delete "$tag"');
     expect(source).not.toContain('releases/github/${tag}.md');
   });

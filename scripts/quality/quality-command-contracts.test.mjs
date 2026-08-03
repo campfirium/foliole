@@ -73,6 +73,7 @@ describe('quality command registry', () => {
       ['runner:sql-surface-scan', new URL('../sync/sql-surface-scan.mjs', import.meta.url)],
       ['runner:android-host-quality', new URL('../android/native-linux-host.mjs', import.meta.url)],
       ['runner:release-target-contract', new URL('../release-target-contract.mjs', import.meta.url)],
+      ['runner:release-draft-assets', new URL('../release-assembly-assets.mjs', import.meta.url)],
       ['runner:desktop-update-release-gate', new URL('../desktop-update-release-policy.mjs', import.meta.url)],
       ['runner:release-manifest-pages', new URL('../prepare-release-manifest-site.mjs', import.meta.url)]
     ]);
@@ -82,6 +83,8 @@ describe('quality command registry', () => {
   });
 
   it('requires exact release state and rejects unknown mutations', () => {
+    expect(readFileSync(new URL('../release-publish.mjs', import.meta.url), 'utf8'))
+      .toContain("assertQualityCommandAllowed('release-control:publish'");
     const expectedStates = new Map([
       ['release-control:draft-body', 'unpublished-draft'],
       ['release-control:abandon-draft', 'explicitly-abandoned-unpublished-draft'],
