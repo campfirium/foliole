@@ -6,6 +6,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { assertExactReleaseAssets } from './release-asset-contract.mjs';
+import { assertLinuxExperimentalReleaseCopy } from './linux/linux-release-copy-contract.mjs';
 import { assertReleaseBodyPlatformScope } from './release-body-contract.mjs';
 import { resolveReleasePlatformIdentity } from './release-platform-contract.mjs';
 import { assertT7Publication } from './release-publication-contract.mjs';
@@ -38,6 +39,7 @@ export async function publishRelease({ cwd = process.cwd(), run = execFileSync }
     throw new Error('public transition requires the frozen unpublished Draft at release HEAD.');
   }
   assertReleaseBodyPlatformScope(candidate.body, identity);
+  assertLinuxExperimentalReleaseCopy(candidate.body, identity);
   assertExactReleaseAssets(identity, candidate.assets.map((asset) => asset.name));
   run('gh', [
     'release', 'edit', tag, '-R', 'campfirium/foliole', '--draft=false',

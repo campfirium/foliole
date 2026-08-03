@@ -19,6 +19,12 @@ it('maps linux x64 release identity to one Experimental amd64 DEB', async () => 
     `${createHash('sha256').update(content).digest('hex')} *${deb}\n`);
 
   await expect(verifyLinuxDebDirectory(directory, '1.2.3')).resolves.toMatchObject({ deb });
+  await writeFile(path.join(directory, 'SHA256SUMS-linux.txt'),
+    `${createHash('sha256').update(content).digest('hex')} *${deb}\n`);
+  await expect(verifyLinuxDebDirectory(directory, '1.2.3', {
+    allowOtherFiles: true, checksumFile: 'SHA256SUMS-linux.txt'
+  }))
+    .resolves.toMatchObject({ deb });
   expect(assertDebMetadata({ Architecture: 'amd64', Package: 'foliole', Version: '1.2.3' }, '1.2.3'))
     .toEqual({ Architecture: 'amd64', Package: 'foliole', Version: '1.2.3' });
   expect(() => assertDebMetadata({ Architecture: 'x64' }, '1.2.3')).toThrow('amd64');

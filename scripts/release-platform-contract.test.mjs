@@ -65,7 +65,7 @@ describe('platform release contract', () => {
     const linux = {
       id: 'linux', displayName: 'Linux Experimental', status: 'active', architectures: ['x64'],
       deliveryChannel: 'github-release', t7Required: true, artifactContract: 'deb',
-      managedAssets: ['Foliole-Linux-x64-{version}.deb'],
+      managedAssets: ['Foliole-Linux-Experimental-amd64-{version}.deb', 'SHA256SUMS-linux.txt'],
       update: { mode: 'manual', baselineVersion: null }
     };
     const identity = resolve({
@@ -75,7 +75,9 @@ describe('platform release contract', () => {
 
     expect(identity.hardGatePlatforms).toEqual(['macos', 'windows', 'linux']);
     expect(identity.updaterBaselines.linux).toBe('');
-    expect(identity.managedAssets).toEqual(['Foliole-Linux-x64-0.8.0.deb']);
+    expect(identity.managedAssets).toEqual([
+      'Foliole-Linux-Experimental-amd64-0.8.0.deb', 'SHA256SUMS-linux.txt'
+    ]);
   });
 
   it('rejects empty, unknown, retired, and unsupported platform scopes', () => {

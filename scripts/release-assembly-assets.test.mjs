@@ -31,6 +31,14 @@ const REGISTRY = {
         'latest.yml', 'SHA256SUMS-windows.txt'
       ],
       update: { mode: 'electron-updater', baselineVersion: '0.7.2' }
+    },
+    {
+      id: 'linux', displayName: 'Linux Experimental', status: 'active', architectures: ['x64'],
+      deliveryChannel: 'github-release', t7Required: true, artifactContract: 'deb',
+      managedAssets: [
+        'Foliole-Linux-Experimental-amd64-{version}.deb', 'SHA256SUMS-linux.txt'
+      ],
+      update: { mode: 'manual', baselineVersion: null }
     }
   ]
 };
@@ -56,6 +64,15 @@ async function writePlatform(root, platform) {
   await writeFile(path.join(directory, 'SHA256SUMS.txt'), `${sha256} *${installer}\n`);
 }
 
+async function writeLinux(root) {
+  const directory = path.join(root, 'linux');
+  const deb = `Foliole-Linux-Experimental-amd64-${VERSION}.deb`;
+  await mkdir(directory, { recursive: true });
+  await writeFile(path.join(directory, deb), 'deb');
+  const sha256 = createHash('sha256').update('deb').digest('hex');
+  await writeFile(path.join(directory, 'SHA256SUMS.txt'), `${sha256} *${deb}\n`);
+}
+
 function identity(selectedPlatforms) {
   return resolveReleasePlatformIdentity({
     registry: REGISTRY,
@@ -73,14 +90,16 @@ async function fixture() {
   const inputRoot = path.join(root, 'input');
   await writePlatform(inputRoot, 'macos');
   await writePlatform(inputRoot, 'windows');
+  await writeLinux(inputRoot);
   return { inputRoot, outputRoot: path.join(root, 'output') };
 }
 
 describe('release assembly assets', () => {
   it.each([
-    [['macos', 'windows'], 10],
+    [['macos', 'windows', 'linux'], 12],
     [['windows'], 4],
-    [['macos'], 6]
+    [['macos'], 6],
+    [['linux'], 2]
   ])('stages exactly the %s intent while validating every active producer', async (scope, count) => {
     const paths = await fixture();
     await expect(assembleReleaseAssets({ ...paths, identity: identity(scope) }))
@@ -92,5 +111,12 @@ describe('release assembly assets', () => {
     await writeFile(path.join(paths.inputRoot, 'macos', 'latest-mac.yml'), 'version: 0.8.0\n');
     await expect(assembleReleaseAssets({ ...paths, identity: identity(['windows']) }))
       .rejects.toThrow('version mismatch');
+  });
+
+  it('blocks every Draft when the Linux DEB checksum does not match', async () => {
+    const paths = await fixture();
+    await writeFile(path.join(paths.inputRoot, 'linux', 'SHA256SUMS.txt'), `${'0'.repeat(64)} *Foliole-Linux-Experimental-amd64-${VERSION}.deb\n`);
+    await expect(assembleReleaseAssets({ ...paths, identity: identity(['windows']) }))
+      .rejects.toThrow('Linux DEB checksum mismatch');
   });
 });

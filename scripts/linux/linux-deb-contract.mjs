@@ -29,14 +29,15 @@ async function sha256(filePath) {
   return createHash('sha256').update(await readFile(filePath)).digest('hex');
 }
 
-export async function verifyLinuxDebDirectory(directory, version) {
+export async function verifyLinuxDebDirectory(directory, version, options = {}) {
+  const { allowOtherFiles = false, checksumFile = 'SHA256SUMS.txt' } = options;
   const deb = linuxDebName(version);
   const entries = await readdir(directory, { withFileTypes: true });
   const files = entries.filter((entry) => entry.isFile()).map((entry) => entry.name).sort();
-  if (JSON.stringify(files) !== JSON.stringify(['SHA256SUMS.txt', deb].sort())) {
+  if (!allowOtherFiles && JSON.stringify(files) !== JSON.stringify([checksumFile, deb].sort())) {
     throw new Error(`Linux DEB asset set mismatch: ${files.join(',')}`);
   }
-  const checksum = (await readFile(path.join(directory, 'SHA256SUMS.txt'), 'utf8')).trim();
+  const checksum = (await readFile(path.join(directory, checksumFile), 'utf8')).trim();
   const match = checksum.match(/^([a-f0-9]{64}) \*([^\r\n]+)$/u);
   if (!match || match[2] !== deb) throw new Error('Linux checksum must name the exact DEB');
   const actual = await sha256(path.join(directory, deb));

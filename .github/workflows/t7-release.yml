@@ -119,9 +119,21 @@ jobs:
       AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
+  linux_package:
+    name: Linux Experimental package
+    needs: [release_context, release_candidate]
+    permissions: { artifact-metadata: write, attestations: write, contents: read, id-token: write }
+    uses: ./.github/workflows/release-linux.yml
+    with:
+      execution_lane: release-t7
+      target_sha: ${{ needs.release_candidate.outputs.accepted_sha }}
+      target_version: ${{ needs.release_context.outputs.target_version }}
+      trigger_ref: ${{ needs.release_context.outputs.trigger_ref }}
+      attest_artifact: true
+
   assemble_draft:
     name: Assemble release draft
-    needs: [release_context, macos_package, windows_package]
+    needs: [release_context, macos_package, windows_package, linux_package]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -129,6 +141,7 @@ jobs:
       contents: write
     env:
       GH_TOKEN: ${{ github.token }}
+      LINUX_SHA: ${{ needs.linux_package.outputs.packaged_sha }}
       MACOS_SHA: ${{ needs.macos_package.outputs.packaged_sha }}
       RELEASE_INTENT_DIGEST: ${{ needs.release_context.outputs.release_intent_digest }}
       TARGET_SHA: ${{ needs.release_context.outputs.target_sha }}
@@ -158,11 +171,15 @@ jobs:
         with:
           name: ${{ needs.windows_package.outputs.artifact_name }}
           path: release-assets/windows
+      - name: Download same-run Linux artifacts
+        uses: actions/download-artifact@v5
+        with: { name: "${{ needs.linux_package.outputs.artifact_name }}", path: release-assets/linux }
       - name: Verify every hard gate and stage selected assets
         run: |
           set -euo pipefail
           test "$MACOS_SHA" = "$TARGET_SHA"
           test "$WINDOWS_SHA" = "$TARGET_SHA"
+          test "$LINUX_SHA" = "$TARGET_SHA"
           node scripts/release-assembly-assets.mjs --version="$TARGET_VERSION" --sha="$TARGET_SHA" \
             --input-root=release-assets --output-root=release-assets/upload
       - name: Reconcile the single unpublished draft

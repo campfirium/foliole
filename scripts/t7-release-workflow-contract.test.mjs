@@ -28,7 +28,7 @@ describe('T7 release workflow contract', () => {
     expect(fs.existsSync('.github/workflows/publish-release.yml')).toBe(false);
   });
 
-  it('chains one reusable T5 to T6 to RC and parallel package pair', () => {
+  it('chains one reusable T5 to T6 to RC and three parallel packages', () => {
     const jobs = workflow.jobs;
     expect(jobs.t6_quality.uses).toBe('./.github/workflows/t6-hosted-quality.yml');
     expect(jobs.t6_quality.with.execution_lane).toBe('release-t7');
@@ -36,10 +36,14 @@ describe('T7 release workflow contract', () => {
     expect(jobs.release_candidate.with.target_sha).toBe('${{ needs.t6_quality.outputs.accepted_sha }}');
     expect(jobs.macos_package.needs).toEqual(['release_context', 'release_candidate']);
     expect(jobs.windows_package.needs).toEqual(['release_context', 'release_candidate']);
+    expect(jobs.linux_package.needs).toEqual(['release_context', 'release_candidate']);
     expect(jobs.macos_package.with.target_sha)
       .toBe('${{ needs.release_candidate.outputs.accepted_sha }}');
     expect(jobs.windows_package.with.target_sha)
       .toBe('${{ needs.release_candidate.outputs.accepted_sha }}');
+    expect(jobs.linux_package.with.target_sha)
+      .toBe('${{ needs.release_candidate.outputs.accepted_sha }}');
+    expect(jobs.linux_package.with.attest_artifact).toBe(true);
     expect(jobs.macos_package.with.updater_baseline_version)
       .toBe('${{ needs.release_context.outputs.macos_updater_baseline_version }}');
     expect(jobs.windows_package.with.updater_baseline_version)
@@ -51,7 +55,7 @@ describe('T7 release workflow contract', () => {
     expect(jobs.release_context.outputs.release_make_latest)
       .toBe('${{ steps.identity.outputs.release_make_latest }}');
     expect(jobs.assemble_draft.needs)
-      .toEqual(['release_context', 'macos_package', 'windows_package']);
+      .toEqual(['release_context', 'macos_package', 'windows_package', 'linux_package']);
   });
 
   it('passes only the declared platform secret sets and grants write only to assembly', () => {
@@ -62,16 +66,20 @@ describe('T7 release workflow contract', () => {
     expect(workflow.permissions).toEqual({ contents: 'read' });
     expect(workflow.jobs.macos_package.permissions.contents).toBe('read');
     expect(workflow.jobs.windows_package.permissions.contents).toBe('read');
+    expect(workflow.jobs.linux_package.permissions).toEqual({
+      'artifact-metadata': 'write', attestations: 'write', contents: 'read', 'id-token': 'write'
+    });
     expect(workflow.jobs.assemble_draft.permissions).toEqual({ actions: 'read', contents: 'write' });
     expect(source.match(/contents: write/gu)).toHaveLength(1);
   });
 
   it('hard-gates all active producers and stages only the frozen scope', () => {
-    expect(source.match(/uses: actions\/download-artifact@v5/gu)).toHaveLength(2);
+    expect(source.match(/uses: actions\/download-artifact@v5/gu)).toHaveLength(3);
     expect(source).not.toContain('run-id:');
     expect(source).not.toContain('repository:');
     expect(source).toContain('test "$MACOS_SHA" = "$TARGET_SHA"');
     expect(source).toContain('test "$WINDOWS_SHA" = "$TARGET_SHA"');
+    expect(source).toContain('test "$LINUX_SHA" = "$TARGET_SHA"');
     expect(source).toContain('node scripts/release-assembly-assets.mjs');
     expect(source).toContain('--output-root=release-assets/upload');
     expect(source).toContain('node scripts/release-asset-contract.mjs list');

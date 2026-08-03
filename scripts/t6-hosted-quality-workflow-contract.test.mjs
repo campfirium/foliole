@@ -79,7 +79,7 @@ describe('T6 hosted quality workflow contracts', () => {
 
   it('preserves the complete heavy host and command union', () => {
     expect(Object.keys(workflows.core.jobs)).toEqual([
-      'common-quality', 'windows-quality', 'android-quality', 'ios-quality'
+      'common-quality', 'windows-quality', 'linux-package-acceptance', 'android-quality', 'ios-quality'
     ]);
     expect(Object.keys(workflows.full.jobs)).toEqual([
       'portable-quality', 'common-build', 'windows-acceptance', 'android-host', 'ios-full',

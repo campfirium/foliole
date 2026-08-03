@@ -1,6 +1,6 @@
 export interface UpdateTarget {
   architecture: 'arm64' | 'x64';
-  platform: 'macos' | 'windows';
+  platform: 'linux' | 'macos' | 'windows';
 }
 
 export function resolveRuntimeUpdateTarget(
@@ -8,9 +8,9 @@ export function resolveRuntimeUpdateTarget(
   userAgent = navigator.userAgent
 ): UpdateTarget {
   const identity = `${platform} ${userAgent}`.toLowerCase();
-  return identity.includes('mac')
-    ? { architecture: 'arm64', platform: 'macos' }
-    : { architecture: 'x64', platform: 'windows' };
+  if (identity.includes('mac')) return { architecture: 'arm64', platform: 'macos' };
+  if (identity.includes('linux')) return { architecture: 'x64', platform: 'linux' };
+  return { architecture: 'x64', platform: 'windows' };
 }
 
 export function releaseMatchesTarget(

@@ -106,6 +106,18 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  linux-package-acceptance:
+    name: Linux Experimental package acceptance
+    if: inputs.scope == 'desktop'
+    permissions: { contents: read }
+    uses: ./.github/workflows/release-linux.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      target_version: ''
+      trigger_ref: ${{ inputs.trigger_ref }}
+      attest_artifact: false
+
   android-quality:
     name: Android ${{ inputs.scope }} quality
     if: inputs.scope == 'android'

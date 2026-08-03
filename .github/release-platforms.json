@@ -42,6 +42,24 @@
         "mode": "electron-updater",
         "baselineVersion": "0.7.2"
       }
+    },
+    {
+      "id": "linux",
+      "displayName": "Linux Experimental",
+      "status": "active",
+      "architectures": ["x64"],
+      "deliveryChannel": "github-release",
+      "t7Required": true,
+      "artifactContract": "deb",
+      "downloadAsset": "Foliole-Linux-Experimental-amd64-{version}.deb",
+      "managedAssets": [
+        "Foliole-Linux-Experimental-amd64-{version}.deb",
+        "SHA256SUMS-linux.txt"
+      ],
+      "update": {
+        "mode": "manual",
+        "baselineVersion": null
+      }
     }
   ]
 }
