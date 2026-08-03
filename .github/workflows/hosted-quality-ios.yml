@@ -109,10 +109,14 @@ jobs:
         with:
           name: ios-simulator-${{ matrix.scenario }}-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
           path: |
-            .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/result.json
-            .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/failure.json
-            .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/evidence.json
-            .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/simulator.log
+            .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/summary.json
+            .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/attempt-*/result.json
+            .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/attempt-*/failure.json
+            .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/attempt-*/evidence.json
+            .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/attempt-*/simulator.log
+            .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/attempt-*/simulator-owned.json
+            .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/attempt-*/lifecycle-actions.json
+            .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/attempt-*/service-observations.json
             .tmp/logs/quality-gate
           if-no-files-found: ignore
           retention-days: 14

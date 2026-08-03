@@ -9,8 +9,6 @@ import { describe, expect, it } from 'vitest';
 import {
   createAcceptanceBuildArgs,
   resolveAcceptanceArtifactDir,
-  selectSimulator,
-  shouldShutdownSimulator,
   verifyBootstrapSnapshots,
   waitForBootstrapSnapshot
 } from './ios-bootstrap-acceptance.mjs';
@@ -164,22 +162,6 @@ describe('iOS bootstrap acceptance contract', () => {
     const first = { evidence: {}, phase: 'resources-synced', resource_sync: {} };
     const second = { evidence: {}, phase: 'resources-restored', resource_sync: null };
     expect(() => verifyContentResourceAcceptance(first, second, {}, {})).toThrow('evidence is incomplete');
-  });
-
-  it('prefers an already booted iPhone simulator', () => {
-    expect(selectSimulator({
-      devices: {
-        'com.apple.CoreSimulator.SimRuntime.iOS-26-5': [
-          { isAvailable: true, name: 'iPhone 17', state: 'Shutdown', udid: 'SIM-1' },
-          { isAvailable: true, name: 'iPhone 13 mini', state: 'Booted', udid: 'SIM-2' }
-        ]
-      }
-    }).udid).toBe('SIM-2');
-  });
-
-  it('shuts down only a simulator started by the acceptance run', () => {
-    expect(shouldShutdownSimulator({ state: 'Shutdown' })).toBe(true);
-    expect(shouldShutdownSimulator({ state: 'Booted' })).toBe(false);
   });
 
   it('accepts a stable database identity and required schema after restart', () => {

@@ -49,7 +49,8 @@ describe('iOS bridge acceptance host contract', () => {
     const bootstrap = fs.readFileSync('scripts/ios/ios-bootstrap-acceptance.mjs', 'utf8');
     const standalone = fs.readFileSync('scripts/ios/ios-standalone-acceptance-runner.mjs', 'utf8');
     const runner = fs.readFileSync('scripts/ios/ios-database-upgrade-acceptance-runner.mjs', 'utf8');
-    expect(bootstrap).toContain('runStandaloneIosAcceptanceScenario(scenario, REPO_ROOT, ARTIFACT_DIR)');
+    expect(bootstrap).toContain('runStandaloneIosAcceptanceScenario(scenario, REPO_ROOT, artifactRoot)');
+    expect(bootstrap).toContain('runIosAcceptanceAttempts({');
     expect(standalone).toContain("scenario === 'database-upgrade-runtime'");
     expect(standalone).toContain('runIosDatabaseUpgradeAcceptance(repoRoot, artifactDir)');
     expect(runner).toContain('launchAndRead(options, simulator.udid, resultPath, false)');
@@ -58,7 +59,7 @@ describe('iOS bridge acceptance host contract', () => {
   });
 
   it('restores ordinary companion assets after compiling the acceptance app', () => {
-    const runner = fs.readFileSync('scripts/ios/ios-bootstrap-acceptance.mjs', 'utf8');
+    const runner = fs.readFileSync('scripts/ios/ios-bootstrap-acceptance-attempt.mjs', 'utf8');
     const databaseRunner = fs.readFileSync('scripts/ios/ios-database-upgrade-acceptance-runner.mjs', 'utf8');
     expect(runner).toMatch(
       /VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE: '1'[\s\S]*try \{[\s\S]*xcodebuild[\s\S]*finally \{[\s\S]*android:web:build/
@@ -71,9 +72,9 @@ describe('iOS bridge acceptance host contract', () => {
   });
 
   it('finishes the first heavy build before booting a cold Simulator', () => {
-    const runner = fs.readFileSync('scripts/ios/ios-bootstrap-acceptance.mjs', 'utf8');
+    const runner = fs.readFileSync('scripts/ios/ios-bootstrap-acceptance-attempt.mjs', 'utf8');
     const databaseRunner = fs.readFileSync('scripts/ios/ios-database-upgrade-acceptance-runner.mjs', 'utf8');
-    expect(runner).toMatch(/prepareApp\(simulator\.udid[\s\S]*bootSimulator\(simulator\)/);
+    expect(runner).toMatch(/prepareApp\(options, owned\.udid[\s\S]*bootSimulator\(options, owned\.udid\)/);
     expect(databaseRunner).toMatch(/prepareBuild\(options, simulator\.udid, false\)[\s\S]*bootSimulator\(options\.repoRoot, simulator\)/);
   });
 

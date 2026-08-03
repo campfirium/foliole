@@ -31,6 +31,7 @@ export async function runAcceptanceRestart(options) {
 }
 
 function readBridgeResult(options) {
+  if (options.readBridgeResult) return options.readBridgeResult();
   return waitForAcceptanceObservation({
     accept: (result) => result?.status === 'passed' || result?.status === 'failed',
     describe: (result) => `scenario status=${result?.status ?? 'missing'}`,

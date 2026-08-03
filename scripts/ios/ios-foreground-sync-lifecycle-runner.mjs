@@ -4,6 +4,12 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
+import {
+  runIosInfrastructureCommand,
+  waitForIosBridgeResult
+} from './ios-acceptance-infrastructure-error.mjs';
+import { cleanupOwnedIosSimulator, createOwnedIosSimulator } from './ios-dedicated-simulator-runtime.mjs';
+import { recordAction, setPhase } from './ios-foreground-sync-lifecycle-evidence.mjs';
 import { iosResourceCommand, iosXcodebuildResourceArgs, resolveIosResourceMode } from './ios-resource-profile.mjs';
 import { createLifecycleBuildEnv, sanitizeIosAcceptanceEnv } from './ios-foreground-sync-lifecycle-build.mjs';
 import { startPairingAcceptanceService } from './ios-pairing-acceptance-runner.mjs';
@@ -13,11 +19,6 @@ import {
   waitForAcceptanceObservation,
   writeAcceptanceFailure
 } from './ios-simulator-acceptance-runner.mjs';
-import {
-  createDedicatedSimulatorArgs,
-  dedicatedSimulatorCleanupArgs,
-  selectDedicatedIphoneTemplate
-} from './ios-dedicated-simulator.mjs';
 import {
   assertForegroundSyncLifecycleRequestPhase,
   verifyForegroundSyncLifecycleAcceptance
@@ -31,7 +32,8 @@ const RESULT_RELATIVE_PATH = 'Library/FolioleBridgeAcceptance/result.json';
 
 export async function runIosForegroundSyncLifecycleAcceptance(
   repoRoot,
-  artifactDir = path.join(repoRoot, '.tmp/artifacts/ios-bridge-acceptance', SCENARIO)
+  artifactDir = path.join(repoRoot, '.tmp/artifacts/ios-bridge-acceptance', SCENARIO),
+  attemptNumber = 1
 ) {
   const resourceMode = resolveIosResourceMode();
   const options = {
@@ -40,13 +42,17 @@ export async function runIosForegroundSyncLifecycleAcceptance(
   };
   prepareArtifactDirectory(artifactDir);
   let service = null;
-  let udid = null;
+  let owned = null;
   try {
     setPhase(options, 'endpoint-ready', 'prepare');
-    const template = selectDedicatedIphoneTemplate(runJson(options, 'xcrun', ['simctl', 'list', 'devices', 'available', '--json']));
-    udid = capture(options, 'xcrun', createDedicatedSimulatorArgs(template, `Foliole Foreground Sync ${process.pid}`)).trim();
-    if (!udid) throw new Error('Dedicated iOS foreground sync Simulator was not created.');
-    writeFileSync(path.join(artifactDir, 'simulator-owned.json'), `${JSON.stringify({ template, udid }, null, 2)}\n`);
+    owned = createOwnedIosSimulator({
+      artifactDir, create: (args) => capture(options, 'xcrun', args),
+      listAvailable: () => JSON.parse(capture(options, 'xcrun', [
+        'simctl', 'list', 'devices', 'available', '--json'
+      ])),
+      name: `Foliole Foreground Sync ${process.pid} ${attemptNumber}`
+    });
+    const { template, udid } = owned;
     service = startPairingAcceptanceService(repoRoot, artifactDir, SCENARIO);
     const serviceInfo = await waitForJson(options, 'service.json', 'lifecycle service', (value) => Boolean(value.endpoint));
     prepareBuild(options, udid, serviceInfo.endpoint);
@@ -106,11 +112,13 @@ export async function runIosForegroundSyncLifecycleAcceptance(
     return report;
   } catch (error) {
     writeAcceptanceFailure(artifactDir, error);
-    if (udid) writeSimulatorLog(options, udid);
     throw error;
   } finally {
-    if (udid) cleanupSimulator(options, udid);
-    service?.kill('SIGTERM');
+    try {
+      if (owned) cleanupSimulator(options, owned.udid);
+    } finally {
+      service?.kill('SIGTERM');
+    }
   }
 }
 
@@ -136,8 +144,10 @@ function prepareBuild(options, udid, endpoint) {
 }
 
 function bootAndInstall(options, udid) {
-  run(options, 'xcrun', ['simctl', 'boot', udid]);
-  run(options, 'xcrun', ['simctl', 'bootstatus', udid, '-b']);
+  runIosInfrastructureCommand('simulator-boot', () => {
+    run(options, 'xcrun', ['simctl', 'boot', udid]);
+    run(options, 'xcrun', ['simctl', 'bootstatus', udid, '-b']);
+  });
   const app = path.join(options.derivedData, 'Build/Products/Debug-iphonesimulator/App.app');
   run(options, 'codesign', ['--verify', '--deep', '--strict', app]);
   const signature = verifyAcceptanceAppSignature(captureAllowFailure(options, 'codesign', ['-d', '--verbose=4', app]), BUNDLE_ID);
@@ -175,9 +185,9 @@ async function waitForRequestPhase(options, phase, count) {
 }
 
 function waitForBridge(options, resultPath, accept, label, timeoutMs = 20_000) {
-  return waitForAcceptanceObservation({ accept, describe: (value) => `phase=${value?.phase ?? 'missing'}`,
+  return waitForIosBridgeResult({ accept, describe: (value) => `phase=${value?.phase ?? 'missing'}`,
     initialObservation: `${label} result was not readable`, label,
-    read: () => JSON.parse(readFileSync(resultPath, 'utf8')), timeoutMs });
+    resultPath, timeoutMs });
 }
 
 function waitForJson(options, name, label, accept) {
@@ -189,22 +199,10 @@ function readObservations(options) {
   return JSON.parse(readFileSync(path.join(options.artifactDir, 'service-observations.json'), 'utf8'));
 }
 
-function setPhase(options, phase, action) {
-  writeFileSync(path.join(options.artifactDir, 'lifecycle-control.json'), `${JSON.stringify({ phase })}\n`);
-  recordAction(options, phase, action);
-}
-
-function recordAction(options, phase, action) {
-  const file = path.join(options.artifactDir, 'lifecycle-actions.json');
-  let actions = [];
-  try { actions = JSON.parse(readFileSync(file, 'utf8')); } catch { /* first action */ }
-  actions.push({ action, at: new Date().toISOString(), phase });
-  writeFileSync(file, `${JSON.stringify(actions, null, 2)}\n`);
-}
-
 function launch(options, udid, terminate) {
   recordAction(options, 'acceptance-app', terminate ? 'launch-fresh-process' : 'bring-to-foreground');
-  run(options, 'xcrun', ['simctl', 'launch', ...(terminate ? ['--terminate-running-process'] : []), udid, BUNDLE_ID]);
+  return runIosInfrastructureCommand('app-launch', () =>
+    run(options, 'xcrun', ['simctl', 'launch', ...(terminate ? ['--terminate-running-process'] : []), udid, BUNDLE_ID]));
 }
 
 function resolveContainer(options, udid) {
@@ -212,23 +210,17 @@ function resolveContainer(options, udid) {
 }
 
 function cleanupSimulator(options, udid) {
-  runAllowFailure(options, 'xcrun', ['simctl', 'terminate', udid, BUNDLE_ID]);
-  const cleanup = dedicatedSimulatorCleanupArgs(udid);
-  runAllowFailure(options, 'xcrun', cleanup.shutdown);
-  runAllowFailure(options, 'xcrun', cleanup.delete);
-}
-
-function writeSimulatorLog(options, udid) {
-  writeFileSync(path.join(options.artifactDir, 'simulator.log'), captureAllowFailure(options, 'xcrun', [
-    'simctl', 'spawn', udid, 'log', 'show', '--last', '5m', '--style', 'compact', '--predicate', 'process == "App"'
-  ]));
+  cleanupOwnedIosSimulator({
+    artifactDir: options.artifactDir, bundleId: BUNDLE_ID,
+    captureLog: (args) => captureAllowFailure(options, 'xcrun', args),
+    runAllowFailure: (args) => runAllowFailure(options, 'xcrun', args), udid
+  });
 }
 
 function runHeavy(options, command, args, extra = {}) {
   const task = iosResourceCommand(command, args, options.resourceMode);
   run(options, task.command, task.args, extra);
 }
-function runJson(options, command, args) { return JSON.parse(capture(options, command, args)); }
 function capture(options, command, args) {
   const result = spawnSync(command, args, { cwd: options.repoRoot, encoding: 'utf8', timeout: 600_000 });
   if (result.status !== 0) throw new Error([command, ...args, result.error?.message || result.stderr || `failed with ${result.status}`].join(' '));
