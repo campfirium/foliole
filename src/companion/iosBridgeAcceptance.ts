@@ -70,7 +70,7 @@ async function bestEffortClearAcceptanceState() {
   };
 }
 
-async function runInitialPairing(deviceId: string, deviceName: string) {
+async function runInitialPairing(deviceId: string, deviceName: string, databasePath: string | null) {
   const endpoint = acceptanceEndpoint()!;
   await clearCompanionPairingCredentials();
   await saveCompanionWorkspaceSyncEndpoint('');
@@ -90,6 +90,7 @@ async function runInitialPairing(deviceId: string, deviceName: string) {
   const workspace = await saveCompanionWorkspaceSyncEndpoint(endpoint!);
   const signed = await fetchDesktopJson<{ ok: boolean }>(endpoint!, '/acceptance/signed');
   postResult({
+    database_path: databasePath,
     endpoint_restored: workspace.endpoint_url === endpoint,
     error: null,
     pairing_device_id: pairing.device_id,
@@ -134,7 +135,9 @@ export async function runIosBridgeAcceptance() {
     const bootstrap = await loadCompanionBootstrapState();
     const pairing = await loadCompanionPairingState();
     if (pairing.is_paired) await runRestartAndDisconnect(pairing.device_id ?? '');
-    else await runInitialPairing(bootstrap.device_id, bootstrap.device_name ?? 'Acceptance iPhone');
+    else await runInitialPairing(
+      bootstrap.device_id, bootstrap.device_name ?? 'Acceptance iPhone', bootstrap.database_path
+    );
   } catch (error) {
     const cleanup = await bestEffortClearAcceptanceState();
     postResult({

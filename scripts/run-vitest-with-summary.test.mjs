@@ -131,7 +131,7 @@ describe('run-vitest-with-summary', () => {
     }
   });
 
-  it('lets release gates tune workers and file parallelism without changing package scripts', async () => {
+  it('lets release gates tune the pool, workers, and file parallelism without changing package scripts', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'vitest-summary-tuning-'));
     const reportPath = path.join(tempRoot, '.tmp', 'vitest', 'summary.json');
     try {
@@ -144,6 +144,7 @@ describe('run-vitest-with-summary', () => {
           VITEST_BIN: '',
           VITEST_FILE_PARALLELISM: '1',
           VITEST_MAX_WORKERS: '4',
+          VITEST_POOL: 'forks',
           VITEST_SUMMARY_SLOW_LIMIT: '2'
         },
         ['--pool=threads', '--maxWorkers=2', '--no-file-parallelism', 'src/Foo.test.ts']
@@ -151,6 +152,8 @@ describe('run-vitest-with-summary', () => {
 
       expect(result.code).toBe(0);
       const args = JSON.parse(await readFile(argsPath, 'utf8'));
+      expect(args).toContain('--pool=forks');
+      expect(args).not.toContain('--pool=threads');
       expect(args).toContain('--maxWorkers=4');
       expect(args).not.toContain('--maxWorkers=2');
       expect(args).not.toContain('--no-file-parallelism');

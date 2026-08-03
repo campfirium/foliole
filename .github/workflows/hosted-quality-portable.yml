@@ -33,26 +33,31 @@ jobs:
             runner: ubuntu-latest
             domain: android-source
             script: test:release:android
+            vitest_pool: threads
             timeout_minutes: 20
           - host: Ubuntu
             runner: ubuntu-latest
             domain: shared
             script: test:release:shared
+            vitest_pool: threads
             timeout_minutes: 20
           - host: Windows
             runner: windows-latest
             domain: android-source
             script: test:release:android
+            vitest_pool: forks
             timeout_minutes: 20
           - host: Windows
             runner: windows-latest
             domain: shared
             script: test:release:shared
+            vitest_pool: threads
             timeout_minutes: 20
     env:
       CI: "true"
       FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: "1"
       TARGET_SHA: ${{ inputs.target_sha }}
+      VITEST_POOL: ${{ matrix.vitest_pool }}
     steps:
       - name: Validate target SHA input
         run: node -e "if (!/^[0-9a-f]{40}$/.test(process.env.TARGET_SHA ?? '')) throw new Error('target_sha must be a full 40-character lowercase commit SHA')"

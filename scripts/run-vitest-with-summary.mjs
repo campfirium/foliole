@@ -86,6 +86,12 @@ function removeMaxWorkersArgs(args) {
 
 function resolveVitestArgs(vitestArgs, env) {
   let args = [...vitestArgs];
+  const pool = env.VITEST_POOL || '';
+  if (pool) {
+    if (!['forks', 'threads'].includes(pool)) throw new Error(`Unsupported VITEST_POOL: ${pool}`);
+    args = args.filter((arg) => !arg.startsWith('--pool='));
+    args.unshift(`--pool=${pool}`);
+  }
   const maxWorkers = env.VITEST_MAX_WORKERS || '';
   if (maxWorkers) {
     args = removeMaxWorkersArgs(args);

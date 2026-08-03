@@ -64,13 +64,10 @@ export async function runIosBootstrapAcceptanceAttempt(repoRoot, scenario, artif
     bootSimulator(options, owned.udid);
     const signatureIdentifier = installFreshAcceptanceApp(options, owned.udid);
     const containerPath = resolveContainerPath(options, owned.udid);
-    const databasePath = path.join(containerPath, DATABASE_RELATIVE_PATH);
     const bridgeResultPath = path.join(containerPath, RESULT_RELATIVE_PATH);
-    const first = await waitForBootstrapSnapshot(
-      () => readBootstrapSnapshot(options, databasePath),
-      () => launchApp(options, owned.udid), BOOTSTRAP_TIMEOUT_MS
+    const { databasePath, first, firstBridge } = await runInitialAcceptanceLaunch(
+      options, scenario, owned.udid, containerPath, bridgeResultPath
     );
-    const firstBridge = verifyBridgeResult(await readBridgeResult(bridgeResultPath), scenario);
     run(options, 'xcrun', ['simctl', 'terminate', owned.udid, BUNDLE_ID]);
     const firstContentObservations = scenario === 'content-resource-read' ? readServiceObservations(artifactDir) : null;
     const firstScenarioSnapshot = readSnapshot(options, scenario, containerPath);
@@ -176,6 +173,33 @@ function readSnapshot(options, scenario, containerPath) {
     capture: (command, args) => capture(options, command, args), containerPath,
     databaseRelativePath: DATABASE_RELATIVE_PATH
   });
+}
+
+export function resolveAcceptanceDatabasePath(containerPath, result) {
+  const containerRoot = path.resolve(containerPath);
+  const databasePath = typeof result?.database_path === 'string' ? path.resolve(result.database_path) : '';
+  if (!databasePath.startsWith(`${containerRoot}${path.sep}`)) {
+    throw new Error('iOS acceptance did not publish a confined runtime database path.');
+  }
+  return databasePath;
+}
+
+async function runInitialAcceptanceLaunch(options, scenario, udid, containerPath, bridgeResultPath) {
+  if (scenario !== 'pairing-signed-transport') {
+    const databasePath = path.join(containerPath, DATABASE_RELATIVE_PATH);
+    const first = await waitForBootstrapSnapshot(
+      () => readBootstrapSnapshot(options, databasePath), () => launchApp(options, udid), BOOTSTRAP_TIMEOUT_MS
+    );
+    const firstBridge = verifyBridgeResult(await readBridgeResult(bridgeResultPath), scenario);
+    return { databasePath, first, firstBridge };
+  }
+  launchApp(options, udid);
+  const firstBridge = verifyBridgeResult(await readBridgeResult(bridgeResultPath, BOOTSTRAP_TIMEOUT_MS), scenario);
+  const databasePath = resolveAcceptanceDatabasePath(containerPath, firstBridge);
+  const first = await waitForBootstrapSnapshot(
+    () => readBootstrapSnapshot(options, databasePath), undefined, BOOTSTRAP_TIMEOUT_MS
+  );
+  return { databasePath, first, firstBridge };
 }
 
 function cleanupSimulator(options, artifactDir, udid) {

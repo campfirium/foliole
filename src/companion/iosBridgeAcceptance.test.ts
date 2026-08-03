@@ -42,7 +42,10 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.stubEnv('VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_ENDPOINT', 'http://127.0.0.1:43123');
   window.webkit = { messageHandlers: { folioleBridgeAcceptance: { postMessage: mocks.postMessage } } };
-  mocks.loadBootstrap.mockResolvedValue({ device_id: 'ios-1', device_name: 'Acceptance iPhone' });
+  mocks.loadBootstrap.mockResolvedValue({
+    database_path: '/app/Library/CapacitorDatabase/foliole-companionSQLite.db',
+    device_id: 'ios-1', device_name: 'Acceptance iPhone'
+  });
   mocks.clearPairing.mockResolvedValue({ is_paired: false });
   mocks.saveEndpoint.mockResolvedValue({ endpoint_url: 'http://127.0.0.1:43123' });
 });
@@ -58,7 +61,10 @@ it('pairs through existing APIs, persists the endpoint, and performs a signed re
 
   expect(mocks.requestPairing).toHaveBeenCalledWith(expect.objectContaining({ deviceId: 'ios-1' }));
   expect(mocks.pair).toHaveBeenCalledWith(expect.objectContaining({ pairRequestId: 'pair-1' }));
-  expect(mocks.postMessage).toHaveBeenCalledWith(expect.objectContaining({ phase: 'paired', status: 'passed' }));
+  expect(mocks.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+    database_path: '/app/Library/CapacitorDatabase/foliole-companionSQLite.db',
+    phase: 'paired', status: 'passed'
+  }));
 });
 
 it('restores pairing, propagates redirect/error status, and clears signing ability', async () => {

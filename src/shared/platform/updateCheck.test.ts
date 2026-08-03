@@ -17,6 +17,10 @@ import {
   subscribeUpdateCheckState
 } from './updateCheck';
 
+const appVersion = vi.hoisted(() => ({ loadAppVersion: vi.fn<() => Promise<string>>() }));
+
+vi.mock('./appVersion', () => ({ loadAppVersion: appVersion.loadAppVersion }));
+
 function createMockElectronApi(invoke: NativeInvoke) {
   return {
     invoke,
@@ -50,6 +54,7 @@ beforeEach(() => {
   window.localStorage.clear();
   delete window.electronAPI;
   globalThis.fetch = vi.fn();
+  appVersion.loadAppVersion.mockReset().mockResolvedValue('0.1.0');
 });
 
 afterEach(() => {
@@ -148,7 +153,6 @@ it('checks the static manifest and persists the latest release state', async () 
     status: 'available'
   });
 
-  expect(invoke).toHaveBeenCalledWith('app_get_version');
   expect(readUpdateCheckState()).toMatchObject({
     cachedReleaseNotes: {
       en: { '0.1.3': { notes: ['New update details.'] } },
@@ -203,19 +207,18 @@ it('uses the beta hourly policy to avoid repeated automatic requests', async () 
   } as Response);
 
   await checkForFolioleUpdates({ force: true });
+  const firstCheckRequestCount = vi.mocked(fetch).mock.calls.length;
   vi.setSystemTime(new Date('2026-05-31T00:30:00.000Z'));
 
   await expect(checkForFolioleUpdates()).resolves.toMatchObject({ status: 'skipped' });
-  expect(fetch).toHaveBeenCalledTimes(1);
+  expect(fetch).toHaveBeenCalledTimes(firstCheckRequestCount);
   expect(getNextUpdateCheckDelayMs()).toBe(30 * 60 * 1000);
 });
 
 it('clears a cached available release after that version is installed', async () => {
   let installedVersion = '0.1.0';
-  const invoke = vi.fn(async (command: string, args?: unknown) => {
-    void args;
-    return command === 'app_get_version' ? installedVersion : { phase: 'idle' };
-  });
+  appVersion.loadAppVersion.mockImplementation(async () => installedVersion);
+  const invoke = vi.fn().mockResolvedValue({ phase: 'idle' });
   window.electronAPI = createMockElectronApi(invoke);
   vi.mocked(fetch).mockResolvedValue({ json: async () => createManifest(), ok: true } as Response);
 
