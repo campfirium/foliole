@@ -22,15 +22,20 @@ export function assertLinuxBuildHost(platform = process.platform, arch = process
   if (platform !== 'linux' || arch !== 'x64') throw new Error('Linux DEB packaging requires a Linux x64 host');
 }
 
-async function writeBuilderConfig() {
-  const base = JSON.parse(await readFile('electron/builder.json', 'utf8'));
+export function createLinuxBuilderConfig(base) {
   const extraFiles = (base.extraFiles ?? []).filter((entry) => entry.from !== 'build/cli');
-  const config = {
+  return {
     ...base,
     directories: { ...base.directories, output: 'artifacts/linux' },
     extraFiles: [...extraFiles, { from: 'build/linux/foliole', to: 'bin/foliole' }],
-    linux: { ...base.linux, target: ['deb'] }
+    linux: { ...base.linux, target: ['deb'] },
+    publish: null
   };
+}
+
+async function writeBuilderConfig() {
+  const base = JSON.parse(await readFile('electron/builder.json', 'utf8'));
+  const config = createLinuxBuilderConfig(base);
   await mkdir(path.dirname(GENERATED_CONFIG), { recursive: true });
   await writeFile(GENERATED_CONFIG, `${JSON.stringify(config, null, 2)}\n`);
 }
