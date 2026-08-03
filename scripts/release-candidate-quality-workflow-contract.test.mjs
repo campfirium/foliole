@@ -34,7 +34,7 @@ describe('release candidate quality workflow contract', () => {
 
   it('preserves the native preflight and desktop golden journey', () => {
     expect(source).toContain('runs-on: windows-latest');
-    expect(source).toContain('run: npm ci');
+    expect(source).toContain('run: node scripts/quality/hosted-npm-ci.mjs');
     expect(source).toContain('npm run electron:rebuild:native');
     expect(source).toContain('node scripts/electron-sqlite-runner.mjs --preflight');
     expect(source).toContain('run: npm run test:e2e:desktop:rc-golden-journey');

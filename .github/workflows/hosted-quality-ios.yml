@@ -45,7 +45,7 @@ jobs:
           node-version: 22
           cache: npm
       - name: Install dependencies
-        run: npm ci
+        run: node scripts/quality/hosted-npm-ci.mjs
       - name: Rebuild Electron native ABI for iOS contract tests
         run: npm run electron:rebuild:native
       - name: Run iOS boundary quality
@@ -98,7 +98,7 @@ jobs:
           node-version: 22
           cache: npm
       - name: Install dependencies
-        run: npm ci
+        run: node scripts/quality/hosted-npm-ci.mjs
       - name: Rebuild Electron native ABI for Simulator desktop pairing
         run: npm run electron:rebuild:native
       - name: Run iOS Simulator scenario

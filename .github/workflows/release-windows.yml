@@ -89,7 +89,7 @@ jobs:
           if ((git rev-parse HEAD) -ne $env:TARGET_SHA) { throw "Checked out SHA does not match target SHA" }
           if ($package.version -ne $env:TARGET_VERSION) { throw "Package version does not match target version" }
       - name: Install dependencies
-        run: npm ci
+        run: node scripts/quality/hosted-npm-ci.mjs
       - name: Verify Artifact Signing configuration
         run: node scripts/windows/check-artifact-signing-config.mjs
       - name: Authenticate to Azure with OIDC
@@ -122,7 +122,7 @@ jobs:
         if: inputs.updater_baseline_version != ''
         working-directory: .tmp/updater-baseline
         run: |
-          npm ci --ignore-scripts
+          node "${{ github.workspace }}/scripts/quality/hosted-npm-ci.mjs" --ignore-scripts
           node node_modules/electron/install.js
       - name: Prove verified Windows baseline consumes same-run update
         if: inputs.updater_baseline_version != ''

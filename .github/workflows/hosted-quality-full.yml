@@ -53,7 +53,7 @@ jobs:
           node-version: 22
           cache: npm
       - name: Install dependencies
-        run: npm ci
+        run: node scripts/quality/hosted-npm-ci.mjs
       - name: Run Common build
         run: bash scripts/quality/quality-gate-target.sh release-hosted-common-build
       - name: Upload Common build logs
@@ -101,7 +101,7 @@ jobs:
         run: node scripts/windows/windows-ci-evidence.mjs verify
       - name: Install dependencies
         id: npm_ci
-        run: npm ci
+        run: node scripts/quality/hosted-npm-ci.mjs
       - name: Rebuild and verify Electron native ABI
         id: native_abi
         run: |
@@ -179,7 +179,7 @@ jobs:
           distribution: temurin
           java-version: '21'
       - name: Install dependencies
-        run: npm ci
+        run: node scripts/quality/hosted-npm-ci.mjs
       - name: Run canonical Android host tail
         run: npm run quality:release:android:tail
       - name: Upload Android quality logs

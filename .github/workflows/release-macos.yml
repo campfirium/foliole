@@ -93,7 +93,7 @@ jobs:
             exit 1
           fi
       - name: Install dependencies
-        run: npm ci
+        run: node scripts/quality/hosted-npm-ci.mjs
       - name: Install Apple signing and notarization credentials
         shell: bash
         env:
@@ -166,7 +166,7 @@ jobs:
         if: inputs.updater_baseline_version != ''
         working-directory: .tmp/updater-baseline
         run: |
-          npm ci --ignore-scripts
+          node "${{ github.workspace }}/scripts/quality/hosted-npm-ci.mjs" --ignore-scripts
           node node_modules/electron/install.js
       - name: Prove verified macOS baseline consumes same-run update
         if: inputs.updater_baseline_version != ''

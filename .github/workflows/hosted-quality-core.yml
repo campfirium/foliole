@@ -69,7 +69,7 @@ jobs:
         run: node scripts/windows/windows-ci-evidence.mjs verify
       - name: Install dependencies
         id: npm_ci
-        run: npm ci
+        run: node scripts/quality/hosted-npm-ci.mjs
       - name: Run dependency hardening checks
         id: dependency_hardening
         run: npm run deps:hardening:check
@@ -137,7 +137,7 @@ jobs:
           distribution: temurin
           java-version: '21'
       - name: Install dependencies
-        run: npm ci
+        run: node scripts/quality/hosted-npm-ci.mjs
       - name: Rebuild Electron native ABI for Android contract tests
         run: npm run electron:rebuild:native
       - name: Run Android quality

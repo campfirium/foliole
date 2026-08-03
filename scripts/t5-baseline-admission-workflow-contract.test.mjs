@@ -63,7 +63,8 @@ describe('T5 Baseline Admission workflow contract', () => {
       expect(job).toContain('persist-credentials: false');
       expect(job).toContain("execFileSync('git', ['rev-parse', 'HEAD']");
       expect(job.indexOf('Validate target SHA input')).toBeLessThan(job.indexOf('Check out target snapshot'));
-      expect(job.indexOf('run: npm ci')).toBeLessThan(job.indexOf('Verify checked-out target SHA'));
+      expect(job.indexOf('run: node scripts/quality/hosted-npm-ci.mjs'))
+        .toBeLessThan(job.indexOf('Verify checked-out target SHA'));
       expect(job.indexOf('Verify checked-out target SHA')).toBeLessThan(
         job.indexOf('run: npm run electron:rebuild:native')
       );
