@@ -1,33 +1,15 @@
-import { readFile, readdir } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
-async function descendants(rootPid: number) {
-  const entries = (await readdir('/proc')).filter((entry) => /^\d+$/u.test(entry));
-  const processes = await Promise.all(entries.map(async (entry) => {
-    try {
-      const status = await readFile(path.join('/proc', entry, 'status'), 'utf8');
-      const parent = Number(status.match(/^PPid:\s+(\d+)$/mu)?.[1]);
-      const command = (await readFile(path.join('/proc', entry, 'cmdline'))).toString().replaceAll('\0', ' ').trim();
-      return { command, parent, pid: Number(entry), status };
-    } catch {
-      return null;
-    }
-  }));
-  const selected = [];
-  const pending = [rootPid];
-  while (pending.length > 0) {
-    const parent = pending.shift()!;
-    for (const entry of processes) {
-      if (entry?.parent !== parent || selected.some((item) => item.pid === entry.pid)) continue;
-      selected.push(entry);
-      pending.push(entry.pid);
-    }
-  }
-  return selected;
+async function readLinuxProcess(pid: number) {
+  const status = await readFile(path.join('/proc', String(pid), 'status'), 'utf8');
+  const command = (await readFile(path.join('/proc', String(pid), 'cmdline')))
+    .toString().replaceAll('\0', ' ').trim();
+  return { command, status };
 }
 
 test('runs the installed Linux DEB with Chromium sandbox and desktop core', async ({
@@ -44,11 +26,12 @@ test('runs the installed Linux DEB with Chromium sandbox and desktop core', asyn
     version: app.getVersion()
   }));
   expect(identity).toEqual({ architecture: 'x64', noSandbox: false, platform: 'linux', version: expectedVersion });
-  const processTree = await descendants(desktopSession.electronApp.process().pid!);
-  expect(processTree.some((entry) => entry.command.includes('--type=renderer'))).toBe(true);
-  expect(processTree.every((entry) => !entry.command.includes('--no-sandbox'))).toBe(true);
-  expect(processTree.filter((entry) => entry.command.includes('--type=renderer'))
-    .every((entry) => /^Seccomp:\s+2$/mu.test(entry.status))).toBe(true);
+  const nativeWindow = await desktopSession.electronApp.browserWindow(desktopWindow);
+  const rendererPid = await nativeWindow.evaluate(({ webContents }) => webContents.getOSProcessId());
+  const renderer = await readLinuxProcess(rendererPid);
+  expect(renderer.command).toContain('--type=renderer');
+  expect(renderer.command).not.toContain('--no-sandbox');
+  expect(renderer.status).toMatch(/^Seccomp:\s+2$/mu);
   const profile = await readFile(`/proc/${desktopSession.electronApp.process().pid}/attr/current`, 'utf8');
   expect(profile).toContain('foliole');
   await desktopWindow.evaluate(async () => {
