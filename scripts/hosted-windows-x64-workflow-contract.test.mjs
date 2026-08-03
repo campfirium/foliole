@@ -18,6 +18,7 @@ describe('hosted Windows x64 workflow contract', () => {
     expect(windowsJob).toContain('runs-on: windows-latest');
     expect(windowsJob).toContain('FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: "1"');
     expect(windowsJob).toContain('persist-credentials: false');
+    expect(windowsJob).toContain('VITEST_POOL: forks');
     expect(windowsJob).toContain('run: npm run quality:desktop');
     expect(windowsJob).not.toContain('quality:release:windows:core');
     expect(windowsJob).not.toContain('quality:release:windows:tail');
