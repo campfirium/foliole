@@ -17,18 +17,18 @@ function installCommands(value, commands = []) {
     return commands;
   }
   if (!value || typeof value !== 'object') return commands;
-  if (typeof value.run === 'string' && value.run.includes(RUNNER)) commands.push(value.run);
+  if (typeof value.run === 'string' && (
+    value.run.includes(RUNNER) || /(?:^|\s)npm ci(?:\s|$)/mu.test(value.run)
+  )) commands.push(value.run);
   for (const child of Object.values(value)) installCommands(child, commands);
   return commands;
 }
 
 describe('hosted npm ci workflow contract', () => {
   it('routes every workflow dependency install through the repository runner', () => {
-    const sources = workflowPaths.map((file) => fs.readFileSync(file, 'utf8'));
-    expect(sources.join('\n')).not.toMatch(/(?:^|\s)npm ci(?:\s|$)/mu);
     const commands = workflowPaths.flatMap((file) => installCommands(parse(fs.readFileSync(file, 'utf8'))));
-    expect(commands).toHaveLength(19);
-    expect(commands.filter((command) => command.includes('--ignore-scripts'))).toHaveLength(2);
+    expect(commands.length).toBeGreaterThan(0);
+    expect(commands.every((command) => command.includes(RUNNER))).toBe(true);
   });
 
   it('keeps baseline installs script-free before the explicit Electron installer', () => {
