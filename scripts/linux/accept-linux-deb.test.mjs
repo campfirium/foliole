@@ -14,7 +14,6 @@ it('requires installed integration without Linux updater metadata', () => {
   const contents = [
     './opt/Foliole/foliole',
     './opt/Foliole/bin/foliole',
-    './opt/Foliole/bin/foliole-global-clip',
     './opt/Foliole/resources/apparmor-profile',
     './usr/share/applications/foliole.desktop'
   ].join('\n');

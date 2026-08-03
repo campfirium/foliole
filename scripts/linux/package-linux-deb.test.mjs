@@ -21,10 +21,7 @@ it('disables builder publishing only in the Linux DEB build config', () => {
 
   expect(config.publish).toBeNull();
   expect(config.linux.target).toEqual(['deb']);
-  expect(config.extraFiles).toEqual([
-    { from: 'build/linux/foliole', to: 'bin/foliole' },
-    { from: 'build/linux/foliole-global-clip', to: 'bin/foliole-global-clip' }
-  ]);
+  expect(config.extraFiles).toEqual([{ from: 'build/linux/foliole', to: 'bin/foliole' }]);
 });
 
 it('roots an installed Linux package at its POSIX directory', () => {
