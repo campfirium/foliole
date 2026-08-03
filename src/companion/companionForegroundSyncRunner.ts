@@ -36,6 +36,7 @@ type ForegroundSyncRunnerArgs = {
   isPairingReadyRef: MutableRefObject<boolean>;
   lastCheckedAtRef: MutableRefObject<number>;
   lastForegroundAtRef: MutableRefObject<number>;
+  readAppActiveState: () => Promise<boolean>;
   resourceContinuationModeRef: MutableRefObject<CompanionSyncContinuationMode>;
   retryAttemptRef: MutableRefObject<number>;
   retryTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>;
@@ -55,6 +56,7 @@ export type ForegroundSyncRefs = Pick<
   | 'isPairingReadyRef'
   | 'lastCheckedAtRef'
   | 'lastForegroundAtRef'
+  | 'readAppActiveState'
   | 'resourceContinuationModeRef'
   | 'retryAttemptRef'
   | 'retryTimerRef'
@@ -84,8 +86,17 @@ function scheduleRetry(
   }
   args.retryTimerRef.current = setTimeout(() => {
     args.retryTimerRef.current = null;
-    runForegroundSyncCheck('retry');
+    void runRetryIfActive(args, runForegroundSyncCheck);
   }, delay);
+}
+
+async function runRetryIfActive(
+  args: ForegroundSyncRunnerArgs,
+  runForegroundSyncCheck: RunForegroundSyncCheck
+) {
+  const isActive = await args.readAppActiveState().catch(() => false);
+  args.isAppActiveRef.current = isActive;
+  if (!args.cancelled() && isActive) runForegroundSyncCheck('retry');
 }
 
 function shouldStartForegroundSync(args: ForegroundSyncRunnerArgs, reason: ForegroundSyncReason, now: number) {

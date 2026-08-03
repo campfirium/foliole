@@ -6,7 +6,8 @@ const capacitorState = vi.hoisted(() => ({
   isNativePlatform: vi.fn(() => true)
 }));
 const appState = vi.hoisted(() => ({
-  addListener: vi.fn()
+  addListener: vi.fn(),
+  getState: vi.fn(async () => ({ isActive: true }))
 }));
 
 vi.mock('@capacitor/core', () => ({
@@ -17,15 +18,11 @@ vi.mock('@capacitor/app', () => ({ App: appState }));
 
 import { useForegroundAutoSync } from './useCompanionWorkspaceAutoSync';
 
-it('cancels failed retries while backgrounded and syncs again on iOS resume', async () => {
+it('confirms current iOS state before a failed retry and syncs again on resume', async () => {
   vi.useFakeTimers();
   let resume: (() => void) | null = null;
-  const appStateHandlers: Array<(state: { isActive: boolean }) => void> = [];
   appState.addListener.mockImplementation(async (eventName: string, listener: () => void) => {
     if (eventName === 'resume') resume = listener;
-    if (eventName === 'appStateChange') {
-      appStateHandlers.push(listener as (state: { isActive: boolean }) => void);
-    }
     return { remove: vi.fn(async () => undefined) };
   });
   const tryForegroundAutoSync = vi.fn()
@@ -68,11 +65,12 @@ it('cancels failed retries while backgrounded and syncs again on iOS resume', as
   expect(appState.addListener).toHaveBeenCalledWith('resume', expect.any(Function));
 
   await act(async () => {
-    for (const handler of appStateHandlers) handler({ isActive: false });
+    appState.getState.mockResolvedValueOnce({ isActive: false });
     await vi.advanceTimersByTimeAsync(2_000);
   });
 
   expect(tryForegroundAutoSync).toHaveBeenCalledTimes(1);
+  expect(appState.getState).toHaveBeenCalledTimes(1);
 
   await act(async () => {
     resume?.();

@@ -30,6 +30,7 @@ async function renderAutoSyncHook(
     return vi.fn();
   });
   vi.doMock('../shared/platform/appLifecycle', () => ({
+    readNativeAppActiveState: vi.fn(async () => true),
     subscribeNativeAppBackground: vi.fn(async () => vi.fn()),
     subscribeNativeAppForeground
   }));

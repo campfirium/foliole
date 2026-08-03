@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import {
+  readNativeAppActiveState,
   subscribeNativeAppBackground,
   subscribeNativeAppForeground
 } from '../shared/platform/appLifecycle';
@@ -35,6 +36,7 @@ function useForegroundSyncRefs(isPairingReady: boolean, state: NativeCompanionWo
     isPairingReadyRef,
     lastCheckedAtRef,
     lastForegroundAtRef,
+    readAppActiveState: readNativeAppActiveState,
     resourceContinuationModeRef,
     retryAttemptRef,
     retryTimerRef,

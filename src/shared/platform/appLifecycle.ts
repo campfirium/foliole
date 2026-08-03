@@ -4,6 +4,13 @@ import { isNativeCompanionRuntime } from './companionBootstrap';
 
 type Unsubscribe = () => void;
 
+export async function readNativeAppActiveState() {
+  if (!isNativeCompanionRuntime()) {
+    return true;
+  }
+  return (await App.getState()).isActive;
+}
+
 async function toUnsubscribe(handlePromise: Promise<{ remove: () => Promise<void> }>) {
   const handle = await handlePromise;
   return () => {

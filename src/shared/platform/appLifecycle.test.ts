@@ -1,13 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const addListener = vi.fn();
+const getState = vi.fn();
 const companionBootstrapState = vi.hoisted(() => ({
   isNativeCompanionRuntime: vi.fn(() => false)
 }));
 
 vi.mock('@capacitor/app', () => ({
   App: {
-    addListener
+    addListener,
+    getState
   }
 }));
 
@@ -85,6 +87,7 @@ async function expectBackgroundLifecycleSubscription() {
 describe('appLifecycle', () => {
   beforeEach(() => {
     addListener.mockReset();
+    getState.mockReset();
     companionBootstrapState.isNativeCompanionRuntime.mockReturnValue(false);
   });
 
@@ -99,5 +102,13 @@ describe('appLifecycle', () => {
 
     expect(addListener).not.toHaveBeenCalled();
     expect(unsubscribe).toBeTypeOf('function');
+  });
+
+  it('reads the current native app state for retry gating', async () => {
+    companionBootstrapState.isNativeCompanionRuntime.mockReturnValue(true);
+    getState.mockResolvedValue({ isActive: false });
+    const { readNativeAppActiveState } = await import('./appLifecycle');
+
+    await expect(readNativeAppActiveState()).resolves.toBe(false);
   });
 });
