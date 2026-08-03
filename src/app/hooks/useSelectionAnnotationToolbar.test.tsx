@@ -132,6 +132,39 @@ it('anchors the selection toolbar primary action above the drag release point', 
   });
 });
 
+it('closes the selection toolbar when deleting the selected range', () => {
+  const selectedText = document.createTextNode('Welcome');
+  const selectedSpan = document.createElement('span');
+  selectedSpan.append(selectedText);
+  appendEditorTarget(selectedSpan);
+  const ranges = [{ from: 0, to: 7 }];
+  const adapter = createEditorAdapter({
+    getSelectionRanges: vi.fn(() => ranges)
+  });
+  const { result } = renderHook(() =>
+    useEditorContextCommands(buildHookArgs({ editorRef: { current: adapter } }))
+  );
+
+  act(() => {
+    selectedSpan.dispatchEvent(new MouseEvent('mouseup', {
+      bubbles: true,
+      button: 0,
+      clientX: 120,
+      clientY: 90
+    }));
+  });
+  expect(result.current.contextMenu?.mode).toBe('annotation-toolbar');
+
+  act(() => {
+    selectedSpan.dispatchEvent(new KeyboardEvent('keydown', {
+      bubbles: true,
+      key: 'Backspace'
+    }));
+  });
+
+  expect(result.current.contextMenu).toBeNull();
+});
+
 it('lets outside workspace item clicks finish without mutating editor selection', () => {
   const order: string[] = [];
   const adapter = createEditorAdapter({

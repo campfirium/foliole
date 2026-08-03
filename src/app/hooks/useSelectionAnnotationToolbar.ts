@@ -10,22 +10,20 @@ import {
   getPdfHighlightTarget,
   resolvePdfExistingHighlight
 } from './pdfExistingHighlightTarget';
+import {
+  clearActiveHighlightElements,
+  createSelectionToolbarDeletionHandler,
+  isEditorTarget
+} from './selectionAnnotationToolbarLifecycle';
 import { findTextAnchorAtPosition } from './selectionHighlightToggleSupport';
 import type { EditorContextMenuState } from './useEditorContextCommandHelpers';
 
 const ACTIVE_HIGHLIGHT_CLASS = 'cm-md-highlight-active';
 const HIGHLIGHT_TARGET_SELECTOR = '.cm-md-highlight, .cm-md-highlight-overlap, .cm-md-cloze, .cm-md-anchor-overlap';
-const EDITOR_TARGET_SELECTOR = '.cm-editor';
 const TOOLBAR_PRIMARY_ACTION_CENTER_OFFSET = 22;
 
 function getHighlightElement(target: EventTarget | null) {
   return target instanceof Element ? target.closest(HIGHLIGHT_TARGET_SELECTOR) : null;
-}
-
-function clearActiveHighlightElements() {
-  document.querySelectorAll(`.${ACTIVE_HIGHLIGHT_CLASS}`).forEach((element) => {
-    element.classList.remove(ACTIVE_HIGHLIGHT_CLASS);
-  });
 }
 
 function resolveSelectionToolbarPosition(event: MouseEvent, targetElement?: Element | null) {
@@ -51,10 +49,6 @@ function isAnnotationToolbarTarget(target: EventTarget | null) {
 
 function isHighlightRangeHandleTarget(target: EventTarget | null) {
   return target instanceof Element && target.closest('[data-highlight-range-handle="true"]') !== null;
-}
-
-function isEditorTarget(target: EventTarget | null) {
-  return target instanceof Element && target.closest(EDITOR_TARGET_SELECTOR) !== null;
 }
 
 function isHighlightTarget(target: EventTarget | null) {
@@ -224,10 +218,13 @@ export function useSelectionAnnotationToolbar(args: SelectionAnnotationToolbarAr
     const handleMouseDown = createAnnotationToolbarMouseDownHandler(args);
     const handleMouseUp = createAnnotationToolbarMouseUpHandler(args);
     const handleKeyDown = createPdfHighlightKeyDownHandler(args);
+    const handleDeletion = createSelectionToolbarDeletionHandler(args);
+    document.addEventListener('keydown', handleDeletion, true);
     document.addEventListener('keydown', handleKeyDown, true);
     document.addEventListener('mousedown', handleMouseDown, true);
     document.addEventListener('mouseup', handleMouseUp, true);
     return () => {
+      document.removeEventListener('keydown', handleDeletion, true);
       document.removeEventListener('mousedown', handleMouseDown, true);
       document.removeEventListener('mouseup', handleMouseUp, true);
       document.removeEventListener('keydown', handleKeyDown, true);
