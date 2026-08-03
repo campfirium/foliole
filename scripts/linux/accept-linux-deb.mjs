@@ -14,7 +14,7 @@ const USER_DATA_SENTINEL = path.join(EVIDENCE_DIRECTORY, 'preserved-user-data', 
 const CODEX_FIXTURE = path.join(EVIDENCE_DIRECTORY, 'external-codex-fixture.mjs');
 const CODEX_PATH_FIXTURE = path.join(EVIDENCE_DIRECTORY, 'codex');
 const INCOMPATIBLE_CODEX_FIXTURE = path.join(EVIDENCE_DIRECTORY, 'incompatible-codex');
-const CODEX_FIXTURE_SOURCE = `#!/usr/bin/env node
+const CODEX_FIXTURE_SOURCE = `#!${process.execPath}
 if (process.argv.includes('--version')) {
   console.log('codex-cli 0.0.0-linux-acceptance');
   process.exit(0);
