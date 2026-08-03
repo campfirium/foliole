@@ -16,6 +16,7 @@ const REGISTRY = {
   platforms: [{
     id: 'windows', displayName: 'Windows', status: 'active', architectures: ['x64'],
     deliveryChannel: 'github-release', t7Required: true, artifactContract: 'desktop-updater',
+    downloadAsset: 'Foliole-Windows-x64-{version}.exe',
     managedAssets: ['Foliole-Windows-x64-{version}.exe'],
     update: { mode: 'electron-updater', baselineVersion: '0.7.2' }
   }]
@@ -44,15 +45,21 @@ const RELEASE = {
   published_at: '2026-07-31T00:00:00Z',
   tag_name: `v${VERSION}`
 };
+const EN_NOTES = { [VERSION]: { notes: ['Fixed', 'A fix.'] } };
+const ZH_NOTES = { [VERSION]: { notes: ['修复', '一个修复。'] } };
 
 function validate(overrides = {}) {
+  const manifest = overrides.manifest ?? MANIFEST;
+  const version = manifest.latest;
   return validateReleaseManifestPublication({
+    enNotes: overrides.enNotes ?? (version === VERSION ? EN_NOTES : { [version]: { notes: ['A change.'] } }),
     intent: overrides.intent ?? INTENT,
-    manifest: overrides.manifest ?? MANIFEST,
+    manifest,
     previousManifest: overrides.previousManifest,
     registry: overrides.registry ?? REGISTRY,
     release: overrides.release ?? RELEASE,
-    repository: REPOSITORY
+    repository: REPOSITORY,
+    zhNotes: overrides.zhNotes ?? (version === VERSION ? ZH_NOTES : { [version]: { notes: ['一项变化。'] } })
   });
 }
 
@@ -127,6 +134,12 @@ describe('release manifest Pages preparation', () => {
     expect(() => validate({
       manifest: { ...MANIFEST, releases: [{ ...MANIFEST.releases[0], platforms: ['macos'] }] }
     })).toThrow('platforms must exactly match');
+  });
+
+  it('rejects platform-limited notes outside the frozen Release scope', () => {
+    expect(() => validate({
+      enNotes: { [VERSION]: { notes: [], platformNotes: { macos: ['A macOS fix.'] } } }
+    })).toThrow('outside the published platform scope');
   });
 
   it('queries the official published-release endpoint with explicit API headers', async () => {

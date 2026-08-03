@@ -14,9 +14,10 @@ function runner(version, bridgeVersion, calls) {
     if (command === 'git' && args[0] === 'branch') return 'release\n';
     if (command === 'git' && args[0] === 'rev-parse') return `${SHA}\n`;
     if (args.includes('--draft=false')) return '';
-    if (args[2] === tag && args.includes('assets,isDraft,tagName,targetCommitish')) {
+    if (args[2] === tag && args.includes('assets,body,isDraft,tagName,targetCommitish')) {
       return JSON.stringify({
         assets: [{ name: `Foliole-Windows-x64-${version}.exe` }],
+        body: '> Platforms: Windows\n\n### Fixed\n\n- A fix.',
         isDraft: true, tagName: tag, targetCommitish: SHA
       });
     }
@@ -53,5 +54,21 @@ describe('release public transition', () => {
       cwd: fixture.rootDir, run: runner(fixture.version, fixture.version, calls)
     })).resolves.toEqual({ expectedLatest: 'v0.9.0', tag: 'v0.9.0' });
     expect(calls.find((call) => call.includes('edit'))).toContain('--latest=true');
+  });
+
+  it('refuses to publish when the reviewed body declares another platform scope', async () => {
+    const fixture = await createFixture();
+    const calls = [];
+    const run = runner(fixture.version, '0.8.0', calls);
+    const mismatched = (command, args, options) => {
+      const output = run(command, args, options);
+      if (command === 'gh' && args.includes('assets,body,isDraft,tagName,targetCommitish')) {
+        return JSON.stringify({ ...JSON.parse(output), body: '> Platforms: macOS\n\n### Fixed\n\n- A fix.' });
+      }
+      return output;
+    };
+    await expect(publishRelease({ cwd: fixture.rootDir, run: mismatched }))
+      .rejects.toThrow('release body must begin with');
+    expect(calls.some((call) => call.includes('--draft=false'))).toBe(false);
   });
 });

@@ -24,9 +24,9 @@ export {
   compareVersionStrings,
   normalizeReleaseNotesCatalog,
   normalizeUpdateManifest,
-  selectLatestPlatformRelease,
-  selectSkippedPlatformReleases
+  selectLatestPlatformRelease
 } from './updateCheckModel';
+export { selectPlatformReleaseNoteSections, selectSkippedPlatformReleases } from './runtime/updateReleaseNotes';
 export type { UpdateCheckState, UpdateRelease, UpdateReleaseNotes } from './updateCheckModel';
 
 const DEFAULT_MANIFEST_URL = 'https://campfirium.github.io/foliole/releases/update-manifest.json';

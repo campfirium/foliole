@@ -1,6 +1,6 @@
 import { useLocalization } from '../../../../shared/localization/LocalizationProvider';
 import {
-  selectSkippedPlatformReleases,
+  selectPlatformReleaseNoteSections,
   type UpdateRelease,
   type UpdateCheckState,
   type UpdateReleaseNotes
@@ -30,8 +30,8 @@ type ReleaseNoteSection = {
 
 const RELEASE_NOTE_SECTION_HEADINGS = new Set(['New', 'Improved', 'Fixed', 'Changed', '新增', '优化', '修复', '变更']);
 
-function getReleaseNotes(state: UpdateCheckState, locale: 'en' | 'zh-Hans', version: string): UpdateReleaseNotes | null {
-  return state.cachedReleaseNotes?.[locale]?.[version] ?? state.cachedReleaseNotes?.en?.[version] ?? null;
+function getReleaseNotesCatalog(state: UpdateCheckState, locale: 'en' | 'zh-Hans') {
+  return state.cachedReleaseNotes?.[locale] ?? state.cachedReleaseNotes?.en ?? null;
 }
 
 function groupReleaseNotes(notes: string[]): ReleaseNoteSection[] {
@@ -79,8 +79,10 @@ function ReleaseNotesList(props: {
 
 export function SettingsUpdateReleaseNotes({ currentVersion, onOpenChange, open, state }: SettingsUpdateReleaseNotesProps) {
   const { locale, t } = useLocalization();
-  const releases = selectSkippedPlatformReleases(state.cachedManifest, currentVersion, state.latestVersion);
-  const visible = state.lastCheckStatus === 'available' && releases.length > 0;
+  const sections = selectPlatformReleaseNoteSections(
+    state.cachedManifest, getReleaseNotesCatalog(state, locale), currentVersion, state.latestVersion
+  );
+  const visible = state.lastCheckStatus === 'available' && sections.length > 0;
   if (!visible) return null;
 
   return (
@@ -99,11 +101,11 @@ export function SettingsUpdateReleaseNotes({ currentVersion, onOpenChange, open,
           </header>
           <div className="app-scrollbar min-h-0 overflow-auto px-6 pb-5 pt-3 [--app-scrollbar-thumb-color:rgb(var(--color-foreground)/0.05)] [--app-scrollbar-thumb-hover-color:rgb(var(--color-foreground)/0.12)]">
             <div className="space-y-4">
-              {releases.map((release) => (
+              {sections.map(({ release, releaseNotes }) => (
                 <ReleaseNotesList
                   key={release.version}
                   release={release}
-                  releaseNotes={getReleaseNotes(state, locale, release.version)}
+                  releaseNotes={releaseNotes}
                   versionAriaLabel={t('settings.about.update.pending.versionAria', { version: release.version })}
                   versionLabel={t('settings.about.update.pending.versionLabel', { version: release.version })}
                 />

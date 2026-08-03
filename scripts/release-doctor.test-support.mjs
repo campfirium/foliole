@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -25,6 +26,7 @@ export async function createFixture(overrides = {}) {
     platforms: [{
       id: 'windows', displayName: 'Windows', status: 'active', architectures: ['x64'],
       deliveryChannel: 'github-release', t7Required: true, artifactContract: 'desktop-updater',
+      downloadAsset: 'Foliole-Windows-x64-{version}.exe',
       managedAssets: ['Foliole-Windows-x64-{version}.exe'],
       update: { mode: 'electron-updater', baselineVersion: '0.7.2' }
     }]
@@ -47,7 +49,7 @@ export async function createFixture(overrides = {}) {
   });
   await writeJson(rootDir, 'releases/notes/en.json', overrides.enNotes ?? { [version]: { notes: ['Fixed', 'A fix.'] } });
   await writeJson(rootDir, 'releases/notes/zh-Hans.json', overrides.zhNotes ?? { [version]: { notes: ['修复', '一个修复。'] } });
-  await writeFile(join(rootDir, `releases/github/v${version}.md`), '### Fixed\n- A fix.\n');
+  await writeFile(join(rootDir, `releases/github/v${version}.md`), '> Platforms: Windows\n\n### Fixed\n- A fix.\n');
   await writeFile(
     join(rootDir, '.github/workflows/t7-release.yml'),
     overrides.releaseWorkflow ?? [
@@ -91,5 +93,59 @@ export function onlineManifest(version) {
       url: `https://github.com/campfirium/foliole/releases/tag/v${version}`,
       version
     }]
+  };
+}
+
+export function onlineDownloads(version) {
+  const asset = `Foliole-Windows-x64-${version}.exe`;
+  return {
+    allReleasesUrl: 'https://github.com/campfirium/foliole/releases',
+    productVersion: version,
+    schemaVersion: 1,
+    platforms: {
+      windows: {
+        architectures: ['x64'], asset, channel: 'github-release',
+        releaseUrl: `https://github.com/campfirium/foliole/releases/tag/v${version}`,
+        status: 'available', tag: `v${version}`,
+        url: `https://github.com/campfirium/foliole/releases/download/v${version}/${asset}`,
+        version
+      }
+    }
+  };
+}
+
+export function onlineReleaseFetcher(version, manifest = onlineManifest(version), downloads = onlineDownloads(version)) {
+  return async (url) => url.endsWith('/downloads.json') ? downloads : manifest;
+}
+
+export function githubResponses(version, candidate = {}, latestVersion = version, siteDownloads = onlineDownloads(version)) {
+  const publishedAt = candidate.isDraft === true ? null : '2026-07-31T00:00:00Z';
+  return {
+    [`gh release view v${version} -R campfirium/foliole --json body,isDraft,publishedAt,tagName,url,assets`]: {
+      status: 0,
+      stdout: JSON.stringify({
+        assets: [{ name: `Foliole-Windows-x64-${version}.exe` }],
+        body: '> Platforms: Windows\n\n### Fixed\n- A fix.\n',
+        isDraft: false, publishedAt, tagName: `v${version}`,
+        url: `https://github.com/campfirium/foliole/releases/tag/v${version}`,
+        ...candidate
+      }),
+      stderr: ''
+    },
+    'gh release view -R campfirium/foliole --json tagName,isDraft,publishedAt,url': {
+      status: 0,
+      stdout: JSON.stringify({ isDraft: false, publishedAt, tagName: `v${latestVersion}`, url: 'https://example.test' }),
+      stderr: ''
+    },
+    'gh run list --repo campfirium/foliole-site --workflow deploy.yml --event repository_dispatch --limit 1 --json conclusion,url,createdAt': {
+      status: 0,
+      stdout: JSON.stringify([{ conclusion: 'success', createdAt: publishedAt, url: 'https://example.test/site-run' }]),
+      stderr: ''
+    },
+    'gh api repos/campfirium/foliole-site/contents/content/downloads.json?ref=main --jq .content': {
+      status: 0,
+      stdout: Buffer.from(JSON.stringify(siteDownloads)).toString('base64'),
+      stderr: ''
+    }
   };
 }

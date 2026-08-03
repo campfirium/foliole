@@ -86,3 +86,49 @@ test('keeps retry waiting and terminal native failure distinct from update succe
   await expect(settingsDialog.getByText(UPDATE_PREPARING, { exact: true })).toBeVisible();
   await expect(settingsDialog.getByRole('button', { name: CHECK_UPDATES })).toHaveCount(0);
 });
+
+test('shows shared skipped-version notes without another platform limited fix', async ({
+  desktopSession,
+  desktopWindow
+}, testInfo) => {
+  const installedVersion = await desktopSession.electronApp.evaluate(({ app }) => app.getVersion());
+  const nextMajor = (Number.parseInt(installedVersion.split('.')[0] ?? '0', 10) || 0) + 1;
+  const latestVersion = `${nextMajor}.8.2`;
+  const skippedVersion = `${nextMajor}.8.1`;
+  await desktopWindow.evaluate(({ latestVersion, skippedVersion }) => {
+    const catalog = {
+      [latestVersion]: { notes: ['Improved', 'A final shared change.'], platformNotes: { macos: ['Fixed', 'A macOS fix.'] } },
+      [skippedVersion]: { notes: ['New', 'A shared change from 0.8.1.'], platformNotes: { windows: ['Fixed', 'A Windows-only fix.'] } }
+    };
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = async (input, init) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+      if (url.includes('/releases/update-manifest.json')) {
+        return new Response(JSON.stringify({
+          releases: [
+            { platforms: ['macos'], url: `https://github.com/campfirium/foliole/releases/tag/v${latestVersion}`, version: latestVersion },
+            { platforms: ['windows'], url: `https://github.com/campfirium/foliole/releases/tag/v${skippedVersion}`, version: skippedVersion }
+          ],
+          schemaVersion: 1
+        }), { headers: { 'content-type': 'application/json' }, status: 200 });
+      }
+      if (url.includes('/releases/notes/')) {
+        return new Response(JSON.stringify(catalog), { headers: { 'content-type': 'application/json' }, status: 200 });
+      }
+      return originalFetch(input, init);
+    };
+  }, { latestVersion, skippedVersion });
+  await expectWorkspaceShell(desktopWindow);
+  const settingsDialog = await openSettingsDialog(desktopWindow);
+  await settingsDialog.getByRole('button', { name: ABOUT_CATEGORY }).click();
+  await settingsDialog.getByRole('button', { name: CHECK_UPDATES }).click();
+
+  const releaseNotesDialog = desktopWindow.getByRole('dialog', { name: /^(Update details|更新内容)$/ });
+  await expect(releaseNotesDialog.getByText('A shared change from 0.8.1.')).toBeVisible();
+  await expect(releaseNotesDialog.getByText('A macOS fix.')).toBeVisible();
+  await expect(releaseNotesDialog.getByText('A Windows-only fix.')).toHaveCount(0);
+  const screenshotPath = path.join(process.cwd(), '.tmp/artifacts/desktop-acceptance/platform-release-notes.png');
+  await mkdir(path.dirname(screenshotPath), { recursive: true });
+  await releaseNotesDialog.screenshot({ path: screenshotPath });
+  await testInfo.attach('platform-release-notes', { path: screenshotPath });
+});

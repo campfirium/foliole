@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* global console, process */
 
-import { cp, mkdir, readFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,6 +15,11 @@ import {
 } from './release-platform-contract.mjs';
 import { assertPublishedManifestScope } from './release-publication-contract.mjs';
 import { assertExactReleaseAssets } from './release-asset-contract.mjs';
+import {
+  createPlatformDownloadDirectory,
+  listPlatformDownloadVersions
+} from './release-download-directory.mjs';
+import { assertLocalizedReleaseNotesScope } from './release-notes-contract.mjs';
 
 const VERSION = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u;
 
@@ -24,7 +29,7 @@ function required(value, name) {
   return normalized;
 }
 
-export function validateReleaseManifestPublication({ intent, manifest, previousManifest, registry, release, repository }) {
+export function validateReleaseManifestPublication({ enNotes, intent, manifest, previousManifest, registry, release, repository, zhNotes }) {
   const version = required(manifest?.latest, 'manifest latest');
   if (!VERSION.test(version)) throw new Error('manifest latest must be a valid version.');
   const entry = Array.isArray(manifest?.releases)
@@ -41,6 +46,7 @@ export function validateReleaseManifestPublication({ intent, manifest, previousM
   });
   assertPublishedManifestScope({ identity, manifest, previousManifest });
   assertExactReleaseAssets(identity, (release.assets ?? []).map((asset) => asset?.name ?? ''));
+  assertLocalizedReleaseNotesScope({ en: enNotes, 'zh-Hans': zhNotes }, identity, version);
   if (previousManifest) assertPublishedReleaseHistoryImmutable(previousManifest, manifest);
   const pendingFirstBaseline = version === '0.7.1' &&
     manifest.desktopUpdater?.firstCapableVersion === null &&
@@ -92,10 +98,21 @@ export async function prepareReleaseManifestSite({
     version: required(manifest.latest, 'manifest latest')
   });
   const publication = validateReleaseManifestPublication({
-    intent, manifest, previousManifest, registry, release, repository: normalizedRepository
+    enNotes, intent, manifest, previousManifest, registry, release, repository: normalizedRepository, zhNotes
+  });
+  const versions = listPlatformDownloadVersions(manifest, registry);
+  const publishedReleases = Object.fromEntries(await Promise.all(versions.map(async (version) => [
+    version,
+    version === publication.version ? release : await fetchPublishedRelease({
+      fetchImpl, repository: normalizedRepository, token, version
+    })
+  ])));
+  const downloads = createPlatformDownloadDirectory({
+    manifest, publishedReleases, registry, repository: normalizedRepository
   });
   await mkdir(dirname(outputRoot), { recursive: true });
   await cp(sourceRoot, outputRoot, { force: true, recursive: true });
+  await writeFile(join(outputRoot, 'downloads.json'), `${JSON.stringify(downloads, null, 2)}\n`);
   return publication;
 }
 

@@ -1,4 +1,3 @@
-import { Buffer } from 'node:buffer';
 import { existsSync } from 'node:fs';
 import { get } from 'node:https';
 import { join } from 'node:path';
@@ -6,6 +5,9 @@ import { join } from 'node:path';
 import { createCheck } from './release-doctor-core.mjs';
 import { assertExactReleaseAssets } from './release-asset-contract.mjs';
 import { resolveReleasePublication } from './release-publication-contract.mjs';
+import { DOWNLOADS_URL } from './release-doctor-site.mjs';
+
+export { checkSiteSync } from './release-doctor-site.mjs';
 
 const MANIFEST_URL = 'https://campfirium.github.io/foliole/releases/update-manifest.json';
 const MARKETING_ROOT = 'D:\\C\\foliole-marketing';
@@ -31,61 +33,6 @@ function classifyGhFailure(result) {
     return createCheck('SKIPPED', 'GitHub release remote', 'gh is not authenticated.');
   }
   return createCheck('UNKNOWN', 'GitHub release remote', `gh release check failed: ${(result.stderr || result.stdout || '').trim()}`);
-}
-
-function siteSyncCommandFailure(result, title) {
-  if (result.error?.code === 'ENOENT') {
-    return createCheck('SKIPPED', title, 'gh is not installed.');
-  }
-  return createCheck(
-    'UNKNOWN',
-    title,
-    (result.stderr || result.stdout || result.error?.message || 'GitHub check failed.').trim()
-  );
-}
-
-export function checkSiteSync(version, rootDir, commandRunner) {
-  const run = commandRunner('gh', [
-    'run', 'list', '--repo', 'campfirium/foliole-site', '--workflow', 'deploy.yml',
-    '--event', 'repository_dispatch', '--limit', '1',
-    '--json', 'conclusion,url,createdAt'
-  ], rootDir);
-  if (run.error || run.status !== 0) {
-    return [siteSyncCommandFailure(run, 'site release sync run')];
-  }
-  const latestRun = parseJsonResult(run)?.[0];
-  const checks = [createCheck(
-    latestRun?.conclusion === 'success' ? 'PASS' : 'FAIL',
-    'site release sync run',
-    latestRun
-      ? `latest repository_dispatch concluded ${latestRun.conclusion || '<pending>'}: ${latestRun.url ?? '<no url>'}`
-      : 'no repository_dispatch deployment run was found.'
-  )];
-
-  const manifest = commandRunner('gh', [
-    'api', 'repos/campfirium/foliole-site/contents/content/downloads.json?ref=main',
-    '--jq', '.content'
-  ], rootDir);
-  if (manifest.error || manifest.status !== 0) {
-    checks.push(siteSyncCommandFailure(manifest, 'site download manifest'));
-    return checks;
-  }
-  let published;
-  try {
-    published = JSON.parse(Buffer.from(manifest.stdout.trim(), 'base64').toString('utf8'));
-  } catch {
-    published = null;
-  }
-  const expectedTag = `v${version}`;
-  const current = published?.version === version && published?.tag === expectedTag;
-  checks.push(createCheck(
-    current ? 'PASS' : 'FAIL',
-    'site download manifest',
-    current
-      ? `site download manifest points to ${expectedTag}.`
-      : `site download manifest points to ${published?.tag ?? '<unreadable>'}; expected ${expectedTag}.`
-  ));
-  return checks;
 }
 
 function checkRemoteBody(candidateJson, localBody, phase) {
@@ -196,6 +143,28 @@ export async function checkOnlineManifest(version, identity, fetcher = fetchJson
   }
 }
 
+export async function checkOnlineDownloadDirectory(version, identity, fetcher = fetchJson) {
+  try {
+    const directory = await fetcher(DOWNLOADS_URL);
+    const platformIds = Object.keys(directory?.platforms ?? {}).sort();
+    const expectedIds = identity.registry.platforms.map(({ id }) => id).sort();
+    const exactPlatforms = JSON.stringify(platformIds) === JSON.stringify(expectedIds);
+    const selectedCurrent = identity.intent.selectedPlatforms.every((id) => {
+      const entry = directory?.platforms?.[id];
+      return entry?.status === 'available' && entry.version === version && entry.tag === `v${version}` &&
+        entry.url === `https://github.com/campfirium/foliole/releases/download/v${version}/${entry.asset}`;
+    });
+    return [
+      createCheck(exactPlatforms ? 'PASS' : 'FAIL', 'Pages download platforms', `online platform keys are ${platformIds.join(',') || '<missing>'}.`),
+      createCheck(selectedCurrent ? 'PASS' : 'FAIL', 'Pages selected downloads', selectedCurrent
+        ? `selected platforms point to exact v${version} assets.`
+        : `selected platforms do not all point to exact v${version} assets.`)
+    ];
+  } catch (error) {
+    return [createCheck('UNKNOWN', 'Pages download directory', `online downloads unavailable: ${error.message}`)];
+  }
+}
+
 export function checkMarketingPosting(version, marketingRoot = MARKETING_ROOT) {
   if (!existsSync(marketingRoot)) {
     return createCheck('SKIPPED', 'marketing posting file', `marketing checkout is unavailable at ${marketingRoot}.`);
@@ -213,6 +182,7 @@ export async function collectPostPublishChecks({ fetcher, identity, marketingRoo
   }
   return [
     ...(await checkOnlineManifest(version, identity, fetcher)),
+    ...(await checkOnlineDownloadDirectory(version, identity, fetcher)),
     checkMarketingPosting(version, marketingRoot)
   ];
 }

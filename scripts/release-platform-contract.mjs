@@ -57,6 +57,7 @@ function validatePlatform(platform, index) {
     deliveryChannel: requireString(platform.deliveryChannel, `${label}.deliveryChannel`),
     t7Required: platform.t7Required,
     artifactContract: requireString(platform.artifactContract, `${label}.artifactContract`),
+    ...(platform.downloadAsset ? { downloadAsset: requireString(platform.downloadAsset, `${label}.downloadAsset`) } : {}),
     managedAssets: requireStringArray(platform.managedAssets, `${label}.managedAssets`),
     update: validateUpdate(platform.update, `${label}.update`)
   };

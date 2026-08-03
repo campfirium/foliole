@@ -16,13 +16,15 @@ import {
 import {
   checkGithubReleaseSignals,
   checkSiteSync,
-  collectPostPublishChecks
+  collectPostPublishChecks,
+  fetchJson
 } from './release-doctor-post-publish.mjs';
 import {
   formatReleaseConfirmation,
   resolveReleasePlatformIdentity
 } from './release-platform-contract.mjs';
 import { assertPublishedManifestScope } from './release-publication-contract.mjs';
+import { checkReleaseMetadata } from './release-doctor-metadata.mjs';
 
 export { formatReleaseDoctorReport, hasFailures } from './release-doctor-core.mjs';
 
@@ -47,29 +49,6 @@ function checkPackage(packageJson) {
     return [createCheck('FAIL', 'package version', 'package.json has no version.')];
   }
   return [createCheck('PASS', 'package version', `package.json version is ${version}.`)];
-}
-
-async function checkGithubBody(rootDir, version) {
-  const relativePath = `releases/github/v${version}.md`;
-  if (!existsSync(join(rootDir, relativePath))) {
-    return createCheck('FAIL', 'GitHub release body', `${relativePath} is missing.`);
-  }
-  const body = await readTextFile(rootDir, relativePath);
-  if (body.trim().length === 0) {
-    return createCheck('FAIL', 'GitHub release body', `${relativePath} is empty.`);
-  }
-  return createCheck('PASS', 'GitHub release body', `${relativePath} exists.`);
-}
-
-function checkNotesCatalog(catalog, locale, version) {
-  const entry = catalog[version];
-  if (!entry) {
-    return createCheck('FAIL', `${locale} release notes`, `${locale} catalog has no ${version} entry.`);
-  }
-  if (!Array.isArray(entry.notes) || entry.notes.length === 0) {
-    return createCheck('FAIL', `${locale} release notes`, `${locale} ${version} notes are empty.`);
-  }
-  return createCheck('PASS', `${locale} release notes`, `${locale} ${version} notes contain ${entry.notes.length} item(s).`);
 }
 
 function checkManifest(manifest, version, identity) {
@@ -151,9 +130,7 @@ async function collectPostPublicMetadataChecks(rootDir, version, identity) {
     readJsonFile(rootDir, 'releases/notes/zh-Hans.json')
   ]);
   return [
-    await checkGithubBody(rootDir, version),
-    checkNotesCatalog(enNotes, 'en', version),
-    checkNotesCatalog(zhNotes, 'zh-Hans', version),
+    ...(await checkReleaseMetadata({ enNotes, identity, rootDir, version, zhNotes })),
     ...checkManifest(manifest, version, identity)
   ];
 }
@@ -201,6 +178,9 @@ export async function collectReleaseDoctorChecks({
   const localBody = phase === 'post' && existsSync(bodyPath)
     ? await readTextFile(rootDir, `releases/github/v${version}.md`)
     : '';
+  const siteChecks = phase === 'post'
+    ? await checkSiteSync(version, rootDir, commandRunner, fetcher ?? fetchJson)
+    : [];
   const checks = [
     ...checkPackage(packageJson),
     platform.check,
@@ -210,7 +190,7 @@ export async function collectReleaseDoctorChecks({
     ...(platform.identity ? checkGithubReleaseSignals({
       commandRunner, identity: platform.identity, localBody, manifest, phase, rootDir, version
     }) : []),
-    ...(phase === 'post' ? checkSiteSync(version, rootDir, commandRunner) : []),
+    ...siteChecks,
     ...(platform.identity
       ? await collectPostPublishChecks({ fetcher, identity: platform.identity, marketingRoot, phase, version })
       : [])

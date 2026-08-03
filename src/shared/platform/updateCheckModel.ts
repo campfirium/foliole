@@ -38,6 +38,7 @@ export interface UpdateManifest {
 
 export interface UpdateReleaseNotes {
   notes: string[];
+  platformNotes?: Record<string, string[]>;
   summary?: string;
 }
 
@@ -121,9 +122,16 @@ function normalizeReleaseNotes(value: unknown): UpdateReleaseNotes | null {
   if (!value || typeof value !== 'object') return null;
   const raw = value as Record<string, unknown>;
   const notes = Array.isArray(raw.notes) ? raw.notes.filter((item): item is string => typeof item === 'string') : [];
-  if (!notes.length && typeof raw.summary !== 'string') return null;
+  const platformNotes = raw.platformNotes && typeof raw.platformNotes === 'object' && !Array.isArray(raw.platformNotes)
+    ? Object.fromEntries(Object.entries(raw.platformNotes as Record<string, unknown>)
+      .map(([platform, entries]): [string, string[]] => [platform, Array.isArray(entries)
+        ? entries.filter((item): item is string => typeof item === 'string') : []])
+      .filter((entry) => entry[1].length > 0))
+    : {};
+  if (!notes.length && !Object.keys(platformNotes).length && typeof raw.summary !== 'string') return null;
   return {
     notes,
+    ...(Object.keys(platformNotes).length ? { platformNotes } : {}),
     ...(typeof raw.summary === 'string' ? { summary: raw.summary } : {})
   };
 }
@@ -202,22 +210,6 @@ export function selectLatestPlatformRelease(manifest: UpdateManifest, currentVer
   return manifest.releases
     .filter((release) => releaseMatchesTarget(release, target) && compareVersionStrings(release.version, currentVersion) > 0)
     .sort((left, right) => compareVersionStrings(right.version, left.version))[0] ?? null;
-}
-
-export function selectSkippedPlatformReleases(
-  manifest: UpdateManifest | null,
-  currentVersion: string | null,
-  latestVersion: string | null,
-  target = resolveRuntimeUpdateTarget()
-) {
-  if (!manifest || !currentVersion || !latestVersion) return [];
-  return manifest.releases
-    .filter((release) =>
-      releaseMatchesTarget(release, target)
-        && compareVersionStrings(release.version, currentVersion) > 0
-        && compareVersionStrings(release.version, latestVersion) <= 0
-    )
-    .sort((left, right) => compareVersionStrings(right.version, left.version));
 }
 
 function resolvePolicy(manifest: UpdateManifest | null, failed: boolean) {

@@ -1,6 +1,5 @@
 // @vitest-environment node
 
-import { Buffer } from 'node:buffer';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -15,50 +14,9 @@ import {
   commandRunner,
   createFixture,
   findCheck,
-  onlineManifest
+  githubResponses,
+  onlineReleaseFetcher
 } from './release-doctor.test-support.mjs';
-
-const ASSETS = [
-  { name: 'Foliole-Windows-x64-0.9.0.exe' }
-];
-
-function githubResponses(version, candidate = {}, latestVersion = version) {
-  const publishedAt = candidate.isDraft === true ? null : '2026-07-31T00:00:00Z';
-  const siteManifest = Buffer.from(JSON.stringify({
-    tag: `v${version}`,
-    version
-  })).toString('base64');
-  return {
-    [`gh release view v${version} -R campfirium/foliole --json body,isDraft,publishedAt,tagName,url,assets`]: {
-      status: 0,
-      stdout: JSON.stringify({
-        assets: ASSETS,
-        body: '### Fixed\n- A fix.\n',
-        isDraft: false,
-        publishedAt,
-        tagName: `v${version}`,
-        url: `https://github.com/campfirium/foliole/releases/tag/v${version}`,
-        ...candidate
-      }),
-      stderr: ''
-    },
-    'gh release view -R campfirium/foliole --json tagName,isDraft,publishedAt,url': {
-      status: 0,
-      stdout: JSON.stringify({ isDraft: false, publishedAt, tagName: `v${latestVersion}`, url: 'https://example.test' }),
-      stderr: ''
-    },
-    'gh run list --repo campfirium/foliole-site --workflow deploy.yml --event repository_dispatch --limit 1 --json conclusion,url,createdAt': {
-      status: 0,
-      stdout: JSON.stringify([{ conclusion: 'success', createdAt: publishedAt, url: 'https://example.test/site-run' }]),
-      stderr: ''
-    },
-    'gh api repos/campfirium/foliole-site/contents/content/downloads.json?ref=main --jq .content': {
-      status: 0,
-      stdout: siteManifest,
-      stderr: ''
-    }
-  };
-}
 
 describe('release doctor', () => {
   it('keeps pre-publish checks independent from committed release metadata', async () => {
@@ -109,7 +67,7 @@ describe('release doctor', () => {
     const result = await collectReleaseDoctorChecks({
       argv: ['--phase=post'],
       commandRunner: commandRunner(githubResponses(fixture.version)),
-      fetcher: async () => onlineManifest(fixture.version),
+      fetcher: onlineReleaseFetcher(fixture.version),
       marketingRoot: join(fixture.rootDir, 'missing-marketing'),
       rootDir: fixture.rootDir
     });
@@ -138,7 +96,7 @@ describe('release doctor', () => {
     const pre = await collectReleaseDoctorChecks({ commandRunner: commandRunner(responses), rootDir });
     const post = await collectReleaseDoctorChecks({
       argv: ['--phase=post'], commandRunner: commandRunner(responses),
-      fetcher: async () => onlineManifest(version), marketingRoot: join(rootDir, 'missing'), rootDir
+      fetcher: onlineReleaseFetcher(version), marketingRoot: join(rootDir, 'missing'), rootDir
     });
 
     expect(findCheck(pre, 'GitHub release state').status).toBe('PASS');
@@ -153,7 +111,7 @@ describe('release doctor', () => {
     const result = await collectReleaseDoctorChecks({
       argv: ['--phase=post'],
       commandRunner: commandRunner(githubResponses(version)),
-      fetcher: async () => onlineManifest(version),
+      fetcher: onlineReleaseFetcher(version),
       marketingRoot,
       rootDir
     });
@@ -176,52 +134,12 @@ describe('release doctor', () => {
     };
     const result = await collectReleaseDoctorChecks({
       argv: ['--phase=post'], commandRunner: commandRunner(responses),
-      fetcher: async () => onlineManifest(fixture.version),
+      fetcher: onlineReleaseFetcher(fixture.version),
       marketingRoot: join(fixture.rootDir, 'missing'), rootDir: fixture.rootDir
     });
 
     expect(findCheck(result, 'site release sync run').status).toBe('FAIL');
     expect(hasFailures(result.checks)).toBe(true);
-  });
-
-  it('accepts a scoped Release while repository latest remains on the bridge', async () => {
-    const version = '0.9.0';
-    const platformRegistry = {
-      schemaVersion: 1,
-      platforms: [
-        {
-          id: 'macos', displayName: 'macOS', status: 'active', architectures: ['arm64'],
-          deliveryChannel: 'github-release', t7Required: true, artifactContract: 'desktop-updater',
-          managedAssets: ['Foliole-macOS-arm64-{version}.dmg'],
-          update: { mode: 'electron-updater', baselineVersion: '0.7.2' }
-        },
-        {
-          id: 'windows', displayName: 'Windows', status: 'active', architectures: ['x64'],
-          deliveryChannel: 'github-release', t7Required: true, artifactContract: 'desktop-updater',
-          managedAssets: ['Foliole-Windows-x64-{version}.exe'],
-          update: { mode: 'electron-updater', baselineVersion: '0.7.2' }
-        }
-      ]
-    };
-    const manifest = {
-      desktopUpdater: { compatibilityBridgeVersion: '0.8.0' }, latest: version,
-      releases: [
-        { version: '0.8.0', platforms: ['macos', 'windows'] },
-        { version, platforms: ['windows'], url: `https://github.com/campfirium/foliole/releases/tag/v${version}` }
-      ]
-    };
-    const fixture = await createFixture({ manifest, platformRegistry });
-    const result = await collectReleaseDoctorChecks({
-      argv: ['--phase=post'],
-      commandRunner: commandRunner(githubResponses(version, {}, '0.8.0')),
-      fetcher: async () => manifest,
-      marketingRoot: join(fixture.rootDir, 'missing'),
-      rootDir: fixture.rootDir
-    });
-
-    expect(findCheck(result, 'GitHub latest release').status).toBe('PASS');
-    expect(findCheck(result, 'GitHub release scoped assets').status).toBe('PASS');
-    expect(findCheck(result, 'Pages manifest release platforms').status).toBe('PASS');
   });
 
   it('accepts the first bridge after metadata freezes its version', async () => {
@@ -235,7 +153,7 @@ describe('release doctor', () => {
     const result = await collectReleaseDoctorChecks({
       argv: ['--phase=post'],
       commandRunner: commandRunner(githubResponses(version)),
-      fetcher: async () => onlineManifest(version),
+      fetcher: onlineReleaseFetcher(version),
       marketingRoot: join(fixture.rootDir, 'missing'),
       rootDir: fixture.rootDir
     });

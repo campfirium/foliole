@@ -9,6 +9,7 @@
       "deliveryChannel": "github-release",
       "t7Required": true,
       "artifactContract": "desktop-updater",
+      "downloadAsset": "Foliole-macOS-arm64-{version}.dmg",
       "managedAssets": [
         "Foliole-macOS-arm64-{version}.dmg",
         "Foliole-macOS-arm64-{version}.dmg.blockmap",
@@ -30,6 +31,7 @@
       "deliveryChannel": "github-release",
       "t7Required": true,
       "artifactContract": "desktop-updater",
+      "downloadAsset": "Foliole-Windows-x64-{version}.exe",
       "managedAssets": [
         "Foliole-Windows-x64-{version}.exe",
         "Foliole-Windows-x64-{version}.exe.blockmap",
