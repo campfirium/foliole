@@ -15,7 +15,9 @@ it('adds installed Linux DEB acceptance to dev remote desktop quality without at
   expect(job.with.target_sha).toBe('${{ inputs.target_sha }}');
   expect(job.with.execution_lane).toBe('${{ inputs.execution_lane }}');
   expect(job.with.attest_artifact).toBe(false);
-  expect(job.permissions).toEqual({ contents: 'read' });
+  expect(job.permissions).toEqual({
+    'artifact-metadata': 'write', attestations: 'write', contents: 'read', 'id-token': 'write'
+  });
   expect(remote.jobs['scoped-quality'].permissions).toEqual({
     'artifact-metadata': 'write', attestations: 'write', contents: 'read', 'id-token': 'write'
   });

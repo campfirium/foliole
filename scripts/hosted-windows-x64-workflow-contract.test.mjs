@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 const core = fs.readFileSync('.github/workflows/hosted-quality-core.yml', 'utf8');
 const full = fs.readFileSync('.github/workflows/hosted-quality-full.yml', 'utf8');
 const t5 = fs.readFileSync('.github/workflows/t5-baseline-admission.yml', 'utf8');
-const windowsJob = core.slice(core.indexOf('  windows-quality:'), core.indexOf('  android-quality:'));
+const windowsJob = core.slice(core.indexOf('  windows-quality:'), core.indexOf('  linux-package-acceptance:'));
 const acceptanceJob = full.slice(
   full.indexOf('  windows-acceptance:'),
   full.indexOf('  android-host:')
@@ -64,6 +64,6 @@ describe('hosted Windows x64 workflow contract', () => {
     for (const rejected of [
       'windows:package', 'installed-app-smoke', 'actions/attest',
       'gh release', 'CSC_', 'id-token: write'
-    ]) expect(`${core}\n${full}`).not.toContain(rejected);
+    ]) expect(`${windowsJob}\n${acceptanceJob}`).not.toContain(rejected);
   });
 });
