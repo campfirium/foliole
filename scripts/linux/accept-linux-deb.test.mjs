@@ -21,4 +21,8 @@ it('requires installed integration without Linux updater metadata', () => {
   expect(() => assertDebContents(contents)).not.toThrow();
   expect(() => assertDebContents(`${contents}\n./opt/Foliole/resources/app-update.yml`))
     .toThrow('app-update.yml');
+  expect(() => assertDebContents(`${contents}\n./usr/bin/foliole-global-clip`))
+    .toThrow('foliole-global-clip');
+  expect(() => assertDebContents(`${contents}\n./usr/share/applications/foliole-global-capture.desktop`))
+    .toThrow('foliole-global-capture.desktop');
 });

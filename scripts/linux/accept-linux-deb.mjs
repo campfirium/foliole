@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /* global console, process */
 
+import { existsSync } from 'node:fs';
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -42,7 +43,13 @@ export function assertDebContents(contents) {
   ]) {
     if (!contents.includes(required)) throw new Error(`Linux DEB is missing ${required}`);
   }
-  for (const forbidden of ['app-update.yml', 'latest-linux.yml', 'package-type']) {
+  for (const forbidden of [
+    'app-update.yml',
+    'foliole-global-capture.desktop',
+    'foliole-global-clip',
+    'latest-linux.yml',
+    'package-type'
+  ]) {
     if (contents.includes(forbidden)) throw new Error(`Linux DEB must not contain ${forbidden}`);
   }
 }
@@ -56,6 +63,12 @@ function assertInstalledIntegration() {
   if (commandTarget !== '/opt/Foliole/bin/foliole') throw new Error('Linux CLI link is not package managed');
   const desktop = run('sed', ['-n', '1,120p', '/usr/share/applications/foliole.desktop'], { capture: true });
   if (!desktop.includes('Exec=/opt/Foliole/foliole')) throw new Error('Linux desktop entry points outside /opt/Foliole');
+  for (const unsupported of [
+    '/usr/bin/foliole-global-clip',
+    '/usr/share/applications/foliole-global-capture.desktop'
+  ]) {
+    if (existsSync(unsupported)) throw new Error(`Linux package installed unsupported Wayland capture path ${unsupported}`);
+  }
   run('/usr/bin/foliole', ['--help']);
   run('cmp', ['/opt/Foliole/resources/apparmor-profile', '/etc/apparmor.d/foliole']);
 }
