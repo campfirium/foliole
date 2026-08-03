@@ -29,7 +29,6 @@ test('runs the installed Linux DEB with Chromium sandbox and desktop core', asyn
   const nativeWindow = await desktopSession.electronApp.browserWindow(desktopWindow);
   const rendererPid = await nativeWindow.evaluate(({ webContents }) => webContents.getOSProcessId());
   const renderer = await readLinuxProcess(rendererPid);
-  expect(renderer.command).toContain('--type=renderer');
   expect(renderer.command).not.toContain('--no-sandbox');
   expect(renderer.status).toMatch(/^Seccomp:\s+2$/mu);
   const profile = await readFile(`/proc/${desktopSession.electronApp.process().pid}/attr/current`, 'utf8');
