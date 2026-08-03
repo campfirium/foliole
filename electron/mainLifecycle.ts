@@ -17,6 +17,10 @@ import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnos
 import { installExternalDocumentFileOpenLifecycle } from './externalDocumentFileOpen.js';
 import { notifyExternalSearchSecondInstance, notifyExternalSearchUserActivity, stopExternalSearchBackgroundRefresh } from './externalSearchBackgroundRefreshRuntime.js';
 import {
+  createGlobalCapturePanelLaunchIntent,
+  createGlobalCapturePanelSingleInstanceData
+} from './globalCapturePanelLaunchIntent.js';
+import {
   refreshGlobalClipShortcutFromSettings
 } from './globalClipShortcut.js';
 import { prepareGlobalClipToInboxWindows } from './globalClipToInbox.js';
@@ -58,11 +62,11 @@ export interface MainLifecycleArgs {
   runtimeMode: RuntimeMode;
 }
 
-function installSingleInstanceGate(runtimeMode: RuntimeMode) {
+function installSingleInstanceGate(runtimeMode: RuntimeMode, argv: readonly string[]) {
   if (runtimeMode.allowParallelInstance) {
     return;
   }
-  if (!app.requestSingleInstanceLock()) {
+  if (!app.requestSingleInstanceLock(createGlobalCapturePanelSingleInstanceData(argv))) {
     app.quit();
     process.exit(0);
   }
@@ -136,6 +140,18 @@ function installWindowAllClosedLifecycle() {
   });
 }
 
+function installSecondInstanceLifecycle(
+  requestCapturePanel: (argv: readonly string[], additionalData?: unknown) => boolean,
+  openMainWindow: () => Promise<BrowserWindow | null>,
+  enqueueExternalDocuments: (argv: string[]) => number
+) {
+  app.on('second-instance', (_event, argv, _workingDirectory, additionalData) => {
+    if (!requestCapturePanel(argv, additionalData)) void openMainWindow();
+    enqueueExternalDocuments(argv);
+    notifyExternalSearchSecondInstance();
+  });
+}
+
 async function prepareGlobalClipAfterStartup(startupMainWindow: Promise<BrowserWindow>) {
   await startupMainWindow;
   prepareGlobalClipToInboxWindows();
@@ -153,6 +169,7 @@ function createStartupMainWindow(
 
 export function installMainLifecycle(args: MainLifecycleArgs) {
   const externalDocumentFileOpen = installExternalDocumentFileOpenLifecycle();
+  const capturePanelLaunchIntent = createGlobalCapturePanelLaunchIntent(process.argv);
   let startupMainWindowPromise: Promise<BrowserWindow> | null = null;
   const openMainWindow = () => {
     if (startupMainWindowPromise) {
@@ -161,14 +178,10 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
     }
     return openOrCreateMainWindow(args, externalDocumentFileOpen.setReadyWindow);
   };
-  installSingleInstanceGate(args.runtimeMode);
+  installSingleInstanceGate(args.runtimeMode, process.argv);
   installBeforeQuitLifecycle();
   installActivateLifecycle(openMainWindow);
-  app.on('second-instance', (_event, argv) => {
-    void openMainWindow();
-    externalDocumentFileOpen.enqueueFromArgv(argv);
-    notifyExternalSearchSecondInstance();
-  });
+  installSecondInstanceLifecycle(capturePanelLaunchIntent.request, openMainWindow, externalDocumentFileOpen.enqueueFromArgv);
   app.whenReady().then(async () => {
     restoreDesktopSecurityScopedAccess();
     installAppProcessDiagnostics();
@@ -192,7 +205,7 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
         installPairingFocusHandler: () => installPairingFocusHandler(openMainWindow),
         loadStartupErrorSurface: (input) => loadStartupErrorSurface({ ...input, loadMainWindow: args.loadMainWindow }),
         mainWindow,
-        showInitialWindow: !wasOpenedAtLogin(),
+        showInitialWindow: !wasOpenedAtLogin() && !capturePanelLaunchIntent.hasInitialIntent,
         startCompanionSyncIfEnabled: () => startCompanionSyncIfEnabled({
           appVersion: resolveFolioleAppVersion(app),
           isEnabled: isDesktopCompanionSyncEnabled,
@@ -204,6 +217,7 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
     })();
     try {
       await prepareGlobalClipAfterStartup(startupMainWindowPromise);
+      capturePanelLaunchIntent.markReady();
     } finally {
       startupMainWindowPromise = null;
     }
