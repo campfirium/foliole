@@ -121,7 +121,7 @@
     "shortcutName": "Foliole"
   },
   "linux": {
-    "artifactName": "${productName}-Linux-Experimental-${arch}-${version}.${ext}",
+    "artifactName": "${productName}-Linux-Experimental-x64-${version}.${ext}",
     "icon": "build/icon.png",
     "target": ["AppImage"],
     "category": "Education"
