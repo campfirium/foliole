@@ -119,7 +119,8 @@ function runPackagedAcceptance(version) {
     FOLIOLE_ELECTRON_LAUNCH_MODE: 'installed',
     FOLIOLE_ELECTRON_NATIVE_HIDDEN: '1',
     FOLIOLE_CODEX_COMMAND: CODEX_FIXTURE,
-    FOLIOLE_LINUX_EXPECTED_VERSION: version
+    FOLIOLE_LINUX_EXPECTED_VERSION: version,
+    XDG_CURRENT_DESKTOP: 'GNOME'
   };
   run(process.execPath, [
     'scripts/with-resource-gate.mjs', 'preview', '--',
