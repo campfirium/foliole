@@ -1,0 +1,195 @@
+#!/usr/bin/python3
+
+import json
+import os
+from pathlib import Path
+import sqlite3
+import subprocess
+import sys
+import tempfile
+import uuid
+
+APP_COMMAND = Path('/opt/Foliole/foliole')
+APP_CONFIG_DIRNAME = 'foliole'
+CURRENT_LIBRARY_FILE = 'current-library.json'
+LEGACY_PATHS_FILE = 'library-path-settings.json'
+LIBRARY_PATH_SETTINGS_KEY = 'library_path_settings'
+
+
+def read_json(path):
+    try:
+        payload = json.loads(path.read_text(encoding='utf-8'))
+        return payload if isinstance(payload, dict) else None
+    except (OSError, ValueError):
+        return None
+
+
+def absolute_path(value):
+    if not isinstance(value, str) or not value.strip():
+        return None
+    path = Path(value.strip()).expanduser()
+    return Path(os.path.normpath(path)) if path.is_absolute() else None
+
+
+def resolve_documents_dir(env, home):
+    config_home = Path(env.get('XDG_CONFIG_HOME') or home / '.config')
+    payload_path = config_home / 'user-dirs.dirs'
+    try:
+        lines = payload_path.read_text(encoding='utf-8').splitlines()
+    except OSError:
+        return home / 'Documents'
+    for line in lines:
+        if not line.startswith('XDG_DOCUMENTS_DIR='):
+            continue
+        value = line.split('=', 1)[1].strip().strip('"')
+        value = value.replace('${HOME}', str(home)).replace('$HOME', str(home))
+        return absolute_path(value) or home / 'Documents'
+    return home / 'Documents'
+
+
+def resolve_config_dir(env, home):
+    user_data = absolute_path(env.get('FOLIOLE_USER_DATA_PATH'))
+    if user_data:
+        return user_data / 'config'
+    root = Path(env.get('XDG_CONFIG_HOME') or home / '.config')
+    return root / APP_CONFIG_DIRNAME / 'config'
+
+
+def resolve_library_home(env, home, config_dir):
+    explicit = absolute_path(env.get('FOLIOLE_LIBRARY_HOME'))
+    if explicit:
+        return explicit
+    current = read_json(config_dir / CURRENT_LIBRARY_FILE)
+    if current and current.get('use_default') is not True:
+        configured = absolute_path(current.get('library_home'))
+        if configured:
+            return configured
+    legacy = read_json(config_dir / LEGACY_PATHS_FILE)
+    configured = absolute_path(legacy.get('library_home')) if legacy else None
+    return configured or resolve_documents_dir(env, home) / 'Foliole'
+
+
+def read_database_inbox(database_path):
+    if not database_path.is_file():
+        return None
+    try:
+        connection = sqlite3.connect(f'{database_path.resolve().as_uri()}?mode=ro', uri=True)
+        try:
+            row = connection.execute(
+                'SELECT value FROM settings WHERE key = ?', (LIBRARY_PATH_SETTINGS_KEY,)
+            ).fetchone()
+        finally:
+            connection.close()
+        payload = json.loads(row[0]) if row else None
+        return absolute_path(payload.get('inbox')) if isinstance(payload, dict) else None
+    except (OSError, sqlite3.Error, ValueError):
+        return None
+
+
+def resolve_inbox_path(env=None, home=None):
+    env = os.environ if env is None else env
+    home = Path.home() if home is None else Path(home)
+    config_dir = resolve_config_dir(env, home)
+    library_home = resolve_library_home(env, home, config_dir)
+    configured = read_database_inbox(library_home / 'Data' / 'foliole.db')
+    if not configured:
+        legacy = read_json(config_dir / LEGACY_PATHS_FILE)
+        configured = absolute_path(legacy.get('inbox')) if legacy else None
+    return configured or library_home / 'Import' / 'Inbox'
+
+
+def drop_selection(text, inbox_path=None):
+    inbox = resolve_inbox_path() if inbox_path is None else Path(inbox_path)
+    inbox.mkdir(parents=True, exist_ok=True)
+    final_path = inbox / f'Global clip {uuid.uuid4().hex}.md'
+    file_descriptor, temporary_name = tempfile.mkstemp(
+        dir=inbox, prefix='.foliole-global-clip-', suffix='.tmp'
+    )
+    try:
+        with os.fdopen(file_descriptor, 'w', encoding='utf-8') as stream:
+            stream.write(text.rstrip() + '\n')
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary_name, final_path)
+    except Exception:
+        try:
+            os.unlink(temporary_name)
+        except OSError:
+            pass
+        raise
+    return final_path
+
+
+def capture_panel_command():
+    return [str(APP_COMMAND), '--global-capture-panel']
+
+
+def launch_capture_panel():
+    subprocess.Popen(
+        capture_panel_command(), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL, start_new_session=True
+    )
+
+
+def run_host():
+    import gi
+    gi.require_version('Gdk', '4.0')
+    gi.require_version('GLib', '2.0')
+    gi.require_version('Gtk', '4.0')
+    from gi.repository import Gdk, GLib, Gtk
+
+    Gtk.init()
+    display = Gdk.Display.get_default()
+    if display is None:
+        launch_capture_panel()
+        return 0
+    loop = GLib.MainLoop()
+    state = {'finished': False, 'started': False, 'status': 0}
+    window = Gtk.Window(title='Foliole Global Clip')
+    window.set_decorated(False)
+    window.set_default_size(1, 1)
+    window.set_opacity(0.01)
+
+    def finish(selection=None, error=None):
+        if state['finished']:
+            return False
+        state['finished'] = True
+        try:
+            if selection and selection.strip():
+                drop_selection(selection)
+            elif error is None:
+                launch_capture_panel()
+            else:
+                print(f'foliole-global-clip: {error}', file=sys.stderr)
+                state['status'] = 1
+        except Exception as failure:
+            print(f'foliole-global-clip: {failure}', file=sys.stderr)
+            state['status'] = 1
+        window.close()
+        loop.quit()
+        return False
+
+    def complete(clipboard, result):
+        try:
+            finish(clipboard.read_text_finish(result) or '')
+        except Exception:
+            finish('')
+
+    def read_selection():
+        display.get_primary_clipboard().read_text_async(None, complete)
+        return False
+
+    def on_active(_window, _parameter):
+        if window.is_active() and not state['started']:
+            state['started'] = True
+            GLib.idle_add(read_selection)
+
+    window.connect('notify::is-active', on_active)
+    window.present()
+    GLib.timeout_add(4000, lambda: finish(''))
+    loop.run()
+    return state['status']
+
+
+if __name__ == '__main__':
+    sys.exit(run_host())

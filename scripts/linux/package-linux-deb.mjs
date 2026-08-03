@@ -27,7 +27,11 @@ export function createLinuxBuilderConfig(base) {
   return {
     ...base,
     directories: { ...base.directories, output: 'artifacts/linux' },
-    extraFiles: [...extraFiles, { from: 'build/linux/foliole', to: 'bin/foliole' }],
+    extraFiles: [
+      ...extraFiles,
+      { from: 'build/linux/foliole', to: 'bin/foliole' },
+      { from: 'build/linux/foliole-global-clip', to: 'bin/foliole-global-clip' }
+    ],
     linux: { ...base.linux, target: ['deb'] },
     publish: null
   };

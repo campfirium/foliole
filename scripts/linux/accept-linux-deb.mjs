@@ -37,6 +37,7 @@ export function assertDebContents(contents) {
   for (const required of [
     './opt/Foliole/foliole',
     './opt/Foliole/bin/foliole',
+    './opt/Foliole/bin/foliole-global-clip',
     './opt/Foliole/resources/apparmor-profile',
     './usr/share/applications/foliole.desktop'
   ]) {
@@ -54,9 +55,14 @@ function assertPackageContents(debPath) {
 function assertInstalledIntegration() {
   const commandTarget = run('readlink', ['/usr/bin/foliole'], { capture: true });
   if (commandTarget !== '/opt/Foliole/bin/foliole') throw new Error('Linux CLI link is not package managed');
+  const clipTarget = run('readlink', ['/usr/bin/foliole-global-clip'], { capture: true });
+  if (clipTarget !== '/opt/Foliole/bin/foliole-global-clip') {
+    throw new Error('Linux global clip command is not package managed');
+  }
   const desktop = run('sed', ['-n', '1,120p', '/usr/share/applications/foliole.desktop'], { capture: true });
   if (!desktop.includes('Exec=/opt/Foliole/foliole')) throw new Error('Linux desktop entry points outside /opt/Foliole');
   run('/usr/bin/foliole', ['--help']);
+  run('/usr/bin/python3', ['-m', 'py_compile', '/opt/Foliole/bin/foliole-global-clip']);
   run('cmp', ['/opt/Foliole/resources/apparmor-profile', '/etc/apparmor.d/foliole']);
 }
 
@@ -79,7 +85,10 @@ function runPackagedAcceptance(version) {
 }
 
 async function assertRemovedPackageFiles() {
-  for (const removed of ['/opt/Foliole', '/usr/bin/foliole', '/usr/share/applications/foliole.desktop', '/etc/apparmor.d/foliole']) {
+  for (const removed of [
+    '/opt/Foliole', '/usr/bin/foliole', '/usr/bin/foliole-global-clip',
+    '/usr/share/applications/foliole.desktop', '/etc/apparmor.d/foliole'
+  ]) {
     await access(removed).then(
       () => { throw new Error(`Linux uninstall left package-owned path ${removed}`); },
       () => undefined

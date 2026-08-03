@@ -2,6 +2,7 @@
 set -eu
 
 ln -sfn '/opt/Foliole/bin/foliole' '/usr/bin/foliole'
+ln -sfn '/opt/Foliole/bin/foliole-global-clip' '/usr/bin/foliole-global-clip'
 
 if [[ -L /proc/self/ns/user ]] && unshare --user true; then
   chmod 0755 '/opt/Foliole/chrome-sandbox'
