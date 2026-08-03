@@ -12,6 +12,8 @@ import { assertDebMetadata, linuxDebName, verifyLinuxDebDirectory } from './linu
 const EVIDENCE_DIRECTORY = path.resolve('.tmp/artifacts/linux-deb-acceptance');
 const USER_DATA_SENTINEL = path.join(EVIDENCE_DIRECTORY, 'preserved-user-data', 'library-sentinel');
 const CODEX_FIXTURE = path.join(EVIDENCE_DIRECTORY, 'external-codex-fixture.mjs');
+const CODEX_PATH_FIXTURE = path.join(EVIDENCE_DIRECTORY, 'codex');
+const INCOMPATIBLE_CODEX_FIXTURE = path.join(EVIDENCE_DIRECTORY, 'incompatible-codex');
 const CODEX_FIXTURE_SOURCE = `#!/usr/bin/env node
 if (process.argv.includes('--version')) {
   console.log('codex-cli 0.0.0-linux-acceptance');
@@ -27,7 +29,12 @@ process.stdin.on('data', (chunk) => {
     if (!line) continue;
     const message = JSON.parse(line);
     if (message.method === 'initialize') console.log(JSON.stringify({ id: message.id, result: {} }));
-    if (message.method === 'account/read') console.log(JSON.stringify({ id: message.id, result: { account: { type: 'chatgpt' }, requiresOpenaiAuth: true } }));
+    if (message.method === 'account/read') {
+      const authenticated = process.env.FOLIOLE_CODEX_FIXTURE_AUTH !== 'missing';
+      console.log(JSON.stringify({ id: message.id, result: authenticated
+        ? { account: { type: 'chatgpt' }, requiresOpenaiAuth: true }
+        : { account: null, requiresOpenaiAuth: true } }));
+    }
   }
 });
 `;
@@ -119,6 +126,7 @@ function runPackagedAcceptance(version) {
     FOLIOLE_ELECTRON_LAUNCH_MODE: 'installed',
     FOLIOLE_ELECTRON_NATIVE_HIDDEN: '1',
     FOLIOLE_CODEX_COMMAND: CODEX_FIXTURE,
+    FOLIOLE_CODEX_PATH_FIXTURE_DIR: EVIDENCE_DIRECTORY,
     FOLIOLE_LINUX_EXPECTED_VERSION: version,
     XDG_CURRENT_DESKTOP: 'GNOME'
   };
@@ -155,7 +163,11 @@ export async function acceptLinuxDeb({ directory, targetSha, version }) {
   await mkdir(path.dirname(USER_DATA_SENTINEL), { recursive: true });
   await writeFile(USER_DATA_SENTINEL, 'preserve\n');
   await writeFile(CODEX_FIXTURE, CODEX_FIXTURE_SOURCE);
+  await writeFile(CODEX_PATH_FIXTURE, CODEX_FIXTURE_SOURCE);
+  await writeFile(INCOMPATIBLE_CODEX_FIXTURE, '#!/bin/sh\nexit 23\n');
   await chmod(CODEX_FIXTURE, 0o700);
+  await chmod(CODEX_PATH_FIXTURE, 0o700);
+  await chmod(INCOMPATIBLE_CODEX_FIXTURE, 0o700);
   run('sudo', ['apt-get', 'install', '-y', debPath]);
   assertInstalledIntegration();
   runPackagedAcceptance(version);

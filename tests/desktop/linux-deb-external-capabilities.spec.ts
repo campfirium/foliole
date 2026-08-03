@@ -99,6 +99,50 @@ async function expectExternalCapabilities(session: DesktopSession) {
   expect(security.backend).not.toBe('basic_text');
 }
 
+async function launchAssistantStatus(
+  source: DesktopSession,
+  env: NodeJS.ProcessEnv
+) {
+  const session = await launchDesktopSession({
+    env: {
+      ...source.launchOptions.env,
+      ...env,
+      FOLIOLE_ELECTRON_TEST_STATE_ROOT: `${source.target.runtimeStateRoot}-${crypto.randomUUID()}`
+    }
+  }) as DesktopSession;
+  try {
+    return await session.firstWindow.evaluate(() => window.electronAPI?.invoke('assistant_get_status'));
+  } finally {
+    await session.close();
+  }
+}
+
+test('installed Linux diagnoses Codex PATH, missing, incompatible, and signed-out states', async ({
+  desktopSession
+}) => {
+  const fixtureDirectory = desktopSession.launchOptions.env.FOLIOLE_CODEX_PATH_FIXTURE_DIR;
+  expect(fixtureDirectory).toBeTruthy();
+  await closeDesktopApplication(desktopSession.electronApp);
+  const basePath = '/usr/bin:/bin';
+  await expect(launchAssistantStatus(desktopSession, {
+    FOLIOLE_CODEX_COMMAND: '',
+    PATH: `${fixtureDirectory}:${basePath}`
+  })).resolves.toMatchObject({ state: 'ready' });
+  await expect(launchAssistantStatus(desktopSession, {
+    FOLIOLE_CODEX_COMMAND: '',
+    PATH: basePath
+  })).resolves.toMatchObject({ failure: { category: 'not_configured' } });
+  await expect(launchAssistantStatus(desktopSession, {
+    FOLIOLE_CODEX_COMMAND: path.join(fixtureDirectory!, 'incompatible-codex'),
+    PATH: basePath
+  })).resolves.toMatchObject({ failure: { category: 'launch_failed' } });
+  await expect(launchAssistantStatus(desktopSession, {
+    FOLIOLE_CODEX_COMMAND: path.join(fixtureDirectory!, 'external-codex-fixture.mjs'),
+    FOLIOLE_CODEX_FIXTURE_AUTH: 'missing',
+    PATH: basePath
+  })).resolves.toMatchObject({ failure: { category: 'auth_failed' } });
+});
+
 test('installed Linux capabilities use external Codex, loopback control, LAN sync, and system secrets', async ({
   desktopSession,
   desktopWindow
@@ -118,6 +162,11 @@ test('installed Linux capabilities use external Codex, loopback control, LAN syn
     ), 'utf8')) as { endpoint: string; token: string };
     expect(descriptor.endpoint).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/u);
     expect((await fetch(`${descriptor.endpoint}/agent-control/v1/capabilities`)).status).toBe(401);
+    const authorized = await fetch(`${descriptor.endpoint}/agent-control/v1/capabilities`, {
+      headers: { authorization: `Bearer ${descriptor.token}` }
+    });
+    expect(authorized.status).toBe(200);
+    expect(await authorized.text()).not.toContain(descriptor.token);
 
     const discovery = discoverFolioleService();
     const overview = await desktopWindow.evaluate(() => window.electronAPI?.invoke('enable_companion_sync')) as {
