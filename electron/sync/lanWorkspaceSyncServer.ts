@@ -135,6 +135,20 @@ function logRunningStatus() {
   });
 }
 
+export function applyLanSyncMdnsWarning(
+  status: LanWorkspaceSyncServerStatus,
+  error: unknown
+) {
+  return {
+    ...status,
+    last_error: error instanceof Error ? error.message : 'mDNS advertisement is unavailable.'
+  };
+}
+
+function recordMdnsWarning(error: unknown) {
+  activeStatus = applyLanSyncMdnsWarning(activeStatus, error);
+}
+
 export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; peerId: string }) {
   if (activeServer) {
     return activeStatus;
@@ -146,6 +160,7 @@ export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; p
     await listenOnSyncPort(server, port);
     startCompanionMdnsAdvertisement({
       appVersion: args.appVersion,
+      onWarning: recordMdnsWarning,
       peerId: args.peerId,
       port
     });

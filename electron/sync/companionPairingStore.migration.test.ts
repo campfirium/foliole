@@ -13,6 +13,7 @@ vi.mock('electron', () => ({
   safeStorage: {
     decryptString: () => { throw new Error('current key cannot decrypt legacy ciphertext'); },
     encryptString: (value: string) => Buffer.from(value),
+    getSelectedStorageBackend: () => 'gnome_libsecret',
     isEncryptionAvailable: () => true
   }
 }));

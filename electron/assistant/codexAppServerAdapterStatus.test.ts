@@ -28,6 +28,29 @@ it('reports not_configured status when codex is unavailable', async () => {
   });
 });
 
+it('distinguishes an incompatible codex command from a missing command', async () => {
+  const adapter = createStatusAdapter({
+    findCommandCandidates: async () => ['codex'],
+    probeCommand: async () => 'incompatible'
+  });
+
+  await expect(adapter.getStatus()).resolves.toMatchObject({
+    failure: { category: 'launch_failed' },
+    state: 'unavailable'
+  });
+});
+
+it('continues after an incompatible configured candidate when PATH has a working codex', async () => {
+  const probeCommand = vi.fn(async (command: string) => command === 'codex' ? 'ready' : 'incompatible');
+  const adapter = createStatusAdapter({
+    findCommandCandidates: async () => ['/configured/codex', 'codex'],
+    probeCommand
+  });
+
+  await expect(adapter.getStatus()).resolves.toMatchObject({ state: 'ready' });
+  expect(probeCommand.mock.calls.map(([command]) => command)).toEqual(['/configured/codex', 'codex']);
+});
+
 it('prefers a working Desktop runtime and falls back to the public codex command', async () => {
   const desktopCommand = 'C:\\Users\\Tester\\AppData\\Local\\OpenAI\\Codex\\bin\\abc123abc123abc1\\codex.exe';
   const probeCommand = vi.fn(async (command: string) => command === 'codex');

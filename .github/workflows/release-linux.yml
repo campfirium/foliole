@@ -95,7 +95,7 @@ jobs:
       - name: Install package and acceptance dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y apparmor apparmor-utils xvfb
+          sudo apt-get install -y apparmor apparmor-utils dbus-x11 gnome-keyring xvfb
           node scripts/quality/hosted-npm-ci.mjs
       - name: Build the Experimental DEB
         env:
@@ -105,7 +105,7 @@ jobs:
         env:
           TARGET_VERSION: ${{ steps.identity.outputs.target_version }}
         run: >-
-          node scripts/linux/accept-linux-deb.mjs
+          dbus-run-session -- node scripts/linux/accept-linux-deb.mjs
           --directory=artifacts/linux --target-sha="$TARGET_SHA" --version="$TARGET_VERSION"
       - name: Generate Linux artifact attestation
         if: inputs.execution_lane != '' && inputs.attest_artifact

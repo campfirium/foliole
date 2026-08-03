@@ -20,6 +20,7 @@ vi.mock('electron', () => ({
   safeStorage: {
     decryptString: vi.fn((payload: Buffer) => payload.toString('utf8')),
     encryptString: vi.fn((payload: string) => Buffer.from(payload, 'utf8')),
+    getSelectedStorageBackend: vi.fn(() => 'gnome_libsecret'),
     isEncryptionAvailable: vi.fn(() => true)
   }
 }));
@@ -166,10 +167,31 @@ function registerCapacitorCorsOriginTest() {
   });
 }
 
+function registerMdnsWarningTest() {
+  it('keeps LAN sync running while exposing an mDNS advertisement failure', async () => {
+    const { applyLanSyncMdnsWarning } = await import(
+      './lanWorkspaceSyncServer.js'
+    );
+
+    expect(applyLanSyncMdnsWarning({
+      advertised_urls: ['http://127.0.0.1:38641'],
+      last_error: null,
+      paired_device_count: 0,
+      pending_pair_request_count: 0,
+      port: 38641,
+      state: 'running'
+    }, new Error('multicast unavailable'))).toMatchObject({
+      last_error: 'multicast unavailable',
+      state: 'running'
+    });
+  });
+}
+
 describe('lan workspace sync server', () => {
   afterEach(resetLanWorkspaceSyncServerTestState);
   registerSnapshotProtectionTest();
   registerWorkspaceVersionProtectionTest();
   registerReplayProtectionTest();
   registerCapacitorCorsOriginTest();
+  registerMdnsWarningTest();
 });

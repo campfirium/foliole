@@ -25,4 +25,6 @@ it('requires installed integration without Linux updater metadata', () => {
     .toThrow('foliole-global-clip');
   expect(() => assertDebContents(`${contents}\n./usr/share/applications/foliole-global-capture.desktop`))
     .toThrow('foliole-global-capture.desktop');
+  expect(() => assertDebContents(`${contents}\n./opt/Foliole/bin/codex`))
+    .toThrow('./opt/Foliole/bin/codex');
 });

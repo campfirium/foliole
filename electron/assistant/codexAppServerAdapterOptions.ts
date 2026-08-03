@@ -1,5 +1,8 @@
 import type { CodexAccountState } from './codexAppServerAccount.js';
-import type { CodexLauncherOptions } from './codexAppServerCommandDiscovery.js';
+import type {
+  CodexCommandProbeResult,
+  CodexLauncherOptions
+} from './codexAppServerCommandDiscovery.js';
 import type {
   DynamicToolCallResult,
   FolioleDynamicToolRequest
@@ -21,7 +24,10 @@ export interface CodexAppServerAdapterOptions {
     spawn: () => SpawnedCodexProcess;
   }) => Promise<void>;
   mkdirSync?: (path: string, options: { recursive: true }) => void;
-  probeCommand?: (command: string, options: CodexLauncherOptions) => Promise<boolean>;
+  probeCommand?: (
+    command: string,
+    options: CodexLauncherOptions
+  ) => Promise<boolean | CodexCommandProbeResult>;
   openExternal?: (url: string) => Promise<unknown>;
   readAccountState?: (options: {
     appVersion: string;

@@ -5,6 +5,7 @@ import path from 'node:path';
 import { app, safeStorage } from 'electron';
 
 import type { SyncProtocolDescriptor } from '../../lib/platform/syncProtocolContract.js';
+import { ensureSecureStorageBackend } from '../security/secureStorageBackend.js';
 
 import {
   PairingStoreDecryptionError,
@@ -36,13 +37,6 @@ function resolveStorePath() {
   return path.join(app.getPath('userData'), PAIRED_DEVICE_STORE_FILE);
 }
 
-function ensureEncryptionAvailable() {
-  if (safeStorage.isEncryptionAvailable()) {
-    return;
-  }
-  throw new Error('Electron safeStorage is unavailable for companion pairing secrets.');
-}
-
 function readStoreStrict(): PairedDeviceStorePayload {
   const storePath = resolveStorePath();
   if (cachedStore && cachedStorePath === storePath) {
@@ -53,7 +47,7 @@ function readStoreStrict(): PairedDeviceStorePayload {
     cachedStore = { devices: [] };
     return cachedStore;
   }
-  ensureEncryptionAvailable();
+  ensureSecureStorageBackend('companion pairing secrets');
   const encrypted = fs.readFileSync(storePath);
   const parsed = readEncryptedPairingStorePayload(encrypted, storePath) as Partial<PairedDeviceStorePayload>;
   cachedStore = {
@@ -94,7 +88,7 @@ function quarantineUnreadableStore(storePath: string, cause: unknown) {
 }
 
 function writeStore(payload: PairedDeviceStorePayload) {
-  ensureEncryptionAvailable();
+  ensureSecureStorageBackend('companion pairing secrets');
   fs.mkdirSync(path.dirname(resolveStorePath()), { recursive: true });
   const encrypted = safeStorage.encryptString(JSON.stringify({ devices: dedupePairedDevices(payload.devices) }));
   fs.writeFileSync(resolveStorePath(), encrypted);

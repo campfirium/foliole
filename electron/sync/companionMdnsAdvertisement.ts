@@ -11,6 +11,7 @@ let activeService: PublishedBonjourService | null = null;
 
 export interface CompanionMdnsAdvertisementInput {
   appVersion: string;
+  onWarning?: (error: unknown) => void;
   peerId: string;
   port: number;
 }
@@ -19,6 +20,7 @@ export function startCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisemen
   stopCompanionMdnsAdvertisement();
   activeBonjour = new Bonjour(undefined, (error: unknown) => {
     console.warn('[companion-sync] mDNS advertisement warning', error);
+    input.onWarning?.(error);
   });
   activeService = activeBonjour.publish({
     name: 'Foliole Desktop',

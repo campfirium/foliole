@@ -25,6 +25,7 @@ import {
   findCodexCommandCandidates,
   probeCodexCommand,
   spawnCodexCommand,
+  type CodexCommandProbeResult,
   type CodexLauncherOptions
 } from './codexAppServerCommandDiscovery.js';
 import { executeFolioleDynamicTool } from './codexAppServerDynamicTools.js';
@@ -49,7 +50,7 @@ export class CodexAppServerAdapter {
   private readonly probeCommand: (
     command: string,
     options: CodexLauncherOptions
-  ) => Promise<boolean>;
+  ) => Promise<boolean | CodexCommandProbeResult>;
   private readonly openExternal: (url: string) => Promise<unknown>;
   private readonly readAccountState: NonNullable<CodexAppServerAdapterOptions['readAccountState']>;
   private resolvedCommand: string | null = null;
@@ -199,11 +200,15 @@ export class CodexAppServerAdapter {
     const candidates = this.configuredCommand
       ? [this.configuredCommand]
       : await this.findCommandCandidates(this.commandDiscoveryEnv);
+    let foundIncompatibleCommand = false;
     for (const command of candidates) {
-      if (!await this.probeCommand(command, options)) continue;
+      const result = await this.probeCommand(command, options);
+      if (result === 'incompatible') foundIncompatibleCommand = true;
+      if (result !== true && result !== 'ready') continue;
       this.resolvedCommand = command;
       return command;
     }
+    if (foundIncompatibleCommand) throw categorizedError('launch_failed');
     return null;
   }
 }

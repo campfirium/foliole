@@ -20,6 +20,8 @@ export interface CodexLauncherOptions {
   env: NodeJS.ProcessEnv;
 }
 
+export type CodexCommandProbeResult = 'incompatible' | 'missing' | 'ready';
+
 export async function findCodexCommandCandidates(
   env: NodeJS.ProcessEnv,
   platform = process.platform
@@ -64,8 +66,9 @@ export async function findWindowsDesktopCodexCommands(env: NodeJS.ProcessEnv) {
 }
 
 export async function probeCodexCommand(command: string, options: CodexLauncherOptions) {
-  if (!await probeCodexExitCode(command, ['--version'], options, PROBE_TIMEOUT_MS)) return false;
-  return probeAppServerInitialize(command, options);
+  const versionResult = await probeCodexExitCode(command, ['--version'], options, PROBE_TIMEOUT_MS);
+  if (versionResult !== 'ready') return versionResult;
+  return await probeAppServerInitialize(command, options) ? 'ready' : 'incompatible';
 }
 
 export function spawnCodexCommand(
@@ -103,19 +106,22 @@ async function probeCodexExitCode(
   options: CodexLauncherOptions,
   timeoutMs: number
 ) {
-  return new Promise<boolean>((resolve) => {
+  return new Promise<CodexCommandProbeResult>((resolve) => {
     const child = spawnCodexCommand(command, args, options);
     let settled = false;
-    const finish = (ok: boolean) => {
+    const finish = (result: CodexCommandProbeResult) => {
       if (settled) return;
       settled = true;
-      resolve(ok);
+      resolve(result);
     };
-    child.on('error', () => finish(false));
-    child.on('exit', (code) => finish(code === 0));
+    child.on('error', (error: unknown) => {
+      const errorCode = error && typeof error === 'object' && 'code' in error ? error.code : null;
+      finish(errorCode === 'ENOENT' ? 'missing' : 'incompatible');
+    });
+    child.on('exit', (code) => finish(code === 0 ? 'ready' : 'incompatible'));
     setTimeout(() => {
       child.kill();
-      finish(false);
+      finish('incompatible');
     }, timeoutMs).unref?.();
   });
 }

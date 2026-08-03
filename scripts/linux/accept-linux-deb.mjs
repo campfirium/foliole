@@ -2,7 +2,7 @@
 /* global console, process */
 
 import { existsSync } from 'node:fs';
-import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { access, chmod, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -11,10 +11,31 @@ import { assertDebMetadata, linuxDebName, verifyLinuxDebDirectory } from './linu
 
 const EVIDENCE_DIRECTORY = path.resolve('.tmp/artifacts/linux-deb-acceptance');
 const USER_DATA_SENTINEL = path.join(EVIDENCE_DIRECTORY, 'preserved-user-data', 'library-sentinel');
+const CODEX_FIXTURE = path.join(EVIDENCE_DIRECTORY, 'external-codex-fixture.mjs');
+const CODEX_FIXTURE_SOURCE = `#!/usr/bin/env node
+if (process.argv.includes('--version')) {
+  console.log('codex-cli 0.0.0-linux-acceptance');
+  process.exit(0);
+}
+process.stdin.setEncoding('utf8');
+let input = '';
+process.stdin.on('data', (chunk) => {
+  input += chunk;
+  const lines = input.split(/\\r?\\n/u);
+  input = lines.pop() ?? '';
+  for (const line of lines) {
+    if (!line) continue;
+    const message = JSON.parse(line);
+    if (message.method === 'initialize') console.log(JSON.stringify({ id: message.id, result: {} }));
+    if (message.method === 'account/read') console.log(JSON.stringify({ id: message.id, result: { account: { type: 'chatgpt' }, requiresOpenaiAuth: true } }));
+  }
+});
+`;
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
     encoding: 'utf8', env: options.env ?? process.env, shell: false,
+    input: options.input,
     stdio: options.capture ? 'pipe' : 'inherit'
   });
   if (result.error) throw result.error;
@@ -44,6 +65,8 @@ export function assertDebContents(contents) {
     if (!contents.includes(required)) throw new Error(`Linux DEB is missing ${required}`);
   }
   for (const forbidden of [
+    './opt/Foliole/bin/codex',
+    './opt/Foliole/codex',
     'app-update.yml',
     'foliole-global-capture.desktop',
     'foliole-global-clip',
@@ -64,6 +87,8 @@ function assertInstalledIntegration() {
   const desktop = run('sed', ['-n', '1,120p', '/usr/share/applications/foliole.desktop'], { capture: true });
   if (!desktop.includes('Exec=/opt/Foliole/foliole')) throw new Error('Linux desktop entry points outside /opt/Foliole');
   for (const unsupported of [
+    '/opt/Foliole/bin/codex',
+    '/opt/Foliole/codex',
     '/usr/bin/foliole-global-clip',
     '/usr/share/applications/foliole-global-capture.desktop'
   ]) {
@@ -73,21 +98,35 @@ function assertInstalledIntegration() {
   run('cmp', ['/opt/Foliole/resources/apparmor-profile', '/etc/apparmor.d/foliole']);
 }
 
+function startSecretServiceSession() {
+  const output = run('gnome-keyring-daemon', ['--unlock', '--components=secrets'], {
+    capture: true,
+    input: '\n'
+  });
+  return Object.fromEntries(output.split('\n').flatMap((line) => {
+    const match = /^([A-Z0-9_]+)=(.*?);?$/u.exec(line.trim());
+    return match ? [[match[1], match[2]]] : [];
+  }));
+}
+
 function runPackagedAcceptance(version) {
   const env = {
     ...process.env,
+    ...startSecretServiceSession(),
     FOLIOLE_DESKTOP_ACCEPTANCE_EVIDENCE: '1',
     FOLIOLE_ELECTRON_APP_ROOT: '/opt/Foliole',
     FOLIOLE_ELECTRON_INSTALLED_EXE_PATH: '/opt/Foliole/foliole',
     FOLIOLE_ELECTRON_LAUNCH_MODE: 'installed',
     FOLIOLE_ELECTRON_NATIVE_HIDDEN: '1',
+    FOLIOLE_CODEX_COMMAND: CODEX_FIXTURE,
     FOLIOLE_LINUX_EXPECTED_VERSION: version
   };
   run(process.execPath, [
     'scripts/with-resource-gate.mjs', 'preview', '--',
     'xvfb-run', '--auto-servernum', process.execPath, 'node_modules/playwright/cli.js',
     'test', '--config', 'playwright.desktop.config.ts',
-    'tests/desktop/linux-deb-core.spec.ts', 'tests/desktop/rc-golden-journey.spec.ts'
+    'tests/desktop/linux-deb-core.spec.ts', 'tests/desktop/linux-deb-external-capabilities.spec.ts',
+    'tests/desktop/rc-golden-journey.spec.ts'
   ], { env });
 }
 
@@ -114,6 +153,8 @@ export async function acceptLinuxDeb({ directory, targetSha, version }) {
   }
   await mkdir(path.dirname(USER_DATA_SENTINEL), { recursive: true });
   await writeFile(USER_DATA_SENTINEL, 'preserve\n');
+  await writeFile(CODEX_FIXTURE, CODEX_FIXTURE_SOURCE);
+  await chmod(CODEX_FIXTURE, 0o700);
   run('sudo', ['apt-get', 'install', '-y', debPath]);
   assertInstalledIntegration();
   runPackagedAcceptance(version);

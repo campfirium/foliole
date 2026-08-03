@@ -1,0 +1,155 @@
+import crypto from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+
+import { Bonjour } from 'bonjour-service';
+
+import {
+  createTestPairingKeyPair,
+  decryptTestPairingSecret
+} from '../../electron/sync/companionPairingProtocolTestSupport.js';
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
+import { closeDesktopApplication } from '../../scripts/desktop/playwright-desktop-close.mjs';
+import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
+
+import { expect, test, type DesktopSession } from './harness/fixtures';
+
+const ACCOUNT_ID = '023e105f4ecef8ad9ca31a8372d0c353';
+const API_TOKEN = 'Sn3lZJTBX6kkg7OdcBUAxOO963GEIyGQqnFTOFYY';
+const DEVICE_ID = 'linux-deb-acceptance-device';
+
+function jsonHeaders() {
+  return { 'content-type': 'application/json' };
+}
+
+async function discoverFolioleService() {
+  const bonjour = new Bonjour();
+  try {
+    return await new Promise<{ port: number; txt: Record<string, string> }>((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Foliole mDNS service was not discovered')), 10_000);
+      bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, (service) => {
+        clearTimeout(timeout);
+        resolve({ port: service.port, txt: service.txt as Record<string, string> });
+      });
+    });
+  } finally {
+    bonjour.destroy();
+  }
+}
+
+function signedHeaders(secret: string, pathWithQuery: string) {
+  const timestamp = new Date().toISOString();
+  const nonce = crypto.randomUUID();
+  const bodyHash = crypto.createHash('sha256').update('').digest('hex');
+  const canonical = ['GET', pathWithQuery, timestamp, nonce, bodyHash].join('\n');
+  return {
+    'X-Device-Id': DEVICE_ID,
+    'X-Nonce': nonce,
+    'X-Signature': crypto.createHmac('sha256', secret).update(canonical).digest('hex'),
+    'X-Timestamp': timestamp
+  };
+}
+
+async function expectSignedWorkspaceVersion(endpoint: string, secret: string) {
+  const pathWithQuery = '/companion/workspace-version';
+  const response = await fetch(`${endpoint}${pathWithQuery}`, {
+    headers: signedHeaders(secret, pathWithQuery)
+  });
+  expect(response.status).toBe(200);
+}
+
+async function pairCompanion(windowPage: DesktopSession['firstWindow'], endpoint: string) {
+  const keyPair = await createTestPairingKeyPair();
+  const created = await fetch(`${endpoint}/companion/pair-requests`, {
+    body: JSON.stringify({
+      device_id: DEVICE_ID,
+      device_kind: 'android',
+      device_name: 'Linux DEB acceptance',
+      pairing_public_key: keyPair.publicKey,
+      protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
+    }),
+    headers: jsonHeaders(),
+    method: 'POST'
+  });
+  expect(created.status).toBe(202);
+  const pairRequestId = String((await created.json() as { pair_request_id: string }).pair_request_id);
+  await windowPage.evaluate((id) => window.electronAPI?.invoke(
+    'approve_companion_pair_request', { pair_request_id: id }
+  ), pairRequestId);
+  const finalized = await fetch(`${endpoint}/companion/pair`, {
+    body: JSON.stringify({ pair_request_id: pairRequestId }),
+    headers: jsonHeaders(),
+    method: 'POST'
+  });
+  expect(finalized.status).toBe(200);
+  const payload = await finalized.json() as {
+    encrypted_device_secret: Parameters<typeof decryptTestPairingSecret>[0]['encrypted'];
+  };
+  return decryptTestPairingSecret({ encrypted: payload.encrypted_device_secret, privateKey: keyPair.privateKey });
+}
+
+async function expectExternalCapabilities(session: DesktopSession) {
+  const status = await session.firstWindow.evaluate(() => window.electronAPI?.invoke('assistant_get_status'));
+  expect(status).toMatchObject({ provider: 'codex-app-server', state: 'ready' });
+  const security = await session.electronApp.evaluate(({ safeStorage }) => ({
+    available: safeStorage.isEncryptionAvailable(),
+    backend: safeStorage.getSelectedStorageBackend()
+  }));
+  expect(security.available).toBe(true);
+  expect(security.backend).not.toBe('basic_text');
+}
+
+test('installed Linux capabilities use external Codex, loopback control, LAN sync, and system secrets', async ({
+  desktopSession,
+  desktopWindow
+}) => {
+  let relaunched: DesktopSession | null = null;
+  const stateRoot = desktopSession.target.runtimeStateRoot;
+  try {
+    await expectExternalCapabilities(desktopSession);
+    const publish = await desktopWindow.evaluate(({ accountId, token }) => window.electronAPI?.invoke(
+      'save_foliole_publish_draft',
+      { settings: { account_id: accountId, api_token: token, project_name: 'linux-deb-acceptance' } }
+    ), { accountId: ACCOUNT_ID, token: API_TOKEN });
+    expect(publish).toMatchObject({ credentials_valid: true, has_credentials: true });
+
+    const descriptor = JSON.parse(await readFile(path.join(
+      stateRoot, 'user-data', 'cache', 'agent-control-session.json'
+    ), 'utf8')) as { endpoint: string; token: string };
+    expect(descriptor.endpoint).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/u);
+    expect((await fetch(`${descriptor.endpoint}/agent-control/v1/capabilities`)).status).toBe(401);
+
+    const discovery = discoverFolioleService();
+    const overview = await desktopWindow.evaluate(() => window.electronAPI?.invoke('enable_companion_sync')) as {
+      server_status: { advertised_urls: string[]; last_error: string | null; port: number; state: string };
+    };
+    expect(overview.server_status).toMatchObject({ last_error: null, state: 'running' });
+    const service = await discovery;
+    expect(service).toMatchObject({ port: overview.server_status.port });
+    expect(service.txt.protocol_version).toBe('1');
+    const endpoint = `http://127.0.0.1:${overview.server_status.port}`;
+    const secret = await pairCompanion(desktopWindow, endpoint);
+    await expectSignedWorkspaceVersion(endpoint, secret);
+
+    const pairingCiphertext = await readFile(path.join(stateRoot, 'user-data', 'companion-paired-devices.bin'));
+    expect(pairingCiphertext.toString('utf8')).not.toContain(secret);
+    const publishCiphertext = await readFile(path.join(stateRoot, 'user-data', 'foliole-publish-cloudflare-token.bin'));
+    expect(publishCiphertext.toString('utf8')).not.toContain(API_TOKEN);
+
+    await closeDesktopApplication(desktopSession.electronApp);
+    relaunched = await launchDesktopSession({
+      env: { ...desktopSession.launchOptions.env, FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot }
+    }) as DesktopSession;
+    await expectExternalCapabilities(relaunched);
+    const restored = await relaunched.firstWindow.evaluate(() => window.electronAPI?.invoke('load_foliole_publish_settings'));
+    expect(restored).toMatchObject({ credentials_valid: true, has_credentials: true });
+    const restoredOverview = await relaunched.firstWindow.evaluate(
+      () => window.electronAPI?.invoke('load_companion_pairing_overview')
+    ) as { server_status: { advertised_urls: string[] } };
+    const restoredEndpoint = restoredOverview.server_status.advertised_urls.find((url) => url.includes('127.0.0.1'));
+    expect(restoredEndpoint).toBeTruthy();
+    await expectSignedWorkspaceVersion(restoredEndpoint!, secret);
+  } finally {
+    await relaunched?.close();
+  }
+});
