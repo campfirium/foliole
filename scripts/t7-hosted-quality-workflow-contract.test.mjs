@@ -16,6 +16,10 @@ describe('T7 hosted quality workflow contract', () => {
     expect(hosted.on.schedule.map(({ cron }) => cron)).toEqual(['40 3 * * *', '40 14 * * *']);
     expect(hosted.on.workflow_dispatch).toEqual(null);
     expect(hosted.jobs.context.steps[0].if).toBe("github.ref != 'refs/heads/dev'");
+    expect(hosted.jobs.context.outputs.reason).toBe('${{ steps.admission.outputs.reason }}');
+    expect(hosted.jobs.skipped_notice.name).toBe('DEV T7 intentionally skipped');
+    expect(hosted.jobs.skipped_notice.if).toBe("needs.context.outputs.should_run != 'true'");
+    expect(hosted.jobs.skipped_notice.steps[0].run).toContain('ADMISSION_REASON');
     expect(hosted.jobs.t6_quality.uses).toBe('./.github/workflows/t6-hosted-quality.yml');
     expect(hosted.jobs.t6_quality.with.execution_lane).toBe('dev-t7');
     expect(hosted.jobs.t6_quality.if).toBe("needs.context.outputs.should_run == 'true'");
@@ -27,6 +31,8 @@ describe('T7 hosted quality workflow contract', () => {
     const admission = read('scripts/quality/t7-hosted-quality-admission.mjs');
     expect(admission).toContain('git/ref/heads/release');
     expect(admission).toContain("reason: releaseActive\n      ? 'release-active'");
+    expect(admission).toContain("run.conclusion === 'success'");
+    expect(admission).toContain('reason=${admission.reason}');
   });
 
   it('shares one release-exclusive top-level concurrency group', () => {

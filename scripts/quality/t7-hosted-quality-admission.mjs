@@ -6,8 +6,6 @@ import { appendFileSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const COMPLETE_CONCLUSIONS = new Set(['failure', 'success']);
-
 function runProcess(command, args) {
   return new Promise((resolve) => {
     const child = spawn(command, args, { shell: false, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -24,7 +22,7 @@ export function hasCompletedFullRemoteValidation(runs, targetSha) {
   const expectedTitle = `Remote Quality (full) @ ${targetSha}`;
   return runs.some((run) => (
     run.status === 'completed' &&
-    COMPLETE_CONCLUSIONS.has(run.conclusion) &&
+    run.conclusion === 'success' &&
     run.display_title === expectedTitle
   ));
 }
@@ -86,6 +84,7 @@ async function main() {
   const outputPath = process.env.GITHUB_OUTPUT;
   if (!outputPath) throw new Error('GITHUB_OUTPUT is required');
   appendFileSync(outputPath, `should_run=${admission.shouldRun}\n`, 'utf8');
+  appendFileSync(outputPath, `reason=${admission.reason}\n`, 'utf8');
   console.log(`[t7-admission] ${admission.reason}`);
 }
 

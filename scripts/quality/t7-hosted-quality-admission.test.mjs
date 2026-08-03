@@ -20,7 +20,7 @@ function run(overrides = {}) {
 }
 
 describe('T7 Hosted Quality admission', () => {
-  it('skips only a scheduled duplicate of a completed T4 full validation', () => {
+  it('skips only a scheduled duplicate of a successful Remote Quality full validation', () => {
     expect(hasCompletedFullRemoteValidation([run()], SHA)).toBe(true);
     expect(shouldRunT7({
       eventName: 'schedule', releaseActive: false, runs: [run()], targetSha: SHA
@@ -30,8 +30,13 @@ describe('T7 Hosted Quality admission', () => {
     })).toBe(true);
   });
 
-  it('keeps different, scoped, canceled, and active validations', () => {
+  it('keeps failed, different, scoped, canceled, and active validations', () => {
+    const failed = run({ conclusion: 'failure' });
+    expect(shouldRunT7({
+      eventName: 'schedule', releaseActive: false, runs: [failed], targetSha: SHA
+    })).toBe(true);
     for (const candidate of [
+      failed,
       run({ display_title: `Remote Quality (desktop) @ ${SHA}` }),
       run({ display_title: 'Remote Quality (full) @ another-sha' }),
       run({ conclusion: 'cancelled' }),

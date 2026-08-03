@@ -23,6 +23,7 @@ jobs:
     name: Resolve dev T7 context
     runs-on: ubuntu-latest
     outputs:
+      reason: ${{ steps.admission.outputs.reason }}
       should_run: ${{ steps.admission.outputs.should_run }}
       target_sha: ${{ github.sha }}
       trigger_ref: ${{ github.ref }}
@@ -35,7 +36,7 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
-      - name: Pause for release or skip duplicate scheduled validation
+      - name: Resolve release pause or successful validation reuse
         id: admission
         env:
           GH_TOKEN: ${{ github.token }}
@@ -43,6 +44,21 @@ jobs:
           FOLIOLE_QUALITY_REPOSITORY: ${{ github.repository }}
           FOLIOLE_QUALITY_TARGET_SHA: ${{ github.sha }}
         run: node scripts/quality/t7-hosted-quality-admission.mjs
+
+  skipped_notice:
+    name: DEV T7 intentionally skipped
+    needs: context
+    if: needs.context.outputs.should_run != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain why DEV quality did not run
+        env:
+          ADMISSION_REASON: ${{ needs.context.outputs.reason }}
+          TARGET_SHA: ${{ needs.context.outputs.target_sha }}
+        run: |
+          echo "## DEV T7 intentionally skipped" >> "$GITHUB_STEP_SUMMARY"
+          echo "Reason: \`${ADMISSION_REASON}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Target: \`${TARGET_SHA}\`" >> "$GITHUB_STEP_SUMMARY"
 
   t6_quality:
     name: T6 hosted quality
