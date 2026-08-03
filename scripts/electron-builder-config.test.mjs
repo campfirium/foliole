@@ -137,7 +137,9 @@ describe('electron-builder release packaging config', () => {
       afterInstall: 'build/linux/after-install.sh',
       afterRemove: 'build/linux/after-remove.sh',
       appArmorProfile: 'build/linux/apparmor-profile',
-      packageName: 'foliole'
+      maintainer: 'Campfirium <196198909+campfirium@users.noreply.github.com>',
+      packageName: 'foliole',
+      publish: null
     });
   });
 

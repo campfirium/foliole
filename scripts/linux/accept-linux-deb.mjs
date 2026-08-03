@@ -33,8 +33,7 @@ function readDebMetadata(debPath) {
   return { Architecture, Package, Version };
 }
 
-function assertPackageContents(debPath) {
-  const contents = run('dpkg-deb', ['--contents', debPath], { capture: true });
+export function assertDebContents(contents) {
   for (const required of [
     './opt/Foliole/foliole',
     './opt/Foliole/bin/foliole',
@@ -43,7 +42,13 @@ function assertPackageContents(debPath) {
   ]) {
     if (!contents.includes(required)) throw new Error(`Linux DEB is missing ${required}`);
   }
-  if (contents.includes('latest-linux.yml')) throw new Error('Linux DEB must not contain update metadata');
+  for (const forbidden of ['app-update.yml', 'latest-linux.yml', 'package-type']) {
+    if (contents.includes(forbidden)) throw new Error(`Linux DEB must not contain ${forbidden}`);
+  }
+}
+
+function assertPackageContents(debPath) {
+  assertDebContents(run('dpkg-deb', ['--contents', debPath], { capture: true }));
 }
 
 function assertInstalledIntegration() {
