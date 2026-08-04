@@ -31,6 +31,7 @@ import { loadAssistantAgentControlContext, mergeAssistantStatusWithAgentControl 
 import {
   readOpeningLocation,
   readOptionalClientTurnId,
+  readOptionalModelSelection,
   readOptionalProviderThreadId
 } from './assistantCommandInputs.js';
 import { handleAssistantLocalHistoryCommand } from './assistantLocalHistoryCommands.js';
@@ -49,6 +50,7 @@ export async function handleAssistantCommand(
 ) {
   if (command === NATIVE_COMMANDS.assistantGetStatus) return getAssistantStatus();
   if (command === NATIVE_COMMANDS.assistantStartChatGptLogin) return startChatGptLogin();
+  if (command === NATIVE_COMMANDS.assistantListModels) return getAssistantAdapter().listModels();
   if (command === NATIVE_COMMANDS.assistantSendMessage) return sendMessage(args, sender);
   return handleAssistantLocalHistoryCommand(command, args) ?? handleAssistantStorageCommand(command);
 }
@@ -76,12 +78,14 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
   const message = typeof args.message === 'string' ? args.message : '';
   let clientTurnId: string;
   let openingLocation: NativeAssistantThreadOpeningLocation | undefined;
+  let modelSelection: import('../../lib/platform/nativeAssistantContract.js').NativeAssistantModelSelection | undefined;
   let providerThreadId: string | undefined;
   let workspaceContext: NativeAssistantWorkspaceContext | undefined;
   let validatedImages: ReturnType<typeof validateAssistantImageDrafts>;
   try {
     clientTurnId = readOptionalClientTurnId(args.clientTurnId) ?? createClientTurnId();
     openingLocation = readOpeningLocation(args.openingLocation);
+    modelSelection = readOptionalModelSelection(args.modelSelection);
     providerThreadId = readOptionalProviderThreadId(args.providerThreadId);
     workspaceContext = readOptionalWorkspaceContext(args.workspaceContext);
     validatedImages = validateAssistantImageDrafts(args.images);
@@ -113,6 +117,7 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
     continuation,
     images,
     message,
+    ...(modelSelection ? { modelSelection } : {}),
     ...(sender ? { onEvent: createAssistantTurnEventSender(sender, clientTurnId) } : {}),
     ...(workspaceContext ? { workspaceContext } : {})
   });

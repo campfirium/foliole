@@ -10,6 +10,7 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 
 import { useAssistantTurnEventSubscription, type AssistantActiveTurn } from './useAssistantTurnEventSubscription';
 import { useFolioleAideContextFollow } from './useFolioleAideContextFollow';
+import { useFolioleAideModelControls } from './useFolioleAideModelControls';
 import { useWorkspaceRightSidebarAssistantThreadMessages } from './useWorkspaceRightSidebarAssistantThreadMessages';
 import { useWorkspaceRightSidebarAssistantThreads } from './useWorkspaceRightSidebarAssistantThreads';
 import type { WorkspaceLayoutDocumentProps } from './workspaceLayoutPropGroups';
@@ -49,6 +50,7 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: Assistant
   const [messagesByThread, dispatchCache] = useReducer(messageCacheReducer, {});
   const [sending, setSending] = useState(false);
   const [followCurrentMaterial, setFollowCurrentMaterial] = useFolioleAideContextFollow();
+  const modelControls = useFolioleAideModelControls(args.aideReady);
   const activeTurnRef = useRef<AssistantActiveTurn | null>(null);
   const activeMessages = messagesByThread[threads.selectedThreadId ?? PENDING_THREAD_KEY] ?? [];
   const selectedRecord = findSelectedRecord(threads.records, threads.selectedThreadId);
@@ -73,6 +75,7 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: Assistant
     imageState,
     location,
     messageText,
+    modelControls,
     selectedRecord,
     sending,
     setMessageText,
@@ -120,6 +123,7 @@ type ControllerResultInput = {
   imageState: ReturnType<typeof useAssistantImageDraftState>;
   location: ReturnType<typeof resolveAssistantLocation>;
   messageText: string;
+  modelControls: ReturnType<typeof useFolioleAideModelControls>;
   selectedRecord: NativeAssistantThreadIndexRecord | null;
   sending: boolean;
   setFollowCurrentMaterial: (value: boolean) => void;
@@ -151,6 +155,8 @@ function createPanelControllerResult(input: ControllerResultInput) {
       imageDrafts: imageState.imageDrafts,
       location: input.location,
       messageText: input.messageText,
+      ...(input.modelControls.selection ? { modelSelection: input.modelControls.selection } : {}),
+      refreshModelCatalog: input.modelControls.refresh,
       selectedRecord: input.selectedRecord,
       sending: input.sending,
       setImageDrafts: imageState.setImageDrafts,
@@ -162,6 +168,7 @@ function createPanelControllerResult(input: ControllerResultInput) {
     imageError: imageState.imageError,
     loading: threads.loading,
     messageText: input.messageText,
+    modelControls: input.modelControls,
     records: threads.records,
     reloadThreads: threads.reload,
     removeImage: imageState.removeImage,

@@ -5,13 +5,24 @@ import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
 import {
   getFolioleAideFollowCurrentMaterial,
   getFolioleAideEnabled,
+  getFolioleAideModelSelection,
   setFolioleAideFollowCurrentMaterial,
   setFolioleAideEnabled,
+  setFolioleAideModelSelection,
   subscribeFolioleAideEnabled
 } from './folioleAideSettings';
 
 beforeEach(() => {
   window.localStorage.clear();
+});
+
+it('persists the complete Foliole Aide model selection in app settings', () => {
+  const selection = { effort: 'high', model: 'gpt-test', serviceTier: 'fast' };
+  setFolioleAideModelSelection(selection);
+
+  expect(getFolioleAideModelSelection()).toEqual(selection);
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.folioleAideModelSelection))
+    .toBe(JSON.stringify(selection));
 });
 
 it('defaults material following on and persists explicit changes', () => {

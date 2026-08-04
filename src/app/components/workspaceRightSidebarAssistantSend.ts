@@ -1,5 +1,6 @@
 import type {
   NativeAssistantThreadIndexRecord,
+  NativeAssistantModelSelection,
   NativeAssistantWorkspaceContext
 } from '../../../lib/platform/nativeAssistantContract';
 import type { NativeAssistantImageDraft } from '../../../lib/platform/nativeAssistantImageContract';
@@ -29,6 +30,7 @@ export async function sendAssistantTurn(
     clientTurnId,
     ...(images.length ? { images } : {}),
     message,
+    ...(args.modelSelection ? { modelSelection: args.modelSelection } : {}),
     openingLocation,
     workspaceContext,
     ...(args.selectedThreadId ? { providerThreadId: args.selectedThreadId } : {})
@@ -40,6 +42,7 @@ export type AssistantSendTurnArgs = {
   editorAdapterRef: WorkspaceLayoutDocumentProps['editorAdapterRef'] | undefined;
   followCurrentMaterial: boolean;
   location: ReturnType<typeof resolveAssistantLocation>;
+  modelSelection?: NativeAssistantModelSelection;
   nodesById: Record<string, Node>;
   selectedRecord: NativeAssistantThreadIndexRecord | null;
   selectedThreadId: string | null;

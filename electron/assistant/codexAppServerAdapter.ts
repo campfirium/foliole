@@ -2,6 +2,8 @@ import fs from 'node:fs';
 
 import type {
   NativeAssistantSendMessageResult,
+  NativeAssistantModelCatalog,
+  NativeAssistantModelSelection,
   NativeAssistantTurnEvent,
   NativeAssistantWorkspaceContext,
   NativeAssistantStatusResult
@@ -29,6 +31,7 @@ import {
   type CodexLauncherOptions
 } from './codexAppServerCommandDiscovery.js';
 import { executeFolioleDynamicTool } from './codexAppServerDynamicTools.js';
+import { readCodexModelCatalog } from './codexAppServerModelCatalog.js';
 import type { SpawnedCodexProcess } from './codexAppServerSessionTypes.js';
 import type { AssistantContinuationMessage } from './codexAppServerThreadHistory.js';
 import { CodexAppServerSession } from './codexAppServerTurn.js';
@@ -125,11 +128,23 @@ export class CodexAppServerAdapter {
     }
   }
 
+  async listModels(): Promise<NativeAssistantModelCatalog> {
+    if (this.active) throw categorizedError('busy');
+    const launcherOptions = this.createLauncherOptions();
+    const command = await this.resolveCommand(launcherOptions);
+    if (!command) throw categorizedError('not_configured');
+    return readCodexModelCatalog({
+      appVersion: this.appVersion,
+      spawn: () => this.spawnCommand(command, CODEX_APP_SERVER_ARGS, launcherOptions)
+    });
+  }
+
   async sendMessage(input: {
     clientTurnId: string;
     continuationMessages?: AssistantContinuationMessage[];
     imagePaths?: string[];
     message: string;
+    modelSelection?: NativeAssistantModelSelection;
     onEvent?: (event: NativeAssistantTurnEvent) => void;
     providerThreadId?: string;
     workspaceContext?: NativeAssistantWorkspaceContext;
@@ -157,6 +172,7 @@ export class CodexAppServerAdapter {
         ...(input.continuationMessages ? { continuationMessages: input.continuationMessages } : {}),
         ...(input.imagePaths?.length ? { imagePaths: input.imagePaths } : {}),
         message,
+        ...(input.modelSelection ? { modelSelection: input.modelSelection } : {}),
         ...(input.onEvent ? { onEvent: input.onEvent } : {}),
         ...(providerThreadId ? { providerThreadId } : {}),
         ...(input.workspaceContext ? { workspaceContext: input.workspaceContext } : {}),

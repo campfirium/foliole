@@ -45,7 +45,8 @@ export function startContinuedTurn(args: Omit<ThreadContinuationSequenceArgs, 'm
       args.launcherCwd,
       args.turn.threadId,
       args.turn.userMessage,
-      args.turn.imagePaths ?? []
+      args.turn.imagePaths ?? [],
+      args.turn.modelSelection
     )
   });
 }

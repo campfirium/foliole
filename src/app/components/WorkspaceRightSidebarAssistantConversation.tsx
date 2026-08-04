@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import type { FormEvent } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 
 import { inspectorListMetaClassName } from '../../shared/ui';
 
@@ -17,6 +17,7 @@ interface AssistantConversationProps {
   imageErrorText?: string | null;
   images?: import('../../../lib/platform/nativeAssistantImageContract').NativeAssistantImageDraft[];
   messageText: string;
+  modelControl?: ReactNode;
   onAddImageFiles?: (files: File[]) => void;
   onRemoveImage?: (index: number) => void;
   onMessageTextChange: (text: string) => void;
@@ -74,6 +75,7 @@ export function WorkspaceRightSidebarAssistantConversation(props: AssistantConve
           {...(props.imageErrorText ? { imageErrorText: props.imageErrorText } : {})}
           {...(props.images ? { images: props.images } : {})}
           messageText={props.messageText}
+          {...(props.modelControl ? { modelControl: props.modelControl } : {})}
           {...(props.onAddImageFiles ? { onAddImageFiles: props.onAddImageFiles } : {})}
           onMessageTextChange={props.onMessageTextChange}
           {...(props.onRemoveImage ? { onRemoveImage: props.onRemoveImage } : {})}

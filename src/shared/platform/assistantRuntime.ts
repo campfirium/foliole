@@ -3,6 +3,7 @@ import type {
   NativeAssistantSendMessageArgs,
   NativeAssistantSendMessageResult,
   NativeAssistantLoginResult,
+  NativeAssistantModelCatalog,
   NativeAssistantStatusResult,
   NativeAssistantThreadIndexListArgs,
   NativeAssistantThreadIndexMutationArgs,
@@ -27,6 +28,12 @@ export async function startAssistantChatGptLogin(): Promise<NativeAssistantLogin
   const invoke = getRuntimeInvoke();
   if (!invoke) return null;
   return invoke(NATIVE_COMMANDS.assistantStartChatGptLogin);
+}
+
+export async function loadAssistantModelCatalog(): Promise<NativeAssistantModelCatalog | null> {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) return null;
+  return invoke(NATIVE_COMMANDS.assistantListModels);
 }
 
 export async function sendAssistantMessage(

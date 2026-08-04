@@ -1,5 +1,6 @@
 import type {
   NativeAssistantAgentControlContext,
+  NativeAssistantModelSelection,
   NativeAssistantTurnEvent,
   NativeAssistantWorkspaceContext
 } from '../../lib/platform/nativeAssistantContract.js';
@@ -15,6 +16,7 @@ export async function sendAssistantTurn(input: {
   continuation: Awaited<ReturnType<typeof prepareAssistantThreadContinuation>>;
   images: StoredAssistantImage[];
   message: string;
+  modelSelection?: NativeAssistantModelSelection;
   onEvent?: (event: NativeAssistantTurnEvent) => void;
   workspaceContext?: NativeAssistantWorkspaceContext;
 }) {
@@ -23,6 +25,7 @@ export async function sendAssistantTurn(input: {
       clientTurnId: input.clientTurnId,
       ...(input.images.length ? { imagePaths: input.images.map((image) => image.filePath) } : {}),
       message: input.message,
+      ...(input.modelSelection ? { modelSelection: input.modelSelection } : {}),
       ...(input.onEvent ? { onEvent: input.onEvent } : {}),
       ...(input.continuation.continuationMessages
         ? { continuationMessages: input.continuation.continuationMessages }

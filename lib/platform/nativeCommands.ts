@@ -3,6 +3,7 @@ export const NATIVE_COMMANDS = {
   folioleCliInstall: 'foliole_cli_install',
   appendReadingPositionTraceLog: 'append_reading_position_trace_log',
   assistantGetStatus: 'assistant_get_status',
+  assistantListModels: 'assistant_list_models',
   assistantStartChatGptLogin: 'assistant_start_chatgpt_login',
   assistantSendMessage: 'assistant_send_message',
   assistantListThreadIndex: 'assistant_list_thread_index',

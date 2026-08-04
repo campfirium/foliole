@@ -1,6 +1,6 @@
 import { ImagePlus, LoaderCircle, SendHorizontal } from 'lucide-react';
 import { useRef } from 'react';
-import type { ClipboardEvent, DragEvent, FormEvent, KeyboardEvent, RefObject } from 'react';
+import type { ClipboardEvent, DragEvent, FormEvent, KeyboardEvent, ReactNode, RefObject } from 'react';
 
 import type { NativeAssistantImageDraft } from '../../../lib/platform/nativeAssistantImageContract';
 import { AppIconButton } from '../../shared/ui';
@@ -18,6 +18,7 @@ type AssistantComposerProps = {
   imageErrorText?: string | null;
   images?: NativeAssistantImageDraft[];
   messageText: string;
+  modelControl?: ReactNode;
   onAddImageFiles?: (files: File[]) => void;
   onMessageTextChange: (text: string) => void;
   onRemoveImage?: (index: number) => void;
@@ -94,15 +95,18 @@ function AssistantComposerActions(props: {
         type="file"
       />
     </div>
-    <AppIconButton
-      className="rounded-full bg-foreground/8 text-foreground hover:bg-foreground/12 disabled:bg-foreground/8"
-      disabled={composer.sending || !composer.messageText.trim()}
-      icon={composer.sending
-        ? <LoaderCircle aria-hidden className="size-4 animate-spin" strokeWidth={1.8} />
-        : <SendHorizontal aria-hidden className="size-4" strokeWidth={1.8} />}
-      label={composer.sendLabel}
-      type="submit"
-    />
+    <div className="flex items-center gap-1">
+      {composer.modelControl}
+      <AppIconButton
+        className="rounded-full bg-foreground/8 text-foreground hover:bg-foreground/12 disabled:bg-foreground/8"
+        disabled={composer.sending || !composer.messageText.trim()}
+        icon={composer.sending
+          ? <LoaderCircle aria-hidden className="size-4 animate-spin" strokeWidth={1.8} />
+          : <SendHorizontal aria-hidden className="size-4" strokeWidth={1.8} />}
+        label={composer.sendLabel}
+        type="submit"
+      />
+    </div>
   </div>;
 }
 

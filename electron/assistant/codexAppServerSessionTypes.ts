@@ -21,6 +21,7 @@ export interface TurnState {
   finish: (result: NativeAssistantSendMessageResult) => void;
   historyInjectRequestId?: number;
   imagePaths?: string[];
+  modelSelection?: import('../../lib/platform/nativeAssistantModelContract.js').NativeAssistantModelSelection;
   onEvent?: (event: NativeAssistantTurnEvent) => void;
   providerThreadId?: string;
   text: string;

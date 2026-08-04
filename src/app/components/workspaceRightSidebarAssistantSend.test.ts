@@ -81,3 +81,23 @@ it('includes selected image drafts in the native assistant payload', async () =>
 
   expect(sendAssistantMessage).toHaveBeenCalledWith(expect.objectContaining({ images: [image] }));
 });
+
+it('sends the resolved model selection on every turn', async () => {
+  const node = createAssistantPanelNode({ id: 'node-1', title: 'Current material' });
+  const modelSelection = { effort: 'high', model: 'gpt-test', serviceTier: 'fast' };
+  await sendAssistantTurn({
+    activeNodeId: node.id,
+    editorAdapterRef: undefined,
+    followCurrentMaterial: false,
+    location: { nodeId: node.id, type: 'node' },
+    modelSelection,
+    nodesById: { [node.id]: node },
+    selectedRecord: null,
+    selectedThreadId: 'existing-thread'
+  }, 'turn-model', 'Use this model');
+
+  expect(sendAssistantMessage).toHaveBeenCalledWith(expect.objectContaining({
+    modelSelection,
+    providerThreadId: 'existing-thread'
+  }));
+});

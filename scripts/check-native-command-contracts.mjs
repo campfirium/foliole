@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 const CONTRACT_FILES = [
   'lib/platform/nativeAideStorageContract.ts',
   'lib/platform/nativeAssistantContract.ts',
+  'lib/platform/nativeAssistantCommandContract.ts',
   'lib/platform/nativeAssistantImageContract.ts',
   'lib/platform/nativeContract.ts',
   'lib/platform/nativeDiscoursePublishContract.ts',

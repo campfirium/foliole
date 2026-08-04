@@ -1,9 +1,11 @@
 import type {
   NativeAssistantImageAttachment,
-  NativeAssistantImageContentResult,
   NativeAssistantImageDraft
 } from './nativeAssistantImageContract.js';
-import { NATIVE_COMMANDS } from './nativeCommands.js';
+import type { NativeAssistantModelSelection } from './nativeAssistantModelContract.js';
+
+export type { NativeAssistantCommandMap } from './nativeAssistantCommandContract.js';
+export type * from './nativeAssistantModelContract.js';
 
 export type NativeAssistantProviderId = 'codex-app-server';
 
@@ -88,6 +90,7 @@ export interface NativeAssistantSendMessageArgs {
   clientTurnId?: string;
   images?: NativeAssistantImageDraft[];
   message: string;
+  modelSelection?: NativeAssistantModelSelection;
   openingLocation?: NativeAssistantThreadOpeningLocation;
   provider?: NativeAssistantProviderId;
   providerThreadId?: string;
@@ -204,38 +207,3 @@ export interface NativeAssistantTurnEvent {
   text?: string;
   turnId?: string;
 }
-
-export type NativeAssistantCommandMap = {
-  [NATIVE_COMMANDS.assistantGetStatus]: {
-    args: undefined;
-    result: NativeAssistantStatusResult;
-  };
-  [NATIVE_COMMANDS.assistantStartChatGptLogin]: {
-    args: undefined;
-    result: NativeAssistantLoginResult;
-  };
-  [NATIVE_COMMANDS.assistantSendMessage]: {
-    args: NativeAssistantSendMessageArgs;
-    result: NativeAssistantSendMessageResult;
-  };
-  [NATIVE_COMMANDS.assistantListThreadIndex]: {
-    args: NativeAssistantThreadIndexListArgs | undefined;
-    result: NativeAssistantThreadIndexRecord[];
-  };
-  [NATIVE_COMMANDS.assistantListThreadMessages]: {
-    args: NativeAssistantThreadMessageListArgs;
-    result: NativeAssistantThreadMessageRecord[];
-  };
-  [NATIVE_COMMANDS.assistantReadImageAttachment]: {
-    args: { attachmentId: string };
-    result: NativeAssistantImageContentResult;
-  };
-  [NATIVE_COMMANDS.assistantArchiveThreadIndex]: {
-    args: NativeAssistantThreadIndexMutationArgs;
-    result: NativeAssistantThreadIndexRecord;
-  };
-  [NATIVE_COMMANDS.assistantRemoveThreadFromHistory]: {
-    args: NativeAssistantThreadIndexMutationArgs;
-    result: NativeAssistantThreadIndexRecord;
-  };
-};

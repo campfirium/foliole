@@ -14,6 +14,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.folioleCliInstall, route: 'windowAndUtility', capability: 'filesystemWrite' },
   { command: NATIVE_COMMANDS.appendReadingPositionTraceLog, route: 'windowAndUtility', capability: 'diagnostic' },
   { command: NATIVE_COMMANDS.assistantGetStatus, route: 'assistant', capability: 'assistant' },
+  { command: NATIVE_COMMANDS.assistantListModels, route: 'assistant', capability: 'assistant' },
   { command: NATIVE_COMMANDS.assistantStartChatGptLogin, route: 'assistant', capability: 'assistant' },
   { command: NATIVE_COMMANDS.assistantSendMessage, route: 'assistant', capability: 'assistant' },
   { command: NATIVE_COMMANDS.assistantListThreadIndex, route: 'assistant', capability: 'assistant' },

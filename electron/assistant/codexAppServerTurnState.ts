@@ -1,5 +1,6 @@
 import type {
   NativeAssistantSendMessageResult,
+  NativeAssistantModelSelection,
   NativeAssistantTurnEvent,
   NativeAssistantWorkspaceContext
 } from '../../lib/platform/nativeAssistantContract.js';
@@ -14,6 +15,7 @@ export interface SendMessageArgs {
   continuationMessages?: AssistantContinuationMessage[];
   imagePaths?: string[];
   message: string;
+  modelSelection?: NativeAssistantModelSelection;
   onEvent?: (event: NativeAssistantTurnEvent) => void;
   providerThreadId?: string;
   timeoutMs: number;
@@ -32,6 +34,7 @@ export function createTurnState(
     dynamicToolCapabilities: resolveDynamicToolCapabilities(args.workspaceContext),
     finish,
     imagePaths: args.imagePaths ?? [],
+    ...(args.modelSelection ? { modelSelection: args.modelSelection } : {}),
     ...(args.onEvent ? { onEvent: args.onEvent } : {}),
     ...(args.providerThreadId ? { providerThreadId: args.providerThreadId } : {}),
     text: '',

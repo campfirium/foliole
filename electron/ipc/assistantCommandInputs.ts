@@ -1,4 +1,7 @@
-import type { NativeAssistantThreadOpeningLocation } from '../../lib/platform/nativeAssistantContract.js';
+import type {
+  NativeAssistantModelSelection,
+  NativeAssistantThreadOpeningLocation
+} from '../../lib/platform/nativeAssistantContract.js';
 
 export function readOptionalClientTurnId(value: unknown) {
   if (value === undefined) return undefined;
@@ -31,6 +34,25 @@ export function readOptionalProviderThreadId(value: unknown) {
   if (value === undefined) return undefined;
   if (typeof value !== 'string') throw new Error('invalid_provider_thread_id');
   return normalizeRequiredString(value, 'provider_thread_id');
+}
+
+export function readOptionalModelSelection(value: unknown): NativeAssistantModelSelection | undefined {
+  if (value === undefined) return undefined;
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    throw new Error('invalid_assistant_model_selection');
+  const selection = value as Record<string, unknown>;
+  if (selection.serviceTier !== null && typeof selection.serviceTier !== 'string')
+    throw new Error('invalid_assistant_model_selection');
+  return {
+    effort: readSelectionString(selection.effort),
+    model: readSelectionString(selection.model),
+    serviceTier: selection.serviceTier === null ? null : readSelectionString(selection.serviceTier)
+  };
+}
+
+function readSelectionString(value: unknown) {
+  if (typeof value !== 'string') throw new Error('invalid_assistant_model_selection');
+  return normalizeRequiredString(value, 'assistant_model_selection');
 }
 
 function normalizeRequiredString(value: string, field: string) {

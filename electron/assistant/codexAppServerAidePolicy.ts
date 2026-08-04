@@ -46,7 +46,8 @@ export function createAideTurnStartParams(
   cwd: string,
   threadId: string,
   userMessage: string,
-  imagePaths: readonly string[] = []
+  imagePaths: readonly string[] = [],
+  modelSelection?: import('../../lib/platform/nativeAssistantModelContract.js').NativeAssistantModelSelection
 ) {
   return {
     approvalPolicy: 'never',
@@ -55,6 +56,11 @@ export function createAideTurnStartParams(
       { text: userMessage, type: 'text' },
       ...imagePaths.map((imagePath) => ({ path: imagePath, type: 'localImage' }))
     ],
+    ...(modelSelection ? {
+      effort: modelSelection.effort,
+      model: modelSelection.model,
+      serviceTier: modelSelection.serviceTier
+    } : {}),
     sandboxPolicy: {
       networkAccess: 'restricted',
       type: 'externalSandbox'

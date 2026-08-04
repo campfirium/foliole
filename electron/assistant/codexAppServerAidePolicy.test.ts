@@ -24,6 +24,9 @@ it('uses the app-server sandbox policy wire values', () => {
       { text: 'Describe this', type: 'text' },
       { path: '/widgets/image.png', type: 'localImage' }
     ]);
+  expect(createAideTurnStartParams('/widgets', 'thread-1', 'Configured', [], {
+    effort: 'high', model: 'gpt-test', serviceTier: 'fast'
+  })).toMatchObject({ effort: 'high', model: 'gpt-test', serviceTier: 'fast' });
 });
 
 it('registers only Foliole Aide managed skill roots', () => {

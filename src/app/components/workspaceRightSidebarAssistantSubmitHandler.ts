@@ -2,6 +2,7 @@ import type { FormEvent } from 'react';
 
 import type {
   NativeAssistantFailureCategory,
+  NativeAssistantModelSelection,
   NativeAssistantSendMessageResult,
   NativeAssistantThreadIndexRecord,
   NativeAssistantWorkspaceContext
@@ -40,6 +41,8 @@ type AssistantSubmitState = {
   imageDrafts: NativeAssistantImageDraft[];
   location: ReturnType<typeof resolveAssistantLocation>;
   messageText: string;
+  modelSelection?: NativeAssistantModelSelection;
+  refreshModelCatalog: () => Promise<void>;
   selectedRecord: NativeAssistantThreadIndexRecord | null;
   sending: boolean;
   setMessageText: (text: string) => void;
@@ -107,6 +110,7 @@ function applySendResult(result: SendResultArgs) {
     return;
   }
   const failureCategory = result.result?.failure?.category;
+  if (failureCategory === 'protocol_error') void result.refreshModelCatalog();
   if (failureCategory) result.onCapabilityFailure(failureCategory);
   result.dispatchCache(createFailedMessageAction(result.threadKey, result.pendingId, result.failedText));
   result.setMessageText(result.prompt);
