@@ -12,6 +12,7 @@ import { expect, it } from 'vitest';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const PREVIEW_DEDUPE_SCRIPT = path.join(REPO_ROOT, 'scripts', 'preview', 'preview-dedupe.mjs');
 const PREVIEW_DEDUPE_INTEGRATION_TIMEOUT_MS = 30_000;
+const APPEND_RUN_LOG_SCRIPT = "require('node:fs').appendFileSync('runs.log', `${process.argv[1]}\\n`)";
 
 function run(command, args, options = {}) {
   return new Promise((resolve) => {
@@ -58,6 +59,10 @@ function previewEnv(repoRoot) {
   };
 }
 
+function appendRunLogCommand(entry) {
+  return [process.execPath, '-e', APPEND_RUN_LOG_SCRIPT, entry];
+}
+
 it('ignores untracked files outside the selected preview target', async () => {
   const repoRoot = await setupRepo();
   try {
@@ -65,9 +70,7 @@ it('ignores untracked files outside the selected preview target', async () => {
       PREVIEW_DEDUPE_SCRIPT,
       'windows',
       '--',
-      'bash',
-      '-lc',
-      'echo first >> runs.log'
+      ...appendRunLogCommand('first')
     ], { env: previewEnv(repoRoot) });
     expect(first.code).toBe(0);
     const hashPath = path.join(repoRoot, '.lab/internal/runtime/windows-preview.hash');
@@ -80,9 +83,7 @@ it('ignores untracked files outside the selected preview target', async () => {
       PREVIEW_DEDUPE_SCRIPT,
       'windows',
       '--',
-      'bash',
-      '-lc',
-      'echo second >> runs.log'
+      ...appendRunLogCommand('second')
     ], { env: previewEnv(repoRoot) });
 
     expect(second.code).toBe(0);
