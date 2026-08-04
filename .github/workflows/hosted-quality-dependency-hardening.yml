@@ -1,4 +1,4 @@
-name: Hosted Static Quality
+name: Hosted Dependency Hardening
 
 on:
   workflow_call:
@@ -14,19 +14,19 @@ on:
         type: string
     outputs:
       accepted_sha:
-        description: Exact commit accepted by canonical static quality
-        value: ${{ jobs.static-admission.outputs.accepted_sha }}
+        description: Exact commit accepted by dependency hardening
+        value: ${{ jobs.hardening-admission.outputs.accepted_sha }}
 
 permissions:
   contents: read
 
 jobs:
-  static-quality:
-    name: Ubuntu static
+  dependency-hardening:
+    name: Ubuntu dependency hardening
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
-      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-static
+      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-dependency-hardening
       cancel-in-progress: false
     env:
       TARGET_SHA: ${{ inputs.target_sha }}
@@ -51,36 +51,24 @@ jobs:
       - name: Verify checked-out target SHA
         run: >-
           node -e "const { execFileSync } = require('node:child_process'); const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(); if (head !== process.env.TARGET_SHA) throw new Error('Checked out SHA does not match TARGET_SHA')"
-      - name: Rebuild Electron native ABI
-        run: npm run electron:rebuild:native
-      - name: Verify Electron sqlite runner
-        run: node scripts/electron-sqlite-runner.mjs --preflight
-      - name: Run canonical Common static quality
-        run: bash scripts/quality/quality-gate-target.sh release-static
-      - name: Upload static quality logs
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: t5-static-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
-          path: .tmp/logs/quality-gate
-          if-no-files-found: ignore
-          retention-days: 14
+      - name: Run dependency hardening checks
+        run: npm run deps:hardening:check
 
-  static-admission:
-    name: Static quality admission
+  hardening-admission:
+    name: Dependency hardening admission
     if: ${{ always() }}
-    needs: static-quality
+    needs: dependency-hardening
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      accepted_sha: ${{ steps.require-static.outputs.accepted_sha }}
+      accepted_sha: ${{ steps.require-hardening.outputs.accepted_sha }}
     steps:
-      - name: Require canonical static quality
-        id: require-static
+      - name: Require dependency hardening
+        id: require-hardening
         env:
-          STATIC_RESULT: ${{ needs.static-quality.result }}
+          HARDENING_RESULT: ${{ needs.dependency-hardening.result }}
           TARGET_SHA: ${{ inputs.target_sha }}
         run: |
           set -euo pipefail
-          node -e 'if (process.env.STATIC_RESULT !== "success") throw new Error(`STATIC_RESULT=${process.env.STATIC_RESULT}`)'
+          node -e 'if (process.env.HARDENING_RESULT !== "success") throw new Error(`HARDENING_RESULT=${process.env.HARDENING_RESULT}`)'
           echo "accepted_sha=${TARGET_SHA}" >> "$GITHUB_OUTPUT"

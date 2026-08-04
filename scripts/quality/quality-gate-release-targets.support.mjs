@@ -34,6 +34,7 @@ export function releaseScripts() {
   const ok = (message) => `printf '%s\\n' '${message}'`;
   return {
     'check:android-boundary': ok('android boundary ok'),
+    'lint:desktop:full': ok('desktop lint ok'),
     'lint:full': ok('release lint ok'),
     'typecheck:desktop': ok('release desktop typecheck ok'),
     'typecheck:android': ok('release android typecheck ok'),

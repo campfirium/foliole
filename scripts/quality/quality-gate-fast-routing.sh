@@ -144,7 +144,7 @@ quality_skip_lint_changed_files_match() {
 
 quality_skip_lint_target_requires_full_scan() {
   case "$1" in
-    full|release|release-core|release-tests|release-tooling)
+    desktop-static|full|release|release-core|release-tests|release-tooling)
       return 0
       ;;
     *)

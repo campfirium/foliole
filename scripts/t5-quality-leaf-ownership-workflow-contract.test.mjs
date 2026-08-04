@@ -145,12 +145,22 @@ describe('T5 canonical leaf ownership', () => {
     expect(workflowSources.filter((source) => source.includes(
       'npm run quality:release:windows:core'
     ))).toHaveLength(1);
+    expect(workflowSources.filter((source) => source.includes(
+      'npm run deps:hardening:check'
+    ))).toHaveLength(1);
+    expect(workflowSources.filter((source) => source.includes(
+      'quality-gate-target.sh desktop-static'
+    ))).toHaveLength(1);
     expect(fs.existsSync('.github/workflows/hosted-quality-portable.yml')).toBe(false);
   });
 
   it('activates pinned npm inside every npm leaf setup', () => {
     for (const file of [
       'hosted-quality-static.yml',
+      'hosted-quality-android-web-build.yml',
+      'hosted-quality-desktop-static.yml',
+      'hosted-quality-dependency-hardening.yml',
+      'hosted-quality-desktop-build.yml',
       'hosted-quality-windows-core.yml',
       'hosted-quality-portable-domain.yml',
       'hosted-quality-desktop-source.yml',

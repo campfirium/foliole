@@ -21,41 +21,21 @@ permissions:
   contents: read
 
 jobs:
-  common-build:
-    name: Common build
-    runs-on: ubuntu-latest
-    timeout-minutes: 120
-    concurrency:
-      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-full-common-build
-      cancel-in-progress: false
-    env:
-      TARGET_SHA: ${{ inputs.target_sha }}
-    steps:
-      - name: Check out target snapshot
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.TARGET_SHA }}
-          fetch-depth: 1
-          persist-credentials: false
-      - name: Verify target SHA
-        run: test "$(git rev-parse HEAD)" = "${TARGET_SHA}"
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - name: Install dependencies
-        run: node scripts/quality/hosted-npm-ci.mjs
-      - name: Run Common build
-        run: bash scripts/quality/quality-gate-target.sh release-hosted-common-build
-      - name: Upload Common build logs
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: common-build-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
-          path: .tmp/logs/quality-gate
-          if-no-files-found: ignore
-          retention-days: 14
+  desktop-build:
+    name: Desktop build
+    uses: ./.github/workflows/hosted-quality-desktop-build.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+
+  android-web-build:
+    name: Android web build
+    uses: ./.github/workflows/hosted-quality-android-web-build.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
 
   windows-acceptance:
     name: Windows acceptance
@@ -86,6 +66,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Activate pinned npm
+        run: node scripts/quality/pinned-npm.mjs activate
       - name: Verify fixed Windows x64 context
         id: context
         env:
@@ -165,6 +147,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Activate pinned npm
+        run: node scripts/quality/pinned-npm.mjs activate
       - name: Set up Java 21 for Android host checks
         uses: actions/setup-java@v4
         with:
@@ -195,7 +179,7 @@ jobs:
   full-admission:
     name: Full quality admission
     if: ${{ always() }}
-    needs: [common-build, windows-acceptance, android-host, ios-full]
+    needs: [desktop-build, android-web-build, windows-acceptance, android-host, ios-full]
     runs-on: ubuntu-latest
     outputs:
       accepted_sha: ${{ steps.require-jobs.outputs.accepted_sha }}
@@ -204,7 +188,8 @@ jobs:
         id: require-jobs
         env:
           ANDROID_RESULT: ${{ needs.android-host.result }}
-          COMMON_RESULT: ${{ needs.common-build.result }}
+          ANDROID_WEB_BUILD_RESULT: ${{ needs.android-web-build.result }}
+          DESKTOP_BUILD_RESULT: ${{ needs.desktop-build.result }}
           IOS_RESULT: ${{ needs.ios-full.result }}
           TARGET_SHA: ${{ inputs.target_sha }}
           WINDOWS_RESULT: ${{ needs.windows-acceptance.result }}

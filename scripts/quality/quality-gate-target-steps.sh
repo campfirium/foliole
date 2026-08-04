@@ -44,6 +44,12 @@ run_release_static_gate_steps() {
   run_gate_steps_parallel lint:full typecheck:desktop typecheck:android
 }
 
+run_desktop_static_gate_steps() {
+  run_renderer_guards_if_present
+  run_repository_root_boundary_check_if_present
+  run_gate_steps lint:desktop:full typecheck:desktop
+}
+
 quality_gate_integration_scripts() {
   QUALITY_GATE_BUCKET_SELECTION_PATH="${QUALITY_GATE_LIB_DIR}/../script-test-bucket-selection.mjs" node --input-type=module -e "import('node:url').then(({ pathToFileURL }) => import(pathToFileURL(process.env.QUALITY_GATE_BUCKET_SELECTION_PATH).href)).then((m) => console.log(m.GATE_INTEGRATION_SCRIPT_NAMES.join(' ')))"
 }

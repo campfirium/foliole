@@ -12,7 +12,7 @@ if [[ ! -f "package.json" ]]; then
   exit 1
 fi
 
-target="${1:-}"; usage="Usage: bash scripts/quality/quality-gate-target.sh <desktop|android|shared|shared-static|shared-test|shared-quality-tests|shared-build|full|release|release-core|release-hosted-common|release-hosted-common-build|release-windows-core|release-static|release-tests|release-build|release-script-preview|release-base|release-windows-tail|release-android-tail|release-ios-tail|release-tooling|release-preview-recovery|release-android-host> [--fail-fast]"
+target="${1:-}"; usage="Usage: bash scripts/quality/quality-gate-target.sh <desktop|desktop-static|android|shared|shared-static|shared-test|shared-quality-tests|shared-build|full|release|release-core|release-hosted-common|release-hosted-common-build|release-windows-core|release-static|release-tests|release-build|release-script-preview|release-base|release-windows-tail|release-android-tail|release-ios-tail|release-tooling|release-preview-recovery|release-android-host> [--fail-fast]"
 QUALITY_GATE_COLLECT_FAILURES=1
 case "${2:-}" in
   --fail-fast) QUALITY_GATE_COLLECT_FAILURES=0 ;;
@@ -78,14 +78,6 @@ run_gate_steps() {
   done
 }
 
-run_desktop_test_step() {
-  if [[ -n "${VITEST_DESKTOP_POOL:-}" ]]; then
-    VITEST_POOL="${VITEST_DESKTOP_POOL}" run_quality_gate_script "${prefix}" "${pm}" "test:desktop"
-    return
-  fi
-  run_quality_gate_script "${prefix}" "${pm}" "test:desktop"
-}
-
 source "${SCRIPT_DIR}/quality-gate-target-steps.sh"
 if quality_gate_should_print_step; then
   echo "[${prefix}] detected package manager: ${pm}"
@@ -104,14 +96,15 @@ fi
 
 case "${target}" in
   desktop)
-    run_renderer_guards_if_present
-    run_repository_root_boundary_check_if_present
-    run_gate_steps lint:desktop:full typecheck:desktop
-    run_desktop_test_step
+    run_desktop_static_gate_steps
+    run_gate_steps test:desktop
     run_gate_steps test:windows:core
     run_quality_script_gate_steps_if_related "${changed_files_for_skip_lint}"
     run_gate_steps build electron:compile
     run_workspace_boundary_check_if_present
+    ;;
+  desktop-static)
+    run_desktop_static_gate_steps
     ;;
   android)
     run_renderer_guards_if_present

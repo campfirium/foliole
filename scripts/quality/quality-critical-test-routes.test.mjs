@@ -35,6 +35,7 @@ const HOSTED_QUALITY_CONTRACTS = [
   'scripts/hosted-quality-tooling-workflow-contract.test.mjs',
   'scripts/hosted-windows-x64-workflow-contract.test.mjs',
   'scripts/quality/t7-hosted-quality-admission.test.mjs',
+  'scripts/t4-desktop-canonical-workflow-contract.test.mjs',
   'scripts/t5-baseline-admission-workflow-contract.test.mjs',
   'scripts/t5-quality-leaf-ownership-workflow-contract.test.mjs',
   'scripts/t6-hosted-quality-workflow-contract.test.mjs',

@@ -35,6 +35,22 @@ jobs:
       target_sha: ${{ inputs.target_sha }}
       trigger_ref: ${{ inputs.trigger_ref }}
 
+  desktop-static:
+    name: Desktop static
+    uses: ./.github/workflows/hosted-quality-desktop-static.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+
+  dependency-hardening:
+    name: Dependency hardening
+    uses: ./.github/workflows/hosted-quality-dependency-hardening.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+
   windows-core:
     name: Windows core
     uses: ./.github/workflows/hosted-quality-windows-core.yml
@@ -90,6 +106,8 @@ jobs:
     if: ${{ always() }}
     needs:
       - static-quality
+      - desktop-static
+      - dependency-hardening
       - windows-core
       - shared-tests
       - android-source-tests
@@ -105,6 +123,10 @@ jobs:
       ANDROID_SOURCE_SHA: ${{ needs.android-source-tests.outputs.accepted_sha }}
       DESKTOP_SOURCE_RESULT: ${{ needs.desktop-source-tests.result }}
       DESKTOP_SOURCE_SHA: ${{ needs.desktop-source-tests.outputs.accepted_sha }}
+      DESKTOP_STATIC_RESULT: ${{ needs.desktop-static.result }}
+      DESKTOP_STATIC_SHA: ${{ needs.desktop-static.outputs.accepted_sha }}
+      DEPENDENCY_RESULT: ${{ needs.dependency-hardening.result }}
+      DEPENDENCY_SHA: ${{ needs.dependency-hardening.outputs.accepted_sha }}
       ELECTRON_RESULT: ${{ needs.electron-tests.result }}
       ELECTRON_SHA: ${{ needs.electron-tests.outputs.accepted_sha }}
       SHARED_RESULT: ${{ needs.shared-tests.result }}

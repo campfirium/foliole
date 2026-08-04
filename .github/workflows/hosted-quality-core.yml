@@ -30,83 +30,78 @@ jobs:
       trigger_ref: ${{ inputs.trigger_ref }}
       scope: ${{ inputs.scope }}
 
-  windows-quality:
-    name: Windows ${{ inputs.scope }} quality
+  desktop-static:
+    name: Desktop static
     if: inputs.scope == 'desktop'
-    runs-on: windows-latest
-    timeout-minutes: 120
-    concurrency:
-      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-core-windows-${{ inputs.scope }}
-      cancel-in-progress: false
-    env:
-      CI: "true"
-      FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: "1"
-      TARGET_SHA: ${{ inputs.target_sha }}
-    steps:
-      - name: Check out target snapshot
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.TARGET_SHA }}
-          fetch-depth: 1
-          persist-credentials: false
-      - name: Verify target SHA
-        shell: pwsh
-        run: |
-          if ((git rev-parse HEAD) -ne "${env:TARGET_SHA}") {
-            throw "Checked out SHA does not match TARGET_SHA"
-          }
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - name: Activate pinned npm
-        run: node scripts/quality/pinned-npm.mjs activate
-      - name: Verify fixed Windows x64 context
-        id: context
-        env:
-          GITHUB_SHA: ${{ env.TARGET_SHA }}
-        run: node scripts/windows/windows-ci-evidence.mjs verify
-      - name: Install dependencies
-        id: npm_ci
-        run: node scripts/quality/hosted-npm-ci.mjs
-      - name: Run dependency hardening checks
-        id: dependency_hardening
-        run: npm run deps:hardening:check
-      - name: Rebuild and verify Electron native ABI
-        id: native_abi
-        run: |
-          npm run electron:rebuild:native
-          node scripts/electron-sqlite-runner.mjs --preflight
-      - name: Run desktop quality
-        id: desktop_quality
-        env:
-          VITEST_DESKTOP_POOL: forks
-        run: npm run quality:desktop
-      - name: Write SHA-bound Windows core evidence
-        if: ${{ always() }}
-        env:
-          GITHUB_SHA: ${{ env.TARGET_SHA }}
-          CONTEXT_OUTCOME: ${{ steps.context.outcome }}
-          NPM_CI_OUTCOME: ${{ steps.npm_ci.outcome }}
-          DEPENDENCY_HARDENING_OUTCOME: ${{ steps.dependency_hardening.outcome }}
-          NATIVE_ABI_OUTCOME: ${{ steps.native_abi.outcome }}
-          DESKTOP_BUILD_OUTCOME: skipped
-          DESKTOP_QUALITY_OUTCOME: ${{ steps.desktop_quality.outcome }}
-          WINDOWS_CORE_OUTCOME: skipped
-          WINDOWS_TAIL_OUTCOME: skipped
-          PLAYWRIGHT_OUTCOME: skipped
-        run: node scripts/windows/windows-ci-evidence.mjs write
-      - name: Upload SHA-bound Windows core evidence
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-core-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
-          path: |
-            .tmp/artifacts/windows-ci-evidence
-            .tmp/logs/quality-gate
-          if-no-files-found: warn
-          retention-days: 14
+    uses: ./.github/workflows/hosted-quality-desktop-static.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+
+  desktop-source-tests:
+    name: Desktop source tests
+    if: inputs.scope == 'desktop'
+    uses: ./.github/workflows/hosted-quality-desktop-source.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+
+  desktop-shared-tests:
+    name: Desktop shared tests
+    if: inputs.scope == 'desktop'
+    uses: ./.github/workflows/hosted-quality-portable-domain.yml
+    with:
+      domain: shared
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+
+  desktop-electron-tests:
+    name: Desktop Electron tests
+    if: inputs.scope == 'desktop'
+    uses: ./.github/workflows/hosted-quality-electron.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+
+  desktop-tooling-tests:
+    name: Desktop tooling tests
+    if: inputs.scope == 'desktop'
+    uses: ./.github/workflows/hosted-quality-tooling.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+
+  desktop-windows-core:
+    name: Desktop Windows core
+    if: inputs.scope == 'desktop'
+    uses: ./.github/workflows/hosted-quality-windows-core.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+
+  desktop-dependency-hardening:
+    name: Desktop dependency hardening
+    if: inputs.scope == 'desktop'
+    uses: ./.github/workflows/hosted-quality-dependency-hardening.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+
+  desktop-build:
+    name: Desktop build
+    if: inputs.scope == 'desktop'
+    uses: ./.github/workflows/hosted-quality-desktop-build.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
 
   linux-package-acceptance:
     name: Linux Experimental package acceptance
@@ -119,6 +114,39 @@ jobs:
       target_version: ''
       trigger_ref: ${{ inputs.trigger_ref }}
       attest_artifact: false
+
+  desktop-admission:
+    name: Desktop scoped admission
+    if: ${{ always() && inputs.scope == 'desktop' }}
+    needs:
+      - desktop-static
+      - desktop-source-tests
+      - desktop-shared-tests
+      - desktop-electron-tests
+      - desktop-tooling-tests
+      - desktop-windows-core
+      - desktop-dependency-hardening
+      - desktop-build
+      - linux-package-acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Summarize desktop scoped topology
+        run: |
+          echo 'T5 baseline: not applicable to scoped run' >> "$GITHUB_STEP_SUMMARY"
+      - name: Require every desktop bucket
+        env:
+          BUILD_RESULT: ${{ needs.desktop-build.result }}
+          DEPENDENCY_RESULT: ${{ needs.desktop-dependency-hardening.result }}
+          DESKTOP_SOURCE_RESULT: ${{ needs.desktop-source-tests.result }}
+          ELECTRON_RESULT: ${{ needs.desktop-electron-tests.result }}
+          LINUX_PACKAGE_RESULT: ${{ needs.linux-package-acceptance.result }}
+          SHARED_RESULT: ${{ needs.desktop-shared-tests.result }}
+          STATIC_RESULT: ${{ needs.desktop-static.result }}
+          TOOLING_RESULT: ${{ needs.desktop-tooling-tests.result }}
+          WINDOWS_CORE_RESULT: ${{ needs.desktop-windows-core.result }}
+        run: >-
+          node -e 'const failed = Object.entries(process.env).filter(([key, value]) => key.endsWith("_RESULT") && value !== "success"); if (failed.length) throw new Error(failed.map(([key, value]) => `${key}=${value}`).join(", "))'
 
   android-quality:
     name: Android ${{ inputs.scope }} quality

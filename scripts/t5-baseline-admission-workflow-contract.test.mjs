@@ -10,6 +10,8 @@ const source = fs.readFileSync('.github/workflows/t5-baseline-admission.yml', 'u
 const workflow = parse(source);
 const leafJobs = [
   'static-quality',
+  'desktop-static',
+  'dependency-hardening',
   'windows-core',
   'shared-tests',
   'android-source-tests',
@@ -20,6 +22,8 @@ const leafJobs = [
 const leafOwners = {
   'android-source-tests': './.github/workflows/hosted-quality-portable-domain.yml',
   'desktop-source-tests': './.github/workflows/hosted-quality-desktop-source.yml',
+  'desktop-static': './.github/workflows/hosted-quality-desktop-static.yml',
+  'dependency-hardening': './.github/workflows/hosted-quality-dependency-hardening.yml',
   'electron-tests': './.github/workflows/hosted-quality-electron.yml',
   'shared-tests': './.github/workflows/hosted-quality-portable-domain.yml',
   'static-quality': './.github/workflows/hosted-quality-static.yml',
@@ -29,6 +33,8 @@ const leafOwners = {
 const leafAdmissionEnv = {
   'android-source-tests': 'ANDROID_SOURCE',
   'desktop-source-tests': 'DESKTOP_SOURCE',
+  'desktop-static': 'DESKTOP_STATIC',
+  'dependency-hardening': 'DEPENDENCY',
   'electron-tests': 'ELECTRON',
   'shared-tests': 'SHARED',
   'static-quality': 'STATIC',

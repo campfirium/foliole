@@ -95,12 +95,10 @@ async function writeCopyGuardScript(rootDir, message = 'copy guard ok') {
 }
 
 describe('quality-gate-target.sh', () => {
-  it('scopes the hosted desktop pool override to test:desktop', async () => {
+  it('keeps the desktop aggregate free of hosted pool overrides', async () => {
     const source = await readFile(TARGET_SCRIPT, 'utf8');
 
-    expect(source).toContain(
-      'VITEST_POOL="${VITEST_DESKTOP_POOL}" run_quality_gate_script "${prefix}" "${pm}" "test:desktop"'
-    );
+    expect(source).not.toContain('VITEST_DESKTOP_POOL');
     expect(source).not.toContain('export VITEST_POOL');
   });
 
