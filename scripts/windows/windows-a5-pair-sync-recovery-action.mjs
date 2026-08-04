@@ -9,6 +9,7 @@ import {
   PAIR_SYNC_RECOVERY_TEST_RUNNER, pairSyncRecoveryArtifactPaths,
   pairSyncRecoveryFailure, parsePairSyncRecoveryInstrumentation
 } from './windows-a5-pair-sync-recovery-contract.mjs';
+import { scrubPairSyncDataProtection } from './windows-a5-pair-sync-recovery-evidence.mjs';
 import {
   openPairSyncDesktopSession, waitForUniquePairRequest
 } from './windows-pair-sync-desktop-session.mjs';
@@ -31,34 +32,6 @@ async function checked(execute, command, args, commandOptions, stage) {
 
 function writeJson(fsApi, filePath, value) {
   fsApi.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
-}
-
-export function sanitizePairSyncDataProtection(manifest) {
-  if (manifest?.schemaVersion === 1 && typeof manifest.backupCreated === 'boolean'
-      && manifest.databasePreserved === true) {
-    return {
-      backupCreated: manifest.backupCreated,
-      databasePreserved: true,
-      nodeCountBefore: Number.isInteger(manifest.nodeCountBefore) ? manifest.nodeCountBefore : null,
-      schemaVersion: 1
-    };
-  }
-  const counts = manifest?.snapshot?.database?.counts ?? {};
-  return {
-    backupCreated: manifest?.backup?.created === true,
-    databasePreserved: true,
-    nodeCountBefore: Number.isInteger(counts.nodes) ? counts.nodes : null,
-    schemaVersion: 1
-  };
-}
-
-function scrubDataProtectionManifest(fsApi, filePath) {
-  if (!fsApi.existsSync(filePath)) return;
-  try {
-    writeJson(fsApi, filePath, sanitizePairSyncDataProtection(JSON.parse(fsApi.readFileSync(filePath, 'utf8'))));
-  } catch {
-    fsApi.unlinkSync(filePath);
-  }
 }
 
 function apk(fsApi, repoRoot, relativePath) {
@@ -87,13 +60,17 @@ async function clientControl(execute, paths, env, action) {
     options(env, 'desktop_client_timeout', 2 * 60_000), `desktop-client-${action}`);
 }
 
-function validateDesktopPreflight(overview, session, deviceFingerprint, remotePeerFingerprint = null) {
+function validateDesktopPreflight(
+  overview, session, deviceFingerprint, remotePeerFingerprint = null, existingPairing = false
+) {
   const safe = session.sanitize(overview);
   const wrongPairedDevice = safe.pairedDeviceFingerprints.some((value) => value !== deviceFingerprint);
   const wrongRemotePeer = remotePeerFingerprint
     && safe.desktopPeerFingerprint !== remotePeerFingerprint;
+  const missingExistingPeer = existingPairing
+    && !safe.pairedDeviceFingerprints.includes(deviceFingerprint);
   if (!safe.desktopPeerFingerprint || safe.pendingDeviceFingerprints.length > 0
-      || wrongPairedDevice || wrongRemotePeer
+      || wrongPairedDevice || wrongRemotePeer || missingExistingPeer
       || safe.pairedDeviceFingerprints.length > 1) {
     throw pairSyncRecoveryFailure(
       'Windows current library pairing state requires user review', 'desktop-pairing-readiness', null, 77
@@ -103,7 +80,7 @@ function validateDesktopPreflight(overview, session, deviceFingerprint, remotePe
 }
 
 export async function inspectWindowsPairSyncRecoveryDesktop({
-  deviceFingerprint, env, execute, openDesktopSession = openPairSyncDesktopSession,
+  deviceFingerprint, env, execute, existingPairing = false, openDesktopSession = openPairSyncDesktopSession,
   paths, remotePeerFingerprint
 }) {
   const output = [];
@@ -112,7 +89,7 @@ export async function inspectWindowsPairSyncRecoveryDesktop({
   try {
     session = await openDesktopSession({ env, repoRoot: paths.repoRoot });
     const overview = validateDesktopPreflight(
-      await session.load(), session, deviceFingerprint, remotePeerFingerprint
+      await session.load(), session, deviceFingerprint, remotePeerFingerprint, existingPairing
     );
     return { output: output.join(''), overview };
   } finally {
@@ -145,7 +122,8 @@ async function cleanupTestPackage(execute, paths, env, adbPort, serial) {
 
 export async function runWindowsA5PairSyncRecovery({
   adbPort, buildIdentity, deviceFingerprint, env, evidenceRoot, execute, fsApi = fs,
-  openDesktopSession = openPairSyncDesktopSession, paths, protectData, remotePeerFingerprint, serial
+  existingPairing = false, openDesktopSession = openPairSyncDesktopSession, paths, protectData,
+  remotePeerFingerprint, serial
 }) {
   const artifacts = pairSyncRecoveryArtifactPaths(evidenceRoot);
   const dataManifest = artifacts['pair-sync-recovery-data-protection.json'];
@@ -164,16 +142,20 @@ export async function runWindowsA5PairSyncRecovery({
     output.push(await install(execute, paths, env, adbPort, serial, builtApks.test.filePath, true));
     testInstalled = true;
     output.push((await protectData('check', dataManifest)).output);
-    scrubDataProtectionManifest(fsApi, dataManifest);
+    scrubPairSyncDataProtection(fsApi, dataManifest);
     session = await openDesktopSession({ env, repoRoot: paths.repoRoot });
     const enabled = await session.enable();
-    validateDesktopPreflight(enabled, session, deviceFingerprint, remotePeerFingerprint);
+    validateDesktopPreflight(
+      enabled, session, deviceFingerprint, remotePeerFingerprint, existingPairing
+    );
     instrumentationPromise = checked(execute, paths.adbPath, [
       '-P', adbPort, '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',
       '-e', 'class', PAIR_SYNC_RECOVERY_TEST_CLASS, PAIR_SYNC_RECOVERY_TEST_RUNNER
     ], options(env, 'pair_sync_instrumentation_timeout', 3 * 60_000), 'pair-sync-instrumentation');
-    const pending = await waitForUniquePairRequest(session, deviceFingerprint);
-    await session.approve(pending.pair_request_id);
+    if (!existingPairing) {
+      const pending = await waitForUniquePairRequest(session, deviceFingerprint);
+      await session.approve(pending.pair_request_id);
+    }
     const instrumentation = await instrumentationPromise;
     output.push(instrumentation.output);
     const receipt = parsePairSyncRecoveryInstrumentation(instrumentation.stdout);
@@ -194,7 +176,7 @@ export async function runWindowsA5PairSyncRecovery({
     primaryError = error;
     await instrumentationPromise?.catch(() => undefined);
   }
-  scrubDataProtectionManifest(fsApi, dataManifest);
+  scrubPairSyncDataProtection(fsApi, dataManifest);
   try {
     if (testInstalled) output.push(await cleanupTestPackage(execute, paths, env, adbPort, serial));
   } catch (error) {

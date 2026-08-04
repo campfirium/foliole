@@ -29,7 +29,9 @@ export function inspectPairSyncRecoveryWorkspace(database) {
   };
 }
 
-export function pairSyncRecoveryReadiness(snapshot, pairingCredentialsPresent, remotePeerFingerprint = null) {
+export function pairSyncRecoveryReadiness(
+  snapshot, pairingCredentialsPresent, remotePeerFingerprint = null, pairingPeerConflict = false
+) {
   const inspection = snapshot.database?.inspection;
   const missingPrerequisites = [];
   if (!snapshot.packageInfo?.installed) missingPrerequisites.push('app_missing');
@@ -45,7 +47,9 @@ export function pairSyncRecoveryReadiness(snapshot, pairingCredentialsPresent, r
   if (inspection && (inspection.dirtyRecordCount ?? 0) > 0) {
     missingPrerequisites.push('unsynced_device_data_requires_review');
   }
-  if (pairingCredentialsPresent && !remotePeerFingerprint) {
+  if (pairingPeerConflict) {
+    missingPrerequisites.push('existing_pairing_peer_conflict');
+  } else if (pairingCredentialsPresent && !remotePeerFingerprint) {
     missingPrerequisites.push('existing_pairing_peer_unproven');
   }
   return {
@@ -54,6 +58,7 @@ export function pairSyncRecoveryReadiness(snapshot, pairingCredentialsPresent, r
     missingPrerequisites,
     nodeCount: inspection?.nodeCount ?? null,
     pairingCredentialsPresent,
+    pairingPeerConflict,
     remotePeerFingerprint,
     resultStatus: missingPrerequisites.length === 0 ? 'ready' : 'approval_required',
     schemaVersion: 1

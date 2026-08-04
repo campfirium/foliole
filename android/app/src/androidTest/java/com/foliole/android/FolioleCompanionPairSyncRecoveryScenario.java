@@ -20,14 +20,21 @@ final class FolioleCompanionPairSyncRecoveryScenario {
     ) throws Exception {
         clickVisible(instrumentation, webView, "companion-tab-settings", timeoutMs);
         clickVisible(instrumentation, webView, "companion-settings-sync", timeoutMs);
-        clickVisible(instrumentation, webView, "companion-sync-discover", timeoutMs);
-        waitForUniqueVisible(instrumentation, webView, "companion-sync-pair", timeoutMs);
-        clickVisible(instrumentation, webView, "companion-sync-pair", timeoutMs);
+        String entry = waitForEitherVisible(
+            instrumentation, webView, "companion-sync-now", "companion-sync-discover", timeoutMs
+        );
+        boolean reusedPairing = CONNECTED_TARGET.equals(entry);
+        if (!reusedPairing) {
+            clickVisible(instrumentation, webView, "companion-sync-discover", timeoutMs);
+            waitForUniqueVisible(instrumentation, webView, "companion-sync-pair", timeoutMs);
+            clickVisible(instrumentation, webView, "companion-sync-pair", timeoutMs);
+        }
         waitForCompletedSync(instrumentation, webView, timeoutMs);
         JSONObject receipt = new JSONObject();
         receipt.put("ok", true);
         receipt.put("targetTestId", "companion-pair-sync-recovery");
         receipt.put("paired", true);
+        receipt.put("pairingPath", reusedPairing ? "existing" : "new");
         receipt.put("initialSyncRequested", true);
         return receipt;
     }
@@ -69,6 +76,29 @@ final class FolioleCompanionPairSyncRecoveryScenario {
             Thread.sleep(150);
         }
         throw new IllegalStateException("Timed out waiting for semantic target: " + testId);
+    }
+
+    private static String waitForEitherVisible(
+        Instrumentation instrumentation,
+        WebView webView,
+        String first,
+        String second,
+        long timeoutMs
+    ) throws Exception {
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
+        while (System.nanoTime() < deadline) {
+            JSONArray elements = FolioleCompanionWebViewSemanticAdapter
+                .snapshot(instrumentation, webView).getJSONArray("elements");
+            for (int index = 0; index < elements.length(); index += 1) {
+                JSONObject element = elements.getJSONObject(index);
+                if (element.optBoolean("visible")) {
+                    String testId = element.optString("testId");
+                    if (first.equals(testId) || second.equals(testId)) return testId;
+                }
+            }
+            Thread.sleep(150);
+        }
+        throw new IllegalStateException("Timed out waiting for pairing or sync entry.");
     }
 
     private static void waitForCompletedSync(

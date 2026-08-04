@@ -48,9 +48,16 @@ it('hashes the existing remote peer on-device without returning its value', asyn
   const peer = 'desktop-device-1';
   const run = vi.fn()
     .mockResolvedValueOnce({ stdout: '' })
+    .mockResolvedValueOnce({ stdout: `${createHash('sha256').update('').digest('hex')}  -\n` })
     .mockResolvedValueOnce({ stdout: `${createHash('sha256').update(peer).digest('hex')}  -\n` });
   const result = await inspectPairingPreferences({ adb: 'adb', appId: 'app', serial: 'a5' }, run);
   expect(result).toMatchObject({ pairingCredentialsPresent: true, remotePeerFingerprint: expect.any(String) });
-  expect(run.mock.calls[1][1].at(-1)).toContain('sha256sum');
+  expect(run.mock.calls.slice(1).every(([, args]) => args.at(-1).includes('sha256sum'))).toBe(true);
   expect(JSON.stringify(result)).not.toContain(peer);
+});
+
+it('rejects conflicting old and current peer metadata', () => {
+  expect(pairSyncRecoveryReadiness(snapshot(), true, null, true)).toMatchObject({
+    missingPrerequisites: ['existing_pairing_peer_conflict'], resultStatus: 'approval_required'
+  });
 });

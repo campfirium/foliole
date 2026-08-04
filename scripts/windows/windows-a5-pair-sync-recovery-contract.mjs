@@ -41,6 +41,7 @@ export function parsePairSyncRecoveryReadiness(output) {
     missingPrerequisites: [...value.missingPrerequisites],
     nodeCount: value.nodeCount,
     pairingCredentialsPresent: value.pairingCredentialsPresent === true,
+    pairingPeerConflict: value.pairingPeerConflict === true,
     remotePeerFingerprint: /^[0-9a-f]{16}$/u.test(value.remotePeerFingerprint)
       ? value.remotePeerFingerprint : null,
     resultStatus: value.resultStatus,
@@ -62,7 +63,8 @@ export function parsePairSyncRecoveryInstrumentation(output) {
   }
   const receipt = parseBundle(output, 'folioleActionReceipt');
   if (receipt.ok !== true || receipt.targetTestId !== 'companion-pair-sync-recovery'
-      || receipt.paired !== true || receipt.initialSyncRequested !== true) {
+      || receipt.paired !== true || receipt.initialSyncRequested !== true
+      || !['existing', 'new'].includes(receipt.pairingPath)) {
     throw pairSyncRecoveryFailure('Pair sync recovery receipt is incomplete', 'pair-sync-instrumentation');
   }
   return receipt;

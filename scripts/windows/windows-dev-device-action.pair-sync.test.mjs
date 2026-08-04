@@ -40,7 +40,8 @@ it('routes pair recovery through read-only identity gates before fixed mutation'
     paths, phase: 'readiness'
   })).resolves.toMatchObject({ pairSyncRecoveryReadiness: readiness });
   expect(inspectPairSyncDesktop).toHaveBeenCalledWith(expect.objectContaining({
-    deviceFingerprint: readiness.deviceIdentityFingerprint, remotePeerFingerprint: null
+    deviceFingerprint: readiness.deviceIdentityFingerprint, existingPairing: false,
+    remotePeerFingerprint: null
   }));
   const runPairSyncRecovery = vi.fn(async () => ({ output: '', pairSyncRecovery: {} }));
   await runWindowsDevDeviceAction({
@@ -49,6 +50,7 @@ it('routes pair recovery through read-only identity gates before fixed mutation'
   });
   expect(runPairSyncRecovery).toHaveBeenCalledWith(expect.objectContaining({
     adbPort: WINDOWS_DEV_ADB_PORT, deviceFingerprint: readiness.deviceIdentityFingerprint,
+    existingPairing: false,
     remotePeerFingerprint: null,
     serial: WINDOWS_DEV_A5_SERIAL
   }));
