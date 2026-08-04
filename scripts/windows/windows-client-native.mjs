@@ -1,8 +1,10 @@
-/* global console, process, setTimeout */
+/* global console, process */
 import path from 'node:path';
+import { setTimeout as wait } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { closeClientLogStreams, createClientLogStreams, printStartupLogTail } from './windows-client-native-logs.mjs';
 import { forceRestartClient } from './windows-client-native-force-restart.mjs';
+import { resolveWindowsClientHead } from './windows-client-native-head.mjs';
 import { runCapture } from './windows-client-native-process.mjs';
 import { recoverClientStateFromReady, recoverClientStateFromStatus } from './windows-client-native-recovered-state.mjs';
 import { restartRuntimeClient } from './windows-client-native-runtime-restart.mjs';
@@ -12,6 +14,8 @@ import { createStatusPrinter } from './windows-client-native-status.mjs';
 import { listRepoElectronPids, stopNativeClient } from './windows-client-native-stop.mjs';
 import { readNativeWindowHealth } from './windows-client-native-window-health.mjs';
 import { resolveWindowsClientAction } from './windows-client-native-actions.mjs';
+import { dispatchWindowsNativeClientAction } from './windows-client-native-interactive.mjs';
+import { createWindowsClientStateReaders } from './windows-client-native-state-readers.mjs';
 import * as nativeState from './windows-client-native-state.mjs';
 import { formatStartupHealthFailure, readStartupFailureFromBootEvents } from './windows-client-native-startup-failure.mjs';
 import { resolveWindowsNativePaths } from './windows-native-paths.mjs';
@@ -22,6 +26,9 @@ const {
   bridgeReadyFile,
   logDir,
   nativeStartScript,
+  nativeTaskInstallScript,
+  nativeTaskStateRoot,
+  nativeTaskWorkerScript,
   nativeWindowHealthScript,
   repoRoot,
   restartDeliveryFile,
@@ -31,27 +38,12 @@ const {
 } = resolveWindowsNativePaths();
 const healthTimeoutMs = Number.parseInt(process.env.FOLIOLE_ELECTRON_HEALTHCHECK_MS ?? '60000', 10);
 
-function wait(ms) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-}
-
-function readClientState() {
-  return nativeState.readClientState(stateFile);
-}
-
-function readReadyState() {
-  const state = readClientState();
-  return nativeState.readReadyState({ appReadyFile, bridgeReadyFile, windowVisibleFile }) ??
-    nativeState.readReadyStateFromBootEvents(bootEventLogFile, { session: state?.session });
-}
+const { readClientState, readReadyState } = createWindowsClientStateReaders({
+  appReadyFile, bootEventLogFile, bridgeReadyFile, nativeState, stateFile, windowVisibleFile
+});
 
 async function currentHead() {
-  const envHead = process.env.FOLIOLE_RUNTIME_HEAD?.trim();
-  if (envHead) return envHead;
-  const result = await runCapture('git', ['rev-parse', 'HEAD'], { cwd: repoRoot });
-  return result.code === 0 ? result.stdout.trim() : '';
+  return resolveWindowsClientHead({ env: process.env, repoRoot, runCapture });
 }
 
 const printStatus = createStatusPrinter({
@@ -198,6 +190,13 @@ async function main() {
   const action = resolveWindowsClientAction(process.argv);
   console.log(`[windows-client-native] action=${action}`);
   console.log(`[windows-client-native] workdir=${repoRoot}`);
+  if (await dispatchWindowsNativeClientAction({
+    action,
+    installScript: nativeTaskInstallScript,
+    repoRoot,
+    stateRoot: nativeTaskStateRoot,
+    workerScript: nativeTaskWorkerScript
+  })) return;
   if (action === 'status') {
     await recoverClientStateFromStatus({ currentHead, saveState, status: await printStatus() });
   } else if (action === 'start') {

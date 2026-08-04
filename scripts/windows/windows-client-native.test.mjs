@@ -29,10 +29,13 @@ it('starts the native dev runner through a Windows-owned process', async () => {
   const restartScript = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-client-native-restart.mjs'), 'utf8');
   const startRunnerScript = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-client-native-start-runner.mjs'), 'utf8');
   const startScript = await readFile(path.resolve(process.cwd(), 'scripts/windows/start-electron-dev-native.ps1'), 'utf8');
+  const stateReadersScript = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-client-native-state-readers.mjs'), 'utf8');
 
   expect(startRunnerScript).toContain("'powershell.exe'");
   expect(startRunnerScript).toContain("'-File'");
   expect(script).toContain('nativeStartScript');
+  expect(script).toContain('dispatchWindowsNativeClientAction');
+  expect(script.indexOf('dispatchWindowsNativeClientAction')).toBeLessThan(script.indexOf("if (action === 'status')"));
   expect(script).toContain("FOLIOLE_ELECTRON_HEALTHCHECK_MS ?? '60000'");
   expect(script).toContain('closeClientLogStreams(logs)');
   expect(startRunnerScript).toContain('native dev runner start failed');
@@ -91,7 +94,8 @@ it('starts the native dev runner through a Windows-owned process', async () => {
   expect(recoveredStateScript).toContain('runtimePid: ready.windowVisible.pid');
   expect(script).toContain('resetMarkers');
   expect(script).toContain('windowVisibleFile');
-  expect(script).toContain('nativeState.readReadyState({ appReadyFile, bridgeReadyFile, windowVisibleFile })');
+  expect(stateReadersScript).toContain('nativeState.readReadyState({');
+  expect(stateReadersScript).toContain('appReadyFile, bridgeReadyFile, windowVisibleFile');
   expect(script).not.toContain('.pipe(logs.');
   expect(script).not.toContain('restart-electron-dev.ps1');
   expect(script).not.toContain('buildPowerShellArgs');
@@ -110,9 +114,9 @@ it('routes the clickable Windows launcher through native preview', async () => {
 });
 
 it('uses the WSL supplied runtime head before falling back to mirror git', async () => {
-  const script = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-client-native.mjs'), 'utf8');
+  const script = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-client-native-head.mjs'), 'utf8');
 
-  expect(script).toContain('const envHead = process.env.FOLIOLE_RUNTIME_HEAD?.trim();');
+  expect(script).toContain('const envHead = env.FOLIOLE_RUNTIME_HEAD?.trim();');
   expect(script).toContain('if (envHead) return envHead;');
   expect(script.indexOf('if (envHead) return envHead;')).toBeLessThan(
     script.indexOf("runCapture('git', ['rev-parse', 'HEAD']")
