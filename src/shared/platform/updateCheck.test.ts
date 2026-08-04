@@ -37,9 +37,9 @@ function createManifest() {
     checkPolicy: { failureRetryMinutes: 15, intervalMinutes: 60 },
     releases: [
       { version: '0.2.0', platforms: ['android'], url: 'https://github.com/campfirium/foliole/releases/tag/v0.2.0' },
-      { version: '0.1.3', platforms: ['windows'], url: 'https://github.com/campfirium/foliole/releases/tag/v0.1.3' },
-      { version: '0.1.2', platforms: ['windows'], url: 'https://github.com/campfirium/foliole/releases/tag/v0.1.2' },
-      { version: '0.1.1', platforms: ['windows'], url: 'https://github.com/campfirium/foliole/releases/tag/v0.1.1' }
+      { version: '0.1.3', platforms: ['linux', 'macos', 'windows'], url: 'https://github.com/campfirium/foliole/releases/tag/v0.1.3' },
+      { version: '0.1.2', platforms: ['linux', 'macos', 'windows'], url: 'https://github.com/campfirium/foliole/releases/tag/v0.1.2' },
+      { version: '0.1.1', platforms: ['linux', 'macos', 'windows'], url: 'https://github.com/campfirium/foliole/releases/tag/v0.1.1' }
     ]
   };
 }
@@ -49,6 +49,7 @@ const MACOS_TARGET = { architecture: 'arm64', platform: 'macos' } as const;
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  vi.spyOn(window.navigator, 'platform', 'get').mockReturnValue('Linux x86_64');
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-05-31T00:00:00.000Z'));
   window.localStorage.clear();
