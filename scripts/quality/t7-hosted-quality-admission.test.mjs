@@ -13,7 +13,7 @@ const SHA = '0123456789abcdef0123456789abcdef01234567';
 function run(overrides = {}) {
   return {
     conclusion: 'success',
-    display_title: `Remote Quality (full) @ ${SHA}`,
+    display_title: `Remote Quality (full) @ ${SHA} via ${SHA}`,
     status: 'completed',
     ...overrides
   };
@@ -37,8 +37,9 @@ describe('T7 Hosted Quality admission', () => {
     })).toBe(true);
     for (const candidate of [
       failed,
-      run({ display_title: `Remote Quality (desktop) @ ${SHA}` }),
-      run({ display_title: 'Remote Quality (full) @ another-sha' }),
+      run({ display_title: `Remote Quality (desktop) @ ${SHA} via ${SHA}` }),
+      run({ display_title: `Remote Quality (full) @ ${SHA} via ${'a'.repeat(40)}` }),
+      run({ display_title: `Remote Quality (full) @ ${'a'.repeat(40)} via ${SHA}` }),
       run({ conclusion: 'cancelled' }),
       run({ conclusion: '', status: 'in_progress' })
     ]) expect(hasCompletedFullRemoteValidation([candidate], SHA)).toBe(false);

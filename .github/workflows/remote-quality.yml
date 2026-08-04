@@ -1,5 +1,5 @@
 name: Remote Quality
-run-name: Remote Quality (${{ inputs.scope }}) @ ${{ github.sha }}
+run-name: Remote Quality (${{ inputs.scope }}) @ ${{ inputs.target_sha }} via ${{ github.sha }}
 
 on:
   workflow_dispatch:
@@ -14,6 +14,10 @@ on:
           - android
           - ios
           - full
+      target_sha:
+        description: Exact commit SHA to validate with the current dev topology
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -29,6 +33,10 @@ jobs:
       - name: Require the dev branch
         if: github.ref != 'refs/heads/dev'
         run: exit 1
+      - name: Validate target SHA
+        env:
+          TARGET_SHA: ${{ inputs.target_sha }}
+        run: node -e "if (!/^[0-9a-f]{40}$/.test(process.env.TARGET_SHA ?? '')) throw new Error('target_sha must be a full 40-character lowercase commit SHA')"
 
   scoped-quality:
     if: inputs.scope != 'full' && needs.dev-ref.result == 'success'
@@ -41,7 +49,7 @@ jobs:
     uses: ./.github/workflows/hosted-quality-core.yml
     with:
       execution_lane: dev-remote
-      target_sha: ${{ github.sha }}
+      target_sha: ${{ inputs.target_sha }}
       trigger_ref: ${{ github.ref }}
       scope: ${{ inputs.scope }}
 
@@ -51,7 +59,7 @@ jobs:
     uses: ./.github/workflows/t5-baseline-admission.yml
     with:
       execution_lane: dev-remote
-      target_sha: ${{ github.sha }}
+      target_sha: ${{ inputs.target_sha }}
       trigger_ref: ${{ github.ref }}
 
   full-quality:

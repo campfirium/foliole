@@ -19,7 +19,7 @@ function runProcess(command, args) {
 }
 
 export function hasCompletedFullRemoteValidation(runs, targetSha) {
-  const expectedTitle = `Remote Quality (full) @ ${targetSha}`;
+  const expectedTitle = `Remote Quality (full) @ ${targetSha} via ${targetSha}`;
   return runs.some((run) => (
     run.status === 'completed' &&
     run.conclusion === 'success' &&

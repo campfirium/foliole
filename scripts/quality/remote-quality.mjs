@@ -81,6 +81,14 @@ function parseWorkflowRuns(value) {
   return parsed.workflow_runs;
 }
 
+function parseRemoteDevSha(value) {
+  const sha = value.trim();
+  if (!/^[0-9a-f]{40}$/.test(sha)) {
+    throw new Error('Remote dev HEAD did not resolve to a full 40-character lowercase commit SHA');
+  }
+  return sha;
+}
+
 export function findActiveHostedQualityRuns(workflowRuns, branch) {
   return workflowRuns.flat().filter((run) => (
     run.head_branch === branch && ACTIVE_RUN_STATUSES.has(run.status)
@@ -151,9 +159,13 @@ export async function runRemoteQuality(options = {}) {
     throw new Error('Remote Quality is a dev-only orchestrator and requires the local dev branch');
   }
   await requireHostedQualityIdle(runner, repoInfo.nameWithOwner, 'dev', cwd);
+  const targetSha = parseRemoteDevSha(await requireSuccess(runner, 'gh', [
+    'api', '-H', 'X-GitHub-Api-Version: 2026-03-10',
+    `repos/${repoInfo.nameWithOwner}/git/ref/heads/dev`, '--jq', '.object.sha'
+  ], { cwd }));
 
   const payload = JSON.stringify({
-    inputs: { scope: args.scope },
+    inputs: { scope: args.scope, target_sha: targetSha },
     ref: 'dev'
   });
   const dispatch = JSON.parse(await dispatchWorkflow(runner, [
@@ -176,7 +188,7 @@ export async function runRemoteQuality(options = {}) {
     throw new Error(`Remote ${args.scope} quality failed: ${dispatch.html_url}`);
   }
   console.log(`[remote-quality] ${args.scope} quality passed on dev`);
-  return { runId: dispatch.workflow_run_id, scope: args.scope, url: dispatch.html_url };
+  return { runId: dispatch.workflow_run_id, scope: args.scope, targetSha, url: dispatch.html_url };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {

@@ -72,17 +72,28 @@ describe('T6 hosted quality workflow contracts', () => {
 
   it('keeps dev Remote Quality outside formal T6/T7 evidence', () => {
     const remote = workflows.remote.jobs;
+    const dispatch = workflows.remote.on.workflow_dispatch.inputs;
+    expect(workflows.remote['run-name'])
+      .toBe('Remote Quality (${{ inputs.scope }}) @ ${{ inputs.target_sha }} via ${{ github.sha }}');
+    expect(dispatch.target_sha).toEqual({
+      description: 'Exact commit SHA to validate with the current dev topology',
+      required: true,
+      type: 'string'
+    });
     expect(remote['dev-ref'].steps[0].if).toBe("github.ref != 'refs/heads/dev'");
+    expect(remote['dev-ref'].steps[1].env.TARGET_SHA).toBe('${{ inputs.target_sha }}');
+    expect(remote['dev-ref'].steps[1].run).toContain('^[0-9a-f]{40}$');
     expect(remote['scoped-quality'].uses).toBe('./.github/workflows/hosted-quality-core.yml');
     expect(remote['scoped-quality'].with.execution_lane).toBe('dev-remote');
     expect(remote['scoped-quality'].with.trigger_ref).toBe('${{ github.ref }}');
+    expect(remote['scoped-quality'].with.target_sha).toBe('${{ inputs.target_sha }}');
     expect(remote['t5-baseline'].uses).toBe('./.github/workflows/t5-baseline-admission.yml');
+    expect(remote['t5-baseline'].with.target_sha).toBe('${{ inputs.target_sha }}');
     expect(remote['full-quality'].uses).toBe('./.github/workflows/hosted-quality-full.yml');
     expect(remote['full-quality'].with.target_sha)
       .toBe('${{ needs.t5-baseline.outputs.admitted_sha }}');
-    expect(workflows.remote.on.workflow_dispatch.inputs.target_sha).toBeUndefined();
     for (const scope of ['desktop', 'shared', 'android', 'ios', 'full']) {
-      expect(workflows.remote.on.workflow_dispatch.inputs.scope.options).toContain(scope);
+      expect(dispatch.scope.options).toContain(scope);
     }
   });
 

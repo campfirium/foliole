@@ -79,9 +79,23 @@ describe('remote quality dispatcher', () => {
     const dispatch = calls.find((call) => call.args.includes('--method'));
     expect(dispatch.args).toContain('X-GitHub-Api-Version: 2026-03-10');
     expect(JSON.parse(dispatch.options.input)).toEqual({
-      inputs: { scope: 'desktop' }, ref: 'dev'
+      inputs: { scope: 'desktop', target_sha: SHA }, ref: 'dev'
     });
+    expect(calls.some((call) => call.args.includes('.object.sha'))).toBe(true);
     expect(calls.some((call) => call.args.some((arg) => arg.includes('/actions/runs/42/jobs')))).toBe(true);
+  });
+
+  it('fails before dispatch when the pushed dev HEAD is not an exact SHA', async () => {
+    const { runner: baseRunner } = createRunner();
+    const runner = vi.fn(async (command, args, options) => {
+      if (args[0] === 'api' && args.includes('.object.sha')) {
+        return { code: 0, stderr: '', stdout: 'dev' };
+      }
+      return baseRunner(command, args, options);
+    });
+    await expect(runRemoteQuality({ args: ['--scope', 'desktop'], runner }))
+      .rejects.toThrow('Remote dev HEAD did not resolve');
+    expect(runner.mock.calls.some(([, args]) => args.some((arg) => arg.includes('/dispatches')))).toBe(false);
   });
 
   it('refuses to dispatch while T7 Hosted Quality or Remote Quality is nonterminal', async () => {
