@@ -53,7 +53,7 @@ it('rejects another library and closes the bounded runtime', async () => {
 
 it('classifies bounded current-library readiness failures', async () => {
   const fixture = launcherFixture();
-  fixture.page.waitForFunction.mockRejectedValue(new Error('page closed'));
+  fixture.page.waitForFunction.mockRejectedValue(Object.freeze(new Error('page closed')));
   fixture.app.close.mockRejectedValue(new Error('close failed'));
   await expect(openPairSyncDesktopSession({
     electronLauncher: fixture.launcher, env: {}, repoRoot: 'C:\\dev\\foliole-android-lab-preview'

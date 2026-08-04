@@ -37,8 +37,10 @@ async function waitForAppReady(page, timeoutMs) {
 async function desktopSessionStep(stage, action) {
   try { return await action(); }
   catch (error) {
-    Object.assign(error, { exitCode: error.exitCode ?? 74, stage: error.stage ?? stage });
-    throw error;
+    if (error?.stage) throw error;
+    throw Object.assign(new Error(error instanceof Error ? error.message : String(error), {
+      cause: error
+    }), { exitCode: 74, stage });
   }
 }
 
