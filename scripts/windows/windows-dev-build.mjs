@@ -11,6 +11,7 @@ import { prepareWindowsAndroidDebugHost } from './windows-android-host-prepare.m
 import { normalizeWindowsDevAction } from './windows-dev-action-contract.mjs';
 import { runWindowsDevDeviceAction } from './windows-dev-device-action.mjs';
 import { windowsDevPaths } from './windows-dev-paths.mjs';
+import { allowsPairSyncNativeClient } from './windows-dev-residual-process.mjs';
 
 const BUILD_COMMAND = 'call .\\gradlew.bat --no-daemon assembleDebugAndroidTest';
 const CAPTURE_BUILD_COMMAND = 'call .\\gradlew.bat --no-daemon assembleDebug assembleDebugAndroidTest';
@@ -133,7 +134,9 @@ export async function runWindowsDevBuild({
       if (!fsApi.existsSync(filePath)) throw failure(`Required tool is missing: ${filePath}`, 64, 'preflight');
     }
     const residualBefore = await snapshotProcesses(execute, paths);
-    if (residualBefore.length > 0) throw failure('Repository-owned action process is already running', 73, 'residual');
+    if (residualBefore.length > 0 && !allowsPairSyncNativeClient(action, residualBefore, paths)) {
+      throw failure('Repository-owned action process is already running', 73, 'residual');
+    }
     const signing = verifySigningIdentity(paths, fsApi);
     let output = '';
     let readiness = null;

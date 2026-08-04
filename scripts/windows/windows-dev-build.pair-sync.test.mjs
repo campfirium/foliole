@@ -7,6 +7,7 @@ import path from 'node:path';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { runWindowsDevBuild } from './windows-dev-build.mjs';
+import { allowsPairSyncNativeClient } from './windows-dev-residual-process.mjs';
 
 const roots = [];
 afterEach(() => roots.splice(0).forEach((root) => fs.rmSync(root, { force: true, recursive: true })));
@@ -38,7 +39,14 @@ it('gates pair recovery before its fixed desktop and Android build path', async 
   const calls = [];
   const execute = vi.fn(async (command, args, options) => {
     calls.push({ args, command, options });
-    if (command === 'powershell.exe') return { code: 0, output: '[]\n', stdout: '[]\n' };
+    if (command === 'powershell.exe') {
+      const nativeCommand = `"${paths.systemNode}" "${path.join(
+        paths.repoRoot, 'scripts', 'windows', 'electron-dev-native.mjs'
+      )}"`.replaceAll('/', '\\');
+      const commandLine = `"C:\\Windows\\system32\\cmd.exe" /d /c "${nativeCommand}"`;
+      const output = `${JSON.stringify([{ CommandLine: commandLine, Name: 'cmd.exe' }])}\n`;
+      return { code: 0, output, stdout: output };
+    }
     if (command === 'cmd.exe') {
       options.onSpawn?.({ pid: 7 });
       return { code: 0, lines: ['BUILD SUCCESSFUL'], output: 'BUILD SUCCESSFUL\n', stdout: 'BUILD SUCCESSFUL\n' };
@@ -60,4 +68,18 @@ it('gates pair recovery before its fixed desktop and Android build path', async 
   expect(calls.filter(({ command }) => command === paths.systemNode).map(({ args }) => args.at(-1)))
     .toEqual(expect.arrayContaining(['build', 'electron:compile']));
   expect(calls.find(({ command }) => command === 'cmd.exe').args.at(-1)).toContain('assembleDebug assembleDebugAndroidTest');
+});
+
+it('rejects unknown or additional residual processes for pair recovery', () => {
+  const paths = fixture();
+  const script = path.join(paths.repoRoot, 'scripts', 'windows', 'electron-dev-native.mjs');
+  const nativeCommand = `"${paths.systemNode}" "${script}"`.replaceAll('/', '\\');
+  const trusted = {
+    CommandLine: `"C:\\Windows\\system32\\cmd.exe" /d /c "${nativeCommand}"`,
+    Name: 'cmd.exe'
+  };
+  expect(allowsPairSyncNativeClient('pair-sync-recover', [trusted], paths)).toBe(true);
+  expect(allowsPairSyncNativeClient('pair-sync-recover', [{ ...trusted, CommandLine: 'cmd.exe /c unknown' }], paths)).toBe(false);
+  expect(allowsPairSyncNativeClient('pair-sync-recover', [trusted, { Name: 'java.exe' }], paths)).toBe(false);
+  expect(allowsPairSyncNativeClient('capture-annotation', [trusted], paths)).toBe(false);
 });
