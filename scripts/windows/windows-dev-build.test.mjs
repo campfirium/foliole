@@ -131,10 +131,15 @@ describe('Windows DEV foreground build', () => {
     const { paths } = fixture();
     const { calls, execute } = successfulExecutor(paths);
     const prepareHost = vi.fn(async () => 'prepared\n');
-    const deviceAction = vi.fn(async ({ buildIdentity }) => ({
-      captureAnnotation: { buildIdentity, manifestPath: 'capture-annotation-manifest.json' },
-      output: 'accepted\n'
-    }));
+    const deviceAction = vi.fn(async ({ buildIdentity, phase }) => phase === 'readiness'
+      ? {
+          captureAnnotationReadiness: { resultStatus: 'ready', schemaVersion: 1 },
+          output: 'ready\n'
+        }
+      : {
+          captureAnnotation: { buildIdentity, manifestPath: 'capture-annotation-manifest.json' },
+          output: 'accepted\n'
+        });
     const run = await runWindowsDevBuild({
       action: 'captureannotation', deviceAction, execute, paths, platform: 'win32', prepareHost
     });
@@ -145,8 +150,10 @@ describe('Windows DEV foreground build', () => {
       '/d', '/s', '/c', 'call .\\gradlew.bat --no-daemon assembleDebug assembleDebugAndroidTest'
     ]);
     expect(build.options.env.ANDROID_USER_HOME).toBe(paths.signingHome);
-    expect(deviceAction).toHaveBeenCalledAfter(prepareHost);
-    expect(deviceAction).toHaveBeenCalledWith(expect.objectContaining({ action: 'capture-annotation' }));
+    expect(deviceAction).toHaveBeenCalledTimes(2);
+    expect(deviceAction.mock.calls[0][0]).toMatchObject({ action: 'capture-annotation', phase: 'readiness' });
+    expect(deviceAction.mock.calls[1][0]).toMatchObject({ action: 'capture-annotation', phase: 'execute' });
+    expect(prepareHost).toHaveBeenCalledAfter(deviceAction);
     expect(run).toMatchObject({
       exitCode: 0, summary: {
         action: 'capture-annotation', captureAnnotation: {
@@ -154,7 +161,40 @@ describe('Windows DEV foreground build', () => {
         }, resultStatus: 'success', signingSha256: expect.stringMatching(/^[0-9a-f]{64}$/u)
       }
     });
-    expect(fs.readFileSync(run.summary.logPath, 'utf8')).toBe('prepared\nBUILD SUCCESSFUL\naccepted\n');
+    expect(fs.readFileSync(run.summary.logPath, 'utf8')).toBe('ready\nprepared\nBUILD SUCCESSFUL\naccepted\n');
+  });
+
+  it('stops an empty capture workspace before prepare, Gradle, or device mutation', async () => {
+    const { paths } = fixture();
+    const { calls, execute } = successfulExecutor(paths);
+    const prepareHost = vi.fn();
+    const readiness = {
+      counts: { content_blobs: 0, node_order: 0, nodes: 0 },
+      missingPrerequisites: ['acceptance_workspace_empty'],
+      resultStatus: 'approval_required', schemaVersion: 1
+    };
+    const deviceAction = vi.fn(async () => {
+      throw Object.assign(new Error('normal pairing and sync required'), {
+        exitCode: 77, readiness, result: { output: 'bounded readiness evidence\n' },
+        resultStatus: 'approval_required', stage: 'capture-readiness'
+      });
+    });
+    const run = await runWindowsDevBuild({
+      action: 'capture-annotation', deviceAction, execute, paths, platform: 'win32', prepareHost
+    });
+    expect(run).toMatchObject({
+      exitCode: 77,
+      summary: {
+        captureAnnotationReadiness: readiness, failureStage: 'capture-readiness',
+        resultStatus: 'approval_required'
+      }
+    });
+    expect(deviceAction).toHaveBeenCalledOnce();
+    expect(deviceAction).toHaveBeenCalledWith(expect.objectContaining({ phase: 'readiness' }));
+    expect(prepareHost).not.toHaveBeenCalled();
+    expect(calls.some(({ command }) => command === 'cmd.exe')).toBe(false);
+    expect(fs.readFileSync(path.join(path.dirname(run.summaryPath), 'action.log'), 'utf8'))
+      .toBe('bounded readiness evidence\n');
   });
 });
 

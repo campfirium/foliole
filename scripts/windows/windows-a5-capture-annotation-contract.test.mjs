@@ -5,7 +5,8 @@ import { expect, it } from 'vitest';
 
 import {
   CAPTURE_ANNOTATION_RUNNER_IDENTITY, CAPTURE_ANNOTATION_TEST_CLASS,
-  parseCaptureAnnotationInstrumentation, parseCaptureAnnotationPackage
+  parseCaptureAnnotationInstrumentation, parseCaptureAnnotationPackage,
+  parseCaptureAnnotationReadiness
 } from './windows-a5-capture-annotation-contract.mjs';
 
 function instrumentationOutput(token) {
@@ -32,6 +33,21 @@ it('locks the exact runner, method, token receipt, and restart evidence', () => 
   expect(() => parseCaptureAnnotationInstrumentation(
     instrumentationOutput('other-run'), 'capture-run-1'
   )).toThrow('belongs to another run');
+});
+
+it('accepts only bounded readiness evidence without credential values', () => {
+  const readiness = {
+    canonicalInbox: { active: false, kind: null },
+    counts: { content_blobs: 0, node_order: 0, nodes: 0 },
+    missingPrerequisites: ['acceptance_workspace_empty'],
+    pairingWorkspace: { localDeviceIdentityPresent: false, syncEndpointPresent: false },
+    resultStatus: 'approval_required', schemaVersion: 1
+  };
+  expect(parseCaptureAnnotationReadiness(
+    `[android-data] capture-annotation-readiness=${JSON.stringify({ ...readiness, endpointSecret: 'omit-me' })}\n`
+  )).toEqual(readiness);
+  expect(() => parseCaptureAnnotationReadiness('[android-data] database=present\n'))
+    .toThrow('evidence is missing');
 });
 
 it('requires a complete installed package identity', () => {

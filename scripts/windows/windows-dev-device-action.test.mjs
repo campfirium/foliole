@@ -127,6 +127,38 @@ describe('Windows DEV fixed device action', () => {
     expect(calls.at(-1).args).toEqual(['-P', WINDOWS_DEV_ADB_PORT, 'kill-server']);
   });
 
+  it('returns approval_required from the read-only gate without force-stop, backup, or install', async () => {
+    const { evidenceRoot, paths } = fixture();
+    const readiness = {
+      canonicalInbox: { active: false, kind: null },
+      counts: { content_blobs: 0, node_order: 0, nodes: 0 },
+      missingPrerequisites: ['acceptance_workspace_empty', 'canonical_inbox_missing'],
+      pairingWorkspace: { localDeviceIdentityPresent: false, syncEndpointPresent: false },
+      resultStatus: 'approval_required', schemaVersion: 1
+    };
+    const { calls, execute: baseExecute } = successfulExecutor(paths);
+    const execute = vi.fn(async (command, args, options) => {
+      if (args.some((arg) => String(arg).includes('android-capture-annotation-readiness-runner.mjs'))) {
+        calls.push({ args, command, options });
+        return { ...result(`[android-data] capture-annotation-readiness=${JSON.stringify(readiness)}`), code: 77 };
+      }
+      return baseExecute(command, args, options);
+    });
+    await expect(runWindowsDevDeviceAction({
+      action: 'capture-annotation', buildIdentity: 'capture-empty', evidenceRoot, execute,
+      paths, phase: 'readiness'
+    })).rejects.toMatchObject({
+      exitCode: 77, readiness: { resultStatus: 'approval_required' },
+      resultStatus: 'approval_required', stage: 'capture-readiness'
+    });
+    const allArgs = calls.flatMap(({ args }) => args).join(' ');
+    expect(allArgs).not.toMatch(/force-stop| backup | install |instrument/iu);
+    expect(calls.filter(({ args }) => args.some(
+      (arg) => String(arg).includes('android-capture-annotation-readiness-runner.mjs')
+    ))).toHaveLength(1);
+    expect(calls.at(-1).args).toEqual(['-P', WINDOWS_DEV_ADB_PORT, 'kill-server']);
+  });
+
   it('routes renderer-only live action without PowerShell deploy or APK install', async () => {
     const { evidenceRoot, paths } = fixture();
     const { calls, execute } = successfulExecutor(paths);

@@ -123,6 +123,15 @@ export async function runWindowsDevBuild({
     if (residualBefore.length > 0) throw failure('Repository-owned action process is already running', 73, 'residual');
     const signing = verifySigningIdentity(paths, fsApi);
     let output = '';
+    let readiness = null;
+    if (action === 'capture-annotation') {
+      const gate = await deviceAction({
+        action, buildIdentity: context.runId, evidenceRoot: context.root, execute, paths,
+        phase: 'readiness'
+      });
+      readiness = gate.captureAnnotationReadiness;
+      output += gate.output;
+    }
     if (['build', 'capture-annotation', 'deploy'].includes(action)) {
       output += await prepareHost({
         execute, fsApi, liveReload: action !== 'capture-annotation', paths
@@ -138,7 +147,8 @@ export async function runWindowsDevBuild({
     }
     if (action !== 'build') {
       actionResult = await deviceAction({
-        action, buildIdentity: context.runId, evidenceRoot: context.root, execute, paths
+        action, buildIdentity: context.runId, evidenceRoot: context.root, execute, paths,
+        phase: 'execute'
       });
       output += actionResult.output;
     }
@@ -146,7 +156,8 @@ export async function runWindowsDevBuild({
     const summary = { action, completedAt: now().toISOString(), directChildPid,
       exitCode: 0, logPath: context.logPath, repoRoot: paths.repoRoot,
       resultStatus: 'success', runId: context.runId, schemaVersion: 1, signingSha256: signing.sha256,
-      startedAt, ...(actionResult?.liveReload ? { liveReload: actionResult.liveReload } : {}) };
+      startedAt, ...(readiness ? { captureAnnotationReadiness: readiness } : {}),
+      ...(actionResult?.liveReload ? { liveReload: actionResult.liveReload } : {}) };
     if (actionResult?.captureAnnotation) summary.captureAnnotation = actionResult.captureAnnotation;
     writeJson(fsApi, context.summaryPath, summary);
     return { exitCode: 0, summary, summaryPath: context.summaryPath };
@@ -156,8 +167,10 @@ export async function runWindowsDevBuild({
       fsApi.writeFileSync(context.logPath, error.result.output, 'utf8');
     }
     const summary = { action, completedAt: now().toISOString(), directChildPid, exitCode,
-      failureStage: error.stage || 'entry', message: error.message, resultStatus: 'failure',
+      failureStage: error.stage || 'entry', message: error.message,
+      resultStatus: error.resultStatus || 'failure',
       runId: context?.runId ?? null, schemaVersion: 1, startedAt,
+      ...(error.readiness ? { captureAnnotationReadiness: error.readiness } : {}),
       ...(error.liveReload ? { liveReload: error.liveReload } : {}) };
     if (context) writeJson(fsApi, context.summaryPath, summary);
     return { exitCode, summary, summaryPath: context?.summaryPath ?? null };

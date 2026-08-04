@@ -24,6 +24,44 @@ export function captureAnnotationFailure(message, stage, result) {
   return Object.assign(new Error(message), { exitCode: 74, result, stage });
 }
 
+export function parseCaptureAnnotationReadiness(output) {
+  const prefix = '[android-data] capture-annotation-readiness=';
+  const line = String(output).split(/\r?\n/u).find((entry) => entry.startsWith(prefix));
+  if (!line) throw captureAnnotationFailure('Capture annotation readiness evidence is missing', 'capture-readiness');
+  let readiness;
+  try { readiness = JSON.parse(line.slice(prefix.length)); }
+  catch { throw captureAnnotationFailure('Capture annotation readiness evidence is invalid', 'capture-readiness'); }
+  const counts = readiness?.counts;
+  const pairing = readiness?.pairingWorkspace;
+  if (readiness?.schemaVersion !== 1 || !['ready', 'approval_required'].includes(readiness.resultStatus)
+      || !Array.isArray(readiness.missingPrerequisites) || !counts || !pairing
+      || readiness.missingPrerequisites.some((entry) => typeof entry !== 'string')
+      || ['content_blobs', 'node_order', 'nodes'].some(
+        (key) => counts[key] !== null && !Number.isSafeInteger(counts[key])
+      )
+      || typeof readiness.canonicalInbox?.active !== 'boolean'
+      || typeof pairing.localDeviceIdentityPresent !== 'boolean'
+      || typeof pairing.syncEndpointPresent !== 'boolean') {
+    throw captureAnnotationFailure('Capture annotation readiness evidence is incomplete', 'capture-readiness');
+  }
+  return {
+    canonicalInbox: {
+      active: readiness.canonicalInbox.active,
+      kind: typeof readiness.canonicalInbox.kind === 'string' ? readiness.canonicalInbox.kind : null
+    },
+    counts: {
+      content_blobs: counts.content_blobs, node_order: counts.node_order, nodes: counts.nodes
+    },
+    missingPrerequisites: [...readiness.missingPrerequisites],
+    pairingWorkspace: {
+      localDeviceIdentityPresent: pairing.localDeviceIdentityPresent,
+      syncEndpointPresent: pairing.syncEndpointPresent
+    },
+    resultStatus: readiness.resultStatus,
+    schemaVersion: 1
+  };
+}
+
 function parseBundleJson(output, key) {
   const prefix = `INSTRUMENTATION_STATUS: ${key}=`;
   const line = String(output).split(/\r?\n/u).find((entry) => entry.startsWith(prefix));

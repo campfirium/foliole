@@ -4,6 +4,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { runWindowsA5LiveReload } from './windows-a5-live-reload-action.mjs';
+import {
+  captureAnnotationFailure, parseCaptureAnnotationReadiness
+} from './windows-a5-capture-annotation-contract.mjs';
 
 export const WINDOWS_DEV_ADB_PORT = '5037';
 export const WINDOWS_DEV_A5_SERIAL = '87a33a4b';
@@ -13,6 +16,26 @@ const COMPONENT = `${APP_ID}/com.foliole.android.MainActivity`;
 async function runDefaultCaptureAnnotation(options) {
   const { runWindowsA5CaptureAnnotation } = await import('./windows-a5-capture-annotation-action.mjs');
   return runWindowsA5CaptureAnnotation(options);
+}
+
+async function runCaptureAnnotationReadiness(execute, paths, env) {
+  const script = path.join(paths.repoRoot, 'scripts', 'android', 'android-capture-annotation-readiness-runner.mjs');
+  const result = await execute(paths.systemNode, [script, '--adb', paths.adbPath,
+    '--serial', WINDOWS_DEV_A5_SERIAL, '--app-id', APP_ID], {
+    env: helperEnv(env), timeoutCode: 'capture_readiness_timeout', timeoutMs: 2 * 60_000,
+    windowsHide: true
+  });
+  const readiness = parseCaptureAnnotationReadiness(result.output);
+  if (result.code === 0 && readiness.resultStatus === 'ready') {
+    return { captureAnnotationReadiness: readiness, output: result.output };
+  }
+  if (result.code === 77 && readiness.resultStatus === 'approval_required') {
+    throw Object.assign(captureAnnotationFailure(
+      'A5 acceptance workspace requires normal pairing and sync before capture annotation acceptance',
+      'capture-readiness', result
+    ), { exitCode: 77, readiness, resultStatus: 'approval_required' });
+  }
+  throw captureAnnotationFailure('Capture annotation readiness result is inconsistent', 'capture-readiness', result);
 }
 
 function failure(message, exitCode, stage, result) {
@@ -88,7 +111,7 @@ async function verify(execute, paths, env) {
 }
 
 export async function runWindowsDevDeviceAction({
-  action, buildIdentity, evidenceRoot, execute, paths,
+  action, buildIdentity, evidenceRoot, execute, paths, phase = 'execute',
   runCaptureAnnotation = runDefaultCaptureAnnotation, runLiveReload = runWindowsA5LiveReload
 }) {
   const env = actionEnv(paths);
@@ -110,7 +133,9 @@ export async function runWindowsDevDeviceAction({
       ['-P', WINDOWS_DEV_ADB_PORT, '-s', WINDOWS_DEV_A5_SERIAL, 'get-state'],
       { env, timeoutCode: 'device_timeout', timeoutMs: 30_000, windowsHide: true }, 'device', 69);
     if (state.stdout.trim() !== 'device') throw failure('Fixed Android device is not ready', 69, 'device');
-    if (action === 'capture-annotation') {
+    if (action === 'capture-annotation' && phase === 'readiness') {
+      actionResult = await runCaptureAnnotationReadiness(execute, paths, env);
+    } else if (action === 'capture-annotation') {
       actionResult = await runCaptureAnnotation({
         adbPort: WINDOWS_DEV_ADB_PORT, buildIdentity, env, evidenceRoot, execute, paths,
         protectData: (mode, manifest, backupRoot) => runDataProtection(
