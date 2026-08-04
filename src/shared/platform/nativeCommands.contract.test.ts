@@ -10,6 +10,7 @@ const PLATFORM_DIR = join(process.cwd(), 'lib/platform');
 const CONTRACT_FILES = [
   'nativeAideStorageContract.ts',
   'nativeAssistantContract.ts',
+  'nativeAssistantCommandContract.ts',
   'nativeContract.ts',
   'nativeDiscoursePublishContract.ts',
   'nativeDisplayScaleContract.ts',
