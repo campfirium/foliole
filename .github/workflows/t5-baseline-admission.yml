@@ -144,5 +144,5 @@ jobs:
         run: |
           set -euo pipefail
           node -e 'const failed = Object.entries(process.env).filter(([key, value]) => key.endsWith("_RESULT") && value !== "success"); if (failed.length) throw new Error(failed.map(([key, value]) => `${key}=${value}`).join(", "))'
-          node -e 'const mismatches = Object.entries(process.env).filter(([key, value]) => key.endsWith("_SHA") && key !== "TARGET_SHA" && value !== process.env.TARGET_SHA); if (mismatches.length) throw new Error(mismatches.map(([key, value]) => `${key}=${value}`).join(", "))'
+          node -e 'const mismatches = Object.entries(process.env).filter(([key, value]) => key.endsWith("_SHA") && `${key.slice(0, -4)}_RESULT` in process.env && value !== process.env.TARGET_SHA); if (mismatches.length) throw new Error(mismatches.map(([key, value]) => `${key}=${value}`).join(", "))'
           echo "admitted_sha=${TARGET_SHA}" >> "$GITHUB_OUTPUT"

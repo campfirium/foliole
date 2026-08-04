@@ -90,7 +90,7 @@ describe('T5 Baseline Admission workflow contract', () => {
       key.endsWith('_RESULT') ? 'success' : 'a'.repeat(40)
     ]));
     const success = spawnSync('bash', ['-c', command], {
-      env: { ...process.env, ...successEnv, GITHUB_OUTPUT: '/dev/null' }
+      env: { ...process.env, ...successEnv, GITHUB_OUTPUT: '/dev/null', GITHUB_SHA: 'b'.repeat(40) }
     });
     const failure = spawnSync('bash', ['-c', command], {
       encoding: 'utf8',
