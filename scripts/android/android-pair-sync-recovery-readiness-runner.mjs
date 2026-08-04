@@ -15,6 +15,7 @@ import {
 const execFileAsync = promisify(execFile);
 const PAIRING_PREFS = 'shared_prefs/foliole_companion_pairing.xml';
 const EMPTY_SHA256 = createHash('sha256').update('').digest('hex');
+const PAIRING_REQUIRED_KEYS = ['device_id', 'device_secret', 'device_secret_iv'];
 
 function parseArgs(argv) {
   const options = { adb: 'adb', appId: 'com.foliole.android', serial: '' };
@@ -37,6 +38,24 @@ export async function inspectPairingPreferences(options, run = execFileAsync) {
   } catch (error) {
     if (error.code === 1) return { pairingCredentialsPresent: false, remotePeerFingerprint: null };
     throw error;
+  }
+  const requiredKeys = await Promise.all(PAIRING_REQUIRED_KEYS.map(async (key) => {
+    try {
+      await run(options.adb, [
+        '-s', options.serial, 'shell', 'run-as', options.appId, 'grep', '-q',
+        `name="${key}"`, PAIRING_PREFS
+      ], { encoding: 'utf8', timeout: 30_000 });
+      return true;
+    } catch (error) {
+      if (error.code === 1) return false;
+      throw error;
+    }
+  }));
+  if (requiredKeys.every((present) => !present)) {
+    return { pairingCredentialsPresent: false, remotePeerFingerprint: null };
+  }
+  if (!requiredKeys.every(Boolean)) {
+    return { pairingCredentialsPresent: true, remotePeerFingerprint: null };
   }
   const hashes = await Promise.all(['remote_peer_id', 'primary_device_id'].map(async (key) => {
     const script = `sed -n 's@.*<string name="${key}">\\([^<]*\\)</string>.*@\\1@p' ${PAIRING_PREFS} | sha256sum`;

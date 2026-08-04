@@ -46,14 +46,30 @@ it('allows existing credentials only with a non-sensitive remote peer fingerprin
 
 it('hashes the existing remote peer on-device without returning its value', async () => {
   const peer = 'desktop-device-1';
-  const run = vi.fn()
-    .mockResolvedValueOnce({ stdout: '' })
-    .mockResolvedValueOnce({ stdout: `${createHash('sha256').update('').digest('hex')}  -\n` })
-    .mockResolvedValueOnce({ stdout: `${createHash('sha256').update(peer).digest('hex')}  -\n` });
+  const run = vi.fn(async (_command, args) => {
+    const script = args.at(-1);
+    if (String(script).includes('remote_peer_id')) {
+      return { stdout: `${createHash('sha256').update('').digest('hex')}  -\n` };
+    }
+    if (String(script).includes('primary_device_id')) {
+      return { stdout: `${createHash('sha256').update(peer).digest('hex')}  -\n` };
+    }
+    return { stdout: '' };
+  });
   const result = await inspectPairingPreferences({ adb: 'adb', appId: 'app', serial: 'a5' }, run);
   expect(result).toMatchObject({ pairingCredentialsPresent: true, remotePeerFingerprint: expect.any(String) });
-  expect(run.mock.calls.slice(1).every(([, args]) => args.at(-1).includes('sha256sum'))).toBe(true);
+  expect(run.mock.calls.filter(([, args]) => String(args.at(-1)).includes('sha256sum'))).toHaveLength(2);
   expect(JSON.stringify(result)).not.toContain(peer);
+});
+
+it('treats an empty retained preferences file as unpaired', async () => {
+  const missing = Object.assign(new Error('missing'), { code: 1 });
+  const run = vi.fn(async (_command, args) => {
+    if (args.includes('grep')) throw missing;
+    return { stdout: '' };
+  });
+  await expect(inspectPairingPreferences({ adb: 'adb', appId: 'app', serial: 'a5' }, run))
+    .resolves.toEqual({ pairingCredentialsPresent: false, remotePeerFingerprint: null });
 });
 
 it('rejects conflicting old and current peer metadata', () => {
