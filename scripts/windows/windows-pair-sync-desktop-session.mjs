@@ -10,7 +10,10 @@ function fingerprint(value) {
 }
 
 function sanitizeOverview(overview) {
+  const primary = overview.primary_device_state;
   return {
+    desktopPeerFingerprint: primary.local_role === 'primary'
+      ? fingerprint(primary.primary_device_id) : null,
     pairedDeviceFingerprints: overview.paired_devices.map((device) => fingerprint(device.device_id)),
     pendingDeviceFingerprints: overview.pending_requests.map((request) => fingerprint(request.device_id)),
     serverState: overview.server_status.state,

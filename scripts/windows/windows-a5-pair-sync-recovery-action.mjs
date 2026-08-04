@@ -87,10 +87,13 @@ async function clientControl(execute, paths, env, action) {
     options(env, 'desktop_client_timeout', 2 * 60_000), `desktop-client-${action}`);
 }
 
-function validateDesktopPreflight(overview, session, deviceFingerprint) {
+function validateDesktopPreflight(overview, session, deviceFingerprint, remotePeerFingerprint = null) {
   const safe = session.sanitize(overview);
   const wrongPairedDevice = safe.pairedDeviceFingerprints.some((value) => value !== deviceFingerprint);
-  if (safe.pendingDeviceFingerprints.length > 0 || wrongPairedDevice
+  const wrongRemotePeer = remotePeerFingerprint
+    && safe.desktopPeerFingerprint !== remotePeerFingerprint;
+  if (!safe.desktopPeerFingerprint || safe.pendingDeviceFingerprints.length > 0
+      || wrongPairedDevice || wrongRemotePeer
       || safe.pairedDeviceFingerprints.length > 1) {
     throw pairSyncRecoveryFailure(
       'Windows current library pairing state requires user review', 'desktop-pairing-readiness', null, 77
@@ -100,14 +103,17 @@ function validateDesktopPreflight(overview, session, deviceFingerprint) {
 }
 
 export async function inspectWindowsPairSyncRecoveryDesktop({
-  deviceFingerprint, env, execute, openDesktopSession = openPairSyncDesktopSession, paths
+  deviceFingerprint, env, execute, openDesktopSession = openPairSyncDesktopSession,
+  paths, remotePeerFingerprint
 }) {
   const output = [];
   await clientControl(execute, paths, env, 'stop');
   let session;
   try {
     session = await openDesktopSession({ env, repoRoot: paths.repoRoot });
-    const overview = validateDesktopPreflight(await session.load(), session, deviceFingerprint);
+    const overview = validateDesktopPreflight(
+      await session.load(), session, deviceFingerprint, remotePeerFingerprint
+    );
     return { output: output.join(''), overview };
   } finally {
     await session?.close();
@@ -139,7 +145,7 @@ async function cleanupTestPackage(execute, paths, env, adbPort, serial) {
 
 export async function runWindowsA5PairSyncRecovery({
   adbPort, buildIdentity, deviceFingerprint, env, evidenceRoot, execute, fsApi = fs,
-  openDesktopSession = openPairSyncDesktopSession, paths, protectData, serial
+  openDesktopSession = openPairSyncDesktopSession, paths, protectData, remotePeerFingerprint, serial
 }) {
   const artifacts = pairSyncRecoveryArtifactPaths(evidenceRoot);
   const dataManifest = artifacts['pair-sync-recovery-data-protection.json'];
@@ -161,7 +167,7 @@ export async function runWindowsA5PairSyncRecovery({
     scrubDataProtectionManifest(fsApi, dataManifest);
     session = await openDesktopSession({ env, repoRoot: paths.repoRoot });
     const enabled = await session.enable();
-    validateDesktopPreflight(enabled, session, deviceFingerprint);
+    validateDesktopPreflight(enabled, session, deviceFingerprint, remotePeerFingerprint);
     instrumentationPromise = checked(execute, paths.adbPath, [
       '-P', adbPort, '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',
       '-e', 'class', PAIR_SYNC_RECOVERY_TEST_CLASS, PAIR_SYNC_RECOVERY_TEST_RUNNER

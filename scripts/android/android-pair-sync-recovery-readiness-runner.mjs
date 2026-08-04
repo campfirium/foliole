@@ -2,6 +2,7 @@
 /* global console, process */
 
 import { execFile } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { pathToFileURL } from 'node:url';
@@ -13,6 +14,8 @@ import {
 
 const execFileAsync = promisify(execFile);
 const PAIRING_PREFS = 'shared_prefs/foliole_companion_pairing.xml';
+const EMPTY_SHA256 = createHash('sha256').update('').digest('hex');
+const REMOTE_PEER_HASH_SCRIPT = `sed -n 's@.*<string name="remote_peer_id">\\([^<]*\\)</string>.*@\\1@p' ${PAIRING_PREFS} | sha256sum`;
 
 function parseArgs(argv) {
   const options = { adb: 'adb', appId: 'com.foliole.android', serial: '' };
@@ -27,27 +30,36 @@ function parseArgs(argv) {
   return options;
 }
 
-async function pairingCredentialsPresent(options) {
+export async function inspectPairingPreferences(options, run = execFileAsync) {
   try {
-    await execFileAsync(options.adb, [
+    await run(options.adb, [
       '-s', options.serial, 'shell', 'run-as', options.appId, 'test', '-f', PAIRING_PREFS
     ], { encoding: 'utf8', timeout: 30_000 });
-    return true;
   } catch (error) {
-    if (error.code === 1) return false;
+    if (error.code === 1) return { pairingCredentialsPresent: false, remotePeerFingerprint: null };
     throw error;
   }
+  const result = await run(options.adb, [
+    '-s', options.serial, 'shell', 'run-as', options.appId, 'sh', '-c', REMOTE_PEER_HASH_SCRIPT
+  ], { encoding: 'utf8', timeout: 30_000 });
+  const hash = /^([0-9a-f]{64})\b/mu.exec(result.stdout)?.[1] ?? null;
+  return {
+    pairingCredentialsPresent: true,
+    remotePeerFingerprint: hash && hash !== EMPTY_SHA256 ? hash.slice(0, 16) : null
+  };
 }
 
 export async function runPairSyncRecoveryReadiness(options) {
-  const [snapshot, credentialsPresent] = await Promise.all([
+  const [snapshot, pairing] = await Promise.all([
     collectAndroidDeviceSnapshot({
       ...options, databaseInspector: inspectPairSyncRecoveryWorkspace, includeEvents: false,
       tables: ['nodes', 'sync_object_state', 'companion_meta']
     }),
-    pairingCredentialsPresent(options)
+    inspectPairingPreferences(options)
   ]);
-  return pairSyncRecoveryReadiness(snapshot, credentialsPresent);
+  return pairSyncRecoveryReadiness(
+    snapshot, pairing.pairingCredentialsPresent, pairing.remotePeerFingerprint
+  );
 }
 
 async function main() {

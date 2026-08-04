@@ -12,6 +12,7 @@ it('keeps readiness evidence non-sensitive and fails closed', () => {
     `[android-data] pair-sync-recovery-readiness=${JSON.stringify({
       deviceIdentityFingerprint: '0123456789abcdef', dirtyRecordCount: 0,
       missingPrerequisites: [], nodeCount: 0, pairingCredentialsPresent: false,
+      remotePeerFingerprint: null,
       resultStatus: 'ready', schemaVersion: 1, endpoint: 'must-be-dropped'
     })}`
   );

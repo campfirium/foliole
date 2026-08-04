@@ -12,7 +12,11 @@ function launcherFixture(libraryHome = 'D:\\X\\U\\Foliole') {
     evaluate: vi.fn(async (_callback, input) => {
       calls.push(input);
       if (input.commandName === 'resolve_app_paths') return { library_home: libraryHome };
-      return { paired_devices: [], pending_requests: [], server_status: { state: 'running' }, sync_enabled: true };
+      return {
+        paired_devices: [], pending_requests: [],
+        primary_device_state: { local_role: 'primary', primary_device_id: 'desktop-device-1' },
+        server_status: { state: 'running' }, sync_enabled: true
+      };
     }),
     waitForFunction: vi.fn(async () => undefined)
   };
@@ -35,6 +39,8 @@ it('launches the real current-library runtime and invokes only existing product 
     'resolve_app_paths', 'enable_companion_sync', 'approve_companion_pair_request'
   ]);
   expect(fixture.calls.at(-1).commandArgs).toEqual({ pair_request_id: 'pair-1' });
+  expect(session.sanitize(await session.load()).desktopPeerFingerprint)
+    .toBe(pairSyncIdentityFingerprint('desktop-device-1'));
 });
 
 it('rejects another library and closes the bounded runtime', async () => {

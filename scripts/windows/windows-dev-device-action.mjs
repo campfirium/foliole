@@ -69,7 +69,8 @@ async function runPairSyncRecoveryReadiness(execute, paths, env, inspectDesktop)
   }
   try {
     const desktop = await inspectDesktop({
-      deviceFingerprint: readiness.deviceIdentityFingerprint, env, execute, paths
+      deviceFingerprint: readiness.deviceIdentityFingerprint, env, execute, paths,
+      remotePeerFingerprint: readiness.remotePeerFingerprint
     });
     return {
       desktopPairingReadiness: desktop.overview,
@@ -197,7 +198,8 @@ export async function runWindowsDevDeviceAction({
         env, evidenceRoot, execute, paths,
         protectData: (mode, manifest, backupRoot) => runDataProtection(
           execute, paths, mode, manifest, env, backupRoot
-        ), serial: WINDOWS_DEV_A5_SERIAL
+        ), remotePeerFingerprint: pairSyncRecoveryReadiness?.remotePeerFingerprint,
+        serial: WINDOWS_DEV_A5_SERIAL
       });
     } else if (action === 'verify') {
       actionResult = { output: await verify(execute, paths, env) };

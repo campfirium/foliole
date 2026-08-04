@@ -41,6 +41,8 @@ export function parsePairSyncRecoveryReadiness(output) {
     missingPrerequisites: [...value.missingPrerequisites],
     nodeCount: value.nodeCount,
     pairingCredentialsPresent: value.pairingCredentialsPresent === true,
+    remotePeerFingerprint: /^[0-9a-f]{16}$/u.test(value.remotePeerFingerprint)
+      ? value.remotePeerFingerprint : null,
     resultStatus: value.resultStatus,
     schemaVersion: 1
   };
