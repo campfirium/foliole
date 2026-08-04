@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { assertReleaseBodyPlatformScope } from './release-body-contract.mjs';
+import { assertReleaseBodyPresentation } from './release-body-contract.mjs';
 import { createCheck } from './release-doctor-core.mjs';
 import { validateReleaseNotesRecord } from './release-notes-contract.mjs';
 
@@ -17,8 +17,8 @@ async function checkGithubBody(rootDir, version, identity) {
     return createCheck('PASS', 'GitHub release body', `${relativePath} is a frozen legacy body.`);
   }
   try {
-    assertReleaseBodyPlatformScope(body, identity);
-    return createCheck('PASS', 'GitHub release body', `${relativePath} declares the frozen platform scope.`);
+    assertReleaseBodyPresentation(body);
+    return createCheck('PASS', 'GitHub release body', `${relativePath} contains reviewed public copy.`);
   } catch (error) {
     return createCheck('FAIL', 'GitHub release body', error.message);
   }

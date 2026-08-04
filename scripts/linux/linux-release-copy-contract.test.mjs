@@ -4,18 +4,16 @@ import { expect, it } from 'vitest';
 
 import {
   assertLinuxExperimentalReleaseCopy,
-  LINUX_EXPERIMENTAL_RELEASE_COPY
+  LINUX_EXPERIMENTAL_LABEL
 } from './linux-release-copy-contract.mjs';
 
 const identity = { intent: { selectedPlatforms: ['macos', 'windows', 'linux'] } };
 
-it('requires the complete user-facing Linux Experimental boundary before publication', () => {
-  const body = LINUX_EXPERIMENTAL_RELEASE_COPY.join('\n');
+it('requires only the experimental Linux label before publication', () => {
+  const body = `Foliole is now available on ${LINUX_EXPERIMENTAL_LABEL}.`;
   expect(assertLinuxExperimentalReleaseCopy(body, identity)).toBe(body);
-  expect(() => assertLinuxExperimentalReleaseCopy(body.replace('Updates are manual:', 'Updates:'), identity))
-    .toThrow('Updates are manual');
-  expect(() => assertLinuxExperimentalReleaseCopy(`${body}\nThe primary selection is unreadable.`, identity))
-    .toThrow('must not claim');
+  expect(() => assertLinuxExperimentalReleaseCopy('Foliole is now available on Linux.', identity))
+    .toThrow('must identify the platform');
 });
 
 it('does not impose Linux copy on a non-Linux release scope', () => {

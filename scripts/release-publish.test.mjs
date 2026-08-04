@@ -17,7 +17,7 @@ function runner(version, bridgeVersion, calls) {
     if (args[2] === tag && args.includes('assets,body,isDraft,tagName,targetCommitish')) {
       return JSON.stringify({
         assets: [{ name: `Foliole-Windows-x64-${version}.exe` }],
-        body: '> Platforms: Windows\n\n### Fixed\n\n- A fix.',
+        body: '### Fixed\n\n- A fix.',
         isDraft: true, tagName: tag, targetCommitish: SHA
       });
     }
@@ -56,7 +56,7 @@ describe('release public transition', () => {
     expect(calls.find((call) => call.includes('edit'))).toContain('--latest=true');
   });
 
-  it('refuses to publish when the reviewed body declares another platform scope', async () => {
+  it('refuses to publish internal platform scope metadata', async () => {
     const fixture = await createFixture();
     const calls = [];
     const run = runner(fixture.version, '0.8.0', calls);
@@ -68,7 +68,7 @@ describe('release public transition', () => {
       return output;
     };
     await expect(publishRelease({ cwd: fixture.rootDir, run: mismatched }))
-      .rejects.toThrow('release body must begin with');
+      .rejects.toThrow('must not expose internal platform scope metadata');
     expect(calls.some((call) => call.includes('--draft=false'))).toBe(false);
   });
 });
