@@ -5,6 +5,7 @@ import type { GlobalCapturePanelResult } from './globalCapturePanel.js';
 import type { ClipboardRestoreContext } from './globalClipClipboardEvidence.js';
 import { restoreClipboardIfUnchanged } from './globalClipClipboardEvidence.js';
 import type { GlobalClipDesktopToast } from './globalClipDesktopToastState.js';
+import type { GlobalClipIssueStatus } from './globalClipIssueDialog.js';
 import { runClipboardImport } from './ipc/importClipboard.js';
 import { runTextCaptureToInbox } from './ipc/importTextCapture.js';
 
@@ -13,10 +14,21 @@ interface ClipboardRestoreArgs {
   context: ClipboardRestoreContext;
 }
 
+async function reportGlobalClipIssue(args: {
+  presentIssue: (status: GlobalClipIssueStatus) => Promise<boolean>;
+  status: GlobalClipIssueStatus;
+  toast: GlobalClipDesktopToast;
+}) {
+  args.toast.close();
+  await args.presentIssue(args.status);
+  return null;
+}
+
 export async function importWithGlobalClipToast(args: {
   clipboardRestore?: ClipboardRestoreArgs;
   log: (event: string, payload?: Record<string, unknown>) => void;
   run: () => Promise<NativeTextImportResult | null> | NativeTextImportResult | null;
+  presentIssue: (status: GlobalClipIssueStatus) => Promise<boolean>;
   toast: GlobalClipDesktopToast;
   waitForReady: typeof waitForDatabaseReady;
 }) {
@@ -25,21 +37,18 @@ export async function importWithGlobalClipToast(args: {
       await args.waitForReady();
     } catch (error) {
       args.log('global_clip_database_not_ready', { error });
-      args.toast.update('importFailed');
-      return null;
+      return await reportGlobalClipIssue({ ...args, status: 'importFailed' });
     }
     let result: NativeTextImportResult | null = null;
     try {
       result = await args.run();
     } catch (error) {
       args.log('global_clip_import_failed', { error });
-      args.toast.update('importFailed');
-      return null;
+      return await reportGlobalClipIssue({ ...args, status: 'importFailed' });
     }
     if (!result?.import_id) {
       args.log('global_clip_import_empty');
-      args.toast.update('empty');
-      return null;
+      return await reportGlobalClipIssue({ ...args, status: 'empty' });
     }
     args.toast.update('success', result.node_id, result.source_name);
     return result;
@@ -55,6 +64,7 @@ export async function handleGlobalCapturePanelResult(args: {
   log: (event: string, payload?: Record<string, unknown>) => void;
   panelResult: GlobalCapturePanelResult;
   runImport: typeof runClipboardImport;
+  presentIssue: (status: GlobalClipIssueStatus) => Promise<boolean>;
   showDesktopToast: (status: 'pending') => GlobalClipDesktopToast;
   waitForReady: typeof waitForDatabaseReady;
 }) {

@@ -222,15 +222,18 @@ it('imports on macOS when Electron observes a changed fingerprint after the help
 it('shows permission guidance on macOS when accessibility is denied', async () => {
   const showCapturePanel = vi.fn();
   const showDesktopToast = vi.fn(() => createToastController());
+  const presentIssue = vi.fn(async () => true);
 
   await runGlobalClipToInbox({
     clipboardRef: createClipboardSnapshotSource('current clipboard'),
     platform: 'darwin',
     runMacosCopy: vi.fn(async () => ({ copyWritten: false, permission: 'denied' as const })),
     showCapturePanel,
-    showDesktopToast
+    showDesktopToast,
+    presentIssue
   });
 
-  expect(showDesktopToast).toHaveBeenCalledWith('permissionRequired');
+  expect(presentIssue).toHaveBeenCalledWith('permissionRequired');
+  expect(showDesktopToast).not.toHaveBeenCalled();
   expect(showCapturePanel).not.toHaveBeenCalled();
 });

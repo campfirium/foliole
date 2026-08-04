@@ -126,6 +126,25 @@ it('opens the capture panel when copy leaves the clipboard unchanged', async () 
   expect(showCapturePanel).toHaveBeenCalledTimes(1);
 });
 
+it('reports copy adapter failures without using the capture panel or result toast', async () => {
+  const showCapturePanel = vi.fn();
+  const showDesktopToast = vi.fn();
+  const presentIssue = vi.fn(async () => true);
+
+  await expect(runGlobalClipToInbox({
+    clipboardRef: createClipboardSnapshotSource('old clipboard', ['text/plain']),
+    platform: 'darwin',
+    runMacosCopy: vi.fn(async () => { throw new Error('copy adapter failed'); }),
+    showCapturePanel,
+    showDesktopToast,
+    presentIssue
+  })).resolves.toBeNull();
+
+  expect(presentIssue).toHaveBeenCalledWith('copyFailed');
+  expect(showCapturePanel).not.toHaveBeenCalled();
+  expect(showDesktopToast).not.toHaveBeenCalled();
+});
+
 it.each([
   ['HTML / rich text', ['text/html', 'text/plain']],
   ['files', ['FileNameW', 'text/plain']]

@@ -24,6 +24,11 @@ import {
 import { prepareGlobalClipDesktopToastWindow, showGlobalClipDesktopToast } from './globalClipDesktopToast.js';
 import type { GlobalClipDesktopToast, GlobalClipToastStatus } from './globalClipDesktopToastState.js';
 import { handleGlobalCapturePanelResult, importWithGlobalClipToast } from './globalClipImportRunner.js';
+import {
+  presentGlobalClipIssue,
+  reportGlobalClipCopyIssue,
+  type GlobalClipIssueStatus
+} from './globalClipIssueDialog.js';
 import { runClipboardImport } from './ipc/importClipboard.js';
 import { runMacosGlobalClipCopy } from './macosGlobalClipCopy.js';
 
@@ -63,6 +68,7 @@ export interface GlobalClipToInboxDeps {
   prepareDesktopToast?: () => void;
   showCapturePanel?: () => Promise<GlobalCapturePanelResult>;
   showDesktopToast?: (status: GlobalClipToastStatus) => GlobalClipDesktopToast;
+  presentIssue?: (status: GlobalClipIssueStatus) => Promise<boolean>;
   waitForClipboardChange?: (
     before: ClipboardSnapshot,
     clipboardRef: NonNullable<GlobalClipToInboxDeps['clipboardRef']>
@@ -124,18 +130,6 @@ async function runCopyAttempt(args: {
   };
 }
 
-function reportUnavailableCopy(
-  permission: 'denied' | 'granted' | 'unavailable',
-  log: NonNullable<GlobalClipToInboxDeps['log']>,
-  showDesktopToast: NonNullable<GlobalClipToInboxDeps['showDesktopToast']>
-) {
-  if (permission === 'granted') return false;
-  const denied = permission === 'denied';
-  log(denied ? 'global_clip_permission_required' : 'global_clip_copy_adapter_unavailable');
-  showDesktopToast(denied ? 'permissionRequired' : 'copyFailed');
-  return true;
-}
-
 export async function runGlobalClipToInbox(deps: GlobalClipToInboxDeps = {}) {
   const clipboardRef = deps.clipboardRef ?? clipboard;
   const log = deps.log ?? appendMainProcessDiagnosticLog;
@@ -146,6 +140,7 @@ export async function runGlobalClipToInbox(deps: GlobalClipToInboxDeps = {}) {
   const waitForChange = deps.waitForClipboardChange ?? waitForClipboardChange;
   const waitForReady = deps.waitForReady ?? waitForDatabaseReady;
   const showDesktopToast = deps.showDesktopToast ?? showGlobalClipDesktopToast;
+  const presentIssue = deps.presentIssue ?? presentGlobalClipIssue;
   if (globalCaptureInFlight) {
     (deps.raiseCapturePanel ?? raiseGlobalCapturePanelWindow)();
     log('global_clip_capture_in_flight');
@@ -162,6 +157,7 @@ export async function runGlobalClipToInbox(deps: GlobalClipToInboxDeps = {}) {
       sendCopyShortcut,
       showCapturePanel,
       showDesktopToast,
+      presentIssue,
       waitForChange,
       waitForReady
     });
@@ -179,6 +175,7 @@ async function runGlobalClipToInboxOnce(args: {
   sendCopyShortcut: NonNullable<GlobalClipToInboxDeps['sendCopyShortcut']>;
   showCapturePanel: NonNullable<GlobalClipToInboxDeps['showCapturePanel']>;
   showDesktopToast: NonNullable<GlobalClipToInboxDeps['showDesktopToast']>;
+  presentIssue: NonNullable<GlobalClipToInboxDeps['presentIssue']>;
   waitForChange: NonNullable<GlobalClipToInboxDeps['waitForClipboardChange']>;
   waitForReady: typeof waitForDatabaseReady;
 }) {
@@ -195,10 +192,10 @@ async function runGlobalClipToInboxOnce(args: {
     });
   } catch (error) {
     args.log('global_clip_copy_adapter_failed', { error });
-    args.showDesktopToast('copyFailed');
+    await args.presentIssue('copyFailed');
     return null;
   }
-  if (reportUnavailableCopy(copyResult.permission, args.log, args.showDesktopToast)) return null;
+  if (await reportGlobalClipCopyIssue(copyResult.permission, args.log, args.presentIssue)) return null;
   const after = readClipboardSnapshot(args.clipboardRef);
   if (copyResult.copyWritten || hasClipboardChanged(before.snapshot, after)) {
     const toast = args.showDesktopToast('pending');
@@ -209,6 +206,7 @@ async function runGlobalClipToInboxOnce(args: {
       },
       log: args.log,
       run: args.runImport,
+      presentIssue: args.presentIssue,
       toast,
       waitForReady: args.waitForReady
     });
@@ -219,6 +217,7 @@ async function runGlobalClipToInboxOnce(args: {
     panelResult: await args.showCapturePanel(),
     runImport: args.runImport,
     showDesktopToast: args.showDesktopToast,
+    presentIssue: args.presentIssue,
     waitForReady: args.waitForReady
   });
 }

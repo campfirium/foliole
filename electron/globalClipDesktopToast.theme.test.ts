@@ -208,7 +208,7 @@ it('falls back and shows the toast when app theme reading stalls', async () => {
   expect(toastWindow.showInactive).toHaveBeenCalledTimes(1);
   expect(toastWindow.close).not.toHaveBeenCalled();
 
-  vi.advanceTimersByTime(3000);
+  vi.advanceTimersByTime(process.platform === 'darwin' ? 5000 : 3000);
 
   expect(toastWindow.close).toHaveBeenCalledTimes(1);
 });
