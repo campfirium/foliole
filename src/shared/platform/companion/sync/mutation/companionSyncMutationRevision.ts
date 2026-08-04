@@ -14,8 +14,7 @@ export function subscribeCompanionSyncMutationRevision(listener: MutationListene
   return () => mutationListeners.delete(listener);
 }
 
-export async function runCompanionSyncMutationTask<T>(task: () => Promise<T>) {
-  const result = await runCompanionSyncWriterTask(task);
+function publishMutationRevision() {
   mutationRevision += 1;
   for (const listener of mutationListeners) {
     try {
@@ -24,5 +23,16 @@ export async function runCompanionSyncMutationTask<T>(task: () => Promise<T>) {
       // A committed native write must not be reported as failed by an observer.
     }
   }
+}
+
+export async function runCompanionSyncMutationTask<T>(task: () => Promise<T>) {
+  const result = await runCompanionSyncWriterTask(task);
+  publishMutationRevision();
+  return result;
+}
+
+export async function runCompanionSyncOptionalMutationTask<T>(task: () => Promise<T | null>) {
+  const result = await runCompanionSyncWriterTask(task);
+  if (result !== null) publishMutationRevision();
   return result;
 }

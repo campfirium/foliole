@@ -97,26 +97,33 @@ export async function saveCompanionSyncNodeReviewRecord(args: {
   review: NativeWorkspaceReviewProfile;
   reviewLog?: NativeSyncReviewLogDraft;
 }) {
+  if (!isNativeCompanionReviewWriteRuntime()) return null;
+  return runCompanionSyncMutationTask(() => saveCompanionSyncNodeReviewRecordWithinWriterTask(args));
+}
+
+export async function saveCompanionSyncNodeReviewRecordWithinWriterTask(args: {
+  nodeId: string;
+  review: NativeWorkspaceReviewProfile;
+  reviewLog?: NativeSyncReviewLogDraft;
+}) {
   if (!isNativeCompanionReviewWriteRuntime()) {
     return null;
   }
-  return runCompanionSyncMutationTask(() => (
-    FolioleCompanionSync.saveSyncNodeReviewRecord({
-      node_id: args.nodeId,
-      review_json: JSON.stringify({
-        difficulty: args.review.difficulty,
-        due: args.review.due,
-        elapsed_days: args.review.elapsedDays,
-        lapses: args.review.lapses,
-        last_review_at: args.review.lastReviewAt,
-        reps: args.review.reps,
-        scheduled_days: args.review.scheduledDays,
-        stability: args.review.stability,
-        state: args.review.state
-      }),
-      ...(args.reviewLog ? { review_log_json: JSON.stringify(args.reviewLog) } : {})
-    })
-  ));
+  return FolioleCompanionSync.saveSyncNodeReviewRecord({
+    node_id: args.nodeId,
+    review_json: JSON.stringify({
+      difficulty: args.review.difficulty,
+      due: args.review.due,
+      elapsed_days: args.review.elapsedDays,
+      lapses: args.review.lapses,
+      last_review_at: args.review.lastReviewAt,
+      reps: args.review.reps,
+      scheduled_days: args.review.scheduledDays,
+      stability: args.review.stability,
+      state: args.review.state
+    }),
+    ...(args.reviewLog ? { review_log_json: JSON.stringify(args.reviewLog) } : {})
+  });
 }
 
 export async function saveCompanionSyncActiveViewState(nodeId: string | null) {

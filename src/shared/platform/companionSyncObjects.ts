@@ -34,6 +34,7 @@ export {
   saveCompanionSyncNodeOpenState,
   saveCompanionSyncNodeReadingRecord,
   saveCompanionSyncNodeReviewRecord,
+  saveCompanionSyncNodeReviewRecordWithinWriterTask,
   saveCompanionSyncNodeViewState,
   saveCompanionSyncSettingRecord
 } from './companionSyncStateWriters';
@@ -119,6 +120,7 @@ export {
 } from './companionSyncCursors';
 export {
   applyCompanionSyncNodeVersions,
+  applyCompanionSyncNodeVersionsWithinWriterTask,
   applyCompanionTrashRestoreNodeVersions
 } from './companionSyncNodeVersions';
 

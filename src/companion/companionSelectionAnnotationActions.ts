@@ -6,10 +6,15 @@ import {
   deriveNodeTitleForCloze,
   deriveNodeTitleFromContent
 } from '../features/nodes/model/deriveNodeTitle';
+import { runCompanionSyncOptionalMutationTask } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
 import {
   applyCompanionSyncNodeVersions,
+  applyCompanionSyncNodeVersionsWithinWriterTask,
+  saveCompanionSyncNodeReviewRecordWithinWriterTask,
   saveCompanionSyncNodeReviewRecord
 } from '../shared/platform/companionSyncObjects';
+import { isAvailableNativeAndroidCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
+import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 import {
   createSelectionAnnotatedHighlightContent,
   createSelectionAnnotationAnchorLink,
@@ -110,6 +115,9 @@ async function buildAnnotationDraft(args: PersistSelectionAnnotationArgs): Promi
 }
 
 export async function persistCompanionSelectionAnnotation(args: PersistSelectionAnnotationArgs) {
+  if (isAvailableNativeAndroidCompanionRuntime()) {
+    return persistAndroidSelectionAnnotation(args);
+  }
   const draft = await buildAnnotationDraft(args);
   if (!draft) {
     return null;
@@ -122,6 +130,23 @@ export async function persistCompanionSelectionAnnotation(args: PersistSelection
     nodeId: draft.node.id,
     snapshot: draft.snapshot
   };
+}
+
+async function persistAndroidSelectionAnnotation(args: PersistSelectionAnnotationArgs) {
+  return runCompanionSyncOptionalMutationTask(async () => {
+    const currentState = await loadCompanionWorkspaceSyncState();
+    const draft = await buildAnnotationDraft({ ...args, snapshot: currentState.workspace_snapshot });
+    if (!draft) return null;
+    await applyCompanionSyncNodeVersionsWithinWriterTask([draft.nodeVersion]);
+    if (draft.review) {
+      await saveCompanionSyncNodeReviewRecordWithinWriterTask({ nodeId: draft.node.id, review: draft.review });
+    }
+    const nextSnapshot = (await loadCompanionWorkspaceSyncState()).workspace_snapshot;
+    if (!nextSnapshot?.nodesById[draft.node.id]) {
+      throw new Error('companion_annotation_snapshot_not_converged');
+    }
+    return { nodeId: draft.node.id, snapshot: nextSnapshot };
+  });
 }
 
 async function persistExistingHighlightNode(args: {

@@ -42,10 +42,16 @@ export async function applyCompanionSyncNodeVersions(
   nodes: NativeSyncNodeRecord[],
   manager?: CompanionSqliteConnectionManager
 ) {
-  if (!isNativeCompanionNodeVersionWriteRuntime() || nodes.length === 0) {
-    return [];
-  }
-  return runCompanionSyncWriterTask(() => applyCompanionSyncNodeVersionsWithSharedCoreOnDevice(nodes, manager));
+  if (!isNativeCompanionNodeVersionWriteRuntime() || nodes.length === 0) return [];
+  return runCompanionSyncWriterTask(() => applyCompanionSyncNodeVersionsWithinWriterTask(nodes, manager));
+}
+
+export async function applyCompanionSyncNodeVersionsWithinWriterTask(
+  nodes: NativeSyncNodeRecord[],
+  manager?: CompanionSqliteConnectionManager
+) {
+  if (!isNativeCompanionNodeVersionWriteRuntime() || nodes.length === 0) return [];
+  return applyCompanionSyncNodeVersionsWithSharedCoreOnDevice(nodes, manager);
 }
 
 export async function applyCompanionTrashRestoreNodeVersions(
