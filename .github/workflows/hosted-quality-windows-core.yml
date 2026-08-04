@@ -1,4 +1,4 @@
-name: Hosted Quality Tooling
+name: Hosted Windows Core Quality
 
 on:
   workflow_call:
@@ -14,52 +14,23 @@ on:
         type: string
     outputs:
       accepted_sha:
-        description: Exact commit accepted by every quality tooling segment
-        value: ${{ jobs.tooling-admission.outputs.accepted_sha }}
+        description: Exact commit accepted by canonical Windows core quality
+        value: ${{ jobs.windows-core-admission.outputs.accepted_sha }}
 
 permissions:
   contents: read
 
 jobs:
-  tooling-tests:
-    name: ${{ matrix.host }} ${{ matrix.segment }}
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 20
+  windows-core:
+    name: Windows core
+    runs-on: windows-latest
+    timeout-minutes: 10
     concurrency:
-      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-tooling-${{ matrix.host }}-${{ matrix.segment }}
+      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-windows-core
       cancel-in-progress: false
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - host: Ubuntu
-            runner: ubuntu-latest
-            segment: full
-          - host: Windows
-            runner: windows-latest
-            segment: core-one
-          - host: Windows
-            runner: windows-latest
-            segment: core-two
-          - host: Windows
-            runner: windows-latest
-            segment: gate-one
-          - host: Windows
-            runner: windows-latest
-            segment: gate-two
-          - host: Windows
-            runner: windows-latest
-            segment: integration-one
-          - host: Windows
-            runner: windows-latest
-            segment: integration-two
-          - host: Windows
-            runner: windows-latest
-            segment: node-preview
     env:
       CI: "true"
       FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: "1"
-      FOLIOLE_QUALITY_TOOLING_SEGMENT: ${{ matrix.segment }}
       TARGET_SHA: ${{ inputs.target_sha }}
     steps:
       - name: Validate target SHA input
@@ -86,34 +57,34 @@ jobs:
         run: npm run electron:rebuild:native
       - name: Verify Electron sqlite runner
         run: node scripts/electron-sqlite-runner.mjs --preflight
-      - name: Run canonical quality tooling segment
-        run: npm run quality:release:tooling
-      - name: Upload quality tooling logs
+      - name: Run canonical Windows core quality
+        run: npm run quality:release:windows:core
+      - name: Upload Windows core logs
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: quality-tooling-${{ matrix.host }}-${{ matrix.segment }}-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          name: t5-windows-core-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
           path: |
             .tmp/logs/quality-gate
             .tmp/vitest
           if-no-files-found: ignore
           retention-days: 14
 
-  tooling-admission:
-    name: Quality tooling admission
+  windows-core-admission:
+    name: Windows core admission
     if: ${{ always() }}
-    needs: tooling-tests
+    needs: windows-core
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      accepted_sha: ${{ steps.require-segments.outputs.accepted_sha }}
-    env:
-      SEGMENT_RESULT: ${{ needs.tooling-tests.result }}
-      TARGET_SHA: ${{ inputs.target_sha }}
+      accepted_sha: ${{ steps.require-core.outputs.accepted_sha }}
     steps:
-      - name: Require every quality tooling segment
-        id: require-segments
+      - name: Require canonical Windows core quality
+        id: require-core
+        env:
+          CORE_RESULT: ${{ needs.windows-core.result }}
+          TARGET_SHA: ${{ inputs.target_sha }}
         run: |
           set -euo pipefail
-          node -e 'if (process.env.SEGMENT_RESULT !== "success") throw new Error(`SEGMENT_RESULT=${process.env.SEGMENT_RESULT}`)'
+          node -e 'if (process.env.CORE_RESULT !== "success") throw new Error(`CORE_RESULT=${process.env.CORE_RESULT}`)'
           echo "accepted_sha=${TARGET_SHA}" >> "$GITHUB_OUTPUT"

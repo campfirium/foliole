@@ -21,14 +21,6 @@ permissions:
   contents: read
 
 jobs:
-  portable-quality:
-    name: Portable quality
-    uses: ./.github/workflows/hosted-quality-portable.yml
-    with:
-      execution_lane: ${{ inputs.execution_lane }}
-      target_sha: ${{ inputs.target_sha }}
-      trigger_ref: ${{ inputs.trigger_ref }}
-
   common-build:
     name: Common build
     runs-on: ubuntu-latest
@@ -203,7 +195,7 @@ jobs:
   full-admission:
     name: Full quality admission
     if: ${{ always() }}
-    needs: [portable-quality, common-build, windows-acceptance, android-host, ios-full]
+    needs: [common-build, windows-acceptance, android-host, ios-full]
     runs-on: ubuntu-latest
     outputs:
       accepted_sha: ${{ steps.require-jobs.outputs.accepted_sha }}
@@ -214,11 +206,8 @@ jobs:
           ANDROID_RESULT: ${{ needs.android-host.result }}
           COMMON_RESULT: ${{ needs.common-build.result }}
           IOS_RESULT: ${{ needs.ios-full.result }}
-          PORTABLE_RESULT: ${{ needs.portable-quality.result }}
-          PORTABLE_SHA: ${{ needs.portable-quality.outputs.accepted_sha }}
           TARGET_SHA: ${{ inputs.target_sha }}
           WINDOWS_RESULT: ${{ needs.windows-acceptance.result }}
         run: |
           node -e 'const failed = Object.entries(process.env).filter(([key, value]) => key.endsWith("_RESULT") && value !== "success"); if (failed.length) throw new Error(failed.map(([key, value]) => `${key}=${value}`).join(", "))'
-          node -e 'if (process.env.PORTABLE_SHA !== process.env.TARGET_SHA) throw new Error("PORTABLE_SHA does not match full-quality target")'
           echo "accepted_sha=${TARGET_SHA}" >> "$GITHUB_OUTPUT"

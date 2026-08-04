@@ -1,4 +1,4 @@
-name: Hosted Quality Tooling
+name: Hosted Portable Domain Quality
 
 on:
   workflow_call:
@@ -12,21 +12,25 @@ on:
       trigger_ref:
         required: true
         type: string
+      domain:
+        required: true
+        type: string
     outputs:
       accepted_sha:
-        description: Exact commit accepted by every quality tooling segment
-        value: ${{ jobs.tooling-admission.outputs.accepted_sha }}
+        description: Exact commit accepted by both hosts for one portable domain
+        value: ${{ jobs.portable-domain-admission.outputs.accepted_sha }}
 
 permissions:
   contents: read
 
 jobs:
-  tooling-tests:
-    name: ${{ matrix.host }} ${{ matrix.segment }}
+  portable-domain-tests:
+    name: ${{ matrix.host }} ${{ inputs.domain }}
+    if: inputs.domain == 'shared' || inputs.domain == 'android-source'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 20
     concurrency:
-      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-tooling-${{ matrix.host }}-${{ matrix.segment }}
+      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-${{ inputs.domain }}-${{ matrix.host }}
       cancel-in-progress: false
     strategy:
       fail-fast: false
@@ -34,33 +38,13 @@ jobs:
         include:
           - host: Ubuntu
             runner: ubuntu-latest
-            segment: full
           - host: Windows
             runner: windows-latest
-            segment: core-one
-          - host: Windows
-            runner: windows-latest
-            segment: core-two
-          - host: Windows
-            runner: windows-latest
-            segment: gate-one
-          - host: Windows
-            runner: windows-latest
-            segment: gate-two
-          - host: Windows
-            runner: windows-latest
-            segment: integration-one
-          - host: Windows
-            runner: windows-latest
-            segment: integration-two
-          - host: Windows
-            runner: windows-latest
-            segment: node-preview
     env:
       CI: "true"
       FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: "1"
-      FOLIOLE_QUALITY_TOOLING_SEGMENT: ${{ matrix.segment }}
       TARGET_SHA: ${{ inputs.target_sha }}
+      VITEST_POOL: ${{ inputs.domain == 'android-source' && matrix.host == 'Windows' && 'forks' || 'threads' }}
     steps:
       - name: Validate target SHA input
         run: node -e "if (!/^[0-9a-f]{40}$/.test(process.env.TARGET_SHA ?? '')) throw new Error('target_sha must be a full 40-character lowercase commit SHA')"
@@ -86,34 +70,38 @@ jobs:
         run: npm run electron:rebuild:native
       - name: Verify Electron sqlite runner
         run: node scripts/electron-sqlite-runner.mjs --preflight
-      - name: Run canonical quality tooling segment
-        run: npm run quality:release:tooling
-      - name: Upload quality tooling logs
+      - name: Run canonical shared domain
+        if: inputs.domain == 'shared'
+        run: npm run test:release:shared
+      - name: Run canonical Android source domain
+        if: inputs.domain == 'android-source'
+        run: npm run test:release:android
+      - name: Upload portable domain logs
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: quality-tooling-${{ matrix.host }}-${{ matrix.segment }}-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          name: portable-${{ inputs.domain }}-${{ matrix.host }}-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
           path: |
             .tmp/logs/quality-gate
             .tmp/vitest
           if-no-files-found: ignore
           retention-days: 14
 
-  tooling-admission:
-    name: Quality tooling admission
+  portable-domain-admission:
+    name: Portable domain admission
     if: ${{ always() }}
-    needs: tooling-tests
+    needs: portable-domain-tests
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      accepted_sha: ${{ steps.require-segments.outputs.accepted_sha }}
-    env:
-      SEGMENT_RESULT: ${{ needs.tooling-tests.result }}
-      TARGET_SHA: ${{ inputs.target_sha }}
+      accepted_sha: ${{ steps.require-domain.outputs.accepted_sha }}
     steps:
-      - name: Require every quality tooling segment
-        id: require-segments
+      - name: Require both portable hosts
+        id: require-domain
+        env:
+          DOMAIN_RESULT: ${{ needs.portable-domain-tests.result }}
+          TARGET_SHA: ${{ inputs.target_sha }}
         run: |
           set -euo pipefail
-          node -e 'if (process.env.SEGMENT_RESULT !== "success") throw new Error(`SEGMENT_RESULT=${process.env.SEGMENT_RESULT}`)'
+          node -e 'if (process.env.DOMAIN_RESULT !== "success") throw new Error(`DOMAIN_RESULT=${process.env.DOMAIN_RESULT}`)'
           echo "accepted_sha=${TARGET_SHA}" >> "$GITHUB_OUTPUT"

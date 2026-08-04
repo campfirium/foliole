@@ -74,6 +74,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Activate pinned npm
+        run: node scripts/quality/pinned-npm.mjs activate
       - name: Install dependencies
         run: node scripts/quality/hosted-npm-ci.mjs
       - name: Verify checked-out target SHA

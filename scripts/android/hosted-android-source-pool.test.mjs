@@ -5,18 +5,16 @@ import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
-const workflow = parse(fs.readFileSync('.github/workflows/hosted-quality-portable.yml', 'utf8'));
-const job = workflow.jobs['portable-tests'];
+const workflow = parse(fs.readFileSync('.github/workflows/hosted-quality-portable-domain.yml', 'utf8'));
+const job = workflow.jobs['portable-domain-tests'];
 
 describe('hosted Android source pool contract', () => {
   it('uses process isolation for the Windows native test bucket only', () => {
-    const rows = job.strategy.matrix.include;
-    const windowsAndroid = rows.find(({ domain, host }) => domain === 'android-source' && host === 'Windows');
-
-    expect(windowsAndroid.vitest_pool).toBe('forks');
-    expect(rows.filter((row) => row !== windowsAndroid).map(({ vitest_pool }) => vitest_pool)).toEqual([
-      'threads', 'threads', 'threads'
+    expect(job.env.VITEST_POOL)
+      .toBe("${{ inputs.domain == 'android-source' && matrix.host == 'Windows' && 'forks' || 'threads' }}");
+    expect(job.strategy.matrix.include).toEqual([
+      { host: 'Ubuntu', runner: 'ubuntu-latest' },
+      { host: 'Windows', runner: 'windows-latest' }
     ]);
-    expect(job.env.VITEST_POOL).toBe('${{ matrix.vitest_pool }}');
   });
 });

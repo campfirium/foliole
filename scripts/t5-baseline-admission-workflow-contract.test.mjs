@@ -6,21 +6,35 @@ import { spawnSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
-const workflowSource = fs.readFileSync('.github/workflows/t5-baseline-admission.yml', 'utf8');
-const workflow = parse(workflowSource);
-const movedScripts = [
-  'test:release:desktop-src',
-  'test:release:android',
-  'test:release:shared',
-  'test:desktop:electron',
-  'quality:release:tooling'
+const source = fs.readFileSync('.github/workflows/t5-baseline-admission.yml', 'utf8');
+const workflow = parse(source);
+const leafJobs = [
+  'static-quality',
+  'windows-core',
+  'shared-tests',
+  'android-source-tests',
+  'desktop-source-tests',
+  'electron-tests',
+  'tooling-tests'
 ];
-
-function jobSection(jobName, nextJobName) {
-  const start = workflowSource.indexOf(`  ${jobName}:`);
-  const end = nextJobName ? workflowSource.indexOf(`  ${nextJobName}:`) : workflowSource.length;
-  return workflowSource.slice(start, end);
-}
+const leafOwners = {
+  'android-source-tests': './.github/workflows/hosted-quality-portable-domain.yml',
+  'desktop-source-tests': './.github/workflows/hosted-quality-desktop-source.yml',
+  'electron-tests': './.github/workflows/hosted-quality-electron.yml',
+  'shared-tests': './.github/workflows/hosted-quality-portable-domain.yml',
+  'static-quality': './.github/workflows/hosted-quality-static.yml',
+  'tooling-tests': './.github/workflows/hosted-quality-tooling.yml',
+  'windows-core': './.github/workflows/hosted-quality-windows-core.yml'
+};
+const leafAdmissionEnv = {
+  'android-source-tests': 'ANDROID_SOURCE',
+  'desktop-source-tests': 'DESKTOP_SOURCE',
+  'electron-tests': 'ELECTRON',
+  'shared-tests': 'SHARED',
+  'static-quality': 'STATIC',
+  'tooling-tests': 'TOOLING',
+  'windows-core': 'WINDOWS_CORE'
+};
 
 describe('T5 Baseline Admission workflow contract', () => {
   it('is reusable-only and binds admission to an explicit lane, ref, and SHA', () => {
@@ -31,10 +45,6 @@ describe('T5 Baseline Admission workflow contract', () => {
     expect(workflow.on.workflow_dispatch).toBeUndefined();
     expect(workflow.on.workflow_call.outputs.admitted_sha.value)
       .toBe('${{ jobs.admission.outputs.admitted_sha }}');
-    expect(workflow.name).toBe('T5 Baseline Admission');
-    expect(workflow['run-name']).toBe(
-      'T5 Baseline Admission (${{ inputs.execution_lane }}) @ ${{ inputs.target_sha }}'
-    );
     expect(workflow.permissions).toEqual({ contents: 'read' });
     expect(workflow.concurrency).toEqual({
       group: 't5-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-admission',
@@ -42,103 +52,60 @@ describe('T5 Baseline Admission workflow contract', () => {
     });
   });
 
-  it('contains exactly the Ubuntu static and Windows core fast lanes', () => {
-    expect(Object.keys(workflow.jobs)).toEqual(['ubuntu-static', 'windows-core', 'admission']);
-    expect(workflow.jobs['ubuntu-static']['runs-on']).toBe('ubuntu-latest');
-    expect(workflow.jobs['windows-core']['runs-on']).toBe('windows-latest');
-    for (const script of movedScripts) expect(workflowSource).not.toContain(script);
-    expect(workflowSource.match(/quality:release:windows:core/gu)).toHaveLength(1);
-    expect(workflowSource).not.toContain('matrix:');
-    expect(workflowSource).not.toContain('paths:');
-    expect(workflowSource).not.toContain('paths-ignore:');
-    expect(workflowSource).not.toContain('changed-files');
-  });
-
-  it('rejects non-SHA inputs and verifies both checkouts before quality commands', () => {
-    const staticJob = jobSection('ubuntu-static', 'windows-core');
-    const windowsJob = jobSection('windows-core', 'admission');
-    for (const job of [staticJob, windowsJob]) {
-      expect(job).toContain('/^[0-9a-f]{40}$/');
-      expect(job).toContain('ref: ${{ env.TARGET_SHA }}');
-      expect(job).toContain('persist-credentials: false');
-      expect(job).toContain("execFileSync('git', ['rev-parse', 'HEAD']");
-      expect(job.indexOf('Validate target SHA input')).toBeLessThan(job.indexOf('Check out target snapshot'));
-      expect(job.indexOf('run: node scripts/quality/hosted-npm-ci.mjs'))
-        .toBeLessThan(job.indexOf('Verify checked-out target SHA'));
-      expect(job.indexOf('Verify checked-out target SHA')).toBeLessThan(
-        job.indexOf('run: npm run electron:rebuild:native')
-      );
-      expect(job.indexOf('run: npm run electron:rebuild:native')).toBeLessThan(
-        job.indexOf('node scripts/electron-sqlite-runner.mjs --preflight')
-      );
+  it('selects every canonical leaf directly without inline or aggregate fallback', () => {
+    expect(Object.keys(workflow.jobs)).toEqual([...leafJobs, 'admission']);
+    for (const [jobName, owner] of Object.entries(leafOwners)) {
+      const job = workflow.jobs[jobName];
+      expect(job.uses).toBe(owner);
+      expect(job.with.execution_lane).toBe('${{ inputs.execution_lane }}');
+      expect(job.with.target_sha).toBe('${{ inputs.target_sha }}');
+      expect(job.with.trigger_ref).toBe('${{ inputs.trigger_ref }}');
     }
-    expect(workflowSource.match(/Validate target SHA input/gu)).toHaveLength(2);
-    expect(workflowSource.match(/Verify checked-out target SHA/gu)).toHaveLength(2);
+    expect(workflow.jobs['shared-tests'].with.domain).toBe('shared');
+    expect(workflow.jobs['android-source-tests'].with.domain).toBe('android-source');
+    expect(source).not.toContain('runs-on: windows-latest');
+    expect(source).not.toContain('runs-on: ${{ matrix.runner }}');
+    expect(source).not.toContain('hosted-quality-portable.yml');
+    expect(source).not.toContain('continue-on-error');
   });
 
-  it('keeps the complete static and Windows core fast checks', () => {
-    const staticJob = jobSection('ubuntu-static', 'windows-core');
-    const windowsJob = jobSection('windows-core', 'admission');
-    expect(staticJob).toContain('node scripts/quality/pinned-npm.mjs activate');
-    expect(staticJob).toContain('npm run deps:hardening:check');
-    expect(staticJob).toContain('bash scripts/quality/quality-gate-target.sh release-static');
-    expect(windowsJob).toContain('npm run quality:release:windows:core');
-    expect(windowsJob).not.toContain('${{ matrix.script }}');
-  });
-
-  it('caps both fast lanes at ten minutes and aggregates both results', () => {
-    expect(workflow.jobs['ubuntu-static']['timeout-minutes']).toBe(10);
-    expect(workflow.jobs['windows-core']['timeout-minutes']).toBe(10);
-    expect(workflow.jobs.admission.needs).toEqual(['ubuntu-static', 'windows-core']);
-    expect(workflow.jobs.admission.if).toBe('${{ always() }}');
-    expect(workflow.jobs.admission.env).toEqual({
-      STATIC_RESULT: '${{ needs.ubuntu-static.result }}',
-      TARGET_SHA: '${{ inputs.target_sha }}',
-      WINDOWS_RESULT: '${{ needs.windows-core.result }}'
+  it('waits for every leaf and rejects any failed or mismatched result', () => {
+    const admission = workflow.jobs.admission;
+    expect(admission.if).toBe('${{ always() }}');
+    expect(admission.needs).toEqual(leafJobs);
+    for (const jobName of leafJobs) {
+      const prefix = leafAdmissionEnv[jobName];
+      expect(admission.env[`${prefix}_RESULT`]).toBe(`\${{ needs.${jobName}.result }}`);
+      expect(admission.env[`${prefix}_SHA`]).toBe(`\${{ needs.${jobName}.outputs.accepted_sha }}`);
+    }
+    const command = admission.steps[0].run;
+    const successEnv = Object.fromEntries(Object.keys(admission.env).map((key) => [
+      key,
+      key.endsWith('_RESULT') ? 'success' : 'a'.repeat(40)
+    ]));
+    const success = spawnSync('bash', ['-c', command], {
+      env: { ...process.env, ...successEnv, GITHUB_OUTPUT: '/dev/null' }
     });
-    const aggregateCommand = workflow.jobs.admission.steps[0].run;
-    const success = spawnSync('bash', ['-c', aggregateCommand], {
-      env: {
-        ...process.env,
-        GITHUB_OUTPUT: '/dev/null',
-        STATIC_RESULT: 'success',
-        TARGET_SHA: 'a'.repeat(40),
-        WINDOWS_RESULT: 'success'
-      }
+    const failure = spawnSync('bash', ['-c', command], {
+      encoding: 'utf8',
+      env: { ...process.env, ...successEnv, GITHUB_OUTPUT: '/dev/null', SHARED_RESULT: 'failure' }
     });
-    const failure = spawnSync('bash', ['-c', aggregateCommand], {
-      env: {
-        ...process.env,
-        GITHUB_OUTPUT: '/dev/null',
-        STATIC_RESULT: 'success',
-        TARGET_SHA: 'a'.repeat(40),
-        WINDOWS_RESULT: 'failure'
-      },
-      encoding: 'utf8'
+    const mismatch = spawnSync('bash', ['-c', command], {
+      encoding: 'utf8',
+      env: { ...process.env, ...successEnv, GITHUB_OUTPUT: '/dev/null', TOOLING_SHA: 'b'.repeat(40) }
     });
     expect(success.status).toBe(0);
     expect(failure.status).toBe(1);
-    expect(failure.stderr).toContain('WINDOWS_RESULT=failure');
-    expect(workflow.jobs.admission.outputs.admitted_sha)
-      .toBe('${{ steps.require-buckets.outputs.admitted_sha }}');
-    expect(workflowSource.match(/npm run electron:rebuild:native/gu)).toHaveLength(2);
-    expect(workflowSource.match(/node scripts\/electron-sqlite-runner\.mjs --preflight/gu)).toHaveLength(2);
-    expect(workflowSource).not.toContain('continue-on-error');
+    expect(failure.stderr).toContain('SHARED_RESULT=failure');
+    expect(mismatch.status).toBe(1);
+    expect(mismatch.stderr).toContain('TOOLING_SHA=');
   });
 
-  it('excludes full aggregation, host acceptance, device work, signing, and publishing', () => {
+  it('keeps T5 free of heavy host, package, device, signing, and publishing work', () => {
     for (const excluded of [
-      'build:vite-only',
-      'electron:compile',
-      'windows-ci-playwright-profile',
-      'quality:release:windows:tail',
-      'android:sync',
-      'gradlew',
-      'xcodebuild',
-      'codesign',
-      'npm run package',
-      'npm run publish',
-      'secrets.'
-    ]) expect(workflowSource).not.toContain(excluded);
+      'build:vite-only', 'electron:compile', 'windows-ci-playwright-profile',
+      'quality:release:windows:tail', 'android:sync', 'gradlew', 'xcodebuild',
+      'codesign', 'npm run package', 'npm run publish', 'secrets.', 'max-parallel'
+    ]) expect(source).not.toContain(excluded);
   });
 });

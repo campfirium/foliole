@@ -27,110 +27,100 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  ubuntu-static:
+  static-quality:
     name: Ubuntu static
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    env:
-      TARGET_SHA: ${{ inputs.target_sha }}
-    steps:
-      - name: Validate target SHA input
-        run: node -e "if (!/^[0-9a-f]{40}$/.test(process.env.TARGET_SHA ?? '')) throw new Error('target_sha must be a full 40-character lowercase commit SHA')"
-      - name: Check out target snapshot
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.TARGET_SHA }}
-          fetch-depth: 1
-          persist-credentials: false
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - name: Activate pinned npm
-        run: node scripts/quality/pinned-npm.mjs activate
-      - name: Install dependencies
-        run: node scripts/quality/hosted-npm-ci.mjs
-      - name: Verify checked-out target SHA
-        run: >-
-          node -e "const { execFileSync } = require('node:child_process'); const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(); if (head !== process.env.TARGET_SHA) throw new Error('Checked out SHA does not match TARGET_SHA')"
-      - name: Run dependency hardening checks
-        run: npm run deps:hardening:check
-      - name: Rebuild Electron native ABI
-        run: npm run electron:rebuild:native
-      - name: Verify Electron sqlite runner
-        run: node scripts/electron-sqlite-runner.mjs --preflight
-      - name: Run canonical Common static quality
-        run: bash scripts/quality/quality-gate-target.sh release-static
-      - name: Upload static quality logs
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: t5-static-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
-          path: .tmp/logs/quality-gate
-          if-no-files-found: ignore
-          retention-days: 14
+    uses: ./.github/workflows/hosted-quality-static.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
 
   windows-core:
     name: Windows core
-    runs-on: windows-latest
-    timeout-minutes: 10
-    env:
-      CI: "true"
-      FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: "1"
-      TARGET_SHA: ${{ inputs.target_sha }}
-    steps:
-      - name: Validate target SHA input
-        run: node -e "if (!/^[0-9a-f]{40}$/.test(process.env.TARGET_SHA ?? '')) throw new Error('target_sha must be a full 40-character lowercase commit SHA')"
-      - name: Check out target snapshot
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.TARGET_SHA }}
-          fetch-depth: 1
-          persist-credentials: false
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - name: Install dependencies
-        run: node scripts/quality/hosted-npm-ci.mjs
-      - name: Verify checked-out target SHA
-        run: >-
-          node -e "const { execFileSync } = require('node:child_process'); const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(); if (head !== process.env.TARGET_SHA) throw new Error('Checked out SHA does not match TARGET_SHA')"
-      - name: Rebuild Electron native ABI
-        run: npm run electron:rebuild:native
-      - name: Verify Electron sqlite runner
-        run: node scripts/electron-sqlite-runner.mjs --preflight
-      - name: Run canonical Windows core quality
-        run: npm run quality:release:windows:core
-      - name: Upload Windows core logs
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: t5-windows-core-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
-          path: |
-            .tmp/logs/quality-gate
-            .tmp/vitest
-          if-no-files-found: ignore
-          retention-days: 14
+    uses: ./.github/workflows/hosted-quality-windows-core.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+
+  shared-tests:
+    name: Portable shared tests
+    uses: ./.github/workflows/hosted-quality-portable-domain.yml
+    with:
+      domain: shared
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+
+  android-source-tests:
+    name: Portable Android source tests
+    uses: ./.github/workflows/hosted-quality-portable-domain.yml
+    with:
+      domain: android-source
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+
+  desktop-source-tests:
+    name: Desktop source tests
+    uses: ./.github/workflows/hosted-quality-desktop-source.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+
+  electron-tests:
+    name: Electron tests
+    uses: ./.github/workflows/hosted-quality-electron.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+
+  tooling-tests:
+    name: Quality tooling tests
+    uses: ./.github/workflows/hosted-quality-tooling.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
 
   admission:
     name: T5 Baseline Admission
     if: ${{ always() }}
-    needs: [ubuntu-static, windows-core]
+    needs:
+      - static-quality
+      - windows-core
+      - shared-tests
+      - android-source-tests
+      - desktop-source-tests
+      - electron-tests
+      - tooling-tests
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       admitted_sha: ${{ steps.require-buckets.outputs.admitted_sha }}
     env:
-      STATIC_RESULT: ${{ needs.ubuntu-static.result }}
+      ANDROID_SOURCE_RESULT: ${{ needs.android-source-tests.result }}
+      ANDROID_SOURCE_SHA: ${{ needs.android-source-tests.outputs.accepted_sha }}
+      DESKTOP_SOURCE_RESULT: ${{ needs.desktop-source-tests.result }}
+      DESKTOP_SOURCE_SHA: ${{ needs.desktop-source-tests.outputs.accepted_sha }}
+      ELECTRON_RESULT: ${{ needs.electron-tests.result }}
+      ELECTRON_SHA: ${{ needs.electron-tests.outputs.accepted_sha }}
+      SHARED_RESULT: ${{ needs.shared-tests.result }}
+      SHARED_SHA: ${{ needs.shared-tests.outputs.accepted_sha }}
+      STATIC_RESULT: ${{ needs.static-quality.result }}
+      STATIC_SHA: ${{ needs.static-quality.outputs.accepted_sha }}
       TARGET_SHA: ${{ inputs.target_sha }}
-      WINDOWS_RESULT: ${{ needs.windows-core.result }}
+      TOOLING_RESULT: ${{ needs.tooling-tests.result }}
+      TOOLING_SHA: ${{ needs.tooling-tests.outputs.accepted_sha }}
+      WINDOWS_CORE_RESULT: ${{ needs.windows-core.result }}
+      WINDOWS_CORE_SHA: ${{ needs.windows-core.outputs.accepted_sha }}
     steps:
       - name: Require every fast lane
         id: require-buckets
         run: |
           set -euo pipefail
           node -e 'const failed = Object.entries(process.env).filter(([key, value]) => key.endsWith("_RESULT") && value !== "success"); if (failed.length) throw new Error(failed.map(([key, value]) => `${key}=${value}`).join(", "))'
+          node -e 'const mismatches = Object.entries(process.env).filter(([key, value]) => key.endsWith("_SHA") && key !== "TARGET_SHA" && value !== process.env.TARGET_SHA); if (mismatches.length) throw new Error(mismatches.map(([key, value]) => `${key}=${value}`).join(", "))'
           echo "admitted_sha=${TARGET_SHA}" >> "$GITHUB_OUTPUT"

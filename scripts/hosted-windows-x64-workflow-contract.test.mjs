@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 const core = fs.readFileSync('.github/workflows/hosted-quality-core.yml', 'utf8');
 const full = fs.readFileSync('.github/workflows/hosted-quality-full.yml', 'utf8');
 const t5 = fs.readFileSync('.github/workflows/t5-baseline-admission.yml', 'utf8');
+const t5WindowsCore = fs.readFileSync('.github/workflows/hosted-quality-windows-core.yml', 'utf8');
 const windowsJob = core.slice(core.indexOf('  windows-quality:'), core.indexOf('  linux-package-acceptance:'));
 const acceptanceJob = full.slice(
   full.indexOf('  windows-acceptance:'),
@@ -26,8 +27,9 @@ describe('hosted Windows x64 workflow contract', () => {
   });
 
   it('runs Windows core in T5 and native acceptance in T6', () => {
-    expect(t5).toContain('runs-on: windows-latest');
-    expect(t5).toContain('run: npm run quality:release:windows:core');
+    expect(t5).toContain('uses: ./.github/workflows/hosted-quality-windows-core.yml');
+    expect(t5WindowsCore).toContain('runs-on: windows-latest');
+    expect(t5WindowsCore).toContain('run: npm run quality:release:windows:core');
     expect(acceptanceJob).toContain('runs-on: windows-latest');
     expect(acceptanceJob).toContain('npm run build:vite-only');
     expect(acceptanceJob).toContain('npm run electron:compile');
