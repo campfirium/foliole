@@ -6,6 +6,6 @@
   "scopeBasis": {
     "macos": "Foliole 0.7.5 changes existing macOS desktop behavior in Aide, editing, and automatic updates, so the supported macOS package is required.",
     "windows": "Foliole 0.7.5 changes existing Windows desktop behavior in Aide, editing, and automatic updates, so the supported Windows package is required.",
-    "linux": "Foliole 0.7.5 introduces an experimental Linux x64 DEB and registers Linux as an active hard-gated release platform, so the Linux package is required."
+    "linux": "Foliole 0.7.5 introduces the first supported Ubuntu 24.04 x64 DEB and registers Linux as an active hard-gated release platform, so the Linux package is required."
   }
 }

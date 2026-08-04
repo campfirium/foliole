@@ -45,7 +45,7 @@
     },
     {
       "id": "linux",
-      "displayName": "Linux (Experimental)",
+      "displayName": "Linux Experimental",
       "status": "active",
       "architectures": ["x64"],
       "deliveryChannel": "github-release",

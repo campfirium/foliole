@@ -37,13 +37,13 @@ it('exposes only a guarded dev candidate manual entry', async () => {
   expect(source).not.toContain('contents: write');
 });
 
-it('registers one active hard-gated manual-update Linux (Experimental) producer', async () => {
+it('registers one active hard-gated manual-update Linux Experimental producer', async () => {
   const registry = JSON.parse(await readFile('.github/release-platforms.json', 'utf8'));
   const linux = registry.platforms.find((platform) => platform.id === 'linux');
 
   expect(linux).toMatchObject({
     architectures: ['x64'], artifactContract: 'deb', deliveryChannel: 'github-release',
-    displayName: 'Linux (Experimental)', status: 'active', t7Required: true,
+    displayName: 'Linux Experimental', status: 'active', t7Required: true,
     update: { baselineVersion: null, mode: 'manual' }
   });
   expect(linux.managedAssets).toEqual([
