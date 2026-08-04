@@ -20,7 +20,7 @@
 让阅读真正完成。<br>
 一款现代的渐进阅读软件。
 
-Windows 和 macOS alpha 已开放测试。<br>
+Windows 和 macOS alpha，以及实验版 Linux 已开放测试。<br>
 Android 和 iOS alpha 预计在 8 月左右发布。<br>
 也可以先通过[在线体验版](https://foliole.app/zh-hans/demo/)体验 Foliole。
 
@@ -84,7 +84,7 @@ Android 和 iOS alpha 预计在 8 月左右发布。<br>
 
 ### 汇聚阅读材料
 
-可集中处理各种来源的阅读材料，无论是本地文件、网页文档，还是 Obsidian 管理的笔记、Readwise Reader 导出的材料。
+可集中处理各种来源的阅读材料，无论是本地文件、网页文档、Obsidian 管理的笔记、Readwise Reader 导出的材料，还是从其他应用中收集的选中文字。
 
 <p align="center">
   <img src="../../../assets/screenshots/Bring%20Reading%20Materials%20Together.png" alt="Foliole document list and reading sources." width="900">
@@ -104,6 +104,22 @@ Android 和 iOS alpha 预计在 8 月左右发布。<br>
 
 <p align="center">
   <img src="../../../assets/screenshots/Complex%20Content%20Support.png" alt="Foliole complex content reading view." width="900">
+</p>
+
+### 命令行与 Agent 工作流
+
+终端和本地 Agent 可以读取、写入和整理 Foliole 中的资料；Foliole Aide 则让你直接在应用中使用 Codex，并使用 ChatGPT 套餐自带的 Codex 额度。
+
+<p align="center">
+  <img src="../../../assets/screenshots/Command-Line%20and%20Agent%20Workflows.png" alt="Foliole Aide working with materials in the desktop app." width="900">
+</p>
+
+### 发布持续演进的主题
+
+将持续演进的主题发布为可以不断更新的内容，可用于自己的网站、WordPress 或 Discourse。
+
+<p align="center">
+  <img src="../../../assets/screenshots/Publish%20Evolving%20Topics.png" alt="Foliole publishing settings for an evolving website." width="900">
 </p>
 
 ## 致谢

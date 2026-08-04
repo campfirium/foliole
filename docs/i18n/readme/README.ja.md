@@ -20,7 +20,7 @@
 読書を本当に完了できるものにする。<br>
 親しみやすいインクリメンタルリーディングアプリです。
 
-Windows と macOS の alpha はテスト公開中です。<br>
+Windows と macOS の alpha に加え、Linux 実験版もテスト公開中です。<br>
 Android と iOS の alpha は 8 月頃に公開予定です。<br>
 [オンラインデモ](https://foliole.app/en/demo/)でも Foliole を試せます。
 
@@ -84,7 +84,7 @@ Foliole は、オープンで効率的な復習スケジューリングアルゴ
 
 ### 読書素材をひとつに集約
 
-ローカルファイル、Web ドキュメント、Obsidian で管理しているノート、Readwise Reader からエクスポートした素材など、さまざまな出所の読書素材をまとめて扱えます。
+ローカルファイル、Web ドキュメント、Obsidian で管理しているノート、Readwise Reader からエクスポートした素材、他のアプリで選択したテキストなど、さまざまな出所の読書素材をまとめて扱えます。
 
 <p align="center">
   <img src="../../../assets/screenshots/Bring%20Reading%20Materials%20Together.png" alt="Foliole document list and reading sources." width="900">
@@ -104,6 +104,22 @@ Markdown、PDF、EPUB、LaTeX 数式、コードブロックなど、さまざ�
 
 <p align="center">
   <img src="../../../assets/screenshots/Complex%20Content%20Support.png" alt="Foliole complex content reading view." width="900">
+</p>
+
+### コマンドラインと Agent のワークフロー
+
+Terminal やローカル Agent から Foliole の素材を読み取り、書き込み、整理できます。Foliole Aide では、ChatGPT プランに含まれる Codex 利用枠を使って、アプリ内で Codex を直接利用できます。
+
+<p align="center">
+  <img src="../../../assets/screenshots/Command-Line%20and%20Agent%20Workflows.png" alt="Foliole Aide working with materials in the desktop app." width="900">
+</p>
+
+### 更新を重ねるテーマを公開
+
+更新を重ねるテーマを、自分のサイト、WordPress、Discourse で継続的に更新できるコンテンツとして公開できます。
+
+<p align="center">
+  <img src="../../../assets/screenshots/Publish%20Evolving%20Topics.png" alt="Foliole publishing settings for an evolving website." width="900">
 </p>
 
 ## 謝辞

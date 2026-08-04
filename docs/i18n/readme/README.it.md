@@ -20,7 +20,7 @@
 Portare davvero a termine la lettura.<br>
 Un'app accessibile per la lettura incrementale.
 
-Le versioni alpha per Windows e macOS sono disponibili per i test.<br>
+Le versioni alpha per Windows e macOS, insieme a una versione Linux sperimentale, sono disponibili per i test.<br>
 Le versioni alpha per Android e iOS sono previste intorno ad agosto.<br>
 Puoi anche provare Foliole con la [demo online](https://foliole.app/en/demo/).
 
@@ -84,7 +84,7 @@ Foliole integra FSRS (Free Spaced Repetition Scheduler), un algoritmo aperto ed 
 
 ### Riunire i materiali di lettura
 
-Foliole gestisce materiali di lettura provenienti da fonti diverse, che siano file locali, documenti web, note gestite in Obsidian o materiali esportati da Readwise Reader.
+Foliole gestisce materiali di lettura provenienti da fonti diverse, che siano file locali, documenti web, note gestite in Obsidian, materiali esportati da Readwise Reader o testo selezionato in altre app.
 
 <p align="center">
   <img src="../../../assets/screenshots/Bring%20Reading%20Materials%20Together.png" alt="Foliole document list and reading sources." width="900">
@@ -104,6 +104,22 @@ Foliole supporta Markdown, PDF, EPUB, formule LaTeX, blocchi di codice e altre e
 
 <p align="center">
   <img src="../../../assets/screenshots/Complex%20Content%20Support.png" alt="Foliole complex content reading view." width="900">
+</p>
+
+### Flussi di lavoro da riga di comando e con agenti
+
+Consente al Terminale e agli agenti locali di leggere, scrivere e organizzare materiali in Foliole, mentre Foliole Aide porta Codex direttamente nell’app usando la quota inclusa nel tuo piano ChatGPT.
+
+<p align="center">
+  <img src="../../../assets/screenshots/Command-Line%20and%20Agent%20Workflows.png" alt="Foliole Aide working with materials in the desktop app." width="900">
+</p>
+
+### Pubblicare temi in evoluzione
+
+Trasforma i temi in evoluzione in contenuti che puoi continuare ad aggiornare sul tuo sito, su WordPress o su Discourse.
+
+<p align="center">
+  <img src="../../../assets/screenshots/Publish%20Evolving%20Topics.png" alt="Foliole publishing settings for an evolving website." width="900">
 </p>
 
 ## Ringraziamenti

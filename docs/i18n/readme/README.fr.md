@@ -20,7 +20,7 @@
 Faire que la lecture aille vraiment jusqu'au bout.<br>
 Une application accessible de lecture incrémentale.
 
-Les versions alpha pour Windows et macOS sont ouvertes aux tests.<br>
+Les versions alpha pour Windows et macOS, ainsi qu’une version Linux expérimentale, sont ouvertes aux tests.<br>
 Les versions alpha pour Android et iOS sont attendues autour d'août.<br>
 Vous pouvez aussi essayer Foliole avec la [démo en ligne](https://foliole.app/en/demo/).
 
@@ -84,7 +84,7 @@ Foliole intègre FSRS (Free Spaced Repetition Scheduler), un algorithme ouvert e
 
 ### Rassembler les supports de lecture
 
-Foliole gère des supports de lecture provenant de sources variées, qu'il s'agisse de fichiers locaux, de documents web, de notes gérées dans Obsidian ou de contenus exportés depuis Readwise Reader.
+Foliole gère des supports de lecture provenant de sources variées, qu'il s'agisse de fichiers locaux, de documents web, de notes gérées dans Obsidian, de contenus exportés depuis Readwise Reader ou de texte sélectionné dans d’autres applications.
 
 <p align="center">
   <img src="../../../assets/screenshots/Bring%20Reading%20Materials%20Together.png" alt="Foliole document list and reading sources." width="900">
@@ -104,6 +104,22 @@ Foliole prend en charge Markdown, PDF, EPUB, les formules LaTeX, les blocs de co
 
 <p align="center">
   <img src="../../../assets/screenshots/Complex%20Content%20Support.png" alt="Foliole complex content reading view." width="900">
+</p>
+
+### Flux de travail en ligne de commande et avec des agents
+
+Permet au Terminal et aux agents locaux de lire, écrire et organiser des contenus dans Foliole, tandis que Foliole Aide intègre Codex directement à l’application en utilisant le quota inclus dans votre abonnement ChatGPT.
+
+<p align="center">
+  <img src="../../../assets/screenshots/Command-Line%20and%20Agent%20Workflows.png" alt="Foliole Aide working with materials in the desktop app." width="900">
+</p>
+
+### Publier des thèmes en évolution
+
+Transforme les thèmes en évolution en contenus que vous pouvez continuer à mettre à jour sur votre propre site, WordPress ou Discourse.
+
+<p align="center">
+  <img src="../../../assets/screenshots/Publish%20Evolving%20Topics.png" alt="Foliole publishing settings for an evolving website." width="900">
 </p>
 
 ## Remerciements

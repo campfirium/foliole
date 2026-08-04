@@ -20,7 +20,7 @@
 Lesen wirklich abschließen.<br>
 Eine zugängliche App für inkrementelles Lesen.
 
-Die Alpha-Versionen für Windows und macOS sind zum Testen verfügbar.<br>
+Alpha-Versionen für Windows und macOS sowie eine experimentelle Linux-Version sind zum Testen verfügbar.<br>
 Die Alpha-Versionen für Android und iOS werden etwa im August erwartet.<br>
 Du kannst Foliole auch mit der [Online-Demo](https://foliole.app/en/demo/) ausprobieren.
 
@@ -84,7 +84,7 @@ Foliole integriert FSRS (Free Spaced Repetition Scheduler), einen offenen und ef
 
 ### Lesematerialien zusammenführen
 
-Foliole verarbeitet Lesematerialien aus unterschiedlichen Quellen zentral, ob lokale Dateien, Webdokumente, in Obsidian verwaltete Notizen oder aus Readwise Reader exportierte Materialien.
+Foliole verarbeitet Lesematerialien aus unterschiedlichen Quellen zentral, ob lokale Dateien, Webdokumente, in Obsidian verwaltete Notizen, aus Readwise Reader exportierte Materialien oder in anderen Apps ausgewählter Text.
 
 <p align="center">
   <img src="../../../assets/screenshots/Bring%20Reading%20Materials%20Together.png" alt="Foliole document list and reading sources." width="900">
@@ -104,6 +104,22 @@ Foliole unterstützt Markdown, PDF, EPUB, LaTeX-Formeln, Codeblöcke und weitere
 
 <p align="center">
   <img src="../../../assets/screenshots/Complex%20Content%20Support.png" alt="Foliole complex content reading view." width="900">
+</p>
+
+### Kommandozeilen- und Agent-Workflows
+
+Terminal und lokale Agents können Materialien in Foliole lesen, schreiben und organisieren, während Foliole Aide Codex direkt in die App bringt und dabei das im ChatGPT-Tarif enthaltene Codex-Kontingent nutzt.
+
+<p align="center">
+  <img src="../../../assets/screenshots/Command-Line%20and%20Agent%20Workflows.png" alt="Foliole Aide working with materials in the desktop app." width="900">
+</p>
+
+### Sich weiterentwickelnde Themen veröffentlichen
+
+Macht sich weiterentwickelnde Themen zu Inhalten, die sich auf der eigenen Website, in WordPress oder Discourse fortlaufend aktualisieren lassen.
+
+<p align="center">
+  <img src="../../../assets/screenshots/Publish%20Evolving%20Topics.png" alt="Foliole publishing settings for an evolving website." width="900">
 </p>
 
 ## Danksagung

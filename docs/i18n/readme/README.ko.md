@@ -20,7 +20,7 @@
 읽기를 정말로 끝까지 완성하게 합니다.<br>
 접근하기 쉬운 점진적 읽기 앱입니다.
 
-Windows와 macOS alpha는 테스트용으로 공개되어 있습니다.<br>
+Windows와 macOS alpha에 더해 Linux 실험 버전도 테스트용으로 공개되어 있습니다.<br>
 Android와 iOS alpha는 8월경 공개될 예정입니다.<br>
 [온라인 데모](https://foliole.app/en/demo/)로도 Foliole을 사용해 볼 수 있습니다.
 
@@ -84,7 +84,7 @@ Foliole은 개방적이고 효율적인 복습 스케줄링 알고리즘인 FSRS
 
 ### 읽기 자료 통합
 
-로컬 파일, 웹 문서, Obsidian에서 관리하는 노트, Readwise Reader에서 내보낸 자료 등 다양한 출처의 읽기 자료를 한곳에서 다룰 수 있습니다.
+로컬 파일, 웹 문서, Obsidian에서 관리하는 노트, Readwise Reader에서 내보낸 자료, 다른 앱에서 선택한 텍스트 등 다양한 출처의 읽기 자료를 한곳에서 다룰 수 있습니다.
 
 <p align="center">
   <img src="../../../assets/screenshots/Bring%20Reading%20Materials%20Together.png" alt="Foliole document list and reading sources." width="900">
@@ -104,6 +104,22 @@ Markdown, PDF, EPUB, LaTeX 수식, 코드 블록 등 다양한 콘텐츠 렌더�
 
 <p align="center">
   <img src="../../../assets/screenshots/Complex%20Content%20Support.png" alt="Foliole complex content reading view." width="900">
+</p>
+
+### 명령줄 및 Agent 워크플로
+
+Terminal과 로컬 Agent가 Foliole의 자료를 읽고, 쓰고, 정리할 수 있습니다. Foliole Aide에서는 ChatGPT 요금제에 포함된 Codex 사용량으로 앱 안에서 Codex를 직접 사용할 수 있습니다.
+
+<p align="center">
+  <img src="../../../assets/screenshots/Command-Line%20and%20Agent%20Workflows.png" alt="Foliole Aide working with materials in the desktop app." width="900">
+</p>
+
+### 계속 발전하는 주제 게시
+
+계속 발전하는 주제를 내 사이트, WordPress 또는 Discourse에서 계속 업데이트할 수 있는 콘텐츠로 게시합니다.
+
+<p align="center">
+  <img src="../../../assets/screenshots/Publish%20Evolving%20Topics.png" alt="Foliole publishing settings for an evolving website." width="900">
 </p>
 
 ## 감사의 말

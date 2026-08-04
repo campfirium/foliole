@@ -20,7 +20,7 @@
 Доводите чтение до настоящего завершения.<br>
 Доступное приложение для инкрементального чтения.
 
-Альфа-версии для Windows и macOS открыты для тестирования.<br>
+Альфа-версии для Windows и macOS, а также экспериментальная версия для Linux открыты для тестирования.<br>
 Альфа-версии для Android и iOS ожидаются примерно в августе.<br>
 Вы также можете попробовать Foliole в [онлайн-демо](https://foliole.app/en/demo/).
 
@@ -84,7 +84,7 @@ Foliole интегрирует FSRS (Free Spaced Repetition Scheduler), откр
 
 ### Собирайте материалы для чтения вместе
 
-Foliole работает с материалами из разных источников: локальными файлами, веб-документами, заметками из Obsidian и материалами, экспортированными из Readwise Reader.
+Foliole работает с материалами из разных источников: локальными файлами, веб-документами, заметками из Obsidian, материалами, экспортированными из Readwise Reader, и текстом, выделенным в других приложениях.
 
 <p align="center">
   <img src="../../../assets/screenshots/Bring%20Reading%20Materials%20Together.png" alt="Foliole document list and reading sources." width="900">
@@ -104,6 +104,22 @@ Foliole поддерживает Markdown, PDF, EPUB, формулы LaTeX, бл
 
 <p align="center">
   <img src="../../../assets/screenshots/Complex%20Content%20Support.png" alt="Foliole complex content reading view." width="900">
+</p>
+
+### Работа из командной строки и с агентами
+
+Позволяет Terminal и локальным агентам читать, изменять и упорядочивать материалы в Foliole, а Foliole Aide переносит Codex прямо в приложение и использует лимит, включённый в ваш план ChatGPT.
+
+<p align="center">
+  <img src="../../../assets/screenshots/Command-Line%20and%20Agent%20Workflows.png" alt="Foliole Aide working with materials in the desktop app." width="900">
+</p>
+
+### Публикуйте развивающиеся темы
+
+Превращает развивающиеся темы в материалы, которые можно продолжать обновлять на собственном сайте, в WordPress или Discourse.
+
+<p align="center">
+  <img src="../../../assets/screenshots/Publish%20Evolving%20Topics.png" alt="Foliole publishing settings for an evolving website." width="900">
 </p>
 
 ## Благодарности

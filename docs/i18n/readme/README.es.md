@@ -20,7 +20,7 @@
 Haz que la lectura llegue realmente a completarse.<br>
 Una app accesible de lectura incremental.
 
-Las versiones alpha para Windows y macOS están abiertas para pruebas.<br>
+Las versiones alpha para Windows y macOS, junto con una versión experimental para Linux, están abiertas para pruebas.<br>
 Las versiones alpha para Android e iOS se esperan alrededor de agosto.<br>
 También puedes probar Foliole con la [demo en línea](https://foliole.app/en/demo/).
 
@@ -84,7 +84,7 @@ Foliole integra FSRS (Free Spaced Repetition Scheduler), un algoritmo abierto y 
 
 ### Reúne tus materiales de lectura
 
-Foliole gestiona materiales de lectura de distintas fuentes, ya sean archivos locales, documentos web, notas administradas en Obsidian o materiales exportados desde Readwise Reader.
+Foliole gestiona materiales de lectura de distintas fuentes, ya sean archivos locales, documentos web, notas administradas en Obsidian, materiales exportados desde Readwise Reader o texto seleccionado en otras aplicaciones.
 
 <p align="center">
   <img src="../../../assets/screenshots/Bring%20Reading%20Materials%20Together.png" alt="Foliole document list and reading sources." width="900">
@@ -104,6 +104,22 @@ Foliole admite Markdown, PDF, EPUB, matemáticas en LaTeX, bloques de código y 
 
 <p align="center">
   <img src="../../../assets/screenshots/Complex%20Content%20Support.png" alt="Foliole complex content reading view." width="900">
+</p>
+
+### Flujos de trabajo con línea de comandos y agentes
+
+Permite que Terminal y los agentes locales lean, escriban y organicen materiales en Foliole, mientras Foliole Aide incorpora Codex directamente en la aplicación usando el cupo incluido en tu plan de ChatGPT.
+
+<p align="center">
+  <img src="../../../assets/screenshots/Command-Line%20and%20Agent%20Workflows.png" alt="Foliole Aide working with materials in the desktop app." width="900">
+</p>
+
+### Publica temas en evolución
+
+Convierte temas en evolución en contenido que puedes seguir actualizando en tu propio sitio, WordPress o Discourse.
+
+<p align="center">
+  <img src="../../../assets/screenshots/Publish%20Evolving%20Topics.png" alt="Foliole publishing settings for an evolving website." width="900">
 </p>
 
 ## Agradecimientos

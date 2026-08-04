@@ -20,7 +20,7 @@
 Make reading actually complete.<br>
 An approachable incremental reading app.
 
-Windows and macOS alpha builds are open for testing.<br>
+Windows and macOS alpha builds, plus an experimental Linux build, are open for testing.<br>
 Android and iOS alpha builds are expected around August.<br>
 You can also try Foliole with the [online demo](https://foliole.app/en/demo/).
 
@@ -84,7 +84,7 @@ Integrates FSRS (Free Spaced Repetition Scheduler), an open and efficient review
 
 ### Bring Reading Materials Together
 
-Handles reading materials from different sources, whether local files, web documents, notes managed in Obsidian, or materials exported from Readwise Reader.
+Handles reading materials from different sources, whether local files, web documents, notes managed in Obsidian, materials exported from Readwise Reader, or selected text captured from other apps.
 
 <p align="center">
   <img src="assets/screenshots/Bring%20Reading%20Materials%20Together.png" alt="Foliole document list and reading sources." width="900">
@@ -104,6 +104,22 @@ Supports Markdown, PDF, EPUB, LaTeX math, code blocks, and other content renderi
 
 <p align="center">
   <img src="assets/screenshots/Complex%20Content%20Support.png" alt="Foliole complex content reading view." width="900">
+</p>
+
+### Command-Line and Agent Workflows
+
+Lets Terminal and local agents read, write, and organize materials in Foliole, while Foliole Aide brings Codex directly into the app using the allowance included in your ChatGPT plan.
+
+<p align="center">
+  <img src="assets/screenshots/Command-Line%20and%20Agent%20Workflows.png" alt="Foliole Aide working with materials in the desktop app." width="900">
+</p>
+
+### Publish Evolving Topics
+
+Turns evolving Topics into content you can continue to update on your own site, WordPress, or Discourse.
+
+<p align="center">
+  <img src="assets/screenshots/Publish%20Evolving%20Topics.png" alt="Foliole publishing settings for an evolving website." width="900">
 </p>
 
 ## Acknowledgements
