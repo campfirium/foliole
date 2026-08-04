@@ -6,8 +6,9 @@ import { parse } from 'yaml';
 
 const read = (file) => fs.readFileSync(file, 'utf8');
 const sources = {
+  android: read('.github/workflows/hosted-quality-android.yml'),
+  androidHost: read('.github/workflows/hosted-quality-android-host.yml'),
   androidWebBuild: read('.github/workflows/hosted-quality-android-web-build.yml'),
-  common: read('.github/workflows/hosted-quality-common.yml'),
   core: read('.github/workflows/hosted-quality-core.yml'),
   dependencyHardening: read('.github/workflows/hosted-quality-dependency-hardening.yml'),
   desktopBuild: read('.github/workflows/hosted-quality-desktop-build.yml'),
@@ -18,6 +19,8 @@ const sources = {
   ios: read('.github/workflows/hosted-quality-ios.yml'),
   portableDomain: read('.github/workflows/hosted-quality-portable-domain.yml'),
   remote: read('.github/workflows/remote-quality.yml'),
+  scopedStatic: read('.github/workflows/hosted-quality-scoped-static.yml'),
+  shared: read('.github/workflows/hosted-quality-shared.yml'),
   static: read('.github/workflows/hosted-quality-static.yml'),
   t5: read('.github/workflows/t5-baseline-admission.yml'),
   t6: read('.github/workflows/t6-hosted-quality.yml'),
@@ -85,7 +88,7 @@ describe('T6 hosted quality workflow contracts', () => {
 
   it('preserves the complete heavy host and command union', () => {
     expect(Object.keys(workflows.core.jobs)).toEqual([
-      'common-quality', 'desktop-static', 'desktop-source-tests', 'desktop-shared-tests',
+      'shared-quality', 'desktop-static', 'desktop-source-tests', 'desktop-shared-tests',
       'desktop-electron-tests', 'desktop-tooling-tests', 'desktop-windows-core',
       'desktop-dependency-hardening', 'desktop-build', 'linux-package-acceptance',
       'desktop-admission', 'android-quality', 'ios-quality'
@@ -123,7 +126,7 @@ describe('T6 hosted quality workflow contracts', () => {
     expect(sources.portableDomain).not.toContain('paths-ignore:');
     expect(sources.portableDomain).not.toContain('changed-files');
     const hostSources = {
-      Ubuntu: `${sources.static}\n${sources.desktopStatic}\n${sources.dependencyHardening}\n${sources.portableDomain}\n${sources.desktopSource}\n${sources.electron}\n${sources.tooling}\n${sources.desktopBuild}\n${sources.androidWebBuild}\n${section(sources.full, 'android-host', 'ios-full')}`,
+      Ubuntu: `${sources.static}\n${sources.scopedStatic}\n${sources.desktopStatic}\n${sources.dependencyHardening}\n${sources.portableDomain}\n${sources.desktopSource}\n${sources.electron}\n${sources.tooling}\n${sources.desktopBuild}\n${sources.androidWebBuild}\n${sources.androidHost}`,
       Windows: `${sources.windowsCore}\n${sources.portableDomain}\n${sources.desktopSource}\n${sources.electron}\n${sources.tooling}\n${section(sources.full, 'windows-acceptance', 'android-host')}`,
       macOS: sources.ios
     };
@@ -161,21 +164,21 @@ describe('T6 hosted quality workflow contracts', () => {
     for (const workflow of Object.values(workflows)) {
       expect(workflow.permissions).toMatchObject({ contents: 'read' });
     }
-    for (const name of ['androidWebBuild', 'common', 'core', 'dependencyHardening', 'desktopBuild',
+    for (const name of ['android', 'androidHost', 'androidWebBuild', 'core', 'dependencyHardening', 'desktopBuild',
       'desktopSource', 'desktopStatic', 'electron', 'full', 'ios', 'portableDomain',
-      'static', 'tooling', 'windowsCore']) {
+      'scopedStatic', 'shared', 'static', 'tooling', 'windowsCore']) {
       expect(workflows[name].on.workflow_call.inputs.execution_lane)
         .toEqual({ required: true, type: 'string' });
       expect(workflows[name].on.workflow_call.inputs.trigger_ref)
         .toEqual({ required: true, type: 'string' });
     }
-    const concurrencySources = `${sources.androidWebBuild}\n${sources.common}\n${sources.core}\n${sources.desktopBuild}\n${sources.desktopStatic}\n${sources.dependencyHardening}\n${sources.full}\n${sources.ios}\n${sources.tooling}`;
+    const concurrencySources = `${sources.androidHost}\n${sources.androidWebBuild}\n${sources.core}\n${sources.desktopBuild}\n${sources.desktopStatic}\n${sources.dependencyHardening}\n${sources.full}\n${sources.ios}\n${sources.scopedStatic}\n${sources.tooling}`;
     expect(concurrencySources).toContain('${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}');
     expect(concurrencySources).not.toContain('group: hosted-quality-');
     expect(workflows.t6.concurrency.group)
       .toBe('t6-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-orchestrator');
-    expect(sources.full.match(/ref: \$\{\{ env\.TARGET_SHA \}\}/gu)).toHaveLength(2);
-    expect(sources.full.match(/persist-credentials: false/gu)).toHaveLength(2);
+    expect(sources.full.match(/ref: \$\{\{ env\.TARGET_SHA \}\}/gu)).toHaveLength(1);
+    expect(sources.full.match(/persist-credentials: false/gu)).toHaveLength(1);
     for (const name of ['androidWebBuild', 'dependencyHardening', 'desktopBuild', 'desktopStatic']) {
       expect(sources[name].match(/ref: \$\{\{ env\.TARGET_SHA \}\}/gu)).toHaveLength(1);
       expect(sources[name].match(/persist-credentials: false/gu)).toHaveLength(1);

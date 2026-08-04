@@ -1,0 +1,85 @@
+name: Hosted Shared Scoped Quality
+
+on:
+  workflow_call:
+    inputs:
+      target_sha:
+        required: true
+        type: string
+      execution_lane:
+        required: true
+        type: string
+      trigger_ref:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  shared-static:
+    name: Shared static
+    uses: ./.github/workflows/hosted-quality-scoped-static.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+      scope: shared
+
+  shared-tests:
+    name: Shared tests
+    uses: ./.github/workflows/hosted-quality-portable-domain.yml
+    with:
+      domain: shared
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+
+  shared-tooling:
+    name: Shared tooling
+    uses: ./.github/workflows/hosted-quality-tooling.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+
+  shared-desktop-build:
+    name: Shared desktop build
+    uses: ./.github/workflows/hosted-quality-desktop-build.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+
+  shared-android-web-build:
+    name: Shared Android web build
+    uses: ./.github/workflows/hosted-quality-android-web-build.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+
+  shared-admission:
+    name: Shared scoped admission
+    if: ${{ always() }}
+    needs:
+      - shared-static
+      - shared-tests
+      - shared-tooling
+      - shared-desktop-build
+      - shared-android-web-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Summarize shared scoped topology
+        run: |
+          echo 'T5 baseline: not applicable to scoped run' >> "$GITHUB_STEP_SUMMARY"
+      - name: Require every shared bucket
+        env:
+          ANDROID_WEB_BUILD_RESULT: ${{ needs.shared-android-web-build.result }}
+          DESKTOP_BUILD_RESULT: ${{ needs.shared-desktop-build.result }}
+          STATIC_RESULT: ${{ needs.shared-static.result }}
+          TEST_RESULT: ${{ needs.shared-tests.result }}
+          TOOLING_RESULT: ${{ needs.shared-tooling.result }}
+        run: >-
+          node -e 'const failed = Object.entries(process.env).filter(([key, value]) => key.endsWith("_RESULT") && value !== "success"); if (failed.length) throw new Error(failed.map(([key, value]) => `${key}=${value}`).join(", "))'

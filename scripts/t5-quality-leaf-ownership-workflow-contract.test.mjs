@@ -78,7 +78,7 @@ describe('T5 canonical leaf ownership', () => {
     expect(portable.jobs['portable-domain-tests'].strategy['fail-fast']).toBe(false);
     expect(portable.jobs['portable-domain-tests']['timeout-minutes']).toBe(20);
     expect(portable.jobs['portable-domain-tests'].if)
-      .toBe("inputs.domain == 'shared' || inputs.domain == 'android-source'");
+      .toBe("inputs.domain == 'shared' || inputs.domain == 'android-source' || inputs.domain == 'android-shared'");
     const steps = portable.jobs['portable-domain-tests'].steps;
     expect(steps.find(({ name }) => name === 'Run canonical shared domain').if)
       .toBe("inputs.domain == 'shared'");
@@ -157,6 +157,8 @@ describe('T5 canonical leaf ownership', () => {
   it('activates pinned npm inside every npm leaf setup', () => {
     for (const file of [
       'hosted-quality-static.yml',
+      'hosted-quality-scoped-static.yml',
+      'hosted-quality-android-host.yml',
       'hosted-quality-android-web-build.yml',
       'hosted-quality-desktop-static.yml',
       'hosted-quality-dependency-hardening.yml',

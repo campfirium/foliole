@@ -1,0 +1,71 @@
+name: Hosted Scoped Static Quality
+
+on:
+  workflow_call:
+    inputs:
+      target_sha:
+        required: true
+        type: string
+      execution_lane:
+        required: true
+        type: string
+      trigger_ref:
+        required: true
+        type: string
+      scope:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  scoped-static:
+    name: Ubuntu ${{ inputs.scope }} static
+    if: inputs.scope == 'shared' || inputs.scope == 'android'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-${{ inputs.scope }}-static
+      cancel-in-progress: false
+    env:
+      TARGET_SHA: ${{ inputs.target_sha }}
+    steps:
+      - name: Validate target SHA input
+        run: node -e "if (!/^[0-9a-f]{40}$/.test(process.env.TARGET_SHA ?? '')) throw new Error('target_sha must be a full 40-character lowercase commit SHA')"
+      - name: Check out target snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Activate pinned npm
+        run: node scripts/quality/pinned-npm.mjs activate
+      - name: Install dependencies
+        run: node scripts/quality/hosted-npm-ci.mjs
+      - name: Verify checked-out target SHA
+        run: >-
+          node -e "const { execFileSync } = require('node:child_process'); const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(); if (head !== process.env.TARGET_SHA) throw new Error('Checked out SHA does not match TARGET_SHA')"
+      - name: Rebuild Electron native ABI
+        run: npm run electron:rebuild:native
+      - name: Verify Electron sqlite runner
+        run: node scripts/electron-sqlite-runner.mjs --preflight
+      - name: Run canonical shared static quality
+        if: inputs.scope == 'shared'
+        run: bash scripts/quality/quality-gate-target.sh shared-static
+      - name: Run canonical Android static quality
+        if: inputs.scope == 'android'
+        run: bash scripts/quality/quality-gate-target.sh android-static
+      - name: Upload scoped static logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.scope }}-static-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          path: .tmp/logs/quality-gate
+          if-no-files-found: ignore
+          retention-days: 14

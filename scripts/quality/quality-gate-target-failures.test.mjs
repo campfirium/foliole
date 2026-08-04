@@ -179,7 +179,7 @@ describe('quality-gate-target.sh failure reporting', () => {
       expect(result.code).toBe(1);
       expect(result.stdout).toContain('[quality-gate-target] unknown target: unknown-target');
       expect(result.stdout).toContain(
-        'Usage: bash scripts/quality/quality-gate-target.sh <desktop|desktop-static|android|shared|shared-static|shared-test|shared-quality-tests|shared-build|full|release|release-core|release-hosted-common|release-hosted-common-build|release-windows-core|release-static|release-tests|release-build|release-script-preview|release-base|release-windows-tail|release-android-tail|release-ios-tail|release-tooling|release-preview-recovery|release-android-host>'
+        'Usage: bash scripts/quality/quality-gate-target.sh <desktop|desktop-static|android|android-static|shared|shared-static|shared-test|shared-quality-tests|shared-build|full|release|release-core|release-hosted-common|release-hosted-common-build|release-windows-core|release-static|release-tests|release-build|release-script-preview|release-base|release-windows-tail|release-android-tail|release-ios-tail|release-tooling|release-preview-recovery|release-android-host>'
       );
     } finally {
       await rm(tempRoot, { recursive: true, force: true });

@@ -1,12 +1,9 @@
-name: Hosted Common Quality
+name: Hosted Android Host Quality
 
 on:
   workflow_call:
     inputs:
       target_sha:
-        required: true
-        type: string
-      scope:
         required: true
         type: string
       execution_lane:
@@ -20,16 +17,16 @@ permissions:
   contents: read
 
 jobs:
-  shared-quality:
-    name: Shared quality
-    if: inputs.scope == 'shared'
+  android-host:
+    name: Android host quality
     runs-on: ubuntu-latest
     timeout-minutes: 120
     concurrency:
-      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-common-shared
+      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-android-host
       cancel-in-progress: false
     env:
       TARGET_SHA: ${{ inputs.target_sha }}
+      FOLIOLE_ANDROID_HOST_MODE: native-linux
     steps:
       - name: Check out target snapshot
         uses: actions/checkout@v4
@@ -44,17 +41,22 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Activate pinned npm
+        run: node scripts/quality/pinned-npm.mjs activate
+      - name: Set up Java 21 for Android host checks
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
       - name: Install dependencies
         run: node scripts/quality/hosted-npm-ci.mjs
-      - name: Rebuild Electron native ABI
-        run: npm run electron:rebuild:native
-      - name: Run shared quality
-        run: npm run quality:shared
-      - name: Upload Shared quality logs
+      - name: Run canonical Android host tail
+        run: npm run quality:release:android:tail
+      - name: Upload Android quality logs
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: common-shared-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          name: android-quality-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
           path: .tmp/logs/quality-gate
           if-no-files-found: ignore
           retention-days: 14

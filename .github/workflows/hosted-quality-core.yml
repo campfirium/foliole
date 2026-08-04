@@ -20,15 +20,14 @@ permissions:
   contents: read
 
 jobs:
-  common-quality:
-    name: Common ${{ inputs.scope }} quality
+  shared-quality:
+    name: Shared scoped quality
     if: inputs.scope == 'shared'
-    uses: ./.github/workflows/hosted-quality-common.yml
+    uses: ./.github/workflows/hosted-quality-shared.yml
     with:
       execution_lane: ${{ inputs.execution_lane }}
       target_sha: ${{ inputs.target_sha }}
       trigger_ref: ${{ inputs.trigger_ref }}
-      scope: ${{ inputs.scope }}
 
   desktop-static:
     name: Desktop static
@@ -149,49 +148,13 @@ jobs:
           node -e 'const failed = Object.entries(process.env).filter(([key, value]) => key.endsWith("_RESULT") && value !== "success"); if (failed.length) throw new Error(failed.map(([key, value]) => `${key}=${value}`).join(", "))'
 
   android-quality:
-    name: Android ${{ inputs.scope }} quality
+    name: Android scoped quality
     if: inputs.scope == 'android'
-    runs-on: ubuntu-latest
-    timeout-minutes: 120
-    concurrency:
-      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-core-android-${{ inputs.scope }}
-      cancel-in-progress: false
-    env:
-      TARGET_SHA: ${{ inputs.target_sha }}
-      FOLIOLE_ANDROID_HOST_MODE: native-linux
-    steps:
-      - name: Check out target snapshot
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.TARGET_SHA }}
-          fetch-depth: 1
-          persist-credentials: false
-      - name: Verify target SHA
-        run: test "$(git rev-parse HEAD)" = "${TARGET_SHA}"
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - name: Set up Java 21 for Android host checks
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-      - name: Install dependencies
-        run: node scripts/quality/hosted-npm-ci.mjs
-      - name: Rebuild Electron native ABI for Android contract tests
-        run: npm run electron:rebuild:native
-      - name: Run Android quality
-        run: npm run quality:android
-      - name: Upload Android quality logs
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-quality-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
-          path: .tmp/logs/quality-gate
-          if-no-files-found: ignore
-          retention-days: 14
+    uses: ./.github/workflows/hosted-quality-android.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
 
   ios-quality:
     name: iOS ${{ inputs.scope }} quality

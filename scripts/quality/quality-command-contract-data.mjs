@@ -48,6 +48,7 @@ export const HOSTED_ONLY_PACKAGES = [
   ['test:android', 'Android test aggregate'],
   ['test:shared', 'shared test aggregate'],
   ['test:release:android', 'release Android test aggregate'],
+  ['test:release:android-shared', 'release Android shared-source test aggregate'],
   ['test:release:shared', 'release shared test aggregate'],
   ['test:quality', 'quality script test aggregate'],
   ['test:quality:core', 'quality script core bucket'],

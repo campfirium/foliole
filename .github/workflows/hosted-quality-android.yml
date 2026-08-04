@@ -1,0 +1,96 @@
+name: Hosted Android Scoped Quality
+
+on:
+  workflow_call:
+    inputs:
+      target_sha:
+        required: true
+        type: string
+      execution_lane:
+        required: true
+        type: string
+      trigger_ref:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  android-static:
+    name: Android static
+    uses: ./.github/workflows/hosted-quality-scoped-static.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+      scope: android
+
+  android-source-tests:
+    name: Android source tests
+    uses: ./.github/workflows/hosted-quality-portable-domain.yml
+    with:
+      domain: android-source
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+
+  android-shared-tests:
+    name: Android shared-source tests
+    uses: ./.github/workflows/hosted-quality-portable-domain.yml
+    with:
+      domain: android-shared
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+
+  android-tooling:
+    name: Android tooling
+    uses: ./.github/workflows/hosted-quality-tooling.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+
+  android-web-build:
+    name: Android web build
+    uses: ./.github/workflows/hosted-quality-android-web-build.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+
+  android-host:
+    name: Android host
+    uses: ./.github/workflows/hosted-quality-android-host.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+
+  android-admission:
+    name: Android scoped admission
+    if: ${{ always() }}
+    needs:
+      - android-static
+      - android-source-tests
+      - android-shared-tests
+      - android-tooling
+      - android-web-build
+      - android-host
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Summarize Android scoped topology
+        run: |
+          echo 'T5 baseline: not applicable to scoped run' >> "$GITHUB_STEP_SUMMARY"
+      - name: Require every Android bucket
+        env:
+          ANDROID_HOST_RESULT: ${{ needs.android-host.result }}
+          ANDROID_SHARED_RESULT: ${{ needs.android-shared-tests.result }}
+          ANDROID_SOURCE_RESULT: ${{ needs.android-source-tests.result }}
+          ANDROID_WEB_BUILD_RESULT: ${{ needs.android-web-build.result }}
+          STATIC_RESULT: ${{ needs.android-static.result }}
+          TOOLING_RESULT: ${{ needs.android-tooling.result }}
+        run: >-
+          node -e 'const failed = Object.entries(process.env).filter(([key, value]) => key.endsWith("_RESULT") && value !== "success"); if (failed.length) throw new Error(failed.map(([key, value]) => `${key}=${value}`).join(", "))'

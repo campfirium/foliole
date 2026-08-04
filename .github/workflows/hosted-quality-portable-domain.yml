@@ -26,7 +26,7 @@ permissions:
 jobs:
   portable-domain-tests:
     name: ${{ matrix.host }} ${{ inputs.domain }}
-    if: inputs.domain == 'shared' || inputs.domain == 'android-source'
+    if: inputs.domain == 'shared' || inputs.domain == 'android-source' || inputs.domain == 'android-shared'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 20
     concurrency:
@@ -76,6 +76,9 @@ jobs:
       - name: Run canonical Android source domain
         if: inputs.domain == 'android-source'
         run: npm run test:release:android
+      - name: Run canonical Android shared-source domain
+        if: inputs.domain == 'android-shared'
+        run: npm run test:release:android-shared
       - name: Upload portable domain logs
         if: ${{ always() }}
         uses: actions/upload-artifact@v4

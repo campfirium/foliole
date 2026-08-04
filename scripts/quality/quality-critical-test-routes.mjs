@@ -133,7 +133,7 @@ export const CRITICAL_TEST_ROUTES = [
   },
   {
     triggers: [
-      /^\.github\/workflows\/(?:hosted-quality-(?:android-web-build|common|core|dependency-hardening|desktop-build|desktop-source|desktop-static|electron|full|ios|portable-domain|static|tooling|windows-core)|remote-quality|t5-baseline-admission|t6-hosted-quality|t7-hosted-quality)\.yml$/u,
+      /^\.github\/workflows\/(?:hosted-quality-(?:android|android-host|android-web-build|core|dependency-hardening|desktop-build|desktop-source|desktop-static|electron|full|ios|portable-domain|scoped-static|shared|static|tooling|windows-core)|remote-quality|t5-baseline-admission|t6-hosted-quality|t7-hosted-quality)\.yml$/u,
       /^scripts\/quality\/t7-hosted-quality-admission\.mjs$/u
     ],
     tests: HOSTED_QUALITY_WORKFLOW_CONTRACT_TESTS

@@ -43,6 +43,16 @@ describe('hosted quality target boundaries', () => {
       target: 'desktop-static'
     },
     {
+      expected: ['check:android-boundary', 'lint:android:full', 'typecheck:android'],
+      rejected: ['test:android', 'android:sync', 'android:host:lint'],
+      target: 'android-static'
+    },
+    {
+      expected: ['check:android-boundary', 'lint:shared:full', 'typecheck:shared'],
+      rejected: ['test:shared', 'build:vite-only', 'android:web:build'],
+      target: 'shared-static'
+    },
+    {
       expected: ['test:release:desktop-src', 'test:release:android', 'test:release:shared', 'test:desktop:electron'],
       rejected: ['test:windows:core', 'test:windows:native-preview', 'android:sync'],
       target: 'release-hosted-common'

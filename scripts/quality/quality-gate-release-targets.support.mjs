@@ -35,9 +35,12 @@ export function releaseScripts() {
   return {
     'check:android-boundary': ok('android boundary ok'),
     'lint:desktop:full': ok('desktop lint ok'),
+    'lint:android:full': ok('Android lint ok'),
+    'lint:shared:full': ok('shared lint ok'),
     'lint:full': ok('release lint ok'),
     'typecheck:desktop': ok('release desktop typecheck ok'),
     'typecheck:android': ok('release android typecheck ok'),
+    'typecheck:shared': ok('shared typecheck ok'),
     'test:release:desktop-src': ok('release desktop src test ok'),
     'test:desktop:electron': ok('release desktop electron test ok'),
     'test:windows:core': ok('release windows core test ok'),
