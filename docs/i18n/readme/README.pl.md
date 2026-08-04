@@ -20,8 +20,8 @@
 Spraw, aby czytanie naprawdę prowadziło do ukończenia.<br>
 Przystępna aplikacja do czytania inkrementalnego.
 
-Wersje alpha dla Windows i macOS oraz eksperymentalna wersja dla Linuxa są dostępne do testów.<br>
-Wersje alpha dla Androida i iOS są planowane około sierpnia.<br>
+Wersje alpha są dostępne dla macOS, Windows i Linuxa (wersja eksperymentalna).<br>
+Wersje na Androida i iOS są planowane na sierpień.<br>
 Możesz też wypróbować Foliole w [demo online](https://foliole.app/en/demo/).
 
 <p align="center">

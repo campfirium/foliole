@@ -20,8 +20,8 @@
 읽기를 정말로 끝까지 완성하게 합니다.<br>
 접근하기 쉬운 점진적 읽기 앱입니다.
 
-Windows와 macOS alpha에 더해 Linux 실험 버전도 테스트용으로 공개되어 있습니다.<br>
-Android와 iOS alpha는 8월경 공개될 예정입니다.<br>
+macOS, Windows, Linux(실험 버전)용 alpha를 사용할 수 있습니다.<br>
+Android 및 iOS 버전은 8월에 공개될 예정입니다.<br>
 [온라인 데모](https://foliole.app/en/demo/)로도 Foliole을 사용해 볼 수 있습니다.
 
 <p align="center">

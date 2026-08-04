@@ -20,8 +20,8 @@
 让阅读真正完成。<br>
 一款现代的渐进阅读软件。
 
-Windows 和 macOS alpha，以及实验版 Linux 已开放测试。<br>
-Android 和 iOS alpha 预计在 8 月左右发布。<br>
+macOS、Windows 和 Linux（实验版）的 alpha 版本现已开放测试。<br>
+Android 和 iOS 版本预计于 8 月发布。<br>
 也可以先通过[在线体验版](https://foliole.app/zh-hans/demo/)体验 Foliole。
 
 <p align="center">
