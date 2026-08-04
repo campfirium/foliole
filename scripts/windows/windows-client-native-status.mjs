@@ -12,19 +12,20 @@ export function createStatusPrinter({
   nativeWindowHealthScript,
   readClientState,
   readReadyState,
+  readWindowHealth = readNativeWindowHealth,
   repoRoot
 }) {
   return async function printStatus() {
     const state = readClientState();
     const ready = readReadyState();
-    if (ready) {
+    const runtimePid = ready?.windowVisible.pid ?? state?.runtimePid;
+    const windowHealth = runtimePid
+      ? await readWindowHealth({ nativeWindowHealthScript, repoRoot, runtimePid })
+      : null;
+    if (ready && windowHealth?.ok) {
       console.log(formatRunningStatus(ready, state));
       return { ok: true, ready, state };
     }
-    const runtimePid = state?.runtimePid;
-    const windowHealth = runtimePid
-      ? await readNativeWindowHealth({ nativeWindowHealthScript, repoRoot, runtimePid })
-      : null;
     if (windowHealth && !windowHealth.ok) {
       console.log(`[windows-restart-client] status: STOPPED trust=FAILED${formatWindowHealthFailure(windowHealth)}`);
       return { ok: false, ready: null, state };

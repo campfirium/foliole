@@ -22,6 +22,7 @@ it('accepts only bounded native client actions with a request identity', () => {
     action: 'start', nonce: '12345678-1234-1234-1234-123456789abc', schemaVersion: 1
   };
   expect(validateInteractiveRequest(request)).toBe(request);
+  expect(validateInteractiveRequest({ ...request, action: 'status' }).action).toBe('status');
   expect(() => validateInteractiveRequest({ ...request, action: 'stop' })).toThrow('invalid');
   expect(() => validateInteractiveRequest({ ...request, nonce: 'latest' })).toThrow('invalid');
 });

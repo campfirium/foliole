@@ -5,7 +5,7 @@ import path from 'node:path';
 
 export const WINDOWS_NATIVE_CLIENT_TASK = 'FolioleNativeClient';
 export const WINDOWS_NATIVE_CLIENT_WORKER_ENV = 'FOLIOLE_NATIVE_CLIENT_INTERACTIVE_WORKER';
-export const INTERACTIVE_ACTIONS = new Set(['start', 'restart', 'full-restart']);
+export const INTERACTIVE_ACTIONS = new Set(['status', 'start', 'restart', 'full-restart']);
 
 export function interactiveStatePaths(stateRoot) {
   return {
