@@ -80,7 +80,8 @@ export async function openPairSyncDesktopSession({
       });
     }
   } catch (error) {
-    await app.close();
+    try { await app.close(); }
+    catch { /* Preserve the classified current-library inspection failure. */ }
     throw error;
   }
   return {
