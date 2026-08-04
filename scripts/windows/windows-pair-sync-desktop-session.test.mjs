@@ -51,6 +51,15 @@ it('rejects another library and closes the bounded runtime', async () => {
   expect(fixture.app.close).toHaveBeenCalledOnce();
 });
 
+it('classifies bounded current-library readiness failures', async () => {
+  const fixture = launcherFixture();
+  fixture.page.waitForFunction.mockRejectedValue(new Error('page closed'));
+  await expect(openPairSyncDesktopSession({
+    electronLauncher: fixture.launcher, env: {}, repoRoot: 'C:\\dev\\foliole-android-lab-preview'
+  })).rejects.toMatchObject({ exitCode: 74, stage: 'desktop-runtime-ready' });
+  expect(fixture.app.close).toHaveBeenCalledOnce();
+});
+
 it('approves only one request from the expected device fingerprint', async () => {
   const request = { device_id: 'android-device-1', pair_request_id: 'pair-1' };
   const session = { load: vi.fn(async () => ({ pending_requests: [request] })) };

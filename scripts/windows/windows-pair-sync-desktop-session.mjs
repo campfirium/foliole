@@ -34,6 +34,14 @@ async function waitForAppReady(page, timeoutMs) {
   });
 }
 
+async function desktopSessionStep(stage, action) {
+  try { return await action(); }
+  catch (error) {
+    Object.assign(error, { exitCode: error.exitCode ?? 74, stage: error.stage ?? stage });
+    throw error;
+  }
+}
+
 function launchOptions(repoRoot, env) {
   return {
     args: [path.join(repoRoot, 'dist', 'electron', 'main.js')],
@@ -54,14 +62,22 @@ export async function openPairSyncDesktopSession({
   env = process.env, electronLauncher, repoRoot, timeoutMs = 90_000
 }) {
   const launcher = electronLauncher ?? (await import('playwright'))._electron;
-  const app = await launcher.launch(launchOptions(repoRoot, env));
-  const page = await app.firstWindow({ timeout: timeoutMs });
+  const app = await desktopSessionStep('desktop-runtime-launch', () => (
+    launcher.launch(launchOptions(repoRoot, env))
+  ));
+  const page = await desktopSessionStep('desktop-runtime-window', () => (
+    app.firstWindow({ timeout: timeoutMs })
+  ));
   try {
-    await waitForAppReady(page, timeoutMs);
-    const appPaths = await invoke(page, 'resolve_app_paths');
+    await desktopSessionStep('desktop-runtime-ready', () => waitForAppReady(page, timeoutMs));
+    const appPaths = await desktopSessionStep('desktop-runtime-paths', () => (
+      invoke(page, 'resolve_app_paths')
+    ));
     if (path.win32.normalize(appPaths.library_home).toLowerCase()
         !== path.win32.normalize(MAIN_LIBRARY_HOME).toLowerCase()) {
-      throw new Error('Desktop runtime did not resolve the fixed current library.');
+      throw Object.assign(new Error('Desktop runtime did not resolve the fixed current library.'), {
+        exitCode: 74, stage: 'desktop-runtime-paths'
+      });
     }
   } catch (error) {
     await app.close();
