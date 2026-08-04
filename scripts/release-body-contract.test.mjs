@@ -2,21 +2,16 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { assertReleaseBodyPlatformScope, formatReleasePlatformHeading } from './release-body-contract.mjs';
+import { assertReleaseBodyPresentation } from './release-body-contract.mjs';
 
-const IDENTITY = {
-  intent: { selectedPlatforms: ['windows'] },
-  registry: { platforms: [{ id: 'macos', displayName: 'macOS' }, { id: 'windows', displayName: 'Windows' }] }
-};
-
-describe('release body platform scope', () => {
-  it('formats and accepts the frozen release scope at the top of the single body', () => {
-    expect(formatReleasePlatformHeading(IDENTITY)).toBe('> Platforms: Windows');
-    expect(assertReleaseBodyPlatformScope('> Platforms: Windows\n\n### Fixed', IDENTITY)).toContain('### Fixed');
+describe('release body presentation', () => {
+  it('accepts reviewed public copy without internal scope metadata', () => {
+    const body = 'Foliole is now available on Linux (Experimental).\n\n### New';
+    expect(assertReleaseBodyPresentation(body)).toBe(body);
   });
 
-  it('rejects a missing, reordered, or expanded scope declaration', () => {
-    expect(() => assertReleaseBodyPlatformScope('### Fixed', IDENTITY)).toThrow('must begin');
-    expect(() => assertReleaseBodyPlatformScope('> Platforms: macOS, Windows', IDENTITY)).toThrow('must begin');
+  it('rejects empty copy and internal platform scope metadata', () => {
+    expect(() => assertReleaseBodyPresentation('')).toThrow('must not be empty');
+    expect(() => assertReleaseBodyPresentation('> Platforms: macOS, Windows')).toThrow('must not expose');
   });
 });

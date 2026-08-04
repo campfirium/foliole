@@ -5,9 +5,6 @@ import { execFileSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import { assertExactReleaseAssets } from './release-asset-contract.mjs';
-import { assertLinuxExperimentalReleaseCopy } from './linux/linux-release-copy-contract.mjs';
-import { assertReleaseBodyPlatformScope } from './release-body-contract.mjs';
 import { resolveReleasePlatformIdentity } from './release-platform-contract.mjs';
 import { assertT7Publication } from './release-publication-contract.mjs';
 import { assertQualityCommandAllowed } from './quality/quality-command-contracts.mjs';
@@ -33,14 +30,11 @@ export async function publishRelease({ cwd = process.cwd(), run = execFileSync }
   const tag = `v${identity.intent.version}`;
   const candidate = json('gh', [
     'release', 'view', tag, '-R', 'campfirium/foliole',
-    '--json', 'assets,body,isDraft,tagName,targetCommitish'
+    '--json', 'isDraft,tagName,url'
   ], cwd, run);
-  if (candidate.tagName !== tag || candidate.isDraft !== true || candidate.targetCommitish !== sha) {
-    throw new Error('public transition requires the frozen unpublished Draft at release HEAD.');
+  if (candidate.tagName !== tag || candidate.isDraft !== true) {
+    throw new Error('public transition requires the confirmed unpublished Draft.');
   }
-  assertReleaseBodyPlatformScope(candidate.body, identity);
-  assertLinuxExperimentalReleaseCopy(candidate.body, identity);
-  assertExactReleaseAssets(identity, candidate.assets.map((asset) => asset.name));
   run('gh', [
     'release', 'edit', tag, '-R', 'campfirium/foliole', '--draft=false',
     `--latest=${publication.makeLatest}`

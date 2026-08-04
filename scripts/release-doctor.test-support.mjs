@@ -49,7 +49,7 @@ export async function createFixture(overrides = {}) {
   });
   await writeJson(rootDir, 'releases/notes/en.json', overrides.enNotes ?? { [version]: { notes: ['Fixed', 'A fix.'] } });
   await writeJson(rootDir, 'releases/notes/zh-Hans.json', overrides.zhNotes ?? { [version]: { notes: ['修复', '一个修复。'] } });
-  await writeFile(join(rootDir, `releases/github/v${version}.md`), '> Platforms: Windows\n\n### Fixed\n- A fix.\n');
+  await writeFile(join(rootDir, `releases/github/v${version}.md`), '### Fixed\n- A fix.\n');
   await writeFile(
     join(rootDir, '.github/workflows/t7-release.yml'),
     overrides.releaseWorkflow ?? [
@@ -125,7 +125,7 @@ export function githubResponses(version, candidate = {}, latestVersion = version
       status: 0,
       stdout: JSON.stringify({
         assets: [{ name: `Foliole-Windows-x64-${version}.exe` }],
-        body: '> Platforms: Windows\n\n### Fixed\n- A fix.\n',
+        body: '### Fixed\n- A fix.\n',
         isDraft: false, publishedAt, tagName: `v${version}`,
         url: `https://github.com/campfirium/foliole/releases/tag/v${version}`,
         ...candidate
