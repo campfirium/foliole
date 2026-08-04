@@ -60,6 +60,14 @@ async function clientControl(execute, paths, env, action) {
     options(env, 'desktop_client_timeout', 2 * 60_000), `desktop-client-${action}`);
 }
 
+async function desktopStep(stage, action) {
+  try { return await action(); }
+  catch (error) {
+    if (error?.stage) throw error;
+    throw pairSyncRecoveryFailure(error.message, stage, error);
+  }
+}
+
 function validateDesktopPreflight(
   overview, session, deviceFingerprint, remotePeerFingerprint = null, existingPairing = false
 ) {
@@ -89,9 +97,12 @@ export async function inspectWindowsPairSyncRecoveryDesktop({
   let primaryError = null;
   let overview;
   try {
-    session = await openDesktopSession({ env, repoRoot: paths.repoRoot });
+    session = await desktopStep('desktop-session-open', () => openDesktopSession({
+      env, repoRoot: paths.repoRoot
+    }));
     overview = validateDesktopPreflight(
-      await session.load(), session, deviceFingerprint, remotePeerFingerprint, existingPairing
+      await desktopStep('desktop-pairing-load', () => session.load()),
+      session, deviceFingerprint, remotePeerFingerprint, existingPairing
     );
   } catch (error) { primaryError = error; }
   try { await session?.close(); }

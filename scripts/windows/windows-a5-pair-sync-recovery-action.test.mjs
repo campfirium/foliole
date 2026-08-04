@@ -35,3 +35,12 @@ it('classifies a standalone bounded session cleanup failure', async () => {
     openDesktopSession: vi.fn(async () => session), paths
   })).rejects.toMatchObject({ exitCode: 74, stage: 'desktop-session-close' });
 });
+
+it('classifies a product pairing overview read failure without exposing its payload', async () => {
+  const session = unsafeSession();
+  session.load.mockRejectedValue(new Error('bridge read failed'));
+  await expect(inspectWindowsPairSyncRecoveryDesktop({
+    deviceFingerprint: '0123456789abcdef', env: {}, execute,
+    openDesktopSession: vi.fn(async () => session), paths
+  })).rejects.toMatchObject({ exitCode: 74, stage: 'desktop-pairing-load' });
+});
