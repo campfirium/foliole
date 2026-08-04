@@ -112,6 +112,7 @@ function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'o
             aria-busy={props.status === 'syncing' || undefined}
             className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border-strong bg-foreground px-4 py-3 text-sm font-semibold text-bg-panel transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-foreground disabled:text-bg-panel"
             disabled={props.status === 'syncing'}
+            data-testid="companion-sync-now"
             onClick={props.onSync}
             type="button"
           >

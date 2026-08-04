@@ -83,6 +83,7 @@ export function CompanionSettingsList(props: {
             accent
             detail={t('companion.settings.sync.detail')}
             onClick={props.onOpenSync}
+            testId="companion-settings-sync"
             title={t('companion.settings.sync.title')}
           />
           <SettingsListItem

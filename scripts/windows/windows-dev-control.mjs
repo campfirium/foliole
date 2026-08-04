@@ -8,16 +8,19 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { CAPTURE_ANNOTATION_EVIDENCE_FILES } from './windows-a5-capture-annotation-contract.mjs';
+import { PAIR_SYNC_RECOVERY_EVIDENCE_FILES } from './windows-a5-pair-sync-recovery-contract.mjs';
 import { toWindowsDevWireAction } from './windows-dev-action-contract.mjs';
 
 export const WINDOWS_DEV_SOURCE_REF = 'refs/heads/dev';
 export const WINDOWS_DEV_ACTIONS = [
-  'appearance', 'build', 'capture-annotation', 'deploy', 'live', 'secondary', 'verify'
+  'appearance', 'build', 'capture-annotation', 'deploy', 'live', 'pair-sync-recover', 'secondary', 'verify'
 ];
 const WINDOWS_DEV_REMOTE_ACTION = 'C:/dev/foliole-android-lab-preview/scripts/windows/windows-dev-action.ps1';
 const WINDOWS_DEV_EVIDENCE_PREFIX = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/';
 const CAPTURE_ANNOTATION_FILES = [...CAPTURE_ANNOTATION_EVIDENCE_FILES, 'summary.json'];
 const CAPTURE_ANNOTATION_FAILURE_FILES = ['action.log', 'summary.json'];
+const PAIR_SYNC_RECOVERY_FILES = [...PAIR_SYNC_RECOVERY_EVIDENCE_FILES, 'summary.json'];
+const PAIR_SYNC_RECOVERY_FAILURE_FILES = ['summary.json'];
 
 function execute(command, args, options = {}) {
   return new Promise((resolve, reject) => {
@@ -45,7 +48,7 @@ export function parseWindowsDevControlArgs(argv, env = process.env) {
   }
   if (args.length !== 1 || !WINDOWS_DEV_ACTIONS.includes(args[0])) {
     throw new Error(
-      'Windows DEV control only accepts appearance, build, capture-annotation, deploy, live, secondary, or verify'
+      'Windows DEV control only accepts appearance, build, capture-annotation, deploy, live, pair-sync-recover, secondary, or verify'
     );
   }
   return { action: args[0], host };
@@ -93,6 +96,16 @@ export function parseWindowsDevCaptureAnnotationEvidence(output) {
   return { buildIdentity: match[1], remoteRoot };
 }
 
+export function parseWindowsDevPairSyncRecoveryEvidence(output) {
+  const match = /^\[windows-dev-action\] pair-sync-recover identity=([A-Za-z0-9.-]{1,96}) manifest=([^\r\n]+)$/mu.exec(output);
+  if (!match) throw new Error('Windows DEV pair-sync-recover action did not report fixed evidence');
+  const remoteRoot = `${WINDOWS_DEV_EVIDENCE_PREFIX}${match[1]}`;
+  if (match[2].replaceAll('\\', '/') !== `${remoteRoot}/pair-sync-recovery-manifest.json`) {
+    throw new Error('Windows DEV pair-sync-recover manifest escaped its fixed evidence root');
+  }
+  return { buildIdentity: match[1], remoteRoot };
+}
+
 export function parseWindowsDevFailureEvidence(output) {
   const match = /^\[windows-dev-action\] status: FAILED exit=\d+ evidence=([^\r\n]+)$/mu.exec(output);
   if (!match) throw new Error('Windows DEV action did not report fixed failure evidence');
@@ -108,6 +121,15 @@ export function parseWindowsDevFailureEvidence(output) {
 
 async function copyCaptureAnnotationFiles({ env, executeScp, fsApi, host, names, remoteRoot, repoRoot }) {
   const localRoot = path.join(repoRoot, '.tmp', 'artifacts', 'a5-capture-annotation', path.basename(remoteRoot));
+  fsApi.mkdirSync(localRoot, { recursive: true });
+  for (const name of names) {
+    await executeScp(windowsDevScpSpec(host, `${remoteRoot}/${name}`, path.join(localRoot, name), env), { env });
+  }
+  return localRoot;
+}
+
+async function copyPairSyncRecoveryFiles({ env, executeScp, fsApi, host, names, remoteRoot, repoRoot }) {
+  const localRoot = path.join(repoRoot, '.tmp', 'artifacts', 'a5-pair-sync-recovery', path.basename(remoteRoot));
   fsApi.mkdirSync(localRoot, { recursive: true });
   for (const name of names) {
     await executeScp(windowsDevScpSpec(host, `${remoteRoot}/${name}`, path.join(localRoot, name), env), { env });
@@ -160,6 +182,24 @@ export async function runWindowsDevControl({
     if (remoteError) stdout.write(`[windows-dev-control] failure evidence=${localRoot}\n`);
     result.evidenceRoot = localRoot;
     result.manifestPath = path.join(localRoot, CAPTURE_ANNOTATION_FILES[0]);
+  }
+  if (action === 'pair-sync-recover') {
+    let evidence;
+    try {
+      evidence = remoteError
+        ? parseWindowsDevFailureEvidence(remoteOutput)
+        : parseWindowsDevPairSyncRecoveryEvidence(remoteOutput);
+    } catch (error) {
+      if (remoteError) throw remoteError;
+      throw error;
+    }
+    const names = remoteError ? PAIR_SYNC_RECOVERY_FAILURE_FILES : PAIR_SYNC_RECOVERY_FILES;
+    const localRoot = await copyPairSyncRecoveryFiles({
+      env, executeScp, fsApi, host, names, remoteRoot: evidence.remoteRoot, repoRoot
+    });
+    if (remoteError) stdout.write(`[windows-dev-control] failure evidence=${localRoot}\n`);
+    result.evidenceRoot = localRoot;
+    result.manifestPath = path.join(localRoot, PAIR_SYNC_RECOVERY_FILES[0]);
   }
   if (['appearance', 'deploy', 'live', 'secondary'].includes(action)) {
     let evidence;

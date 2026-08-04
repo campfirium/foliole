@@ -53,7 +53,7 @@ describe('Windows Android DEV helper boundary', () => {
 
     const controller = source('scripts/windows/windows-dev-control.mjs');
     const adapter = source('scripts/windows/windows-dev-device-action.mjs');
-    expect(controller).toContain("'appearance', 'build', 'capture-annotation', 'deploy', 'live', 'secondary', 'verify'");
+    expect(controller).toContain("'appearance', 'build', 'capture-annotation', 'deploy', 'live', 'pair-sync-recover', 'secondary', 'verify'");
     expect(adapter).toContain("WINDOWS_DEV_ADB_PORT = '5037'");
     expect(adapter).toContain("WINDOWS_DEV_A5_SERIAL = '87a33a4b'");
     expect(`${controller}\n${adapter}`).not.toMatch(/windows-android-lab-(?:request|state|operation|worker)/u);

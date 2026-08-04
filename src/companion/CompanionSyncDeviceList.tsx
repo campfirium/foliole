@@ -32,6 +32,7 @@ function PairAction(props: {
       aria-busy={props.isConnecting || undefined}
       className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-companion-divider px-4 py-2 text-sm font-medium text-foreground transition active:bg-companion-subtle/80 disabled:cursor-not-allowed ${props.isConnecting ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
       disabled={props.disabled}
+      data-testid="companion-sync-pair"
       onClick={props.onClick}
       type="button"
     >

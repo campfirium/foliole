@@ -9,12 +9,14 @@ function PrimaryAction(props: {
   loading?: boolean;
   loadingLabel?: string;
   onClick(): void;
+  testId?: string;
 }) {
   return (
     <button
       aria-busy={props.loading || undefined}
       className={`inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-border-strong bg-foreground px-4 py-3 text-sm font-semibold text-bg-panel transition hover:opacity-90 disabled:cursor-not-allowed ${props.loading ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
       disabled={props.disabled || props.loading}
+      data-testid={props.testId}
       onClick={props.onClick}
       type="button"
     >
@@ -97,7 +99,7 @@ export function EmptyDiscoveryState(props: {
         {t('companion.syncSetup.instructions')}
       </p>
       <div className="mt-6">
-        <PrimaryAction loading={props.disabled} loadingLabel={t('companion.syncSetup.looking')} onClick={props.onTryAgain}>
+        <PrimaryAction loading={props.disabled} loadingLabel={t('companion.syncSetup.looking')} onClick={props.onTryAgain} testId="companion-sync-discover">
           {t('companion.syncSetup.connect')}
         </PrimaryAction>
       </div>

@@ -17,7 +17,7 @@
 - 除原生权限、生命周期、intent、插件接缝与设备集成这类宿主特有能力外，Android 相关需求默认都应先复用或抽取 `src/shared/**` / `src/features/**` / 共享 contract；不得因为入口发生在 Android 就把节点列表、跳转逻辑、浏览语义、状态切换等非原生专属能力落到 Android / companion 私有实现。
 - Android 首轮交付优先验证存储、生命周期、同步入口与真实数据复习闭环；不得先扩展桌面级 UI 宽度或复杂编辑表面。
 - Android 权限、生命周期、文件访问、分享、intent、插件接缝改动，必须先核对 Capacitor 官方文档与 Android 官方文档。
-- 实体 Windows 开发机是 Android 原生宿主与 A5 设备操作的唯一执行端；Mac 只允许编辑源码、运行不启动 Android 宿主的静态 / TypeScript 测试，以及通过 `scripts/windows/windows-dev-control.mjs` 执行普通 `dev` push 并发起 `appearance|build|capture-annotation|deploy|live|secondary|verify` 固定动作。设备 mutation 只走 fixed adapter，不得另建通用 host/device CLI 或第二 checkout。Mac 不得启动本地 ADB、Gradle、Android Studio、模拟器或 scrcpy。
+- 实体 Windows 开发机是 Android 原生宿主与 A5 设备操作的唯一执行端；Mac 只允许编辑源码、运行不启动 Android 宿主的静态 / TypeScript 测试，以及通过 `scripts/windows/windows-dev-control.mjs` 执行普通 `dev` push 并发起 `appearance|build|capture-annotation|deploy|live|pair-sync-recover|secondary|verify` 固定动作。设备 mutation 只走 fixed adapter，不得另建通用 host/device CLI 或第二 checkout。Mac 不得启动本地 ADB、Gradle、Android Studio、模拟器或 scrcpy。
 - Foliole Android 日常自动化默认不得使用 Computer Use：Mac 经受限 SSH/controller 操作 Windows，由 Windows 运行 ADB。只有任务本身依赖可见 Windows UI、SSH 不可用且用户明确要求物理会话 bootstrap 时，才可重新评估 Computer Use；不得把它作为 controller、ADB 或真机验收失败后的自动 fallback。
 
 ## Legacy E-Reader Compatibility
@@ -47,6 +47,7 @@
 - 固定 ADB port 是 device adapter 的命令 contract，不是常驻 server contract；普通 SSH 动作必须在同一前台生命周期内以固定 port 和显式 serial 完成冷启动、设备操作与收口，不得要求 ADB server 跨 SSH 会话存活，也不得为保活引入 detached process、logon task、service、broker、无线或 GUI fallback。
 - A5 日常动作必须机械分流：`live` 只为 renderer-only 变化启动有界前台 companion Vite runtime、配置 Windows ADB reverse、验证页面 DEV build identity 并清理；`appearance` 复用同一 renderer-only 生命周期，只按固定语义入口进入 Appearance 并验证 Custom CSS surface；二者均不得执行 Capacitor sync、Gradle 或 APK install。`build` / `deploy` 必须先完成 companion web build 与 Capacitor sync，`deploy` 再构建 / 安装 debug 壳并接入同一 live runtime。任一阶段失败必须按原阶段失败，不得用 activity 前台或 install cache 命中掩盖 stale Android assets，也不得隐式回退另一条路线。
 - `capture-annotation` 只运行固定 Capture/Cloze/Note 重启验收：同轮准备 Web/Capacitor 产物并构建、保留数据替换主 APK、安装匹配测试 APK、执行唯一方法、只读审计后清理测试包；不得接受外部测试类或 ADB 参数，不得清数据、卸载主包、选择设备、启动后台服务或隐式 fallback。
+- `pair-sync-recover` 只恢复固定 A5 与 Windows 当前唯一 library 的正常配对和首次同步：先以只读预检拒绝多库、多设备、未同步数据、既有配对或外来请求，再经产品已有发现、申请、批准和 workspace sync 路径完成；不得接受参数、清数据、直接写数据库或配对偏好、读取或输出凭据，也不得把审批歧义降级成自动选择。
 
 ## Validation
 

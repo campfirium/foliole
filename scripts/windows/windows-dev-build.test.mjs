@@ -196,6 +196,7 @@ describe('Windows DEV foreground build', () => {
     expect(fs.readFileSync(path.join(path.dirname(run.summaryPath), 'action.log'), 'utf8'))
       .toBe('bounded readiness evidence\n');
   });
+
 });
 
 it('holds a FileShare.None lock and invokes only absolute system Node', () => {
