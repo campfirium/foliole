@@ -86,16 +86,20 @@ export async function inspectWindowsPairSyncRecoveryDesktop({
   const output = [];
   await clientControl(execute, paths, env, 'stop');
   let session;
+  let primaryError = null;
+  let overview;
   try {
     session = await openDesktopSession({ env, repoRoot: paths.repoRoot });
-    const overview = validateDesktopPreflight(
+    overview = validateDesktopPreflight(
       await session.load(), session, deviceFingerprint, remotePeerFingerprint, existingPairing
     );
-    return { output: output.join(''), overview };
-  } finally {
-    await session?.close();
-    output.push((await clientControl(execute, paths, env, 'start')).output);
-  }
+  } catch (error) { primaryError = error; }
+  try { await session?.close(); }
+  catch (error) { primaryError ??= pairSyncRecoveryFailure(error.message, 'desktop-session-close', error); }
+  try { output.push((await clientControl(execute, paths, env, 'start')).output); }
+  catch (error) { primaryError ??= error; }
+  if (primaryError) throw primaryError;
+  return { output: output.join(''), overview };
 }
 
 async function postRecoveryReadiness(execute, paths, env, serial) {
