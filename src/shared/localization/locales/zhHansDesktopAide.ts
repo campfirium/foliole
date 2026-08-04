@@ -7,6 +7,14 @@ export const ZH_HANS_DESKTOP_AIDE_TRANSLATIONS: Partial<Record<TranslationKey, s
   'desktop.rightPanel.assistant.model.tooltip': '模型：{model} · 推理强度：{effort} · 速度：{speed}',
   'desktop.rightPanel.assistant.model.model': '模型',
   'desktop.rightPanel.assistant.model.reasoning': '推理强度',
+  'desktop.rightPanel.assistant.model.effort.none': '无',
+  'desktop.rightPanel.assistant.model.effort.minimal': '最低',
+  'desktop.rightPanel.assistant.model.effort.low': '低',
+  'desktop.rightPanel.assistant.model.effort.medium': '中',
+  'desktop.rightPanel.assistant.model.effort.high': '高',
+  'desktop.rightPanel.assistant.model.effort.xhigh': '极高',
+  'desktop.rightPanel.assistant.model.effort.max': '最大',
+  'desktop.rightPanel.assistant.model.effort.ultra': '超高',
   'desktop.rightPanel.assistant.model.speed': '速度',
   'desktop.rightPanel.assistant.model.defaultSpeed': '默认'
 };

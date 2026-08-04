@@ -29,12 +29,12 @@ test('Aide persists a catalog-backed model selection and sends it on the next tu
   await settings.click();
   await desktopWindow.getByRole('menuitem', { name: 'GPT Alternate' }).click();
   await settings.click();
-  await desktopWindow.getByRole('menuitem', { name: 'High' }).click();
+  await desktopWindow.getByRole('menuitem', { name: /^(High|高)$/ }).click();
   await settings.click();
   await desktopWindow.getByRole('menuitem', { name: 'Fast' }).click();
 
   await settings.hover();
-  await expect(desktopWindow.getByText(/GPT Alternate.*High.*Fast/))
+  await expect(desktopWindow.getByText(/GPT Alternate.*(High|高).*Fast/))
     .toBeVisible();
   await desktopWindow.getByLabel(/^(Foliole Aide message|Foliole Aide 消息)$/).fill('Configured turn');
   await desktopWindow.getByRole('button', { name: /^(Send|发送)$/ }).click();
@@ -46,7 +46,7 @@ test('Aide persists a catalog-backed model selection and sends it on the next tu
   await desktopWindow.reload();
   await openAssistantPanel(desktopWindow);
   await settings.hover();
-  await expect(desktopWindow.getByText(/GPT Alternate.*High.*Fast/))
+  await expect(desktopWindow.getByText(/GPT Alternate.*(High|高).*Fast/))
     .toBeVisible();
   await expect(desktopWindow.getByRole('button', { name: /microphone|麦克风/i })).toHaveCount(0);
 
@@ -91,7 +91,11 @@ async function readSentSelection(electronApp: ElectronApplication) {
 }
 
 function modelCatalog() {
-  const option = (effort: string) => ({ description: effort[0].toUpperCase() + effort.slice(1), effort });
+  const descriptions: Record<string, string> = {
+    high: 'Greater reasoning depth for complex problems',
+    medium: 'Balances speed and reasoning depth for everyday tasks'
+  };
+  const option = (effort: string) => ({ description: descriptions[effort] ?? effort, effort });
   return { models: [{
     defaultReasoningEffort: 'medium', defaultServiceTier: null,
     description: 'Default model', displayName: 'GPT Default', isDefault: true, model: 'gpt-default',

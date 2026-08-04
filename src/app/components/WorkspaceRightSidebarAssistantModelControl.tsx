@@ -108,7 +108,7 @@ function ModelMenu(props: { controls: FolioleAideModelControlsState }) {
           onSelect={() => props.controls.select({ ...selection, effort: item.effort })}
           title={item.description}
         >
-          {item.description || item.effort}
+          {formatReasoningEffortLabel(item.effort, t)}
         </AppDropdownMenuCheckItem>
       ))}
       <AppDropdownMenuSeparator />
@@ -166,8 +166,27 @@ function formatSelectionTooltip(
   const effort = model?.supportedReasoningEfforts.find((item) => item.effort === selection.effort);
   const tier = model?.serviceTiers.find((item) => item.id === selection.serviceTier);
   return t('desktop.rightPanel.assistant.model.tooltip', {
-    effort: effort?.description || selection.effort,
+    effort: formatReasoningEffortLabel(effort?.effort || selection.effort, t),
     model: model?.displayName || selection.model,
     speed: tier?.name || t('desktop.rightPanel.assistant.model.defaultSpeed')
   });
+}
+
+const REASONING_EFFORT_LABEL_KEYS = {
+  high: 'desktop.rightPanel.assistant.model.effort.high',
+  low: 'desktop.rightPanel.assistant.model.effort.low',
+  max: 'desktop.rightPanel.assistant.model.effort.max',
+  medium: 'desktop.rightPanel.assistant.model.effort.medium',
+  minimal: 'desktop.rightPanel.assistant.model.effort.minimal',
+  none: 'desktop.rightPanel.assistant.model.effort.none',
+  ultra: 'desktop.rightPanel.assistant.model.effort.ultra',
+  xhigh: 'desktop.rightPanel.assistant.model.effort.xhigh'
+} as const;
+
+function formatReasoningEffortLabel(
+  effort: string,
+  t: ReturnType<typeof useTranslation>
+) {
+  const key = REASONING_EFFORT_LABEL_KEYS[effort as keyof typeof REASONING_EFFORT_LABEL_KEYS];
+  return key ? t(key) : effort;
 }

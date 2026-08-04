@@ -18,7 +18,10 @@ it('shows catalog-backed model, reasoning, and speed choices from a pure icon bu
           isDefault: true,
           model: 'gpt-test',
           serviceTiers: [{ description: 'Faster', id: 'fast', name: 'Fast' }],
-          supportedReasoningEfforts: [{ description: 'High', effort: 'high' }]
+          supportedReasoningEfforts: [{
+            description: 'Greater reasoning depth for complex problems',
+            effort: 'high'
+          }]
         }]
       },
       refresh: async () => undefined,
@@ -33,7 +36,12 @@ it('shows catalog-backed model, reasoning, and speed choices from a pure icon bu
   fireEvent.keyDown(button, { key: 'ArrowDown' });
   expect(await screen.findByText('Model')).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: 'GPT Test' })).toHaveAttribute('aria-checked', 'true');
-  expect(screen.getByRole('menuitem', { name: 'High' })).toHaveAttribute('aria-checked', 'true');
+  const effortItem = screen.getByRole('menuitem', { name: 'High' });
+  expect(effortItem).toHaveAttribute('aria-checked', 'true');
+  expect(effortItem).toHaveAttribute(
+    'title',
+    'Greater reasoning depth for complex problems'
+  );
   expect(screen.getByRole('menuitem', { name: 'Fast' })).toHaveAttribute('aria-checked', 'true');
 });
 
