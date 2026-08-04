@@ -78,6 +78,14 @@ run_gate_steps() {
   done
 }
 
+run_desktop_test_step() {
+  if [[ -n "${VITEST_DESKTOP_POOL:-}" ]]; then
+    VITEST_POOL="${VITEST_DESKTOP_POOL}" run_quality_gate_script "${prefix}" "${pm}" "test:desktop"
+    return
+  fi
+  run_quality_gate_script "${prefix}" "${pm}" "test:desktop"
+}
+
 source "${SCRIPT_DIR}/quality-gate-target-steps.sh"
 if quality_gate_should_print_step; then
   echo "[${prefix}] detected package manager: ${pm}"
@@ -98,7 +106,9 @@ case "${target}" in
   desktop)
     run_renderer_guards_if_present
     run_repository_root_boundary_check_if_present
-    run_gate_steps lint:desktop:full typecheck:desktop test:desktop test:windows:core
+    run_gate_steps lint:desktop:full typecheck:desktop
+    run_desktop_test_step
+    run_gate_steps test:windows:core
     run_quality_script_gate_steps_if_related "${changed_files_for_skip_lint}"
     run_gate_steps build electron:compile
     run_workspace_boundary_check_if_present

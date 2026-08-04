@@ -81,7 +81,7 @@ jobs:
       - name: Run desktop quality
         id: desktop_quality
         env:
-          VITEST_POOL: forks
+          VITEST_DESKTOP_POOL: forks
         run: npm run quality:desktop
       - name: Write SHA-bound Windows core evidence
         if: ${{ always() }}

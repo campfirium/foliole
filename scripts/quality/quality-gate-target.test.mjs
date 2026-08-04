@@ -1,7 +1,7 @@
 // @vitest-environment node
 /* global process */
 
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
@@ -95,6 +95,15 @@ async function writeCopyGuardScript(rootDir, message = 'copy guard ok') {
 }
 
 describe('quality-gate-target.sh', () => {
+  it('scopes the hosted desktop pool override to test:desktop', async () => {
+    const source = await readFile(TARGET_SCRIPT, 'utf8');
+
+    expect(source).toContain(
+      'VITEST_POOL="${VITEST_DESKTOP_POOL}" run_quality_gate_script "${prefix}" "${pm}" "test:desktop"'
+    );
+    expect(source).not.toContain('export VITEST_POOL');
+  });
+
   it('runs the desktop gate steps in order', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
     try {
