@@ -34,16 +34,6 @@ async function waitForAppReady(page, timeoutMs) {
   });
 }
 
-async function desktopSessionStep(stage, action) {
-  try { return await action(); }
-  catch (error) {
-    if (error?.stage) throw error;
-    throw Object.assign(new Error(error instanceof Error ? error.message : String(error), {
-      cause: error
-    }), { exitCode: 74, stage });
-  }
-}
-
 function launchOptions(repoRoot, env) {
   return {
     args: [path.join(repoRoot, 'dist', 'electron', 'main.js')],
@@ -64,27 +54,27 @@ export async function openPairSyncDesktopSession({
   env = process.env, electronLauncher, repoRoot, timeoutMs = 90_000
 }) {
   const launcher = electronLauncher ?? (await import('playwright'))._electron;
-  const app = await desktopSessionStep('desktop-runtime-launch', () => (
-    launcher.launch(launchOptions(repoRoot, env))
-  ));
-  const page = await desktopSessionStep('desktop-runtime-window', () => (
-    app.firstWindow({ timeout: timeoutMs })
-  ));
+  let app;
+  let page;
+  let stage = 'desktop-runtime-launch';
   try {
-    await desktopSessionStep('desktop-runtime-ready', () => waitForAppReady(page, timeoutMs));
-    const appPaths = await desktopSessionStep('desktop-runtime-paths', () => (
-      invoke(page, 'resolve_app_paths')
-    ));
+    app = await launcher.launch(launchOptions(repoRoot, env));
+    stage = 'desktop-runtime-window';
+    page = await app.firstWindow({ timeout: timeoutMs });
+    stage = 'desktop-runtime-ready';
+    await waitForAppReady(page, timeoutMs);
+    stage = 'desktop-runtime-paths';
+    const appPaths = await invoke(page, 'resolve_app_paths');
     if (path.win32.normalize(appPaths.library_home).toLowerCase()
         !== path.win32.normalize(MAIN_LIBRARY_HOME).toLowerCase()) {
-      throw Object.assign(new Error('Desktop runtime did not resolve the fixed current library.'), {
-        exitCode: 74, stage: 'desktop-runtime-paths'
-      });
+      throw new Error('Desktop runtime did not resolve the fixed current library.');
     }
   } catch (error) {
-    try { await app.close(); }
+    try { await app?.close(); }
     catch { /* Preserve the classified current-library inspection failure. */ }
-    throw error;
+    throw Object.assign(new Error(error instanceof Error ? error.message : String(error), {
+      cause: error
+    }), { exitCode: 74, stage });
   }
   return {
     approve: (pairRequestId) => invoke(page, 'approve_companion_pair_request', {
