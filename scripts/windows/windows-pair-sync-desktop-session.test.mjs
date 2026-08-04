@@ -11,7 +11,7 @@ function launcherFixture(libraryHome = 'D:\\X\\U\\Foliole') {
   const page = {
     evaluate: vi.fn(async (_callback, input) => {
       calls.push(input);
-      if (input.commandName === 'resolve_app_paths') return { library_home: libraryHome };
+      if (input.commandName === 'load_library_path_settings') return { library_home: libraryHome };
       return {
         paired_devices: [], pending_requests: [],
         primary_device_state: { local_role: 'primary', primary_device_id: 'desktop-device-1' },
@@ -36,7 +36,7 @@ it('launches the real current-library runtime and invokes only existing product 
   expect(launchEnv).not.toHaveProperty('FOLIOLE_USER_DATA_PATH');
   expect(launchEnv).not.toHaveProperty('FOLIOLE_SESSION_DATA_PATH');
   expect(fixture.calls.map((call) => call.commandName)).toEqual([
-    'resolve_app_paths', 'enable_companion_sync', 'approve_companion_pair_request'
+    'load_library_path_settings', 'enable_companion_sync', 'approve_companion_pair_request'
   ]);
   expect(fixture.calls.at(-1).commandArgs).toEqual({ pair_request_id: 'pair-1' });
   expect(session.sanitize(await session.load()).desktopPeerFingerprint)

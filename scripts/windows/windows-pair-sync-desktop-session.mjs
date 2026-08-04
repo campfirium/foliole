@@ -64,8 +64,8 @@ export async function openPairSyncDesktopSession({
     stage = 'desktop-runtime-ready';
     await waitForAppReady(page, timeoutMs);
     stage = 'desktop-runtime-paths';
-    const appPaths = await invoke(page, 'resolve_app_paths');
-    if (path.win32.normalize(appPaths.library_home).toLowerCase()
+    const libraryPaths = await invoke(page, 'load_library_path_settings');
+    if (path.win32.normalize(libraryPaths.library_home).toLowerCase()
         !== path.win32.normalize(MAIN_LIBRARY_HOME).toLowerCase()) {
       throw new Error('Desktop runtime did not resolve the fixed current library.');
     }
