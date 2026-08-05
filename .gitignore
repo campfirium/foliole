@@ -17,6 +17,7 @@ blob-report/
 logs/
 src-tauri/
 .tmp/
+.cache/
 .tmp-vitest/
 .windows-native-boot-ready.json
 .windows-native-bridge-ready.json

@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 import { CLEANUP_ROOTS, runCleanup } from './cleanup-local-artifacts.mjs';
 
 const scriptPath = resolve(dirname(fileURLToPath(import.meta.url)), 'cleanup-local-artifacts.mjs');
+const repoRoot = resolve(dirname(scriptPath), '../..');
 const nowMs = Date.UTC(2026, 5, 11);
 const oldTime = new Date(nowMs - 8 * 24 * 60 * 60 * 1000);
 const recentTime = new Date(nowMs - 2 * 24 * 60 * 60 * 1000);
@@ -31,6 +32,12 @@ describe('cleanup-local-artifacts', () => {
       mkdirSync(join(root, 'docs'));
       touch(join(root, '.tmp', 'old-cache'), oldTime);
       touch(join(root, '.tmp', 'recent-cache'), recentTime);
+      mkdirSync(join(root, '.tmp/artifacts/old-batch'), { recursive: true });
+      mkdirSync(join(root, '.tmp/artifacts/recent-batch'), { recursive: true });
+      touch(join(root, '.tmp/artifacts/old-batch', 'evidence.zip'), oldTime);
+      touch(join(root, '.tmp/artifacts/recent-batch', 'evidence.zip'), recentTime);
+      utimesSync(join(root, '.tmp/artifacts/old-batch'), oldTime, oldTime);
+      utimesSync(join(root, '.tmp/artifacts/recent-batch'), recentTime, recentTime);
       touch(join(root, 'release', 'old-installer.exe'), oldTime);
       touch(join(root, 'artifacts/windows', 'old-installer.exe'), oldTime);
       touch(join(root, 'artifacts/windows-internal', 'old-internal-installer.exe'), oldTime);
@@ -44,6 +51,7 @@ describe('cleanup-local-artifacts', () => {
         join(root, 'artifacts/windows', 'old-installer.exe'),
         join(root, 'release', 'old-installer.exe')
       ]);
+      expect(existsSync(join(root, '.tmp/artifacts', 'old-batch'))).toBe(true);
     } finally {
       rmSync(root, { force: true, recursive: true });
     }
@@ -94,5 +102,15 @@ describe('cleanup-local-artifacts', () => {
     } finally {
       rmSync(root, { force: true, recursive: true });
     }
+  });
+
+  it('uses and accepts the repository root from the CLI', () => {
+    const defaultResult = spawnSync(process.execPath, [scriptPath, '--days', '999999', '--dry-run'], { encoding: 'utf8' });
+    const explicitResult = spawnSync(process.execPath, [scriptPath, '--root', repoRoot, '--days', '999999', '--dry-run'], { encoding: 'utf8' });
+
+    expect(defaultResult.status).toBe(0);
+    expect(defaultResult.stdout).toContain(`root=${repoRoot}`);
+    expect(explicitResult.status).toBe(0);
+    expect(explicitResult.stdout).toContain(`root=${repoRoot}`);
   });
 });

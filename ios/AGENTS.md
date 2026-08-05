@@ -26,3 +26,4 @@
 - iOS sync / SQLite 宿主工作开工后，通过 dev-only Remote Quality 的 full scope 请求 `ios:sync:preflight` hosted 证据；该入口先跑 SQL surface scan，再跑 macOS / Xcode 环境下的 SQLite capability gate，不得在普通本地任务执行。
 - 非 iOS 日常质量入口不默认执行 iOS preflight；`sync:sql-surface:scan` 只有在扫描范围出现 `iosRuntime` capability 标记时，才把 iOS runtime 缺口升级为硬失败。
 - 一旦仓库引入新的 iOS 宿主脚本或 npm 入口，本文件必须同步补上对应公开命令、最小验证顺序与预览 / 验收规则。
+- iOS runtime contract 的 Swift/SwiftPM module cache 与 scratch build cache 路由到根 `.cache/`；单次 Simulator 验收的 DerivedData、应用副本与证据继续进入 `.tmp/artifacts/`。写入或命中 Foliole 自管 Cache 的顶层生产入口必须先走登记的本地 artifact/cache 维护能力。

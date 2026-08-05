@@ -6,7 +6,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const repoRoot = resolve(__dirname, '..');
+const repoRoot = resolve(__dirname, '../..');
 const WINDOWS_MIRROR_ROOT = '/mnt/d/C/foliole';
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -18,6 +18,11 @@ export const CLEANUP_ROOTS = [
   'artifacts/windows-internal',
   'trees'
 ];
+const PROTECTED_ROOTS = new Set(['.tmp/artifacts']);
+
+function isProtectedEntry(rootName, entryName) {
+  return PROTECTED_ROOTS.has(`${rootName}/${entryName}`);
+}
 
 function resolveAllowedRoot(rootArg) {
   const rootDir = resolve(rootArg ?? repoRoot);
@@ -65,6 +70,9 @@ function collectEntries(rootDir, nowMs, days) {
       continue;
     }
     for (const entry of readdirSync(rootPath, { withFileTypes: true })) {
+      if (isProtectedEntry(rootName, entry.name)) {
+        continue;
+      }
       const entryPath = resolve(rootPath, entry.name);
       const stats = lstatSync(entryPath);
       if (stats.mtimeMs <= cutoffMs) {
@@ -87,7 +95,7 @@ function removeEmptyChildren(rootDir) {
       continue;
     }
     for (const entry of readdirSync(rootPath, { withFileTypes: true })) {
-      if (!entry.isDirectory()) {
+      if (!entry.isDirectory() || isProtectedEntry(rootName, entry.name)) {
         continue;
       }
       const entryPath = resolve(rootPath, entry.name);
