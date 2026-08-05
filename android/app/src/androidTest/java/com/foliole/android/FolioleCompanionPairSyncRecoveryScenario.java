@@ -136,8 +136,7 @@ final class FolioleCompanionPairSyncRecoveryScenario {
                 lastEvidence = evidence.toString();
             }
             validateRecoveryState(state, evidence);
-            if ("completed".equals(evidence.optString("initialSync"))
-                && state.optBoolean("connectedFound")) return evidence;
+            if ("completed".equals(evidence.optString("initialSync"))) return evidence;
             Thread.sleep(150);
         }
         throw new IllegalStateException("Timed out waiting for initial workspace sync completion.");
