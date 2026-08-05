@@ -1,6 +1,8 @@
 // @vitest-environment node
 
 import fs from 'node:fs';
+import { URL } from 'node:url';
+import vm from 'node:vm';
 
 import { expect, it } from 'vitest';
 
@@ -128,18 +130,45 @@ it('observes request submission without global errors or click-return evidence',
     'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionPairSyncEvidence.java',
     'utf8'
   );
+  const observer = fs.readFileSync(
+    'android/app/src/androidTest/assets/foliole-pair-sync-evidence-observer.js',
+    'utf8'
+  );
   expect(source.indexOf('installPairingRequestObserver')).toBeLessThan(
     source.indexOf('clickVisible(instrumentation, webView, "companion-sync-pair"')
   );
   expect(source).not.toContain('__actionAccepted');
   expect(evidence).toContain('"accepted".equals(state.optString("requestState"))');
   expect(adapter).not.toContain("document.querySelector('.text-error')");
-  expect(recoveryEvidence).toContain("methodName==='desktopHttpRequest'");
-  expect(recoveryEvidence).toContain("methodName==='savePairingCredentials'");
-  expect(recoveryEvidence).toContain("methodName==='signCompanionSyncRequest'");
-  expect(recoveryEvidence).toContain("methodName==='recordWorkspaceSyncEvent'");
-  expect(recoveryEvidence).toContain("kind==='run_finished'&&state.initialSync==='started'");
-  expect(recoveryEvidence).toContain("algorithm.name==='ECDH'");
-  expect(recoveryEvidence).not.toContain('endpoint');
-  expect(recoveryEvidence).not.toContain('pair_request_id');
+  expect(recoveryEvidence).toContain('foliole-pair-sync-evidence-observer.js');
+  expect(observer).toContain("methodName === 'desktopHttpRequest'");
+  expect(observer).toContain("methodName === 'savePairingCredentials'");
+  expect(observer).toContain("methodName === 'signCompanionSyncRequest'");
+  expect(observer).toContain("methodName === 'recordWorkspaceSyncEvent'");
+  expect(observer).toContain("kind === 'run_finished' && state.initialSync === 'started'");
+  expect(observer).toContain("algorithm.name === 'ECDH'");
+  expect(observer).not.toContain('pair_request_id');
+});
+
+it('attributes request evidence only to the product pair-request operation', async () => {
+  const source = fs.readFileSync(
+    'android/app/src/androidTest/assets/foliole-pair-sync-evidence-observer.js', 'utf8'
+  );
+  const calls = [];
+  const cryptoPrototype = { generateKey: async () => ({}) };
+  const window = {
+    Capacitor: { nativePromise: async (_plugin, _method, args) => { calls.push(args); return { status: 202 }; } },
+    crypto: { subtle: Object.create(cryptoPrototype) }
+  };
+  expect(JSON.parse(vm.runInNewContext(source, { Promise, URL, window }))).toEqual({ ok: true });
+  const request = (args) => window.Capacitor.nativePromise('FolioleCompanionSync', 'desktopHttpRequest', args);
+
+  await request({ method: 'GET', url: 'http://127.0.0.1:38641/companion/discovery' });
+  await request({ method: 'POST', url: 'http://127.0.0.1:38641/companion/pair' });
+  await request({ method: 'POST', url: 'http://127.0.0.1:38641/other' });
+  expect(window.__foliolePairSyncObserver.requestState).toBe('not-started');
+
+  await request({ method: 'POST', url: 'http://127.0.0.1:38641/companion/pair-requests' });
+  expect(window.__foliolePairSyncObserver.requestState).toBe('accepted');
+  expect(calls).toHaveLength(4);
 });
