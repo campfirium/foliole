@@ -3,7 +3,8 @@
 import { expect, it } from 'vitest';
 
 import {
-  parsePairSyncRecoveryInstrumentation, parsePairSyncRecoveryReadiness
+  classifyPairSyncRecoveryInstrumentationFailure, parsePairSyncRecoveryInstrumentation,
+  parsePairSyncRecoveryReadiness
 } from './windows-a5-pair-sync-recovery-contract.mjs';
 import { sanitizePairSyncDataProtection } from './windows-a5-pair-sync-recovery-evidence.mjs';
 
@@ -40,4 +41,12 @@ it('removes device paths and raw snapshot details from data-protection evidence'
   expect(evidence).toEqual({ backupCreated: true, databasePreserved: true, nodeCountBefore: 0, schemaVersion: 1 });
   expect(JSON.stringify(evidence)).not.toContain('secret');
   expect(JSON.stringify(evidence)).not.toContain('serial');
+});
+
+it('reduces instrumentation output to a fixed non-sensitive failure reason', () => {
+  expect(classifyPairSyncRecoveryInstrumentationFailure(
+    'java.lang.IllegalStateException: Timed out waiting for pairing or sync entry. endpoint=secret'
+  )).toBe('pairing_entry_timeout');
+  expect(classifyPairSyncRecoveryInstrumentationFailure('unexpected endpoint=secret'))
+    .toBe('unknown_instrumentation_failure');
 });

@@ -70,6 +70,19 @@ export function parsePairSyncRecoveryInstrumentation(output) {
   return receipt;
 }
 
+export function classifyPairSyncRecoveryInstrumentationFailure(output) {
+  const value = String(output);
+  const reasons = [
+    ['pairing_entry_timeout', /Timed out waiting for pairing or sync entry/u],
+    ['pair_target_timeout', /Timed out waiting for semantic target: companion-sync-pair/u],
+    ['initial_sync_timeout', /Timed out waiting for initial workspace sync completion/u],
+    ['pair_target_ambiguous', /Pairing target is not unique/u],
+    ['pair_target_disappeared', /Pairing target disappeared/u],
+    ['semantic_action_failed', /Semantic action failed/u]
+  ];
+  return reasons.find(([, pattern]) => pattern.test(value))?.[0] ?? 'unknown_instrumentation_failure';
+}
+
 export function pairSyncRecoveryArtifactPaths(evidenceRoot) {
   return Object.fromEntries(PAIR_SYNC_RECOVERY_EVIDENCE_FILES.map(
     (name) => [name, path.join(evidenceRoot, name)]

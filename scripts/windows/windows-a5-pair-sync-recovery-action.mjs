@@ -7,7 +7,8 @@ import {
   PAIR_SYNC_RECOVERY_APP_ID, PAIR_SYNC_RECOVERY_EVIDENCE_FILES,
   PAIR_SYNC_RECOVERY_TEST_APP_ID, PAIR_SYNC_RECOVERY_TEST_CLASS,
   PAIR_SYNC_RECOVERY_TEST_RUNNER, pairSyncRecoveryArtifactPaths,
-  pairSyncRecoveryFailure, parsePairSyncRecoveryInstrumentation
+  classifyPairSyncRecoveryInstrumentationFailure, pairSyncRecoveryFailure,
+  parsePairSyncRecoveryInstrumentation
 } from './windows-a5-pair-sync-recovery-contract.mjs';
 import { scrubPairSyncDataProtection } from './windows-a5-pair-sync-recovery-evidence.mjs';
 import {
@@ -30,7 +31,11 @@ async function checked(execute, command, args, commandOptions, stage) {
   try { result = await execute(command, args, commandOptions); }
   catch (error) { throw pairSyncRecoveryFailure(error.message, stage, error); }
   if (result.code === 0) return result;
-  throw pairSyncRecoveryFailure(result.lines?.at(-1) || `${command} exited ${result.code}`, stage, result);
+  const failure = pairSyncRecoveryFailure(result.lines?.at(-1) || `${command} exited ${result.code}`, stage, result);
+  if (stage === 'pair-sync-instrumentation') {
+    failure.failureReason = classifyPairSyncRecoveryInstrumentationFailure(result.output);
+  }
+  throw failure;
 }
 
 function writeJson(fsApi, filePath, value) {

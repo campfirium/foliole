@@ -201,6 +201,7 @@ export async function runWindowsDevBuild({
         [action === 'pair-sync-recover' ? 'pairSyncRecoveryReadiness' : 'captureAnnotationReadiness']: error.readiness
       } : {}),
       ...(error.liveReload ? { liveReload: error.liveReload } : {}) };
+    if (error.failureReason) summary.failureReason = error.failureReason;
     if (context) writeJson(fsApi, context.summaryPath, summary);
     return { exitCode, summary, summaryPath: context?.summaryPath ?? null };
   }
