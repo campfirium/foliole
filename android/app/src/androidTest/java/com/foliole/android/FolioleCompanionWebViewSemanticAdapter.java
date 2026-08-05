@@ -88,14 +88,36 @@ final class FolioleCompanionWebViewSemanticAdapter {
         WebView webView
     ) throws Exception {
         String script = "(function(){var pair=document.querySelector('[data-testid=\"companion-sync-pair\"]');" +
-            "var error=document.querySelector('.text-error');var text=error?(error.textContent||'').toLowerCase():'';" +
-            "var reason='';if(text.indexOf('pair_request_rate_limited')>=0)reason='request_rate_limited';" +
-            "else if(text.indexOf('protocol_incompatible')>=0)reason='protocol_incompatible';" +
-            "else if(text.indexOf('invalid_pair_request')>=0)reason='invalid_pair_request';" +
-            "else if(text.indexOf('desktop http request failed')>=0)reason='desktop_http_failed';" +
-            "else if(/crypto|subtle|ecdh|replaceall/.test(text))reason='pairing_crypto_failed';" +
-            "else if(error)reason='request_ui_error';return JSON.stringify({" +
-            "pairFound:!!pair,pairDisabled:!!(pair&&pair.disabled),errorReason:reason});})()";
+            "var discover=document.querySelector('[data-testid=\"companion-sync-discover\"]');" +
+            "var connected=document.querySelector('[data-testid=\"companion-sync-now\"]');" +
+            "var observer=window.__foliolePairSyncRequestObserver;return JSON.stringify({" +
+            "observerReady:!!observer,keyState:observer?observer.keyState:'unavailable'," +
+            "requestState:observer?observer.requestState:'unavailable',pairFound:!!pair," +
+            "discoverFound:!!discover,connectedFound:!!connected});})()";
+        return evaluateJson(instrumentation, webView, script);
+    }
+
+    static JSONObject installPairingRequestObserver(
+        Instrumentation instrumentation,
+        WebView webView
+    ) throws Exception {
+        String script = "(function(){var cap=window.Capacitor;var subtle=window.crypto&&window.crypto.subtle;" +
+            "if(!cap||typeof cap.nativePromise!=='function'||!subtle)return JSON.stringify({ok:false});" +
+            "var proto=Object.getPrototypeOf(subtle);if(!proto||typeof proto.generateKey!=='function')" +
+            "return JSON.stringify({ok:false});var state={keyState:'not-started',requestState:'not-started'};" +
+            "window.__foliolePairSyncRequestObserver=state;var originalGenerateKey=proto.generateKey;" +
+            "proto.generateKey=function(){var algorithm=arguments[0];" +
+            "if(state.keyState==='not-started'&&algorithm&&algorithm.name==='ECDH'){state.keyState='started';" +
+            "try{return Promise.resolve(originalGenerateKey.apply(this,arguments)).then(function(value){" +
+            "state.keyState='completed';return value;},function(error){state.keyState='failed';throw error;});}" +
+            "catch(error){state.keyState='failed';throw error;}}return originalGenerateKey.apply(this,arguments);};" +
+            "var originalNativePromise=cap.nativePromise;cap.nativePromise=function(pluginName,methodName){" +
+            "if(state.requestState==='not-started'&&pluginName==='FolioleCompanionSync'&&" +
+            "methodName==='desktopHttpRequest'){state.requestState='dispatched';" +
+            "try{return Promise.resolve(originalNativePromise.apply(cap,arguments)).then(function(value){" +
+            "state.requestState=value&&value.status===202?'accepted':'rejected';return value;},function(error){" +
+            "state.requestState='failed';throw error;});}catch(error){state.requestState='failed';throw error;}}" +
+            "return originalNativePromise.apply(cap,arguments);};return JSON.stringify({ok:true});})()";
         return evaluateJson(instrumentation, webView, script);
     }
 

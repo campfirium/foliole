@@ -64,6 +64,15 @@ it('reduces instrumentation output to a fixed non-sensitive failure reason', () 
     'java.lang.IllegalStateException: Pairing request failed: request_rate_limited'
   )).toBe('pair_request_rate_limited');
   expect(classifyPairSyncRecoveryInstrumentationFailure(
+    'java.lang.IllegalStateException: Pairing request failed: key_generation_failed'
+  )).toBe('pair_request_key_generation_failed');
+  expect(classifyPairSyncRecoveryInstrumentationFailure(
+    'java.lang.IllegalStateException: Pairing request failed: request_transport_failed'
+  )).toBe('pair_request_transport_failed');
+  expect(classifyPairSyncRecoveryInstrumentationFailure(
+    'java.lang.IllegalStateException: Pairing request failed: request_rejected'
+  )).toBe('pair_request_rejected');
+  expect(classifyPairSyncRecoveryInstrumentationFailure(
     'java.lang.IllegalStateException: Pairing completion returned to Pair target.'
   )).toBe('pair_completion_ui_reverted');
   expect(classifyPairSyncRecoveryInstrumentationFailure(
@@ -80,6 +89,15 @@ it('reduces instrumentation output to a fixed non-sensitive failure reason', () 
   expect(classifyPairSyncRecoveryInstrumentationFailure(
     'INSTRUMENTATION_STATUS: foliolePairSyncStage=initial-sync-pair-target-returned'
   )).toBe('pair_completion_ui_reverted');
+  expect(classifyPairSyncRecoveryInstrumentationFailure([
+    'INSTRUMENTATION_STATUS: foliolePairSyncStage=pair-request-key-started',
+    'INSTRUMENTATION_STATUS: foliolePairSyncStage=pair-request-key-ready',
+    'INSTRUMENTATION_STATUS: foliolePairSyncStage=pair-request-dispatched',
+    'INSTRUMENTATION_STATUS: foliolePairSyncStage=pair-request-accepted'
+  ].join('\n'))).toBe('pair_request_ui_settlement_interrupted');
+  expect(classifyPairSyncRecoveryInstrumentationFailure(
+    'INSTRUMENTATION_STATUS: foliolePairSyncStage=pair-request-awaiting'
+  )).toBe('pair_request_awaiting_interrupted');
   expect(classifyPairSyncRecoveryInstrumentationFailure(
     'INSTRUMENTATION_STATUS: foliolePairSyncStage=forged-stage'
   )).toBe('unknown_instrumentation_failure');
@@ -88,16 +106,25 @@ it('reduces instrumentation output to a fixed non-sensitive failure reason', () 
   )).toMatchObject({ failureReason: 'pairing_entry_timeout' });
 });
 
-it('prioritizes a returned Pair target over a localized completion error', () => {
+it('observes request submission without global errors or click-return evidence', () => {
   const source = fs.readFileSync(
     'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionPairSyncRecoveryScenario.java',
     'utf8'
   );
-  const method = source.slice(
-    source.indexOf('private static JSONObject waitForConnectedTarget('),
-    source.indexOf('private static JSONObject uniqueVisibleTarget(')
+  const evidence = fs.readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionPairRequestEvidence.java',
+    'utf8'
   );
-  expect(method.indexOf('request.optBoolean("pairFound")')).toBeGreaterThanOrEqual(0);
-  expect(method.indexOf('request.optBoolean("pairFound")'))
-    .toBeLessThan(method.indexOf('request.optString("errorReason")'));
+  const adapter = fs.readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionWebViewSemanticAdapter.java',
+    'utf8'
+  );
+  expect(source.indexOf('installPairingRequestObserver')).toBeLessThan(
+    source.indexOf('clickVisible(instrumentation, webView, "companion-sync-pair"')
+  );
+  expect(source).not.toContain('__actionAccepted');
+  expect(evidence).toContain('"accepted".equals(state.optString("requestState"))');
+  expect(adapter).not.toContain("document.querySelector('.text-error')");
+  expect(adapter).toContain("methodName==='desktopHttpRequest'");
+  expect(adapter).toContain("algorithm.name==='ECDH'");
 });
