@@ -117,11 +117,17 @@ it('rechecks protocol compatibility at pair completion', async () => {
   expect(pairingStoreMock.registerPairedCompanionDevice).not.toHaveBeenCalled();
 });
 
-it('rate limits pair completion attempts by client address before consuming approved requests', async () => {
+it('rate limits approved pair completion attempts by client address before re-registering devices', async () => {
+  pairingStoreMock.registerPairedCompanionDevice.mockReturnValue({
+    device_id: 'android-rate-limited',
+    device_secret: 'device-secret-rate-limited',
+    paired_at: '2026-05-10T01:00:00.000Z'
+  });
+  const created = createApprovedPairRequest('android-rate-limited');
   const writeJson = vi.fn();
   for (let index = 0; index < 10; index += 1) {
     await handlePairRequest(
-      createRequest({ pair_request_id: `missing-${index}` }),
+      createRequest({ pair_request_id: created.pair_request_id }),
       createResponse(),
       '0.1.0-test',
       'desktop-local',
@@ -131,7 +137,7 @@ it('rate limits pair completion attempts by client address before consuming appr
   }
 
   await handlePairRequest(
-    createRequest({ pair_request_id: 'missing-10' }),
+    createRequest({ pair_request_id: created.pair_request_id }),
     createResponse(),
     '0.1.0-test',
     'desktop-local',
@@ -142,6 +148,7 @@ it('rate limits pair completion attempts by client address before consuming appr
   expect(writeJson).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), 429, expect.objectContaining({
     error: 'pair_completion_rate_limited'
   }));
+  expect(pairingStoreMock.registerPairedCompanionDevice).toHaveBeenCalledTimes(1);
 });
 
 it('retries half-committed pair completion without re-registering the device', async () => {

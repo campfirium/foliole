@@ -96,7 +96,6 @@ export async function handlePairRequest(
   updatePairingStatus: PairingStatusUpdater,
   writeJson: JsonResponder
 ) {
-  if (writePairCompletionRateLimit(request, response, writeJson)) return;
   const payload = await readPairCompletionPayload(request, response, writeJson);
   if (!payload) return;
   const pairRequestId = typeof payload.pair_request_id === 'string' ? payload.pair_request_id.trim() : '';
@@ -108,6 +107,7 @@ export async function handlePairRequest(
   if (!completionState) {
     return;
   }
+  if (writePairCompletionRateLimit(request, response, writeJson)) return;
   const approvedRequest = completionState.request;
   const compatibility = evaluateSyncProtocolCompatibility(approvedRequest.protocol);
   if (compatibility.status === 'incompatible') {

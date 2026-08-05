@@ -159,6 +159,10 @@ function updateRequestStatus(pairRequestId: string, status: PendingCompanionPair
     return null;
   }
   request.status = status;
+  if (status === 'approved') {
+    request.expires_at_ms = nowMs + PAIR_REQUEST_TTL_MS;
+    request.expires_at = new Date(request.expires_at_ms).toISOString();
+  }
   return toPublicRequest(request);
 }
 
