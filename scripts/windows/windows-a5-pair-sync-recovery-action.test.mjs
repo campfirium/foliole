@@ -3,6 +3,7 @@
 import { expect, it, vi } from 'vitest';
 
 import { inspectWindowsPairSyncRecoveryDesktop } from './windows-a5-pair-sync-recovery-action.mjs';
+import { pairSyncIdentityFingerprint } from './windows-pair-sync-desktop-session.mjs';
 
 const paths = { repoRoot: 'C:\\repo', systemNode: 'C:\\Program Files\\nodejs\\node.exe' };
 const execute = vi.fn(async () => ({ code: 0, output: '', stdout: '' }));
@@ -15,6 +16,28 @@ function unsafeSession(close = vi.fn(async () => undefined)) {
       desktopPeerFingerprint: null, pairedDeviceFingerprints: [], pendingDeviceFingerprints: []
     }))
   };
+}
+
+function duplicateSession() {
+  const current = 'current-a5';
+  const stale = 'stale-a5';
+  const overview = {
+    paired_devices: [{ device_id: current }, { device_id: stale }], pending_requests: []
+  };
+  const session = {
+    close: vi.fn(async () => undefined), load: vi.fn(async () => overview),
+    remove: vi.fn(async (deviceId) => ({
+      paired_devices: overview.paired_devices.filter((device) => device.device_id !== deviceId),
+      pending_requests: []
+    })),
+    sanitize: vi.fn((value) => ({
+      desktopPeerFingerprint: 'desktop-peer',
+      pairedDeviceFingerprints: value.paired_devices.map((device) =>
+        pairSyncIdentityFingerprint(device.device_id)),
+      pendingDeviceFingerprints: []
+    }))
+  };
+  return { current, session, stale };
 }
 
 it('preserves pairing approval evidence when bounded session cleanup also fails', async () => {
@@ -43,4 +66,31 @@ it('classifies a product pairing overview read failure without exposing its payl
     deviceFingerprint: '0123456789abcdef', env: {}, execute,
     openDesktopSession: vi.fn(async () => session), paths
   })).rejects.toMatchObject({ exitCode: 74, stage: 'desktop-pairing-load' });
+});
+
+it('removes only one authorized stale identity while preserving the fixed A5 pairing', async () => {
+  const fixture = duplicateSession();
+  await expect(inspectWindowsPairSyncRecoveryDesktop({
+    deviceFingerprint: pairSyncIdentityFingerprint(fixture.current), env: {}, execute,
+    openDesktopSession: vi.fn(async () => fixture.session), paths
+  })).resolves.toMatchObject({
+    overview: { pairedDeviceFingerprints: [pairSyncIdentityFingerprint(fixture.current)] }
+  });
+  expect(fixture.session.remove).toHaveBeenCalledOnce();
+  expect(fixture.session.remove).toHaveBeenCalledWith(fixture.stale);
+});
+
+it('keeps ambiguous pairing sets unchanged', async () => {
+  const fixture = duplicateSession();
+  fixture.session.load.mockResolvedValue({
+    paired_devices: [
+      { device_id: fixture.current }, { device_id: fixture.stale }, { device_id: 'another-stale-a5' }
+    ],
+    pending_requests: []
+  });
+  await expect(inspectWindowsPairSyncRecoveryDesktop({
+    deviceFingerprint: pairSyncIdentityFingerprint(fixture.current), env: {}, execute,
+    openDesktopSession: vi.fn(async () => fixture.session), paths
+  })).rejects.toMatchObject({ exitCode: 77, stage: 'desktop-pairing-readiness' });
+  expect(fixture.session.remove).not.toHaveBeenCalled();
 });

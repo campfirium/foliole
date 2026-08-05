@@ -83,6 +83,7 @@ export async function openPairSyncDesktopSession({
     close: () => app.close(),
     enable: () => invoke(page, 'enable_companion_sync'),
     load: () => invoke(page, 'load_companion_pairing_overview'),
+    remove: (deviceId) => invoke(page, 'remove_companion_paired_device', { device_id: deviceId }),
     sanitize: sanitizeOverview
   };
 }

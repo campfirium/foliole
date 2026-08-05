@@ -13,6 +13,9 @@ import { scrubPairSyncDataProtection } from './windows-a5-pair-sync-recovery-evi
 import {
   openPairSyncDesktopSession, waitForUniquePairRequest
 } from './windows-pair-sync-desktop-session.mjs';
+import {
+  reconcileAuthorizedStalePairing, validateDesktopPreflight
+} from './windows-pair-sync-desktop-readiness.mjs';
 
 const MAIN_APK = 'android/app/build/outputs/apk/debug/app-debug.apk';
 const TEST_APK = 'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk';
@@ -68,25 +71,6 @@ async function desktopStep(stage, action) {
   }
 }
 
-function validateDesktopPreflight(
-  overview, session, deviceFingerprint, remotePeerFingerprint = null, existingPairing = false
-) {
-  const safe = session.sanitize(overview);
-  const wrongPairedDevice = safe.pairedDeviceFingerprints.some((value) => value !== deviceFingerprint);
-  const wrongRemotePeer = remotePeerFingerprint
-    && safe.desktopPeerFingerprint !== remotePeerFingerprint;
-  const missingExistingPeer = existingPairing
-    && !safe.pairedDeviceFingerprints.includes(deviceFingerprint);
-  if (!safe.desktopPeerFingerprint || safe.pendingDeviceFingerprints.length > 0
-      || wrongPairedDevice || wrongRemotePeer || missingExistingPeer
-      || safe.pairedDeviceFingerprints.length > 1) {
-    throw pairSyncRecoveryFailure(
-      'Windows current library pairing state requires user review', 'desktop-pairing-readiness', null, 77
-    );
-  }
-  return safe;
-}
-
 export async function inspectWindowsPairSyncRecoveryDesktop({
   deviceFingerprint, env, execute, existingPairing = false, openDesktopSession = openPairSyncDesktopSession,
   paths, remotePeerFingerprint
@@ -100,7 +84,7 @@ export async function inspectWindowsPairSyncRecoveryDesktop({
     session = await desktopStep('desktop-session-open', () => openDesktopSession({
       env, repoRoot: paths.repoRoot
     }));
-    overview = validateDesktopPreflight(
+    overview = await reconcileAuthorizedStalePairing(
       await desktopStep('desktop-pairing-load', () => session.load()),
       session, deviceFingerprint, remotePeerFingerprint, existingPairing
     );
