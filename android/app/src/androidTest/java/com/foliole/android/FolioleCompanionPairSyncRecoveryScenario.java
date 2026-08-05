@@ -35,6 +35,7 @@ final class FolioleCompanionPairSyncRecoveryScenario {
             waitForUniqueVisible(instrumentation, webView, "companion-sync-pair", deadline);
             FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "pair-request");
             clickVisible(instrumentation, webView, "companion-sync-pair", deadline);
+            waitForPairRequestSubmission(instrumentation, webView, deadline);
         }
         FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "initial-sync");
         waitForCompletedSync(instrumentation, webView, deadline);
@@ -45,6 +46,28 @@ final class FolioleCompanionPairSyncRecoveryScenario {
         receipt.put("pairingPath", reusedPairing ? "existing" : "new");
         receipt.put("initialSyncRequested", true);
         return receipt;
+    }
+
+    private static void waitForPairRequestSubmission(
+        Instrumentation instrumentation,
+        WebView webView,
+        long deadline
+    ) throws Exception {
+        while (System.nanoTime() < deadline) {
+            JSONObject state = FolioleCompanionWebViewSemanticAdapter.pairingRequestState(
+                instrumentation, webView
+            );
+            String errorReason = state.optString("errorReason");
+            if (!errorReason.isEmpty()) {
+                throw new IllegalStateException("Pairing request failed: " + errorReason);
+            }
+            if (!state.optBoolean("pairFound")) {
+                FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "pair-request-submitted");
+                return;
+            }
+            Thread.sleep(150);
+        }
+        throw new IllegalStateException("Timed out waiting for pairing request submission.");
     }
 
     private static void clickVisible(

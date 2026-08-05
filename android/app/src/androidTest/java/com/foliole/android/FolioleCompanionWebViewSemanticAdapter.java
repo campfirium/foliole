@@ -83,6 +83,22 @@ final class FolioleCompanionWebViewSemanticAdapter {
         return latest;
     }
 
+    static JSONObject pairingRequestState(
+        Instrumentation instrumentation,
+        WebView webView
+    ) throws Exception {
+        String script = "(function(){var pair=document.querySelector('[data-testid=\"companion-sync-pair\"]');" +
+            "var error=document.querySelector('.text-error');var text=error?(error.textContent||'').toLowerCase():'';" +
+            "var reason='';if(text.indexOf('pair_request_rate_limited')>=0)reason='request_rate_limited';" +
+            "else if(text.indexOf('protocol_incompatible')>=0)reason='protocol_incompatible';" +
+            "else if(text.indexOf('invalid_pair_request')>=0)reason='invalid_pair_request';" +
+            "else if(text.indexOf('desktop http request failed')>=0)reason='desktop_http_failed';" +
+            "else if(/crypto|subtle|ecdh|replaceall/.test(text))reason='pairing_crypto_failed';" +
+            "else if(error)reason='request_ui_error';return JSON.stringify({" +
+            "pairFound:!!pair,pairDisabled:!!(pair&&pair.disabled),errorReason:reason});})()";
+        return evaluateJson(instrumentation, webView, script);
+    }
+
     static JSONObject evaluateJson(
         Instrumentation instrumentation,
         WebView webView,

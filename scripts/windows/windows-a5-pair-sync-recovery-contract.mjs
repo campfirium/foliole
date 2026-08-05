@@ -79,6 +79,13 @@ export function classifyPairSyncRecoveryInstrumentationFailure(output) {
     ['sync_action_timeout', /Timed out waiting for semantic target: companion-sync-now/u],
     ['pairing_entry_timeout', /Timed out waiting for pairing or sync entry/u],
     ['pair_target_timeout', /Timed out waiting for semantic target: companion-sync-pair/u],
+    ['pair_request_rate_limited', /Pairing request failed: request_rate_limited/u],
+    ['pair_request_protocol_incompatible', /Pairing request failed: protocol_incompatible/u],
+    ['pair_request_invalid', /Pairing request failed: invalid_pair_request/u],
+    ['pair_request_transport_failed', /Pairing request failed: desktop_http_failed/u],
+    ['pair_request_crypto_failed', /Pairing request failed: pairing_crypto_failed/u],
+    ['pair_request_ui_error', /Pairing request failed: request_ui_error/u],
+    ['pair_request_submission_timeout', /Timed out waiting for pairing request submission/u],
     ['initial_sync_timeout', /Timed out waiting for initial workspace sync completion/u],
     ['pair_target_ambiguous', /Pairing target is not unique/u],
     ['pair_target_disappeared', /Pairing target disappeared/u],
@@ -102,6 +109,7 @@ export function classifyPairSyncRecoveryInstrumentationFailure(output) {
     'discovery-request': 'discovery_request_interrupted',
     'pair-target': 'pair_target_interrupted',
     'pair-request': 'pair_request_interrupted',
+    'pair-request-submitted': 'pair_request_submitted_interrupted',
     'initial-sync': 'initial_sync_interrupted'
   };
   return interruptedStages[stage] ?? 'unknown_instrumentation_failure';

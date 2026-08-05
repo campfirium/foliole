@@ -55,6 +55,12 @@ it('reduces instrumentation output to a fixed non-sensitive failure reason', () 
   expect(classifyPairSyncRecoveryInstrumentationFailure(
     'INSTRUMENTATION_RESULT: shortMsg=Process crashed.'
   )).toBe('instrumentation_process_crash');
+  expect(classifyPairSyncRecoveryInstrumentationFailure(
+    'java.lang.IllegalStateException: Pairing request failed: pairing_crypto_failed'
+  )).toBe('pair_request_crypto_failed');
+  expect(classifyPairSyncRecoveryInstrumentationFailure(
+    'java.lang.IllegalStateException: Pairing request failed: request_rate_limited'
+  )).toBe('pair_request_rate_limited');
   expect(classifyPairSyncRecoveryInstrumentationFailure([
     'INSTRUMENTATION_STATUS: foliolePairSyncStage=webview-ready',
     'INSTRUMENTATION_STATUS: foliolePairSyncStage=discovery-request',
