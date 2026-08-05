@@ -76,7 +76,8 @@ describe('GitHub macOS packaging', () => {
   it('isolates an older acceptance baseline without changing the formal artifact directory', () => {
     const request = resolveGithubPackageRequest(['--acceptance-baseline-version=0.7.2'], '0.7.4');
     expect(request).toMatchObject({ acceptanceBaseline: true, version: '0.7.2' });
-    expect(request.targetDirectory).toBe(path.resolve('.tmp/artifacts/macos-github-update-baseline-0.7.2-arm64'));
+    expect(request).toMatchObject({ cacheEntryName: 'macos-github-update-baseline-0.7.2-arm64' });
+    expect(request.targetDirectory).toBe(path.resolve('.cache/macos-github-update-baseline-0.7.2-arm64'));
     expect(() => resolveGithubPackageRequest([
       '--acceptance-baseline-version=0.7.4'
     ], '0.7.4')).toThrow('lower than package.json');

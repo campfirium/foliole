@@ -99,18 +99,26 @@ function removeCandidates(entries, removeEntry) {
   return { deletedCount, failures };
 }
 
-export function refreshCacheEntry({ entryName, nowMs = Date.now(), rootDir = repoRoot }) {
+function refreshRootEntry({ entryName, nowMs, relativeRoot, rootDir }) {
   if (!entryName || entryName.includes('/') || entryName.includes('\\') || entryName === '.' || entryName === '..') {
-    throw new Error('cache entry must be one first-level directory name');
+    throw new Error('retention entry must be one first-level directory name');
   }
-  const entryPath = resolve(rootDir, CACHE_ROOT, entryName);
+  const entryPath = resolve(rootDir, relativeRoot, entryName);
   const stats = lstatSync(entryPath);
   if (!stats.isDirectory() || stats.isSymbolicLink()) {
-    throw new Error('cache entry must be an existing directory');
+    throw new Error('retention entry must be an existing directory');
   }
   const time = new Date(nowMs);
   utimesSync(entryPath, time, time);
   return entryPath;
+}
+
+export function refreshArtifactBatch({ entryName, nowMs = Date.now(), rootDir = repoRoot }) {
+  return refreshRootEntry({ entryName, nowMs, relativeRoot: ARTIFACT_ROOT, rootDir });
+}
+
+export function refreshCacheEntry({ entryName, nowMs = Date.now(), rootDir = repoRoot }) {
+  return refreshRootEntry({ entryName, nowMs, relativeRoot: CACHE_ROOT, rootDir });
 }
 
 export function runRetention({

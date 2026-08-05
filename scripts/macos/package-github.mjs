@@ -16,6 +16,7 @@ import { prepareCodexHelper } from './prepare-codex-helper.mjs';
 import { prepareFolioleCli } from './prepare-foliole-cli.mjs';
 import { prepareGlobalCaptureHelper } from './prepare-global-capture-helper.mjs';
 import { verifyPackagedMacosApp } from './verify-packaged-app.mjs';
+import { prepareCacheEntry } from '../diagnostics/local-artifact-cache-production.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
 const PUBLISHED_DIRECTORY = path.join(ROOT, 'artifacts/macos/github-arm64');
@@ -42,7 +43,8 @@ export function resolveGithubPackageRequest(args, currentVersion) {
   }
   return {
     acceptanceBaseline: true,
-    targetDirectory: path.join(ROOT, `.tmp/artifacts/macos-github-update-baseline-${version}-arm64`),
+    cacheEntryName: `macos-github-update-baseline-${version}-arm64`,
+    targetDirectory: path.join(ROOT, `.cache/macos-github-update-baseline-${version}-arm64`),
     version
   };
 }
@@ -157,6 +159,9 @@ async function main() {
   const base = JSON.parse(await readFile(path.join(ROOT, 'electron/builder.json'), 'utf8'));
   const packageMetadata = JSON.parse(await readFile(path.join(ROOT, 'package.json'), 'utf8'));
   const request = resolveGithubPackageRequest(process.argv.slice(2), packageMetadata.version);
+  if (request.cacheEntryName) {
+    prepareCacheEntry({ entryName: request.cacheEntryName, rootDir: ROOT });
+  }
   const codexPath = await prepareCodexHelper({ release: codexRelease });
   console.log(`[codex-helper] build=${codexRelease.version}`);
   const folioleCliPath = await prepareFolioleCli({

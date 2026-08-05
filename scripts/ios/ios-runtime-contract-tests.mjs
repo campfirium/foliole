@@ -14,6 +14,7 @@ import {
   iosVitestResourceArgs,
   resolveIosResourceMode
 } from './ios-resource-profile.mjs';
+import { prepareIosRuntimeContractCache } from './ios-local-storage.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 assertQualityCommandAllowed('runner:ios-runtime-contract');
@@ -163,21 +164,21 @@ if (vitest.status !== 0) {
   if (sqlite.error) throw sqlite.error;
   if (sqlite.status !== 0) process.exit(sqlite.status ?? 1);
 
-  const swiftCacheRoot = path.join(REPO_ROOT, '.tmp/artifacts/ios-swift-cache');
+  const cachePaths = prepareIosRuntimeContractCache(REPO_ROOT);
   const nativeTask = iosResourceCommand('swift', [
     'test',
     ...iosSwiftResourceArgs(resourceMode),
     '--disable-sandbox',
     '--package-path', 'ios/App',
-    '--scratch-path', '.tmp/artifacts/ios-sync-pack-native-tests'
+    '--scratch-path', cachePaths.scratchPath
   ], resourceMode);
   const native = spawnSync(nativeTask.command, nativeTask.args, {
     cwd: REPO_ROOT,
     stdio: 'inherit',
     env: {
       ...process.env,
-      CLANG_MODULE_CACHE_PATH: path.join(swiftCacheRoot, 'clang'),
-      SWIFTPM_MODULECACHE_OVERRIDE: path.join(swiftCacheRoot, 'swiftpm')
+      CLANG_MODULE_CACHE_PATH: cachePaths.clangModuleCache,
+      SWIFTPM_MODULECACHE_OVERRIDE: cachePaths.swiftpmModuleCache
     }
   });
   if (native.error) throw native.error;
