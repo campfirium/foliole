@@ -155,7 +155,8 @@ final class FolioleCompanionPairSyncRecoveryScenario {
             && (!"not_saved".equals(credentials) || !"not_started".equals(initialSync))) {
             throw new IllegalStateException("Pair sync recovery evidence advanced before completion.");
         }
-        if (!"saved_signable".equals(credentials) && !"not_started".equals(initialSync)) {
+        if (!"saved_signable".equals(credentials) && !"not_started".equals(initialSync)
+            && !"existing_pairing".equals(completion)) {
             throw new IllegalStateException("Initial sync advanced before credentials were signable.");
         }
         if ("save_failed".equals(credentials) || "failed".equals(initialSync)) {

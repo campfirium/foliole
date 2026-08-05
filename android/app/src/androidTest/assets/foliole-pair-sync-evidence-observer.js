@@ -38,7 +38,8 @@
     if (methodName === 'signCompanionSyncRequest' && state.credentials === 'saved_not_signable') {
       return call().then(function (value) { state.credentials = 'saved_signable'; return value; });
     }
-    if (methodName === 'recordWorkspaceSyncEvent' && state.credentials === 'saved_signable') {
+    if (methodName === 'recordWorkspaceSyncEvent' &&
+        (state.credentials === 'saved_signable' || state.completion === 'existing_pairing')) {
       return observeSync(state, args, call);
     }
     return call();

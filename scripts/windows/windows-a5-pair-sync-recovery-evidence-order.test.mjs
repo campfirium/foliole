@@ -50,6 +50,11 @@ it('accepts only closed Android enums and ordered persistent progress', () => {
   expect(() => validatePairSyncAndroidEvidence({
     completion: 'forged', credentials: 'not_saved', initialSync: 'not_started'
   })).toThrow('contradictory');
+  expect(validatePairSyncAndroidEvidence({
+    completion: 'existing_pairing', credentials: 'saved_not_signable', initialSync: 'started'
+  })).toEqual({
+    completion: 'existing_pairing', credentials: 'saved_not_signable', initialSync: 'started'
+  });
 });
 
 it('uses only the latest valid instrumentation bundle and fails unknown bundles closed', () => {

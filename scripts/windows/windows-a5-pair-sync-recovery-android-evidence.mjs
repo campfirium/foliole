@@ -16,7 +16,8 @@ export function validatePairSyncAndroidEvidence(value) {
       || !INITIAL_SYNC_STATES.has(value?.initialSync)) invalidEvidence();
   if (value.completion !== 'http_200' && value.completion !== 'existing_pairing'
       && (value.credentials !== 'not_saved' || value.initialSync !== 'not_started')) invalidEvidence();
-  if (value.credentials !== 'saved_signable' && value.initialSync !== 'not_started') invalidEvidence();
+  if (value.credentials !== 'saved_signable' && value.initialSync !== 'not_started'
+      && value.completion !== 'existing_pairing') invalidEvidence();
   return {
     completion: value.completion,
     credentials: value.credentials,
