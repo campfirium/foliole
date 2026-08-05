@@ -2,8 +2,11 @@
 
 import { createHash } from 'node:crypto';
 import path from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
 
 const MAIN_LIBRARY_HOME = 'D:\\X\\U\\Foliole';
+const PROFILE_LOCK_RETRY_DELAY_MS = 100;
+const PROFILE_LOCK_RETRY_TIMEOUT_MS = 5_000;
 
 function fingerprint(value) {
   return createHash('sha256').update(value).digest('hex').slice(0, 16);
@@ -50,15 +53,37 @@ function launchOptions(repoRoot, env) {
   };
 }
 
+function isProfileLockCollision(error) {
+  const detail = error instanceof Error ? error.message : String(error);
+  return /Lock file can not be created!? Error code: 32/iu.test(detail);
+}
+
+async function launchCurrentLibrary(launcher, options, {
+  now, retryTimeoutMs, wait
+}) {
+  const deadline = now() + retryTimeoutMs;
+  while (true) {
+    try { return await launcher.launch(options); }
+    catch (error) {
+      if (!isProfileLockCollision(error) || now() >= deadline) throw error;
+      await wait(PROFILE_LOCK_RETRY_DELAY_MS);
+    }
+  }
+}
+
 export async function openPairSyncDesktopSession({
-  env = process.env, electronLauncher, repoRoot, timeoutMs = 90_000
+  env = process.env, electronLauncher, now = Date.now,
+  profileLockRetryTimeoutMs = PROFILE_LOCK_RETRY_TIMEOUT_MS, repoRoot,
+  timeoutMs = 90_000, wait = delay
 }) {
   const launcher = electronLauncher ?? (await import('playwright'))._electron;
   let app;
   let page;
   let stage = 'desktop-runtime-launch';
   try {
-    app = await launcher.launch(launchOptions(repoRoot, env));
+    app = await launchCurrentLibrary(launcher, launchOptions(repoRoot, env), {
+      now, retryTimeoutMs: profileLockRetryTimeoutMs, wait
+    });
     stage = 'desktop-runtime-window';
     page = await app.firstWindow({ timeout: timeoutMs });
     stage = 'desktop-runtime-ready';

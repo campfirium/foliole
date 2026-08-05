@@ -63,6 +63,40 @@ it('classifies bounded current-library readiness failures', async () => {
   expect(fixture.app.close).toHaveBeenCalledOnce();
 });
 
+it('retries only the bounded Chromium profile lock collision', async () => {
+  const fixture = launcherFixture();
+  fixture.launcher.launch
+    .mockRejectedValueOnce(new Error('Lock file can not be created! Error code: 32'))
+    .mockResolvedValueOnce(fixture.app);
+  const wait = vi.fn(async () => undefined);
+  const session = await openPairSyncDesktopSession({
+    electronLauncher: fixture.launcher, env: {}, repoRoot: 'C:\\repo', wait
+  });
+  expect(fixture.launcher.launch).toHaveBeenCalledTimes(2);
+  expect(wait).toHaveBeenCalledOnce();
+  expect(wait).toHaveBeenCalledWith(100);
+  await session.close();
+});
+
+it('does not retry unrelated or expired launch failures', async () => {
+  const unrelated = launcherFixture();
+  unrelated.launcher.launch.mockRejectedValue(new Error('executable missing'));
+  await expect(openPairSyncDesktopSession({
+    electronLauncher: unrelated.launcher, env: {}, repoRoot: 'C:\\repo', wait: vi.fn()
+  })).rejects.toMatchObject({ stage: 'desktop-runtime-launch' });
+  expect(unrelated.launcher.launch).toHaveBeenCalledOnce();
+
+  const expired = launcherFixture();
+  expired.launcher.launch.mockRejectedValue(
+    new Error('Lock file can not be created! Error code: 32')
+  );
+  await expect(openPairSyncDesktopSession({
+    electronLauncher: expired.launcher, env: {}, now: () => 10,
+    profileLockRetryTimeoutMs: 0, repoRoot: 'C:\\repo', wait: vi.fn()
+  })).rejects.toMatchObject({ stage: 'desktop-runtime-launch' });
+  expect(expired.launcher.launch).toHaveBeenCalledOnce();
+});
+
 it('approves only one request from the expected device fingerprint', async () => {
   const request = { device_id: 'android-device-1', pair_request_id: 'pair-1' };
   const session = { load: vi.fn(async () => ({ pending_requests: [request] })) };
