@@ -17,6 +17,10 @@ const PAIRING_PREFS = 'shared_prefs/foliole_companion_pairing.xml';
 const EMPTY_SHA256 = createHash('sha256').update('').digest('hex');
 const PAIRING_REQUIRED_KEYS = ['device_id', 'device_secret', 'device_secret_iv'];
 
+function quoteAdbShellScript(script) {
+  return JSON.stringify(script);
+}
+
 function parseArgs(argv) {
   const options = { adb: 'adb', appId: 'com.foliole.android', serial: '' };
   for (let index = 0; index < argv.length; index += 2) {
@@ -41,7 +45,7 @@ export async function inspectPairingPreferences(options, run = execFileAsync) {
   }
   const requiredKeys = await Promise.all(PAIRING_REQUIRED_KEYS.map(async (key) => {
     try {
-      const script = `grep -q 'name="${key}"' ${PAIRING_PREFS}`;
+      const script = quoteAdbShellScript(`grep -q 'name="${key}"' ${PAIRING_PREFS}`);
       await run(options.adb, [
         '-s', options.serial, 'shell', 'run-as', options.appId, 'sh', '-c', script
       ], { encoding: 'utf8', timeout: 30_000 });
@@ -58,7 +62,9 @@ export async function inspectPairingPreferences(options, run = execFileAsync) {
     return { pairingCredentialsPresent: true, remotePeerFingerprint: null };
   }
   const hashes = await Promise.all(['remote_peer_id', 'primary_device_id'].map(async (key) => {
-    const script = `sed -n 's@.*<string name="${key}">\\([^<]*\\)</string>.*@\\1@p' ${PAIRING_PREFS} | sha256sum`;
+    const script = quoteAdbShellScript(
+      `sed -n 's@.*<string name="${key}">\\([^<]*\\)</string>.*@\\1@p' ${PAIRING_PREFS} | sha256sum`
+    );
     const result = await run(options.adb, [
       '-s', options.serial, 'shell', 'run-as', options.appId, 'sh', '-c', script
     ], { encoding: 'utf8', timeout: 30_000 });

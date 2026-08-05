@@ -59,7 +59,7 @@ it('hashes the existing remote peer on-device without returning its value', asyn
   const result = await inspectPairingPreferences({ adb: 'adb', appId: 'app', serial: 'a5' }, run);
   expect(result).toMatchObject({ pairingCredentialsPresent: true, remotePeerFingerprint: expect.any(String) });
   expect(run.mock.calls.some(([, args]) => args.at(-2) === '-c'
-    && args.at(-1) === `grep -q 'name="device_id"' shared_prefs/foliole_companion_pairing.xml`)).toBe(true);
+    && args.at(-1) === `"grep -q 'name=\\"device_id\\"' shared_prefs/foliole_companion_pairing.xml"`)).toBe(true);
   expect(run.mock.calls.filter(([, args]) => String(args.at(-1)).includes('sha256sum'))).toHaveLength(2);
   expect(JSON.stringify(result)).not.toContain(peer);
 });
@@ -67,7 +67,7 @@ it('hashes the existing remote peer on-device without returning its value', asyn
 it('treats an empty retained preferences file as unpaired', async () => {
   const missing = Object.assign(new Error('missing'), { code: 1 });
   const run = vi.fn(async (_command, args) => {
-    if (String(args.at(-1)).startsWith('grep -q')) throw missing;
+    if (String(args.at(-1)).startsWith('"grep -q')) throw missing;
     return { stdout: '' };
   });
   await expect(inspectPairingPreferences({ adb: 'adb', appId: 'app', serial: 'a5' }, run))
