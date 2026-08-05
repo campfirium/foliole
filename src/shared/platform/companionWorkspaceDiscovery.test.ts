@@ -17,7 +17,13 @@ vi.mock('@capacitor/core', () => ({
   registerPlugin: vi.fn(() => capacitorMock.plugin)
 }));
 
+vi.mock('./companionPairingEncryption', () => ({
+  createCompanionPairingPublicKey: vi.fn(async () => 'client-public-key'),
+  dropCompanionPairingPrivateKey: vi.fn()
+}));
+
 import { discoverCompanionDesktop, discoverCompanionDesktops } from './companionWorkspaceDiscovery';
+import { requestCompanionPairing } from './companionWorkspacePairing';
 
 const protocol = {
   capabilities: ['lan-sync-v1'],
@@ -119,6 +125,47 @@ describe('companionWorkspaceDiscovery endpoint selection', () => {
     const result = await discoverCompanionDesktop('http://10.0.2.2:38641');
 
     expect(result.endpointUrl).toBe('http://127.0.0.1:38641');
+  });
+});
+
+describe('companionWorkspaceDiscovery fixed reverse route', () => {
+  it('keeps the reverse route through a same-peer pairing request', async () => {
+    let reverseSessionPending = false;
+    capacitorMock.plugin.loadDiscoveryCandidates.mockResolvedValue({
+      candidates: [nsdCandidate('http://foliole-windows.local:38641')]
+    });
+    capacitorMock.plugin.desktopHttpRequest.mockImplementation(async ({ method, url }: {
+      method: string;
+      url: string;
+    }) => {
+      if (method === 'GET') {
+        return desktopResponse({ hostName: 'ZEPHU-PC', peerId: 'desktop-local', platform: 'Windows' });
+      }
+      if (method === 'POST' && url.startsWith('http://127.0.0.1:38641')) {
+        reverseSessionPending = true;
+        return {
+          body: JSON.stringify({
+            expires_at: '2026-08-05T12:02:00.000Z',
+            pair_request_id: 'pair-request-fixed-route',
+            status: 'pending'
+          }),
+          status: 202
+        };
+      }
+      throw new Error('pair request reached an external route');
+    });
+
+    const discovered = await discoverCompanionDesktop('http://192.168.0.11:38641');
+    const pending = await requestCompanionPairing({
+      deviceId: 'fixed-a5',
+      deviceKind: 'android-capacitor',
+      deviceName: 'A5',
+      endpointUrl: discovered.endpointUrl
+    });
+
+    expect(discovered.endpointUrl).toBe('http://127.0.0.1:38641');
+    expect(pending.pair_request_id).toBe('pair-request-fixed-route');
+    expect(reverseSessionPending).toBe(true);
   });
 });
 
