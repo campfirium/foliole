@@ -27,11 +27,10 @@ final class FolioleCompanionCaptureAnnotationScenario {
         perform(instrumentation, webView, "companion-capture-text", "input", captureText(token));
         waitForEnabledTestId(instrumentation, webView, "companion-capture-save", timeoutMs);
         perform(instrumentation, webView, "companion-capture-save", "click", "");
-        waitForMissingTestId(instrumentation, webView, "companion-capture-save", timeoutMs);
         navigateToCapturedTopic(instrumentation, webView, token, timeoutMs);
         waitForText(instrumentation, webView, CLOZE_TEXT, timeoutMs);
         createNote(instrumentation, webView, token, timeoutMs);
-        createCloze(instrumentation, webView, token, timeoutMs);
+        createCloze(instrumentation, webView, timeoutMs);
         JSONObject receipt = new JSONObject();
         receipt.put("action", "click");
         receipt.put("captureCreated", true);
@@ -52,6 +51,7 @@ final class FolioleCompanionCaptureAnnotationScenario {
         navigateToCapturedTopic(instrumentation, webView, token, timeoutMs);
         waitForButtonText(instrumentation, webView, token, timeoutMs);
         waitForButtonText(instrumentation, webView, NOTE_TEXT, timeoutMs);
+        waitForButtonText(instrumentation, webView, CLOZE_TEXT, timeoutMs);
     }
 
     private static void createNote(
@@ -65,19 +65,17 @@ final class FolioleCompanionCaptureAnnotationScenario {
         waitForTestId(instrumentation, webView, "companion-selection-note-text", timeoutMs);
         perform(instrumentation, webView, "companion-selection-note-text", "input", "A5 note " + token);
         perform(instrumentation, webView, "companion-selection-note-save", "click", "");
-        waitForMissingTestId(instrumentation, webView, "companion-selection-note-save", timeoutMs);
+        waitForButtonText(instrumentation, webView, NOTE_TEXT, timeoutMs);
     }
 
     private static void createCloze(
         Instrumentation instrumentation,
         WebView webView,
-        String token,
         long timeoutMs
     ) throws Exception {
         selectText(instrumentation, webView, CLOZE_TEXT, timeoutMs);
         perform(instrumentation, webView, "companion-selection-cloze", "click", "");
-        waitForMissingTestId(instrumentation, webView, "companion-selection-cloze", timeoutMs);
-        waitForButtonText(instrumentation, webView, token, timeoutMs);
+        waitForButtonText(instrumentation, webView, CLOZE_TEXT, timeoutMs);
     }
 
     private static void navigateToCapturedTopic(
@@ -136,16 +134,6 @@ final class FolioleCompanionCaptureAnnotationScenario {
     ) throws Exception {
         String selector = "document.querySelector('[data-testid=\"" + testId + "\"]')";
         waitFor(instrumentation, webView, selector + "&&!" + selector + ".disabled", timeoutMs, "enabled test id " + testId);
-    }
-
-    private static void waitForMissingTestId(
-        Instrumentation instrumentation,
-        WebView webView,
-        String testId,
-        long timeoutMs
-    ) throws Exception {
-        waitFor(instrumentation, webView,
-            "document.querySelector('[data-testid=\"" + testId + "\"]')===null", timeoutMs, "missing test id " + testId);
     }
 
     private static void waitForButtonText(
