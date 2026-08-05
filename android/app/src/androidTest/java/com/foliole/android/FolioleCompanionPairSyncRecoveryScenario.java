@@ -159,15 +159,15 @@ final class FolioleCompanionPairSyncRecoveryScenario {
             JSONObject request = FolioleCompanionWebViewSemanticAdapter.pairingRequestState(
                 instrumentation, webView
             );
-            String errorReason = request.optString("errorReason");
-            if (!errorReason.isEmpty()) {
-                throw new IllegalStateException("Pairing completion failed: " + errorReason);
-            }
             if (request.optBoolean("pairFound")) {
                 FolioleCompanionPairSyncHostEvidence.stage(
                     instrumentation, "initial-sync-pair-target-returned"
                 );
                 throw new IllegalStateException("Pairing completion returned to Pair target.");
+            }
+            String errorReason = request.optString("errorReason");
+            if (!errorReason.isEmpty()) {
+                throw new IllegalStateException("Pairing completion failed: " + errorReason);
             }
             JSONObject target = visibleTarget(instrumentation, webView, CONNECTED_TARGET);
             if (target != null) return target;

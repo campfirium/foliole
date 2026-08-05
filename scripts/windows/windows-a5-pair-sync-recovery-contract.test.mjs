@@ -1,5 +1,7 @@
 // @vitest-environment node
 
+import fs from 'node:fs';
+
 import { expect, it } from 'vitest';
 
 import {
@@ -84,4 +86,18 @@ it('reduces instrumentation output to a fixed non-sensitive failure reason', () 
   expect(classifyPairSyncRecoveryActionFailure(
     new Error('masked'), 'pair-sync-instrumentation', 'Timed out waiting for pairing or sync entry.'
   )).toMatchObject({ failureReason: 'pairing_entry_timeout' });
+});
+
+it('prioritizes a returned Pair target over a localized completion error', () => {
+  const source = fs.readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionPairSyncRecoveryScenario.java',
+    'utf8'
+  );
+  const method = source.slice(
+    source.indexOf('private static JSONObject waitForConnectedTarget('),
+    source.indexOf('private static JSONObject uniqueVisibleTarget(')
+  );
+  expect(method.indexOf('request.optBoolean("pairFound")')).toBeGreaterThanOrEqual(0);
+  expect(method.indexOf('request.optBoolean("pairFound")'))
+    .toBeLessThan(method.indexOf('request.optString("errorReason")'));
 });
