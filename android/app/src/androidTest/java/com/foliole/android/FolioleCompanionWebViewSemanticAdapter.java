@@ -90,11 +90,12 @@ final class FolioleCompanionWebViewSemanticAdapter {
         return FolioleCompanionPairSyncEvidence.read(instrumentation, webView);
     }
 
-    static JSONObject installPairingRequestObserver(
+    static JSONObject installPairSyncObserver(
         Instrumentation instrumentation,
-        WebView webView
+        WebView webView,
+        boolean existingPairing
     ) throws Exception {
-        return FolioleCompanionPairSyncEvidence.install(instrumentation, webView);
+        return FolioleCompanionPairSyncEvidence.install(instrumentation, webView, existingPairing);
     }
 
     static JSONObject evaluateJson(

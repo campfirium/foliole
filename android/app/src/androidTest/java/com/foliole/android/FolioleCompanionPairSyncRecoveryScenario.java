@@ -28,20 +28,23 @@ final class FolioleCompanionPairSyncRecoveryScenario {
             instrumentation, webView, "companion-sync-now", "companion-sync-discover", deadline
         );
         boolean reusedPairing = CONNECTED_TARGET.equals(entry);
+        JSONObject observer = FolioleCompanionWebViewSemanticAdapter.installPairSyncObserver(
+            instrumentation, webView, reusedPairing
+        );
+        if (!observer.optBoolean("ok")) {
+            throw new IllegalStateException("Pair sync observer is unavailable.");
+        }
         if (!reusedPairing) {
             FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "discovery-request");
             clickVisible(instrumentation, webView, "companion-sync-discover", deadline);
             FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "pair-target");
             waitForUniqueVisible(instrumentation, webView, "companion-sync-pair", deadline);
             FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "pair-request");
-            JSONObject observer = FolioleCompanionWebViewSemanticAdapter.installPairingRequestObserver(
-                instrumentation, webView
-            );
-            if (!observer.optBoolean("ok")) {
-                throw new IllegalStateException("Pairing request observer is unavailable.");
-            }
             clickVisible(instrumentation, webView, "companion-sync-pair", deadline);
             FolioleCompanionPairRequestEvidence.awaitSubmission(instrumentation, webView, deadline);
+        } else {
+            FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "initial-sync-request");
+            clickVisible(instrumentation, webView, CONNECTED_TARGET, deadline);
         }
         FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "pair-completion");
         JSONObject recoveryEvidence = awaitRecoveryEvidence(instrumentation, webView, deadline);
@@ -143,12 +146,12 @@ final class FolioleCompanionPairSyncRecoveryScenario {
         String completion = evidence.optString("completion");
         String credentials = evidence.optString("credentials");
         String initialSync = evidence.optString("initialSync");
-        if (!isOneOf(completion, "not_started", "dispatched", "transport_failed", "http_rejected", "http_200")
+        if (!isOneOf(completion, "not_started", "dispatched", "transport_failed", "http_rejected", "http_200", "existing_pairing")
             || !isOneOf(credentials, "not_saved", "save_failed", "saved_not_signable", "saved_signable")
             || !isOneOf(initialSync, "not_started", "started", "failed", "completed")) {
             throw new IllegalStateException("Pair sync recovery emitted an unknown evidence state.");
         }
-        if (!"http_200".equals(completion)
+        if (!"http_200".equals(completion) && !"existing_pairing".equals(completion)
             && (!"not_saved".equals(credentials) || !"not_started".equals(initialSync))) {
             throw new IllegalStateException("Pair sync recovery evidence advanced before completion.");
         }

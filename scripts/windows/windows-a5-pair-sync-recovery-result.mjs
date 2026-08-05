@@ -5,11 +5,18 @@ import {
   createPairSyncApprovalEvidence, validatePairSyncApprovalEvidence
 } from './windows-a5-pair-sync-recovery-approval-evidence.mjs';
 
-export function validatePairSyncRecoveryResult({ android, approval }) {
+export function validatePairSyncRecoveryResult({ android, approval, pairingPath }) {
   const safeAndroid = validatePairSyncAndroidEvidence(android);
   const safeApproval = validatePairSyncApprovalEvidence(approval);
-  if (!safeApproval.pending_observed || !safeApproval.approve_invoked || !safeApproval.approve_succeeded
-      || safeAndroid.completion !== 'http_200'
+  const approvalComplete = safeApproval.pending_observed
+    && safeApproval.approve_invoked && safeApproval.approve_succeeded;
+  const approvalSkipped = !safeApproval.pending_observed
+    && !safeApproval.approve_invoked && !safeApproval.approve_succeeded;
+  const pathComplete = pairingPath === 'new'
+    ? approvalComplete && safeAndroid.completion === 'http_200'
+    : pairingPath === 'existing'
+      && approvalSkipped && safeAndroid.completion === 'existing_pairing';
+  if (!pathComplete
       || safeAndroid.credentials !== 'saved_signable'
       || safeAndroid.initialSync !== 'completed') {
     throw new Error('Pair sync recovery evidence did not prove the ordered recovery result.');
@@ -34,7 +41,9 @@ export function createPairSyncRecoveryEvidenceTracker() {
       approval.markApproveSucceeded();
     },
     complete(receipt) {
-      const result = validatePairSyncRecoveryResult({ android: receipt, approval: approval.snapshot() });
+      const result = validatePairSyncRecoveryResult({
+        android: receipt, approval: approval.snapshot(), pairingPath: receipt.pairingPath
+      });
       return { ...receipt, approval: result.approval };
     },
     failure(error) {

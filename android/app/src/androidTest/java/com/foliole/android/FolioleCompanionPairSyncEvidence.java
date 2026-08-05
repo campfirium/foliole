@@ -15,12 +15,22 @@ final class FolioleCompanionPairSyncEvidence {
 
     private FolioleCompanionPairSyncEvidence() {}
 
-    static JSONObject install(Instrumentation instrumentation, WebView webView) throws Exception {
-        return FolioleCompanionWebViewSemanticAdapter.evaluateJson(
+    static JSONObject install(
+        Instrumentation instrumentation,
+        WebView webView,
+        boolean existingPairing
+    ) throws Exception {
+        JSONObject installed = FolioleCompanionWebViewSemanticAdapter.evaluateJson(
             instrumentation,
             webView,
             readObserverScript(instrumentation)
         );
+        if (!installed.optBoolean("ok") || !existingPairing) return installed;
+        String script = "(function(){var state=window.__foliolePairSyncObserver;" +
+            "if(!state)return JSON.stringify({ok:false});" +
+            "state.completion='existing_pairing';state.credentials='saved_not_signable';" +
+            "return JSON.stringify({ok:true});})()";
+        return FolioleCompanionWebViewSemanticAdapter.evaluateJson(instrumentation, webView, script);
     }
 
     private static String readObserverScript(Instrumentation instrumentation) throws Exception {

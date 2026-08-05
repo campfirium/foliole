@@ -63,13 +63,24 @@ it('uses only the latest valid instrumentation bundle and fails unknown bundles 
 
 it('requires matching desktop approval and Android terminal evidence', () => {
   const approval = { approve_invoked: true, approve_succeeded: true, pending_observed: true };
-  expect(validatePairSyncRecoveryResult({ android: completeAndroid, approval }))
+  expect(validatePairSyncRecoveryResult({ android: completeAndroid, approval, pairingPath: 'new' }))
     .toEqual({ android: completeAndroid, approval });
   expect(() => validatePairSyncRecoveryResult({
-    android: completeAndroid, approval: { ...approval, approve_succeeded: false }
+    android: completeAndroid, approval: { ...approval, approve_succeeded: false }, pairingPath: 'new'
   })).toThrow('did not prove');
   expect(() => validatePairSyncRecoveryResult({
     android: { ...completeAndroid, completion: 'dispatched', credentials: 'not_saved', initialSync: 'not_started' },
-    approval
+    approval, pairingPath: 'new'
   })).toThrow('did not prove');
+});
+
+it('proves matching existing pairing sync without inventing a new approval', () => {
+  const android = {
+    completion: 'existing_pairing', credentials: 'saved_signable', initialSync: 'completed'
+  };
+  const approval = { approve_invoked: false, approve_succeeded: false, pending_observed: false };
+  expect(validatePairSyncRecoveryResult({ android, approval, pairingPath: 'existing' }))
+    .toEqual({ android, approval });
+  expect(() => validatePairSyncRecoveryResult({ android, approval, pairingPath: 'new' }))
+    .toThrow('did not prove');
 });
