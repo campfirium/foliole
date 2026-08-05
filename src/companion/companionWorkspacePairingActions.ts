@@ -96,6 +96,7 @@ function createRequestPairingAction(
         remotePeerName: normalizedDiscovery.desktopDeviceName,
         remotePeerPlatform: normalizedDiscovery.desktopPlatform
       });
+      await args.onSaveEndpoint(normalizedDiscovery.endpointUrl);
       args.setPairingStatus('awaiting-approval');
       return nextRequest;
     } catch (error) {

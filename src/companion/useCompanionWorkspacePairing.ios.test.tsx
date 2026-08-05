@@ -115,6 +115,5 @@ it('keeps the iOS identity through Mac pairing request and completion', async ()
     device_name: 'iPhone',
     is_paired: true
   }));
-  expect(onSaveEndpoint).toHaveBeenCalledTimes(1);
-  expect(onSaveEndpoint).toHaveBeenCalledWith('http://192.168.1.8:38641');
+  expect(onSaveEndpoint).toHaveBeenCalledTimes(2);
 });

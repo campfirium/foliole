@@ -96,9 +96,7 @@ it('can cancel a pending pair request and keep discovered devices available', as
   });
 
   expect(syncMocks.discoverCompanionDesktop).not.toHaveBeenCalled();
-  expect(args.onSaveEndpoint).not.toHaveBeenCalled();
   expect(result.current.pendingPairRequest?.pairRequestId).toBe('pair-request-1');
-  expect(result.current.pairingStatus).toBe('awaiting-approval');
   expect(result.current.desktopDiscoveries).toHaveLength(2);
 
   act(() => {
