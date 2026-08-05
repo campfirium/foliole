@@ -58,6 +58,13 @@ function isProfileLockCollision(error) {
   return /Lock file can not be created!? Error code: 32/iu.test(detail);
 }
 
+function assertElectronAppActive(app) {
+  const runtime = app.process();
+  if (runtime.exitCode !== null || runtime.killed) {
+    throw new Error('Windows current-library Electron session ended unexpectedly.');
+  }
+}
+
 async function launchCurrentLibrary(launcher, options, {
   now, retryTimeoutMs, wait
 }) {
@@ -105,6 +112,7 @@ export async function openPairSyncDesktopSession({
     approve: (pairRequestId) => invoke(page, 'approve_companion_pair_request', {
       pair_request_id: pairRequestId
     }),
+    assertActive: () => assertElectronAppActive(app),
     close: () => app.close(),
     enable: () => invoke(page, 'enable_companion_sync'),
     load: () => invoke(page, 'load_companion_pairing_overview'),

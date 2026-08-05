@@ -20,8 +20,12 @@ function launcherFixture(libraryHome = 'D:\\X\\U\\Foliole') {
     }),
     waitForFunction: vi.fn(async () => undefined)
   };
-  const app = { close: vi.fn(async () => undefined), firstWindow: vi.fn(async () => page) };
-  return { app, calls, launcher: { launch: vi.fn(async () => app) }, page };
+  const runtime = { exitCode: null, killed: false };
+  const app = {
+    close: vi.fn(async () => undefined), firstWindow: vi.fn(async () => page),
+    process: vi.fn(() => runtime)
+  };
+  return { app, calls, launcher: { launch: vi.fn(async () => app) }, page, runtime };
 }
 
 it('launches the real current-library runtime and invokes only existing product commands', async () => {
@@ -61,6 +65,15 @@ it('classifies bounded current-library readiness failures', async () => {
     electronLauncher: fixture.launcher, env: {}, repoRoot: 'C:\\dev\\foliole-android-lab-preview'
   })).rejects.toMatchObject({ exitCode: 74, stage: 'desktop-runtime-ready' });
   expect(fixture.app.close).toHaveBeenCalledOnce();
+});
+
+it('fails closed when the bounded current-library runtime has ended', async () => {
+  const fixture = launcherFixture();
+  const session = await openPairSyncDesktopSession({
+    electronLauncher: fixture.launcher, env: {}, repoRoot: 'C:\\repo'
+  });
+  fixture.runtime.exitCode = 1;
+  expect(() => session.assertActive()).toThrow('ended unexpectedly');
 });
 
 it('retries only the bounded Chromium profile lock collision', async () => {

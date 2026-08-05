@@ -11,6 +11,7 @@ import {
 import {
   resolvePairSyncConcurrentFailure, waitForPairRequestWhileInstrumentationRuns
 } from './windows-a5-pair-sync-recovery-concurrency.mjs';
+import { assertPairSyncRuntimeOwnership } from './windows-a5-pair-sync-recovery-transport.mjs';
 import { pairSyncIdentityFingerprint } from './windows-pair-sync-desktop-session.mjs';
 
 const paths = { repoRoot: 'C:\\repo', systemNode: 'C:\\Program Files\\nodejs\\node.exe' };
@@ -136,6 +137,7 @@ it('preserves the product sync enable failure stage after APK preparation', asyn
     code: 0, lines: [], output: '', stdout: 'Success\n'
   }));
   const session = {
+    assertActive: vi.fn(),
     close: vi.fn(async () => undefined),
     enable: vi.fn(async () => { throw new Error('enable failed'); }),
     load: vi.fn(async () => ({ paired_devices: [], pending_requests: [] })),
@@ -160,10 +162,23 @@ it('preserves the product sync enable failure stage after APK preparation', asyn
   expect(executeAction.mock.calls.some(([, args]) => args.includes('screencap'))).toBe(true);
   expect(executeAction.mock.calls.some(([, args]) => (
     args.includes('reverse') && args.includes('tcp:38641') && !args.includes('--remove')
-  ))).toBe(true);
+  ))).toBe(false);
   expect(executeAction.mock.calls.some(([, args]) => (
     args.includes('reverse') && args.includes('--remove') && args.includes('tcp:38641')
-  ))).toBe(true);
+  ))).toBe(false);
+});
+
+it('accepts only a live current session that owns the fixed running listener', () => {
+  const session = { assertActive: vi.fn() };
+  expect(() => assertPairSyncRuntimeOwnership({
+    server_status: { port: 38641, state: 'running' }, sync_enabled: true
+  }, session)).not.toThrow();
+  expect(session.assertActive).toHaveBeenCalledOnce();
+  for (const overview of [
+    { server_status: { port: 38641, state: 'stopped' }, sync_enabled: true },
+    { server_status: { port: 38642, state: 'running' }, sync_enabled: true },
+    { server_status: { port: 38641, state: 'running' }, sync_enabled: false }
+  ]) expect(() => assertPairSyncRuntimeOwnership(overview, session)).toThrow('fixed sync listener');
 });
 
 it('surfaces instrumentation failure instead of masking it with desktop request waiting', async () => {

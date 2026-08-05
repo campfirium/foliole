@@ -1,4 +1,12 @@
-const PAIR_SYNC_PORT = '38641';
+export const PAIR_SYNC_PORT = '38641';
+
+export function assertPairSyncRuntimeOwnership(overview, session) {
+  if (overview?.sync_enabled !== true || overview?.server_status?.state !== 'running'
+      || String(overview.server_status.port) !== PAIR_SYNC_PORT) {
+    throw new Error('Windows current session did not acquire the fixed sync listener.');
+  }
+  session.assertActive();
+}
 
 export async function openPairSyncRecoveryTransport(runAdb) {
   await runAdb(['reverse', `tcp:${PAIR_SYNC_PORT}`, `tcp:${PAIR_SYNC_PORT}`], 'pair-sync-transport-open');

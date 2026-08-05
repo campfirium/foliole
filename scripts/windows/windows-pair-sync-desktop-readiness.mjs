@@ -1,5 +1,6 @@
 import { pairSyncIdentityFingerprint } from './windows-pair-sync-desktop-session.mjs';
 import { pairSyncRecoveryFailure } from './windows-a5-pair-sync-recovery-contract.mjs';
+import { assertPairSyncRuntimeOwnership } from './windows-a5-pair-sync-recovery-transport.mjs';
 
 function rejectPairingState() {
   throw pairSyncRecoveryFailure(
@@ -21,6 +22,15 @@ export function validateDesktopPreflight(
       || wrongPairedDevice || wrongRemotePeer || missingExistingPeer
       || safe.pairedDeviceFingerprints.length > 1) rejectPairingState();
   return safe;
+}
+
+export function validateOwnedDesktopPreflight(
+  overview, session, deviceFingerprint, remotePeerFingerprint = null, existingPairing = false
+) {
+  assertPairSyncRuntimeOwnership(overview, session);
+  return validateDesktopPreflight(
+    overview, session, deviceFingerprint, remotePeerFingerprint, existingPairing
+  );
 }
 
 export async function reconcileAuthorizedStalePairing(

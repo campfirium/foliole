@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { parseCaptureAnnotationReadiness } from './windows-a5-capture-annotation-contract.mjs';
 import {
-  PAIR_SYNC_RECOVERY_APP_ID, PAIR_SYNC_RECOVERY_EVIDENCE_FILES,
+  PAIR_SYNC_RECOVERY_APP_ID, PAIR_SYNC_RECOVERY_EVIDENCE_FILES, PAIR_SYNC_RECOVERY_MAIN_COMPONENT,
   PAIR_SYNC_RECOVERY_TEST_APP_ID, PAIR_SYNC_RECOVERY_TEST_CLASS,
   PAIR_SYNC_RECOVERY_TEST_RUNNER, pairSyncRecoveryArtifactPaths,
   classifyPairSyncRecoveryActionFailure, createPairSyncRecoveryEvidenceTracker, pairSyncRecoveryFailure,
@@ -19,14 +19,12 @@ import {
   openPairSyncDesktopSession, waitForUniquePairRequest
 } from './windows-pair-sync-desktop-session.mjs';
 import {
-  reconcileAuthorizedStalePairing, validateDesktopPreflight
+  reconcileAuthorizedStalePairing, validateOwnedDesktopPreflight
 } from './windows-pair-sync-desktop-readiness.mjs';
 import { cleanupPairSyncRecoveryTestPackage, closePairSyncRecoveryTransport, openPairSyncRecoveryTransport } from './windows-a5-pair-sync-recovery-transport.mjs';
 
 const MAIN_APK = 'android/app/build/outputs/apk/debug/app-debug.apk';
 const TEST_APK = 'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk';
-const MAIN_COMPONENT = `${PAIR_SYNC_RECOVERY_APP_ID}/com.foliole.android.MainActivity`;
-
 function options(env, timeoutCode, timeoutMs) {
   return { env, timeoutCode, timeoutMs, windowsHide: true };
 }
@@ -150,15 +148,16 @@ export async function runWindowsA5PairSyncRecovery({
     testInstalled = true;
     output.push((await protectData('check', dataManifest)).output);
     scrubPairSyncDataProtection(fsApi, dataManifest);
-    await openPairSyncRecoveryTransport(pairSyncAdbRunner(execute, paths, env, adbPort, serial));
-    transportOpen = true;
     session = await desktopStep('desktop-session-open', () => openDesktopSession({
       env, repoRoot: paths.repoRoot
     }));
     const enabled = await desktopStep('desktop-sync-enable', () => session.enable());
-    validateDesktopPreflight(
+    await desktopStep('desktop-runtime-ownership', () => validateOwnedDesktopPreflight(
       enabled, session, deviceFingerprint, remotePeerFingerprint, existingPairing
-    );
+    ));
+    await openPairSyncRecoveryTransport(pairSyncAdbRunner(execute, paths, env, adbPort, serial));
+    transportOpen = true;
+    await desktopStep('desktop-runtime-ownership', () => session.assertActive());
     instrumentationPromise = checked(execute, paths.adbPath, [
       '-P', adbPort, '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',
       '-e', 'class', PAIR_SYNC_RECOVERY_TEST_CLASS, PAIR_SYNC_RECOVERY_TEST_RUNNER
@@ -177,7 +176,7 @@ export async function runWindowsA5PairSyncRecovery({
       ['-P', adbPort, '-s', serial, 'shell', 'am', 'force-stop', PAIR_SYNC_RECOVERY_APP_ID],
       options(env, 'pair_sync_restart_timeout', 30_000), 'pair-sync-restart');
     await checked(execute, paths.adbPath,
-      ['-P', adbPort, '-s', serial, 'shell', 'am', 'start', '-W', '-n', MAIN_COMPONENT],
+      ['-P', adbPort, '-s', serial, 'shell', 'am', 'start', '-W', '-n', PAIR_SYNC_RECOVERY_MAIN_COMPONENT],
       options(env, 'pair_sync_restart_timeout', 60_000), 'pair-sync-restart');
     const android = await postRecoveryReadiness(execute, paths, env, serial);
     output.push(android.output);
