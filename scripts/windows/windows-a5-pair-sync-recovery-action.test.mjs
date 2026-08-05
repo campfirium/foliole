@@ -5,7 +5,8 @@ import { Buffer } from 'node:buffer';
 import { expect, it, vi } from 'vitest';
 
 import {
-  inspectWindowsPairSyncRecoveryDesktop, runWindowsA5PairSyncRecovery
+  inspectWindowsPairSyncRecoveryDesktop, runWindowsA5PairSyncRecovery,
+  waitForPairRequestWhileInstrumentationRuns
 } from './windows-a5-pair-sync-recovery-action.mjs';
 import { pairSyncIdentityFingerprint } from './windows-pair-sync-desktop-session.mjs';
 
@@ -132,4 +133,16 @@ it('preserves the product sync enable failure stage after APK preparation', asyn
     protectData: vi.fn(async () => ({ output: '' })), serial: '87a33a4b'
   })).rejects.toMatchObject({ exitCode: 74, stage: 'desktop-sync-enable' });
   expect(session.close).toHaveBeenCalledOnce();
+});
+
+it('surfaces instrumentation failure instead of masking it with desktop request waiting', async () => {
+  const instrumentationError = Object.assign(new Error('instrumentation failed'), {
+    stage: 'pair-sync-instrumentation'
+  });
+  await expect(waitForPairRequestWhileInstrumentationRuns(
+    new Promise(() => undefined), Promise.reject(instrumentationError)
+  )).rejects.toBe(instrumentationError);
+  await expect(waitForPairRequestWhileInstrumentationRuns(
+    new Promise(() => undefined), Promise.resolve({ output: 'completed' })
+  )).rejects.toMatchObject({ exitCode: 74, stage: 'pair-sync-instrumentation' });
 });

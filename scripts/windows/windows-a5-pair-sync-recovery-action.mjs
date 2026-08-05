@@ -71,6 +71,18 @@ async function desktopStep(stage, action) {
   }
 }
 
+export function waitForPairRequestWhileInstrumentationRuns(
+  pairRequestPromise, instrumentationPromise
+) {
+  const earlyInstrumentation = instrumentationPromise.then((result) => {
+    throw pairSyncRecoveryFailure(
+      'Pairing instrumentation completed before the desktop request',
+      'pair-sync-instrumentation', result
+    );
+  });
+  return Promise.race([pairRequestPromise, earlyInstrumentation]);
+}
+
 export async function inspectWindowsPairSyncRecoveryDesktop({
   deviceFingerprint, env, execute, existingPairing = false, openDesktopSession = openPairSyncDesktopSession,
   paths, remotePeerFingerprint
@@ -155,7 +167,9 @@ export async function runWindowsA5PairSyncRecovery({
     ], options(env, 'pair_sync_instrumentation_timeout', 3 * 60_000), 'pair-sync-instrumentation');
     if (!existingPairing) {
       const pending = await desktopStep('desktop-pair-request', () =>
-        waitForUniquePairRequest(session, deviceFingerprint));
+        waitForPairRequestWhileInstrumentationRuns(
+          waitForUniquePairRequest(session, deviceFingerprint), instrumentationPromise
+        ));
       await desktopStep('desktop-pair-approval', () => session.approve(pending.pair_request_id));
     }
     const instrumentation = await instrumentationPromise;
