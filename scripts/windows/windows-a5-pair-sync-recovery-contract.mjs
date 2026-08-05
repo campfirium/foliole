@@ -83,6 +83,13 @@ export function classifyPairSyncRecoveryInstrumentationFailure(output) {
   return reasons.find(([, pattern]) => pattern.test(value))?.[0] ?? 'unknown_instrumentation_failure';
 }
 
+export function classifyPairSyncRecoveryActionFailure(failure, stage, output) {
+  if (stage === 'pair-sync-instrumentation') {
+    failure.failureReason = classifyPairSyncRecoveryInstrumentationFailure(output);
+  }
+  return failure;
+}
+
 export function pairSyncRecoveryArtifactPaths(evidenceRoot) {
   return Object.fromEntries(PAIR_SYNC_RECOVERY_EVIDENCE_FILES.map(
     (name) => [name, path.join(evidenceRoot, name)]

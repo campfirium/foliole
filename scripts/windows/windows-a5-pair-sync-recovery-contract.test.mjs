@@ -3,8 +3,8 @@
 import { expect, it } from 'vitest';
 
 import {
-  classifyPairSyncRecoveryInstrumentationFailure, parsePairSyncRecoveryInstrumentation,
-  parsePairSyncRecoveryReadiness
+  classifyPairSyncRecoveryActionFailure, classifyPairSyncRecoveryInstrumentationFailure,
+  parsePairSyncRecoveryInstrumentation, parsePairSyncRecoveryReadiness
 } from './windows-a5-pair-sync-recovery-contract.mjs';
 import { sanitizePairSyncDataProtection } from './windows-a5-pair-sync-recovery-evidence.mjs';
 
@@ -49,4 +49,7 @@ it('reduces instrumentation output to a fixed non-sensitive failure reason', () 
   )).toBe('pairing_entry_timeout');
   expect(classifyPairSyncRecoveryInstrumentationFailure('unexpected endpoint=secret'))
     .toBe('unknown_instrumentation_failure');
+  expect(classifyPairSyncRecoveryActionFailure(
+    new Error('masked'), 'pair-sync-instrumentation', 'Timed out waiting for pairing or sync entry.'
+  )).toMatchObject({ failureReason: 'pairing_entry_timeout' });
 });

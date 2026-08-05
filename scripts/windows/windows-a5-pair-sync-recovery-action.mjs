@@ -7,7 +7,7 @@ import {
   PAIR_SYNC_RECOVERY_APP_ID, PAIR_SYNC_RECOVERY_EVIDENCE_FILES,
   PAIR_SYNC_RECOVERY_TEST_APP_ID, PAIR_SYNC_RECOVERY_TEST_CLASS,
   PAIR_SYNC_RECOVERY_TEST_RUNNER, pairSyncRecoveryArtifactPaths,
-  classifyPairSyncRecoveryInstrumentationFailure, pairSyncRecoveryFailure,
+  classifyPairSyncRecoveryActionFailure, pairSyncRecoveryFailure,
   parsePairSyncRecoveryInstrumentation
 } from './windows-a5-pair-sync-recovery-contract.mjs';
 import { scrubPairSyncDataProtection } from './windows-a5-pair-sync-recovery-evidence.mjs';
@@ -29,13 +29,14 @@ function options(env, timeoutCode, timeoutMs) {
 async function checked(execute, command, args, commandOptions, stage) {
   let result;
   try { result = await execute(command, args, commandOptions); }
-  catch (error) { throw pairSyncRecoveryFailure(error.message, stage, error); }
+  catch (error) {
+    throw classifyPairSyncRecoveryActionFailure(
+      pairSyncRecoveryFailure(error.message, stage, error), stage, error.output
+    );
+  }
   if (result.code === 0) return result;
   const failure = pairSyncRecoveryFailure(result.lines?.at(-1) || `${command} exited ${result.code}`, stage, result);
-  if (stage === 'pair-sync-instrumentation') {
-    failure.failureReason = classifyPairSyncRecoveryInstrumentationFailure(result.output);
-  }
-  throw failure;
+  throw classifyPairSyncRecoveryActionFailure(failure, stage, result.output);
 }
 
 function writeJson(fsApi, filePath, value) {
