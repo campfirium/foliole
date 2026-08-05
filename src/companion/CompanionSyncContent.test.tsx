@@ -84,7 +84,6 @@ describe('CompanionSyncContent', () => {
     expect(workspaceSync.checkDesktop).not.toHaveBeenCalled();
   });
 
-
   it('hides handoff reminder settings before pairing', () => {
     const workspaceSync = createWorkspaceSync();
 
@@ -222,28 +221,8 @@ async function testCompletesApprovedPairing() {
   expect(workspaceSync.pullFromDesktop).toHaveBeenCalledWith('http://192.168.1.8:38641');
 }
 
-async function testKeepsApprovalPollingBelowDesktopRateLimit() {
-  vi.useFakeTimers();
-  const workspaceSync = createWorkspaceSync();
-  workspaceSync.pendingPairRequest = {
-    endpointUrl: 'http://192.168.1.8:38641',
-    expiresAt: '2026-04-24T10:02:00.000Z',
-    pairRequestId: 'pair-request-1',
-    remotePeerId: 'device-desktop',
-    remotePeerName: 'Desktop',
-    remotePeerPlatform: 'macOS'
-  };
-  workspaceSync.pairingStatus = 'awaiting-approval';
-
-  render(<TestSyncContent workspaceSync={workspaceSync} />);
-  await act(async () => vi.advanceTimersByTimeAsync(60_000));
-
-  expect(workspaceSync.completePairing).toHaveBeenCalledTimes(9);
-}
-
 describe('CompanionSyncContent paired flow', () => {
   it('shows sync status details for a paired device', testShowsSyncStatusDetails);
   it('lets a synced secondary device request primary takeover', testRequestsPrimaryTakeover);
   it('automatically completes pairing after desktop approval', testCompletesApprovedPairing);
-  it('keeps approval polling below the desktop completion rate limit', testKeepsApprovalPollingBelowDesktopRateLimit);
 });

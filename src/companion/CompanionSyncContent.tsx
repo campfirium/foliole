@@ -1,9 +1,8 @@
-import { useEffect } from 'react';
-
 import { definedProps } from '../shared/lib/definedProps';
 
 import { useCompanionHandoffReminderRuntime } from './CompanionHandoffReminderRuntime';
 import { CompanionSyncPanel } from './CompanionSyncPanel';
+import { useCompanionPairingApprovalPolling } from './useCompanionPairingApprovalPolling';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
@@ -55,33 +54,7 @@ export function CompanionSyncContent(props: {
 }) {
   const { workspaceSync } = props;
   const handoffReminders = useCompanionHandoffReminderRuntime();
-
-  useEffect(() => {
-    if (!workspaceSync.pendingPairRequest || workspaceSync.pairingStatus !== 'awaiting-approval') {
-      return;
-    }
-
-    const pairingEndpoint = workspaceSync.pendingPairRequest.endpointUrl;
-    const completeApprovedPairing = () => {
-      void workspaceSync.completePairing()
-        .then((pairingState) => {
-          if (pairingState?.sync_usable) {
-            return workspaceSync.pullFromDesktop(pairingEndpoint);
-          }
-          return null;
-        })
-        .catch(() => undefined);
-    };
-    completeApprovedPairing();
-    const timer = window.setInterval(completeApprovedPairing, PAIRING_APPROVAL_POLL_MS);
-
-    return () => window.clearInterval(timer);
-  }, [
-    workspaceSync.completePairing,
-    workspaceSync.pairingStatus,
-    workspaceSync.pendingPairRequest,
-    workspaceSync.pullFromDesktop
-  ]);
+  useCompanionPairingApprovalPolling(workspaceSync, PAIRING_APPROVAL_POLL_MS);
 
   return (
     <CompanionSyncPanel {...buildSyncPanelProps({
