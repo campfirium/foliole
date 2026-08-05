@@ -1,8 +1,10 @@
 /* global console, process */
 
 import path from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
 
 import { killPid, runCapture } from './windows-client-native-process.mjs';
+import { processAlive } from './windows-process-alive.mjs';
 
 function escapePowerShellSingleQuoted(value) {
   return value.replaceAll("'", "''");
@@ -88,14 +90,28 @@ async function isRepoDevShellPid(pid, repoRoot, platform = process.platform) {
   return result.code === 0 && result.stdout.split(/\s+/u).includes(String(pid));
 }
 
+async function waitForOwnedProcessesExit(pids, {
+  processIsAlive, timeoutMs, wait
+}) {
+  const deadline = Date.now() + timeoutMs;
+  while (pids.some((pid) => processIsAlive(pid))) {
+    if (Date.now() >= deadline) return false;
+    await wait(250);
+  }
+  return true;
+}
+
 export async function stopNativeClient({
   print,
   platform = process.platform,
+  processExitTimeoutMs = 10_000,
+  processIsAlive = processAlive,
   readClientState,
   readReadyState,
   removeClientState,
   repoRoot,
-  resetMarkers
+  resetMarkers,
+  wait = delay
 }) {
   const state = readClientState();
   const ready = readReadyState();
@@ -112,17 +128,23 @@ export async function stopNativeClient({
   if (await isRepoDevShellPid(state?.shellPid, repoRoot, platform)) {
     pids.add(state.shellPid);
   }
-  for (const pid of pids) {
+  const ownedPids = [...pids].filter((pid) => Number.isInteger(pid) && pid > 0);
+  for (const pid of ownedPids) {
     try {
       await killPid(pid);
     } catch (error) {
       errors.push(error instanceof Error ? error.message : String(error));
     }
   }
+  const ownedProcessesExited = await waitForOwnedProcessesExit(ownedPids, {
+    processIsAlive, timeoutMs: processExitTimeoutMs, wait
+  });
   const remainingReady = readReadyState();
   const remainingRepoPids = await listRepoElectronPids(repoRoot, platform);
-  if (remainingReady || remainingRepoPids.length > 0) {
-    const remaining = remainingRepoPids.length > 0 ? `remaining electron pids=${remainingRepoPids.join(',')}` : 'runtime still running';
+  if (!ownedProcessesExited || remainingReady || remainingRepoPids.length > 0) {
+    const remaining = !ownedProcessesExited ? 'owned process tree did not exit'
+      : remainingRepoPids.length > 0 ? `remaining electron pids=${remainingRepoPids.join(',')}`
+        : 'runtime still running';
     throw new Error(`client stop failed: ${[...errors, remaining].filter(Boolean).join('; ')}`);
   }
   await removeClientState();

@@ -152,4 +152,30 @@ describe('native Windows client stop', () => {
     expect(killPid).toHaveBeenCalledWith(555);
     expect(killPid).toHaveBeenCalledWith(666);
   });
+
+  it('waits for the owned Electron process tree to release before returning', async () => {
+    runCapture
+      .mockResolvedValueOnce({ code: 0, stdout: '333\r\n' })
+      .mockResolvedValueOnce({ code: 0, stdout: '' })
+      .mockResolvedValueOnce({ code: 0, stdout: '' });
+    const processIsAlive = vi.fn()
+      .mockReturnValueOnce(true)
+      .mockReturnValueOnce(false);
+    const wait = vi.fn(async () => undefined);
+
+    await expect(stopNativeClient({
+      print: false,
+      platform: 'win32',
+      processIsAlive,
+      readClientState: () => null,
+      readReadyState: () => null,
+      removeClientState: vi.fn(),
+      repoRoot: 'D:\\C\\foliole',
+      resetMarkers: vi.fn(),
+      wait
+    })).resolves.toBeUndefined();
+
+    expect(wait).toHaveBeenCalledWith(250);
+    expect(processIsAlive).toHaveBeenCalledWith(333);
+  });
 });
