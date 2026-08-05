@@ -14,6 +14,7 @@ import {
 import { toWindowsDevWireAction } from './windows-dev-action-contract.mjs';
 
 export const WINDOWS_DEV_SOURCE_REF = 'refs/heads/dev';
+export const WINDOWS_DEV_DEFAULT_SSH = 'zephu@192.168.0.11';
 export const WINDOWS_DEV_ACTIONS = [
   'appearance', 'build', 'capture-annotation', 'deploy', 'live', 'pair-sync-recover', 'secondary', 'verify'
 ];
@@ -42,9 +43,11 @@ function execute(command, args, options = {}) {
 export function parseWindowsDevControlArgs(argv, env = process.env) {
   const args = [...argv];
   const hostIndex = args.indexOf('--host');
-  const host = hostIndex >= 0 ? args.splice(hostIndex, 2)[1] : env.FOLIOLE_WINDOWS_DEV_SSH;
+  const host = hostIndex >= 0
+    ? args.splice(hostIndex, 2)[1]
+    : env.FOLIOLE_WINDOWS_DEV_SSH || WINDOWS_DEV_DEFAULT_SSH;
   if (!host || !/^[A-Za-z0-9._\\-]+@[A-Za-z0-9.-]+$/u.test(host)) {
-    throw new Error('--host user@host or FOLIOLE_WINDOWS_DEV_SSH is required');
+    throw new Error('Windows DEV SSH host must use user@host format');
   }
   if (args.length !== 1 || !WINDOWS_DEV_ACTIONS.includes(args[0])) {
     throw new Error(

@@ -9,7 +9,7 @@ import {
   parseWindowsDevCaptureAnnotationEvidence, parseWindowsDevControlArgs,
   parseWindowsDevFailureEvidence, parseWindowsDevLiveEvidence,
   parseWindowsDevPairSyncRecoveryEvidence, runWindowsDevControl,
-  windowsDevPushSpec, windowsDevScpSpec, windowsDevSshSpec
+  WINDOWS_DEV_DEFAULT_SSH, windowsDevPushSpec, windowsDevScpSpec, windowsDevSshSpec
 } from './windows-dev-control.mjs';
 
 const TEST_HOME = '/Users/dev';
@@ -17,25 +17,25 @@ const TEST_WINDOWS_DEV_SSH_KEY = path.join(
   TEST_HOME, '.ssh', 'agent', 'foliole-windows-android-lab'
 );
 
-it('accepts only fixed actions with an explicit LAN host', () => {
-  expect(parseWindowsDevControlArgs(['--host', 'v\\dev@192.168.0.11', 'build'], {}))
-    .toEqual({ action: 'build', host: 'v\\dev@192.168.0.11' });
-  expect(parseWindowsDevControlArgs(['--host', 'v\\dev@192.168.0.11', 'deploy'], {}))
+it('uses the fixed Windows DEV host and accepts only fixed actions', () => {
+  expect(parseWindowsDevControlArgs(['build'], {}))
+    .toEqual({ action: 'build', host: WINDOWS_DEV_DEFAULT_SSH });
+  expect(parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'deploy'], {}))
     .toMatchObject({ action: 'deploy' });
-  expect(parseWindowsDevControlArgs(['--host', 'v\\dev@192.168.0.11', 'live'], {}))
+  expect(parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'live'], {}))
     .toMatchObject({ action: 'live' });
-  expect(parseWindowsDevControlArgs(['--host', 'v\\dev@192.168.0.11', 'appearance'], {}))
+  expect(parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'appearance'], {}))
     .toMatchObject({ action: 'appearance' });
-  expect(parseWindowsDevControlArgs(['--host', 'v\\dev@192.168.0.11', 'capture-annotation'], {}))
+  expect(parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'capture-annotation'], {}))
     .toMatchObject({ action: 'capture-annotation' });
-  expect(parseWindowsDevControlArgs(['--host', 'v\\dev@192.168.0.11', 'pair-sync-recover'], {}))
+  expect(parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'pair-sync-recover'], {}))
     .toMatchObject({ action: 'pair-sync-recover' });
-  expect(parseWindowsDevControlArgs(['--host', 'v\\dev@192.168.0.11', 'secondary'], {}))
+  expect(parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'secondary'], {}))
     .toMatchObject({ action: 'secondary' });
-  expect(() => parseWindowsDevControlArgs(['--host', 'v\\dev@192.168.0.11', 'push'], {}))
+  expect(() => parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'push'], {}))
     .toThrow('only accepts appearance, build, capture-annotation, deploy, live, pair-sync-recover, secondary, or verify');
   expect(() => parseWindowsDevControlArgs([
-    '--host', 'v\\dev@192.168.0.11', 'verify', '--commit', 'a'.repeat(40)
+    '--host', WINDOWS_DEV_DEFAULT_SSH, 'verify', '--commit', 'a'.repeat(40)
   ], {})).toThrow('only accepts appearance, build, capture-annotation, deploy, live, pair-sync-recover, secondary, or verify');
 });
 
@@ -45,10 +45,10 @@ it('pushes dev and then invokes the fixed Windows action', async () => {
   const executeSsh = vi.fn(async (args) => { calls.push(['ssh', ...args]); return 'remote ok\n'; });
   const stdout = { write: vi.fn() };
   await expect(runWindowsDevControl({
-    argv: ['--host', 'v\\dev@192.168.0.11', 'verify'], env: {}, executeGit, executeSsh, stdout
+    argv: ['verify'], env: {}, executeGit, executeSsh, stdout
   })).resolves.toMatchObject({ action: 'verify', ref: 'refs/heads/dev' });
   expect(calls[0]).toEqual([
-    'git', 'push', '--porcelain', 'v\\dev@192.168.0.11:foliole-dev.git', 'dev:refs/heads/dev'
+    'git', 'push', '--porcelain', `${WINDOWS_DEV_DEFAULT_SSH}:foliole-dev.git`, 'dev:refs/heads/dev'
   ]);
   expect(calls[1][0]).toBe('ssh');
   expect(calls[1]).toContain('verify');
@@ -57,36 +57,36 @@ it('pushes dev and then invokes the fixed Windows action', async () => {
 });
 
 it('uses only the dedicated Git key and strict host checking', () => {
-  const spec = windowsDevPushSpec('v\\dev@192.168.0.11', {}, '/Users/dev');
+  const spec = windowsDevPushSpec(WINDOWS_DEV_DEFAULT_SSH, {}, '/Users/dev');
   expect(spec.env.GIT_SSH_COMMAND).toContain('foliole-windows-android-lab-git');
   expect(spec.env.GIT_SSH_COMMAND).toContain('StrictHostKeyChecking=yes');
 });
 
 it('uses only the ordinary SSH key and fixed remote action path', () => {
-  const spec = windowsDevSshSpec('v\\dev@192.168.0.11', 'deploy', {}, TEST_HOME);
+  const spec = windowsDevSshSpec(WINDOWS_DEV_DEFAULT_SSH, 'deploy', {}, TEST_HOME);
   expect(spec).toContain(TEST_WINDOWS_DEV_SSH_KEY);
   expect(spec).toContain('C:/dev/foliole-android-lab-preview/scripts/windows/windows-dev-action.ps1');
   expect(spec.at(-1)).toBe('deploy');
 });
 
 it('uses an alphabetic wire action that an old wrapper can pull before normalizing', () => {
-  const spec = windowsDevSshSpec('v\\dev@192.168.0.11', 'capture-annotation', {}, TEST_HOME);
+  const spec = windowsDevSshSpec(WINDOWS_DEV_DEFAULT_SSH, 'capture-annotation', {}, TEST_HOME);
   expect(spec.at(-1)).toBe('captureannotation');
   expect(spec.at(-1)).toMatch(/^[a-z]+$/u);
   expect(spec).not.toContain('capture-annotation');
 });
 
 it('uses an alphabetic wire action for pair sync recovery', () => {
-  const spec = windowsDevSshSpec('v\\dev@192.168.0.11', 'pair-sync-recover', {}, TEST_HOME);
+  const spec = windowsDevSshSpec(WINDOWS_DEV_DEFAULT_SSH, 'pair-sync-recover', {}, TEST_HOME);
   expect(spec.at(-1)).toBe('pairsyncrecover');
   expect(spec.at(-1)).toMatch(/^[a-z]+$/u);
 });
 
 it('copies only fixed live evidence with the ordinary SSH identity', () => {
   const remotePath = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/dev-1/a5-live.png';
-  const spec = windowsDevScpSpec('v\\dev@192.168.0.11', remotePath, '/repo/a5.png', {}, TEST_HOME);
+  const spec = windowsDevScpSpec(WINDOWS_DEV_DEFAULT_SSH, remotePath, '/repo/a5.png', {}, TEST_HOME);
   expect(spec).toContain(TEST_WINDOWS_DEV_SSH_KEY);
-  expect(spec.at(-2)).toBe(`v\\dev@192.168.0.11:${remotePath}`);
+  expect(spec.at(-2)).toBe(`${WINDOWS_DEV_DEFAULT_SSH}:${remotePath}`);
   expect(spec.at(-1)).toBe('/repo/a5.png');
   expect(parseWindowsDevLiveEvidence(
     `[windows-dev-action] live identity=dev-1 screenshot=${remotePath}\n`
@@ -124,7 +124,7 @@ it('copies live screenshot evidence after the fixed foreground action', async ()
   const remotePath = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/dev-2/a5-live.png';
   const executeScp = vi.fn(async (args) => { fs.writeFileSync(args.at(-1), 'png'); return ''; });
   const result = await runWindowsDevControl({
-    argv: ['--host', 'v\\dev@192.168.0.11', 'live'], env: {}, executeGit: vi.fn(async () => ''),
+    argv: ['live'], env: {}, executeGit: vi.fn(async () => ''),
     executeScp, executeSsh: vi.fn(async () =>
       `[windows-dev-action] live identity=dev-2 screenshot=${remotePath}\n`),
     repoRoot, stdout: { write: vi.fn() }
@@ -139,7 +139,7 @@ it('copies the complete fixed capture annotation evidence set after remote clean
   const remoteRoot = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/run-2';
   const executeScp = vi.fn(async (args) => { fs.writeFileSync(args.at(-1), '{}'); return ''; });
   const result = await runWindowsDevControl({
-    argv: ['--host', 'v\\dev@192.168.0.11', 'capture-annotation'], env: {},
+    argv: ['capture-annotation'], env: {},
     executeGit: vi.fn(async () => ''), executeScp,
     executeSsh: vi.fn(async () =>
       `[windows-dev-action] capture-annotation identity=run-2 manifest=${remoteRoot}/capture-annotation-manifest.json\n`),
@@ -151,7 +151,7 @@ it('copies the complete fixed capture annotation evidence set after remote clean
   });
   expect(executeScp).toHaveBeenCalledTimes(6);
   expect(executeScp.mock.calls.map(([args]) => args.at(-2))).toContain(
-    `v\\dev@192.168.0.11:${remoteRoot}/summary.json`
+    `${WINDOWS_DEV_DEFAULT_SSH}:${remoteRoot}/summary.json`
   );
   fs.rmSync(repoRoot, { force: true, recursive: true });
 });
@@ -163,7 +163,7 @@ it('copies only fixed capture failure diagnostics before preserving the remote e
   const remoteError = Object.assign(new Error('remote failed'), { output });
   const executeScp = vi.fn(async (args) => { fs.writeFileSync(args.at(-1), '{}'); return ''; });
   await expect(runWindowsDevControl({
-    argv: ['--host', 'v\\dev@192.168.0.11', 'capture-annotation'], env: {},
+    argv: ['capture-annotation'], env: {},
     executeGit: vi.fn(async () => ''), executeScp,
     executeSsh: vi.fn(async () => { throw remoteError; }), repoRoot, stdout: { write: vi.fn() }
   })).rejects.toBe(remoteError);
@@ -176,7 +176,7 @@ it('copies only fixed capture failure diagnostics before preserving the remote e
 it('surfaces remote output before rejecting missing live evidence', async () => {
   const stdout = { write: vi.fn() };
   await expect(runWindowsDevControl({
-    argv: ['--host', 'v\\dev@192.168.0.11', 'live'], env: {}, executeGit: vi.fn(async () => ''),
+    argv: ['live'], env: {}, executeGit: vi.fn(async () => ''),
     executeSsh: vi.fn(async () => '[windows-dev-action] status: OK\n'), stdout
   })).rejects.toThrow('did not report screenshot evidence');
   expect(stdout.write).toHaveBeenCalledWith('[windows-dev-action] status: OK\n');
@@ -189,7 +189,7 @@ it('copies fixed screenshot evidence from a failed live lifecycle before rejecti
   const executeScp = vi.fn(async (args) => { fs.writeFileSync(args.at(-1), 'png'); return ''; });
   const remoteError = Object.assign(new Error('remote failed'), { output });
   await expect(runWindowsDevControl({
-    argv: ['--host', 'v\\dev@192.168.0.11', 'live'], env: {}, executeGit: vi.fn(async () => ''),
+    argv: ['live'], env: {}, executeGit: vi.fn(async () => ''),
     executeScp, executeSsh: vi.fn(async () => { throw remoteError; }),
     repoRoot, stdout: { write: vi.fn() }
   })).rejects.toThrow('remote failed');
@@ -203,7 +203,7 @@ it('preserves a remote failure when it exits before screenshot evidence', async 
   const output = '[windows-dev-action] failure stage=request message=Unknown Windows DEV action\n';
   const remoteError = Object.assign(new Error('remote failed'), { output });
   await expect(runWindowsDevControl({
-    argv: ['--host', 'v\\dev@192.168.0.11', 'secondary'], env: {},
+    argv: ['secondary'], env: {},
     executeGit: vi.fn(async () => ''), executeSsh: vi.fn(async () => { throw remoteError; }), stdout
   })).rejects.toBe(remoteError);
   expect(stdout.write).toHaveBeenCalledWith(output);
@@ -217,7 +217,7 @@ it('does not resolve or compare commit identifiers', () => {
 it('does not enter SSH when the ordinary dev push fails', async () => {
   const executeSsh = vi.fn();
   await expect(runWindowsDevControl({
-    argv: ['--host', 'v\\dev@192.168.0.11', 'build'], env: {},
+    argv: ['build'], env: {},
     executeGit: vi.fn(async () => { throw new Error('push failed'); }), executeSsh
   })).rejects.toThrow('push failed');
   expect(executeSsh).not.toHaveBeenCalled();

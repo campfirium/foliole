@@ -24,7 +24,7 @@ it('copies the fixed minimal pair recovery receipt set', async () => {
   const { executeScp, repoRoot } = fixture('pair-control-');
   const remoteRoot = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/pair-1';
   const result = await runWindowsDevControl({
-    argv: ['--host', 'v\\dev@192.168.0.11', 'pair-sync-recover'], env: {},
+    argv: ['pair-sync-recover'], env: {},
     executeGit: vi.fn(async () => ''), executeScp,
     executeSsh: vi.fn(async () =>
       `[windows-dev-action] pair-sync-recover identity=pair-1 manifest=${remoteRoot}/pair-sync-recovery-manifest.json\n`),
@@ -41,7 +41,7 @@ it('copies only a scrubbed summary when pair recovery stops', async () => {
   const output = `[windows-dev-action] status: FAILED exit=77 evidence=${remoteRoot}/summary.json\n`;
   const remoteError = Object.assign(new Error('remote failed'), { output });
   await expect(runWindowsDevControl({
-    argv: ['--host', 'v\\dev@192.168.0.11', 'pair-sync-recover'], env: {},
+    argv: ['pair-sync-recover'], env: {},
     executeGit: vi.fn(async () => ''), executeScp,
     executeSsh: vi.fn(async () => { throw remoteError; }), repoRoot, stdout: { write: vi.fn() }
   })).rejects.toBe(remoteError);
@@ -65,7 +65,7 @@ it('copies the A5 screenshot and Windows request state reported by a failed reco
     return '';
   });
   await expect(runWindowsDevControl({
-    argv: ['--host', 'v\\dev@192.168.0.11', 'pair-sync-recover'], env: {},
+    argv: ['pair-sync-recover'], env: {},
     executeGit: vi.fn(async () => ''), executeScp,
     executeSsh: vi.fn(async () => { throw remoteError; }), repoRoot, stdout: { write: vi.fn() }
   })).rejects.toBe(remoteError);
