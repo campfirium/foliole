@@ -143,6 +143,10 @@ it('surfaces instrumentation failure instead of masking it with desktop request 
     new Promise(() => undefined), Promise.reject(instrumentationError)
   )).rejects.toBe(instrumentationError);
   await expect(waitForPairRequestWhileInstrumentationRuns(
-    new Promise(() => undefined), Promise.resolve({ output: 'completed' })
-  )).rejects.toMatchObject({ exitCode: 74, stage: 'pair-sync-instrumentation' });
+    new Promise(() => undefined), Promise.resolve({
+      output: 'Timed out waiting for pairing or sync entry.'
+    })
+  )).rejects.toMatchObject({
+    exitCode: 74, failureReason: 'pairing_entry_timeout', stage: 'pair-sync-instrumentation'
+  });
 });

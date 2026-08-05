@@ -81,9 +81,11 @@ export function waitForPairRequestWhileInstrumentationRuns(
   pairRequestPromise, instrumentationPromise
 ) {
   const earlyInstrumentation = instrumentationPromise.then((result) => {
-    throw pairSyncRecoveryFailure(
-      'Pairing instrumentation completed before the desktop request',
-      'pair-sync-instrumentation', result
+    throw classifyPairSyncRecoveryActionFailure(
+      pairSyncRecoveryFailure(
+        'Pairing instrumentation completed before the desktop request',
+        'pair-sync-instrumentation', result
+      ), 'pair-sync-instrumentation', result.output
     );
   });
   return Promise.race([pairRequestPromise, earlyInstrumentation]);
