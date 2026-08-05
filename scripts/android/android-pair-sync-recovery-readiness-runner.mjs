@@ -41,9 +41,9 @@ export async function inspectPairingPreferences(options, run = execFileAsync) {
   }
   const requiredKeys = await Promise.all(PAIRING_REQUIRED_KEYS.map(async (key) => {
     try {
+      const script = `grep -q 'name="${key}"' ${PAIRING_PREFS}`;
       await run(options.adb, [
-        '-s', options.serial, 'shell', 'run-as', options.appId, 'grep', '-q',
-        `name="${key}"`, PAIRING_PREFS
+        '-s', options.serial, 'shell', 'run-as', options.appId, 'sh', '-c', script
       ], { encoding: 'utf8', timeout: 30_000 });
       return true;
     } catch (error) {
