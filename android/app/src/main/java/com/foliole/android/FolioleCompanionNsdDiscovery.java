@@ -35,6 +35,19 @@ public final class FolioleCompanionNsdDiscovery {
         return collector.candidates();
     }
 
+    static boolean sameServiceType(String requested, String discovered) {
+        return normalizeServiceType(requested).equalsIgnoreCase(normalizeServiceType(discovered));
+    }
+
+    private static String normalizeServiceType(String serviceType) {
+        if (serviceType == null || serviceType.isEmpty()) {
+            return "";
+        }
+        return serviceType.endsWith(".")
+            ? serviceType.substring(0, serviceType.length() - 1)
+            : serviceType;
+    }
+
     private static final class NsdCollector {
         private final Context context;
         private final NsdManager nsdManager;
@@ -53,7 +66,7 @@ public final class FolioleCompanionNsdDiscovery {
 
             @Override
             public void onServiceFound(NsdServiceInfo serviceInfo) {
-                if (serviceType.equals(serviceInfo.getServiceType())) {
+                if (sameServiceType(serviceType, serviceInfo.getServiceType())) {
                     resolve(serviceInfo);
                 }
             }
