@@ -18,18 +18,19 @@ final class FolioleCompanionPairSyncRecoveryScenario {
         WebView webView,
         long timeoutMs
     ) throws Exception {
-        clickVisible(instrumentation, webView, "companion-tab-settings", timeoutMs);
-        clickVisible(instrumentation, webView, "companion-settings-sync", timeoutMs);
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
+        clickVisible(instrumentation, webView, "companion-tab-settings", deadline);
+        clickVisible(instrumentation, webView, "companion-settings-sync", deadline);
         String entry = waitForEitherVisible(
-            instrumentation, webView, "companion-sync-now", "companion-sync-discover", timeoutMs
+            instrumentation, webView, "companion-sync-now", "companion-sync-discover", deadline
         );
         boolean reusedPairing = CONNECTED_TARGET.equals(entry);
         if (!reusedPairing) {
-            clickVisible(instrumentation, webView, "companion-sync-discover", timeoutMs);
-            waitForUniqueVisible(instrumentation, webView, "companion-sync-pair", timeoutMs);
-            clickVisible(instrumentation, webView, "companion-sync-pair", timeoutMs);
+            clickVisible(instrumentation, webView, "companion-sync-discover", deadline);
+            waitForUniqueVisible(instrumentation, webView, "companion-sync-pair", deadline);
+            clickVisible(instrumentation, webView, "companion-sync-pair", deadline);
         }
-        waitForCompletedSync(instrumentation, webView, timeoutMs);
+        waitForCompletedSync(instrumentation, webView, deadline);
         JSONObject receipt = new JSONObject();
         receipt.put("ok", true);
         receipt.put("targetTestId", "companion-pair-sync-recovery");
@@ -43,9 +44,9 @@ final class FolioleCompanionPairSyncRecoveryScenario {
         Instrumentation instrumentation,
         WebView webView,
         String testId,
-        long timeoutMs
+        long deadline
     ) throws Exception {
-        waitForUniqueVisible(instrumentation, webView, testId, timeoutMs);
+        waitForUniqueVisible(instrumentation, webView, testId, deadline);
         JSONObject receipt = FolioleCompanionWebViewSemanticAdapter.perform(
             instrumentation, webView, testId, "click", ""
         );
@@ -58,9 +59,8 @@ final class FolioleCompanionPairSyncRecoveryScenario {
         Instrumentation instrumentation,
         WebView webView,
         String testId,
-        long timeoutMs
+        long deadline
     ) throws Exception {
-        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
         while (System.nanoTime() < deadline) {
             JSONArray elements = FolioleCompanionWebViewSemanticAdapter
                 .snapshot(instrumentation, webView).getJSONArray("elements");
@@ -83,9 +83,8 @@ final class FolioleCompanionPairSyncRecoveryScenario {
         WebView webView,
         String first,
         String second,
-        long timeoutMs
+        long deadline
     ) throws Exception {
-        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
         while (System.nanoTime() < deadline) {
             JSONArray elements = FolioleCompanionWebViewSemanticAdapter
                 .snapshot(instrumentation, webView).getJSONArray("elements");
@@ -104,14 +103,13 @@ final class FolioleCompanionPairSyncRecoveryScenario {
     private static void waitForCompletedSync(
         Instrumentation instrumentation,
         WebView webView,
-        long timeoutMs
+        long deadline
     ) throws Exception {
-        waitForUniqueVisible(instrumentation, webView, CONNECTED_TARGET, timeoutMs);
+        waitForUniqueVisible(instrumentation, webView, CONNECTED_TARGET, deadline);
         JSONObject target = uniqueVisibleTarget(instrumentation, webView, CONNECTED_TARGET);
         if (!target.optBoolean("disabled")) {
-            clickVisible(instrumentation, webView, CONNECTED_TARGET, timeoutMs);
+            clickVisible(instrumentation, webView, CONNECTED_TARGET, deadline);
         }
-        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
         boolean observedSyncing = false;
         while (System.nanoTime() < deadline) {
             target = uniqueVisibleTarget(instrumentation, webView, CONNECTED_TARGET);

@@ -146,6 +146,12 @@ it('preserves the product sync enable failure stage after APK preparation', asyn
   });
   expect(session.close).toHaveBeenCalledOnce();
   expect(executeAction.mock.calls.some(([, args]) => args.includes('screencap'))).toBe(true);
+  expect(executeAction.mock.calls.some(([, args]) => (
+    args.includes('reverse') && args.includes('tcp:38641') && !args.includes('--remove')
+  ))).toBe(true);
+  expect(executeAction.mock.calls.some(([, args]) => (
+    args.includes('reverse') && args.includes('--remove') && args.includes('tcp:38641')
+  ))).toBe(true);
 });
 
 it('surfaces instrumentation failure instead of masking it with desktop request waiting', async () => {

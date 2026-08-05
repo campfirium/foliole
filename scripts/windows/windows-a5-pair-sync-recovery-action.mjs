@@ -23,6 +23,7 @@ import {
 import {
   reconcileAuthorizedStalePairing, validateDesktopPreflight
 } from './windows-pair-sync-desktop-readiness.mjs';
+import { cleanupPairSyncRecoveryTestPackage, closePairSyncRecoveryTransport, openPairSyncRecoveryTransport } from './windows-a5-pair-sync-recovery-transport.mjs';
 
 const MAIN_APK = 'android/app/build/outputs/apk/debug/app-debug.apk';
 const TEST_APK = 'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk';
@@ -121,14 +122,9 @@ async function postRecoveryReadiness(execute, paths, env, serial) {
   return { output: result.output, readiness };
 }
 
-async function cleanupTestPackage(execute, paths, env, adbPort, serial) {
-  const result = await checked(execute, paths.adbPath,
-    ['-P', adbPort, '-s', serial, 'uninstall', PAIR_SYNC_RECOVERY_TEST_APP_ID],
-    options(env, 'pair_sync_cleanup_timeout', 60_000), 'pair-sync-cleanup');
-  if (!/^Success\s*$/mu.test(result.stdout)) {
-    throw pairSyncRecoveryFailure('Test APK cleanup did not report Success', 'pair-sync-cleanup', result);
-  }
-  return result.output;
+function pairSyncAdbRunner(execute, paths, env, adbPort, serial) {
+  return (args, stage) => checked(execute, paths.adbPath,
+    ['-P', adbPort, '-s', serial, ...args], options(env, 'pair_sync_transport_timeout', 30_000), stage);
 }
 
 export async function runWindowsA5PairSyncRecovery({
@@ -141,6 +137,7 @@ export async function runWindowsA5PairSyncRecovery({
   const builtApks = { main: apk(fsApi, paths.repoRoot, MAIN_APK), test: apk(fsApi, paths.repoRoot, TEST_APK) };
   const output = [];
   let session;
+  let transportOpen = false;
   let testInstalled = false;
   let primaryError = null;
   let instrumentationPromise = null;
@@ -154,6 +151,8 @@ export async function runWindowsA5PairSyncRecovery({
     testInstalled = true;
     output.push((await protectData('check', dataManifest)).output);
     scrubPairSyncDataProtection(fsApi, dataManifest);
+    await openPairSyncRecoveryTransport(pairSyncAdbRunner(execute, paths, env, adbPort, serial));
+    transportOpen = true;
     session = await desktopStep('desktop-session-open', () => openDesktopSession({
       env, repoRoot: paths.repoRoot
     }));
@@ -196,7 +195,14 @@ export async function runWindowsA5PairSyncRecovery({
   }
   scrubPairSyncDataProtection(fsApi, dataManifest);
   try {
-    if (testInstalled) output.push(await cleanupTestPackage(execute, paths, env, adbPort, serial));
+    if (transportOpen) {
+      await closePairSyncRecoveryTransport(pairSyncAdbRunner(execute, paths, env, adbPort, serial));
+    }
+  } catch (error) { primaryError ??= error; }
+  try {
+    if (testInstalled) output.push(await cleanupPairSyncRecoveryTestPackage(
+      pairSyncAdbRunner(execute, paths, env, adbPort, serial), PAIR_SYNC_RECOVERY_TEST_APP_ID
+    ));
   } catch (error) {
     primaryError ??= error;
   }
