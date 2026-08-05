@@ -127,10 +127,13 @@ public class FolioleCompanionWebViewAutomationTest {
     public void recoversPairingAndInitialSync() throws Exception {
         Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
         Activity activity = startMainActivity(instrumentation);
+        FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "activity-started");
         try {
             waitForWindowFocus(activity, 30_000);
+            FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "window-focused");
             WebView webView = activity.findViewById(R.id.webview);
             assertNotNull(webView);
+            FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "webview-ready");
             JSONObject before = FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView);
             JSONObject receipt = FolioleCompanionPairSyncRecoveryScenario.run(
                 instrumentation, webView, 90_000

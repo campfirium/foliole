@@ -88,7 +88,23 @@ export function classifyPairSyncRecoveryInstrumentationFailure(output) {
     ['instrumentation_process_crash', /(?:Process crashed|INSTRUMENTATION_FAILED)/u],
     ['instrumentation_assertion_failure', /AssertionError/u]
   ];
-  return reasons.find(([, pattern]) => pattern.test(value))?.[0] ?? 'unknown_instrumentation_failure';
+  const knownReason = reasons.find(([, pattern]) => pattern.test(value))?.[0];
+  if (knownReason) return knownReason;
+  const stages = [...value.matchAll(/^INSTRUMENTATION_STATUS: foliolePairSyncStage=([a-z-]+)$/gmu)];
+  const stage = stages.at(-1)?.[1];
+  const interruptedStages = {
+    'activity-started': 'activity_start_interrupted',
+    'window-focused': 'webview_lookup_interrupted',
+    'webview-ready': 'webview_snapshot_interrupted',
+    'settings-tab': 'settings_navigation_interrupted',
+    'sync-settings': 'sync_settings_navigation_interrupted',
+    'sync-entry': 'sync_entry_interrupted',
+    'discovery-request': 'discovery_request_interrupted',
+    'pair-target': 'pair_target_interrupted',
+    'pair-request': 'pair_request_interrupted',
+    'initial-sync': 'initial_sync_interrupted'
+  };
+  return interruptedStages[stage] ?? 'unknown_instrumentation_failure';
 }
 
 export function classifyPairSyncRecoveryActionFailure(failure, stage, output) {

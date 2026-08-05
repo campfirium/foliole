@@ -55,6 +55,14 @@ it('reduces instrumentation output to a fixed non-sensitive failure reason', () 
   expect(classifyPairSyncRecoveryInstrumentationFailure(
     'INSTRUMENTATION_RESULT: shortMsg=Process crashed.'
   )).toBe('instrumentation_process_crash');
+  expect(classifyPairSyncRecoveryInstrumentationFailure([
+    'INSTRUMENTATION_STATUS: foliolePairSyncStage=webview-ready',
+    'INSTRUMENTATION_STATUS: foliolePairSyncStage=discovery-request',
+    'INSTRUMENTATION_STATUS: foliolePairSyncStage=pair-target'
+  ].join('\n'))).toBe('pair_target_interrupted');
+  expect(classifyPairSyncRecoveryInstrumentationFailure(
+    'INSTRUMENTATION_STATUS: foliolePairSyncStage=forged-stage'
+  )).toBe('unknown_instrumentation_failure');
   expect(classifyPairSyncRecoveryActionFailure(
     new Error('masked'), 'pair-sync-instrumentation', 'Timed out waiting for pairing or sync entry.'
   )).toMatchObject({ failureReason: 'pairing_entry_timeout' });

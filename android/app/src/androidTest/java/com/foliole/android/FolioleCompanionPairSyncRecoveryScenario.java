@@ -19,17 +19,24 @@ final class FolioleCompanionPairSyncRecoveryScenario {
         long timeoutMs
     ) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
+        FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "settings-tab");
         clickVisible(instrumentation, webView, "companion-tab-settings", deadline);
+        FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "sync-settings");
         clickVisible(instrumentation, webView, "companion-settings-sync", deadline);
+        FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "sync-entry");
         String entry = waitForEitherVisible(
             instrumentation, webView, "companion-sync-now", "companion-sync-discover", deadline
         );
         boolean reusedPairing = CONNECTED_TARGET.equals(entry);
         if (!reusedPairing) {
+            FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "discovery-request");
             clickVisible(instrumentation, webView, "companion-sync-discover", deadline);
+            FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "pair-target");
             waitForUniqueVisible(instrumentation, webView, "companion-sync-pair", deadline);
+            FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "pair-request");
             clickVisible(instrumentation, webView, "companion-sync-pair", deadline);
         }
+        FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "initial-sync");
         waitForCompletedSync(instrumentation, webView, deadline);
         JSONObject receipt = new JSONObject();
         receipt.put("ok", true);
