@@ -1,8 +1,12 @@
 // @vitest-environment node
 
+import { Buffer } from 'node:buffer';
+
 import { expect, it, vi } from 'vitest';
 
-import { inspectWindowsPairSyncRecoveryDesktop } from './windows-a5-pair-sync-recovery-action.mjs';
+import {
+  inspectWindowsPairSyncRecoveryDesktop, runWindowsA5PairSyncRecovery
+} from './windows-a5-pair-sync-recovery-action.mjs';
 import { pairSyncIdentityFingerprint } from './windows-pair-sync-desktop-session.mjs';
 
 const paths = { repoRoot: 'C:\\repo', systemNode: 'C:\\Program Files\\nodejs\\node.exe' };
@@ -103,4 +107,29 @@ it('keeps ambiguous pairing sets unchanged', async () => {
     openDesktopSession: vi.fn(async () => fixture.session), paths
   })).rejects.toMatchObject({ exitCode: 77, stage: 'desktop-pairing-readiness' });
   expect(fixture.session.remove).not.toHaveBeenCalled();
+});
+
+it('preserves the product sync enable failure stage after APK preparation', async () => {
+  const fsApi = {
+    existsSync: vi.fn(() => true),
+    readFileSync: vi.fn((_filePath, encoding) => encoding === 'utf8'
+      ? JSON.stringify({ backupCreated: true, databasePreserved: true, schemaVersion: 1 })
+      : Buffer.from('apk')),
+    statSync: vi.fn(() => ({ size: 3 })), unlinkSync: vi.fn(), writeFileSync: vi.fn()
+  };
+  const executeAction = vi.fn(async () => ({
+    code: 0, lines: [], output: '', stdout: 'Success\n'
+  }));
+  const session = {
+    close: vi.fn(async () => undefined),
+    enable: vi.fn(async () => { throw new Error('enable failed'); })
+  };
+  await expect(runWindowsA5PairSyncRecovery({
+    adbPort: '5037', buildIdentity: 'pair-1', deviceFingerprint: '0123456789abcdef',
+    env: {}, evidenceRoot: 'C:\\evidence', execute: executeAction, fsApi,
+    openDesktopSession: vi.fn(async () => session),
+    paths: { adbPath: 'adb.exe', repoRoot: 'C:\\repo', systemNode: 'node.exe' },
+    protectData: vi.fn(async () => ({ output: '' })), serial: '87a33a4b'
+  })).rejects.toMatchObject({ exitCode: 74, stage: 'desktop-sync-enable' });
+  expect(session.close).toHaveBeenCalledOnce();
 });

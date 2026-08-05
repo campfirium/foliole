@@ -142,8 +142,10 @@ export async function runWindowsA5PairSyncRecovery({
     testInstalled = true;
     output.push((await protectData('check', dataManifest)).output);
     scrubPairSyncDataProtection(fsApi, dataManifest);
-    session = await openDesktopSession({ env, repoRoot: paths.repoRoot });
-    const enabled = await session.enable();
+    session = await desktopStep('desktop-session-open', () => openDesktopSession({
+      env, repoRoot: paths.repoRoot
+    }));
+    const enabled = await desktopStep('desktop-sync-enable', () => session.enable());
     validateDesktopPreflight(
       enabled, session, deviceFingerprint, remotePeerFingerprint, existingPairing
     );
@@ -152,8 +154,9 @@ export async function runWindowsA5PairSyncRecovery({
       '-e', 'class', PAIR_SYNC_RECOVERY_TEST_CLASS, PAIR_SYNC_RECOVERY_TEST_RUNNER
     ], options(env, 'pair_sync_instrumentation_timeout', 3 * 60_000), 'pair-sync-instrumentation');
     if (!existingPairing) {
-      const pending = await waitForUniquePairRequest(session, deviceFingerprint);
-      await session.approve(pending.pair_request_id);
+      const pending = await desktopStep('desktop-pair-request', () =>
+        waitForUniquePairRequest(session, deviceFingerprint));
+      await desktopStep('desktop-pair-approval', () => session.approve(pending.pair_request_id));
     }
     const instrumentation = await instrumentationPromise;
     output.push(instrumentation.output);
@@ -166,7 +169,7 @@ export async function runWindowsA5PairSyncRecovery({
       options(env, 'pair_sync_restart_timeout', 60_000), 'pair-sync-restart');
     const android = await postRecoveryReadiness(execute, paths, env, serial);
     output.push(android.output);
-    const desktop = session.sanitize(await session.load());
+    const desktop = session.sanitize(await desktopStep('desktop-pairing-result', () => session.load()));
     if (!desktop.pairedDeviceFingerprints.includes(deviceFingerprint)) {
       throw pairSyncRecoveryFailure('Windows pairing overview does not contain the fixed A5', 'desktop-pairing-result');
     }
@@ -182,7 +185,7 @@ export async function runWindowsA5PairSyncRecovery({
     primaryError ??= error;
   }
   try { await session?.close(); }
-  catch (error) { primaryError ??= error; }
+  catch (error) { primaryError ??= pairSyncRecoveryFailure(error.message, 'desktop-session-close', error); }
   try { output.push((await clientControl(execute, paths, env, 'start')).output); }
   catch (error) { primaryError ??= error; }
   if (primaryError) {
