@@ -122,13 +122,8 @@ function getDiscoveryKey(result: CompanionDiscoveryResult) {
 
 function appendUniqueDiscovery(results: CompanionDiscoveryResult[], result: CompanionDiscoveryResult) {
   const key = getDiscoveryKey(result);
-  const existingIndex = results.findIndex((current) => getDiscoveryKey(current) === key);
-  if (existingIndex < 0) {
+  if (!results.some((current) => getDiscoveryKey(current) === key)) {
     results.push(result);
-    return;
-  }
-  if (result.endpointUrl === DEV_REVERSE_ENDPOINT) {
-    results[existingIndex] = result;
   }
 }
 
