@@ -48,7 +48,7 @@ describe('Android host bridge contract metadata', () => {
       hostToken: '{host}',
       port: 38641,
       portToken: '{port}',
-      serviceType: '_foliole-sync._tcp.',
+      serviceType: '_foliole-sync._tcp',
       timeoutMs: 1500
     });
     expect(definitions.hostApi.bootstrap.deviceNameDefaults).toEqual({
