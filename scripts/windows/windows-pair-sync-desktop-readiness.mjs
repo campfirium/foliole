@@ -41,8 +41,12 @@ export async function reconcileAuthorizedStalePairing(
   const trustedBase = safe.desktopPeerFingerprint
     && safe.pendingDeviceFingerprints.length === 0
     && (!remotePeerFingerprint || safe.desktopPeerFingerprint === remotePeerFingerprint);
-  if (trustedBase && overview.paired_devices.length === 2 && matches.length === 1 && stale.length === 1) {
-    const reconciled = await session.remove(stale[0].device_id);
+  const authorizedShape = overview.paired_devices.length === 2
+    && ((matches.length === 1 && stale.length === 1)
+      || (!existingPairing && matches.length === 0 && stale.length === 2));
+  if (trustedBase && authorizedShape) {
+    let reconciled = overview;
+    for (const device of stale) reconciled = await session.remove(device.device_id);
     return validateDesktopPreflight(
       reconciled, session, deviceFingerprint, remotePeerFingerprint, existingPairing
     );

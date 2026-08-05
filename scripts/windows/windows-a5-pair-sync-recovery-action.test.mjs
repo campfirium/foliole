@@ -21,15 +21,14 @@ function unsafeSession(close = vi.fn(async () => undefined)) {
 function duplicateSession() {
   const current = 'current-a5';
   const stale = 'stale-a5';
-  const overview = {
-    paired_devices: [{ device_id: current }, { device_id: stale }], pending_requests: []
-  };
+  let pairedDevices = [{ device_id: current }, { device_id: stale }];
   const session = {
-    close: vi.fn(async () => undefined), load: vi.fn(async () => overview),
-    remove: vi.fn(async (deviceId) => ({
-      paired_devices: overview.paired_devices.filter((device) => device.device_id !== deviceId),
-      pending_requests: []
-    })),
+    close: vi.fn(async () => undefined),
+    load: vi.fn(async () => ({ paired_devices: pairedDevices, pending_requests: [] })),
+    remove: vi.fn(async (deviceId) => {
+      pairedDevices = pairedDevices.filter((device) => device.device_id !== deviceId);
+      return { paired_devices: pairedDevices, pending_requests: [] };
+    }),
     sanitize: vi.fn((value) => ({
       desktopPeerFingerprint: 'desktop-peer',
       pairedDeviceFingerprints: value.paired_devices.map((device) =>
@@ -78,6 +77,17 @@ it('removes only one authorized stale identity while preserving the fixed A5 pai
   });
   expect(fixture.session.remove).toHaveBeenCalledOnce();
   expect(fixture.session.remove).toHaveBeenCalledWith(fixture.stale);
+});
+
+it('removes both authorized stale identities when the fixed A5 has no pairing', async () => {
+  const fixture = duplicateSession();
+  await expect(inspectWindowsPairSyncRecoveryDesktop({
+    deviceFingerprint: pairSyncIdentityFingerprint('fresh-a5'), env: {}, execute,
+    existingPairing: false, openDesktopSession: vi.fn(async () => fixture.session), paths
+  })).resolves.toMatchObject({ overview: { pairedDeviceFingerprints: [] } });
+  expect(fixture.session.remove).toHaveBeenCalledTimes(2);
+  expect(fixture.session.remove).toHaveBeenNthCalledWith(1, fixture.current);
+  expect(fixture.session.remove).toHaveBeenNthCalledWith(2, fixture.stale);
 });
 
 it('keeps ambiguous pairing sets unchanged', async () => {
