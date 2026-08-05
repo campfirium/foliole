@@ -73,12 +73,20 @@ export function parsePairSyncRecoveryInstrumentation(output) {
 export function classifyPairSyncRecoveryInstrumentationFailure(output) {
   const value = String(output);
   const reasons = [
+    ['settings_tab_timeout', /Timed out waiting for semantic target: companion-tab-settings/u],
+    ['sync_settings_timeout', /Timed out waiting for semantic target: companion-settings-sync/u],
+    ['discovery_button_timeout', /Timed out waiting for semantic target: companion-sync-discover/u],
+    ['sync_action_timeout', /Timed out waiting for semantic target: companion-sync-now/u],
     ['pairing_entry_timeout', /Timed out waiting for pairing or sync entry/u],
     ['pair_target_timeout', /Timed out waiting for semantic target: companion-sync-pair/u],
     ['initial_sync_timeout', /Timed out waiting for initial workspace sync completion/u],
     ['pair_target_ambiguous', /Pairing target is not unique/u],
     ['pair_target_disappeared', /Pairing target disappeared/u],
-    ['semantic_action_failed', /Semantic action failed/u]
+    ['semantic_action_failed', /Semantic action failed/u],
+    ['window_focus_blocked', /Foliole did not receive window focus/u],
+    ['main_launch_missing', /Main launch intent is missing/u],
+    ['instrumentation_process_crash', /(?:Process crashed|INSTRUMENTATION_FAILED)/u],
+    ['instrumentation_assertion_failure', /AssertionError/u]
   ];
   return reasons.find(([, pattern]) => pattern.test(value))?.[0] ?? 'unknown_instrumentation_failure';
 }

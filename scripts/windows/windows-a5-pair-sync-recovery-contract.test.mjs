@@ -49,6 +49,12 @@ it('reduces instrumentation output to a fixed non-sensitive failure reason', () 
   )).toBe('pairing_entry_timeout');
   expect(classifyPairSyncRecoveryInstrumentationFailure('unexpected endpoint=secret'))
     .toBe('unknown_instrumentation_failure');
+  expect(classifyPairSyncRecoveryInstrumentationFailure(
+    'IllegalStateException: Timed out waiting for semantic target: companion-sync-discover'
+  )).toBe('discovery_button_timeout');
+  expect(classifyPairSyncRecoveryInstrumentationFailure(
+    'INSTRUMENTATION_RESULT: shortMsg=Process crashed.'
+  )).toBe('instrumentation_process_crash');
   expect(classifyPairSyncRecoveryActionFailure(
     new Error('masked'), 'pair-sync-instrumentation', 'Timed out waiting for pairing or sync entry.'
   )).toMatchObject({ failureReason: 'pairing_entry_timeout' });
