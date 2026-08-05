@@ -8,7 +8,9 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { CAPTURE_ANNOTATION_EVIDENCE_FILES } from './windows-a5-capture-annotation-contract.mjs';
-import { PAIR_SYNC_RECOVERY_EVIDENCE_FILES } from './windows-a5-pair-sync-recovery-contract.mjs';
+import {
+  copyWindowsDevPairSyncRecoveryEvidence, WINDOWS_DEV_PAIR_SYNC_RECOVERY_FILES
+} from './windows-dev-pair-sync-evidence.mjs';
 import { toWindowsDevWireAction } from './windows-dev-action-contract.mjs';
 
 export const WINDOWS_DEV_SOURCE_REF = 'refs/heads/dev';
@@ -19,8 +21,6 @@ const WINDOWS_DEV_REMOTE_ACTION = 'C:/dev/foliole-android-lab-preview/scripts/wi
 const WINDOWS_DEV_EVIDENCE_PREFIX = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/';
 const CAPTURE_ANNOTATION_FILES = [...CAPTURE_ANNOTATION_EVIDENCE_FILES, 'summary.json'];
 const CAPTURE_ANNOTATION_FAILURE_FILES = ['action.log', 'summary.json'];
-const PAIR_SYNC_RECOVERY_FILES = [...PAIR_SYNC_RECOVERY_EVIDENCE_FILES, 'summary.json'];
-const PAIR_SYNC_RECOVERY_FAILURE_FILES = ['summary.json'];
 
 function execute(command, args, options = {}) {
   return new Promise((resolve, reject) => {
@@ -128,15 +128,6 @@ async function copyCaptureAnnotationFiles({ env, executeScp, fsApi, host, names,
   return localRoot;
 }
 
-async function copyPairSyncRecoveryFiles({ env, executeScp, fsApi, host, names, remoteRoot, repoRoot }) {
-  const localRoot = path.join(repoRoot, '.tmp', 'artifacts', 'a5-pair-sync-recovery', path.basename(remoteRoot));
-  fsApi.mkdirSync(localRoot, { recursive: true });
-  for (const name of names) {
-    await executeScp(windowsDevScpSpec(host, `${remoteRoot}/${name}`, path.join(localRoot, name), env), { env });
-  }
-  return localRoot;
-}
-
 export function windowsDevScpSpec(host, remotePath, localPath, env = process.env, home = os.homedir()) {
   const key = env.FOLIOLE_WINDOWS_DEV_SSH_KEY
     || path.join(home, '.ssh', 'agent', 'foliole-windows-android-lab');
@@ -193,13 +184,17 @@ export async function runWindowsDevControl({
       if (remoteError) throw remoteError;
       throw error;
     }
-    const names = remoteError ? PAIR_SYNC_RECOVERY_FAILURE_FILES : PAIR_SYNC_RECOVERY_FILES;
-    const localRoot = await copyPairSyncRecoveryFiles({
-      env, executeScp, fsApi, host, names, remoteRoot: evidence.remoteRoot, repoRoot
+    const copied = await copyWindowsDevPairSyncRecoveryEvidence({
+      copyFile: (name, localRoot) => executeScp(windowsDevScpSpec(
+        host, `${evidence.remoteRoot}/${name}`, path.join(localRoot, name), env
+      ), { env }),
+      fsApi, remoteError, remoteRoot: evidence.remoteRoot, repoRoot
     });
+    const localRoot = copied.localRoot;
+    if (copied.warning) stdout.write(`[windows-dev-control] failure evidence copy incomplete: ${copied.warning}\n`);
     if (remoteError) stdout.write(`[windows-dev-control] failure evidence=${localRoot}\n`);
     result.evidenceRoot = localRoot;
-    result.manifestPath = path.join(localRoot, PAIR_SYNC_RECOVERY_FILES[0]);
+    result.manifestPath = path.join(localRoot, WINDOWS_DEV_PAIR_SYNC_RECOVERY_FILES[0]);
   }
   if (['appearance', 'deploy', 'live', 'secondary'].includes(action)) {
     let evidence;

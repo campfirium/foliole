@@ -70,6 +70,53 @@ it('gates pair recovery before its fixed desktop and Android build path', async 
   expect(calls.find(({ command }) => command === 'cmd.exe').args.at(-1)).toContain('assembleDebug assembleDebugAndroidTest');
 });
 
+it('keeps fixed screenshot and Windows request evidence on a failed pair recovery summary', async () => {
+  const paths = fixture();
+  const execute = vi.fn(async (command, args, options) => {
+    if (command === 'powershell.exe') {
+      const nativeCommand = `"${paths.systemNode}" "${path.join(
+        paths.repoRoot, 'scripts', 'windows', 'electron-dev-native.mjs'
+      )}"`.replaceAll('/', '\\');
+      const output = `${JSON.stringify([{
+        CommandLine: `"C:\\Windows\\system32\\cmd.exe" /d /c "${nativeCommand}"`, Name: 'cmd.exe'
+      }])}\n`;
+      return { code: 0, output, stdout: output };
+    }
+    if (command === 'cmd.exe') {
+      options.onSpawn?.({ pid: 7 });
+      return { code: 0, lines: ['BUILD SUCCESSFUL'], output: 'BUILD SUCCESSFUL\n', stdout: 'BUILD SUCCESSFUL\n' };
+    }
+    return { code: 0, output: '', stdout: '' };
+  });
+  const readiness = { deviceIdentityFingerprint: '0123456789abcdef', resultStatus: 'ready', schemaVersion: 1 };
+  const deviceAction = vi.fn(async ({ phase }) => {
+    if (phase === 'readiness') return { output: '', pairSyncRecoveryReadiness: readiness };
+    throw Object.assign(new Error('pairing failed'), {
+      exitCode: 74,
+      pairSyncFailureEvidence: {
+        desktopOverview: 'pair-sync-recovery-failure-desktop-overview.json',
+        ignored: 'C:\\private\\raw.log',
+        screenshot: 'pair-sync-recovery-failure.png'
+      },
+      stage: 'pair-sync-instrumentation'
+    });
+  });
+  const run = await runWindowsDevBuild({
+    action: 'pairsyncrecover', deviceAction, execute, paths, platform: 'win32',
+    prepareHost: vi.fn(async () => '')
+  });
+  expect(run).toMatchObject({
+    exitCode: 74,
+    summary: {
+      pairSyncFailureEvidence: {
+        desktopOverview: 'pair-sync-recovery-failure-desktop-overview.json',
+        screenshot: 'pair-sync-recovery-failure.png'
+      }
+    }
+  });
+  expect(run.summary.pairSyncFailureEvidence).not.toHaveProperty('ignored');
+});
+
 it('rejects unknown or additional residual processes for pair recovery', () => {
   const paths = fixture();
   const script = path.join(paths.repoRoot, 'scripts', 'windows', 'electron-dev-native.mjs');

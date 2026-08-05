@@ -15,6 +15,9 @@ import {
 } from './windows-a5-pair-sync-recovery-concurrency.mjs';
 import { scrubPairSyncDataProtection } from './windows-a5-pair-sync-recovery-evidence.mjs';
 import {
+  collectPairSyncRecoveryFailureEvidence
+} from './windows-a5-pair-sync-recovery-failure-evidence.mjs';
+import {
   openPairSyncDesktopSession, waitForUniquePairRequest
 } from './windows-pair-sync-desktop-session.mjs';
 import {
@@ -187,6 +190,9 @@ export async function runWindowsA5PairSyncRecovery({
     proof = { android: android.readiness, desktop, receipt };
   } catch (error) {
     primaryError = await resolvePairSyncConcurrentFailure(error, instrumentationPromise);
+    primaryError.pairSyncFailureEvidence = await collectPairSyncRecoveryFailureEvidence({
+      adbPort, env, evidenceRoot, execute, fsApi, paths, serial, session
+    });
   }
   scrubPairSyncDataProtection(fsApi, dataManifest);
   try {

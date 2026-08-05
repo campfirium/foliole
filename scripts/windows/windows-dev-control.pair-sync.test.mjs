@@ -47,3 +47,35 @@ it('copies only a scrubbed summary when pair recovery stops', async () => {
   })).rejects.toBe(remoteError);
   expect(executeScp.mock.calls.map(([args]) => path.basename(args.at(-1)))).toEqual(['summary.json']);
 });
+
+it('copies the A5 screenshot and Windows request state reported by a failed recovery', async () => {
+  const { executeScp: baseScp, repoRoot } = fixture('pair-control-failure-screen-');
+  const remoteRoot = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/pair-3';
+  const output = `[windows-dev-action] status: FAILED exit=74 evidence=${remoteRoot}/summary.json\n`;
+  const remoteError = Object.assign(new Error('remote failed'), { output });
+  const executeScp = vi.fn(async (args) => {
+    const name = path.basename(args.at(-1));
+    const content = name === 'summary.json' ? JSON.stringify({
+      pairSyncFailureEvidence: {
+        desktopOverview: 'pair-sync-recovery-failure-desktop-overview.json',
+        screenshot: 'pair-sync-recovery-failure.png'
+      }
+    }) : name.endsWith('.png') ? 'png' : '{}';
+    fs.writeFileSync(args.at(-1), content);
+    return '';
+  });
+  await expect(runWindowsDevControl({
+    argv: ['--host', 'v\\dev@192.168.0.11', 'pair-sync-recover'], env: {},
+    executeGit: vi.fn(async () => ''), executeScp,
+    executeSsh: vi.fn(async () => { throw remoteError; }), repoRoot, stdout: { write: vi.fn() }
+  })).rejects.toBe(remoteError);
+  expect(baseScp).not.toHaveBeenCalled();
+  expect(executeScp.mock.calls.map(([args]) => path.basename(args.at(-1)))).toEqual([
+    'summary.json', 'pair-sync-recovery-failure.png',
+    'pair-sync-recovery-failure-desktop-overview.json'
+  ]);
+  expect(fs.existsSync(path.join(
+    repoRoot, '.tmp', 'artifacts', 'a5-pair-sync-recovery', 'pair-3',
+    'pair-sync-recovery-failure.png'
+  ))).toBe(true);
+});

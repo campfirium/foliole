@@ -8,6 +8,7 @@ import { pathToFileURL } from 'node:url';
 
 import { executeBounded } from './windows-bounded-process.mjs';
 import { prepareWindowsAndroidDebugHost } from './windows-android-host-prepare.mjs';
+import { sanitizePairSyncRecoveryFailureEvidence } from './windows-a5-pair-sync-recovery-failure-evidence.mjs';
 import { normalizeWindowsDevAction } from './windows-dev-action-contract.mjs';
 import { runWindowsDevDeviceAction } from './windows-dev-device-action.mjs';
 import { windowsDevPaths } from './windows-dev-paths.mjs';
@@ -202,6 +203,9 @@ export async function runWindowsDevBuild({
       } : {}),
       ...(error.liveReload ? { liveReload: error.liveReload } : {}) };
     if (error.failureReason) summary.failureReason = error.failureReason;
+    if (error.pairSyncFailureEvidence) {
+      summary.pairSyncFailureEvidence = sanitizePairSyncRecoveryFailureEvidence(error.pairSyncFailureEvidence);
+    }
     if (context) writeJson(fsApi, context.summaryPath, summary);
     return { exitCode, summary, summaryPath: context?.summaryPath ?? null };
   }

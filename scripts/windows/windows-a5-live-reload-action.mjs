@@ -4,10 +4,10 @@ import path from 'node:path';
 import {
   startWindowsA5LiveReloadServer, WINDOWS_A5_LIVE_RELOAD_PORT
 } from './windows-a5-live-reload-server.mjs';
+import { captureWindowsA5Screenshot } from './windows-a5-screenshot.mjs';
 
 const APP_ID = 'com.foliole.android';
 const COMPONENT = `${APP_ID}/com.foliole.android.MainActivity`;
-const REMOTE_SCREENSHOT = '/sdcard/Download/foliole-a5-live.png';
 
 function failure(message, stage, result) {
   return Object.assign(new Error(message), { exitCode: 74, result, stage });
@@ -40,19 +40,11 @@ async function verifySoftKeyboard(execute, paths, env, adbPort, serial) {
   }
 }
 
-async function captureScreenshot(execute, paths, env, adbPort, serial, evidenceRoot) {
-  const screenshotPath = path.join(evidenceRoot, 'a5-live.png');
-  await checked(execute, paths.adbPath, adbArgs(adbPort, serial,
-    ['shell', 'screencap', '-p', REMOTE_SCREENSHOT]), adbOptions(env, 'live-screenshot'), 'live-screenshot');
-  try {
-    await checked(execute, paths.adbPath, adbArgs(adbPort, serial,
-      ['pull', REMOTE_SCREENSHOT, screenshotPath]), adbOptions(env, 'live-screenshot'), 'live-screenshot');
-  } finally {
-    await checked(execute, paths.adbPath, adbArgs(adbPort, serial,
-      ['shell', 'rm', REMOTE_SCREENSHOT]), adbOptions(env, 'live-screenshot-cleanup'), 'live-screenshot-cleanup');
-  }
-  if (!fs.existsSync(screenshotPath)) throw failure('A5 screenshot was not written', 'live-screenshot');
-  return screenshotPath;
+function captureScreenshot(execute, paths, env, adbPort, serial, evidenceRoot) {
+  return captureWindowsA5Screenshot({
+    adbPort, env, evidenceRoot, execute, fileName: 'a5-live.png', paths,
+    remotePath: '/sdcard/Download/foliole-a5-live.png', serial, stage: 'live-screenshot'
+  });
 }
 
 export async function runWindowsA5LiveReload({

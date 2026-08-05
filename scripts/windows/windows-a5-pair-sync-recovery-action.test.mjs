@@ -125,16 +125,27 @@ it('preserves the product sync enable failure stage after APK preparation', asyn
   }));
   const session = {
     close: vi.fn(async () => undefined),
-    enable: vi.fn(async () => { throw new Error('enable failed'); })
+    enable: vi.fn(async () => { throw new Error('enable failed'); }),
+    load: vi.fn(async () => ({ paired_devices: [], pending_requests: [] })),
+    sanitize: vi.fn(() => ({ pairedDeviceFingerprints: [], pendingDeviceFingerprints: [] }))
   };
-  await expect(runWindowsA5PairSyncRecovery({
+  const failure = await runWindowsA5PairSyncRecovery({
     adbPort: '5037', buildIdentity: 'pair-1', deviceFingerprint: '0123456789abcdef',
     env: {}, evidenceRoot: 'C:\\evidence', execute: executeAction, fsApi,
     openDesktopSession: vi.fn(async () => session),
     paths: { adbPath: 'adb.exe', repoRoot: 'C:\\repo', systemNode: 'node.exe' },
     protectData: vi.fn(async () => ({ output: '' })), serial: '87a33a4b'
-  })).rejects.toMatchObject({ exitCode: 74, stage: 'desktop-sync-enable' });
+  }).catch((error) => error);
+  expect(failure).toMatchObject({
+    exitCode: 74,
+    pairSyncFailureEvidence: {
+      desktopOverview: 'pair-sync-recovery-failure-desktop-overview.json',
+      screenshot: 'pair-sync-recovery-failure.png'
+    },
+    stage: 'desktop-sync-enable'
+  });
   expect(session.close).toHaveBeenCalledOnce();
+  expect(executeAction.mock.calls.some(([, args]) => args.includes('screencap'))).toBe(true);
 });
 
 it('surfaces instrumentation failure instead of masking it with desktop request waiting', async () => {
