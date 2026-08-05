@@ -7,16 +7,14 @@ import {
   PAIR_SYNC_RECOVERY_APP_ID, PAIR_SYNC_RECOVERY_EVIDENCE_FILES,
   PAIR_SYNC_RECOVERY_TEST_APP_ID, PAIR_SYNC_RECOVERY_TEST_CLASS,
   PAIR_SYNC_RECOVERY_TEST_RUNNER, pairSyncRecoveryArtifactPaths,
-  classifyPairSyncRecoveryActionFailure, pairSyncRecoveryFailure,
+  classifyPairSyncRecoveryActionFailure, createPairSyncRecoveryEvidenceTracker, pairSyncRecoveryFailure,
   parsePairSyncRecoveryInstrumentation
 } from './windows-a5-pair-sync-recovery-contract.mjs';
 import {
   resolvePairSyncConcurrentFailure, waitForPairRequestWhileInstrumentationRuns
 } from './windows-a5-pair-sync-recovery-concurrency.mjs';
 import { scrubPairSyncDataProtection } from './windows-a5-pair-sync-recovery-evidence.mjs';
-import {
-  collectPairSyncRecoveryFailureEvidence
-} from './windows-a5-pair-sync-recovery-failure-evidence.mjs';
+import { collectPairSyncRecoveryFailureEvidence } from './windows-a5-pair-sync-recovery-failure-evidence.mjs';
 import {
   openPairSyncDesktopSession, waitForUniquePairRequest
 } from './windows-pair-sync-desktop-session.mjs';
@@ -142,6 +140,7 @@ export async function runWindowsA5PairSyncRecovery({
   let primaryError = null;
   let instrumentationPromise = null;
   let proof;
+  const recoveryEvidence = createPairSyncRecoveryEvidenceTracker();
   await clientControl(execute, paths, env, 'stop');
   try {
     const before = await protectData('backup', dataManifest);
@@ -169,11 +168,11 @@ export async function runWindowsA5PairSyncRecovery({
         waitForPairRequestWhileInstrumentationRuns(
           waitForUniquePairRequest(session, deviceFingerprint), instrumentationPromise
         ));
-      await desktopStep('desktop-pair-approval', () => session.approve(pending.pair_request_id));
+      await desktopStep('desktop-pair-approval', () => recoveryEvidence.approve(session, pending));
     }
     const instrumentation = await instrumentationPromise;
     output.push(instrumentation.output);
-    const receipt = parsePairSyncRecoveryInstrumentation(instrumentation.stdout);
+    const receipt = recoveryEvidence.complete(parsePairSyncRecoveryInstrumentation(instrumentation.stdout));
     await checked(execute, paths.adbPath,
       ['-P', adbPort, '-s', serial, 'shell', 'am', 'force-stop', PAIR_SYNC_RECOVERY_APP_ID],
       options(env, 'pair_sync_restart_timeout', 30_000), 'pair-sync-restart');
@@ -189,6 +188,7 @@ export async function runWindowsA5PairSyncRecovery({
     proof = { android: android.readiness, desktop, receipt };
   } catch (error) {
     primaryError = await resolvePairSyncConcurrentFailure(error, instrumentationPromise);
+    primaryError.pairSyncRecoveryEvidence = recoveryEvidence.failure(primaryError);
     primaryError.pairSyncFailureEvidence = await collectPairSyncRecoveryFailureEvidence({
       adbPort, env, evidenceRoot, execute, fsApi, paths, serial, session
     });

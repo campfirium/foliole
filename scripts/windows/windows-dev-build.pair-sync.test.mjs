@@ -98,6 +98,13 @@ it('keeps fixed screenshot and Windows request evidence on a failed pair recover
         ignored: 'C:\\private\\raw.log',
         screenshot: 'pair-sync-recovery-failure.png'
       },
+      pairSyncRecoveryEvidence: {
+        android: {
+          completion: 'http_200', credentials: 'saved_not_signable', initialSync: 'not_started'
+        },
+        approval: { approve_invoked: true, approve_succeeded: true, pending_observed: true },
+        secret: 'must-be-dropped'
+      },
       stage: 'pair-sync-instrumentation'
     });
   });
@@ -111,10 +118,17 @@ it('keeps fixed screenshot and Windows request evidence on a failed pair recover
       pairSyncFailureEvidence: {
         desktopOverview: 'pair-sync-recovery-failure-desktop-overview.json',
         screenshot: 'pair-sync-recovery-failure.png'
+      },
+      pairSyncRecoveryEvidence: {
+        android: {
+          completion: 'http_200', credentials: 'saved_not_signable', initialSync: 'not_started'
+        },
+        approval: { approve_invoked: true, approve_succeeded: true, pending_observed: true }
       }
     }
   });
   expect(run.summary.pairSyncFailureEvidence).not.toHaveProperty('ignored');
+  expect(run.summary.pairSyncRecoveryEvidence).not.toHaveProperty('secret');
 });
 
 it('rejects unknown or additional residual processes for pair recovery', () => {

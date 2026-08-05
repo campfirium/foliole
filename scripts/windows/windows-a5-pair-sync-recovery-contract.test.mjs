@@ -26,6 +26,7 @@ it('keeps readiness evidence non-sensitive and fails closed', () => {
 
 it('accepts only the fixed product pairing receipt', () => {
   const output = `INSTRUMENTATION_STATUS: folioleActionReceipt=${JSON.stringify({
+    completion: 'http_200', credentials: 'saved_signable', initialSync: 'completed',
     initialSyncRequested: true, ok: true, paired: true,
     pairingPath: 'new',
     targetTestId: 'companion-pair-sync-recovery'
@@ -86,6 +87,10 @@ it('reduces instrumentation output to a fixed non-sensitive failure reason', () 
   expect(classifyPairSyncRecoveryInstrumentationFailure(
     'INSTRUMENTATION_STATUS: foliolePairSyncStage=initial-sync-awaiting'
   )).toBe('pair_completion_wait_interrupted');
+  expect(classifyPairSyncRecoveryInstrumentationFailure([
+    'INSTRUMENTATION_STATUS: foliolePairSyncStage=pair-completion',
+    'INSTRUMENTATION_STATUS: foliolePairSyncEvidence={"completion":"transport_failed","credentials":"not_saved","initialSync":"not_started"}'
+  ].join('\n'))).toBe('pair_completion_transport_failed');
   expect(classifyPairSyncRecoveryInstrumentationFailure(
     'INSTRUMENTATION_STATUS: foliolePairSyncStage=initial-sync-pair-target-returned'
   )).toBe('pair_completion_ui_reverted');
@@ -119,12 +124,22 @@ it('observes request submission without global errors or click-return evidence',
     'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionWebViewSemanticAdapter.java',
     'utf8'
   );
+  const recoveryEvidence = fs.readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionPairSyncEvidence.java',
+    'utf8'
+  );
   expect(source.indexOf('installPairingRequestObserver')).toBeLessThan(
     source.indexOf('clickVisible(instrumentation, webView, "companion-sync-pair"')
   );
   expect(source).not.toContain('__actionAccepted');
   expect(evidence).toContain('"accepted".equals(state.optString("requestState"))');
   expect(adapter).not.toContain("document.querySelector('.text-error')");
-  expect(adapter).toContain("methodName==='desktopHttpRequest'");
-  expect(adapter).toContain("algorithm.name==='ECDH'");
+  expect(recoveryEvidence).toContain("methodName==='desktopHttpRequest'");
+  expect(recoveryEvidence).toContain("methodName==='savePairingCredentials'");
+  expect(recoveryEvidence).toContain("methodName==='signCompanionSyncRequest'");
+  expect(recoveryEvidence).toContain("methodName==='recordWorkspaceSyncEvent'");
+  expect(recoveryEvidence).toContain("kind==='run_finished'&&state.initialSync==='started'");
+  expect(recoveryEvidence).toContain("algorithm.name==='ECDH'");
+  expect(recoveryEvidence).not.toContain('endpoint');
+  expect(recoveryEvidence).not.toContain('pair_request_id');
 });

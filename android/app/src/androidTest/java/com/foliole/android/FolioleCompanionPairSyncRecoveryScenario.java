@@ -43,14 +43,17 @@ final class FolioleCompanionPairSyncRecoveryScenario {
             clickVisible(instrumentation, webView, "companion-sync-pair", deadline);
             FolioleCompanionPairRequestEvidence.awaitSubmission(instrumentation, webView, deadline);
         }
-        FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "initial-sync");
-        waitForCompletedSync(instrumentation, webView, deadline);
+        FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "pair-completion");
+        JSONObject recoveryEvidence = awaitRecoveryEvidence(instrumentation, webView, deadline);
         JSONObject receipt = new JSONObject();
         receipt.put("ok", true);
         receipt.put("targetTestId", "companion-pair-sync-recovery");
         receipt.put("paired", true);
         receipt.put("pairingPath", reusedPairing ? "existing" : "new");
         receipt.put("initialSyncRequested", true);
+        receipt.put("completion", recoveryEvidence.getString("completion"));
+        receipt.put("credentials", recoveryEvidence.getString("credentials"));
+        receipt.put("initialSync", recoveryEvidence.getString("initialSync"));
         return receipt;
     }
 
@@ -114,82 +117,73 @@ final class FolioleCompanionPairSyncRecoveryScenario {
         throw new IllegalStateException("Timed out waiting for pairing or sync entry.");
     }
 
-    private static void waitForCompletedSync(
+    private static JSONObject awaitRecoveryEvidence(
         Instrumentation instrumentation,
         WebView webView,
         long deadline
     ) throws Exception {
-        JSONObject target = waitForConnectedTarget(instrumentation, webView, deadline);
-        if (!target.optBoolean("disabled")) {
-            clickVisible(instrumentation, webView, CONNECTED_TARGET, deadline);
-        }
-        boolean observedSyncing = false;
+        String lastEvidence = "";
         while (System.nanoTime() < deadline) {
-            target = uniqueVisibleTarget(instrumentation, webView, CONNECTED_TARGET);
-            observedSyncing = observedSyncing || target.optBoolean("disabled");
-            if (observedSyncing && !target.optBoolean("disabled")) return;
+            JSONObject state = FolioleCompanionPairSyncEvidence.read(instrumentation, webView);
+            JSONObject evidence = FolioleCompanionPairSyncEvidence.terminalEvidence(state);
+            if (!evidence.toString().equals(lastEvidence)) {
+                FolioleCompanionPairSyncEvidence.emit(instrumentation, state);
+                emitRecoveryStage(instrumentation, evidence);
+                lastEvidence = evidence.toString();
+            }
+            validateRecoveryState(state, evidence);
+            if ("completed".equals(evidence.optString("initialSync"))
+                && state.optBoolean("connectedFound")) return evidence;
             Thread.sleep(150);
         }
         throw new IllegalStateException("Timed out waiting for initial workspace sync completion.");
     }
 
-    private static JSONObject waitForConnectedTarget(
-        Instrumentation instrumentation,
-        WebView webView,
-        long deadline
-    ) throws Exception {
-        FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "initial-sync-awaiting");
-        while (System.nanoTime() < deadline) {
-            JSONObject request = FolioleCompanionWebViewSemanticAdapter.pairingRequestState(
-                instrumentation, webView
-            );
-            if (request.optBoolean("pairFound")) {
-                FolioleCompanionPairSyncHostEvidence.stage(
-                    instrumentation, "initial-sync-pair-target-returned"
-                );
-                throw new IllegalStateException("Pairing completion returned to Pair target.");
-            }
-            JSONObject target = visibleTarget(instrumentation, webView, CONNECTED_TARGET);
-            if (target != null) return target;
-            if (request.optBoolean("discoverFound")) {
-                throw new IllegalStateException("Pairing completion returned to discovery.");
-            }
-            Thread.sleep(150);
+    private static void validateRecoveryState(JSONObject state, JSONObject evidence) {
+        String completion = evidence.optString("completion");
+        String credentials = evidence.optString("credentials");
+        String initialSync = evidence.optString("initialSync");
+        if (!isOneOf(completion, "not_started", "dispatched", "transport_failed", "http_rejected", "http_200")
+            || !isOneOf(credentials, "not_saved", "save_failed", "saved_not_signable", "saved_signable")
+            || !isOneOf(initialSync, "not_started", "started", "failed", "completed")) {
+            throw new IllegalStateException("Pair sync recovery emitted an unknown evidence state.");
         }
-        throw new IllegalStateException("Timed out waiting for semantic target: " + CONNECTED_TARGET);
-    }
-
-    private static JSONObject uniqueVisibleTarget(
-        Instrumentation instrumentation,
-        WebView webView,
-        String testId
-    ) throws Exception {
-        JSONArray elements = FolioleCompanionWebViewSemanticAdapter
-            .snapshot(instrumentation, webView).getJSONArray("elements");
-        JSONObject match = visibleTarget(elements, testId);
-        if (match == null) throw new IllegalStateException("Pairing target disappeared: " + testId);
-        return match;
-    }
-
-    private static JSONObject visibleTarget(
-        Instrumentation instrumentation,
-        WebView webView,
-        String testId
-    ) throws Exception {
-        JSONArray elements = FolioleCompanionWebViewSemanticAdapter
-            .snapshot(instrumentation, webView).getJSONArray("elements");
-        return visibleTarget(elements, testId);
-    }
-
-    private static JSONObject visibleTarget(JSONArray elements, String testId) throws Exception {
-        JSONObject match = null;
-        for (int index = 0; index < elements.length(); index += 1) {
-            JSONObject element = elements.getJSONObject(index);
-            if (testId.equals(element.optString("testId")) && element.optBoolean("visible")) {
-                if (match != null) throw new IllegalStateException("Pairing target is not unique: " + testId);
-                match = element;
-            }
+        if (!"http_200".equals(completion)
+            && (!"not_saved".equals(credentials) || !"not_started".equals(initialSync))) {
+            throw new IllegalStateException("Pair sync recovery evidence advanced before completion.");
         }
-        return match;
+        if (!"saved_signable".equals(credentials) && !"not_started".equals(initialSync)) {
+            throw new IllegalStateException("Initial sync advanced before credentials were signable.");
+        }
+        if ("save_failed".equals(credentials) || "failed".equals(initialSync)) {
+            throw new IllegalStateException("Pair sync recovery persisted a terminal failure state.");
+        }
+        if (state.optBoolean("pairFound")) {
+            throw new IllegalStateException("Pairing completion returned to Pair target.");
+        }
+        if (state.optBoolean("discoverFound")) {
+            throw new IllegalStateException("Pairing completion returned to discovery.");
+        }
+    }
+
+    private static void emitRecoveryStage(Instrumentation instrumentation, JSONObject evidence) {
+        if ("completed".equals(evidence.optString("initialSync"))) {
+            FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "initial-sync-completed");
+        } else if ("started".equals(evidence.optString("initialSync"))) {
+            FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "initial-sync-started");
+        } else if ("saved_signable".equals(evidence.optString("credentials"))) {
+            FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "credentials-signable");
+        } else if ("saved_not_signable".equals(evidence.optString("credentials"))) {
+            FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "credentials-saved");
+        } else if ("http_200".equals(evidence.optString("completion"))) {
+            FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "pair-completion-http-200");
+        } else if ("dispatched".equals(evidence.optString("completion"))) {
+            FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "pair-completion-dispatched");
+        }
+    }
+
+    private static boolean isOneOf(String value, String... allowed) {
+        for (String item : allowed) if (item.equals(value)) return true;
+        return false;
     }
 }

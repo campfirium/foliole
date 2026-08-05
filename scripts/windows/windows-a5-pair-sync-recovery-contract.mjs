@@ -1,5 +1,11 @@
 import path from 'node:path';
 
+import {
+  parseLatestPairSyncAndroidEvidence, validatePairSyncAndroidEvidence
+} from './windows-a5-pair-sync-recovery-android-evidence.mjs';
+
+export { createPairSyncRecoveryEvidenceTracker } from './windows-a5-pair-sync-recovery-result.mjs';
+
 export const PAIR_SYNC_RECOVERY_EVIDENCE_FILES = [
   'pair-sync-recovery-manifest.json',
   'pair-sync-recovery-receipt.json',
@@ -67,7 +73,17 @@ export function parsePairSyncRecoveryInstrumentation(output) {
       || !['existing', 'new'].includes(receipt.pairingPath)) {
     throw pairSyncRecoveryFailure('Pair sync recovery receipt is incomplete', 'pair-sync-instrumentation');
   }
-  return receipt;
+  let android;
+  try { android = validatePairSyncAndroidEvidence(receipt); }
+  catch { throw pairSyncRecoveryFailure('Pair sync recovery receipt is incomplete', 'pair-sync-instrumentation'); }
+  return {
+    ...android,
+    initialSyncRequested: true,
+    ok: true,
+    paired: true,
+    pairingPath: receipt.pairingPath,
+    targetTestId: 'companion-pair-sync-recovery'
+  };
 }
 
 export function classifyPairSyncRecoveryInstrumentationFailure(output) {
@@ -105,6 +121,11 @@ export function classifyPairSyncRecoveryInstrumentationFailure(output) {
   ];
   const knownReason = reasons.find(([, pattern]) => pattern.test(value))?.[0];
   if (knownReason) return knownReason;
+  const android = parseLatestPairSyncAndroidEvidence(value);
+  if (android?.completion === 'transport_failed') return 'pair_completion_transport_failed';
+  if (android?.completion === 'http_rejected') return 'pair_completion_http_rejected';
+  if (android?.credentials === 'save_failed') return 'pair_credentials_save_failed';
+  if (android?.initialSync === 'failed') return 'initial_sync_failed';
   const stages = [...value.matchAll(/^INSTRUMENTATION_STATUS: foliolePairSyncStage=([a-z-]+)$/gmu)];
   const stage = stages.at(-1)?.[1];
   const interruptedStages = {
@@ -123,7 +144,13 @@ export function classifyPairSyncRecoveryInstrumentationFailure(output) {
     'pair-request-dispatched': 'pair_request_dispatch_interrupted',
     'pair-request-accepted': 'pair_request_ui_settlement_interrupted',
     'pair-request-awaiting': 'pair_request_awaiting_interrupted',
-    'initial-sync': 'initial_sync_interrupted',
+    'pair-completion': 'pair_completion_wait_interrupted',
+    'pair-completion-dispatched': 'pair_completion_dispatch_interrupted',
+    'pair-completion-http-200': 'pair_credentials_save_interrupted',
+    'credentials-saved': 'pair_credentials_signing_interrupted',
+    'credentials-signable': 'initial_sync_start_interrupted',
+    'initial-sync-started': 'initial_sync_interrupted',
+    'initial-sync-completed': 'initial_sync_ui_settlement_interrupted',
     'initial-sync-awaiting': 'pair_completion_wait_interrupted',
     'initial-sync-pair-target-returned': 'pair_completion_ui_reverted'
   };

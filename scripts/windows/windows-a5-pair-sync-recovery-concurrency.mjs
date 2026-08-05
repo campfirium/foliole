@@ -1,6 +1,7 @@
 import {
   classifyPairSyncRecoveryActionFailure, pairSyncRecoveryFailure
 } from './windows-a5-pair-sync-recovery-contract.mjs';
+import { parseLatestPairSyncAndroidEvidence } from './windows-a5-pair-sync-recovery-android-evidence.mjs';
 
 function completedBeforeRequestFailure(result) {
   return classifyPairSyncRecoveryActionFailure(
@@ -24,9 +25,11 @@ export async function resolvePairSyncConcurrentFailure(primaryError, instrumenta
   if (!instrumentationPromise) return primaryError;
   try {
     const result = await instrumentationPromise;
+    primaryError.pairSyncAndroidEvidence = parseLatestPairSyncAndroidEvidence(result.output);
     return primaryError.stage === 'desktop-pair-request'
       ? completedBeforeRequestFailure(result) : primaryError;
   } catch (error) {
+    primaryError.pairSyncAndroidEvidence = parseLatestPairSyncAndroidEvidence(error.result?.output);
     return primaryError.stage === 'desktop-pair-request' ? error : primaryError;
   }
 }

@@ -1,6 +1,7 @@
 // @vitest-environment node
 
 import { Buffer } from 'node:buffer';
+import fs from 'node:fs';
 
 import { expect, it, vi } from 'vitest';
 
@@ -14,6 +15,17 @@ import { pairSyncIdentityFingerprint } from './windows-pair-sync-desktop-session
 
 const paths = { repoRoot: 'C:\\repo', systemNode: 'C:\\Program Files\\nodejs\\node.exe' };
 const execute = vi.fn(async () => ({ code: 0, output: '', stdout: '' }));
+
+it('wires pending observation, approval invocation, and approval success in order', () => {
+  const source = fs.readFileSync('scripts/windows/windows-a5-pair-sync-recovery-result.mjs', 'utf8');
+  const observed = source.indexOf('approval.markPendingObserved()');
+  const invoked = source.indexOf('approval.markApproveInvoked()');
+  const approved = source.indexOf('approval.markApproveSucceeded()');
+  expect(observed).toBeGreaterThan(-1);
+  expect(observed).toBeLessThan(invoked);
+  expect(invoked).toBeLessThan(source.indexOf('session.approve(', invoked));
+  expect(source.indexOf('session.approve(', invoked)).toBeLessThan(approved);
+});
 
 function unsafeSession(close = vi.fn(async () => undefined)) {
   return {

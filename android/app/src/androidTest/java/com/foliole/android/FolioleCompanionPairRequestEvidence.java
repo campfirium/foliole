@@ -14,10 +14,16 @@ final class FolioleCompanionPairRequestEvidence {
         long deadline
     ) throws Exception {
         String lastStage = "";
+        String lastEvidence = "";
         while (System.nanoTime() < deadline) {
             JSONObject state = FolioleCompanionWebViewSemanticAdapter.pairingRequestState(
                 instrumentation, webView
             );
+            String evidence = FolioleCompanionPairSyncEvidence.terminalEvidence(state).toString();
+            if (!evidence.equals(lastEvidence)) {
+                FolioleCompanionPairSyncEvidence.emit(instrumentation, state);
+                lastEvidence = evidence;
+            }
             validateTerminalState(state);
             String stage = resolveStage(state.optString("keyState"), state.optString("requestState"));
             if (!stage.isEmpty() && !stage.equals(lastStage)) {
