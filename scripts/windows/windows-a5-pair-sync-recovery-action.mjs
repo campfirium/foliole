@@ -162,13 +162,11 @@ export async function runWindowsA5PairSyncRecovery({
       '-P', adbPort, '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',
       '-e', 'class', PAIR_SYNC_RECOVERY_TEST_CLASS, PAIR_SYNC_RECOVERY_TEST_RUNNER
     ], options(env, 'pair_sync_instrumentation_timeout', recoveryWindow.instrumentationTimeoutMs), 'pair-sync-instrumentation');
-    if (!existingPairing) {
-      const pending = await desktopStep('desktop-pair-request', () =>
-        recoveryWindow.waitForPairRequest(
-          waitForUniquePairRequest(session, deviceFingerprint, recoveryWindow), instrumentationPromise
-        ));
-      await desktopStep('desktop-pair-approval', () => recoveryEvidence.approve(session, pending));
-    }
+    const pending = await desktopStep('desktop-pair-request', () =>
+      recoveryWindow.waitForPairRequest(
+        waitForUniquePairRequest(session, deviceFingerprint, recoveryWindow), instrumentationPromise
+      ));
+    await desktopStep('desktop-pair-approval', () => recoveryEvidence.approve(session, pending));
     const instrumentation = await instrumentationPromise;
     output.push(instrumentation.output);
     const receipt = recoveryEvidence.complete(parsePairSyncRecoveryInstrumentation(instrumentation.stdout));

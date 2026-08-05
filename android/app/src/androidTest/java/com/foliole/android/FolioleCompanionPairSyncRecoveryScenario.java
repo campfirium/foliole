@@ -27,32 +27,33 @@ final class FolioleCompanionPairSyncRecoveryScenario {
         String entry = waitForEitherVisible(
             instrumentation, webView, "companion-sync-now", "companion-sync-discover", deadline
         );
-        boolean reusedPairing = CONNECTED_TARGET.equals(entry);
+        boolean replacedPairing = CONNECTED_TARGET.equals(entry);
+        if (replacedPairing) {
+            FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "existing-pair-disconnect");
+            clickVisible(instrumentation, webView, "companion-sync-connection", deadline);
+            clickVisible(instrumentation, webView, "companion-sync-disconnect", deadline);
+            waitForUniqueVisible(instrumentation, webView, "companion-sync-discover", deadline);
+        }
         JSONObject observer = FolioleCompanionWebViewSemanticAdapter.installPairSyncObserver(
-            instrumentation, webView, reusedPairing
+            instrumentation, webView, false
         );
         if (!observer.optBoolean("ok")) {
             throw new IllegalStateException("Pair sync observer is unavailable.");
         }
-        if (!reusedPairing) {
-            FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "discovery-request");
-            clickVisible(instrumentation, webView, "companion-sync-discover", deadline);
-            FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "pair-target");
-            waitForUniqueVisible(instrumentation, webView, "companion-sync-pair", deadline);
-            FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "pair-request");
-            clickVisible(instrumentation, webView, "companion-sync-pair", deadline);
-            FolioleCompanionPairRequestEvidence.awaitSubmission(instrumentation, webView, deadline);
-        } else {
-            FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "initial-sync-request");
-            clickVisible(instrumentation, webView, CONNECTED_TARGET, deadline);
-        }
+        FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "discovery-request");
+        clickVisible(instrumentation, webView, "companion-sync-discover", deadline);
+        FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "pair-target");
+        waitForUniqueVisible(instrumentation, webView, "companion-sync-pair", deadline);
+        FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "pair-request");
+        clickVisible(instrumentation, webView, "companion-sync-pair", deadline);
+        FolioleCompanionPairRequestEvidence.awaitSubmission(instrumentation, webView, deadline);
         FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "pair-completion");
         JSONObject recoveryEvidence = awaitRecoveryEvidence(instrumentation, webView, deadline);
         JSONObject receipt = new JSONObject();
         receipt.put("ok", true);
         receipt.put("targetTestId", "companion-pair-sync-recovery");
         receipt.put("paired", true);
-        receipt.put("pairingPath", reusedPairing ? "existing" : "new");
+        receipt.put("pairingPath", "new");
         receipt.put("initialSyncRequested", true);
         receipt.put("completion", recoveryEvidence.getString("completion"));
         receipt.put("credentials", recoveryEvidence.getString("credentials"));

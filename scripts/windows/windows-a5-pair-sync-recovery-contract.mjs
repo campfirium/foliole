@@ -136,6 +136,7 @@ export function classifyPairSyncRecoveryInstrumentationFailure(output) {
     'settings-tab': 'settings_navigation_interrupted',
     'sync-settings': 'sync_settings_navigation_interrupted',
     'sync-entry': 'sync_entry_interrupted',
+    'existing-pair-disconnect': 'existing_pair_disconnect_interrupted',
     'discovery-request': 'discovery_request_interrupted',
     'pair-target': 'pair_target_interrupted',
     'pair-request': 'pair_request_interrupted',

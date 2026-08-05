@@ -73,11 +73,13 @@ function SettingsLinkRow(props: {
   detail?: string;
   label: string;
   onClick(): void;
+  testId?: string;
   value: string;
 }) {
   return (
     <button
       className="w-full rounded-xl bg-companion-content px-4 py-3 text-left transition active:bg-companion-subtle/80"
+      data-testid={props.testId}
       onClick={props.onClick}
       type="button"
     >
@@ -132,6 +134,7 @@ function ConnectionSummary(props: {
       detail={t('companion.sync.connection.detail')}
       label={t('companion.sync.connection.row')}
       onClick={props.onOpen}
+      testId="companion-sync-connection"
       value={formatPairedDevice(props.pairingState, t)}
     />
   );
@@ -157,6 +160,7 @@ function ConnectionPage(props: {
           aria-busy={props.isDisconnecting || undefined}
           className={`mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-error px-4 py-3 text-sm font-semibold text-error transition active:bg-companion-subtle/80 disabled:cursor-not-allowed ${props.isDisconnecting ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
           disabled={props.isDisconnecting}
+          data-testid="companion-sync-disconnect"
           onClick={props.onDisconnectPairing}
           type="button"
         >

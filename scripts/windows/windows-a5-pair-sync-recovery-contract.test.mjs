@@ -137,7 +137,7 @@ it('observes request submission without global errors or click-return evidence',
   expect(source.indexOf('installPairSyncObserver')).toBeLessThan(
     source.indexOf('clickVisible(instrumentation, webView, "companion-sync-pair"')
   );
-  expect(source).toContain('clickVisible(instrumentation, webView, CONNECTED_TARGET, deadline)');
+  expect(source).toContain('clickVisible(instrumentation, webView, "companion-sync-disconnect", deadline)');
   expect(source).not.toContain('__actionAccepted');
   expect(evidence).toContain('"accepted".equals(state.optString("requestState"))');
   expect(adapter).not.toContain("document.querySelector('.text-error')");

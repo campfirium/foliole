@@ -23,6 +23,7 @@ describe('CompanionSyncPanel disconnect', () => {
     };
 
     render(<CompanionSyncPanel {...props} />);
+    expect(screen.getByTestId('companion-sync-disconnect')).toBeVisible();
     fireEvent.click(screen.getAllByRole('button', { name: 'Disconnect device' })[0]!);
 
     await waitFor(() => {
