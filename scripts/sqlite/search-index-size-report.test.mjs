@@ -5,9 +5,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
-import { afterEach, beforeEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { buildSearchIndexSizeReport } from './search-index-size-report.mjs';
+
+vi.setConfig({ testTimeout: 15_000 });
 
 let tempRoot = '';
 

@@ -110,7 +110,9 @@ async function writeStoredHash(target, hash) {
 function runWindowsStatusCommand() {
   let command = [process.execPath, 'scripts/windows/windows-client-native.mjs', 'status'];
   if (process.env.PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND) {
-    command = ['bash', '-lc', process.env.PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND];
+    command = process.platform === 'win32'
+      ? [process.env.ComSpec || 'cmd.exe', '/d', '/s', '/c', process.env.PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND]
+      : ['bash', '-lc', process.env.PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND];
   }
   return spawnSync(command[0], command.slice(1), {
     cwd: REPO_ROOT,
