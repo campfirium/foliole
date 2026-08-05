@@ -34,14 +34,16 @@ export function pairSyncRecoveryReadiness(
 ) {
   const inspection = snapshot.database?.inspection;
   const missingPrerequisites = [];
-  if (!snapshot.packageInfo?.installed) missingPrerequisites.push('app_missing');
+  if (!snapshot.packageInfo?.installed && !snapshot.database?.exists) {
+    missingPrerequisites.push('app_missing');
+  }
   if (!snapshot.database?.exists || snapshot.database.unreadable || !inspection) {
     missingPrerequisites.push('database_unavailable');
   }
   if (inspection && !inspection.deviceIdentityFingerprint) {
     missingPrerequisites.push('device_identity_missing');
   }
-  if (inspection && (inspection.nodeCount ?? 0) > 1) {
+  if (inspection && (inspection.nodeCount ?? 0) > 1 && !pairingCredentialsPresent) {
     missingPrerequisites.push('nonempty_workspace_requires_review');
   }
   if (inspection && (inspection.dirtyRecordCount ?? 0) > 0) {

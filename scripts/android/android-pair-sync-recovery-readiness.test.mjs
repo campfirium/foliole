@@ -44,6 +44,14 @@ it('allows existing credentials only with a non-sensitive remote peer fingerprin
   });
 });
 
+it('accepts a readable synced workspace after persisted pairing', () => {
+  const input = snapshot({ nodes: 1077 });
+  input.packageInfo.installed = false;
+  expect(pairSyncRecoveryReadiness(input, true, '0123456789abcdef')).toMatchObject({
+    missingPrerequisites: [], nodeCount: 1077, resultStatus: 'ready'
+  });
+});
+
 it('hashes the existing remote peer on-device without returning its value', async () => {
   const peer = 'desktop-device-1';
   const run = vi.fn(async (_command, args) => {
