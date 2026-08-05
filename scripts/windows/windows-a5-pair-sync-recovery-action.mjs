@@ -10,8 +10,7 @@ import {
   classifyPairSyncRecoveryActionFailure, createPairSyncRecoveryEvidenceTracker, pairSyncRecoveryFailure,
   parsePairSyncRecoveryInstrumentation
 } from './windows-a5-pair-sync-recovery-contract.mjs';
-import {
-  resolvePairSyncConcurrentFailure, waitForPairRequestWhileInstrumentationRuns
+import { createPairSyncRecoveryWindow, resolvePairSyncConcurrentFailure
 } from './windows-a5-pair-sync-recovery-concurrency.mjs';
 import { scrubPairSyncDataProtection } from './windows-a5-pair-sync-recovery-evidence.mjs';
 import { collectPairSyncRecoveryFailureEvidence } from './windows-a5-pair-sync-recovery-failure-evidence.mjs';
@@ -158,14 +157,15 @@ export async function runWindowsA5PairSyncRecovery({
     await openPairSyncRecoveryTransport(pairSyncAdbRunner(execute, paths, env, adbPort, serial));
     transportOpen = true;
     await desktopStep('desktop-runtime-ownership', () => session.assertActive());
+    const recoveryWindow = createPairSyncRecoveryWindow();
     instrumentationPromise = checked(execute, paths.adbPath, [
       '-P', adbPort, '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',
       '-e', 'class', PAIR_SYNC_RECOVERY_TEST_CLASS, PAIR_SYNC_RECOVERY_TEST_RUNNER
-    ], options(env, 'pair_sync_instrumentation_timeout', 3 * 60_000), 'pair-sync-instrumentation');
+    ], options(env, 'pair_sync_instrumentation_timeout', recoveryWindow.instrumentationTimeoutMs), 'pair-sync-instrumentation');
     if (!existingPairing) {
       const pending = await desktopStep('desktop-pair-request', () =>
-        waitForPairRequestWhileInstrumentationRuns(
-          waitForUniquePairRequest(session, deviceFingerprint), instrumentationPromise
+        recoveryWindow.waitForPairRequest(
+          waitForUniquePairRequest(session, deviceFingerprint, recoveryWindow), instrumentationPromise
         ));
       await desktopStep('desktop-pair-approval', () => recoveryEvidence.approve(session, pending));
     }

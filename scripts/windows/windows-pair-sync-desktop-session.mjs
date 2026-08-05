@@ -1,4 +1,4 @@
-/* global process, setTimeout */
+/* global process */
 
 import { createHash } from 'node:crypto';
 import path from 'node:path';
@@ -122,10 +122,12 @@ export async function openPairSyncDesktopSession({
 }
 
 export async function waitForUniquePairRequest(session, deviceFingerprint, {
-  timeoutMs = 40_000, wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+  deadline, now = Date.now, signal, timeoutMs = 40_000,
+  wait = (ms, options) => delay(ms, undefined, options)
 } = {}) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
+  const observationDeadline = deadline ?? now() + timeoutMs;
+  while (now() < observationDeadline) {
+    signal?.throwIfAborted();
     const overview = await session.load();
     const pending = overview.pending_requests;
     if (pending.length > 1) throw new Error('Desktop has conflicting companion pair requests.');
@@ -135,7 +137,7 @@ export async function waitForUniquePairRequest(session, deviceFingerprint, {
       }
       return pending[0];
     }
-    await wait(250);
+    await wait(250, { signal });
   }
   throw new Error('Timed out waiting for the fixed A5 pair request.');
 }

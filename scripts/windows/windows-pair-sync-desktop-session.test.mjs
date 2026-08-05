@@ -1,4 +1,5 @@
 // @vitest-environment node
+/* global AbortController */
 
 import { expect, it, vi } from 'vitest';
 
@@ -119,4 +120,28 @@ it('approves only one request from the expected device fingerprint', async () =>
   await expect(waitForUniquePairRequest(
     session, pairSyncIdentityFingerprint('other'), { wait: vi.fn() }
   )).rejects.toThrow('another device');
+});
+
+it('observes a unique fixed request after the legacy window but before the shared deadline', async () => {
+  const request = { device_id: 'android-device-1', pair_request_id: 'pair-1' };
+  let currentTime = 0;
+  const session = { load: vi.fn()
+    .mockResolvedValueOnce({ pending_requests: [] })
+    .mockResolvedValueOnce({ pending_requests: [] })
+    .mockResolvedValue({ pending_requests: [request] }) };
+  const wait = vi.fn(async () => { currentTime += 25_000; });
+  await expect(waitForUniquePairRequest(session, pairSyncIdentityFingerprint(request.device_id), {
+    deadline: 90_000, now: () => currentTime, wait
+  })).resolves.toBe(request);
+  expect(currentTime).toBe(50_000);
+});
+
+it('stops request observation at the shared cancellation boundary', async () => {
+  const controller = new AbortController();
+  const session = { load: vi.fn(async () => ({ pending_requests: [] })) };
+  const wait = vi.fn(async () => { controller.abort(); });
+  await expect(waitForUniquePairRequest(session, '0123456789abcdef', {
+    deadline: 180_000, now: () => 0, signal: controller.signal, wait
+  })).rejects.toMatchObject({ name: 'AbortError' });
+  expect(session.load).toHaveBeenCalledOnce();
 });

@@ -9,7 +9,8 @@ import {
   inspectWindowsPairSyncRecoveryDesktop, runWindowsA5PairSyncRecovery
 } from './windows-a5-pair-sync-recovery-action.mjs';
 import {
-  resolvePairSyncConcurrentFailure, waitForPairRequestWhileInstrumentationRuns
+  createPairSyncRecoveryWindow, resolvePairSyncConcurrentFailure,
+  waitForPairRequestWhileInstrumentationRuns
 } from './windows-a5-pair-sync-recovery-concurrency.mjs';
 import { assertPairSyncRuntimeOwnership } from './windows-a5-pair-sync-recovery-transport.mjs';
 import { pairSyncIdentityFingerprint } from './windows-pair-sync-desktop-session.mjs';
@@ -181,13 +182,23 @@ it('accepts only a live current session that owns the fixed running listener', (
   ]) expect(() => assertPairSyncRuntimeOwnership(overview, session)).toThrow('fixed sync listener');
 });
 
-it('surfaces instrumentation failure instead of masking it with desktop request waiting', async () => {
+it('shares one bounded recovery window and cancels request observation at the first terminal', async () => {
+  const window = createPairSyncRecoveryWindow({ now: () => 20, timeoutMs: 180_000 });
+  expect(window).toMatchObject({ deadline: 180_020, instrumentationTimeoutMs: 180_000 });
+  const cancelPairRequest = vi.fn();
   const instrumentationError = Object.assign(new Error('instrumentation failed'), {
     stage: 'pair-sync-instrumentation'
   });
   await expect(waitForPairRequestWhileInstrumentationRuns(
-    new Promise(() => undefined), Promise.reject(instrumentationError)
+    new Promise(() => undefined), Promise.reject(instrumentationError), cancelPairRequest
   )).rejects.toBe(instrumentationError);
+  expect(cancelPairRequest).toHaveBeenCalledOnce();
+});
+
+it('preserves whichever concurrent failure becomes observable first', async () => {
+  const instrumentationError = Object.assign(new Error('instrumentation failed'), {
+    stage: 'pair-sync-instrumentation'
+  });
   await expect(waitForPairRequestWhileInstrumentationRuns(
     new Promise(() => undefined), Promise.resolve({
       output: 'Timed out waiting for pairing or sync entry.'
@@ -199,6 +210,10 @@ it('surfaces instrumentation failure instead of masking it with desktop request 
     Object.assign(new Error('request timeout'), { stage: 'desktop-pair-request' }),
     Promise.resolve({ output: 'Timed out waiting for pairing or sync entry.' })
   )).resolves.toMatchObject({
-    failureReason: 'pairing_entry_timeout', stage: 'pair-sync-instrumentation'
+    message: 'request timeout', stage: 'desktop-pair-request'
   });
+  await expect(resolvePairSyncConcurrentFailure(
+    Object.assign(new Error('request conflict'), { stage: 'desktop-pair-request' }),
+    Promise.reject(instrumentationError)
+  )).resolves.toMatchObject({ message: 'request conflict', stage: 'desktop-pair-request' });
 });
