@@ -61,11 +61,23 @@ it('reduces instrumentation output to a fixed non-sensitive failure reason', () 
   expect(classifyPairSyncRecoveryInstrumentationFailure(
     'java.lang.IllegalStateException: Pairing request failed: request_rate_limited'
   )).toBe('pair_request_rate_limited');
+  expect(classifyPairSyncRecoveryInstrumentationFailure(
+    'java.lang.IllegalStateException: Pairing completion returned to Pair target.'
+  )).toBe('pair_completion_ui_reverted');
+  expect(classifyPairSyncRecoveryInstrumentationFailure(
+    'java.lang.IllegalStateException: Timed out while evaluating the WebView semantic action.'
+  )).toBe('webview_evaluation_stalled');
   expect(classifyPairSyncRecoveryInstrumentationFailure([
     'INSTRUMENTATION_STATUS: foliolePairSyncStage=webview-ready',
     'INSTRUMENTATION_STATUS: foliolePairSyncStage=discovery-request',
     'INSTRUMENTATION_STATUS: foliolePairSyncStage=pair-target'
   ].join('\n'))).toBe('pair_target_interrupted');
+  expect(classifyPairSyncRecoveryInstrumentationFailure(
+    'INSTRUMENTATION_STATUS: foliolePairSyncStage=initial-sync-awaiting'
+  )).toBe('pair_completion_wait_interrupted');
+  expect(classifyPairSyncRecoveryInstrumentationFailure(
+    'INSTRUMENTATION_STATUS: foliolePairSyncStage=initial-sync-pair-target-returned'
+  )).toBe('pair_completion_ui_reverted');
   expect(classifyPairSyncRecoveryInstrumentationFailure(
     'INSTRUMENTATION_STATUS: foliolePairSyncStage=forged-stage'
   )).toBe('unknown_instrumentation_failure');

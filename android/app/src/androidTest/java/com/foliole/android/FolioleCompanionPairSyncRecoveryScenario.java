@@ -135,8 +135,7 @@ final class FolioleCompanionPairSyncRecoveryScenario {
         WebView webView,
         long deadline
     ) throws Exception {
-        waitForUniqueVisible(instrumentation, webView, CONNECTED_TARGET, deadline);
-        JSONObject target = uniqueVisibleTarget(instrumentation, webView, CONNECTED_TARGET);
+        JSONObject target = waitForConnectedTarget(instrumentation, webView, deadline);
         if (!target.optBoolean("disabled")) {
             clickVisible(instrumentation, webView, CONNECTED_TARGET, deadline);
         }
@@ -150,6 +149,33 @@ final class FolioleCompanionPairSyncRecoveryScenario {
         throw new IllegalStateException("Timed out waiting for initial workspace sync completion.");
     }
 
+    private static JSONObject waitForConnectedTarget(
+        Instrumentation instrumentation,
+        WebView webView,
+        long deadline
+    ) throws Exception {
+        FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "initial-sync-awaiting");
+        while (System.nanoTime() < deadline) {
+            JSONObject request = FolioleCompanionWebViewSemanticAdapter.pairingRequestState(
+                instrumentation, webView
+            );
+            String errorReason = request.optString("errorReason");
+            if (!errorReason.isEmpty()) {
+                throw new IllegalStateException("Pairing completion failed: " + errorReason);
+            }
+            if (request.optBoolean("pairFound")) {
+                FolioleCompanionPairSyncHostEvidence.stage(
+                    instrumentation, "initial-sync-pair-target-returned"
+                );
+                throw new IllegalStateException("Pairing completion returned to Pair target.");
+            }
+            JSONObject target = visibleTarget(instrumentation, webView, CONNECTED_TARGET);
+            if (target != null) return target;
+            Thread.sleep(150);
+        }
+        throw new IllegalStateException("Timed out waiting for semantic target: " + CONNECTED_TARGET);
+    }
+
     private static JSONObject uniqueVisibleTarget(
         Instrumentation instrumentation,
         WebView webView,
@@ -157,6 +183,22 @@ final class FolioleCompanionPairSyncRecoveryScenario {
     ) throws Exception {
         JSONArray elements = FolioleCompanionWebViewSemanticAdapter
             .snapshot(instrumentation, webView).getJSONArray("elements");
+        JSONObject match = visibleTarget(elements, testId);
+        if (match == null) throw new IllegalStateException("Pairing target disappeared: " + testId);
+        return match;
+    }
+
+    private static JSONObject visibleTarget(
+        Instrumentation instrumentation,
+        WebView webView,
+        String testId
+    ) throws Exception {
+        JSONArray elements = FolioleCompanionWebViewSemanticAdapter
+            .snapshot(instrumentation, webView).getJSONArray("elements");
+        return visibleTarget(elements, testId);
+    }
+
+    private static JSONObject visibleTarget(JSONArray elements, String testId) throws Exception {
         JSONObject match = null;
         for (int index = 0; index < elements.length(); index += 1) {
             JSONObject element = elements.getJSONObject(index);
@@ -165,7 +207,6 @@ final class FolioleCompanionPairSyncRecoveryScenario {
                 match = element;
             }
         }
-        if (match == null) throw new IllegalStateException("Pairing target disappeared: " + testId);
         return match;
     }
 }

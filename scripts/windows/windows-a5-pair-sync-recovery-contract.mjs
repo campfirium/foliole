@@ -86,7 +86,10 @@ export function classifyPairSyncRecoveryInstrumentationFailure(output) {
     ['pair_request_crypto_failed', /Pairing request failed: pairing_crypto_failed/u],
     ['pair_request_ui_error', /Pairing request failed: request_ui_error/u],
     ['pair_request_submission_timeout', /Timed out waiting for pairing request submission/u],
+    ['pair_completion_ui_reverted', /Pairing completion returned to Pair target/u],
+    ['pair_completion_ui_error', /Pairing completion failed:/u],
     ['initial_sync_timeout', /Timed out waiting for initial workspace sync completion/u],
+    ['webview_evaluation_stalled', /Timed out while evaluating the WebView semantic action/u],
     ['pair_target_ambiguous', /Pairing target is not unique/u],
     ['pair_target_disappeared', /Pairing target disappeared/u],
     ['semantic_action_failed', /Semantic action failed/u],
@@ -110,7 +113,9 @@ export function classifyPairSyncRecoveryInstrumentationFailure(output) {
     'pair-target': 'pair_target_interrupted',
     'pair-request': 'pair_request_interrupted',
     'pair-request-submitted': 'pair_request_submitted_interrupted',
-    'initial-sync': 'initial_sync_interrupted'
+    'initial-sync': 'initial_sync_interrupted',
+    'initial-sync-awaiting': 'pair_completion_wait_interrupted',
+    'initial-sync-pair-target-returned': 'pair_completion_ui_reverted'
   };
   return interruptedStages[stage] ?? 'unknown_instrumentation_failure';
 }
