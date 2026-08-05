@@ -11,7 +11,7 @@ const bonjourMock = vi.hoisted(() => ({
 const networkInterfacesMock = vi.hoisted(() => vi.fn());
 
 vi.mock('node:os', () => ({
-  default: { networkInterfaces: networkInterfacesMock }
+  default: { hostname: () => 'V', networkInterfaces: networkInterfacesMock }
 }));
 
 vi.mock('bonjour-service', () => {
@@ -79,6 +79,7 @@ describe('companion mDNS advertisement', () => {
     expect(bonjourMock.constructorOptions).toEqual([{ interface: '192.168.0.11' }]);
 
     expect(bonjourMock.publish).toHaveBeenCalledWith({
+      host: 'V.local',
       name: 'Foliole Desktop',
       port: 38683,
       protocol: 'tcp',

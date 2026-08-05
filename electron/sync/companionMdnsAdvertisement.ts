@@ -36,6 +36,12 @@ export function collectCompanionMdnsInterfaceAddresses(
   return [...new Set(addresses)];
 }
 
+export function resolveCompanionMdnsHost(hostname = os.hostname()) {
+  const label = hostname.trim().replace(/\.+$/u, '').split('.')[0]
+    ?.replace(/[^A-Za-z0-9-]/gu, '-').replace(/^-+|-+$/gu, '').slice(0, 63);
+  return `${label || 'foliole-desktop'}.local`;
+}
+
 export function startCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisementInput) {
   stopCompanionMdnsAdvertisement();
   const reportWarning = (error: unknown) => {
@@ -48,6 +54,7 @@ export function startCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisemen
     const options: BonjourMdnsOptions | undefined = interfaceAddress ? { interface: interfaceAddress } : undefined;
     const bonjour = new Bonjour(options, reportWarning);
     const service = bonjour.publish({
+      host: resolveCompanionMdnsHost(),
       name: 'Foliole Desktop',
       port: input.port,
       protocol: 'tcp',
