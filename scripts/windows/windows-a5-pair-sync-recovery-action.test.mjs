@@ -5,9 +5,11 @@ import { Buffer } from 'node:buffer';
 import { expect, it, vi } from 'vitest';
 
 import {
-  inspectWindowsPairSyncRecoveryDesktop, runWindowsA5PairSyncRecovery,
-  waitForPairRequestWhileInstrumentationRuns
+  inspectWindowsPairSyncRecoveryDesktop, runWindowsA5PairSyncRecovery
 } from './windows-a5-pair-sync-recovery-action.mjs';
+import {
+  resolvePairSyncConcurrentFailure, waitForPairRequestWhileInstrumentationRuns
+} from './windows-a5-pair-sync-recovery-concurrency.mjs';
 import { pairSyncIdentityFingerprint } from './windows-pair-sync-desktop-session.mjs';
 
 const paths = { repoRoot: 'C:\\repo', systemNode: 'C:\\Program Files\\nodejs\\node.exe' };
@@ -148,5 +150,11 @@ it('surfaces instrumentation failure instead of masking it with desktop request 
     })
   )).rejects.toMatchObject({
     exitCode: 74, failureReason: 'pairing_entry_timeout', stage: 'pair-sync-instrumentation'
+  });
+  await expect(resolvePairSyncConcurrentFailure(
+    Object.assign(new Error('request timeout'), { stage: 'desktop-pair-request' }),
+    Promise.resolve({ output: 'Timed out waiting for pairing or sync entry.' })
+  )).resolves.toMatchObject({
+    failureReason: 'pairing_entry_timeout', stage: 'pair-sync-instrumentation'
   });
 });

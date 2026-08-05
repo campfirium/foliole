@@ -10,6 +10,9 @@ import {
   classifyPairSyncRecoveryActionFailure, pairSyncRecoveryFailure,
   parsePairSyncRecoveryInstrumentation
 } from './windows-a5-pair-sync-recovery-contract.mjs';
+import {
+  resolvePairSyncConcurrentFailure, waitForPairRequestWhileInstrumentationRuns
+} from './windows-a5-pair-sync-recovery-concurrency.mjs';
 import { scrubPairSyncDataProtection } from './windows-a5-pair-sync-recovery-evidence.mjs';
 import {
   openPairSyncDesktopSession, waitForUniquePairRequest
@@ -75,20 +78,6 @@ async function desktopStep(stage, action) {
     if (error?.stage) throw error;
     throw pairSyncRecoveryFailure(error.message, stage, error);
   }
-}
-
-export function waitForPairRequestWhileInstrumentationRuns(
-  pairRequestPromise, instrumentationPromise
-) {
-  const earlyInstrumentation = instrumentationPromise.then((result) => {
-    throw classifyPairSyncRecoveryActionFailure(
-      pairSyncRecoveryFailure(
-        'Pairing instrumentation completed before the desktop request',
-        'pair-sync-instrumentation', result
-      ), 'pair-sync-instrumentation', result.output
-    );
-  });
-  return Promise.race([pairRequestPromise, earlyInstrumentation]);
 }
 
 export async function inspectWindowsPairSyncRecoveryDesktop({
@@ -197,8 +186,7 @@ export async function runWindowsA5PairSyncRecovery({
     }
     proof = { android: android.readiness, desktop, receipt };
   } catch (error) {
-    primaryError = error;
-    await instrumentationPromise?.catch(() => undefined);
+    primaryError = await resolvePairSyncConcurrentFailure(error, instrumentationPromise);
   }
   scrubPairSyncDataProtection(fsApi, dataManifest);
   try {
