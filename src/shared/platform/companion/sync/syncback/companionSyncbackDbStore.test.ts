@@ -18,10 +18,16 @@ it('selects only supported local state through the shared macOS payload contract
   });
   fake.meta.set('device_id', 'ios-device');
   fake.stateRows = [
+    stateRow('node_open_state', 'open-hash', 3),
     stateRow('node_reading', 'reading-hash', 4),
     stateRow('node_review', 'review-hash', 5),
     stateRow('setting', 'setting-hash', 6, 'device:ios:phone:*:handoff_reminder_settings')
   ];
+  fake.openStatePayloadRows = [{
+    payload_json: JSON.stringify({
+      last_opened_at: '2026-07-20T00:00:00.000Z', node_id: 'node-1'
+    })
+  }];
   fake.readingPayloadRows = [{
     interval_duration_ms: 120000, interval_growth_factor: 1.5,
     last_handled_at: '2026-07-20T00:00:00.000Z', next_at: '2026-07-21T00:00:00.000Z',
@@ -37,6 +43,9 @@ it('selects only supported local state through the shared macOS payload contract
   const store = createCompanionSyncbackDbStore(fake);
 
   await expect(store.loadStateChanges(null, 20)).resolves.toEqual([
+    expect.objectContaining({
+      object_type: 'node_open_state', payload_json: fake.openStatePayloadRows[0]!.payload_json
+    }),
     expect.objectContaining({ object_type: 'node_reading', payload_json: JSON.stringify(fake.readingPayloadRows[0]) }),
     expect.objectContaining({ object_type: 'node_review', payload_json: JSON.stringify(fake.reviewPayloadRows[0]) }),
     expect.objectContaining({ object_type: 'setting', payload_json: settingPayloadJson })
@@ -112,7 +121,7 @@ it('persists cursors and saves valid acknowledgements atomically', async () => {
 });
 
 function stateRow(
-  objectType: 'node_reading' | 'node_review' | 'setting',
+  objectType: 'node_open_state' | 'node_reading' | 'node_review' | 'setting',
   contentHash: string,
   stateSeq: number,
   objectId = 'node-1'
@@ -156,6 +165,7 @@ class FakeDbPort implements DbPort {
   failClientOpId: string | null = null;
   nodeParents = new Map<string, string>();
   nodeRows: DbRow[] = [];
+  openStatePayloadRows: DbRow[] = [];
   readingPayloadRows: DbRow[] = [];
   reviewPayloadRows: DbRow[] = [];
   reviewRows: DbRow[] = [];
@@ -174,6 +184,7 @@ class FakeDbPort implements DbPort {
       return (parentVersionId ? [{ parent_version_id: parentVersionId }] : []) as unknown as T[];
     }
     if (sql === CONTRACT.sql.state) return this.stateRows as T[];
+    if (sql === CONTRACT.sql.openStatePayload) return this.openStatePayloadRows as T[];
     if (sql === CONTRACT.sql.readingPayload) return this.readingPayloadRows as T[];
     if (sql === CONTRACT.sql.reviewPayload) return this.reviewPayloadRows as T[];
     if (sql === CONTRACT.sql.settingPayload) return this.settingPayloadRows as T[];

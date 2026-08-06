@@ -99,6 +99,13 @@ function readiness(paths) {
   ], { cwd: paths.repoRoot });
 }
 
+function pairingReadiness(paths) {
+  checked(process.execPath, [
+    path.join(paths.repoRoot, 'scripts/android/android-pair-sync-recovery-readiness-runner.mjs'),
+    '--adb', paths.adb, '--serial', A5_SERIAL, '--app-id', APP_ID
+  ], { cwd: paths.repoRoot });
+}
+
 function build(paths) {
   checked('npm', ['run', 'android:web:build'], { cwd: paths.repoRoot });
   checked(paths.cap, ['sync', 'android'], { cwd: paths.repoRoot });
@@ -106,6 +113,11 @@ function build(paths) {
     cwd: path.join(paths.repoRoot, 'android'), env: macosA5GradleEnv()
   });
   if (!existsSync(paths.apk)) throw new Error(`Debug APK was not produced: ${paths.apk}`);
+}
+
+function buildDesktop(paths) {
+  checked('npm', ['run', 'build'], { cwd: paths.repoRoot });
+  checked('npm', ['run', 'electron:compile'], { cwd: paths.repoRoot });
 }
 
 function deploy(paths) {
@@ -157,6 +169,33 @@ async function captureAnnotation(paths) {
   console.log(`[macos-a5-dev] capture-annotation evidence=${result.captureAnnotation.manifestPath}`);
 }
 
+async function pairSync(paths) {
+  assertFixedA5(paths);
+  const { runMacosA5PairSyncPreflight } = await import('./macos-a5-pair-sync-preflight.mjs');
+  const readinessState = runMacosA5PairSyncPreflight(paths);
+  build(paths);
+  buildDesktop(paths);
+  const buildIdentity = captureIdentity();
+  const evidenceRoot = path.join(paths.repoRoot, '.tmp/artifacts/a5-pair-sync', buildIdentity);
+  const env = macosA5GradleEnv();
+  const { runMacosA5PairSync } = await import('./macos-a5-pair-sync-action.mjs');
+  const result = await runMacosA5PairSync({
+    buildIdentity,
+    deviceFingerprint: readinessState.deviceIdentityFingerprint,
+    existingPairing: readinessState.existingPairing,
+    env,
+    evidenceRoot,
+    execute,
+    paths,
+    protectData: (mode, manifest, backupRoot) => protectData(
+      paths, env, mode, manifest, backupRoot
+    ),
+    serial: A5_SERIAL
+  });
+  process.stdout.write(result.output);
+  console.log(`[macos-a5-dev] pair-sync evidence=${result.pairSyncRecovery.manifestPath}`);
+}
+
 async function databasePerformance(paths) {
   assertFixedA5(paths); build(paths);
   const { runA5DatabasePerformance } = await import('./android-a5-database-performance-action.mjs');
@@ -168,8 +207,8 @@ async function databasePerformance(paths) {
 }
 
 export async function runMacosA5Action(action, repoRoot = process.cwd()) {
-  if (!['status', 'build', 'capture-annotation', 'database-performance', 'deploy'].includes(action)) {
-    throw new Error('Usage: node scripts/android/macos-a5-dev.mjs <status|build|capture-annotation|database-performance|deploy>');
+  if (!['status', 'build', 'capture-annotation', 'database-performance', 'deploy', 'pair-sync'].includes(action)) {
+    throw new Error('Usage: node scripts/android/macos-a5-dev.mjs <status|build|capture-annotation|database-performance|deploy|pair-sync>');
   }
   const paths = macosA5Paths(repoRoot);
   assertSafeMacosA5Environment(paths);
@@ -177,11 +216,13 @@ export async function runMacosA5Action(action, repoRoot = process.cwd()) {
     if (action === 'build') build(paths);
     if (action === 'status') {
       assertFixedA5(paths);
+      pairingReadiness(paths);
       readiness(paths);
     }
     if (action === 'deploy') deploy(paths);
     if (action === 'capture-annotation') await captureAnnotation(paths);
     if (action === 'database-performance') await databasePerformance(paths);
+    if (action === 'pair-sync') await pairSync(paths);
   } finally {
     spawnSync(paths.adb, ['kill-server']);
   }

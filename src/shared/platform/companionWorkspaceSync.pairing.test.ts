@@ -147,7 +147,8 @@ it.each([
     deviceKind,
     deviceName,
     endpointUrl: 'http://10.0.2.2:38641',
-    pairRequestId: 'pair-request-1'
+    pairRequestId: 'pair-request-1',
+    remotePeerId: 'stale-discovery-peer'
   })).resolves.toMatchObject({ device_id: deviceId, device_name: deviceName, is_paired: true });
   expect(capacitorMock.plugin.desktopHttpRequest).toHaveBeenLastCalledWith({
     body: JSON.stringify({ pair_request_id: 'pair-request-1' }),
@@ -156,7 +157,8 @@ it.each([
     url: 'http://10.0.2.2:38641/companion/pair'
   });
   expect(capacitorMock.plugin.savePairingCredentials).toHaveBeenCalledWith(expect.objectContaining({
-    primary_device_id: 'device-desktop'
+    primary_device_id: 'device-desktop',
+    remote_peer_id: 'device-desktop'
   }));
   expect(capacitorMock.plugin.loadPairingState).toHaveBeenCalledTimes(1);
   expect(writerQueueMock.run).toHaveBeenCalledTimes(1);

@@ -2,7 +2,6 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { parseCaptureAnnotationReadiness } from './windows-a5-capture-annotation-contract.mjs';
 import {
   PAIR_SYNC_RECOVERY_APP_ID, PAIR_SYNC_RECOVERY_EVIDENCE_FILES, PAIR_SYNC_RECOVERY_MAIN_COMPONENT,
   PAIR_SYNC_RECOVERY_TEST_APP_ID, PAIR_SYNC_RECOVERY_TEST_CLASS,
@@ -10,10 +9,10 @@ import {
   classifyPairSyncRecoveryActionFailure, createPairSyncRecoveryEvidenceTracker, pairSyncRecoveryFailure,
   parsePairSyncRecoveryInstrumentation
 } from './windows-a5-pair-sync-recovery-contract.mjs';
-import { createPairSyncRecoveryWindow, resolvePairSyncConcurrentFailure
-} from './windows-a5-pair-sync-recovery-concurrency.mjs';
+import { createPairSyncRecoveryWindow, resolvePairSyncConcurrentFailure } from './windows-a5-pair-sync-recovery-concurrency.mjs';
 import { scrubPairSyncDataProtection } from './windows-a5-pair-sync-recovery-evidence.mjs';
 import { collectPairSyncRecoveryFailureEvidence } from './windows-a5-pair-sync-recovery-failure-evidence.mjs';
+import { postPairSyncRecoveryReadiness } from './windows-a5-pair-sync-recovery-readiness.mjs';
 import {
   openPairSyncDesktopSession, waitForUniquePairRequest
 } from './windows-pair-sync-desktop-session.mjs';
@@ -105,18 +104,6 @@ export async function inspectWindowsPairSyncRecoveryDesktop({
   return { output: output.join(''), overview };
 }
 
-async function postRecoveryReadiness(execute, paths, env, serial) {
-  const script = path.join(paths.repoRoot, 'scripts', 'android', 'android-capture-annotation-readiness-runner.mjs');
-  const result = await checked(execute, paths.systemNode, [
-    script, '--adb', paths.adbPath, '--serial', serial, '--app-id', PAIR_SYNC_RECOVERY_APP_ID
-  ], options(env, 'pair_sync_readiness_timeout', 60_000), 'post-sync-readiness');
-  const readiness = parseCaptureAnnotationReadiness(result.stdout);
-  if (readiness.resultStatus !== 'ready') {
-    throw pairSyncRecoveryFailure('Recovered Android workspace is not ready', 'post-sync-readiness', result);
-  }
-  return { output: result.output, readiness };
-}
-
 function pairSyncAdbRunner(execute, paths, env, adbPort, serial) {
   return (args, stage) => checked(execute, paths.adbPath,
     ['-P', adbPort, '-s', serial, ...args], options(env, 'pair_sync_transport_timeout', 30_000), stage);
@@ -124,7 +111,10 @@ function pairSyncAdbRunner(execute, paths, env, adbPort, serial) {
 
 export async function runWindowsA5PairSyncRecovery({
   adbPort, buildIdentity, deviceFingerprint, env, evidenceRoot, execute, fsApi = fs,
-  existingPairing = false, openDesktopSession = openPairSyncDesktopSession, paths, protectData,
+  existingPairing = false, openDesktopSession = openPairSyncDesktopSession,
+  desktopControl = clientControl, openTransport = openPairSyncRecoveryTransport,
+  closeTransport = closePairSyncRecoveryTransport,
+  validateDesktop = validateOwnedDesktopPreflight, paths, protectData,
   remotePeerFingerprint, serial
 }) {
   const artifacts = pairSyncRecoveryArtifactPaths(evidenceRoot);
@@ -138,7 +128,7 @@ export async function runWindowsA5PairSyncRecovery({
   let instrumentationPromise = null;
   let proof;
   const recoveryEvidence = createPairSyncRecoveryEvidenceTracker();
-  await clientControl(execute, paths, env, 'stop');
+  await desktopControl(execute, paths, env, 'stop');
   try {
     const before = await protectData('backup', dataManifest);
     output.push(before.output);
@@ -151,10 +141,10 @@ export async function runWindowsA5PairSyncRecovery({
       env, repoRoot: paths.repoRoot
     }));
     const enabled = await desktopStep('desktop-sync-enable', () => session.enable());
-    await desktopStep('desktop-runtime-ownership', () => validateOwnedDesktopPreflight(
+    await desktopStep('desktop-runtime-ownership', () => validateDesktop(
       enabled, session, deviceFingerprint, remotePeerFingerprint, existingPairing
     ));
-    await openPairSyncRecoveryTransport(pairSyncAdbRunner(execute, paths, env, adbPort, serial));
+    await openTransport(pairSyncAdbRunner(execute, paths, env, adbPort, serial));
     transportOpen = true;
     await desktopStep('desktop-runtime-ownership', () => session.assertActive());
     const recoveryWindow = createPairSyncRecoveryWindow();
@@ -162,11 +152,12 @@ export async function runWindowsA5PairSyncRecovery({
       '-P', adbPort, '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',
       '-e', 'class', PAIR_SYNC_RECOVERY_TEST_CLASS, PAIR_SYNC_RECOVERY_TEST_RUNNER
     ], options(env, 'pair_sync_instrumentation_timeout', recoveryWindow.instrumentationTimeoutMs), 'pair-sync-instrumentation');
-    const pending = await desktopStep('desktop-pair-request', () =>
-      recoveryWindow.waitForPairRequest(
+    if (!existingPairing) await desktopStep('desktop-pair-request', async () => {
+      const pending = await recoveryWindow.waitForPairRequest(
         waitForUniquePairRequest(session, deviceFingerprint, recoveryWindow), instrumentationPromise
-      ));
-    await desktopStep('desktop-pair-approval', () => recoveryEvidence.approve(session, pending));
+      );
+      await recoveryEvidence.approve(session, pending);
+    });
     const instrumentation = await instrumentationPromise;
     output.push(instrumentation.output);
     const receipt = recoveryEvidence.complete(parsePairSyncRecoveryInstrumentation(instrumentation.stdout));
@@ -176,7 +167,12 @@ export async function runWindowsA5PairSyncRecovery({
     await checked(execute, paths.adbPath,
       ['-P', adbPort, '-s', serial, 'shell', 'am', 'start', '-W', '-n', PAIR_SYNC_RECOVERY_MAIN_COMPONENT],
       options(env, 'pair_sync_restart_timeout', 60_000), 'pair-sync-restart');
-    const android = await postRecoveryReadiness(execute, paths, env, serial);
+    const android = await postPairSyncRecoveryReadiness({
+      deviceFingerprint, env, paths, serial,
+      run: (command, args, commandOptions, stage) => checked(
+        execute, command, args, commandOptions, stage
+      )
+    });
     output.push(android.output);
     const desktop = session.sanitize(await desktopStep('desktop-pairing-result', () => session.load()));
     if (!desktop.pairedDeviceFingerprints.includes(deviceFingerprint)) {
@@ -193,7 +189,7 @@ export async function runWindowsA5PairSyncRecovery({
   scrubPairSyncDataProtection(fsApi, dataManifest);
   try {
     if (transportOpen) {
-      await closePairSyncRecoveryTransport(pairSyncAdbRunner(execute, paths, env, adbPort, serial));
+      await closeTransport(pairSyncAdbRunner(execute, paths, env, adbPort, serial));
     }
   } catch (error) { primaryError ??= error; }
   try {
@@ -205,7 +201,7 @@ export async function runWindowsA5PairSyncRecovery({
   }
   try { await session?.close(); }
   catch (error) { primaryError ??= pairSyncRecoveryFailure(error.message, 'desktop-session-close', error); }
-  try { output.push((await clientControl(execute, paths, env, 'start')).output); }
+  try { output.push((await desktopControl(execute, paths, env, 'start')).output); }
   catch (error) { primaryError ??= error; }
   if (primaryError) {
     if (!primaryError.result?.output) primaryError.result = { output: output.join('') };

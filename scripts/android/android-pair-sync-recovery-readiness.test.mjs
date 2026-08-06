@@ -21,6 +21,21 @@ function snapshot({ dirty = 0, nodes = 0 } = {}) {
   return { database: { exists: true, inspection }, packageInfo: { installed: true } };
 }
 
+it('excludes device-private view state from the unsynced push gate', () => {
+  const queries = [];
+  const database = { prepare: (sql) => {
+    queries.push(sql);
+    return { get: (value) => {
+      if (sql.includes('sqlite_master')) return { present: 1 };
+      if (sql.includes('companion_meta')) return value === 'device_id' ? { value: 'android-device-1' } : undefined;
+      return { count: 0 };
+    } };
+  } };
+
+  expect(inspectPairSyncRecoveryWorkspace(database).dirtyRecordCount).toBe(0);
+  expect(queries).toContainEqual(expect.stringContaining("object_type <> 'view_state'"));
+});
+
 it('allows only an empty unpaired workspace with a stable device identity', () => {
   expect(pairSyncRecoveryReadiness(snapshot(), false)).toMatchObject({
     deviceIdentityFingerprint: expect.stringMatching(/^[0-9a-f]{16}$/u),

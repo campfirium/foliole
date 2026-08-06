@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -29,9 +31,27 @@ describe('macOS fixed A5 development entry', () => {
     await expect(runMacosA5Action('shell', '/repo')).rejects.toThrow(/Usage:/);
   });
 
+  it('exposes one fixed pair-sync action without accepting device arguments', () => {
+    const source = fs.readFileSync('scripts/android/macos-a5-dev.mjs', 'utf8');
+    const preflight = fs.readFileSync('scripts/android/macos-a5-pair-sync-preflight.mjs', 'utf8');
+    expect(source).toContain("'pair-sync'");
+    expect(preflight).toContain('Fixed A5 no longer matches the authorized pair-switch state.');
+    expect(source).not.toContain("process.argv[3]");
+  });
+
   it('keeps bounded instrumentation output on failure', () => {
     expect(macosA5ErrorEvidence({ result: { output: 'INSTRUMENTATION_STATUS: stack=failed' } }))
       .toContain('stack=failed');
     expect(macosA5ErrorEvidence(new Error('missing'))).toBe('');
+  });
+
+  it('checks pairing credentials before workspace readiness in fixed status', () => {
+    const source = fs.readFileSync('scripts/android/macos-a5-dev.mjs', 'utf8');
+    const statusBlock = source.slice(
+      source.indexOf("if (action === 'status')"), source.indexOf("if (action === 'deploy')")
+    );
+
+    expect(statusBlock.indexOf('pairingReadiness(paths)')).toBeGreaterThan(-1);
+    expect(statusBlock.indexOf('pairingReadiness(paths)')).toBeLessThan(statusBlock.indexOf('readiness(paths)'));
   });
 });

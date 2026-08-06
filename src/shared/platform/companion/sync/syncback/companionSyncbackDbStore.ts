@@ -111,8 +111,7 @@ async function loadStateChanges(port: DbPort, cursor: number | null, limit = CON
 
 async function loadPayloadJson(port: DbPort, row: NativeSyncStateObjectRecord) {
   const payload = (await port.query(payloadSql(row.object_type), [row.object_id]))[0] ?? {};
-  if (row.object_type !== 'setting') return JSON.stringify(payload);
-  return typeof payload.payload_json === 'string' ? payload.payload_json : '{}';
+  return typeof payload.payload_json === 'string' ? payload.payload_json : JSON.stringify(payload);
 }
 
 function payloadSql(objectType: NativeSyncStateObjectRecord['object_type']) {

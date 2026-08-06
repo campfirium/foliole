@@ -1,6 +1,6 @@
 import type { CompanionWorkspaceVersionPayload } from '../../../../../lib/platform/nativeCompanionSyncContract';
-import { discoverCompanionDesktop } from '../../companionWorkspaceDiscovery';
-import { createSignedRequestHeaders } from '../../companionWorkspacePairing';
+import { discoverCompanionDesktops } from '../../companionWorkspaceDiscovery';
+import { createSignedRequestHeaders, loadCompanionPairingState } from '../../companionWorkspacePairing';
 import {
   FolioleCompanionSync,
   isNativeCompanionPairingRuntime,
@@ -8,22 +8,17 @@ import {
   WORKSPACE_VERSION_PATH
 } from '../../companionWorkspaceRuntimeRepository';
 
-function isLocalDevelopmentEndpoint(endpointUrl: string) {
-  try {
-    const host = new URL(normalizeEndpointUrl(endpointUrl)).hostname;
-    return host === '10.0.2.2' || host === '127.0.0.1' || host === 'localhost';
-  } catch {
-    return false;
-  }
-}
-
 export async function resolveReachableCompanionWorkspaceSyncEndpoint(endpointUrl: string) {
   const normalizedEndpointUrl = normalizeEndpointUrl(endpointUrl);
-  if (!isNativeCompanionPairingRuntime() || !isLocalDevelopmentEndpoint(normalizedEndpointUrl)) {
+  if (!isNativeCompanionPairingRuntime()) {
     return normalizedEndpointUrl;
   }
-  const discovered = await discoverCompanionDesktop(normalizedEndpointUrl).catch(() => null);
-  return discovered?.endpointUrl ?? normalizedEndpointUrl;
+  const pairing = await loadCompanionPairingState().catch(() => null);
+  const remotePeerId = pairing?.remote_peer_id?.trim();
+  if (!remotePeerId) return normalizedEndpointUrl;
+  const discovered = await discoverCompanionDesktops(normalizedEndpointUrl).catch(() => []);
+  const pairedDesktop = discovered.find((candidate) => candidate.discovery.peer_id === remotePeerId);
+  return pairedDesktop?.endpointUrl ?? normalizedEndpointUrl;
 }
 
 export async function loadCompanionWorkspaceVersion(endpointUrl: string) {

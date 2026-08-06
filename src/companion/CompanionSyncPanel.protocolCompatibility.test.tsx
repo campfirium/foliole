@@ -132,6 +132,7 @@ describe('CompanionSyncPanel protocol rejection', () => {
 
     renderWithLocalization(<CompanionSyncPanel {...props} />);
     expect(screen.getByText('Pairing needs to be renewed')).toBeInTheDocument();
+    expect(screen.getByTestId('companion-sync-repair')).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Sync' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Pair again' }));
     await waitFor(() => expect(props.onDisconnectPairing).toHaveBeenCalledTimes(1));

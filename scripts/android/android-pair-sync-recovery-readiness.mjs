@@ -24,7 +24,11 @@ export function inspectPairSyncRecoveryWorkspace(database) {
   const deviceId = meta(database, 'device_id');
   return {
     deviceIdentityFingerprint: identityFingerprint(deviceId),
-    dirtyRecordCount: count(database, 'sync_object_state', ' WHERE sync_dirty = 1'),
+    dirtyRecordCount: count(
+      database,
+      'sync_object_state',
+      " WHERE sync_dirty = 1 AND object_type <> 'view_state'"
+    ),
     nodeCount: count(database, 'nodes')
   };
 }
