@@ -12,6 +12,7 @@ interface CompanionBootstrapPlugin {
 }
 
 const FolioleCompanionBootstrap = registerPlugin<CompanionBootstrapPlugin>('FolioleCompanionBootstrap');
+let nativeBootstrapPromise: Promise<NativeCompanionBootstrapState> | null = null;
 
 function normalizeCompanionBootstrapState(value: unknown): NativeCompanionBootstrapState | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -91,19 +92,25 @@ export function isNativeCompanionRuntime() {
   return runtime.kind !== 'web-preview' && runtime.kind !== 'native-unavailable';
 }
 
+async function initializeNativeCompanionBootstrapState() {
+  const result = normalizeCompanionBootstrapState(await FolioleCompanionBootstrap.loadBootstrap());
+  if (!result) {
+    throw new Error('Native companion bootstrap returned an invalid payload.');
+  }
+  const { initializeIosCompanionDatabase } = await import('./companion/runtime/iosCompanionDatabaseBootstrap');
+  return initializeIosCompanionDatabase(result);
+}
+
 export async function loadCompanionBootstrapState(): Promise<NativeCompanionBootstrapState> {
   const runtime = requireAvailableCompanionRuntime('bootstrap');
   if (runtime.kind === 'web-preview') {
     return createWebPreviewBootstrapState();
   }
-
-  const result = normalizeCompanionBootstrapState(await FolioleCompanionBootstrap.loadBootstrap());
-  if (!result) {
-    throw new Error('Native companion bootstrap returned an invalid payload.');
+  if (runtime.kind !== 'android-native' && runtime.kind !== 'ios-native') {
+    throw new Error('Native companion bootstrap is unavailable.');
   }
-  if (runtime.kind !== 'android-native' && runtime.kind !== 'ios-native') return result;
-  const { initializeIosCompanionDatabase } = await import('./companion/runtime/iosCompanionDatabaseBootstrap');
-  return initializeIosCompanionDatabase(result);
+  nativeBootstrapPromise ??= initializeNativeCompanionBootstrapState();
+  return nativeBootstrapPromise;
 }
 
 export { normalizeCompanionBootstrapState };

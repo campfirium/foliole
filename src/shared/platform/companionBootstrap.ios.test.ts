@@ -53,4 +53,25 @@ describe('companionBootstrap ios boundary', () => {
     }));
     expect(setItem).not.toHaveBeenCalled();
   });
+
+  it('keeps the same ios bootstrap identity for later sync consumers', async () => {
+    loadBootstrap.mockResolvedValue({
+      booted_at: '2026-07-19T08:00:00Z',
+      database_path: null,
+      database_ready: false,
+      device_id: 'ios-test-device',
+      device_name: 'iPhone',
+      runtime_kind: 'ios-capacitor'
+    });
+    const { loadCompanionBootstrapState } = await import('./companionBootstrap');
+
+    const startup = await loadCompanionBootstrapState();
+    const structureSync = await loadCompanionBootstrapState();
+    const foregroundSync = await loadCompanionBootstrapState();
+
+    expect(structureSync).toBe(startup);
+    expect(foregroundSync).toBe(startup);
+    expect(loadBootstrap).toHaveBeenCalledTimes(1);
+    expect(initializeIosCompanionDatabase).toHaveBeenCalledTimes(1);
+  });
 });

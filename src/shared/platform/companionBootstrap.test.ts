@@ -83,6 +83,34 @@ describe('companionBootstrap', () => {
   });
 });
 
+describe('companionBootstrap native owner lifecycle', () => {
+  it('reuses one owner across sync retries and foreground returns', async () => {
+    capacitorState.isNativePlatform.mockReturnValue(true);
+    capacitorState.getPlatform.mockReturnValue('android');
+    loadBootstrap.mockResolvedValue({
+      booted_at: '2026-08-06T02:00:00.000Z',
+      database_path: null,
+      database_ready: false,
+      device_id: 'android-test-device',
+      device_name: 'Pixel 9',
+      runtime_kind: 'android-capacitor'
+    });
+
+    const { loadCompanionBootstrapState } = await import('./companionBootstrap');
+    const startup = loadCompanionBootstrapState();
+    const structureSync = loadCompanionBootstrapState();
+    const [startupState, structureState] = await Promise.all([startup, structureSync]);
+    const retryState = await loadCompanionBootstrapState();
+    const foregroundState = await loadCompanionBootstrapState();
+
+    expect(structureState).toBe(startupState);
+    expect(retryState).toBe(startupState);
+    expect(foregroundState).toBe(startupState);
+    expect(loadBootstrap).toHaveBeenCalledTimes(1);
+    expect(initializeDatabase).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('companionBootstrap nullable native fields', () => {
   it('normalizes an omitted database path before the shared owner opens it', async () => {
     capacitorState.isNativePlatform.mockReturnValue(true);
