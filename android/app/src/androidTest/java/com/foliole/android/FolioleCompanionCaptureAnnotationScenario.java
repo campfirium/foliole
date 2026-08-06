@@ -107,7 +107,12 @@ final class FolioleCompanionCaptureAnnotationScenario {
             }
             Thread.sleep(100);
         }
-        throw new IllegalStateException("Could not select scenario text: " + result);
+        JSONObject page = evaluate(instrumentation, webView,
+            "(function(){var ids=Array.prototype.slice.call(document.querySelectorAll('[data-testid]'),0,30)" +
+            ".map(function(node){return node.getAttribute('data-testid');});return JSON.stringify({" +
+            "article:!!document.querySelector('[data-companion-article-document]')," +
+            "bodyText:(document.body&&document.body.innerText||'').slice(0,500),testIds:ids});})()");
+        throw new IllegalStateException("Could not select scenario text: " + result + " page=" + page);
     }
 
     static void perform(
