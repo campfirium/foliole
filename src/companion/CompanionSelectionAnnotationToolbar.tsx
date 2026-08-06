@@ -141,32 +141,40 @@ interface CompanionSelectionAnnotationToolbarProps {
 }
 
 function resolveApplyPayload(props: CompanionSelectionAnnotationToolbarProps) {
-  const currentPayload = props.resolveSelectionPayload?.() ?? null;
-  const cachedPayload = props.state?.payload ?? null;
-  if (!currentPayload) return cachedPayload;
-  if (!cachedPayload) return currentPayload;
-  return currentPayload.selectionText.length >= cachedPayload.selectionText.length ? currentPayload : cachedPayload;
+  return props.resolveSelectionPayload ? props.resolveSelectionPayload() : props.state?.payload ?? null;
 }
 
 function reportAnnotationError(error: unknown) {
   console.error('[companion-selection-toolbar] annotation action failed', error);
 }
 
+function useSelectionAnnotationApply(props: CompanionSelectionAnnotationToolbarProps) {
+  const applyPendingRef = useRef(false);
+  return (kind: CompanionSelectionAnnotationKind, note?: string) => {
+    const payload = resolveApplyPayload(props);
+    if (!payload || applyPendingRef.current) return;
+    applyPendingRef.current = true;
+    void Promise.resolve(props.onApply(kind, payload, note))
+      .then(() => {
+        applyPendingRef.current = false;
+        props.onClose();
+      })
+      .catch((error) => {
+        applyPendingRef.current = false;
+        reportAnnotationError(error);
+      });
+  };
+}
+
 export function CompanionSelectionAnnotationToolbar(props: CompanionSelectionAnnotationToolbarProps) {
   const [noteDraft, setNoteDraft] = useState('');
   const [isNoteOpen, setIsNoteOpen] = useState(false);
+  const apply = useSelectionAnnotationApply(props);
 
   if (!props.state) {
     return null;
   }
   const state = props.state;
-
-  function apply(kind: CompanionSelectionAnnotationKind, note?: string) {
-    const payload = resolveApplyPayload(props);
-    if (!payload) return;
-    props.onClose();
-    void Promise.resolve(props.onApply(kind, payload, note)).catch(reportAnnotationError);
-  }
 
   function applyExistingNote(note: string) {
     if (!state.existingHighlight) return;

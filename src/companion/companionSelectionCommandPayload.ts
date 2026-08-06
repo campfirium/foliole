@@ -28,18 +28,25 @@ function getRectPositionRange(adapter: EditorAdapter, rects: DOMRectList): Edito
   return from === null || to === null ? null : { from, to: Math.max(from + 1, to) };
 }
 
-function getDomSelectionRanges(adapter: EditorAdapter): EditorSelection[] {
+function getReadableDomSelection() {
   const selection = window.getSelection();
   if (!selection || selection.isCollapsed || !selection.toString().trim() || !isSelectionInsideReadableArticle(selection)) {
-    return [];
+    return null;
   }
+  return selection;
+}
+
+function getDomSelectionRanges(adapter: EditorAdapter, selection: Selection): EditorSelection[] {
+  const selectedText = selection.toString().trim();
   const rectRanges = Array.from({ length: selection.rangeCount }, (_, index) => {
     const rects = selection.getRangeAt(index).getClientRects();
     return rects.length > 0 ? getRectPositionRange(adapter, rects) : null;
   }).filter((range): range is EditorSelection => range !== null);
-  if (rectRanges.length > 0) return rectRanges;
+  if (rectRanges.length > 1 || (
+    rectRanges.length === 1 && adapter.getContent().slice(rectRanges[0]!.from, rectRanges[0]!.to).trim() === selectedText
+  )) return rectRanges;
 
-  const textRange = getTextSelectionRange(adapter.getContent(), selection.toString());
+  const textRange = getTextSelectionRange(adapter.getContent(), selectedText);
   return textRange ? [textRange] : [];
 }
 
@@ -47,13 +54,12 @@ function getTextSelectionRange(content: string, selectionText: string): EditorSe
   const selectedText = selectionText.trim();
   if (!selectedText) return null;
   const from = content.indexOf(selectedText);
-  if (from < 0) return null;
+  if (from < 0 || content.indexOf(selectedText, from + selectedText.length) >= 0) return null;
   return { from, to: from + selectedText.length };
 }
 
-function getDomSelectionCommandPayload(parentNodeId: string, adapter: EditorAdapter | null) {
-  if (!adapter) return null;
-  const ranges = getDomSelectionRanges(adapter);
+function getDomSelectionCommandPayload(parentNodeId: string, adapter: EditorAdapter, selection: Selection) {
+  const ranges = getDomSelectionRanges(adapter, selection);
   return ranges.length > 0
     ? getSelectionCommandPayloadForContentRanges(parentNodeId, adapter.getContent(), ranges)
     : null;
@@ -61,11 +67,12 @@ function getDomSelectionCommandPayload(parentNodeId: string, adapter: EditorAdap
 
 export function resolveCompanionSelectionCommandPayload(
   parentNodeId: string,
-  adapter: EditorAdapter | null
+  adapter: EditorAdapter | null,
+  fallbackPayload: SelectionCommandPayload | null = null
 ): SelectionCommandPayload | null {
+  if (!adapter) return fallbackPayload;
+  const domSelection = getReadableDomSelection();
+  if (domSelection) return getDomSelectionCommandPayload(parentNodeId, adapter, domSelection);
   const adapterPayload = getSelectionCommandPayload(parentNodeId, adapter);
-  const domPayload = getDomSelectionCommandPayload(parentNodeId, adapter);
-  if (!adapterPayload) return domPayload;
-  if (!domPayload) return adapterPayload;
-  return domPayload.selectionText.length >= adapterPayload.selectionText.length ? domPayload : adapterPayload;
+  return adapterPayload ?? fallbackPayload;
 }

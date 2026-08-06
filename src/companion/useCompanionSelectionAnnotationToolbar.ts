@@ -113,8 +113,10 @@ function useSelectionPayloadResolver(args: {
   nodeId: string;
 }) {
   const { editorRef, lastPayloadRef, nodeId } = args;
-  return useCallback(() => (
-    resolveCompanionSelectionCommandPayload(nodeId, editorRef.current) ?? lastPayloadRef.current
+  return useCallback(() => resolveCompanionSelectionCommandPayload(
+    nodeId,
+    editorRef.current,
+    lastPayloadRef.current
   ), [editorRef, lastPayloadRef, nodeId]);
 }
 

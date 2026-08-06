@@ -35,7 +35,11 @@ const longerPayload: CompanionSelectionAnnotationToolbarState['payload'] = {
   selectionText: 'Beta Gamma'
 };
 
-function renderToolbar(onApply = vi.fn(), resolveSelectionPayload?: () => typeof payload | null) {
+function renderToolbar(
+  onApply = vi.fn(),
+  resolveSelectionPayload?: () => typeof payload | null,
+  statePayload = payload
+) {
   const onClose = vi.fn();
   const onAddExistingHighlightNote = vi.fn();
   const onDeleteExistingHighlight = vi.fn();
@@ -49,7 +53,7 @@ function renderToolbar(onApply = vi.fn(), resolveSelectionPayload?: () => typeof
         left: 12,
         noteLeft: 12,
         noteTop: 52,
-        payload,
+        payload: statePayload,
         top: 12
       }}
       {...definedProps({ resolveSelectionPayload })}
@@ -85,8 +89,9 @@ function renderExistingToolbar(note?: string) {
   return { onAddExistingHighlightNote, onClose, onDeleteExistingHighlight };
 }
 
-it('applies a highlight with the current selection payload and closes immediately', () => {
-  const onApply = vi.fn(() => new Promise<void>(() => undefined));
+it('closes a highlight only after its permanent write completes', async () => {
+  let resolveApply = () => undefined;
+  const onApply = vi.fn(() => new Promise<void>((resolve) => { resolveApply = resolve; }));
   const { onClose } = renderToolbar(onApply);
 
   const button = screen.getByRole('button', { name: 'Highlight' });
@@ -94,17 +99,40 @@ it('applies a highlight with the current selection payload and closes immediatel
   fireEvent.pointerUp(button);
 
   expect(onApply).toHaveBeenCalledWith('highlight', payload, undefined);
-  expect(onClose).toHaveBeenCalledTimes(1);
+  expect(onClose).not.toHaveBeenCalled();
+  resolveApply();
+  await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
 });
 
-it('refreshes the selection payload before applying a highlight', () => {
+it('uses the current selection payload even when the cached selection was longer', () => {
   const onApply = vi.fn();
-  renderToolbar(onApply, () => longerPayload);
+  renderToolbar(onApply, () => payload, longerPayload);
 
   fireEvent.pointerDown(screen.getByRole('button', { name: 'Highlight' }));
   fireEvent.pointerUp(screen.getByRole('button', { name: 'Highlight' }));
 
-  expect(onApply).toHaveBeenCalledWith('highlight', longerPayload, undefined);
+  expect(onApply).toHaveBeenCalledWith('highlight', payload, undefined);
+});
+
+it('rejects another annotation action while the permanent write is pending', () => {
+  const onApply = vi.fn(() => new Promise<void>(() => undefined));
+  renderToolbar(onApply);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Highlight' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Cloze' }));
+
+  expect(onApply).toHaveBeenCalledTimes(1);
+});
+
+it('allows a later annotation after the previous permanent write completes', async () => {
+  const onApply = vi.fn(async () => undefined);
+  renderToolbar(onApply);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Highlight' }));
+  await waitFor(() => expect(onApply).toHaveBeenCalledTimes(1));
+  fireEvent.click(screen.getByRole('button', { name: 'Cloze' }));
+
+  await waitFor(() => expect(onApply).toHaveBeenCalledTimes(2));
 });
 
 it('does not apply twice when Android emits a click after pointer activation', () => {
@@ -165,8 +193,9 @@ it('loads the existing highlight note before saving', () => {
   expect(screen.getByPlaceholderText('Add annotation...')).toHaveValue('Saved note');
 });
 
-it('saves a note annotation from the inline note panel and closes immediately', () => {
-  const onApply = vi.fn(() => new Promise<void>(() => undefined));
+it('keeps the note panel open until its permanent write completes', async () => {
+  let resolveApply = () => undefined;
+  const onApply = vi.fn(() => new Promise<void>((resolve) => { resolveApply = resolve; }));
   const { onClose } = renderToolbar(onApply);
 
   const addCommentButton = screen.getByRole('button', { name: 'Add Comment' });
@@ -180,10 +209,12 @@ it('saves a note annotation from the inline note panel and closes immediately', 
   fireEvent.click(saveButton);
 
   expect(onApply).toHaveBeenCalledWith('note', payload, 'Reader note');
-  expect(onClose).toHaveBeenCalledTimes(1);
+  expect(onClose).not.toHaveBeenCalled();
+  resolveApply();
+  await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
 });
 
-it('closes immediately and reports apply failures', async () => {
+it('keeps the toolbar open and reports permanent write failures', async () => {
   const error = new Error('write failed');
   const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
   const { onClose } = renderToolbar(vi.fn(async () => {
@@ -196,6 +227,21 @@ it('closes immediately and reports apply failures', async () => {
     '[companion-selection-toolbar] annotation action failed',
     error
   ));
-  expect(onClose).toHaveBeenCalledTimes(1);
+  expect(onClose).not.toHaveBeenCalled();
+  consoleError.mockRestore();
+});
+
+it('allows retrying the same annotation after a permanent write failure', async () => {
+  const error = new Error('write failed');
+  const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  const onApply = vi.fn().mockRejectedValueOnce(error).mockResolvedValueOnce(undefined);
+  const { onClose } = renderToolbar(onApply);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Highlight' }));
+  await waitFor(() => expect(consoleError).toHaveBeenCalledTimes(1));
+  fireEvent.click(screen.getByRole('button', { name: 'Highlight' }));
+
+  await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  expect(onApply).toHaveBeenCalledTimes(2);
   consoleError.mockRestore();
 });
