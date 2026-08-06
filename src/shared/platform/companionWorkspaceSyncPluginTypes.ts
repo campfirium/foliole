@@ -199,7 +199,7 @@ export interface CompanionWorkspaceSyncPlugin
     scroll_top: number;
     source?: 'user-scroll';
   }): Promise<{ content_hash: string; object_id: string }>;
-  resolveAttachmentResource(args: { attachment_id: string }): Promise<{
+  resolveAttachmentResource(args: { attachment_id: string; mime_type?: string | null; storage_key?: string | null }): Promise<{
     mime_type?: string | null;
     resource_url: string | null;
     status: 'missing_file' | 'not_found' | 'ready';

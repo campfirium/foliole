@@ -4,17 +4,24 @@ import { applyReviewLogRecordsWithDbPort } from '../../../lib/core/sync/syncPack
 import type { NativeSyncReviewLogRecord } from '../../../lib/platform/nativeSyncContract';
 
 import { createCapacitorSqliteDbPort } from './capacitorSqliteDbPort';
+import { getIosCompanionDatabaseOwner } from './companion/runtime/iosCompanionDatabaseBootstrap';
+import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
 import {
   closeCompanionDatabaseConnection,
   type CompanionSqliteConnectionManager,
   openCompanionDatabaseConnection
 } from './companionSyncNodeVersions';
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
-import { isNativeAndroidCompanionRuntime } from './companionWorkspaceRuntimeRepository';
 
 export async function applyCompanionSyncReviewLog(reviews: NativeSyncReviewLogRecord[]) {
-  if (!isNativeAndroidCompanionRuntime() || reviews.length === 0) {
+  const runtime = getCompanionRuntimeCapability();
+  if ((runtime.kind !== 'android-native' && runtime.kind !== 'ios-native') || reviews.length === 0) {
     return [];
+  }
+  if (runtime.kind === 'ios-native') {
+    return runCompanionSyncWriterTask(() => getIosCompanionDatabaseOwner().runWriter((db) => (
+      applyReviewLogRecordsWithDbPort(db, reviews, { requireExistingNode: true })
+    )));
   }
   return runCompanionSyncWriterTask(() => applyCompanionSyncReviewLogWithSharedCoreOnDevice(reviews));
 }

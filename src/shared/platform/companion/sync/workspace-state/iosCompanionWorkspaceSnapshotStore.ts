@@ -1,8 +1,7 @@
-import type { SQLiteDBConnection } from '@capacitor-community/sqlite';
-
 import { ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS } from '../../../../../../lib/core/database/androidCompanionNodeResourceQueryDefinitions';
 import { ANDROID_COMPANION_WORKSPACE_READ_RULES } from '../../../../../../lib/core/database/androidCompanionWorkspaceReadDefinitions';
 import { normalizeWorkspaceSnapshot, resolveWorkspaceSnapshotActiveNodeId } from '../../../../../../lib/core/database/workspaceSnapshotContract';
+import type { DbPort } from '../../../../../../lib/core/sync/dbPort';
 
 import {
   attachIosWorkspaceNodeAttachments,
@@ -15,7 +14,7 @@ const RULES = ANDROID_COMPANION_WORKSPACE_READ_RULES.snapshot;
 const DEVICE_ID_KEY = 'device_id';
 const ACTIVE_NODE_KEY = 'active_node_id';
 
-export async function loadIosCompanionWorkspaceSnapshot(connection: SQLiteDBConnection) {
+export async function loadIosCompanionWorkspaceSnapshot(connection: DbPort) {
   const deviceId = await loadMetaValue(connection, 'companion_meta', DEVICE_ID_KEY) ?? '*';
   const nodes = await queryRows(connection, await snapshotSql(connection), [deviceId]);
   if (nodes.length === 0) return null;
@@ -49,7 +48,7 @@ export async function loadIosCompanionWorkspaceSnapshot(connection: SQLiteDBConn
   });
 }
 
-async function snapshotSql(connection: SQLiteDBConnection) {
+async function snapshotSql(connection: DbPort) {
   const hasBlobData = await tableExists(connection, 'content_blob_data');
   return QUERIES.workspaceSnapshotNodes.sql
     .replaceAll(RULES.contentExpressionToken, hasBlobData ? RULES.contentExpressionWithBodyBlobSql : RULES.contentExpressionInlineSql)
@@ -57,7 +56,7 @@ async function snapshotSql(connection: SQLiteDBConnection) {
     .replaceAll(RULES.bodyStatusExpressionToken, hasBlobData ? RULES.bodyStatusExpressionWithBodyBlobSql : RULES.bodyStatusExpressionInlineSql);
 }
 
-async function loadAttachments(connection: SQLiteDBConnection) {
+async function loadAttachments(connection: DbPort) {
   return queryRows(connection,
     `SELECT na.node_id, na.attachment_id, na.role, a.mime_type, a.original_name
      FROM node_attachments na LEFT JOIN attachments a ON a.id = na.attachment_id
@@ -65,7 +64,7 @@ async function loadAttachments(connection: SQLiteDBConnection) {
   );
 }
 
-async function tableExists(connection: SQLiteDBConnection, table: string) {
+async function tableExists(connection: DbPort, table: string) {
   const rows = await queryRows(
     connection,
     "SELECT 1 AS found FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1",
@@ -74,14 +73,14 @@ async function tableExists(connection: SQLiteDBConnection, table: string) {
   return rows.length > 0;
 }
 
-async function loadMetaValue(connection: SQLiteDBConnection, table: string, key: string) {
+async function loadMetaValue(connection: DbPort, table: string, key: string) {
   const rows = await queryRows(connection, `SELECT value FROM ${table} WHERE key = ? LIMIT 1`, [key]);
   const value = rows[0]?.value;
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
-async function queryRows(connection: SQLiteDBConnection, statement: string, values?: unknown[]) {
-  return (await connection.query(statement, values)).values ?? [];
+async function queryRows(connection: DbPort, statement: string, values: unknown[] = []) {
+  return connection.query(statement, values as never[]);
 }
 
 function parseObject(value: string | null) {

@@ -1,5 +1,6 @@
 import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
 
+import type { DbPort } from '../../../lib/core/sync/dbPort';
 import { assertSyncPackCursorAdvance } from '../../../lib/core/sync/syncPackCursorGuard';
 import { applySyncPackNodeSurfaceWithDbPort } from '../../../lib/core/sync/syncPackNodeApplyExecutor';
 import type { NativeSyncPackApplyResult } from '../../../lib/platform/nativeSyncContract';
@@ -49,6 +50,22 @@ export async function applyCompanionSyncPackNodesWithSharedCore(
 ) {
   const connection = await openCompanionDatabaseConnection(manager);
   const port = createCapacitorSqliteDbPort(connection);
+  try {
+    return await applyCompanionSyncPackNodesWithDbPort(args, port);
+  } finally {
+    await closeCompanionDatabaseConnection(manager, connection);
+  }
+}
+
+export async function applyCompanionSyncPackNodesWithDbPort(
+  args: {
+    currentCursor: number;
+    deviceId: string;
+    packPath: string;
+    primaryDeviceId?: string | null | undefined;
+  },
+  port: DbPort
+) {
   await port.run(`ATTACH DATABASE ${sqlString(args.packPath)} AS ${INCOMING_PACK_ALIAS}`);
   try {
     return await applySyncPackNodeSurfaceWithDbPort(port, {
@@ -70,7 +87,6 @@ export async function applyCompanionSyncPackNodesWithSharedCore(
     }));
   } finally {
     await port.run(`DETACH DATABASE ${INCOMING_PACK_ALIAS}`);
-    await closeCompanionDatabaseConnection(manager, connection);
   }
 }
 

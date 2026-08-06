@@ -6,12 +6,22 @@ const writerQueueMock = vi.hoisted(() => ({
 const iosSyncbackStoreMock = vi.hoisted(() => ({
   savePushAcks: vi.fn(async () => ['ios-review-op'])
 }));
+const iosReadsMock = vi.hoisted(() => ({
+  index: vi.fn(async () => [{ object_id: 'one', object_type: 'setting' }]),
+  objects: vi.fn(async () => [{ object_id: 'one', object_type: 'setting' }])
+}));
 
 vi.mock('./companionSyncWriterQueue', () => ({
   runCompanionSyncWriterTask: writerQueueMock.run
 }));
 vi.mock('./companion/sync/syncback/iosCompanionSyncbackStore', () => ({
   getIosCompanionSyncbackStore: vi.fn(() => iosSyncbackStoreMock)
+}));
+vi.mock('./companion/runtime/iosCompanionActiveDatabaseReads', () => ({
+  loadIosPdfPageText: vi.fn(),
+  loadIosSyncIndex: iosReadsMock.index,
+  loadIosSyncObjects: iosReadsMock.objects,
+  searchIosPdfPageText: vi.fn()
 }));
 
 function createApplyPluginMocks() {
@@ -226,6 +236,8 @@ describe('companion sync objects bridge', () => {
     await expect(api.loadCompanionSyncIndex()).resolves.toEqual([{ object_id: 'one', object_type: 'setting' }]);
     await expect(api.loadCompanionSyncObjects(['one'], ['setting']))
       .resolves.toEqual([{ object_id: 'one', object_type: 'setting' }]);
+    expect(iosReadsMock.index).toHaveBeenCalledWith();
+    expect(iosReadsMock.objects).toHaveBeenCalledWith(['one'], ['setting']);
   });
 
   it('saves iOS push acknowledgements through the SQLite store', async () => {

@@ -1,6 +1,9 @@
 import type { NativeSyncObjectRecord } from '../../../lib/platform/nativeSyncContract';
 
 import { invalidateAttachmentResourceResolution } from './attachmentResources';
+import { commitStagedCompanionAttachmentBatch } from './companion/runtime/companionBatchDataPlane';
+import { getIosCompanionDatabaseOwner } from './companion/runtime/iosCompanionDatabaseBootstrap';
+import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
 import { loadCompanionMissingAttachmentResource } from './companionSyncObjects';
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import { createSignedRequestHeaders } from './companionWorkspacePairing';
@@ -119,6 +122,12 @@ async function syncAttachmentResourceRequestBatch(endpoint: string, requests: At
 async function syncAttachmentResourceRequestBatchOnce(endpoint: string, requests: AttachmentResourceRequest[]) {
   const resources = await Promise.all(requests.map((request) => buildSignedAttachmentResourceRequest(endpoint, request)));
   const download = await FolioleCompanionSync.downloadAttachmentResourceBatch({ resources });
+  if (getCompanionRuntimeCapability().kind === 'ios-native') {
+    const result = await commitStagedCompanionAttachmentBatch(
+      getIosCompanionDatabaseOwner(), FolioleCompanionSync, download.batch_token
+    );
+    return result.syncedIds;
+  }
   const result = await runCompanionSyncWriterTask(() => FolioleCompanionSync.commitAttachmentResourceBatch({
     batch_token: download.batch_token
   }));

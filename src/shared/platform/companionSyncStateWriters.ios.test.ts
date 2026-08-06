@@ -2,17 +2,17 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 const runtimeMock = vi.hoisted(() => ({
   platform: vi.fn(() => 'ios'),
-  plugin: {
-    saveSyncActiveViewState: vi.fn(async () => ({ content_hash: 'hash-active', object_id: 'active' })),
-    saveSyncNodeOpenState: vi.fn(async () => ({
-      content_hash: 'hash-open', last_opened_at: '2026-07-20T12:00:00Z', object_id: 'node-1'
-    })),
-    saveSyncNodeReadingRecord: vi.fn(async () => ({ content_hash: 'hash-reading', object_id: 'node-1' })),
-    saveSyncNodeReviewRecord: vi.fn(async () => ({ content_hash: 'hash-review', object_id: 'node-1', op_id: 'op-1' })),
-    saveSyncNodeViewState: vi.fn(async () => ({ content_hash: 'hash-view', object_id: 'view' })),
-    saveSyncSettingRecord: vi.fn(async () => ({ content_hash: 'hash-setting', object_id: 'setting' }))
-  },
+  plugin: {},
   writer: vi.fn(async <T>(task: () => Promise<T>) => task())
+}));
+
+const databaseWrites = vi.hoisted(() => ({
+  active: vi.fn(async () => ({ content_hash: 'hash-active', object_id: 'active' })),
+  open: vi.fn(async () => ({ content_hash: 'hash-open', last_opened_at: '2026-07-20T12:00:00Z', object_id: 'node-1' })),
+  reading: vi.fn(async () => ({ content_hash: 'hash-reading', object_id: 'node-1' })),
+  review: vi.fn(async () => ({ content_hash: 'hash-review', object_id: 'node-1', op_id: 'op-1' })),
+  setting: vi.fn(async () => ({ content_hash: 'hash-setting', object_id: 'setting' })),
+  view: vi.fn(async () => ({ content_hash: 'hash-view', object_id: 'view' }))
 }));
 
 vi.mock('@capacitor/core', () => ({
@@ -25,6 +25,15 @@ vi.mock('@capacitor/core', () => ({
 
 vi.mock('./companionSyncWriterQueue', () => ({
   runCompanionSyncWriterTask: runtimeMock.writer
+}));
+
+vi.mock('./companion/runtime/iosCompanionActiveDatabaseWrites', () => ({
+  saveIosActiveViewState: databaseWrites.active,
+  saveIosNodeViewState: databaseWrites.view,
+  saveIosOpenState: databaseWrites.open,
+  saveIosReading: databaseWrites.reading,
+  saveIosReview: databaseWrites.review,
+  saveIosSetting: databaseWrites.setting
 }));
 
 beforeEach(() => {
@@ -42,11 +51,10 @@ beforeEach(() => {
       .resolves.toEqual({ content_hash: 'hash-active', object_id: 'active' });
     await expect(api.saveCompanionSyncNodeViewState({ nodeId: 'node-1', scrollTop: 42.8 }))
       .resolves.toEqual({ content_hash: 'hash-view', object_id: 'view' });
-    expect(runtimeMock.plugin.saveSyncActiveViewState).toHaveBeenCalledWith({ node_id: 'node-1' });
-    expect(runtimeMock.plugin.saveSyncNodeViewState).toHaveBeenCalledWith({
+    expect(databaseWrites.active).toHaveBeenCalledWith({ node_id: 'node-1' });
+    expect(databaseWrites.view).toHaveBeenCalledWith({
       node_id: 'node-1',
-      scroll_top: 42,
-      source: 'user-scroll'
+      scroll_top: 42.8
     });
     expect(runtimeMock.writer).toHaveBeenCalledTimes(2);
     expect(mutation.getCompanionSyncMutationRevision()).toBe(initialRevision + 2);
@@ -68,7 +76,7 @@ beforeEach(() => {
         state: 'active'
       }
     })).resolves.toEqual({ content_hash: 'hash-reading', object_id: 'node-1' });
-    expect(runtimeMock.plugin.saveSyncNodeReadingRecord).toHaveBeenCalledWith({
+    expect(databaseWrites.reading).toHaveBeenCalledWith({
       node_id: 'node-1',
       reading_json: JSON.stringify({
         interval_duration_ms: 60_000,
@@ -90,7 +98,7 @@ beforeEach(() => {
     await expect(api.saveCompanionSyncNodeOpenState({
       lastOpenedAt: '2026-07-20T12:00:00Z', nodeId: 'node-1'
     })).resolves.toMatchObject({ last_opened_at: '2026-07-20T12:00:00Z' });
-    expect(runtimeMock.plugin.saveSyncNodeOpenState).toHaveBeenCalledWith({
+    expect(databaseWrites.open).toHaveBeenCalledWith({
       last_opened_at: '2026-07-20T12:00:00Z', node_id: 'node-1'
     });
     expect(runtimeMock.writer).toHaveBeenCalledOnce();
@@ -120,7 +128,7 @@ beforeEach(() => {
         schedulerVersion: 'fsrs-6'
       }
     })).resolves.toEqual({ content_hash: 'hash-review', object_id: 'node-1', op_id: 'op-1' });
-    expect(runtimeMock.plugin.saveSyncNodeReviewRecord).toHaveBeenCalledWith(expect.objectContaining({
+    expect(databaseWrites.review).toHaveBeenCalledWith(expect.objectContaining({
       node_id: 'node-1',
       review_json: expect.stringContaining('"stability":8.5'),
       review_log_json: expect.stringContaining('"schedulerVersion":"fsrs-6"')
@@ -133,7 +141,7 @@ beforeEach(() => {
 
     await expect(api.saveCompanionSyncSettingRecord({ key: 'one', valueJson: '{}' }))
       .resolves.toEqual({ content_hash: 'hash-setting', object_id: 'setting' });
-    expect(runtimeMock.plugin.saveSyncSettingRecord).toHaveBeenCalledWith({
+    expect(databaseWrites.setting).toHaveBeenCalledWith({
       device_id: '*',
       form_factor: 'phone',
       key: 'one',

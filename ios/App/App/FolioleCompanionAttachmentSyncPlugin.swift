@@ -40,32 +40,14 @@ extension FolioleCompanionSyncPlugin {
         }
     }
 
-    @objc func loadMissingAttachmentResources(_ call: CAPPluginCall) {
-        do {
-            let contract = try FolioleCompanionContractStore().attachmentResourceContract()
-            let limit = call.getInt(try attachmentKey("limit", contract)) ?? contract.defaultLimit
-            call.resolve(try attachmentStore(contract).loadMissing(limit: limit))
-        } catch { call.reject("Failed to load missing companion attachment resources: \(error.localizedDescription)") }
-    }
-
-    @objc func loadMissingAttachmentResource(_ call: CAPPluginCall) {
-        do {
-            let contract = try FolioleCompanionContractStore().attachmentResourceContract()
-            call.resolve(try attachmentStore(contract).loadMissing(
-                attachmentId: try attachmentString(call, "attachmentId", contract)
-            ))
-        } catch { call.reject("Failed to load missing companion attachment resource: \(error.localizedDescription)") }
-    }
-
     @objc func downloadAttachmentResourceBatch(_ call: CAPPluginCall) {
         Task {
             do {
                 let contract = try FolioleCompanionContractStore().attachmentResourceContract()
-                let store = try attachmentStore(contract)
                 let requests = try attachmentRequests(call, contract)
                 let result = try await FolioleCompanionAttachmentResourceDownloader.download(
                     requests,
-                    temporaryRoot: store.temporaryRoot,
+                    temporaryRoot: try attachmentTemporaryRoot(contract),
                     hashPattern: contract.hashPattern
                 )
                 let token = await attachmentResourceSessions.create(
@@ -81,40 +63,37 @@ extension FolioleCompanionSyncPlugin {
         }
     }
 
-    @objc func commitAttachmentResourceBatch(_ call: CAPPluginCall) {
-        Task {
-            do {
-                let contract = try FolioleCompanionContractStore().attachmentResourceContract()
-                let token = try attachmentString(call, "batchToken", contract)
-                if let ids = await attachmentResourceSessions.committed(token) {
-                    call.resolve([try attachmentValue("syncedAttachmentIds", contract.batchResponseKeys): ids])
-                    return
-                }
-                guard let batch = await attachmentResourceSessions.load(token) else {
-                    throw attachmentError("Attachment resource batch token is unknown or expired.")
-                }
-                let ids = try attachmentStore(contract).commit(batch)
-                await attachmentResourceSessions.markCommitted(token, ids: ids)
-                call.resolve([try attachmentValue("syncedAttachmentIds", contract.batchResponseKeys): ids])
-            } catch { call.reject("Failed to commit companion attachment resources: \(error.localizedDescription)") }
-        }
-    }
-
     @objc func resolveAttachmentResource(_ call: CAPPluginCall) {
         do {
             let contract = try FolioleCompanionContractStore().attachmentResourceContract()
-            call.resolve(try attachmentStore(contract).resolve(
-                attachmentId: try attachmentString(call, "attachmentId", contract)
-            ))
+            let storageKey = call.getString("storage_key")?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let mimeType = call.getString("mime_type")
+            guard let storageKey, !storageKey.isEmpty else {
+                call.resolve(["status": "missing_file", "mime_type": mimeType ?? NSNull(), "resource_url": NSNull()])
+                return
+            }
+            let fileURL = try attachmentRoot(contract).appendingPathComponent(storageKey)
+            let exists = FileManager.default.fileExists(atPath: fileURL.path)
+            call.resolve([
+                "status": exists ? "ready" : "missing_file",
+                "mime_type": mimeType ?? NSNull(),
+                "resource_url": exists ? fileURL.absoluteString : NSNull()
+            ])
         } catch { call.reject("Failed to resolve companion attachment resource: \(error.localizedDescription)") }
     }
 }
 
-private func attachmentStore(_ contract: FolioleCompanionAttachmentResourceContract) throws -> FolioleCompanionAttachmentResourceStore {
-    try FolioleCompanionAttachmentResourceStore(
-        databaseURL: FolioleCompanionDatabaseLocation.mainDatabase(),
-        contract: contract
+private func attachmentRoot(_ contract: FolioleCompanionAttachmentResourceContract) throws -> URL {
+    let support = try FileManager.default.url(
+        for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true
     )
+    let root = support.appendingPathComponent(contract.directoryName, isDirectory: true)
+    try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+    return root
+}
+
+private func attachmentTemporaryRoot(_ contract: FolioleCompanionAttachmentResourceContract) throws -> URL {
+    try attachmentRoot(contract).appendingPathComponent(".tmp", isDirectory: true)
 }
 
 private func attachmentRequests(

@@ -37,9 +37,10 @@ describe('iosCompanionSyncPackCursorStore', () => {
     await expect(store.saveCursor(null)).resolves.toBeNull();
     expect(connection.run).toHaveBeenCalledWith(
       expect.stringContaining('ON CONFLICT(key) DO UPDATE'),
-      ['sync_pack_cursor', '7', expect.any(String)]
+      ['sync_pack_cursor', '7', expect.any(String)],
+      false
     );
-    expect(connection.run).toHaveBeenCalledWith('DELETE FROM companion_meta WHERE key = ?', ['sync_pack_cursor']);
+    expect(connection.run).toHaveBeenCalledWith('DELETE FROM companion_meta WHERE key = ?', ['sync_pack_cursor'], false);
   });
 
   it('rejects corrupt stored cursor state', async () => {

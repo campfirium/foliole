@@ -5,6 +5,8 @@ import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { NativeAttachmentResourceResolution } from '../../../lib/platform/nativeUtilityContract';
 import { createBoundedCache } from '../lib/boundedCache';
 
+import { queryIosCompanionDatabase } from './companion/runtime/iosCompanionActiveDatabase';
+import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
 import {
   FolioleCompanionSync,
   isNativeCompanionAttachmentResourceRuntime
@@ -93,7 +95,7 @@ async function resolveNativeAttachmentResource(attachmentId: string) {
     return cached;
   }
 
-  const resolutionPromise = FolioleCompanionSync.resolveAttachmentResource({ attachment_id: attachmentId })
+  const resolutionPromise = resolveNativeAttachmentResourceUncached(attachmentId)
     .then((result) => normalizeNativeAttachmentResolution(result, attachmentId))
     .catch((error) => {
       logRuntimeWarning('native companion attachment resource resolve failed', {
@@ -110,6 +112,21 @@ async function resolveNativeAttachmentResource(attachmentId: string) {
   attachmentResourceResolutionCache.set(attachmentId, resolutionPromise);
   updateImageCacheStats({ entries: attachmentResourceResolutionCache.size, hit: false });
   return resolutionPromise;
+}
+
+async function resolveNativeAttachmentResourceUncached(attachmentId: string) {
+  if (getCompanionRuntimeCapability().kind !== 'ios-native') {
+    return FolioleCompanionSync.resolveAttachmentResource({ attachment_id: attachmentId });
+  }
+  const row = (await queryIosCompanionDatabase<{ mime_type: string | null; storage_key: string | null } & Record<string, unknown>>(
+    'attachmentResourceResolve', [attachmentId]
+  ))[0];
+  if (!row) return { resource_url: null, status: 'not_found' as const };
+  return FolioleCompanionSync.resolveAttachmentResource({
+    attachment_id: attachmentId,
+    mime_type: row.mime_type,
+    storage_key: row.storage_key
+  });
 }
 
 function normalizeNativeAttachmentResolution(

@@ -4,17 +4,24 @@ import { applySyncObjectsWithDbPort } from '../../../lib/core/sync/syncObjectApp
 import type { NativeSyncObjectRecord } from '../../../lib/platform/nativeSyncContract';
 
 import { createCapacitorSqliteDbPort } from './capacitorSqliteDbPort';
+import { getIosCompanionDatabaseOwner } from './companion/runtime/iosCompanionDatabaseBootstrap';
+import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
 import {
   closeCompanionDatabaseConnection,
   type CompanionSqliteConnectionManager,
   openCompanionDatabaseConnection
 } from './companionSyncNodeVersions';
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
-import { isNativeAndroidCompanionRuntime } from './companionWorkspaceRuntimeRepository';
 
 export async function applyCompanionSyncObjects(objects: NativeSyncObjectRecord[]) {
-  if (!isNativeAndroidCompanionRuntime() || objects.length === 0) {
+  const runtime = getCompanionRuntimeCapability();
+  if ((runtime.kind !== 'android-native' && runtime.kind !== 'ios-native') || objects.length === 0) {
     return [];
+  }
+  if (runtime.kind === 'ios-native') {
+    return runCompanionSyncWriterTask(() => getIosCompanionDatabaseOwner().runWriter((db) => (
+      applySyncObjectsWithDbPort(db, objects)
+    )));
   }
   return runCompanionSyncWriterTask(() => applyCompanionSyncObjectsWithSharedCoreOnDevice(objects));
 }

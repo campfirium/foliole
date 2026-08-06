@@ -1,30 +1,33 @@
-import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
-
+import type { DbPort } from '../../../../../../lib/core/sync/dbPort';
+import { createCapacitorSqliteDbPort } from '../../../capacitorSqliteDbPort';
 import {
   closeCompanionDatabaseConnection,
   type CompanionSqliteConnectionManager,
   openCompanionDatabaseConnection
 } from '../../../companionSyncNodeVersions';
+import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap';
 
 import type { CompanionSyncPackCursorStore } from './companionSyncPackCursorStore';
 
 const SYNC_PACK_CURSOR_KEY = 'sync_pack_cursor';
 
 export function createIosCompanionSyncPackCursorStore(
-  manager: CompanionSqliteConnectionManager = new SQLiteConnection(CapacitorSQLite)
+  manager?: CompanionSqliteConnectionManager
 ): CompanionSyncPackCursorStore {
   return {
-    loadCursor: () => withConnection(manager, loadCursor),
-    saveCursor: (cursor) => withConnection(manager, (connection) => saveCursor(connection, cursor))
+    loadCursor: () => manager ? withConnection(manager, loadCursor) : getIosCompanionDatabaseOwner().read(loadCursor),
+    saveCursor: (cursor) => manager
+      ? withConnection(manager, (connection) => saveCursor(connection, cursor))
+      : getIosCompanionDatabaseOwner().runWriter((db) => saveCursor(db, cursor))
   };
 }
 
-async function loadCursor(connection: Awaited<ReturnType<typeof openCompanionDatabaseConnection>>) {
-  const result = await connection.query(
+async function loadCursor(connection: DbPort) {
+  const rows = await connection.query(
     'SELECT value FROM companion_meta WHERE key = ? LIMIT 1',
     [SYNC_PACK_CURSOR_KEY]
   );
-  const value = result.values?.[0]?.value;
+  const value = rows[0]?.value;
   if (value === undefined || value === null || value === '') return null;
   const cursor = typeof value === 'number' ? value : Number(value);
   if (!Number.isSafeInteger(cursor) || cursor < 0) throw new Error('invalid_ios_sync_pack_cursor');
@@ -32,7 +35,7 @@ async function loadCursor(connection: Awaited<ReturnType<typeof openCompanionDat
 }
 
 async function saveCursor(
-  connection: Awaited<ReturnType<typeof openCompanionDatabaseConnection>>,
+  connection: DbPort,
   cursor: number | null
 ) {
   if (cursor === null) {
@@ -50,11 +53,11 @@ async function saveCursor(
 
 async function withConnection<T>(
   manager: CompanionSqliteConnectionManager,
-  task: (connection: Awaited<ReturnType<typeof openCompanionDatabaseConnection>>) => Promise<T>
+  task: (connection: DbPort) => Promise<T>
 ) {
   const connection = await openCompanionDatabaseConnection(manager);
   try {
-    return await task(connection);
+    return await task(createCapacitorSqliteDbPort(connection, 'ios'));
   } finally {
     await closeCompanionDatabaseConnection(manager, connection);
   }

@@ -3,7 +3,14 @@ import type {
   NativeSyncObjectRecord
 } from '../../../lib/platform/nativeSyncContract';
 
+import {
+  loadIosPdfPageText,
+  loadIosSyncIndex,
+  loadIosSyncObjects,
+  searchIosPdfPageText
+} from './companion/runtime/iosCompanionActiveDatabaseReads';
 import { getIosCompanionSyncbackStore } from './companion/sync/syncback/iosCompanionSyncbackStore';
+import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
 import { resolveCompanionSyncSettingRecord } from './companionSyncStateWriters';
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
@@ -45,6 +52,7 @@ export async function loadCompanionSyncIndex() {
   if (!isNativeCompanionSyncObjectReadRuntime()) {
     return [];
   }
+  if (getCompanionRuntimeCapability().kind === 'ios-native') return loadIosSyncIndex();
   return (await FolioleCompanionSync.loadSyncIndex()).entries;
 }
 
@@ -61,6 +69,9 @@ export async function loadCompanionSyncObjects(
 ) {
   if (!isNativeCompanionSyncObjectReadRuntime()) {
     return [];
+  }
+  if (getCompanionRuntimeCapability().kind === 'ios-native') {
+    return loadIosSyncObjects(objectIds, objectTypes);
   }
   return (await FolioleCompanionSync.loadSyncObjects({
     object_ids: objectIds,
@@ -128,6 +139,7 @@ export async function loadCompanionPdfPageText(attachmentId: string) {
   if (!isNativeCompanionPdfPageTextRuntime()) {
     return [] as CompanionPdfPageTextEntry[];
   }
+  if (getCompanionRuntimeCapability().kind === 'ios-native') return loadIosPdfPageText(attachmentId);
   return (await FolioleCompanionSync.loadPdfPageText({ attachment_id: attachmentId })).pages;
 }
 
@@ -135,6 +147,7 @@ export async function searchCompanionPdfPageText(query: string, limit?: number) 
   if (!isNativeCompanionPdfPageTextRuntime()) {
     return [] as CompanionPdfPageTextSearchResult[];
   }
+  if (getCompanionRuntimeCapability().kind === 'ios-native') return searchIosPdfPageText(query, limit);
   return (await FolioleCompanionSync.searchPdfPageText({ ...(limit !== undefined ? { limit } : {}), query })).results;
 }
 

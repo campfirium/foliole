@@ -20,6 +20,14 @@ const capacitorMock = vi.hoisted(() => ({
   }
 }));
 
+const iosReads = vi.hoisted(() => ({
+  directory: vi.fn(),
+  document: vi.fn(),
+  index: vi.fn(async () => []),
+  objects: vi.fn(async () => []),
+  search: vi.fn()
+}));
+
 function externalEntry() {
   return {
     absolute_path: 'folder-1:doc.md',
@@ -57,11 +65,26 @@ vi.mock('@capacitor/core', () => ({
   registerPlugin: vi.fn(() => capacitorMock.plugin)
 }));
 
+vi.mock('./companion/runtime/iosCompanionActiveDatabaseReads', () => ({
+  loadIosExternalDirectory: iosReads.directory,
+  loadIosExternalDocument: iosReads.document,
+  loadIosSyncIndex: iosReads.index,
+  loadIosSyncObjects: iosReads.objects,
+  searchIosExternalDocuments: iosReads.search
+}));
+
 beforeEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
   capacitorMock.isNative.mockReturnValue(true);
   capacitorMock.platform.mockReturnValue('android');
+  iosReads.directory.mockResolvedValue({
+    entries: [externalEntry()], folders: [{ document_count: 1, folder_path: '/library/two think', id: 'folder-1' }]
+  });
+  iosReads.document.mockResolvedValue(externalDocument({ content_status: 'missing' }));
+  iosReads.index.mockResolvedValue([]);
+  iosReads.objects.mockResolvedValue([]);
+  iosReads.search.mockResolvedValue([{ ...externalDocument({ content_status: 'ready' }), excerpt: 'cached external content', match_start: 7 }]);
 });
 
 describe('companion external documents bridge', () => {
@@ -99,9 +122,9 @@ describe('companion external documents bridge', () => {
       entries: [expect.objectContaining({ documentId: 'folder-1:doc.md' })],
       folders: [expect.objectContaining({ id: 'folder-1' })]
     });
-    expect(capacitorMock.plugin.searchExternalDocuments).toHaveBeenCalledWith({ limit: 5, query: 'external' });
-    expect(capacitorMock.plugin.loadExternalDocument).toHaveBeenCalledWith({ document_id: 'folder-1:doc.md' });
-    expect(capacitorMock.plugin.loadExternalDirectory).toHaveBeenCalledWith();
+    expect(iosReads.search).toHaveBeenCalledWith('external', 5);
+    expect(iosReads.document).toHaveBeenCalledWith('folder-1:doc.md');
+    expect(iosReads.directory).toHaveBeenCalledWith();
   });
 
   it('loads cached external directory folders and documents through the native plugin', async () => {

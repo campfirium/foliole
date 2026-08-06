@@ -43,15 +43,23 @@ const CAPABILITIES = [
 const IOS_RUNTIME_CAPABILITY = 'iosRuntime';
 const IOS_RUNTIME_GATE = 'npm run ios:sync:preflight';
 const IOS_RUNTIME_MARKER = /\biosRuntime\b/;
+const IOS_FORMAL_SWIFT_SOURCE = /(?:^|\/)ios\/App\/App\/[^/]+\.swift$/;
+const IOS_ISOLATED_SQLITE_SOURCE = /(?:FolioleCompanionContentBlobPack|FolioleReadOnlySQLite)\.swift$/;
+const SQLITE_OPEN = /\bsqlite3_open(?:_v2)?\s*\(/;
 
 const files = listFiles();
 const findings = [];
 const iosRuntimeMarkers = [];
+const iosActiveDatabaseOpenings = [];
 
 for (const file of files) {
   const text = readFileSync(file, 'utf8');
   if (IOS_RUNTIME_MARKER.test(text)) {
     iosRuntimeMarkers.push(relative(cwd(), file));
+  }
+  const relativeFile = relative(cwd(), file);
+  if (IOS_FORMAL_SWIFT_SOURCE.test(relativeFile) && !IOS_ISOLATED_SQLITE_SOURCE.test(relativeFile) && SQLITE_OPEN.test(text)) {
+    iosActiveDatabaseOpenings.push(relativeFile);
   }
   const sqlFragments = extractSqlFragments(text);
   for (const fragment of sqlFragments) {
@@ -74,6 +82,10 @@ console.log(JSON.stringify({ findings, summary }, null, 2));
 const hardUnknowns = summary.missingCoreCapabilities.filter((name) => {
   return name !== IOS_RUNTIME_CAPABILITY || summary.iosRuntimeGap.required;
 });
+if (iosActiveDatabaseOpenings.length > 0) {
+  console.error(`iOS formal Swift sources open the active SQLite library: ${iosActiveDatabaseOpenings.join(', ')}`);
+  exit(1);
+}
 if (hardUnknowns.length > 0) {
   console.error(`Missing core SQL capability coverage: ${hardUnknowns.join(', ')}`);
   if (hardUnknowns.includes(IOS_RUNTIME_CAPABILITY)) {
@@ -199,6 +211,7 @@ function summarize(items) {
       required: iosRuntimeMarkers.length > 0,
       scopeRule: 'iOS related scope is determined by iosRuntime capability markers in scanned files.'
     },
+    iosActiveDatabaseOpenings,
     missingCoreCapabilities,
     scannedFiles: files.length,
     totalFindings: items.length

@@ -4,8 +4,26 @@ const writerQueueMock = vi.hoisted(() => ({
   run: vi.fn(async <T>(task: () => Promise<T>) => task())
 }));
 
+const iosDatabaseMock = vi.hoisted(() => ({
+  commit: vi.fn(async () => ({ syncedHashes: ['a'.repeat(64)] })),
+  missing: vi.fn(async () => ({ blobs: [{ hash: 'a'.repeat(64) }], hashes: ['a'.repeat(64)] })),
+  owner: {}
+}));
+
 vi.mock('./companionSyncWriterQueue', () => ({
   runCompanionSyncWriterTask: writerQueueMock.run
+}));
+
+vi.mock('./companion/runtime/companionBatchDataPlane', () => ({
+  commitStagedCompanionContentBatch: iosDatabaseMock.commit
+}));
+
+vi.mock('./companion/runtime/iosCompanionActiveDatabaseReads', () => ({
+  loadIosMissingContentBlobs: iosDatabaseMock.missing
+}));
+
+vi.mock('./companion/runtime/iosCompanionDatabaseBootstrap', () => ({
+  getIosCompanionDatabaseOwner: vi.fn(() => iosDatabaseMock.owner)
 }));
 
 const capacitorMock = vi.hoisted(() => ({
@@ -103,7 +121,7 @@ describe('iOS companion content blob sync bridge', () => {
     const api = await import('./companionContentBlobSync');
 
     await expect(api.loadCompanionMissingContentBlobHashes(3)).resolves.toEqual(['a'.repeat(64)]);
-    expect(capacitorMock.plugin.loadMissingContentBlobHashes).toHaveBeenCalledWith({ limit: 3 });
+    expect(iosDatabaseMock.missing).toHaveBeenCalledWith(3);
   });
 
   it('downloads and commits content bodies through the iOS native contract', async () => {
@@ -115,7 +133,7 @@ describe('iOS companion content blob sync bridge', () => {
       headers: { 'X-Device-Id': 'ios-test-device' },
       url: 'http://desktop/companion/content-blobs'
     })).resolves.toEqual({
-      db_elapsed_ms: 2,
+      db_elapsed_ms: 0,
       http_elapsed_ms: 3,
       parse_elapsed_ms: 1,
       synced_hashes: ['a'.repeat(64)],
@@ -127,10 +145,12 @@ describe('iOS companion content blob sync bridge', () => {
       headers: { 'X-Device-Id': 'ios-test-device' },
       url: 'http://desktop/companion/content-blobs'
     });
-    expect(writerQueueMock.run).toHaveBeenCalledTimes(1);
-    expect(capacitorMock.plugin.commitContentBlobBatch).toHaveBeenCalledWith({
-      batch_token: 'content-batch-token'
-    });
+    expect(iosDatabaseMock.commit).toHaveBeenCalledWith(
+      iosDatabaseMock.owner,
+      capacitorMock.plugin,
+      expect.objectContaining({ batch_token: 'content-batch-token' })
+    );
+    expect(capacitorMock.plugin.commitContentBlobBatch).not.toHaveBeenCalled();
   });
 
   it('propagates an iOS native download failure without committing an empty batch', async () => {

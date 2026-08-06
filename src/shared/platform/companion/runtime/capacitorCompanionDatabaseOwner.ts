@@ -32,6 +32,7 @@ export class CapacitorCompanionDatabaseOwner {
   private connection: SQLiteDBConnection | null = null;
   private db: DbPort | null = null;
   private journalMode: CompanionDatabaseBootstrapResult['journalMode'] | null = null;
+  private path: string | null = null;
   private writerTail: Promise<void> = Promise.resolve();
 
   constructor(
@@ -50,10 +51,12 @@ export class CapacitorCompanionDatabaseOwner {
       const result = await bootstrapCompanionDatabase(db, { ...request, allowCreate: !existed });
       const url = (await connection.getUrl()).url;
       if (!url) throw new Error('Companion database did not return a path.');
+      const databasePath = normalizeDatabasePath(url);
       this.connection = connection;
       this.db = db;
       this.journalMode = result.journalMode;
-      return { ...result, databasePath: normalizeDatabasePath(url) } satisfies CapacitorCompanionOpenResult;
+      this.path = databasePath;
+      return { ...result, databasePath } satisfies CapacitorCompanionOpenResult;
     } catch (error) {
       await this.manager.closeConnection(COMPANION_DATABASE_NAME, false).catch(() => undefined);
       throw error;
@@ -61,7 +64,13 @@ export class CapacitorCompanionDatabaseOwner {
   }
 
   async read<T>(task: (db: DbPort) => Promise<T>) {
+    await this.writerTail;
     return task(this.requireDb());
+  }
+
+  get databasePath() {
+    if (!this.path) throw new Error('Companion database owner is not open.');
+    return this.path;
   }
 
   runWriter<T>(task: (db: DbPort) => Promise<T>): Promise<T> {
@@ -78,6 +87,7 @@ export class CapacitorCompanionDatabaseOwner {
     this.connection = null;
     this.db = null;
     this.journalMode = null;
+    this.path = null;
   }
 
   private async openConnection() {

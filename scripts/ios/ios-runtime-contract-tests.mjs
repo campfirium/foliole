@@ -103,21 +103,13 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'scripts/ios/ios-capacitor-runtime-plugins-contract.test.mjs',
   'scripts/ios/ios-content-blob-host-contract.test.mjs',
   'scripts/ios/ios-desktop-http-security-host-contract.test.mjs',
-  'scripts/ios/ios-external-document-search-host-contract.test.mjs',
+  'scripts/ios/ios-active-database-owner-contract.test.mjs',
   'scripts/ios/ios-launch-screen-host-contract.test.mjs',
-  'scripts/ios/ios-sync-object-read-host-contract.test.mjs',
   'scripts/ios/ios-pairing-host-contract.test.mjs',
-  'scripts/ios/ios-pdf-page-text-host-contract.test.mjs',
   'scripts/ios/ios-privacy-manifest-host-contract.test.mjs',
-  'scripts/ios/ios-reading-write-host-contract.test.mjs',
-  'scripts/ios/ios-review-write-host-contract.test.mjs',
   'scripts/ios/ios-resource-profile.test.mjs',
   'scripts/ios/ios-scene-lifecycle-host-contract.test.mjs',
   'scripts/ios/ios-sync-pack-transfer-contract.test.mjs',
-  'scripts/ios/ios-setting-write-host-contract.test.mjs',
-  'scripts/ios/ios-sync-diagnostics-host-contract.test.mjs',
-  'scripts/ios/ios-topic-search-host-contract.test.mjs',
-  'scripts/ios/ios-view-state-write-host-contract.test.mjs'
 ];
 
 export const IOS_RUNTIME_SQLITE_CONTRACT_TESTS = [
@@ -128,6 +120,7 @@ export const IOS_RUNTIME_SQLITE_CONTRACT_TESTS = [
   'scripts/ios/ios-sync-pack-acceptance-fixture.test.mjs',
   'src/companion/companionCaptureTextActions.ios.test.ts',
   'src/companion/companionTrashActions.ios.test.ts',
+  'src/shared/platform/companion/runtime/iosCompanionActiveDatabaseWrites.test.ts',
   'src/shared/platform/companionSyncNodeVersions.ios.test.ts'
 ];
 

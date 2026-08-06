@@ -1,7 +1,7 @@
 import Foundation
 
 enum FolioleCompanionSyncPackTransfer {
-    static func downloadDesktopSyncPack(url: String, headers: [String: String]) async throws -> URL {
+    static func downloadDesktopSyncPack(url: String, headers: [String: String], expectedPeerId: String) async throws -> URL {
         guard let endpoint = URL(string: url),
               ["http", "https"].contains(endpoint.scheme?.lowercased() ?? "") else {
             throw error("Invalid sync pack URL.")
@@ -16,7 +16,7 @@ enum FolioleCompanionSyncPackTransfer {
         }
         let archiveURL = try moveDownloadToCache(temporaryURL)
         defer { try? FileManager.default.removeItem(at: archiveURL) }
-        return try validateAndStore(archiveURL)
+        return try validateAndStore(archiveURL, expectedPeerId: expectedPeerId)
     }
 
     static func deleteDownloadedSyncPack(path: String) throws -> Bool {
@@ -31,13 +31,13 @@ enum FolioleCompanionSyncPackTransfer {
         return true
     }
 
-    private static func validateAndStore(_ archiveURL: URL) throws -> URL {
+    private static func validateAndStore(_ archiveURL: URL, expectedPeerId: String) throws -> URL {
         let store = try FolioleCompanionContractStore()
         let contract = try store.syncPackContract()
         let prepared = try FolioleCompanionSyncPackEnvelopeValidator.validate(
             archiveURL: archiveURL,
             contract: contract,
-            expectedPeerId: try FolioleCompanionDatabaseLocation.canonicalDeviceId()
+            expectedPeerId: expectedPeerId
         )
         let databaseURL = try cacheDirectory().appendingPathComponent("\(UUID().uuidString).db")
         do {

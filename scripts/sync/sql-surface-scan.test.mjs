@@ -95,4 +95,24 @@ describe('sql-surface-scan', () => {
       await rm(tempRoot, { recursive: true, force: true });
     }
   });
+
+  it('fails when a formal iOS Swift source directly opens SQLite', async () => {
+    await mkdir(TEMP_ROOT_BASE, { recursive: true });
+    const tempRoot = await mkdtemp(path.join(TEMP_ROOT_BASE, 'sql-surface-scan-'));
+    try {
+      const iosRoot = path.join(tempRoot, 'ios/App/App');
+      await mkdir(iosRoot, { recursive: true });
+      await writeFixture(tempRoot, completeSqlSurface());
+      await writeFile(path.join(iosRoot, 'ActiveLibraryStore.swift'), 'sqlite3_open_v2(path, &database, flags, nil)', 'utf8');
+
+      const result = await runScan(tempRoot);
+      const output = JSON.parse(result.stdout);
+
+      expect(result.code).toBe(1);
+      expect(output.summary.iosActiveDatabaseOpenings).toHaveLength(1);
+      expect(result.stderr).toContain('iOS formal Swift sources open the active SQLite library');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
 });

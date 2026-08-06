@@ -36,6 +36,9 @@ const syncObjectsMock = vi.hoisted(() => ({
 const writerQueueMock = vi.hoisted(() => ({
   run: vi.fn(async <T>(task: () => Promise<T>) => task())
 }));
+const iosDatabaseMock = vi.hoisted(() => ({
+  commit: vi.fn(async () => ({ syncedIds: [] as string[] })), owner: {}
+}));
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
@@ -51,6 +54,12 @@ vi.mock('./attachmentResources', () => ({
 }));
 vi.mock('./companionSyncWriterQueue', () => ({
   runCompanionSyncWriterTask: writerQueueMock.run
+}));
+vi.mock('./companion/runtime/companionBatchDataPlane', () => ({
+  commitStagedCompanionAttachmentBatch: iosDatabaseMock.commit
+}));
+vi.mock('./companion/runtime/iosCompanionDatabaseBootstrap', () => ({
+  getIosCompanionDatabaseOwner: vi.fn(() => iosDatabaseMock.owner)
 }));
 
 import {
@@ -96,6 +105,7 @@ function resetAttachmentResourceMocks() {
   }) => ({ synced_attachment_ids: resources.map((resource) => resource.attachment_id) }));
   capacitorMock.getPlatform.mockReturnValue('android');
   capacitorMock.isNativePlatform.mockReturnValue(true);
+  iosDatabaseMock.commit.mockImplementation(async () => ({ syncedIds: capacitorMock.lastDownloadedAttachmentIds }));
 }
 
 describe('companion desktop attachment resource manifests', () => {
@@ -159,9 +169,10 @@ describe('companion desktop attachment resource manifests', () => {
     ])).resolves.toEqual(['att-ios']);
 
     expect(capacitorMock.plugin.downloadAttachmentResourceBatch).toHaveBeenCalledTimes(1);
-    expect(capacitorMock.plugin.commitAttachmentResourceBatch).toHaveBeenCalledWith({
-      batch_token: 'attachment-batch-token'
-    });
+    expect(iosDatabaseMock.commit).toHaveBeenCalledWith(
+      iosDatabaseMock.owner, capacitorMock.plugin, 'attachment-batch-token'
+    );
+    expect(capacitorMock.plugin.commitAttachmentResourceBatch).not.toHaveBeenCalled();
   });
 });
 

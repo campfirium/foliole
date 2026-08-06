@@ -1,11 +1,10 @@
-import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
-
 import { createCapacitorSqliteDbPort } from '../../../capacitorSqliteDbPort';
 import {
   closeCompanionDatabaseConnection,
   type CompanionSqliteConnectionManager,
   openCompanionDatabaseConnection
 } from '../../../companionSyncNodeVersions';
+import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap';
 
 import {
   createCompanionSyncbackDbStore,
@@ -20,13 +19,13 @@ export function getIosCompanionSyncbackStore() {
 }
 
 export function createIosCompanionSyncbackStore(
-  manager: CompanionSqliteConnectionManager = new SQLiteConnection(CapacitorSQLite)
+  manager?: CompanionSqliteConnectionManager
 ): CompanionSyncbackDbStore {
   let operationTail: Promise<unknown> = Promise.resolve();
   const run = <T>(operation: (store: CompanionSyncbackDbStore) => Promise<T>) => {
     const next = operationTail.then(
-      () => withStore(manager, operation),
-      () => withStore(manager, operation)
+      () => withStore(operation, manager),
+      () => withStore(operation, manager)
     );
     operationTail = next.catch(() => undefined);
     return next;
@@ -46,9 +45,12 @@ export function createIosCompanionSyncbackStore(
 }
 
 async function withStore<T>(
-  manager: CompanionSqliteConnectionManager,
-  operation: (store: CompanionSyncbackDbStore) => Promise<T>
+  operation: (store: CompanionSyncbackDbStore) => Promise<T>,
+  manager?: CompanionSqliteConnectionManager
 ) {
+  if (!manager) {
+    return getIosCompanionDatabaseOwner().runWriter((db) => operation(createCompanionSyncbackDbStore(db)));
+  }
   const connection = await openCompanionDatabaseConnection(manager);
   try {
     return await operation(createCompanionSyncbackDbStore(createCapacitorSqliteDbPort(connection)));

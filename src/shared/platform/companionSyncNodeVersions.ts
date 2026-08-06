@@ -6,6 +6,8 @@ import { COMPANION_DATABASE_NAME, COMPANION_DATABASE_VERSION } from '../../../li
 import type { NativeSyncNodeRecord } from '../../../lib/platform/nativeSyncContract';
 
 import { createCapacitorSqliteDbPort } from './capacitorSqliteDbPort';
+import { getIosCompanionDatabaseOwner } from './companion/runtime/iosCompanionDatabaseBootstrap';
+import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
   FolioleCompanionSync,
@@ -51,6 +53,9 @@ export async function applyCompanionSyncNodeVersionsWithinWriterTask(
   manager?: CompanionSqliteConnectionManager
 ) {
   if (!isNativeCompanionNodeVersionWriteRuntime() || nodes.length === 0) return [];
+  if (getCompanionRuntimeCapability().kind === 'ios-native' && !manager) {
+    return getIosCompanionDatabaseOwner().runWriter((db) => applyCompanionSyncNodeVersionsWithDbPort(db, nodes));
+  }
   return applyCompanionSyncNodeVersionsWithSharedCoreOnDevice(nodes, manager);
 }
 
@@ -71,7 +76,14 @@ export async function applyCompanionSyncNodeVersionsWithSharedCore(
   nodes: NativeSyncNodeRecord[],
   operation: SyncNodeApplyOperation = 'remote_sync'
 ) {
-  const port = createCapacitorSqliteDbPort(connection);
+  return applyCompanionSyncNodeVersionsWithDbPort(createCapacitorSqliteDbPort(connection), nodes, operation);
+}
+
+async function applyCompanionSyncNodeVersionsWithDbPort(
+  port: ReturnType<typeof createCapacitorSqliteDbPort>,
+  nodes: NativeSyncNodeRecord[],
+  operation: SyncNodeApplyOperation = 'remote_sync'
+) {
   const result = await applySyncNodesWithDbPort(port, nodes, {
     enqueueSearchInvalidations: false,
     includeAlreadyApplied: true,

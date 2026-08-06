@@ -24,7 +24,7 @@ export async function applyCompanionDesktopSyncPack(args: {
   }
   const bootstrap = await loadCompanionBootstrapState();
   const pairing = await loadCompanionPairingState();
-  const packPath = await downloadCompanionDesktopSyncPack(args);
+  const packPath = await downloadCompanionDesktopSyncPack({ ...args, expectedPeerId: bootstrap.device_id });
   if (!packPath) {
     return { applied_blob_count: 0, applied_object_count: 0, to_state_seq: 0 };
   }

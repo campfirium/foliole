@@ -15,6 +15,11 @@ public class FolioleCompanionSyncPackTransferPlugin: CAPPlugin, CAPBridgedPlugin
             let contracts = try FolioleCompanionContractStore()
             let urlKey = try contracts.transferRequestKey("url")
             let headersKey = try contracts.transferRequestKey("headers")
+            guard let expectedPeerId = call.getString("expected_peer_id")?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !expectedPeerId.isEmpty else {
+                call.reject("expected_peer_id is required.")
+                return
+            }
             guard let url = call.getString(urlKey)?.trimmingCharacters(in: .whitespacesAndNewlines), !url.isEmpty else {
                 call.reject("\(urlKey) is required.")
                 return
@@ -28,7 +33,8 @@ public class FolioleCompanionSyncPackTransferPlugin: CAPPlugin, CAPBridgedPlugin
                 do {
                     let packURL = try await FolioleCompanionSyncPackTransfer.downloadDesktopSyncPack(
                         url: url,
-                        headers: headers
+                        headers: headers,
+                        expectedPeerId: expectedPeerId
                     )
                     call.resolve([try contracts.transferResponseKey("packPath"): packURL.path])
                 } catch {

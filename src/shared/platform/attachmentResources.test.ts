@@ -11,6 +11,9 @@ const capacitorMock = vi.hoisted(() => ({
     resolveAttachmentResource: vi.fn()
   }
 }));
+const iosDatabaseMock = vi.hoisted(() => ({
+  query: vi.fn(async () => [{ mime_type: 'application/pdf', storage_key: 'hash-ios' }])
+}));
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
@@ -19,6 +22,9 @@ vi.mock('@capacitor/core', () => ({
     isNativePlatform: capacitorMock.isNativePlatform
   },
   registerPlugin: vi.fn(() => capacitorMock.plugin)
+}));
+vi.mock('./companion/runtime/iosCompanionActiveDatabase', () => ({
+  queryIosCompanionDatabase: iosDatabaseMock.query
 }));
 
 import {
@@ -134,7 +140,9 @@ it('resolves native iOS attachment file URLs through Capacitor', async () => {
     resource_url: 'capacitor://file:///var/mobile/Containers/Data/Application/app/Library/Application Support/attachments/hash-ios',
     status: 'ready'
   });
-  expect(capacitorMock.plugin.resolveAttachmentResource).toHaveBeenCalledWith({ attachment_id: 'att-ios' });
+  expect(capacitorMock.plugin.resolveAttachmentResource).toHaveBeenCalledWith({
+    attachment_id: 'att-ios', mime_type: 'application/pdf', storage_key: 'hash-ios'
+  });
   expect(invoke).not.toHaveBeenCalled();
 });
 

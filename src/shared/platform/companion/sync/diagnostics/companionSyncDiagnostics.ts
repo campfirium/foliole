@@ -3,11 +3,13 @@ import type {
   SyncDiagnosticVerdict
 } from '../../../../../../lib/platform/syncDiagnosticsContract';
 import { fetchDesktopJson } from '../../../companionDesktopSyncHttp';
+import { getCompanionRuntimeCapability } from '../../../companionRuntimeCapabilities';
 import { classifyCompanionSyncTimeoutMessage } from '../../../companionSyncTimeoutOwnership';
 import {
   FolioleCompanionSync,
   isNativeCompanionSyncDiagnosticsRuntime
 } from '../../../companionWorkspaceRuntimeRepository';
+import { diagnoseIosCompanionDatabase } from '../../runtime/iosCompanionActiveDatabaseDiagnostics';
 
 const SYNC_DIAGNOSTICS_PATH = '/companion/diagnostics/sync';
 
@@ -38,6 +40,9 @@ function infoVerdict(code: string, message: string, evidence: Record<string, unk
 export async function loadLocalSyncDiagnostics(): Promise<SyncDiagnosticSnapshot | null> {
   if (!isNativeCompanionSyncDiagnosticsRuntime()) {
     return null;
+  }
+  if (getCompanionRuntimeCapability().kind === 'ios-native') {
+    return diagnoseIosCompanionDatabase(await FolioleCompanionSync.loadPairingState());
   }
   return await FolioleCompanionSync.diagnoseSync();
 }

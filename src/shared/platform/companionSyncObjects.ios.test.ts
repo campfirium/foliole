@@ -4,6 +4,11 @@ const capacitorMock = vi.hoisted(() => ({
   loadSyncObjects: vi.fn(),
   loadSyncNodeConflicts: vi.fn()
 }));
+const iosReads = vi.hoisted(() => ({ objects: vi.fn() }));
+
+vi.mock('./companion/runtime/iosCompanionActiveDatabaseReads', () => ({
+  loadIosSyncObjects: iosReads.objects
+}));
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
@@ -27,21 +32,18 @@ it('treats Android-only conflict copies as absent on iOS', async () => {
 });
 
 it('loads an iOS device setting through its exact shared sync identity', async () => {
-  capacitorMock.loadSyncObjects.mockResolvedValue({
-    objects: [{
+  iosReads.objects.mockResolvedValue([{
       object_id: 'device:ios:phone:*:handoff_reminder_settings',
       object_type: 'setting',
       payload_json: JSON.stringify({
         key: 'handoff_reminder_settings',
         value_json: '{"fixedTime":"20:30","shortDelay":"15"}'
       })
-    }]
-  });
+  }]);
 
   await expect(loadCompanionSyncSettingValueJson('handoff_reminder_settings'))
     .resolves.toBe('{"fixedTime":"20:30","shortDelay":"15"}');
-  expect(capacitorMock.loadSyncObjects).toHaveBeenCalledWith({
-    object_ids: ['device:ios:phone:*:handoff_reminder_settings'],
-    object_types: ['setting']
-  });
+  expect(iosReads.objects).toHaveBeenCalledWith(
+    ['device:ios:phone:*:handoff_reminder_settings'], ['setting']
+  );
 });

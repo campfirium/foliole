@@ -7,36 +7,16 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "FolioleCompanionSync"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "clearPairingCredentials", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "commitAttachmentResourceBatch", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "commitContentBlobBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "desktopHttpRequest", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "diagnoseSync", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "downloadAttachmentResourceBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "downloadContentBlobBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "finishAttachmentResourceBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "finishContentBlobBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadDiscoveryCandidates", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "loadExternalDirectory", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "loadExternalDocument", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "loadPdfPageText", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "loadMissingAttachmentResource", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "loadMissingAttachmentResources", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "loadMissingContentBlobHashes", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadPairingState", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "loadSyncIndex", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "loadSyncObjects", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "resolveAttachmentResource", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "savePairingCredentials", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "savePrimaryDeviceId", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "saveSyncActiveViewState", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "saveSyncNodeOpenState", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "saveSyncNodeViewState", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "saveSyncNodeReadingRecord", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "saveSyncNodeReviewRecord", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "saveSyncSettingRecord", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "searchExternalDocuments", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "searchTopics", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "searchPdfPageText", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "signCompanionSyncRequest", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "stageAttachmentResourceBatch", returnType: CAPPluginReturnPromise)
     ]
@@ -47,18 +27,6 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc func loadPairingState(_ call: CAPPluginCall) {
         resolvePairing(call) { try $0.loadState() }
-    }
-
-    @objc func loadMissingContentBlobHashes(_ call: CAPPluginCall) {
-        do {
-            let contract = try contentBlobContract()
-            let limit = call.getInt(try key("limit", contract.requestKeys)) ?? contract.defaultLimit
-            let database = try FolioleCompanionContentBlobDatabase(
-                url: FolioleCompanionDatabaseLocation.mainDatabase(),
-                contract: contract
-            )
-            call.resolve(try database.loadMissing(limit: limit))
-        } catch { call.reject("Failed to load missing companion content blobs: \(error.localizedDescription)") }
     }
 
     @objc func downloadContentBlobBatch(_ call: CAPPluginCall) {
@@ -81,37 +49,6 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
                     token, packURL: packURL, parts: parts, failed: failed, started: started, contract: contract
                 ))
             } catch { call.reject("Failed to download companion content blobs: \(error.localizedDescription)") }
-        }
-    }
-
-    @objc func commitContentBlobBatch(_ call: CAPPluginCall) {
-        Task {
-            do {
-                let contract = try contentBlobContract()
-                let token = try requiredString(call, contract.requestKeys, "batchToken")
-                if let committed = await contentBlobSessions.committed(token) {
-                    call.resolve(try FolioleCompanionContentBlobBridgePayload.commitResponse(
-                        committed, elapsedMs: 0, contract: contract
-                    ))
-                    return
-                }
-                guard let batch = await contentBlobSessions.load(token) else { throw invalid("Content blob batch token is unknown or expired.") }
-                let started = Date()
-                let database = try FolioleCompanionContentBlobDatabase(
-                    url: FolioleCompanionDatabaseLocation.mainDatabase(),
-                    contract: contract
-                )
-                let synced = try database.commit(
-                    parts: FolioleCompanionContentBlobPack.read(batch.packURL),
-                    failedHashes: batch.failedHashes
-                )
-                await contentBlobSessions.markCommitted(token, hashes: synced)
-                call.resolve(try FolioleCompanionContentBlobBridgePayload.commitResponse(
-                    synced,
-                    elapsedMs: FolioleCompanionContentBlobBridgePayload.elapsedMs(since: started),
-                    contract: contract
-                ))
-            } catch { call.reject("Failed to commit companion content blobs: \(error.localizedDescription)") }
         }
     }
 

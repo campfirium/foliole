@@ -84,6 +84,7 @@ it('downloads desktop packs before applying them through the shared TS core', as
   });
 
   expect(capacitorMock.plugin.downloadDesktopSyncPack).toHaveBeenCalledWith({
+    expected_peer_id: 'android-test-device',
     headers: { 'X-Device-Id': 'android' },
     url: 'http://desktop/companion/sync-pack'
   });
