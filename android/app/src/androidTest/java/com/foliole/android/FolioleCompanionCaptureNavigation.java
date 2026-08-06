@@ -53,6 +53,17 @@ final class FolioleCompanionCaptureNavigation {
         );
     }
 
+    static void waitForAnnotationPersistence(
+        Instrumentation instrumentation,
+        WebView webView,
+        long timeoutMs,
+        String kind
+    ) throws Exception {
+        FolioleCompanionCaptureAnnotationScenario.waitFor(instrumentation, webView,
+            "document.querySelector('[data-companion-selection-toolbar=\"true\"]')===null",
+            timeoutMs, kind + " annotation persistence");
+    }
+
     private static String waitForDirectoryState(
         Instrumentation instrumentation,
         WebView webView,

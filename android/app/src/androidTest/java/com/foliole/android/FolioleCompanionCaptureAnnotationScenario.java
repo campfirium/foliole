@@ -64,6 +64,7 @@ final class FolioleCompanionCaptureAnnotationScenario {
         waitForTestId(instrumentation, webView, "companion-selection-note-text", timeoutMs);
         perform(instrumentation, webView, "companion-selection-note-text", "input", "A5 note " + token);
         perform(instrumentation, webView, "companion-selection-note-save", "click", "");
+        FolioleCompanionCaptureNavigation.waitForAnnotationPersistence(instrumentation, webView, timeoutMs, "note");
         waitForDecorationText(instrumentation, webView, ".cm-md-highlight", NOTE_TEXT, timeoutMs);
     }
 
@@ -74,6 +75,7 @@ final class FolioleCompanionCaptureAnnotationScenario {
     ) throws Exception {
         selectText(instrumentation, webView, CLOZE_TEXT, timeoutMs);
         perform(instrumentation, webView, "companion-selection-cloze", "click", "");
+        FolioleCompanionCaptureNavigation.waitForAnnotationPersistence(instrumentation, webView, timeoutMs, "cloze");
         waitForDecorationText(instrumentation, webView, ".cm-md-cloze", CLOZE_TEXT, timeoutMs);
     }
 
@@ -179,7 +181,7 @@ final class FolioleCompanionCaptureAnnotationScenario {
             "document.body&&document.body.innerText.includes(" + JSONObject.quote(text) + ")", timeoutMs, "text " + text);
     }
 
-    private static void waitFor(
+    static void waitFor(
         Instrumentation instrumentation,
         WebView webView,
         String expression,
