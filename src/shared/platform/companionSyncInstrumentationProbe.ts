@@ -1,9 +1,9 @@
 import type { NativeSyncPackApplyResult } from '../../../lib/platform/nativeSyncContract';
 
 import { loadCompanionBootstrapState } from './companionBootstrap';
+import { loadCompanionSyncPackCursor, saveCompanionSyncPackCursor } from './companionSyncCursors';
 import { applyCompanionSyncPackPathWithSharedCore } from './companionSyncPackNodes';
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
-import { FolioleCompanionSync } from './companionWorkspaceRuntimeRepository';
 
 const PROBE_QUERY_KEY = 'foliole-sync-probe';
 
@@ -43,8 +43,8 @@ async function applyPackPathThroughSharedCore(args: { packPath: string }) {
       deviceId: bootstrap.device_id,
       packPath: args.packPath
     }, {
-      loadCursor: async () => (await FolioleCompanionSync.loadSyncPackCursor()).cursor,
-      saveCursor: async (cursor) => (await FolioleCompanionSync.saveSyncPackCursor({ cursor })).cursor
+      loadCursor: loadCompanionSyncPackCursor,
+      saveCursor: saveCompanionSyncPackCursor
     });
   });
 }

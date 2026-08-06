@@ -31,7 +31,6 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(FolioleCompanionAppDataPlugin.class);
         registerPlugin(FolioleCompanionSyncPackTransferPlugin.class);
         registerPlugin(FolioleCompanionSyncPlugin.class);
-        registerPlugin(FolioleCompanionAlternativePlugin.class);
         super.onCreate(savedInstanceState);
         WebView webView = getBridge().getWebView();
         webView.getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);

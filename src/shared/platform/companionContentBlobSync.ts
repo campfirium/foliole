@@ -1,8 +1,6 @@
 import { commitStagedCompanionContentBatch } from './companion/runtime/companionBatchDataPlane';
 import { loadIosMissingContentBlobs } from './companion/runtime/iosCompanionActiveDatabaseReads';
 import { getIosCompanionDatabaseOwner } from './companion/runtime/iosCompanionDatabaseBootstrap';
-import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
-import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
   FolioleCompanionSync,
   isNativeCompanionContentBlobRuntime
@@ -12,8 +10,7 @@ export async function loadCompanionMissingContentBlobHashes(limit = 50) {
   if (!isNativeCompanionContentBlobRuntime()) {
     return [] as string[];
   }
-  if (getCompanionRuntimeCapability().kind === 'ios-native') return (await loadIosMissingContentBlobs(limit)).hashes;
-  return (await FolioleCompanionSync.loadMissingContentBlobHashes({ limit })).hashes;
+  return (await loadIosMissingContentBlobs(limit)).hashes;
 }
 
 export interface CompanionMissingContentBlobBatch {
@@ -33,9 +30,7 @@ export async function loadCompanionMissingContentBlobBatch(limit = 50): Promise<
   if (!isNativeCompanionContentBlobRuntime()) {
     return { blobs: [], failedBytes: null, failedCount: null, hashes: [], total: null, totalBytes: null };
   }
-  const result = getCompanionRuntimeCapability().kind === 'ios-native'
-    ? await loadIosMissingContentBlobs(limit)
-    : await FolioleCompanionSync.loadMissingContentBlobHashes({ limit });
+  const result = await loadIosMissingContentBlobs(limit);
   const blobs = Array.isArray(result.blobs)
     ? result.blobs
     : result.hashes.map((hash) => ({ hash }));
@@ -81,26 +76,14 @@ export async function syncCompanionContentBlobs(args: {
     throw new Error('Native content body batch sync is unavailable.');
   }
   const download = await FolioleCompanionSync.downloadContentBlobBatch(args);
-  if (getCompanionRuntimeCapability().kind === 'ios-native') {
-    const commit = await commitStagedCompanionContentBatch(
-      getIosCompanionDatabaseOwner(), FolioleCompanionSync, download
-    );
-    return {
-      db_elapsed_ms: 0,
-      http_elapsed_ms: download.http_elapsed_ms,
-      parse_elapsed_ms: download.parse_elapsed_ms,
-      synced_hashes: commit.syncedHashes,
-      total_elapsed_ms: download.total_elapsed_ms
-    };
-  }
-  const commit = await runCompanionSyncWriterTask(() => FolioleCompanionSync.commitContentBlobBatch({
-    batch_token: download.batch_token
-  }));
+  const commit = await commitStagedCompanionContentBatch(
+    getIosCompanionDatabaseOwner(), FolioleCompanionSync, download
+  );
   return {
-    db_elapsed_ms: commit.db_elapsed_ms,
+    db_elapsed_ms: 0,
     http_elapsed_ms: download.http_elapsed_ms,
     parse_elapsed_ms: download.parse_elapsed_ms,
-    synced_hashes: commit.synced_hashes,
+    synced_hashes: commit.syncedHashes,
     total_elapsed_ms: download.total_elapsed_ms
   };
 }

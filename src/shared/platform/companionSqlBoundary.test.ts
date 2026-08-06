@@ -11,6 +11,7 @@ const SQLITE_TOUCH_ALLOWED = new Set([
   'src/shared/platform/companionSyncStateObjects.ts',
   'src/shared/platform/companionSyncNodeVersions.ts',
   'src/shared/platform/companionSyncPackNodes.ts',
+  'src/shared/platform/companion/runtime/capacitorCompanionDatabaseOwner.ts',
   'src/shared/platform/companion/runtime/iosCompanionDatabaseBootstrap.ts',
   'src/shared/platform/companion/sync/cursor/iosCompanionSyncPackCursorStore.ts',
   'src/shared/platform/companion/sync/pack-apply/iosCompanionSyncPackApply.ts',

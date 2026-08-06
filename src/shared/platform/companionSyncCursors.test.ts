@@ -7,6 +7,12 @@ const iosCursorStoreMock = vi.hoisted(() => ({
   loadCursor: vi.fn(async () => 9),
   saveCursor: vi.fn(async (cursor: number | null) => cursor)
 }));
+const sharedCursorMock = vi.hoisted(() => ({
+  loadChange: vi.fn(async () => null),
+  loadNumber: vi.fn(async (kind: string) => kind === 'state' ? 2 : null),
+  saveChange: vi.fn(async (_kind: string, cursor) => cursor),
+  saveNumber: vi.fn(async (_kind: string, cursor) => cursor)
+}));
 const iosSyncbackStoreMock = vi.hoisted(() => ({
   loadNodeVersions: vi.fn(async () => [{ object_id: 'ios-created-node', version_id: 'ios-device#1' }]),
   loadNodeVersionPushCursor: vi.fn(async () => null),
@@ -24,6 +30,12 @@ vi.mock('./companionSyncWriterQueue', () => ({
 }));
 vi.mock('./companion/sync/cursor/iosCompanionSyncPackCursorStore', () => ({
   createIosCompanionSyncPackCursorStore: vi.fn(() => iosCursorStoreMock)
+}));
+vi.mock('./companion/runtime/iosCompanionSyncCursorStore', () => ({
+  loadIosCompanionChangeCursor: sharedCursorMock.loadChange,
+  loadIosCompanionNumberCursor: sharedCursorMock.loadNumber,
+  saveIosCompanionChangeCursor: sharedCursorMock.saveChange,
+  saveIosCompanionNumberCursor: sharedCursorMock.saveNumber
 }));
 vi.mock('./companion/sync/syncback/iosCompanionSyncbackStore', () => ({
   getIosCompanionSyncbackStore: vi.fn(() => iosSyncbackStoreMock)
@@ -73,8 +85,8 @@ it('bridges native sync cursors and pending summary', async () => {
   const cursor = { change_id: 'change-2', created_at: '2026-04-25T00:01:00.000Z' };
 
   await expect(api.loadCompanionSyncStateCursor()).resolves.toBe(2);
-  await expect(api.loadCompanionSyncPackCursor()).resolves.toBe(4);
-  await expect(api.loadCompanionSyncStatePushCursor()).resolves.toBeNull();
+  await expect(api.loadCompanionSyncPackCursor()).resolves.toBe(9);
+  await expect(api.loadCompanionSyncStatePushCursor()).resolves.toBe(6);
   await expect(api.loadCompanionSyncNodeVersionCursor()).resolves.toBeNull();
   await expect(api.loadCompanionSyncReviewLogCursor()).resolves.toBeNull();
   await expect(api.saveCompanionSyncStateCursor(3)).resolves.toBe(3);
@@ -82,10 +94,10 @@ it('bridges native sync cursors and pending summary', async () => {
   await expect(api.saveCompanionSyncNodeVersionCursor(cursor)).resolves.toEqual(cursor);
   await expect(api.saveCompanionSyncReviewLogPushCursor(cursor)).resolves.toEqual(cursor);
   await expect(api.loadCompanionSyncStateChanges(null)).resolves.toEqual([
-    { object_id: 'one', object_type: 'setting', state_seq: 1 }
+    { object_id: 'ios-node-1', object_type: 'node_review', state_seq: 7 }
   ]);
   await expect(api.loadCompanionPendingSyncSummary()).resolves.toEqual({ pendingCount: 3 });
-  expect(writerQueueMock.run).toHaveBeenCalledTimes(4);
+  expect(writerQueueMock.run).toHaveBeenCalledTimes(2);
 });
 
 it('routes iOS syncback cursors and rows through the SQLite store', async () => {
@@ -93,10 +105,7 @@ it('routes iOS syncback cursors and rows through the SQLite store', async () => 
   const getItem = vi.spyOn(Storage.prototype, 'getItem');
   const api = await import('./companionSyncCursors');
 
-  await expect(api.loadCompanionSyncStateCursor()).rejects.toMatchObject({
-    code: 'NATIVE_COMPANION_CAPABILITY_UNAVAILABLE',
-    platform: 'ios'
-  });
+  await expect(api.loadCompanionSyncStateCursor()).resolves.toBe(2);
   await expect(api.loadCompanionSyncStatePushCursor()).resolves.toBe(6);
   await expect(api.loadCompanionSyncStateChanges(null)).resolves.toEqual([
     { object_id: 'ios-node-1', object_type: 'node_review', state_seq: 7 }
@@ -111,7 +120,7 @@ it('routes iOS syncback cursors and rows through the SQLite store', async () => 
   })).resolves.toEqual({ change_id: 'ios-device#1', created_at: '2026-07-21T00:00:00.000Z' });
   await expect(api.loadCompanionPendingSyncSummary()).resolves.toEqual({ pendingCount: 3 });
   expect(getItem).not.toHaveBeenCalled();
-  expect(capacitorMock.plugin.loadSyncStateChanges).not.toHaveBeenCalled();
+  expect(sharedCursorMock.loadNumber).toHaveBeenCalledWith('state');
 });
 
 it('persists the iOS sync-pack cursor through the SQLite store', async () => {

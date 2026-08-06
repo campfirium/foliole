@@ -15,7 +15,9 @@ export const COMPANION_RESOURCE_PLUGIN_REQUEST_KEYS = {
   hash: 'hash',
   headers: 'headers',
   limit: 'limit',
+  mimeType: 'mime_type',
   query: 'query',
   resources: 'resources',
+  storageKey: 'storage_key',
   url: 'url'
 } as const;

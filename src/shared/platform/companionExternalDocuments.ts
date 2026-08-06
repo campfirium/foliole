@@ -7,9 +7,7 @@ import {
   loadIosSyncObjects,
   searchIosExternalDocuments
 } from './companion/runtime/iosCompanionActiveDatabaseReads';
-import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
 import {
-  FolioleCompanionSync,
   isNativeCompanionExternalDirectoryRuntime,
   isNativeCompanionExternalDocumentReadRuntime,
   isNativeCompanionExternalDocumentSearchRuntime,
@@ -68,10 +66,7 @@ export async function loadCompanionExternalDocument(documentId: string) {
   if (!isNativeCompanionExternalDocumentReadRuntime()) {
     return null as CompanionExternalDocument | null;
   }
-  const document = (getCompanionRuntimeCapability().kind === 'ios-native'
-    ? await loadIosExternalDocument(documentId)
-    : (await FolioleCompanionSync.loadExternalDocument({ document_id: documentId })).document
-  ) as NativeExternalDocument | null;
+  const document = await loadIosExternalDocument(documentId) as NativeExternalDocument | null;
   return document ? normalizeExternalDocument(document) : null;
 }
 
@@ -79,9 +74,7 @@ export async function loadCompanionExternalDirectory() {
   if (!isNativeCompanionExternalDirectoryRuntime()) {
     return { entries: [], folders: [] } satisfies CompanionExternalDirectory;
   }
-  const directory = getCompanionRuntimeCapability().kind === 'ios-native'
-    ? await loadIosExternalDirectory()
-    : await FolioleCompanionSync.loadExternalDirectory();
+  const directory = await loadIosExternalDirectory();
   const folderOrder = await loadCompanionExternalFolderOrder();
   return {
     entries: directory.entries.map((entry) => ({
@@ -105,16 +98,12 @@ export async function loadCompanionExternalDirectory() {
 
 async function loadCompanionExternalFolderOrder() {
   if (!isNativeCompanionSyncObjectReadRuntime()) return [];
-  const index = getCompanionRuntimeCapability().kind === 'ios-native'
-    ? { entries: await loadIosSyncIndex() }
-    : await FolioleCompanionSync.loadSyncIndex();
+  const index = { entries: await loadIosSyncIndex() };
   const settingObjectIds = index.entries
     .filter((entry) => entry.object_type === 'setting' && entry.object_id.endsWith(':app_settings'))
     .map((entry) => entry.object_id);
   if (settingObjectIds.length === 0) return [];
-  const objects = getCompanionRuntimeCapability().kind === 'ios-native'
-    ? { objects: await loadIosSyncObjects(settingObjectIds, ['setting']) }
-    : await FolioleCompanionSync.loadSyncObjects({ object_ids: settingObjectIds, object_types: ['setting'] });
+  const objects = { objects: await loadIosSyncObjects(settingObjectIds, ['setting']) };
   const settings = objects.objects
     .map((object) => parseSettingPayload(object.payload_json))
     .filter((payload): payload is SyncSettingPayload => Boolean(payload?.key === 'app_settings' && payload.value_json))
@@ -146,10 +135,7 @@ export async function searchCompanionExternalDocuments(query: string, limit?: nu
   if (!isNativeCompanionExternalDocumentSearchRuntime()) {
     return [] as CompanionExternalDocumentSearchResult[];
   }
-  const results = (getCompanionRuntimeCapability().kind === 'ios-native'
-    ? await searchIosExternalDocuments(query, limit)
-    : (await FolioleCompanionSync.searchExternalDocuments({ ...(limit !== undefined ? { limit } : {}), query })).results
-  ) as NativeExternalDocumentSearchResult[];
+  const results = await searchIosExternalDocuments(query, limit) as NativeExternalDocumentSearchResult[];
   return results.map(normalizeExternalDocumentSearchResult);
 }
 

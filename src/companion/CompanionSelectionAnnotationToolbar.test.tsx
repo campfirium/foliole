@@ -90,8 +90,8 @@ function renderExistingToolbar(note?: string) {
 }
 
 it('closes a highlight only after its permanent write completes', async () => {
-  let resolveApply = () => undefined;
-  const onApply = vi.fn(() => new Promise<void>((resolve) => { resolveApply = resolve; }));
+  let resolveApply: () => void = () => undefined;
+  const onApply = vi.fn(() => new Promise<void>((resolve) => { resolveApply = () => resolve(); }));
   const { onClose } = renderToolbar(onApply);
 
   const button = screen.getByRole('button', { name: 'Highlight' });
@@ -194,8 +194,8 @@ it('loads the existing highlight note before saving', () => {
 });
 
 it('keeps the note panel open until its permanent write completes', async () => {
-  let resolveApply = () => undefined;
-  const onApply = vi.fn(() => new Promise<void>((resolve) => { resolveApply = resolve; }));
+  let resolveApply: () => void = () => undefined;
+  const onApply = vi.fn(() => new Promise<void>((resolve) => { resolveApply = () => resolve(); }));
   const { onClose } = renderToolbar(onApply);
 
   const addCommentButton = screen.getByRole('button', { name: 'Add Comment' });

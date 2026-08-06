@@ -7,7 +7,6 @@ import { fileURLToPath } from 'node:url';
 
 import {
   extractArrayBody,
-  extractJavaExecSqlArguments,
   extractStatementsFromBody,
   quoteIdentifier
 } from './schema-inventory-parse.mjs';
@@ -73,16 +72,8 @@ export function loadAndroidSchemaAssetStatements(repoRoot = REPO_ROOT) {
 }
 
 export function loadAndroidJavaMigrationStatements(repoRoot = REPO_ROOT) {
-  const source = readRepoFile(
-    repoRoot,
-    'android/app/src/main/java/com/foliole/android/FolioleCompanionDatabaseMigration.java'
-  );
-  return extractJavaExecSqlArguments(source)
-    .map((statement) => statement.replace(/\s+/g, ' ').trim())
-    .filter((statement) => (
-      /^CREATE TABLE IF NOT EXISTS [A-Za-z_]/i.test(statement)
-      || /^CREATE TABLE (?!IF\b)[A-Za-z_]/i.test(statement)
-    ));
+  void repoRoot;
+  return [];
 }
 
 function compareInventories(desktop, android) {

@@ -23,8 +23,8 @@ const capacitorMock = vi.hoisted(() => ({
 const iosReads = vi.hoisted(() => ({
   directory: vi.fn(),
   document: vi.fn(),
-  index: vi.fn(async () => []),
-  objects: vi.fn(async () => []),
+  index: vi.fn(async (): Promise<Array<{ object_id: string; object_type: string }>> => []),
+  objects: vi.fn(async (): Promise<Array<{ payload_json: string | null }>> => []),
   search: vi.fn()
 }));
 
@@ -96,14 +96,14 @@ describe('companion external documents bridge', () => {
       content: 'cached external content',
       document_id: 'folder-1:doc.md'
     });
-    expect(capacitorMock.plugin.loadExternalDocument).toHaveBeenCalledWith({ document_id: 'folder-1:doc.md' });
+    expect(iosReads.document).toHaveBeenCalledWith('folder-1:doc.md');
 
     await expect(api.searchCompanionExternalDocuments('external', 5)).resolves.toEqual([expect.objectContaining({
       bodyStatus: 'ready',
       document_id: 'folder-1:doc.md',
       excerpt: 'cached external content'
     })]);
-    expect(capacitorMock.plugin.searchExternalDocuments).toHaveBeenCalledWith({ limit: 5, query: 'external' });
+    expect(iosReads.search).toHaveBeenCalledWith('external', 5);
   });
 
   it('loads, searches, and browses synced external documents on iOS', async () => {
@@ -144,24 +144,23 @@ describe('companion external documents bridge', () => {
         id: 'folder-1'
       }]
     });
-    expect(capacitorMock.plugin.loadExternalDirectory).toHaveBeenCalledWith();
+    expect(iosReads.directory).toHaveBeenCalledWith();
   });
 });
 
 describe('companion external directory ordering', () => {
   it('orders cached external folders by synced app settings', async () => {
-    capacitorMock.plugin.loadExternalDirectory.mockResolvedValueOnce({
+    iosReads.directory.mockResolvedValueOnce({
       entries: [],
       folders: [
         { document_count: 1, folder_path: '/library/1act', id: 'folder-1' },
         { document_count: 1, folder_path: '/library/2think', id: 'folder-2' }
       ]
     });
-    capacitorMock.plugin.loadSyncIndex.mockResolvedValueOnce({
-      entries: [{ object_id: 'user_space:windows:desktop:*:app_settings', object_type: 'setting' }]
-    });
-    capacitorMock.plugin.loadSyncObjects.mockResolvedValueOnce({
-      objects: [{
+    iosReads.index.mockResolvedValueOnce([
+      { object_id: 'user_space:windows:desktop:*:app_settings', object_type: 'setting' }
+    ]);
+    iosReads.objects.mockResolvedValueOnce([{
         payload_json: JSON.stringify({
           key: 'app_settings',
           value_json: JSON.stringify({
@@ -171,8 +170,8 @@ describe('companion external directory ordering', () => {
             ])
           })
         })
-      }]
-    });
+      }
+    ]);
     const api = await import('./companionExternalDocuments');
 
     await expect(api.loadCompanionExternalDirectory()).resolves.toMatchObject({
@@ -186,13 +185,10 @@ describe('companion external directory ordering', () => {
 
 describe('companion external document body status', () => {
   it('preserves external document fetching and failed body status', async () => {
-    capacitorMock.plugin.loadExternalDocument.mockResolvedValueOnce({
-      document: externalDocument({ content: '', content_status: 'fetching' })
-    });
-    capacitorMock.plugin.searchExternalDocuments.mockResolvedValueOnce({
-      query: 'external',
-      results: [{ ...externalDocument({ content: '', content_status: 'failed' }), excerpt: '', match_start: 0 }]
-    });
+    iosReads.document.mockResolvedValueOnce(externalDocument({ content: '', content_status: 'fetching' }));
+    iosReads.search.mockResolvedValueOnce([
+      { ...externalDocument({ content: '', content_status: 'failed' }), excerpt: '', match_start: 0 }
+    ]);
     const api = await import('./companionExternalDocuments');
 
     await expect(api.loadCompanionExternalDocument('folder-1:doc.md')).resolves.toMatchObject({

@@ -4,11 +4,36 @@ const writerQueueMock = vi.hoisted(() => ({
   run: vi.fn(async <T>(task: () => Promise<T>) => task())
 }));
 const iosSyncbackStoreMock = vi.hoisted(() => ({
+  loadNodeVersions: vi.fn(async () => [{ object_id: 'node-1' }]),
+  loadReviewLog: vi.fn(async () => [{ op_id: 'op-1' }]),
   savePushAcks: vi.fn(async () => ['ios-review-op'])
 }));
 const iosReadsMock = vi.hoisted(() => ({
+  conflicts: vi.fn(async () => [
+    { conflict_version_id: 'phone#1', object_id: 'node-1', snapshot: { title: 'Remote' } }
+  ]),
   index: vi.fn(async () => [{ object_id: 'one', object_type: 'setting' }]),
-  objects: vi.fn(async () => [{ object_id: 'one', object_type: 'setting' }])
+  missingAttachments: vi.fn(async () => [
+    { attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }
+  ]),
+  missingBlobs: vi.fn(async () => ({
+    blobs: [{ hash: 'a'.repeat(64), size_bytes: 1024 }], hashes: ['a'.repeat(64)]
+  })),
+  objects: vi.fn(async () => [{ object_id: 'one', object_type: 'setting' }]),
+  pdf: vi.fn(async () => [
+    { page: 1, page_height: 200, page_width: 100, text: 'indexed pdf text' }
+  ]),
+  searchPdf: vi.fn(async () => [{
+    attachment_id: 'att-1', excerpt: 'indexed pdf text', match_start: 8, page: 1,
+    page_height: 200, page_width: 100, text: 'indexed pdf text'
+  }])
+}));
+const iosWritesMock = vi.hoisted(() => ({
+  active: vi.fn(async () => ({ content_hash: 'hash-active', object_id: 'active' })),
+  reading: vi.fn(async () => ({ content_hash: 'hash-reading', object_id: 'node-1' })),
+  review: vi.fn(async () => ({ content_hash: 'hash-review', object_id: 'node-1' })),
+  setting: vi.fn(async () => ({ content_hash: 'hash-setting', object_id: 'setting-1' })),
+  view: vi.fn(async () => ({ content_hash: 'hash-view', object_id: 'view' }))
 }));
 
 vi.mock('./companionSyncWriterQueue', () => ({
@@ -18,91 +43,28 @@ vi.mock('./companion/sync/syncback/iosCompanionSyncbackStore', () => ({
   getIosCompanionSyncbackStore: vi.fn(() => iosSyncbackStoreMock)
 }));
 vi.mock('./companion/runtime/iosCompanionActiveDatabaseReads', () => ({
-  loadIosPdfPageText: vi.fn(),
+  loadIosMissingAttachments: iosReadsMock.missingAttachments,
+  loadIosMissingContentBlobs: iosReadsMock.missingBlobs,
+  loadIosPdfPageText: iosReadsMock.pdf,
   loadIosSyncIndex: iosReadsMock.index,
+  loadIosSyncNodeConflicts: iosReadsMock.conflicts,
   loadIosSyncObjects: iosReadsMock.objects,
-  searchIosPdfPageText: vi.fn()
+  searchIosPdfPageText: iosReadsMock.searchPdf
 }));
-
-function createApplyPluginMocks() {
-  return {
-    saveSyncPushAcks: vi.fn(async () => ({ saved_client_op_ids: ['op-1'] }))
-  };
-}
-function createReadPluginMocks() {
-  return {
-    loadSyncIndex: vi.fn(async () => ({ entries: [{ object_id: 'one', object_type: 'setting' }] })),
-    loadSyncNodeConflicts: vi.fn(async () => ({
-      conflicts: [{ conflict_version_id: 'phone#1', object_id: 'node-1', snapshot: { title: 'Remote' } }]
-    })),
-    loadSyncObjects: vi.fn(async () => ({ objects: [{ object_id: 'one', object_type: 'setting' }] })),
-    loadMissingContentBlobHashes: vi.fn(async () => ({
-      blobs: [{ hash: 'a'.repeat(64), size_bytes: 1024 }],
-      hashes: ['a'.repeat(64)]
-    })),
-    loadMissingAttachmentResources: vi.fn(async () => ({
-      resources: [{ attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }]
-    })),
-    loadSyncNodeVersions: vi.fn(async () => ({ nodes: [{ object_id: 'node-1' }] })),
-    loadSyncReviewLog: vi.fn(async () => ({ reviews: [{ op_id: 'op-1' }] }))
-  };
-}
-
-function createSearchPluginMocks() {
-  return {
-    loadPdfPageText: vi.fn(async () => ({
-      attachment_id: 'att-1',
-      pages: [{ page: 1, page_height: 200, page_width: 100, text: 'indexed pdf text' }]
-    })),
-    searchPdfPageText: vi.fn(async () => ({
-      query: 'pdf',
-      results: [{
-        attachment_id: 'att-1', excerpt: 'indexed pdf text', match_start: 8, page: 1,
-        page_height: 200, page_width: 100, text: 'indexed pdf text'
-      }]
-    }))
-  };
-}
-
-function createWritePluginMocks() {
-  return {
-    commitAttachmentResourceBatch: vi.fn(async () => ({
-      synced_attachment_ids: ['att-1']
-    })),
-    commitContentBlobBatch: vi.fn(async () => ({
-      db_elapsed_ms: 2,
-      synced_hashes: ['a'.repeat(64)]
-    })),
-    downloadAttachmentResourceBatch: vi.fn(async () => ({
-      batch_token: 'attachment-batch-token',
-      failed_attachment_ids: [],
-      synced_attachment_ids: ['att-1']
-    })),
-    downloadContentBlobBatch: vi.fn(async () => ({
-      batch_token: 'content-batch-token',
-      failed_hashes: [],
-      http_elapsed_ms: 3,
-      parse_elapsed_ms: 1,
-      synced_hashes: ['a'.repeat(64)]
-    })),
-    saveSyncActiveViewState: vi.fn(async () => ({ content_hash: 'hash-active', object_id: 'active' })),
-    saveSyncNodeReadingRecord: vi.fn(async () => ({ content_hash: 'hash-reading', object_id: 'node-1' })),
-    saveSyncNodeReviewRecord: vi.fn(async () => ({ content_hash: 'hash-review', object_id: 'node-1' })),
-    saveSyncNodeViewState: vi.fn(async () => ({ content_hash: 'hash-view', object_id: 'view' })),
-    saveSyncSettingRecord: vi.fn(async () => ({ content_hash: 'hash-setting', object_id: 'setting-1' })),
-    syncContentBlob: vi.fn(async ({ hash }) => ({ availability: 'cached', hash })),
-    syncAttachmentResource: vi.fn(async () => ({ attachment_id: 'att-1', availability: 'cached' }))
-  };
-}
+vi.mock('./companion/runtime/iosCompanionActiveDatabaseWrites', () => ({
+  saveIosActiveViewState: iosWritesMock.active,
+  saveIosNodeViewState: iosWritesMock.view,
+  saveIosOpenState: vi.fn(),
+  saveIosReading: iosWritesMock.reading,
+  saveIosReview: iosWritesMock.review,
+  saveIosSetting: iosWritesMock.setting
+}));
 
 const capacitorMock = vi.hoisted(() => ({
   isNative: vi.fn(() => true),
   platform: vi.fn(() => 'android'),
   plugin: {
-    ...createApplyPluginMocks(),
-    ...createReadPluginMocks(),
-    ...createSearchPluginMocks(),
-    ...createWritePluginMocks()
+    saveSyncPushAcks: vi.fn(async () => ({ saved_client_op_ids: ['op-1'] }))
   }
 }));
 
@@ -150,17 +112,17 @@ async function testNativePluginBridge() {
   await expect(api.loadCompanionSyncObjects(['one'], ['setting'])).resolves.toEqual([{ object_id: 'one', object_type: 'setting' }]);
   await expect(api.loadCompanionMissingContentBlobHashes(3)).resolves.toEqual(['a'.repeat(64)]);
   await expect(api.loadCompanionMissingContentBlobs(3)).resolves.toEqual([{ hash: 'a'.repeat(64), size_bytes: 1024 }]);
-  expect(capacitorMock.plugin.loadMissingContentBlobHashes).toHaveBeenCalledWith({ limit: 3 });
+  expect(iosReadsMock.missingBlobs).toHaveBeenCalledWith(3);
   await expect(api.loadCompanionMissingAttachmentResources(4)).resolves.toEqual([
     { attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }
   ]);
-  expect(capacitorMock.plugin.loadMissingAttachmentResources).toHaveBeenCalledWith({ limit: 4 });
+  expect(iosReadsMock.missingAttachments).toHaveBeenCalledWith(4);
   await expect(api.loadCompanionSyncNodeVersions(null)).resolves.toEqual([{ object_id: 'node-1' }]);
   await expect(api.loadCompanionSyncReviewLog(null)).resolves.toEqual([{ op_id: 'op-1' }]);
   await expect(api.loadCompanionPdfPageText('att-1')).resolves.toEqual([
     { page: 1, page_height: 200, page_width: 100, text: 'indexed pdf text' }
   ]);
-  expect(capacitorMock.plugin.loadPdfPageText).toHaveBeenCalledWith({ attachment_id: 'att-1' });
+  expect(iosReadsMock.pdf).toHaveBeenCalledWith('att-1');
   await expect(api.searchCompanionPdfPageText('pdf', 5)).resolves.toEqual([{
     attachment_id: 'att-1',
     excerpt: 'indexed pdf text',
@@ -170,7 +132,7 @@ async function testNativePluginBridge() {
     page_width: 100,
     text: 'indexed pdf text'
   }]);
-  expect(capacitorMock.plugin.searchPdfPageText).toHaveBeenCalledWith({ limit: 5, query: 'pdf' });
+  expect(iosReadsMock.searchPdf).toHaveBeenCalledWith('pdf', 5);
   await expectNativeSaveBridge(api);
 }
 
@@ -183,7 +145,7 @@ async function expectNativeSaveBridge(api: typeof import('./companionSyncObjects
     nodeId: 'node-1',
     reading: createReadingProfile()
   })).resolves.toEqual({ content_hash: 'hash-reading', object_id: 'node-1' });
-  expect(capacitorMock.plugin.saveSyncNodeReadingRecord).toHaveBeenCalledWith(expect.objectContaining({
+  expect(iosWritesMock.reading).toHaveBeenCalledWith(expect.objectContaining({
     reading_json: expect.stringContaining('"reading_position"')
   }));
   await expect(api.saveCompanionSyncNodeReviewRecord({
@@ -197,17 +159,16 @@ async function expectNativeSaveBridge(api: typeof import('./companionSyncObjects
       schedulerVersion: 'ts-fsrs@4'
     }
   })).resolves.toEqual({ content_hash: 'hash-review', object_id: 'node-1' });
-  expect(capacitorMock.plugin.saveSyncNodeReviewRecord).toHaveBeenCalledWith(expect.objectContaining({
+  expect(iosWritesMock.review).toHaveBeenCalledWith(expect.objectContaining({
     node_id: 'node-1',
     review_json: expect.stringContaining('"last_review_at"'),
     review_log_json: expect.stringContaining('"reviewedAt"')
   }));
   await expect(api.saveCompanionSyncNodeViewState({ nodeId: 'node-1', scrollTop: 42.8 }))
     .resolves.toEqual({ content_hash: 'hash-view', object_id: 'view' });
-  expect(capacitorMock.plugin.saveSyncNodeViewState).toHaveBeenCalledWith({
+  expect(iosWritesMock.view).toHaveBeenCalledWith({
     node_id: 'node-1',
-    scroll_top: 42,
-    source: 'user-scroll'
+    scroll_top: 42.8
   });
   await expect(api.applyCompanionSyncReviewLog([])).resolves.toEqual([]);
   await expect(api.saveCompanionSyncPushAcks([{
@@ -215,7 +176,7 @@ async function expectNativeSaveBridge(api: typeof import('./companionSyncObjects
     identity: { objectId: 'one', objectType: 'setting', scope: 'device' },
     stateSeq: 4,
     status: 'accepted'
-  }])).resolves.toEqual(['op-1']);
+  }])).resolves.toEqual(['ios-review-op']);
   expect(writerQueueMock.run).toHaveBeenCalledTimes(6);
 }
 

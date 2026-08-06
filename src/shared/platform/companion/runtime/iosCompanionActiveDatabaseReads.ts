@@ -1,22 +1,81 @@
 import { buildCompanionPayloadQueryDefinitions } from '../../../../../lib/core/database/androidCompanionPayloadQueryDefinitions';
 import { ANDROID_COMPANION_QUERY_DEFINITIONS } from '../../../../../lib/core/database/androidCompanionQueryDefinitions';
 import type { DbRow } from '../../../../../lib/core/sync/dbPort';
-import type { NativeSyncIndexEntry, NativeSyncObjectRecord } from '../../../../../lib/platform/nativeSyncContract';
-import type { CompanionWorkspaceSyncPlugin } from '../../companionWorkspaceSyncPluginTypes';
+import type {
+  NativeSyncIndexEntry,
+  NativeSyncNodeConflictRecord,
+  NativeSyncObjectRecord
+} from '../../../../../lib/platform/nativeSyncContract';
 
 import { iosSearchParams, queryIosCompanionDatabase, readIosCompanionDatabase } from './iosCompanionActiveDatabase';
+import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
 import { iosCompanionDeviceId } from './iosCompanionMutationState';
 
-const PAYLOADS = buildCompanionPayloadQueryDefinitions('ios');
-type Directory = Awaited<ReturnType<CompanionWorkspaceSyncPlugin['loadExternalDirectory']>>;
-type ExternalDocument = NonNullable<Awaited<ReturnType<CompanionWorkspaceSyncPlugin['loadExternalDocument']>>['document']>;
-type ExternalSearchResult = Awaited<ReturnType<CompanionWorkspaceSyncPlugin['searchExternalDocuments']>>['results'][number];
-type PdfPage = Awaited<ReturnType<CompanionWorkspaceSyncPlugin['loadPdfPageText']>>['pages'][number];
-type PdfSearchResult = Awaited<ReturnType<CompanionWorkspaceSyncPlugin['searchPdfPageText']>>['results'][number];
-type TopicSearchResult = Awaited<ReturnType<CompanionWorkspaceSyncPlugin['searchTopics']>>['results'][number];
+function payloads() {
+  return buildCompanionPayloadQueryDefinitions(getIosCompanionDatabaseOwner().platform);
+}
+interface ExternalDocument extends DbRow {
+  content: string;
+  document_id: string;
+  extension: string;
+  file_name: string;
+  folder_id: string;
+  relative_path: string;
+  title: string;
+  updated_at: string;
+}
+
+interface ExternalSearchResult extends ExternalDocument {
+  excerpt: string;
+  match_start: number;
+}
+
+interface ExternalDirectoryEntry extends DbRow {
+  absolute_path: string;
+  document_id: string;
+  extension: 'md' | 'txt';
+  file_name: string;
+  folder_id: string;
+  modified_at: string;
+  opening_text: string | null;
+  relative_path: string;
+  title: string;
+}
+
+interface ExternalDirectoryFolder extends DbRow {
+  document_count: number;
+  folder_path: string;
+  id: string;
+}
+
+interface PdfPage extends DbRow {
+  page: number;
+  page_height: number | null;
+  page_width: number | null;
+  text: string;
+}
+
+interface PdfSearchResult extends PdfPage {
+  attachment_id: string;
+  excerpt: string;
+  match_start: number;
+}
+
+interface TopicSearchResult extends DbRow {
+  excerpt: string;
+  match_start: number;
+  node_id: string;
+  opening_text: string | null;
+  title: string;
+  updated_at: string;
+}
 
 export function loadIosSyncIndex() {
   return queryIosCompanionDatabase<NativeSyncIndexEntry & DbRow>('syncIndex');
+}
+
+export function loadIosSyncNodeConflicts() {
+  return queryIosCompanionDatabase<NativeSyncNodeConflictRecord & DbRow>('nodeConflicts');
 }
 
 export async function loadIosSyncObjects(objectIds: string[], objectTypes?: string[]) {
@@ -51,8 +110,8 @@ export function loadIosExternalDocument(documentId: string) {
 
 export async function loadIosExternalDirectory() {
   const [entries, folders] = await Promise.all([
-    queryIosCompanionDatabase<Directory['entries'][number] & DbRow>('externalDocumentDirectoryEntries'),
-    queryIosCompanionDatabase<Directory['folders'][number] & DbRow>('externalSearchFolders')
+    queryIosCompanionDatabase<ExternalDirectoryEntry>('externalDocumentDirectoryEntries'),
+    queryIosCompanionDatabase<ExternalDirectoryFolder>('externalSearchFolders')
   ]);
   return { entries, folders };
 }
@@ -103,9 +162,10 @@ async function loadPayload(row: NativeSyncObjectRecord) {
 
 function payloadDefinition(row: NativeSyncObjectRecord) {
   if (row.object_type !== 'view_state') {
-    return Object.values(PAYLOADS).find((candidate) => candidate.syncPayload?.objectType === row.object_type);
+    return Object.values(payloads()).find((candidate) => candidate.syncPayload?.objectType === row.object_type);
   }
-  return row.object_id.endsWith(':active_node') ? PAYLOADS.syncPayloadViewActiveNode : PAYLOADS.syncPayloadViewNodeState;
+  const definitions = payloads();
+  return row.object_id.endsWith(':active_node') ? definitions.syncPayloadViewActiveNode : definitions.syncPayloadViewNodeState;
 }
 
 async function payloadParams(row: NativeSyncObjectRecord, mode: string) {

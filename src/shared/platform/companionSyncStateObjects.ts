@@ -18,7 +18,7 @@ export async function applyCompanionSyncObjects(objects: NativeSyncObjectRecord[
   if ((runtime.kind !== 'android-native' && runtime.kind !== 'ios-native') || objects.length === 0) {
     return [];
   }
-  if (runtime.kind === 'ios-native') {
+  if (runtime.kind === 'android-native' || runtime.kind === 'ios-native') {
     return runCompanionSyncWriterTask(() => getIosCompanionDatabaseOwner().runWriter((db) => (
       applySyncObjectsWithDbPort(db, objects)
     )));

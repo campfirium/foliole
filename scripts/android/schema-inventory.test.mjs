@@ -16,7 +16,6 @@ import {
   ANDROID_COMPANION_APP_DATA_CLEAR_MUTATIONS,
   ANDROID_COMPANION_MUTATION_DEFINITIONS
 } from '../../lib/core/database/androidCompanionMutationDefinitions.ts';
-import { ANDROID_COMPANION_QUERY_DEFINITIONS } from '../../lib/core/database/androidCompanionQueryDefinitions.ts';
 import { ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionResourceSchemaStatements.ts';
 import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionSyncSchemaStatements.ts';
 import { ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS } from '../../lib/core/database/androidCompanionSyncProtocolDefinitions.ts';
@@ -30,32 +29,7 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 const COMPANION_SCHEMA = path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'assets', 'companion-core-schema.json');
 const COMPANION_MIGRATION_SCHEMA = path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'assets', 'companion-migration-schema.json');
 const COMPANION_MUTATION_DEFINITIONS = path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'assets', 'companion-mutation-definitions.json');
-const COMPANION_QUERY_DEFINITIONS = path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'assets', 'companion-query-definitions.json');
 const COMPANION_SYNC_PROTOCOL_DEFINITIONS = path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'assets', 'companion-sync-protocol-definitions.json');
-const COMPANION_DATABASE_MIGRATION = path.join(
-  REPO_ROOT,
-  'android',
-  'app',
-  'src',
-  'main',
-  'java',
-  'com',
-  'foliole',
-  'android',
-  'FolioleCompanionDatabaseMigration.java'
-);
-const COMPANION_SYNC_CONFLICT_STORE = path.join(
-  REPO_ROOT,
-  'android',
-  'app',
-  'src',
-  'main',
-  'java',
-  'com',
-  'foliole',
-  'android',
-  'FolioleCompanionSyncConflictQueryRules.java'
-);
 const COMPANION_SYNC_STATE_ROWS = path.join(
   REPO_ROOT,
   'android',
@@ -67,42 +41,6 @@ const COMPANION_SYNC_STATE_ROWS = path.join(
   'foliole',
   'android',
   'FolioleCompanionSyncStateRows.java'
-);
-const COMPANION_APP_DATA_STORE = path.join(
-  REPO_ROOT,
-  'android',
-  'app',
-  'src',
-  'main',
-  'java',
-  'com',
-  'foliole',
-  'android',
-  'FolioleCompanionAppDataStore.java'
-);
-const COMPANION_APP_DATA_PLUGIN = path.join(
-  REPO_ROOT,
-  'android',
-  'app',
-  'src',
-  'main',
-  'java',
-  'com',
-  'foliole',
-  'android',
-  'FolioleCompanionAppDataPlugin.java'
-);
-const COMPANION_NAMED_MUTATION_STORE = path.join(
-  REPO_ROOT,
-  'android',
-  'app',
-  'src',
-  'main',
-  'java',
-  'com',
-  'foliole',
-  'android',
-  'FolioleCompanionNamedMutationStore.java'
 );
 
 describe('schema inventory drift gate', () => {
@@ -119,22 +57,9 @@ describe('schema inventory drift gate', () => {
 
   it('keeps Android migration repair DDL in the generated migration asset', async () => {
     const schema = JSON.parse(await readFile(COMPANION_MIGRATION_SCHEMA, 'utf8'));
-    const migrationSource = await readFile(COMPANION_DATABASE_MIGRATION, 'utf8');
 
     expect(schema.statementsByName).toEqual(ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS);
     expect(schema.plan).toEqual(ANDROID_COMPANION_MIGRATION_PLAN);
-    expect(migrationSource).not.toMatch(/"CREATE (TABLE|INDEX)/);
-    expect(migrationSource).not.toContain('"ALTER TABLE');
-    expect(migrationSource).not.toContain('"DROP TABLE');
-  });
-
-  it('moves Android conflict query shape out of the custom Java store', async () => {
-    const schema = JSON.parse(await readFile(COMPANION_QUERY_DEFINITIONS, 'utf8'));
-    const conflictRulesSource = await readFile(COMPANION_SYNC_CONFLICT_STORE, 'utf8');
-
-    expect(schema.queries).toEqual(ANDROID_COMPANION_QUERY_DEFINITIONS);
-    expect(conflictRulesSource).toContain('FolioleCompanionQueryAssetKeys.ruleGroup(context, "syncConflictRead", "nodeConflicts")');
-    expect(conflictRulesSource).not.toContain('database, "nodeConflicts"');
   });
 
   it('moves Android sync state row mutation SQL out of the custom Java store', async () => {
@@ -143,35 +68,6 @@ describe('schema inventory drift gate', () => {
     expect(schema.statements).toEqual(ANDROID_COMPANION_MUTATION_DEFINITIONS);
     expect(schema.appDataClearMutations).toEqual(ANDROID_COMPANION_APP_DATA_CLEAR_MUTATIONS);
     await expect(readFile(COMPANION_SYNC_STATE_ROWS, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
-  });
-
-  it('moves Android app data clear table order out of Java', async () => {
-    const source = await readFile(COMPANION_APP_DATA_STORE, 'utf8');
-
-    expect(source).toContain('FolioleCompanionGeneratedMutationRunner.appDataClearMutations(context)');
-    expect(source).toContain('FolioleCompanionMutationAssetKeys.appDataClearTable(context, mutation)');
-    expect(source).toContain('FolioleCompanionMutationAssetKeys.appDataClearStatementName(context, mutation)');
-    expect(source).not.toContain('shapeKey(context, "appDataClearMutation", key)');
-    expect(source).not.toContain('mutation.getString("table")');
-    expect(source).not.toContain('mutation.getString("statementName")');
-    expect(source).not.toContain('new ClearMutation("');
-  });
-
-  it('clears Android pairing only after app data tables are cleared', async () => {
-    const source = await readFile(COMPANION_APP_DATA_STORE, 'utf8');
-    const tableClearIndex = source.indexOf('clearTables(context, database)');
-    const pairingClearIndex = source.indexOf('FolioleCompanionPairingStore.clearPairingCredentials(context)');
-
-    expect(pairingClearIndex).toBeGreaterThan(tableClearIndex);
-  });
-
-  it('executes no-arg Android app data clear mutations without empty bind args', async () => {
-    const mutationStoreSource = await readFile(COMPANION_NAMED_MUTATION_STORE, 'utf8');
-    const appDataPluginSource = await readFile(COMPANION_APP_DATA_PLUGIN, 'utf8');
-
-    expect(mutationStoreSource).toContain('if (args == null || args.length == 0)');
-    expect(mutationStoreSource).toContain('database.execSQL(sql);');
-    expect(appDataPluginSource).toContain('FolioleCompanionPluginErrors.withCause("Failed to clear Foliole app data.", exception)');
   });
 
   it('keeps generated mutation definitions write-only', async () => {

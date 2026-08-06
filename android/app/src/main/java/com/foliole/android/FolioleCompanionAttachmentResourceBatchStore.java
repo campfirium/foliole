@@ -1,8 +1,6 @@
 package com.foliole.android;
 
 import android.content.Context;
-import android.database.sqlite.SQLiteDatabase;
-
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
@@ -25,11 +23,6 @@ final class FolioleCompanionAttachmentResourceBatchStore {
 
     private FolioleCompanionAttachmentResourceBatchStore() {}
 
-    static JSObject syncResources(Context context, SQLiteDatabase database, JSONArray resources) throws Exception {
-        JSObject download = downloadResources(context, resources);
-        return commitDownloadedResources(context, database, download.getString(batchResponseKey(context, "batchToken")));
-    }
-
     static JSObject downloadResources(Context context, JSONArray resources) throws Exception {
         if (resources == null) {
             throw new IllegalArgumentException(FolioleCompanionBridgeContractDefinitions.resourceResourcesRequestKey(context) + " is required.");
@@ -47,10 +40,6 @@ final class FolioleCompanionAttachmentResourceBatchStore {
         response.put(batchResponseKey(context, "failedAttachmentIds"), strings(result.failedIds));
         response.put(batchResponseKey(context, "syncedAttachmentIds"), syncedAttachmentIds);
         return response;
-    }
-
-    static JSObject commitDownloadedResources(Context context, SQLiteDatabase database, String batchToken) throws Exception {
-        return FolioleCompanionAttachmentResourceBatchCommitStore.commitDownloadedResources(context, database, batchToken);
     }
 
     private static DownloadResult downloadResourceFiles(Context context, JSONArray resources) throws Exception {

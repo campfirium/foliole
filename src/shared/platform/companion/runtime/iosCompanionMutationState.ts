@@ -2,7 +2,7 @@ import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
 
 export async function iosCompanionDeviceId(db: DbPort) {
   const row = (await db.query<DbRow>("SELECT value FROM companion_meta WHERE key = 'device_id' LIMIT 1"))[0];
-  if (typeof row?.value !== 'string' || !row.value.trim()) throw new Error('iOS companion device identity is unavailable.');
+  if (typeof row?.value !== 'string' || !row.value.trim()) throw new Error('Companion device identity is unavailable.');
   return row.value.trim();
 }
 

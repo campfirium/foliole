@@ -39,7 +39,7 @@ function harness(journalMode = 'delete') {
 }
 
 it('reuses one connection and serializes every shared writer task', async () => {
-  const { manager, owner } = harness();
+  const { connection, manager, owner } = harness();
   await owner.open({ expectedDeviceId: 'device', now: '2026-08-06T00:00:00Z' });
   const events: string[] = [];
   let release: () => void = () => undefined;
@@ -55,6 +55,7 @@ it('reuses one connection and serializes every shared writer task', async () => 
   await Promise.all([first, second]);
 
   expect(events).toEqual(['first-start', 'first-end', 'second']);
+  expect(connection.query).toHaveBeenCalledWith('PRAGMA busy_timeout = 5000', []);
   expect(manager.retrieveConnection).toHaveBeenCalledTimes(1);
   expect(manager.createConnection).not.toHaveBeenCalled();
 });

@@ -9,11 +9,7 @@ import { createCapacitorSqliteDbPort } from './capacitorSqliteDbPort';
 import { getIosCompanionDatabaseOwner } from './companion/runtime/iosCompanionDatabaseBootstrap';
 import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
-import {
-  FolioleCompanionSync,
-  isAvailableNativeAndroidCompanionRuntime,
-  isNativeCompanionNodeVersionWriteRuntime
-} from './companionWorkspaceRuntimeRepository';
+import { isNativeCompanionNodeVersionWriteRuntime } from './companionWorkspaceRuntimeRepository';
 
 export interface CompanionSqliteConnectionManager {
   checkConnectionsConsistency?(): Promise<{ result?: boolean }>;
@@ -53,10 +49,15 @@ export async function applyCompanionSyncNodeVersionsWithinWriterTask(
   manager?: CompanionSqliteConnectionManager
 ) {
   if (!isNativeCompanionNodeVersionWriteRuntime() || nodes.length === 0) return [];
-  if (getCompanionRuntimeCapability().kind === 'ios-native' && !manager) {
+  if (usesSharedOwner() && !manager) {
     return getIosCompanionDatabaseOwner().runWriter((db) => applyCompanionSyncNodeVersionsWithDbPort(db, nodes));
   }
   return applyCompanionSyncNodeVersionsWithSharedCoreOnDevice(nodes, manager);
+}
+
+function usesSharedOwner() {
+  const kind = getCompanionRuntimeCapability().kind;
+  return kind === 'android-native' || kind === 'ios-native';
 }
 
 export async function applyCompanionTrashRestoreNodeVersions(
@@ -109,18 +110,12 @@ export async function applyCompanionSyncNodeVersionsWithSharedCoreOnDevice(
 }
 
 export async function openCompanionDatabaseConnection(manager: CompanionSqliteConnectionManager) {
-  await releaseNativeDatabaseHelperConnection();
   const existing = await manager.isConnection(COMPANION_DATABASE_NAME, false).catch(() => ({ result: false }));
   const connection = existing.result
     ? await retrieveOrCreateCompanionConnection(manager)
     : await createOrRetrieveCompanionConnection(manager);
   if (!(await connection.isDBOpen()).result) await connection.open();
   return connection;
-}
-
-async function releaseNativeDatabaseHelperConnection() {
-  if (!isAvailableNativeAndroidCompanionRuntime()) return;
-  await FolioleCompanionSync.releaseDatabaseConnection();
 }
 
 async function retrieveOrCreateCompanionConnection(manager: CompanionSqliteConnectionManager) {

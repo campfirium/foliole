@@ -32,6 +32,10 @@ function mainActivitySource() {
   return fs.readFileSync(path.join(JAVA_ROOT, 'MainActivity.java'), 'utf8');
 }
 
+function bootstrapStateSource() {
+  return fs.readFileSync(path.join(JAVA_ROOT, 'FolioleCompanionBootstrapState.java'), 'utf8');
+}
+
 describe('Android Java adapter boundary', () => {
   it('documents a concrete host responsibility for every classification bucket', () => {
     expect(classificationEntries().map(({ kind, responsibility, files }) => ({
@@ -39,15 +43,11 @@ describe('Android Java adapter boundary', () => {
       hasResponsibility: responsibility.length > 20,
       fileCount: files.length
     }))).toEqual([
-      { kind: 'asset_support', hasResponsibility: true, fileCount: 6 },
-      { kind: 'bridge_contract_metadata', hasResponsibility: true, fileCount: 3 },
-      { kind: 'bridge_plugin_adapter', hasResponsibility: true, fileCount: 12 },
-      { kind: 'generated_definition_reader', hasResponsibility: true, fileCount: 29 },
-      { kind: 'host_platform_adapter', hasResponsibility: true, fileCount: 18 },
-      { kind: 'migration_adapter', hasResponsibility: true, fileCount: 7 },
-      { kind: 'query_mutation_executor', hasResponsibility: true, fileCount: 4 },
-      { kind: 'sync_diagnostic_adapter', hasResponsibility: true, fileCount: 6 },
-      { kind: 'store_executor', hasResponsibility: true, fileCount: 36 }
+      { kind: 'asset_support', hasResponsibility: true, fileCount: 4 },
+      { kind: 'bridge_contract_metadata', hasResponsibility: true, fileCount: 9 },
+      { kind: 'bridge_plugin_adapter', hasResponsibility: true, fileCount: 7 },
+      { kind: 'host_platform_adapter', hasResponsibility: true, fileCount: 22 },
+      { kind: 'isolated_pack_sqlite', hasResponsibility: true, fileCount: 2 }
     ]);
   });
 
@@ -68,6 +68,10 @@ describe('Android Java adapter boundary', () => {
     expect(mainActivitySource()).toContain('registerPlugin(CapacitorSQLitePlugin.class);');
   });
 
+  it('preserves the nullable database path until the shared SQLite owner opens it', () => {
+    expect(bootstrapStateSource()).toContain('databasePath == null ? JSONObject.NULL : databasePath');
+  });
+
   it('reloads bundled companion assets only when the packaged index signature changes', () => {
     const source = mainActivitySource();
     expect(source).toContain('getAssets().open("public/index.html")');
@@ -85,40 +89,4 @@ describe('Android Java adapter boundary', () => {
     expect(matches).toEqual([]);
   });
 
-  it('flags Java-side filtering of generated query results', () => {
-    const source = `
-      JSObject result = FolioleCompanionGeneratedQueryRunner.load(context, database, queryName, args);
-      JSONArray rows = result.getJSONArray(resultKey);
-      JSONArray filtered = new JSONArray();
-      for (int index = 0; index < rows.length(); index += 1) {
-        JSONObject row = rows.getJSONObject(index);
-        if (!row.optString("object_id").startsWith("conflict-copy-")) {
-          filtered.put(row);
-        }
-      }
-      result.put(resultKey, filtered);
-    `;
-
-    expect(inspectJavaAdapterBoundarySource('FolioleCompanionSyncNodeVersionStore.java', source))
-      .toEqual(expect.arrayContaining([
-        expect.objectContaining({ kind: 'forbidden_business_rule' }),
-        expect.objectContaining({ kind: 'generated_result_filter' })
-      ]));
-  });
-
-  it('allows Java adapter glue that only appends generated ancestor fields', () => {
-    const source = `
-      JSObject result = FolioleCompanionGeneratedQueryRunner.load(context, database, queryName, args);
-      JSONArray nodes = result.getJSONArray(resultKey);
-      for (int index = 0; index < nodes.length(); index += 1) {
-        JSONObject node = nodes.getJSONObject(index);
-        node.put(
-          FolioleCompanionSyncStreamQueryRules.nodeVersionAncestorIdsKey(context),
-          listAncestorVersionIds(context, database, node.getString(FolioleCompanionSyncStreamQueryRules.nodeVersionIdKey(context)))
-        );
-      }
-    `;
-
-    expect(inspectJavaAdapterBoundarySource('FolioleCompanionSyncNodeVersionStore.java', source)).toEqual([]);
-  });
 });

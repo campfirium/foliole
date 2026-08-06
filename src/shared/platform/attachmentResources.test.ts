@@ -60,7 +60,9 @@ it('resolves native Android attachment file URLs through Capacitor', async () =>
   });
 
   expect(capacitorMock.plugin.resolveAttachmentResource).toHaveBeenCalledWith({
-    attachment_id: 'att-android-1'
+    attachment_id: 'att-android-1',
+    mime_type: 'application/pdf',
+    storage_key: 'hash-ios'
   });
 });
 

@@ -194,7 +194,9 @@ final class FolioleCompanionCaptureAnnotationScenario {
                 "(function(){return JSON.stringify({ok:!!(" + expression + ")});})()").optBoolean("ok")) return;
             Thread.sleep(100);
         }
-        throw new IllegalStateException("Timed out waiting for " + label);
+        JSONObject page = evaluate(instrumentation, webView,
+            "(function(){return JSON.stringify({bodyText:(document.body&&document.body.innerText||'').slice(0,800)});})()");
+        throw new IllegalStateException("Timed out waiting for " + label + " page=" + page);
     }
 
     static JSONObject evaluate(

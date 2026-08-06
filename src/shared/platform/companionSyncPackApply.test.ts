@@ -71,16 +71,16 @@ beforeEach(() => {
   });
 });
 
-it('downloads desktop packs before applying them through the shared TS core', async () => {
+it('downloads desktop packs before applying them through the shared database owner', async () => {
   const api = await import('./companionSyncPackApply');
 
   await expect(api.applyCompanionDesktopSyncPack({
     headers: { 'X-Device-Id': 'android' },
     url: 'http://desktop/companion/sync-pack'
   })).resolves.toEqual({
-    applied_blob_count: 3,
-    applied_object_count: 4,
-    to_state_seq: 11
+    applied_blob_count: 5,
+    applied_object_count: 6,
+    to_state_seq: 12
   });
 
   expect(capacitorMock.plugin.downloadDesktopSyncPack).toHaveBeenCalledWith({
@@ -88,11 +88,10 @@ it('downloads desktop packs before applying them through the shared TS core', as
     headers: { 'X-Device-Id': 'android' },
     url: 'http://desktop/companion/sync-pack'
   });
-  expect(syncPackNodesMock.applyCompanionSyncPackPathWithSharedCore).toHaveBeenCalledWith({
+  expect(iosSyncPackApplyMock.apply).toHaveBeenCalledWith({
     deviceId: 'android-test-device',
-    packPath: '/tmp/downloaded-pack.db',
-    primaryDeviceId: 'desktop-test-device'
-  }, expect.any(Object));
+    packPath: '/tmp/downloaded-pack.db'
+  });
   expect(capacitorMock.plugin.deleteDownloadedSyncPack).toHaveBeenCalledWith({ pack_path: '/tmp/downloaded-pack.db' });
 });
 
@@ -134,7 +133,7 @@ it('downloads validated packs before routing iOS through its shared-core adapter
 });
 
 it('deletes downloaded desktop packs when shared core apply fails', async () => {
-  syncPackNodesMock.applyCompanionSyncPackPathWithSharedCore.mockRejectedValueOnce(new Error('apply failed'));
+  iosSyncPackApplyMock.apply.mockRejectedValueOnce(new Error('apply failed'));
   const api = await import('./companionSyncPackApply');
 
   await expect(api.applyCompanionDesktopSyncPack({

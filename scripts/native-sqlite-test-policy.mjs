@@ -3,6 +3,7 @@ const controlledElectronSqliteTests = [
   'electron/database/assistantHistoryRetirementMigration.test.ts',
   'electron/database/betterSqliteDbPort.conformance.test.ts',
   'electron/database/betterSqliteDbPort.ownership.test.ts',
+  'electron/database/companionDatabaseLifecycle.test.ts',
   'electron/database/companionNodeVersionLossless.test.ts',
   'electron/database/companionSyncPushVerticalSlice.test.ts',
   'electron/database/externalDocumentImportVisibility.test.ts',
@@ -45,7 +46,8 @@ const controlledElectronSqliteTests = [
   'src/shared/platform/companionSyncNodeVersions.sequentialReading.test.ts',
   'src/shared/platform/companionSyncNodeVersions.test.ts',
   'src/shared/platform/companionSyncReviewLogApply.test.ts',
-  'src/shared/platform/companionSyncStateObjects.test.ts'
+  'src/shared/platform/companionSyncStateObjects.test.ts',
+  'src/shared/platform/companion/runtime/iosCompanionActiveDatabaseWrites.test.ts'
 ];
 
 const ordinaryNodeSqliteTextOnlyTests = [];

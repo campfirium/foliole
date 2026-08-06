@@ -31,7 +31,8 @@ export async function initializeIosCompanionDatabase(
   manager: IosCompanionDatabaseManager = new SQLiteConnection(CapacitorSQLite),
   options: IosCompanionDatabaseBootstrapOptions = {}
 ): Promise<NativeCompanionBootstrapState> {
-  const owner = new CapacitorCompanionDatabaseOwner(manager, 'ios');
+  const platform = nativeState.runtime_kind === 'android-capacitor' ? 'android' : 'ios';
+  const owner = new CapacitorCompanionDatabaseOwner(manager, platform);
   const result = await owner.open({
     allowCreate: true,
     expectedDeviceId: nativeState.device_id,

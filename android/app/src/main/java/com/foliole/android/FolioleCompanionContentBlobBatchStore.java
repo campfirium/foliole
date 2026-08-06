@@ -1,8 +1,6 @@
 package com.foliole.android;
 
 import android.content.Context;
-import android.database.sqlite.SQLiteDatabase;
-
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
@@ -40,46 +38,6 @@ final class FolioleCompanionContentBlobBatchStore {
         }
     }
 
-    static JSObject commitDownloadedBlobs(Context context, SQLiteDatabase database, String batchToken) throws Exception {
-        return FolioleCompanionContentBlobBatchCommitStore.commitDownloadedBlobs(context, database, batchToken);
-    }
-
-    static JSObject syncBlobs(Context context, SQLiteDatabase database, String url, JSONObject headers, String body) throws Exception {
-        long startedAt = System.nanoTime();
-        long httpStartedAt = System.nanoTime();
-        FolioleCompanionDesktopHttpClient.BinaryResponse response = FolioleCompanionDesktopHttpClient.requestBinary(
-            FolioleCompanionContentBlobBatchText.requireText(
-                url,
-                FolioleCompanionBridgeContractDefinitions.resourceUrlRequestKey(context)
-            ),
-            "POST",
-            headers,
-            body
-        );
-        long httpElapsedMs = elapsedMs(httpStartedAt);
-        long parseStartedAt = System.nanoTime();
-        List<FolioleCompanionContentBlobMultipartBatch.Blob> blobs =
-            FolioleCompanionContentBlobMultipartBatch.parse(
-                response.body,
-                response.contentType,
-                FolioleCompanionHostBridgeContractDefinitions.contentBlobBatchBlobHashResponseHeaderKey(context),
-                FolioleCompanionBridgeContractDefinitions.resourceHashRequestKey(context),
-                context
-            );
-        long parseElapsedMs = elapsedMs(parseStartedAt);
-        long databaseStartedAt = System.nanoTime();
-        FolioleCompanionContentBlobBatchCommitStore.WriteResult writeResult =
-            FolioleCompanionContentBlobBatchCommitStore.storeDownloadedBlobs(context, database, blobs, new ArrayList<>());
-        long databaseElapsedMs = elapsedMs(databaseStartedAt);
-        JSObject result = new JSObject();
-        result.put(batchResponseKey(context, "syncedHashes"), writeResult.syncedHashes);
-        result.put(batchResponseKey(context, "httpElapsedMs"), httpElapsedMs);
-        result.put(batchResponseKey(context, "parseElapsedMs"), parseElapsedMs);
-        result.put(batchResponseKey(context, "databaseElapsedMs"), Math.max(databaseElapsedMs, writeResult.dbElapsedMs));
-        result.put(batchResponseKey(context, "totalElapsedMs"), elapsedMs(startedAt));
-        return result;
-    }
-
     private static List<String> requestedHashes(String body) throws Exception {
         JSONArray hashes = new JSONObject(body).getJSONArray("hashes");
         List<String> result = new ArrayList<>();
@@ -102,7 +60,11 @@ final class FolioleCompanionContentBlobBatchStore {
                 context
             );
         for (FolioleCompanionContentBlobMultipartBatch.Blob blob : blobs) {
-            String hash = FolioleCompanionContentBlobBatchManifestStore.requireHash(context, blob.hash);
+            String hash = FolioleCompanionContentBlobCasRules.requireHash(
+                context,
+                blob.hash,
+                FolioleCompanionBridgeContractDefinitions.resourceHashRequestKey(context)
+            );
             String actualHash = FolioleCompanionContentBlobCasRules.digestHex(context, blob.bytes);
             if (!hash.equals(actualHash)) {
                 throw new IllegalStateException("Content blob hash mismatch.");

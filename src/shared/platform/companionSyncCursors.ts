@@ -5,6 +5,12 @@ import type {
   NativeSyncStateObjectRecord
 } from '../../../lib/platform/nativeSyncContract';
 
+import {
+  loadIosCompanionChangeCursor,
+  loadIosCompanionNumberCursor,
+  saveIosCompanionChangeCursor,
+  saveIosCompanionNumberCursor
+} from './companion/runtime/iosCompanionSyncCursorStore';
 import type { CompanionSyncPackCursorStore } from './companion/sync/cursor/companionSyncPackCursorStore';
 import { createIosCompanionSyncPackCursorStore } from './companion/sync/cursor/iosCompanionSyncPackCursorStore';
 import { getIosCompanionSyncbackStore } from './companion/sync/syncback/iosCompanionSyncbackStore';
@@ -16,11 +22,7 @@ import {
   writeWebNumberCursor
 } from './companionSyncWebCursors';
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
-import {
-  FolioleCompanionSync,
-  getNativeCompanionSyncbackPlatform,
-  isNativeAndroidCompanionRuntime
-} from './companionWorkspaceRuntimeRepository';
+import { getNativeCompanionSyncbackPlatform } from './companionWorkspaceRuntimeRepository';
 
 const WEB_SYNC_STATE_CURSOR_KEY = 'foliole-companion-sync-state-cursor';
 const WEB_SYNC_PACK_CURSOR_KEY = 'foliole-companion-sync-pack-cursor';
@@ -37,135 +39,110 @@ function getIosSyncPackCursorStore() {
 }
 
 export async function loadCompanionSyncStateCursor() {
-  if (!isNativeAndroidCompanionRuntime()) return readWebNumberCursor(WEB_SYNC_STATE_CURSOR_KEY);
-  return (await FolioleCompanionSync.loadSyncStateCursor()).cursor;
+  if (usesSharedOwner()) return loadIosCompanionNumberCursor('state');
+  return readWebNumberCursor(WEB_SYNC_STATE_CURSOR_KEY);
 }
 
 export async function saveCompanionSyncStateCursor(cursor: number | null) {
-  if (!isNativeAndroidCompanionRuntime()) return writeWebNumberCursor(WEB_SYNC_STATE_CURSOR_KEY, cursor);
-  return runCompanionSyncWriterTask(async () => (
-    await FolioleCompanionSync.saveSyncStateCursor({ cursor })
-  ).cursor);
+  if (usesSharedOwner()) return saveIosCompanionNumberCursor('state', cursor);
+  return writeWebNumberCursor(WEB_SYNC_STATE_CURSOR_KEY, cursor);
 }
 
 export async function loadCompanionSyncPackCursor() {
-  if (getCompanionRuntimeCapability().kind === 'ios-native') {
+  if (usesSharedOwner()) {
     return getIosSyncPackCursorStore().loadCursor();
   }
-  if (!isNativeAndroidCompanionRuntime()) return readWebNumberCursor(WEB_SYNC_PACK_CURSOR_KEY);
-  return (await FolioleCompanionSync.loadSyncPackCursor()).cursor;
+  return readWebNumberCursor(WEB_SYNC_PACK_CURSOR_KEY);
 }
 
 export async function saveCompanionSyncPackCursor(cursor: number | null) {
-  if (getCompanionRuntimeCapability().kind === 'ios-native') {
+  if (usesSharedOwner()) {
     return runCompanionSyncWriterTask(() => getIosSyncPackCursorStore().saveCursor(cursor));
   }
-  if (!isNativeAndroidCompanionRuntime()) return writeWebNumberCursor(WEB_SYNC_PACK_CURSOR_KEY, cursor);
-  return runCompanionSyncWriterTask(async () => (
-    await FolioleCompanionSync.saveSyncPackCursor({ cursor })
-  ).cursor);
+  return writeWebNumberCursor(WEB_SYNC_PACK_CURSOR_KEY, cursor);
 }
 
 export async function loadCompanionSyncStatePushCursor() {
-  if (getNativeCompanionSyncbackPlatform() === 'ios') {
+  if (getNativeCompanionSyncbackPlatform() !== null) {
     return getIosCompanionSyncbackStore().loadStatePushCursor();
   }
-  if (!isNativeAndroidCompanionRuntime()) return readWebNumberCursor(WEB_SYNC_STATE_PUSH_CURSOR_KEY);
-  return (await FolioleCompanionSync.loadSyncStatePushCursor()).cursor;
+  return readWebNumberCursor(WEB_SYNC_STATE_PUSH_CURSOR_KEY);
 }
 
 export async function saveCompanionSyncStatePushCursor(cursor: number | null) {
-  if (getNativeCompanionSyncbackPlatform() === 'ios') {
+  if (getNativeCompanionSyncbackPlatform() !== null) {
     return runCompanionSyncWriterTask(() => getIosCompanionSyncbackStore().saveStatePushCursor(cursor));
   }
-  if (!isNativeAndroidCompanionRuntime()) return writeWebNumberCursor(WEB_SYNC_STATE_PUSH_CURSOR_KEY, cursor);
-  return runCompanionSyncWriterTask(async () => (
-    await FolioleCompanionSync.saveSyncStatePushCursor({ cursor })
-  ).cursor);
+  return writeWebNumberCursor(WEB_SYNC_STATE_PUSH_CURSOR_KEY, cursor);
 }
 
 export async function loadCompanionSyncNodeVersionCursor() {
-  if (!isNativeAndroidCompanionRuntime()) return readWebCursor(WEB_SYNC_NODE_VERSION_CURSOR_KEY);
-  return (await FolioleCompanionSync.loadSyncNodeVersionCursor()).cursor;
+  if (usesSharedOwner()) return loadIosCompanionChangeCursor('nodeVersion');
+  return readWebCursor(WEB_SYNC_NODE_VERSION_CURSOR_KEY);
 }
 
 export async function saveCompanionSyncNodeVersionCursor(cursor: NativeSyncChangeCursor | null) {
-  if (!isNativeAndroidCompanionRuntime()) return writeWebCursor(WEB_SYNC_NODE_VERSION_CURSOR_KEY, cursor);
-  return runCompanionSyncWriterTask(async () => (
-    await FolioleCompanionSync.saveSyncNodeVersionCursor({ cursor })
-  ).cursor);
+  if (usesSharedOwner()) return saveIosCompanionChangeCursor('nodeVersion', cursor);
+  return writeWebCursor(WEB_SYNC_NODE_VERSION_CURSOR_KEY, cursor);
 }
 
 export async function loadCompanionSyncNodeVersionPushCursor() {
-  if (getNativeCompanionSyncbackPlatform() === 'ios') {
+  if (getNativeCompanionSyncbackPlatform() !== null) {
     return getIosCompanionSyncbackStore().loadNodeVersionPushCursor();
   }
-  if (!isNativeAndroidCompanionRuntime()) return readWebCursor(WEB_SYNC_NODE_VERSION_PUSH_CURSOR_KEY);
-  return (await FolioleCompanionSync.loadSyncNodeVersionPushCursor()).cursor;
+  return readWebCursor(WEB_SYNC_NODE_VERSION_PUSH_CURSOR_KEY);
 }
 
 export async function saveCompanionSyncNodeVersionPushCursor(cursor: NativeSyncChangeCursor | null) {
-  if (getNativeCompanionSyncbackPlatform() === 'ios') {
+  if (getNativeCompanionSyncbackPlatform() !== null) {
     return runCompanionSyncWriterTask(() => getIosCompanionSyncbackStore().saveNodeVersionPushCursor(cursor));
   }
-  if (!isNativeAndroidCompanionRuntime()) return writeWebCursor(WEB_SYNC_NODE_VERSION_PUSH_CURSOR_KEY, cursor);
-  return runCompanionSyncWriterTask(async () => (
-    await FolioleCompanionSync.saveSyncNodeVersionPushCursor({ cursor })
-  ).cursor);
+  return writeWebCursor(WEB_SYNC_NODE_VERSION_PUSH_CURSOR_KEY, cursor);
 }
 
 export async function loadCompanionSyncReviewLogCursor() {
-  if (!isNativeAndroidCompanionRuntime()) return readWebCursor(WEB_SYNC_REVIEW_LOG_CURSOR_KEY);
-  return (await FolioleCompanionSync.loadSyncReviewLogCursor()).cursor;
+  if (usesSharedOwner()) return loadIosCompanionChangeCursor('reviewLog');
+  return readWebCursor(WEB_SYNC_REVIEW_LOG_CURSOR_KEY);
 }
 
 export async function saveCompanionSyncReviewLogCursor(cursor: NativeSyncChangeCursor | null) {
-  if (!isNativeAndroidCompanionRuntime()) return writeWebCursor(WEB_SYNC_REVIEW_LOG_CURSOR_KEY, cursor);
-  return runCompanionSyncWriterTask(async () => (
-    await FolioleCompanionSync.saveSyncReviewLogCursor({ cursor })
-  ).cursor);
+  if (usesSharedOwner()) return saveIosCompanionChangeCursor('reviewLog', cursor);
+  return writeWebCursor(WEB_SYNC_REVIEW_LOG_CURSOR_KEY, cursor);
 }
 
 export async function loadCompanionSyncReviewLogPushCursor() {
-  if (getNativeCompanionSyncbackPlatform() === 'ios') {
+  if (getNativeCompanionSyncbackPlatform() !== null) {
     return getIosCompanionSyncbackStore().loadReviewLogPushCursor();
   }
-  if (!isNativeAndroidCompanionRuntime()) return readWebCursor(WEB_SYNC_REVIEW_LOG_PUSH_CURSOR_KEY);
-  return (await FolioleCompanionSync.loadSyncReviewLogPushCursor()).cursor;
+  return readWebCursor(WEB_SYNC_REVIEW_LOG_PUSH_CURSOR_KEY);
 }
 
 export async function saveCompanionSyncReviewLogPushCursor(cursor: NativeSyncChangeCursor | null) {
-  if (getNativeCompanionSyncbackPlatform() === 'ios') {
+  if (getNativeCompanionSyncbackPlatform() !== null) {
     return runCompanionSyncWriterTask(() => getIosCompanionSyncbackStore().saveReviewLogPushCursor(cursor));
   }
-  if (!isNativeAndroidCompanionRuntime()) return writeWebCursor(WEB_SYNC_REVIEW_LOG_PUSH_CURSOR_KEY, cursor);
-  return runCompanionSyncWriterTask(async () => (
-    await FolioleCompanionSync.saveSyncReviewLogPushCursor({ cursor })
-  ).cursor);
+  return writeWebCursor(WEB_SYNC_REVIEW_LOG_PUSH_CURSOR_KEY, cursor);
 }
 
 export async function loadCompanionSyncNodeVersions(cursor: NativeSyncChangeCursor | null, limit = 500) {
-  if (getNativeCompanionSyncbackPlatform() === 'ios') {
+  if (getNativeCompanionSyncbackPlatform() !== null) {
     return getIosCompanionSyncbackStore().loadNodeVersions(cursor, limit);
   }
-  if (!isNativeAndroidCompanionRuntime()) return [] as NativeSyncNodeRecord[];
-  return (await FolioleCompanionSync.loadSyncNodeVersions({ cursor, limit })).nodes;
+  return [] as NativeSyncNodeRecord[];
 }
 
 export async function loadCompanionSyncReviewLog(cursor: NativeSyncChangeCursor | null, limit = 500) {
-  if (getNativeCompanionSyncbackPlatform() === 'ios') {
+  if (getNativeCompanionSyncbackPlatform() !== null) {
     return getIosCompanionSyncbackStore().loadReviewLog(cursor, limit);
   }
-  if (!isNativeAndroidCompanionRuntime()) return [] as NativeSyncReviewLogRecord[];
-  return (await FolioleCompanionSync.loadSyncReviewLog({ cursor, limit })).reviews;
+  return [] as NativeSyncReviewLogRecord[];
 }
 
 export async function loadCompanionSyncStateChanges(cursor: number | null, limit = 500) {
-  if (getNativeCompanionSyncbackPlatform() === 'ios') {
+  if (getNativeCompanionSyncbackPlatform() !== null) {
     return getIosCompanionSyncbackStore().loadStateChanges(cursor, limit);
   }
-  if (!isNativeAndroidCompanionRuntime()) return [] as NativeSyncStateObjectRecord[];
-  return (await FolioleCompanionSync.loadSyncStateChanges({ cursor, limit })).objects;
+  return [] as NativeSyncStateObjectRecord[];
 }
 
 export async function loadCompanionPendingSyncSummary() {
@@ -180,4 +157,9 @@ export async function loadCompanionPendingSyncSummary() {
     loadCompanionSyncReviewLog(reviewCursor, 1)
   ]);
   return { pendingCount: stateChanges.length + nodeVersions.length + reviewLog.length };
+}
+
+function usesSharedOwner() {
+  const kind = getCompanionRuntimeCapability().kind;
+  return kind === 'android-native' || kind === 'ios-native';
 }

@@ -91,6 +91,8 @@ export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
   appDataClearSyncChangeLog: 'DELETE FROM sync_change_log',
   appDataClearSyncObjectState: 'DELETE FROM sync_object_state',
   appDataClearNodeSyncConflicts: 'DELETE FROM node_sync_conflicts',
+  appDataClearNodeTextAlternatives: 'DELETE FROM node_text_alternatives',
+  appDataClearNodeSyncVersionParents: 'DELETE FROM node_sync_version_parents',
   appDataClearNodeSyncTombstones: 'DELETE FROM node_sync_tombstones',
   appDataClearNodeSyncVersions: 'DELETE FROM node_sync_versions',
   appDataClearNodeViewState: 'DELETE FROM node_view_state',

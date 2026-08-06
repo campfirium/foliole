@@ -6,18 +6,15 @@ import type {
 import {
   loadIosPdfPageText,
   loadIosSyncIndex,
+  loadIosSyncNodeConflicts,
   loadIosSyncObjects,
   searchIosPdfPageText
 } from './companion/runtime/iosCompanionActiveDatabaseReads';
 import { getIosCompanionSyncbackStore } from './companion/sync/syncback/iosCompanionSyncbackStore';
-import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
 import { resolveCompanionSyncSettingRecord } from './companionSyncStateWriters';
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
-  FolioleCompanionSync,
   getNativeCompanionSyncbackPlatform,
-  isAvailableNativeAndroidCompanionRuntime,
-  isNativeAndroidCompanionRuntime,
   isNativeCompanionPdfPageTextRuntime,
   isNativeCompanionSyncObjectReadRuntime
 } from './companionWorkspaceRuntimeRepository';
@@ -52,15 +49,14 @@ export async function loadCompanionSyncIndex() {
   if (!isNativeCompanionSyncObjectReadRuntime()) {
     return [];
   }
-  if (getCompanionRuntimeCapability().kind === 'ios-native') return loadIosSyncIndex();
-  return (await FolioleCompanionSync.loadSyncIndex()).entries;
+  return loadIosSyncIndex();
 }
 
 export async function loadCompanionSyncNodeConflicts() {
-  if (!isAvailableNativeAndroidCompanionRuntime()) {
+  if (!isNativeCompanionSyncObjectReadRuntime()) {
     return [] as NativeSyncNodeConflictRecord[];
   }
-  return (await FolioleCompanionSync.loadSyncNodeConflicts()).conflicts;
+  return loadIosSyncNodeConflicts();
 }
 
 export async function loadCompanionSyncObjects(
@@ -70,13 +66,7 @@ export async function loadCompanionSyncObjects(
   if (!isNativeCompanionSyncObjectReadRuntime()) {
     return [];
   }
-  if (getCompanionRuntimeCapability().kind === 'ios-native') {
-    return loadIosSyncObjects(objectIds, objectTypes);
-  }
-  return (await FolioleCompanionSync.loadSyncObjects({
-    object_ids: objectIds,
-    ...(objectTypes ? { object_types: objectTypes } : {})
-  })).objects;
+  return loadIosSyncObjects(objectIds, objectTypes);
 }
 
 export async function loadCompanionSyncSettingValueJson(key: string) {
@@ -139,34 +129,17 @@ export async function loadCompanionPdfPageText(attachmentId: string) {
   if (!isNativeCompanionPdfPageTextRuntime()) {
     return [] as CompanionPdfPageTextEntry[];
   }
-  if (getCompanionRuntimeCapability().kind === 'ios-native') return loadIosPdfPageText(attachmentId);
-  return (await FolioleCompanionSync.loadPdfPageText({ attachment_id: attachmentId })).pages;
+  return loadIosPdfPageText(attachmentId);
 }
 
 export async function searchCompanionPdfPageText(query: string, limit?: number) {
   if (!isNativeCompanionPdfPageTextRuntime()) {
     return [] as CompanionPdfPageTextSearchResult[];
   }
-  if (getCompanionRuntimeCapability().kind === 'ios-native') return searchIosPdfPageText(query, limit);
-  return (await FolioleCompanionSync.searchPdfPageText({ ...(limit !== undefined ? { limit } : {}), query })).results;
+  return searchIosPdfPageText(query, limit);
 }
 
 export async function saveCompanionSyncPushAcks(acks: SyncPushAck[]) {
-  if (getNativeCompanionSyncbackPlatform() === 'ios') {
-    return runCompanionSyncWriterTask(() => getIosCompanionSyncbackStore().savePushAcks(acks));
-  }
-  if (!isNativeAndroidCompanionRuntime()) {
-    return [] as string[];
-  }
-  return runCompanionSyncWriterTask(async () => (
-    await FolioleCompanionSync.saveSyncPushAcks({
-      acks: acks.map((ack) => ({
-        ...(ack.canonicalObjectId !== undefined ? { canonical_object_id: ack.canonicalObjectId } : {}),
-        client_op_id: ack.clientOpId,
-        identity: ack.identity,
-        ...(ack.stateSeq !== undefined ? { state_seq: ack.stateSeq } : {}),
-        status: ack.status
-      }))
-    })
-  ).saved_client_op_ids);
+  if (getNativeCompanionSyncbackPlatform() === null) return [] as string[];
+  return runCompanionSyncWriterTask(() => getIosCompanionSyncbackStore().savePushAcks(acks));
 }

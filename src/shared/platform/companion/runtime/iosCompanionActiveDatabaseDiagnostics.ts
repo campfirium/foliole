@@ -25,7 +25,8 @@ export async function diagnoseIosCompanionDatabase(pairing: PairingState): Promi
   return {
     collected_at: new Date().toISOString(),
     connection: { endpoint_url: endpoint, last_error: null, state: pairing.is_paired && endpoint ? 'ready' : 'missing' },
-    content: content as SyncDiagnosticSnapshot['content'], events: parseEvents(events), host: 'ios',
+    content: content as SyncDiagnosticSnapshot['content'], events: parseEvents(events),
+    host: getIosCompanionDatabaseOwner().platform,
     identity: { app_version: null, database_path: getIosCompanionDatabaseOwner().databasePath,
       device_id: pairing.device_id ?? null, device_name: pairing.device_name ?? null },
     storage: storage as unknown as SyncDiagnosticSnapshot['storage'],

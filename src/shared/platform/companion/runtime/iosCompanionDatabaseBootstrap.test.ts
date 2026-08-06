@@ -74,7 +74,7 @@ describe('iosCompanionDatabaseBootstrap', () => {
     expect(manager.createConnection).toHaveBeenCalledWith(
       'foliole-companion', false, 'no-encryption', COMPANION_DATABASE_VERSION, false
     );
-    expect(connection.execute).toHaveBeenCalledWith('PRAGMA busy_timeout = 5000', false);
+    expect(connection.query).toHaveBeenCalledWith('PRAGMA busy_timeout = 5000', []);
     expect(connection.beginTransaction).toHaveBeenCalledTimes(1);
     expect(connection.commitTransaction).toHaveBeenCalledTimes(1);
     expect(connection.run).toHaveBeenCalledWith(

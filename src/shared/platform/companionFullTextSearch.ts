@@ -6,10 +6,8 @@ import {
 
 import { loadIosSyncIndex, loadIosSyncObjects, searchIosTopics } from './companion/runtime/iosCompanionActiveDatabaseReads';
 import { searchCompanionExternalDocuments } from './companionExternalDocuments';
-import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
 import { searchCompanionPdfPageText } from './companionSyncObjects';
 import {
-  FolioleCompanionSync,
   isNativeCompanionExternalDocumentSearchRuntime,
   isNativeCompanionSyncObjectReadRuntime,
   isNativeCompanionTopicSearchRuntime
@@ -80,16 +78,12 @@ export async function loadCompanionFullTextSearchStrategy() {
   if (!isNativeCompanionSyncObjectReadRuntime()) {
     return normalizeFullTextSearchIndexStrategy(null);
   }
-  const index = getCompanionRuntimeCapability().kind === 'ios-native'
-    ? { entries: await loadIosSyncIndex() }
-    : await FolioleCompanionSync.loadSyncIndex();
+  const index = { entries: await loadIosSyncIndex() };
   const settingObjectIds = index.entries
     .filter((entry) => entry.object_type === 'setting' && entry.object_id.endsWith(`:${APP_SETTINGS_KEY}`))
     .map((entry) => entry.object_id);
   if (settingObjectIds.length === 0) return normalizeFullTextSearchIndexStrategy(null);
-  const objects = getCompanionRuntimeCapability().kind === 'ios-native'
-    ? { objects: await loadIosSyncObjects(settingObjectIds, ['setting']) }
-    : await FolioleCompanionSync.loadSyncObjects({ object_ids: settingObjectIds, object_types: ['setting'] });
+  const objects = { objects: await loadIosSyncObjects(settingObjectIds, ['setting']) };
   const settings = objects.objects
     .map((object) => parseSettingPayload(object.payload_json))
     .filter((payload): payload is SyncSettingPayload => Boolean(payload?.key === APP_SETTINGS_KEY && payload.value_json))
@@ -98,10 +92,7 @@ export async function loadCompanionFullTextSearchStrategy() {
 }
 
 async function searchCompanionTopics(query: string, limit?: number) {
-  const results = (getCompanionRuntimeCapability().kind === 'ios-native'
-    ? await searchIosTopics(query, limit)
-    : (await FolioleCompanionSync.searchTopics({ ...(limit !== undefined ? { limit } : {}), query })).results
-  ) as NativeTopicSearchResult[];
+  const results = await searchIosTopics(query, limit) as NativeTopicSearchResult[];
   return results.map((result) => ({
     bodyStatus: normalizeBodyStatus(result.content_status),
     excerpt: result.excerpt,

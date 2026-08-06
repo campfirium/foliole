@@ -252,12 +252,20 @@ final class FolioleCompanionBridgeContractDefinitions {
         return resourceRequestKey(context, "limit");
     }
 
+    static String resourceMimeTypeRequestKey(Context context) throws Exception {
+        return resourceRequestKey(context, "mimeType");
+    }
+
     static String resourceQueryRequestKey(Context context) throws Exception {
         return resourceRequestKey(context, "query");
     }
 
     static String resourceResourcesRequestKey(Context context) throws Exception {
         return resourceRequestKey(context, "resources");
+    }
+
+    static String resourceStorageKeyRequestKey(Context context) throws Exception {
+        return resourceRequestKey(context, "storageKey");
     }
 
     static String resourceUrlRequestKey(Context context) throws Exception {

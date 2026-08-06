@@ -14,7 +14,7 @@ export async function applyIosCompanionSyncPackPath(
   manager?: CompanionSqliteConnectionManager
 ) {
   const runtime = requireAvailableCompanionRuntime('sync-pack-apply');
-  if (runtime.kind !== 'ios-native') {
+  if (runtime.kind !== 'android-native' && runtime.kind !== 'ios-native') {
     throw new NativeCompanionCapabilityUnavailableError('sync-pack-apply', runtime.platform);
   }
   const cursorStore = createIosCompanionSyncPackCursorStore(manager);

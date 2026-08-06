@@ -37,7 +37,7 @@ export class CapacitorCompanionDatabaseOwner {
 
   constructor(
     private readonly manager: CapacitorCompanionDatabaseManager,
-    private readonly platform: string
+    readonly platform: 'android' | 'ios'
   ) {}
 
   async open(request: Omit<CompanionDatabaseBootstrapRequest, 'allowCreate'> & { allowCreate?: boolean }) {
@@ -47,7 +47,7 @@ export class CapacitorCompanionDatabaseOwner {
     const connection = await this.openConnection();
     const db = createCapacitorSqliteDbPort(connection, this.platform);
     try {
-      await connection.execute('PRAGMA busy_timeout = 5000', false);
+      await db.query('PRAGMA busy_timeout = 5000');
       const result = await bootstrapCompanionDatabase(db, { ...request, allowCreate: !existed });
       const url = (await connection.getUrl()).url;
       if (!url) throw new Error('Companion database did not return a path.');

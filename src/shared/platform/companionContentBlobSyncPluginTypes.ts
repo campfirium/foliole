@@ -1,8 +1,4 @@
 export interface CompanionContentBlobSyncPlugin {
-  commitContentBlobBatch(args: { batch_token: string }): Promise<{
-    db_elapsed_ms?: number;
-    synced_hashes: string[];
-  }>;
   downloadContentBlobBatch(args: {
     body: string;
     headers: Record<string, string>;

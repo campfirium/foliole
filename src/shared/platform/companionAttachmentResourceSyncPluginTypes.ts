@@ -1,7 +1,4 @@
 export interface CompanionAttachmentResourceSyncPlugin {
-  commitAttachmentResourceBatch(args: { batch_token: string }): Promise<{
-    synced_attachment_ids: string[];
-  }>;
   downloadAttachmentResourceBatch(args: {
     resources: Array<{
       attachment_id: string;

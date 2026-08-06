@@ -115,7 +115,8 @@ async function resolveNativeAttachmentResource(attachmentId: string) {
 }
 
 async function resolveNativeAttachmentResourceUncached(attachmentId: string) {
-  if (getCompanionRuntimeCapability().kind !== 'ios-native') {
+  const kind = getCompanionRuntimeCapability().kind;
+  if (kind !== 'android-native' && kind !== 'ios-native') {
     return FolioleCompanionSync.resolveAttachmentResource({ attachment_id: attachmentId });
   }
   const row = (await queryIosCompanionDatabase<{ mime_type: string | null; storage_key: string | null } & Record<string, unknown>>(

@@ -134,13 +134,13 @@ describe('companion desktop attachment resource manifests', () => {
         url: 'http://10.0.2.2:38641/companion/attachment-resource?attachment_id=att-1&content_hash=blob-hash'
       }]
     });
-    expect(capacitorMock.plugin.commitAttachmentResourceBatch).toHaveBeenCalledWith({
-      batch_token: 'attachment-batch-token'
-    });
+    expect(iosDatabaseMock.commit).toHaveBeenCalledWith(
+      iosDatabaseMock.owner, capacitorMock.plugin, 'attachment-batch-token'
+    );
     expect(capacitorMock.plugin.syncAttachmentResources).not.toHaveBeenCalled();
     expect(capacitorMock.plugin.syncAttachmentResource).not.toHaveBeenCalled();
     expect(capacitorMock.plugin.downloadAttachmentResourceBatch.mock.invocationCallOrder[0]!)
-      .toBeLessThan(writerQueueMock.run.mock.invocationCallOrder[0]!);
+      .toBeLessThan(iosDatabaseMock.commit.mock.invocationCallOrder[0]!);
   });
 
   it('downloads already enumerated missing attachment resources', async () => {
@@ -156,9 +156,9 @@ describe('companion desktop attachment resource manifests', () => {
         url: 'http://10.0.2.2:38641/companion/attachment-resource?attachment_id=att-2&content_hash=blob-hash-2'
       }]
     });
-    expect(capacitorMock.plugin.commitAttachmentResourceBatch).toHaveBeenCalledWith({
-      batch_token: 'attachment-batch-token'
-    });
+    expect(iosDatabaseMock.commit).toHaveBeenCalledWith(
+      iosDatabaseMock.owner, capacitorMock.plugin, 'attachment-batch-token'
+    );
   });
 
   it('routes iOS attachment downloads through the same native bridge contract', async () => {
@@ -225,11 +225,11 @@ describe('companion desktop attachment resource queue', () => {
 
     await vi.waitFor(() => {
       expect(capacitorMock.plugin.downloadAttachmentResourceBatch).toHaveBeenCalledTimes(1);
-      expect(capacitorMock.plugin.commitAttachmentResourceBatch).not.toHaveBeenCalled();
+      expect(iosDatabaseMock.commit).not.toHaveBeenCalled();
     });
     resolveFirst();
     await expect(download).resolves.toEqual(['att-2', 'att-3']);
-    expect(capacitorMock.plugin.commitAttachmentResourceBatch).toHaveBeenCalledTimes(1);
+    expect(iosDatabaseMock.commit).toHaveBeenCalledTimes(1);
   });
 
   it('fails already enumerated attachment resources when the whole batch fails', async () => {

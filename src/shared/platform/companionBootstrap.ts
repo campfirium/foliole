@@ -23,7 +23,7 @@ function normalizeCompanionBootstrapState(value: unknown): NativeCompanionBootst
   if (typeof booted_at !== 'string' || !booted_at.trim()) {
     return null;
   }
-  if (database_path !== null && typeof database_path !== 'string') {
+  if (database_path !== undefined && database_path !== null && typeof database_path !== 'string') {
     return null;
   }
   if (typeof database_ready !== 'boolean') {
@@ -38,7 +38,7 @@ function normalizeCompanionBootstrapState(value: unknown): NativeCompanionBootst
 
   return {
     booted_at,
-    database_path,
+    database_path: typeof database_path === 'string' ? database_path : null,
     database_ready,
     device_id,
     device_name: typeof device_name === 'string' && device_name.trim() ? device_name.trim() : null,
@@ -101,9 +101,7 @@ export async function loadCompanionBootstrapState(): Promise<NativeCompanionBoot
   if (!result) {
     throw new Error('Native companion bootstrap returned an invalid payload.');
   }
-  if (runtime.kind !== 'ios-native') {
-    return result;
-  }
+  if (runtime.kind !== 'android-native' && runtime.kind !== 'ios-native') return result;
   const { initializeIosCompanionDatabase } = await import('./companion/runtime/iosCompanionDatabaseBootstrap');
   return initializeIosCompanionDatabase(result);
 }

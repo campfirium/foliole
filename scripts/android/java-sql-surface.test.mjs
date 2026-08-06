@@ -4,149 +4,57 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const JAVA_ROOT = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android');
-const SQL_LITERAL_PATTERN = /"[^"\n]*\b(?:ALTER|CREATE|DELETE|DROP|INSERT|PRAGMA|SELECT|UPDATE|sqlite_master)\b[^"\n]*"/g;
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const JAVA_ROOT = path.join(ROOT, 'android/app/src/main/java/com/foliole/android');
+const ISOLATED_SQLITE = new Set([
+  'FolioleCompanionContentBlobPack.java',
+  'FolioleCompanionSyncPackDatabaseValidator.java'
+]);
 
-const ALLOWED_SQL_LITERALS = [
-  {
-    file: 'FolioleCompanionSyncPackDatabaseValidator.java',
-    literal: '"PRAGMA quick_check(1)"'
-  },
-  {
-    file: 'FolioleCompanionSyncPackDatabaseValidator.java',
-    literal: '"PRAGMA table_info("'
-  },
-  {
-    file: 'FolioleCompanionSyncPackDatabaseValidator.java',
-    literal: '"SELECT COUNT(*) FROM "'
-  },
-  {
-    file: 'FolioleCompanionSyncPackDatabaseValidator.java',
-    literal: '"SELECT value FROM pack_manifest WHERE key = ?"'
-  },
-  {
-    file: 'FolioleCompanionSqliteRuntime.java',
-    literal: '"PRAGMA wal_checkpoint(FULL)"'
-  },
-  {
-    file: 'FolioleCompanionSqliteRuntime.java',
-    literal: '"SELECT 1 FROM sqlite_master WHERE type = \'table\' AND name = ? LIMIT 1"'
-  },
-  {
-    file: 'FolioleCompanionSqliteRuntime.java',
-    literal: '"PRAGMA table_info("'
-  }
-];
-const ALLOWED_DIRECT_NAMED_QUERY = [
-  {
-    file: 'FolioleCompanionGeneratedQueryRunner.java',
-    text: 'FolioleCompanionNamedQueryStore.'
-  },
-  {
-    file: 'FolioleCompanionLearningPayloadStore.java',
-    text: 'FolioleCompanionNamedQueryStore.'
-  }
-];
-const ALLOWED_DIRECT_NAMED_MUTATION = [
-  {
-    file: 'FolioleCompanionGeneratedMutationRunner.java',
-    text: 'FolioleCompanionNamedMutationStore.'
-  }
-];
-
-function collectJavaFiles(directory) {
-  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const entryPath = path.join(directory, entry.name);
-    if (entry.isDirectory()) return collectJavaFiles(entryPath);
-    return entry.isFile() && entry.name.endsWith('.java') ? [entryPath] : [];
-  });
+function javaFiles() {
+  return fs.readdirSync(JAVA_ROOT).filter((name) => name.endsWith('.java')).sort();
 }
 
-function relativeFile(filePath) {
-  return path.relative(JAVA_ROOT, filePath).replaceAll(path.sep, '/');
-}
-
-function sqlLiterals(filePath) {
-  const content = fs.readFileSync(filePath, 'utf8');
-  return [...content.matchAll(SQL_LITERAL_PATTERN)].map((match) => ({
-    file: relativeFile(filePath),
-    literal: match[0]
-  }));
-}
-
-function isAllowedSqlLiteral(entry) {
-  return ALLOWED_SQL_LITERALS.some((allowed) => allowed.file === entry.file && allowed.literal === entry.literal);
-}
-
-function interestingAccessLines(filePath) {
-  return fs
-    .readFileSync(filePath, 'utf8')
-    .split(/\r?\n/)
-    .map((line, index) => ({ file: relativeFile(filePath), line: index + 1, text: line.trim() }))
-    .filter((entry) => /\bdatabase\.(?:delete|execSQL|insert|query|rawQuery|update)\(|\.compileStatement\(/.test(entry.text));
-}
-
-function directNamedQueryLines(filePath) {
-  const content = fs.readFileSync(filePath, 'utf8');
-  return [...content.matchAll(/FolioleCompanionNamedQueryStore\s*\./g)]
-    .map((match) => ({
-      file: relativeFile(filePath),
-      line: content.slice(0, match.index).split(/\r?\n/).length,
-      text: match[0].replace(/\s+/g, '')
-    }))
-    .filter((entry) => entry.file !== 'FolioleCompanionNamedQueryStore.java')
-}
-
-function directNamedMutationLines(filePath) {
-  const content = fs.readFileSync(filePath, 'utf8');
-  return [...content.matchAll(/FolioleCompanionNamedMutationStore\s*\./g)]
-    .map((match) => ({
-      file: relativeFile(filePath),
-      line: content.slice(0, match.index).split(/\r?\n/).length,
-      text: match[0].replace(/\s+/g, '')
-    }))
-    .filter((entry) => entry.file !== 'FolioleCompanionNamedMutationStore.java')
-}
-
-function isAllowedAccessLine(entry) {
-  if (entry.file === 'FolioleCompanionSyncPackDatabaseValidator.java') {
-    return true;
-  }
-  if (entry.file === 'FolioleCompanionNamedQueryStore.java') {
-    return entry.text.includes('database.rawQuery(sql, args)');
-  }
-  if (entry.file === 'FolioleCompanionNamedMutationStore.java') {
-    return entry.text.includes('database.compileStatement(statement(context, statementName))') ||
-      entry.text.includes('database.execSQL(statement(context,') ||
-      entry.text.includes('database.execSQL(sql,') ||
-      entry.text.includes('database.execSQL(sql)');
-  }
-  if (entry.file === 'FolioleCompanionSchemaInstaller.java') {
-    return entry.text.includes('database.execSQL(statement)');
-  }
-  return entry.file === 'FolioleCompanionSqliteRuntime.java';
-}
-
-function isAllowedDirectNamedQuery(entry) {
-  return ALLOWED_DIRECT_NAMED_QUERY.some((allowed) => allowed.file === entry.file && entry.text.includes(allowed.text));
-}
-
-function isAllowedDirectNamedMutation(entry) {
-  return ALLOWED_DIRECT_NAMED_MUTATION.some((allowed) => allowed.file === entry.file && entry.text.includes(allowed.text));
+function source(name) {
+  return fs.readFileSync(path.join(JAVA_ROOT, name), 'utf8');
 }
 
 describe('Android Java SQL surface', () => {
-  it('keeps direct Java SQL limited to generated runners and runtime probes', () => {
-    const files = collectJavaFiles(JAVA_ROOT);
-    const unexpectedLiterals = files.flatMap(sqlLiterals).filter((entry) => !isAllowedSqlLiteral(entry));
-    const unexpectedAccess = files.flatMap(interestingAccessLines).filter((entry) => !isAllowedAccessLine(entry));
-    const unexpectedDirectNamedQuery = files.flatMap(directNamedQueryLines).filter((entry) => !isAllowedDirectNamedQuery(entry));
-    const unexpectedDirectNamedMutation = files.flatMap(directNamedMutationLines).filter((entry) => !isAllowedDirectNamedMutation(entry));
+  it('keeps SQLite limited to isolated temporary pack creation and validation', () => {
+    const formalSource = javaFiles().filter((name) => !ISOLATED_SQLITE.has(name)).map(source).join('\n');
+    expect(formalSource).not.toContain('SQLiteOpenHelper');
+    expect(formalSource).not.toContain('android.database.sqlite.SQLiteDatabase');
+    expect(formalSource).not.toContain('getReadableDatabase(');
+    expect(formalSource).not.toContain('getWritableDatabase(');
+    expect(formalSource).not.toContain('releaseDatabaseConnection');
+    expect(formalSource).not.toContain('foliole-companionSQLite.db');
+  });
 
-    expect(unexpectedLiterals).toEqual([]);
-    expect(unexpectedAccess).toEqual([]);
-    expect(unexpectedDirectNamedQuery).toEqual([]);
-    expect(unexpectedDirectNamedMutation).toEqual([]);
+  it('exposes only network, pairing, file, and staged-pack methods from Java', () => {
+    const plugin = source('FolioleCompanionSyncPlugin.java');
+    const methods = [...plugin.matchAll(/@PluginMethod\s+public void\s+([A-Za-z0-9_]+)/g)]
+      .map((match) => match[1]).sort();
+    expect(methods).toEqual([
+      'clearPairingCredentials', 'desktopHttpRequest', 'downloadAttachmentResourceBatch',
+      'downloadContentBlobBatch', 'finishAttachmentResourceBatch', 'finishContentBlobBatch',
+      'loadDiscoveryCandidates', 'loadPairingState', 'resolveAttachmentResource',
+      'savePairingCredentials', 'savePrimaryDeviceId', 'signCompanionSyncRequest',
+      'stageAttachmentResourceBatch'
+    ].sort());
+  });
+
+  it('routes Android reads, writes, alternatives, and sync through the shared owner', () => {
+    const files = [
+      'src/shared/platform/companionBootstrap.ts',
+      'src/shared/platform/companion/runtime/companionNodeTextAlternativeRepository.ts',
+      'src/shared/platform/companion/runtime/iosCompanionActiveDatabase.ts',
+      'src/shared/platform/companionSyncStateWriters.ts',
+      'src/shared/platform/companionSyncPackApply.ts'
+    ];
+    const sharedSource = files.map((name) => fs.readFileSync(path.join(ROOT, name), 'utf8')).join('\n');
+    expect(sharedSource).toContain("runtime.kind !== 'android-native' && runtime.kind !== 'ios-native'");
+    expect(sharedSource).toContain('getIosCompanionDatabaseOwner');
+    expect(sharedSource).toContain('readIosCompanionDatabase');
+    expect(sharedSource).toContain('writeIosCompanionDatabase');
   });
 });

@@ -18,7 +18,7 @@ export async function applyCompanionSyncReviewLog(reviews: NativeSyncReviewLogRe
   if ((runtime.kind !== 'android-native' && runtime.kind !== 'ios-native') || reviews.length === 0) {
     return [];
   }
-  if (runtime.kind === 'ios-native') {
+  if (runtime.kind === 'android-native' || runtime.kind === 'ios-native') {
     return runCompanionSyncWriterTask(() => getIosCompanionDatabaseOwner().runWriter((db) => (
       applyReviewLogRecordsWithDbPort(db, reviews, { requireExistingNode: true })
     )));

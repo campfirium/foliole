@@ -30,7 +30,6 @@ const capacitorMock = vi.hoisted(() => ({
   isNative: vi.fn(() => true),
   platform: vi.fn(() => 'android'),
   plugin: {
-    commitContentBlobBatch: vi.fn(async () => ({ db_elapsed_ms: 2, synced_hashes: ['a'.repeat(64)] })),
     downloadContentBlobBatch: vi.fn(async (): Promise<{
       batch_token: string;
       failed_hashes: string[];
@@ -45,7 +44,6 @@ const capacitorMock = vi.hoisted(() => ({
       parse_elapsed_ms: 1,
       synced_hashes: ['a'.repeat(64)]
     })),
-    loadMissingContentBlobHashes: vi.fn(async () => ({ hashes: ['a'.repeat(64)] })),
     syncContentBlob: vi.fn()
   }
 }));
@@ -78,12 +76,14 @@ describe('companion content blob sync split bridge', () => {
       headers: { 'X-Device-Id': 'android' },
       url: 'http://desktop/companion/content-blobs'
     });
-    expect(capacitorMock.plugin.commitContentBlobBatch).toHaveBeenCalledWith({
-      batch_token: 'content-batch-token'
-    });
+    expect(iosDatabaseMock.commit).toHaveBeenCalledWith(
+      iosDatabaseMock.owner,
+      capacitorMock.plugin,
+      expect.objectContaining({ batch_token: 'content-batch-token' })
+    );
     expect(capacitorMock.plugin.syncContentBlob).not.toHaveBeenCalled();
     expect(capacitorMock.plugin.downloadContentBlobBatch.mock.invocationCallOrder[0]!)
-      .toBeLessThan(writerQueueMock.run.mock.invocationCallOrder[0]!);
+      .toBeLessThan(iosDatabaseMock.commit.mock.invocationCallOrder[0]!);
   });
 
   it('still commits a downloaded failure token so native can mark failed hashes', async () => {
@@ -92,10 +92,7 @@ describe('companion content blob sync split bridge', () => {
       failed_hashes: ['b'.repeat(64)],
       synced_hashes: []
     });
-    capacitorMock.plugin.commitContentBlobBatch.mockResolvedValueOnce({
-      db_elapsed_ms: 1,
-      synced_hashes: []
-    });
+    iosDatabaseMock.commit.mockResolvedValueOnce({ syncedHashes: [] });
 
     const api = await import('./companionContentBlobSync');
     await expect(api.syncCompanionContentBlobs({
@@ -104,9 +101,11 @@ describe('companion content blob sync split bridge', () => {
       url: 'http://desktop/companion/content-blobs'
     })).resolves.toEqual(expect.objectContaining({ synced_hashes: [] }));
 
-    expect(capacitorMock.plugin.commitContentBlobBatch).toHaveBeenCalledWith({
-      batch_token: 'failed-content-batch-token'
-    });
+    expect(iosDatabaseMock.commit).toHaveBeenCalledWith(
+      iosDatabaseMock.owner,
+      capacitorMock.plugin,
+      expect.objectContaining({ batch_token: 'failed-content-batch-token' })
+    );
   });
 });
 
@@ -150,7 +149,7 @@ describe('iOS companion content blob sync bridge', () => {
       capacitorMock.plugin,
       expect.objectContaining({ batch_token: 'content-batch-token' })
     );
-    expect(capacitorMock.plugin.commitContentBlobBatch).not.toHaveBeenCalled();
+    expect(iosDatabaseMock.commit).toHaveBeenCalledTimes(1);
   });
 
   it('propagates an iOS native download failure without committing an empty batch', async () => {
@@ -163,7 +162,7 @@ describe('iOS companion content blob sync bridge', () => {
       url: 'http://desktop/companion/content-blobs'
     })).rejects.toThrow('Desktop request failed.');
 
-    expect(capacitorMock.plugin.commitContentBlobBatch).not.toHaveBeenCalled();
+    expect(iosDatabaseMock.commit).not.toHaveBeenCalled();
     expect(writerQueueMock.run).not.toHaveBeenCalled();
   });
 });

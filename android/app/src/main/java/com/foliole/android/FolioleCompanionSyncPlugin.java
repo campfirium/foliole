@@ -1,302 +1,90 @@
 package com.foliole.android;
 
+import com.getcapacitor.JSObject;
+import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
-import com.getcapacitor.JSObject;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
-@CapacitorPlugin(name = "FolioleCompanionSync")
-public class FolioleCompanionSyncPlugin extends FolioleCompanionDatabasePlugin {
-    @PluginMethod public void desktopHttpRequest(PluginCall call) { FolioleCompanionNetworkPluginActions.desktopHttpRequest(getContext(), call); }
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-    @PluginMethod
-    public void loadDiscoveryCandidates(PluginCall call) {
+@CapacitorPlugin(name = "FolioleCompanionSync")
+public class FolioleCompanionSyncPlugin extends Plugin {
+    private final ExecutorService fileExecutor = Executors.newSingleThreadExecutor();
+
+    @PluginMethod public void desktopHttpRequest(PluginCall call) {
+        FolioleCompanionNetworkPluginActions.desktopHttpRequest(getContext(), call);
+    }
+
+    @PluginMethod public void loadDiscoveryCandidates(PluginCall call) {
         FolioleCompanionNetworkPluginActions.loadDiscoveryCandidates(getContext(), call);
     }
 
-    @PluginMethod
-    public void loadPairingState(PluginCall call) { FolioleCompanionPairingPluginActions.loadPairingState(getContext(), call); }
+    @PluginMethod public void loadPairingState(PluginCall call) {
+        FolioleCompanionPairingPluginActions.loadPairingState(getContext(), call);
+    }
 
-    @PluginMethod
-    public void clearPairingCredentials(PluginCall call) { FolioleCompanionPairingPluginActions.clearPairingCredentials(getContext(), call); }
+    @PluginMethod public void clearPairingCredentials(PluginCall call) {
+        FolioleCompanionPairingPluginActions.clearPairingCredentials(getContext(), call);
+    }
 
-    @PluginMethod
-    public void savePairingCredentials(PluginCall call) {
+    @PluginMethod public void savePairingCredentials(PluginCall call) {
         FolioleCompanionPairingPluginActions.savePairingCredentials(getContext(), call);
     }
 
-    @PluginMethod
-    public void savePrimaryDeviceId(PluginCall call) { FolioleCompanionPairingPluginActions.savePrimaryDeviceId(getContext(), call); }
+    @PluginMethod public void savePrimaryDeviceId(PluginCall call) {
+        FolioleCompanionPairingPluginActions.savePrimaryDeviceId(getContext(), call);
+    }
 
-    @PluginMethod
-    public void signCompanionSyncRequest(PluginCall call) {
+    @PluginMethod public void signCompanionSyncRequest(PluginCall call) {
         FolioleCompanionPairingPluginActions.signCompanionSyncRequest(getContext(), call);
     }
 
-    @PluginMethod public void releaseDatabaseConnection(PluginCall call) { closeDatabaseHelperConnection(); call.resolve(new JSObject()); }
-
-    @PluginMethod
-    public void downloadAttachmentResourceBatch(PluginCall call) {
-        withCall(call, "Failed to download companion attachment resources.", FolioleCompanionResourcePluginActions::downloadAttachmentResourceBatch);
+    @PluginMethod public void downloadAttachmentResourceBatch(PluginCall call) {
+        async(call, "Failed to download companion attachment resources.", () ->
+            FolioleCompanionResourcePluginActions.downloadAttachmentResourceBatch(getContext(), call));
     }
 
-    @PluginMethod
-    public void commitAttachmentResourceBatch(PluginCall call) {
-        withCall(call, "Failed to commit companion attachment resources.", FolioleCompanionResourcePluginActions::commitAttachmentResourceBatch);
+    @PluginMethod public void stageAttachmentResourceBatch(PluginCall call) {
+        async(call, "Failed to stage companion attachment resources.", () ->
+            FolioleCompanionResourcePluginActions.stageAttachmentResourceBatch(getContext(), call));
     }
 
-    @PluginMethod
-    public void stageAttachmentResourceBatch(PluginCall call) {
-        withCall(call, "Failed to stage companion attachment resources.", FolioleCompanionResourcePluginActions::stageAttachmentResourceBatch);
+    @PluginMethod public void finishAttachmentResourceBatch(PluginCall call) {
+        async(call, "Failed to finish companion attachment resources.", () ->
+            FolioleCompanionResourcePluginActions.finishAttachmentResourceBatch(getContext(), call));
     }
 
-    @PluginMethod
-    public void finishAttachmentResourceBatch(PluginCall call) {
-        withCall(call, "Failed to finish companion attachment resources.", FolioleCompanionResourcePluginActions::finishAttachmentResourceBatch);
+    @PluginMethod public void downloadContentBlobBatch(PluginCall call) {
+        async(call, "Failed to download companion content blobs.", () ->
+            FolioleCompanionResourcePluginActions.downloadContentBlobBatch(getContext(), call));
     }
 
-    @PluginMethod
-    public void loadMissingAttachmentResources(PluginCall call) {
-        withCall(call, "Failed to load missing companion attachment resources.", FolioleCompanionResourcePluginActions::loadMissingAttachmentResources);
+    @PluginMethod public void finishContentBlobBatch(PluginCall call) {
+        async(call, "Failed to finish companion content blobs.", () ->
+            FolioleCompanionResourcePluginActions.finishContentBlobBatch(getContext(), call));
     }
 
-    @PluginMethod
-    public void loadMissingAttachmentResource(PluginCall call) {
-        withCall(call, "Failed to load missing companion attachment resource.", FolioleCompanionResourcePluginActions::loadMissingAttachmentResource);
+    @PluginMethod public void resolveAttachmentResource(PluginCall call) {
+        async(call, "Failed to resolve companion attachment resource.", () ->
+            FolioleCompanionResourcePluginActions.resolveAttachmentResource(getContext(), call));
     }
 
-    @PluginMethod
-    public void loadMissingContentBlobHashes(PluginCall call) {
-        withCall(call, "Failed to load missing companion content blobs.", FolioleCompanionResourcePluginActions::loadMissingContentBlobHashes);
+    private void async(PluginCall call, String message, FileWork work) {
+        fileExecutor.execute(() -> {
+            try {
+                call.resolve(work.run());
+            } catch (Exception exception) {
+                call.reject(FolioleCompanionPluginErrors.withCause(message, exception), exception);
+            }
+        });
     }
 
-    @PluginMethod
-    public void downloadContentBlobBatch(PluginCall call) {
-        withCall(call, "Failed to download companion content blobs.", FolioleCompanionResourcePluginActions::downloadContentBlobBatch);
+    @Override protected void handleOnDestroy() {
+        super.handleOnDestroy();
+        fileExecutor.shutdownNow();
     }
 
-    @PluginMethod
-    public void commitContentBlobBatch(PluginCall call) {
-        withCall(call, "Failed to commit companion content blobs.", FolioleCompanionResourcePluginActions::commitContentBlobBatch);
-    }
-
-    @PluginMethod
-    public void finishContentBlobBatch(PluginCall call) {
-        withCall(call, "Failed to finish companion content blobs.", FolioleCompanionResourcePluginActions::finishContentBlobBatch);
-    }
-
-    @PluginMethod
-    public void resolveAttachmentResource(PluginCall call) {
-        withCall(call, "Failed to resolve companion attachment resource.", FolioleCompanionResourcePluginActions::resolveAttachmentResource);
-    }
-
-    @PluginMethod
-    public void loadPdfPageText(PluginCall call) {
-        withCall(call, "Failed to load companion PDF page text.", FolioleCompanionResourcePluginActions::loadPdfPageText);
-    }
-
-    @PluginMethod
-    public void searchPdfPageText(PluginCall call) {
-        withCall(call, "Failed to search companion PDF page text.", FolioleCompanionResourcePluginActions::searchPdfPageText);
-    }
-
-    @PluginMethod
-    public void searchTopics(PluginCall call) {
-        withCall(call, "Failed to search companion topics.", FolioleCompanionResourcePluginActions::searchTopics);
-    }
-
-    @PluginMethod
-    public void loadExternalDocument(PluginCall call) {
-        withCall(call, "Failed to load companion external document.", FolioleCompanionResourcePluginActions::loadExternalDocument);
-    }
-
-    @PluginMethod
-    public void searchExternalDocuments(PluginCall call) {
-        withCall(call, "Failed to search companion external documents.", FolioleCompanionResourcePluginActions::searchExternalDocuments);
-    }
-
-    @PluginMethod
-    public void loadExternalDirectory(PluginCall call) {
-        database(call, "Failed to load companion external directory.", FolioleCompanionDatabaseHelper::loadExternalDirectory);
-    }
-
-    @PluginMethod
-    public void loadWorkspaceSyncState(PluginCall call) {
-        database(call, "Failed to load companion workspace sync state.", FolioleCompanionDatabaseHelper::loadWorkspaceSyncState);
-    }
-
-    @PluginMethod
-    public void diagnoseSync(PluginCall call) {
-        database(call, "Failed to diagnose companion sync.", helper -> FolioleCompanionWorkspaceSyncPluginActions.diagnoseSync(getContext(), helper));
-    }
-
-    @PluginMethod
-    public void saveWorkspaceSyncEndpoint(PluginCall call) {
-        withCall(call, "Failed to save companion workspace sync endpoint.", FolioleCompanionWorkspaceSyncPluginActions::saveWorkspaceSyncEndpoint);
-    }
-
-    @PluginMethod
-    public void recordWorkspaceSyncEvent(PluginCall call) {
-        withCall(call, "Failed to record companion workspace sync event.", FolioleCompanionWorkspaceSyncPluginActions::recordWorkspaceSyncEvent);
-    }
-
-    @PluginMethod
-    public void saveSyncOnboardingStatus(PluginCall call) {
-        withCall(call, "Failed to save companion sync onboarding status.", FolioleCompanionWorkspaceSyncPluginActions::saveSyncOnboardingStatus);
-    }
-
-    @PluginMethod
-    public void removeWorkspaceSyncRememberedTarget(PluginCall call) {
-        withCall(call, "Failed to remove companion workspace sync target.", FolioleCompanionWorkspaceSyncPluginActions::removeWorkspaceSyncRememberedTarget);
-    }
-
-    @PluginMethod
-    public void loadReadableArticle(PluginCall call) {
-        database(call, "Failed to load companion readable article.", FolioleCompanionDatabaseHelper::loadReadableArticle);
-    }
-
-    @PluginMethod
-    public void loadSyncIndex(PluginCall call) {
-        database(call, "Failed to load companion sync index.", FolioleCompanionDatabaseHelper::loadSyncIndex);
-    }
-
-    @PluginMethod
-    public void loadSyncNodeConflicts(PluginCall call) {
-        database(call, "Failed to load companion sync node conflicts.", FolioleCompanionDatabaseHelper::loadSyncNodeConflicts);
-    }
-
-    @PluginMethod
-    public void loadSyncStateChanges(PluginCall call) {
-        withCall(call, "Failed to load companion sync state changes.", FolioleCompanionSyncDataPluginActions::loadSyncStateChanges);
-    }
-
-    @PluginMethod
-    public void loadSyncStateCursor(PluginCall call) {
-        database(call, "Failed to load companion sync state cursor.", FolioleCompanionSyncStatePluginActions::loadSyncStateCursor);
-    }
-
-    @PluginMethod
-    public void saveSyncStateCursor(PluginCall call) {
-        withCall(call, "Failed to save companion sync state cursor.", FolioleCompanionSyncStatePluginActions::saveSyncStateCursor);
-    }
-
-    @PluginMethod
-    public void loadSyncPackCursor(PluginCall call) {
-        database(call, "Failed to load companion sync pack cursor.", FolioleCompanionSyncStatePluginActions::loadSyncPackCursor);
-    }
-
-    @PluginMethod
-    public void saveSyncPackCursor(PluginCall call) {
-        withCall(call, "Failed to save companion sync pack cursor.", FolioleCompanionSyncStatePluginActions::saveSyncPackCursor);
-    }
-
-    @PluginMethod
-    public void loadSyncStatePushCursor(PluginCall call) {
-        database(call, "Failed to load companion sync state push cursor.", FolioleCompanionSyncStatePluginActions::loadSyncStatePushCursor);
-    }
-
-    @PluginMethod
-    public void saveSyncStatePushCursor(PluginCall call) {
-        withCall(call, "Failed to save companion sync state push cursor.", FolioleCompanionSyncStatePluginActions::saveSyncStatePushCursor);
-    }
-
-    @PluginMethod
-    public void loadSyncNodeVersionCursor(PluginCall call) {
-        database(call, "Failed to load companion sync node version cursor.", FolioleCompanionSyncStatePluginActions::loadSyncNodeVersionCursor);
-    }
-
-    @PluginMethod
-    public void saveSyncNodeVersionCursor(PluginCall call) {
-        withCall(call, "Failed to save companion sync node version cursor.", FolioleCompanionSyncStatePluginActions::saveSyncNodeVersionCursor);
-    }
-
-    @PluginMethod
-    public void loadSyncNodeVersionPushCursor(PluginCall call) {
-        database(call, "Failed to load companion sync node version push cursor.", FolioleCompanionSyncStatePluginActions::loadSyncNodeVersionPushCursor);
-    }
-
-    @PluginMethod
-    public void saveSyncNodeVersionPushCursor(PluginCall call) {
-        withCall(call, "Failed to save companion sync node version push cursor.", FolioleCompanionSyncStatePluginActions::saveSyncNodeVersionPushCursor);
-    }
-
-    @PluginMethod
-    public void loadSyncReviewLogCursor(PluginCall call) {
-        database(call, "Failed to load companion sync review log cursor.", FolioleCompanionSyncStatePluginActions::loadSyncReviewLogCursor);
-    }
-
-    @PluginMethod
-    public void saveSyncReviewLogCursor(PluginCall call) {
-        withCall(call, "Failed to save companion sync review log cursor.", FolioleCompanionSyncStatePluginActions::saveSyncReviewLogCursor);
-    }
-
-    @PluginMethod
-    public void loadSyncReviewLogPushCursor(PluginCall call) {
-        database(call, "Failed to load companion sync review log push cursor.", FolioleCompanionSyncStatePluginActions::loadSyncReviewLogPushCursor);
-    }
-
-    @PluginMethod
-    public void saveSyncReviewLogPushCursor(PluginCall call) {
-        withCall(call, "Failed to save companion sync review log push cursor.", FolioleCompanionSyncStatePluginActions::saveSyncReviewLogPushCursor);
-    }
-
-    @PluginMethod
-    public void saveSyncPushAcks(PluginCall call) {
-        withCall(call, "Failed to save companion sync push acknowledgements.", FolioleCompanionSyncStatePluginActions::saveSyncPushAcks);
-    }
-
-    @PluginMethod
-    public void saveSyncSettingRecord(PluginCall call) {
-        withCall(call, "Failed to save companion sync setting record.", FolioleCompanionSyncStatePluginActions::saveSyncSettingRecord);
-    }
-
-    @PluginMethod
-    public void saveSyncNodeReadingRecord(PluginCall call) {
-        withCall(call, "Failed to save companion sync node reading record.", FolioleCompanionSyncStatePluginActions::saveSyncNodeReadingRecord);
-    }
-
-    @PluginMethod
-    public void saveSyncNodeOpenState(PluginCall call) {
-        withCall(call, "Failed to save companion sync node open state.", FolioleCompanionSyncStatePluginActions::saveSyncNodeOpenState);
-    }
-
-    @PluginMethod
-    public void saveSyncNodeReviewRecord(PluginCall call) {
-        withCall(call, "Failed to save companion sync node review record.", FolioleCompanionSyncStatePluginActions::saveSyncNodeReviewRecord);
-    }
-
-    @PluginMethod
-    public void saveSyncActiveViewState(PluginCall call) {
-        withCall(call, "Failed to save companion sync active view state.", FolioleCompanionSyncStatePluginActions::saveSyncActiveViewState);
-    }
-
-    @PluginMethod
-    public void saveSyncNodeViewState(PluginCall call) {
-        withCall(call, "Failed to save companion sync node view state.", FolioleCompanionSyncStatePluginActions::saveSyncNodeViewState);
-    }
-
-    @PluginMethod
-    public void loadSyncObjects(PluginCall call) {
-        withCall(call, "Failed to load companion sync objects.", FolioleCompanionSyncDataPluginActions::loadSyncObjects);
-    }
-
-    @PluginMethod
-    public void loadSyncNodeVersions(PluginCall call) {
-        withCall(call, "Failed to load companion sync node versions.", FolioleCompanionSyncDataPluginActions::loadSyncNodeVersions);
-    }
-
-    @PluginMethod
-    public void loadSyncReviewLog(PluginCall call) {
-        withCall(call, "Failed to load companion sync review log.", FolioleCompanionSyncDataPluginActions::loadSyncReviewLog);
-    }
-
-    private void database(PluginCall call, String errorMessage, DatabaseWork work) {
-        resolveWithDatabase(call, errorMessage, work);
-    }
-
-    private void withCall(PluginCall call, String errorMessage, PluginDatabaseWork work) {
-        database(call, errorMessage, helper -> work.run(helper, call));
-    }
-
-    private interface PluginDatabaseWork { JSObject run(FolioleCompanionDatabaseHelper helper, PluginCall call) throws Exception; }
+    private interface FileWork { JSObject run() throws Exception; }
 }

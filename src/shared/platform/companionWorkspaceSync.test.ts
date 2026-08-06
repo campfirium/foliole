@@ -15,6 +15,11 @@ const capacitorMock = vi.hoisted(() => ({
     saveWorkspaceSyncEndpoint: vi.fn()
   }
 }));
+const clearActiveData = vi.hoisted(() => vi.fn());
+const nativeWorkspaceState = vi.hoisted(() => ({
+  load: vi.fn(),
+  save: vi.fn(async (state) => state)
+}));
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
@@ -22,6 +27,13 @@ vi.mock('@capacitor/core', () => ({
     isNativePlatform: capacitorMock.isNativePlatform
   },
   registerPlugin: vi.fn(() => capacitorMock.plugin)
+}));
+vi.mock('./companion/runtime/iosCompanionActiveDataClear', () => ({
+  clearIosCompanionActiveData: clearActiveData
+}));
+vi.mock('./companion/sync/workspace-state/iosCompanionWorkspaceSyncStateStore', () => ({
+  loadIosCompanionWorkspaceSyncState: nativeWorkspaceState.load,
+  saveIosCompanionWorkspaceSyncState: nativeWorkspaceState.save
 }));
 
 import { clearCompanionAppData } from './companionAppData';
@@ -104,9 +116,20 @@ function registerEndpointPersistenceTest() {
     });
   });
 
-  it('routes app data clearing through the native Android plugin', async () => {
+}
+
+function registerNativeAppDataClearTest() {
+  it('routes app data clearing through the shared owner and native Android host cleanup', async () => {
     capacitorMock.getPlatform.mockReturnValue('android');
     capacitorMock.isNativePlatform.mockReturnValue(true);
+    clearActiveData.mockResolvedValue({
+      endpoint_url: null,
+      last_synced_at: null,
+      remembered_targets: [],
+      sync_events: [],
+      sync_onboarding_status: 'pending',
+      workspace_snapshot: null
+    });
     capacitorMock.plugin.clearAppData.mockResolvedValue({
       endpoint_url: null,
       last_synced_at: null,
@@ -118,6 +141,7 @@ function registerEndpointPersistenceTest() {
 
     await clearCompanionAppData();
 
+    expect(clearActiveData).toHaveBeenCalledWith();
     expect(capacitorMock.plugin.clearAppData).toHaveBeenCalledWith();
   });
 }
@@ -217,7 +241,7 @@ function registerSnapshotPersistenceTest() {
     const updatedSnapshot = createUpdatedStoredSnapshot();
     capacitorMock.getPlatform.mockReturnValue('android');
     capacitorMock.isNativePlatform.mockReturnValue(true);
-    capacitorMock.plugin.loadWorkspaceSyncState.mockResolvedValue({
+    nativeWorkspaceState.load.mockResolvedValue({
       endpoint_url: updatedSnapshot.endpointUrl,
       last_synced_at: updatedSnapshot.lastSyncedAt,
       remembered_targets: ['http://10.0.2.2:38641'],
@@ -232,13 +256,15 @@ function registerSnapshotPersistenceTest() {
       changedNodeId: 'node-1'
     });
 
-    expect(capacitorMock.plugin.loadWorkspaceSyncState).toHaveBeenCalled();
+    expect(nativeWorkspaceState.load).toHaveBeenCalled();
+    expect(capacitorMock.plugin.loadWorkspaceSyncState).not.toHaveBeenCalled();
   });
 }
 
 describe('companionWorkspaceSync', () => {
   beforeEach(() => resetCompanionWorkspaceSyncTestState(capacitorMock));
   registerEndpointPersistenceTest();
+  registerNativeAppDataClearTest();
   registerWorkspaceVersionTest();
   registerReadableArticleTest();
   registerSnapshotPersistenceTest();

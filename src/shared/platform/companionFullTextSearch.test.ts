@@ -53,7 +53,11 @@ const capacitorMock = vi.hoisted(() => ({
 }));
 
 const iosReads = vi.hoisted(() => ({
-  external: vi.fn(), index: vi.fn(), objects: vi.fn(), pdf: vi.fn(), topics: vi.fn()
+  external: vi.fn(),
+  index: vi.fn(async (): Promise<Array<{ object_id: string; object_type: string }>> => []),
+  objects: vi.fn(async (): Promise<Array<{ payload_json: string | null }>> => []),
+  pdf: vi.fn(),
+  topics: vi.fn()
 }));
 
 vi.mock('@capacitor/core', () => ({
@@ -129,33 +133,32 @@ describe('companion full text search', () => {
       strategy: 'word-based',
       topics: [expect.objectContaining({ bodyStatus: 'missing', nodeId: 'topic-1', title: 'Topic One' })]
     });
-    expect(capacitorMock.plugin.searchTopics).toHaveBeenCalledWith({ limit: 5, query: 'alpha' });
-    expect(capacitorMock.plugin.searchPdfPageText).toHaveBeenCalledWith({ limit: 5, query: 'alpha' });
-    expect(capacitorMock.plugin.searchExternalDocuments).toHaveBeenCalledWith({ limit: 5, query: 'alpha' });
+    expect(iosReads.topics).toHaveBeenCalledWith('alpha', 5);
+    expect(iosReads.pdf).toHaveBeenCalledWith('alpha', 5);
+    expect(iosReads.external).toHaveBeenCalledWith('alpha', 5);
   });
 
   it('loads the full-text search language from synced app settings', async () => {
-    capacitorMock.plugin.loadSyncIndex.mockResolvedValueOnce({
-      entries: [{ object_id: 'user_space:windows:desktop:*:app_settings', object_type: 'setting' }]
-    });
-    capacitorMock.plugin.loadSyncObjects.mockResolvedValueOnce({
-      objects: [{
+    iosReads.index.mockResolvedValueOnce([
+      { object_id: 'user_space:windows:desktop:*:app_settings', object_type: 'setting' }
+    ]);
+    iosReads.objects.mockResolvedValueOnce([{
         payload_json: JSON.stringify({
           key: 'app_settings',
           value_json: JSON.stringify({ [FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY]: 'cjk-trigram' })
         })
-      }]
-    });
+      }
+    ]);
     const api = await import('./companionFullTextSearch');
 
     await expect(api.loadCompanionFullTextSearchStrategy()).resolves.toBe('cjk-trigram');
   });
 
   it('keeps native search available when synced app settings cannot be read', async () => {
-    capacitorMock.plugin.loadSyncIndex.mockResolvedValueOnce({
-      entries: [{ object_id: 'user_space:windows:desktop:*:app_settings', object_type: 'setting' }]
-    });
-    capacitorMock.plugin.loadSyncObjects.mockRejectedValueOnce(new Error('no such function: json_object'));
+    iosReads.index.mockResolvedValueOnce([
+      { object_id: 'user_space:windows:desktop:*:app_settings', object_type: 'setting' }
+    ]);
+    iosReads.objects.mockRejectedValueOnce(new Error('no such function: json_object'));
     const api = await import('./companionFullTextSearch');
 
     await expect(api.searchCompanionFullText('alpha', 5)).resolves.toEqual({

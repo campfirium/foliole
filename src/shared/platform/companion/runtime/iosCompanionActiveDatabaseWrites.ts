@@ -3,6 +3,7 @@ import { applyNodeReadingObject, applyNodeReviewObject } from '../../../../../li
 import { applyNodeOpenStateObject } from '../../../../../lib/core/sync/syncObjectOpenStatePayloadExecutor';
 
 import { writeIosCompanionDatabase } from './iosCompanionActiveDatabase';
+import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
 import { iosCompanionContentHash, iosCompanionDeviceId, markIosCompanionMutation } from './iosCompanionMutationState';
 
 export function saveIosSetting(args: {
@@ -11,7 +12,7 @@ export function saveIosSetting(args: {
   return writeIosCompanionDatabase((db) => db.transaction(async (tx) => {
     const deviceId = args.device_id ?? '*';
     const formFactor = args.form_factor ?? 'phone';
-    const platform = args.platform ?? 'ios';
+    const platform = args.platform ?? getIosCompanionDatabaseOwner().platform ?? 'ios';
     const scope = args.scope ?? 'device';
     const objectId = [scope, platform, formFactor, deviceId, args.key].join(':');
     const payload = { device_id: deviceId, form_factor: formFactor, key: args.key, platform, scope, value_json: args.value_json };
@@ -97,8 +98,9 @@ async function writeViewState(
 ) {
   return writeIosCompanionDatabase((db) => db.transaction(async (tx) => {
     const deviceId = await iosCompanionDeviceId(tx);
-    const objectId = ['session_resume', 'ios', 'phone', deviceId, key].join(':');
-    const canonical: Record<string, unknown> = { device_id: deviceId, form_factor: 'phone', key, platform: 'ios', scope: 'session_resume', ...payload };
+    const platform = getIosCompanionDatabaseOwner().platform;
+    const objectId = ['session_resume', platform, 'phone', deviceId, key].join(':');
+    const canonical: Record<string, unknown> = { device_id: deviceId, form_factor: 'phone', key, platform, scope: 'session_resume', ...payload };
     const { source: ignored, ...hashPayload } = canonical; void ignored;
     const contentHash = await iosCompanionContentHash(hashPayload);
     const now = new Date().toISOString();
