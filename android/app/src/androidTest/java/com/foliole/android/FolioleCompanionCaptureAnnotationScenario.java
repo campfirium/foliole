@@ -49,9 +49,8 @@ final class FolioleCompanionCaptureAnnotationScenario {
         long timeoutMs
     ) throws Exception {
         navigateToCapturedTopic(instrumentation, webView, token, timeoutMs);
-        waitForButtonText(instrumentation, webView, token, timeoutMs);
-        waitForButtonText(instrumentation, webView, NOTE_TEXT, timeoutMs);
-        waitForButtonText(instrumentation, webView, CLOZE_TEXT, timeoutMs);
+        waitForDecorationText(instrumentation, webView, ".cm-md-highlight", NOTE_TEXT, timeoutMs);
+        waitForDecorationText(instrumentation, webView, ".cm-md-cloze", CLOZE_TEXT, timeoutMs);
     }
 
     private static void createNote(
@@ -65,7 +64,7 @@ final class FolioleCompanionCaptureAnnotationScenario {
         waitForTestId(instrumentation, webView, "companion-selection-note-text", timeoutMs);
         perform(instrumentation, webView, "companion-selection-note-text", "input", "A5 note " + token);
         perform(instrumentation, webView, "companion-selection-note-save", "click", "");
-        waitForButtonText(instrumentation, webView, NOTE_TEXT, timeoutMs);
+        waitForDecorationText(instrumentation, webView, ".cm-md-highlight", NOTE_TEXT, timeoutMs);
     }
 
     private static void createCloze(
@@ -75,7 +74,7 @@ final class FolioleCompanionCaptureAnnotationScenario {
     ) throws Exception {
         selectText(instrumentation, webView, CLOZE_TEXT, timeoutMs);
         perform(instrumentation, webView, "companion-selection-cloze", "click", "");
-        waitForButtonText(instrumentation, webView, CLOZE_TEXT, timeoutMs);
+        waitForDecorationText(instrumentation, webView, ".cm-md-cloze", CLOZE_TEXT, timeoutMs);
     }
 
     private static void navigateToCapturedTopic(
@@ -148,13 +147,17 @@ final class FolioleCompanionCaptureAnnotationScenario {
         waitFor(instrumentation, webView, selector + "&&!" + selector + ".disabled", timeoutMs, "enabled test id " + testId);
     }
 
-    private static void waitForButtonText(
+    private static void waitForDecorationText(
         Instrumentation instrumentation,
         WebView webView,
+        String selector,
         String text,
         long timeoutMs
     ) throws Exception {
-        waitFor(instrumentation, webView, buttonTextExpression(text), timeoutMs, "button text " + text);
+        waitFor(instrumentation, webView,
+            "Array.prototype.some.call(document.querySelectorAll(" + JSONObject.quote(selector) + "),function(node){" +
+                "return (node.textContent||'').includes(" + JSONObject.quote(text) + ");})",
+            timeoutMs, "annotation decoration " + text);
     }
 
     private static void waitForText(
@@ -193,11 +196,6 @@ final class FolioleCompanionCaptureAnnotationScenario {
 
     private static String captureText(String token) {
         return "A5 capture " + token + "\n\n" + CLOZE_TEXT + ".\n\n" + NOTE_TEXT + ".";
-    }
-
-    private static String buttonTextExpression(String text) {
-        return "Array.prototype.some.call(document.querySelectorAll('button'),function(node){" +
-            "return (node.innerText||'').includes(" + JSONObject.quote(text) + ");})";
     }
 
     private static String directoryButtonTextExpression(String text) {
