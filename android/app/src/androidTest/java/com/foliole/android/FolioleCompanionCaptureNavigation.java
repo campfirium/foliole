@@ -33,6 +33,9 @@ final class FolioleCompanionCaptureNavigation {
         long timeoutMs
     ) throws Exception {
         enterBrowseSurface(instrumentation, webView, timeoutMs);
+        FolioleCompanionCaptureAnnotationScenario.waitForTestId(
+            instrumentation, webView, TOP_BAR_LEFT_ACTION, timeoutMs
+        );
         FolioleCompanionCaptureAnnotationScenario.perform(
             instrumentation, webView, TOP_BAR_LEFT_ACTION, "click", ""
         );
