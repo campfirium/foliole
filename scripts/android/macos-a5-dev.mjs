@@ -157,9 +157,19 @@ async function captureAnnotation(paths) {
   console.log(`[macos-a5-dev] capture-annotation evidence=${result.captureAnnotation.manifestPath}`);
 }
 
+async function databasePerformance(paths) {
+  assertFixedA5(paths); build(paths);
+  const { runA5DatabasePerformance } = await import('./android-a5-database-performance-action.mjs');
+  const result = await runA5DatabasePerformance({ env: macosA5GradleEnv(),
+    evidenceRoot: path.join(paths.repoRoot, '.tmp/artifacts/companion-database-performance'),
+    execute, paths, serial: A5_SERIAL });
+  process.stdout.write(result.output);
+  console.log(`[macos-a5-dev] database-performance evidence=${result.evidencePath}`);
+}
+
 export async function runMacosA5Action(action, repoRoot = process.cwd()) {
-  if (!['status', 'build', 'capture-annotation', 'deploy'].includes(action)) {
-    throw new Error('Usage: node scripts/android/macos-a5-dev.mjs <status|build|capture-annotation|deploy>');
+  if (!['status', 'build', 'capture-annotation', 'database-performance', 'deploy'].includes(action)) {
+    throw new Error('Usage: node scripts/android/macos-a5-dev.mjs <status|build|capture-annotation|database-performance|deploy>');
   }
   const paths = macosA5Paths(repoRoot);
   assertSafeMacosA5Environment(paths);
@@ -171,6 +181,7 @@ export async function runMacosA5Action(action, repoRoot = process.cwd()) {
     }
     if (action === 'deploy') deploy(paths);
     if (action === 'capture-annotation') await captureAnnotation(paths);
+    if (action === 'database-performance') await databasePerformance(paths);
   } finally {
     spawnSync(paths.adb, ['kill-server']);
   }
