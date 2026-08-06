@@ -89,8 +89,9 @@ final class FolioleCompanionCaptureAnnotationScenario {
     ) throws Exception {
         FolioleCompanionCaptureNavigation.openDirectorySurface(instrumentation, webView, timeoutMs);
         perform(instrumentation, webView, "companion-directory-node-special-inbox", "click", "");
-        waitForButtonText(instrumentation, webView, token, timeoutMs);
-        evaluate(instrumentation, webView, clickButtonTextScript(token));
+        waitFor(instrumentation, webView, directoryButtonTextExpression(token), timeoutMs, "captured directory topic");
+        JSONObject result = evaluate(instrumentation, webView, clickDirectoryButtonTextScript(token));
+        if (!result.optBoolean("ok")) throw new IllegalStateException("Could not open captured directory topic");
     }
 
     private static void selectText(
@@ -191,9 +192,15 @@ final class FolioleCompanionCaptureAnnotationScenario {
             "return (node.innerText||'').includes(" + JSONObject.quote(text) + ");})";
     }
 
-    private static String clickButtonTextScript(String text) {
-        return "(function(){var nodes=Array.prototype.slice.call(document.querySelectorAll('button'));" +
-            "var node=nodes.find(function(item){return (item.innerText||'').includes(" + JSONObject.quote(text) + ");});" +
+    private static String directoryButtonTextExpression(String text) {
+        return "Array.prototype.some.call(document.querySelectorAll('button[data-testid^=\"companion-directory-node-\"]')," +
+            "function(node){return (node.innerText||'').includes(" + JSONObject.quote(text) + ");})";
+    }
+
+    private static String clickDirectoryButtonTextScript(String text) {
+        return "(function(){var nodes=Array.prototype.slice.call(document.querySelectorAll(" +
+            "'button[data-testid^=\"companion-directory-node-\"]'));var node=nodes.find(function(item){" +
+            "return (item.innerText||'').includes(" + JSONObject.quote(text) + ");});" +
             "if(!node)return JSON.stringify({ok:false});node.click();return JSON.stringify({ok:true});})()";
     }
 
