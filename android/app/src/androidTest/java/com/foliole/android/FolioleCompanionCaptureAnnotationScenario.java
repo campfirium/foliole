@@ -30,7 +30,7 @@ final class FolioleCompanionCaptureAnnotationScenario {
         navigateToCapturedTopic(instrumentation, webView, token, timeoutMs);
         waitForText(instrumentation, webView, CLOZE_TEXT, timeoutMs);
         createNote(instrumentation, webView, token, timeoutMs);
-        createCloze(instrumentation, webView, token, timeoutMs);
+        createCloze(instrumentation, webView, timeoutMs);
         JSONObject receipt = new JSONObject();
         receipt.put("action", "click");
         receipt.put("captureCreated", true);
@@ -71,11 +71,9 @@ final class FolioleCompanionCaptureAnnotationScenario {
     private static void createCloze(
         Instrumentation instrumentation,
         WebView webView,
-        String token,
         long timeoutMs
     ) throws Exception {
-        navigateToCapturedTopic(instrumentation, webView, token, timeoutMs);
-        waitForText(instrumentation, webView, CLOZE_TEXT, timeoutMs);
+        waitForEditorText(instrumentation, webView, CLOZE_TEXT, timeoutMs);
         selectText(instrumentation, webView, CLOZE_TEXT, timeoutMs);
         perform(instrumentation, webView, "companion-selection-cloze", "click", "");
         waitForButtonText(instrumentation, webView, CLOZE_TEXT, timeoutMs);
@@ -157,6 +155,17 @@ final class FolioleCompanionCaptureAnnotationScenario {
     ) throws Exception {
         waitFor(instrumentation, webView,
             "document.body&&document.body.innerText.includes(" + JSONObject.quote(text) + ")", timeoutMs, "text " + text);
+    }
+
+    private static void waitForEditorText(
+        Instrumentation instrumentation,
+        WebView webView,
+        String text,
+        long timeoutMs
+    ) throws Exception {
+        waitFor(instrumentation, webView,
+            "document.querySelector('.cm-content')&&document.querySelector('.cm-content').innerText.includes(" +
+                JSONObject.quote(text) + ")", timeoutMs, "editor text " + text);
     }
 
     private static void waitFor(
