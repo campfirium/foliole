@@ -5,6 +5,7 @@ import android.webkit.WebView;
 
 final class FolioleCompanionCaptureNavigation {
     private static final String BROWSE_READY = "companion-capture-open";
+    private static final String INBOX_NODE = "companion-directory-node-special-inbox";
     private static final String TOP_BAR_LEFT_ACTION = "companion-top-bar-left-action";
 
     private FolioleCompanionCaptureNavigation() {}
@@ -33,14 +34,16 @@ final class FolioleCompanionCaptureNavigation {
         long timeoutMs
     ) throws Exception {
         enterBrowseSurface(instrumentation, webView, timeoutMs);
+        if (!hasTestId(instrumentation, webView, INBOX_NODE)) {
+            FolioleCompanionCaptureAnnotationScenario.waitForTestId(
+                instrumentation, webView, TOP_BAR_LEFT_ACTION, timeoutMs
+            );
+            FolioleCompanionCaptureAnnotationScenario.perform(
+                instrumentation, webView, TOP_BAR_LEFT_ACTION, "click", ""
+            );
+        }
         FolioleCompanionCaptureAnnotationScenario.waitForTestId(
-            instrumentation, webView, TOP_BAR_LEFT_ACTION, timeoutMs
-        );
-        FolioleCompanionCaptureAnnotationScenario.perform(
-            instrumentation, webView, TOP_BAR_LEFT_ACTION, "click", ""
-        );
-        FolioleCompanionCaptureAnnotationScenario.waitForTestId(
-            instrumentation, webView, "companion-directory-node-special-inbox", timeoutMs
+            instrumentation, webView, INBOX_NODE, timeoutMs
         );
     }
 
