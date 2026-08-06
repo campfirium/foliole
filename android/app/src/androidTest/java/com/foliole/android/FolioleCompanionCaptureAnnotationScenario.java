@@ -164,7 +164,7 @@ final class FolioleCompanionCaptureAnnotationScenario {
         long timeoutMs
     ) throws Exception {
         waitFor(instrumentation, webView,
-            "document.querySelector('.cm-content')&&document.querySelector('.cm-content').innerText.includes(" +
+            "document.querySelector('.cm-content')&&(document.querySelector('.cm-content').textContent||'').includes(" +
                 JSONObject.quote(text) + ")", timeoutMs, "editor text " + text);
     }
 
