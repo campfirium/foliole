@@ -48,7 +48,7 @@ describe('Android launcher icon assets', () => {
     ).resolves.toBe(false);
   });
 
-  it('keeps the adaptive icon transparent and inside the Android mask safe area', async () => {
+  it('keeps the adaptive icon transparent and visually proportional inside the safe area', async () => {
     const backgroundXml = await readFile(
       path.join(RES_ROOT, 'values', 'ic_launcher_background.xml'),
       'utf8'
@@ -72,10 +72,15 @@ describe('Android launcher icon assets', () => {
       path.join(REPO_ROOT, 'scripts', 'android', 'generate-launcher-icons.py'),
       'utf8'
     );
+    const adaptiveRatio = Number(
+      /ADAPTIVE_DISC_RATIO = ([\d.]+)/u.exec(generator)?.[1]
+    );
 
     expect(packageJson).toContain('"android:icons:generate"');
     expect(generator).toContain('SOURCE_LEAF = REPO_ROOT / "assets" / "brand" / "foliole-leaf-tight.png"');
     expect(generator).toContain('LAUNCHER_BACKGROUND = "#FF8DA56D"');
-    expect(generator).toContain('add_brand_mark(canvas, leaf, 0.61)');
+    expect(adaptiveRatio).toBeGreaterThanOrEqual(0.46);
+    expect(adaptiveRatio).toBeLessThanOrEqual(0.5);
+    expect(generator).toContain('add_brand_mark(canvas, leaf, ADAPTIVE_DISC_RATIO)');
   });
 });

@@ -9,6 +9,7 @@ RES_ROOT = REPO_ROOT / "android" / "app" / "src" / "main" / "res"
 LAUNCHER_BACKGROUND = "#FF8DA56D"
 BRAND_GREEN = (141, 165, 109, 255)
 SPLASH_BACKGROUND = (24, 29, 27, 255)
+ADAPTIVE_DISC_RATIO = 0.48
 
 LAUNCHER_SIZES = {
     "mipmap-mdpi": 48,
@@ -100,7 +101,7 @@ def generate_legacy_icons(leaf: Image.Image) -> None:
 def generate_adaptive_foregrounds(leaf: Image.Image) -> None:
     for folder, size in FOREGROUND_SIZES.items():
         canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-        add_brand_mark(canvas, leaf, 0.61)
+        add_brand_mark(canvas, leaf, ADAPTIVE_DISC_RATIO)
         canvas.save(RES_ROOT / folder / "ic_launcher_foreground.png")
 
 
