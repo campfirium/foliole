@@ -154,10 +154,19 @@ final class FolioleCompanionCaptureAnnotationScenario {
         String text,
         long timeoutMs
     ) throws Exception {
-        waitFor(instrumentation, webView,
-            "Array.prototype.some.call(document.querySelectorAll(" + JSONObject.quote(selector) + "),function(node){" +
-                "return (node.textContent||'').includes(" + JSONObject.quote(text) + ");})",
-            timeoutMs, "annotation decoration " + text);
+        String expression = "Array.prototype.some.call(document.querySelectorAll(" + JSONObject.quote(selector) +
+            "),function(node){return (node.textContent||'').includes(" + JSONObject.quote(text) + ");})";
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
+        while (System.nanoTime() < deadline) {
+            if (evaluate(instrumentation, webView,
+                "(function(){return JSON.stringify({ok:!!(" + expression + ")});})()").optBoolean("ok")) return;
+            Thread.sleep(100);
+        }
+        JSONObject page = evaluate(instrumentation, webView,
+            "(function(){var marks=Array.prototype.slice.call(document.querySelectorAll('[class*=\"cm-md-\"]'),0,30)" +
+            ".map(function(node){return {className:node.className,text:(node.textContent||'').slice(0,80)};});" +
+            "return JSON.stringify({article:!!document.querySelector('[data-companion-article-document]'),marks:marks});})()");
+        throw new IllegalStateException("Timed out waiting for annotation decoration " + text + " page=" + page);
     }
 
     private static void waitForText(
