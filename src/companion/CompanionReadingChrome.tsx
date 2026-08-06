@@ -9,6 +9,7 @@ function ReadingChromeButton(props: {
   icon: LucideIcon;
   label: string;
   onClick?: (() => void) | undefined;
+  testId?: string | undefined;
 }) {
   const Icon = props.icon;
   return (
@@ -16,6 +17,7 @@ function ReadingChromeButton(props: {
       aria-disabled={props.disabled ? 'true' : undefined}
       aria-label={props.label}
       className="inline-flex h-10 w-10 items-center justify-center rounded-md text-companion-text-secondary transition hover:bg-companion-subtle hover:text-foreground disabled:text-companion-text-tertiary"
+      data-testid={props.testId}
       disabled={props.disabled}
       onClick={props.onClick}
       type="button"
@@ -87,7 +89,7 @@ export function ReadingChrome(props: {
         <div className={`mx-auto flex max-w-[760px] items-center ${companionFlexRowGap2ClassName}`}>
           {controlsVisible ? (
             <>
-              <ReadingChromeButton icon={ChevronLeft} label={t('companion.reading.exit')} onClick={props.onExit} />
+              <ReadingChromeButton icon={ChevronLeft} label={t('companion.reading.exit')} onClick={props.onExit} testId="companion-reading-exit" />
               <ReadingChromeButton icon={ListTree} label={t('companion.reading.outline')} onClick={props.onOpenOutline} />
               <span className="min-w-0 max-w-[52vw] flex-1 truncate pl-2 text-left text-sm font-medium text-foreground sm:max-w-sm">
                 {props.title}

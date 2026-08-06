@@ -35,6 +35,12 @@ describe('ReadingChrome', () => {
     expect(screen.queryByRole('button', { name: 'Info' })).not.toBeInTheDocument();
   });
 
+  it('exposes the reading exit as a stable host acceptance target', () => {
+    renderChrome();
+
+    expect(screen.getByTestId('companion-reading-exit')).toHaveAccessibleName('Exit');
+  });
+
   it('keeps reading controls compact and clear of Android safe areas', () => {
     renderChrome();
 

@@ -6,6 +6,8 @@ import android.webkit.WebView;
 final class FolioleCompanionCaptureNavigation {
     private static final String BROWSE_READY = "companion-capture-open";
     private static final String INBOX_NODE = "companion-directory-node-special-inbox";
+    private static final String READING_EXIT = "companion-reading-exit";
+    private static final String TOP_BAR_BACK = "companion-top-bar-back";
     private static final String TOP_BAR_LEFT_ACTION = "companion-top-bar-left-action";
 
     private FolioleCompanionCaptureNavigation() {}
@@ -34,12 +36,16 @@ final class FolioleCompanionCaptureNavigation {
         long timeoutMs
     ) throws Exception {
         enterBrowseSurface(instrumentation, webView, timeoutMs);
-        String directoryState = waitForEitherTestId(
-            instrumentation, webView, INBOX_NODE, TOP_BAR_LEFT_ACTION, timeoutMs
-        );
-        if (TOP_BAR_LEFT_ACTION.equals(directoryState)) {
+        String directoryState = waitForDirectoryState(instrumentation, webView, timeoutMs, true);
+        if (READING_EXIT.equals(directoryState)) {
             FolioleCompanionCaptureAnnotationScenario.perform(
-                instrumentation, webView, TOP_BAR_LEFT_ACTION, "click", ""
+                instrumentation, webView, READING_EXIT, "click", ""
+            );
+            directoryState = waitForDirectoryState(instrumentation, webView, timeoutMs, false);
+        }
+        if (TOP_BAR_LEFT_ACTION.equals(directoryState) || TOP_BAR_BACK.equals(directoryState)) {
+            FolioleCompanionCaptureAnnotationScenario.perform(
+                instrumentation, webView, directoryState, "click", ""
             );
         }
         FolioleCompanionCaptureAnnotationScenario.waitForTestId(
@@ -47,17 +53,18 @@ final class FolioleCompanionCaptureNavigation {
         );
     }
 
-    private static String waitForEitherTestId(
+    private static String waitForDirectoryState(
         Instrumentation instrumentation,
         WebView webView,
-        String first,
-        String second,
-        long timeoutMs
+        long timeoutMs,
+        boolean includeReadingExit
     ) throws Exception {
         long deadline = System.nanoTime() + timeoutMs * 1_000_000L;
         while (System.nanoTime() < deadline) {
-            if (hasTestId(instrumentation, webView, first)) return first;
-            if (hasTestId(instrumentation, webView, second)) return second;
+            if (includeReadingExit && hasTestId(instrumentation, webView, READING_EXIT)) return READING_EXIT;
+            if (hasTestId(instrumentation, webView, INBOX_NODE)) return INBOX_NODE;
+            if (hasTestId(instrumentation, webView, TOP_BAR_LEFT_ACTION)) return TOP_BAR_LEFT_ACTION;
+            if (hasTestId(instrumentation, webView, TOP_BAR_BACK)) return TOP_BAR_BACK;
             Thread.sleep(100);
         }
         throw new IllegalStateException("Timed out waiting for capture directory state");
