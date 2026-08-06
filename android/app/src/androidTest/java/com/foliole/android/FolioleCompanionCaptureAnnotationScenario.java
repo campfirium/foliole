@@ -73,7 +73,6 @@ final class FolioleCompanionCaptureAnnotationScenario {
         WebView webView,
         long timeoutMs
     ) throws Exception {
-        waitForEditorText(instrumentation, webView, CLOZE_TEXT, timeoutMs);
         selectText(instrumentation, webView, CLOZE_TEXT, timeoutMs);
         perform(instrumentation, webView, "companion-selection-cloze", "click", "");
         waitForButtonText(instrumentation, webView, CLOZE_TEXT, timeoutMs);
@@ -98,11 +97,17 @@ final class FolioleCompanionCaptureAnnotationScenario {
         String text,
         long timeoutMs
     ) throws Exception {
-        JSONObject result = evaluate(instrumentation, webView, selectTextScript(text));
-        if (!result.optBoolean("ok")) {
-            throw new IllegalStateException("Could not select scenario text: " + result);
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
+        JSONObject result = new JSONObject();
+        while (System.nanoTime() < deadline) {
+            result = evaluate(instrumentation, webView, selectTextScript(text));
+            if (result.optBoolean("ok")) {
+                waitForTestId(instrumentation, webView, "companion-selection-note", timeoutMs);
+                return;
+            }
+            Thread.sleep(100);
         }
-        waitForTestId(instrumentation, webView, "companion-selection-note", timeoutMs);
+        throw new IllegalStateException("Could not select scenario text: " + result);
     }
 
     static void perform(
@@ -155,17 +160,6 @@ final class FolioleCompanionCaptureAnnotationScenario {
     ) throws Exception {
         waitFor(instrumentation, webView,
             "document.body&&document.body.innerText.includes(" + JSONObject.quote(text) + ")", timeoutMs, "text " + text);
-    }
-
-    private static void waitForEditorText(
-        Instrumentation instrumentation,
-        WebView webView,
-        String text,
-        long timeoutMs
-    ) throws Exception {
-        waitFor(instrumentation, webView,
-            "document.querySelector('.cm-content')&&(document.querySelector('.cm-content').textContent||'').includes(" +
-                JSONObject.quote(text) + ")", timeoutMs, "editor text " + text);
     }
 
     private static void waitFor(
