@@ -140,6 +140,23 @@ describe('companionReadableArticle directory browse helpers', () => {
     });
     expect(resolveCompanionFolderViewByNodeId(snapshot, 'node-1')).toBeNull();
   });
+
+  it('keeps a topic readable when its only children are anchored annotations', () => {
+    const snapshot = createSnapshot();
+    snapshot.nodesById['node-8'] = createNodeRecord({
+      anchorLink: { id: 'anchor-note', kind: 'highlight' },
+      content: 'Selected text\n\nA note',
+      id: 'node-8',
+      parentNodeId: 'node-1'
+    });
+    snapshot.nodeOrder.push('node-8');
+
+    expect(resolveCompanionFolderViewByNodeId(snapshot, 'node-1')).toBeNull();
+  });
+
+});
+
+describe('companionReadableArticle directory ordering and exits', () => {
   it('builds folder views in descending cross-device last opened time order', () => {
     const snapshot = createSnapshot();
     snapshot.nodeOpenStateById = {

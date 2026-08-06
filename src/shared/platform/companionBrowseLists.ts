@@ -127,7 +127,9 @@ function resolveCompanionDirectFolderView(
 ) {
   const childNodes = selectCanonicalVisibleNodeIds(snapshot)
     .map((childNodeId) => snapshot.nodesById[childNodeId])
-    .filter((childNode): childNode is CompanionReadableNode => Boolean(childNode && childNode.parentNodeId === folderNode.id));
+    .filter((childNode): childNode is CompanionReadableNode => Boolean(
+      childNode && childNode.parentNodeId === folderNode.id && !childNode.anchorLink
+    ));
   if (isTopicContainerNode(folderNode) && childNodes.length === 0) return null;
   return {
     items: sortCompanionBrowseNodes(snapshot, childNodes, sortKey, sortDirection).map(buildCompanionFolderListEntry),
@@ -196,7 +198,9 @@ export function resolveCompanionTrashFolderViewByNodeId(
   if (!isBrowseContainerNode(folderNode)) return null;
   const childNodes = selectCanonicalTrashedNodeIds(normalizedSnapshot)
     .map((childNodeId) => normalizedSnapshot.nodesById[childNodeId])
-    .filter((childNode): childNode is CompanionReadableNode => Boolean(childNode && childNode.parentNodeId === nodeId));
+    .filter((childNode): childNode is CompanionReadableNode => Boolean(
+      childNode && childNode.parentNodeId === nodeId && !childNode.anchorLink
+    ));
   if (folderNode.kind === 'topic' && childNodes.length === 0) return null;
   return {
     items: sortCompanionBrowseNodes(normalizedSnapshot, childNodes, sortKey, sortDirection).map(buildCompanionFolderListEntry),
