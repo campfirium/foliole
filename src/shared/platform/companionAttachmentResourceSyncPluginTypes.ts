@@ -14,4 +14,14 @@ export interface CompanionAttachmentResourceSyncPlugin {
     failed_attachment_ids?: string[];
     synced_attachment_ids: string[];
   }>;
+  finishAttachmentResourceBatch(args: { batch_token: string; committed: boolean }): Promise<Record<string, never>>;
+  stageAttachmentResourceBatch(args: { batch_token: string }): Promise<{
+    failed_attachment_ids: string[];
+    manifest: Array<{
+      attachment_id: string;
+      content_hash: string;
+      size_bytes: number;
+      storage_key: string;
+    }>;
+  }>;
 }

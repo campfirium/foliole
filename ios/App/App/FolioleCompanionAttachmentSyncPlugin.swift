@@ -2,6 +2,44 @@ import Capacitor
 import Foundation
 
 extension FolioleCompanionSyncPlugin {
+    @objc func stageAttachmentResourceBatch(_ call: CAPPluginCall) {
+        Task {
+            do {
+                let contract = try FolioleCompanionContractStore().attachmentResourceContract()
+                let token = try attachmentString(call, "batchToken", contract)
+                if let manifest = await attachmentResourceSessions.staged(token),
+                   let batch = await attachmentResourceSessions.load(token) {
+                    call.resolve([
+                        try attachmentValue("failedAttachmentIds", contract.batchResponseKeys): batch.failedIds,
+                        try attachmentValue("manifest", contract.batchResponseKeys): manifest
+                    ])
+                    return
+                }
+                guard let batch = await attachmentResourceSessions.load(token) else {
+                    throw attachmentError("Attachment resource batch token is unknown or expired.")
+                }
+                let result = try FolioleCompanionAttachmentFileStage.stage(batch, directoryName: contract.directoryName)
+                await attachmentResourceSessions.markStaged(token, result: result)
+                call.resolve([
+                    try attachmentValue("failedAttachmentIds", contract.batchResponseKeys): batch.failedIds,
+                    try attachmentValue("manifest", contract.batchResponseKeys): result.manifest
+                ])
+            } catch { call.reject("Failed to stage companion attachment resources: \(error.localizedDescription)") }
+        }
+    }
+
+    @objc func finishAttachmentResourceBatch(_ call: CAPPluginCall) {
+        Task {
+            do {
+                let contract = try FolioleCompanionContractStore().attachmentResourceContract()
+                let token = try attachmentString(call, "batchToken", contract)
+                let committedKey = try attachmentKey("committed", contract)
+                await attachmentResourceSessions.finish(token, committed: call.getBool(committedKey) ?? false)
+                call.resolve()
+            } catch { call.reject("Failed to finish companion attachment resources: \(error.localizedDescription)") }
+        }
+    }
+
     @objc func loadMissingAttachmentResources(_ call: CAPPluginCall) {
         do {
             let contract = try FolioleCompanionContractStore().attachmentResourceContract()

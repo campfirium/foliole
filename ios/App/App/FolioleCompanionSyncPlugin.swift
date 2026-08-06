@@ -13,6 +13,8 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "diagnoseSync", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "downloadAttachmentResourceBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "downloadContentBlobBatch", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "finishAttachmentResourceBatch", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "finishContentBlobBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadDiscoveryCandidates", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadExternalDirectory", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadExternalDocument", returnType: CAPPluginReturnPromise),
@@ -35,7 +37,8 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "searchExternalDocuments", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "searchTopics", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "searchPdfPageText", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "signCompanionSyncRequest", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "signCompanionSyncRequest", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "stageAttachmentResourceBatch", returnType: CAPPluginReturnPromise)
     ]
 
     private let discoveries = FolioleCompanionBonjourDiscoveryPool()
@@ -72,9 +75,10 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
                     contract: contract
                 )
                 let failed = requested.filter { hash in !parts.contains(where: { $0.hash == hash }) }
-                let token = await contentBlobSessions.create(parts: parts, failedHashes: failed)
+                let packURL = try FolioleCompanionContentBlobPack.create(parts: parts)
+                let token = await contentBlobSessions.create(packURL: packURL, failedHashes: failed)
                 call.resolve(try FolioleCompanionContentBlobBridgePayload.downloadResponse(
-                    token, parts: parts, failed: failed, started: started, contract: contract
+                    token, packURL: packURL, parts: parts, failed: failed, started: started, contract: contract
                 ))
             } catch { call.reject("Failed to download companion content blobs: \(error.localizedDescription)") }
         }
@@ -97,7 +101,10 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
                     url: FolioleCompanionDatabaseLocation.mainDatabase(),
                     contract: contract
                 )
-                let synced = try database.commit(parts: batch.parts, failedHashes: batch.failedHashes)
+                let synced = try database.commit(
+                    parts: FolioleCompanionContentBlobPack.read(batch.packURL),
+                    failedHashes: batch.failedHashes
+                )
                 await contentBlobSessions.markCommitted(token, hashes: synced)
                 call.resolve(try FolioleCompanionContentBlobBridgePayload.commitResponse(
                     synced,
@@ -105,6 +112,17 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
                     contract: contract
                 ))
             } catch { call.reject("Failed to commit companion content blobs: \(error.localizedDescription)") }
+        }
+    }
+
+    @objc func finishContentBlobBatch(_ call: CAPPluginCall) {
+        Task {
+            do {
+                let contract = try contentBlobContract()
+                let token = try requiredString(call, contract.requestKeys, "batchToken")
+                await contentBlobSessions.finish(token)
+                call.resolve()
+            } catch { call.reject("Failed to finish companion content blobs: \(error.localizedDescription)") }
         }
     }
 

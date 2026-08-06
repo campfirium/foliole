@@ -46,6 +46,16 @@ public class FolioleCompanionSyncPlugin extends FolioleCompanionDatabasePlugin {
     }
 
     @PluginMethod
+    public void stageAttachmentResourceBatch(PluginCall call) {
+        withCall(call, "Failed to stage companion attachment resources.", FolioleCompanionResourcePluginActions::stageAttachmentResourceBatch);
+    }
+
+    @PluginMethod
+    public void finishAttachmentResourceBatch(PluginCall call) {
+        withCall(call, "Failed to finish companion attachment resources.", FolioleCompanionResourcePluginActions::finishAttachmentResourceBatch);
+    }
+
+    @PluginMethod
     public void loadMissingAttachmentResources(PluginCall call) {
         withCall(call, "Failed to load missing companion attachment resources.", FolioleCompanionResourcePluginActions::loadMissingAttachmentResources);
     }
@@ -68,6 +78,11 @@ public class FolioleCompanionSyncPlugin extends FolioleCompanionDatabasePlugin {
     @PluginMethod
     public void commitContentBlobBatch(PluginCall call) {
         withCall(call, "Failed to commit companion content blobs.", FolioleCompanionResourcePluginActions::commitContentBlobBatch);
+    }
+
+    @PluginMethod
+    public void finishContentBlobBatch(PluginCall call) {
+        withCall(call, "Failed to finish companion content blobs.", FolioleCompanionResourcePluginActions::finishContentBlobBatch);
     }
 
     @PluginMethod

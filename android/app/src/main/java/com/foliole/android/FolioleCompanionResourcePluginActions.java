@@ -20,6 +20,20 @@ final class FolioleCompanionResourcePluginActions {
         );
     }
 
+    static JSObject stageAttachmentResourceBatch(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
+        return databaseHelper.stageAttachmentResourceBatch(
+            call.getString(FolioleCompanionBridgeContractDefinitions.resourceBatchTokenRequestKey(databaseHelper.hostContext()))
+        );
+    }
+
+    static JSObject finishAttachmentResourceBatch(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
+        android.content.Context context = databaseHelper.hostContext();
+        return databaseHelper.finishAttachmentResourceBatch(
+            call.getString(FolioleCompanionBridgeContractDefinitions.resourceBatchTokenRequestKey(context)),
+            call.getBoolean(FolioleCompanionBridgeContractDefinitions.resourceCommittedRequestKey(context), false)
+        );
+    }
+
     static JSObject loadMissingAttachmentResources(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         android.content.Context context = databaseHelper.hostContext();
         return databaseHelper.loadMissingAttachmentResources(
@@ -57,6 +71,12 @@ final class FolioleCompanionResourcePluginActions {
 
     static JSObject commitContentBlobBatch(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         return databaseHelper.commitContentBlobBatch(
+            call.getString(FolioleCompanionBridgeContractDefinitions.resourceBatchTokenRequestKey(databaseHelper.hostContext()))
+        );
+    }
+
+    static JSObject finishContentBlobBatch(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
+        return databaseHelper.finishContentBlobBatch(
             call.getString(FolioleCompanionBridgeContractDefinitions.resourceBatchTokenRequestKey(databaseHelper.hostContext()))
         );
     }

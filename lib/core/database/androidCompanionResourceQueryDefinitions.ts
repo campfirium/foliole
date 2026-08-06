@@ -55,6 +55,7 @@ export const ANDROID_COMPANION_RESOURCE_READ_RULES = {
     batchResponseKeys: {
       batchToken: 'batch_token',
       failedAttachmentIds: 'failed_attachment_ids',
+      manifest: 'manifest',
       syncedAttachmentIds: 'synced_attachment_ids'
     },
     resolveResponseKeys: {
@@ -92,6 +93,7 @@ export const ANDROID_COMPANION_RESOURCE_READ_RULES = {
       databaseElapsedMs: 'db_elapsed_ms',
       failedHashes: 'failed_hashes',
       httpElapsedMs: 'http_elapsed_ms',
+      packPath: 'pack_path',
       parseElapsedMs: 'parse_elapsed_ms',
       syncedHashes: 'synced_hashes',
       totalElapsedMs: 'total_elapsed_ms'

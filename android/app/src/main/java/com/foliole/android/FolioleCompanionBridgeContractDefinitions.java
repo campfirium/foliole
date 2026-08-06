@@ -232,6 +232,10 @@ final class FolioleCompanionBridgeContractDefinitions {
         return resourceRequestKey(context, "contentHash");
     }
 
+    static String resourceCommittedRequestKey(Context context) throws Exception {
+        return resourceRequestKey(context, "committed");
+    }
+
     static String resourceDocumentIdRequestKey(Context context) throws Exception {
         return resourceRequestKey(context, "documentId");
     }

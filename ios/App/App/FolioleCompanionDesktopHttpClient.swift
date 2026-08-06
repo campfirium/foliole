@@ -179,6 +179,7 @@ enum FolioleCompanionContentBlobBridgePayload {
 
     static func downloadResponse(
         _ token: String,
+        packURL: URL,
         parts: [FolioleCompanionContentBlobPart],
         failed: [String],
         started: Date,
@@ -189,6 +190,7 @@ enum FolioleCompanionContentBlobBridgePayload {
             try key("batchToken", keys): token,
             try key("failedHashes", keys): failed,
             try key("httpElapsedMs", keys): elapsedMs(since: started),
+            try key("packPath", keys): packURL.path,
             try key("parseElapsedMs", keys): 0,
             try key("syncedHashes", keys): parts.map(\.hash),
             try key("totalElapsedMs", keys): elapsedMs(since: started)
@@ -216,19 +218,24 @@ enum FolioleCompanionContentBlobBridgePayload {
 }
 
 actor FolioleCompanionContentBlobSessions {
-    struct Batch { let failedHashes: [String]; let parts: [FolioleCompanionContentBlobPart] }
+    struct Batch { let failedHashes: [String]; let packURL: URL }
     private var batches: [String: Batch] = [:]
     private var committedHashes: [String: [String]] = [:]
 
-    func create(parts: [FolioleCompanionContentBlobPart], failedHashes: [String]) -> String {
+    func create(packURL: URL, failedHashes: [String]) -> String {
         let token = UUID().uuidString
-        batches[token] = Batch(failedHashes: failedHashes, parts: parts)
+        batches[token] = Batch(failedHashes: failedHashes, packURL: packURL)
         return token
     }
     func load(_ token: String) -> Batch? { batches[token] }
     func committed(_ token: String) -> [String]? { committedHashes[token] }
     func markCommitted(_ token: String, hashes: [String]) {
         committedHashes[token] = hashes
+        if let batch = batches[token] { try? FileManager.default.removeItem(at: batch.packURL) }
+        batches[token] = nil
+    }
+    func finish(_ token: String) {
+        if let batch = batches[token] { try? FileManager.default.removeItem(at: batch.packURL) }
         batches[token] = nil
     }
 }

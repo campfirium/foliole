@@ -148,6 +148,15 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         return FolioleCompanionAttachmentResourceBatchStore.commitDownloadedResources(context, database, batchToken);
     }
 
+    JSObject stageAttachmentResourceBatch(String batchToken) throws Exception {
+        return FolioleCompanionAttachmentFileStage.stage(context, batchToken);
+    }
+
+    JSObject finishAttachmentResourceBatch(String batchToken, boolean committed) {
+        FolioleCompanionAttachmentFileStage.finish(batchToken, committed);
+        return new JSObject();
+    }
+
     JSObject loadMissingAttachmentResources(int limit) throws Exception {
         SQLiteDatabase database = getReadableDatabase();
         return FolioleCompanionAttachmentResourceStore.loadMissingResources(context, database, limit);
@@ -170,6 +179,11 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
     JSObject commitContentBlobBatch(String batchToken) throws Exception {
         SQLiteDatabase database = getWritableDatabase();
         return FolioleCompanionContentBlobBatchStore.commitDownloadedBlobs(context, database, batchToken);
+    }
+
+    JSObject finishContentBlobBatch(String batchToken) {
+        FolioleCompanionContentBlobBatchSessions.finish(batchToken);
+        return new JSObject();
     }
 
     JSObject resolveAttachmentResource(String attachmentId) throws Exception {

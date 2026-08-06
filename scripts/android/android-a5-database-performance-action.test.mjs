@@ -20,9 +20,10 @@ describe('fixed A5 database performance action', () => {
     const calls = [];
     const execute = async (command, args) => {
       calls.push([command, args]);
-      const isLifecycle = args.includes('com.foliole.android.FolioleCompanionDatabaseLifecyclePluginContractTest');
+      const isContract = args.includes('com.foliole.android.FolioleCompanionDatabaseLifecyclePluginContractTest')
+        || args.includes('com.foliole.android.FolioleCompanionBatchDataPlaneTest');
       const isInstrumentation = args.includes('instrument');
-      const output = isLifecycle ? 'OK (2 tests)\n' : isInstrumentation ? performanceOutput() : 'Success\n';
+      const output = isContract ? 'OK (2 tests)\n' : isInstrumentation ? performanceOutput() : 'Success\n';
       return { code: 0, output, stderr: '', stdout: '' };
     };
     const result = await runA5DatabasePerformance({
@@ -39,6 +40,9 @@ describe('fixed A5 database performance action', () => {
     );
     expect(instrumentation[1]).toContain(
       'com.foliole.android.FolioleCompanionDatabaseLifecyclePluginContractTest'
+    );
+    expect(instrumentation[2]).toContain(
+      'com.foliole.android.FolioleCompanionBatchDataPlaneTest'
     );
     expect(calls.at(-1)?.[1]).toEqual(['-s', 'fixed-a5', 'uninstall', 'com.foliole.android.test']);
   });

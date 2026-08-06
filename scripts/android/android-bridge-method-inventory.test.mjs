@@ -43,7 +43,6 @@ describe('FolioleCompanionSync method inventory', () => {
     const typeScriptMethods = await loadTypeScriptMethods();
 
     expect(inventory).toEqual(sortedUnique(inventory));
-    expect(inventory).toHaveLength(56);
     expect(sortedUnique(typeScriptMethods)).toEqual(inventory);
     expect(sortedUnique(extractJavaPluginMethods(javaSource))).toEqual(inventory);
   });

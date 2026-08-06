@@ -9,6 +9,7 @@ import com.getcapacitor.JSObject;
 import org.json.JSONObject;
 import org.json.JSONArray;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -129,9 +130,11 @@ final class FolioleCompanionContentBlobBatchStore {
         long parseElapsedMs,
         long totalElapsedMs
     ) throws Exception {
-        String token = FolioleCompanionContentBlobBatchSessions.create(blobs, failedHashes);
+        File pack = FolioleCompanionContentBlobPack.create(context, blobs);
+        String token = FolioleCompanionContentBlobBatchSessions.create(pack, failedHashes);
         JSObject result = new JSObject();
         result.put(batchResponseKey(context, "batchToken"), token);
+        result.put(batchResponseKey(context, "packPath"), pack.getAbsolutePath());
         result.put(batchResponseKey(context, "syncedHashes"), blobHashes(blobs));
         result.put(batchResponseKey(context, "failedHashes"), strings(failedHashes));
         result.put(batchResponseKey(context, "httpElapsedMs"), httpElapsedMs);

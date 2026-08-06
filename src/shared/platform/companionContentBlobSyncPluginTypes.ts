@@ -10,9 +10,11 @@ export interface CompanionContentBlobSyncPlugin {
   }): Promise<{
     batch_token: string;
     failed_hashes?: string[];
-    http_elapsed_ms?: number;
-    parse_elapsed_ms?: number;
+      http_elapsed_ms?: number;
+      pack_path?: string;
+      parse_elapsed_ms?: number;
     synced_hashes: string[];
     total_elapsed_ms?: number;
   }>;
+  finishContentBlobBatch(args: { batch_token: string; committed: boolean }): Promise<Record<string, never>>;
 }

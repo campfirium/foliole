@@ -35,6 +35,8 @@
 		50F023111FED79650016851F /* FolioleCompanionAttachmentResourceDownload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F023011FED79650016851F /* FolioleCompanionAttachmentResourceDownload.swift */; };
 		50F023121FED79650016851F /* FolioleCompanionAttachmentResourceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F023021FED79650016851F /* FolioleCompanionAttachmentResourceStore.swift */; };
 		50F023131FED79650016851F /* FolioleCompanionAttachmentSyncPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F023031FED79650016851F /* FolioleCompanionAttachmentSyncPlugin.swift */; };
+		50F023141FED79650016851F /* FolioleCompanionContentBlobPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F023041FED79650016851F /* FolioleCompanionContentBlobPack.swift */; };
+		50F023151FED79650016851F /* FolioleCompanionAttachmentFileStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F023051FED79650016851F /* FolioleCompanionAttachmentFileStage.swift */; };
 		50F024111FED79650016851F /* FolioleCompanionTopicSearchStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F024011FED79650016851F /* FolioleCompanionTopicSearchStore.swift */; };
 		50F024121FED79650016851F /* FolioleCompanionTopicSearchPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F024021FED79650016851F /* FolioleCompanionTopicSearchPlugin.swift */; };
 		50F025111FED79650016851F /* FolioleCompanionSyncDiagnosticQueryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F025011FED79650016851F /* FolioleCompanionSyncDiagnosticQueryStore.swift */; };
@@ -100,6 +102,8 @@
 		50F023011FED79650016851F /* FolioleCompanionAttachmentResourceDownload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionAttachmentResourceDownload.swift; sourceTree = "<group>"; };
 		50F023021FED79650016851F /* FolioleCompanionAttachmentResourceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionAttachmentResourceStore.swift; sourceTree = "<group>"; };
 		50F023031FED79650016851F /* FolioleCompanionAttachmentSyncPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionAttachmentSyncPlugin.swift; sourceTree = "<group>"; };
+		50F023041FED79650016851F /* FolioleCompanionContentBlobPack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionContentBlobPack.swift; sourceTree = "<group>"; };
+		50F023051FED79650016851F /* FolioleCompanionAttachmentFileStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionAttachmentFileStage.swift; sourceTree = "<group>"; };
 		50F024011FED79650016851F /* FolioleCompanionTopicSearchStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionTopicSearchStore.swift; sourceTree = "<group>"; };
 		50F024021FED79650016851F /* FolioleCompanionTopicSearchPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionTopicSearchPlugin.swift; sourceTree = "<group>"; };
 		50F025011FED79650016851F /* FolioleCompanionSyncDiagnosticQueryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncDiagnosticQueryStore.swift; sourceTree = "<group>"; };
@@ -192,6 +196,8 @@
 				50F023011FED79650016851F /* FolioleCompanionAttachmentResourceDownload.swift */,
 				50F023021FED79650016851F /* FolioleCompanionAttachmentResourceStore.swift */,
 				50F023031FED79650016851F /* FolioleCompanionAttachmentSyncPlugin.swift */,
+				50F023041FED79650016851F /* FolioleCompanionContentBlobPack.swift */,
+				50F023051FED79650016851F /* FolioleCompanionAttachmentFileStage.swift */,
 				50F024011FED79650016851F /* FolioleCompanionTopicSearchStore.swift */,
 				50F024021FED79650016851F /* FolioleCompanionTopicSearchPlugin.swift */,
 				50F025011FED79650016851F /* FolioleCompanionSyncDiagnosticQueryStore.swift */,
@@ -341,6 +347,8 @@
 				50F023111FED79650016851F /* FolioleCompanionAttachmentResourceDownload.swift in Sources */,
 				50F023121FED79650016851F /* FolioleCompanionAttachmentResourceStore.swift in Sources */,
 				50F023131FED79650016851F /* FolioleCompanionAttachmentSyncPlugin.swift in Sources */,
+				50F023141FED79650016851F /* FolioleCompanionContentBlobPack.swift in Sources */,
+				50F023151FED79650016851F /* FolioleCompanionAttachmentFileStage.swift in Sources */,
 				50F024111FED79650016851F /* FolioleCompanionTopicSearchStore.swift in Sources */,
 				50F024121FED79650016851F /* FolioleCompanionTopicSearchPlugin.swift in Sources */,
 				50F025111FED79650016851F /* FolioleCompanionSyncDiagnosticQueryStore.swift in Sources */,

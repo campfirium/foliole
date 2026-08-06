@@ -8,6 +8,8 @@
       "diagnoseSync",
       "downloadAttachmentResourceBatch",
       "downloadContentBlobBatch",
+      "finishAttachmentResourceBatch",
+      "finishContentBlobBatch",
       "loadDiscoveryCandidates",
       "loadExternalDirectory",
       "loadExternalDocument",
@@ -56,7 +58,8 @@
       "searchExternalDocuments",
       "searchPdfPageText",
       "searchTopics",
-      "signCompanionSyncRequest"
+      "signCompanionSyncRequest",
+      "stageAttachmentResourceBatch"
     ]
   },
   "hostApi": {
@@ -64,6 +67,7 @@
       "batchResponseKeys": {
         "batchToken": "batch_token",
         "failedAttachmentIds": "failed_attachment_ids",
+        "manifest": "manifest",
         "syncedAttachmentIds": "synced_attachment_ids"
       },
       "defaultLimit": 50,
@@ -77,6 +81,7 @@
       "requestKeys": {
         "attachmentId": "attachment_id",
         "batchToken": "batch_token",
+        "committed": "committed",
         "contentHash": "content_hash",
         "headers": "headers",
         "limit": "limit",
@@ -137,6 +142,7 @@
         "databaseElapsedMs": "db_elapsed_ms",
         "failedHashes": "failed_hashes",
         "httpElapsedMs": "http_elapsed_ms",
+        "packPath": "pack_path",
         "parseElapsedMs": "parse_elapsed_ms",
         "syncedHashes": "synced_hashes",
         "totalElapsedMs": "total_elapsed_ms"
@@ -378,6 +384,7 @@
       "batchToken": "batch_token",
       "body": "body",
       "contentHash": "content_hash",
+      "committed": "committed",
       "documentId": "document_id",
       "hash": "hash",
       "headers": "headers",

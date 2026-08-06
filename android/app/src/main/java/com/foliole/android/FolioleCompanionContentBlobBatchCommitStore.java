@@ -23,7 +23,9 @@ final class FolioleCompanionContentBlobBatchCommitStore {
         if (session.committed()) {
             return commitResponse(context, strings(session.committedHashes()), 0L);
         }
-        WriteResult result = storeDownloadedBlobs(context, database, session.blobs, session.failedHashes);
+        WriteResult result = storeDownloadedBlobs(
+            context, database, FolioleCompanionContentBlobPack.read(session.pack), session.failedHashes
+        );
         FolioleCompanionContentBlobBatchSessions.markCommitted(batchToken, jsArrayStrings(result.syncedHashes));
         return commitResponse(context, result.syncedHashes, elapsedMs(startedAt));
     }

@@ -11,6 +11,7 @@ const TEST_APP_ID = `${APP_ID}.test`;
 const RUNNER = `${TEST_APP_ID}/androidx.test.runner.AndroidJUnitRunner`;
 const TEST_CLASS = `${APP_ID}.FolioleCompanionDatabasePerformanceGateTest`;
 const LIFECYCLE_TEST_CLASS = `${APP_ID}.FolioleCompanionDatabaseLifecyclePluginContractTest`;
+const BATCH_DATA_PLANE_TEST_CLASS = `${APP_ID}.FolioleCompanionBatchDataPlaneTest`;
 
 export async function runA5DatabasePerformance({ env, evidenceRoot, execute, paths, serial }) {
   fs.mkdirSync(evidenceRoot, { recursive: true });
@@ -33,6 +34,12 @@ export async function runA5DatabasePerformance({ env, evidenceRoot, execute, pat
     ], options);
     assertInstrumentationPassed(lifecycle.output, LIFECYCLE_TEST_CLASS);
     output.push(lifecycle.output);
+    const batchDataPlane = await checked(execute, paths.adb, [
+      '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',
+      '-e', 'class', BATCH_DATA_PLANE_TEST_CLASS, RUNNER
+    ], options);
+    assertInstrumentationPassed(batchDataPlane.output, BATCH_DATA_PLANE_TEST_CLASS);
+    output.push(batchDataPlane.output);
     const rawOutputPath = path.join(evidenceRoot, 'android-performance.log');
     fs.writeFileSync(rawOutputPath, result.output);
     const measurements = parseCompanionDatabasePerformanceOutput(result.output);

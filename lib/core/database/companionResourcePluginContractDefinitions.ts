@@ -10,6 +10,7 @@ export const COMPANION_RESOURCE_PLUGIN_REQUEST_KEYS = {
   batchToken: 'batch_token',
   body: 'body',
   contentHash: 'content_hash',
+  committed: 'committed',
   documentId: 'document_id',
   hash: 'hash',
   headers: 'headers',

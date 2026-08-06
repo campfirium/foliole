@@ -20,6 +20,8 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
       'diagnoseSync',
       'downloadAttachmentResourceBatch',
       'downloadContentBlobBatch',
+      'finishAttachmentResourceBatch',
+      'finishContentBlobBatch',
       'loadDiscoveryCandidates',
       'loadExternalDirectory',
       'loadExternalDocument',
@@ -68,7 +70,8 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
       'searchExternalDocuments',
       'searchPdfPageText',
       'searchTopics',
-      'signCompanionSyncRequest'
+      'signCompanionSyncRequest',
+      'stageAttachmentResourceBatch'
     ]
   },
   hostApi: {

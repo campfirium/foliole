@@ -5,6 +5,16 @@ import XCTest
 @testable import FolioleSyncPackValidator
 
 final class FolioleContentBlobSyncTests: XCTestCase {
+    func testStagesValidatedBodiesInTemporarySQLitePack() throws {
+        let body = Data("pack body".utf8)
+        let hash = digest(body)
+        let url = try FolioleCompanionContentBlobPack.create(parts: [.init(data: body, hash: hash)])
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        XCTAssertTrue(url.path.hasPrefix(FileManager.default.temporaryDirectory.path))
+        XCTAssertEqual(try FolioleCompanionContentBlobPack.read(url).map(\.hash), [hash])
+    }
+
     func testParsesMultipartAndAtomicallyCommitsValidatedBody() throws {
         let body = Data("hello iPhone".utf8)
         let hash = digest(body)

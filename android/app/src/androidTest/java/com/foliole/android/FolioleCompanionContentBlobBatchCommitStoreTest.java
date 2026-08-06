@@ -72,7 +72,7 @@ public class FolioleCompanionContentBlobBatchCommitStoreTest {
         String hash = sha256(body);
         insertMissingBlob(hash, body.length());
         String token = FolioleCompanionContentBlobBatchSessions.create(
-            Arrays.asList(blob(hash, body)),
+            FolioleCompanionContentBlobPack.create(context, Arrays.asList(blob(hash, body))),
             new ArrayList<>()
         );
 
