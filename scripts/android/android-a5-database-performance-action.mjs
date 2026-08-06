@@ -10,6 +10,7 @@ const APP_ID = 'com.foliole.android';
 const TEST_APP_ID = `${APP_ID}.test`;
 const RUNNER = `${TEST_APP_ID}/androidx.test.runner.AndroidJUnitRunner`;
 const TEST_CLASS = `${APP_ID}.FolioleCompanionDatabasePerformanceGateTest`;
+const LIFECYCLE_TEST_CLASS = `${APP_ID}.FolioleCompanionDatabaseLifecyclePluginContractTest`;
 
 export async function runA5DatabasePerformance({ env, evidenceRoot, execute, paths, serial }) {
   fs.mkdirSync(evidenceRoot, { recursive: true });
@@ -26,6 +27,12 @@ export async function runA5DatabasePerformance({ env, evidenceRoot, execute, pat
       '-e', 'class', TEST_CLASS, RUNNER
     ], options);
     output.push(result.output);
+    const lifecycle = await checked(execute, paths.adb, [
+      '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',
+      '-e', 'class', LIFECYCLE_TEST_CLASS, RUNNER
+    ], options);
+    assertInstrumentationPassed(lifecycle.output, LIFECYCLE_TEST_CLASS);
+    output.push(lifecycle.output);
     const rawOutputPath = path.join(evidenceRoot, 'android-performance.log');
     fs.writeFileSync(rawOutputPath, result.output);
     const measurements = parseCompanionDatabasePerformanceOutput(result.output);
@@ -37,6 +44,12 @@ export async function runA5DatabasePerformance({ env, evidenceRoot, execute, pat
     return { evidencePath, output: output.join('') };
   } finally {
     if (testInstalled) output.push((await checked(execute, paths.adb, ['-s', serial, 'uninstall', TEST_APP_ID], options)).output);
+  }
+}
+
+function assertInstrumentationPassed(output, testClass) {
+  if (/FAILURES!!!|INSTRUMENTATION_FAILED|shortMsg=/u.test(output) || !/OK \(2 tests\)/u.test(output)) {
+    throw new Error(`Android lifecycle plugin contract failed: ${testClass}`);
   }
 }
 

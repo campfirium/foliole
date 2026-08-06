@@ -1,97 +1,29 @@
-import { CapacitorSQLite, SQLiteConnection, type SQLiteDBConnection } from '@capacitor-community/sqlite';
+import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
 
-import { COMPANION_CURRENT_SCHEMA_REPAIRS } from '../../../../../lib/core/database/companionCurrentSchemaRepairs';
-import { COMPANION_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/companionSchemaStatements';
+import type { NativeCompanionBootstrapState } from '../../../../../lib/platform/nativeCompanionContract';
+
 import {
-  COMPANION_DATABASE_NAME,
-  COMPANION_DATABASE_VERSION,
-  type NativeCompanionBootstrapState
-} from '../../../../../lib/platform/nativeCompanionContract';
+  CapacitorCompanionDatabaseOwner,
+  type CapacitorCompanionDatabaseManager
+} from './capacitorCompanionDatabaseOwner';
 
-const DEVICE_ID_KEY = 'device_id';
-const COLUMN_EXISTS_SQL = 'SELECT name FROM pragma_table_info(?) WHERE name = ? LIMIT 1';
-const BUSY_TIMEOUT_SQL = 'PRAGMA busy_timeout = 5000';
-
-export interface IosCompanionDatabaseManager {
-  createConnection(
-    database: string,
-    encrypted: boolean,
-    mode: string,
-    version: number,
-    readonly: boolean
-  ): Promise<SQLiteDBConnection>;
-  isConnection(database: string, readonly: boolean): Promise<{ result?: boolean }>;
-  retrieveConnection(database: string, readonly: boolean): Promise<SQLiteDBConnection>;
-}
+export type IosCompanionDatabaseManager = CapacitorCompanionDatabaseManager;
 
 export interface IosCompanionDatabaseBootstrapOptions {
   afterRepair?: (index: number) => void | Promise<void>;
 }
 
-async function openDatabase(manager: IosCompanionDatabaseManager) {
-  const existing = await manager.isConnection(COMPANION_DATABASE_NAME, false);
-  const connection = existing.result
-    ? await manager.retrieveConnection(COMPANION_DATABASE_NAME, false)
-    : await manager.createConnection(
-      COMPANION_DATABASE_NAME,
-      false,
-      'no-encryption',
-      COMPANION_DATABASE_VERSION,
-      false
-    );
-  if (!(await connection.isDBOpen()).result) await connection.open();
-  return connection;
+let activeOwner: CapacitorCompanionDatabaseOwner | null = null;
+
+export function getIosCompanionDatabaseOwner() {
+  if (!activeOwner) throw new Error('iOS companion database owner is not ready.');
+  return activeOwner;
 }
 
-async function loadOrCreateDeviceId(connection: SQLiteDBConnection, proposedId: string, now: string) {
-  const result = await connection.query(
-    'SELECT value FROM companion_meta WHERE key = ? LIMIT 1',
-    [DEVICE_ID_KEY]
-  );
-  const storedId = result.values?.[0]?.value;
-  if (typeof storedId === 'string' && storedId.trim()) return storedId;
-  await connection.run(
-    'INSERT INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)',
-    [DEVICE_ID_KEY, proposedId, now]
-  );
-  return proposedId;
-}
-
-async function loadMissingRepairStatements(connection: SQLiteDBConnection) {
-  const statements: string[] = [];
-  for (const repair of COMPANION_CURRENT_SCHEMA_REPAIRS) {
-    const result = await connection.query(COLUMN_EXISTS_SQL, [repair.tableName, repair.columnName]);
-    if (!result.values?.length) statements.push(repair.statement);
-  }
-  return statements;
-}
-
-async function repairAndVersionDatabase(
-  connection: SQLiteDBConnection,
-  options: IosCompanionDatabaseBootstrapOptions
-) {
-  await connection.beginTransaction();
-  try {
-    const repairs = await loadMissingRepairStatements(connection);
-    for (const [index, repair] of repairs.entries()) {
-      await connection.execute(repair, false);
-      await options.afterRepair?.(index);
-    }
-    await connection.execute(`PRAGMA user_version = ${COMPANION_DATABASE_VERSION}`, false);
-    await connection.commitTransaction();
-  } catch (error) {
-    await connection.rollbackTransaction();
-    throw error;
-  }
-}
-
-function normalizeDatabasePath(value: string) {
-  if (!value.startsWith('file:')) return value;
-  try {
-    return decodeURIComponent(new URL(value).pathname);
-  } catch {
-    throw new Error('iOS companion database returned an invalid file URL.');
-  }
+export async function closeIosCompanionDatabase() {
+  const owner = activeOwner;
+  activeOwner = null;
+  await owner?.close();
 }
 
 export async function initializeIosCompanionDatabase(
@@ -99,17 +31,18 @@ export async function initializeIosCompanionDatabase(
   manager: IosCompanionDatabaseManager = new SQLiteConnection(CapacitorSQLite),
   options: IosCompanionDatabaseBootstrapOptions = {}
 ): Promise<NativeCompanionBootstrapState> {
-  const connection = await openDatabase(manager);
-  await connection.execute(BUSY_TIMEOUT_SQL, false);
-  await connection.execute(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
-  await repairAndVersionDatabase(connection, options);
-  const deviceId = await loadOrCreateDeviceId(connection, nativeState.device_id, nativeState.booted_at);
-  const databaseUrl = (await connection.getUrl()).url;
-  if (!databaseUrl) throw new Error('iOS companion database did not return a path.');
+  const owner = new CapacitorCompanionDatabaseOwner(manager, 'ios');
+  const result = await owner.open({
+    allowCreate: true,
+    expectedDeviceId: nativeState.device_id,
+    now: nativeState.booted_at,
+    ...(options.afterRepair ? { beforeVersionCommit: () => options.afterRepair?.(0) } : {})
+  });
+  activeOwner = owner;
   return {
     ...nativeState,
-    database_path: normalizeDatabasePath(databaseUrl),
+    database_path: result.databasePath,
     database_ready: true,
-    device_id: deviceId
+    device_id: result.deviceId
   };
 }

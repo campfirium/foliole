@@ -1,5 +1,6 @@
 const SCENARIO = 'database-upgrade-runtime';
 const PROVENANCE_COLUMNS = ['import_content_fingerprint', 'import_source_fingerprint'];
+const CURRENT_VERSION = 22;
 
 export function parseUpgradeSnapshot(output) {
   const [row] = JSON.parse(output || '[]');
@@ -24,6 +25,8 @@ export function parseUpgradeSnapshot(output) {
     review_log_op_id: row?.review_log_op_id ?? null,
     setting_count: number(row?.setting_count),
     setting_value: row?.setting_value ?? null,
+    state_sequence_column: number(row?.state_sequence_column),
+    sync_state_count: number(row?.sync_state_count),
     user_version: number(row?.user_version),
     view_count: number(row?.view_count),
     view_scroll_top: number(row?.view_scroll_top),
@@ -46,8 +49,8 @@ export function verifyIosDatabaseUpgradeAcceptance(stages, verifyBridgeResult) {
       !String(stages.failed?.error ?? '').includes('Injected iOS database upgrade acceptance fault')) {
     throw new Error('iOS database upgrade failure evidence is incomplete.');
   }
-  const current = expectedSnapshot(20, PROVENANCE_COLUMNS, 1);
-  const legacy = expectedSnapshot(19, PROVENANCE_COLUMNS, 0);
+  const current = expectedSnapshot(CURRENT_VERSION, PROVENANCE_COLUMNS, 1, 1);
+  const legacy = expectedSnapshot(4, PROVENANCE_COLUMNS, 0, 0);
   if (![stages.firstSnapshot, stages.secondSnapshot, stages.recoveredSnapshot]
     .every((snapshot) => equal(snapshot, current)) || !equal(stages.failedSnapshot, legacy)) {
     throw new Error('iOS database upgrade SQLite evidence is incomplete.');
@@ -55,11 +58,11 @@ export function verifyIosDatabaseUpgradeAcceptance(stages, verifyBridgeResult) {
   return stages;
 }
 
-export function expectedUpgradeSnapshot(userVersion, provenanceColumns, openStateTableExists = 1) {
-  return expectedSnapshot(userVersion, provenanceColumns, openStateTableExists);
+export function expectedUpgradeSnapshot(userVersion, provenanceColumns, openStateTableExists = 1, stateSequenceColumn = 1) {
+  return expectedSnapshot(userVersion, provenanceColumns, openStateTableExists, stateSequenceColumn);
 }
 
-function expectedSnapshot(userVersion, provenanceColumns, openStateTableExists) {
+function expectedSnapshot(userVersion, provenanceColumns, openStateTableExists, stateSequenceColumn) {
   return {
     attachment_count: 1, attachment_mime_type: 'image/png', attachment_name: 'sample.png',
     attachment_role: 'inline', blob_availability: 'cached', blob_content_hash: 'resource-hash',
@@ -68,6 +71,7 @@ function expectedSnapshot(userVersion, provenanceColumns, openStateTableExists) 
     node_review_due: '2026-07-21T00:00:00.000Z', node_title: 'Upgrade',
     provenance_columns: [...provenanceColumns].sort(), resource_count: 1, review_log_count: 1,
     review_log_grade: 3, review_log_op_id: 'op-1', setting_count: 1, setting_value: '"dark"',
+    state_sequence_column: stateSequenceColumn, sync_state_count: 2,
     user_version: userVersion, view_count: 1, view_scroll_top: 42, view_source: 'user-scroll'
   };
 }
@@ -96,6 +100,8 @@ const SNAPSHOT_SQL = `SELECT
   (SELECT op_id FROM review_log WHERE id='review-1') review_log_op_id,
   (SELECT count(*) FROM setting_records) setting_count,
   (SELECT value_json FROM setting_records WHERE key='theme') setting_value,
+  (SELECT count(*) FROM pragma_table_info('sync_object_state') WHERE name='state_seq') state_sequence_column,
+  (SELECT count(*) FROM sync_object_state) sync_state_count,
   (SELECT user_version FROM pragma_user_version) user_version,
   (SELECT count(*) FROM node_view_state) view_count,
   (SELECT scroll_top FROM node_view_state WHERE node_id='upgrade-node') view_scroll_top,

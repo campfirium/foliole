@@ -20,8 +20,9 @@ export function createIosDatabaseUpgradeFixture(databasePath: string) {
   try {
     sqlite.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
     sqlite.exec('DROP TABLE node_open_state');
+    installLegacySyncObjectState(sqlite);
     seedPermanentState(sqlite);
-    sqlite.pragma(`user_version = ${COMPANION_DATABASE_VERSION - 1}`);
+    sqlite.pragma('user_version = 4');
     return readIosDatabaseUpgradeSnapshot(sqlite);
   } finally {
     sqlite.close();
@@ -29,6 +30,11 @@ export function createIosDatabaseUpgradeFixture(databasePath: string) {
 }
 
 export function assertLatestUpgradeFixtureProvenance() {
+  const commandStep = ANDROID_COMPANION_MIGRATION_PLAN.find((step) => step.beforeVersion === 5);
+  if (!commandStep?.actions.some((action) =>
+    action.type === ANDROID_COMPANION_MIGRATION_ACTION_TYPES.migrateSyncObjectStateSequence)) {
+    throw new Error('The upgrade fixture no longer reaches the command migration contract.');
+  }
   const latest = ANDROID_COMPANION_MIGRATION_PLAN.at(-1);
   const actionTypes = latest?.actions.map((action) => action.type);
   const expected = [
@@ -68,11 +74,29 @@ export function readIosDatabaseUpgradeSnapshot(sqlite: import('better-sqlite3').
     review_log_op_id: scalar(sqlite, "SELECT op_id FROM review_log WHERE id = 'review-1'"),
     setting_count: count(sqlite, 'setting_records'),
     setting_value: scalar(sqlite, "SELECT value_json FROM setting_records WHERE key = 'theme'"),
+    state_sequence_column: Number(Boolean(sqlite.prepare(
+      "SELECT 1 FROM pragma_table_info('sync_object_state') WHERE name = 'state_seq'"
+    ).get())),
+    sync_state_count: count(sqlite, 'sync_object_state'),
     user_version: Number(sqlite.pragma('user_version', { simple: true })),
     view_count: count(sqlite, 'node_view_state'),
     view_scroll_top: scalar(sqlite, "SELECT scroll_top FROM node_view_state WHERE node_id = 'upgrade-node'"),
     view_source: scalar(sqlite, "SELECT source FROM node_view_state WHERE node_id = 'upgrade-node'")
   };
+}
+
+function installLegacySyncObjectState(sqlite: import('better-sqlite3').Database) {
+  sqlite.exec(`DROP TABLE sync_object_state;
+    CREATE TABLE sync_object_state (
+      object_type TEXT NOT NULL, object_id TEXT NOT NULL, current_version_id TEXT,
+      content_hash TEXT NOT NULL, last_modified_by_device_id TEXT NOT NULL,
+      updated_at TEXT NOT NULL, deleted_at TEXT, sync_dirty INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (object_type, object_id)
+    );
+    INSERT INTO sync_object_state VALUES ('node', 'node-b', NULL, 'hash-b', 'ios-upgrade-device',
+      '2026-07-21T02:00:00.000Z', NULL, 0);
+    INSERT INTO sync_object_state VALUES ('node', 'node-a', NULL, 'hash-a', 'ios-upgrade-device',
+      '2026-07-21T01:00:00.000Z', NULL, 1);`);
 }
 
 function seedPermanentState(sqlite: import('better-sqlite3').Database) {

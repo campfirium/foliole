@@ -1,0 +1,124 @@
+import { COMPANION_DATABASE_VERSION } from '../../platform/nativeCompanionContract.js';
+import type { DbPort, DbRow } from '../sync/dbPort.js';
+
+import { createCompanionDatabase, migrateCompanionDatabase } from './companionDatabaseMigrationExecutor.js';
+
+export type CompanionJournalMode = 'delete' | 'wal';
+
+export interface CompanionDatabaseBootstrapRequest {
+  allowCreate: boolean;
+  beforeVersionCommit?: () => void | Promise<void>;
+  expectedDeviceId?: string;
+  expectedJournalMode?: CompanionJournalMode;
+  now: string;
+}
+
+export interface CompanionDatabaseBootstrapResult {
+  created: boolean;
+  deviceId: string;
+  journalMode: CompanionJournalMode;
+  version: number;
+}
+
+export class CompanionDatabaseBlockedError extends Error {
+  constructor(readonly reason: string) {
+    super(`Companion database blocked: ${reason}`);
+    this.name = 'CompanionDatabaseBlockedError';
+  }
+}
+
+export async function bootstrapCompanionDatabase(
+  db: DbPort,
+  request: CompanionDatabaseBootstrapRequest
+): Promise<CompanionDatabaseBootstrapResult> {
+  await assertIntegrity(db);
+  const openedJournalMode = await readJournalMode(db);
+  const version = await readUserVersion(db);
+  const hasSchema = await hasCompanionSchema(db);
+  if (!hasSchema && !request.allowCreate) throw new CompanionDatabaseBlockedError('missing');
+  if (version > COMPANION_DATABASE_VERSION) throw new CompanionDatabaseBlockedError('newer-version');
+  const existingDeviceId = hasSchema ? await requireExistingDeviceIdentity(db, request.expectedDeviceId) : null;
+  if (!hasSchema && !request.expectedDeviceId) throw new CompanionDatabaseBlockedError('identity-missing');
+  const journalMode = await restoreExpectedJournalMode(db, openedJournalMode, request.expectedJournalMode);
+  await db.transaction(async (tx) => {
+    if (!hasSchema) {
+      await createCompanionDatabase(tx, COMPANION_DATABASE_VERSION, request.beforeVersionCommit);
+      await tx.run('INSERT INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)', [
+        'device_id', request.expectedDeviceId!, request.now
+      ]);
+    }
+    else await migrateCompanionDatabase(tx, version, COMPANION_DATABASE_VERSION, request.beforeVersionCommit);
+  });
+  const deviceId = existingDeviceId ?? request.expectedDeviceId!;
+  return { created: !hasSchema, deviceId, journalMode, version: COMPANION_DATABASE_VERSION };
+}
+
+export async function checkpointCompanionDatabase(db: DbPort, journalMode: CompanionJournalMode) {
+  if (journalMode !== 'wal') return;
+  const rows = await db.query<DbRow>('PRAGMA wal_checkpoint(FULL)');
+  const busy = Number(Object.values(rows[0] ?? {})[0] ?? 0);
+  if (busy !== 0) throw new CompanionDatabaseBlockedError('wal-checkpoint-busy');
+}
+
+async function assertIntegrity(db: DbPort) {
+  let rows: DbRow[];
+  try {
+    rows = await db.query('PRAGMA quick_check');
+  } catch (error) {
+    throw new CompanionDatabaseBlockedError(`unreadable:${message(error)}`);
+  }
+  const result = String(Object.values(rows[0] ?? {})[0] ?? '').toLowerCase();
+  if (result !== 'ok') throw new CompanionDatabaseBlockedError('integrity');
+}
+
+async function readJournalMode(db: DbPort): Promise<CompanionJournalMode> {
+  const rows = await db.query('PRAGMA journal_mode');
+  const mode = String(Object.values(rows[0] ?? {})[0] ?? '').toLowerCase();
+  if (mode === 'delete' || mode === 'wal') return mode;
+  throw new CompanionDatabaseBlockedError(`journal:${mode || 'unknown'}`);
+}
+
+async function restoreExpectedJournalMode(
+  db: DbPort,
+  opened: CompanionJournalMode,
+  expected?: CompanionJournalMode
+): Promise<CompanionJournalMode> {
+  if (!expected || expected === opened) return opened;
+  if (expected !== 'wal' || opened !== 'delete') {
+    throw new CompanionDatabaseBlockedError(`journal-mismatch:${expected}:${opened}`);
+  }
+  const rows = await db.query('PRAGMA journal_mode = WAL');
+  const restored = String(Object.values(rows[0] ?? {})[0] ?? '').toLowerCase();
+  if (restored !== 'wal') throw new CompanionDatabaseBlockedError('journal-restore-failed');
+  return 'wal';
+}
+
+async function readUserVersion(db: DbPort) {
+  const rows = await db.query('PRAGMA user_version');
+  const value = Number(Object.values(rows[0] ?? {})[0] ?? Number.NaN);
+  if (!Number.isSafeInteger(value) || value < 0) throw new CompanionDatabaseBlockedError('invalid-version');
+  return value;
+}
+
+async function hasCompanionSchema(db: DbPort) {
+  const rows = await db.query(
+    "SELECT 1 AS present FROM sqlite_master WHERE type = 'table' AND name = 'companion_meta' LIMIT 1"
+  );
+  return rows.length > 0;
+}
+
+async function requireExistingDeviceIdentity(db: DbPort, expectedDeviceId?: string) {
+  const rows = await db.query<{ value: string }>(
+    "SELECT value FROM companion_meta WHERE key = 'device_id' LIMIT 1"
+  );
+  const stored = typeof rows[0]?.value === 'string' ? rows[0].value.trim() : '';
+  if (stored && expectedDeviceId && stored !== expectedDeviceId) {
+    throw new CompanionDatabaseBlockedError('identity-mismatch');
+  }
+  if (stored) return stored;
+  throw new CompanionDatabaseBlockedError('identity-missing');
+}
+
+function message(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}

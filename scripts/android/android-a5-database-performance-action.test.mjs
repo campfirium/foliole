@@ -14,14 +14,16 @@ afterEach(() => {
 });
 
 describe('fixed A5 database performance action', () => {
-  it('runs only the fixed instrumentation class and persists passing evidence', async () => {
+  it('runs the fixed performance and lifecycle contracts and persists passing evidence', async () => {
     const evidenceRoot = fs.mkdtempSync(path.join(process.cwd(), '.tmp/artifacts/a5-performance-test-'));
     created.push(evidenceRoot);
     const calls = [];
     const execute = async (command, args) => {
       calls.push([command, args]);
+      const isLifecycle = args.includes('com.foliole.android.FolioleCompanionDatabaseLifecyclePluginContractTest');
       const isInstrumentation = args.includes('instrument');
-      return { code: 0, output: isInstrumentation ? performanceOutput() : 'Success\n', stderr: '', stdout: '' };
+      const output = isLifecycle ? 'OK (2 tests)\n' : isInstrumentation ? performanceOutput() : 'Success\n';
+      return { code: 0, output, stderr: '', stdout: '' };
     };
     const result = await runA5DatabasePerformance({
       env: {}, evidenceRoot, execute,
@@ -31,8 +33,12 @@ describe('fixed A5 database performance action', () => {
     const evidence = JSON.parse(fs.readFileSync(result.evidencePath, 'utf8'));
     expect(evidence.gate).toEqual({ failures: [], passed: true });
     expect(evidence.measurements).toHaveLength(5);
-    expect(calls.find(([, args]) => args.includes('instrument'))?.[1]).toContain(
+    const instrumentation = calls.filter(([, args]) => args.includes('instrument')).map(([, args]) => args);
+    expect(instrumentation[0]).toContain(
       'com.foliole.android.FolioleCompanionDatabasePerformanceGateTest'
+    );
+    expect(instrumentation[1]).toContain(
+      'com.foliole.android.FolioleCompanionDatabaseLifecyclePluginContractTest'
     );
     expect(calls.at(-1)?.[1]).toEqual(['-s', 'fixed-a5', 'uninstall', 'com.foliole.android.test']);
   });

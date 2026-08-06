@@ -32,7 +32,9 @@ it('derives the previous-version upgrade fixture from the latest formal migratio
       review_log_op_id: 'op-1',
       setting_count: 1,
       setting_value: '"dark"',
-      user_version: 21,
+      state_sequence_column: 0,
+      sync_state_count: 2,
+      user_version: 4,
       view_count: 1,
       view_scroll_top: 42,
       view_source: 'user-scroll'

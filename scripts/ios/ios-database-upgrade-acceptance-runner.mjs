@@ -49,6 +49,7 @@ export async function runIosDatabaseUpgradeAcceptance(
     prepareBuild(options, simulator.udid, false);
     bootSimulator(options.repoRoot, simulator);
     installApp(options, simulator.udid, true);
+    seedAcceptanceDeviceIdentity(options, simulator.udid);
     const containerPath = resolveContainer(options, simulator.udid);
     let databasePath = path.join(containerPath, DATABASE_RELATIVE_PATH);
     let resultPath = path.join(containerPath, RESULT_RELATIVE_PATH);
@@ -137,6 +138,13 @@ function installApp(options, udid, fresh) {
   const app = path.join(options.derivedData, 'Build/Products/Debug-iphonesimulator/App.app');
   run(options.repoRoot, 'codesign', ['--verify', '--deep', '--strict', app]);
   run(options.repoRoot, 'xcrun', ['simctl', 'install', udid, app]);
+}
+
+function seedAcceptanceDeviceIdentity(options, udid) {
+  run(options.repoRoot, 'xcrun', [
+    'simctl', 'spawn', udid, 'defaults', 'write', options.bundleId,
+    'foliole-companion-ios-device-id', 'ios-upgrade-device'
+  ]);
 }
 
 function replaceWithV18Fixture(options, databasePath) {

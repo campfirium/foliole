@@ -11,8 +11,8 @@ import {
   verifyIosDatabaseUpgradeAcceptance
 } from './ios-database-upgrade-acceptance-snapshot.mjs';
 
-const current = expectedUpgradeSnapshot(20, ['import_content_fingerprint', 'import_source_fingerprint'], 1);
-const legacy = expectedUpgradeSnapshot(19, ['import_content_fingerprint', 'import_source_fingerprint'], 0);
+const current = expectedUpgradeSnapshot(22, ['import_content_fingerprint', 'import_source_fingerprint'], 1, 1);
+const legacy = expectedUpgradeSnapshot(4, ['import_content_fingerprint', 'import_source_fingerprint'], 0, 0);
 const passed = {
   bootstrap: { database_ready: true }, error: null, phase: 'upgraded',
   scenario: 'database-upgrade-runtime', status: 'passed'
