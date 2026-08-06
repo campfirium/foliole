@@ -34,10 +34,10 @@ final class FolioleCompanionCaptureNavigation {
         long timeoutMs
     ) throws Exception {
         enterBrowseSurface(instrumentation, webView, timeoutMs);
-        if (!hasTestId(instrumentation, webView, INBOX_NODE)) {
-            FolioleCompanionCaptureAnnotationScenario.waitForTestId(
-                instrumentation, webView, TOP_BAR_LEFT_ACTION, timeoutMs
-            );
+        String directoryState = waitForEitherTestId(
+            instrumentation, webView, INBOX_NODE, TOP_BAR_LEFT_ACTION, timeoutMs
+        );
+        if (TOP_BAR_LEFT_ACTION.equals(directoryState)) {
             FolioleCompanionCaptureAnnotationScenario.perform(
                 instrumentation, webView, TOP_BAR_LEFT_ACTION, "click", ""
             );
@@ -45,6 +45,22 @@ final class FolioleCompanionCaptureNavigation {
         FolioleCompanionCaptureAnnotationScenario.waitForTestId(
             instrumentation, webView, INBOX_NODE, timeoutMs
         );
+    }
+
+    private static String waitForEitherTestId(
+        Instrumentation instrumentation,
+        WebView webView,
+        String first,
+        String second,
+        long timeoutMs
+    ) throws Exception {
+        long deadline = System.nanoTime() + timeoutMs * 1_000_000L;
+        while (System.nanoTime() < deadline) {
+            if (hasTestId(instrumentation, webView, first)) return first;
+            if (hasTestId(instrumentation, webView, second)) return second;
+            Thread.sleep(100);
+        }
+        throw new IllegalStateException("Timed out waiting for capture directory state");
     }
 
     private static boolean hasTestId(
