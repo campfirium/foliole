@@ -9,7 +9,8 @@ RES_ROOT = REPO_ROOT / "android" / "app" / "src" / "main" / "res"
 LAUNCHER_BACKGROUND = "#FF8DA56D"
 BRAND_GREEN = (141, 165, 109, 255)
 SPLASH_BACKGROUND = (24, 29, 27, 255)
-ADAPTIVE_DISC_RATIO = 0.48
+# Android exposes the central 72/108 layer; retain the brand artwork's 0.825 outer scale.
+ADAPTIVE_DISC_RATIO = 0.396
 
 LAUNCHER_SIZES = {
     "mipmap-mdpi": 48,

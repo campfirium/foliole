@@ -79,8 +79,8 @@ describe('Android launcher icon assets', () => {
     expect(packageJson).toContain('"android:icons:generate"');
     expect(generator).toContain('SOURCE_LEAF = REPO_ROOT / "assets" / "brand" / "foliole-leaf-tight.png"');
     expect(generator).toContain('LAUNCHER_BACKGROUND = "#FF8DA56D"');
-    expect(adaptiveRatio).toBeGreaterThanOrEqual(0.46);
-    expect(adaptiveRatio).toBeLessThanOrEqual(0.5);
+    expect(adaptiveRatio).toBeGreaterThanOrEqual(0.38);
+    expect(adaptiveRatio).toBeLessThanOrEqual(0.41);
     expect(generator).toContain('add_brand_mark(canvas, leaf, ADAPTIVE_DISC_RATIO)');
   });
 });
