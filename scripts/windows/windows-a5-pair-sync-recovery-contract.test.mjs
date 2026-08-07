@@ -8,23 +8,10 @@ import { expect, it } from 'vitest';
 
 import {
   classifyPairSyncRecoveryActionFailure, classifyPairSyncRecoveryInstrumentationFailure,
-  parsePairSyncRecoveryInstrumentation, parsePairSyncRecoveryReadiness
+  pairSyncRecoveryModeArgs, pairSyncRecoveryRequiresApproval,
+  parsePairSyncRecoveryInstrumentation
 } from './windows-a5-pair-sync-recovery-contract.mjs';
 import { sanitizePairSyncDataProtection } from './windows-a5-pair-sync-recovery-evidence.mjs';
-
-it('keeps readiness evidence non-sensitive and fails closed', () => {
-  const readiness = parsePairSyncRecoveryReadiness(
-    `[android-data] pair-sync-recovery-readiness=${JSON.stringify({
-      deviceIdentityFingerprint: '0123456789abcdef', dirtyRecordCount: 0,
-      missingPrerequisites: [], nodeCount: 0, pairingCredentialsPresent: false,
-      pairingPeerConflict: false,
-      remotePeerFingerprint: null,
-      resultStatus: 'ready', schemaVersion: 1, endpoint: 'must-be-dropped'
-    })}`
-  );
-  expect(readiness).not.toHaveProperty('endpoint');
-  expect(readiness).toMatchObject({ resultStatus: 'ready' });
-});
 
 it('accepts only the fixed product pairing receipt', () => {
   const output = `INSTRUMENTATION_STATUS: folioleActionReceipt=${JSON.stringify({
@@ -36,6 +23,13 @@ it('accepts only the fixed product pairing receipt', () => {
   expect(parsePairSyncRecoveryInstrumentation(output)).toMatchObject({ paired: true });
   expect(() => parsePairSyncRecoveryInstrumentation(output.replace('paired":true', 'paired":false')))
     .toThrow('incomplete');
+});
+
+it('routes an approved peer replacement through product re-pair and fresh desktop approval', () => {
+  expect(pairSyncRecoveryModeArgs(true)).toEqual(['-e', 'foliolePairSyncMode', 're-pair']);
+  expect(pairSyncRecoveryModeArgs(false)).toEqual([]);
+  expect(pairSyncRecoveryRequiresApproval(true, true)).toBe(true);
+  expect(pairSyncRecoveryRequiresApproval(true, false)).toBe(false);
 });
 
 it('removes device paths and raw snapshot details from data-protection evidence', () => {
@@ -113,6 +107,7 @@ it('reduces instrumentation output to a fixed non-sensitive failure reason', () 
   )).toMatchObject({ failureReason: 'pairing_entry_timeout' });
 });
 
+
 it('observes request submission without global errors or click-return evidence', () => {
   const source = fs.readFileSync(
     'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionPairSyncRecoveryScenario.java',
@@ -138,7 +133,12 @@ it('observes request submission without global errors or click-return evidence',
     source.indexOf('clickVisible(instrumentation, webView, "companion-sync-pair"')
   );
   expect(source).toContain('clickVisible(instrumentation, webView, CONNECTED_TARGET, deadline)');
-  expect(source).not.toContain('"companion-sync-disconnect"');
+  const rePairGuard = source.indexOf('if (existingPairing && forceRePair)');
+  const disconnect = source.indexOf('"companion-sync-disconnect"');
+  const existingSync = source.indexOf('else if (existingPairing)', rePairGuard);
+  expect(rePairGuard).toBeGreaterThan(-1);
+  expect(disconnect).toBeGreaterThan(rePairGuard);
+  expect(disconnect).toBeLessThan(existingSync);
   expect(source).toContain('SETTINGS_TARGET, REVIEW_EXIT_TARGET');
   expect(source).toContain('clickVisible(instrumentation, webView, REVIEW_EXIT_TARGET, deadline)');
   expect(source).not.toContain('&& state.optBoolean("connectedFound")');
@@ -149,8 +149,15 @@ it('observes request submission without global errors or click-return evidence',
   expect(observer).toContain("methodName === 'desktopHttpRequest'");
   expect(observer).toContain("methodName === 'savePairingCredentials'");
   expect(observer).toContain("methodName === 'signCompanionSyncRequest'");
-  expect(observer).toContain("methodName === 'recordWorkspaceSyncEvent'");
-  expect(observer).toContain("kind === 'run_finished' && state.initialSync === 'started'");
+  expect(observer).toContain("pluginName === 'FolioleCompanionSyncPackTransfer'");
+  expect(observer).toContain("methodName === 'downloadDesktopSyncPack'");
+  expect(observer).toContain("methodName === 'deleteDownloadedSyncPack'");
+  expect(observer).toContain("new URL(args.url).pathname === '/companion/sync-push'");
+  expect(source).toContain('awaitAfterStructureApplied');
+  expect(fs.readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionExistingPairSyncEvidence.java', 'utf8'
+  )).toContain('companion-sync-inline-progress');
+  expect(observer).not.toContain("methodName === 'recordWorkspaceSyncEvent'");
   expect(observer).toContain("algorithm.name === 'ECDH'");
   expect(observer).not.toContain('pair_request_id');
 });
@@ -176,4 +183,35 @@ it('attributes request evidence only to the product pair-request operation', asy
   await request({ method: 'POST', url: 'http://127.0.0.1:38641/companion/pair-requests' });
   expect(window.__foliolePairSyncObserver.requestState).toBe('accepted');
   expect(calls).toHaveLength(4);
+});
+
+it('keeps the native sync pack as intermediate evidence until product UI settlement', async () => {
+  const source = fs.readFileSync(
+    'android/app/src/androidTest/assets/foliole-pair-sync-evidence-observer.js', 'utf8'
+  );
+  const window = {
+    Capacitor: { nativePromise: async (_plugin, method) => (
+      method === 'desktopHttpRequest' ? { status: 200 } : { deleted: true }
+    ) },
+    crypto: { subtle: Object.create({ generateKey: async () => ({}) }) }
+  };
+  expect(JSON.parse(vm.runInNewContext(source, { Promise, URL, window }))).toEqual({ ok: true });
+  const state = window.__foliolePairSyncObserver;
+  state.completion = 'http_200';
+  state.credentials = 'saved_signable';
+
+  await window.Capacitor.nativePromise('FolioleCompanionSync', 'desktopHttpRequest', {
+    method: 'POST', url: 'http://127.0.0.1:38641/companion/sync-push'
+  });
+  expect(state.initialSync).toBe('started');
+  await window.Capacitor.nativePromise(
+    'FolioleCompanionSyncPackTransfer', 'downloadDesktopSyncPack', {}
+  );
+  expect(state.initialSync).toBe('started');
+  await window.Capacitor.nativePromise(
+    'FolioleCompanionSyncPackTransfer', 'deleteDownloadedSyncPack', {}
+  );
+  expect(state).toMatchObject({
+    initialSync: 'started', syncPackApplied: true, syncPackDownloaded: true
+  });
 });

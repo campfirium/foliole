@@ -16,12 +16,38 @@ function meta(database, key) {
   return database.prepare('SELECT value FROM companion_meta WHERE key = ? LIMIT 1').get(key)?.value ?? null;
 }
 
+function latestFinishedSyncEvent(database) {
+  const raw = meta(database, 'workspace_sync_events');
+  if (!raw) return null;
+  try {
+    const events = JSON.parse(raw);
+    return Array.isArray(events)
+      ? events.find((event) => event?.kind === 'run_finished') ?? null : null;
+  } catch { return null; }
+}
+
+function pairingCredentialRejection(event) {
+  const rejected = event?.status === 'failed'
+    && typeof event.message === 'string' && /\b401\b/u.test(event.message);
+  const reason = rejected
+    ? event.message.match(/\b(expired_timestamp|invalid_signature|missing_headers|unknown_device)\b/u)?.[1] ?? null
+    : null;
+  return { rejected, reason };
+}
+
+function waitingCount(event, key) {
+  const value = event?.summary?.[key];
+  return Number.isSafeInteger(value) && value >= 0 ? value : 0;
+}
+
 export function identityFingerprint(value) {
   return value ? createHash('sha256').update(value).digest('hex').slice(0, 16) : null;
 }
 
 export function inspectPairSyncRecoveryWorkspace(database) {
   const deviceId = meta(database, 'device_id');
+  const latestSyncRun = latestFinishedSyncEvent(database);
+  const rejection = pairingCredentialRejection(latestSyncRun);
   return {
     deviceIdentityFingerprint: identityFingerprint(deviceId),
     dirtyRecordCount: count(
@@ -29,7 +55,17 @@ export function inspectPairSyncRecoveryWorkspace(database) {
       'sync_object_state',
       " WHERE sync_dirty = 1 AND object_type <> 'view_state'"
     ),
-    nodeCount: count(database, 'nodes')
+    nodeCount: count(database, 'nodes'),
+    latestSyncRunResult: typeof latestSyncRun?.result === 'string'
+      ? latestSyncRun.result : null,
+    latestSyncRunStatus: typeof latestSyncRun?.status === 'string'
+      ? latestSyncRun.status : null,
+    latestSyncWaitingConfirmationCount: waitingCount(
+      latestSyncRun, 'waiting_confirmation_count'
+    ),
+    latestSyncWaitingSendCount: waitingCount(latestSyncRun, 'waiting_send_count'),
+    pairingCredentialRejectionReason: rejection.reason,
+    pairingCredentialsRejected: rejection.rejected
   };
 }
 
@@ -63,7 +99,14 @@ export function pairSyncRecoveryReadiness(
     dirtyRecordCount: inspection?.dirtyRecordCount ?? null,
     missingPrerequisites,
     nodeCount: inspection?.nodeCount ?? null,
+    latestSyncRunResult: inspection?.latestSyncRunResult ?? null,
+    latestSyncRunStatus: inspection?.latestSyncRunStatus ?? null,
+    latestSyncWaitingConfirmationCount:
+      inspection?.latestSyncWaitingConfirmationCount ?? 0,
+    latestSyncWaitingSendCount: inspection?.latestSyncWaitingSendCount ?? 0,
     pairingCredentialsPresent,
+    pairingCredentialRejectionReason: inspection?.pairingCredentialRejectionReason ?? null,
+    pairingCredentialsRejected: inspection?.pairingCredentialsRejected === true,
     pairingPeerConflict,
     remotePeerFingerprint,
     resultStatus: missingPrerequisites.length === 0 ? 'ready' : 'approval_required',

@@ -2,6 +2,7 @@ import { app } from 'electron';
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { resolveFolioleAppVersion } from '../appVersion.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadOrCreateDesktopDeviceId } from '../database/deviceIdentity.js';
 import { commitPrimaryDeviceToPeer } from '../database/primaryDeviceCommit.js';
 import {
@@ -23,6 +24,17 @@ import {
 import { loadDesktopPrimaryDeviceStatePayload } from '../sync/primaryDeviceState.js';
 
 import { asString } from './commandParsers.js';
+
+const COMPANION_PAIRING_COMMANDS = new Set<string>([
+  NATIVE_COMMANDS.loadCompanionPairingOverview,
+  NATIVE_COMMANDS.enableCompanionSync,
+  NATIVE_COMMANDS.disableCompanionSync,
+  NATIVE_COMMANDS.clearCompanionPairedDevices,
+  NATIVE_COMMANDS.removeCompanionPairedDevice,
+  NATIVE_COMMANDS.setDesktopAsPrimaryDevice,
+  NATIVE_COMMANDS.approveCompanionPairRequest,
+  NATIVE_COMMANDS.rejectCompanionPairRequest
+]);
 
 function buildDesktopCompanionPairingOverview() {
   return {
@@ -59,7 +71,7 @@ function setDesktopAsPrimaryDevice() {
   return buildDesktopCompanionPairingOverview();
 }
 
-export function handleCompanionPairingCommand(command: string, args: Record<string, unknown>) {
+function handleOwnedCompanionPairingCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.loadCompanionPairingOverview) {
     return {
       paired_devices: loadPairedCompanionDevices(),
@@ -99,4 +111,9 @@ export function handleCompanionPairingCommand(command: string, args: Record<stri
     return setDesktopAsPrimaryDevice();
   }
   return undefined;
+}
+
+export function handleCompanionPairingCommand(command: string, args: Record<string, unknown>) {
+  if (!COMPANION_PAIRING_COMMANDS.has(command)) return undefined;
+  return runWithDatabaseConnectionOwner(() => handleOwnedCompanionPairingCommand(command, args));
 }

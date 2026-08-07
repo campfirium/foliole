@@ -54,5 +54,10 @@ export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
   if (!existingPairingRecovery && !cleanPairSwitch) {
     throw new Error('Fixed A5 no longer matches the authorized pair-switch state.');
   }
-  return { ...pairState, existingPairing: existingPairingRecovery };
+  return {
+    ...pairState,
+    credentialRepairRequired: existingPairingRecovery
+      && pairState.pairingCredentialsRejected === true,
+    existingPairing: existingPairingRecovery
+  };
 }

@@ -167,6 +167,17 @@ describe('companion sync push apply', () => {
 
 });
 
+it('accepts a first node open-state fact even when its former desktop base is absent', async () => {
+  const result = await applyCompanionSyncPushAsync([
+    createNodeOpenStatePush('2026-04-30T02:00:00.000Z')
+  ]);
+
+  expect(result.acks).toMatchObject([{ status: 'accepted' }]);
+  expect(openDatabaseConnection().driver.queryOne<{ last_opened_at: string }>(
+    "SELECT last_opened_at FROM node_open_state WHERE node_id = 'node-1'"
+  )).toEqual({ last_opened_at: '2026-04-30T02:00:00.000Z' });
+});
+
 describe('companion sync push conflict handling', () => {
   it('merges node open state by the latest timestamp instead of conflicting on a stale base', async () => {
     insertBaseState('node_open_state', 'node-1', 'desktop-open-base');

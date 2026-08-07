@@ -7,6 +7,7 @@ const pairing = {
   dirtyRecordCount: 0,
   nodeCount: 0,
   pairingCredentialsPresent: true,
+  pairingCredentialsRejected: false,
   pairingPeerConflict: false,
   remotePeerFingerprint: '82cc2dc5c98135c8'
 };
@@ -70,5 +71,22 @@ describe('macOS A5 one-time pair sync preflight', () => {
 
     expect(runMacosA5PairSyncPreflight({ adb: '/adb', repoRoot: '/repo' }, run))
       .toMatchObject({ dirtyRecordCount: 6, existingPairing: true, nodeCount: 1299 });
+  });
+
+  it('authorizes credential repair only for an existing dirty pairing with a proven 401', () => {
+    const run = vi.fn()
+      .mockReturnValueOnce(result('[android-data] pair-sync-recovery-readiness=', {
+        ...pairing, dirtyRecordCount: 1, nodeCount: 1299,
+        pairingCredentialsRejected: true, resultStatus: 'approval_required'
+      }, 77))
+      .mockReturnValueOnce(result('[android-data] capture-annotation-readiness=', {
+        ...workspace,
+        canonicalInbox: { active: true, kind: 'folder' },
+        counts: { content_blobs: 2039, node_order: 975, nodes: 1299 },
+        pairingWorkspace: { localDeviceIdentityPresent: true, syncEndpointPresent: true }
+      }, 0));
+
+    expect(runMacosA5PairSyncPreflight({ adb: '/adb', repoRoot: '/repo' }, run))
+      .toMatchObject({ credentialRepairRequired: true, existingPairing: true });
   });
 });

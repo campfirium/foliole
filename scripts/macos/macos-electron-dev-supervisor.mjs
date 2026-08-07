@@ -16,7 +16,11 @@ import { createElectronRuntimeWatcher } from '../desktop/electron-dev-runtime-wa
 import { createDesktopIsolationContext } from '../desktop/playwright-desktop-isolation.mjs';
 import { withResourceGate } from '../lib/resource-gate.mjs';
 import { requestMacosElectronRuntimeRestart, requestMacosElectronShellExit } from './macos-electron-dev-actions.mjs';
-import { resolveMacosElectronDevPaths, resolveMacosElectronWatchTargets } from './macos-electron-dev-paths.mjs';
+import {
+  MACOS_DAILY_LIBRARY_HOME,
+  resolveMacosElectronDevPaths,
+  resolveMacosElectronWatchTargets
+} from './macos-electron-dev-paths.mjs';
 import {
   createMacosElectronDevLogger,
   runLoggedCommand,
@@ -33,6 +37,7 @@ function createDailyEnvironment({ env, homeDir, paths, platform }) {
     ...isolation.env,
     FOLIOLE_DEV_SHELL_RESTART_REQUEST_FILE: paths.shellRequestFile,
     FOLIOLE_ELECTRON_APP_ROOT: paths.appRoot,
+    FOLIOLE_LIBRARY_HOME: MACOS_DAILY_LIBRARY_HOME,
     FOLIOLE_MACOS_DAILY_DEBUG: '1',
     FOLIOLE_PREVIEW_SANDBOX: '1',
     FOLIOLE_PREVIEW_SANDBOX_RESET: '0',

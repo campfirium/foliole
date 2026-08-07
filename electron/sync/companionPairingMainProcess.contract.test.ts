@@ -103,7 +103,7 @@ describe('companion pairing main-process state ownership', () => {
     });
 
     const response = await postPairRequest(server);
-    const overview = commands.handleCompanionPairingCommand(
+    const overview = await commands.handleCompanionPairingCommand(
       NATIVE_COMMANDS.loadCompanionPairingOverview,
       {}
     );
@@ -128,20 +128,20 @@ describe('companion pairing main-process state ownership', () => {
     expect((await postPairRequest(server)).status).toBe(409);
 
     await firstRuntime.stopLanWorkspaceSyncServer();
-    expect(firstCommands.handleCompanionPairingCommand(
+    await expect(firstCommands.handleCompanionPairingCommand(
       NATIVE_COMMANDS.loadCompanionPairingOverview,
       {}
-    )).toMatchObject({
+    )).resolves.toMatchObject({
       pending_requests: [{ device_id: 'fixed-android-device' }],
       server_status: { pending_pair_request_count: 1, state: 'stopped' }
     });
 
     vi.useFakeTimers();
     vi.setSystemTime(Date.now() + 121_000);
-    expect(firstCommands.handleCompanionPairingCommand(
+    await expect(firstCommands.handleCompanionPairingCommand(
       NATIVE_COMMANDS.loadCompanionPairingOverview,
       {}
-    )).toMatchObject({
+    )).resolves.toMatchObject({
       pending_requests: [],
       server_status: { pending_pair_request_count: 0 }
     });

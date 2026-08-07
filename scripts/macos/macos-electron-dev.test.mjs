@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { resolveMacosElectronDevAction } from './macos-electron-dev.mjs';
 import {
   MACOS_DAILY_DEBUG_ROOT,
+  MACOS_DAILY_LIBRARY_HOME,
   MACOS_RESET_PREVIEW_ROOT,
   resolveMacosElectronDevPaths,
   resolveMacosElectronWatchTargets
@@ -20,6 +21,7 @@ describe('macOS Electron dev entry', () => {
     expect(paths.dailyRoot).toBe(path.join(repoRoot, MACOS_DAILY_DEBUG_ROOT));
     expect(paths.resetPreviewRoot).toBe(path.join(repoRoot, MACOS_RESET_PREVIEW_ROOT));
     expect(paths.dailyRoot).not.toBe(paths.resetPreviewRoot);
+    expect(MACOS_DAILY_LIBRARY_HOME).toBe('/Users/roamer/Documents/Foliole');
   });
 
   it('accepts the complete explicit control surface', () => {

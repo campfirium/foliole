@@ -16,7 +16,8 @@ const commandMocks = vi.hoisted(() => ({
     primary_device_id: 'device-desktop',
     source: 'committed-primary-device',
     takeover_blocked_reasons: []
-  })
+  }),
+  runWithDatabaseConnectionOwner: vi.fn(async (execute: () => unknown) => execute())
 }));
 
 vi.mock('electron', () => ({
@@ -24,6 +25,9 @@ vi.mock('electron', () => ({
 }));
 vi.mock('../database/deviceIdentity.js', () => ({
   loadOrCreateDesktopDeviceId: vi.fn(() => 'device-desktop')
+}));
+vi.mock('../database/connection.js', () => ({
+  runWithDatabaseConnectionOwner: commandMocks.runWithDatabaseConnectionOwner
 }));
 vi.mock('../database/primaryDeviceCommit.js', () => ({
   commitPrimaryDeviceToPeer: commandMocks.commitPrimaryDeviceToPeer
@@ -70,8 +74,8 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-it('commits the desktop device as primary through the existing primary-device model', () => {
-  expect(handleCompanionPairingCommand('set_desktop_as_primary_device', {})).toMatchObject({
+it('commits the desktop device as primary through the coordinated database owner', async () => {
+  await expect(handleCompanionPairingCommand('set_desktop_as_primary_device', {})).resolves.toMatchObject({
     primary_device_state: {
       local_role: 'primary',
       primary_device_id: 'device-desktop'
@@ -81,4 +85,5 @@ it('commits the desktop device as primary through the existing primary-device mo
     primaryDeviceId: 'device-desktop',
     updatedByDeviceId: 'device-desktop'
   });
+  expect(commandMocks.runWithDatabaseConnectionOwner).toHaveBeenCalledOnce();
 });

@@ -35,6 +35,8 @@ describe('macOS fixed A5 development entry', () => {
     const source = fs.readFileSync('scripts/android/macos-a5-dev.mjs', 'utf8');
     const preflight = fs.readFileSync('scripts/android/macos-a5-pair-sync-preflight.mjs', 'utf8');
     expect(source).toContain("'pair-sync'");
+    expect(source).toContain('credentialRepairRequired: readinessState.credentialRepairRequired');
+    expect(source).toContain('remotePeerFingerprint: readinessState.remotePeerFingerprint');
     expect(preflight).toContain('Fixed A5 no longer matches the authorized pair-switch state.');
     expect(source).not.toContain("process.argv[3]");
   });

@@ -8,11 +8,17 @@ import {
 } from './android-pair-sync-recovery-readiness.mjs';
 import { inspectPairingPreferences } from './android-pair-sync-recovery-readiness-runner.mjs';
 
-function snapshot({ dirty = 0, nodes = 0 } = {}) {
+function snapshot({ credentialsRejected = false, dirty = 0, nodes = 0 } = {}) {
   const tables = new Set(['companion_meta', 'nodes', 'sync_object_state']);
   const database = { prepare: (sql) => ({ get: (value) => {
     if (sql.includes('sqlite_master')) return tables.has(value) ? { present: 1 } : undefined;
-    if (sql.includes('companion_meta')) return value === 'device_id' ? { value: 'android-device-1' } : undefined;
+    if (sql.includes('companion_meta')) {
+      if (value === 'device_id') return { value: 'android-device-1' };
+      if (value === 'workspace_sync_events' && credentialsRejected) return {
+        value: JSON.stringify([{ kind: 'run_finished', message: 'Desktop returned 401.', status: 'failed' }])
+      };
+      return undefined;
+    }
     if (sql.includes('sync_object_state')) return { count: dirty };
     if (sql.includes('nodes')) return { count: nodes };
     return undefined;
@@ -59,6 +65,27 @@ it('allows existing credentials only with a non-sensitive remote peer fingerprin
   });
 });
 
+it('reports only the fixed credential-rejection signal from sync history', () => {
+  expect(pairSyncRecoveryReadiness(
+    snapshot({ credentialsRejected: true, dirty: 1 }), true, '0123456789abcdef'
+  )).toMatchObject({
+    latestSyncRunStatus: 'failed',
+    latestSyncWaitingConfirmationCount: 0,
+    latestSyncWaitingSendCount: 0,
+    pairingCredentialRejectionReason: null, pairingCredentialsRejected: true
+  });
+  expect(pairSyncRecoveryReadiness(snapshot(), true, '0123456789abcdef'))
+    .toMatchObject({ pairingCredentialsRejected: false });
+});
+
+it('reports an allowlisted desktop credential-rejection reason without response details', () => {
+  const input = snapshot({ credentialsRejected: true, dirty: 1 });
+  input.database.inspection.pairingCredentialRejectionReason = 'unknown_device';
+  expect(pairSyncRecoveryReadiness(input, true, '0123456789abcdef')).toMatchObject({
+    pairingCredentialRejectionReason: 'unknown_device', pairingCredentialsRejected: true
+  });
+});
+
 it('accepts a readable synced workspace after persisted pairing', () => {
   const input = snapshot({ nodes: 1077 });
   input.packageInfo.installed = false;
@@ -84,6 +111,7 @@ it('hashes the existing remote peer on-device without returning its value', asyn
   expect(run.mock.calls.some(([, args]) => args.at(-2) === '-c'
     && args.at(-1) === `"grep -q 'name=\\"device_id\\"' shared_prefs/foliole_companion_pairing.xml"`)).toBe(true);
   expect(run.mock.calls.filter(([, args]) => String(args.at(-1)).includes('sha256sum'))).toHaveLength(2);
+  expect(run.mock.calls.filter(([, args]) => String(args.at(-1)).includes("tr -d '\\\\n'"))).toHaveLength(2);
   expect(JSON.stringify(result)).not.toContain(peer);
 });
 

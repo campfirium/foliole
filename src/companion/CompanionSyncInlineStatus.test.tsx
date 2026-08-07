@@ -44,7 +44,8 @@ describe('CompanionSyncInlineStatus visibility', () => {
       />
     );
 
-    expect(screen.getByRole('button', { name: 'Sync in progress' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sync in progress' }))
+      .toHaveAttribute('data-testid', 'companion-sync-inline-progress');
     expect(screen.queryByText('Syncing topics')).not.toBeInTheDocument();
     expect(screen.queryByText('Bringing the latest desktop content onto this device.')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
@@ -60,7 +61,8 @@ describe('CompanionSyncInlineStatus visibility', () => {
       />
     );
 
-    expect(screen.getByRole('button', { name: 'Sync needs attention' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sync needs attention' }))
+      .toHaveAttribute('data-testid', 'companion-sync-inline-attention');
     expect(screen.queryByText('Desktop sync failed.')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
   });

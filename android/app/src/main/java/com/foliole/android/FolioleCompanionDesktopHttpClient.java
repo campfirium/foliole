@@ -77,8 +77,9 @@ final class FolioleCompanionDesktopHttpClient {
         }
         int status = connection.getResponseCode();
         if (status < 200 || status >= 300) {
+            String errorCode = readSafeErrorCode(connection, status);
             connection.disconnect();
-            throw new IllegalStateException("Desktop binary resource returned " + status + ".");
+            throw binaryResourceError(status, errorCode);
         }
         try (InputStream inputStream = connection.getInputStream()) {
             return new BinaryResponse(readBytes(inputStream), connection.getContentType());
@@ -93,8 +94,9 @@ final class FolioleCompanionDesktopHttpClient {
         applyHeaders(connection, headers);
         int status = connection.getResponseCode();
         if (status < 200 || status >= 300) {
+            String errorCode = readSafeErrorCode(connection, status);
             connection.disconnect();
-            throw new IllegalStateException("Desktop binary resource returned " + status + ".");
+            throw binaryResourceError(status, errorCode);
         }
         try (
             InputStream inputStream = new BufferedInputStream(connection.getInputStream(), COPY_BUFFER_BYTES);
@@ -131,6 +133,29 @@ final class FolioleCompanionDesktopHttpClient {
             }
         }
         return body.toString();
+    }
+
+    private static IllegalStateException binaryResourceError(int status, String errorCode) {
+        String detail = errorCode == null ? "." : " (" + errorCode + ").";
+        return new IllegalStateException("Desktop binary resource returned " + status + detail);
+    }
+
+    private static String readSafeErrorCode(HttpURLConnection connection, int status) {
+        try {
+            String error = new JSONObject(readBody(connection, status)).optString("error", "");
+            return isSafeErrorCode(error) ? error : null;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private static boolean isSafeErrorCode(String value) {
+        return "expired_timestamp".equals(value)
+            || "invalid_signature".equals(value)
+            || "missing_headers".equals(value)
+            || "protocol_pairing_repair_required".equals(value)
+            || "replayed_nonce".equals(value)
+            || "unknown_device".equals(value);
     }
 
     private static byte[] readBytes(InputStream inputStream) throws Exception {

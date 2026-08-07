@@ -18,6 +18,7 @@ final class FolioleCompanionPairSyncRecoveryScenario {
     static JSONObject run(
         Instrumentation instrumentation,
         WebView webView,
+        boolean forceRePair,
         long timeoutMs
     ) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
@@ -38,12 +39,18 @@ final class FolioleCompanionPairSyncRecoveryScenario {
         );
         boolean existingPairing = CONNECTED_TARGET.equals(entry);
         JSONObject observer = FolioleCompanionWebViewSemanticAdapter.installPairSyncObserver(
-            instrumentation, webView, existingPairing
+            instrumentation, webView, existingPairing && !forceRePair
         );
         if (!observer.optBoolean("ok")) {
             throw new IllegalStateException("Pair sync observer is unavailable.");
         }
-        if (existingPairing) {
+        if (existingPairing && forceRePair) {
+            FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "existing-pair-disconnect");
+            clickVisible(instrumentation, webView, "companion-sync-connection", deadline);
+            clickVisible(instrumentation, webView, "companion-sync-disconnect", deadline);
+            waitForUniqueVisible(instrumentation, webView, "companion-sync-discover", deadline);
+            existingPairing = false;
+        } else if (existingPairing) {
             FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "existing-pair-push");
             clickVisible(instrumentation, webView, CONNECTED_TARGET, deadline);
             FolioleCompanionExistingPairSyncEvidence.await(
@@ -153,13 +160,19 @@ final class FolioleCompanionPairSyncRecoveryScenario {
         while (System.nanoTime() < deadline) {
             JSONObject state = FolioleCompanionPairSyncEvidence.read(instrumentation, webView);
             JSONObject evidence = FolioleCompanionPairSyncEvidence.terminalEvidence(state);
-            if (!evidence.toString().equals(lastEvidence)) {
+            if (!state.toString().equals(lastEvidence)) {
                 FolioleCompanionPairSyncEvidence.emit(instrumentation, state);
-                emitRecoveryStage(instrumentation, evidence);
-                lastEvidence = evidence.toString();
+                emitRecoveryStage(instrumentation, state, evidence);
+                lastEvidence = state.toString();
             }
             validateRecoveryState(state, evidence);
-            if ("completed".equals(evidence.optString("initialSync"))) return evidence;
+            if (state.optBoolean("syncPackApplied")) {
+                JSONObject settled = FolioleCompanionExistingPairSyncEvidence.awaitAfterStructureApplied(
+                    instrumentation, webView, deadline, evidence
+                );
+                FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "initial-sync-completed");
+                return settled;
+            }
             Thread.sleep(150);
         }
         throw new IllegalStateException("Timed out waiting for initial workspace sync completion.");
@@ -193,9 +206,13 @@ final class FolioleCompanionPairSyncRecoveryScenario {
         }
     }
 
-    private static void emitRecoveryStage(Instrumentation instrumentation, JSONObject evidence) {
+    private static void emitRecoveryStage(Instrumentation instrumentation, JSONObject state, JSONObject evidence) {
         if ("completed".equals(evidence.optString("initialSync"))) {
             FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "initial-sync-completed");
+        } else if (state.optBoolean("syncPackApplied")) {
+            FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "structure-pack-applied");
+        } else if (state.optBoolean("syncPackDownloaded")) {
+            FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "structure-pack-downloaded");
         } else if ("started".equals(evidence.optString("initialSync"))) {
             FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "initial-sync-started");
         } else if ("saved_signable".equals(evidence.optString("credentials"))) {

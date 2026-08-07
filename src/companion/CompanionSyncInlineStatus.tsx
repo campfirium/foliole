@@ -24,6 +24,7 @@ export function CompanionSyncInlineStatus(props: {
     <button
       aria-label={label}
       className="inline-flex h-10 w-10 items-center justify-center rounded-md text-companion-text-secondary transition hover:bg-bg-subtle/60 hover:text-foreground"
+      data-testid={isSyncing ? 'companion-sync-inline-progress' : 'companion-sync-inline-attention'}
       onClick={props.onOpenSyncSettings}
       type="button"
     >

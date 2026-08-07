@@ -7,7 +7,7 @@ import {
   PAIR_SYNC_RECOVERY_TEST_APP_ID, PAIR_SYNC_RECOVERY_TEST_CLASS,
   PAIR_SYNC_RECOVERY_TEST_RUNNER, pairSyncRecoveryArtifactPaths,
   classifyPairSyncRecoveryActionFailure, createPairSyncRecoveryEvidenceTracker, pairSyncRecoveryFailure,
-  parsePairSyncRecoveryInstrumentation
+  pairSyncRecoveryModeArgs, pairSyncRecoveryRequiresApproval, parsePairSyncRecoveryInstrumentationResult
 } from './windows-a5-pair-sync-recovery-contract.mjs';
 import { createPairSyncRecoveryWindow, resolvePairSyncConcurrentFailure } from './windows-a5-pair-sync-recovery-concurrency.mjs';
 import { scrubPairSyncDataProtection } from './windows-a5-pair-sync-recovery-evidence.mjs';
@@ -111,7 +111,7 @@ function pairSyncAdbRunner(execute, paths, env, adbPort, serial) {
 
 export async function runWindowsA5PairSyncRecovery({
   adbPort, buildIdentity, deviceFingerprint, env, evidenceRoot, execute, fsApi = fs,
-  existingPairing = false, openDesktopSession = openPairSyncDesktopSession,
+  credentialRepairRequired = false, existingPairing = false, openDesktopSession = openPairSyncDesktopSession,
   desktopControl = clientControl, openTransport = openPairSyncRecoveryTransport,
   closeTransport = closePairSyncRecoveryTransport,
   validateDesktop = validateOwnedDesktopPreflight, paths, protectData,
@@ -127,6 +127,7 @@ export async function runWindowsA5PairSyncRecovery({
   let primaryError = null;
   let instrumentationPromise = null;
   let proof;
+  let receipt;
   const recoveryEvidence = createPairSyncRecoveryEvidenceTracker();
   await desktopControl(execute, paths, env, 'stop');
   try {
@@ -141,18 +142,21 @@ export async function runWindowsA5PairSyncRecovery({
       env, repoRoot: paths.repoRoot
     }));
     const enabled = await desktopStep('desktop-sync-enable', () => session.enable());
-    await desktopStep('desktop-runtime-ownership', () => validateDesktop(
-      enabled, session, deviceFingerprint, remotePeerFingerprint, existingPairing
+    const desktopReadiness = await desktopStep('desktop-runtime-ownership', () => validateDesktop(
+      enabled, session, deviceFingerprint, remotePeerFingerprint, existingPairing,
+      credentialRepairRequired
     ));
+    const rePairRequired = desktopReadiness.rePairRequired === true;
     await openTransport(pairSyncAdbRunner(execute, paths, env, adbPort, serial));
     transportOpen = true;
     await desktopStep('desktop-runtime-ownership', () => session.assertActive());
     const recoveryWindow = createPairSyncRecoveryWindow();
     instrumentationPromise = checked(execute, paths.adbPath, [
       '-P', adbPort, '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',
+      ...pairSyncRecoveryModeArgs(rePairRequired),
       '-e', 'class', PAIR_SYNC_RECOVERY_TEST_CLASS, PAIR_SYNC_RECOVERY_TEST_RUNNER
     ], options(env, 'pair_sync_instrumentation_timeout', recoveryWindow.instrumentationTimeoutMs), 'pair-sync-instrumentation');
-    if (!existingPairing) await desktopStep('desktop-pair-request', async () => {
+    if (pairSyncRecoveryRequiresApproval(existingPairing, rePairRequired)) await desktopStep('desktop-pair-request', async () => {
       const pending = await recoveryWindow.waitForPairRequest(
         waitForUniquePairRequest(session, deviceFingerprint, recoveryWindow), instrumentationPromise
       );
@@ -160,7 +164,7 @@ export async function runWindowsA5PairSyncRecovery({
     });
     const instrumentation = await instrumentationPromise;
     output.push(instrumentation.output);
-    const receipt = recoveryEvidence.complete(parsePairSyncRecoveryInstrumentation(instrumentation.stdout));
+    receipt = recoveryEvidence.complete(parsePairSyncRecoveryInstrumentationResult(instrumentation));
     await checked(execute, paths.adbPath,
       ['-P', adbPort, '-s', serial, 'shell', 'am', 'force-stop', PAIR_SYNC_RECOVERY_APP_ID],
       options(env, 'pair_sync_restart_timeout', 30_000), 'pair-sync-restart');
@@ -181,9 +185,10 @@ export async function runWindowsA5PairSyncRecovery({
     proof = { android: android.readiness, desktop, receipt };
   } catch (error) {
     primaryError = await resolvePairSyncConcurrentFailure(error, instrumentationPromise);
+    primaryError.pairSyncAndroidEvidence ??= receipt ?? null;
     primaryError.pairSyncRecoveryEvidence = recoveryEvidence.failure(primaryError);
     primaryError.pairSyncFailureEvidence = await collectPairSyncRecoveryFailureEvidence({
-      adbPort, env, evidenceRoot, execute, fsApi, paths, serial, session
+      adbPort, env, error: primaryError, evidenceRoot, execute, fsApi, paths, serial, session
     });
   }
   scrubPairSyncDataProtection(fsApi, dataManifest);

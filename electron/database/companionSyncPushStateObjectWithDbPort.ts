@@ -42,8 +42,9 @@ export async function applyStateObjectPushWithDbPort(
     if (current?.content_hash === record.content_hash && current.deleted_at === record.deleted_at) {
       return emptyResult(stateAck(item, current, 'already_applied'));
     }
-    if (objectType === 'node_open_state' && current && current.content_hash !== item.base.baseContentHash) {
-      if (current.updated_at >= record.updated_at) {
+    if (objectType === 'node_open_state') {
+      if (current && current.content_hash !== item.base.baseContentHash
+        && current.updated_at >= record.updated_at) {
         return emptyResult(stateAck(item, current, 'already_applied'));
       }
     } else if (objectType !== 'node_review'

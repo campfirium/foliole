@@ -63,7 +63,7 @@ export async function inspectPairingPreferences(options, run = execFileAsync) {
   }
   const hashes = await Promise.all(['remote_peer_id', 'primary_device_id'].map(async (key) => {
     const script = quoteAdbShellScript(
-      `sed -n 's@.*<string name="${key}">\\([^<]*\\)</string>.*@\\1@p' ${PAIRING_PREFS} | sha256sum`
+      `sed -n 's@.*<string name="${key}">\\([^<]*\\)</string>.*@\\1@p' ${PAIRING_PREFS} | tr -d '\\n' | sha256sum`
     );
     const result = await run(options.adb, [
       '-s', options.serial, 'shell', 'run-as', options.appId, 'sh', '-c', script

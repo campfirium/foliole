@@ -7,7 +7,8 @@
   if (!proto || typeof proto.generateKey !== 'function') return JSON.stringify({ ok: false });
   var state = {
     keyState: 'not-started', requestState: 'not-started', completion: 'not_started',
-    credentials: 'not_saved', initialSync: 'not_started'
+    credentials: 'not_saved', initialSync: 'not_started',
+    syncPackApplied: false, syncPackDownloaded: false
   };
   window.__foliolePairSyncObserver = state;
   var originalGenerateKey = proto.generateKey;
@@ -29,6 +30,9 @@
       try { return Promise.resolve(originalNativePromise.call(cap, pluginName, methodName, args)); }
       catch (error) { return Promise.reject(error); }
     };
+    if (pluginName === 'FolioleCompanionSyncPackTransfer') {
+      return observeSyncPack(state, methodName, call);
+    }
     if (pluginName !== 'FolioleCompanionSync') return call();
     if (methodName === 'desktopHttpRequest') return observeHttp(state, args, call);
     if (methodName === 'savePairingCredentials' && state.completion === 'http_200') {
@@ -37,10 +41,6 @@
     }
     if (methodName === 'signCompanionSyncRequest' && state.credentials === 'saved_not_signable') {
       return call().then(function (value) { state.credentials = 'saved_signable'; return value; });
-    }
-    if (methodName === 'recordWorkspaceSyncEvent' &&
-        (state.credentials === 'saved_signable' || state.completion === 'existing_pairing')) {
-      return observeSync(state, args, call);
     }
     return call();
   };
@@ -62,18 +62,34 @@
         state.completion = value && value.status === 200 ? 'http_200' : 'http_rejected'; return value;
       }, function (error) { state.completion = 'transport_failed'; throw error; });
     }
+    if (isSyncPush(args) && pairingCanSync(state)) {
+      state.initialSync = 'started';
+      return call().then(function (value) {
+        if (!value || value.status < 200 || value.status >= 300) state.initialSync = 'failed';
+        return value;
+      }, function (error) { state.initialSync = 'failed'; throw error; });
+    }
     return call();
   }
-  function observeSync(state, args, call) {
-    var status = args && args.status;
-    var kind = args && args.kind;
-    if (status === 'started' && state.initialSync === 'not_started') {
-      return call().then(function (value) { state.initialSync = 'started'; return value; },
-        function (error) { state.initialSync = 'failed'; throw error; });
-    }
-    if (kind === 'run_finished' && state.initialSync === 'started') {
+  function isSyncPush(args) {
+    if (!args || args.method !== 'POST' || typeof args.url !== 'string') return false;
+    try { return new URL(args.url).pathname === '/companion/sync-push'; }
+    catch { return false; }
+  }
+  function pairingCanSync(state) {
+    return state.credentials === 'saved_signable' || state.completion === 'existing_pairing';
+  }
+  function observeSyncPack(state, methodName, call) {
+    if (!pairingCanSync(state)) return call();
+    if (methodName === 'downloadDesktopSyncPack') {
+      if (state.initialSync === 'not_started') state.initialSync = 'started';
       return call().then(function (value) {
-        state.initialSync = status === 'failed' ? 'failed' : 'completed'; return value;
+        state.syncPackDownloaded = true; return value;
+      }, function (error) { state.initialSync = 'failed'; throw error; });
+    }
+    if (methodName === 'deleteDownloadedSyncPack' && state.syncPackDownloaded) {
+      return call().then(function (value) {
+        state.syncPackApplied = true; return value;
       }, function (error) { state.initialSync = 'failed'; throw error; });
     }
     return call();

@@ -33,6 +33,21 @@ export function validateOwnedDesktopPreflight(
   );
 }
 
+export function validateOwnedDesktopRePairPreflight(
+  overview, session, deviceFingerprint, remotePeerFingerprint
+) {
+  assertPairSyncRuntimeOwnership(overview, session);
+  const safe = session.sanitize(overview);
+  const exactPeerSwitch = remotePeerFingerprint
+    && safe.desktopPeerFingerprint
+    && safe.desktopPeerFingerprint !== remotePeerFingerprint
+    && safe.pendingDeviceFingerprints.length === 0
+    && safe.pairedDeviceFingerprints.length === 1
+    && safe.pairedDeviceFingerprints[0] === deviceFingerprint;
+  if (!exactPeerSwitch) rejectPairingState();
+  return { ...safe, rePairRequired: true };
+}
+
 export async function reconcileAuthorizedStalePairing(
   overview, session, deviceFingerprint, remotePeerFingerprint = null, existingPairing = false
 ) {

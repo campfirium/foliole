@@ -55,8 +55,8 @@
 ## Windows Command Boundary
 
 - Windows 开发使用普通 `dev` Git 流程：Mac controller 把 `dev` push 到 LAN Git，Windows 单一普通 `dev` 仓库执行 `git pull --ff-only lan dev` 后再动作；不解析、传递、保存、回传或比对 SHA，Git 失败直接报告。
-- Windows 本地仓库同时服务 Windows 桌面与 A5 Android 开发；Windows 不提交或推送源码上游，不建立 candidate、scratch 或第二份源码现场。拉取失败直接报告，不自动 reset、重建、修复或合并源码。
-- 普通 Windows 终端诊断走局域网 SSH；A5 设备动作只允许由 `scripts/windows/windows-dev-control.mjs` 的固定动作触发同一 Windows `dev` 仓库内的 adapter。不得绕过该入口建立其他设备控制面；动作集合与具体边界按 `electron/AGENTS.md` 与 `android/AGENTS.md` 执行。
+- Windows 本地仓库服务 Windows 桌面、Windows 专属 A5 联动与最终跨宿主验收；Android 日常开发、固定 A5 调试和 Mac desktop DEV library 同步留在 Mac 当前工作区。Windows 不提交或推送源码上游，不建立 candidate、scratch 或第二份源码现场。拉取失败直接报告，不自动 reset、重建、修复或合并源码。
+- 普通 Windows 终端诊断走局域网 SSH；Windows 侧 A5 设备动作只允许由 `scripts/windows/windows-dev-control.mjs` 的固定动作触发同一 Windows `dev` 仓库内的 adapter。Mac 日常 A5 调试按 `android/AGENTS.md` 使用固定本地入口；不得建立其他设备控制面。
 - Windows 原生命令默认用已存在的 `npm` / `node` / 项目脚本入口执行；不得把多步验证长期写成内联 PowerShell / cmd 片段。
 - 复杂 Windows 命令若涉及多层引号、环境变量、重定向、后台进程、native exe、`cmd.exe` / PowerShell 交叉调用或 stdout 可靠性判断，优先写成仓库内 Node runner 或已提交脚本；临时诊断必须把 stdout、stderr、exit code 写入 `.tmp/` 后再读取，不得只凭空 stdout 或空日志判定成功。
 - 临时 Playwright / browser 验收、生产站点 browser probe、HTTP server + browser 脚本必须通过 `node scripts/with-resource-gate.mjs preview -- <command...>` 执行；Node REPL 只用于短探针，长流程必须转成仓库脚本。只清理 runner 自己启动的子进程树，不按进程名全机杀 `node.exe` / `msedge.exe`。
@@ -113,7 +113,7 @@
 - npm 默认保留 7 天 release-age 安全窗口；但 Dependabot / GitHub Advisory / `npm audit` 已明确报出的漏洞修复必须定向绕过该窗口，只允许更新被点名的漏洞包或其必要传递依赖，并用 `npm ls <package> --all` 与 `npm audit --omit=dev` 复验。禁止用等待窗口期作为安全告警处理结论。
 - `it.skip` / `test.skip` 必须紧邻 `// SKIP: <reason> | <date YYYY-MM-DD> | revive: <condition>`；看到超过 30 天的 stale `SKIP` 必须复查能否恢复。
 - E2E（Playwright）不进入任何质量闸；它作为宿主可见验收单独执行。桌面日常 agent 自动化验收优先按 `electron/AGENTS.md` 使用不干扰用户桌面的 Playwright 入口，人工预览仍按下表执行。
-- Windows Android 日常按 DEV-first 远程工作站使用：Windows native dev 与 A5 fixed deploy / verify 服务开发调试；CI 级 clean / bundled / release-like 终检只由 GitHub hosted lane 承担，不得恢复通用设备 runner 或 detached preview 服务。
+- Android 日常按 Mac DEV-first 使用固定 A5 本地 CLI；Windows 只承担 Windows desktop 联动、Windows 专属边界与最终跨宿主验收。CI 级 clean / bundled / release-like 终检只由 GitHub hosted lane 承担，不得恢复通用设备 runner 或 detached preview 服务。
 - `scripts/quality/quality-command-contracts.mjs` 是质量 / 发布命令分类的机械真相；未登记命令拒绝。`npm run quality:remote -- --scope <desktop|shared|android|ios|full>` 是唯一 dev-only hosted recheck orchestrator，禁止 SHA 输入和 release 调用；`release-control:draft-body`、`release-control:abandon-draft`、`release-control:abandon-ref`、`release-control:publish` 只允许 pinned 发布主任务在登记状态下使用。
 - 运行命令后若工具返回非终态、无新增输出、仅 heartbeat / progress，或 agent 准备汇报“仍在运行 / 继续等 / 再查一次”，必须触发 `$quiet-wait`；后续用 waiter 接管等待，不得用 agent 回合继续守进程。
 - `copy:guard` 默认只报告 warning；若它报 warning，修复前先读 `.lab/specs/_product/terminology-and-copy.md`，禁止机械替换。

@@ -25,6 +25,14 @@ export const PAIR_SYNC_RECOVERY_TEST_CLASS =
 export const PAIR_SYNC_RECOVERY_TEST_RUNNER =
   `${PAIR_SYNC_RECOVERY_TEST_APP_ID}/androidx.test.runner.AndroidJUnitRunner`;
 
+export function pairSyncRecoveryModeArgs(rePairRequired) {
+  return rePairRequired ? ['-e', 'foliolePairSyncMode', 're-pair'] : [];
+}
+
+export function pairSyncRecoveryRequiresApproval(existingPairing, rePairRequired) {
+  return !existingPairing || rePairRequired;
+}
+
 export function pairSyncRecoveryFailure(message, stage, result, exitCode = 74) {
   return Object.assign(new Error(message), { exitCode, result, stage });
 }
@@ -46,8 +54,21 @@ export function parsePairSyncRecoveryReadiness(output) {
     deviceIdentityFingerprint: value.deviceIdentityFingerprint,
     dirtyRecordCount: value.dirtyRecordCount,
     missingPrerequisites: [...value.missingPrerequisites],
+    latestSyncRunResult: typeof value.latestSyncRunResult === 'string'
+      ? value.latestSyncRunResult : null,
+    latestSyncRunStatus: typeof value.latestSyncRunStatus === 'string'
+      ? value.latestSyncRunStatus : null,
+    latestSyncWaitingConfirmationCount: Number.isSafeInteger(
+      value.latestSyncWaitingConfirmationCount
+    ) ? value.latestSyncWaitingConfirmationCount : 0,
+    latestSyncWaitingSendCount: Number.isSafeInteger(value.latestSyncWaitingSendCount)
+      ? value.latestSyncWaitingSendCount : 0,
     nodeCount: value.nodeCount,
     pairingCredentialsPresent: value.pairingCredentialsPresent === true,
+    pairingCredentialRejectionReason: [
+      'expired_timestamp', 'invalid_signature', 'missing_headers', 'unknown_device'
+    ].includes(value.pairingCredentialRejectionReason) ? value.pairingCredentialRejectionReason : null,
+    pairingCredentialsRejected: value.pairingCredentialsRejected === true,
     pairingPeerConflict: value.pairingPeerConflict === true,
     remotePeerFingerprint: /^[0-9a-f]{16}$/u.test(value.remotePeerFingerprint)
       ? value.remotePeerFingerprint : null,
@@ -87,6 +108,14 @@ export function parsePairSyncRecoveryInstrumentation(output) {
   };
 }
 
+export function parsePairSyncRecoveryInstrumentationResult(result) {
+  try { return parsePairSyncRecoveryInstrumentation(result.stdout); }
+  catch (error) {
+    error.result ??= result;
+    throw classifyPairSyncRecoveryActionFailure(error, 'pair-sync-instrumentation', result.output);
+  }
+}
+
 export function classifyPairSyncRecoveryInstrumentationFailure(output) {
   const value = String(output);
   const reasons = [
@@ -111,6 +140,11 @@ export function classifyPairSyncRecoveryInstrumentationFailure(output) {
     ['pair_completion_ui_reverted', /Pairing completion returned to discovery/u],
     ['pair_completion_ui_error', /Pairing completion failed:/u],
     ['initial_sync_timeout', /Timed out waiting for initial workspace sync completion/u],
+    ['initial_sync_busy_timeout', /initial workspace sync settlement: target_disabled/u],
+    ['initial_sync_surface_missing', /initial workspace sync settlement: target_missing/u],
+    ['initial_sync_needs_attention', /Initial workspace sync settled with attention/u],
+    ['existing_sync_failed', /Existing workspace sync failed/u],
+    ['initial_sync_settlement_timeout', /Timed out waiting for initial workspace sync settlement/u],
     ['webview_evaluation_stalled', /Timed out while evaluating the WebView semantic action/u],
     ['pair_target_ambiguous', /Pairing target is not unique/u],
     ['pair_target_disappeared', /Pairing target disappeared/u],
@@ -153,11 +187,20 @@ export function classifyPairSyncRecoveryInstrumentationFailure(output) {
     'credentials-saved': 'pair_credentials_signing_interrupted',
     'credentials-signable': 'initial_sync_start_interrupted',
     'initial-sync-started': 'initial_sync_interrupted',
+    'structure-pack-downloaded': 'structure_pack_apply_interrupted',
+    'structure-pack-applied': 'initial_sync_settlement_interrupted',
     'initial-sync-completed': 'initial_sync_ui_settlement_interrupted',
     'initial-sync-awaiting': 'pair_completion_wait_interrupted',
     'initial-sync-pair-target-returned': 'pair_completion_ui_reverted'
   };
   return interruptedStages[stage] ?? 'unknown_instrumentation_failure';
+}
+
+export function parseLatestPairSyncRecoveryHostStage(output) {
+  const stages = [...String(output).matchAll(
+    /^INSTRUMENTATION_STATUS: foliolePairSyncStage=([a-z][a-z-]{0,63})$/gmu
+  )];
+  return stages.at(-1)?.[1] ?? null;
 }
 
 export function classifyPairSyncRecoveryActionFailure(failure, stage, output) {

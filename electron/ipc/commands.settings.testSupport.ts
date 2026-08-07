@@ -35,6 +35,10 @@ vi.mock('../database/nodeMutations.js', () => ({
   upsertNodeSnapshot: vi.fn(),
   upsertNodeSnapshots: vi.fn()
 }));
+vi.mock('../database/connection.js', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../database/connection.js')>(),
+  runWithDatabaseConnectionOwner: vi.fn(async (execute: () => unknown) => execute())
+}));
 vi.mock('../sync/lanWorkspaceSyncServer.js', () => ({
   ensureLanWorkspaceSyncServer: vi.fn().mockResolvedValue({
     advertised_urls: ['http://127.0.0.1:38641'],

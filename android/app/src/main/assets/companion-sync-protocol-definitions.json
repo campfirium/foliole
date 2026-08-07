@@ -505,7 +505,7 @@
         "deviceScope": "workspace",
         "key": "node_open_state",
         "objectType": "node_open_state",
-        "pushIssue": "review_required",
+        "pushIssue": "diagnostic",
         "storage": [
           "node_open_state"
         ],
@@ -662,7 +662,6 @@
       "external_folder",
       "import_source",
       "node",
-      "node_open_state",
       "node_reading",
       "node_review",
       "node_text_alternative",
