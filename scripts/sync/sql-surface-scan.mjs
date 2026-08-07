@@ -54,10 +54,10 @@ const iosActiveDatabaseOpenings = [];
 
 for (const file of files) {
   const text = readFileSync(file, 'utf8');
+  const relativeFile = relative(cwd(), file).replaceAll('\\', '/');
   if (IOS_RUNTIME_MARKER.test(text)) {
-    iosRuntimeMarkers.push(relative(cwd(), file));
+    iosRuntimeMarkers.push(relativeFile);
   }
-  const relativeFile = relative(cwd(), file);
   if (IOS_FORMAL_SWIFT_SOURCE.test(relativeFile) && !IOS_ISOLATED_SQLITE_SOURCE.test(relativeFile) && SQLITE_OPEN.test(text)) {
     iosActiveDatabaseOpenings.push(relativeFile);
   }
@@ -69,7 +69,7 @@ for (const file of files) {
     if (capabilities.length === 0) continue;
     findings.push({
       capabilities,
-      file: relative(cwd(), file),
+      file: relativeFile,
       line: fragment.line,
       sql: compactSql(fragment.sql)
     });

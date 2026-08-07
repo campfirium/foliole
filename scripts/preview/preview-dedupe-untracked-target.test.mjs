@@ -65,9 +65,9 @@ it('ignores untracked files outside the selected preview target', async () => {
       PREVIEW_DEDUPE_SCRIPT,
       'windows',
       '--',
-      'git',
-      'tag',
-      'preview-first'
+      process.execPath,
+      '-e',
+      "require('node:fs').appendFileSync('runs.log', 'preview-first\\n')"
     ], { env: previewEnv(repoRoot) });
     expect(first.code).toBe(0);
     const hashPath = path.join(repoRoot, '.lab/internal/runtime/windows-preview.hash');
@@ -80,17 +80,15 @@ it('ignores untracked files outside the selected preview target', async () => {
       PREVIEW_DEDUPE_SCRIPT,
       'windows',
       '--',
-      'git',
-      'tag',
-      'preview-second'
+      process.execPath,
+      '-e',
+      "require('node:fs').appendFileSync('runs.log', 'preview-second\\n')"
     ], { env: previewEnv(repoRoot) });
 
     expect(second.code).toBe(0);
     expect(second.stdout).toContain('[windows-preview] dedupe: covered hash=');
     await expect(readFile(hashPath, 'utf8')).resolves.toBe(storedHash);
-    const tags = await run('git', ['tag', '--list', 'preview-*'], { cwd: repoRoot });
-    expect(tags.code).toBe(0);
-    expect(tags.stdout.trim().split(/\s+/u)).toEqual(['preview-first']);
+    await expect(readFile(path.join(repoRoot, 'runs.log'), 'utf8')).resolves.toBe('preview-first\n');
   } finally {
     await rm(repoRoot, { force: true, recursive: true });
   }

@@ -14,6 +14,10 @@ const capacitorMock = vi.hoisted(() => ({
     saveWorkspaceSyncEndpoint: vi.fn(async () => createNativeState())
   }
 }));
+const stateStore = vi.hoisted(() => ({
+  load: vi.fn(async () => createNativeState()),
+  save: vi.fn(async (state) => state)
+}));
 
 vi.mock('./companionSyncWriterQueue', () => ({
   runCompanionSyncWriterTask: writerQueueMock.run
@@ -25,6 +29,10 @@ vi.mock('@capacitor/core', () => ({
     isNativePlatform: capacitorMock.isNativePlatform
   },
   registerPlugin: vi.fn(() => capacitorMock.plugin)
+}));
+vi.mock('./companion/sync/workspace-state/iosCompanionWorkspaceSyncStateStore', () => ({
+  loadIosCompanionWorkspaceSyncState: stateStore.load,
+  saveIosCompanionWorkspaceSyncState: stateStore.save
 }));
 
 function createNativeState() {
@@ -52,10 +60,8 @@ it('serializes native workspace sync metadata writes', async () => {
   });
 
   expect(writerQueueMock.run).toHaveBeenCalledTimes(4);
-  expect(capacitorMock.plugin.recordWorkspaceSyncEvent).toHaveBeenCalledWith({
-    endpoint_url: 'http://10.0.2.2:38641',
-    message: 'done',
-    occurred_at: '2026-04-25T00:00:00.000Z',
-    status: 'completed'
-  });
+  expect(stateStore.save).toHaveBeenCalledTimes(4);
+  expect(stateStore.save).toHaveBeenLastCalledWith(expect.objectContaining({
+    sync_events: [expect.objectContaining({ message: 'done', status: 'completed' })]
+  }));
 });

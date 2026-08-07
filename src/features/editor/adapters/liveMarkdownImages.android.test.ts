@@ -11,6 +11,9 @@ const capacitorMock = vi.hoisted(() => ({
     resolveAttachmentResource: vi.fn()
   }
 }));
+const databaseMock = vi.hoisted(() => ({
+  query: vi.fn()
+}));
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
@@ -23,6 +26,9 @@ vi.mock('@capacitor/core', () => ({
 
 vi.mock('../../../shared/platform/runtimeInvoke', () => ({
   getRuntimeInvoke: vi.fn(() => null)
+}));
+vi.mock('../../../shared/platform/companion/runtime/iosCompanionActiveDatabase', () => ({
+  queryIosCompanionDatabase: databaseMock.query
 }));
 
 vi.mock('../../../shared/platform/bridge', () => ({
@@ -57,6 +63,10 @@ describe('live markdown image rendering on Android companion', () => {
       resource_url: 'file:///data/user/0/com.foliole.android/files/attachments/android-hash-1',
       status: 'ready'
     });
+    databaseMock.query.mockResolvedValue([{
+      mime_type: 'image/png',
+      storage_key: 'attachments/android-hash-1'
+    }]);
   });
 
   it('resolves internal attachment images to Android WebView file URLs in native companion', async () => {
@@ -68,7 +78,9 @@ describe('live markdown image rendering on Android companion', () => {
       );
     });
     expect(capacitorMock.plugin.resolveAttachmentResource).toHaveBeenCalledWith({
-      attachment_id: 'android-hash-1'
+      attachment_id: 'android-hash-1',
+      mime_type: 'image/png',
+      storage_key: 'attachments/android-hash-1'
     });
 
     adapter.destroy();
@@ -86,6 +98,10 @@ describe('live markdown image rendering on Android companion', () => {
         resource_url: 'file:///data/user/0/com.foliole.android/files/attachments/android-hash-2',
         status: 'ready'
       });
+    databaseMock.query.mockResolvedValue([{
+      mime_type: 'image/png',
+      storage_key: 'attachments/android-hash-2'
+    }]);
 
     const { adapter, host } = createAdapterHostWithMissingResourceSync(
       '![Cover](asset://android-hash-2.png)',

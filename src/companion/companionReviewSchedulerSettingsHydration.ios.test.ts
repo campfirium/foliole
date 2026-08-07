@@ -6,7 +6,7 @@ import {
   hydrateCurrentReviewSchedulerSettings
 } from '../features/settings/model/reviewSchedulerSettings';
 
-const nativePlugin = vi.hoisted(() => ({
+const iosReads = vi.hoisted(() => ({
   loadSyncIndex: vi.fn(),
   loadSyncObjects: vi.fn()
 }));
@@ -16,22 +16,26 @@ vi.mock('@capacitor/core', () => ({
     getPlatform: () => 'ios',
     isNativePlatform: () => true
   },
-  registerPlugin: vi.fn(() => nativePlugin)
+  registerPlugin: vi.fn(() => ({}))
+}));
+
+vi.mock('../shared/platform/companion/runtime/iosCompanionActiveDatabaseReads', () => ({
+  loadIosSyncIndex: iosReads.loadSyncIndex,
+  loadIosSyncObjects: iosReads.loadSyncObjects
 }));
 
 beforeEach(() => {
-  nativePlugin.loadSyncIndex.mockReset();
-  nativePlugin.loadSyncObjects.mockReset();
+  iosReads.loadSyncIndex.mockReset();
+  iosReads.loadSyncObjects.mockReset();
   hydrateCurrentReviewSchedulerSettings(DEFAULT_REVIEW_SCHEDULER_SETTINGS);
 });
 
 it('hydrates the iOS review scheduler from the shared desktop setting object', async () => {
   const objectId = 'user_space:windows:desktop:*:review_scheduler_settings';
-  nativePlugin.loadSyncIndex.mockResolvedValue({
-    entries: [{ object_id: objectId, object_type: 'setting' }]
-  });
-  nativePlugin.loadSyncObjects.mockResolvedValue({
-    objects: [{
+  iosReads.loadSyncIndex.mockResolvedValue([
+    { object_id: objectId, object_type: 'setting' }
+  ]);
+  iosReads.loadSyncObjects.mockResolvedValue([{
       content_hash: 'macos-setting-hash',
       deleted_at: null,
       object_id: objectId,
@@ -42,8 +46,7 @@ it('hydrates the iOS review scheduler from the shared desktop setting object', a
         value_json: JSON.stringify({ desiredRetention: 0.87, newDayStartsAtHour: 6 })
       }),
       updated_at: '2026-07-21T00:30:00.000Z'
-    }]
-  });
+  }]);
   const { hydrateCompanionReviewSchedulerSettings } = await import(
     './companionReviewSchedulerSettingsHydration'
   );
@@ -56,8 +59,5 @@ it('hydrates the iOS review scheduler from the shared desktop setting object', a
     desiredRetention: 0.87,
     newDayStartsAtHour: 6
   });
-  expect(nativePlugin.loadSyncObjects).toHaveBeenCalledWith({
-    object_ids: [objectId],
-    object_types: ['setting']
-  });
+  expect(iosReads.loadSyncObjects).toHaveBeenCalledWith([objectId], ['setting']);
 });

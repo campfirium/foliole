@@ -68,6 +68,8 @@ async function resetRuntimeState() {
   const server = await import('./lanWorkspaceSyncServer.js');
   server.setLanWorkspaceSyncPairRequestHandler(null);
   await server.stopLanWorkspaceSyncServer();
+  const database = await import('../database/connection.js');
+  database.closeDatabaseConnection();
   fs.rmSync(electronMock.userDataPath, { force: true, recursive: true });
   electronMock.userDataPath = fs.mkdtempSync(path.join(process.cwd(), '.tmp', 'foliole-pairing-main-'));
 }

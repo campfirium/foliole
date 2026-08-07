@@ -2,6 +2,9 @@ import Database from 'better-sqlite3';
 
 import { COMPANION_CURRENT_SCHEMA_REPAIRS } from '../../../lib/core/database/companionCurrentSchemaRepairs';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../../lib/core/database/companionSchemaStatements';
+import type { DbPort } from '../../../lib/core/sync/dbPort';
+
+import { createCapacitorSqliteDbPort } from './capacitorSqliteDbPort';
 
 export function installCompanionNodeSchema(database: Database.Database) {
   database.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
@@ -39,6 +42,15 @@ export function createFakeCapacitorConnection(database: Database.Database) {
       const info = prepared.statement.run(...prepared.params);
       return { changes: { changes: info.changes, lastId: Number(info.lastInsertRowid) } };
     }
+  };
+}
+
+export function createFakeCompanionDatabaseOwner(database: Database.Database) {
+  const db = createCapacitorSqliteDbPort(createFakeCapacitorConnection(database) as never, 'ios');
+  return {
+    platform: 'ios' as const,
+    read: <T>(task: (port: DbPort) => Promise<T>) => task(db),
+    runWriter: <T>(task: (port: DbPort) => Promise<T>) => task(db)
   };
 }
 

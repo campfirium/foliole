@@ -4,9 +4,10 @@ const capacitorMock = vi.hoisted(() => ({
   loadSyncObjects: vi.fn(),
   loadSyncNodeConflicts: vi.fn()
 }));
-const iosReads = vi.hoisted(() => ({ objects: vi.fn() }));
+const iosReads = vi.hoisted(() => ({ conflicts: vi.fn(), objects: vi.fn() }));
 
 vi.mock('./companion/runtime/iosCompanionActiveDatabaseReads', () => ({
+  loadIosSyncNodeConflicts: iosReads.conflicts,
   loadIosSyncObjects: iosReads.objects
 }));
 
@@ -27,8 +28,10 @@ import {
 } from './companionSyncObjects';
 
 it('treats Android-only conflict copies as absent on iOS', async () => {
+  iosReads.conflicts.mockResolvedValue([]);
   await expect(loadCompanionSyncNodeConflicts()).resolves.toEqual([]);
   expect(capacitorMock.loadSyncNodeConflicts).not.toHaveBeenCalled();
+  expect(iosReads.conflicts).toHaveBeenCalledOnce();
 });
 
 it('loads an iOS device setting through its exact shared sync identity', async () => {

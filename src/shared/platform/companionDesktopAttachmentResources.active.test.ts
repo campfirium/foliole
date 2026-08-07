@@ -31,6 +31,10 @@ const attachmentResourceCacheMock = vi.hoisted(() => ({
 const writerQueueMock = vi.hoisted(() => ({
   run: vi.fn(async <T>(task: () => Promise<T>) => task())
 }));
+const databaseMock = vi.hoisted(() => ({
+  commit: vi.fn(async () => ({ syncedIds: ['att-3'] })),
+  owner: {}
+}));
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
@@ -45,6 +49,12 @@ vi.mock('./companionSyncWriterQueue', () => ({
   runCompanionSyncWriterTask: writerQueueMock.run
 }));
 vi.mock('./companionWorkspacePairing', () => pairingMock);
+vi.mock('./companion/runtime/companionBatchDataPlane', () => ({
+  commitStagedCompanionAttachmentBatch: databaseMock.commit
+}));
+vi.mock('./companion/runtime/iosCompanionDatabaseBootstrap', () => ({
+  getIosCompanionDatabaseOwner: () => databaseMock.owner
+}));
 
 import { syncCompanionAttachmentResourceFromDesktop } from './companionDesktopAttachmentResources';
 
@@ -63,6 +73,7 @@ function resetMocks() {
     content_hash: 'blob-hash-3',
     size_bytes: 4096
   });
+  databaseMock.commit.mockResolvedValue({ syncedIds: ['att-3'] });
 }
 
 describe('companion desktop active attachment resource priority', () => {
@@ -84,6 +95,11 @@ describe('companion desktop active attachment resource priority', () => {
         url: 'http://10.0.2.2:38641/companion/attachment-resource?attachment_id=att-3&content_hash=blob-hash-3'
       }]
     });
+    expect(databaseMock.commit).toHaveBeenCalledWith(
+      databaseMock.owner,
+      capacitorMock.plugin,
+      'attachment-batch-token'
+    );
     expect(capacitorMock.plugin.syncAttachmentResources).not.toHaveBeenCalled();
     expect(capacitorMock.plugin.syncAttachmentResource).not.toHaveBeenCalled();
     expect(attachmentResourceCacheMock.invalidateAttachmentResourceResolution).toHaveBeenCalledWith('att-3');

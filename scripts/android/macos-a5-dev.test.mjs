@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
@@ -13,9 +14,9 @@ describe('macOS fixed A5 development entry', () => {
   it('uses the repository APK and fixed CLI toolchain', () => {
     const paths = macosA5Paths('/repo');
 
-    expect(paths.apk).toBe('/repo/android/app/build/outputs/apk/debug/app-debug.apk');
-    expect(paths.adb).toBe('/opt/homebrew/share/android-commandlinetools/platform-tools/adb');
-    expect(paths.gradle).toBe('/repo/android/gradlew');
+    expect(paths.apk).toBe(path.join('/repo', 'android/app/build/outputs/apk/debug/app-debug.apk'));
+    expect(paths.adb).toBe(path.join('/opt/homebrew/share/android-commandlinetools', 'platform-tools', 'adb'));
+    expect(paths.gradle).toBe(path.join('/repo', 'android/gradlew'));
   });
 
   it('binds Gradle to the lightweight Homebrew SDK and JDK', () => {

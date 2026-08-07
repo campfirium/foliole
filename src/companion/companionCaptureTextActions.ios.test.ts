@@ -6,6 +6,7 @@ import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { pushLocalDirtyObjects } from '../shared/platform/companionDesktopSyncPush';
 import {
   createFakeCapacitorConnection,
+  createFakeCompanionDatabaseOwner,
   installCompanionNodeSchema
 } from '../shared/platform/companionSyncNodeVersionsTestSupport';
 
@@ -13,6 +14,7 @@ import { persistCompanionCapturedText } from './companionCaptureTextActions';
 
 const runtimeState = vi.hoisted(() => ({
   manager: null as unknown,
+  owner: null as unknown,
   postDesktopJson: vi.fn()
 }));
 
@@ -35,12 +37,17 @@ vi.mock('../shared/platform/companionDesktopSyncHttp', () => ({
   postDesktopJson: runtimeState.postDesktopJson
 }));
 
+vi.mock('../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap', () => ({
+  getIosCompanionDatabaseOwner: () => runtimeState.owner
+}));
+
 let database: Database.Database | null = null;
 
 afterEach(() => {
   database?.close();
   database = null;
   runtimeState.manager = null;
+  runtimeState.owner = null;
   vi.restoreAllMocks();
 });
 
@@ -75,6 +82,7 @@ it('persists and pushes an iOS quick capture through the shared node-version pat
 
 function installRuntimeManager(db: Database.Database) {
   const connection = createFakeCapacitorConnection(db);
+  runtimeState.owner = createFakeCompanionDatabaseOwner(db);
   runtimeState.manager = {
     createConnection: vi.fn(async () => connection),
     isConnection: vi.fn(async () => ({ result: false })),

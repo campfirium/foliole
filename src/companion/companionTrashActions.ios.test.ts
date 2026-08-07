@@ -5,6 +5,7 @@ import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapsho
 import { pushLocalDirtyObjects } from '../shared/platform/companionDesktopSyncPush';
 import {
   createFakeCapacitorConnection,
+  createFakeCompanionDatabaseOwner,
   installCompanionNodeSchema
 } from '../shared/platform/companionSyncNodeVersionsTestSupport';
 import { supportsCompanionNodeMutationSurface } from '../shared/platform/companionWorkspaceRuntimeRepository';
@@ -13,6 +14,7 @@ import { restoreCompanionTrashNode } from './companionTrashActions';
 
 const runtimeState = vi.hoisted(() => ({
   manager: null as unknown,
+  owner: null as unknown,
   postDesktopJson: vi.fn()
 }));
 
@@ -35,12 +37,17 @@ vi.mock('../shared/platform/companionDesktopSyncHttp', () => ({
   postDesktopJson: runtimeState.postDesktopJson
 }));
 
+vi.mock('../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap', () => ({
+  getIosCompanionDatabaseOwner: () => runtimeState.owner
+}));
+
 let database: Database.Database | null = null;
 
 afterEach(() => {
   database?.close();
   database = null;
   runtimeState.manager = null;
+  runtimeState.owner = null;
   vi.restoreAllMocks();
 });
 
@@ -114,6 +121,7 @@ it('rejects an iOS restore when its persisted base has advanced', async () => {
 
 function installRuntimeManager(db: Database.Database) {
   const connection = createFakeCapacitorConnection(db);
+  runtimeState.owner = createFakeCompanionDatabaseOwner(db);
   runtimeState.manager = {
     createConnection: vi.fn(async () => connection),
     isConnection: vi.fn(async () => ({ result: false })),
