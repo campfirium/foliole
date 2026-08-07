@@ -2,9 +2,7 @@ import Database from 'better-sqlite3';
 
 import { COMPANION_CURRENT_SCHEMA_REPAIRS } from '../../../lib/core/database/companionCurrentSchemaRepairs';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../../lib/core/database/companionSchemaStatements';
-import type { DbPort } from '../../../lib/core/sync/dbPort';
-
-import { createCapacitorSqliteDbPort } from './capacitorSqliteDbPort';
+import type { DbPort, DbRow } from '../../../lib/core/sync/dbPort';
 
 export function installCompanionNodeSchema(database: Database.Database) {
   database.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
@@ -46,12 +44,43 @@ export function createFakeCapacitorConnection(database: Database.Database) {
 }
 
 export function createFakeCompanionDatabaseOwner(database: Database.Database) {
-  const db = createCapacitorSqliteDbPort(createFakeCapacitorConnection(database) as never, 'ios');
+  const db = createFakeDbPort(database);
   return {
     platform: 'ios' as const,
     read: <T>(task: (port: DbPort) => Promise<T>) => task(db),
     runWriter: <T>(task: (port: DbPort) => Promise<T>) => task(db)
   };
+}
+
+function createFakeDbPort(database: Database.Database): DbPort {
+  let transactionDepth = 0;
+  const port: DbPort = {
+    async query<T extends DbRow>(sql: string, params = []) {
+      const prepared = prepareStatement(database, sql, [...params]);
+      return prepared.statement.all(...prepared.params) as T[];
+    },
+    async run(sql: string, params = []) {
+      const prepared = prepareStatement(database, sql, [...params]);
+      const result = prepared.statement.run(...prepared.params);
+      return { changes: result.changes, lastInsertRowId: result.lastInsertRowid };
+    },
+    async transaction<T>(execute: (transaction: DbPort) => Promise<T>) {
+      if (transactionDepth > 0) return execute(port);
+      database.exec('BEGIN');
+      transactionDepth += 1;
+      try {
+        const result = await execute(port);
+        database.exec('COMMIT');
+        return result;
+      } catch (error) {
+        database.exec('ROLLBACK');
+        throw error;
+      } finally {
+        transactionDepth -= 1;
+      }
+    }
+  };
+  return port;
 }
 
 function prepareStatement(database: Database.Database, sql: string, params: unknown[]) {

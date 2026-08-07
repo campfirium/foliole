@@ -12,6 +12,7 @@ import { expect, it } from 'vitest';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const PREVIEW_DEDUPE_SCRIPT = path.join(REPO_ROOT, 'scripts', 'preview', 'preview-dedupe.mjs');
 const PREVIEW_DEDUPE_INTEGRATION_TIMEOUT_MS = 30_000;
+const NODE_RUNTIME = process.env.npm_node_execpath?.trim() || process.execPath;
 
 function run(command, args, options = {}) {
   return new Promise((resolve) => {
@@ -61,11 +62,11 @@ function previewEnv(repoRoot) {
 it('ignores untracked files outside the selected preview target', async () => {
   const repoRoot = await setupRepo();
   try {
-    const first = await run(process.execPath, [
+    const first = await run(NODE_RUNTIME, [
       PREVIEW_DEDUPE_SCRIPT,
       'windows',
       '--',
-      process.execPath,
+      NODE_RUNTIME,
       '-e',
       "require('node:fs').appendFileSync('runs.log', 'preview-first\\n')"
     ], { env: previewEnv(repoRoot) });
@@ -76,11 +77,11 @@ it('ignores untracked files outside the selected preview target', async () => {
     await mkdir(path.join(repoRoot, 'android/app/src/main/res'), { recursive: true });
     await writeFile(path.join(repoRoot, 'android/app/src/main/res/splash.png'), 'android-only\n', 'utf8');
 
-    const second = await run(process.execPath, [
+    const second = await run(NODE_RUNTIME, [
       PREVIEW_DEDUPE_SCRIPT,
       'windows',
       '--',
-      process.execPath,
+      NODE_RUNTIME,
       '-e',
       "require('node:fs').appendFileSync('runs.log', 'preview-second\\n')"
     ], { env: previewEnv(repoRoot) });
