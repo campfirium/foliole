@@ -216,7 +216,7 @@
     "katex": "0.17.0",
     "liquidjs": "10.27.2",
     "lucide-react": "^0.577.0",
-    "mermaid": "11.16.0",
+    "mermaid": "11.16.1",
     "parse5": "7.3.0",
     "pdfjs-dist": "5.4.296",
     "react": "^18.3.1",
