@@ -267,5 +267,6 @@
     "typescript": "^5.7.3",
     "vite": "8.1.4",
     "vitest": "4.1.10"
-  }
+  },
+  "folioleBuildChannel": "mas"
 }
