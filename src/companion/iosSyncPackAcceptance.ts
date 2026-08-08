@@ -29,19 +29,18 @@ const REJECTION_ERRORS: Partial<Record<AcceptancePhase, string>> = {
   'wrong-target': 'sync_pack_target_mismatch'
 };
 
-async function pairForSyncPack(endpoint: string) {
-  const bootstrap = await loadCompanionBootstrapState();
+async function pairForSyncPack(endpoint: string, deviceId: string, deviceName: string) {
   await clearCompanionPairingCredentials();
   await saveCompanionWorkspaceSyncEndpoint('');
   const pending = await requestCompanionPairing({
-    deviceId: bootstrap.device_id,
+    deviceId,
     deviceKind: 'ios-capacitor',
-    deviceName: bootstrap.device_name ?? 'Acceptance iPhone',
+    deviceName,
     endpointUrl: endpoint
   });
   await pairCompanionWithDesktop({
     deviceKind: 'ios-capacitor',
-    deviceName: bootstrap.device_name ?? 'Acceptance iPhone',
+    deviceName,
     endpointUrl: endpoint,
     pairRequestId: pending.pair_request_id
   });
@@ -67,14 +66,13 @@ async function applyPack(endpoint: string, phase: AcceptancePhase) {
   });
 }
 
-async function runPhase(endpoint: string, phase: AcceptancePhase) {
+async function runPhase(endpoint: string, phase: AcceptancePhase, deviceId: string) {
   if (phase === 'apply') {
     const initial = await applyPack(endpoint, phase);
-    const bootstrap = await loadCompanionBootstrapState();
     return {
       apply: initial,
       error: null,
-      roundtrip: await runIosNodeVersionRoundtripAcceptance(endpoint, bootstrap.device_id)
+      roundtrip: await runIosNodeVersionRoundtripAcceptance(endpoint, deviceId)
     };
   }
   if (phase === 'reapply') {
@@ -96,10 +94,13 @@ export async function runIosSyncPackAcceptance() {
   try {
     const endpoint = acceptanceEndpoint();
     if (!endpoint) throw new Error('iOS Sync Pack acceptance endpoint is unavailable.');
+    const bootstrap = await loadCompanionBootstrapState();
     const pairing = await loadCompanionPairingState();
-    if (!pairing.is_paired) await pairForSyncPack(endpoint);
+    if (!pairing.is_paired) {
+      await pairForSyncPack(endpoint, bootstrap.device_id, bootstrap.device_name ?? 'Acceptance iPhone');
+    }
     const phase = loadPhase();
-    const result = await runPhase(endpoint, phase);
+    const result = await runPhase(endpoint, phase, bootstrap.device_id);
     advancePhase(phase);
     postResult({
       ...result,

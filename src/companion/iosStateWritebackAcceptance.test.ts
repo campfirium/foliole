@@ -73,6 +73,9 @@ it('syncs without rewriting state after process restart', async () => {
 
   await runIosStateWritebackAcceptance();
 
+  expect(mocks.loadBootstrap).toHaveBeenCalledOnce();
+  expect(mocks.loadBootstrap.mock.invocationCallOrder[0] ?? Infinity)
+    .toBeLessThan(mocks.sync.mock.invocationCallOrder[0] ?? -Infinity);
   expect(mocks.sync).toHaveBeenCalledOnce();
   expect(mocks.saveActive).not.toHaveBeenCalled();
   expect(mocks.saveReading).not.toHaveBeenCalled();

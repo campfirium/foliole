@@ -68,6 +68,9 @@ it('reapplies through the shared path without repairing an existing pairing', as
 
   await runIosSyncPackAcceptance();
 
+  expect(mocks.loadBootstrap).toHaveBeenCalledOnce();
+  expect(mocks.loadBootstrap.mock.invocationCallOrder[0] ?? Infinity)
+    .toBeLessThan(mocks.rerunRoundtrip.mock.invocationCallOrder[0] ?? -Infinity);
   expect(mocks.requestPairing).not.toHaveBeenCalled();
   expect(mocks.apply).not.toHaveBeenCalled();
   expect(mocks.rerunRoundtrip).toHaveBeenCalledOnce();

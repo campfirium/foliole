@@ -36,12 +36,14 @@ describe('iOS sync-pack transfer contract', () => {
     expect(project).toContain('companion-bridge-contract-definitions.json in Resources');
   });
 
-  it('uses canonical database identity, system zlib, and confined cache deletion', async () => {
+  it('validates pack SQLite, uses system zlib, and confines cache deletion', async () => {
     const database = await appSource('FolioleReadOnlySQLite.swift');
     const transfer = await appSource('FolioleCompanionSyncPackTransfer.swift');
+    const validator = await appSource('FolioleCompanionSyncPackDatabaseValidator.swift');
     const zlib = await appSource('FolioleCompanionZlib.swift');
 
-    expect(database).toContain('SELECT value FROM companion_meta WHERE key = ?');
+    expect(database).toContain('SQLITE_OPEN_READONLY | SQLITE_OPEN_FULLMUTEX');
+    expect(validator).toContain('SELECT value FROM pack_manifest WHERE key = ?');
     expect(zlib).toContain('import zlib');
     expect(zlib).toContain('inflateInit_');
     expect(zlib).not.toContain('import Compression');
