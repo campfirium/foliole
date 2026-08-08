@@ -23,7 +23,9 @@ export async function resolveReachableCompanionWorkspaceSyncEndpoint(endpointUrl
 
 export async function loadCompanionWorkspaceVersion(endpointUrl: string) {
   const normalizedEndpointUrl = normalizeEndpointUrl(endpointUrl);
-  const headers = await createSignedRequestHeaders({ method: 'GET', pathWithQuery: WORKSPACE_VERSION_PATH });
+  const headers = await createSignedRequestHeaders({
+    endpointUrl: normalizedEndpointUrl, method: 'GET', pathWithQuery: WORKSPACE_VERSION_PATH
+  });
   if (isNativeCompanionPairingRuntime()) {
     const response = await FolioleCompanionSync.desktopHttpRequest({
       headers,

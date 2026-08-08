@@ -61,7 +61,7 @@ async function applyPack(endpoint: string, phase: AcceptancePhase) {
   const kind = phase === 'apply' || phase === 'reapply' ? 'legal' : phase;
   const path = `/acceptance/sync-pack/${kind}`;
   return await applyCompanionDesktopSyncPack({
-    headers: await createSignedRequestHeaders({ method: 'GET', pathWithQuery: path }),
+    headers: await createSignedRequestHeaders({ endpointUrl: endpoint, method: 'GET', pathWithQuery: path }),
     url: `${endpoint}${path}`
   });
 }

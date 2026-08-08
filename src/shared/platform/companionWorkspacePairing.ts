@@ -158,6 +158,10 @@ async function saveNativePairing(
       device_kind: args.deviceKind,
       device_name: args.deviceName,
       device_secret: deviceSecret,
+      ...(usesSyncGroup && payload.sync_group ? {
+        endpoint_url: normalizeEndpointUrl(args.endpointUrl),
+        sync_group_id: payload.sync_group.group_id
+      } : {}),
       negotiated_protocol_version: payload.compatibility.negotiated_version ?? CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
       paired_at: payload.paired_at,
       primary_device_id: payload.peer_id,
@@ -193,7 +197,7 @@ async function saveNativePairing(
         });
       }
     }
-    await verifyNativePairingCanSignRequest();
+    await verifyNativePairingCanSignRequest(normalizeEndpointUrl(args.endpointUrl));
     return storedPairingState;
   });
 }

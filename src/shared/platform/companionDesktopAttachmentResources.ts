@@ -64,7 +64,7 @@ async function buildSignedAttachmentResourceRequest(endpoint: string, request: A
   return {
     attachment_id: request.attachmentId,
     content_hash: request.contentHash,
-    headers: await createSignedRequestHeaders({ method: 'GET', pathWithQuery }),
+    headers: await createSignedRequestHeaders({ endpointUrl: endpoint, method: 'GET', pathWithQuery }),
     url: `${endpoint}${pathWithQuery}`
   };
 }

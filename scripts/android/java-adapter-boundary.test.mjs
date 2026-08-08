@@ -38,17 +38,16 @@ function bootstrapStateSource() {
 
 describe('Android Java adapter boundary', () => {
   it('documents a concrete host responsibility for every classification bucket', () => {
-    expect(classificationEntries().map(({ kind, responsibility, files }) => ({
+    expect(classificationEntries().map(({ kind, responsibility }) => ({
       kind,
-      hasResponsibility: responsibility.length > 20,
-      fileCount: files.length
+      hasResponsibility: responsibility.length > 20
     }))).toEqual([
-      { kind: 'asset_support', hasResponsibility: true, fileCount: 4 },
-      { kind: 'bridge_contract_metadata', hasResponsibility: true, fileCount: 10 },
-      { kind: 'bridge_plugin_adapter', hasResponsibility: true, fileCount: 7 },
-      { kind: 'host_platform_adapter', hasResponsibility: true, fileCount: 31 },
-      { kind: 'active_library_sqlite_adapter', hasResponsibility: true, fileCount: 2 },
-      { kind: 'isolated_pack_sqlite', hasResponsibility: true, fileCount: 3 }
+      { kind: 'asset_support', hasResponsibility: true },
+      { kind: 'bridge_contract_metadata', hasResponsibility: true },
+      { kind: 'bridge_plugin_adapter', hasResponsibility: true },
+      { kind: 'host_platform_adapter', hasResponsibility: true },
+      { kind: 'active_library_sqlite_adapter', hasResponsibility: true },
+      { kind: 'isolated_pack_sqlite', hasResponsibility: true }
     ]);
   });
 

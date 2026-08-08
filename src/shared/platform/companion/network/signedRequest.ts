@@ -27,23 +27,28 @@ function canonical(args: { bodyHash: string; method: string; nonce: string; path
   return [args.method.toUpperCase(), args.pathWithQuery, args.timestamp, args.nonce, args.bodyHash].join('\n');
 }
 
-export async function createSignedRequestHeaders(args: { bodyText?: string; method: string; pathWithQuery: string }) {
+export async function createSignedRequestHeaders(args: {
+  bodyText?: string;
+  endpointUrl?: string;
+  method: string;
+  pathWithQuery: string;
+}) {
   const timestamp = new Date().toISOString();
   const nonce = createCompanionUuid();
   const bodyHash = await sha256Hex(args.bodyText ?? '');
   if (isNativeCompanionPairingRuntime()) {
-    const result = await FolioleCompanionSync.signCompanionSyncRequest({
-      body_hash: bodyHash, method: args.method, nonce, path_with_query: args.pathWithQuery, timestamp
-    });
     const pairing = normalizePairingState(await FolioleCompanionSync.loadPairingState());
-    if (pairing.device_kind !== 'android-capacitor') return result.headers;
-    const group = await loadCompanionSyncGroup();
-    if (!group) throw new Error('Companion does not belong to a Sync Group.');
-    return { ...result.headers, 'X-Sync-Group-Id': group.group_id };
+    const group = pairing.device_kind === 'android-capacitor' ? await loadCompanionSyncGroup() : null;
+    if (group && !args.endpointUrl) throw new Error('Sync Group request target is required.');
+    const result = await FolioleCompanionSync.signCompanionSyncRequest({
+      body_hash: bodyHash, method: args.method, nonce, path_with_query: args.pathWithQuery, timestamp,
+      ...(group ? { endpoint_url: args.endpointUrl, sync_group_id: group.group_id } : {})
+    });
+    return group ? { ...result.headers, 'X-Sync-Group-Id': group.group_id } : result.headers;
   }
   const stored = readStoredWebPairingState();
   if (!stored?.device_id || !stored.device_secret || normalizePairingState(stored).sync_usable !== true) {
-    throw new Error('Companion is not paired with a compatible sync provider.');
+    throw new Error('Companion is not paired with a compatible desktop sync source.');
   }
   return {
     'X-Device-Id': stored.device_id,
@@ -56,9 +61,11 @@ export async function createSignedRequestHeaders(args: { bodyText?: string; meth
   };
 }
 
-export async function verifyNativePairingCanSignRequest() {
+export async function verifyNativePairingCanSignRequest(endpointUrl?: string) {
   try {
-    const headers = await createSignedRequestHeaders({ method: 'GET', pathWithQuery: PAIRING_SIGNATURE_CHECK_PATH });
+    const headers = await createSignedRequestHeaders({
+      ...(endpointUrl ? { endpointUrl } : {}), method: 'GET', pathWithQuery: PAIRING_SIGNATURE_CHECK_PATH
+    });
     if (!headers['X-Device-Id'] || !headers['X-Signature']) throw new Error('Missing signed request headers.');
   } catch (error) {
     const reason = error instanceof Error ? error.message : 'unknown error';

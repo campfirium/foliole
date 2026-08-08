@@ -68,7 +68,7 @@ async function pullRemoteStructurePack(endpointUrl: string) {
   const cursor = await loadCompanionSyncPackCursor();
   const pathWithQuery = buildPackPath(cursor);
   const result = await applyCompanionDesktopSyncPack({
-    headers: await createSignedRequestHeaders({ method: 'GET', pathWithQuery }),
+    headers: await createSignedRequestHeaders({ endpointUrl, method: 'GET', pathWithQuery }),
     url: `${normalizeEndpointUrl(endpointUrl)}${pathWithQuery}`
   });
   assertSyncPackCursorAdvance({

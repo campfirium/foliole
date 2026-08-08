@@ -125,9 +125,9 @@ final class FolioleCompanionSyncGroupServer {
 
     private void saveOutboundPairing(FolioleCompanionSyncGroupJoinRequest pending, String secret) throws Exception {
         String now = java.time.Instant.now().toString();
-        FolioleCompanionPairingStore.savePairingCredentials(context, config.getString("device_id"), "android-capacitor",
-            config.getString("device_name"), secret, 1, now, pending.deviceId, pending.deviceId,
-            pending.deviceName, pending.deviceKind, new com.getcapacitor.JSObject(protocol().toString()));
+        FolioleCompanionSyncGroupOutboundPeerStore.save(
+            context, config.getJSONObject("sync_group").getString("group_id"), config.getString("device_id"),
+            pending.deviceId, "http://" + pending.remoteAddress + ":38641", secret);
         FolioleCompanionSyncGroupDatabase.saveSyncEndpoint(
             config.getString("database_path"), "http://" + pending.remoteAddress + ":38641", now);
     }

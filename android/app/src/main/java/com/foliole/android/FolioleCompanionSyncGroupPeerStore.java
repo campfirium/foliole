@@ -45,6 +45,12 @@ final class FolioleCompanionSyncGroupPeerStore {
         return cipher.doFinal(ciphertext);
     }
 
+    static void clear(Context context) {
+        if (!prefs(context).edit().clear().commit()) {
+            throw new IllegalStateException("Failed to clear Sync Group peer secrets.");
+        }
+    }
+
     private static void save(Context context, String deviceId, byte[] secret) throws Exception {
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
         cipher.init(Cipher.ENCRYPT_MODE, key());

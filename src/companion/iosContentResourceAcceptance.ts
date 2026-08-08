@@ -54,7 +54,7 @@ async function pairForContent(endpoint: string) {
 
 async function applyStructure(endpoint: string) {
   await applyCompanionDesktopSyncPack({
-    headers: await createSignedRequestHeaders({ method: 'GET', pathWithQuery: PACK_PATH }),
+    headers: await createSignedRequestHeaders({ endpointUrl: endpoint, method: 'GET', pathWithQuery: PACK_PATH }),
     url: `${endpoint}${PACK_PATH}`
   });
 }

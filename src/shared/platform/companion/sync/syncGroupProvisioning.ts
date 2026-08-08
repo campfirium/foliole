@@ -31,7 +31,9 @@ export async function activateCompanionSyncGroupIfComplete(endpointUrl: string) 
     member_authorization_id: member.authorization_id,
     timeline_id: group.timeline_id
   });
-  const headers = await createSignedRequestHeaders({ bodyText: body, method: 'POST', pathWithQuery: ACTIVATE_PATH });
+  const headers = await createSignedRequestHeaders({
+    bodyText: body, endpointUrl, method: 'POST', pathWithQuery: ACTIVATE_PATH
+  });
   const response = await FolioleCompanionSync.desktopHttpRequest({
     body, headers: { ...headers, 'Content-Type': 'application/json' }, method: 'POST',
     url: `${endpointUrl.replace(/\/+$/, '')}${ACTIVATE_PATH}`

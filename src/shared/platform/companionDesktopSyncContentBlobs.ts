@@ -174,7 +174,7 @@ async function pullContentBlobNativeBatch(endpoint: string, hashes: string[]) {
   const body = JSON.stringify({ hashes });
   const result = await syncCompanionContentBlobs({
     body,
-    headers: await createSignedRequestHeaders({ bodyText: body, method: 'POST', pathWithQuery }),
+    headers: await createSignedRequestHeaders({ bodyText: body, endpointUrl: endpoint, method: 'POST', pathWithQuery }),
     url: `${endpoint}${pathWithQuery}`
   });
   return {

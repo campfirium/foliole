@@ -48,6 +48,14 @@ final class FolioleCompanionBridgeContractDefinitions {
         return pairingCredentialRequestKey(context, "deviceSecret");
     }
 
+    static String pairingEndpointUrlCredentialRequestKey(Context context) throws Exception {
+        return pairingCredentialRequestKey(context, "endpointUrl");
+    }
+
+    static String pairingSyncGroupIdCredentialRequestKey(Context context) throws Exception {
+        return pairingCredentialRequestKey(context, "syncGroupId");
+    }
+
     static String pairingPairedAtCredentialRequestKey(Context context) throws Exception {
         return pairingCredentialRequestKey(context, "pairedAt");
     }
@@ -144,6 +152,10 @@ final class FolioleCompanionBridgeContractDefinitions {
         return pairingSignatureRequestKey(context, "bodyHash");
     }
 
+    static String pairingEndpointUrlSignatureRequestKey(Context context) throws Exception {
+        return pairingSignatureRequestKey(context, "endpointUrl");
+    }
+
     static String pairingMethodSignatureRequestKey(Context context) throws Exception {
         return pairingSignatureRequestKey(context, "method");
     }
@@ -154,6 +166,10 @@ final class FolioleCompanionBridgeContractDefinitions {
 
     static String pairingPathWithQuerySignatureRequestKey(Context context) throws Exception {
         return pairingSignatureRequestKey(context, "pathWithQuery");
+    }
+
+    static String pairingSyncGroupIdSignatureRequestKey(Context context) throws Exception {
+        return pairingSignatureRequestKey(context, "syncGroupId");
     }
 
     static String pairingTimestampSignatureRequestKey(Context context) throws Exception {

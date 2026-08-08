@@ -22,7 +22,7 @@ export class DesktopSyncHttpError extends Error {
 export async function fetchDesktopJson<T>(endpointUrl: string, pathWithQuery: string): Promise<T> {
   const endpoint = normalizeEndpointUrl(endpointUrl);
   const response = await requestDesktop(`${endpoint}${pathWithQuery}`, {
-    headers: await createSignedRequestHeaders({ method: 'GET', pathWithQuery }),
+    headers: await createSignedRequestHeaders({ endpointUrl: endpoint, method: 'GET', pathWithQuery }),
     method: 'GET'
   });
   return await readDesktopJson<T>(response, pathWithQuery, 'source');
@@ -35,7 +35,7 @@ export async function postDesktopJson<T>(endpointUrl: string, pathWithQuery: str
     body: bodyText,
     headers: {
       'Content-Type': 'application/json',
-      ...await createSignedRequestHeaders({ bodyText, method: 'POST', pathWithQuery })
+      ...await createSignedRequestHeaders({ bodyText, endpointUrl: endpoint, method: 'POST', pathWithQuery })
     },
     method: 'POST'
   });

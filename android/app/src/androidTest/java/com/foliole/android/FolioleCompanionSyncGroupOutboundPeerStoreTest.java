@@ -1,0 +1,78 @@
+package com.foliole.android;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
+
+import android.content.Context;
+
+import androidx.test.core.app.ApplicationProvider;
+import androidx.test.ext.junit.runners.AndroidJUnit4;
+
+import com.getcapacitor.JSObject;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+@RunWith(AndroidJUnit4.class)
+public class FolioleCompanionSyncGroupOutboundPeerStoreTest {
+    private Context context;
+
+    @Before
+    public void setUp() {
+        context = ApplicationProvider.getApplicationContext();
+        clear();
+    }
+
+    @After
+    public void tearDown() {
+        clear();
+    }
+
+    @Test
+    public void signsWithThePeerMatchingTheExactGroupAndEndpoint() throws Exception {
+        FolioleCompanionSyncGroupOutboundPeerStore.save(
+            context, "group-1", "mobile-b", "desktop-a", "http://10.0.0.1:38641", "secret-a");
+        FolioleCompanionSyncGroupOutboundPeerStore.save(
+            context, "group-1", "mobile-b", "desktop-c", "http://10.0.0.3:38641/", "secret-c");
+
+        JSObject signedA = sign("http://10.0.0.1:38641");
+        JSObject signedC = sign("http://10.0.0.3:38641");
+        assertEquals("mobile-b", signedA.getJSObject("headers").getString("X-Device-Id"));
+        assertNotEquals(
+            signedA.getJSObject("headers").getString("X-Signature"),
+            signedC.getJSObject("headers").getString("X-Signature")
+        );
+    }
+
+    @Test
+    public void refusesAnUnknownEndpointInsteadOfFallingBackToAnotherPeer() {
+        assertThrows(SecurityException.class, () -> sign("http://10.0.0.9:38641"));
+    }
+
+    @Test
+    public void appDataClearRemovesInboundAndOutboundGroupCredentials() throws Exception {
+        FolioleCompanionSyncGroupPeerStore.createSecret(context, "desktop-c");
+        FolioleCompanionSyncGroupOutboundPeerStore.save(
+            context, "group-1", "mobile-b", "desktop-c", "http://10.0.0.3:38641", "secret-c");
+
+        FolioleCompanionAppDataStore.clear(context);
+
+        assertNull(FolioleCompanionSyncGroupPeerStore.load(context, "desktop-c"));
+        assertThrows(SecurityException.class, () -> sign("http://10.0.0.3:38641"));
+    }
+
+    private JSObject sign(String endpoint) throws Exception {
+        return FolioleCompanionSyncGroupOutboundPeerStore.sign(
+            context, "group-1", endpoint, "GET", "/companion/sync-pack?after_state_seq=0",
+            "2026-08-09T00:00:00.000Z", "nonce", "body-hash"
+        );
+    }
+
+    private void clear() {
+        context.getSharedPreferences("foliole_sync_group_outbound_peers", Context.MODE_PRIVATE).edit().clear().commit();
+    }
+}

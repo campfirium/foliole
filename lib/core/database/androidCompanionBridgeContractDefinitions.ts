@@ -129,6 +129,8 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
       deviceKind: 'device_kind',
       deviceName: 'device_name',
       deviceSecret: 'device_secret',
+      endpointUrl: 'endpoint_url',
+      syncGroupId: 'sync_group_id',
       negotiatedProtocolVersion: 'negotiated_protocol_version',
       pairedAt: 'paired_at',
       primaryDeviceId: 'primary_device_id',
@@ -164,9 +166,11 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
       },
       requestKeys: {
         bodyHash: 'body_hash',
+        endpointUrl: 'endpoint_url',
         method: 'method',
         nonce: 'nonce',
         pathWithQuery: 'path_with_query',
+        syncGroupId: 'sync_group_id',
         timestamp: 'timestamp'
       },
       responseKeys: {

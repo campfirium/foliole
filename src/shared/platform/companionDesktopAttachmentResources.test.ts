@@ -123,6 +123,7 @@ describe('companion desktop attachment resource manifests', () => {
     ])).resolves.toEqual(['att-1']);
 
     expect(pairingMock.createSignedRequestHeaders).toHaveBeenCalledWith({
+      endpointUrl: 'http://10.0.2.2:38641',
       method: 'GET',
       pathWithQuery: '/companion/attachment-resource?attachment_id=att-1&content_hash=blob-hash'
     });

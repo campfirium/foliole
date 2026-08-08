@@ -19,6 +19,10 @@ const PEER_STORE = path.join(
   'android',
   'FolioleCompanionSyncGroupPeerStore.java'
 );
+const APP_DATA_STORE = path.join(
+  REPO_ROOT, 'android', 'app', 'src', 'main', 'java', 'com', 'foliole', 'android',
+  'FolioleCompanionAppDataStore.java'
+);
 
 describe('FolioleCompanionSyncGroupPeerStore', () => {
   it('lets Android Keystore generate the AES-GCM encryption IV', async () => {
@@ -29,5 +33,11 @@ describe('FolioleCompanionSyncGroupPeerStore', () => {
     expect(saveBody).toContain('byte[] iv = cipher.getIV();');
     expect(saveBody).not.toContain('new GCMParameterSpec(128, iv)');
     expect(saveBody).not.toContain('new java.security.SecureRandom()');
+  });
+
+  it('clears Sync Group transport credentials with the rest of companion app data', async () => {
+    const source = await readFile(APP_DATA_STORE, 'utf8');
+    expect(source).toContain('FolioleCompanionSyncGroupPeerStore.clear(context);');
+    expect(source).toContain('FolioleCompanionSyncGroupOutboundPeerStore.clear(context);');
   });
 });

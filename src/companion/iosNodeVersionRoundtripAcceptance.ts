@@ -47,7 +47,7 @@ export async function rerunIosNodeVersionRoundtripAcceptance(endpoint: string) {
 
 async function applySuccessor(endpoint: string) {
   return applyCompanionDesktopSyncPack({
-    headers: await createSignedRequestHeaders({ method: 'GET', pathWithQuery: SUCCESSOR_PATH }),
+    headers: await createSignedRequestHeaders({ endpointUrl: endpoint, method: 'GET', pathWithQuery: SUCCESSOR_PATH }),
     url: `${endpoint}${SUCCESSOR_PATH}`
   });
 }

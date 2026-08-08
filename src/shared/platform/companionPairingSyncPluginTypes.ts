@@ -11,6 +11,7 @@ export interface CompanionPairingSyncPlugin {
     device_kind: string;
     device_name: string;
     device_secret: string;
+    endpoint_url?: string;
     negotiated_protocol_version: number;
     paired_at: string;
     primary_device_id: string;
@@ -18,13 +19,16 @@ export interface CompanionPairingSyncPlugin {
     remote_peer_name?: string | null;
     remote_peer_platform?: string | null;
     remote_protocol: NonNullable<NativeCompanionPairingState['remote_protocol']>;
+    sync_group_id?: string;
   }): Promise<NativeCompanionPairingState>;
   savePrimaryDeviceId(args: { primary_device_id: string }): Promise<NativeCompanionPairingState>;
   signCompanionSyncRequest(args: {
     body_hash: string;
+    endpoint_url?: string;
     method: string;
     nonce: string;
     path_with_query: string;
+    sync_group_id?: string;
     timestamp: string;
   }): Promise<NativeCompanionSignedRequestHeaders>;
 }

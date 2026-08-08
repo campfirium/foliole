@@ -186,14 +186,20 @@ export function registerPairedCompanionDeviceWithSecret(args: {
 
 export function savePairedSyncGroupPeer(peer: PairedSyncGroupPeer) {
   const store = readStoreStrict();
-  store.client_peers = store.client_peers.filter((candidate) => candidate.group_id !== peer.group_id);
+  store.client_peers = store.client_peers.filter((candidate) =>
+    candidate.group_id !== peer.group_id || candidate.peer_device_id !== peer.peer_device_id);
   store.client_peers.push(peer);
   writeStore(store);
   return peer;
 }
 
-export function loadPairedSyncGroupPeer(groupId: string) {
-  return readStoreForQuery().client_peers.find((peer) => peer.group_id === groupId) ?? null;
+export function loadPairedSyncGroupPeer(groupId: string, peerDeviceId: string) {
+  return readStoreForQuery().client_peers.find((peer) =>
+    peer.group_id === groupId && peer.peer_device_id === peerDeviceId) ?? null;
+}
+
+export function loadPairedSyncGroupPeers(groupId: string) {
+  return readStoreForQuery().client_peers.filter((peer) => peer.group_id === groupId);
 }
 
 export function clearPairedCompanionDevices() {
