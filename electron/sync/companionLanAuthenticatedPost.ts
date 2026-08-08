@@ -12,6 +12,10 @@ import {
   activateProvisionedSyncGroupMember,
   SYNC_GROUP_ACTIVATE_PATH
 } from './companionLanSyncGroupActivation.js';
+import {
+  mergeSubmittedSyncGroupMembership,
+  SYNC_GROUP_MEMBERSHIP_PATH
+} from './companionLanSyncGroupMembership.js';
 import { isRetiredSyncJsonEndpoint } from './companionLanSyncObjects.js';
 import { handleCompanionSyncPush, SYNC_PUSH_PATH } from './companionLanSyncPush.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
@@ -37,6 +41,7 @@ function resolveAuthenticatedPostRoute(parsedRequestUrl: URL) {
   if (parsedRequestUrl.pathname === CONTENT_BLOB_BATCH_PATH) return 'content-blob-batch';
   if (parsedRequestUrl.pathname === SYNC_PUSH_PATH) return 'sync-push';
   if (parsedRequestUrl.pathname === SYNC_GROUP_ACTIVATE_PATH) return 'sync-group-activate';
+  if (parsedRequestUrl.pathname === SYNC_GROUP_MEMBERSHIP_PATH) return 'sync-group-membership';
   if (parsedRequestUrl.pathname === PRIMARY_DEVICE_TAKEOVER_PATH) return 'primary-device-takeover';
   if (isRetiredSyncJsonEndpoint(parsedRequestUrl)) return 'retired-sync-json';
   return null;
@@ -93,6 +98,16 @@ async function handleAuthenticatedRoute(args: {
     } catch (error) {
       writeJson(request, response, 409, {
         error: error instanceof Error ? error.message : 'sync_group_activation_invalid'
+      }, 'POST, OPTIONS');
+    }
+  } else if (route === 'sync-group-membership') {
+    try {
+      writeJson(request, response, 200, {
+        sync_group: mergeSubmittedSyncGroupMembership(bodyText, auth.device_id)
+      }, 'POST, OPTIONS');
+    } catch (error) {
+      writeJson(request, response, 409, {
+        error: error instanceof Error ? error.message : 'sync_group_membership_invalid'
       }, 'POST, OPTIONS');
     }
   } else if (route === 'primary-device-takeover') {

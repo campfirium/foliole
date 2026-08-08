@@ -54,6 +54,8 @@ export async function handlePairRequest(
     approvedByDeviceId: peerId, authorizationId: pairRequestId, deviceId: approved.device_id,
     deviceKind: approved.device_kind, deviceName: approved.device_name, provisioningCursor
   });
+  const memberAuthorizationId = syncGroup?.members.find((member) => member.device_id === approved.device_id)
+    ?.authorization_id ?? null;
   const encryptedSecret = await encryptCompanionPairingSecret({
     clientPublicKey: approved.pairing_public_key, deviceSecret: paired.device_secret
   });
@@ -65,7 +67,7 @@ export async function handlePairRequest(
     app_version: appVersion, compatibility, desktop_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
     device_id: paired.device_id, encrypted_device_secret: encryptedSecret, paired_at: paired.paired_at, peer_id: peerId,
     ...(syncGroup && provisioningCursor !== null ? {
-      member_authorization_id: pairRequestId, provisioning_cursor: provisioningCursor, sync_group: syncGroup
+      member_authorization_id: memberAuthorizationId, provisioning_cursor: provisioningCursor, sync_group: syncGroup
     } : {})
   });
 }

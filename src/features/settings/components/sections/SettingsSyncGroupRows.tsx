@@ -25,7 +25,7 @@ function DeviceList({ group }: { group: SyncGroupPayload }) {
   const t = useTranslation();
   return (
     <div className="flex flex-col gap-2" role="list">
-      {group.members.map((member) => (
+      {group.members.filter((member) => member.state !== 'left').map((member) => (
         <div className="flex items-center justify-between gap-4 py-1" key={member.device_id} role="listitem">
           <span className="truncate text-sm text-foreground">{member.device_name}</span>
           <span className="shrink-0 text-xs text-foreground/55">

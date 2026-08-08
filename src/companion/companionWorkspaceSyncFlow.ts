@@ -1,4 +1,5 @@
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
+import { exchangeCompanionSyncGroupMembership } from '../shared/platform/companion/sync/syncGroupMembershipExchange';
 import {
   activateCompanionSyncGroupIfComplete,
   rollbackIncompleteCompanionSyncGroup
@@ -160,7 +161,8 @@ export async function runCompanionStreamSync(args: RunCompanionStreamSyncArgs) {
     workspaceSnapshot: latestWorkspaceSnapshot
   });
   await hydrateCompanionReviewSchedulerSettings().catch(() => null);
-  await activateCompanionSyncGroupIfComplete(args.endpointUrl);
+  const group = await activateCompanionSyncGroupIfComplete(args.endpointUrl);
+  if (group?.local_member_state === 'active') await exchangeCompanionSyncGroupMembership(args.endpointUrl);
   applyRemainingProgress({ result, setSyncProgress: args.setSyncProgress });
   args.onContinuationModeChange?.(resolveCompanionSyncContinuationMode(result));
   if (passResult.outcome === 'skipped' && hasFastRetryWork(result)) {

@@ -1,4 +1,5 @@
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
+import { exchangeCompanionSyncGroupMembership } from '../shared/platform/companion/sync/syncGroupMembershipExchange';
 import { activateCompanionSyncGroupIfComplete } from '../shared/platform/companion/sync/syncGroupProvisioning';
 import { recoverInterruptedCompanionSyncGroupProvisioning } from '../shared/platform/companion/sync/syncGroupStore';
 import {
@@ -99,7 +100,8 @@ export async function syncCompanionDesktopStreams(args: ManualSyncArgs) {
   }
   if (!result) throw new Error('Manual sync did not run.');
   result = await continueProvisioningResources(args, result);
-  await activateCompanionSyncGroupIfComplete(args.endpointUrl);
+  const group = await activateCompanionSyncGroupIfComplete(args.endpointUrl);
+  if (group?.local_member_state === 'active') await exchangeCompanionSyncGroupMembership(args.endpointUrl);
   if (!structureRefreshCompleted) {
     await refreshAfterStructureSync();
   }

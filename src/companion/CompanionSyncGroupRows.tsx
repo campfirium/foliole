@@ -35,7 +35,7 @@ export function CompanionSyncGroupRows(props: { group: SyncGroupPayload }) {
       <div className="rounded-xl bg-companion-content px-4 py-3">
         <p className="text-sm text-companion-text-secondary">{t('companion.sync.devices')}</p>
         <ul className="mt-2 space-y-2">
-          {props.group.members.map((member) => (
+          {props.group.members.filter((member) => member.state !== 'left').map((member) => (
             <li className="flex items-center justify-between gap-3 text-sm" key={member.device_id}>
               <span className="font-semibold text-foreground">{member.device_name}</span>
               <span className="text-companion-text-secondary">
