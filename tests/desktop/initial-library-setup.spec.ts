@@ -17,6 +17,12 @@ const SCREENSHOT_PATH = path.resolve(
   'desktop-acceptance',
   'initial-library-setup-hidden-native.png'
 );
+const EMPTY_LIBRARY_SCREENSHOT_PATH = path.resolve(
+  '.tmp',
+  'artifacts',
+  'desktop-acceptance',
+  'initial-library-empty-hidden-native.png'
+);
 
 test('fresh macOS startup confirms the library before database creation', async ({ browserName }, testInfo) => {
   void browserName;
@@ -49,6 +55,12 @@ test('fresh macOS startup confirms the library before database creation', async 
     await expect.poll(() => fs.existsSync(pointerPath), { timeout: 10_000 }).toBe(true);
     expect(JSON.parse(fs.readFileSync(pointerPath, 'utf8')).library_home).toBe(libraryHome);
     await expect.poll(() => fs.existsSync(databasePath), { timeout: 10_000 }).toBe(true);
+    await expect(page.getByText(/^(Welcome to Foliole|欢迎使用 Foliole)$/)).toHaveCount(0);
+    await page.screenshot({ path: EMPTY_LIBRARY_SCREENSHOT_PATH });
+    await testInfo.attach('initial-library-empty', {
+      contentType: 'image/png',
+      path: EMPTY_LIBRARY_SCREENSHOT_PATH
+    });
 
     await electronApp.close();
     electronApp = await electron.launch(launchOptions);
