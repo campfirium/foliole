@@ -1,4 +1,7 @@
+import { EN_COMPANION_SYNC_PROVIDER_TRANSLATIONS } from './enCompanionSyncProvider';
+
 export const EN_COMPANION_SYNC_TRANSLATIONS = {
+  ...EN_COMPANION_SYNC_PROVIDER_TRANSLATIONS,
   'companion.sync.none': 'None',
   'companion.sync.never': 'Never',
   'companion.sync.unavailable': 'Unavailable',

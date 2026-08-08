@@ -112,6 +112,69 @@ export function registerProvisioningSyncGroupMember(args: {
   return loadDesktopSyncGroup()!;
 }
 
+export function beginDesktopSyncGroupProvisioning(args: {
+  deviceId: string;
+  emptyProof: unknown;
+  group: SyncGroupPayload;
+  provisioningCursor: number;
+  now?: string;
+}) {
+  if (loadDesktopSyncGroup()) throw new Error('sync_group_identity_mismatch');
+  const now = args.now ?? new Date().toISOString();
+  const driver = openDatabaseConnection().driver;
+  driver.transaction(() => {
+    driver.execute(
+      'INSERT INTO sync_groups VALUES (?, ?, ?, ?, ?, ?)',
+      [args.group.group_id, args.group.display_name, args.group.timeline_id,
+        args.group.created_by_device_id, args.group.created_at, now]
+    );
+    for (const member of args.group.members) {
+      driver.execute(
+        `INSERT INTO sync_group_members (
+          group_id, device_id, device_kind, device_name, state, approved_by_device_id,
+          authorization_id, provisioning_cursor, joined_at, activated_at, left_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)`,
+        [args.group.group_id, member.device_id, member.device_kind, member.device_name, member.state,
+          member.approved_by_device_id, member.authorization_id,
+          member.device_id === args.deviceId ? args.provisioningCursor : null,
+          member.joined_at, member.activated_at, now]
+      );
+    }
+    driver.execute(
+      `INSERT INTO sync_group_local_state (
+        singleton_id, group_id, local_device_id, member_state, provisioning_cursor,
+        created_empty_proof_json, updated_at
+      ) VALUES (1, ?, ?, 'provisioning', ?, ?, ?)`,
+      [args.group.group_id, args.deviceId, args.provisioningCursor, JSON.stringify(args.emptyProof), now]
+    );
+  });
+  return loadDesktopSyncGroup()!;
+}
+
+export function activateDesktopSyncGroupProvisioning(completedCursor: number, now = new Date().toISOString()) {
+  const group = loadDesktopSyncGroup();
+  if (!group || group.local_member_state !== 'provisioning') throw new Error('sync_group_identity_mismatch');
+  if (completedCursor < loadDesktopProvisioningCursor()) throw new Error('sync_group_provisioning_incomplete');
+  openDatabaseConnection().driver.transaction(() => {
+    openDatabaseConnection().driver.execute(
+      `UPDATE sync_group_local_state SET member_state = 'active', provisioning_cursor = NULL,
+       created_empty_proof_json = NULL, updated_at = ? WHERE singleton_id = 1`, [now]
+    );
+    openDatabaseConnection().driver.execute(
+      `UPDATE sync_group_members SET state = 'active', activated_at = COALESCE(activated_at, ?),
+       provisioning_cursor = NULL, updated_at = ? WHERE group_id = ? AND device_id = ?`,
+      [now, now, group.group_id, group.local_device_id]
+    );
+  });
+  return loadDesktopSyncGroup()!;
+}
+
+function loadDesktopProvisioningCursor() {
+  return Number(openDatabaseConnection().driver.queryOne<{ value: number }>(
+    'SELECT COALESCE(provisioning_cursor, 0) AS value FROM sync_group_local_state WHERE singleton_id = 1'
+  )?.value ?? 0);
+}
+
 export function loadDesktopSyncGroupTimelineCursor() {
   return Number(openDatabaseConnection().driver.queryOne<{ value: number }>(
     'SELECT COALESCE(MAX(state_seq), 0) AS value FROM sync_object_state'

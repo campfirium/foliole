@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import type { SyncGroupPayload } from '../../lib/platform/syncGroupContract';
 import { definedProps } from '../shared/lib/definedProps';
+import { reconcileCompanionSyncGroupProvider } from '../shared/platform/companion/sync/syncGroupProvider';
 import { loadCompanionSyncGroup } from '../shared/platform/companion/sync/syncGroupStore';
 
 import { useCompanionHandoffReminderRuntime } from './CompanionHandoffReminderRuntime';
@@ -65,6 +66,11 @@ export function CompanionSyncContent(props: {
     if (workspaceSync.bootstrapState.runtime_kind !== 'android-capacitor') return;
     void loadCompanionSyncGroup().then(setSyncGroup).catch(() => setSyncGroup(null));
   }, [workspaceSync.bootstrapState.runtime_kind, workspaceSync.pairingState.is_paired, workspaceSync.state.last_synced_at]);
+
+  useEffect(() => {
+    if (workspaceSync.bootstrapState.runtime_kind !== 'android-capacitor') return;
+    void reconcileCompanionSyncGroupProvider(workspaceSync.bootstrapState, syncGroup).catch(() => undefined);
+  }, [syncGroup, workspaceSync.bootstrapState]);
 
   useEffect(() => {
     if (!workspaceSync.pendingPairRequest || workspaceSync.pairingStatus !== 'awaiting-approval') {

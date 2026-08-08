@@ -7,13 +7,18 @@
       "downloadContentBlobBatch",
       "finishAttachmentResourceBatch",
       "finishContentBlobBatch",
+      "approveSyncGroupJoinRequest",
       "loadDiscoveryCandidates",
+      "loadSyncGroupProviderState",
       "loadPairingState",
+      "rejectSyncGroupJoinRequest",
       "resolveAttachmentResource",
       "savePairingCredentials",
       "savePrimaryDeviceId",
       "signCompanionSyncRequest",
-      "stageAttachmentResourceBatch"
+      "stageAttachmentResourceBatch",
+      "startSyncGroupProvider",
+      "stopSyncGroupProvider"
     ]
   },
   "hostApi": {
@@ -238,6 +243,16 @@
       "responseKeys": {
         "body": "body",
         "status": "status"
+      }
+    },
+    "syncGroupProvider": {
+      "requestKeys": {
+        "appVersion": "app_version",
+        "databasePath": "database_path",
+        "deviceId": "device_id",
+        "deviceName": "device_name",
+        "group": "sync_group",
+        "pairRequestId": "pair_request_id"
       }
     },
     "syncPackTransfer": {

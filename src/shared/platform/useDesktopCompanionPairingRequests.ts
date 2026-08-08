@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 
 import type { DesktopCompanionPairingOverviewPayload } from '../../../lib/platform/nativeCompanionSyncContract';
 
+import { useDesktopSyncGroupJoinActions } from './desktop/useSyncGroupJoinActions';
 import {
   EMPTY_DESKTOP_COMPANION_PAIRING_OVERVIEW,
   useCompanionPairingPolling,
@@ -181,6 +182,7 @@ export function useDesktopCompanionPairingRequests(pollMs = 2_000) {
     state.setIsLoading,
     state.setPendingActionId
   );
+  const join = useDesktopSyncGroupJoinActions(state);
   useCompanionPairingPushRefresh(refresh);
   useCompanionPairingPolling(pollMs, state.setOverview, state.setError, state.setIsLoading);
 
@@ -189,7 +191,9 @@ export function useDesktopCompanionPairingRequests(pollMs = 2_000) {
       approveRequest: (pairRequestId: string) => runAction(pairRequestId, 'approve'),
       createSyncGroup,
       clearPairedDevices,
+      completeSyncGroupJoin: join.completeJoin,
       removePairedDevice,
+      discoverSyncGroups: join.discoverGroups,
       disableSync: () => toggleSync(false),
       enableSync: () => toggleSync(true),
       error: state.error,
@@ -198,8 +202,10 @@ export function useDesktopCompanionPairingRequests(pollMs = 2_000) {
       overview: state.overview,
       pendingActionId: state.pendingActionId,
       refresh,
+      requestSyncGroupJoin: join.requestJoin,
       rejectRequest: (pairRequestId: string) => runAction(pairRequestId, 'reject')
     }),
-    [clearPairedDevices, createSyncGroup, removePairedDevice, refresh, runAction, state.error, state.isLoading, state.overview, state.pendingActionId, toggleSync]
+    [clearPairedDevices, createSyncGroup, join.completeJoin, join.discoverGroups, join.requestJoin, removePairedDevice,
+      refresh, runAction, state.error, state.isLoading, state.overview, state.pendingActionId, toggleSync]
   );
 }

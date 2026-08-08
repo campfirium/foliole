@@ -1,0 +1,115 @@
+package com.foliole.android;
+
+import android.content.Context;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.time.Instant;
+import java.util.UUID;
+import java.util.zip.CRC32;
+import java.util.zip.DeflaterOutputStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+final class FolioleCompanionSyncPackProvider {
+    private FolioleCompanionSyncPackProvider() {}
+
+    static byte[] build(Context context, String sourcePath, String fromDeviceId, String toPeerId, int fromSeq) throws Exception {
+        FolioleCompanionSyncPackProviderDefinitions definitions = FolioleCompanionSyncPackProviderDefinitions.load(context);
+        File packDbFile = File.createTempFile("foliole-provider-", ".db", context.getCacheDir());
+        String packId = UUID.randomUUID().toString();
+        int toSeq = maxStateSeq(sourcePath);
+        SQLiteDatabase pack = SQLiteDatabase.openOrCreateDatabase(packDbFile, null);
+        try {
+            createPack(pack, definitions, sourcePath, fromSeq, toSeq);
+            JSONObject tables = tableManifest(pack, definitions.tableNames());
+            JSONObject inner = innerManifest(packId, fromSeq, toSeq, tables.getJSONArray("tables"));
+            pack.execSQL("INSERT INTO pack_manifest (key, value) VALUES ('manifest_json', ?)", new Object[] { inner.toString() });
+        } finally { pack.close(); }
+        try {
+            byte[] database = readAll(packDbFile);
+            byte[] compressed = deflate(database);
+            JSONObject manifest = outerManifest(definitions, packId, fromDeviceId, toPeerId, fromSeq, toSeq,
+                tableManifest(packDbFile, definitions.tableNames()).getJSONArray("tables"), database, compressed);
+            return zip(manifest, definitions.databaseEntry(), compressed);
+        } finally { if (!packDbFile.delete()) packDbFile.deleteOnExit(); }
+    }
+
+    private static void createPack(SQLiteDatabase pack, FolioleCompanionSyncPackProviderDefinitions definitions,
+                                   String sourcePath, int fromSeq, int toSeq) throws Exception {
+        JSONArray schema = definitions.packSchema();
+        for (int index = 0; index < schema.length(); index++) pack.execSQL(schema.getString(index));
+        pack.execSQL("ATTACH DATABASE ? AS source", new Object[] { sourcePath });
+        try {
+            JSONArray copies = definitions.copyStatements();
+            for (int index = 0; index < copies.length(); index++) {
+                if (index == 0) pack.execSQL(copies.getString(index), new Object[] { fromSeq, toSeq });
+                else pack.execSQL(copies.getString(index));
+            }
+        } finally { pack.execSQL("DETACH DATABASE source"); }
+    }
+
+    private static int maxStateSeq(String sourcePath) {
+        SQLiteDatabase source = SQLiteDatabase.openDatabase(sourcePath, null, SQLiteDatabase.OPEN_READONLY);
+        try (Cursor cursor = source.rawQuery("SELECT COALESCE(MAX(state_seq), 0) FROM sync_object_state", null)) {
+            return cursor.moveToFirst() ? cursor.getInt(0) : 0;
+        } finally { source.close(); }
+    }
+
+    private static JSONObject tableManifest(File path, JSONArray names) throws Exception {
+        SQLiteDatabase db = SQLiteDatabase.openDatabase(path.getAbsolutePath(), null, SQLiteDatabase.OPEN_READONLY);
+        try { return tableManifest(db, names); } finally { db.close(); }
+    }
+
+    private static JSONObject tableManifest(SQLiteDatabase db, JSONArray names) throws Exception {
+        JSONArray tables = new JSONArray();
+        for (int index = 0; index < names.length(); index++) {
+            String name = names.getString(index);
+            try (Cursor cursor = db.rawQuery("SELECT COUNT(*) FROM \"" + name + "\"", null)) {
+                tables.put(new JSONObject().put("name", name).put("row_count", cursor.moveToFirst() ? cursor.getInt(0) : 0));
+            }
+        }
+        return new JSONObject().put("tables", tables);
+    }
+
+    private static JSONObject innerManifest(String id, int from, int to, JSONArray tables) throws Exception {
+        return new JSONObject().put("pack_id", id).put("from_state_seq", from).put("to_state_seq", to).put("tables", tables);
+    }
+
+    private static JSONObject outerManifest(FolioleCompanionSyncPackProviderDefinitions definitions, String id,
+            String fromDevice, String toPeer, int from, int to, JSONArray tables, byte[] database, byte[] compressed) throws Exception {
+        return innerManifest(id, from, to, tables).put("format", definitions.format())
+            .put("format_version", definitions.formatVersion()).put("from_device_id", fromDevice)
+            .put("to_peer_id", toPeer).put("schema_version", definitions.schemaVersion())
+            .put("compression", "zlib").put("database_file", definitions.databaseEntry())
+            .put("database_uncompressed_sha256", sha(database)).put("database_compressed_sha256", sha(compressed))
+            .put("created_at", Instant.now().toString());
+    }
+
+    private static byte[] zip(JSONObject manifest, String databaseEntry, byte[] compressed) throws Exception {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        try (ZipOutputStream zip = new ZipOutputStream(output)) {
+            stored(zip, "manifest.json", manifest.toString(2).getBytes(StandardCharsets.UTF_8));
+            stored(zip, databaseEntry, compressed);
+        }
+        return output.toByteArray();
+    }
+
+    private static void stored(ZipOutputStream zip, String name, byte[] body) throws Exception {
+        CRC32 crc = new CRC32(); crc.update(body);
+        ZipEntry entry = new ZipEntry(name); entry.setMethod(ZipEntry.STORED); entry.setSize(body.length); entry.setCompressedSize(body.length); entry.setCrc(crc.getValue());
+        zip.putNextEntry(entry); zip.write(body); zip.closeEntry();
+    }
+
+    private static byte[] deflate(byte[] body) throws Exception { ByteArrayOutputStream out = new ByteArrayOutputStream(); try (DeflaterOutputStream stream = new DeflaterOutputStream(out)) { stream.write(body); } return out.toByteArray(); }
+    private static byte[] readAll(File file) throws Exception { try (FileInputStream input = new FileInputStream(file)) { ByteArrayOutputStream out = new ByteArrayOutputStream(); byte[] b = new byte[256 * 1024]; for (int n; (n = input.read(b)) >= 0;) out.write(b, 0, n); return out.toByteArray(); } }
+    private static String sha(byte[] body) throws Exception { StringBuilder out = new StringBuilder("sha256:"); for (byte b : MessageDigest.getInstance("SHA-256").digest(body)) out.append(String.format("%02x", b)); return out.toString(); }
+}

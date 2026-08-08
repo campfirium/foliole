@@ -26,6 +26,11 @@ vi.mock('electron', () => ({
   }
 }));
 
+vi.mock('../database/syncGroupStore.js', () => ({
+  loadDesktopSyncGroup: () => ({ group_id: 'group-1' }),
+  loadSyncGroupMemberAuthorization: () => ({ state: 'active' })
+}));
+
 import {
   clearPairedCompanionDevices,
   countPairedCompanionDevices,
@@ -130,6 +135,7 @@ it('keeps paired devices with different ids even when their LAN labels match', (
     })
   })).toEqual({
     device_id: 'device-before-reset',
+    member_state: 'active',
     ok: true
   });
   warnSpy.mockRestore();
@@ -222,6 +228,7 @@ function createSignedRequest(args: {
       'x-device-id': args.deviceId,
       'x-nonce': args.nonce,
       'x-signature': signature,
+      'x-sync-group-id': 'group-1',
       'x-timestamp': args.timestamp
     },
     method: 'GET',

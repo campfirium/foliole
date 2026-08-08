@@ -145,6 +145,10 @@ final class FolioleCompanionHostBridgeContractDefinitions {
         return syncPackTransferRequestKey(context, "url");
     }
 
+    static String syncGroupProviderRequestKey(Context context, String key) throws Exception {
+        return hostApiString(context, "syncGroupProvider", "requestKeys", key);
+    }
+
     static String workspaceSyncEndpointUrlRequestKey(Context context) throws Exception {
         return workspaceSyncRequestKey(context, "endpointUrl");
     }

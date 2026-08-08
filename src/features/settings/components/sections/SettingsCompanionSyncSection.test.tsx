@@ -19,6 +19,8 @@ function createState(overrides: Partial<PairingState> = {}): PairingState {
     approveRequest: vi.fn(),
     createSyncGroup: vi.fn(),
     clearPairedDevices: vi.fn(),
+    completeSyncGroupJoin: vi.fn(),
+    discoverSyncGroups: vi.fn(),
     disableSync: vi.fn(),
     enableSync: vi.fn(),
     error: null,
@@ -48,6 +50,7 @@ function createState(overrides: Partial<PairingState> = {}): PairingState {
     refresh: vi.fn(),
     rejectRequest: vi.fn(),
     removePairedDevice: vi.fn(),
+    requestSyncGroupJoin: vi.fn(),
     ...overrides
   };
 }
@@ -73,6 +76,41 @@ it('creates a Sync Group from sync settings', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Create Sync Group' }));
 
   expect(createSyncGroup).toHaveBeenCalledTimes(1);
+});
+
+it('requests a discovered Sync Group from its active mobile Device', () => {
+  const requestSyncGroupJoin = vi.fn();
+  companionPairingMock.useDesktopCompanionPairingRequests.mockReturnValue(createState({
+    requestSyncGroupJoin,
+    overview: {
+      ...createState().overview,
+      join_candidates: [{
+        endpoint_url: 'http://192.168.1.8:43123', group_display_name: 'Studio', group_id: 'group-1',
+        provider_device_id: 'android-b', provider_device_kind: 'android-capacitor',
+        provider_device_name: 'A5', timeline_id: 'timeline-1'
+      }]
+    }
+  }));
+  renderWithLocalization(<SettingsCompanionSyncSection />);
+  fireEvent.click(screen.getByRole('button', { name: 'Join Studio' }));
+  expect(requestSyncGroupJoin).toHaveBeenCalledWith('http://192.168.1.8:43123');
+});
+
+it('finishes an approved mobile-to-desktop provisioning request', () => {
+  const completeSyncGroupJoin = vi.fn();
+  companionPairingMock.useDesktopCompanionPairingRequests.mockReturnValue(createState({
+    completeSyncGroupJoin,
+    overview: {
+      ...createState().overview,
+      join_request: {
+        endpoint_url: 'http://192.168.1.8:43123', expires_at: '2026-08-08T01:00:00.000Z',
+        group_id: 'group-1', pair_request_id: 'request-1', status: 'pending', timeline_id: 'timeline-1'
+      }
+    }
+  }));
+  renderWithLocalization(<SettingsCompanionSyncSection />);
+  fireEvent.click(screen.getByRole('button', { name: 'Finish joining' }));
+  expect(completeSyncGroupJoin).toHaveBeenCalledOnce();
 });
 
 it('approves a recognized device asking to join the Sync Group', () => {

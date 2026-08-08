@@ -1,6 +1,9 @@
 import type { TranslationKey } from '../translations';
 
+import { ZH_HANS_COMPANION_SYNC_PROVIDER_TRANSLATIONS } from './zhHansCompanionSyncProvider';
+
 export const ZH_HANS_COMPANION_SYNC_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  ...ZH_HANS_COMPANION_SYNC_PROVIDER_TRANSLATIONS,
   'companion.sync.none': '无',
   'companion.sync.never': '从未',
   'companion.sync.unavailable': '不可用',

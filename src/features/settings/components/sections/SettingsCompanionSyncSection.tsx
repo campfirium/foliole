@@ -52,13 +52,18 @@ export function SettingsCompanionSyncSection() {
         <SettingsErrorState description={syncError} title={t('settings.companionSync.error.desktopUnavailable')} />
       ) : null}
       <SettingsSyncGroupRows
+        candidates={state.overview.join_candidates ?? []}
         group={state.overview.sync_group ?? null}
         isBusy={!state.isDesktopRuntime || state.pendingActionId !== null || state.isLoading}
         isCreating={state.pendingActionId === 'create-sync-group'}
         onCreate={() => void state.createSyncGroup()}
+        onDiscover={() => void state.discoverSyncGroups()}
+        onCompleteJoin={() => void state.completeSyncGroupJoin()}
+        onRequestJoin={(endpointUrl) => void state.requestSyncGroupJoin(endpointUrl)}
         onApprove={(id) => void state.approveRequest(id)}
         onReject={(id) => void state.rejectRequest(id)}
         pendingRequests={state.overview.pending_requests}
+        joinRequest={state.overview.join_request ?? null}
       />
       {state.error ? (
         <SettingsErrorState description={state.error} title={t('settings.companionSync.error.devicesUnavailable')} />

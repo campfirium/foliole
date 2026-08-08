@@ -10,6 +10,18 @@ interface CompanionDiscoveryCandidatesPayload {
   }>;
 }
 
+export interface CompanionSyncGroupProviderState {
+  pending_requests: Array<{
+    device_id: string;
+    device_kind: string;
+    device_name: string;
+    pair_request_id: string;
+    requested_at: string;
+  }>;
+  port: number | null;
+  state: 'running' | 'stopped';
+}
+
 export interface CompanionWorkspaceSyncPlugin
   extends CompanionAttachmentResourceSyncPlugin, CompanionContentBlobSyncPlugin, CompanionPairingSyncPlugin {
   desktopHttpRequest(args: {
@@ -19,6 +31,17 @@ export interface CompanionWorkspaceSyncPlugin
     url: string;
   }): Promise<{ body: string; status: number }>;
   loadDiscoveryCandidates(): Promise<CompanionDiscoveryCandidatesPayload>;
+  loadSyncGroupProviderState(): Promise<CompanionSyncGroupProviderState>;
+  approveSyncGroupJoinRequest(args: { pair_request_id: string }): Promise<CompanionSyncGroupProviderState>;
+  rejectSyncGroupJoinRequest(args: { pair_request_id: string }): Promise<CompanionSyncGroupProviderState>;
+  startSyncGroupProvider(args: {
+    app_version: string;
+    database_path: string;
+    device_id: string;
+    device_name: string;
+    sync_group: import('../../../lib/platform/syncGroupContract').SyncGroupPayload;
+  }): Promise<CompanionSyncGroupProviderState>;
+  stopSyncGroupProvider(): Promise<CompanionSyncGroupProviderState>;
   resolveAttachmentResource(args: {
     attachment_id: string;
     mime_type?: string | null;

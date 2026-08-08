@@ -22,6 +22,7 @@ import {
   verifyDatabaseIntegrity
 } from './integrity.js';
 import { createInternalDatabaseSnapshot } from './internalSnapshots.js';
+import { recoverInterruptedDesktopSyncGroupProvisioning } from './syncGroupProvisioningRecovery.js';
 import { seedInitialWorkspace } from './workspaceBootstrap.js';
 
 export { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
@@ -91,6 +92,7 @@ function initializeOpenedDatabase(connection: ReturnType<typeof openDatabaseConn
 
 function initializeSchemaWorkspaceAndSearch(connection: ReturnType<typeof openDatabaseConnection>) {
   const initializedConnection = initializeDatabaseConnection(connection);
+  recoverInterruptedDesktopSyncGroupProvisioning(initializedConnection);
   seedInitialWorkspace(initializedConnection);
   return initializeWorkspaceSearchSidecar(initializedConnection);
 }

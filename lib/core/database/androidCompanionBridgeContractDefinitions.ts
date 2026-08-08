@@ -19,13 +19,18 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
       'downloadContentBlobBatch',
       'finishAttachmentResourceBatch',
       'finishContentBlobBatch',
+      'approveSyncGroupJoinRequest',
       'loadDiscoveryCandidates',
+      'loadSyncGroupProviderState',
       'loadPairingState',
+      'rejectSyncGroupJoinRequest',
       'resolveAttachmentResource',
       'savePairingCredentials',
       'savePrimaryDeviceId',
       'signCompanionSyncRequest',
-      'stageAttachmentResourceBatch'
+      'stageAttachmentResourceBatch',
+      'startSyncGroupProvider',
+      'stopSyncGroupProvider'
     ]
   },
   hostApi: {
@@ -86,6 +91,16 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
       responseKeys: {
         body: 'body',
         status: 'status'
+      }
+    },
+    syncGroupProvider: {
+      requestKeys: {
+        appVersion: 'app_version',
+        databasePath: 'database_path',
+        deviceId: 'device_id',
+        deviceName: 'device_name',
+        group: 'sync_group',
+        pairRequestId: 'pair_request_id'
       }
     },
     syncPackTransfer: {

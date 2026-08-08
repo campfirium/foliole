@@ -120,6 +120,10 @@ export interface CompanionWorkspacePairPayload {
   sync_group?: import('./syncGroupContract.js').SyncGroupPayload;
   member_authorization_id?: string;
   provisioning_cursor?: number;
+  provider_device_id?: string;
+  provider_device_kind?: string;
+  provider_device_name?: string;
+  provider_encrypted_device_secret?: CompanionPairingSecretPayload;
 }
 
 export interface DesktopCompanionPairRequestPayload {
@@ -148,6 +152,25 @@ export interface DesktopCompanionSyncServerStatusPayload {
   pending_pair_request_count: number;
   port: number | null;
   state: 'failed' | 'running' | 'stopped';
+}
+
+export interface DesktopSyncGroupJoinCandidatePayload {
+  endpoint_url: string;
+  group_display_name: string;
+  group_id: string;
+  provider_device_id: string;
+  provider_device_kind: string;
+  provider_device_name: string;
+  timeline_id: string;
+}
+
+export interface DesktopSyncGroupJoinRequestPayload {
+  endpoint_url: string;
+  expires_at: string;
+  group_id: string;
+  pair_request_id: string;
+  status: 'pending';
+  timeline_id: string;
 }
 
 export type NativePrimaryDeviceRole = 'primary' | 'secondary' | 'unknown';
@@ -189,6 +212,8 @@ export interface NativePrimaryDeviceTakeoverResponse {
 }
 
 export interface DesktopCompanionPairingOverviewPayload {
+  join_candidates?: DesktopSyncGroupJoinCandidatePayload[];
+  join_request?: DesktopSyncGroupJoinRequestPayload | null;
   paired_devices: DesktopCompanionPairedDevicePayload[];
   pending_requests: DesktopCompanionPairRequestPayload[];
   primary_device_state: NativePrimaryDeviceStatePayload;

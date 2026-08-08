@@ -8,25 +8,23 @@ import type { SyncProtocolDescriptor } from '../../lib/platform/syncProtocolCont
 import { ensureSecureStorageBackend } from '../security/secureStorageBackend.js';
 
 import {
+  isClientPeerRecord,
+  isPairedDeviceRecord,
+  type PairedCompanionDevice,
+  type PairedSyncGroupPeer
+} from './companionPairingStoreRecords.js';
+import {
   PairingStoreDecryptionError,
   readEncryptedPairingStorePayload
 } from './pairingStoreEncryption.js';
 
+export type { PairedSyncGroupPeer } from './companionPairingStoreRecords.js';
+
 const PAIRED_DEVICE_STORE_FILE = 'companion-paired-devices.bin';
 const CORRUPT_STORE_SUFFIX = '.corrupt-';
 
-export interface PairedCompanionDevice {
-  client_address: string | null;
-  device_id: string;
-  device_kind: string;
-  device_name: string;
-  device_secret: string;
-  negotiated_protocol_version?: number;
-  paired_at: string;
-  remote_protocol?: SyncProtocolDescriptor;
-}
-
 interface PairedDeviceStorePayload {
+  client_peers: PairedSyncGroupPeer[];
   devices: PairedCompanionDevice[];
 }
 
@@ -44,13 +42,14 @@ function readStoreStrict(): PairedDeviceStorePayload {
   }
   if (!fs.existsSync(storePath)) {
     cachedStorePath = storePath;
-    cachedStore = { devices: [] };
+    cachedStore = { client_peers: [], devices: [] };
     return cachedStore;
   }
   ensureSecureStorageBackend('companion pairing secrets');
   const encrypted = fs.readFileSync(storePath);
   const parsed = readEncryptedPairingStorePayload(encrypted, storePath) as Partial<PairedDeviceStorePayload>;
   cachedStore = {
+    client_peers: Array.isArray(parsed.client_peers) ? parsed.client_peers.filter(isClientPeerRecord) : [],
     devices: Array.isArray(parsed.devices) ? parsed.devices.filter(isPairedDeviceRecord) : []
   };
   cachedStorePath = storePath;
@@ -66,7 +65,7 @@ function readStoreForQuery(): PairedDeviceStorePayload {
     }
     if (error.preserveStore) throw error;
     quarantineUnreadableStore(error.storePath, error.cause);
-    return { devices: [] };
+    return { client_peers: [], devices: [] };
   }
 }
 
@@ -90,27 +89,16 @@ function quarantineUnreadableStore(storePath: string, cause: unknown) {
 function writeStore(payload: PairedDeviceStorePayload) {
   ensureSecureStorageBackend('companion pairing secrets');
   fs.mkdirSync(path.dirname(resolveStorePath()), { recursive: true });
-  const encrypted = safeStorage.encryptString(JSON.stringify({ devices: dedupePairedDevices(payload.devices) }));
+  const encrypted = safeStorage.encryptString(JSON.stringify({
+    client_peers: payload.client_peers,
+    devices: dedupePairedDevices(payload.devices)
+  }));
   fs.writeFileSync(resolveStorePath(), encrypted);
   cachedStore = {
+    client_peers: payload.client_peers,
     devices: dedupePairedDevices(payload.devices)
   };
   cachedStorePath = resolveStorePath();
-}
-
-function isPairedDeviceRecord(value: unknown): value is PairedCompanionDevice {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return false;
-  }
-  const record = value as Record<string, unknown>;
-  return (
-    (record.client_address === null || typeof record.client_address === 'string' || typeof record.client_address === 'undefined') &&
-    typeof record.device_id === 'string' &&
-    typeof record.device_kind === 'string' &&
-    typeof record.device_name === 'string' &&
-    typeof record.device_secret === 'string' &&
-    typeof record.paired_at === 'string'
-  );
 }
 
 export function countPairedCompanionDevices() {
@@ -145,7 +133,7 @@ export function removePairedCompanionDevice(deviceId: string) {
   if (nextDevices.length === store.devices.length) {
     return false;
   }
-  writeStore({ devices: nextDevices });
+  writeStore({ client_peers: store.client_peers, devices: nextDevices });
   return true;
 }
 
@@ -158,13 +146,26 @@ export function registerPairedCompanionDevice(args: {
   pairedAt?: string;
   remoteProtocol: SyncProtocolDescriptor;
 }) {
+  return registerPairedCompanionDeviceWithSecret({ ...args, deviceSecret: randomBytes(32).toString('base64url') });
+}
+
+export function registerPairedCompanionDeviceWithSecret(args: {
+  clientAddress?: string | null;
+  deviceId: string;
+  deviceKind: string;
+  deviceName: string;
+  deviceSecret: string;
+  negotiatedProtocolVersion: number;
+  pairedAt?: string;
+  remoteProtocol: SyncProtocolDescriptor;
+}) {
   const now = args.pairedAt ?? new Date().toISOString();
   const next: PairedCompanionDevice = {
     client_address: args.clientAddress?.trim() || null,
     device_id: args.deviceId.trim(),
     device_kind: args.deviceKind.trim(),
     device_name: args.deviceName.trim(),
-    device_secret: randomBytes(32).toString('base64url'),
+    device_secret: args.deviceSecret,
     negotiated_protocol_version: args.negotiatedProtocolVersion,
     paired_at: now,
     remote_protocol: args.remoteProtocol
@@ -183,8 +184,20 @@ export function registerPairedCompanionDevice(args: {
   return next;
 }
 
+export function savePairedSyncGroupPeer(peer: PairedSyncGroupPeer) {
+  const store = readStoreStrict();
+  store.client_peers = store.client_peers.filter((candidate) => candidate.group_id !== peer.group_id);
+  store.client_peers.push(peer);
+  writeStore(store);
+  return peer;
+}
+
+export function loadPairedSyncGroupPeer(groupId: string) {
+  return readStoreForQuery().client_peers.find((peer) => peer.group_id === groupId) ?? null;
+}
+
 export function clearPairedCompanionDevices() {
-  writeStore({ devices: [] });
+  writeStore({ client_peers: [], devices: [] });
 }
 
 function isSamePairedDevice(left: PairedCompanionDevice, right: PairedCompanionDevice) {

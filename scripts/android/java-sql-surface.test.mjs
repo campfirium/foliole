@@ -8,7 +8,10 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const JAVA_ROOT = path.join(ROOT, 'android/app/src/main/java/com/foliole/android');
 const ISOLATED_SQLITE = new Set([
   'FolioleCompanionContentBlobPack.java',
-  'FolioleCompanionSyncPackDatabaseValidator.java'
+  'FolioleCompanionSyncGroupDatabase.java',
+  'FolioleCompanionSyncGroupResources.java',
+  'FolioleCompanionSyncPackDatabaseValidator.java',
+  'FolioleCompanionSyncPackProvider.java'
 ]);
 
 function javaFiles() {
@@ -36,10 +39,12 @@ describe('Android Java SQL surface', () => {
       .map((match) => match[1]).sort();
     expect(methods).toEqual([
       'clearPairingCredentials', 'desktopHttpRequest', 'downloadAttachmentResourceBatch',
+      'approveSyncGroupJoinRequest',
       'downloadContentBlobBatch', 'finishAttachmentResourceBatch', 'finishContentBlobBatch',
-      'loadDiscoveryCandidates', 'loadPairingState', 'resolveAttachmentResource',
+      'loadDiscoveryCandidates', 'loadPairingState', 'loadSyncGroupProviderState', 'rejectSyncGroupJoinRequest',
+      'resolveAttachmentResource',
       'savePairingCredentials', 'savePrimaryDeviceId', 'signCompanionSyncRequest',
-      'stageAttachmentResourceBatch'
+      'stageAttachmentResourceBatch', 'startSyncGroupProvider', 'stopSyncGroupProvider'
     ].sort());
   });
 

@@ -54,6 +54,7 @@ import {
   ANDROID_COMPANION_SYNC_STREAM_READ_RULES
 } from '../../lib/core/database/androidCompanionSyncQueryDefinitions.ts';
 import { ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS } from '../../lib/core/database/androidCompanionSyncProtocolDefinitions.ts';
+import { ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS } from '../../lib/core/sync/androidSyncPackProviderDefinitions.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '../..');
@@ -61,6 +62,10 @@ const outputPath = path.join(repoRoot, 'android/app/src/main/assets/companion-co
 const migrationOutputPath = path.join(
   repoRoot,
   'android/app/src/main/assets/companion-migration-schema.json'
+);
+const syncPackProviderOutputPath = path.join(
+  repoRoot,
+  'android/app/src/main/assets/companion-sync-pack-provider-definitions.json'
 );
 const mutationOutputPaths = [
   path.join(repoRoot, 'android/app/src/main/assets/companion-mutation-definitions.json'),
@@ -82,6 +87,11 @@ await fs.mkdir(path.dirname(outputPath), { recursive: true });
 await fs.writeFile(
   outputPath,
   `${JSON.stringify({ statements: ANDROID_COMPANION_SCHEMA_STATEMENTS }, null, 2)}\n`,
+  'utf8'
+);
+await fs.writeFile(
+  syncPackProviderOutputPath,
+  `${JSON.stringify(ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS, null, 2)}\n`,
   'utf8'
 );
 await fs.writeFile(
@@ -174,6 +184,7 @@ await fs.writeFile(
   'utf8'
 );
 console.info('[android-schema] wrote companion schema artifact', outputPath);
+console.info('[android-schema] wrote companion sync pack provider artifact', syncPackProviderOutputPath);
 console.info('[android-schema] wrote companion migration schema artifact', migrationOutputPath);
 console.info('[android-schema] wrote companion mutation definitions artifacts', mutationOutputPaths);
 console.info('[android-schema] wrote companion query definitions artifacts', queryOutputPaths);

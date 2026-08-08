@@ -1,0 +1,37 @@
+import { useCallback } from 'react';
+
+import type { DesktopCompanionPairingOverviewPayload } from '../../../../lib/platform/nativeCompanionSyncContract';
+import {
+  completeDesktopSyncGroupJoin,
+  discoverDesktopSyncGroups,
+  requestDesktopSyncGroupJoin
+} from '../desktopCompanionPairingRuntimeRepository';
+
+export function useDesktopSyncGroupJoinActions(args: {
+  setError(value: string | null): void;
+  setIsLoading(value: boolean): void;
+  setOverview(value: DesktopCompanionPairingOverviewPayload): void;
+  setPendingActionId(value: string | null): void;
+}) {
+  const { setError, setIsLoading, setOverview, setPendingActionId } = args;
+  const run = useCallback(async (id: string, action: () => Promise<DesktopCompanionPairingOverviewPayload>) => {
+    setPendingActionId(id);
+    try {
+      const overview = await action();
+      setOverview(overview);
+      setError(null);
+      return overview;
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to join Sync Group.');
+      throw error;
+    } finally {
+      setPendingActionId(null);
+      setIsLoading(false);
+    }
+  }, [setError, setIsLoading, setOverview, setPendingActionId]);
+  return {
+    completeJoin: () => run('complete-sync-group-join', completeDesktopSyncGroupJoin),
+    discoverGroups: () => run('discover-sync-groups', discoverDesktopSyncGroups),
+    requestJoin: (endpointUrl: string) => run('request-sync-group-join', () => requestDesktopSyncGroupJoin(endpointUrl))
+  };
+}

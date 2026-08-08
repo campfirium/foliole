@@ -3,10 +3,11 @@ import type {
   DesktopCompanionPairedDevicePayload,
   DesktopCompanionPairingOverviewPayload,
   DesktopCompanionPairRequestPayload,
-  NativePrimaryDeviceStatePayload,
-  DesktopCompanionSyncServerStatusPayload
+  NativePrimaryDeviceStatePayload
 } from '../../../lib/platform/nativeCompanionSyncContract';
 
+import { normalizeJoinCandidates, normalizeJoinRequest } from './desktop/pairingJoinNormalization';
+import { normalizeServerStatus } from './desktop/pairingServerNormalization';
 import { normalizeSyncGroup } from './desktop/syncGroupNormalization';
 import { getElectronAPI } from './electronApi';
 import { getRuntimeInvoke } from './runtimeInvoke';
@@ -63,30 +64,6 @@ function normalizePendingRequest(value: unknown): DesktopCompanionPairRequestPay
   };
 }
 
-function normalizeServerStatus(value: unknown): DesktopCompanionSyncServerStatusPayload {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return {
-      advertised_urls: [],
-      last_error: null,
-      paired_device_count: 0,
-      pending_pair_request_count: 0,
-      port: null,
-      state: 'stopped'
-    };
-  }
-  const raw = value as Record<string, unknown>;
-  return {
-    advertised_urls: Array.isArray(raw.advertised_urls)
-      ? raw.advertised_urls.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
-      : [],
-    last_error: typeof raw.last_error === 'string' && raw.last_error.trim() ? raw.last_error : null,
-    paired_device_count: typeof raw.paired_device_count === 'number' ? raw.paired_device_count : 0,
-    pending_pair_request_count: typeof raw.pending_pair_request_count === 'number' ? raw.pending_pair_request_count : 0,
-    port: typeof raw.port === 'number' ? raw.port : null,
-    state: raw.state === 'failed' || raw.state === 'running' || raw.state === 'stopped' ? raw.state : 'stopped'
-  };
-}
-
 function normalizePrimaryDeviceState(value: unknown): NativePrimaryDeviceStatePayload {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return {
@@ -134,6 +111,8 @@ function normalizeTakeoverBlockedReasons(value: unknown): NativePrimaryDeviceSta
 function normalizePairingOverview(value: unknown): DesktopCompanionPairingOverviewPayload {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return {
+      join_candidates: [],
+      join_request: null,
       paired_devices: [],
       pending_requests: [],
       primary_device_state: normalizePrimaryDeviceState(null),
@@ -144,6 +123,8 @@ function normalizePairingOverview(value: unknown): DesktopCompanionPairingOvervi
   }
   const raw = value as Record<string, unknown>;
   return {
+    join_candidates: normalizeJoinCandidates(raw.join_candidates),
+    join_request: normalizeJoinRequest(raw.join_request),
     paired_devices: Array.isArray(raw.paired_devices)
       ? raw.paired_devices
           .map((entry) => normalizePairedDevice(entry))
@@ -165,6 +146,9 @@ async function invokeDesktopCompanionPairingCommand<
   T extends
     | typeof NATIVE_COMMANDS.loadCompanionPairingOverview
     | typeof NATIVE_COMMANDS.createSyncGroup
+    | typeof NATIVE_COMMANDS.discoverSyncGroups
+    | typeof NATIVE_COMMANDS.requestSyncGroupJoin
+    | typeof NATIVE_COMMANDS.completeSyncGroupJoin
     | typeof NATIVE_COMMANDS.enableCompanionSync
     | typeof NATIVE_COMMANDS.disableCompanionSync
     | typeof NATIVE_COMMANDS.clearCompanionPairedDevices
@@ -189,6 +173,18 @@ export function loadDesktopCompanionPairingOverview() {
 
 export function createDesktopSyncGroup() {
   return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.createSyncGroup);
+}
+
+export function discoverDesktopSyncGroups() {
+  return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.discoverSyncGroups);
+}
+
+export function requestDesktopSyncGroupJoin(endpointUrl: string) {
+  return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.requestSyncGroupJoin, { endpoint_url: endpointUrl });
+}
+
+export function completeDesktopSyncGroupJoin() {
+  return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.completeSyncGroupJoin);
 }
 
 export function clearDesktopCompanionPairedDevices() {

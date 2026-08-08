@@ -19,6 +19,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionResourceQueryStringKeys.java',
       'FolioleCompanionResourceReadQueryRules.java',
       'FolioleCompanionSyncPackContract.java',
+      'FolioleCompanionSyncPackProviderDefinitions.java',
       'FolioleCompanionSyncProtocolDefinitions.java'
     ]
   },
@@ -48,24 +49,41 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionContentBlobBatchText.java',
       'FolioleCompanionContentBlobMultipartBatch.java',
       'FolioleCompanionDesktopHttpClient.java',
+      'FolioleCompanionHttpRequest.java',
+      'FolioleCompanionHttpResponse.java',
       'FolioleCompanionNetworkPluginActions.java',
+      'FolioleCompanionNsdAdvertisement.java',
       'FolioleCompanionNsdDiscovery.java',
       'FolioleCompanionPairingCrypto.java',
       'FolioleCompanionPairingMetadata.java',
       'FolioleCompanionPairingPeerContractDefinitions.java',
       'FolioleCompanionPairingProtocolStore.java',
       'FolioleCompanionPairingStore.java',
+      'FolioleCompanionSyncGroupJoinRequest.java',
+      'FolioleCompanionSyncGroupPairCrypto.java',
+      'FolioleCompanionSyncGroupPeerStore.java',
+      'FolioleCompanionSyncGroupProvider.java',
+      'FolioleCompanionSyncGroupRequestAuth.java',
+      'FolioleCompanionSyncGroupServer.java',
       'FolioleCompanionSyncPackEnvelopeValidator.java',
       'FolioleCompanionSyncPackTransfer.java',
       'FolioleCompanionWebView.java',
       'MainActivity.java'
     ]
   },
+  active_library_sqlite_adapter: {
+    responsibility: 'Read provider facts and membership from the active library through fixed shared SQL definitions.',
+    files: [
+      'FolioleCompanionSyncGroupDatabase.java',
+      'FolioleCompanionSyncGroupResources.java'
+    ]
+  },
   isolated_pack_sqlite: {
     responsibility: 'Create or validate isolated temporary SQLite packs without opening the active library.',
     files: [
       'FolioleCompanionContentBlobPack.java',
-      'FolioleCompanionSyncPackDatabaseValidator.java'
+      'FolioleCompanionSyncPackDatabaseValidator.java',
+      'FolioleCompanionSyncPackProvider.java'
     ]
   }
 };

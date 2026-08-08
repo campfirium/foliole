@@ -53,6 +53,18 @@ export type NativeSyncCommandMap = {
     args: undefined;
     result: DesktopCompanionPairingOverviewPayload;
   };
+  [NATIVE_COMMANDS.discoverSyncGroups]: {
+    args: undefined;
+    result: DesktopCompanionPairingOverviewPayload;
+  };
+  [NATIVE_COMMANDS.requestSyncGroupJoin]: {
+    args: { endpoint_url: string };
+    result: DesktopCompanionPairingOverviewPayload;
+  };
+  [NATIVE_COMMANDS.completeSyncGroupJoin]: {
+    args: undefined;
+    result: DesktopCompanionPairingOverviewPayload;
+  };
   [NATIVE_COMMANDS.enableCompanionSync]: {
     args: undefined;
     result: DesktopCompanionPairingOverviewPayload;

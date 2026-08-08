@@ -21,6 +21,30 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         FolioleCompanionNetworkPluginActions.loadDiscoveryCandidates(getContext(), call);
     }
 
+    @PluginMethod public void startSyncGroupProvider(PluginCall call) {
+        async(call, "Failed to start Sync Group provider.", () ->
+            FolioleCompanionSyncGroupProvider.start(getContext(), call));
+    }
+
+    @PluginMethod public void stopSyncGroupProvider(PluginCall call) {
+        async(call, "Failed to stop Sync Group provider.", () ->
+            FolioleCompanionSyncGroupProvider.stop());
+    }
+
+    @PluginMethod public void loadSyncGroupProviderState(PluginCall call) {
+        call.resolve(FolioleCompanionSyncGroupProvider.state());
+    }
+
+    @PluginMethod public void approveSyncGroupJoinRequest(PluginCall call) {
+        async(call, "Failed to approve Device.", () ->
+            FolioleCompanionSyncGroupProvider.approve(getContext(), call));
+    }
+
+    @PluginMethod public void rejectSyncGroupJoinRequest(PluginCall call) {
+        async(call, "Failed to reject Device.", () ->
+            FolioleCompanionSyncGroupProvider.reject(getContext(), call));
+    }
+
     @PluginMethod public void loadPairingState(PluginCall call) {
         FolioleCompanionPairingPluginActions.loadPairingState(getContext(), call);
     }
@@ -82,8 +106,22 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     }
 
     @Override protected void handleOnDestroy() {
+        FolioleCompanionSyncGroupProvider.stop();
         super.handleOnDestroy();
         fileExecutor.shutdownNow();
+    }
+
+    @Override protected void handleOnPause() {
+        FolioleCompanionSyncGroupProvider.pause();
+        super.handleOnPause();
+    }
+
+    @Override protected void handleOnResume() {
+        super.handleOnResume();
+        fileExecutor.execute(() -> {
+            try { FolioleCompanionSyncGroupProvider.resume(); }
+            catch (Exception error) { android.util.Log.w("FolioleSyncProvider", "Resume failed", error); }
+        });
     }
 
     private interface FileWork { JSObject run() throws Exception; }

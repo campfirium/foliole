@@ -1,4 +1,8 @@
-import type { DesktopCompanionPairRequestPayload } from '../../../../../lib/platform/nativeCompanionSyncContract';
+import type {
+  DesktopCompanionPairRequestPayload,
+  DesktopSyncGroupJoinCandidatePayload,
+  DesktopSyncGroupJoinRequestPayload
+} from '../../../../../lib/platform/nativeCompanionSyncContract';
 import type { SyncGroupPayload } from '../../../../../lib/platform/syncGroupContract';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
@@ -35,26 +39,53 @@ function DeviceList({ group }: { group: SyncGroupPayload }) {
   );
 }
 
+function EmptySyncGroupRow(props: Parameters<typeof SettingsSyncGroupRows>[0]) {
+  const t = useTranslation();
+  return (
+    <SettingsRow description={t('settings.companionSync.group.empty.description')} title={t('settings.companionSync.group.title')}>
+      <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2">
+            <SettingsButton disabled={props.isBusy} loading={props.isCreating} onClick={props.onCreate}>
+              {t('settings.companionSync.group.create')}
+            </SettingsButton>
+            <SettingsButton disabled={props.isBusy} onClick={props.onDiscover}>
+              {t('settings.companionSync.group.find')}
+            </SettingsButton>
+          </div>
+          {props.joinRequest ? (
+            <SettingsButton disabled={props.isBusy} onClick={props.onCompleteJoin}>
+              {t('settings.companionSync.group.join.complete')}
+            </SettingsButton>
+          ) : props.candidates.map((candidate) => (
+            <SettingsButton disabled={props.isBusy} key={`${candidate.group_id}:${candidate.endpoint_url}`}
+              onClick={() => props.onRequestJoin(candidate.endpoint_url)}>
+              {t('settings.companionSync.group.join.named', { name: candidate.group_display_name })}
+            </SettingsButton>
+          ))}
+        </div>
+      </SettingsControlSlot>
+    </SettingsRow>
+  );
+}
+
 export function SettingsSyncGroupRows(props: {
+  candidates: DesktopSyncGroupJoinCandidatePayload[];
   group: SyncGroupPayload | null;
   isBusy: boolean;
   isCreating: boolean;
   onCreate(): void;
+  onDiscover(): void;
+  onCompleteJoin(): void;
+  onRequestJoin(endpointUrl: string): void;
   onApprove(id: string): void;
   onReject(id: string): void;
   pendingRequests: DesktopCompanionPairRequestPayload[];
+  joinRequest: DesktopSyncGroupJoinRequestPayload | null;
 }) {
   const t = useTranslation();
   if (!props.group) {
-    return (
-      <SettingsRow description={t('settings.companionSync.group.empty.description')} title={t('settings.companionSync.group.title')}>
-        <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-          <SettingsButton disabled={props.isBusy} loading={props.isCreating} onClick={props.onCreate}>
-            {t('settings.companionSync.group.create')}
-          </SettingsButton>
-        </SettingsControlSlot>
-      </SettingsRow>
-    );
+    return <EmptySyncGroupRow {...props} />;
   }
   return (
     <>
