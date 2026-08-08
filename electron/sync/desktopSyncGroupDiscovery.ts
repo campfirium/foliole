@@ -21,7 +21,7 @@ export async function discoverDesktopSyncGroups() {
       if (!host || !service.port || typeof txt.group_id !== 'string' || typeof txt.timeline_id !== 'string') return;
       const candidate = {
         endpoint_url: `http://${host}:${service.port}`,
-        group_display_name: service.name,
+        group_display_name: typeof txt.group_display_name === 'string' ? txt.group_display_name : service.name,
         group_id: txt.group_id,
         provider_device_id: typeof txt.peer_id === 'string' ? txt.peer_id : service.name,
         provider_device_kind: 'android-capacitor',

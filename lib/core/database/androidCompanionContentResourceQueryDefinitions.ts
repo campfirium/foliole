@@ -18,7 +18,8 @@ export const ANDROID_COMPANION_CONTENT_RESOURCE_QUERY_DEFINITIONS = {
       'LEFT JOIN node_reading rd ON rd.node_id = n.id ' +
       'WHERE n.body_blob_hash IS NOT NULL ' +
       'UNION ALL SELECT ed.body_blob_hash AS hash, 4 AS priority, ed.updated_at AS updated_at ' +
-      'FROM external_documents ed WHERE ed.body_blob_hash IS NOT NULL AND ed.is_present = 1' +
+      'FROM external_documents ed WHERE ed.body_blob_hash IS NOT NULL AND ed.is_present = 1 ' +
+      "UNION ALL SELECT cb.hash, 5 AS priority, cb.created_at AS updated_at FROM content_blobs cb WHERE cb.kind = 'text_body'" +
       '), ranked_refs AS (' +
       'SELECT hash, MIN(priority) AS priority, MAX(updated_at) AS updated_at FROM body_refs GROUP BY hash' +
       ') SELECT cb.hash, COALESCE(cb.stored_size_bytes, 0) AS size_bytes FROM content_blobs cb ' +
@@ -39,7 +40,8 @@ export const ANDROID_COMPANION_CONTENT_RESOURCE_QUERY_DEFINITIONS = {
       `${VISIBLE_NODES_CTE_SQL}, body_refs AS (` +
       'SELECT n.body_blob_hash AS hash FROM nodes n INNER JOIN visible_nodes visible ON visible.id = n.id WHERE n.body_blob_hash IS NOT NULL ' +
       'UNION SELECT ed.body_blob_hash AS hash FROM external_documents ed ' +
-      'WHERE ed.body_blob_hash IS NOT NULL AND ed.is_present = 1' +
+      'WHERE ed.body_blob_hash IS NOT NULL AND ed.is_present = 1 ' +
+      "UNION SELECT cb.hash FROM content_blobs cb WHERE cb.kind = 'text_body'" +
       ') SELECT cb.hash, COALESCE(cb.stored_size_bytes, 0) AS size_bytes, cb.availability FROM content_blobs cb ' +
       'JOIN body_refs refs ON refs.hash = cb.hash LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash ' +
       "WHERE cb.kind = 'text_body' AND cbd.hash IS NULL",

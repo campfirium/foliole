@@ -114,7 +114,10 @@ function handleSyncGroupJoinCommand(command: string, args: Record<string, unknow
 
 function handleOwnedCompanionPairingCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.loadCompanionPairingOverview) {
+    const join = loadDesktopSyncGroupJoinState();
     return {
+      join_candidates: join.candidates,
+      join_request: join.pending?.request ?? null,
       paired_devices: loadPairedCompanionDevices(),
       pending_requests: loadPendingCompanionPairRequests(),
       primary_device_state: loadDesktopPrimaryDeviceStatePayload(),

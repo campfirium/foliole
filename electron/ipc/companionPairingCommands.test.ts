@@ -17,6 +17,18 @@ const commandMocks = vi.hoisted(() => ({
     source: 'committed-primary-device',
     takeover_blocked_reasons: []
   }),
+  loadDesktopSyncGroupJoinState: vi.fn(() => ({
+    candidates: [{
+      endpoint_url: 'http://192.168.0.107:39339',
+      group_display_name: 'Foliole Desktop on Maci.local',
+      group_id: 'group-1',
+      provider_device_id: 'android-b',
+      provider_device_kind: 'android-capacitor',
+      provider_device_name: 'Xiaomi 23049RAD8C',
+      timeline_id: 'timeline-1'
+    }],
+    pending: null
+  })),
   runWithDatabaseConnectionOwner: vi.fn(async (execute: () => unknown) => execute())
 }));
 
@@ -49,6 +61,10 @@ vi.mock('../sync/companionPairingStore.js', () => ({
 vi.mock('../sync/desktopCompanionSyncPreference.js', () => ({
   isDesktopCompanionSyncEnabled: vi.fn(() => true),
   setDesktopCompanionSyncEnabled: vi.fn()
+}));
+vi.mock('../sync/desktopSyncGroupJoinState.js', () => ({
+  loadDesktopSyncGroupJoinState: commandMocks.loadDesktopSyncGroupJoinState,
+  saveDesktopSyncGroupCandidates: vi.fn()
 }));
 vi.mock('../sync/lanWorkspaceSyncServer.js', () => ({
   ensureLanWorkspaceSyncServer: vi.fn(),
@@ -90,4 +106,14 @@ it('commits the desktop device as primary through the coordinated database owner
     updatedByDeviceId: 'device-desktop'
   });
   expect(commandMocks.runWithDatabaseConnectionOwner).toHaveBeenCalledOnce();
+});
+
+it('keeps discovered Sync Group candidates in the polling overview', async () => {
+  await expect(handleCompanionPairingCommand('load_companion_pairing_overview', {})).resolves.toMatchObject({
+    join_candidates: [expect.objectContaining({
+      group_display_name: 'Foliole Desktop on Maci.local',
+      group_id: 'group-1'
+    })],
+    join_request: null
+  });
 });
