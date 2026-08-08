@@ -46,10 +46,12 @@ final class FolioleCompanionSyncGroupPeerStore {
     }
 
     private static void save(Context context, String deviceId, byte[] secret) throws Exception {
-        byte[] iv = new byte[12];
-        new java.security.SecureRandom().nextBytes(iv);
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-        cipher.init(Cipher.ENCRYPT_MODE, key(), new GCMParameterSpec(128, iv));
+        cipher.init(Cipher.ENCRYPT_MODE, key());
+        byte[] iv = cipher.getIV();
+        if (iv == null || iv.length == 0) {
+            throw new IllegalStateException("Android Keystore did not provide an encryption IV.");
+        }
         byte[] encrypted = cipher.doFinal(secret);
         byte[] payload = new byte[iv.length + encrypted.length];
         System.arraycopy(iv, 0, payload, 0, iv.length);
