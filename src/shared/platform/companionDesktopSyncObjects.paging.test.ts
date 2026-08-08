@@ -63,7 +63,8 @@ vi.mock('./companionDesktopSyncSummary', () => ({
   }))
 }));
 vi.mock('./companionWorkspacePairing', () => ({
-  createSignedRequestHeaders: vi.fn(async () => ({ 'X-Device-Id': 'android-test-device' }))
+  createSignedRequestHeaders: vi.fn(async () => ({ 'X-Device-Id': 'android-test-device' })),
+  loadCompanionPairingState: vi.fn(async () => ({ device_kind: 'android' }))
 }));
 
 function createStateObject(index: number): NativeSyncStateObjectRecord {

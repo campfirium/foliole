@@ -13,6 +13,7 @@ import type { NumberedSchemaMigration } from './numberedMigrations.js';
 import { migrateSettingSingleTruth } from './numberedMigrationSettingSingleTruth.js';
 import { migrateSyncConflictConvergence } from './numberedMigrationSyncConvergence.js';
 import { createVirtualFolderTables } from './numberedMigrationVirtualFolders.js';
+import { SYNC_GROUP_SCHEMA_STATEMENTS } from './syncGroupSchemaStatements.js';
 
 export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   {
@@ -126,5 +127,11 @@ export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   {
     version: 62,
     migrate: migrateSyncConflictConvergence
+  },
+  {
+    version: 63,
+    migrate: (sqlite) => {
+      for (const statement of SYNC_GROUP_SCHEMA_STATEMENTS) sqlite.exec(statement);
+    }
   }
 ];

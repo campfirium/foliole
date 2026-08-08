@@ -1,6 +1,7 @@
 import os from 'node:os';
 
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
+import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import type { WorkspaceSnapshot, WorkspaceVersionMetadata } from '../database/workspaceSnapshot.js';
 
 export function buildWorkspaceSnapshotPayload(appVersion: string, peerId: string, snapshot: WorkspaceSnapshot | null) {
@@ -33,12 +34,14 @@ function resolveDesktopPlatformLabel() {
   return platform;
 }
 
-function resolveDesktopDeviceName() {
+export function resolveDesktopDeviceName() {
   const hostName = os.hostname().trim();
   return hostName ? `Foliole Desktop on ${hostName}` : 'Foliole Desktop';
 }
 
 export function buildDiscoveryPayload(appVersion: string, peerId: string) {
+  const group = loadDesktopSyncGroup();
+  if (!group || group.local_member_state !== 'active') return null;
   return {
     app_version: appVersion,
     desktop_device_name: resolveDesktopDeviceName(),
@@ -46,6 +49,9 @@ export function buildDiscoveryPayload(appVersion: string, peerId: string) {
     desktop_platform: resolveDesktopPlatformLabel(),
     pairing_mode: 'desktop-confirm' as const,
     peer_id: peerId,
+    group_display_name: group.display_name,
+    group_id: group.group_id,
+    timeline_id: group.timeline_id,
     protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
   };
 }

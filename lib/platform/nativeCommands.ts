@@ -144,6 +144,7 @@ export const NATIVE_COMMANDS = {
   searchWorkspace: 'search_workspace',
   loadWorkspaceSnapshot: 'load_workspace_snapshot',
   loadCompanionPairingOverview: 'load_companion_pairing_overview',
+  createSyncGroup: 'create_sync_group',
   enableCompanionSync: 'enable_companion_sync',
   disableCompanionSync: 'disable_companion_sync',
   clearCompanionPairedDevices: 'clear_companion_paired_devices',

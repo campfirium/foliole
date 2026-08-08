@@ -143,6 +143,8 @@ export type PairCompanionWithDesktopArgs = {
   deviceName: string;
   endpointUrl: string;
   pairRequestId: string;
+  groupId?: string | undefined;
+  timelineId?: string | undefined;
   remotePeerId?: string | null;
   remotePeerName?: string | null;
   remotePeerPlatform?: string | null;
@@ -153,6 +155,8 @@ export type RequestCompanionPairingArgs = {
   deviceKind: string;
   deviceName: string;
   endpointUrl: string;
+  groupId?: string | undefined;
+  timelineId?: string | undefined;
 };
 
 export type PairCompanionWithDesktopResponse = CompanionWorkspacePairPayload;

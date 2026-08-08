@@ -64,7 +64,8 @@ vi.mock('./companionDesktopAttachmentResources', () => ({
   syncCompanionAttachmentResourcesFromDesktop: vi.fn(async () => [] as string[])
 }));
 vi.mock('./companionWorkspacePairing', () => ({
-  createSignedRequestHeaders: vi.fn(async () => ({ 'X-Device-Id': 'android-test-device' }))
+  createSignedRequestHeaders: vi.fn(async () => ({ 'X-Device-Id': 'android-test-device' })),
+  loadCompanionPairingState: vi.fn(async () => ({ device_kind: 'android' }))
 }));
 
 function setupPushAckMocks() {

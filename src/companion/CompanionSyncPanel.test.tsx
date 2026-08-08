@@ -134,7 +134,7 @@ describe('CompanionSyncPanel discovery list', () => {
     expect(screen.getByText('(Windows)')).toBeInTheDocument();
     expect(screen.getByText('192.168.1.8:38641')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Pair with this device' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Join' }));
 
     await waitFor(() => {
       expect(props.onRequestPairing).toHaveBeenCalledWith('http://192.168.1.8:38641');
@@ -160,7 +160,7 @@ describe('CompanionSyncPanel discovery list', () => {
 
     renderWithLocalization(<CompanionSyncPanel {...props} />);
 
-    const button = screen.getByRole('button', { name: 'Connecting...' });
+    const button = screen.getByRole('button', { name: 'Joining...' });
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute('aria-busy', 'true');
   });
@@ -198,7 +198,7 @@ describe('CompanionSyncPanel multiple discovery list', () => {
     expect(screen.queryByText('Bring content from another device')).not.toBeInTheDocument();
     expect(screen.getByText('Foliole Desktop on V')).toBeInTheDocument();
     expect(screen.getByText('Foliole Desktop on Studio')).toBeInTheDocument();
-    const pairButtons = screen.getAllByRole('button', { name: 'Connect' });
+    const pairButtons = screen.getAllByRole('button', { name: 'Join' });
     fireEvent.click(pairButtons[1]!);
 
     await waitFor(() => {

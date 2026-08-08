@@ -5,6 +5,8 @@ import { resolveFolioleAppVersion } from '../appVersion.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadOrCreateDesktopDeviceId } from '../database/deviceIdentity.js';
 import { commitPrimaryDeviceToPeer } from '../database/primaryDeviceCommit.js';
+import { createDesktopSyncGroup, loadDesktopSyncGroup } from '../database/syncGroupStore.js';
+import { resolveDesktopDeviceName } from '../sync/companionLanPayloads.js';
 import {
   approveCompanionPairRequest,
   loadPendingCompanionPairRequests,
@@ -27,6 +29,7 @@ import { asString } from './commandParsers.js';
 
 const COMPANION_PAIRING_COMMANDS = new Set<string>([
   NATIVE_COMMANDS.loadCompanionPairingOverview,
+  NATIVE_COMMANDS.createSyncGroup,
   NATIVE_COMMANDS.enableCompanionSync,
   NATIVE_COMMANDS.disableCompanionSync,
   NATIVE_COMMANDS.clearCompanionPairedDevices,
@@ -42,6 +45,7 @@ function buildDesktopCompanionPairingOverview() {
     pending_requests: loadPendingCompanionPairRequests(),
     primary_device_state: loadDesktopPrimaryDeviceStatePayload(),
     server_status: refreshLanWorkspaceSyncServerPairingStatus(),
+    sync_group: loadDesktopSyncGroup(),
     sync_enabled: isDesktopCompanionSyncEnabled()
   };
 }
@@ -78,8 +82,22 @@ function handleOwnedCompanionPairingCommand(command: string, args: Record<string
       pending_requests: loadPendingCompanionPairRequests(),
       primary_device_state: loadDesktopPrimaryDeviceStatePayload(),
       server_status: getLanWorkspaceSyncServerStatus(),
+      sync_group: loadDesktopSyncGroup(),
       sync_enabled: isDesktopCompanionSyncEnabled()
     };
+  }
+  if (command === NATIVE_COMMANDS.createSyncGroup) {
+    const deviceId = loadOrCreateDesktopDeviceId();
+    createDesktopSyncGroup({
+      deviceId,
+      deviceKind: process.platform,
+      deviceName: resolveDesktopDeviceName()
+    });
+    if (!isDesktopCompanionSyncEnabled()) setDesktopCompanionSyncEnabled(true);
+    return ensureLanWorkspaceSyncServer({
+      appVersion: resolveFolioleAppVersion(app),
+      peerId: deviceId
+    }).then(() => buildDesktopCompanionPairingOverview());
   }
   if (command === NATIVE_COMMANDS.enableCompanionSync) {
     setDesktopCompanionSyncEnabled(true);

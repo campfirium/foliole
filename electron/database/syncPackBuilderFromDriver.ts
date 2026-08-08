@@ -113,7 +113,10 @@ export async function buildDesktopSyncPackFromDriver(
       nodeVersions,
       nodeVersionParents: loadSyncPackNodeVersionParentRows(sourceDriver, nodeVersions)
     };
-    const packToStateSeq = rows.stateRows.at(-1)?.state_seq ?? fromStateSeq;
+    const packToStateSeq = Math.max(
+      rows.stateRows.at(-1)?.state_seq ?? fromStateSeq,
+      baseRows.consumedStateSeq
+    );
     const writePack = packDb.transaction(() => {
       writePackManifest(packDb, input, fromStateSeq, packToStateSeq, rows);
       writePackRows(packDb, rows);

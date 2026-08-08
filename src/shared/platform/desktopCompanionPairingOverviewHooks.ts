@@ -23,6 +23,7 @@ export const EMPTY_DESKTOP_COMPANION_PAIRING_OVERVIEW: DesktopCompanionPairingOv
     port: null,
     state: 'stopped'
   },
+  sync_group: null,
   sync_enabled: false
 };
 

@@ -29,7 +29,8 @@ const DESKTOP_SCHEMA_FILES = {
   DESKTOP_RESOURCE_SCHEMA_STATEMENTS: 'lib/core/database/desktopResourceSchemaStatements.ts',
   EXTERNAL_DOCUMENT_SCHEMA_STATEMENTS: 'lib/core/database/externalDocumentSchemaStatements.ts',
   KEEP_IMPORT_SCHEMA_STATEMENTS: 'lib/core/database/keepImportSchemaStatements.ts',
-  SYNC_SCHEMA_STATEMENTS: 'lib/core/database/syncSchemaStatements.ts'
+  SYNC_SCHEMA_STATEMENTS: 'lib/core/database/syncSchemaStatements.ts',
+  SYNC_GROUP_SCHEMA_STATEMENTS: 'lib/core/database/syncGroupSchemaStatements.ts'
 };
 
 export function buildSchemaDriftReport(repoRoot = REPO_ROOT) {

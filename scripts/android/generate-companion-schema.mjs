@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 import { writeCompanionContractAssets } from '../capacitor/write-companion-contract-assets.mjs';
 import { ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS } from '../../lib/core/database/androidCompanionBridgeContractDefinitions.ts';
-import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.ts';
+import { ANDROID_COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionSchemaStatements.ts';
 import {
   ANDROID_COMPANION_MIGRATION_ACTION_TYPES,
   ANDROID_COMPANION_MIGRATION_ACTION_KEYS,
@@ -81,7 +81,7 @@ const resourceQueryStringJavaOutputPath = path.join(
 await fs.mkdir(path.dirname(outputPath), { recursive: true });
 await fs.writeFile(
   outputPath,
-  `${JSON.stringify({ statements: COMPANION_SCHEMA_STATEMENTS }, null, 2)}\n`,
+  `${JSON.stringify({ statements: ANDROID_COMPANION_SCHEMA_STATEMENTS }, null, 2)}\n`,
   'utf8'
 );
 await fs.writeFile(

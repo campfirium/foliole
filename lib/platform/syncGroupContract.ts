@@ -1,0 +1,74 @@
+export type SyncGroupMemberState = 'active' | 'left' | 'provisioning';
+
+export interface SyncGroupMemberPayload {
+  activated_at: string | null;
+  approved_by_device_id: string;
+  authorization_id: string;
+  device_id: string;
+  device_kind: string;
+  device_name: string;
+  joined_at: string;
+  state: SyncGroupMemberState;
+}
+
+export interface SyncGroupPayload {
+  created_at: string;
+  created_by_device_id: string;
+  display_name: string;
+  group_id: string;
+  local_device_id: string;
+  local_member_state: SyncGroupMemberState;
+  members: SyncGroupMemberPayload[];
+  timeline_id: string;
+}
+
+export interface SyncGroupDiscoveryPayload {
+  app_version: string;
+  group_display_name: string;
+  group_id: string;
+  protocol: import('./syncProtocolContract.js').SyncProtocolDescriptor;
+  provider_device_id: string;
+  provider_device_kind: string;
+  provider_device_name: string;
+  timeline_id: string;
+}
+
+export interface SyncGroupProvisioningPayload {
+  group: SyncGroupPayload;
+  member_authorization_id: string;
+  provisioning_cursor: number;
+}
+
+export interface SyncGroupLibraryFacts {
+  attachment_count: number;
+  content_blob_count: number;
+  node_count: number;
+  review_log_count: number;
+  timeline_id: string | null;
+}
+
+export function isEmptySyncGroupLibrary(facts: SyncGroupLibraryFacts) {
+  return facts.node_count === 0
+    && facts.review_log_count === 0
+    && facts.attachment_count === 0
+    && facts.content_blob_count === 0
+    && facts.timeline_id === null;
+}
+
+export function isCompleteProvisioningSummary(summary: {
+  remainingAttachmentResourceCount: number | null;
+  remainingContentBlobCount: number | null;
+  remainingFailedAttachmentResourceCount: number | null;
+  remainingFailedContentBlobCount: number | null;
+  remainingStructureChangeCount: number | null;
+}) {
+  return summary.remainingStructureChangeCount === 0
+    && summary.remainingAttachmentResourceCount === 0
+    && summary.remainingContentBlobCount === 0
+    && summary.remainingFailedAttachmentResourceCount === 0
+    && summary.remainingFailedContentBlobCount === 0;
+}
+
+export function shouldSkipSyncGroupPush(deviceKind: string | null | undefined, state: SyncGroupMemberState | null | undefined) {
+  return deviceKind === 'android-capacitor' && state === 'provisioning';
+}

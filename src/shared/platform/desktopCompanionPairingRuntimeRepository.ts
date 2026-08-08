@@ -7,6 +7,7 @@ import type {
   DesktopCompanionSyncServerStatusPayload
 } from '../../../lib/platform/nativeCompanionSyncContract';
 
+import { normalizeSyncGroup } from './desktop/syncGroupNormalization';
 import { getElectronAPI } from './electronApi';
 import { getRuntimeInvoke } from './runtimeInvoke';
 
@@ -137,6 +138,7 @@ function normalizePairingOverview(value: unknown): DesktopCompanionPairingOvervi
       pending_requests: [],
       primary_device_state: normalizePrimaryDeviceState(null),
       server_status: normalizeServerStatus(null),
+      sync_group: null,
       sync_enabled: false
     };
   }
@@ -154,6 +156,7 @@ function normalizePairingOverview(value: unknown): DesktopCompanionPairingOvervi
       : [],
     primary_device_state: normalizePrimaryDeviceState(raw.primary_device_state),
     server_status: normalizeServerStatus(raw.server_status),
+    sync_group: normalizeSyncGroup(raw.sync_group),
     sync_enabled: raw.sync_enabled === true
   };
 }
@@ -161,6 +164,7 @@ function normalizePairingOverview(value: unknown): DesktopCompanionPairingOvervi
 async function invokeDesktopCompanionPairingCommand<
   T extends
     | typeof NATIVE_COMMANDS.loadCompanionPairingOverview
+    | typeof NATIVE_COMMANDS.createSyncGroup
     | typeof NATIVE_COMMANDS.enableCompanionSync
     | typeof NATIVE_COMMANDS.disableCompanionSync
     | typeof NATIVE_COMMANDS.clearCompanionPairedDevices
@@ -181,6 +185,10 @@ async function invokeDesktopCompanionPairingCommand<
 
 export function loadDesktopCompanionPairingOverview() {
   return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.loadCompanionPairingOverview);
+}
+
+export function createDesktopSyncGroup() {
+  return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.createSyncGroup);
 }
 
 export function clearDesktopCompanionPairedDevices() {

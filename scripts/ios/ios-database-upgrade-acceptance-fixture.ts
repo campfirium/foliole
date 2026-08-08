@@ -37,13 +37,7 @@ export function assertLatestUpgradeFixtureProvenance() {
   }
   const latest = ANDROID_COMPANION_MIGRATION_PLAN.at(-1);
   const actionTypes = latest?.actions.map((action) => action.type);
-  const expected = [
-    ANDROID_COMPANION_MIGRATION_ACTION_TYPES.installSchema,
-    ANDROID_COMPANION_MIGRATION_ACTION_TYPES.addNodesAnchorResolutionStatusIfMissing,
-    ANDROID_COMPANION_MIGRATION_ACTION_TYPES.addNodesAnchorSourceVersionIdIfMissing,
-    ANDROID_COMPANION_MIGRATION_ACTION_TYPES.addNodeSyncVersionsBodyTextIfMissing,
-    ANDROID_COMPANION_MIGRATION_ACTION_TYPES.backfillSyncConflictConvergence
-  ];
+  const expected = [ANDROID_COMPANION_MIGRATION_ACTION_TYPES.installSchema];
   if (latest?.beforeVersion !== COMPANION_DATABASE_VERSION || JSON.stringify(actionTypes) !== JSON.stringify(expected)) {
     throw new Error('The upgrade fixture no longer matches the latest companion migration step.');
   }

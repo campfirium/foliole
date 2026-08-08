@@ -2,6 +2,10 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('../shared/platform/companion/sync/syncGroupStore', () => ({
+  loadCompanionSyncGroup: vi.fn(async () => null)
+}));
+
 import { CompanionHandoffReminderRuntime } from './CompanionHandoffReminderRuntime';
 import { CompanionSyncContent } from './CompanionSyncContent';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
@@ -152,7 +156,7 @@ function pairedWorkspaceSync() {
   return workspaceSync;
 }
 
-function testShowsSyncStatusDetails() {
+function testShowsSyncGroupStatusDetails() {
   const workspaceSync = pairedWorkspaceSync();
   workspaceSync.state = {
     ...workspaceSync.state,
@@ -170,14 +174,14 @@ function testShowsSyncStatusDetails() {
   render(<TestSyncContent workspaceSync={workspaceSync} />);
 
   expect(screen.getByText('Last sync')).toBeInTheDocument();
-  expect(screen.getByText('MacBook Pro (macOS)')).toBeInTheDocument();
   expect(screen.getByText('Activity')).toBeInTheDocument();
   expect(screen.getByText('Downloaded 1 topic body in this sync.')).toBeInTheDocument();
   expect(screen.getByText(/^Checked \d/)).toBeInTheDocument();
+  expect(screen.getByTestId('companion-sync-connection')).toHaveTextContent('MacBook Pro (macOS)');
   expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
 }
 
-function testRequestsPrimaryTakeover() {
+function testHidesLegacyPrimaryTakeover() {
   const workspaceSync = pairedWorkspaceSync();
   workspaceSync.state = {
     ...workspaceSync.state,
@@ -185,9 +189,9 @@ function testRequestsPrimaryTakeover() {
   };
 
   render(<TestSyncContent workspaceSync={workspaceSync} />);
-  fireEvent.click(screen.getByRole('button', { name: 'Set as primary device' }));
 
-  expect(workspaceSync.requestPrimaryDeviceTakeover).toHaveBeenCalledWith('http://10.0.2.2:38641');
+  expect(screen.queryByRole('button', { name: 'Set as primary device' })).not.toBeInTheDocument();
+  expect(workspaceSync.requestPrimaryDeviceTakeover).not.toHaveBeenCalled();
 }
 
 async function testCompletesApprovedPairing() {
@@ -242,8 +246,8 @@ async function testKeepsApprovalPollingBelowDesktopRateLimit() {
 }
 
 describe('CompanionSyncContent paired flow', () => {
-  it('shows sync status details for a paired device', testShowsSyncStatusDetails);
-  it('lets a synced secondary device request primary takeover', testRequestsPrimaryTakeover);
+  it('shows sync status with the paired-device connection entry', testShowsSyncGroupStatusDetails);
+  it('hides legacy primary takeover for an Android Sync Group member', testHidesLegacyPrimaryTakeover);
   it('automatically completes pairing after desktop approval', testCompletesApprovedPairing);
   it('keeps approval polling below the desktop completion rate limit', testKeepsApprovalPollingBelowDesktopRateLimit);
 });

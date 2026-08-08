@@ -32,6 +32,10 @@ vi.mock('../database/connection.js', () => ({
 vi.mock('../database/primaryDeviceCommit.js', () => ({
   commitPrimaryDeviceToPeer: commandMocks.commitPrimaryDeviceToPeer
 }));
+vi.mock('../database/syncGroupStore.js', () => ({
+  createDesktopSyncGroup: vi.fn(),
+  loadDesktopSyncGroup: vi.fn(() => null)
+}));
 vi.mock('../sync/companionPairingRequests.js', () => ({
   approveCompanionPairRequest: vi.fn(),
   loadPendingCompanionPairRequests: vi.fn(() => []),

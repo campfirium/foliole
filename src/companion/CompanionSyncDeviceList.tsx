@@ -14,7 +14,7 @@ function formatEndpoint(endpointUrl: string) {
 }
 
 function resolveDeviceTitle(desktop: CompanionDesktopDiscovery, unknownHost: string) {
-  return desktop.desktopDeviceName || unknownHost;
+  return desktop.groupDisplayName || desktop.desktopDeviceName || unknownHost;
 }
 
 function resolveDesktopPlatform(desktop: CompanionDesktopDiscovery, desktopFallback: string) {

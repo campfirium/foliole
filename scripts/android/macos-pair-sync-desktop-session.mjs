@@ -29,6 +29,11 @@ async function invoke(page, command, args) {
   }, { commandArgs: args, commandName: command });
 }
 
+export async function ensureMacosSyncGroup(actions) {
+  const overview = await actions.load();
+  return overview.sync_group ? actions.enable() : actions.create();
+}
+
 function launchOptions(repoRoot, env, userDataPath) {
   return {
     args: [path.join(repoRoot, 'dist/electron/main.js')],
@@ -61,6 +66,11 @@ export async function openMacosPairSyncDesktopSession({
     await page.waitForFunction(() => globalThis.__FOLIOLE_APP_READY_REPORTED__ === true, null, {
       timeout: timeoutMs
     });
+    const syncGroupActions = {
+      create: () => invoke(page, 'create_sync_group'),
+      enable: () => invoke(page, 'enable_companion_sync'),
+      load: () => invoke(page, 'load_companion_pairing_overview')
+    };
     return {
       approve: (pairRequestId) => invoke(page, 'approve_companion_pair_request', {
         pair_request_id: pairRequestId
@@ -69,8 +79,8 @@ export async function openMacosPairSyncDesktopSession({
         if (app.process().exitCode !== null) throw new Error('Mac desktop runtime ended unexpectedly.');
       },
       close: () => app.close(),
-      enable: () => invoke(page, 'enable_companion_sync'),
-      load: () => invoke(page, 'load_companion_pairing_overview'),
+      enable: () => ensureMacosSyncGroup(syncGroupActions),
+      load: syncGroupActions.load,
       remove: (deviceId) => invoke(page, 'remove_companion_paired_device', { device_id: deviceId }),
       sanitize: sanitizeOverview
     };

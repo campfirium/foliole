@@ -44,26 +44,22 @@ final class FolioleCompanionExistingPairSyncEvidence {
         long deadline,
         JSONObject evidence
     ) throws Exception {
-        int settledOffSurfaceSamples = 0;
         String lastTargetState = "missing";
         while (System.nanoTime() < deadline) {
+            JSONObject state = FolioleCompanionPairSyncEvidence.read(instrumentation, webView);
+            String groupActivation = state.optString("groupActivation", "not_started");
+            if ("failed".equals(groupActivation)) {
+                throw new IllegalStateException("Sync Group activation failed.");
+            }
             lastTargetState = targetState(instrumentation, webView, "companion-sync-now");
-            if ("enabled".equals(lastTargetState)) {
+            if ("active".equals(groupActivation) && "enabled".equals(lastTargetState)) {
                 evidence.put("initialSync", "completed");
                 return evidence;
             }
             if (isTargetVisible(instrumentation, webView, "companion-sync-inline-attention")) {
                 throw new IllegalStateException("Initial workspace sync settled with attention.");
             }
-            boolean progressVisible = isTargetVisible(
-                instrumentation, webView, "companion-sync-inline-progress"
-            );
-            settledOffSurfaceSamples = "missing".equals(lastTargetState) && !progressVisible
-                ? settledOffSurfaceSamples + 1 : 0;
-            if (settledOffSurfaceSamples >= 3) {
-                evidence.put("initialSync", "completed");
-                return evidence;
-            }
+            isTargetVisible(instrumentation, webView, "companion-sync-inline-progress");
             Thread.sleep(150);
         }
         throw new IllegalStateException(

@@ -1,5 +1,6 @@
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import { definedProps } from '../shared/lib/definedProps';
+import { rollbackIncompleteCompanionSyncGroup } from '../shared/platform/companion/sync/syncGroupProvisioning';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 import { createCompanionSyncRunId } from '../shared/platform/companionSyncActivityEvents';
@@ -93,18 +94,7 @@ function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
         args.setStatus('idle');
         return nextState;
       } catch (syncError) {
-        const message = formatCompanionSyncFailureMessage(syncError);
-        args.setStatus('idle');
-        args.setSyncProgress(null);
-        args.setError(message);
-        await recordCompanionManualSyncFailure({
-          endpointUrl: syncEndpointUrl,
-          message,
-          runId,
-          setState: args.setState,
-          startedAt,
-          workspaceSnapshot: args.state.workspace_snapshot
-        });
+        await handleSyncFailure(args, syncEndpointUrl, runId, startedAt, syncError);
         throw syncError;
       }
     });
@@ -119,6 +109,28 @@ function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
     }
     return run.result;
   };
+}
+
+async function handleSyncFailure(
+  args: WorkspaceSnapshotActionArgs,
+  endpointUrl: string,
+  runId: string,
+  startedAt: string,
+  syncError: unknown
+) {
+  await rollbackIncompleteCompanionSyncGroup();
+  const message = formatCompanionSyncFailureMessage(syncError);
+  args.setStatus('idle');
+  args.setSyncProgress(null);
+  args.setError(message);
+  await recordCompanionManualSyncFailure({
+    endpointUrl,
+    message,
+    runId,
+    setState: args.setState,
+    startedAt,
+    workspaceSnapshot: args.state.workspace_snapshot
+  });
 }
 
 async function replaceCompanionWorkspaceSnapshot(

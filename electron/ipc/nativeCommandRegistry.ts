@@ -155,6 +155,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.searchWorkspace, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.loadWorkspaceSnapshot, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.loadCompanionPairingOverview, route: 'storage', capability: 'read' },
+  { command: NATIVE_COMMANDS.createSyncGroup, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.enableCompanionSync, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.disableCompanionSync, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.clearCompanionPairedDevices, route: 'storage', capability: 'settingsMutation' },

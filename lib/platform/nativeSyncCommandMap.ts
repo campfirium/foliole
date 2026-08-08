@@ -49,6 +49,10 @@ export type NativeSyncCommandMap = {
     args: undefined;
     result: DesktopCompanionPairingOverviewPayload;
   };
+  [NATIVE_COMMANDS.createSyncGroup]: {
+    args: undefined;
+    result: DesktopCompanionPairingOverviewPayload;
+  };
   [NATIVE_COMMANDS.enableCompanionSync]: {
     args: undefined;
     result: DesktopCompanionPairingOverviewPayload;

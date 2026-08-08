@@ -1,5 +1,6 @@
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 import type { NativeCompanionPairingState, NativeCompanionSyncEvent } from '../../lib/platform/nativeCompanionSyncContract';
+import type { SyncGroupPayload } from '../../lib/platform/syncGroupContract';
 import { useTranslation, type Translate } from '../shared/localization/LocalizationProvider';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import { isCompanionPairingSyncUsable } from '../shared/platform/companionPairingState';
@@ -26,6 +27,7 @@ type CompanionSyncPanelProps = {
   syncConflictCount: number;
   syncEvents: NativeCompanionSyncEvent[];
   syncProgress: CompanionDesktopSyncProgress | null;
+  syncGroup?: SyncGroupPayload | null;
   onCancelPairing(): void;
   onCheckDesktop(endpointUrl: string): Promise<unknown>;
   onChangeHandoffReminderSettings(settings: CompanionHandoffReminderSettings): void;
@@ -86,12 +88,11 @@ function formatSyncPanelError(message: string, t: Translate) {
   return message;
 }
 
-function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'onDisconnectPairing' | 'onOpenSettingsPage' | 'onRequestPrimaryDeviceTakeover' | 'page' | 'pairingState' | 'status' | 'syncConflictCount' | 'syncEvents' | 'syncProgress'> & {
+function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'onDisconnectPairing' | 'onOpenSettingsPage' | 'page' | 'pairingState' | 'status' | 'syncConflictCount' | 'syncEvents' | 'syncGroup' | 'syncProgress'> & {
   endpointUrl: string;
   onSync(): void;
 }) {
   const t = useTranslation();
-  const isPrimary = props.pairingState.device_id !== null && props.pairingState.primary_device_id === props.pairingState.device_id;
   return (
     <>
       <CompanionSyncStatusDetails
@@ -102,6 +103,7 @@ function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'o
         syncConflictCount={props.syncConflictCount}
         syncEvents={props.syncEvents}
         syncProgress={props.syncProgress}
+        syncGroup={props.syncGroup ?? null}
         page={props.page}
         onDisconnectPairing={props.onDisconnectPairing}
         onOpenPage={props.onOpenSettingsPage}
@@ -119,23 +121,13 @@ function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'o
             {props.status === 'syncing' ? <AppSpinner className="pointer-events-none shrink-0" decorative size="sm" /> : null}
             <span>{t(props.status === 'syncing' ? 'companion.browse.syncing' : 'companion.settings.sync.title')}</span>
           </button>
-          {!isPrimary ? (
-            <button
-              className="min-h-11 w-full rounded-xl border border-companion-divider bg-companion-content px-4 py-3 text-sm font-semibold text-foreground transition active:bg-companion-subtle/80 disabled:cursor-not-allowed disabled:opacity-45"
-              disabled={props.status === 'syncing'}
-              onClick={() => void props.onRequestPrimaryDeviceTakeover(props.endpointUrl)}
-              type="button"
-            >
-              {t('companion.sync.setPrimary')}
-            </button>
-          ) : null}
         </>
       )}
     </>
   );
 }
 
-function MainSyncContent(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'onCancelPairing' | 'onDisconnectPairing' | 'onOpenSettingsPage' | 'onRequestPrimaryDeviceTakeover' | 'page' | 'pairingRequest' | 'pairingState' | 'status' | 'syncConflictCount' | 'syncEvents' | 'syncProgress'> & {
+function MainSyncContent(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'onCancelPairing' | 'onDisconnectPairing' | 'onOpenSettingsPage' | 'page' | 'pairingRequest' | 'pairingState' | 'status' | 'syncConflictCount' | 'syncEvents' | 'syncGroup' | 'syncProgress'> & {
   endpointUrl: string;
   isBusy: boolean;
   isDiscovering: boolean;
@@ -155,9 +147,9 @@ function MainSyncContent(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | '
         syncConflictCount={props.syncConflictCount}
         syncEvents={props.syncEvents}
         syncProgress={props.syncProgress}
+        syncGroup={props.syncGroup ?? null}
         page={props.page}
         onSync={props.onSync}
-        onRequestPrimaryDeviceTakeover={props.onRequestPrimaryDeviceTakeover}
         onDisconnectPairing={props.onDisconnectPairing}
         onOpenSettingsPage={props.onOpenSettingsPage}
       />

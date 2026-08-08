@@ -50,6 +50,20 @@ vi.mock('../database/workspaceSnapshot.js', () => ({
   }))
 }));
 
+vi.mock('../database/syncGroupStore.js', () => ({
+  loadDesktopSyncGroup: vi.fn(() => ({
+    created_at: '2026-08-08T00:00:00.000Z',
+    created_by_device_id: 'desktop-local',
+    display_name: 'Foliole Desktop',
+    group_id: 'group-test',
+    local_device_id: 'desktop-local',
+    local_member_state: 'active',
+    members: [],
+    timeline_id: 'timeline-test'
+  })),
+  loadSyncGroupMemberAuthorization: vi.fn(() => null)
+}));
+
 async function resetLanWorkspaceSyncServerTestState() {
   const { clearCompanionPairRequests } = await import('./companionPairingRequests.js');
   const { clearCompanionRequestNonceCache } = await import('./companionRequestAuth.js');

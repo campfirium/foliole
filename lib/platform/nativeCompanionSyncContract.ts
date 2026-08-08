@@ -1,5 +1,6 @@
 import type { WorkspaceSnapshot } from '../core/database/workspaceSnapshot.js';
 
+import type { SyncGroupPayload } from './syncGroupContract.js';
 import type {
   SyncProtocolCompatibilityResult,
   SyncProtocolDescriptor
@@ -88,6 +89,9 @@ export interface CompanionWorkspaceDiscoveryPayload {
   pairing_mode: 'desktop-confirm';
   peer_id: string;
   protocol: SyncProtocolDescriptor;
+  group_display_name: string;
+  group_id: string;
+  timeline_id: string;
 }
 
 export interface CompanionWorkspacePairRequestPayload {
@@ -113,6 +117,9 @@ export interface CompanionWorkspacePairPayload {
   paired_at: string;
   peer_id: string;
   desktop_protocol: SyncProtocolDescriptor;
+  sync_group?: import('./syncGroupContract.js').SyncGroupPayload;
+  member_authorization_id?: string;
+  provisioning_cursor?: number;
 }
 
 export interface DesktopCompanionPairRequestPayload {
@@ -186,5 +193,6 @@ export interface DesktopCompanionPairingOverviewPayload {
   pending_requests: DesktopCompanionPairRequestPayload[];
   primary_device_state: NativePrimaryDeviceStatePayload;
   server_status: DesktopCompanionSyncServerStatusPayload;
+  sync_group?: SyncGroupPayload | null;
   sync_enabled: boolean;
 }

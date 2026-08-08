@@ -8,6 +8,10 @@ import {
 } from './companionLanContentBlobs.js';
 import { handlePrimaryDeviceTakeover, PRIMARY_DEVICE_TAKEOVER_PATH } from './companionLanPrimaryDeviceTakeover.js';
 import { readCompanionRequestBody } from './companionLanRequestBody.js';
+import {
+  activateProvisionedSyncGroupMember,
+  SYNC_GROUP_ACTIVATE_PATH
+} from './companionLanSyncGroupActivation.js';
 import { isRetiredSyncJsonEndpoint } from './companionLanSyncObjects.js';
 import { handleCompanionSyncPush, SYNC_PUSH_PATH } from './companionLanSyncPush.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
@@ -32,6 +36,7 @@ function resolveAuthenticatedPostRoute(parsedRequestUrl: URL) {
   if (parsedRequestUrl.pathname === CONTENT_BLOB_ACK_PATH) return 'content-blob-ack';
   if (parsedRequestUrl.pathname === CONTENT_BLOB_BATCH_PATH) return 'content-blob-batch';
   if (parsedRequestUrl.pathname === SYNC_PUSH_PATH) return 'sync-push';
+  if (parsedRequestUrl.pathname === SYNC_GROUP_ACTIVATE_PATH) return 'sync-group-activate';
   if (parsedRequestUrl.pathname === PRIMARY_DEVICE_TAKEOVER_PATH) return 'primary-device-takeover';
   if (isRetiredSyncJsonEndpoint(parsedRequestUrl)) return 'retired-sync-json';
   return null;
@@ -48,6 +53,51 @@ async function readAuthenticatedPostBody(
     const message = error instanceof Error ? error.message : 'invalid_request_body';
     writeJson(request, response, message === 'request_too_large' ? 413 : 400, { error: message }, 'POST, OPTIONS');
     return null;
+  }
+}
+
+async function handleAuthenticatedRoute(args: {
+  auth: Extract<ReturnType<typeof authenticateCompanionRequest>, { ok: true }>;
+  bodyText: string;
+  request: http.IncomingMessage;
+  response: http.ServerResponse;
+  route: NonNullable<ReturnType<typeof resolveAuthenticatedPostRoute>>;
+  writeJson: WriteJson;
+}) {
+  const { auth, bodyText, request, response, route, writeJson } = args;
+  if (route === 'content-blob-ack') {
+    const ack = acknowledgeCompanionContentBlobs(bodyText);
+    writeJson(request, response, ack.status === 'ok' ? 200 : ack.statusCode,
+      ack.status === 'ok' ? ack : { error: ack.error }, 'POST, OPTIONS');
+  } else if (route === 'content-blob-batch') {
+    const batch = loadCompanionContentBlobBatch(bodyText);
+    if (batch.status === 'ready') writeBinary(response, 200, batch.body, batch.mimeType);
+    else writeJson(request, response, batch.statusCode, { error: batch.error }, 'POST, OPTIONS');
+  } else if (route === 'sync-push') {
+    if (auth.member_state === 'provisioning') {
+      writeJson(request, response, 409, { error: 'sync_group_provisioning_incomplete' }, 'POST, OPTIONS');
+      return;
+    }
+    try {
+      writeJson(request, response, 200, await handleCompanionSyncPush(bodyText), 'POST, OPTIONS');
+    } catch (error) {
+      writeJson(request, response, 400, {
+        error: error instanceof Error ? error.message : 'invalid_sync_push_payload'
+      }, 'POST, OPTIONS');
+    }
+  } else if (route === 'sync-group-activate') {
+    try {
+      writeJson(request, response, 200, {
+        sync_group: activateProvisionedSyncGroupMember(bodyText, auth.device_id)
+      }, 'POST, OPTIONS');
+    } catch (error) {
+      writeJson(request, response, 409, {
+        error: error instanceof Error ? error.message : 'sync_group_activation_invalid'
+      }, 'POST, OPTIONS');
+    }
+  } else if (route === 'primary-device-takeover') {
+    const result = handlePrimaryDeviceTakeover(bodyText, auth.device_id);
+    writeJson(request, response, result.statusCode, result.value, 'POST, OPTIONS');
   }
 }
 
@@ -75,36 +125,6 @@ export async function handleAuthenticatedPost(
     writeJson(request, response, auth.status_code, { error: auth.error });
     return true;
   }
-  if (route === 'content-blob-ack') {
-    const ack = acknowledgeCompanionContentBlobs(bodyText);
-    writeJson(request, response, ack.status === 'ok' ? 200 : ack.statusCode, ack.status === 'ok' ? ack : {
-      error: ack.error
-    }, 'POST, OPTIONS');
-    return true;
-  }
-  if (route === 'content-blob-batch') {
-    const batch = loadCompanionContentBlobBatch(bodyText);
-    if (batch.status === 'ready') {
-      writeBinary(response, 200, batch.body, batch.mimeType);
-    } else {
-      writeJson(request, response, batch.statusCode, { error: batch.error }, 'POST, OPTIONS');
-    }
-    return true;
-  }
-  if (route === 'sync-push') {
-    try {
-      writeJson(request, response, 200, await handleCompanionSyncPush(bodyText), 'POST, OPTIONS');
-    } catch (error) {
-      writeJson(request, response, 400, {
-        error: error instanceof Error ? error.message : 'invalid_sync_push_payload'
-      }, 'POST, OPTIONS');
-    }
-    return true;
-  }
-  if (route === 'primary-device-takeover') {
-    const result = handlePrimaryDeviceTakeover(bodyText, auth.device_id);
-    writeJson(request, response, result.statusCode, result.value, 'POST, OPTIONS');
-    return true;
-  }
+  await handleAuthenticatedRoute({ auth, bodyText, request, response, route, writeJson });
   return true;
 }

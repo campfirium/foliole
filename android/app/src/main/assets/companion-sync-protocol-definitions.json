@@ -76,7 +76,7 @@
       "content_blobs",
       "review_log"
     ],
-    "maximumSchemaVersion": 62,
+    "maximumSchemaVersion": 63,
     "minimumSchemaVersion": 46,
     "sqliteTableRequirements": {
       "pack_manifest": [

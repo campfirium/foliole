@@ -18,6 +18,7 @@ import {
 } from '../../lib/core/database/androidCompanionMutationDefinitions.ts';
 import { ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionResourceSchemaStatements.ts';
 import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionSyncSchemaStatements.ts';
+import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../../lib/core/database/syncGroupSchemaStatements.ts';
 import { ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS } from '../../lib/core/database/androidCompanionSyncProtocolDefinitions.ts';
 import {
   EXPECTED_SCHEMA_SOURCES,
@@ -51,7 +52,8 @@ describe('schema inventory drift gate', () => {
       ...ANDROID_COMPANION_HOST_SCHEMA_STATEMENTS,
       ...ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS,
       ...ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS,
-      ...ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS
+      ...ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS,
+      ...SYNC_GROUP_SCHEMA_STATEMENTS
     ]);
   });
 

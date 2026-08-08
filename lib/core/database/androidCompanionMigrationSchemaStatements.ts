@@ -164,6 +164,10 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
       { type: 'backfillSyncConflictConvergence' }
     ],
     beforeVersion: 22
+  },
+  {
+    actions: [{ errorMessage: 'Failed to install companion Sync Group schema.', type: 'installSchema' }],
+    beforeVersion: 23
   }
 ] as const;
 

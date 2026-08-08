@@ -30,12 +30,25 @@ describe('macOS A5 one-time pair sync preflight', () => {
       .toMatchObject(pairing);
   });
 
-  it('rejects a clean unpaired device because the authorization was for stale pairing removal', () => {
+  it('accepts a strictly empty fresh device', () => {
     const run = vi.fn()
       .mockReturnValueOnce(result('[android-data] pair-sync-recovery-readiness=', {
         ...pairing, pairingCredentialsPresent: false, remotePeerFingerprint: null
       }, 0))
       .mockReturnValueOnce(result('[android-data] capture-annotation-readiness=', workspace, 77));
+
+    expect(runMacosA5PairSyncPreflight({ adb: '/adb', repoRoot: '/repo' }, run))
+      .toMatchObject({ existingPairing: false, nodeCount: 0 });
+  });
+
+  it('rejects an unpaired device with orphaned workspace data', () => {
+    const run = vi.fn()
+      .mockReturnValueOnce(result('[android-data] pair-sync-recovery-readiness=', {
+        ...pairing, pairingCredentialsPresent: false, remotePeerFingerprint: null
+      }, 0))
+      .mockReturnValueOnce(result('[android-data] capture-annotation-readiness=', {
+        ...workspace, counts: { ...workspace.counts, content_blobs: 1 }
+      }, 77));
 
     expect(() => runMacosA5PairSyncPreflight({ adb: '/adb', repoRoot: '/repo' }, run))
       .toThrow('authorized pair-switch state');
@@ -45,6 +58,50 @@ describe('macOS A5 one-time pair sync preflight', () => {
     const run = vi.fn()
       .mockReturnValueOnce(result('[android-data] pair-sync-recovery-readiness=', {
         ...pairing, nodeCount: 1293
+      }, 0))
+      .mockReturnValueOnce(result('[android-data] capture-annotation-readiness=', {
+        ...workspace,
+        canonicalInbox: { active: true, kind: 'folder' },
+        counts: { content_blobs: 2033, node_order: 969, nodes: 1293 },
+        pairingWorkspace: { localDeviceIdentityPresent: true, syncEndpointPresent: true }
+      }, 0));
+
+    expect(runMacosA5PairSyncPreflight({ adb: '/adb', repoRoot: '/repo' }, run))
+      .toMatchObject({ existingPairing: true, nodeCount: 1293 });
+  });
+
+  it('repairs a clean synced workspace after the desktop rejects and clears its credentials', () => {
+    const run = vi.fn()
+      .mockReturnValueOnce(result('[android-data] pair-sync-recovery-readiness=', {
+        ...pairing,
+        dirtyRecordCount: 0,
+        nodeCount: 1293,
+        pairingCredentialRejectionReason: 'unknown_device',
+        pairingCredentialsPresent: false,
+        pairingCredentialsRejected: true,
+        remotePeerFingerprint: null,
+        resultStatus: 'approval_required'
+      }, 77))
+      .mockReturnValueOnce(result('[android-data] capture-annotation-readiness=', {
+        ...workspace,
+        canonicalInbox: { active: true, kind: 'folder' },
+        counts: { content_blobs: 2033, node_order: 969, nodes: 1293 },
+        pairingWorkspace: { localDeviceIdentityPresent: true, syncEndpointPresent: false }
+      }, 0));
+
+    expect(runMacosA5PairSyncPreflight({ adb: '/adb', repoRoot: '/repo' }, run))
+      .toMatchObject({ existingPairing: false, nodeCount: 1293 });
+  });
+
+  it('repairs a clean synced workspace while the rejected credentials are still readable', () => {
+    const run = vi.fn()
+      .mockReturnValueOnce(result('[android-data] pair-sync-recovery-readiness=', {
+        ...pairing,
+        dirtyRecordCount: 0,
+        nodeCount: 1293,
+        pairingCredentialRejectionReason: 'unknown_device',
+        pairingCredentialsRejected: true,
+        resultStatus: 'ready'
       }, 0))
       .mockReturnValueOnce(result('[android-data] capture-annotation-readiness=', {
         ...workspace,

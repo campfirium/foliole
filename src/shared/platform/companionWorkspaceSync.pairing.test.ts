@@ -132,7 +132,7 @@ beforeEach(() => {
 });
 
 it.each([
-  { deviceId: 'android-test-device', deviceKind: 'android-capacitor', deviceName: 'Pixel 9', platform: 'android' },
+  { deviceId: 'android-test-device', deviceKind: 'android', deviceName: 'Pixel 9', platform: 'android' },
   { deviceId: 'ios-test-device', deviceKind: 'ios-capacitor', deviceName: 'iPhone', platform: 'ios' }
 ])('verifies $platform native pairing credentials after saving', async ({ deviceId, deviceKind, deviceName, platform }) => {
   const queueEvents = mockVerifiedNativePairing({ deviceId, deviceKind, deviceName, platform });
@@ -160,7 +160,7 @@ it.each([
     primary_device_id: 'device-desktop',
     remote_peer_id: 'device-desktop'
   }));
-  expect(capacitorMock.plugin.loadPairingState).toHaveBeenCalledTimes(1);
+  expect(capacitorMock.plugin.loadPairingState).toHaveBeenCalledTimes(2);
   expect(writerQueueMock.run).toHaveBeenCalledTimes(1);
   expect(queueEvents).toEqual(['start', 'sign', 'end']);
   expect(capacitorMock.plugin.signCompanionSyncRequest).toHaveBeenCalledWith(expect.objectContaining({
@@ -178,12 +178,12 @@ it('fails native pairing when credentials cannot be read back locally', async ()
 
   await requestCompanionPairing({
     deviceId: 'android-test-device',
-    deviceKind: 'android-capacitor',
+    deviceKind: 'android',
     deviceName: 'Pixel 9',
     endpointUrl: 'http://10.0.2.2:38641'
   });
   await expect(pairCompanionWithDesktop({
-    deviceKind: 'android-capacitor',
+    deviceKind: 'android',
     deviceName: 'Pixel 9',
     endpointUrl: 'http://10.0.2.2:38641',
     pairRequestId: 'pair-request-1'
@@ -197,7 +197,7 @@ it('fails native pairing when saved credentials cannot sign sync requests', asyn
   capacitorMock.plugin.savePairingCredentials.mockResolvedValue({
     ...nativeProtocolState,
     device_id: 'android-test-device',
-    device_kind: 'android-capacitor',
+    device_kind: 'android',
     device_name: 'Pixel 9',
     is_paired: true,
     paired_at: '2026-04-22T12:00:00.000Z',
@@ -206,7 +206,7 @@ it('fails native pairing when saved credentials cannot sign sync requests', asyn
   capacitorMock.plugin.loadPairingState.mockResolvedValue({
     ...nativeProtocolState,
     device_id: 'android-test-device',
-    device_kind: 'android-capacitor',
+    device_kind: 'android',
     device_name: 'Pixel 9',
     is_paired: true,
     paired_at: '2026-04-22T12:00:00.000Z',
@@ -216,12 +216,12 @@ it('fails native pairing when saved credentials cannot sign sync requests', asyn
 
   await requestCompanionPairing({
     deviceId: 'android-test-device',
-    deviceKind: 'android-capacitor',
+    deviceKind: 'android',
     deviceName: 'Pixel 9',
     endpointUrl: 'http://10.0.2.2:38641'
   });
   await expect(pairCompanionWithDesktop({
-    deviceKind: 'android-capacitor',
+    deviceKind: 'android',
     deviceName: 'Pixel 9',
     endpointUrl: 'http://10.0.2.2:38641',
     pairRequestId: 'pair-request-1'

@@ -12,6 +12,9 @@ export type CompanionDesktopDiscovery = {
   compatibility: SyncProtocolCompatibilityResult;
   endpointUrl: string;
   peerId: string;
+  groupDisplayName?: string;
+  groupId?: string | undefined;
+  timelineId?: string | undefined;
 };
 
 export type PendingPairRequest = {
@@ -21,6 +24,8 @@ export type PendingPairRequest = {
   remotePeerId: string;
   remotePeerName: string;
   remotePeerPlatform: string;
+  groupId?: string | undefined;
+  timelineId?: string | undefined;
 } | null;
 
 export function createCompanionDeviceName(bootstrapState: NativeCompanionBootstrapState) {
@@ -36,6 +41,9 @@ export function normalizeDiscovery(endpointUrl: string, discovery: {
   desktop_name: string;
   desktop_platform?: string;
   peer_id: string;
+  group_display_name: string;
+  group_id: string;
+  timeline_id: string;
 }, compatibility: SyncProtocolCompatibilityResult) {
   return {
     appVersion: discovery.app_version?.trim() || UNKNOWN_DESKTOP_VERSION,
@@ -44,7 +52,10 @@ export function normalizeDiscovery(endpointUrl: string, discovery: {
     desktopPlatform: discovery.desktop_platform?.trim() || UNKNOWN_DESKTOP_PLATFORM,
     compatibility,
     endpointUrl: endpointUrl.trim(),
-    peerId: discovery.peer_id
+    peerId: discovery.peer_id,
+    groupDisplayName: discovery.group_display_name,
+    groupId: discovery.group_id,
+    timelineId: discovery.timeline_id
   };
 }
 

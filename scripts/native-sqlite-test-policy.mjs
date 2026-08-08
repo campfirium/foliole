@@ -18,6 +18,7 @@ const controlledElectronSqliteTests = [
   'electron/database/syncPackBuilder.contract.test.ts',
   'electron/database/syncPackBuilder.test.ts',
   'electron/database/syncPackNodeAttachments.test.ts',
+  'electron/database/syncGroupStore.test.ts',
   'electron/database/workspaceSearchSidecar.test.ts',
   'electron/sync/syncPackNodeApplyParentOrder.test.ts',
   'electron/sync/syncPackLearningDependencyApply.test.ts',
@@ -46,6 +47,7 @@ const controlledElectronSqliteTests = [
   'src/shared/platform/companionSyncNodeVersions.sequentialReading.test.ts',
   'src/shared/platform/companionSyncNodeVersions.test.ts',
   'src/shared/platform/companionSyncReviewLogApply.test.ts',
+  'src/shared/platform/companionSyncGroupStore.test.ts',
   'src/shared/platform/companionSyncStateObjects.test.ts',
   'src/shared/platform/companion/runtime/iosCompanionActiveDatabaseWrites.test.ts'
 ];

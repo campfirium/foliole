@@ -5,17 +5,18 @@ import {
   evaluateSyncProtocolCompatibility,
   parseSyncProtocolDescriptor
 } from '../../lib/platform/syncProtocolContract.js';
+import { isActiveSyncGroupMember, loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import { readCompanionRequestBody } from './companionLanRequestBody.js';
-import { encryptCompanionPairingSecret, isSupportedPairingPublicKey } from './companionPairingEncryption.js';
+import { isSupportedPairingPublicKey } from './companionPairingEncryption.js';
 import {
-  completeCompanionPairRequest,
   countPendingCompanionPairRequests,
   createCompanionPairRequest,
-  loadCompanionPairRequestForCompletion,
-  reservePairCompletionSlot
 } from './companionPairingRequests.js';
-import { countPairedCompanionDevices, registerPairedCompanionDevice } from './companionPairingStore.js';
+import { countPairedCompanionDevices } from './companionPairingStore.js';
+import { isEligibleSyncGroupJoin, parseSyncGroupLibraryFacts } from './companionSyncGroupPairRequest.js';
+
+export { handlePairRequest } from './companionLanPairCompletion.js';
 
 type PairingStatusUpdater = (pairing: {
   paired_device_count: number;
@@ -28,7 +29,6 @@ type JsonResponder = (
   statusCode: number,
   payload: unknown
 ) => void;
-type PairCompletionState = NonNullable<ReturnType<typeof loadCompanionPairRequestForCompletion>>;
 
 function writePairingStatus(updatePairingStatus: PairingStatusUpdater) {
   updatePairingStatus({
@@ -48,128 +48,44 @@ function normalizeClientAddress(address: string | undefined) {
   return address.startsWith('::ffff:') ? address.slice('::ffff:'.length) : address;
 }
 
-function writePairCompletionRateLimit(
-  request: http.IncomingMessage,
-  response: http.ServerResponse,
-  writeJson: JsonResponder
-) {
-  const pairRateLimit = reservePairCompletionSlot({
-    clientAddress: normalizeClientAddress(request.socket.remoteAddress)
+function resolveSyncGroupJoin(payload: Record<string, unknown>, deviceId: string, deviceKind: string) {
+  if (deviceKind !== 'android-capacitor') return { error: null, syncGroup: null };
+  const syncGroup = loadDesktopSyncGroup();
+  if (!syncGroup) return { error: 'sync_group_identity_mismatch', syncGroup: null };
+  const eligible = isEligibleSyncGroupJoin({
+    deviceKind,
+    groupId: syncGroup.group_id,
+    isExistingActiveMember: isActiveSyncGroupMember(syncGroup.group_id, deviceId),
+    libraryFacts: parseSyncGroupLibraryFacts(payload.library_facts),
+    requestedGroupId: typeof payload.group_id === 'string' ? payload.group_id.trim() : '',
+    requestedTimelineId: typeof payload.timeline_id === 'string' ? payload.timeline_id.trim() : '',
+    timelineId: syncGroup.timeline_id
   });
-  if (pairRateLimit.allowed) {
+  return { error: eligible ? null : 'sync_group_requires_empty_library', syncGroup };
+}
+
+function writePairRequestResult(args: {
+  compatibility: ReturnType<typeof evaluateSyncProtocolCompatibility>;
+  created: ReturnType<typeof createCompanionPairRequest>;
+  request: http.IncomingMessage;
+  response: http.ServerResponse;
+  writeJson: JsonResponder;
+}) {
+  if (args.created.rate_limited) {
+    args.writeJson(args.request, args.response, 429, {
+      error: 'pair_request_rate_limited',
+      retry_after_ms: args.created.retry_after_ms
+    });
     return false;
   }
-  writeJson(request, response, 429, {
-    error: 'pair_completion_rate_limited',
-    retry_after_ms: pairRateLimit.retry_after_ms
+  args.writeJson(args.request, args.response, args.created.created ? 202 : 409, {
+    compatibility: args.compatibility,
+    desktop_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+    expires_at: args.created.request.expires_at,
+    pair_request_id: args.created.request.pair_request_id,
+    status: 'pending'
   });
   return true;
-}
-
-function loadApprovedPairCompletionState(
-  pairRequestId: string,
-  request: http.IncomingMessage,
-  response: http.ServerResponse,
-  writeJson: JsonResponder
-): PairCompletionState | null {
-  const completionState = loadCompanionPairRequestForCompletion(pairRequestId);
-  if (!completionState) {
-    writeJson(request, response, 404, { error: 'pair_request_not_found' });
-    return null;
-  }
-  if (completionState.request.status === 'pending') {
-    writeJson(request, response, 409, { error: 'pair_request_pending' });
-    return null;
-  }
-  if (completionState.request.status === 'rejected') {
-    writeJson(request, response, 403, { error: 'pair_request_rejected' });
-    return null;
-  }
-  return completionState;
-}
-
-export async function handlePairRequest(
-  request: http.IncomingMessage,
-  response: http.ServerResponse,
-  appVersion: string,
-  peerId: string,
-  updatePairingStatus: PairingStatusUpdater,
-  writeJson: JsonResponder
-) {
-  const payload = await readPairCompletionPayload(request, response, writeJson);
-  if (!payload) return;
-  const pairRequestId = typeof payload.pair_request_id === 'string' ? payload.pair_request_id.trim() : '';
-  if (!pairRequestId) {
-    writeJson(request, response, 400, { error: 'invalid_pair_request' });
-    return;
-  }
-  const completionState = loadApprovedPairCompletionState(pairRequestId, request, response, writeJson);
-  if (!completionState) {
-    return;
-  }
-  if (writePairCompletionRateLimit(request, response, writeJson)) return;
-  const approvedRequest = completionState.request;
-  const compatibility = evaluateSyncProtocolCompatibility(approvedRequest.protocol);
-  if (compatibility.status === 'incompatible') {
-    writeJson(request, response, 409, {
-      compatibility,
-      desktop_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
-      error: 'protocol_incompatible'
-    });
-    return;
-  }
-  const paired = completionState.completion ?? registerPairedCompanionDevice({
-    clientAddress: approvedRequest.client_address,
-    deviceId: approvedRequest.device_id,
-    deviceKind: approvedRequest.device_kind,
-    deviceName: approvedRequest.device_name,
-    negotiatedProtocolVersion: compatibility.negotiated_version ?? CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
-    remoteProtocol: approvedRequest.protocol
-  });
-  if (!completionState.completion) {
-    completeCompanionPairRequest(pairRequestId, {
-      device_id: paired.device_id,
-      device_secret: paired.device_secret,
-      paired_at: paired.paired_at
-    });
-  }
-  const encryptedDeviceSecret = await encryptCompanionPairingSecret({
-    clientPublicKey: approvedRequest.pairing_public_key,
-    deviceSecret: paired.device_secret
-  });
-  writePairingStatus(updatePairingStatus);
-  writePairCompletionResponse(request, response, writeJson, {
-    app_version: appVersion,
-    compatibility,
-    desktop_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
-    device_id: paired.device_id,
-    encrypted_device_secret: encryptedDeviceSecret,
-    paired_at: paired.paired_at,
-    peer_id: peerId
-  });
-}
-
-async function readPairCompletionPayload(
-  request: http.IncomingMessage,
-  response: http.ServerResponse,
-  writeJson: JsonResponder
-) {
-  try {
-    return await readJsonPayload(request);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'invalid_json';
-    writeJson(request, response, message === 'request_too_large' ? 413 : 400, { error: message });
-    return null;
-  }
-}
-
-function writePairCompletionResponse(
-  request: http.IncomingMessage,
-  response: http.ServerResponse,
-  writeJson: JsonResponder,
-  payload: Record<string, unknown>
-) {
-  writeJson(request, response, 200, payload);
 }
 
 export async function handlePairRequestCreate(
@@ -196,6 +112,11 @@ export async function handlePairRequestCreate(
     writeJson(request, response, 400, { error: 'invalid_pair_request' });
     return;
   }
+  const groupJoin = resolveSyncGroupJoin(payload, deviceId, deviceKind);
+  if (groupJoin.error) {
+    writeJson(request, response, 409, { error: groupJoin.error });
+    return;
+  }
   const compatibility = evaluateSyncProtocolCompatibility(payload.protocol);
   if (!protocol || compatibility.status === 'incompatible') {
     writeJson(request, response, 409, {
@@ -212,22 +133,13 @@ export async function handlePairRequestCreate(
     deviceKind,
     deviceName,
     pairingPublicKey,
-    protocol
+    protocol,
+    ...(groupJoin.syncGroup
+      ? { groupId: groupJoin.syncGroup.group_id, timelineId: groupJoin.syncGroup.timeline_id }
+      : {})
   });
-  if (created.rate_limited) {
-    writeJson(request, response, 429, {
-      error: 'pair_request_rate_limited',
-      retry_after_ms: created.retry_after_ms
-    });
-    return;
-  }
+  const accepted = writePairRequestResult({ compatibility, created, request, response, writeJson });
+  if (!accepted) return;
   writePairingStatus(updatePairingStatus);
   onPairRequestCreated?.();
-  writeJson(request, response, created.created ? 202 : 409, {
-    compatibility,
-    desktop_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
-    expires_at: created.request.expires_at,
-    pair_request_id: created.request.pair_request_id,
-    status: 'pending'
-  });
 }

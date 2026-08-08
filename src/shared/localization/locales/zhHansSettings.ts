@@ -2,6 +2,7 @@ import type { TranslationKey } from '../translations';
 
 import { ZH_HANS_SETTINGS_PUBLISHING_TRANSLATIONS } from './zhHansSettingsPublishing';
 import { ZH_HANS_SETTINGS_STORAGE_TRANSLATIONS } from './zhHansSettingsStorage';
+import { ZH_HANS_SETTINGS_SYNC_GROUP_TRANSLATIONS } from './zhHansSettingsSyncGroup';
 
 export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
   'settings.title': '设置',
@@ -41,10 +42,10 @@ export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'settings.category.mouseGestures.label': '鼠标手势',
   'settings.category.mouseGestures.description': '配置鼠标手势和反馈。',
   'settings.category.companionSync.label': '同步',
-  'settings.category.companionSync.description': '配对其他设备并管理本地同步。',
+  'settings.category.companionSync.description': '管理本设备及其同步组。',
   'settings.companionSync.sectionAria': '同步设置区',
   'settings.companionSync.title': '同步',
-  'settings.companionSync.description': '配对其他设备前，先在这台桌面端打开同步。同一局域网内的手机可发现这台桌面端，经你批准后即可同步。',
+  'settings.companionSync.description': '让同步组内的设备通过局域网保持最新。',
   'settings.companionSync.enableDesktop.title': '在这台桌面端启用',
   'settings.companionSync.enableDesktop.aria': '启用桌面同步',
   'settings.companionSync.error.open': '无法打开同步。{error}',
@@ -170,6 +171,7 @@ export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'settings.search.gestureThreshold.description': '接受方向前所需的最小移动距离。',
   ...ZH_HANS_SETTINGS_STORAGE_TRANSLATIONS,
   ...ZH_HANS_SETTINGS_PUBLISHING_TRANSLATIONS,
+  ...ZH_HANS_SETTINGS_SYNC_GROUP_TRANSLATIONS,
   'settings.webLookup.sectionAria': '右键菜单项设置区',
   'settings.webLookup.title': '右键菜单项',
   'settings.webLookup.description': '配置每个菜单项的名称和链接。用 {selection} 表示当前文本，用 {title} 表示当前主题标题。',

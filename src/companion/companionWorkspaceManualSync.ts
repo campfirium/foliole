@@ -1,4 +1,6 @@
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
+import { activateCompanionSyncGroupIfComplete } from '../shared/platform/companion/sync/syncGroupProvisioning';
+import { recoverInterruptedCompanionSyncGroupProvisioning } from '../shared/platform/companion/sync/syncGroupStore';
 import {
   syncCompanionObjectsFromDesktop,
   type CompanionDesktopSyncProgress
@@ -34,6 +36,34 @@ interface ManualSyncArgs {
 
 const MAX_MANUAL_STRUCTURE_PASSES = 3;
 
+function provisioningResourceBacklog(result: Awaited<ReturnType<typeof syncCompanionObjectsFromDesktop>>) {
+  const counts = [result.remainingAttachmentResourceCount, result.remainingContentBlobCount];
+  const failed = [result.remainingFailedAttachmentResourceCount, result.remainingFailedContentBlobCount];
+  if (counts.some((count) => typeof count !== 'number') || failed.some((count) => count !== 0)) return null;
+  return counts.reduce<number>((total, count) => total + (count ?? 0), 0);
+}
+
+async function continueProvisioningResources(
+  args: ManualSyncArgs,
+  initial: Awaited<ReturnType<typeof syncCompanionObjectsFromDesktop>>
+) {
+  let result = initial;
+  let previousBacklog = provisioningResourceBacklog(result);
+  while (previousBacklog !== null && previousBacklog > 0
+    && await recoverInterruptedCompanionSyncGroupProvisioning()) {
+    const next = await syncCompanionObjectsFromDesktop(args.endpointUrl, {
+      onProgress: args.setSyncProgress,
+      resourcesOnly: true
+    });
+    await recordCompanionSyncStageEvents(args, next);
+    const nextBacklog = provisioningResourceBacklog(next);
+    result = next;
+    if (nextBacklog === null || nextBacklog >= previousBacklog) break;
+    previousBacklog = nextBacklog;
+  }
+  return result;
+}
+
 function shouldContinueStructureCatchUp(
   result: Awaited<ReturnType<typeof syncCompanionObjectsFromDesktop>>,
   passIndex: number
@@ -68,6 +98,8 @@ export async function syncCompanionDesktopStreams(args: ManualSyncArgs) {
     if (!shouldContinueStructureCatchUp(result, passIndex)) break;
   }
   if (!result) throw new Error('Manual sync did not run.');
+  result = await continueProvisioningResources(args, result);
+  await activateCompanionSyncGroupIfComplete(args.endpointUrl);
   if (!structureRefreshCompleted) {
     await refreshAfterStructureSync();
   }

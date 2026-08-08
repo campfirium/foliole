@@ -1,5 +1,6 @@
 import { EN_SETTINGS_PUBLISHING_TRANSLATIONS } from './enSettingsPublishing';
 import { EN_SETTINGS_STORAGE_TRANSLATIONS } from './enSettingsStorage';
+import { EN_SETTINGS_SYNC_GROUP_TRANSLATIONS } from './enSettingsSyncGroup';
 
 export const EN_SETTINGS_TRANSLATIONS = {
   'settings.title': 'Settings',
@@ -39,10 +40,10 @@ export const EN_SETTINGS_TRANSLATIONS = {
   'settings.category.mouseGestures.label': 'Mouse gestures',
   'settings.category.mouseGestures.description': 'Configure mouse gestures and feedback.',
   'settings.category.companionSync.label': 'Sync',
-  'settings.category.companionSync.description': 'Pair other devices and manage local sync.',
+  'settings.category.companionSync.description': 'Manage this device and its Sync Group.',
   'settings.companionSync.sectionAria': 'Sync section',
   'settings.companionSync.title': 'Sync',
-  'settings.companionSync.description': 'Turn on desktop sync before pairing another device. Phones on your local network can discover this desktop, then sync after you approve them.',
+  'settings.companionSync.description': 'Keep the devices in your Sync Group up to date on the local network.',
   'settings.companionSync.enableDesktop.title': 'Enable on this desktop',
   'settings.companionSync.enableDesktop.aria': 'Enable desktop sync',
   'settings.companionSync.error.open': 'Could not open sync. {error}',
@@ -170,6 +171,7 @@ export const EN_SETTINGS_TRANSLATIONS = {
   'settings.search.gestureThreshold.description': 'Minimum movement before a direction is accepted.',
   ...EN_SETTINGS_STORAGE_TRANSLATIONS,
   ...EN_SETTINGS_PUBLISHING_TRANSLATIONS,
+  ...EN_SETTINGS_SYNC_GROUP_TRANSLATIONS,
   'settings.webLookup.sectionAria': 'Right-click menu items settings section',
   'settings.webLookup.title': 'Right-click menu items',
   'settings.webLookup.description': 'Configure each menu label and link. Use {selection} for the current text and {title} for the current topic title.',

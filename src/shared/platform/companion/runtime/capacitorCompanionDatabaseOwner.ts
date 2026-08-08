@@ -6,6 +6,7 @@ import {
   type CompanionDatabaseBootstrapRequest,
   type CompanionDatabaseBootstrapResult
 } from '../../../../../lib/core/database/companionDatabaseLifecycle';
+import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/syncGroupSchemaStatements';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { COMPANION_DATABASE_NAME, COMPANION_DATABASE_VERSION } from '../../../../../lib/platform/nativeCompanionContract';
 import { createCapacitorSqliteDbPort } from '../../capacitorSqliteDbPort';
@@ -49,6 +50,9 @@ export class CapacitorCompanionDatabaseOwner {
     try {
       await db.query('PRAGMA busy_timeout = 5000');
       const result = await bootstrapCompanionDatabase(db, { ...request, allowCreate: !existed });
+      if (this.platform === 'android') {
+        for (const statement of SYNC_GROUP_SCHEMA_STATEMENTS) await db.run(statement);
+      }
       const url = (await connection.getUrl()).url;
       if (!url) throw new Error('Companion database did not return a path.');
       const databasePath = normalizeDatabasePath(url);

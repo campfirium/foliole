@@ -11,11 +11,11 @@ import {
 import {
   disableDesktopCompanionSync,
   enableDesktopCompanionSync,
+  createDesktopSyncGroup,
   approveDesktopCompanionPairRequest,
   clearDesktopCompanionPairedDevices,
   removeDesktopCompanionPairedDevice,
-  rejectDesktopCompanionPairRequest,
-  setDesktopAsPrimaryDevice
+  rejectDesktopCompanionPairRequest
 } from './desktopCompanionPairingRuntimeRepository';
 import { isDesktopRuntime } from './runtime';
 
@@ -125,21 +125,21 @@ function useToggleCompanionSyncAction(
   }, [setError, setIsLoading, setOverview, setPendingActionId]);
 }
 
-function useSetDesktopAsPrimaryAction(
+function useCreateSyncGroupAction(
   setOverview: (value: DesktopCompanionPairingOverviewPayload) => void,
   setError: (value: string | null) => void,
   setIsLoading: (value: boolean) => void,
   setPendingActionId: (value: string | null) => void
 ) {
   return useCallback(async () => {
-    setPendingActionId('set-desktop-primary-device');
+    setPendingActionId('create-sync-group');
     try {
-      const nextOverview = await setDesktopAsPrimaryDevice();
+      const nextOverview = await createDesktopSyncGroup();
       setOverview(nextOverview);
       setError(null);
       return nextOverview;
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : 'Failed to set this desktop as primary.');
+      setError(actionError instanceof Error ? actionError.message : 'Failed to create Sync Group.');
       throw actionError;
     } finally {
       setPendingActionId(null);
@@ -175,7 +175,7 @@ export function useDesktopCompanionPairingRequests(pollMs = 2_000) {
     state.setIsLoading,
     state.setPendingActionId
   );
-  const setDesktopPrimary = useSetDesktopAsPrimaryAction(
+  const createSyncGroup = useCreateSyncGroupAction(
     state.setOverview,
     state.setError,
     state.setIsLoading,
@@ -187,6 +187,7 @@ export function useDesktopCompanionPairingRequests(pollMs = 2_000) {
   return useMemo(
     () => ({
       approveRequest: (pairRequestId: string) => runAction(pairRequestId, 'approve'),
+      createSyncGroup,
       clearPairedDevices,
       removePairedDevice,
       disableSync: () => toggleSync(false),
@@ -197,9 +198,8 @@ export function useDesktopCompanionPairingRequests(pollMs = 2_000) {
       overview: state.overview,
       pendingActionId: state.pendingActionId,
       refresh,
-      rejectRequest: (pairRequestId: string) => runAction(pairRequestId, 'reject'),
-      setDesktopAsPrimaryDevice: setDesktopPrimary
+      rejectRequest: (pairRequestId: string) => runAction(pairRequestId, 'reject')
     }),
-    [clearPairedDevices, removePairedDevice, refresh, runAction, setDesktopPrimary, state.error, state.isLoading, state.overview, state.pendingActionId, toggleSync]
+    [clearPairedDevices, createSyncGroup, removePairedDevice, refresh, runAction, state.error, state.isLoading, state.overview, state.pendingActionId, toggleSync]
   );
 }

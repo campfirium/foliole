@@ -1,6 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
+import type { SyncGroupPayload } from '../../lib/platform/syncGroupContract';
 import { definedProps } from '../shared/lib/definedProps';
+import { loadCompanionSyncGroup } from '../shared/platform/companion/sync/syncGroupStore';
 
 import { useCompanionHandoffReminderRuntime } from './CompanionHandoffReminderRuntime';
 import { CompanionSyncPanel } from './CompanionSyncPanel';
@@ -14,6 +16,7 @@ function buildSyncPanelProps(args: {
   onOpenSettingsPage?: (page: CompanionSettingsPage) => void;
   page: CompanionSettingsPage;
   workspaceSync: ReturnType<typeof useCompanionWorkspaceSync>;
+  syncGroup: SyncGroupPayload | null;
 }) {
   const { handoffReminders, workspaceSync } = args;
   return {
@@ -28,6 +31,7 @@ function buildSyncPanelProps(args: {
     syncConflictCount: workspaceSync.syncConflictCount,
     syncEvents: workspaceSync.state.sync_events,
     syncProgress: workspaceSync.syncProgress,
+    syncGroup: args.syncGroup,
     onCancelPairing: workspaceSync.cancelPairing,
     onChangeHandoffReminderSettings: handoffReminders.updateSettings,
     onCheckDesktop: workspaceSync.checkDesktop,
@@ -55,6 +59,12 @@ export function CompanionSyncContent(props: {
 }) {
   const { workspaceSync } = props;
   const handoffReminders = useCompanionHandoffReminderRuntime();
+  const [syncGroup, setSyncGroup] = useState<SyncGroupPayload | null>(null);
+
+  useEffect(() => {
+    if (workspaceSync.bootstrapState.runtime_kind !== 'android-capacitor') return;
+    void loadCompanionSyncGroup().then(setSyncGroup).catch(() => setSyncGroup(null));
+  }, [workspaceSync.bootstrapState.runtime_kind, workspaceSync.pairingState.is_paired, workspaceSync.state.last_synced_at]);
 
   useEffect(() => {
     if (!workspaceSync.pendingPairRequest || workspaceSync.pairingStatus !== 'awaiting-approval') {
@@ -87,6 +97,7 @@ export function CompanionSyncContent(props: {
     <CompanionSyncPanel {...buildSyncPanelProps({
       handoffReminders,
       page: props.page ?? 'sync',
+      syncGroup,
       workspaceSync,
       ...definedProps({ onOpenSettingsPage: props.onOpenSettingsPage })
     })} />

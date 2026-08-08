@@ -121,7 +121,7 @@ describe('CompanionSyncPanel protocol rejection', () => {
 
     renderWithLocalization(<CompanionSyncPanel {...props} />);
     expect(screen.getByText('Update Foliole on both devices to connect.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Connect' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Join' })).toBeDisabled();
   });
 
   it('offers repair without exposing the manual sync action for old pairing records', async () => {

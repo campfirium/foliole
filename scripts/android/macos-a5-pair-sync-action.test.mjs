@@ -58,6 +58,43 @@ it('removes only the fixed A5 record when current-peer credentials were rejected
   expect(session.remove).toHaveBeenCalledWith(currentId);
 });
 
+it('removes the fixed stale desktop record after A5 app data was cleared', async () => {
+  const currentId = 'current-a5';
+  const currentFingerprint = macosPairSyncIdentityFingerprint(currentId);
+  const session = {
+    assertActive: vi.fn(),
+    remove: vi.fn(async () => overview(null)),
+    sanitize: vi.fn((value) => ({
+      desktopPeerFingerprint: '7f58d92331c8872b',
+      pairedDeviceFingerprints: value.paired_devices.map(
+        (device) => macosPairSyncIdentityFingerprint(device.device_id)
+      ),
+      pendingDeviceFingerprints: [], serverState: 'running', syncEnabled: true
+    }))
+  };
+
+  await expect(reconcileAuthorizedMacosDailyPairing(
+    overview(currentId), session, currentFingerprint, null, false
+  )).resolves.toMatchObject({ pairedDeviceFingerprints: [] });
+  expect(session.remove).toHaveBeenCalledWith(currentId);
+});
+
+it('forces product re-pair when rejected A5 credentials outlive the desktop record', async () => {
+  const session = {
+    assertActive: vi.fn(), remove: vi.fn(),
+    sanitize: vi.fn(() => ({
+      desktopPeerFingerprint: '7f58d92331c8872b',
+      pairedDeviceFingerprints: [], pendingDeviceFingerprints: [],
+      serverState: 'running', syncEnabled: true
+    }))
+  };
+
+  await expect(reconcileAuthorizedMacosDailyPairing(
+    overview(null), session, 'bd1d679fbb55b53e', '7f58d92331c8872b', false, true
+  )).resolves.toMatchObject({ pairedDeviceFingerprints: [], rePairRequired: true });
+  expect(session.remove).not.toHaveBeenCalled();
+});
+
 it('passes an authorized existing pairing through without removing it', async () => {
   const currentId = 'current-a5';
   const currentFingerprint = macosPairSyncIdentityFingerprint(currentId);
@@ -111,6 +148,8 @@ it('passes the A5 trusted remote peer into desktop readiness', async () => {
   expect(result).toMatchObject({
     credentialRepairRequired: true, remotePeerFingerprint: '82cc2dc5c98135c8'
   });
+  expect(result).not.toHaveProperty('openTransport');
+  expect(result).not.toHaveProperty('closeTransport');
   expect(runPairSyncRecovery).toHaveBeenCalledOnce();
 });
 

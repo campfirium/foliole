@@ -2,6 +2,7 @@ import path from 'node:path';
 
 import { expect, it, vi } from 'vitest';
 
+import { openDatabaseConnection } from './connection.js';
 import { buildDesktopSyncPack } from './syncPackBuilder.js';
 import {
   insertAttachmentSyncState,
@@ -150,6 +151,24 @@ it('packs node reading state as a generic sync object', async () => {
       object_type: 'node_reading',
       payload_json: expect.stringContaining('interval_duration_ms')
     })]
+  });
+});
+
+it('omits stale node reading state without a backing reading row', async () => {
+  insertNodeReadingSyncState();
+  openDatabaseConnection().driver.execute(
+    "DELETE FROM node_reading WHERE node_id = 'node-reading-1'"
+  );
+  const packPath = resolveSyncPackPath('incoming-stale-node-reading.db');
+
+  const result = await buildDesktopSyncPack({
+    outputPath: packPath, packId: 'pack-stale-node-reading-1', fromStateSeq: 0
+  });
+
+  expect(result).toMatchObject({ objectCount: 1, toStateSeq: 8 });
+  expect(readPackRows(packPath)).toMatchObject({
+    stateRows: [{ object_id: 'node-reading-1', object_type: 'node', state_seq: 1 }],
+    syncObjects: []
   });
 });
 

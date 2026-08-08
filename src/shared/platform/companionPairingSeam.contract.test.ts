@@ -138,7 +138,7 @@ function configureNativePairingStore() {
 async function requestPairing() {
   return await requestCompanionPairing({
     deviceId: 'android-seam',
-    deviceKind: 'android-capacitor',
+    deviceKind: 'android',
     deviceName: 'A5',
     endpointUrl
   });
@@ -146,7 +146,7 @@ async function requestPairing() {
 
 async function completePairing(pairRequestId: string) {
   return await pairCompanionWithDesktop({
-    deviceKind: 'android-capacitor',
+    deviceKind: 'android',
     deviceName: 'A5',
     endpointUrl,
     pairRequestId

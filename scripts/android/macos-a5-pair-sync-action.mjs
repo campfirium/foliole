@@ -38,6 +38,30 @@ export async function reconcileAuthorizedMacosDailyPairing(
     && safe.pairedDeviceFingerprints.length === 1
     && safe.pairedDeviceFingerprints[0] === deviceFingerprint
     && safe.pendingDeviceFingerprints.length === 0;
+  const exactClearedDevice = existingPairing === false
+    && safe.pairedDeviceFingerprints.length === 1
+    && safe.pairedDeviceFingerprints[0] === deviceFingerprint
+    && safe.pendingDeviceFingerprints.length === 0;
+  const exactMissingCredentialRepair = existingPairing === false
+    && credentialRepairRequired
+    && safe.pairedDeviceFingerprints.length === 0
+    && safe.pendingDeviceFingerprints.length === 0
+    && (!remotePeerFingerprint || safe.desktopPeerFingerprint === remotePeerFingerprint);
+  if (exactMissingCredentialRepair) {
+    const validated = validateOwnedDesktopPreflight(
+      overview, session, deviceFingerprint, remotePeerFingerprint, false
+    );
+    return { ...validated, rePairRequired: true };
+  }
+  if (exactClearedDevice) {
+    const paired = overview.paired_devices.find(
+      (device) => macosPairSyncIdentityFingerprint(device.device_id) === deviceFingerprint
+    );
+    if (!paired) throw new Error('Authorized cleared A5 pairing record is missing.');
+    return validateOwnedDesktopPreflight(
+      await session.remove(paired.device_id), session, deviceFingerprint, remotePeerFingerprint, false
+    );
+  }
   if (exactCredentialRepair) {
     const paired = overview.paired_devices.find(
       (device) => macosPairSyncIdentityFingerprint(device.device_id) === deviceFingerprint
@@ -96,8 +120,6 @@ export async function runMacosA5PairSync({
       ...options, userDataPath
     }),
     desktopControl: macosDesktopControl,
-    openTransport: async () => undefined,
-    closeTransport: async () => undefined,
     validateDesktop: reconcileAuthorizedMacosDailyPairing,
     paths: {
       adbPath: paths.adb,

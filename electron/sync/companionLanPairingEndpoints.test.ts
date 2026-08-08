@@ -58,7 +58,7 @@ it('does not revoke an existing paired device before desktop approval', async ()
   await handlePairRequestCreate(
     createRequest({
       device_id: 'android-1',
-      device_kind: 'android-capacitor',
+      device_kind: 'android',
       device_name: 'Pixel 9',
       pairing_public_key: TEST_PAIRING_PUBLIC_KEY,
       protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
@@ -81,7 +81,7 @@ it('rejects a pair request without compatible protocol metadata before creating 
   await handlePairRequestCreate(
     createRequest({
       device_id: 'android-old',
-      device_kind: 'android-capacitor',
+      device_kind: 'android',
       device_name: 'Old Android',
       pairing_public_key: TEST_PAIRING_PUBLIC_KEY
     }),
@@ -225,7 +225,7 @@ function createApprovedPairRequest(deviceId: string) {
     compatibility: evaluateSyncProtocolCompatibility(protocol),
     clientAddress: '192.168.1.22',
     deviceId,
-    deviceKind: 'android-capacitor',
+    deviceKind: 'android',
     deviceName: 'Pixel 9',
     pairingPublicKey: TEST_PAIRING_PUBLIC_KEY,
     protocol

@@ -23,6 +23,9 @@ export interface CompanionMdnsAdvertisementInput {
   onWarning?: (error: unknown) => void;
   peerId: string;
   port: number;
+  groupDisplayName: string;
+  groupId: string;
+  timelineId: string;
 }
 
 export function collectCompanionMdnsInterfaceAddresses(
@@ -55,12 +58,14 @@ export function startCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisemen
     const bonjour = new Bonjour(options, reportWarning);
     const service = bonjour.publish({
       host: resolveCompanionMdnsHost(),
-      name: 'Foliole Desktop',
+      name: input.groupDisplayName,
       port: input.port,
       protocol: 'tcp',
       txt: {
         app_version: input.appVersion,
+        group_id: input.groupId,
         peer_id: input.peerId,
+        timeline_id: input.timelineId,
         ...serializeSyncProtocolTxt()
       },
       type: COMPANION_SYNC_MDNS_SERVICE_TYPE

@@ -16,7 +16,8 @@ const syncBridgeMock = vi.hoisted(() => ({
 }));
 
 const pairingMock = vi.hoisted(() => ({
-  createSignedRequestHeaders: vi.fn(async () => ({ 'X-Signature': 'signed' }))
+  createSignedRequestHeaders: vi.fn(async () => ({ 'X-Signature': 'signed' })),
+  loadCompanionPairingState: vi.fn(async () => ({ device_kind: 'android' }))
 }));
 
 vi.mock('./companionSyncObjects', () => syncBridgeMock);

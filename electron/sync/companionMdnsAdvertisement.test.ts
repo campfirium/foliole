@@ -58,9 +58,12 @@ describe('companion mDNS advertisement', () => {
 
     startCompanionMdnsAdvertisement({
       appVersion: '0.1.0-test',
+      groupDisplayName: 'V',
+      groupId: 'group-1',
       onWarning,
       peerId: 'desktop-local',
-      port: 38683
+      port: 38683,
+      timelineId: 'timeline-1'
     });
     bonjourMock.constructorCallback?.(new Error('multicast unavailable'));
 
@@ -72,24 +75,29 @@ describe('companion mDNS advertisement', () => {
 
     startCompanionMdnsAdvertisement({
       appVersion: '0.1.0-test',
+      groupDisplayName: 'V',
+      groupId: 'group-1',
       peerId: 'desktop-local',
-      port: 38683
+      port: 38683,
+      timelineId: 'timeline-1'
     });
 
     expect(bonjourMock.constructorOptions).toEqual([{ interface: '192.168.0.11' }]);
 
     expect(bonjourMock.publish).toHaveBeenCalledWith({
       host: 'V.local',
-      name: 'Foliole Desktop',
+      name: 'V',
       port: 38683,
       protocol: 'tcp',
       txt: {
         app_version: '0.1.0-test',
+        group_id: 'group-1',
         peer_id: 'desktop-local',
         protocol_capabilities: 'lan-sync-v1',
         protocol_max_version: '1',
         protocol_min_version: '1',
-        protocol_version: '1'
+        protocol_version: '1',
+        timeline_id: 'timeline-1'
       },
       type: 'foliole-sync'
     });
@@ -108,7 +116,10 @@ describe('companion mDNS interface lifecycle', () => {
     });
     const { startCompanionMdnsAdvertisement } = await import('./companionMdnsAdvertisement.js');
 
-    startCompanionMdnsAdvertisement({ appVersion: '0.1.0-test', peerId: 'desktop-local', port: 38683 });
+    startCompanionMdnsAdvertisement({
+      appVersion: '0.1.0-test', groupDisplayName: 'V', groupId: 'group-1',
+      peerId: 'desktop-local', port: 38683, timelineId: 'timeline-1'
+    });
 
     expect(bonjourMock.constructorOptions).toEqual([
       { interface: '192.168.0.11' },
@@ -124,8 +135,11 @@ describe('companion mDNS interface lifecycle', () => {
 
     startCompanionMdnsAdvertisement({
       appVersion: '0.1.0-test',
+      groupDisplayName: 'V',
+      groupId: 'group-1',
       peerId: 'desktop-local',
-      port: 38683
+      port: 38683,
+      timelineId: 'timeline-1'
     });
     stopCompanionMdnsAdvertisement();
 

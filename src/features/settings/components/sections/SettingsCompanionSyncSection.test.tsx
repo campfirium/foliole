@@ -17,6 +17,7 @@ type PairingState = ReturnType<typeof useDesktopCompanionPairingRequests>;
 function createState(overrides: Partial<PairingState> = {}): PairingState {
   return {
     approveRequest: vi.fn(),
+    createSyncGroup: vi.fn(),
     clearPairedDevices: vi.fn(),
     disableSync: vi.fn(),
     enableSync: vi.fn(),
@@ -47,7 +48,6 @@ function createState(overrides: Partial<PairingState> = {}): PairingState {
     refresh: vi.fn(),
     rejectRequest: vi.fn(),
     removePairedDevice: vi.fn(),
-    setDesktopAsPrimaryDevice: vi.fn(),
     ...overrides
   };
 }
@@ -56,48 +56,65 @@ beforeEach(() => {
   companionPairingMock.useDesktopCompanionPairingRequests.mockReturnValue(createState());
 });
 
-it('shows the current primary device role in sync settings', () => {
+it('offers to create a Sync Group when this desktop has none', () => {
   renderWithLocalization(<SettingsCompanionSyncSection />);
 
-  expect(screen.getByText('Device role')).toBeInTheDocument();
-  expect(screen.getByText('Primary device')).toBeInTheDocument();
-  expect(screen.getByText('Current primary')).toBeInTheDocument();
-  expect(screen.getByText('This desktop runs sync and external document mirrors for paired devices.')).toBeInTheDocument();
+  expect(screen.getByText('Sync Group')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Create Sync Group' })).toBeInTheDocument();
 });
 
-it('lets a secondary desktop become the primary device from sync settings', async () => {
-  const setDesktopAsPrimaryDevice = vi.fn();
+it('creates a Sync Group from sync settings', async () => {
+  const createSyncGroup = vi.fn();
   companionPairingMock.useDesktopCompanionPairingRequests.mockReturnValue(createState({
-    overview: {
-      ...createState().overview,
-      primary_device_state: {
-        can_initiate_takeover: false,
-        local_role: 'secondary',
-        primary_device_id: 'device-android',
-        source: 'committed-primary-device',
-        takeover_blocked_reasons: ['sync-latest-confirmation-missing']
-      }
-    },
-    setDesktopAsPrimaryDevice
+    createSyncGroup
   }));
 
   renderWithLocalization(<SettingsCompanionSyncSection />);
-  fireEvent.click(screen.getByRole('button', { name: 'Set as primary device' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Create Sync Group' }));
 
-  expect(setDesktopAsPrimaryDevice).toHaveBeenCalledTimes(1);
+  expect(createSyncGroup).toHaveBeenCalledTimes(1);
 });
 
-it('announces connected devices progress through the settings state surface', () => {
+it('approves a recognized device asking to join the Sync Group', () => {
+  const approveRequest = vi.fn();
+  const overview = createState().overview;
+  companionPairingMock.useDesktopCompanionPairingRequests.mockReturnValue(createState({
+    approveRequest,
+    overview: {
+      ...overview,
+      pending_requests: [{
+        client_address: '192.168.1.8', device_id: 'android-1', device_kind: 'android-capacitor',
+        device_name: 'Pixel', expires_at: '2026-08-08T01:00:00.000Z', pair_request_id: 'request-1',
+        requested_at: '2026-08-08T00:58:00.000Z', status: 'pending'
+      }],
+      sync_group: {
+        created_at: '2026-08-08T00:00:00.000Z', created_by_device_id: 'desktop-1', display_name: 'Studio',
+        group_id: 'group-1', local_device_id: 'desktop-1', local_member_state: 'active',
+        members: [{
+          activated_at: '2026-08-08T00:00:00.000Z', approved_by_device_id: 'desktop-1',
+          authorization_id: 'founder-1', device_id: 'desktop-1', device_kind: 'darwin', device_name: 'Studio',
+          joined_at: '2026-08-08T00:00:00.000Z', state: 'active'
+        }],
+        timeline_id: 'timeline-1'
+      }
+    }
+  }));
+
+  renderWithLocalization(<SettingsCompanionSyncSection />);
+  fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
+
+  expect(approveRequest).toHaveBeenCalledWith('request-1');
+});
+
+it('disables Sync Group creation while settings are loading', () => {
   companionPairingMock.useDesktopCompanionPairingRequests.mockReturnValue(createState({ isLoading: true }));
 
   renderWithLocalization(<SettingsCompanionSyncSection />);
 
-  const status = screen.getByRole('status');
-  expect(status).toHaveAttribute('aria-busy', 'true');
-  expect(status).toHaveTextContent('');
+  expect(screen.getByRole('button', { name: 'Create Sync Group' })).toBeDisabled();
 });
 
-it('shows the product iOS label for a paired iPhone', () => {
+it('does not expose legacy paired-device transport rows', () => {
   companionPairingMock.useDesktopCompanionPairingRequests.mockReturnValue(createState({
     overview: {
       ...createState().overview,
@@ -113,8 +130,8 @@ it('shows the product iOS label for a paired iPhone', () => {
 
   renderWithLocalization(<SettingsCompanionSyncSection />);
 
-  expect(screen.getByRole('listitem')).toHaveTextContent('iPhone 13 mini (iOS)');
-  expect(screen.queryByText(/ios-capacitor/)).not.toBeInTheDocument();
+  expect(screen.queryByText('Connected devices')).not.toBeInTheDocument();
+  expect(screen.queryByText('iPhone 13 mini')).not.toBeInTheDocument();
 });
 
 it('shows sync server errors through the settings state surface', () => {

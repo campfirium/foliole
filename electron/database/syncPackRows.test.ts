@@ -35,8 +35,9 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-it('loads reading and review state as state-only sync pack metadata', () => {
+it('loads backed reading and review state as sync pack metadata', () => {
   insertNodeSyncState();
+  insertLearningStateRows();
   openDatabaseConnection().driver.execute(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
@@ -127,6 +128,17 @@ function insertNodeSyncState() {
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
      ) VALUES ('node', 'node-1', 1, 'node-hash', 'desktop', '2026-04-27T00:00:00.000Z', 0)`
+  );
+}
+
+function insertLearningStateRows() {
+  openDatabaseConnection().driver.execute(
+    `INSERT INTO node_review (node_id, due, state)
+     VALUES ('node-1', '2026-04-28T00:00:00.000Z', 0)`
+  );
+  openDatabaseConnection().driver.execute(
+    `INSERT INTO node_reading (node_id, last_handled_at, next_at, state)
+     VALUES ('node-1', '2026-04-27T00:04:00.000Z', '2026-04-28T00:04:00.000Z', 'active')`
   );
 }
 

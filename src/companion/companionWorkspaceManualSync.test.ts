@@ -12,8 +12,18 @@ const syncPlatformMock = vi.hoisted(() => ({
 const stageEventsMock = vi.hoisted(() => ({
   recordCompanionSyncStageEvents: vi.fn(async () => undefined)
 }));
+const provisioningMock = vi.hoisted(() => ({
+  activateCompanionSyncGroupIfComplete: vi.fn(async () => null),
+  isCompanionSyncGroupProvisioning: vi.fn(async () => false)
+}));
 
 vi.mock('../shared/platform/companionDesktopSyncObjects', () => syncObjectsMock);
+vi.mock('../shared/platform/companion/sync/syncGroupProvisioning', () => ({
+  activateCompanionSyncGroupIfComplete: provisioningMock.activateCompanionSyncGroupIfComplete
+}));
+vi.mock('../shared/platform/companion/sync/syncGroupStore', () => ({
+  recoverInterruptedCompanionSyncGroupProvisioning: provisioningMock.isCompanionSyncGroupProvisioning
+}));
 vi.mock('../shared/platform/companionSyncObjects', () => ({ loadCompanionSyncNodeConflicts: vi.fn(async () => []) }));
 vi.mock('../shared/platform/companionWorkspaceSync', () => syncPlatformMock);
 vi.mock('./companionStructureSyncSnapshot', () => ({ loadCompanionStateAfterStructureSync: vi.fn(async () => null) }));
@@ -59,6 +69,7 @@ function syncArgs() {
 describe('manual companion sync structure catch-up', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    provisioningMock.isCompanionSyncGroupProvisioning.mockResolvedValue(false);
     syncPlatformMock.recordCompanionWorkspaceSyncEvent.mockResolvedValue(createSyncState());
   });
 
@@ -89,5 +100,34 @@ describe('manual companion sync structure catch-up', () => {
     expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenLastCalledWith(expect.objectContaining({
       kind: 'run_finished', message: 'Topic list confirmation is still pending.', result: 'partial'
     }));
+  });
+
+  it('finishes a decreasing resource backlog before activating a provisioning member', async () => {
+    provisioningMock.isCompanionSyncGroupProvisioning.mockResolvedValue(true);
+    syncObjectsMock.syncCompanionObjectsFromDesktop
+      .mockResolvedValueOnce(createSyncObjectsResult({ remainingContentBlobCount: 1404 }))
+      .mockResolvedValueOnce(createSyncObjectsResult({ remainingContentBlobCount: 764 }))
+      .mockResolvedValueOnce(createSyncObjectsResult({ remainingContentBlobCount: 0 }));
+    const { syncCompanionDesktopStreams } = await import('./companionWorkspaceManualSync');
+
+    await syncCompanionDesktopStreams(syncArgs());
+
+    expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledTimes(3);
+    expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenLastCalledWith(
+      'http://127.0.0.1:38641', expect.objectContaining({ resourcesOnly: true })
+    );
+    expect(provisioningMock.activateCompanionSyncGroupIfComplete).toHaveBeenCalledOnce();
+  });
+
+  it('stops provisioning continuation when a resource pass makes no progress', async () => {
+    provisioningMock.isCompanionSyncGroupProvisioning.mockResolvedValue(true);
+    syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(
+      createSyncObjectsResult({ remainingContentBlobCount: 1404 })
+    );
+    const { syncCompanionDesktopStreams } = await import('./companionWorkspaceManualSync');
+
+    await syncCompanionDesktopStreams(syncArgs());
+
+    expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledTimes(2);
   });
 });

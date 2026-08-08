@@ -7,7 +7,7 @@
   if (!proto || typeof proto.generateKey !== 'function') return JSON.stringify({ ok: false });
   var state = {
     keyState: 'not-started', requestState: 'not-started', completion: 'not_started',
-    credentials: 'not_saved', initialSync: 'not_started',
+    credentials: 'not_saved', groupActivation: 'not_started', initialSync: 'not_started',
     syncPackApplied: false, syncPackDownloaded: false
   };
   window.__foliolePairSyncObserver = state;
@@ -62,6 +62,12 @@
         state.completion = value && value.status === 200 ? 'http_200' : 'http_rejected'; return value;
       }, function (error) { state.completion = 'transport_failed'; throw error; });
     }
+    if (isGroupActivation(args)) {
+      state.groupActivation = 'dispatched';
+      return call().then(function (value) {
+        state.groupActivation = value && value.status === 200 ? 'active' : 'failed'; return value;
+      }, function (error) { state.groupActivation = 'failed'; throw error; });
+    }
     if (isSyncPush(args) && pairingCanSync(state)) {
       state.initialSync = 'started';
       return call().then(function (value) {
@@ -74,6 +80,11 @@
   function isSyncPush(args) {
     if (!args || args.method !== 'POST' || typeof args.url !== 'string') return false;
     try { return new URL(args.url).pathname === '/companion/sync-push'; }
+    catch { return false; }
+  }
+  function isGroupActivation(args) {
+    if (!args || args.method !== 'POST' || typeof args.url !== 'string') return false;
+    try { return new URL(args.url).pathname === '/companion/sync-group/activate'; }
     catch { return false; }
   }
   function pairingCanSync(state) {

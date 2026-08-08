@@ -2,36 +2,20 @@ import { randomUUID } from 'node:crypto';
 
 import type { SyncProtocolCompatibilityResult, SyncProtocolDescriptor } from '../../lib/platform/syncProtocolContract.js';
 
+import {
+  type CompletedCompanionPairRequest,
+  type PendingCompanionPairRequest,
+  type StoredCompanionPairRequest,
+  toPublicPairRequest
+} from './companionPairRequestPresentation.js';
+
+export type { CompletedCompanionPairRequest, PendingCompanionPairRequest } from './companionPairRequestPresentation.js';
+
 const PAIR_REQUEST_TTL_MS = 2 * 60 * 1000;
 const PAIR_REQUEST_RATE_LIMIT_MAX = 5;
 const PAIR_REQUEST_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const PAIR_COMPLETION_RATE_LIMIT_MAX = 10;
 const PAIR_COMPLETION_RATE_LIMIT_WINDOW_MS = 60 * 1000;
-
-export interface PendingCompanionPairRequest {
-  compatibility: SyncProtocolCompatibilityResult;
-  client_address: string | null;
-  device_id: string;
-  device_kind: string;
-  device_name: string;
-  expires_at: string;
-  pairing_public_key: string;
-  protocol: SyncProtocolDescriptor;
-  pair_request_id: string;
-  requested_at: string;
-  status: 'approved' | 'pending' | 'rejected';
-}
-
-export interface CompletedCompanionPairRequest {
-  device_id: string;
-  device_secret: string;
-  paired_at: string;
-}
-
-interface StoredCompanionPairRequest extends PendingCompanionPairRequest {
-  completion: CompletedCompanionPairRequest | null;
-  expires_at_ms: number;
-}
 
 const requestsById = new Map<string, StoredCompanionPairRequest>();
 const pairCompletionTimestampsByClient = new Map<string, number[]>();
@@ -64,20 +48,16 @@ function reserveRateLimitSlot(args: { clientAddress?: string | null; deviceId: s
   return { allowed: true } as const;
 }
 
-function toPublicRequest(request: StoredCompanionPairRequest): PendingCompanionPairRequest {
-  return {
-    client_address: request.client_address,
-    compatibility: request.compatibility,
-    device_id: request.device_id,
-    device_kind: request.device_kind,
-    device_name: request.device_name,
-    expires_at: request.expires_at,
-    pairing_public_key: request.pairing_public_key,
-    protocol: request.protocol,
-    pair_request_id: request.pair_request_id,
-    requested_at: request.requested_at,
-    status: request.status
-  };
+function refreshPendingRequest(
+  request: StoredCompanionPairRequest,
+  args: Parameters<typeof createCompanionPairRequest>[0]
+) {
+  request.pairing_public_key = args.pairingPublicKey.trim();
+  request.compatibility = args.compatibility;
+  request.protocol = args.protocol;
+  if (args.groupId) request.group_id = args.groupId;
+  if (args.timelineId) request.timeline_id = args.timelineId;
+  return { created: false, rate_limited: false, request: toPublicPairRequest(request) } as const;
 }
 
 export function createCompanionPairRequest(args: {
@@ -89,6 +69,8 @@ export function createCompanionPairRequest(args: {
   nowMs?: number;
   pairingPublicKey: string;
   protocol: SyncProtocolDescriptor;
+  groupId?: string;
+  timelineId?: string;
 }) {
   const nowMs = args.nowMs ?? Date.now();
   pruneExpiredRequests(nowMs);
@@ -96,14 +78,7 @@ export function createCompanionPairRequest(args: {
     return request.device_id === args.deviceId.trim() && request.status === 'pending';
   });
   if (existingPendingRequest) {
-    existingPendingRequest.pairing_public_key = args.pairingPublicKey.trim();
-    existingPendingRequest.compatibility = args.compatibility;
-    existingPendingRequest.protocol = args.protocol;
-    return {
-      created: false,
-      rate_limited: false,
-      request: toPublicRequest(existingPendingRequest)
-    } as const;
+    return refreshPendingRequest(existingPendingRequest, args);
   }
   const rateLimit = reserveRateLimitSlot({
     ...(args.clientAddress === undefined ? {} : { clientAddress: args.clientAddress }),
@@ -131,13 +106,15 @@ export function createCompanionPairRequest(args: {
     protocol: args.protocol,
     pair_request_id: randomUUID(),
     requested_at: new Date(nowMs).toISOString(),
-    status: 'pending'
+    status: 'pending',
+    ...(args.groupId ? { group_id: args.groupId } : {}),
+    ...(args.timelineId ? { timeline_id: args.timelineId } : {})
   };
   requestsById.set(request.pair_request_id, request);
   return {
     created: true,
     rate_limited: false,
-    request: toPublicRequest(request)
+    request: toPublicPairRequest(request)
   } as const;
 }
 
@@ -145,7 +122,7 @@ export function loadPendingCompanionPairRequests(nowMs = Date.now()) {
   pruneExpiredRequests(nowMs);
   return [...requestsById.values()]
     .filter((request) => request.status === 'pending')
-    .map(toPublicRequest);
+    .map(toPublicPairRequest);
 }
 
 export function countPendingCompanionPairRequests(nowMs = Date.now()) {
@@ -163,7 +140,7 @@ function updateRequestStatus(pairRequestId: string, status: PendingCompanionPair
     request.expires_at_ms = nowMs + PAIR_REQUEST_TTL_MS;
     request.expires_at = new Date(request.expires_at_ms).toISOString();
   }
-  return toPublicRequest(request);
+  return toPublicPairRequest(request);
 }
 
 export function approveCompanionPairRequest(pairRequestId: string, nowMs = Date.now()) {
@@ -181,10 +158,10 @@ export function consumeApprovedCompanionPairRequest(pairRequestId: string, nowMs
     return null;
   }
   if (request.status !== 'approved') {
-    return toPublicRequest(request);
+    return toPublicPairRequest(request);
   }
   requestsById.delete(pairRequestId);
-  return toPublicRequest(request);
+  return toPublicPairRequest(request);
 }
 
 export function loadCompanionPairRequestForCompletion(pairRequestId: string, nowMs = Date.now()) {
@@ -195,7 +172,7 @@ export function loadCompanionPairRequestForCompletion(pairRequestId: string, now
   }
   return {
     completion: request.completion,
-    request: toPublicRequest(request)
+    request: toPublicPairRequest(request)
   };
 }
 

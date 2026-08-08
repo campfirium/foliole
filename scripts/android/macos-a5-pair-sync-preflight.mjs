@@ -45,19 +45,41 @@ export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
     && workspaceState.counts?.nodes === pairState.nodeCount
     && workspaceState.canonicalInbox?.active === true
     && workspaceState.pairingWorkspace?.syncEndpointPresent === true;
+  const rejectedWorkspace = pairState.nodeCount > 0
+    && workspaceState.counts?.nodes === pairState.nodeCount
+    && workspaceState.canonicalInbox?.active === true
+    && workspaceState.pairingWorkspace?.localDeviceIdentityPresent === true;
   const authorizedWorkspace = workspaceState.pairingWorkspace?.localDeviceIdentityPresent === true
     && (emptyStalePairing || syncedProfileSwitch);
   const existingPairingRecovery = pairState.dirtyRecordCount > 0
     && authorizedPairing && syncedProfileSwitch;
   const cleanPairSwitch = pairing.status === 0 && pairState.dirtyRecordCount === 0
-    && authorizedPairing && authorizedWorkspace;
-  if (!existingPairingRecovery && !cleanPairSwitch) {
+    && authorizedPairing && authorizedWorkspace
+    && pairState.pairingCredentialsRejected !== true;
+  const rejectedCleanPairing = pairState.dirtyRecordCount === 0
+    && pairState.pairingCredentialsRejected === true
+    && pairState.pairingCredentialRejectionReason === 'unknown_device'
+    && (pairState.remotePeerFingerprint === null
+      || /^[0-9a-f]{16}$/u.test(pairState.remotePeerFingerprint))
+    && pairState.pairingPeerConflict === false
+    && rejectedWorkspace;
+  const freshEmptyPairing = pairing.status === 0 && pairState.dirtyRecordCount === 0
+    && pairState.nodeCount === 0
+    && pairState.pairingCredentialsPresent === false
+    && pairState.remotePeerFingerprint === null
+    && pairState.pairingPeerConflict === false
+    && workspaceState.counts?.nodes === 0
+    && workspaceState.counts?.content_blobs === 0
+    && workspaceState.counts?.node_order === 0
+    && workspaceState.pairingWorkspace?.localDeviceIdentityPresent === true
+    && workspaceState.pairingWorkspace?.syncEndpointPresent === false;
+  if (!existingPairingRecovery && !cleanPairSwitch && !rejectedCleanPairing && !freshEmptyPairing) {
     throw new Error('Fixed A5 no longer matches the authorized pair-switch state.');
   }
   return {
     ...pairState,
-    credentialRepairRequired: existingPairingRecovery
-      && pairState.pairingCredentialsRejected === true,
-    existingPairing: existingPairingRecovery
+    credentialRepairRequired: rejectedCleanPairing || (existingPairingRecovery
+      && pairState.pairingCredentialsRejected === true),
+    existingPairing: existingPairingRecovery || cleanPairSwitch
   };
 }

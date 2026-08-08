@@ -5,6 +5,7 @@ import { KEEP_IMPORT_SCHEMA_STATEMENTS } from './keepImportSchemaStatements.js';
 import { LOCAL_FILE_SCHEMA_STATEMENTS } from './localFileSchemaStatements.js';
 import { SEARCH_INDEX_INVALIDATION_SCHEMA_STATEMENTS } from './searchIndexInvalidationSchemaStatements.js';
 import { SOURCE_DISPOSITION_SCHEMA_STATEMENTS } from './sourceDispositionSchemaStatements.js';
+import { SYNC_GROUP_SCHEMA_STATEMENTS } from './syncGroupSchemaStatements.js';
 import { SYNC_SCHEMA_STATEMENTS } from './syncSchemaStatements.js';
 
 export const DESKTOP_FRESH_SCHEMA_STATEMENTS = [
@@ -13,6 +14,7 @@ export const DESKTOP_FRESH_SCHEMA_STATEMENTS = [
   ...KEEP_IMPORT_SCHEMA_STATEMENTS,
   ...DESKTOP_RESOURCE_SCHEMA_STATEMENTS.slice(6),
   ...SYNC_SCHEMA_STATEMENTS,
+  ...SYNC_GROUP_SCHEMA_STATEMENTS,
   ...EXTERNAL_DOCUMENT_SCHEMA_STATEMENTS,
   ...LOCAL_FILE_SCHEMA_STATEMENTS,
   ...SOURCE_DISPOSITION_SCHEMA_STATEMENTS,

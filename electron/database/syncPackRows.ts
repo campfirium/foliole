@@ -151,7 +151,15 @@ function loadPayloadObjects(driver: DatabaseDriver, rows: SyncStatePackRow[]): S
   }
   return [...rowsByType.entries()].flatMap(([objectType, objectIds]) => loadSyncObjectsFromDriver(
     driver, objectIds, [objectType]
+  )).filter((record) => record.deleted_at !== null || record.payload_json !== null);
+}
+
+function retainBackedStateRows(rows: SyncStatePackRow[], syncObjects: SyncObjectPackRow[]) {
+  const payloadKeys = new Set(syncObjects.map(
+    (record) => `${record.object_type}:${record.object_id}`
   ));
+  return rows.filter((row) => !isSyncPackPayloadObjectType(row.object_type)
+    || payloadKeys.has(`${row.object_type}:${row.object_id}`));
 }
 
 function loadReviewLogRows(driver: DatabaseDriver, rows: SyncStatePackRow[]): ReviewLogPackRow[] {
@@ -185,13 +193,15 @@ export function loadPackRows(
 ) {
   const changedStateRows = listChangedStateRows(driver, fromStateSeq, toStateSeq).filter(isSyncStatePackRow);
   const changedNodeIds = idsForObjectTable(changedStateRows, 'nodes');
-  const stateRows = mergeStateRows(changedStateRows, loadNodePreludeStateRows({
+  const candidateStateRows = mergeStateRows(changedStateRows, loadNodePreludeStateRows({
     isSyncStatePackRow,
     nodeIds: [...changedNodeIds, ...learningNodeIds(changedStateRows)],
     placeholders,
     query: (sql, params) => driver.queryAll<RawSyncStatePackRow>(sql, params),
     toStateSeq
   }));
+  const syncObjects = loadPayloadObjects(driver, candidateStateRows);
+  const stateRows = retainBackedStateRows(candidateStateRows, syncObjects);
   const nodeIds = [...new Set([
     ...idsForObjectTable(stateRows, 'nodes'),
     ...learningNodeIds(stateRows)
@@ -211,6 +221,7 @@ export function loadPackRows(
     externalDocumentIds
   );
   return {
+    consumedStateSeq: candidateStateRows.at(-1)?.state_seq ?? fromStateSeq,
     contentBlobs: queryRowsByIds<ContentBlobPackRow>(driver,
       `SELECT hash, storage_key, kind, mime_type, compression, original_size_bytes, stored_size_bytes,
          original_sha256, stored_sha256, availability, source_device_id, created_at, cached_at, last_verified_at
@@ -223,7 +234,7 @@ export function loadPackRows(
     nodes,
     reviewLog: loadReviewLogRows(driver, stateRows),
     stateRows,
-    syncObjects: loadPayloadObjects(driver, stateRows)
+    syncObjects
   };
 }
 

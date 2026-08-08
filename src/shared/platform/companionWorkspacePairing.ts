@@ -1,5 +1,12 @@
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../lib/platform/syncProtocolContract';
 
+import { createSignedRequestHeaders, verifyNativePairingCanSignRequest } from './companion/network/signedRequest';
+import {
+  beginCompanionSyncGroupProvisioning,
+  loadCompanionSyncGroup,
+  loadCompanionSyncGroupLibraryFacts,
+  refreshActiveCompanionSyncGroupMembership
+} from './companion/sync/syncGroupStore';
 import {
   createCompanionPairingPublicKey,
   decryptCompanionPairingSecret,
@@ -9,7 +16,6 @@ import { CompanionPairingHttpError, readCompanionPairingError } from './companio
 import {
   clearWebPairingState,
   normalizePairingState,
-  readStoredWebPairingState,
   readWebPairingState,
   writeWebPairingState
 } from './companionPairingState';
@@ -31,43 +37,9 @@ import {
 } from './companionWorkspaceRuntimeRepository';
 
 const pairingKeyIdsByRequestId = new Map<string, string>();
-const PAIRING_SIGNATURE_CHECK_PATH = '/companion/sync-pack?after_state_seq=0';
 
 export { discoverCompanionDesktop, discoverCompanionDesktops };
 
-function toHex(buffer: ArrayBuffer) {
-  return [...new Uint8Array(buffer)].map((value) => value.toString(16).padStart(2, '0')).join('');
-}
-
-async function sha256Hex(text: string) {
-  const encoded = new TextEncoder().encode(text);
-  return toHex(await crypto.subtle.digest('SHA-256', encoded));
-}
-
-async function hmacSha256Hex(secret: string, text: string) {
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(secret),
-    { hash: 'SHA-256', name: 'HMAC' },
-    false,
-    ['sign']
-  );
-  return toHex(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(text)));
-}
-
-function createNonce() {
-  return createCompanionUuid();
-}
-
-function buildCanonicalRequestPayload(args: {
-  bodyHash: string;
-  method: string;
-  nonce: string;
-  pathWithQuery: string;
-  timestamp: string;
-}) {
-  return [args.method.toUpperCase(), args.pathWithQuery, args.timestamp, args.nonce, args.bodyHash].join('\n');
-}
 
 export async function loadCompanionPairingState() {
   if (!isNativeCompanionPairingRuntime()) {
@@ -83,53 +55,7 @@ export async function clearCompanionPairingCredentials() {
   return normalizePairingState(await runCompanionSyncWriterTask(() => FolioleCompanionSync.clearPairingCredentials()));
 }
 
-export async function createSignedRequestHeaders(args: { bodyText?: string; method: string; pathWithQuery: string }) {
-  const timestamp = new Date().toISOString();
-  const nonce = createNonce();
-  const bodyHash = await sha256Hex(args.bodyText ?? '');
-  if (isNativeCompanionPairingRuntime()) {
-    const result = await FolioleCompanionSync.signCompanionSyncRequest({
-      body_hash: bodyHash,
-      method: args.method,
-      nonce,
-      path_with_query: args.pathWithQuery,
-      timestamp
-    });
-    return result.headers;
-  }
-
-  const stored = readStoredWebPairingState();
-  if (!stored?.device_id || !stored.device_secret || normalizePairingState(stored).sync_usable !== true) {
-    throw new Error('Companion is not paired with a compatible desktop sync source.');
-  }
-  return {
-    'X-Device-Id': stored.device_id,
-    'X-Nonce': nonce,
-    'X-Signature': await hmacSha256Hex(
-      stored.device_secret,
-      buildCanonicalRequestPayload({
-        bodyHash,
-        method: args.method,
-        nonce,
-        pathWithQuery: args.pathWithQuery,
-        timestamp
-      })
-    ),
-    'X-Timestamp': timestamp
-  };
-}
-
-async function verifyNativePairingCanSignRequest() {
-  try {
-    const headers = await createSignedRequestHeaders({ method: 'GET', pathWithQuery: PAIRING_SIGNATURE_CHECK_PATH });
-    if (!headers['X-Device-Id'] || !headers['X-Signature']) {
-      throw new Error('Native pairing credentials did not produce signed request headers.');
-    }
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : 'unknown error';
-    throw new Error(`Native pairing credentials cannot sign sync requests: ${reason}`);
-  }
-}
+export { createSignedRequestHeaders };
 
 export async function loadCompanionDiscovery(endpointUrl: string) {
   const normalizedEndpointUrl = normalizeEndpointUrl(endpointUrl);
@@ -144,13 +70,18 @@ export async function requestCompanionPairing(args: RequestCompanionPairingArgs)
   const normalizedEndpointUrl = normalizeEndpointUrl(args.endpointUrl);
   const pairingKeyId = createCompanionUuid();
   const pairingPublicKey = await createCompanionPairingPublicKey(pairingKeyId);
+  const usesSyncGroup = args.deviceKind === 'android-capacitor';
+  const libraryFacts = usesSyncGroup ? await loadCompanionSyncGroupLibraryFacts() : null;
   const response = await requestDesktop(`${normalizedEndpointUrl}${PAIR_REQUESTS_ENDPOINT_PATH}`, {
     body: JSON.stringify({
       device_id: args.deviceId,
       device_kind: args.deviceKind,
       device_name: args.deviceName,
+      group_id: args.groupId,
+      library_facts: libraryFacts,
       pairing_public_key: pairingPublicKey,
-      protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
+      protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+      timeline_id: args.timelineId
     }),
     headers: { 'Content-Type': 'application/json' },
     method: 'POST'
@@ -169,6 +100,7 @@ export async function requestCompanionPairing(args: RequestCompanionPairingArgs)
 }
 
 export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArgs) {
+  const usesSyncGroup = args.deviceKind === 'android-capacitor';
   const normalizedEndpointUrl = normalizeEndpointUrl(args.endpointUrl);
   const response = await requestDesktop(`${normalizedEndpointUrl}${PAIR_ENDPOINT_PATH}`, {
     body: JSON.stringify({
@@ -203,6 +135,23 @@ export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArg
       remote_protocol: payload.desktop_protocol
     });
   }
+  try {
+    return await saveNativePairing(args, payload, deviceSecret, usesSyncGroup);
+  } catch (error) {
+    if (usesSyncGroup) {
+      const { clearCompanionAppData } = await import('./companionAppData');
+      await clearCompanionAppData();
+    }
+    throw error;
+  }
+}
+
+async function saveNativePairing(
+  args: PairCompanionWithDesktopArgs,
+  payload: PairCompanionWithDesktopResponse,
+  deviceSecret: string,
+  usesSyncGroup: boolean
+) {
   return runCompanionSyncWriterTask(async () => {
     await FolioleCompanionSync.savePairingCredentials({
       device_id: payload.device_id,
@@ -219,6 +168,31 @@ export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArg
     });
     const storedPairingState = normalizePairingState(await FolioleCompanionSync.loadPairingState());
     if (!storedPairingState.is_paired) throw new Error('Native pairing credentials were not saved.');
+    if (usesSyncGroup) {
+      if (!payload.sync_group || !payload.member_authorization_id || !Number.isSafeInteger(payload.provisioning_cursor)) {
+        throw new Error('Desktop did not return Sync Group provisioning state.');
+      }
+      const existingGroup = await loadCompanionSyncGroup();
+      const isActiveReauthorization = existingGroup?.group_id === payload.sync_group.group_id
+        && existingGroup.timeline_id === payload.sync_group.timeline_id
+        && existingGroup.local_device_id === payload.device_id
+        && existingGroup.local_member_state === 'active';
+      if (isActiveReauthorization) {
+        await refreshActiveCompanionSyncGroupMembership({
+          deviceId: payload.device_id, group: payload.sync_group
+        });
+      } else {
+        await beginCompanionSyncGroupProvisioning({
+          deviceId: payload.device_id,
+          emptyFacts: await loadCompanionSyncGroupLibraryFacts(),
+          provisioning: {
+            group: payload.sync_group,
+            member_authorization_id: payload.member_authorization_id,
+            provisioning_cursor: Number(payload.provisioning_cursor)
+          }
+        });
+      }
+    }
     await verifyNativePairingCanSignRequest();
     return storedPairingState;
   });

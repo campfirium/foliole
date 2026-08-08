@@ -1,6 +1,8 @@
 import http from 'node:http';
 import os from 'node:os';
 
+import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
+
 import {
   createLanWorkspaceSyncRequestHandler,
   ATTACHMENT_RESOURCE_PATH,
@@ -149,8 +151,21 @@ function recordMdnsWarning(error: unknown) {
   activeStatus = applyLanSyncMdnsWarning(activeStatus, error);
 }
 
+function advertiseActiveSyncGroup(args: { appVersion: string; peerId: string; port: number }) {
+  const group = loadDesktopSyncGroup();
+  if (!group || group.local_member_state !== 'active') return;
+  startCompanionMdnsAdvertisement({
+    ...args,
+    groupDisplayName: group.display_name,
+    groupId: group.group_id,
+    onWarning: recordMdnsWarning,
+    timelineId: group.timeline_id
+  });
+}
+
 export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; peerId: string }) {
   if (activeServer) {
+    if (activeStatus.port) advertiseActiveSyncGroup({ ...args, port: activeStatus.port });
     return activeStatus;
   }
 
@@ -158,12 +173,7 @@ export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; p
   const server = createWorkspaceSyncHttpServer(args);
   try {
     await listenOnSyncPort(server, port);
-    startCompanionMdnsAdvertisement({
-      appVersion: args.appVersion,
-      onWarning: recordMdnsWarning,
-      peerId: args.peerId,
-      port
-    });
+    advertiseActiveSyncGroup({ appVersion: args.appVersion, peerId: args.peerId, port });
     activeServer = server;
     activeStatus = buildRunningStatus(port);
     logRunningStatus();

@@ -1,6 +1,8 @@
 import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
 
 import type { NativeCompanionBootstrapState } from '../../../../../lib/platform/nativeCompanionContract';
+import { clearCompanionAppData } from '../../companionAppData';
+import { recoverInterruptedCompanionSyncGroupProvisioning } from '../sync/syncGroupStore';
 
 import {
   CapacitorCompanionDatabaseOwner,
@@ -40,6 +42,9 @@ export async function initializeIosCompanionDatabase(
     ...(options.afterRepair ? { beforeVersionCommit: () => options.afterRepair?.(0) } : {})
   });
   activeOwner = owner;
+  if (await recoverInterruptedCompanionSyncGroupProvisioning()) {
+    await clearCompanionAppData();
+  }
   return {
     ...nativeState,
     database_path: result.databasePath,
