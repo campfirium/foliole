@@ -37,9 +37,10 @@ async function openSession(paths, evidenceRoot, electronLauncher) {
 
 function captureSyncRuntimeLog(child, logPath) {
   const capture = (chunk) => {
-    const lines = String(chunk).split(/\r?\n/u).filter((line) =>
-      line.includes('[sync-group]') || line.includes('[companion-sync]'));
-    if (lines.length) fs.appendFileSync(logPath, `${lines.join('\n')}\n`, 'utf8');
+    const text = String(chunk);
+    if (text.includes('[sync-group]') || text.includes('[companion-sync]')) {
+      fs.appendFileSync(logPath, text.endsWith('\n') ? text : `${text}\n`, 'utf8');
+    }
   };
   child.stdout?.on('data', capture);
   child.stderr?.on('data', capture);
@@ -69,6 +70,7 @@ async function waitForJoinedGroup(page, expectedGroupId, timeoutMs = 12 * 60_000
 
 async function waitForOrdinarySyncFacts(execute, paths, evidenceRoot, timeoutMs = 12 * 60_000) {
   const deadline = Date.now() + timeoutMs;
+  const nodeSurfaceDeadline = Date.now() + 90_000;
   let lastFacts = null;
   while (Date.now() < deadline) {
     lastFacts = await inspectDatabase(execute, paths, evidenceRoot);
@@ -76,14 +78,22 @@ async function waitForOrdinarySyncFacts(execute, paths, evidenceRoot, timeoutMs 
       assertComplete(lastFacts);
       return lastFacts;
     } catch {
+      const runtimeLog = readSyncRuntimeLog(evidenceRoot);
+      if (Date.now() >= nodeSurfaceDeadline && lastFacts.nodeCount <= 2 && runtimeLog !== 'unavailable') {
+        throw new Error(`Ordinary sync pack failed before apply: ${JSON.stringify(lastFacts)}; runtime=${runtimeLog}`);
+      }
       await delay(1_000);
     }
   }
+  const runtimeLog = readSyncRuntimeLog(evidenceRoot);
+  throw new Error(`Timed out waiting for ordinary sync facts: ${JSON.stringify(lastFacts)}; runtime=${runtimeLog}`);
+}
+
+function readSyncRuntimeLog(evidenceRoot) {
   const logPath = path.join(evidenceRoot, 'sync-group-runtime.log');
-  const runtimeLog = fs.existsSync(logPath)
+  return fs.existsSync(logPath)
     ? fs.readFileSync(logPath, 'utf8').trim().split(/\r?\n/u).slice(-8).join(' | ')
     : 'unavailable';
-  throw new Error(`Timed out waiting for ordinary sync facts: ${JSON.stringify(lastFacts)}; runtime=${runtimeLog}`);
 }
 
 async function inspectDatabase(execute, paths, evidenceRoot) {
