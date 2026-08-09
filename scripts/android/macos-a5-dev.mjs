@@ -7,7 +7,7 @@ import path from 'node:path';
 import { clearTimeout, setTimeout } from 'node:timers';
 import { pathToFileURL } from 'node:url';
 
-const A5_SERIAL = '87a33a4b';
+export const A5_SERIAL = '87a33a4b';
 const APP_ID = 'com.foliole.android';
 const COMPONENT = `${APP_ID}/.MainActivity`;
 const SDK_ROOT = '/opt/homebrew/share/android-commandlinetools';
@@ -82,7 +82,7 @@ export function assertSafeMacosA5Environment(paths) {
   }
 }
 
-function assertFixedA5(paths) {
+export function assertFixedA5(paths) {
   checked(paths.adb, ['start-server']);
   const state = captured(paths.adb, ['-s', A5_SERIAL, 'get-state']);
   if (state !== 'device') throw new Error(`Fixed A5 ${A5_SERIAL} is not ready: ${state || 'missing'}`);
@@ -106,7 +106,7 @@ function pairingReadiness(paths) {
   ], { cwd: paths.repoRoot });
 }
 
-function build(paths) {
+export function build(paths) {
   checked('npm', ['run', 'android:web:build'], { cwd: paths.repoRoot });
   checked(paths.cap, ['sync', 'android'], { cwd: paths.repoRoot });
   checked(paths.gradle, ['--no-daemon', 'assembleDebug', 'assembleDebugAndroidTest'], {
@@ -135,7 +135,7 @@ function deploy(paths) {
   readiness(paths);
 }
 
-async function protectData(paths, env, mode, manifest, backupRoot = paths.protectionBackups) {
+export async function protectData(paths, env, mode, manifest, backupRoot = paths.protectionBackups) {
   const result = await execute(process.execPath, [
     path.join(paths.repoRoot, 'scripts/android/android-device-data-protection.mjs'),
     '--mode', mode, '--adb', paths.adb, '--serial', A5_SERIAL, '--app-id', APP_ID,

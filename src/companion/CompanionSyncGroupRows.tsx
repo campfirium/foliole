@@ -51,10 +51,12 @@ export function CompanionSyncGroupRows(props: { group: SyncGroupPayload }) {
           <p className="mt-1 text-sm text-companion-text-secondary">{t('companion.sync.joinRequest.description')}</p>
           <div className="mt-3 flex gap-2">
             <button className="flex-1 rounded-xl border border-companion-divider px-3 py-2 text-sm font-semibold"
+              data-testid="companion-sync-group-reject"
               onClick={() => void rejectCompanionSyncGroupJoinRequest(request.pair_request_id).then(provider.refresh)} type="button">
               {t('companion.sync.joinRequest.reject')}
             </button>
             <button className="flex-1 rounded-xl bg-foreground px-3 py-2 text-sm font-semibold text-companion-content"
+              data-testid="companion-sync-group-approve"
               onClick={() => void approveCompanionSyncGroupJoinRequest(request.pair_request_id).then(provider.refresh)} type="button">
               {t('companion.sync.joinRequest.approve')}
             </button>

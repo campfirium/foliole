@@ -12,11 +12,13 @@ import {
   copyWindowsDevPairSyncRecoveryEvidence, WINDOWS_DEV_PAIR_SYNC_RECOVERY_FILES
 } from './windows-dev-pair-sync-evidence.mjs';
 import { toWindowsDevWireAction } from './windows-dev-action-contract.mjs';
+import { runWindowsSyncGroupRecoveryControl } from './windows-sync-group-recovery-control.mjs';
 
 export const WINDOWS_DEV_SOURCE_REF = 'refs/heads/dev';
 export const WINDOWS_DEV_DEFAULT_SSH = 'zephu@192.168.0.11';
 export const WINDOWS_DEV_ACTIONS = [
-  'appearance', 'build', 'capture-annotation', 'deploy', 'live', 'pair-sync-recover', 'secondary', 'verify'
+  'appearance', 'build', 'capture-annotation', 'deploy', 'live', 'pair-sync-recover', 'secondary',
+  'sync-group-recover', 'verify'
 ];
 const WINDOWS_DEV_REMOTE_ACTION = 'C:/dev/foliole-android-lab-preview/scripts/windows/windows-dev-action.ps1';
 const WINDOWS_DEV_EVIDENCE_PREFIX = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/';
@@ -51,7 +53,7 @@ export function parseWindowsDevControlArgs(argv, env = process.env) {
   }
   if (args.length !== 1 || !WINDOWS_DEV_ACTIONS.includes(args[0])) {
     throw new Error(
-      'Windows DEV control only accepts appearance, build, capture-annotation, deploy, live, pair-sync-recover, secondary, or verify'
+      'Windows DEV control only accepts a registered fixed action'
     );
   }
   return { action: args[0], host };
@@ -147,6 +149,10 @@ export async function runWindowsDevControl({
   repoRoot = process.cwd(), stdout = process.stdout
 } = {}) {
   const { action, host } = parseWindowsDevControlArgs(argv, env);
+  if (action === 'sync-group-recover') return runWindowsSyncGroupRecoveryControl({
+    buildPushSpec: windowsDevPushSpec, buildScpSpec: windowsDevScpSpec,
+    buildSshSpec: windowsDevSshSpec, env, executeGit, executeScp, executeSsh, host, repoRoot, stdout
+  });
   const spec = windowsDevPushSpec(host, env);
   await executeGit(spec.args, { env: spec.env });
   let remoteError = null;

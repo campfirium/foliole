@@ -109,6 +109,26 @@ describe('Windows DEV foreground build', () => {
     expect(calls.flatMap(({ args }) => args).join(' ')).not.toMatch(/gradle|install|android:web:build/iu);
   });
 
+  it('runs Sync Group recovery as a Windows-only desktop action without ADB or Gradle', async () => {
+    const { paths } = fixture();
+    fs.rmSync(paths.adbPath);
+    const { calls, execute } = successfulExecutor(paths);
+    const prepareHost = vi.fn(async () => 'prepared\n');
+    const deviceAction = vi.fn(async () => ({
+      output: '', syncGroupRecovery: { receiptPath: 'receipt.json', screenshotPath: 'screen.png' }
+    }));
+    const run = await runWindowsDevBuild({
+      action: 'sync-group-recover', deviceAction, execute, paths, platform: 'win32', prepareHost
+    });
+    expect(run).toMatchObject({
+      exitCode: 0, summary: { action: 'sync-group-recover', syncGroupRecovery: { receiptPath: 'receipt.json' } }
+    });
+    expect(prepareHost).toHaveBeenCalledWith(expect.objectContaining({ liveReload: false }));
+    expect(deviceAction).toHaveBeenCalledWith(expect.objectContaining({ action: 'sync-group-recover' }));
+    expect(calls.some(({ command }) => command === 'cmd.exe')).toBe(false);
+    expect(calls.flatMap(({ args }) => args).join(' ')).not.toContain('adb');
+  });
+
   it('prepares current companion assets before native deploy can install', async () => {
     const { paths } = fixture();
     const { execute } = successfulExecutor(paths);

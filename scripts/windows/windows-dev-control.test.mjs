@@ -30,13 +30,15 @@ it('uses the fixed Windows DEV host and accepts only fixed actions', () => {
     .toMatchObject({ action: 'capture-annotation' });
   expect(parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'pair-sync-recover'], {}))
     .toMatchObject({ action: 'pair-sync-recover' });
+  expect(parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'sync-group-recover'], {}))
+    .toMatchObject({ action: 'sync-group-recover' });
   expect(parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'secondary'], {}))
     .toMatchObject({ action: 'secondary' });
   expect(() => parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'push'], {}))
-    .toThrow('only accepts appearance, build, capture-annotation, deploy, live, pair-sync-recover, secondary, or verify');
+    .toThrow('only accepts a registered fixed action');
   expect(() => parseWindowsDevControlArgs([
     '--host', WINDOWS_DEV_DEFAULT_SSH, 'verify', '--commit', 'a'.repeat(40)
-  ], {})).toThrow('only accepts appearance, build, capture-annotation, deploy, live, pair-sync-recover, secondary, or verify');
+  ], {})).toThrow('only accepts a registered fixed action');
 });
 
 it('pushes dev and then invokes the fixed Windows action', async () => {

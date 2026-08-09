@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { runWindowsA5LiveReload } from './windows-a5-live-reload-action.mjs';
+import { runWindowsSyncGroupRecovery } from './windows-sync-group-recovery-action.mjs';
 import {
   captureAnnotationFailure, parseCaptureAnnotationReadiness
 } from './windows-a5-capture-annotation-contract.mjs';
@@ -162,6 +163,9 @@ export async function runWindowsDevDeviceAction({
   runCaptureAnnotation = runDefaultCaptureAnnotation, runLiveReload = runWindowsA5LiveReload,
   runPairSyncRecovery = runDefaultPairSyncRecovery
 }) {
+  if (action === 'sync-group-recover') {
+    return runWindowsSyncGroupRecovery({ evidenceRoot, paths });
+  }
   const env = actionEnv(paths);
   let started = false;
   let primaryError = null;

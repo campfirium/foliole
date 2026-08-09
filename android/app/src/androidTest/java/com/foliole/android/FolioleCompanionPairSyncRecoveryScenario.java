@@ -92,7 +92,7 @@ final class FolioleCompanionPairSyncRecoveryScenario {
         return receipt;
     }
 
-    private static void clickVisible(
+    static void clickVisible(
         Instrumentation instrumentation,
         WebView webView,
         String testId,
@@ -107,7 +107,7 @@ final class FolioleCompanionPairSyncRecoveryScenario {
         }
     }
 
-    private static void waitForUniqueVisible(
+    static void waitForUniqueVisible(
         Instrumentation instrumentation,
         WebView webView,
         String testId,
@@ -130,7 +130,7 @@ final class FolioleCompanionPairSyncRecoveryScenario {
         throw new IllegalStateException("Timed out waiting for semantic target: " + testId);
     }
 
-    private static String waitForAnyVisible(
+    static String waitForAnyVisible(
         Instrumentation instrumentation,
         WebView webView,
         long deadline,
