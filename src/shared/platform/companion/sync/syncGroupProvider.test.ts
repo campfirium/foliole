@@ -47,8 +47,8 @@ it('lands an active Android member on the native provider bridge with its persis
   });
 });
 
-it('stops the native provider when the local membership is not active', async () => {
-  await reconcileCompanionSyncGroupProvider(bootstrap, { ...group, local_member_state: 'provisioning' });
+it('stops the native provider when there is no local group membership', async () => {
+  await reconcileCompanionSyncGroupProvider(bootstrap, null);
   expect(runtime.stop).toHaveBeenCalledOnce();
   expect(runtime.start).not.toHaveBeenCalled();
 });

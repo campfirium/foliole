@@ -40,6 +40,20 @@ beforeEach(() => {
     contentHash: 'setting-hash', lastModifiedByDeviceId: 'android-b',
     objectId: 'device:android:phone:*:sample', objectType: 'setting', updatedAt: now
   });
+  driver.execute(
+    `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
+     VALUES ('attachment-1', 'sample.pdf', 'application/pdf', 12, ?)`, [now]
+  );
+  driver.execute(
+    `INSERT INTO attachment_blobs
+       (attachment_id, content_hash, storage_key, size_bytes, mime_type, availability, source_device_id, created_at)
+     VALUES ('attachment-1', 'attachment-hash', 'sample.pdf', 12, 'application/pdf', 'available', 'android-b', ?)`,
+    [now]
+  );
+  upsertSyncObjectState(driver, {
+    contentHash: 'attachment-state-hash', lastModifiedByDeviceId: 'android-b',
+    objectId: 'attachment-1', objectType: 'attachment', updatedAt: now
+  });
 });
 
 afterEach(() => {
@@ -55,15 +69,32 @@ it('builds a baseline payload with structure, body manifest, and payload objects
   expect(pack.prepare('SELECT hash FROM content_blobs').get()).toBeTruthy();
   expect(pack.prepare("SELECT object_id FROM sync_objects WHERE object_type = 'setting'").get())
     .toEqual({ object_id: 'device:android:phone:*:sample' });
+  expect(JSON.parse((pack.prepare(
+    "SELECT payload_json FROM sync_objects WHERE object_type = 'attachment'"
+  ).get() as { payload_json: string }).payload_json)).toMatchObject({
+    attachment_id: 'attachment-1', blob: { content_hash: 'attachment-hash', size_bytes: 12 }
+  });
   pack.close();
+});
+
+it('keeps the Android provider independent of optional SQLite JSON functions', () => {
+  expect(definitions.copyStatements.join('\n')).not.toContain('json_object');
+  expect(definitions.payloadPlans.map((plan) => plan.sql).join('\n')).not.toContain('json_object');
+});
+
+it('loads each payload surface in bulk instead of querying once per state row', () => {
+  for (const plan of definitions.payloadPlans) {
+    expect(plan.sql).toContain('__object_id');
+    expect(plan.sql).not.toContain('?');
+  }
 });
 
 it('selects an independent delta for each member cursor', () => {
   const baseline = buildPack(0);
-  const laterPeer = buildPack(1);
-  expect(baseline.prepare('SELECT COUNT(*) AS value FROM sync_object_state').get()).toEqual({ value: 2 });
+  const laterPeer = buildPack(2);
+  expect(baseline.prepare('SELECT COUNT(*) AS value FROM sync_object_state').get()).toEqual({ value: 3 });
   expect(laterPeer.prepare('SELECT object_type, object_id FROM sync_object_state').all()).toEqual([{
-    object_id: 'device:android:phone:*:sample', object_type: 'setting'
+    object_id: 'attachment-1', object_type: 'attachment'
   }]);
   baseline.close(); laterPeer.close();
 });
@@ -73,9 +104,47 @@ function buildPack(fromStateSeq: number) {
   for (const statement of definitions.packSchema) pack.exec(statement);
   pack.prepare('ATTACH DATABASE ? AS source').run(sourcePath);
   definitions.copyStatements.forEach((statement, index) => {
-    if (index === 0) pack.prepare(statement).run(fromStateSeq, 2);
+    if (index === 0) pack.prepare(statement).run(fromStateSeq, 3);
+    else if (index === definitions.payloadCopyIndex) {
+      copyPayloads(pack);
+      pack.exec(statement);
+    }
     else pack.exec(statement);
   });
   pack.exec('DETACH DATABASE source');
   return pack;
+}
+
+function copyPayloads(pack: Database.Database) {
+  const payloads = new Map<string, Record<string, unknown>>();
+  for (const plan of definitions.payloadPlans) {
+    for (const row of pack.prepare(plan.sql).all() as Array<Record<string, unknown>>) {
+      const objectId = String(row.__object_id);
+      delete row.__object_id;
+      payloads.set(`${plan.objectType}\u0000${objectId}`, nestedPayload(row));
+    }
+  }
+  const states = pack.prepare(`SELECT object_type, object_id, content_hash, updated_at, deleted_at
+    FROM sync_object_state WHERE object_type NOT IN ('external_document','node')`).all() as Array<Record<string, unknown>>;
+  const insert = pack.prepare(`INSERT INTO sync_objects
+    (object_type, object_id, content_hash, payload_json, updated_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?)`);
+  for (const state of states) {
+    const row = state.deleted_at == null ? payloads.get(`${state.object_type}\u0000${state.object_id}`) : null;
+    if (state.deleted_at == null && row === undefined) continue;
+    insert.run(state.object_type, state.object_id, state.content_hash,
+      row ? JSON.stringify(row) : null, state.updated_at, state.deleted_at);
+  }
+}
+
+function nestedPayload(row: Record<string, unknown>) {
+  const payload: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(row)) {
+    const [parent = '', child] = key.split('__');
+    if (!child) payload[parent] = value;
+    else {
+      const nested = (payload[parent] ??= {}) as Record<string, unknown>;
+      nested[child] = value;
+    }
+  }
+  return payload;
 }

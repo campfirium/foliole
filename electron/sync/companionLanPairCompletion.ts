@@ -2,8 +2,7 @@ import type http from 'node:http';
 
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR, evaluateSyncProtocolCompatibility } from '../../lib/platform/syncProtocolContract.js';
 import {
-  loadDesktopSyncGroupTimelineCursor,
-  registerProvisioningSyncGroupMember
+  registerSyncGroupMember
 } from '../database/syncGroupStore.js';
 
 import { readCompanionRequestBody } from './companionLanRequestBody.js';
@@ -47,13 +46,10 @@ export async function handlePairRequest(
     remoteProtocol: approved.protocol
   });
   if (!completion.completion) completeCompanionPairRequest(pairRequestId, paired);
-  const provisioningCursor = approved.device_kind === 'android-capacitor'
-    ? loadDesktopSyncGroupTimelineCursor()
-    : null;
-  const syncGroup = provisioningCursor === null ? null : registerProvisioningSyncGroupMember({
+  const syncGroup = approved.device_kind === 'android-capacitor' ? registerSyncGroupMember({
     approvedByDeviceId: peerId, authorizationId: pairRequestId, deviceId: approved.device_id,
-    deviceKind: approved.device_kind, deviceName: approved.device_name, provisioningCursor
-  });
+    deviceKind: approved.device_kind, deviceName: approved.device_name
+  }) : null;
   const encryptedSecret = await encryptCompanionPairingSecret({
     clientPublicKey: approved.pairing_public_key, deviceSecret: paired.device_secret
   });
@@ -64,9 +60,7 @@ export async function handlePairRequest(
   writeJson(request, response, 200, {
     app_version: appVersion, compatibility, desktop_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
     device_id: paired.device_id, encrypted_device_secret: encryptedSecret, paired_at: paired.paired_at, peer_id: peerId,
-    ...(syncGroup && provisioningCursor !== null ? {
-      member_authorization_id: pairRequestId, provisioning_cursor: provisioningCursor, sync_group: syncGroup
-    } : {})
+    ...(syncGroup ? { sync_group: syncGroup } : {})
   });
 }
 

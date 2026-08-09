@@ -1,7 +1,6 @@
-export type SyncGroupMemberState = 'active' | 'left' | 'provisioning';
+export type SyncGroupMemberState = 'active' | 'left';
 
 export interface SyncGroupMemberPayload {
-  activated_at: string | null;
   approved_by_device_id: string;
   authorization_id: string;
   device_id: string;
@@ -33,12 +32,6 @@ export interface SyncGroupDiscoveryPayload {
   timeline_id: string;
 }
 
-export interface SyncGroupProvisioningPayload {
-  group: SyncGroupPayload;
-  member_authorization_id: string;
-  provisioning_cursor: number;
-}
-
 export interface SyncGroupLibraryFacts {
   attachment_count: number;
   content_blob_count: number;
@@ -53,22 +46,4 @@ export function isEmptySyncGroupLibrary(facts: SyncGroupLibraryFacts) {
     && facts.attachment_count === 0
     && facts.content_blob_count === 0
     && facts.timeline_id === null;
-}
-
-export function isCompleteProvisioningSummary(summary: {
-  remainingAttachmentResourceCount: number | null;
-  remainingContentBlobCount: number | null;
-  remainingFailedAttachmentResourceCount: number | null;
-  remainingFailedContentBlobCount: number | null;
-  remainingStructureChangeCount: number | null;
-}) {
-  return summary.remainingStructureChangeCount === 0
-    && summary.remainingAttachmentResourceCount === 0
-    && summary.remainingContentBlobCount === 0
-    && summary.remainingFailedAttachmentResourceCount === 0
-    && summary.remainingFailedContentBlobCount === 0;
-}
-
-export function shouldSkipSyncGroupPush(deviceKind: string | null | undefined, state: SyncGroupMemberState | null | undefined) {
-  return deviceKind === 'android-capacitor' && state === 'provisioning';
 }

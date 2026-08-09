@@ -9,8 +9,10 @@ const JAVA_ROOT = path.join(ROOT, 'android/app/src/main/java/com/foliole/android
 const ISOLATED_SQLITE = new Set([
   'FolioleCompanionContentBlobPack.java',
   'FolioleCompanionSyncGroupDatabase.java',
+  'FolioleCompanionSyncGroupContentBlobBatch.java',
   'FolioleCompanionSyncGroupResources.java',
   'FolioleCompanionSyncPackDatabaseValidator.java',
+  'FolioleCompanionSyncPackPayloadWriter.java',
   'FolioleCompanionSyncPackProvider.java'
 ]);
 

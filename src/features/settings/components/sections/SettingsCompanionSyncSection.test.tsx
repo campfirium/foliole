@@ -96,10 +96,8 @@ it('requests a discovered Sync Group from its active mobile Device', () => {
   expect(requestSyncGroupJoin).toHaveBeenCalledWith('http://192.168.1.8:43123');
 });
 
-it('finishes an approved mobile-to-desktop provisioning request', () => {
-  const completeSyncGroupJoin = vi.fn();
+it('shows that approval starts sync automatically', () => {
   companionPairingMock.useDesktopCompanionPairingRequests.mockReturnValue(createState({
-    completeSyncGroupJoin,
     overview: {
       ...createState().overview,
       join_request: {
@@ -109,8 +107,8 @@ it('finishes an approved mobile-to-desktop provisioning request', () => {
     }
   }));
   renderWithLocalization(<SettingsCompanionSyncSection />);
-  fireEvent.click(screen.getByRole('button', { name: 'Finish joining' }));
-  expect(completeSyncGroupJoin).toHaveBeenCalledOnce();
+  expect(screen.getByText('Waiting for approval. Sync starts automatically afterward.')).toBeVisible();
+  expect(screen.queryByRole('button', { name: 'Finish joining' })).not.toBeInTheDocument();
 });
 
 it('approves a recognized device asking to join the Sync Group', () => {
@@ -129,7 +127,7 @@ it('approves a recognized device asking to join the Sync Group', () => {
         created_at: '2026-08-08T00:00:00.000Z', created_by_device_id: 'desktop-1', display_name: 'Studio',
         group_id: 'group-1', local_device_id: 'desktop-1', local_member_state: 'active',
         members: [{
-          activated_at: '2026-08-08T00:00:00.000Z', approved_by_device_id: 'desktop-1',
+          approved_by_device_id: 'desktop-1',
           authorization_id: 'founder-1', device_id: 'desktop-1', device_kind: 'darwin', device_name: 'Studio',
           joined_at: '2026-08-08T00:00:00.000Z', state: 'active'
         }],

@@ -9,9 +9,10 @@ export const EN_SETTINGS_SYNC_GROUP_TRANSLATIONS = {
   'settings.companionSync.group.create': 'Create Sync Group',
   'settings.companionSync.group.find': 'Find Sync Group',
   'settings.companionSync.group.join.complete': 'Finish joining',
+  'settings.companionSync.group.join.waiting': 'Waiting for approval. Sync starts automatically afterward.',
   'settings.companionSync.group.join.named': 'Join {name}',
   'settings.companionSync.group.devices.title': 'Devices',
   'settings.companionSync.group.devices.description': 'Devices keep their membership when another device is offline.',
-  'settings.companionSync.group.member.active': 'Active',
+  'settings.companionSync.group.member.active': 'Joined',
   'settings.companionSync.group.member.provisioning': 'Setting up'
 } as const;

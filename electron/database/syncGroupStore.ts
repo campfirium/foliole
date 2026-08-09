@@ -36,9 +36,9 @@ export function loadDesktopSyncGroup(): SyncGroupPayload | null {
   if (!row) return null;
   const members = driver.queryAll<MemberRow>(
     `SELECT group_id, device_id, device_kind, device_name, state, approved_by_device_id,
-            authorization_id, joined_at, activated_at
+            authorization_id, joined_at
      FROM sync_group_members
-     WHERE group_id = ? AND state != 'left'
+     WHERE group_id = ? AND state = 'active'
      ORDER BY joined_at ASC, device_id ASC`,
     [row.group_id]
   );
@@ -67,8 +67,8 @@ export function createDesktopSyncGroup(args: {
       `INSERT INTO sync_group_members (
         group_id, device_id, device_kind, device_name, state, approved_by_device_id,
         authorization_id, provisioning_cursor, joined_at, activated_at, left_at, updated_at
-      ) VALUES (?, ?, ?, ?, 'active', ?, ?, NULL, ?, ?, NULL, ?)`,
-      [groupId, args.deviceId, args.deviceKind, args.deviceName, args.deviceId, authorizationId, now, now, now]
+      ) VALUES (?, ?, ?, ?, 'active', ?, ?, NULL, ?, NULL, NULL, ?)`,
+      [groupId, args.deviceId, args.deviceKind, args.deviceName, args.deviceId, authorizationId, now, now]
     );
     driver.execute(
       `INSERT INTO sync_group_local_state (
@@ -81,13 +81,12 @@ export function createDesktopSyncGroup(args: {
   return loadDesktopSyncGroup()!;
 }
 
-export function registerProvisioningSyncGroupMember(args: {
+export function registerSyncGroupMember(args: {
   authorizationId: string;
   deviceId: string;
   deviceKind: string;
   deviceName: string;
   approvedByDeviceId: string;
-  provisioningCursor: number;
   now?: string;
 }) {
   const group = loadDesktopSyncGroup();
@@ -97,29 +96,29 @@ export function registerProvisioningSyncGroupMember(args: {
     `INSERT INTO sync_group_members (
       group_id, device_id, device_kind, device_name, state, approved_by_device_id,
       authorization_id, provisioning_cursor, joined_at, activated_at, left_at, updated_at
-    ) VALUES (?, ?, ?, ?, 'provisioning', ?, ?, ?, ?, NULL, NULL, ?)
+    ) VALUES (?, ?, ?, ?, 'active', ?, ?, NULL, ?, NULL, NULL, ?)
     ON CONFLICT(group_id, device_id) DO UPDATE SET
       device_kind = excluded.device_kind,
       device_name = excluded.device_name,
-      state = CASE WHEN sync_group_members.state = 'active' THEN 'active' ELSE 'provisioning' END,
+      state = 'active',
       approved_by_device_id = excluded.approved_by_device_id,
       authorization_id = excluded.authorization_id,
-      provisioning_cursor = excluded.provisioning_cursor,
+      provisioning_cursor = NULL,
       updated_at = excluded.updated_at`,
     [group.group_id, args.deviceId, args.deviceKind, args.deviceName, args.approvedByDeviceId,
-      args.authorizationId, args.provisioningCursor, now, now]
+      args.authorizationId, now, now]
   );
   return loadDesktopSyncGroup()!;
 }
 
-export function beginDesktopSyncGroupProvisioning(args: {
+export function joinDesktopSyncGroup(args: {
   deviceId: string;
-  emptyProof: unknown;
   group: SyncGroupPayload;
-  provisioningCursor: number;
   now?: string;
 }) {
   if (loadDesktopSyncGroup()) throw new Error('sync_group_identity_mismatch');
+  const localMember = args.group.members.find((member) => member.device_id === args.deviceId);
+  if (!localMember || localMember.state !== 'active') throw new Error('sync_group_member_not_authorized');
   const now = args.now ?? new Date().toISOString();
   const driver = openDatabaseConnection().driver;
   driver.transaction(() => {
@@ -133,75 +132,21 @@ export function beginDesktopSyncGroupProvisioning(args: {
         `INSERT INTO sync_group_members (
           group_id, device_id, device_kind, device_name, state, approved_by_device_id,
           authorization_id, provisioning_cursor, joined_at, activated_at, left_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?)`,
         [args.group.group_id, member.device_id, member.device_kind, member.device_name, member.state,
           member.approved_by_device_id, member.authorization_id,
-          member.device_id === args.deviceId ? args.provisioningCursor : null,
-          member.joined_at, member.activated_at, now]
+          null,
+          member.joined_at, now]
       );
     }
     driver.execute(
       `INSERT INTO sync_group_local_state (
         singleton_id, group_id, local_device_id, member_state, provisioning_cursor,
         created_empty_proof_json, updated_at
-      ) VALUES (1, ?, ?, 'provisioning', ?, ?, ?)`,
-      [args.group.group_id, args.deviceId, args.provisioningCursor, JSON.stringify(args.emptyProof), now]
+      ) VALUES (1, ?, ?, 'active', NULL, NULL, ?)`,
+      [args.group.group_id, args.deviceId, now]
     );
   });
-  return loadDesktopSyncGroup()!;
-}
-
-export function activateDesktopSyncGroupProvisioning(completedCursor: number, now = new Date().toISOString()) {
-  const group = loadDesktopSyncGroup();
-  if (!group || group.local_member_state !== 'provisioning') throw new Error('sync_group_identity_mismatch');
-  if (completedCursor < loadDesktopProvisioningCursor()) throw new Error('sync_group_provisioning_incomplete');
-  openDatabaseConnection().driver.transaction(() => {
-    openDatabaseConnection().driver.execute(
-      `UPDATE sync_group_local_state SET member_state = 'active', provisioning_cursor = NULL,
-       created_empty_proof_json = NULL, updated_at = ? WHERE singleton_id = 1`, [now]
-    );
-    openDatabaseConnection().driver.execute(
-      `UPDATE sync_group_members SET state = 'active', activated_at = COALESCE(activated_at, ?),
-       provisioning_cursor = NULL, updated_at = ? WHERE group_id = ? AND device_id = ?`,
-      [now, now, group.group_id, group.local_device_id]
-    );
-  });
-  return loadDesktopSyncGroup()!;
-}
-
-function loadDesktopProvisioningCursor() {
-  return Number(openDatabaseConnection().driver.queryOne<{ value: number }>(
-    'SELECT COALESCE(provisioning_cursor, 0) AS value FROM sync_group_local_state WHERE singleton_id = 1'
-  )?.value ?? 0);
-}
-
-export function loadDesktopSyncGroupTimelineCursor() {
-  return Number(openDatabaseConnection().driver.queryOne<{ value: number }>(
-    'SELECT COALESCE(MAX(state_seq), 0) AS value FROM sync_object_state'
-  )?.value ?? 0);
-}
-
-export function activateSyncGroupMember(args: {
-  authorizationId: string;
-  deviceId: string;
-  groupId: string;
-  timelineId: string;
-  completedCursor: number;
-  now?: string;
-}) {
-  const group = loadDesktopSyncGroup();
-  if (!group || group.group_id !== args.groupId || group.timeline_id !== args.timelineId) {
-    throw new Error('sync_group_identity_mismatch');
-  }
-  const now = args.now ?? new Date().toISOString();
-  const result = openDatabaseConnection().driver.execute(
-    `UPDATE sync_group_members
-     SET state = 'active', activated_at = COALESCE(activated_at, ?), updated_at = ?
-     WHERE group_id = ? AND device_id = ? AND authorization_id = ?
-       AND state IN ('provisioning', 'active') AND ? >= COALESCE(provisioning_cursor, 0)`,
-    [now, now, group.group_id, args.deviceId, args.authorizationId, args.completedCursor]
-  );
-  if (result.changes !== 1) throw new Error('sync_group_member_not_authorized');
   return loadDesktopSyncGroup()!;
 }
 
@@ -218,10 +163,10 @@ export function loadSyncGroupMemberAuthorization(groupId: string, deviceId: stri
   return openDatabaseConnection().driver.queryOne<{
     [key: string]: null | number | string;
     authorization_id: string;
-    state: 'active' | 'provisioning';
+    state: 'active';
   }>(
     `SELECT authorization_id, state FROM sync_group_members
-     WHERE group_id = ? AND device_id = ? AND state IN ('active', 'provisioning') LIMIT 1`,
+     WHERE group_id = ? AND device_id = ? AND state = 'active' LIMIT 1`,
     [groupId, deviceId]
   );
 }

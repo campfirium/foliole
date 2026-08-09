@@ -1,22 +1,8 @@
 {
   "compression": "zlib",
-  "completenessQueries": {
-    "attachments": "SELECT attachment_id, storage_key, content_hash FROM attachment_blobs\n      WHERE content_hash IS NOT NULL ORDER BY attachment_id",
-    "missingContentBlobCount": "SELECT COUNT(*) FROM content_blobs cb\n      LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash\n      WHERE cbd.hash IS NULL OR cb.compression != 'none' OR cb.original_sha256 != cb.hash\n        OR cb.stored_sha256 != cb.hash OR length(cbd.data) != cb.stored_size_bytes"
-  },
   "copyStatements": [
     "INSERT INTO sync_object_state SELECT object_type, object_id, state_seq, content_hash, updated_at, deleted_at\n     FROM source.sync_object_state WHERE state_seq > ? AND state_seq <= ? AND object_type IN\n       ('attachment','external_document','external_folder','import_source','node','node_open_state','node_reading',\n        'node_review','node_text_alternative','pdf_page_text','setting','view_state')\n       AND (object_type != 'node' OR deleted_at IS NOT NULL OR EXISTS\n         (SELECT 1 FROM source.nodes WHERE id = source.sync_object_state.object_id))\n       AND (object_type NOT IN ('node_reading','node_review') OR EXISTS\n         (SELECT 1 FROM source.nodes WHERE id = source.sync_object_state.object_id))\n       ",
     "INSERT OR IGNORE INTO sync_object_state SELECT s.object_type, s.object_id, s.state_seq, s.content_hash, s.updated_at, s.deleted_at\n     FROM source.sync_object_state s WHERE s.object_type = 'node' AND s.object_id IN\n       (SELECT object_id FROM sync_object_state WHERE object_type IN ('node_reading','node_review'))",
-    "INSERT INTO sync_objects\n   SELECT s.object_type, s.object_id, s.content_hash,\n     CASE WHEN s.deleted_at IS NULL THEN (SELECT json_object(\n    'attachment_id', a.id, 'original_name', a.original_name, 'mime_type', a.mime_type,\n    'size_bytes', a.size_bytes, 'created_at', a.created_at, 'blob', json_object(\n      'content_hash', b.content_hash, 'storage_key', b.storage_key, 'size_bytes', b.size_bytes,\n      'mime_type', b.mime_type, 'availability', b.availability, 'source_device_id', b.source_device_id,\n      'created_at', b.created_at, 'cached_at', b.cached_at, 'last_verified_at', b.last_verified_at\n    )) AS payload_json FROM attachments a LEFT JOIN attachment_blobs b ON b.attachment_id = a.id WHERE a.id = s.object_id) ELSE NULL END,\n     s.updated_at, s.deleted_at FROM sync_object_state s WHERE s.object_type = 'attachment'",
-    "INSERT INTO sync_objects\n   SELECT s.object_type, s.object_id, s.content_hash,\n     CASE WHEN s.deleted_at IS NULL THEN (SELECT json_object(\n    'id', id, 'folder_path', folder_path, 'attachment_mode', attachment_mode,\n    'attachment_root_path', attachment_root_path, 'excluded_dirs_json', excluded_dirs_json,\n    'status', status, 'document_count', document_count, 'indexed_at', indexed_at,\n    'last_error', last_error, 'owner_installation_id', owner_installation_id,\n    'owner_device_name', owner_device_name, 'owner_platform', owner_platform,\n    'created_at', created_at, 'updated_at', updated_at\n  ) AS payload_json FROM external_search_folders WHERE id = s.object_id) ELSE NULL END,\n     s.updated_at, s.deleted_at FROM sync_object_state s WHERE s.object_type = 'external_folder'",
-    "INSERT INTO sync_objects\n   SELECT s.object_type, s.object_id, s.content_hash,\n     CASE WHEN s.deleted_at IS NULL THEN (SELECT json_object(\n    'source_fingerprint', source_fingerprint, 'provider', provider, 'source_kind', source_kind,\n    'source_name', source_name, 'source_locator', source_locator, 'first_imported_at', first_imported_at,\n    'last_imported_at', last_imported_at, 'last_content_fingerprint', last_content_fingerprint,\n    'latest_node_id', latest_node_id\n  ) AS payload_json FROM import_sources WHERE source_fingerprint = s.object_id) ELSE NULL END,\n     s.updated_at, s.deleted_at FROM sync_object_state s WHERE s.object_type = 'import_source'",
-    "INSERT INTO sync_objects\n   SELECT s.object_type, s.object_id, s.content_hash,\n     CASE WHEN s.deleted_at IS NULL THEN (SELECT json_object('node_id', node_id, 'last_opened_at', last_opened_at) AS payload_json\n    FROM node_open_state WHERE node_id = s.object_id) ELSE NULL END,\n     s.updated_at, s.deleted_at FROM sync_object_state s WHERE s.object_type = 'node_open_state'",
-    "INSERT INTO sync_objects\n   SELECT s.object_type, s.object_id, s.content_hash,\n     CASE WHEN s.deleted_at IS NULL THEN (SELECT json_object(\n    'node_id', node_id, 'interval_duration_ms', interval_duration_ms,\n    'interval_growth_factor', interval_growth_factor, 'last_handled_at', last_handled_at,\n    'next_at', next_at, 'priority', priority, 'repetition_count', repetition_count, 'state', state\n  ) AS payload_json FROM node_reading WHERE node_id = s.object_id) ELSE NULL END,\n     s.updated_at, s.deleted_at FROM sync_object_state s WHERE s.object_type = 'node_reading'",
-    "INSERT INTO sync_objects\n   SELECT s.object_type, s.object_id, s.content_hash,\n     CASE WHEN s.deleted_at IS NULL THEN (SELECT json_object(\n    'node_id', node_id, 'due', due, 'last_review_at', last_review_at, 'state', state,\n    'stability', stability, 'difficulty', difficulty, 'elapsed_days', elapsed_days,\n    'scheduled_days', scheduled_days, 'reps', reps, 'lapses', lapses\n  ) AS payload_json FROM node_review WHERE node_id = s.object_id) ELSE NULL END,\n     s.updated_at, s.deleted_at FROM sync_object_state s WHERE s.object_type = 'node_review'",
-    "INSERT INTO sync_objects\n   SELECT s.object_type, s.object_id, s.content_hash,\n     CASE WHEN s.deleted_at IS NULL THEN (SELECT json_object(\n    'alternative_id', alternative_id, 'node_id', node_id, 'source_version_id', source_version_id,\n    'body_text', body_text, 'source_device_id', source_device_id, 'created_at', created_at,\n    'status', status, 'updated_at', updated_at\n  ) AS payload_json FROM node_text_alternatives WHERE alternative_id = s.object_id) ELSE NULL END,\n     s.updated_at, s.deleted_at FROM sync_object_state s WHERE s.object_type = 'node_text_alternative'",
-    "INSERT INTO sync_objects\n   SELECT s.object_type, s.object_id, s.content_hash,\n     CASE WHEN s.deleted_at IS NULL THEN (SELECT json_object(\n    'attachment_id', attachment_id, 'page', page, 'text', text,\n    'page_width', page_width, 'page_height', page_height\n  ) AS payload_json FROM pdf_page_text WHERE attachment_id || ':' || page = s.object_id) ELSE NULL END,\n     s.updated_at, s.deleted_at FROM sync_object_state s WHERE s.object_type = 'pdf_page_text'",
-    "INSERT INTO sync_objects\n   SELECT s.object_type, s.object_id, s.content_hash,\n     CASE WHEN s.deleted_at IS NULL THEN (SELECT json_object(\n    'key', key, 'scope', scope, 'platform', platform, 'form_factor', form_factor,\n    'device_id', device_id, 'value_json', value_json, 'content_hash', content_hash,\n    'updated_at', updated_at, 'deleted_at', deleted_at\n  ) AS payload_json FROM setting_records\n    WHERE scope || ':' || platform || ':' || form_factor || ':' || device_id || ':' || key = s.object_id) ELSE NULL END,\n     s.updated_at, s.deleted_at FROM sync_object_state s WHERE s.object_type = 'setting'",
-    "INSERT INTO sync_objects\n  SELECT s.object_type, s.object_id, s.content_hash, CASE WHEN s.deleted_at IS NOT NULL THEN NULL\n    WHEN s.object_id LIKE '%:active_node' THEN\n      (SELECT json_object('active_node_id', NULLIF(value, ''), 'updated_at', updated_at)\n       FROM source.workspace_meta WHERE key = 'active_node_id')\n    ELSE (SELECT json_object('node_id', v.node_id, 'scroll_top', v.scroll_top,\n      'selection_from', v.selection_from, 'selection_to', v.selection_to, 'source', v.source, 'updated_at', v.updated_at)\n      FROM source.node_view_state v WHERE s.object_id LIKE '%:' || v.device_id || ':node:' || v.node_id LIMIT 1)\n    END, s.updated_at, s.deleted_at FROM sync_object_state s WHERE s.object_type = 'view_state'",
     "DELETE FROM sync_object_state WHERE object_type NOT IN ('external_document','node') AND NOT EXISTS\n      (SELECT 1 FROM sync_objects o WHERE o.object_type = sync_object_state.object_type AND o.object_id = sync_object_state.object_id)",
     "INSERT INTO nodes (id, parent_id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled, shelved_at, manual_child_order, title, is_title_manual, hide_title_heading, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, import_source_fingerprint, import_content_fingerprint, content, current_version_id, created_at, updated_at, deleted_at) SELECT id, parent_id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled, shelved_at, manual_child_order, title, is_title_manual, hide_title_heading, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, import_source_fingerprint, import_content_fingerprint, content, current_version_id, created_at, updated_at, deleted_at FROM source.nodes\n     WHERE id IN (SELECT object_id FROM sync_object_state WHERE object_type = 'node')",
     "INSERT INTO node_sync_versions SELECT v.version_id, v.object_id, v.parent_version_id, v.device_id,\n       v.created_at, v.content_hash, v.body_text, v.snapshot_json FROM source.node_sync_versions v\n     WHERE v.object_id IN (SELECT id FROM nodes)",
@@ -30,6 +16,53 @@
   "databaseEntry": "incoming.db.deflate",
   "format": "foliole.sync-pack",
   "formatVersion": 3,
+  "payloadCopyIndex": 2,
+  "payloadPlans": [
+    {
+      "objectType": "attachment",
+      "sql": "SELECT a.id __object_id, a.id attachment_id, a.original_name, a.mime_type, a.size_bytes, a.created_at,\n    b.content_hash blob__content_hash, b.storage_key blob__storage_key, b.size_bytes blob__size_bytes,\n    b.mime_type blob__mime_type, b.availability blob__availability, b.source_device_id blob__source_device_id,\n    b.created_at blob__created_at, b.cached_at blob__cached_at, b.last_verified_at blob__last_verified_at\n    FROM source.attachments a LEFT JOIN source.attachment_blobs b ON b.attachment_id = a.id"
+    },
+    {
+      "objectType": "external_folder",
+      "sql": "SELECT id __object_id, id, folder_path, attachment_mode, attachment_root_path, excluded_dirs_json,\n    status, document_count, indexed_at, last_error, owner_installation_id, owner_device_name, owner_platform, created_at, updated_at\n    FROM source.external_search_folders"
+    },
+    {
+      "objectType": "import_source",
+      "sql": "SELECT source_fingerprint __object_id, source_fingerprint, provider, source_kind, source_name, source_locator,\n    first_imported_at, last_imported_at, last_content_fingerprint, latest_node_id\n    FROM source.import_sources"
+    },
+    {
+      "objectType": "node_open_state",
+      "sql": "SELECT node_id __object_id, node_id, last_opened_at FROM source.node_open_state"
+    },
+    {
+      "objectType": "node_reading",
+      "sql": "SELECT node_id __object_id, node_id, interval_duration_ms, interval_growth_factor,\n    last_handled_at, next_at, priority, repetition_count, state FROM source.node_reading"
+    },
+    {
+      "objectType": "node_review",
+      "sql": "SELECT node_id __object_id, node_id, due, last_review_at, state, stability, difficulty,\n    elapsed_days, scheduled_days, reps, lapses FROM source.node_review"
+    },
+    {
+      "objectType": "node_text_alternative",
+      "sql": "SELECT alternative_id __object_id, alternative_id, node_id, source_version_id,\n    body_text, source_device_id, created_at, status, updated_at FROM source.node_text_alternatives"
+    },
+    {
+      "objectType": "pdf_page_text",
+      "sql": "SELECT attachment_id || ':' || page __object_id,\n    attachment_id, page, text, page_width, page_height FROM source.pdf_page_text"
+    },
+    {
+      "objectType": "setting",
+      "sql": "SELECT scope || ':' || platform || ':' || form_factor || ':' || device_id || ':' || key __object_id,\n    key, scope, platform, form_factor, device_id, value_json, content_hash, updated_at, deleted_at FROM source.setting_records"
+    },
+    {
+      "objectType": "view_state",
+      "sql": "SELECT s.object_id __object_id, NULLIF(m.value, '') active_node_id, m.updated_at\n    FROM source.sync_object_state s JOIN source.workspace_meta m ON m.key = 'active_node_id'\n    WHERE s.object_type = 'view_state' AND s.object_id LIKE '%:active_node'"
+    },
+    {
+      "objectType": "view_state",
+      "sql": "SELECT s.object_id __object_id,\n    v.node_id, v.scroll_top, v.selection_from, v.selection_to, v.source, v.updated_at\n    FROM source.sync_object_state s JOIN source.node_view_state v\n      ON s.object_id LIKE '%:' || v.device_id || ':node:' || v.node_id\n    WHERE s.object_type = 'view_state' AND s.object_id NOT LIKE '%:active_node'"
+    }
+  ],
   "packSchema": [
     "CREATE TABLE pack_manifest (\n    key TEXT PRIMARY KEY,\n    value TEXT NOT NULL\n  )",
     "CREATE TABLE sync_object_state (\n    object_type TEXT NOT NULL,\n    object_id TEXT NOT NULL,\n    state_seq INTEGER NOT NULL,\n    content_hash TEXT NOT NULL,\n    updated_at TEXT NOT NULL,\n    deleted_at TEXT,\n    PRIMARY KEY (object_type, object_id)\n  )",

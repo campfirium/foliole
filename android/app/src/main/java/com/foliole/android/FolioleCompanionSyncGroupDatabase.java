@@ -7,47 +7,21 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.time.Instant;
-import java.io.File;
 
 final class FolioleCompanionSyncGroupDatabase {
     private FolioleCompanionSyncGroupDatabase() {}
 
-    static int registerProvisioning(String path, JSONObject config, FolioleCompanionSyncGroupJoinRequest request) throws Exception {
+    static void registerMember(String path, JSONObject config, FolioleCompanionSyncGroupJoinRequest request) throws Exception {
         SQLiteDatabase db = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READWRITE);
         try {
-            int cursor = maxStateSeq(db);
             String groupId = config.getJSONObject("sync_group").getString("group_id");
             String now = Instant.now().toString();
             db.execSQL("INSERT OR REPLACE INTO sync_group_members (group_id, device_id, device_kind, device_name, state, " +
                 "approved_by_device_id, authorization_id, provisioning_cursor, joined_at, activated_at, left_at, updated_at) " +
-                "VALUES (?, ?, ?, ?, 'provisioning', ?, ?, ?, ?, NULL, NULL, ?)", new Object[] {
+                "VALUES (?, ?, ?, ?, 'active', ?, ?, NULL, ?, NULL, NULL, ?)", new Object[] {
                     groupId, request.deviceId, request.deviceKind, request.deviceName, config.getString("device_id"),
-                    request.pairRequestId, cursor, now, now
+                    request.pairRequestId, now, now
                 });
-            return cursor;
-        } finally { db.close(); }
-    }
-
-    static void assertProviderComplete(android.content.Context context, String path) throws Exception {
-        FolioleCompanionSyncPackProviderDefinitions definitions = FolioleCompanionSyncPackProviderDefinitions.load(context);
-        SQLiteDatabase db = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READONLY);
-        try {
-            try (Cursor count = db.rawQuery(definitions.completenessQuery("missingContentBlobCount"), null)) {
-                if (!count.moveToFirst() || count.getInt(0) != 0) throw new IllegalStateException("sync_group_provider_incomplete");
-            }
-            try (Cursor rows = db.rawQuery(definitions.completenessQuery("attachments"), null)) {
-                while (rows.moveToNext()) {
-                    if (rows.isNull(1)) throw new IllegalStateException("sync_group_provider_incomplete");
-                    String storageKey = rows.getString(1); String contentHash = rows.getString(2);
-                    if (!contentHash.matches("[a-f0-9]{64}") || !contentHash.equals(storageKey)) {
-                        throw new IllegalStateException("sync_group_provider_incomplete");
-                    }
-                    File file = new File(new File(context.getFilesDir(), "attachments"), storageKey);
-                    if (!file.isFile() || !contentHash.equals(FolioleCompanionAttachmentResourceHash.digestHex(context, file))) {
-                        throw new IllegalStateException("sync_group_provider_incomplete");
-                    }
-                }
-            }
         } finally { db.close(); }
     }
 
@@ -63,31 +37,18 @@ final class FolioleCompanionSyncGroupDatabase {
             }
             JSONArray members = new JSONArray();
             try (Cursor rows = db.rawQuery("SELECT device_id, device_kind, device_name, state, approved_by_device_id, " +
-                    "authorization_id, joined_at, activated_at FROM sync_group_members WHERE state != 'left' ORDER BY joined_at, device_id", null)) {
+                    "authorization_id, joined_at FROM sync_group_members WHERE state = 'active' ORDER BY joined_at, device_id", null)) {
                 while (rows.moveToNext()) members.put(new JSONObject().put("device_id", rows.getString(0))
                     .put("device_kind", rows.getString(1)).put("device_name", rows.getString(2)).put("state", rows.getString(3))
                     .put("approved_by_device_id", rows.getString(4)).put("authorization_id", rows.getString(5))
-                    .put("joined_at", rows.getString(6)).put("activated_at", rows.isNull(7) ? JSONObject.NULL : rows.getString(7)));
+                    .put("joined_at", rows.getString(6)));
             }
-            String state = "provisioning";
+            String state = "active";
             for (int index = 0; index < members.length(); index++) {
                 JSONObject member = members.getJSONObject(index);
                 if (localDeviceId.equals(member.getString("device_id"))) state = member.getString("state");
             }
             return group.put("local_member_state", state).put("members", members);
-        } finally { db.close(); }
-    }
-
-    static void activate(String path, String deviceId, String authorizationId, int completedCursor) {
-        SQLiteDatabase db = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READWRITE);
-        try {
-            String now = Instant.now().toString();
-            db.execSQL("UPDATE sync_group_members SET state = 'active', activated_at = COALESCE(activated_at, ?), updated_at = ? " +
-                "WHERE device_id = ? AND authorization_id = ? AND ? >= COALESCE(provisioning_cursor, 0)",
-                new Object[] { now, now, deviceId, authorizationId, completedCursor });
-            try (Cursor changes = db.rawQuery("SELECT changes()", null)) {
-                if (!changes.moveToFirst() || changes.getInt(0) != 1) throw new IllegalStateException("sync_group_member_not_authorized");
-            }
         } finally { db.close(); }
     }
 
@@ -99,6 +60,16 @@ final class FolioleCompanionSyncGroupDatabase {
         } finally { db.close(); }
     }
 
+    static String requireAuthorizedMember(String path, String groupId, String deviceId) {
+        SQLiteDatabase db = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READONLY);
+        try (Cursor row = db.rawQuery(
+            "SELECT state FROM sync_group_members WHERE group_id = ? AND device_id = ? AND state = 'active' LIMIT 1",
+            new String[] { groupId, deviceId })) {
+            if (!row.moveToFirst()) throw new SecurityException("sync_group_member_not_authorized");
+            return row.getString(0);
+        } finally { db.close(); }
+    }
+
     static void saveSyncEndpoint(String path, String endpointUrl, String now) {
         SQLiteDatabase db = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READWRITE);
         try {
@@ -107,14 +78,4 @@ final class FolioleCompanionSyncGroupDatabase {
         } finally { db.close(); }
     }
 
-    static int maxStateSeq(String path) {
-        SQLiteDatabase db = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READONLY);
-        try { return maxStateSeq(db); } finally { db.close(); }
-    }
-
-    private static int maxStateSeq(SQLiteDatabase db) {
-        try (Cursor cursor = db.rawQuery("SELECT COALESCE(MAX(state_seq), 0) FROM sync_object_state", null)) {
-            return cursor.moveToFirst() ? cursor.getInt(0) : 0;
-        }
-    }
 }

@@ -1,40 +1,47 @@
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../platform/syncProtocolContract.js';
 import { DATABASE_SCHEMA_VERSION } from '../database/databaseSchemaVersion.js';
 
-import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from './syncObjectPayloadSql.js';
 import { SYNC_PACK_DATABASE_ENTRY, SYNC_PACK_FORMAT, SYNC_PACK_FORMAT_VERSION } from './syncPackEnvelopeContract.js';
 import { SYNC_PACK_TABLE_NAMES } from './syncPackManifest.js';
 import { SYNC_PACK_NODE_COLUMNS } from './syncPackNodeFields.js';
 import { PACK_SCHEMA } from './syncPackSchema.js';
 
 const nodeColumns = SYNC_PACK_NODE_COLUMNS.join(', ');
-const payloadCopyStatements = Object.entries(SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE).map(([objectType, sql]) =>
-  `INSERT INTO sync_objects
-   SELECT s.object_type, s.object_id, s.content_hash,
-     CASE WHEN s.deleted_at IS NULL THEN (${sql.replace('?', 's.object_id')}) ELSE NULL END,
-     s.updated_at, s.deleted_at FROM sync_object_state s WHERE s.object_type = '${objectType}'`
-);
-
-const viewStateCopyStatement = `INSERT INTO sync_objects
-  SELECT s.object_type, s.object_id, s.content_hash, CASE WHEN s.deleted_at IS NOT NULL THEN NULL
-    WHEN s.object_id LIKE '%:active_node' THEN
-      (SELECT json_object('active_node_id', NULLIF(value, ''), 'updated_at', updated_at)
-       FROM source.workspace_meta WHERE key = 'active_node_id')
-    ELSE (SELECT json_object('node_id', v.node_id, 'scroll_top', v.scroll_top,
-      'selection_from', v.selection_from, 'selection_to', v.selection_to, 'source', v.source, 'updated_at', v.updated_at)
-      FROM source.node_view_state v WHERE s.object_id LIKE '%:' || v.device_id || ':node:' || v.node_id LIMIT 1)
-    END, s.updated_at, s.deleted_at FROM sync_object_state s WHERE s.object_type = 'view_state'`;
+const payloadPlans = [
+  { objectType: 'attachment', sql: `SELECT a.id __object_id, a.id attachment_id, a.original_name, a.mime_type, a.size_bytes, a.created_at,
+    b.content_hash blob__content_hash, b.storage_key blob__storage_key, b.size_bytes blob__size_bytes,
+    b.mime_type blob__mime_type, b.availability blob__availability, b.source_device_id blob__source_device_id,
+    b.created_at blob__created_at, b.cached_at blob__cached_at, b.last_verified_at blob__last_verified_at
+    FROM source.attachments a LEFT JOIN source.attachment_blobs b ON b.attachment_id = a.id` },
+  { objectType: 'external_folder', sql: `SELECT id __object_id, id, folder_path, attachment_mode, attachment_root_path, excluded_dirs_json,
+    status, document_count, indexed_at, last_error, owner_installation_id, owner_device_name, owner_platform, created_at, updated_at
+    FROM source.external_search_folders` },
+  { objectType: 'import_source', sql: `SELECT source_fingerprint __object_id, source_fingerprint, provider, source_kind, source_name, source_locator,
+    first_imported_at, last_imported_at, last_content_fingerprint, latest_node_id
+    FROM source.import_sources` },
+  { objectType: 'node_open_state', sql: `SELECT node_id __object_id, node_id, last_opened_at FROM source.node_open_state` },
+  { objectType: 'node_reading', sql: `SELECT node_id __object_id, node_id, interval_duration_ms, interval_growth_factor,
+    last_handled_at, next_at, priority, repetition_count, state FROM source.node_reading` },
+  { objectType: 'node_review', sql: `SELECT node_id __object_id, node_id, due, last_review_at, state, stability, difficulty,
+    elapsed_days, scheduled_days, reps, lapses FROM source.node_review` },
+  { objectType: 'node_text_alternative', sql: `SELECT alternative_id __object_id, alternative_id, node_id, source_version_id,
+    body_text, source_device_id, created_at, status, updated_at FROM source.node_text_alternatives` },
+  { objectType: 'pdf_page_text', sql: `SELECT attachment_id || ':' || page __object_id,
+    attachment_id, page, text, page_width, page_height FROM source.pdf_page_text` },
+  { objectType: 'setting', sql: `SELECT scope || ':' || platform || ':' || form_factor || ':' || device_id || ':' || key __object_id,
+    key, scope, platform, form_factor, device_id, value_json, content_hash, updated_at, deleted_at FROM source.setting_records` },
+  { objectType: 'view_state', sql: `SELECT s.object_id __object_id, NULLIF(m.value, '') active_node_id, m.updated_at
+    FROM source.sync_object_state s JOIN source.workspace_meta m ON m.key = 'active_node_id'
+    WHERE s.object_type = 'view_state' AND s.object_id LIKE '%:active_node'` },
+  { objectType: 'view_state', sql: `SELECT s.object_id __object_id,
+    v.node_id, v.scroll_top, v.selection_from, v.selection_to, v.source, v.updated_at
+    FROM source.sync_object_state s JOIN source.node_view_state v
+      ON s.object_id LIKE '%:' || v.device_id || ':node:' || v.node_id
+    WHERE s.object_type = 'view_state' AND s.object_id NOT LIKE '%:active_node'` }
+] as const;
 
 export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
   compression: 'zlib',
-  completenessQueries: {
-    attachments: `SELECT attachment_id, storage_key, content_hash FROM attachment_blobs
-      WHERE content_hash IS NOT NULL ORDER BY attachment_id`,
-    missingContentBlobCount: `SELECT COUNT(*) FROM content_blobs cb
-      LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash
-      WHERE cbd.hash IS NULL OR cb.compression != 'none' OR cb.original_sha256 != cb.hash
-        OR cb.stored_sha256 != cb.hash OR length(cbd.data) != cb.stored_size_bytes`
-  },
   copyStatements: [
     `INSERT INTO sync_object_state SELECT object_type, object_id, state_seq, content_hash, updated_at, deleted_at
      FROM source.sync_object_state WHERE state_seq > ? AND state_seq <= ? AND object_type IN
@@ -48,8 +55,6 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
     `INSERT OR IGNORE INTO sync_object_state SELECT s.object_type, s.object_id, s.state_seq, s.content_hash, s.updated_at, s.deleted_at
      FROM source.sync_object_state s WHERE s.object_type = 'node' AND s.object_id IN
        (SELECT object_id FROM sync_object_state WHERE object_type IN ('node_reading','node_review'))`,
-    ...payloadCopyStatements,
-    viewStateCopyStatement,
     `DELETE FROM sync_object_state WHERE object_type NOT IN ('external_document','node') AND NOT EXISTS
       (SELECT 1 FROM sync_objects o WHERE o.object_type = sync_object_state.object_type AND o.object_id = sync_object_state.object_id)`,
     `INSERT INTO nodes (${nodeColumns}) SELECT ${nodeColumns} FROM source.nodes
@@ -80,6 +85,8 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
   databaseEntry: SYNC_PACK_DATABASE_ENTRY,
   format: SYNC_PACK_FORMAT,
   formatVersion: SYNC_PACK_FORMAT_VERSION,
+  payloadCopyIndex: 2,
+  payloadPlans,
   packSchema: PACK_SCHEMA,
   protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
   schemaVersion: DATABASE_SCHEMA_VERSION,

@@ -1,6 +1,5 @@
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import { definedProps } from '../shared/lib/definedProps';
-import { rollbackIncompleteCompanionSyncGroup } from '../shared/platform/companion/sync/syncGroupProvisioning';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 import { createCompanionSyncRunId } from '../shared/platform/companionSyncActivityEvents';
@@ -118,7 +117,6 @@ async function handleSyncFailure(
   startedAt: string,
   syncError: unknown
 ) {
-  await rollbackIncompleteCompanionSyncGroup();
   const message = formatCompanionSyncFailureMessage(syncError);
   args.setStatus('idle');
   args.setSyncProgress(null);

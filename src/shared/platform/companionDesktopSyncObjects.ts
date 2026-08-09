@@ -1,6 +1,5 @@
 import { assertSyncPackCursorAdvance } from '../../../lib/core/sync/syncPackCursorGuard';
 
-import { shouldSkipCompanionPush } from './companion/sync/syncGroupPushPolicy';
 import { pushLocalDirtyObjects } from './companionDesktopSyncPush';
 import {
   createEmptyResourceStages,
@@ -183,7 +182,7 @@ async function runCompanionObjectsSync(
   endpointUrl: string,
   options: CompanionDesktopSyncOptions = {}
 ): Promise<CompanionDesktopSyncResult> {
-  const skipPush = await shouldSkipCompanionPush(options);
+  const skipPush = options.resourcesOnly === true;
   const pushed = skipPush
     ? createSkippedPushResult()
     : await withSyncStepTimeout('push_local_changes', pushLocalDirtyObjects(endpointUrl))

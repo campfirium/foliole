@@ -58,7 +58,6 @@ export function SettingsCompanionSyncSection() {
         isCreating={state.pendingActionId === 'create-sync-group'}
         onCreate={() => void state.createSyncGroup()}
         onDiscover={() => void state.discoverSyncGroups()}
-        onCompleteJoin={() => void state.completeSyncGroupJoin()}
         onRequestJoin={(endpointUrl) => void state.requestSyncGroupJoin(endpointUrl)}
         onApprove={(id) => void state.approveRequest(id)}
         onReject={(id) => void state.rejectRequest(id)}

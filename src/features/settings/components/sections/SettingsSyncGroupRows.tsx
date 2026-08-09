@@ -54,9 +54,7 @@ function EmptySyncGroupRow(props: Parameters<typeof SettingsSyncGroupRows>[0]) {
             </SettingsButton>
           </div>
           {props.joinRequest ? (
-            <SettingsButton disabled={props.isBusy} onClick={props.onCompleteJoin}>
-              {t('settings.companionSync.group.join.complete')}
-            </SettingsButton>
+            <span className="text-sm text-foreground/65">{t('settings.companionSync.group.join.waiting')}</span>
           ) : props.candidates.map((candidate) => (
             <SettingsButton disabled={props.isBusy} key={`${candidate.group_id}:${candidate.endpoint_url}`}
               onClick={() => props.onRequestJoin(candidate.endpoint_url)}>
@@ -76,7 +74,6 @@ export function SettingsSyncGroupRows(props: {
   isCreating: boolean;
   onCreate(): void;
   onDiscover(): void;
-  onCompleteJoin(): void;
   onRequestJoin(endpointUrl: string): void;
   onApprove(id: string): void;
   onReject(id: string): void;

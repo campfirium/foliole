@@ -13,7 +13,7 @@ const usedNonceExpiryByDeviceId = new Map<string, Map<string, number>>();
 
 interface CompanionRequestAuthSuccess {
   device_id: string;
-  member_state?: 'active' | 'provisioning';
+  member_state?: 'active';
   ok: true;
 }
 

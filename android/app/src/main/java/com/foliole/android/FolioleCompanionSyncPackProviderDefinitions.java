@@ -16,12 +16,11 @@ final class FolioleCompanionSyncPackProviderDefinitions {
     }
 
     JSONArray copyStatements() throws Exception { return value.getJSONArray("copyStatements"); }
-    String completenessQuery(String name) throws Exception {
-        return value.getJSONObject("completenessQueries").getString(name);
-    }
     String databaseEntry() throws Exception { return value.getString("databaseEntry"); }
     String format() throws Exception { return value.getString("format"); }
     int formatVersion() throws Exception { return value.getInt("formatVersion"); }
+    int payloadCopyIndex() throws Exception { return value.getInt("payloadCopyIndex"); }
+    JSONArray payloadPlans() throws Exception { return value.getJSONArray("payloadPlans"); }
     JSONArray packSchema() throws Exception { return value.getJSONArray("packSchema"); }
     JSONObject protocol() throws Exception { return value.getJSONObject("protocol"); }
     int schemaVersion() throws Exception { return value.getInt("schemaVersion"); }

@@ -22,14 +22,14 @@ import java.util.zip.ZipOutputStream;
 final class FolioleCompanionSyncPackProvider {
     private FolioleCompanionSyncPackProvider() {}
 
-    static byte[] build(Context context, String sourcePath, String fromDeviceId, String toPeerId, int fromSeq) throws Exception {
+    static BuildResult build(Context context, String sourcePath, String fromDeviceId, String toPeerId, int fromSeq) throws Exception {
         FolioleCompanionSyncPackProviderDefinitions definitions = FolioleCompanionSyncPackProviderDefinitions.load(context);
         File packDbFile = File.createTempFile("foliole-provider-", ".db", context.getCacheDir());
         String packId = UUID.randomUUID().toString();
-        int toSeq = maxStateSeq(sourcePath);
         SQLiteDatabase pack = SQLiteDatabase.openOrCreateDatabase(packDbFile, null);
+        int toSeq;
         try {
-            createPack(pack, definitions, sourcePath, fromSeq, toSeq);
+            toSeq = createPack(pack, definitions, sourcePath, fromSeq);
             JSONObject tables = tableManifest(pack, definitions.tableNames());
             JSONObject inner = innerManifest(packId, fromSeq, toSeq, tables.getJSONArray("tables"));
             pack.execSQL("INSERT INTO pack_manifest (key, value) VALUES ('manifest_json', ?)", new Object[] { inner.toString() });
@@ -39,29 +39,39 @@ final class FolioleCompanionSyncPackProvider {
             byte[] compressed = deflate(database);
             JSONObject manifest = outerManifest(definitions, packId, fromDeviceId, toPeerId, fromSeq, toSeq,
                 tableManifest(packDbFile, definitions.tableNames()).getJSONArray("tables"), database, compressed);
-            return zip(manifest, definitions.databaseEntry(), compressed);
+            return new BuildResult(zip(manifest, definitions.databaseEntry(), compressed), toSeq);
         } finally { if (!packDbFile.delete()) packDbFile.deleteOnExit(); }
     }
 
-    private static void createPack(SQLiteDatabase pack, FolioleCompanionSyncPackProviderDefinitions definitions,
-                                   String sourcePath, int fromSeq, int toSeq) throws Exception {
-        JSONArray schema = definitions.packSchema();
-        for (int index = 0; index < schema.length(); index++) pack.execSQL(schema.getString(index));
+    private static int createPack(SQLiteDatabase pack, FolioleCompanionSyncPackProviderDefinitions definitions,
+                                  String sourcePath, int fromSeq) throws Exception {
         pack.execSQL("ATTACH DATABASE ? AS source", new Object[] { sourcePath });
         try {
+            pack.execSQL("BEGIN");
+            int toSeq = maxStateSeq(pack, "source.");
+            JSONArray schema = definitions.packSchema();
+            for (int index = 0; index < schema.length(); index++) pack.execSQL(schema.getString(index));
             JSONArray copies = definitions.copyStatements();
             for (int index = 0; index < copies.length(); index++) {
                 if (index == 0) pack.execSQL(copies.getString(index), new Object[] { fromSeq, toSeq });
+                else if (index == definitions.payloadCopyIndex()) {
+                    FolioleCompanionSyncPackPayloadWriter.copy(pack, definitions.payloadPlans());
+                    pack.execSQL(copies.getString(index));
+                }
                 else pack.execSQL(copies.getString(index));
             }
+            pack.execSQL("COMMIT");
+            return toSeq;
+        } catch (Exception error) {
+            if (pack.inTransaction()) pack.execSQL("ROLLBACK");
+            throw error;
         } finally { pack.execSQL("DETACH DATABASE source"); }
     }
 
-    private static int maxStateSeq(String sourcePath) {
-        SQLiteDatabase source = SQLiteDatabase.openDatabase(sourcePath, null, SQLiteDatabase.OPEN_READONLY);
-        try (Cursor cursor = source.rawQuery("SELECT COALESCE(MAX(state_seq), 0) FROM sync_object_state", null)) {
+    private static int maxStateSeq(SQLiteDatabase source, String prefix) {
+        try (Cursor cursor = source.rawQuery("SELECT COALESCE(MAX(state_seq), 0) FROM " + prefix + "sync_object_state", null)) {
             return cursor.moveToFirst() ? cursor.getInt(0) : 0;
-        } finally { source.close(); }
+        }
     }
 
     private static JSONObject tableManifest(File path, JSONArray names) throws Exception {
@@ -112,4 +122,10 @@ final class FolioleCompanionSyncPackProvider {
     private static byte[] deflate(byte[] body) throws Exception { ByteArrayOutputStream out = new ByteArrayOutputStream(); try (DeflaterOutputStream stream = new DeflaterOutputStream(out)) { stream.write(body); } return out.toByteArray(); }
     private static byte[] readAll(File file) throws Exception { try (FileInputStream input = new FileInputStream(file)) { ByteArrayOutputStream out = new ByteArrayOutputStream(); byte[] b = new byte[256 * 1024]; for (int n; (n = input.read(b)) >= 0;) out.write(b, 0, n); return out.toByteArray(); } }
     private static String sha(byte[] body) throws Exception { StringBuilder out = new StringBuilder("sha256:"); for (byte b : MessageDigest.getInstance("SHA-256").digest(body)) out.append(String.format("%02x", b)); return out.toString(); }
+
+    static final class BuildResult {
+        final byte[] body;
+        final int toSeq;
+        BuildResult(byte[] body, int toSeq) { this.body = body; this.toSeq = toSeq; }
+    }
 }

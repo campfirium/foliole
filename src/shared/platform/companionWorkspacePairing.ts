@@ -2,7 +2,7 @@ import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../lib/platform/syncProt
 
 import { createSignedRequestHeaders, verifyNativePairingCanSignRequest } from './companion/network/signedRequest';
 import {
-  beginCompanionSyncGroupProvisioning,
+  joinCompanionSyncGroup,
   loadCompanionSyncGroup,
   loadCompanionSyncGroupLibraryFacts,
   refreshActiveCompanionSyncGroupMembership
@@ -135,15 +135,7 @@ export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArg
       remote_protocol: payload.desktop_protocol
     });
   }
-  try {
-    return await saveNativePairing(args, payload, deviceSecret, usesSyncGroup);
-  } catch (error) {
-    if (usesSyncGroup) {
-      const { clearCompanionAppData } = await import('./companionAppData');
-      await clearCompanionAppData();
-    }
-    throw error;
-  }
+  return saveNativePairing(args, payload, deviceSecret, usesSyncGroup);
 }
 
 async function saveNativePairing(
@@ -173,9 +165,7 @@ async function saveNativePairing(
     const storedPairingState = normalizePairingState(await FolioleCompanionSync.loadPairingState());
     if (!storedPairingState.is_paired) throw new Error('Native pairing credentials were not saved.');
     if (usesSyncGroup) {
-      if (!payload.sync_group || !payload.member_authorization_id || !Number.isSafeInteger(payload.provisioning_cursor)) {
-        throw new Error('Desktop did not return Sync Group provisioning state.');
-      }
+      if (!payload.sync_group) throw new Error('Desktop did not return Sync Group membership.');
       const existingGroup = await loadCompanionSyncGroup();
       const isActiveReauthorization = existingGroup?.group_id === payload.sync_group.group_id
         && existingGroup.timeline_id === payload.sync_group.timeline_id
@@ -186,14 +176,10 @@ async function saveNativePairing(
           deviceId: payload.device_id, group: payload.sync_group
         });
       } else {
-        await beginCompanionSyncGroupProvisioning({
+        await joinCompanionSyncGroup({
           deviceId: payload.device_id,
           emptyFacts: await loadCompanionSyncGroupLibraryFacts(),
-          provisioning: {
-            group: payload.sync_group,
-            member_authorization_id: payload.member_authorization_id,
-            provisioning_cursor: Number(payload.provisioning_cursor)
-          }
+          group: payload.sync_group
         });
       }
     }

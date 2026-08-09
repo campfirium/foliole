@@ -47,7 +47,6 @@ final class FolioleCompanionPairSyncEvidence {
             "requestState:state?state.requestState:'unavailable'," +
             "completion:state?state.completion:'not_started'," +
             "credentials:state?state.credentials:'not_saved'," +
-            "groupActivation:state?state.groupActivation:'not_started'," +
             "initialSync:state?state.initialSync:'not_started'," +
             "syncPackApplied:!!(state&&state.syncPackApplied)," +
             "syncPackDownloaded:!!(state&&state.syncPackDownloaded)," +

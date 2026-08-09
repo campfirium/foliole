@@ -63,9 +63,9 @@ final class FolioleCompanionSyncGroupServer {
         if (request.method.equals("POST") && pathOnly.equals("/companion/pair-requests")) { createRequest(request, output, remoteAddress); return; }
         if (request.method.equals("POST") && pathOnly.equals("/companion/pair")) { completePair(request, output); return; }
         if (request.method.equals("GET") && pathOnly.equals("/companion/sync-pack")) { syncPack(request, output); return; }
+        if (request.method.equals("POST") && pathOnly.equals("/companion/content-blobs")) { contentBlobs(request, output); return; }
         if (request.method.equals("GET") && pathOnly.equals("/companion/content-blob")) { contentBlob(request, output); return; }
         if (request.method.equals("GET") && pathOnly.equals("/companion/attachment-resource")) { attachment(request, output); return; }
-        if (request.method.equals("POST") && pathOnly.equals("/companion/sync-group/activate")) { activate(request, output); return; }
         FolioleCompanionHttpResponse.json(output, 404, new JSONObject().put("error", "not_found"));
     }
 
@@ -110,7 +110,7 @@ final class FolioleCompanionSyncGroupServer {
         if (!pending.status.equals("approved")) { FolioleCompanionHttpResponse.json(output, 409, new JSONObject().put("error", "pair_request_pending")); return; }
         if (pending.deviceSecret == null) pending.deviceSecret = FolioleCompanionSyncGroupPeerStore.createSecret(context, pending.deviceId);
         if (pending.providerSecret == null) pending.providerSecret = FolioleCompanionSyncGroupPeerStore.randomSecret();
-        int cursor = FolioleCompanionSyncGroupDatabase.registerProvisioning(config.getString("database_path"), config, pending);
+        FolioleCompanionSyncGroupDatabase.registerMember(config.getString("database_path"), config, pending);
         JSONObject group = FolioleCompanionSyncGroupDatabase.groupForMember(config.getString("database_path"), pending.deviceId);
         saveOutboundPairing(pending, pending.providerSecret);
         FolioleCompanionHttpResponse.json(output, 200, new JSONObject().put("app_version", config.getString("app_version"))
@@ -120,7 +120,7 @@ final class FolioleCompanionSyncGroupServer {
             .put("provider_device_id", config.getString("device_id")).put("provider_device_kind", "android-capacitor")
             .put("provider_device_name", config.getString("device_name"))
             .put("paired_at", java.time.Instant.now().toString()).put("peer_id", config.getString("device_id"))
-            .put("member_authorization_id", id).put("provisioning_cursor", cursor).put("sync_group", group));
+            .put("sync_group", group));
     }
 
     private void saveOutboundPairing(FolioleCompanionSyncGroupJoinRequest pending, String secret) throws Exception {
@@ -133,37 +133,35 @@ final class FolioleCompanionSyncGroupServer {
     }
 
     private void syncPack(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {
-        String peer = FolioleCompanionSyncGroupRequestAuth.authenticate(context, request, config.getJSONObject("sync_group").getString("group_id"));
+        FolioleCompanionSyncScreenAwake.touch();
+        String peer = authenticate(request);
         int after = integerQuery(request.path, "after_state_seq");
-        byte[] pack = FolioleCompanionSyncPackProvider.build(context, config.getString("database_path"), config.getString("device_id"), peer, after);
-        FolioleCompanionSyncGroupDatabase.recordSupplyCursor(config.getString("database_path"), peer, after,
-            FolioleCompanionSyncGroupDatabase.maxStateSeq(config.getString("database_path")));
-        FolioleCompanionHttpResponse.bytes(output, 200, "application/zip", pack);
-    }
-
-    private void activate(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {
-        String peer = FolioleCompanionSyncGroupRequestAuth.authenticate(context, request, config.getJSONObject("sync_group").getString("group_id"));
-        JSONObject body = new JSONObject(request.bodyText());
-        JSONObject group = config.getJSONObject("sync_group");
-        if (!group.getString("group_id").equals(body.optString("group_id")) ||
-            !group.getString("timeline_id").equals(body.optString("timeline_id")) || !complete(body.optJSONObject("completeness"))) {
-            throw new IllegalArgumentException("sync_group_provisioning_incomplete");
-        }
-        FolioleCompanionSyncGroupDatabase.activate(config.getString("database_path"), peer, body.getString("member_authorization_id"), body.getInt("completed_cursor"));
-        FolioleCompanionHttpResponse.json(output, 200, new JSONObject().put("sync_group",
-            FolioleCompanionSyncGroupDatabase.groupForMember(config.getString("database_path"), peer)));
+        FolioleCompanionSyncPackProvider.BuildResult pack = FolioleCompanionSyncPackProvider.build(
+            context, config.getString("database_path"), config.getString("device_id"), peer, after);
+        FolioleCompanionSyncGroupDatabase.recordSupplyCursor(config.getString("database_path"), peer, after, pack.toSeq);
+        FolioleCompanionHttpResponse.bytes(output, 200, "application/zip", pack.body);
     }
 
     private void contentBlob(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {
-        FolioleCompanionSyncGroupRequestAuth.authenticate(context, request, config.getJSONObject("sync_group").getString("group_id"));
+        FolioleCompanionSyncScreenAwake.touch();
+        authenticate(request);
         FolioleCompanionSyncGroupResources.Resource resource = FolioleCompanionSyncGroupResources.contentBlob(
             config.getString("database_path"), query(request.path, "hash"));
         if (resource == null) FolioleCompanionHttpResponse.json(output, 404, new JSONObject().put("error", "blob_not_found"));
         else FolioleCompanionHttpResponse.bytes(output, 200, resource.mimeType, resource.body);
     }
 
+    private void contentBlobs(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {
+        FolioleCompanionSyncScreenAwake.touch();
+        authenticate(request);
+        FolioleCompanionSyncGroupContentBlobBatch.Result batch = FolioleCompanionSyncGroupContentBlobBatch.load(
+            config.getString("database_path"), request.bodyText());
+        FolioleCompanionHttpResponse.bytes(output, 200, batch.mimeType, batch.body);
+    }
+
     private void attachment(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {
-        FolioleCompanionSyncGroupRequestAuth.authenticate(context, request, config.getJSONObject("sync_group").getString("group_id"));
+        FolioleCompanionSyncScreenAwake.touch();
+        authenticate(request);
         FolioleCompanionSyncGroupResources.Resource resource = FolioleCompanionSyncGroupResources.attachment(
             context, config.getString("database_path"), query(request.path, "attachment_id"), query(request.path, "content_hash"));
         if (resource == null) FolioleCompanionHttpResponse.json(output, 404, new JSONObject().put("error", "missing_file"));
@@ -171,11 +169,11 @@ final class FolioleCompanionSyncGroupServer {
     }
 
     private static boolean empty(JSONObject facts) { return facts != null && facts.optInt("node_count", -1) == 0 && facts.optInt("review_log_count", -1) == 0 && facts.optInt("attachment_count", -1) == 0 && facts.optInt("content_blob_count", -1) == 0 && facts.isNull("timeline_id"); }
-    private static boolean complete(JSONObject value) { return value != null &&
-        value.optInt("failed_attachment_resource_count", -1) == 0 && value.optInt("failed_content_blob_count", -1) == 0 &&
-        value.optInt("remaining_attachment_resource_count", -1) == 0 && value.optInt("remaining_content_blob_count", -1) == 0 &&
-        value.optInt("remaining_structure_change_count", -1) == 0; }
     private JSONObject protocol() throws Exception { return config.getJSONObject("protocol"); }
+    private String authenticate(FolioleCompanionHttpRequest request) throws Exception {
+        return FolioleCompanionSyncGroupRequestAuth.authenticate(context, request,
+            config.getJSONObject("sync_group").getString("group_id"), config.getString("database_path"));
+    }
     private JSONObject compatible() throws Exception { return new JSONObject().put("status", "compatible").put("reason", JSONObject.NULL)
         .put("missing_capabilities", new org.json.JSONArray()).put("negotiated_version", protocol().getInt("version")); }
     private boolean compatibleWith(JSONObject remote) throws Exception {

@@ -13,10 +13,10 @@ import {
   CONTENT_BLOB_RESOURCE_PATH,
   loadCompanionContentBlobResource
 } from './companionLanContentBlobs.js';
+import { loadCompanionLanDiscovery } from './companionLanDiscovery.js';
 import { handlePairRequest } from './companionLanPairCompletion.js';
 import { handlePairRequestCreate } from './companionLanPairingEndpoints.js';
 import {
-  buildDiscoveryPayload,
   buildWorkspaceSnapshotPayload,
   buildWorkspaceVersionPayload
 } from './companionLanPayloads.js';
@@ -177,7 +177,7 @@ export function createLanWorkspaceSyncRequestHandler(args: {
       return;
     }
     if (request.method === 'GET' && parsedRequestUrl.pathname === DISCOVERY_ENDPOINT_PATH) {
-      const discovery = buildDiscoveryPayload(args.appVersion, args.peerId);
+      const discovery = await loadCompanionLanDiscovery(args.appVersion, args.peerId);
       writeJson(request, response, discovery ? 200 : 404, discovery ?? { error: 'sync_group_not_available' });
       return;
     }

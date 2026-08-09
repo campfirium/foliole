@@ -4,6 +4,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { handleCompanionPairingCommand } from './companionPairingCommands.js';
 
 const commandMocks = vi.hoisted(() => ({
+  completeDesktopSyncGroupJoin: vi.fn().mockResolvedValue({ group_id: 'group-1' }),
   commitPrimaryDeviceToPeer: vi.fn().mockReturnValue({
     committedAt: '2026-04-24T10:05:00.000Z',
     primaryDeviceEpoch: 2,
@@ -29,7 +30,11 @@ const commandMocks = vi.hoisted(() => ({
     }],
     pending: null
   })),
-  runWithDatabaseConnectionOwner: vi.fn(async (execute: () => unknown) => execute())
+  requestDesktopSyncGroupJoin: vi.fn().mockResolvedValue(undefined),
+  runWithDatabaseConnectionOwner: vi.fn(async (execute: () => unknown) => execute()),
+  setDesktopCompanionSyncEnabled: vi.fn(),
+  setJoinCompletionExecutor: vi.fn(),
+  ensureLanWorkspaceSyncServer: vi.fn().mockResolvedValue(undefined)
 }));
 
 vi.mock('electron', () => ({
@@ -60,14 +65,19 @@ vi.mock('../sync/companionPairingStore.js', () => ({
 }));
 vi.mock('../sync/desktopCompanionSyncPreference.js', () => ({
   isDesktopCompanionSyncEnabled: vi.fn(() => true),
-  setDesktopCompanionSyncEnabled: vi.fn()
+  setDesktopCompanionSyncEnabled: commandMocks.setDesktopCompanionSyncEnabled
+}));
+vi.mock('../sync/desktopSyncGroupJoin.js', () => ({
+  completeDesktopSyncGroupJoin: commandMocks.completeDesktopSyncGroupJoin,
+  requestDesktopSyncGroupJoin: commandMocks.requestDesktopSyncGroupJoin,
+  setDesktopSyncGroupJoinCompletionExecutor: commandMocks.setJoinCompletionExecutor
 }));
 vi.mock('../sync/desktopSyncGroupJoinState.js', () => ({
   loadDesktopSyncGroupJoinState: commandMocks.loadDesktopSyncGroupJoinState,
   saveDesktopSyncGroupCandidates: vi.fn()
 }));
 vi.mock('../sync/lanWorkspaceSyncServer.js', () => ({
-  ensureLanWorkspaceSyncServer: vi.fn(),
+  ensureLanWorkspaceSyncServer: commandMocks.ensureLanWorkspaceSyncServer,
   getLanWorkspaceSyncServerStatus: vi.fn(() => ({
     advertised_urls: [],
     last_error: null,
@@ -116,4 +126,18 @@ it('keeps discovered Sync Group candidates in the polling overview', async () =>
     })],
     join_request: null
   });
+});
+
+it('finishes an approved join inside the database owner and enables automatic continuation', async () => {
+  await handleCompanionPairingCommand('request_sync_group_join', {
+    endpoint_url: 'http://192.168.0.107:39339'
+  });
+  expect(commandMocks.requestDesktopSyncGroupJoin).toHaveBeenCalledWith('http://192.168.0.107:39339');
+  const execute = commandMocks.setJoinCompletionExecutor.mock.calls[0]?.[0];
+  expect(execute).toBeTypeOf('function');
+  await execute();
+  expect(commandMocks.completeDesktopSyncGroupJoin).toHaveBeenCalledOnce();
+  expect(commandMocks.setDesktopCompanionSyncEnabled).toHaveBeenCalledWith(true);
+  expect(commandMocks.ensureLanWorkspaceSyncServer).toHaveBeenCalledOnce();
+  expect(commandMocks.runWithDatabaseConnectionOwner).toHaveBeenCalledTimes(2);
 });

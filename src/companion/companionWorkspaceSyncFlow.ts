@@ -1,9 +1,5 @@
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import {
-  activateCompanionSyncGroupIfComplete,
-  rollbackIncompleteCompanionSyncGroup
-} from '../shared/platform/companion/sync/syncGroupProvisioning';
-import {
   syncCompanionObjectsFromDesktop,
   type CompanionDesktopSyncProgress
 } from '../shared/platform/companionDesktopSyncObjects';
@@ -160,7 +156,6 @@ export async function runCompanionStreamSync(args: RunCompanionStreamSyncArgs) {
     workspaceSnapshot: latestWorkspaceSnapshot
   });
   await hydrateCompanionReviewSchedulerSettings().catch(() => null);
-  await activateCompanionSyncGroupIfComplete(args.endpointUrl);
   applyRemainingProgress({ result, setSyncProgress: args.setSyncProgress });
   args.onContinuationModeChange?.(resolveCompanionSyncContinuationMode(result));
   if (passResult.outcome === 'skipped' && hasFastRetryWork(result)) {
@@ -205,7 +200,6 @@ export async function tryForegroundAutoSync(args: TryForegroundAutoSyncArgs): Pr
       }) ?? 'skipped';
     } catch (syncError) {
       if (args.cancelled()) return 'skipped';
-      await rollbackIncompleteCompanionSyncGroup();
       const message = formatCompanionSyncFailureMessage(syncError);
       const refreshedState = await loadCompanionStateAfterStructureSync(args.state.workspace_snapshot);
       const workspaceSnapshot = refreshedState?.workspace_snapshot ?? args.state.workspace_snapshot;

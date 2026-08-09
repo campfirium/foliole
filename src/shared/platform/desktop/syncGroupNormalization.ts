@@ -8,11 +8,10 @@ function normalizeMember(value: unknown): SyncGroupMemberPayload | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const raw = value as Record<string, unknown>;
   const state = raw.state;
-  if (state !== 'active' && state !== 'left' && state !== 'provisioning') return null;
+  if (state !== 'active' && state !== 'left') return null;
   const required = ['approved_by_device_id', 'authorization_id', 'device_id', 'device_kind', 'device_name', 'joined_at'];
   if (required.some((key) => !readString(raw, key))) return null;
   return {
-    activated_at: readString(raw, 'activated_at'),
     approved_by_device_id: readString(raw, 'approved_by_device_id')!,
     authorization_id: readString(raw, 'authorization_id')!,
     device_id: readString(raw, 'device_id')!,
@@ -27,7 +26,7 @@ export function normalizeSyncGroup(value: unknown): SyncGroupPayload | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const raw = value as Record<string, unknown>;
   const localState = raw.local_member_state;
-  if (localState !== 'active' && localState !== 'left' && localState !== 'provisioning') return null;
+  if (localState !== 'active' && localState !== 'left') return null;
   const required = ['created_at', 'created_by_device_id', 'display_name', 'group_id', 'local_device_id', 'timeline_id'];
   if (required.some((key) => !readString(raw, key))) return null;
   return {

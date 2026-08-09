@@ -20,6 +20,7 @@ import {
 } from './companionMdnsAdvertisement.js';
 import { countPendingCompanionPairRequests } from './companionPairingRequests.js';
 import { countPairedCompanionDevices } from './companionPairingStore.js';
+import { startDesktopSyncGroupAutoSync, stopDesktopSyncGroupAutoSync } from './desktopSyncGroupAutoSync.js';
 
 const DEFAULT_SYNC_PORT = 38641;
 export const LAN_WORKSPACE_SYNC_HTTP_LIMITS = {
@@ -164,6 +165,7 @@ function advertiseActiveSyncGroup(args: { appVersion: string; peerId: string; po
 }
 
 export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; peerId: string }) {
+  startDesktopSyncGroupAutoSync();
   if (activeServer) {
     if (activeStatus.port) advertiseActiveSyncGroup({ ...args, port: activeStatus.port });
     return activeStatus;
@@ -194,6 +196,7 @@ export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; p
 }
 
 export async function stopLanWorkspaceSyncServer() {
+  stopDesktopSyncGroupAutoSync();
   if (!activeServer) {
     activeStatus = {
       advertised_urls: [],

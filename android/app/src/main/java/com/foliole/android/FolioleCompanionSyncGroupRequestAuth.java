@@ -12,7 +12,7 @@ final class FolioleCompanionSyncGroupRequestAuth {
     private static final Map<String, Long> NONCES = new ConcurrentHashMap<>();
     private FolioleCompanionSyncGroupRequestAuth() {}
 
-    static String authenticate(Context context, FolioleCompanionHttpRequest request, String groupId) throws Exception {
+    static String authenticate(Context context, FolioleCompanionHttpRequest request, String groupId, String databasePath) throws Exception {
         String deviceId = request.header("x-device-id");
         String nonce = request.header("x-nonce");
         String signature = request.header("x-signature");
@@ -23,6 +23,7 @@ final class FolioleCompanionSyncGroupRequestAuth {
         if (drift > 60_000) throw new SecurityException("expired_timestamp");
         byte[] secret = FolioleCompanionSyncGroupPeerStore.load(context, deviceId);
         if (secret == null) throw new SecurityException("unknown_device");
+        FolioleCompanionSyncGroupDatabase.requireAuthorizedMember(databasePath, groupId, deviceId);
         String canonical = request.method + "\n" + request.path + "\n" + timestamp + "\n" + nonce + "\n" + sha256(request.body);
         String encodedSecret = android.util.Base64.encodeToString(secret, android.util.Base64.NO_WRAP | android.util.Base64.URL_SAFE | android.util.Base64.NO_PADDING);
         String expected = FolioleCompanionPairingCrypto.signCanonicalRequest(encodedSecret, canonical);

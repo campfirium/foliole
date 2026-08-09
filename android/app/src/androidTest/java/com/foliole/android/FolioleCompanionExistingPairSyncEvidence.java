@@ -47,12 +47,8 @@ final class FolioleCompanionExistingPairSyncEvidence {
         String lastTargetState = "missing";
         while (System.nanoTime() < deadline) {
             JSONObject state = FolioleCompanionPairSyncEvidence.read(instrumentation, webView);
-            String groupActivation = state.optString("groupActivation", "not_started");
-            if ("failed".equals(groupActivation)) {
-                throw new IllegalStateException("Sync Group activation failed.");
-            }
             lastTargetState = targetState(instrumentation, webView, "companion-sync-now");
-            if ("active".equals(groupActivation) && "enabled".equals(lastTargetState)) {
+            if (state.optBoolean("syncPackApplied") && "enabled".equals(lastTargetState)) {
                 evidence.put("initialSync", "completed");
                 return evidence;
             }

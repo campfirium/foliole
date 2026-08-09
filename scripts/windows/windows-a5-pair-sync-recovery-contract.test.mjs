@@ -153,7 +153,7 @@ it('observes request submission without global errors or click-return evidence',
   expect(observer).toContain("methodName === 'downloadDesktopSyncPack'");
   expect(observer).toContain("methodName === 'deleteDownloadedSyncPack'");
   expect(observer).toContain("new URL(args.url).pathname === '/companion/sync-push'");
-  expect(observer).toContain("new URL(args.url).pathname === '/companion/sync-group/activate'");
+  expect(observer).not.toContain("new URL(args.url).pathname === '/companion/sync-group/activate'");
   expect(source).toContain('awaitAfterStructureApplied');
   expect(fs.readFileSync(
     'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionExistingPairSyncEvidence.java', 'utf8'
@@ -215,8 +215,5 @@ it('keeps the native sync pack as intermediate evidence until product UI settlem
   expect(state).toMatchObject({
     initialSync: 'started', syncPackApplied: true, syncPackDownloaded: true
   });
-  await window.Capacitor.nativePromise('FolioleCompanionSync', 'desktopHttpRequest', {
-    method: 'POST', url: 'http://127.0.0.1:38641/companion/sync-group/activate'
-  });
-  expect(state.groupActivation).toBe('active');
+  expect(state).not.toHaveProperty('groupActivation');
 });

@@ -23,7 +23,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
     @PluginMethod public void startSyncGroupProvider(PluginCall call) {
         async(call, "Failed to start Sync Group provider.", () ->
-            FolioleCompanionSyncGroupProvider.start(getContext(), call));
+            FolioleCompanionSyncGroupProvider.start(getContext(), getActivity(), call));
     }
 
     @PluginMethod public void stopSyncGroupProvider(PluginCall call) {

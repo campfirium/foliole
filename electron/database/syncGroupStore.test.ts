@@ -5,10 +5,9 @@ import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../../lib/core/database/syncGroupS
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import {
-  activateSyncGroupMember,
   createDesktopSyncGroup,
   loadDesktopSyncGroup,
-  registerProvisioningSyncGroupMember
+  registerSyncGroupMember
 } from './syncGroupStore.js';
 
 const connection = vi.hoisted(() => ({ current: null as unknown as { driver: unknown } }));
@@ -39,19 +38,13 @@ it('persists one stable desktop-created group and idempotent founder membership'
   expect(first.members).toHaveLength(1);
 });
 
-it('keeps a joining member provisioning until its fixed cursor is proven complete', () => {
-  const group = createDesktopSyncGroup({ deviceId: 'desktop-1', deviceKind: 'desktop', deviceName: 'Studio' });
-  registerProvisioningSyncGroupMember({
+it('persists an approved device as a member without a second activation', () => {
+  createDesktopSyncGroup({ deviceId: 'desktop-1', deviceKind: 'desktop', deviceName: 'Studio' });
+  const group = registerSyncGroupMember({
     approvedByDeviceId: 'desktop-1', authorizationId: 'request-1', deviceId: 'android-1',
-    deviceKind: 'android-capacitor', deviceName: 'Pixel', provisioningCursor: 12
+    deviceKind: 'android-capacitor', deviceName: 'Pixel'
   });
-  expect(() => activateSyncGroupMember({
-    authorizationId: 'request-1', completedCursor: 11, deviceId: 'android-1',
-    groupId: group.group_id, timelineId: group.timeline_id
-  })).toThrow('sync_group_member_not_authorized');
-  const active = activateSyncGroupMember({
-    authorizationId: 'request-1', completedCursor: 12, deviceId: 'android-1',
-    groupId: group.group_id, timelineId: group.timeline_id
+  expect(group.members.find((member) => member.device_id === 'android-1')).toMatchObject({
+    approved_by_device_id: 'desktop-1', state: 'active'
   });
-  expect(active.members.find((member) => member.device_id === 'android-1')?.state).toBe('active');
 });

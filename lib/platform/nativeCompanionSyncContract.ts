@@ -118,8 +118,6 @@ export interface CompanionWorkspacePairPayload {
   peer_id: string;
   desktop_protocol: SyncProtocolDescriptor;
   sync_group?: import('./syncGroupContract.js').SyncGroupPayload;
-  member_authorization_id?: string;
-  provisioning_cursor?: number;
   provider_device_id?: string;
   provider_device_kind?: string;
   provider_device_name?: string;

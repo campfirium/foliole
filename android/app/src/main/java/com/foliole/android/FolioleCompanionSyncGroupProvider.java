@@ -1,6 +1,7 @@
 package com.foliole.android;
 
 import android.content.Context;
+import android.app.Activity;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -16,7 +17,7 @@ final class FolioleCompanionSyncGroupProvider {
 
     private FolioleCompanionSyncGroupProvider() {}
 
-    static synchronized JSObject start(Context context, PluginCall call) throws Exception {
+    static synchronized JSObject start(Context context, Activity activity, PluginCall call) throws Exception {
         JSONObject next = new JSONObject()
             .put("app_version", value(context, call, "appVersion"))
             .put("database_path", value(context, call, "databasePath"))
@@ -25,13 +26,14 @@ final class FolioleCompanionSyncGroupProvider {
             .put("protocol", FolioleCompanionSyncPackProviderDefinitions.load(context).protocol())
             .put("sync_group", call.getData().getJSONObject(key(context, "group")));
         stop();
-        FolioleCompanionSyncGroupDatabase.assertProviderComplete(context, next.getString("database_path"));
+        FolioleCompanionSyncScreenAwake.attach(activity);
         activeContext = context.getApplicationContext(); activeConfig = next;
         startRuntime();
         return state();
     }
 
     static synchronized JSObject stop() {
+        FolioleCompanionSyncScreenAwake.clear();
         if (advertisement != null) advertisement.stop();
         if (server != null) server.stop();
         advertisement = null; server = null;
@@ -40,6 +42,7 @@ final class FolioleCompanionSyncGroupProvider {
     }
 
     static synchronized void pause() {
+        FolioleCompanionSyncScreenAwake.clear();
         if (advertisement != null) advertisement.stop();
         if (server != null) server.stop();
         advertisement = null; server = null;
@@ -50,7 +53,6 @@ final class FolioleCompanionSyncGroupProvider {
     }
 
     private static void startRuntime() throws Exception {
-        FolioleCompanionSyncGroupDatabase.assertProviderComplete(activeContext, activeConfig.getString("database_path"));
         server = new FolioleCompanionSyncGroupServer(activeContext, activeConfig);
         advertisement = FolioleCompanionNsdAdvertisement.start(activeContext, server.port(), activeConfig);
     }
@@ -58,6 +60,7 @@ final class FolioleCompanionSyncGroupProvider {
     static synchronized JSObject approve(Context context, PluginCall call) throws Exception {
         FolioleCompanionSyncGroupJoinRequest request = require(call.getString(key(context, "pairRequestId")));
         request.status = "approved";
+        FolioleCompanionSyncScreenAwake.touch();
         return state();
     }
 

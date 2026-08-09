@@ -13,12 +13,8 @@ vi.mock('./companion/runtime/iosCompanionDatabaseBootstrap', () => ({
   getIosCompanionDatabaseOwner: () => databaseOwner.current
 }));
 
-import {
-  activateCompanionSyncGroup,
-  beginCompanionSyncGroupProvisioning,
-  loadCompanionSyncGroup,
-  refreshActiveCompanionSyncGroupMembership
-} from './companion/sync/syncGroupStore';
+import { joinCompanionSyncGroup, loadCompanionSyncGroup,
+  refreshActiveCompanionSyncGroupMembership } from './companion/sync/syncGroupStore';
 
 let sqlite: Database.Database;
 
@@ -37,46 +33,36 @@ beforeEach(() => {
 
 afterEach(() => sqlite.close());
 
-it('persists provisioning membership and promotes it only from the desktop group payload', async () => {
+it('persists membership immediately when the approved group payload is accepted', async () => {
   const group = {
     created_at: '2026-08-08T00:00:00.000Z', created_by_device_id: 'desktop-1', display_name: 'Studio',
     group_id: 'group-1', local_device_id: 'desktop-1', local_member_state: 'active' as const,
     members: [{
-      activated_at: '2026-08-08T00:00:00.000Z', approved_by_device_id: 'desktop-1',
+      approved_by_device_id: 'desktop-1',
       authorization_id: 'founder-1', device_id: 'desktop-1', device_kind: 'darwin',
       device_name: 'Studio', joined_at: '2026-08-08T00:00:00.000Z', state: 'active' as const
     }, {
-      activated_at: null, approved_by_device_id: 'desktop-1', authorization_id: 'request-1',
+      approved_by_device_id: 'desktop-1', authorization_id: 'request-1',
       device_id: 'android-1', device_kind: 'android-capacitor', device_name: 'Pixel',
-      joined_at: '2026-08-08T00:01:00.000Z', state: 'provisioning' as const
+      joined_at: '2026-08-08T00:01:00.000Z', state: 'active' as const
     }],
     timeline_id: 'timeline-1'
   };
   const emptyFacts = {
     attachment_count: 0, content_blob_count: 0, node_count: 0, review_log_count: 0, timeline_id: null
   };
-  await beginCompanionSyncGroupProvisioning({
-    deviceId: 'android-1', emptyFacts,
-    provisioning: { group, member_authorization_id: 'request-1', provisioning_cursor: 9 }
-  });
+  await joinCompanionSyncGroup({ deviceId: 'android-1', emptyFacts, group });
   expect(await loadCompanionSyncGroup()).toMatchObject({
-    group_id: 'group-1', local_device_id: 'android-1', local_member_state: 'provisioning'
+    group_id: 'group-1', local_device_id: 'android-1', local_member_state: 'active'
   });
-  const activated = await activateCompanionSyncGroup({
-    ...group, local_device_id: 'android-1', local_member_state: 'active',
-    members: group.members.map((member) => member.device_id === 'android-1'
-      ? { ...member, activated_at: '2026-08-08T00:02:00.000Z', state: 'active' as const }
-      : member)
-  });
-  expect(activated.local_member_state).toBe('active');
 });
 
 it('rejects a join when persistent content already exists', async () => {
   sqlite.prepare("INSERT INTO nodes VALUES ('node-1')").run();
-  await expect(beginCompanionSyncGroupProvisioning({
+  await expect(joinCompanionSyncGroup({
     deviceId: 'android-1',
     emptyFacts: { attachment_count: 0, content_blob_count: 0, node_count: 0, review_log_count: 0, timeline_id: null },
-    provisioning: { group: {} as never, member_authorization_id: 'request-1', provisioning_cursor: 0 }
+    group: {} as never
   })).rejects.toThrow('sync_group_requires_empty_library');
 });
 
@@ -85,7 +71,7 @@ it('refreshes authorization for the same active member without requiring an empt
     created_at: '2026-08-08T00:00:00.000Z', created_by_device_id: 'desktop-1', display_name: 'Studio',
     group_id: 'group-1', local_device_id: 'android-1', local_member_state: 'active' as const,
     members: [{
-      activated_at: '2026-08-08T00:02:00.000Z', approved_by_device_id: 'desktop-1',
+      approved_by_device_id: 'desktop-1',
       authorization_id: 'request-2', device_id: 'android-1', device_kind: 'android-capacitor',
       device_name: 'Pixel', joined_at: '2026-08-08T00:01:00.000Z', state: 'active' as const
     }], timeline_id: 'timeline-1'

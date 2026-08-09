@@ -65,6 +65,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionSyncGroupPeerStore.java',
       'FolioleCompanionSyncGroupProvider.java',
       'FolioleCompanionSyncGroupRequestAuth.java',
+      'FolioleCompanionSyncScreenAwake.java',
       'FolioleCompanionSyncGroupServer.java',
       'FolioleCompanionSyncPackEnvelopeValidator.java',
       'FolioleCompanionSyncPackTransfer.java',
@@ -83,7 +84,9 @@ export const CLASSIFICATIONS = {
     responsibility: 'Create or validate isolated temporary SQLite packs without opening the active library.',
     files: [
       'FolioleCompanionContentBlobPack.java',
+      'FolioleCompanionSyncGroupContentBlobBatch.java',
       'FolioleCompanionSyncPackDatabaseValidator.java',
+      'FolioleCompanionSyncPackPayloadWriter.java',
       'FolioleCompanionSyncPackProvider.java'
     ]
   }

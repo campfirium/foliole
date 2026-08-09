@@ -18,8 +18,12 @@ import {
   setDesktopCompanionSyncEnabled
 } from '../sync/desktopCompanionSyncPreference.js';
 import { discoverDesktopSyncGroups } from '../sync/desktopSyncGroupDiscovery.js';
+import {
+  completeDesktopSyncGroupJoin,
+  requestDesktopSyncGroupJoin,
+  setDesktopSyncGroupJoinCompletionExecutor
+} from '../sync/desktopSyncGroupJoin.js';
 import { loadDesktopSyncGroupJoinState, saveDesktopSyncGroupCandidates } from '../sync/desktopSyncGroupJoinState.js';
-import { completeDesktopSyncGroupJoin, requestDesktopSyncGroupJoin } from '../sync/desktopSyncGroupProvisioning.js';
 import {
   ensureLanWorkspaceSyncServer,
   getLanWorkspaceSyncServerStatus,
@@ -47,6 +51,7 @@ const COMPANION_PAIRING_COMMANDS = new Set<string>([
 
 function buildDesktopCompanionPairingOverview() {
   const join = loadDesktopSyncGroupJoinState();
+  const syncGroup = loadDesktopSyncGroup();
   return {
     join_candidates: join.candidates,
     join_request: join.pending?.request ?? null,
@@ -54,7 +59,7 @@ function buildDesktopCompanionPairingOverview() {
     pending_requests: loadPendingCompanionPairRequests(),
     primary_device_state: loadDesktopPrimaryDeviceStatePayload(),
     server_status: refreshLanWorkspaceSyncServerPairingStatus(),
-    sync_group: loadDesktopSyncGroup(),
+    sync_group: syncGroup,
     sync_enabled: isDesktopCompanionSyncEnabled()
   };
 }
@@ -84,6 +89,15 @@ function setDesktopAsPrimaryDevice() {
   return buildDesktopCompanionPairingOverview();
 }
 
+async function finishDesktopSyncGroupJoin() {
+  await completeDesktopSyncGroupJoin();
+  setDesktopCompanionSyncEnabled(true);
+  await ensureLanWorkspaceSyncServer({
+    appVersion: resolveFolioleAppVersion(app), peerId: loadOrCreateDesktopDeviceId()
+  });
+  return buildDesktopCompanionPairingOverview();
+}
+
 function handleSyncGroupJoinCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.createSyncGroup) {
     const deviceId = loadOrCreateDesktopDeviceId();
@@ -99,22 +113,20 @@ function handleSyncGroupJoinCommand(command: string, args: Record<string, unknow
     });
   }
   if (command === NATIVE_COMMANDS.requestSyncGroupJoin) {
+    setDesktopSyncGroupJoinCompletionExecutor(
+      () => runWithDatabaseConnectionOwner(finishDesktopSyncGroupJoin)
+    );
     return requestDesktopSyncGroupJoin(asString(args.endpoint_url, 'endpoint_url'))
       .then(() => buildDesktopCompanionPairingOverview());
   }
   if (command !== NATIVE_COMMANDS.completeSyncGroupJoin) return undefined;
-  return completeDesktopSyncGroupJoin().then(async () => {
-    setDesktopCompanionSyncEnabled(true);
-    await ensureLanWorkspaceSyncServer({
-      appVersion: resolveFolioleAppVersion(app), peerId: loadOrCreateDesktopDeviceId()
-    });
-    return buildDesktopCompanionPairingOverview();
-  });
+  return finishDesktopSyncGroupJoin();
 }
 
 function handleOwnedCompanionPairingCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.loadCompanionPairingOverview) {
     const join = loadDesktopSyncGroupJoinState();
+    const syncGroup = loadDesktopSyncGroup();
     return {
       join_candidates: join.candidates,
       join_request: join.pending?.request ?? null,
@@ -122,7 +134,7 @@ function handleOwnedCompanionPairingCommand(command: string, args: Record<string
       pending_requests: loadPendingCompanionPairRequests(),
       primary_device_state: loadDesktopPrimaryDeviceStatePayload(),
       server_status: getLanWorkspaceSyncServerStatus(),
-      sync_group: loadDesktopSyncGroup(),
+      sync_group: syncGroup,
       sync_enabled: isDesktopCompanionSyncEnabled()
     };
   }
