@@ -106,7 +106,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     }
 
     @Override protected void handleOnDestroy() {
-        FolioleCompanionSyncGroupProvider.stop();
+        FolioleCompanionSyncGroupProvider.pause();
         super.handleOnDestroy();
         fileExecutor.shutdownNow();
     }

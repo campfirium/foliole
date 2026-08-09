@@ -9,11 +9,16 @@ import com.getcapacitor.PluginCall;
 
 import org.json.JSONObject;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 final class FolioleCompanionSyncGroupProvider {
     private static FolioleCompanionNsdAdvertisement advertisement;
     private static Context activeContext;
     private static JSONObject activeConfig;
     private static FolioleCompanionSyncGroupServer server;
+    private static final Map<String, FolioleCompanionSyncGroupJoinRequest> joinRequests =
+        new ConcurrentHashMap<>();
 
     private FolioleCompanionSyncGroupProvider() {}
 
@@ -25,6 +30,12 @@ final class FolioleCompanionSyncGroupProvider {
             .put("device_name", value(context, call, "deviceName"))
             .put("protocol", FolioleCompanionSyncPackProviderDefinitions.load(context).protocol())
             .put("sync_group", call.getData().getJSONObject(key(context, "group")));
+        if (sameProvider(next)) {
+            FolioleCompanionSyncScreenAwake.attach(activity);
+            activeContext = context.getApplicationContext(); activeConfig = next;
+            if (server == null) startRuntime();
+            return state();
+        }
         stop();
         FolioleCompanionSyncScreenAwake.attach(activity);
         activeContext = context.getApplicationContext(); activeConfig = next;
@@ -38,6 +49,7 @@ final class FolioleCompanionSyncGroupProvider {
         if (server != null) server.stop();
         advertisement = null; server = null;
         activeContext = null; activeConfig = null;
+        joinRequests.clear();
         return state();
     }
 
@@ -53,12 +65,26 @@ final class FolioleCompanionSyncGroupProvider {
     }
 
     private static void startRuntime() throws Exception {
-        server = new FolioleCompanionSyncGroupServer(activeContext, activeConfig);
+        server = new FolioleCompanionSyncGroupServer(activeContext, activeConfig, joinRequests);
         advertisement = FolioleCompanionNsdAdvertisement.start(activeContext, server.port(), activeConfig);
+    }
+
+    private static boolean sameProvider(JSONObject next) {
+        if (activeConfig == null) return false;
+        JSONObject currentGroup = activeConfig.optJSONObject("sync_group");
+        JSONObject nextGroup = next.optJSONObject("sync_group");
+        return activeConfig.optString("database_path").equals(next.optString("database_path"))
+            && activeConfig.optString("device_id").equals(next.optString("device_id"))
+            && currentGroup != null && nextGroup != null
+            && currentGroup.optString("group_id").equals(nextGroup.optString("group_id"))
+            && currentGroup.optString("timeline_id").equals(nextGroup.optString("timeline_id"));
     }
 
     static synchronized JSObject approve(Context context, PluginCall call) throws Exception {
         FolioleCompanionSyncGroupJoinRequest request = require(call.getString(key(context, "pairRequestId")));
+        FolioleCompanionSyncGroupDatabase.registerMember(
+            activeConfig.getString("database_path"), activeConfig, request
+        );
         request.status = "approved";
         FolioleCompanionSyncScreenAwake.touch();
         return state();
@@ -87,7 +113,7 @@ final class FolioleCompanionSyncGroupProvider {
     }
 
     private static FolioleCompanionSyncGroupJoinRequest require(String id) {
-        FolioleCompanionSyncGroupJoinRequest request = server == null || id == null ? null : server.requests.get(id);
+        FolioleCompanionSyncGroupJoinRequest request = id == null ? null : joinRequests.get(id);
         if (request == null) throw new IllegalArgumentException("pair_request_not_found");
         return request;
     }

@@ -9,20 +9,23 @@ import java.net.Socket;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 final class FolioleCompanionSyncGroupServer {
-    final Map<String, FolioleCompanionSyncGroupJoinRequest> requests = new ConcurrentHashMap<>();
+    final Map<String, FolioleCompanionSyncGroupJoinRequest> requests;
     private final Context context;
     private final JSONObject config;
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final ServerSocket server;
     private volatile boolean running = true;
 
-    FolioleCompanionSyncGroupServer(Context context, JSONObject config) throws Exception {
-        this.context = context.getApplicationContext(); this.config = config;
+    FolioleCompanionSyncGroupServer(
+        Context context,
+        JSONObject config,
+        Map<String, FolioleCompanionSyncGroupJoinRequest> requests
+    ) throws Exception {
+        this.context = context.getApplicationContext(); this.config = config; this.requests = requests;
         server = new ServerSocket(0); executor.execute(this::acceptLoop);
     }
 
@@ -110,7 +113,6 @@ final class FolioleCompanionSyncGroupServer {
         if (!pending.status.equals("approved")) { FolioleCompanionHttpResponse.json(output, 409, new JSONObject().put("error", "pair_request_pending")); return; }
         if (pending.deviceSecret == null) pending.deviceSecret = FolioleCompanionSyncGroupPeerStore.createSecret(context, pending.deviceId);
         if (pending.providerSecret == null) pending.providerSecret = FolioleCompanionSyncGroupPeerStore.randomSecret();
-        FolioleCompanionSyncGroupDatabase.registerMember(config.getString("database_path"), config, pending);
         JSONObject group = FolioleCompanionSyncGroupDatabase.groupForMember(config.getString("database_path"), pending.deviceId);
         saveOutboundPairing(pending, pending.providerSecret);
         FolioleCompanionHttpResponse.json(output, 200, new JSONObject().put("app_version", config.getString("app_version"))
