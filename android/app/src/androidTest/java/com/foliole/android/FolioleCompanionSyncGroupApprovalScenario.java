@@ -15,6 +15,7 @@ final class FolioleCompanionSyncGroupApprovalScenario {
 
     static JSONObject run(Instrumentation instrumentation) throws Exception {
         Activity activity = start(instrumentation);
+        boolean leaveProviderRunning = false;
         try {
             waitForFocus(activity, 30_000);
             WebView webView = activity.findViewById(R.id.webview);
@@ -33,11 +34,14 @@ final class FolioleCompanionSyncGroupApprovalScenario {
             instrumentation.runOnMainSync(activity::finish);
             activity = start(instrumentation);
             waitForFocus(activity, 30_000);
+            leaveProviderRunning = true;
             return new JSONObject().put("ok", true).put("targetTestId", "sync-group-approval")
                 .put("approved", true).put("paused", true).put("resumed", true);
         } finally {
-            Activity finalActivity = activity;
-            instrumentation.runOnMainSync(finalActivity::finish);
+            if (!leaveProviderRunning) {
+                Activity finalActivity = activity;
+                instrumentation.runOnMainSync(finalActivity::finish);
+            }
         }
     }
 
