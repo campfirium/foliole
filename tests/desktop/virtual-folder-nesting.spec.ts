@@ -42,6 +42,14 @@ async function dragFolder(
   await page.mouse.up();
 }
 
+async function createRootFolder(
+  page: Parameters<typeof expectWorkspaceShell>[0],
+  title: string
+) {
+  await page.getByRole('treeitem', { name: 'Virtual', exact: true }).click({ button: 'right' });
+  return createFolder(page, /^(Create Virtual Folder|创建虚拟文件夹)$/, title, 'menuitem');
+}
+
 test('creates and nests virtual folders without aggregating child Topics', async ({ desktopWindow }, testInfo) => {
   await expectWorkspaceShell(desktopWindow);
   await desktopWindow.evaluate(async (topicTitle) => {
@@ -49,9 +57,8 @@ test('creates and nests virtual folders without aggregating child Topics', async
       { content: 'Nested body', id: 'nested-folder-topic', kind: 'topic', title: topicTitle }
     ]);
   }, TOPIC_TITLE);
-  const rootCreate = /^(Create Virtual Folder|创建虚拟文件夹)$/;
-  const parent = await createFolder(desktopWindow, rootCreate, PARENT_TITLE);
-  const dragged = await createFolder(desktopWindow, rootCreate, DRAGGED_TITLE);
+  const parent = await createRootFolder(desktopWindow, PARENT_TITLE);
+  const dragged = await createRootFolder(desktopWindow, DRAGGED_TITLE);
   await dragFolder(desktopWindow, dragged.locator('..'), parent.locator('..'));
   await expect(dragged).toHaveAttribute('aria-level', '3');
 

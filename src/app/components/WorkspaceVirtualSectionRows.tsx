@@ -1,4 +1,4 @@
-import { FolderPlus, Layers2 } from 'lucide-react';
+import { Layers2 } from 'lucide-react';
 import type { Dispatch, DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent, SetStateAction } from 'react';
 
 import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
@@ -12,15 +12,11 @@ import {
   isVirtualNode
 } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
-import { AppIconButton } from '../../shared/ui';
-
 interface WorkspaceVirtualRowsProps {
   activeVirtualNodeId?: string | null;
-  createVirtualFolderLabel: string;
   isVirtualViewOpen: boolean;
   nodesById: WorkspaceListNodesById;
-  onContextMenuSavedSearch: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
-  onCreateVirtualFolder: (parentNodeId?: string) => void;
+  onContextMenuVirtualNode: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
   onDeleteVirtualNode: (nodeId: string) => void;
   onDragEndVirtualFolder: () => void;
   onDragEnterVirtualFolder: (nodeId: string, event: ReactDragEvent<HTMLElement>) => void;
@@ -122,7 +118,9 @@ function renderMainVirtualRow(args: Parameters<typeof renderVirtualRow>[0] & {
       showLeafChevronPlaceholder={false}
       {...(args.isVirtualRoot ? { trailingLabelContent: <VirtualRootMarker /> } : {})}
       {...(args.isSavedSearch ? { onRename: args.props.onRenameVirtualNode } : {})}
-      {...(args.isSavedSearch ? { onContextMenu: args.props.onContextMenuSavedSearch } : {})}
+      {...(args.isVirtualRoot || args.isSavedSearch
+        ? { onContextMenu: args.props.onContextMenuVirtualNode }
+        : {})}
       {...(args.isSavedSearch ? {
         onDragEnd: args.props.onDragEndVirtualFolder,
         onDragStart: args.props.onDragStartVirtualFolder
@@ -142,18 +140,7 @@ function renderMainVirtualRow(args: Parameters<typeof renderVirtualRow>[0] & {
       onToggleCollapse={(nodeId) => toggleCollapsed(nodeId, args.setCollapsedIds)}
     />
   );
-  if (!args.isVirtualRoot) return row;
-  return (
-    <div className="group/virtual-row relative" key={args.row.node.id}>
-      {row}
-      <AppIconButton
-        className="absolute right-1 top-1/2 z-10 size-7 -translate-y-1/2 text-foreground/60 hover:bg-foreground/[0.04] hover:text-foreground"
-        icon={<FolderPlus size={15} strokeWidth={1.9} />}
-        label={args.props.createVirtualFolderLabel}
-        onClick={() => args.props.onCreateVirtualFolder()}
-      />
-    </div>
-  );
+  return row;
 }
 
 function VirtualRootMarker() {

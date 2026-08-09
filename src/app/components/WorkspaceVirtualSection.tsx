@@ -10,6 +10,7 @@ import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListR
 import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
 import { buildNodeTree, buildVisibleNodeTreeRows } from '../../features/nodes/model/nodeTree';
 import {
+  VIRTUAL_ROOT_NODE_ID,
   VIRTUAL_SHELVED_NODE_ID,
   VIRTUAL_REMOVED_NODE_ID,
   isVirtualNode,
@@ -71,7 +72,7 @@ function renderSavedSearchContextMenu(args: {
   contextMenu: { left: number; nodeId: string; top: number } | null;
   deleteNode: (nodeId: string) => void;
   isWritingTopicYaml: boolean;
-  onCreateChild: (nodeId: string) => void;
+  onCreateChild: (nodeId?: string) => void;
   onWriteTopicYaml: (nodeId: string) => void;
   setContextMenu: (value: { left: number; nodeId: string; top: number } | null) => void;
 }) {
@@ -79,6 +80,7 @@ function renderSavedSearchContextMenu(args: {
   return (
     <WorkspaceVirtualSavedSearchContextMenu
       left={args.contextMenu.left}
+      isVirtualRoot={args.contextMenu.nodeId === VIRTUAL_ROOT_NODE_ID}
       nodeId={args.contextMenu.nodeId}
       onClose={() => args.setContextMenu(null)}
       onCreateChild={args.onCreateChild}
@@ -166,12 +168,10 @@ export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
           onRowKeyDown: tree.onRowKeyDown,
           props: {
             ...props,
-            createVirtualFolderLabel: t('desktop.nodeList.createVirtualFolder'),
-            onContextMenuSavedSearch: (nodeId, event) => {
+            onContextMenuVirtualNode: (nodeId, event) => {
               event.preventDefault();
               setContextMenu({ nodeId, ...getContextMenuPosition(event) });
             },
-            onCreateVirtualFolder: (parentNodeId) => void createVirtualFolder(parentNodeId),
             onDeleteVirtualNode: deleteNode,
             onDragEndVirtualFolder: drop.onDragEnd,
             onDragEnterVirtualFolder: drop.onDragEnter,

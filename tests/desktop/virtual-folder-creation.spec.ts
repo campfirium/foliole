@@ -16,7 +16,8 @@ test('creates, recognizes, and persists a manual virtual folder', async ({ deskt
     ]);
   }, TOPIC_TITLE);
 
-  await desktopWindow.getByRole('button', { name: /^(Create Virtual Folder|创建虚拟文件夹)$/ }).click();
+  await desktopWindow.getByRole('treeitem', { name: 'Virtual', exact: true }).click({ button: 'right' });
+  await desktopWindow.getByRole('menuitem', { name: /^(Create Virtual Folder|创建虚拟文件夹)$/ }).click();
   const renameInput = desktopWindow.getByRole('textbox', { name: /^(Rename|重命名) / });
   await expect(renameInput).toBeVisible();
   await renameInput.fill(FOLDER_TITLE);
