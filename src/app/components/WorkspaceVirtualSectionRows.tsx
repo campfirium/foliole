@@ -1,4 +1,4 @@
-import { Layers2 } from 'lucide-react';
+import { FolderPlus, Layers2 } from 'lucide-react';
 import type { Dispatch, DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent, SetStateAction } from 'react';
 
 import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
@@ -12,15 +12,22 @@ import {
   isVirtualNode
 } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { AppIconButton } from '../../shared/ui';
 
 interface WorkspaceVirtualRowsProps {
   activeVirtualNodeId?: string | null;
+  createNestedVirtualFolderLabel: (title: string) => string;
+  createVirtualFolderLabel: string;
   isVirtualViewOpen: boolean;
   nodesById: WorkspaceListNodesById;
   onContextMenuSavedSearch: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
+  onCreateVirtualFolder: (parentNodeId?: string) => void;
   onDeleteVirtualNode: (nodeId: string) => void;
+  onDragEndVirtualFolder: () => void;
+  onDragEnterVirtualFolder: (nodeId: string, event: ReactDragEvent<HTMLElement>) => void;
   onDragLeaveVirtualFolder: (nodeId: string, event: ReactDragEvent<HTMLElement>) => void;
   onDragOverVirtualFolder: (nodeId: string, event: ReactDragEvent<HTMLElement>) => void;
+  onDragStartVirtualFolder: (nodeId: string, event: ReactDragEvent<HTMLElement>) => void;
   onDropOnVirtualFolder: (nodeId: string, event: ReactDragEvent<HTMLElement>) => void;
   onOpenVirtualView?: (nodeId?: string) => void;
   onRenameVirtualNode: (nodeId: string, title: string) => void;
@@ -98,16 +105,16 @@ function renderMainVirtualRow(args: Parameters<typeof renderVirtualRow>[0] & {
   isSelected: boolean;
   isVirtualRoot: boolean;
 }) {
-  return (
+  const row = (
     <NodeTreeRow
       depth={args.row.depth}
       hasChildren={args.isVirtualRoot ? true : args.row.hasChildren}
       isActive={args.isSelected}
       isCollapsed={args.collapsedIds.has(args.row.node.id)}
-      isDragDisabled
+      isDragDisabled={args.isVirtualRoot}
       isDropTarget={args.dropTargetNodeId === args.row.node.id}
       isSelected={args.isSelected}
-      key={args.row.node.id}
+      key={undefined}
       label={args.row.node.title}
       nodeId={args.row.node.id}
       descendantCount={args.isVirtualRoot ? 0 : (args.props.virtualResultCountById?.get(args.row.node.id) ?? 0)}
@@ -118,7 +125,12 @@ function renderMainVirtualRow(args: Parameters<typeof renderVirtualRow>[0] & {
       {...(args.isSavedSearch ? { onRename: args.props.onRenameVirtualNode } : {})}
       {...(args.isSavedSearch ? { onContextMenu: args.props.onContextMenuSavedSearch } : {})}
       {...(args.isSavedSearch ? {
+        onDragEnd: args.props.onDragEndVirtualFolder,
+        onDragStart: args.props.onDragStartVirtualFolder
+      } : {})}
+      {...(args.isVirtualRoot || args.isSavedSearch ? {
         dropIntent: 'child' as const,
+        onDragEnter: args.props.onDragEnterVirtualFolder,
         onDragLeave: args.props.onDragLeaveVirtualFolder,
         onDragOver: args.props.onDragOverVirtualFolder,
         onDrop: args.props.onDropOnVirtualFolder
@@ -130,6 +142,20 @@ function renderMainVirtualRow(args: Parameters<typeof renderVirtualRow>[0] & {
       }}
       onToggleCollapse={(nodeId) => toggleCollapsed(nodeId, args.setCollapsedIds)}
     />
+  );
+  const createLabel = args.isVirtualRoot
+    ? args.props.createVirtualFolderLabel
+    : args.props.createNestedVirtualFolderLabel(args.row.node.title);
+  return (
+    <div className="group/virtual-row relative" key={args.row.node.id}>
+      {row}
+      <AppIconButton
+        className={`absolute right-1 top-1/2 z-10 size-7 -translate-y-1/2 text-foreground/60 hover:bg-foreground/[0.04] hover:text-foreground ${args.isVirtualRoot ? '' : 'opacity-0 focus-visible:opacity-100 group-hover/virtual-row:opacity-100'}`}
+        icon={<FolderPlus size={15} strokeWidth={1.9} />}
+        label={createLabel}
+        onClick={() => args.props.onCreateVirtualFolder(args.isVirtualRoot ? undefined : args.row.node.id)}
+      />
+    </div>
   );
 }
 

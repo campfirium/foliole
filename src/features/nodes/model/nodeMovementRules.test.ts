@@ -53,6 +53,17 @@ it('allows folders to accept topics but not items to accept children', () => {
   expect(canNodeAcceptMovedNode(item, topic)).toBe(false);
 });
 
+it('allows virtual folders to nest only under Virtual or another virtual folder', () => {
+  const virtualRoot = createNode({ id: 'special-virtual-root', title: 'Virtual', content: '', kind: 'folder', specialKind: 'virtual-root' });
+  const parent = createNode({ id: 'virtual-parent', title: 'Parent', content: '', kind: 'folder', specialKind: 'virtual' });
+  const child = createNode({ id: 'virtual-child', title: 'Child', content: '', kind: 'folder', specialKind: 'virtual' });
+  const regular = createNode({ id: 'folder', title: 'Folder', content: '', kind: 'folder' });
+
+  expect(canNodeAcceptMovedNode(virtualRoot, child)).toBe(true);
+  expect(canNodeAcceptMovedNode(parent, child)).toBe(true);
+  expect(canNodeAcceptMovedNode(regular, child)).toBe(false);
+});
+
 it('blocks moving Home and dropping nodes into Home', () => {
   const home = createNode({ id: 'special-home', title: 'Home', content: '', kind: 'folder', specialKind: 'home' });
   const topic = createNode({ id: 'topic-1', title: 'Topic', content: 'Body', kind: 'topic' });

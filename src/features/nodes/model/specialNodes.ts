@@ -131,7 +131,7 @@ function resolveNodeSpecialKind(node: Node): Node['specialKind'] | undefined {
   if (node.id === VIRTUAL_ROOT_NODE_ID) {
     return 'virtual-root';
   }
-  if (node.parentNodeId === VIRTUAL_ROOT_NODE_ID) {
+  if (node.parentNodeId === VIRTUAL_ROOT_NODE_ID || node.virtualFilter) {
     return 'virtual';
   }
   return undefined;

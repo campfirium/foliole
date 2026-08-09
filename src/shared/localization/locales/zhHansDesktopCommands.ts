@@ -16,6 +16,7 @@ export const ZH_HANS_DESKTOP_COMMAND_TRANSLATIONS: Partial<Record<TranslationKey
   'desktop.command.createFolder': '创建文件夹',
   'desktop.command.createTopic': '创建主题',
   'desktop.command.createItem': '创建检测项',
+  'desktop.command.createVirtualFolder': '创建虚拟文件夹',
   'desktop.command.undo': '撤销',
   'desktop.command.redo': '重做',
   'desktop.command.undoOperation': '撤销{operation}',

@@ -1,4 +1,5 @@
 import { FOLDER_TOPIC_ITEM_APP_COMMAND_IDS } from '../../../lib/core/nodes/folderTopicItemCommands';
+import { VIRTUAL_FOLDER_APP_COMMAND_ID } from '../../../lib/core/nodes/virtualFolderCommands';
 import { GLOBAL_CAPTURE_COMMAND_ID } from '../../../lib/platform/globalCaptureShortcut';
 
 export const APP_COMMAND_IDS = {
@@ -79,6 +80,7 @@ export const APP_COMMAND_IDS = {
   createFolder: FOLDER_TOPIC_ITEM_APP_COMMAND_IDS.createFolder,
   createTopic: FOLDER_TOPIC_ITEM_APP_COMMAND_IDS.createTopic,
   createItem: FOLDER_TOPIC_ITEM_APP_COMMAND_IDS.createItem,
+  createVirtualFolder: VIRTUAL_FOLDER_APP_COMMAND_ID,
   openSettings: 'workspace.openSettings',
   openReadwiseReaderSettings: 'workspace.openReadwiseReaderSettings',
   toggleBaseColorMode: 'settings.toggleBaseColorMode',

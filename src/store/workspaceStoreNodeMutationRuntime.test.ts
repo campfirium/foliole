@@ -222,7 +222,7 @@ it('caches selection cloze prompt and reveal before runtime creation confirmatio
   }));
 });
 
-it('keeps virtual node metadata when runtime accepts a newly created virtual node', async () => {
+it('keeps manual virtual folder metadata when runtime accepts its creation', async () => {
   vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);
   vi.mocked(syncCreateNodeMutationToRuntime).mockImplementationOnce(async (node, nodeOrder, activeNodeId) => ({
     createdNodeIds: [node.id],
@@ -247,7 +247,14 @@ it('keeps virtual node metadata when runtime accepts a newly created virtual nod
   const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
   const actions = createWorkspaceNodeActions(harness.setState);
 
-  const createdNodeId = (await actions.createVirtualNode())!;
+  const createdNodeId = (await actions.createVirtualNode({ mode: 'manual' }))!;
 
-  expect(harness.getState().nodesById[createdNodeId]?.specialKind).toBe('virtual');
+  expect(harness.getState().nodesById[createdNodeId]).toMatchObject({
+    specialKind: 'virtual',
+    virtualFilter: {
+      conditions: [{ field: 'manual', operator: 'equals', value: 'manual-child-order' }],
+      match: 'all',
+      version: 1
+    }
+  });
 });

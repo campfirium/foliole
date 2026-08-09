@@ -7,6 +7,7 @@ const COMMAND_TITLE_KEYS: Partial<Record<AppCommandId, TranslationKey>> = {
   [APP_COMMAND_IDS.createFolder]: 'desktop.command.createFolder',
   [APP_COMMAND_IDS.createTopic]: 'desktop.command.createTopic',
   [APP_COMMAND_IDS.createItem]: 'desktop.command.createItem',
+  [APP_COMMAND_IDS.createVirtualFolder]: 'desktop.command.createVirtualFolder',
   [APP_COMMAND_IDS.undo]: 'desktop.command.undo',
   [APP_COMMAND_IDS.redo]: 'desktop.command.redo',
   [APP_COMMAND_IDS.openLocalFile]: 'desktop.command.openFile',

@@ -18,6 +18,7 @@ import { createPaletteReviewActions } from './appControllerPaletteReviewActions'
 import { createPaletteRuntimeActions } from './appControllerPaletteRuntimeActions';
 import { createPublishingPaletteActions } from './appControllerPublishingActions';
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
+import { createPaletteCreationActions } from './appPaletteCreationActions';
 import { createPaletteDocumentActions } from './appPaletteDocumentActions';
 import { createPaletteHistoryActions } from './appPaletteHistoryActions';
 import { createPaletteImportActions } from './appPaletteImportActions';
@@ -28,16 +29,6 @@ import { restartAppWithReadingProgress } from './appRestartPersistence';
 import { repairEditorTable } from './editorRepairTableCommand';
 import { clearSettingsRequest } from './settingsOverlayRequest';
 import type { useFormalImport } from './useFormalImport';
-
-function createDirectNodeCommand(kind: 'folder' | 'topic' | 'item', args: {
-  trash: ReturnType<typeof useWorkspaceControllerState>['trash'];
-  ws: ReturnType<typeof useWorkspaceSelectors>;
-}) {
-  return () => {
-    args.trash.closeTrashView();
-    args.ws.createRootNode('', kind);
-  };
-}
 
 function createExportCurrentArticleCommand(args: {
   runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
@@ -183,9 +174,7 @@ export function createPaletteRunnerArgs(args: {
   return {
     clearSettingsRequest: () => clearSettingsRequest(args.runtime),
     closeTrashView: args.trash.closeTrashView,
-    createFolder: createDirectNodeCommand('folder', args),
-    createItem: createDirectNodeCommand('item', args),
-    createTopic: createDirectNodeCommand('topic', args),
+    ...createPaletteCreationActions(args),
     ...createSelectionAnnotationPaletteActions(args),
     ...createPaletteReviewActions(args),
     ...createPaletteHistoryActions({

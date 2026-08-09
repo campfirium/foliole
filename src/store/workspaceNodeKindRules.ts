@@ -1,5 +1,5 @@
 import { canCreateChildNodeKind } from '../../lib/core/nodes/folderTopicItemCommands';
-import { HOME_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../features/nodes/model/specialNodes';
+import { HOME_NODE_ID, VIRTUAL_ROOT_NODE_ID, isVirtualNode } from '../features/nodes/model/specialNodes';
 
 import { resolveNextParentNodeId, type NodeDropIntent } from './workspaceMoveNodes';
 import { isNodeInSubtree } from './workspaceNodeTreeOrder';
@@ -34,9 +34,17 @@ export function canMoveRootsIntoTarget(
     return false;
   }
   const nextParentNodeId = resolveNextParentNodeId(intent, targetNodeId, state.nodesById);
+  if (
+    intent === 'child' &&
+    targetNodeId &&
+    rootNodeIds.some((rootNodeId) => isNodeInSubtree(targetNodeId, rootNodeId, state.nodesById))
+  ) {
+    return false;
+  }
   const movingVirtualNode = rootNodeIds.some((rootNodeId) => state.nodesById[rootNodeId]?.specialKind === 'virtual');
   if (movingVirtualNode) {
-    return nextParentNodeId === VIRTUAL_ROOT_NODE_ID;
+    return rootNodeIds.every((rootNodeId) => isVirtualNode(state.nodesById[rootNodeId])) &&
+      (nextParentNodeId === VIRTUAL_ROOT_NODE_ID || isVirtualNode(state.nodesById[nextParentNodeId ?? '']));
   }
   if (nextParentNodeId === HOME_NODE_ID || nextParentNodeId === VIRTUAL_ROOT_NODE_ID) {
     return false;
@@ -45,13 +53,6 @@ export function canMoveRootsIntoTarget(
     return rootNodeIds.every((rootNodeId) => state.nodesById[rootNodeId]?.kind === 'folder');
   }
   const nextParentKind = nextParentNodeId ? state.nodesById[nextParentNodeId]?.kind ?? null : null;
-  if (
-    intent === 'child' &&
-    targetNodeId &&
-    rootNodeIds.some((rootNodeId) => isNodeInSubtree(targetNodeId, rootNodeId, state.nodesById))
-  ) {
-    return false;
-  }
   return rootNodeIds.every((rootNodeId) => {
     const movedNode = state.nodesById[rootNodeId];
     return movedNode ? canCreateChildNodeKind(nextParentKind, movedNode.kind) : false;

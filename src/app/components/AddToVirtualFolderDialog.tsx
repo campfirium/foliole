@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
+  AppButton,
   appFloatingEmptyStateClassName,
   appFloatingItemClassName,
   appFloatingListClassName,
@@ -24,6 +25,7 @@ function useAddToVirtualFolderPalette(props: { onClose: () => void; topicIds: st
   const nodeOrder = useWorkspaceStore((state) => state.nodeOrder);
   const nodesById = useWorkspaceStore((state) => state.nodesById);
   const setFolderManualChildOrder = useWorkspaceStore((state) => state.setFolderManualChildOrder);
+  const createVirtualNode = useWorkspaceStore((state) => state.createVirtualNode);
   const targets = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();
     return listAvailableManualVirtualFolders({ nodeOrder, nodesById, topicIds: props.topicIds })
@@ -37,11 +39,16 @@ function useAddToVirtualFolderPalette(props: { onClose: () => void; topicIds: st
     setFolderManualChildOrder(folderId, appendMissingTopicIds(folder.manualChildOrder ?? [], props.topicIds));
     props.onClose();
   };
-  return { activeIndex, addToFolder, query, setActiveIndex, setQuery, targets };
+  const createVirtualFolder = async () => {
+    setQuery('');
+    await createVirtualNode({ mode: 'manual' });
+  };
+  return { activeIndex, addToFolder, createVirtualFolder, query, setActiveIndex, setQuery, targets };
 }
 
 function VirtualFolderResults(props: {
   activeIndex: number;
+  onCreateVirtualFolder: () => void;
   onSelect: (folderId: string) => void;
   query: string;
   targets: VirtualFolderTarget[];
@@ -51,9 +58,16 @@ function VirtualFolderResults(props: {
     return (
       <ul aria-label={t('desktop.nodeList.addToVirtualFolder.results')} className={appFloatingListClassName()}>
         <li className={appFloatingEmptyStateClassName()}>
-          {props.query.trim()
-            ? t('desktop.nodeList.addToVirtualFolder.noResults')
-            : t('desktop.nodeList.addToVirtualFolder.empty')}
+          <span>
+            {props.query.trim()
+              ? t('desktop.nodeList.addToVirtualFolder.noResults')
+              : t('desktop.nodeList.addToVirtualFolder.empty')}
+          </span>
+          {!props.query.trim() ? (
+            <AppButton onClick={props.onCreateVirtualFolder} size="sm" variant="subtle">
+              {t('desktop.nodeList.createVirtualFolder')}
+            </AppButton>
+          ) : null}
         </li>
       </ul>
     );
@@ -114,6 +128,7 @@ export function AddToVirtualFolderDialog(props: { onClose: () => void; topicIds:
         <VirtualFolderResults
           activeIndex={palette.activeIndex}
           onSelect={palette.addToFolder}
+          onCreateVirtualFolder={() => void palette.createVirtualFolder()}
           query={palette.query}
           targets={palette.targets}
         />

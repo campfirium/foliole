@@ -29,16 +29,23 @@ function createReviewCommandActions() {
   };
 }
 
+function createNodeCommandActions() {
+  return {
+    createFolder: () => undefined,
+    createItem: () => undefined,
+    createTopic: () => undefined,
+    createVirtualFolder: () => undefined
+  };
+}
+
 function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand>[1]> = {}) {
   return {
     undo: () => undefined,
     redo: () => undefined,
     closeSettings: () => undefined,
-    createFolder: () => undefined,
-    createItem: () => undefined,
+    ...createNodeCommandActions(),
     createSelectionCloze: () => undefined,
     createSelectionHighlight: () => undefined,
-    createTopic: () => undefined,
     addSelectionNote: () => undefined,
     repairTable: () => undefined,
     enterPriorityMode: () => undefined,

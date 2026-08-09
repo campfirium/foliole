@@ -1,4 +1,5 @@
 import { FOLDER_TOPIC_ITEM_COMMANDS } from '../../../lib/core/nodes/folderTopicItemCommands';
+import { VIRTUAL_FOLDER_COMMAND } from '../../../lib/core/nodes/virtualFolderCommands';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 
 import { DEVELOPER_PALETTE_COMMANDS } from './appPaletteDeveloperCommands';
@@ -20,6 +21,12 @@ export const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
     section: 'Create',
     title: command.paletteTitle
   })),
+  {
+    id: VIRTUAL_FOLDER_COMMAND.appCommandId,
+    keywords: ['create', 'virtual', 'folder', 'collection'],
+    section: 'Create',
+    title: VIRTUAL_FOLDER_COMMAND.paletteTitle
+  },
   { id: APP_COMMAND_IDS.undo, title: 'Undo', section: 'Workspace', keywords: ['undo', 'history'] },
   { id: APP_COMMAND_IDS.redo, title: 'Redo', section: 'Workspace', keywords: ['redo', 'history'] },
   { id: APP_COMMAND_IDS.openLocalFile, title: 'Open File', section: 'Workspace', keywords: ['open', 'markdown', 'file', 'local'] },

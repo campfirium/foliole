@@ -2,7 +2,7 @@ import type { PdfReadingMode } from '../../features/settings/model/appearanceSet
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 
-import { runAppCommand, runReviewModeToggle } from './appCommands';
+import { runAppCommand } from './appCommands';
 import {
   createPaletteEditorCommandActions,
   type PaletteEditorCommandRunnerArgs
@@ -10,6 +10,7 @@ import {
 import { createPaletteHelpCommandActions, type PaletteHelpCommandRunnerArgs } from './appPaletteHelpCommandRunner';
 import { runResetImportDataCommand } from './appPaletteResetImportCommand';
 import { enterReviewModeSession, type StartStudyModeOptions } from './reviewModeSessionActions';
+import { runReviewModeToggle } from './reviewModeToggle';
 
 const FRESH_STATE_COMMAND_IDS: ReadonlySet<string> = new Set([APP_COMMAND_IDS.undo, APP_COMMAND_IDS.redo]);
 const CONTEXTUAL_COMMAND_IDS: ReadonlySet<string> = new Set([APP_COMMAND_IDS.reviewSourceUpdate]);
@@ -20,6 +21,7 @@ interface PaletteCommandRunnerArgs extends PaletteHelpCommandRunnerArgs, Palette
   createFolder: () => void;
   createItem: () => void;
   createTopic: () => void;
+  createVirtualFolder: () => void;
   exitReviewSession: () => void;
   exitStudyMode: () => void;
   goBack: () => void;
@@ -138,6 +140,7 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
     createSelectionCloze: args.createSelectionCloze,
     createSelectionHighlight: args.createSelectionHighlight,
     createTopic: args.createTopic,
+    createVirtualFolder: args.createVirtualFolder,
     goBack: args.goBack,
     goForward: args.goForward,
     goToNode: () => args.setGoToNodePaletteOpen(true),

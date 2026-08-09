@@ -2,28 +2,47 @@ import { useState, type DragEvent as ReactDragEvent } from 'react';
 
 import {
   clearNodeListDragSource,
-  readNodeListDragSource
+  isInvalidNodeListDropTarget,
+  readNodeListDragSource,
+  writeNodeListDragSource
 } from '../../features/nodes/components/NodeListDragSource';
+import { isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { appendMissingTopicIds, isManualVirtualFolder } from './workspaceVirtualFolderMembership';
 
-function readDraggedTopicIds(event: ReactDragEvent<HTMLElement>) {
+function readDraggedNodeIds(event: ReactDragEvent<HTMLElement>) {
   const state = useWorkspaceStore.getState();
   const trashedIds = new Set(state.trashedNodeIds);
-  return readNodeListDragSource(event, []).filter((nodeId) => {
-    const node = state.nodesById[nodeId];
-    return node?.kind === 'topic' && !trashedIds.has(nodeId);
-  });
+  return readNodeListDragSource(event, []).filter((nodeId) => state.nodesById[nodeId] && !trashedIds.has(nodeId));
+}
+
+function resolveVirtualFolderDrop(folderId: string, event: ReactDragEvent<HTMLElement>) {
+  const state = useWorkspaceStore.getState();
+  const sourceIds = readDraggedNodeIds(event);
+  const folder = state.nodesById[folderId];
+  const virtualFolderIds = sourceIds.filter((nodeId) => isVirtualNode(state.nodesById[nodeId]));
+  if (
+    virtualFolderIds.length === sourceIds.length &&
+    virtualFolderIds.length > 0 &&
+    (isVirtualRootNode(folder) || isVirtualNode(folder)) &&
+    !isInvalidNodeListDropTarget(folderId, virtualFolderIds, state.nodesById)
+  ) {
+    return { effect: 'move' as const, sourceIds: virtualFolderIds };
+  }
+  const topicIds = sourceIds.filter((nodeId) => state.nodesById[nodeId]?.kind === 'topic');
+  return topicIds.length === sourceIds.length && topicIds.length > 0 && isManualVirtualFolder(folder)
+    ? { effect: 'copy' as const, sourceIds: topicIds }
+    : null;
 }
 
 export function useWorkspaceVirtualFolderDrop() {
   const [targetId, setTargetId] = useState<string | null>(null);
   const onDragOver = (folderId: string, event: ReactDragEvent<HTMLElement>) => {
-    const folder = useWorkspaceStore.getState().nodesById[folderId];
-    if (!isManualVirtualFolder(folder) || readDraggedTopicIds(event).length === 0) return;
+    const drop = resolveVirtualFolderDrop(folderId, event);
+    if (!drop) return;
     event.preventDefault();
-    event.dataTransfer.dropEffect = 'copy';
+    event.dataTransfer.dropEffect = drop.effect;
     setTargetId(folderId);
   };
   const onDragLeave = (folderId: string, event: ReactDragEvent<HTMLElement>) => {
@@ -32,16 +51,28 @@ export function useWorkspaceVirtualFolderDrop() {
   };
   const onDrop = (folderId: string, event: ReactDragEvent<HTMLElement>) => {
     const state = useWorkspaceStore.getState();
-    const folder = state.nodesById[folderId];
-    const topicIds = readDraggedTopicIds(event);
-    if (!isManualVirtualFolder(folder) || topicIds.length === 0) return;
+    const drop = resolveVirtualFolderDrop(folderId, event);
+    if (!drop) return;
     event.preventDefault();
-    state.setFolderManualChildOrder?.(
-      folderId,
-      appendMissingTopicIds(folder.manualChildOrder ?? [], topicIds)
-    );
+    const folder = state.nodesById[folderId];
+    if (drop.effect === 'move') {
+      void state.moveNodes(drop.sourceIds, folderId, 'child');
+    } else if (isManualVirtualFolder(folder)) {
+      state.setFolderManualChildOrder?.(
+        folderId,
+        appendMissingTopicIds(folder.manualChildOrder ?? [], drop.sourceIds)
+      );
+    }
     clearNodeListDragSource();
     setTargetId(null);
   };
-  return { onDragLeave, onDragOver, onDrop, targetId };
+  return {
+    onDragEnd: clearNodeListDragSource,
+    onDragEnter: onDragOver,
+    onDragLeave,
+    onDragOver,
+    onDragStart: (folderId: string, event: ReactDragEvent<HTMLElement>) => writeNodeListDragSource(event, [folderId]),
+    onDrop,
+    targetId
+  };
 }

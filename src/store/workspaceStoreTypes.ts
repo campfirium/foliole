@@ -89,7 +89,10 @@ export interface WorkspaceState {
   deleteNodesPermanently: (nodeIds: string[]) => void;
   createRootNode: (content?: string, kind?: NodeKind, options?: WorkspaceNodeCreationOptions) => Promise<string | null>;
   createChildNode: (parentNodeId: string, content?: string, kind?: NodeKind, options?: WorkspaceNodeCreationOptions) => Promise<string | null>;
-  createVirtualNode: () => Promise<string | null>;
+  createVirtualNode: (options?: {
+    mode?: 'manual' | 'saved-search';
+    parentNodeId?: string;
+  }) => Promise<string | null>;
   createHighlightNodeFromSelection: (
     parentNodeId: string,
     content: string,

@@ -3,7 +3,8 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { preloadTranslationCatalog, translate, type TranslationKey } from '../../shared/localization/translations';
 
-import { buildAppPaletteItems, runReviewModeToggle } from './appCommands';
+import { buildAppPaletteItems } from './appCommands';
+import { runReviewModeToggle } from './reviewModeToggle';
 
 beforeAll(async () => {
   await preloadTranslationCatalog('en');
@@ -57,6 +58,10 @@ function expectCorePaletteEntries() {
   expect(items.some((item) => item.id === APP_COMMAND_IDS.createFolder)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.createTopic)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.createItem)).toBe(true);
+  expect(items.find((item) => item.id === APP_COMMAND_IDS.createVirtualFolder)).toMatchObject({
+    enabled: true,
+    title: 'Create Virtual Folder'
+  });
   expect(items.find((item) => item.id === APP_COMMAND_IDS.undo)).toMatchObject({ enabled: false, title: 'Undo' });
   expect(items.find((item) => item.id === APP_COMMAND_IDS.redo)).toMatchObject({ enabled: false, title: 'Redo' });
   expect(items.some((item) => item.id === APP_COMMAND_IDS.toggleList)).toBe(true);

@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { VIRTUAL_ROOT_NODE_ID } from '../../features/nodes/model/specialNodes';
@@ -28,7 +28,10 @@ function createVirtualNode(args: {
   };
 }
 
-function renderSavedSearchTree() {
+function renderSavedSearchTree(args: {
+  onOpenVirtualView?: (nodeId?: string) => void;
+  onSelectNodeInVirtualView?: (nodeId: string) => void;
+} = {}) {
   const root = createVirtualNode({
     id: VIRTUAL_ROOT_NODE_ID,
     parentNodeId: null,
@@ -50,8 +53,8 @@ function renderSavedSearchTree() {
         [VIRTUAL_ROOT_NODE_ID]: root,
         'virtual-custom': custom
       }}
-      onOpenVirtualView={vi.fn()}
-      onSelectNodeInVirtualView={vi.fn()}
+      onOpenVirtualView={args.onOpenVirtualView ?? vi.fn()}
+      onSelectNodeInVirtualView={args.onSelectNodeInVirtualView ?? vi.fn()}
     />
   );
 }
@@ -69,6 +72,29 @@ it('marks the virtual root with the layers icon', () => {
   renderSavedSearchTree();
 
   expect(screen.getByRole('treeitem', { name: 'Virtual' }).querySelector('.lucide-layers-2')).toBeInTheDocument();
+});
+
+it('creates a manual virtual folder from the Virtual root action', async () => {
+  const onOpenVirtualView = vi.fn();
+  const onSelectNodeInVirtualView = vi.fn();
+  renderSavedSearchTree({ onOpenVirtualView, onSelectNodeInVirtualView });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Create Virtual Folder' }));
+
+  await waitFor(() => expect(useWorkspaceStore.getState().createVirtualNode).toHaveBeenCalledWith({ mode: 'manual' }));
+  expect(onOpenVirtualView).toHaveBeenCalledWith('virtual-new');
+  expect(onSelectNodeInVirtualView).toHaveBeenCalledWith('virtual-new');
+});
+
+it('creates a child virtual folder from a virtual folder row action', async () => {
+  renderSavedSearchTree();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Create Virtual Folder in Custom virtual' }));
+
+  await waitFor(() => expect(useWorkspaceStore.getState().createVirtualNode).toHaveBeenCalledWith({
+    mode: 'manual',
+    parentNodeId: 'virtual-custom'
+  }));
 });
 
 it('renames a saved search from the virtual directory row', async () => {

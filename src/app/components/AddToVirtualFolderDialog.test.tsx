@@ -57,3 +57,17 @@ it('searches eligible manual virtual folders in the shared floating palette styl
     .toHaveBeenCalledWith('manual', ['existing', 'topic']);
   expect(onClose).toHaveBeenCalledOnce();
 });
+
+it('offers to create a manual virtual folder when none are available', () => {
+  const createVirtualNode = vi.fn(async () => 'virtual-new');
+  useWorkspaceStore.setState({
+    createVirtualNode,
+    nodeOrder: ['topic'],
+    nodesById: { topic: node({ id: 'topic', kind: 'topic', title: 'Topic' }) }
+  });
+
+  renderWithLocalization(<AddToVirtualFolderDialog onClose={vi.fn()} topicIds={['topic']} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Create Virtual Folder' }));
+
+  expect(createVirtualNode).toHaveBeenCalledWith({ mode: 'manual' });
+});

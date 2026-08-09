@@ -7,6 +7,7 @@ import {
   INBOX_NODE_ID,
   isHomeNode,
   isInboxNode,
+  isVirtualNode,
   isVirtualRootNode,
   VIRTUAL_ROOT_NODE_ID
 } from './specialNodes';
@@ -65,5 +66,24 @@ describe('ensureInboxNodeInSnapshot', () => {
     expect(snapshot.nodeOrder).toEqual([HOME_NODE_ID, 'guides', INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID]);
     expect(isInboxNode(snapshot.nodesById[INBOX_NODE_ID])).toBe(true);
     expect(isVirtualRootNode(snapshot.nodesById[VIRTUAL_ROOT_NODE_ID])).toBe(true);
+  });
+
+  it('preserves virtual identity for folders nested below another virtual folder', () => {
+    const parent = { ...createNode('virtual-parent', 'Parent'), kind: 'folder' as const, parentNodeId: VIRTUAL_ROOT_NODE_ID };
+    const child = {
+      ...createNode('virtual-child', 'Child'),
+      kind: 'folder' as const,
+      parentNodeId: parent.id,
+      virtualFilter: { conditions: [{ field: 'manual' as const, operator: 'equals' as const, value: 'manual-child-order' }], match: 'all' as const, version: 1 as const }
+    };
+    const snapshot = ensureInboxNodeInSnapshot({
+      activeNodeId: child.id,
+      nodeOrder: [parent.id, child.id],
+      nodesById: { [parent.id]: parent, [child.id]: child },
+      trashedNodeIds: []
+    });
+
+    expect(isVirtualNode(snapshot.nodesById[child.id])).toBe(true);
+    expect(snapshot.nodesById[child.id]?.parentNodeId).toBe(parent.id);
   });
 });

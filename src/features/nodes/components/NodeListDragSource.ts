@@ -1,8 +1,8 @@
 import type { DragEvent as ReactDragEvent } from 'react';
 
-import type { WorkspaceListNodesById } from '../model/workspaceListNode';
-
 const NODE_LIST_DRAG_MIME = 'application/x-foliole-node-list';
+
+type NodeParentLookup = Record<string, { parentNodeId: string | null } | undefined>;
 
 let activeNodeListDragSource: string[] = [];
 
@@ -54,7 +54,7 @@ export function clearNodeListDragSource() {
 export function isInvalidNodeListDropTarget(
   targetNodeId: string,
   sourceNodeIds: string[],
-  nodesById: WorkspaceListNodesById
+  nodesById: NodeParentLookup
 ) {
   const sourceSet = new Set(sourceNodeIds);
   if (sourceSet.has(targetNodeId)) {

@@ -39,6 +39,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     createSelectionCloze: () => undefined,
     createSelectionHighlight: () => undefined,
     createTopic: () => undefined,
+    createVirtualFolder: () => undefined,
     addSelectionNote: () => undefined,
     repairTable: () => undefined,
     enterPriorityMode: () => undefined,
@@ -99,6 +100,14 @@ it('runs create topic through the shared command handler', () => {
   expectCommandRuns(APP_COMMAND_IDS.createTopic, { createTopic });
 
   expect(createTopic).toHaveBeenCalledTimes(1);
+});
+
+it('runs create virtual folder through the shared command handler', () => {
+  const createVirtualFolder = vi.fn();
+
+  expectCommandRuns(APP_COMMAND_IDS.createVirtualFolder, { createVirtualFolder });
+
+  expect(createVirtualFolder).toHaveBeenCalledTimes(1);
 });
 
 it('runs restart app through the shared command handler', () => {

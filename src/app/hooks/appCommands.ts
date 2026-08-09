@@ -15,6 +15,7 @@ interface RunAppCommandActions {
   createFolder: () => void;
   createItem: () => void;
   createTopic: () => void;
+  createVirtualFolder: () => void;
   enterPriorityMode: () => void;
   exportCurrentArticle: () => void | Promise<void>;
   publishToFoliole?: () => void | Promise<void>;
@@ -90,11 +91,6 @@ interface RunAppCommandActions {
   toggleDevTools: () => void;
 }
 
-interface ReviewModeToggleActions {
-  enterReviewMode: () => void;
-  exitReviewMode: () => void;
-}
-
 type CommandActionResult = boolean | void | Promise<void>;
 
 export function buildAppPaletteItems(options: BuildAppPaletteItemsOptions): CommandPaletteItem[] {
@@ -107,14 +103,6 @@ export function buildAppPaletteItems(options: BuildAppPaletteItemsOptions): Comm
   }));
 }
 
-export function runReviewModeToggle(isReviewMode: boolean, actions: ReviewModeToggleActions) {
-  if (isReviewMode) {
-    actions.exitReviewMode();
-    return;
-  }
-  actions.enterReviewMode();
-}
-
 function createWorkspaceCommandHandlers(actions: RunAppCommandActions): Record<string, () => CommandActionResult> {
   return {
     [APP_COMMAND_IDS.undo]: actions.undo,
@@ -122,6 +110,7 @@ function createWorkspaceCommandHandlers(actions: RunAppCommandActions): Record<s
     [APP_COMMAND_IDS.createFolder]: actions.createFolder,
     [APP_COMMAND_IDS.createTopic]: actions.createTopic,
     [APP_COMMAND_IDS.createItem]: actions.createItem,
+    [APP_COMMAND_IDS.createVirtualFolder]: actions.createVirtualFolder,
     [APP_COMMAND_IDS.openLocalFile]: actions.openLocalFile ?? (() => false),
     [APP_COMMAND_IDS.importSingleFile]: actions.importSingleFile,
     [APP_COMMAND_IDS.importFolder]: actions.importDirectory,

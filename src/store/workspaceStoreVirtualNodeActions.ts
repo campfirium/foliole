@@ -1,6 +1,10 @@
-import { VIRTUAL_NODE_FILTER_VERSION, type VirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter';
+import {
+  VIRTUAL_NODE_FILTER_VERSION,
+  createManualVirtualNodeFilter,
+  type VirtualNodeFilter
+} from '../../lib/core/nodes/virtualNodeFilter';
 import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
-import { VIRTUAL_ROOT_NODE_ID } from '../features/nodes/model/specialNodes';
+import { VIRTUAL_ROOT_NODE_ID, isVirtualNode } from '../features/nodes/model/specialNodes';
 import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
 
 import { markNodeCreatePending } from './workspaceNodeContentVersionGuard';
@@ -28,20 +32,26 @@ function createEmptyVirtualNodeFilter(): VirtualNodeFilter {
   };
 }
 
+function createInitialVirtualNodeFilter(mode: 'manual' | 'saved-search'): VirtualNodeFilter {
+  return mode === 'manual' ? createManualVirtualNodeFilter() : createEmptyVirtualNodeFilter();
+}
+
 function createVirtualNodeSnapshot(args: {
+  mode: 'manual' | 'saved-search';
   nodeId: string;
+  parentNodeId: string;
   timestamp: string;
   title: string;
 }): NodeSnapshot {
   return {
     id: args.nodeId,
-    parentNodeId: VIRTUAL_ROOT_NODE_ID,
+    parentNodeId: args.parentNodeId,
     kind: 'folder',
     specialKind: 'virtual',
     title: args.title,
     isTitleManual: true,
     content: '',
-    virtualFilter: createEmptyVirtualNodeFilter(),
+    virtualFilter: createInitialVirtualNodeFilter(args.mode),
     anchorLink: null,
     reveal: null,
     review: null,
@@ -120,8 +130,9 @@ export function createVirtualNodeAction(
   ) => Promise<WorkspaceNodeMutationPatchResult | null>,
   onNodeOrderChanged?: (nodeOrder: string[]) => void
 ): WorkspaceState['createVirtualNode'] {
-  return async () => {
+  return async (options) => {
     const nodeId = `node-${crypto.randomUUID()}`;
+    const parentNodeId = options?.parentNodeId ?? VIRTUAL_ROOT_NODE_ID;
     const timestamp = new Date().toISOString();
     let createdNode: NodeSnapshot | null = null;
     let nextNodeOrder: string[] | null = null;
@@ -129,13 +140,22 @@ export function createVirtualNodeAction(
     let applied = false;
 
     set((state) => {
-      const untitledState = resolveCreatedNodeTitleState(deriveNodeTitleFromContent(''), VIRTUAL_ROOT_NODE_ID, state);
-      const nextNode = createVirtualNodeSnapshot({ nodeId, timestamp, title: untitledState.title });
+      if (parentNodeId !== VIRTUAL_ROOT_NODE_ID && !isVirtualNode(state.nodesById[parentNodeId])) {
+        return state;
+      }
+      const untitledState = resolveCreatedNodeTitleState(deriveNodeTitleFromContent(''), parentNodeId, state);
+      const nextNode = createVirtualNodeSnapshot({
+        mode: options?.mode ?? 'saved-search',
+        nodeId,
+        parentNodeId,
+        timestamp,
+        title: untitledState.title
+      });
       const updatedNodesById = {
         ...state.nodesById,
         [nodeId]: nextNode
       };
-      nextNodeOrder = insertNodeBlockUnderParent(state.nodeOrder, [nodeId], VIRTUAL_ROOT_NODE_ID, updatedNodesById);
+      nextNodeOrder = insertNodeBlockUnderParent(state.nodeOrder, [nodeId], parentNodeId, updatedNodesById);
       createdNode = nextNode;
       localPatch = createVirtualNodeLocalPatch({
         nextNodeOrder,

@@ -1,4 +1,10 @@
-import { useMemo, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import {
+  useMemo,
+  useState,
+  type Dispatch,
+  type MouseEvent as ReactMouseEvent,
+  type SetStateAction
+} from 'react';
 
 import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
 import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
@@ -13,6 +19,7 @@ import type { WorkspaceListNodesById } from '../../features/nodes/model/workspac
 import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
+import { useCreateVirtualFolder } from './useCreateVirtualFolder';
 import { useWorkspaceVirtualFolderDrop } from './workspaceVirtualFolderDrop';
 import { compareVirtualNodeTitle } from './workspaceVirtualNodeSort';
 import { WorkspaceVirtualSavedSearchContextMenu } from './WorkspaceVirtualSavedSearchContextMenu';
@@ -105,8 +112,28 @@ function useVirtualFolderActions(
           : t('desktop.workspace.virtualFolderYaml.complete', { ...result }));
       }).finally(() => setIsWritingTopicYaml(false));
     },
+    setStatus,
     status
   };
+}
+
+function useVirtualSectionTreeModel(
+  props: WorkspaceVirtualSectionProps,
+  collapsedIds: Set<string>,
+  setCollapsedIds: Dispatch<SetStateAction<Set<string>>>
+) {
+  const rows = useMemo(
+    () => buildWorkspaceVirtualRows(props, collapsedIds),
+    [collapsedIds, props.nodeOrder, props.nodesById]
+  );
+  const keyboardRows = useMemo(() => getVirtualKeyboardRows(rows, collapsedIds), [collapsedIds, rows]);
+  const onRowKeyDown = useMemo(() => createNodeListRowKeydownHandler({
+    collapsedNodeIds: collapsedIds,
+    onSelect: (nodeId) => selectVirtualKeyboardRow(nodeId, props),
+    onToggleCollapse: (nodeId) => toggleCollapsed(nodeId, setCollapsedIds),
+    rows: keyboardRows
+  }), [collapsedIds, keyboardRows, props, setCollapsedIds]);
+  return { onRowKeyDown, rows };
 }
 
 export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
@@ -116,24 +143,17 @@ export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
   const deleteNode = useWorkspaceStore((state) => state.deleteNode);
   const updateNodeTitle = useWorkspaceStore((state) => state.updateNodeTitle);
   const actions = useVirtualFolderActions(t, updateNodeTitle);
+  const createVirtualFolder = useCreateVirtualFolder({
+    failedMessage: t('desktop.nodeList.createVirtualFolderFailed'),
+    nodesById: props.nodesById,
+    onSelectNodeInVirtualView: props.onSelectNodeInVirtualView,
+    setStatus: actions.setStatus,
+    ...(props.onOpenVirtualView ? { onOpenVirtualView: props.onOpenVirtualView } : {})
+  });
   const drop = useWorkspaceVirtualFolderDrop();
-  const rows = useMemo(
-    () => buildWorkspaceVirtualRows(props, collapsedIds),
-    [collapsedIds, props.nodeOrder, props.nodesById]
-  );
-  const keyboardRows = useMemo(() => getVirtualKeyboardRows(rows, collapsedIds), [collapsedIds, rows]);
-  const onRowKeyDown = useMemo(
-    () =>
-      createNodeListRowKeydownHandler({
-        collapsedNodeIds: collapsedIds,
-        onSelect: (nodeId) => selectVirtualKeyboardRow(nodeId, props),
-        onToggleCollapse: (nodeId) => toggleCollapsed(nodeId, setCollapsedIds),
-        rows: keyboardRows
-      }),
-    [collapsedIds, keyboardRows, props]
-  );
+  const tree = useVirtualSectionTreeModel(props, collapsedIds, setCollapsedIds);
 
-  if (props.hideInDemo || rows.length === 0) return null;
+  if (props.hideInDemo || tree.rows.length === 0) return null;
 
   return (
     <div className="mt-1 flex min-w-0 flex-col">
@@ -141,22 +161,28 @@ export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
       <section aria-label={t('desktop.workspace.virtualFolderTree')} className="flex flex-col pt-1" role="tree">
         {renderVirtualRows({
           collapsedIds,
-          onRowKeyDown,
+          onRowKeyDown: tree.onRowKeyDown,
           props: {
             ...props,
+            createNestedVirtualFolderLabel: (title) => t('desktop.nodeList.createNestedVirtualFolder', { title }),
+            createVirtualFolderLabel: t('desktop.nodeList.createVirtualFolder'),
             onContextMenuSavedSearch: (nodeId, event) => {
               event.preventDefault();
               setContextMenu({ nodeId, ...getContextMenuPosition(event) });
             },
+            onCreateVirtualFolder: (parentNodeId) => void createVirtualFolder(parentNodeId),
             onDeleteVirtualNode: deleteNode,
+            onDragEndVirtualFolder: drop.onDragEnd,
+            onDragEnterVirtualFolder: drop.onDragEnter,
             onDragLeaveVirtualFolder: drop.onDragLeave,
             onDragOverVirtualFolder: drop.onDragOver,
+            onDragStartVirtualFolder: drop.onDragStart,
             onDropOnVirtualFolder: drop.onDrop,
             onRenameVirtualNode: actions.onRename
           },
           dropTargetNodeId: drop.targetId,
           rowSpacing: getNodeListRowSpacing(),
-          rows,
+          rows: tree.rows,
           setCollapsedIds
         })}
         {renderSavedSearchContextMenu({

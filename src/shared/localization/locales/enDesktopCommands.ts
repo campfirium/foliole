@@ -14,6 +14,7 @@ export const EN_DESKTOP_COMMAND_TRANSLATIONS = {
   'desktop.command.createFolder': 'Create Folder',
   'desktop.command.createTopic': 'Create Topic',
   'desktop.command.createItem': 'Create Item',
+  'desktop.command.createVirtualFolder': 'Create Virtual Folder',
   'desktop.command.undo': 'Undo',
   'desktop.command.redo': 'Redo',
   'desktop.command.undoOperation': 'Undo {operation}',

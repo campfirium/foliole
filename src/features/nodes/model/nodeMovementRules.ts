@@ -30,7 +30,7 @@ export function canNodeAcceptMovedNode(
     return isVirtualNode(movedNode);
   }
   if (isVirtualNode(movedNode)) {
-    return false;
+    return isVirtualNode(targetNode);
   }
   if (!movedNode.kind) {
     return false;

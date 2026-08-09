@@ -37,6 +37,7 @@ beforeEach(() => {
       manual: fullNode({ id: 'manual', kind: 'folder', manualChildOrder: ['existing'], parentNodeId: VIRTUAL_ROOT_NODE_ID, specialKind: 'virtual', title: 'Manual', virtualFilter: createManualVirtualNodeFilter() }),
       filtered: fullNode({ id: 'filtered', kind: 'folder', parentNodeId: VIRTUAL_ROOT_NODE_ID, specialKind: 'virtual', title: 'Filtered', virtualFilter: createCollectionVirtualNodeFilter('Filtered') })
     },
+    moveNodes: vi.fn(async () => true),
     setFolderManualChildOrder: vi.fn(() => true),
     trashedNodeIds: []
   });
@@ -50,6 +51,8 @@ it('copies a dragged Topic into a manual virtual folder without moving its physi
 
   const manualRow = screen.getByRole('treeitem', { name: 'Manual' });
   const manualDrag = dragData('topic');
+  fireEvent.dragEnter(manualRow, { dataTransfer: manualDrag });
+  expect(manualRow.parentElement).toHaveClass('border-border-strong');
   fireEvent.dragOver(manualRow, { dataTransfer: manualDrag });
   expect(manualDrag.dropEffect).toBe('copy');
   fireEvent.drop(manualRow, { dataTransfer: manualDrag });
@@ -58,4 +61,20 @@ it('copies a dragged Topic into a manual virtual folder without moving its physi
 
   fireEvent.dragOver(screen.getByRole('treeitem', { name: 'Filtered' }), { dataTransfer: dragData('topic') });
   expect(useWorkspaceStore.getState().setFolderManualChildOrder).toHaveBeenCalledOnce();
+});
+
+it('moves virtual folders under another virtual folder and back to the Virtual root', () => {
+  const root = listNode({ id: VIRTUAL_ROOT_NODE_ID, parentNodeId: null, specialKind: 'virtual-root', title: 'Virtual' });
+  const manual = listNode({ id: 'manual', parentNodeId: VIRTUAL_ROOT_NODE_ID, specialKind: 'virtual', title: 'Manual' });
+  const filtered = listNode({ id: 'filtered', parentNodeId: VIRTUAL_ROOT_NODE_ID, specialKind: 'virtual', title: 'Filtered' });
+  renderWithLocalization(<WorkspaceVirtualSection activeVirtualNodeId={null} isVirtualViewOpen={false} nodeOrder={[root.id, manual.id, filtered.id]} nodesById={{ [root.id]: root, [manual.id]: manual, [filtered.id]: filtered }} onSelectNodeInVirtualView={vi.fn()} />);
+
+  const nestedDrag = dragData('manual');
+  fireEvent.dragEnter(screen.getByRole('treeitem', { name: 'Filtered' }), { dataTransfer: nestedDrag });
+  expect(nestedDrag.dropEffect).toBe('move');
+  fireEvent.drop(screen.getByRole('treeitem', { name: 'Filtered' }), { dataTransfer: nestedDrag });
+  expect(useWorkspaceStore.getState().moveNodes).toHaveBeenCalledWith(['manual'], 'filtered', 'child');
+
+  fireEvent.drop(screen.getByRole('treeitem', { name: 'Virtual' }), { dataTransfer: dragData('manual') });
+  expect(useWorkspaceStore.getState().moveNodes).toHaveBeenLastCalledWith(['manual'], VIRTUAL_ROOT_NODE_ID, 'child');
 });
