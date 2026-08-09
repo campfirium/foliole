@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 import type { SyncGroupPayload } from '../../lib/platform/syncGroupContract';
 import { definedProps } from '../shared/lib/definedProps';
-import { reconcileCompanionSyncGroupProvider } from '../shared/platform/companion/sync/syncGroupProvider';
-import { loadCompanionSyncGroup } from '../shared/platform/companion/sync/syncGroupStore';
 
 import { useCompanionHandoffReminderRuntime } from './CompanionHandoffReminderRuntime';
+import { useCompanionSyncGroupRuntime } from './CompanionSyncGroupRuntime';
 import { CompanionSyncPanel } from './CompanionSyncPanel';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
@@ -60,25 +59,7 @@ export function CompanionSyncContent(props: {
 }) {
   const { workspaceSync } = props;
   const handoffReminders = useCompanionHandoffReminderRuntime();
-  const [syncGroup, setSyncGroup] = useState<SyncGroupPayload | null>(null);
-  const [syncGroupLoaded, setSyncGroupLoaded] = useState(false);
-
-  useEffect(() => {
-    if (workspaceSync.bootstrapState.runtime_kind !== 'android-capacitor') return;
-    setSyncGroupLoaded(false);
-    void loadCompanionSyncGroup().then((group) => {
-      setSyncGroup(group);
-      setSyncGroupLoaded(true);
-    }).catch(() => {
-      setSyncGroup(null);
-      setSyncGroupLoaded(true);
-    });
-  }, [workspaceSync.bootstrapState.runtime_kind, workspaceSync.pairingState.is_paired, workspaceSync.state.last_synced_at]);
-
-  useEffect(() => {
-    if (workspaceSync.bootstrapState.runtime_kind !== 'android-capacitor' || !syncGroupLoaded) return;
-    void reconcileCompanionSyncGroupProvider(workspaceSync.bootstrapState, syncGroup).catch(() => undefined);
-  }, [syncGroup, syncGroupLoaded, workspaceSync.bootstrapState]);
+  const syncGroup = useCompanionSyncGroupRuntime();
 
   useEffect(() => {
     if (!workspaceSync.pendingPairRequest || workspaceSync.pairingStatus !== 'awaiting-approval') {

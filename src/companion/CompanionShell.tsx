@@ -8,6 +8,7 @@ import type { CompanionTabAction } from './CompanionFloatingBars';
 import { CompanionHandoffReminderRuntime } from './CompanionHandoffReminderRuntime';
 import { useReviewBreadcrumbItems } from './companionReviewBreadcrumbs';
 import { CompanionShellView } from './CompanionShellView';
+import { CompanionSyncGroupRuntime } from './CompanionSyncGroupRuntime';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionBrowseSortState } from './useCompanionBrowseSortState';
 import { useCompanionDirectorySelectionState } from './useCompanionDirectorySelectionState';
@@ -203,9 +204,11 @@ export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrap
       refreshKey={model.workspaceSync.state.last_synced_at}
       runtimeKind={props.bootstrapState.runtime_kind}
     >
-      <CompanionHandoffReminderRuntime workspaceSync={model.workspaceSync}>
-        <CompanionShellView model={model} />
-      </CompanionHandoffReminderRuntime>
+      <CompanionSyncGroupRuntime workspaceSync={model.workspaceSync}>
+        <CompanionHandoffReminderRuntime workspaceSync={model.workspaceSync}>
+          <CompanionShellView model={model} />
+        </CompanionHandoffReminderRuntime>
+      </CompanionSyncGroupRuntime>
     </CompanionCustomCssProvider>
   );
 }

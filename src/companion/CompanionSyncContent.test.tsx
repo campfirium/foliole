@@ -2,18 +2,6 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const syncGroupMocks = vi.hoisted(() => ({
-  load: vi.fn(async () => null),
-  reconcile: vi.fn(async () => null)
-}));
-
-vi.mock('../shared/platform/companion/sync/syncGroupStore', () => ({
-  loadCompanionSyncGroup: syncGroupMocks.load
-}));
-vi.mock('../shared/platform/companion/sync/syncGroupProvider', () => ({
-  reconcileCompanionSyncGroupProvider: syncGroupMocks.reconcile
-}));
-
 import { CompanionHandoffReminderRuntime } from './CompanionHandoffReminderRuntime';
 import { CompanionSyncContent } from './CompanionSyncContent';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
@@ -31,8 +19,6 @@ const usablePairingMetadata = {
 };
 
 afterEach(() => {
-  syncGroupMocks.load.mockReset().mockResolvedValue(null);
-  syncGroupMocks.reconcile.mockReset().mockResolvedValue(null);
   window.localStorage.clear();
   vi.useRealTimers();
 });
@@ -89,18 +75,6 @@ function TestSyncContent(props: ComponentProps<typeof CompanionSyncContent>) {
 }
 
 describe('CompanionSyncContent', () => {
-  it('does not stop the native provider while persisted Sync Group membership is still loading', async () => {
-    let resolveGroup: (value: null) => void = () => undefined;
-    syncGroupMocks.load.mockReturnValueOnce(new Promise((resolve) => { resolveGroup = resolve; }));
-
-    render(<TestSyncContent workspaceSync={createWorkspaceSync()} />);
-    await act(async () => Promise.resolve());
-    expect(syncGroupMocks.reconcile).not.toHaveBeenCalled();
-
-    await act(async () => resolveGroup(null));
-    expect(syncGroupMocks.reconcile).toHaveBeenCalledOnce();
-  });
-
   it('does not start discovery before the user asks to connect', () => {
     const workspaceSync = createWorkspaceSync();
 

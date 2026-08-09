@@ -1,0 +1,53 @@
+import { act, render } from '@testing-library/react';
+import { afterEach, expect, it, vi } from 'vitest';
+
+const runtime = vi.hoisted(() => ({
+  load: vi.fn(async (): Promise<unknown> => null),
+  reconcile: vi.fn(async () => null)
+}));
+
+vi.mock('../shared/platform/companion/sync/syncGroupStore', () => ({
+  loadCompanionSyncGroup: runtime.load
+}));
+vi.mock('../shared/platform/companion/sync/syncGroupProvider', () => ({
+  reconcileCompanionSyncGroupProvider: runtime.reconcile
+}));
+
+import { CompanionSyncGroupRuntime } from './CompanionSyncGroupRuntime';
+import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
+
+afterEach(() => {
+  runtime.load.mockReset().mockResolvedValue(null);
+  runtime.reconcile.mockReset().mockResolvedValue(null);
+});
+
+function workspaceSync() {
+  return {
+    bootstrapState: {
+      database_path: 'foliole-companion-preview.db', device_id: 'android-b',
+      runtime_kind: 'android-capacitor'
+    },
+    pairingState: { is_paired: true },
+    state: { last_synced_at: null }
+  } as unknown as ReturnType<typeof useCompanionWorkspaceSync>;
+}
+
+it('maintains the member provider before any settings surface is mounted', async () => {
+  const group = { group_id: 'group-1', local_member_state: 'active' };
+  runtime.load.mockResolvedValue(group);
+  render(<CompanionSyncGroupRuntime workspaceSync={workspaceSync()}><main>Reader</main></CompanionSyncGroupRuntime>);
+  await act(async () => Promise.resolve());
+  expect(runtime.reconcile).toHaveBeenCalledWith(
+    expect.objectContaining({ device_id: 'android-b' }), group
+  );
+});
+
+it('does not stop the provider while persisted membership is loading', async () => {
+  let resolveGroup: (value: null) => void = () => undefined;
+  runtime.load.mockReturnValueOnce(new Promise((resolve) => { resolveGroup = resolve; }));
+  render(<CompanionSyncGroupRuntime workspaceSync={workspaceSync()}><main>Reader</main></CompanionSyncGroupRuntime>);
+  await act(async () => Promise.resolve());
+  expect(runtime.reconcile).not.toHaveBeenCalled();
+  await act(async () => resolveGroup(null));
+  expect(runtime.reconcile).toHaveBeenCalledOnce();
+});
