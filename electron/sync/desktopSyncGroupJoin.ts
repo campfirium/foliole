@@ -16,6 +16,7 @@ import { resolveDesktopDeviceName } from './companionLanPayloads.js';
 import { loadPairedSyncGroupPeers, savePairedSyncGroupPeer } from './companionPairingStore.js';
 import { registerPairedCompanionDeviceWithSecret } from './companionPairingStore.js';
 import { createDesktopSyncGroupSignedHeaders, requestJson } from './desktopSyncGroupHttp.js';
+import { refreshDesktopSyncGroupPendingJoinFromDiscovery } from './desktopSyncGroupJoinEndpoint.js';
 import { loadDesktopSyncGroupJoinState, saveDesktopSyncGroupPendingJoin } from './desktopSyncGroupJoinState.js';
 import { createDesktopSyncGroupPairingKey, decryptDesktopSyncGroupPairingSecret } from './desktopSyncGroupPairingCrypto.js';
 import {
@@ -177,12 +178,15 @@ function scheduleJoinCompletion() {
   joinApprovalTimer = setTimeout(() => {
     joinApprovalTimer = null;
     const execute = joinCompletionExecutor ?? completeDesktopSyncGroupJoin;
-    void execute().catch((error) => {
+    void execute().catch(async (error) => {
       const pending = loadDesktopSyncGroupJoinState().pending;
       if (!pending) return;
       if (error instanceof Error && error.message === 'pair_request_rejected') {
         saveDesktopSyncGroupPendingJoin(null);
         return;
+      }
+      if (error instanceof TypeError) {
+        await refreshDesktopSyncGroupPendingJoinFromDiscovery().catch(() => false);
       }
       if (Date.parse(pending.request.expires_at) > Date.now()) scheduleJoinCompletion();
     });
