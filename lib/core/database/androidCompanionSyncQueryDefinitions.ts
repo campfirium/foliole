@@ -1,6 +1,9 @@
 import { ANDROID_COMPANION_CONVERGENCE_QUERY_DEFINITIONS } from './androidCompanionConvergenceQueryDefinitions.js';
+import {
+  ANDROID_COMPANION_SYNC_REVIEW_LOG_SQL,
+  ANDROID_COMPANION_SYNC_STATE_CHANGES_SQL
+} from './androidCompanionSyncDeliveryQuerySql.js';
 import { ANDROID_COMPANION_SYNC_NODE_VERSIONS_SQL } from './androidCompanionSyncNodeVersionSql.js';
-import { REVIEW_REQUIRED_PUSH_ISSUE_TYPES_SQL } from './androidCompanionSyncPolicySql.js';
 
 export const ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS = {
   ...ANDROID_COMPANION_CONVERGENCE_QUERY_DEFINITIONS,
@@ -20,13 +23,7 @@ export const ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS = {
   },
   syncStateChanges: {
     resultKey: 'objects',
-    sql:
-      'SELECT object_type, object_id, state_seq, content_hash, updated_at, deleted_at, base_content_hash ' +
-      "FROM sync_object_state WHERE object_type NOT IN ('node', 'view_state') AND sync_dirty = 1 AND state_seq > ? " +
-      'AND NOT EXISTS (SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = sync_object_state.object_type ' +
-      'AND ack.object_id = sync_object_state.object_id ' +
-      `AND (ack.status IN ('accepted', 'already_applied') OR ack.object_type IN (${REVIEW_REQUIRED_PUSH_ISSUE_TYPES_SQL}))) ` +
-      'ORDER BY state_seq ASC LIMIT ?',
+    sql: ANDROID_COMPANION_SYNC_STATE_CHANGES_SQL,
     columns: [
       { key: 'object_type', source: 'object_type', type: 'string' },
       { key: 'object_id', source: 'object_id', type: 'string' },
@@ -70,12 +67,7 @@ export const ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS = {
   },
   syncReviewLog: {
     resultKey: 'reviews',
-    sql:
-      'SELECT id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at, ' +
-      'due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after ' +
-      'FROM review_log WHERE device_id = ? ' +
-      "AND (? = '' OR ? = '' OR reviewed_at > ? OR (reviewed_at = ? AND op_id > ?)) " +
-      'ORDER BY reviewed_at ASC, op_id ASC LIMIT ?',
+    sql: ANDROID_COMPANION_SYNC_REVIEW_LOG_SQL,
     columns: [
       { key: 'id', source: 'id', type: 'string' },
       { key: 'op_id', source: 'op_id', type: 'string' },

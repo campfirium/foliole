@@ -75,9 +75,9 @@ it('treats a repeated node_reading push as already applied', async () => {
        object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
      ) VALUES ('node_reading', 'node-1', 1, 'desktop-reading-base', 'desktop', '2026-04-30T00:00:00.000Z', 0)`
   );
-  await applyCompanionSyncPushAsync([createNodeReadingPush()]);
+  await applyCompanionSyncPushAsync([createNodeReadingPush()], 'android-device');
 
-  const result = await applyCompanionSyncPushAsync([createNodeReadingPush()]);
+  const result = await applyCompanionSyncPushAsync([createNodeReadingPush()], 'android-device');
 
   expect(result.appliedObjectIds).toEqual([]);
   expect(result.acks).toMatchObject([{ stateSeq: 2, status: 'already_applied' }]);
@@ -91,9 +91,9 @@ it('inserts review_log once and rejects a mismatched duplicate operation payload
     payloadJson: JSON.stringify({ ...JSON.parse(first.payloadJson ?? '{}'), grade: 4 })
   };
 
-  await expect(applyCompanionSyncPushAsync([first])).resolves.toMatchObject({ acks: [{ status: 'accepted' }] });
-  await expect(applyCompanionSyncPushAsync([duplicate])).resolves.toMatchObject({ acks: [{ status: 'already_applied' }] });
-  await expect(applyCompanionSyncPushAsync([conflicting])).resolves.toMatchObject({
+  await expect(applyCompanionSyncPushAsync([first], 'android-device')).resolves.toMatchObject({ acks: [{ status: 'accepted' }] });
+  await expect(applyCompanionSyncPushAsync([duplicate], 'android-device')).resolves.toMatchObject({ acks: [{ status: 'already_applied' }] });
+  await expect(applyCompanionSyncPushAsync([conflicting], 'android-device')).resolves.toMatchObject({
     acks: [{ conflictReason: 'op_id_payload_mismatch', status: 'rejected' }]
   });
   expect(openDatabaseConnection().driver.queryOne<{ count: number }>(

@@ -125,7 +125,7 @@ describe('companion sync push apply', () => {
   it('accepts node_review when base content hash matches current desktop state', async () => {
     insertBaseReviewState();
 
-    const result = await applyCompanionSyncPushAsync([createNodeReviewPush()]);
+    const result = await applyCompanionSyncPushAsync([createNodeReviewPush()], 'android-device');
 
     expect(result.appliedObjectIds).toEqual(['node_review:node-1']);
     expect(result.acks).toMatchObject([{ stateSeq: 2, status: 'accepted' }]);
@@ -138,7 +138,7 @@ describe('companion sync push apply', () => {
   it('accepts node_review create attempts when desktop has no current state', async () => {
     const result = await applyCompanionSyncPushAsync([createNodeReviewPush({
       base: { baseContentHash: null, kind: 'content_hash' }
-    })]);
+    })], 'android-device');
 
     expect(result.appliedObjectIds).toEqual(['node_review:node-1']);
     expect(result.acks).toMatchObject([{ stateSeq: 1, status: 'accepted' }]);
@@ -151,7 +151,7 @@ describe('companion sync push apply', () => {
   it('accepts node_reading when base content hash matches current desktop state', async () => {
     insertBaseReadingState();
 
-    const result = await applyCompanionSyncPushAsync([createNodeReadingPush()]);
+    const result = await applyCompanionSyncPushAsync([createNodeReadingPush()], 'android-device');
 
     expect(result.appliedObjectIds).toEqual(['node_reading:node-1']);
     expect(result.acks).toMatchObject([{ stateSeq: 2, status: 'accepted' }]);
@@ -170,7 +170,7 @@ describe('companion sync push apply', () => {
 it('accepts a first node open-state fact even when its former desktop base is absent', async () => {
   const result = await applyCompanionSyncPushAsync([
     createNodeOpenStatePush('2026-04-30T02:00:00.000Z')
-  ]);
+  ], 'android-device');
 
   expect(result.acks).toMatchObject([{ status: 'accepted' }]);
   expect(openDatabaseConnection().driver.queryOne<{ last_opened_at: string }>(
@@ -187,7 +187,7 @@ describe('companion sync push conflict handling', () => {
 
     const result = await applyCompanionSyncPushAsync([
       createNodeOpenStatePush('2026-04-30T02:00:00.000Z')
-    ]);
+    ], 'android-device');
 
     expect(result.acks).toMatchObject([{ status: 'accepted' }]);
     expect(openDatabaseConnection().driver.queryOne<{ last_opened_at: string }>(
@@ -206,7 +206,7 @@ describe('companion sync push conflict handling', () => {
 
     const result = await applyCompanionSyncPushAsync([
       createNodeOpenStatePush('2026-04-30T02:00:00.000Z')
-    ]);
+    ], 'android-device');
 
     expect(result.acks).toMatchObject([{ status: 'already_applied' }]);
     expect(openDatabaseConnection().driver.queryOne<{ last_opened_at: string }>(
@@ -217,7 +217,7 @@ describe('companion sync push conflict handling', () => {
   it('accepts the first actual node review even when its base hash has changed', async () => {
     insertBaseReviewState('desktop-newer');
 
-    const result = await applyCompanionSyncPushAsync([createNodeReviewPush()]);
+    const result = await applyCompanionSyncPushAsync([createNodeReviewPush()], 'android-device');
 
     expect(result.appliedObjectIds).toEqual(['node_review:node-1']);
     expect(result.acks).toMatchObject([{ status: 'accepted' }]);
@@ -230,7 +230,7 @@ describe('companion sync push conflict handling', () => {
   it('returns conflict for node_reading when desktop base has changed', async () => {
     insertBaseReadingState('desktop-reading-newer');
 
-    const result = await applyCompanionSyncPushAsync([createNodeReadingPush()]);
+    const result = await applyCompanionSyncPushAsync([createNodeReadingPush()], 'android-device');
 
     expect(result.appliedObjectIds).toEqual([]);
     expect(result.acks).toMatchObject([{

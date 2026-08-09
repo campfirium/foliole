@@ -49,14 +49,6 @@ export function createIncomingPack(filePath: string) {
 export function installLocalNodeFixtures() {
   const sqlite = openDatabaseConnection().sqlite;
   sqlite.exec(`
-    CREATE TABLE sync_push_ack (
-      client_op_id TEXT PRIMARY KEY NOT NULL,
-      object_type TEXT NOT NULL,
-      object_id TEXT NOT NULL,
-      state_seq INTEGER,
-      status TEXT NOT NULL,
-      acked_at TEXT NOT NULL
-    );
     INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
     VALUES ('att-1', 'att-1.pdf', 'application/pdf', 128, '2026-05-04T00:00:00.000Z');
     INSERT INTO sync_object_state (
@@ -64,8 +56,5 @@ export function installLocalNodeFixtures() {
       last_modified_by_device_id, updated_at, deleted_at, sync_dirty
     ) VALUES ('node', 'node-1', 1, 'android#local', 'hash-node-1', 'android-device',
       '2026-05-04T00:30:00.000Z', NULL, 1);
-    INSERT INTO sync_push_ack (
-      client_op_id, object_type, object_id, state_seq, status, acked_at
-    ) VALUES ('op-1', 'node', 'node-1', 1, 'accepted', '2026-05-04T01:00:00.000Z');
   `);
 }

@@ -130,11 +130,21 @@ async function downloadAndApply(peer: ReturnType<typeof savePairedSyncGroupPeer>
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-desktop-initial-sync-'));
   const incomingPath = path.join(tempRoot, 'incoming.db');
   try {
-    const manifest = await extractSyncPackDatabase({ body: Buffer.from(await response.arrayBuffer()), expectedPeerId: peer.local_device_id, outputPath: incomingPath });
+    const manifest = await extractSyncPackDatabase({
+      body: Buffer.from(await response.arrayBuffer()),
+      expectedPeerId: peer.local_device_id,
+      expectedSourcePeerId: peer.peer_device_id,
+      outputPath: incomingPath
+    });
     const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'desktop-sync-group-initial-sync' });
     await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
     try {
-      await applySyncPackNodeSurfaceWithDbPort(port, { currentCursor: after, deviceId: peer.local_device_id, incomingAlias: 'inc' });
+      await applySyncPackNodeSurfaceWithDbPort(port, {
+        currentCursor: after,
+        deviceId: peer.local_device_id,
+        incomingAlias: 'inc',
+        sourcePeerId: peer.peer_device_id
+      });
     } finally { await port.run('DETACH DATABASE inc'); }
     return manifest.toStateSeq;
   } finally { await fs.rm(tempRoot, { recursive: true, force: true }); }

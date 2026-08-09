@@ -32,6 +32,7 @@ import { applySyncPackViewStateObjectsWithDbPort } from './syncPackViewStateObje
 export interface SyncPackNodeSurfaceApplyOptions extends SyncPackNodeApplyOptions {
   currentCursor: number;
   deviceId: string;
+  sourcePeerId?: string;
 }
 
 export async function applySyncPackNodesWithDbPort(
@@ -182,6 +183,7 @@ function clearConfirmedSyncPushAcks(
 ) {
   return clearConfirmedSyncPushAcksWithDbPort(port, {
     ...(options.incomingAlias === undefined ? {} : { incomingAlias: options.incomingAlias }),
+    sourcePeerId: options.sourcePeerId!,
     toStateSeq
   });
 }

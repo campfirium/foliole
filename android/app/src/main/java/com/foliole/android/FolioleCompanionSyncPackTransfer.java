@@ -11,22 +11,39 @@ import org.json.JSONObject;
 final class FolioleCompanionSyncPackTransfer {
     private FolioleCompanionSyncPackTransfer() {}
 
-    static File downloadToCache(Context context, String url, JSONObject headers) throws Exception {
+    static File downloadToCache(
+        Context context,
+        String url,
+        JSONObject headers,
+        String expectedPeerId,
+        String expectedSourcePeerId
+    ) throws Exception {
         byte[] body = FolioleCompanionDesktopHttpClient.requestBytes(url, headers);
-        return storeDownloadedPack(context, body);
+        return storeDownloadedPack(context, body, expectedPeerId, expectedSourcePeerId);
     }
 
     static File storeDownloadedPack(Context context, byte[] body) throws Exception {
-        return storeDownloadedPack(context, body, FolioleCompanionPairingStore.loadPairedDeviceId(context));
+        return storeDownloadedPack(
+            context,
+            body,
+            FolioleCompanionPairingStore.loadPairedDeviceId(context),
+            FolioleCompanionPairingStore.loadPairingState(context).optString("remote_peer_id")
+        );
     }
 
-    static File storeDownloadedPack(Context context, byte[] body, String expectedPeerId) throws Exception {
+    static File storeDownloadedPack(
+        Context context,
+        byte[] body,
+        String expectedPeerId,
+        String expectedSourcePeerId
+    ) throws Exception {
         FolioleCompanionSyncPackContract contract = FolioleCompanionSyncPackContract.load(context);
         FolioleCompanionSyncPackEnvelopeValidator.PreparedEnvelope envelope =
             FolioleCompanionSyncPackEnvelopeValidator.validate(
                 body,
                 contract,
-                expectedPeerId
+                expectedPeerId,
+                expectedSourcePeerId
             );
         File directory = cacheDirectory(context);
         if (!directory.exists() && !directory.mkdirs()) {

@@ -16,7 +16,12 @@ import {
 const INCOMING_PACK_ALIAS = 'inc';
 
 export async function applyCompanionSyncPackPathWithSharedCore(
-  args: { deviceId: string; packPath: string; primaryDeviceId?: string | null | undefined },
+  args: {
+    deviceId: string;
+    packPath: string;
+    primaryDeviceId?: string | null | undefined;
+    sourcePeerId: string;
+  },
   cursorStore: CompanionSyncPackCursorStore,
   manager: CompanionSqliteConnectionManager = new SQLiteConnection(CapacitorSQLite)
 ) {
@@ -25,7 +30,8 @@ export async function applyCompanionSyncPackPathWithSharedCore(
     currentCursor: currentCursor ?? 0,
     deviceId: args.deviceId,
     packPath: args.packPath,
-    primaryDeviceId: args.primaryDeviceId
+    primaryDeviceId: args.primaryDeviceId,
+    sourcePeerId: args.sourcePeerId
   }, manager);
   assertSyncPackCursorAdvance({
     appliedObjectCount: result.applied_object_count,
@@ -45,6 +51,7 @@ export async function applyCompanionSyncPackNodesWithSharedCore(
     deviceId: string;
     packPath: string;
     primaryDeviceId?: string | null | undefined;
+    sourcePeerId: string;
   },
   manager: CompanionSqliteConnectionManager = new SQLiteConnection(CapacitorSQLite)
 ) {
@@ -63,6 +70,7 @@ export async function applyCompanionSyncPackNodesWithDbPort(
     deviceId: string;
     packPath: string;
     primaryDeviceId?: string | null | undefined;
+    sourcePeerId: string;
   },
   port: DbPort
 ) {
@@ -72,6 +80,7 @@ export async function applyCompanionSyncPackNodesWithDbPort(
       currentCursor: args.currentCursor,
       deviceId: args.deviceId,
       incomingAlias: INCOMING_PACK_ALIAS,
+      sourcePeerId: args.sourcePeerId
     }).then((result) => ({
       ...result,
       applied_blob_count: result.appliedBlobCount,

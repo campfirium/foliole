@@ -70,7 +70,7 @@ async function handleAuthenticatedRoute(args: {
     else writeJson(request, response, batch.statusCode, { error: batch.error }, 'POST, OPTIONS');
   } else if (route === 'sync-push') {
     try {
-      writeJson(request, response, 200, await handleCompanionSyncPush(bodyText), 'POST, OPTIONS');
+      writeJson(request, response, 200, await handleCompanionSyncPush(bodyText, auth.device_id), 'POST, OPTIONS');
     } catch (error) {
       writeJson(request, response, 400, {
         error: error instanceof Error ? error.message : 'invalid_sync_push_payload'

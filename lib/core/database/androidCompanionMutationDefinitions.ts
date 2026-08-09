@@ -7,12 +7,6 @@ const RESOURCE_STATUS = ANDROID_COMPANION_RESOURCE_STATUSES;
 
 export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
   ...ANDROID_COMPANION_CONVERGENCE_MUTATION_DEFINITIONS,
-  syncPushAckDeleteByObject: 'DELETE FROM sync_push_ack WHERE object_type = ? AND object_id = ?',
-  syncPushAckDeleteIssuesByObject:
-    "DELETE FROM sync_push_ack WHERE object_type = ? AND object_id = ? AND status IN ('conflict', 'rejected')",
-  syncPushAckUpsert:
-    'INSERT OR REPLACE INTO sync_push_ack (client_op_id, object_type, object_id, state_seq, status, acked_at) ' +
-    'VALUES (?, ?, ?, ?, ?, ?)',
   syncReviewLogInsert:
     'INSERT OR IGNORE INTO review_log (' +
     'id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at, due_before, stability_before, ' +
@@ -89,7 +83,7 @@ export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
   appDataClearSyncGroupLocalState: 'DELETE FROM sync_group_local_state',
   appDataClearSyncGroupMembers: 'DELETE FROM sync_group_members',
   appDataClearSyncGroups: 'DELETE FROM sync_groups',
-  appDataClearSyncPushAck: 'DELETE FROM sync_push_ack',
+  appDataClearSyncDeliveryReceipts: 'DELETE FROM sync_delivery_receipts',
   appDataClearSyncPeerCursors: 'DELETE FROM sync_peer_cursors',
   appDataClearSyncChangeLog: 'DELETE FROM sync_change_log',
   appDataClearSyncObjectState: 'DELETE FROM sync_object_state',
@@ -156,11 +150,7 @@ export const ANDROID_COMPANION_RESOURCE_MUTATION_RULES = {
 } as const;
 
 export const ANDROID_COMPANION_RUNTIME_MUTATION_RULES = {
-  groupKeys: { syncPushAck: 'syncPushAck', syncState: 'syncState' },
-  syncPushAck: {
-    deleteByObjectMutationName: 'syncPushAckDeleteByObject',
-    tableName: 'sync_push_ack'
-  },
+  groupKeys: { syncState: 'syncState' },
   syncState: {
     upsertMutationName: 'syncStateUpsert'
   }
@@ -186,7 +176,7 @@ export const ANDROID_COMPANION_HOST_SUPPORT_MUTATION_RULES = {
 } as const;
 
 export const ANDROID_COMPANION_SYNC_APPLY_MUTATION_RULES = {
-  groupKeys: { documents: 'documents', learning: 'learning', openState: 'openState', pushAck: 'pushAck', reviewLog: 'reviewLog', settings: 'settings', viewState: 'viewState' },
+  groupKeys: { documents: 'documents', learning: 'learning', openState: 'openState', reviewLog: 'reviewLog', settings: 'settings', viewState: 'viewState' },
   documents: {
     markMissingMutationName: 'syncExternalDocumentMarkMissing',
     upsertMutationName: 'syncExternalDocumentUpsert'
@@ -202,10 +192,6 @@ export const ANDROID_COMPANION_SYNC_APPLY_MUTATION_RULES = {
   openState: {
     deleteMutationName: 'syncNodeOpenStateDelete',
     upsertMutationName: 'syncNodeOpenStateUpsert'
-  },
-  pushAck: {
-    deleteIssuesMutationName: 'syncPushAckDeleteIssuesByObject',
-    upsertMutationName: 'syncPushAckUpsert'
   },
   reviewLog: {
     insertMutationName: 'syncReviewLogInsert'

@@ -14,12 +14,18 @@ enum FolioleCompanionSyncPackEnvelopeValidator {
     static func validate(
         archiveURL: URL,
         contract: FolioleCompanionSyncPackContract,
-        expectedPeerId: String
+        expectedPeerId: String,
+        expectedSourcePeerId: String
     ) throws -> FoliolePreparedSyncPack {
         do {
             let entries = try readEntries(archiveURL, contract: contract)
             let manifest = try parseManifest(entries["manifest.json"])
-            let rowCounts = try validateManifest(manifest, contract: contract, expectedPeerId: expectedPeerId)
+            let rowCounts = try validateManifest(
+                manifest,
+                contract: contract,
+                expectedPeerId: expectedPeerId,
+                expectedSourcePeerId: expectedSourcePeerId
+            )
             guard let compressed = entries[contract.databaseEntry] else { throw invalid("missing_sync_pack_entry") }
             try verifySha256(compressed, expected: try string(manifest, "database_compressed_sha256"), layer: "compressed")
             let database = try FolioleCompanionZlib.inflate(compressed)
@@ -61,7 +67,8 @@ enum FolioleCompanionSyncPackEnvelopeValidator {
     private static func validateManifest(
         _ manifest: [String: Any],
         contract: FolioleCompanionSyncPackContract,
-        expectedPeerId: String
+        expectedPeerId: String,
+        expectedSourcePeerId: String
     ) throws -> [String: Int] {
         guard try string(manifest, "format") == contract.format else { throw invalid("unsupported_sync_pack_format") }
         guard try integer(manifest, "format_version") == contract.formatVersion else {
@@ -79,7 +86,9 @@ enum FolioleCompanionSyncPackEnvelopeValidator {
         }
         guard try string(manifest, "to_peer_id") == expectedPeerId else { throw invalid("sync_pack_target_mismatch") }
         _ = try string(manifest, "pack_id")
-        _ = try string(manifest, "from_device_id")
+        guard try string(manifest, "from_device_id") == expectedSourcePeerId else {
+            throw invalid("sync_pack_source_mismatch")
+        }
         _ = try string(manifest, "created_at")
         let from = try integer(manifest, "from_state_seq")
         let to = try integer(manifest, "to_state_seq")

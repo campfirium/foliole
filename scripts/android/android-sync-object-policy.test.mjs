@@ -22,7 +22,7 @@ describe('sync object policy', () => {
       'setting.device',
       'view_state.active_node',
       'view_state.node',
-      'sync_push_ack'
+      'sync_delivery_receipts'
     ]));
   });
 

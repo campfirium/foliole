@@ -75,7 +75,7 @@ it('keeps the latest complete review when newer arrives before older', async () 
   const newer = createOrderedReviewPush('2026-04-30T03:00:00.000Z', 3, 'review-newer');
   const older = createOrderedReviewPush('2026-04-30T02:00:00.000Z', 2, 'review-older');
 
-  await applyCompanionSyncPushAsync([newer, older]);
+  await applyCompanionSyncPushAsync([newer, older], 'android-device');
 
   expect(readReview()).toEqual({
     due: 'due:review-newer', last_review_at: '2026-04-30T03:00:00.000Z', reps: 3
@@ -87,7 +87,7 @@ it('keeps the latest complete review when older arrives first and rejects reps z
   const newer = createOrderedReviewPush('2026-04-30T03:00:00.000Z', 3, 'review-newer');
   const zero = createOrderedReviewPush(null, 0, 'review-zero');
 
-  await applyCompanionSyncPushAsync([older, newer, zero]);
+  await applyCompanionSyncPushAsync([older, newer, zero], 'android-device');
 
   expect(readReview()).toEqual({
     due: 'due:review-newer', last_review_at: '2026-04-30T03:00:00.000Z', reps: 3

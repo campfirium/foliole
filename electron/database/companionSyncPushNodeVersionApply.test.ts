@@ -139,7 +139,7 @@ function seedDeletedNode() {
 
 describe('companion sync node version push apply', () => {
   it('accepts Android-created node versions into desktop nodes and version history', async () => {
-    const result = await applyCompanionSyncPushAsync([createNodeVersionPush()]);
+    const result = await applyCompanionSyncPushAsync([createNodeVersionPush()], 'android-device');
 
     expect(result.appliedNodeIds).toEqual(['node-highlight']);
     expect(result.acks).toMatchObject([{
@@ -160,7 +160,7 @@ describe('companion sync node version push apply', () => {
   });
 
   it('accepts node versions through the async companion push entry', async () => {
-    const result = await applyCompanionSyncPushAsync([createNodeVersionPush()]);
+    const result = await applyCompanionSyncPushAsync([createNodeVersionPush()], 'android-device');
 
     expect(result.appliedNodeIds).toEqual(['node-highlight']);
     expect(result.acks).toMatchObject([{
@@ -175,7 +175,7 @@ describe('companion sync node version push apply', () => {
   it('accepts only a direct child version as an intentional companion restore', async () => {
     seedDeletedNode();
 
-    const result = await applyCompanionSyncPushAsync([createRestoreNodeVersionPush()]);
+    const result = await applyCompanionSyncPushAsync([createRestoreNodeVersionPush()], 'android-device');
 
     expect(result.acks).toMatchObject([{ status: 'accepted', versionId: 'ios#restore' }]);
     expect(openDatabaseConnection().driver.queryOne<{ current_version_id: string; deleted_at: null }>(
@@ -186,7 +186,9 @@ describe('companion sync node version push apply', () => {
   it('keeps stale companion restore ancestry on the conflict path', async () => {
     seedDeletedNode();
 
-    const result = await applyCompanionSyncPushAsync([createRestoreNodeVersionPush('desktop#stale')]);
+    const result = await applyCompanionSyncPushAsync(
+      [createRestoreNodeVersionPush('desktop#stale')], 'android-device'
+    );
 
     expect(result.acks).toMatchObject([{ status: 'conflict' }]);
     expect(openDatabaseConnection().driver.queryOne<{ current_version_id: string; deleted_at: string }>(

@@ -19,6 +19,7 @@ import {
 import { ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionResourceSchemaStatements.ts';
 import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionSyncSchemaStatements.ts';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../../lib/core/database/syncGroupSchemaStatements.ts';
+import { SYNC_DELIVERY_TRIGGER_STATEMENTS } from '../../lib/core/database/syncDeliveryTriggerStatements.ts';
 import { ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS } from '../../lib/core/database/androidCompanionSyncProtocolDefinitions.ts';
 import {
   EXPECTED_SCHEMA_SOURCES,
@@ -53,7 +54,8 @@ describe('schema inventory drift gate', () => {
       ...ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS,
       ...ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS,
       ...ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS,
-      ...SYNC_GROUP_SCHEMA_STATEMENTS
+      ...SYNC_GROUP_SCHEMA_STATEMENTS,
+      ...SYNC_DELIVERY_TRIGGER_STATEMENTS
     ]);
   });
 
@@ -108,8 +110,7 @@ describe('schema inventory drift gate', () => {
       { classification: 'known-platform-only', table: 'sync_peers' }
     ]);
     expect(report.androidOnly).toEqual([
-      { classification: 'known-platform-only', table: 'companion_meta' },
-      { classification: 'known-platform-only', table: 'sync_push_ack' }
+      { classification: 'known-platform-only', table: 'companion_meta' }
     ]);
     expect(report.androidJavaSharedDdl).toEqual([]);
     expect(report.unattributed).toEqual([]);

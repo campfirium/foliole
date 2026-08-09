@@ -8,6 +8,7 @@ export interface SyncPackApplyableRowsOptions {
   excludedNodeIds?: readonly string[] | undefined;
   incomingAlias?: string;
   objectType?: string;
+  sourcePeerId?: string;
 }
 
 export interface SyncPackNodeApplyOptions extends SyncPackApplyableRowsOptions {
@@ -37,6 +38,17 @@ function excludedNodeFilter(options: SyncPackApplyableRowsOptions) {
     : ` AND (incoming.object_type <> 'node' OR ${idFilter})`;
 }
 
+function acceptedDeliveryFilter(options: SyncPackApplyableRowsOptions) {
+  if (!options.sourcePeerId) return '0';
+  const peerId = options.sourcePeerId.replaceAll("'", "''");
+  return `EXISTS (SELECT 1 FROM main.sync_delivery_receipts receipt ` +
+    `WHERE receipt.peer_id = '${peerId}' AND receipt.stream_name = 'state' ` +
+    `AND receipt.object_type = incoming.object_type AND receipt.object_id = incoming.object_id ` +
+    `AND receipt.payload_identity = current.content_hash AND receipt.status = 'accepted' ` +
+    `AND receipt.remote_position IS NOT NULL ` +
+    `AND incoming.state_seq >= CAST(receipt.remote_position AS INTEGER))`;
+}
+
 export function buildSyncPackApplyableRowsSql(options: SyncPackApplyableRowsOptions = {}) {
   const alias = incomingAlias(options);
   return `(SELECT incoming.object_type, incoming.object_id, incoming.state_seq, incoming.content_hash, ` +
@@ -44,10 +56,8 @@ export function buildSyncPackApplyableRowsSql(options: SyncPackApplyableRowsOpti
     `LEFT JOIN main.sync_object_state current ON current.object_type = incoming.object_type ` +
     `AND current.object_id = incoming.object_id WHERE ` +
     `(current.object_id IS NULL OR (current.updated_at <= incoming.updated_at ` +
-    `AND (incoming.object_type = 'view_state' OR current.sync_dirty <> 1 OR EXISTS (` +
-    `SELECT 1 FROM main.sync_push_ack ack WHERE ack.object_type = incoming.object_type ` +
-    `AND ack.object_id = incoming.object_id AND ack.state_seq IS NOT NULL ` +
-    `AND incoming.state_seq >= ack.state_seq AND incoming.content_hash = current.content_hash))))` +
+    `AND (incoming.object_type IN ('node', 'view_state') OR current.sync_dirty <> 1 OR ` +
+    `${acceptedDeliveryFilter(options)})))` +
     ` AND (incoming.object_type <> 'node' OR incoming.deleted_at IS NOT NULL OR EXISTS (` +
     `SELECT 1 FROM ${alias}.nodes node_payload WHERE node_payload.id = incoming.object_id))` +
     typeFilter(options.objectType) +

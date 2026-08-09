@@ -84,7 +84,7 @@
     "min_supported_version": 1,
     "version": 1
   },
-  "schemaVersion": 63,
+  "schemaVersion": 64,
   "tableNames": [
     "sync_object_state",
     "sync_objects",

@@ -36,6 +36,7 @@ import java.util.zip.ZipOutputStream;
 @RunWith(AndroidJUnit4.class)
 public class FolioleCompanionSyncPackTransferValidationTest {
     private static final String EXPECTED_PEER_ID = "android-fixture";
+    private static final String EXPECTED_SOURCE_PEER_ID = "desktop-fixture";
     private Context context;
     private File syncPackCache;
 
@@ -56,7 +57,8 @@ public class FolioleCompanionSyncPackTransferValidationTest {
         File stored = FolioleCompanionSyncPackTransfer.storeDownloadedPack(
             context,
             readContractFixture(),
-            EXPECTED_PEER_ID
+            EXPECTED_PEER_ID,
+            EXPECTED_SOURCE_PEER_ID
         );
 
         assertTrue(stored.exists());
@@ -70,7 +72,8 @@ public class FolioleCompanionSyncPackTransferValidationTest {
         byte[] invalid = mutateDatabase(readContractFixture(), "DROP TABLE pack_manifest");
 
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class, () ->
-            FolioleCompanionSyncPackTransfer.storeDownloadedPack(context, invalid, EXPECTED_PEER_ID)
+            FolioleCompanionSyncPackTransfer.storeDownloadedPack(
+                context, invalid, EXPECTED_PEER_ID, EXPECTED_SOURCE_PEER_ID)
         );
 
         assertTrue(error.getMessage(), error.getMessage().contains("invalid_sync_pack_table_structure:pack_manifest"));
@@ -91,7 +94,8 @@ public class FolioleCompanionSyncPackTransferValidationTest {
         byte[] invalid = zip(manifest, entries.get("incoming.db.deflate"));
 
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class, () ->
-            FolioleCompanionSyncPackTransfer.storeDownloadedPack(context, invalid, EXPECTED_PEER_ID)
+            FolioleCompanionSyncPackTransfer.storeDownloadedPack(
+                context, invalid, EXPECTED_PEER_ID, EXPECTED_SOURCE_PEER_ID)
         );
 
         assertTrue(error.getMessage(), error.getMessage().contains("invalid_sync_pack_row_count:nodes"));
@@ -113,7 +117,8 @@ public class FolioleCompanionSyncPackTransferValidationTest {
         );
         legacy = withSchemaVersion(legacy, 46);
 
-        File stored = FolioleCompanionSyncPackTransfer.storeDownloadedPack(context, legacy, EXPECTED_PEER_ID);
+        File stored = FolioleCompanionSyncPackTransfer.storeDownloadedPack(
+            context, legacy, EXPECTED_PEER_ID, EXPECTED_SOURCE_PEER_ID);
 
         assertTrue(stored.exists());
         assertTrue(FolioleCompanionSyncPackTransfer.deleteCachedPack(context, stored.getAbsolutePath()));

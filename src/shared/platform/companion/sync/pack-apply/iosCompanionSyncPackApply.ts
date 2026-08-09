@@ -10,7 +10,7 @@ import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabase
 import { createIosCompanionSyncPackCursorStore } from '../cursor/iosCompanionSyncPackCursorStore';
 
 export async function applyIosCompanionSyncPackPath(
-  args: { deviceId: string; packPath: string },
+  args: { deviceId: string; packPath: string; sourcePeerId: string },
   manager?: CompanionSqliteConnectionManager
 ) {
   const runtime = requireAvailableCompanionRuntime('sync-pack-apply');
@@ -25,7 +25,7 @@ export async function applyIosCompanionSyncPackPath(
   return runCompanionSyncWriterTask(async () => {
     const currentCursor = await cursorStore.loadCursor() ?? 0;
     const result = await getIosCompanionDatabaseOwner().runWriter((db) => applyCompanionSyncPackNodesWithDbPort({
-      currentCursor, deviceId: args.deviceId, packPath: args.packPath
+      currentCursor, deviceId: args.deviceId, packPath: args.packPath, sourcePeerId: args.sourcePeerId
     }, db));
     assertSyncPackCursorAdvance({
       appliedObjectCount: result.applied_object_count,

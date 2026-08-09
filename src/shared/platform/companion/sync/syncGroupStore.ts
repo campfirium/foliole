@@ -112,10 +112,17 @@ async function loadGroup(db: DbPort): Promise<SyncGroupPayload | null> {
 
 async function saveMember(db: DbPort, groupId: string, member: SyncGroupPayload['members'][number], now: string) {
   await db.run(
-    `INSERT OR REPLACE INTO sync_group_members (
+    `INSERT INTO sync_group_members (
       group_id, device_id, device_kind, device_name, state, approved_by_device_id,
       authorization_id, provisioning_cursor, joined_at, activated_at, left_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, NULL, NULL, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, NULL, NULL, ?)
+    ON CONFLICT(group_id, device_id) DO UPDATE SET
+      device_kind = excluded.device_kind,
+      device_name = excluded.device_name,
+      state = excluded.state,
+      approved_by_device_id = excluded.approved_by_device_id,
+      authorization_id = excluded.authorization_id,
+      updated_at = excluded.updated_at`,
     [groupId, member.device_id, member.device_kind, member.device_name, member.state,
       member.approved_by_device_id, member.authorization_id, member.joined_at, now]
   );

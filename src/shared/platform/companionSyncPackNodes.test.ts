@@ -16,12 +16,15 @@ it('attaches a sync pack before applying pack nodes through the shared core', as
     retrieveConnection: vi.fn()
   };
 
-  connection.query.mockResolvedValueOnce({ values: [{ value: JSON.stringify({ from_state_seq: 0, to_state_seq: 4 }) }] });
+  connection.query.mockResolvedValueOnce({ values: [{ value: JSON.stringify({
+    from_device_id: 'desktop-device', from_state_seq: 0, to_peer_id: 'android-device', to_state_seq: 4
+  }) }] });
 
   await expect(applyCompanionSyncPackNodesWithSharedCore({
     currentCursor: 0,
     deviceId: 'android-device',
-    packPath: '/tmp/incoming pack.db'
+    packPath: '/tmp/incoming pack.db',
+    sourcePeerId: 'desktop-device'
   }, manager as never)).resolves.toEqual({
     applied: true,
     applied_blob_count: 0,
@@ -66,7 +69,9 @@ it('allows cursor advance when a pack only handled conflicts', () => {
 it('reuses an already open companion database connection', async () => {
   const connection = createFakeConnection();
   connection.isDBOpen.mockResolvedValue({ result: true });
-  connection.query.mockResolvedValueOnce({ values: [{ value: JSON.stringify({ from_state_seq: 0, to_state_seq: 1 }) }] });
+  connection.query.mockResolvedValueOnce({ values: [{ value: JSON.stringify({
+    from_device_id: 'desktop-device', from_state_seq: 0, to_peer_id: 'ios-device', to_state_seq: 1
+  }) }] });
   const manager = {
     closeConnection: vi.fn(async () => undefined),
     createConnection: vi.fn(),
@@ -77,7 +82,8 @@ it('reuses an already open companion database connection', async () => {
   await applyCompanionSyncPackNodesWithSharedCore({
     currentCursor: 0,
     deviceId: 'ios-device',
-    packPath: '/tmp/pack.db'
+    packPath: '/tmp/pack.db',
+    sourcePeerId: 'desktop-device'
   }, manager as never);
 
   expect(connection.open).not.toHaveBeenCalled();
@@ -100,7 +106,8 @@ it('loads and advances the pack cursor around the shared core apply', async () =
 
   await expect(applyCompanionSyncPackPathWithSharedCore({
     deviceId: 'android-device',
-    packPath: '/tmp/pack.db'
+    packPath: '/tmp/pack.db',
+    sourcePeerId: 'desktop-device'
   }, cursorStore, manager as never)).resolves.toMatchObject({
     applied: true,
     to_state_seq: 5
@@ -127,7 +134,8 @@ it('does not advance the pack cursor when no objects were applied', async () => 
 
   await expect(applyCompanionSyncPackPathWithSharedCore({
     deviceId: 'android-device',
-    packPath: '/tmp/empty-apply-pack.db'
+    packPath: '/tmp/empty-apply-pack.db',
+    sourcePeerId: 'desktop-device'
   }, cursorStore, manager as never)).rejects.toThrow('sync_pack_applied_no_objects');
 
   expect(cursorStore.saveCursor).not.toHaveBeenCalled();
@@ -144,12 +152,15 @@ it('retrieves an existing Android companion database connection before attaching
     retrieveConnection: vi.fn(async () => connection)
   };
 
-  connection.query.mockResolvedValueOnce({ values: [{ value: JSON.stringify({ from_state_seq: 0, to_state_seq: 1 }) }] });
+  connection.query.mockResolvedValueOnce({ values: [{ value: JSON.stringify({
+    from_device_id: 'desktop-device', from_state_seq: 0, to_peer_id: 'android-device', to_state_seq: 1
+  }) }] });
 
   await expect(applyCompanionSyncPackNodesWithSharedCore({
     currentCursor: 0,
     deviceId: 'android-device',
-    packPath: '/tmp/downloaded-pack.db'
+    packPath: '/tmp/downloaded-pack.db',
+    sourcePeerId: 'desktop-device'
   }, manager as never)).resolves.toMatchObject({
     applied: true,
     to_state_seq: 1
@@ -178,7 +189,8 @@ it('detaches the incoming pack when shared core apply fails', async () => {
   await expect(applyCompanionSyncPackNodesWithSharedCore({
     currentCursor: 0,
     deviceId: 'android-device',
-    packPath: '/tmp/bad-pack.db'
+    packPath: '/tmp/bad-pack.db',
+    sourcePeerId: 'desktop-device'
   }, manager as never)).rejects.toThrow('bad pack manifest');
 
   expect(connection.run).toHaveBeenNthCalledWith(
@@ -215,7 +227,10 @@ function mockPackApplyQueries(
 ) {
   connection.query.mockImplementation(async (sql: string) => {
     if (sql.includes('pack_manifest')) {
-      return { values: [{ value: JSON.stringify({ from_state_seq: args.fromStateSeq, to_state_seq: args.toStateSeq }) }] };
+      return { values: [{ value: JSON.stringify({
+        from_device_id: 'desktop-device', from_state_seq: args.fromStateSeq,
+        to_peer_id: 'android-device', to_state_seq: args.toStateSeq
+      }) }] };
     }
     if (sql.includes('COALESCE(MAX(state_seq), 0) + 1 AS next_state_seq')) {
       return { values: [{ next_state_seq: 1 }] };

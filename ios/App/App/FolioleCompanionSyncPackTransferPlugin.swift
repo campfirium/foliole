@@ -15,9 +15,16 @@ public class FolioleCompanionSyncPackTransferPlugin: CAPPlugin, CAPBridgedPlugin
             let contracts = try FolioleCompanionContractStore()
             let urlKey = try contracts.transferRequestKey("url")
             let headersKey = try contracts.transferRequestKey("headers")
-            guard let expectedPeerId = call.getString("expected_peer_id")?.trimmingCharacters(in: .whitespacesAndNewlines),
+            let expectedPeerIdKey = try contracts.transferRequestKey("expectedPeerId")
+            let expectedSourcePeerIdKey = try contracts.transferRequestKey("expectedSourcePeerId")
+            guard let expectedPeerId = call.getString(expectedPeerIdKey)?.trimmingCharacters(in: .whitespacesAndNewlines),
                   !expectedPeerId.isEmpty else {
-                call.reject("expected_peer_id is required.")
+                call.reject("\(expectedPeerIdKey) is required.")
+                return
+            }
+            guard let expectedSourcePeerId = call.getString(expectedSourcePeerIdKey)?
+                .trimmingCharacters(in: .whitespacesAndNewlines), !expectedSourcePeerId.isEmpty else {
+                call.reject("\(expectedSourcePeerIdKey) is required.")
                 return
             }
             guard let url = call.getString(urlKey)?.trimmingCharacters(in: .whitespacesAndNewlines), !url.isEmpty else {
@@ -34,7 +41,8 @@ public class FolioleCompanionSyncPackTransferPlugin: CAPPlugin, CAPBridgedPlugin
                     let packURL = try await FolioleCompanionSyncPackTransfer.downloadDesktopSyncPack(
                         url: url,
                         headers: headers,
-                        expectedPeerId: expectedPeerId
+                        expectedPeerId: expectedPeerId,
+                        expectedSourcePeerId: expectedSourcePeerId
                     )
                     call.resolve([try contracts.transferResponseKey("packPath"): packURL.path])
                 } catch {

@@ -9,7 +9,8 @@ final class FolioleSyncPackValidatorTests: XCTestCase {
         let prepared = try FolioleCompanionSyncPackEnvelopeValidator.validate(
             archiveURL: fixtureURL(),
             contract: contract,
-            expectedPeerId: "android-fixture"
+            expectedPeerId: "android-fixture",
+            expectedSourcePeerId: "desktop-fixture"
         )
         XCTAssertTrue(prepared.databaseBytes.starts(with: Data("SQLite format 3\0".utf8)))
 
@@ -29,9 +30,23 @@ final class FolioleSyncPackValidatorTests: XCTestCase {
         XCTAssertThrowsError(try FolioleCompanionSyncPackEnvelopeValidator.validate(
             archiveURL: fixtureURL(),
             contract: contract,
-            expectedPeerId: "ios-other-device"
+            expectedPeerId: "ios-other-device",
+            expectedSourcePeerId: "desktop-fixture"
         )) { error in
             XCTAssertEqual(error.localizedDescription, "sync_pack_target_mismatch")
+        }
+    }
+
+    func testRejectsPackFromAnotherPeerBeforeSQLiteWrite() throws {
+        let contract = try FolioleCompanionContractStore(bundle: .module).syncPackContract()
+
+        XCTAssertThrowsError(try FolioleCompanionSyncPackEnvelopeValidator.validate(
+            archiveURL: fixtureURL(),
+            contract: contract,
+            expectedPeerId: "android-fixture",
+            expectedSourcePeerId: "other-desktop"
+        )) { error in
+            XCTAssertEqual(error.localizedDescription, "sync_pack_source_mismatch")
         }
     }
 
@@ -63,7 +78,8 @@ final class FolioleSyncPackValidatorTests: XCTestCase {
         XCTAssertThrowsError(try FolioleCompanionSyncPackEnvelopeValidator.validate(
             archiveURL: archiveURL,
             contract: contract,
-            expectedPeerId: "android-fixture"
+            expectedPeerId: "android-fixture",
+            expectedSourcePeerId: "desktop-fixture"
         )) { error in
             XCTAssertEqual(error.localizedDescription, code)
         }

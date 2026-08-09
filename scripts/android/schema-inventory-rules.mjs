@@ -21,6 +21,7 @@ export const CORE_TABLES = [
   'review_log',
   'setting_records',
   'sync_change_log',
+  'sync_delivery_receipts',
   'sync_object_state',
   'sync_peer_cursors',
   'workspace_meta'
@@ -37,7 +38,7 @@ export const DESKTOP_ONLY_TABLES = new Set([
   'sync_peers'
 ]);
 
-export const ANDROID_ONLY_TABLES = new Set(['companion_meta', 'sync_push_ack']);
+export const ANDROID_ONLY_TABLES = new Set(['companion_meta']);
 
 const LEGACY_REPAIR_TABLES = new Set(['sync_object_state_next']);
 

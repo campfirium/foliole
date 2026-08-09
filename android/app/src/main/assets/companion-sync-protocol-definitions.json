@@ -76,7 +76,7 @@
       "content_blobs",
       "review_log"
     ],
-    "maximumSchemaVersion": 63,
+    "maximumSchemaVersion": 64,
     "minimumSchemaVersion": 46,
     "sqliteTableRequirements": {
       "pack_manifest": [
@@ -647,11 +647,11 @@
         "category": "diagnostic",
         "conflict": "device_private",
         "deviceScope": "device",
-        "key": "sync_push_ack",
+        "key": "sync_delivery_receipts",
         "objectType": null,
         "pushIssue": "diagnostic",
         "storage": [
-          "sync_push_ack"
+          "sync_delivery_receipts"
         ],
         "userVisible": false
       }

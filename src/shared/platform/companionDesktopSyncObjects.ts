@@ -14,10 +14,7 @@ import type {
 import {
   applyCompanionDesktopSyncPack,
   loadCompanionSyncPackCursor,
-  loadCompanionSyncReviewLog,
-  loadCompanionSyncReviewLogPushCursor,
-  saveCompanionSyncPackCursor,
-  saveCompanionSyncReviewLogPushCursor
+  saveCompanionSyncPackCursor
 } from './companionSyncObjects';
 import {
   companionSyncTimeoutOwnership,
@@ -43,25 +40,6 @@ function normalizeEndpointUrl(endpointUrl: string) {
   return endpointUrl.trim().replace(/\/+$/, '');
 }
 
-async function saveConfirmedReviewLogPushCursor(confirmedOpIds: string[]) {
-  if (confirmedOpIds.length === 0) {
-    return;
-  }
-  const confirmedSet = new Set(confirmedOpIds);
-  const cursor = await loadCompanionSyncReviewLogPushCursor();
-  const reviewLog = await loadCompanionSyncReviewLog(cursor, 100);
-  let confirmed = null as null | { change_id: string; created_at: string };
-  for (const row of reviewLog) {
-    if (!confirmedSet.has(row.op_id)) {
-      break;
-    }
-    confirmed = { change_id: row.op_id, created_at: row.reviewed_at };
-  }
-  if (confirmed) {
-    await saveCompanionSyncReviewLogPushCursor(confirmed);
-  }
-}
-
 async function pullRemoteStructurePack(endpointUrl: string) {
   const startedAt = Date.now();
   const cursor = await loadCompanionSyncPackCursor();
@@ -80,7 +58,6 @@ async function pullRemoteStructurePack(endpointUrl: string) {
     await saveCompanionSyncPackCursor(result.to_state_seq);
   }
   const appliedReviewOpIds = result.applied_review_op_ids ?? [];
-  await saveConfirmedReviewLogPushCursor(appliedReviewOpIds);
   return {
     appliedPackBlobCount: result.applied_blob_count,
     appliedPackObjectCount: result.applied_object_count,

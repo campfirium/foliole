@@ -1,3 +1,5 @@
+import { SYNC_DELIVERY_SCHEMA_STATEMENTS } from './syncDeliverySchemaStatements.js';
+
 export const SYNC_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS sync_object_state (
     object_type TEXT NOT NULL,
@@ -49,6 +51,7 @@ export const SYNC_SCHEMA_STATEMENTS = [
     updated_at TEXT NOT NULL,
     PRIMARY KEY (peer_id, stream_name)
   )`,
+  ...SYNC_DELIVERY_SCHEMA_STATEMENTS,
   `CREATE TABLE IF NOT EXISTS attachment_blobs (
     attachment_id TEXT PRIMARY KEY REFERENCES attachments(id) ON DELETE CASCADE,
     content_hash TEXT,

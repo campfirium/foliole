@@ -7,6 +7,7 @@ import {
 import { ANDROID_COMPANION_MUTATION_DEFINITIONS as MUTATIONS } from './androidCompanionMutationDefinitions.js';
 import { ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS } from './androidCompanionNodeResourceQueryDefinitions.js';
 import { COMPANION_SCHEMA_STATEMENTS } from './companionSchemaStatements.js';
+import { SYNC_DELIVERY_LEGACY_BACKFILL_SQL } from './syncDeliveryMigrationStatements.js';
 
 interface LegacySyncRow extends DbRow {
   content_hash: string;
@@ -26,6 +27,12 @@ interface AttachmentSnapshotRow extends DbRow {
 
 export async function installCompanionSchema(db: DbPort) {
   for (const statement of COMPANION_SCHEMA_STATEMENTS) await db.run(statement);
+}
+
+export async function replaceLegacySyncPushAck(db: DbPort) {
+  await installCompanionSchema(db);
+  await db.run(STATEMENTS.syncPushAckDropLegacyTable);
+  await db.run(SYNC_DELIVERY_LEGACY_BACKFILL_SQL);
 }
 
 export async function addColumnIfMissing(

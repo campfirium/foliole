@@ -1,8 +1,7 @@
 import { ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS } from './androidCompanionLearningPayloadQueryDefinitions.js';
 import {
   ANDROID_COMPANION_MUTATION_DEFINITIONS,
-  ANDROID_COMPANION_HOST_SUPPORT_MUTATION_RULES,
-  ANDROID_COMPANION_SYNC_APPLY_MUTATION_RULES
+  ANDROID_COMPANION_HOST_SUPPORT_MUTATION_RULES
 } from './androidCompanionMutationDefinitions.js';
 import { ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS } from './androidCompanionPayloadQueryDefinitions.js';
 import { ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS } from './androidCompanionSyncProtocolDefinitions.js';
@@ -13,7 +12,6 @@ import {
 
 const mutations = ANDROID_COMPANION_MUTATION_DEFINITIONS;
 const metaRules = ANDROID_COMPANION_HOST_SUPPORT_MUTATION_RULES.companionMeta;
-const ackRules = ANDROID_COMPANION_SYNC_APPLY_MUTATION_RULES.pushAck;
 const protocol = ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS;
 const nodeVersionRules = ANDROID_COMPANION_SYNC_STREAM_READ_RULES.nodeVersions;
 const sharedStateQuery = ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS.syncStateChanges.sql;
@@ -46,8 +44,6 @@ export const COMPANION_SYNCBACK_HOST_CONTRACT = {
   },
   pushAck: protocol.pushAck,
   sql: {
-    ackDeleteIssues: mutations[ackRules.deleteIssuesMutationName],
-    ackUpsert: mutations[ackRules.upsertMutationName],
     state: syncbackStateQuery,
     metaDelete: mutations[metaRules.deleteByKeyMutationName],
     metaQuery: ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS.companionMetaValue.sql,

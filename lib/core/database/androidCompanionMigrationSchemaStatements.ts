@@ -32,6 +32,7 @@ export const ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS = {
   nodesShelvedAtColumn: 'ALTER TABLE nodes ADD COLUMN shelved_at TEXT',
   nodesManualChildOrderColumn: 'ALTER TABLE nodes ADD COLUMN manual_child_order TEXT',
   nodeViewStateSourceColumn: "ALTER TABLE node_view_state ADD COLUMN source TEXT NOT NULL DEFAULT 'user-scroll'",
+  syncPushAckDropLegacyTable: 'DROP TABLE IF EXISTS sync_push_ack',
   syncObjectStateDropLegacyTable: 'DROP TABLE sync_object_state',
   syncObjectStateBaseContentHashColumn: 'ALTER TABLE sync_object_state ADD COLUMN base_content_hash TEXT',
   syncObjectStateRenameNextTable: 'ALTER TABLE sync_object_state_next RENAME TO sync_object_state',
@@ -66,6 +67,7 @@ export const ANDROID_COMPANION_MIGRATION_ACTION_TYPES = {
   addSyncBaseContentHashIfMissing: 'addSyncBaseContentHashIfMissing',
   backfillNodeAttachmentsFromVersions: 'backfillNodeAttachmentsFromVersions',
   installSchema: 'installSchema',
+  replaceSyncPushAck: 'replaceSyncPushAck',
   migrateSyncObjectStateSequence: 'migrateSyncObjectStateSequence'
 } as const;
 
@@ -168,6 +170,10 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
   {
     actions: [{ errorMessage: 'Failed to install companion Sync Group schema.', type: 'installSchema' }],
     beforeVersion: 23
+  },
+  {
+    actions: [{ errorMessage: 'Failed to replace the legacy sync receipt schema.', type: 'replaceSyncPushAck' }],
+    beforeVersion: 24
   }
 ] as const;
 

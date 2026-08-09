@@ -124,37 +124,49 @@ export async function saveCompanionSyncReviewLogPushCursor(cursor: NativeSyncCha
   return writeWebCursor(WEB_SYNC_REVIEW_LOG_PUSH_CURSOR_KEY, cursor);
 }
 
-export async function loadCompanionSyncNodeVersions(cursor: NativeSyncChangeCursor | null, limit = 500) {
+export async function loadCompanionSyncNodeVersions(
+  peerId: string,
+  cursor: NativeSyncChangeCursor | null,
+  limit = 500
+) {
   if (getNativeCompanionSyncbackPlatform() !== null) {
-    return getIosCompanionSyncbackStore().loadNodeVersions(cursor, limit);
+    return getIosCompanionSyncbackStore().loadNodeVersions(peerId, cursor, limit);
   }
   return [] as NativeSyncNodeRecord[];
 }
 
-export async function loadCompanionSyncReviewLog(cursor: NativeSyncChangeCursor | null, limit = 500) {
+export async function loadCompanionSyncReviewLog(
+  peerId: string,
+  cursor: NativeSyncChangeCursor | null,
+  limit = 500
+) {
   if (getNativeCompanionSyncbackPlatform() !== null) {
-    return getIosCompanionSyncbackStore().loadReviewLog(cursor, limit);
+    return getIosCompanionSyncbackStore().loadReviewLog(peerId, cursor, limit);
   }
   return [] as NativeSyncReviewLogRecord[];
 }
 
-export async function loadCompanionSyncStateChanges(cursor: number | null, limit = 500) {
+export async function loadCompanionSyncStateChanges(peerId: string, cursor: number | null, limit = 500) {
   if (getNativeCompanionSyncbackPlatform() !== null) {
-    return getIosCompanionSyncbackStore().loadStateChanges(cursor, limit);
+    return getIosCompanionSyncbackStore().loadStateChanges(peerId, cursor, limit);
   }
   return [] as NativeSyncStateObjectRecord[];
 }
 
 export async function loadCompanionPendingSyncSummary() {
+  const { loadCompanionPairingState } = await import('./companionWorkspacePairing');
+  const pairing = await loadCompanionPairingState();
+  const peerId = pairing.remote_peer_id?.trim();
+  if (!peerId) return { pendingCount: 0 };
   const [stateCursor, nodeCursor, reviewCursor] = await Promise.all([
     loadCompanionSyncStatePushCursor(),
     loadCompanionSyncNodeVersionPushCursor(),
     loadCompanionSyncReviewLogPushCursor()
   ]);
   const [stateChanges, nodeVersions, reviewLog] = await Promise.all([
-    loadCompanionSyncStateChanges(stateCursor, 1),
-    loadCompanionSyncNodeVersions(nodeCursor, 1),
-    loadCompanionSyncReviewLog(reviewCursor, 1)
+    loadCompanionSyncStateChanges(peerId, stateCursor, 1),
+    loadCompanionSyncNodeVersions(peerId, nodeCursor, 1),
+    loadCompanionSyncReviewLog(peerId, reviewCursor, 1)
   ]);
   return { pendingCount: stateChanges.length + nodeVersions.length + reviewLog.length };
 }

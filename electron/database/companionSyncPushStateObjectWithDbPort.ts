@@ -9,8 +9,6 @@ import type {
 } from './companionSyncPushTypes.js';
 import { materializeDesktopSettingRecord } from './desktopSettingMaterializer.js';
 
-const REMOTE_DEVICE_ID = 'companion-push';
-
 export type StatePushObjectType = Extract<NativeSyncObjectType, 'node_open_state' | 'node_reading' | 'node_review' | 'node_text_alternative' | 'setting' | 'view_state'>;
 
 interface SyncObjectStateRow extends DbRow {
@@ -32,7 +30,8 @@ export function isStateObjectPush(item: CompanionSyncPushPayload) {
 export async function applyStateObjectPushWithDbPort(
   port: DbPort,
   item: CompanionSyncPushPayload,
-  objectType: StatePushObjectType
+  objectType: StatePushObjectType,
+  sourceDeviceId: string
 ) {
   return await port.transaction(async (tx) => {
     const current = await currentState(tx, item.identity);
@@ -63,7 +62,7 @@ export async function applyStateObjectPushWithDbPort(
       return emptyResult(stateAck(item, current, 'already_applied'));
     }
     await materializeDesktopSettingRecord(tx, record);
-    await upsertState(tx, record);
+    await upsertState(tx, record, sourceDeviceId);
     const updated = await currentState(tx, item.identity);
     return {
       acks: [stateAck(item, updated, 'accepted')],
@@ -107,7 +106,7 @@ async function currentState(port: DbPort, identity: SyncObjectIdentity) {
   ))[0];
 }
 
-function upsertState(port: DbPort, record: NativeSyncObjectRecord) {
+function upsertState(port: DbPort, record: NativeSyncObjectRecord, sourceDeviceId: string) {
   return port.run(
     `INSERT INTO sync_object_state (` +
     `object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty, deleted_at` +
@@ -115,7 +114,7 @@ function upsertState(port: DbPort, record: NativeSyncObjectRecord) {
     `ON CONFLICT(object_type, object_id) DO UPDATE SET state_seq = excluded.state_seq, content_hash = excluded.content_hash, ` +
     `last_modified_by_device_id = excluded.last_modified_by_device_id, updated_at = excluded.updated_at, ` +
     `sync_dirty = excluded.sync_dirty, deleted_at = excluded.deleted_at`,
-    [record.object_type, record.object_id, record.content_hash, REMOTE_DEVICE_ID, record.updated_at, record.deleted_at]
+    [record.object_type, record.object_id, record.content_hash, sourceDeviceId, record.updated_at, record.deleted_at]
   );
 }
 

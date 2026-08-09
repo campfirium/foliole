@@ -21,12 +21,13 @@ import type { CompanionSyncPushPayload, CompanionSyncPushResult } from './compan
 
 export async function applyNodePushBatchWithDbPort(
   port: DbPort,
-  items: CompanionSyncPushPayload[]
+  items: CompanionSyncPushPayload[],
+  sourceDeviceId: string
 ): Promise<CompanionSyncPushResult> {
   const parsed = items.map((item) => ({ item, record: parseNodeVersionPush(item) }));
   const result = emptyResult();
   const valid = parsed.filter((entry): entry is { item: CompanionSyncPushPayload; record: NativeSyncNodeRecord } => {
-    if (entry.record) return true;
+    if (entry.record?.device_id === sourceDeviceId) return true;
     append(result, rejectNodeVersionPush(entry.item, 'invalid_node_push'));
     return false;
   });

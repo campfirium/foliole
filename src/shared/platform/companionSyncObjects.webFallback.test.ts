@@ -70,15 +70,15 @@ describe('companion sync objects web fallback', () => {
     await expect(api.loadCompanionSyncIndex()).resolves.toEqual([]);
     await expect(api.loadCompanionSyncNodeConflicts()).resolves.toEqual([]);
     await expect(api.loadCompanionSyncObjects(['one'], ['setting'])).resolves.toEqual([]);
-    await expect(api.loadCompanionSyncStateChanges(null)).resolves.toEqual([]);
+    await expect(api.loadCompanionSyncStateChanges('desktop-peer', null)).resolves.toEqual([]);
     await expect(api.loadCompanionMissingContentBlobHashes()).resolves.toEqual([]);
     await expect(api.syncCompanionContentBlob({
       hash: 'a'.repeat(64),
       headers: {},
       url: 'http://desktop/companion/content-blob?hash=a'
     })).resolves.toEqual({ availability: 'missing', hash: 'a'.repeat(64) });
-    await expect(api.loadCompanionSyncNodeVersions(null)).resolves.toEqual([]);
-    await expect(api.loadCompanionSyncReviewLog(null)).resolves.toEqual([]);
+    await expect(api.loadCompanionSyncNodeVersions('desktop-peer', null)).resolves.toEqual([]);
+    await expect(api.loadCompanionSyncReviewLog('desktop-peer', null)).resolves.toEqual([]);
     await expect(api.loadCompanionPdfPageText('att-1')).resolves.toEqual([]);
     await expect(api.searchCompanionPdfPageText('pdf')).resolves.toEqual([]);
     await expect(api.loadCompanionPendingSyncSummary()).resolves.toEqual({ pendingCount: 0 });
@@ -102,6 +102,6 @@ describe('companion sync objects web fallback', () => {
     });
     await expect(api.applyCompanionSyncNodeVersions([])).resolves.toEqual([]);
     await expect(api.applyCompanionSyncReviewLog([])).resolves.toEqual([]);
-    await expect(api.saveCompanionSyncPushAcks([])).resolves.toEqual([]);
+    await expect(api.saveCompanionSyncPushAcks('desktop-peer', [])).resolves.toEqual([]);
   });
 });

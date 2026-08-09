@@ -94,9 +94,9 @@ function localPushBlockers(db) {
     `SELECT object_type, COUNT(*) AS count FROM sync_object_state
      WHERE sync_dirty = 1 AND object_type <> 'view_state' GROUP BY object_type ORDER BY object_type`
   ).all();
-  const pushIssueRows = tableExists(db, 'sync_push_ack')
+  const pushIssueRows = tableExists(db, 'sync_delivery_receipts')
     ? db.prepare(
-        `SELECT status, object_type, COUNT(*) AS count FROM sync_push_ack
+        `SELECT status, object_type, COUNT(*) AS count FROM sync_delivery_receipts
          WHERE status IN ('conflict', 'rejected')
          GROUP BY status, object_type ORDER BY status, object_type`
       ).all().filter((row) => isReviewRequiredPushIssueObjectType(row.object_type))

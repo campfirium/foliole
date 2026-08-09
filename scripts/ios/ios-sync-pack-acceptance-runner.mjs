@@ -38,7 +38,7 @@ export function readSyncPackSnapshot(options) {
     (SELECT count(*) FROM nodes WHERE id IN (
       'ios-acceptance-restore', (SELECT id FROM nodes WHERE title = 'Mac successor acceptance')
     ) AND sync_dirty <> 0) AS dirty_count,
-    (SELECT count(*) FROM sync_push_ack) AS push_ack_count,
+    (SELECT count(*) FROM sync_delivery_receipts WHERE status <> 'confirmed') AS push_ack_count,
     (SELECT count(*) FROM companion_meta WHERE key = 'sync_node_version_push_cursor') AS push_cursor_present,
     (SELECT current_version_id FROM nodes WHERE id = 'ios-acceptance-restore') AS restore_current,
     (SELECT deleted_at FROM nodes WHERE id = 'ios-acceptance-restore') AS restore_deleted_at,

@@ -117,8 +117,8 @@ async function testNativePluginBridge() {
     { attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }
   ]);
   expect(iosReadsMock.missingAttachments).toHaveBeenCalledWith(4);
-  await expect(api.loadCompanionSyncNodeVersions(null)).resolves.toEqual([{ object_id: 'node-1' }]);
-  await expect(api.loadCompanionSyncReviewLog(null)).resolves.toEqual([{ op_id: 'op-1' }]);
+  await expect(api.loadCompanionSyncNodeVersions('desktop-peer', null)).resolves.toEqual([{ object_id: 'node-1' }]);
+  await expect(api.loadCompanionSyncReviewLog('desktop-peer', null)).resolves.toEqual([{ op_id: 'op-1' }]);
   await expect(api.loadCompanionPdfPageText('att-1')).resolves.toEqual([
     { page: 1, page_height: 200, page_width: 100, text: 'indexed pdf text' }
   ]);
@@ -171,7 +171,7 @@ async function expectNativeSaveBridge(api: typeof import('./companionSyncObjects
     scroll_top: 42.8
   });
   await expect(api.applyCompanionSyncReviewLog([])).resolves.toEqual([]);
-  await expect(api.saveCompanionSyncPushAcks([{
+  await expect(api.saveCompanionSyncPushAcks('desktop-peer', [{
     clientOpId: 'client-op-1',
     identity: { objectId: 'one', objectType: 'setting', scope: 'device' },
     stateSeq: 4,
@@ -212,8 +212,8 @@ describe('companion sync objects bridge', () => {
       status: 'accepted' as const
     };
 
-    await expect(api.saveCompanionSyncPushAcks([ack])).resolves.toEqual(['ios-review-op']);
-    expect(iosSyncbackStoreMock.savePushAcks).toHaveBeenCalledWith([ack]);
+    await expect(api.saveCompanionSyncPushAcks('desktop-peer', [ack])).resolves.toEqual(['ios-review-op']);
+    expect(iosSyncbackStoreMock.savePushAcks).toHaveBeenCalledWith('desktop-peer', [ack]);
     expect(capacitorMock.plugin.saveSyncPushAcks).not.toHaveBeenCalled();
   });
 });

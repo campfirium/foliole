@@ -129,6 +129,14 @@ final class FolioleCompanionHostBridgeContractDefinitions {
         return syncPackTransferResponseKey(context, "deleted");
     }
 
+    static String syncPackTransferExpectedPeerIdRequestKey(Context context) throws Exception {
+        return syncPackTransferRequestKey(context, "expectedPeerId");
+    }
+
+    static String syncPackTransferExpectedSourcePeerIdRequestKey(Context context) throws Exception {
+        return syncPackTransferRequestKey(context, "expectedSourcePeerId");
+    }
+
     static String syncPackTransferHeadersRequestKey(Context context) throws Exception {
         return syncPackTransferRequestKey(context, "headers");
     }

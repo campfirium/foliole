@@ -11,6 +11,7 @@ import {
   backfillNodeAttachments,
   installCompanionSchema,
   migrateExternalFolderOwnership,
+  replaceLegacySyncPushAck,
   migrateSyncObjectStateSequence
 } from './companionDatabaseMigrationActions.js';
 
@@ -75,6 +76,7 @@ async function runMigrationAction(db: DbPort, action: MigrationAction) {
   if (action.type === ACTIONS.migrateSyncObjectStateSequence) return migrateSyncObjectStateSequence(db);
   if (action.type === ACTIONS.backfillNodeAttachmentsFromVersions) return backfillNodeAttachments(db);
   if (action.type === ACTIONS.migrateExternalFolderOwnership) return migrateExternalFolderOwnership(db);
+  if (action.type === ACTIONS.replaceSyncPushAck) return replaceLegacySyncPushAck(db);
   if (action.type === ACTIONS.backfillSyncConflictConvergence) {
     await db.run(STATEMENTS.syncVersionParentsBackfill);
     await db.run(STATEMENTS.syncCurrentVersionBodyTextBackfill);

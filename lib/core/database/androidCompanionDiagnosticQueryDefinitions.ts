@@ -11,7 +11,8 @@ const MISSING_TOPIC_BODY_FROM =
   'LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash ';
 
 const BLOCKING_ACK_WHERE =
-  `(ack.status IN ('accepted', 'already_applied') OR ack.object_type IN (${REVIEW_REQUIRED_PUSH_ISSUE_TYPES_SQL}))`;
+  `(ack.status = 'accepted' OR (ack.status IN ('conflict', 'rejected') ` +
+  `AND ack.object_type IN (${REVIEW_REQUIRED_PUSH_ISSUE_TYPES_SQL})))`;
 
 const REVIEW_REQUIRED_PUSH_ISSUE_WHERE =
   `status IN ('conflict', 'rejected') AND object_type IN (${REVIEW_REQUIRED_PUSH_ISSUE_TYPES_SQL})`;
@@ -119,12 +120,12 @@ export const ANDROID_COMPANION_DIAGNOSTIC_QUERY_DEFINITIONS = {
       "UNION ALL SELECT 'local_dirty_count' AS metric, COUNT(*) AS value FROM sync_object_state WHERE sync_dirty = 1 AND object_type <> 'view_state' " +
       "UNION ALL SELECT 'ready_dirty_count' AS metric, COUNT(*) AS value FROM sync_object_state state WHERE state.sync_dirty = 1 " +
       "AND state.object_type <> 'view_state' " +
-      'AND NOT EXISTS (SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = state.object_type AND ack.object_id = state.object_id ' +
+      'AND NOT EXISTS (SELECT 1 FROM sync_delivery_receipts ack WHERE ack.object_type = state.object_type AND ack.object_id = state.object_id ' +
       'AND ' +
       BLOCKING_ACK_WHERE +
       ') ' +
-      "UNION ALL SELECT 'pending_ack_count' AS metric, COUNT(*) AS value FROM sync_push_ack WHERE status IN ('accepted', 'already_applied') " +
-      "UNION ALL SELECT 'push_issue_count' AS metric, COUNT(*) AS value FROM sync_push_ack WHERE " +
+      "UNION ALL SELECT 'pending_ack_count' AS metric, COUNT(*) AS value FROM sync_delivery_receipts WHERE status = 'accepted' " +
+      "UNION ALL SELECT 'push_issue_count' AS metric, COUNT(*) AS value FROM sync_delivery_receipts WHERE " +
       REVIEW_REQUIRED_PUSH_ISSUE_WHERE,
     columns: [
       { key: 'metric', source: 'metric', type: 'string' },
@@ -138,13 +139,13 @@ export const ANDROID_COMPANION_DIAGNOSTIC_QUERY_DEFINITIONS = {
       'MIN(state.state_seq) AS min_state_seq, MAX(state.state_seq) AS max_state_seq, ' +
       'COALESCE(pending.count, 0) AS pending_ack_count, COALESCE(issues.count, 0) AS push_issue_count, ' +
       'SUM(CASE WHEN state.sync_dirty = 1 AND NOT EXISTS (' +
-      'SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = state.object_type AND ack.object_id = state.object_id' +
+      'SELECT 1 FROM sync_delivery_receipts ack WHERE ack.object_type = state.object_type AND ack.object_id = state.object_id' +
       ' AND ' +
       BLOCKING_ACK_WHERE +
       ') THEN 1 ELSE 0 END) AS ready_dirty_count FROM sync_object_state state ' +
-      "LEFT JOIN (SELECT object_type, COUNT(*) AS count FROM sync_push_ack WHERE status IN ('accepted', 'already_applied') GROUP BY object_type) pending " +
+      "LEFT JOIN (SELECT object_type, COUNT(*) AS count FROM sync_delivery_receipts WHERE status = 'accepted' GROUP BY object_type) pending " +
       'ON pending.object_type = state.object_type ' +
-      'LEFT JOIN (SELECT object_type, COUNT(*) AS count FROM sync_push_ack WHERE ' +
+      'LEFT JOIN (SELECT object_type, COUNT(*) AS count FROM sync_delivery_receipts WHERE ' +
       REVIEW_REQUIRED_PUSH_ISSUE_WHERE +
       ' GROUP BY object_type) issues ' +
       "ON issues.object_type = state.object_type WHERE state.object_type <> 'view_state' " +
@@ -165,7 +166,7 @@ export const ANDROID_COMPANION_DIAGNOSTIC_QUERY_DEFINITIONS = {
     sql:
       'SELECT object_type, object_id, content_hash, state_seq, updated_at, base_content_hash ' +
       "FROM sync_object_state WHERE sync_dirty = 1 AND object_type <> 'view_state' " +
-      'AND NOT EXISTS (SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = sync_object_state.object_type ' +
+      'AND NOT EXISTS (SELECT 1 FROM sync_delivery_receipts ack WHERE ack.object_type = sync_object_state.object_type ' +
       'AND ack.object_id = sync_object_state.object_id AND ' +
       BLOCKING_ACK_WHERE +
       ') ORDER BY state_seq DESC LIMIT 50',
@@ -181,8 +182,8 @@ export const ANDROID_COMPANION_DIAGNOSTIC_QUERY_DEFINITIONS = {
   diagnosticPendingAcks: {
     resultKey: 'acks',
     sql:
-      "SELECT client_op_id, object_type, object_id, state_seq, status, acked_at FROM sync_push_ack WHERE status IN ('accepted', 'already_applied') " +
-      'ORDER BY acked_at ASC LIMIT 50',
+      "SELECT operation_id AS client_op_id, object_type, object_id, remote_position AS state_seq, status, updated_at AS acked_at " +
+      "FROM sync_delivery_receipts WHERE status = 'accepted' ORDER BY updated_at ASC LIMIT 50",
     columns: [
       { key: 'client_op_id', source: 'client_op_id', type: 'string' },
       { key: 'object_type', source: 'object_type', type: 'string' },
@@ -195,9 +196,10 @@ export const ANDROID_COMPANION_DIAGNOSTIC_QUERY_DEFINITIONS = {
   diagnosticPushIssues: {
     resultKey: 'acks',
     sql:
-      "SELECT client_op_id, object_type, object_id, state_seq, status, acked_at FROM sync_push_ack WHERE status IN ('conflict', 'rejected') " +
+      "SELECT operation_id AS client_op_id, object_type, object_id, remote_position AS state_seq, status, updated_at AS acked_at " +
+      "FROM sync_delivery_receipts WHERE status IN ('conflict', 'rejected') " +
       `AND object_type IN (${REVIEW_REQUIRED_PUSH_ISSUE_TYPES_SQL}) ` +
-      'ORDER BY acked_at ASC LIMIT 50',
+      'ORDER BY updated_at ASC LIMIT 50',
     columns: [
       { key: 'client_op_id', source: 'client_op_id', type: 'string' },
       { key: 'object_type', source: 'object_type', type: 'string' },

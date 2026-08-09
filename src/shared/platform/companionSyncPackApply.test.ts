@@ -41,7 +41,9 @@ const bootstrapMock = vi.hoisted(() => ({
   }))
 }));
 const pairingMock = vi.hoisted(() => ({
-  load: vi.fn(async () => ({ primary_device_id: 'desktop-test-device' }))
+  load: vi.fn(async () => ({
+    primary_device_id: 'desktop-test-device', remote_peer_id: 'desktop-test-device'
+  }))
 }));
 
 vi.mock('@capacitor/core', () => ({
@@ -85,12 +87,14 @@ it('downloads desktop packs before applying them through the shared database own
 
   expect(capacitorMock.plugin.downloadDesktopSyncPack).toHaveBeenCalledWith({
     expected_peer_id: 'android-test-device',
+    expected_source_peer_id: 'desktop-test-device',
     headers: { 'X-Device-Id': 'android' },
     url: 'http://desktop/companion/sync-pack'
   });
   expect(iosSyncPackApplyMock.apply).toHaveBeenCalledWith({
     deviceId: 'android-test-device',
-    packPath: '/tmp/downloaded-pack.db'
+    packPath: '/tmp/downloaded-pack.db',
+    sourcePeerId: 'desktop-test-device'
   });
   expect(capacitorMock.plugin.deleteDownloadedSyncPack).toHaveBeenCalledWith({ pack_path: '/tmp/downloaded-pack.db' });
 });
@@ -125,7 +129,8 @@ it('downloads validated packs before routing iOS through its shared-core adapter
 
   expect(iosSyncPackApplyMock.apply).toHaveBeenCalledWith({
     deviceId: 'ios-test-device',
-    packPath: '/tmp/downloaded-pack.db'
+    packPath: '/tmp/downloaded-pack.db',
+    sourcePeerId: 'desktop-test-device'
   });
   expect(capacitorMock.plugin.deleteDownloadedSyncPack).toHaveBeenCalledWith({
     pack_path: '/tmp/downloaded-pack.db'

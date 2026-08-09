@@ -42,7 +42,7 @@ it('selects only supported local state through the shared macOS payload contract
   fake.reviewRows = [reviewRow('ios-device', 'op-1'), reviewRow('other-device', 'op-2')];
   const store = createCompanionSyncbackDbStore(fake);
 
-  await expect(store.loadStateChanges(null, 20)).resolves.toEqual([
+  await expect(store.loadStateChanges('desktop-peer', null, 20)).resolves.toEqual([
     expect.objectContaining({
       object_type: 'node_open_state', payload_json: fake.openStatePayloadRows[0]!.payload_json
     }),
@@ -50,8 +50,8 @@ it('selects only supported local state through the shared macOS payload contract
     expect.objectContaining({ object_type: 'node_review', payload_json: JSON.stringify(fake.reviewPayloadRows[0]) }),
     expect.objectContaining({ object_type: 'setting', payload_json: settingPayloadJson })
   ]);
-  await expect(store.loadReviewLog(null, 20)).resolves.toEqual([reviewRow('ios-device', 'op-1')]);
-  expect(fake.queries).toContainEqual([CONTRACT.sql.state, [0, 20]]);
+  await expect(store.loadReviewLog('desktop-peer', null, 20)).resolves.toEqual([reviewRow('ios-device', 'op-1')]);
+  expect(fake.queries).toContainEqual([CONTRACT.sql.state, [0, 'desktop-peer', 20]]);
   expect(fake.queries).toContainEqual([CONTRACT.sql.readingPayload, ['node-1']]);
   expect(fake.queries).toContainEqual([CONTRACT.sql.reviewPayload, ['node-1']]);
   expect(fake.queries).toContainEqual([
@@ -71,7 +71,7 @@ it('loads local node versions with shared ordering and ancestor semantics', asyn
   fake.nodeParents.set('ios-device#1', 'desktop#1');
   const store = createCompanionSyncbackDbStore(fake);
 
-  await expect(store.loadNodeVersions(null, 20)).resolves.toEqual([expect.objectContaining({
+  await expect(store.loadNodeVersions('desktop-peer', null, 20)).resolves.toEqual([expect.objectContaining({
     ancestor_version_ids: ['desktop#1'],
     is_tombstone: false,
     snapshot: { id: 'node-1', title: 'iPhone note' },
@@ -79,7 +79,7 @@ it('loads local node versions with shared ordering and ancestor semantics', asyn
   })]);
   expect(fake.queries).toContainEqual([
     CONTRACT.sql.nodeVersions,
-    ['ios-device', '', '', '', '', '', 20]
+    ['ios-device', 'desktop-peer', '', '', '', '', '', 20]
   ]);
 });
 
@@ -91,7 +91,7 @@ it('rejects malformed local node snapshots before they reach the Mac push protoc
     version_id: 'ios-device#broken'
   }];
 
-  await expect(createCompanionSyncbackDbStore(fake).loadNodeVersions(null, 20))
+  await expect(createCompanionSyncbackDbStore(fake).loadNodeVersions('desktop-peer', null, 20))
     .rejects.toThrow('invalid_companion_node_version_snapshot');
 });
 
@@ -105,19 +105,19 @@ it('persists cursors and saves valid acknowledgements atomically', async () => {
   await expect(store.loadStatePushCursor()).resolves.toBe(5);
   await expect(store.loadNodeVersionPushCursor()).resolves.toEqual(cursor);
   await expect(store.loadReviewLogPushCursor()).resolves.toEqual(cursor);
-  await expect(store.savePushAcks([
+  await expect(store.savePushAcks('desktop-peer', [
     ack('reading-state', 'node_reading', 'node-1', 'accepted', 4),
     ack('review-state', 'node_review', 'node-1', 'accepted', 5),
     ack('review-log', 'review_log', 'op-1', 'accepted')
-  ])).resolves.toEqual(['reading-state', 'review-state']);
-  expect(fake.acks.map((row) => row.clientOpId)).toEqual(['reading-state', 'review-state']);
+  ])).resolves.toEqual(['reading-state', 'review-state', 'review-log']);
+  expect(fake.acks.map((row) => row.clientOpId)).toEqual(['reading-state', 'review-state', 'review-log']);
 
   fake.failClientOpId = 'second';
-  await expect(store.savePushAcks([
+  await expect(store.savePushAcks('desktop-peer', [
     ack('first', 'node_reading', 'node-2', 'conflict'),
     ack('second', 'node_review', 'node-3', 'rejected')
   ])).rejects.toThrow('forced_ack_failure');
-  expect(fake.acks.map((row) => row.clientOpId)).toEqual(['reading-state', 'review-state']);
+  expect(fake.acks.map((row) => row.clientOpId)).toEqual(['reading-state', 'review-state', 'review-log']);
 });
 
 function stateRow(
@@ -197,15 +197,12 @@ class FakeDbPort implements DbPort {
   async run(sql: string, params: DbParams = []) {
     if (sql === CONTRACT.sql.metaDelete) this.meta.delete(String(params[0]));
     if (sql === CONTRACT.sql.metaUpsert) this.meta.set(String(params[0]), String(params[1]));
-    if (sql === CONTRACT.sql.ackDeleteIssues) {
-      this.acks = this.acks.filter((row) => row.objectType !== params[0] || row.objectId !== params[1]);
-    }
-    if (sql === CONTRACT.sql.ackUpsert) {
-      if (params[0] === this.failClientOpId) throw new Error('forced_ack_failure');
+    if (sql.startsWith('UPDATE sync_delivery_receipts SET status')) {
+      if (params[6] === this.failClientOpId) throw new Error('forced_ack_failure');
       this.acks.push({
-        clientOpId: String(params[0]),
-        objectId: String(params[2]),
-        objectType: String(params[1])
+        clientOpId: String(params[6]),
+        objectId: 'stored-object',
+        objectType: 'stored-type'
       });
     }
     return { changes: 1, lastInsertRowId: null };

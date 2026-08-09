@@ -2,6 +2,7 @@ import type { DbPort } from './dbPort.js';
 
 export interface SyncPackPushAckCleanupOptions {
   incomingAlias?: string;
+  sourcePeerId: string;
   toStateSeq: number;
 }
 
@@ -10,20 +11,22 @@ export async function clearConfirmedSyncPushAcksWithDbPort(
   options: SyncPackPushAckCleanupOptions
 ) {
   const alias = options.incomingAlias ?? 'inc';
+  const sourcePeerId = options.sourcePeerId;
   await port.run(
-    `UPDATE sync_object_state SET sync_dirty = 0 ` +
-    `WHERE sync_dirty = 1 AND EXISTS (` +
-    `SELECT 1 FROM sync_push_ack ack JOIN ${alias}.sync_object_state incoming ` +
-    `ON incoming.object_type = ack.object_type AND incoming.object_id = ack.object_id ` +
-    `WHERE ack.object_type = sync_object_state.object_type ` +
-    `AND ack.object_id = sync_object_state.object_id ` +
-    `AND ack.state_seq IS NOT NULL ` +
-    `AND incoming.state_seq >= ack.state_seq ` +
-    `AND incoming.content_hash = sync_object_state.content_hash)`
+    `UPDATE sync_delivery_receipts SET status = 'confirmed', updated_at = CURRENT_TIMESTAMP ` +
+    `WHERE peer_id = ? AND stream_name = 'state' AND status = 'accepted' AND EXISTS (` +
+    `SELECT 1 FROM ${alias}.sync_object_state incoming ` +
+    `WHERE incoming.object_type = sync_delivery_receipts.object_type ` +
+    `AND incoming.object_id = sync_delivery_receipts.object_id ` +
+    `AND incoming.state_seq >= CAST(sync_delivery_receipts.remote_position AS INTEGER))`,
+    [sourcePeerId]
   );
   await port.run(
-    `DELETE FROM sync_push_ack WHERE EXISTS (` +
-    `SELECT 1 FROM sync_object_state state WHERE state.object_type = sync_push_ack.object_type ` +
-    `AND state.object_id = sync_push_ack.object_id AND state.sync_dirty = 0)`
+    `UPDATE sync_object_state SET sync_dirty = 0 WHERE sync_dirty = 1 ` +
+    `AND NOT EXISTS (SELECT 1 FROM sync_delivery_receipts receipt ` +
+    `WHERE receipt.object_type = sync_object_state.object_type ` +
+    `AND receipt.object_id = sync_object_state.object_id ` +
+    `AND receipt.payload_identity = sync_object_state.content_hash ` +
+    `AND receipt.status <> 'confirmed')`
   );
 }

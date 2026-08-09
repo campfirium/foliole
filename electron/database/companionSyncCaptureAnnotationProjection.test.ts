@@ -53,7 +53,9 @@ afterEach(async () => {
 });
 
 it('projects Android Capture, Cloze, and Note records into desktop and its next sync pack', async () => {
-  const push = await applyCompanionSyncPushAsync(await buildAndroidCaptureAnnotationPushPayloads());
+  const push = await applyCompanionSyncPushAsync(
+    await buildAndroidCaptureAnnotationPushPayloads(), ANDROID_SOURCE_DEVICE_ID
+  );
 
   expectAcceptedPush(push);
   expectProjectedNodes();

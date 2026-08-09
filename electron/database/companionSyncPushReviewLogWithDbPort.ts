@@ -87,11 +87,19 @@ function insertReviewLogWithDbPort(port: DbPort, record: NativeSyncReviewLogReco
 
 export async function applyReviewLogPushWithDbPort(
   port: DbPort,
-  item: CompanionSyncPushPayload
+  item: CompanionSyncPushPayload,
+  sourceDeviceId: string
 ): Promise<CompanionSyncPushResult> {
   return await port.transaction(async (tx) => {
     const record = parseReviewLog(item);
-    if (!record) return { acks: [rejectAck(item, 'invalid_review_log_push')], appliedNodeIds: [], appliedObjectIds: [], appliedReviewOpIds: [] };
+    if (!record || record.device_id !== sourceDeviceId) {
+      return {
+        acks: [rejectAck(item, 'invalid_review_log_source')],
+        appliedNodeIds: [],
+        appliedObjectIds: [],
+        appliedReviewOpIds: []
+      };
+    }
     const existing = await selectReviewLogWithDbPort(tx, record.op_id);
     if (existing) {
       const matches = reviewLogMatches(existing, record);

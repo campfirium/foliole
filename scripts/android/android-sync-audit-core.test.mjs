@@ -25,7 +25,10 @@ function createDatabase(name) {
     CREATE TABLE content_blobs (hash TEXT PRIMARY KEY, availability TEXT);
     CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB);
     CREATE TABLE attachment_blobs (attachment_id TEXT PRIMARY KEY, content_hash TEXT, availability TEXT);
-    CREATE TABLE sync_push_ack (client_op_id TEXT PRIMARY KEY, object_type TEXT, object_id TEXT, state_seq INTEGER, status TEXT, acked_at TEXT);
+    CREATE TABLE sync_delivery_receipts (
+      peer_id TEXT, stream_name TEXT, operation_id TEXT, object_type TEXT, object_id TEXT,
+      payload_identity TEXT, local_position TEXT, status TEXT, remote_position TEXT,
+      issue_reason TEXT, created_at TEXT, updated_at TEXT);
     CREATE TABLE node_view_state (node_id TEXT, device_id TEXT, scroll_top INTEGER);
     CREATE TABLE node_reading_device_state (node_id TEXT, device_id TEXT, reading_position INTEGER, updated_at TEXT);
     CREATE TABLE review_log (id TEXT PRIMARY KEY, op_id TEXT UNIQUE);
@@ -147,8 +150,10 @@ describe('android sync audit core', () => {
     android.db.prepare('INSERT INTO companion_meta VALUES (?, ?)').run('workspace_sync_endpoint_url', 'http://10.0.2.2:38641');
     android.db.prepare('INSERT INTO companion_meta VALUES (?, ?)').run('sync_pack_cursor', '10');
     android.db.prepare(
-      'INSERT INTO sync_push_ack VALUES (?, ?, ?, ?, ?, ?)'
-    ).run('view_state:session_resume:11', 'view_state', 'session_resume:android:phone:device-1:node:special-inbox', null, 'conflict', 'now');
+      'INSERT INTO sync_delivery_receipts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run('desktop-peer', 'state', 'view_state:session_resume:11', 'view_state',
+      'session_resume:android:phone:device-1:node:special-inbox', 'hash', '11', 'conflict',
+      null, 'conflict', 'now', 'now');
     desktop.db.prepare('INSERT INTO sync_object_state VALUES (?, ?, ?, ?, ?, 0)').run('external_document', 'deleted-doc', 11, 'deleted-doc-hash', '2026-05-07');
     desktop.db.close();
     android.db.close();
@@ -169,8 +174,9 @@ describe('android sync audit core', () => {
     android.db.prepare('INSERT INTO companion_meta VALUES (?, ?)').run('workspace_sync_endpoint_url', 'http://10.0.2.2:38641');
     android.db.prepare('INSERT INTO companion_meta VALUES (?, ?)').run('sync_pack_cursor', '10');
     android.db.prepare(
-      'INSERT INTO sync_push_ack VALUES (?, ?, ?, ?, ?, ?)'
-    ).run('node_review:node-1:11', 'node_review', 'node-1', null, 'conflict', 'now');
+      'INSERT INTO sync_delivery_receipts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run('desktop-peer', 'state', 'node_review:node-1:11', 'node_review', 'node-1',
+      'hash', '11', 'conflict', null, 'conflict', 'now', 'now');
     desktop.db.prepare('INSERT INTO sync_object_state VALUES (?, ?, ?, ?, ?, 0)').run('external_document', 'deleted-doc', 11, 'deleted-doc-hash', '2026-05-07');
     desktop.db.close();
     android.db.close();

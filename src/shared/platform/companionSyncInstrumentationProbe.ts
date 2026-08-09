@@ -4,6 +4,7 @@ import { loadCompanionBootstrapState } from './companionBootstrap';
 import { loadCompanionSyncPackCursor, saveCompanionSyncPackCursor } from './companionSyncCursors';
 import { applyCompanionSyncPackPathWithSharedCore } from './companionSyncPackNodes';
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
+import { loadCompanionPairingState } from './companionWorkspacePairing';
 
 const PROBE_QUERY_KEY = 'foliole-sync-probe';
 
@@ -39,9 +40,13 @@ async function applyPackPathThroughSharedCore(args: { packPath: string }) {
   }
   return runCompanionSyncWriterTask(async () => {
     const bootstrap = await loadCompanionBootstrapState();
+    const pairing = await loadCompanionPairingState();
+    const sourcePeerId = pairing.remote_peer_id?.trim();
+    if (!sourcePeerId) throw new Error('sync_pack_source_identity_unavailable');
     return applyCompanionSyncPackPathWithSharedCore({
       deviceId: bootstrap.device_id,
-      packPath: args.packPath
+      packPath: args.packPath,
+      sourcePeerId
     }, {
       loadCursor: loadCompanionSyncPackCursor,
       saveCursor: saveCompanionSyncPackCursor

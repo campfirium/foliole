@@ -105,6 +105,8 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
     },
     syncPackTransfer: {
       requestKeys: {
+        expectedPeerId: 'expected_peer_id',
+        expectedSourcePeerId: 'expected_source_peer_id',
         headers: 'headers',
         packPath: 'pack_path',
         url: 'url'

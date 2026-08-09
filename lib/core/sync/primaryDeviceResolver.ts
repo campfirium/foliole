@@ -54,7 +54,7 @@ export const PRIMARY_DEVICE_AUTHORITY_COVERAGE: readonly PrimaryDeviceAuthorityC
   coverage('sync_object_state.state_seq', 'local object ordering', 'is not comparable across devices'),
   coverage('sync_peer_cursors', 'whether a peer has reached a known cursor', 'does not commit a role change'),
   coverage('syncObjectPolicy', 'object authority scope and conflict policy', 'does not pick an external-source runner'),
-  coverage('sync_push_ack', 'whether pushed device-private writes were accepted', 'is not a takeover release ack')
+  coverage('sync_delivery_receipts', 'per-peer delivery and confirmation state', 'is not a takeover release ack')
 ];
 
 const TAKEOVER_PROTOCOL_GAPS: readonly PrimaryDeviceTakeoverBlockedReason[] = [

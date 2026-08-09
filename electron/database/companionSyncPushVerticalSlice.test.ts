@@ -197,7 +197,7 @@ function readStoredZipEntries(filePath: string) {
 
 describe('companion sync push vertical slice', () => {
   it('packs accepted node_review and review_log changes for Android pull confirmation', async () => {
-    const push = await applyCompanionSyncPushAsync([nodeReviewPush(), reviewLogPush()]);
+    const push = await applyCompanionSyncPushAsync([nodeReviewPush(), reviewLogPush()], 'android-device');
     const packPath = path.join(tempRoot, 'vertical-pack.syncpack');
 
     const pack = await buildDesktopSyncPack({
@@ -227,7 +227,7 @@ describe('companion sync push vertical slice', () => {
   });
 
   it('packs accepted node version pushes for Android pull confirmation', async () => {
-    const push = await applyCompanionSyncPushAsync([nodeVersionPush()]);
+    const push = await applyCompanionSyncPushAsync([nodeVersionPush()], 'android-device');
     const packPath = path.join(tempRoot, 'node-version-pack.syncpack');
 
     const pack = await buildDesktopSyncPack({

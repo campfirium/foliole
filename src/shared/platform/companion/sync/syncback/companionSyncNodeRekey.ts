@@ -35,7 +35,7 @@ export async function rekeyNodeObject(port: DbPort, sourceId: string, canonicalI
     [canonicalId, sourceId]
   );
   await port.run(
-    `UPDATE sync_push_ack SET object_id = ? WHERE object_id = ? AND object_type = 'node'`,
+    `UPDATE sync_delivery_receipts SET object_id = ? WHERE object_id = ? AND object_type = 'node'`,
     [canonicalId, sourceId]
   );
   await port.run('DELETE FROM nodes WHERE id = ?', [sourceId]);

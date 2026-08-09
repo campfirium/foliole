@@ -28,7 +28,6 @@ export async function markIosCompanionMutation(args: {
      ) VALUES (?, ?, COALESCE((SELECT MAX(state_seq) + 1 FROM sync_object_state), 1), NULL, ?, ?, ?, ?, NULL, 1)`,
     [args.objectType, args.objectId, args.contentHash, base, args.deviceId, args.updatedAt]
   );
-  await args.db.run('DELETE FROM sync_push_ack WHERE object_type = ? AND object_id = ?', [args.objectType, args.objectId]);
 }
 
 export async function iosCompanionContentHash(payload: unknown) {

@@ -8,16 +8,25 @@ import type {
 } from '../../../../../../lib/platform/nativeSyncContract';
 import type { SyncPushAck } from '../../../companionSyncPushProtocol';
 
+import {
+  loadChangeCursor,
+  loadNumberCursor,
+  loadRequiredMeta,
+  saveChangeCursor,
+  saveNumberCursor
+} from './companionSyncbackCursorStore';
+import { savePeerPushAcksWithinTransaction, stagePushDeliveries } from './companionSyncDeliveryStore';
 import { rekeyNodeObject } from './companionSyncNodeRekey';
 
 export interface CompanionSyncbackDbStore {
-  loadNodeVersions(cursor: NativeSyncChangeCursor | null, limit?: number): Promise<NativeSyncNodeRecord[]>;
+  loadNodeVersions(peerId: string, cursor: NativeSyncChangeCursor | null, limit?: number): Promise<NativeSyncNodeRecord[]>;
   loadNodeVersionPushCursor(): Promise<NativeSyncChangeCursor | null>;
-  loadReviewLog(cursor: NativeSyncChangeCursor | null, limit?: number): Promise<NativeSyncReviewLogRecord[]>;
+  loadReviewLog(peerId: string, cursor: NativeSyncChangeCursor | null, limit?: number): Promise<NativeSyncReviewLogRecord[]>;
   loadReviewLogPushCursor(): Promise<NativeSyncChangeCursor | null>;
-  loadStateChanges(cursor: number | null, limit?: number): Promise<NativeSyncStateObjectRecord[]>;
+  loadStateChanges(peerId: string, cursor: number | null, limit?: number): Promise<NativeSyncStateObjectRecord[]>;
   loadStatePushCursor(): Promise<number | null>;
-  savePushAcks(acks: SyncPushAck[]): Promise<string[]>;
+  savePushAcks(peerId: string, acks: SyncPushAck[]): Promise<string[]>;
+  stagePushItems(peerId: string, items: import('../../../companionSyncPushProtocol').SyncPushPayload[]): Promise<void>;
   saveNodeVersionPushCursor(cursor: NativeSyncChangeCursor | null): Promise<NativeSyncChangeCursor | null>;
   saveReviewLogPushCursor(cursor: NativeSyncChangeCursor | null): Promise<NativeSyncChangeCursor | null>;
   saveStatePushCursor(cursor: number | null): Promise<number | null>;
@@ -25,13 +34,14 @@ export interface CompanionSyncbackDbStore {
 
 export function createCompanionSyncbackDbStore(port: DbPort): CompanionSyncbackDbStore {
   return {
-    loadNodeVersions: (cursor, limit) => loadNodeVersions(port, cursor, limit),
+    loadNodeVersions: (peerId, cursor, limit) => loadNodeVersions(port, peerId, cursor, limit),
     loadNodeVersionPushCursor: () => loadChangeCursor(port, CONTRACT.cursors.nodeVersionPush, 'node_version'),
-    loadReviewLog: (cursor, limit) => loadReviewLog(port, cursor, limit),
+    loadReviewLog: (peerId, cursor, limit) => loadReviewLog(port, peerId, cursor, limit),
     loadReviewLogPushCursor: () => loadChangeCursor(port, CONTRACT.cursors.reviewLogPush, 'review_log'),
-    loadStateChanges: (cursor, limit) => loadStateChanges(port, cursor, limit),
+    loadStateChanges: (peerId, cursor, limit) => loadStateChanges(port, peerId, cursor, limit),
     loadStatePushCursor: () => loadNumberCursor(port, CONTRACT.cursors.statePush),
-    savePushAcks: (acks) => savePushAcks(port, acks),
+    savePushAcks: (peerId, acks) => savePushAcks(port, peerId, acks),
+    stagePushItems: (peerId, items) => stagePushDeliveries(port, peerId, items),
     saveNodeVersionPushCursor: (cursor) => saveChangeCursor(
       port, CONTRACT.cursors.nodeVersionPush, cursor, 'node_version'
     ),
@@ -44,6 +54,7 @@ export function createCompanionSyncbackDbStore(port: DbPort): CompanionSyncbackD
 
 async function loadNodeVersions(
   port: DbPort,
+  peerId: string,
   cursor: NativeSyncChangeCursor | null,
   limit = CONTRACT.nodeVersions.defaultLimit
 ) {
@@ -51,7 +62,7 @@ async function loadNodeVersions(
   const createdAt = cursor?.created_at ?? '';
   const changeId = cursor?.change_id ?? '';
   const rows = await port.query(CONTRACT.sql.nodeVersions, [
-    deviceId, createdAt, changeId, createdAt, createdAt, changeId, normalizeNodeVersionLimit(limit)
+    deviceId, peerId, createdAt, changeId, createdAt, createdAt, changeId, normalizeNodeVersionLimit(limit)
   ]);
   return Promise.all(rows.map(async (row) => {
     const snapshot = parseNodeSnapshot(row.snapshot) as NativeSyncNodeRecord['snapshot'];
@@ -98,10 +109,10 @@ function parseNodeSnapshot(value: unknown) {
   throw new Error('invalid_companion_node_version_snapshot');
 }
 
-async function loadStateChanges(port: DbPort, cursor: number | null, limit = CONTRACT.limits.default) {
+async function loadStateChanges(port: DbPort, peerId: string, cursor: number | null, limit = CONTRACT.limits.default) {
   const rows = await port.query(
     CONTRACT.sql.state,
-    [normalizeNumberCursor(cursor), normalizeLimit(limit)]
+    [normalizeNumberCursor(cursor), peerId, normalizeLimit(limit)]
   ) as unknown as NativeSyncStateObjectRecord[];
   return Promise.all(rows.map(async (row) => ({
     ...row,
@@ -123,71 +134,30 @@ function payloadSql(objectType: NativeSyncStateObjectRecord['object_type']) {
   throw new Error(`unsupported_companion_syncback_object:${objectType}`);
 }
 
-async function loadReviewLog(port: DbPort, cursor: NativeSyncChangeCursor | null, limit = CONTRACT.limits.default) {
+async function loadReviewLog(
+  port: DbPort,
+  peerId: string,
+  cursor: NativeSyncChangeCursor | null,
+  limit = CONTRACT.limits.default
+) {
   const deviceId = await loadRequiredMeta(port, CONTRACT.deviceIdMetaKey);
   const createdAt = cursor?.created_at ?? '';
   const changeId = cursor?.change_id ?? '';
   return port.query(CONTRACT.sql.reviewLog, [
-    deviceId, createdAt, changeId, createdAt, createdAt, changeId, normalizeLimit(limit)
+    deviceId, createdAt, changeId, createdAt, createdAt, changeId, peerId, normalizeLimit(limit)
   ]) as unknown as Promise<NativeSyncReviewLogRecord[]>;
 }
 
-async function loadNumberCursor(port: DbPort, key: string) {
-  const raw = await loadMeta(port, key);
-  if (raw === null) return null;
-  const cursor = Number(raw);
-  if (!Number.isSafeInteger(cursor) || cursor < 0) throw new Error('invalid_companion_state_push_cursor');
-  return cursor;
-}
-
-async function loadChangeCursor(port: DbPort, key: string, stream: 'node_version' | 'review_log') {
-  const raw = await loadMeta(port, key);
-  if (raw === null) return null;
-  try {
-    const cursor = JSON.parse(raw) as Partial<NativeSyncChangeCursor>;
-    if (typeof cursor.created_at === 'string' && typeof cursor.change_id === 'string') {
-      return { change_id: cursor.change_id, created_at: cursor.created_at };
-    }
-  } catch { /* invalid cursor handled below */ }
-  throw new Error(`invalid_companion_${stream}_push_cursor`);
-}
-
-async function saveNumberCursor(port: DbPort, key: string, cursor: number | null) {
-  if (cursor !== null && (!Number.isSafeInteger(cursor) || cursor < 0)) {
-    throw new Error('invalid_companion_state_push_cursor');
-  }
-  await saveMeta(port, key, cursor === null ? null : String(cursor));
-  return cursor;
-}
-
-async function saveChangeCursor(
-  port: DbPort,
-  key: string,
-  cursor: NativeSyncChangeCursor | null,
-  stream: 'node_version' | 'review_log'
-) {
-  if (cursor && (!cursor.created_at.trim() || !cursor.change_id.trim())) {
-    throw new Error(`invalid_companion_${stream}_push_cursor`);
-  }
-  await saveMeta(port, key, cursor === null ? null : JSON.stringify(cursor));
-  return cursor;
-}
-
-async function savePushAcks(port: DbPort, acks: SyncPushAck[]) {
+async function savePushAcks(port: DbPort, peerId: string, acks: SyncPushAck[]) {
   const saved: string[] = [];
   await port.transaction(async (tx) => {
-    const now = new Date().toISOString();
     for (const ack of acks) {
       if (!isValidAck(ack)) continue;
       if (ack.identity.objectType === 'node' && ack.canonicalObjectId
         && ack.canonicalObjectId !== ack.identity.objectId) {
         await rekeyNodeObject(tx, ack.identity.objectId, ack.canonicalObjectId);
       }
-      await tx.run(CONTRACT.sql.ackDeleteIssues, [ack.identity.objectType, ack.identity.objectId]);
-      await tx.run(CONTRACT.sql.ackUpsert, [
-        ack.clientOpId, ack.identity.objectType, ack.identity.objectId, ack.stateSeq ?? null, ack.status, now
-      ]);
-      saved.push(ack.clientOpId);
+      saved.push(...await savePeerPushAcksWithinTransaction(tx, peerId, [ack]));
     }
   });
   return saved;
@@ -197,7 +167,9 @@ function isValidAck(ack: SyncPushAck) {
   const rules = CONTRACT.pushAck;
   const confirming = includesString(rules.confirmingStatuses, ack.status);
   if (!includesString(rules.statuses, ack.status) || !ack.clientOpId.trim() || !ack.identity.objectId.trim()) return false;
-  if (confirming && includesString(rules.stateSeqRejectedObjectTypes, ack.identity.objectType)) return false;
+  if (confirming && includesString(rules.stateSeqRejectedObjectTypes, ack.identity.objectType)) {
+    return ack.stateSeq === undefined || ack.stateSeq === null;
+  }
   if (confirming && !includesString(rules.stateSeqOptionalObjectTypes, ack.identity.objectType)) {
     return typeof ack.stateSeq === 'number';
   }
@@ -206,25 +178,6 @@ function isValidAck(ack: SyncPushAck) {
 
 function includesString(values: readonly string[], value: string) {
   return values.includes(value);
-}
-
-async function loadMeta(port: DbPort, key: string) {
-  const row = (await port.query<DbRow>(CONTRACT.sql.metaQuery, [key]))[0];
-  return typeof row?.value === 'string' && row.value.length > 0 ? row.value : null;
-}
-
-async function loadRequiredMeta(port: DbPort, key: string) {
-  const value = await loadMeta(port, key);
-  if (!value) throw new Error(`missing_companion_meta:${key}`);
-  return value;
-}
-
-async function saveMeta(port: DbPort, key: string, value: string | null) {
-  if (value === null) {
-    await port.run(CONTRACT.sql.metaDelete, [key]);
-    return;
-  }
-  await port.run(CONTRACT.sql.metaUpsert, [key, value, new Date().toISOString()]);
 }
 
 function normalizeNumberCursor(cursor: number | null) {

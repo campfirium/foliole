@@ -26,13 +26,14 @@ describe('iosCompanionSyncPackApply', () => {
 
     await expect(applyIosCompanionSyncPackPath({
       deviceId: 'ios-device',
-      packPath: '/Library/incoming.db'
+      packPath: '/Library/incoming.db',
+      sourcePeerId: 'desktop-device'
     }, manager as never)).resolves.toMatchObject({ applied: true });
 
     expect(mocks.requireRuntime).toHaveBeenCalledWith('sync-pack-apply');
     expect(mocks.createCursorStore).toHaveBeenCalledWith(manager);
     expect(mocks.applyShared).toHaveBeenCalledWith(
-      { deviceId: 'ios-device', packPath: '/Library/incoming.db' },
+      { deviceId: 'ios-device', packPath: '/Library/incoming.db', sourcePeerId: 'desktop-device' },
       mocks.createCursorStore.mock.results[0]?.value,
       manager
     );
@@ -42,7 +43,9 @@ describe('iosCompanionSyncPackApply', () => {
     mocks.requireRuntime.mockReturnValueOnce({ kind: 'web-preview', platform: 'web' });
     const { applyIosCompanionSyncPackPath } = await import('./iosCompanionSyncPackApply');
 
-    await expect(applyIosCompanionSyncPackPath({ deviceId: 'web', packPath: '/tmp/pack.db' }, {} as never))
+    await expect(applyIosCompanionSyncPackPath({
+      deviceId: 'web', packPath: '/tmp/pack.db', sourcePeerId: 'desktop-device'
+    }, {} as never))
       .rejects.toMatchObject({ capability: 'sync-pack-apply', platform: 'web' });
     expect(mocks.applyShared).not.toHaveBeenCalled();
   });

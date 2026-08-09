@@ -16,9 +16,20 @@ public class FolioleCompanionSyncPackTransferPlugin extends Plugin {
         new Thread(() -> {
             try {
                 String urlKey = FolioleCompanionHostBridgeContractDefinitions.syncPackTransferUrlRequestKey(getContext());
+                String expectedPeerIdKey = FolioleCompanionHostBridgeContractDefinitions
+                    .syncPackTransferExpectedPeerIdRequestKey(getContext());
+                String expectedSourcePeerIdKey = FolioleCompanionHostBridgeContractDefinitions
+                    .syncPackTransferExpectedSourcePeerIdRequestKey(getContext());
                 String url = call.getString(urlKey);
                 if (url == null || url.trim().isEmpty()) {
                     call.reject(urlKey + " is required.");
+                    return;
+                }
+                String expectedPeerId = call.getString(expectedPeerIdKey);
+                String expectedSourcePeerId = call.getString(expectedSourcePeerIdKey);
+                if (expectedPeerId == null || expectedPeerId.trim().isEmpty()
+                    || expectedSourcePeerId == null || expectedSourcePeerId.trim().isEmpty()) {
+                    call.reject("Sync pack peer identities are required.");
                     return;
                 }
                 File packFile = FolioleCompanionSyncPackTransfer.downloadToCache(
@@ -26,7 +37,9 @@ public class FolioleCompanionSyncPackTransferPlugin extends Plugin {
                     url.trim(),
                     call.getData().optJSONObject(
                         FolioleCompanionHostBridgeContractDefinitions.syncPackTransferHeadersRequestKey(getContext())
-                    )
+                    ),
+                    expectedPeerId.trim(),
+                    expectedSourcePeerId.trim()
                 );
                 JSObject result = new JSObject();
                 result.put(

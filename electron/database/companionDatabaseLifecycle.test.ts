@@ -98,6 +98,36 @@ describe('shared companion database migration executor', () => {
   });
 });
 
+describe('shared companion delivery migration', () => {
+  it('replaces the legacy receipt table without losing dirty facts', async () => {
+    const { port, sqlite } = fixture(23);
+    sqlite.exec(`
+      DROP TRIGGER trg_sync_delivery_state_insert;
+      DROP TRIGGER trg_sync_delivery_state_update;
+      DROP TRIGGER trg_sync_delivery_member_leave;
+      DROP TRIGGER trg_sync_delivery_review_insert;
+      DROP TABLE sync_delivery_receipts;
+      CREATE TABLE sync_push_ack (client_op_id TEXT PRIMARY KEY, status TEXT NOT NULL);
+      INSERT INTO sync_groups VALUES ('group','Group','timeline','local','2026-08-01','2026-08-09');
+      INSERT INTO sync_group_local_state VALUES (1,'group','local','active',NULL,NULL,'2026-08-09');
+      INSERT INTO sync_group_members VALUES
+        ('group','local','desktop','Local','active','local','auth-local',NULL,'2026-08-01',NULL,NULL,'2026-08-09'),
+        ('group','peer','mobile','Peer','active','local','auth-peer',NULL,'2026-08-01',NULL,NULL,'2026-08-09');
+      INSERT INTO sync_object_state VALUES
+        ('setting','setting-a',7,NULL,'hash-a','local','2026-08-09',NULL,1,NULL);
+    `);
+
+    await bootstrap(port);
+
+    expect(sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'sync_push_ack'").get()).toBeUndefined();
+    expect(sqlite.prepare('SELECT peer_id, object_id, status FROM sync_delivery_receipts').get())
+      .toEqual({ object_id: 'setting-a', peer_id: 'peer', status: 'pending' });
+    expect(sqlite.prepare("SELECT content_hash FROM sync_object_state WHERE object_id = 'setting-a'").pluck().get())
+      .toBe('hash-a');
+    sqlite.close();
+  });
+});
+
 describe('shared companion database lifecycle guardrails', () => {
   it('repairs current schema idempotently and rolls back a failed upgrade before version commit', async () => {
     const { port, sqlite } = fixture(18);

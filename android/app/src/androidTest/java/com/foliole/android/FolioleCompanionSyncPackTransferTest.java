@@ -13,6 +13,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 @RunWith(AndroidJUnit4.class)
 public class FolioleCompanionSyncPackTransferTest {
+    private static final String EXPECTED_SOURCE_PEER_ID = "desktop-fixture";
     @Test
     public void validatesCurrentAndSupportedLegacyEnvelope() throws Exception {
         byte[] sqlite = FolioleCompanionSyncPackEnvelopeTestSupport.sqliteBytes();
@@ -28,6 +29,7 @@ public class FolioleCompanionSyncPackTransferTest {
     public void rejectsWrongTargetAndUnsupportedVersions() throws Exception {
         byte[] sqlite = FolioleCompanionSyncPackEnvelopeTestSupport.sqliteBytes();
         assertRejected("sync_pack_target_mismatch", manifest(sqlite).put("to_peer_id", "other"), sqlite);
+        assertRejected("sync_pack_source_mismatch", manifest(sqlite).put("from_device_id", "other"), sqlite);
         assertRejected("unsupported_sync_pack_format", manifest(sqlite).put("format", "other"), sqlite);
         assertRejected("unsupported_sync_pack_format_version", manifest(sqlite).put("format_version", 2), sqlite);
         assertRejected("unsupported_sync_pack_schema_version", manifest(sqlite).put("schema_version", 45), sqlite);
@@ -75,13 +77,15 @@ public class FolioleCompanionSyncPackTransferTest {
             FolioleCompanionSyncPackEnvelopeValidator.validate(
                 FolioleCompanionSyncPackEnvelopeTestSupport.packWithoutDatabase(manifest),
                 FolioleCompanionSyncPackEnvelopeTestSupport.contract(),
-                "android-fixture"
+                "android-fixture",
+                EXPECTED_SOURCE_PEER_ID
             ));
         assertRejects("duplicate_sync_pack_entry", () ->
             FolioleCompanionSyncPackEnvelopeValidator.validate(
                 FolioleCompanionSyncPackEnvelopeTestSupport.packWithDuplicateManifest(manifest, sqlite),
                 FolioleCompanionSyncPackEnvelopeTestSupport.contract(),
-                "android-fixture"
+                "android-fixture",
+                EXPECTED_SOURCE_PEER_ID
             ));
     }
 
@@ -102,7 +106,8 @@ public class FolioleCompanionSyncPackTransferTest {
         return FolioleCompanionSyncPackEnvelopeValidator.validate(
             FolioleCompanionSyncPackEnvelopeTestSupport.pack(manifest, sqlite),
             FolioleCompanionSyncPackEnvelopeTestSupport.contract(),
-            "android-fixture"
+            "android-fixture",
+            EXPECTED_SOURCE_PEER_ID
         );
     }
 

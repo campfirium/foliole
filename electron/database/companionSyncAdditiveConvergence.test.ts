@@ -90,9 +90,9 @@ function createHighlightPush(anchorId: string, versionId: string): CompanionSync
 }
 
 it('deduplicates an exact additive object collision', async () => {
-  await applyCompanionSyncPushAsync([createHighlightPush('anchor-shared', 'android#local')]);
+  await applyCompanionSyncPushAsync([createHighlightPush('anchor-shared', 'android#local')], 'android');
 
-  const result = await applyCompanionSyncPushAsync([createHighlightPush('anchor-shared', 'ios#remote')]);
+  const result = await applyCompanionSyncPushAsync([createHighlightPush('anchor-shared', 'ios#remote')], 'ios');
 
   expect(result.acks).toMatchObject([{ status: 'accepted' }]);
   expect(result.acks[0]?.canonicalObjectId).toBeUndefined();
@@ -102,10 +102,10 @@ it('deduplicates an exact additive object collision', async () => {
 });
 
 it('preserves both additive objects under a stable canonical id', async () => {
-  await applyCompanionSyncPushAsync([createHighlightPush('anchor-local', 'android#local')]);
+  await applyCompanionSyncPushAsync([createHighlightPush('anchor-local', 'android#local')], 'android');
   const incoming = createHighlightPush('anchor-remote', 'ios#remote');
 
-  const first = await applyCompanionSyncPushAsync([incoming]);
+  const first = await applyCompanionSyncPushAsync([incoming], 'ios');
   const canonicalId = first.acks[0]?.canonicalObjectId;
 
   expect(canonicalId).toMatch(/^highlight-1~[0-9a-f]{12}$/u);
@@ -117,7 +117,7 @@ it('preserves both additive objects under a stable canonical id', async () => {
     { anchor_link: '{"id":"anchor-remote","kind":"highlight"}', id: canonicalId }
   ]);
 
-  const replay = await applyCompanionSyncPushAsync([incoming]);
+  const replay = await applyCompanionSyncPushAsync([incoming], 'ios');
   expect(replay.acks[0]?.canonicalObjectId).toBe(canonicalId);
   expect(openDatabaseConnection().driver.queryOne<{ count: number }>(
     `SELECT COUNT(*) AS count FROM nodes WHERE id LIKE 'highlight-1%'`

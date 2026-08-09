@@ -1,13 +1,10 @@
 import { postDesktopJson } from './companionDesktopSyncHttp';
 import {
   loadCompanionSyncReviewLog,
-  loadCompanionSyncReviewLogPushCursor,
-  loadCompanionSyncNodeVersionPushCursor,
   loadCompanionSyncNodeVersions,
   loadCompanionSyncStateChanges,
-  loadCompanionSyncStatePushCursor,
-  saveCompanionSyncNodeVersionPushCursor,
-  saveCompanionSyncPushAcks
+  saveCompanionSyncPushAcks,
+  stageCompanionSyncPushItems
 } from './companionSyncObjects';
 import {
   nodeVersionSyncAdapter,
@@ -20,6 +17,7 @@ import {
   viewStateSyncAdapter,
   type SyncPushAck
 } from './companionSyncPushProtocol';
+import { loadCompanionPairingState } from './companionWorkspacePairing';
 
 const SYNC_PUSH_PATH = '/companion/sync-push';
 
@@ -89,16 +87,11 @@ const statePushAdapters = {
   view_state: viewStateSyncAdapter
 } as const;
 
-async function collectLocalPushItems() {
-  const [nodeCursor, stateCursor, reviewCursor] = await Promise.all([
-    loadCompanionSyncNodeVersionPushCursor(),
-    loadCompanionSyncStatePushCursor(),
-    loadCompanionSyncReviewLogPushCursor()
-  ]);
+async function collectLocalPushItems(peerId: string) {
   const [nodeVersions, stateChanges, reviewLog] = await Promise.all([
-    loadCompanionSyncNodeVersions(nodeCursor, 100),
-    loadCompanionSyncStateChanges(stateCursor, 100),
-    loadCompanionSyncReviewLog(reviewCursor, 100)
+    loadCompanionSyncNodeVersions(peerId, null, 100),
+    loadCompanionSyncStateChanges(peerId, null, 100),
+    loadCompanionSyncReviewLog(peerId, null, 100)
   ]);
   const nodeItems = nodeVersions
     .map((row) => nodeVersionSyncAdapter.buildPushPayload(row))
@@ -122,25 +115,6 @@ async function collectLocalPushItems() {
   };
 }
 
-async function saveConfirmedNodeVersionPushCursor(
-  nodeVersions: Awaited<ReturnType<typeof loadCompanionSyncNodeVersions>>,
-  acks: SyncPushAck[]
-) {
-  const confirmedVersionIds = new Set(acceptedAcks(acks)
-    .filter((ack) => ack.identity.objectType === 'node' && ack.versionId)
-    .map((ack) => ack.versionId));
-  let confirmed = null as null | { change_id: string; created_at: string };
-  for (const row of nodeVersions) {
-    if (!row.version_id || !row.version_created_at || !confirmedVersionIds.has(row.version_id)) {
-      break;
-    }
-    confirmed = { change_id: row.version_id, created_at: row.version_created_at };
-  }
-  if (confirmed) {
-    await saveCompanionSyncNodeVersionPushCursor(confirmed);
-  }
-}
-
 function acceptedAcks(acks: SyncPushAck[]) {
   return acks.filter((ack) => ack.status === 'accepted' || ack.status === 'already_applied');
 }
@@ -155,7 +129,10 @@ function formatPushError(error: unknown) {
 
 export async function pushLocalDirtyObjects(endpointUrl: string): Promise<CompanionDesktopSyncPushResult> {
   try {
-    const { items, nodeVersions } = await collectLocalPushItems();
+    const pairing = await loadCompanionPairingState();
+    const peerId = pairing.remote_peer_id?.trim();
+    if (!peerId) throw new Error('sync_delivery_peer_identity_unavailable');
+    const { items } = await collectLocalPushItems(peerId);
     if (items.length === 0) {
       return {
         pushConflictCount: 0,
@@ -165,11 +142,11 @@ export async function pushLocalDirtyObjects(endpointUrl: string): Promise<Compan
         pushRejectedCount: 0
       };
     }
+    await stageCompanionSyncPushItems(peerId, items);
     const response = await postDesktopJson<DesktopSyncPushResponse>(endpointUrl, SYNC_PUSH_PATH, { items });
     const acks = response.acks.map(toPushAck);
     const accepted = acceptedAcks(acks);
-    await saveCompanionSyncPushAcks(acks);
-    await saveConfirmedNodeVersionPushCursor(nodeVersions, acks);
+    await saveCompanionSyncPushAcks(peerId, acks);
     return {
       pushedObjectIds: accepted
         .filter((ack) => ack.identity.objectType !== 'review_log')

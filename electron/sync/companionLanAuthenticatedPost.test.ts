@@ -98,6 +98,23 @@ it('routes signed primary device takeover requests with the authenticated device
   }), 'POST, OPTIONS');
 });
 
+it('binds sync push provenance to the authenticated device id', async () => {
+  authMock.authenticateCompanionRequest.mockReturnValue({ device_id: 'device-android', ok: true } as never);
+  syncPushMock.handleCompanionSyncPush.mockResolvedValue({ acks: [] });
+  const response = createResponse();
+  const writeJson = createWriteJson();
+  const requestBody = JSON.stringify({ items: [] });
+  const request = Readable.from([requestBody]) as http.IncomingMessage;
+  request.headers = {};
+  request.method = 'POST';
+  request.url = '/companion/sync-push';
+
+  await handleAuthenticatedPost(request, response, new URL(request.url, 'http://127.0.0.1'), writeJson);
+
+  expect(syncPushMock.handleCompanionSyncPush).toHaveBeenCalledWith(requestBody, 'device-android');
+  expect(writeJson).toHaveBeenCalledWith(request, response, 200, { acks: [] }, 'POST, OPTIONS');
+});
+
 function createResponse() {
   const response = {
     end: vi.fn(),

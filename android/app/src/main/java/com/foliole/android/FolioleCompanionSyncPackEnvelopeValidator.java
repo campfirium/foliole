@@ -23,7 +23,8 @@ final class FolioleCompanionSyncPackEnvelopeValidator {
     static PreparedEnvelope validate(
         byte[] body,
         FolioleCompanionSyncPackContract contract,
-        String expectedPeerId
+        String expectedPeerId,
+        String expectedSourcePeerId
     ) throws Exception {
         try {
             Map<String, byte[]> entries = readEntries(body, contract);
@@ -31,7 +32,9 @@ final class FolioleCompanionSyncPackEnvelopeValidator {
                 requireEntry(entries, "manifest.json"),
                 StandardCharsets.UTF_8
             ));
-            Map<String, Integer> rowCounts = validateManifest(manifest, contract, expectedPeerId);
+            Map<String, Integer> rowCounts = validateManifest(
+                manifest, contract, expectedPeerId, expectedSourcePeerId
+            );
             byte[] compressed = requireEntry(entries, contract.databaseEntry());
             verifySha256(compressed, requireString(manifest, "database_compressed_sha256"), "compressed");
             byte[] database = inflate(compressed);
@@ -77,7 +80,8 @@ final class FolioleCompanionSyncPackEnvelopeValidator {
     private static Map<String, Integer> validateManifest(
         JSONObject manifest,
         FolioleCompanionSyncPackContract contract,
-        String expectedPeerId
+        String expectedPeerId,
+        String expectedSourcePeerId
     ) throws Exception {
         if (!contract.format().equals(requireString(manifest, "format"))) {
             throw invalid("unsupported_sync_pack_format");
@@ -99,7 +103,9 @@ final class FolioleCompanionSyncPackEnvelopeValidator {
             throw invalid("sync_pack_target_mismatch");
         }
         requireString(manifest, "pack_id");
-        requireString(manifest, "from_device_id");
+        if (!expectedSourcePeerId.equals(requireString(manifest, "from_device_id"))) {
+            throw invalid("sync_pack_source_mismatch");
+        }
         requireString(manifest, "created_at");
         int fromStateSeq = requireInt(manifest, "from_state_seq");
         int toStateSeq = requireInt(manifest, "to_state_seq");

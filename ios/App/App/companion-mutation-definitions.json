@@ -13,8 +13,8 @@
       "statementName": "appDataClearSyncGroups"
     },
     {
-      "table": "sync_push_ack",
-      "statementName": "appDataClearSyncPushAck"
+      "table": "sync_delivery_receipts",
+      "statementName": "appDataClearSyncDeliveryReceipts"
     },
     {
       "table": "sync_peer_cursors",
@@ -181,12 +181,7 @@
   },
   "runtimeMutations": {
     "groupKeys": {
-      "syncPushAck": "syncPushAck",
       "syncState": "syncState"
-    },
-    "syncPushAck": {
-      "deleteByObjectMutationName": "syncPushAckDeleteByObject",
-      "tableName": "sync_push_ack"
     },
     "syncState": {
       "upsertMutationName": "syncStateUpsert"
@@ -209,11 +204,8 @@
     "nodeRekeyViewState": "UPDATE node_view_state SET node_id = ? WHERE node_id = ?",
     "nodeRekeyAttachments": "UPDATE node_attachments SET node_id = ? WHERE node_id = ?",
     "nodeRekeySyncState": "UPDATE sync_object_state SET object_id = ? WHERE object_id = ? AND object_type IN ('node', 'node_open_state', 'node_reading', 'node_review')",
-    "nodeRekeyPushAck": "UPDATE sync_push_ack SET object_id = ? WHERE object_id = ? AND object_type = 'node'",
+    "nodeRekeyPushAck": "UPDATE sync_delivery_receipts SET object_id = ? WHERE object_id = ? AND object_type = 'node'",
     "nodeRekeyDeleteSource": "DELETE FROM nodes WHERE id = ?",
-    "syncPushAckDeleteByObject": "DELETE FROM sync_push_ack WHERE object_type = ? AND object_id = ?",
-    "syncPushAckDeleteIssuesByObject": "DELETE FROM sync_push_ack WHERE object_type = ? AND object_id = ? AND status IN ('conflict', 'rejected')",
-    "syncPushAckUpsert": "INSERT OR REPLACE INTO sync_push_ack (client_op_id, object_type, object_id, state_seq, status, acked_at) VALUES (?, ?, ?, ?, ?, ?)",
     "syncReviewLogInsert": "INSERT OR IGNORE INTO review_log (id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at, due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     "syncNodeOpenStateDelete": "DELETE FROM node_open_state WHERE node_id = ?",
     "syncNodeOpenStateUpsert": "INSERT INTO node_open_state (node_id, last_opened_at) VALUES (?, ?) ON CONFLICT(node_id) DO UPDATE SET last_opened_at = excluded.last_opened_at WHERE excluded.last_opened_at > node_open_state.last_opened_at",
@@ -247,7 +239,7 @@
     "appDataClearSyncGroupLocalState": "DELETE FROM sync_group_local_state",
     "appDataClearSyncGroupMembers": "DELETE FROM sync_group_members",
     "appDataClearSyncGroups": "DELETE FROM sync_groups",
-    "appDataClearSyncPushAck": "DELETE FROM sync_push_ack",
+    "appDataClearSyncDeliveryReceipts": "DELETE FROM sync_delivery_receipts",
     "appDataClearSyncPeerCursors": "DELETE FROM sync_peer_cursors",
     "appDataClearSyncChangeLog": "DELETE FROM sync_change_log",
     "appDataClearSyncObjectState": "DELETE FROM sync_object_state",
@@ -282,7 +274,6 @@
       "documents": "documents",
       "learning": "learning",
       "openState": "openState",
-      "pushAck": "pushAck",
       "reviewLog": "reviewLog",
       "settings": "settings",
       "viewState": "viewState"
@@ -302,10 +293,6 @@
     "openState": {
       "deleteMutationName": "syncNodeOpenStateDelete",
       "upsertMutationName": "syncNodeOpenStateUpsert"
-    },
-    "pushAck": {
-      "deleteIssuesMutationName": "syncPushAckDeleteIssuesByObject",
-      "upsertMutationName": "syncPushAckUpsert"
     },
     "reviewLog": {
       "insertMutationName": "syncReviewLogInsert"

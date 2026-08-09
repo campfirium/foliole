@@ -38,7 +38,7 @@ function inspectDevicePrivateResidue(databasePath) {
       deviceId,
       nodeReadingDeviceState: residueRows(db, 'node_reading_device_state', deviceId),
       nodeViewState: residueRows(db, 'node_view_state', deviceId),
-      syncPushAcks: viewStatePushAckRows(db),
+      deliveryReceipts: viewStateDeliveryRows(db),
       viewStateSyncObjects: viewStateSyncRows(db)
     };
   } finally {
@@ -58,10 +58,10 @@ function viewStateSyncRows(db) {
   ).all();
 }
 
-function viewStatePushAckRows(db) {
-  if (!tableExists(db, 'sync_push_ack')) return [];
+function viewStateDeliveryRows(db) {
+  if (!tableExists(db, 'sync_delivery_receipts')) return [];
   return db.prepare(
-    "SELECT rowid, object_id FROM sync_push_ack WHERE object_type = 'view_state' ORDER BY rowid"
+    "SELECT rowid, object_id FROM sync_delivery_receipts WHERE object_type = 'view_state' ORDER BY rowid"
   ).all();
 }
 
@@ -73,7 +73,7 @@ function cleanupDevicePrivateResidue(databasePath, options = {}) {
     db.transaction(() => {
       deleteRowids(db, 'node_reading_device_state', report.nodeReadingDeviceState);
       deleteRowids(db, 'node_view_state', report.nodeViewState);
-      deleteRowids(db, 'sync_push_ack', report.syncPushAcks);
+      deleteRowids(db, 'sync_delivery_receipts', report.deliveryReceipts);
       deleteRowids(db, 'sync_object_state', report.viewStateSyncObjects);
     })();
   } finally {
@@ -95,7 +95,7 @@ function formatCleanupReport(report) {
     `[android-sync-cleanup-device-private] node_view_state_non_local=${report.nodeViewState.length}`,
     `[android-sync-cleanup-device-private] node_reading_device_state_non_local=${report.nodeReadingDeviceState.length}`,
     `[android-sync-cleanup-device-private] view_state_sync_object_rows=${report.viewStateSyncObjects.length}`,
-    `[android-sync-cleanup-device-private] view_state_push_ack_rows=${report.syncPushAcks.length}`,
+    `[android-sync-cleanup-device-private] view_state_delivery_receipt_rows=${report.deliveryReceipts.length}`,
     `[android-sync-cleanup-device-private] applied=${report.applied ? 'yes' : 'no'}`
   ].join('\n');
 }

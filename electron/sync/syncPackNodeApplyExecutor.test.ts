@@ -129,7 +129,7 @@ it('applies pack nodes only when the attached pack cursor is contiguous', async 
     `SELECT value_json FROM setting_records
      WHERE scope = 'device' AND platform = 'android' AND form_factor = 'phone' AND device_id = '*' AND key = 'theme'`
   ).get()).toEqual({ value_json: '{"mode":"dark"}' });
-  expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM sync_push_ack').get()).toEqual({ count: 0 });
+  expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM sync_delivery_receipts').get()).toEqual({ count: 0 });
 });
 
 it('does not apply live node state rows when the pack has no node payload', async () => {
@@ -186,7 +186,7 @@ it.each([
   }
   expect(connection.sqlite.prepare('SELECT id FROM nodes WHERE id = ?').get('node-1')).toBeUndefined();
   expect(connection.sqlite.prepare('SELECT version_id FROM node_sync_versions WHERE version_id = ?').get('desktop#1')).toBeUndefined();
-  expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM sync_push_ack').get()).toEqual({ count: 1 });
+  expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM sync_delivery_receipts').get()).toEqual({ count: 0 });
 });
 
 it('rejects cross-object ancestry and immutable duplicate mismatches', async () => {

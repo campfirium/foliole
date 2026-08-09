@@ -139,7 +139,15 @@ export async function searchCompanionPdfPageText(query: string, limit?: number) 
   return searchIosPdfPageText(query, limit);
 }
 
-export async function saveCompanionSyncPushAcks(acks: SyncPushAck[]) {
+export async function saveCompanionSyncPushAcks(peerId: string, acks: SyncPushAck[]) {
   if (getNativeCompanionSyncbackPlatform() === null) return [] as string[];
-  return runCompanionSyncWriterTask(() => getIosCompanionSyncbackStore().savePushAcks(acks));
+  return runCompanionSyncWriterTask(() => getIosCompanionSyncbackStore().savePushAcks(peerId, acks));
+}
+
+export async function stageCompanionSyncPushItems(
+  peerId: string,
+  items: import('./companionSyncPushProtocol').SyncPushPayload[]
+) {
+  if (getNativeCompanionSyncbackPlatform() === null) return;
+  return runCompanionSyncWriterTask(() => getIosCompanionSyncbackStore().stagePushItems(peerId, items));
 }

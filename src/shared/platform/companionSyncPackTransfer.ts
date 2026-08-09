@@ -6,6 +6,7 @@ interface CompanionSyncPackTransferPlugin {
   deleteDownloadedSyncPack(args: { pack_path: string }): Promise<{ deleted: boolean }>;
   downloadDesktopSyncPack(args: {
     expected_peer_id: string;
+    expected_source_peer_id: string;
     headers: Record<string, string>;
     url: string;
   }): Promise<{ pack_path: string }>;
@@ -17,6 +18,7 @@ const FolioleCompanionSyncPackTransfer = registerPlugin<CompanionSyncPackTransfe
 
 export async function downloadCompanionDesktopSyncPack(args: {
   expectedPeerId: string;
+  expectedSourcePeerId: string;
   headers: Record<string, string>;
   url: string;
 }) {
@@ -25,6 +27,7 @@ export async function downloadCompanionDesktopSyncPack(args: {
   }
   const result = await FolioleCompanionSyncPackTransfer.downloadDesktopSyncPack({
     expected_peer_id: args.expectedPeerId,
+    expected_source_peer_id: args.expectedSourcePeerId,
     headers: args.headers,
     url: args.url
   });

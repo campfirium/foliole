@@ -13,16 +13,17 @@ import {
 import { SYNC_PACK_NODE_COLUMNS } from '../../lib/core/sync/syncPackNodeFields.js';
 
 it('builds the applyable row filter used by sync pack apply', () => {
-  expect(buildSyncPackApplyableRowsSql({ objectType: 'node' })).toContain(
+  const sql = buildSyncPackApplyableRowsSql({ objectType: 'node', sourcePeerId: 'desktop-peer' });
+  expect(sql).toContain(
     "FROM inc.sync_object_state incoming LEFT JOIN main.sync_object_state current"
   );
-  expect(buildSyncPackApplyableRowsSql({ objectType: 'node' })).toContain(
+  expect(sql).toContain(
     "current.sync_dirty <> 1 OR EXISTS"
   );
-  expect(buildSyncPackApplyableRowsSql({ objectType: 'node' })).toContain(
+  expect(sql).toContain(
     "AND incoming.object_type = 'node'"
   );
-  expect(buildSyncPackApplyableRowsSql({ objectType: 'node' })).toContain(
+  expect(sql).toContain(
     "incoming.deleted_at IS NOT NULL OR EXISTS"
   );
 });

@@ -45,6 +45,7 @@ const capacitorMock = vi.hoisted(() => ({
   isNative: vi.fn(() => true),
   platform: vi.fn(() => 'android'),
   plugin: {
+    loadPairingState: vi.fn(async () => ({ remote_peer_id: 'desktop-peer' })),
     loadSyncNodeVersionCursor: vi.fn(async () => ({ cursor: null })),
     loadSyncNodeVersionPushCursor: vi.fn(async () => ({ cursor: null })),
     loadSyncNodeVersions: vi.fn(async () => ({ nodes: [{ object_id: 'node-1' }] })),
@@ -93,7 +94,7 @@ it('bridges native sync cursors and pending summary', async () => {
   await expect(api.saveCompanionSyncPackCursor(5)).resolves.toBe(5);
   await expect(api.saveCompanionSyncNodeVersionCursor(cursor)).resolves.toEqual(cursor);
   await expect(api.saveCompanionSyncReviewLogPushCursor(cursor)).resolves.toEqual(cursor);
-  await expect(api.loadCompanionSyncStateChanges(null)).resolves.toEqual([
+  await expect(api.loadCompanionSyncStateChanges('desktop-peer', null)).resolves.toEqual([
     { object_id: 'ios-node-1', object_type: 'node_review', state_seq: 7 }
   ]);
   await expect(api.loadCompanionPendingSyncSummary()).resolves.toEqual({ pendingCount: 3 });
@@ -107,11 +108,11 @@ it('routes iOS syncback cursors and rows through the SQLite store', async () => 
 
   await expect(api.loadCompanionSyncStateCursor()).resolves.toBe(2);
   await expect(api.loadCompanionSyncStatePushCursor()).resolves.toBe(6);
-  await expect(api.loadCompanionSyncStateChanges(null)).resolves.toEqual([
+  await expect(api.loadCompanionSyncStateChanges('desktop-peer', null)).resolves.toEqual([
     { object_id: 'ios-node-1', object_type: 'node_review', state_seq: 7 }
   ]);
-  await expect(api.loadCompanionSyncReviewLog(null)).resolves.toEqual([{ op_id: 'ios-op-1' }]);
-  await expect(api.loadCompanionSyncNodeVersions(null)).resolves.toEqual([
+  await expect(api.loadCompanionSyncReviewLog('desktop-peer', null)).resolves.toEqual([{ op_id: 'ios-op-1' }]);
+  await expect(api.loadCompanionSyncNodeVersions('desktop-peer', null)).resolves.toEqual([
     { object_id: 'ios-created-node', version_id: 'ios-device#1' }
   ]);
   await expect(api.saveCompanionSyncStatePushCursor(7)).resolves.toBe(7);

@@ -1,3 +1,5 @@
+import { SYNC_DELIVERY_SCHEMA_STATEMENTS } from './syncDeliverySchemaStatements.js';
+
 export const ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS setting_records (
     key TEXT NOT NULL,
@@ -48,5 +50,6 @@ export const ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS = [
     cursor_value TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     PRIMARY KEY (peer_id, stream_name)
-  )`
+  )`,
+  ...SYNC_DELIVERY_SCHEMA_STATEMENTS
 ];

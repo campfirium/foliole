@@ -10,11 +10,16 @@ import type {
 } from './companionSyncPushTypes.js';
 import { openDatabaseConnection } from './connection.js';
 
-export async function applyStateObjectPushAsync(item: CompanionSyncPushPayload): Promise<CompanionSyncPushResult> {
+export async function applyStateObjectPushAsync(
+  item: CompanionSyncPushPayload,
+  sourceDeviceId: string
+): Promise<CompanionSyncPushResult> {
   const connection = openDatabaseConnection();
   const port = createBetterSqliteDbPort(connection.sqlite, { name: 'desktop-sync-state-push' });
   try {
-    return await applyStateObjectPushWithDbPort(port, item, item.identity.objectType as StatePushObjectType);
+    return await applyStateObjectPushWithDbPort(
+      port, item, item.identity.objectType as StatePushObjectType, sourceDeviceId
+    );
   } catch (error) {
     return rejectedStateObjectPushResult(item, error instanceof Error ? error.message : 'apply_failed');
   }

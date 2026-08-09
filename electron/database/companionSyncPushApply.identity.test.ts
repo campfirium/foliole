@@ -100,7 +100,7 @@ describe('companion sync push identity validation', () => {
   it('rejects malformed setting identity before applying payload', async () => {
     insertBaseState('setting', 'device', 'desktop-setting-base');
 
-    const result = await applyCompanionSyncPushAsync([createSettingPush()]);
+    const result = await applyCompanionSyncPushAsync([createSettingPush()], 'android-device');
 
     expect(result.appliedObjectIds).toEqual([]);
     expect(result.acks).toMatchObject([{ conflictReason: 'invalid_setting_push', status: 'rejected' }]);
@@ -109,7 +109,7 @@ describe('companion sync push identity validation', () => {
   it('rejects malformed view_state identity before applying payload', async () => {
     insertBaseState('view_state', 'session_resume:android:phone', 'desktop-view-base');
 
-    const result = await applyCompanionSyncPushAsync([createViewStatePush()]);
+    const result = await applyCompanionSyncPushAsync([createViewStatePush()], 'android-device');
 
     expect(result.appliedObjectIds).toEqual([]);
     expect(result.acks).toMatchObject([{ conflictReason: 'invalid_view_state_push', status: 'rejected' }]);
@@ -121,7 +121,7 @@ describe('companion sync push identity validation', () => {
 
     const result = await applyCompanionSyncPushAsync([createValidViewStatePush({
       base: { baseContentHash: 'stale-android-base', kind: 'content_hash' }
-    })]);
+    })], 'android-device');
 
     expect(result.appliedObjectIds).toEqual([]);
     expect(result.acks).toMatchObject([{ conflictReason: 'device_private_view_state_push', status: 'rejected' }]);
@@ -137,7 +137,7 @@ describe('companion sync push identity validation', () => {
     const result = await applyCompanionSyncPushAsync([createValidViewStatePush({
       base: { baseContentHash: 'stale-desktop-view-base', kind: 'content_hash' },
       identity: { objectId, objectType: 'view_state', scope: 'session_resume' }
-    })]);
+    })], 'android-device');
 
     expect(result.appliedObjectIds).toEqual([]);
     expect(result.acks).toMatchObject([{ conflictReason: 'device_private_view_state_push', status: 'rejected' }]);
@@ -151,7 +151,7 @@ describe('companion sync push identity validation', () => {
     const result = await applyCompanionSyncPushAsync([createValidViewStatePush({
       base: { baseContentHash: 'stale-android-base', kind: 'content_hash' },
       updatedAt: '2026-04-29T23:00:00.000Z'
-    })]);
+    })], 'android-device');
 
     expect(result.appliedObjectIds).toEqual([]);
     expect(result.acks).toMatchObject([{ conflictReason: 'device_private_view_state_push', status: 'rejected' }]);

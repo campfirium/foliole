@@ -94,7 +94,7 @@ function createDivergedTopicPush(body: string, versionId = 'android#branch'): Co
 it('creates one multi-parent resolution for non-overlapping text edits', async () => {
   seedDivergedTopic('A1\nB\nC\n');
 
-  const result = await applyCompanionSyncPushAsync([createDivergedTopicPush('A\nB\nC1\n')]);
+  const result = await applyCompanionSyncPushAsync([createDivergedTopicPush('A\nB\nC1\n')], 'android-device');
   const node = openDatabaseConnection().driver.queryOne<{ content: string; current_version_id: string; updated_at: string }>(
     `SELECT content, current_version_id, updated_at FROM nodes WHERE id = 'topic-1'`
   );
@@ -111,7 +111,7 @@ it('creates one multi-parent resolution for non-overlapping text edits', async (
 it('keeps one simple alternative when overlapping text edits cannot merge', async () => {
   seedDivergedTopic('banana\nB\nC\n');
 
-  await applyCompanionSyncPushAsync([createDivergedTopicPush('orange\nB\nC\n')]);
+  await applyCompanionSyncPushAsync([createDivergedTopicPush('orange\nB\nC\n')], 'android-device');
 
   expect(openDatabaseConnection().driver.queryAll<{ body_text: string; status: string }>(
     `SELECT body_text, status FROM node_text_alternatives WHERE node_id = 'topic-1'`
@@ -133,7 +133,7 @@ it('publishes the superseded alternative before its same-device replacement', as
        '2026-05-02T03:00:00.000Z', 0)`
   );
 
-  await applyCompanionSyncPushAsync([createDivergedTopicPush('orange\nB\nC\n')]);
+  await applyCompanionSyncPushAsync([createDivergedTopicPush('orange\nB\nC\n')], 'android-device');
 
   expect(driver.queryAll<{ object_id: string; state_seq: number }>(
     `SELECT object_id, state_seq FROM sync_object_state WHERE object_type = 'node_text_alternative' ORDER BY state_seq`
@@ -153,7 +153,7 @@ it('absorbs multiple same-request branches into one stable resolution', async ()
     createDivergedTopicPush('A\nB\nC1\n', 'android#branch-c')
   ];
 
-  const first = await applyCompanionSyncPushAsync(pushes);
+  const first = await applyCompanionSyncPushAsync(pushes, 'android-device');
   const node = openDatabaseConnection().driver.queryOne<{ content: string; current_version_id: string }>(
     `SELECT content, current_version_id FROM nodes WHERE id = 'topic-1'`
   );
@@ -168,7 +168,7 @@ it('absorbs multiple same-request branches into one stable resolution', async ()
     { parent_version_id: 'desktop#local' }
   ]);
 
-  await applyCompanionSyncPushAsync(pushes);
+  await applyCompanionSyncPushAsync(pushes, 'android-device');
   expect(openDatabaseConnection().driver.queryOne<{ count: number }>(
     `SELECT COUNT(*) AS count FROM node_sync_versions WHERE version_id LIKE 'resolution#%'`
   )).toEqual({ count: 1 });
