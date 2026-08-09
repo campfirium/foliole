@@ -22,7 +22,6 @@ export const EN_DESKTOP_NODES_TRANSLATIONS = {
   'desktop.nodeList.createTopicButton': 'Create topic',
   'desktop.nodeList.createItem': 'Create Item',
   'desktop.nodeList.createVirtualFolder': 'Create Virtual Folder',
-  'desktop.nodeList.createNestedVirtualFolder': 'Create Virtual Folder in {title}',
   'desktop.nodeList.createVirtualFolderFailed': 'Could not create a virtual folder.',
   'desktop.nodeList.emptyTrash': 'Empty trash',
   'desktop.nodeList.trashSection': 'Trash section',

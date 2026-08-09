@@ -13,9 +13,10 @@ const SCREENSHOT_PATH = path.resolve('.tmp/artifacts/desktop-acceptance/virtual-
 async function createFolder(
   page: Parameters<typeof expectWorkspaceShell>[0],
   buttonName: string | RegExp,
-  title: string
+  title: string,
+  role: 'button' | 'menuitem' = 'button'
 ) {
-  await page.getByRole('button', { name: buttonName }).click();
+  await page.getByRole(role, { name: buttonName }).click();
   const renameInput = page.getByRole('textbox', { name: /^(Rename|重命名) / });
   await expect(renameInput).toBeVisible();
   await renameInput.fill(title);
@@ -54,10 +55,12 @@ test('creates and nests virtual folders without aggregating child Topics', async
   await dragFolder(desktopWindow, dragged.locator('..'), parent.locator('..'));
   await expect(dragged).toHaveAttribute('aria-level', '3');
 
+  await parent.click({ button: 'right' });
   const child = await createFolder(
     desktopWindow,
-    /^(Create Virtual Folder in Parent Virtual Folder|在 Parent Virtual Folder 中创建虚拟文件夹)$/,
-    CHILD_TITLE
+    /^(Create Virtual Folder|创建虚拟文件夹)$/,
+    CHILD_TITLE,
+    'menuitem'
   );
   await expect(child).toHaveAttribute('aria-level', '3');
   await desktopWindow.getByRole('treeitem', { name: 'Home', exact: true }).click();

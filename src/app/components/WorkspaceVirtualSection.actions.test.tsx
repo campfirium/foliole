@@ -86,10 +86,12 @@ it('creates a manual virtual folder from the Virtual root action', async () => {
   expect(onSelectNodeInVirtualView).toHaveBeenCalledWith('virtual-new');
 });
 
-it('creates a child virtual folder from a virtual folder row action', async () => {
+it('creates a child virtual folder from the virtual folder context menu', async () => {
   renderSavedSearchTree();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Create Virtual Folder in Custom virtual' }));
+  expect(screen.getAllByRole('button', { name: 'Create Virtual Folder' })).toHaveLength(1);
+  fireEvent.contextMenu(screen.getByRole('treeitem', { name: 'Custom virtual' }));
+  fireEvent.click(await screen.findByRole('menuitem', { name: 'Create Virtual Folder' }));
 
   await waitFor(() => expect(useWorkspaceStore.getState().createVirtualNode).toHaveBeenCalledWith({
     mode: 'manual',

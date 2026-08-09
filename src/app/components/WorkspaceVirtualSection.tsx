@@ -71,6 +71,7 @@ function renderSavedSearchContextMenu(args: {
   contextMenu: { left: number; nodeId: string; top: number } | null;
   deleteNode: (nodeId: string) => void;
   isWritingTopicYaml: boolean;
+  onCreateChild: (nodeId: string) => void;
   onWriteTopicYaml: (nodeId: string) => void;
   setContextMenu: (value: { left: number; nodeId: string; top: number } | null) => void;
 }) {
@@ -80,6 +81,7 @@ function renderSavedSearchContextMenu(args: {
       left={args.contextMenu.left}
       nodeId={args.contextMenu.nodeId}
       onClose={() => args.setContextMenu(null)}
+      onCreateChild={args.onCreateChild}
       onDelete={args.deleteNode}
       {...(!args.isWritingTopicYaml && canWriteVirtualFolderInfoToTopicYaml(args.contextMenu.nodeId)
         ? { onWriteTopicYaml: args.onWriteTopicYaml }
@@ -164,7 +166,6 @@ export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
           onRowKeyDown: tree.onRowKeyDown,
           props: {
             ...props,
-            createNestedVirtualFolderLabel: (title) => t('desktop.nodeList.createNestedVirtualFolder', { title }),
             createVirtualFolderLabel: t('desktop.nodeList.createVirtualFolder'),
             onContextMenuSavedSearch: (nodeId, event) => {
               event.preventDefault();
@@ -189,6 +190,7 @@ export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
           contextMenu,
           deleteNode,
           isWritingTopicYaml: actions.isWritingTopicYaml,
+          onCreateChild: (nodeId) => void createVirtualFolder(nodeId),
           onWriteTopicYaml: actions.onWriteTopicYaml,
           setContextMenu
         })}
