@@ -56,6 +56,21 @@ async function waitForJoinedGroup(page, expectedGroupId, timeoutMs = 12 * 60_000
   throw new Error('Timed out waiting for ordinary Sync Group synchronization.');
 }
 
+async function waitForOrdinarySyncFacts(execute, paths, evidenceRoot, timeoutMs = 12 * 60_000) {
+  const deadline = Date.now() + timeoutMs;
+  let lastFacts = null;
+  while (Date.now() < deadline) {
+    lastFacts = await inspectDatabase(execute, paths, evidenceRoot);
+    try {
+      assertComplete(lastFacts);
+      return lastFacts;
+    } catch {
+      await delay(1_000);
+    }
+  }
+  throw new Error(`Timed out waiting for ordinary sync facts: ${JSON.stringify(lastFacts)}`);
+}
+
 async function inspectDatabase(execute, paths, evidenceRoot) {
   const databasePath = path.join(evidenceRoot, 'library-c', 'Data', 'foliole.db');
   const electronPath = path.join(paths.repoRoot, 'node_modules/electron/dist/electron.exe');
@@ -97,13 +112,13 @@ export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths
   try {
     let session = await openSession(paths, evidenceRoot);
     let candidate;
+    let firstFacts;
     try {
       candidate = await discoverUniqueGroup(session.page);
       await invoke(session.page, 'request_sync_group_join', { endpoint_url: candidate.endpoint_url });
       await waitForJoinedGroup(session.page, candidate.group_id);
+      firstFacts = await waitForOrdinarySyncFacts(execute, paths, evidenceRoot);
     } finally { await session.app.close(); }
-    const firstFacts = await inspectDatabase(execute, paths, evidenceRoot);
-    assertComplete(firstFacts);
     session = await openSession(paths, evidenceRoot);
     const screenshotPath = path.join(evidenceRoot, 'sync-group-recovery.png');
     try {
