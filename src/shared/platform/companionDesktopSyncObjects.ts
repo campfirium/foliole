@@ -1,5 +1,6 @@
 import { assertSyncPackCursorAdvance } from '../../../lib/core/sync/syncPackCursorGuard';
 
+import { resolveCompanionSyncPeerId } from './companion/network/syncGroupPeerIdentity';
 import { pushLocalDirtyObjects } from './companionDesktopSyncPush';
 import {
   createEmptyResourceStages,
@@ -42,10 +43,12 @@ function normalizeEndpointUrl(endpointUrl: string) {
 
 async function pullRemoteStructurePack(endpointUrl: string) {
   const startedAt = Date.now();
-  const cursor = await loadCompanionSyncPackCursor();
+  const sourcePeerId = await resolveCompanionSyncPeerId(endpointUrl);
+  const cursor = await loadCompanionSyncPackCursor(sourcePeerId);
   const pathWithQuery = buildPackPath(cursor);
   const result = await applyCompanionDesktopSyncPack({
     headers: await createSignedRequestHeaders({ endpointUrl, method: 'GET', pathWithQuery }),
+    sourcePeerId,
     url: `${normalizeEndpointUrl(endpointUrl)}${pathWithQuery}`
   });
   assertSyncPackCursorAdvance({
@@ -55,7 +58,7 @@ async function pullRemoteStructurePack(endpointUrl: string) {
     toStateSeq: result.to_state_seq
   });
   if (result.to_state_seq > (cursor ?? 0)) {
-    await saveCompanionSyncPackCursor(result.to_state_seq);
+    await saveCompanionSyncPackCursor(result.to_state_seq, sourcePeerId);
   }
   const appliedReviewOpIds = result.applied_review_op_ids ?? [];
   return {

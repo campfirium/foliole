@@ -34,9 +34,13 @@ export interface CompanionWorkspaceSyncPlugin
   loadSyncGroupProviderState(): Promise<CompanionSyncGroupProviderState>;
   approveSyncGroupJoinRequest(args: { pair_request_id: string }): Promise<CompanionSyncGroupProviderState>;
   rejectSyncGroupJoinRequest(args: { pair_request_id: string }): Promise<CompanionSyncGroupProviderState>;
+  resolveSyncGroupDataRequest(args: {
+    error?: string;
+    request_id: string;
+    result?: Record<string, unknown>;
+  }): Promise<void>;
   startSyncGroupProvider(args: {
     app_version: string;
-    database_path: string;
     device_id: string;
     device_name: string;
     sync_group: import('../../../lib/platform/syncGroupContract').SyncGroupPayload;

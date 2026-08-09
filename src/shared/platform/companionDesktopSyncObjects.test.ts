@@ -20,9 +20,10 @@ async function testPullsStructurePack() {
       'X-Device-Id': 'android-test-device',
       'X-Signature': 'signed:/companion/sync-pack?after_state_seq=0'
     },
+    sourcePeerId: 'desktop-test-device',
     url: 'http://10.0.2.2:38641/companion/sync-pack?after_state_seq=0'
   });
-  expect(syncBridgeMock.saveCompanionSyncPackCursor).toHaveBeenCalledWith(8);
+  expect(syncBridgeMock.saveCompanionSyncPackCursor).toHaveBeenCalledWith(8, 'desktop-test-device');
 }
 
 async function testNoLegacyJsonStreams() {
@@ -80,7 +81,7 @@ async function testWaitsForExclusiveStructureApplyAfterTimeout() {
     to_state_seq: 8
   });
   await expect(sync).resolves.toMatchObject({ appliedPackObjectCount: 3 });
-  expect(syncBridgeMock.saveCompanionSyncPackCursor).toHaveBeenCalledWith(8);
+  expect(syncBridgeMock.saveCompanionSyncPackCursor).toHaveBeenCalledWith(8, 'desktop-test-device');
   vi.useRealTimers();
 }
 

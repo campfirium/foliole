@@ -39,7 +39,11 @@ export async function requestDesktopSyncGroupJoin(endpointUrl: string) {
   const candidate = state.candidates.find((item) => item.endpoint_url === endpointUrl);
   if (!candidate) throw new Error('sync_group_candidate_not_found');
   const facts = loadDesktopLibraryFacts();
-  if (!isEmpty(facts)) throw new Error('sync_group_requires_empty_library');
+  const existingGroup = loadDesktopSyncGroup();
+  const isActiveSameGroup = existingGroup?.local_member_state === 'active'
+    && existingGroup.group_id === candidate.group_id
+    && existingGroup.timeline_id === candidate.timeline_id;
+  if (!isActiveSameGroup && !isEmpty(facts)) throw new Error('sync_group_requires_empty_library');
   const key = await createDesktopSyncGroupPairingKey();
   const deviceId = loadOrCreateDesktopDeviceId();
   const payload = await requestJson(`${endpointUrl}/companion/pair-requests`, {

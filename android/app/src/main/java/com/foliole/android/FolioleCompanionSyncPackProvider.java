@@ -22,14 +22,14 @@ import java.util.zip.ZipOutputStream;
 final class FolioleCompanionSyncPackProvider {
     private FolioleCompanionSyncPackProvider() {}
 
-    static BuildResult build(Context context, String sourcePath, String fromDeviceId, String toPeerId, int fromSeq) throws Exception {
+    static BuildResult build(Context context, String snapshotPath, String fromDeviceId, String toPeerId, int fromSeq) throws Exception {
         FolioleCompanionSyncPackProviderDefinitions definitions = FolioleCompanionSyncPackProviderDefinitions.load(context);
         File packDbFile = File.createTempFile("foliole-provider-", ".db", context.getCacheDir());
         String packId = UUID.randomUUID().toString();
         SQLiteDatabase pack = SQLiteDatabase.openOrCreateDatabase(packDbFile, null);
         int toSeq;
         try {
-            toSeq = createPack(pack, definitions, sourcePath, fromSeq);
+            toSeq = createPack(pack, definitions, snapshotPath, fromSeq);
             JSONObject tables = tableManifest(pack, definitions.tableNames());
             JSONObject inner = innerManifest(packId, fromSeq, toSeq, tables.getJSONArray("tables"));
             pack.execSQL("INSERT INTO pack_manifest (key, value) VALUES ('manifest_json', ?)", new Object[] { inner.toString() });
@@ -44,8 +44,8 @@ final class FolioleCompanionSyncPackProvider {
     }
 
     private static int createPack(SQLiteDatabase pack, FolioleCompanionSyncPackProviderDefinitions definitions,
-                                  String sourcePath, int fromSeq) throws Exception {
-        pack.execSQL("ATTACH DATABASE ? AS source", new Object[] { sourcePath });
+                                  String snapshotPath, int fromSeq) throws Exception {
+        pack.execSQL("ATTACH DATABASE ? AS source", new Object[] { snapshotPath });
         try {
             pack.execSQL("BEGIN");
             int toSeq = maxStateSeq(pack, "source.");
@@ -53,7 +53,9 @@ final class FolioleCompanionSyncPackProvider {
             for (int index = 0; index < schema.length(); index++) pack.execSQL(schema.getString(index));
             JSONArray copies = definitions.copyStatements();
             for (int index = 0; index < copies.length(); index++) {
-                if (index == 0) pack.execSQL(copies.getString(index), new Object[] { fromSeq, toSeq });
+                if (index == definitions.stateCopyIndex()) {
+                    pack.execSQL(copies.getString(index), new Object[] { fromSeq, toSeq });
+                }
                 else if (index == definitions.payloadCopyIndex()) {
                     FolioleCompanionSyncPackPayloadWriter.copy(pack, definitions.payloadPlans());
                     pack.execSQL(copies.getString(index));

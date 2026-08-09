@@ -170,3 +170,38 @@ export function loadSyncGroupMemberAuthorization(groupId: string, deviceId: stri
     [groupId, deviceId]
   );
 }
+
+export function recordSyncGroupDeparture(args: {
+  authorizationId: string;
+  authorizedByDeviceId: string;
+  deviceId: string;
+  groupId: string;
+  leftAt: string;
+  local?: boolean;
+}) {
+  if (args.authorizedByDeviceId !== args.deviceId) throw new Error('sync_group_departure_authorization_invalid');
+  const driver = openDatabaseConnection().driver;
+  driver.transaction(() => {
+    const member = driver.queryOne<{ joined_at: string; state: string }>(
+      'SELECT joined_at, state FROM sync_group_members WHERE group_id = ? AND device_id = ? LIMIT 1',
+      [args.groupId, args.deviceId]
+    );
+    if (!member || args.leftAt < member.joined_at) throw new Error('sync_group_departure_authorization_invalid');
+    driver.execute(
+      `INSERT INTO sync_group_member_departures
+        (group_id, device_id, authorized_by_device_id, authorization_id, left_at)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(group_id, device_id) DO NOTHING`,
+      [args.groupId, args.deviceId, args.authorizedByDeviceId, args.authorizationId, args.leftAt]
+    );
+    driver.execute(
+      `UPDATE sync_group_members SET state = 'left', left_at = ?, updated_at = ?
+       WHERE group_id = ? AND device_id = ?`,
+      [args.leftAt, args.leftAt, args.groupId, args.deviceId]
+    );
+    if (args.local) {
+      driver.execute('DELETE FROM sync_group_local_state WHERE singleton_id = 1 AND local_device_id = ?',
+        [args.deviceId]);
+    }
+  });
+}

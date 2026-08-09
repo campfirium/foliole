@@ -33,6 +33,9 @@ const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
 
 const EXTERNAL_DOCUMENT_PACK_TABLES = [
+  { name: 'sync_groups', row_count: 0 },
+  { name: 'sync_group_members', row_count: 0 },
+  { name: 'sync_group_member_departures', row_count: 0 },
   { name: 'sync_object_state', row_count: 1 },
   { name: 'sync_objects', row_count: 0 },
   { name: 'nodes', row_count: 0 },
@@ -121,13 +124,16 @@ function expectNodePackRows(packPath: string) {
       database_compressed_sha256: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
       database_uncompressed_sha256: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
       format: 'foliole.sync-pack',
-      format_version: 3,
+      format_version: 4,
       created_at: '2026-04-27T02:00:00.000Z',
       from_device_id: 'desktop-fixture',
       pack_id: 'pack-1',
       schema_version: expect.any(Number),
       to_peer_id: 'android-fixture',
       tables: [
+        { name: 'sync_groups', row_count: 0 },
+        { name: 'sync_group_members', row_count: 0 },
+        { name: 'sync_group_member_departures', row_count: 0 },
         { name: 'sync_object_state', row_count: 2 },
         { name: 'sync_objects', row_count: 1 },
         { name: 'nodes', row_count: 1 },

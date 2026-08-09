@@ -202,6 +202,14 @@ export function loadPairedSyncGroupPeers(groupId: string) {
   return readStoreForQuery().client_peers.filter((peer) => peer.group_id === groupId);
 }
 
+export function removeSyncGroupPeerCredentials(groupId: string, deviceId: string) {
+  const store = readStoreStrict();
+  store.client_peers = store.client_peers.filter((peer) =>
+    peer.group_id !== groupId || peer.peer_device_id !== deviceId);
+  store.devices = store.devices.filter((device) => device.device_id !== deviceId);
+  writeStore(store);
+}
+
 export function clearPairedCompanionDevices() {
   writeStore({ client_peers: [], devices: [] });
 }

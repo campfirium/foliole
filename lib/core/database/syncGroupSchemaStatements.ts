@@ -25,6 +25,14 @@ export const SYNC_GROUP_SCHEMA_STATEMENTS = [
   )`,
   `CREATE INDEX IF NOT EXISTS idx_sync_group_members_state
     ON sync_group_members (group_id, state, updated_at)`,
+  `CREATE TABLE IF NOT EXISTS sync_group_member_departures (
+    group_id TEXT NOT NULL REFERENCES sync_groups(group_id) ON DELETE CASCADE,
+    device_id TEXT NOT NULL,
+    authorized_by_device_id TEXT NOT NULL,
+    authorization_id TEXT NOT NULL UNIQUE,
+    left_at TEXT NOT NULL,
+    PRIMARY KEY (group_id, device_id)
+  )`,
   `CREATE TABLE IF NOT EXISTS sync_group_local_state (
     singleton_id INTEGER PRIMARY KEY CHECK (singleton_id = 1),
     group_id TEXT REFERENCES sync_groups(group_id) ON DELETE CASCADE,

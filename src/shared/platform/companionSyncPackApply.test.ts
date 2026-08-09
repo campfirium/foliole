@@ -78,6 +78,7 @@ it('downloads desktop packs before applying them through the shared database own
 
   await expect(api.applyCompanionDesktopSyncPack({
     headers: { 'X-Device-Id': 'android' },
+    sourcePeerId: 'desktop-test-device',
     url: 'http://desktop/companion/sync-pack'
   })).resolves.toEqual({
     applied_blob_count: 5,
@@ -104,7 +105,9 @@ it('keeps pack apply inert outside native companion hosts', async () => {
   capacitorMock.platform.mockReturnValue('web');
   const api = await import('./companionSyncPackApply');
 
-  await expect(api.applyCompanionDesktopSyncPack({ headers: {}, url: 'http://desktop/pack.db' })).resolves.toEqual({
+  await expect(api.applyCompanionDesktopSyncPack({
+    headers: {}, sourcePeerId: 'desktop-test-device', url: 'http://desktop/pack.db'
+  })).resolves.toEqual({
     applied_blob_count: 0,
     applied_object_count: 0,
     to_state_seq: 0
@@ -124,6 +127,7 @@ it('downloads validated packs before routing iOS through its shared-core adapter
 
   await expect(api.applyCompanionDesktopSyncPack({
     headers: { 'X-Device-Id': 'ios-test-device' },
+    sourcePeerId: 'desktop-test-device',
     url: 'http://desktop/companion/sync-pack'
   })).resolves.toEqual({ applied_blob_count: 5, applied_object_count: 6, to_state_seq: 12 });
 
@@ -143,6 +147,7 @@ it('deletes downloaded desktop packs when shared core apply fails', async () => 
 
   await expect(api.applyCompanionDesktopSyncPack({
     headers: { 'X-Device-Id': 'android' },
+    sourcePeerId: 'desktop-test-device',
     url: 'http://desktop/companion/sync-pack'
   })).rejects.toThrow('apply failed');
 

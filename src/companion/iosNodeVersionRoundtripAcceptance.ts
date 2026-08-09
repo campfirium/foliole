@@ -2,7 +2,7 @@ import { INBOX_NODE_ID } from '../../lib/core/database/specialNodeIds';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { pushLocalDirtyObjects } from '../shared/platform/companionDesktopSyncPush';
 import { applyCompanionDesktopSyncPack } from '../shared/platform/companionSyncPackApply';
-import { createSignedRequestHeaders } from '../shared/platform/companionWorkspacePairing';
+import { createSignedRequestHeaders, loadCompanionPairingState } from '../shared/platform/companionWorkspacePairing';
 import { supportsCompanionNodeMutationSurface } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
 import { persistCompanionCapturedText } from './companionCaptureTextActions';
@@ -46,8 +46,11 @@ export async function rerunIosNodeVersionRoundtripAcceptance(endpoint: string) {
 }
 
 async function applySuccessor(endpoint: string) {
+  const sourcePeerId = (await loadCompanionPairingState()).remote_peer_id;
+  if (!sourcePeerId) throw new Error('sync_pack_source_identity_unavailable');
   return applyCompanionDesktopSyncPack({
     headers: await createSignedRequestHeaders({ endpointUrl: endpoint, method: 'GET', pathWithQuery: SUCCESSOR_PATH }),
+    sourcePeerId,
     url: `${endpoint}${SUCCESSOR_PATH}`
   });
 }

@@ -5,6 +5,35 @@ export const PACK_SCHEMA = [
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
   )`,
+  `CREATE TABLE sync_groups (
+    group_id TEXT PRIMARY KEY,
+    display_name TEXT NOT NULL,
+    timeline_id TEXT NOT NULL,
+    created_by_device_id TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  )`,
+  `CREATE TABLE sync_group_members (
+    group_id TEXT NOT NULL,
+    device_id TEXT NOT NULL,
+    device_kind TEXT NOT NULL,
+    device_name TEXT NOT NULL,
+    state TEXT NOT NULL,
+    approved_by_device_id TEXT NOT NULL,
+    authorization_id TEXT NOT NULL,
+    joined_at TEXT NOT NULL,
+    left_at TEXT,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (group_id, device_id),
+    UNIQUE (authorization_id)
+  )`,
+  `CREATE TABLE sync_group_member_departures (
+    group_id TEXT NOT NULL,
+    device_id TEXT NOT NULL,
+    authorized_by_device_id TEXT NOT NULL,
+    authorization_id TEXT NOT NULL UNIQUE,
+    left_at TEXT NOT NULL,
+    PRIMARY KEY (group_id, device_id)
+  )`,
   `CREATE TABLE sync_object_state (
     object_type TEXT NOT NULL,
     object_id TEXT NOT NULL,

@@ -17,6 +17,7 @@ import {
   readSyncPackCursorWithDbPort
 } from './syncPackCursor.js';
 import { applySyncPackExternalDocumentsWithDbPort } from './syncPackExternalDocumentsExecutor.js';
+import { applySyncPackGroupFactsWithDbPort } from './syncPackGroupFactsExecutor.js';
 import { applySyncPackLearningObjectsWithDbPort } from './syncPackLearningObjectsExecutor.js';
 import { applySyncPackNodeVersionsWithDbPort } from './syncPackNodeVersionApplyExecutor.js';
 import { clearConfirmedSyncPushAcksWithDbPort } from './syncPackPushAcksExecutor.js';
@@ -148,6 +149,10 @@ async function applySyncPackSurfaceInTransaction(
     };
   }
   const applyOptions = options;
+  await applySyncPackGroupFactsWithDbPort(port, {
+    ...(options.incomingAlias === undefined ? {} : { incomingAlias: options.incomingAlias }),
+    sourcePeerId: options.sourcePeerId!
+  });
   const appliedBlobCount = await applySyncPackContentBlobsWithDbPort(port, applyOptions);
   await applySyncPackNodeRowsWithDbPort(port, applyOptions);
   await applySyncPackNodeVersionsWithDbPort(port, applyOptions);

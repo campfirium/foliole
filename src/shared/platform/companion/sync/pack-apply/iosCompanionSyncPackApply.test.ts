@@ -31,7 +31,7 @@ describe('iosCompanionSyncPackApply', () => {
     }, manager as never)).resolves.toMatchObject({ applied: true });
 
     expect(mocks.requireRuntime).toHaveBeenCalledWith('sync-pack-apply');
-    expect(mocks.createCursorStore).toHaveBeenCalledWith(manager);
+    expect(mocks.createCursorStore).toHaveBeenCalledWith(manager, 'desktop-device');
     expect(mocks.applyShared).toHaveBeenCalledWith(
       { deviceId: 'ios-device', packPath: '/Library/incoming.db', sourcePeerId: 'desktop-device' },
       mocks.createCursorStore.mock.results[0]?.value,

@@ -1,3 +1,4 @@
+import { resolveCompanionSyncPeerId } from './companion/network/syncGroupPeerIdentity';
 import { postDesktopJson } from './companionDesktopSyncHttp';
 import {
   loadCompanionSyncReviewLog,
@@ -17,7 +18,6 @@ import {
   viewStateSyncAdapter,
   type SyncPushAck
 } from './companionSyncPushProtocol';
-import { loadCompanionPairingState } from './companionWorkspacePairing';
 
 const SYNC_PUSH_PATH = '/companion/sync-push';
 
@@ -129,9 +129,7 @@ function formatPushError(error: unknown) {
 
 export async function pushLocalDirtyObjects(endpointUrl: string): Promise<CompanionDesktopSyncPushResult> {
   try {
-    const pairing = await loadCompanionPairingState();
-    const peerId = pairing.remote_peer_id?.trim();
-    if (!peerId) throw new Error('sync_delivery_peer_identity_unavailable');
+    const peerId = await resolveCompanionSyncPeerId(endpointUrl);
     const { items } = await collectLocalPushItems(peerId);
     if (items.length === 0) {
       return {

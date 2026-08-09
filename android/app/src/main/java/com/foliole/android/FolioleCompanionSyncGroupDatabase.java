@@ -1,97 +1,90 @@
 package com.foliole.android;
 
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
-
 import org.json.JSONArray;
 import org.json.JSONObject;
-
-import java.time.Instant;
 
 final class FolioleCompanionSyncGroupDatabase {
     private FolioleCompanionSyncGroupDatabase() {}
 
     static void registerMember(
-        String path, String groupId, String approvedByDeviceId, FolioleCompanionSyncGroupJoinRequest request
+        FolioleCompanionSyncGroupDataBridge bridge,
+        String groupId,
+        String approvedByDeviceId,
+        FolioleCompanionSyncGroupJoinRequest request
     ) throws Exception {
-        SQLiteDatabase db = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READWRITE);
-        try {
-            String now = Instant.now().toString();
-            db.execSQL("INSERT OR REPLACE INTO sync_group_members (group_id, device_id, device_kind, device_name, state, " +
-                "approved_by_device_id, authorization_id, provisioning_cursor, joined_at, activated_at, left_at, updated_at) " +
-                "VALUES (?, ?, ?, ?, 'active', ?, ?, NULL, ?, NULL, NULL, ?)", new Object[] {
-                    groupId, request.deviceId, request.deviceKind, request.deviceName, approvedByDeviceId,
-                    request.pairRequestId, now, now
-                });
-        } finally { db.close(); }
+        JSONObject member = new JSONObject()
+            .put("authorization_id", request.pairRequestId)
+            .put("device_kind", request.deviceKind)
+            .put("device_name", request.deviceName)
+            .put("joined_at", request.requestedAt);
+        JSONObject result = bridge.request("authorize_member", new JSONObject()
+            .put("approved_by_device_id", approvedByDeviceId)
+            .put("device_id", request.deviceId)
+            .put("group_id", groupId)
+            .put("member", member));
+        if (!result.optBoolean("authorized")) throw new SecurityException("sync_group_member_not_authorized");
     }
 
-    static boolean isAuthorizedMember(String path, String groupId, String deviceId) {
+    static boolean isAuthorizedMember(FolioleCompanionSyncGroupDataBridge bridge, String groupId, String deviceId) {
         try {
-            requireAuthorizedMember(path, groupId, deviceId);
-            return true;
-        } catch (SecurityException error) {
+            return bridge.request("authorize_member", new JSONObject()
+                .put("device_id", deviceId).put("group_id", groupId)).optBoolean("authorized");
+        } catch (Exception error) {
             return false;
         }
     }
 
     static JSONObject groupForApprovedRequest(
-        String path, String approvedByDeviceId, FolioleCompanionSyncGroupJoinRequest request
+        FolioleCompanionSyncGroupDataBridge bridge,
+        String approvedByDeviceId,
+        FolioleCompanionSyncGroupJoinRequest request
     ) throws Exception {
-        SQLiteDatabase db = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READONLY);
-        try {
-            JSONObject group;
-            try (Cursor row = db.rawQuery("SELECT group_id, display_name, timeline_id, created_by_device_id, created_at FROM sync_groups LIMIT 1", null)) {
-                if (!row.moveToFirst()) throw new IllegalStateException("sync_group_not_available");
-                group = new JSONObject().put("group_id", row.getString(0)).put("display_name", row.getString(1))
-                    .put("timeline_id", row.getString(2)).put("created_by_device_id", row.getString(3))
-                    .put("created_at", row.getString(4)).put("local_device_id", request.deviceId);
-            }
-            JSONArray members = new JSONArray();
-            try (Cursor rows = db.rawQuery("SELECT device_id, device_kind, device_name, state, approved_by_device_id, " +
-                    "authorization_id, joined_at FROM sync_group_members WHERE state = 'active' ORDER BY joined_at, device_id", null)) {
-                while (rows.moveToNext()) members.put(new JSONObject().put("device_id", rows.getString(0))
-                    .put("device_kind", rows.getString(1)).put("device_name", rows.getString(2)).put("state", rows.getString(3))
-                    .put("approved_by_device_id", rows.getString(4)).put("authorization_id", rows.getString(5))
-                    .put("joined_at", rows.getString(6)));
-            }
-            boolean found = false;
-            for (int index = 0; index < members.length(); index++) {
-                JSONObject member = members.getJSONObject(index);
-                if (request.deviceId.equals(member.getString("device_id"))) found = true;
-            }
-            if (!found) members.put(new JSONObject().put("device_id", request.deviceId)
-                .put("device_kind", request.deviceKind).put("device_name", request.deviceName).put("state", "active")
-                .put("approved_by_device_id", approvedByDeviceId).put("authorization_id", request.pairRequestId)
-                .put("joined_at", request.requestedAt));
-            return group.put("local_member_state", "active").put("members", members);
-        } finally { db.close(); }
+        JSONObject loaded = bridge.request("load_group", new JSONObject());
+        JSONObject row = loaded.getJSONObject("group");
+        JSONObject group = new JSONObject()
+            .put("group_id", row.getString("group_id"))
+            .put("display_name", row.getString("display_name"))
+            .put("timeline_id", row.getString("timeline_id"))
+            .put("created_by_device_id", row.getString("created_by_device_id"))
+            .put("created_at", row.getString("created_at"))
+            .put("local_device_id", request.deviceId);
+        JSONArray members = loaded.getJSONArray("members");
+        boolean found = false;
+        for (int index = 0; index < members.length(); index++) {
+            found |= request.deviceId.equals(members.getJSONObject(index).getString("device_id"));
+        }
+        if (!found) members.put(new JSONObject().put("device_id", request.deviceId)
+            .put("device_kind", request.deviceKind).put("device_name", request.deviceName).put("state", "active")
+            .put("approved_by_device_id", approvedByDeviceId).put("authorization_id", request.pairRequestId)
+            .put("joined_at", request.requestedAt));
+        return group.put("local_member_state", "active").put("members", members);
     }
 
-    static void recordSupplyCursor(String path, String peerId, int fromCursor, int toCursor) {
-        SQLiteDatabase db = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READWRITE);
-        try {
-            db.execSQL("INSERT OR REPLACE INTO sync_peer_cursors (peer_id, stream_name, cursor_value, updated_at) VALUES (?, ?, ?, ?)",
-                new Object[] { peerId, "sync-pack-supply", fromCursor + ":" + toCursor, Instant.now().toString() });
-        } finally { db.close(); }
+    static void recordSupplyCursor(
+        FolioleCompanionSyncGroupDataBridge bridge, String peerId, int fromCursor, int toCursor
+    ) throws Exception {
+        bridge.request("record_supply_cursor", new JSONObject().put("peer_id", peerId)
+            .put("from_cursor", fromCursor).put("to_cursor", toCursor));
     }
 
-    static String requireAuthorizedMember(String path, String groupId, String deviceId) {
-        SQLiteDatabase db = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READONLY);
-        try (Cursor row = db.rawQuery(
-            "SELECT state FROM sync_group_members WHERE group_id = ? AND device_id = ? AND state = 'active' LIMIT 1",
-            new String[] { groupId, deviceId })) {
-            if (!row.moveToFirst()) throw new SecurityException("sync_group_member_not_authorized");
-            return row.getString(0);
-        } finally { db.close(); }
+    static void recordDeparture(
+        FolioleCompanionSyncGroupDataBridge bridge, String groupId, JSONObject value
+    ) throws Exception {
+        bridge.request("record_departure", new JSONObject().put("group_id", groupId).put("value", value));
     }
 
-    static void saveSyncEndpoint(String path, String endpointUrl, String now) {
-        SQLiteDatabase db = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READWRITE);
-        try {
-            db.execSQL("INSERT OR REPLACE INTO companion_meta (key, value, updated_at) VALUES ('workspace_sync_endpoint_url', ?, ?)",
-                new Object[] { endpointUrl, now });
-        } finally { db.close(); }
+    static void requireAuthorizedMember(
+        FolioleCompanionSyncGroupDataBridge bridge, String groupId, String deviceId
+    ) throws Exception {
+        if (!isAuthorizedMember(bridge, groupId, deviceId)) {
+            throw new SecurityException("sync_group_member_not_authorized");
+        }
     }
 
+    static void saveSyncEndpoint(
+        FolioleCompanionSyncGroupDataBridge bridge, String endpointUrl, String now
+    ) throws Exception {
+        bridge.request("save_sync_endpoint", new JSONObject()
+            .put("endpoint_url", endpointUrl).put("updated_at", now));
+    }
 }

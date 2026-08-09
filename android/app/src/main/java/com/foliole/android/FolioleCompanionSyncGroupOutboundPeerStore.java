@@ -53,6 +53,12 @@ final class FolioleCompanionSyncGroupOutboundPeerStore {
         }
     }
 
+    static void remove(Context context, String peerDeviceId) {
+        if (!prefs(context).edit().remove(peerDeviceId.trim()).commit()) {
+            throw new IllegalStateException("Failed to remove Sync Group outbound peer.");
+        }
+    }
+
     private static JSONObject find(Context context, String groupId, String endpointUrl) throws Exception {
         JSONObject match = null;
         for (Object encoded : prefs(context).getAll().values()) {

@@ -7,6 +7,7 @@ import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import {
   createDesktopSyncGroup,
   loadDesktopSyncGroup,
+  recordSyncGroupDeparture,
   registerSyncGroupMember
 } from './syncGroupStore.js';
 
@@ -47,4 +48,24 @@ it('persists an approved device as a member without a second activation', () => 
   expect(group.members.find((member) => member.device_id === 'android-1')).toMatchObject({
     approved_by_device_id: 'desktop-1', state: 'active'
   });
+});
+
+it('records a self-authorized departure and unbinds only the local departing Device', () => {
+  const group = createDesktopSyncGroup({
+    deviceId: 'desktop-1', deviceKind: 'desktop', deviceName: 'Studio', now: '2026-08-09T00:00:00Z'
+  });
+  registerSyncGroupMember({
+    approvedByDeviceId: 'desktop-1', authorizationId: 'request-1', deviceId: 'android-1',
+    deviceKind: 'android-capacitor', deviceName: 'Pixel', now: '2026-08-09T01:00:00Z'
+  });
+  recordSyncGroupDeparture({
+    authorizationId: 'leave-desktop-1', authorizedByDeviceId: 'desktop-1', deviceId: 'desktop-1',
+    groupId: group.group_id, leftAt: '2026-08-09T02:00:00Z', local: true
+  });
+
+  expect(loadDesktopSyncGroup()).toBeNull();
+  expect(sqlite.prepare("SELECT state FROM sync_group_members WHERE device_id = 'android-1'").get())
+    .toEqual({ state: 'active' });
+  expect(sqlite.prepare("SELECT authorized_by_device_id FROM sync_group_member_departures").get())
+    .toEqual({ authorized_by_device_id: 'desktop-1' });
 });

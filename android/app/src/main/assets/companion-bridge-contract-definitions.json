@@ -13,6 +13,7 @@
       "loadSyncGroupProviderState",
       "rejectSyncGroupJoinRequest",
       "resolveAttachmentResource",
+      "resolveSyncGroupDataRequest",
       "savePairingCredentials",
       "savePrimaryDeviceId",
       "signCompanionSyncRequest",
@@ -246,6 +247,17 @@
       }
     },
     "syncGroupProvider": {
+      "dataRequestEvent": "syncGroupDataRequest",
+      "dataRequestKeys": {
+        "operation": "operation",
+        "payload": "payload",
+        "requestId": "request_id"
+      },
+      "dataResponseKeys": {
+        "error": "error",
+        "requestId": "request_id",
+        "result": "result"
+      },
       "requestKeys": {
         "appVersion": "app_version",
         "databasePath": "database_path",

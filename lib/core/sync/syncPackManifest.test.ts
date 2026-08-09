@@ -13,19 +13,14 @@ import {
   SYNC_PACK_TABLE_NAMES
 } from './syncPackManifest.js';
 
+const EXPECTED_SYNC_PACK_TABLES = [
+  'sync_groups', 'sync_group_members', 'sync_group_member_departures', 'sync_object_state',
+  'sync_objects', 'nodes', 'node_sync_versions', 'node_sync_version_parents', 'node_order',
+  'node_attachments', 'external_documents', 'content_blobs', 'review_log'
+];
+
 it('builds the pack manifest from the shared table map', () => {
-  expect(SYNC_PACK_TABLE_NAMES).toEqual([
-    'sync_object_state',
-    'sync_objects',
-    'nodes',
-    'node_sync_versions',
-    'node_sync_version_parents',
-    'node_order',
-    'node_attachments',
-    'external_documents',
-    'content_blobs',
-    'review_log'
-  ]);
+  expect(SYNC_PACK_TABLE_NAMES).toEqual(EXPECTED_SYNC_PACK_TABLES);
   expect(SYNC_PACK_OBJECT_TYPE_TABLES).toEqual({
     external_document: 'external_documents',
     node: 'nodes'
@@ -33,7 +28,6 @@ it('builds the pack manifest from the shared table map', () => {
   expect([...SYNC_PACK_OBJECT_TYPES]).toEqual(['external_document', 'node']);
   expect(isSyncPackObjectType('node')).toBe(true);
   expect(isSyncPackObjectType('setting')).toBe(false);
-
   expect(buildSyncPackManifest({
     fromStateSeq: 1,
     packId: 'pack-1',
@@ -46,6 +40,9 @@ it('builds the pack manifest from the shared table map', () => {
       node_sync_version_parents: [],
       nodes: [{}, {}],
       review_log: [{}],
+      sync_group_member_departures: [],
+      sync_group_members: [{}, {}, {}],
+      sync_groups: [{}],
       sync_object_state: [{}, {}, {}],
       sync_objects: [{}]
     },
@@ -54,6 +51,9 @@ it('builds the pack manifest from the shared table map', () => {
     from_state_seq: 1,
     pack_id: 'pack-1',
     tables: [
+      { name: 'sync_groups', row_count: 1 },
+      { name: 'sync_group_members', row_count: 3 },
+      { name: 'sync_group_member_departures', row_count: 0 },
       { name: 'sync_object_state', row_count: 3 },
       { name: 'sync_objects', row_count: 1 },
       { name: 'nodes', row_count: 2 },

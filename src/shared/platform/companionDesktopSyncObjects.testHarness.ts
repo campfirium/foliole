@@ -93,6 +93,9 @@ vi.mock('./companionSyncObjects', () => syncBridgeMock);
 vi.mock('./companionDesktopAttachmentResources', () => attachmentResourceMock);
 vi.mock('./attachmentResources', () => attachmentResolutionMock);
 vi.mock('./companion/sync/diagnostics/companionSyncDiagnostics', () => diagnosticsMock);
+vi.mock('./companion/network/syncGroupPeerIdentity', () => ({
+  resolveCompanionSyncPeerId: vi.fn(async () => 'desktop-test-device')
+}));
 vi.mock('./companionWorkspacePairing', () => pairingMock);
 vi.mock('./companionPrimaryDeviceIdentity', () => primaryDeviceIdentityMock);
 vi.mock('@capacitor/core', () => ({

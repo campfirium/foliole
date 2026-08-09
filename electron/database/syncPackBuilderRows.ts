@@ -51,6 +51,9 @@ export function writePackManifest(
         node_sync_version_parents: rows.nodeVersionParents,
         nodes: rows.nodes,
         review_log: rows.reviewLog,
+        sync_group_member_departures: rows.groupDepartures,
+        sync_group_members: rows.groupMembers,
+        sync_groups: rows.groups,
         sync_object_state: rows.stateRows,
         sync_objects: rows.syncObjects
       },
@@ -60,10 +63,30 @@ export function writePackManifest(
 }
 
 export function writePackRows(db: import('better-sqlite3').Database, rows: LoadedDesktopSyncPackRows) {
+  writeGroupPackRows(db, rows);
   writeCorePackRows(db, rows);
   writeNodePackRows(db, rows);
   writeDocumentPackRows(db, rows);
   writeReviewPackRows(db, rows);
+}
+
+function writeGroupPackRows(db: import('better-sqlite3').Database, rows: LoadedDesktopSyncPackRows) {
+  copyRows({
+    db, table: 'sync_groups',
+    columns: ['group_id', 'display_name', 'timeline_id', 'created_by_device_id', 'created_at'],
+    rows: rows.groups
+  });
+  copyRows({
+    db, table: 'sync_group_members',
+    columns: ['group_id', 'device_id', 'device_kind', 'device_name', 'state', 'approved_by_device_id',
+      'authorization_id', 'joined_at', 'left_at', 'updated_at'],
+    rows: rows.groupMembers
+  });
+  copyRows({
+    db, table: 'sync_group_member_departures',
+    columns: ['group_id', 'device_id', 'authorized_by_device_id', 'authorization_id', 'left_at'],
+    rows: rows.groupDepartures
+  });
 }
 
 function writeCorePackRows(db: import('better-sqlite3').Database, rows: LoadedDesktopSyncPackRows) {

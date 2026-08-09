@@ -12,7 +12,12 @@ final class FolioleCompanionSyncGroupRequestAuth {
     private static final Map<String, Long> NONCES = new ConcurrentHashMap<>();
     private FolioleCompanionSyncGroupRequestAuth() {}
 
-    static String authenticate(Context context, FolioleCompanionHttpRequest request, String groupId, String databasePath) throws Exception {
+    static String authenticate(
+        Context context,
+        FolioleCompanionHttpRequest request,
+        String groupId,
+        FolioleCompanionSyncGroupDataBridge bridge
+    ) throws Exception {
         String deviceId = request.header("x-device-id");
         String nonce = request.header("x-nonce");
         String signature = request.header("x-signature");
@@ -32,8 +37,8 @@ final class FolioleCompanionSyncGroupRequestAuth {
         long now = System.currentTimeMillis();
         NONCES.entrySet().removeIf(entry -> entry.getValue() < now);
         if (NONCES.putIfAbsent(deviceId + ":" + nonce, now + 60_000) != null) throw new SecurityException("replayed_nonce");
-        FolioleCompanionSyncGroupProvider.promoteApprovedJoin(groupId, databasePath, deviceId);
-        FolioleCompanionSyncGroupDatabase.requireAuthorizedMember(databasePath, groupId, deviceId);
+        FolioleCompanionSyncGroupProvider.promoteApprovedJoin(groupId, deviceId);
+        FolioleCompanionSyncGroupDatabase.requireAuthorizedMember(bridge, groupId, deviceId);
         return deviceId;
     }
 

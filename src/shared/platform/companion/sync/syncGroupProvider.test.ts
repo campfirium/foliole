@@ -2,6 +2,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 const runtime = vi.hoisted(() => ({
   available: true,
+  listen: vi.fn(),
   start: vi.fn(),
   stop: vi.fn()
 }));
@@ -9,6 +10,8 @@ const runtime = vi.hoisted(() => ({
 vi.mock('../../appVersion', () => ({ loadAppVersion: () => Promise.resolve('0.7.5') }));
 vi.mock('../../companionWorkspaceRuntimeRepository', () => ({
   FolioleCompanionSync: {
+    addListener: runtime.listen,
+    resolveSyncGroupDataRequest: vi.fn(),
     startSyncGroupProvider: runtime.start,
     stopSyncGroupProvider: runtime.stop
   },
@@ -36,15 +39,17 @@ const group = {
 beforeEach(() => {
   runtime.available = true;
   runtime.start.mockReset().mockResolvedValue({ pending_requests: [], port: 1234, state: 'running' });
+  runtime.listen.mockReset().mockResolvedValue({ remove: vi.fn() });
   runtime.stop.mockReset().mockResolvedValue({ pending_requests: [], port: null, state: 'stopped' });
 });
 
 it('lands an active Android member on the native provider bridge with its persistent group identity', async () => {
   await reconcileCompanionSyncGroupProvider(bootstrap, group);
   expect(runtime.start).toHaveBeenCalledWith({
-    app_version: '0.7.5', database_path: '/data/foliole.db', device_id: 'android-b',
+    app_version: '0.7.5', device_id: 'android-b',
     device_name: 'A5', sync_group: group
   });
+  expect(runtime.listen).toHaveBeenCalledWith('syncGroupDataRequest', expect.any(Function));
 });
 
 it('stops the native provider when there is no local group membership', async () => {

@@ -31,12 +31,14 @@ import {
   stopLanWorkspaceSyncServer
 } from '../sync/lanWorkspaceSyncServer.js';
 import { loadDesktopPrimaryDeviceStatePayload } from '../sync/primaryDeviceState.js';
+import { leaveDesktopSyncGroup } from '../sync/syncGroupDeparture.js';
 
 import { asString } from './commandParsers.js';
 
 const COMPANION_PAIRING_COMMANDS = new Set<string>([
   NATIVE_COMMANDS.loadCompanionPairingOverview,
   NATIVE_COMMANDS.createSyncGroup,
+  NATIVE_COMMANDS.leaveSyncGroup,
   NATIVE_COMMANDS.discoverSyncGroups,
   NATIVE_COMMANDS.requestSyncGroupJoin,
   NATIVE_COMMANDS.completeSyncGroupJoin,
@@ -107,7 +109,7 @@ function handleSyncGroupJoinCommand(command: string, args: Record<string, unknow
       .then(() => buildDesktopCompanionPairingOverview());
   }
   if (command === NATIVE_COMMANDS.discoverSyncGroups) {
-    return discoverDesktopSyncGroups().then((candidates) => {
+    return discoverDesktopSyncGroups(loadOrCreateDesktopDeviceId()).then((candidates) => {
       saveDesktopSyncGroupCandidates(candidates);
       return buildDesktopCompanionPairingOverview();
     });
@@ -150,6 +152,11 @@ function handleOwnedCompanionPairingCommand(command: string, args: Record<string
   if (command === NATIVE_COMMANDS.disableCompanionSync) {
     setDesktopCompanionSyncEnabled(false);
     return stopLanWorkspaceSyncServer().then(() => buildDesktopCompanionPairingOverview());
+  }
+  if (command === NATIVE_COMMANDS.leaveSyncGroup) {
+    return leaveDesktopSyncGroup()
+      .then(() => stopLanWorkspaceSyncServer())
+      .then(() => buildDesktopCompanionPairingOverview());
   }
   if (command === NATIVE_COMMANDS.approveCompanionPairRequest) {
     return handleCompanionPairRequestMutation(args, approveCompanionPairRequest);

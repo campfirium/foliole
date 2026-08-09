@@ -93,7 +93,20 @@ export function SettingsSyncGroupRows(props: {
       </SettingsRow>
       <SettingsRow description={t('settings.companionSync.group.devices.description')} title={t('settings.companionSync.group.devices.title')}>
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-          <DeviceList group={props.group} />
+          <div className="flex flex-col gap-2">
+            <DeviceList group={props.group} />
+            <SettingsButton disabled={props.isBusy} onClick={props.onDiscover}>
+              {t('settings.companionSync.group.devices.find')}
+            </SettingsButton>
+            {props.candidates
+              .filter((candidate) => candidate.group_id === props.group?.group_id)
+              .map((candidate) => (
+                <SettingsButton disabled={props.isBusy} key={`${candidate.group_id}:${candidate.endpoint_url}`}
+                  onClick={() => props.onRequestJoin(candidate.endpoint_url)}>
+                  {t('settings.companionSync.group.devices.syncWith', { name: candidate.provider_device_name })}
+                </SettingsButton>
+              ))}
+          </div>
         </SettingsControlSlot>
       </SettingsRow>
       {props.pendingRequests.length > 0 ? (

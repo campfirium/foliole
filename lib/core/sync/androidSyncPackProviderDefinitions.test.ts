@@ -9,5 +9,8 @@ it('uses the desktop sync-pack envelope, table, and protocol contracts', () => {
   expect(definitions.formatVersion).toBe(SYNC_PACK_FORMAT_VERSION);
   expect(definitions.tableNames).toEqual(SYNC_PACK_TABLE_NAMES);
   expect(definitions.compression).toBe('zlib');
-  expect(definitions.protocol).toMatchObject({ capabilities: ['lan-sync-v1'], version: 1 });
+  expect(definitions.protocol).toMatchObject({
+    capabilities: ['lan-sync-v1', 'sync-group-facts-v1'],
+    version: 1
+  });
 });

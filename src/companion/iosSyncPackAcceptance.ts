@@ -60,8 +60,11 @@ function advancePhase(phase: AcceptancePhase) {
 async function applyPack(endpoint: string, phase: AcceptancePhase) {
   const kind = phase === 'apply' || phase === 'reapply' ? 'legal' : phase;
   const path = `/acceptance/sync-pack/${kind}`;
+  const sourcePeerId = (await loadCompanionPairingState()).remote_peer_id;
+  if (!sourcePeerId) throw new Error('sync_pack_source_identity_unavailable');
   return await applyCompanionDesktopSyncPack({
     headers: await createSignedRequestHeaders({ endpointUrl: endpoint, method: 'GET', pathWithQuery: path }),
+    sourcePeerId,
     url: `${endpoint}${path}`
   });
 }

@@ -11,6 +11,7 @@ import { readCompanionRequestBody } from './companionLanRequestBody.js';
 import { isRetiredSyncJsonEndpoint } from './companionLanSyncObjects.js';
 import { handleCompanionSyncPush, SYNC_PUSH_PATH } from './companionLanSyncPush.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
+import { acceptSyncGroupDeparture, SYNC_GROUP_DEPARTURE_PATH } from './syncGroupDeparture.js';
 
 type WriteJson = (
   request: http.IncomingMessage,
@@ -33,6 +34,7 @@ function resolveAuthenticatedPostRoute(parsedRequestUrl: URL) {
   if (parsedRequestUrl.pathname === CONTENT_BLOB_BATCH_PATH) return 'content-blob-batch';
   if (parsedRequestUrl.pathname === SYNC_PUSH_PATH) return 'sync-push';
   if (parsedRequestUrl.pathname === PRIMARY_DEVICE_TAKEOVER_PATH) return 'primary-device-takeover';
+  if (parsedRequestUrl.pathname === SYNC_GROUP_DEPARTURE_PATH) return 'sync-group-departure';
   if (isRetiredSyncJsonEndpoint(parsedRequestUrl)) return 'retired-sync-json';
   return null;
 }
@@ -79,6 +81,14 @@ async function handleAuthenticatedRoute(args: {
   } else if (route === 'primary-device-takeover') {
     const result = handlePrimaryDeviceTakeover(bodyText, auth.device_id);
     writeJson(request, response, result.statusCode, result.value, 'POST, OPTIONS');
+  } else if (route === 'sync-group-departure') {
+    try {
+      writeJson(request, response, 200, acceptSyncGroupDeparture(bodyText, auth.device_id), 'POST, OPTIONS');
+    } catch (error) {
+      writeJson(request, response, 400, {
+        error: error instanceof Error ? error.message : 'sync_group_departure_payload_invalid'
+      }, 'POST, OPTIONS');
+    }
   }
 }
 

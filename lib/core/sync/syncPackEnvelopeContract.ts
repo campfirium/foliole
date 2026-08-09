@@ -7,7 +7,7 @@ import {
 } from './syncPackNodeFields.js';
 
 export const SYNC_PACK_FORMAT = 'foliole.sync-pack';
-export const SYNC_PACK_FORMAT_VERSION = 3;
+export const SYNC_PACK_FORMAT_VERSION = 4;
 export const SYNC_PACK_COMPRESSION = 'zlib';
 export const SYNC_PACK_DATABASE_ENTRY = 'incoming.db.deflate';
 export const SYNC_PACK_MINIMUM_SCHEMA_VERSION = 46;
@@ -18,6 +18,14 @@ const requiredNodeColumns = SYNC_PACK_NODE_COLUMNS.filter(
 
 export const SYNC_PACK_SQLITE_TABLE_REQUIREMENTS = {
   pack_manifest: ['key', 'value'],
+  sync_groups: ['group_id', 'display_name', 'timeline_id', 'created_by_device_id', 'created_at'],
+  sync_group_members: [
+    'group_id', 'device_id', 'device_kind', 'device_name', 'state', 'approved_by_device_id',
+    'authorization_id', 'joined_at', 'left_at', 'updated_at'
+  ],
+  sync_group_member_departures: [
+    'group_id', 'device_id', 'authorized_by_device_id', 'authorization_id', 'left_at'
+  ],
   sync_object_state: ['object_type', 'object_id', 'state_seq', 'content_hash', 'updated_at', 'deleted_at'],
   sync_objects: ['object_type', 'object_id', 'content_hash', 'payload_json', 'updated_at', 'deleted_at'],
   nodes: requiredNodeColumns,

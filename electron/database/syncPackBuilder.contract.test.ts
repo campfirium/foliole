@@ -192,6 +192,9 @@ it('keeps the Android sync pack contract fixture deterministic', async () => {
     manifest: expect.objectContaining({
       pack_id: 'sync-pack-contract-v1',
       tables: [
+        { name: 'sync_groups', row_count: 0 },
+        { name: 'sync_group_members', row_count: 0 },
+        { name: 'sync_group_member_departures', row_count: 0 },
         { name: 'sync_object_state', row_count: 3 },
         { name: 'sync_objects', row_count: 1 },
         { name: 'nodes', row_count: 1 },

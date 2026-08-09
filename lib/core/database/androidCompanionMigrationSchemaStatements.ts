@@ -174,6 +174,10 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
   {
     actions: [{ errorMessage: 'Failed to replace the legacy sync receipt schema.', type: 'replaceSyncPushAck' }],
     beforeVersion: 24
+  },
+  {
+    actions: [{ errorMessage: 'Failed to install Sync Group departure facts.', type: 'installSchema' }],
+    beforeVersion: 25
   }
 ] as const;
 

@@ -18,13 +18,13 @@ final class FolioleCompanionSyncGroupContentBlobBatch {
 
     private FolioleCompanionSyncGroupContentBlobBatch() {}
 
-    static Result load(String databasePath, String bodyText) throws Exception {
+    static Result load(String snapshotPath, String bodyText) throws Exception {
         JSONArray requested = new JSONObject(bodyText).optJSONArray("hashes");
         if (requested == null || requested.length() > MAX_BATCH_SIZE) {
             throw new IllegalArgumentException("invalid_hashes");
         }
         List<String> hashes = validatedHashes(requested);
-        Map<String, Entry> entries = loadEntries(databasePath, hashes);
+        Map<String, Entry> entries = loadEntries(snapshotPath, hashes);
         String boundary = "foliole-content-blobs-" + String.join("", hashes).substring(0, Math.min(24, hashes.size() * 64));
         return new Result(encode(hashes, entries, boundary), "multipart/mixed; boundary=" + boundary);
     }

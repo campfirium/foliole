@@ -39,6 +39,9 @@ it('packs attachment metadata as a generic sync object', async () => {
   expect(readPackRows(packPath)).toMatchObject({
     manifest: expect.objectContaining({
       tables: [
+        { name: 'sync_groups', row_count: 0 },
+        { name: 'sync_group_members', row_count: 0 },
+        { name: 'sync_group_member_departures', row_count: 0 },
         { name: 'sync_object_state', row_count: 1 },
         { name: 'sync_objects', row_count: 1 },
         { name: 'nodes', row_count: 0 },

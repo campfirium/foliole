@@ -15,6 +15,8 @@ export const ZH_HANS_SETTINGS_SYNC_GROUP_TRANSLATIONS: Partial<Record<Translatio
   'settings.companionSync.group.join.named': '加入 {name}',
   'settings.companionSync.group.devices.title': '设备',
   'settings.companionSync.group.devices.description': '其他设备离线时，本设备仍会保留成员身份。',
+  'settings.companionSync.group.devices.find': '查找设备',
+  'settings.companionSync.group.devices.syncWith': '与 {name} 同步',
   'settings.companionSync.group.member.active': '已加入',
   'settings.companionSync.group.member.provisioning': '正在设置'
 };

@@ -25,6 +25,7 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
       'loadSyncGroupProviderState',
       'rejectSyncGroupJoinRequest',
       'resolveAttachmentResource',
+      'resolveSyncGroupDataRequest',
       'savePairingCredentials',
       'savePrimaryDeviceId',
       'signCompanionSyncRequest',
@@ -94,6 +95,17 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
       }
     },
     syncGroupProvider: {
+      dataRequestEvent: 'syncGroupDataRequest',
+      dataRequestKeys: {
+        operation: 'operation',
+        payload: 'payload',
+        requestId: 'request_id'
+      },
+      dataResponseKeys: {
+        error: 'error',
+        requestId: 'request_id',
+        result: 'result'
+      },
       requestKeys: {
         appVersion: 'app_version',
         databasePath: 'database_path',

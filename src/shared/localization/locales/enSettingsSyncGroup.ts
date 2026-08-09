@@ -13,6 +13,8 @@ export const EN_SETTINGS_SYNC_GROUP_TRANSLATIONS = {
   'settings.companionSync.group.join.named': 'Join {name}',
   'settings.companionSync.group.devices.title': 'Devices',
   'settings.companionSync.group.devices.description': 'Devices keep their membership when another device is offline.',
+  'settings.companionSync.group.devices.find': 'Find Devices',
+  'settings.companionSync.group.devices.syncWith': 'Sync with {name}',
   'settings.companionSync.group.member.active': 'Joined',
   'settings.companionSync.group.member.provisioning': 'Setting up'
 } as const;

@@ -23,7 +23,26 @@ it('authorizes every Android provider data request with both the channel secret 
   const auth = await readJava('FolioleCompanionSyncGroupRequestAuth.java');
   const database = await readJava('FolioleCompanionSyncGroupDatabase.java');
   expect(auth).toContain('FolioleCompanionSyncGroupDatabase.requireAuthorizedMember');
-  expect(database).toContain("state = 'active'");
+  expect(database).toContain('bridge.request("authorize_member"');
+});
+
+it('keeps the live companion database under the Capacitor owner', async () => {
+  const names = [
+    'FolioleCompanionSyncGroupDatabase.java',
+    'FolioleCompanionSyncGroupProvider.java',
+    'FolioleCompanionSyncGroupRequestAuth.java',
+    'FolioleCompanionSyncGroupServer.java'
+  ];
+  const sources = await Promise.all(names.map(readJava));
+  for (const source of sources) {
+    expect(source).not.toContain('android.database.sqlite');
+    expect(source).not.toContain('SQLiteDatabase.openDatabase');
+    expect(source).not.toContain('database_path');
+  }
+  const server = sources[3];
+  const snapshot = await readJava('FolioleCompanionSyncGroupSnapshot.java');
+  expect(server).toContain('FolioleCompanionSyncGroupSnapshot.read');
+  expect(snapshot).toContain('bridge.request("create_snapshot"');
 });
 
 it('promotes an approved join only after the new member proves key possession', async () => {
@@ -33,6 +52,8 @@ it('promotes an approved join only after the new member proves key possession', 
   const server = await readJava('FolioleCompanionSyncGroupServer.java');
   const approve = provider.slice(provider.indexOf('static synchronized JSObject approve'),
     provider.indexOf('static synchronized JSObject reject'));
+  const promote = provider.slice(provider.indexOf('static synchronized void promoteApprovedJoin'),
+    provider.indexOf('static synchronized void pruneExpired'));
   expect(approve).toContain('FolioleCompanionSyncGroupJoinGrantStore.save');
   expect(approve).not.toContain('registerMember');
   expect(auth.indexOf('MessageDigest.isEqual')).toBeLessThan(auth.indexOf('promoteApprovedJoin'));
@@ -41,6 +62,7 @@ it('promotes an approved join only after the new member proves key possession', 
   expect(grantStore).toContain('AndroidKeyStore');
   expect(server).toContain('groupForApprovedRequest');
   expect(server).not.toContain('/companion/sync-group/activate');
+  expect(promote).toMatch(/isAuthorizedMember[\s\S]*request != null[\s\S]*consumeApprovedJoin\(request\)/u);
 });
 
 it('keeps the Android screen awake only around foreground provider activity', async () => {

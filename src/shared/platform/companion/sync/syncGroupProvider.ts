@@ -3,6 +3,8 @@ import type { SyncGroupPayload } from '../../../../../lib/platform/syncGroupCont
 import { loadAppVersion } from '../../appVersion';
 import { FolioleCompanionSync, isAvailableNativeAndroidCompanionRuntime } from '../../companionWorkspaceRuntimeRepository';
 
+import { ensureCompanionSyncGroupDataOwner } from './syncGroupProviderDataOwner';
+
 export async function reconcileCompanionSyncGroupProvider(
   bootstrap: NativeCompanionBootstrapState,
   group: SyncGroupPayload | null
@@ -11,9 +13,9 @@ export async function reconcileCompanionSyncGroupProvider(
   if (!group || group.local_member_state !== 'active' || !bootstrap.database_path) {
     return FolioleCompanionSync.stopSyncGroupProvider();
   }
+  await ensureCompanionSyncGroupDataOwner();
   return FolioleCompanionSync.startSyncGroupProvider({
     app_version: await loadAppVersion(),
-    database_path: bootstrap.database_path,
     device_id: bootstrap.device_id,
     device_name: bootstrap.device_name ?? 'Android device',
     sync_group: group

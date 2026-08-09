@@ -23,7 +23,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
     @PluginMethod public void startSyncGroupProvider(PluginCall call) {
         async(call, "Failed to start Sync Group provider.", () ->
-            FolioleCompanionSyncGroupProvider.start(getContext(), getActivity(), call));
+            FolioleCompanionSyncGroupProvider.start(getContext(), getActivity(), call, this::dispatchDataRequest));
     }
 
     @PluginMethod public void stopSyncGroupProvider(PluginCall call) {
@@ -43,6 +43,15 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     @PluginMethod public void rejectSyncGroupJoinRequest(PluginCall call) {
         async(call, "Failed to reject Device.", () ->
             FolioleCompanionSyncGroupProvider.reject(getContext(), call));
+    }
+
+    @PluginMethod public void resolveSyncGroupDataRequest(PluginCall call) {
+        try {
+            FolioleCompanionSyncGroupProvider.resolveDataRequest(call.getData());
+            call.resolve();
+        } catch (Exception error) {
+            call.reject(FolioleCompanionPluginErrors.withCause("Failed to resolve Sync Group data request.", error), error);
+        }
     }
 
     @PluginMethod public void loadPairingState(PluginCall call) {
@@ -103,6 +112,11 @@ public class FolioleCompanionSyncPlugin extends Plugin {
                 call.reject(FolioleCompanionPluginErrors.withCause(message, exception), exception);
             }
         });
+    }
+
+    private void dispatchDataRequest(JSObject event) throws Exception {
+        String name = FolioleCompanionHostBridgeContractDefinitions.syncGroupProviderDataRequestEvent(getContext());
+        getActivity().runOnUiThread(() -> notifyListeners(name, event));
     }
 
     @Override protected void handleOnDestroy() {

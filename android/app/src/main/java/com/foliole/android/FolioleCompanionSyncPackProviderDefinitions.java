@@ -24,5 +24,6 @@ final class FolioleCompanionSyncPackProviderDefinitions {
     JSONArray packSchema() throws Exception { return value.getJSONArray("packSchema"); }
     JSONObject protocol() throws Exception { return value.getJSONObject("protocol"); }
     int schemaVersion() throws Exception { return value.getInt("schemaVersion"); }
+    int stateCopyIndex() throws Exception { return value.getInt("stateCopyIndex"); }
     JSONArray tableNames() throws Exception { return value.getJSONArray("tableNames"); }
 }

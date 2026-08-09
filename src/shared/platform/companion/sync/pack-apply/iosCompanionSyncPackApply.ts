@@ -17,7 +17,7 @@ export async function applyIosCompanionSyncPackPath(
   if (runtime.kind !== 'android-native' && runtime.kind !== 'ios-native') {
     throw new NativeCompanionCapabilityUnavailableError('sync-pack-apply', runtime.platform);
   }
-  const cursorStore = createIosCompanionSyncPackCursorStore(manager);
+  const cursorStore = createIosCompanionSyncPackCursorStore(manager, args.sourcePeerId);
   if (manager) {
     const { applyCompanionSyncPackPathWithSharedCore } = await import('../../../companionSyncPackNodes');
     return runCompanionSyncWriterTask(() => applyCompanionSyncPackPathWithSharedCore(args, cursorStore, manager));

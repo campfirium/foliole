@@ -10,9 +10,9 @@ import java.nio.file.Files;
 final class FolioleCompanionSyncGroupResources {
     private FolioleCompanionSyncGroupResources() {}
 
-    static Resource contentBlob(String databasePath, String hash) {
+    static Resource contentBlob(String snapshotPath, String hash) {
         if (hash == null || !hash.matches("[a-fA-F0-9]{64}")) return null;
-        SQLiteDatabase db = SQLiteDatabase.openDatabase(databasePath, null, SQLiteDatabase.OPEN_READONLY);
+        SQLiteDatabase db = SQLiteDatabase.openDatabase(snapshotPath, null, SQLiteDatabase.OPEN_READONLY);
         try (Cursor cursor = db.rawQuery(
             "SELECT cb.mime_type, cbd.data FROM content_blobs cb JOIN content_blob_data cbd ON cbd.hash = cb.hash WHERE cb.hash = ?",
             new String[] { hash.toLowerCase() })) {
@@ -21,9 +21,9 @@ final class FolioleCompanionSyncGroupResources {
         } finally { db.close(); }
     }
 
-    static Resource attachment(Context context, String databasePath, String attachmentId, String contentHash) throws Exception {
+    static Resource attachment(Context context, String snapshotPath, String attachmentId, String contentHash) throws Exception {
         if (attachmentId == null || attachmentId.trim().isEmpty() || contentHash == null || contentHash.trim().isEmpty()) return null;
-        SQLiteDatabase db = SQLiteDatabase.openDatabase(databasePath, null, SQLiteDatabase.OPEN_READONLY);
+        SQLiteDatabase db = SQLiteDatabase.openDatabase(snapshotPath, null, SQLiteDatabase.OPEN_READONLY);
         try (Cursor cursor = db.rawQuery(
             "SELECT content_hash, storage_key, mime_type FROM attachment_blobs WHERE attachment_id = ?",
             new String[] { attachmentId })) {

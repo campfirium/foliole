@@ -49,7 +49,7 @@
     "compression": "zlib",
     "databaseEntry": "incoming.db.deflate",
     "format": "foliole.sync-pack",
-    "formatVersion": 3,
+    "formatVersion": 4,
     "legacyOptionalNodeColumns": [
       "priority",
       "desired_retention",
@@ -65,6 +65,9 @@
       "current_version_id"
     ],
     "manifestTableNames": [
+      "sync_groups",
+      "sync_group_members",
+      "sync_group_member_departures",
       "sync_object_state",
       "sync_objects",
       "nodes",
@@ -76,12 +79,38 @@
       "content_blobs",
       "review_log"
     ],
-    "maximumSchemaVersion": 64,
+    "maximumSchemaVersion": 65,
     "minimumSchemaVersion": 46,
     "sqliteTableRequirements": {
       "pack_manifest": [
         "key",
         "value"
+      ],
+      "sync_groups": [
+        "group_id",
+        "display_name",
+        "timeline_id",
+        "created_by_device_id",
+        "created_at"
+      ],
+      "sync_group_members": [
+        "group_id",
+        "device_id",
+        "device_kind",
+        "device_name",
+        "state",
+        "approved_by_device_id",
+        "authorization_id",
+        "joined_at",
+        "left_at",
+        "updated_at"
+      ],
+      "sync_group_member_departures": [
+        "group_id",
+        "device_id",
+        "authorized_by_device_id",
+        "authorization_id",
+        "left_at"
       ],
       "sync_object_state": [
         "object_type",

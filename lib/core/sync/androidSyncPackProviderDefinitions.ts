@@ -43,6 +43,15 @@ const payloadPlans = [
 export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
   compression: 'zlib',
   copyStatements: [
+    `INSERT INTO sync_groups SELECT group_id, display_name, timeline_id, created_by_device_id, created_at
+     FROM source.sync_groups WHERE group_id IN (SELECT group_id FROM source.sync_group_local_state WHERE singleton_id = 1)`,
+    `INSERT INTO sync_group_members SELECT group_id, device_id, device_kind, device_name, state,
+       approved_by_device_id, authorization_id, joined_at, left_at, updated_at
+     FROM source.sync_group_members
+     WHERE group_id IN (SELECT group_id FROM sync_groups) AND state IN ('active', 'left')`,
+    `INSERT INTO sync_group_member_departures SELECT group_id, device_id, authorized_by_device_id,
+       authorization_id, left_at FROM source.sync_group_member_departures
+     WHERE group_id IN (SELECT group_id FROM sync_groups)`,
     `INSERT INTO sync_object_state SELECT object_type, object_id, state_seq, content_hash, updated_at, deleted_at
      FROM source.sync_object_state WHERE state_seq > ? AND state_seq <= ? AND object_type IN
        ('attachment','external_document','external_folder','import_source','node','node_open_state','node_reading',
@@ -85,10 +94,11 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
   databaseEntry: SYNC_PACK_DATABASE_ENTRY,
   format: SYNC_PACK_FORMAT,
   formatVersion: SYNC_PACK_FORMAT_VERSION,
-  payloadCopyIndex: 2,
+  payloadCopyIndex: 5,
   payloadPlans,
   packSchema: PACK_SCHEMA,
   protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
   schemaVersion: DATABASE_SCHEMA_VERSION,
+  stateCopyIndex: 3,
   tableNames: SYNC_PACK_TABLE_NAMES
 } as const;

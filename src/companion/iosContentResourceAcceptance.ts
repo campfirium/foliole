@@ -53,8 +53,11 @@ async function pairForContent(endpoint: string) {
 }
 
 async function applyStructure(endpoint: string) {
+  const sourcePeerId = (await loadCompanionPairingState()).remote_peer_id;
+  if (!sourcePeerId) throw new Error('sync_pack_source_identity_unavailable');
   await applyCompanionDesktopSyncPack({
     headers: await createSignedRequestHeaders({ endpointUrl: endpoint, method: 'GET', pathWithQuery: PACK_PATH }),
+    sourcePeerId,
     url: `${endpoint}${PACK_PATH}`
   });
 }

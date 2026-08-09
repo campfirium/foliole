@@ -38,6 +38,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.loadBootstrap.mockResolvedValue({ device_id: 'ios-1', device_name: 'Acceptance iPhone' });
   mocks.requestPairing.mockResolvedValue({ pair_request_id: 'pair-1' });
+  mocks.loadPairing.mockResolvedValue({ remote_peer_id: 'desktop-1' });
   mocks.sign.mockResolvedValue({ 'X-Signature': 'signed' });
   mocks.pullContent.mockResolvedValue({ syncedContentBlobHashes: ['topic', 'external'] });
   mocks.pullAttachments.mockResolvedValue({ syncedAttachmentIds: ['ios-acceptance-valid-attachment'] });
@@ -58,12 +59,13 @@ beforeEach(() => {
 });
 
 it('pairs, applies, downloads resources, and reads all three domains on the first launch', async () => {
-  mocks.loadPairing.mockResolvedValue({ is_paired: false });
+  mocks.loadPairing.mockResolvedValue({ is_paired: false, remote_peer_id: 'desktop-1' });
 
   await runIosContentResourceAcceptance();
 
   expect(mocks.apply).toHaveBeenCalledWith({
     headers: { 'X-Signature': 'signed' },
+    sourcePeerId: 'desktop-1',
     url: 'http://127.0.0.1:43123/acceptance/sync-pack/content-resource'
   });
   expect(mocks.pullContent).toHaveBeenCalledOnce();
@@ -78,7 +80,7 @@ it('pairs, applies, downloads resources, and reads all three domains on the firs
 });
 
 it('only reloads persisted reads and searches after restart', async () => {
-  mocks.loadPairing.mockResolvedValue({ device_id: 'ios-1', is_paired: true });
+  mocks.loadPairing.mockResolvedValue({ device_id: 'ios-1', is_paired: true, remote_peer_id: 'desktop-1' });
 
   await runIosContentResourceAcceptance();
 

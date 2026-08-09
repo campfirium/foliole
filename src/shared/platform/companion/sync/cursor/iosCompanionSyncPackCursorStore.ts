@@ -9,23 +9,25 @@ import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabase
 
 import type { CompanionSyncPackCursorStore } from './companionSyncPackCursorStore';
 
-const SYNC_PACK_CURSOR_KEY = 'sync_pack_cursor';
+const SYNC_PACK_CURSOR_STREAM = 'sync-pack-receive';
 
 export function createIosCompanionSyncPackCursorStore(
-  manager?: CompanionSqliteConnectionManager
+  manager?: CompanionSqliteConnectionManager,
+  peerId = 'legacy-peer'
 ): CompanionSyncPackCursorStore {
   return {
-    loadCursor: () => manager ? withConnection(manager, loadCursor) : getIosCompanionDatabaseOwner().read(loadCursor),
+    loadCursor: () => manager ? withConnection(manager, (db) => loadCursor(db, peerId))
+      : getIosCompanionDatabaseOwner().read((db) => loadCursor(db, peerId)),
     saveCursor: (cursor) => manager
-      ? withConnection(manager, (connection) => saveCursor(connection, cursor))
-      : getIosCompanionDatabaseOwner().runWriter((db) => saveCursor(db, cursor))
+      ? withConnection(manager, (connection) => saveCursor(connection, peerId, cursor))
+      : getIosCompanionDatabaseOwner().runWriter((db) => saveCursor(db, peerId, cursor))
   };
 }
 
-async function loadCursor(connection: DbPort) {
+async function loadCursor(connection: DbPort, peerId: string) {
   const rows = await connection.query(
-    'SELECT value FROM companion_meta WHERE key = ? LIMIT 1',
-    [SYNC_PACK_CURSOR_KEY]
+    'SELECT cursor_value AS value FROM sync_peer_cursors WHERE peer_id = ? AND stream_name = ? LIMIT 1',
+    [peerId, SYNC_PACK_CURSOR_STREAM]
   );
   const value = rows[0]?.value;
   if (value === undefined || value === null || value === '') return null;
@@ -36,17 +38,20 @@ async function loadCursor(connection: DbPort) {
 
 async function saveCursor(
   connection: DbPort,
+  peerId: string,
   cursor: number | null
 ) {
   if (cursor === null) {
-    await connection.run('DELETE FROM companion_meta WHERE key = ?', [SYNC_PACK_CURSOR_KEY]);
+    await connection.run('DELETE FROM sync_peer_cursors WHERE peer_id = ? AND stream_name = ?',
+      [peerId, SYNC_PACK_CURSOR_STREAM]);
     return null;
   }
   if (!Number.isSafeInteger(cursor) || cursor < 0) throw new Error('invalid_ios_sync_pack_cursor');
   await connection.run(
-    `INSERT INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)
-     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
-    [SYNC_PACK_CURSOR_KEY, String(cursor), new Date().toISOString()]
+    `INSERT INTO sync_peer_cursors (peer_id, stream_name, cursor_value, updated_at) VALUES (?, ?, ?, ?)
+     ON CONFLICT(peer_id, stream_name) DO UPDATE SET
+       cursor_value = excluded.cursor_value, updated_at = excluded.updated_at`,
+    [peerId, SYNC_PACK_CURSOR_STREAM, String(cursor), new Date().toISOString()]
   );
   return cursor;
 }

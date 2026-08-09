@@ -20,27 +20,29 @@ function createHarness(storedValue?: unknown) {
 }
 
 describe('iosCompanionSyncPackCursorStore', () => {
-  it('loads the permanent sync-pack cursor from companion metadata', async () => {
+  it('loads the permanent sync-pack cursor for one source Device', async () => {
     const { connection, manager } = createHarness('12');
 
-    await expect(createIosCompanionSyncPackCursorStore(manager as never).loadCursor()).resolves.toBe(12);
-    expect(connection.query).toHaveBeenCalledWith(expect.stringContaining('companion_meta'), ['sync_pack_cursor']);
+    await expect(createIosCompanionSyncPackCursorStore(manager as never, 'device-b').loadCursor()).resolves.toBe(12);
+    expect(connection.query).toHaveBeenCalledWith(expect.stringContaining('sync_peer_cursors'),
+      ['device-b', 'sync-pack-receive']);
     expect(connection.close).not.toHaveBeenCalled();
     expect(manager.closeConnection).toHaveBeenCalledWith('foliole-companion', false);
   });
 
   it('upserts and clears the permanent cursor', async () => {
     const { connection, manager } = createHarness();
-    const store = createIosCompanionSyncPackCursorStore(manager as never);
+    const store = createIosCompanionSyncPackCursorStore(manager as never, 'device-c');
 
     await expect(store.saveCursor(7)).resolves.toBe(7);
     await expect(store.saveCursor(null)).resolves.toBeNull();
     expect(connection.run).toHaveBeenCalledWith(
-      expect.stringContaining('ON CONFLICT(key) DO UPDATE'),
-      ['sync_pack_cursor', '7', expect.any(String)],
+      expect.stringContaining('ON CONFLICT(peer_id, stream_name) DO UPDATE'),
+      ['device-c', 'sync-pack-receive', '7', expect.any(String)],
       false
     );
-    expect(connection.run).toHaveBeenCalledWith('DELETE FROM companion_meta WHERE key = ?', ['sync_pack_cursor'], false);
+    expect(connection.run).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM sync_peer_cursors'),
+      ['device-c', 'sync-pack-receive'], false);
   });
 
   it('rejects corrupt stored cursor state', async () => {
