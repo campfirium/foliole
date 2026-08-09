@@ -3,7 +3,11 @@ import { Bonjour } from 'bonjour-service';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import { loadPairedSyncGroupPeers, savePairedSyncGroupPeer } from './companionPairingStore.js';
-import { continueDesktopSyncGroupSync } from './desktopSyncGroupJoin.js';
+import {
+  completeDesktopSyncGroupJoin,
+  continueDesktopSyncGroupSync
+} from './desktopSyncGroupJoin.js';
+import { refreshDesktopSyncGroupPendingJoinEndpoint } from './desktopSyncGroupJoinState.js';
 
 let bonjour: InstanceType<typeof Bonjour> | null = null;
 let browser: ReturnType<InstanceType<typeof Bonjour>['find']> | null = null;
@@ -18,7 +22,18 @@ export function startDesktopSyncGroupAutoSync() {
     const txt = service.txt as Record<string, unknown>;
     const groupId = typeof txt.group_id === 'string' ? txt.group_id : null;
     const peerDeviceId = typeof txt.peer_id === 'string' ? txt.peer_id : null;
+    const timelineId = typeof txt.timeline_id === 'string' ? txt.timeline_id : null;
     if (!endpoint || !groupId || !peerDeviceId) return;
+    if (timelineId && refreshDesktopSyncGroupPendingJoinEndpoint({
+      endpointUrl: endpoint, groupId, providerDeviceId: peerDeviceId, timelineId
+    })) {
+      void completeDesktopSyncGroupJoin().catch((error) => {
+        console.info('[sync-group] approved join waiting for provider', {
+          error: error instanceof Error ? error.message : String(error), peerDeviceId
+        });
+      });
+      return;
+    }
     void syncAvailablePeer({ endpoint, groupId, peerDeviceId });
   });
 }

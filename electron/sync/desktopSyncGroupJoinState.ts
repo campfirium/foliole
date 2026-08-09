@@ -17,3 +17,20 @@ let pending: DesktopSyncGroupPendingJoin | null = null;
 export function loadDesktopSyncGroupJoinState() { return { candidates, pending }; }
 export function saveDesktopSyncGroupCandidates(next: DesktopSyncGroupJoinCandidatePayload[]) { candidates = next; }
 export function saveDesktopSyncGroupPendingJoin(next: DesktopSyncGroupPendingJoin | null) { pending = next; }
+
+export function refreshDesktopSyncGroupPendingJoinEndpoint(args: {
+  endpointUrl: string;
+  groupId: string;
+  providerDeviceId: string;
+  timelineId: string;
+}) {
+  if (!pending || pending.candidate.group_id !== args.groupId ||
+      pending.candidate.provider_device_id !== args.providerDeviceId ||
+      pending.candidate.timeline_id !== args.timelineId) return false;
+  pending = {
+    ...pending,
+    candidate: { ...pending.candidate, endpoint_url: args.endpointUrl },
+    request: { ...pending.request, endpoint_url: args.endpointUrl }
+  };
+  return true;
+}

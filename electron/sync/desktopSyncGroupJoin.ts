@@ -27,6 +27,7 @@ import { extractSyncPackDatabase } from './syncPackContainerReader.js';
 const JOIN_APPROVAL_POLL_MS = 1_500;
 let joinApprovalTimer: NodeJS.Timeout | null = null;
 let joinCompletionExecutor: (() => Promise<unknown>) | null = null;
+let joinCompletionInFlight: Promise<ReturnType<typeof loadDesktopSyncGroup>> | null = null;
 
 export function setDesktopSyncGroupJoinCompletionExecutor(execute: (() => Promise<unknown>) | null) {
   joinCompletionExecutor = execute;
@@ -58,6 +59,15 @@ export async function requestDesktopSyncGroupJoin(endpointUrl: string) {
 }
 
 export async function completeDesktopSyncGroupJoin() {
+  if (joinCompletionInFlight) return await joinCompletionInFlight;
+  const work = completeDesktopSyncGroupJoinOnce().finally(() => {
+    if (joinCompletionInFlight === work) joinCompletionInFlight = null;
+  });
+  joinCompletionInFlight = work;
+  return await work;
+}
+
+async function completeDesktopSyncGroupJoinOnce() {
   const pending = loadDesktopSyncGroupJoinState().pending;
   if (!pending) throw new Error('sync_group_join_not_pending');
   const payload = await requestJson(`${pending.candidate.endpoint_url}/companion/pair`, {
