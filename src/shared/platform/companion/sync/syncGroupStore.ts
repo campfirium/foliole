@@ -1,5 +1,4 @@
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
-import { mergeSyncGroupMemberFacts } from '../../../../../lib/core/sync/syncGroupMemberMerge';
 import {
   isEmptySyncGroupLibrary,
   type SyncGroupLibraryFacts,
@@ -72,34 +71,28 @@ export function activateCompanionSyncGroup(group: SyncGroupPayload) {
   }));
 }
 
-export async function refreshActiveCompanionSyncGroupMembership(args: {
+export function refreshActiveCompanionSyncGroupMembership(args: {
   deviceId: string;
   group: SyncGroupPayload;
 }) {
-  const current = await loadCompanionSyncGroup();
-  if (current?.local_device_id !== args.deviceId) throw new Error('sync_group_identity_mismatch');
-  return mergeActiveCompanionSyncGroupMembership(args.group);
-}
-
-export function mergeActiveCompanionSyncGroupMembership(incoming: SyncGroupPayload) {
   return owner().runWriter((db) => db.transaction(async (tx) => {
-    const current = await loadGroup(tx);
-    if (!current || current.local_member_state !== 'active'
-      || current.group_id !== incoming.group_id
-      || current.timeline_id !== incoming.timeline_id
-      || current.display_name !== incoming.display_name
-      || current.created_at !== incoming.created_at
-      || current.created_by_device_id !== incoming.created_by_device_id
-      || incoming.local_member_state !== 'active') {
+    const local = (await tx.query<DbRow>(
+      `SELECT l.group_id, l.local_device_id, l.member_state, g.timeline_id
+       FROM sync_group_local_state l JOIN sync_groups g ON g.group_id = l.group_id
+       WHERE l.singleton_id = 1`
+    ))[0];
+    if (local?.group_id !== args.group.group_id
+      || local.timeline_id !== args.group.timeline_id
+      || local.local_device_id !== args.deviceId
+      || local.member_state !== 'active') {
       throw new Error('sync_group_identity_mismatch');
     }
-    const members = mergeSyncGroupMemberFacts({
-      currentMembers: current.members,
-      incomingMembers: incoming.members,
-      submittedByDeviceId: incoming.local_device_id
-    });
     const now = new Date().toISOString();
-    for (const member of members) await saveMember(tx, current.group_id, member, now);
+    await tx.run(
+      'UPDATE sync_groups SET display_name = ?, updated_at = ? WHERE group_id = ?',
+      [args.group.display_name, now, args.group.group_id]
+    );
+    for (const member of args.group.members) await saveMember(tx, args.group.group_id, member, now);
     await tx.run('UPDATE sync_group_local_state SET updated_at = ? WHERE singleton_id = 1', [now]);
     return (await loadGroup(tx))!;
   }));
@@ -120,7 +113,7 @@ async function loadGroup(db: DbPort): Promise<SyncGroupPayload | null> {
   const members = await db.query<DbRow>(
     `SELECT device_id, device_kind, device_name, state, approved_by_device_id,
             authorization_id, joined_at, activated_at
-     FROM sync_group_members WHERE group_id = ? ORDER BY joined_at, device_id`,
+     FROM sync_group_members WHERE group_id = ? AND state != 'left' ORDER BY joined_at, device_id`,
     [row.group_id]
   );
   return {

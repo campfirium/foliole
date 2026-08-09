@@ -112,7 +112,6 @@ final class FolioleCompanionSyncGroupServer {
         if (pending.providerSecret == null) pending.providerSecret = FolioleCompanionSyncGroupPeerStore.randomSecret();
         int cursor = FolioleCompanionSyncGroupDatabase.registerProvisioning(config.getString("database_path"), config, pending);
         JSONObject group = FolioleCompanionSyncGroupDatabase.groupForMember(config.getString("database_path"), pending.deviceId);
-        String memberAuthorizationId = FolioleCompanionSyncGroupDatabase.memberAuthorizationId(group, pending.deviceId);
         saveOutboundPairing(pending, pending.providerSecret);
         FolioleCompanionHttpResponse.json(output, 200, new JSONObject().put("app_version", config.getString("app_version"))
             .put("compatibility", compatible()).put("desktop_protocol", protocol()).put("device_id", pending.deviceId)
@@ -121,7 +120,7 @@ final class FolioleCompanionSyncGroupServer {
             .put("provider_device_id", config.getString("device_id")).put("provider_device_kind", "android-capacitor")
             .put("provider_device_name", config.getString("device_name"))
             .put("paired_at", java.time.Instant.now().toString()).put("peer_id", config.getString("device_id"))
-            .put("member_authorization_id", memberAuthorizationId).put("provisioning_cursor", cursor).put("sync_group", group));
+            .put("member_authorization_id", id).put("provisioning_cursor", cursor).put("sync_group", group));
     }
 
     private void saveOutboundPairing(FolioleCompanionSyncGroupJoinRequest pending, String secret) throws Exception {

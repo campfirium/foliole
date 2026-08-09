@@ -38,7 +38,7 @@ export function loadDesktopSyncGroup(): SyncGroupPayload | null {
     `SELECT group_id, device_id, device_kind, device_name, state, approved_by_device_id,
             authorization_id, joined_at, activated_at
      FROM sync_group_members
-     WHERE group_id = ?
+     WHERE group_id = ? AND state != 'left'
      ORDER BY joined_at ASC, device_id ASC`,
     [row.group_id]
   );
@@ -99,12 +99,12 @@ export function registerProvisioningSyncGroupMember(args: {
       authorization_id, provisioning_cursor, joined_at, activated_at, left_at, updated_at
     ) VALUES (?, ?, ?, ?, 'provisioning', ?, ?, ?, ?, NULL, NULL, ?)
     ON CONFLICT(group_id, device_id) DO UPDATE SET
-      device_kind = CASE WHEN sync_group_members.state = 'active' THEN sync_group_members.device_kind ELSE excluded.device_kind END,
-      device_name = CASE WHEN sync_group_members.state = 'active' THEN sync_group_members.device_name ELSE excluded.device_name END,
+      device_kind = excluded.device_kind,
+      device_name = excluded.device_name,
       state = CASE WHEN sync_group_members.state = 'active' THEN 'active' ELSE 'provisioning' END,
-      approved_by_device_id = CASE WHEN sync_group_members.state = 'active' THEN sync_group_members.approved_by_device_id ELSE excluded.approved_by_device_id END,
-      authorization_id = CASE WHEN sync_group_members.state = 'active' THEN sync_group_members.authorization_id ELSE excluded.authorization_id END,
-      provisioning_cursor = CASE WHEN sync_group_members.state = 'active' THEN NULL ELSE excluded.provisioning_cursor END,
+      approved_by_device_id = excluded.approved_by_device_id,
+      authorization_id = excluded.authorization_id,
+      provisioning_cursor = excluded.provisioning_cursor,
       updated_at = excluded.updated_at`,
     [group.group_id, args.deviceId, args.deviceKind, args.deviceName, args.approvedByDeviceId,
       args.authorizationId, args.provisioningCursor, now, now]

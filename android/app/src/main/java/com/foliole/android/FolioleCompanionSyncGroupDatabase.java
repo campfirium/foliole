@@ -18,17 +18,9 @@ final class FolioleCompanionSyncGroupDatabase {
             int cursor = maxStateSeq(db);
             String groupId = config.getJSONObject("sync_group").getString("group_id");
             String now = Instant.now().toString();
-            db.execSQL("INSERT INTO sync_group_members (group_id, device_id, device_kind, device_name, state, " +
+            db.execSQL("INSERT OR REPLACE INTO sync_group_members (group_id, device_id, device_kind, device_name, state, " +
                 "approved_by_device_id, authorization_id, provisioning_cursor, joined_at, activated_at, left_at, updated_at) " +
-                "VALUES (?, ?, ?, ?, 'provisioning', ?, ?, ?, ?, NULL, NULL, ?) " +
-                "ON CONFLICT(group_id, device_id) DO UPDATE SET " +
-                "device_kind = CASE WHEN sync_group_members.state = 'active' THEN sync_group_members.device_kind ELSE excluded.device_kind END, " +
-                "device_name = CASE WHEN sync_group_members.state = 'active' THEN sync_group_members.device_name ELSE excluded.device_name END, " +
-                "state = CASE WHEN sync_group_members.state = 'active' THEN 'active' ELSE 'provisioning' END, " +
-                "approved_by_device_id = CASE WHEN sync_group_members.state = 'active' THEN sync_group_members.approved_by_device_id ELSE excluded.approved_by_device_id END, " +
-                "authorization_id = CASE WHEN sync_group_members.state = 'active' THEN sync_group_members.authorization_id ELSE excluded.authorization_id END, " +
-                "provisioning_cursor = CASE WHEN sync_group_members.state = 'active' THEN NULL ELSE excluded.provisioning_cursor END, " +
-                "updated_at = excluded.updated_at", new Object[] {
+                "VALUES (?, ?, ?, ?, 'provisioning', ?, ?, ?, ?, NULL, NULL, ?)", new Object[] {
                     groupId, request.deviceId, request.deviceKind, request.deviceName, config.getString("device_id"),
                     request.pairRequestId, cursor, now, now
                 });
@@ -84,15 +76,6 @@ final class FolioleCompanionSyncGroupDatabase {
             }
             return group.put("local_member_state", state).put("members", members);
         } finally { db.close(); }
-    }
-
-    static String memberAuthorizationId(JSONObject group, String deviceId) throws Exception {
-        JSONArray members = group.getJSONArray("members");
-        for (int index = 0; index < members.length(); index++) {
-            JSONObject member = members.getJSONObject(index);
-            if (deviceId.equals(member.getString("device_id"))) return member.getString("authorization_id");
-        }
-        throw new IllegalStateException("sync_group_member_not_authorized");
     }
 
     static void activate(String path, String deviceId, String authorizationId, int completedCursor) {

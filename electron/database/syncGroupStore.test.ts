@@ -55,21 +55,3 @@ it('keeps a joining member provisioning until its fixed cursor is proven complet
   });
   expect(active.members.find((member) => member.device_id === 'android-1')?.state).toBe('active');
 });
-
-it('rotates an active member transport without rewriting its membership authorization fact', () => {
-  createDesktopSyncGroup({ deviceId: 'desktop-1', deviceKind: 'desktop', deviceName: 'Studio' });
-  registerProvisioningSyncGroupMember({
-    approvedByDeviceId: 'desktop-1', authorizationId: 'authorization-original', deviceId: 'android-1',
-    deviceKind: 'android-capacitor', deviceName: 'A5', provisioningCursor: 12,
-    now: '2026-08-08T00:01:00.000Z'
-  });
-  sqlite.prepare("UPDATE sync_group_members SET state = 'active', activated_at = '2026-08-08T00:02:00.000Z' WHERE device_id = 'android-1'").run();
-  const refreshed = registerProvisioningSyncGroupMember({
-    approvedByDeviceId: 'desktop-1', authorizationId: 'authorization-new-pairing', deviceId: 'android-1',
-    deviceKind: 'android-capacitor', deviceName: 'Renamed A5', provisioningCursor: 99,
-    now: '2026-08-08T00:03:00.000Z'
-  });
-  expect(refreshed.members.find((member) => member.device_id === 'android-1')).toMatchObject({
-    authorization_id: 'authorization-original', device_name: 'A5', state: 'active'
-  });
-});
