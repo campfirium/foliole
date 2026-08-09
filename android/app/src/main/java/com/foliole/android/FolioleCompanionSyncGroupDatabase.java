@@ -11,21 +11,33 @@ import java.time.Instant;
 final class FolioleCompanionSyncGroupDatabase {
     private FolioleCompanionSyncGroupDatabase() {}
 
-    static void registerMember(String path, JSONObject config, FolioleCompanionSyncGroupJoinRequest request) throws Exception {
+    static void registerMember(
+        String path, String groupId, String approvedByDeviceId, FolioleCompanionSyncGroupJoinRequest request
+    ) throws Exception {
         SQLiteDatabase db = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READWRITE);
         try {
-            String groupId = config.getJSONObject("sync_group").getString("group_id");
             String now = Instant.now().toString();
             db.execSQL("INSERT OR REPLACE INTO sync_group_members (group_id, device_id, device_kind, device_name, state, " +
                 "approved_by_device_id, authorization_id, provisioning_cursor, joined_at, activated_at, left_at, updated_at) " +
                 "VALUES (?, ?, ?, ?, 'active', ?, ?, NULL, ?, NULL, NULL, ?)", new Object[] {
-                    groupId, request.deviceId, request.deviceKind, request.deviceName, config.getString("device_id"),
+                    groupId, request.deviceId, request.deviceKind, request.deviceName, approvedByDeviceId,
                     request.pairRequestId, now, now
                 });
         } finally { db.close(); }
     }
 
-    static JSONObject groupForMember(String path, String localDeviceId) throws Exception {
+    static boolean isAuthorizedMember(String path, String groupId, String deviceId) {
+        try {
+            requireAuthorizedMember(path, groupId, deviceId);
+            return true;
+        } catch (SecurityException error) {
+            return false;
+        }
+    }
+
+    static JSONObject groupForApprovedRequest(
+        String path, String approvedByDeviceId, FolioleCompanionSyncGroupJoinRequest request
+    ) throws Exception {
         SQLiteDatabase db = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READONLY);
         try {
             JSONObject group;
@@ -33,7 +45,7 @@ final class FolioleCompanionSyncGroupDatabase {
                 if (!row.moveToFirst()) throw new IllegalStateException("sync_group_not_available");
                 group = new JSONObject().put("group_id", row.getString(0)).put("display_name", row.getString(1))
                     .put("timeline_id", row.getString(2)).put("created_by_device_id", row.getString(3))
-                    .put("created_at", row.getString(4)).put("local_device_id", localDeviceId);
+                    .put("created_at", row.getString(4)).put("local_device_id", request.deviceId);
             }
             JSONArray members = new JSONArray();
             try (Cursor rows = db.rawQuery("SELECT device_id, device_kind, device_name, state, approved_by_device_id, " +
@@ -43,12 +55,16 @@ final class FolioleCompanionSyncGroupDatabase {
                     .put("approved_by_device_id", rows.getString(4)).put("authorization_id", rows.getString(5))
                     .put("joined_at", rows.getString(6)));
             }
-            String state = "active";
+            boolean found = false;
             for (int index = 0; index < members.length(); index++) {
                 JSONObject member = members.getJSONObject(index);
-                if (localDeviceId.equals(member.getString("device_id"))) state = member.getString("state");
+                if (request.deviceId.equals(member.getString("device_id"))) found = true;
             }
-            return group.put("local_member_state", state).put("members", members);
+            if (!found) members.put(new JSONObject().put("device_id", request.deviceId)
+                .put("device_kind", request.deviceKind).put("device_name", request.deviceName).put("state", "active")
+                .put("approved_by_device_id", approvedByDeviceId).put("authorization_id", request.pairRequestId)
+                .put("joined_at", request.requestedAt));
+            return group.put("local_member_state", "active").put("members", members);
         } finally { db.close(); }
     }
 

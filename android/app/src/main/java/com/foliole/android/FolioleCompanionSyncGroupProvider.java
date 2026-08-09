@@ -36,9 +36,10 @@ final class FolioleCompanionSyncGroupProvider {
             if (server == null) startRuntime();
             return state();
         }
-        stop();
+        if (activeConfig != null) stop();
         FolioleCompanionSyncScreenAwake.attach(activity);
         activeContext = context.getApplicationContext(); activeConfig = next;
+        restoreApprovedJoins();
         startRuntime();
         return state();
     }
@@ -48,6 +49,12 @@ final class FolioleCompanionSyncGroupProvider {
         if (advertisement != null) advertisement.stop();
         if (server != null) server.stop();
         advertisement = null; server = null;
+        if (activeContext != null) {
+            for (FolioleCompanionSyncGroupJoinRequest request : joinRequests.values()) {
+                if ("approved".equals(request.status)) FolioleCompanionSyncGroupPeerStore.remove(activeContext, request.deviceId);
+            }
+            FolioleCompanionSyncGroupJoinGrantStore.clear(activeContext);
+        }
         activeContext = null; activeConfig = null;
         joinRequests.clear();
         return state();
@@ -69,6 +76,14 @@ final class FolioleCompanionSyncGroupProvider {
         advertisement = FolioleCompanionNsdAdvertisement.start(activeContext, server.port(), activeConfig);
     }
 
+    private static void restoreApprovedJoins() throws Exception {
+        JSONObject group = activeConfig.getJSONObject("sync_group");
+        joinRequests.clear();
+        joinRequests.putAll(FolioleCompanionSyncGroupJoinGrantStore.load(
+            activeContext, group.getString("group_id"), group.getString("timeline_id")
+        ));
+    }
+
     private static boolean sameProvider(JSONObject next) {
         if (activeConfig == null) return false;
         JSONObject currentGroup = activeConfig.optJSONObject("sync_group");
@@ -82,10 +97,16 @@ final class FolioleCompanionSyncGroupProvider {
 
     static synchronized JSObject approve(Context context, PluginCall call) throws Exception {
         FolioleCompanionSyncGroupJoinRequest request = require(call.getString(key(context, "pairRequestId")));
-        FolioleCompanionSyncGroupDatabase.registerMember(
-            activeConfig.getString("database_path"), activeConfig, request
-        );
+        request.deviceSecret = FolioleCompanionSyncGroupPeerStore.createSecret(activeContext, request.deviceId);
+        request.providerSecret = FolioleCompanionSyncGroupPeerStore.randomSecret();
         request.status = "approved";
+        try {
+            FolioleCompanionSyncGroupJoinGrantStore.save(activeContext, activeConfig, request);
+        } catch (Exception error) {
+            request.status = "pending";
+            FolioleCompanionSyncGroupPeerStore.remove(activeContext, request.deviceId);
+            throw error;
+        }
         FolioleCompanionSyncScreenAwake.touch();
         return state();
     }
@@ -94,6 +115,29 @@ final class FolioleCompanionSyncGroupProvider {
         FolioleCompanionSyncGroupJoinRequest request = require(call.getString(key(context, "pairRequestId")));
         request.status = "rejected";
         return state();
+    }
+
+    static synchronized void promoteApprovedJoin(String groupId, String databasePath, String deviceId) throws Exception {
+        if (FolioleCompanionSyncGroupDatabase.isAuthorizedMember(databasePath, groupId, deviceId)) return;
+        FolioleCompanionSyncGroupJoinRequest request = joinRequests.values().stream()
+            .filter(item -> deviceId.equals(item.deviceId) && "approved".equals(item.status) && !item.expired())
+            .findFirst().orElseThrow(() -> new SecurityException("sync_group_member_not_authorized"));
+        String approvedBy = FolioleCompanionSyncGroupJoinGrantStore.approvedByDeviceId(activeContext, request.pairRequestId);
+        FolioleCompanionSyncGroupDatabase.registerMember(databasePath, groupId, approvedBy, request);
+        FolioleCompanionSyncGroupJoinGrantStore.remove(activeContext, request.pairRequestId);
+        joinRequests.remove(request.pairRequestId);
+    }
+
+    static synchronized void pruneExpired(Context context) {
+        joinRequests.entrySet().removeIf((entry) -> {
+            FolioleCompanionSyncGroupJoinRequest request = entry.getValue();
+            if (!request.expired()) return false;
+            if ("approved".equals(request.status)) {
+                FolioleCompanionSyncGroupJoinGrantStore.remove(context, request.pairRequestId);
+                FolioleCompanionSyncGroupPeerStore.remove(context, request.deviceId);
+            }
+            return true;
+        });
     }
 
     static synchronized JSObject state() {

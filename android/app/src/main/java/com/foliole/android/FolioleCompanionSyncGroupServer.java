@@ -93,7 +93,7 @@ final class FolioleCompanionSyncGroupServer {
         if (!compatibleWith(body.optJSONObject("protocol"))) {
             FolioleCompanionHttpResponse.json(output, 409, new JSONObject().put("error", "sync_protocol_incompatible")); return;
         }
-        requests.entrySet().removeIf(entry -> entry.getValue().expired());
+        FolioleCompanionSyncGroupProvider.pruneExpired(context);
         FolioleCompanionSyncGroupJoinRequest existing = requests.values().stream()
             .filter(item -> !item.status.equals("rejected") && item.matches(body)).findFirst().orElse(null);
         if (existing != null) {
@@ -111,9 +111,9 @@ final class FolioleCompanionSyncGroupServer {
         FolioleCompanionSyncGroupJoinRequest pending = requests.get(id);
         if (pending == null || pending.expired()) { FolioleCompanionHttpResponse.json(output, 404, new JSONObject().put("error", "pair_request_not_found")); return; }
         if (!pending.status.equals("approved")) { FolioleCompanionHttpResponse.json(output, 409, new JSONObject().put("error", "pair_request_pending")); return; }
-        if (pending.deviceSecret == null) pending.deviceSecret = FolioleCompanionSyncGroupPeerStore.createSecret(context, pending.deviceId);
-        if (pending.providerSecret == null) pending.providerSecret = FolioleCompanionSyncGroupPeerStore.randomSecret();
-        JSONObject group = FolioleCompanionSyncGroupDatabase.groupForMember(config.getString("database_path"), pending.deviceId);
+        JSONObject group = FolioleCompanionSyncGroupDatabase.groupForApprovedRequest(
+            config.getString("database_path"), config.getString("device_id"), pending
+        );
         saveOutboundPairing(pending, pending.providerSecret);
         FolioleCompanionHttpResponse.json(output, 200, new JSONObject().put("app_version", config.getString("app_version"))
             .put("compatibility", compatible()).put("desktop_protocol", protocol()).put("device_id", pending.deviceId)

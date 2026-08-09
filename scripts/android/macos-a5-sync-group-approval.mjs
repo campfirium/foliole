@@ -58,7 +58,10 @@ export async function runMacosA5SyncGroupApproval({ execute, repoRoot }) {
       '-w', '-r', '-e', 'class', `${TEST_CLASS}#approvesJoinAndResumesProviderAfterBackgroundPause`, TEST_RUNNER], {
       env, timeoutMs: 15 * 60_000
     }), 'sync-group-approval');
-    return { output: run.output, receipt: parseReceipt(run.output) };
+    const receipt = parseReceipt(run.output);
+    const resume = requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start',
+      '-W', '-n', `${APP_ID}/.MainActivity`], { env, timeoutMs: 60_000 }), 'provider-resume');
+    return { output: `${run.output}${resume.output}`, receipt };
   } finally {
     await execute(paths.adb, ['-s', A5_SERIAL, 'uninstall', TEST_APP_ID], { env, timeoutMs: 60_000 });
     await execute(paths.adb, ['kill-server'], { env, timeoutMs: 30_000 });

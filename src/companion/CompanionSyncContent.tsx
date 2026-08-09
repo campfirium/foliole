@@ -61,16 +61,24 @@ export function CompanionSyncContent(props: {
   const { workspaceSync } = props;
   const handoffReminders = useCompanionHandoffReminderRuntime();
   const [syncGroup, setSyncGroup] = useState<SyncGroupPayload | null>(null);
+  const [syncGroupLoaded, setSyncGroupLoaded] = useState(false);
 
   useEffect(() => {
     if (workspaceSync.bootstrapState.runtime_kind !== 'android-capacitor') return;
-    void loadCompanionSyncGroup().then(setSyncGroup).catch(() => setSyncGroup(null));
+    setSyncGroupLoaded(false);
+    void loadCompanionSyncGroup().then((group) => {
+      setSyncGroup(group);
+      setSyncGroupLoaded(true);
+    }).catch(() => {
+      setSyncGroup(null);
+      setSyncGroupLoaded(true);
+    });
   }, [workspaceSync.bootstrapState.runtime_kind, workspaceSync.pairingState.is_paired, workspaceSync.state.last_synced_at]);
 
   useEffect(() => {
-    if (workspaceSync.bootstrapState.runtime_kind !== 'android-capacitor') return;
+    if (workspaceSync.bootstrapState.runtime_kind !== 'android-capacitor' || !syncGroupLoaded) return;
     void reconcileCompanionSyncGroupProvider(workspaceSync.bootstrapState, syncGroup).catch(() => undefined);
-  }, [syncGroup, workspaceSync.bootstrapState]);
+  }, [syncGroup, syncGroupLoaded, workspaceSync.bootstrapState]);
 
   useEffect(() => {
     if (!workspaceSync.pendingPairRequest || workspaceSync.pairingStatus !== 'awaiting-approval') {

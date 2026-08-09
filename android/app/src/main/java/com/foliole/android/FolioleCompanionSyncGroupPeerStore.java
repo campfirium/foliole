@@ -51,6 +51,12 @@ final class FolioleCompanionSyncGroupPeerStore {
         }
     }
 
+    static void remove(Context context, String deviceId) {
+        if (!prefs(context).edit().remove(deviceId).commit()) {
+            throw new IllegalStateException("Failed to remove Sync Group peer secret.");
+        }
+    }
+
     private static void save(Context context, String deviceId, byte[] secret) throws Exception {
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
         cipher.init(Cipher.ENCRYPT_MODE, key());

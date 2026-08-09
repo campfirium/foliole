@@ -7,9 +7,6 @@ it('keeps A5 on Mac and Windows C on a real LAN Sync Group path', () => {
   const inspector = fs.readFileSync('scripts/windows/windows-sync-group-recovery-inspect.mjs', 'utf8');
   const control = fs.readFileSync('scripts/windows/windows-sync-group-recovery-control.mjs', 'utf8');
   const approval = fs.readFileSync('scripts/android/macos-a5-sync-group-approval.mjs', 'utf8');
-  const approvalScenario = fs.readFileSync(
-    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupApprovalScenario.java', 'utf8'
-  );
   const provider = fs.readFileSync(
     'android/app/src/main/java/com/foliole/android/FolioleCompanionSyncGroupProvider.java', 'utf8'
   );
@@ -30,9 +27,10 @@ it('keeps A5 on Mac and Windows C on a real LAN Sync Group path', () => {
   expect(remote).toContain("controlNativeClient(execute, paths, 'start')");
   expect(control).toContain('runMacosA5SyncGroupApproval');
   expect(approval).toContain('FolioleCompanionSyncGroupApprovalTest');
-  expect(approvalScenario).toContain('leaveProviderRunning = true');
+  expect(approval).toContain("'-W', '-n', `${APP_ID}/.MainActivity`");
   expect(provider).toContain('new FolioleCompanionSyncGroupServer(activeContext, activeConfig, joinRequests)');
-  expect(provider).toContain('FolioleCompanionSyncGroupDatabase.registerMember(');
+  expect(provider).toContain('FolioleCompanionSyncGroupJoinGrantStore.save(');
+  expect(provider).toContain('promoteApprovedJoin(');
   expect(provider).toContain('if (sameProvider(next))');
   expect(plugin).toMatch(/handleOnDestroy\(\)[\s\S]*?SyncGroupProvider\.pause\(\)/u);
   expect(`${remote}\n${control}\n${approval}`).not.toContain("'reverse'");

@@ -23,7 +23,6 @@ final class FolioleCompanionSyncGroupRequestAuth {
         if (drift > 60_000) throw new SecurityException("expired_timestamp");
         byte[] secret = FolioleCompanionSyncGroupPeerStore.load(context, deviceId);
         if (secret == null) throw new SecurityException("unknown_device");
-        FolioleCompanionSyncGroupDatabase.requireAuthorizedMember(databasePath, groupId, deviceId);
         String canonical = request.method + "\n" + request.path + "\n" + timestamp + "\n" + nonce + "\n" + sha256(request.body);
         String encodedSecret = android.util.Base64.encodeToString(secret, android.util.Base64.NO_WRAP | android.util.Base64.URL_SAFE | android.util.Base64.NO_PADDING);
         String expected = FolioleCompanionPairingCrypto.signCanonicalRequest(encodedSecret, canonical);
@@ -33,6 +32,8 @@ final class FolioleCompanionSyncGroupRequestAuth {
         long now = System.currentTimeMillis();
         NONCES.entrySet().removeIf(entry -> entry.getValue() < now);
         if (NONCES.putIfAbsent(deviceId + ":" + nonce, now + 60_000) != null) throw new SecurityException("replayed_nonce");
+        FolioleCompanionSyncGroupProvider.promoteApprovedJoin(groupId, databasePath, deviceId);
+        FolioleCompanionSyncGroupDatabase.requireAuthorizedMember(databasePath, groupId, deviceId);
         return deviceId;
     }
 

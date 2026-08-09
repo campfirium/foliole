@@ -39,5 +39,6 @@ describe('FolioleCompanionSyncGroupPeerStore', () => {
     const source = await readFile(APP_DATA_STORE, 'utf8');
     expect(source).toContain('FolioleCompanionSyncGroupPeerStore.clear(context);');
     expect(source).toContain('FolioleCompanionSyncGroupOutboundPeerStore.clear(context);');
+    expect(source).toContain('FolioleCompanionSyncGroupJoinGrantStore.clear(context);');
   });
 });

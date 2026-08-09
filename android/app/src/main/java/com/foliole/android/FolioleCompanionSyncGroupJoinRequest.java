@@ -19,20 +19,41 @@ final class FolioleCompanionSyncGroupJoinRequest {
     volatile String status = "pending";
 
     FolioleCompanionSyncGroupJoinRequest(JSONObject payload, String remoteAddress) throws Exception {
-        deviceId = required(payload, "device_id");
-        deviceKind = required(payload, "device_kind");
-        deviceName = required(payload, "device_name");
-        pairingPublicKey = required(payload, "pairing_public_key");
-        pairRequestId = "pair-" + UUID.randomUUID();
-        requestedAt = Instant.now().toString();
-        expiresAt = Instant.now().plusSeconds(120).toString();
-        this.remoteAddress = remoteAddress;
+        this(required(payload, "device_id"), required(payload, "device_kind"), required(payload, "device_name"),
+            Instant.now().plusSeconds(120).toString(), required(payload, "pairing_public_key"),
+            "pair-" + UUID.randomUUID(), Instant.now().toString(), remoteAddress);
+    }
+
+    private FolioleCompanionSyncGroupJoinRequest(
+        String deviceId, String deviceKind, String deviceName, String expiresAt, String pairingPublicKey,
+        String pairRequestId, String requestedAt, String remoteAddress
+    ) {
+        this.deviceId = deviceId; this.deviceKind = deviceKind; this.deviceName = deviceName;
+        this.expiresAt = expiresAt; this.pairingPublicKey = pairingPublicKey; this.pairRequestId = pairRequestId;
+        this.requestedAt = requestedAt; this.remoteAddress = remoteAddress;
     }
 
     JSONObject publicJson() throws Exception {
         return new JSONObject().put("device_id", deviceId).put("device_kind", deviceKind)
             .put("device_name", deviceName).put("pair_request_id", pairRequestId)
             .put("requested_at", requestedAt).put("expires_at", expiresAt).put("status", status);
+    }
+
+    JSONObject grantJson() throws Exception {
+        return publicJson().put("pairing_public_key", pairingPublicKey).put("remote_address", remoteAddress)
+            .put("device_secret", deviceSecret).put("provider_secret", providerSecret);
+    }
+
+    static FolioleCompanionSyncGroupJoinRequest fromGrantJson(JSONObject value) {
+        FolioleCompanionSyncGroupJoinRequest request = new FolioleCompanionSyncGroupJoinRequest(
+            required(value, "device_id"), required(value, "device_kind"), required(value, "device_name"),
+            required(value, "expires_at"), required(value, "pairing_public_key"),
+            required(value, "pair_request_id"), required(value, "requested_at"), required(value, "remote_address")
+        );
+        request.status = required(value, "status");
+        request.deviceSecret = required(value, "device_secret");
+        request.providerSecret = required(value, "provider_secret");
+        return request;
     }
 
     boolean expired() { return Instant.now().isAfter(Instant.parse(expiresAt)); }

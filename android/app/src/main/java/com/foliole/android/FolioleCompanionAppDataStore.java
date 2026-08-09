@@ -12,6 +12,7 @@ final class FolioleCompanionAppDataStore {
     static JSObject clear(Context context) throws Exception {
         deleteRecursively(new File(context.getFilesDir(), "attachments"));
         FolioleCompanionPairingStore.clearPairingCredentials(context);
+        FolioleCompanionSyncGroupJoinGrantStore.clear(context);
         FolioleCompanionSyncGroupPeerStore.clear(context);
         FolioleCompanionSyncGroupOutboundPeerStore.clear(context);
         return new JSObject();

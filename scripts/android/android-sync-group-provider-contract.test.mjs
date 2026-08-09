@@ -26,10 +26,20 @@ it('authorizes every Android provider data request with both the channel secret 
   expect(database).toContain("state = 'active'");
 });
 
-it('makes approval the only membership transition and does not expose remote activation', async () => {
+it('promotes an approved join only after the new member proves key possession', async () => {
+  const auth = await readJava('FolioleCompanionSyncGroupRequestAuth.java');
+  const grantStore = await readJava('FolioleCompanionSyncGroupJoinGrantStore.java');
+  const provider = await readJava('FolioleCompanionSyncGroupProvider.java');
   const server = await readJava('FolioleCompanionSyncGroupServer.java');
-  const database = await readJava('FolioleCompanionSyncGroupDatabase.java');
-  expect(database).toContain("VALUES (?, ?, ?, ?, 'active'");
+  const approve = provider.slice(provider.indexOf('static synchronized JSObject approve'),
+    provider.indexOf('static synchronized JSObject reject'));
+  expect(approve).toContain('FolioleCompanionSyncGroupJoinGrantStore.save');
+  expect(approve).not.toContain('registerMember');
+  expect(auth.indexOf('MessageDigest.isEqual')).toBeLessThan(auth.indexOf('promoteApprovedJoin'));
+  expect(auth.indexOf('promoteApprovedJoin')).toBeLessThan(auth.indexOf('requireAuthorizedMember'));
+  expect(grantStore).toContain('AES/GCM/NoPadding');
+  expect(grantStore).toContain('AndroidKeyStore');
+  expect(server).toContain('groupForApprovedRequest');
   expect(server).not.toContain('/companion/sync-group/activate');
 });
 
