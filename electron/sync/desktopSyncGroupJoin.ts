@@ -19,6 +19,7 @@ import { createDesktopSyncGroupSignedHeaders, requestJson } from './desktopSyncG
 import { refreshDesktopSyncGroupPendingJoinFromDiscovery } from './desktopSyncGroupJoinEndpoint.js';
 import { loadDesktopSyncGroupJoinState, saveDesktopSyncGroupPendingJoin } from './desktopSyncGroupJoinState.js';
 import { createDesktopSyncGroupPairingKey, decryptDesktopSyncGroupPairingSecret } from './desktopSyncGroupPairingCrypto.js';
+import { runDesktopSyncGroupPeerSingleFlight } from './desktopSyncGroupPeerSingleFlight.js';
 import {
   assertDesktopSyncGroupResourcesComplete,
   downloadDesktopSyncGroupResources
@@ -116,6 +117,10 @@ export async function continueDesktopSyncGroupSync(peer?: ReturnType<typeof save
   if (!group) return null;
   const target = peer ?? loadPairedSyncGroupPeers(group.group_id)[0];
   if (!target) return null;
+  return runDesktopSyncGroupPeerSingleFlight(target.peer_device_id, () => continuePeerSync(target));
+}
+
+async function continuePeerSync(target: ReturnType<typeof savePairedSyncGroupPeer>) {
   const cursor = loadReceiveCursor(target.peer_device_id);
   const nextCursor = await downloadAndApply(target, cursor);
   saveReceiveCursor(target.peer_device_id, nextCursor);
