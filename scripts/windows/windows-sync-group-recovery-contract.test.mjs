@@ -25,6 +25,8 @@ it('keeps A5 on Mac and Windows C on a real LAN Sync Group path', () => {
   expect(inspector).toContain('readonly: true');
   expect(remote).toContain("controlNativeClient(execute, paths, 'stop')");
   expect(remote).toContain("controlNativeClient(execute, paths, 'start')");
+  expect(remote).toContain("line.includes('[sync-group]')");
+  expect(remote).toContain("'sync-group-runtime.log'");
   expect(control).toContain('runMacosA5SyncGroupApproval');
   expect(approval).toContain('FolioleCompanionSyncGroupApprovalTest');
   expect(approval).toContain("'-W', '-n', `${APP_ID}/.MainActivity`");

@@ -27,11 +27,22 @@ function launchOptions(paths, evidenceRoot) {
 async function openSession(paths, evidenceRoot, electronLauncher) {
   const launcher = electronLauncher ?? (await import('playwright'))._electron;
   const app = await launcher.launch(launchOptions(paths, evidenceRoot));
+  captureSyncRuntimeLog(app.process(), path.join(evidenceRoot, 'sync-group-runtime.log'));
   const page = await app.firstWindow({ timeout: 90_000 });
   await page.waitForFunction(() => globalThis.__FOLIOLE_APP_READY_REPORTED__ === true, null, {
     timeout: 90_000
   });
   return { app, page };
+}
+
+function captureSyncRuntimeLog(child, logPath) {
+  const capture = (chunk) => {
+    const lines = String(chunk).split(/\r?\n/u).filter((line) =>
+      line.includes('[sync-group]') || line.includes('[companion-sync]'));
+    if (lines.length) fs.appendFileSync(logPath, `${lines.join('\n')}\n`, 'utf8');
+  };
+  child.stdout?.on('data', capture);
+  child.stderr?.on('data', capture);
 }
 
 async function discoverUniqueGroup(page, timeoutMs = 60_000) {
@@ -68,7 +79,11 @@ async function waitForOrdinarySyncFacts(execute, paths, evidenceRoot, timeoutMs 
       await delay(1_000);
     }
   }
-  throw new Error(`Timed out waiting for ordinary sync facts: ${JSON.stringify(lastFacts)}`);
+  const logPath = path.join(evidenceRoot, 'sync-group-runtime.log');
+  const runtimeLog = fs.existsSync(logPath)
+    ? fs.readFileSync(logPath, 'utf8').trim().split(/\r?\n/u).slice(-8).join(' | ')
+    : 'unavailable';
+  throw new Error(`Timed out waiting for ordinary sync facts: ${JSON.stringify(lastFacts)}; runtime=${runtimeLog}`);
 }
 
 async function inspectDatabase(execute, paths, evidenceRoot) {
