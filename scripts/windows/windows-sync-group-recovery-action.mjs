@@ -4,8 +4,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
-import BetterSqlite3 from 'better-sqlite3';
-
 async function invoke(page, command, args = {}) {
   return page.evaluate(async ({ command, args }) => {
     if (!globalThis.electronAPI?.invoke) throw new Error('Desktop native bridge is unavailable.');
@@ -58,22 +56,16 @@ async function waitForJoinedGroup(page, expectedGroupId, timeoutMs = 12 * 60_000
   throw new Error('Timed out waiting for ordinary Sync Group synchronization.');
 }
 
-function inspectDatabase(evidenceRoot) {
+async function inspectDatabase(execute, paths, evidenceRoot) {
   const databasePath = path.join(evidenceRoot, 'library-c', 'Data', 'foliole.db');
-  const db = new BetterSqlite3(databasePath, { fileMustExist: true, readonly: true });
-  try {
-    const count = (sql) => Number(db.prepare(sql).pluck().get() ?? 0);
-    return {
-      activeMemberCount: count("SELECT COUNT(*) FROM sync_group_members WHERE state = 'active'"),
-      attachmentCount: count('SELECT COUNT(*) FROM attachments'),
-      contentBlobCount: count('SELECT COUNT(*) FROM content_blobs'),
-      missingAttachmentCount: count("SELECT COUNT(*) FROM attachment_blobs WHERE availability != 'cached'"),
-      missingContentBlobCount: count(`SELECT COUNT(*) FROM content_blobs cb
-        LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash WHERE cbd.hash IS NULL`),
-      nodeCount: count('SELECT COUNT(*) FROM nodes'),
-      reviewLogCount: count('SELECT COUNT(*) FROM review_log')
-    };
-  } finally { db.close(); }
+  const electronPath = path.join(paths.repoRoot, 'node_modules/electron/dist/electron.exe');
+  const inspectorPath = path.join(paths.repoRoot, 'scripts/windows/windows-sync-group-recovery-inspect.mjs');
+  const result = await execute(electronPath, [inspectorPath, databasePath], {
+    cwd: paths.repoRoot, env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+    timeoutCode: 'sync_group_inspect_timeout', timeoutMs: 30_000, windowsHide: true
+  });
+  if (result.code !== 0) throw new Error('Windows C database inspection failed.');
+  return JSON.parse(result.stdout.trim());
 }
 
 async function captureSyncSettings(page, screenshotPath) {
@@ -110,7 +102,7 @@ export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths
       await invoke(session.page, 'request_sync_group_join', { endpoint_url: candidate.endpoint_url });
       await waitForJoinedGroup(session.page, candidate.group_id);
     } finally { await session.app.close(); }
-    const firstFacts = inspectDatabase(evidenceRoot);
+    const firstFacts = await inspectDatabase(execute, paths, evidenceRoot);
     assertComplete(firstFacts);
     session = await openSession(paths, evidenceRoot);
     const screenshotPath = path.join(evidenceRoot, 'sync-group-recovery.png');
@@ -121,7 +113,7 @@ export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths
       }
       await captureSyncSettings(session.page, screenshotPath);
     } finally { await session.app.close(); }
-    const restartedFacts = inspectDatabase(evidenceRoot);
+    const restartedFacts = await inspectDatabase(execute, paths, evidenceRoot);
     assertComplete(restartedFacts);
     const receipt = { candidate: { groupId: candidate.group_id, providerKind: candidate.provider_device_kind },
       firstFacts, restartedFacts, resultStatus: 'success', schemaVersion: 1 };
