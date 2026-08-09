@@ -13,16 +13,16 @@ import { COMPANION_TOPIC_SEARCH_HOST_CONTRACT } from './companionTopicSearchDefi
 export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
   methodInventory: {
     folioleCompanionSync: [
+      'approveSyncGroupJoinRequest',
       'clearPairingCredentials',
       'desktopHttpRequest',
       'downloadAttachmentResourceBatch',
       'downloadContentBlobBatch',
       'finishAttachmentResourceBatch',
       'finishContentBlobBatch',
-      'approveSyncGroupJoinRequest',
       'loadDiscoveryCandidates',
-      'loadSyncGroupProviderState',
       'loadPairingState',
+      'loadSyncGroupProviderState',
       'rejectSyncGroupJoinRequest',
       'resolveAttachmentResource',
       'savePairingCredentials',

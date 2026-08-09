@@ -1,16 +1,16 @@
 {
   "methodInventory": {
     "folioleCompanionSync": [
+      "approveSyncGroupJoinRequest",
       "clearPairingCredentials",
       "desktopHttpRequest",
       "downloadAttachmentResourceBatch",
       "downloadContentBlobBatch",
       "finishAttachmentResourceBatch",
       "finishContentBlobBatch",
-      "approveSyncGroupJoinRequest",
       "loadDiscoveryCandidates",
-      "loadSyncGroupProviderState",
       "loadPairingState",
+      "loadSyncGroupProviderState",
       "rejectSyncGroupJoinRequest",
       "resolveAttachmentResource",
       "savePairingCredentials",

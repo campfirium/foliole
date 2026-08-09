@@ -34,6 +34,24 @@ vi.mock('../database/workspaceSnapshot.js', () => ({
   loadWorkspaceSnapshot: vi.fn()
 }));
 
+vi.mock('../database/connection.js', () => ({
+  runWithDatabaseConnectionOwner: vi.fn(async (execute: () => unknown) => execute())
+}));
+
+vi.mock('../database/syncGroupStore.js', () => ({
+  isActiveSyncGroupMember: vi.fn(() => false),
+  loadDesktopSyncGroup: vi.fn(() => ({
+    created_at: '2026-08-08T00:00:00.000Z',
+    created_by_device_id: 'desktop-local',
+    display_name: 'Foliole Desktop',
+    group_id: 'group-test',
+    local_device_id: 'desktop-local',
+    local_member_state: 'active',
+    members: [],
+    timeline_id: 'timeline-test'
+  }))
+}));
+
 async function resetTestState() {
   const { setLanWorkspaceSyncPairRequestHandler } = await import('./lanWorkspaceSyncServer.js');
   setLanWorkspaceSyncPairRequestHandler(null);
@@ -41,6 +59,25 @@ async function resetTestState() {
   clearCompanionPairRequests();
   fs.rmSync(electronMock.userDataPath, { force: true, recursive: true });
   electronMock.userDataPath = fs.mkdtempSync(path.join(process.cwd(), '.tmp', 'foliole-companion-pairing-'));
+}
+
+function pairRequestBody(pairingPublicKey: string) {
+  return {
+    device_id: 'android-test-device',
+    device_kind: 'android-capacitor',
+    device_name: 'Android companion android-test-device',
+    group_id: 'group-test',
+    library_facts: {
+      attachment_count: 0,
+      content_blob_count: 0,
+      node_count: 0,
+      review_log_count: 0,
+      timeline_id: null
+    },
+    pairing_public_key: pairingPublicKey,
+    protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+    timeline_id: 'timeline-test'
+  };
 }
 
 describe('lan workspace sync pairing notifications', () => {
@@ -60,25 +97,13 @@ describe('lan workspace sync pairing notifications', () => {
     const secondPairingKey = await createTestPairingKeyPair();
 
     const response = await requestWorkspaceSyncServer(server, {
-      body: {
-        device_id: 'android-test-device',
-        device_kind: 'android-capacitor',
-        device_name: 'Android companion android-test-device',
-        pairing_public_key: firstPairingKey.publicKey,
-        protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
-      },
+      body: pairRequestBody(firstPairingKey.publicKey),
       headers: { 'Content-Type': 'application/json' },
       method: 'POST',
       path: '/companion/pair-requests'
     });
     const duplicateResponse = await requestWorkspaceSyncServer(server, {
-      body: {
-        device_id: 'android-test-device',
-        device_kind: 'android-capacitor',
-        device_name: 'Android companion android-test-device',
-        pairing_public_key: secondPairingKey.publicKey,
-        protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
-      },
+      body: pairRequestBody(secondPairingKey.publicKey),
       headers: { 'Content-Type': 'application/json' },
       method: 'POST',
       path: '/companion/pair-requests'

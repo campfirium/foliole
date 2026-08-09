@@ -1,5 +1,6 @@
 const controlledElectronSqliteTests = [
   'electron/database/androidCompanionVisibleNodesQueryDefinitions.contract.test.ts',
+  'electron/database/androidSyncPackProviderDefinitions.test.ts',
   'electron/database/assistantHistoryRetirementMigration.test.ts',
   'electron/database/betterSqliteDbPort.conformance.test.ts',
   'electron/database/betterSqliteDbPort.ownership.test.ts',
@@ -52,7 +53,9 @@ const controlledElectronSqliteTests = [
   'src/shared/platform/companion/runtime/iosCompanionActiveDatabaseWrites.test.ts'
 ];
 
-const ordinaryNodeSqliteTextOnlyTests = [];
+const ordinaryNodeSqliteTextOnlyTests = [
+  'scripts/windows/windows-sync-group-recovery-contract.test.mjs'
+];
 
 export {
   controlledElectronSqliteTests,

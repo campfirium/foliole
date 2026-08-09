@@ -21,7 +21,7 @@ function testShowsPendingSyncConflicts() {
   expect(screen.getByText('2')).toBeInTheDocument();
 }
 
-function testKeepsConnectedSummaryReadableForSecondaryDevice() {
+function testHidesRetiredPrimaryDeviceControls() {
   render(
     <CompanionSyncPanel
       {...createConnectedProps()}
@@ -33,9 +33,11 @@ function testKeepsConnectedSummaryReadableForSecondaryDevice() {
     />
   );
 
-  expect(screen.getAllByText('Device role')).toHaveLength(1);
-  expect(screen.getByText('device-33ea...260e')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Set as primary device' })).toBeDisabled();
+  expect(screen.queryByText('Device role')).not.toBeInTheDocument();
+  expect(screen.queryByText('device-33ea...260e')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Set as primary device' })).not.toBeInTheDocument();
+  expect(screen.getByTestId('companion-sync-connection'))
+    .toHaveTextContent('Foliole Desktop on Windows (Windows)');
 }
 
 function testSeparatesConnectionFromActivity() {
@@ -228,7 +230,7 @@ function testShowsTransferProgressInLastSyncRow() {
 describe('CompanionSyncPanel connected state', () => {
   it('shows a paired state without setup controls', testShowsPairedState);
   it('shows pending sync conflicts when the local database has them', testShowsPendingSyncConflicts);
-  it('keeps secondary device status readable without duplicate role cards', testKeepsConnectedSummaryReadableForSecondaryDevice);
+  it('hides retired primary-device controls while keeping the paired device readable', testHidesRetiredPrimaryDeviceControls);
   it('separates the current connection state from older sync activity', testSeparatesConnectionFromActivity);
   it('does not call manual sync completion automatic', testManualPassIsNotAutomatic);
   it('shows older failures as neutral history after a later completed sync', testOlderFailuresAreNeutralAfterCompletedPass);

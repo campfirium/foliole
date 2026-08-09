@@ -70,6 +70,10 @@ const companionPairingMocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../database/deviceIdentity.js', () => ({ loadOrCreateDesktopDeviceId: vi.fn(() => 'device-desktop') }));
+vi.mock('../database/syncGroupStore.js', () => ({
+  createDesktopSyncGroup: vi.fn(),
+  loadDesktopSyncGroup: vi.fn().mockReturnValue(null)
+}));
 vi.mock('../database/syncPeers.js', () => ({ loadSyncPeers, saveSyncPeers }));
 vi.mock('../sync/companionPairingRequests.js', () => companionPairingMocks);
 vi.mock('../sync/companionPairingStore.js', () => ({

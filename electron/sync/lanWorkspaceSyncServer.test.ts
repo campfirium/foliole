@@ -50,6 +50,10 @@ vi.mock('../database/workspaceSnapshot.js', () => ({
   }))
 }));
 
+vi.mock('../database/connection.js', () => ({
+  runWithDatabaseConnectionOwner: vi.fn(async (execute: () => unknown) => execute())
+}));
+
 vi.mock('../database/syncGroupStore.js', () => ({
   loadDesktopSyncGroup: vi.fn(() => ({
     created_at: '2026-08-08T00:00:00.000Z',

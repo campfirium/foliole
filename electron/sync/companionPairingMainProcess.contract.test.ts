@@ -41,6 +41,25 @@ vi.mock('../database/primaryDeviceCommit.js', () => ({
   commitPrimaryDeviceToPeer: vi.fn()
 }));
 
+vi.mock('../database/connection.js', () => ({
+  runWithDatabaseConnectionOwner: vi.fn(async (execute: () => unknown) => execute())
+}));
+
+vi.mock('../database/syncGroupStore.js', () => ({
+  createDesktopSyncGroup: vi.fn(),
+  isActiveSyncGroupMember: vi.fn(() => false),
+  loadDesktopSyncGroup: vi.fn(() => ({
+    created_at: '2026-08-08T00:00:00.000Z',
+    created_by_device_id: 'desktop-local',
+    display_name: 'Foliole Desktop',
+    group_id: 'group-test',
+    local_device_id: 'desktop-local',
+    local_member_state: 'active',
+    members: [],
+    timeline_id: 'timeline-test'
+  }))
+}));
+
 vi.mock('./desktopCompanionSyncPreference.js', () => ({
   isDesktopCompanionSyncEnabled: vi.fn(() => true),
   setDesktopCompanionSyncEnabled: vi.fn()
@@ -68,8 +87,6 @@ async function resetRuntimeState() {
   const server = await import('./lanWorkspaceSyncServer.js');
   server.setLanWorkspaceSyncPairRequestHandler(null);
   await server.stopLanWorkspaceSyncServer();
-  const database = await import('../database/connection.js');
-  database.closeDatabaseConnection();
   fs.rmSync(electronMock.userDataPath, { force: true, recursive: true });
   electronMock.userDataPath = fs.mkdtempSync(path.join(process.cwd(), '.tmp', 'foliole-pairing-main-'));
 }
@@ -81,8 +98,17 @@ async function postPairRequest(server: ReturnType<typeof import('./lanWorkspaceS
       device_id: 'fixed-android-device',
       device_kind: 'android-capacitor',
       device_name: 'Fixed Android companion',
+      group_id: 'group-test',
+      library_facts: {
+        attachment_count: 0,
+        content_blob_count: 0,
+        node_count: 0,
+        review_log_count: 0,
+        timeline_id: null
+      },
       pairing_public_key: pairingKey.publicKey,
-      protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
+      protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+      timeline_id: 'timeline-test'
     },
     headers: { 'Content-Type': 'application/json' },
     method: 'POST',

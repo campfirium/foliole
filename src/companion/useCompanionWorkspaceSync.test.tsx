@@ -195,7 +195,7 @@ async function testManualSyncRefreshesConflictCount() {
   expect(result.current.syncConflictCount).toBe(2);
 }
 
-async function testManualSyncRecordsOneBoundedResourceBacklogPass() {
+async function testManualSyncContinuesResourceBacklog() {
   syncObjectsMock.syncCompanionObjectsFromDesktop
     .mockResolvedValueOnce(createSyncObjectsResult({
       remainingContentBlobCount: 1,
@@ -212,7 +212,11 @@ async function testManualSyncRecordsOneBoundedResourceBacklogPass() {
     await result.current.pullFromDesktop('http://10.0.2.2:38641');
   });
 
-  expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledTimes(1);
+  expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledTimes(2);
+  expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenLastCalledWith(
+    'http://10.0.2.2:38641',
+    expect.objectContaining({ resourcesOnly: true })
+  );
   expect(result.current.status).toBe('idle');
 }
 
@@ -223,5 +227,5 @@ describe('useCompanionWorkspaceSync', () => {
 
   it('refreshes the visible sync conflict count after manual sync', testManualSyncRefreshesConflictCount);
 
-  it('records one bounded manual resource backlog pass', testManualSyncRecordsOneBoundedResourceBacklogPass);
+  it('continues a decreasing manual resource backlog', testManualSyncContinuesResourceBacklog);
 });
