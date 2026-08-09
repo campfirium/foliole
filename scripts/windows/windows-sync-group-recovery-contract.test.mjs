@@ -25,13 +25,18 @@ it('keeps A5 on Mac and Windows C on a real LAN Sync Group path', () => {
   expect(inspector).toContain('readonly: true');
   expect(remote).toContain("controlNativeClient(execute, paths, 'stop')");
   expect(remote).toContain("controlNativeClient(execute, paths, 'start')");
+  expect(remote).toContain('else primaryError = cleanupError;');
+  expect(remote).toContain('primaryError.message +=');
+  expect(remote).toContain("slice(-12).join(' | ')");
   expect(remote).toContain("text.includes('[sync-group]')");
   expect(remote).toContain("'sync-group-runtime.log'");
   expect(remote).toContain('Ordinary sync pack failed before apply');
   expect(control).toContain('runMacosA5SyncGroupApproval');
   expect(approval).toContain('FolioleCompanionSyncGroupApprovalTest');
   expect(approval).toContain("'-W', '-n', `${APP_ID}/.MainActivity`");
-  expect(provider).toContain('new FolioleCompanionSyncGroupServer(activeContext, activeConfig, joinRequests)');
+  expect(provider).toContain(
+    'new FolioleCompanionSyncGroupServer(activeContext, activeConfig, joinRequests, requireDataBridge())'
+  );
   expect(provider).toContain('FolioleCompanionSyncGroupJoinGrantStore.save(');
   expect(provider).toContain('promoteApprovedJoin(');
   expect(provider).toContain('if (sameProvider(next))');

@@ -15,11 +15,15 @@ import java.util.concurrent.TimeUnit;
 
 final class FolioleCompanionSyncGroupDataBridge {
     private final Context context;
-    private final Dispatcher dispatcher;
+    private volatile Dispatcher dispatcher;
     private final Map<String, CompletableFuture<JSONObject>> pending = new ConcurrentHashMap<>();
 
     FolioleCompanionSyncGroupDataBridge(Context context, Dispatcher dispatcher) {
         this.context = context.getApplicationContext();
+        this.dispatcher = dispatcher;
+    }
+
+    void replaceDispatcher(Dispatcher dispatcher) {
         this.dispatcher = dispatcher;
     }
 

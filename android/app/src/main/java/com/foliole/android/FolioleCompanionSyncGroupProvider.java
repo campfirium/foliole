@@ -35,6 +35,7 @@ final class FolioleCompanionSyncGroupProvider {
         if (sameProvider(next)) {
             FolioleCompanionSyncScreenAwake.attach(activity);
             activeContext = context.getApplicationContext(); activeConfig = next;
+            requireDataBridge().replaceDispatcher(dispatcher);
             if (server == null) startRuntime();
             return state();
         }

@@ -41,8 +41,20 @@ it('keeps the live companion database under the Capacitor owner', async () => {
   }
   const server = sources[3];
   const snapshot = await readJava('FolioleCompanionSyncGroupSnapshot.java');
-  expect(server).toContain('FolioleCompanionSyncGroupSnapshot.read');
-  expect(snapshot).toContain('bridge.request("create_snapshot"');
+  expect(server).toContain('snapshots.refresh(');
+  expect(server).toContain('snapshots.read(');
+  expect(snapshot).toMatch(/bridge\.request\(\s*"create_snapshot"/u);
+});
+
+it('pins one independent database snapshot to each peer sync-pack cycle', async () => {
+  const server = await readJava('FolioleCompanionSyncGroupServer.java');
+  const snapshot = await readJava('FolioleCompanionSyncGroupSnapshot.java');
+  expect(server).toMatch(/syncPack[\s\S]*snapshots\.refresh\([\s\S]*peer/u);
+  expect(server).toMatch(/contentBlobs[\s\S]*snapshots\.read\([\s\S]*peer/u);
+  expect(server).toMatch(/attachment[\s\S]*snapshots\.read\([\s\S]*peer/u);
+  expect(snapshot).toContain('snapshots.put(peerDeviceId, next)');
+  expect(snapshot).toContain('File previous = snapshots.put');
+  expect(snapshot).toContain('delete(previous)');
 });
 
 it('promotes an approved join only after the new member proves key possession', async () => {
@@ -74,6 +86,18 @@ it('keeps the Android screen awake only around foreground provider activity', as
   expect(plugin).toContain('FolioleCompanionSyncGroupProvider.pause()');
   expect(plugin).toContain('FolioleCompanionSyncGroupProvider.resume()');
   expect(awake).toContain('FLAG_KEEP_SCREEN_ON');
+});
+
+it('refreshes the provider data bridge after Activity recreation', async () => {
+  const bridge = await readJava('FolioleCompanionSyncGroupDataBridge.java');
+  const provider = await readJava('FolioleCompanionSyncGroupProvider.java');
+  const sameProvider = provider.slice(
+    provider.indexOf('if (sameProvider(next))'), provider.indexOf('if (activeConfig != null) stop()')
+  );
+  expect(bridge).toContain('private volatile Dispatcher dispatcher;');
+  expect(bridge).toContain('void replaceDispatcher(Dispatcher dispatcher)');
+  expect(sameProvider).toContain('requireDataBridge().replaceDispatcher(dispatcher);');
+  expect(sameProvider.indexOf('replaceDispatcher')).toBeLessThan(sameProvider.indexOf('startRuntime'));
 });
 
 it('records the exact cursor returned by the Android pack snapshot', async () => {

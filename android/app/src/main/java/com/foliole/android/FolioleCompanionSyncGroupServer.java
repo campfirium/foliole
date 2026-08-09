@@ -19,6 +19,7 @@ final class FolioleCompanionSyncGroupServer {
     private final FolioleCompanionSyncGroupDataBridge dataBridge;
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final ServerSocket server;
+    private final FolioleCompanionSyncGroupSnapshot snapshots;
     private volatile boolean running = true;
 
     FolioleCompanionSyncGroupServer(
@@ -28,6 +29,7 @@ final class FolioleCompanionSyncGroupServer {
         FolioleCompanionSyncGroupDataBridge dataBridge
     ) throws Exception {
         this.context = context.getApplicationContext(); this.config = config; this.requests = requests; this.dataBridge = dataBridge;
+        snapshots = new FolioleCompanionSyncGroupSnapshot(this.context, dataBridge);
         server = new ServerSocket(0); executor.execute(this::acceptLoop);
     }
 
@@ -37,6 +39,7 @@ final class FolioleCompanionSyncGroupServer {
         running = false;
         try { server.close(); } catch (Exception ignored) {}
         executor.shutdownNow();
+        snapshots.close();
     }
 
     private void acceptLoop() {
@@ -147,8 +150,8 @@ final class FolioleCompanionSyncGroupServer {
         FolioleCompanionSyncScreenAwake.touch();
         String peer = authenticate(request);
         int after = integerQuery(request.path, "after_state_seq");
-        FolioleCompanionSyncPackProvider.BuildResult pack = FolioleCompanionSyncGroupSnapshot.read(
-            context, dataBridge, (snapshot) -> FolioleCompanionSyncPackProvider.build(
+        FolioleCompanionSyncPackProvider.BuildResult pack = snapshots.refresh(
+            peer, (snapshot) -> FolioleCompanionSyncPackProvider.build(
                 context, snapshot, config.getString("device_id"), peer, after));
         FolioleCompanionSyncGroupDatabase.recordSupplyCursor(dataBridge, peer, after, pack.toSeq);
         FolioleCompanionHttpResponse.bytes(output, 200, "application/zip", pack.body);
@@ -170,9 +173,9 @@ final class FolioleCompanionSyncGroupServer {
 
     private void contentBlob(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {
         FolioleCompanionSyncScreenAwake.touch();
-        authenticate(request);
-        FolioleCompanionSyncGroupResources.Resource resource = FolioleCompanionSyncGroupSnapshot.read(
-            context, dataBridge, (snapshot) -> FolioleCompanionSyncGroupResources.contentBlob(
+        String peer = authenticate(request);
+        FolioleCompanionSyncGroupResources.Resource resource = snapshots.read(
+            peer, (snapshot) -> FolioleCompanionSyncGroupResources.contentBlob(
                 snapshot, query(request.path, "hash")));
         if (resource == null) FolioleCompanionHttpResponse.json(output, 404, new JSONObject().put("error", "blob_not_found"));
         else FolioleCompanionHttpResponse.bytes(output, 200, resource.mimeType, resource.body);
@@ -180,18 +183,18 @@ final class FolioleCompanionSyncGroupServer {
 
     private void contentBlobs(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {
         FolioleCompanionSyncScreenAwake.touch();
-        authenticate(request);
-        FolioleCompanionSyncGroupContentBlobBatch.Result batch = FolioleCompanionSyncGroupSnapshot.read(
-            context, dataBridge, (snapshot) -> FolioleCompanionSyncGroupContentBlobBatch.load(
+        String peer = authenticate(request);
+        FolioleCompanionSyncGroupContentBlobBatch.Result batch = snapshots.read(
+            peer, (snapshot) -> FolioleCompanionSyncGroupContentBlobBatch.load(
                 snapshot, request.bodyText()));
         FolioleCompanionHttpResponse.bytes(output, 200, batch.mimeType, batch.body);
     }
 
     private void attachment(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {
         FolioleCompanionSyncScreenAwake.touch();
-        authenticate(request);
-        FolioleCompanionSyncGroupResources.Resource resource = FolioleCompanionSyncGroupSnapshot.read(
-            context, dataBridge, (snapshot) -> FolioleCompanionSyncGroupResources.attachment(
+        String peer = authenticate(request);
+        FolioleCompanionSyncGroupResources.Resource resource = snapshots.read(
+            peer, (snapshot) -> FolioleCompanionSyncGroupResources.attachment(
                 context, snapshot, query(request.path, "attachment_id"), query(request.path, "content_hash")));
         if (resource == null) FolioleCompanionHttpResponse.json(output, 404, new JSONObject().put("error", "missing_file"));
         else FolioleCompanionHttpResponse.bytes(output, 200, resource.mimeType, resource.body);

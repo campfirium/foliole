@@ -121,7 +121,11 @@ async function controlNativeClient(execute, paths, action) {
     cwd: paths.repoRoot, timeoutCode: `native_${action}_timeout`, timeoutMs: 120_000,
     windowsHide: true
   });
-  if (result.code !== 0) throw new Error(`Windows native client ${action} failed.`);
+  if (result.code !== 0) {
+    const detail = `${result.stdout ?? ''}${result.stderr ?? ''}`.trim()
+      .split(/\r?\n/u).slice(-12).join(' | ');
+    throw new Error(`Windows native client ${action} failed: ${detail || `exit_${result.code}`}`);
+  }
 }
 
 function assertComplete(facts) {
@@ -134,6 +138,8 @@ function assertComplete(facts) {
 export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths }) {
   fs.mkdirSync(evidenceRoot, { recursive: true });
   await controlNativeClient(execute, paths, 'stop');
+  let primaryError = null;
+  let recoveryResult = null;
   try {
     let session = await openSession(paths, evidenceRoot);
     let candidate;
@@ -159,6 +165,15 @@ export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths
       firstFacts, restartedFacts, resultStatus: 'success', schemaVersion: 1 };
     const receiptPath = path.join(evidenceRoot, 'sync-group-recovery-receipt.json');
     fs.writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, 'utf8');
-    return { output: '', syncGroupRecovery: { receiptPath, screenshotPath }, receipt };
-  } finally { await controlNativeClient(execute, paths, 'start'); }
+    recoveryResult = { output: '', syncGroupRecovery: { receiptPath, screenshotPath }, receipt };
+  } catch (error) {
+    primaryError = error;
+  }
+  try { await controlNativeClient(execute, paths, 'start'); }
+  catch (cleanupError) {
+    if (primaryError) primaryError.message += `; cleanup: ${cleanupError.message}`;
+    else primaryError = cleanupError;
+  }
+  if (primaryError) throw primaryError;
+  return recoveryResult;
 }
