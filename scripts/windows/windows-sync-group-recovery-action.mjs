@@ -83,6 +83,15 @@ async function captureSyncSettings(page, screenshotPath) {
   await dialog.screenshot({ path: screenshotPath });
 }
 
+async function controlNativeClient(execute, paths, action) {
+  const script = path.join(paths.repoRoot, 'scripts/windows/windows-client-native.mjs');
+  const result = await execute(paths.systemNode, [script, action], {
+    cwd: paths.repoRoot, timeoutCode: `native_${action}_timeout`, timeoutMs: 120_000,
+    windowsHide: true
+  });
+  if (result.code !== 0) throw new Error(`Windows native client ${action} failed.`);
+}
+
 function assertComplete(facts) {
   if (facts.activeMemberCount < 2 || facts.nodeCount === 0 || facts.contentBlobCount === 0
       || facts.missingAttachmentCount !== 0 || facts.missingContentBlobCount !== 0) {
@@ -90,32 +99,34 @@ function assertComplete(facts) {
   }
 }
 
-export async function runWindowsSyncGroupRecovery({ evidenceRoot, paths }) {
+export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths }) {
   fs.mkdirSync(evidenceRoot, { recursive: true });
-  let session = await openSession(paths, evidenceRoot);
-  let candidate;
+  await controlNativeClient(execute, paths, 'stop');
   try {
-    candidate = await discoverUniqueGroup(session.page);
-    await invoke(session.page, 'request_sync_group_join', { endpoint_url: candidate.endpoint_url });
-    await waitForJoinedGroup(session.page, candidate.group_id);
-  } finally { await session.app.close(); }
-  const firstFacts = inspectDatabase(evidenceRoot);
-  assertComplete(firstFacts);
-  session = await openSession(paths, evidenceRoot);
-  let restartedOverview;
-  const screenshotPath = path.join(evidenceRoot, 'sync-group-recovery.png');
-  try {
-    restartedOverview = await invoke(session.page, 'load_companion_pairing_overview');
-    if (restartedOverview.sync_group?.group_id !== candidate.group_id) {
-      throw new Error('Windows C lost Sync Group membership after restart.');
-    }
-    await captureSyncSettings(session.page, screenshotPath);
-  } finally { await session.app.close(); }
-  const restartedFacts = inspectDatabase(evidenceRoot);
-  assertComplete(restartedFacts);
-  const receipt = { candidate: { groupId: candidate.group_id, providerKind: candidate.provider_device_kind },
-    firstFacts, restartedFacts, resultStatus: 'success', schemaVersion: 1 };
-  const receiptPath = path.join(evidenceRoot, 'sync-group-recovery-receipt.json');
-  fs.writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, 'utf8');
-  return { output: '', syncGroupRecovery: { receiptPath, screenshotPath }, receipt };
+    let session = await openSession(paths, evidenceRoot);
+    let candidate;
+    try {
+      candidate = await discoverUniqueGroup(session.page);
+      await invoke(session.page, 'request_sync_group_join', { endpoint_url: candidate.endpoint_url });
+      await waitForJoinedGroup(session.page, candidate.group_id);
+    } finally { await session.app.close(); }
+    const firstFacts = inspectDatabase(evidenceRoot);
+    assertComplete(firstFacts);
+    session = await openSession(paths, evidenceRoot);
+    const screenshotPath = path.join(evidenceRoot, 'sync-group-recovery.png');
+    try {
+      const overview = await invoke(session.page, 'load_companion_pairing_overview');
+      if (overview.sync_group?.group_id !== candidate.group_id) {
+        throw new Error('Windows C lost Sync Group membership after restart.');
+      }
+      await captureSyncSettings(session.page, screenshotPath);
+    } finally { await session.app.close(); }
+    const restartedFacts = inspectDatabase(evidenceRoot);
+    assertComplete(restartedFacts);
+    const receipt = { candidate: { groupId: candidate.group_id, providerKind: candidate.provider_device_kind },
+      firstFacts, restartedFacts, resultStatus: 'success', schemaVersion: 1 };
+    const receiptPath = path.join(evidenceRoot, 'sync-group-recovery-receipt.json');
+    fs.writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, 'utf8');
+    return { output: '', syncGroupRecovery: { receiptPath, screenshotPath }, receipt };
+  } finally { await controlNativeClient(execute, paths, 'start'); }
 }

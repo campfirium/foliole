@@ -164,7 +164,7 @@ export async function runWindowsDevDeviceAction({
   runPairSyncRecovery = runDefaultPairSyncRecovery
 }) {
   if (action === 'sync-group-recover') {
-    return runWindowsSyncGroupRecovery({ evidenceRoot, paths });
+    return runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths });
   }
   const env = actionEnv(paths);
   let started = false;

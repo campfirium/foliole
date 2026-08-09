@@ -140,6 +140,7 @@ it('rejects unknown or additional residual processes for pair recovery', () => {
     Name: 'cmd.exe'
   };
   expect(allowsPairSyncNativeClient('pair-sync-recover', [trusted], paths)).toBe(true);
+  expect(allowsPairSyncNativeClient('sync-group-recover', [trusted], paths)).toBe(true);
   expect(allowsPairSyncNativeClient('pair-sync-recover', [{ ...trusted, CommandLine: 'cmd.exe /c unknown' }], paths)).toBe(false);
   expect(allowsPairSyncNativeClient('pair-sync-recover', [trusted, { Name: 'java.exe' }], paths)).toBe(false);
   expect(allowsPairSyncNativeClient('capture-annotation', [trusted], paths)).toBe(false);

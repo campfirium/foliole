@@ -9,6 +9,8 @@ it('keeps A5 on Mac and Windows C on a real LAN Sync Group path', () => {
   expect(remote).toContain("FOLIOLE_LIBRARY_HOME: libraryHome");
   expect(remote).toContain("invoke(session.page, 'request_sync_group_join'");
   expect(remote).toContain("missingContentBlobCount");
+  expect(remote).toContain("controlNativeClient(execute, paths, 'stop')");
+  expect(remote).toContain("controlNativeClient(execute, paths, 'start')");
   expect(control).toContain('runMacosA5SyncGroupApproval');
   expect(approval).toContain('FolioleCompanionSyncGroupApprovalTest');
   expect(`${remote}\n${control}\n${approval}`).not.toContain("'reverse'");
