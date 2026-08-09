@@ -12,6 +12,7 @@ import { refreshDesktopSyncGroupPendingJoinEndpoint } from './desktopSyncGroupJo
 let bonjour: InstanceType<typeof Bonjour> | null = null;
 let browser: ReturnType<InstanceType<typeof Bonjour>['find']> | null = null;
 const inFlight = new Map<string, Promise<unknown>>();
+const retryAfterFlight = new Map<string, { endpoint: string; groupId: string; peerDeviceId: string }>();
 
 export function startDesktopSyncGroupAutoSync() {
   if (bonjour) return;
@@ -43,6 +44,7 @@ export function stopDesktopSyncGroupAutoSync() {
   bonjour?.destroy();
   browser = null;
   bonjour = null;
+  retryAfterFlight.clear();
 }
 
 async function syncAvailablePeer(args: { endpoint: string; groupId: string; peerDeviceId: string }) {
@@ -50,13 +52,23 @@ async function syncAvailablePeer(args: { endpoint: string; groupId: string; peer
   if (!group || group.group_id !== args.groupId) return;
   const stored = loadPairedSyncGroupPeers(args.groupId)
     .find((peer) => peer.peer_device_id === args.peerDeviceId);
-  if (!stored || inFlight.has(args.peerDeviceId)) return;
+  if (!stored) return;
+  if (inFlight.has(args.peerDeviceId)) {
+    retryAfterFlight.set(args.peerDeviceId, args);
+    return;
+  }
   const peer = savePairedSyncGroupPeer({ ...stored, endpoint_url: args.endpoint });
   const work = continueDesktopSyncGroupSync(peer).catch((error) => {
     console.info('[sync-group] sync paused until provider is available', {
       error: error instanceof Error ? error.message : String(error), peerDeviceId: args.peerDeviceId
     });
-  }).finally(() => inFlight.delete(args.peerDeviceId));
+  }).finally(() => {
+    inFlight.delete(args.peerDeviceId);
+    const retry = retryAfterFlight.get(args.peerDeviceId);
+    if (!retry) return;
+    retryAfterFlight.delete(args.peerDeviceId);
+    void syncAvailablePeer(retry);
+  });
   inFlight.set(args.peerDeviceId, work);
   await work;
 }
