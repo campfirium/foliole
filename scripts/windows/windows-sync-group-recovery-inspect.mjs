@@ -9,17 +9,25 @@ import {
   identityFingerprint, inspectPairSyncRecoveryWorkspace
 } from '../android/android-pair-sync-recovery-readiness.mjs';
 
-function departedDeviceIdentities(database) {
-  const rows = database.prepare(`SELECT DISTINCT members.device_kind, members.device_id
-    FROM sync_group_member_departures departures
-    JOIN sync_group_members members
-      ON members.group_id = departures.group_id AND members.device_id = departures.device_id
-    WHERE members.state = 'left' ORDER BY members.device_kind, members.device_id`).all();
+function identitiesByKind(rows) {
   return rows.reduce((result, row) => {
     result[row.device_kind] ??= [];
     result[row.device_kind].push(identityFingerprint(row.device_id));
     return result;
   }, {});
+}
+
+function departedDeviceIdentities(database) {
+  return identitiesByKind(database.prepare(`SELECT DISTINCT members.device_kind, members.device_id
+    FROM sync_group_member_departures departures
+    JOIN sync_group_members members
+      ON members.group_id = departures.group_id AND members.device_id = departures.device_id
+    WHERE members.state = 'left' ORDER BY members.device_kind, members.device_id`).all());
+}
+
+function activeDeviceIdentities(database) {
+  return identitiesByKind(database.prepare(`SELECT DISTINCT device_kind, device_id
+    FROM sync_group_members WHERE state = 'active' ORDER BY device_kind, device_id`).all());
 }
 
 export function inspectSyncGroupRecoveryDatabase(databasePath, factIds = []) {
@@ -34,6 +42,7 @@ export function inspectSyncGroupRecoveryDatabase(databasePath, factIds = []) {
     const factExists = db.prepare('SELECT COUNT(*) FROM nodes WHERE id = ? AND deleted_at IS NULL').pluck();
     const facts = Object.fromEntries(factIds.map((id) => [id, Number(factExists.get(id)) === 1]));
     return {
+      activeDeviceIdentities: activeDeviceIdentities(db),
       activeMemberCount: count("SELECT COUNT(*) FROM sync_group_members WHERE state = 'active'"),
       attachmentCount: count('SELECT COUNT(*) FROM attachments'),
       contentBlobCount: count('SELECT COUNT(*) FROM content_blobs'),

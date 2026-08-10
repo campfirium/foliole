@@ -13,6 +13,11 @@ it('uses one proven departed darwin identity when A has already left the old gro
   }, deviceIdentity: null })).toThrow('not uniquely recoverable');
 });
 
+it('prefers one active darwin identity after A creates the new group', () => {
+  expect(resolveMacosProtectionIdentity({ activeDeviceIdentities: { darwin: ['active-a'] },
+    departedDeviceIdentities: { darwin: ['departed-a'] }, deviceIdentity: null })).toBe('active-a');
+});
+
 it('stops the registered owner and refuses protection while any database owner remains', async () => {
   const stopOwner = vi.fn(async () => true);
   await expect(runMacosSyncGroupLibraryProtection({ candidate: 'a'.repeat(40),

@@ -4,7 +4,20 @@ import path from 'node:path';
 
 import { expect, it } from 'vitest';
 
-import { runWindowsSyncGroupBaselineReset } from './windows-sync-group-baseline-action.mjs';
+import {
+  resolveWindowsProtectionIdentity, runWindowsSyncGroupBaselineReset
+} from './windows-sync-group-baseline-action.mjs';
+
+it('uses one active win32 member or a fresh product identity for C protection', () => {
+  expect(resolveWindowsProtectionIdentity({ activeDeviceIdentities: {
+    win32: ['active-c']
+  }, deviceIdentity: null })).toBe('active-c');
+  expect(resolveWindowsProtectionIdentity({ activeDeviceIdentities: {}, deviceIdentity: null },
+    'fresh-c')).toBe('fresh-c');
+  expect(() => resolveWindowsProtectionIdentity({ activeDeviceIdentities: {
+    win32: ['c', 'conflict']
+  }, deviceIdentity: null })).toThrow('not uniquely recoverable');
+});
 
 it('protects old C, boots a fresh product workspace, then protects the empty baseline', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 't121-windows-baseline-'));
@@ -25,7 +38,9 @@ it('protects old C, boots a fresh product workspace, then protects the empty bas
   const result = await runWindowsSyncGroupBaselineReset({ buildIdentity: 'candidate-1',
     controlNativeClient: async (_execute, _paths, action) => controls.push(action),
     evidenceRoot: path.join(root, 'evidence'), execute: async () => ({ code: 0 }),
-    inspectDatabase, openSession: async () => {
+    inspectDatabase, loadOverview: async () => ({ primary_device_state: {
+      primary_device_id: 'fresh-c'
+    } }), openSession: async () => {
       fs.mkdirSync(path.join(library, 'Data'), { recursive: true });
       fs.writeFileSync(path.join(library, 'Data', 'foliole.db'), 'fresh');
       return { app: { close: async () => undefined } };

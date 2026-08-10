@@ -6,7 +6,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 const CLIENT_ROOT_NAME = 'windows-sync-group-client-c';
 
-async function invoke(page, command, args = {}) {
+export async function invokeWindowsSyncGroupCommand(page, command, args = {}) {
   return page.evaluate(async ({ command, args }) => {
     if (!globalThis.electronAPI?.invoke) throw new Error('Desktop native bridge is unavailable.');
     return globalThis.electronAPI.invoke(command, args);
@@ -55,7 +55,7 @@ function captureSyncRuntimeLog(child, logPath) {
 async function discoverUniqueGroup(page, timeoutMs = 60_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const overview = await invoke(page, 'discover_sync_groups');
+    const overview = await invokeWindowsSyncGroupCommand(page, 'discover_sync_groups');
     if (overview.join_candidates.length > 1) throw new Error('Multiple Sync Groups were discovered.');
     if (overview.join_candidates.length === 1) return overview.join_candidates[0];
     await delay(1_000);
@@ -66,7 +66,7 @@ async function discoverUniqueGroup(page, timeoutMs = 60_000) {
 async function waitForJoinedGroup(page, expectedGroupId, timeoutMs = 12 * 60_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const overview = await invoke(page, 'load_companion_pairing_overview');
+    const overview = await invokeWindowsSyncGroupCommand(page, 'load_companion_pairing_overview');
     if (overview.sync_group?.group_id === expectedGroupId
         && overview.sync_group.local_member_state === 'active') return overview;
     await delay(1_000);
@@ -155,14 +155,14 @@ export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths
     let firstFacts;
     try {
       candidate = await discoverUniqueGroup(session.page);
-      await invoke(session.page, 'request_sync_group_join', { endpoint_url: candidate.endpoint_url });
+      await invokeWindowsSyncGroupCommand(session.page, 'request_sync_group_join', { endpoint_url: candidate.endpoint_url });
       await waitForJoinedGroup(session.page, candidate.group_id);
       firstFacts = await waitForOrdinarySyncFacts(execute, paths, evidenceRoot);
     } finally { await session.app.close(); }
     session = await openWindowsSyncGroupSession(paths, evidenceRoot);
     const screenshotPath = path.join(evidenceRoot, 'sync-group-recovery.png');
     try {
-      const overview = await invoke(session.page, 'load_companion_pairing_overview');
+      const overview = await invokeWindowsSyncGroupCommand(session.page, 'load_companion_pairing_overview');
       if (overview.sync_group?.group_id !== candidate.group_id) {
         throw new Error('Windows C lost Sync Group membership after restart.');
       }
