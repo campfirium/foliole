@@ -40,7 +40,7 @@ describe('Android Java SQL surface', () => {
     const methods = [...plugin.matchAll(/@PluginMethod\s+public void\s+([A-Za-z0-9_]+)/g)]
       .map((match) => match[1]).sort();
     expect(methods).toEqual([
-      'clearPairingCredentials', 'desktopHttpRequest', 'downloadAttachmentResourceBatch',
+      'clearPairingCredentials', 'clearSyncGroupCredentials', 'desktopHttpRequest', 'downloadAttachmentResourceBatch',
       'approveSyncGroupJoinRequest',
       'downloadContentBlobBatch', 'finishAttachmentResourceBatch', 'finishContentBlobBatch',
       'loadDiscoveryCandidates', 'loadPairingState', 'loadSyncGroupProviderState', 'rejectSyncGroupJoinRequest',

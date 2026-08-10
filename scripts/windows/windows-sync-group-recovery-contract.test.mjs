@@ -31,6 +31,7 @@ it('keeps stable desktop A and Windows C on a real LAN Sync Group path', () => {
   expect(remote).toContain("text.includes('[sync-group]')");
   expect(remote).toContain("'sync-group-runtime.log'");
   expect(remote).toContain('Ordinary sync pack failed before apply');
+  expect(remote).toContain('facts.activeMemberCount !== 2');
   expect(control).not.toContain('runMacosA5SyncGroupApproval');
   expect(provider).toContain(
     'new FolioleCompanionSyncGroupServer(activeContext, activeConfig, joinRequests, requireDataBridge())'

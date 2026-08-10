@@ -7,7 +7,6 @@ import android.content.Intent;
 import android.webkit.WebView;
 
 import org.json.JSONObject;
-import org.json.JSONArray;
 
 import java.util.concurrent.TimeUnit;
 
@@ -63,43 +62,21 @@ final class FolioleCompanionSyncGroupApprovalScenario {
     private static void openSyncSettings(
         Instrumentation instrumentation, WebView webView, long deadline
     ) throws Exception {
-        waitForSettingsEntry(instrumentation, webView, deadline);
+        String entry = FolioleCompanionPairSyncRecoveryScenario.waitForAnyVisible(
+            instrumentation, webView, deadline,
+            "companion-tab-settings", "companion-top-bar-left-action"
+        );
+        if ("companion-top-bar-left-action".equals(entry)) {
+            FolioleCompanionPairSyncRecoveryScenario.clickVisible(
+                instrumentation, webView, entry, deadline
+            );
+        }
         FolioleCompanionPairSyncRecoveryScenario.clickVisible(
             instrumentation, webView, "companion-tab-settings", deadline
         );
         FolioleCompanionPairSyncRecoveryScenario.clickVisible(
             instrumentation, webView, "companion-settings-sync", deadline
         );
-    }
-
-    private static void waitForSettingsEntry(
-        Instrumentation instrumentation, WebView webView, long overallDeadline
-    ) throws Exception {
-        long deadline = Math.min(
-            overallDeadline, System.nanoTime() + TimeUnit.SECONDS.toNanos(30)
-        );
-        JSONObject latest = new JSONObject();
-        while (System.nanoTime() < deadline) {
-            latest = FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView);
-            JSONArray elements = latest.getJSONArray("elements");
-            for (int index = 0; index < elements.length(); index += 1) {
-                JSONObject element = elements.getJSONObject(index);
-                if (!element.optBoolean("visible")) continue;
-                if ("companion-tab-settings".equals(element.optString("testId"))) return;
-                if ("companion-top-bar-left-action".equals(element.optString("testId"))
-                    && isReviewExit(element.optString("ariaLabel"))) {
-                    FolioleCompanionWebViewSemanticAdapter.perform(
-                        instrumentation, webView, "companion-top-bar-left-action", "click", ""
-                    );
-                }
-            }
-            Thread.sleep(150);
-        }
-        throw new IllegalStateException("Settings entry unavailable: " + latest);
-    }
-
-    private static boolean isReviewExit(String label) {
-        return "Exit".equals(label) || "退出".equals(label);
     }
 
     private static void waitForProviderAdvertisement() throws Exception {

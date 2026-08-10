@@ -8,14 +8,16 @@ import {
 } from './android-pair-sync-recovery-readiness.mjs';
 import { inspectPairingPreferences } from './android-pair-sync-recovery-readiness-runner.mjs';
 
-function snapshot({ credentialsRejected = false, dirty = 0, nodes = 0 } = {}) {
+function snapshot({ credentialsRejected = false, dirty = 0, nodes = 0, syncFailureMessage } = {}) {
   const tables = new Set(['companion_meta', 'nodes', 'sync_object_state']);
   const database = { prepare: (sql) => ({ get: (value) => {
     if (sql.includes('sqlite_master')) return tables.has(value) ? { present: 1 } : undefined;
     if (sql.includes('companion_meta')) {
       if (value === 'device_id') return { value: 'android-device-1' };
-      if (value === 'workspace_sync_events' && credentialsRejected) return {
-        value: JSON.stringify([{ kind: 'run_finished', message: 'Desktop returned 401.', status: 'failed' }])
+      if (value === 'workspace_sync_events' && (credentialsRejected || syncFailureMessage)) return {
+        value: JSON.stringify([{
+          kind: 'run_finished', message: syncFailureMessage ?? 'Desktop returned 401.', status: 'failed'
+        }])
       };
       return undefined;
     }
@@ -105,6 +107,16 @@ it('reports an allowlisted desktop credential-rejection reason without response 
   input.database.inspection.pairingCredentialRejectionReason = 'unknown_device';
   expect(pairSyncRecoveryReadiness(input, true, '0123456789abcdef')).toMatchObject({
     pairingCredentialRejectionReason: 'unknown_device', pairingCredentialsRejected: true
+  });
+});
+
+it('classifies a local Sync Group signing failure as an exact credential repair signal', () => {
+  const input = snapshot({
+    syncFailureMessage: 'Failed to sign companion sync request.', nodes: 1293
+  });
+  expect(pairSyncRecoveryReadiness(input, true, '0123456789abcdef')).toMatchObject({
+    pairingCredentialRejectionReason: 'local_signing_unavailable',
+    pairingCredentialsRejected: true
   });
 });
 

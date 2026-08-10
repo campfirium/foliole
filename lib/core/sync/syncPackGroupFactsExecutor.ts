@@ -52,7 +52,12 @@ export async function applySyncPackGroupFactsWithDbPort(port: DbPort, args: {
   const members = await port.query<MemberRow>(`SELECT * FROM ${alias}.sync_group_members`);
   const departures = await port.query<DepartureRow>(`SELECT * FROM ${alias}.sync_group_member_departures`);
   validateFacts(incomingGroup, members, departures);
-  if (departures.some((item) => item.device_id === local.local_device_id)) {
+  const localMember = (await port.query<MemberRow>(
+    `SELECT * FROM main.sync_group_members WHERE group_id = ? AND device_id = ? LIMIT 1`,
+    [local.group_id, local.local_device_id]
+  ))[0];
+  if (departures.some((item) => item.device_id === local.local_device_id
+    && (!localMember || item.left_at >= localMember.joined_at))) {
     throw new Error('sync_group_local_departure_requires_local_action');
   }
   const now = new Date().toISOString();
@@ -73,6 +78,11 @@ function validateFacts(group: GroupRow, members: MemberRow[], departures: Depart
     throw new Error('sync_group_member_fact_invalid');
   }
   const byDevice = new Map(members.map((member) => [member.device_id, member]));
+  const effectiveDepartures = departures.filter((departure) => {
+    const member = byDevice.get(departure.device_id);
+    return member && departure.left_at >= member.joined_at;
+  });
+  const departureByDevice = new Map(effectiveDepartures.map((item) => [item.device_id, item]));
   const founder = byDevice.get(group.created_by_device_id);
   if (!founder || founder.approved_by_device_id !== founder.device_id) {
     throw new Error('sync_group_founder_authorization_invalid');
@@ -83,7 +93,7 @@ function validateFacts(group: GroupRow, members: MemberRow[], departures: Depart
     for (const member of members) {
       if (resolved.has(member.device_id) || !resolved.has(member.approved_by_device_id)) continue;
       const approver = byDevice.get(member.approved_by_device_id)!;
-      const departure = departures.find((item) => item.device_id === approver.device_id);
+      const departure = departureByDevice.get(approver.device_id);
       if (approver.joined_at <= member.joined_at && (!departure || departure.left_at >= member.joined_at)) {
         resolved.add(member.device_id); changed = true;
       }
@@ -93,11 +103,11 @@ function validateFacts(group: GroupRow, members: MemberRow[], departures: Depart
   for (const departure of departures) {
     const member = byDevice.get(departure.device_id);
     if (!member || departure.group_id !== group.group_id || departure.authorized_by_device_id !== departure.device_id
-      || departure.left_at < member.joined_at || member.state !== 'left') {
+      || (departure.left_at >= member.joined_at && member.state !== 'left')) {
       throw new Error('sync_group_departure_authorization_invalid');
     }
   }
-  if (members.some((member) => member.state === 'left' && !departures.some((item) => item.device_id === member.device_id))) {
+  if (members.some((member) => member.state === 'left' && !departureByDevice.has(member.device_id))) {
     throw new Error('sync_group_departure_fact_missing');
   }
 }
@@ -109,14 +119,31 @@ async function mergeMember(port: DbPort, groupId: string, member: MemberRow, now
       authorization_id, provisioning_cursor, joined_at, activated_at, left_at, updated_at
     ) VALUES (?, ?, ?, ?, 'active', ?, ?, NULL, ?, NULL, NULL, ?)
     ON CONFLICT(group_id, device_id) DO UPDATE SET
-      device_kind = CASE WHEN excluded.authorization_id < authorization_id THEN excluded.device_kind ELSE device_kind END,
-      device_name = CASE WHEN excluded.authorization_id < authorization_id THEN excluded.device_name ELSE device_name END,
-      approved_by_device_id = CASE WHEN excluded.authorization_id < authorization_id THEN excluded.approved_by_device_id ELSE approved_by_device_id END,
-      authorization_id = MIN(authorization_id, excluded.authorization_id),
-      joined_at = CASE WHEN excluded.authorization_id < authorization_id THEN excluded.joined_at ELSE joined_at END,
+      device_kind = CASE WHEN excluded.joined_at > joined_at OR
+        (excluded.joined_at = joined_at AND excluded.authorization_id < authorization_id)
+        THEN excluded.device_kind ELSE device_kind END,
+      device_name = CASE WHEN excluded.joined_at > joined_at OR
+        (excluded.joined_at = joined_at AND excluded.authorization_id < authorization_id)
+        THEN excluded.device_name ELSE device_name END,
+      state = CASE WHEN excluded.joined_at > joined_at THEN 'active' ELSE state END,
+      approved_by_device_id = CASE WHEN excluded.joined_at > joined_at OR
+        (excluded.joined_at = joined_at AND excluded.authorization_id < authorization_id)
+        THEN excluded.approved_by_device_id ELSE approved_by_device_id END,
+      authorization_id = CASE WHEN excluded.joined_at > joined_at THEN excluded.authorization_id
+        WHEN excluded.joined_at = joined_at THEN MIN(authorization_id, excluded.authorization_id)
+        ELSE authorization_id END,
+      joined_at = MAX(joined_at, excluded.joined_at),
+      left_at = CASE WHEN excluded.joined_at > joined_at THEN NULL ELSE left_at END,
       updated_at = MAX(updated_at, excluded.updated_at)`,
     [groupId, member.device_id, member.device_kind, member.device_name, member.approved_by_device_id,
       member.authorization_id, member.joined_at, now]
+  );
+  await port.run(
+    `DELETE FROM main.sync_group_member_departures
+     WHERE group_id = ? AND device_id = ? AND left_at < (
+       SELECT joined_at FROM main.sync_group_members WHERE group_id = ? AND device_id = ?
+     )`,
+    [groupId, member.device_id, groupId, member.device_id]
   );
 }
 
@@ -124,17 +151,19 @@ async function mergeDeparture(port: DbPort, departure: DepartureRow, now: string
   await port.run(
     `INSERT INTO main.sync_group_member_departures
       (group_id, device_id, authorized_by_device_id, authorization_id, left_at)
-     VALUES (?, ?, ?, ?, ?)
+     SELECT ?, ?, ?, ?, ? WHERE EXISTS (
+       SELECT 1 FROM main.sync_group_members WHERE group_id = ? AND device_id = ? AND joined_at <= ?
+     )
      ON CONFLICT(group_id, device_id) DO UPDATE SET
        authorization_id = MIN(authorization_id, excluded.authorization_id),
        left_at = MIN(left_at, excluded.left_at)`,
     [departure.group_id, departure.device_id, departure.authorized_by_device_id,
-      departure.authorization_id, departure.left_at]
+      departure.authorization_id, departure.left_at, departure.group_id, departure.device_id, departure.left_at]
   );
   await port.run(
     `UPDATE main.sync_group_members SET state = 'left', left_at = ?, updated_at = ?
-     WHERE group_id = ? AND device_id = ? AND state <> 'left'`,
-    [departure.left_at, now, departure.group_id, departure.device_id]
+     WHERE group_id = ? AND device_id = ? AND state <> 'left' AND joined_at <= ?`,
+    [departure.left_at, now, departure.group_id, departure.device_id, departure.left_at]
   );
 }
 

@@ -64,6 +64,10 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         FolioleCompanionPairingPluginActions.clearPairingCredentials(getContext(), call);
     }
 
+    @PluginMethod public void clearSyncGroupCredentials(PluginCall call) {
+        FolioleCompanionPairingPluginActions.clearSyncGroupCredentials(getContext(), call);
+    }
+
     @PluginMethod public void savePairingCredentials(PluginCall call) {
         FolioleCompanionPairingPluginActions.savePairingCredentials(getContext(), call);
     }

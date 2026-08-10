@@ -24,7 +24,9 @@ final class FolioleCompanionNsdAdvertisement {
         if (manager == null) throw new IllegalStateException("Android NSD is unavailable.");
         NsdServiceInfo info = new NsdServiceInfo();
         info.setServiceName(config.getJSONObject("sync_group").getString("display_name"));
-        info.setServiceType(FolioleCompanionHostBridgeContractDefinitions.networkServiceType(context));
+        info.setServiceType(FolioleCompanionNsdDiscovery.qualifiedServiceType(
+            FolioleCompanionHostBridgeContractDefinitions.networkServiceType(context)
+        ));
         info.setPort(port);
         put(info, "app_version", config.getString("app_version"));
         put(info, "group_id", config.getJSONObject("sync_group").getString("group_id"));

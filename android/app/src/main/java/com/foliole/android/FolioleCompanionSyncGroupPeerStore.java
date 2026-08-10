@@ -28,6 +28,10 @@ final class FolioleCompanionSyncGroupPeerStore {
         return Base64.encodeToString(randomSecretBytes(), Base64.NO_WRAP | Base64.URL_SAFE | Base64.NO_PADDING);
     }
 
+    static void saveSecret(Context context, String deviceId, String encodedSecret) throws Exception {
+        save(context, deviceId, Base64.decode(encodedSecret, Base64.NO_WRAP | Base64.URL_SAFE));
+    }
+
     private static byte[] randomSecretBytes() {
         byte[] secret = new byte[32];
         new java.security.SecureRandom().nextBytes(secret);

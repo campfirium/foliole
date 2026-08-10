@@ -5,7 +5,7 @@ import {
 } from './windows-a5-pair-sync-recovery-contract.mjs';
 import { parseLatestPairSyncAndroidEvidence } from './windows-a5-pair-sync-recovery-android-evidence.mjs';
 
-export const PAIR_SYNC_RECOVERY_TIMEOUT_MS = 11 * 60_000;
+export const PAIR_SYNC_RECOVERY_TIMEOUT_MS = 3 * 60_000;
 
 export function createPairSyncRecoveryWindow({
   now = Date.now, timeoutMs = PAIR_SYNC_RECOVERY_TIMEOUT_MS

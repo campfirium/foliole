@@ -1,11 +1,22 @@
 package com.foliole.android;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
 public class FolioleCompanionNsdDiscoveryTest {
+    @Test
+    public void qualifiesServiceTypeForAndroidNsd() {
+        assertEquals("_foliole-sync._tcp.", FolioleCompanionNsdDiscovery.qualifiedServiceType(
+            "_foliole-sync._tcp"
+        ));
+        assertEquals("_foliole-sync._tcp.", FolioleCompanionNsdDiscovery.qualifiedServiceType(
+            "_foliole-sync._tcp."
+        ));
+    }
+
     @Test
     public void matchesAndroidCallbackTypeWithTrailingDot() {
         assertTrue(FolioleCompanionNsdDiscovery.sameServiceType(

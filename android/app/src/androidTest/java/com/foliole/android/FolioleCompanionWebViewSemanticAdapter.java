@@ -83,6 +83,18 @@ final class FolioleCompanionWebViewSemanticAdapter {
         return latest;
     }
 
+    static JSONObject readAttribute(
+        Instrumentation instrumentation,
+        WebView webView,
+        String testId,
+        String attribute
+    ) throws Exception {
+        String script = "(function(){var node=document.querySelector('[data-testid=\"'+" +
+            JSONObject.quote(testId) + "+'\"]');return JSON.stringify({found:!!node," +
+            "value:node?(node.getAttribute(" + JSONObject.quote(attribute) + ")||''):''});})()";
+        return evaluateJson(instrumentation, webView, script);
+    }
+
     static JSONObject pairingRequestState(
         Instrumentation instrumentation,
         WebView webView

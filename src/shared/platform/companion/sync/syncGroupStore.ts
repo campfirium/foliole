@@ -14,6 +14,16 @@ export function loadCompanionSyncGroup() {
   return owner().read(loadGroup);
 }
 
+export function loadCompanionSyncGroupEndpoint() {
+  return owner().read(async (db) => {
+    const row = (await db.query<DbRow>(
+      `SELECT value FROM companion_meta
+       WHERE key = 'workspace_sync_endpoint_url' LIMIT 1`
+    ))[0];
+    return typeof row?.value === 'string' && row.value.trim() ? row.value.trim() : null;
+  });
+}
+
 export function loadCompanionSyncGroupLibraryFacts(): Promise<SyncGroupLibraryFacts> {
   return owner().read(async (db) => ({
     attachment_count: await count(db, 'attachments'),
@@ -77,6 +87,39 @@ export function refreshActiveCompanionSyncGroupMembership(args: {
     for (const member of args.group.members) await saveMember(tx, args.group.group_id, member, now);
     await tx.run('UPDATE sync_group_local_state SET updated_at = ? WHERE singleton_id = 1', [now]);
     return (await loadGroup(tx))!;
+  }));
+}
+
+export function recordLocalCompanionSyncGroupDeparture(args: {
+  authorizationId: string;
+  deviceId: string;
+  groupId: string;
+  leftAt: string;
+}) {
+  return owner().runWriter((db) => db.transaction(async (tx) => {
+    const local = (await tx.query<DbRow>(
+      `SELECT l.local_device_id, l.member_state, m.joined_at
+       FROM sync_group_local_state l
+       JOIN sync_group_members m ON m.group_id = l.group_id AND m.device_id = l.local_device_id
+       WHERE l.singleton_id = 1 AND l.group_id = ? LIMIT 1`, [args.groupId]
+    ))[0];
+    if (local?.local_device_id !== args.deviceId || local.member_state !== 'active'
+      || Date.parse(args.leftAt) < Date.parse(String(local.joined_at))) {
+      throw new Error('sync_group_departure_authorization_invalid');
+    }
+    await tx.run(
+      `INSERT OR IGNORE INTO sync_group_member_departures
+       (group_id, device_id, authorized_by_device_id, authorization_id, left_at)
+       VALUES (?, ?, ?, ?, ?)`,
+      [args.groupId, args.deviceId, args.deviceId, args.authorizationId, args.leftAt]
+    );
+    await tx.run(
+      `UPDATE sync_group_members SET state = 'left', left_at = ?, updated_at = ?
+       WHERE group_id = ? AND device_id = ?`,
+      [args.leftAt, args.leftAt, args.groupId, args.deviceId]
+    );
+    await tx.run('DELETE FROM sync_group_local_state WHERE singleton_id = 1 AND local_device_id = ?',
+      [args.deviceId]);
   }));
 }
 

@@ -3,6 +3,7 @@
     "folioleCompanionSync": [
       "approveSyncGroupJoinRequest",
       "clearPairingCredentials",
+      "clearSyncGroupCredentials",
       "desktopHttpRequest",
       "downloadAttachmentResourceBatch",
       "downloadContentBlobBatch",
@@ -300,6 +301,7 @@
       "negotiatedProtocolVersion": "negotiated_protocol_version",
       "pairedAt": "paired_at",
       "primaryDeviceId": "primary_device_id",
+      "providerDeviceSecret": "provider_device_secret",
       "remotePeerId": "remote_peer_id",
       "remotePeerName": "remote_peer_name",
       "remotePeerPlatform": "remote_peer_platform",

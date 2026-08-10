@@ -147,6 +147,27 @@ describe('macOS A5 one-time pair sync preflight', () => {
       .toMatchObject({ existingPairing: false, nodeCount: 1293 });
   });
 
+  it('formally re-pairs a clean synced workspace when local Sync Group signing is unavailable', () => {
+    const run = vi.fn()
+      .mockReturnValueOnce(result('[android-data] pair-sync-recovery-readiness=', {
+        ...pairing,
+        dirtyRecordCount: 0,
+        nodeCount: 1293,
+        pairingCredentialRejectionReason: 'local_signing_unavailable',
+        pairingCredentialsRejected: true,
+        resultStatus: 'ready'
+      }, 0))
+      .mockReturnValueOnce(result('[android-data] capture-annotation-readiness=', {
+        ...workspace,
+        canonicalInbox: { active: true, kind: 'folder' },
+        counts: { content_blobs: 2033, node_order: 969, nodes: 1293 },
+        pairingWorkspace: { localDeviceIdentityPresent: true, syncEndpointPresent: true }
+      }, 0));
+
+    expect(runMacosA5PairSyncPreflight({ adb: '/adb', repoRoot: '/repo' }, run))
+      .toMatchObject({ credentialRepairRequired: true, existingPairing: false, nodeCount: 1293 });
+  });
+
   it('re-pairs an empty preserved identity after the product records a generic 401', () => {
     const run = vi.fn()
       .mockReturnValueOnce(result('[android-data] pair-sync-recovery-readiness=', {
@@ -163,6 +184,19 @@ describe('macOS A5 one-time pair sync preflight', () => {
 
     expect(runMacosA5PairSyncPreflight({ adb: '/adb', repoRoot: '/repo' }, run))
       .toMatchObject({ credentialRepairRequired: true, existingPairing: true, nodeCount: 0 });
+  });
+
+  it('resumes initial sync for an empty Device already joined to the Group', () => {
+    const run = vi.fn()
+      .mockReturnValueOnce(result('[android-data] pair-sync-recovery-readiness=', {
+        ...pairing, activeSyncGroupMemberCount: 3, syncGroupId: 'group-1',
+        syncGroupTimelineId: 'timeline-1'
+      }, 0))
+      .mockReturnValueOnce(result('[android-data] capture-annotation-readiness=', {
+        ...workspace, pairingWorkspace: { localDeviceIdentityPresent: true, syncEndpointPresent: true }
+      }, 77));
+    expect(runMacosA5PairSyncPreflight({ adb: '/adb', repoRoot: '/repo' }, run))
+      .toMatchObject({ existingPairing: true, nodeCount: 0 });
   });
 
   it('rejects a generic 401 when the empty workspace has no proven sync endpoint', () => {

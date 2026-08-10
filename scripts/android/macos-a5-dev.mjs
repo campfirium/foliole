@@ -7,6 +7,19 @@ import path from 'node:path';
 import { clearTimeout, setTimeout } from 'node:timers';
 import { pathToFileURL } from 'node:url';
 
+import {
+  buildMacosA5Desktop as buildDesktop,
+  runMacosA5DesktopLeaveEntry,
+  runMacosA5DatabasePerformanceEntry,
+  runMacosA5SyncGroupMaintenanceEntry,
+  runMacosA5WindowsJoinEntry
+} from './macos-a5-extended-actions.mjs';
+import {
+  createMacosA5CaptureIdentity as captureIdentity,
+  runMacosA5CaptureReadiness,
+  runMacosA5PairingReadiness
+} from './macos-a5-readiness.mjs';
+
 export const A5_SERIAL = '87a33a4b';
 const APP_ID = 'com.foliole.android';
 const COMPONENT = `${APP_ID}/.MainActivity`;
@@ -93,17 +106,11 @@ export function assertFixedA5(paths) {
 }
 
 function readiness(paths) {
-  checked(process.execPath, [
-    path.join(paths.repoRoot, 'scripts/android/android-capture-annotation-readiness-runner.mjs'),
-    '--adb', paths.adb, '--serial', A5_SERIAL, '--app-id', APP_ID
-  ], { cwd: paths.repoRoot });
+  runMacosA5CaptureReadiness(checked, paths, A5_SERIAL, APP_ID);
 }
 
 function pairingReadiness(paths) {
-  checked(process.execPath, [
-    path.join(paths.repoRoot, 'scripts/android/android-pair-sync-recovery-readiness-runner.mjs'),
-    '--adb', paths.adb, '--serial', A5_SERIAL, '--app-id', APP_ID
-  ], { cwd: paths.repoRoot });
+  runMacosA5PairingReadiness(checked, paths, A5_SERIAL, APP_ID);
 }
 
 export function build(paths) {
@@ -113,11 +120,6 @@ export function build(paths) {
     cwd: path.join(paths.repoRoot, 'android'), env: macosA5GradleEnv()
   });
   if (!existsSync(paths.apk)) throw new Error(`Debug APK was not produced: ${paths.apk}`);
-}
-
-function buildDesktop(paths) {
-  checked('npm', ['run', 'build'], { cwd: paths.repoRoot });
-  checked('npm', ['run', 'electron:compile'], { cwd: paths.repoRoot });
 }
 
 function deploy(paths) {
@@ -145,11 +147,6 @@ export async function protectData(paths, env, mode, manifest, backupRoot = paths
   return result;
 }
 
-function captureIdentity() {
-  const timestamp = new Date().toISOString().replace(/\D/gu, '').slice(0, 17);
-  return `${timestamp}-mac-a5`;
-}
-
 async function captureAnnotation(paths) {
   assertFixedA5(paths);
   readiness(paths);
@@ -174,7 +171,7 @@ async function pairSync(paths) {
   const { resolveMacosA5PairSyncReadiness } = await import('./macos-a5-product-bootstrap.mjs');
   const readinessState = resolveMacosA5PairSyncReadiness(paths);
   build(paths);
-  buildDesktop(paths);
+  buildDesktop(checked, paths);
   const buildIdentity = captureIdentity();
   const evidenceRoot = path.join(paths.repoRoot, '.tmp/artifacts/a5-pair-sync', buildIdentity);
   const env = macosA5GradleEnv();
@@ -198,19 +195,9 @@ async function pairSync(paths) {
   console.log(`[macos-a5-dev] pair-sync evidence=${result.pairSyncRecovery.manifestPath}`);
 }
 
-async function databasePerformance(paths) {
-  assertFixedA5(paths); build(paths);
-  const { runA5DatabasePerformance } = await import('./android-a5-database-performance-action.mjs');
-  const result = await runA5DatabasePerformance({ env: macosA5GradleEnv(),
-    evidenceRoot: path.join(paths.repoRoot, '.tmp/artifacts/companion-database-performance'),
-    execute, paths, serial: A5_SERIAL });
-  process.stdout.write(result.output);
-  console.log(`[macos-a5-dev] database-performance evidence=${result.evidencePath}`);
-}
-
 export async function runMacosA5Action(action, repoRoot = process.cwd()) {
-  if (!['status', 'build', 'capture-annotation', 'database-performance', 'deploy', 'pair-sync'].includes(action)) {
-    throw new Error('Usage: node scripts/android/macos-a5-dev.mjs <status|build|capture-annotation|database-performance|deploy|pair-sync>');
+  if (!['status', 'approve-windows-join', 'build', 'capture-annotation', 'clear-app-data', 'database-performance', 'deploy', 'leave-sync-group', 'macos-leave', 'pair-sync'].includes(action)) {
+    throw new Error('Usage: node scripts/android/macos-a5-dev.mjs <status|approve-windows-join|build|capture-annotation|clear-app-data|database-performance|deploy|leave-sync-group|macos-leave|pair-sync>');
   }
   const paths = macosA5Paths(repoRoot);
   assertSafeMacosA5Environment(paths);
@@ -223,8 +210,18 @@ export async function runMacosA5Action(action, repoRoot = process.cwd()) {
     }
     if (action === 'deploy') deploy(paths);
     if (action === 'capture-annotation') await captureAnnotation(paths);
-    if (action === 'database-performance') await databasePerformance(paths);
+    if (action === 'database-performance') await runMacosA5DatabasePerformanceEntry({
+      assertFixed: () => assertFixedA5(paths), build: () => build(paths), env: macosA5GradleEnv(), execute, paths, serial: A5_SERIAL });
+    if (action === 'leave-sync-group' || action === 'clear-app-data') await runMacosA5SyncGroupMaintenanceEntry({
+      action, assertFixed: () => assertFixedA5(paths), build: () => build(paths), buildIdentity: captureIdentity(),
+      env: macosA5GradleEnv(), execute, paths, serial: A5_SERIAL });
     if (action === 'pair-sync') await pairSync(paths);
+    if (action === 'macos-leave') await runMacosA5DesktopLeaveEntry({
+      assertFixed: () => assertFixedA5(paths), env: macosA5GradleEnv(), execute, paths, serial: A5_SERIAL
+    });
+    if (action === 'approve-windows-join') await runMacosA5WindowsJoinEntry({
+      env: macosA5GradleEnv(), execute, paths
+    });
   } finally {
     spawnSync(paths.adb, ['kill-server']);
   }

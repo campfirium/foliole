@@ -46,10 +46,14 @@ final class FolioleCompanionExistingPairSyncEvidence {
     ) throws Exception {
         String lastTargetState = "missing";
         boolean restoredSyncSurface = false;
+        boolean syncStarted = false;
         while (System.nanoTime() < deadline) {
             JSONObject state = FolioleCompanionPairSyncEvidence.read(instrumentation, webView);
             lastTargetState = targetState(instrumentation, webView, "companion-sync-now");
-            if (state.optBoolean("syncPackApplied") && "enabled".equals(lastTargetState)) {
+            if (state.optBoolean("syncPackApplied") && "disabled".equals(lastTargetState)) {
+                syncStarted = true;
+            }
+            if (state.optBoolean("syncPackApplied") && syncStarted && "enabled".equals(lastTargetState)) {
                 evidence.put("initialSync", "completed");
                 return evidence;
             }

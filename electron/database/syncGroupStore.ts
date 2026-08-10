@@ -92,22 +92,32 @@ export function registerSyncGroupMember(args: {
   const group = loadDesktopSyncGroup();
   if (!group || group.local_member_state !== 'active') throw new Error('sync_group_not_available');
   const now = args.now ?? new Date().toISOString();
-  openDatabaseConnection().driver.execute(
-    `INSERT INTO sync_group_members (
-      group_id, device_id, device_kind, device_name, state, approved_by_device_id,
-      authorization_id, provisioning_cursor, joined_at, activated_at, left_at, updated_at
-    ) VALUES (?, ?, ?, ?, 'active', ?, ?, NULL, ?, NULL, NULL, ?)
-    ON CONFLICT(group_id, device_id) DO UPDATE SET
-      device_kind = excluded.device_kind,
-      device_name = excluded.device_name,
-      state = 'active',
-      approved_by_device_id = excluded.approved_by_device_id,
-      authorization_id = excluded.authorization_id,
-      provisioning_cursor = NULL,
-      updated_at = excluded.updated_at`,
-    [group.group_id, args.deviceId, args.deviceKind, args.deviceName, args.approvedByDeviceId,
-      args.authorizationId, now, now]
-  );
+  const driver = openDatabaseConnection().driver;
+  driver.transaction(() => {
+    driver.execute(
+      `DELETE FROM sync_group_member_departures WHERE group_id = ? AND device_id = ?`,
+      [group.group_id, args.deviceId]
+    );
+    driver.execute(
+      `INSERT INTO sync_group_members (
+        group_id, device_id, device_kind, device_name, state, approved_by_device_id,
+        authorization_id, provisioning_cursor, joined_at, activated_at, left_at, updated_at
+      ) VALUES (?, ?, ?, ?, 'active', ?, ?, NULL, ?, NULL, NULL, ?)
+      ON CONFLICT(group_id, device_id) DO UPDATE SET
+        device_kind = excluded.device_kind,
+        device_name = excluded.device_name,
+        state = 'active',
+        approved_by_device_id = excluded.approved_by_device_id,
+        authorization_id = excluded.authorization_id,
+        provisioning_cursor = NULL,
+        joined_at = excluded.joined_at,
+        activated_at = NULL,
+        left_at = NULL,
+        updated_at = excluded.updated_at`,
+      [group.group_id, args.deviceId, args.deviceKind, args.deviceName, args.approvedByDeviceId,
+        args.authorizationId, now, now]
+    );
+  });
   return loadDesktopSyncGroup()!;
 }
 

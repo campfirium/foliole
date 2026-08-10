@@ -15,6 +15,7 @@ export interface CompanionPairingSyncPlugin {
     negotiated_protocol_version: number;
     paired_at: string;
     primary_device_id: string;
+    provider_device_secret?: string;
     remote_peer_id?: string | null;
     remote_peer_name?: string | null;
     remote_peer_platform?: string | null;

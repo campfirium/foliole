@@ -73,6 +73,15 @@ export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
     && workspaceState.counts?.nodes === pairState.nodeCount
     && workspaceState.canonicalInbox?.active === true
     && workspaceState.pairingWorkspace?.syncEndpointPresent === true;
+  const joinedEmptyWorkspace = pairState.nodeCount === 0
+    && pairState.activeSyncGroupMemberCount > 1
+    && typeof pairState.syncGroupId === 'string'
+    && typeof pairState.syncGroupTimelineId === 'string'
+    && workspaceState.counts?.nodes === 0
+    && workspaceState.counts?.content_blobs === 0
+    && workspaceState.counts?.node_order === 0
+    && workspaceState.pairingWorkspace?.localDeviceIdentityPresent === true
+    && workspaceState.pairingWorkspace?.syncEndpointPresent === true;
   const rejectedWorkspace = pairState.nodeCount > 0
     && workspaceState.counts?.nodes === pairState.nodeCount
     && workspaceState.canonicalInbox?.active === true
@@ -84,7 +93,7 @@ export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
     && workspaceState.pairingWorkspace?.localDeviceIdentityPresent === true
     && workspaceState.pairingWorkspace?.syncEndpointPresent === true;
   const authorizedWorkspace = workspaceState.pairingWorkspace?.localDeviceIdentityPresent === true
-    && (emptyStalePairing || syncedProfileSwitch);
+    && (emptyStalePairing || joinedEmptyWorkspace || syncedProfileSwitch);
   const existingPairingRecovery = pairState.dirtyRecordCount > 0
     && authorizedPairing && syncedProfileSwitch;
   const cleanPairSwitch = pairing.status === 0 && pairState.dirtyRecordCount === 0
@@ -92,7 +101,9 @@ export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
     && pairState.pairingCredentialsRejected !== true;
   const rejectedCleanPairing = pairState.dirtyRecordCount === 0
     && pairState.pairingCredentialsRejected === true
-    && pairState.pairingCredentialRejectionReason === 'unknown_device'
+    && ['local_signing_unavailable', 'unknown_device'].includes(
+      pairState.pairingCredentialRejectionReason
+    )
     && (pairState.remotePeerFingerprint === null
       || /^[0-9a-f]{16}$/u.test(pairState.remotePeerFingerprint))
     && pairState.pairingPeerConflict === false

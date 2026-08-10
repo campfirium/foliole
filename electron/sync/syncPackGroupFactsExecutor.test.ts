@@ -62,6 +62,46 @@ it('accepts a relayed self-departure but refuses a remote departure for the loca
   }))).rejects.toThrow('sync_group_local_departure_requires_local_action');
 });
 
+it('treats a departure before a newer join as superseded history', async () => {
+  seedGroup(sqlite, 'inc', ['a', 'b']);
+  sqlite.exec(`UPDATE inc.sync_group_members SET authorization_id = 'join-b-new',
+    joined_at = '2026-08-09T04:00:00Z' WHERE device_id = 'b'`);
+  sqlite.exec(`INSERT INTO inc.sync_group_member_departures VALUES
+    ('group-1', 'b', 'b', 'leave-b-old', '2026-08-09T03:00:00Z')`);
+  sqlite.exec(`UPDATE sync_group_members SET state = 'left', left_at = '2026-08-09T03:00:00Z'
+    WHERE device_id = 'b'`);
+  sqlite.exec(`INSERT INTO sync_group_member_departures VALUES
+    ('group-1', 'b', 'b', 'leave-b-old', '2026-08-09T03:00:00Z')`);
+  const port = createBetterSqliteDbPort(sqlite, { name: 'group-facts-test' });
+
+  await port.transaction((tx) => applySyncPackGroupFactsWithDbPort(tx, {
+    incomingAlias: 'inc', sourcePeerId: 'a'
+  }));
+
+  expect(sqlite.prepare(`SELECT state, authorization_id, joined_at, left_at
+    FROM sync_group_members WHERE device_id = 'b'`).get()).toEqual({
+    authorization_id: 'join-b-new', joined_at: '2026-08-09T04:00:00Z', left_at: null, state: 'active'
+  });
+  expect(sqlite.prepare("SELECT COUNT(*) AS value FROM sync_group_member_departures WHERE device_id = 'b'").get())
+    .toEqual({ value: 0 });
+});
+
+it('ignores a local departure that predates the local Device current join generation', async () => {
+  seedGroup(sqlite, 'inc', ['a', 'b']);
+  sqlite.exec("UPDATE sync_group_members SET joined_at = '2026-08-09T04:00:00Z' WHERE device_id = 'a'");
+  sqlite.exec("UPDATE inc.sync_group_members SET state = 'left' WHERE device_id = 'a'");
+  sqlite.exec(`INSERT INTO inc.sync_group_member_departures VALUES
+    ('group-1', 'a', 'a', 'leave-a-old', '2026-08-09T03:00:00Z')`);
+  const port = createBetterSqliteDbPort(sqlite, { name: 'group-facts-test' });
+
+  await port.transaction((tx) => applySyncPackGroupFactsWithDbPort(tx, {
+    incomingAlias: 'inc', sourcePeerId: 'b'
+  }));
+
+  expect(sqlite.prepare("SELECT state, joined_at FROM sync_group_members WHERE device_id = 'a'").get())
+    .toEqual({ joined_at: '2026-08-09T04:00:00Z', state: 'active' });
+});
+
 function seedGroup(db: Database.Database, schema: 'inc' | 'main', devices: string[], timeline = 'timeline-1') {
   const prefix = schema === 'main' ? '' : 'inc.';
   db.prepare(`INSERT INTO ${prefix}sync_groups

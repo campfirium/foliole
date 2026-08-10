@@ -37,10 +37,13 @@ function syncGroup(database) {
 }
 
 function pairingCredentialRejection(event) {
-  const rejected = event?.status === 'failed'
-    && typeof event.message === 'string' && /\b401\b/u.test(event.message);
+  const failedMessage = event?.status === 'failed' && typeof event.message === 'string'
+    ? event.message : '';
+  const localSigningUnavailable = failedMessage.includes('Failed to sign companion sync request.');
+  const rejected = localSigningUnavailable || /\b401\b/u.test(failedMessage);
   const reason = rejected
-    ? event.message.match(/\b(expired_timestamp|invalid_signature|missing_headers|unknown_device)\b/u)?.[1] ?? null
+    ? (localSigningUnavailable ? 'local_signing_unavailable'
+      : failedMessage.match(/\b(expired_timestamp|invalid_signature|missing_headers|unknown_device)\b/u)?.[1] ?? null)
     : null;
   return { rejected, reason };
 }

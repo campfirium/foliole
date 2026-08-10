@@ -86,6 +86,5 @@ export async function decryptCompanionPairingSecret(
     secretKey,
     fromBase64Url(payload.ciphertext)
   );
-  pairingPrivateKeys.delete(pairRequestClientId);
   return new TextDecoder().decode(plaintext);
 }

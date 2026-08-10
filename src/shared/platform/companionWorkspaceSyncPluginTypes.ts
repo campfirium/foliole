@@ -31,6 +31,7 @@ export interface CompanionWorkspaceSyncPlugin
     url: string;
   }): Promise<{ body: string; status: number }>;
   loadDiscoveryCandidates(): Promise<CompanionDiscoveryCandidatesPayload>;
+  clearSyncGroupCredentials(): Promise<void>;
   loadSyncGroupProviderState(): Promise<CompanionSyncGroupProviderState>;
   approveSyncGroupJoinRequest(args: { pair_request_id: string }): Promise<CompanionSyncGroupProviderState>;
   rejectSyncGroupJoinRequest(args: { pair_request_id: string }): Promise<CompanionSyncGroupProviderState>;

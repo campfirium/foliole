@@ -13,6 +13,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 final class FolioleCompanionSyncGroupServer {
+    private static final int SYNC_PORT = 38641;
     final Map<String, FolioleCompanionSyncGroupJoinRequest> requests;
     private final Context context;
     private final JSONObject config;
@@ -30,7 +31,7 @@ final class FolioleCompanionSyncGroupServer {
     ) throws Exception {
         this.context = context.getApplicationContext(); this.config = config; this.requests = requests; this.dataBridge = dataBridge;
         snapshots = new FolioleCompanionSyncGroupSnapshot(this.context, dataBridge);
-        server = new ServerSocket(0); executor.execute(this::acceptLoop);
+        server = new ServerSocket(SYNC_PORT); executor.execute(this::acceptLoop);
     }
 
     int port() { return server.getLocalPort(); }

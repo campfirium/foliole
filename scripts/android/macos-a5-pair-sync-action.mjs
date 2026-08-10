@@ -11,16 +11,62 @@ import {
 import {
   validateOwnedDesktopPreflight, validateOwnedDesktopRePairPreflight
 } from '../windows/windows-pair-sync-desktop-readiness.mjs';
+import { assertPairSyncRuntimeOwnership } from '../windows/windows-a5-pair-sync-recovery-transport.mjs';
 import { openMacosPairSyncDesktopSession } from './macos-pair-sync-desktop-session.mjs';
 import { macosPairSyncIdentityFingerprint } from './macos-pair-sync-desktop-session.mjs';
 
 const AUTHORIZED_STALE_DEVICE_FINGERPRINT = 'bd1d679fbb55b53e';
+
+function activeSyncGroupDeviceIds(overview) {
+  const members = overview.sync_group?.members;
+  if (!Array.isArray(members)) return null;
+  return new Set(members.filter((member) => member.state === 'active').map((member) => member.device_id));
+}
+
+async function reconcileCurrentSyncGroupPairings(
+  overview, session, deviceFingerprint, remotePeerFingerprint, existingPairing,
+  credentialRepairRequired
+) {
+  const activeDeviceIds = activeSyncGroupDeviceIds(overview);
+  const target = overview.sync_group?.members?.find(
+    (member) => macosPairSyncIdentityFingerprint(member.device_id) === deviceFingerprint
+  );
+  const joiningMissingMember = !target && existingPairing === false;
+  const rejoiningDepartedMember = target?.state === 'left' && existingPairing === false;
+  if (!activeDeviceIds || (!joiningMissingMember
+      && (!target || (target.state !== 'active' && !rejoiningDepartedMember)))) return null;
+  assertPairSyncRuntimeOwnership(overview, session);
+  let reconciled = overview;
+  for (const device of overview.paired_devices) {
+    if (!activeDeviceIds.has(device.device_id)
+        || (credentialRepairRequired && device.device_id === target.device_id)) {
+      reconciled = await session.remove(device.device_id);
+    }
+  }
+  const safe = session.sanitize(reconciled);
+  const wrongRemotePeer = remotePeerFingerprint
+    && safe.desktopPeerFingerprint !== remotePeerFingerprint;
+  if (!safe.desktopPeerFingerprint || wrongRemotePeer || safe.pendingDeviceFingerprints.length > 0) {
+    throw new Error('Current Sync Group pairing state requires user review.');
+  }
+  const targetPaired = safe.pairedDeviceFingerprints.includes(deviceFingerprint);
+  return {
+    ...safe,
+    rePairRequired: joiningMissingMember || rejoiningDepartedMember || credentialRepairRequired
+      || (existingPairing && !targetPaired)
+  };
+}
 
 export async function reconcileAuthorizedMacosDailyPairing(
   overview, session, deviceFingerprint, remotePeerFingerprint, existingPairing,
   credentialRepairRequired = false,
   authorizedStaleDeviceFingerprint = AUTHORIZED_STALE_DEVICE_FINGERPRINT
 ) {
+  const currentGroup = await reconcileCurrentSyncGroupPairings(
+    overview, session, deviceFingerprint, remotePeerFingerprint, existingPairing,
+    credentialRepairRequired
+  );
+  if (currentGroup) return currentGroup;
   const safe = session.sanitize(overview);
   const exactStaleShape = existingPairing === false
     && safe.pendingDeviceFingerprints.length === 0

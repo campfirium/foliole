@@ -50,6 +50,32 @@ it('persists an approved device as a member without a second activation', () => 
   });
 });
 
+it('replaces a departed device with its newly approved membership generation', () => {
+  const group = createDesktopSyncGroup({
+    deviceId: 'desktop-1', deviceKind: 'desktop', deviceName: 'Studio', now: '2026-08-09T00:00:00Z'
+  });
+  registerSyncGroupMember({
+    approvedByDeviceId: 'desktop-1', authorizationId: 'request-old', deviceId: 'android-1',
+    deviceKind: 'android-capacitor', deviceName: 'Pixel', now: '2026-08-09T01:00:00Z'
+  });
+  recordSyncGroupDeparture({
+    authorizationId: 'leave-android-1', authorizedByDeviceId: 'android-1', deviceId: 'android-1',
+    groupId: group.group_id, leftAt: '2026-08-09T02:00:00Z'
+  });
+
+  registerSyncGroupMember({
+    approvedByDeviceId: 'desktop-1', authorizationId: 'request-new', deviceId: 'android-1',
+    deviceKind: 'android-capacitor', deviceName: 'Pixel', now: '2026-08-09T03:00:00Z'
+  });
+
+  expect(sqlite.prepare(`SELECT state, authorization_id, joined_at, left_at
+    FROM sync_group_members WHERE device_id = 'android-1'`).get()).toEqual({
+    authorization_id: 'request-new', joined_at: '2026-08-09T03:00:00Z', left_at: null, state: 'active'
+  });
+  expect(sqlite.prepare(`SELECT COUNT(*) AS value FROM sync_group_member_departures
+    WHERE device_id = 'android-1'`).get()).toEqual({ value: 0 });
+});
+
 it('records a self-authorized departure and unbinds only the local departing Device', () => {
   const group = createDesktopSyncGroup({
     deviceId: 'desktop-1', deviceKind: 'desktop', deviceName: 'Studio', now: '2026-08-09T00:00:00Z'

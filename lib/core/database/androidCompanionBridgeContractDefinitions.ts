@@ -15,6 +15,7 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
     folioleCompanionSync: [
       'approveSyncGroupJoinRequest',
       'clearPairingCredentials',
+      'clearSyncGroupCredentials',
       'desktopHttpRequest',
       'downloadAttachmentResourceBatch',
       'downloadContentBlobBatch',
@@ -148,6 +149,7 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
       negotiatedProtocolVersion: 'negotiated_protocol_version',
       pairedAt: 'paired_at',
       primaryDeviceId: 'primary_device_id',
+      providerDeviceSecret: 'provider_device_secret',
       remotePeerId: 'remote_peer_id',
       remotePeerName: 'remote_peer_name',
       remotePeerPlatform: 'remote_peer_platform',

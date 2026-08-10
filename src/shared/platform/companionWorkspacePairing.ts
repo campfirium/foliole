@@ -118,6 +118,9 @@ export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArg
     throw new Error('Companion pairing key is no longer available.');
   }
   const deviceSecret = await decryptCompanionPairingSecret(pairingKeyId, payload.encrypted_device_secret);
+  const providerSecret = usesSyncGroup && payload.provider_encrypted_device_secret
+    ? await decryptCompanionPairingSecret(pairingKeyId, payload.provider_encrypted_device_secret)
+    : null;
   pairingKeyIdsByRequestId.delete(args.pairRequestId);
   if (!isNativeCompanionPairingRuntime()) {
     return writeWebPairingState({
@@ -135,13 +138,15 @@ export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArg
       remote_protocol: payload.desktop_protocol
     });
   }
-  return saveNativePairing(args, payload, deviceSecret, usesSyncGroup);
+  if (usesSyncGroup && !providerSecret) throw new Error('Sync Group provider pairing credentials are missing.');
+  return saveNativePairing(args, payload, deviceSecret, providerSecret, usesSyncGroup);
 }
 
 async function saveNativePairing(
   args: PairCompanionWithDesktopArgs,
   payload: PairCompanionWithDesktopResponse,
   deviceSecret: string,
+  providerSecret: string | null,
   usesSyncGroup: boolean
 ) {
   return runCompanionSyncWriterTask(async () => {
@@ -152,6 +157,7 @@ async function saveNativePairing(
       device_secret: deviceSecret,
       ...(usesSyncGroup && payload.sync_group ? {
         endpoint_url: normalizeEndpointUrl(args.endpointUrl),
+        ...(providerSecret ? { provider_device_secret: providerSecret } : {}),
         sync_group_id: payload.sync_group.group_id
       } : {}),
       negotiated_protocol_version: payload.compatibility.negotiated_version ?? CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,

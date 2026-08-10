@@ -45,6 +45,7 @@ function DataAppearanceSettingsSection(props: {
           Icon={Database}
           detail={t('companion.settings.storage.detail')}
           onClick={props.onOpenStorage}
+          testId="companion-settings-storage"
           title={t('companion.settings.storage.title')}
         />
       ) : null}

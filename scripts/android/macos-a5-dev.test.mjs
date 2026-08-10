@@ -44,6 +44,14 @@ describe('macOS fixed A5 development entry', () => {
     expect(source).not.toContain("process.argv[3]");
   });
 
+  it('routes Leave and app-data clearing only through fixed product actions', () => {
+    const source = fs.readFileSync('scripts/android/macos-a5-dev.mjs', 'utf8');
+    expect(source).toContain("'leave-sync-group'");
+    expect(source).toContain("'clear-app-data'");
+    expect(source).toContain('runMacosA5SyncGroupMaintenanceEntry');
+    expect(source).not.toContain('process.argv[3]');
+  });
+
   it('bootstraps only through the installed product before identity is rechecked', () => {
     const calls = [];
     runMacosA5ProductBootstrap({ adb: '/adb', repoRoot: '/repo' }, (command, args) => {

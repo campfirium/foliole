@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import { renderWithLocalization } from '../shared/localization/testLocalization';
@@ -20,4 +20,7 @@ it('shows the persistent Sync Group name and active device membership', () => {
   expect(screen.getByText('Studio')).toBeInTheDocument();
   expect(screen.getByText('Pixel')).toBeInTheDocument();
   expect(screen.getByText('Active')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Leave Sync Group' }));
+  expect(screen.getByText(/Topics and attachments stay on this device/)).toBeInTheDocument();
+  expect(screen.getByTestId('companion-sync-group-leave-confirm')).toBeInTheDocument();
 });

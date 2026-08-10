@@ -116,6 +116,75 @@ it('passes an authorized existing pairing through without removing it', async ()
   expect(session.remove).not.toHaveBeenCalled();
 });
 
+it('keeps current group peers, removes orphan pairings, and re-pairs the missing A5', async () => {
+  const currentId = 'current-a5';
+  const desktopC = 'desktop-c';
+  const orphanId = 'orphan-device';
+  const currentFingerprint = macosPairSyncIdentityFingerprint(currentId);
+  const groupOverview = {
+    ...overview(orphanId),
+    paired_devices: [{ device_id: orphanId }, { device_id: desktopC }],
+    sync_group: {
+      members: [
+        { device_id: 'desktop-current', state: 'active' },
+        { device_id: currentId, state: 'active' },
+        { device_id: desktopC, state: 'active' }
+      ]
+    }
+  };
+  const session = {
+    assertActive: vi.fn(),
+    remove: vi.fn(async (deviceId) => ({
+      ...groupOverview,
+      paired_devices: groupOverview.paired_devices.filter((device) => device.device_id !== deviceId)
+    })),
+    sanitize: vi.fn((value) => ({
+      desktopPeerFingerprint: '7f58d92331c8872b',
+      pairedDeviceFingerprints: value.paired_devices.map(
+        (device) => macosPairSyncIdentityFingerprint(device.device_id)
+      ),
+      pendingDeviceFingerprints: [], serverState: 'running', syncEnabled: true
+    }))
+  };
+
+  await expect(reconcileAuthorizedMacosDailyPairing(
+    groupOverview, session, currentFingerprint, '7f58d92331c8872b', true
+  )).resolves.toMatchObject({
+    pairedDeviceFingerprints: [macosPairSyncIdentityFingerprint(desktopC)],
+    rePairRequired: true
+  });
+  expect(session.remove).toHaveBeenCalledTimes(1);
+  expect(session.remove).toHaveBeenCalledWith(orphanId);
+});
+
+it('keeps active peers while a formally departed empty A5 requests a new join', async () => {
+  const currentId = 'current-a5';
+  const desktopC = 'desktop-c';
+  const currentFingerprint = macosPairSyncIdentityFingerprint(currentId);
+  const groupOverview = {
+    ...overview(desktopC),
+    sync_group: {
+      members: [
+        { device_id: 'desktop-current', state: 'active' },
+        { device_id: desktopC, state: 'active' }
+      ]
+    }
+  };
+  const session = {
+    assertActive: vi.fn(), remove: vi.fn(),
+    sanitize: vi.fn(() => ({
+      desktopPeerFingerprint: '7f58d92331c8872b',
+      pairedDeviceFingerprints: [macosPairSyncIdentityFingerprint(desktopC)],
+      pendingDeviceFingerprints: [], serverState: 'running', syncEnabled: true
+    }))
+  };
+
+  await expect(reconcileAuthorizedMacosDailyPairing(
+    groupOverview, session, currentFingerprint, '7f58d92331c8872b', false
+  )).resolves.toMatchObject({ rePairRequired: true });
+  expect(session.remove).not.toHaveBeenCalled();
+});
+
 it('authorizes exact A5 peer replacement only through the product re-pair path', async () => {
   const currentId = 'current-a5';
   const currentFingerprint = macosPairSyncIdentityFingerprint(currentId);

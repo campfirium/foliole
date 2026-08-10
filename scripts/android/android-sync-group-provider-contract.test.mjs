@@ -19,6 +19,13 @@ it('serves the established content blob batch route instead of provisioning thro
   expect(batch).toContain('X-Blob-Hash: ');
 });
 
+it('listens on the same stable port persisted by bidirectional peer pairing', async () => {
+  const server = await readJava('FolioleCompanionSyncGroupServer.java');
+  expect(server).toContain('private static final int SYNC_PORT = 38641;');
+  expect(server).toContain('new ServerSocket(SYNC_PORT)');
+  expect(server).not.toContain('new ServerSocket(0)');
+});
+
 it('authorizes every Android provider data request with both the channel secret and member fact', async () => {
   const auth = await readJava('FolioleCompanionSyncGroupRequestAuth.java');
   const database = await readJava('FolioleCompanionSyncGroupDatabase.java');

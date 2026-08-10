@@ -27,7 +27,9 @@ public final class FolioleCompanionNsdDiscovery {
         NsdCollector collector = new NsdCollector(
             context,
             nsdManager,
-            FolioleCompanionHostBridgeContractDefinitions.networkServiceType(context)
+            qualifiedServiceType(
+                FolioleCompanionHostBridgeContractDefinitions.networkServiceType(context)
+            )
         );
         collector.start();
         collector.await(FolioleCompanionHostBridgeContractDefinitions.networkDiscoveryTimeoutMs(context));
@@ -37,6 +39,11 @@ public final class FolioleCompanionNsdDiscovery {
 
     static boolean sameServiceType(String requested, String discovered) {
         return normalizeServiceType(requested).equalsIgnoreCase(normalizeServiceType(discovered));
+    }
+
+    static String qualifiedServiceType(String serviceType) {
+        String normalized = normalizeServiceType(serviceType);
+        return normalized.isEmpty() ? normalized : normalized + ".";
     }
 
     private static String normalizeServiceType(String serviceType) {

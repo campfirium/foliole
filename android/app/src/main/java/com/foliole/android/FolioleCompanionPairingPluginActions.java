@@ -25,12 +25,26 @@ final class FolioleCompanionPairingPluginActions {
         }
     }
 
+    static void clearSyncGroupCredentials(Context context, PluginCall call) {
+        try {
+            FolioleCompanionPairingStore.clearPairingCredentials(context);
+            FolioleCompanionSyncGroupJoinGrantStore.clear(context);
+            FolioleCompanionSyncGroupPeerStore.clear(context);
+            FolioleCompanionSyncGroupOutboundPeerStore.clear(context);
+            call.resolve();
+        } catch (Exception exception) {
+            call.reject("Failed to clear Sync Group credentials.", exception);
+        }
+    }
+
     static void savePairingCredentials(Context context, PluginCall call) {
         try {
             String deviceIdKey = FolioleCompanionBridgeContractDefinitions.pairingDeviceIdCredentialRequestKey(context);
             String deviceKindKey = FolioleCompanionBridgeContractDefinitions.pairingDeviceKindCredentialRequestKey(context);
             String deviceNameKey = FolioleCompanionBridgeContractDefinitions.pairingDeviceNameCredentialRequestKey(context);
             String deviceSecretKey = FolioleCompanionBridgeContractDefinitions.pairingDeviceSecretCredentialRequestKey(context);
+            String providerDeviceSecretKey = FolioleCompanionBridgeContractDefinitions
+                .pairingCredentialRequestKey(context, "providerDeviceSecret");
             String endpointUrlKey = FolioleCompanionBridgeContractDefinitions.pairingEndpointUrlCredentialRequestKey(context);
             String syncGroupIdKey = FolioleCompanionBridgeContractDefinitions.pairingSyncGroupIdCredentialRequestKey(context);
             String pairedAtKey = FolioleCompanionBridgeContractDefinitions.pairingPairedAtCredentialRequestKey(context);
@@ -44,6 +58,7 @@ final class FolioleCompanionPairingPluginActions {
             String deviceKind = call.getString(deviceKindKey);
             String deviceName = call.getString(deviceNameKey);
             String deviceSecret = call.getString(deviceSecretKey);
+            String providerDeviceSecret = call.getString(providerDeviceSecretKey);
             String endpointUrl = call.getString(endpointUrlKey);
             String syncGroupId = call.getString(syncGroupIdKey);
             String pairedAt = call.getString(pairedAtKey);
@@ -69,7 +84,8 @@ final class FolioleCompanionPairingPluginActions {
             }
             if ((syncGroupId != null || endpointUrl != null) &&
                 (rejectIfBlank(call, syncGroupIdKey, syncGroupId) || rejectIfBlank(call, endpointUrlKey, endpointUrl) ||
-                    rejectIfBlank(call, remotePeerIdKey, remotePeerId))) return;
+                    rejectIfBlank(call, remotePeerIdKey, remotePeerId) ||
+                    rejectIfBlank(call, providerDeviceSecretKey, providerDeviceSecret))) return;
             JSObject saved = FolioleCompanionPairingStore.savePairingCredentials(
                 context,
                 deviceId,
@@ -87,6 +103,7 @@ final class FolioleCompanionPairingPluginActions {
             if (syncGroupId != null || endpointUrl != null) {
                 FolioleCompanionSyncGroupOutboundPeerStore.save(
                     context, syncGroupId, deviceId, remotePeerId, endpointUrl, deviceSecret);
+                FolioleCompanionSyncGroupPeerStore.saveSecret(context, primaryDeviceId, providerDeviceSecret);
             }
             call.resolve(saved);
         } catch (Exception exception) {
