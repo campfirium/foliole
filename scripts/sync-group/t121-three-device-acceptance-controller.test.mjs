@@ -20,26 +20,15 @@ function counts(value) {
   return { attachments: value, contentBlobs: value, nodes: value };
 }
 
-function protection(device, value = 2) {
-  return { counts: counts(value), device, deviceIdentity: `device-${device}`, integrity: 'ok',
-    restorable: true, restorePoint: `restore-${device}` };
-}
-
 function baseline() {
   return { devices: {
     A: { activeMemberCount: 2, counts: counts(2), device: 'A', groupId: 'group-new',
       localMemberState: 'active', timelineId: 'timeline-new' },
     B: { activeMemberCount: 2, counts: counts(2), device: 'B', groupId: 'group-new',
       localMemberState: 'active', timelineId: 'timeline-new' },
-    C: { activeMemberCount: 0, counts: counts(0), device: 'C', groupId: null,
-      localMemberState: null, timelineId: null }
-  }, groupId: 'group-new', restorePoints: {
-    A: protection('A'), B: protection('B'), C: protection('C', 0)
-  }, timelineId: 'timeline-new' };
-}
-
-function originalProtection() {
-  return { A: protection('A'), B: protection('B'), C: protection('C') };
+    C: { activeMemberCount: 0, attachmentCount: 0, contentBlobCount: 0,
+      device: 'C', groupId: null, localMemberState: null, timelineId: null, userNodeCount: 0 }
+  }, groupId: 'group-new', timelineId: 'timeline-new' };
 }
 
 function receipt(step, manifest = null) {
@@ -81,17 +70,12 @@ function journeyEvidence(step, manifest) {
 it('requires A and B to share a two-member identity while C stays unbound and empty', () => {
   expect(() => assertAcceptanceBaseline(baseline())).not.toThrow();
   const invalid = baseline();
-  invalid.devices.C.counts.nodes = 1;
-  expect(() => assertAcceptanceBaseline(invalid)).not.toThrow();
-  invalid.devices.C.counts.nodes = 2;
-  expect(() => assertAcceptanceBaseline(invalid)).not.toThrow();
-  invalid.devices.C.counts.nodes = 3;
-  expect(() => assertAcceptanceBaseline(invalid)).toThrow('not an empty workspace count');
+  invalid.devices.C.userNodeCount = 1;
+  expect(() => assertAcceptanceBaseline(invalid)).toThrow('empty product workspace');
 });
 
-it('pins candidate, restore points, baseline, and success criteria into one boundary digest', () => {
-  const manifest = createAcceptanceManifest({ baseline: baseline(), candidate: candidate(),
-    originalProtection: originalProtection(), phase: 'journey' });
+it('pins candidate, current baseline, and success criteria into one boundary digest', () => {
+  const manifest = createAcceptanceManifest({ baseline: baseline(), candidate: candidate(), phase: 'journey' });
   const digest = acceptanceBoundaryDigest(manifest);
   manifest.baseline.groupId = 'changed';
   expect(acceptanceBoundaryDigest(manifest)).not.toBe(digest);
@@ -123,16 +107,14 @@ it('persists each successful receipt and stops at the first red action', async (
 });
 
 it('accepts success only after the complete continuous journey evidence chain', () => {
-  const manifest = createAcceptanceManifest({ baseline: baseline(), candidate: candidate(),
-    originalProtection: originalProtection(), phase: 'journey' });
+  const manifest = createAcceptanceManifest({ baseline: baseline(), candidate: candidate(), phase: 'journey' });
   manifest.boundaryDigest = acceptanceBoundaryDigest(manifest);
   for (const step of JOURNEY_STEPS) recordStep(manifest, step, receipt(step, manifest));
   expect(assertJourneyComplete(manifest)).toBe(true);
 });
 
 it('rejects a green-looking journey receipt that lacks bound product evidence', () => {
-  const manifest = createAcceptanceManifest({ baseline: baseline(), candidate: candidate(),
-    originalProtection: originalProtection(), phase: 'journey' });
+  const manifest = createAcceptanceManifest({ baseline: baseline(), candidate: candidate(), phase: 'journey' });
   manifest.boundaryDigest = acceptanceBoundaryDigest(manifest);
   expect(() => recordStep(manifest, JOURNEY_STEPS[0], receipt(JOURNEY_STEPS[0])))
     .toThrow('registered action differs');

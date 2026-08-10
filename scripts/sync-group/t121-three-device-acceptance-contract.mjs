@@ -8,11 +8,9 @@ import {
 
 export const BASELINE_STEPS = [
   'freeze-candidate',
-  'protect-original',
   'reset-c',
   'rebuild-a-b',
   'restart-verify-baseline',
-  'protect-baseline',
   'freeze-journey'
 ];
 
@@ -32,7 +30,6 @@ export const JOURNEY_STEPS = [
   'verify-final-convergence'
 ];
 
-const DEVICES = ['A', 'B', 'C'];
 const HEX_REVISION = /^[0-9a-f]{40}$/u;
 
 function fail(message) {
@@ -42,19 +39,6 @@ function fail(message) {
 function requireText(value, label) {
   if (typeof value !== 'string' || value.trim() === '') fail(`${label} is missing`);
   return value;
-}
-
-function requireInteger(value, label) {
-  if (!Number.isInteger(value) || value < 0) fail(`${label} is invalid`);
-  return value;
-}
-
-function assertCounts(counts, label, empty = false) {
-  for (const key of ['nodes', 'contentBlobs', 'attachments']) {
-    const value = requireInteger(counts?.[key], `${label}.${key}`);
-    const expectedEmpty = key === 'nodes' ? value <= 2 : value === 0;
-    if (empty && !expectedEmpty) fail(`${label}.${key} is not an empty workspace count`);
-  }
 }
 
 export function assertFrozenCandidate(candidate) {
@@ -69,21 +53,6 @@ export function assertFrozenCandidate(candidate) {
   }
 }
 
-function assertProtectionPoint(point, device) {
-  if (point?.device !== device || point.integrity !== 'ok' || point.restorable !== true) {
-    fail(`${device} protection is incomplete`);
-  }
-  requireText(point.restorePoint, `${device} restore point`);
-  requireText(point.deviceIdentity, `${device} device identity`);
-  assertCounts(point.counts, `${device} protection counts`);
-}
-
-export function assertOriginalProtection(protection) {
-  for (const device of DEVICES) assertProtectionPoint(protection?.[device], device);
-  const restorePoints = DEVICES.map((device) => protection[device].restorePoint);
-  if (new Set(restorePoints).size !== restorePoints.length) fail('restore points must be distinct');
-}
-
 function assertActiveMember(facts, device, expected) {
   if (facts?.device !== device || facts.localMemberState !== 'active') {
     fail(`${device} is not an active baseline member`);
@@ -92,7 +61,6 @@ function assertActiveMember(facts, device, expected) {
     fail(`${device} baseline identity differs from the manifest`);
   }
   if (facts.activeMemberCount !== 2) fail(`${device} baseline member count is not two`);
-  assertCounts(facts.counts, `${device} baseline counts`);
 }
 
 export function assertAcceptanceBaseline(baseline) {
@@ -106,8 +74,9 @@ export function assertAcceptanceBaseline(baseline) {
       || c.localMemberState !== null || c.activeMemberCount !== 0) {
     fail('C is not an unbound empty baseline');
   }
-  assertCounts(c.counts, 'C baseline counts', true);
-  for (const device of DEVICES) assertProtectionPoint(baseline.restorePoints?.[device], device);
+  if (c.userNodeCount !== 0 || c.contentBlobCount !== 0 || c.attachmentCount !== 0) {
+    fail('C is not an empty product workspace');
+  }
 }
 
 function assertReceipt(step, receipt) {
@@ -132,19 +101,16 @@ export function recordStep(manifest, step, receipt) {
   return manifest;
 }
 
-export function createAcceptanceManifest({ baseline = null, candidate, originalProtection = null,
-  phase }) {
+export function createAcceptanceManifest({ baseline = null, candidate, phase }) {
   if (!['baseline', 'journey'].includes(phase)) fail('phase is invalid');
   assertFrozenCandidate(candidate);
   if (phase === 'journey') {
-    assertOriginalProtection(originalProtection);
     assertAcceptanceBaseline(baseline);
   }
   return {
     baseline: baseline ? structuredClone(baseline) : null,
     candidate: structuredClone(candidate),
     createdAt: new Date().toISOString(),
-    originalProtection: originalProtection ? structuredClone(originalProtection) : null,
     phase,
     receipts: [],
     schemaVersion: 1,
@@ -156,7 +122,6 @@ export function acceptanceBoundaryDigest(manifest) {
   const boundary = {
     baseline: manifest.baseline,
     candidate: manifest.candidate,
-    originalProtection: manifest.originalProtection,
     schemaVersion: manifest.schemaVersion,
     successCriteria: manifest.successCriteria
   };

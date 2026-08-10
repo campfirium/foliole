@@ -125,9 +125,7 @@ export async function runA5CaptureAnnotation({
   paths, protectData, serial
 }) {
   fsApi.mkdirSync(evidenceRoot, { recursive: true });
-  fsApi.mkdirSync(paths.protectionBackups, { recursive: true });
   const artifacts = captureAnnotationArtifactPaths(evidenceRoot);
-  const dataManifest = artifacts['capture-annotation-data-protection.json'];
   const snapshotManifest = path.join(evidenceRoot, 'capture-annotation-database-snapshot.json');
   const snapshotRoot = path.join(evidenceRoot, 'capture-annotation-database');
   const builtApks = {
@@ -142,17 +140,11 @@ export async function runA5CaptureAnnotation({
     output.push((await checked(execute, paths.adbPath,
       ['-P', adbPort, '-s', serial, 'shell', 'am', 'force-stop', CAPTURE_ANNOTATION_APP_ID],
       commandOptions(env, 'capture_quiesce_timeout', 30_000), 'capture-quiesce')).output);
-    const before = await protectData('backup', dataManifest);
-    output.push(before.output);
     output.push((await installApk({ adbPort, env, execute, filePath: builtApks.main.filePath,
       paths, serial, testOnly: false })).output);
     output.push((await installApk({ adbPort, env, execute, filePath: builtApks.test.filePath,
       paths, serial, testOnly: true })).output);
     testInstalled = true;
-    output.push((await protectData('check', dataManifest)).output);
-    if (!fsApi.existsSync(dataManifest)) {
-      throw captureAnnotationFailure('Data protection manifest is missing', 'data-protection');
-    }
     const scenario = await requireInstalledScenario({ adbPort, env, execute, paths, serial });
     const instrumentation = await checked(execute, paths.adbPath, [
       '-P', adbPort, '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',

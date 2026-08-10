@@ -10,7 +10,6 @@ import {
   pairSyncRecoveryModeArgs, pairSyncRecoveryRequiresApproval, parsePairSyncRecoveryInstrumentationResult
 } from './windows-a5-pair-sync-recovery-contract.mjs';
 import { createPairSyncRecoveryWindow, resolvePairSyncConcurrentFailure } from './windows-a5-pair-sync-recovery-concurrency.mjs';
-import { scrubPairSyncDataProtection } from './windows-a5-pair-sync-recovery-evidence.mjs';
 import { collectPairSyncRecoveryFailureEvidence } from './windows-a5-pair-sync-recovery-failure-evidence.mjs';
 import { postPairSyncRecoveryReadiness } from './windows-a5-pair-sync-recovery-readiness.mjs';
 import {
@@ -114,11 +113,10 @@ export async function runWindowsA5PairSyncRecovery({
   credentialRepairRequired = false, existingPairing = false, openDesktopSession = openPairSyncDesktopSession,
   desktopControl = clientControl, openTransport = openPairSyncRecoveryTransport,
   closeTransport = closePairSyncRecoveryTransport,
-  validateDesktop = validateOwnedDesktopPreflight, paths, protectData,
+  validateDesktop = validateOwnedDesktopPreflight, paths,
   remotePeerFingerprint, serial
 }) {
   const artifacts = pairSyncRecoveryArtifactPaths(evidenceRoot);
-  const dataManifest = artifacts['pair-sync-recovery-data-protection.json'];
   const builtApks = { main: apk(fsApi, paths.repoRoot, MAIN_APK), test: apk(fsApi, paths.repoRoot, TEST_APK) };
   const output = [];
   let session;
@@ -131,13 +129,9 @@ export async function runWindowsA5PairSyncRecovery({
   const recoveryEvidence = createPairSyncRecoveryEvidenceTracker();
   await desktopControl(execute, paths, env, 'stop');
   try {
-    const before = await protectData('backup', dataManifest);
-    output.push(before.output);
     output.push(await install(execute, paths, env, adbPort, serial, builtApks.main.filePath, false));
     output.push(await install(execute, paths, env, adbPort, serial, builtApks.test.filePath, true));
     testInstalled = true;
-    output.push((await protectData('check', dataManifest)).output);
-    scrubPairSyncDataProtection(fsApi, dataManifest);
     session = await desktopStep('desktop-session-open', () => openDesktopSession({
       env, repoRoot: paths.repoRoot
     }));
@@ -191,7 +185,6 @@ export async function runWindowsA5PairSyncRecovery({
       adbPort, env, error: primaryError, evidenceRoot, execute, fsApi, paths, serial, session
     });
   }
-  scrubPairSyncDataProtection(fsApi, dataManifest);
   try {
     if (transportOpen) {
       await closeTransport(pairSyncAdbRunner(execute, paths, env, adbPort, serial));

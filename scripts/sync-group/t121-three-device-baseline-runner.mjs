@@ -62,9 +62,9 @@ export async function prepareBaselineAuthorization(repoRoot = process.cwd()) {
 
 export function createBaselineAuthorizationRequest(candidate) {
   const request = { candidate, mutations: [
-    { device: 'A', effect: 'stop the registered DEV owner; preserve the library; create a new Sync Group through the product' },
-    { device: 'B', effect: 'force-stop; protect SQLite, WAL, and attachments; clear app data through the product; join A' },
-    { device: 'C', effect: 'stop Windows native runtime; protect the isolated client root; replace only that owned root with an empty product workspace' }
+    { device: 'A', effect: 'stop the registered DEV owner and create the test Sync Group through the product' },
+    { device: 'B', effect: 'clear disposable test app data, then join A through the product' },
+    { device: 'C', effect: 'replace only the isolated test client root with an empty product workspace' }
   ], schemaVersion: 1 };
   request.authorizationDigest = requestDigest(request);
   return request;
@@ -104,15 +104,6 @@ export async function executeAuthorizedBaseline({ authorization, repoRoot = proc
   const artifacts = {};
   const actions = {
     'freeze-candidate': async () => receipt('freeze-candidate', request.authorizationDigest),
-    'protect-original': async () => {
-      const macos = await runNode(repoRoot, 'scripts/macos/macos-sync-group-library-protection.mjs',
-        ['--label', 'original', '--candidate', candidate.revision]);
-      const android = await runNode(repoRoot, 'scripts/android/macos-a5-dev.mjs', ['protect-original']);
-      artifacts.originalA = evidencePath(macos.stdout, /evidence=([^\r\n]+)/u, 'macOS protection');
-      artifacts.originalB = evidencePath(android.stdout, /protect-original evidence=([^\r\n]+)/u,
-        'Android protection');
-      return receipt('protect-original', `${artifacts.originalA};${artifacts.originalB}`);
-    },
     'reset-c': async () => {
       const result = await runNode(repoRoot, 'scripts/windows/windows-dev-control.mjs',
         ['sync-group-baseline-reset']);
@@ -136,24 +127,10 @@ export async function executeAuthorizedBaseline({ authorization, repoRoot = proc
         'baseline inspection');
       return receipt('restart-verify-baseline', artifacts.inspection);
     },
-    'protect-baseline': async () => {
-      const macos = await runNode(repoRoot, 'scripts/macos/macos-sync-group-library-protection.mjs',
-        ['--label', 'baseline', '--candidate', candidate.revision]);
-      const android = await runNode(repoRoot, 'scripts/android/macos-a5-dev.mjs', ['protect-baseline']);
-      artifacts.baselineA = evidencePath(macos.stdout, /evidence=([^\r\n]+)/u,
-        'macOS baseline protection');
-      artifacts.baselineB = evidencePath(android.stdout, /protect-baseline evidence=([^\r\n]+)/u,
-        'Android baseline protection');
-      return receipt('protect-baseline', `${artifacts.baselineA};${artifacts.baselineB}`);
-    },
     'freeze-journey': async () => {
       const journey = buildThreeDeviceJourneyManifest({
-        baselineA: readJson(artifacts.baselineA).protection,
-        baselineB: readJson(artifacts.baselineB),
         baselineInspection: readJson(artifacts.inspection).evidence,
-        candidate, cReset: readJson(artifacts.cReset),
-        originalA: readJson(artifacts.originalA).protection,
-        originalB: readJson(artifacts.originalB)
+        candidate, cReset: readJson(artifacts.cReset)
       });
       journey.boundaryDigest = acceptanceBoundaryDigest(journey);
       artifacts.journey = path.join(root, 'journey-manifest.json');

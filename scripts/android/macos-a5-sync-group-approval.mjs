@@ -3,14 +3,12 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 import process from 'node:process';
 
-import { scrubPairSyncDataProtection } from '../windows/windows-a5-pair-sync-recovery-evidence.mjs';
 import {
   A5_SERIAL,
   assertFixedA5,
   build,
   macosA5GradleEnv,
-  macosA5Paths,
-  protectData
+  macosA5Paths
 } from './macos-a5-dev.mjs';
 
 const APP_ID = 'com.foliole.android';
@@ -59,17 +57,6 @@ export function parseSyncGroupApprovalReceipt(output) {
   return receipt;
 }
 
-export function assertSyncGroupProtectionSnapshot(snapshot) {
-  const database = snapshot?.database;
-  const inspection = database?.inspection;
-  if (database?.integrity !== 'ok' || !inspection?.deviceIdentityFingerprint
-      || !inspection.syncGroupId || !inspection.syncGroupTimelineId
-      || !Number.isInteger(inspection.activeSyncGroupMemberCount)
-      || inspection.activeSyncGroupMemberCount < 1 || !Number.isInteger(database.counts?.nodes)) {
-    throw new Error('Sync Group protection baseline is incomplete.');
-  }
-}
-
 export async function startMacosA5SyncGroupApprovalProvider({ execute, onReady, paths, env }) {
   requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start',
     '-W', '-n', `${APP_ID}/.MainActivity`], { env, timeoutMs: 60_000 }), 'provider-ready');
@@ -89,12 +76,9 @@ export async function runMacosA5SyncGroupApproval({ execute, onReady = async () 
   const reuseInstalledMain = await installedMainMatches({ execute, paths, env });
   const evidenceRoot = path.join(repoRoot, '.tmp/artifacts/a5-sync-group-approval');
   fs.mkdirSync(evidenceRoot, { recursive: true });
-  const manifest = path.join(evidenceRoot, 'data-protection.json');
   requireSuccess(await execute(paths.adb, [
     '-s', A5_SERIAL, 'shell', 'am', 'force-stop', APP_ID
-  ], { env, timeoutMs: 30_000 }), 'provider-stop-before-backup');
-  await protectData(paths, env, 'backup', manifest);
-  assertSyncGroupProtectionSnapshot(JSON.parse(fs.readFileSync(manifest, 'utf8')).snapshot);
+  ], { env, timeoutMs: 30_000 }), 'provider-stop-before-install');
   try {
     if (!reuseInstalledMain) {
       requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'install', '-r', paths.apk], {
@@ -108,8 +92,6 @@ export async function runMacosA5SyncGroupApproval({ execute, onReady = async () 
     requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'logcat', '-c'], {
       env, timeoutMs: 30_000
     }), 'provider-log-clear');
-    await protectData(paths, env, 'check', manifest);
-    scrubPairSyncDataProtection(fs, manifest);
     await startMacosA5SyncGroupApprovalProvider({ execute, onReady, paths, env });
     const run = requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'instrument',
       '-w', '-r', '-e', 'class', `${TEST_CLASS}#approvesJoinWhileProviderStaysForeground`, TEST_RUNNER], {

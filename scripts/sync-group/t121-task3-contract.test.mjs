@@ -8,13 +8,9 @@ const counts = { attachments: 3, contentBlobs: 4, missingAttachments: 0,
   missingContentBlobs: 0, nodes: 5 };
 const identity = (device, activeMemberCount = 3) => ({ activeMemberCount,
   counts, device, groupId: 'group', localMemberState: 'active', timelineId: 'timeline' });
-const restore = (device) => ({ device, deviceIdentity: `identity-${device}`, integrity: 'ok',
-  restorable: true, restorePoint: `restore-${device}` });
-
 function manifest() {
   return createTask3Manifest({ baseline: { devices: { A: identity('A', 2), B: identity('B'),
-    C: identity('C') }, groupId: 'group', restorePoints: { A: restore('A'), B: restore('B'),
-    C: restore('C') }, timelineId: 'timeline' }, candidate: { branch: 'dev', clean: true,
+    C: identity('C') }, groupId: 'group', timelineId: 'timeline' }, candidate: { branch: 'dev', clean: true,
     committed: true, revision: 'a'.repeat(40), verifications: [{ status: 'passed' }] } });
 }
 
@@ -26,7 +22,7 @@ function receipt(value, step) {
   return { evidence, evidenceRef: `${step}.json`, resultStatus: 'success', step };
 }
 
-it('accepts only a restorable B/C-complete task 2 output baseline', () => {
+it('accepts only a current B/C-complete task 2 output baseline', () => {
   expect(() => manifest()).not.toThrow();
   const value = manifest();
   value.baseline.devices.C.counts.missingAttachments = 1;

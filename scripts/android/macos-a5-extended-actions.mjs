@@ -21,19 +21,6 @@ export async function runMacosA5DatabasePerformanceEntry(args) {
   console.log(`[macos-a5-dev] database-performance evidence=${result.evidencePath}`);
 }
 
-export async function runMacosA5DataProtectionEntry(args) {
-  args.assertFixed();
-  await args.execute(args.paths.adb, [
-    '-s', args.serial, 'shell', 'am', 'force-stop', 'com.foliole.android'
-  ], { env: args.env, timeoutMs: 30_000 });
-  const label = args.action === 'protect-original' ? 'original' : 'baseline';
-  const root = path.join(args.paths.repoRoot, '.tmp/artifacts/a5-data-protection', args.buildIdentity);
-  fs.mkdirSync(root, { recursive: true });
-  const manifest = path.join(root, `${label}-manifest.json`);
-  await args.protectData('backup', manifest);
-  console.log(`[macos-a5-dev] ${args.action} evidence=${manifest}`);
-}
-
 export async function runMacosA5SyncGroupMaintenanceEntry(args) {
   args.assertFixed(); args.build();
   const result = await runMacosA5SyncGroupMaintenance({
@@ -85,7 +72,7 @@ export async function runMacosA5PairSyncEntry(args) {
     deviceFingerprint: readiness.deviceIdentityFingerprint, env: args.env,
     evidenceRoot: path.join(args.paths.repoRoot, '.tmp/artifacts/a5-pair-sync', buildIdentity),
     execute: args.execute, existingPairing: readiness.existingPairing, paths: args.paths,
-    protectData: args.protectData, remotePeerFingerprint: readiness.remotePeerFingerprint,
+    remotePeerFingerprint: readiness.remotePeerFingerprint,
     serial: args.serial
   });
   process.stdout.write(result.output);
@@ -96,7 +83,6 @@ export async function runMacosA5ExistingSyncEntry(args) {
   args.assertFixed(); args.build();
   const evidenceRoot = path.join(args.paths.repoRoot, '.tmp/artifacts/a5-existing-sync', args.buildIdentity());
   fs.mkdirSync(evidenceRoot, { recursive: true });
-  await args.protectData('backup', path.join(evidenceRoot, 'data-protection.json'));
   const testApk = path.join(args.paths.repoRoot,
     'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk');
   await args.execute(args.paths.adb, ['-s', args.serial, 'install', '-r', args.paths.apk], {

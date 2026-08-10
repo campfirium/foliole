@@ -43,11 +43,6 @@ export function assertTask2OutputBaseline(baseline) {
     fail('offline A identity is incomplete');
   }
   requireCounts(a.counts, 'A');
-  for (const device of ['A', 'B', 'C']) {
-    const point = baseline.restorePoints?.[device];
-    if (point?.device !== device || point.integrity !== 'ok' || point.restorable !== true
-        || !point.restorePoint || !point.deviceIdentity) fail(`${device} restore point is incomplete`);
-  }
 }
 
 export function task3BoundaryDigest(manifest) {

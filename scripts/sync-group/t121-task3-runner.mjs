@@ -72,20 +72,19 @@ async function node(root, script, args = []) {
   ) });
 }
 
-function androidPoint(manifest, expected) {
-  const db = manifest.snapshot.database;
+function androidPoint(snapshot, expected) {
+  const db = snapshot.database;
   const facts = db.inspection;
   if (db.integrity !== 'ok' || facts.syncGroupId !== expected.groupId
       || facts.syncGroupTimelineId !== expected.timelineId || facts.activeSyncGroupMemberCount !== 3
       || facts.missingAttachmentCount !== 0 || facts.missingContentBlobCount !== 0) {
-    throw new Error('Android B task 2 protection is incomplete.');
+    throw new Error('Android B task 2 state is incomplete.');
   }
   return { counts: { attachments: db.counts.attachments, contentBlobs: db.counts.content_blobs,
     missingAttachments: facts.missingAttachmentCount,
     missingContentBlobs: facts.missingContentBlobCount, nodes: db.counts.nodes }, device: 'B',
-  deviceIdentity: facts.deviceIdentityFingerprint, groupId: facts.syncGroupId, integrity: 'ok',
-  localMemberState: 'active', restorable: true, restorePoint: manifest.backup.manifestPath,
-  timelineId: facts.syncGroupTimelineId };
+  deviceIdentity: facts.deviceIdentityFingerprint, groupId: facts.syncGroupId,
+  localMemberState: 'active', timelineId: facts.syncGroupTimelineId };
 }
 
 function device(point, activeMemberCount = 3) {
@@ -93,28 +92,25 @@ function device(point, activeMemberCount = 3) {
     localMemberState: point.localMemberState, timelineId: point.timelineId };
 }
 
-async function buildBaseline(root, candidate) {
-  const mac = await node(root, 'scripts/macos/macos-sync-group-library-protection.mjs',
-    ['--label', 'original', '--candidate', candidate.revision]);
-  const aPath = evidence(mac, /evidence=([^\r\n]+)/u, 'macOS A protection');
-  const bOriginal = await node(root, 'scripts/android/macos-a5-dev.mjs', ['protect-original']);
-  evidence(bOriginal, /protect-original evidence=([^\r\n]+)/u, 'Android B protection');
+async function buildBaseline(root) {
   await node(root, 'scripts/windows/windows-dev-control.mjs', ['sync-group-baseline-reset']);
   await node(root, 'scripts/android/macos-a5-sync-group-baseline-inspect.mjs');
+  const aFacts = inspectMacosFacts(root);
+  const expected = { groupId: aFacts.localGroupId, timelineId: aFacts.localTimelineId };
   await node(root, 'scripts/android/macos-a5-dev.mjs', ['approve-windows-join']);
-  const bProtected = await node(root, 'scripts/android/macos-a5-dev.mjs', ['protect-baseline']);
-  const bPath = evidence(bProtected, /protect-baseline evidence=([^\r\n]+)/u, 'Android B task 2 protection');
-  const cProtected = await node(root, 'scripts/windows/windows-dev-control.mjs', ['sync-group-task3-protect']);
-  const cIdentity = evidence(cProtected,
-    /sync-group-task3-protect identity=([A-Za-z0-9.-]+)/u, 'Windows C task 2 protection');
+  const b = androidPoint(await androidSnapshot(root), expected);
+  const cInspection = await node(root, 'scripts/windows/windows-dev-control.mjs',
+    ['sync-group-task3-protect']);
+  const cIdentity = evidence(cInspection,
+    /sync-group-task3-protect identity=([A-Za-z0-9.-]+)/u, 'Windows C task 2 inspection');
   const cPath = path.join(root, '.tmp/artifacts/sync-group-task3-protection', cIdentity,
     'sync-group-task3-protection.json');
-  const a = JSON.parse(fs.readFileSync(aPath, 'utf8')).protection;
-  const expected = { groupId: a.groupId, timelineId: a.timelineId };
-  const b = androidPoint(JSON.parse(fs.readFileSync(bPath, 'utf8')), expected);
-  const c = JSON.parse(fs.readFileSync(cPath, 'utf8')).protection;
-  return { devices: { A: device(a, 2), B: device(b), C: device(c) }, ...expected,
-    restorePoints: { A: a, B: b, C: c } };
+  const c = JSON.parse(fs.readFileSync(cPath, 'utf8')).current;
+  const a = finalPoint('A', aFacts, { attachments: aFacts.attachmentCount,
+    contentBlobs: aFacts.contentBlobCount, nodes: aFacts.nodeCount });
+  return { devices: { A: { ...a, activeMemberCount: 2 }, B: device(b),
+    C: finalPoint('C', c, { attachments: c.attachmentCount,
+      contentBlobs: c.contentBlobCount, nodes: c.nodeCount }) }, ...expected };
 }
 
 async function androidSnapshot(root) {
@@ -122,6 +118,15 @@ async function androidSnapshot(root) {
   return collectAndroidDeviceSnapshot({ adb: paths.adb, appId: 'com.foliole.android',
     databaseInspector: inspectPairSyncRecoveryWorkspace, includeEvents: false,
     serial: A5_SERIAL, tables: ['nodes', 'content_blobs', 'attachments'] });
+}
+
+function inspectMacosFacts(root) {
+  const electron = path.join(root, 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron');
+  const inspector = path.join(root, 'scripts/windows/windows-sync-group-recovery-inspect.mjs');
+  return JSON.parse(execFileSync(electron, [inspector,
+    path.join(MACOS_DAILY_LIBRARY_HOME, 'Data', 'foliole.db')], {
+    cwd: root, encoding: 'utf8', env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }
+  }));
 }
 
 function finalPoint(deviceName, facts, counts) {
@@ -167,12 +172,7 @@ async function runJourney(root, manifest) {
   finally { await reopened.close(); }
   await node(root, 'scripts/android/macos-a5-dev.mjs', ['resume-sync-group']);
   const b = await androidSnapshot(root);
-  const electron = path.join(root, 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron');
-  const inspector = path.join(root, 'scripts/windows/windows-sync-group-recovery-inspect.mjs');
-  const aFacts = JSON.parse(execFileSync(electron, [inspector,
-    path.join(MACOS_DAILY_LIBRARY_HOME, 'Data', 'foliole.db')], {
-    cwd: root, encoding: 'utf8', env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }
-  }));
+  const aFacts = inspectMacosFacts(root);
   const devices = {
     A: finalPoint('A', aFacts, { attachments: aFacts.attachmentCount,
       contentBlobs: aFacts.contentBlobCount, nodes: aFacts.nodeCount }),
@@ -199,7 +199,7 @@ export async function executeTask3({ authorization, root = process.cwd() }) {
   if (authorization !== request.authorizationDigest || authorizationDigest(request) !== authorization) {
     throw new Error('T121 task 3 authorization does not match the frozen candidate.');
   }
-  const manifest = createTask3Manifest({ baseline: await buildBaseline(root, candidate), candidate });
+  const manifest = createTask3Manifest({ baseline: await buildBaseline(root), candidate });
   const manifestPath = path.join(artifactRoot(root, candidate.revision), 'task3-manifest.json');
   fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
   await runJourney(root, manifest);

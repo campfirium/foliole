@@ -27,10 +27,5 @@ it('keeps Android approval active while the fixed Windows recovery runs', async 
   );
   expect(approvalSource).toContain('const reuseInstalledMain = await installedMainMatches');
   expect(approvalSource).toContain('if (!reuseInstalledMain)');
-  expect(approvalSource.indexOf("'shell', 'am', 'force-stop', APP_ID"))
-    .toBeLessThan(approvalSource.indexOf("protectData(paths, env, 'backup'"));
-  expect(approvalSource.indexOf("protectData(paths, env, 'backup'"))
-    .toBeLessThan(approvalSource.indexOf('if (!reuseInstalledMain)'));
-  expect(approvalSource.indexOf("protectData(paths, env, 'check'"))
-    .toBeGreaterThan(approvalSource.indexOf("'test-install'"));
+  expect(approvalSource).not.toContain('protectData(');
 });

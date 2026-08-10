@@ -50,7 +50,7 @@ function successfulLiveReload() {
 }
 
 describe('Windows DEV fixed device action', () => {
-  it('deploys only to fixed port and serial with data protection and cleanup', async () => {
+  it('deploys only to the fixed port and serial without retaining a device backup', async () => {
     const { evidenceRoot, paths } = fixture();
     const { calls, execute } = successfulExecutor(paths);
     await expect(runWindowsDevDeviceAction({
@@ -65,15 +65,9 @@ describe('Windows DEV fixed device action', () => {
     expect(adbCalls).toContainEqual([
       '-P', WINDOWS_DEV_ADB_PORT, '-s', WINDOWS_DEV_A5_SERIAL, 'get-state'
     ]);
-    expect(adbCalls).toContainEqual([
-      '-P', WINDOWS_DEV_ADB_PORT, '-s', WINDOWS_DEV_A5_SERIAL,
-      'shell', 'am', 'force-stop', 'com.foliole.android'
-    ]);
     expect(adbCalls.at(-1)).toEqual(['-P', WINDOWS_DEV_ADB_PORT, 'kill-server']);
     const protection = calls.filter(({ args }) => args.some((arg) => String(arg).includes('android-device-data-protection.mjs')));
-    expect(protection).toHaveLength(2);
-    expect(protection[0].args).toContain('backup');
-    expect(protection[1].args).toContain('check');
+    expect(protection).toHaveLength(0);
     const deploy = calls.find(({ command }) => command === 'powershell.exe');
     expect(deploy.args).toContain(WINDOWS_DEV_A5_SERIAL);
     expect(deploy.args).toContain(paths.systemNode);

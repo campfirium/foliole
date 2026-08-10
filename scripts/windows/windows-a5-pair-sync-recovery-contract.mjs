@@ -10,8 +10,7 @@ export const PAIR_SYNC_RECOVERY_EVIDENCE_FILES = [
   'pair-sync-recovery-manifest.json',
   'pair-sync-recovery-receipt.json',
   'pair-sync-recovery-android-readiness.json',
-  'pair-sync-recovery-desktop-overview.json',
-  'pair-sync-recovery-data-protection.json'
+  'pair-sync-recovery-desktop-overview.json'
 ];
 
 export const PAIR_SYNC_RECOVERY_APP_ID = 'com.foliole.android';

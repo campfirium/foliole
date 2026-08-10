@@ -10,7 +10,6 @@ import { pathToFileURL } from 'node:url';
 import {
   runMacosA5DesktopLeaveEntry,
   runMacosA5DatabasePerformanceEntry,
-  runMacosA5DataProtectionEntry,
   runMacosA5ExistingSyncEntry,
   runMacosA5PairSyncEntry,
   runMacosA5SyncGroupMaintenanceEntry,
@@ -76,7 +75,6 @@ export function macosA5Paths(repoRoot = process.cwd()) {
     cap: path.join(repoRoot, 'node_modules/.bin/cap'),
     gradle: path.join(repoRoot, 'android/gradlew'),
     java: path.join(JAVA_HOME, 'bin/java'),
-    protectionBackups: path.join(repoRoot, '.lab/internal/android-device-backups/mac-a5'),
     repoRoot
   };
 }
@@ -139,7 +137,8 @@ function deploy(paths) {
   readiness(paths);
 }
 
-export async function protectData(paths, env, mode, manifest, backupRoot = paths.protectionBackups) {
+export async function protectData(paths, env, mode, manifest, backupRoot) {
+  if (!backupRoot) throw new Error('Transient Android snapshot root is required.');
   const result = await execute(process.execPath, [
     path.join(paths.repoRoot, 'scripts/android/android-device-data-protection.mjs'),
     '--mode', mode, '--adb', paths.adb, '--serial', A5_SERIAL, '--app-id', APP_ID,
@@ -159,7 +158,7 @@ async function captureAnnotation(paths) {
   const { runA5CaptureAnnotation } = await import('./android-a5-capture-annotation-action.mjs');
   const result = await runA5CaptureAnnotation({
     adbPort: '5037', buildIdentity, env, evidenceRoot, execute, paths: {
-      adbPath: paths.adb, protectionBackups: paths.protectionBackups, repoRoot: paths.repoRoot
+      adbPath: paths.adb, repoRoot: paths.repoRoot
     },
     protectData: (mode, manifest, backupRoot) => protectData(paths, env, mode, manifest, backupRoot),
     serial: A5_SERIAL
@@ -169,7 +168,7 @@ async function captureAnnotation(paths) {
 }
 
 export async function runMacosA5Action(action, repoRoot = process.cwd()) {
-  if (!['status', 'approve-windows-join', 'build', 'capture-annotation', 'clear-app-data', 'create-journey-fact', 'database-performance', 'deploy', 'leave-sync-group', 'macos-leave', 'pair-sync', 'protect-baseline', 'protect-original', 'resume-sync-group', 'sync-existing'].includes(action)) {
+  if (!['status', 'approve-windows-join', 'build', 'capture-annotation', 'clear-app-data', 'create-journey-fact', 'database-performance', 'deploy', 'leave-sync-group', 'macos-leave', 'pair-sync', 'resume-sync-group', 'sync-existing'].includes(action)) {
     throw new Error('Usage: node scripts/android/macos-a5-dev.mjs <registered-action>');
   }
   const paths = macosA5Paths(repoRoot);
@@ -190,21 +189,12 @@ export async function runMacosA5Action(action, repoRoot = process.cwd()) {
     if (action === 'capture-annotation') await captureAnnotation(paths);
     if (action === 'database-performance') await runMacosA5DatabasePerformanceEntry({
       assertFixed: () => assertFixedA5(paths), build: () => build(paths), env: macosA5GradleEnv(), execute, paths, serial: A5_SERIAL });
-    if (action === 'protect-original' || action === 'protect-baseline') {
-      await runMacosA5DataProtectionEntry({ action, assertFixed: () => assertFixedA5(paths),
-        buildIdentity: captureIdentity(), env: macosA5GradleEnv(), execute, paths,
-        protectData: (mode, manifest) => protectData(paths, macosA5GradleEnv(), mode, manifest),
-        serial: A5_SERIAL });
-    }
     if (['leave-sync-group', 'clear-app-data', 'create-journey-fact'].includes(action)) await runMacosA5SyncGroupMaintenanceEntry({
       action, assertFixed: () => assertFixedA5(paths), build: () => build(paths), buildIdentity: captureIdentity(),
       env: macosA5GradleEnv(), execute, paths, serial: A5_SERIAL });
     const productArgs = {
       assertFixed: () => assertFixedA5(paths), build: () => build(paths), buildIdentity: captureIdentity,
-      checked, env: macosA5GradleEnv(), execute, paths,
-      protectData: (mode, manifest, backupRoot) => protectData(
-        paths, macosA5GradleEnv(), mode, manifest, backupRoot
-      ), serial: A5_SERIAL
+      checked, env: macosA5GradleEnv(), execute, paths, serial: A5_SERIAL
     };
     if (action === 'pair-sync') await runMacosA5PairSyncEntry(productArgs);
     if (action === 'sync-existing') await runMacosA5ExistingSyncEntry(productArgs);

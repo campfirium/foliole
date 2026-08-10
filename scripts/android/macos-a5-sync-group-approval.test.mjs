@@ -1,22 +1,10 @@
 import { expect, it } from 'vitest';
 
 import {
-  assertSyncGroupProtectionSnapshot,
   installedMainMatches,
   parseSyncGroupApprovalReceipt,
   startMacosA5SyncGroupApprovalProvider
 } from './macos-a5-sync-group-approval.mjs';
-
-it('requires an intact device, group, timeline, member, and data baseline before approval', () => {
-  const snapshot = { database: { counts: { nodes: 1308 }, inspection: {
-    activeSyncGroupMemberCount: 2, deviceIdentityFingerprint: '0123456789abcdef',
-    syncGroupId: 'group-1', syncGroupTimelineId: 'timeline-1'
-  }, integrity: 'ok' } };
-  expect(() => assertSyncGroupProtectionSnapshot(snapshot)).not.toThrow();
-  expect(() => assertSyncGroupProtectionSnapshot({
-    ...snapshot, database: { ...snapshot.database, integrity: 'damaged' }
-  })).toThrow('protection baseline is incomplete');
-});
 
 it('reuses an installed main APK only when its SHA-256 matches exactly', async () => {
   const execute = async (_command, args) => {

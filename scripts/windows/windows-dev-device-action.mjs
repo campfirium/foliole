@@ -1,6 +1,5 @@
 /* global process */
 
-import fs from 'node:fs';
 import path from 'node:path';
 
 import { runWindowsA5LiveReload } from './windows-a5-live-reload-action.mjs';
@@ -121,7 +120,8 @@ function helperEnv(env) {
     FOLIOLE_ANDROID_ADB_SERVER_PORT: WINDOWS_DEV_ADB_PORT };
 }
 
-async function runDataProtection(execute, paths, mode, manifest, env, backupRoot = paths.protectionBackups) {
+async function runDataProtection(execute, paths, mode, manifest, env, backupRoot) {
+  if (!backupRoot) throw new Error('Transient Android snapshot root is required.');
   const script = path.join(paths.repoRoot, 'scripts', 'android', 'android-device-data-protection.mjs');
   return checked(execute, paths.systemNode, [script, '--mode', mode, '--adb', paths.adbPath,
     '--serial', WINDOWS_DEV_A5_SERIAL, '--app-id', APP_ID,
@@ -130,21 +130,14 @@ async function runDataProtection(execute, paths, mode, manifest, env, backupRoot
     windowsHide: true }, `data-${mode}`);
 }
 
-async function deploy(execute, paths, evidenceRoot, env) {
-  fs.mkdirSync(paths.protectionBackups, { recursive: true });
-  const manifest = path.join(evidenceRoot, 'data-protection.json');
-  await checked(execute, paths.adbPath, ['-P', WINDOWS_DEV_ADB_PORT,
-    '-s', WINDOWS_DEV_A5_SERIAL, 'shell', 'am', 'force-stop', APP_ID],
-  { env, timeoutCode: 'data_quiesce_timeout', timeoutMs: 30_000, windowsHide: true }, 'data-quiesce');
-  const before = await runDataProtection(execute, paths, 'backup', manifest, env);
+async function deploy(execute, paths, env) {
   const script = path.join(paths.repoRoot, 'scripts', 'android', 'windows-deploy-app.ps1');
   const action = await checked(execute, 'powershell.exe', ['-NoProfile', '-NonInteractive',
     '-ExecutionPolicy', 'Bypass', '-File', script, '-WindowsWorkDir', paths.repoRoot,
     '-TargetSerial', WINDOWS_DEV_A5_SERIAL, '-NodeExe', paths.systemNode, '-StopGradleDaemon'],
   { env: { ...helperEnv(env), ANDROID_USER_HOME: paths.signingHome }, timeoutCode: 'deploy_timeout',
     timeoutMs: 20 * 60_000, windowsHide: true }, 'deploy');
-  const after = await runDataProtection(execute, paths, 'check', manifest, env);
-  return `${before.output}${action.output}${after.output}`;
+  return action.output;
 }
 
 async function verify(execute, paths, env) {
@@ -213,7 +206,7 @@ export async function runWindowsDevDeviceAction({
       actionResult = { output: await verify(execute, paths, env) };
     } else {
       const deployOutput = action === 'deploy'
-        ? await deploy(execute, paths, evidenceRoot, env)
+        ? await deploy(execute, paths, env)
         : '';
       const live = await runLiveReload({
         adbPort: WINDOWS_DEV_ADB_PORT, buildIdentity, env, evidenceRoot, execute, paths,

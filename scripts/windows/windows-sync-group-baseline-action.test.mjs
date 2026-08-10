@@ -6,7 +6,6 @@ import path from 'node:path';
 
 import { expect, it } from 'vitest';
 
-import { identityFingerprint } from '../android/android-pair-sync-recovery-readiness.mjs';
 import {
   resolveWindowsProtectionIdentity, runWindowsSyncGroupBaselineReset
 } from './windows-sync-group-baseline-action.mjs';
@@ -22,7 +21,7 @@ it('uses one active win32 member or a fresh product identity for C protection', 
   }, deviceIdentity: null })).toThrow('not uniquely recoverable');
 });
 
-it('protects old C, boots a fresh product workspace, then protects the empty baseline', async () => {
+it('discards the disposable C workspace and boots a fresh empty product state', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 't121-windows-baseline-'));
   const clientRoot = path.join(root, '.tmp', 'artifacts', 'windows-sync-group-client-c');
   const library = path.join(clientRoot, 'library');
@@ -51,13 +50,14 @@ it('protects old C, boots a fresh product workspace, then protects the empty bas
     }, paths });
   const manifest = JSON.parse(fs.readFileSync(result.syncGroupBaseline.manifestPath, 'utf8'));
   expect(controls).toEqual([]);
-  expect(manifest).toMatchObject({ baselineProtection: {
-    deviceIdentity: identityFingerprint('fresh-c') },
+  expect(manifest).toMatchObject({
     emptyFacts: { activeMemberCount: 0, localGroupId: null, nodeCount: 2 },
-    originalProtection: { deviceIdentity: 'device-c-old' }, resultStatus: 'success' });
+    resultStatus: 'success' });
+  expect(manifest).not.toHaveProperty('originalProtection');
+  expect(manifest).not.toHaveProperty('baselineProtection');
 });
 
-it('reads product identity before protecting an already-empty C workspace', async () => {
+it('recreates an already-empty disposable C workspace without retaining its prior identity', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 't121-windows-empty-baseline-'));
   const clientRoot = path.join(root, '.tmp', 'artifacts', 'windows-sync-group-client-c');
   const library = path.join(clientRoot, 'library');
@@ -73,17 +73,15 @@ it('reads product identity before protecting an already-empty C workspace', asyn
     evidenceRoot: path.join(root, 'evidence'), execute: async () => ({ code: 0 }),
     inspectDatabase: async () => emptyFacts,
     loadOverview: async () => ({ primary_device_state: {
-      primary_device_id: sessionCount === 1 ? 'existing-empty-c' : 'fresh-c'
+      primary_device_id: 'fresh-c'
     } }), openSession: async () => {
       sessionCount += 1;
-      if (sessionCount === 2) {
-        fs.mkdirSync(path.dirname(database), { recursive: true });
-        fs.writeFileSync(database, 'fresh');
-      }
+      fs.mkdirSync(path.dirname(database), { recursive: true });
+      fs.writeFileSync(database, 'fresh');
       return { app: { close: async () => undefined } };
     }, paths: { repoRoot: root } });
   const manifest = JSON.parse(fs.readFileSync(result.syncGroupBaseline.manifestPath, 'utf8'));
-  expect(sessionCount).toBe(2);
-  expect(manifest.originalProtection.deviceIdentity).toBe(identityFingerprint('existing-empty-c'));
-  expect(manifest.baselineProtection.deviceIdentity).toBe(identityFingerprint('fresh-c'));
+  expect(sessionCount).toBe(1);
+  expect(manifest.emptyFacts.deviceIdentity).toBeTruthy();
+  expect(manifest).not.toHaveProperty('originalProtection');
 });
