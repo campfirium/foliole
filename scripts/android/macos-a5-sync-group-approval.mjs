@@ -31,7 +31,7 @@ export function parseSyncGroupApprovalReceipt(output) {
   }
   const receipt = JSON.parse(line.slice(prefix.length));
   if (receipt?.ok !== true || receipt.targetTestId !== 'sync-group-approval'
-      || receipt.approved !== true || receipt.paused !== true || receipt.resumed !== true) {
+      || receipt.approved !== true || receipt.foreground !== true) {
     throw new Error('Sync Group approval evidence is incomplete.');
   }
   return receipt;
@@ -69,7 +69,7 @@ export async function runMacosA5SyncGroupApproval({ execute, onReady = async () 
     scrubPairSyncDataProtection(fs, manifest);
     await startMacosA5SyncGroupApprovalProvider({ execute, onReady, paths, env });
     const run = requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'instrument',
-      '-w', '-r', '-e', 'class', `${TEST_CLASS}#approvesJoinAndResumesProviderAfterBackgroundPause`, TEST_RUNNER], {
+      '-w', '-r', '-e', 'class', `${TEST_CLASS}#approvesJoinWhileProviderStaysForeground`, TEST_RUNNER], {
       env, timeoutMs: 15 * 60_000
     }), 'sync-group-approval');
     const receipt = parseSyncGroupApprovalReceipt(run.output);

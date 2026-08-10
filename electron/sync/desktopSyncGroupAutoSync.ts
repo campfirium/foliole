@@ -2,7 +2,6 @@ import { Bonjour } from 'bonjour-service';
 
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
-import { collectCompanionMdnsInterfaceAddresses } from './companionMdnsAdvertisement.js';
 import { loadPairedSyncGroupPeers, savePairedSyncGroupPeer } from './companionPairingStore.js';
 import {
   completeDesktopSyncGroupJoin,
@@ -10,33 +9,16 @@ import {
 } from './desktopSyncGroupJoin.js';
 import { refreshDesktopSyncGroupPendingJoinEndpoint } from './desktopSyncGroupJoinState.js';
 
-type BonjourMdnsOptions = NonNullable<ConstructorParameters<typeof Bonjour>[0]> & {
-  interface?: string;
-};
-type ActiveDiscovery = {
-  bonjour: InstanceType<typeof Bonjour>;
-  browser: ReturnType<InstanceType<typeof Bonjour>['find']>;
-};
-let discoveries: ActiveDiscovery[] = [];
+let bonjour: InstanceType<typeof Bonjour> | null = null;
+let browser: ReturnType<InstanceType<typeof Bonjour>['find']> | null = null;
 const inFlight = new Map<string, Promise<unknown>>();
 const retryAfterFlight = new Map<string, { endpoint: string; groupId: string; peerDeviceId: string }>();
 
-export function startDesktopSyncGroupAutoSync(
-  interfaceAddresses = collectCompanionMdnsInterfaceAddresses()
-) {
-  if (discoveries.length > 0) return;
-  const targets = interfaceAddresses.length > 0 ? interfaceAddresses : [undefined];
-  discoveries = targets.map((interfaceAddress) => {
-    const options: BonjourMdnsOptions | undefined = interfaceAddress
-      ? { interface: interfaceAddress }
-      : undefined;
-    const bonjour = new Bonjour(options);
-    const browser = bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, handleService);
-    return { bonjour, browser };
-  });
-}
-
-function handleService(service: Parameters<NonNullable<Parameters<InstanceType<typeof Bonjour>['find']>[1]>>[0]) {
+export function startDesktopSyncGroupAutoSync() {
+  if (bonjour) return;
+  const nextBonjour = new Bonjour();
+  bonjour = nextBonjour;
+  browser = nextBonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, (service) => {
     const endpoint = endpointForService(service);
     const txt = service.txt as Record<string, unknown>;
     const groupId = typeof txt.group_id === 'string' ? txt.group_id : null;
@@ -54,14 +36,14 @@ function handleService(service: Parameters<NonNullable<Parameters<InstanceType<t
       return;
     }
     void syncAvailablePeer({ endpoint, groupId, peerDeviceId });
+  });
 }
 
 export function stopDesktopSyncGroupAutoSync() {
-  discoveries.forEach(({ bonjour, browser }) => {
-    browser.stop();
-    bonjour.destroy();
-  });
-  discoveries = [];
+  browser?.stop();
+  bonjour?.destroy();
+  browser = null;
+  bonjour = null;
   retryAfterFlight.clear();
 }
 

@@ -1,8 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const runtime = vi.hoisted(() => ({
-  callbacks: [] as Array<(service: unknown) => void>,
-  constructorOptions: [] as unknown[][],
+  callback: null as null | ((service: unknown) => void),
   completeJoin: vi.fn(),
   continueSync: vi.fn(),
   destroy: vi.fn(),
@@ -21,10 +20,9 @@ function deferred<T>() {
 
 vi.mock('bonjour-service', () => ({
   Bonjour: class {
-    constructor(...args: unknown[]) { runtime.constructorOptions.push(args); }
     destroy = runtime.destroy;
     find(_query: unknown, callback: (service: unknown) => void) {
-      runtime.callbacks.push(callback);
+      runtime.callback = callback;
       return { stop: runtime.stop };
     }
   }
@@ -47,16 +45,15 @@ import { startDesktopSyncGroupAutoSync, stopDesktopSyncGroupAutoSync } from './d
 beforeEach(() => {
   stopDesktopSyncGroupAutoSync();
   vi.clearAllMocks();
-  runtime.callbacks = [];
-  runtime.constructorOptions = [];
+  runtime.callback = null;
   runtime.completeJoin.mockResolvedValue({ group_id: 'group-1' });
   runtime.continueSync.mockResolvedValue({ complete: true, cursor: 9 });
   runtime.refreshPending.mockReturnValue(false);
 });
 
 it('continues the saved member sync when its provider advertises again', async () => {
-  startDesktopSyncGroupAutoSync(['192.168.1.11', '192.168.111.1']);
-  runtime.callbacks[0]?.({
+  startDesktopSyncGroupAutoSync();
+  runtime.callback?.({
     addresses: ['192.168.1.12'], port: 43121,
     txt: { group_id: 'group-1', peer_id: 'android-b' }
   });
@@ -64,15 +61,12 @@ it('continues the saved member sync when its provider advertises again', async (
   expect(runtime.savePeer).toHaveBeenCalledWith(expect.objectContaining({
     endpoint_url: 'http://192.168.1.12:43121', peer_device_id: 'android-b'
   }));
-  expect(runtime.constructorOptions).toEqual([
-    [{ interface: '192.168.1.11' }], [{ interface: '192.168.111.1' }]
-  ]);
 });
 
 it('continues an approved join at the same provider new endpoint', async () => {
   runtime.refreshPending.mockReturnValue(true);
-  startDesktopSyncGroupAutoSync(['192.168.1.11']);
-  runtime.callbacks[0]?.({
+  startDesktopSyncGroupAutoSync();
+  runtime.callback?.({
     addresses: ['192.168.1.12'], port: 43122,
     txt: { group_id: 'group-1', peer_id: 'android-b', timeline_id: 'timeline-1' }
   });
@@ -87,13 +81,13 @@ it('continues an approved join at the same provider new endpoint', async () => {
 it('retries the latest advertisement after an interrupted peer sync settles', async () => {
   const first = deferred<{ complete: boolean; cursor: number }>();
   runtime.continueSync.mockReturnValueOnce(first.promise).mockResolvedValue({ complete: true, cursor: 10 });
-  startDesktopSyncGroupAutoSync(['192.168.1.11']);
-  runtime.callbacks[0]?.({
+  startDesktopSyncGroupAutoSync();
+  runtime.callback?.({
     addresses: ['192.168.1.12'], port: 43121,
     txt: { group_id: 'group-1', peer_id: 'android-b' }
   });
   await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
-  runtime.callbacks[0]?.({
+  runtime.callback?.({
     addresses: ['192.168.1.12'], port: 43122,
     txt: { group_id: 'group-1', peer_id: 'android-b' }
   });

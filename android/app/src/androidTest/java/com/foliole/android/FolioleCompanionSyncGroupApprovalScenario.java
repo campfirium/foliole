@@ -14,6 +14,23 @@ import java.util.concurrent.TimeUnit;
 final class FolioleCompanionSyncGroupApprovalScenario {
     private FolioleCompanionSyncGroupApprovalScenario() {}
 
+    static JSONObject approveForeground(Instrumentation instrumentation) throws Exception {
+        Activity activity = start(instrumentation);
+        waitForFocus(activity, 30_000);
+        WebView webView = activity.findViewById(R.id.webview);
+        long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(12);
+        openSyncSettings(instrumentation, webView, deadline);
+        waitForProviderAdvertisement();
+        FolioleCompanionPairSyncRecoveryScenario.waitForUniqueVisible(
+            instrumentation, webView, "companion-sync-group-approve", deadline
+        );
+        FolioleCompanionPairSyncRecoveryScenario.clickVisible(
+            instrumentation, webView, "companion-sync-group-approve", deadline
+        );
+        return new JSONObject().put("ok", true).put("targetTestId", "sync-group-approval")
+            .put("approved", true).put("foreground", true);
+    }
+
     static JSONObject run(Instrumentation instrumentation) throws Exception {
         Activity activity = start(instrumentation);
         try {

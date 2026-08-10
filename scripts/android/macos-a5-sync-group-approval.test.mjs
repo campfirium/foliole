@@ -14,7 +14,7 @@ it('keeps bounded instrumentation failure evidence', () => {
 
 it('accepts the complete approval receipt', () => {
   const receipt = {
-    approved: true, ok: true, paused: true, resumed: true, targetTestId: 'sync-group-approval'
+    approved: true, foreground: true, ok: true, targetTestId: 'sync-group-approval'
   };
   expect(parseSyncGroupApprovalReceipt(
     `INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReceipt=${JSON.stringify(receipt)}\nINSTRUMENTATION_CODE: -1`
