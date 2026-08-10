@@ -86,7 +86,7 @@ async function downloadBlobBatch(peer: ResourcePeer, blobs: BlobRow[]) {
   });
   if (!response.ok) throw new Error(`sync_resource_http_${response.status}`);
   const received = new Map(parseCompanionContentBlobMultipart(
-    Buffer.from(await response.arrayBuffer()), response.headers.get('content-type')
+    await readResponseBody(response), response.headers.get('content-type')
   ).map((item) => [item.hash, item.body]));
   return blobs.map((blob) => {
     const body = received.get(blob.hash);
@@ -95,6 +95,22 @@ async function downloadBlobBatch(peer: ResourcePeer, blobs: BlobRow[]) {
     }
     return { blob, body };
   });
+}
+
+async function readResponseBody(response: Response) {
+  const reader = response.body?.getReader();
+  if (!reader) return Buffer.alloc(0);
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+  try {
+    for (let item = await reader.read(); !item.done; item = await reader.read()) {
+      chunks.push(item.value); received += item.value.byteLength;
+    }
+    return Buffer.concat(chunks);
+  } catch (error) {
+    const expected = response.headers.get('content-length') ?? 'unknown';
+    throw new Error(`resource_body_truncated expected=${expected} received=${received}`, { cause: error });
+  }
 }
 
 async function downloadAttachment(peer: ResourcePeer, attachment: AttachmentRow) {

@@ -36,6 +36,7 @@ final class FolioleCompanionSyncGroupServer {
     int port() { return server.getLocalPort(); }
 
     void stop() {
+        android.util.Log.i("FolioleSyncProvider", "Stopping provider server on port " + port());
         running = false;
         try { server.close(); } catch (Exception ignored) {}
         executor.shutdownNow();
@@ -187,7 +188,9 @@ final class FolioleCompanionSyncGroupServer {
         FolioleCompanionSyncGroupContentBlobBatch.Result batch = snapshots.read(
             peer, (snapshot) -> FolioleCompanionSyncGroupContentBlobBatch.load(
                 snapshot, request.bodyText()));
+        android.util.Log.i("FolioleSyncProvider", "Writing content batch bytes=" + batch.body.length);
         FolioleCompanionHttpResponse.bytes(output, 200, batch.mimeType, batch.body);
+        android.util.Log.i("FolioleSyncProvider", "Completed content batch bytes=" + batch.body.length);
     }
 
     private void attachment(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {
