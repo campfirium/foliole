@@ -148,7 +148,7 @@ export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths
       candidate = await discoverUniqueGroup(session.page);
       await invoke(session.page, 'request_sync_group_join', { endpoint_url: candidate.endpoint_url });
       await waitForJoinedGroup(session.page, candidate.group_id);
-      firstFacts = await waitForOrdinarySyncFacts(execute, paths, evidenceRoot);
+      firstFacts = await waitForOrdinarySyncFacts(execute, paths, evidenceRoot, 3 * 60_000);
     } finally { await session.app.close(); }
     session = await openSession(paths, evidenceRoot);
     const screenshotPath = path.join(evidenceRoot, 'sync-group-recovery.png');

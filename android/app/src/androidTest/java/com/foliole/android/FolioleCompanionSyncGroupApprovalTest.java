@@ -19,7 +19,7 @@ public class FolioleCompanionSyncGroupApprovalTest {
         emit(FolioleCompanionSyncGroupApprovalScenario.approveForeground(
             InstrumentationRegistry.getInstrumentation()
         ));
-        Thread.sleep(TimeUnit.MINUTES.toMillis(13));
+        Thread.sleep(TimeUnit.MINUTES.toMillis(3));
     }
 
     @Test

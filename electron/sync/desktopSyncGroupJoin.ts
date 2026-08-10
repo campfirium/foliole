@@ -122,11 +122,20 @@ export async function continueDesktopSyncGroupSync(peer?: ReturnType<typeof save
 
 async function continuePeerSync(target: ReturnType<typeof savePairedSyncGroupPeer>) {
   const cursor = loadReceiveCursor(target.peer_device_id);
-  const nextCursor = await downloadAndApply(target, cursor);
+  const nextCursor = await runPeerSyncStage('sync_pack', () => downloadAndApply(target, cursor));
   saveReceiveCursor(target.peer_device_id, nextCursor);
-  await downloadDesktopSyncGroupResources(target);
+  await runPeerSyncStage('resources', () => downloadDesktopSyncGroupResources(target));
   const complete = resourcesComplete();
   return { complete, cursor: nextCursor };
+}
+
+async function runPeerSyncStage<T>(stage: 'resources' | 'sync_pack', execute: () => Promise<T>) {
+  try {
+    return await execute();
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`sync_group_${stage}_failed: ${detail}`, { cause: error });
+  }
 }
 
 async function downloadAndApply(peer: ReturnType<typeof savePairedSyncGroupPeer>, after: number) {
