@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import type http from 'node:http';
 
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR, evaluateSyncProtocolCompatibility } from '../../lib/platform/syncProtocolContract.js';
@@ -5,15 +6,22 @@ import {
   registerSyncGroupMember
 } from '../database/syncGroupStore.js';
 
+import { resolveDesktopDeviceName } from './companionLanPayloads.js';
 import { readCompanionRequestBody } from './companionLanRequestBody.js';
 import { encryptCompanionPairingSecret } from './companionPairingEncryption.js';
 import {
   completeCompanionPairRequest,
   countPendingCompanionPairRequests,
   loadCompanionPairRequestForCompletion,
+  type PendingCompanionPairRequest,
   reservePairCompletionSlot
 } from './companionPairingRequests.js';
-import { countPairedCompanionDevices, registerPairedCompanionDevice } from './companionPairingStore.js';
+import {
+  countPairedCompanionDevices,
+  loadPairedSyncGroupPeer,
+  registerPairedCompanionDevice,
+  savePairedSyncGroupPeer
+} from './companionPairingStore.js';
 
 type StatusUpdater = (pairing: { paired_device_count: number; pending_pair_request_count: number }) => void;
 type JsonResponder = (request: http.IncomingMessage, response: http.ServerResponse, statusCode: number, payload: unknown) => void;
@@ -50,9 +58,13 @@ export async function handlePairRequest(
     approvedByDeviceId: peerId, authorizationId: pairRequestId, deviceId: approved.device_id,
     deviceKind: approved.device_kind, deviceName: approved.device_name
   }) : null;
+  const providerSecret = syncGroup ? saveProviderPeer(approved, peerId) : null;
   const encryptedSecret = await encryptCompanionPairingSecret({
     clientPublicKey: approved.pairing_public_key, deviceSecret: paired.device_secret
   });
+  const providerEncryptedSecret = providerSecret ? await encryptCompanionPairingSecret({
+    clientPublicKey: approved.pairing_public_key, deviceSecret: providerSecret
+  }) : null;
   updatePairingStatus({
     paired_device_count: countPairedCompanionDevices(),
     pending_pair_request_count: countPendingCompanionPairRequests()
@@ -60,8 +72,34 @@ export async function handlePairRequest(
   writeJson(request, response, 200, {
     app_version: appVersion, compatibility, desktop_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
     device_id: paired.device_id, encrypted_device_secret: encryptedSecret, paired_at: paired.paired_at, peer_id: peerId,
-    ...(syncGroup ? { sync_group: syncGroup } : {})
+    ...(syncGroup ? {
+      provider_device_id: peerId,
+      provider_device_kind: process.platform,
+      provider_device_name: resolveDesktopDeviceName(),
+      provider_encrypted_device_secret: providerEncryptedSecret,
+      sync_group: syncGroup
+    } : {})
   });
+}
+
+function saveProviderPeer(approved: PendingCompanionPairRequest, peerId: string) {
+  if (!approved.group_id || !approved.timeline_id || !approved.client_address) {
+    throw new Error('sync_group_provider_pairing_invalid');
+  }
+  const existing = loadPairedSyncGroupPeer(approved.group_id, approved.device_id);
+  if (existing) return existing.secret;
+  const secret = randomBytes(32).toString('base64url');
+  savePairedSyncGroupPeer({
+    endpoint_url: `http://${approved.client_address}:38641`,
+    group_id: approved.group_id,
+    local_device_id: peerId,
+    peer_device_id: approved.device_id,
+    peer_device_kind: approved.device_kind,
+    peer_device_name: approved.device_name,
+    secret,
+    timeline_id: approved.timeline_id
+  });
+  return secret;
 }
 
 function loadApproved(pairRequestId: string, request: http.IncomingMessage, response: http.ServerResponse, writeJson: JsonResponder) {

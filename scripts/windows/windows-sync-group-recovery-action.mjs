@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
+const CLIENT_ROOT_NAME = 'windows-sync-group-client-c';
+
 async function invoke(page, command, args = {}) {
   return page.evaluate(async ({ command, args }) => {
     if (!globalThis.electronAPI?.invoke) throw new Error('Desktop native bridge is unavailable.');
@@ -11,9 +13,13 @@ async function invoke(page, command, args = {}) {
   }, { args, command });
 }
 
-function launchOptions(paths, evidenceRoot) {
-  const libraryHome = path.join(evidenceRoot, 'library-c');
-  const userData = path.join(evidenceRoot, 'user-data-c');
+function clientPaths(paths) {
+  const root = path.join(paths.repoRoot, '.tmp', 'artifacts', CLIENT_ROOT_NAME);
+  return { libraryHome: path.join(root, 'library'), userData: path.join(root, 'user-data') };
+}
+
+function launchOptions(paths) {
+  const { libraryHome, userData } = clientPaths(paths);
   return {
     args: [path.join(paths.repoRoot, 'dist/electron/main.js')], cwd: paths.repoRoot,
     env: { ...process.env, FOLIOLE_DISABLE_HARDWARE_ACCELERATION: '1',
@@ -26,7 +32,7 @@ function launchOptions(paths, evidenceRoot) {
 
 async function openSession(paths, evidenceRoot, electronLauncher) {
   const launcher = electronLauncher ?? (await import('playwright'))._electron;
-  const app = await launcher.launch(launchOptions(paths, evidenceRoot));
+  const app = await launcher.launch(launchOptions(paths));
   captureSyncRuntimeLog(app.process(), path.join(evidenceRoot, 'sync-group-runtime.log'));
   const page = await app.firstWindow({ timeout: 90_000 });
   await page.waitForFunction(() => globalThis.__FOLIOLE_APP_READY_REPORTED__ === true, null, {
@@ -73,7 +79,7 @@ async function waitForOrdinarySyncFacts(execute, paths, evidenceRoot, timeoutMs 
   const nodeSurfaceDeadline = Date.now() + 90_000;
   let lastFacts = null;
   while (Date.now() < deadline) {
-    lastFacts = await inspectDatabase(execute, paths, evidenceRoot);
+    lastFacts = await inspectDatabase(execute, paths);
     try {
       assertComplete(lastFacts);
       return lastFacts;
@@ -96,8 +102,8 @@ function readSyncRuntimeLog(evidenceRoot) {
     : 'unavailable';
 }
 
-async function inspectDatabase(execute, paths, evidenceRoot) {
-  const databasePath = path.join(evidenceRoot, 'library-c', 'Data', 'foliole.db');
+async function inspectDatabase(execute, paths) {
+  const databasePath = path.join(clientPaths(paths).libraryHome, 'Data', 'foliole.db');
   const electronPath = path.join(paths.repoRoot, 'node_modules/electron/dist/electron.exe');
   const inspectorPath = path.join(paths.repoRoot, 'scripts/windows/windows-sync-group-recovery-inspect.mjs');
   const result = await execute(electronPath, [inspectorPath, databasePath], {
@@ -159,7 +165,7 @@ export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths
       }
       await captureSyncSettings(session.page, screenshotPath);
     } finally { await session.app.close(); }
-    const restartedFacts = await inspectDatabase(execute, paths, evidenceRoot);
+    const restartedFacts = await inspectDatabase(execute, paths);
     assertComplete(restartedFacts);
     const receipt = { candidate: { groupId: candidate.group_id, providerKind: candidate.provider_device_kind },
       firstFacts, restartedFacts, resultStatus: 'success', schemaVersion: 1 };
