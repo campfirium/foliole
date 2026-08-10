@@ -2,11 +2,10 @@ import fs from 'node:fs';
 
 import { expect, it } from 'vitest';
 
-it('keeps A5 on Mac and Windows C on a real LAN Sync Group path', () => {
+it('keeps stable desktop A and Windows C on a real LAN Sync Group path', () => {
   const remote = fs.readFileSync('scripts/windows/windows-sync-group-recovery-action.mjs', 'utf8');
   const inspector = fs.readFileSync('scripts/windows/windows-sync-group-recovery-inspect.mjs', 'utf8');
   const control = fs.readFileSync('scripts/windows/windows-sync-group-recovery-control.mjs', 'utf8');
-  const approval = fs.readFileSync('scripts/android/macos-a5-sync-group-approval.mjs', 'utf8');
   const provider = fs.readFileSync(
     'android/app/src/main/java/com/foliole/android/FolioleCompanionSyncGroupProvider.java', 'utf8'
   );
@@ -31,16 +30,14 @@ it('keeps A5 on Mac and Windows C on a real LAN Sync Group path', () => {
   expect(remote).toContain("text.includes('[sync-group]')");
   expect(remote).toContain("'sync-group-runtime.log'");
   expect(remote).toContain('Ordinary sync pack failed before apply');
-  expect(control).toContain('runMacosA5SyncGroupApproval');
-  expect(approval).toContain('FolioleCompanionSyncGroupApprovalTest');
-  expect(approval).toContain("'-W', '-n', `${APP_ID}/.MainActivity`");
+  expect(control).not.toContain('runMacosA5SyncGroupApproval');
   expect(provider).toContain(
     'new FolioleCompanionSyncGroupServer(activeContext, activeConfig, joinRequests, requireDataBridge())'
   );
   expect(provider).toContain('FolioleCompanionSyncGroupJoinGrantStore.save(');
   expect(provider).toContain('promoteApprovedJoin(');
   expect(provider).toContain('if (sameProvider(next))');
-  expect(plugin).toMatch(/handleOnDestroy\(\)[\s\S]*?SyncGroupProvider\.pause\(\)/u);
-  expect(`${remote}\n${control}\n${approval}`).not.toContain("'reverse'");
-  expect(`${remote}\n${control}\n${approval}`).not.toContain('windows-a5-pair-sync-recovery-action');
+  expect(plugin).toMatch(/handleOnDestroy\(\)[\s\S]*?SyncGroupProvider\.pause\(this\)/u);
+  expect(`${remote}\n${control}`).not.toContain("'reverse'");
+  expect(`${remote}\n${control}`).not.toContain('windows-a5-pair-sync-recovery-action');
 });

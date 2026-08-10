@@ -1,9 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { runMacosA5SyncGroupApproval } from '../android/macos-a5-sync-group-approval.mjs';
-import { executeBounded } from './windows-bounded-process.mjs';
-
 const REMOTE_PREFIX = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/';
 
 function parseRemoteEvidence(output) {
@@ -29,32 +26,16 @@ async function copyEvidence({ buildScpSpec, env, executeScp, evidence, host, rep
 }
 
 export async function runWindowsSyncGroupRecoveryControl({
-  approve = runMacosA5SyncGroupApproval,
   buildPushSpec, buildScpSpec, buildSshSpec, env, executeGit, executeScp, executeSsh,
   host, repoRoot, stdout
 }) {
   const push = buildPushSpec(host, env);
   await executeGit(push.args, { env: push.env });
-  let remote = null;
-  const startRemote = async () => {
-    if (remote) throw new Error('Windows Sync Group recovery already started.');
-    remote = executeSsh(buildSshSpec(host, 'sync-group-recover', env), { env }).then(
-      (output) => ({ error: null, output }),
-      (error) => ({ error, output: error.output || error.message })
-    );
-  };
-  let approvalError = null;
-  try {
-    const approval = await approve({ execute: executeBounded, onReady: startRemote, repoRoot });
-    stdout.write(approval.output);
-  } catch (error) { approvalError = error; }
-  if (!remote) {
-    if (approvalError) throw approvalError;
-    throw new Error('A5 approval preparation did not start Windows C.');
-  }
-  const remoteResult = await remote;
+  const remoteResult = await executeSsh(buildSshSpec(host, 'sync-group-recover', env), { env }).then(
+    (output) => ({ error: null, output }),
+    (error) => ({ error, output: error.output || error.message })
+  );
   if (remoteResult.output) stdout.write(remoteResult.output);
-  if (approvalError) throw approvalError;
   if (remoteResult.error) throw remoteResult.error;
   const evidence = parseRemoteEvidence(remoteResult.output);
   const evidenceRoot = await copyEvidence({
