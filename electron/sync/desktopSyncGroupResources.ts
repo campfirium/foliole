@@ -2,8 +2,9 @@ import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
-import type { DatabaseDriver } from '../../lib/core/database/driver.js';
+import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
+import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
 import { boundedConcurrentMap } from './boundedConcurrentMap.js';
@@ -47,17 +48,19 @@ export function assertDesktopSyncGroupResourcesComplete() {
 }
 
 export async function downloadDesktopSyncGroupResources(peer: ResourcePeer) {
-  const driver = openDatabaseConnection().driver;
-  const blobs = driver.queryAll<BlobRow>(
+  const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'desktop-sync-group-resources' });
+  const blobs = await port.query<BlobRow>(
     `SELECT cb.hash, cb.stored_sha256, cb.stored_size_bytes FROM content_blobs cb
      LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash WHERE cbd.hash IS NULL ORDER BY cb.hash`
   );
   for (let index = 0; index < blobs.length; index += CONTENT_BLOB_BATCH_SIZE) {
     const wave = blobs.slice(index, index + CONTENT_BLOB_BATCH_SIZE);
     const downloaded = await downloadBlobBatch(peer, wave);
-    driver.transaction(() => downloaded.forEach(({ blob, body }) => persistBlob(driver, blob, body)));
+    await port.transaction(async (tx) => {
+      for (const { blob, body } of downloaded) await persistBlob(tx, blob, body);
+    });
   }
-  const attachments = driver.queryAll<AttachmentRow>(
+  const attachments = await port.query<AttachmentRow>(
     `SELECT attachment_id, content_hash FROM attachment_blobs
      WHERE content_hash IS NOT NULL AND availability != 'cached' ORDER BY attachment_id`
   );
@@ -66,7 +69,7 @@ export async function downloadDesktopSyncGroupResources(peer: ResourcePeer) {
     await boundedConcurrentMap(wave, ATTACHMENT_CONCURRENCY, async (item) => {
       const downloaded = await downloadAttachment(peer, item);
       await persistAttachmentFile(downloaded);
-      persistAttachmentRow(downloaded);
+      await persistAttachmentRow(port, downloaded);
     });
   }
 }
@@ -101,10 +104,10 @@ async function downloadAttachment(peer: ResourcePeer, attachment: AttachmentRow)
   return { attachment, body, filePath: resolveAttachmentStoragePath(attachment.attachment_id, undefined, null) };
 }
 
-function persistBlob(driver: DatabaseDriver, blob: BlobRow, body: Buffer) {
+async function persistBlob(port: DbPort, blob: BlobRow, body: Buffer) {
   const now = new Date().toISOString();
-  driver.execute('INSERT OR REPLACE INTO content_blob_data (hash, data) VALUES (?, ?)', [blob.hash, body]);
-  driver.execute("UPDATE content_blobs SET availability = 'cached', cached_at = ?, last_verified_at = ? WHERE hash = ?",
+  await port.run('INSERT OR REPLACE INTO content_blob_data (hash, data) VALUES (?, ?)', [blob.hash, body]);
+  await port.run("UPDATE content_blobs SET availability = 'cached', cached_at = ?, last_verified_at = ? WHERE hash = ?",
     [now, now, blob.hash]);
 }
 
@@ -114,9 +117,9 @@ async function persistAttachmentFile(input: Awaited<ReturnType<typeof downloadAt
   await fs.rename(`${input.filePath}.partial`, input.filePath);
 }
 
-function persistAttachmentRow(input: Awaited<ReturnType<typeof downloadAttachment>>) {
+async function persistAttachmentRow(port: DbPort, input: Awaited<ReturnType<typeof downloadAttachment>>) {
   const now = new Date().toISOString();
-  openDatabaseConnection().driver.execute(
+  await port.run(
     "UPDATE attachment_blobs SET availability = 'cached', storage_key = ?, cached_at = ?, last_verified_at = ? WHERE attachment_id = ?",
     [path.basename(input.filePath), now, now, input.attachment.attachment_id]
   );

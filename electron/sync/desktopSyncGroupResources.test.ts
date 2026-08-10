@@ -3,11 +3,13 @@ import { createHash } from 'node:crypto';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const runtime = vi.hoisted(() => ({
-  execute: vi.fn(),
   mkdir: vi.fn().mockResolvedValue(undefined),
   openConnection: vi.fn(),
-  queryAll: vi.fn(),
+  query: vi.fn(),
   rename: vi.fn().mockResolvedValue(undefined),
+  run: vi.fn().mockResolvedValue({ changes: 1, lastInsertRowId: 0 }),
+  transaction: vi.fn(),
+  transactionRun: vi.fn().mockResolvedValue({ changes: 1, lastInsertRowId: 0 }),
   writeFile: vi.fn().mockResolvedValue(undefined)
 }));
 
@@ -21,6 +23,13 @@ vi.mock('node:fs', async (importOriginal) => {
 vi.mock('../attachments/resourceResolver.js', () => ({
   resolveAttachmentStoragePath: (id: string) => `${process.cwd()}/.tmp/test-attachments/${id}`
 }));
+vi.mock('../database/betterSqliteDbPort.js', () => ({
+  createBetterSqliteDbPort: () => ({
+    query: runtime.query,
+    run: runtime.run,
+    transaction: runtime.transaction
+  })
+}));
 vi.mock('../database/connection.js', () => ({
   openDatabaseConnection: runtime.openConnection
 }));
@@ -29,14 +38,11 @@ import { downloadDesktopSyncGroupResources } from './desktopSyncGroupResources.j
 
 beforeEach(() => {
   vi.clearAllMocks();
-  runtime.openConnection.mockReturnValue({
-    driver: {
-      execute: runtime.execute,
-      queryAll: runtime.queryAll,
-      transaction: (execute: () => void) => execute()
-    }
+  runtime.openConnection.mockReturnValue({ sqlite: {} });
+  runtime.transaction.mockImplementation(async (execute: (tx: { run: typeof runtime.transactionRun }) => Promise<void>) => {
+    await execute({ run: runtime.transactionRun });
   });
-  runtime.queryAll
+  runtime.query
     .mockReturnValueOnce([])
     .mockReturnValueOnce([
       { attachment_id: 'complete', content_hash: sha256('complete-body') },
@@ -48,7 +54,7 @@ it('persists a content body batch through the transaction owner that enumerated 
   const body = Buffer.from('complete-content-body');
   const hash = sha256(body);
   const boundary = 'content-owner-boundary';
-  runtime.queryAll
+  runtime.query
     .mockReset()
     .mockReturnValueOnce([{ hash, stored_sha256: hash, stored_size_bytes: body.length }])
     .mockReturnValueOnce([]);
@@ -63,7 +69,8 @@ it('persists a content body batch through the transaction owner that enumerated 
   });
 
   expect(runtime.openConnection).toHaveBeenCalledTimes(1);
-  expect(runtime.execute).toHaveBeenCalledWith(
+  expect(runtime.transaction).toHaveBeenCalledTimes(1);
+  expect(runtime.transactionRun).toHaveBeenCalledWith(
     'INSERT OR REPLACE INTO content_blob_data (hash, data) VALUES (?, ?)', [hash, body]
   );
 });
@@ -79,11 +86,11 @@ it('keeps a completed attachment when another concurrent request interrupts the 
     endpoint_url: 'http://provider', group_id: 'group-1', local_device_id: 'desktop-c', secret: 'secret'
   })).rejects.toThrow('sync_resource_http_503');
 
-  await vi.waitFor(() => expect(runtime.execute).toHaveBeenCalledWith(
+  await vi.waitFor(() => expect(runtime.run).toHaveBeenCalledWith(
     expect.stringContaining("UPDATE attachment_blobs SET availability = 'cached'"),
     expect.arrayContaining(['complete'])
   ));
-  expect(runtime.execute).not.toHaveBeenCalledWith(
+  expect(runtime.run).not.toHaveBeenCalledWith(
     expect.any(String), expect.arrayContaining(['interrupted'])
   );
 });
