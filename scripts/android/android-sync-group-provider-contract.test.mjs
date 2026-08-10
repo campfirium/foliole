@@ -26,6 +26,14 @@ it('listens on the same stable port persisted by bidirectional peer pairing', as
   expect(server).not.toContain('new ServerSocket(0)');
 });
 
+it('normalizes the Android NSD trailing-dot service type without changing the requested type', async () => {
+  const discovery = await readJava('FolioleCompanionNsdDiscovery.java');
+  expect(discovery).toContain('normalizeServiceType(requested).equalsIgnoreCase');
+  expect(discovery).toContain('return serviceType.endsWith(".")');
+  expect(discovery).toContain('? serviceType.substring(0, serviceType.length() - 1)');
+  expect(discovery).toContain('return normalized.isEmpty() ? normalized : normalized + ".";');
+});
+
 it('authorizes every Android provider data request with both the channel secret and member fact', async () => {
   const auth = await readJava('FolioleCompanionSyncGroupRequestAuth.java');
   const database = await readJava('FolioleCompanionSyncGroupDatabase.java');

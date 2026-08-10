@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import process from 'node:process';
 
@@ -22,6 +23,27 @@ function requireSuccess(result, stage) {
   throw Object.assign(new Error(`${stage} failed`), { result, stage });
 }
 
+function resultText(result) {
+  return String(result.stdout || result.output || '').trim();
+}
+
+function sha256File(filePath) {
+  return createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+}
+
+export async function installedMainMatches({ execute, paths, env, localHash = sha256File(paths.apk) }) {
+  const packagePathResult = await execute(paths.adb, [
+    '-s', A5_SERIAL, 'shell', 'pm', 'path', APP_ID
+  ], { env, timeoutMs: 30_000 });
+  const packagePath = resultText(packagePathResult).split(/\r?\n/u)
+    .find((line) => line.startsWith('package:'))?.slice('package:'.length);
+  if (packagePathResult.code !== 0 || !packagePath) return false;
+  const hashResult = await execute(paths.adb, [
+    '-s', A5_SERIAL, 'shell', 'sha256sum', packagePath
+  ], { env, timeoutMs: 30_000 });
+  return hashResult.code === 0 && resultText(hashResult).split(/\s+/u)[0] === localHash;
+}
+
 export function parseSyncGroupApprovalReceipt(output) {
   const prefix = 'INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReceipt=';
   const line = String(output).split(/\r?\n/u).find((entry) => entry.startsWith(prefix));
@@ -35,6 +57,17 @@ export function parseSyncGroupApprovalReceipt(output) {
     throw new Error('Sync Group approval evidence is incomplete.');
   }
   return receipt;
+}
+
+export function assertSyncGroupProtectionSnapshot(snapshot) {
+  const database = snapshot?.database;
+  const inspection = database?.inspection;
+  if (database?.integrity !== 'ok' || !inspection?.deviceIdentityFingerprint
+      || !inspection.syncGroupId || !inspection.syncGroupTimelineId
+      || !Number.isInteger(inspection.activeSyncGroupMemberCount)
+      || inspection.activeSyncGroupMemberCount < 1 || !Number.isInteger(database.counts?.nodes)) {
+    throw new Error('Sync Group protection baseline is incomplete.');
+  }
 }
 
 export async function startMacosA5SyncGroupApprovalProvider({ execute, onReady, paths, env }) {
@@ -53,14 +86,21 @@ export async function runMacosA5SyncGroupApproval({ execute, onReady = async () 
   const env = macosA5GradleEnv();
   assertFixedA5(paths);
   build(paths);
+  const reuseInstalledMain = await installedMainMatches({ execute, paths, env });
   const evidenceRoot = path.join(repoRoot, '.tmp/artifacts/a5-sync-group-approval');
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const manifest = path.join(evidenceRoot, 'data-protection.json');
+  requireSuccess(await execute(paths.adb, [
+    '-s', A5_SERIAL, 'shell', 'am', 'force-stop', APP_ID
+  ], { env, timeoutMs: 30_000 }), 'provider-stop-before-backup');
   await protectData(paths, env, 'backup', manifest);
+  assertSyncGroupProtectionSnapshot(JSON.parse(fs.readFileSync(manifest, 'utf8')).snapshot);
   try {
-    requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'install', '-r', paths.apk], {
-      env, timeoutMs: 120_000
-    }), 'main-install');
+    if (!reuseInstalledMain) {
+      requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'install', '-r', paths.apk], {
+        env, timeoutMs: 120_000
+      }), 'main-install');
+    }
     const testApk = path.join(repoRoot, 'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk');
     requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'install', '-r', '-t', testApk], {
       env, timeoutMs: 120_000

@@ -1,23 +1,65 @@
 // @vitest-environment node
 /* global URL */
 
-import { readFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
+import { backupDatabase } from './android-data-backup-files.mjs';
+import { assertProtectionPreserved } from './android-device-data-protection.mjs';
 import { assertReadableDatabase } from './android-data-protection-validation.mjs';
+import { pullDatabaseFile } from './android-device-snapshot.mjs';
 
 describe('Android device data protection', () => {
-  it('checks that the companion database exists before streaming its contents', async () => {
+  it('streams the companion database together with any live SQLite sidecars', async () => {
     const source = await readFile(new URL('./android-device-snapshot.mjs', import.meta.url), 'utf8');
     const entrySource = await readFile(
       new URL('./android-device-data-protection.mjs', import.meta.url), 'utf8'
     );
-    const existenceCheck = source.indexOf("'test', '-f', 'databases/foliole-companionSQLite.db'");
-    const databaseRead = source.indexOf("'cat', 'databases/foliole-companionSQLite.db'");
+    const existenceCheck = source.indexOf("'test', '-f', remotePath");
+    const databaseRead = source.indexOf("'cat', remotePath");
 
     expect(existenceCheck).toBeGreaterThan(-1);
     expect(databaseRead).toBeGreaterThan(existenceCheck);
+    expect(source).toContain("const remoteBase = 'databases/foliole-companionSQLite.db'");
+    expect(source).toContain("for (const suffix of ['-wal', '-shm'])");
+    expect(source).toContain('sidecarPaths.push(sidecarPath)');
+    expect(source).toContain('sidecarPaths, size');
     expect(entrySource).toContain('pathToFileURL(path.resolve(process.argv[1])).href');
+  });
+
+  it('keeps SQLite sidecars adjacent to the protected database copy', async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'foliole-protection-contract-'));
+    const source = path.join(root, 'source.db');
+    try {
+      await Promise.all([
+        writeFile(source, 'main'), writeFile(`${source}-wal`, 'wal'), writeFile(`${source}-shm`, 'shm')
+      ]);
+      const backup = await backupDatabase(
+        { appId: 'com.foliole.android', backupRoot: path.join(root, 'backup') },
+        { database: { counts: { nodes: 2 }, exists: true, path: source,
+          sidecarPaths: [`${source}-wal`, `${source}-shm`], size: 4 }, serial: 'fixed-a5' }
+      );
+
+      expect(await readFile(backup.databasePath, 'utf8')).toBe('main');
+      expect(backup.sidecarPaths).toEqual([`${backup.databasePath}-wal`, `${backup.databasePath}-shm`]);
+      expect(await Promise.all(backup.sidecarPaths.map((file) => readFile(file, 'utf8'))))
+        .toEqual(['wal', 'shm']);
+    } finally {
+      await rm(root, { force: true, recursive: true });
+    }
+  });
+
+  it('ignores only absent sidecars and fails closed on transfer errors', async () => {
+    const absent = Object.assign(new Error('missing'), { code: 1 });
+    const failed = Object.assign(new Error('transport failed'), { code: 2 });
+    await expect(pullDatabaseFile(
+      { appId: 'com.foliole.android' }, 'database-wal', 'unused', async () => { throw absent; }
+    )).resolves.toBe(false);
+    await expect(pullDatabaseFile(
+      { appId: 'com.foliole.android' }, 'database-wal', 'unused', async () => { throw failed; }
+    )).rejects.toThrow('transport failed');
   });
 
   it('fails closed when a protection snapshot cannot prove a readable database', () => {
@@ -25,5 +67,16 @@ describe('Android device data protection', () => {
     expect(() => assertReadableDatabase({ database: { error: 'bad db', exists: true, unreadable: true } }, 'after install')).toThrow('database is unreadable');
     expect(() => assertReadableDatabase({ error: 'adb unavailable' }, 'before install')).toThrow('snapshot failed');
     expect(() => assertReadableDatabase({ database: { exists: true } }, 'after install')).not.toThrow();
+  });
+
+  it('fails closed when install changes identity, group, timeline, integrity, or data counts', () => {
+    const snapshot = { database: { counts: { nodes: 2 }, inspection: {
+      activeSyncGroupMemberCount: 2, deviceIdentityFingerprint: 'identity',
+      syncGroupId: 'group-1', syncGroupTimelineId: 'timeline-1'
+    }, integrity: 'ok' } };
+    expect(() => assertProtectionPreserved(snapshot, JSON.parse(JSON.stringify(snapshot)))).not.toThrow();
+    const changed = JSON.parse(JSON.stringify(snapshot));
+    changed.database.inspection.syncGroupTimelineId = 'timeline-2';
+    expect(() => assertProtectionPreserved(snapshot, changed)).toThrow('database identity, group, timeline, or counts changed');
   });
 });

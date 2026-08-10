@@ -53,6 +53,7 @@
 ## Validation
 
 - Android / Capacitor 相关改动默认先执行覆盖本轮能力闭环的最小验证；A5 日常开发验收由 Mac 固定本地入口执行，CI 级 clean / bundled / release-like 终检只在发布、T6/T7 或用户明确要求时升级。只有当能力闭环触及移动宿主根链路、Capacitor 宿主 / bridge 主链路、共享层 / 依赖、跨宿主联动、或你无法用相关验证证明影响已被覆盖时，才升级为 hosted `quality:android`、`quality:shared` 或 `quality:release`。
+- 固定 A5 验收若在 mutation 前创建保护备份或数据库快照，必须由当前数据库 owner 产生一致快照，或先正常停止应用写入并按 SQLite 语义完整携带相关 WAL / SHM；不得把运行中只复制主 `.db` 文件当成可恢复备份或验收证据。快照必须先通过完整性与预期 identity / group / timeline / 数据计数检查，失败时不得继续安装、配对、清理或同步动作。
 - 若改动触及 Android 权限、生命周期、Capacitor 插件、intent、安装 / 启动链路，或问题只会在设备上暴露，必须在 Mac 固定 A5 上完成适用的本地动作；目标同时依赖 Windows desktop / library 时，再追加 Windows fixed action。现有固定入口无法表达的清数据、模拟器或可见 UI 验收必须停下重新评估，不得绕过入口直接执行。
 - Android 设备 serial、安装、启动、截图、logcat 与数据保护由 Mac 固定入口解析和执行，不接受调用方设备选择或“唯一 ready 设备”推断；Windows 跨宿主验收继续由 Windows adapter 持有自己的 fixed serial / port。
 - Android 调试命令不得批量弹出终端窗口：自动化验证、ADB、PowerShell、Node、bash、截图、sync、deploy 等后台步骤必须使用隐藏窗口或无窗口进程；只有用户明确要操作手机时，才允许打开一个可见的 `scrcpy` 设备镜像窗口。

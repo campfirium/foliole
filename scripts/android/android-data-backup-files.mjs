@@ -24,7 +24,14 @@ export async function backupDatabase(options, snapshot) {
   const dbBackupPath = path.join(options.backupRoot, `${baseName}.db`);
   const manifestPath = path.join(options.backupRoot, `${baseName}.json`);
   await copyFile(database.path, dbBackupPath);
-  const backup = { created: true, databasePath: dbBackupPath, manifestPath };
+  const sidecarPaths = [];
+  for (const sourcePath of database.sidecarPaths ?? []) {
+    const suffix = sourcePath.slice(database.path.length);
+    const destination = `${dbBackupPath}${suffix}`;
+    await copyFile(sourcePath, destination);
+    sidecarPaths.push(destination);
+  }
+  const backup = { created: true, databasePath: dbBackupPath, manifestPath, sidecarPaths };
   await writeManifest(manifestPath, { backup, snapshot });
   return backup;
 }

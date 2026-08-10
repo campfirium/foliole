@@ -70,20 +70,34 @@ async function collectPackageInfo(options) {
   }
 }
 
-async function pullDatabase(options, destination) {
+export async function pullDatabaseFile(options, remotePath, destination, executeAdb = runAdb) {
   try {
-    await runAdb(options, [
-      'shell', 'run-as', options.appId, 'test', '-f', 'databases/foliole-companionSQLite.db'
+    await executeAdb(options, [
+      'shell', 'run-as', options.appId, 'test', '-f', remotePath
     ]);
-    const { stdout } = await runAdb(options, [
-      'exec-out', 'run-as', options.appId, 'cat', 'databases/foliole-companionSQLite.db'
-    ], { encoding: 'buffer' });
-    if (!stdout || stdout.length === 0) return false;
-    await writeFile(destination, stdout);
-    return true;
-  } catch {
-    return false;
+  } catch (error) {
+    if (error.code === 1) return false;
+    throw error;
   }
+  const { stdout } = await executeAdb(options, [
+    'exec-out', 'run-as', options.appId, 'cat', remotePath
+  ], { encoding: 'buffer' });
+  if (!stdout || stdout.length === 0) throw new Error(`Android database file is empty: ${remotePath}`);
+  await writeFile(destination, stdout);
+  return true;
+}
+
+async function pullDatabase(options, destination) {
+  const remoteBase = 'databases/foliole-companionSQLite.db';
+  if (!await pullDatabaseFile(options, remoteBase, destination)) return null;
+  const sidecarPaths = [];
+  for (const suffix of ['-wal', '-shm']) {
+    const sidecarPath = `${destination}${suffix}`;
+    if (await pullDatabaseFile(options, `${remoteBase}${suffix}`, sidecarPath)) {
+      sidecarPaths.push(sidecarPath);
+    }
+  }
+  return sidecarPaths;
 }
 
 function countTable(database, table) {
@@ -94,15 +108,20 @@ function countTable(database, table) {
   return database.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get().count;
 }
 
-async function inspectDatabase(filePath, tables, inspector) {
+async function inspectDatabase(filePath, sidecarPaths, tables, inspector) {
   const size = (await stat(filePath)).size;
   let database = null;
   try {
     database = await openReadonlySqliteDatabase(filePath);
+    const integrity = database.prepare('PRAGMA integrity_check').get()?.integrity_check;
+    if (integrity !== 'ok') throw new Error(`SQLite integrity check failed: ${integrity ?? 'missing'}`);
     const counts = Object.fromEntries(tables.map((table) => [table, countTable(database, table)]));
-    return { counts, exists: true, inspection: inspector?.(database), path: filePath, size };
+    return { counts, exists: true, inspection: inspector?.(database), integrity, path: filePath,
+      sidecarPaths, size };
   } catch (error) {
-    return { counts: {}, error: error.message, exists: true, path: filePath, size, unreadable: true };
+    return {
+      counts: {}, error: error.message, exists: true, path: filePath, sidecarPaths, size, unreadable: true
+    };
   } finally {
     database?.close();
   }
@@ -135,9 +154,9 @@ export async function collectAndroidDeviceSnapshot(rawOptions) {
     const [packageInfo, events] = await Promise.all([
       collectPackageInfo(options), rawOptions.includeEvents === false ? [] : collectEvents(options)
     ]);
-    const hasDatabase = await pullDatabase(options, dbPath);
-    const database = hasDatabase
-      ? await inspectDatabase(dbPath, options.tables, rawOptions.databaseInspector)
+    const sidecarPaths = await pullDatabase(options, dbPath);
+    const database = sidecarPaths
+      ? await inspectDatabase(dbPath, sidecarPaths, options.tables, rawOptions.databaseInspector)
       : { exists: false };
     return { adb: options.adb, appId: options.appId, database, events, packageInfo, serial };
   } finally {

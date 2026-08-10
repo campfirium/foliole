@@ -7,8 +7,29 @@ import { backupDatabase, writeManifest } from './android-data-backup-files.mjs';
 import { assertReadableDatabase } from './android-data-protection-validation.mjs';
 import { collectAndroidDeviceSnapshot } from './android-device-snapshot.mjs';
 import { classifyInstallerClearAppDataEvents } from './android-install-events.mjs';
+import { inspectPairSyncRecoveryWorkspace } from './android-pair-sync-recovery-readiness.mjs';
 
 const DEFAULT_TABLES = ['nodes', 'node_order', 'content_blobs', 'sync_object_state', 'workspace_meta', 'companion_meta'];
+const IDENTITY_FIELDS = [
+  'activeSyncGroupMemberCount', 'deviceIdentityFingerprint', 'syncGroupId', 'syncGroupTimelineId'
+];
+
+function protectionFacts(snapshot) {
+  const inspection = snapshot.database?.inspection ?? {};
+  return {
+    counts: snapshot.database?.counts ?? {},
+    identity: Object.fromEntries(IDENTITY_FIELDS.map((key) => [key, inspection[key] ?? null])),
+    integrity: snapshot.database?.integrity ?? null
+  };
+}
+
+export function assertProtectionPreserved(before, after) {
+  const beforeFacts = protectionFacts(before);
+  const afterFacts = protectionFacts(after);
+  if (JSON.stringify(beforeFacts) !== JSON.stringify(afterFacts)) {
+    throw new Error('Android data protection failure: database identity, group, timeline, or counts changed');
+  }
+}
 
 function parseArgs(argv) {
   const options = {
@@ -54,7 +75,9 @@ function printSummary(label, snapshot) {
 }
 
 async function runBackup(options) {
-  const snapshot = await collectAndroidDeviceSnapshot({ ...options, keepPulledDatabase: true });
+  const snapshot = await collectAndroidDeviceSnapshot({
+    ...options, databaseInspector: inspectPairSyncRecoveryWorkspace, keepPulledDatabase: true
+  });
   try {
     assertReadableDatabase(snapshot, 'before install');
     const backup = await backupDatabase(options, snapshot);
@@ -76,8 +99,11 @@ function isDataCleared(before, after) {
 async function runCheck(options) {
   const before = JSON.parse(await readFile(options.manifest, 'utf8'));
   assertReadableDatabase(before.snapshot, 'before install');
-  const after = await collectAndroidDeviceSnapshot(options);
+  const after = await collectAndroidDeviceSnapshot({
+    ...options, databaseInspector: inspectPairSyncRecoveryWorkspace
+  });
   assertReadableDatabase(after, 'after install');
+  assertProtectionPreserved(before.snapshot, after);
   printSummary('after install', after);
   const beforeInstallTime = before.snapshot?.packageInfo?.firstInstallTime;
   const afterInstallTime = after.packageInfo?.firstInstallTime;
