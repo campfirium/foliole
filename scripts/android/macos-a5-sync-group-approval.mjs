@@ -65,6 +65,9 @@ export async function runMacosA5SyncGroupApproval({ execute, onReady = async () 
     requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'install', '-r', '-t', testApk], {
       env, timeoutMs: 120_000
     }), 'test-install');
+    requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'logcat', '-c'], {
+      env, timeoutMs: 30_000
+    }), 'provider-log-clear');
     await protectData(paths, env, 'check', manifest);
     scrubPairSyncDataProtection(fs, manifest);
     await startMacosA5SyncGroupApprovalProvider({ execute, onReady, paths, env });
@@ -73,9 +76,11 @@ export async function runMacosA5SyncGroupApproval({ execute, onReady = async () 
       env, timeoutMs: 15 * 60_000
     }), 'sync-group-approval');
     const receipt = parseSyncGroupApprovalReceipt(run.output);
+    const providerLog = requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'logcat', '-d',
+      '-v', 'time', 'FolioleSyncProvider:V', '*:S'], { env, timeoutMs: 30_000 }), 'provider-log');
     const resume = requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start',
       '-W', '-n', `${APP_ID}/.MainActivity`], { env, timeoutMs: 60_000 }), 'provider-resume');
-    return { output: `${run.output}${resume.output}`, receipt };
+    return { output: `${run.output}${providerLog.output}${resume.output}`, receipt };
   } finally {
     await execute(paths.adb, ['-s', A5_SERIAL, 'uninstall', TEST_APP_ID], { env, timeoutMs: 60_000 });
     await execute(paths.adb, ['kill-server'], { env, timeoutMs: 30_000 });

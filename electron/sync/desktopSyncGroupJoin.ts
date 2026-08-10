@@ -133,7 +133,8 @@ async function runPeerSyncStage<T>(stage: 'resources' | 'sync_pack', execute: ()
   try {
     return await execute();
   } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
+    const cause = error instanceof Error && error.cause instanceof Error ? `; cause=${error.cause.message}` : '';
+    const detail = `${error instanceof Error ? error.message : String(error)}${cause}`;
     throw new Error(`sync_group_${stage}_failed: ${detail}`, { cause: error });
   }
 }
