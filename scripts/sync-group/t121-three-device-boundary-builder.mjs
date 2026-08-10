@@ -6,10 +6,11 @@ function androidProtection(manifest, expectedGroup = undefined) {
   const database = snapshot?.database;
   const inspection = database?.inspection;
   const attachmentCount = database?.counts?.attachments ?? 0;
+  const attachmentSnapshot = snapshot?.attachments;
   if (backup?.created !== true || backup?.validated !== true || database?.integrity !== 'ok'
       || !inspection?.deviceIdentityFingerprint || !Number.isInteger(database.counts?.nodes)
       || !Number.isInteger(database.counts?.content_blobs) || !Number.isInteger(attachmentCount)
-      || (attachmentCount > 0 && (!backup.attachmentArchivePath || !snapshot.attachments?.sha256))) {
+      || (attachmentSnapshot && (!backup.attachmentArchivePath || !attachmentSnapshot.sha256))) {
     throw new Error('T121 Android protection manifest is incomplete.');
   }
   if (expectedGroup && (inspection.syncGroupId !== expectedGroup.groupId

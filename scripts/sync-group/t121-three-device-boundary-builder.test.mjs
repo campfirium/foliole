@@ -32,3 +32,15 @@ it('rejects Android attachment facts without a restorable attachment archive', (
     candidate, cReset: { baselineProtection: desktop('C', true), originalProtection: desktop('C') },
     originalA: desktop('A'), originalB: android('group-old') })).toThrow('incomplete');
 });
+
+it('accepts attachment records when the device has no local attachment directory', () => {
+  const withoutLocalAttachments = android();
+  withoutLocalAttachments.snapshot.attachments = null;
+  withoutLocalAttachments.backup.attachmentArchivePath = null;
+  const manifest = buildThreeDeviceJourneyManifest({ baselineA: desktop('A'),
+    baselineB: withoutLocalAttachments, baselineInspection: { identity: { groupId: 'group-1',
+      timelineId: 'timeline-1' } }, candidate, cReset: {
+      baselineProtection: desktop('C', true), originalProtection: desktop('C')
+    }, originalA: desktop('A'), originalB: android('group-old') });
+  expect(manifest.baseline.restorePoints.B.counts.attachments).toBe(2);
+});
