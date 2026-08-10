@@ -2,18 +2,12 @@ import { Bonjour } from 'bonjour-service';
 
 import type { DesktopSyncGroupJoinCandidatePayload } from '../../lib/platform/nativeCompanionSyncContract.js';
 
-import { collectCompanionMdnsInterfaceAddresses } from './companionMdnsAdvertisement.js';
-
 const DISCOVERY_MS = 1_800;
 const DISCOVERY_PROBE_MS = 2_000;
-type BonjourMdnsOptions = NonNullable<ConstructorParameters<typeof Bonjour>[0]> & {
-  interface?: string;
-};
 type DiscoveredService = Parameters<NonNullable<Parameters<InstanceType<typeof Bonjour>['find']>[1]>>[0];
 
 export async function discoverDesktopSyncGroups(
   excludedDeviceId?: string,
-  interfaceAddresses = collectCompanionMdnsInterfaceAddresses(),
   fetchDiscovery: typeof fetch = fetch
 ) {
   const endpoints = new Map<string, { name: string; txt: Record<string, unknown> }>();
@@ -26,19 +20,11 @@ export async function discoverDesktopSyncGroups(
     if (!host || !service.port || typeof txt.group_id !== 'string' || typeof txt.timeline_id !== 'string') return;
     endpoints.set(`http://${host}:${service.port}`, { name: service.name, txt });
   };
-  const targets = interfaceAddresses.length > 0 ? interfaceAddresses : [undefined];
-  const discoveries = targets.map((interfaceAddress) => {
-    const options: BonjourMdnsOptions | undefined = interfaceAddress
-      ? { interface: interfaceAddress }
-      : undefined;
-    const bonjour = new Bonjour(options);
-    return { bonjour, browser: bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, collect) };
-  });
+  const bonjour = new Bonjour();
+  const browser = bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, collect);
   await new Promise((resolve) => setTimeout(resolve, DISCOVERY_MS));
-  discoveries.forEach(({ bonjour, browser }) => {
-    browser.stop();
-    bonjour.destroy();
-  });
+  browser.stop();
+  bonjour.destroy();
   const candidates = (await Promise.all([...endpoints].map(([endpointUrl, service]) =>
     probeCandidate(fetchDiscovery, endpointUrl, service)
   ))).filter((candidate): candidate is DesktopSyncGroupJoinCandidatePayload => candidate !== null);

@@ -8,10 +8,8 @@ const bonjourMock = vi.hoisted(() => ({
   stop: vi.fn()
 }));
 
-const networkInterfacesMock = vi.hoisted(() => vi.fn());
-
 vi.mock('node:os', () => ({
-  default: { hostname: () => 'V', networkInterfaces: networkInterfacesMock }
+  default: { hostname: () => 'V' }
 }));
 
 vi.mock('bonjour-service', () => {
@@ -44,9 +42,6 @@ async function resetMocks() {
   bonjourMock.constructorCallback = null;
   bonjourMock.publish.mockClear();
   bonjourMock.stop.mockClear();
-  networkInterfacesMock.mockReturnValue({
-    Ethernet: [{ address: '192.168.0.11', family: 'IPv4', internal: false, mac: '54:05:db:6a:f6:31' }]
-  });
 }
 
 describe('companion mDNS advertisement', () => {
@@ -82,7 +77,7 @@ describe('companion mDNS advertisement', () => {
       timelineId: 'timeline-1'
     });
 
-    expect(bonjourMock.constructorOptions).toEqual([{ interface: '192.168.0.11' }]);
+    expect(bonjourMock.constructorOptions).toEqual([undefined]);
 
     expect(bonjourMock.publish).toHaveBeenCalledWith({
       host: 'V.local',
@@ -104,16 +99,10 @@ describe('companion mDNS advertisement', () => {
   });
 });
 
-describe('companion mDNS interface lifecycle', () => {
+describe('companion mDNS lifecycle', () => {
   beforeEach(resetMocks);
 
-  it('advertises on every usable IPv4 interface instead of the system multicast route', async () => {
-    networkInterfacesMock.mockReturnValue({
-      Ethernet: [{ address: '192.168.0.11', family: 'IPv4', internal: false, mac: '54:05:db:6a:f6:31' }],
-      Loopback: [{ address: '127.0.0.1', family: 'IPv4', internal: true, mac: '00:00:00:00:00:00' }],
-      Tunnel: [{ address: '198.18.0.1', family: 'IPv4', internal: false, mac: '00:00:00:00:00:00' }],
-      VMware: [{ address: '192.168.111.1', family: 'IPv4', internal: false, mac: '00:50:56:c0:00:08' }]
-    });
+  it('advertises once through the system multicast route', async () => {
     const { startCompanionMdnsAdvertisement } = await import('./companionMdnsAdvertisement.js');
 
     startCompanionMdnsAdvertisement({
@@ -121,11 +110,8 @@ describe('companion mDNS interface lifecycle', () => {
       peerId: 'desktop-local', port: 38683, timelineId: 'timeline-1'
     });
 
-    expect(bonjourMock.constructorOptions).toEqual([
-      { interface: '192.168.0.11' },
-      { interface: '192.168.111.1' }
-    ]);
-    expect(bonjourMock.publish).toHaveBeenCalledTimes(2);
+    expect(bonjourMock.constructorOptions).toEqual([undefined]);
+    expect(bonjourMock.publish).toHaveBeenCalledTimes(1);
   });
 
   it('stops the advertised service and destroys the responder', async () => {

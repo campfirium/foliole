@@ -7,16 +7,12 @@ import { serializeSyncProtocolTxt } from '../../lib/platform/syncProtocolContrac
 const COMPANION_SYNC_MDNS_SERVICE_TYPE = 'foliole-sync';
 
 type PublishedBonjourService = ReturnType<InstanceType<typeof Bonjour>['publish']>;
-type BonjourMdnsOptions = NonNullable<ConstructorParameters<typeof Bonjour>[0]> & {
-  interface?: string;
-};
-
 type ActiveAdvertisement = {
   bonjour: InstanceType<typeof Bonjour>;
   service: PublishedBonjourService;
 };
 
-let activeAdvertisements: ActiveAdvertisement[] = [];
+let activeAdvertisement: ActiveAdvertisement | null = null;
 
 export interface CompanionMdnsAdvertisementInput {
   appVersion: string;
@@ -26,17 +22,6 @@ export interface CompanionMdnsAdvertisementInput {
   groupDisplayName: string;
   groupId: string;
   timelineId: string;
-}
-
-export function collectCompanionMdnsInterfaceAddresses(
-  interfaces = os.networkInterfaces()
-) {
-  const addresses = Object.values(interfaces)
-    .flatMap((entries) => entries ?? [])
-    .filter((entry) => entry.family === 'IPv4' && !entry.internal)
-    .filter((entry) => entry.mac !== '00:00:00:00:00:00')
-    .map((entry) => entry.address);
-  return [...new Set(addresses)];
 }
 
 export function resolveCompanionMdnsHost(hostname = os.hostname()) {
@@ -51,35 +36,28 @@ export function startCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisemen
     console.warn('[companion-sync] mDNS advertisement warning', error);
     input.onWarning?.(error);
   };
-  const addresses = collectCompanionMdnsInterfaceAddresses();
-  const targets = addresses.length > 0 ? addresses : [undefined];
-  activeAdvertisements = targets.map((interfaceAddress) => {
-    const options: BonjourMdnsOptions | undefined = interfaceAddress ? { interface: interfaceAddress } : undefined;
-    const bonjour = new Bonjour(options, reportWarning);
-    const service = bonjour.publish({
-      host: resolveCompanionMdnsHost(),
-      name: input.groupDisplayName,
-      port: input.port,
-      protocol: 'tcp',
-      txt: {
-        app_version: input.appVersion,
-        group_id: input.groupId,
-        peer_id: input.peerId,
-        timeline_id: input.timelineId,
-        ...serializeSyncProtocolTxt()
-      },
-      type: COMPANION_SYNC_MDNS_SERVICE_TYPE
-    });
-    return { bonjour, service };
+  const bonjour = new Bonjour(undefined, reportWarning);
+  const service = bonjour.publish({
+    host: resolveCompanionMdnsHost(),
+    name: input.groupDisplayName,
+    port: input.port,
+    protocol: 'tcp',
+    txt: {
+      app_version: input.appVersion,
+      group_id: input.groupId,
+      peer_id: input.peerId,
+      timeline_id: input.timelineId,
+      ...serializeSyncProtocolTxt()
+    },
+    type: COMPANION_SYNC_MDNS_SERVICE_TYPE
   });
-  return activeAdvertisements.map(({ service }) => service);
+  activeAdvertisement = { bonjour, service };
+  return [service];
 }
 
 export function stopCompanionMdnsAdvertisement() {
-  const advertisements = activeAdvertisements;
-  activeAdvertisements = [];
-  advertisements.forEach(({ bonjour, service }) => {
-    service.stop?.();
-    bonjour.destroy();
-  });
+  const advertisement = activeAdvertisement;
+  activeAdvertisement = null;
+  advertisement?.service.stop?.();
+  advertisement?.bonjour.destroy();
 }
