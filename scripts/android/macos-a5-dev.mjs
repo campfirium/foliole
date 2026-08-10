@@ -169,7 +169,7 @@ async function captureAnnotation(paths) {
 }
 
 export async function runMacosA5Action(action, repoRoot = process.cwd()) {
-  if (!['status', 'approve-windows-join', 'build', 'capture-annotation', 'clear-app-data', 'create-journey-fact', 'database-performance', 'deploy', 'leave-sync-group', 'macos-leave', 'pair-sync', 'protect-baseline', 'protect-original', 'sync-existing'].includes(action)) {
+  if (!['status', 'approve-windows-join', 'build', 'capture-annotation', 'clear-app-data', 'create-journey-fact', 'database-performance', 'deploy', 'leave-sync-group', 'macos-leave', 'pair-sync', 'protect-baseline', 'protect-original', 'resume-sync-group', 'sync-existing'].includes(action)) {
     throw new Error('Usage: node scripts/android/macos-a5-dev.mjs <registered-action>');
   }
   const paths = macosA5Paths(repoRoot);
@@ -182,6 +182,11 @@ export async function runMacosA5Action(action, repoRoot = process.cwd()) {
       readiness(paths);
     }
     if (action === 'deploy') deploy(paths);
+    if (action === 'resume-sync-group') {
+      assertFixedA5(paths);
+      checked(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start', '-n', COMPONENT]);
+      readiness(paths);
+    }
     if (action === 'capture-annotation') await captureAnnotation(paths);
     if (action === 'database-performance') await runMacosA5DatabasePerformanceEntry({
       assertFixed: () => assertFixedA5(paths), build: () => build(paths), env: macosA5GradleEnv(), execute, paths, serial: A5_SERIAL });

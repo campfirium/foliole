@@ -15,13 +15,17 @@ import { runWindowsDevDesktopBuild } from './windows-dev-desktop-build.mjs';
 import { runWindowsDevDeviceAction } from './windows-dev-device-action.mjs';
 import { windowsDevPaths } from './windows-dev-paths.mjs';
 import { allowsPairSyncNativeClient } from './windows-dev-residual-process.mjs';
+import {
+  attachSyncGroupResult, isWindowsSyncGroupAction, printSyncGroupResult,
+  WINDOWS_SYNC_GROUP_ACTIONS
+} from './windows-sync-group-build-routing.mjs';
 
 const BUILD_COMMAND = 'call .\\gradlew.bat --no-daemon assembleDebugAndroidTest';
 const CAPTURE_BUILD_COMMAND = 'call .\\gradlew.bat --no-daemon assembleDebug assembleDebugAndroidTest';
 const BUILD_TIMEOUT_MS = 20 * 60_000;
 const WINDOWS_DEV_ACTIONS = [
   'appearance', 'build', 'capture-annotation', 'deploy', 'live', 'pair-sync-recover', 'secondary',
-  'sync-group-baseline-reset', 'sync-group-recover', 'verify'
+  ...WINDOWS_SYNC_GROUP_ACTIONS, 'verify'
 ];
 
 function failure(message, exitCode, stage) {
@@ -119,9 +123,10 @@ export async function runWindowsDevBuild({
     if (!WINDOWS_DEV_ACTIONS.includes(action)) throw failure('Unknown Windows DEV action', 64, 'request');
     context = evidenceContext(paths, now, id, fsApi);
     const requiredTools = [paths.systemNode,
-      ...(['build', 'capture-annotation', 'deploy', 'pair-sync-recover', 'sync-group-baseline-reset', 'sync-group-recover'].includes(action)
+      ...(['build', 'capture-annotation', 'deploy', 'pair-sync-recover'].includes(action)
+        || isWindowsSyncGroupAction(action)
         ? [paths.systemNpmCli] : []),
-      ...(['build', 'sync-group-baseline-reset', 'sync-group-recover'].includes(action) ? [] : [paths.adbPath])];
+      ...(['build'].includes(action) || isWindowsSyncGroupAction(action) ? [] : [paths.adbPath])];
     for (const filePath of requiredTools) {
       if (!fsApi.existsSync(filePath)) throw failure(`Required tool is missing: ${filePath}`, 64, 'preflight');
     }
@@ -142,12 +147,14 @@ export async function runWindowsDevBuild({
       desktopPairingReadiness = gate.desktopPairingReadiness ?? null;
       output += gate.output;
     }
-    if (['build', 'capture-annotation', 'deploy', 'pair-sync-recover', 'sync-group-baseline-reset', 'sync-group-recover'].includes(action)) {
+    if (['build', 'capture-annotation', 'deploy', 'pair-sync-recover'].includes(action)
+        || isWindowsSyncGroupAction(action)) {
       output += await prepareHost({
-        execute, fsApi, liveReload: !['capture-annotation', 'pair-sync-recover', 'sync-group-baseline-reset', 'sync-group-recover'].includes(action), paths
+        execute, fsApi, liveReload: !['capture-annotation', 'pair-sync-recover'].includes(action)
+          && !isWindowsSyncGroupAction(action), paths
       });
     }
-    if (['pair-sync-recover', 'sync-group-baseline-reset', 'sync-group-recover'].includes(action)) {
+    if (action === 'pair-sync-recover' || isWindowsSyncGroupAction(action)) {
       output += await runWindowsDevDesktopBuild(execute, paths, checked);
     }
     let actionResult = null;
@@ -179,8 +186,7 @@ export async function runWindowsDevBuild({
       ...(actionResult?.liveReload ? { liveReload: actionResult.liveReload } : {}) };
     if (actionResult?.captureAnnotation) summary.captureAnnotation = actionResult.captureAnnotation;
     if (actionResult?.pairSyncRecovery) summary.pairSyncRecovery = actionResult.pairSyncRecovery;
-    if (actionResult?.syncGroupRecovery) summary.syncGroupRecovery = actionResult.syncGroupRecovery;
-    if (actionResult?.syncGroupBaseline) summary.syncGroupBaseline = actionResult.syncGroupBaseline;
+    attachSyncGroupResult(summary, actionResult);
     writeJson(fsApi, context.summaryPath, summary);
     return { exitCode: 0, summary, summaryPath: context.summaryPath };
   } catch (error) {
@@ -223,12 +229,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
   if (result.summary.pairSyncRecovery) {
     stream(`[windows-dev-action] pair-sync-recover identity=${result.summary.pairSyncRecovery.buildIdentity} manifest=${result.summary.pairSyncRecovery.manifestPath}`);
   }
-  if (result.summary.syncGroupRecovery) {
-    stream(`[windows-dev-action] sync-group-recover identity=${result.summary.runId} manifest=${result.summary.syncGroupRecovery.receiptPath}`);
-  }
-  if (result.summary.syncGroupBaseline) {
-    stream(`[windows-dev-action] sync-group-baseline-reset identity=${result.summary.runId} manifest=${result.summary.syncGroupBaseline.manifestPath}`);
-  }
+  printSyncGroupResult(stream, result.summary);
   stream(`[windows-dev-action] status: ${label} exit=${result.exitCode} evidence=${result.summaryPath ?? '-'}`);
   process.exitCode = result.exitCode;
 }

@@ -50,6 +50,8 @@ function stableFacts(inspection) {
     localGroupId: inspection.localGroupId,
     localMemberState: inspection.localMemberState,
     localTimelineId: inspection.localTimelineId,
+    missingAttachmentCount: inspection.missingAttachmentCount,
+    missingContentBlobCount: inspection.missingContentBlobCount,
     nodeCount: inspection.nodeCount
   };
 }
@@ -75,7 +77,8 @@ export async function protectOwnedLibrary({ backupRoot, device, inspectDatabase,
   }
   return {
     counts: { attachments: before.attachmentCount, contentBlobs: before.contentBlobCount,
-      nodes: before.nodeCount },
+      missingAttachments: before.missingAttachmentCount,
+      missingContentBlobs: before.missingContentBlobCount, nodes: before.nodeCount },
     device,
     deviceIdentity: before.deviceIdentity,
     groupId: before.localGroupId,

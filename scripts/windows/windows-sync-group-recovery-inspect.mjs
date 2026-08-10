@@ -49,6 +49,7 @@ export function inspectSyncGroupRecoveryDatabase(databasePath, factIds = []) {
       departedDeviceIdentities: departedDeviceIdentities(db),
       deviceIdentity: identity.deviceIdentityFingerprint,
       integrity: db.prepare('PRAGMA integrity_check').pluck().get(),
+      journeyFacts: identity.journeyFacts,
       facts,
       localGroupId: local?.group_id ?? null,
       localMemberState: local?.member_state ?? null,

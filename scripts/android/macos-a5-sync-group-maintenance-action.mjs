@@ -58,6 +58,11 @@ export async function runMacosA5SyncGroupMaintenance({
     const expected = action === 'leave-sync-group' ? 'departurePersisted'
       : action === 'create-journey-fact' ? 'factPersisted' : 'appDataCleared';
     if (receipt[expected] !== true) throw new Error(`Product receipt did not prove ${expected}`);
+    if (action === 'create-journey-fact') {
+      output.push((await checked(execute, paths.adb, [
+        '-s', serial, 'shell', 'am', 'start', '-n', `${APP_ID}/.MainActivity`
+      ], options, 'provider resume')).output);
+    }
     const manifestPath = path.join(evidenceRoot, 'sync-group-maintenance-manifest.json');
     fs.writeFileSync(manifestPath, `${JSON.stringify({ action,
       after: bundle(instrumentation.stdout, 'folioleAfterSemantic'), buildIdentity,

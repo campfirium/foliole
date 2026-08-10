@@ -53,6 +53,28 @@ function waitingCount(event, key) {
   return Number.isSafeInteger(value) && value >= 0 ? value : 0;
 }
 
+function scalar(database, sql) {
+  const statement = database.prepare(sql);
+  if (typeof statement.pluck === 'function') return Number(statement.pluck().get() ?? 0);
+  const row = statement.get();
+  return Number(row?.count ?? row?.value ?? 0);
+}
+
+function journeyFacts(database) {
+  if (!tableExists(database, 'nodes')) return {};
+  const statement = database.prepare(`SELECT id,
+      CASE
+        WHEN id GLOB 't121-a-*' OR title LIKE 'T121 A fact%' OR content LIKE 'T121 A fact%' THEN 'A'
+        WHEN id GLOB 't121-b-*' OR title LIKE 'T121 B fact%' OR content LIKE 'T121 B fact%' THEN 'B'
+        WHEN id GLOB 't121-c-*' OR title LIKE 'T121 C fact%' OR content LIKE 'T121 C fact%' THEN 'C'
+      END AS origin
+    FROM nodes WHERE deleted_at IS NULL AND (id GLOB 't121-[abc]-*'
+      OR title LIKE 'T121 _ fact%' OR content LIKE 'T121 _ fact%') ORDER BY updated_at DESC`);
+  if (typeof statement.all !== 'function') return {};
+  const rows = statement.all();
+  return Object.fromEntries(rows.map(({ id, origin }) => [id, origin]));
+}
+
 export function identityFingerprint(value) {
   return value ? createHash('sha256').update(value).digest('hex').slice(0, 16) : null;
 }
@@ -79,6 +101,13 @@ export function inspectPairSyncRecoveryWorkspace(database) {
       latestSyncRun, 'waiting_confirmation_count'
     ),
     latestSyncWaitingSendCount: waitingCount(latestSyncRun, 'waiting_send_count'),
+    journeyFacts: journeyFacts(database),
+    missingAttachmentCount: tableExists(database, 'attachment_blobs')
+      ? scalar(database, "SELECT COUNT(*) FROM attachment_blobs WHERE availability != 'cached'") : null,
+    missingContentBlobCount: tableExists(database, 'content_blobs')
+      && tableExists(database, 'content_blob_data')
+      ? scalar(database, `SELECT COUNT(*) FROM content_blobs cb
+        LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash WHERE cbd.hash IS NULL`) : null,
     pairingCredentialRejectionReason: rejection.reason,
     pairingCredentialsRejected: rejection.rejected,
     syncGroupId: group?.group_id ?? null,

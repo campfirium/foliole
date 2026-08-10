@@ -136,7 +136,7 @@ export async function controlWindowsNativeClient(execute, paths, action) {
 }
 
 function assertComplete(facts) {
-  if (facts.activeMemberCount !== 2 || facts.nodeCount === 0 || facts.contentBlobCount === 0
+  if (facts.activeMemberCount < 2 || facts.nodeCount === 0 || facts.contentBlobCount === 0
       || facts.missingAttachmentCount !== 0 || facts.missingContentBlobCount !== 0) {
     throw new Error(`Windows C did not complete ordinary sync: ${JSON.stringify(facts)}`);
   }
