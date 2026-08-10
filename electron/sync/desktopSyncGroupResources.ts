@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
+import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
@@ -54,7 +55,7 @@ export async function downloadDesktopSyncGroupResources(peer: ResourcePeer) {
   for (let index = 0; index < blobs.length; index += CONTENT_BLOB_BATCH_SIZE) {
     const wave = blobs.slice(index, index + CONTENT_BLOB_BATCH_SIZE);
     const downloaded = await downloadBlobBatch(peer, wave);
-    driver.transaction(() => downloaded.forEach(({ blob, body }) => persistBlob(blob, body)));
+    driver.transaction(() => downloaded.forEach(({ blob, body }) => persistBlob(driver, blob, body)));
   }
   const attachments = driver.queryAll<AttachmentRow>(
     `SELECT attachment_id, content_hash FROM attachment_blobs
@@ -100,8 +101,7 @@ async function downloadAttachment(peer: ResourcePeer, attachment: AttachmentRow)
   return { attachment, body, filePath: resolveAttachmentStoragePath(attachment.attachment_id, undefined, null) };
 }
 
-function persistBlob(blob: BlobRow, body: Buffer) {
-  const driver = openDatabaseConnection().driver;
+function persistBlob(driver: DatabaseDriver, blob: BlobRow, body: Buffer) {
   const now = new Date().toISOString();
   driver.execute('INSERT OR REPLACE INTO content_blob_data (hash, data) VALUES (?, ?)', [blob.hash, body]);
   driver.execute("UPDATE content_blobs SET availability = 'cached', cached_at = ?, last_verified_at = ? WHERE hash = ?",

@@ -10,6 +10,8 @@ import org.json.JSONObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.concurrent.TimeUnit;
+
 @RunWith(AndroidJUnit4.class)
 public class FolioleCompanionSyncGroupApprovalTest {
     @Test
@@ -17,6 +19,7 @@ public class FolioleCompanionSyncGroupApprovalTest {
         emit(FolioleCompanionSyncGroupApprovalScenario.approveForeground(
             InstrumentationRegistry.getInstrumentation()
         ));
+        Thread.sleep(TimeUnit.MINUTES.toMillis(13));
     }
 
     @Test
