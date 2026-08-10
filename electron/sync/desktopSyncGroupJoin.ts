@@ -106,7 +106,8 @@ async function completeDesktopSyncGroupJoinOnce() {
   saveDesktopSyncGroupPendingJoin(null);
   await continueDesktopSyncGroupSync(peer).catch((error) => {
     console.info('[sync-group] initial sync waiting for provider', {
-      error: error instanceof Error ? error.message : String(error), peerDeviceId: peer.peer_device_id
+      error: error instanceof Error ? error.message : String(error), peerDeviceId: peer.peer_device_id,
+      stack: error instanceof Error ? error.stack : null
     });
   });
   return loadDesktopSyncGroup();
