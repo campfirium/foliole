@@ -43,3 +43,14 @@ it('uses the fixed product instrumentation method and records its receipt', asyn
     '-s', '87a33a4b', 'uninstall', 'com.foliole.android.test'
   ]);
 });
+
+it('creates journey facts only through the visible Capture product entry', async () => {
+  const source = fs.readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupMaintenanceScenario.java',
+    'utf8'
+  );
+  expect(source).toContain('"companion-capture-open"');
+  expect(source).toContain('"companion-capture-text", "input", factText');
+  expect(source).toContain('"companion-capture-save"');
+  expect(source).toContain('put("factPersisted", true)');
+});

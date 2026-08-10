@@ -32,6 +32,8 @@ it('uses the fixed Windows DEV host and accepts only fixed actions', () => {
     .toMatchObject({ action: 'pair-sync-recover' });
   expect(parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'sync-group-recover'], {}))
     .toMatchObject({ action: 'sync-group-recover' });
+  expect(parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'sync-group-baseline-reset'], {}))
+    .toMatchObject({ action: 'sync-group-baseline-reset' });
   expect(parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'secondary'], {}))
     .toMatchObject({ action: 'secondary' });
   expect(() => parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'push'], {}))

@@ -21,6 +21,19 @@ export async function runMacosA5DatabasePerformanceEntry(args) {
   console.log(`[macos-a5-dev] database-performance evidence=${result.evidencePath}`);
 }
 
+export async function runMacosA5DataProtectionEntry(args) {
+  args.assertFixed();
+  await args.execute(args.paths.adb, [
+    '-s', args.serial, 'shell', 'am', 'force-stop', 'com.foliole.android'
+  ], { env: args.env, timeoutMs: 30_000 });
+  const label = args.action === 'protect-original' ? 'original' : 'baseline';
+  const root = path.join(args.paths.repoRoot, '.tmp/artifacts/a5-data-protection', args.buildIdentity);
+  fs.mkdirSync(root, { recursive: true });
+  const manifest = path.join(root, `${label}-manifest.json`);
+  await args.protectData('backup', manifest);
+  console.log(`[macos-a5-dev] ${args.action} evidence=${manifest}`);
+}
+
 export async function runMacosA5SyncGroupMaintenanceEntry(args) {
   args.assertFixed(); args.build();
   const result = await runMacosA5SyncGroupMaintenance({

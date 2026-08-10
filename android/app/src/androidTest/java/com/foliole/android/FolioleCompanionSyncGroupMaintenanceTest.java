@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 public class FolioleCompanionSyncGroupMaintenanceTest {
     @Test public void leavesSyncGroupThroughProduct() throws Exception { run(true); }
     @Test public void clearsAppDataThroughProduct() throws Exception { run(false); }
+    @Test public void createsJourneyFactThroughProduct() throws Exception { runFact(); }
     private void run(boolean leave) throws Exception {
         Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
         Activity activity = start(instrumentation);
@@ -38,6 +39,24 @@ public class FolioleCompanionSyncGroupMaintenanceTest {
             evidence.putString("folioleAfterSemantic",
                 FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView).toString());
             evidence.putString("folioleActionReceipt", receipt.toString());
+            instrumentation.sendStatus(2, evidence);
+        } finally {
+            instrumentation.runOnMainSync(activity::finish);
+        }
+    }
+
+    private void runFact() throws Exception {
+        Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
+        Activity activity = start(instrumentation);
+        try {
+            waitForWindowFocus(activity, 30_000);
+            WebView webView = activity.findViewById(R.id.webview);
+            assertNotNull(webView);
+            Bundle evidence = new Bundle();
+            evidence.putString("folioleAfterSemantic",
+                FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView).toString());
+            evidence.putString("folioleActionReceipt",
+                FolioleCompanionSyncGroupMaintenanceScenario.createFact(instrumentation, webView).toString());
             instrumentation.sendStatus(2, evidence);
         } finally {
             instrumentation.runOnMainSync(activity::finish);

@@ -5,8 +5,9 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import BetterSqlite3 from 'better-sqlite3';
+import { inspectPairSyncRecoveryWorkspace } from '../android/android-pair-sync-recovery-readiness.mjs';
 
-export function inspectSyncGroupRecoveryDatabase(databasePath) {
+export function inspectSyncGroupRecoveryDatabase(databasePath, factIds = []) {
   const db = new BetterSqlite3(databasePath, { fileMustExist: true, readonly: true });
   try {
     const count = (sql) => Number(db.prepare(sql).pluck().get() ?? 0);
@@ -14,10 +15,16 @@ export function inspectSyncGroupRecoveryDatabase(databasePath) {
       FROM sync_group_local_state local
       LEFT JOIN sync_groups groups ON groups.group_id = local.group_id
       WHERE local.singleton_id = 1 LIMIT 1`).get();
+    const identity = inspectPairSyncRecoveryWorkspace(db);
+    const factExists = db.prepare('SELECT COUNT(*) FROM nodes WHERE id = ? AND deleted_at IS NULL').pluck();
+    const facts = Object.fromEntries(factIds.map((id) => [id, Number(factExists.get(id)) === 1]));
     return {
       activeMemberCount: count("SELECT COUNT(*) FROM sync_group_members WHERE state = 'active'"),
       attachmentCount: count('SELECT COUNT(*) FROM attachments'),
       contentBlobCount: count('SELECT COUNT(*) FROM content_blobs'),
+      deviceIdentity: identity.deviceIdentityFingerprint,
+      integrity: db.prepare('PRAGMA integrity_check').pluck().get(),
+      facts,
       localGroupId: local?.group_id ?? null,
       localMemberState: local?.member_state ?? null,
       localTimelineId: local?.timeline_id ?? null,
@@ -31,8 +38,8 @@ export function inspectSyncGroupRecoveryDatabase(databasePath) {
 }
 
 function main(argv) {
-  if (argv.length !== 1) throw new Error('usage: electron inspect.mjs <database-path>');
-  console.log(JSON.stringify(inspectSyncGroupRecoveryDatabase(path.resolve(argv[0]))));
+  if (argv.length < 1) throw new Error('usage: electron inspect.mjs <database-path> [fact-id...]');
+  console.log(JSON.stringify(inspectSyncGroupRecoveryDatabase(path.resolve(argv[0]), argv.slice(1))));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {

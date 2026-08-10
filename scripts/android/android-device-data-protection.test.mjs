@@ -1,5 +1,5 @@
 // @vitest-environment node
-/* global URL */
+/* global Buffer, URL */
 
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { backupDatabase } from './android-data-backup-files.mjs';
 import { assertProtectionPreserved } from './android-device-data-protection.mjs';
 import { assertReadableDatabase } from './android-data-protection-validation.mjs';
-import { pullDatabaseFile } from './android-device-snapshot.mjs';
+import { pullAttachmentArchive, pullDatabaseFile } from './android-device-snapshot.mjs';
 
 describe('Android device data protection', () => {
   it('streams the companion database together with any live SQLite sidecars', async () => {
@@ -36,9 +36,13 @@ describe('Android device data protection', () => {
       await Promise.all([
         writeFile(source, 'main'), writeFile(`${source}-wal`, 'wal'), writeFile(`${source}-shm`, 'shm')
       ]);
+      const attachmentArchive = `${source}.attachments.tar`;
+      await writeFile(attachmentArchive, 'attachments');
       const backup = await backupDatabase(
         { appId: 'com.foliole.android', backupRoot: path.join(root, 'backup') },
-        { database: { counts: { nodes: 2 }, exists: true, path: source,
+        { attachments: { path: attachmentArchive,
+          sha256: '3930e671c9e40dee2a33442c6f1055e8e8b75958ee19da8bd470754fd44beec2' },
+        database: { counts: { nodes: 2 }, exists: true, path: source,
           sidecarPaths: [`${source}-wal`, `${source}-shm`], size: 4 }, serial: 'fixed-a5' }
       );
 
@@ -46,6 +50,10 @@ describe('Android device data protection', () => {
       expect(backup.sidecarPaths).toEqual([`${backup.databasePath}-wal`, `${backup.databasePath}-shm`]);
       expect(await Promise.all(backup.sidecarPaths.map((file) => readFile(file, 'utf8'))))
         .toEqual(['wal', 'shm']);
+      expect(await readFile(backup.attachmentArchivePath, 'utf8')).toBe('attachments');
+      expect(backup).toMatchObject({ validated: true,
+        fileDigests: { attachments: expect.stringMatching(/^[0-9a-f]{64}$/u),
+          database: expect.stringMatching(/^[0-9a-f]{64}$/u) } });
     } finally {
       await rm(root, { force: true, recursive: true });
     }
@@ -60,6 +68,21 @@ describe('Android device data protection', () => {
     await expect(pullDatabaseFile(
       { appId: 'com.foliole.android' }, 'database-wal', 'unused', async () => { throw failed; }
     )).rejects.toThrow('transport failed');
+  });
+
+  it('streams the stopped app attachment directory into a hashed restorable archive', async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'foliole-attachment-protection-'));
+    const destination = path.join(root, 'attachments.tar');
+    const executeAdb = async (_options, args) => args.includes('tar')
+      ? { stdout: Buffer.from('archive-bytes') }
+      : { stdout: Buffer.alloc(0) };
+    const archive = await pullAttachmentArchive(
+      { appId: 'com.foliole.android' }, destination, executeAdb
+    );
+    expect(archive).toMatchObject({ size: 13, path: destination,
+      sha256: expect.stringMatching(/^[0-9a-f]{64}$/u) });
+    expect(await readFile(destination, 'utf8')).toBe('archive-bytes');
+    await rm(root, { force: true, recursive: true });
   });
 
   it('fails closed when a protection snapshot cannot prove a readable database', () => {

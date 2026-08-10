@@ -28,6 +28,19 @@ final class FolioleCompanionSyncGroupMaintenanceScenario {
         return receipt.put("appDataCleared", true);
     }
 
+    static JSONObject createFact(Instrumentation instrumentation, WebView webView) throws Exception {
+        String factText = "T121 B fact " + System.currentTimeMillis();
+        click(instrumentation, webView, "companion-capture-open");
+        waitUntilVisible(instrumentation, webView, "companion-capture-text", 30_000);
+        JSONObject input = FolioleCompanionWebViewSemanticAdapter.perform(
+            instrumentation, webView, "companion-capture-text", "input", factText
+        );
+        if (!input.optBoolean("ok")) throw new IllegalStateException(input.toString());
+        click(instrumentation, webView, "companion-capture-save");
+        waitUntilMissing(instrumentation, webView, "companion-capture-save", 30_000);
+        return new JSONObject().put("factPersisted", true).put("factText", factText);
+    }
+
     private static void openSettings(Instrumentation instrumentation, WebView webView) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
         String entry = FolioleCompanionPairSyncRecoveryScenario.waitForAnyVisible(

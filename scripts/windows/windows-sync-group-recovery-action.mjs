@@ -13,13 +13,13 @@ async function invoke(page, command, args = {}) {
   }, { args, command });
 }
 
-function clientPaths(paths) {
+export function windowsSyncGroupClientPaths(paths) {
   const root = path.join(paths.repoRoot, '.tmp', 'artifacts', CLIENT_ROOT_NAME);
   return { libraryHome: path.join(root, 'library'), userData: path.join(root, 'user-data') };
 }
 
 function launchOptions(paths) {
-  const { libraryHome, userData } = clientPaths(paths);
+  const { libraryHome, userData } = windowsSyncGroupClientPaths(paths);
   return {
     args: [path.join(paths.repoRoot, 'dist/electron/main.js')], cwd: paths.repoRoot,
     env: { ...process.env, FOLIOLE_DISABLE_HARDWARE_ACCELERATION: '1',
@@ -30,7 +30,7 @@ function launchOptions(paths) {
   };
 }
 
-async function openSession(paths, evidenceRoot, electronLauncher) {
+export async function openWindowsSyncGroupSession(paths, evidenceRoot, electronLauncher) {
   const launcher = electronLauncher ?? (await import('playwright'))._electron;
   const app = await launcher.launch(launchOptions(paths));
   captureSyncRuntimeLog(app.process(), path.join(evidenceRoot, 'sync-group-runtime.log'));
@@ -79,7 +79,7 @@ async function waitForOrdinarySyncFacts(execute, paths, evidenceRoot, timeoutMs 
   const nodeSurfaceDeadline = Date.now() + 90_000;
   let lastFacts = null;
   while (Date.now() < deadline) {
-    lastFacts = await inspectDatabase(execute, paths);
+    lastFacts = await inspectWindowsSyncGroupDatabase(execute, paths);
     try {
       assertComplete(lastFacts);
       return lastFacts;
@@ -102,11 +102,12 @@ function readSyncRuntimeLog(evidenceRoot) {
     : 'unavailable';
 }
 
-async function inspectDatabase(execute, paths) {
-  const databasePath = path.join(clientPaths(paths).libraryHome, 'Data', 'foliole.db');
+export async function inspectWindowsSyncGroupDatabase(execute, paths, databasePath = path.join(
+  windowsSyncGroupClientPaths(paths).libraryHome, 'Data', 'foliole.db'
+), factIds = []) {
   const electronPath = path.join(paths.repoRoot, 'node_modules/electron/dist/electron.exe');
   const inspectorPath = path.join(paths.repoRoot, 'scripts/windows/windows-sync-group-recovery-inspect.mjs');
-  const result = await execute(electronPath, [inspectorPath, databasePath], {
+  const result = await execute(electronPath, [inspectorPath, databasePath, ...factIds], {
     cwd: paths.repoRoot, env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
     timeoutCode: 'sync_group_inspect_timeout', timeoutMs: 30_000, windowsHide: true
   });
@@ -121,7 +122,7 @@ async function captureSyncSettings(page, screenshotPath) {
   await dialog.screenshot({ path: screenshotPath });
 }
 
-async function controlNativeClient(execute, paths, action) {
+export async function controlWindowsNativeClient(execute, paths, action) {
   const script = path.join(paths.repoRoot, 'scripts/windows/windows-client-native.mjs');
   const result = await execute(paths.systemNode, [script, action], {
     cwd: paths.repoRoot, timeoutCode: `native_${action}_timeout`, timeoutMs: 120_000,
@@ -143,13 +144,13 @@ function assertComplete(facts) {
 
 export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths }) {
   fs.mkdirSync(evidenceRoot, { recursive: true });
-  await controlNativeClient(execute, paths, 'stop');
+  await controlWindowsNativeClient(execute, paths, 'stop');
   let initialFacts = null;
   let primaryError = null;
   let recoveryResult = null;
   try {
-    initialFacts = await inspectDatabase(execute, paths);
-    let session = await openSession(paths, evidenceRoot);
+    initialFacts = await inspectWindowsSyncGroupDatabase(execute, paths);
+    let session = await openWindowsSyncGroupSession(paths, evidenceRoot);
     let candidate;
     let firstFacts;
     try {
@@ -158,7 +159,7 @@ export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths
       await waitForJoinedGroup(session.page, candidate.group_id);
       firstFacts = await waitForOrdinarySyncFacts(execute, paths, evidenceRoot);
     } finally { await session.app.close(); }
-    session = await openSession(paths, evidenceRoot);
+    session = await openWindowsSyncGroupSession(paths, evidenceRoot);
     const screenshotPath = path.join(evidenceRoot, 'sync-group-recovery.png');
     try {
       const overview = await invoke(session.page, 'load_companion_pairing_overview');
@@ -167,7 +168,7 @@ export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths
       }
       await captureSyncSettings(session.page, screenshotPath);
     } finally { await session.app.close(); }
-    const restartedFacts = await inspectDatabase(execute, paths);
+    const restartedFacts = await inspectWindowsSyncGroupDatabase(execute, paths);
     assertComplete(restartedFacts);
     const receipt = { candidate: { groupId: candidate.group_id, providerKind: candidate.provider_device_kind },
       firstFacts, restartedFacts, resultStatus: 'success', schemaVersion: 1 };
@@ -178,7 +179,7 @@ export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths
     error.message += `; initial=${JSON.stringify(initialFacts)}`;
     primaryError = error;
   }
-  try { await controlNativeClient(execute, paths, 'start'); }
+  try { await controlWindowsNativeClient(execute, paths, 'start'); }
   catch (cleanupError) {
     if (primaryError) primaryError.message += `; cleanup: ${cleanupError.message}`;
     else primaryError = cleanupError;

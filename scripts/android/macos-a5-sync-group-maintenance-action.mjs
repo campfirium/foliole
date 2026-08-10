@@ -25,10 +25,13 @@ function bundle(output, key) {
 export async function runMacosA5SyncGroupMaintenance({
   action, buildIdentity, env, evidenceRoot, execute, paths, serial
 }) {
-  if (!['leave-sync-group', 'clear-app-data'].includes(action)) throw new Error('Unsupported maintenance action');
-  const method = action === 'leave-sync-group'
-    ? 'leavesSyncGroupThroughProduct'
-    : 'clearsAppDataThroughProduct';
+  if (!['leave-sync-group', 'clear-app-data', 'create-journey-fact'].includes(action)) {
+    throw new Error('Unsupported maintenance action');
+  }
+  const methods = { 'clear-app-data': 'clearsAppDataThroughProduct',
+    'create-journey-fact': 'createsJourneyFactThroughProduct',
+    'leave-sync-group': 'leavesSyncGroupThroughProduct' };
+  const method = methods[action];
   const testApk = path.join(paths.repoRoot, TEST_APK);
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const options = { env, timeoutCode: 'sync_group_maintenance_timeout', timeoutMs: 3 * 60_000 };
@@ -52,7 +55,8 @@ export async function runMacosA5SyncGroupMaintenance({
     output.push(instrumentation.output);
     if (!/^INSTRUMENTATION_CODE: -1$/mu.test(instrumentation.stdout)) throw new Error('Product instrumentation did not finish');
     const receipt = bundle(instrumentation.stdout, 'folioleActionReceipt');
-    const expected = action === 'leave-sync-group' ? 'departurePersisted' : 'appDataCleared';
+    const expected = action === 'leave-sync-group' ? 'departurePersisted'
+      : action === 'create-journey-fact' ? 'factPersisted' : 'appDataCleared';
     if (receipt[expected] !== true) throw new Error(`Product receipt did not prove ${expected}`);
     const manifestPath = path.join(evidenceRoot, 'sync-group-maintenance-manifest.json');
     fs.writeFileSync(manifestPath, `${JSON.stringify({ action,

@@ -1,6 +1,7 @@
 /* global process */
 
 import { execFile } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -87,6 +88,24 @@ export async function pullDatabaseFile(options, remotePath, destination, execute
   return true;
 }
 
+export async function pullAttachmentArchive(options, destination, executeAdb = runAdb) {
+  try {
+    await executeAdb(options, [
+      'shell', 'run-as', options.appId, 'test', '-d', 'files/attachments'
+    ]);
+  } catch (error) {
+    if (error.code === 1) return null;
+    throw error;
+  }
+  const { stdout } = await executeAdb(options, [
+    'exec-out', 'run-as', options.appId, 'tar', '-cf', '-', 'files/attachments'
+  ], { encoding: 'buffer', maxBuffer: 1024 * 1024 * 1024 });
+  if (!stdout || stdout.length === 0) throw new Error('Android attachment archive is empty.');
+  await writeFile(destination, stdout);
+  return { path: destination, sha256: createHash('sha256').update(stdout).digest('hex'),
+    size: stdout.length };
+}
+
 async function pullDatabase(options, destination) {
   const remoteBase = 'databases/foliole-companionSQLite.db';
   if (!await pullDatabaseFile(options, remoteBase, destination)) return null;
@@ -150,15 +169,17 @@ export async function collectAndroidDeviceSnapshot(rawOptions) {
   if (!serial) return { adb: options.adb, appId: options.appId, error: 'no ready Android device', serial: '' };
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'foliole-android-db-'));
   const dbPath = path.join(tempDir, 'foliole-companion.db');
+  const attachmentArchivePath = path.join(tempDir, 'attachments.tar');
   try {
-    const [packageInfo, events] = await Promise.all([
-      collectPackageInfo(options), rawOptions.includeEvents === false ? [] : collectEvents(options)
+    const [packageInfo, events, attachments] = await Promise.all([
+      collectPackageInfo(options), rawOptions.includeEvents === false ? [] : collectEvents(options),
+      pullAttachmentArchive(options, attachmentArchivePath)
     ]);
     const sidecarPaths = await pullDatabase(options, dbPath);
     const database = sidecarPaths
       ? await inspectDatabase(dbPath, sidecarPaths, options.tables, rawOptions.databaseInspector)
       : { exists: false };
-    return { adb: options.adb, appId: options.appId, database, events, packageInfo, serial };
+    return { adb: options.adb, appId: options.appId, attachments, database, events, packageInfo, serial };
   } finally {
     if (!rawOptions.keepPulledDatabase) await rm(tempDir, { recursive: true, force: true });
   }

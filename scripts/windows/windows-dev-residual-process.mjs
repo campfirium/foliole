@@ -16,6 +16,7 @@ function isTrustedNativeClientWrapper(processEntry, paths) {
 }
 
 export function allowsPairSyncNativeClient(action, residual, paths) {
-  return ['pair-sync-recover', 'sync-group-recover'].includes(action) && residual.length === 1
+  return ['pair-sync-recover', 'sync-group-baseline-reset', 'sync-group-recover'].includes(action)
+    && residual.length === 1
     && isTrustedNativeClientWrapper(residual[0], paths);
 }

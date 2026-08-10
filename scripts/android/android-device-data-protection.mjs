@@ -9,7 +9,10 @@ import { collectAndroidDeviceSnapshot } from './android-device-snapshot.mjs';
 import { classifyInstallerClearAppDataEvents } from './android-install-events.mjs';
 import { inspectPairSyncRecoveryWorkspace } from './android-pair-sync-recovery-readiness.mjs';
 
-const DEFAULT_TABLES = ['nodes', 'node_order', 'content_blobs', 'sync_object_state', 'workspace_meta', 'companion_meta'];
+const DEFAULT_TABLES = [
+  'nodes', 'node_order', 'content_blobs', 'attachments',
+  'sync_object_state', 'workspace_meta', 'companion_meta'
+];
 const IDENTITY_FIELDS = [
   'activeSyncGroupMemberCount', 'deviceIdentityFingerprint', 'syncGroupId', 'syncGroupTimelineId'
 ];
@@ -17,6 +20,9 @@ const IDENTITY_FIELDS = [
 function protectionFacts(snapshot) {
   const inspection = snapshot.database?.inspection ?? {};
   return {
+    attachments: snapshot.attachments
+      ? { sha256: snapshot.attachments.sha256, size: snapshot.attachments.size }
+      : null,
     counts: snapshot.database?.counts ?? {},
     identity: Object.fromEntries(IDENTITY_FIELDS.map((key) => [key, inspection[key] ?? null])),
     integrity: snapshot.database?.integrity ?? null
