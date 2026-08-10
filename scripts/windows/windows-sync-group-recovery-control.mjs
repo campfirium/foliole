@@ -35,15 +35,23 @@ export async function runWindowsSyncGroupRecoveryControl({
 }) {
   const push = buildPushSpec(host, env);
   await executeGit(push.args, { env: push.env });
-  const remote = executeSsh(buildSshSpec(host, 'sync-group-recover', env), { env }).then(
-    (output) => ({ error: null, output }),
-    (error) => ({ error, output: error.output || error.message })
-  );
+  let remote = null;
+  const startRemote = async () => {
+    if (remote) throw new Error('Windows Sync Group recovery already started.');
+    remote = executeSsh(buildSshSpec(host, 'sync-group-recover', env), { env }).then(
+      (output) => ({ error: null, output }),
+      (error) => ({ error, output: error.output || error.message })
+    );
+  };
   let approvalError = null;
   try {
-    const approval = await approve({ execute: executeBounded, repoRoot });
+    const approval = await approve({ execute: executeBounded, onReady: startRemote, repoRoot });
     stdout.write(approval.output);
   } catch (error) { approvalError = error; }
+  if (!remote) {
+    if (approvalError) throw approvalError;
+    throw new Error('A5 approval preparation did not start Windows C.');
+  }
   const remoteResult = await remote;
   if (remoteResult.output) stdout.write(remoteResult.output);
   if (approvalError) throw approvalError;

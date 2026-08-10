@@ -6,9 +6,13 @@ import android.net.nsd.NsdServiceInfo;
 
 import org.json.JSONObject;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 final class FolioleCompanionNsdAdvertisement {
     private final NsdManager manager;
     private final NsdManager.RegistrationListener listener;
+    private volatile int errorCode;
+    private volatile String state = "registering";
 
     private FolioleCompanionNsdAdvertisement(NsdManager manager, NsdManager.RegistrationListener listener) {
         this.manager = manager;
@@ -32,18 +36,39 @@ final class FolioleCompanionNsdAdvertisement {
         put(info, "protocol_min_version", String.valueOf(protocol.getInt("min_supported_version")));
         put(info, "protocol_max_version", String.valueOf(protocol.getInt("max_supported_version")));
         put(info, "protocol_capabilities", join(protocol.getJSONArray("capabilities")));
+        AtomicReference<FolioleCompanionNsdAdvertisement> active = new AtomicReference<>();
         NsdManager.RegistrationListener listener = new NsdManager.RegistrationListener() {
-            public void onRegistrationFailed(NsdServiceInfo serviceInfo, int errorCode) {}
-            public void onUnregistrationFailed(NsdServiceInfo serviceInfo, int errorCode) {}
-            public void onServiceRegistered(NsdServiceInfo serviceInfo) {}
-            public void onServiceUnregistered(NsdServiceInfo serviceInfo) {}
+            public void onRegistrationFailed(NsdServiceInfo serviceInfo, int errorCode) {
+                active.get().failed(errorCode);
+            }
+            public void onUnregistrationFailed(NsdServiceInfo serviceInfo, int errorCode) {
+                active.get().failed(errorCode);
+            }
+            public void onServiceRegistered(NsdServiceInfo serviceInfo) {
+                active.get().state = "registered";
+            }
+            public void onServiceUnregistered(NsdServiceInfo serviceInfo) {
+                active.get().state = "unregistered";
+            }
         };
+        FolioleCompanionNsdAdvertisement advertisement =
+            new FolioleCompanionNsdAdvertisement(manager, listener);
+        active.set(advertisement);
         manager.registerService(info, NsdManager.PROTOCOL_DNS_SD, listener);
-        return new FolioleCompanionNsdAdvertisement(manager, listener);
+        return advertisement;
     }
 
     void stop() {
         try { manager.unregisterService(listener); } catch (IllegalArgumentException ignored) {}
+    }
+
+    int errorCode() { return errorCode; }
+
+    String state() { return state; }
+
+    private void failed(int code) {
+        errorCode = code;
+        state = "failed";
     }
 
     private static void put(NsdServiceInfo info, String key, String value) {

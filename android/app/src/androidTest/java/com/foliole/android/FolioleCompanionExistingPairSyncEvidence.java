@@ -45,12 +45,18 @@ final class FolioleCompanionExistingPairSyncEvidence {
         JSONObject evidence
     ) throws Exception {
         String lastTargetState = "missing";
+        boolean restoredSyncSurface = false;
         while (System.nanoTime() < deadline) {
             JSONObject state = FolioleCompanionPairSyncEvidence.read(instrumentation, webView);
             lastTargetState = targetState(instrumentation, webView, "companion-sync-now");
             if (state.optBoolean("syncPackApplied") && "enabled".equals(lastTargetState)) {
                 evidence.put("initialSync", "completed");
                 return evidence;
+            }
+            if (state.optBoolean("syncPackApplied") && "missing".equals(lastTargetState)
+                && !restoredSyncSurface) {
+                restoreSyncSurface(instrumentation, webView, deadline);
+                restoredSyncSurface = true;
             }
             if (isTargetVisible(instrumentation, webView, "companion-sync-inline-attention")) {
                 throw new IllegalStateException("Initial workspace sync settled with attention.");
@@ -60,6 +66,26 @@ final class FolioleCompanionExistingPairSyncEvidence {
         }
         throw new IllegalStateException(
             "Timed out waiting for initial workspace sync settlement: target_" + lastTargetState + "."
+        );
+    }
+
+    private static void restoreSyncSurface(
+        Instrumentation instrumentation, WebView webView, long deadline
+    ) throws Exception {
+        String entry = FolioleCompanionPairSyncRecoveryScenario.waitForAnyVisible(
+            instrumentation, webView, deadline,
+            "companion-tab-settings", "companion-top-bar-left-action"
+        );
+        if ("companion-top-bar-left-action".equals(entry)) {
+            FolioleCompanionPairSyncRecoveryScenario.clickVisible(
+                instrumentation, webView, entry, deadline
+            );
+        }
+        FolioleCompanionPairSyncRecoveryScenario.clickVisible(
+            instrumentation, webView, "companion-tab-settings", deadline
+        );
+        FolioleCompanionPairSyncRecoveryScenario.clickVisible(
+            instrumentation, webView, "companion-settings-sync", deadline
         );
     }
 

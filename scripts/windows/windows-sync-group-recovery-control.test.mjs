@@ -13,7 +13,13 @@ it('coordinates Mac-owned A5 approval with the fixed Windows C action', async ()
   const executeGit = vi.fn(async () => 'pushed');
   const executeSsh = vi.fn(async () => output);
   const executeScp = vi.fn(async (args) => { fs.writeFileSync(args.at(-1), '{}'); return ''; });
-  const approve = vi.fn(async () => ({ output: 'approved\n' }));
+  const order = [];
+  const approve = vi.fn(async ({ onReady }) => {
+    order.push('a5-ready');
+    await onReady();
+    order.push('approval-finished');
+    return { output: 'approved\n' };
+  });
   const writes = [];
   const result = await runWindowsSyncGroupRecoveryControl({
     approve, buildPushSpec: () => ({ args: ['push'], env: {} }),
@@ -24,6 +30,7 @@ it('coordinates Mac-owned A5 approval with the fixed Windows C action', async ()
   expect(approve).toHaveBeenCalledOnce();
   expect(executeGit).toHaveBeenCalledOnce();
   expect(executeSsh).toHaveBeenCalledOnce();
+  expect(order).toEqual(['a5-ready', 'approval-finished']);
   expect(result.evidenceRoot).toContain(path.join('sync-group-recovery', 'run-1'));
   expect(writes.join('')).toContain('approved');
 });

@@ -155,9 +155,11 @@ it('observes request submission without global errors or click-return evidence',
   expect(observer).toContain("new URL(args.url).pathname === '/companion/sync-push'");
   expect(observer).not.toContain("new URL(args.url).pathname === '/companion/sync-group/activate'");
   expect(source).toContain('awaitAfterStructureApplied');
-  expect(fs.readFileSync(
+  const settlement = fs.readFileSync(
     'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionExistingPairSyncEvidence.java', 'utf8'
-  )).toContain('companion-sync-inline-progress');
+  );
+  expect(settlement).toContain('companion-sync-inline-progress');
+  expect(settlement).toContain('restoreSyncSurface');
   expect(observer).not.toContain("methodName === 'recordWorkspaceSyncEvent'");
   expect(observer).toContain("algorithm.name === 'ECDH'");
   expect(observer).not.toContain('pair_request_id');

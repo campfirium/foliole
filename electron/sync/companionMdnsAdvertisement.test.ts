@@ -93,7 +93,7 @@ describe('companion mDNS advertisement', () => {
         app_version: '0.1.0-test',
         group_id: 'group-1',
         peer_id: 'desktop-local',
-        protocol_capabilities: 'lan-sync-v1',
+        protocol_capabilities: 'lan-sync-v1,sync-group-facts-v1',
         protocol_max_version: '1',
         protocol_min_version: '1',
         protocol_version: '1',

@@ -164,6 +164,8 @@ final class FolioleCompanionSyncGroupProvider {
         }
         JSObject result = new JSObject();
         result.put("pending_requests", pending);
+        result.put("advertisement_error_code", advertisement == null ? JSONObject.NULL : advertisement.errorCode());
+        result.put("advertisement_state", advertisement == null ? "stopped" : advertisement.state());
         result.put("port", server == null ? JSONObject.NULL : server.port());
         result.put("state", server == null ? "stopped" : "running");
         return result;

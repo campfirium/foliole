@@ -171,8 +171,8 @@ async function captureAnnotation(paths) {
 
 async function pairSync(paths) {
   assertFixedA5(paths);
-  const { runMacosA5PairSyncPreflight } = await import('./macos-a5-pair-sync-preflight.mjs');
-  const readinessState = runMacosA5PairSyncPreflight(paths);
+  const { resolveMacosA5PairSyncReadiness } = await import('./macos-a5-product-bootstrap.mjs');
+  const readinessState = resolveMacosA5PairSyncReadiness(paths);
   build(paths);
   buildDesktop(paths);
   const buildIdentity = captureIdentity();

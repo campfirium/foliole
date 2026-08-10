@@ -80,6 +80,7 @@ export async function openMacosPairSyncDesktopSession({
       },
       close: () => app.close(),
       enable: () => ensureMacosSyncGroup(syncGroupActions),
+      leave: () => invoke(page, 'leave_sync_group'),
       load: syncGroupActions.load,
       remove: (deviceId) => invoke(page, 'remove_companion_paired_device', { device_id: deviceId }),
       sanitize: sanitizeOverview

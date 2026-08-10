@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { runMacosA5PairSyncPreflight } from './macos-a5-pair-sync-preflight.mjs';
+import {
+  assertMacosA5ProductBootstrap, runMacosA5PairSyncPreflight
+} from './macos-a5-pair-sync-preflight.mjs';
 
 const pairing = {
   deviceIdentityFingerprint: 'bd1d679fbb55b53e',
@@ -21,6 +23,37 @@ function result(prefix, value, status) {
 }
 
 describe('macOS A5 one-time pair sync preflight', () => {
+  it('allows only a missing database that can preserve the proven paired device identity', () => {
+    const missingPairing = {
+      ...pairing,
+      deviceIdentityFingerprint: null, dirtyRecordCount: null, nodeCount: null,
+      missingPrerequisites: ['database_unavailable'], resultStatus: 'approval_required',
+      storedDeviceFingerprint: 'c6b193a8d1f83849'
+    };
+    const missingWorkspace = {
+      ...workspace,
+      counts: { content_blobs: null, node_order: null, nodes: null },
+      missingPrerequisites: ['database_missing'], resultStatus: 'approval_required',
+      pairingWorkspace: { localDeviceIdentityPresent: false, syncEndpointPresent: false }
+    };
+    const run = vi.fn()
+      .mockReturnValueOnce(result('[android-data] pair-sync-recovery-readiness=', missingPairing, 77))
+      .mockReturnValueOnce(result('[android-data] capture-annotation-readiness=', missingWorkspace, 77));
+
+    expect(runMacosA5PairSyncPreflight({ adb: '/adb', repoRoot: '/repo' }, run))
+      .toMatchObject({ existingPairing: true, requiresProductBootstrap: true });
+  });
+
+  it('rejects product bootstrap unless the recreated database keeps the stored identity', () => {
+    const before = { requiresProductBootstrap: true, storedDeviceFingerprint: 'c6b193a8d1f83849' };
+    expect(() => assertMacosA5ProductBootstrap(before, {
+      deviceIdentityFingerprint: 'different-id', requiresProductBootstrap: false
+    })).toThrow('did not preserve');
+    expect(assertMacosA5ProductBootstrap(before, {
+      deviceIdentityFingerprint: 'c6b193a8d1f83849', requiresProductBootstrap: false
+    })).toMatchObject({ deviceIdentityFingerprint: 'c6b193a8d1f83849' });
+  });
+
   it('accepts only the authorized empty stale-pairing shape', () => {
     const run = vi.fn()
       .mockReturnValueOnce(result('[android-data] pair-sync-recovery-readiness=', pairing, 0))
@@ -112,6 +145,35 @@ describe('macOS A5 one-time pair sync preflight', () => {
 
     expect(runMacosA5PairSyncPreflight({ adb: '/adb', repoRoot: '/repo' }, run))
       .toMatchObject({ existingPairing: false, nodeCount: 1293 });
+  });
+
+  it('re-pairs an empty preserved identity after the product records a generic 401', () => {
+    const run = vi.fn()
+      .mockReturnValueOnce(result('[android-data] pair-sync-recovery-readiness=', {
+        ...pairing,
+        pairingCredentialRejectionReason: null,
+        pairingCredentialsRejected: true,
+        resultStatus: 'ready',
+        storedDeviceFingerprint: pairing.deviceIdentityFingerprint
+      }, 0))
+      .mockReturnValueOnce(result('[android-data] capture-annotation-readiness=', {
+        ...workspace,
+        pairingWorkspace: { localDeviceIdentityPresent: true, syncEndpointPresent: true }
+      }, 77));
+
+    expect(runMacosA5PairSyncPreflight({ adb: '/adb', repoRoot: '/repo' }, run))
+      .toMatchObject({ credentialRepairRequired: true, existingPairing: true, nodeCount: 0 });
+  });
+
+  it('rejects a generic 401 when the empty workspace has no proven sync endpoint', () => {
+    const run = vi.fn()
+      .mockReturnValueOnce(result('[android-data] pair-sync-recovery-readiness=', {
+        ...pairing, pairingCredentialsRejected: true, resultStatus: 'ready'
+      }, 0))
+      .mockReturnValueOnce(result('[android-data] capture-annotation-readiness=', workspace, 77));
+
+    expect(() => runMacosA5PairSyncPreflight({ adb: '/adb', repoRoot: '/repo' }, run))
+      .toThrow('authorized pair-switch state');
   });
 
   it('preserves a proven existing pairing while authorized dirty data is pushed first', () => {

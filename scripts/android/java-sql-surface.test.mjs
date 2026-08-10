@@ -44,7 +44,7 @@ describe('Android Java SQL surface', () => {
       'approveSyncGroupJoinRequest',
       'downloadContentBlobBatch', 'finishAttachmentResourceBatch', 'finishContentBlobBatch',
       'loadDiscoveryCandidates', 'loadPairingState', 'loadSyncGroupProviderState', 'rejectSyncGroupJoinRequest',
-      'resolveAttachmentResource',
+      'resolveAttachmentResource', 'resolveSyncGroupDataRequest',
       'savePairingCredentials', 'savePrimaryDeviceId', 'signCompanionSyncRequest',
       'stageAttachmentResourceBatch', 'startSyncGroupProvider', 'stopSyncGroupProvider'
     ].sort());

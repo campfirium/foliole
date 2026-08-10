@@ -2,12 +2,20 @@ import { Bonjour } from 'bonjour-service';
 
 import type { DesktopSyncGroupJoinCandidatePayload } from '../../lib/platform/nativeCompanionSyncContract.js';
 
-const DISCOVERY_MS = 1_800;
+import { collectCompanionMdnsInterfaceAddresses } from './companionMdnsAdvertisement.js';
 
-export async function discoverDesktopSyncGroups(excludedDeviceId?: string) {
+const DISCOVERY_MS = 1_800;
+type BonjourMdnsOptions = NonNullable<ConstructorParameters<typeof Bonjour>[0]> & {
+  interface?: string;
+};
+type DiscoveredService = Parameters<NonNullable<Parameters<InstanceType<typeof Bonjour>['find']>[1]>>[0];
+
+export async function discoverDesktopSyncGroups(
+  excludedDeviceId?: string,
+  interfaceAddresses = collectCompanionMdnsInterfaceAddresses()
+) {
   const results = new Map<string, DesktopSyncGroupJoinCandidatePayload>();
-  const bonjour = new Bonjour();
-  const browser = bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, (service) => {
+  const collect = (service: DiscoveredService) => {
     const txt = service.txt as Record<string, unknown>;
     if (typeof txt.peer_id === 'string' && txt.peer_id === excludedDeviceId) return;
     const host = service.addresses?.find((value) => /^\d+\.\d+\.\d+\.\d+$/.test(value)) ??
@@ -23,9 +31,19 @@ export async function discoverDesktopSyncGroups(excludedDeviceId?: string) {
       timeline_id: txt.timeline_id
     } satisfies DesktopSyncGroupJoinCandidatePayload;
     results.set(`${candidate.group_id}:${candidate.endpoint_url}`, candidate);
+  };
+  const targets = interfaceAddresses.length > 0 ? interfaceAddresses : [undefined];
+  const discoveries = targets.map((interfaceAddress) => {
+    const options: BonjourMdnsOptions | undefined = interfaceAddress
+      ? { interface: interfaceAddress }
+      : undefined;
+    const bonjour = new Bonjour(options);
+    return { bonjour, browser: bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, collect) };
   });
   await new Promise((resolve) => setTimeout(resolve, DISCOVERY_MS));
-  browser.stop();
-  bonjour.destroy();
+  discoveries.forEach(({ bonjour, browser }) => {
+    browser.stop();
+    bonjour.destroy();
+  });
   return [...results.values()].sort((left, right) => left.group_display_name.localeCompare(right.group_display_name));
 }

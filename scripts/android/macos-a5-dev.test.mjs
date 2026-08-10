@@ -9,6 +9,7 @@ import {
   macosA5Paths,
   runMacosA5Action
 } from './macos-a5-dev.mjs';
+import { runMacosA5ProductBootstrap } from './macos-a5-product-bootstrap.mjs';
 
 describe('macOS fixed A5 development entry', () => {
   it('uses the repository APK and fixed CLI toolchain', () => {
@@ -38,8 +39,25 @@ describe('macOS fixed A5 development entry', () => {
     expect(source).toContain("'pair-sync'");
     expect(source).toContain('credentialRepairRequired: readinessState.credentialRepairRequired');
     expect(source).toContain('remotePeerFingerprint: readinessState.remotePeerFingerprint');
+    expect(source).toContain('resolveMacosA5PairSyncReadiness');
     expect(preflight).toContain('Fixed A5 no longer matches the authorized pair-switch state.');
     expect(source).not.toContain("process.argv[3]");
+  });
+
+  it('bootstraps only through the installed product before identity is rechecked', () => {
+    const calls = [];
+    runMacosA5ProductBootstrap({ adb: '/adb', repoRoot: '/repo' }, (command, args) => {
+      calls.push([command, args]);
+      return { status: 0 };
+    });
+
+    expect(calls[0]).toEqual(['/adb', [
+      '-s', '87a33a4b', 'shell', 'am', 'force-stop', 'com.foliole.android'
+    ]]);
+    expect(calls[1][1]).toEqual([
+      '-s', '87a33a4b', 'shell', 'am', 'start', '-n', 'com.foliole.android/.MainActivity'
+    ]);
+    expect(calls[2][1]).toContain('/repo/scripts/android/verify-android-launch.mjs');
   });
 
   it('keeps bounded instrumentation output on failure', () => {

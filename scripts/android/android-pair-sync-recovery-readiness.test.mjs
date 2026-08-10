@@ -42,6 +42,28 @@ it('excludes device-private view state from the unsynced push gate', () => {
   expect(queries).toContainEqual(expect.stringContaining("object_type <> 'view_state'"));
 });
 
+it('reports the persisted Sync Group identity without deriving it from pairing metadata', () => {
+  const tables = new Set([
+    'companion_meta', 'nodes', 'sync_group_local_state', 'sync_group_members',
+    'sync_groups', 'sync_object_state'
+  ]);
+  const database = { prepare: (sql) => ({ get: (value) => {
+    if (sql.includes('sqlite_master')) return tables.has(value) ? { present: 1 } : undefined;
+    if (sql.includes('JOIN sync_groups')) {
+      return { group_id: 'group-1', timeline_id: 'timeline-1' };
+    }
+    if (sql.includes('companion_meta')) return value === 'device_id' ? { value: 'android-1' } : undefined;
+    if (sql.includes('sync_group_members')) return { count: 3 };
+    return { count: 0 };
+  } }) };
+
+  expect(inspectPairSyncRecoveryWorkspace(database)).toMatchObject({
+    activeSyncGroupMemberCount: 3,
+    syncGroupId: 'group-1',
+    syncGroupTimelineId: 'timeline-1'
+  });
+});
+
 it('allows only an empty unpaired workspace with a stable device identity', () => {
   expect(pairSyncRecoveryReadiness(snapshot(), false)).toMatchObject({
     deviceIdentityFingerprint: expect.stringMatching(/^[0-9a-f]{16}$/u),
@@ -95,9 +117,13 @@ it('accepts a readable synced workspace after persisted pairing', () => {
 });
 
 it('hashes the existing remote peer on-device without returning its value', async () => {
+  const device = 'android-device-1';
   const peer = 'desktop-device-1';
   const run = vi.fn(async (_command, args) => {
     const script = args.at(-1);
+    if (String(script).includes('name=\\"device_id\\"')) {
+      return { stdout: `${createHash('sha256').update(device).digest('hex')}  -\n` };
+    }
     if (String(script).includes('remote_peer_id')) {
       return { stdout: `${createHash('sha256').update('').digest('hex')}  -\n` };
     }
@@ -107,11 +133,16 @@ it('hashes the existing remote peer on-device without returning its value', asyn
     return { stdout: '' };
   });
   const result = await inspectPairingPreferences({ adb: 'adb', appId: 'app', serial: 'a5' }, run);
-  expect(result).toMatchObject({ pairingCredentialsPresent: true, remotePeerFingerprint: expect.any(String) });
+  expect(result).toMatchObject({
+    pairingCredentialsPresent: true,
+    remotePeerFingerprint: createHash('sha256').update(peer).digest('hex').slice(0, 16),
+    storedDeviceFingerprint: createHash('sha256').update(device).digest('hex').slice(0, 16)
+  });
   expect(run.mock.calls.some(([, args]) => args.at(-2) === '-c'
     && args.at(-1) === `"grep -q 'name=\\"device_id\\"' shared_prefs/foliole_companion_pairing.xml"`)).toBe(true);
-  expect(run.mock.calls.filter(([, args]) => String(args.at(-1)).includes('sha256sum'))).toHaveLength(2);
-  expect(run.mock.calls.filter(([, args]) => String(args.at(-1)).includes("tr -d '\\\\n'"))).toHaveLength(2);
+  expect(run.mock.calls.filter(([, args]) => String(args.at(-1)).includes('sha256sum'))).toHaveLength(3);
+  expect(run.mock.calls.filter(([, args]) => String(args.at(-1)).includes("tr -d '\\\\n'"))).toHaveLength(3);
+  expect(JSON.stringify(result)).not.toContain(device);
   expect(JSON.stringify(result)).not.toContain(peer);
 });
 
@@ -122,7 +153,9 @@ it('treats an empty retained preferences file as unpaired', async () => {
     return { stdout: '' };
   });
   await expect(inspectPairingPreferences({ adb: 'adb', appId: 'app', serial: 'a5' }, run))
-    .resolves.toEqual({ pairingCredentialsPresent: false, remotePeerFingerprint: null });
+    .resolves.toEqual({
+      pairingCredentialsPresent: false, remotePeerFingerprint: null, storedDeviceFingerprint: null
+    });
 });
 
 it('rejects conflicting old and current peer metadata', () => {

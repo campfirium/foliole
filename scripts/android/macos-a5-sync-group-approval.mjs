@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import process from 'node:process';
 
 import { scrubPairSyncDataProtection } from '../windows/windows-a5-pair-sync-recovery-evidence.mjs';
 import {
@@ -21,11 +22,12 @@ function requireSuccess(result, stage) {
   throw Object.assign(new Error(`${stage} failed`), { result, stage });
 }
 
-function parseReceipt(output) {
+export function parseSyncGroupApprovalReceipt(output) {
   const prefix = 'INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReceipt=';
   const line = String(output).split(/\r?\n/u).find((entry) => entry.startsWith(prefix));
   if (!line || !/^INSTRUMENTATION_CODE: -1$/mu.test(output)) {
-    throw new Error('Sync Group approval instrumentation did not complete.');
+    const tail = String(output).trim().split(/\r?\n/u).slice(-24).join(' | ');
+    throw new Error(`Sync Group approval instrumentation did not complete: ${tail || 'no output'}`);
   }
   const receipt = JSON.parse(line.slice(prefix.length));
   if (receipt?.ok !== true || receipt.targetTestId !== 'sync-group-approval'
@@ -35,7 +37,18 @@ function parseReceipt(output) {
   return receipt;
 }
 
-export async function runMacosA5SyncGroupApproval({ execute, repoRoot }) {
+export async function startMacosA5SyncGroupApprovalProvider({ execute, onReady, paths, env }) {
+  requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start',
+    '-W', '-n', `${APP_ID}/.MainActivity`], { env, timeoutMs: 60_000 }), 'provider-ready');
+  requireSuccess(await execute(process.execPath, [
+    path.join(paths.repoRoot, 'scripts/android/verify-android-launch.mjs'),
+    '--adb', paths.adb, '--serial', A5_SERIAL, '--app-id', APP_ID,
+    '--component', `${APP_ID}/.MainActivity`, '--timeout-seconds', '30', '--stability-seconds', '3'
+  ], { env, timeoutMs: 60_000 }), 'provider-stability');
+  await onReady();
+}
+
+export async function runMacosA5SyncGroupApproval({ execute, onReady = async () => {}, repoRoot }) {
   const paths = macosA5Paths(repoRoot);
   const env = macosA5GradleEnv();
   assertFixedA5(paths);
@@ -54,11 +67,12 @@ export async function runMacosA5SyncGroupApproval({ execute, repoRoot }) {
     }), 'test-install');
     await protectData(paths, env, 'check', manifest);
     scrubPairSyncDataProtection(fs, manifest);
+    await startMacosA5SyncGroupApprovalProvider({ execute, onReady, paths, env });
     const run = requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'instrument',
       '-w', '-r', '-e', 'class', `${TEST_CLASS}#approvesJoinAndResumesProviderAfterBackgroundPause`, TEST_RUNNER], {
       env, timeoutMs: 15 * 60_000
     }), 'sync-group-approval');
-    const receipt = parseReceipt(run.output);
+    const receipt = parseSyncGroupApprovalReceipt(run.output);
     const resume = requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start',
       '-W', '-n', `${APP_ID}/.MainActivity`], { env, timeoutMs: 60_000 }), 'provider-resume');
     return { output: `${run.output}${resume.output}`, receipt };

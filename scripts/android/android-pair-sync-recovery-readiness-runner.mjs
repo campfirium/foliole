@@ -40,7 +40,9 @@ export async function inspectPairingPreferences(options, run = execFileAsync) {
       '-s', options.serial, 'shell', 'run-as', options.appId, 'test', '-f', PAIRING_PREFS
     ], { encoding: 'utf8', timeout: 30_000 });
   } catch (error) {
-    if (error.code === 1) return { pairingCredentialsPresent: false, remotePeerFingerprint: null };
+    if (error.code === 1) return {
+      pairingCredentialsPresent: false, remotePeerFingerprint: null, storedDeviceFingerprint: null
+    };
     throw error;
   }
   const requiredKeys = await Promise.all(PAIRING_REQUIRED_KEYS.map(async (key) => {
@@ -56,12 +58,16 @@ export async function inspectPairingPreferences(options, run = execFileAsync) {
     }
   }));
   if (requiredKeys.every((present) => !present)) {
-    return { pairingCredentialsPresent: false, remotePeerFingerprint: null };
+    return {
+      pairingCredentialsPresent: false, remotePeerFingerprint: null, storedDeviceFingerprint: null
+    };
   }
   if (!requiredKeys.every(Boolean)) {
-    return { pairingCredentialsPresent: true, remotePeerFingerprint: null };
+    return {
+      pairingCredentialsPresent: true, remotePeerFingerprint: null, storedDeviceFingerprint: null
+    };
   }
-  const hashes = await Promise.all(['remote_peer_id', 'primary_device_id'].map(async (key) => {
+  const hashes = await Promise.all(['device_id', 'remote_peer_id', 'primary_device_id'].map(async (key) => {
     const script = quoteAdbShellScript(
       `sed -n 's@.*<string name="${key}">\\([^<]*\\)</string>.*@\\1@p' ${PAIRING_PREFS} | tr -d '\\n' | sha256sum`
     );
@@ -71,11 +77,13 @@ export async function inspectPairingPreferences(options, run = execFileAsync) {
     const hash = /^([0-9a-f]{64})\b/mu.exec(result.stdout)?.[1] ?? null;
     return hash && hash !== EMPTY_SHA256 ? hash.slice(0, 16) : null;
   }));
-  const peers = [...new Set(hashes.filter(Boolean))];
+  const [storedDeviceFingerprint, ...peerHashes] = hashes;
+  const peers = [...new Set(peerHashes.filter(Boolean))];
   return {
     pairingCredentialsPresent: true,
     pairingPeerConflict: peers.length > 1,
-    remotePeerFingerprint: peers.length === 1 ? peers[0] : null
+    remotePeerFingerprint: peers.length === 1 ? peers[0] : null,
+    storedDeviceFingerprint
   };
 }
 
@@ -89,7 +97,7 @@ export async function runPairSyncRecoveryReadiness(options) {
   ]);
   return pairSyncRecoveryReadiness(
     snapshot, pairing.pairingCredentialsPresent, pairing.remotePeerFingerprint,
-    pairing.pairingPeerConflict
+    pairing.pairingPeerConflict, pairing.storedDeviceFingerprint
   );
 }
 

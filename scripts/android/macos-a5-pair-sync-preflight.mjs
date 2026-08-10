@@ -20,6 +20,31 @@ function parseEvidence(output, prefix) {
   return JSON.parse(line.slice(prefix.length));
 }
 
+function isMissingDatabaseBootstrap(pairState, workspaceState) {
+  const storedIdentity = /^[0-9a-f]{16}$/u.test(pairState.storedDeviceFingerprint);
+  const exactPairFailure = pairState.resultStatus === 'approval_required'
+    && pairState.missingPrerequisites?.length === 1
+    && pairState.missingPrerequisites[0] === 'database_unavailable'
+    && pairState.deviceIdentityFingerprint === null
+    && pairState.dirtyRecordCount === null && pairState.nodeCount === null;
+  const exactWorkspaceFailure = workspaceState.resultStatus === 'approval_required'
+    && workspaceState.missingPrerequisites?.length === 1
+    && workspaceState.missingPrerequisites[0] === 'database_missing'
+    && Object.values(workspaceState.counts ?? {}).every((value) => value === null)
+    && workspaceState.pairingWorkspace?.localDeviceIdentityPresent === false
+    && workspaceState.pairingWorkspace?.syncEndpointPresent === false;
+  return exactPairFailure && exactWorkspaceFailure && storedIdentity;
+}
+
+export function assertMacosA5ProductBootstrap(before, after) {
+  if (before.requiresProductBootstrap !== true
+      || after.requiresProductBootstrap === true
+      || after.deviceIdentityFingerprint !== before.storedDeviceFingerprint) {
+    throw new Error('Fixed A5 product bootstrap did not preserve the authorized device identity.');
+  }
+  return after;
+}
+
 export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
   const common = ['--adb', paths.adb, '--serial', A5_SERIAL, '--app-id', APP_ID];
   const pairing = evidence(process.execPath, [
@@ -39,6 +64,9 @@ export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
   const authorizedPairing = pairState.pairingCredentialsPresent === true
     && pairState.pairingPeerConflict === false
     && /^[0-9a-f]{16}$/u.test(pairState.remotePeerFingerprint);
+  const missingDatabaseBootstrap = authorizedPairing
+    && pairState.pairingCredentialsRejected !== true
+    && isMissingDatabaseBootstrap(pairState, workspaceState);
   const emptyStalePairing = pairState.nodeCount === 0 && workspaceState.counts?.nodes === 0
     && workspaceState.pairingWorkspace?.syncEndpointPresent === false;
   const syncedProfileSwitch = pairState.nodeCount > 0
@@ -49,6 +77,12 @@ export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
     && workspaceState.counts?.nodes === pairState.nodeCount
     && workspaceState.canonicalInbox?.active === true
     && workspaceState.pairingWorkspace?.localDeviceIdentityPresent === true;
+  const rejectedEmptyWorkspace = pairState.nodeCount === 0
+    && workspaceState.counts?.nodes === 0
+    && workspaceState.counts?.content_blobs === 0
+    && workspaceState.counts?.node_order === 0
+    && workspaceState.pairingWorkspace?.localDeviceIdentityPresent === true
+    && workspaceState.pairingWorkspace?.syncEndpointPresent === true;
   const authorizedWorkspace = workspaceState.pairingWorkspace?.localDeviceIdentityPresent === true
     && (emptyStalePairing || syncedProfileSwitch);
   const existingPairingRecovery = pairState.dirtyRecordCount > 0
@@ -63,6 +97,10 @@ export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
       || /^[0-9a-f]{16}$/u.test(pairState.remotePeerFingerprint))
     && pairState.pairingPeerConflict === false
     && rejectedWorkspace;
+  const rejectedEmptyPairing = pairing.status === 0 && pairState.dirtyRecordCount === 0
+    && pairState.pairingCredentialsRejected === true
+    && pairState.pairingCredentialRejectionReason === null
+    && authorizedPairing && rejectedEmptyWorkspace;
   const freshEmptyPairing = pairing.status === 0 && pairState.dirtyRecordCount === 0
     && pairState.nodeCount === 0
     && pairState.pairingCredentialsPresent === false
@@ -73,13 +111,16 @@ export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
     && workspaceState.counts?.node_order === 0
     && workspaceState.pairingWorkspace?.localDeviceIdentityPresent === true
     && workspaceState.pairingWorkspace?.syncEndpointPresent === false;
-  if (!existingPairingRecovery && !cleanPairSwitch && !rejectedCleanPairing && !freshEmptyPairing) {
+  if (!existingPairingRecovery && !cleanPairSwitch && !rejectedCleanPairing
+      && !rejectedEmptyPairing && !freshEmptyPairing && !missingDatabaseBootstrap) {
     throw new Error('Fixed A5 no longer matches the authorized pair-switch state.');
   }
   return {
     ...pairState,
-    credentialRepairRequired: rejectedCleanPairing || (existingPairingRecovery
+    credentialRepairRequired: rejectedCleanPairing || rejectedEmptyPairing || (existingPairingRecovery
       && pairState.pairingCredentialsRejected === true),
     existingPairing: existingPairingRecovery || cleanPairSwitch
+      || rejectedEmptyPairing || missingDatabaseBootstrap,
+    requiresProductBootstrap: missingDatabaseBootstrap
   };
 }

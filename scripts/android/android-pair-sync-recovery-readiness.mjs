@@ -26,6 +26,16 @@ function latestFinishedSyncEvent(database) {
   } catch { return null; }
 }
 
+function syncGroup(database) {
+  if (!tableExists(database, 'sync_groups') || !tableExists(database, 'sync_group_local_state')) {
+    return null;
+  }
+  return database.prepare(`SELECT groups.group_id, groups.timeline_id
+    FROM sync_group_local_state local
+    JOIN sync_groups groups ON groups.group_id = local.group_id
+    WHERE local.singleton_id = 1 LIMIT 1`).get() ?? null;
+}
+
 function pairingCredentialRejection(event) {
   const rejected = event?.status === 'failed'
     && typeof event.message === 'string' && /\b401\b/u.test(event.message);
@@ -48,7 +58,9 @@ export function inspectPairSyncRecoveryWorkspace(database) {
   const deviceId = meta(database, 'device_id');
   const latestSyncRun = latestFinishedSyncEvent(database);
   const rejection = pairingCredentialRejection(latestSyncRun);
+  const group = syncGroup(database);
   return {
+    activeSyncGroupMemberCount: count(database, 'sync_group_members', " WHERE state = 'active'"),
     deviceIdentityFingerprint: identityFingerprint(deviceId),
     dirtyRecordCount: count(
       database,
@@ -65,12 +77,15 @@ export function inspectPairSyncRecoveryWorkspace(database) {
     ),
     latestSyncWaitingSendCount: waitingCount(latestSyncRun, 'waiting_send_count'),
     pairingCredentialRejectionReason: rejection.reason,
-    pairingCredentialsRejected: rejection.rejected
+    pairingCredentialsRejected: rejection.rejected,
+    syncGroupId: group?.group_id ?? null,
+    syncGroupTimelineId: group?.timeline_id ?? null
   };
 }
 
 export function pairSyncRecoveryReadiness(
-  snapshot, pairingCredentialsPresent, remotePeerFingerprint = null, pairingPeerConflict = false
+  snapshot, pairingCredentialsPresent, remotePeerFingerprint = null, pairingPeerConflict = false,
+  storedDeviceFingerprint = null
 ) {
   const inspection = snapshot.database?.inspection;
   const missingPrerequisites = [];
@@ -95,6 +110,7 @@ export function pairSyncRecoveryReadiness(
     missingPrerequisites.push('existing_pairing_peer_unproven');
   }
   return {
+    activeSyncGroupMemberCount: inspection?.activeSyncGroupMemberCount ?? null,
     deviceIdentityFingerprint: inspection?.deviceIdentityFingerprint ?? null,
     dirtyRecordCount: inspection?.dirtyRecordCount ?? null,
     missingPrerequisites,
@@ -109,6 +125,9 @@ export function pairSyncRecoveryReadiness(
     pairingCredentialsRejected: inspection?.pairingCredentialsRejected === true,
     pairingPeerConflict,
     remotePeerFingerprint,
+    storedDeviceFingerprint,
+    syncGroupId: inspection?.syncGroupId ?? null,
+    syncGroupTimelineId: inspection?.syncGroupTimelineId ?? null,
     resultStatus: missingPrerequisites.length === 0 ? 'ready' : 'approval_required',
     schemaVersion: 1
   };
