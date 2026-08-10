@@ -43,14 +43,10 @@ async function runTransaction<T>(input: {
   port: DbPort;
   sqlite: SqliteDatabase;
 }) {
-  if (input.nested) {
-    if (!input.sqlite.inTransaction) {
-      const name = (input.port as DbPort & { readonly __dbPortName?: string }).__dbPortName ?? 'unnamed';
-      throw new SqliteConnectionOwnerError(`nested sqlite owner has no active transaction (${name})`);
-    }
+  if (input.nested && input.sqlite.inTransaction) {
     return runScopedTransaction(input.coordinator, input.owner, input.port, input.execute);
   }
-  if (input.sqlite.inTransaction) {
+  if (!input.nested && input.sqlite.inTransaction) {
     throw new SqliteConnectionOwnerError('sqlite connection has an uncoordinated active transaction');
   }
   input.sqlite.prepare('BEGIN IMMEDIATE').run();

@@ -9,7 +9,7 @@ import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { guardBetterSqliteDatabase } from './guardedBetterSqliteDatabase.js';
-import { SqliteConnectionOwnerError } from './sqliteConnectionCoordinator.js';
+import { getSqliteConnectionCoordinator, SqliteConnectionOwnerError } from './sqliteConnectionCoordinator.js';
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
@@ -70,6 +70,27 @@ it('serializes transactions from different ports on one connection', async () =>
 
   expect(order).toEqual(['a-entered', 'a-leaving', 'b']);
   expect(sqlite.prepare('SELECT id FROM items ORDER BY id').all()).toEqual([{ id: 'a' }, { id: 'b' }]);
+});
+
+it('releases a completed operation owner before the next transaction', async () => {
+  const { portA, sqlite } = createFixture();
+  await portA.run('INSERT INTO items (id, value) VALUES (?, ?)', ['first', 'A']);
+  await portA.transaction(async (tx) => {
+    await tx.run('INSERT INTO items (id, value) VALUES (?, ?)', ['second', 'B']);
+  });
+  expect(sqlite.prepare('SELECT id FROM items ORDER BY id').all())
+    .toEqual([{ id: 'first' }, { id: 'second' }]);
+});
+
+it('starts a transaction inside a same-owner exclusive operation', async () => {
+  const { portA, sqlite } = createFixture();
+  const coordinator = getSqliteConnectionCoordinator(sqlite);
+  await coordinator.runExclusive(async () => {
+    await portA.transaction(async (tx) => {
+      await tx.run('INSERT INTO items (id, value) VALUES (?, ?)', ['owned', 'A']);
+    });
+  });
+  expect(sqlite.prepare('SELECT id FROM items').all()).toEqual([{ id: 'owned' }]);
 });
 
 it('releases the next owner after rollback without leaking prior writes', async () => {
@@ -141,14 +162,6 @@ it('does not treat an uncoordinated manual transaction as a nested owner', async
   await expect(portA.transaction(async () => undefined))
     .rejects.toThrow('sqlite connection has an uncoordinated active transaction');
   sqlite.exec('ROLLBACK');
-});
-
-it('identifies the port when a nested owner outlives its SQLite transaction', async () => {
-  const { portA, sqlite } = createFixture();
-  await expect(portA.transaction(async () => {
-    sqlite.exec('COMMIT');
-    await portA.transaction(async () => undefined);
-  })).rejects.toThrow('nested sqlite owner has no active transaction (owner-a)');
 });
 
 it('rejects close during owned work and isolates a reopened connection', async () => {
