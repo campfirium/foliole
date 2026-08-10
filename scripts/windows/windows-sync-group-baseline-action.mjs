@@ -61,7 +61,7 @@ export async function runWindowsSyncGroupBaselineReset({ buildIdentity, evidence
     const overview = await loadOverview(session);
     productIdentity = identityFingerprint(overview?.primary_device_state?.primary_device_id);
     await session.app.close();
-    const emptyFacts = await inspectDatabase(execute, paths);
+    const emptyFacts = await inspect(path.join(client.libraryHome, 'Data', 'foliole.db'));
     assertEmptyClient(emptyFacts);
     const baselineProtection = await protectLibrary({
       backupRoot: path.join(protectionRoot, 'baseline'),

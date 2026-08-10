@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import { expect, it } from 'vitest';
 
+import { identityFingerprint } from '../android/android-pair-sync-recovery-readiness.mjs';
 import {
   resolveWindowsProtectionIdentity, runWindowsSyncGroupBaselineReset
 } from './windows-sync-group-baseline-action.mjs';
@@ -28,7 +29,8 @@ it('protects old C, boots a fresh product workspace, then protects the empty bas
   fs.writeFileSync(path.join(library, 'Data', 'foliole.db'), 'old');
   const paths = { repoRoot: root };
   const facts = (empty) => ({ activeMemberCount: empty ? 0 : 2, attachmentCount: empty ? 0 : 3,
-    contentBlobCount: empty ? 0 : 4, deviceIdentity: empty ? 'device-c-new' : 'device-c-old',
+    activeDeviceIdentities: {}, contentBlobCount: empty ? 0 : 4,
+    deviceIdentity: empty ? null : 'device-c-old',
     integrity: 'ok', localGroupId: empty ? null : 'group-old',
     localMemberState: empty ? null : 'active', localTimelineId: empty ? null : 'timeline-old',
     nodeCount: empty ? 2 : 5, userNodeCount: empty ? 0 : 3 });
@@ -47,7 +49,8 @@ it('protects old C, boots a fresh product workspace, then protects the empty bas
     }, paths });
   const manifest = JSON.parse(fs.readFileSync(result.syncGroupBaseline.manifestPath, 'utf8'));
   expect(controls).toEqual(['stop', 'start']);
-  expect(manifest).toMatchObject({ baselineProtection: { deviceIdentity: 'device-c-new' },
+  expect(manifest).toMatchObject({ baselineProtection: {
+    deviceIdentity: identityFingerprint('fresh-c') },
     emptyFacts: { activeMemberCount: 0, localGroupId: null, nodeCount: 2 },
     originalProtection: { deviceIdentity: 'device-c-old' }, resultStatus: 'success' });
 });
