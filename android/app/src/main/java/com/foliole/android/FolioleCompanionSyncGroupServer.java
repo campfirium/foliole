@@ -128,7 +128,9 @@ final class FolioleCompanionSyncGroupServer {
         JSONObject group = FolioleCompanionSyncGroupDatabase.groupForApprovedRequest(
             dataBridge, config.getString("device_id"), pending
         );
-        saveOutboundPairing(pending, pending.providerSecret);
+        FolioleCompanionSyncGroupOutboundPairing.save(
+            context, config, pending, pending.providerSecret, dataBridge
+        );
         FolioleCompanionHttpResponse.json(output, 200, new JSONObject().put("app_version", config.getString("app_version"))
             .put("compatibility", compatible()).put("desktop_protocol", protocol()).put("device_id", pending.deviceId)
             .put("encrypted_device_secret", FolioleCompanionSyncGroupPairCrypto.encrypt(pending.pairingPublicKey, pending.deviceSecret))
@@ -137,15 +139,6 @@ final class FolioleCompanionSyncGroupServer {
             .put("provider_device_name", config.getString("device_name"))
             .put("paired_at", java.time.Instant.now().toString()).put("peer_id", config.getString("device_id"))
             .put("sync_group", group));
-    }
-
-    private void saveOutboundPairing(FolioleCompanionSyncGroupJoinRequest pending, String secret) throws Exception {
-        String now = java.time.Instant.now().toString();
-        FolioleCompanionSyncGroupOutboundPeerStore.save(
-            context, config.getJSONObject("sync_group").getString("group_id"), config.getString("device_id"),
-            pending.deviceId, "http://" + pending.remoteAddress + ":38641", secret);
-        FolioleCompanionSyncGroupDatabase.saveSyncEndpoint(
-            dataBridge, "http://" + pending.remoteAddress + ":38641", now);
     }
 
     private void syncPack(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {

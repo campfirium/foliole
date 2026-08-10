@@ -35,13 +35,23 @@ describe('macOS fixed A5 development entry', () => {
 
   it('exposes one fixed pair-sync action without accepting device arguments', () => {
     const source = fs.readFileSync('scripts/android/macos-a5-dev.mjs', 'utf8');
+    const extended = fs.readFileSync('scripts/android/macos-a5-extended-actions.mjs', 'utf8');
     const preflight = fs.readFileSync('scripts/android/macos-a5-pair-sync-preflight.mjs', 'utf8');
     expect(source).toContain("'pair-sync'");
-    expect(source).toContain('credentialRepairRequired: readinessState.credentialRepairRequired');
-    expect(source).toContain('remotePeerFingerprint: readinessState.remotePeerFingerprint');
-    expect(source).toContain('resolveMacosA5PairSyncReadiness');
+    expect(extended).toContain('credentialRepairRequired: readiness.credentialRepairRequired');
+    expect(extended).toContain('remotePeerFingerprint: readiness.remotePeerFingerprint');
+    expect(extended).toContain('resolveMacosA5PairSyncReadiness');
     expect(preflight).toContain('Fixed A5 no longer matches the authorized pair-switch state.');
     expect(source).not.toContain("process.argv[3]");
+  });
+
+  it('exposes existing Sync Group sync without accepting an endpoint', () => {
+    const source = fs.readFileSync('scripts/android/macos-a5-dev.mjs', 'utf8');
+    const extended = fs.readFileSync('scripts/android/macos-a5-extended-actions.mjs', 'utf8');
+    expect(source).toContain("'sync-existing'");
+    expect(extended).toContain('FolioleCompanionWebViewAutomationTest#recoversPairingAndInitialSync');
+    expect(extended).toContain('"pairingPath":"existing"');
+    expect(source).not.toContain('process.argv[3]');
   });
 
   it('routes Leave and app-data clearing only through fixed product actions', () => {

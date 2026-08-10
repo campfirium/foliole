@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.webkit.WebView;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.concurrent.TimeUnit;
@@ -17,15 +18,17 @@ final class FolioleCompanionSyncGroupApprovalScenario {
         Activity activity = start(instrumentation);
         waitForFocus(activity, 30_000);
         WebView webView = activity.findViewById(R.id.webview);
-        long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(12);
+        long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(3);
         openSyncSettings(instrumentation, webView, deadline);
         waitForProviderAdvertisement();
         FolioleCompanionPairSyncRecoveryScenario.waitForUniqueVisible(
             instrumentation, webView, "companion-sync-group-approve", deadline
         );
+        String joiningDeviceId = pendingJoiningDeviceId();
         FolioleCompanionPairSyncRecoveryScenario.clickVisible(
             instrumentation, webView, "companion-sync-group-approve", deadline
         );
+        waitForPairingPromotion(instrumentation.getTargetContext(), joiningDeviceId, deadline);
         return new JSONObject().put("ok", true).put("targetTestId", "sync-group-approval")
             .put("approved", true).put("foreground", true);
     }
@@ -35,7 +38,7 @@ final class FolioleCompanionSyncGroupApprovalScenario {
         try {
             waitForFocus(activity, 30_000);
             WebView webView = activity.findViewById(R.id.webview);
-            long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(12);
+            long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(3);
             openSyncSettings(instrumentation, webView, deadline);
             waitForProviderAdvertisement();
             FolioleCompanionPairSyncRecoveryScenario.waitForUniqueVisible(
@@ -92,6 +95,21 @@ final class FolioleCompanionSyncGroupApprovalScenario {
             Thread.sleep(100);
         }
         throw new IllegalStateException("Provider advertisement unavailable: " + latest);
+    }
+
+    private static String pendingJoiningDeviceId() throws Exception {
+        JSONArray requests = FolioleCompanionSyncGroupProvider.state().getJSONArray("pending_requests");
+        if (requests.length() != 1) throw new IllegalStateException("Expected one joining Device.");
+        return requests.getJSONObject(0).getString("device_id");
+    }
+
+    private static void waitForPairingPromotion(Context context, String deviceId, long deadline) throws Exception {
+        String peerKey = FolioleCompanionPairingPeerContractDefinitions.remotePeerIdStateKey(context);
+        while (System.nanoTime() < deadline) {
+            if (deviceId.equals(FolioleCompanionPairingStore.loadPairingState(context).optString(peerKey))) return;
+            Thread.sleep(100);
+        }
+        throw new IllegalStateException("Approved Device did not become the current Sync peer.");
     }
 
     private static Activity start(Instrumentation instrumentation) {

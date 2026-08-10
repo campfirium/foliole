@@ -2,6 +2,7 @@
 /* global console, process */
 
 import { spawn } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -19,15 +20,21 @@ function execute(command, args, options = {}) {
 }
 
 export async function runFixedA5WindowsJoin({
-  executeProcess = execute, repoRoot = process.cwd(), runApproval = runMacosA5SyncGroupApproval
+  executeProcess = execute, repoRoot = process.cwd(), runApproval = runMacosA5SyncGroupApproval,
+  writeWindowsLog = (logPath, output) => {
+    fs.mkdirSync(path.dirname(logPath), { recursive: true });
+    fs.writeFileSync(logPath, output, 'utf8');
+  }
 } = {}) {
   let windowsWork;
+  const windowsLog = path.join(repoRoot, '.tmp/artifacts/a5-sync-group-approval/windows-control.log');
   const approval = await runApproval({
     execute: executeProcess,
     onReady: async () => {
       windowsWork = executeProcess(process.execPath, [
         path.join(repoRoot, 'scripts/windows/windows-dev-control.mjs'), 'sync-group-recover'
       ], { cwd: repoRoot });
+      windowsWork.then((result) => writeWindowsLog(windowsLog, result.output));
     },
     repoRoot
   });

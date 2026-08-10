@@ -19,6 +19,8 @@ it('keeps stable desktop A and Windows C on a real LAN Sync Group path', () => {
   expect(remote.indexOf('firstFacts = await waitForOrdinarySyncFacts(execute, paths, evidenceRoot)'))
     .toBeLessThan(remote.indexOf('finally { await session.app.close(); }'));
   expect(inspector).toContain("missingContentBlobCount");
+  expect(inspector).toContain('localMemberState');
+  expect(remote).toContain('initial=${JSON.stringify(initialFacts)}');
   expect(remote).toContain("ELECTRON_RUN_AS_NODE: '1'");
   expect(remote).not.toContain("from 'better-sqlite3'");
   expect(inspector).toContain("from 'better-sqlite3'");

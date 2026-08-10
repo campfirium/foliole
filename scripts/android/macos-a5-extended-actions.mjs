@@ -1,5 +1,6 @@
 /* global console, process */
 
+import fs from 'node:fs';
 import path from 'node:path';
 
 import { runMacosA5SyncGroupMaintenance } from './macos-a5-sync-group-maintenance-action.mjs';
@@ -58,4 +59,50 @@ export async function runMacosA5DesktopLeaveEntry(args) {
       '-s', args.serial, 'forward', '--remove', `tcp:${PAIR_SYNC_PORT}`
     ], { env: args.env, timeoutMs: 30_000 });
   }
+}
+
+export async function runMacosA5PairSyncEntry(args) {
+  const { resolveMacosA5PairSyncReadiness } = await import('./macos-a5-product-bootstrap.mjs');
+  const readiness = resolveMacosA5PairSyncReadiness(args.paths);
+  args.build(); buildMacosA5Desktop(args.checked, args.paths);
+  const buildIdentity = args.buildIdentity();
+  const { runMacosA5PairSync } = await import('./macos-a5-pair-sync-action.mjs');
+  const result = await runMacosA5PairSync({
+    buildIdentity, credentialRepairRequired: readiness.credentialRepairRequired,
+    deviceFingerprint: readiness.deviceIdentityFingerprint, env: args.env,
+    evidenceRoot: path.join(args.paths.repoRoot, '.tmp/artifacts/a5-pair-sync', buildIdentity),
+    execute: args.execute, existingPairing: readiness.existingPairing, paths: args.paths,
+    protectData: args.protectData, remotePeerFingerprint: readiness.remotePeerFingerprint,
+    serial: args.serial
+  });
+  process.stdout.write(result.output);
+  console.log(`[macos-a5-dev] pair-sync evidence=${result.pairSyncRecovery.manifestPath}`);
+}
+
+export async function runMacosA5ExistingSyncEntry(args) {
+  args.assertFixed(); args.build();
+  const evidenceRoot = path.join(args.paths.repoRoot, '.tmp/artifacts/a5-existing-sync', args.buildIdentity());
+  fs.mkdirSync(evidenceRoot, { recursive: true });
+  await args.protectData('backup', path.join(evidenceRoot, 'data-protection.json'));
+  const testApk = path.join(args.paths.repoRoot,
+    'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk');
+  await args.execute(args.paths.adb, ['-s', args.serial, 'install', '-r', args.paths.apk], {
+    env: args.env, timeoutMs: 120_000
+  });
+  await args.execute(args.paths.adb, ['-s', args.serial, 'install', '-r', '-t', testApk], {
+    env: args.env, timeoutMs: 120_000
+  });
+  const appId = 'com.foliole.android';
+  const result = await args.execute(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'instrument',
+    '-w', '-r', '-e', 'class',
+    `${appId}.FolioleCompanionWebViewAutomationTest#recoversPairingAndInitialSync`,
+    `${appId}.test/androidx.test.runner.AndroidJUnitRunner`], {
+    env: args.env, timeoutMs: 12 * 60_000
+  });
+  if (result.code !== 0 || !result.output.includes('"pairingPath":"existing"')
+      || !result.output.includes('"initialSync":"completed"')) {
+    throw Object.assign(new Error('Existing A5 Sync Group sync failed'), { result });
+  }
+  process.stdout.write(result.output);
+  console.log(`[macos-a5-dev] existing-sync evidence=${evidenceRoot}`);
 }

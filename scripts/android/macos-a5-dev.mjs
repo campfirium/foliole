@@ -8,9 +8,10 @@ import { clearTimeout, setTimeout } from 'node:timers';
 import { pathToFileURL } from 'node:url';
 
 import {
-  buildMacosA5Desktop as buildDesktop,
   runMacosA5DesktopLeaveEntry,
   runMacosA5DatabasePerformanceEntry,
+  runMacosA5ExistingSyncEntry,
+  runMacosA5PairSyncEntry,
   runMacosA5SyncGroupMaintenanceEntry,
   runMacosA5WindowsJoinEntry
 } from './macos-a5-extended-actions.mjs';
@@ -166,38 +167,9 @@ async function captureAnnotation(paths) {
   console.log(`[macos-a5-dev] capture-annotation evidence=${result.captureAnnotation.manifestPath}`);
 }
 
-async function pairSync(paths) {
-  assertFixedA5(paths);
-  const { resolveMacosA5PairSyncReadiness } = await import('./macos-a5-product-bootstrap.mjs');
-  const readinessState = resolveMacosA5PairSyncReadiness(paths);
-  build(paths);
-  buildDesktop(checked, paths);
-  const buildIdentity = captureIdentity();
-  const evidenceRoot = path.join(paths.repoRoot, '.tmp/artifacts/a5-pair-sync', buildIdentity);
-  const env = macosA5GradleEnv();
-  const { runMacosA5PairSync } = await import('./macos-a5-pair-sync-action.mjs');
-  const result = await runMacosA5PairSync({
-    buildIdentity,
-    credentialRepairRequired: readinessState.credentialRepairRequired,
-    deviceFingerprint: readinessState.deviceIdentityFingerprint,
-    existingPairing: readinessState.existingPairing,
-    remotePeerFingerprint: readinessState.remotePeerFingerprint,
-    env,
-    evidenceRoot,
-    execute,
-    paths,
-    protectData: (mode, manifest, backupRoot) => protectData(
-      paths, env, mode, manifest, backupRoot
-    ),
-    serial: A5_SERIAL
-  });
-  process.stdout.write(result.output);
-  console.log(`[macos-a5-dev] pair-sync evidence=${result.pairSyncRecovery.manifestPath}`);
-}
-
 export async function runMacosA5Action(action, repoRoot = process.cwd()) {
-  if (!['status', 'approve-windows-join', 'build', 'capture-annotation', 'clear-app-data', 'database-performance', 'deploy', 'leave-sync-group', 'macos-leave', 'pair-sync'].includes(action)) {
-    throw new Error('Usage: node scripts/android/macos-a5-dev.mjs <status|approve-windows-join|build|capture-annotation|clear-app-data|database-performance|deploy|leave-sync-group|macos-leave|pair-sync>');
+  if (!['status', 'approve-windows-join', 'build', 'capture-annotation', 'clear-app-data', 'database-performance', 'deploy', 'leave-sync-group', 'macos-leave', 'pair-sync', 'sync-existing'].includes(action)) {
+    throw new Error('Usage: node scripts/android/macos-a5-dev.mjs <status|approve-windows-join|build|capture-annotation|clear-app-data|database-performance|deploy|leave-sync-group|macos-leave|pair-sync|sync-existing>');
   }
   const paths = macosA5Paths(repoRoot);
   assertSafeMacosA5Environment(paths);
@@ -215,7 +187,15 @@ export async function runMacosA5Action(action, repoRoot = process.cwd()) {
     if (action === 'leave-sync-group' || action === 'clear-app-data') await runMacosA5SyncGroupMaintenanceEntry({
       action, assertFixed: () => assertFixedA5(paths), build: () => build(paths), buildIdentity: captureIdentity(),
       env: macosA5GradleEnv(), execute, paths, serial: A5_SERIAL });
-    if (action === 'pair-sync') await pairSync(paths);
+    const productArgs = {
+      assertFixed: () => assertFixedA5(paths), build: () => build(paths), buildIdentity: captureIdentity,
+      checked, env: macosA5GradleEnv(), execute, paths,
+      protectData: (mode, manifest, backupRoot) => protectData(
+        paths, macosA5GradleEnv(), mode, manifest, backupRoot
+      ), serial: A5_SERIAL
+    };
+    if (action === 'pair-sync') await runMacosA5PairSyncEntry(productArgs);
+    if (action === 'sync-existing') await runMacosA5ExistingSyncEntry(productArgs);
     if (action === 'macos-leave') await runMacosA5DesktopLeaveEntry({
       assertFixed: () => assertFixedA5(paths), env: macosA5GradleEnv(), execute, paths, serial: A5_SERIAL
     });

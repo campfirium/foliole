@@ -12,12 +12,14 @@ async function source(relativePath) {
   return readFile(path.join(ROOT, relativePath), 'utf8');
 }
 
-it('persists the provider credential for authenticated requests back into Android', async () => {
-  const [pairing, encryption, actions, peerStore, contract] = await Promise.all([
+it('persists reciprocal credentials for authenticated requests in both Android roles', async () => {
+  const [pairing, encryption, actions, peerStore, server, outbound, contract] = await Promise.all([
     source('src/shared/platform/companionWorkspacePairing.ts'),
     source('src/shared/platform/companionPairingEncryption.ts'),
     source('android/app/src/main/java/com/foliole/android/FolioleCompanionPairingPluginActions.java'),
     source('android/app/src/main/java/com/foliole/android/FolioleCompanionSyncGroupPeerStore.java'),
+    source('android/app/src/main/java/com/foliole/android/FolioleCompanionSyncGroupServer.java'),
+    source('android/app/src/main/java/com/foliole/android/FolioleCompanionSyncGroupOutboundPairing.java'),
     source('android/app/src/main/assets/companion-bridge-contract-definitions.json')
   ]);
 
@@ -27,6 +29,10 @@ it('persists the provider credential for authenticated requests back into Androi
     .not.toContain('pairingPrivateKeys.delete(pairRequestClientId)');
   expect(actions).toContain('FolioleCompanionSyncGroupPeerStore.saveSecret(context, primaryDeviceId, providerDeviceSecret);');
   expect(peerStore).toContain('static void saveSecret(Context context, String deviceId, String encodedSecret)');
+  expect(server).toContain('FolioleCompanionSyncGroupOutboundPairing.save(');
+  expect(outbound).toContain('FolioleCompanionPairingStore.savePairingCredentials(');
+  expect(outbound).toContain('pending.deviceName, pending.deviceKind, remoteProtocol');
+  expect(outbound).toContain('FolioleCompanionSyncGroupDatabase.saveSyncEndpoint(dataBridge, endpointUrl, now)');
   expect(JSON.parse(contract).pairingPlugin.credentialRequestKeys.providerDeviceSecret)
     .toBe('provider_device_secret');
 });

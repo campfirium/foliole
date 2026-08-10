@@ -144,9 +144,11 @@ function assertComplete(facts) {
 export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths }) {
   fs.mkdirSync(evidenceRoot, { recursive: true });
   await controlNativeClient(execute, paths, 'stop');
+  let initialFacts = null;
   let primaryError = null;
   let recoveryResult = null;
   try {
+    initialFacts = await inspectDatabase(execute, paths);
     let session = await openSession(paths, evidenceRoot);
     let candidate;
     let firstFacts;
@@ -173,6 +175,7 @@ export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths
     fs.writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, 'utf8');
     recoveryResult = { output: '', syncGroupRecovery: { receiptPath, screenshotPath }, receipt };
   } catch (error) {
+    error.message += `; initial=${JSON.stringify(initialFacts)}`;
     primaryError = error;
   }
   try { await controlNativeClient(execute, paths, 'start'); }

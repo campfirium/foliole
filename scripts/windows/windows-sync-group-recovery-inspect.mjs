@@ -10,10 +10,17 @@ export function inspectSyncGroupRecoveryDatabase(databasePath) {
   const db = new BetterSqlite3(databasePath, { fileMustExist: true, readonly: true });
   try {
     const count = (sql) => Number(db.prepare(sql).pluck().get() ?? 0);
+    const local = db.prepare(`SELECT local.group_id, local.member_state, groups.timeline_id
+      FROM sync_group_local_state local
+      LEFT JOIN sync_groups groups ON groups.group_id = local.group_id
+      WHERE local.singleton_id = 1 LIMIT 1`).get();
     return {
       activeMemberCount: count("SELECT COUNT(*) FROM sync_group_members WHERE state = 'active'"),
       attachmentCount: count('SELECT COUNT(*) FROM attachments'),
       contentBlobCount: count('SELECT COUNT(*) FROM content_blobs'),
+      localGroupId: local?.group_id ?? null,
+      localMemberState: local?.member_state ?? null,
+      localTimelineId: local?.timeline_id ?? null,
       missingAttachmentCount: count("SELECT COUNT(*) FROM attachment_blobs WHERE availability != 'cached'"),
       missingContentBlobCount: count(`SELECT COUNT(*) FROM content_blobs cb
         LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash WHERE cbd.hash IS NULL`),
