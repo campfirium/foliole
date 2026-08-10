@@ -48,17 +48,20 @@ function normalizeClientAddress(address: string | undefined) {
   return address.startsWith('::ffff:') ? address.slice('::ffff:'.length) : address;
 }
 
-function resolveSyncGroupJoin(payload: Record<string, unknown>, deviceId: string, deviceKind: string) {
-  if (deviceKind !== 'android-capacitor') return { error: null, syncGroup: null };
+function resolveSyncGroupJoin(payload: Record<string, unknown>, deviceId: string) {
+  const requestedGroupId = typeof payload.group_id === 'string' ? payload.group_id.trim() : '';
+  const requestedTimelineId = typeof payload.timeline_id === 'string' ? payload.timeline_id.trim() : '';
+  const libraryFacts = parseSyncGroupLibraryFacts(payload.library_facts);
+  const requestsGroupJoin = Boolean(requestedGroupId || requestedTimelineId || payload.library_facts !== undefined);
+  if (!requestsGroupJoin) return { error: null, syncGroup: null };
   const syncGroup = loadDesktopSyncGroup();
   if (!syncGroup) return { error: 'sync_group_identity_mismatch', syncGroup: null };
   const eligible = isEligibleSyncGroupJoin({
-    deviceKind,
     groupId: syncGroup.group_id,
     isExistingActiveMember: isActiveSyncGroupMember(syncGroup.group_id, deviceId),
-    libraryFacts: parseSyncGroupLibraryFacts(payload.library_facts),
-    requestedGroupId: typeof payload.group_id === 'string' ? payload.group_id.trim() : '',
-    requestedTimelineId: typeof payload.timeline_id === 'string' ? payload.timeline_id.trim() : '',
+    libraryFacts,
+    requestedGroupId,
+    requestedTimelineId,
     timelineId: syncGroup.timeline_id
   });
   return { error: eligible ? null : 'sync_group_requires_empty_library', syncGroup };
@@ -112,7 +115,7 @@ export async function handlePairRequestCreate(
     writeJson(request, response, 400, { error: 'invalid_pair_request' });
     return;
   }
-  const groupJoin = resolveSyncGroupJoin(payload, deviceId, deviceKind);
+  const groupJoin = resolveSyncGroupJoin(payload, deviceId);
   if (groupJoin.error) {
     writeJson(request, response, 409, { error: groupJoin.error });
     return;

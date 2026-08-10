@@ -17,9 +17,15 @@ const pairingEncryptionMock = vi.hoisted(() => ({
   encryptCompanionPairingSecret: vi.fn(async () => 'encrypted-device-secret'),
   isSupportedPairingPublicKey: vi.fn(() => true)
 }));
+const syncGroupStoreMock = vi.hoisted(() => ({
+  isActiveSyncGroupMember: vi.fn(() => false),
+  loadDesktopSyncGroup: vi.fn(() => ({ group_id: 'group-1', timeline_id: 'timeline-1' })),
+  registerSyncGroupMember: vi.fn(() => ({ group_id: 'group-1', timeline_id: 'timeline-1' }))
+}));
 
 vi.mock('./companionPairingStore.js', () => pairingStoreMock);
 vi.mock('./companionPairingEncryption.js', () => pairingEncryptionMock);
+vi.mock('../database/syncGroupStore.js', () => syncGroupStoreMock);
 
 import { handlePairRequest, handlePairRequestCreate } from './companionLanPairingEndpoints.js';
 import {
@@ -73,6 +79,29 @@ it('does not revoke an existing paired device before desktop approval', async ()
   expect(writeJson).toHaveBeenCalledWith(expect.anything(), expect.anything(), 202, expect.objectContaining({
     status: 'pending'
   }));
+});
+
+it('registers an approved empty Windows desktop as a Sync Group member', async () => {
+  pairingStoreMock.registerPairedCompanionDevice.mockReturnValue({
+    device_id: 'desktop-c', device_secret: 'secret-c', paired_at: '2026-08-10T01:00:00.000Z'
+  });
+  const writeJson = vi.fn();
+  await handlePairRequestCreate(createRequest({
+    device_id: 'desktop-c', device_kind: 'win32', device_name: 'Desktop C', group_id: 'group-1',
+    library_facts: { attachment_count: 0, content_blob_count: 0, node_count: 0, review_log_count: 0, timeline_id: null },
+    pairing_public_key: TEST_PAIRING_PUBLIC_KEY, protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+    timeline_id: 'timeline-1'
+  }), createResponse(), vi.fn(), null, writeJson);
+  const requestId = writeJson.mock.calls.at(-1)?.[3]?.pair_request_id as string;
+  approveCompanionPairRequest(requestId);
+  await handlePairRequest(createRequest({ pair_request_id: requestId }), createResponse(),
+    '0.1.0-test', 'desktop-a', vi.fn(), writeJson);
+
+  expect(syncGroupStoreMock.registerSyncGroupMember).toHaveBeenCalledWith(expect.objectContaining({
+    deviceId: 'desktop-c', deviceKind: 'win32'
+  }));
+  expect(writeJson).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), 200,
+    expect.objectContaining({ sync_group: { group_id: 'group-1', timeline_id: 'timeline-1' } }));
 });
 
 it('rejects a pair request without compatible protocol metadata before creating review state', async () => {

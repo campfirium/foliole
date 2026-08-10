@@ -46,7 +46,7 @@ export async function handlePairRequest(
     remoteProtocol: approved.protocol
   });
   if (!completion.completion) completeCompanionPairRequest(pairRequestId, paired);
-  const syncGroup = approved.device_kind === 'android-capacitor' ? registerSyncGroupMember({
+  const syncGroup = approved.group_id && approved.timeline_id ? registerSyncGroupMember({
     approvedByDeviceId: peerId, authorizationId: pairRequestId, deviceId: approved.device_id,
     deviceKind: approved.device_kind, deviceName: approved.device_name
   }) : null;

@@ -16,7 +16,6 @@ export function parseSyncGroupLibraryFacts(value: unknown): SyncGroupLibraryFact
 }
 
 export function isEligibleSyncGroupJoin(args: {
-  deviceKind: string;
   groupId: string;
   isExistingActiveMember?: boolean;
   libraryFacts: SyncGroupLibraryFacts | null;
@@ -24,7 +23,6 @@ export function isEligibleSyncGroupJoin(args: {
   requestedTimelineId: string;
   timelineId: string;
 }) {
-  if (args.deviceKind !== 'android-capacitor') return true;
   return args.groupId === args.requestedGroupId
     && args.timelineId === args.requestedTimelineId
     && args.libraryFacts !== null
