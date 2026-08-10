@@ -1,6 +1,17 @@
 import { expect, it, vi } from 'vitest';
 
-import { runMacosSyncGroupLibraryProtection } from './macos-sync-group-library-protection.mjs';
+import {
+  resolveMacosProtectionIdentity, runMacosSyncGroupLibraryProtection
+} from './macos-sync-group-library-protection.mjs';
+
+it('uses one proven departed darwin identity when A has already left the old group', () => {
+  expect(resolveMacosProtectionIdentity({ departedDeviceIdentities: {
+    darwin: ['departed-a'], win32: ['other']
+  }, deviceIdentity: null })).toBe('departed-a');
+  expect(() => resolveMacosProtectionIdentity({ departedDeviceIdentities: {
+    darwin: ['a', 'conflict']
+  }, deviceIdentity: null })).toThrow('not uniquely recoverable');
+});
 
 it('stops the registered owner and refuses protection while any database owner remains', async () => {
   const stopOwner = vi.fn(async () => true);

@@ -42,6 +42,15 @@ async function assertDatabaseOwnerStopped(databasePath, executeProcess) {
   if (![0, 1].includes(result.code)) throw new Error('macOS database owner preflight failed.');
 }
 
+export function resolveMacosProtectionIdentity(inspection) {
+  if (inspection.deviceIdentity) return inspection.deviceIdentity;
+  const departed = inspection.departedDeviceIdentities?.darwin;
+  if (!Array.isArray(departed) || departed.length !== 1 || !departed[0]) {
+    throw new Error('macOS departed device identity is not uniquely recoverable.');
+  }
+  return departed[0];
+}
+
 export async function runMacosSyncGroupLibraryProtection({ candidate, executeProcess = execute,
   label, repoRoot = process.cwd(), stopOwner = stopMacosElectronDev }) {
   const devPaths = resolveMacosElectronDevPaths(repoRoot);
@@ -55,7 +64,8 @@ export async function runMacosSyncGroupLibraryProtection({ candidate, executePro
       cwd: repoRoot, env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }, timeout: 30_000
     });
     if (result.code !== 0) throw new Error(`macOS library inspection failed: ${result.stderr.trim()}`);
-    return JSON.parse(result.stdout.trim());
+    const inspection = JSON.parse(result.stdout.trim());
+    return { ...inspection, deviceIdentity: resolveMacosProtectionIdentity(inspection) };
   };
   const restoreRoot = path.join(
     repoRoot, '.lab', 'internal', 't121-device-backups', 'macos-a', candidate, label
