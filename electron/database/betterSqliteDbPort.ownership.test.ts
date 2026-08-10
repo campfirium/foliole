@@ -143,6 +143,14 @@ it('does not treat an uncoordinated manual transaction as a nested owner', async
   sqlite.exec('ROLLBACK');
 });
 
+it('identifies the port when a nested owner outlives its SQLite transaction', async () => {
+  const { portA, sqlite } = createFixture();
+  await expect(portA.transaction(async () => {
+    sqlite.exec('COMMIT');
+    await portA.transaction(async () => undefined);
+  })).rejects.toThrow('nested sqlite owner has no active transaction (owner-a)');
+});
+
 it('rejects close during owned work and isolates a reopened connection', async () => {
   const { portA, sqlite } = createFixture();
   const gate = barrier();
