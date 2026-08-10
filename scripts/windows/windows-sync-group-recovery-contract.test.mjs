@@ -29,8 +29,8 @@ it('keeps stable desktop A and Windows C on a real LAN Sync Group path', () => {
   expect(remote).not.toContain("from 'better-sqlite3'");
   expect(inspector).toContain("from 'better-sqlite3'");
   expect(inspector).toContain('readonly: true');
-  expect(remote).toContain("controlWindowsNativeClient(execute, paths, 'stop')");
-  expect(remote).toContain("controlWindowsNativeClient(execute, paths, 'start')");
+  expect(remote).toContain('suspendWindowsNativeClient');
+  expect(remote).toContain('restoreWindowsNativeClient');
   expect(remote).toContain('else primaryError = cleanupError;');
   expect(remote).toContain('primaryError.message +=');
   expect(remote).toContain("slice(-12).join(' | ')");

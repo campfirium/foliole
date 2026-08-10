@@ -6,6 +6,7 @@ import path from 'node:path';
 
 import { afterEach, expect, it } from 'vitest';
 
+import { waitForInteractiveResult } from './windows-client-native-interactive.mjs';
 import {
   interactiveStatePaths, validateInteractiveRequest, WINDOWS_NATIVE_CLIENT_TASK,
   WINDOWS_NATIVE_CLIENT_WORKER_ENV, writeJsonAtomic
@@ -34,6 +35,18 @@ it('publishes request state atomically inside the dedicated state root', () => {
   writeJsonAtomic(paths.status, { schemaVersion: 1, state: 'pending' });
   expect(JSON.parse(fs.readFileSync(paths.status, 'utf8'))).toEqual({ schemaVersion: 1, state: 'pending' });
   expect(fs.readdirSync(root)).toEqual(['status.json']);
+});
+
+it('fails quickly when the interactive worker never starts', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-native-client-timeout-'));
+  roots.push(root);
+  const paths = interactiveStatePaths(root);
+  const nonce = '12345678-1234-1234-1234-123456789abc';
+  writeJsonAtomic(paths.status, { nonce, schemaVersion: 1, state: 'pending' });
+  let current = 0;
+  await expect(waitForInteractiveResult(paths, nonce, {
+    now: () => current, pause: async () => { current += 5_000; }
+  })).rejects.toThrow('did not start within 5 seconds');
 });
 
 it('keeps the interactive launcher isolated from the Android task control plane', () => {

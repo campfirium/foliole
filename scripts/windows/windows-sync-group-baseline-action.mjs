@@ -8,6 +8,9 @@ import {
   openWindowsSyncGroupSession,
   windowsSyncGroupClientPaths
 } from './windows-sync-group-recovery-action.mjs';
+import {
+  restoreWindowsNativeClient, suspendWindowsNativeClient
+} from './windows-sync-group-native-lifecycle.mjs';
 
 function assertEmptyClient(facts) {
   if (facts.integrity !== 'ok' || !facts.deviceIdentity || facts.localGroupId !== null
@@ -24,6 +27,27 @@ export function resolveWindowsProtectionIdentity(inspection, productIdentity = n
   if (Array.isArray(active) && active.length === 1 && active[0]) return active[0];
   if (productIdentity) return productIdentity;
   throw new Error('Windows C device identity is not uniquely recoverable.');
+}
+
+function isUnboundEmptyClient(facts) {
+  return facts.integrity === 'ok' && facts.localGroupId === null
+    && facts.localTimelineId === null && facts.localMemberState === null
+    && facts.activeMemberCount === 0 && facts.userNodeCount === 0
+    && facts.contentBlobCount === 0 && facts.attachmentCount === 0;
+}
+
+async function resolveOriginalProductIdentity({ client, evidenceRoot, execute,
+  inspectDatabase, loadOverview, openSession, paths }) {
+  const facts = await inspectDatabase(execute, paths, path.join(client.libraryHome, 'Data', 'foliole.db'));
+  try { return resolveWindowsProtectionIdentity(facts); }
+  catch (error) {
+    if (!isUnboundEmptyClient(facts)) throw error;
+    const session = await openSession(paths, evidenceRoot);
+    try {
+      const overview = await loadOverview(session);
+      return identityFingerprint(overview?.primary_device_state?.primary_device_id);
+    } finally { await session.app.close(); }
+  }
 }
 
 export async function runWindowsSyncGroupBaselineReset({ buildIdentity, evidenceRoot, execute,
@@ -45,10 +69,12 @@ export async function runWindowsSyncGroupBaselineReset({ buildIdentity, evidence
       deviceIdentity: resolveWindowsProtectionIdentity(facts, productIdentity) };
   };
   fs.mkdirSync(evidenceRoot, { recursive: true });
-  await controlNativeClient(execute, paths, 'stop');
+  const suspended = await suspendWindowsNativeClient({ control: controlNativeClient, execute, paths });
   let primaryError = null;
   let result = null;
   try {
+    productIdentity = await resolveOriginalProductIdentity({ client, evidenceRoot, execute,
+      inspectDatabase, loadOverview, openSession, paths });
     const originalProtection = await protectLibrary({
       backupRoot: path.join(protectionRoot, 'original'),
       databaseRelativePath: path.join('library', 'Data', 'foliole.db'),
@@ -75,7 +101,7 @@ export async function runWindowsSyncGroupBaselineReset({ buildIdentity, evidence
     }, null, 2)}\n`, 'utf8');
     result = { output: '', syncGroupBaseline: { manifestPath } };
   } catch (error) { primaryError = error; }
-  try { await controlNativeClient(execute, paths, 'start'); }
+  try { await restoreWindowsNativeClient({ control: controlNativeClient, execute, paths, suspended }); }
   catch (cleanupError) {
     if (primaryError) primaryError.message += `; cleanup: ${cleanupError.message}`;
     else primaryError = cleanupError;

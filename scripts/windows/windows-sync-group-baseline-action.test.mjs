@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -48,9 +50,40 @@ it('protects old C, boots a fresh product workspace, then protects the empty bas
       return { app: { close: async () => undefined } };
     }, paths });
   const manifest = JSON.parse(fs.readFileSync(result.syncGroupBaseline.manifestPath, 'utf8'));
-  expect(controls).toEqual(['stop', 'start']);
+  expect(controls).toEqual([]);
   expect(manifest).toMatchObject({ baselineProtection: {
     deviceIdentity: identityFingerprint('fresh-c') },
     emptyFacts: { activeMemberCount: 0, localGroupId: null, nodeCount: 2 },
     originalProtection: { deviceIdentity: 'device-c-old' }, resultStatus: 'success' });
+});
+
+it('reads product identity before protecting an already-empty C workspace', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 't121-windows-empty-baseline-'));
+  const clientRoot = path.join(root, '.tmp', 'artifacts', 'windows-sync-group-client-c');
+  const library = path.join(clientRoot, 'library');
+  const database = path.join(library, 'Data', 'foliole.db');
+  fs.mkdirSync(path.dirname(database), { recursive: true });
+  fs.mkdirSync(path.join(clientRoot, 'user-data'), { recursive: true });
+  fs.writeFileSync(database, 'already-empty');
+  const emptyFacts = { activeMemberCount: 0, attachmentCount: 0, activeDeviceIdentities: {},
+    contentBlobCount: 0, deviceIdentity: null, integrity: 'ok', localGroupId: null,
+    localMemberState: null, localTimelineId: null, nodeCount: 2, userNodeCount: 0 };
+  let sessionCount = 0;
+  const result = await runWindowsSyncGroupBaselineReset({ buildIdentity: 'candidate-empty',
+    evidenceRoot: path.join(root, 'evidence'), execute: async () => ({ code: 0 }),
+    inspectDatabase: async () => emptyFacts,
+    loadOverview: async () => ({ primary_device_state: {
+      primary_device_id: sessionCount === 1 ? 'existing-empty-c' : 'fresh-c'
+    } }), openSession: async () => {
+      sessionCount += 1;
+      if (sessionCount === 2) {
+        fs.mkdirSync(path.dirname(database), { recursive: true });
+        fs.writeFileSync(database, 'fresh');
+      }
+      return { app: { close: async () => undefined } };
+    }, paths: { repoRoot: root } });
+  const manifest = JSON.parse(fs.readFileSync(result.syncGroupBaseline.manifestPath, 'utf8'));
+  expect(sessionCount).toBe(2);
+  expect(manifest.originalProtection.deviceIdentity).toBe(identityFingerprint('existing-empty-c'));
+  expect(manifest.baselineProtection.deviceIdentity).toBe(identityFingerprint('fresh-c'));
 });

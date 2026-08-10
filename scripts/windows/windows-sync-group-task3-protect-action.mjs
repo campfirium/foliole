@@ -6,6 +6,9 @@ import { resolveWindowsProtectionIdentity } from './windows-sync-group-baseline-
 import {
   controlWindowsNativeClient, inspectWindowsSyncGroupDatabase, windowsSyncGroupClientPaths
 } from './windows-sync-group-recovery-action.mjs';
+import {
+  restoreWindowsNativeClient, suspendWindowsNativeClient
+} from './windows-sync-group-native-lifecycle.mjs';
 
 export async function runWindowsSyncGroupTask3Protect({ buildIdentity, evidenceRoot, execute, paths }) {
   const client = windowsSyncGroupClientPaths(paths);
@@ -16,8 +19,11 @@ export async function runWindowsSyncGroupTask3Protect({ buildIdentity, evidenceR
     const facts = await inspectWindowsSyncGroupDatabase(execute, paths, databasePath);
     return { ...facts, deviceIdentity: resolveWindowsProtectionIdentity(facts) };
   };
-  await controlWindowsNativeClient(execute, paths, 'stop');
+  const suspended = await suspendWindowsNativeClient({
+    control: controlWindowsNativeClient, execute, paths
+  });
   let primaryError;
+  let result;
   try {
     const current = await inspectWindowsSyncGroupDatabase(execute, paths);
     if (current.activeMemberCount !== 3 || current.localMemberState !== 'active'
@@ -30,14 +36,17 @@ export async function runWindowsSyncGroupTask3Protect({ buildIdentity, evidenceR
     fs.writeFileSync(manifestPath, `${JSON.stringify({ completedAt: new Date().toISOString(),
       current, protection, resultStatus: 'success', schemaVersion: 1
     }, null, 2)}\n`, 'utf8');
-    return { output: '', syncGroupTask3Protection: { manifestPath } };
+    result = { output: '', syncGroupTask3Protection: { manifestPath } };
   } catch (error) { primaryError = error; }
   finally {
-    try { await controlWindowsNativeClient(execute, paths, 'start'); }
+    try { await restoreWindowsNativeClient({
+      control: controlWindowsNativeClient, execute, paths, suspended
+    }); }
     catch (cleanupError) {
       if (primaryError) primaryError.message += `; cleanup: ${cleanupError.message}`;
       else primaryError = cleanupError;
     }
   }
   if (primaryError) throw primaryError;
+  return result;
 }

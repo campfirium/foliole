@@ -62,6 +62,7 @@ describe('native Windows client stop', () => {
     await expect(stopNativeClient({
       print: false,
       platform: 'win32',
+      processIsAlive: () => false,
       readClientState: () => null,
       readReadyState: () => null,
       removeClientState,
@@ -142,6 +143,7 @@ describe('native Windows client stop', () => {
     await expect(stopNativeClient({
       print: false,
       platform: 'win32',
+      processIsAlive: () => false,
       readClientState: () => null,
       readReadyState: () => null,
       removeClientState: vi.fn(),

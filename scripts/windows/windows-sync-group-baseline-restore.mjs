@@ -11,6 +11,9 @@ import { resolveWindowsProtectionIdentity } from './windows-sync-group-baseline-
 import {
   controlWindowsNativeClient, inspectWindowsSyncGroupDatabase, windowsSyncGroupClientPaths
 } from './windows-sync-group-recovery-action.mjs';
+import {
+  restoreWindowsNativeClient, suspendWindowsNativeClient
+} from './windows-sync-group-native-lifecycle.mjs';
 import { windowsDevPaths } from './windows-dev-paths.mjs';
 
 function assertSourceId(value) {
@@ -50,7 +53,9 @@ export async function restoreWindowsSyncGroupBaseline({ execute = executeBounded
     const value = await inspectWindowsSyncGroupDatabase(execute, paths, databasePath);
     return { ...value, deviceIdentity: resolveWindowsProtectionIdentity(value) };
   };
-  await controlWindowsNativeClient(execute, paths, 'stop');
+  const suspended = await suspendWindowsNativeClient({
+    control: controlWindowsNativeClient, execute, paths
+  });
   let primaryError = null;
   let result = null;
   try {
@@ -71,7 +76,9 @@ export async function restoreWindowsSyncGroupBaseline({ execute = executeBounded
     }, null, 2)}\n`, 'utf8');
     result = { ...result, manifestPath };
   } catch (error) { primaryError = error; }
-  try { await controlWindowsNativeClient(execute, paths, 'start'); }
+  try { await restoreWindowsNativeClient({
+    control: controlWindowsNativeClient, execute, paths, suspended
+  }); }
   catch (cleanupError) {
     if (primaryError) primaryError.message += `; cleanup: ${cleanupError.message}`;
     else primaryError = cleanupError;

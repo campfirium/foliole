@@ -9,6 +9,7 @@ import {
 } from './windows-client-native-interactive-state.mjs';
 
 const RESULT_TIMEOUT_MS = 90_000;
+const START_TIMEOUT_MS = 5_000;
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -30,12 +31,22 @@ async function installTask({ installScript, repoRoot, workerScript }) {
   }
 }
 
-async function waitForResult(paths, nonce) {
-  const deadline = Date.now() + RESULT_TIMEOUT_MS;
-  while (Date.now() < deadline) {
+export async function waitForInteractiveResult(paths, nonce, {
+  now = Date.now, pause = wait, resultTimeoutMs = RESULT_TIMEOUT_MS,
+  startTimeoutMs = START_TIMEOUT_MS
+} = {}) {
+  const startedAt = now();
+  const deadline = startedAt + resultTimeoutMs;
+  let workerStarted = false;
+  while (now() < deadline) {
     const result = readJson(paths.result);
     if (result?.nonce === nonce) return result;
-    await wait(250);
+    const status = readJson(paths.status);
+    if (status?.nonce === nonce && status.state === 'running') workerStarted = true;
+    if (!workerStarted && now() - startedAt >= startTimeoutMs) {
+      throw new Error('native client interactive task did not start within 5 seconds');
+    }
+    await pause(250);
   }
   throw new Error('native client interactive task result timed out');
 }
@@ -59,7 +70,7 @@ export async function dispatchWindowsNativeClientAction({
     if (launch.code !== 0) {
       throw new Error(launch.stderr.trim() || launch.stdout.trim() || 'interactive task launch failed');
     }
-    result = await waitForResult(paths, request.nonce);
+    result = await waitForInteractiveResult(paths, request.nonce);
   } catch (error) {
     writeJsonAtomic(paths.status, {
       error: error.message, nonce: request.nonce, schemaVersion: 1, state: 'completed'

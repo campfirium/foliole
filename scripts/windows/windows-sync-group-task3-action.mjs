@@ -7,6 +7,10 @@ import {
   controlWindowsNativeClient, inspectWindowsSyncGroupDatabase, invokeWindowsSyncGroupCommand,
   openWindowsSyncGroupSession
 } from './windows-sync-group-recovery-action.mjs';
+import {
+  restoreWindowsNativeClient, suspendWindowsNativeClient
+} from './windows-sync-group-native-lifecycle.mjs';
+import { createSyncProgressWatchdog } from '../sync-group/sync-progress-watchdog.mjs';
 
 function hasOrigin(facts, origin, excluded) {
   return Object.entries(facts?.journeyFacts ?? {}).some(([id, value]) =>
@@ -23,9 +27,13 @@ function assertComplete(facts, factId = null) {
 
 async function waitForFacts(execute, paths, origins, excluded, factIds = [], timeoutMs = 12 * 60_000) {
   const deadline = Date.now() + timeoutMs;
+  const observe = createSyncProgressWatchdog({
+    label: 'Windows C task 3 fact convergence', stallMs: 60_000
+  });
   let facts;
   while (Date.now() < deadline) {
     facts = await inspectWindowsSyncGroupDatabase(execute, paths, undefined, factIds);
+    observe(JSON.stringify([facts.activeMemberCount, facts.journeyFacts, facts.facts]), facts);
     if (origins.every((origin) => hasOrigin(facts, origin, excluded))
         && factIds.every((id) => facts.facts[id] === true)) return facts;
     await delay(1_000);
@@ -44,8 +52,11 @@ async function runSession(paths, evidenceRoot, action) {
 
 export async function runWindowsSyncGroupTask3({ evidenceRoot, execute, paths }) {
   fs.mkdirSync(evidenceRoot, { recursive: true });
-  await controlWindowsNativeClient(execute, paths, 'stop');
+  const suspended = await suspendWindowsNativeClient({
+    control: controlWindowsNativeClient, execute, paths
+  });
   let primaryError;
+  let result;
   try {
     const initial = await inspectWindowsSyncGroupDatabase(execute, paths);
     const excluded = new Set(Object.keys(initial.journeyFacts ?? {}));
@@ -69,14 +80,17 @@ export async function runWindowsSyncGroupTask3({ evidenceRoot, execute, paths })
       converged, factId: created.factId, initialJourneyFacts: initial.journeyFacts,
       restarted, resultStatus: 'success', schemaVersion: 1
     }, null, 2)}\n`, 'utf8');
-    return { output: '', syncGroupTask3: { receiptPath } };
+    result = { output: '', syncGroupTask3: { receiptPath } };
   } catch (error) { primaryError = error; }
   finally {
-    try { await controlWindowsNativeClient(execute, paths, 'start'); }
+    try { await restoreWindowsNativeClient({
+      control: controlWindowsNativeClient, execute, paths, suspended
+    }); }
     catch (cleanupError) {
       if (primaryError) primaryError.message += `; cleanup: ${cleanupError.message}`;
       else primaryError = cleanupError;
     }
   }
-  throw primaryError;
+  if (primaryError) throw primaryError;
+  return result;
 }

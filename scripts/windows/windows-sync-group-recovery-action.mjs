@@ -4,6 +4,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
+import {
+  restoreWindowsNativeClient, suspendWindowsNativeClient
+} from './windows-sync-group-native-lifecycle.mjs';
+import { createSyncProgressWatchdog } from '../sync-group/sync-progress-watchdog.mjs';
+
 const CLIENT_ROOT_NAME = 'windows-sync-group-client-c';
 
 export async function invokeWindowsSyncGroupCommand(page, command, args = {}) {
@@ -77,9 +82,15 @@ async function waitForJoinedGroup(page, expectedGroupId, timeoutMs = 12 * 60_000
 async function waitForOrdinarySyncFacts(execute, paths, evidenceRoot, timeoutMs = 12 * 60_000) {
   const deadline = Date.now() + timeoutMs;
   const nodeSurfaceDeadline = Date.now() + 90_000;
+  const observe = createSyncProgressWatchdog({
+    label: 'Windows C ordinary sync', stallMs: 90_000
+  });
   let lastFacts = null;
   while (Date.now() < deadline) {
     lastFacts = await inspectWindowsSyncGroupDatabase(execute, paths);
+    observe(JSON.stringify([lastFacts.activeMemberCount, lastFacts.nodeCount,
+      lastFacts.contentBlobCount, lastFacts.attachmentCount,
+      lastFacts.missingContentBlobCount, lastFacts.missingAttachmentCount]), lastFacts);
     try {
       assertComplete(lastFacts);
       return lastFacts;
@@ -144,7 +155,9 @@ function assertComplete(facts) {
 
 export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths }) {
   fs.mkdirSync(evidenceRoot, { recursive: true });
-  await controlWindowsNativeClient(execute, paths, 'stop');
+  const suspended = await suspendWindowsNativeClient({
+    control: controlWindowsNativeClient, execute, paths
+  });
   let initialFacts = null;
   let primaryError = null;
   let recoveryResult = null;
@@ -179,7 +192,9 @@ export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths
     error.message += `; initial=${JSON.stringify(initialFacts)}`;
     primaryError = error;
   }
-  try { await controlWindowsNativeClient(execute, paths, 'start'); }
+  try { await restoreWindowsNativeClient({
+    control: controlWindowsNativeClient, execute, paths, suspended
+  }); }
   catch (cleanupError) {
     if (primaryError) primaryError.message += `; cleanup: ${cleanupError.message}`;
     else primaryError = cleanupError;

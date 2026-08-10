@@ -5,7 +5,6 @@ import { execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { setTimeout as delay } from 'node:timers/promises';
 
 import { inspectPairSyncRecoveryWorkspace } from '../android/android-pair-sync-recovery-readiness.mjs';
 import { collectAndroidDeviceSnapshot } from '../android/android-device-snapshot.mjs';
@@ -17,6 +16,10 @@ import { authorizationDigest, createTask3Authorization } from './t121-task3-auth
 import {
   assertTask3Complete, assertTask3Receipt, createTask3Manifest, TASK3_STEPS
 } from './t121-task3-contract.mjs';
+import {
+  waitForTask3MacFacts, waitForTask3MacMembers
+} from './t121-task3-macos-convergence.mjs';
+import { runTask3Stage } from './t121-task3-stage.mjs';
 
 function execute(command, args, options = {}) {
   return new Promise((resolve, reject) => {
@@ -63,7 +66,10 @@ function evidence(output, pattern, label) {
 }
 
 async function node(root, script, args = []) {
-  return execute(process.execPath, [path.join(root, script), ...args], { cwd: root });
+  const label = `${path.basename(script, '.mjs')}:${args.join(',') || 'run'}`;
+  return runTask3Stage({ label, run: () => execute(
+    process.execPath, [path.join(root, script), ...args], { cwd: root }
+  ) });
 }
 
 function androidPoint(manifest, expected) {
@@ -111,29 +117,6 @@ async function buildBaseline(root, candidate) {
     restorePoints: { A: a, B: b, C: c } };
 }
 
-async function waitForMac(session, requiredIds, timeoutMs = 12 * 60_000) {
-  const deadline = Date.now() + timeoutMs;
-  let snapshot;
-  while (Date.now() < deadline) {
-    const overview = await session.load();
-    snapshot = await session.invoke('load_workspace_list_snapshot', { includePdfOpenings: false });
-    const active = overview.sync_group?.members.filter(({ state }) => state === 'active').length;
-    if (active === 3 && requiredIds.every((id) => snapshot.nodesById?.[id])) return snapshot;
-    await delay(1_000);
-  }
-  throw new Error('macOS A did not converge on the required task 3 facts.');
-}
-
-async function waitForMacMembers(session, timeoutMs = 4 * 60_000) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const group = (await session.load()).sync_group;
-    if (group?.members.filter(({ state }) => state === 'active').length === 3) return group;
-    await delay(1_000);
-  }
-  throw new Error('macOS A did not rejoin the three-member group.');
-}
-
 async function androidSnapshot(root) {
   const paths = macosA5Paths(root);
   return collectAndroidDeviceSnapshot({ adb: paths.adb, appId: 'com.foliole.android',
@@ -161,7 +144,7 @@ async function runJourney(root, manifest) {
   let cReceipt;
   let ids;
   try {
-    await waitForMacMembers(session);
+    await waitForTask3MacMembers(session);
     aFact = await createDesktopSyncGroupJourneyFact({ device: 'A',
       evidenceRoot: artifactRoot(root, manifest.candidate.revision), session });
     await node(root, 'scripts/android/macos-a5-dev.mjs', ['create-journey-fact']);
@@ -176,11 +159,12 @@ async function runJourney(root, manifest) {
       .filter(([id]) => !excluded.has(id));
     ids = { A: aFact.factId,
       ...Object.fromEntries(fresh.map(([id, origin]) => [origin, id])) };
-    macSnapshot = await waitForMac(session, Object.values(ids));
+    macSnapshot = await waitForTask3MacFacts(session, Object.values(ids));
   } finally { await session.close(); }
   const reopened = await openMacosPairSyncDesktopSession({ repoRoot: root,
     userDataPath: path.join(root, MACOS_DAILY_DEBUG_ROOT, 'user-data') });
-  try { macSnapshot = await waitForMac(reopened, Object.values(ids)); } finally { await reopened.close(); }
+  try { macSnapshot = await waitForTask3MacFacts(reopened, Object.values(ids)); }
+  finally { await reopened.close(); }
   await node(root, 'scripts/android/macos-a5-dev.mjs', ['resume-sync-group']);
   const b = await androidSnapshot(root);
   const electron = path.join(root, 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron');
