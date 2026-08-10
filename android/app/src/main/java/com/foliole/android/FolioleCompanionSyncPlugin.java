@@ -23,12 +23,14 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
     @PluginMethod public void startSyncGroupProvider(PluginCall call) {
         async(call, "Failed to start Sync Group provider.", () ->
-            FolioleCompanionSyncGroupProvider.start(getContext(), getActivity(), call, this::dispatchDataRequest));
+            FolioleCompanionSyncGroupProvider.start(
+                getContext(), getActivity(), call, this, this::dispatchDataRequest
+            ));
     }
 
     @PluginMethod public void stopSyncGroupProvider(PluginCall call) {
         async(call, "Failed to stop Sync Group provider.", () ->
-            FolioleCompanionSyncGroupProvider.stop());
+            FolioleCompanionSyncGroupProvider.stop(this));
     }
 
     @PluginMethod public void loadSyncGroupProviderState(PluginCall call) {
@@ -120,20 +122,20 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     }
 
     @Override protected void handleOnDestroy() {
-        FolioleCompanionSyncGroupProvider.pause();
+        FolioleCompanionSyncGroupProvider.pause(this);
         super.handleOnDestroy();
         fileExecutor.shutdownNow();
     }
 
     @Override protected void handleOnPause() {
-        FolioleCompanionSyncGroupProvider.pause();
+        FolioleCompanionSyncGroupProvider.pause(this);
         super.handleOnPause();
     }
 
     @Override protected void handleOnResume() {
         super.handleOnResume();
         fileExecutor.execute(() -> {
-            try { FolioleCompanionSyncGroupProvider.resume(); }
+            try { FolioleCompanionSyncGroupProvider.resume(this); }
             catch (Exception error) { android.util.Log.w("FolioleSyncProvider", "Resume failed", error); }
         });
     }

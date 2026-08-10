@@ -16,6 +16,7 @@ final class FolioleCompanionSyncGroupProvider {
     private static FolioleCompanionNsdAdvertisement advertisement;
     private static Context activeContext;
     private static JSONObject activeConfig;
+    private static Object activeOwner;
     private static FolioleCompanionSyncGroupDataBridge dataBridge;
     private static FolioleCompanionSyncGroupServer server;
     private static final Map<String, FolioleCompanionSyncGroupJoinRequest> joinRequests =
@@ -24,7 +25,8 @@ final class FolioleCompanionSyncGroupProvider {
     private FolioleCompanionSyncGroupProvider() {}
 
     static synchronized JSObject start(
-        Context context, Activity activity, PluginCall call, FolioleCompanionSyncGroupDataBridge.Dispatcher dispatcher
+        Context context, Activity activity, PluginCall call, Object owner,
+        FolioleCompanionSyncGroupDataBridge.Dispatcher dispatcher
     ) throws Exception {
         JSONObject next = new JSONObject()
             .put("app_version", value(context, call, "appVersion"))
@@ -33,22 +35,27 @@ final class FolioleCompanionSyncGroupProvider {
             .put("protocol", FolioleCompanionSyncPackProviderDefinitions.load(context).protocol())
             .put("sync_group", call.getData().getJSONObject(key(context, "group")));
         if (sameProvider(next)) {
+            activeOwner = owner;
             FolioleCompanionSyncScreenAwake.attach(activity);
             activeContext = context.getApplicationContext(); activeConfig = next;
             requireDataBridge().replaceDispatcher(dispatcher);
             if (server == null) startRuntime();
             return state();
         }
-        if (activeConfig != null) stop();
+        if (activeConfig != null) stopActiveProvider();
         FolioleCompanionSyncScreenAwake.attach(activity);
-        activeContext = context.getApplicationContext(); activeConfig = next;
+        activeContext = context.getApplicationContext(); activeConfig = next; activeOwner = owner;
         dataBridge = new FolioleCompanionSyncGroupDataBridge(activeContext, dispatcher);
         restoreApprovedJoins();
         startRuntime();
         return state();
     }
 
-    static synchronized JSObject stop() {
+    static synchronized JSObject stop(Object owner) {
+        return owner == activeOwner ? stopActiveProvider() : state();
+    }
+
+    private static JSObject stopActiveProvider() {
         FolioleCompanionSyncScreenAwake.clear();
         if (advertisement != null) advertisement.stop();
         if (server != null) server.stop();
@@ -59,21 +66,23 @@ final class FolioleCompanionSyncGroupProvider {
             }
             FolioleCompanionSyncGroupJoinGrantStore.clear(activeContext);
         }
-        activeContext = null; activeConfig = null;
+        activeContext = null; activeConfig = null; activeOwner = null;
         if (dataBridge != null) dataBridge.close();
         dataBridge = null;
         joinRequests.clear();
         return state();
     }
 
-    static synchronized void pause() {
+    static synchronized void pause(Object owner) {
+        if (owner != activeOwner) return;
         FolioleCompanionSyncScreenAwake.clear();
         if (advertisement != null) advertisement.stop();
         if (server != null) server.stop();
         advertisement = null; server = null;
     }
 
-    static synchronized void resume() throws Exception {
+    static synchronized void resume(Object owner) throws Exception {
+        if (owner != activeOwner) return;
         if (server == null && activeContext != null && activeConfig != null) startRuntime();
     }
 

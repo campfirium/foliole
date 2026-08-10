@@ -83,8 +83,9 @@ it('keeps the Android screen awake only around foreground provider activity', as
   const awake = await readJava('FolioleCompanionSyncScreenAwake.java');
   expect(provider).toContain('FolioleCompanionSyncScreenAwake.touch()');
   expect(provider).toContain('FolioleCompanionSyncScreenAwake.clear()');
-  expect(plugin).toContain('FolioleCompanionSyncGroupProvider.pause()');
-  expect(plugin).toContain('FolioleCompanionSyncGroupProvider.resume()');
+  expect(plugin).toContain('FolioleCompanionSyncGroupProvider.pause(this)');
+  expect(plugin).toContain('FolioleCompanionSyncGroupProvider.resume(this)');
+  expect(provider).toContain('if (owner != activeOwner) return;');
   expect(awake).toContain('FLAG_KEEP_SCREEN_ON');
 });
 
@@ -92,7 +93,8 @@ it('refreshes the provider data bridge after Activity recreation', async () => {
   const bridge = await readJava('FolioleCompanionSyncGroupDataBridge.java');
   const provider = await readJava('FolioleCompanionSyncGroupProvider.java');
   const sameProvider = provider.slice(
-    provider.indexOf('if (sameProvider(next))'), provider.indexOf('if (activeConfig != null) stop()')
+    provider.indexOf('if (sameProvider(next))'),
+    provider.indexOf('if (activeConfig != null) stopActiveProvider()')
   );
   expect(bridge).toContain('private volatile Dispatcher dispatcher;');
   expect(bridge).toContain('void replaceDispatcher(Dispatcher dispatcher)');
