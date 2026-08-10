@@ -52,7 +52,7 @@ function requireInteger(value, label) {
 function assertCounts(counts, label, empty = false) {
   for (const key of ['nodes', 'contentBlobs', 'attachments']) {
     const value = requireInteger(counts?.[key], `${label}.${key}`);
-    const expectedEmpty = key === 'nodes' ? value <= 1 : value === 0;
+    const expectedEmpty = key === 'nodes' ? value <= 2 : value === 0;
     if (empty && !expectedEmpty) fail(`${label}.${key} is not an empty workspace count`);
   }
 }

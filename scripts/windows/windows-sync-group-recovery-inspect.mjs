@@ -57,7 +57,9 @@ export function inspectSyncGroupRecoveryDatabase(databasePath, factIds = []) {
       missingContentBlobCount: count(`SELECT COUNT(*) FROM content_blobs cb
         LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash WHERE cbd.hash IS NULL`),
       nodeCount: count('SELECT COUNT(*) FROM nodes'),
-      reviewLogCount: count('SELECT COUNT(*) FROM review_log')
+      reviewLogCount: count('SELECT COUNT(*) FROM review_log'),
+      userNodeCount: count(`SELECT COUNT(*) FROM nodes
+        WHERE deleted_at IS NULL AND id NOT IN ('special-inbox', 'special-virtual-root')`)
     };
   } finally { db.close(); }
 }

@@ -12,7 +12,7 @@ import {
 function assertEmptyClient(facts) {
   if (facts.integrity !== 'ok' || !facts.deviceIdentity || facts.localGroupId !== null
       || facts.localTimelineId !== null || facts.localMemberState !== null
-      || facts.activeMemberCount !== 0 || facts.nodeCount > 1 || facts.contentBlobCount !== 0
+      || facts.activeMemberCount !== 0 || facts.userNodeCount !== 0 || facts.contentBlobCount !== 0
       || facts.attachmentCount !== 0) {
     throw new Error('Windows C did not reach a fresh empty unbound product state.');
   }

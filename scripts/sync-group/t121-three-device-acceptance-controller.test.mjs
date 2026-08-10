@@ -84,6 +84,8 @@ it('requires A and B to share a two-member identity while C stays unbound and em
   invalid.devices.C.counts.nodes = 1;
   expect(() => assertAcceptanceBaseline(invalid)).not.toThrow();
   invalid.devices.C.counts.nodes = 2;
+  expect(() => assertAcceptanceBaseline(invalid)).not.toThrow();
+  invalid.devices.C.counts.nodes = 3;
   expect(() => assertAcceptanceBaseline(invalid)).toThrow('not an empty workspace count');
 });
 

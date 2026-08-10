@@ -31,7 +31,7 @@ it('protects old C, boots a fresh product workspace, then protects the empty bas
     contentBlobCount: empty ? 0 : 4, deviceIdentity: empty ? 'device-c-new' : 'device-c-old',
     integrity: 'ok', localGroupId: empty ? null : 'group-old',
     localMemberState: empty ? null : 'active', localTimelineId: empty ? null : 'timeline-old',
-    nodeCount: empty ? 1 : 5 });
+    nodeCount: empty ? 2 : 5, userNodeCount: empty ? 0 : 3 });
   const controls = [];
   const inspectDatabase = async (_execute, _paths, databasePath = path.join(library, 'Data', 'foliole.db')) =>
     facts(fs.readFileSync(databasePath, 'utf8') === 'fresh');
@@ -48,6 +48,6 @@ it('protects old C, boots a fresh product workspace, then protects the empty bas
   const manifest = JSON.parse(fs.readFileSync(result.syncGroupBaseline.manifestPath, 'utf8'));
   expect(controls).toEqual(['stop', 'start']);
   expect(manifest).toMatchObject({ baselineProtection: { deviceIdentity: 'device-c-new' },
-    emptyFacts: { activeMemberCount: 0, localGroupId: null, nodeCount: 1 },
+    emptyFacts: { activeMemberCount: 0, localGroupId: null, nodeCount: 2 },
     originalProtection: { deviceIdentity: 'device-c-old' }, resultStatus: 'success' });
 });
