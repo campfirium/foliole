@@ -1,7 +1,10 @@
 import { expect, it, vi } from 'vitest';
 
+import { APP_LANGUAGE_STORAGE_KEY } from '../shared/localization/appLanguage';
+
 import { DEMO_TOPICS, getDemoTopicNodeId } from './demoContent';
 import {
+  acceptDemoLanguagePreferenceFromSearch,
   demoPathSegmentFromLocale,
   resolveDemoInitialLanguagePreference,
   resolveDemoLanguagePreferenceFromPath,
@@ -22,12 +25,23 @@ it('resolves only supported Demo route locale prefixes into runtime language pre
   expect(demoPathSegmentFromLocale('de')).toBe('en');
 });
 
-it('resolves persisted choice, website context, route, then system fallback in order', () => {
-  expect(resolveDemoInitialLanguagePreference('/en/demo/', '?lang=ja', 'system')).toBe('system');
-  expect(resolveDemoInitialLanguagePreference('/en/demo/', '?lang=ja', 'de')).toBe('de');
+it('resolves website context, persisted choice, route, then system fallback in order', () => {
+  expect(resolveDemoInitialLanguagePreference('/en/demo/', '?lang=ja', 'system')).toBe('ja');
+  expect(resolveDemoInitialLanguagePreference('/en/demo/', '?lang=ja', 'de')).toBe('ja');
   expect(resolveDemoInitialLanguagePreference('/en/demo/', '?lang=ja', null)).toBe('ja');
   expect(resolveDemoInitialLanguagePreference('/zh-hans/demo/', '', null)).toBe('zh-Hans');
   expect(resolveDemoInitialLanguagePreference('/en/demo/', '?lang=nl', null)).toBe('en');
+});
+
+it('persists a supported website language as the next Demo preference', () => {
+  window.localStorage.clear();
+
+  expect(acceptDemoLanguagePreferenceFromSearch('?lang=ja')).toBe('ja');
+  expect(window.localStorage.getItem(APP_LANGUAGE_STORAGE_KEY)).toBe('ja');
+  expect(acceptDemoLanguagePreferenceFromSearch('?lang=nl')).toBeUndefined();
+  expect(window.localStorage.getItem(APP_LANGUAGE_STORAGE_KEY)).toBe('ja');
+
+  window.localStorage.clear();
 });
 
 it('keeps the active topic on a published route while carrying website language context', () => {

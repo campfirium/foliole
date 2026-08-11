@@ -1,6 +1,7 @@
 import { APP_LOCALES } from '../../lib/core/localization/appLocaleRegistry';
 import {
   isAppLanguagePreference,
+  setStoredAppLanguagePreference,
   type AppLanguagePreference,
   type AppLocale
 } from '../shared/localization/appLanguage';
@@ -38,8 +39,14 @@ export function resolveDemoInitialLanguagePreference(
   search: string,
   persistedPreference: AppLanguagePreference | null
 ): AppLanguagePreference | undefined {
-  return persistedPreference ?? resolveDemoLanguagePreferenceFromSearch(search) ??
+  return resolveDemoLanguagePreferenceFromSearch(search) ?? persistedPreference ??
     resolveDemoLanguagePreferenceFromPath(pathname);
+}
+
+export function acceptDemoLanguagePreferenceFromSearch(search: string) {
+  const preference = resolveDemoLanguagePreferenceFromSearch(search);
+  if (preference) setStoredAppLanguagePreference(preference);
+  return preference;
 }
 
 export function demoPathSegmentFromLocale(locale: AppLocale) {
