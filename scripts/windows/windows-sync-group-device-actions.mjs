@@ -2,8 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { provisionWindowsAcceptanceRoot } from './windows-multi-device-sync-readiness.mjs';
+import { runWindowsMultiDeviceSyncC } from './windows-multi-device-sync-c-action.mjs';
 
 export async function runWindowsSyncGroupDeviceAction(options) {
+  if (options.action === 'multi-device-sync-c') {
+    return runWindowsMultiDeviceSyncC(options);
+  }
   if (options.action === 'multi-device-sync-candidate') {
     const owned = provisionWindowsAcceptanceRoot({ paths: options.paths });
     const manifestPath = path.win32.join(options.evidenceRoot, 'multi-device-sync-candidate.json');

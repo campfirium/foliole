@@ -26,35 +26,47 @@ function stagePassed(stage, startedAt, result) {
     startedAt, status: 'passed' };
 }
 
-export async function runDiagnostic({ adapters, availableFacts = [], candidateProvider,
-  mutationAdapters = adapters, run, stageActions, targetStage }) {
+export async function runStageSequence({ adapters, candidateProvider,
+  mutationAdapters = adapters, onReceipt = () => {}, run, stageActions, stages }) {
   const readiness = await collectEnvironmentReadiness({ adapters });
-  for (const receipt of readiness.receipts) recordReceipt(run, receipt);
+  for (const receipt of readiness.receipts) {
+    recordReceipt(run, receipt); onReceipt(receipt);
+  }
   if (!readiness.allReady) return finalizeRun(run, await candidateProvider());
-  for (const stage of shortestStageChain(targetStage, availableFacts)) {
+  for (const stage of stages) {
     const action = stageActions[stage.action];
     if (typeof action !== 'function') {
-      recordReceipt(run, stageFailure(stage, new Date().toISOString(), {
+      const receipt = stageFailure(stage, new Date().toISOString(), {
         failureOwner: 'controller', missingFact: 'unbound_stage', status: 'blocked'
-      }));
+      });
+      recordReceipt(run, receipt); onReceipt(receipt);
       break;
     }
     const startedAt = new Date().toISOString();
     try {
       const result = await action({ run: structuredClone(run), stage });
-      recordReceipt(run, stagePassed(stage, startedAt, result));
+      const receipt = stagePassed(stage, startedAt, result);
+      recordReceipt(run, receipt); onReceipt(receipt);
       if (stage.name === 'candidate-preparation') {
         const mutationReadiness = await collectEnvironmentReadiness({ adapters: mutationAdapters });
         for (const current of mutationReadiness.receipts) {
-          recordReceipt(run, { ...current, inputFacts: ['candidate_bound'],
-            stage: 'mutation-readiness' });
+          const receipt = { ...current, inputFacts: ['candidate_bound'],
+            stage: 'mutation-readiness' };
+          recordReceipt(run, receipt); onReceipt(receipt);
         }
         if (!mutationReadiness.allReady) break;
       }
     } catch (error) {
-      recordReceipt(run, stageFailure(stage, startedAt, error));
+      const receipt = stageFailure(stage, startedAt, error);
+      recordReceipt(run, receipt); onReceipt(receipt);
       break;
     }
   }
   return finalizeRun(run, await candidateProvider());
+}
+
+export async function runDiagnostic({ availableFacts = [], targetStage, ...options }) {
+  return runStageSequence({
+    ...options, stages: shortestStageChain(targetStage, availableFacts)
+  });
 }

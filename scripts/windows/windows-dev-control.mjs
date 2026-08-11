@@ -18,7 +18,7 @@ export const WINDOWS_DEV_SOURCE_REF = 'refs/heads/dev';
 export const WINDOWS_DEV_DEFAULT_SSH = 'zephu@192.168.0.11';
 export const WINDOWS_DEV_ACTIONS = [
   'appearance', 'build', 'capture-annotation', 'deploy', 'live', 'pair-sync-recover', 'secondary',
-  'multi-device-sync-candidate', 'verify'
+  'multi-device-sync-c', 'multi-device-sync-candidate', 'verify'
 ];
 const WINDOWS_DEV_REMOTE_ACTION = 'C:/dev/foliole-android-lab-preview/scripts/windows/windows-dev-action.ps1';
 const WINDOWS_DEV_EVIDENCE_PREFIX = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/';
@@ -151,7 +151,8 @@ export async function runWindowsDevControl({
   const { action, host } = parseWindowsDevControlArgs(argv, env);
   const syncGroup = runWindowsSyncGroupControl(action, {
     buildPushSpec: windowsDevPushSpec, buildScpSpec: windowsDevScpSpec,
-    buildSshSpec: windowsDevSshSpec, env, executeGit, executeScp, executeSsh, host, repoRoot, stdout
+    buildSshSpec: windowsDevSshSpec, env, executeGit, executeScp, executeSsh, fsApi,
+    host, repoRoot, stdout
   });
   if (syncGroup) return syncGroup;
   const spec = windowsDevPushSpec(host, env);

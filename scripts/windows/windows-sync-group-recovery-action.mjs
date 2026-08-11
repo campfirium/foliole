@@ -7,9 +7,10 @@ import { setTimeout as delay } from 'node:timers/promises';
 import {
   restoreWindowsNativeClient, suspendWindowsNativeClient
 } from './windows-sync-group-native-lifecycle.mjs';
+import {
+  provisionWindowsAcceptanceRoot, windowsAcceptanceRoot
+} from './windows-multi-device-sync-readiness.mjs';
 import { createSyncProgressWatchdog } from '../sync-group/sync-progress-watchdog.mjs';
-
-const CLIENT_ROOT_NAME = 'windows-sync-group-client-c';
 
 export async function invokeWindowsSyncGroupCommand(page, command, args = {}) {
   return page.evaluate(async ({ command, args }) => {
@@ -19,7 +20,7 @@ export async function invokeWindowsSyncGroupCommand(page, command, args = {}) {
 }
 
 export function windowsSyncGroupClientPaths(paths) {
-  const root = path.join(paths.repoRoot, '.tmp', 'artifacts', CLIENT_ROOT_NAME);
+  const root = path.join(windowsAcceptanceRoot(paths), 'client');
   return { libraryHome: path.join(root, 'library'), userData: path.join(root, 'user-data') };
 }
 
@@ -153,7 +154,29 @@ function assertComplete(facts) {
   }
 }
 
-export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths }) {
+function assertEmpty(facts) {
+  if (facts.integrity !== 'ok' || facts.localGroupId !== null || facts.localTimelineId !== null
+      || facts.localMemberState !== null || facts.activeMemberCount !== 0 || facts.userNodeCount !== 0
+      || facts.contentBlobCount !== 0 || facts.attachmentCount !== 0) {
+    throw new Error(`Windows C did not start empty: ${JSON.stringify(facts)}`);
+  }
+}
+
+async function resetOwnedClient(paths, evidenceRoot, execute) {
+  provisionWindowsAcceptanceRoot({ paths });
+  const client = windowsSyncGroupClientPaths(paths);
+  fs.rmSync(path.dirname(client.libraryHome), { force: true, recursive: true });
+  fs.mkdirSync(client.libraryHome, { recursive: true });
+  fs.mkdirSync(client.userData, { recursive: true });
+  const session = await openWindowsSyncGroupSession(paths, evidenceRoot);
+  await session.app.close();
+  const facts = await inspectWindowsSyncGroupDatabase(execute, paths);
+  assertEmpty(facts);
+  return facts;
+}
+
+export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths,
+  resetOwnedState = false }) {
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const suspended = await suspendWindowsNativeClient({
     control: controlWindowsNativeClient, execute, paths
@@ -162,7 +185,9 @@ export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths
   let primaryError = null;
   let recoveryResult = null;
   try {
-    initialFacts = await inspectWindowsSyncGroupDatabase(execute, paths);
+    initialFacts = resetOwnedState
+      ? await resetOwnedClient(paths, evidenceRoot, execute)
+      : await inspectWindowsSyncGroupDatabase(execute, paths);
     let session = await openWindowsSyncGroupSession(paths, evidenceRoot);
     let candidate;
     let firstFacts;

@@ -4,13 +4,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { digest } from './multi-device-sync-contract.mjs';
+import { scenarioCatalog, scenarioCatalogDigest } from './multi-device-sync-scenario-catalog.mjs';
 import { stageCatalog, stageCatalogDigest } from './multi-device-sync-stage-catalog.mjs';
 
 const CONTROLLER_FILES = [
   'scripts/sync-group/multi-device-sync-contract.mjs',
   'scripts/sync-group/multi-device-sync-diagnostic.mjs',
+  'scripts/sync-group/multi-device-sync-formal.mjs',
   'scripts/sync-group/multi-device-sync-host-readiness.mjs',
   'scripts/sync-group/multi-device-sync-stage-actions.mjs',
+  'scripts/sync-group/multi-device-sync-scenario-catalog.mjs',
   'scripts/sync-group/multi-device-sync-stage-catalog.mjs',
   'scripts/sync-group/multi-device-sync-workspace.mjs'
 ];
@@ -32,7 +35,8 @@ export function currentAcceptanceCandidate(repoRoot, mode = 'diagnostic') {
     committed: true, controllerDigest: controllerDigest(repoRoot),
     criteriaDigest: digest({ deadlineMs: 45_000, hosts: ['macos-a', 'android-b', 'windows-c'],
       progressStallMs: 60_000, statuses: ['passed', 'blocked', 'failed', 'stalled', 'invalidated'] }),
-    mode, revision: git(repoRoot, ['rev-parse', 'HEAD']), scenarioDigest: stageCatalogDigest(),
+    mode, revision: git(repoRoot, ['rev-parse', 'HEAD']),
+    scenarioDigest: digest({ scenarios: scenarioCatalogDigest(), stages: stageCatalogDigest() }),
     treeDigest: git(repoRoot, ['rev-parse', 'HEAD^{tree}'])
   };
 }
@@ -42,5 +46,5 @@ export function acceptanceControllerFiles() {
 }
 
 export function acceptanceScenarioDefinition() {
-  return stageCatalog();
+  return { scenarios: scenarioCatalog(), stages: stageCatalog() };
 }

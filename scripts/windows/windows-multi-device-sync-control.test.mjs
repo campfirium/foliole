@@ -1,0 +1,23 @@
+import path from 'node:path';
+
+import { expect, it, vi } from 'vitest';
+
+import { runWindowsMultiDeviceSyncControl } from './windows-multi-device-sync-control.mjs';
+
+it('pushes dev and copies only the fixed C receipt', async () => {
+  const executeGit = vi.fn(async () => 'pushed');
+  const executeScp = vi.fn(async () => 'copied');
+  const executeSsh = vi.fn(async () => '[windows-dev-action] multi-device-sync-c '
+    + 'identity=run-1 manifest=C:\\dev\\foliole-android-lab-preview\\.tmp\\artifacts\\'
+    + 'windows-dev-action\\run-1\\sync-group-recovery-receipt.json\n');
+  const result = await runWindowsMultiDeviceSyncControl({
+    buildPushSpec: () => ({ args: ['push'], env: { GIT: 'fixed' } }),
+    buildScpSpec: (_host, remote, local) => [remote, local],
+    buildSshSpec: () => ['ssh'], env: {}, executeGit, executeScp, executeSsh,
+    fsApi: { mkdirSync: vi.fn() }, host: 'user@host', repoRoot: '/repo', stdout: { write: vi.fn() }
+  });
+  expect(result.manifestPath).toBe(path.join('/repo', '.tmp', 'artifacts',
+    'multi-device-sync', 'windows-c', 'run-1', 'multi-device-sync-c-receipt.json'));
+  expect(executeGit).toHaveBeenCalledTimes(1);
+  expect(executeScp).toHaveBeenCalledTimes(1);
+});

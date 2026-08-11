@@ -68,11 +68,12 @@ export async function startMacosA5SyncGroupApprovalProvider({ execute, onReady, 
   await onReady();
 }
 
-export async function runMacosA5SyncGroupApproval({ execute, onReady = async () => {}, repoRoot }) {
+export async function runMacosA5SyncGroupApproval({ execute, onReady = async () => {},
+  prepare = build, repoRoot }) {
   const paths = macosA5Paths(repoRoot);
   const env = macosA5GradleEnv();
   assertFixedA5(paths);
-  build(paths);
+  prepare(paths);
   const reuseInstalledMain = await installedMainMatches({ execute, paths, env });
   const evidenceRoot = path.join(repoRoot, '.tmp/artifacts/a5-sync-group-approval');
   fs.mkdirSync(evidenceRoot, { recursive: true });

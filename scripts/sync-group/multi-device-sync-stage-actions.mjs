@@ -6,6 +6,7 @@ import { promisify } from 'node:util';
 
 import { macosA5GradleEnv, macosA5Paths, A5_SERIAL } from '../android/macos-a5-dev.mjs';
 import { runMacosA5PairSync } from '../android/macos-a5-pair-sync-action.mjs';
+import { runMacosA5SyncGroupApproval } from '../android/macos-a5-sync-group-approval.mjs';
 import { resolveMacosA5PairSyncReadiness } from '../android/macos-a5-product-bootstrap.mjs';
 import { runMacosA5SyncGroupMaintenance } from '../android/macos-a5-sync-group-maintenance-action.mjs';
 import { validateOwnedDesktopPreflight } from '../windows/windows-pair-sync-desktop-readiness.mjs';
@@ -106,8 +107,52 @@ async function establishAB(repoRoot, runId) {
   }
 }
 
+function windowsFormalReceipt(output, repoRoot) {
+  const match = /^\[windows-dev-action\] multi-device-sync-c identity=([A-Za-z0-9.-]{1,96})/mu.exec(output);
+  if (!match) throw new Error('Windows C formal action did not report fixed evidence.');
+  const evidenceRef = path.join(repoRoot, '.tmp', 'artifacts', 'multi-device-sync',
+    'windows-c', match[1], 'multi-device-sync-c-receipt.json');
+  if (!fs.existsSync(evidenceRef)) throw new Error('Windows C formal receipt is missing.');
+  const receipt = JSON.parse(fs.readFileSync(evidenceRef, 'utf8'));
+  if (receipt.resultStatus !== 'success' || receipt.firstFacts?.activeMemberCount !== 3
+      || receipt.restartedFacts?.activeMemberCount !== 3) {
+    throw Object.assign(new Error('Windows C ordinary sync facts are incomplete.'), {
+      failureOwner: 'product', host: 'windows-c', missingFact: 'windows_c_sync_incomplete'
+    });
+  }
+  return evidenceRef;
+}
+
+async function admitEmptyC(repoRoot, runId) {
+  const evidenceRoot = path.join(repoRoot, '.tmp', 'artifacts', 'multi-device-sync', 'runs', runId,
+    'b-admit-empty-c');
+  fs.mkdirSync(evidenceRoot, { recursive: true });
+  const execute = actionExecute(path.join(evidenceRoot, 'progress.jsonl'),
+    path.join(evidenceRoot, 'action.log'));
+  const paths = macosA5Paths(repoRoot);
+  await runMacosA5SyncGroupMaintenance({ action: 'create-journey-fact', buildIdentity: runId,
+    env: macosA5GradleEnv(), evidenceRoot: path.join(evidenceRoot, 'b-fact'), execute,
+    paths, serial: A5_SERIAL });
+  let windowsWork;
+  const approval = await runMacosA5SyncGroupApproval({ execute,
+    onReady: async () => {
+      windowsWork = execute(process.execPath,
+        ['scripts/windows/windows-dev-control.mjs', 'multi-device-sync-c'], { cwd: repoRoot });
+    }, prepare: () => {}, repoRoot });
+  const windows = await windowsWork;
+  if (!windows || windows.code !== 0) {
+    throw Object.assign(new Error('Windows C ordinary sync failed.'), { evidenceRef: evidenceRoot,
+      failureOwner: 'product', host: 'windows-c', missingFact: 'windows_c_sync_receipt' });
+  }
+  const evidenceRef = windowsFormalReceipt(windows.output, repoRoot);
+  return { evidenceRef, lastProgressAt: new Date().toISOString(),
+    progress: ['b-deterministic-fact-created', 'c-join-approved', 'c-ordinary-sync-complete',
+      `approval-${approval.receipt.targetTestId}`] };
+}
+
 export function createDiagnosticStageActions({ repoRoot, runId }) {
   return {
+    'admit-empty-c': () => admitEmptyC(repoRoot, runId),
     'establish-a-b': () => establishAB(repoRoot, runId),
     'prepare-candidate': () => prepareCandidate(repoRoot, runId)
   };

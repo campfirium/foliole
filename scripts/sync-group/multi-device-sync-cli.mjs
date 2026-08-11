@@ -8,6 +8,7 @@ import { pathToFileURL } from 'node:url';
 import { createRun } from './multi-device-sync-contract.mjs';
 import { currentAcceptanceCandidate } from './multi-device-sync-candidate.mjs';
 import { runDiagnostic } from './multi-device-sync-diagnostic.mjs';
+import { runFormal } from './multi-device-sync-formal.mjs';
 import {
   createHostReadinessAdapters, createMutationReadinessAdapters
 } from './multi-device-sync-host-readiness.mjs';
@@ -19,10 +20,11 @@ import {
 } from './multi-device-sync-workspace.mjs';
 
 function parse(argv) {
-  if (argv.length !== 3 || argv[0] !== 'diagnostic' || argv[1] !== '--stage') {
-    throw new Error('usage: multi-device-sync-cli diagnostic --stage <registered-stage>');
+  if (argv.length !== 3 || !['diagnostic', 'formal'].includes(argv[0])
+      || argv[1] !== (argv[0] === 'formal' ? '--scenario' : '--stage')) {
+    throw new Error('usage: multi-device-sync-cli <diagnostic --stage|formal --scenario> <name>');
   }
-  return { mode: 'diagnostic', stage: argv[2] };
+  return { mode: argv[0], target: argv[2] };
 }
 
 function identity() {
@@ -45,10 +47,12 @@ export async function runCli({ argv = process.argv.slice(2), repoRoot = process.
   cleanupPreviousOwnedRuns({ repoRoot, runId });
   createIsolatedMacosRoot({ repoRoot, runId });
   const options = { repoRoot, runId };
-  const run = createRun({ candidate, mode: request.mode, runId, scenario: request.stage });
-  const result = await runDiagnostic({ adapters: createHostReadinessAdapters(options),
+  const run = createRun({ candidate, mode: request.mode, runId, scenario: request.target });
+  const runner = request.mode === 'formal' ? runFormal : runDiagnostic;
+  const result = await runner({ adapters: createHostReadinessAdapters(options),
     candidateProvider, mutationAdapters: createMutationReadinessAdapters(options), run,
-    stageActions: createDiagnosticStageActions(options), targetStage: request.stage });
+    onReceipt: (receipt) => console.log(`[multi-device-sync] stage=${receipt.stage} status=${receipt.status}`),
+    stageActions: createDiagnosticStageActions(options), targetStage: request.target });
   const summaryPath = writeSummary(repoRoot, result);
   if (result.status === 'passed') {
     await cleanupDiagnosticState(options);
