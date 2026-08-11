@@ -26,6 +26,16 @@ it('classifies an expired controller hard deadline separately from product stall
     .rejects.toMatchObject({ failureOwner: 'controller', missingFact: 'stage_hard_deadline' });
 });
 
+it('preserves completed milestones when the stage progress envelope expires', async () => {
+  await expect(runBoundedStageAction({ action: ({ reportProgress, signal }) => {
+    reportProgress('started');
+    return new Promise((resolve) => signal.addEventListener('abort', resolve, { once: true }));
+  }, run: {}, stage: stage({ hardDeadlineMs: 100, progressDeadlineMs: 20 }) }))
+    .rejects.toMatchObject({
+      failureOwner: 'product', missingFact: 'declared_semantic_progress', progress: ['started']
+    });
+});
+
 it('joins every sibling before reporting the first failure', async () => {
   const events = [];
   const cancel = vi.fn(() => events.push('cancel'));

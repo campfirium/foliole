@@ -23,7 +23,7 @@ const stages = [
     milestones: ['a-listener-ready', 'a-fact-created', 'b-provider-stopped', 'b-transport-ready',
       'b-fact-received', 'a-offline', 'c-join-started', 'b-approval-completed',
       'c-ordinary-sync-completed'], outputs: ['b_c_group_active'],
-    progressDeadlineMs: PRODUCT_PROGRESS_DEADLINE,
+    progressDeadlineMs: PRODUCT_PROGRESS_DEADLINE + CONTROL_DEADLINE,
     siblings: [{ hardDeadlineMs: 15 * 60_000 + CONTROL_DEADLINE,
       name: 'android-b-approval', waitsFor: 'windows-c-join' },
       { hardDeadlineMs: 15 * 60_000, name: 'windows-c-join', waitsFor: null }] },

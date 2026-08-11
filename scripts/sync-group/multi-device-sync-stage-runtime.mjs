@@ -53,7 +53,7 @@ export async function runBoundedStageAction({ action, run, stage }) {
     }
     return { ...result, lastProgressAt: new Date().toISOString(), progress };
   } catch (error) {
-    throw terminal || Object.assign(error, { progress });
+    throw Object.assign(terminal || error, { progress: [...progress] });
   } finally {
     clearTimeout(hardTimer); clearTimeout(progressTimer);
   }

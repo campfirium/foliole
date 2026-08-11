@@ -19,7 +19,8 @@ it('declares every required product stage without embedding its business impleme
 });
 
 it('declares ordered milestones and deadlines that cover legal sibling waits', () => {
-  expect(resolveStage('b-admit-empty-c')).toMatchObject({
+  const stage = resolveStage('b-admit-empty-c');
+  expect(stage).toMatchObject({
     milestones: ['a-listener-ready', 'a-fact-created', 'b-provider-stopped', 'b-transport-ready',
       'b-fact-received', 'a-offline', 'c-join-started', 'b-approval-completed',
       'c-ordinary-sync-completed'],
@@ -28,6 +29,7 @@ it('declares ordered milestones and deadlines that cover legal sibling waits', (
       expect.objectContaining({ name: 'windows-c-join', waitsFor: null })
     ])
   });
+  expect(stage.progressDeadlineMs).toBeGreaterThan(60_000);
   expect(() => assertStageTiming({ hardDeadlineMs: 100, name: 'invalid', progressDeadlineMs: 50,
     siblings: [{ hardDeadlineMs: 80, name: 'waiter', waitsFor: 'worker' },
       { hardDeadlineMs: 80, name: 'worker', waitsFor: null }] }))

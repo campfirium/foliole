@@ -27,7 +27,7 @@ it('does not treat stdout bytes as semantic progress or extend the hard deadline
   const { execute, progressPath } = executor();
   const result = await execute(process.execPath, ['-e',
     'setInterval(() => process.stdout.write("noise\\n"), 5)'], {
-    action: 'noisy', hardDeadlineMs: 45, host: 'android-b', stage: 'test'
+    action: 'noisy', hardDeadlineMs: 250, host: 'android-b', stage: 'test'
   });
   expect(result.code).toBe(124);
   const events = fs.readFileSync(progressPath, 'utf8').trim().split('\n').map(JSON.parse);
