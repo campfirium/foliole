@@ -16,19 +16,21 @@ it('resolves only supported Demo route locale prefixes into runtime language pre
   expect(resolveDemoLanguagePreferenceFromPath('/en/demo/')).toBe('en');
   expect(resolveDemoLanguagePreferenceFromPath('/zh-hans/guides/welcome-to-foliole/')).toBe('zh-Hans');
   expect(resolveDemoLanguagePreferenceFromPath('/zh-hant/guides/welcome-to-foliole/')).toBe('zh-Hant');
-  expect(resolveDemoLanguagePreferenceFromPath('/pt-br/demo/')).toBe('pt-BR');
+  expect(resolveDemoLanguagePreferenceFromPath('/pt/demo/')).toBe('pt-BR');
   expect(resolveDemoLanguagePreferenceFromPath('/nl/demo/')).toBeUndefined();
   expect(resolveDemoLanguagePreferenceFromSearch('?lang=pt-BR')).toBe('pt-BR');
   expect(resolveDemoLanguagePreferenceFromSearch('?lang=nl')).toBeUndefined();
   expect(demoPathSegmentFromLocale('en')).toBe('en');
   expect(demoPathSegmentFromLocale('zh-Hans')).toBe('zh-hans');
-  expect(demoPathSegmentFromLocale('de')).toBe('en');
+  expect(demoPathSegmentFromLocale('de')).toBe('de');
+  expect(demoPathSegmentFromLocale('pt-BR')).toBe('pt');
 });
 
-it('resolves website context, persisted choice, route, then system fallback in order', () => {
+it('resolves website context, route, persisted choice, then system fallback in order', () => {
   expect(resolveDemoInitialLanguagePreference('/en/demo/', '?lang=ja', 'system')).toBe('ja');
   expect(resolveDemoInitialLanguagePreference('/en/demo/', '?lang=ja', 'de')).toBe('ja');
   expect(resolveDemoInitialLanguagePreference('/en/demo/', '?lang=ja', null)).toBe('ja');
+  expect(resolveDemoInitialLanguagePreference('/ja/demo/', '', 'de')).toBe('ja');
   expect(resolveDemoInitialLanguagePreference('/zh-hans/demo/', '', null)).toBe('zh-Hans');
   expect(resolveDemoInitialLanguagePreference('/en/demo/', '?lang=nl', null)).toBe('en');
 });
@@ -58,7 +60,7 @@ it('keeps the active topic on a published route while carrying website language 
   expect(replaceState).toHaveBeenCalledWith(
     null,
     '',
-    `/en/guides/${firstTopic.slug}/?source=site&lang=de`
+    `/de/guides/${firstTopic.slug}/?source=site`
   );
   vi.unstubAllGlobals();
 });
@@ -75,6 +77,19 @@ it('keeps locale Demo entry URLs stable while active nodes change', () => {
   syncDemoUrlToNode(getDemoTopicNodeId(firstTopic), 'en', 'en');
 
   expect(replaceState).not.toHaveBeenCalled();
+  vi.unstubAllGlobals();
+});
+
+it('keeps a Japanese website route after the Demo runtime starts', () => {
+  const replaceState = vi.fn();
+  vi.stubGlobal('window', {
+    history: { replaceState, state: null },
+    location: { hash: '', pathname: '/ja/demo/', search: '?lang=ja' }
+  });
+
+  syncDemoUrlToNode('inbox', 'ja', 'ja');
+
+  expect(replaceState).toHaveBeenCalledWith(null, '', '/ja/demo/');
   vi.unstubAllGlobals();
 });
 

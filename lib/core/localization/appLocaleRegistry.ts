@@ -11,6 +11,15 @@ type LocaleDefinition = {
 export const APP_LOCALE_MANIFEST = appLocaleManifest.locales;
 export const APP_LOCALES = Object.keys(APP_LOCALE_MANIFEST) as RegisteredAppLocale[];
 
+export function appLocaleRouteSegment(locale: RegisteredAppLocale) {
+  return locale === 'pt-BR' ? 'pt' : locale.toLowerCase();
+}
+
+export function resolveAppLocaleRouteSegment(segment: string): RegisteredAppLocale | null {
+  const normalized = normalizeLanguageTag(segment);
+  return APP_LOCALES.find((locale) => appLocaleRouteSegment(locale) === normalized) ?? null;
+}
+
 export function resolveRegisteredAppLocale(language: string): RegisteredAppLocale | null {
   const normalized = normalizeLanguageTag(language);
   for (const locale of APP_LOCALES) {

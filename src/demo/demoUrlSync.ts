@@ -1,4 +1,7 @@
-import { APP_LOCALES } from '../../lib/core/localization/appLocaleRegistry';
+import {
+  appLocaleRouteSegment,
+  resolveAppLocaleRouteSegment
+} from '../../lib/core/localization/appLocaleRegistry';
 import {
   isAppLanguagePreference,
   setStoredAppLanguagePreference,
@@ -30,8 +33,7 @@ export function syncDemoUrlToNode(
 
 export function resolveDemoLanguagePreferenceFromPath(pathname: string): AppLanguagePreference | undefined {
   const match = DEMO_ROUTE_LOCALE_PATTERN.exec(pathname);
-  const locale = match?.[1]?.toLowerCase();
-  return APP_LOCALES.find((candidate) => candidate.toLowerCase() === locale);
+  return match?.[1] ? resolveAppLocaleRouteSegment(match[1]) ?? undefined : undefined;
 }
 
 export function resolveDemoInitialLanguagePreference(
@@ -39,8 +41,8 @@ export function resolveDemoInitialLanguagePreference(
   search: string,
   persistedPreference: AppLanguagePreference | null
 ): AppLanguagePreference | undefined {
-  return resolveDemoLanguagePreferenceFromSearch(search) ?? persistedPreference ??
-    resolveDemoLanguagePreferenceFromPath(pathname);
+  return resolveDemoLanguagePreferenceFromSearch(search) ??
+    resolveDemoLanguagePreferenceFromPath(pathname) ?? persistedPreference ?? undefined;
 }
 
 export function acceptDemoLanguagePreferenceFromSearch(search: string) {
@@ -50,7 +52,7 @@ export function acceptDemoLanguagePreferenceFromSearch(search: string) {
 }
 
 export function demoPathSegmentFromLocale(locale: AppLocale) {
-  return locale === 'zh-Hans' ? 'zh-hans' : 'en';
+  return appLocaleRouteSegment(locale);
 }
 
 export function resolveDemoLanguagePreferenceFromSearch(search: string) {
@@ -65,7 +67,7 @@ function demoLanguageUrlSuffix(
   hash: string
 ) {
   const params = new URLSearchParams(search);
-  const routeCarriesLanguage = preference === locale && demoPathSegmentFromLocale(locale) === locale.toLowerCase();
+  const routeCarriesLanguage = preference === locale;
   if (routeCarriesLanguage) params.delete(DEMO_LANGUAGE_QUERY_KEY);
   else params.set(DEMO_LANGUAGE_QUERY_KEY, preference);
   const query = params.size > 0 ? `?${params.toString()}` : '';

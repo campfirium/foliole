@@ -126,8 +126,10 @@ describe('vite config', () => {
   it('recognizes Demo canonical locale routes for dev serving only', () => {
     expect(isDemoCanonicalRoutePath('/en/demo/')).toBe(true);
     expect(isDemoCanonicalRoutePath('/zh-hans/guides/welcome-to-foliole/')).toBe(true);
-    expect(isDemoCanonicalRoutePath('/zh-hant/guides/welcome-to-foliole/')).toBe(false);
-    expect(isDemoCanonicalRoutePath('/ja/demo/')).toBe(false);
+    expect(isDemoCanonicalRoutePath('/zh-hant/guides/welcome-to-foliole/')).toBe(true);
+    expect(isDemoCanonicalRoutePath('/ja/demo/')).toBe(true);
+    expect(isDemoCanonicalRoutePath('/pt/demo/')).toBe(true);
+    expect(isDemoCanonicalRoutePath('/nl/demo/')).toBe(false);
     expect(isDemoCanonicalRoutePath('/assets/demo/')).toBe(false);
   });
 

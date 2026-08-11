@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { APP_LOCALES, resolveRegisteredAppLocale } from './appLocaleRegistry.js';
+import {
+  APP_LOCALES,
+  appLocaleRouteSegment,
+  resolveAppLocaleRouteSegment,
+  resolveRegisteredAppLocale
+} from './appLocaleRegistry.js';
 
 describe('formal app locale registry', () => {
   it('registers the README locale set in product order', () => {
@@ -17,5 +22,14 @@ describe('formal app locale registry', () => {
     expect(resolveRegisteredAppLocale('zh-CN')).toBe('zh-Hans');
     expect(resolveRegisteredAppLocale('zh-HK')).toBe('zh-Hant');
     expect(resolveRegisteredAppLocale('zh')).toBeNull();
+  });
+
+  it('maps every app locale to its public website route segment', () => {
+    expect(appLocaleRouteSegment('ja')).toBe('ja');
+    expect(appLocaleRouteSegment('pt-BR')).toBe('pt');
+    expect(appLocaleRouteSegment('zh-Hans')).toBe('zh-hans');
+    expect(resolveAppLocaleRouteSegment('PT')).toBe('pt-BR');
+    expect(resolveAppLocaleRouteSegment('zh-hant')).toBe('zh-Hant');
+    expect(resolveAppLocaleRouteSegment('nl')).toBeNull();
   });
 });

@@ -111,6 +111,23 @@ it('uses a registered primary system language and falls back when unsupported', 
   expect(resolveSystemAppLocale(['nl-NL'])).toBe('en');
 });
 
+it('follows the primary browser language while System is selected', async () => {
+  Object.defineProperty(window.navigator, 'languages', {
+    configurable: true,
+    value: ['ja-JP', 'en-US']
+  });
+
+  render(
+    <LocalizationProvider>
+      <TranslationHarness />
+    </LocalizationProvider>
+  );
+
+  expect(await screen.findByText('system')).toBeInTheDocument();
+  expect(screen.getByText('ja')).toBeInTheDocument();
+  expect(await screen.findByText('設定')).toBeInTheDocument();
+});
+
 it('uses only the primary system language and requires explicit simplified Chinese', () => {
   expect(resolveSystemAppLocale(['ko-KR', 'zh-CN'])).toBe('ko');
   expect(resolveSystemAppLocale(['zh-TW'])).toBe('zh-Hant');

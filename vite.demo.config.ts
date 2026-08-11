@@ -5,11 +5,15 @@ import { fileURLToPath } from 'node:url';
 import type { Plugin, Rollup } from 'vite';
 import { defineConfig, mergeConfig } from 'vite';
 
+import { APP_LOCALES, appLocaleRouteSegment } from './lib/core/localization/appLocaleRegistry';
 import { createDemoManifest, DEMO_MANIFEST_FILE, type DemoRuntimeAsset } from './src/demo/demoManifest';
 import { createSharedViteConfig } from './vite.shared';
 
 const PROJECT_ROOT = path.dirname(fileURLToPath(import.meta.url));
-const DEMO_CANONICAL_ROUTE_PATTERN = /^\/(?:en|zh-hans)\/(?:demo|guides\/[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)*)\/?$/;
+const DEMO_ROUTE_LOCALES = APP_LOCALES.map(appLocaleRouteSegment).join('|');
+const DEMO_CANONICAL_ROUTE_PATTERN = new RegExp(
+  `^/(?:${DEMO_ROUTE_LOCALES})/(?:demo|guides/[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*)/?$`
+);
 
 export function filterDemoModulePreloadDependencies(
   _filename: string,
