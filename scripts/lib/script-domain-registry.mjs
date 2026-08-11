@@ -27,7 +27,7 @@ const WINDOWS_VALIDATION_KIT_PATTERN = /^scripts\/windows\/windows-(?:native-mou
 const WINDOWS_DEVICE_PATTERN =
   /^scripts\/windows\/(?:hidden-native|visible-native|windows-android-dev-diagnostics|windows-client-native|windows-preview-native)/u;
 const WINDOWS_ASSET_PATTERN = /^(?:scripts\/windows\/|scripts\/android\/windows-|scripts\/android\/open-foliole-android-)/u;
-const MACOS_ASSET_PATTERN = /^scripts\/macos\//u;
+const MACOS_ASSET_PATTERN = /^scripts\/macos\/|^scripts\/sync-group\/multi-device-sync-(?:cli|host-readiness|stage-actions)\.mjs$/u;
 
 export const CAPABILITY_CONTRACTS = [
   ...[
@@ -48,6 +48,13 @@ export const CAPABILITY_CONTRACTS = [
     name: 'quality:fast',
     placements: ['shared-core'],
     platforms: ['darwin', 'linux', 'win32']
+  },
+  {
+    adapter: { args: ['scripts/sync-group/multi-device-sync-cli.mjs'], bin: 'node' },
+    adapterPath: 'scripts/sync-group/multi-device-sync-cli.mjs',
+    name: 'multi-device-sync',
+    placements: ['macos-only'],
+    platforms: ['darwin']
   },
   {
     adapter: { args: ['scripts/quality/remote-quality.mjs'], bin: 'node' },
@@ -128,7 +135,7 @@ export const CAPABILITY_CONTRACTS = [
   }
 ];
 
-export const SCRIPT_ASSET_INVENTORY_SHA256 = '220ccc1624aaf7b4c749deb67910f4c504118c5c73645d5caeadc4fe3d6b52ca';
+export const SCRIPT_ASSET_INVENTORY_SHA256 = 'd72365559534fad69a8af7c48cb1bed89b294af7f6d4053ca380fcc7385f3ce2';
 
 function normalizeScriptPath(filePath) {
   return filePath.replaceAll('\\', '/').replace(/^\.\//u, '').trim();

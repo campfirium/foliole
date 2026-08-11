@@ -1,14 +1,17 @@
-import { runWindowsSyncGroupBaselineReset } from './windows-sync-group-baseline-action.mjs';
-import { runWindowsSyncGroupRecovery } from './windows-sync-group-recovery-action.mjs';
-import { runWindowsSyncGroupTask3 } from './windows-sync-group-task3-action.mjs';
-import { runWindowsSyncGroupTask3Protect } from './windows-sync-group-task3-protect-action.mjs';
+import fs from 'node:fs';
+import path from 'node:path';
+
+import { provisionWindowsAcceptanceRoot } from './windows-multi-device-sync-readiness.mjs';
 
 export async function runWindowsSyncGroupDeviceAction(options) {
-  if (options.action === 'sync-group-baseline-reset') {
-    return runWindowsSyncGroupBaselineReset(options);
+  if (options.action === 'multi-device-sync-candidate') {
+    const owned = provisionWindowsAcceptanceRoot({ paths: options.paths });
+    const manifestPath = path.win32.join(options.evidenceRoot, 'multi-device-sync-candidate.json');
+    fs.writeFileSync(manifestPath, `${JSON.stringify({
+      buildIdentity: options.buildIdentity, completedAt: new Date().toISOString(),
+      isolatedRoot: owned.root, resultStatus: 'success', schemaVersion: 1
+    }, null, 2)}\n`, 'utf8');
+    return { multiDeviceSyncCandidate: { manifestPath }, output: '' };
   }
-  if (options.action === 'sync-group-recover') return runWindowsSyncGroupRecovery(options);
-  if (options.action === 'sync-group-task3') return runWindowsSyncGroupTask3(options);
-  if (options.action === 'sync-group-task3-protect') return runWindowsSyncGroupTask3Protect(options);
   return null;
 }

@@ -34,7 +34,7 @@ export async function ensureMacosSyncGroup(actions) {
   return overview.sync_group ? actions.enable() : actions.create();
 }
 
-function launchOptions(repoRoot, env, userDataPath) {
+function launchOptions(repoRoot, env, userDataPath, libraryHome) {
   return {
     args: [path.join(repoRoot, 'dist/electron/main.js')],
     cwd: repoRoot,
@@ -43,7 +43,7 @@ function launchOptions(repoRoot, env, userDataPath) {
       FOLIOLE_DISABLE_HARDWARE_ACCELERATION: '1',
       FOLIOLE_DISABLE_IN_APP_RELAUNCH: '1',
       FOLIOLE_ELECTRON_NATIVE_HIDDEN: '1',
-      FOLIOLE_LIBRARY_HOME: MACOS_DAILY_LIBRARY_HOME,
+      FOLIOLE_LIBRARY_HOME: libraryHome,
       FOLIOLE_SESSION_DATA_PATH: userDataPath,
       FOLIOLE_USER_DATA_PATH: userDataPath,
       FOLIOLE_WORKDIR: repoRoot
@@ -56,12 +56,13 @@ function launchOptions(repoRoot, env, userDataPath) {
 }
 
 export async function openMacosPairSyncDesktopSession({
-  env = process.env, electronLauncher, repoRoot, timeoutMs = 90_000, userDataPath
+  env = process.env, electronLauncher, libraryHome = MACOS_DAILY_LIBRARY_HOME,
+  repoRoot, timeoutMs = 20_000, userDataPath
 }) {
   const launcher = electronLauncher ?? (await import('playwright'))._electron;
   let app;
   try {
-    app = await launcher.launch(launchOptions(repoRoot, env, userDataPath));
+    app = await launcher.launch(launchOptions(repoRoot, env, userDataPath, libraryHome));
     const page = await app.firstWindow({ timeout: timeoutMs });
     await page.waitForFunction(() => globalThis.__FOLIOLE_APP_READY_REPORTED__ === true, null, {
       timeout: timeoutMs

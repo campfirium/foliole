@@ -30,10 +30,10 @@ it('uses the fixed Windows DEV host and accepts only fixed actions', () => {
     .toMatchObject({ action: 'capture-annotation' });
   expect(parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'pair-sync-recover'], {}))
     .toMatchObject({ action: 'pair-sync-recover' });
-  expect(parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'sync-group-recover'], {}))
-    .toMatchObject({ action: 'sync-group-recover' });
-  expect(parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'sync-group-baseline-reset'], {}))
-    .toMatchObject({ action: 'sync-group-baseline-reset' });
+  expect(parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'multi-device-sync-candidate'], {}))
+    .toMatchObject({ action: 'multi-device-sync-candidate' });
+  expect(() => parseWindowsDevControlArgs(['sync-group-recover'], {}))
+    .toThrow('only accepts a registered fixed action');
   expect(parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'secondary'], {}))
     .toMatchObject({ action: 'secondary' });
   expect(() => parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'push'], {}))
@@ -153,7 +153,10 @@ it('copies the complete fixed capture annotation evidence set after remote clean
     action: 'capture-annotation', evidenceRoot: expect.stringContaining('run-2'),
     manifestPath: expect.stringContaining('capture-annotation-manifest.json')
   });
-  expect(executeScp).toHaveBeenCalledTimes(6);
+  expect(executeScp.mock.calls.map(([args]) => path.basename(args.at(-1))).sort()).toEqual([
+    'capture-annotation-db-summary.json', 'capture-annotation-manifest.json',
+    'capture-annotation-receipt.json', 'capture-annotation-semantic-snapshot.json', 'summary.json'
+  ]);
   expect(executeScp.mock.calls.map(([args]) => args.at(-2))).toContain(
     `${WINDOWS_DEV_DEFAULT_SSH}:${remoteRoot}/summary.json`
   );

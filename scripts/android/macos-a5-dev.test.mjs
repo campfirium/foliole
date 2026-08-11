@@ -54,11 +54,13 @@ describe('macOS fixed A5 development entry', () => {
     expect(source).not.toContain('process.argv[3]');
   });
 
-  it('routes Leave and app-data clearing only through fixed product actions', () => {
+  it('retires public T121 maintenance routes while the generic system owns its fixed action', () => {
     const source = fs.readFileSync('scripts/android/macos-a5-dev.mjs', 'utf8');
-    expect(source).toContain("'leave-sync-group'");
-    expect(source).toContain("'clear-app-data'");
-    expect(source).toContain('runMacosA5SyncGroupMaintenanceEntry');
+    const generic = fs.readFileSync('scripts/sync-group/multi-device-sync-stage-actions.mjs', 'utf8');
+    expect(source).not.toContain("'leave-sync-group'");
+    expect(source).not.toContain("'clear-app-data'");
+    expect(source).not.toContain('runMacosA5SyncGroupMaintenanceEntry');
+    expect(generic).toContain("action: 'clear-app-data'");
     expect(source).not.toContain('process.argv[3]');
   });
 

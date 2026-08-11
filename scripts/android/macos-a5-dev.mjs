@@ -8,12 +8,9 @@ import { clearTimeout, setTimeout } from 'node:timers';
 import { pathToFileURL } from 'node:url';
 
 import {
-  runMacosA5DesktopLeaveEntry,
   runMacosA5DatabasePerformanceEntry,
   runMacosA5ExistingSyncEntry,
-  runMacosA5PairSyncEntry,
-  runMacosA5SyncGroupMaintenanceEntry,
-  runMacosA5WindowsJoinEntry
+  runMacosA5PairSyncEntry
 } from './macos-a5-extended-actions.mjs';
 import {
   createMacosA5CaptureIdentity as captureIdentity,
@@ -168,7 +165,8 @@ async function captureAnnotation(paths) {
 }
 
 export async function runMacosA5Action(action, repoRoot = process.cwd()) {
-  if (!['status', 'approve-windows-join', 'build', 'capture-annotation', 'clear-app-data', 'create-journey-fact', 'database-performance', 'deploy', 'leave-sync-group', 'macos-leave', 'pair-sync', 'resume-sync-group', 'sync-existing'].includes(action)) {
+  if (!['status', 'build', 'capture-annotation', 'database-performance', 'deploy',
+    'pair-sync', 'sync-existing'].includes(action)) {
     throw new Error('Usage: node scripts/android/macos-a5-dev.mjs <registered-action>');
   }
   const paths = macosA5Paths(repoRoot);
@@ -181,29 +179,15 @@ export async function runMacosA5Action(action, repoRoot = process.cwd()) {
       readiness(paths);
     }
     if (action === 'deploy') deploy(paths);
-    if (action === 'resume-sync-group') {
-      assertFixedA5(paths);
-      checked(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start', '-n', COMPONENT]);
-      readiness(paths);
-    }
     if (action === 'capture-annotation') await captureAnnotation(paths);
     if (action === 'database-performance') await runMacosA5DatabasePerformanceEntry({
       assertFixed: () => assertFixedA5(paths), build: () => build(paths), env: macosA5GradleEnv(), execute, paths, serial: A5_SERIAL });
-    if (['leave-sync-group', 'clear-app-data', 'create-journey-fact'].includes(action)) await runMacosA5SyncGroupMaintenanceEntry({
-      action, assertFixed: () => assertFixedA5(paths), build: () => build(paths), buildIdentity: captureIdentity(),
-      env: macosA5GradleEnv(), execute, paths, serial: A5_SERIAL });
     const productArgs = {
       assertFixed: () => assertFixedA5(paths), build: () => build(paths), buildIdentity: captureIdentity,
       checked, env: macosA5GradleEnv(), execute, paths, serial: A5_SERIAL
     };
     if (action === 'pair-sync') await runMacosA5PairSyncEntry(productArgs);
     if (action === 'sync-existing') await runMacosA5ExistingSyncEntry(productArgs);
-    if (action === 'macos-leave') await runMacosA5DesktopLeaveEntry({
-      assertFixed: () => assertFixedA5(paths), env: macosA5GradleEnv(), execute, paths, serial: A5_SERIAL
-    });
-    if (action === 'approve-windows-join') await runMacosA5WindowsJoinEntry({
-      env: macosA5GradleEnv(), execute, paths
-    });
   } finally {
     spawnSync(paths.adb, ['kill-server']);
   }
