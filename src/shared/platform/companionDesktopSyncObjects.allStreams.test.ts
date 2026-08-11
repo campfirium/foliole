@@ -39,19 +39,23 @@ const syncBridgeMock = vi.hoisted(() => ({
   saveCompanionSyncReviewLogPushCursor: vi.fn(async (cursor: NativeSyncChangeCursor | null) => cursor),
   saveCompanionSyncPackCursor: vi.fn(async (cursor: number | null) => cursor),
   saveCompanionSyncPushAcks: vi.fn(async () => [] as string[]),
+  stageCompanionSyncPushItems: vi.fn(async () => undefined),
   saveCompanionSyncStateCursor: vi.fn(async (cursor: number | null) => cursor),
   saveCompanionSyncStatePushCursor: vi.fn(async (cursor: number | null) => cursor),
   syncCompanionContentBlob: vi.fn(async ({ hash }: { hash: string }) => ({ availability: 'cached', hash }))
 }));
 
 vi.mock('./companionSyncObjects', () => syncBridgeMock);
+vi.mock('./companion/sync/syncGroupStore', () => ({
+  loadCompanionSyncGroup: vi.fn(async () => null)
+}));
 vi.mock('./companionDesktopAttachmentResources', () => ({
   syncCompanionAttachmentResourceRequestsFromDesktop: vi.fn(async () => [] as string[]),
   syncCompanionAttachmentResourcesFromDesktop: vi.fn(async () => [] as string[])
 }));
 vi.mock('./companionWorkspacePairing', () => ({
   createSignedRequestHeaders: vi.fn(async () => ({ 'X-Device-Id': 'android-test-device' })),
-  loadCompanionPairingState: vi.fn(async () => ({ device_kind: 'android' }))
+  loadCompanionPairingState: vi.fn(async () => ({ device_kind: 'android', remote_peer_id: 'desktop-peer' }))
 }));
 
 function parseBody(init: RequestInit | undefined) {

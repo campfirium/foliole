@@ -120,7 +120,7 @@ describe('resolvePrimaryDeviceState authority gaps', () => {
       'sync_object_state.state_seq',
       'sync_peer_cursors',
       'syncObjectPolicy',
-      'sync_push_ack'
+      'sync_delivery_receipts'
     ]);
   });
 });

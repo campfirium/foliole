@@ -12,15 +12,19 @@ const syncBridgeMock = vi.hoisted(() => ({
   loadCompanionSyncStatePushCursor: vi.fn(async () => null),
   saveCompanionSyncPackCursor: vi.fn(async (cursor: number | null) => cursor),
   saveCompanionSyncPushAcks: vi.fn(async () => [] as string[]),
+  stageCompanionSyncPushItems: vi.fn(async () => undefined),
   syncCompanionContentBlob: vi.fn(async ({ hash }: { hash: string }) => ({ availability: 'cached', hash }))
 }));
 
 const pairingMock = vi.hoisted(() => ({
   createSignedRequestHeaders: vi.fn(async () => ({ 'X-Signature': 'signed' })),
-  loadCompanionPairingState: vi.fn(async () => ({ device_kind: 'android' }))
+  loadCompanionPairingState: vi.fn(async () => ({ device_kind: 'android', remote_peer_id: 'desktop-peer' }))
 }));
 
 vi.mock('./companionSyncObjects', () => syncBridgeMock);
+vi.mock('./companion/sync/syncGroupStore', () => ({
+  loadCompanionSyncGroup: vi.fn(async () => null)
+}));
 vi.mock('./companionDesktopSyncSummary', () => ({
   loadCompanionDesktopSyncSummary: vi.fn(async () => ({
     localDirtyCount: null,

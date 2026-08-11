@@ -204,7 +204,7 @@ export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrap
       refreshKey={model.workspaceSync.state.last_synced_at}
       runtimeKind={props.bootstrapState.runtime_kind}
     >
-      <CompanionSyncGroupRuntime workspaceSync={model.workspaceSync}>
+      <CompanionSyncGroupRuntime bootstrapState={props.bootstrapState} workspaceSync={model.workspaceSync}>
         <CompanionHandoffReminderRuntime workspaceSync={model.workspaceSync}>
           <CompanionShellView model={model} />
         </CompanionHandoffReminderRuntime>

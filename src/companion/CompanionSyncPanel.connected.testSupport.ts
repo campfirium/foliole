@@ -1,5 +1,7 @@
 import { vi } from 'vitest';
 
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract';
+
 export function createConnectedProps() {
   return {
     bootstrapState: {
@@ -40,18 +42,13 @@ export function createConnectedProps() {
       device_kind: 'android-capacitor',
       device_name: 'Android companion',
       is_paired: true,
-      negotiated_protocol_version: 1,
+      negotiated_protocol_version: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
       paired_at: '2026-04-22T09:00:00.000Z',
       primary_device_id: 'android-test-device',
       remote_peer_id: 'device-desktop',
       remote_peer_name: 'Foliole Desktop on Windows',
       remote_peer_platform: 'Windows',
-      remote_protocol: {
-        capabilities: ['lan-sync-v1'],
-        max_supported_version: 1,
-        min_supported_version: 1,
-        version: 1
-      },
+      remote_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
       sync_usable: true
     },
     pairingStatus: 'idle' as const,

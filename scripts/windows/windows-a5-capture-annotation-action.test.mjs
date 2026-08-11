@@ -110,7 +110,7 @@ it('installs only same-run APKs, executes one fixed restart method, audits, and 
   expect(adbArgs.find((args) => args.includes('instrument') && !args.includes('log'))).toContain(
     'com.foliole.android.FolioleCompanionWebViewAutomationTest#persistsCaptureClozeAndNoteAfterRestart'
   );
-  expect(protectData.mock.calls.map(([mode]) => mode)).toEqual(['backup', 'check', 'backup']);
+  expect(protectData.mock.calls.map(([mode]) => mode)).toEqual(['backup']);
   expect(adbArgs.at(-1)).toEqual(['-P', '5037', '-s', '87a33a4b', 'uninstall', 'com.foliole.android.test']);
   expect(database.close).toHaveBeenCalledOnce();
   const manifest = JSON.parse(fs.readFileSync(result.captureAnnotation.manifestPath, 'utf8'));

@@ -32,6 +32,20 @@ it('replaces legacy acknowledgements with pending obligations for every active p
   sqlite.close();
 });
 
+it('keeps partial legacy schemas migratable when sync state was never installed', () => {
+  const sqlite = new Database(':memory:');
+
+  migrateSyncDeliveryReceipts(sqlite);
+
+  expect(sqlite.prepare(
+    "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'sync_delivery_receipts'"
+  ).get()).toEqual({ name: 'sync_delivery_receipts' });
+  expect(sqlite.prepare(
+    "SELECT name FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'sync_delivery_%'"
+  ).all()).toEqual([]);
+  sqlite.close();
+});
+
 it('persists peer-scoped obligations across reopen and clears only the member that leaves', () => {
   const root = path.resolve('.tmp/artifacts');
   fs.mkdirSync(root, { recursive: true });

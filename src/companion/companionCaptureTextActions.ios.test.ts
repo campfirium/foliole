@@ -23,7 +23,9 @@ vi.mock('@capacitor/core', () => ({
     getPlatform: vi.fn(() => 'ios'),
     isNativePlatform: vi.fn(() => true)
   },
-  registerPlugin: vi.fn(() => ({}))
+  registerPlugin: vi.fn(() => ({
+    loadPairingState: vi.fn(async () => ({ remote_peer_id: 'desktop-peer' }))
+  }))
 }));
 
 vi.mock('@capacitor-community/sqlite', () => ({
@@ -133,12 +135,15 @@ function expectPushedCapture(db: Database.Database, nodeId: string) {
       identity: { objectId: nodeId, objectType: 'node', scope: 'workspace' }
     })] }
   );
-  const cursor = db.prepare(`
-    SELECT value FROM companion_meta WHERE key = 'sync_node_version_push_cursor'
-  `).get() as { value: string };
-  expect(JSON.parse(cursor.value)).toEqual({
-    change_id: 'ios-device#00000000-0000-4000-8000-000000000021',
-    created_at: expect.any(String)
+  expect(db.prepare(`
+    SELECT peer_id, stream_name, operation_id, object_id, status
+    FROM sync_delivery_receipts WHERE object_id = ?
+  `).get(nodeId)).toEqual({
+    object_id: nodeId,
+    operation_id: 'node:ios-device#00000000-0000-4000-8000-000000000021',
+    peer_id: 'desktop-peer',
+    status: 'confirmed',
+    stream_name: 'node_version'
   });
 }
 
