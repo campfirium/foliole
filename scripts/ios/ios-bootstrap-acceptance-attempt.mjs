@@ -40,8 +40,11 @@ export function createAcceptanceBuildArgs(udid, options = {}) {
   });
 }
 
-export function verifyBootstrapSnapshots(first, second) {
+export function verifyBootstrapSnapshots(first, second, expectedDeviceProfile) {
   if (!first.deviceId) throw new Error('The first launch did not persist a device identity.');
+  if (expectedDeviceProfile && first.deviceId !== expectedDeviceProfile) {
+    throw new Error('The iOS device profile does not match the current system name.');
+  }
   if (first.tableCount !== REQUIRED_TABLES.length) throw new Error('The first launch did not install the required schema.');
   if (second.deviceId !== first.deviceId) throw new Error('The device identity changed after process restart.');
   if (second.tableCount !== REQUIRED_TABLES.length) throw new Error('The schema changed after process restart.');
@@ -83,7 +86,7 @@ export async function runIosBootstrapAcceptanceAttempt(repoRoot, scenario, artif
       removeBridgeResult: () => rmSync(bridgeResultPath, { force: true }), scenario,
       terminate: () => run(options, 'xcrun', ['simctl', 'terminate', owned.udid, BUNDLE_ID])
     });
-    const result = verifyBootstrapSnapshots(first, restart.second);
+    const result = verifyBootstrapSnapshots(first, restart.second, owned.name);
     const scenarioResult = verifyAcceptanceScenario({
       firstBridge, firstContentObservations, firstScenarioSnapshot,
       pairingObservations: readServiceObservations(artifactDir), scenario,

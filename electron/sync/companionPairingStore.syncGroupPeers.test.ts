@@ -7,12 +7,13 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let userDataDir = '';
+const encryptString = vi.hoisted(() => vi.fn((value: string) => Buffer.from(value, 'utf8')));
 
 vi.mock('electron', () => ({
   app: { getPath: () => userDataDir },
   safeStorage: {
     decryptString: (value: Buffer) => value.toString('utf8'),
-    encryptString: (value: string) => Buffer.from(value, 'utf8'),
+    encryptString,
     getSelectedStorageBackend: () => 'gnome_libsecret',
     isEncryptionAvailable: () => true
   }
@@ -58,6 +59,17 @@ it('replaces only the same peer channel and requires an exact peer lookup', () =
     expect.objectContaining({ endpoint_url: 'http://new.local', secret: 'secret-new' })
   );
   expect(loadPairedSyncGroupPeer('group-1', 'missing')).toBeNull();
+});
+
+it('clears credentials by deleting the store without encrypting an empty replacement', async () => {
+  savePairedSyncGroupPeer(peer('desktop-a', 'secret-a', 'http://a.local'));
+  const storePath = path.join(userDataDir, 'companion-paired-devices.bin');
+  expect((await fs.stat(storePath)).isFile()).toBe(true);
+  encryptString.mockClear();
+  clearPairedCompanionDevices();
+  expect(encryptString).not.toHaveBeenCalled();
+  await expect(fs.stat(storePath)).rejects.toMatchObject({ code: 'ENOENT' });
+  expect(loadPairedSyncGroupPeers('group-1')).toEqual([]);
 });
 
 function peer(peerDeviceId: string, secret: string, endpointUrl: string) {

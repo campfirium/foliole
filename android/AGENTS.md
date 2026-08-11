@@ -17,7 +17,7 @@
 - 除原生权限、生命周期、intent、插件接缝与设备集成这类宿主特有能力外，Android 相关需求默认都应先复用或抽取 `src/shared/**` / `src/features/**` / 共享 contract；不得因为入口发生在 Android 就把节点列表、跳转逻辑、浏览语义、状态切换等非原生专属能力落到 Android / companion 私有实现。
 - Android 首轮交付优先验证存储、生命周期、同步入口与真实数据复习闭环；不得先扩展桌面级 UI 宽度或复杂编辑表面。
 - Android 权限、生命周期、文件访问、分享、intent、插件接缝改动，必须先核对 Capacitor 官方文档与 Android 官方文档。
-- Mac 是 Android 日常开发主机：源码、companion 构建、Capacitor sync、Gradle、固定 A5 的 ADB 安装 / 启动 / 日志与 instrumentation 必须在同一 Mac 工作区闭环，并优先使用 `node scripts/android/macos-a5-dev.mjs <status|build|capture-annotation|deploy|pair-sync>`。该入口只接受内建 A5 serial，不卸载主应用、不清数据、不扫描或猜测设备，并在动作结束后停止本轮 ADB server；`pair-sync` 只在显式授权和只读旧配对闸门通过后按产品语义断开并重配，其他动作不得改配对。Android Studio 与模拟器不进入日常路径。
+- Mac 是 Android 日常开发主机：源码、companion 构建、Capacitor sync、Gradle、固定 A5 的 ADB 安装 / 启动 / 日志与 instrumentation 必须在同一 Mac 工作区闭环，并优先使用 `node scripts/android/macos-a5-dev.mjs <status|build|capture-annotation|deploy|device-profile|pair-sync>`。该入口只接受内建 A5 serial，不卸载主应用、不清数据、不扫描或猜测设备，并在动作结束后停止本轮 ADB server；`device-profile` 只在可恢复基线成立后保留数据覆盖安装，证明系统命名档案与内容保持；`pair-sync` 只在显式授权和只读旧配对闸门通过后按产品语义断开并重配，其他动作不得改配对。Android Studio 与模拟器不进入日常路径。
 - Mac desktop DEV runtime 的明确测试 library 是固定 A5 的日常产品同步对象；源码、构建、ADB 与产品同步虽然是独立链路，但共同留在 Mac 当前工作区缩短开发内循环。Windows 只保留 Windows desktop 专属行为、Windows library 联动与最终跨宿主验收；不得把 Windows 当前库或 Windows controller 作为普通 Android 真机验收的前置。
 - Foliole Android 日常自动化默认不得使用 Computer Use；Mac 本地 CLI 与固定 A5 证据足够时不得打开 Android Studio、Windows App 或可见终端。只有目标依赖真实可见交互且现有固定入口无法表达时，才重新评估可见操作。
 

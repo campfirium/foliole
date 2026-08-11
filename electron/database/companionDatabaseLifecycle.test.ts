@@ -5,6 +5,7 @@ import Database from 'better-sqlite3';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  acknowledgeCompanionDeviceProfileReset,
   bootstrapCompanionDatabase,
   checkpointCompanionDatabase
 } from '../../lib/core/database/companionDatabaseLifecycle.js';
@@ -146,7 +147,7 @@ describe('shared companion database lifecycle guardrails', () => {
     sqlite.close();
   });
 
-  it('blocks newer versions, invalid journal modes, and identity mismatch before writes', async () => {
+  it('blocks newer versions and invalid journal modes before writes', async () => {
     const newer = fixture(COMPANION_DATABASE_VERSION + 1);
     await expect(bootstrap(newer.port)).rejects.toThrow('newer-version');
     expect(newer.sqlite.pragma('user_version', { simple: true })).toBe(COMPANION_DATABASE_VERSION + 1);
@@ -156,15 +157,45 @@ describe('shared companion database lifecycle guardrails', () => {
     journal.sqlite.pragma('journal_mode = MEMORY');
     await expect(bootstrap(journal.port)).rejects.toThrow('journal:memory');
     journal.sqlite.close();
+  });
+});
 
-    const identity = fixture(21);
+describe('shared companion device profile migration', () => {
+  it('adopts the host profile, unbinds only local participation, and preserves history', async () => {
+    const identity = fixture();
+    identity.sqlite.exec(`
+      INSERT INTO sync_groups VALUES ('group','Group','timeline','fixture-device','2026-08-01','2026-08-01');
+      INSERT INTO sync_group_local_state VALUES (1,'group','fixture-device','active',NULL,NULL,'2026-08-01');
+      INSERT INTO sync_group_members VALUES
+        ('group','fixture-device','ios','Legacy','active','fixture-device','auth',NULL,'2026-08-01',NULL,NULL,'2026-08-01');
+      INSERT INTO nodes (id,title,content,created_at,updated_at) VALUES
+        ('node-1','Preserved','content','2026-08-01','2026-08-01');
+      INSERT INTO review_log (
+        id,op_id,device_id,node_id,grade,scheduler_version,reviewed_at,due_before,
+        stability_before,difficulty_before,due_after,stability_after,difficulty_after
+      ) VALUES ('r','op','fixture-device','node-1',3,'v1','2026-08-01','2026-08-01',1,1,'2026-08-02',2,2);
+    `);
+
+    const result = await bootstrapCompanionDatabase(identity.port, {
+      allowCreate: false, expectedDeviceId: 'iPhone', now: '2026-08-11T00:00:00Z'
+    });
+
+    expect(result).toMatchObject({ credentialResetPending: true, deviceId: 'iPhone' });
+    expect(identity.sqlite.prepare('SELECT COUNT(*) FROM sync_group_local_state').pluck().get()).toBe(0);
+    expect(identity.sqlite.prepare('SELECT device_id, state FROM sync_group_members').get())
+      .toEqual({ device_id: 'fixture-device', state: 'active' });
+    expect(identity.sqlite.prepare('SELECT content FROM nodes').pluck().get()).toBe('content');
+    expect(identity.sqlite.prepare('SELECT device_id FROM review_log').pluck().get()).toBe('fixture-device');
+
+    await acknowledgeCompanionDeviceProfileReset(identity.port, 'iPhone');
     await expect(bootstrapCompanionDatabase(identity.port, {
-      allowCreate: false, expectedDeviceId: 'other-device', now: '2026-08-06T00:00:00Z'
-    })).rejects.toThrow('identity-mismatch');
-    expect(identity.sqlite.pragma('user_version', { simple: true })).toBe(21);
+      allowCreate: false, expectedDeviceId: 'iPhone', now: '2026-08-12T00:00:00Z'
+    })).resolves.toMatchObject({ credentialResetPending: false, deviceId: 'iPhone' });
     identity.sqlite.close();
   });
+});
 
+describe('shared companion database lifecycle recovery', () => {
   it('restores a preflight-confirmed WAL contract before the migration transaction', async () => {
     const { port, sqlite } = fixture(21);
     const result = await bootstrap(port, { expectedJournalMode: 'wal' });

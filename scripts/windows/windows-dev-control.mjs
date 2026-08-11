@@ -12,16 +12,26 @@ import {
   copyWindowsDevPairSyncRecoveryEvidence, WINDOWS_DEV_PAIR_SYNC_RECOVERY_FILES
 } from './windows-dev-pair-sync-evidence.mjs';
 import { toWindowsDevWireAction } from './windows-dev-action-contract.mjs';
+import {
+  parseWindowsDevCaptureAnnotationEvidence, parseWindowsDevFailureEvidence,
+  parseWindowsDevLiveEvidence, parseWindowsDevPairSyncRecoveryEvidence
+} from './windows-dev-control-evidence.mjs';
 import { runWindowsSyncGroupControl } from './windows-sync-group-control-router.mjs';
+import { copyWindowsDeviceProfileEvidence } from './windows-device-profile-control.mjs';
+
+export {
+  parseWindowsDevCaptureAnnotationEvidence, parseWindowsDevFailureEvidence,
+  parseWindowsDevLiveEvidence, parseWindowsDevPairSyncRecoveryEvidence,
+  parseWindowsDevSuccessEvidence
+} from './windows-dev-control-evidence.mjs';
 
 export const WINDOWS_DEV_SOURCE_REF = 'refs/heads/dev';
 export const WINDOWS_DEV_DEFAULT_SSH = 'zephu@192.168.0.11';
 export const WINDOWS_DEV_ACTIONS = [
-  'appearance', 'build', 'capture-annotation', 'deploy', 'live', 'pair-sync-recover', 'secondary',
+  'appearance', 'build', 'capture-annotation', 'deploy', 'device-profile', 'live', 'pair-sync-recover', 'secondary',
   'multi-device-sync-c', 'multi-device-sync-candidate', 'verify'
 ];
 const WINDOWS_DEV_REMOTE_ACTION = 'C:/dev/foliole-android-lab-preview/scripts/windows/windows-dev-action.ps1';
-const WINDOWS_DEV_EVIDENCE_PREFIX = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/';
 const CAPTURE_ANNOTATION_FILES = [...CAPTURE_ANNOTATION_EVIDENCE_FILES, 'summary.json'];
 const CAPTURE_ANNOTATION_FAILURE_FILES = ['action.log', 'summary.json'];
 
@@ -82,47 +92,6 @@ export function windowsDevSshSpec(host, action, env = process.env, home = os.hom
     '-File', WINDOWS_DEV_REMOTE_ACTION, toWindowsDevWireAction(action)];
 }
 
-export function parseWindowsDevLiveEvidence(output) {
-  const match = /^\[windows-dev-action\] live identity=([A-Za-z0-9.-]{1,96}) screenshot=([^\r\n]+)$/mu.exec(output);
-  if (!match) throw new Error('Windows DEV live action did not report screenshot evidence');
-  const normalized = match[2].replaceAll('\\', '/');
-  const expected = `${WINDOWS_DEV_EVIDENCE_PREFIX}${match[1]}/a5-live.png`;
-  if (normalized !== expected) throw new Error('Windows DEV live screenshot path escaped its fixed evidence root');
-  return { buildIdentity: match[1], remotePath: normalized };
-}
-
-export function parseWindowsDevCaptureAnnotationEvidence(output) {
-  const match = /^\[windows-dev-action\] capture-annotation identity=([A-Za-z0-9.-]{1,96}) manifest=([^\r\n]+)$/mu.exec(output);
-  if (!match) throw new Error('Windows DEV capture-annotation action did not report fixed evidence');
-  const remoteRoot = `${WINDOWS_DEV_EVIDENCE_PREFIX}${match[1]}`;
-  if (match[2].replaceAll('\\', '/') !== `${remoteRoot}/capture-annotation-manifest.json`) {
-    throw new Error('Windows DEV capture-annotation manifest escaped its fixed evidence root');
-  }
-  return { buildIdentity: match[1], remoteRoot };
-}
-
-export function parseWindowsDevPairSyncRecoveryEvidence(output) {
-  const match = /^\[windows-dev-action\] pair-sync-recover identity=([A-Za-z0-9.-]{1,96}) manifest=([^\r\n]+)$/mu.exec(output);
-  if (!match) throw new Error('Windows DEV pair-sync-recover action did not report fixed evidence');
-  const remoteRoot = `${WINDOWS_DEV_EVIDENCE_PREFIX}${match[1]}`;
-  if (match[2].replaceAll('\\', '/') !== `${remoteRoot}/pair-sync-recovery-manifest.json`) {
-    throw new Error('Windows DEV pair-sync-recover manifest escaped its fixed evidence root');
-  }
-  return { buildIdentity: match[1], remoteRoot };
-}
-
-export function parseWindowsDevFailureEvidence(output) {
-  const match = /^\[windows-dev-action\] status: FAILED exit=\d+ evidence=([^\r\n]+)$/mu.exec(output);
-  if (!match) throw new Error('Windows DEV action did not report fixed failure evidence');
-  const normalized = match[1].replaceAll('\\', '/');
-  const suffix = '/summary.json';
-  const buildIdentity = normalized.slice(WINDOWS_DEV_EVIDENCE_PREFIX.length, -suffix.length);
-  if (!normalized.startsWith(WINDOWS_DEV_EVIDENCE_PREFIX) || !normalized.endsWith(suffix)
-      || !/^[A-Za-z0-9.-]{1,96}$/u.test(buildIdentity)) {
-    throw new Error('Windows DEV failure evidence escaped its fixed root');
-  }
-  return { buildIdentity, remoteRoot: normalized.slice(0, -suffix.length) };
-}
 
 async function copyCaptureAnnotationFiles({ env, executeScp, fsApi, host, names, remoteRoot, repoRoot }) {
   const localRoot = path.join(repoRoot, '.tmp', 'artifacts', 'a5-capture-annotation', path.basename(remoteRoot));
@@ -207,6 +176,11 @@ export async function runWindowsDevControl({
     result.evidenceRoot = localRoot;
     result.manifestPath = path.join(localRoot, WINDOWS_DEV_PAIR_SYNC_RECOVERY_FILES[0]);
   }
+  const deviceProfile = await copyWindowsDeviceProfileEvidence({ action, fsApi, remoteError,
+    remoteOutput, repoRoot, copyFile: (remote, local) => executeScp(
+      windowsDevScpSpec(host, remote, local, env), { env }
+    ) });
+  if (deviceProfile) Object.assign(result, deviceProfile);
   if (['appearance', 'deploy', 'live', 'secondary'].includes(action)) {
     let evidence;
     try { evidence = parseWindowsDevLiveEvidence(remoteOutput); }

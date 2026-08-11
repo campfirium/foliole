@@ -211,7 +211,10 @@ export function removeSyncGroupPeerCredentials(groupId: string, deviceId: string
 }
 
 export function clearPairedCompanionDevices() {
-  writeStore({ client_peers: [], devices: [] });
+  const storePath = resolveStorePath();
+  fs.rmSync(storePath, { force: true });
+  cachedStorePath = storePath;
+  cachedStore = { client_peers: [], devices: [] };
 }
 
 function isSamePairedDevice(left: PairedCompanionDevice, right: PairedCompanionDevice) {

@@ -166,7 +166,7 @@ async function captureAnnotation(paths) {
 
 export async function runMacosA5Action(action, repoRoot = process.cwd()) {
   if (!['status', 'build', 'capture-annotation', 'database-performance', 'deploy',
-    'pair-sync', 'sync-existing'].includes(action)) {
+    'device-profile', 'pair-sync', 'sync-existing'].includes(action)) {
     throw new Error('Usage: node scripts/android/macos-a5-dev.mjs <registered-action>');
   }
   const paths = macosA5Paths(repoRoot);
@@ -182,6 +182,15 @@ export async function runMacosA5Action(action, repoRoot = process.cwd()) {
     if (action === 'capture-annotation') await captureAnnotation(paths);
     if (action === 'database-performance') await runMacosA5DatabasePerformanceEntry({
       assertFixed: () => assertFixedA5(paths), build: () => build(paths), env: macosA5GradleEnv(), execute, paths, serial: A5_SERIAL });
+    if (action === 'device-profile') {
+      const { runMacosA5DeviceProfileEntry } = await import('./macos-a5-device-profile-action.mjs');
+      await runMacosA5DeviceProfileEntry({
+        assertFixed: () => assertFixedA5(paths), build: () => build(paths), buildIdentity: captureIdentity,
+        captured, checked, paths,
+        protectData: (mode, manifest, backupRoot) => protectData(paths, macosA5GradleEnv(), mode, manifest, backupRoot),
+        serial: A5_SERIAL
+      });
+    }
     const productArgs = {
       assertFixed: () => assertFixedA5(paths), build: () => build(paths), buildIdentity: captureIdentity,
       checked, env: macosA5GradleEnv(), execute, paths, serial: A5_SERIAL

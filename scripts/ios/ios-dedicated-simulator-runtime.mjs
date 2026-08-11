@@ -15,7 +15,7 @@ export function createOwnedIosSimulator(options) {
     path.join(options.artifactDir, 'simulator-owned.json'),
     `${JSON.stringify({ template, udid }, null, 2)}\n`
   );
-  return { template, udid };
+  return { name: options.name, template, udid };
 }
 
 export function cleanupOwnedIosSimulator(options) {

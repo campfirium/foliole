@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* global console, process */
 
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -11,10 +11,14 @@ import { prepareWindowsAndroidDebugHost } from './windows-android-host-prepare.m
 import { sanitizePairSyncRecoveryFailureEvidence } from './windows-a5-pair-sync-recovery-failure-evidence.mjs';
 import { sanitizePairSyncRecoveryProgressEvidence } from './windows-a5-pair-sync-recovery-result.mjs';
 import { normalizeWindowsDevAction } from './windows-dev-action-contract.mjs';
+import {
+  formatWindowsDevFailure, verifyWindowsDevSigningIdentity, windowsDevFailure
+} from './windows-dev-build-support.mjs';
 import { runWindowsDevDesktopBuild } from './windows-dev-desktop-build.mjs';
 import { runWindowsDevDeviceAction } from './windows-dev-device-action.mjs';
 import { windowsDevPaths } from './windows-dev-paths.mjs';
 import { allowsPairSyncNativeClient } from './windows-dev-residual-process.mjs';
+import { runWindowsDeviceProfileAcceptance } from './windows-device-profile-action.mjs';
 import {
   attachSyncGroupResult, isWindowsSyncGroupAction, preparesWindowsSyncGroupCandidate, printSyncGroupResult,
   WINDOWS_SYNC_GROUP_ACTIONS
@@ -24,39 +28,16 @@ const BUILD_COMMAND = 'call .\\gradlew.bat --no-daemon assembleDebugAndroidTest'
 const CAPTURE_BUILD_COMMAND = 'call .\\gradlew.bat --no-daemon assembleDebug assembleDebugAndroidTest';
 const BUILD_TIMEOUT_MS = 20 * 60_000;
 const WINDOWS_DEV_ACTIONS = [
-  'appearance', 'build', 'capture-annotation', 'deploy', 'live', 'pair-sync-recover', 'secondary',
+  'appearance', 'build', 'capture-annotation', 'deploy', 'device-profile', 'live', 'pair-sync-recover', 'secondary',
   ...WINDOWS_SYNC_GROUP_ACTIONS, 'verify'
 ];
-
-function failure(message, exitCode, stage) {
-  return Object.assign(new Error(message), { exitCode, stage });
-}
-
-function sha256(filePath, fsApi) {
-  return createHash('sha256').update(fsApi.readFileSync(filePath)).digest('hex');
-}
 
 function parseJson(text, label) {
   try { return JSON.parse(text.replace(/^\uFEFF/u, '')); }
   catch { throw failure(`${label} is not valid JSON`, 64, 'preflight'); }
 }
 
-function verifySigningIdentity(paths, fsApi) {
-  if (!fsApi.existsSync(paths.signingManifest) || !fsApi.existsSync(paths.signingKeystore)) {
-    throw failure('Android signing identity is incomplete', 64, 'signing');
-  }
-  const manifest = parseJson(fsApi.readFileSync(paths.signingManifest, 'utf8'), 'signing identity');
-  const expectedPath = fsApi.realpathSync.native(paths.signingKeystore);
-  if (manifest.schemaVersion !== 1 || typeof manifest.keystorePath !== 'string'
-      || manifest.keystorePath.toLowerCase() !== expectedPath.toLowerCase()
-      || !/^[0-9a-f]{64}$/u.test(manifest.sha256)) {
-    throw failure('Android signing identity contract is invalid', 64, 'signing');
-  }
-  if (sha256(paths.signingKeystore, fsApi) !== manifest.sha256) {
-    throw failure('Android signing keystore hash changed', 64, 'signing');
-  }
-  return manifest;
-}
+const failure = windowsDevFailure;
 
 async function checked(execute, command, args, options, stage, exitCode = 74) {
   const result = await execute(command, args, options);
@@ -103,11 +84,7 @@ async function runGradleBuild(execute, paths, platform, command) {
   return { directChildPid, output: build.output };
 }
 
-export function formatWindowsDevFailure(summary) {
-  const stage = String(summary.failureStage || 'entry').replace(/[^A-Za-z0-9_-]/gu, '').slice(0, 48);
-  const message = String(summary.message || 'unknown failure').replace(/[\r\n]+/gu, ' ').slice(0, 500);
-  return `[windows-dev-action] failure stage=${stage || 'entry'} message=${message}`;
-}
+export { formatWindowsDevFailure } from './windows-dev-build-support.mjs';
 
 export async function runWindowsDevBuild({
   action: requestedAction = 'build', deviceAction = runWindowsDevDeviceAction, execute = executeBounded,
@@ -124,9 +101,9 @@ export async function runWindowsDevBuild({
     context = evidenceContext(paths, now, id, fsApi);
     const requiredTools = [paths.systemNode,
       ...(['build', 'capture-annotation', 'deploy', 'pair-sync-recover'].includes(action)
-        || preparesWindowsSyncGroupCandidate(action)
+        || action === 'device-profile' || preparesWindowsSyncGroupCandidate(action)
         ? [paths.systemNpmCli] : []),
-      ...(['build'].includes(action) || isWindowsSyncGroupAction(action) ? [] : [paths.adbPath])];
+      ...(['build', 'device-profile'].includes(action) || isWindowsSyncGroupAction(action) ? [] : [paths.adbPath])];
     for (const filePath of requiredTools) {
       if (!fsApi.existsSync(filePath)) throw failure(`Required tool is missing: ${filePath}`, 64, 'preflight');
     }
@@ -134,7 +111,7 @@ export async function runWindowsDevBuild({
     if (residualBefore.length > 0 && !allowsPairSyncNativeClient(action, residualBefore, paths)) {
       throw failure('Repository-owned action process is already running', 73, 'residual');
     }
-    const signing = verifySigningIdentity(paths, fsApi);
+    const signing = verifyWindowsDevSigningIdentity(paths, fsApi);
     let output = '';
     let readiness = null;
     let desktopPairingReadiness = null;
@@ -154,7 +131,8 @@ export async function runWindowsDevBuild({
           && !isWindowsSyncGroupAction(action), paths
       });
     }
-    if (action === 'pair-sync-recover' || preparesWindowsSyncGroupCandidate(action)) {
+    if (action === 'pair-sync-recover' || action === 'device-profile'
+        || preparesWindowsSyncGroupCandidate(action)) {
       output += await runWindowsDevDesktopBuild(execute, paths, checked);
     }
     let actionResult = null;
@@ -166,7 +144,11 @@ export async function runWindowsDevBuild({
       directChildPid = build.directChildPid;
       output += build.output;
     }
-    if (action !== 'build') {
+    const desktopDeviceProfile = await runWindowsDeviceProfileAcceptance(action, execute, paths);
+    if (desktopDeviceProfile) {
+      output += desktopDeviceProfile.output;
+      actionResult = { desktopDeviceProfile: desktopDeviceProfile.evidence };
+    } else if (action !== 'build') {
       actionResult = await deviceAction({
         action, buildIdentity: context.runId, evidenceRoot: context.root, execute, paths,
         pairSyncRecoveryReadiness: action === 'pair-sync-recover' ? readiness : undefined,
@@ -186,6 +168,7 @@ export async function runWindowsDevBuild({
       ...(actionResult?.liveReload ? { liveReload: actionResult.liveReload } : {}) };
     if (actionResult?.captureAnnotation) summary.captureAnnotation = actionResult.captureAnnotation;
     if (actionResult?.pairSyncRecovery) summary.pairSyncRecovery = actionResult.pairSyncRecovery;
+    if (actionResult?.desktopDeviceProfile) summary.desktopDeviceProfile = actionResult.desktopDeviceProfile;
     attachSyncGroupResult(summary, actionResult);
     writeJson(fsApi, context.summaryPath, summary);
     return { exitCode: 0, summary, summaryPath: context.summaryPath };

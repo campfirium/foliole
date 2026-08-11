@@ -9,8 +9,6 @@ import com.getcapacitor.JSObject;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.UUID;
-
 final class FolioleCompanionBootstrapState {
     private static final String IDENTITY_PREFERENCES = "foliole_companion_identity";
     private static final String DEVICE_ID_KEY = "device_id";
@@ -28,22 +26,27 @@ final class FolioleCompanionBootstrapState {
         this.databasePath = databasePath;
         this.databaseReady = databaseReady;
         this.deviceId = deviceId;
-        this.deviceName = resolveDeviceName();
+        this.deviceName = deviceId;
     }
 
     static String loadDeviceId(Context context) throws Exception {
+        String current = resolveDeviceName(context);
         SharedPreferences preferences = context.getSharedPreferences(IDENTITY_PREFERENCES, Context.MODE_PRIVATE);
-        String existing = preferences.getString(DEVICE_ID_KEY, null);
-        if (existing != null && !existing.trim().isEmpty()) return existing.trim();
+        String legacy = trimToNull(preferences.getString(DEVICE_ID_KEY, null));
         String paired = FolioleCompanionPairingStore.loadStoredDeviceId(context);
-        String created = paired == null ? "android-" + UUID.randomUUID() : paired;
-        if (!preferences.edit().putString(DEVICE_ID_KEY, created).commit()) {
-            throw new IllegalStateException("Failed to persist companion device identity.");
+        if ((legacy != null && !legacy.equals(current)) || (paired != null && !paired.equals(current))) {
+            FolioleCompanionPairingStore.clearPairingCredentials(context);
+            FolioleCompanionSyncGroupJoinGrantStore.clear(context);
+            FolioleCompanionSyncGroupPeerStore.clear(context);
+            FolioleCompanionSyncGroupOutboundPeerStore.clear(context);
         }
-        return created;
+        if (!preferences.edit().remove(DEVICE_ID_KEY).commit()) {
+            throw new IllegalStateException("Failed to retire legacy companion device identity.");
+        }
+        return current;
     }
 
-    private String resolveDeviceName() throws Exception {
+    private static String resolveDeviceName(Context context) throws Exception {
         String model = Build.MODEL == null ? "" : Build.MODEL.trim();
         String manufacturer = Build.MANUFACTURER == null ? "" : Build.MANUFACTURER.trim();
         if (model.isEmpty()) {
@@ -60,6 +63,11 @@ final class FolioleCompanionBootstrapState {
             return manufacturer + " " + model;
         }
         return model;
+    }
+
+    private static String trimToNull(String value) {
+        if (value == null || value.trim().isEmpty()) return null;
+        return value.trim();
     }
 
     JSObject toJsObject() throws Exception {

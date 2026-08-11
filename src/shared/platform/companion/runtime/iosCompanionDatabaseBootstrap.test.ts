@@ -20,6 +20,8 @@ function nativeState(): NativeCompanionBootstrapState {
 }
 
 function harness(args: { existed?: boolean; path?: string; storedId?: string; version?: number } = {}) {
+  const meta = new Map<string, string>();
+  if (args.storedId) meta.set('device_id', args.storedId);
   const connection = {
     beginTransaction: vi.fn(async () => ({ changes: { changes: 0 } })),
     commitTransaction: vi.fn(async () => ({ changes: { changes: 0 } })),
@@ -29,9 +31,12 @@ function harness(args: { existed?: boolean; path?: string; storedId?: string; ve
     })),
     isDBOpen: vi.fn(async () => ({ result: false })),
     open: vi.fn(async () => undefined),
-    query: vi.fn(async (sql: string) => queryResult(sql, args)),
+    query: vi.fn(async (sql: string, values: unknown[] = []) => queryResult(sql, args, meta, values)),
     rollbackTransaction: vi.fn(async () => ({ changes: { changes: 0 } })),
-    run: vi.fn(async () => ({ changes: { changes: 1 } }))
+    run: vi.fn(async (sql: string, values: unknown[] = []) => {
+      updateMeta(sql, values, meta);
+      return { changes: { changes: 1 } };
+    })
   };
   const manager = {
     closeConnection: vi.fn(async () => undefined),
@@ -43,14 +48,37 @@ function harness(args: { existed?: boolean; path?: string; storedId?: string; ve
   return { connection, manager };
 }
 
-function queryResult(sql: string, args: { existed?: boolean; storedId?: string; version?: number }) {
+function queryResult(
+  sql: string,
+  args: { existed?: boolean; version?: number },
+  meta: Map<string, string>,
+  values: unknown[]
+) {
   if (sql === 'PRAGMA quick_check') return { values: [{ quick_check: 'ok' }] };
   if (sql === 'PRAGMA journal_mode') return { values: [{ journal_mode: 'delete' }] };
   if (sql === 'PRAGMA user_version') return { values: [{ user_version: args.version ?? 0 }] };
   if (sql.includes("name = 'companion_meta'")) return { values: args.existed ? [{ present: 1 }] : [] };
-  if (sql.includes("key = 'device_id'")) return { values: args.storedId ? [{ value: args.storedId }] : [] };
+  if (sql.includes('FROM companion_meta WHERE key = ?')) {
+    const value = meta.get(String(values[0]));
+    return { values: value ? [{ value }] : [] };
+  }
   if (sql.includes('pragma_table_info')) return { values: [{ name: 'present' }] };
   return { values: [] };
+}
+
+function updateMeta(sql: string, values: unknown[], meta: Map<string, string>) {
+  if (sql.includes('DELETE FROM companion_meta')) {
+    if (meta.get('device_identity_reset_pending') === String(values[0])) {
+      meta.delete('device_identity_reset_pending');
+    }
+    return;
+  }
+  if (sql.includes("VALUES ('device_id', ?, ?)")) meta.set('device_id', String(values[0]));
+  else if (sql.includes("VALUES ('device_identity_reset_pending', ?, ?)")) {
+    meta.set('device_identity_reset_pending', String(values[0]));
+  } else if (sql.includes('INSERT INTO companion_meta')) {
+    meta.set(String(values[0]), String(values[1]));
+  }
 }
 
 describe('iosCompanionDatabaseBootstrap version contract', () => {
@@ -92,15 +120,27 @@ describe('iosCompanionDatabaseBootstrap', () => {
     expect(connection.run).not.toHaveBeenCalledWith(expect.stringContaining('INSERT INTO companion_meta'), expect.anything(), false);
     expect(connection.commitTransaction).toHaveBeenCalledTimes(1);
   });
+});
 
-  it('blocks an identity mismatch before the migration transaction starts', async () => {
+describe('iosCompanionDatabaseBootstrap host profile migration', () => {
+  it('adopts the current host profile and clears legacy credentials once', async () => {
     const { connection, manager } = harness({ existed: true, storedId: 'different-device', version: 21 });
+    const resetCredentials = vi.fn(async () => undefined);
 
-    await expect(initializeIosCompanionDatabase(nativeState(), manager)).rejects.toThrow('identity-mismatch');
-    expect(connection.beginTransaction).not.toHaveBeenCalled();
-    expect(manager.closeConnection).toHaveBeenCalledTimes(1);
+    await expect(initializeIosCompanionDatabase(nativeState(), manager, { resetCredentials }))
+      .resolves.toMatchObject({ device_id: 'ios-device' });
+    expect(connection.beginTransaction).toHaveBeenCalledOnce();
+    expect(connection.run).toHaveBeenCalledWith(
+      expect.stringContaining('DELETE FROM sync_group_local_state'), ['different-device'], false
+    );
+    expect(resetCredentials).toHaveBeenCalledWith('ios-capacitor');
+    expect(connection.run).toHaveBeenCalledWith(
+      expect.stringContaining('device_identity_reset_pending'), ['ios-device'], false
+    );
   });
+});
 
+describe('iosCompanionDatabaseBootstrap failure boundaries', () => {
   it('blocks a newer database before any write', async () => {
     const { connection, manager } = harness({
       existed: true, storedId: 'ios-device', version: COMPANION_DATABASE_VERSION + 1

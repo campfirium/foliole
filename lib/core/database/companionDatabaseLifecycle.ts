@@ -15,6 +15,7 @@ export interface CompanionDatabaseBootstrapRequest {
 
 export interface CompanionDatabaseBootstrapResult {
   created: boolean;
+  credentialResetPending: boolean;
   deviceId: string;
   journalMode: CompanionJournalMode;
   version: number;
@@ -37,7 +38,7 @@ export async function bootstrapCompanionDatabase(
   const hasSchema = await hasCompanionSchema(db);
   if (!hasSchema && !request.allowCreate) throw new CompanionDatabaseBlockedError('missing');
   if (version > COMPANION_DATABASE_VERSION) throw new CompanionDatabaseBlockedError('newer-version');
-  const existingDeviceId = hasSchema ? await requireExistingDeviceIdentity(db, request.expectedDeviceId) : null;
+  const existingDeviceId = hasSchema ? await requireExistingDeviceIdentity(db) : null;
   if (!hasSchema && !request.expectedDeviceId) throw new CompanionDatabaseBlockedError('identity-missing');
   const journalMode = await restoreExpectedJournalMode(db, openedJournalMode, request.expectedJournalMode);
   await db.transaction(async (tx) => {
@@ -47,10 +48,23 @@ export async function bootstrapCompanionDatabase(
         'device_id', request.expectedDeviceId!, request.now
       ]);
     }
-    else await migrateCompanionDatabase(tx, version, COMPANION_DATABASE_VERSION, request.beforeVersionCommit);
+    else {
+      await migrateCompanionDatabase(tx, version, COMPANION_DATABASE_VERSION, request.beforeVersionCommit);
+      if (request.expectedDeviceId && existingDeviceId !== request.expectedDeviceId) {
+        await replaceCompanionDeviceProfile(tx, existingDeviceId!, request.expectedDeviceId, request.now);
+      }
+    }
   });
-  const deviceId = existingDeviceId ?? request.expectedDeviceId!;
-  return { created: !hasSchema, deviceId, journalMode, version: COMPANION_DATABASE_VERSION };
+  const deviceId = request.expectedDeviceId ?? existingDeviceId!;
+  const credentialResetPending = await readMeta(db, 'device_identity_reset_pending') === deviceId;
+  return { created: !hasSchema, credentialResetPending, deviceId, journalMode, version: COMPANION_DATABASE_VERSION };
+}
+
+export async function acknowledgeCompanionDeviceProfileReset(db: DbPort, deviceId: string) {
+  await db.run(
+    "DELETE FROM companion_meta WHERE key = 'device_identity_reset_pending' AND value = ?",
+    [deviceId]
+  );
 }
 
 export async function checkpointCompanionDatabase(db: DbPort, journalMode: CompanionJournalMode) {
@@ -107,16 +121,30 @@ async function hasCompanionSchema(db: DbPort) {
   return rows.length > 0;
 }
 
-async function requireExistingDeviceIdentity(db: DbPort, expectedDeviceId?: string) {
-  const rows = await db.query<{ value: string }>(
-    "SELECT value FROM companion_meta WHERE key = 'device_id' LIMIT 1"
-  );
-  const stored = typeof rows[0]?.value === 'string' ? rows[0].value.trim() : '';
-  if (stored && expectedDeviceId && stored !== expectedDeviceId) {
-    throw new CompanionDatabaseBlockedError('identity-mismatch');
-  }
+async function requireExistingDeviceIdentity(db: DbPort) {
+  const stored = await readMeta(db, 'device_id');
   if (stored) return stored;
   throw new CompanionDatabaseBlockedError('identity-missing');
+}
+
+async function readMeta(db: DbPort, key: string) {
+  const rows = await db.query<{ value: string }>(
+    'SELECT value FROM companion_meta WHERE key = ? LIMIT 1', [key]
+  );
+  return typeof rows[0]?.value === 'string' && rows[0].value.trim() ? rows[0].value.trim() : null;
+}
+
+async function replaceCompanionDeviceProfile(db: DbPort, previousId: string, nextId: string, now: string) {
+  await db.run(
+    `INSERT OR REPLACE INTO companion_meta (key, value, updated_at) VALUES ('device_id', ?, ?)`,
+    [nextId, now]
+  );
+  await db.run('DELETE FROM sync_group_local_state WHERE singleton_id = 1 AND local_device_id = ?', [previousId]);
+  await db.run(
+    `INSERT OR REPLACE INTO companion_meta (key, value, updated_at)
+     VALUES ('device_identity_reset_pending', ?, ?)`,
+    [nextId, now]
+  );
 }
 
 function message(error: unknown) {

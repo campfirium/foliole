@@ -1,6 +1,7 @@
 import type { SQLiteDBConnection } from '@capacitor-community/sqlite';
 
 import {
+  acknowledgeCompanionDeviceProfileReset,
   bootstrapCompanionDatabase,
   checkpointCompanionDatabase,
   type CompanionDatabaseBootstrapRequest,
@@ -81,6 +82,10 @@ export class CapacitorCompanionDatabaseOwner {
     const execute = this.writerTail.then(() => task(this.requireDb()));
     this.writerTail = execute.then(() => undefined, () => undefined);
     return execute;
+  }
+
+  acknowledgeDeviceProfileReset(deviceId: string) {
+    return this.runWriter((db) => acknowledgeCompanionDeviceProfileReset(db, deviceId));
   }
 
   async close() {

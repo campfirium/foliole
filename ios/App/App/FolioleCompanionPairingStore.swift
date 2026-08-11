@@ -26,6 +26,8 @@ final class FolioleCompanionPairingStore {
         return try loadState()
     }
 
+    var storedDeviceId: String? { metadata("deviceId") }
+
     func loadState() throws -> [String: Any] {
         let deviceId = metadata("deviceId")
         let secret = try secrets.load()?.trimmedNonempty

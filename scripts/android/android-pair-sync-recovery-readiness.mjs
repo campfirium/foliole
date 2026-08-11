@@ -60,6 +60,16 @@ function scalar(database, sql) {
   return Number(row?.count ?? row?.value ?? 0);
 }
 
+function protectedContentDigest(database) {
+  const rows = ['attachments', 'content_blobs', 'nodes', 'review_log'].flatMap((table) => {
+    if (!tableExists(database, table)) return [];
+    const statement = database.prepare(`SELECT * FROM ${table}`);
+    if (typeof statement.all !== 'function') return [];
+    return statement.all().map((row) => `${table}:${JSON.stringify(row)}`);
+  });
+  return createHash('sha256').update(rows.sort().join('\n')).digest('hex');
+}
+
 function journeyFacts(database) {
   if (!tableExists(database, 'nodes')) return {};
   const statement = database.prepare(`SELECT id,
@@ -87,6 +97,7 @@ export function inspectPairSyncRecoveryWorkspace(database) {
   return {
     activeSyncGroupMemberCount: count(database, 'sync_group_members', " WHERE state = 'active'"),
     deviceIdentityFingerprint: identityFingerprint(deviceId),
+    deviceProfile: deviceId,
     dirtyRecordCount: count(
       database,
       'sync_object_state',
@@ -110,6 +121,7 @@ export function inspectPairSyncRecoveryWorkspace(database) {
         LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash WHERE cbd.hash IS NULL`) : null,
     pairingCredentialRejectionReason: rejection.reason,
     pairingCredentialsRejected: rejection.rejected,
+    protectedContentDigest: protectedContentDigest(database),
     syncGroupId: group?.group_id ?? null,
     syncGroupTimelineId: group?.timeline_id ?? null
   };

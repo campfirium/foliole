@@ -1,5 +1,3 @@
-import { randomUUID } from 'node:crypto';
-
 import type { DatabaseDriver } from './driver.js';
 
 const DEVICE_ID_KEY = 'device_id';
@@ -16,18 +14,10 @@ function parseSettingValue(value: string | null | undefined) {
 }
 
 export function loadOrCreateDatabaseDeviceId(driver: DatabaseDriver, now: string) {
+  void now;
   const existingDeviceId = loadDatabaseDeviceId(driver);
-  if (existingDeviceId) {
-    return existingDeviceId;
-  }
-  const deviceId = `device-${randomUUID()}`;
-  driver.execute(
-    `INSERT INTO settings (key, value, updated_at)
-     VALUES (?, ?, ?)
-     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
-    [DEVICE_ID_KEY, JSON.stringify(deviceId), now]
-  );
-  return deviceId;
+  if (existingDeviceId) return existingDeviceId;
+  throw new Error('Database device profile is unavailable before host initialization.');
 }
 
 export function loadDatabaseDeviceId(driver: DatabaseDriver) {

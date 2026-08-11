@@ -6,6 +6,8 @@ import {
 } from '../../lib/core/database/migrations.js';
 import { NUMBERED_MIGRATION_BASE_VERSION } from '../../lib/core/database/numberedMigrations.js';
 import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
+import { resolveDesktopDeviceName } from '../sync/companionLanPayloads.js';
+import { clearPairedCompanionDevices } from '../sync/companionPairingStore.js';
 
 import {
   closeDatabaseConnection,
@@ -14,6 +16,10 @@ import {
   resolveDatabasePath
 } from './connection.js';
 import type { DatabaseFileNameMigrationResult } from './databaseFileNameMigration.js';
+import {
+  loadStoredDesktopDeviceId,
+  refreshDesktopDeviceProfile
+} from './deviceIdentity.js';
 import { clearOpenedExternalSearchCache } from './externalSearchCacheMaintenance.js';
 import {
   isDatabaseCorruptionError,
@@ -75,6 +81,7 @@ function enableStartupWriteAheadLog(connection: ReturnType<typeof openDatabaseCo
 function initializeOpenedDatabase(connection: ReturnType<typeof openDatabaseConnection>, reportStage?: DatabaseInitStageReporter) {
   verifyStartupDatabaseIntegrity(connection, reportStage);
   enableStartupWriteAheadLog(connection, reportStage);
+  const previousDeviceId = loadStoredDesktopDeviceId(connection);
   if (shouldSkipStartupSchemaInit()) {
     reportStage?.('database_schema_init_skipped', {
       reason: 'startup-schema-init-disabled'
@@ -84,6 +91,7 @@ function initializeOpenedDatabase(connection: ReturnType<typeof openDatabaseConn
   reportStage?.('database_schema_init_start');
   createPreMigrationSnapshotIfNeeded(connection);
   const initializedConnection = initializeSchemaWorkspaceAndSearch(connection);
+  refreshHostOwnedDeviceProfile(initializedConnection, previousDeviceId);
   clearOpenedExternalSearchCache();
   reportStage?.('database_schema_init_complete');
   return initializedConnection;
@@ -93,6 +101,21 @@ function initializeSchemaWorkspaceAndSearch(connection: ReturnType<typeof openDa
   const initializedConnection = initializeDatabaseConnection(connection);
   seedInitialWorkspace(initializedConnection);
   return initializeWorkspaceSearchSidecar(initializedConnection);
+}
+
+function refreshHostOwnedDeviceProfile(
+  connection: ReturnType<typeof openDatabaseConnection>,
+  previousDeviceId: string | null
+) {
+  refreshDesktopDeviceProfile({
+    clearCredentials: clearPairedCompanionDevices,
+    connection,
+    currentDeviceId: resolveDesktopDeviceName(),
+    previousDeviceId,
+    protect: () => createInternalDatabaseSnapshot({
+      reason: 'pre-migration', sourceDatabase: connection.sqlite, sourcePath: connection.dbPath
+    })
+  });
 }
 
 export function initializeDatabase(reportStage?: DatabaseInitStageReporter) {
@@ -147,7 +170,9 @@ export function initializeDatabase(reportStage?: DatabaseInitStageReporter) {
     reportStage?.('database_recovery_integrity_check_complete');
     enableDatabaseWriteAheadLog(connection);
     reportStage?.('database_recovery_schema_init_start');
+    const previousDeviceId = loadStoredDesktopDeviceId(connection);
     const initializedConnection = initializeSchemaWorkspaceAndSearch(connection);
+    refreshHostOwnedDeviceProfile(initializedConnection, previousDeviceId);
     clearOpenedExternalSearchCache();
     reportStage?.('database_recovery_schema_init_complete');
     return initializedConnection;
@@ -176,6 +201,7 @@ function rebuildLegacyDevelopmentDatabase(databasePath: string, reportStage?: Da
   });
   reportStage?.('database_legacy_rebuild_open_connection_complete', { dbPath: connection.dbPath });
   const initializedConnection = initializeSchemaWorkspaceAndSearch(connection);
+  refreshHostOwnedDeviceProfile(initializedConnection, null);
   clearOpenedExternalSearchCache();
   reportStage?.('database_legacy_rebuild_schema_init_complete');
   return initializedConnection;

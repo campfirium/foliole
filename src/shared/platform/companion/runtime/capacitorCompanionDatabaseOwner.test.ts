@@ -15,12 +15,14 @@ function harness(journalMode = 'delete') {
     getUrl: vi.fn(async () => ({ url: '/isolated/fixture.db' })),
     isDBOpen: vi.fn(async () => ({ result: true })),
     open: vi.fn(async () => undefined),
-    query: vi.fn(async (sql: string) => {
+    query: vi.fn(async (sql: string, values: unknown[] = []) => {
       if (sql === 'PRAGMA quick_check') return { values: [{ quick_check: 'ok' }] };
       if (sql === 'PRAGMA journal_mode') return { values: [{ journal_mode: journalMode }] };
       if (sql === 'PRAGMA user_version') return { values: [{ user_version: COMPANION_DATABASE_VERSION }] };
       if (sql.includes("name = 'companion_meta'")) return { values: [{ present: 1 }] };
-      if (sql.includes("key = 'device_id'")) return { values: [{ value: 'device' }] };
+      if (sql.includes('SELECT value FROM companion_meta') && values[0] === 'device_id') {
+        return { values: [{ value: 'device' }] };
+      }
       if (sql.includes('pragma_table_info')) return { values: [{ name: 'present' }] };
       if (sql === 'PRAGMA wal_checkpoint(FULL)') return { values: [{ busy: 0, log: 1, checkpointed: 1 }] };
       return { values: [] };

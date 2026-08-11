@@ -11,6 +11,7 @@ export type IosCompanionDatabaseManager = CapacitorCompanionDatabaseManager;
 
 export interface IosCompanionDatabaseBootstrapOptions {
   afterRepair?: (index: number) => void | Promise<void>;
+  resetCredentials?: (runtimeKind: NativeCompanionBootstrapState['runtime_kind']) => Promise<void>;
 }
 
 let activeOwner: CapacitorCompanionDatabaseOwner | null = null;
@@ -40,10 +41,20 @@ export async function initializeIosCompanionDatabase(
     ...(options.afterRepair ? { beforeVersionCommit: () => options.afterRepair?.(0) } : {})
   });
   activeOwner = owner;
+  if (result.credentialResetPending) {
+    await (options.resetCredentials ?? resetNativeCredentials)(nativeState.runtime_kind);
+    await owner.acknowledgeDeviceProfileReset(result.deviceId);
+  }
   return {
     ...nativeState,
     database_path: result.databasePath,
     database_ready: true,
     device_id: result.deviceId
   };
+}
+
+async function resetNativeCredentials(runtimeKind: NativeCompanionBootstrapState['runtime_kind']) {
+  const { FolioleCompanionSync } = await import('../../companionWorkspaceRuntimeRepository');
+  if (runtimeKind === 'android-capacitor') await FolioleCompanionSync.clearSyncGroupCredentials();
+  else if (runtimeKind === 'ios-capacitor') await FolioleCompanionSync.clearPairingCredentials();
 }
