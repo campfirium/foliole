@@ -9,10 +9,10 @@ import {
 function snapshot() {
   return parseStateWritebackSnapshot(JSON.stringify([{
     active_node_id: 'ios-state-node',
+    confirmed_review_delivery_count: 1,
     local_reading_position: 42,
     local_scroll_top: 42,
     pending_ack_count: 0,
-    review_cursor: '{"change_id":"review-op","created_at":"2026-07-21T00:01:00.000Z"}',
     review_log_count: 1,
     review_op_id: 'review-op',
     shared_dirty_count: 0,
@@ -53,5 +53,17 @@ it('rejects a transient HTTP ack that was not cleared by confirmation apply', ()
 
   expect(() => verifyStateWritebackAcceptance(
     first, second, { ...snapshot(), pending_ack_count: 1 }, snapshot(), observations()
+  )).toThrow('evidence is incomplete');
+});
+
+it('rejects a review operation without a confirmed peer delivery receipt', () => {
+  const first = {
+    phase: 'applied',
+    sync: { pushRejectedCount: 0, pushedObjectIds: ['reading', 'review', 'setting'], pushedReviewOpIds: ['review-op'] }
+  };
+  const second = { phase: 'reapplied', sync: { pushedObjectIds: [], pushedReviewOpIds: [] } };
+
+  expect(() => verifyStateWritebackAcceptance(
+    first, second, { ...snapshot(), confirmed_review_delivery_count: 0 }, snapshot(), observations()
   )).toThrow('evidence is incomplete');
 });

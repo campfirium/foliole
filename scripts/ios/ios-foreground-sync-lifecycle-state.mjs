@@ -18,7 +18,7 @@ export function waitForForegroundSyncLifecycleSnapshot(args) {
   return waitForAcceptanceObservation({
     accept: (snapshot) => isForegroundSyncLifecycleSnapshotSettled(snapshot) &&
       (!args.previousRunId || snapshot.latestFinished.runId !== args.previousRunId),
-    describe: (snapshot) => `latest run=${snapshot.latestFinished?.runId ?? 'missing'} status=${snapshot.latestFinished?.status ?? 'missing'}`,
+    describe: (snapshot) => `latest=${JSON.stringify(snapshot.latestFinished)}`,
     initialObservation: 'permanent recovery snapshot was not readable',
     label: 'permanent foreground sync recovery',
     read: () => readForegroundSyncLifecycleSnapshot(args.repoRoot, args.databasePath),

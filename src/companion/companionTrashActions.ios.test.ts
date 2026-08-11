@@ -57,7 +57,7 @@ it('persists and pushes an iOS trash restore while keeping its interaction hidde
   database = new Database(':memory:');
   installCompanionNodeSchema(database);
   seedTrashedNode(database);
-  installRuntimeManager(database);
+  const manager = installRuntimeManager(database);
   vi.spyOn(crypto, 'randomUUID').mockReturnValue('00000000-0000-4000-8000-000000000031');
   configureAcceptedNodeAck();
 
@@ -88,6 +88,7 @@ it('persists and pushes an iOS trash restore while keeping its interaction hidde
     identity: { objectId: 'topic-trash', objectType: 'node', scope: 'workspace' }
   });
   expect(JSON.parse(pushedItem.payloadJson).snapshot.deleted_at).toBeNull();
+  expect(manager.createConnection).not.toHaveBeenCalled();
   expectNodePushCursor(database);
   await expect(pushLocalDirtyObjects('http://desktop.local')).resolves.toMatchObject({
     pushError: null,
@@ -124,11 +125,13 @@ it('rejects an iOS restore when its persisted base has advanced', async () => {
 function installRuntimeManager(db: Database.Database) {
   const connection = createFakeCapacitorConnection(db);
   runtimeState.owner = createFakeCompanionDatabaseOwner(db);
-  runtimeState.manager = {
+  const manager = {
     createConnection: vi.fn(async () => connection),
     isConnection: vi.fn(async () => ({ result: false })),
     retrieveConnection: vi.fn()
   };
+  runtimeState.manager = manager;
+  return manager;
 }
 
 function configureAcceptedNodeAck() {

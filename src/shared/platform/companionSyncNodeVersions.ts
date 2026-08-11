@@ -67,9 +67,14 @@ export async function applyCompanionTrashRestoreNodeVersions(
   if (!isNativeCompanionNodeVersionWriteRuntime() || nodes.length === 0) {
     return [];
   }
-  return runCompanionSyncWriterTask(() => (
-    applyCompanionSyncNodeVersionsWithSharedCoreOnDevice(nodes, manager, 'local_restore')
-  ));
+  return runCompanionSyncWriterTask(() => {
+    if (usesSharedOwner() && !manager) {
+      return getIosCompanionDatabaseOwner().runWriter((db) => (
+        applyCompanionSyncNodeVersionsWithDbPort(db, nodes, 'local_restore')
+      ));
+    }
+    return applyCompanionSyncNodeVersionsWithSharedCoreOnDevice(nodes, manager, 'local_restore');
+  });
 }
 
 export async function applyCompanionSyncNodeVersionsWithSharedCore(
