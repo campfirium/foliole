@@ -22,6 +22,7 @@ it('uses explicit A5 serial and a registered Windows action', async () => {
   await adapters['android-b']();
   await adapters['windows-c']();
   expect(calls.some(([, args]) => args.includes('87a33a4b'))).toBe(true);
+  expect(calls.some(([, args]) => args.includes('wait-for-device'))).toBe(true);
   expect(calls.find(([command]) => command === 'ssh')[1].join(' '))
     .toContain('windows-multi-device-sync-readiness.mjs');
 });

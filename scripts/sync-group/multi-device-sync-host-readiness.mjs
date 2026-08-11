@@ -12,7 +12,7 @@ import { assertIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
 const exec = promisify(execFile);
 const APP = 'com.foliole.android';
-const WINDOWS_NODE = 'C:/Program Files/nodejs/node.exe';
+const WINDOWS_NODE = '"C:/Program Files/nodejs/node.exe"';
 const WINDOWS_READINESS = 'C:/dev/foliole-android-lab-preview/scripts/windows/windows-multi-device-sync-readiness.mjs';
 
 async function bounded(command, args, options = {}) {
@@ -44,6 +44,7 @@ export function createHostReadinessAdapters({ env = process.env, execute = bound
     'android-b': async () => {
       const output = await execute(paths.adb, ['start-server'], { env });
       void output;
+      await execute(paths.adb, ['-s', A5_SERIAL, 'wait-for-device'], { env, timeout: 10_000 });
       fixedDevice(await execute(paths.adb, ['devices', '-l'], { env }));
       await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start', '-W', '-n', `${APP}/.MainActivity`], {
         env, timeout: 20_000
@@ -56,7 +57,16 @@ export function createHostReadinessAdapters({ env = process.env, execute = bound
       const args = ['-T', '-i', key, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10',
         '-o', 'IdentitiesOnly=yes', '-o', 'StrictHostKeyChecking=yes', windowsHost,
         WINDOWS_NODE, WINDOWS_READINESS];
-      const output = await execute('ssh', args, { env });
+      let output;
+      try { output = await execute('ssh', args, { env }); }
+      catch (error) {
+        const detail = `${error.stdout || ''}${error.stderr || ''}`;
+        const missing = /missingFact=([^\s]+)/u.exec(detail)?.[1];
+        throw Object.assign(new Error('Windows acceptance readiness command failed.'), {
+          lastSuccessfulAction: 'windows_ssh_connected',
+          missingFact: missing || 'windows_readiness_command_failed'
+        });
+      }
       if (!output.includes('[multi-device-sync-readiness] status=ready')) {
         throw Object.assign(new Error('Windows acceptance readiness is incomplete.'), {
           missingFact: 'windows_readiness_missing', lastSuccessfulAction: 'windows_ssh_connected'
