@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.5",
-  "publicationMode": "bridge",
+  "version": "0.7.6",
+  "publicationMode": "scoped",
   "selectedPlatforms": ["macos", "windows", "linux"],
   "scopeBasis": {
-    "macos": "Foliole 0.7.5 changes existing macOS desktop behavior in Aide, editing, and automatic updates, so the supported macOS package is required.",
-    "windows": "Foliole 0.7.5 changes existing Windows desktop behavior in Aide, editing, and automatic updates, so the supported Windows package is required.",
-    "linux": "Foliole 0.7.5 introduces the first supported Ubuntu 24.04 x64 DEB and registers Linux as an active hard-gated release platform, so the Linux package is required."
+    "macos": "Foliole 0.7.6 changes the shared interface-language contract and macOS desktop surfaces, so the macOS package is required.",
+    "windows": "Foliole 0.7.6 changes the shared interface-language contract and Windows desktop surfaces, so the Windows package is required.",
+    "linux": "Foliole 0.7.6 changes the shared interface-language contract and Linux desktop surfaces, so the Linux package is required."
   }
 }
