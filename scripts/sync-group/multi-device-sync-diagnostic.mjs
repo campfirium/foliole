@@ -27,8 +27,8 @@ function stagePassed(stage, startedAt, result) {
 }
 
 export async function runStageSequence({ adapters, candidateProvider,
-  mutationAdapters = adapters, onReceipt = () => {}, run, stageActions, stages }) {
-  const readiness = await collectEnvironmentReadiness({ adapters });
+  mutationAdapters = adapters, onReceipt = () => {}, readinessHosts, run, stageActions, stages }) {
+  const readiness = await collectEnvironmentReadiness({ adapters, hosts: readinessHosts });
   for (const receipt of readiness.receipts) {
     recordReceipt(run, receipt); onReceipt(receipt);
   }
@@ -48,7 +48,9 @@ export async function runStageSequence({ adapters, candidateProvider,
       const receipt = stagePassed(stage, startedAt, result);
       recordReceipt(run, receipt); onReceipt(receipt);
       if (stage.name === 'candidate-preparation') {
-        const mutationReadiness = await collectEnvironmentReadiness({ adapters: mutationAdapters });
+        const mutationReadiness = await collectEnvironmentReadiness({
+          adapters: mutationAdapters, hosts: readinessHosts
+        });
         for (const current of mutationReadiness.receipts) {
           const receipt = { ...current, inputFacts: ['candidate_bound'],
             stage: 'mutation-readiness' };

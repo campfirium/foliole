@@ -8,6 +8,11 @@ import org.json.JSONObject;
 import java.util.concurrent.TimeUnit;
 
 final class FolioleCompanionSyncGroupMaintenanceScenario {
+    private static final String REVIEW_ACTION = "companion-review-action-later";
+    private static final String SETTINGS_TAB = "companion-tab-settings";
+    private static final String TOP_BAR_BACK = "companion-top-bar-back";
+    private static final String TOP_BAR_LEFT_ACTION = "companion-top-bar-left-action";
+
     private FolioleCompanionSyncGroupMaintenanceScenario() {}
 
     static JSONObject leave(Instrumentation instrumentation, WebView webView) throws Exception {
@@ -44,16 +49,31 @@ final class FolioleCompanionSyncGroupMaintenanceScenario {
 
     private static void openSettings(Instrumentation instrumentation, WebView webView) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
-        String entry = FolioleCompanionPairSyncRecoveryScenario.waitForAnyVisible(
-            instrumentation, webView, deadline,
-            "companion-tab-settings", "companion-top-bar-left-action"
-        );
-        if ("companion-top-bar-left-action".equals(entry)) {
-            FolioleCompanionPairSyncRecoveryScenario.clickVisible(
-                instrumentation, webView, entry, deadline
-            );
+        while (System.nanoTime() < deadline) {
+            JSONObject snapshot = FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView);
+            if (isVisible(snapshot, SETTINGS_TAB)) {
+                click(instrumentation, webView, SETTINGS_TAB);
+                return;
+            }
+            String exit = isVisible(snapshot, REVIEW_ACTION) && isVisible(snapshot, TOP_BAR_LEFT_ACTION)
+                ? TOP_BAR_LEFT_ACTION
+                : isVisible(snapshot, TOP_BAR_BACK) ? TOP_BAR_BACK : null;
+            if (exit != null) {
+                FolioleCompanionPairSyncRecoveryScenario.clickVisible(
+                    instrumentation, webView, exit, deadline
+                );
+            }
+            Thread.sleep(500);
         }
-        click(instrumentation, webView, "companion-tab-settings");
+        throw new IllegalStateException("Timed out navigating to companion Settings.");
+    }
+
+    private static boolean isVisible(JSONObject snapshot, String testId) throws Exception {
+        for (int index = 0; index < snapshot.getJSONArray("elements").length(); index += 1) {
+            JSONObject item = snapshot.getJSONArray("elements").getJSONObject(index);
+            if (testId.equals(item.optString("testId")) && item.optBoolean("visible")) return true;
+        }
+        return false;
     }
 
     private static JSONObject click(Instrumentation instrumentation, WebView webView, String testId) throws Exception {

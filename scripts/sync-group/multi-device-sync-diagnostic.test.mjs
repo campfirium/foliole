@@ -1,4 +1,4 @@
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 import { createRun } from './multi-device-sync-contract.mjs';
 import { runDiagnostic } from './multi-device-sync-diagnostic.mjs';
@@ -18,6 +18,19 @@ it('performs zero stage mutations when any readiness host is blocked', async () 
   targetStage: 'a-b-group-sync' });
   expect(mutations).toBe(0);
   expect(result.status).toBe('blocked');
+});
+
+it('does not consult Windows readiness for an A/B-only stage closure', async () => {
+  const windows = vi.fn(ready);
+  const result = await runDiagnostic({ adapters: {
+    'macos-a': ready, 'android-b': ready, 'windows-c': windows
+  }, availableFacts: ['candidate_bound'], candidateProvider: async () => candidate,
+  readinessHosts: ['macos-a', 'android-b'],
+  run: createRun({ candidate, mode: 'diagnostic', runId: 'run-ab', scenario: 'a-b-group-sync' }),
+  stageActions: { 'establish-a-b': async () => ({ evidenceRef: 'a-b.json' }) },
+  targetStage: 'a-b-group-sync' });
+  expect(result.status).toBe('passed');
+  expect(windows).not.toHaveBeenCalled();
 });
 
 it('preserves bounded failure detail and evidence without advancing later stages', async () => {

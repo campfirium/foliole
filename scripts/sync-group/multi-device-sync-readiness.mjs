@@ -36,9 +36,9 @@ async function withDeadline(action, timeoutMs, timeout, host, startedAt, now) {
 }
 
 export async function collectEnvironmentReadiness({ adapters, now = Date.now,
-  timeout = setTimeout, timeoutMs = ENVIRONMENT_READINESS_TIMEOUT_MS }) {
+  hosts = HOSTS, timeout = setTimeout, timeoutMs = ENVIRONMENT_READINESS_TIMEOUT_MS }) {
   const startedAt = nowIso(now);
-  const receipts = await Promise.all(HOSTS.map(async (host) => {
+  const receipts = await Promise.all(hosts.map(async (host) => {
     const adapter = adapters[host];
     if (typeof adapter !== 'function') return blocked(host, startedAt, now, 'adapter_unbound');
     try {

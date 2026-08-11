@@ -59,6 +59,7 @@ export async function runCli({ argv = process.argv.slice(2), repoRoot = process.
   const result = await runner({ adapters: createHostReadinessAdapters(options),
     candidateProvider, mutationAdapters: createMutationReadinessAdapters(options), run,
     onReceipt: (receipt) => console.log(`[multi-device-sync] stage=${receipt.stage} status=${receipt.status}`),
+    readinessHosts: options.requiredHosts,
     stageActions: createDiagnosticStageActions(options), targetStage: request.target });
   const summaryPath = writeSummary(repoRoot, result);
   if (result.status === 'passed') {

@@ -29,6 +29,16 @@ it('finishes green only when all three fixed hosts report facts', async () => {
   expect(result.receipts.every(({ status }) => status === 'passed')).toBe(true);
 });
 
+it('checks only the host closure selected by the target stage', async () => {
+  const windows = vi.fn(async () => ({ facts: ['windows_ready'] }));
+  const result = await collectEnvironmentReadiness({ adapters: {
+    'macos-a': ready('mac_ready'), 'android-b': ready('a5_ready'), 'windows-c': windows
+  }, hosts: ['macos-a', 'android-b'] });
+  expect(result.receipts.map(({ host }) => host)).toEqual(['macos-a', 'android-b']);
+  expect(result.status).toBe('passed');
+  expect(windows).not.toHaveBeenCalled();
+});
+
 it('turns the 45-second boundary into an environment blocker', async () => {
   vi.useFakeTimers();
   const pending = collectEnvironmentReadiness({ adapters: {
