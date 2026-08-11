@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 
 import folioleLeafUrl from '../../../assets/brand/foliole-leaf-tight.svg?url';
 import type { NativeInitialLibrarySetupState } from '../../../lib/platform/nativeInitialLibrarySetupContract';
+import { getStoredAppLocale } from '../../shared/localization/appLanguage';
 import {
   chooseInitialLibraryLocation,
   confirmInitialLibrarySetup,
@@ -33,7 +34,7 @@ const COPY = {
 } as const;
 
 function resolveCopy() {
-  return navigator.language.toLowerCase().startsWith('zh') ? COPY.zh : COPY.en;
+  return getStoredAppLocale() === 'zh-Hans' ? COPY.zh : COPY.en;
 }
 
 export function InitialLibrarySetupView() {

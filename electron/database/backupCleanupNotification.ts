@@ -1,5 +1,10 @@
 import { app, Notification } from 'electron';
 
+import {
+  isExplicitSimplifiedChineseLanguageTag,
+  readPrimaryLanguage
+} from '../../lib/core/localization/systemLanguage.js';
+
 import type { BackupPruneResult } from './backupCatalog.js';
 
 function formatBytes(bytes: number) {
@@ -9,12 +14,12 @@ function formatBytes(bytes: number) {
     : `${Math.max(1, Math.round(megabytes))} MB`;
 }
 
-function buildBody(result: BackupPruneResult, locale: string) {
+function buildBody(result: BackupPruneResult, usesSimplifiedChinese: boolean) {
   const released = formatBytes(result.releasedBytes);
   const count = result.deletedCount;
   const hasPolicyCleanup = result.policyDeletedCount > 0;
   const hasCapacityCleanup = result.capacityDeletedCount > 0;
-  if (locale.toLowerCase().startsWith('zh')) {
+  if (usesSimplifiedChinese) {
     const reason = hasPolicyCleanup && hasCapacityCleanup
       ? '根据保留规则和备份大小上限'
       : hasCapacityCleanup
@@ -37,11 +42,13 @@ export function showBackupCleanupNotification(result: BackupPruneResult) {
       console.warn('[backup] cleanup notification is not supported', result);
       return false;
     }
-    const locale = app.getLocale();
+    const usesSimplifiedChinese = isExplicitSimplifiedChineseLanguageTag(
+      readPrimaryLanguage(app.getPreferredSystemLanguages())
+    );
     new Notification({
-      body: buildBody(result, locale),
+      body: buildBody(result, usesSimplifiedChinese),
       silent: true,
-      title: locale.toLowerCase().startsWith('zh') ? '旧备份已清理' : 'Older backups cleaned up'
+      title: usesSimplifiedChinese ? '旧备份已清理' : 'Older backups cleaned up'
     }).show();
     return true;
   } catch (error) {

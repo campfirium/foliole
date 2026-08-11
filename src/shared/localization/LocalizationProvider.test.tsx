@@ -92,6 +92,16 @@ it('falls back to English when the system language is unsupported', () => {
   expect(resolveSystemAppLocale(['fr-FR'])).toBe('en');
 });
 
+it('uses only the primary system language and requires explicit simplified Chinese', () => {
+  expect(resolveSystemAppLocale(['ko-KR', 'zh-CN'])).toBe('en');
+  expect(resolveSystemAppLocale(['zh-TW'])).toBe('en');
+  expect(resolveSystemAppLocale(['zh-Hant'])).toBe('en');
+  expect(resolveSystemAppLocale(['zh'])).toBe('en');
+  expect(resolveSystemAppLocale(['pt-PT'])).toBe('en');
+  expect(resolveSystemAppLocale([])).toBe('en');
+  expect(resolveSystemAppLocale(['zh-CN', 'ko-KR'])).toBe('zh-Hans');
+});
+
 it('allows a dev-only app language override without changing stored preferences', async () => {
   vi.stubEnv('VITE_FOLIOLE_DEV_APP_LANGUAGE', 'en');
   vi.stubEnv('VITE_FOLIOLE_INTERNAL_BUILD', '1');

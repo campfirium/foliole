@@ -29,4 +29,8 @@ describe('resolveGuidedSampleLocale', () => {
     expect(resolveGuidedSampleLocale(['zh-MO'])).toBe('en-US');
     expect(resolveGuidedSampleLocale(['zh'])).toBe('en-US');
   });
+
+  it('does not scan secondary browser languages for Chinese content', () => {
+    expect(resolveGuidedSampleLocale(['ko-KR', 'zh-CN'])).toBe('en-US');
+  });
 });
