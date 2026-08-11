@@ -22,27 +22,51 @@ function result(stdout, code = 0) {
   return { code, lines: stdout ? [stdout] : [], output: stdout, stderr: code ? stdout : '', stdout };
 }
 
-it('validates the fixed dev checkout and pulls only lan/dev before the action runner', async () => {
+it('aligns a clean fixed dev checkout exactly to the Mac-owned lan/dev mirror', async () => {
   const paths = fixture();
   const calls = [];
   const execute = vi.fn(async (_command, args) => {
     calls.push(args);
     if (args.includes('--show-toplevel')) return result(paths.repoRoot);
     if (args.includes('--show-current')) return result('dev');
+    if (args.includes('status')) return result('');
     return result('Already up to date.');
   });
   await expect(runWindowsDevPull({ execute, paths, platform: 'win32' }))
     .resolves.toMatchObject({ exitCode: 0 });
-  expect(calls.at(-1)).toEqual(['-C', paths.repoRoot, 'pull', '--ff-only', 'lan', 'dev']);
+  expect(calls.slice(-3)).toEqual([
+    ['-C', paths.repoRoot, 'status', '--porcelain', '--untracked-files=all'],
+    ['-C', paths.repoRoot, 'fetch', '--no-tags', 'lan', 'dev'],
+    ['-C', paths.repoRoot, 'reset', '--hard', 'FETCH_HEAD']
+  ]);
 });
 
-it('fails closed without starting an action when fast-forward pull is blocked', async () => {
+it('fails closed without fetching when the Windows checkout has local changes', async () => {
   const paths = fixture();
+  const calls = [];
   const execute = vi.fn(async (_command, args) => {
+    calls.push(args);
     if (args.includes('--show-toplevel')) return result(paths.repoRoot);
     if (args.includes('--show-current')) return result('dev');
-    return result('pull blocked', 1);
+    if (args.includes('status')) return result(' M local-change.txt');
+    return result('unexpected');
   });
   await expect(runWindowsDevPull({ execute, paths, platform: 'win32' }))
-    .resolves.toMatchObject({ exitCode: 64, stage: 'pull' });
+    .resolves.toMatchObject({ exitCode: 64, stage: 'repo' });
+  expect(calls.some((args) => args.includes('fetch'))).toBe(false);
+});
+
+it('fails closed without alignment when mirror fetch is blocked', async () => {
+  const paths = fixture();
+  const calls = [];
+  const execute = vi.fn(async (_command, args) => {
+    calls.push(args);
+    if (args.includes('--show-toplevel')) return result(paths.repoRoot);
+    if (args.includes('--show-current')) return result('dev');
+    if (args.includes('fetch')) return result('fetch blocked', 1);
+    return result('');
+  });
+  await expect(runWindowsDevPull({ execute, paths, platform: 'win32' }))
+    .resolves.toMatchObject({ exitCode: 64, stage: 'fetch' });
+  expect(calls.some((args) => args.includes('reset'))).toBe(false);
 });
