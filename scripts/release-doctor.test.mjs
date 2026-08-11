@@ -20,7 +20,15 @@ import {
 
 describe('release doctor', () => {
   it('keeps pre-publish checks independent from committed release metadata', async () => {
-    const { rootDir, version } = await createFixture({ enNotes: {}, manifest: { latest: '0.8.0', releases: [] }, zhNotes: {} });
+    const { rootDir, version } = await createFixture({
+      enNotes: {},
+      manifest: {
+        desktopUpdater: { compatibilityBridgeVersion: '0.8.0' },
+        latest: '0.8.0',
+        releases: [{ version: '0.8.0', platforms: ['windows'] }]
+      },
+      zhNotes: {}
+    });
     await writeFile(join(rootDir, `releases/github/v${version}.md`), '');
     const result = await collectReleaseDoctorChecks({ commandRunner: commandRunner(), rootDir });
 
@@ -28,6 +36,7 @@ describe('release doctor', () => {
     expect(findCheck(result, 'package version').status).toBe('PASS');
     expect(findCheck(result, 'T7 release identity').status).toBe('PASS');
     expect(findCheck(result, 'platform release identity').status).toBe('PASS');
+    expect(findCheck(result, 'release publication mode').status).toBe('PASS');
     expect(findCheck(result, 'GitHub release body')).toBeUndefined();
     expect(findCheck(result, 'manifest latest')).toBeUndefined();
     expect(hasFailures(result.checks)).toBe(false);
@@ -59,6 +68,51 @@ describe('release doctor', () => {
     expect(findCheck(result, 'platform release identity')).toMatchObject({
       status: 'FAIL', detail: expect.stringContaining('unknown platform linux')
     });
+  });
+
+  it('rejects a later release that reuses a frozen compatibility bridge', async () => {
+    const version = '0.7.6';
+    const { rootDir } = await createFixture({
+      version,
+      releaseIntent: {
+        schemaVersion: 1,
+        version,
+        publicationMode: 'bridge',
+        selectedPlatforms: ['windows'],
+        scopeBasis: { windows: 'Complete bridge.' }
+      },
+      manifest: {
+        desktopUpdater: { compatibilityBridgeVersion: '0.7.5' },
+        latest: '0.7.5',
+        releases: [{ version: '0.7.5', platforms: ['windows'] }]
+      }
+    });
+    const result = await collectReleaseDoctorChecks({ commandRunner: commandRunner(), rootDir });
+
+    expect(findCheck(result, 'release publication mode')).toMatchObject({
+      status: 'FAIL', detail: 'compatibility bridge is already frozen at 0.7.5.'
+    });
+    expect(hasFailures(result.checks)).toBe(true);
+  });
+
+  it('accepts the first bridge before T7', async () => {
+    const version = '0.9.0';
+    const { rootDir } = await createFixture({
+      releaseIntent: {
+        schemaVersion: 1,
+        version,
+        publicationMode: 'bridge',
+        selectedPlatforms: ['windows'],
+        scopeBasis: { windows: 'Complete bridge.' }
+      },
+      manifest: { latest: '0.8.0', releases: [] }
+    });
+    const result = await collectReleaseDoctorChecks({ commandRunner: commandRunner(), rootDir });
+
+    expect(findCheck(result, 'release publication mode')).toMatchObject({
+      status: 'PASS', detail: 'bridge publication is valid before T7.'
+    });
+    expect(hasFailures(result.checks)).toBe(false);
   });
 
   it('requires body, notes, and manifest only after publication', async () => {

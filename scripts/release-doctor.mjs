@@ -23,7 +23,10 @@ import {
   formatReleaseConfirmation,
   resolveReleasePlatformIdentity
 } from './release-platform-contract.mjs';
-import { assertPublishedManifestScope } from './release-publication-contract.mjs';
+import {
+  assertPublishedManifestScope,
+  assertT7Publication
+} from './release-publication-contract.mjs';
 import { checkReleaseMetadata } from './release-doctor-metadata.mjs';
 
 export { formatReleaseDoctorReport, hasFailures } from './release-doctor-core.mjs';
@@ -123,6 +126,23 @@ function resolvePlatformIdentity(packageJson, registry, intent) {
   }
 }
 
+function checkReleasePublication(identity, manifest) {
+  try {
+    const publication = assertT7Publication(identity, manifest);
+    return createCheck(
+      'PASS',
+      'release publication mode',
+      `${publication.mode} publication is valid before T7.`
+    );
+  } catch (error) {
+    return createCheck(
+      'FAIL',
+      'release publication mode',
+      error instanceof Error ? error.message : String(error)
+    );
+  }
+}
+
 async function collectPostPublicMetadataChecks(rootDir, version, identity) {
   const [manifest, enNotes, zhNotes] = await Promise.all([
     readJsonFile(rootDir, 'releases/update-manifest.json'),
@@ -184,6 +204,9 @@ export async function collectReleaseDoctorChecks({
   const checks = [
     ...checkPackage(packageJson),
     platform.check,
+    ...(phase === 'pre' && platform.identity
+      ? [checkReleasePublication(platform.identity, manifest)]
+      : []),
     ...metadataChecks,
     checkReleaseWorkflow(workflow, version),
     checkWorkingTree(rootDir, commandRunner),
