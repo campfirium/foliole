@@ -14,6 +14,9 @@ import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desk
 import { resolveMacosA5PairSyncReadiness } from '../android/macos-a5-product-bootstrap.mjs';
 import { runMacosA5SyncGroupMaintenance } from '../android/macos-a5-sync-group-maintenance-action.mjs';
 import { validateOwnedDesktopPreflight } from '../windows/windows-pair-sync-desktop-readiness.mjs';
+import {
+  closePairSyncRecoveryTransport, openPairSyncRecoveryTransport
+} from '../windows/windows-a5-pair-sync-recovery-transport.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import { runAOfflineAdmissionPrelude } from './multi-device-sync-fact-preparation.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
@@ -152,8 +155,19 @@ async function admitEmptyC(repoRoot, runId) {
   const execute = actionExecute(path.join(evidenceRoot, 'progress.jsonl'),
     path.join(evidenceRoot, 'action.log'));
   const paths = macosA5Paths(repoRoot);
+  const env = macosA5GradleEnv();
   const owned = createIsolatedMacosRoot({ repoRoot, runId });
+  const runTransport = async (args, stage) => {
+    const result = await execute(paths.adb, ['-s', A5_SERIAL, ...args], { env, timeoutMs: 10_000 });
+    if (result.code === 0) return result;
+    throw Object.assign(new Error(`${stage} failed`), {
+      failureOwner: 'controller', host: 'android-b',
+      lastSuccessfulAction: 'a_deterministic_fact_created',
+      missingFact: 'a5_product_transport_unavailable'
+    });
+  };
   const { approval, windows } = await runAOfflineAdmissionPrelude({
+    closeTransport: () => closePairSyncRecoveryTransport(runTransport),
     createFact: (session) => createDesktopSyncGroupJourneyFact({
       device: 'A', evidenceRoot: path.join(evidenceRoot, 'a-fact'), session
     }),
@@ -161,6 +175,7 @@ async function admitEmptyC(repoRoot, runId) {
       libraryHome: path.join(owned.root, 'library'), repoRoot,
       userDataPath: path.join(owned.root, 'user-data')
     }),
+    openTransport: () => openPairSyncRecoveryTransport(runTransport),
     runApproval: (onReady) => runMacosA5SyncGroupApproval({
       execute, onReady, prepare: () => {}, repoRoot
     }),
