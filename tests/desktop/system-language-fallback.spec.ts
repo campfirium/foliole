@@ -3,6 +3,8 @@ import path from 'node:path';
 import { expect } from '@playwright/test';
 
 import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
+import { resolveSystemAppLocale } from '../../src/shared/localization/appLanguage';
+import { preloadTranslationCatalog, translate } from '../../src/shared/localization/translations';
 
 import { test } from './harness/fixtures';
 
@@ -10,61 +12,68 @@ const SCREENSHOT_PATH = path.resolve(
   '.tmp',
   'artifacts',
   'desktop-acceptance',
-  'formal-locale-catalog-loading.png'
+  'system-language-host-preference.png'
 );
 
-test('uses English for an unsupported primary language and persists a formal locale selected in settings', async ({
+async function resolveSystemLabels(systemLanguage: string) {
+  const locale = resolveSystemAppLocale(systemLanguage ? [systemLanguage] : []);
+  await preloadTranslationCatalog(locale);
+  return {
+    appLanguage: translate(locale, 'settings.general.language.aria'),
+    general: translate(locale, 'settings.category.general.label'),
+    settings: translate(locale, 'settings.title')
+  };
+}
+
+test('uses the host primary language, preserves a manual language, and returns to System immediately', async ({
   desktopSession,
   desktopWindow
 }, testInfo) => {
-  let secondSession: Awaited<ReturnType<typeof launchDesktopSession>> | null = null;
+  let restartedSession: Awaited<ReturnType<typeof launchDesktopSession>> | null = null;
+  const systemLanguage = await desktopSession.electronApp.evaluate(({ app }) =>
+    app.getPreferredSystemLanguages()[0]?.trim() ?? ''
+  );
+  const systemLabels = await resolveSystemLabels(systemLanguage);
   try {
-    await desktopWindow.evaluate(() => {
-      window.localStorage.removeItem('foliole-app-language');
-    });
-    await desktopWindow.addInitScript(() => {
-      Object.defineProperty(window.navigator, 'languages', {
-        configurable: true,
-        value: ['nl-NL', 'zh-CN']
-      });
-    });
+    await expect.poll(() => desktopWindow.evaluate(() =>
+      window.electronAPI?.runtimeConfig?.systemLanguage ?? null
+    )).toBe(systemLanguage || null);
+
+    await desktopWindow.evaluate(() => window.localStorage.removeItem('foliole-app-language'));
     await desktopWindow.reload();
+    await desktopWindow.getByRole('button', { name: systemLabels.settings, exact: true }).click();
+    let dialog = desktopWindow.getByRole('dialog');
+    await dialog.getByRole('button', { name: systemLabels.general, exact: true }).click();
+    let language = dialog.getByRole('combobox', { name: systemLabels.appLanguage });
+    await expect(language).toHaveValue('system');
 
-    await expect(desktopWindow.getByRole('button', { name: 'Settings' })).toBeVisible();
-    await expect(desktopWindow.getByRole('button', { name: 'Einstellungen' })).toHaveCount(0);
-
-    await desktopWindow.evaluate(() => {
-      window.localStorage.setItem('foliole-app-language', 'de');
-    });
-    await desktopWindow.reload();
-
-    await desktopWindow.getByRole('button', { name: 'Einstellungen', exact: true }).click();
-    const dialog = desktopWindow.getByRole('dialog');
-    await dialog.getByRole('button', { name: 'Allgemein', exact: true }).click();
-    const language = dialog.getByRole('combobox', { name: 'App-Sprache' });
-    await expect(language).toHaveValue('de');
-    await expect.poll(() => language.evaluate((element) => (element as HTMLSelectElement).options.length)).toBe(13);
-    const saved = desktopWindow.evaluate(() => new Promise<void>((resolve) => {
+    const manualSaved = desktopWindow.evaluate(() => new Promise<void>((resolve) => {
       window.addEventListener('foliole:runtime-app-settings-saved', () => resolve(), { once: true });
     }));
     await language.selectOption('ja');
-    await saved;
+    await manualSaved;
     await expect(dialog.getByRole('combobox', { name: 'アプリ言語' })).toHaveValue('ja');
-    await desktopWindow.screenshot({ path: SCREENSHOT_PATH });
 
     await desktopSession.electronApp.close();
-    secondSession = await launchDesktopSession({ env: desktopSession.launchOptions.env });
-    const restoredSettingsButton = secondSession.firstWindow.getByRole('button', { name: '設定', exact: true });
-    await expect(restoredSettingsButton).toBeVisible();
-    await restoredSettingsButton.click();
-    const restoredDialog = secondSession.firstWindow.getByRole('dialog');
-    await restoredDialog.getByRole('button', { name: '一般', exact: true }).click();
-    await expect(restoredDialog.getByRole('combobox', { name: 'アプリ言語' })).toHaveValue('ja');
-    await testInfo.attach('formal-locale-catalog-loading', {
+    restartedSession = await launchDesktopSession({ env: desktopSession.launchOptions.env });
+    await restartedSession.firstWindow.getByRole('button', { name: '設定', exact: true }).click();
+    dialog = restartedSession.firstWindow.getByRole('dialog');
+    await dialog.getByRole('button', { name: '一般', exact: true }).click();
+    language = dialog.getByRole('combobox', { name: 'アプリ言語' });
+    await expect(language).toHaveValue('ja');
+
+    const systemSaved = restartedSession.firstWindow.evaluate(() => new Promise<void>((resolve) => {
+      window.addEventListener('foliole:runtime-app-settings-saved', () => resolve(), { once: true });
+    }));
+    await language.selectOption('system');
+    await systemSaved;
+    await expect(dialog.getByRole('combobox', { name: systemLabels.appLanguage })).toHaveValue('system');
+    await restartedSession.firstWindow.screenshot({ path: SCREENSHOT_PATH });
+    await testInfo.attach('system-language-host-preference', {
       contentType: 'image/png',
       path: SCREENSHOT_PATH
     });
   } finally {
-    await secondSession?.close();
+    await restartedSession?.close();
   }
 });

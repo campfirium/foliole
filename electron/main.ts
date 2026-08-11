@@ -48,6 +48,7 @@ import {
   logWindowStateLifecycleEvent
 } from './runtimeMainSupport.js';
 import { resolveRuntimeMode } from './runtimeMode.js';
+import { publishRuntimeSystemLanguage } from './runtimeSystemLanguage.js';
 import { prepareStartupRendererAppearance } from './startupRendererPreparation.js';
 import { desktopUpdateService } from './update/desktopUpdateRuntime.js';
 import { bindWindowRuntimeDiagnostics, setStartupWindowPresentation } from './windowRuntimeDiagnostics.js';
@@ -141,6 +142,7 @@ async function createMainWindow(
   startupAppearance?: { backgroundColor: string; displayScalePercent?: number } | null,
   startupOptions: { deferDatabaseBackedBindings?: boolean } = {}
 ) {
+  publishRuntimeSystemLanguage(app);
   const { options, restoredWindowState } = await prepareMainWindowStartupOptions(
     createMainWindowOptions(runtimeDiagnostics.preloadPath),
     startupAppearance,

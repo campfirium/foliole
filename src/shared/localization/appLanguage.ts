@@ -6,6 +6,7 @@ import {
 } from '../../../lib/core/localization/appLocaleRegistry';
 import { readPrimaryLanguage } from '../../../lib/core/localization/systemLanguage';
 import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
+import { getRuntimeSystemLanguage } from '../platform/runtimeConfig';
 import {
   getWhitelistedLocalStorageItem,
   setWhitelistedLocalStorageItem
@@ -43,7 +44,7 @@ function resolveDevAppLocaleOverride(): AppLocale | null {
   return isAppLocale(override) ? override : null;
 }
 
-export function resolveSystemAppLocale(languages: readonly string[] = getNavigatorLanguages()): AppLocale {
+export function resolveSystemAppLocale(languages: readonly string[] = getSystemLanguages()): AppLocale {
   return resolveRegisteredAppLocale(readPrimaryLanguage(languages)) ?? DEFAULT_APP_LOCALE;
 }
 
@@ -80,4 +81,12 @@ function getNavigatorLanguages(): readonly string[] {
     return navigator.languages;
   }
   return navigator.language ? [navigator.language] : [];
+}
+
+function getSystemLanguages(): readonly string[] {
+  const runtimeSystemLanguage = getRuntimeSystemLanguage();
+  if (runtimeSystemLanguage !== undefined) {
+    return runtimeSystemLanguage ? [runtimeSystemLanguage] : [];
+  }
+  return getNavigatorLanguages();
 }

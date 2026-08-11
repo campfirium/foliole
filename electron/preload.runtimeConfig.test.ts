@@ -39,11 +39,21 @@ function executePreload(env: Record<string, string | undefined>) {
 describe('preload runtime config bridge', () => {
   it('exposes only supported guided sample locale overrides', () => {
     expect(executePreload({ FOLIOLE_GUIDED_SAMPLE_LOCALE: 'en-US' }).api.runtimeConfig).toEqual({
-      guidedSampleLocale: 'en-US'
+      guidedSampleLocale: 'en-US',
+      systemLanguage: null
     });
     expect(executePreload({ FOLIOLE_GUIDED_SAMPLE_LOCALE: 'fr-FR' }).api.runtimeConfig).toEqual({
-      guidedSampleLocale: null
+      guidedSampleLocale: null,
+      systemLanguage: null
     });
+  });
+
+  it('exposes one sanitized host system language', () => {
+    expect(executePreload({ FOLIOLE_SYSTEM_LANGUAGE: ' zh-Hans-CN ' }).api.runtimeConfig).toEqual({
+      guidedSampleLocale: null,
+      systemLanguage: 'zh-Hans-CN'
+    });
+    expect(executePreload({ FOLIOLE_SYSTEM_LANGUAGE: '   ' }).api.runtimeConfig.systemLanguage).toBeNull();
   });
 
   it('exposes the bridge from a sandbox-limited preload require environment', () => {
@@ -53,7 +63,8 @@ describe('preload runtime config bridge', () => {
     expect(exposeInMainWorld).toHaveBeenCalledWith('electronAPI', api);
     expect(api).toEqual(expect.objectContaining({
       invoke: expect.any(Function),
-      onReadwiseBookEpubProgress: expect.any(Function)
+      onReadwiseBookEpubProgress: expect.any(Function),
+      runtimeConfig: expect.objectContaining({ systemLanguage: null })
     }));
   });
 

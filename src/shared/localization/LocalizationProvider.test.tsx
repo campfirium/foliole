@@ -38,6 +38,7 @@ beforeEach(() => {
     configurable: true,
     value: ['en-US']
   });
+  Object.defineProperty(window, 'electronAPI', { configurable: true, value: undefined });
 });
 
 it('hydrates the saved app language and updates translated consumers', async () => {
@@ -59,7 +60,13 @@ it('hydrates the saved app language and updates translated consumers', async () 
 it('defaults to system language and resolves supported Chinese locales', async () => {
   Object.defineProperty(window.navigator, 'languages', {
     configurable: true,
-    value: ['zh-CN', 'en-US']
+    value: ['en-US']
+  });
+  Object.defineProperty(window, 'electronAPI', {
+    configurable: true,
+    value: {
+      runtimeConfig: { guidedSampleLocale: null, systemLanguage: 'zh-Hans-CN' }
+    }
   });
 
   render(

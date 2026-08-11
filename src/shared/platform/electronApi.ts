@@ -14,6 +14,7 @@ interface ElectronDebugMetadata {
 
 interface ElectronRuntimeConfig {
   guidedSampleLocale: 'en-US' | 'zh-CN' | null;
+  systemLanguage: string | null;
 }
 
 export interface NativeKeyboardInputPayload {

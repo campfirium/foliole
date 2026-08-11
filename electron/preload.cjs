@@ -44,6 +44,7 @@ const guidedSampleLocale = process.env.FOLIOLE_GUIDED_SAMPLE_LOCALE?.trim();
 const guidedSampleLocaleOverride = guidedSampleLocale === 'en-US' || guidedSampleLocale === 'zh-CN'
   ? guidedSampleLocale
   : null;
+const systemLanguage = process.env.FOLIOLE_SYSTEM_LANGUAGE?.trim() || null;
 
 function normalizeReadwiseBookEpubProgressPayload(payload) {
   if (
@@ -216,7 +217,7 @@ const electronApi = {
   onAssistantTurnEvent: (handler) => subscribe(IPC_ASSISTANT_TURN_EVENT_CHANNEL, handler),
   onDesktopUpdateState: (handler) => subscribe(IPC_DESKTOP_UPDATE_STATE_EVENT_CHANNEL, handler),
   onWindowResized: (handler) => subscribe(IPC_WINDOW_RESIZED_EVENT_CHANNEL, handler),
-  runtimeConfig: { guidedSampleLocale: guidedSampleLocaleOverride },
+  runtimeConfig: { guidedSampleLocale: guidedSampleLocaleOverride, systemLanguage },
   setNativeHotkeyRecordingActive: (active) => ipcRenderer.send(IPC_HOTKEY_RECORDER_ACTIVE_CHANNEL, active === true)
 };
 
