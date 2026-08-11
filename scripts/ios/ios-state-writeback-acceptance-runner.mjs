@@ -9,12 +9,12 @@ export function parseStateWritebackSnapshot(output) {
     confirmed_review_delivery_count: Number(row?.confirmed_review_delivery_count ?? 0),
     local_reading_position: Number(row?.local_reading_position ?? -1),
     local_scroll_top: Number(row?.local_scroll_top ?? -1),
+    local_view_state_count: Number(row?.local_view_state_count ?? -1),
     pending_ack_count: Number(row?.pending_ack_count ?? -1),
     review_log_count: Number(row?.review_log_count ?? 0),
     review_op_id: row?.review_op_id ?? null,
     shared_dirty_count: Number(row?.shared_dirty_count ?? -1),
-    shared_state_count: Number(row?.shared_state_count ?? 0),
-    view_state_sync_count: Number(row?.view_state_sync_count ?? -1)
+    shared_state_count: Number(row?.shared_state_count ?? 0)
   };
 }
 
@@ -33,7 +33,7 @@ export function readStateWritebackSnapshot(options) {
     ) AS confirmed_review_delivery_count,
     (SELECT count(*) FROM sync_object_state WHERE object_type IN (${SHARED_TYPES}) AND sync_dirty = 1) AS shared_dirty_count,
     (SELECT count(*) FROM sync_object_state WHERE object_type IN (${SHARED_TYPES})) AS shared_state_count,
-    (SELECT count(*) FROM sync_object_state WHERE object_type = 'view_state') AS view_state_sync_count;`;
+    (SELECT count(*) FROM sync_object_state WHERE object_type = 'view_state') AS local_view_state_count;`;
   return parseStateWritebackSnapshot(options.capture('sqlite3', ['-json', databasePath, sql]));
 }
 
@@ -49,7 +49,7 @@ function snapshotPassed(snapshot) {
     snapshot.local_scroll_top === 42 && snapshot.pending_ack_count === 0 &&
     snapshot.review_log_count === 1 && snapshot.confirmed_review_delivery_count === 1 &&
     snapshot.shared_dirty_count === 0 && snapshot.shared_state_count === 3 &&
-    snapshot.view_state_sync_count === 0;
+    snapshot.local_view_state_count === 2;
 }
 
 export function verifyStateWritebackAcceptance(first, second, firstSnapshot, secondSnapshot, observations) {

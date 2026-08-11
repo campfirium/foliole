@@ -14,12 +14,12 @@ function snapshot() {
     confirmed_review_delivery_count: 1,
     local_reading_position: 42,
     local_scroll_top: 42,
+    local_view_state_count: 2,
     pending_ack_count: 0,
     review_log_count: 1,
     review_op_id: 'review-op',
     shared_dirty_count: 0,
-    shared_state_count: 3,
-    view_state_sync_count: 0
+    shared_state_count: 3
   }]));
 }
 
