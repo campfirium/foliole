@@ -2,7 +2,7 @@ import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_FEEDBACK_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
   'feedback.title': '发送反馈',
-  'feedback.description': '告诉我们哪里出错、哪里不清楚，或哪里可以更顺手。',
+  'feedback.description': '告诉我们哪里出错、哪里不清楚，或怎样让 Foliole 更顺手。',
   'feedback.message.label': '反馈',
   'feedback.message.placeholder': '写下你的反馈',
   'feedback.name.label': '称呼',

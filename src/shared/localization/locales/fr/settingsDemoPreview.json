@@ -1,0 +1,18 @@
+{
+  "settings.demoPreview.banner.title": "Aperçu des paramètres du bureau",
+  "settings.demoPreview.banner.description": "Ce panneau affiche tous les paramètres du bureau, afin que vous puissiez comprendre la structure des fonctionnalités de Foliole. Les modifications apportées ici n'affectent pas la démo en ligne.",
+  "settings.demoPreview.control.desktopOnly": "Bureau uniquement",
+  "settings.demoPreview.control.previewOnly": "Aperçu uniquement",
+  "settings.demoPreview.downloadDesktop": "Télécharger l'application de bureau",
+  "settings.demoPreview.empty": "Aperçu indisponible",
+  "settings.demoPreview.emptyDescription": "Cette catégorie de paramètres est représentée dans l'application de bureau.",
+  "settings.demoPreview.about.title": "À propos de Foliole",
+  "settings.demoPreview.hotkeys.title": "Raccourcis clavier",
+  "settings.demoPreview.hotkeys.search": "Raccourci de recherche",
+  "settings.demoPreview.hotkeys.settings": "Raccourci des paramètres",
+  "settings.demoPreview.hotkeys.study": "Raccourci d'étude",
+  "settings.demoPreview.mouseGestures.title": "Comportement des gestes de la souris",
+  "settings.demoPreview.readwise.status": "Readwise Statut du lecteur",
+  "settings.demoPreview.note.label": "Accès aux dossiers",
+  "settings.demoPreview.note.externalFolders": "Les fonctionnalités des dossiers externes sont simplifiées dans cette démo. L'application de bureau inclut l'expérience complète."
+}

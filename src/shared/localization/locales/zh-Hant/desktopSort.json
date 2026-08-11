@@ -1,0 +1,15 @@
+{
+  "desktop.sort.order.az": "A -> Z",
+  "desktop.sort.order.za": "Z -> A",
+  "desktop.sort.order.newest": "最新的優先",
+  "desktop.sort.order.oldest": "最老的在前",
+  "desktop.sort.order.manual": "手動下單",
+  "desktop.sort.key.dateModified": "修改日期",
+  "desktop.sort.key.lastOpened": "上次打開",
+  "desktop.sort.key.name": "名稱",
+  "desktop.sort.key.manual": "手冊",
+  "desktop.sort.fallback.dateImported": "導入日期",
+  "desktop.sort.listBy": "按 {label} 排序列表",
+  "desktop.sort.sortBy": "排序依據",
+  "desktop.sort.order": "訂單"
+}

@@ -1,0 +1,20 @@
+{
+  "settings.companionSync.group.title": "Группа синхронизации",
+  "settings.companionSync.group.description": "Это имя сохраняется при создании группы.",
+  "settings.companionSync.group.empty.description": "Создайте группу синхронизации или присоединитесь к ней с активного устройства в этой сети.",
+  "settings.companionSync.group.join.title": "Запросы на присоединение",
+  "settings.companionSync.group.join.description": "Одобряйте только знакомые устройства.",
+  "settings.companionSync.group.join.approve": "Одобрить",
+  "settings.companionSync.group.join.reject": "Отклонить",
+  "settings.companionSync.group.create": "Создать группу синхронизации",
+  "settings.companionSync.group.find": "Найти группу синхронизации",
+  "settings.companionSync.group.join.complete": "Завершить присоединение",
+  "settings.companionSync.group.join.waiting": "Ожидание одобрения. После этого синхронизация начнется автоматически.",
+  "settings.companionSync.group.join.named": "Присоединиться к {name}",
+  "settings.companionSync.group.devices.title": "Устройства",
+  "settings.companionSync.group.devices.description": "Устройства сохраняют членство, когда другое устройство не в сети.",
+  "settings.companionSync.group.devices.find": "Найти устройства",
+  "settings.companionSync.group.devices.syncWith": "Синхронизировать с {name}",
+  "settings.companionSync.group.member.active": "Присоединено",
+  "settings.companionSync.group.member.provisioning": "Настройка"
+}

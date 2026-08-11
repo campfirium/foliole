@@ -1,0 +1,15 @@
+{
+  "desktop.sort.order.az": "A -> Z",
+  "desktop.sort.order.za": "Z -> A",
+  "desktop.sort.order.newest": "Lo más nuevo primero",
+  "desktop.sort.order.oldest": "El más antiguo primero",
+  "desktop.sort.order.manual": "Orden manual",
+  "desktop.sort.key.dateModified": "Fecha de modificación",
+  "desktop.sort.key.lastOpened": "Última apertura",
+  "desktop.sort.key.name": "Nombre",
+  "desktop.sort.key.manual": "Manual",
+  "desktop.sort.fallback.dateImported": "Fecha de importación",
+  "desktop.sort.listBy": "Ordenar lista por {label}",
+  "desktop.sort.sortBy": "Ordenar por",
+  "desktop.sort.order": "Orden"
+}

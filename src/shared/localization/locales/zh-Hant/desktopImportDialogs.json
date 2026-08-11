@@ -1,0 +1,21 @@
+{
+  "desktop.epubImport.mode.title": "選擇閱讀模式",
+  "desktop.epubImport.mode.description": "您可以稍後從主題上下文選單變更此設定。",
+  "desktop.epubImport.mode.aria": "EPUB閱讀模式",
+  "desktop.epubImport.mode.sequential.label": "順序閱讀",
+  "desktop.epubImport.mode.sequential.suitability": "適合新內容",
+  "desktop.epubImport.mode.sequential.description": "按順序閱讀。當前章節關閉後，下一章將進入審閱佇列。",
+  "desktop.epubImport.mode.free.label": "免費閱讀",
+  "desktop.epubImport.mode.free.suitability": "適合現有內容",
+  "desktop.epubImport.mode.free.description": "保持每一章可用，以便他們可以進入審閱佇列而無需鎖定章節順序。",
+  "desktop.readwise.importDialog.blockedTitle": "首先預覽導入",
+  "desktop.readwise.importDialog.ok": "好的",
+  "desktop.readwise.importDialog.title": "Readwise導入",
+  "desktop.readwise.importDialog.previewTitle": "Readwise導入預覽",
+  "desktop.readwise.importDialog.preparing": "正在準備預覽...",
+  "desktop.readwise.importDialog.cancel": "取消",
+  "desktop.readwise.importDialog.cancelling": "取消",
+  "desktop.readwise.importDialog.import": "進口",
+  "desktop.readwise.importDialog.importing": "導入",
+  "desktop.readwise.previewSample.highlightMissing": "在來源主題中未找到此突出顯示。"
+}

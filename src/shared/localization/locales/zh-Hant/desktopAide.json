@@ -1,0 +1,18 @@
+{
+  "desktop.rightPanel.assistant.model.settings": "型號和性能設置",
+  "desktop.rightPanel.assistant.model.loading": "正在載入可用模型和效能設定...",
+  "desktop.rightPanel.assistant.model.unavailable": "型號和性能設定不可用。訊息將使用 Codex 預設值。",
+  "desktop.rightPanel.assistant.model.tooltip": "型號：{model} · 推理：{effort} · 速度：{speed}",
+  "desktop.rightPanel.assistant.model.model": "型號",
+  "desktop.rightPanel.assistant.model.reasoning": "推理",
+  "desktop.rightPanel.assistant.model.effort.none": "無",
+  "desktop.rightPanel.assistant.model.effort.minimal": "最小",
+  "desktop.rightPanel.assistant.model.effort.low": "低",
+  "desktop.rightPanel.assistant.model.effort.medium": "中等",
+  "desktop.rightPanel.assistant.model.effort.high": "高",
+  "desktop.rightPanel.assistant.model.effort.xhigh": "超高",
+  "desktop.rightPanel.assistant.model.effort.max": "最大",
+  "desktop.rightPanel.assistant.model.effort.ultra": "超",
+  "desktop.rightPanel.assistant.model.speed": "速度",
+  "desktop.rightPanel.assistant.model.defaultSpeed": "Default"
+}

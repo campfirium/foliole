@@ -1,0 +1,21 @@
+{
+  "desktop.epubImport.mode.title": "Wybierz tryb czytania",
+  "desktop.epubImport.mode.description": "Możesz to zmienić później w menu kontekstowym Temat.",
+  "desktop.epubImport.mode.aria": "Tryb czytania EPUB",
+  "desktop.epubImport.mode.sequential.label": "Czytanie sekwencyjne",
+  "desktop.epubImport.mode.sequential.suitability": "Dopasowane do nowych treści",
+  "desktop.epubImport.mode.sequential.description": "Czytaj po kolei. Następny rozdział trafia do kolejki recenzji po odrzuceniu bieżącego rozdziału.",
+  "desktop.epubImport.mode.free.label": "Bezpłatne czytanie",
+  "desktop.epubImport.mode.free.suitability": "Dostosowane do istniejących treści",
+  "desktop.epubImport.mode.free.description": "Zapewnij dostępność każdego rozdziału, aby mogli wejść do kolejki recenzji bez blokad kolejności rozdziałów.",
+  "desktop.readwise.importDialog.blockedTitle": "Najpierw wyświetl podgląd importu",
+  "desktop.readwise.importDialog.ok": "OK",
+  "desktop.readwise.importDialog.title": "Import Readwise",
+  "desktop.readwise.importDialog.previewTitle": "Podgląd importu Readwise",
+  "desktop.readwise.importDialog.preparing": "Przygotowuję podgląd...",
+  "desktop.readwise.importDialog.cancel": "Anuluj",
+  "desktop.readwise.importDialog.cancelling": "Anulowanie",
+  "desktop.readwise.importDialog.import": "Importuj",
+  "desktop.readwise.importDialog.importing": "Importowanie",
+  "desktop.readwise.previewSample.highlightMissing": "Tego wyróżnienia nie znaleziono w temacie źródłowym."
+}

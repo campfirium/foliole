@@ -72,12 +72,13 @@ describe('Demo manifest contract', () => {
       sections: topic.sections,
       summary: topic.summary
     });
-    expect(manifestTopic.alternates).toEqual([
+    expect(manifestTopic.alternates).toEqual(expect.arrayContaining([
       { locale: 'en', hreflang: 'en', path: '/en/guides/welcome-to-foliole/' },
+      { locale: 'de', hreflang: 'de', path: '/de/guides/welcome-to-foliole/' },
+      { locale: 'pt-br', hreflang: 'pt-BR', path: '/pt-br/guides/welcome-to-foliole/' },
       { locale: 'zh-hans', hreflang: 'zh-Hans', path: '/zh-hans/guides/welcome-to-foliole/' }
-    ]);
-    expect(JSON.stringify(manifestTopic.alternates)).not.toContain('zh-hant');
-    expect(JSON.stringify(manifestTopic.alternates)).not.toContain('ja');
+    ]));
+    expect(manifestTopic.alternates).toHaveLength(12);
     expect(JSON.stringify(manifestTopic)).not.toContain('reviewScheduleSeeds');
     expect(JSON.stringify(manifestTopic)).not.toContain('dayOffset');
     expect(manifestTopic.contentHash).toMatch(/^sha256:[a-f0-9]{64}$/);
@@ -93,17 +94,10 @@ describe('Demo manifest contract', () => {
 
     expect(first.contractVersion).toBe(3);
     expect(first.publishedLocales).toEqual(DEMO_PUBLISHED_LOCALES);
-    expect(first.localePublishPacks.map((pack) => pack.locale)).toEqual(['en', 'zh-hans']);
-    expect(first.publishedLocales.map((locale) => locale.locale)).toEqual(['en', 'zh-hans']);
-    expect(JSON.stringify(first.publishedLocales)).not.toContain('zh-hant');
-    expect(JSON.stringify(first.publishedLocales)).not.toContain('ja');
-    expect(JSON.stringify(first.localePublishPacks.flatMap((pack) => pack.topics.flatMap((item) => item.alternates)))).not.toContain('zh-hant');
-    expect(JSON.stringify(first.localePublishPacks.flatMap((pack) => pack.topics.flatMap((item) => item.alternates)))).not.toContain('ja');
-    expect(first.localePublishPacks[1]!.topics[0]!).toMatchObject({
-      locale: 'zh-hans',
-      hreflang: 'zh-Hans',
-      canonicalPath: '/zh-hans/guides/welcome-to-foliole/',
-      demoPath: '/zh-hans/demo/'
+    expect(first.localePublishPacks.map((pack) => pack.locale)).toHaveLength(12);
+    expect(first.publishedLocales.map((locale) => locale.locale)).toHaveLength(12);
+    expect(first.localePublishPacks.find((pack) => pack.locale === 'zh-hans')?.topics[0]).toMatchObject({
+      locale: 'zh-hans', hreflang: 'zh-Hans', canonicalPath: '/zh-hans/guides/welcome-to-foliole/', demoPath: '/zh-hans/demo/'
     });
     expect(first.buildHash).toBe(second.buildHash);
     expect(first.runtime.assets.map((asset) => asset.path)).toEqual(['assets/index-a.js', 'assets/index-b.css']);

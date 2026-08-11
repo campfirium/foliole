@@ -1,0 +1,20 @@
+{
+  "settings.companionSync.group.title": "同期グループ",
+  "settings.companionSync.group.description": "グループの作成時にこの名前が保存されます。",
+  "settings.companionSync.group.empty.description": "新しい同期グループを作成するか、このネットワーク上のアクティブなデバイスから参加してください。",
+  "settings.companionSync.group.join.title": "参加リクエスト",
+  "settings.companionSync.group.join.description": "確認できるデバイスだけを承認してください。",
+  "settings.companionSync.group.join.approve": "承認",
+  "settings.companionSync.group.join.reject": "拒否",
+  "settings.companionSync.group.create": "同期グループを作成",
+  "settings.companionSync.group.find": "同期グループを検索",
+  "settings.companionSync.group.join.complete": "参加を完了",
+  "settings.companionSync.group.join.waiting": "承認を待っています。承認後、同期が自動的に始まります。",
+  "settings.companionSync.group.join.named": "{name} に参加",
+  "settings.companionSync.group.devices.title": "デバイス",
+  "settings.companionSync.group.devices.description": "別のデバイスがオフラインでも、各デバイスのメンバーシップは維持されます。",
+  "settings.companionSync.group.devices.find": "デバイスを検索",
+  "settings.companionSync.group.devices.syncWith": "{name} と同期",
+  "settings.companionSync.group.member.active": "参加済み",
+  "settings.companionSync.group.member.provisioning": "設定中"
+}

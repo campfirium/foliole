@@ -1,0 +1,11 @@
+{
+  "companion.capture.title": "Cattura",
+  "companion.capture.text": "Cattura testo",
+  "companion.capture.placeholder": "Digita o pronuncia un nuovo argomento",
+  "companion.capture.paste": "Incolla dagli Appunti",
+  "companion.capture.upload": "Carica file",
+  "companion.capture.save": "Salva",
+  "companion.capture.saving": "Salvataggio in corso...",
+  "companion.capture.error.inboxUnavailable": "Sincronizza questo dispositivo prima di salvare un nuovo argomento.",
+  "companion.capture.error.saveFailed": "Impossibile salvare questo argomento. Riprova."
+}

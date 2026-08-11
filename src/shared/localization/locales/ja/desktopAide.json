@@ -1,0 +1,18 @@
+{
+  "desktop.rightPanel.assistant.model.settings": "モデルとパフォーマンスの設定",
+  "desktop.rightPanel.assistant.model.loading": "利用可能なモデルとパフォーマンス設定をロードしています...",
+  "desktop.rightPanel.assistant.model.unavailable": "モデルとパフォーマンスの設定は利用できません。メッセージでは Codex のデフォルトが使用されます。",
+  "desktop.rightPanel.assistant.model.tooltip": "モデル: {model} · 推論: {effort} · 速度: {speed}",
+  "desktop.rightPanel.assistant.model.model": "モデル",
+  "desktop.rightPanel.assistant.model.reasoning": "推論",
+  "desktop.rightPanel.assistant.model.effort.none": "なし",
+  "desktop.rightPanel.assistant.model.effort.minimal": "最小限",
+  "desktop.rightPanel.assistant.model.effort.low": "低",
+  "desktop.rightPanel.assistant.model.effort.medium": "中",
+  "desktop.rightPanel.assistant.model.effort.high": "高",
+  "desktop.rightPanel.assistant.model.effort.xhigh": "超高",
+  "desktop.rightPanel.assistant.model.effort.max": "最大",
+  "desktop.rightPanel.assistant.model.effort.ultra": "ウルトラ",
+  "desktop.rightPanel.assistant.model.speed": "速度",
+  "desktop.rightPanel.assistant.model.defaultSpeed": "Default"
+}

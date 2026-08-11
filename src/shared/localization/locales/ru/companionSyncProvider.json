@@ -1,0 +1,10 @@
+{
+  "companion.sync.joinRequest.description": "Это устройство хочет присоединиться к вашей группе синхронизации.",
+  "companion.sync.joinRequest.approve": "Одобрить",
+  "companion.sync.joinRequest.reject": "Отклонить",
+  "companion.sync.leave.button": "Покинуть группу синхронизации",
+  "companion.sync.leave.description": "Это устройство перестанет синхронизироваться с этой группой. Темы и вложения останутся на устройстве.",
+  "companion.sync.leave.error": "Foliole не удалось подтвердить выход на другом устройстве. Повторите попытку, когда другое устройство будет доступно.",
+  "companion.sync.leave.progress": "Выход из группы синхронизации",
+  "companion.sync.provider.foregroundHint": "Foliole не выключает экран во время отправки. При переключении приложения или блокировке устройства синхронизация приостанавливается до вашего возвращения."
+}

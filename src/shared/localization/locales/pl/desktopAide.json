@@ -1,0 +1,18 @@
+{
+  "desktop.rightPanel.assistant.model.settings": "Ustawienia modelu i wydajności",
+  "desktop.rightPanel.assistant.model.loading": "Ładowanie dostępnych modeli i ustawień wydajności...",
+  "desktop.rightPanel.assistant.model.unavailable": "Ustawienia modelu i wydajności są niedostępne. Wiadomości będą używać domyślnych ustawień Kodeksu.",
+  "desktop.rightPanel.assistant.model.tooltip": "Model: {model} · Rozumowanie: {effort} · Prędkość: {speed}",
+  "desktop.rightPanel.assistant.model.model": "Modelka",
+  "desktop.rightPanel.assistant.model.reasoning": "Rozumowanie",
+  "desktop.rightPanel.assistant.model.effort.none": "Żadne",
+  "desktop.rightPanel.assistant.model.effort.minimal": "Minimalne",
+  "desktop.rightPanel.assistant.model.effort.low": "Niski",
+  "desktop.rightPanel.assistant.model.effort.medium": "Średni",
+  "desktop.rightPanel.assistant.model.effort.high": "Wysoka",
+  "desktop.rightPanel.assistant.model.effort.xhigh": "Bardzo wysokie",
+  "desktop.rightPanel.assistant.model.effort.max": "Maks",
+  "desktop.rightPanel.assistant.model.effort.ultra": "Ultra",
+  "desktop.rightPanel.assistant.model.speed": "Prędkość",
+  "desktop.rightPanel.assistant.model.defaultSpeed": "Default"
+}

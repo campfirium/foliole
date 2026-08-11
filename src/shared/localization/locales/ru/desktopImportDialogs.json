@@ -1,0 +1,21 @@
+{
+  "desktop.epubImport.mode.title": "Выберите режим чтения",
+  "desktop.epubImport.mode.description": "Вы можете изменить это позже в контекстном меню темы.",
+  "desktop.epubImport.mode.aria": "Режим чтения EPUB",
+  "desktop.epubImport.mode.sequential.label": "Последовательное чтение",
+  "desktop.epubImport.mode.sequential.suitability": "Подходит для нового контента",
+  "desktop.epubImport.mode.sequential.description": "Читайте по порядку. Следующая глава попадает в очередь проверки после закрытия текущей главы.",
+  "desktop.epubImport.mode.free.label": "Бесплатное чтение",
+  "desktop.epubImport.mode.free.suitability": "Подходит для существующего контента",
+  "desktop.epubImport.mode.free.description": "Обеспечьте доступность каждой главы, чтобы они могли попасть в очередь на просмотр без блокировки порядка глав.",
+  "desktop.readwise.importDialog.blockedTitle": "Сначала просмотрите импорт",
+  "desktop.readwise.importDialog.ok": "ОК",
+  "desktop.readwise.importDialog.title": "Readwise импорт",
+  "desktop.readwise.importDialog.previewTitle": "Readwise предварительный просмотр импорта",
+  "desktop.readwise.importDialog.preparing": "Подготовка предварительного просмотра...",
+  "desktop.readwise.importDialog.cancel": "Отмена",
+  "desktop.readwise.importDialog.cancelling": "Отмена",
+  "desktop.readwise.importDialog.import": "Импорт",
+  "desktop.readwise.importDialog.importing": "Импорт",
+  "desktop.readwise.previewSample.highlightMissing": "Этот момент не найден в исходной теме."
+}

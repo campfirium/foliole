@@ -1,0 +1,14 @@
+{
+  "settings.general.system.section": "Sistema",
+  "settings.general.system.aria": "Impostazioni di sistema",
+  "settings.general.openAtLogin.title": "Avvia Foliole automaticamente",
+  "settings.general.openAtLogin.description": "Mantieni la sincronizzazione locale e la clip globale disponibili dopo l'avvio.",
+  "settings.general.openAtLogin.ineffective": "Windows ha disabilitato questo elemento di avvio.",
+  "settings.general.openAtLogin.requiresApproval": "Consenti Foliole in Impostazioni di sistema > Generali > Elementi di accesso.",
+  "settings.general.openAtLogin.error": "macOS non è riuscito a trovare questo elemento di accesso. Prova ad accenderlo di nuovo.",
+  "settings.general.openAtLogin.unsupported": "L'avvio automatico non è disponibile in questa build.",
+  "settings.general.openAtLogin.aria": "Avvia Foliole automaticamente",
+  "settings.search.generalOpenAtLogin.title": "Avvia Foliole automaticamente",
+  "settings.search.generalOpenAtLogin.description": "Avvia Foliole automaticamente sulle installazioni desktop supportate.",
+  "settings.search.generalOpenAtLogin.terms": "startup|avvia all'avvio|boot|in background"
+}

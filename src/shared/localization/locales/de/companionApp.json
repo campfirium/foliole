@@ -1,0 +1,11 @@
+{
+  "companion.app.retry": "Wiederholen",
+  "companion.app.starting.eyebrow": "Companion-Laufzeit",
+  "companion.app.starting.message": "Vorbereiten einer stabilen Geräteidentität und eines lokalen Begleitspeichers, bevor die Themenoberfläche geladen wird.",
+  "companion.app.starting.title": "Companion Runtime wird gestartet",
+  "companion.app.bootstrap.module": "Companion-Bootstrap",
+  "companion.app.bootstrapFailed": "Companion-Bootstrap fehlgeschlagen",
+  "companion.app.iosPrepared.eyebrow": "Foliole für iPhone",
+  "companion.app.iosPrepared.message": "Der lokale Speicher ist bereit. Das Durchsuchen, Überprüfen und Synchronisieren von Themen ist in diesem Build nicht verfügbar.",
+  "companion.app.iosPrepared.title": "Dieses iPhone ist fertig"
+}

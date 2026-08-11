@@ -1,0 +1,10 @@
+{
+  "companion.sync.joinRequest.description": "Dieses Gerät möchte deiner Synchronisierungsgruppe beitreten.",
+  "companion.sync.joinRequest.approve": "Genehmigen",
+  "companion.sync.joinRequest.reject": "Ablehnen",
+  "companion.sync.leave.button": "Synchronisierungsgruppe verlassen",
+  "companion.sync.leave.description": "Dieses Gerät wird nicht mehr mit dieser Synchronisierungsgruppe synchronisiert. Themen und Anhänge bleiben auf diesem Gerät.",
+  "companion.sync.leave.error": "Foliole konnte das Verlassen nicht mit einem anderen Gerät bestätigen. Versuche es erneut, wenn ein anderes Gerät verfügbar ist.",
+  "companion.sync.leave.progress": "Synchronisierungsgruppe wird verlassen",
+  "companion.sync.provider.foregroundHint": "Foliole hält den Bildschirm während des Sendens aktiv. Wenn du die App wechselst oder das Gerät sperrst, pausiert die Synchronisierung, bis du zurückkehrst."
+}

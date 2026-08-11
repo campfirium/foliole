@@ -1,0 +1,20 @@
+{
+  "settings.companionSync.group.title": "동기화 그룹",
+  "settings.companionSync.group.description": "그룹을 만들 때 이 이름이 저장됩니다.",
+  "settings.companionSync.group.empty.description": "새 동기화 그룹을 만들거나 이 네트워크의 활성 기기에서 그룹에 참여하세요.",
+  "settings.companionSync.group.join.title": "참여 요청",
+  "settings.companionSync.group.join.description": "알아보는 기기만 승인하세요.",
+  "settings.companionSync.group.join.approve": "승인",
+  "settings.companionSync.group.join.reject": "거부",
+  "settings.companionSync.group.create": "동기화 그룹 만들기",
+  "settings.companionSync.group.find": "동기화 그룹 찾기",
+  "settings.companionSync.group.join.complete": "참여 완료",
+  "settings.companionSync.group.join.waiting": "승인을 기다리는 중입니다. 승인 후 동기화가 자동으로 시작됩니다.",
+  "settings.companionSync.group.join.named": "{name} 참여",
+  "settings.companionSync.group.devices.title": "기기",
+  "settings.companionSync.group.devices.description": "다른 기기가 오프라인이어도 기기의 그룹 멤버십은 유지됩니다.",
+  "settings.companionSync.group.devices.find": "기기 찾기",
+  "settings.companionSync.group.devices.syncWith": "{name}와 동기화",
+  "settings.companionSync.group.member.active": "참여함",
+  "settings.companionSync.group.member.provisioning": "설정 중"
+}

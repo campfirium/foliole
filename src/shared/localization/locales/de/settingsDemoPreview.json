@@ -1,0 +1,18 @@
+{
+  "settings.demoPreview.banner.title": "Vorschau der Desktop-Einstellungen",
+  "settings.demoPreview.banner.description": "In diesem Bereich werden die vollständigen Desktop-Einstellungen angezeigt, sodass Sie die Funktionsstruktur von Foliole verstehen können. Änderungen hier haben keinen Einfluss auf die Online-Demo.",
+  "settings.demoPreview.control.desktopOnly": "Nur Desktop",
+  "settings.demoPreview.control.previewOnly": "Nur Vorschau",
+  "settings.demoPreview.downloadDesktop": "Desktop-App herunterladen",
+  "settings.demoPreview.empty": "Vorschau nicht verfügbar",
+  "settings.demoPreview.emptyDescription": "Diese Einstellungskategorie wird in der Desktop-App dargestellt.",
+  "settings.demoPreview.about.title": "Über Foliole",
+  "settings.demoPreview.hotkeys.title": "Tastaturkürzel",
+  "settings.demoPreview.hotkeys.search": "Suchverknüpfung",
+  "settings.demoPreview.hotkeys.settings": "Verknüpfung zu Einstellungen",
+  "settings.demoPreview.hotkeys.study": "Lernverknüpfung",
+  "settings.demoPreview.mouseGestures.title": "Mausgestenverhalten",
+  "settings.demoPreview.readwise.status": "Readwise Leserstatus",
+  "settings.demoPreview.note.label": "Ordnerzugriff",
+  "settings.demoPreview.note.externalFolders": "Externe Ordnerfunktionen werden in dieser Demo vereinfacht. Die Desktop-App bietet das volle Erlebnis."
+}

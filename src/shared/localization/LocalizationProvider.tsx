@@ -41,7 +41,7 @@ export function LocalizationProvider({ children, initialLanguagePreference }: Lo
   const [locale, setLocaleState] = useState(() =>
     initialLanguagePreference ? resolveAppLocale(initialLanguagePreference) : getStoredAppLocale()
   );
-  const [, setCatalogVersion] = useState(0);
+  const [catalogVersion, setCatalogVersion] = useState(0);
   const catalogReady = hasTranslationCatalog(locale);
   const setLocale = useCallback((nextLocale: AppLocale) => {
     setStoredAppLocale(nextLocale);
@@ -53,7 +53,10 @@ export function LocalizationProvider({ children, initialLanguagePreference }: Lo
     setLanguagePreferenceState(nextPreference);
     setLocaleState(resolveAppLocale(nextPreference));
   }, []);
-  const t = useCallback((key: TranslationKey, params?: TranslationParams) => translate(locale, key, params), [locale]);
+  const t = useCallback(
+    (key: TranslationKey, params?: TranslationParams) => translate(locale, key, params),
+    [catalogVersion, locale]
+  );
   const value = useMemo(
     () => ({ languagePreference, locale, setLanguagePreference, setLocale, t }),
     [languagePreference, locale, setLanguagePreference, setLocale, t]
@@ -63,8 +66,8 @@ export function LocalizationProvider({ children, initialLanguagePreference }: Lo
       return undefined;
     }
     let active = true;
-    void preloadTranslationCatalog(locale).then(() => {
-      if (active) {
+    void preloadTranslationCatalog(locale).then((loaded) => {
+      if (active && loaded) {
         setCatalogVersion((version) => version + 1);
       }
     });
@@ -73,9 +76,6 @@ export function LocalizationProvider({ children, initialLanguagePreference }: Lo
     };
   }, [catalogReady, locale]);
 
-  if (!catalogReady) {
-    return null;
-  }
   return <LocalizationContext.Provider value={value}>{children}</LocalizationContext.Provider>;
 }
 

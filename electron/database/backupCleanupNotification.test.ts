@@ -4,13 +4,13 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 const notificationMocks = vi.hoisted(() => ({
   construct: vi.fn(),
-  getLocale: vi.fn(() => 'en-US'),
+  getPreferredSystemLanguages: vi.fn(() => ['en-US']),
   isSupported: vi.fn(() => true),
   show: vi.fn()
 }));
 
 vi.mock('electron', () => ({
-  app: { getLocale: notificationMocks.getLocale },
+  app: { getPreferredSystemLanguages: notificationMocks.getPreferredSystemLanguages },
   Notification: class Notification {
     static isSupported = notificationMocks.isSupported;
     constructor(public options: unknown) {
@@ -26,7 +26,7 @@ import { showBackupCleanupNotification } from './backupCleanupNotification.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  notificationMocks.getLocale.mockReturnValue('en-US');
+  notificationMocks.getPreferredSystemLanguages.mockReturnValue(['en-US']);
   notificationMocks.isSupported.mockReturnValue(true);
 });
 
@@ -62,7 +62,7 @@ it('does not notify when nothing was deleted or notifications are unavailable', 
 });
 
 it('uses Chinese cleanup copy for Chinese locales', () => {
-  notificationMocks.getLocale.mockReturnValue('zh-CN');
+  notificationMocks.getPreferredSystemLanguages.mockReturnValue(['zh-CN', 'en-US']);
   expect(showBackupCleanupNotification({
     capacityDeletedCount: 0,
     deletedCount: 1,
@@ -74,6 +74,25 @@ it('uses Chinese cleanup copy for Chinese locales', () => {
     body: '根据保留规则删除了 1 份较早的备份，释放 10 MB。',
     title: '旧备份已清理'
   }));
+});
+
+it('uses English when Chinese is secondary, traditional, ambiguous, or absent', () => {
+  for (const languages of [['ko-KR', 'zh-CN'], ['zh-TW'], ['zh'], []]) {
+    vi.clearAllMocks();
+    notificationMocks.getPreferredSystemLanguages.mockReturnValue(languages);
+    notificationMocks.isSupported.mockReturnValue(true);
+
+    expect(showBackupCleanupNotification({
+      capacityDeletedCount: 0,
+      deletedCount: 1,
+      policyDeletedCount: 1,
+      releasedBytes: 10 * 1024 * 1024
+    })).toBe(true);
+    expect(notificationMocks.construct).toHaveBeenCalledWith(expect.objectContaining({
+      body: 'Retention rules removed 1 older backup and freed 10 MB.',
+      title: 'Older backups cleaned up'
+    }));
+  }
 });
 
 it('does not let notification failures escape into completed backup work', () => {

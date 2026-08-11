@@ -1,3 +1,4 @@
+import { APP_LOCALES } from '../../lib/core/localization/appLocaleRegistry';
 import type { AppLanguagePreference, AppLocale } from '../shared/localization/appLanguage';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
@@ -34,13 +35,18 @@ export function syncDemoUrlToNode(nodeId: string | null, locale = resolveCurrent
 export function resolveDemoLanguagePreferenceFromPath(pathname: string): AppLanguagePreference | undefined {
   const match = DEMO_ROUTE_LOCALE_PATTERN.exec(pathname);
   const locale = match?.[1]?.toLowerCase();
-  if (locale === 'en') return 'en';
-  if (locale === 'zh-hans') return 'zh-Hans';
-  return undefined;
+  return APP_LOCALES.find((candidate) => candidate.toLowerCase() === locale);
+}
+
+export function resolveDemoInitialLanguagePreference(
+  pathname: string,
+  persistedPreference: AppLanguagePreference | null
+): AppLanguagePreference | undefined {
+  return persistedPreference ?? resolveDemoLanguagePreferenceFromPath(pathname);
 }
 
 export function demoPathSegmentFromLocale(locale: AppLocale) {
-  return locale === 'zh-Hans' ? 'zh-hans' : 'en';
+  return locale.toLowerCase();
 }
 
 function resolveCurrentLocalePathSegment() {

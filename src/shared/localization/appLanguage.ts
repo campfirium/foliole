@@ -1,13 +1,24 @@
+import {
+  APP_LOCALE_MANIFEST,
+  APP_LOCALES,
+  resolveRegisteredAppLocale,
+  type RegisteredAppLocale
+} from '../../../lib/core/localization/appLocaleRegistry';
+import { readPrimaryLanguage } from '../../../lib/core/localization/systemLanguage';
 import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
 import {
   getWhitelistedLocalStorageItem,
   setWhitelistedLocalStorageItem
 } from '../platform/storage';
 
-const APP_LOCALES = ['en', 'zh-Hans'] as const;
-export type AppLocale = (typeof APP_LOCALES)[number];
-const APP_LANGUAGE_PREFERENCES = ['system', ...APP_LOCALES] as const;
+export type AppLocale = RegisteredAppLocale;
+export const APP_LANGUAGE_PREFERENCES = ['system', ...APP_LOCALES] as const;
 export type AppLanguagePreference = (typeof APP_LANGUAGE_PREFERENCES)[number];
+
+export const APP_LANGUAGE_OPTIONS = APP_LOCALES.map((locale) => ({
+  label: APP_LOCALE_MANIFEST[locale].nativeName,
+  value: locale
+}));
 
 const DEFAULT_APP_LOCALE: AppLocale = 'en';
 const DEFAULT_APP_LANGUAGE_PREFERENCE: AppLanguagePreference = 'system';
@@ -19,10 +30,6 @@ export function isAppLanguagePreference(value: string): value is AppLanguagePref
 
 function isAppLocale(value: string): value is AppLocale {
   return APP_LOCALES.includes(value as AppLocale);
-}
-
-function normalizeAppLanguagePreference(value: string | null | undefined): AppLanguagePreference {
-  return value && isAppLanguagePreference(value) ? value : DEFAULT_APP_LANGUAGE_PREFERENCE;
 }
 
 function resolveDevAppLocaleOverride(): AppLocale | null {
@@ -37,7 +44,7 @@ function resolveDevAppLocaleOverride(): AppLocale | null {
 }
 
 export function resolveSystemAppLocale(languages: readonly string[] = getNavigatorLanguages()): AppLocale {
-  return languages.some((language) => language.toLowerCase().startsWith('zh')) ? 'zh-Hans' : DEFAULT_APP_LOCALE;
+  return resolveRegisteredAppLocale(readPrimaryLanguage(languages)) ?? DEFAULT_APP_LOCALE;
 }
 
 export function resolveAppLocale(preference: AppLanguagePreference): AppLocale {
@@ -49,7 +56,12 @@ export function getStoredAppLocale(): AppLocale {
 }
 
 export function getStoredAppLanguagePreference(): AppLanguagePreference {
-  return normalizeAppLanguagePreference(getWhitelistedLocalStorageItem(APP_LANGUAGE_STORAGE_KEY));
+  return getPersistedAppLanguagePreference() ?? DEFAULT_APP_LANGUAGE_PREFERENCE;
+}
+
+export function getPersistedAppLanguagePreference(): AppLanguagePreference | null {
+  const storedPreference = getWhitelistedLocalStorageItem(APP_LANGUAGE_STORAGE_KEY);
+  return storedPreference && isAppLanguagePreference(storedPreference) ? storedPreference : null;
 }
 
 export function setStoredAppLanguagePreference(preference: AppLanguagePreference) {

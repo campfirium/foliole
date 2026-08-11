@@ -1,0 +1,11 @@
+{
+  "companion.app.retry": "재시도",
+  "companion.app.starting.eyebrow": "동반 런타임",
+  "companion.app.starting.message": "주제 표면이 로드되기 전에 안정적인 장치 ID 및 로컬 동반 저장소를 준비합니다.",
+  "companion.app.starting.title": "컴패니언 런타임 시작",
+  "companion.app.bootstrap.module": "동반 부트스트랩",
+  "companion.app.bootstrapFailed": "동반 부트스트랩 실패",
+  "companion.app.iosPrepared.eyebrow": "iPhone용 Foliole",
+  "companion.app.iosPrepared.message": "로컬 저장소가 준비되었습니다. 이 빌드에서는 주제 탐색, 검토 및 동기화를 사용할 수 없습니다.",
+  "companion.app.iosPrepared.title": "이 iPhone은 준비되었습니다"
+}

@@ -1,6 +1,9 @@
 import type { ComponentType, ReactNode } from 'react';
 
-import type { AppLanguagePreference } from '../shared/localization/appLanguage';
+import {
+  getPersistedAppLanguagePreference,
+  type AppLanguagePreference
+} from '../shared/localization/appLanguage';
 
 import { installDemoResumeShell } from './demoResumeShell';
 
@@ -26,7 +29,7 @@ const [
   { createBrowserLocalWorkspaceMutationRepository, installWorkspaceMutationRepository },
   { createDemoExternalFolderProvider },
   { createBrowserDemoRuntimeController },
-  { installDemoUrlSync, resolveDemoLanguagePreferenceFromPath },
+  { installDemoUrlSync, resolveDemoInitialLanguagePreference },
   { DemoUrlSyncBridge },
   { installDemoWorkspaceSnapshot },
   { App }
@@ -50,7 +53,10 @@ installDemoRuntimeController(createBrowserDemoRuntimeController());
 installExternalFolderRuntimeProvider(createDemoExternalFolderProvider());
 installWorkspaceMutationRepository(createBrowserLocalWorkspaceMutationRepository());
 installDemoUrlSync();
-const initialLanguagePreference = resolveDemoLanguagePreferenceFromPath(window.location.pathname);
+const initialLanguagePreference = resolveDemoInitialLanguagePreference(
+  window.location.pathname,
+  getPersistedAppLanguagePreference()
+);
 const DemoReact = React as typeof import('react');
 const DemoReactDOM = ReactDOM as typeof import('react-dom/client');
 const DemoApp = App as ComponentType<DemoAppProps>;

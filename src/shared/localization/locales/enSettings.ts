@@ -109,7 +109,7 @@ export const EN_SETTINGS_TRANSLATIONS = {
   'settings.search.editorFrontmatter.description': 'Fields shown under the title. Use commas for groups and | for aliases.',
   'settings.search.editorLongCloze.title': 'Long cloze mistake guard',
   'settings.search.editorLongCloze.description': 'When both length checks are exceeded, ask first, create a highlight, or allow the cloze.',
-  'settings.editor.liveMarkdown.section': 'Live markdown',
+  'settings.editor.liveMarkdown.section': 'Live Markdown',
   'settings.editor.liveMarkdown.aria': 'Editor settings section',
   'settings.editor.annotation.section': 'Annotations',
   'settings.editor.annotation.aria': 'Annotation settings section',

@@ -1,0 +1,18 @@
+{
+  "settings.demoPreview.banner.title": "Anteprima impostazioni desktop",
+  "settings.demoPreview.banner.description": "Questo pannello mostra le impostazioni complete del desktop, così puoi comprendere la struttura delle funzionalità di Foliole. Le modifiche qui non influiscono sulla demo online.",
+  "settings.demoPreview.control.desktopOnly": "Solo desktop",
+  "settings.demoPreview.control.previewOnly": "Solo anteprima",
+  "settings.demoPreview.downloadDesktop": "Scarica l'applicazione desktop",
+  "settings.demoPreview.empty": "Anteprima non disponibile",
+  "settings.demoPreview.emptyDescription": "Questa categoria di impostazioni è rappresentata nell'app desktop.",
+  "settings.demoPreview.about.title": "Informazioni su Foliole",
+  "settings.demoPreview.hotkeys.title": "Scorciatoie da tastiera",
+  "settings.demoPreview.hotkeys.search": "Scorciatoia per la ricerca",
+  "settings.demoPreview.hotkeys.settings": "Collegamento alle impostazioni",
+  "settings.demoPreview.hotkeys.study": "Scorciatoia per lo studio",
+  "settings.demoPreview.mouseGestures.title": "Comportamento dei gesti del mouse",
+  "settings.demoPreview.readwise.status": "Readwise Stato del lettore",
+  "settings.demoPreview.note.label": "Accesso alle cartelle",
+  "settings.demoPreview.note.externalFolders": "Le funzionalità delle cartelle esterne sono semplificate in questa demo. L'app desktop include l'esperienza completa."
+}

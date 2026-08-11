@@ -1,0 +1,17 @@
+{
+  "companion.reading.font.size": "크기",
+  "companion.reading.font.size.small": "소형",
+  "companion.reading.font.size.default": "Default",
+  "companion.reading.font.size.large": "대형",
+  "companion.reading.font.size.xlarge": "초대형",
+  "companion.reading.font.lineHeight": "줄 높이",
+  "companion.reading.font.lineHeight.compact": "컴팩트",
+  "companion.reading.font.lineHeight.default": "Default",
+  "companion.reading.font.lineHeight.relaxed": "편안한",
+  "companion.reading.font.family": "서체",
+  "companion.reading.font.family.sans": "산스",
+  "companion.reading.font.family.serif": "세리프체",
+  "companion.reading.font.contrast": "신체 대비",
+  "companion.reading.font.contrast.default": "Default",
+  "companion.reading.font.contrast.high": "높음"
+}

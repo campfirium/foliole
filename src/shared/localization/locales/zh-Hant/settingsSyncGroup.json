@@ -1,0 +1,20 @@
+{
+  "settings.companionSync.group.title": "同步群組",
+  "settings.companionSync.group.description": "群組名稱會在建立時儲存。",
+  "settings.companionSync.group.empty.description": "建立新的同步群組，或加入目前網路中活躍裝置提供的同步群組。",
+  "settings.companionSync.group.join.title": "加入要求",
+  "settings.companionSync.group.join.description": "只核准你認得的裝置。",
+  "settings.companionSync.group.join.approve": "核准",
+  "settings.companionSync.group.join.reject": "拒絕",
+  "settings.companionSync.group.create": "建立同步群組",
+  "settings.companionSync.group.find": "尋找同步群組",
+  "settings.companionSync.group.join.complete": "完成加入",
+  "settings.companionSync.group.join.waiting": "正在等待核准；核准後會自動開始同步。",
+  "settings.companionSync.group.join.named": "加入 {name}",
+  "settings.companionSync.group.devices.title": "裝置",
+  "settings.companionSync.group.devices.description": "其他裝置離線時，本裝置仍會保留成員身分。",
+  "settings.companionSync.group.devices.find": "尋找裝置",
+  "settings.companionSync.group.devices.syncWith": "與 {name} 同步",
+  "settings.companionSync.group.member.active": "已加入",
+  "settings.companionSync.group.member.provisioning": "正在設定"
+}

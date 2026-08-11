@@ -1,0 +1,14 @@
+{
+  "settings.capture.sectionAria": "Impostazioni di acquisizione globali",
+  "settings.capture.sectionTitle": "Cattura globale",
+  "settings.capture.permission.title": "Accesso alla selezione",
+  "settings.capture.permission.granted": "Foliole può copiare la selezione corrente quando si esegue l'acquisizione globale.",
+  "settings.capture.permission.denied": "Consenti Foliole in Impostazioni di sistema → Privacy e sicurezza → Accessibilità.",
+  "settings.capture.permission.unavailable": "L'accesso alla selezione non è disponibile su questo Mac.",
+  "settings.capture.permission.notRequired": "Non è richiesta alcuna autorizzazione di selezione aggiuntiva su questo dispositivo.",
+  "settings.capture.permission.unsupported": "L'acquisizione globale non è disponibile su questo dispositivo.",
+  "settings.capture.position.title": "Posizione di conferma",
+  "settings.capture.position.description": "Scegli dove visualizzare le conferme di acquisizione su questo Mac.",
+  "settings.capture.position.topRight": "In alto a destra",
+  "settings.capture.position.bottomRight": "In basso a destra"
+}

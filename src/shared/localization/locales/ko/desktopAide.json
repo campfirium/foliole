@@ -1,0 +1,18 @@
+{
+  "desktop.rightPanel.assistant.model.settings": "모델 및 성능 설정",
+  "desktop.rightPanel.assistant.model.loading": "사용 가능한 모델 및 성능 설정 로드 중...",
+  "desktop.rightPanel.assistant.model.unavailable": "모델 및 성능 설정을 사용할 수 없습니다. 메시지는 Codex 기본값을 사용합니다.",
+  "desktop.rightPanel.assistant.model.tooltip": "모델: {model} · 추론: {effort} · 속도: {speed}",
+  "desktop.rightPanel.assistant.model.model": "모델",
+  "desktop.rightPanel.assistant.model.reasoning": "추론",
+  "desktop.rightPanel.assistant.model.effort.none": "없음",
+  "desktop.rightPanel.assistant.model.effort.minimal": "최소한의",
+  "desktop.rightPanel.assistant.model.effort.low": "낮음",
+  "desktop.rightPanel.assistant.model.effort.medium": "중간",
+  "desktop.rightPanel.assistant.model.effort.high": "높음",
+  "desktop.rightPanel.assistant.model.effort.xhigh": "매우 높음",
+  "desktop.rightPanel.assistant.model.effort.max": "맥스",
+  "desktop.rightPanel.assistant.model.effort.ultra": "울트라",
+  "desktop.rightPanel.assistant.model.speed": "속도",
+  "desktop.rightPanel.assistant.model.defaultSpeed": "Default"
+}

@@ -1,3 +1,5 @@
+import { SIMPLIFIED_CHINESE_LANGUAGE_TAG_PATTERN_SOURCE } from '../lib/core/localization/systemLanguage.js';
+
 export function buildFloatingThemeReadScript() {
   return `
       (() => {
@@ -6,7 +8,7 @@ export function buildFloatingThemeReadScript() {
           hasAppTheme: true,
           ${buildThemeValueFieldsScript()}
           hintVisible: true,
-          strings: ${buildThemeStringsScript()}
+          strings: ${buildFloatingThemeStringsScript()}
         };
       })()
     `;
@@ -24,7 +26,7 @@ function buildThemeReadPrelude() {
           if (storedMode === 'dark' || storedMode === 'light') return storedMode;
           return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         };
-        if (!hasAppTheme) return { hasAppTheme: false, resolvedBaseColor: readResolvedBaseColor(), strings: ${buildThemeStringsScript()} };
+        if (!hasAppTheme) return { hasAppTheme: false, resolvedBaseColor: readResolvedBaseColor(), strings: ${buildFloatingThemeStringsScript()} };
         const readColor = (property, value, fallback) => {
           const probe = document.createElement('div');
           probe.style[property] = value;
@@ -73,11 +75,13 @@ function buildThemeValueFieldsScript() {
           divider: readColor('borderColor', 'var(--app-shellless-divider-color)', 'rgba(32, 33, 36, 0.10)'),`;
 }
 
-function buildThemeStringsScript() {
+export function buildFloatingThemeStringsScript() {
   return `(() => {
             const preference = localStorage.getItem('foliole-app-language');
             const languages = Array.from(navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language]).filter(Boolean);
-            const usesChinese = preference === 'zh-Hans' || (preference !== 'en' && languages.some((language) => language.toLowerCase().startsWith('zh')));
+            const primaryLanguage = String(languages[0] || '').trim().toLowerCase().replaceAll('_', '-');
+            const simplifiedChinesePattern = new RegExp(${JSON.stringify(SIMPLIFIED_CHINESE_LANGUAGE_TAG_PATTERN_SOURCE)}, 'u');
+            const usesChinese = preference === 'zh-Hans' || (preference !== 'en' && simplifiedChinesePattern.test(primaryLanguage));
             return usesChinese
               ? { hideHint: '×', hideHintLabel: '隐藏提示', hint: '回车保存，空白时导入剪贴板', locale: 'zh-Hans', showHint: '?', showHintLabel: '显示提示', placeholder: '...', save: '保存' }
               : { hideHint: '×', hideHintLabel: 'Hide shortcut hint', hint: 'Enter saves. Empty input imports the clipboard.', locale: 'en', showHint: '?', showHintLabel: 'Show shortcut hint', placeholder: '...', save: 'Save' };

@@ -1,0 +1,17 @@
+{
+  "companion.reading.font.size": "サイズ",
+  "companion.reading.font.size.small": "小",
+  "companion.reading.font.size.default": "Default",
+  "companion.reading.font.size.large": "大",
+  "companion.reading.font.size.xlarge": "特大",
+  "companion.reading.font.lineHeight": "行の高さ",
+  "companion.reading.font.lineHeight.compact": "コンパクト",
+  "companion.reading.font.lineHeight.default": "Default",
+  "companion.reading.font.lineHeight.relaxed": "リラックス",
+  "companion.reading.font.family": "書体",
+  "companion.reading.font.family.sans": "サンズ",
+  "companion.reading.font.family.serif": "セリフ",
+  "companion.reading.font.contrast": "ボディコントラスト",
+  "companion.reading.font.contrast.default": "Default",
+  "companion.reading.font.contrast.high": "高"
+}

@@ -1,0 +1,17 @@
+{
+  "companion.reading.font.size": "Tamaño",
+  "companion.reading.font.size.small": "Pequeño",
+  "companion.reading.font.size.default": "Default",
+  "companion.reading.font.size.large": "Grande",
+  "companion.reading.font.size.xlarge": "Extra grande",
+  "companion.reading.font.lineHeight": "Alto de línea",
+  "companion.reading.font.lineHeight.compact": "Compacto",
+  "companion.reading.font.lineHeight.default": "Default",
+  "companion.reading.font.lineHeight.relaxed": "Relajado",
+  "companion.reading.font.family": "Tipo de letra",
+  "companion.reading.font.family.sans": "Sin",
+  "companion.reading.font.family.serif": "Serifa",
+  "companion.reading.font.contrast": "Contraste corporal",
+  "companion.reading.font.contrast.default": "Default",
+  "companion.reading.font.contrast.high": "Alto"
+}

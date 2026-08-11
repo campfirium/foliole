@@ -1,0 +1,14 @@
+{
+  "settings.capture.sectionAria": "Globalne ustawienia przechwytywania",
+  "settings.capture.sectionTitle": "Globalne przechwytywanie",
+  "settings.capture.permission.title": "Dostęp do wyboru",
+  "settings.capture.permission.granted": "Foliole może skopiować bieżący wybór po uruchomieniu przechwytywania globalnego.",
+  "settings.capture.permission.denied": "Zezwól na Foliole w Ustawieniach systemu → Prywatność i bezpieczeństwo → Dostępność.",
+  "settings.capture.permission.unavailable": "Dostęp do zaznaczania jest niedostępny na tym komputerze Mac.",
+  "settings.capture.permission.notRequired": "Na tym urządzeniu nie są wymagane żadne dodatkowe uprawnienia do wyboru.",
+  "settings.capture.permission.unsupported": "Przechwytywanie globalne jest niedostępne na tym urządzeniu.",
+  "settings.capture.position.title": "Stanowisko potwierdzenia",
+  "settings.capture.position.description": "Wybierz, gdzie na tym Macu mają pojawiać się potwierdzenia przechwytywania.",
+  "settings.capture.position.topRight": "U góry po prawej",
+  "settings.capture.position.bottomRight": "Prawy dolny róg"
+}

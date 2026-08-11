@@ -1,0 +1,11 @@
+{
+  "companion.capture.title": "Захват",
+  "companion.capture.text": "Захват текста",
+  "companion.capture.placeholder": "Введите или произнесите новую тему",
+  "companion.capture.paste": "Вставить из буфера обмена",
+  "companion.capture.upload": "Загрузить файл",
+  "companion.capture.save": "Сохранить",
+  "companion.capture.saving": "Сохранение...",
+  "companion.capture.error.inboxUnavailable": "Синхронизируйте это устройство, прежде чем сохранять новую тему.",
+  "companion.capture.error.saveFailed": "Не удалось сохранить тему. Попробуйте еще раз."
+}

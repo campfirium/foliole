@@ -1,0 +1,22 @@
+{
+  "desktop.wordpressPublish.dialogTitle": "Publish to WordPress",
+  "desktop.wordpressPublish.postTitle": "Título de la publicación",
+  "desktop.wordpressPublish.target": "Sitio de destino",
+  "desktop.wordpressPublish.mode": "Acción",
+  "desktop.wordpressPublish.mode.create": "Crear una nueva publicación",
+  "desktop.wordpressPublish.mode.update": "Actualizar la publicación conectada",
+  "desktop.wordpressPublish.status": "Estado de la publicación",
+  "desktop.wordpressPublish.status.draft": "Borrador",
+  "desktop.wordpressPublish.status.publish": "Publicar",
+  "desktop.wordpressPublish.category.placeholder": "Elige una categoría",
+  "desktop.wordpressPublish.category.create": "Crear “{name}”",
+  "desktop.wordpressPublish.catalog.loading": "Cargando categorías y etiquetas",
+  "desktop.wordpressPublish.catalog.error": "No se pudieron cargar categorías y etiquetas. Intente abrir el panel nuevamente.",
+  "desktop.wordpressPublish.confirm": "Publicar",
+  "desktop.wordpressPublish.publishing": "Publicando...",
+  "desktop.wordpressPublish.created": "Publicado en WordPress.",
+  "desktop.wordpressPublish.updated": "Actualizado el WordPress.",
+  "desktop.wordpressPublish.viewPost": "Ver publicación",
+  "desktop.wordpressPublish.error.publish": "No se pudo publicar en WordPress.",
+  "desktop.wordpressPublish.error.localSave": "La publicación se guardó de forma remota, pero Foliole no pudo guardar el enlace de la publicación."
+}

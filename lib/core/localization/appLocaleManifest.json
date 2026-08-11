@@ -1,0 +1,16 @@
+{
+  "locales": {
+    "en": { "nativeName": "English", "systemLanguagePrefixes": ["en"] },
+    "de": { "nativeName": "Deutsch", "systemLanguagePrefixes": ["de"] },
+    "es": { "nativeName": "Español", "systemLanguagePrefixes": ["es"] },
+    "fr": { "nativeName": "Français", "systemLanguagePrefixes": ["fr"] },
+    "it": { "nativeName": "Italiano", "systemLanguagePrefixes": ["it"] },
+    "ja": { "nativeName": "日本語", "systemLanguagePrefixes": ["ja"] },
+    "ko": { "nativeName": "한국어", "systemLanguagePrefixes": ["ko"] },
+    "pl": { "nativeName": "Polski", "systemLanguagePrefixes": ["pl"] },
+    "pt-BR": { "nativeName": "Português (Brasil)", "systemLanguageTags": ["pt", "pt-br"] },
+    "ru": { "nativeName": "Русский", "systemLanguagePrefixes": ["ru"] },
+    "zh-Hans": { "nativeName": "简体中文", "systemLanguagePrefixes": ["zh-cn", "zh-sg", "zh-hans"] },
+    "zh-Hant": { "nativeName": "繁體中文", "systemLanguagePrefixes": ["zh-tw", "zh-hk", "zh-mo", "zh-hant"] }
+  }
+}

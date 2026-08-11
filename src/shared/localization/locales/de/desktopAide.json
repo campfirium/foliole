@@ -1,0 +1,18 @@
+{
+  "desktop.rightPanel.assistant.model.settings": "Modell- und Leistungseinstellungen",
+  "desktop.rightPanel.assistant.model.loading": "Verfügbare Modelle und Leistungseinstellungen werden geladen...",
+  "desktop.rightPanel.assistant.model.unavailable": "Modell- und Leistungseinstellungen sind nicht verfügbar. Für Nachrichten wird die Codex-Standardeinstellung verwendet.",
+  "desktop.rightPanel.assistant.model.tooltip": "Modell: {model} · Begründung: {effort} · Geschwindigkeit: {speed}",
+  "desktop.rightPanel.assistant.model.model": "Modell",
+  "desktop.rightPanel.assistant.model.reasoning": "Begründung",
+  "desktop.rightPanel.assistant.model.effort.none": "Keine",
+  "desktop.rightPanel.assistant.model.effort.minimal": "Minimal",
+  "desktop.rightPanel.assistant.model.effort.low": "Niedrig",
+  "desktop.rightPanel.assistant.model.effort.medium": "Mittel",
+  "desktop.rightPanel.assistant.model.effort.high": "Hoch",
+  "desktop.rightPanel.assistant.model.effort.xhigh": "Extra hoch",
+  "desktop.rightPanel.assistant.model.effort.max": "Max",
+  "desktop.rightPanel.assistant.model.effort.ultra": "Ultra",
+  "desktop.rightPanel.assistant.model.speed": "Geschwindigkeit",
+  "desktop.rightPanel.assistant.model.defaultSpeed": "Default"
+}

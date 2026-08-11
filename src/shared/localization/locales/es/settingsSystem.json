@@ -1,0 +1,14 @@
+{
+  "settings.general.system.section": "Sistema",
+  "settings.general.system.aria": "Configuración del sistema",
+  "settings.general.openAtLogin.title": "Inicia Foliole automáticamente",
+  "settings.general.openAtLogin.description": "Mantenga la sincronización local y el clip global disponibles después del inicio.",
+  "settings.general.openAtLogin.ineffective": "Windows ha deshabilitado este elemento de inicio.",
+  "settings.general.openAtLogin.requiresApproval": "Permitir Foliole en Configuración del sistema > General > Elementos de inicio de sesión.",
+  "settings.general.openAtLogin.error": "macOS no pudo encontrar este elemento de inicio de sesión. Intente encenderlo nuevamente.",
+  "settings.general.openAtLogin.unsupported": "El inicio automático no está disponible en esta compilación.",
+  "settings.general.openAtLogin.aria": "Inicia Foliole automáticamente",
+  "settings.search.generalOpenAtLogin.title": "Inicia Foliole automáticamente",
+  "settings.search.generalOpenAtLogin.description": "Inicie Foliole automáticamente en instalaciones de escritorio compatibles.",
+  "settings.search.generalOpenAtLogin.terms": "inicio|iniciar al inicio|arranque|fondo"
+}

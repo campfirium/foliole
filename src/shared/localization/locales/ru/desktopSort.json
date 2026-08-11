@@ -1,0 +1,15 @@
+{
+  "desktop.sort.order.az": "А -> Я",
+  "desktop.sort.order.za": "Я -> А",
+  "desktop.sort.order.newest": "Сначала самые новые",
+  "desktop.sort.order.oldest": "Сначала самый старый",
+  "desktop.sort.order.manual": "Ручной заказ",
+  "desktop.sort.key.dateModified": "Дата изменения",
+  "desktop.sort.key.lastOpened": "Последнее открытие",
+  "desktop.sort.key.name": "Имя",
+  "desktop.sort.key.manual": "Руководство",
+  "desktop.sort.fallback.dateImported": "Дата импорта",
+  "desktop.sort.listBy": "Сортировать список по {label}",
+  "desktop.sort.sortBy": "Сортировать по",
+  "desktop.sort.order": "Заказать"
+}

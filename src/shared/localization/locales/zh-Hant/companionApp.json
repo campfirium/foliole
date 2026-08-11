@@ -1,0 +1,11 @@
+{
+  "companion.app.retry": "重試",
+  "companion.app.starting.eyebrow": "伴侶運作時",
+  "companion.app.starting.message": "在主題表面加載之前準備穩定的設備身份和本地配套存儲。",
+  "companion.app.starting.title": "啟動伴隨運轉時",
+  "companion.app.bootstrap.module": "同伴引導程式",
+  "companion.app.bootstrapFailed": "同伴引導失敗",
+  "companion.app.iosPrepared.eyebrow": "iPhone 版 Foliole",
+  "companion.app.iosPrepared.message": "本地儲存已準備就緒。此版本中不提供主題瀏覽、審閱和同步。",
+  "companion.app.iosPrepared.title": "這款 iPhone 已準備就緒"
+}

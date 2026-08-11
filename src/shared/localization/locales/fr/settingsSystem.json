@@ -1,0 +1,14 @@
+{
+  "settings.general.system.section": "",
+  "settings.general.system.aria": "Paramètres système",
+  "settings.general.openAtLogin.title": "Démarre Foliole automatiquement",
+  "settings.general.openAtLogin.description": "Gardez la synchronisation locale et le clip global disponibles après le démarrage.",
+  "settings.general.openAtLogin.ineffective": "Windows a désactivé cet élément de démarrage.",
+  "settings.general.openAtLogin.requiresApproval": "Autorisez Foliole dans Paramètres système > Général > Éléments de connexion.",
+  "settings.general.openAtLogin.error": "macOS n'a pas trouvé cet élément de connexion. Essayez de le rallumer.",
+  "settings.general.openAtLogin.unsupported": "Le démarrage automatique n'est pas disponible dans cette version.",
+  "settings.general.openAtLogin.aria": "Démarrer Foliole automatiquement",
+  "settings.search.generalOpenAtLogin.title": "Démarrer Foliole automatiquement",
+  "settings.search.generalOpenAtLogin.description": "Démarrez automatiquement Foliole sur les installations de bureau prises en charge.",
+  "settings.search.generalOpenAtLogin.terms": "démarrage|lancement au démarrage|démarrage|arrière-plan"
+}

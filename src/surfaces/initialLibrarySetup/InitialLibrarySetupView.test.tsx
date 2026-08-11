@@ -16,6 +16,11 @@ vi.mock('../../shared/platform/initialLibrarySetupRuntime', () => ({
 import { InitialLibrarySetupView } from './InitialLibrarySetupView';
 
 beforeEach(() => {
+  window.localStorage.clear();
+  Object.defineProperty(window.navigator, 'languages', {
+    configurable: true,
+    value: ['en-US']
+  });
   mocks.load.mockResolvedValue({
     display_path: '~/Documents/Foliole',
     library_home: '/Users/tester/Documents/Foliole',
@@ -23,6 +28,18 @@ beforeEach(() => {
   });
   mocks.choose.mockResolvedValue({ status: 'canceled' });
   mocks.confirm.mockResolvedValue({ status: 'confirmed' });
+});
+
+it('keeps setup in English when Chinese is not the primary system language', async () => {
+  Object.defineProperty(window.navigator, 'languages', {
+    configurable: true,
+    value: ['ko-KR', 'zh-CN']
+  });
+
+  render(<InitialLibrarySetupView />);
+
+  expect(await screen.findByText('Welcome to Foliole')).toBeInTheDocument();
+  expect(screen.queryByText('欢迎使用 Foliole')).not.toBeInTheDocument();
 });
 
 it('shows one library path with equal primary and secondary actions', async () => {

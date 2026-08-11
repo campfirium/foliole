@@ -177,7 +177,7 @@ export const ZH_HANS_DESKTOP_NAVIGATION_TRANSLATIONS: Partial<Record<Translation
   'desktop.rightPanel.flow.empty': '当前没有可用的 Flow 主题。',
   'desktop.rightPanel.flow.scheduledLater': '稍后出现',
   'desktop.rightPanel.flow.demo.dayGroup': 'Day {day}',
-  'desktop.rightPanel.flow.demo.laterGroup': '后续',
+  'desktop.rightPanel.flow.demo.laterGroup': 'Later',
   'desktop.rightPanel.flow.demo.notice': 'Demo Flow 提示',
   'desktop.rightPanel.flow.demo.dayClearTitle': 'Day {day} 已完成。',
   'desktop.rightPanel.flow.demo.dayClearDescription':

@@ -1,0 +1,14 @@
+{
+  "settings.general.system.section": "Sistema",
+  "settings.general.system.aria": "Configurações do sistema",
+  "settings.general.openAtLogin.title": "Iniciar Foliole automaticamente",
+  "settings.general.openAtLogin.description": "Mantenha a sincronização local e o clipe global disponíveis após a inicialização.",
+  "settings.general.openAtLogin.ineffective": "Windows desativou este item de inicialização.",
+  "settings.general.openAtLogin.requiresApproval": "Permitir Foliole em Configurações do sistema > Geral > Itens de login.",
+  "settings.general.openAtLogin.error": "macOS não conseguiu encontrar este item de login. Tente ligá-lo novamente.",
+  "settings.general.openAtLogin.unsupported": "A inicialização automática não está disponível nesta compilação.",
+  "settings.general.openAtLogin.aria": "Iniciar Foliole automaticamente",
+  "settings.search.generalOpenAtLogin.title": "Iniciar Foliole automaticamente",
+  "settings.search.generalOpenAtLogin.description": "Inicie Foliole automaticamente em instalações de desktop suportadas.",
+  "settings.search.generalOpenAtLogin.terms": "inicialização | inicialização na inicialização | inicialização | plano de fundo"
+}

@@ -1,0 +1,18 @@
+{
+  "settings.demoPreview.banner.title": "Visualização das configurações da área de trabalho",
+  "settings.demoPreview.banner.description": "Este painel mostra as configurações completas da área de trabalho, para que você possa entender a estrutura de recursos do Foliole. As alterações aqui não afetam a demonstração online.",
+  "settings.demoPreview.control.desktopOnly": "Somente desktop",
+  "settings.demoPreview.control.previewOnly": "Somente visualização",
+  "settings.demoPreview.downloadDesktop": "Baixe o aplicativo para desktop",
+  "settings.demoPreview.empty": "Visualização indisponível",
+  "settings.demoPreview.emptyDescription": "Esta categoria de configurações é representada no aplicativo de desktop.",
+  "settings.demoPreview.about.title": "Sobre Foliole",
+  "settings.demoPreview.hotkeys.title": "Atalhos de teclado",
+  "settings.demoPreview.hotkeys.search": "Atalho de pesquisa",
+  "settings.demoPreview.hotkeys.settings": "Atalho de configurações",
+  "settings.demoPreview.hotkeys.study": "Atalho de estudo",
+  "settings.demoPreview.mouseGestures.title": "Comportamento do gesto do mouse",
+  "settings.demoPreview.readwise.status": "Readwise Status do leitor",
+  "settings.demoPreview.note.label": "Acesso à pasta",
+  "settings.demoPreview.note.externalFolders": "Os recursos de pasta externa são simplificados nesta demonstração. O aplicativo de desktop inclui a experiência completa."
+}

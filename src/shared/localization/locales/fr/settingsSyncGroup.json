@@ -1,0 +1,20 @@
+{
+  "settings.companionSync.group.title": "Groupe de synchronisation",
+  "settings.companionSync.group.description": "Ce nom est enregistré lors de la création du groupe.",
+  "settings.companionSync.group.empty.description": "Créez un groupe de synchronisation ou rejoignez-en un depuis un appareil actif sur ce réseau.",
+  "settings.companionSync.group.join.title": "Demandes d’adhésion",
+  "settings.companionSync.group.join.description": "N’approuvez que les appareils que vous reconnaissez.",
+  "settings.companionSync.group.join.approve": "Approuver",
+  "settings.companionSync.group.join.reject": "Refuser",
+  "settings.companionSync.group.create": "Créer un groupe de synchronisation",
+  "settings.companionSync.group.find": "Rechercher un groupe de synchronisation",
+  "settings.companionSync.group.join.complete": "Terminer l’adhésion",
+  "settings.companionSync.group.join.waiting": "En attente d’approbation. La synchronisation démarrera ensuite automatiquement.",
+  "settings.companionSync.group.join.named": "Rejoindre {name}",
+  "settings.companionSync.group.devices.title": "Appareils",
+  "settings.companionSync.group.devices.description": "Les appareils conservent leur adhésion lorsqu’un autre appareil est hors ligne.",
+  "settings.companionSync.group.devices.find": "Rechercher des appareils",
+  "settings.companionSync.group.devices.syncWith": "Synchroniser avec {name}",
+  "settings.companionSync.group.member.active": "Membre",
+  "settings.companionSync.group.member.provisioning": "Configuration"
+}

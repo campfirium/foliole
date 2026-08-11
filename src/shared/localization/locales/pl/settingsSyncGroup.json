@@ -1,0 +1,20 @@
+{
+  "settings.companionSync.group.title": "Grupa synchronizacji",
+  "settings.companionSync.group.description": "Ta nazwa jest zapisywana podczas tworzenia grupy.",
+  "settings.companionSync.group.empty.description": "Utwórz grupę synchronizacji lub dołącz do niej z aktywnego urządzenia w tej sieci.",
+  "settings.companionSync.group.join.title": "Prośby o dołączenie",
+  "settings.companionSync.group.join.description": "Zatwierdzaj tylko rozpoznawane urządzenia.",
+  "settings.companionSync.group.join.approve": "Zatwierdź",
+  "settings.companionSync.group.join.reject": "Odrzuć",
+  "settings.companionSync.group.create": "Utwórz grupę synchronizacji",
+  "settings.companionSync.group.find": "Znajdź grupę synchronizacji",
+  "settings.companionSync.group.join.complete": "Zakończ dołączanie",
+  "settings.companionSync.group.join.waiting": "Oczekiwanie na zatwierdzenie. Synchronizacja rozpocznie się później automatycznie.",
+  "settings.companionSync.group.join.named": "Dołącz do {name}",
+  "settings.companionSync.group.devices.title": "Urządzenia",
+  "settings.companionSync.group.devices.description": "Urządzenia zachowują członkostwo, gdy inne urządzenie jest offline.",
+  "settings.companionSync.group.devices.find": "Znajdź urządzenia",
+  "settings.companionSync.group.devices.syncWith": "Synchronizuj z {name}",
+  "settings.companionSync.group.member.active": "Dołączono",
+  "settings.companionSync.group.member.provisioning": "Konfigurowanie"
+}

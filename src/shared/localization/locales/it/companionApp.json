@@ -1,0 +1,11 @@
+{
+  "companion.app.retry": "Riprova",
+  "companion.app.starting.eyebrow": "Runtime complementare",
+  "companion.app.starting.message": "Preparazione di un'identità del dispositivo stabile e di un'archiviazione complementare locale prima del caricamento della superficie dell'argomento.",
+  "companion.app.starting.title": "Avvio del runtime associato",
+  "companion.app.bootstrap.module": "Bootstrap associato",
+  "companion.app.bootstrapFailed": "Bootstrap complementare non riuscito",
+  "companion.app.iosPrepared.eyebrow": "Foliole per iPhone",
+  "companion.app.iosPrepared.message": "L'archiviazione locale è pronta. L'esplorazione, la revisione e la sincronizzazione degli argomenti non sono disponibili in questa build.",
+  "companion.app.iosPrepared.title": "Questo iPhone è pronto"
+}

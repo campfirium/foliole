@@ -1,0 +1,18 @@
+{
+  "settings.demoPreview.banner.title": "Podgląd ustawień pulpitu",
+  "settings.demoPreview.banner.description": "Ten panel pokazuje pełne ustawienia pulpitu, dzięki czemu możesz zrozumieć strukturę funkcji Foliole. Zmiany tutaj nie mają wpływu na demo online.",
+  "settings.demoPreview.control.desktopOnly": "Tylko komputer stacjonarny",
+  "settings.demoPreview.control.previewOnly": "Tylko podgląd",
+  "settings.demoPreview.downloadDesktop": "Pobierz aplikację komputerową",
+  "settings.demoPreview.empty": "Podgląd niedostępny",
+  "settings.demoPreview.emptyDescription": "Ta kategoria ustawień jest reprezentowana w aplikacji komputerowej.",
+  "settings.demoPreview.about.title": "O Foliole",
+  "settings.demoPreview.hotkeys.title": "Skróty klawiaturowe",
+  "settings.demoPreview.hotkeys.search": "Wyszukaj skrót",
+  "settings.demoPreview.hotkeys.settings": "Skrót do ustawień",
+  "settings.demoPreview.hotkeys.study": "Skrót do nauki",
+  "settings.demoPreview.mouseGestures.title": "Zachowanie gestów myszy",
+  "settings.demoPreview.readwise.status": "Readwise Stan czytnika",
+  "settings.demoPreview.note.label": "Dostęp do folderu",
+  "settings.demoPreview.note.externalFolders": "W tym demo funkcje folderów zewnętrznych zostały uproszczone. Aplikacja komputerowa zapewnia pełną funkcjonalność."
+}

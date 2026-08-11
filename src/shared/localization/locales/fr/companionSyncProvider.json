@@ -1,0 +1,10 @@
+{
+  "companion.sync.joinRequest.description": "Cet appareil souhaite rejoindre votre groupe de synchronisation.",
+  "companion.sync.joinRequest.approve": "Approuver",
+  "companion.sync.joinRequest.reject": "Refuser",
+  "companion.sync.leave.button": "Quitter le groupe de synchronisation",
+  "companion.sync.leave.description": "Cet appareil cessera de se synchroniser avec ce groupe. Les sujets et les pièces jointes resteront sur cet appareil.",
+  "companion.sync.leave.error": "Foliole n’a pas pu confirmer le départ auprès d’un autre appareil. Réessayez lorsqu’un autre appareil est disponible.",
+  "companion.sync.leave.progress": "Départ du groupe de synchronisation",
+  "companion.sync.provider.foregroundHint": "Foliole maintient l’écran allumé pendant l’envoi. Changer d’application ou verrouiller l’appareil suspend la synchronisation jusqu’à votre retour."
+}

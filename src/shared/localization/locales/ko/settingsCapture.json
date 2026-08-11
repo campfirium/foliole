@@ -1,0 +1,14 @@
+{
+  "settings.capture.sectionAria": "전역 캡처 설정",
+  "settings.capture.sectionTitle": "글로벌 캡처",
+  "settings.capture.permission.title": "선택 액세스",
+  "settings.capture.permission.granted": "Foliole은 전역 캡처를 실행할 때 현재 선택 항목을 복사할 수 있습니다.",
+  "settings.capture.permission.denied": "시스템 설정 → 개인정보 보호 및 보안 → 접근성에서 Foliole을 허용하세요.",
+  "settings.capture.permission.unavailable": "이 Mac에서는 선택 항목에 액세스할 수 없습니다.",
+  "settings.capture.permission.notRequired": "이 장치에는 추가 선택 권한이 필요하지 않습니다.",
+  "settings.capture.permission.unsupported": "이 장치에서는 전역 캡처를 사용할 수 없습니다.",
+  "settings.capture.position.title": "확인 위치",
+  "settings.capture.position.description": "이 Mac에서 캡처 확인이 표시되는 위치를 선택하세요.",
+  "settings.capture.position.topRight": "오른쪽 상단",
+  "settings.capture.position.bottomRight": "오른쪽 하단"
+}

@@ -1,0 +1,14 @@
+{
+  "settings.general.system.section": "Система",
+  "settings.general.system.aria": "Системные настройки",
+  "settings.general.openAtLogin.title": "Запустить Foliole автоматически",
+  "settings.general.openAtLogin.description": "Сохраняйте локальную синхронизацию и глобальный клип доступными после запуска.",
+  "settings.general.openAtLogin.ineffective": "Windows отключил этот элемент автозагрузки.",
+  "settings.general.openAtLogin.requiresApproval": "Разрешите Foliole в разделе «Настройки системы» > «Основные» > «Элементы входа».",
+  "settings.general.openAtLogin.error": "macOS не удалось найти этот элемент входа. Попробуйте включить его снова.",
+  "settings.general.openAtLogin.unsupported": "В этой сборке автоматический запуск недоступен.",
+  "settings.general.openAtLogin.aria": "Запустить Foliole автоматически",
+  "settings.search.generalOpenAtLogin.title": "Запустить Foliole автоматически",
+  "settings.search.generalOpenAtLogin.description": "Запускайте Foliole автоматически на поддерживаемых настольных компьютерах.",
+  "settings.search.generalOpenAtLogin.terms": "запуск|запуск при запуске|загрузка|фон"
+}

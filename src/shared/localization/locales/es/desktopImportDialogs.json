@@ -1,0 +1,21 @@
+{
+  "desktop.epubImport.mode.title": "Elige modo de lectura",
+  "desktop.epubImport.mode.description": "Puede cambiar esto más adelante desde el menú contextual del tema.",
+  "desktop.epubImport.mode.aria": "Modo de lectura EPUB",
+  "desktop.epubImport.mode.sequential.label": "Lectura secuencial",
+  "desktop.epubImport.mode.sequential.suitability": "Adecuado para contenido nuevo",
+  "desktop.epubImport.mode.sequential.description": "Leído en orden. El siguiente capítulo ingresa a la cola de revisión después de que se descarta el capítulo actual.",
+  "desktop.epubImport.mode.free.label": "Lectura gratuita",
+  "desktop.epubImport.mode.free.suitability": "Adecuado al contenido existente",
+  "desktop.epubImport.mode.free.description": "Mantenga todos los capítulos disponibles para que puedan ingresar a la cola de revisión sin bloqueos de orden de capítulos.",
+  "desktop.readwise.importDialog.blockedTitle": "Vista previa de la importación primero",
+  "desktop.readwise.importDialog.ok": "Aceptar",
+  "desktop.readwise.importDialog.title": "Readwise importar",
+  "desktop.readwise.importDialog.previewTitle": "Readwise vista previa de importación",
+  "desktop.readwise.importDialog.preparing": "Preparando vista previa...",
+  "desktop.readwise.importDialog.cancel": "Cancelar",
+  "desktop.readwise.importDialog.cancelling": "Cancelando",
+  "desktop.readwise.importDialog.import": "Importar",
+  "desktop.readwise.importDialog.importing": "Importando",
+  "desktop.readwise.previewSample.highlightMissing": "Este resaltado no se encontró en el tema fuente."
+}

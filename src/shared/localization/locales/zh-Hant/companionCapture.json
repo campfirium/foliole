@@ -1,0 +1,11 @@
+{
+  "companion.capture.title": "捕捉",
+  "companion.capture.text": "捕獲文字",
+  "companion.capture.placeholder": "輸入或說出新主題",
+  "companion.capture.paste": "從剪貼簿貼上",
+  "companion.capture.upload": "上傳文件",
+  "companion.capture.save": "儲存",
+  "companion.capture.saving": "正在儲存...",
+  "companion.capture.error.inboxUnavailable": "在儲存新主題之前同步此裝置。",
+  "companion.capture.error.saveFailed": "無法保存該主題。再試一次。"
+}

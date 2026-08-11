@@ -1,11 +1,11 @@
 import type { AppLocale } from './appLanguage';
+import type { TranslationCatalog } from './locales/catalogTypes';
+import { EN_TRANSLATIONS } from './locales/en';
 
 export type TranslationKey = keyof typeof import('./locales/en').EN_TRANSLATIONS;
 export type TranslationParams = Record<string, string | number>;
-type TranslationCatalog = Partial<Record<TranslationKey, string>>;
-
-const TRANSLATIONS: Partial<Record<AppLocale, TranslationCatalog>> = {};
-const translationCatalogPromises = new Map<AppLocale, Promise<void>>();
+const TRANSLATIONS: Partial<Record<AppLocale, TranslationCatalog>> = { en: EN_TRANSLATIONS };
+const translationCatalogPromises = new Map<AppLocale, Promise<boolean>>();
 const STARTUP_TRANSLATION_FALLBACKS: Partial<Record<AppLocale, TranslationCatalog>> = {
   en: {
     'shared.startup.bootHelp': 'Preparing the workspace services...',
@@ -47,7 +47,7 @@ function interpolate(template: string, params?: TranslationParams) {
 }
 
 export function translate(locale: AppLocale, key: TranslationKey, params?: TranslationParams) {
-  const template = TRANSLATIONS[locale]?.[key] ??
+  const template = resolveTranslationTemplate(TRANSLATIONS[locale], key) ??
     STARTUP_TRANSLATION_FALLBACKS[locale]?.[key] ??
     TRANSLATIONS.en?.[key] ??
     STARTUP_TRANSLATION_FALLBACKS.en?.[key] ??
@@ -55,13 +55,17 @@ export function translate(locale: AppLocale, key: TranslationKey, params?: Trans
   return interpolate(template, params);
 }
 
+export function resolveTranslationTemplate(catalog: TranslationCatalog | undefined, key: TranslationKey) {
+  return catalog?.[key];
+}
+
 export function hasTranslationCatalog(locale: AppLocale) {
   return Boolean(TRANSLATIONS[locale]);
 }
 
-export function preloadTranslationCatalog(locale: AppLocale) {
+export function preloadTranslationCatalog(locale: AppLocale): Promise<boolean> {
   if (hasTranslationCatalog(locale)) {
-    return Promise.resolve();
+    return Promise.resolve(true);
   }
   const existingPromise = translationCatalogPromises.get(locale);
   if (existingPromise) {
@@ -74,13 +78,36 @@ export function preloadTranslationCatalog(locale: AppLocale) {
   return promise;
 }
 
-function loadTranslationCatalog(locale: AppLocale) {
-  if (locale === 'zh-Hans') {
-    return import('./locales/zhHans').then((module) => {
-      TRANSLATIONS['zh-Hans'] = module.ZH_HANS_TRANSLATIONS;
-    });
+const CATALOG_LOADERS: Record<Exclude<AppLocale, 'en'>, () => Promise<TranslationCatalog>> = {
+  de: () => import('./locales/de').then((module) => module.TRANSLATIONS),
+  es: () => import('./locales/es').then((module) => module.TRANSLATIONS),
+  fr: () => import('./locales/fr').then((module) => module.TRANSLATIONS),
+  it: () => import('./locales/it').then((module) => module.TRANSLATIONS),
+  ja: () => import('./locales/ja').then((module) => module.TRANSLATIONS),
+  ko: () => import('./locales/ko').then((module) => module.TRANSLATIONS),
+  pl: () => import('./locales/pl').then((module) => module.TRANSLATIONS),
+  'pt-BR': () => import('./locales/ptBR').then((module) => module.TRANSLATIONS),
+  ru: () => import('./locales/ru').then((module) => module.TRANSLATIONS),
+  'zh-Hans': () => import('./locales/zhHans').then((module) => module.ZH_HANS_TRANSLATIONS),
+  'zh-Hant': () => import('./locales/zh-Hant').then((module) => module.TRANSLATIONS)
+};
+
+export async function safelyLoadTranslationCatalog(loader: () => Promise<TranslationCatalog>) {
+  try {
+    return await loader();
+  } catch {
+    return null;
   }
-  return import('./locales/en').then((module) => {
-    TRANSLATIONS.en = module.EN_TRANSLATIONS;
-  });
+}
+
+async function loadTranslationCatalog(locale: AppLocale) {
+  if (locale === 'en') {
+    return true;
+  }
+  const catalog = await safelyLoadTranslationCatalog(CATALOG_LOADERS[locale]);
+  if (!catalog) {
+    return false;
+  }
+  TRANSLATIONS[locale] = catalog;
+  return true;
 }

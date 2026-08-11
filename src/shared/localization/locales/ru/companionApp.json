@@ -1,0 +1,11 @@
+{
+  "companion.app.retry": "Повторить попытку",
+  "companion.app.starting.eyebrow": "Сопутствующая среда выполнения",
+  "companion.app.starting.message": "Подготовка стабильной идентификации устройства и локального сопутствующего хранилища перед загрузкой темы.",
+  "companion.app.starting.title": "Запуск сопутствующей среды выполнения",
+  "companion.app.bootstrap.module": "Сопутствующий бутстрап",
+  "companion.app.bootstrapFailed": "Не удалось выполнить загрузку сопутствующего устройства.",
+  "companion.app.iosPrepared.eyebrow": "Foliole для iPhone",
+  "companion.app.iosPrepared.message": "Локальное хранилище готово. Просмотр тем, просмотр и синхронизация недоступны в этой сборке.",
+  "companion.app.iosPrepared.title": "Этот iPhone готов"
+}

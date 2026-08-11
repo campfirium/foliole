@@ -1,0 +1,11 @@
+{
+  "companion.app.retry": "Réessayer",
+  "companion.app.starting.eyebrow": "Runtime compagnon",
+  "companion.app.starting.message": "Préparation d'une identité d'appareil stable et d'un stockage compagnon local avant le chargement de la surface du sujet.",
+  "companion.app.starting.title": "Démarrage du runtime compagnon",
+  "companion.app.bootstrap.module": "Bootstrap compagnon",
+  "companion.app.bootstrapFailed": "L'amorçage du compagnon a échoué",
+  "companion.app.iosPrepared.eyebrow": "Foliole pour iPhone",
+  "companion.app.iosPrepared.message": "Le stockage local est prêt. La navigation, la révision et la synchronisation des sujets ne sont pas disponibles dans cette version.",
+  "companion.app.iosPrepared.title": "Cet iPhone est prêt"
+}

@@ -38,7 +38,7 @@
       "to": "bin"
     }
   ],
-  "electronLanguages": ["en-US", "zh-CN"],
+  "electronLanguages": ["de", "en-US", "es", "fr", "it", "ja", "ko", "pl", "pt-BR", "ru", "zh-CN", "zh-TW"],
   "npmRebuild": true,
   "nativeRebuilder": "sequential",
   "publish": [

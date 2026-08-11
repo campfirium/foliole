@@ -1,0 +1,22 @@
+{
+  "desktop.wordpressPublish.dialogTitle": "Publish to WordPress",
+  "desktop.wordpressPublish.postTitle": "Titolo del post",
+  "desktop.wordpressPublish.target": "Sito di destinazione",
+  "desktop.wordpressPublish.mode": "Azione",
+  "desktop.wordpressPublish.mode.create": "Crea un nuovo post",
+  "desktop.wordpressPublish.mode.update": "Aggiorna il post collegato",
+  "desktop.wordpressPublish.status": "Stato del messaggio",
+  "desktop.wordpressPublish.status.draft": "Bozza",
+  "desktop.wordpressPublish.status.publish": "Pubblica",
+  "desktop.wordpressPublish.category.placeholder": "Scegli una categoria",
+  "desktop.wordpressPublish.category.create": "Crea “{name}”",
+  "desktop.wordpressPublish.catalog.loading": "Caricamento categorie e tag",
+  "desktop.wordpressPublish.catalog.error": "Impossibile caricare categorie e tag. Prova ad aprire nuovamente il pannello.",
+  "desktop.wordpressPublish.confirm": "Pubblica",
+  "desktop.wordpressPublish.publishing": "Pubblicazione...",
+  "desktop.wordpressPublish.created": "Pubblicato in WordPress.",
+  "desktop.wordpressPublish.updated": "Aggiornato il WordPress.",
+  "desktop.wordpressPublish.viewPost": "Visualizza il messaggio",
+  "desktop.wordpressPublish.error.publish": "Impossibile pubblicare su WordPress.",
+  "desktop.wordpressPublish.error.localSave": "Il post è stato salvato in remoto, ma Foliole non è riuscito a salvare il collegamento al post."
+}

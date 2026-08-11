@@ -18,7 +18,7 @@ afterEach(() => {
   resetExternalSourceSettingsFoldersCacheForTest();
 });
 
-it('uses the real desktop settings panel without exposing app language selection', async () => {
+it('uses the real desktop settings panel and exposes the persistent language selection', async () => {
   renderWithMouseGestureProvider(
     <DemoSettingsPreviewOverlay onClose={vi.fn()} requestedCategory="general" />
   );
@@ -30,7 +30,7 @@ it('uses the real desktop settings panel without exposing app language selection
   expect(dialog).toHaveClass('w-[min(1240px,calc(100vw-36px))]');
   expect(dialog).toHaveClass('rounded-lg');
   expect(screen.getByRole('textbox', { name: 'Search settings' })).toBeInTheDocument();
-  expect(screen.queryByText('App language')).not.toBeInTheDocument();
+  expect(screen.getByRole('combobox', { name: 'App language' })).toBeInTheDocument();
 
   const startupSwitch = await screen.findByRole('switch', { name: 'Start Foliole automatically' });
   expect(startupSwitch).toHaveAttribute('aria-checked', 'false');

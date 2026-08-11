@@ -1,0 +1,11 @@
+{
+  "companion.capture.title": "Capturar",
+  "companion.capture.text": "Capturar texto",
+  "companion.capture.placeholder": "Digite ou fale um novo tópico",
+  "companion.capture.paste": "Colar da área de transferência",
+  "companion.capture.upload": "Carregar arquivo",
+  "companion.capture.save": "Salvar",
+  "companion.capture.saving": "Salvando...",
+  "companion.capture.error.inboxUnavailable": "Sincronize este dispositivo antes de salvar um novo tópico.",
+  "companion.capture.error.saveFailed": "Não foi possível salvar este tópico. Tente novamente."
+}
