@@ -102,7 +102,12 @@ function validateFacts(group: GroupRow, members: MemberRow[], departures: Depart
   if (resolved.size !== members.length) throw new Error('sync_group_member_authorization_invalid');
   for (const departure of departures) {
     const member = byDevice.get(departure.device_id);
-    if (!member || departure.group_id !== group.group_id || departure.authorized_by_device_id !== departure.device_id
+    if (member && departure.left_at < member.joined_at) continue;
+    const authorizer = byDevice.get(departure.authorized_by_device_id);
+    const authorizerDeparture = departureByDevice.get(departure.authorized_by_device_id);
+    if (!member || !authorizer || departure.group_id !== group.group_id
+      || authorizer.joined_at > departure.left_at
+      || (authorizerDeparture && authorizerDeparture.left_at < departure.left_at)
       || (departure.left_at >= member.joined_at && member.state !== 'left')) {
       throw new Error('sync_group_departure_authorization_invalid');
     }

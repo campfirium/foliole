@@ -35,8 +35,12 @@ function resolveDesktopPlatformLabel() {
 }
 
 export function resolveDesktopDeviceName() {
-  const hostName = os.hostname().trim();
-  return hostName ? `Foliole Desktop on ${hostName}` : 'Foliole Desktop';
+  return normalizeDesktopHostName(os.hostname());
+}
+
+export function normalizeDesktopHostName(value: string) {
+  const hostName = value.trim().replace(/\.local$/iu, '');
+  return hostName || 'Foliole Desktop';
 }
 
 export function buildDiscoveryPayload(appVersion: string, peerId: string) {

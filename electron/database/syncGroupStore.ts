@@ -189,14 +189,20 @@ export function recordSyncGroupDeparture(args: {
   leftAt: string;
   local?: boolean;
 }) {
-  if (args.authorizedByDeviceId !== args.deviceId) throw new Error('sync_group_departure_authorization_invalid');
   const driver = openDatabaseConnection().driver;
   driver.transaction(() => {
     const member = driver.queryOne<{ joined_at: string; state: string }>(
       'SELECT joined_at, state FROM sync_group_members WHERE group_id = ? AND device_id = ? LIMIT 1',
       [args.groupId, args.deviceId]
     );
-    if (!member || args.leftAt < member.joined_at) throw new Error('sync_group_departure_authorization_invalid');
+    const authorizer = driver.queryOne<{ joined_at: string; left_at: string | null }>(
+      'SELECT joined_at, left_at FROM sync_group_members WHERE group_id = ? AND device_id = ? LIMIT 1',
+      [args.groupId, args.authorizedByDeviceId]
+    );
+    if (!member || !authorizer || args.leftAt < member.joined_at || args.leftAt < authorizer.joined_at
+      || (authorizer.left_at && authorizer.left_at < args.leftAt)) {
+      throw new Error('sync_group_departure_authorization_invalid');
+    }
     driver.execute(
       `INSERT INTO sync_group_member_departures
         (group_id, device_id, authorized_by_device_id, authorization_id, left_at)

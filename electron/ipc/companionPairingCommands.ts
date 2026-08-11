@@ -31,7 +31,7 @@ import {
   stopLanWorkspaceSyncServer
 } from '../sync/lanWorkspaceSyncServer.js';
 import { loadDesktopPrimaryDeviceStatePayload } from '../sync/primaryDeviceState.js';
-import { leaveDesktopSyncGroup } from '../sync/syncGroupDeparture.js';
+import { leaveDesktopSyncGroup, removeDesktopSyncGroupMember } from '../sync/syncGroupDeparture.js';
 
 import { asString } from './commandParsers.js';
 
@@ -39,6 +39,7 @@ const COMPANION_PAIRING_COMMANDS = new Set<string>([
   NATIVE_COMMANDS.loadCompanionPairingOverview,
   NATIVE_COMMANDS.createSyncGroup,
   NATIVE_COMMANDS.leaveSyncGroup,
+  NATIVE_COMMANDS.removeSyncGroupMember,
   NATIVE_COMMANDS.discoverSyncGroups,
   NATIVE_COMMANDS.requestSyncGroupJoin,
   NATIVE_COMMANDS.completeSyncGroupJoin,
@@ -53,7 +54,7 @@ const COMPANION_PAIRING_COMMANDS = new Set<string>([
 
 function buildDesktopCompanionPairingOverview() {
   const join = loadDesktopSyncGroupJoinState();
-  const syncGroup = loadDesktopSyncGroup();
+  const syncGroup = withCurrentDesktopName(loadDesktopSyncGroup());
   return {
     join_candidates: join.candidates,
     join_request: join.pending?.request ?? null,
@@ -63,6 +64,16 @@ function buildDesktopCompanionPairingOverview() {
     server_status: refreshLanWorkspaceSyncServerPairingStatus(),
     sync_group: syncGroup,
     sync_enabled: isDesktopCompanionSyncEnabled()
+  };
+}
+
+function withCurrentDesktopName(group: ReturnType<typeof loadDesktopSyncGroup>) {
+  if (!group) return null;
+  return {
+    ...group,
+    members: group.members.map((member) => member.device_id === group.local_device_id
+      ? { ...member, device_name: resolveDesktopDeviceName() }
+      : member)
   };
 }
 
@@ -156,6 +167,10 @@ function handleOwnedCompanionPairingCommand(command: string, args: Record<string
   if (command === NATIVE_COMMANDS.leaveSyncGroup) {
     return leaveDesktopSyncGroup()
       .then(() => stopLanWorkspaceSyncServer())
+      .then(() => buildDesktopCompanionPairingOverview());
+  }
+  if (command === NATIVE_COMMANDS.removeSyncGroupMember) {
+    return removeDesktopSyncGroupMember(asString(args.device_id, 'device_id'))
       .then(() => buildDesktopCompanionPairingOverview());
   }
   if (command === NATIVE_COMMANDS.approveCompanionPairRequest) {

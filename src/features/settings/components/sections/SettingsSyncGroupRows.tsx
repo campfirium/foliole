@@ -3,7 +3,7 @@ import type {
   DesktopSyncGroupJoinCandidatePayload,
   DesktopSyncGroupJoinRequestPayload
 } from '../../../../../lib/platform/nativeCompanionSyncContract';
-import type { SyncGroupPayload } from '../../../../../lib/platform/syncGroupContract';
+import type { SyncGroupMemberPayload, SyncGroupPayload } from '../../../../../lib/platform/syncGroupContract';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
@@ -14,56 +14,84 @@ import {
 
 import { SettingsSyncGroupJoinRequests } from './SettingsSyncGroupJoinRequests';
 
-function deviceKindLabel(kind: string) {
-  if (kind.includes('android')) return 'Android';
-  if (kind === 'darwin') return 'macOS';
-  if (kind === 'win32') return 'Windows';
-  return kind;
+const PLATFORM_LABELS: Record<string, string> = {
+  android: 'Android',
+  darwin: 'macOS',
+  ios: 'iOS',
+  linux: 'Linux',
+  win32: 'Windows'
+};
+
+function platformFor(kind: string) {
+  const key = Object.keys(PLATFORM_LABELS).find((candidate) => kind.toLowerCase().includes(candidate));
+  return key ? PLATFORM_LABELS[key]! : kind;
 }
 
-function DeviceList({ group }: { group: SyncGroupPayload }) {
+function DeviceRow(props: {
+  disabled: boolean;
+  group: SyncGroupPayload;
+  member: SyncGroupMemberPayload;
+  onRemove(deviceId: string): void;
+  onToggleSync(): void;
+  syncEnabled: boolean;
+}) {
   const t = useTranslation();
+  const local = props.member.device_id === props.group.local_device_id;
   return (
-    <div className="flex flex-col gap-2" role="list">
-      {group.members.map((member) => (
-        <div className="flex items-center justify-between gap-4 py-1" key={member.device_id} role="listitem">
-          <span className="truncate text-sm text-foreground">{member.device_name}</span>
-          <span className="shrink-0 text-xs text-foreground/55">
-            {deviceKindLabel(member.device_kind)} · {t(member.state === 'active'
-              ? 'settings.companionSync.group.member.active'
-              : 'settings.companionSync.group.member.provisioning')}
-          </span>
-        </div>
-      ))}
+    <div className="flex min-h-14 items-center justify-between gap-5 border-t border-settings-divider/65 py-2.5" role="listitem">
+      <div className="flex min-w-0 items-baseline gap-2">
+        <span className="truncate text-ui-md font-medium text-foreground">{props.member.device_name}</span>
+        <span className="shrink-0 text-ui-sm text-muted-foreground">{platformFor(props.member.device_kind)}</span>
+      </div>
+      <button className="shrink-0 rounded-sm px-2 py-1 text-ui-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-45"
+        disabled={props.disabled} onClick={local ? props.onToggleSync : () => props.onRemove(props.member.device_id)} type="button">
+        {local
+          ? t(props.syncEnabled ? 'settings.companionSync.group.pause' : 'settings.companionSync.group.resume')
+          : t('settings.companionSync.group.remove')}
+      </button>
     </div>
   );
 }
 
 function EmptySyncGroupRow(props: Parameters<typeof SettingsSyncGroupRows>[0]) {
   const t = useTranslation();
+  const groups = Array.from(new Map(props.candidates.map((candidate) => [candidate.group_id, candidate])).values());
   return (
-    <SettingsRow description={t('settings.companionSync.group.empty.description')} title={t('settings.companionSync.group.title')}>
-      <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-        <div className="flex flex-col gap-2">
-          <div className="flex gap-2">
-            <SettingsButton disabled={props.isBusy} loading={props.isCreating} onClick={props.onCreate}>
-              {t('settings.companionSync.group.create')}
-            </SettingsButton>
-            <SettingsButton disabled={props.isBusy} onClick={props.onDiscover}>
-              {t('settings.companionSync.group.find')}
-            </SettingsButton>
+    <div className="px-settings-panel-x pt-1">
+      <div className="flex min-h-11 items-center justify-between gap-5">
+        <h4 className="text-ui-md font-semibold text-foreground">{t('settings.companionSync.group.title')}</h4>
+        <SettingsButton className="h-8" disabled={props.isBusy} loading={props.isCreating} onClick={props.onCreate}>
+          {t('settings.companionSync.group.create')}
+        </SettingsButton>
+      </div>
+      <div className="border-b border-settings-divider/65">
+        {groups.map((candidate) => (
+          <div className="flex min-h-14 items-center justify-between gap-5 border-t border-settings-divider/65 py-2.5"
+            key={candidate.group_id}>
+            <span className="truncate text-ui-md font-medium text-foreground">
+              {t('settings.companionSync.group.named', { name: candidate.group_display_name })}
+            </span>
+            <button className="shrink-0 rounded-sm px-2 py-1 text-ui-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-45"
+              disabled={props.isBusy} onClick={() => props.onRequestJoin(candidate.endpoint_url)} type="button">
+              {t('settings.companionSync.group.join')}
+            </button>
           </div>
-          {props.joinRequest ? (
-            <span className="text-sm text-foreground/65">{t('settings.companionSync.group.join.waiting')}</span>
-          ) : props.candidates.map((candidate) => (
-            <SettingsButton disabled={props.isBusy} key={`${candidate.group_id}:${candidate.endpoint_url}`}
-              onClick={() => props.onRequestJoin(candidate.endpoint_url)}>
-              {t('settings.companionSync.group.join.named', { name: candidate.group_display_name })}
-            </SettingsButton>
-          ))}
-        </div>
-      </SettingsControlSlot>
-    </SettingsRow>
+        ))}
+        {groups.length === 0 ? (
+          <div className="flex min-h-14 items-center border-t border-settings-divider/65 py-2.5">
+            <button className="rounded-sm py-1 text-ui-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-45"
+              disabled={props.isBusy} onClick={props.onDiscover} type="button">
+              {t('settings.companionSync.group.find')}
+            </button>
+          </div>
+        ) : null}
+        {props.joinRequest ? (
+          <div className="border-t border-settings-divider/65 py-3 text-ui-sm text-muted-foreground">
+            {t('settings.companionSync.group.join.waiting')}
+          </div>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
@@ -72,43 +100,42 @@ export function SettingsSyncGroupRows(props: {
   group: SyncGroupPayload | null;
   isBusy: boolean;
   isCreating: boolean;
+  joinRequest: DesktopSyncGroupJoinRequestPayload | null;
+  onApprove(id: string): void;
   onCreate(): void;
   onDiscover(): void;
-  onRequestJoin(endpointUrl: string): void;
-  onApprove(id: string): void;
+  onLeave(): void;
   onReject(id: string): void;
+  onRemove(deviceId: string): void;
+  onRequestJoin(endpointUrl: string): void;
+  onToggleSync(): void;
   pendingRequests: DesktopCompanionPairRequestPayload[];
-  joinRequest: DesktopSyncGroupJoinRequestPayload | null;
+  syncEnabled: boolean;
 }) {
   const t = useTranslation();
-  if (!props.group) {
-    return <EmptySyncGroupRow {...props} />;
-  }
+  if (!props.group) return <EmptySyncGroupRow {...props} />;
   return (
     <>
-      <SettingsRow description={t('settings.companionSync.group.description')} title={t('settings.companionSync.group.title')}>
-        <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-          <span className="text-sm font-medium text-foreground">{props.group.display_name}</span>
-        </SettingsControlSlot>
-      </SettingsRow>
-      <SettingsRow description={t('settings.companionSync.group.devices.description')} title={t('settings.companionSync.group.devices.title')}>
-        <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-          <div className="flex flex-col gap-2">
-            <DeviceList group={props.group} />
-            <SettingsButton disabled={props.isBusy} onClick={props.onDiscover}>
-              {t('settings.companionSync.group.devices.find')}
-            </SettingsButton>
-            {props.candidates
-              .filter((candidate) => candidate.group_id === props.group?.group_id)
-              .map((candidate) => (
-                <SettingsButton disabled={props.isBusy} key={`${candidate.group_id}:${candidate.endpoint_url}`}
-                  onClick={() => props.onRequestJoin(candidate.endpoint_url)}>
-                  {t('settings.companionSync.group.devices.syncWith', { name: candidate.provider_device_name })}
-                </SettingsButton>
-              ))}
-          </div>
-        </SettingsControlSlot>
-      </SettingsRow>
+      <div className="px-settings-panel-x pt-1">
+        <div className="flex min-h-11 items-center">
+          <h4 className="text-ui-md font-semibold text-foreground">{t('settings.companionSync.group.title')}</h4>
+        </div>
+        <div className="flex min-h-11 items-center justify-between gap-5">
+          <span className="truncate text-ui-md font-medium text-foreground">
+            {t('settings.companionSync.group.named', { name: props.group.display_name })}
+          </span>
+          <button className="shrink-0 rounded-sm px-2 py-1 text-ui-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-45"
+            disabled={props.isBusy} onClick={props.onLeave} type="button">
+            {t('settings.companionSync.group.leave')}
+          </button>
+        </div>
+        <div aria-label={t('settings.companionSync.group.devices.title')} className="border-b border-settings-divider/65" role="list">
+          {props.group.members.filter((member) => member.state === 'active').map((member) => (
+            <DeviceRow disabled={props.isBusy} group={props.group!} key={member.device_id} member={member}
+              onRemove={props.onRemove} onToggleSync={props.onToggleSync} syncEnabled={props.syncEnabled} />
+          ))}
+        </div>
+      </div>
       {props.pendingRequests.length > 0 ? (
         <SettingsRow description={t('settings.companionSync.group.join.description')} title={t('settings.companionSync.group.join.title')}>
           <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>

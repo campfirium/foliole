@@ -1,5 +1,6 @@
 export const EN_SETTINGS_SYNC_GROUP_TRANSLATIONS = {
-  'settings.companionSync.group.title': 'Sync Group',
+  'settings.companionSync.group.title': 'Sync Groups',
+  'settings.companionSync.group.named': "{name}'s Sync Group",
   'settings.companionSync.group.description': 'This name is saved when the group is created.',
   'settings.companionSync.group.empty.description': 'Create a new Sync Group or join one from an active Device on this network.',
   'settings.companionSync.group.join.title': 'Join requests',
@@ -8,6 +9,7 @@ export const EN_SETTINGS_SYNC_GROUP_TRANSLATIONS = {
   'settings.companionSync.group.join.reject': 'Decline',
   'settings.companionSync.group.create': 'Create Sync Group',
   'settings.companionSync.group.find': 'Find Sync Group',
+  'settings.companionSync.group.join': 'Join',
   'settings.companionSync.group.join.complete': 'Finish joining',
   'settings.companionSync.group.join.waiting': 'Waiting for approval. Sync starts automatically afterward.',
   'settings.companionSync.group.join.named': 'Join {name}',
@@ -15,6 +17,14 @@ export const EN_SETTINGS_SYNC_GROUP_TRANSLATIONS = {
   'settings.companionSync.group.devices.description': 'Devices keep their membership when another device is offline.',
   'settings.companionSync.group.devices.find': 'Find Devices',
   'settings.companionSync.group.devices.syncWith': 'Sync with {name}',
+  'settings.companionSync.group.pause': 'Pause Sync',
+  'settings.companionSync.group.resume': 'Resume Sync',
+  'settings.companionSync.group.leave': 'Leave Sync Group',
+  'settings.companionSync.group.remove': 'Remove from Sync Group',
+  'settings.companionSync.group.leave.confirm.title': 'Leave Sync Group?',
+  'settings.companionSync.group.leave.confirm.description': 'This device will leave {name} and stop syncing with its devices.',
+  'settings.companionSync.group.remove.confirm.title': 'Remove device?',
+  'settings.companionSync.group.remove.confirm.description': '{name} will be removed from this Sync Group and must join again to sync.',
   'settings.companionSync.group.member.active': 'Joined',
   'settings.companionSync.group.member.provisioning': 'Setting up'
 } as const;

@@ -24,11 +24,11 @@ vi.mock('./desktopSyncGroupHttp.js', () => ({
   requestJson: mocks.requestJson
 }));
 
-import { acceptSyncGroupDeparture, leaveDesktopSyncGroup } from './syncGroupDeparture.js';
+import { acceptSyncGroupDeparture, leaveDesktopSyncGroup, removeDesktopSyncGroupMember } from './syncGroupDeparture.js';
 
 const GROUP = {
-  group_id: 'group-1', local_member_state: 'active',
-  members: [{ device_id: 'device-a' }, { device_id: 'device-b' }]
+  group_id: 'group-1', local_device_id: 'device-a', local_member_state: 'active',
+  members: [{ device_id: 'device-a', state: 'active' }, { device_id: 'device-b', state: 'active' }]
 };
 
 beforeEach(() => {
@@ -53,15 +53,26 @@ it('accepts only a self-authorized departure from the authenticated Device', () 
   expect(mocks.removeCredentials).toHaveBeenCalledWith('group-1', 'device-b');
 });
 
-it('rejects a departure attributed to another Device', () => {
+it('accepts removal of another Device when attributed to the authenticated member', () => {
   const payload = JSON.stringify({
     authorization_id: 'leave-b', authorized_by_device_id: 'device-a', device_id: 'device-b',
     group_id: 'group-1', left_at: '2026-08-09T02:00:00Z'
   });
 
-  expect(() => acceptSyncGroupDeparture(payload, 'device-b'))
-    .toThrow('sync_group_departure_authorization_invalid');
-  expect(mocks.recordDeparture).not.toHaveBeenCalled();
+  expect(acceptSyncGroupDeparture(payload, 'device-a')).toEqual({ status: 'accepted' });
+  expect(mocks.recordDeparture).toHaveBeenCalledWith(expect.objectContaining({
+    authorizedByDeviceId: 'device-a', deviceId: 'device-b'
+  }));
+  expect(mocks.removeCredentials).toHaveBeenCalledWith('group-1', 'device-b');
+});
+
+it('records and revokes a remote member even when no peer is currently reachable', async () => {
+  mocks.requestJson.mockRejectedValue(new Error('offline'));
+  await removeDesktopSyncGroupMember('device-b');
+  expect(mocks.recordDeparture).toHaveBeenCalledWith(expect.objectContaining({
+    authorizedByDeviceId: 'device-a', deviceId: 'device-b'
+  }));
+  expect(mocks.removeCredentials).toHaveBeenCalledWith('group-1', 'device-b');
 });
 
 it('delivers a self-authorized fact before locally unbinding the departing Device', async () => {

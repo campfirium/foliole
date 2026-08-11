@@ -146,6 +146,7 @@ export const NATIVE_COMMANDS = {
   loadCompanionPairingOverview: 'load_companion_pairing_overview',
   createSyncGroup: 'create_sync_group',
   leaveSyncGroup: 'leave_sync_group',
+  removeSyncGroupMember: 'remove_sync_group_member',
   discoverSyncGroups: 'discover_sync_groups',
   requestSyncGroupJoin: 'request_sync_group_join',
   completeSyncGroupJoin: 'complete_sync_group_join',

@@ -57,6 +57,10 @@ export type NativeSyncCommandMap = {
     args: undefined;
     result: DesktopCompanionPairingOverviewPayload;
   };
+  [NATIVE_COMMANDS.removeSyncGroupMember]: {
+    args: { device_id: string };
+    result: DesktopCompanionPairingOverviewPayload;
+  };
   [NATIVE_COMMANDS.discoverSyncGroups]: {
     args: undefined;
     result: DesktopCompanionPairingOverviewPayload;

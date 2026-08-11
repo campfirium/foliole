@@ -62,6 +62,23 @@ it('accepts a relayed self-departure but refuses a remote departure for the loca
   }))).rejects.toThrow('sync_group_local_departure_requires_local_action');
 });
 
+it('accepts a relayed removal authorized by an active member', async () => {
+  seedGroup(sqlite, 'inc', ['a', 'b', 'c']);
+  sqlite.exec("UPDATE inc.sync_group_members SET state = 'left' WHERE device_id = 'c'");
+  sqlite.exec(`INSERT INTO inc.sync_group_member_departures VALUES
+    ('group-1', 'c', 'b', 'remove-c', '2026-08-09T03:00:00Z')`);
+  const port = createBetterSqliteDbPort(sqlite, { name: 'group-facts-test' });
+
+  await port.transaction((tx) => applySyncPackGroupFactsWithDbPort(tx, {
+    incomingAlias: 'inc', sourcePeerId: 'b'
+  }));
+
+  expect(sqlite.prepare("SELECT state FROM sync_group_members WHERE device_id = 'c'").get())
+    .toEqual({ state: 'left' });
+  expect(sqlite.prepare("SELECT authorized_by_device_id FROM sync_group_member_departures WHERE device_id = 'c'").get())
+    .toEqual({ authorized_by_device_id: 'b' });
+});
+
 it('treats a departure before a newer join as superseded history', async () => {
   seedGroup(sqlite, 'inc', ['a', 'b']);
   sqlite.exec(`UPDATE inc.sync_group_members SET authorization_id = 'join-b-new',

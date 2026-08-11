@@ -147,6 +147,7 @@ async function invokeDesktopCompanionPairingCommand<
     | typeof NATIVE_COMMANDS.loadCompanionPairingOverview
     | typeof NATIVE_COMMANDS.createSyncGroup
     | typeof NATIVE_COMMANDS.leaveSyncGroup
+    | typeof NATIVE_COMMANDS.removeSyncGroupMember
     | typeof NATIVE_COMMANDS.discoverSyncGroups
     | typeof NATIVE_COMMANDS.requestSyncGroupJoin
     | typeof NATIVE_COMMANDS.completeSyncGroupJoin
@@ -178,6 +179,10 @@ export function createDesktopSyncGroup() {
 
 export function leaveDesktopSyncGroup() {
   return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.leaveSyncGroup);
+}
+
+export function removeDesktopSyncGroupMember(deviceId: string) {
+  return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.removeSyncGroupMember, { device_id: deviceId });
 }
 
 export function discoverDesktopSyncGroups() {

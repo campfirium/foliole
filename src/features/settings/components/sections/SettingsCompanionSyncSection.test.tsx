@@ -9,8 +9,13 @@ import { SettingsCompanionSyncSection } from './SettingsCompanionSyncSection';
 const companionPairingMock = vi.hoisted(() => ({
   useDesktopCompanionPairingRequests: vi.fn()
 }));
+const confirmationMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../../../../shared/platform/useDesktopCompanionPairingRequests', () => companionPairingMock);
+vi.mock('../../../../shared/ui', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../../../../shared/ui')>(),
+  requestAppConfirmation: confirmationMock
+}));
 
 type PairingState = ReturnType<typeof useDesktopCompanionPairingRequests>;
 
@@ -26,6 +31,7 @@ function createState(overrides: Partial<PairingState> = {}): PairingState {
     error: null,
     isDesktopRuntime: true,
     isLoading: false,
+    leaveSyncGroup: vi.fn(),
     overview: {
       paired_devices: [],
       pending_requests: [],
@@ -50,19 +56,21 @@ function createState(overrides: Partial<PairingState> = {}): PairingState {
     refresh: vi.fn(),
     rejectRequest: vi.fn(),
     removePairedDevice: vi.fn(),
+    removeSyncGroupMember: vi.fn(),
     requestSyncGroupJoin: vi.fn(),
     ...overrides
   };
 }
 
 beforeEach(() => {
+  confirmationMock.mockReset().mockResolvedValue(false);
   companionPairingMock.useDesktopCompanionPairingRequests.mockReturnValue(createState());
 });
 
 it('offers to create a Sync Group when this desktop has none', () => {
   renderWithLocalization(<SettingsCompanionSyncSection />);
 
-  expect(screen.getByText('Sync Group')).toBeInTheDocument();
+  expect(screen.getByText('Sync Groups')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Create Sync Group' })).toBeInTheDocument();
 });
 
@@ -76,6 +84,31 @@ it('creates a Sync Group from sync settings', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Create Sync Group' }));
 
   expect(createSyncGroup).toHaveBeenCalledTimes(1);
+});
+
+it('confirms before leaving the group or removing another member', async () => {
+  const leaveSyncGroup = vi.fn();
+  const removeSyncGroupMember = vi.fn();
+  const overview = createState().overview;
+  companionPairingMock.useDesktopCompanionPairingRequests.mockReturnValue(createState({
+    leaveSyncGroup, removeSyncGroupMember,
+    overview: { ...overview, sync_group: {
+      created_at: '2026-08-08T00:00:00Z', created_by_device_id: 'desktop-1', display_name: 'Studio',
+      group_id: 'group-1', local_device_id: 'desktop-1', local_member_state: 'active', timeline_id: 'timeline-1',
+      members: [{ approved_by_device_id: 'desktop-1', authorization_id: 'founder', device_id: 'desktop-1',
+        device_kind: 'darwin', device_name: 'Studio Mac', joined_at: '2026-08-08T00:00:00Z', state: 'active' },
+      { approved_by_device_id: 'desktop-1', authorization_id: 'member', device_id: 'android-1',
+        device_kind: 'android-capacitor', device_name: 'A5', joined_at: '2026-08-08T01:00:00Z', state: 'active' }]
+    } }
+  }));
+  confirmationMock.mockResolvedValue(true);
+  renderWithLocalization(<SettingsCompanionSyncSection />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Remove from Sync Group' }));
+  await vi.waitFor(() => expect(removeSyncGroupMember).toHaveBeenCalledWith('android-1'));
+  fireEvent.click(screen.getByRole('button', { name: 'Leave Sync Group' }));
+  await vi.waitFor(() => expect(leaveSyncGroup).toHaveBeenCalledTimes(1));
+  expect(confirmationMock).toHaveBeenCalledTimes(2);
 });
 
 it('requests a discovered Sync Group from its active mobile Device', () => {
@@ -92,7 +125,8 @@ it('requests a discovered Sync Group from its active mobile Device', () => {
     }
   }));
   renderWithLocalization(<SettingsCompanionSyncSection />);
-  fireEvent.click(screen.getByRole('button', { name: 'Join Studio' }));
+  expect(screen.getByText("Studio's Sync Group")).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Join' }));
   expect(requestSyncGroupJoin).toHaveBeenCalledWith('http://192.168.1.8:43123');
 });
 

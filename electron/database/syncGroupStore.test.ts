@@ -95,3 +95,21 @@ it('records a self-authorized departure and unbinds only the local departing Dev
   expect(sqlite.prepare("SELECT authorized_by_device_id FROM sync_group_member_departures").get())
     .toEqual({ authorized_by_device_id: 'desktop-1' });
 });
+
+it('records an active member removing another member', () => {
+  const group = createDesktopSyncGroup({
+    deviceId: 'desktop-1', deviceKind: 'desktop', deviceName: 'Studio', now: '2026-08-09T00:00:00Z'
+  });
+  registerSyncGroupMember({
+    approvedByDeviceId: 'desktop-1', authorizationId: 'request-1', deviceId: 'android-1',
+    deviceKind: 'android-capacitor', deviceName: 'Pixel', now: '2026-08-09T01:00:00Z'
+  });
+  recordSyncGroupDeparture({
+    authorizationId: 'remove-android-1', authorizedByDeviceId: 'desktop-1', deviceId: 'android-1',
+    groupId: group.group_id, leftAt: '2026-08-09T02:00:00Z'
+  });
+  expect(sqlite.prepare("SELECT state FROM sync_group_members WHERE device_id = 'android-1'").get())
+    .toEqual({ state: 'left' });
+  expect(sqlite.prepare("SELECT authorized_by_device_id FROM sync_group_member_departures").get())
+    .toEqual({ authorized_by_device_id: 'desktop-1' });
+});

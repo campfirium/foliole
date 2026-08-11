@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import type { DesktopCompanionPairingOverviewPayload } from '../../../lib/platform/nativeCompanionSyncContract';
 
 import { useDesktopSyncGroupJoinActions } from './desktop/useSyncGroupJoinActions';
+import { useSyncGroupMembershipActions } from './desktop/useSyncGroupMembershipActions';
 import {
   EMPTY_DESKTOP_COMPANION_PAIRING_OVERVIEW,
   useCompanionPairingPolling,
@@ -149,63 +150,48 @@ function useCreateSyncGroupAction(
   }, [setError, setIsLoading, setOverview, setPendingActionId]);
 }
 
+function usePairingMutationActions(state: ReturnType<typeof useDesktopCompanionPairingOverviewState>) {
+  const args = [state.setOverview, state.setError, state.setIsLoading, state.setPendingActionId] as const;
+  return {
+    clearPairedDevices: useClearPairedDevicesAction(...args),
+    createSyncGroup: useCreateSyncGroupAction(...args),
+    membership: useSyncGroupMembershipActions(state),
+    removePairedDevice: useRemovePairedDeviceAction(...args),
+    runAction: useCompanionPairingAction(...args),
+    toggleSync: useToggleCompanionSyncAction(...args)
+  };
+}
+
 export function useDesktopCompanionPairingRequests(pollMs = 2_000) {
   const state = useDesktopCompanionPairingOverviewState();
   const refresh = useCompanionPairingRefresh(state.setOverview, state.setError, state.setIsLoading);
-  const runAction = useCompanionPairingAction(
-    state.setOverview,
-    state.setError,
-    state.setIsLoading,
-    state.setPendingActionId
-  );
-  const clearPairedDevices = useClearPairedDevicesAction(
-    state.setOverview,
-    state.setError,
-    state.setIsLoading,
-    state.setPendingActionId
-  );
-  const removePairedDevice = useRemovePairedDeviceAction(
-    state.setOverview,
-    state.setError,
-    state.setIsLoading,
-    state.setPendingActionId
-  );
-  const toggleSync = useToggleCompanionSyncAction(
-    state.setOverview,
-    state.setError,
-    state.setIsLoading,
-    state.setPendingActionId
-  );
-  const createSyncGroup = useCreateSyncGroupAction(
-    state.setOverview,
-    state.setError,
-    state.setIsLoading,
-    state.setPendingActionId
-  );
+  const actions = usePairingMutationActions(state);
   const join = useDesktopSyncGroupJoinActions(state);
   useCompanionPairingPushRefresh(refresh);
   useCompanionPairingPolling(pollMs, state.setOverview, state.setError, state.setIsLoading);
 
   return useMemo(
     () => ({
-      approveRequest: (pairRequestId: string) => runAction(pairRequestId, 'approve'),
-      createSyncGroup,
-      clearPairedDevices,
+      approveRequest: (pairRequestId: string) => actions.runAction(pairRequestId, 'approve'),
+      createSyncGroup: actions.createSyncGroup,
+      clearPairedDevices: actions.clearPairedDevices,
       completeSyncGroupJoin: join.completeJoin,
-      removePairedDevice,
+      removePairedDevice: actions.removePairedDevice,
       discoverSyncGroups: join.discoverGroups,
-      disableSync: () => toggleSync(false),
-      enableSync: () => toggleSync(true),
+      disableSync: () => actions.toggleSync(false),
+      enableSync: () => actions.toggleSync(true),
       error: state.error,
       isDesktopRuntime: isDesktopRuntime(),
       isLoading: state.isLoading,
+      leaveSyncGroup: actions.membership.leave,
       overview: state.overview,
       pendingActionId: state.pendingActionId,
+      removeSyncGroupMember: actions.membership.remove,
       refresh,
       requestSyncGroupJoin: join.requestJoin,
-      rejectRequest: (pairRequestId: string) => runAction(pairRequestId, 'reject')
+      rejectRequest: (pairRequestId: string) => actions.runAction(pairRequestId, 'reject')
     }),
-    [clearPairedDevices, createSyncGroup, join.completeJoin, join.discoverGroups, join.requestJoin, removePairedDevice,
-      refresh, runAction, state.error, state.isLoading, state.overview, state.pendingActionId, toggleSync]
+    [actions, join.completeJoin, join.discoverGroups, join.requestJoin, refresh, state.error, state.isLoading,
+      state.overview, state.pendingActionId]
   );
 }
