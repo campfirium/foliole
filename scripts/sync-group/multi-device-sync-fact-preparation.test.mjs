@@ -8,7 +8,10 @@ it('creates on A, proves B received the fact, takes A offline, then starts C', a
   const result = await runAOfflineAdmissionPrelude({
     closeTransport: async () => { events.push('b-transport-closed'); },
     createFact: async () => { events.push('a-fact-created'); return { factId: 'fact-a' }; },
-    openSession: async () => ({ close }),
+    openSession: async () => ({ close, enable: async () => {
+      events.push('a-listener-ready');
+      return { server_status: { state: 'running' }, sync_enabled: true };
+    } }),
     openTransport: async () => { events.push('b-transport-open'); },
     runApproval: async (onReady) => {
       events.push('b-started'); await onReady(); events.push('c-approved'); return 'approval';
@@ -17,7 +20,7 @@ it('creates on A, proves B received the fact, takes A offline, then starts C', a
     waitForFact: async (factId) => { events.push(`b-received-${factId}`); }
   });
   expect(events).toEqual([
-    'a-fact-created', 'b-transport-open', 'b-started', 'b-received-fact-a',
+    'a-listener-ready', 'a-fact-created', 'b-transport-open', 'b-started', 'b-received-fact-a',
     'b-transport-closed', 'a-offline', 'c-started', 'c-approved'
   ]);
   expect(close).toHaveBeenCalledTimes(1);
@@ -29,11 +32,31 @@ it('closes the product transport when B never receives the A fact', async () => 
   await expect(runAOfflineAdmissionPrelude({
     closeTransport,
     createFact: async () => ({ factId: 'fact-a' }),
-    openSession: async () => ({ close: vi.fn(async () => undefined) }),
+    openSession: async () => ({ close: vi.fn(async () => undefined), enable: async () => ({
+      server_status: { state: 'running' }, sync_enabled: true
+    }) }),
     openTransport: async () => undefined,
     runApproval: async (onReady) => onReady(),
     startWindows: vi.fn(),
     waitForFact: async () => { throw new Error('fact missing'); }
   })).rejects.toThrow('fact missing');
   expect(closeTransport).toHaveBeenCalledTimes(1);
+});
+
+it('stops before product mutation when the A listener is not ready', async () => {
+  const close = vi.fn(async () => undefined);
+  const createFact = vi.fn();
+  const openTransport = vi.fn();
+  await expect(runAOfflineAdmissionPrelude({
+    closeTransport: vi.fn(), createFact,
+    openSession: async () => ({ close, enable: async () => ({
+      server_status: { state: 'stopped' }, sync_enabled: true
+    }) }),
+    openTransport, runApproval: vi.fn(), startWindows: vi.fn(), waitForFact: vi.fn()
+  })).rejects.toMatchObject({
+    failureOwner: 'controller', host: 'macos-a', missingFact: 'a_product_listener_unavailable'
+  });
+  expect(createFact).not.toHaveBeenCalled();
+  expect(openTransport).not.toHaveBeenCalled();
+  expect(close).toHaveBeenCalledOnce();
 });

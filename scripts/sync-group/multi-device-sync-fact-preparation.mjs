@@ -10,6 +10,12 @@ export async function runAOfflineAdmissionPrelude({
   };
   let windowsWork;
   try {
+    const listener = await session.enable();
+    if (listener.sync_enabled !== true || listener.server_status?.state !== 'running') {
+      throw Object.assign(new Error('MacOS A product sync listener did not become ready.'), {
+        failureOwner: 'controller', host: 'macos-a', missingFact: 'a_product_listener_unavailable'
+      });
+    }
     const fact = await createFact(session);
     await openTransport();
     transportOpen = true;
