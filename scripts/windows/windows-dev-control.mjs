@@ -64,7 +64,7 @@ export function windowsDevPushSpec(host, env = process.env, home = os.homedir())
     || path.join(home, '.ssh', 'agent', 'foliole-windows-android-lab-git');
   if (/['\0\r\n]/u.test(key)) throw new Error('Windows DEV Git key path contains unsupported characters');
   return {
-    args: ['push', '--porcelain', `${host}:foliole-dev.git`, `dev:${WINDOWS_DEV_SOURCE_REF}`],
+    args: ['push', '--porcelain', `${host}:foliole-dev.git`, `+dev:${WINDOWS_DEV_SOURCE_REF}`],
     env: {
       ...env,
       GIT_SSH_COMMAND: `ssh -i '${key}' -o BatchMode=yes -o IdentitiesOnly=yes `

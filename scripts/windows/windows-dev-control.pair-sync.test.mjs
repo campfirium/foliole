@@ -6,6 +6,7 @@ import path from 'node:path';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { runWindowsDevControl } from './windows-dev-control.mjs';
+import { WINDOWS_DEV_PAIR_SYNC_RECOVERY_FILES } from './windows-dev-pair-sync-evidence.mjs';
 
 const roots = [];
 afterEach(() => roots.splice(0).forEach((root) => fs.rmSync(root, { force: true, recursive: true })));
@@ -31,8 +32,8 @@ it('copies the fixed minimal pair recovery receipt set', async () => {
     repoRoot, stdout: { write: vi.fn() }
   });
   expect(result).toMatchObject({ action: 'pair-sync-recover', manifestPath: expect.stringContaining('manifest.json') });
-  expect(executeScp).toHaveBeenCalledTimes(6);
-  expect(executeScp.mock.calls.map(([args]) => path.basename(args.at(-1)))).not.toContain('action.log');
+  expect(executeScp.mock.calls.map(([args]) => path.basename(args.at(-1))))
+    .toEqual(WINDOWS_DEV_PAIR_SYNC_RECOVERY_FILES);
 });
 
 it('copies only a scrubbed summary when pair recovery stops', async () => {

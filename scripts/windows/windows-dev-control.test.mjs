@@ -52,7 +52,7 @@ it('pushes dev and then invokes the fixed Windows action', async () => {
     argv: ['verify'], env: {}, executeGit, executeSsh, stdout
   })).resolves.toMatchObject({ action: 'verify', ref: 'refs/heads/dev' });
   expect(calls[0]).toEqual([
-    'git', 'push', '--porcelain', `${WINDOWS_DEV_DEFAULT_SSH}:foliole-dev.git`, 'dev:refs/heads/dev'
+    'git', 'push', '--porcelain', `${WINDOWS_DEV_DEFAULT_SSH}:foliole-dev.git`, '+dev:refs/heads/dev'
   ]);
   expect(calls[1][0]).toBe('ssh');
   expect(calls[1]).toContain('verify');

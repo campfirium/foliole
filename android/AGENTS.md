@@ -44,7 +44,7 @@
 - Android 原生壳新增配置、权限或插件接入时，必须同步检查 `scripts/android/**` 现有工作流是否需要更新。
 - 除非用户明确要求，不得把 Android 特有实现回写成全仓默认路径。
 - Android / companion 侧凡会写入移动端 SQLite 的同步、复习、资源落库、cursor、配对或 workspace sync metadata 路径，必须经共享的 companion sync writer queue 串行化；已处在同一个 writer task 内部的内部 cursor 保存不得再次嵌套排队，避免自锁。
-- Mac 本地 A5 动作直接消费当前工作区源码，不要求先提交或 push；正式验收证据必须记录当前工作区状态并拒绝把未提交源码伪装成可复现版本。Windows 跨宿主动作继续使用普通本地 `dev` Git 仓库：Mac controller 对 LAN Git 做普通 `dev` push，Windows 执行 `git pull --ff-only lan dev` 后运行固定 adapter；Windows 不提交或推送源码上游。
+- Mac 本地 A5 动作直接消费当前工作区源码，不要求先提交或 push；正式验收证据必须记录当前工作区状态并拒绝把未提交源码伪装成可复现版本。Windows 跨宿主动作继续使用普通本地 `dev` Git 仓库：Mac controller 将当前工作区 `dev` 精确覆盖到 LAN Git 的同名传输镜像，Windows 执行 `git pull --ff-only lan dev` 后运行固定 adapter；Windows 不提交或推送源码上游。
 - 固定 ADB port 是 device adapter 的命令 contract，不是常驻 server contract；普通 SSH 动作必须在同一前台生命周期内以固定 port 和显式 serial 完成冷启动、设备操作与收口，不得要求 ADB server 跨 SSH 会话存活，也不得为保活引入 detached process、logon task、service、broker、无线或 GUI fallback。
 - Mac A5 日常动作必须机械分流：`status` 只读取固定设备、应用与 workspace readiness；`build` 完成 companion web build、Capacitor sync 与无 daemon debug / androidTest APK 构建；`deploy` 先执行同一 build，再用 `adb install -r` 保留数据覆盖安装、冷启动并复核 readiness。任一阶段失败必须按原阶段失败，不得卸载、清数据、使用 install cache 掩盖 stale assets 或隐式回退 Windows。Windows `live|appearance|build|deploy` 只保留对应跨宿主验收语义。
 - `capture-annotation` 由 Mac 固定入口运行 Capture/Cloze/Note 重启验收：同轮准备 Web/Capacitor 产物并构建、保留数据替换主 APK、安装匹配测试 APK、执行唯一方法、只读审计后清理测试包；不得接受外部测试类或 ADB 参数，不得清数据、卸载主包、选择设备、启动后台服务或隐式 fallback。Windows 同名 action 只保留跨宿主验收兼容入口，并复用 `scripts/android/android-a5-capture-annotation-*` 共享核心。
