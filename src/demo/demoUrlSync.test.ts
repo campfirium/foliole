@@ -1,13 +1,11 @@
 import { expect, it, vi } from 'vitest';
 
-import { createInitialWorkspaceState, useWorkspaceStore } from '../store/workspaceStore';
-
 import { DEMO_TOPICS, getDemoTopicNodeId } from './demoContent';
 import {
   demoPathSegmentFromLocale,
-  installDemoUrlSync,
   resolveDemoInitialLanguagePreference,
   resolveDemoLanguagePreferenceFromPath,
+  resolveDemoLanguagePreferenceFromSearch,
   syncDemoUrlToNode
 } from './demoUrlSync';
 
@@ -17,54 +15,37 @@ it('resolves only supported Demo route locale prefixes into runtime language pre
   expect(resolveDemoLanguagePreferenceFromPath('/zh-hant/guides/welcome-to-foliole/')).toBe('zh-Hant');
   expect(resolveDemoLanguagePreferenceFromPath('/pt-br/demo/')).toBe('pt-BR');
   expect(resolveDemoLanguagePreferenceFromPath('/nl/demo/')).toBeUndefined();
+  expect(resolveDemoLanguagePreferenceFromSearch('?lang=pt-BR')).toBe('pt-BR');
+  expect(resolveDemoLanguagePreferenceFromSearch('?lang=nl')).toBeUndefined();
   expect(demoPathSegmentFromLocale('en')).toBe('en');
   expect(demoPathSegmentFromLocale('zh-Hans')).toBe('zh-hans');
+  expect(demoPathSegmentFromLocale('de')).toBe('en');
 });
 
-it('keeps a persisted Demo language preference ahead of the route default', () => {
-  expect(resolveDemoInitialLanguagePreference('/ja/demo/', 'system')).toBe('system');
-  expect(resolveDemoInitialLanguagePreference('/ja/demo/', 'de')).toBe('de');
-  expect(resolveDemoInitialLanguagePreference('/ja/demo/', null)).toBe('ja');
+it('resolves persisted choice, website context, route, then system fallback in order', () => {
+  expect(resolveDemoInitialLanguagePreference('/en/demo/', '?lang=ja', 'system')).toBe('system');
+  expect(resolveDemoInitialLanguagePreference('/en/demo/', '?lang=ja', 'de')).toBe('de');
+  expect(resolveDemoInitialLanguagePreference('/en/demo/', '?lang=ja', null)).toBe('ja');
+  expect(resolveDemoInitialLanguagePreference('/zh-hans/demo/', '', null)).toBe('zh-Hans');
+  expect(resolveDemoInitialLanguagePreference('/en/demo/', '?lang=nl', null)).toBe('en');
 });
 
-it('keeps the browser URL aligned with the active official Demo topic', () => {
+it('keeps the active topic on a published route while carrying website language context', () => {
   const firstTopic = DEMO_TOPICS[0];
   if (!firstTopic) throw new Error('Demo URL sync test requires one topic.');
   const replaceState = vi.fn();
   vi.stubGlobal('window', {
     history: { replaceState, state: null },
-    localStorage: {
-      getItem: () => null,
-      setItem: vi.fn(),
-      removeItem: vi.fn()
-    },
-    location: { pathname: `/zh-hans/guides/${firstTopic.slug}/` }
-  });
-  useWorkspaceStore.setState({
-    ...createInitialWorkspaceState(new Date('2026-06-17T00:00:00.000Z')),
-    activeNodeId: getDemoTopicNodeId(firstTopic)
+    location: { hash: '', pathname: `/en/guides/${firstTopic.slug}/`, search: '?source=site' }
   });
 
-  const unsubscribe = installDemoUrlSync();
-  useWorkspaceStore.setState({ activeNodeId: 'special-inbox' });
+  syncDemoUrlToNode(getDemoTopicNodeId(firstTopic), 'de', 'de');
 
-  expect(replaceState).toHaveBeenCalledWith(null, '', '/zh-hans/demo/');
-  unsubscribe();
-  vi.unstubAllGlobals();
-});
-
-it('rewrites the active official Demo topic with the provided locale segment', () => {
-  const firstTopic = DEMO_TOPICS[0];
-  if (!firstTopic) throw new Error('Demo URL sync test requires one topic.');
-  const replaceState = vi.fn();
-  vi.stubGlobal('window', {
-    history: { replaceState, state: null },
-    location: { pathname: `/en/guides/${firstTopic.slug}/` }
-  });
-
-  syncDemoUrlToNode(getDemoTopicNodeId(firstTopic), 'zh-hans');
-
-  expect(replaceState).toHaveBeenCalledWith(null, '', `/zh-hans/guides/${firstTopic.slug}/`);
+  expect(replaceState).toHaveBeenCalledWith(
+    null,
+    '',
+    `/en/guides/${firstTopic.slug}/?source=site&lang=de`
+  );
   vi.unstubAllGlobals();
 });
 
@@ -74,39 +55,39 @@ it('keeps locale Demo entry URLs stable while active nodes change', () => {
   const replaceState = vi.fn();
   vi.stubGlobal('window', {
     history: { replaceState, state: null },
-    location: { pathname: '/en/demo/' }
+    location: { hash: '', pathname: '/en/demo/', search: '' }
   });
 
-  syncDemoUrlToNode(getDemoTopicNodeId(firstTopic), 'en');
+  syncDemoUrlToNode(getDemoTopicNodeId(firstTopic), 'en', 'en');
 
   expect(replaceState).not.toHaveBeenCalled();
   vi.unstubAllGlobals();
 });
 
-it('updates only the locale segment for locale Demo entry URLs', () => {
+it('uses the published Chinese path without a redundant language query', () => {
   const firstTopic = DEMO_TOPICS[0];
   if (!firstTopic) throw new Error('Demo URL sync test requires one topic.');
   const replaceState = vi.fn();
   vi.stubGlobal('window', {
     history: { replaceState, state: null },
-    location: { pathname: '/en/demo/' }
+    location: { hash: '', pathname: '/en/demo/', search: '?lang=de' }
   });
 
-  syncDemoUrlToNode(getDemoTopicNodeId(firstTopic), 'zh-hans');
+  syncDemoUrlToNode(getDemoTopicNodeId(firstTopic), 'zh-Hans', 'zh-Hans');
 
   expect(replaceState).toHaveBeenCalledWith(null, '', '/zh-hans/demo/');
   vi.unstubAllGlobals();
 });
 
-it('rewrites non-public Demo workspace nodes to the locale Demo entry', () => {
+it('keeps System explicit and rewrites non-public nodes to a refresh-safe route', () => {
   const replaceState = vi.fn();
   vi.stubGlobal('window', {
     history: { replaceState, state: null },
-    location: { pathname: '/zh-hans/guides/welcome-to-foliole/' }
+    location: { hash: '#current', pathname: '/zh-hans/guides/welcome-to-foliole/', search: '' }
   });
 
-  syncDemoUrlToNode('inbox', 'zh-hans');
+  syncDemoUrlToNode('inbox', 'system', 'zh-Hans');
 
-  expect(replaceState).toHaveBeenCalledWith(null, '', '/zh-hans/demo/');
+  expect(replaceState).toHaveBeenCalledWith(null, '', '/zh-hans/demo/?lang=system#current');
   vi.unstubAllGlobals();
 });

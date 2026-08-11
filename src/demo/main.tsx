@@ -29,7 +29,7 @@ const [
   { createBrowserLocalWorkspaceMutationRepository, installWorkspaceMutationRepository },
   { createDemoExternalFolderProvider },
   { createBrowserDemoRuntimeController },
-  { installDemoUrlSync, resolveDemoInitialLanguagePreference },
+  { resolveDemoInitialLanguagePreference },
   { DemoUrlSyncBridge },
   { installDemoWorkspaceSnapshot },
   { App }
@@ -52,9 +52,9 @@ await installDemoWorkspaceSnapshot();
 installDemoRuntimeController(createBrowserDemoRuntimeController());
 installExternalFolderRuntimeProvider(createDemoExternalFolderProvider());
 installWorkspaceMutationRepository(createBrowserLocalWorkspaceMutationRepository());
-installDemoUrlSync();
 const initialLanguagePreference = resolveDemoInitialLanguagePreference(
   window.location.pathname,
+  window.location.search,
   getPersistedAppLanguagePreference()
 );
 const DemoReact = React as typeof import('react');

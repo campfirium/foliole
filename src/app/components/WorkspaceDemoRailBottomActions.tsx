@@ -7,6 +7,7 @@ import { resetDemoExperience } from '../../shared/platform/runtime/demoRuntime';
 import { openExternalUrl } from '../../shared/platform/runtimeExternalNavigation';
 import { requestAppConfirmation, ToolbarActionGroup } from '../../shared/ui';
 
+import { WorkspaceDemoLanguageMenu } from './WorkspaceDemoLanguageMenu';
 import {
   WORKSPACE_RAIL_BUTTON_FOCUS_CLASS_NAME,
   WorkspaceRailTooltipButton
@@ -53,6 +54,7 @@ export function WorkspaceDemoRailBottomActions({
       fullWidth
       orientation="vertical"
     >
+      <WorkspaceDemoLanguageMenu />
       <DemoRailActionButton
         className={RAIL_BUTTON_CLASS_NAME}
         icon={<House aria-hidden="true" size={16} strokeWidth={1.75} />}

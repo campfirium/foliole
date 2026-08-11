@@ -15,9 +15,9 @@ if (!DEMO_TOPIC) {
 }
 
 function LanguageSwitchHarness() {
-  const { setLocale } = useLocalization();
+  const { setLanguagePreference } = useLocalization();
   return (
-    <button onClick={() => setLocale('zh-Hans')} type="button">
+    <button onClick={() => setLanguagePreference('de')} type="button">
       Switch
     </button>
   );
@@ -36,7 +36,7 @@ beforeEach(() => {
   });
 });
 
-it('keeps the Demo URL prefix aligned with runtime locale changes', async () => {
+it('keeps explicit Demo language changes on refresh-safe published URLs', async () => {
   const replaceState = vi.spyOn(window.history, 'replaceState');
 
   render(
@@ -52,7 +52,7 @@ it('keeps the Demo URL prefix aligned with runtime locale changes', async () => 
     expect(replaceState).toHaveBeenCalledWith(
       null,
       '',
-      '/zh-hans/demo/'
+      '/en/demo/?lang=de'
     );
   });
   replaceState.mockRestore();
