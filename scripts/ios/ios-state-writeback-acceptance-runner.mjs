@@ -58,9 +58,16 @@ export function verifyStateWritebackAcceptance(first, second, firstSnapshot, sec
   const servicePassed = state.push_requests === 1 && state.pack_requests === 3 &&
     JSON.stringify(pushedTypes) === JSON.stringify(['node_reading', 'node_review', 'review_log', 'setting']) &&
     state.ack_statuses?.length === 4 && state.ack_statuses.every((status) => status === 'accepted');
-  if (!bridgeEvidencePassed(first, second) || !snapshotPassed(firstSnapshot) ||
-      JSON.stringify(secondSnapshot) !== JSON.stringify(firstSnapshot) || !servicePassed) {
-    throw new Error('iOS state writeback acceptance evidence is incomplete.');
+  const verdicts = {
+    bridge: bridgeEvidencePassed(first, second),
+    restartStable: JSON.stringify(secondSnapshot) === JSON.stringify(firstSnapshot),
+    service: servicePassed,
+    snapshot: snapshotPassed(firstSnapshot)
+  };
+  if (Object.values(verdicts).some((passed) => !passed)) {
+    throw new Error(`iOS state writeback acceptance evidence is incomplete: ${JSON.stringify({
+      first, firstSnapshot, second, secondSnapshot, verdicts
+    })}`);
   }
   return { first, first_snapshot: firstSnapshot, observations: state, second, second_snapshot: secondSnapshot };
 }
