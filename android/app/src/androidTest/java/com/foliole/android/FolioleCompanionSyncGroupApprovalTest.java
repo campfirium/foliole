@@ -10,7 +10,7 @@ import org.json.JSONObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CountDownLatch;
 
 @RunWith(AndroidJUnit4.class)
 public class FolioleCompanionSyncGroupApprovalTest {
@@ -19,7 +19,7 @@ public class FolioleCompanionSyncGroupApprovalTest {
         emit(FolioleCompanionSyncGroupApprovalScenario.approveForeground(
             InstrumentationRegistry.getInstrumentation()
         ));
-        Thread.sleep(TimeUnit.MINUTES.toMillis(3));
+        new CountDownLatch(1).await();
     }
 
     @Test

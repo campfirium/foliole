@@ -85,7 +85,8 @@ async function admitEmptyC(repoRoot, runId, { reportProgress, signal, stage }) {
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const approvalController = new AbortController();
   const approvalSignal = AbortSignal.any([signal, approvalController.signal]);
-  const execute = actionExecute(evidenceRoot, approvalSignal, stage);
+  const execute = actionExecute(evidenceRoot, signal, stage);
+  const executeApproval = actionExecute(evidenceRoot, approvalSignal, stage);
   const executeWindows = actionExecute(evidenceRoot, signal, stage);
   const paths = macosA5Paths(repoRoot);
   const env = macosA5GradleEnv();
@@ -113,7 +114,8 @@ async function admitEmptyC(repoRoot, runId, { reportProgress, signal, stage }) {
     }),
     openTransport: () => openPairSyncRecoveryTransport(runTransport),
     runApproval: (lifecycle) => runMacosA5SyncGroupApproval({
-      execute, ...lifecycle, prepare: () => {}, repoRoot
+      allowControlledCancellation: true, execute, instrumentationExecute: executeApproval,
+      ...lifecycle, prepare: () => {}, repoRoot
     }),
     startWindows: async () => {
       const result = await executeWindows(process.execPath,

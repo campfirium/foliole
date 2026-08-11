@@ -4,7 +4,7 @@ import {
   runBoundedStageAction, settleSiblingActions
 } from './multi-device-sync-stage-runtime.mjs';
 
-/* global setTimeout */
+/* global AbortController, setTimeout */
 
 function stage(overrides = {}) {
   return { hardDeadlineMs: 200, host: 'all', milestones: ['started', 'completed'],
@@ -39,4 +39,16 @@ it('joins every sibling before reporting the first failure', async () => {
     { name: 'approval', status: 'rejected' }, { name: 'windows', status: 'fulfilled' }
   ] });
   expect(events).toEqual(['cancel', 'slow-settled']);
+});
+
+it('lets a declared terminal sibling release its bounded waiter before joining both', async () => {
+  const controller = new AbortController();
+  const approval = new Promise((resolve) => {
+    controller.signal.addEventListener('abort', () => resolve('approved'), { once: true });
+  });
+  await expect(settleSiblingActions([
+    { name: 'approval', work: approval }, { name: 'windows', work: Promise.resolve('synced') }
+  ], () => controller.abort(), ['windows'])).resolves.toEqual({
+    approval: 'approved', windows: 'synced'
+  });
 });

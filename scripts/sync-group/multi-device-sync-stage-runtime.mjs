@@ -59,13 +59,14 @@ export async function runBoundedStageAction({ action, run, stage }) {
   }
 }
 
-export async function settleSiblingActions(entries, cancel = () => {}) {
+export async function settleSiblingActions(entries, cancel = () => {}, cancelOnSuccess = []) {
   const wrapped = entries.map(({ name, work }) => Promise.resolve(work).then(
     (value) => ({ name, status: 'fulfilled', value }),
     (reason) => ({ name, reason, status: 'rejected' })
   ));
   const first = await Promise.race(wrapped);
   if (first.status === 'rejected') cancel(first.name);
+  if (first.status === 'fulfilled' && cancelOnSuccess.includes(first.name)) cancel(first.name);
   const settled = await Promise.all(wrapped);
   const failure = settled.find(({ status }) => status === 'rejected');
   if (failure) {

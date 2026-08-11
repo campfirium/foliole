@@ -53,7 +53,7 @@ export async function runAOfflineAdmissionPrelude({
         reportProgress('b-approval-completed'); return approval;
       }) },
       { name: 'windows-c-join', work: windowsWork }
-    ], cancelSiblings);
+    ], cancelSiblings, ['windows-c-join']);
     return { approval: settled['android-b-approval'], fact, windows: settled['windows-c-join'] };
   } finally {
     if (transportOpen) await closeTransport().catch(() => undefined);

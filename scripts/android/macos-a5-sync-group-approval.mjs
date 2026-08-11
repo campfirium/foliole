@@ -42,10 +42,10 @@ export async function installedMainMatches({ execute, paths, env, localHash = sh
   return hashResult.code === 0 && resultText(hashResult).split(/\s+/u)[0] === localHash;
 }
 
-export function parseSyncGroupApprovalReceipt(output) {
+export function parseSyncGroupApprovalReceipt(output, allowControlledCancellation = false) {
   const prefix = 'INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReceipt=';
   const line = String(output).split(/\r?\n/u).find((entry) => entry.startsWith(prefix));
-  if (!line || !/^INSTRUMENTATION_CODE: -1$/mu.test(output)) {
+  if (!line || (!allowControlledCancellation && !/^INSTRUMENTATION_CODE: -1$/mu.test(output))) {
     const tail = String(output).trim().split(/\r?\n/u).slice(-24).join(' | ');
     throw new Error(`Sync Group approval instrumentation did not complete: ${tail || 'no output'}`);
   }
@@ -72,7 +72,8 @@ export async function startMacosA5SyncGroupApprovalProvider({
 }
 
 export async function runMacosA5SyncGroupApproval({ execute, onProviderStopped = async () => {},
-  onReady = async () => {}, prepare = build, repoRoot }) {
+  onReady = async () => {}, prepare = build, repoRoot,
+  allowControlledCancellation = false, instrumentationExecute = execute }) {
   const paths = macosA5Paths(repoRoot);
   const env = macosA5GradleEnv();
   assertFixedA5(paths);
@@ -97,11 +98,13 @@ export async function runMacosA5SyncGroupApproval({ execute, onProviderStopped =
       env, timeoutMs: 30_000
     }), 'provider-log-clear');
     await startMacosA5SyncGroupApprovalProvider({ execute, onProviderStopped, onReady, paths, env });
-    const run = requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'instrument',
+    const run = await instrumentationExecute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'instrument',
       '-w', '-r', '-e', 'class', `${TEST_CLASS}#approvesJoinWhileProviderStaysForeground`, TEST_RUNNER], {
       env, timeoutMs: 15 * 60_000
-    }), 'sync-group-approval');
-    const receipt = parseSyncGroupApprovalReceipt(run.output);
+    });
+    const controlled = allowControlledCancellation && run.terminationReason === 'cancelled';
+    if (!controlled) requireSuccess(run, 'sync-group-approval');
+    const receipt = parseSyncGroupApprovalReceipt(run.output, controlled);
     const providerLog = requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'logcat', '-d',
       '-v', 'time', 'FolioleSyncProvider:V', '*:S'], { env, timeoutMs: 30_000 }), 'provider-log');
     const resume = requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start',

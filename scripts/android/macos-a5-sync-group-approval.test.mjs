@@ -36,6 +36,15 @@ it('accepts the complete approval receipt', () => {
   )).toEqual(receipt);
 });
 
+it('accepts a signed approval receipt after controller-owned sibling completion', () => {
+  const receipt = {
+    approved: true, foreground: true, ok: true, targetTestId: 'sync-group-approval'
+  };
+  expect(parseSyncGroupApprovalReceipt(
+    `INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReceipt=${JSON.stringify(receipt)}`, true
+  )).toEqual(receipt);
+});
+
 it('opens transport after provider stop and starts the peer only after the product surface is stable', async () => {
   const order = [];
   const execute = async (_command, args) => {
