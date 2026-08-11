@@ -6,6 +6,10 @@ export function isWindowsSyncGroupAction(action) {
   return WINDOWS_SYNC_GROUP_ACTIONS.includes(action);
 }
 
+export function preparesWindowsSyncGroupCandidate(action) {
+  return action === 'multi-device-sync-candidate';
+}
+
 export function attachSyncGroupResult(summary, result) {
   for (const key of ['multiDeviceSyncC', 'multiDeviceSyncCandidate']) {
     if (result?.[key]) summary[key] = result[key];

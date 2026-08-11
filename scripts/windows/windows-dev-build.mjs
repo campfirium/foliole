@@ -16,7 +16,7 @@ import { runWindowsDevDeviceAction } from './windows-dev-device-action.mjs';
 import { windowsDevPaths } from './windows-dev-paths.mjs';
 import { allowsPairSyncNativeClient } from './windows-dev-residual-process.mjs';
 import {
-  attachSyncGroupResult, isWindowsSyncGroupAction, printSyncGroupResult,
+  attachSyncGroupResult, isWindowsSyncGroupAction, preparesWindowsSyncGroupCandidate, printSyncGroupResult,
   WINDOWS_SYNC_GROUP_ACTIONS
 } from './windows-sync-group-build-routing.mjs';
 
@@ -124,7 +124,7 @@ export async function runWindowsDevBuild({
     context = evidenceContext(paths, now, id, fsApi);
     const requiredTools = [paths.systemNode,
       ...(['build', 'capture-annotation', 'deploy', 'pair-sync-recover'].includes(action)
-        || isWindowsSyncGroupAction(action)
+        || preparesWindowsSyncGroupCandidate(action)
         ? [paths.systemNpmCli] : []),
       ...(['build'].includes(action) || isWindowsSyncGroupAction(action) ? [] : [paths.adbPath])];
     for (const filePath of requiredTools) {
@@ -148,13 +148,13 @@ export async function runWindowsDevBuild({
       output += gate.output;
     }
     if (['build', 'capture-annotation', 'deploy', 'pair-sync-recover'].includes(action)
-        || isWindowsSyncGroupAction(action)) {
+        || preparesWindowsSyncGroupCandidate(action)) {
       output += await prepareHost({
         execute, fsApi, liveReload: !['capture-annotation', 'pair-sync-recover'].includes(action)
           && !isWindowsSyncGroupAction(action), paths
       });
     }
-    if (action === 'pair-sync-recover' || isWindowsSyncGroupAction(action)) {
+    if (action === 'pair-sync-recover' || preparesWindowsSyncGroupCandidate(action)) {
       output += await runWindowsDevDesktopBuild(execute, paths, checked);
     }
     let actionResult = null;
