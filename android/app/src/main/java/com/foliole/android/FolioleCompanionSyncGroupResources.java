@@ -4,8 +4,9 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.nio.file.Files;
+import java.io.FileInputStream;
 
 final class FolioleCompanionSyncGroupResources {
     private FolioleCompanionSyncGroupResources() {}
@@ -31,8 +32,18 @@ final class FolioleCompanionSyncGroupResources {
                 cursor.isNull(1) || !contentHash.equals(cursor.getString(1))) return null;
             File file = new File(new File(context.getFilesDir(), "attachments"), contentHash);
             if (!file.isFile()) return null;
-            return new Resource(cursor.isNull(2) ? "application/octet-stream" : cursor.getString(2), Files.readAllBytes(file.toPath()));
+            return new Resource(cursor.isNull(2) ? "application/octet-stream" : cursor.getString(2), readAll(file));
         } finally { db.close(); }
+    }
+
+    private static byte[] readAll(File file) throws Exception {
+        try (FileInputStream input = new FileInputStream(file); ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[256 * 1024];
+            for (int count; (count = input.read(buffer)) >= 0;) {
+                if (count > 0) output.write(buffer, 0, count);
+            }
+            return output.toByteArray();
+        }
     }
 
     static final class Resource {

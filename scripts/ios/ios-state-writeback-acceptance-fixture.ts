@@ -37,7 +37,8 @@ export async function createIosStateWritebackAcceptanceFixture(args: {
   );
   const port = createBetterSqliteDbPort(sqlite, { name: 'ios-state-writeback-acceptance' });
   return {
-    apply: (items: CompanionSyncPushPayload[]) => applyCompanionStateSyncPushWithDbPort(port, items),
+    apply: (items: CompanionSyncPushPayload[], sourceDeviceId: string) =>
+      applyCompanionStateSyncPushWithDbPort(port, items, sourceDeviceId),
     buildConfirmationPack: async (fromStateSeq = 0) => {
       const outputPath = path.join(args.outputDirectory, `confirmation-${fromStateSeq}.syncpack`);
       await buildDesktopSyncPackFromDriver({

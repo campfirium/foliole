@@ -39,7 +39,8 @@ export async function createIosSyncPackAcceptanceFixture(args: {
   const port = createBetterSqliteDbPort(sqlite, { name: 'ios-node-version-roundtrip-acceptance' });
   return {
     ...paths,
-    apply: (items: CompanionSyncPushPayload[]) => applyCompanionStateSyncPushWithDbPort(port, items),
+    apply: (items: CompanionSyncPushPayload[], sourceDeviceId: string) =>
+      applyCompanionStateSyncPushWithDbPort(port, items, sourceDeviceId),
     buildSuccessorPack: async (appliedNodeIds: string[]) => {
       const captureNodeId = appliedNodeIds.find((nodeId) => nodeId !== RESTORE_NODE_ID);
       if (!captureNodeId || !appliedNodeIds.includes(RESTORE_NODE_ID)) {

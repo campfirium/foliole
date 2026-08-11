@@ -27,7 +27,12 @@ export async function createIosStateWritebackAcceptanceService(args: {
           object_type: item.identity?.objectType ?? 'invalid',
           payload_json: item.payloadJson ?? null
         }));
-        const result = await handleCompanionSyncPushWithApply(request.bodyText, fixture.apply, () => undefined);
+        const result = await handleCompanionSyncPushWithApply(
+          request.bodyText,
+          args.toPeerId,
+          fixture.apply,
+          () => undefined
+        );
         args.observations.ack_statuses.push(...result.acks.map((ack) => ack.status));
         return { body: JSON.stringify(result), contentType: 'application/json' };
       }
