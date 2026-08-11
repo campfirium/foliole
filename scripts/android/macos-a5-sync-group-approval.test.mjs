@@ -36,15 +36,16 @@ it('accepts the complete approval receipt', () => {
   )).toEqual(receipt);
 });
 
-it('starts the peer only after the A5 product surface is stable', async () => {
+it('opens transport after provider stop and starts the peer only after the product surface is stable', async () => {
   const order = [];
   const execute = async (_command, args) => {
     order.push(args.some((arg) => arg.endsWith('verify-android-launch.mjs')) ? 'stable' : 'started');
     return { code: 0, output: '' };
   };
   await startMacosA5SyncGroupApprovalProvider({
-    env: {}, execute, onReady: async () => { order.push('peer'); },
+    env: {}, execute, onProviderStopped: async () => { order.push('transport'); },
+    onReady: async () => { order.push('peer'); },
     paths: { adb: 'adb', repoRoot: '/repo' }
   });
-  expect(order).toEqual(['started', 'stable', 'peer']);
+  expect(order).toEqual(['transport', 'started', 'stable', 'peer']);
 });

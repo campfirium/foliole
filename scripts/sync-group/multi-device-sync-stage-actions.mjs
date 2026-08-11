@@ -176,8 +176,8 @@ async function admitEmptyC(repoRoot, runId) {
       userDataPath: path.join(owned.root, 'user-data')
     }),
     openTransport: () => openPairSyncRecoveryTransport(runTransport),
-    runApproval: (onReady) => runMacosA5SyncGroupApproval({
-      execute, onReady, prepare: () => {}, repoRoot
+    runApproval: (lifecycle) => runMacosA5SyncGroupApproval({
+      execute, ...lifecycle, prepare: () => {}, repoRoot
     }),
     startWindows: () => execute(process.execPath,
       ['scripts/windows/windows-dev-control.mjs', 'multi-device-sync-c'], { cwd: repoRoot }),

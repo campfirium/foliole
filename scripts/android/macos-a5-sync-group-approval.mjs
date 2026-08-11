@@ -57,7 +57,10 @@ export function parseSyncGroupApprovalReceipt(output) {
   return receipt;
 }
 
-export async function startMacosA5SyncGroupApprovalProvider({ execute, onReady, paths, env }) {
+export async function startMacosA5SyncGroupApprovalProvider({
+  execute, onProviderStopped, onReady, paths, env
+}) {
+  await onProviderStopped();
   requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start',
     '-W', '-n', `${APP_ID}/.MainActivity`], { env, timeoutMs: 60_000 }), 'provider-ready');
   requireSuccess(await execute(process.execPath, [
@@ -68,8 +71,8 @@ export async function startMacosA5SyncGroupApprovalProvider({ execute, onReady, 
   await onReady();
 }
 
-export async function runMacosA5SyncGroupApproval({ execute, onReady = async () => {},
-  prepare = build, repoRoot }) {
+export async function runMacosA5SyncGroupApproval({ execute, onProviderStopped = async () => {},
+  onReady = async () => {}, prepare = build, repoRoot }) {
   const paths = macosA5Paths(repoRoot);
   const env = macosA5GradleEnv();
   assertFixedA5(paths);
@@ -93,7 +96,7 @@ export async function runMacosA5SyncGroupApproval({ execute, onReady = async () 
     requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'logcat', '-c'], {
       env, timeoutMs: 30_000
     }), 'provider-log-clear');
-    await startMacosA5SyncGroupApprovalProvider({ execute, onReady, paths, env });
+    await startMacosA5SyncGroupApprovalProvider({ execute, onProviderStopped, onReady, paths, env });
     const run = requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'instrument',
       '-w', '-r', '-e', 'class', `${TEST_CLASS}#approvesJoinWhileProviderStaysForeground`, TEST_RUNNER], {
       env, timeoutMs: 15 * 60_000

@@ -17,14 +17,18 @@ export async function runAOfflineAdmissionPrelude({
       });
     }
     const fact = await createFact(session);
-    await openTransport();
-    transportOpen = true;
-    const approval = await runApproval(async () => {
-      await waitForFact(fact.factId);
-      await closeTransport();
-      transportOpen = false;
-      await close();
-      windowsWork = startWindows();
+    const approval = await runApproval({
+      onProviderStopped: async () => {
+        await openTransport();
+        transportOpen = true;
+      },
+      onReady: async () => {
+        await waitForFact(fact.factId);
+        await closeTransport();
+        transportOpen = false;
+        await close();
+        windowsWork = startWindows();
+      }
     });
     return { approval, fact, windows: await windowsWork };
   } finally {
