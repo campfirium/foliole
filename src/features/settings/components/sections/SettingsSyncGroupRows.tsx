@@ -118,28 +118,31 @@ export function SettingsSyncGroupRows(props: {
 }) {
   const t = useTranslation();
   if (!props.group) return <EmptySyncGroupRow {...props} />;
+  const groupHeadingId = `sync-group-${props.group.group_id}-heading`;
   return (
     <>
       <div className="px-settings-panel-x pt-1">
         <div className="flex min-h-11 items-center">
           <h4 className="text-ui-md font-semibold text-foreground">{t('settings.companionSync.group.title')}</h4>
         </div>
-        <div className="mt-5 flex min-h-12 items-center justify-between gap-7 pb-3">
-          <span className="truncate text-ui-lg font-semibold text-foreground">
-            {t('settings.companionSync.group.named', { name: resolveSyncGroupDisplayDeviceName(props.group) })}
-          </span>
-          <button className="shrink-0 rounded-sm px-2 py-1 text-ui-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-45"
-            disabled={props.isBusy} onClick={props.onLeave} type="button">
-            {t('settings.companionSync.group.leave')}
-          </button>
-        </div>
-        <div aria-label={t('settings.companionSync.group.devices.title')}
-          className="ml-5 divide-y divide-settings-divider/65 border-l border-settings-divider/55 pl-6" role="list">
-          {props.group.members.filter((member) => member.state === 'active').map((member) => (
-            <DeviceRow disabled={props.isBusy} group={props.group!} key={member.device_id} member={member}
-              onRemove={props.onRemove} onToggleSync={props.onToggleSync} syncEnabled={props.syncEnabled} />
-          ))}
-        </div>
+        <section aria-labelledby={groupHeadingId} className="mt-5 border-b border-settings-divider/65 pb-5">
+          <div className="flex min-h-12 items-center justify-between gap-7 pb-2">
+            <h5 className="truncate text-ui-lg font-semibold text-foreground" id={groupHeadingId}>
+              {t('settings.companionSync.group.named', { name: resolveSyncGroupDisplayDeviceName(props.group) })}
+            </h5>
+            <button className="shrink-0 rounded-sm px-2 py-1 text-ui-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-45"
+              disabled={props.isBusy} onClick={props.onLeave} type="button">
+              {t('settings.companionSync.group.leave')}
+            </button>
+          </div>
+          <div aria-label={t('settings.companionSync.group.devices.title')}
+            className="ml-5 divide-y divide-settings-divider/65 pl-5" role="list">
+            {props.group.members.filter((member) => member.state === 'active').map((member) => (
+              <DeviceRow disabled={props.isBusy} group={props.group!} key={member.device_id} member={member}
+                onRemove={props.onRemove} onToggleSync={props.onToggleSync} syncEnabled={props.syncEnabled} />
+            ))}
+          </div>
+        </section>
       </div>
       {props.pendingRequests.length > 0 ? (
         <SettingsRow description={t('settings.companionSync.group.join.description')} title={t('settings.companionSync.group.join.title')}>
