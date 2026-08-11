@@ -1,6 +1,6 @@
 /* global console, process */
 
-import { readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
@@ -162,7 +162,10 @@ function resolveContainerPath(options, udid) {
   return capture(options, 'xcrun', ['simctl', 'get_app_container', udid, BUNDLE_ID, 'data']).trim();
 }
 
-function readBootstrapSnapshot(options, databasePath) {
+export function readBootstrapSnapshot(options, databasePath) {
+  if (!existsSync(databasePath)) {
+    throw new Error('iOS bootstrap database has not been created yet.');
+  }
   const names = REQUIRED_TABLES.map((name) => `'${name}'`).join(', ');
   const sql = `SELECT value FROM companion_meta WHERE key = 'device_id'; SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name IN (${names});`;
   return parseBootstrapSnapshot(capture(options, 'sqlite3', ['-cmd', '.timeout 1000', databasePath, sql]));

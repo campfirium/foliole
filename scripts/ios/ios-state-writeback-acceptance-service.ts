@@ -16,6 +16,12 @@ export async function createIosStateWritebackAcceptanceService(args: {
   return {
     close: fixture.close,
     route: async (request: { bodyText: string; method: string; url: string }) => {
+      if (request.method === 'GET' && request.url === '/companion/diagnostics/sync') {
+        return {
+          body: JSON.stringify({ sync_state: { max_state_seq: fixture.loadMaxStateSeq() } }),
+          contentType: 'application/json'
+        };
+      }
       if (request.method === 'POST' && request.url === '/companion/sync-push') {
         const payload = JSON.parse(request.bodyText) as {
           items?: Array<{ identity?: { objectType?: string }; payloadJson?: unknown }>;

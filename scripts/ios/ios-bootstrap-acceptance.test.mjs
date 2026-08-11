@@ -120,8 +120,8 @@ describe('iOS bootstrap acceptance contract', () => {
 
   it('accepts stable node, state, cursor, cleanup, and repeated apply evidence', () => {
     const snapshot = parseSyncPackSnapshot(JSON.stringify([{
-      capture_current: 'acceptance-desktop#2', capture_versions: 2, cursor: '4', dirty_count: 0,
-      push_ack_count: 0, push_cursor_present: 1, restore_current: 'ios-device#restore',
+      capture_current: 'acceptance-desktop#2', capture_versions: 2, confirmed_node_delivery_count: 2,
+      cursor: '4', dirty_count: 0, push_ack_count: 0, restore_current: 'ios-device#restore',
       restore_deleted_at: null, restore_versions: 2, tombstone_count: 0
     }]));
     const gates = Object.fromEntries([
