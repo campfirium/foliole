@@ -12,16 +12,19 @@ it('uses explicit A5 serial and a registered Windows action', async () => {
   fs.writeFileSync(path.join(repoRoot, 'node_modules/.bin/cap'), '');
   createIsolatedMacosRoot({ repoRoot, runId: 'run-1' });
   const calls = [];
+  const launchCalls = [];
   const execute = async (command, args) => {
     calls.push([command, args]);
     if (args.includes('devices')) return '87a33a4b               device product:test\n';
-    if (args.includes('dumpsys')) {
-      return '  mCurrentFocus=Window{1 u0 com.foliole.android/.MainActivity}\n';
-    }
     if (command === 'ssh') return '[multi-device-sync-readiness] status=ready\n';
     return '';
   };
-  const adapters = createHostReadinessAdapters({ execute, repoRoot, runId: 'run-1' });
+  const verifyLaunch = async (options) => {
+    launchCalls.push(options);
+    return { ok: true, state: { focusedWindow: 'com.foliole.android/.MainActivity',
+      topActivity: 'com.foliole.android/.MainActivity' } };
+  };
+  const adapters = createHostReadinessAdapters({ execute, repoRoot, runId: 'run-1', verifyLaunch });
   await adapters['android-b']();
   await adapters['windows-c']();
   expect(calls.some(([, args]) => args.includes('87a33a4b'))).toBe(true);
@@ -29,6 +32,8 @@ it('uses explicit A5 serial and a registered Windows action', async () => {
   expect(calls.find(([command]) => command === 'ssh')[1].join(' '))
     .toContain('windows-multi-device-sync-readiness.mjs');
   expect(calls.find(([command]) => command === 'ssh')[1]).toContain('C:/Progra~1/nodejs/node.exe');
+  expect(launchCalls).toEqual([expect.objectContaining({ appId: 'com.foliole.android',
+    serial: '87a33a4b', stabilitySeconds: 2, timeoutSeconds: 10 })]);
 });
 
 it('blocks Android readiness before mutation when Foliole lacks window focus', async () => {
@@ -38,10 +43,11 @@ it('blocks Android readiness before mutation when Foliole lacks window focus', a
   createIsolatedMacosRoot({ repoRoot, runId: 'run-2' });
   const execute = async (_command, args) => {
     if (args.includes('devices')) return '87a33a4b device product:test\n';
-    if (args.includes('dumpsys')) return 'mCurrentFocus=Window{2 u0 com.android.systemui/.keyguard}\n';
     return '';
   };
-  const adapters = createHostReadinessAdapters({ execute, repoRoot, runId: 'run-2' });
+  const verifyLaunch = async () => ({ ok: false,
+    state: { focusedWindow: 'com.android.systemui/.keyguard', topActivity: null } });
+  const adapters = createHostReadinessAdapters({ execute, repoRoot, runId: 'run-2', verifyLaunch });
   await expect(adapters['android-b']()).rejects.toMatchObject({
     lastSuccessfulAction: 'android_activity_started',
     missingFact: 'android_app_window_focus_missing'

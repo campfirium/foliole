@@ -5,6 +5,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 
 import { A5_SERIAL, macosA5Paths } from '../android/macos-a5-dev.mjs';
+import { verifyAndroidLaunch } from '../android/verify-android-launch.mjs';
 import { WINDOWS_DEV_DEFAULT_SSH } from '../windows/windows-dev-control.mjs';
 import { assertIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
@@ -29,16 +30,9 @@ function fixedDevice(output) {
   });
 }
 
-function requireAndroidWindowFocus(output) {
-  const focused = String(output).split(/\r?\n/u)
-    .find((line) => line.includes('mCurrentFocus='));
-  if (!focused?.includes(APP)) throw Object.assign(new Error('Foliole does not own Android window focus.'), {
-    missingFact: 'android_app_window_focus_missing', lastSuccessfulAction: 'android_activity_started'
-  });
-}
-
 export function createHostReadinessAdapters({ env = process.env, execute = bounded,
-  fsApi = fs, repoRoot, runId, windowsHost = WINDOWS_DEV_DEFAULT_SSH }) {
+  fsApi = fs, repoRoot, runId, verifyLaunch = verifyAndroidLaunch,
+  windowsHost = WINDOWS_DEV_DEFAULT_SSH }) {
   const paths = macosA5Paths(repoRoot);
   return {
     'macos-a': async () => {
@@ -58,8 +52,12 @@ export function createHostReadinessAdapters({ env = process.env, execute = bound
       await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start', '-W', '-n', `${APP}/.MainActivity`], {
         env, timeout: 20_000
       });
-      requireAndroidWindowFocus(await execute(paths.adb,
-        ['-s', A5_SERIAL, 'shell', 'dumpsys', 'window', 'windows'], { env, timeout: 10_000 }));
+      const launch = await verifyLaunch({ adb: paths.adb, appId: APP,
+        component: `${APP}/.MainActivity`, serial: A5_SERIAL,
+        stabilitySeconds: 2, timeoutSeconds: 10 });
+      if (!launch.ok) throw Object.assign(new Error('Foliole is not stably foregrounded on A5.'), {
+        missingFact: 'android_app_window_focus_missing', lastSuccessfulAction: 'android_activity_started'
+      });
       return { facts: ['fixed_a5_ready', 'android_workspace_ready'] };
     },
     'windows-c': async () => {
