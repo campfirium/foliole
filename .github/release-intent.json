@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "version": "0.7.6",
-  "publicationMode": "bridge",
+  "publicationMode": "scoped",
   "selectedPlatforms": ["macos", "windows", "linux"],
   "scopeBasis": {
     "macos": "Foliole 0.7.6 adds system-aware multilingual behavior across the desktop application, so the supported macOS package is required.",
