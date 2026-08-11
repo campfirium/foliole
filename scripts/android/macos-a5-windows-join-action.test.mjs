@@ -1,6 +1,7 @@
 /* global process */
 
 import fs from 'node:fs';
+import path from 'node:path';
 
 import { expect, it, vi } from 'vitest';
 
@@ -20,10 +21,10 @@ it('keeps Android approval active while the fixed Windows recovery runs', async 
   }))
     .resolves.toEqual({ output: 'android-approved\nwindows-complete\n' });
   expect(executeProcess).toHaveBeenCalledWith(process.execPath, [
-    '/repo/scripts/windows/windows-dev-control.mjs', 'sync-group-recover'
+    path.join('/repo', 'scripts/windows/windows-dev-control.mjs'), 'sync-group-recover'
   ], { cwd: '/repo' });
   expect(writeWindowsLog).toHaveBeenCalledWith(
-    '/repo/.tmp/artifacts/a5-sync-group-approval/windows-control.log', 'windows-complete\n'
+    path.join('/repo', '.tmp/artifacts/a5-sync-group-approval/windows-control.log'), 'windows-complete\n'
   );
   expect(approvalSource).toContain('const reuseInstalledMain = await installedMainMatches');
   expect(approvalSource).toContain('if (!reuseInstalledMain)');
