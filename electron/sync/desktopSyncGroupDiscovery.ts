@@ -1,3 +1,5 @@
+import os from 'node:os';
+
 import { Bonjour } from 'bonjour-service';
 
 import type { DesktopSyncGroupJoinCandidatePayload } from '../../lib/platform/nativeCompanionSyncContract.js';
@@ -5,6 +7,7 @@ import type { DesktopSyncGroupJoinCandidatePayload } from '../../lib/platform/na
 const DISCOVERY_MS = 1_800;
 const DISCOVERY_PROBE_MS = 2_000;
 type DiscoveredService = Parameters<NonNullable<Parameters<InstanceType<typeof Bonjour>['find']>[1]>>[0];
+type BonjourOptions = NonNullable<ConstructorParameters<typeof Bonjour>[0]> & { interface: string };
 
 export async function discoverDesktopSyncGroups(
   excludedDeviceId?: string,
@@ -20,15 +23,27 @@ export async function discoverDesktopSyncGroups(
     if (!host || !service.port || typeof txt.group_id !== 'string' || typeof txt.timeline_id !== 'string') return;
     endpoints.set(`http://${host}:${service.port}`, { name: service.name, txt });
   };
-  const bonjour = new Bonjour();
-  const browser = bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, collect);
+  const runtimes = discoveryInterfaces().map((networkInterface) => {
+    const bonjour = new Bonjour({ interface: networkInterface } as BonjourOptions);
+    const browser = bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, collect);
+    return { bonjour, browser };
+  });
   await new Promise((resolve) => setTimeout(resolve, DISCOVERY_MS));
-  browser.stop();
-  bonjour.destroy();
+  runtimes.forEach(({ bonjour, browser }) => {
+    browser.stop();
+    bonjour.destroy();
+  });
   const candidates = (await Promise.all([...endpoints].map(([endpointUrl, service]) =>
     probeCandidate(fetchDiscovery, endpointUrl, service)
   ))).filter((candidate): candidate is DesktopSyncGroupJoinCandidatePayload => candidate !== null);
   return selectStableGroupProviders(candidates);
+}
+
+function discoveryInterfaces(networks = os.networkInterfaces()) {
+  return Object.values(networks).flatMap((entries) => entries ?? [])
+    .filter((entry) => entry.family === 'IPv4' && !entry.internal)
+    .map((entry) => entry.address)
+    .filter((address, index, addresses) => addresses.indexOf(address) === index);
 }
 
 async function probeCandidate(

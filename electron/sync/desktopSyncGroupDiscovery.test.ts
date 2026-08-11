@@ -18,6 +18,16 @@ vi.mock('bonjour-service', () => ({
   }
 }));
 
+vi.mock('node:os', () => ({
+  default: {
+    networkInterfaces: () => ({
+      Ethernet: [{ address: '192.168.0.11', family: 'IPv4', internal: false }],
+      FlClash: [{ address: '198.18.0.1', family: 'IPv4', internal: false }],
+      Loopback: [{ address: '127.0.0.1', family: 'IPv4', internal: true }]
+    })
+  }
+}));
+
 import { discoverDesktopSyncGroups } from './desktopSyncGroupDiscovery.js';
 
 afterEach(() => {
@@ -29,14 +39,14 @@ afterEach(() => {
 });
 
 describe('desktop Sync Group discovery', () => {
-  it('uses the system multicast route and resolves an Android provider once', async () => {
+  it('queries every external IPv4 interface and resolves an Android provider once', async () => {
     vi.useFakeTimers();
     const fetchDiscovery = vi.fn(async () => new Response(JSON.stringify({
       group_display_name: 'Daily Group', group_id: 'group-1', peer_id: 'device-b',
       provider_device_kind: 'android-capacitor', provider_device_name: 'Android B', timeline_id: 'timeline-1'
     })));
     const discovery = discoverDesktopSyncGroups('device-a', fetchDiscovery as unknown as typeof fetch);
-    runtime.onServices[0]?.({
+    runtime.onServices[1]?.({
       addresses: ['192.168.0.10'],
       name: 'Desktop A',
       port: 41186,
@@ -55,7 +65,10 @@ describe('desktop Sync Group discovery', () => {
     });
     await vi.advanceTimersByTimeAsync(1_800);
 
-    expect(runtime.constructorArgs).toEqual([[]]);
+    expect(runtime.constructorArgs).toEqual([
+      [{ interface: '192.168.0.11' }],
+      [{ interface: '198.18.0.1' }]
+    ]);
     await expect(discovery).resolves.toEqual([{
       endpoint_url: 'http://192.168.0.107:41187',
       group_display_name: 'Daily Group',
@@ -65,8 +78,8 @@ describe('desktop Sync Group discovery', () => {
       provider_device_name: 'Android B',
       timeline_id: 'timeline-1'
     }]);
-    expect(runtime.stop).toHaveBeenCalledTimes(1);
-    expect(runtime.destroy).toHaveBeenCalledTimes(1);
+    expect(runtime.stop).toHaveBeenCalledTimes(2);
+    expect(runtime.destroy).toHaveBeenCalledTimes(2);
   });
 });
 
