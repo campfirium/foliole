@@ -3,13 +3,19 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
+import { setTimeout as delay } from 'node:timers/promises';
 
+import { inspectPairSyncRecoveryWorkspace } from '../android/android-pair-sync-recovery-readiness.mjs';
+import { collectAndroidDeviceSnapshot } from '../android/android-device-snapshot.mjs';
 import { macosA5GradleEnv, macosA5Paths, A5_SERIAL } from '../android/macos-a5-dev.mjs';
 import { runMacosA5PairSync } from '../android/macos-a5-pair-sync-action.mjs';
 import { runMacosA5SyncGroupApproval } from '../android/macos-a5-sync-group-approval.mjs';
+import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desktop-session.mjs';
 import { resolveMacosA5PairSyncReadiness } from '../android/macos-a5-product-bootstrap.mjs';
 import { runMacosA5SyncGroupMaintenance } from '../android/macos-a5-sync-group-maintenance-action.mjs';
 import { validateOwnedDesktopPreflight } from '../windows/windows-pair-sync-desktop-readiness.mjs';
+import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
+import { runAOfflineAdmissionPrelude } from './multi-device-sync-fact-preparation.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
 /* global Buffer, clearTimeout, process, setTimeout */
@@ -123,6 +129,22 @@ function windowsFormalReceipt(output, repoRoot) {
   return evidenceRef;
 }
 
+async function waitForAndroidFact(paths, factId) {
+  const deadline = Date.now() + 60_000;
+  let snapshot;
+  while (Date.now() < deadline) {
+    snapshot = await collectAndroidDeviceSnapshot({ adb: paths.adb, appId: 'com.foliole.android',
+      databaseInspector: inspectPairSyncRecoveryWorkspace, includeEvents: false,
+      serial: A5_SERIAL, tables: ['nodes'] });
+    if (snapshot.database?.inspection?.journeyFacts?.[factId] === 'A') return snapshot;
+    await delay(1_000);
+  }
+  throw Object.assign(new Error('Android B did not receive the deterministic A fact.'), {
+    failureOwner: 'product', host: 'android-b', missingFact: 'deterministic_a_fact_missing',
+    status: 'stalled'
+  });
+}
+
 async function admitEmptyC(repoRoot, runId) {
   const evidenceRoot = path.join(repoRoot, '.tmp', 'artifacts', 'multi-device-sync', 'runs', runId,
     'b-admit-empty-c');
@@ -130,23 +152,30 @@ async function admitEmptyC(repoRoot, runId) {
   const execute = actionExecute(path.join(evidenceRoot, 'progress.jsonl'),
     path.join(evidenceRoot, 'action.log'));
   const paths = macosA5Paths(repoRoot);
-  await runMacosA5SyncGroupMaintenance({ action: 'create-journey-fact', buildIdentity: runId,
-    env: macosA5GradleEnv(), evidenceRoot: path.join(evidenceRoot, 'b-fact'), execute,
-    paths, serial: A5_SERIAL });
-  let windowsWork;
-  const approval = await runMacosA5SyncGroupApproval({ execute,
-    onReady: async () => {
-      windowsWork = execute(process.execPath,
-        ['scripts/windows/windows-dev-control.mjs', 'multi-device-sync-c'], { cwd: repoRoot });
-    }, prepare: () => {}, repoRoot });
-  const windows = await windowsWork;
+  const owned = createIsolatedMacosRoot({ repoRoot, runId });
+  const { approval, windows } = await runAOfflineAdmissionPrelude({
+    createFact: (session) => createDesktopSyncGroupJourneyFact({
+      device: 'A', evidenceRoot: path.join(evidenceRoot, 'a-fact'), session
+    }),
+    openSession: () => openMacosPairSyncDesktopSession({
+      libraryHome: path.join(owned.root, 'library'), repoRoot,
+      userDataPath: path.join(owned.root, 'user-data')
+    }),
+    runApproval: (onReady) => runMacosA5SyncGroupApproval({
+      execute, onReady, prepare: () => {}, repoRoot
+    }),
+    startWindows: () => execute(process.execPath,
+      ['scripts/windows/windows-dev-control.mjs', 'multi-device-sync-c'], { cwd: repoRoot }),
+    waitForFact: (factId) => waitForAndroidFact(paths, factId)
+  });
   if (!windows || windows.code !== 0) {
     throw Object.assign(new Error('Windows C ordinary sync failed.'), { evidenceRef: evidenceRoot,
       failureOwner: 'product', host: 'windows-c', missingFact: 'windows_c_sync_receipt' });
   }
   const evidenceRef = windowsFormalReceipt(windows.output, repoRoot);
   return { evidenceRef, lastProgressAt: new Date().toISOString(),
-    progress: ['b-deterministic-fact-created', 'c-join-approved', 'c-ordinary-sync-complete',
+    progress: ['a-deterministic-fact-created', 'a-fact-synced-to-b', 'a-offline',
+      'c-join-approved', 'c-ordinary-sync-complete',
       `approval-${approval.receipt.targetTestId}`] };
 }
 

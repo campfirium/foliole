@@ -66,6 +66,22 @@ it('reports the persisted Sync Group identity without deriving it from pairing m
   });
 });
 
+it('recognizes generic multi-device acceptance facts without a track-specific prefix', () => {
+  const tables = new Set(['companion_meta', 'nodes', 'sync_object_state']);
+  const database = { prepare: (sql) => ({
+    all: () => [{ id: 'multi-device-sync-a-1', origin: 'A' }],
+    get: (value) => {
+      if (sql.includes('sqlite_master')) return tables.has(value) ? { present: 1 } : undefined;
+      if (sql.includes('companion_meta')) {
+        return value === 'device_id' ? { value: 'android-1' } : undefined;
+      }
+      return { count: 0 };
+    }
+  }) };
+  expect(inspectPairSyncRecoveryWorkspace(database).journeyFacts)
+    .toEqual({ 'multi-device-sync-a-1': 'A' });
+});
+
 it('allows only an empty unpaired workspace with a stable device identity', () => {
   expect(pairSyncRecoveryReadiness(snapshot(), false)).toMatchObject({
     deviceIdentityFingerprint: expect.stringMatching(/^[0-9a-f]{16}$/u),

@@ -64,12 +64,12 @@ function journeyFacts(database) {
   if (!tableExists(database, 'nodes')) return {};
   const statement = database.prepare(`SELECT id,
       CASE
-        WHEN id GLOB 't121-a-*' OR title LIKE 'T121 A fact%' OR content LIKE 'T121 A fact%' THEN 'A'
-        WHEN id GLOB 't121-b-*' OR title LIKE 'T121 B fact%' OR content LIKE 'T121 B fact%' THEN 'B'
-        WHEN id GLOB 't121-c-*' OR title LIKE 'T121 C fact%' OR content LIKE 'T121 C fact%' THEN 'C'
+        WHEN id GLOB 'multi-device-sync-a-*' THEN 'A'
+        WHEN id GLOB 'multi-device-sync-b-*' THEN 'B'
+        WHEN id GLOB 'multi-device-sync-c-*' THEN 'C'
       END AS origin
-    FROM nodes WHERE deleted_at IS NULL AND (id GLOB 't121-[abc]-*'
-      OR title LIKE 'T121 _ fact%' OR content LIKE 'T121 _ fact%') ORDER BY updated_at DESC`);
+    FROM nodes WHERE deleted_at IS NULL AND id GLOB 'multi-device-sync-[abc]-*'
+    ORDER BY updated_at DESC`);
   if (typeof statement.all !== 'function') return {};
   const rows = statement.all();
   return Object.fromEntries(rows.map(({ id, origin }) => [id, origin]));

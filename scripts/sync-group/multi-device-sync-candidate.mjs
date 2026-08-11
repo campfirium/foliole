@@ -11,6 +11,7 @@ const CONTROLLER_FILES = [
   'scripts/sync-group/multi-device-sync-contract.mjs',
   'scripts/sync-group/multi-device-sync-diagnostic.mjs',
   'scripts/sync-group/multi-device-sync-formal.mjs',
+  'scripts/sync-group/multi-device-sync-fact-preparation.mjs',
   'scripts/sync-group/multi-device-sync-host-readiness.mjs',
   'scripts/sync-group/multi-device-sync-stage-actions.mjs',
   'scripts/sync-group/multi-device-sync-scenario-catalog.mjs',

@@ -15,7 +15,7 @@ it('creates a unique journey fact only through the registered desktop product co
   expect(invoke.mock.calls.map(([command]) => command)).toEqual([
     'load_workspace_list_snapshot', 'create_topic'
   ]);
-  expect(result.factId).toBe('t121-a-20260810000000000');
+  expect(result.factId).toBe('multi-device-sync-a-20260810000000000');
   expect(JSON.parse(fs.readFileSync(result.receiptPath, 'utf8'))).toMatchObject({
     device: 'A', factId: result.factId, resultStatus: 'success'
   });

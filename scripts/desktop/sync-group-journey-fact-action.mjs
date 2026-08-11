@@ -3,11 +3,12 @@ import path from 'node:path';
 
 function factPayload(device, snapshot, now) {
   const stamp = now().toISOString();
-  const nodeId = `t121-${device.toLowerCase()}-${stamp.replace(/\D/gu, '')}`;
-  return { activeNodeId: nodeId, anchorLink: null, content: `T121 ${device} fact ${stamp}`,
+  const nodeId = `multi-device-sync-${device.toLowerCase()}-${stamp.replace(/\D/gu, '')}`;
+  return { activeNodeId: nodeId, anchorLink: null, content: `Multi-device sync ${device} fact ${stamp}`,
     createdAt: stamp, isTitleManual: false, kind: 'topic', nodeId,
     nodeOrder: [...snapshot.nodeOrder, nodeId], parentNodeId: 'special-inbox',
-    position: snapshot.nodeOrder.length, reveal: null, title: `T121 ${device} fact`, updatedAt: stamp };
+    position: snapshot.nodeOrder.length, reveal: null,
+    title: `Multi-device sync ${device} fact`, updatedAt: stamp };
 }
 
 export async function createDesktopSyncGroupJourneyFact({ device, evidenceRoot, now = () => new Date(),
