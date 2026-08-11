@@ -9,16 +9,34 @@ const TEST_APK = 'android/app/build/outputs/apk/androidTest/debug/app-debug-andr
 
 async function checked(execute, command, args, options, stage) {
   const result = await execute(command, args, options);
-  if (result.code !== 0) throw Object.assign(new Error(`${stage} failed`), { result, stage });
+  if (result.code !== 0) {
+    const detail = String(result.output || result.stderr || result.stdout || '');
+    const focusMissing = detail.includes('Foliole did not receive window focus');
+    throw Object.assign(new Error(focusMissing
+      ? 'Foliole did not receive Android window focus.' : `${stage} failed`), {
+      ...(stage === 'product instrumentation' ? {
+        failureOwner: focusMissing ? 'environment' : 'product', host: 'android-b',
+        lastSuccessfulAction: 'android_activity_started',
+        missingFact: focusMissing ? 'android_app_window_focus_missing' : 'product_instrumentation_failed'
+      } : {}), result, stage
+    });
+  }
   return result;
 }
 
 function bundle(output, key) {
   const prefix = `INSTRUMENTATION_STATUS: ${key}=`;
   const line = String(output).split(/\r?\n/u).find((entry) => entry.startsWith(prefix));
-  if (!line) throw Object.assign(new Error(`Instrumentation did not emit ${key}`), {
-    result: { output: String(output) }
-  });
+  if (!line) {
+    const focusMissing = String(output).includes('Foliole did not receive window focus');
+    throw Object.assign(new Error(focusMissing
+      ? 'Foliole did not receive Android window focus.' : `Instrumentation did not emit ${key}`), {
+      failureOwner: focusMissing ? 'environment' : 'product', host: 'android-b',
+      lastSuccessfulAction: 'android_activity_started',
+      missingFact: focusMissing ? 'android_app_window_focus_missing' : 'product_action_receipt',
+      result: { output: String(output) }
+    });
+  }
   return JSON.parse(line.slice(prefix.length));
 }
 

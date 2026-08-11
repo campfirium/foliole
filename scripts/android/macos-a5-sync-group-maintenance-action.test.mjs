@@ -54,3 +54,21 @@ it('creates journey facts only through the visible Capture product entry', async
   expect(source).toContain('"companion-capture-save"');
   expect(source).toContain('put("factPersisted", true)');
 });
+
+it('preserves a lost Android window focus as an environment failure', async () => {
+  const root = fs.mkdtempSync(path.join(process.cwd(), '.tmp/artifacts/a5-maintenance-test-'));
+  roots.push(root);
+  const execute = vi.fn(async (_command, args) => args.includes('instrument') ? {
+    code: 0,
+    output: 'java.lang.IllegalStateException: Foliole did not receive window focus;\nINSTRUMENTATION_CODE: -1',
+    stdout: 'java.lang.IllegalStateException: Foliole did not receive window focus;\nINSTRUMENTATION_CODE: -1'
+  } : { code: 0, output: 'Success\n', stdout: 'Success\n' });
+  await expect(runMacosA5SyncGroupMaintenance({
+    action: 'clear-app-data', buildIdentity: 'build-2', env: {}, evidenceRoot: root, execute,
+    paths: { adb: '/fixed/adb', apk: '/fixed/app.apk', repoRoot: process.cwd() }, serial: '87a33a4b'
+  })).rejects.toMatchObject({
+    failureOwner: 'environment', host: 'android-b',
+    lastSuccessfulAction: 'android_activity_started',
+    missingFact: 'android_app_window_focus_missing'
+  });
+});

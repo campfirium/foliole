@@ -29,6 +29,14 @@ function fixedDevice(output) {
   });
 }
 
+function requireAndroidWindowFocus(output) {
+  const focused = String(output).split(/\r?\n/u)
+    .find((line) => line.includes('mCurrentFocus='));
+  if (!focused?.includes(APP)) throw Object.assign(new Error('Foliole does not own Android window focus.'), {
+    missingFact: 'android_app_window_focus_missing', lastSuccessfulAction: 'android_activity_started'
+  });
+}
+
 export function createHostReadinessAdapters({ env = process.env, execute = bounded,
   fsApi = fs, repoRoot, runId, windowsHost = WINDOWS_DEV_DEFAULT_SSH }) {
   const paths = macosA5Paths(repoRoot);
@@ -50,6 +58,8 @@ export function createHostReadinessAdapters({ env = process.env, execute = bound
       await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start', '-W', '-n', `${APP}/.MainActivity`], {
         env, timeout: 20_000
       });
+      requireAndroidWindowFocus(await execute(paths.adb,
+        ['-s', A5_SERIAL, 'shell', 'dumpsys', 'window', 'windows'], { env, timeout: 10_000 }));
       return { facts: ['fixed_a5_ready', 'android_workspace_ready'] };
     },
     'windows-c': async () => {
