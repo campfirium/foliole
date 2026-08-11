@@ -1,7 +1,6 @@
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
-import { parseCaptureAnnotationReadiness } from './windows-a5-capture-annotation-contract.mjs';
 import { parsePairSyncRecoveryReadiness, pairSyncRecoveryFailure } from './windows-a5-pair-sync-recovery-contract.mjs';
 
 function options(env) {
@@ -34,10 +33,8 @@ function retryableConvergence(pairing, deviceFingerprint) {
 export async function postPairSyncRecoveryReadiness({
   deviceFingerprint, env, maxAttempts = 20, paths, run, serial, wait = delay
 }) {
-  const workspaceScript = path.join(paths.repoRoot, 'scripts/android/android-capture-annotation-readiness-runner.mjs');
   const pairingScript = path.join(paths.repoRoot, 'scripts/android/android-pair-sync-recovery-readiness-runner.mjs');
   const common = ['--adb', paths.adbPath, '--serial', serial, '--app-id', 'com.foliole.android'];
-  const workspaceResult = await run(paths.systemNode, [workspaceScript, ...common], options(env), 'post-sync-readiness');
   let pairingResult;
   let pairing;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
@@ -49,16 +46,17 @@ export async function postPairSyncRecoveryReadiness({
     if (!retryableConvergence(pairing, deviceFingerprint) || attempt === maxAttempts) break;
     await wait(1_000);
   }
-  const workspace = parseCaptureAnnotationReadiness(workspaceResult.stdout);
-  if (workspace.resultStatus !== 'ready' || pairing.resultStatus !== 'ready'
+  if (pairing.resultStatus !== 'ready'
       || pairing.deviceIdentityFingerprint !== deviceFingerprint || pairing.dirtyRecordCount !== 0
-      || !pairing.pairingCredentialsPresent || pairing.pairingPeerConflict) {
+      || !pairing.pairingCredentialsPresent || pairing.pairingCredentialsRejected
+      || pairing.pairingPeerConflict || pairing.activeSyncGroupMemberCount < 2
+      || !pairing.syncGroupId || !pairing.syncGroupTimelineId) {
     throw pairSyncRecoveryFailure(
       'Recovered Android workspace did not converge', 'post-sync-convergence', pairingResult
     );
   }
   return {
-    output: workspaceResult.output + pairingResult.output,
-    readiness: { ...workspace, dirtyRecordCount: 0, pairingCredentialsPresent: true }
+    output: pairingResult.output,
+    readiness: pairing
   };
 }

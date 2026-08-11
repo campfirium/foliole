@@ -50,6 +50,8 @@ export function parsePairSyncRecoveryReadiness(output) {
     throw pairSyncRecoveryFailure('Pair sync recovery readiness evidence is incomplete', 'pair-sync-readiness');
   }
   return {
+    activeSyncGroupMemberCount: Number.isSafeInteger(value.activeSyncGroupMemberCount)
+      ? value.activeSyncGroupMemberCount : null,
     deviceIdentityFingerprint: value.deviceIdentityFingerprint,
     dirtyRecordCount: value.dirtyRecordCount,
     missingPrerequisites: [...value.missingPrerequisites],
@@ -72,7 +74,10 @@ export function parsePairSyncRecoveryReadiness(output) {
     remotePeerFingerprint: /^[0-9a-f]{16}$/u.test(value.remotePeerFingerprint)
       ? value.remotePeerFingerprint : null,
     resultStatus: value.resultStatus,
-    schemaVersion: 1
+    schemaVersion: 1,
+    syncGroupId: typeof value.syncGroupId === 'string' ? value.syncGroupId : null,
+    syncGroupTimelineId: typeof value.syncGroupTimelineId === 'string'
+      ? value.syncGroupTimelineId : null
   };
 }
 
