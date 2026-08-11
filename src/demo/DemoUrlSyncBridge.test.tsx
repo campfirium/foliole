@@ -52,7 +52,7 @@ it('keeps the Demo URL prefix aligned with runtime locale changes', async () => 
     expect(replaceState).toHaveBeenCalledWith(
       null,
       '',
-      `/zh-hans/guides/${DEMO_TOPIC.slug}/`
+      '/zh-hans/demo/'
     );
   });
   replaceState.mockRestore();

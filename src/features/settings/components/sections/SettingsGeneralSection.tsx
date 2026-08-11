@@ -27,6 +27,7 @@ import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows
 import { SettingsAideStorageSection } from './SettingsAideStorageSection';
 import { SettingsCaptureSection } from './SettingsCaptureSection';
 import { SettingsGeneralSystemSection } from './SettingsGeneralSystemSection';
+import { SettingsLanguageSection } from './SettingsLanguageSection';
 
 type Translate = ReturnType<typeof useTranslation>;
 
@@ -147,6 +148,7 @@ export function SettingsGeneralSection({
   const t = useTranslation();
   return (
     <>
+      <SettingsLanguageSection />
       <SettingsGeneralSystemSection previewDesktopSettings={previewDesktopSettings} />
       <InterfaceBehaviorSection />
       <SettingsSection ariaLabel={t('settings.general.search.aria')} title={t('settings.general.search.section')}>

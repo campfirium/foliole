@@ -50,7 +50,9 @@ describe('electron-builder release packaging config', () => {
       readPackageJson()
     ]);
 
-    expect(config.electronLanguages).toEqual(['en-US', 'zh-CN']);
+    expect(config.electronLanguages).toEqual([
+      'de', 'en-US', 'es', 'fr', 'it', 'ja', 'ko', 'pl', 'pt-BR', 'ru', 'zh-CN', 'zh-TW'
+    ]);
     expect(config.files).toContain('dist/desktop/**/*');
     expect(config.files).not.toContain('dist/**/*');
     expect(packageJson.dependencies['@lezer/common']).toEqual('1.5.1');

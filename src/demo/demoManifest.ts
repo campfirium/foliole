@@ -1,21 +1,20 @@
 import { createHash } from 'node:crypto';
 
+import { APP_LOCALES } from '../../lib/core/localization/appLocaleRegistry';
+
 import { canonicalDemoPath, canonicalGuidePath, getDemoTopicsForLocale, type DemoTopic } from './demoContent';
 import { GENERATED_DEMO_PACKS } from './generated/demoPacks';
 
 export const DEMO_MANIFEST_FILE = 'demo-manifest.json';
 export const DEMO_CONTRACT_VERSION = 3;
-const DEMO_LOCALE_REGISTRY = [
-  { locale: 'en', hreflang: 'en' },
-  { locale: 'zh-hans', hreflang: 'zh-Hans' },
-  { locale: 'zh-hant', hreflang: 'zh-Hant' },
-  { locale: 'ja', hreflang: 'ja' }
-] as const;
-const GENERATED_DEMO_PACK_LOCALES = Object.keys(GENERATED_DEMO_PACKS);
-export const DEMO_PUBLISHED_LOCALES = DEMO_LOCALE_REGISTRY.filter((locale) => GENERATED_DEMO_PACK_LOCALES.includes(locale.locale));
+const DEMO_LOCALE_REGISTRY = APP_LOCALES.map((locale) => ({
+  locale: locale.toLowerCase(),
+  hreflang: locale
+}));
+export const DEMO_PUBLISHED_LOCALES = DEMO_LOCALE_REGISTRY;
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)*$/;
-const DEMO_TOPIC_PATH_PATTERN = /^\/(?:en|zh-hans)\/guides\/[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)*\/$/;
+const DEMO_TOPIC_PATH_PATTERN = /^\/[a-z]{2}(?:-[a-z]+)?\/guides\/[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)*\/$/;
 
 export type DemoLocalePathSegment = (typeof DEMO_PUBLISHED_LOCALES)[number]['locale'];
 export type DemoHreflang = (typeof DEMO_PUBLISHED_LOCALES)[number]['hreflang'];

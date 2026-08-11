@@ -6,6 +6,7 @@ import { DEMO_TOPICS, getDemoTopicNodeId } from './demoContent';
 import {
   demoPathSegmentFromLocale,
   installDemoUrlSync,
+  resolveDemoInitialLanguagePreference,
   resolveDemoLanguagePreferenceFromPath,
   syncDemoUrlToNode
 } from './demoUrlSync';
@@ -13,10 +14,17 @@ import {
 it('resolves only supported Demo route locale prefixes into runtime language preferences', () => {
   expect(resolveDemoLanguagePreferenceFromPath('/en/demo/')).toBe('en');
   expect(resolveDemoLanguagePreferenceFromPath('/zh-hans/guides/welcome-to-foliole/')).toBe('zh-Hans');
-  expect(resolveDemoLanguagePreferenceFromPath('/zh-hant/guides/welcome-to-foliole/')).toBeUndefined();
-  expect(resolveDemoLanguagePreferenceFromPath('/ja/demo/')).toBeUndefined();
+  expect(resolveDemoLanguagePreferenceFromPath('/zh-hant/guides/welcome-to-foliole/')).toBe('zh-Hant');
+  expect(resolveDemoLanguagePreferenceFromPath('/pt-br/demo/')).toBe('pt-BR');
+  expect(resolveDemoLanguagePreferenceFromPath('/nl/demo/')).toBeUndefined();
   expect(demoPathSegmentFromLocale('en')).toBe('en');
   expect(demoPathSegmentFromLocale('zh-Hans')).toBe('zh-hans');
+});
+
+it('keeps a persisted Demo language preference ahead of the route default', () => {
+  expect(resolveDemoInitialLanguagePreference('/ja/demo/', 'system')).toBe('system');
+  expect(resolveDemoInitialLanguagePreference('/ja/demo/', 'de')).toBe('de');
+  expect(resolveDemoInitialLanguagePreference('/ja/demo/', null)).toBe('ja');
 });
 
 it('keeps the browser URL aligned with the active official Demo topic', () => {
