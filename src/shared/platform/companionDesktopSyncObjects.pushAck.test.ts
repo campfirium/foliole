@@ -47,6 +47,7 @@ const syncBridgeMock = vi.hoisted(() => ({
   saveCompanionSyncReviewLogPushCursor: vi.fn(async (cursor: NativeSyncChangeCursor | null) => cursor),
   saveCompanionSyncPackCursor: vi.fn(async (cursor: number | null) => cursor),
   saveCompanionSyncPushAcks: vi.fn(async () => [] as string[]),
+  stageCompanionSyncPushItems: vi.fn(async () => undefined),
   saveCompanionSyncStateCursor: vi.fn(async (cursor: number | null) => cursor),
   saveCompanionSyncStatePushCursor: vi.fn(async (cursor: number | null) => cursor),
   syncCompanionContentBlob: vi.fn(async ({ hash }: { hash: string }) => ({ availability: 'cached', hash }))
@@ -58,6 +59,9 @@ const diagnosticsMock = vi.hoisted(() => ({
 }));
 
 vi.mock('./companionSyncObjects', () => syncBridgeMock);
+vi.mock('./companion/sync/syncGroupStore', () => ({
+  loadCompanionSyncGroup: vi.fn(async () => null)
+}));
 vi.mock('./companion/sync/diagnostics/companionSyncDiagnostics', () => diagnosticsMock);
 vi.mock('./companionDesktopAttachmentResources', () => ({
   syncCompanionAttachmentResourceRequestsFromDesktop: vi.fn(async () => [] as string[]),
@@ -65,7 +69,7 @@ vi.mock('./companionDesktopAttachmentResources', () => ({
 }));
 vi.mock('./companionWorkspacePairing', () => ({
   createSignedRequestHeaders: vi.fn(async () => ({ 'X-Device-Id': 'android-test-device' })),
-  loadCompanionPairingState: vi.fn(async () => ({ device_kind: 'android' }))
+  loadCompanionPairingState: vi.fn(async () => ({ device_kind: 'android', remote_peer_id: 'desktop-peer' }))
 }));
 
 function setupPushAckMocks() {
@@ -158,7 +162,7 @@ describe('companion desktop sync accepted push acknowledgements', () => {
       'view_state:session_resume:android:phone:android-test-device:active_node'
     ]);
     expect(result.pushedReviewOpIds).toEqual(['op-1']);
-    expect(syncBridgeMock.saveCompanionSyncPushAcks).toHaveBeenCalledWith([
+    expect(syncBridgeMock.saveCompanionSyncPushAcks).toHaveBeenCalledWith('desktop-peer', [
       expect.objectContaining({ clientOpId: 'node_reading:node-1:9', status: 'accepted' }),
       expect.objectContaining({ clientOpId: 'node_review:node-1:10', status: 'accepted' }),
       expect.objectContaining({ clientOpId: 'setting:device:android:phone:*:app_settings:11', status: 'accepted' }),
@@ -188,7 +192,7 @@ describe('companion desktop sync accepted push acknowledgements', () => {
 describe('companion desktop sync push acknowledgement cursors', () => {
   setupPushAckMocks();
 
-  it('advances accepted review log cursor only after the pulled pack confirms the op id', async () => {
+  it('reports pulled review confirmation without reviving the legacy push cursor', async () => {
     syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([createLocalNodeReviewChange()]);
     syncBridgeMock.loadCompanionSyncReviewLog.mockResolvedValue([createLocalReviewLog()]);
     syncBridgeMock.applyCompanionDesktopSyncPack.mockResolvedValue({
@@ -202,10 +206,7 @@ describe('companion desktop sync push acknowledgement cursors', () => {
     const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
 
     expect(result.appliedReviewOpIds).toEqual(['op-1']);
-    expect(syncBridgeMock.saveCompanionSyncReviewLogPushCursor).toHaveBeenCalledWith({
-      change_id: 'op-1',
-      created_at: '2026-04-25T00:05:00.000Z'
-    });
+    expect(syncBridgeMock.saveCompanionSyncReviewLogPushCursor).not.toHaveBeenCalled();
   });
 
   it('does not advance the review log cursor past earlier unconfirmed ops', async () => {

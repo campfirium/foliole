@@ -31,6 +31,7 @@ const storeMock = vi.hoisted(() => ({
     'node_reading:node-1:4', 'node_review:node-1:5',
     'setting:device:ios:phone:*:handoff_reminder_settings:6'
   ]),
+  stagePushItems: vi.fn(async () => undefined),
   saveNodeVersionPushCursor: vi.fn(async () => null)
 }));
 const capacitorMock = vi.hoisted(() => ({
@@ -44,6 +45,12 @@ vi.mock('@capacitor/core', () => ({
 }));
 vi.mock('./companion/sync/syncback/iosCompanionSyncbackStore', () => ({
   getIosCompanionSyncbackStore: vi.fn(() => storeMock)
+}));
+vi.mock('./companion/sync/syncGroupStore', () => ({
+  loadCompanionSyncGroup: vi.fn(async () => null)
+}));
+vi.mock('./companionWorkspacePairing', () => ({
+  loadCompanionPairingState: vi.fn(async () => ({ remote_peer_id: 'desktop-peer' }))
 }));
 vi.mock('./companionDesktopSyncHttp', () => ({ postDesktopJson: httpMock.post }));
 vi.mock('./companionSyncWriterQueue', () => ({

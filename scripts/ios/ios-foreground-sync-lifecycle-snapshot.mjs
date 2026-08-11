@@ -51,10 +51,12 @@ export function verifyForegroundSyncLifecycleAcceptance(args) {
 
 function parseFinishedRun(event) {
   return {
+    message: event.message ?? null,
     occurredAt: event.occurred_at ?? null,
     result: event.result ?? null,
     runId: event.run_id ?? null,
-    status: event.status ?? null
+    status: event.status ?? null,
+    summary: event.summary ?? null
   };
 }
 

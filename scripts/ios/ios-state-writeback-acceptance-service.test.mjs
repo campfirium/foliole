@@ -25,6 +25,9 @@ it('routes push and confirmation pack through one isolated desktop fixture', asy
     toPeerId: 'ios-device'
   });
   try {
+    const diagnostics = await service.route({
+      bodyText: '', method: 'GET', url: '/companion/diagnostics/sync'
+    });
     const item = {
       base: { baseContentHash: null, kind: 'content_hash' },
       clientOpId: 'node_reading:ios-state-node:1',
@@ -45,6 +48,8 @@ it('routes push and confirmation pack through one isolated desktop fixture', asy
     });
     const pack = await service.route({ bodyText: '', method: 'GET', url: '/companion/sync-pack?after_state_seq=0' });
 
+    expect(JSON.parse(String(diagnostics?.body))).toEqual({ sync_state: { max_state_seq: 1 } });
+    expect(diagnostics?.contentType).toBe('application/json');
     expect(JSON.parse(String(push?.body))).toMatchObject({ acks: [{ status: 'accepted' }] });
     expect(pack).toMatchObject({ contentType: 'application/vnd.foliole.sync-pack' });
     expect(Buffer.isBuffer(pack?.body)).toBe(true);

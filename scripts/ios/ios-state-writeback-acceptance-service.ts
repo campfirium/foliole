@@ -16,6 +16,12 @@ export async function createIosStateWritebackAcceptanceService(args: {
   return {
     close: fixture.close,
     route: async (request: { bodyText: string; method: string; url: string }) => {
+      if (request.method === 'GET' && request.url === '/companion/diagnostics/sync') {
+        return {
+          body: JSON.stringify({ sync_state: { max_state_seq: fixture.loadMaxStateSeq() } }),
+          contentType: 'application/json'
+        };
+      }
       if (request.method === 'POST' && request.url === '/companion/sync-push') {
         const payload = JSON.parse(request.bodyText) as {
           items?: Array<{ identity?: { objectType?: string }; payloadJson?: unknown }>;
@@ -27,7 +33,12 @@ export async function createIosStateWritebackAcceptanceService(args: {
           object_type: item.identity?.objectType ?? 'invalid',
           payload_json: item.payloadJson ?? null
         }));
-        const result = await handleCompanionSyncPushWithApply(request.bodyText, fixture.apply, () => undefined);
+        const result = await handleCompanionSyncPushWithApply(
+          request.bodyText,
+          args.toPeerId,
+          fixture.apply,
+          () => undefined
+        );
         args.observations.ack_statuses.push(...result.acks.map((ack) => ack.status));
         return { body: JSON.stringify(result), contentType: 'application/json' };
       }

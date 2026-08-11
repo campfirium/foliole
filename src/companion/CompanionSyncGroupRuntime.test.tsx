@@ -32,10 +32,14 @@ function workspaceSync() {
   } as unknown as ReturnType<typeof useCompanionWorkspaceSync>;
 }
 
+const bootstrapState = workspaceSync().bootstrapState;
+
 it('maintains the member provider before any settings surface is mounted', async () => {
   const group = { group_id: 'group-1', local_member_state: 'active' };
   runtime.load.mockResolvedValue(group);
-  render(<CompanionSyncGroupRuntime workspaceSync={workspaceSync()}><main>Reader</main></CompanionSyncGroupRuntime>);
+  render(<CompanionSyncGroupRuntime bootstrapState={bootstrapState} workspaceSync={workspaceSync()}>
+    <main>Reader</main>
+  </CompanionSyncGroupRuntime>);
   await act(async () => Promise.resolve());
   expect(runtime.reconcile).toHaveBeenCalledWith(
     expect.objectContaining({ device_id: 'android-b' }), group
@@ -45,7 +49,9 @@ it('maintains the member provider before any settings surface is mounted', async
 it('does not stop the provider while persisted membership is loading', async () => {
   let resolveGroup: (value: null) => void = () => undefined;
   runtime.load.mockReturnValueOnce(new Promise((resolve) => { resolveGroup = resolve; }));
-  render(<CompanionSyncGroupRuntime workspaceSync={workspaceSync()}><main>Reader</main></CompanionSyncGroupRuntime>);
+  render(<CompanionSyncGroupRuntime bootstrapState={bootstrapState} workspaceSync={workspaceSync()}>
+    <main>Reader</main>
+  </CompanionSyncGroupRuntime>);
   await act(async () => Promise.resolve());
   expect(runtime.reconcile).not.toHaveBeenCalled();
   await act(async () => resolveGroup(null));

@@ -31,8 +31,10 @@ function createRunnerArgs(overrides: Record<string, unknown> = {}) {
         onToggleListVisibility: vi.fn(),
         onToggleRightSidebarVisibility: vi.fn()
       },
+      navigation: { onSelectNodeInVirtualView: vi.fn() },
       nodeList: { onOpenNotesView: vi.fn() },
-      review: { onOpenPostponeTopicPanel: vi.fn() }
+      review: { onOpenPostponeTopicPanel: vi.fn() },
+      virtualView: { onOpenVirtualView: vi.fn() }
     },
     nav: {},
     onOpenHelpSearch: vi.fn(),

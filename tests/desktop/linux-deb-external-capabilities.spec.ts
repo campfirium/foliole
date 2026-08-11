@@ -169,9 +169,11 @@ test('installed Linux capabilities use external Codex, loopback control, LAN syn
     expect(await authorized.text()).not.toContain(descriptor.token);
 
     const discovery = discoverFolioleService();
-    const overview = await desktopWindow.evaluate(() => window.electronAPI?.invoke('enable_companion_sync')) as {
+    const overview = await desktopWindow.evaluate(() => window.electronAPI?.invoke('create_sync_group')) as {
       server_status: { advertised_urls: string[]; last_error: string | null; port: number; state: string };
+      sync_group: { local_member_state: string };
     };
+    expect(overview.sync_group).toMatchObject({ local_member_state: 'active' });
     expect(overview.server_status).toMatchObject({ last_error: null, state: 'running' });
     const service = await discovery;
     expect(service).toMatchObject({ port: overview.server_status.port });

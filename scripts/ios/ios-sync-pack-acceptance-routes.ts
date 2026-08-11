@@ -24,7 +24,12 @@ export async function createIosSyncPackAcceptanceRoutes(args: {
   const route = async (request: { bodyText: string; method: string; url: string }) => {
     if (request.method === 'POST' && request.url === '/companion/sync-push') {
       args.observations.push_requests += 1;
-      const result = await handleCompanionSyncPushWithApply(request.bodyText, fixture.apply, () => undefined);
+      const result = await handleCompanionSyncPushWithApply(
+        request.bodyText,
+        args.toPeerId,
+        fixture.apply,
+        () => undefined
+      );
       args.observations.ack_statuses.push(...result.acks.map((ack) => ack.status));
       args.observations.pushed_node_ids.push(...result.acks.map((ack) => ack.identity.objectId));
       args.observations.pushed_version_ids.push(...result.acks.flatMap((ack) => ack.version_id ? [ack.version_id] : []));

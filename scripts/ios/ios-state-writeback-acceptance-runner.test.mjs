@@ -1,4 +1,6 @@
 // @vitest-environment node
+import fs from 'node:fs';
+
 import { expect, it } from 'vitest';
 
 import {
@@ -9,15 +11,15 @@ import {
 function snapshot() {
   return parseStateWritebackSnapshot(JSON.stringify([{
     active_node_id: 'ios-state-node',
+    confirmed_review_delivery_count: 1,
     local_reading_position: 42,
     local_scroll_top: 42,
+    local_view_state_count: 2,
     pending_ack_count: 0,
-    review_cursor: '{"change_id":"review-op","created_at":"2026-07-21T00:01:00.000Z"}',
     review_log_count: 1,
     review_op_id: 'review-op',
     shared_dirty_count: 0,
-    shared_state_count: 3,
-    view_state_sync_count: 0
+    shared_state_count: 3
   }]));
 }
 
@@ -54,4 +56,22 @@ it('rejects a transient HTTP ack that was not cleared by confirmation apply', ()
   expect(() => verifyStateWritebackAcceptance(
     first, second, { ...snapshot(), pending_ack_count: 1 }, snapshot(), observations()
   )).toThrow('evidence is incomplete');
+});
+
+it('rejects a review operation without a confirmed peer delivery receipt', () => {
+  const first = {
+    phase: 'applied',
+    sync: { pushRejectedCount: 0, pushedObjectIds: ['reading', 'review', 'setting'], pushedReviewOpIds: ['review-op'] }
+  };
+  const second = { phase: 'reapplied', sync: { pushedObjectIds: [], pushedReviewOpIds: [] } };
+
+  expect(() => verifyStateWritebackAcceptance(
+    first, second, { ...snapshot(), confirmed_review_delivery_count: 0 }, snapshot(), observations()
+  )).toThrow('evidence is incomplete');
+});
+
+it('matches the peer delivery receipt by the review operation object identity', () => {
+  const source = fs.readFileSync('scripts/ios/ios-state-writeback-acceptance-runner.mjs', 'utf8');
+  expect(source).toContain("AND object_id = (SELECT op_id FROM review_log");
+  expect(source).not.toContain("AND operation_id = (SELECT op_id FROM review_log");
 });

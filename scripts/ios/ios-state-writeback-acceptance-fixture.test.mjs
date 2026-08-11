@@ -65,8 +65,8 @@ describe('iOS state writeback acceptance fixture', () => {
     tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-ios-state-writeback-'));
     const fixture = await createIosStateWritebackAcceptanceFixture({ outputDirectory: tempRoot, toPeerId: 'ios-device' });
     try {
-      const first = await fixture.apply(acceptanceItems());
-      const second = await fixture.apply(acceptanceItems());
+      const first = await fixture.apply(acceptanceItems(), 'ios-device');
+      const second = await fixture.apply(acceptanceItems(), 'ios-device');
       const packPath = await fixture.buildConfirmationPack();
 
       expect(fixture.driver.queryOne(
@@ -93,7 +93,7 @@ describe('iOS state writeback acceptance fixture', () => {
     try {
       const result = await fixture.apply([
         stateItem('view_state', 'session_resume:ios:phone:ios-device:active_node', { active_node_id: 'ios-state-node' }, 'view-hash')
-      ]);
+      ], 'ios-device');
       expect(result.acks).toMatchObject([{ conflictReason: 'device_private_view_state_push', status: 'rejected' }]);
       expect(fixture.driver.queryOne(
         "SELECT object_id FROM sync_object_state WHERE object_type = 'view_state'"

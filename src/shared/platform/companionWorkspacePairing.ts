@@ -77,11 +77,13 @@ export async function requestCompanionPairing(args: RequestCompanionPairingArgs)
       device_id: args.deviceId,
       device_kind: args.deviceKind,
       device_name: args.deviceName,
-      group_id: args.groupId,
-      library_facts: libraryFacts,
+      ...(usesSyncGroup ? {
+        group_id: args.groupId,
+        library_facts: libraryFacts,
+        timeline_id: args.timelineId
+      } : {}),
       pairing_public_key: pairingPublicKey,
-      protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
-      timeline_id: args.timelineId
+      protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
     }),
     headers: { 'Content-Type': 'application/json' },
     method: 'POST'

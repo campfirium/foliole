@@ -34,12 +34,16 @@ const syncBridgeMock = vi.hoisted(() => ({
   saveCompanionSyncReviewLogPushCursor: vi.fn(async (cursor: NativeSyncChangeCursor | null) => cursor),
   saveCompanionSyncPackCursor: vi.fn(async (cursor: number | null) => cursor),
   saveCompanionSyncPushAcks: vi.fn(async () => [] as string[]),
+  stageCompanionSyncPushItems: vi.fn(async () => undefined),
   saveCompanionSyncStateCursor: vi.fn(async (cursor: number | null) => cursor),
   saveCompanionSyncStatePushCursor: vi.fn(async (cursor: number | null) => cursor),
   syncCompanionContentBlob: vi.fn(async ({ hash }: { hash: string }) => ({ availability: 'cached', hash }))
 }));
 
 vi.mock('./companionSyncObjects', () => syncBridgeMock);
+vi.mock('./companion/sync/syncGroupStore', () => ({
+  loadCompanionSyncGroup: vi.fn(async () => null)
+}));
 vi.mock('./companionDesktopAttachmentResources', () => ({
   syncCompanionAttachmentResourceRequestsFromDesktop: vi.fn(async () => [] as string[]),
   syncCompanionAttachmentResourcesFromDesktop: vi.fn(async () => [] as string[])
@@ -64,7 +68,7 @@ vi.mock('./companionDesktopSyncSummary', () => ({
 }));
 vi.mock('./companionWorkspacePairing', () => ({
   createSignedRequestHeaders: vi.fn(async () => ({ 'X-Device-Id': 'android-test-device' })),
-  loadCompanionPairingState: vi.fn(async () => ({ device_kind: 'android' }))
+  loadCompanionPairingState: vi.fn(async () => ({ device_kind: 'android', remote_peer_id: 'desktop-peer' }))
 }));
 
 function createStateObject(index: number): NativeSyncStateObjectRecord {
@@ -120,7 +124,7 @@ describe('companion desktop sync object paging', () => {
     expect(result.appliedPackObjectCount).toBe(501);
     expect(result.appliedPackBlobCount).toBe(3);
     expect(syncBridgeMock.applyCompanionSyncObjects).not.toHaveBeenCalled();
-    expect(syncBridgeMock.saveCompanionSyncPackCursor).toHaveBeenLastCalledWith(501);
+    expect(syncBridgeMock.saveCompanionSyncPackCursor).toHaveBeenLastCalledWith(501, 'desktop-peer');
   });
 
   it('does not page legacy local state changes while pack sync is active', async () => {
@@ -144,7 +148,7 @@ describe('companion desktop sync object paging', () => {
 
     expect(result.pushedObjectIds).toEqual([]);
     expect(syncBridgeMock.loadCompanionSyncStateChanges).toHaveBeenCalledTimes(1);
-    expect(syncBridgeMock.loadCompanionSyncStateChanges).toHaveBeenCalledWith(null, 100);
+    expect(syncBridgeMock.loadCompanionSyncStateChanges).toHaveBeenCalledWith('desktop-peer', null, 100);
     expect(syncBridgeMock.saveCompanionSyncStatePushCursor).not.toHaveBeenCalled();
   });
 

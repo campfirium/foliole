@@ -18,10 +18,10 @@ export function parseSyncPackSnapshot(output, cacheEntries = []) {
     cache_entries: [...cacheEntries].sort(),
     capture_current: row?.capture_current ?? null,
     capture_versions: Number(row?.capture_versions ?? 0),
+    confirmed_node_delivery_count: Number(row?.confirmed_node_delivery_count ?? 0),
     cursor: Number(row?.cursor ?? -1),
     dirty_count: Number(row?.dirty_count ?? -1),
     push_ack_count: Number(row?.push_ack_count ?? -1),
-    push_cursor_present: Number(row?.push_cursor_present ?? 0),
     restore_current: row?.restore_current ?? null,
     restore_deleted_at: row?.restore_deleted_at ?? null,
     restore_versions: Number(row?.restore_versions ?? 0),
@@ -38,15 +38,19 @@ export function readSyncPackSnapshot(options) {
     (SELECT count(*) FROM nodes WHERE id IN (
       'ios-acceptance-restore', (SELECT id FROM nodes WHERE title = 'Mac successor acceptance')
     ) AND sync_dirty <> 0) AS dirty_count,
+    (SELECT count(*) FROM sync_delivery_receipts WHERE stream_name = 'node_version'
+      AND status = 'confirmed' AND object_id IN (
+        'ios-acceptance-restore', (SELECT id FROM nodes WHERE title = 'Mac successor acceptance')
+      )) AS confirmed_node_delivery_count,
     (SELECT count(*) FROM sync_delivery_receipts WHERE status <> 'confirmed') AS push_ack_count,
-    (SELECT count(*) FROM companion_meta WHERE key = 'sync_node_version_push_cursor') AS push_cursor_present,
     (SELECT current_version_id FROM nodes WHERE id = 'ios-acceptance-restore') AS restore_current,
     (SELECT deleted_at FROM nodes WHERE id = 'ios-acceptance-restore') AS restore_deleted_at,
     (SELECT count(*) FROM node_sync_versions WHERE object_id = 'ios-acceptance-restore') AS restore_versions,
     (SELECT count(*) FROM node_sync_tombstones WHERE node_id IN (
       'ios-acceptance-restore', (SELECT id FROM nodes WHERE title = 'Mac successor acceptance')
     )) AS tombstone_count,
-    (SELECT value FROM companion_meta WHERE key = 'sync_pack_cursor') AS cursor;`;
+    (SELECT MAX(CAST(cursor_value AS INTEGER)) FROM sync_peer_cursors
+      WHERE stream_name = 'sync-pack-receive') AS cursor;`;
   const cachePath = path.join(options.containerPath, 'Library/Caches/sync-packs');
   const cacheEntries = existsSync(cachePath) ? readdirSync(cachePath) : [];
   return parseSyncPackSnapshot(options.capture('sqlite3', ['-json', databasePath, sql]), cacheEntries);
@@ -60,7 +64,7 @@ export function verifySyncPackAcceptance(
   const secondPassed = secondBridge.phase === 'reapplied' &&
     secondBridge.roundtrip?.push?.pushedObjectIds?.length === 0 && gatesClosed(secondBridge.roundtrip?.gates);
   const snapshotPassed = firstSnapshot?.capture_versions === 2 && firstSnapshot?.restore_versions === 2 &&
-    firstSnapshot?.dirty_count === 0 && firstSnapshot?.push_cursor_present === 1 &&
+    firstSnapshot?.confirmed_node_delivery_count === 2 && firstSnapshot?.dirty_count === 0 &&
     firstSnapshot?.restore_deleted_at === null && firstSnapshot?.tombstone_count === 0 &&
     firstSnapshot?.cursor > 2 && firstSnapshot?.cache_entries?.length === 0;
   const rejectionKinds = rejections.map(({ bridge }) => bridge.rejection);

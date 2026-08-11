@@ -6,7 +6,7 @@ import { renderWithLocalization } from '../shared/localization/testLocalization'
 import { CompanionSyncPanel } from './CompanionSyncPanel';
 
 const protocol = {
-  capabilities: ['lan-sync-v1'],
+  capabilities: ['lan-sync-v1', 'sync-group-facts-v1'],
   max_supported_version: 1,
   min_supported_version: 1,
   version: 1

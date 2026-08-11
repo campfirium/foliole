@@ -84,7 +84,10 @@ describe('lan workspace sync push endpoint', () => {
         status: 'accepted'
       }]
     });
-    expect(pushApplyMock.applyCompanionSyncPushAsync).toHaveBeenCalledWith(JSON.parse(buildPushBody()).items);
+    expect(pushApplyMock.applyCompanionSyncPushAsync).toHaveBeenCalledWith(
+      JSON.parse(buildPushBody()).items,
+      'android-test-device'
+    );
     expect(syncAppliedEventsMock.notifyWorkspaceSyncApplied).toHaveBeenCalledWith({
       appliedNodeIds: [],
       appliedObjectIds: ['node_review:node-1'],

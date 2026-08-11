@@ -45,6 +45,7 @@ const syncBridgeMock = vi.hoisted(() => ({
   saveCompanionSyncReviewLogPushCursor: vi.fn(async (cursor: NativeSyncChangeCursor | null) => cursor),
   saveCompanionSyncPackCursor: vi.fn(async (cursor: number | null) => cursor),
   saveCompanionSyncPushAcks: vi.fn(async () => [] as string[]),
+  stageCompanionSyncPushItems: vi.fn(async () => undefined),
   saveCompanionSyncStateCursor: vi.fn(async (cursor: number | null) => cursor),
   saveCompanionSyncStatePushCursor: vi.fn(async (cursor: number | null) => cursor),
   syncCompanionContentBlob: vi.fn(async ({ hash }: { hash: string }) => ({ availability: 'cached', hash }))
@@ -56,6 +57,9 @@ const diagnosticsMock = vi.hoisted(() => ({
 }));
 
 vi.mock('./companionSyncObjects', () => syncBridgeMock);
+vi.mock('./companion/sync/syncGroupStore', () => ({
+  loadCompanionSyncGroup: vi.fn(async () => null)
+}));
 vi.mock('./companion/sync/diagnostics/companionSyncDiagnostics', () => diagnosticsMock);
 vi.mock('./companionDesktopAttachmentResources', () => ({
   syncCompanionAttachmentResourceRequestsFromDesktop: vi.fn(async () => [] as string[]),
@@ -63,7 +67,7 @@ vi.mock('./companionDesktopAttachmentResources', () => ({
 }));
 vi.mock('./companionWorkspacePairing', () => ({
   createSignedRequestHeaders: vi.fn(async () => ({ 'X-Device-Id': 'android-test-device' })),
-  loadCompanionPairingState: vi.fn(async () => ({ device_kind: 'android' }))
+  loadCompanionPairingState: vi.fn(async () => ({ device_kind: 'android', remote_peer_id: 'desktop-peer' }))
 }));
 
 function setupPushAckMocks() {
@@ -107,7 +111,7 @@ describe('companion desktop sync push acknowledgement conflicts', () => {
     expect(result.pushConflictCount).toBe(1);
     expect(result.pushRejectedCount).toBe(1);
     expect(result.pushedObjectIds).toEqual([]);
-    expect(syncBridgeMock.saveCompanionSyncPushAcks).toHaveBeenCalledWith([
+    expect(syncBridgeMock.saveCompanionSyncPushAcks).toHaveBeenCalledWith('desktop-peer', [
       expect.objectContaining({ clientOpId: 'node_reading:node-1:9', status: 'conflict' }),
       expect.objectContaining({ clientOpId: 'node_review:node-1:10', status: 'rejected' })
     ]);
@@ -131,7 +135,7 @@ describe('companion desktop sync push acknowledgement conflicts', () => {
 
     expect(result.pushedObjectIds).toEqual([]);
     expect(result.pushRejectedCount).toBe(1);
-    expect(syncBridgeMock.saveCompanionSyncPushAcks).toHaveBeenCalledWith([
+    expect(syncBridgeMock.saveCompanionSyncPushAcks).toHaveBeenCalledWith('desktop-peer', [
       expect.objectContaining({ clientOpId: 'node_review:node-1:10', conflictReason: 'missing_state_seq' })
     ]);
   });

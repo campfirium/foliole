@@ -13,7 +13,8 @@ const syncBridgeMock = vi.hoisted(() => ({
   loadCompanionSyncStateChanges: vi.fn(async () => []),
   loadCompanionSyncStatePushCursor: vi.fn(async () => null),
   saveCompanionSyncNodeVersionPushCursor: vi.fn(async (cursor: NativeSyncChangeCursor | null) => cursor),
-  saveCompanionSyncPushAcks: vi.fn(async () => [])
+  saveCompanionSyncPushAcks: vi.fn(async () => []),
+  stageCompanionSyncPushItems: vi.fn(async () => undefined)
 }));
 
 const httpMock = vi.hoisted(() => ({
@@ -22,6 +23,12 @@ const httpMock = vi.hoisted(() => ({
 
 vi.mock('./companionSyncObjects', () => syncBridgeMock);
 vi.mock('./companionDesktopSyncHttp', () => httpMock);
+vi.mock('./companion/sync/syncGroupStore', () => ({
+  loadCompanionSyncGroup: vi.fn(async () => null)
+}));
+vi.mock('./companionWorkspacePairing', () => ({
+  loadCompanionPairingState: vi.fn(async () => ({ remote_peer_id: 'desktop-peer' }))
+}));
 
 function createNodeVersion(versionId: string): NativeSyncNodeRecord {
   return {
@@ -85,9 +92,7 @@ describe('companion desktop sync node version push', () => {
       ]
     });
     expect(result.pushedObjectIds).toEqual(['node:node-1', 'node:node-2']);
-    expect(syncBridgeMock.saveCompanionSyncNodeVersionPushCursor).toHaveBeenCalledWith({
-      change_id: 'android#2',
-      created_at: '2026-05-03T01:00:02.000Z'
-    });
+    expect(syncBridgeMock.stageCompanionSyncPushItems).toHaveBeenCalledWith('desktop-peer', expect.any(Array));
+    expect(syncBridgeMock.saveCompanionSyncPushAcks).toHaveBeenCalledWith('desktop-peer', expect.any(Array));
   });
 });

@@ -77,7 +77,7 @@ describe('macOS fixed A5 development entry', () => {
     expect(calls[1][1]).toEqual([
       '-s', '87a33a4b', 'shell', 'am', 'start', '-n', 'com.foliole.android/.MainActivity'
     ]);
-    expect(calls[2][1]).toContain('/repo/scripts/android/verify-android-launch.mjs');
+    expect(calls[2][1]).toContain(path.join('/repo', 'scripts/android/verify-android-launch.mjs'));
   });
 
   it('keeps bounded instrumentation output on failure', () => {

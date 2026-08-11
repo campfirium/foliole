@@ -40,6 +40,7 @@ describe('iOS foreground sync lifecycle acceptance', () => {
     const entry = fs.readFileSync('src/companion/main.tsx', 'utf8');
     const runner = fs.readFileSync('scripts/ios/ios-foreground-sync-lifecycle-runner.mjs', 'utf8');
     const shell = fs.readFileSync('src/companion/iosForegroundSyncLifecycleAcceptance.tsx', 'utf8');
+    const state = fs.readFileSync('scripts/ios/ios-foreground-sync-lifecycle-state.mjs', 'utf8');
     expect(entry).toContain("iosAcceptanceScenario === 'foreground-sync-lifecycle'");
     expect(entry).toMatch(/if \(isIosBridgeAcceptance\)[\s\S]*else[\s\S]*<CompanionApp/);
     expect(shell).toContain('useCompanionWorkspaceSync(bootstrap)');
@@ -49,6 +50,8 @@ describe('iOS foreground sync lifecycle acceptance', () => {
     expect(runner.match(/shell readiness', 60_000/g)).toHaveLength(2);
     expect(runner).toContain('timeoutMs = 20_000');
     expect(runner).toMatch(/terminate[^\n]+com\.apple\.Preferences[^\n]+\n[^\n]+launch[^\n]+com\.apple\.Preferences/);
+    expect(state).toContain("FROM sync_peer_cursors");
+    expect(state).toContain("stream_name = 'sync-pack-receive'");
   });
 
   it('sanitizes ordinary assets and enables only the reviewed lifecycle scenario', () => {
