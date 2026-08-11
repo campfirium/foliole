@@ -14,7 +14,7 @@ it('uses explicit A5 serial and a registered Windows action', async () => {
   const calls = [];
   const execute = async (command, args) => {
     calls.push([command, args]);
-    if (args.includes('devices')) return '87a33a4b\tdevice product:test\n';
+    if (args.includes('devices')) return '87a33a4b               device product:test\n';
     if (command === 'ssh') return '[multi-device-sync-readiness] status=ready\n';
     return '';
   };
@@ -25,4 +25,5 @@ it('uses explicit A5 serial and a registered Windows action', async () => {
   expect(calls.some(([, args]) => args.includes('wait-for-device'))).toBe(true);
   expect(calls.find(([command]) => command === 'ssh')[1].join(' '))
     .toContain('windows-multi-device-sync-readiness.mjs');
+  expect(calls.find(([command]) => command === 'ssh')[1]).toContain('C:/Progra~1/nodejs/node.exe');
 });

@@ -59,3 +59,19 @@ export function cleanupOwnedRun({ fsApi = fs, repoRoot, runId }) {
   assertIsolatedMacosRoot({ fsApi, repoRoot, root: macosRoot, runId });
   fsApi.rmSync(root, { recursive: true });
 }
+
+export function cleanupPreviousOwnedRuns({ fsApi = fs, repoRoot, runId }) {
+  const parent = path.join(repoRoot, ...RUNS);
+  if (!fsApi.existsSync(parent)) return [];
+  const removed = [];
+  for (const entry of fsApi.readdirSync(parent, { withFileTypes: true })) {
+    if (!entry.isDirectory() || entry.name === runId) continue;
+    const previous = path.join(parent, entry.name);
+    const marker = path.join(previous, 'macos-a', 'acceptance-owner.json');
+    if (!fsApi.existsSync(marker)) continue;
+    const owner = JSON.parse(fsApi.readFileSync(marker, 'utf8'));
+    if (owner.runId !== entry.name || owner.purpose !== 'multi-device-sync-acceptance') continue;
+    fsApi.rmSync(previous, { recursive: true }); removed.push(entry.name);
+  }
+  return removed;
+}

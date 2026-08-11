@@ -15,7 +15,7 @@ import {
   cleanupDiagnosticState, createDiagnosticStageActions
 } from './multi-device-sync-stage-actions.mjs';
 import {
-  cleanupOwnedRun, createIsolatedMacosRoot
+  cleanupOwnedRun, cleanupPreviousOwnedRuns, createIsolatedMacosRoot
 } from './multi-device-sync-workspace.mjs';
 
 function parse(argv) {
@@ -42,6 +42,7 @@ export async function runCli({ argv = process.argv.slice(2), repoRoot = process.
   const request = parse(argv);
   const candidateProvider = async () => currentAcceptanceCandidate(repoRoot, request.mode);
   const candidate = await candidateProvider();
+  cleanupPreviousOwnedRuns({ repoRoot, runId });
   createIsolatedMacosRoot({ repoRoot, runId });
   const options = { repoRoot, runId };
   const run = createRun({ candidate, mode: request.mode, runId, scenario: request.stage });

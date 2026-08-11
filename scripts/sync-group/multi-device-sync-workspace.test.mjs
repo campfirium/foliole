@@ -4,7 +4,7 @@ import path from 'node:path';
 import { expect, it } from 'vitest';
 
 import {
-  assertIsolatedMacosRoot, cleanupOwnedRun, createIsolatedMacosRoot
+  assertIsolatedMacosRoot, cleanupOwnedRun, cleanupPreviousOwnedRuns, createIsolatedMacosRoot
 } from './multi-device-sync-workspace.mjs';
 
 it('creates and removes only a run-owned isolated macOS library', () => {
@@ -13,6 +13,18 @@ it('creates and removes only a run-owned isolated macOS library', () => {
   expect(created.root).toContain(path.join('.tmp', 'artifacts', 'multi-device-sync', 'runs', 'run-1'));
   cleanupOwnedRun({ repoRoot, runId: 'run-1' });
   expect(fs.existsSync(path.dirname(created.root))).toBe(false);
+});
+
+it('removes only previous roots whose marker owns the exact directory name', () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'multi-device-owner-'));
+  createIsolatedMacosRoot({ repoRoot, runId: 'old-run' });
+  const unknown = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs/unknown/macos-a');
+  fs.mkdirSync(unknown, { recursive: true });
+  fs.writeFileSync(path.join(unknown, 'acceptance-owner.json'), JSON.stringify({
+    purpose: 'another-system', runId: 'unknown'
+  }));
+  expect(cleanupPreviousOwnedRuns({ repoRoot, runId: 'new-run' })).toEqual(['old-run']);
+  expect(fs.existsSync(unknown)).toBe(true);
 });
 
 it('rejects personal, unknown, and mismatched owners', () => {

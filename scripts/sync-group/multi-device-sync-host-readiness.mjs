@@ -12,7 +12,7 @@ import { assertIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
 const exec = promisify(execFile);
 const APP = 'com.foliole.android';
-const WINDOWS_NODE = '"C:/Program Files/nodejs/node.exe"';
+const WINDOWS_NODE = 'C:/Progra~1/nodejs/node.exe';
 const WINDOWS_READINESS = 'C:/dev/foliole-android-lab-preview/scripts/windows/windows-multi-device-sync-readiness.mjs';
 
 async function bounded(command, args, options = {}) {
@@ -22,8 +22,9 @@ async function bounded(command, args, options = {}) {
 }
 
 function fixedDevice(output) {
-  const row = output.split(/\r?\n/u).find((line) => line.startsWith(`${A5_SERIAL}\t`));
-  if (!row || !/\tdevice(?:\s|$)/u.test(row)) throw Object.assign(new Error('Fixed A5 is unavailable.'), {
+  const row = output.split(/\r?\n/u).map((line) => line.trim().split(/\s+/u))
+    .find(([serial]) => serial === A5_SERIAL);
+  if (!row || row[1] !== 'device') throw Object.assign(new Error('Fixed A5 is unavailable.'), {
     missingFact: 'fixed_a5_unavailable', lastSuccessfulAction: 'adb_devices_read'
   });
 }
