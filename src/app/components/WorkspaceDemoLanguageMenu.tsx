@@ -1,4 +1,4 @@
-import { Globe2 } from 'lucide-react';
+import { Globe } from 'lucide-react';
 import { useState } from 'react';
 
 import { APP_LANGUAGE_OPTIONS } from '../../shared/localization/appLanguage';
@@ -35,7 +35,7 @@ export function WorkspaceDemoLanguageMenu() {
               <AppIconButton
                 className={BUTTON_CLASS_NAME}
                 focusRing="none"
-                icon={<Globe2 aria-hidden="true" size={16} strokeWidth={1.75} />}
+                icon={<Globe aria-hidden="true" size={16} strokeWidth={1.75} />}
                 label={label}
                 onClick={() => setOpen(true)}
               />
