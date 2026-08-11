@@ -20,6 +20,20 @@ it('performs zero stage mutations when any readiness host is blocked', async () 
   expect(result.status).toBe('blocked');
 });
 
+it('preserves bounded failure detail and evidence without advancing later stages', async () => {
+  const result = await runDiagnostic({ adapters: {
+    'macos-a': ready, 'android-b': ready, 'windows-c': ready
+  }, availableFacts: ['candidate_bound'], candidateProvider: async () => candidate,
+  run: createRun({ candidate, mode: 'diagnostic', runId: 'run-5', scenario: 'a-b-group-sync' }),
+  stageActions: { 'establish-a-b': async () => { throw Object.assign(new Error('receipt missing'), {
+    evidenceRef: '/evidence/action.log', host: 'android-b',
+    lastSuccessfulAction: 'a5_cleared', missingFact: 'pair_sync_receipt'
+  }); } }, targetStage: 'a-b-group-sync' });
+  expect(result.receipts.at(-1)).toMatchObject({ evidenceRef: '/evidence/action.log',
+    failureDetail: 'receipt missing', host: 'android-b', lastSuccessfulAction: 'a5_cleared',
+    missingFact: 'pair_sync_receipt', status: 'failed' });
+});
+
 it('blocks an unbound selected stage instead of treating it as passed', async () => {
   const result = await runDiagnostic({ adapters: {
     'macos-a': ready, 'android-b': ready, 'windows-c': ready

@@ -8,6 +8,8 @@ function stageFailure(stage, startedAt, error) {
   const completedAt = new Date().toISOString();
   const stalled = error.status === 'stalled' || error.result?.code === 124;
   return { completedAt, durationMs: Date.parse(completedAt) - Date.parse(startedAt),
+    ...(error.evidenceRef ? { evidenceRef: error.evidenceRef } : {}),
+    ...(error.message ? { failureDetail: String(error.message).replace(/[\r\n]+/gu, ' ').slice(0, 500) } : {}),
     failureOwner: error.failureOwner || (stalled ? 'product' : 'controller'), host: error.host || stage.host,
     inputFacts: stage.inputs, lastProgressAt: error.lastProgressAt || startedAt,
     lastSuccessfulAction: error.lastSuccessfulAction || 'stage_started',

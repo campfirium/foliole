@@ -15,13 +15,16 @@ import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
 const exec = promisify(execFile);
 
-function actionExecute(progressPath) {
+function actionExecute(progressPath, logPath) {
   return (command, args, options = {}) => new Promise((resolve, reject) => {
     const child = spawn(command, args, { ...options, stdio: ['ignore', 'pipe', 'pipe'] });
     let output = ''; let stderr = ''; let stdout = '';
     const progress = (host, chunk) => {
       const text = chunk.toString(); output += text;
       if (host === 'stdout') stdout += text; else stderr += text;
+      if (!fs.existsSync(logPath) || fs.statSync(logPath).size < 64 * 1024 ** 2) {
+        fs.appendFileSync(logPath, text.slice(0, 64 * 1024 ** 2), 'utf8');
+      }
       fs.appendFileSync(progressPath, `${JSON.stringify({ at: new Date().toISOString(),
         bytes: Buffer.byteLength(text), host })}\n`, 'utf8');
       clearTimeout(stall); stall = setTimeout(() => child.kill('SIGKILL'), 60_000);
@@ -78,19 +81,29 @@ async function establishAB(repoRoot, runId) {
   const evidenceRoot = path.join(repoRoot, '.tmp', 'artifacts', 'multi-device-sync', 'runs', runId,
     'a-b-group-sync');
   fs.mkdirSync(evidenceRoot, { recursive: true });
-  const execute = actionExecute(path.join(evidenceRoot, 'progress.jsonl'));
-  await runMacosA5SyncGroupMaintenance({ action: 'clear-app-data', buildIdentity: runId,
-    env, evidenceRoot: path.join(evidenceRoot, 'clear-a5'), execute, paths, serial: A5_SERIAL });
-  const readiness = resolveMacosA5PairSyncReadiness(paths);
-  const result = await runMacosA5PairSync({ buildIdentity: runId,
-    credentialRepairRequired: readiness.credentialRepairRequired,
-    desktopControl: async () => ({ code: 0, output: '' }),
-    deviceFingerprint: readiness.deviceIdentityFingerprint, env, evidenceRoot, execute,
-    existingPairing: readiness.existingPairing, libraryHome: path.join(owned.root, 'library'),
-    paths, remotePeerFingerprint: readiness.remotePeerFingerprint, serial: A5_SERIAL,
-    userDataPath: path.join(owned.root, 'user-data'), validateDesktop: validateOwnedDesktopPreflight });
-  return { evidenceRef: result.pairSyncRecovery.manifestPath,
-    progress: ['a5-cleared', 'macos-group-created', 'a5-paired', 'a-b-synced'] };
+  const logPath = path.join(evidenceRoot, 'action.log');
+  const execute = actionExecute(path.join(evidenceRoot, 'progress.jsonl'), logPath);
+  let lastSuccessfulAction = 'stage_started';
+  try {
+    await runMacosA5SyncGroupMaintenance({ action: 'clear-app-data', buildIdentity: runId,
+      env, evidenceRoot: path.join(evidenceRoot, 'clear-a5'), execute, paths, serial: A5_SERIAL });
+    lastSuccessfulAction = 'a5_cleared';
+    const readiness = resolveMacosA5PairSyncReadiness(paths);
+    lastSuccessfulAction = 'a5_pairing_readiness';
+    const result = await runMacosA5PairSync({ buildIdentity: runId,
+      credentialRepairRequired: readiness.credentialRepairRequired,
+      desktopControl: async () => ({ code: 0, output: '' }),
+      deviceFingerprint: readiness.deviceIdentityFingerprint, env, evidenceRoot, execute,
+      existingPairing: readiness.existingPairing, libraryHome: path.join(owned.root, 'library'),
+      paths, remotePeerFingerprint: readiness.remotePeerFingerprint, serial: A5_SERIAL,
+      userDataPath: path.join(owned.root, 'user-data'), validateDesktop: validateOwnedDesktopPreflight });
+    return { evidenceRef: result.pairSyncRecovery.manifestPath,
+      progress: ['a5-cleared', 'macos-group-created', 'a5-paired', 'a-b-synced'] };
+  } catch (error) {
+    Object.assign(error, { evidenceRef: logPath, host: error.host || 'android-b',
+      lastSuccessfulAction, missingFact: error.missingFact || error.stage || 'product_action_receipt' });
+    throw error;
+  }
 }
 
 export function createDiagnosticStageActions({ repoRoot, runId }) {
@@ -107,5 +120,6 @@ export async function cleanupDiagnosticState({ repoRoot, runId }) {
   fs.mkdirSync(evidenceRoot, { recursive: true });
   await runMacosA5SyncGroupMaintenance({ action: 'clear-app-data', buildIdentity: runId,
     env: macosA5GradleEnv(), evidenceRoot,
-    execute: actionExecute(path.join(evidenceRoot, 'progress.jsonl')), paths, serial: A5_SERIAL });
+    execute: actionExecute(path.join(evidenceRoot, 'progress.jsonl'),
+      path.join(evidenceRoot, 'action.log')), paths, serial: A5_SERIAL });
 }
