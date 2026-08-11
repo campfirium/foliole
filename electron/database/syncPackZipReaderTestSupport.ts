@@ -37,7 +37,7 @@ export function readPackRowsFromZip(packPath: string, tempRoot: string) {
   }
 }
 
-function readStoredZipEntries(filePath: string) {
+export function readStoredZipEntries(filePath: string) {
   const buffer = fsSync.readFileSync(filePath);
   const entries = new Map<string, Buffer>();
   let offset = 0;

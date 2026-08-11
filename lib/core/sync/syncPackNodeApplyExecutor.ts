@@ -22,6 +22,7 @@ import { applySyncPackLearningObjectsWithDbPort } from './syncPackLearningObject
 import { applySyncPackNodeVersionsWithDbPort } from './syncPackNodeVersionApplyExecutor.js';
 import { clearConfirmedSyncPushAcksWithDbPort } from './syncPackPushAcksExecutor.js';
 import { applySyncPackReviewLogWithDbPort } from './syncPackReviewLogExecutor.js';
+import { ensureSyncPackSpecialRootParents } from './syncPackSpecialRootApply.js';
 import { applySyncPackStateRowsWithDbPort } from './syncPackStateRowsExecutor.js';
 import {
   applySyncPackMetadataObjectsWithDbPort,
@@ -59,6 +60,7 @@ async function applySyncPackNodeRowsWithDbPort(
   options: SyncPackNodeApplyOptions = {}
 ) {
   const resolvedOptions = await resolveSyncPackNodeApplyOptions(port, options);
+  await ensureSyncPackSpecialRootParents(port, options.incomingAlias);
   await dropNodeIndexes(port);
   try {
     await port.run(buildSyncPackNodeUpsertSql(resolvedOptions));

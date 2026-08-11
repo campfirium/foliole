@@ -11,6 +11,10 @@ function isSpecialRootNode(nodeId: string): nodeId is SpecialRootNodeId {
   return nodeId in SPECIAL_ROOT_NODE_RECORDS;
 }
 
+export function specialRootNodeDefinition(nodeId: string) {
+  return isSpecialRootNode(nodeId) ? SPECIAL_ROOT_NODE_RECORDS[nodeId] : null;
+}
+
 function ensureSpecialRootNode(driver: DatabaseDriver, nodeId: SpecialRootNodeId, updatedAt: string) {
   const existingNode = driver.queryOne<{ id: string }>('SELECT id FROM nodes WHERE id = ?', [nodeId]);
   if (existingNode) {

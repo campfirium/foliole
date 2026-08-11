@@ -30,6 +30,7 @@ final class FolioleCompanionSyncGroupMaintenanceScenario {
 
     static JSONObject createFact(Instrumentation instrumentation, WebView webView) throws Exception {
         String factText = "T121 B fact " + System.currentTimeMillis();
+        FolioleCompanionCaptureNavigation.enterBrowseSurface(instrumentation, webView, 30_000);
         click(instrumentation, webView, "companion-capture-open");
         waitUntilVisible(instrumentation, webView, "companion-capture-text", 30_000);
         JSONObject input = FolioleCompanionWebViewSemanticAdapter.perform(

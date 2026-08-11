@@ -3,10 +3,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import { setTimeout as delay } from 'node:timers/promises';
 
-import { inspectPairSyncRecoveryWorkspace } from '../android/android-pair-sync-recovery-readiness.mjs';
-import { collectAndroidDeviceSnapshot } from '../android/android-device-snapshot.mjs';
 import { macosA5GradleEnv, macosA5Paths, A5_SERIAL } from '../android/macos-a5-dev.mjs';
 import { runMacosA5PairSync } from '../android/macos-a5-pair-sync-action.mjs';
 import { runMacosA5SyncGroupApproval } from '../android/macos-a5-sync-group-approval.mjs';
@@ -18,6 +15,9 @@ import {
   closePairSyncRecoveryTransport, openPairSyncRecoveryTransport
 } from '../windows/windows-a5-pair-sync-recovery-transport.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
+import {
+  proveABConvergence, waitForAndroidJourneyFact
+} from './multi-device-sync-ab-convergence.mjs';
 import { runAOfflineAdmissionPrelude } from './multi-device-sync-fact-preparation.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
@@ -132,22 +132,6 @@ function windowsFormalReceipt(output, repoRoot) {
   return evidenceRef;
 }
 
-async function waitForAndroidFact(paths, factId) {
-  const deadline = Date.now() + 60_000;
-  let snapshot;
-  while (Date.now() < deadline) {
-    snapshot = await collectAndroidDeviceSnapshot({ adb: paths.adb, appId: 'com.foliole.android',
-      databaseInspector: inspectPairSyncRecoveryWorkspace, includeEvents: false,
-      serial: A5_SERIAL, tables: ['nodes'] });
-    if (snapshot.database?.inspection?.journeyFacts?.[factId] === 'A') return snapshot;
-    await delay(1_000);
-  }
-  throw Object.assign(new Error('Android B did not receive the deterministic A fact.'), {
-    failureOwner: 'product', host: 'android-b', missingFact: 'deterministic_a_fact_missing',
-    status: 'stalled'
-  });
-}
-
 async function admitEmptyC(repoRoot, runId) {
   const evidenceRoot = path.join(repoRoot, '.tmp', 'artifacts', 'multi-device-sync', 'runs', runId,
     'b-admit-empty-c');
@@ -181,7 +165,7 @@ async function admitEmptyC(repoRoot, runId) {
     }),
     startWindows: () => execute(process.execPath,
       ['scripts/windows/windows-dev-control.mjs', 'multi-device-sync-c'], { cwd: repoRoot }),
-    waitForFact: (factId) => waitForAndroidFact(paths, factId)
+    waitForFact: (factId) => waitForAndroidJourneyFact(paths, factId)
   });
   if (!windows || windows.code !== 0) {
     throw Object.assign(new Error('Windows C ordinary sync failed.'), { evidenceRef: evidenceRoot,
@@ -195,10 +179,15 @@ async function admitEmptyC(repoRoot, runId) {
 }
 
 export function createDiagnosticStageActions({ repoRoot, runId }) {
+  const convergenceRoot = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId,
+    'a-b-convergence');
   return {
     'admit-empty-c': () => admitEmptyC(repoRoot, runId),
     'establish-a-b': () => establishAB(repoRoot, runId),
-    'prepare-candidate': () => prepareCandidate(repoRoot, runId)
+    'prepare-candidate': () => prepareCandidate(repoRoot, runId),
+    'prove-a-b-convergence': () => proveABConvergence({ repoRoot, runId,
+      execute: actionExecute(path.join(convergenceRoot, 'progress.jsonl'),
+        path.join(convergenceRoot, 'action.log')) })
   };
 }
 

@@ -7,6 +7,8 @@ const stages = [
     outputs: ['candidate_bound'] },
   { action: 'establish-a-b', host: 'all', inputs: ['candidate_bound'], name: 'a-b-group-sync',
     outputs: ['a_b_group_active'] },
+  { action: 'prove-a-b-convergence', host: 'all', inputs: ['a_b_group_active'],
+    name: 'a-b-convergence', outputs: ['a_b_bidirectional_converged'] },
   { action: 'admit-empty-c', host: 'all', inputs: ['a_b_group_active'], name: 'b-admit-empty-c',
     outputs: ['b_c_group_active'] },
   { action: 'rejoin-a', host: 'all', inputs: ['b_c_group_active'], name: 'a-rejoin',

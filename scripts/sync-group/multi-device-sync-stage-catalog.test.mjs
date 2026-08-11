@@ -5,12 +5,15 @@ import { resolveStage, shortestStageChain, stageCatalog } from './multi-device-s
 it('declares every required product stage without embedding its business implementation', () => {
   const names = stageCatalog().map(({ name }) => name);
   expect(names).toEqual([
-    'candidate-preparation', 'a-b-group-sync', 'b-admit-empty-c', 'a-rejoin', 'a-leave',
+    'candidate-preparation', 'a-b-group-sync', 'a-b-convergence', 'b-admit-empty-c', 'a-rejoin', 'a-leave',
     'participation-control', 'sync-from-zero'
   ]);
   expect(resolveStage('a-b-group-sync')).toMatchObject({
     action: 'establish-a-b', inputs: ['candidate_bound'], outputs: ['a_b_group_active']
   });
+  expect(shortestStageChain('a-b-convergence').map(({ name }) => name)).toEqual([
+    'candidate-preparation', 'a-b-group-sync', 'a-b-convergence'
+  ]);
 });
 
 it('builds only the shortest missing product prerequisite chain', () => {
