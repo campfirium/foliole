@@ -1,5 +1,8 @@
+import { settleSiblingActions } from './multi-device-sync-stage-runtime.mjs';
+
 export async function runAOfflineAdmissionPrelude({
-  closeTransport, createFact, openSession, openTransport, runApproval, startWindows, waitForFact
+  cancelSiblings = () => {}, closeTransport, createFact, openSession, openTransport,
+  reportProgress = () => {}, runApproval, startWindows, waitForFact
 }) {
   const session = await openSession();
   let closed = false;
@@ -9,6 +12,8 @@ export async function runAOfflineAdmissionPrelude({
     closed = true; await session.close();
   };
   let windowsWork;
+  let windowsStarted;
+  const windowsStart = new Promise((resolve) => { windowsStarted = resolve; });
   try {
     const listener = await session.enable();
     if (listener.sync_enabled !== true || listener.server_status?.state !== 'running') {
@@ -16,21 +21,40 @@ export async function runAOfflineAdmissionPrelude({
         failureOwner: 'controller', host: 'macos-a', missingFact: 'a_product_listener_unavailable'
       });
     }
+    reportProgress('a-listener-ready');
     const fact = await createFact(session);
-    const approval = await runApproval({
+    reportProgress('a-fact-created');
+    const approvalWork = runApproval({
       onProviderStopped: async () => {
+        reportProgress('b-provider-stopped');
         await openTransport();
-        transportOpen = true;
+        transportOpen = true; reportProgress('b-transport-ready');
       },
       onReady: async () => {
         await waitForFact(fact.factId);
+        reportProgress('b-fact-received');
         await closeTransport();
         transportOpen = false;
         await close();
-        windowsWork = startWindows();
+        reportProgress('a-offline');
+        windowsWork = startWindows(); reportProgress('c-join-started'); windowsStarted();
       }
     });
-    return { approval, fact, windows: await windowsWork };
+    const first = await Promise.race([
+      approvalWork.then(() => 'approval'), windowsStart.then(() => 'windows-started')
+    ]);
+    if (first === 'approval' && !windowsWork) {
+      throw Object.assign(new Error('Android approval completed before Windows C started.'), {
+        failureOwner: 'controller', host: 'android-b', missingFact: 'windows_c_join_not_started'
+      });
+    }
+    const settled = await settleSiblingActions([
+      { name: 'android-b-approval', work: approvalWork.then((approval) => {
+        reportProgress('b-approval-completed'); return approval;
+      }) },
+      { name: 'windows-c-join', work: windowsWork }
+    ], cancelSiblings);
+    return { approval: settled['android-b-approval'], fact, windows: settled['windows-c-join'] };
   } finally {
     if (transportOpen) await closeTransport().catch(() => undefined);
     await close().catch(() => undefined);

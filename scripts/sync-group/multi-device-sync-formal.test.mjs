@@ -10,14 +10,22 @@ const ready = async () => ({ facts: ['ready'] });
 const adapters = { 'android-b': ready, 'macos-a': ready, 'windows-c': ready };
 
 function actions(failAt = null) {
+  const milestones = {
+    'admit-empty-c': ['a-listener-ready', 'a-fact-created', 'b-provider-stopped',
+      'b-transport-ready', 'b-fact-received', 'a-offline', 'c-join-started',
+      'b-approval-completed', 'c-ordinary-sync-completed'],
+    'establish-a-b': ['a5-cleared', 'macos-group-created', 'a5-paired', 'a-b-synced'],
+    'prepare-candidate': ['candidate-prepared']
+  };
   return Object.fromEntries([
     ['prepare-candidate', 'candidate.json'], ['establish-a-b', 'a-b.json'],
     ['admit-empty-c', 'b-c.json']
-  ].map(([name, evidenceRef]) => [name, vi.fn(async () => {
+  ].map(([name, evidenceRef]) => [name, vi.fn(async ({ reportProgress }) => {
     if (name === failAt) throw Object.assign(new Error('product red'), {
       failureOwner: 'product', host: 'windows-c', missingFact: 'c_sync_missing'
     });
-    return { evidenceRef, progress: [`${name}-done`] };
+    milestones[name].forEach(reportProgress);
+    return { evidenceRef };
   })]));
 }
 

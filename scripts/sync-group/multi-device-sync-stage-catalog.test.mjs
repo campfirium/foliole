@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 
 import {
-  resolveStage, shortestStageChain, stageCatalog, stageHostClosure
+  assertStageTiming, resolveStage, shortestStageChain, stageCatalog, stageHostClosure
 } from './multi-device-sync-stage-catalog.mjs';
 
 it('declares every required product stage without embedding its business implementation', () => {
@@ -16,6 +16,22 @@ it('declares every required product stage without embedding its business impleme
   expect(shortestStageChain('a-b-convergence').map(({ name }) => name)).toEqual([
     'candidate-preparation', 'a-b-group-sync', 'a-b-convergence'
   ]);
+});
+
+it('declares ordered milestones and deadlines that cover legal sibling waits', () => {
+  expect(resolveStage('b-admit-empty-c')).toMatchObject({
+    milestones: ['a-listener-ready', 'a-fact-created', 'b-provider-stopped', 'b-transport-ready',
+      'b-fact-received', 'a-offline', 'c-join-started', 'b-approval-completed',
+      'c-ordinary-sync-completed'],
+    siblings: expect.arrayContaining([
+      expect.objectContaining({ name: 'android-b-approval', waitsFor: 'windows-c-join' }),
+      expect.objectContaining({ name: 'windows-c-join', waitsFor: null })
+    ])
+  });
+  expect(() => assertStageTiming({ hardDeadlineMs: 100, name: 'invalid', progressDeadlineMs: 50,
+    siblings: [{ hardDeadlineMs: 80, name: 'waiter', waitsFor: 'worker' },
+      { hardDeadlineMs: 80, name: 'worker', waitsFor: null }] }))
+    .toThrow('Sibling wait deadline is too short');
 });
 
 it('limits candidate hosts to the selected product stage closure', () => {

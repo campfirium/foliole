@@ -8,12 +8,14 @@ import { scenarioCatalog, scenarioCatalogDigest } from './multi-device-sync-scen
 import { stageCatalog, stageCatalogDigest } from './multi-device-sync-stage-catalog.mjs';
 
 const CONTROLLER_FILES = [
+  'scripts/sync-group/multi-device-sync-action-executor.mjs',
   'scripts/sync-group/multi-device-sync-contract.mjs',
   'scripts/sync-group/multi-device-sync-diagnostic.mjs',
   'scripts/sync-group/multi-device-sync-formal.mjs',
   'scripts/sync-group/multi-device-sync-fact-preparation.mjs',
   'scripts/sync-group/multi-device-sync-host-readiness.mjs',
   'scripts/sync-group/multi-device-sync-stage-actions.mjs',
+  'scripts/sync-group/multi-device-sync-stage-runtime.mjs',
   'scripts/sync-group/multi-device-sync-scenario-catalog.mjs',
   'scripts/sync-group/multi-device-sync-stage-catalog.mjs',
   'scripts/sync-group/multi-device-sync-workspace.mjs'

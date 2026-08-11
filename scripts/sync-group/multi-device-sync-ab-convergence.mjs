@@ -31,15 +31,19 @@ export async function runABConvergenceJourney(actions) {
     transportOpen = true;
     await actions.startAndroid();
     await actions.waitForAndroidFact(desktopFact.factId);
+    actions.reportProgress?.('a-fact-synced-to-b');
     await actions.closeTransport();
     transportOpen = false;
     const androidFact = await actions.createAndroidFact();
     await actions.waitForDesktopFact(session, androidFact.factText);
+    actions.reportProgress?.('b-fact-synced-to-a');
     await session.close();
     session = null;
     await actions.restartAndroid();
+    actions.reportProgress?.('a-b-restarted');
     session = await actions.openSession();
     const proof = await actions.inspectRestarted(session, desktopFact.factId, androidFact.factText);
+    actions.reportProgress?.('a-b-bidirectional-converged');
     return { androidFact, desktopFact, proof };
   } finally {
     if (transportOpen) await actions.closeTransport().catch(() => undefined);
@@ -58,7 +62,7 @@ export async function waitForAndroidJourneyFact(paths, factId, wait = delay) {
     'Android B did not receive the deterministic A fact.', 'stalled');
 }
 
-export async function proveABConvergence({ execute, repoRoot, runId }) {
+export async function proveABConvergence({ execute, reportProgress, repoRoot, runId }) {
   const owned = createIsolatedMacosRoot({ repoRoot, runId });
   const paths = macosA5Paths(repoRoot);
   const env = macosA5GradleEnv();
@@ -83,6 +87,7 @@ export async function proveABConvergence({ execute, repoRoot, runId }) {
     }),
     openSession: () => openMacosPairSyncDesktopSession(sessionOptions),
     openTransport: () => openPairSyncRecoveryTransport(runTransport),
+    reportProgress,
     restartAndroid: async () => { await stopAndroid(execute, paths, env); await startAndroid(); },
     startAndroid,
     stopAndroid: () => stopAndroid(execute, paths, env),

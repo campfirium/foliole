@@ -1,4 +1,3 @@
-import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -16,39 +15,23 @@ import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey
 import {
   proveABConvergence, waitForAndroidJourneyFact
 } from './multi-device-sync-ab-convergence.mjs';
+import { createActionExecutor } from './multi-device-sync-action-executor.mjs';
 import { prepareCandidate } from './multi-device-sync-candidate-preparation.mjs';
 import { runAOfflineAdmissionPrelude } from './multi-device-sync-fact-preparation.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
-/* global Buffer, clearTimeout, process, setTimeout */
+/* global AbortController, AbortSignal, process */
 
-function actionExecute(progressPath, logPath) {
-  return (command, args, options = {}) => new Promise((resolve, reject) => {
-    const child = spawn(command, args, { ...options, stdio: ['ignore', 'pipe', 'pipe'] });
-    let output = ''; let stderr = ''; let stdout = '';
-    const progress = (host, chunk) => {
-      const text = chunk.toString(); output += text;
-      if (host === 'stdout') stdout += text; else stderr += text;
-      if (!fs.existsSync(logPath) || fs.statSync(logPath).size < 64 * 1024 ** 2) {
-        fs.appendFileSync(logPath, text.slice(0, 64 * 1024 ** 2), 'utf8');
-      }
-      fs.appendFileSync(progressPath, `${JSON.stringify({ at: new Date().toISOString(),
-        bytes: Buffer.byteLength(text), host })}\n`, 'utf8');
-      clearTimeout(stall); stall = setTimeout(() => child.kill('SIGKILL'), 60_000);
-    };
-    let stall = setTimeout(() => child.kill('SIGKILL'), 60_000);
-    child.stdout.on('data', (chunk) => progress('stdout', chunk));
-    child.stderr.on('data', (chunk) => progress('stderr', chunk));
-    child.on('error', (error) => { clearTimeout(stall); reject(error); });
-    child.on('close', (code, signal) => {
-      clearTimeout(stall);
-      resolve({ code: signal === 'SIGKILL' ? 124 : code ?? 1,
-        lines: output.split(/\r?\n/u).filter(Boolean), output, stderr, stdout });
-    });
+function actionExecute(evidenceRoot, signal, stage) {
+  const execute = createActionExecutor({ logPath: path.join(evidenceRoot, 'action.log'),
+    progressPath: path.join(evidenceRoot, 'progress.jsonl') });
+  return (command, args, options = {}) => execute(command, args, {
+    action: options.action || path.basename(command), hardDeadlineMs: options.timeoutMs,
+    host: options.host || stage.host, ...options, signal, stage: stage.name
   });
 }
 
-async function establishAB(repoRoot, runId) {
+async function establishAB(repoRoot, runId, { reportProgress, signal, stage }) {
   const owned = createIsolatedMacosRoot({ repoRoot, runId });
   const paths = macosA5Paths(repoRoot);
   const env = macosA5GradleEnv();
@@ -56,12 +39,12 @@ async function establishAB(repoRoot, runId) {
     'a-b-group-sync');
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const logPath = path.join(evidenceRoot, 'action.log');
-  const execute = actionExecute(path.join(evidenceRoot, 'progress.jsonl'), logPath);
+  const execute = actionExecute(evidenceRoot, signal, stage);
   let lastSuccessfulAction = 'stage_started';
   try {
     await runMacosA5SyncGroupMaintenance({ action: 'clear-app-data', buildIdentity: runId,
       env, evidenceRoot: path.join(evidenceRoot, 'clear-a5'), execute, paths, serial: A5_SERIAL });
-    lastSuccessfulAction = 'a5_cleared';
+    lastSuccessfulAction = 'a5_cleared'; reportProgress('a5-cleared');
     const readiness = resolveMacosA5PairSyncReadiness(paths);
     lastSuccessfulAction = 'a5_pairing_readiness';
     const result = await runMacosA5PairSync({ buildIdentity: runId,
@@ -71,8 +54,8 @@ async function establishAB(repoRoot, runId) {
       existingPairing: readiness.existingPairing, libraryHome: path.join(owned.root, 'library'),
       paths, remotePeerFingerprint: readiness.remotePeerFingerprint, serial: A5_SERIAL,
       userDataPath: path.join(owned.root, 'user-data'), validateDesktop: validateOwnedDesktopPreflight });
-    return { evidenceRef: result.pairSyncRecovery.manifestPath,
-      progress: ['a5-cleared', 'macos-group-created', 'a5-paired', 'a-b-synced'] };
+    reportProgress('macos-group-created'); reportProgress('a5-paired'); reportProgress('a-b-synced');
+    return { evidenceRef: result.pairSyncRecovery.manifestPath };
   } catch (error) {
     Object.assign(error, { evidenceRef: logPath, host: error.host || 'android-b',
       lastSuccessfulAction, missingFact: error.missingFact || error.stage || 'product_action_receipt' });
@@ -96,12 +79,14 @@ function windowsFormalReceipt(output, repoRoot) {
   return evidenceRef;
 }
 
-async function admitEmptyC(repoRoot, runId) {
+async function admitEmptyC(repoRoot, runId, { reportProgress, signal, stage }) {
   const evidenceRoot = path.join(repoRoot, '.tmp', 'artifacts', 'multi-device-sync', 'runs', runId,
     'b-admit-empty-c');
   fs.mkdirSync(evidenceRoot, { recursive: true });
-  const execute = actionExecute(path.join(evidenceRoot, 'progress.jsonl'),
-    path.join(evidenceRoot, 'action.log'));
+  const approvalController = new AbortController();
+  const approvalSignal = AbortSignal.any([signal, approvalController.signal]);
+  const execute = actionExecute(evidenceRoot, approvalSignal, stage);
+  const executeWindows = actionExecute(evidenceRoot, signal, stage);
   const paths = macosA5Paths(repoRoot);
   const env = macosA5GradleEnv();
   const owned = createIsolatedMacosRoot({ repoRoot, runId });
@@ -115,6 +100,9 @@ async function admitEmptyC(repoRoot, runId) {
     });
   };
   const { approval, windows } = await runAOfflineAdmissionPrelude({
+    cancelSiblings: (failedName) => {
+      if (failedName === 'windows-c-join') approvalController.abort();
+    },
     closeTransport: () => closePairSyncRecoveryTransport(runTransport),
     createFact: (session) => createDesktopSyncGroupJourneyFact({
       device: 'A', evidenceRoot: path.join(evidenceRoot, 'a-fact'), session
@@ -127,8 +115,17 @@ async function admitEmptyC(repoRoot, runId) {
     runApproval: (lifecycle) => runMacosA5SyncGroupApproval({
       execute, ...lifecycle, prepare: () => {}, repoRoot
     }),
-    startWindows: () => execute(process.execPath,
-      ['scripts/windows/windows-dev-control.mjs', 'multi-device-sync-c'], { cwd: repoRoot }),
+    startWindows: async () => {
+      const result = await executeWindows(process.execPath,
+        ['scripts/windows/windows-dev-control.mjs', 'multi-device-sync-c'], {
+        action: 'windows-c-join', cwd: repoRoot, host: 'windows-c', timeoutMs: 15 * 60_000
+        });
+      if (result.code === 0) return result;
+      throw Object.assign(new Error('Windows C join action failed.'), { result,
+        failureOwner: result.terminationReason ? 'controller' : 'product', host: 'windows-c',
+        missingFact: result.terminationReason || 'windows_c_sync_receipt' });
+    },
+    reportProgress,
     waitForFact: (factId) => waitForAndroidJourneyFact(paths, factId)
   });
   if (!windows || windows.code !== 0) {
@@ -136,22 +133,23 @@ async function admitEmptyC(repoRoot, runId) {
       failureOwner: 'product', host: 'windows-c', missingFact: 'windows_c_sync_receipt' });
   }
   const evidenceRef = windowsFormalReceipt(windows.output, repoRoot);
-  return { evidenceRef, lastProgressAt: new Date().toISOString(),
-    progress: ['a-deterministic-fact-created', 'a-fact-synced-to-b', 'a-offline',
-      'c-join-approved', 'c-ordinary-sync-complete',
-      `approval-${approval.receipt.targetTestId}`] };
+  reportProgress('c-ordinary-sync-completed');
+  return { evidenceRef, lastProgressAt: new Date().toISOString(), approval };
 }
 
 export function createDiagnosticStageActions({ repoRoot, requiredHosts, runId }) {
   const convergenceRoot = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId,
     'a-b-convergence');
   return {
-    'admit-empty-c': () => admitEmptyC(repoRoot, runId),
-    'establish-a-b': () => establishAB(repoRoot, runId),
-    'prepare-candidate': () => prepareCandidate({ repoRoot, requiredHosts, runId }),
-    'prove-a-b-convergence': () => proveABConvergence({ repoRoot, runId,
-      execute: actionExecute(path.join(convergenceRoot, 'progress.jsonl'),
-        path.join(convergenceRoot, 'action.log')) })
+    'admit-empty-c': (context) => admitEmptyC(repoRoot, runId, context),
+    'establish-a-b': (context) => establishAB(repoRoot, runId, context),
+    'prepare-candidate': async ({ reportProgress }) => {
+      const result = await prepareCandidate({ repoRoot, requiredHosts, runId });
+      reportProgress('candidate-prepared'); return result;
+    },
+    'prove-a-b-convergence': (context) => proveABConvergence({ repoRoot, runId,
+      execute: actionExecute(convergenceRoot, context.signal, context.stage),
+      reportProgress: context.reportProgress })
   };
 }
 
@@ -162,6 +160,6 @@ export async function cleanupDiagnosticState({ repoRoot, runId }) {
   fs.mkdirSync(evidenceRoot, { recursive: true });
   await runMacosA5SyncGroupMaintenance({ action: 'clear-app-data', buildIdentity: runId,
     env: macosA5GradleEnv(), evidenceRoot,
-    execute: actionExecute(path.join(evidenceRoot, 'progress.jsonl'),
-      path.join(evidenceRoot, 'action.log')), paths, serial: A5_SERIAL });
+    execute: actionExecute(evidenceRoot, undefined, { host: 'android-b', name: 'cleanup' }),
+    paths, serial: A5_SERIAL });
 }

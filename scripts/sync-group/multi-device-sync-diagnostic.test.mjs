@@ -14,7 +14,9 @@ it('performs zero stage mutations when any readiness host is blocked', async () 
       missingFact: 'fixed_a5_unavailable' }); }, 'windows-c': ready
   }, candidateProvider: async () => candidate,
   run: createRun({ candidate, mode: 'diagnostic', runId: 'run-1', scenario: 'a-b-group-sync' }),
-  stageActions: { 'prepare-candidate': async () => { mutations += 1; } },
+  stageActions: { 'prepare-candidate': async ({ reportProgress }) => {
+    mutations += 1; reportProgress('candidate-prepared'); return {};
+  } },
   targetStage: 'a-b-group-sync' });
   expect(mutations).toBe(0);
   expect(result.status).toBe('blocked');
@@ -27,7 +29,10 @@ it('does not consult Windows readiness for an A/B-only stage closure', async () 
   }, availableFacts: ['candidate_bound'], candidateProvider: async () => candidate,
   readinessHosts: ['macos-a', 'android-b'],
   run: createRun({ candidate, mode: 'diagnostic', runId: 'run-ab', scenario: 'a-b-group-sync' }),
-  stageActions: { 'establish-a-b': async () => ({ evidenceRef: 'a-b.json' }) },
+  stageActions: { 'establish-a-b': async ({ reportProgress }) => {
+    ['a5-cleared', 'macos-group-created', 'a5-paired', 'a-b-synced'].forEach(reportProgress);
+    return { evidenceRef: 'a-b.json' };
+  } },
   targetStage: 'a-b-group-sync' });
   expect(result.status).toBe('passed');
   expect(windows).not.toHaveBeenCalled();
@@ -52,7 +57,9 @@ it('blocks an unbound selected stage instead of treating it as passed', async ()
     'macos-a': ready, 'android-b': ready, 'windows-c': ready
   }, candidateProvider: async () => candidate,
   run: createRun({ candidate, mode: 'diagnostic', runId: 'run-2', scenario: 'a-b-group-sync' }),
-  stageActions: { 'prepare-candidate': async () => ({ evidenceRef: 'candidate.json' }) },
+  stageActions: { 'prepare-candidate': async ({ reportProgress }) => {
+    reportProgress('candidate-prepared'); return { evidenceRef: 'candidate.json' };
+  } },
   targetStage: 'a-b-group-sync' });
   expect(result.status).toBe('blocked');
   expect(result.receipts.at(-1)).toMatchObject({ missingFact: 'unbound_stage',
@@ -70,7 +77,9 @@ it('rechecks all hosts after candidate preparation before product mutation', asy
   run: createRun({ candidate, mode: 'diagnostic', runId: 'run-4', scenario: 'a-b-group-sync' }),
   stageActions: {
     'establish-a-b': async () => { mutations += 1; },
-    'prepare-candidate': async () => ({ evidenceRef: 'candidate.json' })
+    'prepare-candidate': async ({ reportProgress }) => {
+      reportProgress('candidate-prepared'); return { evidenceRef: 'candidate.json' };
+    }
   }, targetStage: 'a-b-group-sync' });
   expect(mutations).toBe(0);
   expect(result.receipts.at(-2)).toMatchObject({

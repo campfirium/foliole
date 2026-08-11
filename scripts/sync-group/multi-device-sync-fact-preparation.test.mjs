@@ -4,6 +4,7 @@ import { runAOfflineAdmissionPrelude } from './multi-device-sync-fact-preparatio
 
 it('creates on A, proves B received the fact, takes A offline, then starts C', async () => {
   const events = [];
+  const milestones = [];
   const close = vi.fn(async () => { events.push('a-offline'); });
   const result = await runAOfflineAdmissionPrelude({
     closeTransport: async () => { events.push('b-transport-closed'); },
@@ -13,6 +14,7 @@ it('creates on A, proves B received the fact, takes A offline, then starts C', a
       return { server_status: { state: 'running' }, sync_enabled: true };
     } }),
     openTransport: async () => { events.push('b-transport-open'); },
+    reportProgress: (milestone) => milestones.push(milestone),
     runApproval: async ({ onProviderStopped, onReady }) => {
       events.push('b-provider-stopped'); await onProviderStopped();
       events.push('b-started'); await onReady(); events.push('c-approved'); return 'approval';
@@ -26,6 +28,10 @@ it('creates on A, proves B received the fact, takes A offline, then starts C', a
     'b-transport-closed', 'a-offline', 'c-started', 'c-approved'
   ]);
   expect(close).toHaveBeenCalledTimes(1);
+  expect(milestones).toEqual([
+    'a-listener-ready', 'a-fact-created', 'b-provider-stopped', 'b-transport-ready',
+    'b-fact-received', 'a-offline', 'c-join-started', 'b-approval-completed'
+  ]);
   expect(result).toMatchObject({ approval: 'approval', windows: 'windows' });
 });
 
