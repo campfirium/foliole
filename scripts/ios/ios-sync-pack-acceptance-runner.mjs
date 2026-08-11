@@ -49,7 +49,8 @@ export function readSyncPackSnapshot(options) {
     (SELECT count(*) FROM node_sync_tombstones WHERE node_id IN (
       'ios-acceptance-restore', (SELECT id FROM nodes WHERE title = 'Mac successor acceptance')
     )) AS tombstone_count,
-    (SELECT value FROM companion_meta WHERE key = 'sync_pack_cursor') AS cursor;`;
+    (SELECT MAX(CAST(cursor_value AS INTEGER)) FROM sync_peer_cursors
+      WHERE stream_name = 'sync-pack-receive') AS cursor;`;
   const cachePath = path.join(options.containerPath, 'Library/Caches/sync-packs');
   const cacheEntries = existsSync(cachePath) ? readdirSync(cachePath) : [];
   return parseSyncPackSnapshot(options.capture('sqlite3', ['-json', databasePath, sql]), cacheEntries);

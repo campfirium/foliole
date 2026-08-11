@@ -6,7 +6,10 @@ import {
   parseForegroundSyncLifecycleSnapshot
 } from './ios-foreground-sync-lifecycle-snapshot.mjs';
 
-const SNAPSHOT_SQL = "SELECT key, value FROM companion_meta WHERE key IN ('device_id','workspace_sync_endpoint_url','workspace_sync_last_synced_at','workspace_sync_events','sync_pack_cursor')";
+const SNAPSHOT_SQL = `SELECT key, value FROM companion_meta
+  WHERE key IN ('device_id','workspace_sync_endpoint_url','workspace_sync_last_synced_at','workspace_sync_events')
+  UNION ALL SELECT 'sync_pack_cursor', MAX(CAST(cursor_value AS INTEGER)) FROM sync_peer_cursors
+  WHERE stream_name = 'sync-pack-receive'`;
 
 export function readForegroundSyncLifecycleSnapshot(repoRoot, databasePath) {
   const result = spawnSync('sqlite3', ['-json', databasePath, SNAPSHOT_SQL], { cwd: repoRoot, encoding: 'utf8' });

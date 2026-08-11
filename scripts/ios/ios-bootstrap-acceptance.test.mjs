@@ -152,6 +152,13 @@ describe('iOS bootstrap acceptance contract', () => {
       .toThrow('evidence is incomplete');
   });
 
+  it('reads Sync Pack progress from the peer-scoped receive cursor', () => {
+    const source = fs.readFileSync('scripts/ios/ios-sync-pack-acceptance-runner.mjs', 'utf8');
+    expect(source).toContain("FROM sync_peer_cursors");
+    expect(source).toContain("stream_name = 'sync-pack-receive'");
+    expect(source).not.toContain("key = 'sync_pack_cursor'");
+  });
+
   it('rejects state writeback evidence without confirmation cleanup', () => {
     const snapshot = parseStateWritebackSnapshot('[{"pending_ack_count":1}]');
     expect(() => verifyStateWritebackAcceptance({}, {}, snapshot, snapshot, {}))

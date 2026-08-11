@@ -29,7 +29,7 @@ export function readStateWritebackSnapshot(options) {
     (SELECT op_id FROM review_log WHERE node_id = 'ios-state-node' LIMIT 1) AS review_op_id,
     (SELECT count(*) FROM sync_delivery_receipts
       WHERE stream_name = 'review_log' AND status = 'confirmed'
-      AND operation_id = (SELECT op_id FROM review_log WHERE node_id = 'ios-state-node' LIMIT 1)
+      AND object_id = (SELECT op_id FROM review_log WHERE node_id = 'ios-state-node' LIMIT 1)
     ) AS confirmed_review_delivery_count,
     (SELECT count(*) FROM sync_object_state WHERE object_type IN (${SHARED_TYPES}) AND sync_dirty = 1) AS shared_dirty_count,
     (SELECT count(*) FROM sync_object_state WHERE object_type IN (${SHARED_TYPES})) AS shared_state_count,

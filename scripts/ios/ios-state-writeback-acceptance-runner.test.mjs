@@ -1,4 +1,6 @@
 // @vitest-environment node
+import fs from 'node:fs';
+
 import { expect, it } from 'vitest';
 
 import {
@@ -66,4 +68,10 @@ it('rejects a review operation without a confirmed peer delivery receipt', () =>
   expect(() => verifyStateWritebackAcceptance(
     first, second, { ...snapshot(), confirmed_review_delivery_count: 0 }, snapshot(), observations()
   )).toThrow('evidence is incomplete');
+});
+
+it('matches the peer delivery receipt by the review operation object identity', () => {
+  const source = fs.readFileSync('scripts/ios/ios-state-writeback-acceptance-runner.mjs', 'utf8');
+  expect(source).toContain("AND object_id = (SELECT op_id FROM review_log");
+  expect(source).not.toContain("AND operation_id = (SELECT op_id FROM review_log");
 });
