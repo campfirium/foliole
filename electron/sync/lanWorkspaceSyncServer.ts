@@ -1,6 +1,7 @@
 import http from 'node:http';
 import os from 'node:os';
 
+import { resolveSyncGroupDisplayDeviceName } from '../../lib/platform/syncGroupContract.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import {
@@ -157,7 +158,7 @@ function advertiseActiveSyncGroup(args: { appVersion: string; peerId: string; po
   if (!group || group.local_member_state !== 'active') return;
   startCompanionMdnsAdvertisement({
     ...args,
-    groupDisplayName: group.display_name,
+    groupDisplayName: resolveSyncGroupDisplayDeviceName(group),
     groupId: group.group_id,
     onWarning: recordMdnsWarning,
     timelineId: group.timeline_id

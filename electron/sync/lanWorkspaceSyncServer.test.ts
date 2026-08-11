@@ -62,7 +62,11 @@ vi.mock('../database/syncGroupStore.js', () => ({
     group_id: 'group-test',
     local_device_id: 'desktop-local',
     local_member_state: 'active',
-    members: [],
+    members: [{
+      approved_by_device_id: 'desktop-local', authorization_id: 'founder-local',
+      device_id: 'desktop-local', device_kind: 'darwin', device_name: 'Maci',
+      joined_at: '2026-08-08T00:00:00.000Z', state: 'active'
+    }],
     timeline_id: 'timeline-test'
   })),
   loadSyncGroupMemberAuthorization: vi.fn(() => null)
@@ -88,6 +92,7 @@ function registerSnapshotProtectionTest() {
     expect(discoveryResponse.status).toBe(200);
     expect(discoveryResponse.json()).toMatchObject({
       desktop_name: 'Foliole Desktop',
+      group_display_name: 'Maci',
       pairing_mode: 'desktop-confirm',
       peer_id: 'desktop-local'
     });

@@ -31,6 +31,28 @@ it('merges a third member approved by B when A rejoins the same timeline', async
     .toEqual({ approved_by_device_id: 'b' });
 });
 
+it('accepts a current membership name update only from that Device', async () => {
+  seedGroup(sqlite, 'inc', ['a', 'b']);
+  sqlite.exec(`UPDATE inc.sync_group_members SET device_name = 'B renamed',
+    updated_at = '2026-08-11T00:00:00Z' WHERE device_id = 'b'`);
+  const port = createBetterSqliteDbPort(sqlite, { name: 'group-facts-test' });
+
+  await port.transaction((tx) => applySyncPackGroupFactsWithDbPort(tx, {
+    incomingAlias: 'inc', sourcePeerId: 'b'
+  }));
+
+  expect(sqlite.prepare("SELECT device_name FROM sync_group_members WHERE device_id = 'b'").get())
+    .toEqual({ device_name: 'B renamed' });
+
+  sqlite.exec(`UPDATE inc.sync_group_members SET device_name = 'A forged',
+    updated_at = '2026-08-12T00:00:00Z' WHERE device_id = 'a'`);
+  await port.transaction((tx) => applySyncPackGroupFactsWithDbPort(tx, {
+    incomingAlias: 'inc', sourcePeerId: 'b'
+  }));
+  expect(sqlite.prepare("SELECT device_name FROM sync_group_members WHERE device_id = 'a'").get())
+    .toEqual({ device_name: 'A' });
+});
+
 it('rejects a same-id pack from a different library timeline without writes', async () => {
   seedGroup(sqlite, 'inc', ['a', 'b', 'c'], 'timeline-other');
   const port = createBetterSqliteDbPort(sqlite, { name: 'group-facts-test' });

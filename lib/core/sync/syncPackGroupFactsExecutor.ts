@@ -17,6 +17,7 @@ interface MemberRow extends DbRow {
   group_id: string;
   joined_at: string;
   state: string;
+  updated_at: string;
 }
 
 interface DepartureRow extends DbRow {
@@ -61,7 +62,9 @@ export async function applySyncPackGroupFactsWithDbPort(port: DbPort, args: {
     throw new Error('sync_group_local_departure_requires_local_action');
   }
   const now = new Date().toISOString();
-  for (const member of members) await mergeMember(port, incomingGroup.group_id, member, now);
+  for (const member of members) {
+    await mergeMember(port, incomingGroup.group_id, member, args.sourcePeerId);
+  }
   for (const departure of departures) await mergeDeparture(port, departure, now);
   return { appliedMemberCount: members.length };
 }
@@ -117,7 +120,12 @@ function validateFacts(group: GroupRow, members: MemberRow[], departures: Depart
   }
 }
 
-async function mergeMember(port: DbPort, groupId: string, member: MemberRow, now: string) {
+async function mergeMember(
+  port: DbPort,
+  groupId: string,
+  member: MemberRow,
+  sourcePeerId: string
+) {
   await port.run(
     `INSERT INTO main.sync_group_members (
       group_id, device_id, device_kind, device_name, state, approved_by_device_id,
@@ -129,6 +137,9 @@ async function mergeMember(port: DbPort, groupId: string, member: MemberRow, now
         THEN excluded.device_kind ELSE device_kind END,
       device_name = CASE WHEN excluded.joined_at > joined_at OR
         (excluded.joined_at = joined_at AND excluded.authorization_id < authorization_id)
+        THEN excluded.device_name
+        WHEN excluded.device_id = ? AND excluded.authorization_id = authorization_id
+          AND excluded.joined_at = joined_at AND excluded.updated_at > updated_at
         THEN excluded.device_name ELSE device_name END,
       state = CASE WHEN excluded.joined_at > joined_at THEN 'active' ELSE state END,
       approved_by_device_id = CASE WHEN excluded.joined_at > joined_at OR
@@ -141,7 +152,7 @@ async function mergeMember(port: DbPort, groupId: string, member: MemberRow, now
       left_at = CASE WHEN excluded.joined_at > joined_at THEN NULL ELSE left_at END,
       updated_at = MAX(updated_at, excluded.updated_at)`,
     [groupId, member.device_id, member.device_kind, member.device_name, member.approved_by_device_id,
-      member.authorization_id, member.joined_at, now]
+      member.authorization_id, member.joined_at, member.updated_at, sourcePeerId]
   );
   await port.run(
     `DELETE FROM main.sync_group_member_departures

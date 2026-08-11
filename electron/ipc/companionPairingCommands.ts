@@ -54,7 +54,7 @@ const COMPANION_PAIRING_COMMANDS = new Set<string>([
 
 function buildDesktopCompanionPairingOverview() {
   const join = loadDesktopSyncGroupJoinState();
-  const syncGroup = withCurrentDesktopName(loadDesktopSyncGroup());
+  const syncGroup = loadDesktopSyncGroup();
   return {
     join_candidates: join.candidates,
     join_request: join.pending?.request ?? null,
@@ -64,16 +64,6 @@ function buildDesktopCompanionPairingOverview() {
     server_status: refreshLanWorkspaceSyncServerPairingStatus(),
     sync_group: syncGroup,
     sync_enabled: isDesktopCompanionSyncEnabled()
-  };
-}
-
-function withCurrentDesktopName(group: ReturnType<typeof loadDesktopSyncGroup>) {
-  if (!group) return null;
-  return {
-    ...group,
-    members: group.members.map((member) => member.device_id === group.local_device_id
-      ? { ...member, device_name: resolveDesktopDeviceName() }
-      : member)
   };
 }
 

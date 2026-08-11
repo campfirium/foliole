@@ -1,5 +1,6 @@
 import os from 'node:os';
 
+import { resolveSyncGroupDisplayDeviceName } from '../../lib/platform/syncGroupContract.js';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import type { WorkspaceSnapshot, WorkspaceVersionMetadata } from '../database/workspaceSnapshot.js';
@@ -53,7 +54,7 @@ export function buildDiscoveryPayload(appVersion: string, peerId: string) {
     desktop_platform: resolveDesktopPlatformLabel(),
     pairing_mode: 'desktop-confirm' as const,
     peer_id: peerId,
-    group_display_name: group.display_name,
+    group_display_name: resolveSyncGroupDisplayDeviceName(group),
     group_id: group.group_id,
     timeline_id: group.timeline_id,
     protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR

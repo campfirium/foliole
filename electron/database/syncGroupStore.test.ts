@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../../lib/core/database/syncGroupSchemaStatements.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
+import { updateLocalSyncGroupDeviceName } from './syncGroupIdentityStore.js';
 import {
   createDesktopSyncGroup,
   loadDesktopSyncGroup,
@@ -48,6 +49,19 @@ it('persists an approved device as a member without a second activation', () => 
   expect(group.members.find((member) => member.device_id === 'android-1')).toMatchObject({
     approved_by_device_id: 'desktop-1', state: 'active'
   });
+});
+
+it('persists the current host name for an existing local membership', () => {
+  createDesktopSyncGroup({
+    deviceId: 'desktop-1', deviceKind: 'darwin', deviceName: 'Foliole Desktop on Maci.local',
+    now: '2026-08-08T00:00:00.000Z'
+  });
+
+  const group = updateLocalSyncGroupDeviceName('Maci', '2026-08-11T00:00:00.000Z');
+
+  expect(group?.members[0]).toMatchObject({ device_name: 'Maci' });
+  expect(sqlite.prepare("SELECT device_name, updated_at FROM sync_group_members WHERE device_id = 'desktop-1'").get())
+    .toEqual({ device_name: 'Maci', updated_at: '2026-08-11T00:00:00.000Z' });
 });
 
 it('replaces a departed device with its newly approved membership generation', () => {

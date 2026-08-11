@@ -41,6 +41,8 @@ it('offers only the actions that are valid for local and remote members', () => 
   expect(props.onToggleSync).toHaveBeenCalledTimes(1);
   expect(props.onRemove).toHaveBeenCalledWith('device-b');
   expect(props.onLeave).toHaveBeenCalledTimes(1);
+  expect(screen.getByText("Studio Mac's Sync Group")).toBeVisible();
+  expect(screen.queryByText("Studio's Sync Group")).not.toBeInTheDocument();
   expect(screen.getByText('macOS')).toBeVisible();
   expect(screen.getByText('Android')).toBeVisible();
 });

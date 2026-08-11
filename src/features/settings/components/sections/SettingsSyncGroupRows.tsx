@@ -3,7 +3,11 @@ import type {
   DesktopSyncGroupJoinCandidatePayload,
   DesktopSyncGroupJoinRequestPayload
 } from '../../../../../lib/platform/nativeCompanionSyncContract';
-import type { SyncGroupMemberPayload, SyncGroupPayload } from '../../../../../lib/platform/syncGroupContract';
+import {
+  resolveSyncGroupDisplayDeviceName,
+  type SyncGroupMemberPayload,
+  type SyncGroupPayload
+} from '../../../../../lib/platform/syncGroupContract';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
@@ -38,9 +42,9 @@ function DeviceRow(props: {
   const t = useTranslation();
   const local = props.member.device_id === props.group.local_device_id;
   return (
-    <div className="flex min-h-14 items-center justify-between gap-5 border-t border-settings-divider/65 py-2.5" role="listitem">
+    <div className="flex min-h-16 items-center justify-between gap-7 py-3.5" role="listitem">
       <div className="flex min-w-0 items-baseline gap-2">
-        <span className="truncate text-ui-md font-medium text-foreground">{props.member.device_name}</span>
+        <span className="truncate text-ui-md font-normal text-foreground">{props.member.device_name}</span>
         <span className="shrink-0 text-ui-sm text-muted-foreground">{platformFor(props.member.device_kind)}</span>
       </div>
       <button className="shrink-0 rounded-sm px-2 py-1 text-ui-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-45"
@@ -120,16 +124,17 @@ export function SettingsSyncGroupRows(props: {
         <div className="flex min-h-11 items-center">
           <h4 className="text-ui-md font-semibold text-foreground">{t('settings.companionSync.group.title')}</h4>
         </div>
-        <div className="flex min-h-11 items-center justify-between gap-5">
-          <span className="truncate text-ui-md font-medium text-foreground">
-            {t('settings.companionSync.group.named', { name: props.group.display_name })}
+        <div className="mt-5 flex min-h-12 items-center justify-between gap-7 pb-3">
+          <span className="truncate text-ui-lg font-semibold text-foreground">
+            {t('settings.companionSync.group.named', { name: resolveSyncGroupDisplayDeviceName(props.group) })}
           </span>
           <button className="shrink-0 rounded-sm px-2 py-1 text-ui-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-45"
             disabled={props.isBusy} onClick={props.onLeave} type="button">
             {t('settings.companionSync.group.leave')}
           </button>
         </div>
-        <div aria-label={t('settings.companionSync.group.devices.title')} className="border-b border-settings-divider/65" role="list">
+        <div aria-label={t('settings.companionSync.group.devices.title')}
+          className="ml-5 divide-y divide-settings-divider/65 border-l border-settings-divider/55 pl-6" role="list">
           {props.group.members.filter((member) => member.state === 'active').map((member) => (
             <DeviceRow disabled={props.isBusy} group={props.group!} key={member.device_id} member={member}
               onRemove={props.onRemove} onToggleSync={props.onToggleSync} syncEnabled={props.syncEnabled} />
