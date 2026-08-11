@@ -3,7 +3,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { expect, it } from 'vitest';
 
-import { createHostReadinessAdapters } from './multi-device-sync-host-readiness.mjs';
+import {
+  createHostReadinessAdapters, createMutationReadinessAdapters
+} from './multi-device-sync-host-readiness.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
 it('uses explicit A5 serial and a registered Windows action', async () => {
@@ -51,5 +53,22 @@ it('blocks Android readiness before mutation when Foliole lacks window focus', a
   await expect(adapters['android-b']()).rejects.toMatchObject({
     lastSuccessfulAction: 'android_activity_started',
     missingFact: 'android_app_window_focus_missing'
+  });
+});
+
+it('does not require a Windows candidate receipt for an A/B-only target', async () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'multi-device-hosts-'));
+  const runId = 'run-ab-only';
+  const receiptRoot = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId);
+  fs.mkdirSync(receiptRoot, { recursive: true });
+  fs.writeFileSync(path.join(receiptRoot, 'candidate-preparation.json'), JSON.stringify({
+    preparedHosts: ['macos-a', 'android-b'], resultStatus: 'success', runId
+  }));
+  const execute = async (command) => command === 'ssh'
+    ? '[multi-device-sync-readiness] status=ready\n' : '';
+  const adapters = createMutationReadinessAdapters({ execute, repoRoot,
+    requiredHosts: ['macos-a', 'android-b'], runId });
+  await expect(adapters['windows-c']()).resolves.toMatchObject({
+    facts: expect.arrayContaining(['windows-c_candidate_not_required'])
   });
 });

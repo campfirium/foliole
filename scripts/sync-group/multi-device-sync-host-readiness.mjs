@@ -97,15 +97,21 @@ export function createMutationReadinessAdapters(options) {
       lastSuccessfulAction: `${host}_environment_ready`, missingFact: 'candidate_receipt_missing'
     });
     const receipt = JSON.parse(fs.readFileSync(receiptPath, 'utf8'));
-    if (receipt.runId !== options.runId || receipt.resultStatus !== 'success'
-        || !receipt.windowsReceipt || !fs.existsSync(apkPath)
+    const required = new Set(options.requiredHosts);
+    const baseMismatch = receipt.runId !== options.runId || receipt.resultStatus !== 'success'
+      || (!required.has(host) && receipt.preparedHosts?.includes(host));
+    const hostMismatch = required.has(host) && (!receipt.preparedHosts?.includes(host)
+      || (host === 'windows-c' && !receipt.windowsReceipt)
+      || (host === 'android-b' && (!fs.existsSync(apkPath)
         || createHash('sha256').update(fs.readFileSync(apkPath)).digest('hex')
-          !== receipt.androidApkSha256) {
+          !== receipt.androidApkSha256)));
+    if (baseMismatch || hostMismatch) {
       throw Object.assign(new Error('Candidate artifacts do not match the receipt.'), {
         lastSuccessfulAction: `${host}_environment_ready`, missingFact: `${host}_candidate_mismatch`
       });
     }
-    return { facts: [...result.facts, `${host}_candidate_bound`] };
+    return { facts: [...result.facts, required.has(host)
+      ? `${host}_candidate_bound` : `${host}_candidate_not_required`] };
   };
   return Object.fromEntries(Object.entries(adapters).map(([host, action]) => [
     host, () => requireCandidate(host, action)

@@ -1,8 +1,6 @@
-import { execFile, spawn } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { promisify } from 'node:util';
 
 import { macosA5GradleEnv, macosA5Paths, A5_SERIAL } from '../android/macos-a5-dev.mjs';
 import { runMacosA5PairSync } from '../android/macos-a5-pair-sync-action.mjs';
@@ -18,12 +16,11 @@ import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey
 import {
   proveABConvergence, waitForAndroidJourneyFact
 } from './multi-device-sync-ab-convergence.mjs';
+import { prepareCandidate } from './multi-device-sync-candidate-preparation.mjs';
 import { runAOfflineAdmissionPrelude } from './multi-device-sync-fact-preparation.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
 /* global Buffer, clearTimeout, process, setTimeout */
-
-const exec = promisify(execFile);
 
 function actionExecute(progressPath, logPath) {
   return (command, args, options = {}) => new Promise((resolve, reject) => {
@@ -49,39 +46,6 @@ function actionExecute(progressPath, logPath) {
         lines: output.split(/\r?\n/u).filter(Boolean), output, stderr, stdout });
     });
   });
-}
-
-function run(command, args, repoRoot, timeout = 20 * 60_000) {
-  return exec(command, args, { cwd: repoRoot, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024,
-    timeout });
-}
-
-async function prepareCandidate(repoRoot, runId) {
-  await run('npm', ['run', 'build'], repoRoot);
-  await run('npm', ['run', 'electron:compile'], repoRoot);
-  await run(process.execPath, ['scripts/android/macos-a5-dev.mjs', 'build'], repoRoot);
-  const paths = macosA5Paths(repoRoot);
-  await run(paths.adb, ['-s', A5_SERIAL, 'install', '-r', paths.apk], repoRoot, 5 * 60_000);
-  await run(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'force-stop', 'com.foliole.android'], repoRoot, 10_000);
-  await run(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start', '-W', '-n',
-    'com.foliole.android/.MainActivity'], repoRoot, 20_000);
-  const windows = await run(process.execPath, ['scripts/windows/windows-dev-control.mjs',
-    'multi-device-sync-candidate'], repoRoot);
-  if (!windows.stdout.includes('[windows-dev-action] multi-device-sync-candidate')) {
-    throw Object.assign(new Error('Windows candidate did not report fixed evidence.'), {
-      failureOwner: 'candidate', host: 'windows-c', missingFact: 'windows_candidate_unbound'
-    });
-  }
-  const apk = path.join(repoRoot, 'android/app/build/outputs/apk/debug/app-debug.apk');
-  const evidenceRef = path.join(repoRoot, '.tmp', 'artifacts', 'multi-device-sync', 'runs', runId,
-    'candidate-preparation.json');
-  fs.writeFileSync(evidenceRef, `${JSON.stringify({
-    androidApkSha256: createHash('sha256').update(fs.readFileSync(apk)).digest('hex'),
-    completedAt: new Date().toISOString(), resultStatus: 'success', runId,
-    windowsReceipt: windows.stdout.split(/\r?\n/u).find((line) =>
-      line.includes('[windows-dev-action] multi-device-sync-candidate'))
-  }, null, 2)}\n`, 'utf8');
-  return { evidenceRef, progress: ['macos-built', 'a5-built', 'windows-built'] };
 }
 
 async function establishAB(repoRoot, runId) {
@@ -178,13 +142,13 @@ async function admitEmptyC(repoRoot, runId) {
       `approval-${approval.receipt.targetTestId}`] };
 }
 
-export function createDiagnosticStageActions({ repoRoot, runId }) {
+export function createDiagnosticStageActions({ repoRoot, requiredHosts, runId }) {
   const convergenceRoot = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId,
     'a-b-convergence');
   return {
     'admit-empty-c': () => admitEmptyC(repoRoot, runId),
     'establish-a-b': () => establishAB(repoRoot, runId),
-    'prepare-candidate': () => prepareCandidate(repoRoot, runId),
+    'prepare-candidate': () => prepareCandidate({ repoRoot, requiredHosts, runId }),
     'prove-a-b-convergence': () => proveABConvergence({ repoRoot, runId,
       execute: actionExecute(path.join(convergenceRoot, 'progress.jsonl'),
         path.join(convergenceRoot, 'action.log')) })

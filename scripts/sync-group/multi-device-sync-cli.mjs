@@ -15,6 +15,10 @@ import {
 import {
   cleanupDiagnosticState, createDiagnosticStageActions
 } from './multi-device-sync-stage-actions.mjs';
+import { resolveScenario } from './multi-device-sync-scenario-catalog.mjs';
+import {
+  resolveStage, shortestStageChain, stageHostClosure
+} from './multi-device-sync-stage-catalog.mjs';
 import {
   cleanupOwnedRun, cleanupPreviousOwnedRuns, createIsolatedMacosRoot
 } from './multi-device-sync-workspace.mjs';
@@ -46,7 +50,10 @@ export async function runCli({ argv = process.argv.slice(2), repoRoot = process.
   const candidate = await candidateProvider();
   cleanupPreviousOwnedRuns({ repoRoot, runId });
   createIsolatedMacosRoot({ repoRoot, runId });
-  const options = { repoRoot, runId };
+  const selectedStages = request.mode === 'formal'
+    ? resolveScenario(request.target).stages.map(resolveStage)
+    : shortestStageChain(request.target);
+  const options = { repoRoot, requiredHosts: stageHostClosure(selectedStages), runId };
   const run = createRun({ candidate, mode: request.mode, runId, scenario: request.target });
   const runner = request.mode === 'formal' ? runFormal : runDiagnostic;
   const result = await runner({ adapters: createHostReadinessAdapters(options),

@@ -4,21 +4,22 @@ import { digest } from './multi-device-sync-contract.mjs';
 
 const stages = [
   { action: 'prepare-candidate', host: 'all', inputs: [], name: 'candidate-preparation',
-    outputs: ['candidate_bound'] },
+    hosts: [], outputs: ['candidate_bound'] },
   { action: 'establish-a-b', host: 'all', inputs: ['candidate_bound'], name: 'a-b-group-sync',
-    outputs: ['a_b_group_active'] },
+    hosts: ['macos-a', 'android-b'], outputs: ['a_b_group_active'] },
   { action: 'prove-a-b-convergence', host: 'all', inputs: ['a_b_group_active'],
-    name: 'a-b-convergence', outputs: ['a_b_bidirectional_converged'] },
+    hosts: ['macos-a', 'android-b'], name: 'a-b-convergence',
+    outputs: ['a_b_bidirectional_converged'] },
   { action: 'admit-empty-c', host: 'all', inputs: ['a_b_group_active'], name: 'b-admit-empty-c',
-    outputs: ['b_c_group_active'] },
+    hosts: ['macos-a', 'android-b', 'windows-c'], outputs: ['b_c_group_active'] },
   { action: 'rejoin-a', host: 'all', inputs: ['b_c_group_active'], name: 'a-rejoin',
-    outputs: ['three_members_active'] },
+    hosts: ['macos-a', 'android-b', 'windows-c'], outputs: ['three_members_active'] },
   { action: 'leave-a', host: 'macos-a', inputs: ['three_members_active'], name: 'a-leave',
-    outputs: ['b_c_survivors_active'] },
+    hosts: ['macos-a', 'android-b', 'windows-c'], outputs: ['b_c_survivors_active'] },
   { action: 'set-participation', host: 'all', inputs: ['three_members_active'], name: 'participation-control',
-    outputs: ['participation_converged'] },
+    hosts: ['macos-a', 'android-b', 'windows-c'], outputs: ['participation_converged'] },
   { action: 'sync-from-zero', host: 'all', inputs: ['a_b_group_active'], name: 'sync-from-zero',
-    outputs: ['fresh_client_converged'] }
+    hosts: ['macos-a', 'android-b', 'windows-c'], outputs: ['fresh_client_converged'] }
 ];
 
 export function stageCatalog() {
@@ -56,4 +57,8 @@ export function shortestStageChain(name, availableFacts = []) {
   }
   visit(name);
   return result;
+}
+
+export function stageHostClosure(selectedStages) {
+  return [...new Set(selectedStages.flatMap(({ hosts = [] }) => hosts))];
 }

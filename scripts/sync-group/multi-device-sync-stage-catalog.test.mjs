@@ -1,6 +1,8 @@
 import { expect, it } from 'vitest';
 
-import { resolveStage, shortestStageChain, stageCatalog } from './multi-device-sync-stage-catalog.mjs';
+import {
+  resolveStage, shortestStageChain, stageCatalog, stageHostClosure
+} from './multi-device-sync-stage-catalog.mjs';
 
 it('declares every required product stage without embedding its business implementation', () => {
   const names = stageCatalog().map(({ name }) => name);
@@ -13,6 +15,15 @@ it('declares every required product stage without embedding its business impleme
   });
   expect(shortestStageChain('a-b-convergence').map(({ name }) => name)).toEqual([
     'candidate-preparation', 'a-b-group-sync', 'a-b-convergence'
+  ]);
+});
+
+it('limits candidate hosts to the selected product stage closure', () => {
+  expect(stageHostClosure(shortestStageChain('a-b-convergence'))).toEqual([
+    'macos-a', 'android-b'
+  ]);
+  expect(stageHostClosure(shortestStageChain('b-admit-empty-c'))).toEqual([
+    'macos-a', 'android-b', 'windows-c'
   ]);
 });
 
