@@ -1,0 +1,22 @@
+{
+  "desktop.wordpressPublish.dialogTitle": "Publish to WordPress",
+  "desktop.wordpressPublish.postTitle": "Beitragstitel",
+  "desktop.wordpressPublish.target": "Zielseite",
+  "desktop.wordpressPublish.mode": "Aktion",
+  "desktop.wordpressPublish.mode.create": "Erstelle einen neuen Beitrag",
+  "desktop.wordpressPublish.mode.update": "Den verbundenen Beitrag aktualisieren",
+  "desktop.wordpressPublish.status": "Beitragsstatus",
+  "desktop.wordpressPublish.status.draft": "Entwurf",
+  "desktop.wordpressPublish.status.publish": "Veröffentlichen",
+  "desktop.wordpressPublish.category.placeholder": "Wählen Sie eine Kategorie",
+  "desktop.wordpressPublish.category.create": "Erstellen Sie „{name}“",
+  "desktop.wordpressPublish.catalog.loading": "Kategorien und Tags werden geladen",
+  "desktop.wordpressPublish.catalog.error": "Kategorien und Tags konnten nicht geladen werden. Versuchen Sie erneut, das Panel zu öffnen.",
+  "desktop.wordpressPublish.confirm": "Veröffentlichen",
+  "desktop.wordpressPublish.publishing": "Veröffentlichen...",
+  "desktop.wordpressPublish.created": "Veröffentlicht unter WordPress.",
+  "desktop.wordpressPublish.updated": "Aktualisiert am WordPress.",
+  "desktop.wordpressPublish.viewPost": "Beitrag anzeigen",
+  "desktop.wordpressPublish.error.publish": "Veröffentlichung unter WordPress nicht möglich.",
+  "desktop.wordpressPublish.error.localSave": "Der Beitrag wurde remote gespeichert, aber Foliole konnte seinen Beitragslink nicht speichern."
+}

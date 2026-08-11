@@ -1,0 +1,22 @@
+{
+  "desktop.wordpressPublish.dialogTitle": "Publish to WordPress",
+  "desktop.wordpressPublish.postTitle": "貼文標題",
+  "desktop.wordpressPublish.target": "目標站點",
+  "desktop.wordpressPublish.mode": "行動",
+  "desktop.wordpressPublish.mode.create": "建立一個新帖子",
+  "desktop.wordpressPublish.mode.update": "更新連接的帖子",
+  "desktop.wordpressPublish.status": "貼文狀態",
+  "desktop.wordpressPublish.status.draft": "吃水",
+  "desktop.wordpressPublish.status.publish": "發布",
+  "desktop.wordpressPublish.category.placeholder": "選擇一個類別",
+  "desktop.wordpressPublish.category.create": "創建“{name}”",
+  "desktop.wordpressPublish.catalog.loading": "載入類別和標籤",
+  "desktop.wordpressPublish.catalog.error": "無法載入類別和標籤。嘗試再次打開面板。",
+  "desktop.wordpressPublish.confirm": "發布",
+  "desktop.wordpressPublish.publishing": "出版...",
+  "desktop.wordpressPublish.created": "發佈到WordPress。",
+  "desktop.wordpressPublish.updated": "更新於WordPress。",
+  "desktop.wordpressPublish.viewPost": "查看貼文",
+  "desktop.wordpressPublish.error.publish": "無法發佈到 WordPress。",
+  "desktop.wordpressPublish.error.localSave": "該帖子已遠端保存，但Foliole無法保存其帖子連結。"
+}

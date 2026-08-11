@@ -1,0 +1,22 @@
+{
+  "desktop.wordpressPublish.dialogTitle": "Publish to WordPress",
+  "desktop.wordpressPublish.postTitle": "Название сообщения",
+  "desktop.wordpressPublish.target": "Целевой сайт",
+  "desktop.wordpressPublish.mode": "Действие",
+  "desktop.wordpressPublish.mode.create": "Создать новый пост",
+  "desktop.wordpressPublish.mode.update": "Обновить связанную публикацию",
+  "desktop.wordpressPublish.status": "Статус публикации",
+  "desktop.wordpressPublish.status.draft": "Черновик",
+  "desktop.wordpressPublish.status.publish": "Опубликовать",
+  "desktop.wordpressPublish.category.placeholder": "Выберите категорию",
+  "desktop.wordpressPublish.category.create": "Создать «{name}»",
+  "desktop.wordpressPublish.catalog.loading": "Загрузка категорий и тегов",
+  "desktop.wordpressPublish.catalog.error": "Не удалось загрузить категории и теги. Попробуйте открыть панель еще раз.",
+  "desktop.wordpressPublish.confirm": "Опубликовать",
+  "desktop.wordpressPublish.publishing": "Публикация...",
+  "desktop.wordpressPublish.created": "Опубликовано на WordPress.",
+  "desktop.wordpressPublish.updated": "Обновлено WordPress.",
+  "desktop.wordpressPublish.viewPost": "Посмотреть сообщение",
+  "desktop.wordpressPublish.error.publish": "Не удалось опубликовать на WordPress.",
+  "desktop.wordpressPublish.error.localSave": "Публикация была сохранена удаленно, но Foliole не удалось сохранить ссылку на публикацию."
+}

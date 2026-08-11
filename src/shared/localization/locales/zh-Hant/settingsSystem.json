@@ -1,0 +1,14 @@
+{
+  "settings.general.system.section": "系統",
+  "settings.general.system.aria": "系統設定",
+  "settings.general.openAtLogin.title": "自動啟動Foliole",
+  "settings.general.openAtLogin.description": "啟動後保持本機同步和全域剪輯可用。",
+  "settings.general.openAtLogin.ineffective": "Windows已停用此啟動項目。",
+  "settings.general.openAtLogin.requiresApproval": "在系統設定 > 常規 > 登入項目中允許 Foliole。",
+  "settings.general.openAtLogin.error": "macOS找不到此登入項目。嘗試再次打開它。",
+  "settings.general.openAtLogin.unsupported": "此版本中不支援自動啟動。",
+  "settings.general.openAtLogin.aria": "自動啟動Foliole",
+  "settings.search.generalOpenAtLogin.title": "自動啟動Foliole",
+  "settings.search.generalOpenAtLogin.description": "在支援的桌面安裝上自動啟動 Foliole。",
+  "settings.search.generalOpenAtLogin.terms": "啟動|啟動時啟動|啟動|後台"
+}

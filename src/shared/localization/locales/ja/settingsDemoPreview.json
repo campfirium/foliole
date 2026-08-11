@@ -1,0 +1,18 @@
+{
+  "settings.demoPreview.banner.title": "デスクトップ設定のプレビュー",
+  "settings.demoPreview.banner.description": "このパネルには完全なデスクトップ設定が表示されるため、Foliole の機能構造を理解できます。ここでの変更はオンライン デモには影響しません。",
+  "settings.demoPreview.control.desktopOnly": "デスクトップのみ",
+  "settings.demoPreview.control.previewOnly": "プレビューのみ",
+  "settings.demoPreview.downloadDesktop": "デスクトップ アプリをダウンロード",
+  "settings.demoPreview.empty": "プレビューは利用できません",
+  "settings.demoPreview.emptyDescription": "この設定カテゴリはデスクトップ アプリで表されます。",
+  "settings.demoPreview.about.title": "Foliole について",
+  "settings.demoPreview.hotkeys.title": "キーボード ショートカット",
+  "settings.demoPreview.hotkeys.search": "検索ショートカット",
+  "settings.demoPreview.hotkeys.settings": "設定のショートカット",
+  "settings.demoPreview.hotkeys.study": "学習ショートカット",
+  "settings.demoPreview.mouseGestures.title": "マウス ジェスチャの動作",
+  "settings.demoPreview.readwise.status": "Readwise リーダーのステータス",
+  "settings.demoPreview.note.label": "フォルダーへのアクセス",
+  "settings.demoPreview.note.externalFolders": "このデモでは、外部フォルダー機能が簡略化されています。デスクトップ アプリにはすべてのエクスペリエンスが含まれています。"
+}

@@ -1,0 +1,18 @@
+{
+  "settings.demoPreview.banner.title": "Vista previa de la configuración del escritorio",
+  "settings.demoPreview.banner.description": "Este panel muestra la configuración completa del escritorio, para que pueda comprender la estructura de funciones de Foliole. Los cambios aquí no afectan la demostración en línea.",
+  "settings.demoPreview.control.desktopOnly": "Solo escritorio",
+  "settings.demoPreview.control.previewOnly": "Solo vista previa",
+  "settings.demoPreview.downloadDesktop": "Descargar la aplicación de escritorio",
+  "settings.demoPreview.empty": "Vista previa no disponible",
+  "settings.demoPreview.emptyDescription": "Esta categoría de configuración está representada en la aplicación de escritorio.",
+  "settings.demoPreview.about.title": "Acerca de Foliole",
+  "settings.demoPreview.hotkeys.title": "Atajos de teclado",
+  "settings.demoPreview.hotkeys.search": "Búsqueda de acceso directo",
+  "settings.demoPreview.hotkeys.settings": "Acceso directo a configuración",
+  "settings.demoPreview.hotkeys.study": "Atajo de estudio",
+  "settings.demoPreview.mouseGestures.title": "Comportamiento del gesto del mouse",
+  "settings.demoPreview.readwise.status": "Readwise Estado del lector",
+  "settings.demoPreview.note.label": "Acceso a carpeta",
+  "settings.demoPreview.note.externalFolders": "Las funciones de las carpetas externas se simplifican en esta demostración. La aplicación de escritorio incluye la experiencia completa."
+}

@@ -1,0 +1,21 @@
+{
+  "desktop.epubImport.mode.title": "Wählen Sie den Lesemodus",
+  "desktop.epubImport.mode.description": "Sie können dies später über das Themenkontextmenü ändern.",
+  "desktop.epubImport.mode.aria": "EPUB-Lesemodus",
+  "desktop.epubImport.mode.sequential.label": "Sequentielles Lesen",
+  "desktop.epubImport.mode.sequential.suitability": "Geeignet für neue Inhalte",
+  "desktop.epubImport.mode.sequential.description": "In der Reihenfolge lesen. Das nächste Kapitel gelangt in die Überprüfungswarteschlange, nachdem das aktuelle Kapitel verworfen wurde.",
+  "desktop.epubImport.mode.free.label": "Kostenlose Lektüre",
+  "desktop.epubImport.mode.free.suitability": "Passend zu vorhandenen Inhalten",
+  "desktop.epubImport.mode.free.description": "Halten Sie jedes Kapitel verfügbar, damit sie ohne Sperren der Kapitelreihenfolge in die Überprüfungswarteschlange gelangen können.",
+  "desktop.readwise.importDialog.blockedTitle": "Zeigen Sie zunächst eine Vorschau des Imports an",
+  "desktop.readwise.importDialog.ok": "OK",
+  "desktop.readwise.importDialog.title": "Readwise importieren",
+  "desktop.readwise.importDialog.previewTitle": "Readwise Importvorschau",
+  "desktop.readwise.importDialog.preparing": "Vorschau wird vorbereitet...",
+  "desktop.readwise.importDialog.cancel": "Abbrechen",
+  "desktop.readwise.importDialog.cancelling": "Abbrechen",
+  "desktop.readwise.importDialog.import": "Importieren",
+  "desktop.readwise.importDialog.importing": "Importieren",
+  "desktop.readwise.previewSample.highlightMissing": "Diese Hervorhebung wurde im Quellthema nicht gefunden."
+}

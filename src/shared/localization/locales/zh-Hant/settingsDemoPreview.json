@@ -1,0 +1,18 @@
+{
+  "settings.demoPreview.banner.title": "桌面設定預覽",
+  "settings.demoPreview.banner.description": "此面板顯示了完整的桌面設置，因此您可以了解Foliole的功能結構。此處的更改不會影響線上演示。",
+  "settings.demoPreview.control.desktopOnly": "限桌面版",
+  "settings.demoPreview.control.previewOnly": "僅預覽",
+  "settings.demoPreview.downloadDesktop": "下載桌面應用程式",
+  "settings.demoPreview.empty": "預覽不可用",
+  "settings.demoPreview.emptyDescription": "此設定類別顯示在桌面應用程式中。",
+  "settings.demoPreview.about.title": "關於Foliole",
+  "settings.demoPreview.hotkeys.title": "鍵盤快速鍵",
+  "settings.demoPreview.hotkeys.search": "搜尋快捷方式",
+  "settings.demoPreview.hotkeys.settings": "設定快速鍵",
+  "settings.demoPreview.hotkeys.study": "學習捷徑",
+  "settings.demoPreview.mouseGestures.title": "滑鼠手勢行為",
+  "settings.demoPreview.readwise.status": "Readwise 讀者狀態",
+  "settings.demoPreview.note.label": "資料夾訪問",
+  "settings.demoPreview.note.externalFolders": "此示範中簡化了外部資料夾功能。桌面應用程式包含完整的體驗。"
+}

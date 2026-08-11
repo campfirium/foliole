@@ -1,0 +1,18 @@
+{
+  "settings.demoPreview.banner.title": "Предварительный просмотр настроек рабочего стола",
+  "settings.demoPreview.banner.description": "На этой панели показаны все настройки рабочего стола, поэтому вы можете понять структуру функций Foliole. Изменения здесь не влияют на онлайн-демо.",
+  "settings.demoPreview.control.desktopOnly": "Только рабочий стол",
+  "settings.demoPreview.control.previewOnly": "Только предварительный просмотр",
+  "settings.demoPreview.downloadDesktop": "Загрузите настольное приложение",
+  "settings.demoPreview.empty": "Предварительный просмотр недоступен",
+  "settings.demoPreview.emptyDescription": "Эта категория настроек представлена в настольном приложении.",
+  "settings.demoPreview.about.title": "О Foliole",
+  "settings.demoPreview.hotkeys.title": "Сочетания клавиш",
+  "settings.demoPreview.hotkeys.search": "Ярлык поиска",
+  "settings.demoPreview.hotkeys.settings": "Ярлык настроек",
+  "settings.demoPreview.hotkeys.study": "Ярлык исследования",
+  "settings.demoPreview.mouseGestures.title": "Поведение жестов мыши",
+  "settings.demoPreview.readwise.status": "Readwise Статус читателя",
+  "settings.demoPreview.note.label": "Доступ к папке",
+  "settings.demoPreview.note.externalFolders": "В этой демонстрации упрощены функции внешних папок. Настольное приложение включает в себя все возможности."
+}

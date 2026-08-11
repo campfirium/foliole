@@ -1,0 +1,22 @@
+{
+  "desktop.wordpressPublish.dialogTitle": "Publish to WordPress",
+  "desktop.wordpressPublish.postTitle": "投稿タイトル",
+  "desktop.wordpressPublish.target": "対象サイト",
+  "desktop.wordpressPublish.mode": "アクション",
+  "desktop.wordpressPublish.mode.create": "新しい投稿を作成する",
+  "desktop.wordpressPublish.mode.update": "接続された投稿を更新します",
+  "desktop.wordpressPublish.status": "投稿ステータス",
+  "desktop.wordpressPublish.status.draft": "ドラフト",
+  "desktop.wordpressPublish.status.publish": "発行",
+  "desktop.wordpressPublish.category.placeholder": "カテゴリを選択してください",
+  "desktop.wordpressPublish.category.create": "「{name}」を作成します",
+  "desktop.wordpressPublish.catalog.loading": "カテゴリとタグを読み込んでいます",
+  "desktop.wordpressPublish.catalog.error": "カテゴリとタグを読み込めませんでした。もう一度パネルを開いてみてください。",
+  "desktop.wordpressPublish.confirm": "発行",
+  "desktop.wordpressPublish.publishing": "公開中...",
+  "desktop.wordpressPublish.created": "WordPress に公開されました。",
+  "desktop.wordpressPublish.updated": "WordPress に更新されました。",
+  "desktop.wordpressPublish.viewPost": "投稿を見る",
+  "desktop.wordpressPublish.error.publish": "WordPress に公開できませんでした。",
+  "desktop.wordpressPublish.error.localSave": "投稿はリモートで保存されましたが、Foliole は投稿リンクを保存できませんでした。"
+}

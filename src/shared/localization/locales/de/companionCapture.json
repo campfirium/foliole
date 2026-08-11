@@ -1,0 +1,11 @@
+{
+  "companion.capture.title": "Erfassung",
+  "companion.capture.text": "Text erfassen",
+  "companion.capture.placeholder": "Geben Sie ein neues Thema ein oder sprechen Sie es",
+  "companion.capture.paste": "Aus der Zwischenablage einfügen",
+  "companion.capture.upload": "Datei hochladen",
+  "companion.capture.save": "Speichern",
+  "companion.capture.saving": "Speichern...",
+  "companion.capture.error.inboxUnavailable": "Synchronisieren Sie dieses Gerät, bevor Sie ein neues Thema speichern.",
+  "companion.capture.error.saveFailed": "Dieses Thema konnte nicht gespeichert werden. Versuchen Sie es erneut."
+}

@@ -63,8 +63,8 @@ export function LocalizationProvider({ children, initialLanguagePreference }: Lo
       return undefined;
     }
     let active = true;
-    void preloadTranslationCatalog(locale).then(() => {
-      if (active) {
+    void preloadTranslationCatalog(locale).then((loaded) => {
+      if (active && loaded) {
         setCatalogVersion((version) => version + 1);
       }
     });
@@ -73,9 +73,6 @@ export function LocalizationProvider({ children, initialLanguagePreference }: Lo
     };
   }, [catalogReady, locale]);
 
-  if (!catalogReady) {
-    return null;
-  }
   return <LocalizationContext.Provider value={value}>{children}</LocalizationContext.Provider>;
 }
 

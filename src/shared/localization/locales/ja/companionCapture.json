@@ -1,0 +1,11 @@
+{
+  "companion.capture.title": "キャプチャ",
+  "companion.capture.text": "テキストをキャプチャします",
+  "companion.capture.placeholder": "新しいトピックを入力するか話します",
+  "companion.capture.paste": "クリップボードから貼り付け",
+  "companion.capture.upload": "ファイルをアップロード",
+  "companion.capture.save": "保存",
+  "companion.capture.saving": "保存中...",
+  "companion.capture.error.inboxUnavailable": "新しいトピックを保存する前に、このデバイスを同期してください。",
+  "companion.capture.error.saveFailed": "このトピックを保存できませんでした。もう一度やり直してください。"
+}

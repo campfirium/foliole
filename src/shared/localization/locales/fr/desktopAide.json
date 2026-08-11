@@ -1,0 +1,18 @@
+{
+  "desktop.rightPanel.assistant.model.settings": "Paramètres de modèle et de performances",
+  "desktop.rightPanel.assistant.model.loading": "Chargement des modèles disponibles et des paramètres de performances...",
+  "desktop.rightPanel.assistant.model.unavailable": "Les paramètres de modèle et de performances ne sont pas disponibles. Les messages utiliseront la valeur par défaut du Codex.",
+  "desktop.rightPanel.assistant.model.tooltip": "Modèle : {model} · Raisonnement : {effort} · Rapidité : {speed}",
+  "desktop.rightPanel.assistant.model.model": "Modèle",
+  "desktop.rightPanel.assistant.model.reasoning": "Raisonnement",
+  "desktop.rightPanel.assistant.model.effort.none": "Aucun",
+  "desktop.rightPanel.assistant.model.effort.minimal": "Minimale",
+  "desktop.rightPanel.assistant.model.effort.low": "Faible",
+  "desktop.rightPanel.assistant.model.effort.medium": "Moyen",
+  "desktop.rightPanel.assistant.model.effort.high": "Élevé",
+  "desktop.rightPanel.assistant.model.effort.xhigh": "Très haut",
+  "desktop.rightPanel.assistant.model.effort.max": "Max",
+  "desktop.rightPanel.assistant.model.effort.ultra": "Ultra",
+  "desktop.rightPanel.assistant.model.speed": "Vitesse",
+  "desktop.rightPanel.assistant.model.defaultSpeed": "Default"
+}

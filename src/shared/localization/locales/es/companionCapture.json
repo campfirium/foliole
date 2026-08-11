@@ -1,0 +1,11 @@
+{
+  "companion.capture.title": "Captura",
+  "companion.capture.text": "Capturar texto",
+  "companion.capture.placeholder": "Escribe o habla de un tema nuevo",
+  "companion.capture.paste": "Pegar desde el portapapeles",
+  "companion.capture.upload": "Cargar archivo",
+  "companion.capture.save": "Guardar",
+  "companion.capture.saving": "Guardando...",
+  "companion.capture.error.inboxUnavailable": "Sincroniza este dispositivo antes de guardar un tema nuevo.",
+  "companion.capture.error.saveFailed": "No se pudo guardar este tema. Intentar otra vez."
+}

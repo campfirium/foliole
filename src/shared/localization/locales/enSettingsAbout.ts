@@ -12,7 +12,7 @@ export const EN_SETTINGS_ABOUT_TRANSLATIONS = {
   'settings.search.aboutDiagnostic.description': 'Copy a small support report with recent errors and crash status. It does not include your library content.',
   'settings.search.aboutCommunity.title': 'Community',
   'settings.search.aboutCommunity.description': 'Project and community links.',
-  'settings.search.aboutCommunity.terms': 'github|issue|discussion|youtube|video',
+  'settings.search.aboutCommunity.terms': 'GitHub|Issues|Discussions|YouTube|video',
   'settings.search.generalSearchEnhancement.title': 'Full-text search language',
   'settings.search.generalSearchEnhancement.description': 'Choose the language pattern Foliole should use when preparing full-text search.',
   'settings.search.generalSearchEnhancement.terms': 'full text search|search language|Chinese Japanese Korean',

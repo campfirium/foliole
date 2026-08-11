@@ -88,14 +88,26 @@ it('allows an injected initial language without changing stored preferences', as
   expect(window.localStorage.getItem(APP_LANGUAGE_STORAGE_KEY)).toBe('zh-Hans');
 });
 
-it('falls back to English when the system language is unsupported', () => {
-  expect(resolveSystemAppLocale(['fr-FR'])).toBe('en');
+it('renders English while an on-demand catalog is loading', () => {
+  render(
+    <LocalizationProvider initialLanguagePreference="de">
+      <TranslationHarness />
+    </LocalizationProvider>
+  );
+
+  expect(screen.getByText('Settings')).toBeInTheDocument();
+  expect(screen.getAllByText('de')).toHaveLength(2);
+});
+
+it('uses a registered primary system language and falls back when unsupported', () => {
+  expect(resolveSystemAppLocale(['fr-FR'])).toBe('fr');
+  expect(resolveSystemAppLocale(['nl-NL'])).toBe('en');
 });
 
 it('uses only the primary system language and requires explicit simplified Chinese', () => {
-  expect(resolveSystemAppLocale(['ko-KR', 'zh-CN'])).toBe('en');
-  expect(resolveSystemAppLocale(['zh-TW'])).toBe('en');
-  expect(resolveSystemAppLocale(['zh-Hant'])).toBe('en');
+  expect(resolveSystemAppLocale(['ko-KR', 'zh-CN'])).toBe('ko');
+  expect(resolveSystemAppLocale(['zh-TW'])).toBe('zh-Hant');
+  expect(resolveSystemAppLocale(['zh-Hant'])).toBe('zh-Hant');
   expect(resolveSystemAppLocale(['zh'])).toBe('en');
   expect(resolveSystemAppLocale(['pt-PT'])).toBe('en');
   expect(resolveSystemAppLocale([])).toBe('en');

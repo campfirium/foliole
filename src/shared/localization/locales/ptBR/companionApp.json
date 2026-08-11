@@ -1,0 +1,11 @@
+{
+  "companion.app.retry": "Tentar novamente",
+  "companion.app.starting.eyebrow": "Tempo de execução complementar",
+  "companion.app.starting.message": "Preparar uma identidade de dispositivo estável e armazenamento complementar local antes do carregamento da superfície do tópico.",
+  "companion.app.starting.title": "Iniciando o tempo de execução complementar",
+  "companion.app.bootstrap.module": "Inicialização complementar",
+  "companion.app.bootstrapFailed": "Falha na inicialização complementar",
+  "companion.app.iosPrepared.eyebrow": "Foliole para iPhone",
+  "companion.app.iosPrepared.message": "O armazenamento local está pronto. A navegação, revisão e sincronização de tópicos não estão disponíveis nesta versão.",
+  "companion.app.iosPrepared.title": "Este iPhone está pronto"
+}

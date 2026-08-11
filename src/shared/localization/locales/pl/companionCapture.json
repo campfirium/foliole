@@ -1,0 +1,11 @@
+{
+  "companion.capture.title": "Przechwytywanie",
+  "companion.capture.text": "Przechwytywanie tekstu",
+  "companion.capture.placeholder": "Wpisz lub wypowiedz nowy temat",
+  "companion.capture.paste": "Wklej ze schowka",
+  "companion.capture.upload": "Prześlij plik",
+  "companion.capture.save": "Zapisz",
+  "companion.capture.saving": "Zapisywanie...",
+  "companion.capture.error.inboxUnavailable": "Zsynchronizuj to urządzenie przed zapisaniem nowego tematu.",
+  "companion.capture.error.saveFailed": "Nie udało się zapisać tego tematu. Spróbuj ponownie."
+}

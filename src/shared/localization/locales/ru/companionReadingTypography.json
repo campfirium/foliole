@@ -1,0 +1,17 @@
+{
+  "companion.reading.font.size": "Размер",
+  "companion.reading.font.size.small": "Маленький",
+  "companion.reading.font.size.default": "Default",
+  "companion.reading.font.size.large": "Большой",
+  "companion.reading.font.size.xlarge": "Очень большой",
+  "companion.reading.font.lineHeight": "Высота строки",
+  "companion.reading.font.lineHeight.compact": "Компактный",
+  "companion.reading.font.lineHeight.default": "Default",
+  "companion.reading.font.lineHeight.relaxed": "Расслабленный",
+  "companion.reading.font.family": "Гарнитура",
+  "companion.reading.font.family.sans": "Санс",
+  "companion.reading.font.family.serif": "с засечками",
+  "companion.reading.font.contrast": "Контраст тела",
+  "companion.reading.font.contrast.default": "Default",
+  "companion.reading.font.contrast.high": "Высокий"
+}

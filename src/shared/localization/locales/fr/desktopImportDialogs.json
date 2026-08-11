@@ -1,0 +1,21 @@
+{
+  "desktop.epubImport.mode.title": "Choisir le mode lecture",
+  "desktop.epubImport.mode.description": "Vous pourrez modifier cela ultérieurement à partir du menu contextuel du sujet.",
+  "desktop.epubImport.mode.aria": "Mode de lecture EPUB",
+  "desktop.epubImport.mode.sequential.label": "Lecture séquentielle",
+  "desktop.epubImport.mode.sequential.suitability": "Adapté aux nouveaux contenus",
+  "desktop.epubImport.mode.sequential.description": "Lire dans l'ordre. Le chapitre suivant entre dans la file d'attente de révision après la fermeture du chapitre en cours.",
+  "desktop.epubImport.mode.free.label": "Lecture gratuite",
+  "desktop.epubImport.mode.free.suitability": "Adapté aux contenus existants",
+  "desktop.epubImport.mode.free.description": "Gardez chaque chapitre disponible afin qu'ils puissent entrer dans la file d'attente de révision sans verrous d'ordre des chapitres.",
+  "desktop.readwise.importDialog.blockedTitle": "Prévisualisez d'abord l'importation",
+  "desktop.readwise.importDialog.ok": "OK",
+  "desktop.readwise.importDialog.title": "Readwise importation",
+  "desktop.readwise.importDialog.previewTitle": "Readwise aperçu de l'importation",
+  "desktop.readwise.importDialog.preparing": "Préparation de l'aperçu...",
+  "desktop.readwise.importDialog.cancel": "Annuler",
+  "desktop.readwise.importDialog.cancelling": "Annulation",
+  "desktop.readwise.importDialog.import": "Importer",
+  "desktop.readwise.importDialog.importing": "Importation",
+  "desktop.readwise.previewSample.highlightMissing": "Ce surlignage n'a pas été trouvé dans le sujet source."
+}

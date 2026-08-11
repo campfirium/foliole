@@ -1,0 +1,14 @@
+{
+  "settings.capture.sectionAria": "Глобальные настройки захвата",
+  "settings.capture.sectionTitle": "Глобальный захват",
+  "settings.capture.permission.title": "Доступ к выбору",
+  "settings.capture.permission.granted": "Foliole может скопировать текущий выбор при запуске глобального захвата.",
+  "settings.capture.permission.denied": "Разрешите Foliole в настройках системы → Конфиденциальность и безопасность → Доступность.",
+  "settings.capture.permission.unavailable": "Доступ к выбору недоступен на этом Mac.",
+  "settings.capture.permission.notRequired": "На этом устройстве не требуется никаких дополнительных разрешений на выбор.",
+  "settings.capture.permission.unsupported": "Глобальный захват недоступен на этом устройстве.",
+  "settings.capture.position.title": "Позиция подтверждения",
+  "settings.capture.position.description": "Выберите, где на этом Mac будут появляться подтверждения захвата.",
+  "settings.capture.position.topRight": "Вверху справа",
+  "settings.capture.position.bottomRight": "Внизу справа"
+}

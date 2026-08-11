@@ -1,0 +1,15 @@
+{
+  "desktop.sort.order.az": "A -> Z",
+  "desktop.sort.order.za": "Z -> A",
+  "desktop.sort.order.newest": "최신순",
+  "desktop.sort.order.oldest": "오래된 것부터",
+  "desktop.sort.order.manual": "수동 주문",
+  "desktop.sort.key.dateModified": "수정된 날짜",
+  "desktop.sort.key.lastOpened": "마지막 열림",
+  "desktop.sort.key.name": "이름",
+  "desktop.sort.key.manual": "매뉴얼",
+  "desktop.sort.fallback.dateImported": "가져온 날짜",
+  "desktop.sort.listBy": "{label} 기준으로 목록 정렬",
+  "desktop.sort.sortBy": "정렬 기준",
+  "desktop.sort.order": "주문"
+}

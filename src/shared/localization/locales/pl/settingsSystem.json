@@ -1,0 +1,14 @@
+{
+  "settings.general.system.section": "Systemu",
+  "settings.general.system.aria": "Ustawienia systemowe",
+  "settings.general.openAtLogin.title": "Uruchom automatycznie Foliole",
+  "settings.general.openAtLogin.description": "Zachowaj lokalną synchronizację i klip globalny dostępny po uruchomieniu.",
+  "settings.general.openAtLogin.ineffective": "Windows wyłączył ten element startowy.",
+  "settings.general.openAtLogin.requiresApproval": "Zezwól na Foliole w Ustawieniach systemowych > Ogólne > Elementy logowania.",
+  "settings.general.openAtLogin.error": "macOS nie mógł znaleźć tego elementu logowania. Spróbuj włączyć go ponownie.",
+  "settings.general.openAtLogin.unsupported": "Automatyczne uruchamianie jest niedostępne w tej kompilacji.",
+  "settings.general.openAtLogin.aria": "Uruchom automatycznie Foliole",
+  "settings.search.generalOpenAtLogin.title": "Uruchom automatycznie Foliole",
+  "settings.search.generalOpenAtLogin.description": "Uruchom Foliole automatycznie w obsługiwanych instalacjach na komputerach stacjonarnych.",
+  "settings.search.generalOpenAtLogin.terms": "uruchamianie|uruchamianie przy starcie|uruchamianie|w tle"
+}

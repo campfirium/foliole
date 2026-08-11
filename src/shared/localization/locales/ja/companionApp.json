@@ -1,0 +1,11 @@
+{
+  "companion.app.retry": "再試行",
+  "companion.app.starting.eyebrow": "コンパニオン ランタイム",
+  "companion.app.starting.message": "トピック サーフェスが読み込まれる前に、安定したデバイス ID とローカル コンパニオン ストレージを準備します。",
+  "companion.app.starting.title": "コンパニオン ランタイムを開始しています",
+  "companion.app.bootstrap.module": "コンパニオン ブートストラップ",
+  "companion.app.bootstrapFailed": "コンパニオンのブートストラップが失敗しました",
+  "companion.app.iosPrepared.eyebrow": "Foliole (iPhone 用)",
+  "companion.app.iosPrepared.message": "ローカル ストレージの準備ができました。このビルドでは、トピックの参照、レビュー、同期は利用できません。",
+  "companion.app.iosPrepared.title": "この iPhone は準備ができています"
+}

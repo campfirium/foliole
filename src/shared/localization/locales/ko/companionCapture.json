@@ -1,0 +1,11 @@
+{
+  "companion.capture.title": "캡처",
+  "companion.capture.text": "텍스트 캡처",
+  "companion.capture.placeholder": "새 주제를 입력하거나 말하세요.",
+  "companion.capture.paste": "클립보드에서 붙여넣기",
+  "companion.capture.upload": "파일 업로드",
+  "companion.capture.save": "저장",
+  "companion.capture.saving": "저장 중...",
+  "companion.capture.error.inboxUnavailable": "새 주제를 저장하기 전에 이 장치를 동기화하세요.",
+  "companion.capture.error.saveFailed": "이 주제를 저장할 수 없습니다. 다시 시도해 보세요."
+}

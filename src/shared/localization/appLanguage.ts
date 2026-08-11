@@ -1,15 +1,16 @@
 import {
-  isExplicitSimplifiedChineseLanguageTag,
-  readPrimaryLanguage
-} from '../../../lib/core/localization/systemLanguage';
+  APP_LOCALES,
+  resolveRegisteredAppLocale,
+  type RegisteredAppLocale
+} from '../../../lib/core/localization/appLocaleRegistry';
+import { readPrimaryLanguage } from '../../../lib/core/localization/systemLanguage';
 import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
 import {
   getWhitelistedLocalStorageItem,
   setWhitelistedLocalStorageItem
 } from '../platform/storage';
 
-const APP_LOCALES = ['en', 'zh-Hans'] as const;
-export type AppLocale = (typeof APP_LOCALES)[number];
+export type AppLocale = RegisteredAppLocale;
 const APP_LANGUAGE_PREFERENCES = ['system', ...APP_LOCALES] as const;
 export type AppLanguagePreference = (typeof APP_LANGUAGE_PREFERENCES)[number];
 
@@ -41,9 +42,7 @@ function resolveDevAppLocaleOverride(): AppLocale | null {
 }
 
 export function resolveSystemAppLocale(languages: readonly string[] = getNavigatorLanguages()): AppLocale {
-  return isExplicitSimplifiedChineseLanguageTag(readPrimaryLanguage(languages))
-    ? 'zh-Hans'
-    : DEFAULT_APP_LOCALE;
+  return resolveRegisteredAppLocale(readPrimaryLanguage(languages)) ?? DEFAULT_APP_LOCALE;
 }
 
 export function resolveAppLocale(preference: AppLanguagePreference): AppLocale {

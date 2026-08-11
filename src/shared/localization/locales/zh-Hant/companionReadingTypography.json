@@ -1,0 +1,17 @@
+{
+  "companion.reading.font.size": "尺寸",
+  "companion.reading.font.size.small": "小號",
+  "companion.reading.font.size.default": "Default",
+  "companion.reading.font.size.large": "大號",
+  "companion.reading.font.size.xlarge": "特大號",
+  "companion.reading.font.lineHeight": "線高",
+  "companion.reading.font.lineHeight.compact": "緊湊型",
+  "companion.reading.font.lineHeight.default": "Default",
+  "companion.reading.font.lineHeight.relaxed": "輕鬆",
+  "companion.reading.font.family": "字體",
+  "companion.reading.font.family.sans": "桑斯",
+  "companion.reading.font.family.serif": "襯線",
+  "companion.reading.font.contrast": "身材對比",
+  "companion.reading.font.contrast.default": "Default",
+  "companion.reading.font.contrast.high": "高"
+}

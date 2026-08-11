@@ -16,5 +16,5 @@ export const ZH_HANS_DESKTOP_AIDE_TRANSLATIONS: Partial<Record<TranslationKey, s
   'desktop.rightPanel.assistant.model.effort.max': '最大',
   'desktop.rightPanel.assistant.model.effort.ultra': '超高',
   'desktop.rightPanel.assistant.model.speed': '速度',
-  'desktop.rightPanel.assistant.model.defaultSpeed': '默认'
+  'desktop.rightPanel.assistant.model.defaultSpeed': 'Default'
 };

@@ -1,0 +1,11 @@
+{
+  "companion.app.retry": "Reintentar",
+  "companion.app.starting.eyebrow": "Tiempo de ejecución complementario",
+  "companion.app.starting.message": "Preparando una identidad de dispositivo estable y un almacenamiento complementario local antes de que se cargue la superficie del tema.",
+  "companion.app.starting.title": "Iniciando el tiempo de ejecución complementario",
+  "companion.app.bootstrap.module": "Arranque complementario",
+  "companion.app.bootstrapFailed": "Falló el arranque complementario",
+  "companion.app.iosPrepared.eyebrow": "Foliole para iPhone",
+  "companion.app.iosPrepared.message": "El almacenamiento local está listo. La exploración, revisión y sincronización de temas no están disponibles en esta compilación.",
+  "companion.app.iosPrepared.title": "Este iPhone está listo"
+}

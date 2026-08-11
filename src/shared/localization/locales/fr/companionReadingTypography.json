@@ -1,0 +1,17 @@
+{
+  "companion.reading.font.size": "Taille",
+  "companion.reading.font.size.small": "Petit",
+  "companion.reading.font.size.default": "Default",
+  "companion.reading.font.size.large": "Grand",
+  "companion.reading.font.size.xlarge": "Très grand",
+  "companion.reading.font.lineHeight": "Hauteur de ligne",
+  "companion.reading.font.lineHeight.compact": "Compacte",
+  "companion.reading.font.lineHeight.default": "Default",
+  "companion.reading.font.lineHeight.relaxed": "Détendu",
+  "companion.reading.font.family": "Police de caractères",
+  "companion.reading.font.family.sans": "Sans",
+  "companion.reading.font.family.serif": "Serif",
+  "companion.reading.font.contrast": "Contraste du corps",
+  "companion.reading.font.contrast.default": "Default",
+  "companion.reading.font.contrast.high": "Élevé"
+}

@@ -1,0 +1,22 @@
+{
+  "desktop.wordpressPublish.dialogTitle": "Publish to WordPress",
+  "desktop.wordpressPublish.postTitle": "Tytuł posta",
+  "desktop.wordpressPublish.target": "Witryna docelowa",
+  "desktop.wordpressPublish.mode": "Akcja",
+  "desktop.wordpressPublish.mode.create": "Utwórz nowy post",
+  "desktop.wordpressPublish.mode.update": "Zaktualizuj połączony post",
+  "desktop.wordpressPublish.status": "Stan postu",
+  "desktop.wordpressPublish.status.draft": "Wersja robocza",
+  "desktop.wordpressPublish.status.publish": "Publikuj",
+  "desktop.wordpressPublish.category.placeholder": "Wybierz kategorię",
+  "desktop.wordpressPublish.category.create": "Utwórz „{name}”",
+  "desktop.wordpressPublish.catalog.loading": "Ładowanie kategorii i tagów",
+  "desktop.wordpressPublish.catalog.error": "Nie można załadować kategorii i tagów. Spróbuj ponownie otworzyć panel.",
+  "desktop.wordpressPublish.confirm": "Publikuj",
+  "desktop.wordpressPublish.publishing": "Publikowanie...",
+  "desktop.wordpressPublish.created": "Opublikowano w: WordPress.",
+  "desktop.wordpressPublish.updated": "Zaktualizowano w dniu WordPress.",
+  "desktop.wordpressPublish.viewPost": "Zobacz wpis",
+  "desktop.wordpressPublish.error.publish": "Nie można opublikować w: WordPress.",
+  "desktop.wordpressPublish.error.localSave": "Post został zapisany zdalnie, ale Foliole nie mógł zapisać linku do swojego posta."
+}

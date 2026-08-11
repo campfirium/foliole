@@ -1,0 +1,11 @@
+{
+  "companion.app.retry": "Spróbuj ponownie",
+  "companion.app.starting.eyebrow": "Czas działania towarzyszącego",
+  "companion.app.starting.message": "Przygotowanie stabilnej tożsamości urządzenia i lokalnego magazynu towarzyszącego przed załadowaniem tematu.",
+  "companion.app.starting.title": "Uruchamiam środowisko wykonawcze towarzyszące",
+  "companion.app.bootstrap.module": "Bootstrap towarzyszący",
+  "companion.app.bootstrapFailed": "Ładowanie towarzyszące nie powiodło się",
+  "companion.app.iosPrepared.eyebrow": "Foliole dla iPhone'a",
+  "companion.app.iosPrepared.message": "Magazyn lokalny jest gotowy. Przeglądanie, przeglądanie i synchronizacja tematów nie są dostępne w tej kompilacji.",
+  "companion.app.iosPrepared.title": "Ten iPhone jest gotowy"
+}

@@ -8,10 +8,10 @@ const SCREENSHOT_PATH = path.resolve(
   '.tmp',
   'artifacts',
   'desktop-acceptance',
-  'system-language-fallback-english.png'
+  'formal-locale-catalog-loading.png'
 );
 
-test('uses English for an unsupported primary language and preserves an explicit choice', async ({
+test('uses English for an unsupported primary language and loads an explicit formal locale', async ({
   desktopWindow
 }, testInfo) => {
   await desktopWindow.evaluate(() => {
@@ -20,23 +20,27 @@ test('uses English for an unsupported primary language and preserves an explicit
   await desktopWindow.addInitScript(() => {
     Object.defineProperty(window.navigator, 'languages', {
       configurable: true,
-      value: ['ko-KR', 'zh-CN']
+      value: ['nl-NL', 'zh-CN']
     });
   });
   await desktopWindow.reload();
 
   await expect(desktopWindow.getByRole('button', { name: 'Settings' })).toBeVisible();
-  await expect(desktopWindow.getByRole('button', { name: '设置' })).toHaveCount(0);
-  await desktopWindow.screenshot({ path: SCREENSHOT_PATH });
-  await testInfo.attach('system-language-fallback', {
-    contentType: 'image/png',
-    path: SCREENSHOT_PATH
-  });
+  await expect(desktopWindow.getByRole('button', { name: 'Einstellungen' })).toHaveCount(0);
 
   await desktopWindow.evaluate(() => {
-    window.localStorage.setItem('foliole-app-language', 'zh-Hans');
+    window.localStorage.setItem('foliole-app-language', 'de');
   });
   await desktopWindow.reload();
 
-  await expect(desktopWindow.getByRole('button', { name: '设置' })).toBeVisible();
+  const settingsButton = desktopWindow.getByRole('button', { name: 'Einstellungen' });
+  await expect(settingsButton).toBeVisible();
+  await settingsButton.click();
+  await expect(desktopWindow.getByRole('dialog')).toBeVisible();
+  await expect(desktopWindow.getByRole('navigation', { name: 'Einstellungsnavigation' })).toBeVisible();
+  await desktopWindow.screenshot({ path: SCREENSHOT_PATH });
+  await testInfo.attach('formal-locale-catalog-loading', {
+    contentType: 'image/png',
+    path: SCREENSHOT_PATH
+  });
 });

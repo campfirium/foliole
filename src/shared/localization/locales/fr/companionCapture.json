@@ -1,0 +1,11 @@
+{
+  "companion.capture.title": "Capturer",
+  "companion.capture.text": "Capturer du texte",
+  "companion.capture.placeholder": "Tapez ou parlez d'un nouveau sujet",
+  "companion.capture.paste": "Coller depuis le Presse-papiers",
+  "companion.capture.upload": "Télécharger le fichier",
+  "companion.capture.save": "Enregistrer",
+  "companion.capture.saving": "Enregistrement...",
+  "companion.capture.error.inboxUnavailable": "Synchronisez cet appareil avant d'enregistrer un nouveau sujet.",
+  "companion.capture.error.saveFailed": "Impossible d'enregistrer ce sujet. Essayer à nouveau."
+}

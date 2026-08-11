@@ -1,0 +1,21 @@
+{
+  "desktop.epubImport.mode.title": "Escolha o modo de leitura",
+  "desktop.epubImport.mode.description": "Você pode alterar isso posteriormente no menu de contexto do tópico.",
+  "desktop.epubImport.mode.aria": "Modo de leitura EPUB",
+  "desktop.epubImport.mode.sequential.label": "Leitura sequencial",
+  "desktop.epubImport.mode.sequential.suitability": "Adequado para novos conteúdos",
+  "desktop.epubImport.mode.sequential.description": "Leia em ordem. O próximo capítulo entra na fila de revisão depois que o capítulo atual é descartado.",
+  "desktop.epubImport.mode.free.label": "Leitura grátis",
+  "desktop.epubImport.mode.free.suitability": "Adequado ao conteúdo existente",
+  "desktop.epubImport.mode.free.description": "Mantenha todos os capítulos disponíveis para que eles possam entrar na fila de revisão sem bloqueios na ordem dos capítulos.",
+  "desktop.readwise.importDialog.blockedTitle": "Visualize a importação primeiro",
+  "desktop.readwise.importDialog.ok": "OK",
+  "desktop.readwise.importDialog.title": "Importação de Readwise",
+  "desktop.readwise.importDialog.previewTitle": "Visualização da importação de Readwise",
+  "desktop.readwise.importDialog.preparing": "Preparando visualização...",
+  "desktop.readwise.importDialog.cancel": "Cancelar",
+  "desktop.readwise.importDialog.cancelling": "Cancelando",
+  "desktop.readwise.importDialog.import": "Importar",
+  "desktop.readwise.importDialog.importing": "Importando",
+  "desktop.readwise.previewSample.highlightMissing": "Este destaque não foi encontrado no tópico de origem."
+}

@@ -1,0 +1,14 @@
+{
+  "settings.capture.sectionAria": "全域擷取設定",
+  "settings.capture.sectionTitle": "全球捕獲",
+  "settings.capture.permission.title": "選擇訪問",
+  "settings.capture.permission.granted": "Foliole 可以在執行全域擷取時複製目前選擇。",
+  "settings.capture.permission.denied": "在系統設定 → 隱私和安全性 → 輔助功能中允許 Foliole。",
+  "settings.capture.permission.unavailable": "此 Mac 上無法進行選擇存取。",
+  "settings.capture.permission.notRequired": "此設備不需要額外的選擇權限。",
+  "settings.capture.permission.unsupported": "此設備上無法進行全域捕獲。",
+  "settings.capture.position.title": "確認位置",
+  "settings.capture.position.description": "選擇捕捉確認訊息在此 Mac 上的顯示位置。",
+  "settings.capture.position.topRight": "右上",
+  "settings.capture.position.bottomRight": "右下角"
+}

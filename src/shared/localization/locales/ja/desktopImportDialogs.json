@@ -1,0 +1,21 @@
+{
+  "desktop.epubImport.mode.title": "読み取りモードの選択",
+  "desktop.epubImport.mode.description": "これは、後で [トピック] コンテキスト メニューから変更できます。",
+  "desktop.epubImport.mode.aria": "EPUB 読み取りモード",
+  "desktop.epubImport.mode.sequential.label": "順次読み取り",
+  "desktop.epubImport.mode.sequential.suitability": "新しいコンテンツに適しています",
+  "desktop.epubImport.mode.sequential.description": "順番に読みます。現在の章が閉じられた後、次の章がレビュー キューに入ります。",
+  "desktop.epubImport.mode.free.label": "無料で読める",
+  "desktop.epubImport.mode.free.suitability": "既存のコンテンツに適しています",
+  "desktop.epubImport.mode.free.description": "すべての章を利用可能な状態にしておき、章の順序をロックせずにレビュー キューに入れるようにします。",
+  "desktop.readwise.importDialog.blockedTitle": "最初にインポートをプレビューします",
+  "desktop.readwise.importDialog.ok": "OK",
+  "desktop.readwise.importDialog.title": "Readwise インポート",
+  "desktop.readwise.importDialog.previewTitle": "Readwise インポート プレビュー",
+  "desktop.readwise.importDialog.preparing": "プレビューを準備しています...",
+  "desktop.readwise.importDialog.cancel": "キャンセル",
+  "desktop.readwise.importDialog.cancelling": "キャンセル中",
+  "desktop.readwise.importDialog.import": "インポート",
+  "desktop.readwise.importDialog.importing": "インポート中",
+  "desktop.readwise.previewSample.highlightMissing": "このハイライトはソース トピック内に見つかりませんでした。"
+}

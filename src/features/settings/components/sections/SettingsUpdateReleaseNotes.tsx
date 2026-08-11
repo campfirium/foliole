@@ -1,3 +1,4 @@
+import type { AppLocale } from '../../../../shared/localization/appLanguage';
 import { useLocalization } from '../../../../shared/localization/LocalizationProvider';
 import {
   selectPlatformReleaseNoteSections,
@@ -30,8 +31,9 @@ type ReleaseNoteSection = {
 
 const RELEASE_NOTE_SECTION_HEADINGS = new Set(['New', 'Improved', 'Fixed', 'Changed', '新增', '优化', '修复', '变更']);
 
-function getReleaseNotesCatalog(state: UpdateCheckState, locale: 'en' | 'zh-Hans') {
-  return state.cachedReleaseNotes?.[locale] ?? state.cachedReleaseNotes?.en ?? null;
+function getReleaseNotesCatalog(state: UpdateCheckState, locale: AppLocale) {
+  const releaseNotesLocale = locale === 'zh-Hans' ? locale : 'en';
+  return state.cachedReleaseNotes?.[releaseNotesLocale] ?? state.cachedReleaseNotes?.en ?? null;
 }
 
 function groupReleaseNotes(notes: string[]): ReleaseNoteSection[] {

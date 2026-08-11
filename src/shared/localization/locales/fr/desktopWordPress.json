@@ -1,0 +1,22 @@
+{
+  "desktop.wordpressPublish.dialogTitle": "Publish to WordPress",
+  "desktop.wordpressPublish.postTitle": "Titre du message",
+  "desktop.wordpressPublish.target": "Site cible",
+  "desktop.wordpressPublish.mode": "Action",
+  "desktop.wordpressPublish.mode.create": "Créer un nouveau message",
+  "desktop.wordpressPublish.mode.update": "Mettre à jour la publication connectée",
+  "desktop.wordpressPublish.status": "Statut du message",
+  "desktop.wordpressPublish.status.draft": "Brouillon",
+  "desktop.wordpressPublish.status.publish": "Publier",
+  "desktop.wordpressPublish.category.placeholder": "Choisir une catégorie",
+  "desktop.wordpressPublish.category.create": "Créer « {name} »",
+  "desktop.wordpressPublish.catalog.loading": "Chargement des catégories et des tags",
+  "desktop.wordpressPublish.catalog.error": "Impossible de charger les catégories et les balises. Essayez d'ouvrir à nouveau le panneau.",
+  "desktop.wordpressPublish.confirm": "Publier",
+  "desktop.wordpressPublish.publishing": "Publication...",
+  "desktop.wordpressPublish.created": "Publié dans WordPress.",
+  "desktop.wordpressPublish.updated": "Mis à jour le WordPress.",
+  "desktop.wordpressPublish.viewPost": "Voir le message",
+  "desktop.wordpressPublish.error.publish": "Impossible de publier sur WordPress.",
+  "desktop.wordpressPublish.error.localSave": "La publication a été enregistrée à distance, mais Foliole n'a pas pu enregistrer le lien de sa publication."
+}

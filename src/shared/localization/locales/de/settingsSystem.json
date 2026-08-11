@@ -1,0 +1,14 @@
+{
+  "settings.general.system.section": "System",
+  "settings.general.system.aria": "Systemeinstellungen",
+  "settings.general.openAtLogin.title": "Foliole automatisch starten",
+  "settings.general.openAtLogin.description": "Halten Sie die lokale Synchronisierung und den globalen Clip nach dem Start verfügbar.",
+  "settings.general.openAtLogin.ineffective": "Windows hat dieses Startelement deaktiviert.",
+  "settings.general.openAtLogin.requiresApproval": "Erlauben Sie Foliole in den Systemeinstellungen > Allgemein > Anmeldeelemente.",
+  "settings.general.openAtLogin.error": "macOS konnte dieses Anmeldeelement nicht finden. Versuchen Sie es erneut einzuschalten.",
+  "settings.general.openAtLogin.unsupported": "Der automatische Start ist in diesem Build nicht verfügbar.",
+  "settings.general.openAtLogin.aria": "Foliole automatisch starten",
+  "settings.search.generalOpenAtLogin.title": "Foliole automatisch starten",
+  "settings.search.generalOpenAtLogin.description": "Starten Sie Foliole automatisch auf unterstützten Desktop-Installationen.",
+  "settings.search.generalOpenAtLogin.terms": "Start|Start beim Start|Boot|Hintergrund"
+}

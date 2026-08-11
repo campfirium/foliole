@@ -1,0 +1,22 @@
+{
+  "desktop.wordpressPublish.dialogTitle": "Publish to WordPress",
+  "desktop.wordpressPublish.postTitle": "게시물 제목",
+  "desktop.wordpressPublish.target": "대상 사이트",
+  "desktop.wordpressPublish.mode": "액션",
+  "desktop.wordpressPublish.mode.create": "새 게시물 작성",
+  "desktop.wordpressPublish.mode.update": "연결된 게시물 업데이트",
+  "desktop.wordpressPublish.status": "게시물 상태",
+  "desktop.wordpressPublish.status.draft": "초안",
+  "desktop.wordpressPublish.status.publish": "게시",
+  "desktop.wordpressPublish.category.placeholder": "카테고리를 선택하세요",
+  "desktop.wordpressPublish.category.create": "“{name}” 생성",
+  "desktop.wordpressPublish.catalog.loading": "카테고리 및 태그 로드 중",
+  "desktop.wordpressPublish.catalog.error": "카테고리 및 태그를 로드할 수 없습니다. 패널을 다시 열어보세요.",
+  "desktop.wordpressPublish.confirm": "게시",
+  "desktop.wordpressPublish.publishing": "게시 중...",
+  "desktop.wordpressPublish.created": "WordPress에 게시되었습니다.",
+  "desktop.wordpressPublish.updated": "WordPress에 업데이트되었습니다.",
+  "desktop.wordpressPublish.viewPost": "게시물 보기",
+  "desktop.wordpressPublish.error.publish": "WordPress에 게시할 수 없습니다.",
+  "desktop.wordpressPublish.error.localSave": "게시물이 원격으로 저장되었지만 Foliole에서 게시물 링크를 저장할 수 없습니다."
+}

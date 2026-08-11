@@ -1,0 +1,14 @@
+{
+  "settings.general.system.section": "システム",
+  "settings.general.system.aria": "システム設定",
+  "settings.general.openAtLogin.title": "Foliole を自動的に開始します",
+  "settings.general.openAtLogin.description": "起動後もローカル同期とグローバル クリップを利用できるようにします。",
+  "settings.general.openAtLogin.ineffective": "Windows はこのスタートアップ項目を無効にしました。",
+  "settings.general.openAtLogin.requiresApproval": "システム設定 > 一般 > ログイン項目で Foliole を許可します。",
+  "settings.general.openAtLogin.error": "macOS はこのログイン項目を見つけられませんでした。もう一度オンにしてみてください。",
+  "settings.general.openAtLogin.unsupported": "このビルドでは自動起動は利用できません。",
+  "settings.general.openAtLogin.aria": "Foliole を自動的に開始します",
+  "settings.search.generalOpenAtLogin.title": "Foliole を自動的に開始します",
+  "settings.search.generalOpenAtLogin.description": "サポートされているデスクトップ インストールで Foliole を自動的に起動します。",
+  "settings.search.generalOpenAtLogin.terms": "スタートアップ|スタートアップ時に起動|ブート|バックグラウンド"
+}

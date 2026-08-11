@@ -1,0 +1,35 @@
+{
+  "exact": [
+    "Flow",
+    "Dismiss",
+    "Later",
+    "Read",
+    "Soon",
+    "Queue clear",
+    "Custom",
+    "Default",
+    "All clear for now.",
+    "Publish to the site",
+    "Publish to WordPress",
+    "Publish to Discourse"
+  ],
+  "embedded": [
+    "Foliole",
+    "External folders",
+    "Discussions",
+    "Issues",
+    "WordPress",
+    "Discourse",
+    "Readwise",
+    "Obsidian",
+    "GitHub",
+    "Markdown",
+    "HTML",
+    "PDF",
+    "URL",
+    "macOS",
+    "Windows",
+    "Linux",
+    "Android"
+  ]
+}

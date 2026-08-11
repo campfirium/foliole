@@ -1,0 +1,14 @@
+{
+  "settings.capture.sectionAria": "Globale Erfassungseinstellungen",
+  "settings.capture.sectionTitle": "Globale Erfassung",
+  "settings.capture.permission.title": "Auswahlzugriff",
+  "settings.capture.permission.granted": "Foliole kann die aktuelle Auswahl kopieren, wenn Sie die globale Erfassung ausführen.",
+  "settings.capture.permission.denied": "Erlauben Sie Foliole in den Systemeinstellungen → Datenschutz und Sicherheit → Barrierefreiheit.",
+  "settings.capture.permission.unavailable": "Der Auswahlzugriff ist auf diesem Mac nicht verfügbar.",
+  "settings.capture.permission.notRequired": "Auf diesem Gerät ist keine zusätzliche Auswahlberechtigung erforderlich.",
+  "settings.capture.permission.unsupported": "Die globale Erfassung ist auf diesem Gerät nicht verfügbar.",
+  "settings.capture.position.title": "Bestätigungsposition",
+  "settings.capture.position.description": "Wählen Sie aus, wo Aufnahmebestätigungen auf diesem Mac angezeigt werden.",
+  "settings.capture.position.topRight": "Oben rechts",
+  "settings.capture.position.bottomRight": "Unten rechts"
+}

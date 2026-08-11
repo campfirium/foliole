@@ -1,0 +1,18 @@
+{
+  "desktop.rightPanel.assistant.model.settings": "Настройки модели и производительности",
+  "desktop.rightPanel.assistant.model.loading": "Загрузка доступных моделей и настроек производительности...",
+  "desktop.rightPanel.assistant.model.unavailable": "Настройки модели и производительности недоступны. В сообщениях будет использоваться значение Кодекса по умолчанию.",
+  "desktop.rightPanel.assistant.model.tooltip": "Модель: {model} · Рассуждение: {effort} · Скорость: {speed}",
+  "desktop.rightPanel.assistant.model.model": "Модель",
+  "desktop.rightPanel.assistant.model.reasoning": "Рассуждение",
+  "desktop.rightPanel.assistant.model.effort.none": "Нет",
+  "desktop.rightPanel.assistant.model.effort.minimal": "Минимальный",
+  "desktop.rightPanel.assistant.model.effort.low": "Низкий",
+  "desktop.rightPanel.assistant.model.effort.medium": "Средний",
+  "desktop.rightPanel.assistant.model.effort.high": "Высокий",
+  "desktop.rightPanel.assistant.model.effort.xhigh": "Очень высокий",
+  "desktop.rightPanel.assistant.model.effort.max": "Макс",
+  "desktop.rightPanel.assistant.model.effort.ultra": "Ультра",
+  "desktop.rightPanel.assistant.model.speed": "Скорость",
+  "desktop.rightPanel.assistant.model.defaultSpeed": "Default"
+}

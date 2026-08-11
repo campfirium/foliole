@@ -1,0 +1,14 @@
+{
+  "settings.capture.sectionAria": "グローバル キャプチャ設定",
+  "settings.capture.sectionTitle": "グローバル キャプチャ",
+  "settings.capture.permission.title": "選択アクセス",
+  "settings.capture.permission.granted": "Foliole は、グローバル キャプチャを実行するときに現在の選択内容をコピーできます。",
+  "settings.capture.permission.denied": "システム設定 → プライバシーとセキュリティ → アクセシビリティで Foliole を許可します。",
+  "settings.capture.permission.unavailable": "この Mac では選択アクセスは利用できません。",
+  "settings.capture.permission.notRequired": "このデバイスには追加の選択権限は必要ありません。",
+  "settings.capture.permission.unsupported": "このデバイスではグローバル キャプチャを利用できません。",
+  "settings.capture.position.title": "確認位置",
+  "settings.capture.position.description": "この Mac 上でキャプチャ確認が表示される場所を選択します。",
+  "settings.capture.position.topRight": "右上",
+  "settings.capture.position.bottomRight": "右下"
+}

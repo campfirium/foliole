@@ -1,0 +1,15 @@
+{
+  "desktop.sort.order.az": "A -> Z",
+  "desktop.sort.order.za": "Z -> A",
+  "desktop.sort.order.newest": "新しい順",
+  "desktop.sort.order.oldest": "古い順",
+  "desktop.sort.order.manual": "手動注文",
+  "desktop.sort.key.dateModified": "変更日",
+  "desktop.sort.key.lastOpened": "最後に開いた日",
+  "desktop.sort.key.name": "名前",
+  "desktop.sort.key.manual": "マニュアル",
+  "desktop.sort.fallback.dateImported": "インポートされた日付",
+  "desktop.sort.listBy": "リストを {label} で並べ替えます",
+  "desktop.sort.sortBy": "並べ替え基準",
+  "desktop.sort.order": "注文"
+}
