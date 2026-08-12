@@ -142,7 +142,7 @@ final class FolioleCompanionSyncGroupProvider {
         return state();
     }
 
-    static synchronized void promoteApprovedJoin(String groupId, String deviceId) throws Exception {
+    static void promoteApprovedJoin(String groupId, String deviceId) throws Exception {
         FolioleCompanionSyncGroupJoinRequest request = joinRequests.values().stream()
             .filter(item -> deviceId.equals(item.deviceId) && "approved".equals(item.status) && !item.expired())
             .findFirst().orElse(null);

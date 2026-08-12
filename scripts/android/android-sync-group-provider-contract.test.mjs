@@ -90,7 +90,7 @@ it('promotes an approved join only after the new member proves key possession', 
   const server = await readJava('FolioleCompanionSyncGroupServer.java');
   const approve = provider.slice(provider.indexOf('static synchronized JSObject approve'),
     provider.indexOf('static synchronized JSObject reject'));
-  const promote = provider.slice(provider.indexOf('static synchronized void promoteApprovedJoin'),
+  const promote = provider.slice(provider.indexOf('static void promoteApprovedJoin'),
     provider.indexOf('static synchronized void pruneExpired'));
   expect(approve).toContain('FolioleCompanionSyncGroupJoinGrantStore.save');
   expect(approve).not.toContain('registerMember');
@@ -100,6 +100,7 @@ it('promotes an approved join only after the new member proves key possession', 
   expect(grantStore).toContain('AndroidKeyStore');
   expect(server).toContain('groupForApprovedRequest');
   expect(server).not.toContain('/companion/sync-group/activate');
+  expect(provider).not.toContain('static synchronized void promoteApprovedJoin');
   expect(promote).toMatch(/isAuthorizedMember[\s\S]*request != null[\s\S]*consumeApprovedJoin\(request\)/u);
 });
 
