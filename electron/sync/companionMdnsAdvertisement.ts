@@ -9,10 +9,13 @@ import { loadSyncGroupRuntimeInstanceId } from './syncGroupRuntimeInstance.js';
 const COMPANION_SYNC_MDNS_SERVICE_TYPE = 'foliole-sync';
 
 type PublishedBonjourService = ReturnType<InstanceType<typeof Bonjour>['publish']>;
+type BonjourOptions = NonNullable<ConstructorParameters<typeof Bonjour>[0]> & { interface: string };
 type ActiveAdvertisement = {
-  bonjour: InstanceType<typeof Bonjour>;
   input: CompanionMdnsAdvertisementInput;
-  service: PublishedBonjourService;
+  runtimes: Array<{
+    bonjour: InstanceType<typeof Bonjour>;
+    service: PublishedBonjourService;
+  }>;
 };
 
 let activeAdvertisement: ActiveAdvertisement | null = null;
@@ -64,26 +67,32 @@ export function startCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisemen
     console.warn('[companion-sync] mDNS advertisement warning', error);
     input.onWarning?.(error);
   };
-  const bonjour = new Bonjour(undefined, reportWarning);
-  const service = bonjour.publish({
-    host: resolveCompanionMdnsHost(os.hostname(), runtimeInstanceId),
-    name: resolveCompanionMdnsServiceName(input.groupDisplayName, runtimeInstanceId),
-    port: input.port,
-    protocol: 'tcp',
-    txt: {
-      app_version: input.appVersion,
-      facts_revision: String(factsRevision),
-      group_id: input.groupId,
-      ipv4_addresses: resolveCompanionMdnsIpv4Addresses().join(','),
-      peer_id: input.peerId,
-      runtime_instance_id: runtimeInstanceId,
-      timeline_id: input.timelineId,
-      ...serializeSyncProtocolTxt()
-    },
-    type: COMPANION_SYNC_MDNS_SERVICE_TYPE
+  const ipv4Addresses = resolveCompanionMdnsIpv4Addresses();
+  const interfaces = ipv4Addresses.length > 0 ? ipv4Addresses : [null];
+  const runtimes = interfaces.map((networkInterface) => {
+    const options = networkInterface ? { interface: networkInterface } as BonjourOptions : undefined;
+    const bonjour = new Bonjour(options, reportWarning);
+    const service = bonjour.publish({
+      host: resolveCompanionMdnsHost(os.hostname(), runtimeInstanceId),
+      name: resolveCompanionMdnsServiceName(input.groupDisplayName, runtimeInstanceId),
+      port: input.port,
+      protocol: 'tcp',
+      txt: {
+        app_version: input.appVersion,
+        facts_revision: String(factsRevision),
+        group_id: input.groupId,
+        ipv4_addresses: ipv4Addresses.join(','),
+        peer_id: input.peerId,
+        runtime_instance_id: runtimeInstanceId,
+        timeline_id: input.timelineId,
+        ...serializeSyncProtocolTxt()
+      },
+      type: COMPANION_SYNC_MDNS_SERVICE_TYPE
+    });
+    return { bonjour, service };
   });
-  activeAdvertisement = { bonjour, input, service };
-  return [service];
+  activeAdvertisement = { input, runtimes };
+  return runtimes.map(({ service }) => service);
 }
 
 export function refreshCompanionMdnsAdvertisement() {
@@ -96,6 +105,8 @@ export function refreshCompanionMdnsAdvertisement() {
 export function stopCompanionMdnsAdvertisement() {
   const advertisement = activeAdvertisement;
   activeAdvertisement = null;
-  advertisement?.service.stop?.();
-  advertisement?.bonjour.destroy();
+  advertisement?.runtimes.forEach(({ bonjour, service }) => {
+    service.stop?.();
+    bonjour.destroy();
+  });
 }

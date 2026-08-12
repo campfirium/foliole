@@ -4,6 +4,7 @@ const bonjourMock = vi.hoisted(() => ({
   constructorOptions: [] as unknown[],
   constructorCallback: null as ((error: unknown) => void) | null,
   destroy: vi.fn(),
+  networkInterfaces: vi.fn(),
   publish: vi.fn(),
   stop: vi.fn()
 }));
@@ -11,9 +12,7 @@ const bonjourMock = vi.hoisted(() => ({
 vi.mock('node:os', () => ({
   default: {
     hostname: () => 'V',
-    networkInterfaces: () => ({
-      ethernet: [{ address: '192.168.0.11', family: 'IPv4', internal: false }]
-    })
+    networkInterfaces: bonjourMock.networkInterfaces
   }
 }));
 
@@ -49,6 +48,10 @@ async function resetMocks() {
   bonjourMock.destroy.mockClear();
   bonjourMock.constructorOptions = [];
   bonjourMock.constructorCallback = null;
+  bonjourMock.networkInterfaces.mockReset();
+  bonjourMock.networkInterfaces.mockReturnValue({
+    ethernet: [{ address: '192.168.0.11', family: 'IPv4', internal: false }]
+  });
   bonjourMock.publish.mockClear();
   bonjourMock.stop.mockClear();
 }
@@ -86,7 +89,7 @@ describe('companion mDNS advertisement', () => {
       timelineId: 'timeline-1'
     });
 
-    expect(bonjourMock.constructorOptions).toEqual([undefined]);
+    expect(bonjourMock.constructorOptions).toEqual([{ interface: '192.168.0.11' }]);
 
     expect(bonjourMock.publish).toHaveBeenCalledWith({
       host: 'V-runtimed.local',
@@ -176,8 +179,26 @@ describe('companion mDNS lifecycle', () => {
       peerId: 'desktop-local', port: 38683, timelineId: 'timeline-1'
     });
 
-    expect(bonjourMock.constructorOptions).toEqual([undefined]);
+    expect(bonjourMock.constructorOptions).toEqual([{ interface: '192.168.0.11' }]);
     expect(bonjourMock.publish).toHaveBeenCalledTimes(1);
+  });
+
+  it('advertises on every external IPv4 interface', async () => {
+    bonjourMock.networkInterfaces.mockReturnValue({
+      ethernet: [{ address: '192.168.0.11', family: 'IPv4', internal: false }],
+      vpn: [{ address: '198.18.0.1', family: 'IPv4', internal: false }]
+    });
+    const { startCompanionMdnsAdvertisement } = await import('./companionMdnsAdvertisement.js');
+
+    startCompanionMdnsAdvertisement({
+      appVersion: '0.1.0-test', groupDisplayName: 'V', groupId: 'group-1',
+      peerId: 'desktop-local', port: 38683, timelineId: 'timeline-1'
+    });
+
+    expect(bonjourMock.constructorOptions).toEqual([
+      { interface: '192.168.0.11' }, { interface: '198.18.0.1' }
+    ]);
+    expect(bonjourMock.publish).toHaveBeenCalledTimes(2);
   });
 
   it('stops the advertised service and destroys the responder', async () => {
