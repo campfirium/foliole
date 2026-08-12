@@ -84,7 +84,7 @@ describe('companion mDNS advertisement', () => {
     expect(bonjourMock.constructorOptions).toEqual([undefined]);
 
     expect(bonjourMock.publish).toHaveBeenCalledWith({
-      host: 'V.local',
+      host: 'V-runtimed.local',
       name: 'V-runtimed',
       port: 38683,
       protocol: 'tcp',
@@ -136,6 +136,13 @@ describe('companion mDNS facts hints', () => {
 
     expect(bonjourMock.publish.mock.calls.map(([input]) => (input as { name: string }).name))
       .toEqual(['Shared group-runtimed', 'Shared group-runtimed']);
+  });
+
+  it('separates SRV hosts when two desktops share one OS hostname', async () => {
+    const { resolveCompanionMdnsHost } = await import('./companionMdnsAdvertisement.js');
+
+    expect(resolveCompanionMdnsHost('Maci', 'aaaaaaaa-desktop-a'))
+      .not.toBe(resolveCompanionMdnsHost('Maci', 'bbbbbbbb-desktop-c'));
   });
 });
 

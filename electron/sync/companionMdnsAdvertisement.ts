@@ -28,14 +28,23 @@ export interface CompanionMdnsAdvertisementInput {
   timelineId: string;
 }
 
-export function resolveCompanionMdnsHost(hostname = os.hostname()) {
+function runtimeSuffix(runtimeInstanceId: string) {
+  return runtimeInstanceId.replace(/[^A-Za-z0-9]/gu, '').slice(0, 8) || 'runtime';
+}
+
+export function resolveCompanionMdnsHost(
+  hostname = os.hostname(),
+  runtimeInstanceId: string = loadSyncGroupRuntimeInstanceId()
+) {
   const label = hostname.trim().replace(/\.+$/u, '').split('.')[0]
-    ?.replace(/[^A-Za-z0-9-]/gu, '-').replace(/^-+|-+$/gu, '').slice(0, 63);
-  return `${label || 'foliole-desktop'}.local`;
+    ?.replace(/[^A-Za-z0-9-]/gu, '-').replace(/^-+|-+$/gu, '');
+  const suffix = runtimeSuffix(runtimeInstanceId);
+  const hostLimit = Math.max(1, 62 - suffix.length);
+  return `${(label || 'foliole-desktop').slice(0, hostLimit)}-${suffix}.local`;
 }
 
 export function resolveCompanionMdnsServiceName(groupDisplayName: string, runtimeInstanceId: string) {
-  const suffix = runtimeInstanceId.replace(/[^A-Za-z0-9]/gu, '').slice(0, 8) || 'runtime';
+  const suffix = runtimeSuffix(runtimeInstanceId);
   const displayLimit = Math.max(1, 62 - suffix.length);
   return `${Array.from(groupDisplayName).slice(0, displayLimit).join('')}-${suffix}`;
 }
@@ -49,7 +58,7 @@ export function startCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisemen
   };
   const bonjour = new Bonjour(undefined, reportWarning);
   const service = bonjour.publish({
-    host: resolveCompanionMdnsHost(),
+    host: resolveCompanionMdnsHost(os.hostname(), runtimeInstanceId),
     name: resolveCompanionMdnsServiceName(input.groupDisplayName, runtimeInstanceId),
     port: input.port,
     protocol: 'tcp',
