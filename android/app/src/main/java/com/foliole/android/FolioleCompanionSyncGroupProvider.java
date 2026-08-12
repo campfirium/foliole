@@ -98,7 +98,7 @@ final class FolioleCompanionSyncGroupProvider {
     }
 
     private static void restartAdvertisement() throws Exception {
-        if (advertisement != null) advertisement.stop();
+        if (advertisement != null) advertisement.stopAndAwait();
         advertisement = FolioleCompanionNsdAdvertisement.start(activeContext, server.port(), activeConfig);
     }
 

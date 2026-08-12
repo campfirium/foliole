@@ -6,11 +6,14 @@ import android.net.nsd.NsdServiceInfo;
 
 import org.json.JSONObject;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 final class FolioleCompanionNsdAdvertisement {
     private final NsdManager manager;
     private final NsdManager.RegistrationListener listener;
+    private final CountDownLatch unregistered = new CountDownLatch(1);
     private volatile int errorCode;
     private volatile String state = "registering";
 
@@ -47,12 +50,14 @@ final class FolioleCompanionNsdAdvertisement {
             }
             public void onUnregistrationFailed(NsdServiceInfo serviceInfo, int errorCode) {
                 active.get().failed(errorCode);
+                active.get().unregistered.countDown();
             }
             public void onServiceRegistered(NsdServiceInfo serviceInfo) {
                 active.get().state = "registered";
             }
             public void onServiceUnregistered(NsdServiceInfo serviceInfo) {
                 active.get().state = "unregistered";
+                active.get().unregistered.countDown();
             }
         };
         FolioleCompanionNsdAdvertisement advertisement =
@@ -64,6 +69,14 @@ final class FolioleCompanionNsdAdvertisement {
 
     void stop() {
         try { manager.unregisterService(listener); } catch (IllegalArgumentException ignored) {}
+    }
+
+    void stopAndAwait() throws Exception {
+        stop();
+        if (!unregistered.await(5, TimeUnit.SECONDS)) {
+            throw new IllegalStateException("Android NSD advertisement did not unregister.");
+        }
+        if ("failed".equals(state)) throw new IllegalStateException("Android NSD advertisement unregister failed.");
     }
 
     int errorCode() { return errorCode; }

@@ -53,6 +53,14 @@ it('serializes Android NSD resolution so one active resolve cannot hide another 
   expect(discovery).toMatch(/onServiceResolved[\s\S]*addResolvedEndpoint[\s\S]*resolveNext\(\)/u);
 });
 
+it('waits for Android NSD unregistration before publishing a newer fact revision', async () => {
+  const advertisement = await readJava('FolioleCompanionNsdAdvertisement.java');
+  const provider = await readJava('FolioleCompanionSyncGroupProvider.java');
+  expect(advertisement).toContain('unregistered.await(5, TimeUnit.SECONDS)');
+  expect(advertisement).toContain('unregistered.countDown()');
+  expect(provider).toMatch(/restartAdvertisement[\s\S]*stopAndAwait\(\)[\s\S]*start\(/u);
+});
+
 it('authorizes every Android provider data request with both the channel secret and member fact', async () => {
   const auth = await readJava('FolioleCompanionSyncGroupRequestAuth.java');
   const database = await readJava('FolioleCompanionSyncGroupDatabase.java');
