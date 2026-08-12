@@ -62,7 +62,8 @@ async function withSession(paths, evidenceRoot, openSession, action) {
 }
 
 async function runContinuousSession(options, initial) {
-  const { createFact, evidenceRoot, execute, inspect, invoke, openSession, paths } = options;
+  const { createFact, evidenceRoot, execute, inspect, invoke, openSession, paths,
+    reportProgress } = options;
   return withSession(paths, evidenceRoot, openSession, async ({ page }) => {
     const departed = await inspectUntil({ execute, inspect,
       accept: (facts) => {
@@ -73,6 +74,7 @@ async function runContinuousSession(options, initial) {
     const created = await createFact({ device: 'C', evidenceRoot, session: {
       invoke: (command, args) => invoke(page, command, args)
     }, withAttachment: true });
+    reportProgress({ factId: created.factId, milestone: 'c-fact-created' });
     const discovered = await inspectUntil({ execute, inspect,
       accept: (facts) => {
         const fresh = factIdsSince(facts, departure.formerLeftAt);
@@ -94,7 +96,8 @@ async function runContinuousSession(options, initial) {
 
 export async function runWindowsMultiDeviceSyncALeave({ evidenceRoot, execute, paths,
   control, createFact = createDesktopSyncGroupJourneyFact, inspect, invoke, openSession, restore,
-  suspend, waitForConsumerRelease = waitForWindowsSyncGroupProviderRelease }) {
+  reportProgress = () => {}, suspend,
+  waitForConsumerRelease = waitForWindowsSyncGroupProviderRelease }) {
   const recovery = control && inspect && invoke && openSession ? null
     : await import('./windows-sync-group-recovery-action.mjs');
   const lifecycle = restore && suspend ? null : await import('./windows-sync-group-native-lifecycle.mjs');
@@ -112,7 +115,7 @@ export async function runWindowsMultiDeviceSyncALeave({ evidenceRoot, execute, p
     const initial = await inspect(execute, paths);
     assertInitialState(initial);
     const continuous = await runContinuousSession({ createFact, evidenceRoot, execute,
-      inspect, invoke, openSession, paths }, initial);
+      inspect, invoke, openSession, paths, reportProgress }, initial);
     const restarted = await withSession(paths, evidenceRoot, openSession, async () => {
       const value = await inspectUntil({
         accept: (facts) => {

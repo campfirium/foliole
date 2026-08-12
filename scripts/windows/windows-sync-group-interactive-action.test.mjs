@@ -9,7 +9,8 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { runWindowsDevDeviceAction } from './windows-dev-device-action.mjs';
 import { runWindowsSyncGroupInteractiveAction } from './windows-sync-group-interactive-action.mjs';
 import {
-  readJson, syncGroupInteractivePaths, validateSyncGroupInteractiveRequest
+  readJson, syncGroupInteractivePaths, validateSyncGroupInteractiveProgress,
+  validateSyncGroupInteractiveRequest
 } from './windows-sync-group-interactive-state.mjs';
 
 const roots = [];
@@ -53,6 +54,29 @@ it('accepts only registered actions and evidence inside the action-owned root', 
   expect(() => validateSyncGroupInteractiveRequest({
     ...request, evidenceRoot: path.join(paths.repoRoot, 'outside')
   }, paths.repoRoot)).toThrow('invalid');
+  expect(validateSyncGroupInteractiveProgress({
+    factId: 'multi-device-sync-c-20260813080000000', milestone: 'c-fact-created'
+  }, 'multi-device-sync-a-leave')).toMatchObject({ milestone: 'c-fact-created' });
+  expect(() => validateSyncGroupInteractiveProgress({
+    factId: 'old-fact', milestone: 'c-fact-created'
+  }, 'multi-device-sync-a-leave')).toThrow('invalid');
+});
+
+it('streams the created C fact as nonce-bound provider progress', async () => {
+  const options = { action: 'multi-device-sync-a-leave', buildIdentity: 'candidate-1',
+    execute: vi.fn(async () => ({ code: 0 })), stdout: { write: vi.fn() }, ...fixture() };
+  const progress = { factId: 'multi-device-sync-c-20260813080000000',
+    milestone: 'c-fact-created' };
+  const waitForResult = vi.fn(async (_paths, _nonce, settings) => {
+    settings.onProgress(progress);
+    return { actionResult: {}, exitCode: 0 };
+  });
+  await runWindowsSyncGroupInteractiveAction(options, {
+    installTask: vi.fn(async () => undefined), waitForResult
+  });
+  expect(options.stdout.write).toHaveBeenCalledWith(expect.stringMatching(
+    /^\[windows-dev-action\] progress action=multi-device-sync-a-leave nonce=[0-9a-f-]{36} milestone=c-fact-created fact=multi-device-sync-c-20260813080000000\n$/u
+  ));
 });
 
 it('routes Sync Group desktop actions before the fixed Android device boundary', async () => {

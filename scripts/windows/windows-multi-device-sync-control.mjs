@@ -17,8 +17,11 @@ export async function runWindowsMultiDeviceSyncControl({ buildPushSpec, buildScp
   action = 'multi-device-sync-c' }) {
   const push = buildPushSpec(host, env);
   await executeGit(push.args, { env: push.env });
-  const output = await executeSsh(buildSshSpec(host, action, env), { env });
-  stdout.write(output);
+  let streamed = false;
+  const output = await executeSsh(buildSshSpec(host, action, env), { env, onOutput: (chunk) => {
+    streamed = true; stdout.write(chunk);
+  } });
+  if (!streamed) stdout.write(output);
   const receiptNames = {
     'multi-device-sync-a-leave': 'multi-device-sync-a-leave-receipt.json',
     'multi-device-sync-a-rejoin': 'multi-device-sync-a-rejoin-receipt.json',

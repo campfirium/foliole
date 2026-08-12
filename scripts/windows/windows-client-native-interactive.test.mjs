@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 
 import { waitForInteractiveResult } from './windows-client-native-interactive.mjs';
 import {
@@ -47,6 +47,27 @@ it('fails quickly when the interactive worker never starts', async () => {
   await expect(waitForInteractiveResult(paths, nonce, {
     now: () => current, pause: async () => { current += 5_000; }
   })).rejects.toThrow('did not start within 5 seconds');
+});
+
+it('forwards nonce-bound semantic progress exactly once before completion', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-native-client-progress-'));
+  roots.push(root);
+  const paths = interactiveStatePaths(root);
+  const nonce = '12345678-1234-1234-1234-123456789abc';
+  const progress = { factId: 'multi-device-sync-c-20260813080000000',
+    milestone: 'c-fact-created' };
+  writeJsonAtomic(paths.status, { nonce, progress: [progress], schemaVersion: 1, state: 'running' });
+  let current = 0;
+  const onProgress = vi.fn();
+  const result = await waitForInteractiveResult(paths, nonce, {
+    now: () => current, onProgress, pause: async () => {
+      current += 1;
+      writeJsonAtomic(paths.result, { exitCode: 0, nonce, schemaVersion: 1, state: 'completed' });
+    }, resultTimeoutMs: 10
+  });
+  expect(result.exitCode).toBe(0);
+  expect(onProgress).toHaveBeenCalledOnce();
+  expect(onProgress).toHaveBeenCalledWith(progress);
 });
 
 it('keeps the interactive launcher isolated from the Android task control plane', () => {

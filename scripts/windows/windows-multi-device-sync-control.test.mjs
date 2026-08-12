@@ -37,15 +37,23 @@ it('copies only the fixed A-rejoin receipt', async () => {
 });
 
 it('copies only the fixed A-leave receipt', async () => {
-  const executeSsh = vi.fn(async () => '[windows-dev-action] multi-device-sync-a-leave '
+  const progress = '[windows-dev-action] progress action=multi-device-sync-a-leave '
+    + 'nonce=12345678-1234-1234-1234-123456789abc milestone=c-fact-created '
+    + 'fact=multi-device-sync-c-20260813080000000\n';
+  const receipt = '[windows-dev-action] multi-device-sync-a-leave '
     + 'identity=run-3 manifest=C:\\dev\\foliole-android-lab-preview\\.tmp\\artifacts\\'
-    + 'windows-dev-action\\run-3\\multi-device-sync-a-leave-receipt.json\n');
+    + 'windows-dev-action\\run-3\\multi-device-sync-a-leave-receipt.json\n';
+  const executeSsh = vi.fn(async (_args, options) => {
+    options.onOutput(progress); options.onOutput(receipt); return `${progress}${receipt}`;
+  });
+  const stdout = { write: vi.fn() };
   const result = await runWindowsMultiDeviceSyncControl({ action: 'multi-device-sync-a-leave',
     buildPushSpec: () => ({ args: ['push'], env: {} }),
     buildScpSpec: (_host, remote, local) => [remote, local], buildSshSpec: () => ['ssh'],
     env: {}, executeGit: vi.fn(async () => ''), executeScp: vi.fn(async () => 'copied'),
     executeSsh, fsApi: { mkdirSync: vi.fn() }, host: 'user@host', repoRoot: '/repo',
-    stdout: { write: vi.fn() } });
+    stdout });
   expect(result.manifestPath).toBe(path.join('/repo', '.tmp', 'artifacts',
     'multi-device-sync', 'windows-c', 'run-3', 'multi-device-sync-a-leave-receipt.json'));
+  expect(stdout.write.mock.calls.map(([value]) => value).join('')).toBe(`${progress}${receipt}`);
 });

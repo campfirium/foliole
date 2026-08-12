@@ -42,14 +42,17 @@ it('creates C after departure and records restarted B/C convergence', async () =
     }));
   const close = vi.fn(async () => {});
   const createFact = vi.fn(async () => ({ factId: 'fact-c' }));
+  const reportProgress = vi.fn();
   let releaseProvider;
   const waitForConsumerRelease = vi.fn(() => new Promise((resolve) => { releaseProvider = resolve; }));
   const work = runWindowsMultiDeviceSyncALeave({ evidenceRoot: root,
     control: vi.fn(), createFact, execute: vi.fn(),
     inspect, invoke: vi.fn(), openSession: vi.fn(async () => ({ app: { close }, page: {} })),
-    paths: {}, restore: vi.fn(async () => {}), suspend: vi.fn(async () => ({ running: false })),
+    paths: {}, reportProgress, restore: vi.fn(async () => {}),
+    suspend: vi.fn(async () => ({ running: false })),
     waitForConsumerRelease });
   await vi.waitFor(() => expect(waitForConsumerRelease).toHaveBeenCalledOnce(), { timeout: 2_500 });
+  expect(reportProgress).toHaveBeenCalledWith({ factId: 'fact-c', milestone: 'c-fact-created' });
   expect(close).toHaveBeenCalledTimes(1);
   releaseProvider();
   const result = await work;

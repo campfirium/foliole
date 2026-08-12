@@ -28,4 +28,13 @@ export function validateSyncGroupInteractiveRequest(request, repoRoot) {
   return { ...request, evidenceRoot };
 }
 
+export function validateSyncGroupInteractiveProgress(progress, action) {
+  if (action !== 'multi-device-sync-a-leave'
+      || progress?.milestone !== 'c-fact-created'
+      || !/^multi-device-sync-c-\d{17}$/u.test(progress.factId || '')) {
+    throw new Error('invalid Sync Group interactive progress');
+  }
+  return { factId: progress.factId, milestone: progress.milestone };
+}
+
 export { readJson, writeJsonAtomic };

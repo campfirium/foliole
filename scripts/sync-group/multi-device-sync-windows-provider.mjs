@@ -9,7 +9,8 @@ import {
 
 const PROVIDER_ACTIONS = Object.freeze({
   'multi-device-sync-a-leave': {
-    controllerAction: 'windows-c-a-leave', label: 'A-leave', missingPrefix: 'windows_a_leave'
+    controllerAction: 'windows-c-a-leave', label: 'A-leave', missingPrefix: 'windows_a_leave',
+    progressMilestone: 'c-fact-created'
   },
   'multi-device-sync-a-rejoin': {
     controllerAction: 'windows-c-a-rejoin', label: 'A-rejoin', missingPrefix: 'windows_a_rejoin'
@@ -58,10 +59,19 @@ function receiptFromResult(result, repoRoot, action, spec) {
   return { evidenceRef, receipt: JSON.parse(fs.readFileSync(evidenceRef, 'utf8')) };
 }
 
-export function startWindowsSyncGroupProvider({ action, execute, repoRoot }) {
+export function startWindowsSyncGroupProvider({ action, execute, reportProgress = () => {}, repoRoot }) {
   const spec = actionSpec(action);
+  let providerFactId = null;
   const work = execute(process.execPath, ['scripts/windows/windows-dev-control.mjs', action], {
-    action: spec.controllerAction, cwd: repoRoot, host: 'windows-c', timeoutMs: 15 * 60_000
+    action: spec.controllerAction, cwd: repoRoot, host: 'windows-c',
+    onOutput: ({ stdout }) => {
+      if (!spec.progressMilestone || providerFactId) return;
+      const expression = new RegExp(`^\\[windows-dev-action\\] progress action=${action}`
+        + ' nonce=[0-9a-f-]{36} milestone=c-fact-created'
+        + ' fact=(multi-device-sync-c-\\d{17})$', 'mu');
+      providerFactId = expression.exec(stdout)?.[1] ?? null;
+      if (providerFactId) reportProgress(spec.progressMilestone);
+    }, timeoutMs: 15 * 60_000
   }).then((value) => ({ value }), (error) => ({ error }));
   let releaseSent = false;
   const release = async (status) => {
@@ -92,5 +102,14 @@ export function startWindowsSyncGroupProvider({ action, execute, repoRoot }) {
     await release('cancelled').catch(() => undefined);
     await work;
   };
-  return { cancelAndSettle, finish, raceConsumer, release };
+  const confirmProgress = (factId) => {
+    if (providerFactId && providerFactId !== factId) {
+      throw controllerFailure('Windows C provider progress reported a different fact identity.',
+        `${spec.missingPrefix}_progress_identity_mismatch`);
+    }
+    if (!providerFactId && spec.progressMilestone) {
+      providerFactId = factId; reportProgress(spec.progressMilestone);
+    }
+  };
+  return { cancelAndSettle, confirmProgress, finish, raceConsumer, release };
 }

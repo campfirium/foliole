@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 
+/* global process */
+
 import {
   installInteractiveTask, waitForInteractiveResult
 } from './windows-client-native-interactive.mjs';
@@ -9,7 +11,7 @@ import { WINDOWS_NATIVE_CLIENT_TASK } from './windows-client-native-interactive-
 import { resolveWindowsNativePaths } from './windows-native-paths.mjs';
 import {
   syncGroupInteractivePaths, WINDOWS_SYNC_GROUP_INTERACTIVE_ACTIONS,
-  writeJsonAtomic
+  validateSyncGroupInteractiveProgress, writeJsonAtomic
 } from './windows-sync-group-interactive-state.mjs';
 
 const RESULT_TIMEOUT_MS = 20 * 60_000;
@@ -41,6 +43,12 @@ export async function runWindowsSyncGroupInteractiveAction(options, {
   });
   if (launch.code !== 0) throw new Error('Sync Group interactive task launch failed.');
   const result = await waitForResult(paths, request.nonce, {
+    onProgress: (value) => {
+      const progress = validateSyncGroupInteractiveProgress(value, request.action);
+      const line = `[windows-dev-action] progress action=${request.action} nonce=${request.nonce}`
+        + ` milestone=${progress.milestone} fact=${progress.factId}\n`;
+      (options.stdout ?? process.stdout).write(line);
+    },
     resultTimeoutMs: RESULT_TIMEOUT_MS
   });
   if (result.exitCode !== 0) throw new Error(result.error || `interactive ${options.action} failed`);

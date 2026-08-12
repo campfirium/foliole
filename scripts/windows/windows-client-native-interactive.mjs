@@ -35,17 +35,23 @@ export async function installInteractiveTask({
 }
 
 export async function waitForInteractiveResult(paths, nonce, {
-  now = Date.now, pause = wait, resultTimeoutMs = RESULT_TIMEOUT_MS,
+  now = Date.now, onProgress = () => {}, pause = wait, resultTimeoutMs = RESULT_TIMEOUT_MS,
   startTimeoutMs = START_TIMEOUT_MS
 } = {}) {
   const startedAt = now();
   const deadline = startedAt + resultTimeoutMs;
   let workerStarted = false;
+  let progressCount = 0;
   while (now() < deadline) {
+    const status = readJson(paths.status);
+    if (status?.nonce === nonce) {
+      if (status.state === 'running') workerStarted = true;
+      const progress = Array.isArray(status.progress) ? status.progress : [];
+      if (progress.length < progressCount) throw new Error('native client interactive progress regressed');
+      while (progressCount < progress.length) onProgress(progress[progressCount++]);
+    }
     const result = readJson(paths.result);
     if (result?.nonce === nonce) return result;
-    const status = readJson(paths.status);
-    if (status?.nonce === nonce && status.state === 'running') workerStarted = true;
     if (!workerStarted && now() - startedAt >= startTimeoutMs) {
       throw new Error('native client interactive task did not start within 5 seconds');
     }

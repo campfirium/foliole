@@ -42,10 +42,11 @@ const CAPTURE_ANNOTATION_FAILURE_FILES = ['action.log', 'summary.json'];
 
 function execute(command, args, options = {}) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { ...options, shell: false, stdio: ['ignore', 'pipe', 'pipe'] });
+    const { onOutput, ...spawnOptions } = options;
+    const child = spawn(command, args, { ...spawnOptions, shell: false, stdio: ['ignore', 'pipe', 'pipe'] });
     let stderr = '';
     let stdout = '';
-    child.stdout.on('data', (chunk) => { stdout += chunk; });
+    child.stdout.on('data', (chunk) => { const text = chunk.toString(); stdout += text; onOutput?.(text); });
     child.stderr.on('data', (chunk) => { stderr += chunk; });
     child.on('error', reject);
     child.on('close', (code) => {

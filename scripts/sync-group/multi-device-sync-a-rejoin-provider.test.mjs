@@ -53,14 +53,21 @@ it('reads the A-leave receipt only after the same fixed provider is released', a
   fs.writeFileSync(path.join(remoteRoot, 'multi-device-sync-a-leave-receipt.json'),
     JSON.stringify({ factIds: { B: 'b', C: 'c' } }), 'utf8');
   let finishWindows;
-  const execute = vi.fn((_command, args) => args.at(-1) === 'multi-device-sync-provider-complete'
-    ? Promise.resolve({ code: 0 })
-    : new Promise((resolve) => { finishWindows = () => resolve({
+  const reportProgress = vi.fn();
+  const execute = vi.fn((_command, args, options) => {
+    if (args.at(-1) === 'multi-device-sync-provider-complete') return Promise.resolve({ code: 0 });
+    options.onOutput({ stdout: '[windows-dev-action] progress action=multi-device-sync-a-leave '
+      + 'nonce=12345678-1234-1234-1234-123456789abc milestone=c-fact-created '
+      + 'fact=multi-device-sync-c-20260813080000000\n' });
+    return new Promise((resolve) => { finishWindows = () => resolve({
       code: 0, output: '[windows-dev-action] multi-device-sync-a-leave identity=run-2\n'
-    }); }));
-  const provider = startWindowsSyncGroupProvider({
-    action: 'multi-device-sync-a-leave', execute, repoRoot
+    }); });
   });
+  const provider = startWindowsSyncGroupProvider({
+    action: 'multi-device-sync-a-leave', execute, reportProgress, repoRoot
+  });
+  expect(reportProgress).toHaveBeenCalledWith('c-fact-created');
+  provider.confirmProgress('multi-device-sync-c-20260813080000000');
   await provider.release('consumer_complete');
   finishWindows();
   await expect(provider.finish()).resolves.toMatchObject({ receipt: { factIds: { C: 'c' } } });

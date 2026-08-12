@@ -124,7 +124,7 @@ async function runWindowsContinuity(context, before) {
   reportProgress('b-two-members-active');
   const beforeWindows = await androidSnapshot(paths);
   const windowsProvider = startWindowsSyncGroupProvider({
-    action: 'multi-device-sync-a-leave', execute, repoRoot
+    action: 'multi-device-sync-a-leave', execute, reportProgress, repoRoot
   });
   let windowsSettled = false;
   try {
@@ -148,7 +148,7 @@ async function runWindowsContinuity(context, before) {
       throw error;
     }
     const ids = assertAndroidConsumerComplete({ before: beforeWindows, expected, snapshot: completed });
-    reportProgress('c-fact-created');
+    windowsProvider.confirmProgress(ids.C);
     await windowsProvider.release('consumer_complete');
     const remote = await windowsProvider.finish();
     windowsSettled = true;
