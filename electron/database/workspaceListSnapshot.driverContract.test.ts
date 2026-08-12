@@ -163,10 +163,12 @@ it('prefers the persisted active node when it is still available', () => {
       title: 'Node 2'
     }
   ]).mockReturnValueOnce([]).mockReturnValueOnce([{ node_id: 'node-1' }, { node_id: 'node-2' }]);
-  queryOneSpy
-    .mockReturnValueOnce({ value: '"desktop-test"' })
-    .mockReturnValueOnce({ value: 'node-2' })
-    .mockReturnValueOnce(undefined);
+  queryOneSpy.mockImplementation((sql) => {
+    if (sql.includes('sync_group_local_state')) return undefined;
+    if (sql.includes('settings WHERE key')) return { value: '"desktop-test"' };
+    if (sql.includes('workspace_meta')) return { value: 'node-2' };
+    return undefined;
+  });
 
   expect(loadWorkspaceListSnapshot(driver)?.activeNodeId).toBe('node-2');
 });

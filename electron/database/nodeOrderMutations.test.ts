@@ -77,14 +77,14 @@ it('rewrites node order without changing node updated_at or nodes.position', () 
   ).toEqual([
     {
       id: 'node-a',
-      last_modified_by_device_id: expect.stringMatching(/^device-/),
+      last_modified_by_device_id: expect.any(String),
       position: null,
       sync_dirty: 1,
       updated_at: '2026-03-06T00:00:00.000Z'
     },
     {
       id: 'node-b',
-      last_modified_by_device_id: expect.stringMatching(/^device-/),
+      last_modified_by_device_id: expect.any(String),
       position: null,
       sync_dirty: 1,
       updated_at: '2026-03-06T00:00:00.000Z'

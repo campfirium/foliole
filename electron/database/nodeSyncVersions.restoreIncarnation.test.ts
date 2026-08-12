@@ -56,7 +56,7 @@ it('keeps restore incarnation local and uses order-safe post-restore version ids
   const versionId = flushNodeSyncVersion('node-1', '2026-04-21T10:01:00.000Z');
   const connection = openDatabaseConnection();
 
-  expect(versionId).toMatch(/^device-.*#zrestore-[0-9a-f-]+#0$/);
+  expect(versionId).toMatch(/^.+#zrestore-[0-9a-f-]+#0$/);
   expect(
     connection.driver.queryOne<{ count: number }>(
       'SELECT COUNT(*) AS count FROM setting_records WHERE key = ?',

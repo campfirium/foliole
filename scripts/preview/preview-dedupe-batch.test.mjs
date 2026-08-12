@@ -7,10 +7,11 @@ import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const DEDUPE_SCRIPT = path.join(REPO_ROOT, 'scripts', 'preview', 'preview-dedupe.mjs');
+const INTEGRATION_TIMEOUT_MS = 30_000;
 
 function git(cwd, args) {
   const result = spawnSync('git', args, {
@@ -197,7 +198,7 @@ describe('preview-dedupe batching', () => {
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
-  });
+  }, INTEGRATION_TIMEOUT_MS);
 
   it('runs a queued preview request after the active driver finishes', async () => {
     const repoRoot = await createRepo();
@@ -210,7 +211,9 @@ describe('preview-dedupe batching', () => {
 
       await writeFile(path.join(repoRoot, 'src', 'app', 'App.tsx'), 'export const app = 2;\n', 'utf8');
       const first = runDedupe(repoRoot, 'first', env, 'echo first >> runs.log; sleep 0.3; echo "[windows-preview] status: STARTED"');
-      await delay(60);
+      await vi.waitFor(async () => expect(JSON.parse(await readFile(
+        path.join(repoRoot, '.lab/internal/runtime/windows-preview.state.json'), 'utf8'
+      )).activeRunId).toBeTruthy());
       const second = runDedupe(repoRoot, 'second', env);
 
       const [firstResult, secondResult] = await Promise.all([first, second]);

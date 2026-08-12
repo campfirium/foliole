@@ -24,6 +24,7 @@ import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 
 import { applyCompanionSyncPushAsync } from './companionSyncPushAsyncApply.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { saveJsonSetting } from './settingsStore.js';
 import { buildDesktopSyncPack } from './syncPackBuilder.js';
 
 type SyncPushPayload = import('./companionSyncPushTypes.js').CompanionSyncPushPayload;
@@ -37,6 +38,7 @@ beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-companion-sync-push-vertical-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabaseConnection(openDatabaseConnection());
+  saveJsonSetting('device_id', 'desktop-test', '2026-08-12T00:00:00.000Z');
   insertDesktopBaseReview();
 });
 

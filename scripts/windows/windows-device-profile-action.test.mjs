@@ -39,6 +39,7 @@ it('runs only the targeted hidden native profile spec', async () => {
 });
 
 it('builds the desktop before the bounded device profile acceptance', async () => {
+  fs.mkdirSync(path.resolve('.tmp/artifacts'), { recursive: true });
   const root = fs.mkdtempSync(path.resolve('.tmp/artifacts/windows-device-profile-build-'));
   const paths = profileBuildPaths(root);
   const calls = [];
@@ -89,6 +90,7 @@ it('accepts only the fixed Windows action evidence root', () => {
 });
 
 it('copies only the bounded profile action log and summary', async () => {
+  fs.mkdirSync(path.resolve('.tmp/artifacts'), { recursive: true });
   const repoRoot = fs.mkdtempSync(path.resolve('.tmp/artifacts/windows-device-profile-control-'));
   const remoteRoot = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/run-2';
   const copyFile = vi.fn(async (_remote, local) => fs.writeFileSync(local, 'evidence'));

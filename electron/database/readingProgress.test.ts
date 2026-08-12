@@ -19,6 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { resetSeededWorkspace } from './databaseTestWorkspace.js';
+import { loadDesktopDeviceId } from './deviceIdentity.js';
 import { initializeDatabase } from './migrate.js';
 import { loadReadingProgress, saveReadingProgress } from './readingProgress.js';
 
@@ -28,9 +29,6 @@ beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-reading-progress-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabase();
-  openDatabaseConnection().sqlite
-    .prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)')
-    .run('desktop_device_id', '"desktop-test"', '2026-03-06T00:00:00.000Z');
   resetSeededWorkspace();
 });
 
@@ -48,6 +46,7 @@ it('returns empty reading progress shape when sqlite has no rows', () => {
 });
 
 it('persists and loads active node and per-node view state from sqlite', () => {
+  const deviceId = loadDesktopDeviceId();
   saveReadingProgress({
     activeNodeId: 'node-2',
     browseRootNodeId: 'special-home',
@@ -90,7 +89,7 @@ it('persists and loads active node and per-node view state from sqlite', () => {
   });
   expect(openDatabaseConnection().sqlite
     .prepare('SELECT device_id FROM node_view_state WHERE node_id = ?')
-    .get('node-1')).toEqual({ device_id: 'desktop-test' });
+    .get('node-1')).toEqual({ device_id: deviceId });
 });
 
 it('persists close flush source and keeps newer user scroll rows', () => {
@@ -182,6 +181,7 @@ it('does not let restore overwrite saved user reading positions', () => {
 
 
 it('writes sync object state for active node and node view states', () => {
+  const deviceId = loadDesktopDeviceId();
   saveReadingProgress({
     activeNodeId: 'node-2',
     browseRootNodeId: 'special-home',
@@ -210,11 +210,11 @@ it('writes sync object state for active node and node view states', () => {
     .all() as Array<Record<string, unknown>>;
 
   expect(rows.map((row) => row.object_id)).toEqual([
-    'session_resume:windows:desktop:desktop-test:active_node',
-    'session_resume:windows:desktop:desktop-test:node:node-1',
-    'session_resume:windows:desktop:desktop-test:node:node-2'
+    `session_resume:windows:desktop:${deviceId}:active_node`,
+    `session_resume:windows:desktop:${deviceId}:node:node-1`,
+    `session_resume:windows:desktop:${deviceId}:node:node-2`
   ]);
-  expect(rows.every((row) => row.last_modified_by_device_id === 'desktop-test')).toBe(true);
+  expect(rows.every((row) => row.last_modified_by_device_id === deviceId)).toBe(true);
   expect(rows.every((row) => row.sync_dirty === 1)).toBe(true);
   const changeCount = openDatabaseConnection().sqlite
     .prepare(

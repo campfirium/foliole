@@ -31,6 +31,7 @@ import {
 } from './companionSyncCaptureAnnotationProjectionTestSupport.js';
 import { applyCompanionSyncPushAsync } from './companionSyncPushAsyncApply.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { saveJsonSetting } from './settingsStore.js';
 import { buildDesktopSyncPack } from './syncPackBuilder.js';
 
 let tempRoot = '';
@@ -39,6 +40,7 @@ beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-capture-annotation-projection-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabaseConnection(openDatabaseConnection());
+  saveJsonSetting('device_id', 'desktop-test', '2026-08-12T00:00:00.000Z');
   seedProjectionParents();
   vi.spyOn(crypto, 'randomUUID')
     .mockReturnValueOnce('00000000-0000-4000-8000-000000000101')

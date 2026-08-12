@@ -24,6 +24,7 @@ import type { PersistedImportRecord } from '../../lib/core/import/contract.js';
 import { withoutNodeViewStateHashSource } from '../../lib/platform/persistedNodeViewState.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { saveJsonSetting } from './settingsStore.js';
 import { loadSyncObjects, loadSyncStateObjectsSince } from './syncObjects.js';
 
 let tempRoot = '';
@@ -32,6 +33,7 @@ beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-sync-objects-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabaseConnection(openDatabaseConnection());
+  saveJsonSetting('device_id', 'desktop-test', '2026-08-12T00:00:00.000Z');
 });
 
 afterEach(async () => {

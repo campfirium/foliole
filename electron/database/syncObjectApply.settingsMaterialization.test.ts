@@ -8,6 +8,11 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let mockedAppDataDir = '/tmp/foliole-setting-materialization-tests';
 
+vi.mock('electron', () => ({
+  app: { getPath: () => mockedAppDataDir },
+  safeStorage: {}
+}));
+
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
     app_cache_dir: path.join(mockedAppDataDir, 'cache'),

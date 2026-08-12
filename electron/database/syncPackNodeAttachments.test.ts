@@ -25,6 +25,7 @@ import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 
 import { createAttachmentRecord, createNodeAttachmentLink } from './attachments.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { saveJsonSetting } from './settingsStore.js';
 import { buildDesktopSyncPack } from './syncPackBuilder.js';
 
 const require = createRequire(import.meta.url);
@@ -36,6 +37,7 @@ beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-sync-pack-node-attachments-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabaseConnection(openDatabaseConnection());
+  saveJsonSetting('device_id', 'desktop-test', '2026-08-12T00:00:00.000Z');
 });
 
 afterEach(async () => {

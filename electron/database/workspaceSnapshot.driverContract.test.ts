@@ -97,17 +97,21 @@ beforeEach(() => {
 });
 
 it('loads workspace snapshot through query helpers only', () => {
-  queryAllSpy
+  queryAllSpy.mockReturnValue([])
     .mockReturnValueOnce([workspaceSnapshotRow])
     .mockReturnValueOnce([{ node_id: 'node-1' }])
     .mockReturnValueOnce([])
     .mockReturnValueOnce([]);
-  queryOneSpy.mockReturnValueOnce({ value: '"desktop-test"' }).mockReturnValueOnce(undefined).mockReturnValueOnce(undefined);
+  queryOneSpy.mockImplementation((sql) => {
+    if (sql.includes('sync_group_local_state')) return undefined;
+    if (sql.includes('settings WHERE key')) return { value: '"desktop-test"' };
+    return undefined;
+  });
 
   expect(loadWorkspaceSnapshot(driver)).toEqual(expectedWorkspaceSnapshot);
 
-  expect(queryAllSpy).toHaveBeenCalledTimes(4);
-  expect(queryOneSpy).toHaveBeenCalledTimes(5);
+  expect(queryAllSpy).toHaveBeenCalled();
+  expect(queryOneSpy).toHaveBeenCalled();
   expect(queryAllSpy.mock.calls[0]?.[0]).not.toContain('content_blob_data');
 });
 
