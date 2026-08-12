@@ -48,9 +48,13 @@ it('keeps Android fact-change discovery foreground-bound and excludes its own re
 
 it('serializes Android NSD resolution so one active resolve cannot hide another group member', async () => {
   const discovery = await readJava('FolioleCompanionNsdDiscovery.java');
+  const addresses = await readJava('FolioleCompanionNsdAddresses.java');
   expect(discovery).toContain('pendingResolutions.addLast(serviceInfo)');
   expect(discovery).toContain('if (resolving) return;');
   expect(discovery).toMatch(/onServiceResolved[\s\S]*addResolvedEndpoint[\s\S]*resolveNext\(\)/u);
+  expect(discovery).toContain('FolioleCompanionNsdAddresses.endpointHosts(serviceInfo)');
+  expect(addresses).toContain('serviceInfo.getHostAddresses()');
+  expect(addresses).toContain('? "[" + value + "]" : value');
 });
 
 it('waits for Android NSD unregistration before publishing a newer fact revision', async () => {

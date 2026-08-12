@@ -6,7 +6,6 @@ import android.net.nsd.NsdServiceInfo;
 
 import com.getcapacitor.JSObject;
 
-import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -175,28 +174,21 @@ public final class FolioleCompanionNsdDiscovery {
         private void addResolvedEndpoint(NsdServiceInfo serviceInfo) {
             try {
                 if (ownRuntimeInstance(serviceInfo)) return;
-                InetAddress host = serviceInfo.getHost();
                 int port = serviceInfo.getPort();
-                if (host == null || port <= 0) {
-                    return;
-                }
-                String hostAddress = host.getHostAddress();
-                if (hostAddress == null || hostAddress.indexOf(':') >= 0) {
-                    return;
-                }
-                synchronized (lock) {
-                    String endpointUrl = FolioleCompanionHostBridgeContractDefinitions.networkEndpointUrl(context, hostAddress, port);
-                    if (!endpointUrls.add(endpointUrl)) {
-                        return;
+                if (port <= 0) return;
+                for (String host : FolioleCompanionNsdAddresses.endpointHosts(serviceInfo)) {
+                    synchronized (lock) {
+                        String endpointUrl = FolioleCompanionHostBridgeContractDefinitions.networkEndpointUrl(context, host, port);
+                        if (!endpointUrls.add(endpointUrl)) continue;
+                        JSObject candidate = new JSObject();
+                        candidate.put(FolioleCompanionHostBridgeContractDefinitions.networkEndpointUrlCandidateKey(context), endpointUrl);
+                        candidate.put(FolioleCompanionHostBridgeContractDefinitions.networkSourceCandidateKey(context), "nsd");
+                        candidate.put(
+                            FolioleCompanionHostBridgeContractDefinitions.networkProtocolTxtCandidateKey(context),
+                            readProtocolTxt(serviceInfo)
+                        );
+                        candidates.add(candidate);
                     }
-                    JSObject candidate = new JSObject();
-                    candidate.put(FolioleCompanionHostBridgeContractDefinitions.networkEndpointUrlCandidateKey(context), endpointUrl);
-                    candidate.put(FolioleCompanionHostBridgeContractDefinitions.networkSourceCandidateKey(context), "nsd");
-                    candidate.put(
-                        FolioleCompanionHostBridgeContractDefinitions.networkProtocolTxtCandidateKey(context),
-                        readProtocolTxt(serviceInfo)
-                    );
-                    candidates.add(candidate);
                 }
             } catch (Exception ignored) {
             }
