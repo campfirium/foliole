@@ -17,11 +17,13 @@ it('creates C fact only after fresh A and B facts and verifies a restarted three
     C: 'multi-device-sync-c-new' };
   const complete = { ...identity, facts: Object.fromEntries(Object.values(ids).map((id) => [id, true])),
     journeyFacts: Object.fromEntries(Object.entries(ids).map(([origin, id]) => [id, origin])) };
+  const pendingBodies = { ...complete, missingContentBlobCount: 3 };
   const inspect = vi.fn()
     .mockResolvedValueOnce({ ...identity, journeyFacts: { 'multi-device-sync-a-old': 'A' } })
     .mockResolvedValueOnce({ ...identity, journeyFacts: {
       'multi-device-sync-a-old': 'A', [ids.A]: 'A', [ids.B]: 'B'
     } })
+    .mockResolvedValueOnce(pendingBodies)
     .mockResolvedValue(complete);
   const close = vi.fn(async () => {});
   const result = await runWindowsMultiDeviceSyncARejoin({ evidenceRoot: root,
@@ -32,4 +34,5 @@ it('creates C fact only after fresh A and B facts and verifies a restarted three
   expect(JSON.parse(fs.readFileSync(result.multiDeviceSyncARejoin.manifestPath, 'utf8')))
     .toMatchObject({ factIds: ids, resultStatus: 'success', restarted: { activeMemberCount: 3 } });
   expect(close).toHaveBeenCalledTimes(4);
+  expect(inspect).toHaveBeenCalledTimes(5);
 });

@@ -28,8 +28,10 @@ async function waitForFreshFacts(execute, inspect, paths, excluded, origins, fac
     facts = await inspect(execute, paths, undefined, factIds);
     const fresh = freshFactIds(facts, excluded);
     observe(JSON.stringify([facts.activeMemberCount, fresh, facts.facts]), facts);
+    const resourcesComplete = factIds.length === 0 || (facts.missingAttachmentCount === 0
+      && facts.missingContentBlobCount === 0);
     if (facts.activeMemberCount === 3 && origins.every((origin) => fresh[origin])
-        && factIds.every((id) => facts.facts[id] === true)) return { facts, fresh };
+        && factIds.every((id) => facts.facts[id] === true) && resourcesComplete) return { facts, fresh };
     await delay(1_000);
   }
   throw new Error(`Windows C timed out during A rejoin: ${JSON.stringify(facts)}`);
