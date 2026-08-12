@@ -63,19 +63,18 @@ export async function runWindowsMultiDeviceSyncARejoin({ evidenceRoot, execute, 
   try {
     const initial = await inspect(execute, paths);
     const excluded = new Set(Object.keys(initial.journeyFacts ?? {}));
-    const ab = await withSession(paths, evidenceRoot, openSession, () => waitForFreshFacts(
-      execute, inspect, paths, excluded, ['A', 'B']
-    ));
-    const created = await withSession(paths, evidenceRoot, openSession, ({ page }) =>
-      createFact({ device: 'C', evidenceRoot, session: {
+    const continuous = await withSession(paths, evidenceRoot, openSession, async ({ page }) => {
+      const ab = await waitForFreshFacts(execute, inspect, paths, excluded, ['A', 'B']);
+      const created = await createFact({ device: 'C', evidenceRoot, session: {
         invoke: (command, args) => invoke(page, command, args)
-      } }));
-    const ids = { A: ab.fresh.A, B: ab.fresh.B, C: created.factId };
-    const converged = await withSession(paths, evidenceRoot, openSession, async () => {
+      } });
+      const ids = { A: ab.fresh.A, B: ab.fresh.B, C: created.factId };
       const value = (await waitForFreshFacts(execute, inspect, paths, excluded, ['A', 'B', 'C'],
         Object.values(ids))).facts;
-      assertComplete(value, ids); return value;
+      assertComplete(value, ids);
+      return { converged: value, ids };
     });
+    const { converged, ids } = continuous;
     const restarted = await withSession(paths, evidenceRoot, openSession, async () => {
       const value = (await waitForFreshFacts(execute, inspect, paths, excluded, ['A', 'B', 'C'],
         Object.values(ids))).facts;
