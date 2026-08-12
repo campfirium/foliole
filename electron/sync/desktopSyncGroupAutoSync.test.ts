@@ -72,7 +72,7 @@ it('continues the saved member sync when its provider advertises again', async (
   });
   await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
   expect(runtime.constructorOptions).toEqual([
-    { interface: '192.168.1.10' }, { interface: '10.0.0.10' }
+    undefined, { interface: '192.168.1.10' }, { interface: '10.0.0.10' }
   ]);
   expect(runtime.savePeer).toHaveBeenCalledWith(expect.objectContaining({
     endpoint_url: 'http://192.168.1.12:43121', peer_device_id: 'android-b'

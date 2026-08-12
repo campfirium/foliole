@@ -43,7 +43,7 @@ export function startDesktopSyncGroupAutoSync() {
     void syncAvailablePeer({ endpoint, groupId, peerDeviceId });
   };
   const addresses = resolveCompanionMdnsIpv4Addresses();
-  const interfaces = addresses.length > 0 ? addresses : [null];
+  const interfaces = [null, ...addresses];
   runtimes = interfaces.map((networkInterface) => {
     const options = networkInterface ? { interface: networkInterface } as BonjourOptions : undefined;
     const bonjour = new Bonjour(options);
