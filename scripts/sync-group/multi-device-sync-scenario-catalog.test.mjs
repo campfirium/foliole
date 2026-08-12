@@ -8,6 +8,9 @@ it('accepts only a complete ordered formal topology', () => {
   expect(resolveScenario('a-offline-b-admits-c').stages).toEqual([
     'candidate-preparation', 'a-b-group-sync', 'b-admit-empty-c'
   ]);
+  expect(resolveScenario('three-device-convergence').stages).toEqual([
+    'candidate-preparation', 'a-b-group-sync', 'b-admit-empty-c', 'a-rejoin'
+  ]);
   expect(() => assertScenarioTopology({
     stages: ['candidate-preparation', 'b-admit-empty-c']
   })).toThrow('requires a_b_group_active');

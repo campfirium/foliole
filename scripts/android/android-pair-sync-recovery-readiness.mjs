@@ -74,11 +74,16 @@ function journeyFacts(database) {
   if (!tableExists(database, 'nodes')) return {};
   const statement = database.prepare(`SELECT id,
       CASE
-        WHEN id GLOB 'multi-device-sync-a-*' THEN 'A'
-        WHEN id GLOB 'multi-device-sync-b-*' THEN 'B'
-        WHEN id GLOB 'multi-device-sync-c-*' THEN 'C'
+        WHEN id GLOB 'multi-device-sync-a-*' OR title GLOB 'Multi-device sync A fact*'
+          OR title GLOB 'T121 A fact *' THEN 'A'
+        WHEN id GLOB 'multi-device-sync-b-*' OR title GLOB 'Multi-device sync B fact*'
+          OR title GLOB 'T121 B fact *' THEN 'B'
+        WHEN id GLOB 'multi-device-sync-c-*' OR title GLOB 'Multi-device sync C fact*'
+          OR title GLOB 'T121 C fact *' THEN 'C'
       END AS origin
-    FROM nodes WHERE deleted_at IS NULL AND id GLOB 'multi-device-sync-[abc]-*'
+    FROM nodes WHERE deleted_at IS NULL AND (
+      id GLOB 'multi-device-sync-[abc]-*' OR title GLOB 'Multi-device sync [ABC] fact*'
+      OR title GLOB 'T121 [ABC] fact *')
     ORDER BY updated_at DESC`);
   if (typeof statement.all !== 'function') return {};
   const rows = statement.all();

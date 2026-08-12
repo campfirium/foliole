@@ -6,6 +6,9 @@ import { resolveStage } from './multi-device-sync-stage-catalog.mjs';
 const scenarios = [{
   name: 'a-offline-b-admits-c',
   stages: ['candidate-preparation', 'a-b-group-sync', 'b-admit-empty-c']
+}, {
+  name: 'three-device-convergence',
+  stages: ['candidate-preparation', 'a-b-group-sync', 'b-admit-empty-c', 'a-rejoin']
 }];
 
 function assertAcyclic(stages) {

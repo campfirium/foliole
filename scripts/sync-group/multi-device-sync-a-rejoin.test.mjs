@@ -2,7 +2,10 @@
 
 import { expect, it } from 'vitest';
 
-import { assertThreeDeviceProof } from './multi-device-sync-a-rejoin.mjs';
+import {
+  assertThreeDeviceProof,
+  restartARejoinAndroidProvider
+} from './multi-device-sync-a-rejoin.mjs';
 
 const ids = { A: 'fact-a', B: 'fact-b', C: 'fact-c' };
 const identities = { desktop: ['a', 'c'], mobile: ['b'] };
@@ -27,4 +30,19 @@ it('rejects a same-count member set that does not converge by device identity', 
   const divergent = { ...facts, activeDeviceIdentities: { desktop: ['a', 'x'], mobile: ['b'] } };
   expect(() => assertThreeDeviceProof({ android, ids, macos: facts, windows: divergent }))
     .toThrow('one complete three-member timeline');
+});
+
+it('ends the stale provider lifecycle before every staged Android restart', async () => {
+  const order = [];
+  await restartARejoinAndroidProvider({
+    env: {}, execute: async () => ({ code: 0 }), paths: { adb: 'adb' },
+    startProvider: async ({ onProviderStopped, onReady }) => {
+      await onProviderStopped();
+      order.push('started');
+      await onReady();
+      order.push('ready');
+    },
+    stopProvider: async () => { order.push('stopped'); }
+  });
+  expect(order).toEqual(['stopped', 'started', 'ready']);
 });

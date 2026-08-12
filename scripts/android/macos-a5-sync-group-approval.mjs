@@ -71,6 +71,12 @@ export async function startMacosA5SyncGroupApprovalProvider({
   await onReady();
 }
 
+export async function stopMacosA5SyncGroupApprovalProvider({ execute, paths, env }) {
+  requireSuccess(await execute(paths.adb, [
+    '-s', A5_SERIAL, 'shell', 'am', 'force-stop', APP_ID
+  ], { env, timeoutMs: 30_000 }), 'provider-stop');
+}
+
 export async function runMacosA5SyncGroupApproval({ execute, onProviderStopped = async () => {},
   onReady = async () => {}, prepare = build, repoRoot,
   allowControlledCancellation = false, instrumentationExecute = execute }) {

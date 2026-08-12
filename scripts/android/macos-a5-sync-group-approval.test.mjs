@@ -3,7 +3,8 @@ import { expect, it } from 'vitest';
 import {
   installedMainMatches,
   parseSyncGroupApprovalReceipt,
-  startMacosA5SyncGroupApprovalProvider
+  startMacosA5SyncGroupApprovalProvider,
+  stopMacosA5SyncGroupApprovalProvider
 } from './macos-a5-sync-group-approval.mjs';
 
 it('reuses an installed main APK only when its SHA-256 matches exactly', async () => {
@@ -57,4 +58,18 @@ it('opens transport after provider stop and starts the peer only after the produ
     paths: { adb: 'adb', repoRoot: '/repo' }
   });
   expect(order).toEqual(['transport', 'started', 'stable', 'peer']);
+});
+
+it('ends the previous provider lifecycle before a staged foreground restart', async () => {
+  const calls = [];
+  await stopMacosA5SyncGroupApprovalProvider({
+    env: {}, execute: async (command, args, options) => {
+      calls.push({ args, command, options });
+      return { code: 0, output: '' };
+    }, paths: { adb: 'adb' }
+  });
+  expect(calls).toEqual([{
+    args: ['-s', '87a33a4b', 'shell', 'am', 'force-stop', 'com.foliole.android'],
+    command: 'adb', options: { env: {}, timeoutMs: 30_000 }
+  }]);
 });

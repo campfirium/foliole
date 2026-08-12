@@ -7,7 +7,10 @@ import {
   identityFingerprint, inspectPairSyncRecoveryWorkspace
 } from '../android/android-pair-sync-recovery-readiness.mjs';
 import { macosA5GradleEnv, macosA5Paths, A5_SERIAL } from '../android/macos-a5-dev.mjs';
-import { startMacosA5SyncGroupApprovalProvider } from '../android/macos-a5-sync-group-approval.mjs';
+import {
+  startMacosA5SyncGroupApprovalProvider,
+  stopMacosA5SyncGroupApprovalProvider
+} from '../android/macos-a5-sync-group-approval.mjs';
 import { runMacosA5SyncGroupMaintenance } from '../android/macos-a5-sync-group-maintenance-action.mjs';
 import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desktop-session.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
@@ -33,11 +36,6 @@ async function waitUntil(label, inspect, accept, missingFact, progress = (value)
     await delay(1_000);
   }
   throw productFailure('all', missingFact, `${label} did not converge.`);
-}
-
-function freshIds(journeyFacts, excluded) {
-  return Object.entries(journeyFacts ?? {}).filter(([id]) => !excluded.has(id))
-    .reduce((result, [id, origin]) => ({ ...result, [origin]: id }), {});
 }
 
 function androidSnapshot(paths) {
@@ -86,6 +84,18 @@ function desktopMemberIdentities(facts) {
   return Object.values(facts.activeDeviceIdentities ?? {}).flat().sort();
 }
 
+export async function restartARejoinAndroidProvider({
+  env, execute, paths,
+  startProvider = startMacosA5SyncGroupApprovalProvider,
+  stopProvider = stopMacosA5SyncGroupApprovalProvider
+}) {
+  await startProvider({
+    env, execute,
+    onProviderStopped: () => stopProvider({ env, execute, paths }),
+    onReady: async () => {}, paths
+  });
+}
+
 export function assertThreeDeviceProof({ android, macos, windows, ids }) {
   const androidFacts = android.database?.inspection;
   const points = [macos, windows];
@@ -125,8 +135,7 @@ export async function proveARejoin({ execute, reportProgress, repoRoot, runId })
     action: 'windows-c-a-rejoin', cwd: repoRoot, host: 'windows-c', timeoutMs: 15 * 60_000
   }).then((value) => ({ value }), (error) => ({ error }));
   let windowsSettled = false;
-  await startMacosA5SyncGroupApprovalProvider({ env, execute, onProviderStopped: async () => {},
-    onReady: async () => {}, paths });
+  const restartProvider = () => restartARejoinAndroidProvider({ env, execute, paths });
   let session = await openMacosPairSyncDesktopSession({ libraryHome: path.join(owned.root, 'library'),
     repoRoot, userDataPath: path.join(owned.root, 'user-data') });
   try {
@@ -134,6 +143,7 @@ export async function proveARejoin({ execute, reportProgress, repoRoot, runId })
     if (enabled.server_status?.state !== 'running') throw productFailure('macos-a',
       'a_product_listener_unavailable', 'macOS A sync listener is unavailable.');
     reportProgress('a-listener-ready');
+    await restartProvider();
     await waitUntil('macOS A three-member convergence', async () =>
       (await session.load()).sync_group?.members.filter(({ state }) => state === 'active').length ?? 0,
     (value) => value === 3,
@@ -147,6 +157,7 @@ export async function proveARejoin({ execute, reportProgress, repoRoot, runId })
     reportProgress('a-fact-created');
     await createAndroidFact({ env, evidenceRoot, execute, paths, runId });
     reportProgress('b-fact-created');
+    await restartProvider();
     const windowsResult = await runWindows;
     windowsSettled = true;
     if (windowsResult.error) throw windowsResult.error;
@@ -157,9 +168,8 @@ export async function proveARejoin({ execute, reportProgress, repoRoot, runId })
       'windows_a_rejoin_fact_identity_mismatch', 'Windows C reported incomplete fresh facts.');
     await waitUntil('macOS A fresh fact convergence', async () => {
       const snapshot = await session.invoke('load_workspace_list_snapshot', { includePdfOpenings: false });
-      return freshIds(Object.fromEntries(Object.keys(snapshot.nodesById ?? {}).filter((id) =>
-        /^multi-device-sync-[abc]-/u.test(id)).map((id) => [id, id.split('-')[3]?.toUpperCase()])), excluded);
-    }, (value) => Object.values(ids).every((id) => Object.values(value).includes(id)),
+      return Object.keys(snapshot.nodesById ?? {}).filter((id) => !excluded.has(id));
+    }, (value) => Object.values(ids).every((id) => value.includes(id)),
     'three_facts_missing');
     await waitUntil('Android B fresh fact and resource convergence', () => androidSnapshot(paths),
       (value) => Object.values(ids).every((id) => value.database?.inspection?.journeyFacts?.[id])
@@ -175,9 +185,7 @@ export async function proveARejoin({ execute, reportProgress, repoRoot, runId })
       ]);
     reportProgress('three-facts-converged');
     await session.close(); session = null;
-    await startMacosA5SyncGroupApprovalProvider({ env, execute,
-      onProviderStopped: () => execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'force-stop', APP_ID],
-        { env, timeoutMs: 30_000 }), onReady: async () => {}, paths });
+    await restartProvider();
     session = await openMacosPairSyncDesktopSession({ libraryHome: path.join(owned.root, 'library'),
       repoRoot, userDataPath: path.join(owned.root, 'user-data') });
     const databasePath = path.join(owned.root, 'library', 'Data', 'foliole.db');
