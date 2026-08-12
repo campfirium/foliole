@@ -6,7 +6,10 @@ import {
   type CompanionSyncGroupDataRequest
 } from '../../../../../lib/platform/companionSyncGroupDataContract';
 import { allocateSyncGroupDeviceProfile } from '../../../../../lib/platform/syncGroupDeviceProfile';
-import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
+import {
+  runCompanionSyncControlWriterTask,
+  runCompanionSyncWriterTask
+} from '../../companionSyncWriterQueue';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
@@ -56,7 +59,7 @@ async function authorizeMember(payload: Record<string, unknown>) {
     const active = await owner.read((db) => hasActiveMember(db, groupId, deviceId));
     return { authorized: active, ...(active ? { device_id: deviceId, device_name: deviceId } : {}) };
   }
-  return runCompanionSyncWriterTask(() => owner.runWriter((db) => db.transaction(async (tx) => {
+  return runCompanionSyncControlWriterTask(() => owner.runWriter((db) => db.transaction(async (tx) => {
     const authorizationId = text(member.authorization_id);
     const existing = (await tx.query<DbRow>(
       `SELECT device_id, device_name FROM sync_group_members

@@ -1,6 +1,9 @@
 import { expect, it } from 'vitest';
 
-import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
+import {
+  runCompanionSyncControlWriterTask,
+  runCompanionSyncWriterTask
+} from './companionSyncWriterQueue';
 
 it('runs companion sync writer tasks one at a time', async () => {
   const events: string[] = [];
@@ -35,4 +38,22 @@ it('continues after a failed companion sync writer task', async () => {
   })).rejects.toThrow('boom');
 
   await expect(runCompanionSyncWriterTask(async () => 'next')).resolves.toBe('next');
+});
+
+it('runs a pending control write before queued data writes without interrupting the active writer', async () => {
+  const events: string[] = [];
+  let releaseFirst: () => void = () => undefined;
+  const gate = new Promise<void>((resolve) => { releaseFirst = resolve; });
+  const first = runCompanionSyncWriterTask(async () => {
+    events.push('data-active');
+    await gate;
+  });
+  const second = runCompanionSyncWriterTask(async () => { events.push('data-pending'); });
+  const control = runCompanionSyncControlWriterTask(async () => { events.push('control'); });
+
+  await vi.waitFor(() => expect(events).toEqual(['data-active']));
+  releaseFirst();
+  await Promise.all([first, second, control]);
+
+  expect(events).toEqual(['data-active', 'control', 'data-pending']);
 });

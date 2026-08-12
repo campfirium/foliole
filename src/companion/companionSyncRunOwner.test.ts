@@ -9,12 +9,14 @@ const syncObjectsMock = vi.hoisted(() => ({
   syncCompanionObjectsFromDesktop: vi.fn()
 }));
 const workspaceSyncMock = vi.hoisted(() => ({
+  bindCompanionWorkspaceSyncTarget: vi.fn(async () => undefined),
   loadCompanionReadableArticle: vi.fn(async () => null),
   loadCompanionWorkspaceSyncState: vi.fn(),
   persistCompanionWorkspaceSnapshot: vi.fn(),
   recordCompanionWorkspaceSyncEvent: vi.fn(),
   removeCompanionWorkspaceSyncRememberedTarget: vi.fn(),
   resolveReachableCompanionWorkspaceSyncEndpoint: vi.fn(async (endpointUrl: string) => endpointUrl),
+  resolveReachableCompanionWorkspaceSyncEndpoints: vi.fn(async (endpointUrl: string) => [{ endpointUrl }]),
   saveCompanionSyncOnboardingStatus: vi.fn(),
   saveCompanionWorkspaceSyncEndpoint: vi.fn()
 }));
@@ -125,6 +127,9 @@ describe('companion sync run owner', () => {
     workspaceSyncMock.recordCompanionWorkspaceSyncEvent.mockResolvedValue(syncState());
     workspaceSyncMock.loadCompanionWorkspaceSyncState.mockResolvedValue(syncState());
     workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoint.mockImplementation(async (endpointUrl: string) => endpointUrl);
+    workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoints.mockImplementation(
+      async (endpointUrl: string) => [{ endpointUrl }]
+    );
   });
 
   it('lets manual sync wait for an active auto run without writing activity', async () => {

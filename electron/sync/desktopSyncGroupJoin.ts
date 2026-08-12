@@ -213,6 +213,9 @@ function scheduleJoinCompletion() {
     void execute().catch(async (error) => {
       const pending = loadDesktopSyncGroupJoinState().pending;
       if (!pending) return;
+      console.info('[sync-group] join completion waiting', {
+        error: error instanceof Error ? error.message : String(error)
+      });
       if (error instanceof Error && error.message === 'pair_request_rejected') {
         saveDesktopSyncGroupPendingJoin(null);
         return;

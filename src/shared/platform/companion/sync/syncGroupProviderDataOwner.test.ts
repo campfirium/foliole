@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   query: vi.fn(),
   resolve: vi.fn(),
   run: vi.fn(),
+  controlWriter: vi.fn(),
   writer: vi.fn()
 }));
 
@@ -18,6 +19,7 @@ vi.mock('../../companionWorkspaceRuntimeRepository', () => ({
   }
 }));
 vi.mock('../../companionSyncWriterQueue', () => ({
+  runCompanionSyncControlWriterTask: mocks.controlWriter,
   runCompanionSyncWriterTask: mocks.writer
 }));
 vi.mock('../runtime/iosCompanionDatabaseBootstrap', () => ({
@@ -36,6 +38,7 @@ beforeEach(async () => {
   mocks.query.mockReset();
   mocks.resolve.mockReset().mockResolvedValue(undefined);
   mocks.run.mockReset().mockResolvedValue({ changes: 0, lastInsertRowId: null });
+  mocks.controlWriter.mockReset().mockImplementation((task: () => Promise<unknown>) => task());
   mocks.writer.mockReset().mockImplementation((task: () => Promise<unknown>) => task());
   await ensureCompanionSyncGroupDataOwner();
 });
@@ -87,6 +90,8 @@ it('allocates the smallest unused member profile inside the writer transaction',
     request_id: 'request-3'
   });
   await vi.waitFor(() => expect(mocks.resolve).toHaveBeenCalled());
+  expect(mocks.controlWriter).toHaveBeenCalledOnce();
+  expect(mocks.writer).not.toHaveBeenCalled();
   expect(mocks.run).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO sync_group_members'), [
     'group-1', 'Maci 3', 'darwin', 'Maci 3', 'Maci', 'request-3',
     '2026-08-12T00:00:00.000Z', expect.any(String)
