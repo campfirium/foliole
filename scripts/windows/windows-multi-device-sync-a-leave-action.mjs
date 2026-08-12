@@ -74,20 +74,22 @@ async function runContinuousSession(options, initial) {
     const created = await createFact({ device: 'C', evidenceRoot, session: {
       invoke: (command, args) => invoke(page, command, args)
     }, withAttachment: true });
-    const converged = await inspectUntil({ execute, inspect,
+    const discovered = await inspectUntil({ execute, inspect,
       accept: (facts) => {
         const fresh = factIdsSince(facts, departure.formerLeftAt);
-        const ids = [fresh.B, created.factId].filter(Boolean);
-        try {
-          assertWindowsSurvivorState({ facts, initial, ids });
-          return fresh.B && fresh.C === created.factId;
-        } catch { return false; }
+        return Boolean(fresh.B && fresh.C === created.factId);
+      }, label: 'Windows C survivor fact identities', paths,
+      progress: { value: (facts) => factIdsSince(facts, departure.formerLeftAt) } });
+    const fresh = factIdsSince(discovered, departure.formerLeftAt);
+    const ids = { B: fresh.B, C: created.factId };
+    const converged = await inspectUntil({ execute, inspect,
+      accept: (facts) => {
+        try { assertWindowsSurvivorState({ facts, initial, ids: Object.values(ids) }); return true; }
+        catch { return false; }
       }, label: 'Windows C survivor convergence', paths,
-      progress: { value: (facts) => [facts.activeMemberCount,
-        factIdsSince(facts, departure.formerLeftAt),
+      progress: { factIds: Object.values(ids), value: (facts) => [facts.activeMemberCount, facts.facts,
         facts.missingAttachmentCount, facts.missingContentBlobCount] } });
-    const fresh = factIdsSince(converged, departure.formerLeftAt);
-    return { converged, departed, ids: { B: fresh.B, C: created.factId } };
+    return { converged, departed, ids };
   });
 }
 

@@ -36,8 +36,10 @@ it('creates C after departure and records restarted B/C convergence', async () =
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-a-leave-'));
   const inspect = vi.fn()
     .mockResolvedValueOnce(initial)
-    .mockResolvedValueOnce(survivor)
-    .mockResolvedValue(survivor);
+    .mockImplementation(async (_execute, _paths, _databasePath, factIds = []) => ({
+      ...survivor,
+      facts: Object.fromEntries(factIds.map((id) => [id, true]))
+    }));
   const close = vi.fn(async () => {});
   const createFact = vi.fn(async () => ({ factId: 'fact-c' }));
   const result = await runWindowsMultiDeviceSyncALeave({ evidenceRoot: root,
@@ -49,6 +51,8 @@ it('creates C after departure and records restarted B/C convergence', async () =
   expect(receipt).toMatchObject({ factIds: { B: 'fact-b', C: 'fact-c' },
     proof: { formerDeviceIdentity: 'a' }, restarted: { activeMemberCount: 2 } });
   expect(createFact).toHaveBeenCalledWith(expect.objectContaining({ device: 'C', withAttachment: true }));
+  expect(inspect).toHaveBeenNthCalledWith(4, expect.anything(), expect.anything(), undefined,
+    ['fact-b', 'fact-c']);
   expect(close).toHaveBeenCalledTimes(2);
   fs.rmSync(root, { force: true, recursive: true });
 });
