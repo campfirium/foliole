@@ -62,6 +62,15 @@ final class FolioleCompanionSyncGroupOutboundPeerStore {
         }
     }
 
+    static boolean contains(Context context, String groupId, String peerDeviceId) throws Exception {
+        String normalizedPeerId = peerDeviceId.trim();
+        String encoded = prefs(context).getString(normalizedPeerId, null);
+        if (encoded == null) return false;
+        JSONObject peer = new JSONObject(decrypt(encoded));
+        return groupId.trim().equals(peer.optString("group_id"))
+            && normalizedPeerId.equals(peer.optString("peer_device_id"));
+    }
+
     static void clear(Context context) {
         if (!prefs(context).edit().clear().commit()) {
             throw new IllegalStateException("Failed to clear Sync Group outbound peers.");

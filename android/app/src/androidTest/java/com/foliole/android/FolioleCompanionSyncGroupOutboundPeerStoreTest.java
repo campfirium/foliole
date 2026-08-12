@@ -1,9 +1,11 @@
 package com.foliole.android;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
 
@@ -39,6 +41,9 @@ public class FolioleCompanionSyncGroupOutboundPeerStoreTest {
         FolioleCompanionSyncGroupOutboundPeerStore.save(
             context, "group-1", "mobile-b", "desktop-c", "http://10.0.0.3:38641/", "secret-c");
 
+        assertTrue(FolioleCompanionSyncGroupOutboundPeerStore.contains(context, "group-1", "desktop-a"));
+        assertTrue(FolioleCompanionSyncGroupOutboundPeerStore.contains(context, "group-1", "desktop-c"));
+        assertFalse(FolioleCompanionSyncGroupOutboundPeerStore.contains(context, "group-2", "desktop-c"));
         JSObject signedA = sign("http://10.0.0.1:38641");
         JSObject signedC = sign("http://10.0.0.3:38641");
         assertEquals("mobile-b", signedA.getJSObject("headers").getString("X-Device-Id"));

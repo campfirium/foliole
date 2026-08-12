@@ -215,6 +215,11 @@ final class FolioleCompanionSyncGroupProvider {
         return activeConfig == null ? "" : activeConfig.optString("runtime_instance_id");
     }
 
+    static synchronized String activeGroupId() {
+        JSONObject group = activeConfig == null ? null : activeConfig.optJSONObject("sync_group");
+        return group == null ? "" : group.optString("group_id");
+    }
+
     static void resolveDataRequest(JSONObject response) throws Exception {
         requireDataBridge().resolve(response);
     }

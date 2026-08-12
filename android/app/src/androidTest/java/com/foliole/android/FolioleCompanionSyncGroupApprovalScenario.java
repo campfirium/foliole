@@ -28,7 +28,7 @@ final class FolioleCompanionSyncGroupApprovalScenario {
         FolioleCompanionPairSyncRecoveryScenario.clickVisible(
             instrumentation, webView, "companion-sync-group-approve", deadline
         );
-        waitForPairingPromotion(instrumentation.getTargetContext(), joiningDeviceId, deadline);
+        waitForPeerCredential(instrumentation.getTargetContext(), joiningDeviceId, deadline);
         return new JSONObject().put("ok", true).put("targetTestId", "sync-group-approval")
             .put("approved", true).put("foreground", true);
     }
@@ -103,13 +103,13 @@ final class FolioleCompanionSyncGroupApprovalScenario {
         return requests.getJSONObject(0).getString("device_id");
     }
 
-    private static void waitForPairingPromotion(Context context, String deviceId, long deadline) throws Exception {
-        String peerKey = FolioleCompanionPairingPeerContractDefinitions.remotePeerIdStateKey(context);
+    private static void waitForPeerCredential(Context context, String deviceId, long deadline) throws Exception {
+        String groupId = FolioleCompanionSyncGroupProvider.activeGroupId();
         while (System.nanoTime() < deadline) {
-            if (deviceId.equals(FolioleCompanionPairingStore.loadPairingState(context).optString(peerKey))) return;
+            if (FolioleCompanionSyncGroupOutboundPeerStore.contains(context, groupId, deviceId)) return;
             Thread.sleep(100);
         }
-        throw new IllegalStateException("Approved Device did not become the current Sync peer.");
+        throw new IllegalStateException("Approved Device peer credential was not persisted.");
     }
 
     private static Activity start(Instrumentation instrumentation) {
