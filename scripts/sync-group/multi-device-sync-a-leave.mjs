@@ -129,9 +129,6 @@ async function runWindowsContinuity(context, before) {
     (value) => matchesAndroidSurvivorState(value, expected),
     (value) => value.database?.inspection);
   reportProgress('b-two-members-active');
-  await createAndroidFact({ env, evidenceRoot, execute, paths, runId });
-  reportProgress('b-fact-created');
-  await restartARejoinAndroidProvider({ env, execute, paths });
   const beforeWindows = await androidSnapshot(paths);
   const knownCFacts = new Set(Object.entries(beforeWindows.database?.inspection?.journeyFacts ?? {})
     .filter(([, origin]) => origin === 'C').map(([id]) => id));
@@ -139,6 +136,9 @@ async function runWindowsContinuity(context, before) {
     ['scripts/windows/windows-dev-control.mjs', 'multi-device-sync-a-leave'], {
     action: 'windows-c-a-leave', cwd: repoRoot, host: 'windows-c', timeoutMs: 15 * 60_000
   });
+  await createAndroidFact({ env, evidenceRoot, execute, paths, runId });
+  reportProgress('b-fact-created');
+  await restartARejoinAndroidProvider({ env, execute, paths });
   const cObserved = waitUntil('Android B receives the new C fact', () => androidSnapshot(paths),
     (value) => Object.entries(value.database?.inspection?.journeyFacts ?? {})
       .some(([id, origin]) => origin === 'C' && !knownCFacts.has(id)),
