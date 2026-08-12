@@ -46,6 +46,16 @@ function journeyFactUpdates(database) {
   return Object.fromEntries(rows.map(({ id, updated_at }) => [id, updated_at]));
 }
 
+function storedDesktopDeviceIdentity(database) {
+  const row = database.prepare(`SELECT value FROM settings
+    WHERE key IN ('device_id', 'desktop_device_id')
+    ORDER BY CASE key WHEN 'device_id' THEN 0 ELSE 1 END LIMIT 1`).get();
+  if (typeof row?.value !== 'string') return null;
+  let value = row.value;
+  try { value = JSON.parse(value); } catch { /* legacy settings may store plain text */ }
+  return typeof value === 'string' && value.trim() ? identityFingerprint(value.trim()) : null;
+}
+
 export function inspectSyncGroupRecoveryDatabase(databasePath, factIds = []) {
   const db = new BetterSqlite3(databasePath, { fileMustExist: true, readonly: true });
   try {
@@ -64,7 +74,7 @@ export function inspectSyncGroupRecoveryDatabase(databasePath, factIds = []) {
       contentBlobCount: count('SELECT COUNT(*) FROM content_blobs'),
       departedAtByDeviceIdentity: departedAtByDeviceIdentity(db),
       departedDeviceIdentities: departedDeviceIdentities(db),
-      deviceIdentity: identity.deviceIdentityFingerprint,
+      deviceIdentity: storedDesktopDeviceIdentity(db) ?? identity.deviceIdentityFingerprint,
       integrity: db.prepare('PRAGMA integrity_check').pluck().get(),
       journeyFacts: identity.journeyFacts,
       journeyFactUpdates: journeyFactUpdates(db),
