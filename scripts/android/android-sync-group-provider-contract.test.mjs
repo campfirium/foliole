@@ -61,6 +61,13 @@ it('serializes Android NSD resolution so one active resolve cannot hide another 
   expect(addresses).toContain('if (isIpv4(candidate)) result.add(candidate)');
 });
 
+it('releases the Android NSD queue when a platform resolve callback never arrives', async () => {
+  const monitor = await readJava('FolioleCompanionNsdMonitor.java');
+  expect(monitor).toContain('handler.postDelayed(resolutionTimeout, RESOLVE_TIMEOUT_MS)');
+  expect(monitor).toMatch(/finishResolution[\s\S]*generation != resolutionGeneration[\s\S]*resolveNext\(\)/u);
+  expect(monitor).toMatch(/void stop\(\)[\s\S]*resolutionGeneration \+= 1[\s\S]*resolving = false/u);
+});
+
 it('waits for Android NSD unregistration before publishing a newer fact revision', async () => {
   const advertisement = await readJava('FolioleCompanionNsdAdvertisement.java');
   const provider = await readJava('FolioleCompanionSyncGroupProvider.java');

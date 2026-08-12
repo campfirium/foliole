@@ -3,6 +3,8 @@ package com.foliole.android;
 import android.content.Context;
 import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
+import android.os.Handler;
+import android.os.Looper;
 
 import com.getcapacitor.JSObject;
 
@@ -13,11 +15,15 @@ import java.util.Deque;
 final class FolioleCompanionNsdMonitor {
     interface HintListener { void onServiceHint(JSObject hint); }
 
+    private static final long RESOLVE_TIMEOUT_MS = 3_000;
     private final Context context;
+    private final Handler handler = new Handler(Looper.getMainLooper());
     private final NsdManager manager;
     private final HintListener onServiceHint;
     private final String serviceType;
     private final Deque<NsdServiceInfo> pendingResolutions = new ArrayDeque<>();
+    private long resolutionGeneration;
+    private Runnable resolutionTimeout;
     private boolean resolving;
     private boolean started;
 
@@ -53,20 +59,30 @@ final class FolioleCompanionNsdMonitor {
     private synchronized void resolveNext() {
         NsdServiceInfo service = pendingResolutions.pollFirst();
         if (service == null) { resolving = false; return; }
+        long generation = ++resolutionGeneration;
+        resolutionTimeout = () -> finishResolution(generation, null);
+        handler.postDelayed(resolutionTimeout, RESOLVE_TIMEOUT_MS);
         try {
             manager.resolveService(service, new NsdManager.ResolveListener() {
                 @Override public void onResolveFailed(NsdServiceInfo ignored, int errorCode) {
-                    resolveNext();
+                    finishResolution(generation, null);
                 }
 
                 @Override public void onServiceResolved(NsdServiceInfo resolved) {
-                    if (started) emitRemoteServiceHint(resolved);
-                    resolveNext();
+                    finishResolution(generation, resolved);
                 }
             });
         } catch (IllegalArgumentException ignored) {
-            resolveNext();
+            finishResolution(generation, null);
         }
+    }
+
+    private synchronized void finishResolution(long generation, NsdServiceInfo resolved) {
+        if (generation != resolutionGeneration) return;
+        if (resolutionTimeout != null) handler.removeCallbacks(resolutionTimeout);
+        resolutionTimeout = null;
+        if (started && resolved != null) emitRemoteServiceHint(resolved);
+        resolveNext();
     }
 
     private void emitRemoteServiceHint(NsdServiceInfo service) {
@@ -110,6 +126,10 @@ final class FolioleCompanionNsdMonitor {
         if (!started || manager == null) return;
         started = false;
         pendingResolutions.clear();
+        resolutionGeneration += 1;
+        resolving = false;
+        if (resolutionTimeout != null) handler.removeCallbacks(resolutionTimeout);
+        resolutionTimeout = null;
         try {
             manager.stopServiceDiscovery(listener);
         } catch (IllegalArgumentException ignored) {
