@@ -2,6 +2,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 const runtime = vi.hoisted(() => ({
   callback: null as null | ((service: unknown) => void),
+  updateCallbacks: new Map<string, (service: unknown) => void>(),
   completeJoin: vi.fn(),
   continueSync: vi.fn(),
   destroy: vi.fn(),
@@ -23,7 +24,12 @@ vi.mock('bonjour-service', () => ({
     destroy = runtime.destroy;
     find(_query: unknown, callback: (service: unknown) => void) {
       runtime.callback = callback;
-      return { stop: runtime.stop };
+      return {
+        on: (event: string, handler: (service: unknown) => void) => {
+          runtime.updateCallbacks.set(event, handler);
+        },
+        stop: runtime.stop
+      };
     }
   }
 }));
@@ -46,6 +52,7 @@ beforeEach(() => {
   stopDesktopSyncGroupAutoSync();
   vi.clearAllMocks();
   runtime.callback = null;
+  runtime.updateCallbacks.clear();
   runtime.completeJoin.mockResolvedValue({ group_id: 'group-1' });
   runtime.continueSync.mockResolvedValue({ complete: true, cursor: 9 });
   runtime.refreshPending.mockReturnValue(false);
@@ -97,4 +104,14 @@ it('retries the latest advertisement after an interrupted peer sync settles', as
   expect(runtime.savePeer).toHaveBeenLastCalledWith(expect.objectContaining({
     endpoint_url: 'http://192.168.1.12:43122'
   }));
+});
+
+it('continues sync when an existing service publishes a newer facts revision', async () => {
+  startDesktopSyncGroupAutoSync();
+  runtime.updateCallbacks.get('txt-update')?.({
+    addresses: ['192.168.1.12'], port: 43121,
+    txt: { facts_revision: '2', group_id: 'group-1', peer_id: 'android-b' }
+  });
+
+  await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
 });

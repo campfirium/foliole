@@ -18,7 +18,7 @@ export function startDesktopSyncGroupAutoSync() {
   if (bonjour) return;
   const nextBonjour = new Bonjour();
   bonjour = nextBonjour;
-  browser = nextBonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, (service) => {
+  const handleService = (service: Parameters<NonNullable<Parameters<typeof nextBonjour.find>[1]>>[0]) => {
     const endpoint = endpointForService(service);
     const txt = service.txt as Record<string, unknown>;
     const groupId = typeof txt.group_id === 'string' ? txt.group_id : null;
@@ -36,7 +36,10 @@ export function startDesktopSyncGroupAutoSync() {
       return;
     }
     void syncAvailablePeer({ endpoint, groupId, peerDeviceId });
-  });
+  };
+  browser = nextBonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, handleService);
+  browser.on('txt-update', handleService);
+  browser.on('srv-update', handleService);
 }
 
 export function stopDesktopSyncGroupAutoSync() {
