@@ -115,3 +115,13 @@ it('continues sync when an existing service publishes a newer facts revision', a
 
   await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
 });
+
+it('uses service withdrawal as a final fact-change hint while the authenticated endpoint remains available', async () => {
+  startDesktopSyncGroupAutoSync();
+  runtime.updateCallbacks.get('down')?.({
+    addresses: ['192.168.1.12'], port: 43121,
+    txt: { group_id: 'group-1', peer_id: 'android-b' }
+  });
+
+  await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
+});

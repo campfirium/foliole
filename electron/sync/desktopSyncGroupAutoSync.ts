@@ -38,6 +38,7 @@ export function startDesktopSyncGroupAutoSync() {
     void syncAvailablePeer({ endpoint, groupId, peerDeviceId });
   };
   browser = nextBonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, handleService);
+  browser.on('down', handleService);
   browser.on('txt-update', handleService);
   browser.on('srv-update', handleService);
 }
