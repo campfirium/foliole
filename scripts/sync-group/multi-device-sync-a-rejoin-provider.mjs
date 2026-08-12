@@ -2,13 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {
-  WINDOWS_DEV_DEFAULT_SSH, windowsDevScpSpec
-} from '../windows/windows-dev-control.mjs';
+  WINDOWS_SYNC_GROUP_PROVIDER_RELEASE_ACTIONS
+} from '../windows/windows-sync-group-provider-release-control.mjs';
 
 /* global process */
-
-const REMOTE_RELEASE_PATH = 'C:/dev/foliole-android-lab-preview/.tmp/'
-  + 'windows-sync-group-interactive/provider-release.json';
 
 function controllerFailure(message, missingFact) {
   return Object.assign(new Error(message), {
@@ -38,7 +35,7 @@ export function freshJourneyFactIds(journeyFacts, excluded) {
   return result;
 }
 
-export function startWindowsARejoinProvider({ evidenceRoot, execute, repoRoot }) {
+export function startWindowsARejoinProvider({ execute, repoRoot }) {
   const work = execute(process.execPath,
     ['scripts/windows/windows-dev-control.mjs', 'multi-device-sync-a-rejoin'], {
     action: 'windows-c-a-rejoin', cwd: repoRoot, host: 'windows-c', timeoutMs: 15 * 60_000
@@ -46,16 +43,14 @@ export function startWindowsARejoinProvider({ evidenceRoot, execute, repoRoot })
   let releaseSent = false;
   const release = async (status) => {
     if (releaseSent) return;
-    const releasePath = path.join(evidenceRoot, 'windows-provider-release.json');
-    fs.writeFileSync(releasePath, `${JSON.stringify({
-      action: 'multi-device-sync-a-rejoin', schemaVersion: 1, status
-    }, null, 2)}\n`, 'utf8');
-    const host = process.env.FOLIOLE_WINDOWS_DEV_SSH || WINDOWS_DEV_DEFAULT_SSH;
-    const copied = await execute('scp', windowsDevScpSpec(host, releasePath, REMOTE_RELEASE_PATH), {
+    const action = WINDOWS_SYNC_GROUP_PROVIDER_RELEASE_ACTIONS[status];
+    if (!action) throw controllerFailure('Windows C provider release status is invalid.',
+      'windows_provider_release_status_invalid');
+    const released = await execute(process.execPath, ['scripts/windows/windows-dev-control.mjs', action], {
       action: 'windows-c-provider-release', cwd: repoRoot, host: 'windows-c', timeoutMs: 30_000
     });
-    if (copied.code !== 0) throw controllerFailure('Windows C provider release transfer failed.',
-      'windows_provider_release_transfer_failed');
+    if (released.code !== 0) throw controllerFailure('Windows C provider release action failed.',
+      'windows_provider_release_action_failed');
     releaseSent = true;
   };
   const finish = async () => {

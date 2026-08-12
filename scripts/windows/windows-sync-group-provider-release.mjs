@@ -1,14 +1,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { readJson, syncGroupInteractivePaths } from './windows-sync-group-interactive-state.mjs';
+import {
+  readJson, syncGroupInteractivePaths, validateSyncGroupInteractiveRequest
+} from './windows-sync-group-interactive-state.mjs';
 
 /* global clearTimeout, setTimeout */
 
 const RELEASE_TIMEOUT_MS = 12 * 60_000;
 
-function validateRelease(value, action) {
+function validateRelease(value, action, nonce) {
   if (value?.schemaVersion !== 1 || value.action !== action
+      || value.nonce !== nonce
       || !['cancelled', 'consumer_complete'].includes(value.status)) {
     throw new Error('invalid Sync Group provider release');
   }
@@ -18,7 +21,10 @@ function validateRelease(value, action) {
 export function waitForWindowsSyncGroupProviderRelease({
   action, repoRoot, timeoutMs = RELEASE_TIMEOUT_MS
 }) {
-  const releasePath = syncGroupInteractivePaths(repoRoot).providerRelease;
+  const paths = syncGroupInteractivePaths(repoRoot);
+  const request = validateSyncGroupInteractiveRequest(readJson(paths.request), repoRoot);
+  if (request.action !== action) throw new Error('Sync Group provider request action mismatch.');
+  const releasePath = paths.providerRelease;
   return new Promise((resolve, reject) => {
     let settled = false;
     const finish = (error, value) => {
@@ -34,7 +40,7 @@ export function waitForWindowsSyncGroupProviderRelease({
       try { value = readJson(releasePath); } catch { return; }
       if (!value) return;
       try {
-        const release = validateRelease(value, action);
+        const release = validateRelease(value, action, request.nonce);
         if (release.status === 'cancelled') {
           finish(new Error('Sync Group provider release was cancelled.'));
         } else finish(null, release);

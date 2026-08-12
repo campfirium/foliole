@@ -1,4 +1,5 @@
 // @vitest-environment node
+/* global process */
 
 import fs from 'node:fs';
 import os from 'node:os';
@@ -24,7 +25,7 @@ it('releases the fixed Windows provider only after consumer completion', async (
   fs.writeFileSync(path.join(remoteRoot, 'multi-device-sync-a-rejoin-receipt.json'),
     JSON.stringify({ factIds: { A: 'a', B: 'b', C: 'c' } }), 'utf8');
   let finishWindows;
-  const execute = vi.fn((command) => command === 'scp'
+  const execute = vi.fn((_command, args) => args.at(-1) === 'multi-device-sync-provider-complete'
     ? Promise.resolve({ code: 0 })
     : new Promise((resolve) => { finishWindows = () => resolve({
       code: 0, output: '[windows-dev-action] multi-device-sync-a-rejoin identity=run-1\n'
@@ -33,9 +34,9 @@ it('releases the fixed Windows provider only after consumer completion', async (
   await provider.release('consumer_complete');
   finishWindows();
   await expect(provider.finish()).resolves.toMatchObject({ receipt: { factIds: { C: 'c' } } });
-  expect(execute).toHaveBeenCalledWith('scp', expect.arrayContaining([
-    expect.stringContaining('provider-release.json')
-  ]), expect.objectContaining({ action: 'windows-c-provider-release' }));
+  expect(execute).toHaveBeenCalledWith(process.execPath, [
+    'scripts/windows/windows-dev-control.mjs', 'multi-device-sync-provider-complete'
+  ], expect.objectContaining({ action: 'windows-c-provider-release' }));
 });
 
 it('derives one fresh identity per device without reusing the prior journey', () => {

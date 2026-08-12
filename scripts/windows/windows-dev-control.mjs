@@ -17,6 +17,9 @@ import {
   parseWindowsDevLiveEvidence, parseWindowsDevPairSyncRecoveryEvidence
 } from './windows-dev-control-evidence.mjs';
 import { runWindowsSyncGroupControl } from './windows-sync-group-control-router.mjs';
+import {
+  isWindowsSyncGroupProviderReleaseAction, WINDOWS_SYNC_GROUP_PROVIDER_RELEASE_ACTIONS
+} from './windows-sync-group-provider-release-control.mjs';
 import { copyWindowsDeviceProfileEvidence } from './windows-device-profile-control.mjs';
 
 export {
@@ -30,7 +33,8 @@ export const WINDOWS_DEV_DEFAULT_SSH = 'zephu@192.168.0.11';
 export const WINDOWS_DEV_ACTIONS = [
   'appearance', 'build', 'capture-annotation', 'deploy', 'device-profile', 'live', 'pair-sync-recover', 'secondary',
   'multi-device-sync-a-leave', 'multi-device-sync-a-rejoin', 'multi-device-sync-c',
-  'multi-device-sync-candidate', 'verify'
+  'multi-device-sync-candidate', ...Object.values(WINDOWS_SYNC_GROUP_PROVIDER_RELEASE_ACTIONS),
+  'verify'
 ];
 const WINDOWS_DEV_REMOTE_ACTION = 'C:/dev/foliole-android-lab-preview/scripts/windows/windows-dev-action.ps1';
 const CAPTURE_ANNOTATION_FILES = [...CAPTURE_ANNOTATION_EVIDENCE_FILES, 'summary.json'];
@@ -119,6 +123,11 @@ export async function runWindowsDevControl({
   repoRoot = process.cwd(), stdout = process.stdout
 } = {}) {
   const { action, host } = parseWindowsDevControlArgs(argv, env);
+  if (isWindowsSyncGroupProviderReleaseAction(action)) {
+    const output = await executeSsh(windowsDevSshSpec(host, action, env), { env });
+    if (output) stdout.write(output);
+    return { action, operation: 'provider-release', ref: WINDOWS_DEV_SOURCE_REF };
+  }
   const syncGroup = runWindowsSyncGroupControl(action, {
     buildPushSpec: windowsDevPushSpec, buildScpSpec: windowsDevScpSpec,
     buildSshSpec: windowsDevSshSpec, env, executeGit, executeScp, executeSsh, fsApi,

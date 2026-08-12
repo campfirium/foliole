@@ -36,6 +36,8 @@ it('uses the fixed Windows DEV host and accepts only fixed actions', () => {
     .toMatchObject({ action: 'multi-device-sync-a-rejoin' });
   expect(parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'multi-device-sync-a-leave'], {}))
     .toMatchObject({ action: 'multi-device-sync-a-leave' });
+  expect(parseWindowsDevControlArgs(['multi-device-sync-provider-complete'], {}))
+    .toMatchObject({ action: 'multi-device-sync-provider-complete' });
   expect(() => parseWindowsDevControlArgs(['sync-group-recover'], {}))
     .toThrow('only accepts a registered fixed action');
   expect(parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'secondary'], {}))

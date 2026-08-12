@@ -8,12 +8,23 @@ $ErrorActionPreference = "Stop"
 $systemNode = "C:\Program Files\nodejs\node.exe"
 $puller = Join-Path $PSScriptRoot "windows-dev-pull.mjs"
 $runner = Join-Path $PSScriptRoot "windows-dev-build.mjs"
+$releaseRunner = Join-Path $PSScriptRoot "windows-sync-group-provider-release-control.mjs"
 $lockPath = Join-Path $env:LOCALAPPDATA "Foliole\windows-dev-control\build.lock"
 $lockDirectory = Split-Path -Parent $lockPath
 
 if (-not (Test-Path -LiteralPath $systemNode -PathType Leaf)) {
   [Console]::Error.WriteLine("System Node is missing at $systemNode")
   exit 64
+}
+
+$releaseStatus = switch ($Action) {
+  "multi-device-sync-provider-complete" { "consumer_complete" }
+  "multi-device-sync-provider-cancel" { "cancelled" }
+  default { $null }
+}
+if ($null -ne $releaseStatus) {
+  & $systemNode $releaseRunner $releaseStatus
+  exit $LASTEXITCODE
 }
 
 New-Item -ItemType Directory -Force -Path $lockDirectory | Out-Null
