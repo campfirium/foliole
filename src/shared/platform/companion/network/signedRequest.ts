@@ -37,8 +37,7 @@ export async function createSignedRequestHeaders(args: {
   const nonce = createCompanionUuid();
   const bodyHash = await sha256Hex(args.bodyText ?? '');
   if (isNativeCompanionPairingRuntime()) {
-    const pairing = normalizePairingState(await FolioleCompanionSync.loadPairingState());
-    const group = pairing.device_kind === 'android-capacitor' ? await loadCompanionSyncGroup() : null;
+    const group = await loadCompanionSyncGroup();
     if (group && !args.endpointUrl) throw new Error('Sync Group request target is required.');
     const result = await FolioleCompanionSync.signCompanionSyncRequest({
       body_hash: bodyHash, method: args.method, nonce, path_with_query: args.pathWithQuery, timestamp,

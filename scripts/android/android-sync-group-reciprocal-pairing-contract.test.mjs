@@ -30,8 +30,8 @@ it('persists reciprocal credentials for authenticated requests in both Android r
   expect(actions).toContain('FolioleCompanionSyncGroupPeerStore.saveSecret(context, primaryDeviceId, providerDeviceSecret);');
   expect(peerStore).toContain('static void saveSecret(Context context, String deviceId, String encodedSecret)');
   expect(server).toContain('FolioleCompanionSyncGroupOutboundPairing.save(');
-  expect(outbound).toContain('FolioleCompanionPairingStore.savePairingCredentials(');
-  expect(outbound).toContain('pending.deviceName, pending.deviceKind, remoteProtocol');
+  expect(outbound).not.toContain('FolioleCompanionPairingStore.savePairingCredentials(');
+  expect(outbound).toContain('FolioleCompanionSyncGroupOutboundPeerStore.save(');
   expect(outbound).toContain('FolioleCompanionSyncGroupDatabase.saveSyncEndpoint(dataBridge, endpointUrl, now)');
   expect(JSON.parse(contract).pairingPlugin.credentialRequestKeys.providerDeviceSecret)
     .toBe('provider_device_secret');

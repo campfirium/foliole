@@ -39,6 +39,20 @@ it('routes a Sync Group request to the exact native peer endpoint', async () => 
   }));
 });
 
+it('uses the persistent Sync Group even when legacy pairing metadata names the latest remote host', async () => {
+  nativeMock.loadPairingState.mockResolvedValue({
+    device_id: 'mobile-b', device_kind: 'win32', is_paired: true, remote_peer_id: 'desktop-c'
+  });
+
+  await createSignedRequestHeaders({
+    endpointUrl: 'http://192.168.0.10:38641', method: 'GET', pathWithQuery: '/companion/sync-pack'
+  });
+
+  expect(nativeMock.signCompanionSyncRequest).toHaveBeenCalledWith(expect.objectContaining({
+    endpoint_url: 'http://192.168.0.10:38641', sync_group_id: 'group-1'
+  }));
+});
+
 it('rejects an ambiguous target before asking the native peer store to sign', async () => {
   await expect(createSignedRequestHeaders({
     method: 'GET', pathWithQuery: '/companion/workspace-version'
