@@ -94,6 +94,31 @@ it('does not let a full-size protected snapshot evict completed restore points',
   snapshot.release();
 });
 
+it.each(['EBUSY', 'EPERM'])('keeps an occupied restore point and reports only successful %s removals', async (code) => {
+  const occupiedName = 'manual-2026-08-12_08-00-00-000.db';
+  const removedName = 'manual-2026-08-12_09-00-00-000.db';
+  await writeFixture(occupiedName, 10, '2026-08-12T08:00:00.000Z');
+  await writeFixture(removedName, 10, '2026-08-12T09:00:00.000Z');
+  const occupiedPath = path.join(backupDirectory, occupiedName);
+  const originalRm = fs.rm.bind(fs);
+  vi.spyOn(fs, 'rm').mockImplementation(async (filePath, options) => {
+    if (path.resolve(String(filePath)) === path.resolve(occupiedPath)) {
+      throw Object.assign(new Error(code), { code });
+    }
+    await originalRm(filePath, options);
+  });
+
+  const result = await pruneManagedDatabaseBackups(backupDirectory, {
+    ...settings(100),
+    manual_max_count: 0
+  });
+
+  expect(result).toMatchObject({ deletedCount: 1, policyDeletedCount: 1, releasedBytes: 10 });
+  await expect(fs.access(occupiedPath)).resolves.toBeUndefined();
+  await expect(fs.access(path.join(backupDirectory, removedName))).rejects.toMatchObject({ code: 'ENOENT' });
+  await expect(listManagedDatabaseBackups(backupDirectory)).resolves.toHaveLength(1);
+});
+
 function settings(totalSizeLimitBytes: number): NativeBackupSettings {
   return {
     auto_daily_days: 0, auto_hourly_hours: 0, auto_monthly_months: 0, auto_weekly_weeks: 0,

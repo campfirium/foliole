@@ -11,9 +11,14 @@ import {
 } from './sqliteBackupRestore.js';
 
 export const COMPRESSED_SQLITE_BACKUP_SUFFIX = '.db.gz';
+const activeTemporaryPaths = new Set<string>();
 
 export function isCompressedSqliteBackup(filePath: string) {
   return filePath.toLowerCase().endsWith(COMPRESSED_SQLITE_BACKUP_SUFFIX);
+}
+
+export function isCompressedSqliteTemporaryPathActive(filePath: string) {
+  return activeTemporaryPaths.has(path.resolve(filePath));
 }
 
 export async function backupCompressedSqliteDatabase(
@@ -21,12 +26,17 @@ export async function backupCompressedSqliteDatabase(
 ): Promise<SqliteBackupResult> {
   const destinationPath = path.resolve(options.destinationPath);
   const temporaryPath = siblingTemporaryPath(destinationPath, 'source.db');
+  activeTemporaryPaths.add(temporaryPath);
   try {
     const result = await backupSqliteDatabase({ ...options, destinationPath: temporaryPath });
     await compressSqliteFile(temporaryPath, destinationPath);
     return { ...result, destinationPath };
   } finally {
-    await fs.rm(temporaryPath, { force: true });
+    try {
+      await fs.rm(temporaryPath, { force: true });
+    } finally {
+      activeTemporaryPaths.delete(temporaryPath);
+    }
   }
 }
 
@@ -60,6 +70,7 @@ export async function materializeCompressedSqliteBackup(
 export async function compressSqliteFile(sourcePath: string, destinationPath: string) {
   await assertCompressionSpace(sourcePath, path.dirname(destinationPath));
   const temporaryPath = siblingTemporaryPath(destinationPath, 'compressed.tmp');
+  activeTemporaryPaths.add(temporaryPath);
   try {
     await pipeline(
       createReadStream(sourcePath),
@@ -67,10 +78,12 @@ export async function compressSqliteFile(sourcePath: string, destinationPath: st
       createWriteStream(temporaryPath, { flags: 'wx' })
     );
     await fs.link(temporaryPath, destinationPath);
-    await fs.rm(temporaryPath, { force: true });
-  } catch (error) {
-    await fs.rm(temporaryPath, { force: true });
-    throw error;
+  } finally {
+    try {
+      await fs.rm(temporaryPath, { force: true });
+    } finally {
+      activeTemporaryPaths.delete(temporaryPath);
+    }
   }
 }
 

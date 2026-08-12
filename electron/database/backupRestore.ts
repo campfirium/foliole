@@ -13,6 +13,7 @@ import {
   loadBackupSettings,
   resolveManagedBackupDirectory
 } from './backupSettings.js';
+import { cleanupOrphanedBackupTemporaryFiles } from './backupTemporaryFileCleanup.js';
 import {
   backupCompressedSqliteDatabase,
   COMPRESSED_SQLITE_BACKUP_SUFFIX,
@@ -99,6 +100,10 @@ export async function reconcileAutomaticDatabaseBackups(now = new Date()) {
   await waitForManagedSafetySnapshotSettlements();
   const settings = loadBackupSettings();
   const backupDirectory = ensureManagedBackupDirectory(settings);
+  const temporaryCleanup = await cleanupOrphanedBackupTemporaryFiles(backupDirectory);
+  if (temporaryCleanup.deletedCount > 0) {
+    console.info('[backup] removed interrupted compression files', temporaryCleanup);
+  }
   const existingEntries = await listManagedDatabaseBackups(backupDirectory);
 
   const cadence = finestEnabledFrequency(settings);
@@ -114,6 +119,7 @@ export async function reconcileAutomaticDatabaseBackups(now = new Date()) {
 
   const pruneResult = await pruneManagedDatabaseBackups(backupDirectory, settings, now);
   showBackupCleanupNotification(pruneResult);
+  return temporaryCleanup;
 }
 
 export async function createApplicationDatabaseBackup(

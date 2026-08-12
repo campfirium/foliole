@@ -155,22 +155,36 @@ export async function pruneManagedDatabaseBackups(directoryPath: string, setting
   }
 
   const capacityDeleted = retainedEntries.filter((entry) => !retained.has(entry.filePath));
-  const deletedEntries = [...policyDeleted, ...capacityDeleted];
-  await Promise.all(deletedEntries.map((entry) => fs.rm(entry.filePath, { force: true })));
+  const policyRemoved = await removeBackupEntries(policyDeleted);
+  const capacityRemoved = await removeBackupEntries(capacityDeleted);
+  const deletedEntries = [...policyRemoved, ...capacityRemoved];
+  const deletedPaths = new Set(deletedEntries.map((entry) => entry.filePath));
   const remainingSizeBytes = entries
-    .filter((entry) => retained.has(entry.filePath))
+    .filter((entry) => !deletedPaths.has(entry.filePath))
     .reduce((sum, entry) => sum + entry.sizeBytes, 0);
   const remainingBytesOverLimit = settings.total_size_limit_bytes > 0
     ? Math.max(0, remainingSizeBytes - settings.total_size_limit_bytes)
     : 0;
   return {
-    capacityDeletedCount: capacityDeleted.length,
+    capacityDeletedCount: capacityRemoved.length,
     deletedCount: deletedEntries.length,
-    policyDeletedCount: policyDeleted.length,
+    policyDeletedCount: policyRemoved.length,
     releasedBytes: deletedEntries.reduce((sum, entry) => sum + entry.sizeBytes, 0),
     ...(remainingBytesOverLimit > 0 ? {
       remainingBytesOverLimit,
       safetySnapshotFloorPreserved: latestCompletedSnapshot !== undefined && retained.has(latestCompletedSnapshot.filePath)
     } : {})
   } satisfies BackupPruneResult;
+}
+
+async function removeBackupEntries(entries: ApplicationDatabaseBackupEntry[]) {
+  const removed = await Promise.all(entries.map(async (entry) => {
+    try {
+      await fs.rm(entry.filePath, { force: true });
+      return entry;
+    } catch {
+      return null;
+    }
+  }));
+  return removed.filter((entry): entry is ApplicationDatabaseBackupEntry => entry !== null);
 }
