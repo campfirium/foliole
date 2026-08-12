@@ -40,9 +40,17 @@ it('keeps Android fact-change discovery foreground-bound and excludes its own re
   expect(monitor).toContain('manager.resolveService(service');
   expect(monitor).toContain('FolioleCompanionSyncGroupProvider.runtimeInstanceId()');
   expect(monitor).toContain('ownRuntimeId.equals(new String(runtimeId');
+  expect(monitor).toContain('pendingResolutions.addLast(service)');
   expect(plugin).toContain('serviceMonitor.start()');
   expect(plugin).toContain('serviceMonitor.stop()');
   expect(plugin).toContain('syncGroupProviderServiceHintEvent');
+});
+
+it('serializes Android NSD resolution so one active resolve cannot hide another group member', async () => {
+  const discovery = await readJava('FolioleCompanionNsdDiscovery.java');
+  expect(discovery).toContain('pendingResolutions.addLast(serviceInfo)');
+  expect(discovery).toContain('if (resolving) return;');
+  expect(discovery).toMatch(/onServiceResolved[\s\S]*addResolvedEndpoint[\s\S]*resolveNext\(\)/u);
 });
 
 it('authorizes every Android provider data request with both the channel secret and member fact', async () => {

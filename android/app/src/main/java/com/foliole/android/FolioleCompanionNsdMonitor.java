@@ -5,11 +5,15 @@ import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayDeque;
+import java.util.Deque;
 
 final class FolioleCompanionNsdMonitor {
     private final NsdManager manager;
     private final Runnable onServiceHint;
     private final String serviceType;
+    private final Deque<NsdServiceInfo> pendingResolutions = new ArrayDeque<>();
+    private boolean resolving;
     private boolean started;
 
     private final NsdManager.DiscoveryListener listener = new NsdManager.DiscoveryListener() {
@@ -33,16 +37,30 @@ final class FolioleCompanionNsdMonitor {
     };
 
     @SuppressWarnings("deprecation")
-    private void resolve(NsdServiceInfo service) {
+    private synchronized void resolve(NsdServiceInfo service) {
+        pendingResolutions.addLast(service);
+        if (resolving) return;
+        resolving = true;
+        resolveNext();
+    }
+
+    @SuppressWarnings("deprecation")
+    private synchronized void resolveNext() {
+        NsdServiceInfo service = pendingResolutions.pollFirst();
+        if (service == null) { resolving = false; return; }
         try {
             manager.resolveService(service, new NsdManager.ResolveListener() {
-                @Override public void onResolveFailed(NsdServiceInfo ignored, int errorCode) {}
+                @Override public void onResolveFailed(NsdServiceInfo ignored, int errorCode) {
+                    resolveNext();
+                }
 
                 @Override public void onServiceResolved(NsdServiceInfo resolved) {
-                    emitRemoteServiceHint(resolved);
+                    if (started) emitRemoteServiceHint(resolved);
+                    resolveNext();
                 }
             });
         } catch (IllegalArgumentException ignored) {
+            resolveNext();
         }
     }
 
@@ -75,6 +93,7 @@ final class FolioleCompanionNsdMonitor {
     synchronized void stop() {
         if (!started || manager == null) return;
         started = false;
+        pendingResolutions.clear();
         try {
             manager.stopServiceDiscovery(listener);
         } catch (IllegalArgumentException ignored) {

@@ -8,7 +8,9 @@ import com.getcapacitor.JSObject;
 
 import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -63,6 +65,8 @@ public final class FolioleCompanionNsdDiscovery {
         private final Object lock = new Object();
         private final Set<String> endpointUrls = new LinkedHashSet<>();
         private final List<JSObject> candidates = new ArrayList<>();
+        private final Deque<NsdServiceInfo> pendingResolutions = new ArrayDeque<>();
+        private boolean resolving;
         private boolean stopped;
 
         private final NsdManager.DiscoveryListener discoveryListener = new NsdManager.DiscoveryListener() {
@@ -134,19 +138,38 @@ public final class FolioleCompanionNsdDiscovery {
 
         @SuppressWarnings("deprecation")
         private void resolve(NsdServiceInfo serviceInfo) {
+            synchronized (lock) {
+                pendingResolutions.addLast(serviceInfo);
+                if (resolving) return;
+                resolving = true;
+            }
+            resolveNext();
+        }
+
+        @SuppressWarnings("deprecation")
+        private void resolveNext() {
+            NsdServiceInfo serviceInfo;
+            synchronized (lock) {
+                serviceInfo = pendingResolutions.pollFirst();
+                if (serviceInfo == null) {
+                    resolving = false;
+                    return;
+                }
+            }
             try {
                 nsdManager.resolveService(serviceInfo, new NsdManager.ResolveListener() {
                     @Override
                     public void onResolveFailed(NsdServiceInfo serviceInfo, int errorCode) {
+                        resolveNext();
                     }
 
                     @Override
                     public void onServiceResolved(NsdServiceInfo serviceInfo) {
                         addResolvedEndpoint(serviceInfo);
+                        resolveNext();
                     }
                 });
-            } catch (IllegalArgumentException ignored) {
-            }
+            } catch (IllegalArgumentException ignored) { resolveNext(); }
         }
 
         private void addResolvedEndpoint(NsdServiceInfo serviceInfo) {
