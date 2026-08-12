@@ -27,7 +27,7 @@ function useForegroundSyncRefs(isPairingReady: boolean, state: NativeCompanionWo
   const isPairingReadyRef = useRef(isPairingReady);
   const lastCheckedAtRef = useRef(0);
   const lastForegroundAtRef = useRef(0);
-  const pendingServiceHintRef = useRef<string | null>(null);
+  const pendingServiceHintRef = useRef(new Set<string>());
   const resourceContinuationModeRef = useRef<CompanionSyncContinuationMode>('full');
   const retryAttemptRef = useRef(0);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
