@@ -25,7 +25,9 @@ function productFailure(host, missingFact, message) {
   return Object.assign(new Error(message), { failureOwner: 'product', host, missingFact, status: 'stalled' });
 }
 
-async function waitUntil(label, inspect, accept, missingFact, progress = (value) => value) {
+async function waitUntil(
+  label, inspect, accept, missingFact, progress = (value) => value, intervalMs = 1_000
+) {
   const deadline = Date.now() + 60_000;
   const observe = createSyncProgressWatchdog({ label, stallMs: 60_000 });
   let value;
@@ -33,7 +35,7 @@ async function waitUntil(label, inspect, accept, missingFact, progress = (value)
     value = await inspect();
     observe(JSON.stringify(progress(value)));
     if (accept(value)) return value;
-    await delay(1_000);
+    await delay(intervalMs);
   }
   throw productFailure('all', missingFact, `${label} did not converge.`);
 }
@@ -124,6 +126,24 @@ export function assertThreeDeviceProof({ android, macos, windows, ids }) {
     groupId: groupIds[0], nodeCount: counts[0][0], timelineId: timelines[0] };
 }
 
+export async function waitForThreeDeviceProof({ ids, inspect, intervalMs = 1_000 }) {
+  const result = await waitUntil('A, B, and C restarted convergence', async () => {
+    const evidence = await inspect();
+    try {
+      return { evidence, proof: assertThreeDeviceProof({ ...evidence, ids }) };
+    } catch (error) {
+      if (error?.missingFact !== 'three_device_restart_convergence_missing') throw error;
+      return { evidence, proof: null };
+    }
+  }, (value) => value.proof !== null, 'three_device_restart_convergence_missing',
+  ({ evidence }) => ({
+    android: evidence.android.database?.inspection,
+    macos: evidence.macos,
+    windows: evidence.windows
+  }), intervalMs);
+  return result.proof;
+}
+
 export async function proveARejoin({ execute, reportProgress, repoRoot, runId }) {
   const owned = createIsolatedMacosRoot({ repoRoot, runId });
   const paths = macosA5Paths(repoRoot);
@@ -189,9 +209,11 @@ export async function proveARejoin({ execute, reportProgress, repoRoot, runId })
     session = await openMacosPairSyncDesktopSession({ libraryHome: path.join(owned.root, 'library'),
       repoRoot, userDataPath: path.join(owned.root, 'user-data') });
     const databasePath = path.join(owned.root, 'library', 'Data', 'foliole.db');
-    const proof = assertThreeDeviceProof({ ids, android: await androidSnapshot(paths),
+    const proof = await waitForThreeDeviceProof({ ids, inspect: async () => ({
+      android: await androidSnapshot(paths),
       macos: await macosFacts(execute, repoRoot, databasePath, Object.values(ids)),
-      windows: remote.receipt.restarted });
+      windows: remote.receipt.restarted
+    }) });
     reportProgress('three-members-restarted');
     const evidenceRef = path.join(evidenceRoot, 'a-rejoin-proof.json');
     fs.writeFileSync(evidenceRef, `${JSON.stringify({ completedAt: new Date().toISOString(),

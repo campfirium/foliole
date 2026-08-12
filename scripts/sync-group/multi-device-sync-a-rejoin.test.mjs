@@ -4,7 +4,8 @@ import { expect, it } from 'vitest';
 
 import {
   assertThreeDeviceProof,
-  restartARejoinAndroidProvider
+  restartARejoinAndroidProvider,
+  waitForThreeDeviceProof
 } from './multi-device-sync-a-rejoin.mjs';
 
 const ids = { A: 'fact-a', B: 'fact-b', C: 'fact-c' };
@@ -30,6 +31,20 @@ it('rejects a same-count member set that does not converge by device identity', 
   const divergent = { ...facts, activeDeviceIdentities: { desktop: ['a', 'x'], mobile: ['b'] } };
   expect(() => assertThreeDeviceProof({ android, ids, macos: facts, windows: divergent }))
     .toThrow('one complete three-member timeline');
+});
+
+it('waits for restarted resource bodies instead of failing on the transient metadata state', async () => {
+  let inspections = 0;
+  const proof = await waitForThreeDeviceProof({ ids, intervalMs: 0, inspect: async () => {
+    inspections += 1;
+    const currentAndroid = inspections === 1 ? {
+      ...android, database: { ...android.database,
+        inspection: { ...android.database.inspection, missingContentBlobCount: 4 } }
+    } : android;
+    return { android: currentAndroid, macos: facts, windows: facts };
+  } });
+  expect(inspections).toBe(2);
+  expect(proof).toMatchObject({ contentBlobCount: 4, nodeCount: 5 });
 });
 
 it('ends the stale provider lifecycle before every staged Android restart', async () => {
