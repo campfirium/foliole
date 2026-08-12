@@ -4,6 +4,7 @@ interface MacosDockApp {
     setIcon(image: string): void;
   } | undefined;
   isPackaged?: boolean;
+  setActivationPolicy?(policy: 'accessory' | 'prohibited' | 'regular'): void;
 }
 
 export function applyMacosDockPresentation(
@@ -14,6 +15,7 @@ export function applyMacosDockPresentation(
 ) {
   if (platform !== 'darwin' || !app.dock) return false;
   if (env.FOLIOLE_ELECTRON_NATIVE_HIDDEN?.trim() === '1') {
+    app.setActivationPolicy?.('accessory');
     app.dock.hide();
     return true;
   }

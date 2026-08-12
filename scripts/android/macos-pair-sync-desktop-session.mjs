@@ -5,6 +5,7 @@ import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
 import { MACOS_DAILY_LIBRARY_HOME } from '../macos/macos-electron-dev-paths.mjs';
+import { prepareMacosHiddenElectronRuntime } from '../desktop/macos-hidden-electron-runtime.mjs';
 
 function fingerprint(value) {
   return createHash('sha256').update(value).digest('hex').slice(0, 16);
@@ -34,7 +35,7 @@ export async function ensureMacosSyncGroup(actions) {
   return overview.sync_group ? actions.enable() : actions.create();
 }
 
-function launchOptions(repoRoot, env, userDataPath, libraryHome) {
+function launchOptions(repoRoot, env, userDataPath, libraryHome, executablePath) {
   return {
     args: [path.join(repoRoot, 'dist/electron/main.js')],
     cwd: repoRoot,
@@ -48,21 +49,23 @@ function launchOptions(repoRoot, env, userDataPath, libraryHome) {
       FOLIOLE_USER_DATA_PATH: userDataPath,
       FOLIOLE_WORKDIR: repoRoot
     },
-    executablePath: path.join(
-      repoRoot, 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'
-    ),
+    executablePath,
     timeout: 90_000
   };
 }
 
 export async function openMacosPairSyncDesktopSession({
   env = process.env, electronLauncher, libraryHome = MACOS_DAILY_LIBRARY_HOME,
+  prepareHiddenRuntime = prepareMacosHiddenElectronRuntime,
   repoRoot, timeoutMs = 20_000, userDataPath
 }) {
   const launcher = electronLauncher ?? (await import('playwright'))._electron;
+  const runtime = prepareHiddenRuntime({ appRoot: repoRoot, env });
   let app;
   try {
-    app = await launcher.launch(launchOptions(repoRoot, env, userDataPath, libraryHome));
+    app = await launcher.launch(launchOptions(
+      repoRoot, env, userDataPath, libraryHome, runtime.executablePath
+    ));
     const page = await app.firstWindow({ timeout: timeoutMs });
     await page.waitForFunction(() => globalThis.__FOLIOLE_APP_READY_REPORTED__ === true, null, {
       timeout: timeoutMs
@@ -79,7 +82,13 @@ export async function openMacosPairSyncDesktopSession({
       assertActive: () => {
         if (app.process().exitCode !== null) throw new Error('Mac desktop runtime ended unexpectedly.');
       },
-      close: () => app.close(),
+      close: async () => {
+        try {
+          await app.close();
+        } finally {
+          runtime.cleanup();
+        }
+      },
       enable: () => ensureMacosSyncGroup(syncGroupActions),
       leave: () => invoke(page, 'leave_sync_group'),
       load: syncGroupActions.load,
@@ -89,6 +98,7 @@ export async function openMacosPairSyncDesktopSession({
     };
   } catch (error) {
     await app?.close().catch(() => undefined);
+    runtime.cleanup();
     throw error;
   }
 }

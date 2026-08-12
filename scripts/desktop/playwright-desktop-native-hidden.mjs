@@ -5,6 +5,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { normalizeSpawnCommand } from '../lib/spawn-command.mjs';
+import { prepareMacosHiddenElectronRuntime } from './macos-hidden-electron-runtime.mjs';
 
 export const HIDDEN_MODE_HEALTH_SPECS = [
   'tests/desktop/hidden-native-presentation.spec.ts',
@@ -98,14 +99,26 @@ export function createNativeHiddenDesktopBuildCommands({
 
 export async function runNativeHiddenDesktopGate(options = {}) {
   const buildCommands = createNativeHiddenDesktopBuildCommands(options);
-  const command = createNativeHiddenDesktopGateCommand(options);
   for (const buildCommand of buildCommands) {
     const code = await runCommand(buildCommand);
     if (code !== 0) {
       return code;
     }
   }
-  return runCommand(command);
+  const env = options.env ?? process.env;
+  const platform = options.platform ?? process.platform;
+  const appRoot = path.resolve(env.FOLIOLE_ELECTRON_APP_ROOT?.trim() || options.cwd || process.cwd());
+  const runtime = platform === 'darwin'
+    ? prepareMacosHiddenElectronRuntime({ appRoot, env })
+    : null;
+  try {
+    return await runCommand(createNativeHiddenDesktopGateCommand({
+      ...options,
+      env: runtime ? { ...env, FOLIOLE_ELECTRON_EXECUTABLE_PATH: runtime.executablePath } : env
+    }));
+  } finally {
+    runtime?.cleanup();
+  }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
