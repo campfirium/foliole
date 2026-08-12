@@ -140,10 +140,10 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         getActivity().runOnUiThread(() -> notifyListeners(name, event));
     }
 
-    private void dispatchServiceHint() {
+    private void dispatchServiceHint(JSObject event) {
         try {
             String name = FolioleCompanionHostBridgeContractDefinitions.syncGroupProviderServiceHintEvent(getContext());
-            getActivity().runOnUiThread(() -> notifyListeners(name, new JSObject()));
+            getActivity().runOnUiThread(() -> notifyListeners(name, event));
         } catch (Exception error) {
             android.util.Log.w("FolioleSyncDiscovery", "Hint dispatch failed", error);
         }

@@ -30,9 +30,11 @@ async function renderAutoSyncHook(
     isNativeAndroidCompanionRuntime: () => isNativeRuntime
   }));
   const foregroundHandlers: Array<() => void> = [];
-  const serviceHintHandlers: Array<() => void> = [];
+  const serviceHintHandlers: Array<(hint: { endpoint_url: string }) => void> = [];
   vi.doMock('../shared/platform/companion/sync/syncGroupProvider', () => ({
-    subscribeCompanionSyncGroupServiceHint: vi.fn(async (handler: () => void) => {
+    subscribeCompanionSyncGroupServiceHint: vi.fn(async (
+      handler: (hint: { endpoint_url: string }) => void
+    ) => {
       if (isNativeRuntime) serviceHintHandlers.push(handler);
       return vi.fn();
     })
@@ -271,9 +273,12 @@ describe('useForegroundAutoSync service hints', () => {
     const { serviceHintHandlers, tryForegroundAutoSync } = await renderAutoSyncHook(true);
     await act(async () => Promise.resolve());
 
-    await act(async () => serviceHintHandlers[0]?.());
+    await act(async () => serviceHintHandlers[0]?.({ endpoint_url: 'http://192.168.0.11:38641' }));
 
     expect(tryForegroundAutoSync).toHaveBeenCalledTimes(2);
+    expect(tryForegroundAutoSync).toHaveBeenLastCalledWith(expect.objectContaining({
+      state: expect.objectContaining({ endpoint_url: 'http://192.168.0.11:38641' })
+    }));
   });
 
   it('keeps one service hint that arrives during an active peer sync', async () => {
@@ -287,7 +292,7 @@ describe('useForegroundAutoSync service hints', () => {
     );
     await act(async () => Promise.resolve());
 
-    await act(async () => serviceHintHandlers[0]?.());
+    await act(async () => serviceHintHandlers[0]?.({ endpoint_url: 'http://192.168.0.11:38641' }));
     expect(tryForegroundAutoSync).toHaveBeenCalledOnce();
     await act(async () => first.resolve('completed'));
 

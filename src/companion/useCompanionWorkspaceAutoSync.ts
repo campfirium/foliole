@@ -27,7 +27,7 @@ function useForegroundSyncRefs(isPairingReady: boolean, state: NativeCompanionWo
   const isPairingReadyRef = useRef(isPairingReady);
   const lastCheckedAtRef = useRef(0);
   const lastForegroundAtRef = useRef(0);
-  const pendingServiceHintRef = useRef(false);
+  const pendingServiceHintRef = useRef<string | null>(null);
   const resourceContinuationModeRef = useRef<CompanionSyncContinuationMode>('full');
   const retryAttemptRef = useRef(0);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -56,7 +56,7 @@ function useForegroundSyncRefs(isPairingReady: boolean, state: NativeCompanionWo
 
 function subscribeForegroundSyncEvents(
   refs: ForegroundSyncRefs,
-  run: (reason: ForegroundSyncReason) => void,
+  run: (reason: ForegroundSyncReason, endpointUrl?: string) => void,
   cancelled: () => boolean
 ) {
   const unsubscribers: Array<() => void> = [];
@@ -65,7 +65,7 @@ function subscribeForegroundSyncEvents(
     if (cancelled()) unsubscribe();
     else unsubscribers.push(unsubscribe);
   };
-  void keep(subscribeCompanionSyncGroupServiceHint(() => run('service-hint')));
+  void keep(subscribeCompanionSyncGroupServiceHint((hint) => run('service-hint', hint.endpoint_url)));
   void keep(subscribeNativeAppForeground(() => {
     refs.isAppActiveRef.current = true;
     run('foreground');
@@ -88,7 +88,9 @@ export function useForegroundAutoSync(
   tryForegroundAutoSync: TryForegroundAutoSync
 ) {
   const refs = useForegroundSyncRefs(isPairingReady, state);
-  const runForegroundSyncCheckRef = useRef<(reason: ForegroundSyncReason) => void>(() => undefined);
+  const runForegroundSyncCheckRef = useRef<
+    (reason: ForegroundSyncReason, endpointUrl?: string) => void
+  >(() => undefined);
   const endpointUrl = resolveCompanionWorkspaceSyncEndpoint(state);
 
   useEffect(() => {

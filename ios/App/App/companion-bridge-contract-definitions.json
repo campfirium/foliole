@@ -251,6 +251,9 @@
     "syncGroupProvider": {
       "dataRequestEvent": "syncGroupDataRequest",
       "serviceHintEvent": "syncGroupServiceHint",
+      "serviceHintKeys": {
+        "endpointUrl": "endpoint_url"
+      },
       "dataRequestKeys": {
         "operation": "operation",
         "payload": "payload",

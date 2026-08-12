@@ -5,6 +5,10 @@ import { FolioleCompanionSync, isAvailableNativeAndroidCompanionRuntime } from '
 
 import { ensureCompanionSyncGroupDataOwner } from './syncGroupProviderDataOwner';
 
+export interface CompanionSyncGroupServiceHint {
+  endpoint_url: string;
+}
+
 export async function reconcileCompanionSyncGroupProvider(
   bootstrap: NativeCompanionBootstrapState,
   group: SyncGroupPayload | null,
@@ -26,10 +30,14 @@ export async function reconcileCompanionSyncGroupProvider(
   });
 }
 
-export async function subscribeCompanionSyncGroupServiceHint(listener: () => void) {
+export async function subscribeCompanionSyncGroupServiceHint(
+  listener: (hint: CompanionSyncGroupServiceHint) => void
+) {
   if (!isAvailableNativeAndroidCompanionRuntime()) return () => undefined;
   const eventSource = FolioleCompanionSync as typeof FolioleCompanionSync & {
-    addListener(eventName: 'syncGroupServiceHint', next: () => void): Promise<{ remove(): Promise<void> }>;
+    addListener(
+      eventName: 'syncGroupServiceHint', next: (hint: CompanionSyncGroupServiceHint) => void
+    ): Promise<{ remove(): Promise<void> }>;
   };
   const handle = await eventSource.addListener('syncGroupServiceHint', listener);
   return () => { void handle.remove(); };

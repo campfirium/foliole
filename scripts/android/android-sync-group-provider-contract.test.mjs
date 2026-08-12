@@ -41,9 +41,11 @@ it('keeps Android fact-change discovery foreground-bound and excludes its own re
   expect(monitor).toContain('FolioleCompanionSyncGroupProvider.runtimeInstanceId()');
   expect(monitor).toContain('ownRuntimeId.equals(new String(runtimeId');
   expect(monitor).toContain('pendingResolutions.addLast(service)');
+  expect(monitor).toContain('syncGroupProviderServiceHintKey(context, "endpointUrl")');
   expect(plugin).toContain('serviceMonitor.start()');
   expect(plugin).toContain('serviceMonitor.stop()');
   expect(plugin).toContain('syncGroupProviderServiceHintEvent');
+  expect(plugin).toContain('notifyListeners(name, event)');
 });
 
 it('serializes Android NSD resolution so one active resolve cannot hide another group member', async () => {

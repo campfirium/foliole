@@ -4,13 +4,18 @@ import android.content.Context;
 import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
 
+import com.getcapacitor.JSObject;
+
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
 final class FolioleCompanionNsdMonitor {
+    interface HintListener { void onServiceHint(JSObject hint); }
+
+    private final Context context;
     private final NsdManager manager;
-    private final Runnable onServiceHint;
+    private final HintListener onServiceHint;
     private final String serviceType;
     private final Deque<NsdServiceInfo> pendingResolutions = new ArrayDeque<>();
     private boolean resolving;
@@ -69,10 +74,21 @@ final class FolioleCompanionNsdMonitor {
         String ownRuntimeId = FolioleCompanionSyncGroupProvider.runtimeInstanceId();
         if (runtimeId != null && !ownRuntimeId.isEmpty()
             && ownRuntimeId.equals(new String(runtimeId, StandardCharsets.UTF_8))) return;
-        onServiceHint.run();
+        try {
+            int port = service.getPort();
+            if (port <= 0) return;
+            for (String host : FolioleCompanionNsdAddresses.endpointHosts(service)) {
+                JSObject hint = new JSObject();
+                hint.put(FolioleCompanionHostBridgeContractDefinitions
+                    .syncGroupProviderServiceHintKey(context, "endpointUrl"),
+                    FolioleCompanionHostBridgeContractDefinitions.networkEndpointUrl(context, host, port));
+                onServiceHint.onServiceHint(hint);
+            }
+        } catch (Exception ignored) {}
     }
 
-    FolioleCompanionNsdMonitor(Context context, Runnable onServiceHint) throws Exception {
+    FolioleCompanionNsdMonitor(Context context, HintListener onServiceHint) throws Exception {
+        this.context = context;
         manager = (NsdManager) context.getSystemService(Context.NSD_SERVICE);
         serviceType = FolioleCompanionNsdDiscovery.qualifiedServiceType(
             FolioleCompanionHostBridgeContractDefinitions.networkServiceType(context)

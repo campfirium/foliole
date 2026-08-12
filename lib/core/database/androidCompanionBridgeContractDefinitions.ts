@@ -99,6 +99,9 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
     syncGroupProvider: {
       dataRequestEvent: 'syncGroupDataRequest',
       serviceHintEvent: 'syncGroupServiceHint',
+      serviceHintKeys: {
+        endpointUrl: 'endpoint_url'
+      },
       dataRequestKeys: {
         operation: 'operation',
         payload: 'payload',
