@@ -93,7 +93,7 @@ describe('companion mDNS advertisement', () => {
 
     expect(bonjourMock.publish).toHaveBeenCalledWith({
       host: 'V-runtimed.local',
-      name: expect.stringMatching(/^V-runtimed--[0-9a-z]+$/u),
+      name: expect.stringMatching(/^V-runtimed-[0-9a-z]+$/u),
       port: 38683,
       protocol: 'tcp',
       txt: {
@@ -165,8 +165,8 @@ describe('companion mDNS facts hints', () => {
     await refreshCompanionMdnsAdvertisement();
 
     const names = bonjourMock.publish.mock.calls.map(([input]) => (input as { name: string }).name);
-    expect(names[0]).toMatch(/^Shared group-runtimed--[0-9a-z]+$/u);
-    expect(names[1]).toMatch(/^Shared group-runtimed--[0-9a-z]+$/u);
+    expect(names[0]).toMatch(/^Shared group-runtimed-[0-9a-z]+$/u);
+    expect(names[1]).toMatch(/^Shared group-runtimed-[0-9a-z]+$/u);
     expect(names[1]).not.toBe(names[0]);
   });
 });

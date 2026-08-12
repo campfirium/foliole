@@ -97,7 +97,7 @@ final class FolioleCompanionNsdAdvertisement {
         String runtime = config.getString("runtime_instance_id").replaceAll("[^A-Za-z0-9]", "");
         String runtimeSuffix = runtime.isEmpty() ? "runtime" : runtime.substring(0, Math.min(8, runtime.length()));
         String revision = Integer.toUnsignedString(config.getString("facts_revision").hashCode(), 36);
-        String suffix = runtimeSuffix + "--" + revision;
+        String suffix = runtimeSuffix + "-" + revision;
         int displayLimit = Math.max(1, 62 - suffix.length());
         return displayName.substring(0, Math.min(displayName.length(), displayLimit)) + "-" + suffix;
     }

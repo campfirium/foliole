@@ -6,7 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 final class FolioleCompanionLatestServiceQueue<T> {
-    private static final String REVISION_SEPARATOR = "--";
+    private static final String REVISION_SEPARATOR = "-";
     private final Map<String, T> latestByService = new HashMap<>();
     private final Deque<String> serviceOrder = new ArrayDeque<>();
 
@@ -28,6 +28,8 @@ final class FolioleCompanionLatestServiceQueue<T> {
 
     static String stableServiceKey(String instanceName) {
         int separator = instanceName.lastIndexOf(REVISION_SEPARATOR);
-        return separator > 0 ? instanceName.substring(0, separator) : instanceName;
+        String revision = separator > 0 ? instanceName.substring(separator + 1) : "";
+        return separator > 0 && revision.matches("[0-9a-z]{1,7}")
+            ? instanceName.substring(0, separator) : instanceName;
     }
 }
