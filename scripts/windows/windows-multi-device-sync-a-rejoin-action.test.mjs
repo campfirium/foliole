@@ -26,13 +26,15 @@ it('creates C fact only after fresh A and B facts and verifies a restarted three
     .mockResolvedValueOnce(pendingBodies)
     .mockResolvedValue(complete);
   const close = vi.fn(async () => {});
+  const settle = vi.fn(async () => {});
   const result = await runWindowsMultiDeviceSyncARejoin({ evidenceRoot: root,
     control: vi.fn(), execute: vi.fn(), inspect, paths: {}, suspend: vi.fn(async () => ({ running: false })),
     restore: vi.fn(async () => {}), openSession: vi.fn(async () => ({ app: { close }, page: {} })),
-    invoke: vi.fn(), createFact: vi.fn(async () => ({ factId: ids.C })) });
+    invoke: vi.fn(), settle, createFact: vi.fn(async () => ({ factId: ids.C })) });
   expect(result.multiDeviceSyncARejoin.manifestPath).toContain('multi-device-sync-a-rejoin-receipt.json');
   expect(JSON.parse(fs.readFileSync(result.multiDeviceSyncARejoin.manifestPath, 'utf8')))
     .toMatchObject({ factIds: ids, resultStatus: 'success', restarted: { activeMemberCount: 3 } });
   expect(close).toHaveBeenCalledTimes(4);
   expect(inspect).toHaveBeenCalledTimes(5);
+  expect(settle).toHaveBeenCalledWith(15_000);
 });

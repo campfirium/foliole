@@ -83,6 +83,24 @@ it('recognizes generic multi-device acceptance facts without a track-specific pr
     .toEqual({ 'node-random': 'B' });
 });
 
+it('reads missing resource counts through the Node SQLite row shape', () => {
+  const tables = new Set(['attachment_blobs', 'companion_meta', 'content_blob_data',
+    'content_blobs', 'nodes', 'sync_object_state']);
+  const database = { prepare: (sql) => ({
+    all: () => [],
+    get: (value) => {
+      if (sql.includes('sqlite_master')) return tables.has(value) ? { present: 1 } : undefined;
+      if (sql.includes('companion_meta')) return value === 'device_id' ? { value: 'android-1' } : undefined;
+      if (sql.includes('attachment_blobs')) return { count: 2 };
+      if (sql.includes('LEFT JOIN content_blob_data')) return { count: 1 };
+      return { count: 0 };
+    }
+  }) };
+  expect(inspectPairSyncRecoveryWorkspace(database)).toMatchObject({
+    missingAttachmentCount: 2, missingContentBlobCount: 1
+  });
+});
+
 it('allows only an empty unpaired workspace with a stable device identity', () => {
   expect(pairSyncRecoveryReadiness(snapshot(), false)).toMatchObject({
     deviceIdentityFingerprint: expect.stringMatching(/^[0-9a-f]{16}$/u),
