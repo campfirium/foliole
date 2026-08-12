@@ -56,8 +56,10 @@ export function resolveCompanionMdnsHost(
   return `${(label || 'foliole-desktop').slice(0, hostLimit)}-${suffix}.local`;
 }
 
-export function resolveCompanionMdnsServiceName(groupDisplayName: string, runtimeInstanceId: string) {
-  const suffix = runtimeSuffix(runtimeInstanceId);
+export function resolveCompanionMdnsServiceName(
+  groupDisplayName: string, runtimeInstanceId: string, revision = factsRevision
+) {
+  const suffix = `${runtimeSuffix(runtimeInstanceId)}-${revision.toString(36)}`;
   const displayLimit = Math.max(1, 62 - suffix.length);
   return `${Array.from(groupDisplayName).slice(0, displayLimit).join('')}-${suffix}`;
 }
@@ -81,7 +83,7 @@ function publishCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisementInpu
     const bonjour = new Bonjour(options, reportWarning);
     const service = bonjour.publish({
       host: resolveCompanionMdnsHost(os.hostname(), runtimeInstanceId),
-      name: resolveCompanionMdnsServiceName(input.groupDisplayName, runtimeInstanceId),
+      name: resolveCompanionMdnsServiceName(input.groupDisplayName, runtimeInstanceId, factsRevision),
       port: input.port,
       protocol: 'tcp',
       txt: {

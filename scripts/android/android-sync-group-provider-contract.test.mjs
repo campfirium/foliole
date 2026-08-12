@@ -67,12 +67,12 @@ it('waits for Android NSD unregistration before publishing a newer fact revision
   expect(provider).toMatch(/restartAdvertisement[\s\S]*stopAndAwait\(\)[\s\S]*start\(/u);
 });
 
-it('gives each Android runtime a stable device-specific DNS-SD instance', async () => {
+it('versions every device-specific Android DNS-SD fact hint', async () => {
   const advertisement = await readJava('FolioleCompanionNsdAdvertisement.java');
   expect(advertisement).toContain('info.setServiceName(serviceInstanceName(config))');
   expect(advertisement).toContain('config.getString("runtime_instance_id")');
   expect(advertisement).toContain('config.getJSONObject("sync_group").getString("display_name")');
-  expect(advertisement).not.toContain('config.getString("facts_revision").hashCode()');
+  expect(advertisement).toContain('config.getString("facts_revision").hashCode()');
 });
 
 it('authorizes every Android provider data request with both the channel secret and member fact', async () => {
