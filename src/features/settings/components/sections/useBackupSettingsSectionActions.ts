@@ -132,6 +132,7 @@ export function useBackupActionHandlers(args: BackupActionHandlerArgs) {
   const handleRestoreBackup = (entry: DatabaseBackupEntry) =>
     void runRestoreBackup(entry, args.setRestoringPath, args.setStatusMessage, async (fileName) => {
       await refreshWorkspaceState('backup-restore');
+      await args.refreshBackups();
       args.setRestoreSuccessFileName(fileName);
     });
   const handleExportSourceDispositions = () => void runExportSourceDispositions(args);

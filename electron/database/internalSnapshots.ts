@@ -25,6 +25,19 @@ export interface CreateInternalDatabaseSnapshotOptions {
   sourcePath: string;
 }
 
+export function buildInternalDatabaseSnapshotPath({
+  destinationDirectory,
+  now = new Date(),
+  reason,
+  sourcePath
+}: Pick<CreateInternalDatabaseSnapshotOptions, 'destinationDirectory' | 'now' | 'reason' | 'sourcePath'>) {
+  const resolvedSourcePath = path.resolve(sourcePath);
+  const resolvedDestinationDirectory = destinationDirectory
+    ? path.resolve(destinationDirectory)
+    : resolveInternalDatabaseSnapshotDirectory(resolvedSourcePath);
+  return path.join(resolvedDestinationDirectory, `${reason}-${snapshotTimestamp(now)}.db`);
+}
+
 export function resolveInternalDatabaseSnapshotDirectory(sourcePath: string) {
   void sourcePath;
   return resolveManagedBackupDirectory();
@@ -39,13 +52,10 @@ export function createInternalDatabaseSnapshot({
   sourcePath
 }: CreateInternalDatabaseSnapshotOptions): InternalDatabaseSnapshotResult {
   const resolvedSourcePath = path.resolve(sourcePath);
-  const resolvedDestinationDirectory = destinationDirectory
-    ? path.resolve(destinationDirectory)
-    : resolveInternalDatabaseSnapshotDirectory(resolvedSourcePath);
-  const destinationPath = path.join(
-    resolvedDestinationDirectory,
-    `${reason}-${snapshotTimestamp(now)}.db`
-  );
+  const destinationPath = buildInternalDatabaseSnapshotPath({
+    ...(destinationDirectory ? { destinationDirectory } : {}), now, reason, sourcePath
+  });
+  const resolvedDestinationDirectory = path.dirname(destinationPath);
 
   try {
     if (destinationDirectory) {
@@ -54,7 +64,7 @@ export function createInternalDatabaseSnapshot({
       ensureManagedBackupDirectory();
     }
     sourceDatabase.exec(`VACUUM INTO ${toSqliteStringLiteral(destinationPath)}`);
-    if (!destinationDirectory) {
+    if (!destinationDirectory && reason === 'pre-cleanup') {
       pruneInternalDatabaseSnapshots(resolvedSourcePath, retentionLimit);
     }
   } catch (error) {
@@ -79,13 +89,9 @@ export async function createInternalDatabaseSnapshotWithBackup({
   sourcePath
 }: CreateInternalDatabaseSnapshotOptions): Promise<InternalDatabaseSnapshotResult> {
   const resolvedSourcePath = path.resolve(sourcePath);
-  const resolvedDestinationDirectory = destinationDirectory
-    ? path.resolve(destinationDirectory)
-    : resolveInternalDatabaseSnapshotDirectory(resolvedSourcePath);
-  const destinationPath = path.join(
-    resolvedDestinationDirectory,
-    `${reason}-${snapshotTimestamp(now)}.db`
-  );
+  const destinationPath = buildInternalDatabaseSnapshotPath({
+    ...(destinationDirectory ? { destinationDirectory } : {}), now, reason, sourcePath
+  });
 
   try {
     await backupSqliteDatabase({
@@ -93,7 +99,7 @@ export async function createInternalDatabaseSnapshotWithBackup({
       sourceDatabase,
       sourcePath: resolvedSourcePath
     });
-    if (!destinationDirectory) {
+    if (!destinationDirectory && reason === 'pre-cleanup') {
       await pruneInternalDatabaseSnapshotsAsync(resolvedSourcePath, retentionLimit);
     }
   } catch (error) {
@@ -113,7 +119,7 @@ function pruneInternalDatabaseSnapshots(sourcePath: string, retentionLimit = INT
   const snapshotDirectory = resolveInternalDatabaseSnapshotDirectory(sourcePath);
   const snapshotEntries = fs
     .readdirSync(snapshotDirectory)
-    .filter((fileName) => fileName.endsWith('.db') && /^pre-(?:cleanup|migration|restore)-/.test(fileName))
+    .filter((fileName) => fileName.endsWith('.db') && fileName.startsWith('pre-cleanup-'))
     .map((fileName) => {
       const filePath = path.join(snapshotDirectory, fileName);
       const stats = fs.statSync(filePath);
@@ -137,7 +143,7 @@ async function pruneInternalDatabaseSnapshotsAsync(
   const fileNames = await fsPromises.readdir(snapshotDirectory);
   const snapshotEntries = await Promise.all(
     fileNames
-      .filter((fileName) => fileName.endsWith('.db') && /^pre-(?:cleanup|migration|restore)-/.test(fileName))
+      .filter((fileName) => fileName.endsWith('.db') && fileName.startsWith('pre-cleanup-'))
       .map(async (fileName) => {
         const filePath = path.join(snapshotDirectory, fileName);
         const stats = await fsPromises.stat(filePath);

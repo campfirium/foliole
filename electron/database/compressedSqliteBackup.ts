@@ -39,6 +39,7 @@ export async function materializeCompressedSqliteBackup(
     return { cleanup: async () => undefined, databasePath: resolvedSourcePath };
   }
   await fs.mkdir(temporaryDirectory, { recursive: true });
+  await assertMaterializationSpace(resolvedSourcePath, temporaryDirectory);
   const databasePath = path.join(temporaryDirectory, `.foliole-restore-source-${randomUUID()}.db`);
   try {
     await pipeline(
@@ -56,7 +57,8 @@ export async function materializeCompressedSqliteBackup(
   }
 }
 
-async function compressSqliteFile(sourcePath: string, destinationPath: string) {
+export async function compressSqliteFile(sourcePath: string, destinationPath: string) {
+  await assertCompressionSpace(sourcePath, path.dirname(destinationPath));
   const temporaryPath = siblingTemporaryPath(destinationPath, 'compressed.tmp');
   try {
     await pipeline(
@@ -64,10 +66,37 @@ async function compressSqliteFile(sourcePath: string, destinationPath: string) {
       createGzip({ level: constants.Z_BEST_SPEED }),
       createWriteStream(temporaryPath, { flags: 'wx' })
     );
-    await fs.rename(temporaryPath, destinationPath);
+    await fs.link(temporaryPath, destinationPath);
+    await fs.rm(temporaryPath, { force: true });
   } catch (error) {
     await fs.rm(temporaryPath, { force: true });
     throw error;
+  }
+}
+
+async function assertCompressionSpace(sourcePath: string, destinationDirectory: string) {
+  const sourceStats = await fs.stat(sourcePath);
+  await assertAvailableSpace(destinationDirectory, sourceStats.size, 'compress sqlite snapshot');
+}
+
+async function assertMaterializationSpace(sourcePath: string, destinationDirectory: string) {
+  const sourceStats = await fs.stat(sourcePath);
+  const handle = await fs.open(sourcePath, 'r');
+  try {
+    const trailer = Buffer.alloc(4);
+    await handle.read(trailer, 0, trailer.length, Math.max(0, sourceStats.size - trailer.length));
+    const expectedBytes = Math.max(sourceStats.size, trailer.readUInt32LE(0));
+    await assertAvailableSpace(destinationDirectory, expectedBytes, 'restore compressed sqlite backup');
+  } finally {
+    await handle.close();
+  }
+}
+
+async function assertAvailableSpace(directoryPath: string, requiredBytes: number, action: string) {
+  const stats = await fs.statfs(directoryPath);
+  const availableBytes = stats.bavail * stats.bsize;
+  if (availableBytes < requiredBytes) {
+    throw new Error(`${action} requires ${requiredBytes} bytes but only ${availableBytes} bytes are available`);
   }
 }
 

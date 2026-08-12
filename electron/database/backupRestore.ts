@@ -20,7 +20,11 @@ import {
 } from './compressedSqliteBackup.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { copyExtraBackup, disabledExtraBackupResult, type ExtraBackupCopyResult } from './extraBackupCopies.js';
-import { createInternalDatabaseSnapshotWithBackup } from './internalSnapshots.js';
+import {
+  assertManagedSafetySnapshotIntegrity,
+  createManagedSafetySnapshotWithBackup,
+  waitForManagedSafetySnapshotSettlements
+} from './managedSafetySnapshots.js';
 import { initializeDatabase } from './migrate.js';
 import { markNodeSyncRestoreIncarnation } from './nodeSyncVersions.js';
 import {
@@ -63,6 +67,7 @@ function automaticBackupFileName(now: Date) {
 }
 
 async function pruneBackupsNow(now = new Date()) {
+  await waitForManagedSafetySnapshotSettlements();
   const settings = loadBackupSettings();
   const result = await pruneManagedDatabaseBackups(resolveManagedBackupDirectory(settings), settings, now);
   showBackupCleanupNotification(result);
@@ -91,6 +96,7 @@ async function createAutomaticBackup(now: Date, backupDirectory: string) {
 }
 
 export async function reconcileAutomaticDatabaseBackups(now = new Date()) {
+  await waitForManagedSafetySnapshotSettlements();
   const settings = loadBackupSettings();
   const backupDirectory = ensureManagedBackupDirectory(settings);
   const existingEntries = await listManagedDatabaseBackups(backupDirectory);
@@ -144,25 +150,33 @@ export async function restoreApplicationDatabaseBackup(
 ): Promise<SqliteRestoreResult> {
   const connection = openDatabaseConnection();
   const targetPath = connection.dbPath;
-  await createInternalDatabaseSnapshotWithBackup({
+  const safetySnapshot = await createManagedSafetySnapshotWithBackup({
     reason: 'pre-restore',
     sourceDatabase: connection.sqlite,
     sourcePath: targetPath
   });
-  const materialized = await materializeCompressedSqliteBackup(options.sourcePath, path.dirname(targetPath));
+  let materialized: Awaited<ReturnType<typeof materializeCompressedSqliteBackup>> | null = null;
+  let restored = false;
   try {
+    await assertManagedSafetySnapshotIntegrity(safetySnapshot.currentPath);
+    materialized = await materializeCompressedSqliteBackup(options.sourcePath, path.dirname(targetPath));
     closeDatabaseConnection();
     const result = await restoreSqliteDatabase({ sourcePath: materialized.databasePath, targetPath });
     initializeDatabase();
     markNodeSyncRestoreIncarnation();
-    await pruneBackupsNow();
+    restored = true;
     return { ...result, sourcePath: path.resolve(options.sourcePath) };
   } finally {
-    await materialized.cleanup();
+    await materialized?.cleanup();
+    safetySnapshot.release();
+    if (restored) {
+      await pruneBackupsNow();
+    }
   }
 }
 
 export async function listApplicationDatabaseBackups(): Promise<ApplicationDatabaseBackupEntry[]> {
+  await waitForManagedSafetySnapshotSettlements();
   await pruneBackupsNow();
   return listManagedDatabaseBackups(resolveManagedBackupDirectory());
 }

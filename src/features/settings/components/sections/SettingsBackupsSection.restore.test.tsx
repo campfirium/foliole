@@ -42,6 +42,18 @@ beforeEach(() => {
 });
 
 it('ends the restoring state and shows a completion dialog after workspace refresh', async () => {
+  const initialBackup = defaultBackups[0];
+  if (!initialBackup) throw new Error('backup fixture is required');
+  const safetySnapshot = {
+    ...initialBackup,
+    fileName: 'pre-restore-2026-08-12_08-00-00-000.db.gz',
+    filePath: '/app/Backups/pre-restore-2026-08-12_08-00-00-000.db.gz',
+    kind: 'snapshot' as const,
+    snapshotReason: 'pre-restore' as const
+  };
+  vi.mocked(listDatabaseBackups)
+    .mockResolvedValueOnce(defaultBackups)
+    .mockResolvedValueOnce([safetySnapshot, ...defaultBackups]);
   renderWithLocalization(<SettingsBackupsSection />);
   const restoreButton = await screen.findByRole('button', { name: 'Restore' });
 
@@ -52,7 +64,8 @@ it('ends the restoring state and shows a completion dialog after workspace refre
   expect(screen.queryByText(/Reloading workspace/)).not.toBeInTheDocument();
   expect(restoreButton).toBeEnabled();
   expect(refreshWorkspaceState).toHaveBeenCalledWith('backup-restore');
-
+  expect(listDatabaseBackups).toHaveBeenCalledTimes(2);
   fireEvent.click(screen.getByRole('button', { name: 'Done' }));
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: safetySnapshot.fileName })).toBeInTheDocument();
 });

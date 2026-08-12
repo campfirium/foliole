@@ -61,6 +61,21 @@ it('does not notify when nothing was deleted or notifications are unavailable', 
   expect(notificationMocks.show).not.toHaveBeenCalled();
 });
 
+it('explains when the latest safety backup keeps storage over the limit', () => {
+  expect(showBackupCleanupNotification({
+    capacityDeletedCount: 0,
+    deletedCount: 0,
+    policyDeletedCount: 0,
+    releasedBytes: 0,
+    remainingBytesOverLimit: 12 * 1024 * 1024,
+    safetySnapshotFloorPreserved: true
+  })).toBe(true);
+  expect(notificationMocks.construct).toHaveBeenCalledWith(expect.objectContaining({
+    body: 'Backup storage remains 12 MB over the limit to keep the latest safety backup.',
+    title: 'Backup limit not reached'
+  }));
+});
+
 it('uses Chinese cleanup copy for Chinese locales', () => {
   notificationMocks.getPreferredSystemLanguages.mockReturnValue(['zh-CN', 'en-US']);
   expect(showBackupCleanupNotification({

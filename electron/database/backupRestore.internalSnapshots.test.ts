@@ -1,10 +1,14 @@
 // @vitest-environment node
 
 import { promises as fs } from 'node:fs';
+import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+
+const require = createRequire(import.meta.url);
+const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
 
 let mockedAppDataDir = '/tmp/foliole-backup-restore-snapshot-tests';
 
@@ -17,13 +21,19 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { createApplicationDatabaseBackup, restoreApplicationDatabaseBackup } from './backupRestore.js';
+import {
+  createApplicationDatabaseBackup,
+  listApplicationDatabaseBackups,
+  restoreApplicationDatabaseBackup
+} from './backupRestore.js';
+import { materializeCompressedSqliteBackup } from './compressedSqliteBackup.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import {
   INTERNAL_DATABASE_SNAPSHOT_RETENTION_LIMIT,
   resolveInternalDatabaseSnapshotDirectory
 } from './internalSnapshots.js';
 import { initializeDatabase } from './migrate.js';
+import { DATABASE_SCHEMA_VERSION } from './migrate.js';
 import { upsertNodeSnapshot } from './nodeMutations.js';
 import { loadWorkspaceSnapshot } from './workspaceSnapshot.js';
 
@@ -36,6 +46,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   closeDatabaseConnection();
   await removeTempRoot();
 });
@@ -101,6 +112,69 @@ it('keeps the current database untouched when the pre-restore snapshot cannot be
   }
   expect(snapshot.nodesById['node-1']).toMatchObject({ content: '# current' });
 });
+
+it('restores through a complete sqlite safety snapshot when compression lacks space', async () => {
+  seedNode('node-1', '# original');
+  const sourcePath = path.join(tempRoot, 'legacy-source.db');
+  await createApplicationDatabaseBackup({ destinationPath: sourcePath });
+  seedNode('node-1', '# current');
+  vi.spyOn(fs, 'statfs').mockResolvedValue({
+    bavail: 0, bsize: 4096
+  } as Awaited<ReturnType<typeof fs.statfs>>);
+
+  await restoreApplicationDatabaseBackup({ sourcePath });
+
+  expect(loadWorkspaceSnapshot({ includeBody: true })?.nodesById['node-1']?.content).toBe('# original');
+  const snapshot = (await listApplicationDatabaseBackups()).find((entry) =>
+    entry.snapshotReason === 'pre-restore');
+  expect(snapshot?.fileName).toMatch(/^pre-restore-.*\.db$/);
+  await expect(readSnapshotState(snapshot?.filePath)).resolves.toEqual({
+    content: '# current', userVersion: DATABASE_SCHEMA_VERSION
+  });
+});
+
+it('keeps distinct compressed pre-restore and pre-migration states restorable', async () => {
+  seedNode('node-1', '# restored old state');
+  const oldBackupPath = path.join(tempRoot, 'old-schema.db');
+  await createApplicationDatabaseBackup({ destinationPath: oldBackupPath });
+  const oldSqlite = new BetterSqlite3(oldBackupPath);
+  oldSqlite.pragma('user_version = 31');
+  oldSqlite.close();
+  seedNode('node-1', '# current state');
+
+  await restoreApplicationDatabaseBackup({ sourcePath: oldBackupPath });
+
+  const snapshots = (await listApplicationDatabaseBackups()).filter((entry) => entry.kind === 'snapshot');
+  const preRestore = snapshots.find((entry) => entry.snapshotReason === 'pre-restore');
+  const preMigration = snapshots.find((entry) => entry.snapshotReason === 'pre-migration');
+  expect(preRestore?.fileName).toMatch(/^pre-restore-.*\.db\.gz$/);
+  expect(preMigration?.fileName).toMatch(/^pre-migration-.*\.db\.gz$/);
+  await expect(readSnapshotState(preRestore?.filePath)).resolves.toEqual({
+    content: '# current state', userVersion: DATABASE_SCHEMA_VERSION
+  });
+  await expect(readSnapshotState(preMigration?.filePath)).resolves.toEqual({
+    content: '# restored old state', userVersion: 31
+  });
+
+  await restoreApplicationDatabaseBackup({ sourcePath: preRestore?.filePath ?? '' });
+  expect(loadWorkspaceSnapshot({ includeBody: true })?.nodesById['node-1']?.content).toBe('# current state');
+});
+
+async function readSnapshotState(filePath: string | undefined) {
+  if (!filePath) throw new Error('snapshot path is required');
+  const materialized = await materializeCompressedSqliteBackup(filePath, tempRoot);
+  try {
+    const sqlite = new BetterSqlite3(materialized.databasePath, { readonly: true });
+    try {
+      const row = sqlite.prepare('SELECT content FROM nodes WHERE id = ?').get('node-1') as { content: string };
+      return { content: row.content, userVersion: sqlite.pragma('user_version', { simple: true }) };
+    } finally {
+      sqlite.close();
+    }
+  } finally {
+    await materialized.cleanup();
+  }
+}
 
 function seedNode(nodeId: string, content: string) {
   upsertNodeSnapshot({
