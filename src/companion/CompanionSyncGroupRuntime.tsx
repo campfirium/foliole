@@ -1,7 +1,11 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 import type { SyncGroupPayload } from '../../lib/platform/syncGroupContract';
+import {
+  getCompanionSyncMutationRevision,
+  subscribeCompanionSyncMutationRevision
+} from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
 import { reconcileCompanionSyncGroupProvider } from '../shared/platform/companion/sync/syncGroupProvider';
 import { loadCompanionSyncGroup } from '../shared/platform/companion/sync/syncGroupStore';
 
@@ -17,6 +21,11 @@ export function CompanionSyncGroupRuntime(props: {
   const { bootstrapState, workspaceSync } = props;
   const [group, setGroup] = useState<SyncGroupPayload | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const mutationRevision = useSyncExternalStore(
+    subscribeCompanionSyncMutationRevision,
+    getCompanionSyncMutationRevision,
+    getCompanionSyncMutationRevision
+  );
 
   useEffect(() => {
     if (bootstrapState.runtime_kind !== 'android-capacitor') return;
@@ -33,8 +42,9 @@ export function CompanionSyncGroupRuntime(props: {
 
   useEffect(() => {
     if (bootstrapState.runtime_kind !== 'android-capacitor' || !loaded) return;
-    void reconcileCompanionSyncGroupProvider(bootstrapState, group).catch(() => undefined);
-  }, [bootstrapState, group, loaded]);
+    const factsRevision = `${mutationRevision}:${workspaceSync.state.last_synced_at ?? ''}`;
+    void reconcileCompanionSyncGroupProvider(bootstrapState, group, factsRevision).catch(() => undefined);
+  }, [bootstrapState, group, loaded, mutationRevision, workspaceSync.state.last_synced_at]);
 
   return (
     <CompanionSyncGroupContext.Provider value={group}>

@@ -250,6 +250,7 @@
     },
     "syncGroupProvider": {
       "dataRequestEvent": "syncGroupDataRequest",
+      "serviceHintEvent": "syncGroupServiceHint",
       "dataRequestKeys": {
         "operation": "operation",
         "payload": "payload",
@@ -265,6 +266,7 @@
         "databasePath": "database_path",
         "deviceId": "device_id",
         "deviceName": "device_name",
+        "factsRevision": "facts_revision",
         "group": "sync_group",
         "pairRequestId": "pair_request_id"
       }

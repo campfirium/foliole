@@ -4,6 +4,7 @@ import { digest } from './multi-device-sync-contract.mjs';
 
 const CONTROL_DEADLINE = 10_000;
 const PRODUCT_PROGRESS_DEADLINE = 60_000;
+const WINDOWS_C_JOIN_DEADLINE = 15 * 60_000;
 
 const stages = [
   { action: 'prepare-candidate', hardDeadlineMs: 30 * 60_000, host: 'all', inputs: [],
@@ -23,10 +24,10 @@ const stages = [
     milestones: ['a-listener-ready', 'a-fact-created', 'b-provider-stopped', 'b-transport-ready',
       'b-fact-received', 'a-offline', 'c-join-started', 'b-approval-completed',
       'c-ordinary-sync-completed'], outputs: ['b_c_group_active'],
-    progressDeadlineMs: PRODUCT_PROGRESS_DEADLINE + CONTROL_DEADLINE,
-    siblings: [{ hardDeadlineMs: 15 * 60_000 + CONTROL_DEADLINE,
+    progressDeadlineMs: WINDOWS_C_JOIN_DEADLINE + CONTROL_DEADLINE,
+    siblings: [{ hardDeadlineMs: WINDOWS_C_JOIN_DEADLINE + CONTROL_DEADLINE,
       name: 'android-b-approval', waitsFor: 'windows-c-join' },
-      { hardDeadlineMs: 15 * 60_000, name: 'windows-c-join', waitsFor: null }] },
+      { hardDeadlineMs: WINDOWS_C_JOIN_DEADLINE, name: 'windows-c-join', waitsFor: null }] },
   { action: 'rejoin-a', host: 'all', inputs: ['b_c_group_active'], name: 'a-rejoin',
     hardDeadlineMs: 20 * 60_000, hosts: ['macos-a', 'android-b', 'windows-c'],
     milestones: ['a-listener-ready', 'three-members-converged', 'a-fact-created',
@@ -57,6 +58,9 @@ export function assertStageTiming(stage) {
     }
   }
   const siblingWindow = Math.max(0, ...stage.siblings.map(({ hardDeadlineMs }) => hardDeadlineMs));
+  if (stage.siblings.length > 0 && stage.progressDeadlineMs < siblingWindow) {
+    throw new Error(`Stage progress deadline is shorter than its sibling window: ${stage.name}`);
+  }
   if (stage.siblings.length > 0 && stage.hardDeadlineMs < siblingWindow + CONTROL_DEADLINE) {
     throw new Error(`Stage sibling settlement deadline is too short: ${stage.name}`);
   }

@@ -11,10 +11,12 @@ const COMPANION_SYNC_MDNS_SERVICE_TYPE = 'foliole-sync';
 type PublishedBonjourService = ReturnType<InstanceType<typeof Bonjour>['publish']>;
 type ActiveAdvertisement = {
   bonjour: InstanceType<typeof Bonjour>;
+  input: CompanionMdnsAdvertisementInput;
   service: PublishedBonjourService;
 };
 
 let activeAdvertisement: ActiveAdvertisement | null = null;
+let factsRevision = 0;
 
 export interface CompanionMdnsAdvertisementInput {
   appVersion: string;
@@ -46,6 +48,7 @@ export function startCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisemen
     protocol: 'tcp',
     txt: {
       app_version: input.appVersion,
+      facts_revision: String(factsRevision),
       group_id: input.groupId,
       peer_id: input.peerId,
       runtime_instance_id: loadSyncGroupRuntimeInstanceId(),
@@ -54,8 +57,15 @@ export function startCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisemen
     },
     type: COMPANION_SYNC_MDNS_SERVICE_TYPE
   });
-  activeAdvertisement = { bonjour, service };
+  activeAdvertisement = { bonjour, input, service };
   return [service];
+}
+
+export function refreshCompanionMdnsAdvertisement() {
+  const input = activeAdvertisement?.input;
+  if (!input) return;
+  factsRevision += 1;
+  startCompanionMdnsAdvertisement(input);
 }
 
 export function stopCompanionMdnsAdvertisement() {

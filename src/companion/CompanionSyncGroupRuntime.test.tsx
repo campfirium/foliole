@@ -42,7 +42,7 @@ it('maintains the member provider before any settings surface is mounted', async
   </CompanionSyncGroupRuntime>);
   await act(async () => Promise.resolve());
   expect(runtime.reconcile).toHaveBeenCalledWith(
-    expect.objectContaining({ device_id: 'android-b' }), group
+    expect.objectContaining({ device_id: 'android-b' }), group, '0:'
   );
 });
 

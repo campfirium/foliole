@@ -6,6 +6,7 @@ import {
   subscribeNativeAppBackground,
   subscribeNativeAppForeground
 } from '../shared/platform/appLifecycle';
+import { subscribeCompanionSyncGroupServiceHint } from '../shared/platform/companion/sync/syncGroupProvider';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 
@@ -26,6 +27,7 @@ function useForegroundSyncRefs(isPairingReady: boolean, state: NativeCompanionWo
   const isPairingReadyRef = useRef(isPairingReady);
   const lastCheckedAtRef = useRef(0);
   const lastForegroundAtRef = useRef(0);
+  const pendingServiceHintRef = useRef(false);
   const resourceContinuationModeRef = useRef<CompanionSyncContinuationMode>('full');
   const retryAttemptRef = useRef(0);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -36,6 +38,7 @@ function useForegroundSyncRefs(isPairingReady: boolean, state: NativeCompanionWo
     isPairingReadyRef,
     lastCheckedAtRef,
     lastForegroundAtRef,
+    pendingServiceHintRef,
     readAppActiveState: readNativeAppActiveState,
     resourceContinuationModeRef,
     retryAttemptRef,
@@ -49,6 +52,29 @@ function useForegroundSyncRefs(isPairingReady: boolean, state: NativeCompanionWo
   }, [isPairingReady, refs, state]);
 
   return refs;
+}
+
+function subscribeForegroundSyncEvents(
+  refs: ForegroundSyncRefs,
+  run: (reason: ForegroundSyncReason) => void,
+  cancelled: () => boolean
+) {
+  const unsubscribers: Array<() => void> = [];
+  const keep = async (subscription: Promise<() => void>) => {
+    const unsubscribe = await subscription;
+    if (cancelled()) unsubscribe();
+    else unsubscribers.push(unsubscribe);
+  };
+  void keep(subscribeCompanionSyncGroupServiceHint(() => run('service-hint')));
+  void keep(subscribeNativeAppForeground(() => {
+    refs.isAppActiveRef.current = true;
+    run('foreground');
+  }));
+  void keep(subscribeNativeAppBackground(() => {
+    refs.isAppActiveRef.current = false;
+    clearRetryTimer(refs.retryTimerRef);
+  }));
+  return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
 }
 
 export function useForegroundAutoSync(
@@ -84,33 +110,11 @@ export function useForegroundAutoSync(
     runForegroundSyncCheckRef.current = runForegroundSyncCheck;
 
     runForegroundSyncCheck('endpoint-ready');
-    let unsubscribeBackground: (() => void) | null = null;
-    let unsubscribeForeground: (() => void) | null = null;
-    void subscribeNativeAppForeground(() => {
-      refs.isAppActiveRef.current = true;
-      runForegroundSyncCheck('foreground');
-    }).then((nextUnsubscribe) => {
-      if (cancelled) {
-        nextUnsubscribe();
-        return;
-      }
-      unsubscribeForeground = nextUnsubscribe;
-    });
-    void subscribeNativeAppBackground(() => {
-      refs.isAppActiveRef.current = false;
-      clearRetryTimer(refs.retryTimerRef);
-    }).then((nextUnsubscribe) => {
-      if (cancelled) {
-        nextUnsubscribe();
-        return;
-      }
-      unsubscribeBackground = nextUnsubscribe;
-    });
+    const unsubscribe = subscribeForegroundSyncEvents(refs, runForegroundSyncCheck, () => cancelled);
     return () => {
       cancelled = true;
       clearRetryTimer(refs.retryTimerRef);
-      unsubscribeBackground?.();
-      unsubscribeForeground?.();
+      unsubscribe();
     };
   }, [refs, setError, setReadableArticle, setState, setStatus, tryForegroundAutoSync]);
 }

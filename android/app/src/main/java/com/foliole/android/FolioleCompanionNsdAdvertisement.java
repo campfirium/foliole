@@ -29,6 +29,7 @@ final class FolioleCompanionNsdAdvertisement {
         ));
         info.setPort(port);
         put(info, "app_version", config.getString("app_version"));
+        put(info, "facts_revision", config.getString("facts_revision"));
         put(info, "group_id", config.getJSONObject("sync_group").getString("group_id"));
         put(info, "group_display_name", config.getJSONObject("sync_group").getString("display_name"));
         put(info, "peer_id", config.getString("device_id"));

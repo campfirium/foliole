@@ -13,6 +13,7 @@ import { loadOrCreateDesktopDeviceId } from '../database/deviceIdentity.js';
 import { joinDesktopSyncGroup, loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import { resolveDesktopDeviceName } from './companionLanPayloads.js';
+import { refreshCompanionMdnsAdvertisement } from './companionMdnsAdvertisement.js';
 import { loadPairedSyncGroupPeers, savePairedSyncGroupPeer } from './companionPairingStore.js';
 import { registerPairedCompanionDeviceWithSecret } from './companionPairingStore.js';
 import { createDesktopSyncGroupSignedHeaders, requestJson } from './desktopSyncGroupHttp.js';
@@ -127,6 +128,7 @@ async function continuePeerSync(target: ReturnType<typeof savePairedSyncGroupPee
   saveReceiveCursor(target.peer_device_id, nextCursor);
   await runPeerSyncStage('resources', () => downloadDesktopSyncGroupResources(target));
   const complete = resourcesComplete();
+  refreshCompanionMdnsAdvertisement();
   return { complete, cursor: nextCursor };
 }
 

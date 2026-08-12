@@ -7,7 +7,8 @@ import { ensureCompanionSyncGroupDataOwner } from './syncGroupProviderDataOwner'
 
 export async function reconcileCompanionSyncGroupProvider(
   bootstrap: NativeCompanionBootstrapState,
-  group: SyncGroupPayload | null
+  group: SyncGroupPayload | null,
+  factsRevision = '0'
 ) {
   if (!isAvailableNativeAndroidCompanionRuntime()) return null;
   if (!group || group.local_member_state !== 'active' || !bootstrap.database_path) {
@@ -20,8 +21,18 @@ export async function reconcileCompanionSyncGroupProvider(
     app_version: await loadAppVersion(),
     device_id: localMember.device_id,
     device_name: localMember.device_name,
+    facts_revision: factsRevision,
     sync_group: group
   });
+}
+
+export async function subscribeCompanionSyncGroupServiceHint(listener: () => void) {
+  if (!isAvailableNativeAndroidCompanionRuntime()) return () => undefined;
+  const eventSource = FolioleCompanionSync as typeof FolioleCompanionSync & {
+    addListener(eventName: 'syncGroupServiceHint', next: () => void): Promise<{ remove(): Promise<void> }>;
+  };
+  const handle = await eventSource.addListener('syncGroupServiceHint', listener);
+  return () => { void handle.remove(); };
 }
 
 export function loadCompanionSyncGroupProviderState() {

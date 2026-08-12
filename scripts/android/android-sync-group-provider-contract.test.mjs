@@ -34,6 +34,17 @@ it('normalizes the Android NSD trailing-dot service type without changing the re
   expect(discovery).toContain('return normalized.isEmpty() ? normalized : normalized + ".";');
 });
 
+it('keeps Android fact-change discovery foreground-bound and excludes its own resolved service', async () => {
+  const monitor = await readJava('FolioleCompanionNsdMonitor.java');
+  const plugin = await readJava('FolioleCompanionSyncPlugin.java');
+  expect(monitor).toContain('manager.resolveService(service');
+  expect(monitor).toContain('FolioleCompanionSyncGroupProvider.runtimeInstanceId()');
+  expect(monitor).toContain('ownRuntimeId.equals(new String(runtimeId');
+  expect(plugin).toContain('serviceMonitor.start()');
+  expect(plugin).toContain('serviceMonitor.stop()');
+  expect(plugin).toContain('syncGroupProviderServiceHintEvent');
+});
+
 it('authorizes every Android provider data request with both the channel secret and member fact', async () => {
   const auth = await readJava('FolioleCompanionSyncGroupRequestAuth.java');
   const database = await readJava('FolioleCompanionSyncGroupDatabase.java');

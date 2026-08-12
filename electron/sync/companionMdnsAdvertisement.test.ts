@@ -86,6 +86,7 @@ describe('companion mDNS advertisement', () => {
       protocol: 'tcp',
       txt: {
         app_version: '0.1.0-test',
+        facts_revision: expect.any(String),
         group_id: 'group-1',
         peer_id: 'desktop-local',
         protocol_capabilities: 'lan-sync-v1,sync-group-facts-v1',
@@ -97,6 +98,26 @@ describe('companion mDNS advertisement', () => {
       },
       type: 'foliole-sync'
     });
+  });
+
+});
+
+describe('companion mDNS facts hints', () => {
+  beforeEach(resetMocks);
+
+  it('re-advertises a newer transient facts revision after committed data changes', async () => {
+    const { refreshCompanionMdnsAdvertisement, startCompanionMdnsAdvertisement } = await import(
+      './companionMdnsAdvertisement.js'
+    );
+    startCompanionMdnsAdvertisement({
+      appVersion: '0.1.0-test', groupDisplayName: 'V', groupId: 'group-1',
+      peerId: 'desktop-local', port: 38683, timelineId: 'timeline-1'
+    });
+    const initial = (bonjourMock.publish.mock.calls[0]?.[0] as { txt: { facts_revision: string } }).txt.facts_revision;
+    refreshCompanionMdnsAdvertisement();
+    const refreshed = (bonjourMock.publish.mock.calls[1]?.[0] as { txt: { facts_revision: string } }).txt.facts_revision;
+    expect(Number(refreshed)).toBe(Number(initial) + 1);
+    expect(bonjourMock.stop).toHaveBeenCalledOnce();
   });
 });
 

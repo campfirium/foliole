@@ -33,14 +33,18 @@ final class FolioleCompanionSyncGroupProvider {
             .put("app_version", value(context, call, "appVersion"))
             .put("device_id", value(context, call, "deviceId"))
             .put("device_name", value(context, call, "deviceName"))
+            .put("facts_revision", value(context, call, "factsRevision"))
             .put("protocol", FolioleCompanionSyncPackProviderDefinitions.load(context).protocol())
             .put("sync_group", call.getData().getJSONObject(key(context, "group")));
         if (sameProvider(next)) {
+            next.put("runtime_instance_id", activeConfig.getString("runtime_instance_id"));
+            boolean factsChanged = !next.optString("facts_revision").equals(activeConfig.optString("facts_revision"));
             activeOwner = owner;
             FolioleCompanionSyncScreenAwake.attach(activity);
             activeContext = context.getApplicationContext(); activeConfig = next;
             requireDataBridge().replaceDispatcher(dispatcher);
             if (server == null) startRuntime();
+            else if (factsChanged) restartAdvertisement();
             return state();
         }
         if (activeConfig != null) stopActiveProvider();
@@ -90,6 +94,11 @@ final class FolioleCompanionSyncGroupProvider {
 
     private static void startRuntime() throws Exception {
         server = new FolioleCompanionSyncGroupServer(activeContext, activeConfig, joinRequests, requireDataBridge());
+        advertisement = FolioleCompanionNsdAdvertisement.start(activeContext, server.port(), activeConfig);
+    }
+
+    private static void restartAdvertisement() throws Exception {
+        if (advertisement != null) advertisement.stop();
         advertisement = FolioleCompanionNsdAdvertisement.start(activeContext, server.port(), activeConfig);
     }
 

@@ -25,6 +25,7 @@ import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorag
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { initializeDesktopDeviceProfileFixture } from './deviceIdentityTestSupport.js';
 import { replaceExternalDocumentsForFolder } from './externalDocuments.js';
 import { buildDesktopSyncPack } from './syncPackBuilder.js';
 
@@ -66,6 +67,7 @@ it('advances the shared pack cursor for external document tombstone-only packs',
 async function buildSourceCreateAndDeletePacks() {
   mockedAppDataDir = path.join(tempRoot, 'source-app-data');
   initializeDatabaseConnection(openDatabaseConnection());
+  initializeDesktopDeviceProfileFixture();
   const folder = createExternalFolder();
   replaceExternalDocumentsForFolder(folder, [createScannedDocument()], '2026-05-04T09:00:00.000Z');
   const created = await buildPack('external-delete-create', 'external-create.syncpack', 0, '2026-05-04T09:00:30.000Z');

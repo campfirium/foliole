@@ -25,6 +25,7 @@ import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { initializeDesktopDeviceProfileFixture } from './deviceIdentityTestSupport.js';
 import { upsertExternalDocuments } from './externalDocuments.js';
 import { buildDesktopSyncPack } from './syncPackBuilder.js';
 
@@ -37,6 +38,7 @@ beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-sync-pack-contract-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabaseConnection(openDatabaseConnection());
+  initializeDesktopDeviceProfileFixture();
 });
 
 afterEach(async () => {

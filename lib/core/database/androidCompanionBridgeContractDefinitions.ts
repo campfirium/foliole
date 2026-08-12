@@ -98,6 +98,7 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
     },
     syncGroupProvider: {
       dataRequestEvent: 'syncGroupDataRequest',
+      serviceHintEvent: 'syncGroupServiceHint',
       dataRequestKeys: {
         operation: 'operation',
         payload: 'payload',
@@ -113,6 +114,7 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
         databasePath: 'database_path',
         deviceId: 'device_id',
         deviceName: 'device_name',
+        factsRevision: 'facts_revision',
         group: 'sync_group',
         pairRequestId: 'pair_request_id'
       }

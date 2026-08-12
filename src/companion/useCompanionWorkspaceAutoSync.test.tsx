@@ -12,6 +12,12 @@ function createSyncState(endpointUrl: string | null) {
   };
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => { resolve = done; });
+  return { promise, resolve };
+}
+
 async function renderAutoSyncHook(
   isNativeRuntime: boolean,
   endpointUrl: string | null = 'http://10.0.2.2:38641',
@@ -24,6 +30,13 @@ async function renderAutoSyncHook(
     isNativeAndroidCompanionRuntime: () => isNativeRuntime
   }));
   const foregroundHandlers: Array<() => void> = [];
+  const serviceHintHandlers: Array<() => void> = [];
+  vi.doMock('../shared/platform/companion/sync/syncGroupProvider', () => ({
+    subscribeCompanionSyncGroupServiceHint: vi.fn(async (handler: () => void) => {
+      if (isNativeRuntime) serviceHintHandlers.push(handler);
+      return vi.fn();
+    })
+  }));
   const setStatus = vi.fn();
   const subscribeNativeAppForeground = vi.fn(async (handler: () => void) => {
     foregroundHandlers.push(handler);
@@ -39,7 +52,8 @@ async function renderAutoSyncHook(
     useForegroundAutoSync(vi.fn(), vi.fn(), vi.fn(), vi.fn(), setStatus, pairingReady, syncState, tryForegroundAutoSync),
     { initialProps: { pairingReady: isPairingReady, syncState: createSyncState(endpointUrl) } }
   );
-  return { foregroundHandlers, hook, setStatus, subscribeNativeAppForeground, tryForegroundAutoSync };
+  return { foregroundHandlers, hook, serviceHintHandlers, setStatus, subscribeNativeAppForeground,
+    tryForegroundAutoSync };
 }
 
 function resetAutoSyncTestModules() {
@@ -245,6 +259,40 @@ describe('useForegroundAutoSync triggers', () => {
   });
 
   it('waits for native pairing before syncing a saved endpoint', expectWaitsForNativePairing);
+});
+
+describe('useForegroundAutoSync service hints', () => {
+  beforeEach(() => {
+    resetAutoSyncTestModules();
+  });
+
+  it('runs again when a foreground DNS-SD service fact changes', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_000);
+    const { serviceHintHandlers, tryForegroundAutoSync } = await renderAutoSyncHook(true);
+    await act(async () => Promise.resolve());
+
+    await act(async () => serviceHintHandlers[0]?.());
+
+    expect(tryForegroundAutoSync).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps one service hint that arrives during an active peer sync', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_000);
+    const first = deferred<'completed'>();
+    const tryForegroundAutoSync = vi.fn()
+      .mockReturnValueOnce(first.promise)
+      .mockResolvedValue('completed');
+    const { serviceHintHandlers } = await renderAutoSyncHook(
+      true, 'http://10.0.2.2:38641', tryForegroundAutoSync
+    );
+    await act(async () => Promise.resolve());
+
+    await act(async () => serviceHintHandlers[0]?.());
+    expect(tryForegroundAutoSync).toHaveBeenCalledOnce();
+    await act(async () => first.resolve('completed'));
+
+    expect(tryForegroundAutoSync).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('useForegroundAutoSync retry cadence', () => {

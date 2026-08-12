@@ -54,6 +54,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionNetworkPluginActions.java',
       'FolioleCompanionNsdAdvertisement.java',
       'FolioleCompanionNsdDiscovery.java',
+      'FolioleCompanionNsdMonitor.java',
       'FolioleCompanionPairingCrypto.java',
       'FolioleCompanionPairingMetadata.java',
       'FolioleCompanionPairingPeerContractDefinitions.java',

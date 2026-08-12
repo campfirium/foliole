@@ -12,6 +12,17 @@ import java.util.concurrent.Executors;
 @CapacitorPlugin(name = "FolioleCompanionSync")
 public class FolioleCompanionSyncPlugin extends Plugin {
     private final ExecutorService fileExecutor = Executors.newSingleThreadExecutor();
+    private FolioleCompanionNsdMonitor serviceMonitor;
+
+    @Override public void load() {
+        super.load();
+        try {
+            serviceMonitor = new FolioleCompanionNsdMonitor(getContext(), this::dispatchServiceHint);
+            serviceMonitor.start();
+        } catch (Exception error) {
+            android.util.Log.w("FolioleSyncDiscovery", "Monitor unavailable", error);
+        }
+    }
 
     @PluginMethod public void desktopHttpRequest(PluginCall call) {
         FolioleCompanionNetworkPluginActions.desktopHttpRequest(getContext(), call);
@@ -129,19 +140,31 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         getActivity().runOnUiThread(() -> notifyListeners(name, event));
     }
 
+    private void dispatchServiceHint() {
+        try {
+            String name = FolioleCompanionHostBridgeContractDefinitions.syncGroupProviderServiceHintEvent(getContext());
+            getActivity().runOnUiThread(() -> notifyListeners(name, new JSObject()));
+        } catch (Exception error) {
+            android.util.Log.w("FolioleSyncDiscovery", "Hint dispatch failed", error);
+        }
+    }
+
     @Override protected void handleOnDestroy() {
+        if (serviceMonitor != null) serviceMonitor.stop();
         FolioleCompanionSyncGroupProvider.pause(this);
         super.handleOnDestroy();
         fileExecutor.shutdownNow();
     }
 
     @Override protected void handleOnPause() {
+        if (serviceMonitor != null) serviceMonitor.stop();
         FolioleCompanionSyncGroupProvider.pause(this);
         super.handleOnPause();
     }
 
     @Override protected void handleOnResume() {
         super.handleOnResume();
+        if (serviceMonitor != null) serviceMonitor.start();
         fileExecutor.execute(() -> {
             try { FolioleCompanionSyncGroupProvider.resume(this); }
             catch (Exception error) { android.util.Log.w("FolioleSyncProvider", "Resume failed", error); }

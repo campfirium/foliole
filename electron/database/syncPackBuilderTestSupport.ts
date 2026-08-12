@@ -10,6 +10,7 @@ import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js'
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { initializeDesktopDeviceProfileFixture } from './deviceIdentityTestSupport.js';
 import { readPackRowsFromZip } from './syncPackZipReaderTestSupport.js';
 
 export let mockedSyncPackBuilderAppDataDir = '/tmp/foliole-sync-pack-builder-tests';
@@ -20,6 +21,7 @@ export function setupSyncPackBuilderTestLifecycle() {
     tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-sync-pack-builder-'));
     mockedSyncPackBuilderAppDataDir = path.join(tempRoot, 'app-data');
     initializeDatabaseConnection(openDatabaseConnection());
+    initializeDesktopDeviceProfileFixture();
   });
 
   afterEach(async () => {

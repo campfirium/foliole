@@ -47,12 +47,19 @@ beforeEach(() => {
 });
 
 it('lands an active Android member on the native provider bridge with its persistent group identity', async () => {
-  await reconcileCompanionSyncGroupProvider(bootstrap, group);
+  await reconcileCompanionSyncGroupProvider(bootstrap, group, '4:2026-08-12T00:00:00.000Z');
   expect(runtime.start).toHaveBeenCalledWith({
     app_version: '0.7.5', device_id: 'A5 2',
-    device_name: 'A5 2', sync_group: group
+    device_name: 'A5 2', facts_revision: '4:2026-08-12T00:00:00.000Z', sync_group: group
   });
   expect(runtime.listen).toHaveBeenCalledWith('syncGroupDataRequest', expect.any(Function));
+});
+
+it('lands the native service hint event on the shared subscription', async () => {
+  const listener = vi.fn();
+  const { subscribeCompanionSyncGroupServiceHint } = await import('./syncGroupProvider');
+  await subscribeCompanionSyncGroupServiceHint(listener);
+  expect(runtime.listen).toHaveBeenCalledWith('syncGroupServiceHint', listener);
 });
 
 it('stops the native provider when there is no local group membership', async () => {

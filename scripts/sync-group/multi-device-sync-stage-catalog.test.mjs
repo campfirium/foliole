@@ -29,7 +29,9 @@ it('declares ordered milestones and deadlines that cover legal sibling waits', (
       expect.objectContaining({ name: 'windows-c-join', waitsFor: null })
     ])
   });
-  expect(stage.progressDeadlineMs).toBeGreaterThan(60_000);
+  expect(stage.progressDeadlineMs).toBeGreaterThanOrEqual(
+    Math.max(...stage.siblings.map(({ hardDeadlineMs }) => hardDeadlineMs))
+  );
   expect(resolveStage('a-rejoin')).toMatchObject({
     action: 'rejoin-a', milestones: ['a-listener-ready', 'three-members-converged',
       'a-fact-created', 'b-fact-created', 'c-fact-created', 'three-facts-converged',
@@ -39,6 +41,9 @@ it('declares ordered milestones and deadlines that cover legal sibling waits', (
     siblings: [{ hardDeadlineMs: 80, name: 'waiter', waitsFor: 'worker' },
       { hardDeadlineMs: 80, name: 'worker', waitsFor: null }] }))
     .toThrow('Sibling wait deadline is too short');
+  expect(() => assertStageTiming({ hardDeadlineMs: 120, name: 'invalid-progress',
+    progressDeadlineMs: 70, siblings: [{ hardDeadlineMs: 80, name: 'worker', waitsFor: null }] }))
+    .toThrow('Stage progress deadline is shorter than its sibling window');
 });
 
 it('limits candidate hosts to the selected product stage closure', () => {
