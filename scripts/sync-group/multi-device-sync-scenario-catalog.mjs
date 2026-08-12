@@ -9,6 +9,9 @@ const scenarios = [{
 }, {
   name: 'three-device-convergence',
   stages: ['candidate-preparation', 'a-b-group-sync', 'b-admit-empty-c', 'a-rejoin']
+}, {
+  name: 'founder-leave-continuity',
+  stages: ['candidate-preparation', 'a-b-group-sync', 'b-admit-empty-c', 'a-rejoin', 'a-leave']
 }];
 
 function assertAcyclic(stages) {

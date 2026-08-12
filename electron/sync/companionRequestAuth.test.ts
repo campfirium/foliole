@@ -8,8 +8,13 @@ import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtoco
 const pairingStoreMock = vi.hoisted(() => ({
   loadPairedCompanionDevice: vi.fn()
 }));
+const syncGroupStoreMock = vi.hoisted(() => ({
+  loadDesktopSyncGroup: vi.fn(() => ({ group_id: 'group-1' })),
+  loadSyncGroupMemberAuthorization: vi.fn((): { state: 'active' } | null => ({ state: 'active' }))
+}));
 
 vi.mock('./companionPairingStore.js', () => pairingStoreMock);
+vi.mock('../database/syncGroupStore.js', () => syncGroupStoreMock);
 
 import { authenticateCompanionRequest, clearCompanionRequestNonceCache } from './companionRequestAuth.js';
 
@@ -25,6 +30,8 @@ const NONCE_CACHE_LIMIT_PER_DEVICE = 2_048;
 afterEach(() => {
   clearCompanionRequestNonceCache();
   vi.clearAllMocks();
+  syncGroupStoreMock.loadDesktopSyncGroup.mockReturnValue({ group_id: 'group-1' });
+  syncGroupStoreMock.loadSyncGroupMemberAuthorization.mockReturnValue({ state: 'active' });
 });
 
 function createRequest(headers: http.IncomingHttpHeaders): http.IncomingMessage {
@@ -163,6 +170,16 @@ function assertCrossDeviceNonceFloodDoesNotAllowReplay() {
 }
 
 describe('companion request auth', () => {
+  it('rejects a valid old credential after its Device is no longer active', () => {
+    mockPairedDevice();
+    syncGroupStoreMock.loadSyncGroupMemberAuthorization.mockReturnValue(null);
+    expect(authenticateCompanionRequest({ nowMs: NOW_MS, request: createRequest({
+      ...signedHeaders({ nonce: 'departed-device' }), 'x-sync-group-id': 'group-1'
+    }) })).toEqual({
+      error: 'sync_group_member_not_authorized', ok: false, status_code: 401
+    });
+  });
+
   it('blocks old pairing records before signature or nonce processing', () => {
     pairingStoreMock.loadPairedCompanionDevice.mockReturnValue({
       device_id: DEVICE_ID,

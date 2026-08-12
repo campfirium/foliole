@@ -37,6 +37,11 @@ it('declares ordered milestones and deadlines that cover legal sibling waits', (
       'a-fact-created', 'b-fact-created', 'c-fact-created', 'three-facts-converged',
       'three-members-restarted']
   });
+  expect(resolveStage('a-leave')).toMatchObject({
+    action: 'leave-a', milestones: ['survivor-provider-ready', 'a-left',
+      'a-restarted-unbound', 'b-two-members-active', 'b-fact-created', 'c-fact-created',
+      'survivor-facts-converged', 'survivors-restarted', 'former-a-revoked']
+  });
   expect(() => assertStageTiming({ hardDeadlineMs: 100, name: 'invalid', progressDeadlineMs: 50,
     siblings: [{ hardDeadlineMs: 80, name: 'waiter', waitsFor: 'worker' },
       { hardDeadlineMs: 80, name: 'worker', waitsFor: null }] }))

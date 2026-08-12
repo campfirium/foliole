@@ -19,8 +19,13 @@ export async function runWindowsMultiDeviceSyncControl({ buildPushSpec, buildScp
   await executeGit(push.args, { env: push.env });
   const output = await executeSsh(buildSshSpec(host, action, env), { env });
   stdout.write(output);
-  const receiptName = action === 'multi-device-sync-a-rejoin'
-    ? 'multi-device-sync-a-rejoin-receipt.json' : 'sync-group-recovery-receipt.json';
+  const receiptNames = {
+    'multi-device-sync-a-leave': 'multi-device-sync-a-leave-receipt.json',
+    'multi-device-sync-a-rejoin': 'multi-device-sync-a-rejoin-receipt.json',
+    'multi-device-sync-c': 'sync-group-recovery-receipt.json'
+  };
+  const receiptName = receiptNames[action];
+  if (!receiptName) throw new Error(`Unsupported multi-device sync action: ${action}`);
   const evidence = parseEvidence(output, action, receiptName);
   const localRoot = path.join(repoRoot, '.tmp', 'artifacts', 'multi-device-sync',
     'windows-c', evidence.identity);

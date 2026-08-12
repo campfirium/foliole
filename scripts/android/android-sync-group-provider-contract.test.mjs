@@ -100,6 +100,16 @@ it('authorizes every Android provider data request with both the channel secret 
   expect(database).toContain('bridge.request("authorize_member"');
 });
 
+it('revokes both directions of a departed peer credential before accepting departure', async () => {
+  const server = await readJava('FolioleCompanionSyncGroupServer.java');
+  const departure = server.slice(server.indexOf('private void departure('),
+    server.indexOf('private void contentBlob('));
+  expect(departure).toContain('FolioleCompanionSyncGroupPeerStore.remove(context, authenticatedDeviceId)');
+  expect(departure).toContain('FolioleCompanionSyncGroupOutboundPeerStore.remove(context, authenticatedDeviceId)');
+  expect(departure.indexOf('recordDeparture')).toBeLessThan(departure.indexOf('SyncGroupPeerStore.remove'));
+  expect(departure.indexOf('SyncGroupOutboundPeerStore.remove')).toBeLessThan(departure.indexOf('status", "accepted'));
+});
+
 it('keeps the live companion database under the Capacitor owner', async () => {
   const names = [
     'FolioleCompanionSyncGroupDatabase.java',

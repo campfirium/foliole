@@ -16,7 +16,8 @@ function isTrustedNativeClientWrapper(processEntry, paths) {
 }
 
 export function allowsPairSyncNativeClient(action, residual, paths) {
-  return ['multi-device-sync-a-rejoin', 'multi-device-sync-c', 'pair-sync-recover', 'sync-group-baseline-reset',
+  return ['multi-device-sync-a-leave', 'multi-device-sync-a-rejoin', 'multi-device-sync-c',
+    'pair-sync-recover', 'sync-group-baseline-reset',
     'sync-group-recover', 'sync-group-task3', 'sync-group-task3-protect'].includes(action)
     && residual.length === 1
     && isTrustedNativeClientWrapper(residual[0], paths);

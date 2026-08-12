@@ -60,3 +60,17 @@ it('runs A-rejoin against the prepared Windows candidate without rebuilding', as
   expect(prepareHost).not.toHaveBeenCalled();
   fs.rmSync(root, { force: true, recursive: true });
 });
+
+it('runs A-leave against the prepared Windows candidate without rebuilding', async () => {
+  const { paths, root } = fixture();
+  fs.writeFileSync(paths.systemNode, 'node');
+  const deviceAction = vi.fn(async () => ({
+    multiDeviceSyncALeave: { manifestPath: 'a-leave.json' }, output: 'leave complete\n'
+  }));
+  const result = await runWindowsDevBuild({ action: 'multi-device-sync-a-leave', deviceAction,
+    execute: vi.fn(async () => ({ code: 0, lines: [], output: '[]\n', stderr: '', stdout: '[]\n' })),
+    paths, platform: 'win32', prepareHost: vi.fn() });
+  expect(result.summary).toMatchObject({ action: 'multi-device-sync-a-leave',
+    multiDeviceSyncALeave: { manifestPath: 'a-leave.json' } });
+  fs.rmSync(root, { force: true, recursive: true });
+});

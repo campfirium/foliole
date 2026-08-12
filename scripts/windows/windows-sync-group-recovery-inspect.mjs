@@ -30,6 +30,22 @@ function activeDeviceIdentities(database) {
     FROM sync_group_members WHERE state = 'active' ORDER BY device_kind, device_id`).all());
 }
 
+function departedAtByDeviceIdentity(database) {
+  const rows = database.prepare(`SELECT members.device_id, departures.left_at
+    FROM sync_group_member_departures departures
+    JOIN sync_group_members members
+      ON members.group_id = departures.group_id AND members.device_id = departures.device_id
+    ORDER BY departures.left_at, members.device_id`).all();
+  return Object.fromEntries(rows.map(({ device_id, left_at }) => [identityFingerprint(device_id), left_at]));
+}
+
+function journeyFactUpdates(database) {
+  const rows = database.prepare(`SELECT id, updated_at FROM nodes WHERE deleted_at IS NULL AND (
+    id GLOB 'multi-device-sync-[abc]-*' OR title GLOB 'Multi-device sync [ABC] fact*'
+    OR title GLOB 'T121 [ABC] fact *') ORDER BY updated_at, id`).all();
+  return Object.fromEntries(rows.map(({ id, updated_at }) => [id, updated_at]));
+}
+
 export function inspectSyncGroupRecoveryDatabase(databasePath, factIds = []) {
   const db = new BetterSqlite3(databasePath, { fileMustExist: true, readonly: true });
   try {
@@ -46,10 +62,12 @@ export function inspectSyncGroupRecoveryDatabase(databasePath, factIds = []) {
       activeMemberCount: count("SELECT COUNT(*) FROM sync_group_members WHERE state = 'active'"),
       attachmentCount: count('SELECT COUNT(*) FROM attachments'),
       contentBlobCount: count('SELECT COUNT(*) FROM content_blobs'),
+      departedAtByDeviceIdentity: departedAtByDeviceIdentity(db),
       departedDeviceIdentities: departedDeviceIdentities(db),
       deviceIdentity: identity.deviceIdentityFingerprint,
       integrity: db.prepare('PRAGMA integrity_check').pluck().get(),
       journeyFacts: identity.journeyFacts,
+      journeyFactUpdates: journeyFactUpdates(db),
       facts,
       localGroupId: local?.group_id ?? null,
       localMemberState: local?.member_state ?? null,

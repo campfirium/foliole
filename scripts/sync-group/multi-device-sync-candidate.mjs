@@ -9,6 +9,8 @@ import { stageCatalog, stageCatalogDigest } from './multi-device-sync-stage-cata
 
 const CONTROLLER_FILES = [
   'scripts/sync-group/multi-device-sync-action-executor.mjs',
+  'scripts/sync-group/multi-device-sync-a-leave.mjs',
+  'scripts/sync-group/multi-device-sync-a-leave-proof.mjs',
   'scripts/sync-group/multi-device-sync-a-rejoin.mjs',
   'scripts/sync-group/multi-device-sync-contract.mjs',
   'scripts/sync-group/multi-device-sync-diagnostic.mjs',
