@@ -2,6 +2,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 const runtime = vi.hoisted(() => ({
   callback: null as null | ((service: unknown) => void),
+  constructorOptions: [] as unknown[],
   updateCallbacks: new Map<string, (service: unknown) => void>(),
   completeJoin: vi.fn(),
   continueSync: vi.fn(),
@@ -22,6 +23,7 @@ function deferred<T>() {
 vi.mock('bonjour-service', () => ({
   Bonjour: class {
     destroy = runtime.destroy;
+    constructor(options: unknown) { runtime.constructorOptions.push(options); }
     find(_query: unknown, callback: (service: unknown) => void) {
       runtime.callback = callback;
       return {
@@ -32,6 +34,9 @@ vi.mock('bonjour-service', () => ({
       };
     }
   }
+}));
+vi.mock('./companionMdnsAdvertisement.js', () => ({
+  resolveCompanionMdnsIpv4Addresses: () => ['192.168.1.10', '10.0.0.10']
 }));
 vi.mock('../database/syncGroupStore.js', () => ({ loadDesktopSyncGroup: () => runtime.group }));
 vi.mock('./companionPairingStore.js', () => ({
@@ -52,6 +57,7 @@ beforeEach(() => {
   stopDesktopSyncGroupAutoSync();
   vi.clearAllMocks();
   runtime.callback = null;
+  runtime.constructorOptions = [];
   runtime.updateCallbacks.clear();
   runtime.completeJoin.mockResolvedValue({ group_id: 'group-1' });
   runtime.continueSync.mockResolvedValue({ complete: true, cursor: 9 });
@@ -65,6 +71,9 @@ it('continues the saved member sync when its provider advertises again', async (
     txt: { group_id: 'group-1', peer_id: 'android-b' }
   });
   await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
+  expect(runtime.constructorOptions).toEqual([
+    { interface: '192.168.1.10' }, { interface: '10.0.0.10' }
+  ]);
   expect(runtime.savePeer).toHaveBeenCalledWith(expect.objectContaining({
     endpoint_url: 'http://192.168.1.12:43121', peer_device_id: 'android-b'
   }));

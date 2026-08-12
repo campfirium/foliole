@@ -2,6 +2,7 @@ import { Bonjour } from 'bonjour-service';
 
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
+import { resolveCompanionMdnsIpv4Addresses } from './companionMdnsAdvertisement.js';
 import { loadPairedSyncGroupPeers, savePairedSyncGroupPeer } from './companionPairingStore.js';
 import {
   completeDesktopSyncGroupJoin,
@@ -9,16 +10,20 @@ import {
 } from './desktopSyncGroupJoin.js';
 import { refreshDesktopSyncGroupPendingJoinEndpoint } from './desktopSyncGroupJoinState.js';
 
-let bonjour: InstanceType<typeof Bonjour> | null = null;
-let browser: ReturnType<InstanceType<typeof Bonjour>['find']> | null = null;
+type BonjourOptions = NonNullable<ConstructorParameters<typeof Bonjour>[0]> & { interface: string };
+type AutoSyncRuntime = {
+  bonjour: InstanceType<typeof Bonjour>;
+  browser: ReturnType<InstanceType<typeof Bonjour>['find']>;
+};
+type DiscoveredService = Parameters<NonNullable<Parameters<InstanceType<typeof Bonjour>['find']>[1]>>[0];
+
+let runtimes: AutoSyncRuntime[] = [];
 const inFlight = new Map<string, Promise<unknown>>();
 const retryAfterFlight = new Map<string, { endpoint: string; groupId: string; peerDeviceId: string }>();
 
 export function startDesktopSyncGroupAutoSync() {
-  if (bonjour) return;
-  const nextBonjour = new Bonjour();
-  bonjour = nextBonjour;
-  const handleService = (service: Parameters<NonNullable<Parameters<typeof nextBonjour.find>[1]>>[0]) => {
+  if (runtimes.length > 0) return;
+  const handleService = (service: DiscoveredService) => {
     const endpoint = endpointForService(service);
     const txt = service.txt as Record<string, unknown>;
     const groupId = typeof txt.group_id === 'string' ? txt.group_id : null;
@@ -37,17 +42,25 @@ export function startDesktopSyncGroupAutoSync() {
     }
     void syncAvailablePeer({ endpoint, groupId, peerDeviceId });
   };
-  browser = nextBonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, handleService);
-  browser.on('down', handleService);
-  browser.on('txt-update', handleService);
-  browser.on('srv-update', handleService);
+  const addresses = resolveCompanionMdnsIpv4Addresses();
+  const interfaces = addresses.length > 0 ? addresses : [null];
+  runtimes = interfaces.map((networkInterface) => {
+    const options = networkInterface ? { interface: networkInterface } as BonjourOptions : undefined;
+    const bonjour = new Bonjour(options);
+    const browser = bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, handleService);
+    browser.on('down', handleService);
+    browser.on('txt-update', handleService);
+    browser.on('srv-update', handleService);
+    return { bonjour, browser };
+  });
 }
 
 export function stopDesktopSyncGroupAutoSync() {
-  browser?.stop();
-  bonjour?.destroy();
-  browser = null;
-  bonjour = null;
+  runtimes.forEach(({ bonjour, browser }) => {
+    browser.stop();
+    bonjour.destroy();
+  });
+  runtimes = [];
   retryAfterFlight.clear();
 }
 
