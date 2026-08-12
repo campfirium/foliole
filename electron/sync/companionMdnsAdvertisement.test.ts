@@ -6,7 +6,7 @@ const bonjourMock = vi.hoisted(() => ({
   destroy: vi.fn(),
   networkInterfaces: vi.fn(),
   publish: vi.fn(),
-  stop: vi.fn()
+  stop: vi.fn((callback?: () => void) => callback?.())
 }));
 
 vi.mock('node:os', () => ({
@@ -127,10 +127,31 @@ describe('companion mDNS facts hints', () => {
       peerId: 'desktop-local', port: 38683, timelineId: 'timeline-1'
     });
     const initial = (bonjourMock.publish.mock.calls[0]?.[0] as { txt: { facts_revision: string } }).txt.facts_revision;
-    refreshCompanionMdnsAdvertisement();
+    await refreshCompanionMdnsAdvertisement();
     const refreshed = (bonjourMock.publish.mock.calls[1]?.[0] as { txt: { facts_revision: string } }).txt.facts_revision;
     expect(Number(refreshed)).toBe(Number(initial) + 1);
     expect(bonjourMock.stop).toHaveBeenCalledOnce();
+  });
+
+  it('waits for the old service goodbye before publishing its replacement', async () => {
+    let finishGoodbye = () => {};
+    bonjourMock.stop.mockImplementationOnce((callback?: () => void) => {
+      finishGoodbye = () => callback?.();
+    });
+    const { refreshCompanionMdnsAdvertisement, startCompanionMdnsAdvertisement } = await import(
+      './companionMdnsAdvertisement.js'
+    );
+    startCompanionMdnsAdvertisement({
+      appVersion: '0.1.0-test', groupDisplayName: 'V', groupId: 'group-1',
+      peerId: 'desktop-local', port: 38683, timelineId: 'timeline-1'
+    });
+
+    const refreshed = refreshCompanionMdnsAdvertisement();
+    await Promise.resolve();
+    expect(bonjourMock.publish).toHaveBeenCalledTimes(1);
+    finishGoodbye();
+    await refreshed;
+    expect(bonjourMock.publish).toHaveBeenCalledTimes(2);
   });
 
   it('keeps one device service identity stable while facts revisions change', async () => {
@@ -141,11 +162,15 @@ describe('companion mDNS facts hints', () => {
       appVersion: '0.1.0-test', groupDisplayName: 'Shared group', groupId: 'group-1',
       peerId: 'desktop-local', port: 38683, timelineId: 'timeline-1'
     });
-    refreshCompanionMdnsAdvertisement();
+    await refreshCompanionMdnsAdvertisement();
 
     expect(bonjourMock.publish.mock.calls.map(([input]) => (input as { name: string }).name))
       .toEqual(['Shared group-runtimed', 'Shared group-runtimed']);
   });
+});
+
+describe('companion mDNS routing', () => {
+  beforeEach(resetMocks);
 
   it('separates SRV hosts when two desktops share one OS hostname', async () => {
     const { resolveCompanionMdnsHost } = await import('./companionMdnsAdvertisement.js');

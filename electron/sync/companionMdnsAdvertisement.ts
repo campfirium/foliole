@@ -20,6 +20,8 @@ type ActiveAdvertisement = {
 
 let activeAdvertisement: ActiveAdvertisement | null = null;
 let factsRevision = 0;
+let lifecycleRevision = 0;
+let refreshQueue = Promise.resolve();
 
 export interface CompanionMdnsAdvertisementInput {
   appVersion: string;
@@ -61,7 +63,12 @@ export function resolveCompanionMdnsServiceName(groupDisplayName: string, runtim
 }
 
 export function startCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisementInput) {
+  lifecycleRevision += 1;
   stopCompanionMdnsAdvertisement();
+  return publishCompanionMdnsAdvertisement(input);
+}
+
+function publishCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisementInput) {
   const runtimeInstanceId = loadSyncGroupRuntimeInstanceId();
   const reportWarning = (error: unknown) => {
     console.warn('[companion-sync] mDNS advertisement warning', error);
@@ -96,17 +103,31 @@ export function startCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisemen
 }
 
 export function refreshCompanionMdnsAdvertisement() {
-  const input = activeAdvertisement?.input;
-  if (!input) return;
   factsRevision += 1;
-  startCompanionMdnsAdvertisement(input);
+  const expectedLifecycle = lifecycleRevision;
+  refreshQueue = refreshQueue.then(async () => {
+    const advertisement = activeAdvertisement;
+    if (!advertisement || lifecycleRevision !== expectedLifecycle) return;
+    activeAdvertisement = null;
+    await stopAdvertisement(advertisement);
+    if (activeAdvertisement || lifecycleRevision !== expectedLifecycle) return;
+    publishCompanionMdnsAdvertisement(advertisement.input);
+  });
+  return refreshQueue;
 }
 
 export function stopCompanionMdnsAdvertisement() {
+  lifecycleRevision += 1;
   const advertisement = activeAdvertisement;
   activeAdvertisement = null;
-  advertisement?.runtimes.forEach(({ bonjour, service }) => {
-    service.stop?.();
-    bonjour.destroy();
-  });
+  if (advertisement) void stopAdvertisement(advertisement);
+}
+
+function stopAdvertisement(advertisement: ActiveAdvertisement) {
+  return Promise.all(advertisement.runtimes.map(({ bonjour, service }) => new Promise<void>((resolve) => {
+    service.stop?.(() => {
+      bonjour.destroy();
+      resolve();
+    });
+  }))).then(() => undefined);
 }
