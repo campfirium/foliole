@@ -44,3 +44,14 @@ it('records caller cancellation separately from a product stall', async () => {
     stage: 'test'
   })).resolves.toMatchObject({ code: 125, terminationReason: 'cancelled' });
 });
+
+it('publishes cumulative diagnostic output without treating it as semantic progress', async () => {
+  const { execute } = executor();
+  const observed = [];
+  const result = await execute(process.execPath, ['-e', 'process.stdout.write("signed-receipt")'], {
+    action: 'receipt', hardDeadlineMs: 500, host: 'android-b',
+    onOutput: ({ output }) => observed.push(output), stage: 'test'
+  });
+  expect(result.code).toBe(0);
+  expect(observed.at(-1)).toBe('signed-receipt');
+});

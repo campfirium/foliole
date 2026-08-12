@@ -17,6 +17,7 @@ import {
 } from './multi-device-sync-ab-convergence.mjs';
 import { proveARejoin } from './multi-device-sync-a-rejoin.mjs';
 import { createActionExecutor } from './multi-device-sync-action-executor.mjs';
+import { createApprovalReceiptRelease } from './multi-device-sync-approval-release.mjs';
 import { prepareCandidate } from './multi-device-sync-candidate-preparation.mjs';
 import { runAOfflineAdmissionPrelude } from './multi-device-sync-fact-preparation.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
@@ -86,8 +87,12 @@ async function admitEmptyC(repoRoot, runId, { reportProgress, signal, stage }) {
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const approvalController = new AbortController();
   const approvalSignal = AbortSignal.any([signal, approvalController.signal]);
+  const approvalRelease = createApprovalReceiptRelease(() => approvalController.abort());
   const execute = actionExecute(evidenceRoot, signal, stage);
-  const executeApproval = actionExecute(evidenceRoot, approvalSignal, stage);
+  const executeApprovalAction = actionExecute(evidenceRoot, approvalSignal, stage);
+  const executeApproval = (command, args, options = {}) => executeApprovalAction(command, args, {
+    ...options, onOutput: approvalRelease.capture
+  });
   const executeWindows = actionExecute(evidenceRoot, signal, stage);
   const paths = macosA5Paths(repoRoot);
   const env = macosA5GradleEnv();
@@ -103,7 +108,7 @@ async function admitEmptyC(repoRoot, runId, { reportProgress, signal, stage }) {
   };
   const { approval, windows } = await runAOfflineAdmissionPrelude({
     cancelSiblings: (failedName) => {
-      if (failedName === 'windows-c-join') approvalController.abort();
+      if (failedName === 'windows-c-join') void approvalRelease.release();
     },
     closeTransport: () => closePairSyncRecoveryTransport(runTransport),
     createFact: (session) => createDesktopSyncGroupJourneyFact({

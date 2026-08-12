@@ -26,9 +26,9 @@ function terminationCode(reason, code) {
 export function createActionExecutor({ logPath, progressPath, spawnImpl = spawn }) {
   return (command, args, options = {}) => new Promise((resolve, reject) => {
     const { action = command, hardDeadlineMs = options.timeoutMs, host = 'unknown',
-      signal, stage = 'unknown' } = options;
+      onOutput, signal, stage = 'unknown' } = options;
     const spawnOptions = { ...options };
-    for (const key of ['action', 'hardDeadlineMs', 'host', 'signal', 'stage', 'timeoutMs']) {
+    for (const key of ['action', 'hardDeadlineMs', 'host', 'onOutput', 'signal', 'stage', 'timeoutMs']) {
       delete spawnOptions[key];
     }
     if (!Number.isFinite(hardDeadlineMs) || hardDeadlineMs <= 0) {
@@ -51,6 +51,7 @@ export function createActionExecutor({ logPath, progressPath, spawnImpl = spawn 
       appendBounded(logPath, text);
       progressRecord(progressPath, { action, bytes: Buffer.byteLength(text),
         event: 'diagnostic_bytes', host, stream, stage });
+      onOutput?.({ output, stderr, stdout, stream, text });
     };
     child.stdout.on('data', (chunk) => capture('stdout', chunk));
     child.stderr.on('data', (chunk) => capture('stderr', chunk));
