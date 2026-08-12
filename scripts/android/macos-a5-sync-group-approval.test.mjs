@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+
 import { expect, it } from 'vitest';
 
 import {
@@ -44,6 +46,22 @@ it('accepts a signed approval receipt after controller-owned sibling completion'
   expect(parseSyncGroupApprovalReceipt(
     `INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReceipt=${JSON.stringify(receipt)}`, true
   )).toEqual(receipt);
+});
+
+it('reuses bounded Settings navigation that exits Review and nested Settings surfaces', () => {
+  const approval = fs.readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupApprovalScenario.java',
+    'utf8'
+  );
+  const navigation = fs.readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSettingsNavigation.java',
+    'utf8'
+  );
+  expect(approval).toContain('FolioleCompanionSettingsNavigation.open(instrumentation, webView)');
+  expect(navigation).toContain('"companion-review-action-later"');
+  expect(navigation).toContain('"companion-top-bar-left-action"');
+  expect(navigation).toContain('"companion-top-bar-back"');
+  expect(navigation).toContain('"companion-tab-settings"');
 });
 
 it('opens transport after provider stop and starts the peer only after the product surface is stable', async () => {

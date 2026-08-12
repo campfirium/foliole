@@ -19,7 +19,7 @@ final class FolioleCompanionSyncGroupApprovalScenario {
         waitForFocus(activity, 30_000);
         WebView webView = activity.findViewById(R.id.webview);
         long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(3);
-        openSyncSettings(instrumentation, webView, deadline);
+        openSyncSettings(instrumentation, webView);
         waitForProviderAdvertisement();
         FolioleCompanionPairSyncRecoveryScenario.waitForUniqueVisible(
             instrumentation, webView, "companion-sync-group-approve", deadline
@@ -39,7 +39,7 @@ final class FolioleCompanionSyncGroupApprovalScenario {
             waitForFocus(activity, 30_000);
             WebView webView = activity.findViewById(R.id.webview);
             long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(3);
-            openSyncSettings(instrumentation, webView, deadline);
+            openSyncSettings(instrumentation, webView);
             waitForProviderAdvertisement();
             FolioleCompanionPairSyncRecoveryScenario.waitForUniqueVisible(
                 instrumentation, webView, "companion-sync-group-approve", deadline
@@ -63,20 +63,10 @@ final class FolioleCompanionSyncGroupApprovalScenario {
     }
 
     private static void openSyncSettings(
-        Instrumentation instrumentation, WebView webView, long deadline
+        Instrumentation instrumentation, WebView webView
     ) throws Exception {
-        String entry = FolioleCompanionPairSyncRecoveryScenario.waitForAnyVisible(
-            instrumentation, webView, deadline,
-            "companion-tab-settings", "companion-top-bar-left-action"
-        );
-        if ("companion-top-bar-left-action".equals(entry)) {
-            FolioleCompanionPairSyncRecoveryScenario.clickVisible(
-                instrumentation, webView, entry, deadline
-            );
-        }
-        FolioleCompanionPairSyncRecoveryScenario.clickVisible(
-            instrumentation, webView, "companion-tab-settings", deadline
-        );
+        FolioleCompanionSettingsNavigation.open(instrumentation, webView);
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
         FolioleCompanionPairSyncRecoveryScenario.clickVisible(
             instrumentation, webView, "companion-settings-sync", deadline
         );
