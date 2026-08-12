@@ -26,6 +26,11 @@ async function runDefaultPairSyncRecovery(options) {
   return runWindowsA5PairSyncRecovery(options);
 }
 
+async function runDefaultSyncGroupInteractive(options) {
+  const { runWindowsSyncGroupInteractiveAction } = await import('./windows-sync-group-interactive-action.mjs');
+  return runWindowsSyncGroupInteractiveAction(options);
+}
+
 async function inspectDefaultPairSyncDesktop(options) {
   const { inspectWindowsPairSyncRecoveryDesktop } = await import('./windows-a5-pair-sync-recovery-action.mjs');
   return inspectWindowsPairSyncRecoveryDesktop(options);
@@ -154,8 +159,13 @@ export async function runWindowsDevDeviceAction({
   action, buildIdentity, evidenceRoot, execute, pairSyncRecoveryReadiness, paths, phase = 'execute',
   inspectPairSyncDesktop = inspectDefaultPairSyncDesktop,
   runCaptureAnnotation = runDefaultCaptureAnnotation, runLiveReload = runWindowsA5LiveReload,
-  runPairSyncRecovery = runDefaultPairSyncRecovery
+  runPairSyncRecovery = runDefaultPairSyncRecovery,
+  runSyncGroupInteractive = runDefaultSyncGroupInteractive
 }) {
+  const interactiveSyncGroup = await runSyncGroupInteractive({
+    action, buildIdentity, evidenceRoot, execute, paths
+  });
+  if (interactiveSyncGroup) return interactiveSyncGroup;
   const syncGroupAction = await runWindowsSyncGroupDeviceAction({
     action, buildIdentity, evidenceRoot, execute, paths
   });

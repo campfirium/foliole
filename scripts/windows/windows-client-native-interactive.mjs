@@ -21,10 +21,13 @@ function assertIdle(status) {
   }
 }
 
-async function installTask({ installScript, repoRoot, workerScript }) {
+export async function installInteractiveTask({
+  executionTimeLimitMinutes = 3, installScript, repoRoot, workerScript
+}) {
   const result = await runCapture('powershell.exe', [
     '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', installScript,
-    '-NodePath', process.execPath, '-WorkDir', repoRoot, '-WorkerScript', workerScript
+    '-NodePath', process.execPath, '-WorkDir', repoRoot, '-WorkerScript', workerScript,
+    '-ExecutionTimeLimitMinutes', String(executionTimeLimitMinutes)
   ], { cwd: repoRoot, timeoutMs: 30_000 });
   if (result.code !== 0) {
     throw new Error(result.stderr.trim() || result.stdout.trim() || 'interactive task installation failed');
@@ -58,7 +61,7 @@ export async function dispatchWindowsNativeClientAction({
       || env[WINDOWS_NATIVE_CLIENT_WORKER_ENV] === '1') return false;
   const paths = interactiveStatePaths(stateRoot);
   assertIdle(readJson(paths.status));
-  await installTask({ installScript, repoRoot, workerScript });
+  await installInteractiveTask({ installScript, repoRoot, workerScript });
   const request = { action, createdAt: new Date().toISOString(), nonce: randomUUID(), schemaVersion: 1 };
   writeJsonAtomic(paths.request, request);
   writeJsonAtomic(paths.status, { nonce: request.nonce, schemaVersion: 1, state: 'pending' });

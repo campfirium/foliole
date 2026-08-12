@@ -38,7 +38,6 @@ final class FolioleCompanionSyncGroupDataBridge {
             event.put(requestKey("operation"), operation);
             event.put(requestKey("payload"), payload);
             dispatcher.dispatch(event);
-            android.util.Log.d(LOG_TAG, "Data request dispatched operation=" + operation + " requestId=" + id);
             return future.get(60, TimeUnit.SECONDS);
         } catch (ExecutionException error) {
             Throwable cause = error.getCause();
@@ -53,7 +52,6 @@ final class FolioleCompanionSyncGroupDataBridge {
         String id = response.getString(responseKey("requestId"));
         CompletableFuture<JSONObject> future = pending.get(id);
         if (future == null) throw new IllegalArgumentException("sync_group_data_request_not_found");
-        android.util.Log.d(LOG_TAG, "Data request resolved requestId=" + id);
         String error = response.optString(responseKey("error"), "");
         if (!error.isEmpty()) future.completeExceptionally(new IllegalStateException(error));
         else future.complete(response.optJSONObject(responseKey("result")) == null

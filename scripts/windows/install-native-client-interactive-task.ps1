@@ -6,7 +6,10 @@ param(
   [string]$WorkDir,
 
   [Parameter(Mandatory = $true)]
-  [string]$WorkerScript
+  [string]$WorkerScript,
+
+  [ValidateRange(1, 30)]
+  [int]$ExecutionTimeLimitMinutes = 3
 )
 
 $ErrorActionPreference = "Stop"
@@ -28,7 +31,7 @@ $settings = New-ScheduledTaskSettingsSet `
   -AllowStartIfOnBatteries `
   -DontStopIfGoingOnBatteries `
   -MultipleInstances IgnoreNew `
-  -ExecutionTimeLimit (New-TimeSpan -Minutes 3)
+  -ExecutionTimeLimit (New-TimeSpan -Minutes $ExecutionTimeLimitMinutes)
 
 Register-ScheduledTask `
   -TaskName $taskName `
