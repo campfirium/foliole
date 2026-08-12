@@ -9,6 +9,34 @@ function assertAndroidSurvivorState(snapshot, expected) {
   return facts;
 }
 
+function freshFactIds(journeyFacts, excluded) {
+  const result = {};
+  for (const [id, origin] of Object.entries(journeyFacts ?? {})) {
+    if (excluded.has(id) || !['B', 'C'].includes(origin)) continue;
+    if (result[origin]) throw new Error(`Multiple fresh ${origin} facts were observed.`);
+    result[origin] = id;
+  }
+  return result;
+}
+
+export function assertAndroidConsumerComplete({ before, expected, snapshot }) {
+  const facts = assertAndroidSurvivorState(snapshot, expected);
+  const excluded = new Set(Object.keys(before.database?.inspection?.journeyFacts ?? {}));
+  const ids = freshFactIds(facts.journeyFacts, excluded);
+  const beforeInventory = [before.database?.inspection?.userNodeCount,
+    before.database?.counts?.content_blobs, before.database?.counts?.attachments];
+  const inventory = [facts.userNodeCount, snapshot.database?.counts?.content_blobs,
+    snapshot.database?.counts?.attachments];
+  if (!ids.B || !ids.C || facts.missingAttachmentCount !== 0
+      || facts.missingContentBlobCount !== 0
+      || inventory.some((value, index) => !Number.isSafeInteger(value)
+        || !Number.isSafeInteger(beforeInventory[index])
+        || value < beforeInventory[index] + [2, 2, 1][index])) {
+    throw new Error('Android B has not consumed the complete survivor facts and resources.');
+  }
+  return ids;
+}
+
 export function assertSurvivorProof({ android, baseline, factIds, formerDeviceIdentity, windows }) {
   const androidFacts = assertAndroidSurvivorState(android, {
     formerDeviceIdentity, groupId: baseline.groupId, timelineId: baseline.timelineId

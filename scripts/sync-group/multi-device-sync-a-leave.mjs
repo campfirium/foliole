@@ -10,10 +10,11 @@ import { macosA5GradleEnv, macosA5Paths, A5_SERIAL } from '../android/macos-a5-d
 import { runMacosA5SyncGroupMaintenance } from '../android/macos-a5-sync-group-maintenance-action.mjs';
 import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desktop-session.mjs';
 import {
-  assertSurvivorProof, matchesAndroidSurvivorState
+  assertAndroidConsumerComplete, assertSurvivorProof, matchesAndroidSurvivorState
 } from './multi-device-sync-a-leave-proof.mjs';
 import { createSyncProgressWatchdog } from './sync-progress-watchdog.mjs';
 import { restartARejoinAndroidProvider } from './multi-device-sync-a-rejoin.mjs';
+import { startWindowsSyncGroupProvider } from './multi-device-sync-windows-provider.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
 /* global process */
@@ -53,16 +54,6 @@ async function macosFacts(execute, repoRoot, databasePath, factIds) {
   });
   if (result.code !== 0) throw new Error('macOS A database inspection failed.');
   return JSON.parse(result.stdout.trim());
-}
-
-function readWindowsReceipt(result, repoRoot) {
-  const match = /^\[windows-dev-action\] multi-device-sync-a-leave identity=([A-Za-z0-9.-]{1,96})/mu
-    .exec(result.output);
-  if (!match) throw new Error('Windows C A-leave action did not report fixed evidence.');
-  const evidenceRef = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/windows-c', match[1],
-    'multi-device-sync-a-leave-receipt.json');
-  if (!fs.existsSync(evidenceRef)) throw new Error('Windows C A-leave receipt is missing.');
-  return { evidenceRef, receipt: JSON.parse(fs.readFileSync(evidenceRef, 'utf8')) };
 }
 
 function assertMacosRetention(before, after, factIds) {
@@ -130,24 +121,33 @@ async function runWindowsContinuity(context, before) {
     (value) => value.database?.inspection);
   reportProgress('b-two-members-active');
   const beforeWindows = await androidSnapshot(paths);
-  const knownCFacts = new Set(Object.entries(beforeWindows.database?.inspection?.journeyFacts ?? {})
-    .filter(([, origin]) => origin === 'C').map(([id]) => id));
-  const windowsWork = execute(process.execPath,
-    ['scripts/windows/windows-dev-control.mjs', 'multi-device-sync-a-leave'], {
-    action: 'windows-c-a-leave', cwd: repoRoot, host: 'windows-c', timeoutMs: 15 * 60_000
+  const windowsProvider = startWindowsSyncGroupProvider({
+    action: 'multi-device-sync-a-leave', execute, repoRoot
   });
-  await createAndroidFact({ env, evidenceRoot, execute, paths, runId });
-  reportProgress('b-fact-created');
-  await restartARejoinAndroidProvider({ env, execute, paths });
-  const cObserved = waitUntil('Android B receives the new C fact', () => androidSnapshot(paths),
-    (value) => Object.entries(value.database?.inspection?.journeyFacts ?? {})
-      .some(([id, origin]) => origin === 'C' && !knownCFacts.has(id)),
-    (value) => value.database?.inspection?.journeyFacts).then((value) => {
-    reportProgress('c-fact-created'); return value;
-  });
-  const [windowsResult] = await Promise.all([windowsWork, cObserved]);
-  if (windowsResult.code !== 0) throw new Error('Windows C A-leave action failed.');
-  return readWindowsReceipt(windowsResult, repoRoot);
+  let windowsSettled = false;
+  try {
+    await createAndroidFact({ env, evidenceRoot, execute, paths, runId });
+    reportProgress('b-fact-created');
+    await restartARejoinAndroidProvider({ env, execute, paths });
+    const completed = await waitUntil('Android B consumes the new C fact and resources',
+      () => androidSnapshot(paths), (value) => {
+        try { assertAndroidConsumerComplete({ before: beforeWindows, expected, snapshot: value });
+          return true; } catch { return false; }
+      }, (value) => [value.database?.inspection?.journeyFacts,
+        value.database?.inspection?.missingAttachmentCount,
+        value.database?.inspection?.missingContentBlobCount, value.database?.counts]);
+    const ids = assertAndroidConsumerComplete({ before: beforeWindows, expected, snapshot: completed });
+    reportProgress('c-fact-created');
+    await windowsProvider.release('consumer_complete');
+    const remote = await windowsProvider.finish();
+    windowsSettled = true;
+    if (!['B', 'C'].every((origin) => remote.receipt.factIds?.[origin] === ids[origin])) {
+      throw new Error('Windows C reported different survivor fact identities.');
+    }
+    return remote;
+  } finally {
+    if (!windowsSettled) await windowsProvider.cancelAndSettle();
+  }
 }
 
 function matchesFullProof(value, context, before, remote) {

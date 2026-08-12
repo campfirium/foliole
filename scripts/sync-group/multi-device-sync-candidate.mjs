@@ -12,6 +12,7 @@ const CONTROLLER_FILES = [
   'scripts/sync-group/multi-device-sync-a-leave.mjs',
   'scripts/sync-group/multi-device-sync-a-leave-proof.mjs',
   'scripts/sync-group/multi-device-sync-a-rejoin.mjs',
+  'scripts/sync-group/multi-device-sync-a-rejoin-provider.mjs',
   'scripts/sync-group/multi-device-sync-contract.mjs',
   'scripts/sync-group/multi-device-sync-diagnostic.mjs',
   'scripts/sync-group/multi-device-sync-formal.mjs',
@@ -21,6 +22,7 @@ const CONTROLLER_FILES = [
   'scripts/sync-group/multi-device-sync-stage-runtime.mjs',
   'scripts/sync-group/multi-device-sync-scenario-catalog.mjs',
   'scripts/sync-group/multi-device-sync-stage-catalog.mjs',
+  'scripts/sync-group/multi-device-sync-windows-provider.mjs',
   'scripts/sync-group/multi-device-sync-workspace.mjs'
 ];
 

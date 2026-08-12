@@ -4,8 +4,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import { createSyncProgressWatchdog } from '../sync-group/sync-progress-watchdog.mjs';
-
-const RESOURCE_SETTLEMENT_WINDOW_MS = 15_000;
+import { waitForWindowsSyncGroupProviderRelease } from './windows-sync-group-provider-release.mjs';
 
 function identities(value) {
   return Object.values(value ?? {}).flat().sort();
@@ -95,7 +94,7 @@ async function runContinuousSession(options, initial) {
 
 export async function runWindowsMultiDeviceSyncALeave({ evidenceRoot, execute, paths,
   control, createFact = createDesktopSyncGroupJourneyFact, inspect, invoke, openSession, restore,
-  settle = delay, suspend }) {
+  suspend, waitForConsumerRelease = waitForWindowsSyncGroupProviderRelease }) {
   const recovery = control && inspect && invoke && openSession ? null
     : await import('./windows-sync-group-recovery-action.mjs');
   const lifecycle = restore && suspend ? null : await import('./windows-sync-group-native-lifecycle.mjs');
@@ -114,15 +113,18 @@ export async function runWindowsMultiDeviceSyncALeave({ evidenceRoot, execute, p
     assertInitialState(initial);
     const continuous = await runContinuousSession({ createFact, evidenceRoot, execute,
       inspect, invoke, openSession, paths }, initial);
-    const restarted = await withSession(paths, evidenceRoot, openSession, async () => inspectUntil({
-      accept: (facts) => {
-        try { assertWindowsSurvivorState({ facts, initial, ids: Object.values(continuous.ids) }); return true; }
-        catch { return false; }
-      }, execute, inspect, label: 'Windows C restarted survivor state', paths,
-      progress: { factIds: Object.values(continuous.ids), value: (facts) => [facts.activeMemberCount,
-        facts.facts, facts.missingAttachmentCount, facts.missingContentBlobCount] }
-    }));
-    await settle(RESOURCE_SETTLEMENT_WINDOW_MS);
+    const restarted = await withSession(paths, evidenceRoot, openSession, async () => {
+      const value = await inspectUntil({
+        accept: (facts) => {
+          try { assertWindowsSurvivorState({ facts, initial, ids: Object.values(continuous.ids) });
+            return true; } catch { return false; }
+        }, execute, inspect, label: 'Windows C restarted survivor state', paths,
+        progress: { factIds: Object.values(continuous.ids), value: (facts) => [facts.activeMemberCount,
+          facts.facts, facts.missingAttachmentCount, facts.missingContentBlobCount] }
+      });
+      await waitForConsumerRelease({ action: 'multi-device-sync-a-leave', repoRoot: paths.repoRoot });
+      return value;
+    });
     const receiptPath = path.join(evidenceRoot, 'multi-device-sync-a-leave-receipt.json');
     const proof = assertWindowsSurvivorState({ facts: restarted, initial,
       ids: Object.values(continuous.ids) });
