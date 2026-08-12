@@ -21,3 +21,17 @@ it('pushes dev and copies only the fixed C receipt', async () => {
   expect(executeGit).toHaveBeenCalledTimes(1);
   expect(executeScp).toHaveBeenCalledTimes(1);
 });
+
+it('copies only the fixed A-rejoin receipt', async () => {
+  const executeScp = vi.fn(async () => 'copied');
+  const executeSsh = vi.fn(async () => '[windows-dev-action] multi-device-sync-a-rejoin '
+    + 'identity=run-2 manifest=C:\\dev\\foliole-android-lab-preview\\.tmp\\artifacts\\'
+    + 'windows-dev-action\\run-2\\multi-device-sync-a-rejoin-receipt.json\n');
+  const result = await runWindowsMultiDeviceSyncControl({ action: 'multi-device-sync-a-rejoin',
+    buildPushSpec: () => ({ args: ['push'], env: {} }), buildScpSpec: (_host, remote, local) => [remote, local],
+    buildSshSpec: () => ['ssh'], env: {}, executeGit: vi.fn(async () => ''), executeScp,
+    executeSsh, fsApi: { mkdirSync: vi.fn() }, host: 'user@host', repoRoot: '/repo',
+    stdout: { write: vi.fn() } });
+  expect(result.manifestPath).toBe(path.join('/repo', '.tmp', 'artifacts',
+    'multi-device-sync', 'windows-c', 'run-2', 'multi-device-sync-a-rejoin-receipt.json'));
+});

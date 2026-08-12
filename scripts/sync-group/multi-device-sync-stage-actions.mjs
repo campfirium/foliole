@@ -15,6 +15,7 @@ import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey
 import {
   proveABConvergence, waitForAndroidJourneyFact
 } from './multi-device-sync-ab-convergence.mjs';
+import { proveARejoin } from './multi-device-sync-a-rejoin.mjs';
 import { createActionExecutor } from './multi-device-sync-action-executor.mjs';
 import { prepareCandidate } from './multi-device-sync-candidate-preparation.mjs';
 import { runAOfflineAdmissionPrelude } from './multi-device-sync-fact-preparation.mjs';
@@ -151,7 +152,10 @@ export function createDiagnosticStageActions({ repoRoot, requiredHosts, runId })
     },
     'prove-a-b-convergence': (context) => proveABConvergence({ repoRoot, runId,
       execute: actionExecute(convergenceRoot, context.signal, context.stage),
-      reportProgress: context.reportProgress })
+      reportProgress: context.reportProgress }),
+    'rejoin-a': (context) => proveARejoin({ repoRoot, runId,
+      execute: actionExecute(path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId,
+        'a-rejoin'), context.signal, context.stage), reportProgress: context.reportProgress })
   };
 }
 

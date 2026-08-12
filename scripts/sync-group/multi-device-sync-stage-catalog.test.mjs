@@ -30,6 +30,11 @@ it('declares ordered milestones and deadlines that cover legal sibling waits', (
     ])
   });
   expect(stage.progressDeadlineMs).toBeGreaterThan(60_000);
+  expect(resolveStage('a-rejoin')).toMatchObject({
+    action: 'rejoin-a', milestones: ['a-listener-ready', 'three-members-converged',
+      'a-fact-created', 'b-fact-created', 'c-fact-created', 'three-facts-converged',
+      'three-members-restarted']
+  });
   expect(() => assertStageTiming({ hardDeadlineMs: 100, name: 'invalid', progressDeadlineMs: 50,
     siblings: [{ hardDeadlineMs: 80, name: 'waiter', waitsFor: 'worker' },
       { hardDeadlineMs: 80, name: 'worker', waitsFor: null }] }))

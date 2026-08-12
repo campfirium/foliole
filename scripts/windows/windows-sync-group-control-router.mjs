@@ -1,6 +1,8 @@
 import { runWindowsMultiDeviceSyncControl } from './windows-multi-device-sync-control.mjs';
 
 export function runWindowsSyncGroupControl(action, options) {
-  if (action === 'multi-device-sync-c') return runWindowsMultiDeviceSyncControl(options);
+  if (['multi-device-sync-a-rejoin', 'multi-device-sync-c'].includes(action)) {
+    return runWindowsMultiDeviceSyncControl({ ...options, action });
+  }
   return null;
 }

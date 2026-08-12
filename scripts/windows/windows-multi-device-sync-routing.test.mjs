@@ -7,5 +7,6 @@ it('exposes only generic multi-device sync routes', () => {
   const control = fs.readFileSync('scripts/windows/windows-sync-group-control-router.mjs', 'utf8');
   expect(actions).toContain("options.action === 'multi-device-sync-candidate'");
   expect(actions).toContain("options.action === 'multi-device-sync-c'");
+  expect(actions).toContain("options.action === 'multi-device-sync-a-rejoin'");
   expect(`${actions}\n${control}`).not.toMatch(/sync-group-(?:task3|recover|baseline)/u);
 });

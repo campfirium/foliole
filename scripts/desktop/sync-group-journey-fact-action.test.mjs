@@ -20,3 +20,18 @@ it('creates a unique journey fact only through the registered desktop product co
     device: 'A', factId: result.factId, resultStatus: 'success'
   });
 });
+
+it('can attach a deterministic resource through the registered desktop product command', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'multi-device-fact-resource-'));
+  const invoke = vi.fn(async (command, args) => {
+    if (command === 'load_workspace_list_snapshot') return { nodeOrder: ['special-inbox'] };
+    if (command === 'create_topic') return { createdNodeIds: [args.nodeId] };
+    return { attachment_id: 'attachment-1', status: 'imported' };
+  });
+  const result = await createDesktopSyncGroupJourneyFact({ device: 'A', evidenceRoot: root,
+    now: () => new Date('2026-08-10T00:00:00.000Z'), session: { invoke }, withAttachment: true });
+  expect(invoke.mock.calls.map(([command]) => command)).toEqual([
+    'load_workspace_list_snapshot', 'create_topic', 'import_clipboard_image_attachment'
+  ]);
+  expect(result.attachmentId).toBe('attachment-1');
+});

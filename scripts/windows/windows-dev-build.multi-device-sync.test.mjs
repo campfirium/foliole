@@ -44,3 +44,19 @@ it('consumes the prepared Windows candidate without rebuilding during formal C s
   expect(execute.mock.calls.some(([command]) => command === 'cmd.exe')).toBe(false);
   fs.rmSync(root, { force: true, recursive: true });
 });
+
+it('runs A-rejoin against the prepared Windows candidate without rebuilding', async () => {
+  const { paths, root } = fixture();
+  fs.writeFileSync(paths.systemNode, 'node');
+  const execute = vi.fn(async () => ({ code: 0, lines: [], output: '[]\n', stderr: '', stdout: '[]\n' }));
+  const prepareHost = vi.fn();
+  const deviceAction = vi.fn(async () => ({
+    multiDeviceSyncARejoin: { manifestPath: 'a-rejoin.json' }, output: 'rejoin complete\n'
+  }));
+  const result = await runWindowsDevBuild({ action: 'multi-device-sync-a-rejoin',
+    deviceAction, execute, paths, platform: 'win32', prepareHost });
+  expect(result.summary).toMatchObject({ action: 'multi-device-sync-a-rejoin',
+    multiDeviceSyncARejoin: { manifestPath: 'a-rejoin.json' } });
+  expect(prepareHost).not.toHaveBeenCalled();
+  fs.rmSync(root, { force: true, recursive: true });
+});

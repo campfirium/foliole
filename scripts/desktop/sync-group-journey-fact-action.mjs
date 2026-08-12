@@ -11,8 +11,10 @@ function factPayload(device, snapshot, now) {
     title: `Multi-device sync ${device} fact`, updatedAt: stamp };
 }
 
+const JOURNEY_PNG_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB';
+
 export async function createDesktopSyncGroupJourneyFact({ device, evidenceRoot, now = () => new Date(),
-  session }) {
+  session, withAttachment = false }) {
   if (!['A', 'C'].includes(device)) throw new Error('Desktop journey fact device is invalid.');
   const snapshot = await session.invoke('load_workspace_list_snapshot', { includePdfOpenings: false });
   if (!Array.isArray(snapshot?.nodeOrder)) throw new Error('Desktop workspace snapshot is unavailable.');
@@ -21,10 +23,18 @@ export async function createDesktopSyncGroupJourneyFact({ device, evidenceRoot, 
   if (!result?.createdNodeIds?.includes(payload.nodeId)) {
     throw new Error('Desktop product command did not persist the journey fact.');
   }
+  const attachment = withAttachment ? await session.invoke('import_clipboard_image_attachment', {
+    bytesBase64: JOURNEY_PNG_BASE64, mimeType: 'image/png', nodeId: payload.nodeId,
+    originalName: `${payload.nodeId}.png`
+  }) : null;
+  if (withAttachment && attachment?.status !== 'imported') {
+    throw new Error('Desktop product command did not persist the journey attachment.');
+  }
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const receiptPath = path.join(evidenceRoot, `${device.toLowerCase()}-fact-receipt.json`);
   fs.writeFileSync(receiptPath, `${JSON.stringify({ completedAt: new Date().toISOString(), device,
-    factId: payload.nodeId, resultStatus: 'success', schemaVersion: 1
+    attachmentId: attachment?.attachment_id ?? null, factId: payload.nodeId,
+    resultStatus: 'success', schemaVersion: 1
   }, null, 2)}\n`, 'utf8');
-  return { factId: payload.nodeId, receiptPath };
+  return { attachmentId: attachment?.attachment_id ?? null, factId: payload.nodeId, receiptPath };
 }

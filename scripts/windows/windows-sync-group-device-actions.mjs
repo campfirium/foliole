@@ -3,8 +3,12 @@ import path from 'node:path';
 
 import { provisionWindowsAcceptanceRoot } from './windows-multi-device-sync-readiness.mjs';
 import { runWindowsMultiDeviceSyncC } from './windows-multi-device-sync-c-action.mjs';
+import { runWindowsMultiDeviceSyncARejoin } from './windows-multi-device-sync-a-rejoin-action.mjs';
 
 export async function runWindowsSyncGroupDeviceAction(options) {
+  if (options.action === 'multi-device-sync-a-rejoin') {
+    return runWindowsMultiDeviceSyncARejoin(options);
+  }
   if (options.action === 'multi-device-sync-c') {
     return runWindowsMultiDeviceSyncC(options);
   }
