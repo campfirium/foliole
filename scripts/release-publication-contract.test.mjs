@@ -28,9 +28,9 @@ describe('release publication contract', () => {
       .toThrow('select every active platform');
   });
 
-  it('keeps scoped releases away from repository latest after a complete bridge', () => {
+  it('marks scoped releases as repository latest after a complete bridge', () => {
     expect(resolveReleasePublication(identity('scoped'), BRIDGE_MANIFEST))
-      .toEqual({ bridgeVersion: '0.8.0', makeLatest: false, mode: 'scoped' });
+      .toEqual({ bridgeVersion: '0.8.0', makeLatest: true, mode: 'scoped' });
     expect(() => resolveReleasePublication(identity('scoped'), { releases: [] }))
       .toThrow('requires a compatibility bridge version');
   });
@@ -43,7 +43,7 @@ describe('release publication contract', () => {
       releases: [...BRIDGE_MANIFEST.releases, { version: '0.9.0', platforms: ['windows'] }]
     };
     expect(assertPublishedManifestScope({ identity: identity('scoped'), manifest }))
-      .toEqual({ bridgeVersion: '0.8.0', makeLatest: false, mode: 'scoped' });
+      .toEqual({ bridgeVersion: '0.8.0', makeLatest: true, mode: 'scoped' });
     expect(() => assertPublishedManifestScope({
       identity: identity('scoped'),
       manifest: { ...manifest, releases: [...BRIDGE_MANIFEST.releases, { version: '0.9.0', platforms: ['macos'] }] }

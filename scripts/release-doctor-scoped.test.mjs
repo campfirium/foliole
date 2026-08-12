@@ -37,7 +37,7 @@ it('accepts a scoped Release while unselected platform downloads remain on the b
     version: '0.8.0'
   };
   const result = await collectReleaseDoctorChecks({
-    argv: ['--phase=post'], commandRunner: commandRunner(githubResponses(version, {}, '0.8.0', downloads)),
+    argv: ['--phase=post'], commandRunner: commandRunner(githubResponses(version, {}, version, downloads)),
     fetcher: onlineReleaseFetcher(version, manifest, downloads),
     marketingRoot: join(fixture.rootDir, 'missing'), rootDir: fixture.rootDir
   });

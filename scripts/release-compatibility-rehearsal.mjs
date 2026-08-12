@@ -76,7 +76,7 @@ export function applyIsolatedReleaseStep(previousState, registry, step) {
   const downloads = createPlatformDownloadDirectory({ manifest, publishedReleases, registry });
   const next = {
     downloads,
-    githubLatestVersion: publication.makeLatest ? step.version : previousState.githubLatestVersion,
+    githubLatestVersion: step.version,
     manifest,
     notes: { ...structuredClone(previousState.notes), [step.version]: step.notes },
     publishedReleases
@@ -91,8 +91,8 @@ export function resolveRehearsalPlatformVersion(state, platform) {
 
 export function auditCompatibilityRehearsal(state, registry) {
   const bridge = state.manifest.desktopUpdater?.compatibilityBridgeVersion;
-  if (!bridge || state.githubLatestVersion !== bridge) {
-    throw new Error('legacy GitHub-provider clients must remain on the compatibility bridge.');
+  if (!bridge || state.githubLatestVersion !== state.manifest.latest) {
+    throw new Error('GitHub latest must match the newest public manifest release.');
   }
   const rebuilt = createPlatformDownloadDirectory({
     manifest: state.manifest,

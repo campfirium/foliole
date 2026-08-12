@@ -29,7 +29,7 @@ export function resolveReleasePublication(identity, manifest) {
   }
   if (!existingBridge) throw new Error('scoped publication requires a compatibility bridge version.');
   requireBridgeRecord(identity, manifest, existingBridge);
-  return { bridgeVersion: existingBridge, makeLatest: false, mode };
+  return { bridgeVersion: existingBridge, makeLatest: true, mode };
 }
 
 export function assertT7Publication(identity, manifest) {

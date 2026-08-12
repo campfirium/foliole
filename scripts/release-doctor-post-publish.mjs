@@ -4,7 +4,6 @@ import { join } from 'node:path';
 
 import { createCheck } from './release-doctor-core.mjs';
 import { assertExactReleaseAssets } from './release-asset-contract.mjs';
-import { resolveReleasePublication } from './release-publication-contract.mjs';
 import { DOWNLOADS_URL } from './release-doctor-site.mjs';
 
 export { checkSiteSync } from './release-doctor-site.mjs';
@@ -67,7 +66,7 @@ function checkRemoteAssets(candidateJson, phase, identity) {
 }
 
 export function checkGithubReleaseSignals({
-  commandRunner, identity, localBody, manifest, phase, rootDir, version
+  commandRunner, identity, localBody, phase, rootDir, version
 }) {
   const candidate = commandRunner('gh', ['release', 'view', `v${version}`, '-R', 'campfirium/foliole', '--json', 'body,isDraft,publishedAt,tagName,url,assets'], rootDir);
   if (candidate.error || candidate.status !== 0) {
@@ -95,18 +94,7 @@ export function checkGithubReleaseSignals({
     return checks;
   }
   const latestJson = parseJsonResult(latest);
-  let expectedLatest;
-  try {
-    if (identity.intent.publicationMode === 'bridge') {
-      expectedLatest = version;
-    } else {
-      const publication = resolveReleasePublication(identity, manifest);
-      expectedLatest = publication.mode === 'scoped' ? publication.bridgeVersion : version;
-    }
-  } catch (error) {
-    checks.push(createCheck('FAIL', 'GitHub latest release', error.message));
-    return checks;
-  }
+  const expectedLatest = version;
   const latestMatches = latestJson?.tagName === `v${expectedLatest}`;
   checks.push(createCheck(latestMatches ? 'PASS' : (phase === 'post' ? 'FAIL' : 'WARN'), 'GitHub latest release', `GitHub latest is ${latestJson?.tagName ?? '<unknown>'}; expected v${expectedLatest}; phase=${phase}.`));
   return checks;

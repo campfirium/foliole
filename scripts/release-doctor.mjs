@@ -211,7 +211,7 @@ export async function collectReleaseDoctorChecks({
     checkReleaseWorkflow(workflow, version),
     checkWorkingTree(rootDir, commandRunner),
     ...(platform.identity ? checkGithubReleaseSignals({
-      commandRunner, identity: platform.identity, localBody, manifest, phase, rootDir, version
+      commandRunner, identity: platform.identity, localBody, phase, rootDir, version
     }) : []),
     ...siteChecks,
     ...(platform.identity

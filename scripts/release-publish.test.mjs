@@ -7,7 +7,7 @@ import { createFixture } from './release-doctor.test-support.mjs';
 
 const SHA = 'a'.repeat(40);
 
-function runner(version, bridgeVersion, calls) {
+function runner(version, latestVersion, calls) {
   const tag = `v${version}`;
   return (command, args) => {
     calls.push([command, ...args]);
@@ -20,12 +20,12 @@ function runner(version, bridgeVersion, calls) {
       });
     }
     if (args[2] === tag) return JSON.stringify({ isDraft: false, tagName: tag });
-    return JSON.stringify({ tagName: `v${bridgeVersion}` });
+    return JSON.stringify({ tagName: `v${latestVersion}` });
   };
 }
 
 describe('release public transition', () => {
-  it('publishes a confirmed Draft without moving repository latest', async () => {
+  it('publishes a confirmed Draft as repository latest', async () => {
     const fixture = await createFixture({
       manifest: {
         desktopUpdater: { compatibilityBridgeVersion: '0.8.0' }, latest: '0.8.0',
@@ -34,9 +34,9 @@ describe('release public transition', () => {
     });
     const calls = [];
     await expect(publishRelease({
-      cwd: fixture.rootDir, run: runner(fixture.version, '0.8.0', calls)
-    })).resolves.toEqual({ expectedLatest: 'v0.8.0', tag: `v${fixture.version}` });
-    expect(calls.find((call) => call.includes('edit'))).toContain('--latest=false');
+      cwd: fixture.rootDir, run: runner(fixture.version, fixture.version, calls)
+    })).resolves.toEqual({ expectedLatest: `v${fixture.version}`, tag: `v${fixture.version}` });
+    expect(calls.find((call) => call.includes('edit'))).toContain('--latest=true');
   });
 
   it('marks the first complete bridge as repository latest', async () => {

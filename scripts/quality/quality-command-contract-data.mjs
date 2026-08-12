@@ -126,5 +126,6 @@ export const RELEASE_CONTROLS = [
   ['release-control:draft-body', 'unpublished-draft'],
   ['release-control:abandon-draft', 'explicitly-abandoned-unpublished-draft'],
   ['release-control:abandon-ref', 'explicitly-abandoned-release-ref'],
-  ['release-control:publish', 'user-confirmed-unpublished-draft']
+  ['release-control:publish', 'user-confirmed-unpublished-draft'],
+  ['release-control:latest', 'user-confirmed-published-release-latest']
 ];

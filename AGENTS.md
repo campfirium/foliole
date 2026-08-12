@@ -117,7 +117,7 @@
 - `it.skip` / `test.skip` 必须紧邻 `// SKIP: <reason> | <date YYYY-MM-DD> | revive: <condition>`；看到超过 30 天的 stale `SKIP` 必须复查能否恢复。
 - E2E（Playwright）不进入任何质量闸；它作为宿主可见验收单独执行。桌面日常 agent 自动化验收优先按 `electron/AGENTS.md` 使用不干扰用户桌面的 Playwright 入口，人工预览仍按下表执行。
 - Android 日常按 Mac DEV-first 使用固定 A5 本地 CLI；Windows 只承担 Windows desktop 联动、Windows 专属边界与最终跨宿主验收。CI 级 clean / bundled / release-like 终检只由 GitHub hosted lane 承担，不得恢复通用设备 runner 或 detached preview 服务。
-- `scripts/quality/quality-command-contracts.mjs` 是质量 / 发布命令分类的机械真相；未登记命令拒绝。`npm run quality:remote -- --scope <desktop|shared|android|ios|full>` 是唯一 dev-only hosted recheck orchestrator，禁止 SHA 输入和 release 调用；`release-control:draft-body`、`release-control:abandon-draft`、`release-control:abandon-ref`、`release-control:publish` 只允许 pinned 发布主任务在登记状态下使用。
+- `scripts/quality/quality-command-contracts.mjs` 是质量 / 发布命令分类的机械真相；未登记命令拒绝。`npm run quality:remote -- --scope <desktop|shared|android|ios|full>` 是唯一 dev-only hosted recheck orchestrator，禁止 SHA 输入和 release 调用；`release-control:draft-body`、`release-control:abandon-draft`、`release-control:abandon-ref`、`release-control:publish`、`release-control:latest` 只允许 pinned 发布主任务在登记状态下使用。
 - 运行命令后若工具返回非终态、无新增输出、仅 heartbeat / progress，或 agent 准备汇报“仍在运行 / 继续等 / 再查一次”，必须触发 `$quiet-wait`；后续用 waiter 接管等待，不得用 agent 回合继续守进程。
 - `copy:guard` 默认只报告 warning；若它报 warning，修复前先读 `.lab/specs/_product/terminology-and-copy.md`，禁止机械替换。
 

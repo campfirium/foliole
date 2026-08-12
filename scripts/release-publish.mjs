@@ -45,7 +45,7 @@ export async function publishRelease({ cwd = process.cwd(), run = execFileSync }
   const latest = json('gh', [
     'release', 'view', '-R', 'campfirium/foliole', '--json', 'tagName'
   ], cwd, run);
-  const expectedLatest = publication.makeLatest ? tag : `v${publication.bridgeVersion}`;
+  const expectedLatest = tag;
   if (published.isDraft || published.tagName !== tag || latest.tagName !== expectedLatest) {
     throw new Error(`published Release must preserve repository latest at ${expectedLatest}.`);
   }

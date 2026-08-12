@@ -62,7 +62,7 @@ function step(version, selectedPlatforms, publicationMode, notes = { notes: [`Sh
 }
 
 describe('isolated compatibility transition rehearsal', () => {
-  it('moves through bridge, Windows-only, macOS-only, and full releases without moving repository latest', () => {
+  it('moves repository latest through bridge, Windows-only, macOS-only, and full releases', () => {
     const bridge = applyIsolatedReleaseStep(INITIAL, REGISTRY, step('0.8.0', ['macos', 'windows'], 'bridge'));
     const windows = applyIsolatedReleaseStep(bridge, REGISTRY, step('0.8.1', ['windows'], 'scoped', {
       notes: ['Shared 0.8.1'], platformNotes: { windows: ['Windows fix'] }
@@ -72,7 +72,7 @@ describe('isolated compatibility transition rehearsal', () => {
     }));
     const full = applyIsolatedReleaseStep(macos, REGISTRY, step('0.8.3', ['macos', 'windows'], 'scoped'));
 
-    expect(full.githubLatestVersion).toBe('0.8.0');
+    expect(full.githubLatestVersion).toBe('0.8.3');
     expect(resolveRehearsalPlatformVersion(windows, 'macos')).toBe('0.8.0');
     expect(resolveRehearsalPlatformVersion(windows, 'windows')).toBe('0.8.1');
     expect(resolveRehearsalPlatformVersion(macos, 'macos')).toBe('0.8.2');
