@@ -14,6 +14,7 @@ const nativePlugin = vi.hoisted(() => ({
   savePairingCredentials: vi.fn(),
   signCompanionSyncRequest: vi.fn()
 }));
+const syncGroupMock = vi.hoisted(() => ({ load: vi.fn() }));
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
@@ -31,6 +32,11 @@ vi.mock('electron', () => ({
     getSelectedStorageBackend: () => 'gnome_libsecret',
     isEncryptionAvailable: () => true
   }
+}));
+
+vi.mock('./companion/sync/syncGroupStore', async (importOriginal) => ({
+  ...await importOriginal<typeof import('./companion/sync/syncGroupStore')>(),
+  loadCompanionSyncGroup: syncGroupMock.load
 }));
 
 import { createLanWorkspaceSyncRequestHandler } from '../../../electron/sync/companionLanRequestHandler.js';
@@ -59,6 +65,7 @@ beforeEach(async () => {
   clearCompanionPairRequests();
   clearPairedCompanionDevices();
   pairingState = null;
+  syncGroupMock.load.mockResolvedValue(null);
   configureNativePairingStore();
   server = http.createServer(createLanWorkspaceSyncRequestHandler({
     appVersion: '0.1.0-test',

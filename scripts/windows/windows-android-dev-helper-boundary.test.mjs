@@ -6,6 +6,10 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { RETIRED_PACKAGE_SCRIPTS, RETIRED_SCRIPT_ASSETS } from '../lib/script-domain-retirements.mjs';
+import { WINDOWS_DEV_ACTIONS } from './windows-dev-control.mjs';
+import {
+  WINDOWS_SYNC_GROUP_PROVIDER_RELEASE_ACTIONS
+} from './windows-sync-group-provider-release-control.mjs';
 
 const retained = [
   'android-capture-annotation-audit.mjs',
@@ -53,7 +57,11 @@ describe('Windows Android DEV helper boundary', () => {
 
     const controller = source('scripts/windows/windows-dev-control.mjs');
     const adapter = source('scripts/windows/windows-dev-device-action.mjs');
-    expect(controller).toContain("'multi-device-sync-candidate', 'verify'");
+    expect(WINDOWS_DEV_ACTIONS).toEqual(expect.arrayContaining([
+      'multi-device-sync-candidate',
+      ...Object.values(WINDOWS_SYNC_GROUP_PROVIDER_RELEASE_ACTIONS),
+      'verify'
+    ]));
     expect(adapter).toContain("WINDOWS_DEV_ADB_PORT = '5037'");
     expect(adapter).toContain("WINDOWS_DEV_A5_SERIAL = '87a33a4b'");
     expect(`${controller}\n${adapter}`).not.toMatch(/windows-android-lab-(?:request|state|operation|worker)/u);

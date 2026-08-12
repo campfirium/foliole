@@ -19,7 +19,7 @@ function validateRelease(value, action, nonce) {
 }
 
 export function waitForWindowsSyncGroupProviderRelease({
-  action, repoRoot, timeoutMs = RELEASE_TIMEOUT_MS
+  action, repoRoot, timeoutMs = RELEASE_TIMEOUT_MS, watchDirectory = fs.watch
 }) {
   const paths = syncGroupInteractivePaths(repoRoot);
   const request = validateSyncGroupInteractiveRequest(readJson(paths.request), repoRoot);
@@ -47,9 +47,7 @@ export function waitForWindowsSyncGroupProviderRelease({
       } catch (error) { finish(error); }
     };
     fs.mkdirSync(path.dirname(releasePath), { recursive: true });
-    const watcher = fs.watch(path.dirname(releasePath), (_event, fileName) => {
-      if (!fileName || String(fileName) === path.basename(releasePath)) inspect();
-    });
+    const watcher = watchDirectory(path.dirname(releasePath), inspect);
     const timer = setTimeout(() => finish(new Error('Sync Group provider release timed out.')),
       timeoutMs);
     inspect();

@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
+const macosPath = path.posix;
+
 function checkedSpawn(command, args) {
   const result = spawnSync(command, args, { encoding: 'utf8', stdio: 'pipe' });
   if (result.status === 0) return;
@@ -12,9 +14,9 @@ function checkedSpawn(command, args) {
 }
 
 export function resolveMacosHiddenElectronSource(appRoot, env = process.env) {
-  const executablePath = path.resolve(env.FOLIOLE_ELECTRON_EXECUTABLE_PATH?.trim()
-    || path.join(appRoot, 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'));
-  const marker = `${path.sep}Contents${path.sep}MacOS${path.sep}`;
+  const executablePath = macosPath.resolve(env.FOLIOLE_ELECTRON_EXECUTABLE_PATH?.trim()
+    || macosPath.join(appRoot, 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'));
+  const marker = `${macosPath.sep}Contents${macosPath.sep}MacOS${macosPath.sep}`;
   const markerIndex = executablePath.lastIndexOf(marker);
   if (markerIndex < 0) {
     throw new Error(`hidden Electron executable is not inside a macOS app bundle: ${executablePath}`);
@@ -23,7 +25,7 @@ export function resolveMacosHiddenElectronSource(appRoot, env = process.env) {
   return {
     appBundlePath,
     executablePath,
-    executableRelativePath: path.relative(appBundlePath, executablePath)
+    executableRelativePath: macosPath.relative(appBundlePath, executablePath)
   };
 }
 
@@ -37,18 +39,18 @@ export function prepareMacosHiddenElectronRuntime({
   if (!fileSystem.existsSync(source.executablePath)) {
     throw new Error(`hidden Electron executable is missing: ${source.executablePath}`);
   }
-  const parent = path.join(appRoot, '.tmp', 'native-hidden-electron');
+  const parent = macosPath.join(appRoot, '.tmp', 'native-hidden-electron');
   fileSystem.mkdirSync(parent, { recursive: true });
-  const runtimeRoot = fileSystem.mkdtempSync(path.join(parent, 'run-'));
-  const targetApp = path.join(runtimeRoot, path.basename(source.appBundlePath));
+  const runtimeRoot = fileSystem.mkdtempSync(macosPath.join(parent, 'run-'));
+  const targetApp = macosPath.join(runtimeRoot, macosPath.basename(source.appBundlePath));
   try {
     run('/bin/cp', ['-cR', source.appBundlePath, targetApp]);
     run('/usr/bin/plutil', [
-      '-replace', 'LSUIElement', '-bool', 'YES', path.join(targetApp, 'Contents', 'Info.plist')
+      '-replace', 'LSUIElement', '-bool', 'YES', macosPath.join(targetApp, 'Contents', 'Info.plist')
     ]);
     return {
       cleanup: () => fileSystem.rmSync(runtimeRoot, { force: true, recursive: true }),
-      executablePath: path.join(targetApp, source.executableRelativePath)
+      executablePath: macosPath.join(targetApp, source.executableRelativePath)
     };
   } catch (error) {
     fileSystem.rmSync(runtimeRoot, { force: true, recursive: true });

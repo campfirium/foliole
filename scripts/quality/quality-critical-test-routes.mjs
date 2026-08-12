@@ -36,6 +36,12 @@ const Z_INDEX_TOKEN_CONTRACT_TESTS = [
   'src/app/zIndexTokenBoundary.test.ts'
 ];
 
+const NATIVE_PAIRING_SIGNING_CONTRACT_TESTS = [
+  'src/shared/platform/companion/network/signedRequest.syncGroupPeer.test.ts',
+  'src/shared/platform/companionPairingSeam.contract.test.ts',
+  'src/shared/platform/companionWorkspaceSync.pairing.test.ts'
+];
+
 const PINNED_NPM_WORKFLOW_CONTRACT_TESTS = [
   'scripts/quality/pinned-npm.test.mjs',
   'scripts/t5-baseline-admission-workflow-contract.test.mjs',
@@ -122,6 +128,19 @@ export const CRITICAL_TEST_ROUTES = [
       /^src\/features\/settings\/components\/sections\/SettingsDocumentMenuSection\.tsx$/u
     ],
     tests: Z_INDEX_TOKEN_CONTRACT_TESTS
+  },
+  {
+    triggers: [/^src\/shared\/platform\/companion\/network\/signedRequest\.ts$/u],
+    tests: NATIVE_PAIRING_SIGNING_CONTRACT_TESTS
+  },
+  {
+    triggers: [/^android\/app\/src\/main\/java\/com\/foliole\/companion\/.+\.java$/u,
+      /^scripts\/android\/java-adapter-boundary-rules\.mjs$/u],
+    tests: ['scripts/android/java-adapter-boundary.test.mjs']
+  },
+  {
+    triggers: [/^scripts\/windows\/windows-dev-control\.mjs$/u],
+    tests: ['scripts/windows/windows-android-dev-helper-boundary.test.mjs']
   },
   {
     triggers: [

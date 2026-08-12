@@ -4,14 +4,19 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 
 import { waitForWindowsSyncGroupProviderRelease } from './windows-sync-group-provider-release.mjs';
-import { syncGroupInteractivePaths } from './windows-sync-group-interactive-state.mjs';
+import {
+  syncGroupInteractivePaths, writeJsonAtomic
+} from './windows-sync-group-interactive-state.mjs';
 
 const roots = [];
 
-afterEach(() => roots.splice(0).forEach((root) => fs.rmSync(root, { force: true, recursive: true })));
+afterEach(() => {
+  vi.restoreAllMocks();
+  roots.splice(0).forEach((root) => fs.rmSync(root, { force: true, recursive: true }));
+});
 
 function fixture() {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'sync-group-provider-release-'));
@@ -27,14 +32,28 @@ function fixture() {
   return { nonce, releasePath, repoRoot };
 }
 
+function watchFixture() {
+  let listener = null;
+  return {
+    notify(fileName) {
+      if (!listener) throw new Error('provider release watcher is not ready');
+      listener('rename', fileName);
+    },
+    watchDirectory: vi.fn((_directory, nextListener) => {
+      listener = nextListener;
+      return { close: vi.fn() };
+    })
+  };
+}
+
 it('keeps the provider alive until the matching consumer completion event', async () => {
   const { nonce, releasePath, repoRoot } = fixture();
   const waiting = waitForWindowsSyncGroupProviderRelease({
     action: 'multi-device-sync-a-rejoin', repoRoot, timeoutMs: 1_000
   });
-  fs.writeFileSync(releasePath, `${JSON.stringify({
+  writeJsonAtomic(releasePath, {
     action: 'multi-device-sync-a-rejoin', nonce, schemaVersion: 1, status: 'consumer_complete'
-  })}\n`, 'utf8');
+  });
   await expect(waiting).resolves.toMatchObject({ status: 'consumer_complete' });
   expect(fs.existsSync(releasePath)).toBe(false);
 });
@@ -44,10 +63,26 @@ it('fails closed when the controller cancels the provider lifecycle', async () =
   const waiting = waitForWindowsSyncGroupProviderRelease({
     action: 'multi-device-sync-a-rejoin', repoRoot, timeoutMs: 1_000
   });
-  fs.writeFileSync(releasePath, `${JSON.stringify({
+  writeJsonAtomic(releasePath, {
     action: 'multi-device-sync-a-rejoin', nonce, schemaVersion: 1, status: 'cancelled'
-  })}\n`, 'utf8');
+  });
   await expect(waiting).rejects.toThrow('cancelled');
+});
+
+it('rechecks the nonce-bound release after any directory notification', async () => {
+  const { nonce, releasePath, repoRoot } = fixture();
+  const watcher = watchFixture();
+  const waiting = waitForWindowsSyncGroupProviderRelease({
+    action: 'multi-device-sync-a-rejoin', repoRoot, timeoutMs: 1_000,
+    watchDirectory: watcher.watchDirectory
+  });
+  fs.writeFileSync(releasePath, `${JSON.stringify({
+    action: 'multi-device-sync-a-rejoin', nonce, schemaVersion: 1, status: 'consumer_complete'
+  })}\n`, 'utf8');
+  watcher.notify('provider-release.json.pending');
+
+  await expect(waiting).resolves.toMatchObject({ status: 'consumer_complete' });
+  expect(watcher.watchDirectory).toHaveBeenCalledOnce();
 });
 
 it('rejects a release from a stale provider request', async () => {

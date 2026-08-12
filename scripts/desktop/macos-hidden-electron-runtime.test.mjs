@@ -1,7 +1,5 @@
 // @vitest-environment node
 
-import path from 'node:path';
-
 import { expect, it, vi } from 'vitest';
 
 import {
@@ -13,10 +11,8 @@ it('resolves the raw Electron executable inside its macOS app bundle', () => {
   const appRoot = '/repo/foliole';
   const source = resolveMacosHiddenElectronSource(appRoot, {});
 
-  expect(source.appBundlePath).toBe(path.join(
-    appRoot, 'node_modules/electron/dist/Electron.app'
-  ));
-  expect(source.executableRelativePath).toBe(path.join('Contents', 'MacOS', 'Electron'));
+  expect(source.appBundlePath).toBe('/repo/foliole/node_modules/electron/dist/Electron.app');
+  expect(source.executableRelativePath).toBe('Contents/MacOS/Electron');
 });
 
 it('clones and marks an isolated Electron app as an LSUIElement runtime', () => {

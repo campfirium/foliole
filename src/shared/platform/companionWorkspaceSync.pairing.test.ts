@@ -3,6 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 const writerQueueMock = vi.hoisted(() => ({
   run: vi.fn(async <T>(task: () => Promise<T>) => task())
 }));
+const syncGroupMock = vi.hoisted(() => ({ load: vi.fn() }));
 
 const capacitorMock = vi.hoisted(() => ({
   getPlatform: vi.fn(() => 'web'),
@@ -31,6 +32,11 @@ vi.mock('./companionPairingEncryption', () => ({
   createCompanionPairingPublicKey: vi.fn(async () => 'client-public-key'),
   decryptCompanionPairingSecret: vi.fn(async () => 'test-secret'),
   dropCompanionPairingPrivateKey: vi.fn()
+}));
+
+vi.mock('./companion/sync/syncGroupStore', async (importOriginal) => ({
+  ...await importOriginal<typeof import('./companion/sync/syncGroupStore')>(),
+  loadCompanionSyncGroup: syncGroupMock.load
 }));
 
 import {
@@ -128,6 +134,7 @@ function mockVerifiedNativePairing(args: { deviceId: string; deviceKind: string;
 
 beforeEach(() => {
   resetCompanionWorkspaceSyncTestState(capacitorMock);
+  syncGroupMock.load.mockResolvedValue(null);
   writerQueueMock.run.mockImplementation(async <T>(task: () => Promise<T>) => task());
 });
 
@@ -160,7 +167,7 @@ it.each([
     primary_device_id: 'device-desktop',
     remote_peer_id: 'device-desktop'
   }));
-  expect(capacitorMock.plugin.loadPairingState).toHaveBeenCalledTimes(2);
+  expect(capacitorMock.plugin.loadPairingState).toHaveBeenCalledOnce();
   expect(writerQueueMock.run).toHaveBeenCalledTimes(1);
   expect(queueEvents).toEqual(['start', 'sign', 'end']);
   expect(capacitorMock.plugin.signCompanionSyncRequest).toHaveBeenCalledWith(expect.objectContaining({
@@ -225,5 +232,5 @@ it('fails native pairing when saved credentials cannot sign sync requests', asyn
     deviceName: 'Pixel 9',
     endpointUrl: 'http://10.0.2.2:38641',
     pairRequestId: 'pair-request-1'
-  })).rejects.toThrow('Native pairing credentials cannot sign sync requests');
+  })).rejects.toThrow(/Native pairing credentials cannot sign sync requests: Failed to sign companion sync request\./u);
 });

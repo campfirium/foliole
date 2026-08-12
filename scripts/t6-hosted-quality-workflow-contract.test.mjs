@@ -68,6 +68,9 @@ describe('T6 hosted quality workflow contracts', () => {
     expect(gate.outputs.accepted_sha).toBe('${{ steps.require-chain.outputs.accepted_sha }}');
     expect(sources.t6).toContain('T5_SHA: ${{ needs.t5-baseline.outputs.admitted_sha }}');
     expect(sources.t6).toContain('FULL_SHA: ${{ needs.full-quality.outputs.accepted_sha }}');
+    const admissionCommand = gate.steps[0].run.split('\n')[0];
+    expect(admissionCommand).toMatch(/^node -e '.*'$/u);
+    expect(admissionCommand).toContain('throw new Error(`${name}=${value}`)');
   });
 
   it('keeps dev Remote Quality outside formal T6/T7 evidence', () => {

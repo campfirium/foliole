@@ -23,6 +23,17 @@ const HOSTED_QUALITY_GAP_ROUTES = [
   ['z-index token boundary', [
     'src/features/settings/components/sections/SettingsDocumentMenuSection.tsx'
   ], ['src/app/zIndexTokenBoundary.test.ts']],
+  ['native pairing signing', ['src/shared/platform/companion/network/signedRequest.ts'], [
+    'src/shared/platform/companion/network/signedRequest.syncGroupPeer.test.ts',
+    'src/shared/platform/companionPairingSeam.contract.test.ts',
+    'src/shared/platform/companionWorkspaceSync.pairing.test.ts'
+  ]],
+  ['Android Java adapter inventory', [
+    'android/app/src/main/java/com/foliole/companion/FolioleCompanionNsdAddresses.java'
+  ], ['scripts/android/java-adapter-boundary.test.mjs']],
+  ['Windows DEV action registry', [
+    'scripts/windows/windows-dev-control.mjs'
+  ], ['scripts/windows/windows-android-dev-helper-boundary.test.mjs']],
   ['pinned npm workflow', ['package.json', 'package-lock.json'], [
     'scripts/quality/pinned-npm.test.mjs',
     'scripts/t5-baseline-admission-workflow-contract.test.mjs',
@@ -146,8 +157,9 @@ describe('quality critical test routes', () => {
   });
 
   it('exposes the source-triggered contracts through the quality:fast route', () => {
-    const plan = readQualityFastPlan(HOSTED_QUALITY_GAP_ROUTES.slice(0, 4).flatMap(([, triggers]) => triggers));
-    expect(plan.relatedTests).toEqual(expect.arrayContaining(HOSTED_QUALITY_GAP_ROUTES.slice(0, 4).flatMap(([, , tests]) => tests)));
+    const sourceRoutes = HOSTED_QUALITY_GAP_ROUTES.filter(([name]) => name !== 'pinned npm workflow');
+    const plan = readQualityFastPlan(sourceRoutes.flatMap(([, triggers]) => triggers));
+    expect(plan.relatedTests).toEqual(expect.arrayContaining(sourceRoutes.flatMap(([, , tests]) => tests)));
   }, 45_000);
 
   it('keeps capped quality:fast routes wired to the critical test runner', () => {

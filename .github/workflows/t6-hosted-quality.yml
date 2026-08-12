@@ -83,5 +83,5 @@ jobs:
           T5_SHA: ${{ needs.t5-baseline.outputs.admitted_sha }}
           TARGET_SHA: ${{ needs.context.outputs.target_sha }}
         run: |
-          node -e "for (const [name, value] of Object.entries({ T5_RESULT: process.env.T5_RESULT, FULL_RESULT: process.env.FULL_RESULT })) if (value !== 'success') throw new Error(`${name}=${value}`); for (const [name, value] of Object.entries({ T5_SHA: process.env.T5_SHA, FULL_SHA: process.env.FULL_SHA })) if (value !== process.env.TARGET_SHA) throw new Error(`${name} does not match T6 target`);"
+          node -e 'for (const [name, value] of Object.entries({ T5_RESULT: process.env.T5_RESULT, FULL_RESULT: process.env.FULL_RESULT })) if (value !== "success") throw new Error(`${name}=${value}`); for (const [name, value] of Object.entries({ T5_SHA: process.env.T5_SHA, FULL_SHA: process.env.FULL_SHA })) if (value !== process.env.TARGET_SHA) throw new Error(`${name} does not match T6 target`);'
           echo "accepted_sha=${TARGET_SHA}" >> "$GITHUB_OUTPUT"
