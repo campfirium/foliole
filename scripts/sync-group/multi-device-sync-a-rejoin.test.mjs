@@ -14,17 +14,17 @@ const facts = { activeDeviceIdentities: identities, activeMemberCount: 3, attach
   contentBlobCount: 4, facts: { 'fact-a': true, 'fact-b': true, 'fact-c': true },
   integrity: 'ok', localGroupId: 'group-1', localMemberState: 'active',
   localTimelineId: 'timeline-1', missingAttachmentCount: 0, missingContentBlobCount: 0,
-  nodeCount: 5 };
+  nodeCount: 6, userNodeCount: 4 };
 const android = { database: { counts: { attachments: 1, content_blobs: 4, nodes: 5 },
   inspection: { activeMemberIdentities: ['a', 'b', 'c'], activeSyncGroupMemberCount: 3,
     journeyFacts: { 'fact-a': 'A', 'fact-b': 'B', 'fact-c': 'C' },
     missingAttachmentCount: 0, missingContentBlobCount: 0, syncGroupId: 'group-1',
-    syncGroupTimelineId: 'timeline-1' }, integrity: 'ok' } };
+    syncGroupTimelineId: 'timeline-1', userNodeCount: 4 }, integrity: 'ok' } };
 
 it('requires one restarted identity, timeline, member set, fact set, and resource inventory', () => {
   expect(assertThreeDeviceProof({ android, ids, macos: facts, windows: facts }))
     .toEqual({ attachmentCount: 1, contentBlobCount: 4, groupId: 'group-1',
-      nodeCount: 5, timelineId: 'timeline-1' });
+      nodeCount: 4, timelineId: 'timeline-1' });
 });
 
 it('rejects a same-count member set that does not converge by device identity', () => {
@@ -44,7 +44,7 @@ it('waits for restarted resource bodies instead of failing on the transient meta
     return { android: currentAndroid, macos: facts, windows: facts };
   } });
   expect(inspections).toBe(2);
-  expect(proof).toMatchObject({ contentBlobCount: 4, nodeCount: 5 });
+  expect(proof).toMatchObject({ contentBlobCount: 4, nodeCount: 4 });
 });
 
 it('ends the stale provider lifecycle before every staged Android restart', async () => {

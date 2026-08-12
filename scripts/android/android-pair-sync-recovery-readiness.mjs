@@ -128,7 +128,9 @@ export function inspectPairSyncRecoveryWorkspace(database) {
     pairingCredentialsRejected: rejection.rejected,
     protectedContentDigest: protectedContentDigest(database),
     syncGroupId: group?.group_id ?? null,
-    syncGroupTimelineId: group?.timeline_id ?? null
+    syncGroupTimelineId: group?.timeline_id ?? null,
+    userNodeCount: count(database, 'nodes',
+      " WHERE id NOT IN ('special-inbox', 'special-virtual-root')")
   };
 }
 

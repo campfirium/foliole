@@ -103,8 +103,8 @@ export function assertThreeDeviceProof({ android, macos, windows, ids }) {
   const points = [macos, windows];
   const groupIds = [macos.localGroupId, windows.localGroupId, androidFacts?.syncGroupId];
   const timelines = [macos.localTimelineId, windows.localTimelineId, androidFacts?.syncGroupTimelineId];
-  const counts = points.map((value) => [value.nodeCount, value.contentBlobCount, value.attachmentCount]);
-  counts.push([android.database.counts.nodes, android.database.counts.content_blobs,
+  const counts = points.map((value) => [value.userNodeCount, value.contentBlobCount, value.attachmentCount]);
+  counts.push([androidFacts?.userNodeCount, android.database.counts.content_blobs,
     android.database.counts.attachments]);
   const androidHasFacts = Object.values(ids).every((id) => androidFacts?.journeyFacts?.[id]);
   const memberIdentities = [desktopMemberIdentities(macos), desktopMemberIdentities(windows),
