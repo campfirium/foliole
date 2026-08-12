@@ -68,3 +68,24 @@ it('reads the A-leave receipt only after the same fixed provider is released', a
     'scripts/windows/windows-dev-control.mjs', 'multi-device-sync-a-leave'
   ], expect.objectContaining({ action: 'windows-c-a-leave' }));
 });
+
+it('reports a Windows provider terminal before the consumer watchdog can mask it', async () => {
+  const execute = vi.fn(() => Promise.resolve({ code: 1,
+    stderr: 'ssh: connect to host timed out', terminationReason: null }));
+  const provider = startWindowsSyncGroupProvider({
+    action: 'multi-device-sync-a-leave', execute, repoRoot: process.cwd()
+  });
+  await expect(provider.raceConsumer(new Promise(() => {}))).rejects.toMatchObject({
+    failureOwner: 'controller', host: 'windows-c', missingFact: 'windows_a_leave_action_failed',
+    message: expect.stringContaining('ssh: connect to host timed out')
+  });
+});
+
+it('rejects a provider that ends successfully before its consumer is complete', async () => {
+  const provider = startWindowsSyncGroupProvider({ action: 'multi-device-sync-a-leave',
+    execute: vi.fn(() => Promise.resolve({ code: 0, output: '' })), repoRoot: process.cwd() });
+  await expect(provider.raceConsumer(new Promise(() => {}))).rejects.toMatchObject({
+    failureOwner: 'controller', host: 'windows-c',
+    missingFact: 'windows_a_leave_provider_ended_early'
+  });
+});

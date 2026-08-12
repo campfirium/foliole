@@ -17,7 +17,7 @@ import { restartARejoinAndroidProvider } from './multi-device-sync-a-rejoin.mjs'
 import { startWindowsSyncGroupProvider } from './multi-device-sync-windows-provider.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
-/* global process */
+/* global AbortController, process */
 
 function memberIdentities(database, state) {
   return database.prepare(`SELECT device_id FROM sync_group_members
@@ -33,15 +33,17 @@ function androidSnapshot(paths) {
       departedMemberIdentities: memberIdentities(database, 'left') }) });
 }
 
-async function waitUntil(label, inspect, accept, progress) {
+async function waitUntil(label, inspect, accept, progress, signal) {
   const deadline = Date.now() + 12 * 60_000;
   const observe = createSyncProgressWatchdog({ label, stallMs: 60_000 });
   let value;
   while (Date.now() < deadline) {
+    signal?.throwIfAborted();
     value = await inspect();
+    signal?.throwIfAborted();
     observe(JSON.stringify(progress(value)), value);
     if (accept(value)) return value;
-    await delay(1_000);
+    await delay(1_000, undefined, signal ? { signal } : undefined);
   }
   throw new Error(`${label} timed out: ${JSON.stringify(value)}`);
 }
@@ -129,13 +131,22 @@ async function runWindowsContinuity(context, before) {
     await createAndroidFact({ env, evidenceRoot, execute, paths, runId });
     reportProgress('b-fact-created');
     await restartARejoinAndroidProvider({ env, execute, paths });
-    const completed = await waitUntil('Android B consumes the new C fact and resources',
+    const consumerController = new AbortController();
+    const consumer = waitUntil('Android B consumes the new C fact and resources',
       () => androidSnapshot(paths), (value) => {
         try { assertAndroidConsumerComplete({ before: beforeWindows, expected, snapshot: value });
           return true; } catch { return false; }
       }, (value) => [value.database?.inspection?.journeyFacts,
         value.database?.inspection?.missingAttachmentCount,
-        value.database?.inspection?.missingContentBlobCount, value.database?.counts]);
+        value.database?.inspection?.missingContentBlobCount, value.database?.counts],
+      consumerController.signal);
+    let completed;
+    try { completed = await windowsProvider.raceConsumer(consumer); }
+    catch (error) {
+      consumerController.abort();
+      await consumer.catch(() => undefined);
+      throw error;
+    }
     const ids = assertAndroidConsumerComplete({ before: beforeWindows, expected, snapshot: completed });
     reportProgress('c-fact-created');
     await windowsProvider.release('consumer_complete');

@@ -22,6 +22,21 @@ function controllerFailure(message, missingFact) {
   });
 }
 
+function providerFailure(result, spec) {
+  if (result.error) {
+    return Object.assign(result.error, {
+      failureOwner: result.error.failureOwner || 'controller', host: result.error.host || 'windows-c',
+      missingFact: result.error.missingFact || `${spec.missingPrefix}_action_failed`
+    });
+  }
+  if (result.value.code === 0) return null;
+  const detail = (result.value.stderr || result.value.stdout || '').trim().split(/\r?\n/u).at(-1);
+  return Object.assign(controllerFailure(
+    `Windows C ${spec.label} action failed${detail ? `: ${detail}` : '.'}`,
+    result.value.terminationReason || `${spec.missingPrefix}_action_failed`
+  ), { result: result.value });
+}
+
 function actionSpec(action) {
   const spec = PROVIDER_ACTIONS[action];
   if (!spec) throw controllerFailure('Windows C provider action is invalid.',
@@ -64,14 +79,18 @@ export function startWindowsSyncGroupProvider({ action, execute, repoRoot }) {
   };
   const finish = async () => {
     const result = await work;
-    if (result.error) throw result.error;
-    if (result.value.code !== 0) throw controllerFailure(`Windows C ${spec.label} action failed.`,
-      result.value.terminationReason || `${spec.missingPrefix}_action_failed`);
+    const failure = providerFailure(result, spec);
+    if (failure) throw failure;
     return receiptFromResult(result.value, repoRoot, action, spec);
   };
+  const raceConsumer = (consumer) => Promise.race([consumer, work.then((result) => {
+    const failure = providerFailure(result, spec);
+    throw failure || controllerFailure(`Windows C ${spec.label} provider ended before consumer completion.`,
+      `${spec.missingPrefix}_provider_ended_early`);
+  })]);
   const cancelAndSettle = async () => {
     await release('cancelled').catch(() => undefined);
     await work;
   };
-  return { cancelAndSettle, finish, release };
+  return { cancelAndSettle, finish, raceConsumer, release };
 }
