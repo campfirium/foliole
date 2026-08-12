@@ -33,7 +33,7 @@ function androidSnapshot(paths) {
       departedMemberIdentities: memberIdentities(database, 'left') }) });
 }
 
-async function waitUntil(label, inspect, accept, progress, signal) {
+async function waitUntil(label, inspect, accept, progress, signal, reportActivity = () => {}) {
   const deadline = Date.now() + 12 * 60_000;
   const observe = createSyncProgressWatchdog({ label, stallMs: 60_000 });
   let value;
@@ -41,7 +41,7 @@ async function waitUntil(label, inspect, accept, progress, signal) {
     signal?.throwIfAborted();
     value = await inspect();
     signal?.throwIfAborted();
-    observe(JSON.stringify(progress(value)), value);
+    if (observe(JSON.stringify(progress(value)), value)) reportActivity();
     if (accept(value)) return value;
     await delay(1_000, undefined, signal ? { signal } : undefined);
   }
@@ -115,7 +115,8 @@ async function leaveAndRestartA(context) {
 }
 
 async function runWindowsContinuity(context, before) {
-  const { env, evidenceRoot, execute, paths, rejoin, reportProgress, repoRoot, runId } = context;
+  const { env, evidenceRoot, execute, paths, rejoin, reportActivity,
+    reportProgress, repoRoot, runId } = context;
   const expected = { formerDeviceIdentity: before.deviceIdentity,
     groupId: rejoin.proof.groupId, timelineId: rejoin.proof.timelineId };
   await waitUntil('Android B departure convergence', () => androidSnapshot(paths),
@@ -139,7 +140,7 @@ async function runWindowsContinuity(context, before) {
       }, (value) => [value.database?.inspection?.journeyFacts,
         value.database?.inspection?.missingAttachmentCount,
         value.database?.inspection?.missingContentBlobCount, value.database?.counts],
-      consumerController.signal);
+      consumerController.signal, () => reportActivity('b-consumer-progress'));
     let completed;
     try { completed = await windowsProvider.raceConsumer(consumer); }
     catch (error) {
@@ -188,14 +189,14 @@ async function verifyRestartedSurvivors(context, before, remote) {
   return proof;
 }
 
-function createContext({ execute, reportProgress, repoRoot, runId }) {
+function createContext({ execute, reportActivity = () => {}, reportProgress, repoRoot, runId }) {
   const owned = createIsolatedMacosRoot({ repoRoot, runId });
   const evidenceRoot = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId, 'a-leave');
   const rejoin = JSON.parse(fs.readFileSync(path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs',
     runId, 'a-rejoin/a-rejoin-proof.json'), 'utf8'));
   return { databasePath: path.join(owned.root, 'library', 'Data', 'foliole.db'),
     env: macosA5GradleEnv(), evidenceRoot, execute, owned, paths: macosA5Paths(repoRoot),
-    rejoin, reportProgress, repoRoot, runId };
+    rejoin, reportActivity, reportProgress, repoRoot, runId };
 }
 
 export async function proveALeave(options) {

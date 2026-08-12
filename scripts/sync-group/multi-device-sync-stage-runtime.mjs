@@ -14,7 +14,9 @@ function productStall(stage, lastSuccessfulAction) {
 
 export async function runBoundedStageAction({ action, run, stage }) {
   const controller = new AbortController();
+  const activityCounts = new Map();
   const progress = [];
+  let lastProgressAt = new Date().toISOString();
   let terminal = null;
   let hardTimer; let progressTimer;
   const armProgress = () => {
@@ -32,7 +34,17 @@ export async function runBoundedStageAction({ action, run, stage }) {
         `Stage ${stage.name} expected ${expected || 'no further milestone'}, received ${milestone}.`);
       controller.abort(); return;
     }
-    progress.push(milestone); armProgress();
+    progress.push(milestone); lastProgressAt = new Date().toISOString(); armProgress();
+  };
+  const reportActivity = (activity) => {
+    if (terminal) return;
+    if (!(stage.activities ?? []).includes(activity)) {
+      terminal = controllerFailure(stage, 'activity_invalid', progress.at(-1) || 'stage_started',
+        `Stage ${stage.name} received undeclared activity ${activity}.`);
+      controller.abort(); return;
+    }
+    activityCounts.set(activity, (activityCounts.get(activity) ?? 0) + 1);
+    lastProgressAt = new Date().toISOString(); armProgress();
   };
   hardTimer = setTimeout(() => {
     if (terminal) return;
@@ -41,7 +53,7 @@ export async function runBoundedStageAction({ action, run, stage }) {
   }, stage.hardDeadlineMs);
   armProgress();
   try {
-    const result = await action({ reportProgress, run, signal: controller.signal, stage });
+    const result = await action({ reportActivity, reportProgress, run, signal: controller.signal, stage });
     if (terminal) throw terminal;
     if (progress.length === 0 && Array.isArray(result?.progress)) {
       result.progress.forEach(reportProgress);
@@ -51,9 +63,11 @@ export async function runBoundedStageAction({ action, run, stage }) {
       throw controllerFailure(stage, 'milestone_sequence_incomplete',
         progress.at(-1) || 'stage_started', `Stage ${stage.name} completed without all milestones.`);
     }
-    return { ...result, lastProgressAt: new Date().toISOString(), progress };
+    const activities = [...activityCounts].map(([name, count]) => ({ count, name }));
+    return { ...result, activities, lastProgressAt, progress };
   } catch (error) {
-    throw Object.assign(terminal || error, { progress: [...progress] });
+    const activities = [...activityCounts].map(([name, count]) => ({ count, name }));
+    throw Object.assign(terminal || error, { activities, lastProgressAt, progress: [...progress] });
   } finally {
     clearTimeout(hardTimer); clearTimeout(progressTimer);
   }

@@ -7,9 +7,9 @@ it('allows a long operation while its durable facts keep advancing', () => {
   const observe = createSyncProgressWatchdog({
     label: 'ordinary sync', now: () => current, stallMs: 90_000
   });
-  observe('0', { nodes: 0 });
+  expect(observe('0', { nodes: 0 })).toBe(false);
   current = 80_000;
-  observe('1', { nodes: 1 });
+  expect(observe('1', { nodes: 1 })).toBe(true);
   current = 160_000;
   expect(() => observe('2', { nodes: 2 })).not.toThrow();
 });

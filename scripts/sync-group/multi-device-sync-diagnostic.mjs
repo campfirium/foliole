@@ -13,6 +13,7 @@ function stageFailure(stage, startedAt, error) {
     ...(error.message ? { failureDetail: String(error.message).replace(/[\r\n]+/gu, ' ').slice(0, 500) } : {}),
     ...(error.siblingOutcomes ? { siblingOutcomes: error.siblingOutcomes } : {}),
     failureOwner: error.failureOwner || (stalled ? 'product' : 'controller'), host: error.host || stage.host,
+    ...(error.activities?.length ? { activities: error.activities } : {}),
     inputFacts: stage.inputs, lastProgressAt: error.lastProgressAt || startedAt,
     lastSuccessfulAction: error.lastSuccessfulAction || 'stage_started',
     missingFact: error.missingFact || (stalled ? 'observable_progress' : 'stage_action_failed'),
@@ -24,6 +25,7 @@ function stageFailure(stage, startedAt, error) {
 function stagePassed(stage, startedAt, result) {
   const completedAt = new Date().toISOString();
   return { completedAt, durationMs: Date.parse(completedAt) - Date.parse(startedAt),
+    ...(result.activities?.length ? { activities: result.activities } : {}),
     evidenceRef: result.evidenceRef, failureOwner: 'product', host: stage.host,
     inputFacts: stage.inputs, lastProgressAt: result.lastProgressAt || completedAt,
     outputFacts: stage.outputs, progress: result.progress || [], stage: stage.name,

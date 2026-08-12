@@ -38,7 +38,8 @@ it('declares ordered milestones and deadlines that cover legal sibling waits', (
       'three-members-restarted']
   });
   expect(resolveStage('a-leave')).toMatchObject({
-    action: 'leave-a', milestones: ['survivor-provider-ready', 'a-left',
+    action: 'leave-a', activities: ['b-consumer-progress'],
+    milestones: ['survivor-provider-ready', 'a-left',
       'a-restarted-unbound', 'b-two-members-active', 'b-fact-created', 'c-fact-created',
       'survivor-facts-converged', 'survivors-restarted', 'former-a-revoked'],
     progressDeadlineMs: 70_000

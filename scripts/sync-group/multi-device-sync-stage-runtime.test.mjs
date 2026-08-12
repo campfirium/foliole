@@ -7,7 +7,7 @@ import {
 /* global AbortController, setTimeout */
 
 function stage(overrides = {}) {
-  return { hardDeadlineMs: 200, host: 'all', milestones: ['started', 'completed'],
+  return { activities: [], hardDeadlineMs: 200, host: 'all', milestones: ['started', 'completed'],
     name: 'test-stage', progressDeadlineMs: 100, ...overrides };
 }
 
@@ -34,6 +34,23 @@ it('preserves completed milestones when the stage progress envelope expires', as
     .rejects.toMatchObject({
       failureOwner: 'product', missingFact: 'declared_semantic_progress', progress: ['started']
     });
+});
+
+it('extends the stage window only for declared semantic activity', async () => {
+  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  await expect(runBoundedStageAction({ action: async ({ reportActivity, reportProgress }) => {
+    reportProgress('started'); await wait(25); reportActivity('consumer-progress');
+    await wait(25); reportProgress('completed'); return {};
+  }, run: {}, stage: stage({ activities: ['consumer-progress'],
+    hardDeadlineMs: 120, progressDeadlineMs: 40 }) })).resolves.toMatchObject({
+      activities: [{ count: 1, name: 'consumer-progress' }],
+      progress: ['started', 'completed']
+    });
+  await expect(runBoundedStageAction({ action: async ({ reportActivity }) => {
+    reportActivity('stdout'); return {};
+  }, run: {}, stage: stage() })).rejects.toMatchObject({
+    failureOwner: 'controller', missingFact: 'activity_invalid'
+  });
 });
 
 it('joins every sibling before reporting the first failure', async () => {

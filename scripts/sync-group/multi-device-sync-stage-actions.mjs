@@ -161,7 +161,8 @@ export function createDiagnosticStageActions({ repoRoot, requiredHosts, runId })
       reportProgress: context.reportProgress }),
     'leave-a': (context) => proveALeave({ repoRoot, runId,
       execute: actionExecute(path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId,
-        'a-leave'), context.signal, context.stage), reportProgress: context.reportProgress }),
+        'a-leave'), context.signal, context.stage), reportActivity: context.reportActivity,
+      reportProgress: context.reportProgress }),
     'rejoin-a': (context) => proveARejoin({ repoRoot, runId,
       execute: actionExecute(path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId,
         'a-rejoin'), context.signal, context.stage), reportProgress: context.reportProgress })

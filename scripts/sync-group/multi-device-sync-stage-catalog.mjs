@@ -36,6 +36,7 @@ const stages = [
     progressDeadlineMs: PRODUCT_PROGRESS_DEADLINE + CONTROL_DEADLINE, siblings: [] },
   { action: 'leave-a', host: 'macos-a', inputs: ['three_members_active'], name: 'a-leave',
     hardDeadlineMs: 20 * 60_000, hosts: ['macos-a', 'android-b', 'windows-c'],
+    activities: ['b-consumer-progress'],
     milestones: ['survivor-provider-ready', 'a-left', 'a-restarted-unbound',
       'b-two-members-active', 'b-fact-created', 'c-fact-created',
       'survivor-facts-converged', 'survivors-restarted', 'former-a-revoked'],

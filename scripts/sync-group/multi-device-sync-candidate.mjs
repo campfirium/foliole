@@ -23,7 +23,8 @@ const CONTROLLER_FILES = [
   'scripts/sync-group/multi-device-sync-scenario-catalog.mjs',
   'scripts/sync-group/multi-device-sync-stage-catalog.mjs',
   'scripts/sync-group/multi-device-sync-windows-provider.mjs',
-  'scripts/sync-group/multi-device-sync-workspace.mjs'
+  'scripts/sync-group/multi-device-sync-workspace.mjs',
+  'scripts/sync-group/sync-progress-watchdog.mjs'
 ];
 
 function git(repoRoot, args) {
