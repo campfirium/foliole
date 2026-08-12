@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
+import { createServer } from 'node:net';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
@@ -13,6 +14,7 @@ import { assertIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
 const exec = promisify(execFile);
 const APP = 'com.foliole.android';
+const MACOS_SYNC_PORT = 38641;
 const WINDOWS_NODE = 'C:/Progra~1/nodejs/node.exe';
 const WINDOWS_READINESS = 'C:/dev/foliole-android-lab-preview/scripts/windows/windows-multi-device-sync-readiness.mjs';
 
@@ -20,6 +22,16 @@ async function bounded(command, args, options = {}) {
   const result = await exec(command, args, { encoding: 'utf8', maxBuffer: 4 * 1024 * 1024,
     timeout: 10_000, ...options });
   return `${result.stdout}${result.stderr}`;
+}
+
+export function probeTcpPort(port) {
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    server.once('error', reject);
+    server.listen({ host: '0.0.0.0', port, exclusive: true }, () => {
+      server.close((error) => error ? reject(error) : resolve());
+    });
+  });
 }
 
 function fixedDevice(output) {
@@ -32,6 +44,7 @@ function fixedDevice(output) {
 
 export function createHostReadinessAdapters({ env = process.env, execute = bounded,
   fsApi = fs, repoRoot, runId, verifyLaunch = verifyAndroidLaunch,
+  probeMacosSyncPort = probeTcpPort,
   windowsHost = WINDOWS_DEV_DEFAULT_SSH }) {
   const paths = macosA5Paths(repoRoot);
   return {
@@ -42,7 +55,16 @@ export function createHostReadinessAdapters({ env = process.env, execute = bound
       if (free < 4 * 1024 ** 3) throw Object.assign(new Error('macOS acceptance disk is low.'), {
         missingFact: 'macos_disk_budget_missing', lastSuccessfulAction: 'isolated_owner_checked'
       });
-      return { facts: ['macos_isolated_owner_ready', 'macos_disk_ready'] };
+      try { await probeMacosSyncPort(MACOS_SYNC_PORT); }
+      catch (error) {
+        throw Object.assign(new Error('macOS sync port is unavailable.', { cause: error }), {
+          missingFact: error.code === 'EADDRINUSE'
+            ? 'macos_sync_port_occupied' : 'macos_sync_port_unavailable',
+          lastSuccessfulAction: 'macos_disk_ready'
+        });
+      }
+      return { facts: ['macos_isolated_owner_ready', 'macos_disk_ready',
+        'macos_sync_port_ready'] };
     },
     'android-b': async () => {
       const output = await execute(paths.adb, ['start-server'], { env });

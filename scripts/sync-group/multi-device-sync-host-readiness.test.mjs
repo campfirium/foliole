@@ -56,6 +56,33 @@ it('blocks Android readiness before mutation when Foliole lacks window focus', a
   });
 });
 
+it('blocks macOS readiness while the fixed sync port is occupied', async () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'multi-device-hosts-'));
+  createIsolatedMacosRoot({ repoRoot, runId: 'run-port-busy' });
+  const probeMacosSyncPort = async () => {
+    throw Object.assign(new Error('address in use'), { code: 'EADDRINUSE' });
+  };
+  const adapters = createHostReadinessAdapters({ probeMacosSyncPort, repoRoot,
+    runId: 'run-port-busy' });
+  await expect(adapters['macos-a']()).rejects.toMatchObject({
+    lastSuccessfulAction: 'macos_disk_ready',
+    missingFact: 'macos_sync_port_occupied'
+  });
+});
+
+it('records fixed sync port availability in macOS readiness', async () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'multi-device-hosts-'));
+  createIsolatedMacosRoot({ repoRoot, runId: 'run-port-free' });
+  const ports = [];
+  const probeMacosSyncPort = async (port) => ports.push(port);
+  const adapters = createHostReadinessAdapters({ probeMacosSyncPort, repoRoot,
+    runId: 'run-port-free' });
+  await expect(adapters['macos-a']()).resolves.toMatchObject({
+    facts: expect.arrayContaining(['macos_sync_port_ready'])
+  });
+  expect(ports).toEqual([38641]);
+});
+
 it('does not require a Windows candidate receipt for an A/B-only target', async () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'multi-device-hosts-'));
   const runId = 'run-ab-only';
