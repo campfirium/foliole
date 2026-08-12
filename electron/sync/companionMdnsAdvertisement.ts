@@ -34,8 +34,15 @@ export function resolveCompanionMdnsHost(hostname = os.hostname()) {
   return `${label || 'foliole-desktop'}.local`;
 }
 
+export function resolveCompanionMdnsServiceName(groupDisplayName: string, runtimeInstanceId: string) {
+  const suffix = runtimeInstanceId.replace(/[^A-Za-z0-9]/gu, '').slice(0, 8) || 'runtime';
+  const displayLimit = Math.max(1, 62 - suffix.length);
+  return `${Array.from(groupDisplayName).slice(0, displayLimit).join('')}-${suffix}`;
+}
+
 export function startCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisementInput) {
   stopCompanionMdnsAdvertisement();
+  const runtimeInstanceId = loadSyncGroupRuntimeInstanceId();
   const reportWarning = (error: unknown) => {
     console.warn('[companion-sync] mDNS advertisement warning', error);
     input.onWarning?.(error);
@@ -43,7 +50,7 @@ export function startCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisemen
   const bonjour = new Bonjour(undefined, reportWarning);
   const service = bonjour.publish({
     host: resolveCompanionMdnsHost(),
-    name: input.groupDisplayName,
+    name: resolveCompanionMdnsServiceName(input.groupDisplayName, runtimeInstanceId),
     port: input.port,
     protocol: 'tcp',
     txt: {
@@ -51,7 +58,7 @@ export function startCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisemen
       facts_revision: String(factsRevision),
       group_id: input.groupId,
       peer_id: input.peerId,
-      runtime_instance_id: loadSyncGroupRuntimeInstanceId(),
+      runtime_instance_id: runtimeInstanceId,
       timeline_id: input.timelineId,
       ...serializeSyncProtocolTxt()
     },

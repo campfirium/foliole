@@ -12,6 +12,10 @@ vi.mock('node:os', () => ({
   default: { hostname: () => 'V' }
 }));
 
+vi.mock('./syncGroupRuntimeInstance.js', () => ({
+  loadSyncGroupRuntimeInstanceId: () => 'runtime-desktop-v'
+}));
+
 vi.mock('bonjour-service', () => {
   class MockBonjour {
     constructor(options: unknown, callback: (error: unknown) => void) {
@@ -81,7 +85,7 @@ describe('companion mDNS advertisement', () => {
 
     expect(bonjourMock.publish).toHaveBeenCalledWith({
       host: 'V.local',
-      name: 'V',
+      name: 'V-runtimed',
       port: 38683,
       protocol: 'tcp',
       txt: {
@@ -118,6 +122,20 @@ describe('companion mDNS facts hints', () => {
     const refreshed = (bonjourMock.publish.mock.calls[1]?.[0] as { txt: { facts_revision: string } }).txt.facts_revision;
     expect(Number(refreshed)).toBe(Number(initial) + 1);
     expect(bonjourMock.stop).toHaveBeenCalledOnce();
+  });
+
+  it('keeps one device service identity stable while facts revisions change', async () => {
+    const { refreshCompanionMdnsAdvertisement, startCompanionMdnsAdvertisement } = await import(
+      './companionMdnsAdvertisement.js'
+    );
+    startCompanionMdnsAdvertisement({
+      appVersion: '0.1.0-test', groupDisplayName: 'Shared group', groupId: 'group-1',
+      peerId: 'desktop-local', port: 38683, timelineId: 'timeline-1'
+    });
+    refreshCompanionMdnsAdvertisement();
+
+    expect(bonjourMock.publish.mock.calls.map(([input]) => (input as { name: string }).name))
+      .toEqual(['Shared group-runtimed', 'Shared group-runtimed']);
   });
 });
 
