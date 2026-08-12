@@ -61,6 +61,13 @@ it('waits for Android NSD unregistration before publishing a newer fact revision
   expect(provider).toMatch(/restartAdvertisement[\s\S]*stopAndAwait\(\)[\s\S]*start\(/u);
 });
 
+it('gives each Android fact revision a distinct transient DNS-SD instance', async () => {
+  const advertisement = await readJava('FolioleCompanionNsdAdvertisement.java');
+  expect(advertisement).toContain('info.setServiceName(serviceInstanceName(config))');
+  expect(advertisement).toContain('config.getString("facts_revision").hashCode()');
+  expect(advertisement).toContain('config.getJSONObject("sync_group").getString("display_name")');
+});
+
 it('authorizes every Android provider data request with both the channel secret and member fact', async () => {
   const auth = await readJava('FolioleCompanionSyncGroupRequestAuth.java');
   const database = await readJava('FolioleCompanionSyncGroupDatabase.java');

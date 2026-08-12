@@ -26,7 +26,7 @@ final class FolioleCompanionNsdAdvertisement {
         NsdManager manager = (NsdManager) context.getSystemService(Context.NSD_SERVICE);
         if (manager == null) throw new IllegalStateException("Android NSD is unavailable.");
         NsdServiceInfo info = new NsdServiceInfo();
-        info.setServiceName(config.getJSONObject("sync_group").getString("display_name"));
+        info.setServiceName(serviceInstanceName(config));
         info.setServiceType(FolioleCompanionNsdDiscovery.qualifiedServiceType(
             FolioleCompanionHostBridgeContractDefinitions.networkServiceType(context)
         ));
@@ -90,6 +90,13 @@ final class FolioleCompanionNsdAdvertisement {
 
     private static void put(NsdServiceInfo info, String key, String value) {
         info.setAttribute(key, value);
+    }
+
+    private static String serviceInstanceName(JSONObject config) throws Exception {
+        String displayName = config.getJSONObject("sync_group").getString("display_name");
+        String revision = Integer.toUnsignedString(config.getString("facts_revision").hashCode(), 36);
+        int displayLimit = Math.max(1, 62 - revision.length());
+        return displayName.substring(0, Math.min(displayName.length(), displayLimit)) + "-" + revision;
     }
 
     private static String join(org.json.JSONArray values) throws Exception {
