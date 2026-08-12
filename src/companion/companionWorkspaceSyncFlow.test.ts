@@ -68,7 +68,9 @@ async function testUsesRememberedSyncTarget() {
 
 async function testRepairsStaleEmulatorEndpoint() {
   const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
-  syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoint.mockResolvedValueOnce('http://192.168.0.11:38641');
+  syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints.mockResolvedValueOnce([
+    { endpointUrl: 'http://192.168.0.11:38641' }
+  ]);
 
   await tryForegroundAutoSync({
     cancelled: () => false,
@@ -85,6 +87,52 @@ async function testRepairsStaleEmulatorEndpoint() {
     'http://192.168.0.11:38641',
     expect.objectContaining({ onStructureSynced: expect.any(Function) })
   );
+}
+
+async function testSyncsEveryReachableGroupMember() {
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+  syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints.mockResolvedValueOnce([
+    { deviceId: 'desktop-a', endpointUrl: 'http://192.168.0.11:38641', groupId: 'group-1' },
+    { deviceId: 'desktop-c', endpointUrl: 'http://192.168.0.12:38641', groupId: 'group-1' }
+  ]);
+
+  const outcome = await tryForegroundAutoSync({
+    cancelled: () => false,
+    continuationMode: 'resources-only',
+    onContinuationModeChange: vi.fn(),
+    setError: vi.fn(), setReadableArticle: vi.fn(), setState: vi.fn(),
+    setSyncProgress: vi.fn(), setStatus: vi.fn(), state: createSyncState()
+  });
+
+  expect(syncObjectsMock.syncCompanionObjectsFromDesktop.mock.calls.map(([endpoint]) => endpoint)).toEqual([
+    'http://192.168.0.11:38641',
+    'http://192.168.0.12:38641'
+  ]);
+  expect(syncPlatformMock.bindCompanionWorkspaceSyncTarget.mock.calls.map(([target]) => target.deviceId))
+    .toEqual(['desktop-a', 'desktop-c']);
+  expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenNthCalledWith(
+    2, 'http://192.168.0.12:38641', expect.objectContaining({ resourcesOnly: false })
+  );
+  expect(outcome).toBe('completed');
+}
+
+async function testContinuesAfterOneGroupMemberFails() {
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+  syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints.mockResolvedValueOnce([
+    { deviceId: 'desktop-a', endpointUrl: 'http://192.168.0.11:38641', groupId: 'group-1' },
+    { deviceId: 'desktop-c', endpointUrl: 'http://192.168.0.12:38641', groupId: 'group-1' }
+  ]);
+  syncObjectsMock.syncCompanionObjectsFromDesktop
+    .mockRejectedValueOnce(new Error('First Device unavailable.'))
+    .mockResolvedValueOnce(createSyncObjectsResult());
+
+  const outcome = await tryForegroundAutoSync({
+    cancelled: () => false, setError: vi.fn(), setReadableArticle: vi.fn(), setState: vi.fn(),
+    setSyncProgress: vi.fn(), setStatus: vi.fn(), state: createSyncState()
+  });
+
+  expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledTimes(2);
+  expect(outcome).toBe('failed');
 }
 
 async function testRecordsStructureLagWithoutCompleting() {
@@ -182,6 +230,10 @@ describe('tryForegroundAutoSync', () => {
   it('uses a remembered sync target when the active endpoint is missing', testUsesRememberedSyncTarget);
 
   it('repairs a stale emulator endpoint before automatic sync', testRepairsStaleEmulatorEndpoint);
+
+  it('syncs every reachable active Sync Group member in one foreground pass', testSyncsEveryReachableGroupMember);
+
+  it('continues to other Sync Group members after one peer fails', testContinuesAfterOneGroupMemberFails);
 
   it('records structure lag without marking the pass completed', testRecordsStructureLagWithoutCompleting);
 

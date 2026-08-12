@@ -119,8 +119,9 @@ async function requestDiscovery(url: string, signal: AbortSignal) {
 function getDiscoveryKey(result: CompanionDiscoveryResult) {
   const groupId = result.discovery.group_id?.trim();
   const timelineId = result.discovery.timeline_id?.trim();
-  if (groupId && timelineId) return `group:${groupId}:${timelineId}`;
-  return result.discovery.runtime_instance_id?.trim() || result.discovery.peer_id?.trim() || result.endpointUrl;
+  const peerId = result.discovery.peer_id?.trim();
+  if (groupId && timelineId && peerId) return `group:${groupId}:${timelineId}:peer:${peerId}`;
+  return result.discovery.runtime_instance_id?.trim() || peerId || result.endpointUrl;
 }
 
 function appendUniqueDiscovery(results: CompanionDiscoveryResult[], result: CompanionDiscoveryResult) {

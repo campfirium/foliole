@@ -2,13 +2,18 @@ import { vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
+import type { CompanionWorkspaceSyncTarget } from '../shared/platform/companion/network/companionWorkspaceEndpoint';
 import type { CompanionDesktopSyncResult } from '../shared/platform/companionDesktopSyncObjects';
 
 export const syncPlatformMock = {
+  bindCompanionWorkspaceSyncTarget: vi.fn(),
   loadCompanionReadableArticle: vi.fn(async () => null),
   loadCompanionWorkspaceSyncState: vi.fn(),
   recordCompanionWorkspaceSyncEvent: vi.fn(),
   resolveReachableCompanionWorkspaceSyncEndpoint: vi.fn(async (endpointUrl: string) => endpointUrl),
+  resolveReachableCompanionWorkspaceSyncEndpoints: vi.fn(
+    async (endpointUrl: string): Promise<CompanionWorkspaceSyncTarget[]> => [{ endpointUrl }]
+  ),
   saveCompanionWorkspaceSyncEndpoint: vi.fn()
 };
 
@@ -102,6 +107,10 @@ export function resetCompanionWorkspaceSyncFlowMocks() {
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult());
   syncPlatformMock.loadCompanionWorkspaceSyncState.mockResolvedValue(createSyncState());
   syncPlatformMock.recordCompanionWorkspaceSyncEvent.mockResolvedValue(createSyncState());
+  syncPlatformMock.bindCompanionWorkspaceSyncTarget.mockResolvedValue(undefined);
   syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoint.mockImplementation(async (endpointUrl: string) => endpointUrl);
+  syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints.mockImplementation(
+    async (endpointUrl: string) => [{ endpointUrl }]
+  );
   syncPlatformMock.saveCompanionWorkspaceSyncEndpoint.mockResolvedValue(createSyncState());
 }

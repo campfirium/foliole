@@ -149,6 +149,24 @@ final class FolioleCompanionPairingPluginActions {
         }
     }
 
+    static void bindSyncGroupPeerRoute(Context context, PluginCall call) {
+        try {
+            String groupKey = routeBindingKey(context, "syncGroupId");
+            String peerKey = routeBindingKey(context, "peerDeviceId");
+            String endpointKey = routeBindingKey(context, "endpointUrl");
+            String groupId = call.getString(groupKey);
+            String peerDeviceId = call.getString(peerKey);
+            String endpointUrl = call.getString(endpointKey);
+            if (rejectIfBlank(call, groupKey, groupId) || rejectIfBlank(call, peerKey, peerDeviceId) ||
+                rejectIfBlank(call, endpointKey, endpointUrl)) return;
+            FolioleCompanionSyncGroupOutboundPeerStore.bindRoute(
+                context, groupId, peerDeviceId, endpointUrl);
+            call.resolve();
+        } catch (Exception exception) {
+            call.reject("Failed to bind Sync Group peer route.", exception);
+        }
+    }
+
     static void savePrimaryDeviceId(Context context, PluginCall call) {
         try {
             String primaryDeviceIdKey = FolioleCompanionBridgeContractDefinitions.pairingPrimaryDeviceIdCredentialRequestKey(context);
@@ -168,6 +186,11 @@ final class FolioleCompanionPairingPluginActions {
             return true;
         }
         return false;
+    }
+
+    private static String routeBindingKey(Context context, String key) throws Exception {
+        return FolioleCompanionBridgeContractAsset.string(
+            context, "pairingPlugin", "routeBindingRequestKeys", key);
     }
 
 }

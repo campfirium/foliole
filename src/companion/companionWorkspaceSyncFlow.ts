@@ -5,14 +5,12 @@ import {
 } from '../shared/platform/companionDesktopSyncObjects';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 import {
-  createCompanionSyncRunId,
   statusForSyncRunResult
 } from '../shared/platform/companionSyncActivityEvents';
 import {
   loadCompanionReadableArticle,
   recordCompanionWorkspaceSyncEvent,
-  resolveReachableCompanionWorkspaceSyncEndpoint,
-  saveCompanionWorkspaceSyncEndpoint
+  resolveReachableCompanionWorkspaceSyncEndpoints
 } from '../shared/platform/companionWorkspaceSync';
 
 import { hydrateCompanionReviewSchedulerSettings } from './companionReviewSchedulerSettingsHydration';
@@ -22,21 +20,20 @@ import {
   resolveCompanionSyncContinuationMode,
   type CompanionSyncContinuationMode
 } from './companionSyncContinuation';
-import { formatCompanionSyncFailureMessage } from './companionSyncFailureMessage';
 import { describeCompanionSyncPassResult } from './companionSyncPassResult';
 import {
   buildRemainingSyncProgress,
   shouldClearCompanionSyncProgress
 } from './companionSyncProgressVisibility';
-import { runCompanionSyncAsOwner } from './companionSyncRunOwner';
 import { buildCompanionSyncRunSummary } from './companionSyncRunSummary';
 import { recordCompanionSyncStageEvents } from './companionSyncStageEvents';
+import { tryForegroundAutoSyncTarget } from './companionSyncTargetFlow';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 
 export type CompanionWorkspaceSyncStatus = 'idle' | 'loading' | 'syncing';
 export type ForegroundAutoSyncOutcome = 'backlog' | 'completed' | 'failed' | 'skipped';
 
-interface RunCompanionStreamSyncArgs {
+export interface RunCompanionStreamSyncArgs {
   cancelled: () => boolean;
   endpointUrl: string;
   runId: string;
@@ -50,7 +47,7 @@ interface RunCompanionStreamSyncArgs {
   workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'];
 }
 
-interface TryForegroundAutoSyncArgs {
+export interface TryForegroundAutoSyncArgs {
   cancelled: () => boolean;
   setError(error: string | null): void;
   setReadableArticle(article: CompanionReadableArticle | null): void;
@@ -61,12 +58,6 @@ interface TryForegroundAutoSyncArgs {
   onContinuationModeChange?(mode: CompanionSyncContinuationMode): void;
   state: NativeCompanionWorkspaceSyncState;
 }
-
-const STARTING_STRUCTURE_PROGRESS = {
-  completed: 0,
-  phase: 'structure' as const,
-  total: null
-};
 
 export async function syncReadableArticle(snapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot']) {
   return loadCompanionReadableArticle(snapshot);
@@ -164,60 +155,31 @@ export async function runCompanionStreamSync(args: RunCompanionStreamSyncArgs) {
   return passResult.outcome;
 }
 
+function combineForegroundSyncOutcomes(outcomes: ForegroundAutoSyncOutcome[]) {
+  if (outcomes.includes('failed')) return 'failed';
+  if (outcomes.includes('backlog')) return 'backlog';
+  if (outcomes.includes('completed')) return 'completed';
+  return 'skipped';
+}
+
+function resetSharedContinuation(args: TryForegroundAutoSyncArgs) {
+  const targetArgs = { ...args };
+  delete targetArgs.continuationMode;
+  delete targetArgs.onContinuationModeChange;
+  return targetArgs;
+}
+
 export async function tryForegroundAutoSync(args: TryForegroundAutoSyncArgs): Promise<ForegroundAutoSyncOutcome> {
   const storedEndpointUrl = resolveCompanionWorkspaceSyncEndpoint(args.state);
   if (!storedEndpointUrl) return 'skipped';
-  const endpointUrl = await resolveReachableCompanionWorkspaceSyncEndpoint(storedEndpointUrl);
-  const run = await runCompanionSyncAsOwner(endpointUrl, async () => {
-    const runId = createCompanionSyncRunId();
-    const startedAt = new Date().toISOString();
-    try {
-      args.setStatus('syncing');
-      args.setError(null);
-      args.setSyncProgress(STARTING_STRUCTURE_PROGRESS);
-      if (endpointUrl !== storedEndpointUrl) {
-        await saveCompanionWorkspaceSyncEndpoint(endpointUrl);
-      }
-      await recordCompanionWorkspaceSyncEvent({
-        endpointUrl,
-        kind: 'run_started',
-        message: 'Auto sync started.',
-        runId,
-        startedAt,
-        status: 'started'
-      });
-      const continuationOptions = {
-        ...(args.continuationMode ? { continuationMode: args.continuationMode } : {}),
-        ...(args.onContinuationModeChange ? { onContinuationModeChange: args.onContinuationModeChange } : {})
-      };
-      return await runCompanionStreamSync({
-        ...args,
-        endpointUrl,
-        runId,
-        startedAt,
-        ...continuationOptions,
-        workspaceSnapshot: args.state.workspace_snapshot
-      }) ?? 'skipped';
-    } catch (syncError) {
-      if (args.cancelled()) return 'skipped';
-      const message = formatCompanionSyncFailureMessage(syncError);
-      const refreshedState = await loadCompanionStateAfterStructureSync(args.state.workspace_snapshot);
-      const workspaceSnapshot = refreshedState?.workspace_snapshot ?? args.state.workspace_snapshot;
-      args.setStatus('idle');
-      args.setSyncProgress(null);
-      args.setError(message);
-      const failedState = await recordCompanionWorkspaceSyncEvent({
-        endpointUrl,
-        kind: 'run_finished',
-        message,
-        result: 'failed',
-        runId,
-        startedAt,
-        status: 'failed'
-      }).catch(() => null);
-      if (failedState) args.setState({ ...failedState, workspace_snapshot: workspaceSnapshot });
-      return 'failed';
-    }
-  });
-  return run.owned ? run.result : 'skipped';
+  const targets = await resolveReachableCompanionWorkspaceSyncEndpoints(storedEndpointUrl);
+  const outcomes: ForegroundAutoSyncOutcome[] = [];
+  for (const target of targets) {
+    if (args.cancelled()) break;
+    const targetArgs = targets.length > 1 ? resetSharedContinuation(args) : args;
+    outcomes.push(await tryForegroundAutoSyncTarget(
+      targetArgs, target, storedEndpointUrl, runCompanionStreamSync
+    ));
+  }
+  return combineForegroundSyncOutcomes(outcomes);
 }

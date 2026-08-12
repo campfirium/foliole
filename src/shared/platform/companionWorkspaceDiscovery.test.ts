@@ -168,4 +168,24 @@ describe('companionWorkspaceDiscovery compatibility', () => {
       status: 'incompatible'
     });
   });
+
+  it('keeps separate providers that advertise the same Sync Group timeline', async () => {
+    capacitorMock.plugin.loadDiscoveryCandidates.mockResolvedValue({
+      candidates: [
+        nsdCandidate('http://192.168.1.44:38641'),
+        nsdCandidate('http://192.168.1.45:38641')
+      ]
+    });
+    capacitorMock.plugin.desktopHttpRequest.mockImplementation(async ({ url }: { url: string }) => {
+      const peerId = url.startsWith('http://192.168.1.44:38641') ? 'desktop-a' : 'desktop-c';
+      if (!url.startsWith('http://192.168.1.4')) throw new TypeError('Failed to fetch');
+      const body = JSON.parse(discoveryBody({ hostName: peerId, peerId, platform: 'macOS' }));
+      Object.assign(body, { group_id: 'group-1', timeline_id: 'timeline-1' });
+      return { body: JSON.stringify(body), status: 200 };
+    });
+
+    const results = await discoverCompanionDesktops('http://10.0.2.2:38641');
+
+    expect(results.map((result) => result.discovery.peer_id)).toEqual(['desktop-a', 'desktop-c']);
+  });
 });

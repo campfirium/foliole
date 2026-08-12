@@ -47,6 +47,21 @@ final class FolioleCompanionSyncGroupOutboundPeerStore {
         return new JSObject().put("headers", headers);
     }
 
+    static void bindRoute(Context context, String groupId, String peerDeviceId, String endpointUrl) throws Exception {
+        String normalizedPeerId = peerDeviceId.trim();
+        String encoded = prefs(context).getString(normalizedPeerId, null);
+        if (encoded == null) throw new SecurityException("sync_group_peer_not_found");
+        JSONObject peer = new JSONObject(decrypt(encoded));
+        if (!groupId.trim().equals(peer.optString("group_id")) ||
+            !normalizedPeerId.equals(peer.optString("peer_device_id"))) {
+            throw new SecurityException("sync_group_peer_mismatch");
+        }
+        peer.put("endpoint_url", normalizeEndpoint(endpointUrl));
+        if (!prefs(context).edit().putString(normalizedPeerId, encrypt(peer.toString())).commit()) {
+            throw new IllegalStateException("Failed to persist Sync Group peer route.");
+        }
+    }
+
     static void clear(Context context) {
         if (!prefs(context).edit().clear().commit()) {
             throw new IllegalStateException("Failed to clear Sync Group outbound peers.");

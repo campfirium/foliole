@@ -23,6 +23,14 @@ const APP_DATA_STORE = path.join(
   REPO_ROOT, 'android', 'app', 'src', 'main', 'java', 'com', 'foliole', 'android',
   'FolioleCompanionAppDataStore.java'
 );
+const OUTBOUND_STORE = path.join(
+  REPO_ROOT, 'android', 'app', 'src', 'main', 'java', 'com', 'foliole', 'android',
+  'FolioleCompanionSyncGroupOutboundPeerStore.java'
+);
+const PAIRING_ACTIONS = path.join(
+  REPO_ROOT, 'android', 'app', 'src', 'main', 'java', 'com', 'foliole', 'android',
+  'FolioleCompanionPairingPluginActions.java'
+);
 
 describe('FolioleCompanionSyncGroupPeerStore', () => {
   it('lets Android Keystore generate the AES-GCM encryption IV', async () => {
@@ -40,5 +48,28 @@ describe('FolioleCompanionSyncGroupPeerStore', () => {
     expect(source).toContain('FolioleCompanionSyncGroupPeerStore.clear(context);');
     expect(source).toContain('FolioleCompanionSyncGroupOutboundPeerStore.clear(context);');
     expect(source).toContain('FolioleCompanionSyncGroupJoinGrantStore.clear(context);');
+  });
+
+  it('rebinds a discovered route by peer identity and fails closed on group mismatch', async () => {
+    const source = await readFile(OUTBOUND_STORE, 'utf8');
+    const bindBody = source.slice(source.indexOf('static void bindRoute'), source.indexOf('static void clear'));
+
+    expect(bindBody).toContain('prefs(context).getString(normalizedPeerId, null)');
+    expect(bindBody).toContain('groupId.trim().equals(peer.optString("group_id"))');
+    expect(bindBody).toContain('peer.put("endpoint_url", normalizeEndpoint(endpointUrl))');
+    expect(bindBody).not.toContain('getAll()');
+  });
+
+  it('lands the Web route-binding payload in the Android peer store', async () => {
+    const source = await readFile(PAIRING_ACTIONS, 'utf8');
+    const action = source.slice(
+      source.indexOf('static void bindSyncGroupPeerRoute'),
+      source.indexOf('static void savePrimaryDeviceId')
+    );
+
+    expect(action).toContain('routeBindingKey(context, "syncGroupId")');
+    expect(action).toContain('routeBindingKey(context, "peerDeviceId")');
+    expect(action).toContain('routeBindingKey(context, "endpointUrl")');
+    expect(action).toContain('FolioleCompanionSyncGroupOutboundPeerStore.bindRoute(');
   });
 });

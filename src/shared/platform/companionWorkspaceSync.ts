@@ -53,8 +53,10 @@ export {
   requestCompanionPairing
 };
 export {
+  bindCompanionWorkspaceSyncTarget,
   loadCompanionWorkspaceVersion,
-  resolveReachableCompanionWorkspaceSyncEndpoint
+  resolveReachableCompanionWorkspaceSyncEndpoint,
+  resolveReachableCompanionWorkspaceSyncEndpoints
 } from './companion/network/companionWorkspaceEndpoint';
 
 export async function saveCompanionWorkspaceSyncEndpoint(endpointUrl: string) {

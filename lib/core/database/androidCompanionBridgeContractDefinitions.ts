@@ -14,6 +14,7 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
   methodInventory: {
     folioleCompanionSync: [
       'approveSyncGroupJoinRequest',
+      'bindSyncGroupPeerRoute',
       'clearPairingCredentials',
       'clearSyncGroupCredentials',
       'desktopHttpRequest',
@@ -139,6 +140,11 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
     }
   },
   pairingPlugin: {
+    routeBindingRequestKeys: {
+      endpointUrl: 'endpoint_url',
+      peerDeviceId: 'peer_device_id',
+      syncGroupId: 'sync_group_id'
+    },
     credentialRequestKeys: {
       deviceId: 'device_id',
       deviceKind: 'device_kind',

@@ -68,6 +68,10 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         FolioleCompanionPairingPluginActions.clearSyncGroupCredentials(getContext(), call);
     }
 
+    @PluginMethod public void bindSyncGroupPeerRoute(PluginCall call) {
+        FolioleCompanionPairingPluginActions.bindSyncGroupPeerRoute(getContext(), call);
+    }
+
     @PluginMethod public void savePairingCredentials(PluginCall call) {
         FolioleCompanionPairingPluginActions.savePairingCredentials(getContext(), call);
     }

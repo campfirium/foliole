@@ -31,6 +31,11 @@ export interface CompanionWorkspaceSyncPlugin
     url: string;
   }): Promise<{ body: string; status: number }>;
   loadDiscoveryCandidates(): Promise<CompanionDiscoveryCandidatesPayload>;
+  bindSyncGroupPeerRoute(args: {
+    endpoint_url: string;
+    peer_device_id: string;
+    sync_group_id: string;
+  }): Promise<void>;
   clearSyncGroupCredentials(): Promise<void>;
   loadSyncGroupProviderState(): Promise<CompanionSyncGroupProviderState>;
   approveSyncGroupJoinRequest(args: { pair_request_id: string }): Promise<CompanionSyncGroupProviderState>;
