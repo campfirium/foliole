@@ -58,7 +58,8 @@ function resolveSyncGroupJoin(payload: Record<string, unknown>, deviceId: string
   if (!syncGroup) return { error: 'sync_group_identity_mismatch', syncGroup: null };
   const eligible = isEligibleSyncGroupJoin({
     groupId: syncGroup.group_id,
-    isExistingActiveMember: isActiveSyncGroupMember(syncGroup.group_id, deviceId),
+    isExistingActiveMember: libraryFacts?.timeline_id === syncGroup.timeline_id
+      && isActiveSyncGroupMember(syncGroup.group_id, deviceId),
     libraryFacts,
     requestedGroupId,
     requestedTimelineId,

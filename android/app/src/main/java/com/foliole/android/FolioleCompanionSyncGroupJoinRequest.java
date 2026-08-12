@@ -6,9 +6,9 @@ import java.time.Instant;
 import java.util.UUID;
 
 final class FolioleCompanionSyncGroupJoinRequest {
-    final String deviceId;
+    String deviceId;
     final String deviceKind;
-    final String deviceName;
+    String deviceName;
     final String expiresAt;
     final String pairingPublicKey;
     final String pairRequestId;
@@ -60,6 +60,11 @@ final class FolioleCompanionSyncGroupJoinRequest {
 
     boolean matches(JSONObject payload) {
         return deviceId.equals(payload.optString("device_id")) && pairingPublicKey.equals(payload.optString("pairing_public_key"));
+    }
+
+    void assign(JSONObject profile) {
+        deviceId = required(profile, "device_id");
+        deviceName = required(profile, "device_name");
     }
 
     private static String required(JSONObject payload, String key) {

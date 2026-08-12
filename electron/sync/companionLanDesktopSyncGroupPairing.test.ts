@@ -8,8 +8,8 @@ import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtoco
 const pairingStoreMock = vi.hoisted(() => ({
   countPairedCompanionDevices: vi.fn(() => 1),
   loadPairedSyncGroupPeer: vi.fn(() => null),
-  registerPairedCompanionDevice: vi.fn(() => ({
-    device_id: 'desktop-c', device_secret: 'secret-c', paired_at: '2026-08-10T01:00:00.000Z'
+  registerPairedCompanionDevice: vi.fn((args: { deviceId: string }) => ({
+    device_id: args.deviceId, device_secret: 'secret-c', paired_at: '2026-08-10T01:00:00.000Z'
   })),
   savePairedSyncGroupPeer: vi.fn()
 }));
@@ -19,8 +19,11 @@ const pairingEncryptionMock = vi.hoisted(() => ({
 }));
 const syncGroupStoreMock = vi.hoisted(() => ({
   isActiveSyncGroupMember: vi.fn(() => false),
-  loadDesktopSyncGroup: vi.fn(() => ({ group_id: 'group-1', timeline_id: 'timeline-1' })),
-  registerSyncGroupMember: vi.fn(() => ({ group_id: 'group-1', timeline_id: 'timeline-1' }))
+  loadDesktopSyncGroup: vi.fn(() => ({ group_id: 'group-1', members: [], timeline_id: 'timeline-1' })),
+  registerSyncGroupMember: vi.fn((args: { authorizationId: string }) => ({
+    group_id: 'group-1', timeline_id: 'timeline-1',
+    members: [{ authorization_id: args.authorizationId, device_id: 'Desktop C 2', device_kind: 'win32', device_name: 'Desktop C 2' }]
+  }))
 }));
 
 vi.mock('./companionPairingStore.js', () => pairingStoreMock);
@@ -63,9 +66,9 @@ it('registers an approved empty Windows desktop and returns bidirectional provid
     deviceId: 'desktop-c', deviceKind: 'win32'
   }));
   expect(pairingStoreMock.savePairedSyncGroupPeer).toHaveBeenCalledWith(expect.objectContaining({
-    endpoint_url: 'http://192.168.1.22:38641', peer_device_id: 'desktop-c'
+    endpoint_url: 'http://192.168.1.22:38641', peer_device_id: 'Desktop C 2', peer_device_name: 'Desktop C 2'
   }));
   expect(writeJson).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), 200,
-    expect.objectContaining({ provider_device_id: 'desktop-a', provider_encrypted_device_secret: 'encrypted-secret',
-      sync_group: { group_id: 'group-1', timeline_id: 'timeline-1' } }));
+    expect.objectContaining({ device_id: 'Desktop C 2', provider_device_id: 'desktop-a', provider_encrypted_device_secret: 'encrypted-secret',
+      sync_group: expect.objectContaining({ group_id: 'group-1', timeline_id: 'timeline-1' }) }));
 });

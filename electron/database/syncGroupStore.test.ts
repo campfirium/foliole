@@ -46,9 +46,23 @@ it('persists an approved device as a member without a second activation', () => 
     approvedByDeviceId: 'desktop-1', authorizationId: 'request-1', deviceId: 'android-1',
     deviceKind: 'android-capacitor', deviceName: 'Pixel'
   });
-  expect(group.members.find((member) => member.device_id === 'android-1')).toMatchObject({
+  expect(group.members.find((member) => member.device_id === 'Pixel')).toMatchObject({
     approved_by_device_id: 'desktop-1', state: 'active'
   });
+});
+
+it('atomically assigns stable readable identities to same-name members', () => {
+  createDesktopSyncGroup({ deviceId: 'Maci', deviceKind: 'darwin', deviceName: 'Maci' });
+  const second = registerSyncGroupMember({
+    approvedByDeviceId: 'Maci', authorizationId: 'request-2', deviceId: 'Maci',
+    deviceKind: 'darwin', deviceName: 'Maci', now: '2026-08-09T01:00:00Z'
+  });
+  const repeated = registerSyncGroupMember({
+    approvedByDeviceId: 'Maci', authorizationId: 'request-2', deviceId: 'Maci',
+    deviceKind: 'darwin', deviceName: 'Maci', now: '2026-08-09T02:00:00Z'
+  });
+  expect(second.members.map((member) => member.device_name).sort()).toEqual(['Maci', 'Maci 2']);
+  expect(repeated.members).toEqual(second.members);
 });
 
 it('persists the current host name for an existing local membership', () => {
@@ -64,7 +78,7 @@ it('persists the current host name for an existing local membership', () => {
     .toEqual({ device_name: 'Maci', updated_at: '2026-08-11T00:00:00.000Z' });
 });
 
-it('replaces a departed device with its newly approved membership generation', () => {
+it('retains a departed profile and assigns the next readable identity when it rejoins', () => {
   const group = createDesktopSyncGroup({
     deviceId: 'desktop-1', deviceKind: 'desktop', deviceName: 'Studio', now: '2026-08-09T00:00:00Z'
   });
@@ -73,7 +87,7 @@ it('replaces a departed device with its newly approved membership generation', (
     deviceKind: 'android-capacitor', deviceName: 'Pixel', now: '2026-08-09T01:00:00Z'
   });
   recordSyncGroupDeparture({
-    authorizationId: 'leave-android-1', authorizedByDeviceId: 'android-1', deviceId: 'android-1',
+    authorizationId: 'leave-Pixel', authorizedByDeviceId: 'Pixel', deviceId: 'Pixel',
     groupId: group.group_id, leftAt: '2026-08-09T02:00:00Z'
   });
 
@@ -82,12 +96,13 @@ it('replaces a departed device with its newly approved membership generation', (
     deviceKind: 'android-capacitor', deviceName: 'Pixel', now: '2026-08-09T03:00:00Z'
   });
 
-  expect(sqlite.prepare(`SELECT state, authorization_id, joined_at, left_at
-    FROM sync_group_members WHERE device_id = 'android-1'`).get()).toEqual({
-    authorization_id: 'request-new', joined_at: '2026-08-09T03:00:00Z', left_at: null, state: 'active'
+  expect(sqlite.prepare(`SELECT device_id, device_name, state, authorization_id, joined_at, left_at
+    FROM sync_group_members WHERE authorization_id = 'request-new'`).get()).toEqual({
+    authorization_id: 'request-new', device_id: 'Pixel 2', device_name: 'Pixel 2',
+    joined_at: '2026-08-09T03:00:00Z', left_at: null, state: 'active'
   });
   expect(sqlite.prepare(`SELECT COUNT(*) AS value FROM sync_group_member_departures
-    WHERE device_id = 'android-1'`).get()).toEqual({ value: 0 });
+    WHERE device_id = 'Pixel'`).get()).toEqual({ value: 1 });
 });
 
 it('records a self-authorized departure and unbinds only the local departing Device', () => {
@@ -104,7 +119,7 @@ it('records a self-authorized departure and unbinds only the local departing Dev
   });
 
   expect(loadDesktopSyncGroup()).toBeNull();
-  expect(sqlite.prepare("SELECT state FROM sync_group_members WHERE device_id = 'android-1'").get())
+  expect(sqlite.prepare("SELECT state FROM sync_group_members WHERE device_id = 'Pixel'").get())
     .toEqual({ state: 'active' });
   expect(sqlite.prepare("SELECT authorized_by_device_id FROM sync_group_member_departures").get())
     .toEqual({ authorized_by_device_id: 'desktop-1' });
@@ -119,10 +134,10 @@ it('records an active member removing another member', () => {
     deviceKind: 'android-capacitor', deviceName: 'Pixel', now: '2026-08-09T01:00:00Z'
   });
   recordSyncGroupDeparture({
-    authorizationId: 'remove-android-1', authorizedByDeviceId: 'desktop-1', deviceId: 'android-1',
+    authorizationId: 'remove-Pixel', authorizedByDeviceId: 'desktop-1', deviceId: 'Pixel',
     groupId: group.group_id, leftAt: '2026-08-09T02:00:00Z'
   });
-  expect(sqlite.prepare("SELECT state FROM sync_group_members WHERE device_id = 'android-1'").get())
+  expect(sqlite.prepare("SELECT state FROM sync_group_members WHERE device_id = 'Pixel'").get())
     .toEqual({ state: 'left' });
   expect(sqlite.prepare("SELECT authorized_by_device_id FROM sync_group_member_departures").get())
     .toEqual({ authorized_by_device_id: 'desktop-1' });

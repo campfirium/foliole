@@ -42,9 +42,11 @@ export async function openSettingsDialog(windowPage: Page) {
 
 export async function openSettingsCategory(windowPage: Page, categoryName: string) {
   const settingsDialog = await openSettingsDialog(windowPage);
+  const category = CATEGORY_NAMES[categoryName as keyof typeof CATEGORY_NAMES] ?? categoryName;
   await settingsDialog.getByRole('button', {
-    name: CATEGORY_NAMES[categoryName as keyof typeof CATEGORY_NAMES] ?? categoryName
+    name: category
   }).click();
+  await waitForVisible(settingsDialog.getByRole('heading', { level: 2, name: category }));
   return settingsDialog;
 }
 

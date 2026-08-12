@@ -5,6 +5,8 @@ import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtoco
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import type { WorkspaceSnapshot, WorkspaceVersionMetadata } from '../database/workspaceSnapshot.js';
 
+import { loadSyncGroupRuntimeInstanceId } from './syncGroupRuntimeInstance.js';
+
 export function buildWorkspaceSnapshotPayload(appVersion: string, peerId: string, snapshot: WorkspaceSnapshot | null) {
   return {
     app_version: appVersion,
@@ -54,6 +56,7 @@ export function buildDiscoveryPayload(appVersion: string, peerId: string) {
     desktop_platform: resolveDesktopPlatformLabel(),
     pairing_mode: 'desktop-confirm' as const,
     peer_id: peerId,
+    runtime_instance_id: loadSyncGroupRuntimeInstanceId(),
     group_display_name: resolveSyncGroupDisplayDeviceName(group),
     group_id: group.group_id,
     timeline_id: group.timeline_id,

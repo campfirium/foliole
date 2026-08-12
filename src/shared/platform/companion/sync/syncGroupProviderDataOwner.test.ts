@@ -23,7 +23,10 @@ vi.mock('../../companionSyncWriterQueue', () => ({
 vi.mock('../runtime/iosCompanionDatabaseBootstrap', () => ({
   getIosCompanionDatabaseOwner: () => ({
     read: (task: (db: unknown) => Promise<unknown>) => task({ query: mocks.query, run: mocks.run }),
-    runWriter: (task: (db: unknown) => Promise<unknown>) => task({ query: mocks.query, run: mocks.run })
+    runWriter: (task: (db: unknown) => Promise<unknown>) => task({
+      query: mocks.query, run: mocks.run,
+      transaction: (work: (tx: unknown) => Promise<unknown>) => work({ query: mocks.query, run: mocks.run })
+    })
   })
 }));
 
@@ -65,5 +68,30 @@ it('creates provider read snapshots through the Capacitor database owner', async
   expect(mocks.resolve).toHaveBeenCalledWith({
     request_id: 'request-2',
     result: { snapshot_path: '/data/user/0/com.foliole.android/cache/foliole-provider-source-1.db' }
+  });
+});
+
+it('allocates the smallest unused member profile inside the writer transaction', async () => {
+  mocks.query
+    .mockResolvedValueOnce([])
+    .mockResolvedValueOnce([{ device_name: 'Maci' }, { device_name: 'Maci 2' }]);
+  mocks.listener?.({
+    operation: 'authorize_member',
+    payload: {
+      approved_by_device_id: 'Maci', device_id: 'Maci', group_id: 'group-1',
+      member: {
+        authorization_id: 'request-3', device_kind: 'darwin', device_name: 'Maci',
+        joined_at: '2026-08-12T00:00:00.000Z'
+      }
+    },
+    request_id: 'request-3'
+  });
+  await vi.waitFor(() => expect(mocks.resolve).toHaveBeenCalled());
+  expect(mocks.run).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO sync_group_members'), [
+    'group-1', 'Maci 3', 'darwin', 'Maci 3', 'Maci', 'request-3',
+    '2026-08-12T00:00:00.000Z', expect.any(String)
+  ]);
+  expect(mocks.resolve).toHaveBeenCalledWith({
+    request_id: 'request-3', result: { authorized: true, device_id: 'Maci 3', device_name: 'Maci 3' }
   });
 });

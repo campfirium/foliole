@@ -110,7 +110,7 @@ function handleSyncGroupJoinCommand(command: string, args: Record<string, unknow
       .then(() => buildDesktopCompanionPairingOverview());
   }
   if (command === NATIVE_COMMANDS.discoverSyncGroups) {
-    return discoverDesktopSyncGroups(loadOrCreateDesktopDeviceId()).then((candidates) => {
+    return discoverDesktopSyncGroups().then((candidates) => {
       saveDesktopSyncGroupCandidates(candidates);
       return buildDesktopCompanionPairingOverview();
     });

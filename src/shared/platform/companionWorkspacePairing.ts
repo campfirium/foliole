@@ -70,13 +70,17 @@ export async function requestCompanionPairing(args: RequestCompanionPairingArgs)
   const normalizedEndpointUrl = normalizeEndpointUrl(args.endpointUrl);
   const pairingKeyId = createCompanionUuid();
   const pairingPublicKey = await createCompanionPairingPublicKey(pairingKeyId);
-  const usesSyncGroup = args.deviceKind === 'android-capacitor';
+  const usesSyncGroup = Boolean(args.groupId && args.timelineId);
   const libraryFacts = usesSyncGroup ? await loadCompanionSyncGroupLibraryFacts() : null;
+  const existingGroup = usesSyncGroup ? await loadCompanionSyncGroup() : null;
+  const existingMember = existingGroup?.group_id === args.groupId && existingGroup?.timeline_id === args.timelineId
+    ? existingGroup?.members.find((member) => member.device_id === existingGroup.local_device_id)
+    : null;
   const response = await requestDesktop(`${normalizedEndpointUrl}${PAIR_REQUESTS_ENDPOINT_PATH}`, {
     body: JSON.stringify({
-      device_id: args.deviceId,
+      device_id: existingMember?.device_id ?? args.deviceId,
       device_kind: args.deviceKind,
-      device_name: args.deviceName,
+      device_name: existingMember?.device_name ?? args.deviceName,
       ...(usesSyncGroup ? {
         group_id: args.groupId,
         library_facts: libraryFacts,
@@ -102,7 +106,7 @@ export async function requestCompanionPairing(args: RequestCompanionPairingArgs)
 }
 
 export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArgs) {
-  const usesSyncGroup = args.deviceKind === 'android-capacitor';
+  const usesSyncGroup = Boolean(args.groupId && args.timelineId);
   const normalizedEndpointUrl = normalizeEndpointUrl(args.endpointUrl);
   const response = await requestDesktop(`${normalizedEndpointUrl}${PAIR_ENDPOINT_PATH}`, {
     body: JSON.stringify({

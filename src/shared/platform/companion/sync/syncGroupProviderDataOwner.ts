@@ -5,6 +5,7 @@ import {
   COMPANION_SYNC_GROUP_DATA_CONTRACT as CONTRACT,
   type CompanionSyncGroupDataRequest
 } from '../../../../../lib/platform/companionSyncGroupDataContract';
+import { allocateSyncGroupDeviceProfile } from '../../../../../lib/platform/syncGroupDeviceProfile';
 import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
@@ -50,23 +51,35 @@ async function authorizeMember(payload: Record<string, unknown>) {
   const groupId = text(payload.group_id);
   const deviceId = text(payload.device_id);
   const owner = getIosCompanionDatabaseOwner();
-  const active = await owner.read((db) => hasActiveMember(db, groupId, deviceId));
-  if (active) return { authorized: true };
   const member = record(payload.member);
-  if (!member) return { authorized: false };
-  return runCompanionSyncWriterTask(() => owner.runWriter(async (db) => {
-    if (await hasActiveMember(db, groupId, deviceId)) return { authorized: true };
+  if (!member) {
+    const active = await owner.read((db) => hasActiveMember(db, groupId, deviceId));
+    return { authorized: active, ...(active ? { device_id: deviceId, device_name: deviceId } : {}) };
+  }
+  return runCompanionSyncWriterTask(() => owner.runWriter((db) => db.transaction(async (tx) => {
+    const authorizationId = text(member.authorization_id);
+    const existing = (await tx.query<DbRow>(
+      `SELECT device_id, device_name FROM sync_group_members
+       WHERE group_id = ? AND authorization_id = ? LIMIT 1`, [groupId, authorizationId]
+    ))[0];
+    if (existing) return { authorized: true, device_id: text(existing.device_id), device_name: text(existing.device_name) };
+    const occupied = await tx.query<DbRow>(
+      'SELECT device_name FROM sync_group_members WHERE group_id = ?', [groupId]
+    );
+    const assigned = allocateSyncGroupDeviceProfile(
+      text(member.device_name), occupied.map((row) => text(row.device_name))
+    );
     const now = new Date().toISOString();
-    await db.run(
-      `INSERT OR REPLACE INTO sync_group_members (
+    await tx.run(
+      `INSERT INTO sync_group_members (
         group_id, device_id, device_kind, device_name, state, approved_by_device_id,
         authorization_id, provisioning_cursor, joined_at, activated_at, left_at, updated_at
       ) VALUES (?, ?, ?, ?, 'active', ?, ?, NULL, ?, NULL, NULL, ?)`,
-      [groupId, deviceId, text(member.device_kind), text(member.device_name),
-        text(payload.approved_by_device_id), text(member.authorization_id), text(member.joined_at), now]
+      [groupId, assigned.device_id, text(member.device_kind), assigned.device_name,
+        text(payload.approved_by_device_id), authorizationId, text(member.joined_at), now]
     );
-    return { authorized: true };
-  }));
+    return { authorized: true, ...assigned };
+  })));
 }
 
 async function createSnapshot(payload: Record<string, unknown>) {

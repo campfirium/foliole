@@ -21,6 +21,13 @@ export function loadOrCreateDatabaseDeviceId(driver: DatabaseDriver, now: string
 }
 
 export function loadDatabaseDeviceId(driver: DatabaseDriver) {
+  const activeGroup = driver.queryOne<{ local_device_id: string }>(
+    `SELECT l.local_device_id FROM sync_group_local_state l
+     JOIN sync_group_members m ON m.group_id = l.group_id AND m.device_id = l.local_device_id
+     WHERE l.singleton_id = 1 AND l.member_state = 'active' AND m.state = 'active' LIMIT 1`
+  );
+  const activeGroupDeviceId = parseSettingValue(activeGroup?.local_device_id);
+  if (activeGroupDeviceId) return activeGroupDeviceId;
   const existing = driver.queryOne<{ value: string }>('SELECT value FROM settings WHERE key = ?', [DEVICE_ID_KEY]);
   const existingDeviceId = parseSettingValue(existing?.value);
   if (existingDeviceId) {

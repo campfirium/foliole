@@ -151,9 +151,14 @@ it('stamps a restore incarnation before minting post-restore node sync versions'
   seedNode('node-1', '# restored mutation');
   const restoredVersionId = flushNodeSyncVersion('node-1', '2026-03-14T10:02:30.000Z');
 
-  expect(preBackupVersionId).toMatch(/^device-.*#0$/);
-  expect(distributedAfterBackupVersionId).toMatch(/^device-.*#1$/);
-  expect(restoredVersionId).toMatch(/^device-.*#zrestore-[0-9a-f-]+#1$/);
+  if (!preBackupVersionId || !distributedAfterBackupVersionId || !restoredVersionId) {
+    throw new Error('Expected restore version identities to be minted.');
+  }
+  expect(preBackupVersionId).toMatch(/^[^#]+#0$/);
+  const deviceProfile = preBackupVersionId.slice(0, -2);
+  expect(distributedAfterBackupVersionId).toBe(`${deviceProfile}#1`);
+  expect(restoredVersionId.startsWith(`${deviceProfile}#zrestore-`)).toBe(true);
+  expect(restoredVersionId).toMatch(/#zrestore-[0-9a-f-]+#1$/);
   expect(restoredVersionId).not.toBe(distributedAfterBackupVersionId);
   expect(selectSettingSyncRecordCount('desktop_node_sync_restore_incarnation')).toBe(0);
 });

@@ -52,3 +52,21 @@ it('shows resume for the local member while sync is paused', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Resume Sync' }));
   expect(props.onToggleSync).toHaveBeenCalledTimes(1);
 });
+
+it('keeps same-base members visible and targets the suffixed member independently', () => {
+  const props = renderRows({
+    group: {
+      ...GROUP,
+      local_device_id: 'Maci',
+      members: GROUP.members.map((member, index) => ({
+        ...member,
+        device_id: index === 0 ? 'Maci' : 'Maci 2',
+        device_name: index === 0 ? 'Maci' : 'Maci 2'
+      }))
+    }
+  });
+  expect(screen.getByText('Maci')).toBeVisible();
+  expect(screen.getByText('Maci 2')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Remove from Sync Group' }));
+  expect(props.onRemove).toHaveBeenCalledWith('Maci 2');
+});

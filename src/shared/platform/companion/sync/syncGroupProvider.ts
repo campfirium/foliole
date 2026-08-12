@@ -13,11 +13,13 @@ export async function reconcileCompanionSyncGroupProvider(
   if (!group || group.local_member_state !== 'active' || !bootstrap.database_path) {
     return FolioleCompanionSync.stopSyncGroupProvider();
   }
+  const localMember = group.members.find((member) => member.device_id === group.local_device_id);
+  if (!localMember) throw new Error('sync_group_member_not_authorized');
   await ensureCompanionSyncGroupDataOwner();
   return FolioleCompanionSync.startSyncGroupProvider({
     app_version: await loadAppVersion(),
-    device_id: bootstrap.device_id,
-    device_name: bootstrap.device_name ?? 'Android device',
+    device_id: localMember.device_id,
+    device_name: localMember.device_name,
     sync_group: group
   });
 }

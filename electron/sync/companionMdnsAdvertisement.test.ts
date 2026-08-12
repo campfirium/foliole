@@ -92,6 +92,7 @@ describe('companion mDNS advertisement', () => {
         protocol_max_version: '1',
         protocol_min_version: '1',
         protocol_version: '1',
+        runtime_instance_id: expect.any(String),
         timeline_id: 'timeline-1'
       },
       type: 'foliole-sync'

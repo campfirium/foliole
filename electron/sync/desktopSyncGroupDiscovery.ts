@@ -4,19 +4,21 @@ import { Bonjour } from 'bonjour-service';
 
 import type { DesktopSyncGroupJoinCandidatePayload } from '../../lib/platform/nativeCompanionSyncContract.js';
 
+import { loadSyncGroupRuntimeInstanceId } from './syncGroupRuntimeInstance.js';
+
 const DISCOVERY_MS = 1_800;
 const DISCOVERY_PROBE_MS = 2_000;
 type DiscoveredService = Parameters<NonNullable<Parameters<InstanceType<typeof Bonjour>['find']>[1]>>[0];
 type BonjourOptions = NonNullable<ConstructorParameters<typeof Bonjour>[0]> & { interface: string };
 
 export async function discoverDesktopSyncGroups(
-  excludedDeviceId?: string,
   fetchDiscovery: typeof fetch = fetch
 ) {
+  const localRuntimeInstanceId = loadSyncGroupRuntimeInstanceId();
   const endpoints = new Map<string, { name: string; txt: Record<string, unknown> }>();
   const collect = (service: DiscoveredService) => {
     const txt = service.txt as Record<string, unknown>;
-    if (typeof txt.peer_id === 'string' && txt.peer_id === excludedDeviceId) return;
+    if (txt.runtime_instance_id === localRuntimeInstanceId) return;
     const sourceAddress = service.referer?.address ?? '';
     const host = /^\d+\.\d+\.\d+\.\d+$/.test(sourceAddress) ? sourceAddress :
       service.addresses?.find((value) => /^\d+\.\d+\.\d+\.\d+$/.test(value));
@@ -34,7 +36,7 @@ export async function discoverDesktopSyncGroups(
     bonjour.destroy();
   });
   const candidates = (await Promise.all([...endpoints].map(([endpointUrl, service]) =>
-    probeCandidate(fetchDiscovery, endpointUrl, service)
+    probeCandidate(fetchDiscovery, endpointUrl, service, localRuntimeInstanceId)
   ))).filter((candidate): candidate is DesktopSyncGroupJoinCandidatePayload => candidate !== null);
   return selectStableGroupProviders(candidates);
 }
@@ -49,7 +51,8 @@ function discoveryInterfaces(networks = os.networkInterfaces()) {
 async function probeCandidate(
   fetchDiscovery: typeof fetch,
   endpointUrl: string,
-  service: { name: string; txt: Record<string, unknown> }
+  service: { name: string; txt: Record<string, unknown> },
+  localRuntimeInstanceId: string
 ) {
   try {
     const response = await fetchDiscovery(`${endpointUrl}/companion/discovery`, {
@@ -57,6 +60,7 @@ async function probeCandidate(
     });
     if (!response.ok) return null;
     const payload = await response.json() as Record<string, unknown>;
+    if (payload.runtime_instance_id === localRuntimeInstanceId) return null;
     if (payload.group_id !== service.txt.group_id || payload.timeline_id !== service.txt.timeline_id) return null;
     const platform = typeof payload.desktop_platform === 'string' ? payload.desktop_platform : '';
     return {

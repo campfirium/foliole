@@ -15,7 +15,10 @@ test('creates a persistent Sync Group from desktop settings', async ({ desktopWi
 
   await expect(create).toBeEnabled();
   await create.click();
-  await expect(section.getByRole('heading', { name: /^(Devices|设备)$/ })).toBeVisible();
+  const devices = section.getByRole('list', { name: /^(Devices|设备)$/ });
+  await expect(devices).toBeVisible();
+  await expect(devices.getByRole('listitem')).toHaveCount(1);
+  await expect(devices.getByText(/^(macOS|Windows|Linux)$/)).toBeVisible();
   await expect(create).toHaveCount(0);
 
   const screenshot = await section.screenshot({ path: SCREENSHOT_PATH });

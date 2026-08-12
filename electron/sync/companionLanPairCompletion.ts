@@ -3,6 +3,7 @@ import type http from 'node:http';
 
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR, evaluateSyncProtocolCompatibility } from '../../lib/platform/syncProtocolContract.js';
 import {
+  loadDesktopSyncGroup,
   registerSyncGroupMember
 } from '../database/syncGroupStore.js';
 
@@ -47,28 +48,32 @@ export async function handlePairRequest(
       compatibility, desktop_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR, error: 'protocol_incompatible'
     });
   }
+  const syncGroup = approved.group_id && approved.timeline_id
+    ? completion.completion
+      ? loadDesktopSyncGroup()
+      : registerSyncGroupMember({
+        approvedByDeviceId: peerId, authorizationId: pairRequestId, deviceId: approved.device_id,
+        deviceKind: approved.device_kind, deviceName: approved.device_name
+      })
+    : null;
+  const assignedMember = syncGroup?.members.find((member) => member.authorization_id === pairRequestId)
+    ?? syncGroup?.members.find((member) => member.device_id === completion.completion?.device_id);
+  if (syncGroup && !assignedMember) throw new Error('sync_group_member_not_authorized');
   const paired = completion.completion ?? registerPairedCompanionDevice({
-    clientAddress: approved.client_address, deviceId: approved.device_id, deviceKind: approved.device_kind,
-    deviceName: approved.device_name,
+    clientAddress: approved.client_address, deviceId: assignedMember?.device_id ?? approved.device_id,
+    deviceKind: approved.device_kind, deviceName: assignedMember?.device_name ?? approved.device_name,
     negotiatedProtocolVersion: compatibility.negotiated_version ?? CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
     remoteProtocol: approved.protocol
   });
   if (!completion.completion) completeCompanionPairRequest(pairRequestId, paired);
-  const syncGroup = approved.group_id && approved.timeline_id ? registerSyncGroupMember({
-    approvedByDeviceId: peerId, authorizationId: pairRequestId, deviceId: approved.device_id,
-    deviceKind: approved.device_kind, deviceName: approved.device_name
-  }) : null;
-  const providerSecret = syncGroup ? saveProviderPeer(approved, peerId) : null;
+  const providerSecret = syncGroup && assignedMember ? saveProviderPeer(approved, assignedMember, peerId) : null;
   const encryptedSecret = await encryptCompanionPairingSecret({
     clientPublicKey: approved.pairing_public_key, deviceSecret: paired.device_secret
   });
   const providerEncryptedSecret = providerSecret ? await encryptCompanionPairingSecret({
     clientPublicKey: approved.pairing_public_key, deviceSecret: providerSecret
   }) : null;
-  updatePairingStatus({
-    paired_device_count: countPairedCompanionDevices(),
-    pending_pair_request_count: countPendingCompanionPairRequests()
-  });
+  updateStatus(updatePairingStatus);
   writeJson(request, response, 200, {
     app_version: appVersion, compatibility, desktop_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
     device_id: paired.device_id, encrypted_device_secret: encryptedSecret, paired_at: paired.paired_at, peer_id: peerId,
@@ -82,20 +87,31 @@ export async function handlePairRequest(
   });
 }
 
-function saveProviderPeer(approved: PendingCompanionPairRequest, peerId: string) {
+function updateStatus(updatePairingStatus: StatusUpdater) {
+  updatePairingStatus({
+    paired_device_count: countPairedCompanionDevices(),
+    pending_pair_request_count: countPendingCompanionPairRequests()
+  });
+}
+
+function saveProviderPeer(
+  approved: PendingCompanionPairRequest,
+  assigned: { device_id: string; device_kind: string; device_name: string },
+  peerId: string
+) {
   if (!approved.group_id || !approved.timeline_id || !approved.client_address) {
     throw new Error('sync_group_provider_pairing_invalid');
   }
-  const existing = loadPairedSyncGroupPeer(approved.group_id, approved.device_id);
+  const existing = loadPairedSyncGroupPeer(approved.group_id, assigned.device_id);
   if (existing) return existing.secret;
   const secret = randomBytes(32).toString('base64url');
   savePairedSyncGroupPeer({
     endpoint_url: `http://${approved.client_address}:38641`,
     group_id: approved.group_id,
     local_device_id: peerId,
-    peer_device_id: approved.device_id,
-    peer_device_kind: approved.device_kind,
-    peer_device_name: approved.device_name,
+    peer_device_id: assigned.device_id,
+    peer_device_kind: assigned.device_kind,
+    peer_device_name: assigned.device_name,
     secret,
     timeline_id: approved.timeline_id
   });

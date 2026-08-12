@@ -89,7 +89,8 @@ async function completeDesktopSyncGroupJoinOnce() {
   const providerSecret = await decryptDesktopSyncGroupPairingSecret(
     pending.key.privateKey, payload.provider_encrypted_device_secret
   );
-  const localDeviceId = loadOrCreateDesktopDeviceId();
+  const localDeviceId = payload.device_id.trim();
+  if (!localDeviceId) throw new Error('sync_group_membership_invalid');
   const peer = savePairedSyncGroupPeer({
     endpoint_url: pending.candidate.endpoint_url, group_id: pending.candidate.group_id,
     local_device_id: localDeviceId, peer_device_id: pending.candidate.provider_device_id,

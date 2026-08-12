@@ -32,8 +32,11 @@ const bootstrap = {
 
 const group = {
   created_at: '2026-08-08T00:00:00.000Z', created_by_device_id: 'mac-a', display_name: 'Studio',
-  group_id: 'group-1', local_device_id: 'android-b', local_member_state: 'active' as const,
-  members: [], timeline_id: 'timeline-1'
+  group_id: 'group-1', local_device_id: 'A5 2', local_member_state: 'active' as const,
+  members: [{
+    approved_by_device_id: 'mac-a', authorization_id: 'pair-1', device_id: 'A5 2',
+    device_kind: 'android-capacitor', device_name: 'A5 2', joined_at: '2026-08-08T00:00:00.000Z', state: 'active' as const
+  }], timeline_id: 'timeline-1'
 };
 
 beforeEach(() => {
@@ -46,8 +49,8 @@ beforeEach(() => {
 it('lands an active Android member on the native provider bridge with its persistent group identity', async () => {
   await reconcileCompanionSyncGroupProvider(bootstrap, group);
   expect(runtime.start).toHaveBeenCalledWith({
-    app_version: '0.7.5', device_id: 'android-b',
-    device_name: 'A5', sync_group: group
+    app_version: '0.7.5', device_id: 'A5 2',
+    device_name: 'A5 2', sync_group: group
   });
   expect(runtime.listen).toHaveBeenCalledWith('syncGroupDataRequest', expect.any(Function));
 });

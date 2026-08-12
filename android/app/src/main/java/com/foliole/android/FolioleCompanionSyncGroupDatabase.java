@@ -6,7 +6,7 @@ import org.json.JSONObject;
 final class FolioleCompanionSyncGroupDatabase {
     private FolioleCompanionSyncGroupDatabase() {}
 
-    static void registerMember(
+    static JSONObject registerMember(
         FolioleCompanionSyncGroupDataBridge bridge,
         String groupId,
         String approvedByDeviceId,
@@ -23,6 +23,7 @@ final class FolioleCompanionSyncGroupDatabase {
             .put("group_id", groupId)
             .put("member", member));
         if (!result.optBoolean("authorized")) throw new SecurityException("sync_group_member_not_authorized");
+        return result;
     }
 
     static boolean isAuthorizedMember(FolioleCompanionSyncGroupDataBridge bridge, String groupId, String deviceId) {

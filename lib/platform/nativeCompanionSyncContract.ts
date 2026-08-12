@@ -88,6 +88,7 @@ export interface CompanionWorkspaceDiscoveryPayload {
   desktop_platform: string;
   pairing_mode: 'desktop-confirm';
   peer_id: string;
+  runtime_instance_id: string;
   protocol: SyncProtocolDescriptor;
   group_display_name: string;
   group_id: string;

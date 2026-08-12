@@ -151,6 +151,7 @@ public final class FolioleCompanionNsdDiscovery {
 
         private void addResolvedEndpoint(NsdServiceInfo serviceInfo) {
             try {
+                if (ownRuntimeInstance(serviceInfo)) return;
                 InetAddress host = serviceInfo.getHost();
                 int port = serviceInfo.getPort();
                 if (host == null || port <= 0) {
@@ -176,6 +177,14 @@ public final class FolioleCompanionNsdDiscovery {
                 }
             } catch (Exception ignored) {
             }
+        }
+
+        private boolean ownRuntimeInstance(NsdServiceInfo serviceInfo) {
+            byte[] value = serviceInfo.getAttributes().get("runtime_instance_id");
+            if (value == null) return false;
+            return FolioleCompanionSyncGroupProvider.runtimeInstanceId().equals(
+                new String(value, StandardCharsets.UTF_8)
+            );
         }
 
         private JSObject readProtocolTxt(NsdServiceInfo serviceInfo) throws Exception {

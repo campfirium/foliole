@@ -89,6 +89,7 @@ final class FolioleCompanionSyncGroupServer {
             .put("timeline_id", group.getString("timeline_id")).put("provider_device_id", config.getString("device_id"))
             .put("provider_device_kind", "android-capacitor").put("provider_device_name", config.getString("device_name"))
             .put("protocol", protocol()).put("peer_id", config.getString("device_id"))
+            .put("runtime_instance_id", config.getString("runtime_instance_id"))
             .put("desktop_name", config.getString("device_name")).put("desktop_device_name", config.getString("device_name"))
             .put("desktop_platform", "android-capacitor").put("pairing_mode", "desktop-confirm"));
     }
@@ -96,9 +97,12 @@ final class FolioleCompanionSyncGroupServer {
     private void createRequest(FolioleCompanionHttpRequest request, java.io.OutputStream output, String remoteAddress) throws Exception {
         JSONObject body = new JSONObject(request.bodyText());
         JSONObject group = config.getJSONObject("sync_group");
-        boolean existingMember = FolioleCompanionSyncGroupDatabase.isAuthorizedMember(
-            dataBridge, group.getString("group_id"), body.optString("device_id")
-        );
+        JSONObject facts = body.optJSONObject("library_facts");
+        boolean existingMember = facts != null
+            && group.getString("timeline_id").equals(facts.optString("timeline_id"))
+            && FolioleCompanionSyncGroupDatabase.isAuthorizedMember(
+                dataBridge, group.getString("group_id"), body.optString("device_id")
+            );
         if (!group.getString("group_id").equals(body.optString("group_id")) ||
             !group.getString("timeline_id").equals(body.optString("timeline_id")) ||
             (!existingMember && !empty(body.optJSONObject("library_facts")))) {
@@ -125,6 +129,7 @@ final class FolioleCompanionSyncGroupServer {
         FolioleCompanionSyncGroupJoinRequest pending = requests.get(id);
         if (pending == null || pending.expired()) { FolioleCompanionHttpResponse.json(output, 404, new JSONObject().put("error", "pair_request_not_found")); return; }
         if (!pending.status.equals("approved")) { FolioleCompanionHttpResponse.json(output, 409, new JSONObject().put("error", "pair_request_pending")); return; }
+        FolioleCompanionSyncGroupProvider.assignApprovedProfile(context, dataBridge, config, pending);
         JSONObject group = FolioleCompanionSyncGroupDatabase.groupForApprovedRequest(
             dataBridge, config.getString("device_id"), pending
         );

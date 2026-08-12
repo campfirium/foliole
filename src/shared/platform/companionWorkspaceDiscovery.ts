@@ -117,14 +117,21 @@ async function requestDiscovery(url: string, signal: AbortSignal) {
 }
 
 function getDiscoveryKey(result: CompanionDiscoveryResult) {
-  return result.discovery.peer_id?.trim() || result.endpointUrl;
+  const groupId = result.discovery.group_id?.trim();
+  const timelineId = result.discovery.timeline_id?.trim();
+  if (groupId && timelineId) return `group:${groupId}:${timelineId}`;
+  return result.discovery.runtime_instance_id?.trim() || result.discovery.peer_id?.trim() || result.endpointUrl;
 }
 
 function appendUniqueDiscovery(results: CompanionDiscoveryResult[], result: CompanionDiscoveryResult) {
   const key = getDiscoveryKey(result);
-  if (!results.some((current) => getDiscoveryKey(current) === key)) {
-    results.push(result);
-  }
+  const existingIndex = results.findIndex((current) => getDiscoveryKey(current) === key);
+  if (existingIndex < 0) return void results.push(result);
+  if (providerRank(result) < providerRank(results[existingIndex]!)) results[existingIndex] = result;
+}
+
+function providerRank(result: CompanionDiscoveryResult) {
+  return result.discovery.desktop_platform === 'android-capacitor' ? 1 : 0;
 }
 
 export async function discoverCompanionDesktops(preferredEndpointUrl: string): Promise<CompanionDiscoveryResult[]> {

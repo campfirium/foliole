@@ -75,7 +75,9 @@ export function createCompanionPairRequest(args: {
   const nowMs = args.nowMs ?? Date.now();
   pruneExpiredRequests(nowMs);
   const existingPendingRequest = [...requestsById.values()].find((request) => {
-    return request.device_id === args.deviceId.trim() && request.status === 'pending';
+    return request.client_address === (args.clientAddress?.trim() || null)
+      && request.device_id === args.deviceId.trim()
+      && request.status === 'pending';
   });
   if (existingPendingRequest) {
     return refreshPendingRequest(existingPendingRequest, args);

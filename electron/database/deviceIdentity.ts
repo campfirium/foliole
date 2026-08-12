@@ -1,4 +1,5 @@
 import type { DatabaseConnection } from './connection.js';
+import { openDatabaseConnection } from './connection.js';
 import { loadJsonSetting } from './settingsStore.js';
 
 const DEVICE_ID_KEY = 'device_id';
@@ -10,7 +11,9 @@ function normalizeDeviceId(value: unknown): string | null {
 }
 
 export function loadDesktopDeviceId(): string | null {
-  return normalizeDeviceId(loadJsonSetting(DEVICE_ID_KEY)) ?? normalizeDeviceId(loadJsonSetting(LEGACY_DESKTOP_DEVICE_ID_KEY));
+  return loadActiveSyncGroupDeviceId()
+    ?? normalizeDeviceId(loadJsonSetting(DEVICE_ID_KEY))
+    ?? normalizeDeviceId(loadJsonSetting(LEGACY_DESKTOP_DEVICE_ID_KEY));
 }
 
 export function loadOrCreateDesktopDeviceId(now = new Date().toISOString()): string {
@@ -65,14 +68,26 @@ function writeCurrentProfile(
     );
     driver.execute('DELETE FROM settings WHERE key = ?', [LEGACY_DESKTOP_DEVICE_ID_KEY]);
     if (!previousDeviceId) return;
-    driver.execute('DELETE FROM sync_group_local_state WHERE singleton_id = 1 AND local_device_id = ?',
-      [previousDeviceId]);
+    driver.execute('DELETE FROM sync_group_local_state WHERE singleton_id = 1');
     driver.execute(
       `INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)
        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
       [RESET_PENDING_KEY, JSON.stringify(currentDeviceId), now]
     );
   });
+}
+
+function loadActiveSyncGroupDeviceId() {
+  try {
+    const row = openDatabaseConnection().driver.queryOne<{ local_device_id: string }>(
+      `SELECT l.local_device_id FROM sync_group_local_state l
+       JOIN sync_group_members m ON m.group_id = l.group_id AND m.device_id = l.local_device_id
+       WHERE l.singleton_id = 1 AND l.member_state = 'active' AND m.state = 'active' LIMIT 1`
+    );
+    return normalizeDeviceId(row?.local_device_id);
+  } catch {
+    return null;
+  }
 }
 
 function readDriverSetting(connection: DatabaseConnection, key: string) {

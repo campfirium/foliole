@@ -53,8 +53,12 @@ beforeEach(() => {
       desktop_device_name: 'Roamer Mac',
       desktop_name: 'Foliole Desktop',
       desktop_platform: 'macOS',
+      group_display_name: 'Maci',
+      group_id: 'group-1',
       peer_id: 'desktop-mac',
-      protocol
+      protocol,
+      runtime_instance_id: 'runtime-mac',
+      timeline_id: 'timeline-1'
     },
     endpointUrl: 'http://192.168.1.8:38641'
   });
@@ -93,7 +97,9 @@ it('keeps the iOS identity through Mac pairing request and completion', async ()
     deviceId: 'ios-test-device',
     deviceKind: 'ios-capacitor',
     deviceName: 'iPhone',
-    endpointUrl: 'http://192.168.1.8:38641'
+    endpointUrl: 'http://192.168.1.8:38641',
+    groupId: 'group-1',
+    timelineId: 'timeline-1'
   });
 
   await act(async () => {
@@ -107,7 +113,9 @@ it('keeps the iOS identity through Mac pairing request and completion', async ()
     pairRequestId: 'pair-request-ios',
     remotePeerId: 'desktop-mac',
     remotePeerName: 'Roamer Mac',
-    remotePeerPlatform: 'macOS'
+    remotePeerPlatform: 'macOS',
+    groupId: 'group-1',
+    timelineId: 'timeline-1'
   });
   expect(result.current.pairingState).toEqual(expect.objectContaining({
     device_id: 'ios-test-device',

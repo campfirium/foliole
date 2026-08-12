@@ -10,6 +10,7 @@ import com.getcapacitor.PluginCall;
 import org.json.JSONObject;
 
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 final class FolioleCompanionSyncGroupProvider {
@@ -43,6 +44,7 @@ final class FolioleCompanionSyncGroupProvider {
             return state();
         }
         if (activeConfig != null) stopActiveProvider();
+        next.put("runtime_instance_id", UUID.randomUUID().toString());
         FolioleCompanionSyncScreenAwake.attach(activity);
         activeContext = context.getApplicationContext(); activeConfig = next; activeOwner = owner;
         dataBridge = new FolioleCompanionSyncGroupDataBridge(activeContext, dispatcher);
@@ -141,8 +143,28 @@ final class FolioleCompanionSyncGroupProvider {
         }
         if (request == null) throw new SecurityException("sync_group_member_not_authorized");
         String approvedBy = FolioleCompanionSyncGroupJoinGrantStore.approvedByDeviceId(activeContext, request.pairRequestId);
-        FolioleCompanionSyncGroupDatabase.registerMember(requireDataBridge(), groupId, approvedBy, request);
+        request.assign(FolioleCompanionSyncGroupDatabase.registerMember(
+            requireDataBridge(), groupId, approvedBy, request
+        ));
         consumeApprovedJoin(request);
+    }
+
+    static synchronized void assignApprovedProfile(
+        Context context,
+        FolioleCompanionSyncGroupDataBridge bridge,
+        JSONObject config,
+        FolioleCompanionSyncGroupJoinRequest request
+    ) throws Exception {
+        String previousDeviceId = request.deviceId;
+        String approvedBy = FolioleCompanionSyncGroupJoinGrantStore.approvedByDeviceId(context, request.pairRequestId);
+        request.assign(FolioleCompanionSyncGroupDatabase.registerMember(
+            bridge, config.getJSONObject("sync_group").getString("group_id"), approvedBy, request
+        ));
+        if (!previousDeviceId.equals(request.deviceId)) {
+            FolioleCompanionSyncGroupPeerStore.saveSecret(context, request.deviceId, request.deviceSecret);
+            FolioleCompanionSyncGroupPeerStore.remove(context, previousDeviceId);
+        }
+        FolioleCompanionSyncGroupJoinGrantStore.save(context, config, request);
     }
 
     private static void consumeApprovedJoin(FolioleCompanionSyncGroupJoinRequest request) {
@@ -178,6 +200,10 @@ final class FolioleCompanionSyncGroupProvider {
         result.put("port", server == null ? JSONObject.NULL : server.port());
         result.put("state", server == null ? "stopped" : "running");
         return result;
+    }
+
+    static synchronized String runtimeInstanceId() {
+        return activeConfig == null ? "" : activeConfig.optString("runtime_instance_id");
     }
 
     static void resolveDataRequest(JSONObject response) throws Exception {
