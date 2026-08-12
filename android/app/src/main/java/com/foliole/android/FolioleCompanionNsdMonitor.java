@@ -9,9 +9,6 @@ import android.os.Looper;
 import com.getcapacitor.JSObject;
 
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayDeque;
-import java.util.Deque;
-
 final class FolioleCompanionNsdMonitor {
     interface HintListener { void onServiceHint(JSObject hint); }
 
@@ -21,7 +18,8 @@ final class FolioleCompanionNsdMonitor {
     private final NsdManager manager;
     private final HintListener onServiceHint;
     private final String serviceType;
-    private final Deque<NsdServiceInfo> pendingResolutions = new ArrayDeque<>();
+    private final FolioleCompanionLatestServiceQueue<NsdServiceInfo> pendingResolutions =
+        new FolioleCompanionLatestServiceQueue<>();
     private long resolutionGeneration;
     private Runnable resolutionTimeout;
     private boolean resolving;
@@ -49,7 +47,7 @@ final class FolioleCompanionNsdMonitor {
 
     @SuppressWarnings("deprecation")
     private synchronized void resolve(NsdServiceInfo service) {
-        pendingResolutions.addLast(service);
+        pendingResolutions.offer(service.getServiceName(), service);
         if (resolving) return;
         resolving = true;
         resolveNext();
@@ -57,7 +55,7 @@ final class FolioleCompanionNsdMonitor {
 
     @SuppressWarnings("deprecation")
     private synchronized void resolveNext() {
-        NsdServiceInfo service = pendingResolutions.pollFirst();
+        NsdServiceInfo service = pendingResolutions.poll();
         if (service == null) { resolving = false; return; }
         long generation = ++resolutionGeneration;
         resolutionTimeout = () -> finishResolution(generation, null);

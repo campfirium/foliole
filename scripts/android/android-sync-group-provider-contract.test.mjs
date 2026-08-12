@@ -40,7 +40,7 @@ it('keeps Android fact-change discovery foreground-bound and excludes its own re
   expect(monitor).toContain('manager.resolveService(service');
   expect(monitor).toContain('FolioleCompanionSyncGroupProvider.runtimeInstanceId()');
   expect(monitor).toContain('ownRuntimeId.equals(new String(runtimeId');
-  expect(monitor).toContain('pendingResolutions.addLast(service)');
+  expect(monitor).toContain('pendingResolutions.offer(service.getServiceName(), service)');
   expect(monitor).toContain('syncGroupProviderServiceHintKey(context, "endpointUrl")');
   expect(plugin).toContain('serviceMonitor.start()');
   expect(plugin).toContain('serviceMonitor.stop()');
@@ -59,6 +59,15 @@ it('serializes Android NSD resolution so one active resolve cannot hide another 
   expect(addresses).toContain('? "[" + value + "]" : value');
   expect(addresses).toContain('get("ipv4_addresses")');
   expect(addresses).toContain('if (isIpv4(candidate)) result.add(candidate)');
+});
+
+it('coalesces obsolete hint revisions without suppressing another device', async () => {
+  const monitor = await readJava('FolioleCompanionNsdMonitor.java');
+  const queue = await readJava('FolioleCompanionLatestServiceQueue.java');
+  expect(monitor).toContain('pendingResolutions.offer(service.getServiceName(), service)');
+  expect(queue).toContain('latestByService.put(key, service)');
+  expect(queue).toContain('if (!latestByService.containsKey(key)) serviceOrder.addLast(key)');
+  expect(queue).toContain('lastIndexOf(REVISION_SEPARATOR)');
 });
 
 it('releases the Android NSD queue when a platform resolve callback never arrives', async () => {

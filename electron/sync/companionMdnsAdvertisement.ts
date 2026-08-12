@@ -59,7 +59,7 @@ export function resolveCompanionMdnsHost(
 export function resolveCompanionMdnsServiceName(
   groupDisplayName: string, runtimeInstanceId: string, revision = factsRevision
 ) {
-  const suffix = `${runtimeSuffix(runtimeInstanceId)}-${revision.toString(36)}`;
+  const suffix = `${runtimeSuffix(runtimeInstanceId)}--${revision.toString(36)}`;
   const displayLimit = Math.max(1, 62 - suffix.length);
   return `${Array.from(groupDisplayName).slice(0, displayLimit).join('')}-${suffix}`;
 }
