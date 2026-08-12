@@ -10,7 +10,11 @@ export const WINDOWS_SYNC_GROUP_INTERACTIVE_ACTIONS = new Set([
 export const WINDOWS_SYNC_GROUP_INTERACTIVE_WORKER_ENV = 'FOLIOLE_SYNC_GROUP_INTERACTIVE_WORKER';
 
 export function syncGroupInteractivePaths(repoRoot) {
-  return interactiveStatePaths(path.join(repoRoot, '.tmp', 'windows-sync-group-interactive'));
+  const stateRoot = path.join(repoRoot, '.tmp', 'windows-sync-group-interactive');
+  return {
+    ...interactiveStatePaths(stateRoot),
+    providerRelease: path.join(stateRoot, 'provider-release.json')
+  };
 }
 
 export function validateSyncGroupInteractiveRequest(request, repoRoot) {

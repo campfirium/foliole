@@ -4,8 +4,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import { createSyncProgressWatchdog } from '../sync-group/sync-progress-watchdog.mjs';
-
-const RESOURCE_SETTLEMENT_WINDOW_MS = 15_000;
+import { waitForWindowsSyncGroupProviderRelease } from './windows-sync-group-provider-release.mjs';
 
 function freshFactIds(facts, excluded) {
   return Object.entries(facts?.journeyFacts ?? {}).filter(([id]) => !excluded.has(id))
@@ -46,7 +45,7 @@ async function withSession(paths, evidenceRoot, openSession, action) {
 
 export async function runWindowsMultiDeviceSyncARejoin({ evidenceRoot, execute, paths,
   control, createFact = createDesktopSyncGroupJourneyFact, inspect, invoke, openSession, restore,
-  settle = delay, suspend }) {
+  suspend, waitForConsumerRelease = waitForWindowsSyncGroupProviderRelease }) {
   const recovery = control && inspect && invoke && openSession ? null
     : await import('./windows-sync-group-recovery-action.mjs');
   const lifecycle = restore && suspend ? null : await import('./windows-sync-group-native-lifecycle.mjs');
@@ -79,7 +78,7 @@ export async function runWindowsMultiDeviceSyncARejoin({ evidenceRoot, execute, 
       const value = (await waitForFreshFacts(execute, inspect, paths, excluded, ['A', 'B', 'C'],
         Object.values(ids))).facts;
       assertComplete(value, ids);
-      await settle(RESOURCE_SETTLEMENT_WINDOW_MS);
+      await waitForConsumerRelease({ action: 'multi-device-sync-a-rejoin', repoRoot: paths.repoRoot });
       return value;
     });
     const receiptPath = path.join(evidenceRoot, 'multi-device-sync-a-rejoin-receipt.json');

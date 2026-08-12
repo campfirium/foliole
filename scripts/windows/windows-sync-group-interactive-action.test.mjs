@@ -29,6 +29,9 @@ it('runs the Windows C Electron journey in the bounded interactive user task', a
   const installTask = vi.fn(async () => undefined);
   const actionResult = { multiDeviceSyncC: { manifestPath: 'receipt.json' }, output: '' };
   const waitForResult = vi.fn(async () => ({ actionResult, exitCode: 0 }));
+  const interactive = syncGroupInteractivePaths(options.paths.repoRoot);
+  fs.mkdirSync(path.dirname(interactive.providerRelease), { recursive: true });
+  fs.writeFileSync(interactive.providerRelease, '{}', 'utf8');
   await expect(runWindowsSyncGroupInteractiveAction(options, {
     installTask, waitForResult
   })).resolves.toEqual(actionResult);
@@ -37,6 +40,7 @@ it('runs the Windows C Electron journey in the bounded interactive user task', a
     ['/Run', '/TN', 'FolioleNativeClient'], expect.any(Object));
   const request = readJson(syncGroupInteractivePaths(options.paths.repoRoot).request);
   expect(request).toMatchObject({ action: options.action, evidenceRoot: options.evidenceRoot, schemaVersion: 1 });
+  expect(fs.existsSync(interactive.providerRelease)).toBe(false);
 });
 
 it('accepts only registered actions and evidence inside the action-owned root', () => {

@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 
@@ -31,6 +32,7 @@ export async function runWindowsSyncGroupInteractiveAction(options, {
     createdAt: new Date().toISOString(), evidenceRoot: options.evidenceRoot,
     nonce: randomUUID(), schemaVersion: 1
   };
+  fs.rmSync(paths.providerRelease, { force: true });
   writeJsonAtomic(paths.request, request);
   writeJsonAtomic(paths.status, { nonce: request.nonce, schemaVersion: 1, state: 'pending' });
   const launch = await options.execute('schtasks.exe', ['/Run', '/TN', WINDOWS_NATIVE_CLIENT_TASK], {

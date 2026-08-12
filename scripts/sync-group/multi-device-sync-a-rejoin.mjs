@@ -15,6 +15,9 @@ import { runMacosA5SyncGroupMaintenance } from '../android/macos-a5-sync-group-m
 import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desktop-session.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import { createSyncProgressWatchdog } from './sync-progress-watchdog.mjs';
+import {
+  freshJourneyFactIds, startWindowsARejoinProvider
+} from './multi-device-sync-a-rejoin-provider.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
 /* global process */
@@ -58,18 +61,6 @@ async function createAndroidFact({ env, evidenceRoot, execute, paths, runId }) {
     throw productFailure('android-b', 'deterministic_b_fact_missing', 'Android B fact receipt is incomplete.');
   }
   return receipt.factText;
-}
-
-function windowsReceipt(result, repoRoot) {
-  const match = /^\[windows-dev-action\] multi-device-sync-a-rejoin identity=([A-Za-z0-9.-]{1,96})/mu
-    .exec(result.output);
-  if (!match) throw productFailure('windows-c', 'windows_a_rejoin_receipt_missing',
-    'Windows C A-rejoin action did not report fixed evidence.');
-  const evidenceRef = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/windows-c', match[1],
-    'multi-device-sync-a-rejoin-receipt.json');
-  if (!fs.existsSync(evidenceRef)) throw productFailure('windows-c', 'windows_a_rejoin_receipt_missing',
-    'Windows C A-rejoin receipt is missing.');
-  return { evidenceRef, receipt: JSON.parse(fs.readFileSync(evidenceRef, 'utf8')) };
 }
 
 async function macosFacts(execute, repoRoot, databasePath, factIds) {
@@ -150,10 +141,7 @@ export async function proveARejoin({ execute, reportProgress, repoRoot, runId })
   const env = macosA5GradleEnv();
   const evidenceRoot = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId, 'a-rejoin');
   fs.mkdirSync(evidenceRoot, { recursive: true });
-  const runWindows = execute(process.execPath,
-    ['scripts/windows/windows-dev-control.mjs', 'multi-device-sync-a-rejoin'], {
-    action: 'windows-c-a-rejoin', cwd: repoRoot, host: 'windows-c', timeoutMs: 15 * 60_000
-  }).then((value) => ({ value }), (error) => ({ error }));
+  const windowsProvider = startWindowsARejoinProvider({ evidenceRoot, execute, repoRoot });
   let windowsSettled = false;
   const restartProvider = () => restartARejoinAndroidProvider({ env, execute, paths });
   let session = await openMacosPairSyncDesktopSession({ libraryHome: path.join(owned.root, 'library'),
@@ -178,12 +166,12 @@ export async function proveARejoin({ execute, reportProgress, repoRoot, runId })
     await createAndroidFact({ env, evidenceRoot, execute, paths, runId });
     reportProgress('b-fact-created');
     await restartProvider();
-    const windowsResult = await runWindows;
-    windowsSettled = true;
-    if (windowsResult.error) throw windowsResult.error;
-    const remote = windowsReceipt(windowsResult.value, repoRoot);
+    const databasePath = path.join(owned.root, 'library', 'Data', 'foliole.db');
+    const ids = await waitUntil('macOS A fresh fact identities', async () =>
+      freshJourneyFactIds((await macosFacts(execute, repoRoot, databasePath, [])).journeyFacts, excluded),
+    (value) => ['A', 'B', 'C'].every((origin) => value[origin]),
+    'three_facts_missing');
     reportProgress('c-fact-created');
-    const ids = remote.receipt.factIds;
     if (ids.A !== aFact.factId || !ids.B || !ids.C) throw productFailure('windows-c',
       'windows_a_rejoin_fact_identity_mismatch', 'Windows C reported incomplete fresh facts.');
     await waitUntil('macOS A fresh fact convergence', async () => {
@@ -203,12 +191,16 @@ export async function proveARejoin({ execute, reportProgress, repoRoot, runId })
         value.database?.inspection?.missingContentBlobCount,
         value.database?.counts?.attachments
       ]);
+    await windowsProvider.release('consumer_complete');
+    const remote = await windowsProvider.finish();
+    windowsSettled = true;
+    if (!['A', 'B', 'C'].every((origin) => remote.receipt.factIds?.[origin] === ids[origin])) throw productFailure('windows-c',
+      'windows_a_rejoin_fact_identity_mismatch', 'Windows C reported different fresh facts.');
     reportProgress('three-facts-converged');
     await session.close(); session = null;
     await restartProvider();
     session = await openMacosPairSyncDesktopSession({ libraryHome: path.join(owned.root, 'library'),
       repoRoot, userDataPath: path.join(owned.root, 'user-data') });
-    const databasePath = path.join(owned.root, 'library', 'Data', 'foliole.db');
     const proof = await waitForThreeDeviceProof({ ids, inspect: async () => ({
       android: await androidSnapshot(paths),
       macos: await macosFacts(execute, repoRoot, databasePath, Object.values(ids)),
@@ -222,6 +214,6 @@ export async function proveARejoin({ execute, reportProgress, repoRoot, runId })
     return { evidenceRef };
   } finally {
     await session?.close().catch(() => undefined);
-    if (!windowsSettled) await runWindows;
+    if (!windowsSettled) await windowsProvider.cancelAndSettle();
   }
 }

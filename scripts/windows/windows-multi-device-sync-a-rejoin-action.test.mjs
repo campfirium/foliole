@@ -27,16 +27,24 @@ it('creates C fact only after fresh A and B facts and verifies a restarted three
     .mockResolvedValue(complete);
   const close = vi.fn(async () => {});
   const openSession = vi.fn(async () => ({ app: { close }, page: {} }));
-  const settle = vi.fn(async () => {});
-  const result = await runWindowsMultiDeviceSyncARejoin({ evidenceRoot: root,
+  let releaseProvider;
+  const waitForConsumerRelease = vi.fn(() => new Promise((resolve) => { releaseProvider = resolve; }));
+  const work = runWindowsMultiDeviceSyncARejoin({ evidenceRoot: root,
     control: vi.fn(), execute: vi.fn(), inspect, paths: {}, suspend: vi.fn(async () => ({ running: false })),
     restore: vi.fn(async () => {}), openSession,
-    invoke: vi.fn(), settle, createFact: vi.fn(async () => ({ factId: ids.C })) });
+    invoke: vi.fn(), waitForConsumerRelease,
+    createFact: vi.fn(async () => ({ factId: ids.C })) });
+  await vi.waitFor(() => expect(waitForConsumerRelease).toHaveBeenCalledOnce(), { timeout: 2_500 });
+  expect(close).toHaveBeenCalledTimes(1);
+  releaseProvider();
+  const result = await work;
   expect(result.multiDeviceSyncARejoin.manifestPath).toContain('multi-device-sync-a-rejoin-receipt.json');
   expect(JSON.parse(fs.readFileSync(result.multiDeviceSyncARejoin.manifestPath, 'utf8')))
     .toMatchObject({ factIds: ids, resultStatus: 'success', restarted: { activeMemberCount: 3 } });
   expect(openSession).toHaveBeenCalledTimes(2);
   expect(close).toHaveBeenCalledTimes(2);
   expect(inspect).toHaveBeenCalledTimes(5);
-  expect(settle).toHaveBeenCalledWith(15_000);
+  expect(waitForConsumerRelease).toHaveBeenCalledWith({
+    action: 'multi-device-sync-a-rejoin', repoRoot: undefined
+  });
 });
