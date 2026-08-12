@@ -55,6 +55,8 @@ it('serializes Android NSD resolution so one active resolve cannot hide another 
   expect(discovery).toContain('FolioleCompanionNsdAddresses.endpointHosts(serviceInfo)');
   expect(addresses).toContain('serviceInfo.getHostAddresses()');
   expect(addresses).toContain('? "[" + value + "]" : value');
+  expect(addresses).toContain('get("ipv4_addresses")');
+  expect(addresses).toContain('if (isIpv4(candidate)) result.add(candidate)');
 });
 
 it('waits for Android NSD unregistration before publishing a newer fact revision', async () => {

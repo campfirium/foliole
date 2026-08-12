@@ -32,6 +32,14 @@ function runtimeSuffix(runtimeInstanceId: string) {
   return runtimeInstanceId.replace(/[^A-Za-z0-9]/gu, '').slice(0, 8) || 'runtime';
 }
 
+export function resolveCompanionMdnsIpv4Addresses(
+  interfaces = os.networkInterfaces()
+) {
+  return [...new Set(Object.values(interfaces).flatMap((entries) => entries ?? [])
+    .filter((entry) => entry.family === 'IPv4' && !entry.internal)
+    .map((entry) => entry.address))];
+}
+
 export function resolveCompanionMdnsHost(
   hostname = os.hostname(),
   runtimeInstanceId: string = loadSyncGroupRuntimeInstanceId()
@@ -66,6 +74,7 @@ export function startCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisemen
       app_version: input.appVersion,
       facts_revision: String(factsRevision),
       group_id: input.groupId,
+      ipv4_addresses: resolveCompanionMdnsIpv4Addresses().join(','),
       peer_id: input.peerId,
       runtime_instance_id: runtimeInstanceId,
       timeline_id: input.timelineId,
