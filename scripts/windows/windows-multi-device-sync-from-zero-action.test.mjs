@@ -32,13 +32,15 @@ it('interrupts only after a committed cursor and resumes without cursor regressi
       return { ...dataset, activeMemberCount: 3, integrity: 'ok', localMemberState: 'active',
         missingAttachmentCount: 0, missingContentBlobCount: 0, receiveCursor: 90 };
     },
-    waitForFirstCommitted: async () => partial,
+    waitForCursorCommitted: async () => { events.push('cursor-committed'); },
     waitForJoined: async () => { events.push('joined'); }
   });
   expect(result).toMatchObject({ finalFacts: { receiveCursor: 90 },
     initialFacts: { receiveCursor: 0 }, interruptedFacts: { receiveCursor: 80 },
     restartedFacts: { receiveCursor: 80 } });
-  expect(events).toEqual(['enabled', 'join-requested', 'joined', 'first-closed', 'restarted-closed']);
+  expect(events).toEqual([
+    'enabled', 'join-requested', 'joined', 'cursor-committed', 'first-closed', 'restarted-closed'
+  ]);
   expect(progress).toEqual([
     'c-cursor-zero', 'c-group-discovered', 'c-join-requested', 'c-membership-active',
     'c-first-cursor-committed', 'c-object-batches-received', 'c-controlled-interruption',
@@ -58,7 +60,7 @@ it('rejects a restart that falls behind the committed cursor', async () => {
     enable: vi.fn(), inspect,
     openSession: async () => sessions.shift(), reportProgress: vi.fn(), requestJoin: vi.fn(),
     reset: async () => ({ datasetAttachmentCount: 0, datasetNodeCount: 0,
-      receiveCursor: 0, syncPeerCursorCount: 0 }), waitForFirstCommitted: async () => partial,
+      receiveCursor: 0, syncPeerCursorCount: 0 }), waitForCursorCommitted: vi.fn(),
     waitForJoined: vi.fn()
   })).rejects.toThrow('restarted behind');
 });

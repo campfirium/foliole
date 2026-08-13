@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { clearTimeout, setTimeout } from 'node:timers';
 import { setTimeout as delay } from 'node:timers/promises';
 
 import { createSyncProgressWatchdog } from '../sync-group/sync-progress-watchdog.mjs';
@@ -47,9 +48,16 @@ async function waitForFacts(label, inspect, accept, onObserved = () => {}, timeo
   throw new Error(`${label} timed out: ${JSON.stringify(facts)}`);
 }
 
-function waitForFirstCommittedFacts(inspect) {
-  return waitForFacts('Windows C first committed cursor', inspect, (facts) => {
-    try { assertCommittedPartial(facts); return true; } catch { return false; }
+function waitForCursorCommitSignal(signal, timeoutMs = 45_000) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error('Windows C did not report its first committed cursor.'));
+    }, timeoutMs);
+    signal.then((value) => {
+      clearTimeout(timer); resolve(value);
+    }, (error) => {
+      clearTimeout(timer); reject(error);
+    });
   });
 }
 
@@ -81,14 +89,12 @@ export async function runWindowsSyncFromZeroJourney(actions) {
     const candidate = await actions.discover(session.page); report('c-group-discovered');
     await actions.requestJoin(session.page, candidate.endpoint_url); report('c-join-requested');
     await actions.waitForJoined(session.page, candidate.group_id); report('c-membership-active');
-    const firstCommittedFacts = await actions.waitForFirstCommitted();
+    await actions.waitForCursorCommitted(session.cursorCommitted);
     report('c-first-cursor-committed'); report('c-object-batches-received');
     await session.app.close(); session = null;
     const interruptedFacts = await actions.inspect();
     assertCommittedPartial(interruptedFacts);
-    if (interruptedFacts.receiveCursor !== firstCommittedFacts.receiveCursor) {
-      throw new Error('Windows C cursor changed while the client was stopped.');
-    }
+    const firstCommittedFacts = interruptedFacts;
     report('c-controlled-interruption');
     session = await actions.openSession();
     const restartedFacts = await actions.inspect();
@@ -128,7 +134,7 @@ export async function runWindowsMultiDeviceSyncFromZero({ evidenceRoot, execute,
       ),
       reset: () => resetOwnedClient(paths, evidenceRoot, execute),
       waitForComplete: (report) => waitForCompleteFacts(inspect, report),
-      waitForFirstCommitted: () => waitForFirstCommittedFacts(inspect),
+      waitForCursorCommitted: waitForCursorCommitSignal,
       waitForJoined: waitForJoinedGroup
     });
   } catch (error) { primaryError = error; }

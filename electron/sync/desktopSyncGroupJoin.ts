@@ -128,6 +128,9 @@ async function continuePeerSync(target: ReturnType<typeof savePairedSyncGroupPee
   const cursor = loadReceiveCursor(target.peer_device_id);
   const nextCursor = await runPeerSyncStage('sync_pack', () => downloadAndApply(target, cursor));
   saveReceiveCursor(target.peer_device_id, nextCursor);
+  console.info('[sync-group] receive cursor committed', {
+    cursor: nextCursor, peerDeviceId: target.peer_device_id
+  });
   await runPeerSyncStage('resources', () => downloadDesktopSyncGroupResources(target));
   const complete = resourcesComplete();
   refreshCompanionMdnsAdvertisement();

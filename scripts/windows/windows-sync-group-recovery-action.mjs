@@ -12,6 +12,7 @@ import {
 } from './windows-multi-device-sync-readiness.mjs';
 import { createSyncProgressWatchdog } from '../sync-group/sync-progress-watchdog.mjs';
 import { enableWindowsSyncParticipation } from './windows-sync-group-participation-control.mjs';
+import { captureWindowsSyncRuntimeProgress } from './windows-sync-group-runtime-progress.mjs';
 
 export async function invokeWindowsSyncGroupCommand(page, command, args = {}) {
   return page.evaluate(async ({ command, args }) => {
@@ -40,23 +41,14 @@ function launchOptions(paths) {
 export async function openWindowsSyncGroupSession(paths, evidenceRoot, electronLauncher) {
   const launcher = electronLauncher ?? (await import('playwright'))._electron;
   const app = await launcher.launch(launchOptions(paths));
-  captureSyncRuntimeLog(app.process(), path.join(evidenceRoot, 'sync-group-runtime.log'));
+  const progress = captureWindowsSyncRuntimeProgress(
+    app.process(), path.join(evidenceRoot, 'sync-group-runtime.log')
+  );
   const page = await app.firstWindow({ timeout: 90_000 });
   await page.waitForFunction(() => globalThis.__FOLIOLE_APP_READY_REPORTED__ === true, null, {
     timeout: 90_000
   });
-  return { app, page };
-}
-
-function captureSyncRuntimeLog(child, logPath) {
-  const capture = (chunk) => {
-    const text = String(chunk);
-    if (text.includes('[sync-group]') || text.includes('[companion-sync]')) {
-      fs.appendFileSync(logPath, text.endsWith('\n') ? text : `${text}\n`, 'utf8');
-    }
-  };
-  child.stdout?.on('data', capture);
-  child.stderr?.on('data', capture);
+  return { app, page, ...progress };
 }
 
 export async function discoverUniqueGroup(page, timeoutMs = 60_000) {
