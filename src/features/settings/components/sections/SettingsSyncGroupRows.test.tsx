@@ -24,7 +24,7 @@ function renderRows(overrides: Partial<Parameters<typeof SettingsSyncGroupRows>[
   const props = {
     candidates: [], group: GROUP, isBusy: false, isCreating: false, joinRequest: null,
     onApprove: vi.fn(), onCreate: vi.fn(), onDiscover: vi.fn(), onLeave: vi.fn(), onReject: vi.fn(),
-    onRemove: vi.fn(), onRequestJoin: vi.fn(), onToggleSync: vi.fn(), pendingRequests: [], syncEnabled: true,
+    onRemove: vi.fn(), onRequestJoin: vi.fn(), onTogglePause: vi.fn(), pendingRequests: [], syncPaused: false,
     ...overrides
   };
   renderWithLocalization(<SettingsSyncGroupRows {...props} />);
@@ -38,7 +38,7 @@ it('offers only the actions that are valid for local and remote members', () => 
   fireEvent.click(screen.getByRole('button', { name: 'Remove from Sync Group' }));
   fireEvent.click(screen.getByRole('button', { name: 'Leave Sync Group' }));
 
-  expect(props.onToggleSync).toHaveBeenCalledTimes(1);
+  expect(props.onTogglePause).toHaveBeenCalledTimes(1);
   expect(props.onRemove).toHaveBeenCalledWith('device-b');
   expect(props.onLeave).toHaveBeenCalledTimes(1);
   expect(screen.getByText("Studio Mac's Sync Group")).toBeVisible();
@@ -48,9 +48,9 @@ it('offers only the actions that are valid for local and remote members', () => 
 });
 
 it('shows resume for the local member while sync is paused', () => {
-  const props = renderRows({ syncEnabled: false });
+  const props = renderRows({ syncPaused: true });
   fireEvent.click(screen.getByRole('button', { name: 'Resume Sync' }));
-  expect(props.onToggleSync).toHaveBeenCalledTimes(1);
+  expect(props.onTogglePause).toHaveBeenCalledTimes(1);
 });
 
 it('keeps same-base members visible and targets the suffixed member independently', () => {

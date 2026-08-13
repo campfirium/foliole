@@ -85,3 +85,18 @@ it('delivers a self-authorized fact before locally unbinding the departing Devic
   expect(mocks.recordDeparture).toHaveBeenCalledWith(expect.objectContaining({ local: true }));
   expect(mocks.removeCredentials).toHaveBeenCalledWith('group-1', 'device-b');
 });
+
+it('lets the last active member Leave without a reachable peer', async () => {
+  mocks.loadGroup.mockReturnValue({
+    ...GROUP,
+    members: [{ device_id: 'device-a', state: 'active' }, { device_id: 'device-b', state: 'left' }]
+  });
+  mocks.loadPeers.mockReturnValue([]);
+
+  await leaveDesktopSyncGroup();
+
+  expect(mocks.requestJson).not.toHaveBeenCalled();
+  expect(mocks.recordDeparture).toHaveBeenCalledWith(expect.objectContaining({
+    deviceId: 'device-a', groupId: 'group-1', local: true
+  }));
+});

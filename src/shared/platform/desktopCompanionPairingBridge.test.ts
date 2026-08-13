@@ -9,7 +9,9 @@ import {
   enableDesktopCompanionSync,
   loadDesktopCompanionPairingOverview,
   removeDesktopCompanionPairedDevice,
+  pauseDesktopCompanionSync,
   rejectDesktopCompanionPairRequest,
+  resumeDesktopCompanionSync,
   setDesktopAsPrimaryDevice
 } from './desktopCompanionPairingBridge';
 
@@ -145,9 +147,13 @@ it('toggles desktop companion sync through the native bridge', async () => {
 
   await enableDesktopCompanionSync();
   await disableDesktopCompanionSync();
+  await pauseDesktopCompanionSync();
+  await resumeDesktopCompanionSync();
 
   expect(invoke).toHaveBeenNthCalledWith(1, 'enable_companion_sync');
   expect(invoke).toHaveBeenNthCalledWith(2, 'disable_companion_sync');
+  expect(invoke).toHaveBeenNthCalledWith(3, 'pause_companion_sync');
+  expect(invoke).toHaveBeenNthCalledWith(4, 'resume_companion_sync');
 });
 
 it('sets the desktop as primary through the native bridge', async () => {

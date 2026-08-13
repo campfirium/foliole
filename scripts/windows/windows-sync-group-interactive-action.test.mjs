@@ -60,6 +60,11 @@ it('accepts only registered actions and evidence inside the action-owned root', 
   expect(() => validateSyncGroupInteractiveProgress({
     factId: 'old-fact', milestone: 'c-fact-created'
   }, 'multi-device-sync-a-leave')).toThrow('invalid');
+  expect(validateSyncGroupInteractiveProgress({
+    factId: 'participation-control', milestone: 'windows-paused'
+  }, 'multi-device-sync-participation')).toEqual({
+    factId: 'participation-control', milestone: 'windows-paused'
+  });
 });
 
 it('streams the created C fact as nonce-bound provider progress', async () => {

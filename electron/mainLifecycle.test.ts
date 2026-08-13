@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
   installAppMenu: vi.fn(),
   ensureAgentControlApiServer: vi.fn().mockResolvedValue(undefined),
   ensureLanWorkspaceSyncServer: vi.fn().mockResolvedValue(undefined),
-  isDesktopCompanionSyncEnabled: vi.fn(() => false),
+  isDesktopCompanionSyncParticipating: vi.fn(() => false),
   prepareGlobalClipToInboxWindows: vi.fn(),
   presentInitialRendererWindow: vi.fn(),
   registerAttachmentProtocol: vi.fn(),
@@ -99,7 +99,7 @@ vi.mock('./windowRuntimeDiagnostics.js', () => ({
 }));
 vi.mock('./startupTasks.js', () => ({ runStartupTask: vi.fn() }));
 vi.mock('./sync/desktopCompanionSyncPreference.js', () => ({
-  isDesktopCompanionSyncEnabled: mocks.isDesktopCompanionSyncEnabled
+  isDesktopCompanionSyncParticipating: mocks.isDesktopCompanionSyncParticipating
 }));
 vi.mock('./sync/lanWorkspaceSyncServer.js', () => ({
   ensureLanWorkspaceSyncServer: mocks.ensureLanWorkspaceSyncServer,
@@ -112,8 +112,8 @@ afterEach(() => {
   mocks.initializeDatabase.mockReset();
   mocks.ensureLanWorkspaceSyncServer.mockReset();
   mocks.ensureLanWorkspaceSyncServer.mockResolvedValue(undefined);
-  mocks.isDesktopCompanionSyncEnabled.mockReset();
-  mocks.isDesktopCompanionSyncEnabled.mockReturnValue(false);
+  mocks.isDesktopCompanionSyncParticipating.mockReset();
+  mocks.isDesktopCompanionSyncParticipating.mockReturnValue(false);
   mocks.presentInitialRendererWindow.mockClear();
   vi.resetModules();
 });

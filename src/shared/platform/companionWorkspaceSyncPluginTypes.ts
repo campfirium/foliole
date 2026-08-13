@@ -1,3 +1,5 @@
+import type { SyncParticipationSnapshot } from '../../../lib/platform/syncParticipationContract';
+
 import type { CompanionAttachmentResourceSyncPlugin } from './companionAttachmentResourceSyncPluginTypes';
 import type { CompanionContentBlobSyncPlugin } from './companionContentBlobSyncPluginTypes';
 import type { CompanionPairingSyncPlugin } from './companionPairingSyncPluginTypes';
@@ -10,7 +12,7 @@ interface CompanionDiscoveryCandidatesPayload {
   }>;
 }
 
-export interface CompanionSyncGroupProviderState {
+export interface CompanionSyncGroupProviderState extends SyncParticipationSnapshot {
   pending_requests: Array<{
     device_id: string;
     device_kind: string;
@@ -21,6 +23,8 @@ export interface CompanionSyncGroupProviderState {
   port: number | null;
   state: 'running' | 'stopped';
 }
+
+export type CompanionSyncParticipationState = SyncParticipationSnapshot;
 
 export interface CompanionWorkspaceSyncPlugin
   extends CompanionAttachmentResourceSyncPlugin, CompanionContentBlobSyncPlugin, CompanionPairingSyncPlugin {
@@ -38,6 +42,9 @@ export interface CompanionWorkspaceSyncPlugin
   }): Promise<void>;
   clearSyncGroupCredentials(): Promise<void>;
   loadSyncGroupProviderState(): Promise<CompanionSyncGroupProviderState>;
+  loadSyncParticipationState(): Promise<CompanionSyncParticipationState>;
+  setSyncEnabled(args: { sync_enabled: boolean }): Promise<CompanionSyncParticipationState>;
+  setSyncPaused(args: { sync_paused: boolean }): Promise<CompanionSyncParticipationState>;
   approveSyncGroupJoinRequest(args: { pair_request_id: string }): Promise<CompanionSyncGroupProviderState>;
   rejectSyncGroupJoinRequest(args: { pair_request_id: string }): Promise<CompanionSyncGroupProviderState>;
   resolveSyncGroupDataRequest(args: {

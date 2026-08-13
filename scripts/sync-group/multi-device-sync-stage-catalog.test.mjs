@@ -44,6 +44,12 @@ it('declares ordered milestones and deadlines that cover legal sibling waits', (
       'survivor-facts-converged', 'survivors-restarted', 'former-a-revoked'],
     progressDeadlineMs: 70_000
   });
+  expect(resolveStage('participation-control')).toMatchObject({
+    action: 'set-participation', milestones: expect.arrayContaining([
+      'macos-pause-persisted', 'android-resumed-cursor', 'windows-last-member-left',
+      'all-restarted-unbound'
+    ])
+  });
   expect(() => assertStageTiming({ hardDeadlineMs: 100, name: 'invalid', progressDeadlineMs: 50,
     siblings: [{ hardDeadlineMs: 80, name: 'waiter', waitsFor: 'worker' },
       { hardDeadlineMs: 80, name: 'worker', waitsFor: null }] }))
@@ -68,4 +74,8 @@ it('builds only the shortest missing product prerequisite chain', () => {
   ]);
   expect(shortestStageChain('a-rejoin', ['a_b_group_active']).map(({ name }) => name))
     .toEqual(['b-admit-empty-c', 'a-rejoin']);
+  expect(shortestStageChain('participation-control').map(({ name }) => name)).toEqual([
+    'candidate-preparation', 'a-b-group-sync', 'b-admit-empty-c', 'a-rejoin',
+    'participation-control'
+  ]);
 });

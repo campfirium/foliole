@@ -21,6 +21,7 @@ import {
 } from './companionWorkspaceSyncFlow';
 import { useForegroundAutoSync } from './useCompanionWorkspaceAutoSync';
 import { useCompanionWorkspacePairing } from './useCompanionWorkspacePairing';
+import { useCompanionWorkspaceParticipationActions } from './useCompanionWorkspaceParticipationActions';
 
 const EMPTY_SYNC_STATE: NativeCompanionWorkspaceSyncState = {
   endpoint_url: null,
@@ -117,7 +118,6 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
   const { error, isWorkspaceSyncStateReady, readableArticle, setError, setIsWorkspaceSyncStateReady,
     setReadableArticle, setState, setStatus, setSyncConflictCount, state, status, syncConflictCount } = viewState;
   const [syncProgress, setMergedSyncProgress] = useMergedCompanionSyncProgress();
-
   const snapshotActions = createWorkspaceSnapshotActions({
     setError,
     setReadableArticle,
@@ -132,11 +132,7 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
     onError: setError,
     onSaveEndpoint: snapshotActions.saveEndpoint
   });
-  const pullFromDesktop = useCallback(async (endpointUrl: string) => {
-    const nextState = await snapshotActions.pullFromDesktop(endpointUrl);
-    await pairing.refreshPairingState();
-    return nextState;
-  }, [pairing.refreshPairingState, snapshotActions]);
+  const participationActions = useCompanionWorkspaceParticipationActions({ pairing, setError, snapshotActions });
   const disconnectPairing = useCallback(() => disconnectCompanionWorkspacePairing({
     refreshPairingState: pairing.refreshPairingState,
     saveEndpoint: snapshotActions.saveEndpoint
@@ -148,7 +144,7 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
     setState,
     setMergedSyncProgress,
     setStatus,
-    isCompanionPairingSyncUsable(pairing.pairingState),
+    isCompanionPairingSyncUsable(pairing.pairingState) && participationActions.participation.participating,
     state,
     tryForegroundAutoSync
   );
@@ -159,17 +155,21 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
     error,
     isWorkspaceSyncStateReady,
     readableArticle,
+    syncParticipation: participationActions.participation,
     state,
     syncConflictCount,
     syncProgress,
     status,
-    pullFromDesktop,
+    pullFromDesktop: participationActions.pullFromDesktop,
     refreshFromDevice: snapshotActions.refreshFromDevice,
     removeRememberedTarget: snapshotActions.removeRememberedTarget,
     replaceSnapshot: snapshotActions.replaceSnapshot,
     saveEndpoint: snapshotActions.saveEndpoint,
     saveSyncOnboardingStatus: snapshotActions.saveSyncOnboardingStatus,
     ...pairing,
-    disconnectPairing
+    checkDesktop: participationActions.checkDesktop,
+    completePairing: participationActions.completePairing,
+    disconnectPairing,
+    requestPairing: participationActions.requestPairing
   };
 }

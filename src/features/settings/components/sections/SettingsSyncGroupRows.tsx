@@ -36,8 +36,8 @@ function DeviceRow(props: {
   group: SyncGroupPayload;
   member: SyncGroupMemberPayload;
   onRemove(deviceId: string): void;
-  onToggleSync(): void;
-  syncEnabled: boolean;
+  onTogglePause(): void;
+  syncPaused: boolean;
 }) {
   const t = useTranslation();
   const local = props.member.device_id === props.group.local_device_id;
@@ -48,9 +48,9 @@ function DeviceRow(props: {
         <span className="shrink-0 text-ui-sm text-muted-foreground">{platformFor(props.member.device_kind)}</span>
       </div>
       <button className="shrink-0 rounded-sm px-2 py-1 text-ui-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-45"
-        disabled={props.disabled} onClick={local ? props.onToggleSync : () => props.onRemove(props.member.device_id)} type="button">
+        disabled={props.disabled} onClick={local ? props.onTogglePause : () => props.onRemove(props.member.device_id)} type="button">
         {local
-          ? t(props.syncEnabled ? 'settings.companionSync.group.pause' : 'settings.companionSync.group.resume')
+          ? t(props.syncPaused ? 'settings.companionSync.group.resume' : 'settings.companionSync.group.pause')
           : t('settings.companionSync.group.remove')}
       </button>
     </div>
@@ -112,9 +112,9 @@ export function SettingsSyncGroupRows(props: {
   onReject(id: string): void;
   onRemove(deviceId: string): void;
   onRequestJoin(endpointUrl: string): void;
-  onToggleSync(): void;
+  onTogglePause(): void;
   pendingRequests: DesktopCompanionPairRequestPayload[];
-  syncEnabled: boolean;
+  syncPaused: boolean;
 }) {
   const t = useTranslation();
   if (!props.group) return <EmptySyncGroupRow {...props} />;
@@ -139,7 +139,7 @@ export function SettingsSyncGroupRows(props: {
             className="ml-5 divide-y divide-settings-divider/65 pl-5" role="list">
             {props.group.members.filter((member) => member.state === 'active').map((member) => (
               <DeviceRow disabled={props.isBusy} group={props.group!} key={member.device_id} member={member}
-                onRemove={props.onRemove} onToggleSync={props.onToggleSync} syncEnabled={props.syncEnabled} />
+                onRemove={props.onRemove} onTogglePause={props.onTogglePause} syncPaused={props.syncPaused} />
             ))}
           </div>
         </section>

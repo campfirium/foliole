@@ -47,7 +47,7 @@ import { bindEmbeddedLinkPanelContents, installMainRuntimeDiagnostics } from './
 import type { RuntimeMode } from './runtimeMode.js';
 import { loadStartupErrorSurface } from './startupErrorSurface.js';
 import type { StartupRendererAppearance } from './startupRendererPreparation.js';
-import { isDesktopCompanionSyncEnabled } from './sync/desktopCompanionSyncPreference.js';
+import { isDesktopCompanionSyncParticipating } from './sync/desktopCompanionSyncPreference.js';
 import { stopLanWorkspaceSyncServer } from './sync/lanWorkspaceSyncServer.js';
 
 export interface MainLifecycleArgs {
@@ -208,7 +208,7 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
         showInitialWindow: !wasOpenedAtLogin() && !capturePanelLaunchIntent.hasInitialIntent,
         startCompanionSyncIfEnabled: () => startCompanionSyncIfEnabled({
           appVersion: resolveFolioleAppVersion(app),
-          isEnabled: isDesktopCompanionSyncEnabled,
+          isEnabled: isDesktopCompanionSyncParticipating,
           peerId: loadOrCreateDesktopDeviceId()
         })
       });

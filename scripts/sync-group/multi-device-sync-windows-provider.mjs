@@ -14,6 +14,11 @@ const PROVIDER_ACTIONS = Object.freeze({
   },
   'multi-device-sync-a-rejoin': {
     controllerAction: 'windows-c-a-rejoin', label: 'A-rejoin', missingPrefix: 'windows_a_rejoin'
+  },
+  'multi-device-sync-participation': {
+    controllerAction: 'windows-c-participation', label: 'participation',
+    missingPrefix: 'windows_participation', progressFactPattern: 'participation-control',
+    progressMilestone: 'windows-paused'
   }
 });
 
@@ -62,15 +67,20 @@ function receiptFromResult(result, repoRoot, action, spec) {
 export function startWindowsSyncGroupProvider({ action, execute, reportProgress = () => {}, repoRoot }) {
   const spec = actionSpec(action);
   let providerFactId = null;
+  let resolveProgress;
+  const progress = new Promise((resolve) => { resolveProgress = resolve; });
   const work = execute(process.execPath, ['scripts/windows/windows-dev-control.mjs', action], {
     action: spec.controllerAction, cwd: repoRoot, host: 'windows-c',
     onOutput: ({ stdout }) => {
       if (!spec.progressMilestone || providerFactId) return;
       const expression = new RegExp(`^\\[windows-dev-action\\] progress action=${action}`
-        + ' nonce=[0-9a-f-]{36} milestone=c-fact-created'
-        + ' fact=(multi-device-sync-c-\\d{17})$', 'mu');
+        + ` nonce=[0-9a-f-]{36} milestone=${spec.progressMilestone}`
+        + ` fact=(${spec.progressFactPattern ?? 'multi-device-sync-c-\\d{17}'})$`, 'mu');
       providerFactId = expression.exec(stdout)?.[1] ?? null;
-      if (providerFactId) reportProgress(spec.progressMilestone);
+      if (providerFactId) {
+        reportProgress(spec.progressMilestone);
+        resolveProgress(providerFactId);
+      }
     }, timeoutMs: 15 * 60_000
   }).then((value) => ({ value }), (error) => ({ error }));
   let releaseSent = false;
@@ -108,8 +118,13 @@ export function startWindowsSyncGroupProvider({ action, execute, reportProgress 
         `${spec.missingPrefix}_progress_identity_mismatch`);
     }
     if (!providerFactId && spec.progressMilestone) {
-      providerFactId = factId; reportProgress(spec.progressMilestone);
+      providerFactId = factId; reportProgress(spec.progressMilestone); resolveProgress(factId);
     }
   };
-  return { cancelAndSettle, confirmProgress, finish, raceConsumer, release };
+  const waitForProgress = () => Promise.race([progress, work.then((result) => {
+    const failure = providerFailure(result, spec);
+    throw failure || controllerFailure(`Windows C ${spec.label} ended before progress.`,
+      `${spec.missingPrefix}_progress_missing`);
+  })]);
+  return { cancelAndSettle, confirmProgress, finish, raceConsumer, release, waitForProgress };
 }

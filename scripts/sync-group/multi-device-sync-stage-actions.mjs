@@ -17,6 +17,7 @@ import {
 } from './multi-device-sync-ab-convergence.mjs';
 import { proveALeave } from './multi-device-sync-a-leave.mjs';
 import { proveARejoin } from './multi-device-sync-a-rejoin.mjs';
+import { proveParticipationControl } from './multi-device-sync-participation.mjs';
 import { createActionExecutor } from './multi-device-sync-action-executor.mjs';
 import { createApprovalReceiptRelease } from './multi-device-sync-approval-release.mjs';
 import { prepareCandidate } from './multi-device-sync-candidate-preparation.mjs';
@@ -176,6 +177,10 @@ export function createDiagnosticStageActions({ repoRoot, requiredHosts, runId })
     },
     'prove-a-b-convergence': (context) => proveABConvergence({ repoRoot, runId,
       execute: actionExecute(convergenceRoot, context.signal, context.stage),
+      reportProgress: context.reportProgress }),
+    'set-participation': (context) => proveParticipationControl({ repoRoot, runId,
+      execute: actionExecute(path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId,
+        'participation-control'), context.signal, context.stage),
       reportProgress: context.reportProgress }),
     'leave-a': (context) => proveALeave({ repoRoot, runId,
       execute: actionExecute(path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId,

@@ -27,7 +27,7 @@ beforeEach(() => {
   mocks.endpoint.mockResolvedValue('http://192.168.1.2:38641');
   mocks.group.mockResolvedValue({
     group_id: 'group-1', local_device_id: 'android-1', local_member_state: 'active',
-    members: [{ device_id: 'android-1' }, { device_id: 'desktop-1' }]
+    members: [{ device_id: 'android-1', state: 'active' }, { device_id: 'desktop-1', state: 'active' }]
   });
   mocks.headers.mockResolvedValue({ 'X-Signature': 'signed' });
   mocks.request.mockResolvedValue({ body: '{"status":"accepted"}', status: 200 });
@@ -59,4 +59,19 @@ it('keeps local membership and credentials when no Device accepts the departure'
   await expect(leaveCompanionSyncGroup()).rejects.toThrow('sync_group_departure_http_503');
   expect(mocks.record).not.toHaveBeenCalled();
   expect(mocks.clear).not.toHaveBeenCalled();
+});
+
+it('clears the final local membership without requiring a reachable Device', async () => {
+  mocks.group.mockResolvedValue({
+    group_id: 'group-1', local_device_id: 'android-1', local_member_state: 'active',
+    members: [{ device_id: 'android-1', state: 'active' }, { device_id: 'desktop-1', state: 'left' }]
+  });
+  mocks.endpoint.mockResolvedValue(null);
+
+  await leaveCompanionSyncGroup();
+
+  expect(mocks.request).not.toHaveBeenCalled();
+  expect(mocks.record).toHaveBeenCalledOnce();
+  expect(mocks.stop).toHaveBeenCalledOnce();
+  expect(mocks.clear).toHaveBeenCalledOnce();
 });

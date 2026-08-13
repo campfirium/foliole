@@ -21,6 +21,8 @@ beforeEach(() => {
   sqlite = new Database(':memory:');
   for (const statement of SYNC_GROUP_SCHEMA_STATEMENTS) sqlite.exec(statement);
   sqlite.exec('CREATE TABLE sync_object_state (state_seq INTEGER)');
+  sqlite.exec('CREATE TABLE sync_delivery_receipts (peer_id TEXT)');
+  sqlite.exec('CREATE TABLE sync_peer_cursors (peer_id TEXT)');
   connection.current = { driver: createBetterSqlite3Driver(sqlite) };
 });
 
@@ -113,6 +115,8 @@ it('records a self-authorized departure and unbinds only the local departing Dev
     approvedByDeviceId: 'desktop-1', authorizationId: 'request-1', deviceId: 'android-1',
     deviceKind: 'android-capacitor', deviceName: 'Pixel', now: '2026-08-09T01:00:00Z'
   });
+  sqlite.exec("INSERT INTO sync_delivery_receipts VALUES ('Pixel')");
+  sqlite.exec("INSERT INTO sync_peer_cursors VALUES ('Pixel')");
   recordSyncGroupDeparture({
     authorizationId: 'leave-desktop-1', authorizedByDeviceId: 'desktop-1', deviceId: 'desktop-1',
     groupId: group.group_id, leftAt: '2026-08-09T02:00:00Z', local: true
@@ -121,6 +125,8 @@ it('records a self-authorized departure and unbinds only the local departing Dev
   expect(loadDesktopSyncGroup()).toBeNull();
   expect(sqlite.prepare("SELECT state FROM sync_group_members WHERE device_id = 'Pixel'").get())
     .toEqual({ state: 'active' });
+  expect(sqlite.prepare('SELECT COUNT(*) AS value FROM sync_delivery_receipts').get()).toEqual({ value: 0 });
+  expect(sqlite.prepare('SELECT COUNT(*) AS value FROM sync_peer_cursors').get()).toEqual({ value: 0 });
   expect(sqlite.prepare("SELECT authorized_by_device_id FROM sync_group_member_departures").get())
     .toEqual({ authorized_by_device_id: 'desktop-1' });
 });

@@ -1,12 +1,34 @@
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { useDesktopCompanionPairingRequests } from '../../../../shared/platform/useDesktopCompanionPairingRequests';
 import {
+  SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
+  SettingsButton,
+  SettingsControlSlot,
   SettingsErrorState,
+  SettingsRow,
   SettingsSection,
   requestAppConfirmation
 } from '../../../../shared/ui';
 
 import { SettingsSyncGroupRows } from './SettingsSyncGroupRows';
+
+function SyncAvailabilityRow(props: { disabled: boolean; enabled: boolean; onToggle(): void }) {
+  const t = useTranslation();
+  return (
+    <SettingsRow
+      description={t('settings.companionSync.group.sync.description')}
+      title={t('settings.companionSync.group.sync.title')}
+    >
+      <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+        <SettingsButton disabled={props.disabled} onClick={props.onToggle}>
+          {t(props.enabled
+            ? 'settings.companionSync.group.sync.turnOff'
+            : 'settings.companionSync.group.sync.turnOn')}
+        </SettingsButton>
+      </SettingsControlSlot>
+    </SettingsRow>
+  );
+}
 
 export function SettingsCompanionSyncSection() {
   const t = useTranslation();
@@ -40,6 +62,11 @@ export function SettingsCompanionSyncSection() {
       {syncError ? (
         <SettingsErrorState description={syncError} title={t('settings.companionSync.error.desktopUnavailable')} />
       ) : null}
+      <SyncAvailabilityRow
+        disabled={!state.isDesktopRuntime || state.pendingActionId !== null || state.isLoading}
+        enabled={state.overview.sync_enabled}
+        onToggle={() => void (state.overview.sync_enabled ? state.disableSync() : state.enableSync())}
+      />
       <SettingsSyncGroupRows
         candidates={state.overview.join_candidates ?? []}
         group={state.overview.sync_group ?? null}
@@ -47,7 +74,7 @@ export function SettingsCompanionSyncSection() {
         isCreating={state.pendingActionId === 'create-sync-group'}
         onLeave={() => void confirmLeave()}
         onRemove={(deviceId) => void confirmRemove(deviceId)}
-        onToggleSync={() => void (state.overview.sync_enabled ? state.disableSync() : state.enableSync())}
+        onTogglePause={() => void (state.overview.sync_paused ? state.resumeSync() : state.pauseSync())}
         onCreate={() => void state.createSyncGroup()}
         onDiscover={() => void state.discoverSyncGroups()}
         onRequestJoin={(endpointUrl) => void state.requestSyncGroupJoin(endpointUrl)}
@@ -55,7 +82,7 @@ export function SettingsCompanionSyncSection() {
         onReject={(id) => void state.rejectRequest(id)}
         pendingRequests={state.overview.pending_requests}
         joinRequest={state.overview.join_request ?? null}
-        syncEnabled={state.overview.sync_enabled}
+        syncPaused={state.overview.sync_paused}
       />
       {state.error ? (
         <SettingsErrorState description={state.error} title={t('settings.companionSync.error.devicesUnavailable')} />

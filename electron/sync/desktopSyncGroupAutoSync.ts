@@ -4,6 +4,7 @@ import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import { resolveCompanionMdnsIpv4Addresses } from './companionMdnsAdvertisement.js';
 import { loadPairedSyncGroupPeers, savePairedSyncGroupPeer } from './companionPairingStore.js';
+import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import {
   completeDesktopSyncGroupJoin,
   continueDesktopSyncGroupSync
@@ -22,8 +23,9 @@ const inFlight = new Map<string, Promise<unknown>>();
 const retryAfterFlight = new Map<string, { endpoint: string; groupId: string; peerDeviceId: string }>();
 
 export function startDesktopSyncGroupAutoSync() {
-  if (runtimes.length > 0) return;
+  if (!isDesktopCompanionSyncParticipating() || runtimes.length > 0) return;
   const handleService = (service: DiscoveredService) => {
+    if (!isDesktopCompanionSyncParticipating()) return;
     const endpoint = endpointForService(service);
     const txt = service.txt as Record<string, unknown>;
     const groupId = typeof txt.group_id === 'string' ? txt.group_id : null;
@@ -65,6 +67,7 @@ export function stopDesktopSyncGroupAutoSync() {
 }
 
 async function syncAvailablePeer(args: { endpoint: string; groupId: string; peerDeviceId: string }) {
+  if (!isDesktopCompanionSyncParticipating()) return;
   const group = loadDesktopSyncGroup();
   if (!group || group.group_id !== args.groupId) return;
   const stored = loadPairedSyncGroupPeers(args.groupId)

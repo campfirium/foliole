@@ -14,6 +14,10 @@ it('accepts only a complete ordered formal topology', () => {
   expect(resolveScenario('founder-leave-continuity').stages).toEqual([
     'candidate-preparation', 'a-b-group-sync', 'b-admit-empty-c', 'a-rejoin', 'a-leave'
   ]);
+  expect(resolveScenario('participation-control-continuity').stages).toEqual([
+    'candidate-preparation', 'a-b-group-sync', 'b-admit-empty-c', 'a-rejoin',
+    'participation-control'
+  ]);
   expect(() => assertScenarioTopology({
     stages: ['candidate-preparation', 'b-admit-empty-c']
   })).toThrow('requires a_b_group_active');

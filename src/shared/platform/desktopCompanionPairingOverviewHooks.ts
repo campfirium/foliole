@@ -24,7 +24,9 @@ export const EMPTY_DESKTOP_COMPANION_PAIRING_OVERVIEW: DesktopCompanionPairingOv
     state: 'stopped'
   },
   sync_group: null,
-  sync_enabled: false
+  sync_enabled: false,
+  sync_paused: false,
+  participating: false
 };
 
 export function useCompanionPairingRefresh(

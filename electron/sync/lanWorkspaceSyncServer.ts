@@ -21,6 +21,7 @@ import {
 } from './companionMdnsAdvertisement.js';
 import { countPendingCompanionPairRequests } from './companionPairingRequests.js';
 import { countPairedCompanionDevices } from './companionPairingStore.js';
+import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import { startDesktopSyncGroupAutoSync, stopDesktopSyncGroupAutoSync } from './desktopSyncGroupAutoSync.js';
 
 const DEFAULT_SYNC_PORT = 38641;
@@ -166,6 +167,7 @@ function advertiseActiveSyncGroup(args: { appVersion: string; peerId: string; po
 }
 
 export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; peerId: string }) {
+  if (!isDesktopCompanionSyncParticipating()) return activeStatus;
   startDesktopSyncGroupAutoSync();
   if (activeServer) {
     if (activeStatus.port) advertiseActiveSyncGroup({ ...args, port: activeStatus.port });

@@ -9,5 +9,6 @@ it('exposes only generic multi-device sync routes', () => {
   expect(actions).toContain("options.action === 'multi-device-sync-candidate'");
   expect(actions).toContain("options.action === 'multi-device-sync-c'");
   expect(actions).toContain("options.action === 'multi-device-sync-a-rejoin'");
+  expect(actions).toContain("options.action === 'multi-device-sync-participation'");
   expect(`${actions}\n${control}`).not.toMatch(/sync-group-(?:task3|recover|baseline)/u);
 });

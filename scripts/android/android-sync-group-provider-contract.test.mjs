@@ -169,7 +169,10 @@ it('keeps the Android screen awake only around foreground provider activity', as
   expect(provider).toContain('FolioleCompanionSyncScreenAwake.touch()');
   expect(provider).toContain('FolioleCompanionSyncScreenAwake.clear()');
   expect(plugin).toContain('FolioleCompanionSyncGroupProvider.pause(this)');
-  expect(plugin).toContain('FolioleCompanionSyncGroupProvider.resume(this)');
+  expect(plugin).toContain('FolioleCompanionSyncGroupProvider.reconcile(this, getActivity(), isParticipating())');
+  expect(plugin).toContain('lifecycleActive = false;');
+  expect(plugin).toContain('lifecycleActive = true;');
+  expect(provider).toContain('if (!participating) stopRuntime();');
   expect(provider).toContain('if (owner != activeOwner) return;');
   expect(awake).toContain('FLAG_KEEP_SCREEN_ON');
 });

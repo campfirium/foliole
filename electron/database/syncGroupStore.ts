@@ -195,6 +195,8 @@ export function recordSyncGroupDeparture(args: {
       [args.leftAt, args.leftAt, args.groupId, args.deviceId]
     );
     if (args.local) {
+      driver.execute('DELETE FROM sync_delivery_receipts');
+      driver.execute('DELETE FROM sync_peer_cursors');
       driver.execute('DELETE FROM sync_group_local_state WHERE singleton_id = 1 AND local_device_id = ?',
         [args.deviceId]);
     }

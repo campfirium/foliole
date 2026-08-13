@@ -81,6 +81,14 @@ export type NativeSyncCommandMap = {
     args: undefined;
     result: DesktopCompanionPairingOverviewPayload;
   };
+  [NATIVE_COMMANDS.pauseCompanionSync]: {
+    args: undefined;
+    result: DesktopCompanionPairingOverviewPayload;
+  };
+  [NATIVE_COMMANDS.resumeCompanionSync]: {
+    args: undefined;
+    result: DesktopCompanionPairingOverviewPayload;
+  };
   [NATIVE_COMMANDS.clearCompanionPairedDevices]: {
     args: undefined;
     result: DesktopCompanionPairingOverviewPayload;

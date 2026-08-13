@@ -57,3 +57,17 @@ it('copies only the fixed A-leave receipt', async () => {
     'multi-device-sync', 'windows-c', 'run-3', 'multi-device-sync-a-leave-receipt.json'));
   expect(stdout.write.mock.calls.map(([value]) => value).join('')).toBe(`${progress}${receipt}`);
 });
+
+it('copies only the fixed participation receipt', async () => {
+  const receipt = '[windows-dev-action] multi-device-sync-participation '
+    + 'identity=run-4 manifest=C:\\dev\\foliole-android-lab-preview\\.tmp\\artifacts\\'
+    + 'windows-dev-action\\run-4\\multi-device-sync-participation-receipt.json\n';
+  const result = await runWindowsMultiDeviceSyncControl({ action: 'multi-device-sync-participation',
+    buildPushSpec: () => ({ args: ['push'], env: {} }),
+    buildScpSpec: (_host, remote, local) => [remote, local], buildSshSpec: () => ['ssh'],
+    env: {}, executeGit: vi.fn(async () => ''), executeScp: vi.fn(async () => 'copied'),
+    executeSsh: vi.fn(async () => receipt), fsApi: { mkdirSync: vi.fn() },
+    host: 'user@host', repoRoot: '/repo', stdout: { write: vi.fn() } });
+  expect(result.manifestPath).toBe(path.join('/repo', '.tmp', 'artifacts',
+    'multi-device-sync', 'windows-c', 'run-4', 'multi-device-sync-participation-receipt.json'));
+});

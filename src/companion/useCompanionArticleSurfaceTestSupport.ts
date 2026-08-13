@@ -85,6 +85,9 @@ export function createWorkspaceSync(snapshot: WorkspaceSnapshot | null = createC
     saveEndpoint: vi.fn(),
     state,
     syncConflictCount: 0,
+    syncParticipation: {
+      lifecycle_active: true, participating: true, sync_enabled: true, sync_paused: false
+    },
     syncProgress: null,
     status: 'idle' as const
   };

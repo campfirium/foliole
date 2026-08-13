@@ -219,4 +219,6 @@ export interface DesktopCompanionPairingOverviewPayload {
   server_status: DesktopCompanionSyncServerStatusPayload;
   sync_group?: SyncGroupPayload | null;
   sync_enabled: boolean;
+  sync_paused: boolean;
+  participating: boolean;
 }

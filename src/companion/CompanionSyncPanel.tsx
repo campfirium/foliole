@@ -62,6 +62,7 @@ function resolveDesktopDiscoveries(props: CompanionSyncPanelProps) {
 }
 
 function formatSyncPanelError(message: string, t: Translate) {
+  if (message.includes('sync_participation_inactive')) return t('companion.sync.participation.inactive');
   const lowerMessage = message.toLowerCase();
   const isPairingError = lowerMessage.includes('pair') || lowerMessage.includes('pairing');
   if (message.includes('pair_request_not_found') || message.includes('Pairing request expired') || (isPairingError && message.includes('404'))) {

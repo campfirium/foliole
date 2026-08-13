@@ -19,6 +19,16 @@ final class FolioleCompanionSyncGroupMaintenanceScenario {
         return receipt.put("departurePersisted", true);
     }
 
+    static JSONObject toggleSync(Instrumentation instrumentation, WebView webView) throws Exception {
+        openSyncSettings(instrumentation, webView);
+        return click(instrumentation, webView, "companion-sync-toggle");
+    }
+
+    static JSONObject togglePause(Instrumentation instrumentation, WebView webView) throws Exception {
+        openSyncSettings(instrumentation, webView);
+        return click(instrumentation, webView, "companion-sync-pause-toggle");
+    }
+
     static JSONObject clearAppData(Instrumentation instrumentation, WebView webView) throws Exception {
         openSettings(instrumentation, webView);
         click(instrumentation, webView, "companion-settings-storage");
@@ -44,6 +54,11 @@ final class FolioleCompanionSyncGroupMaintenanceScenario {
 
     private static void openSettings(Instrumentation instrumentation, WebView webView) throws Exception {
         FolioleCompanionSettingsNavigation.open(instrumentation, webView);
+    }
+
+    private static void openSyncSettings(Instrumentation instrumentation, WebView webView) throws Exception {
+        openSettings(instrumentation, webView);
+        click(instrumentation, webView, "companion-settings-sync");
     }
 
     private static JSONObject click(Instrumentation instrumentation, WebView webView, String testId) throws Exception {

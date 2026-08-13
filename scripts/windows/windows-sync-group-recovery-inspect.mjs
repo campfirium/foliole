@@ -87,6 +87,8 @@ export function inspectSyncGroupRecoveryDatabase(databasePath, factIds = []) {
         LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash WHERE cbd.hash IS NULL`),
       nodeCount: count('SELECT COUNT(*) FROM nodes'),
       reviewLogCount: count('SELECT COUNT(*) FROM review_log'),
+      syncDeliveryReceiptCount: count('SELECT COUNT(*) FROM sync_delivery_receipts'),
+      syncPeerCursorCount: count('SELECT COUNT(*) FROM sync_peer_cursors'),
       userNodeCount: count(`SELECT COUNT(*) FROM nodes
         WHERE deleted_at IS NULL AND id NOT IN ('special-inbox', 'special-virtual-root')`)
     };

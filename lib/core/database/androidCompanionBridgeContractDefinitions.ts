@@ -1,4 +1,8 @@
 import {
+  ANDROID_COMPANION_SYNC_GROUP_PROVIDER_CONTRACT_DEFINITIONS,
+  ANDROID_COMPANION_SYNC_PARTICIPATION_CONTRACT_DEFINITIONS
+} from './androidCompanionSyncParticipationContractDefinitions.js';
+import {
   COMPANION_ATTACHMENT_RESOURCE_HOST_CONTRACT_DEFINITIONS
 } from './companionAttachmentResourceHostContractDefinitions.js';
 import {
@@ -25,11 +29,14 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
       'loadDiscoveryCandidates',
       'loadPairingState',
       'loadSyncGroupProviderState',
+      'loadSyncParticipationState',
       'rejectSyncGroupJoinRequest',
       'resolveAttachmentResource',
       'resolveSyncGroupDataRequest',
       'savePairingCredentials',
       'savePrimaryDeviceId',
+      'setSyncEnabled',
+      'setSyncPaused',
       'signCompanionSyncRequest',
       'stageAttachmentResourceBatch',
       'startSyncGroupProvider',
@@ -96,32 +103,8 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
         status: 'status'
       }
     },
-    syncGroupProvider: {
-      dataRequestEvent: 'syncGroupDataRequest',
-      serviceHintEvent: 'syncGroupServiceHint',
-      serviceHintKeys: {
-        endpointUrl: 'endpoint_url'
-      },
-      dataRequestKeys: {
-        operation: 'operation',
-        payload: 'payload',
-        requestId: 'request_id'
-      },
-      dataResponseKeys: {
-        error: 'error',
-        requestId: 'request_id',
-        result: 'result'
-      },
-      requestKeys: {
-        appVersion: 'app_version',
-        databasePath: 'database_path',
-        deviceId: 'device_id',
-        deviceName: 'device_name',
-        factsRevision: 'facts_revision',
-        group: 'sync_group',
-        pairRequestId: 'pair_request_id'
-      }
-    },
+    syncGroupProvider: ANDROID_COMPANION_SYNC_GROUP_PROVIDER_CONTRACT_DEFINITIONS,
+    syncParticipation: ANDROID_COMPANION_SYNC_PARTICIPATION_CONTRACT_DEFINITIONS,
     syncPackTransfer: {
       requestKeys: {
         expectedPeerId: 'expected_peer_id',

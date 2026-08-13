@@ -118,6 +118,8 @@ export function recordLocalCompanionSyncGroupDeparture(args: {
        WHERE group_id = ? AND device_id = ?`,
       [args.leftAt, args.leftAt, args.groupId, args.deviceId]
     );
+    await tx.run('DELETE FROM sync_delivery_receipts');
+    await tx.run('DELETE FROM sync_peer_cursors');
     await tx.run('DELETE FROM sync_group_local_state WHERE singleton_id = 1 AND local_device_id = ?',
       [args.deviceId]);
   }));

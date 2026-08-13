@@ -50,14 +50,18 @@ function createState(overrides: Partial<PairingState> = {}): PairingState {
         port: null,
         state: 'stopped'
       },
-      sync_enabled: true
+      participating: true,
+      sync_enabled: true,
+      sync_paused: false
     },
     pendingActionId: null,
+    pauseSync: vi.fn(),
     refresh: vi.fn(),
     rejectRequest: vi.fn(),
     removePairedDevice: vi.fn(),
     removeSyncGroupMember: vi.fn(),
     requestSyncGroupJoin: vi.fn(),
+    resumeSync: vi.fn(),
     ...overrides
   };
 }

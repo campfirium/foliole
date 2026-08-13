@@ -143,7 +143,8 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   manualComparisonDrafts: 'foliole-manual-comparison-drafts',
   devReviewStatusBarPersistenceEnabled: 'foliole-dev-review-status-bar-persistence-enabled',
   devReviewStatusBarOpen: 'foliole-dev-review-status-bar-open',
-  desktopDeviceSyncEnabled: 'foliole-desktop-device-sync-enabled'
+  desktopDeviceSyncEnabled: 'foliole-desktop-device-sync-enabled',
+  desktopDeviceSyncPaused: 'foliole-desktop-device-sync-paused'
 } as const;
 
 export type MarkdownSyntaxVisibility = 'hidden' | 'visible';

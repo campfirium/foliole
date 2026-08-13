@@ -3,7 +3,6 @@ package com.foliole.android;
 import android.content.Context;
 import android.app.Activity;
 
-import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PluginCall;
 
@@ -27,7 +26,8 @@ final class FolioleCompanionSyncGroupProvider {
 
     static synchronized JSObject start(
         Context context, Activity activity, PluginCall call, Object owner,
-        FolioleCompanionSyncGroupDataBridge.Dispatcher dispatcher
+        FolioleCompanionSyncGroupDataBridge.Dispatcher dispatcher,
+        boolean participating
     ) throws Exception {
         JSONObject next = new JSONObject()
             .put("app_version", value(context, call, "appVersion"))
@@ -40,20 +40,25 @@ final class FolioleCompanionSyncGroupProvider {
             next.put("runtime_instance_id", activeConfig.getString("runtime_instance_id"));
             boolean factsChanged = !next.optString("facts_revision").equals(activeConfig.optString("facts_revision"));
             activeOwner = owner;
-            FolioleCompanionSyncScreenAwake.attach(activity);
             activeContext = context.getApplicationContext(); activeConfig = next;
             requireDataBridge().replaceDispatcher(dispatcher);
-            if (server == null) startRuntime();
+            if (!participating) stopRuntime();
+            else if (server == null) {
+                FolioleCompanionSyncScreenAwake.attach(activity);
+                startRuntime();
+            }
             else if (factsChanged) restartAdvertisement();
             return state();
         }
         if (activeConfig != null) stopActiveProvider();
         next.put("runtime_instance_id", UUID.randomUUID().toString());
-        FolioleCompanionSyncScreenAwake.attach(activity);
         activeContext = context.getApplicationContext(); activeConfig = next; activeOwner = owner;
         dataBridge = new FolioleCompanionSyncGroupDataBridge(activeContext, dispatcher);
         restoreApprovedJoins();
-        startRuntime();
+        if (participating) {
+            FolioleCompanionSyncScreenAwake.attach(activity);
+            startRuntime();
+        }
         return state();
     }
 
@@ -62,10 +67,7 @@ final class FolioleCompanionSyncGroupProvider {
     }
 
     private static JSObject stopActiveProvider() {
-        FolioleCompanionSyncScreenAwake.clear();
-        if (advertisement != null) advertisement.stop();
-        if (server != null) server.stop();
-        advertisement = null; server = null;
+        stopRuntime();
         if (activeContext != null) {
             for (FolioleCompanionSyncGroupJoinRequest request : joinRequests.values()) {
                 if ("approved".equals(request.status)) FolioleCompanionSyncGroupPeerStore.remove(activeContext, request.deviceId);
@@ -81,15 +83,24 @@ final class FolioleCompanionSyncGroupProvider {
 
     static synchronized void pause(Object owner) {
         if (owner != activeOwner) return;
+        stopRuntime();
+    }
+
+    static synchronized JSObject reconcile(Object owner, Activity activity, boolean participating) throws Exception {
+        if (owner != activeOwner) return state();
+        if (!participating) stopRuntime();
+        else if (server == null && activeContext != null && activeConfig != null) {
+            FolioleCompanionSyncScreenAwake.attach(activity);
+            startRuntime();
+        }
+        return state();
+    }
+
+    private static void stopRuntime() {
         FolioleCompanionSyncScreenAwake.clear();
         if (advertisement != null) advertisement.stop();
         if (server != null) server.stop();
         advertisement = null; server = null;
-    }
-
-    static synchronized void resume(Object owner) throws Exception {
-        if (owner != activeOwner) return;
-        if (server == null && activeContext != null && activeConfig != null) startRuntime();
     }
 
     private static void startRuntime() throws Exception {
@@ -121,6 +132,7 @@ final class FolioleCompanionSyncGroupProvider {
     }
 
     static synchronized JSObject approve(Context context, PluginCall call) throws Exception {
+        if (server == null) throw new IllegalStateException("sync_participation_inactive");
         FolioleCompanionSyncGroupJoinRequest request = require(call.getString(key(context, "pairRequestId")));
         request.deviceSecret = FolioleCompanionSyncGroupPeerStore.createSecret(activeContext, request.deviceId);
         request.providerSecret = FolioleCompanionSyncGroupPeerStore.randomSecret();
@@ -194,21 +206,7 @@ final class FolioleCompanionSyncGroupProvider {
     }
 
     static synchronized JSObject state() {
-        JSArray pending = new JSArray();
-        if (server != null) {
-            for (FolioleCompanionSyncGroupJoinRequest request : server.requests.values()) {
-                if (request.status.equals("pending")) {
-                    try { pending.put(request.publicJson()); } catch (Exception ignored) {}
-                }
-            }
-        }
-        JSObject result = new JSObject();
-        result.put("pending_requests", pending);
-        result.put("advertisement_error_code", advertisement == null ? JSONObject.NULL : advertisement.errorCode());
-        result.put("advertisement_state", advertisement == null ? "stopped" : advertisement.state());
-        result.put("port", server == null ? JSONObject.NULL : server.port());
-        result.put("state", server == null ? "stopped" : "running");
-        return result;
+        return FolioleCompanionSyncGroupProviderState.create(server, advertisement);
     }
 
     static synchronized String runtimeInstanceId() {

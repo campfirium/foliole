@@ -166,7 +166,8 @@ const DESKTOP_RUNTIME_APP_SETTING_NAMES = [
   'manualComparisonDrafts'
 ] as const satisfies readonly AppSettingsStorageName[];
 const CROSS_HOST_SYNC_APP_SETTING_NAMES = [
-  'desktopDeviceSyncEnabled'
+  'desktopDeviceSyncEnabled',
+  'desktopDeviceSyncPaused'
 ] as const satisfies readonly AppSettingsStorageName[];
 const UI_SESSION_ONLY_APP_SETTING_NAMES = [] as const satisfies readonly AppSettingsStorageName[];
 

@@ -33,8 +33,12 @@ const commandMocks = vi.hoisted(() => ({
   requestDesktopSyncGroupJoin: vi.fn().mockResolvedValue(undefined),
   runWithDatabaseConnectionOwner: vi.fn(async (execute: () => unknown) => execute()),
   setDesktopCompanionSyncEnabled: vi.fn(),
+  setDesktopCompanionSyncPaused: vi.fn(),
   setJoinCompletionExecutor: vi.fn(),
-  ensureLanWorkspaceSyncServer: vi.fn().mockResolvedValue(undefined)
+  ensureLanWorkspaceSyncServer: vi.fn().mockResolvedValue(undefined),
+  enabled: true,
+  paused: false,
+  stopLanWorkspaceSyncServer: vi.fn().mockResolvedValue(undefined)
 }));
 
 vi.mock('electron', () => ({
@@ -65,7 +69,13 @@ vi.mock('../sync/companionPairingStore.js', () => ({
 }));
 vi.mock('../sync/desktopCompanionSyncPreference.js', () => ({
   isDesktopCompanionSyncEnabled: vi.fn(() => true),
-  setDesktopCompanionSyncEnabled: commandMocks.setDesktopCompanionSyncEnabled
+  isDesktopCompanionSyncParticipating: vi.fn(() => commandMocks.enabled && !commandMocks.paused),
+  loadDesktopCompanionSyncParticipation: vi.fn(() => ({
+    lifecycle_active: true, participating: commandMocks.enabled && !commandMocks.paused,
+    sync_enabled: commandMocks.enabled, sync_paused: commandMocks.paused
+  })),
+  setDesktopCompanionSyncEnabled: commandMocks.setDesktopCompanionSyncEnabled,
+  setDesktopCompanionSyncPaused: commandMocks.setDesktopCompanionSyncPaused
 }));
 vi.mock('../sync/desktopSyncGroupJoin.js', () => ({
   completeDesktopSyncGroupJoin: commandMocks.completeDesktopSyncGroupJoin,
@@ -94,7 +104,7 @@ vi.mock('../sync/lanWorkspaceSyncServer.js', () => ({
     port: null,
     state: 'stopped'
   })),
-  stopLanWorkspaceSyncServer: vi.fn()
+  stopLanWorkspaceSyncServer: commandMocks.stopLanWorkspaceSyncServer
 }));
 vi.mock('../sync/primaryDeviceState.js', () => ({
   loadDesktopPrimaryDeviceStatePayload: commandMocks.loadDesktopPrimaryDeviceStatePayload
@@ -102,6 +112,33 @@ vi.mock('../sync/primaryDeviceState.js', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  commandMocks.enabled = true;
+  commandMocks.paused = false;
+  commandMocks.setDesktopCompanionSyncEnabled.mockImplementation((enabled: boolean) => {
+    commandMocks.enabled = enabled;
+  });
+  commandMocks.setDesktopCompanionSyncPaused.mockImplementation((paused: boolean) => {
+    commandMocks.paused = paused;
+  });
+});
+
+it('keeps desktop Sync and Pause as independent commands', async () => {
+  await expect(handleCompanionPairingCommand('pause_companion_sync', {})).resolves.toMatchObject({
+    participating: false, sync_enabled: true, sync_paused: true
+  });
+  await expect(handleCompanionPairingCommand('disable_companion_sync', {})).resolves.toMatchObject({
+    participating: false, sync_enabled: false, sync_paused: true
+  });
+  await expect(handleCompanionPairingCommand('resume_companion_sync', {})).resolves.toMatchObject({
+    participating: false, sync_enabled: false, sync_paused: false
+  });
+  expect(commandMocks.ensureLanWorkspaceSyncServer).not.toHaveBeenCalled();
+});
+
+it('rejects discovery while local participation is inactive', async () => {
+  commandMocks.enabled = false;
+  await expect(handleCompanionPairingCommand('discover_sync_groups', {}))
+    .rejects.toThrow('sync_participation_inactive');
 });
 
 it('commits the desktop device as primary through the coordinated database owner', async () => {
@@ -138,6 +175,7 @@ it('finishes an approved join inside the database owner and enables automatic co
   await execute();
   expect(commandMocks.completeDesktopSyncGroupJoin).toHaveBeenCalledOnce();
   expect(commandMocks.setDesktopCompanionSyncEnabled).toHaveBeenCalledWith(true);
+  expect(commandMocks.setDesktopCompanionSyncPaused).toHaveBeenCalledWith(false);
   expect(commandMocks.ensureLanWorkspaceSyncServer).toHaveBeenCalledOnce();
   expect(commandMocks.runWithDatabaseConnectionOwner).toHaveBeenCalledTimes(2);
 });

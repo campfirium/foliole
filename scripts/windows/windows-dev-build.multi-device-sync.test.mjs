@@ -74,3 +74,17 @@ it('runs A-leave against the prepared Windows candidate without rebuilding', asy
     multiDeviceSyncALeave: { manifestPath: 'a-leave.json' } });
   fs.rmSync(root, { force: true, recursive: true });
 });
+
+it('runs participation control against the prepared Windows candidate without rebuilding', async () => {
+  const { paths, root } = fixture();
+  fs.writeFileSync(paths.systemNode, 'node');
+  const deviceAction = vi.fn(async () => ({
+    multiDeviceSyncParticipation: { manifestPath: 'participation.json' }, output: 'complete\n'
+  }));
+  const result = await runWindowsDevBuild({ action: 'multi-device-sync-participation', deviceAction,
+    execute: vi.fn(async () => ({ code: 0, lines: [], output: '[]\n', stderr: '', stdout: '[]\n' })),
+    paths, platform: 'win32', prepareHost: vi.fn() });
+  expect(result.summary).toMatchObject({ action: 'multi-device-sync-participation',
+    multiDeviceSyncParticipation: { manifestPath: 'participation.json' } });
+  fs.rmSync(root, { force: true, recursive: true });
+});

@@ -2,6 +2,12 @@ import { useCallback, useMemo, useState } from 'react';
 
 import type { DesktopCompanionPairingOverviewPayload } from '../../../lib/platform/nativeCompanionSyncContract';
 
+import {
+  disableDesktopCompanionSync,
+  enableDesktopCompanionSync,
+  pauseDesktopCompanionSync,
+  resumeDesktopCompanionSync
+} from './desktop/companionSyncParticipationRuntime';
 import { useDesktopSyncGroupJoinActions } from './desktop/useSyncGroupJoinActions';
 import { useSyncGroupMembershipActions } from './desktop/useSyncGroupMembershipActions';
 import {
@@ -11,8 +17,6 @@ import {
   useCompanionPairingRefresh
 } from './desktopCompanionPairingOverviewHooks';
 import {
-  disableDesktopCompanionSync,
-  enableDesktopCompanionSync,
   createDesktopSyncGroup,
   approveDesktopCompanionPairRequest,
   clearDesktopCompanionPairedDevices,
@@ -127,6 +131,29 @@ function useToggleCompanionSyncAction(
   }, [setError, setIsLoading, setOverview, setPendingActionId]);
 }
 
+function useToggleCompanionPauseAction(
+  setOverview: (value: DesktopCompanionPairingOverviewPayload) => void,
+  setError: (value: string | null) => void,
+  setIsLoading: (value: boolean) => void,
+  setPendingActionId: (value: string | null) => void
+) {
+  return useCallback(async (paused: boolean) => {
+    setPendingActionId(paused ? 'pause-sync' : 'resume-sync');
+    try {
+      const nextOverview = paused ? await pauseDesktopCompanionSync() : await resumeDesktopCompanionSync();
+      setOverview(nextOverview);
+      setError(null);
+      return nextOverview;
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : 'Failed to update the sync pause state.');
+      throw actionError;
+    } finally {
+      setPendingActionId(null);
+      setIsLoading(false);
+    }
+  }, [setError, setIsLoading, setOverview, setPendingActionId]);
+}
+
 function useCreateSyncGroupAction(
   setOverview: (value: DesktopCompanionPairingOverviewPayload) => void,
   setError: (value: string | null) => void,
@@ -158,6 +185,7 @@ function usePairingMutationActions(state: ReturnType<typeof useDesktopCompanionP
     membership: useSyncGroupMembershipActions(state),
     removePairedDevice: useRemovePairedDeviceAction(...args),
     runAction: useCompanionPairingAction(...args),
+    togglePause: useToggleCompanionPauseAction(...args),
     toggleSync: useToggleCompanionSyncAction(...args)
   };
 }
@@ -185,11 +213,13 @@ export function useDesktopCompanionPairingRequests(pollMs = 2_000) {
       isLoading: state.isLoading,
       leaveSyncGroup: actions.membership.leave,
       overview: state.overview,
+      pauseSync: () => actions.togglePause(true),
       pendingActionId: state.pendingActionId,
       removeSyncGroupMember: actions.membership.remove,
       refresh,
       requestSyncGroupJoin: join.requestJoin,
-      rejectRequest: (pairRequestId: string) => actions.runAction(pairRequestId, 'reject')
+      rejectRequest: (pairRequestId: string) => actions.runAction(pairRequestId, 'reject'),
+      resumeSync: () => actions.togglePause(false)
     }),
     [actions, join.completeJoin, join.discoverGroups, join.requestJoin, refresh, state.error, state.isLoading,
       state.overview, state.pendingActionId]

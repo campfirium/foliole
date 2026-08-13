@@ -1,6 +1,6 @@
 export const WINDOWS_SYNC_GROUP_ACTIONS = [
   'multi-device-sync-a-leave', 'multi-device-sync-a-rejoin', 'multi-device-sync-c',
-  'multi-device-sync-candidate'
+  'multi-device-sync-candidate', 'multi-device-sync-participation'
 ];
 
 export function isWindowsSyncGroupAction(action) {
@@ -13,7 +13,8 @@ export function preparesWindowsSyncGroupCandidate(action) {
 
 export function attachSyncGroupResult(summary, result) {
   for (const key of [
-    'multiDeviceSyncALeave', 'multiDeviceSyncARejoin', 'multiDeviceSyncC', 'multiDeviceSyncCandidate'
+    'multiDeviceSyncALeave', 'multiDeviceSyncARejoin', 'multiDeviceSyncC', 'multiDeviceSyncCandidate',
+    'multiDeviceSyncParticipation'
   ]) {
     if (result?.[key]) summary[key] = result[key];
   }
@@ -24,7 +25,8 @@ export function printSyncGroupResult(stream, summary) {
     ['multiDeviceSyncALeave', 'multi-device-sync-a-leave', 'manifestPath'],
     ['multiDeviceSyncARejoin', 'multi-device-sync-a-rejoin', 'manifestPath'],
     ['multiDeviceSyncC', 'multi-device-sync-c', 'manifestPath'],
-    ['multiDeviceSyncCandidate', 'multi-device-sync-candidate', 'manifestPath']
+    ['multiDeviceSyncCandidate', 'multi-device-sync-candidate', 'manifestPath'],
+    ['multiDeviceSyncParticipation', 'multi-device-sync-participation', 'manifestPath']
   ];
   for (const [key, action, field] of values) {
     if (summary[key]) stream(`[windows-dev-action] ${action} identity=${summary.runId} manifest=${summary[key][field]}`);

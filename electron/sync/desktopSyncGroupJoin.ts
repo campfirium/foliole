@@ -16,6 +16,7 @@ import { resolveDesktopDeviceName } from './companionLanPayloads.js';
 import { refreshCompanionMdnsAdvertisement } from './companionMdnsAdvertisement.js';
 import { loadPairedSyncGroupPeers, savePairedSyncGroupPeer } from './companionPairingStore.js';
 import { registerPairedCompanionDeviceWithSecret } from './companionPairingStore.js';
+import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import { createDesktopSyncGroupSignedHeaders, requestJson } from './desktopSyncGroupHttp.js';
 import { refreshDesktopSyncGroupPendingJoinFromDiscovery } from './desktopSyncGroupJoinEndpoint.js';
 import { loadDesktopSyncGroupJoinState, saveDesktopSyncGroupPendingJoin } from './desktopSyncGroupJoinState.js';
@@ -115,6 +116,7 @@ async function completeDesktopSyncGroupJoinOnce() {
 }
 
 export async function continueDesktopSyncGroupSync(peer?: ReturnType<typeof savePairedSyncGroupPeer>) {
+  if (!isDesktopCompanionSyncParticipating()) throw new Error('sync_participation_inactive');
   const group = loadDesktopSyncGroup();
   if (!group) return null;
   const target = peer ?? loadPairedSyncGroupPeers(group.group_id)[0];

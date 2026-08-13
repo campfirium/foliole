@@ -43,12 +43,18 @@ function bundle(output, key) {
 export async function runMacosA5SyncGroupMaintenance({
   action, buildIdentity, env, evidenceRoot, execute, paths, serial
 }) {
-  if (!['leave-sync-group', 'clear-app-data', 'create-journey-fact'].includes(action)) {
+  if (!['leave-sync-group', 'clear-app-data', 'control-participation',
+    'create-journey-fact', 'pause-and-leave', 'pause-participation',
+    'resume-participation'].includes(action)) {
     throw new Error('Unsupported maintenance action');
   }
   const methods = { 'clear-app-data': 'clearsAppDataThroughProduct',
+    'control-participation': 'controlsSyncParticipationThroughProduct',
     'create-journey-fact': 'createsJourneyFactThroughProduct',
-    'leave-sync-group': 'leavesSyncGroupThroughProduct' };
+    'leave-sync-group': 'leavesSyncGroupThroughProduct',
+    'pause-and-leave': 'pausesAndLeavesSyncGroupThroughProduct',
+    'pause-participation': 'pausesSyncParticipationThroughProduct',
+    'resume-participation': 'resumesSyncParticipationThroughProduct' };
   const method = methods[action];
   const testApk = path.join(paths.repoRoot, TEST_APK);
   fs.mkdirSync(evidenceRoot, { recursive: true });
@@ -60,7 +66,7 @@ export async function runMacosA5SyncGroupMaintenance({
     output.push((await checked(execute, paths.adb, ['-s', serial, 'install', '-r', paths.apk], options, 'main install')).output);
     output.push((await checked(execute, paths.adb, ['-s', serial, 'install', '-r', '-t', testApk], options, 'test install')).output);
     testInstalled = true;
-    if (action === 'leave-sync-group') {
+    if (action === 'leave-sync-group' || action === 'pause-and-leave') {
       output.push((await checked(execute, paths.adb,
         ['-s', serial, 'reverse', `tcp:${PAIR_SYNC_PORT}`, `tcp:${PAIR_SYNC_PORT}`],
         options, 'product transport')).output);
@@ -73,10 +79,12 @@ export async function runMacosA5SyncGroupMaintenance({
     output.push(instrumentation.output);
     if (!/^INSTRUMENTATION_CODE: -1$/mu.test(instrumentation.stdout)) throw new Error('Product instrumentation did not finish');
     const receipt = bundle(instrumentation.stdout, 'folioleActionReceipt');
-    const expected = action === 'leave-sync-group' ? 'departurePersisted'
-      : action === 'create-journey-fact' ? 'factPersisted' : 'appDataCleared';
+    const expected = action === 'leave-sync-group' || action === 'pause-and-leave'
+      ? 'departurePersisted' : action === 'create-journey-fact' ? 'factPersisted'
+        : action === 'control-participation' || action === 'resume-participation' ? 'resumed'
+          : action === 'pause-participation' ? 'paused' : 'appDataCleared';
     if (receipt[expected] !== true) throw new Error(`Product receipt did not prove ${expected}`);
-    if (action === 'create-journey-fact') {
+    if (['control-participation', 'create-journey-fact', 'resume-participation'].includes(action)) {
       output.push((await checked(execute, paths.adb, [
         '-s', serial, 'shell', 'am', 'start', '-n', `${APP_ID}/.MainActivity`
       ], options, 'provider resume')).output);

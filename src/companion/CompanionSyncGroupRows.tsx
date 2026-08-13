@@ -6,7 +6,9 @@ import { leaveCompanionSyncGroup } from '../shared/platform/companion/sync/syncG
 import {
   approveCompanionSyncGroupJoinRequest,
   loadCompanionSyncGroupProviderState,
-  rejectCompanionSyncGroupJoinRequest
+  rejectCompanionSyncGroupJoinRequest,
+  setCompanionSyncEnabled,
+  setCompanionSyncPaused
 } from '../shared/platform/companion/sync/syncGroupProvider';
 import type { CompanionSyncGroupProviderState } from '../shared/platform/companionWorkspaceSyncPluginTypes';
 
@@ -62,29 +64,74 @@ function LeaveSyncGroup() {
   );
 }
 
+function SyncParticipationRows(props: {
+  disabled: boolean;
+  syncEnabled: boolean;
+  onRefresh(): void;
+}) {
+  const t = useTranslation();
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl bg-companion-content px-4 py-3">
+      <span className="text-sm font-semibold text-foreground">{t('companion.sync.participation.sync')}</span>
+      <button className="rounded-xl border border-companion-divider px-3 py-2 text-sm font-semibold"
+        data-testid="companion-sync-toggle"
+        disabled={props.disabled}
+        onClick={() => void setCompanionSyncEnabled(!props.syncEnabled).then(props.onRefresh)} type="button">
+        {t(props.syncEnabled ? 'companion.sync.participation.turnOff' : 'companion.sync.participation.turnOn')}
+      </button>
+    </div>
+  );
+}
+
+function SyncGroupDevices(props: {
+  disabled: boolean;
+  group: SyncGroupPayload;
+  onRefresh(): void;
+  syncPaused: boolean;
+}) {
+  const t = useTranslation();
+  return (
+    <div className="rounded-xl bg-companion-content px-4 py-3">
+      <p className="text-sm text-companion-text-secondary">{t('companion.sync.devices')}</p>
+      <ul className="mt-2 space-y-2">
+        {props.group.members.map((member) => (
+          <li className="flex items-center justify-between gap-3 text-sm" key={member.device_id}>
+            <span className="font-semibold text-foreground">{member.device_name}</span>
+            {member.device_id === props.group.local_device_id ? (
+              <button className="rounded-xl border border-companion-divider px-3 py-2 font-semibold"
+                data-testid="companion-sync-pause-toggle"
+                disabled={props.disabled}
+                onClick={() => void setCompanionSyncPaused(!props.syncPaused).then(props.onRefresh)} type="button">
+                {t(props.syncPaused ? 'companion.sync.participation.resume' : 'companion.sync.participation.pause')}
+              </button>
+            ) : (
+              <span className="text-companion-text-secondary">
+                {t(member.state === 'active' ? 'companion.sync.member.active' : 'companion.sync.member.settingUp')}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function CompanionSyncGroupRows(props: { group: SyncGroupPayload }) {
   const t = useTranslation();
   const provider = useJoinRequests();
   const requests = provider.state?.pending_requests ?? [];
+  const syncEnabled = provider.state?.sync_enabled ?? false;
+  const syncPaused = provider.state?.sync_paused ?? false;
   return (
     <div className="space-y-3">
       <div className="rounded-xl bg-companion-content px-4 py-3">
         <p className="text-sm text-companion-text-secondary">{t('companion.sync.group')}</p>
         <p className="mt-1 text-sm font-semibold text-foreground">{props.group.display_name}</p>
       </div>
-      <div className="rounded-xl bg-companion-content px-4 py-3">
-        <p className="text-sm text-companion-text-secondary">{t('companion.sync.devices')}</p>
-        <ul className="mt-2 space-y-2">
-          {props.group.members.map((member) => (
-            <li className="flex items-center justify-between gap-3 text-sm" key={member.device_id}>
-              <span className="font-semibold text-foreground">{member.device_name}</span>
-              <span className="text-companion-text-secondary">
-                {t(member.state === 'active' ? 'companion.sync.member.active' : 'companion.sync.member.settingUp')}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
+      <SyncParticipationRows disabled={!provider.state} onRefresh={provider.refresh}
+        syncEnabled={syncEnabled} />
+      <SyncGroupDevices disabled={!provider.state} group={props.group} onRefresh={provider.refresh}
+        syncPaused={syncPaused} />
       {requests.map((request) => (
         <div className="rounded-xl bg-companion-content px-4 py-3" key={request.pair_request_id}>
           <p className="text-sm font-semibold text-foreground">{request.device_name}</p>

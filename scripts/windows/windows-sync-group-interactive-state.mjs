@@ -5,7 +5,8 @@ import {
 } from './windows-client-native-interactive-state.mjs';
 
 export const WINDOWS_SYNC_GROUP_INTERACTIVE_ACTIONS = new Set([
-  'multi-device-sync-a-leave', 'multi-device-sync-a-rejoin', 'multi-device-sync-c'
+  'multi-device-sync-a-leave', 'multi-device-sync-a-rejoin', 'multi-device-sync-c',
+  'multi-device-sync-participation'
 ]);
 export const WINDOWS_SYNC_GROUP_INTERACTIVE_WORKER_ENV = 'FOLIOLE_SYNC_GROUP_INTERACTIVE_WORKER';
 
@@ -29,6 +30,11 @@ export function validateSyncGroupInteractiveRequest(request, repoRoot) {
 }
 
 export function validateSyncGroupInteractiveProgress(progress, action) {
+  if (action === 'multi-device-sync-participation'
+      && progress?.milestone === 'windows-paused'
+      && progress.factId === 'participation-control') {
+    return { factId: progress.factId, milestone: progress.milestone };
+  }
   if (action !== 'multi-device-sync-a-leave'
       || progress?.milestone !== 'c-fact-created'
       || !/^multi-device-sync-c-\d{17}$/u.test(progress.factId || '')) {

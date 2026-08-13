@@ -13,11 +13,14 @@
       "loadDiscoveryCandidates",
       "loadPairingState",
       "loadSyncGroupProviderState",
+      "loadSyncParticipationState",
       "rejectSyncGroupJoinRequest",
       "resolveAttachmentResource",
       "resolveSyncGroupDataRequest",
       "savePairingCredentials",
       "savePrimaryDeviceId",
+      "setSyncEnabled",
+      "setSyncPaused",
       "signCompanionSyncRequest",
       "stageAttachmentResourceBatch",
       "startSyncGroupProvider",
@@ -272,6 +275,25 @@
         "factsRevision": "facts_revision",
         "group": "sync_group",
         "pairRequestId": "pair_request_id"
+      }
+    },
+    "syncParticipation": {
+      "defaults": {
+        "syncEnabled": true,
+        "syncPaused": false
+      },
+      "requestKeys": {
+        "syncEnabled": "sync_enabled",
+        "syncPaused": "sync_paused"
+      },
+      "stateKeys": {
+        "lifecycleActive": "lifecycle_active",
+        "participating": "participating",
+        "syncEnabled": "sync_enabled",
+        "syncPaused": "sync_paused"
+      },
+      "storage": {
+        "preferencesName": "foliole_companion_sync_participation"
       }
     },
     "syncPackTransfer": {

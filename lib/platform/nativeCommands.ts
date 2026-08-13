@@ -152,6 +152,8 @@ export const NATIVE_COMMANDS = {
   completeSyncGroupJoin: 'complete_sync_group_join',
   enableCompanionSync: 'enable_companion_sync',
   disableCompanionSync: 'disable_companion_sync',
+  pauseCompanionSync: 'pause_companion_sync',
+  resumeCompanionSync: 'resume_companion_sync',
   clearCompanionPairedDevices: 'clear_companion_paired_devices',
   removeCompanionPairedDevice: 'remove_companion_paired_device',
   setDesktopAsPrimaryDevice: 'set_desktop_as_primary_device',

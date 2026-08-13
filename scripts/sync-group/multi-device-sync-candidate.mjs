@@ -8,6 +8,7 @@ import { scenarioCatalog, scenarioCatalogDigest } from './multi-device-sync-scen
 import { stageCatalog, stageCatalogDigest } from './multi-device-sync-stage-catalog.mjs';
 
 const CONTROLLER_FILES = [
+  'scripts/android/macos-a5-sync-group-maintenance-action.mjs',
   'scripts/sync-group/multi-device-sync-action-executor.mjs',
   'scripts/sync-group/multi-device-sync-a-leave.mjs',
   'scripts/sync-group/multi-device-sync-a-leave-proof.mjs',
@@ -18,13 +19,16 @@ const CONTROLLER_FILES = [
   'scripts/sync-group/multi-device-sync-formal.mjs',
   'scripts/sync-group/multi-device-sync-fact-preparation.mjs',
   'scripts/sync-group/multi-device-sync-host-readiness.mjs',
+  'scripts/sync-group/multi-device-sync-participation.mjs',
   'scripts/sync-group/multi-device-sync-stage-actions.mjs',
   'scripts/sync-group/multi-device-sync-stage-runtime.mjs',
   'scripts/sync-group/multi-device-sync-scenario-catalog.mjs',
   'scripts/sync-group/multi-device-sync-stage-catalog.mjs',
   'scripts/sync-group/multi-device-sync-windows-provider.mjs',
   'scripts/sync-group/multi-device-sync-workspace.mjs',
-  'scripts/sync-group/sync-progress-watchdog.mjs'
+  'scripts/sync-group/sync-progress-watchdog.mjs',
+  'scripts/windows/windows-multi-device-sync-participation-action.mjs',
+  'scripts/windows/windows-sync-group-recovery-inspect.mjs'
 ];
 
 function git(repoRoot, args) {

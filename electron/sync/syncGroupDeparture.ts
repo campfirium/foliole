@@ -56,7 +56,9 @@ export async function leaveDesktopSyncGroup() {
   const deviceId = loadOrCreateDesktopDeviceId();
   const departure = createDeparture(group.group_id, deviceId, deviceId, 'leave');
   const peers = loadPairedSyncGroupPeers(group.group_id);
-  if (group.members.some((member) => member.device_id !== deviceId) && peers.length === 0) {
+  const hasOtherActiveMember = group.members.some((member) =>
+    member.device_id !== deviceId && member.state === 'active');
+  if (hasOtherActiveMember && peers.length === 0) {
     throw new Error('sync_group_departure_peer_unavailable');
   }
   const delivered = await broadcastDeparture(departure, peers);

@@ -1,5 +1,6 @@
 package com.foliole.android;
 
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -12,13 +13,14 @@ import java.util.concurrent.Executors;
 @CapacitorPlugin(name = "FolioleCompanionSync")
 public class FolioleCompanionSyncPlugin extends Plugin {
     private final ExecutorService fileExecutor = Executors.newSingleThreadExecutor();
+    private boolean lifecycleActive = true;
     private FolioleCompanionNsdMonitor serviceMonitor;
 
     @Override public void load() {
         super.load();
         try {
             serviceMonitor = new FolioleCompanionNsdMonitor(getContext(), this::dispatchServiceHint);
-            serviceMonitor.start();
+            reconcileServiceMonitor();
         } catch (Exception error) {
             android.util.Log.w("FolioleSyncDiscovery", "Monitor unavailable", error);
         }
@@ -29,33 +31,52 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     }
 
     @PluginMethod public void loadDiscoveryCandidates(PluginCall call) {
-        FolioleCompanionNetworkPluginActions.loadDiscoveryCandidates(getContext(), call);
+        try {
+            if (isParticipating()) FolioleCompanionNetworkPluginActions.loadDiscoveryCandidates(getContext(), call);
+            else call.resolve(emptyDiscoveryCandidates());
+        } catch (Exception error) {
+            call.reject(FolioleCompanionPluginErrors.withCause("Failed to load Sync Group candidates.", error), error);
+        }
     }
 
     @PluginMethod public void startSyncGroupProvider(PluginCall call) {
         async(call, "Failed to start Sync Group provider.", () ->
             FolioleCompanionSyncGroupProvider.start(
-                getContext(), getActivity(), call, this, this::dispatchDataRequest
+                getContext(), getActivity(), call, this, this::dispatchDataRequest, isParticipating()
             ));
     }
 
     @PluginMethod public void stopSyncGroupProvider(PluginCall call) {
         async(call, "Failed to stop Sync Group provider.", () ->
-            FolioleCompanionSyncGroupProvider.stop(this));
+            withParticipation(FolioleCompanionSyncGroupProvider.stop(this)));
     }
 
     @PluginMethod public void loadSyncGroupProviderState(PluginCall call) {
-        call.resolve(FolioleCompanionSyncGroupProvider.state());
+        try { call.resolve(withParticipation(FolioleCompanionSyncGroupProvider.state())); }
+        catch (Exception error) { call.reject("Failed to load Sync participation state.", error); }
+    }
+
+    @PluginMethod public void loadSyncParticipationState(PluginCall call) {
+        try { call.resolve(FolioleCompanionSyncParticipationStore.state(getContext(), lifecycleActive)); }
+        catch (Exception error) { call.reject("Failed to load Sync participation state.", error); }
+    }
+
+    @PluginMethod public void setSyncEnabled(PluginCall call) {
+        setParticipation(call, "syncEnabled");
+    }
+
+    @PluginMethod public void setSyncPaused(PluginCall call) {
+        setParticipation(call, "syncPaused");
     }
 
     @PluginMethod public void approveSyncGroupJoinRequest(PluginCall call) {
         async(call, "Failed to approve Device.", () ->
-            FolioleCompanionSyncGroupProvider.approve(getContext(), call));
+            withParticipation(FolioleCompanionSyncGroupProvider.approve(getContext(), call)));
     }
 
     @PluginMethod public void rejectSyncGroupJoinRequest(PluginCall call) {
         async(call, "Failed to reject Device.", () ->
-            FolioleCompanionSyncGroupProvider.reject(getContext(), call));
+            withParticipation(FolioleCompanionSyncGroupProvider.reject(getContext(), call)));
     }
 
     @PluginMethod public void resolveSyncGroupDataRequest(PluginCall call) {
@@ -149,7 +170,49 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         }
     }
 
+    private void setParticipation(PluginCall call, String name) {
+        async(call, "Failed to update Sync participation.", () -> {
+            String key = FolioleCompanionSyncParticipationContractDefinitions.requestKey(getContext(), name);
+            if (!call.getData().has(key)) throw new IllegalArgumentException(key + " is required.");
+            boolean value = call.getBoolean(key, false);
+            if ("syncEnabled".equals(name)) {
+                FolioleCompanionSyncParticipationStore.setSyncEnabled(getContext(), value);
+            } else {
+                FolioleCompanionSyncParticipationStore.setSyncPaused(getContext(), value);
+            }
+            reconcileServiceMonitor();
+            FolioleCompanionSyncGroupProvider.reconcile(this, getActivity(), isParticipating());
+            return FolioleCompanionSyncParticipationStore.state(getContext(), lifecycleActive);
+        });
+    }
+
+    private boolean isParticipating() throws Exception {
+        return FolioleCompanionSyncParticipationStore.isParticipating(getContext(), lifecycleActive);
+    }
+
+    private JSObject emptyDiscoveryCandidates() {
+        JSObject result = new JSObject();
+        result.put("candidates", new JSArray());
+        return result;
+    }
+
+    private void reconcileServiceMonitor() throws Exception {
+        if (serviceMonitor == null) return;
+        if (isParticipating()) serviceMonitor.start();
+        else serviceMonitor.stop();
+    }
+
+    private JSObject withParticipation(JSObject result) throws Exception {
+        JSObject participation = FolioleCompanionSyncParticipationStore.state(getContext(), lifecycleActive);
+        for (java.util.Iterator<String> keys = participation.keys(); keys.hasNext();) {
+            String key = keys.next();
+            result.put(key, participation.get(key));
+        }
+        return result;
+    }
+
     @Override protected void handleOnDestroy() {
+        lifecycleActive = false;
         if (serviceMonitor != null) serviceMonitor.stop();
         FolioleCompanionSyncGroupProvider.pause(this);
         super.handleOnDestroy();
@@ -157,6 +220,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     }
 
     @Override protected void handleOnPause() {
+        lifecycleActive = false;
         if (serviceMonitor != null) serviceMonitor.stop();
         FolioleCompanionSyncGroupProvider.pause(this);
         super.handleOnPause();
@@ -164,9 +228,11 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
     @Override protected void handleOnResume() {
         super.handleOnResume();
-        if (serviceMonitor != null) serviceMonitor.start();
+        lifecycleActive = true;
+        try { reconcileServiceMonitor(); }
+        catch (Exception error) { android.util.Log.w("FolioleSyncDiscovery", "Resume failed", error); }
         fileExecutor.execute(() -> {
-            try { FolioleCompanionSyncGroupProvider.resume(this); }
+            try { FolioleCompanionSyncGroupProvider.reconcile(this, getActivity(), isParticipating()); }
             catch (Exception error) { android.util.Log.w("FolioleSyncProvider", "Resume failed", error); }
         });
     }

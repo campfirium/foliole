@@ -12,6 +12,10 @@ const scenarios = [{
 }, {
   name: 'founder-leave-continuity',
   stages: ['candidate-preparation', 'a-b-group-sync', 'b-admit-empty-c', 'a-rejoin', 'a-leave']
+}, {
+  name: 'participation-control-continuity',
+  stages: ['candidate-preparation', 'a-b-group-sync', 'b-admit-empty-c', 'a-rejoin',
+    'participation-control']
 }];
 
 function assertAcyclic(stages) {

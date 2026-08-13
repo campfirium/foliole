@@ -118,7 +118,9 @@ function normalizePairingOverview(value: unknown): DesktopCompanionPairingOvervi
       primary_device_state: normalizePrimaryDeviceState(null),
       server_status: normalizeServerStatus(null),
       sync_group: null,
-      sync_enabled: false
+      sync_enabled: false,
+      sync_paused: false,
+      participating: false
     };
   }
   const raw = value as Record<string, unknown>;
@@ -138,11 +140,13 @@ function normalizePairingOverview(value: unknown): DesktopCompanionPairingOvervi
     primary_device_state: normalizePrimaryDeviceState(raw.primary_device_state),
     server_status: normalizeServerStatus(raw.server_status),
     sync_group: normalizeSyncGroup(raw.sync_group),
-    sync_enabled: raw.sync_enabled === true
+    sync_enabled: raw.sync_enabled === true,
+    sync_paused: raw.sync_paused === true,
+    participating: raw.participating === true
   };
 }
 
-async function invokeDesktopCompanionPairingCommand<
+export async function invokeDesktopCompanionPairingCommand<
   T extends
     | typeof NATIVE_COMMANDS.loadCompanionPairingOverview
     | typeof NATIVE_COMMANDS.createSyncGroup
@@ -153,6 +157,8 @@ async function invokeDesktopCompanionPairingCommand<
     | typeof NATIVE_COMMANDS.completeSyncGroupJoin
     | typeof NATIVE_COMMANDS.enableCompanionSync
     | typeof NATIVE_COMMANDS.disableCompanionSync
+    | typeof NATIVE_COMMANDS.pauseCompanionSync
+    | typeof NATIVE_COMMANDS.resumeCompanionSync
     | typeof NATIVE_COMMANDS.clearCompanionPairedDevices
     | typeof NATIVE_COMMANDS.removeCompanionPairedDevice
     | typeof NATIVE_COMMANDS.setDesktopAsPrimaryDevice
@@ -209,14 +215,6 @@ export function removeDesktopCompanionPairedDevice(deviceId: string) {
 
 export function setDesktopAsPrimaryDevice() {
   return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.setDesktopAsPrimaryDevice);
-}
-
-export function enableDesktopCompanionSync() {
-  return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.enableCompanionSync);
-}
-
-export function disableDesktopCompanionSync() {
-  return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.disableCompanionSync);
 }
 
 export function approveDesktopCompanionPairRequest(pairRequestId: string) {
