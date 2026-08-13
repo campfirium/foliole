@@ -76,16 +76,20 @@ function finishDelete(
   entry: EditorAnnotationOperationEntry,
   mode: 'redo' | 'undo',
   result: Awaited<ReturnType<typeof commitDelete>>,
-  onSettled?: (queuedMode?: 'redo' | 'undo') => void
+  onSettled?: (succeeded: boolean) => void
 ) {
-  if (!result) return finishFailure(set, entry, mode);
-  let queuedMode: 'redo' | 'undo' | undefined;
+  if (!result) {
+    finishFailure(set, entry, mode);
+    onSettled?.(false);
+    return;
+  }
+  let settledExactly = false;
   set((state) => {
     const current = getEditorOperationTopEntry(state.editorOperationHistory, entry.nodeId, mode);
     const mutation = computeDeleteNodesMutation(state, result.deletedNodeIds, result.mutation.deletedAt);
-    queuedMode = current && current.type !== 'text.edit' && isApplyingEntry(current, entry, mode)
-      ? current.queuedMode
-      : undefined;
+    settledExactly = Boolean(
+      mutation && current && current.type !== 'text.edit' && isApplyingEntry(current, entry, mode)
+    );
     const history = finishSuccessfulHistory(state, entry, mode, current);
     if (!mutation) return { editorOperationHistory: history };
     mutation.parentNodesToSync.forEach(syncNodeContentToRuntime);
@@ -97,7 +101,7 @@ function finishDelete(
       editorOperationHistory: history
     };
   });
-  onSettled?.(queuedMode);
+  onSettled?.(settledExactly);
 }
 
 function finishRestore(
@@ -105,21 +109,25 @@ function finishRestore(
   entry: EditorAnnotationOperationEntry,
   mode: 'redo' | 'undo',
   restoredNodeIds: string[] | null,
-  onSettled?: (queuedMode?: 'redo' | 'undo') => void
+  onSettled?: (succeeded: boolean) => void
 ) {
-  if (!restoredNodeIds) return finishFailure(set, entry, mode);
-  let queuedMode: 'redo' | 'undo' | undefined;
+  if (!restoredNodeIds) {
+    finishFailure(set, entry, mode);
+    onSettled?.(false);
+    return;
+  }
+  let settledExactly = false;
   set((state) => {
     const current = getEditorOperationTopEntry(state.editorOperationHistory, entry.nodeId, mode);
-    queuedMode = current && current.type !== 'text.edit' && isApplyingEntry(current, entry, mode)
-      ? current.queuedMode
-      : undefined;
+    settledExactly = Boolean(
+      current && current.type !== 'text.edit' && isApplyingEntry(current, entry, mode)
+    );
     return {
       ...createRestorePatch(state, restoredNodeIds),
       editorOperationHistory: finishSuccessfulHistory(state, entry, mode, current)
     };
   });
-  onSettled?.(queuedMode);
+  onSettled?.(settledExactly);
 }
 
 function finishSuccessfulHistory(
@@ -159,7 +167,7 @@ export function startEditorAnnotationHistoryMutation(args: {
   entry: EditorAnnotationOperationEntry;
   get: WorkspaceGet;
   mode: 'redo' | 'undo';
-  onSettled?: (queuedMode?: 'redo' | 'undo') => void;
+  onSettled?: (succeeded: boolean) => void;
   set: WorkspaceSet;
 }) {
   args.set((state) => ({
@@ -172,11 +180,17 @@ export function startEditorAnnotationHistoryMutation(args: {
   if (shouldDelete) {
     void commitDelete(args.entry, args.get())
       .then((result) => finishDelete(args.set, args.entry, args.mode, result, args.onSettled))
-      .catch(() => finishFailure(args.set, args.entry, args.mode));
+      .catch(() => {
+        finishFailure(args.set, args.entry, args.mode);
+        args.onSettled?.(false);
+      });
   } else {
     void commitRestore(args.entry)
       .then((result) => finishRestore(args.set, args.entry, args.mode, result, args.onSettled))
-      .catch(() => finishFailure(args.set, args.entry, args.mode));
+      .catch(() => {
+        finishFailure(args.set, args.entry, args.mode);
+        args.onSettled?.(false);
+      });
   }
   return true;
 }

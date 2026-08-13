@@ -13,6 +13,7 @@ import { computeDeleteNodesMutation } from './workspaceTrashMutations';
 type WorkspaceSet = (
   partial: Partial<WorkspaceState> | ((state: WorkspaceState) => Partial<WorkspaceState> | WorkspaceState)
 ) => void;
+type AnnotationCreationSettlementOutcome = 'confirmed-nontop' | 'confirmed-top' | 'failed' | 'ignored';
 
 export function isSameEditorAnnotationEntry(
   entry: EditorOperationHistoryEntry | null | undefined,
@@ -70,30 +71,32 @@ export function confirmPendingEditorAnnotationEntry(state: WorkspaceState, nodeI
   }
   const entry = session.undoStack[entryIndex];
   if (!entry || entry.type === 'text.edit') return null;
-  const { queuedMode, ...confirmedEntry } = entry;
   return {
     history: replaceEditorOperationEntryWhere(
       state.editorOperationHistory,
       nodeId,
       'undo',
       (candidate) => candidate === entry,
-      () => ({ ...confirmedEntry, canonical: 'confirmed' })
+      () => ({ ...entry, canonical: 'confirmed' })
     ),
-    queuedMode: entryIndex === session.undoStack.length - 1 ? queuedMode : undefined
+    wasTop: entryIndex === session.undoStack.length - 1
   };
 }
 
 export function settleEditorAnnotationCreation(
   set: WorkspaceSet,
   result: { annotationNodeIds: string[]; nodeId: string; succeeded: boolean }
-) {
-  let queuedMode: 'redo' | 'undo' | undefined;
+): AnnotationCreationSettlementOutcome {
+  let outcome: AnnotationCreationSettlementOutcome = 'ignored';
   set((state) => {
-    if (!result.succeeded) return rollbackPendingCreation(state, result.nodeId, result.annotationNodeIds);
+    if (!result.succeeded) {
+      outcome = 'failed';
+      return rollbackPendingCreation(state, result.nodeId, result.annotationNodeIds);
+    }
     const confirmed = confirmPendingEditorAnnotationEntry(state, result.nodeId, result.annotationNodeIds);
     if (!confirmed) return state;
-    queuedMode = confirmed.queuedMode;
+    outcome = confirmed.wasTop ? 'confirmed-top' : 'confirmed-nontop';
     return { editorOperationHistory: confirmed.history };
   });
-  return queuedMode;
+  return outcome as AnnotationCreationSettlementOutcome;
 }

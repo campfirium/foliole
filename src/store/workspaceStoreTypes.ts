@@ -135,6 +135,7 @@ export interface WorkspaceState {
 export interface EditorOperationApplyContext {
   applyText: (entry: EditorTextEditOperationEntry, mode: 'redo' | 'undo') => boolean;
   currentContent: string;
+  getCurrentContent?: () => string;
   nodeId: string;
 }
 

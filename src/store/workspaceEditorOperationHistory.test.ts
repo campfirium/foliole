@@ -166,7 +166,7 @@ it('keeps a visible pending annotation at the stack top and serializes undo behi
   expect(historyActions.undoEditorOperation()).toBe(true);
   expect(harness.getState().trashedNodeIds).not.toContain(createdId);
   expect(getEditorOperationSession(harness.getState().editorOperationHistory, 'node-1').undoStack.at(-1))
-    .toMatchObject({ canonical: 'pending', queuedMode: 'undo', type: 'annotation.create' });
+    .toMatchObject({ canonical: 'pending', type: 'annotation.create' });
 
   resolveCreate({
     createdNodeIds: [createdId],

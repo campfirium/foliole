@@ -64,6 +64,7 @@ export function createEditorOperationApplyContext(
   return {
     applyText: (entry, mode) => editor?.applyTextHistory?.(entry, mode) ?? false,
     currentContent: editor?.getContent() ?? node.content,
+    getCurrentContent: () => editor?.getContent() ?? args.ws.nodesById[nodeId]?.content ?? '',
     nodeId
   };
 }

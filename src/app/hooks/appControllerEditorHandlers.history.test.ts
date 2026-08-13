@@ -136,8 +136,9 @@ describe('app controller editor history handlers', () => {
   it('matches text history against the current editor document instead of the stale store body', () => {
     const { args } = createArgs();
     const applyTextHistory = vi.fn(() => true);
+    let editorContent = 'Current unsaved editor body';
     args.runtime.editorRef = {
-      current: { applyTextHistory, getContent: () => 'Current unsaved editor body' }
+      current: { applyTextHistory, getContent: () => editorContent }
     } as unknown as BuildControllerLayoutPropsArgs['runtime']['editorRef'];
 
     const context = createEditorOperationApplyContext(args);
@@ -146,6 +147,8 @@ describe('app controller editor history handlers', () => {
       currentContent: 'Current unsaved editor body',
       nodeId: 'node-1'
     });
+    editorContent = 'Newer queued body';
+    expect(context?.getCurrentContent?.()).toBe('Newer queued body');
     expect(context?.applyText({} as never, 'undo')).toBe(true);
     expect(applyTextHistory).toHaveBeenCalledWith({}, 'undo');
   });

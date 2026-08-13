@@ -1,10 +1,10 @@
 import {
   getEditorOperationTopEntry,
   invalidateEditorOperationSession,
+  isPendingEditorAnnotationEntry,
   moveEditorOperationEntry,
   pushEditorOperationEntry,
   removeEditorOperationEntry,
-  replaceEditorOperationEntry,
   type EditorAnnotationOperationEntry,
   type EditorOperationHistoryEntry
 } from '../features/editor/model/editorOperationHistory';
@@ -26,6 +26,15 @@ import { computeDeleteNodesMutation } from './workspaceTrashMutations';
 
 type WorkspaceSet = (partial: Partial<WorkspaceState> | ((state: WorkspaceState) => Partial<WorkspaceState> | WorkspaceState)) => void;
 type WorkspaceGet = () => WorkspaceState;
+type EditorOperationMode = 'redo' | 'undo';
+type ApplyOutcome = 'applied' | 'failed' | 'noop' | 'pending';
+
+interface QueuedEditorOperation {
+  context?: EditorOperationApplyContext;
+  mode: EditorOperationMode;
+}
+
+const EDITOR_OPERATION_QUEUE_LIMIT = 50;
 
 function expectedTextContent(entry: Extract<EditorOperationHistoryEntry, { type: 'text.edit' }>, mode: 'redo' | 'undo') {
   return mode === 'undo' ? entry.afterContent : entry.beforeContent;
@@ -38,7 +47,8 @@ function applyTextEntry(args: {
   nodeId: string;
   set: WorkspaceSet;
 }) {
-  if (!args.context || args.context.nodeId !== args.nodeId || args.context.currentContent !== expectedTextContent(args.entry, args.mode)) {
+  const currentContent = args.context?.getCurrentContent?.() ?? args.context?.currentContent;
+  if (!args.context || args.context.nodeId !== args.nodeId || currentContent !== expectedTextContent(args.entry, args.mode)) {
     args.set((state) => ({
       editorOperationHistory: invalidateEditorOperationSession(state.editorOperationHistory, {
         nodeId: args.nodeId,
@@ -62,69 +72,74 @@ function applyTextEntry(args: {
   return true;
 }
 
-function createApplyForNode(set: WorkspaceSet, get: WorkspaceGet) {
-  return (nodeId: string, mode: 'redo' | 'undo', context?: EditorOperationApplyContext) => {
+function hasBlockingAnnotation(get: WorkspaceGet, nodeId: string) {
+  return (['undo', 'redo'] as const).some((mode) => isPendingEditorAnnotationEntry(
+    getEditorOperationTopEntry(get().editorOperationHistory, nodeId, mode)
+  ));
+}
+
+function createOperationRunner(set: WorkspaceSet, get: WorkspaceGet) {
+  const queuedByNodeId = new Map<string, QueuedEditorOperation[]>();
+  const clearQueued = (nodeId: string) => queuedByNodeId.delete(nodeId);
+  const enqueue = (nodeId: string, command: QueuedEditorOperation) => {
+    const queued = queuedByNodeId.get(nodeId) ?? [];
+    if (queued.length >= EDITOR_OPERATION_QUEUE_LIMIT) return false;
+    queuedByNodeId.set(nodeId, [...queued, command]);
+    return true;
+  };
+  let applyForNode: (
+    nodeId: string,
+    mode: EditorOperationMode,
+    context?: EditorOperationApplyContext,
+    queueWhenBlocked?: boolean
+  ) => ApplyOutcome;
+  const drain = (nodeId: string) => {
+    const queued = queuedByNodeId.get(nodeId);
+    if (!queued || queued.length === 0) return clearQueued(nodeId);
+    const next = queued.shift()!;
+    if (queued.length === 0) clearQueued(nodeId);
+    const outcome = applyForNode(nodeId, next.mode, next.context, false);
+    if (outcome === 'applied' || outcome === 'noop') queueMicrotask(() => drain(nodeId));
+    else if (outcome === 'failed') clearQueued(nodeId);
+  };
+  const settle = (nodeId: string, succeeded: boolean) => {
+    if (!succeeded) return clearQueued(nodeId);
+    queueMicrotask(() => drain(nodeId));
+  };
+  applyForNode = (nodeId, mode, context, queueWhenBlocked = true) => {
+    if (hasBlockingAnnotation(get, nodeId)) {
+      return queueWhenBlocked && enqueue(nodeId, { ...(context ? { context } : {}), mode })
+        ? 'pending'
+        : 'failed';
+    }
     const entry = getEditorOperationTopEntry(get().editorOperationHistory, nodeId, mode);
-    if (!entry) {
-      return queueBehindApplyingAnnotation(set, get, nodeId, mode);
+    if (!entry) return 'noop';
+    if (entry.type === 'text.edit') {
+      return applyTextEntry({ entry, mode, nodeId, set, ...(context ? { context } : {}) })
+        ? 'applied'
+        : 'failed';
     }
-    if (entry.type === 'text.edit') return applyTextEntry({
-      entry,
-      mode,
-      nodeId,
-      set,
-      ...(context ? { context } : {})
-    });
-    if (entry.applyingMode) {
-      set((state) => ({
-        editorOperationHistory: replaceEditorOperationEntry(state.editorOperationHistory, nodeId, mode, {
-          ...entry,
-          queuedMode: mode
-        })
-      }));
-      return true;
-    }
-    if (entry.canonical === 'pending') {
-      if (mode !== 'undo') return false;
-      set((state) => ({
-        editorOperationHistory: replaceEditorOperationEntry(state.editorOperationHistory, nodeId, mode, {
-          ...entry,
-          queuedMode: mode
-        })
-      }));
-      return true;
-    }
-    return startEditorAnnotationHistoryMutation({
+    startEditorAnnotationHistoryMutation({
       entry,
       get,
       mode,
-      onSettled: (queuedMode) => {
-        if (queuedMode) queueMicrotask(() => createApplyForNode(set, get)(nodeId, queuedMode));
-      },
+      onSettled: (succeeded) => settle(nodeId, succeeded),
       set
     });
+    return 'pending';
+  };
+  return {
+    apply: (nodeId: string, mode: EditorOperationMode, context?: EditorOperationApplyContext) =>
+      ['applied', 'pending'].includes(applyForNode(nodeId, mode, context)),
+    settle
   };
 }
 
-function queueBehindApplyingAnnotation(
+function deleteEditorAnnotations(
   set: WorkspaceSet,
-  get: WorkspaceGet,
-  nodeId: string,
-  mode: 'redo' | 'undo'
+  nodeIds: string[],
+  onSettled: (nodeId: string, succeeded: boolean) => void
 ) {
-  const oppositeMode = mode === 'undo' ? 'redo' : 'undo';
-  const applyingEntry = getEditorOperationTopEntry(get().editorOperationHistory, nodeId, oppositeMode);
-  if (!applyingEntry || applyingEntry.type === 'text.edit' || !applyingEntry.applyingMode) return false;
-  set((state) => ({
-    editorOperationHistory: replaceEditorOperationEntry(state.editorOperationHistory, nodeId, oppositeMode, {
-      ...applyingEntry,
-      queuedMode: mode
-    })
-  }));
-  return true;
-}
-
-function deleteEditorAnnotations(set: WorkspaceSet, get: WorkspaceGet, nodeIds: string[]) {
   let entry: EditorAnnotationOperationEntry | null = null;
   let deletedAt = '';
   set((state) => {
@@ -138,7 +153,7 @@ function deleteEditorAnnotations(set: WorkspaceSet, get: WorkspaceGet, nodeIds: 
   if (!entry) return;
   void Promise.resolve(syncSoftDeleteNodesToRuntime({ deletedAt, nodeIds })).then((result) => {
     const acceptedIds = result?.deletedNodeIds ?? (!hasWorkspaceNodeMutationRuntime() ? nodeIds : []);
-    let queuedMode: 'redo' | 'undo' | undefined;
+    let settledExactly = false;
     set((state) => {
       const acceptedIdSet = new Set(acceptedIds);
       if (acceptedIds.length !== nodeIds.length || nodeIds.some((id) => !acceptedIdSet.has(id))) {
@@ -153,7 +168,7 @@ function deleteEditorAnnotations(set: WorkspaceSet, get: WorkspaceGet, nodeIds: 
       const mutation = computeDeleteNodesMutation(state, acceptedIds, deletedAt);
       const confirmed = confirmPendingEditorAnnotationEntry(state, entry!.nodeId, nodeIds);
       if (!mutation || !confirmed) return state;
-      queuedMode = confirmed.queuedMode;
+      settledExactly = confirmed.wasTop;
       mutation.parentNodesToSync.forEach(syncNodeContentToRuntime);
       return {
         nodesById: mutation.patch.nodesById,
@@ -163,7 +178,7 @@ function deleteEditorAnnotations(set: WorkspaceSet, get: WorkspaceGet, nodeIds: 
         editorOperationHistory: confirmed.history
       };
     });
-    if (queuedMode) queueMicrotask(() => createApplyForNode(set, get)(entry!.nodeId, queuedMode!));
+    onSettled(entry!.nodeId, settledExactly);
   }).catch(() => {
     set((state) => ({
       editorOperationHistory: removeEditorOperationEntry(
@@ -172,27 +187,34 @@ function deleteEditorAnnotations(set: WorkspaceSet, get: WorkspaceGet, nodeIds: 
         (item) => isSameEditorAnnotationEntry(item, nodeIds, 'annotation.delete')
       )
     }));
+    onSettled(entry!.nodeId, false);
   });
 }
 
 export function createWorkspaceEditorOperationHistoryActions(set: WorkspaceSet, get: WorkspaceGet) {
-  const applyForNode = createApplyForNode(set, get);
+  const runner = createOperationRunner(set, get);
   return {
-    deleteEditorAnnotationNodes: (nodeIds: string[]) => deleteEditorAnnotations(set, get, nodeIds),
+    deleteEditorAnnotationNodes: (nodeIds: string[]) => deleteEditorAnnotations(
+      set,
+      nodeIds,
+      (nodeId, succeeded) => runner.settle(nodeId, succeeded)
+    ),
     pushEditorOperationEntry: (entry: EditorOperationHistoryEntry) => set((state) => ({
       editorOperationHistory: pushEditorOperationEntry(state.editorOperationHistory, entry)
     })),
     redoEditorOperation: (context?: EditorOperationApplyContext) => {
       const nodeId = context?.nodeId ?? get().activeNodeId;
-      return nodeId ? applyForNode(nodeId, 'redo', context) : false;
+      return nodeId ? runner.apply(nodeId, 'redo', context) : false;
     },
     settleEditorAnnotationCreation: (result: { annotationNodeIds: string[]; nodeId: string; succeeded: boolean }) => {
-      const queuedMode = settleEditorAnnotationCreation(set, result);
-      if (queuedMode) queueMicrotask(() => applyForNode(result.nodeId, queuedMode));
+      const outcome = settleEditorAnnotationCreation(set, result);
+      if (outcome !== 'confirmed-nontop') {
+        runner.settle(result.nodeId, outcome === 'confirmed-top');
+      }
     },
     undoEditorOperation: (context?: EditorOperationApplyContext) => {
       const nodeId = context?.nodeId ?? get().activeNodeId;
-      return nodeId ? applyForNode(nodeId, 'undo', context) : false;
+      return nodeId ? runner.apply(nodeId, 'undo', context) : false;
     }
   };
 }

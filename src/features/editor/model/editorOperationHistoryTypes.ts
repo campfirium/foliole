@@ -30,7 +30,6 @@ export interface EditorTextEditOperationEntry {
 export interface EditorAnnotationOperationState {
   applyingMode?: 'redo' | 'undo';
   canonical: 'confirmed' | 'pending';
-  queuedMode?: 'redo' | 'undo';
 }
 
 export interface EditorAnnotationCreateOperationEntry extends EditorAnnotationOperationState {
