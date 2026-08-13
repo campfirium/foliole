@@ -184,14 +184,18 @@ test('keeps create, rename, move, and delete in one exact workspace history', as
   await pressWorkspaceHistory(desktopWindow, 'redo');
   await expect.poll(() => collectNode(desktopWindow, createdId)).toMatchObject({ trashed: false });
 
-  const originalTitle = (await collectNode(desktopWindow, createdId))?.title;
+  const originalNode = await collectNode(desktopWindow, createdId);
+  const originalTitle = originalNode?.title;
   expect(await desktopWindow.evaluate(([nodeId, title]) =>
     window.__folioleWorkspaceDebug?.updateNodeTitle?.(nodeId!, title!) ?? false,
   [createdId, 'Renamed Structure Topic'])).toBe(true);
+  await expect.poll(() => collectNode(desktopWindow, createdId)).toMatchObject({ content: '# Renamed Structure Topic' });
   await clickNativeHistoryCommand(desktopApp, desktopWindow, 'app.undo');
-  await expect.poll(() => collectNode(desktopWindow, createdId)).toMatchObject({ title: originalTitle });
+  await expect.poll(() => collectNode(desktopWindow, createdId)).toMatchObject({ content: originalNode?.content, title: originalTitle });
   await clickNativeHistoryCommand(desktopApp, desktopWindow, 'app.redo');
-  await expect.poll(() => collectNode(desktopWindow, createdId)).toMatchObject({ title: 'Renamed Structure Topic' });
+  await expect.poll(() => collectNode(desktopWindow, createdId)).toMatchObject({
+    content: '# Renamed Structure Topic', title: 'Renamed Structure Topic'
+  });
 
   const beforeMoveOrder = await readStructureOrder(desktopWindow);
   expect(await desktopWindow.evaluate(([nodeId, targetId]) =>

@@ -12,7 +12,8 @@ import { WorkspaceDualListContent } from './WorkspaceDualListContent';
 
 vi.mock('../../store/workspaceRuntimeSync', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../store/workspaceRuntimeSync')>()),
-  syncMoveNodesToRuntime: vi.fn(async (payload) => payload)
+  syncMoveNodesToRuntime: vi.fn(async (payload) => ({ movedNodeIds: payload.nodes.map((node: { nodeId: string }) => node.nodeId),
+    nodeOrder: payload.nodeOrder }))
 }));
 
 function createNode(args: {

@@ -62,7 +62,7 @@ it('postpones a topic by changing only next due time in week steps', async () =>
     nextAt: '2026-03-31T00:00:00.000Z',
     repetitionCount: beforeReading?.repetitionCount
   });
-  expect(harness.getState().appActionHistory.undoStack[0]).toMatchObject({ title: 'Postpone Topic' });
+  expect(harness.getState().appActionHistory.undoStack).toEqual([]);
 });
 
 it('resets topic postpone level zero to the current natural due time without moving into the past', async () => {

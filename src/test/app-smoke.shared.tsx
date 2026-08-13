@@ -17,9 +17,6 @@ export { mockEditorState } from './app-smoke-editor-mock';
 
 const smokeRuntimeMocks = vi.hoisted(() => {
   function createNodeMutationResult(command: string, payload?: Record<string, unknown>) {
-    if (Array.isArray(payload?.nodeOrder)) {
-      return null;
-    }
     const nodeId = typeof payload?.nodeId === 'string' ? payload.nodeId : 'node-created';
     const parentNodeId = typeof payload?.parentNodeId === 'string' ? payload.parentNodeId : null;
     const content = typeof payload?.content === 'string' ? payload.content : '';
@@ -67,7 +64,9 @@ const smokeRuntimeMocks = vi.hoisted(() => {
       const nodeIds = Array.isArray(payload?.nodeIds) ? payload.nodeIds : [];
       return { nodeOrder: nodeOrder.filter((nodeId) => !nodeIds.includes(nodeId)), removedNodeIds: nodeIds };
     }
-    if (command === 'move_nodes') return { movedNodeIds: Array.isArray(payload?.nodeIds) ? payload.nodeIds : [], nodeOrder: payload?.nodeOrder };
+    if (command === 'move_nodes') return { movedNodeIds: Array.isArray(payload?.nodes)
+      ? payload.nodes.flatMap((node) => typeof node?.nodeId === 'string' ? [node.nodeId] : [])
+      : [], nodeOrder: payload?.nodeOrder };
     if (command === 'inspect_foliole_published_delete') return { status: 'allowed' };
     if (command === 'load_node_backlinks') return [];
     if (command === 'load_readwise_books_inventory') return { books: [] };

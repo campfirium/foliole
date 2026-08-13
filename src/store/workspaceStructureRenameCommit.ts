@@ -42,7 +42,7 @@ export function buildCommittedTitleMutation(args: {
     ? createWorkspaceNodeMutationPatch(args.state, args.result)
     : args.shouldUseLocalFallback ? args.localPatch : null;
   if (!acceptedPatch || args.state.nodesById[args.nodeId]?.title !== args.beforeTitle) return null;
-  const patch = preserveCurrentBodyInPatch(args.state, args.nodeId, acceptedPatch);
+  const patch = acceptedPatch;
   const acceptedNode = patch.nodesById?.[args.nodeId];
   if (!acceptedNode) return null;
   const entry = args.beforeTitle && isWorkspaceStructureKind(acceptedNode.kind)

@@ -194,7 +194,10 @@ describe('workspaceStoreNodeActions extra sync coverage command bridge', () => {
   });
 
   it('syncs moved root nodes through runtime command bridge', async () => {
-    vi.mocked(syncMoveNodesToRuntime).mockResolvedValue({ movedNodeIds: [], nodeOrder: [] });
+    vi.mocked(syncMoveNodesToRuntime).mockImplementation(async (payload) => ({
+      movedNodeIds: payload.nodes.map((node) => node.nodeId),
+      nodeOrder: payload.nodeOrder
+    }));
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
     const firstFolderId = (await actions.createRootNode('Folder A', 'folder'))!;

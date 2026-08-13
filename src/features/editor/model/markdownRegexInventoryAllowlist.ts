@@ -1,4 +1,5 @@
 export const allowedRegexInventory = [
+  { path: 'src/features/editor/adapters/codeMirrorTextHistory.ts', line: '!USER_TEXT_EVENT.test(userEvent)', owner: 'editor text history', reason: 'Limits native history capture to CodeMirror user text events.' },
   {
     path: 'src/features/editor/adapters/markdownInputAssist.ts',
     line: 'const CODE_FENCE_PATTERN = /^\\s*`{3,}/;',
@@ -64,6 +65,7 @@ export const allowedRegexInventory = [
     line: "const match = /^#([0-9a-fA-F]{6})$/.exec(value?.trim() ?? '');",
     owner: 'color setting validation'
   },
+  { path: 'src/features/editor/model/editorTextOperationGrouping.ts', line: 'JOINABLE_USER_EVENT.test(next.userEvent) &&', owner: 'editor text history', reason: 'Groups adjacent typing and delete events without parsing Markdown.' },
   {
     path: 'src/features/editor/model/highlightAnnotationPrefixSetting.ts',
     line: "const normalized = (value ?? '').replace(/\\r\\n?/g, '\\n').split('\\n')[0]?.slice(0, HIGHLIGHT_ANNOTATION_PREFIX_MAX_LENGTH) ?? '';",

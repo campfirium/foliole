@@ -27,6 +27,7 @@ const controlledElectronSqliteTests = [
   'electron/database/syncGroupStore.test.ts',
   'electron/database/workspaceSearchSidecar.test.ts',
   'electron/sync/syncPackNodeApplyParentOrder.test.ts',
+  'electron/sync/syncPackContentBlobsExecutor.test.ts',
   'electron/sync/syncPackLearningDependencyApply.test.ts',
   'electron/sync/syncPackNodeEmptyBodyApply.test.ts',
   'electron/sync/syncPackNodeApplyExecutor.test.ts',
