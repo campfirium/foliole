@@ -11,6 +11,7 @@ import {
   provisionWindowsAcceptanceRoot, windowsAcceptanceRoot
 } from './windows-multi-device-sync-readiness.mjs';
 import { createSyncProgressWatchdog } from '../sync-group/sync-progress-watchdog.mjs';
+import { enableWindowsSyncParticipation } from './windows-sync-group-participation-control.mjs';
 
 export async function invokeWindowsSyncGroupCommand(page, command, args = {}) {
   return page.evaluate(async ({ command, args }) => {
@@ -192,6 +193,7 @@ export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths
     let candidate;
     let firstFacts;
     try {
+      await enableWindowsSyncParticipation(session.page, invokeWindowsSyncGroupCommand);
       candidate = await discoverUniqueGroup(session.page);
       await invokeWindowsSyncGroupCommand(session.page, 'request_sync_group_join', { endpoint_url: candidate.endpoint_url });
       await waitForJoinedGroup(session.page, candidate.group_id);

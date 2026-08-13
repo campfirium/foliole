@@ -28,6 +28,8 @@ const CONTROLLER_FILES = [
   'scripts/sync-group/multi-device-sync-workspace.mjs',
   'scripts/sync-group/sync-progress-watchdog.mjs',
   'scripts/windows/windows-multi-device-sync-participation-action.mjs',
+  'scripts/windows/windows-sync-group-participation-control.mjs',
+  'scripts/windows/windows-sync-group-recovery-action.mjs',
   'scripts/windows/windows-sync-group-recovery-inspect.mjs'
 ];
 
