@@ -9,6 +9,7 @@ import { runMacosA5SyncGroupMaintenance } from '../android/macos-a5-sync-group-m
 import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desktop-session.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import { waitForAndroidJourneyFact } from './multi-device-sync-ab-convergence.mjs';
+import { assertAndroidResumeData } from './multi-device-sync-participation-evidence.mjs';
 import { startWindowsSyncGroupProvider } from './multi-device-sync-windows-provider.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
@@ -116,10 +117,8 @@ async function proveAndroidParticipation(context, macosSession) {
   await waitForAndroidJourneyFact(context.paths, fact.factId);
   context.reportProgress('android-resumed-cursor');
   const after = await androidSnapshot(context.paths);
-  if (after.database?.integrity !== 'ok'
-      || after.database.counts.nodes <= before.database.counts.nodes) {
-    throw productFailure('android-b', 'android_resume_data_missing', 'Android did not retain resumed data.');
-  }
+  assertAndroidResumeData(before, after, fact.factId,
+    (message) => productFailure('android-b', 'android_resume_data_missing', message));
   return after;
 }
 
