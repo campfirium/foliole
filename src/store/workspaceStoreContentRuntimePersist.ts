@@ -186,6 +186,13 @@ export async function completeNodeCreateRuntimePersist(nodeId: string) {
   return drainPendingNodeContentRuntimePersist(nodeId);
 }
 
+export function cancelNodeCreateRuntimePersist(nodeId: string) {
+  const pending = pendingNodeContentRuntimePersists.get(nodeId);
+  if (pending?.timer) globalThis.clearTimeout(pending.timer);
+  pendingNodeContentRuntimePersists.delete(nodeId);
+  markNodeCreateConfirmed(nodeId);
+}
+
 export async function drainPendingNodeContentRuntimePersists() {
   const blockedNodeIds = [...pendingNodeContentRuntimePersists.keys()]
     .filter((nodeId) => isNodeCreatePending(nodeId));

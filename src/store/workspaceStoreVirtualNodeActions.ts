@@ -8,7 +8,7 @@ import { VIRTUAL_ROOT_NODE_ID, isVirtualNode } from '../features/nodes/model/spe
 import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
 
 import { markNodeCreatePending } from './workspaceNodeContentVersionGuard';
-import { createWorkspaceNodeMutationPatchWithLocalSideEffects } from './workspaceNodeMutationPatch';
+import { createWorkspaceNodeCreateAckPatch } from './workspaceNodeMutationPatch';
 import { insertNodeBlockUnderParent } from './workspaceNodeTreeOrder';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStore';
@@ -111,7 +111,7 @@ async function applyCreatedVirtualNode(args: {
     orderForSync.indexOf(args.nodeId)
   );
   if (result) {
-    args.set((state) => createWorkspaceNodeMutationPatchWithLocalSideEffects(state, result, args.localPatch));
+    args.set((state) => createWorkspaceNodeCreateAckPatch(state, result, [args.nodeId]));
   }
   if (!result && args.nextNodeOrder) {
     args.onNodeOrderChanged?.(args.nextNodeOrder);

@@ -116,6 +116,26 @@ describe('workspaceStoreContentRuntimePersist queue', () => {
 
     await expect(drainPendingNodeContentRuntimePersists()).resolves.toBe(false);
   });
+
+  it('does not let a late older persist acknowledgement clear a newer edit version', async () => {
+    let resolveFirst!: (value: { nodes: never[] }) => void;
+    vi.mocked(syncNodeContentWithAnchorsMutationToRuntime).mockImplementationOnce(
+      () => new Promise((resolve) => { resolveFirst = resolve; })
+    );
+    const node = createNode('node-1', 'First draft');
+    schedulePersist(node);
+    const firstDrain = drainPendingNodeContentRuntimePersists();
+    schedulePersist({ ...node, content: 'Newer draft' });
+    resolveFirst({ nodes: [] });
+    await firstDrain;
+
+    expect(shouldKeepLocalNodeContent({
+      currentUpdatedAt: node.updatedAt,
+      incomingUpdatedAt: '2026-06-27T00:00:01.000Z',
+      nodeId: node.id
+    })).toBe(true);
+    await expect(drainPendingNodeContentRuntimePersists()).resolves.toBe(true);
+  });
 });
 
 describe('workspaceStoreContentRuntimePersist document cache', () => {

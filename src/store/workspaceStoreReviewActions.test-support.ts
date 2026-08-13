@@ -20,7 +20,8 @@ function createHistoryActionStubs() {
     pushEditorOperationEntry: () => undefined,
     deleteEditorAnnotationNodes: () => undefined,
     undoEditorOperation: () => false,
-    redoEditorOperation: () => false
+    redoEditorOperation: () => false,
+    settleEditorAnnotationCreation: () => undefined
   };
 }
 

@@ -10,7 +10,15 @@ import type { ReviewSchedulerSettingsContextValue } from '../../features/setting
 import type { NodeViewState, ReviewSessionState, WorkspaceState } from '../../store/workspaceStore';
 import type { ReadReviewTopicOptions } from '../../store/workspaceStore';
 
-import { createAnswerChangeHandler, createEditorChangeHandler, createEditorReadyHandler, createNodeContentChangeHandler, type SelectNodeHandler } from './appControllerEditorHandlers';
+import {
+  createAnswerChangeHandler,
+  createEditorChangeHandler,
+  createEditorReadyHandler,
+  createEditorRedoHandler,
+  createEditorUndoHandler,
+  createNodeContentChangeHandler,
+  type SelectNodeHandler
+} from './appControllerEditorHandlers';
 import type { useCurrentReviewPreview } from './appControllerHelpers';
 import { createLayoutDataArgs } from './appControllerLayoutData';
 import { createSelectTrashNodeHandler } from './appControllerNavHandlers';
@@ -115,8 +123,8 @@ export interface BuildControllerLayoutPropsArgs {
     startReviewSession: WorkspaceState['startReviewSession'];
     trashedNodeIds: string[];
     pushEditorOperationEntry: (entry: EditorOperationHistoryEntry) => void;
-    undoEditorOperation: () => boolean;
-    redoEditorOperation: () => boolean;
+    undoEditorOperation: WorkspaceState['undoEditorOperation'];
+    redoEditorOperation: WorkspaceState['redoEditorOperation'];
     updateNodeContent: (nodeId: string, content: string, options?: { publishLocal?: boolean }) => Promise<boolean>;
     updateNodeDerivedTitle: (nodeId: string, content?: string) => Promise<boolean>;
     updateHighlightAnchorRange?: (highlightNodeId: string, range: { from: number; to: number }) => boolean;
@@ -150,8 +158,8 @@ function createLayoutHandlerArgs(
   return {
     onAnswerChange: createAnswerChangeHandler(args),
     onEditorChange: createEditorChangeHandler(args),
-    onEditorUndo: args.ws.undoEditorOperation,
-    onEditorRedo: args.ws.redoEditorOperation,
+    onEditorUndo: createEditorUndoHandler(args),
+    onEditorRedo: createEditorRedoHandler(args),
     onFinalizeNodeTitle: args.ws.updateNodeDerivedTitle,
     onRegisterEditorDraftFlush: args.runtime.registerPendingEditorDraftFlush,
     onEnterPriorityQuickSet: args.priorityQuickSet.enter,

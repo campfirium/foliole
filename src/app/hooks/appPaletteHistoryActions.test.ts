@@ -1,45 +1,49 @@
-import { expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import { createPaletteHistoryActions } from './appPaletteHistoryActions';
+import { setUndoRouterOwner } from './undoRouter';
 
-it('runs editor undo before workspace undo from app commands', () => {
+const context = { applyText: vi.fn(() => true), currentContent: 'Body', nodeId: 'node-1' };
+
+beforeEach(() => setUndoRouterOwner('workspace'));
+
+function createActions(overrides?: {
+  redoEditorOperation?: () => boolean;
+  undoEditorOperation?: () => boolean;
+}) {
   const flushPendingEditorDraft = vi.fn(() => true);
-  const undoEditorOperation = vi.fn(() => true);
-  const undoWorkspaceAction = vi.fn(() => true);
-  const actions = createPaletteHistoryActions({
+  const ws = {
+    redoEditorOperation: vi.fn(overrides?.redoEditorOperation ?? (() => false)),
+    redoWorkspaceAction: vi.fn(() => true),
+    undoEditorOperation: vi.fn(overrides?.undoEditorOperation ?? (() => false)),
+    undoWorkspaceAction: vi.fn(() => true)
+  };
+  return {
+    actions: createPaletteHistoryActions({
+      flushPendingEditorDraft,
+      getEditorOperationContext: () => context,
+      ws
+    }),
     flushPendingEditorDraft,
-    ws: {
-      redoEditorOperation: vi.fn(() => false),
-      redoWorkspaceAction: vi.fn(() => false),
-      undoEditorOperation,
-      undoWorkspaceAction
-    }
-  });
+    ws
+  };
+}
 
-  expect(actions.undoWorkspaceAction()).toBe(true);
-  expect(flushPendingEditorDraft).toHaveBeenCalledTimes(1);
-  expect(undoEditorOperation).toHaveBeenCalledTimes(1);
-  expect(flushPendingEditorDraft).toHaveBeenCalledBefore(undoEditorOperation);
-  expect(undoWorkspaceAction).not.toHaveBeenCalled();
+it('routes content undo only to the current topic history without fallback or draft flush', () => {
+  setUndoRouterOwner('content');
+  const { actions, flushPendingEditorDraft, ws } = createActions();
+
+  expect(actions.undoWorkspaceAction()).toBe(false);
+  expect(ws.undoEditorOperation).toHaveBeenCalledWith(context);
+  expect(ws.undoWorkspaceAction).not.toHaveBeenCalled();
+  expect(flushPendingEditorDraft).not.toHaveBeenCalled();
 });
 
-it('runs editor redo before workspace redo from app commands', () => {
-  const flushPendingEditorDraft = vi.fn(() => true);
-  const redoEditorOperation = vi.fn(() => true);
-  const redoWorkspaceAction = vi.fn(() => true);
-  const actions = createPaletteHistoryActions({
-    flushPendingEditorDraft,
-    ws: {
-      redoEditorOperation,
-      redoWorkspaceAction,
-      undoEditorOperation: vi.fn(() => false),
-      undoWorkspaceAction: vi.fn(() => false)
-    }
-  });
+it('routes workspace redo only to structural history after flushing the current draft', () => {
+  const { actions, flushPendingEditorDraft, ws } = createActions({ redoEditorOperation: () => true });
 
   expect(actions.redoWorkspaceAction()).toBe(true);
-  expect(flushPendingEditorDraft).toHaveBeenCalledTimes(1);
-  expect(redoEditorOperation).toHaveBeenCalledTimes(1);
-  expect(flushPendingEditorDraft).toHaveBeenCalledBefore(redoEditorOperation);
-  expect(redoWorkspaceAction).not.toHaveBeenCalled();
+  expect(flushPendingEditorDraft).toHaveBeenCalledOnce();
+  expect(ws.redoWorkspaceAction).toHaveBeenCalledOnce();
+  expect(ws.redoEditorOperation).not.toHaveBeenCalled();
 });

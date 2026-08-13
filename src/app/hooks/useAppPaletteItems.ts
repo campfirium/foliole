@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 
 import {
-  canApplyEditorOperationEntryForCurrentNode,
+  getEditorOperationTopEntry,
   getEditorOperationRedoTitle,
   getEditorOperationUndoTitle
 } from '../../features/editor/model/editorOperationHistory';
@@ -24,6 +24,7 @@ import { resolveDevPaletteOptions } from './appPaletteDevOptions';
 import { buildEditorPaletteOptions } from './appPaletteEditorOptions';
 import { canDelayReviewTopic } from './appPaletteNodeActionGuards';
 import { useCommandShortcutState } from './reviewHotkeysState';
+import { useUndoRouterOwner, type UndoRouterOwner } from './undoRouter';
 
 function canNodeBeMoveTarget(args: {
   activeNodeId: string;
@@ -62,18 +63,22 @@ export function resolveEditorAwarePaletteHistoryOptions(args: {
   activeNodeId: string | null;
   appActionHistory: Parameters<typeof getWorkspaceUndoTitle>[0];
   editorOperationHistory: Parameters<typeof getEditorOperationUndoTitle>[0];
+  owner: UndoRouterOwner;
   t: Translate;
 }) {
-  const canUndoEditorOperation = canApplyEditorOperationEntryForCurrentNode(args.editorOperationHistory.undoStack.at(-1), args.activeNodeId);
-  const canRedoEditorOperation = canApplyEditorOperationEntryForCurrentNode(args.editorOperationHistory.redoStack.at(-1), args.activeNodeId);
+  const undoEntry = getEditorOperationTopEntry(args.editorOperationHistory, args.activeNodeId, 'undo');
+  const redoEntry = getEditorOperationTopEntry(args.editorOperationHistory, args.activeNodeId, 'redo');
+  const contentOwner = args.owner === 'content';
+  const canUndoEditorOperation = Boolean(undoEntry && (undoEntry.type === 'text.edit' || !undoEntry.applyingMode));
+  const canRedoEditorOperation = Boolean(redoEntry && (redoEntry.type === 'text.edit' || !redoEntry.applyingMode));
   return {
-    canRedoWorkspaceAction: canRedoEditorOperation || args.appActionHistory.redoStack.length > 0,
-    canUndoWorkspaceAction: canUndoEditorOperation || args.appActionHistory.undoStack.length > 0,
-    redoWorkspaceActionTitle: canRedoEditorOperation
-      ? getEditorOperationRedoTitle(args.editorOperationHistory, args.t)
+    canRedoWorkspaceAction: contentOwner ? canRedoEditorOperation : args.appActionHistory.redoStack.length > 0,
+    canUndoWorkspaceAction: contentOwner ? canUndoEditorOperation : args.appActionHistory.undoStack.length > 0,
+    redoWorkspaceActionTitle: contentOwner
+      ? getEditorOperationRedoTitle(args.editorOperationHistory, args.activeNodeId, args.t)
       : getWorkspaceRedoTitle(args.appActionHistory),
-    undoWorkspaceActionTitle: canUndoEditorOperation
-      ? getEditorOperationUndoTitle(args.editorOperationHistory, args.t)
+    undoWorkspaceActionTitle: contentOwner
+      ? getEditorOperationUndoTitle(args.editorOperationHistory, args.activeNodeId, args.t)
       : getWorkspaceUndoTitle(args.appActionHistory)
   };
 }
@@ -82,6 +87,7 @@ function buildPaletteOptions(
   args: Parameters<typeof useAppPaletteItems>[0],
   canMoveToNode: boolean,
   hasNavigableNodes: boolean,
+  owner: UndoRouterOwner,
   t: Translate
 ) {
   const activeNodeId = args.activeNodeId;
@@ -94,6 +100,7 @@ function buildPaletteOptions(
     activeNodeId: args.activeNodeId,
     appActionHistory: args.ws.appActionHistory,
     editorOperationHistory: args.ws.editorOperationHistory,
+    owner,
     t
   });
   return {
@@ -152,6 +159,7 @@ export function useAppPaletteItems(args: {
   ws: Pick<ReturnType<typeof useWorkspaceSelectors>, 'appActionHistory' | 'editorOperationHistory' | 'nodeOrder' | 'nodesById' | 'trashedNodeIds'>;
 }) {
   const contentScaleRevision = useContentRegionScaleCommandRevision();
+  const undoRouterOwner = useUndoRouterOwner();
   const t = useTranslation();
   const hasNavigableNodes = useMemo(
     () => args.ws.nodeOrder.some((nodeId) => !args.ws.trashedNodeIds.includes(nodeId) && Boolean(args.ws.nodesById[nodeId])),
@@ -171,10 +179,10 @@ export function useAppPaletteItems(args: {
 
   return useMemo(
     () =>
-      buildAppPaletteItems(buildPaletteOptions(args, canMoveToNode, hasNavigableNodes, t)).map((item) => ({
+      buildAppPaletteItems(buildPaletteOptions(args, canMoveToNode, hasNavigableNodes, undoRouterOwner, t)).map((item) => ({
         ...item,
         ...definedProps({ shortcuts: args.hotkeys.shortcutMap[item.id] ?? item.shortcuts })
       })),
-    [args, canMoveToNode, contentScaleRevision, hasNavigableNodes, t]
+    [args, canMoveToNode, contentScaleRevision, hasNavigableNodes, t, undoRouterOwner]
   );
 }

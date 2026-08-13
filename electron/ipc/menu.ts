@@ -1,6 +1,5 @@
 import {
   app,
-  BrowserWindow,
   Menu,
   type BrowserWindow as ElectronBrowserWindow,
   type MenuItem as ElectronMenuItem,
@@ -10,6 +9,7 @@ import {
 import { FOLDER_TOPIC_ITEM_COMMANDS } from '../../lib/core/nodes/folderTopicItemCommands.js';
 
 import { IPC_MENU_EVENT_CHANNEL, type MenuCommandEvent } from './contracts.js';
+import { resolveMenuCommandWindow } from './menuCommandWindow.js';
 
 const menuItemsById = new Map<string, ElectronMenuItem>();
 
@@ -39,8 +39,8 @@ function commandItem(label: string, commandId: string, state: MenuState): MenuIt
     enabled: state.enabledSet ? shouldAlwaysDispatchCommand(commandId) || state.enabledSet.has(commandId) : true,
     id: commandId,
     label,
-    click: () => {
-      const window = BrowserWindow.getFocusedWindow();
+    click: (_menuItem, candidate) => {
+      const window = resolveMenuCommandWindow(candidate);
       if (!window) {
         return;
       }
@@ -109,13 +109,54 @@ function buildViewMenu(state: MenuState): MenuItemConstructorOptions {
   };
 }
 
-function buildMacosStandardMenus(platform: NodeJS.Platform): MenuItemConstructorOptions[] {
+function buildMacosEditMenu(state: MenuState): MenuItemConstructorOptions {
+  return {
+    label: 'Edit',
+    submenu: [
+      commandItem('Undo', 'app.undo', state),
+      commandItem('Redo', 'app.redo', state),
+      { type: 'separator' },
+      { role: 'cut' },
+      { role: 'copy' },
+      { role: 'paste' },
+      { role: 'pasteAndMatchStyle' },
+      { role: 'delete' },
+      { role: 'selectAll' },
+      { type: 'separator' },
+      { role: 'startSpeaking' },
+      { role: 'stopSpeaking' }
+    ]
+  };
+}
+
+function buildMacosStandardMenus(state: MenuState, platform: NodeJS.Platform): MenuItemConstructorOptions[] {
   if (platform !== 'darwin') return [];
   return [
     { role: 'appMenu' },
-    { role: 'editMenu' },
+    buildMacosEditMenu(state),
     { role: 'windowMenu' }
   ];
+}
+
+function buildEditorMenu(state: MenuState, platform: NodeJS.Platform): MenuItemConstructorOptions {
+  const historyItems: MenuItemConstructorOptions[] = platform === 'darwin'
+    ? []
+    : [
+        commandItem('Undo', 'app.undo', state),
+        commandItem('Redo', 'app.redo', state),
+        { type: 'separator' }
+      ];
+  return {
+    label: 'Editor',
+    submenu: [
+      ...historyItems,
+      commandItem('Find in Topic', 'document.findInTopic', state),
+      commandItem('Set Priority…', 'nodes.enterPriorityMode', state),
+      { type: 'separator' },
+      commandItem('Toggle Source / Live Preview', 'editor.toggleDisplayMode', state),
+      commandItem('Toggle Immersive Reading', 'editor.toggleImmersiveMode', state)
+    ]
+  };
 }
 
 function buildAppMenuTemplate(
@@ -131,7 +172,7 @@ function buildAppMenuTemplate(
         }
       ];
   return [
-    ...buildMacosStandardMenus(platform),
+    ...buildMacosStandardMenus(state, platform),
     buildViewMenu(state),
     buildWorkspaceMenu(state),
     {
@@ -155,19 +196,7 @@ function buildAppMenuTemplate(
         commandItem('Grade Easy (4)', 'review.gradeEasy', state)
       ]
     },
-    {
-      label: 'Editor',
-      submenu: [
-        commandItem('Undo', 'app.undo', state),
-        commandItem('Redo', 'app.redo', state),
-        { type: 'separator' },
-        commandItem('Find in Topic', 'document.findInTopic', state),
-        commandItem('Set Priority…', 'nodes.enterPriorityMode', state),
-        { type: 'separator' },
-        commandItem('Toggle Source / Live Preview', 'editor.toggleDisplayMode', state),
-        commandItem('Toggle Immersive Reading', 'editor.toggleImmersiveMode', state)
-      ]
-    },
+    buildEditorMenu(state, platform),
     ...developerMenu,
     buildHelpMenu(state)
   ];

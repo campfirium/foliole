@@ -66,6 +66,11 @@ export class EditorExternalChangeBuffer {
     this.flush();
   }
 
+  discardPending() {
+    this.clearTimer();
+    this.pendingChange = null;
+  }
+
   private scheduleFlush() {
     this.clearTimer();
     this.pendingTimer = setTimeout(() => {

@@ -1,7 +1,7 @@
 import { defaultKeymap, toggleComment } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { EditorState, type Extension } from '@codemirror/state';
-import { Decoration, EditorView, highlightActiveLine, keymap } from '@codemirror/view';
+import { Decoration, EditorView, highlightActiveLine, keymap, type ViewUpdate } from '@codemirror/view';
 
 import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
 import { folioleMarkdownLanguageExtensions } from '../model/folioleMarkdownParser';
@@ -41,7 +41,7 @@ function createEditorUndoRedoKeymap(options: CodeMirrorEditorAdapterOptions) {
 
 function createEditorUpdateListener(args: {
   nodeId: string | null;
-  onDocChanged: (content: string | null, meta: EditorDocumentChangeMeta) => void;
+  onDocChanged: (content: string | null, meta: EditorDocumentChangeMeta, update: ViewUpdate) => void;
 }) {
   return EditorView.updateListener.of((update) => {
     if (update.selectionSet) {
@@ -50,7 +50,7 @@ function createEditorUpdateListener(args: {
     if (!update.docChanged) {
       return;
     }
-    args.onDocChanged(null, { contentLength: update.state.doc.length, isComposing: update.view.composing, nodeId: args.nodeId });
+    args.onDocChanged(null, { contentLength: update.state.doc.length, isComposing: update.view.composing, nodeId: args.nodeId }, update);
   });
 }
 
@@ -123,7 +123,7 @@ export function createCodeMirrorEditorExtensions(args: {
   liveMarkdownCompartment: import('@codemirror/state').Compartment;
   liveMarkdownStateCompartment: import('@codemirror/state').Compartment;
   nodeId: string | null;
-  onDocChanged: (content: string | null, meta: EditorDocumentChangeMeta) => void;
+  onDocChanged: (content: string | null, meta: EditorDocumentChangeMeta, update: ViewUpdate) => void;
   onCompositionEnd: () => void;
   options: CodeMirrorEditorAdapterOptions;
   paragraphMarkerCompartment: import('@codemirror/state').Compartment;

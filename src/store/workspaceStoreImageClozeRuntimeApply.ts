@@ -1,9 +1,17 @@
 import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
 
 import { markNodeCreatePending } from './workspaceNodeContentVersionGuard';
-import { createWorkspaceNodeMutationPatchWithLocalSideEffects } from './workspaceNodeMutationPatch';
+import { removeCachedWorkspaceNodeDocument } from './workspaceNodeDocumentCache';
+import {
+  createWorkspaceNodeCreateAckPatch,
+  didRuntimeConfirmNodeCreation
+} from './workspaceNodeMutationPatch';
+import { hasWorkspaceNodeMutationRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
-import { completeNodeCreateRuntimePersist } from './workspaceStoreContentRuntimePersist';
+import {
+  cancelNodeCreateRuntimePersist,
+  completeNodeCreateRuntimePersist
+} from './workspaceStoreContentRuntimePersist';
 
 type WorkspaceNode = WorkspaceState['nodesById'][string];
 type WorkspaceSet = (
@@ -25,9 +33,10 @@ interface RuntimeSyncHandlers {
 
 export async function applyCreatedImageClozeNodes(args: {
   createdNodes: WorkspaceNode[];
+  get?: () => WorkspaceState;
   handlers: RuntimeSyncHandlers;
-  localPatch: Partial<WorkspaceState> | null;
   nextNodeOrder: string[] | null;
+  parentNodeId: string;
   set: WorkspaceSet;
   updatedParentNode: WorkspaceNode | null;
 }) {
@@ -43,13 +52,26 @@ export async function applyCreatedImageClozeNodes(args: {
       node.id,
       args.nextNodeOrder.indexOf(node.id)
     );
-    if (result) {
-      args.set((state) => createWorkspaceNodeMutationPatchWithLocalSideEffects(state, result, args.localPatch));
+    const runtimeConfirmed = didRuntimeConfirmNodeCreation(result, node.id);
+    if (runtimeConfirmed && result) {
+      args.set((state) => createWorkspaceNodeCreateAckPatch(state, result, [node.id]));
     }
-    await completeNodeCreateRuntimePersist(node.id);
-    acceptedIds.push(node.id);
+    const succeeded = runtimeConfirmed || !hasWorkspaceNodeMutationRuntime();
+    if (succeeded) {
+      await completeNodeCreateRuntimePersist(node.id);
+      acceptedIds.push(node.id);
+    } else {
+      cancelNodeCreateRuntimePersist(node.id);
+      removeCachedWorkspaceNodeDocument(node.id);
+    }
   }
-  if (args.updatedParentNode) {
+  const succeeded = acceptedIds.length === args.createdNodes.length;
+  args.get?.().settleEditorAnnotationCreation({
+    annotationNodeIds: args.createdNodes.map(({ id }) => id),
+    nodeId: args.parentNodeId,
+    succeeded
+  });
+  if (succeeded && args.updatedParentNode) {
     args.handlers.syncNodeContent(args.updatedParentNode);
   }
   return acceptedIds;

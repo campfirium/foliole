@@ -2,6 +2,7 @@ import { Compartment } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 
 import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
+import type { EditorTextEditOperationEntry } from '../model/editorOperationHistory';
 import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 
 import {
@@ -36,10 +37,12 @@ import {
   revealEditorSelectionNearest
 } from './codeMirrorSelectionActions';
 import { toEditorSelectionRanges } from './codeMirrorSelectionRanges';
+import { CodeMirrorTextHistoryController } from './codeMirrorTextHistory';
 import { resolvePrimaryVisiblePosition } from './codeMirrorVisiblePosition';
 import {
   EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS,
   type EditorAdapter,
+  type EditorContentChangeMeta,
   type EditorRevealOptions,
   type EditorScrollMetrics,
   type EditorSearchDecorations,
@@ -56,7 +59,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   private liveMarkdownStateCompartment = new Compartment();
   private localDocumentPath: string | null = null;
   private nodeId: string | null = null;
-  private onChange: ((content: string, meta?: { nodeId: string | null }) => void) | undefined;
+  private onChange: ((content: string, meta?: EditorContentChangeMeta) => void) | undefined;
   private onMissingAttachmentResource: NonNullable<CodeMirrorEditorAdapterOptions['onMissingAttachmentResource']> | null = null;
   private onOpenExternalLink: ((request: ExternalLinkOpenRequest) => void) | null = null;
   private onOpenNodeLink: ((title: string) => void) | null = null;
@@ -66,6 +69,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   private readOnlyCompartment = new Compartment();
   private searchDecorationsCompartment = new Compartment();
   private textAnchorDecorationsCompartment = new Compartment();
+  private textHistory: CodeMirrorTextHistoryController;
   private remoteImageLocalization: RemoteImageLocalizationController;
   private externalChangeBuffer: EditorExternalChangeBuffer;
   private view: EditorView;
@@ -83,6 +87,11 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     this.onOpenNodeLink = options.onOpenNodeLink ?? null;
     this.onPreviewNodeLink = options.onPreviewNodeLink ?? null;
     this.onPastedAnchors = options.onPastedAnchors ?? null;
+    this.textHistory = new CodeMirrorTextHistoryController({
+      discardPending: () => this.externalChangeBuffer.discardPending(),
+      getNodeId: () => this.nodeId,
+      isApplyingExternalContent: () => this.isApplyingExternalContent
+    });
     const runtime = createCodeMirrorEditorAdapterRuntime({
       diffDecorationsCompartment: this.diffDecorationsCompartment,
       getContent: () => this.getContent(),
@@ -92,6 +101,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
       host,
       imageClozePresentationVersion: this.imageClozePresentationVersion,
       isApplyingExternalContent: () => this.isApplyingExternalContent,
+      isApplyingHistoryReplay: () => this.textHistory.isApplying(),
       liveMarkdownCompartment: this.liveMarkdownCompartment,
       liveMarkdownStateCompartment: this.liveMarkdownStateCompartment,
       onOpenNodeLink: this.onOpenNodeLink,
@@ -117,6 +127,9 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   }
   focus() { this.view.focus(); }
   getContent() { return this.view.state.doc.toString(); }
+  applyTextHistory(entry: EditorTextEditOperationEntry, mode: 'redo' | 'undo') {
+    return this.textHistory.apply(entry, mode, this.view);
+  }
   getDocumentPositionAtViewportY(clientY: number) { return resolveDocumentPositionAtViewportY(this.view, clientY); }
   getDocumentPositionAtClientPoint(clientX: number, clientY: number) { return this.view.posAtCoords({ x: clientX, y: clientY }, false); }
   getPrimaryVisiblePosition() { return resolvePrimaryVisiblePosition(this.view); }
@@ -220,7 +233,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   setSearchDecorations(searchDecorations: EditorSearchDecorations | null) {
     setCodeMirrorSearchDecorations({ compartment: this.searchDecorationsCompartment, searchDecorations, view: this.view });
   }
-  onContentChange(listener: (content: string, meta?: { nodeId: string | null }) => void) {
+  onContentChange(listener: (content: string, meta?: EditorContentChangeMeta) => void) {
     this.onChange = listener;
     return () => {
       this.onChange = undefined;

@@ -1,6 +1,7 @@
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 export interface WorkspaceDebugOperationHistory {
+  invalidations: Array<{ nodeId: string; reason: string }>;
   redoStack: Array<{ nodeId?: string; type: string }>;
   undoStack: Array<{ nodeId?: string; type: string }>;
 }
@@ -13,9 +14,12 @@ function toDebugOperationEntry(entry: { nodeId?: string; type: string }) {
 }
 
 export function getEditorOperationHistory(): WorkspaceDebugOperationHistory {
-  const history = useWorkspaceStore.getState().editorOperationHistory;
+  const state = useWorkspaceStore.getState();
+  const history = state.editorOperationHistory;
+  const session = state.activeNodeId ? history.sessionsByNodeId[state.activeNodeId] : undefined;
   return {
-    redoStack: history.redoStack.map(toDebugOperationEntry),
-    undoStack: history.undoStack.map(toDebugOperationEntry)
+    invalidations: history.invalidations,
+    redoStack: (session?.redoStack ?? []).map(toDebugOperationEntry),
+    undoStack: (session?.undoStack ?? []).map(toDebugOperationEntry)
   };
 }

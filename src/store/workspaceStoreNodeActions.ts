@@ -88,7 +88,7 @@ function createRuntimeHandlers() {
   };
 }
 
-export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActions {
+export function createWorkspaceNodeActions(set: WorkspaceSet, get?: () => WorkspaceState): WorkspaceNodeActions {
   const trashActions = createWorkspaceTrashActions(set, {
     syncNodeContent: (node, position) => getWorkspaceMutationRepository().syncNodeContent(node, position),
     syncSoftDeleteNodes: (payload) => getWorkspaceMutationRepository().syncSoftDeleteNodes(payload),
@@ -128,10 +128,10 @@ export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActi
       runtimeHandlers.syncNodeCreation,
       runtimeHandlers.syncNodeOrder
     ),
-    createHighlightNodeFromSelection: createHighlightFromSelectionAction(set, runtimeHandlers),
-    createFormulaClozeNode: createFormulaClozeNodeAction(set, runtimeHandlers, reconcileReviewSession),
-    createImageClozeNodes: createImageClozeNodesAction(set, runtimeHandlers, reconcileReviewSession),
-    createQANodeFromSelection: createQAFromSelectionAction(set, runtimeHandlers),
+    createHighlightNodeFromSelection: createHighlightFromSelectionAction(set, runtimeHandlers, get),
+    createFormulaClozeNode: createFormulaClozeNodeAction(set, runtimeHandlers, reconcileReviewSession, get),
+    createImageClozeNodes: createImageClozeNodesAction(set, runtimeHandlers, reconcileReviewSession, get),
+    createQANodeFromSelection: createQAFromSelectionAction(set, runtimeHandlers, get),
     deleteImageClozeRegion: trashActions.deleteImageClozeRegion,
     moveNode: createMoveNodeAction(set, syncMovedNodes),
     moveNodes: createMoveNodesAction(set, syncMovedNodes)

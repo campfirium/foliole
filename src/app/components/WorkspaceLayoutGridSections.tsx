@@ -91,7 +91,7 @@ export const WorkspaceListArea = memo(function WorkspaceListArea(props: Workspac
   });
 
   return (
-    <div className="workspace-region-main-folder flex min-h-0 flex-1 flex-col overflow-hidden text-foreground">
+    <div className="workspace-region-main-folder flex min-h-0 flex-1 flex-col overflow-hidden text-foreground" data-undo-history-owner="workspace">
       {renderWorkspaceListBody({
         ...props,
         shouldShowEmptyState,
@@ -161,7 +161,7 @@ export const WorkspaceDocumentArea = memo(function WorkspaceDocumentArea({
 }) {
   const t = useTranslation();
   return (
-    <section aria-label={t('desktop.workspace.documentAndReviewArea')} className="flex min-h-0 min-w-0 flex-1 flex-col gap-0">
+    <section aria-label={t('desktop.workspace.documentAndReviewArea')} className="flex min-h-0 min-w-0 flex-1 flex-col gap-0" data-undo-history-owner="content">
       {studySessionCompleteSummaryProps ? (
         <StudySessionCompleteSummary {...studySessionCompleteSummaryProps} />
       ) : (

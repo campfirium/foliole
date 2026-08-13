@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { appMock, menuMock } = vi.hoisted(() => ({
+const { appMock, browserWindowMock, menuMock } = vi.hoisted(() => ({
   appMock: { isPackaged: false },
+  browserWindowMock: {
+    getAllWindows: vi.fn(() => []),
+    getFocusedWindow: vi.fn(() => null)
+  },
   menuMock: {
     applicationMenu: null as { items: unknown[] } | null,
     buildFromTemplate: vi.fn(),
@@ -11,9 +15,7 @@ const { appMock, menuMock } = vi.hoisted(() => ({
 
 vi.mock('electron', () => ({
   app: appMock,
-  BrowserWindow: {
-    getFocusedWindow: vi.fn()
-  },
+  BrowserWindow: browserWindowMock,
   Menu: menuMock
 }));
 
@@ -21,8 +23,10 @@ import { installAppMenu, syncAppMenuState } from './menu.js';
 
 interface MockMenuItem {
   accelerator?: string | null;
+  click?: (...args: unknown[]) => void;
   enabled?: boolean;
   id?: string;
+  label?: string;
   role?: string;
   submenu?: { items: MockMenuItem[] };
 }
@@ -30,8 +34,10 @@ interface MockMenuItem {
 function toMenuItem(item: Record<string, unknown>): MockMenuItem {
   return {
     ...(item.accelerator === undefined ? {} : { accelerator: item.accelerator as string | null }),
+    ...(item.click === undefined ? {} : { click: item.click as (...args: unknown[]) => void }),
     ...(item.enabled === undefined ? {} : { enabled: item.enabled as boolean }),
     ...(item.id === undefined ? {} : { id: item.id as string }),
+    ...(item.label === undefined ? {} : { label: item.label as string }),
     ...(item.role === undefined ? {} : { role: item.role as string }),
     ...(Array.isArray(item.submenu)
       ? { submenu: { items: item.submenu.map((child) => toMenuItem(child as Record<string, unknown>)) } }
@@ -52,10 +58,16 @@ function findMenuItem(items: MockMenuItem[], id: string): MockMenuItem | null {
   return null;
 }
 
+function collectMenuItems(items: MockMenuItem[]): MockMenuItem[] {
+  return items.flatMap((item) => [item, ...(item.submenu ? collectMenuItems(item.submenu.items) : [])]);
+}
+
 function resetMenuMock() {
   vi.clearAllMocks();
   appMock.isPackaged = false;
   menuMock.applicationMenu = null;
+  browserWindowMock.getAllWindows.mockReturnValue([]);
+  browserWindowMock.getFocusedWindow.mockReturnValue(null);
   menuMock.buildFromTemplate.mockImplementation((template: Record<string, unknown>[]) => ({
     items: template.map((item) => toMenuItem(item))
   }));
@@ -114,14 +126,39 @@ describe('native app menu command state', () => {
     expect(findMenuItem(items, 'app.redo')).toMatchObject({ enabled: true });
     expect(findMenuItem(items, 'app.redo')).not.toHaveProperty('role');
   });
+});
 
-  it('adds standard application, edit, and window roles on macOS', () => {
+describe('native app menu platform roles', () => {
+  beforeEach(resetMenuMock);
+
+  it('routes macOS Edit undo and redo through the app commands without native role collisions', () => {
     installAppMenu('darwin');
 
     const items = (menuMock.applicationMenu?.items ?? []) as MockMenuItem[];
-    expect(items.slice(0, 3).map((item) => item.role)).toEqual(['appMenu', 'editMenu', 'windowMenu']);
+    const allItems = collectMenuItems(items);
+    expect(items.slice(0, 3)).toMatchObject([
+      { role: 'appMenu' },
+      { label: 'Edit' },
+      { role: 'windowMenu' }
+    ]);
+    expect(allItems.filter((item) => item.id === 'app.undo')).toHaveLength(1);
+    expect(allItems.filter((item) => item.id === 'app.redo')).toHaveLength(1);
+    expect(allItems.some((item) => item.role === 'editMenu' || item.role === 'undo' || item.role === 'redo')).toBe(false);
+    expect(allItems.some((item) => item.role === 'cut')).toBe(true);
+    expect(allItems.some((item) => item.role === 'paste')).toBe(true);
     expect(findMenuItem(items, 'workspace.openSettings')).not.toBeNull();
     expect(findMenuItem(items, 'localFile.open')).not.toBeNull();
+  });
+
+  it('dispatches a menu accelerator through the BrowserWindow supplied by Electron', () => {
+    installAppMenu('darwin');
+    const items = (menuMock.applicationMenu?.items ?? []) as MockMenuItem[];
+    const send = vi.fn();
+    const window = { isDestroyed: () => false, webContents: { send } };
+
+    findMenuItem(items, 'app.undo')?.click?.({}, window, {});
+
+    expect(send).toHaveBeenCalledWith(expect.any(String), { commandId: 'app.undo' });
   });
 
   it('does not add macOS standard roles to the Windows menu', () => {

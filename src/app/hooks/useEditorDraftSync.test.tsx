@@ -227,31 +227,6 @@ function registerStaleNodeChangeTest() {
 
 }
 
-function registerCommittedContentRefreshTest() {
-  it('preserves an uncommitted same-node draft when committed content refreshes', () => {
-    const onCommit = vi.fn();
-    const { result, rerender } = renderHook(
-      ({ committedContent }) => useEditorDraftSync({ committedContent, nodeId: 'node-1', onCommit }),
-      { initialProps: { committedContent: 'Alpha body' } }
-    );
-
-    act(() => {
-      result.current.handleEditorInput({ contentLength: 'Alpha local draft'.length, nodeId: 'node-1' });
-      result.current.handleEditorChange('Alpha local draft');
-    });
-
-    rerender({ committedContent: 'Alpha remote refresh' });
-
-    expect(result.current.editorContent).toBe('Alpha local draft');
-
-    act(() => {
-      vi.advanceTimersByTime(1200);
-    });
-
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha local draft', { publishLocal: false });
-  });
-}
-
 describe('useEditorDraftSync', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -265,5 +240,4 @@ describe('useEditorDraftSync', () => {
   registerNodeSwitchDisplayTest();
   registerNodeSwitchCommitIsolationTest();
   registerStaleNodeChangeTest();
-  registerCommittedContentRefreshTest();
 });

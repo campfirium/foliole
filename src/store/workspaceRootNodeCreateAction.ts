@@ -7,7 +7,7 @@ import { normalizePushQueuePriority } from '../features/review/model/unifiedPush
 
 import { createNewItemReviewProfiles } from './newItemReviewSlots';
 import { markNodeCreatePending } from './workspaceNodeContentVersionGuard';
-import { createWorkspaceNodeMutationPatchWithLocalSideEffects } from './workspaceNodeMutationPatch';
+import { createWorkspaceNodeCreateAckPatch } from './workspaceNodeMutationPatch';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStore';
 import { completeNodeCreateRuntimePersist } from './workspaceStoreContentRuntimePersist';
@@ -122,13 +122,7 @@ export function createRootNodeAction(
       const acceptedOrder = [...nextNodeOrder] as string[];
       const result = await handlers.syncNodeCreation(createdNode, acceptedOrder, nodeId, acceptedOrder.indexOf(nodeId));
       if (result) {
-        set((state) => {
-          const acceptedPatch = createWorkspaceNodeMutationPatchWithLocalSideEffects(state, result, localPatch);
-          return {
-            ...acceptedPatch,
-            reviewSession: reconcileReviewSession({ ...state, ...acceptedPatch }, nodeId)
-          };
-        });
+        set((state) => createWorkspaceNodeCreateAckPatch(state, result, [nodeId]));
       }
       await completeNodeCreateRuntimePersist(nodeId);
     }

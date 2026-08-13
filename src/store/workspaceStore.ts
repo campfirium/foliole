@@ -149,7 +149,7 @@ const workspaceStore = create<WorkspaceState>()(
       ...createWorkspaceNavigationActions(boundaryAwareSet),
       ...createWorkspaceActionHistoryActions(boundaryAwareSet, get),
       ...createWorkspaceEditorOperationHistoryActions(boundaryAwareSet, get),
-      ...createWorkspaceNodeActions(boundaryAwareSet),
+      ...createWorkspaceNodeActions(boundaryAwareSet, get),
       ...createWorkspaceReviewActions(boundaryAwareSet, get)
     });
     },

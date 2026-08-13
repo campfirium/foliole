@@ -1,7 +1,7 @@
 import type { MouseEvent as ReactMouseEvent } from 'react';
 
 import type { NodeKind } from '../../../lib/core/nodes/nodeKind';
-import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorAdapter, EditorContentChangeMeta } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
 import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
@@ -51,12 +51,12 @@ export interface DocumentPanelSectionProps {
   showDocumentOutline?: boolean;
   onAnswerChange: (answer: string) => void;
   onEditorChange: (content: string) => void;
-  onEditorInput?: (meta: { contentLength?: number; nodeId: string | null }) => void;
+  onEditorInput?: (meta: EditorContentChangeMeta) => void;
   onEditorUndo?: () => boolean;
   onEditorRedo?: () => boolean;
   onFinalizeNodeTitle?: (nodeId: string, content: string) => void;
   onRegisterEditorDraftFlush?: (flush: (() => boolean) | null, closeFlush: (() => Promise<boolean>) | null) => void;
-  onNodeContentChange: (nodeId: string, content: string, options?: { publishLocal?: boolean }) => void;
+  onNodeContentChange: (nodeId: string, content: string, options?: import('../hooks/useEditorDraftFlushCallbacks').EditorDraftCommitOptions) => void;
   onNodePriorityChange?: (nodeId: string, priority: number | null) => void;
   onNodeShortTermChange?: (nodeId: string, enableShortTerm: boolean | null) => void;
   onEditorContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;

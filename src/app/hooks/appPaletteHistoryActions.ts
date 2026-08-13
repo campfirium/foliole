@@ -1,7 +1,11 @@
+import type { EditorOperationApplyContext } from '../../store/workspaceStoreTypes';
+
 import type { useWorkspaceSelectors } from './appControllerState';
+import { getUndoRouterOwner } from './undoRouter';
 
 export function createPaletteHistoryActions(args: {
   flushPendingEditorDraft?: () => boolean;
+  getEditorOperationContext: () => EditorOperationApplyContext | undefined;
   ws: Pick<
     ReturnType<typeof useWorkspaceSelectors>,
     'redoEditorOperation' | 'redoWorkspaceAction' | 'undoEditorOperation' | 'undoWorkspaceAction'
@@ -12,12 +16,18 @@ export function createPaletteHistoryActions(args: {
   };
   return {
     redoWorkspaceAction: () => {
+      if (getUndoRouterOwner() === 'content') {
+        return args.ws.redoEditorOperation(args.getEditorOperationContext());
+      }
       flushEditorDraft();
-      return args.ws.redoEditorOperation() || args.ws.redoWorkspaceAction();
+      return args.ws.redoWorkspaceAction();
     },
     undoWorkspaceAction: () => {
+      if (getUndoRouterOwner() === 'content') {
+        return args.ws.undoEditorOperation(args.getEditorOperationContext());
+      }
       flushEditorDraft();
-      return args.ws.undoEditorOperation() || args.ws.undoWorkspaceAction();
+      return args.ws.undoWorkspaceAction();
     }
   };
 }

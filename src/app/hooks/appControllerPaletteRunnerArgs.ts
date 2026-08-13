@@ -14,6 +14,7 @@ import { refreshWorkspaceState } from '../../store/workspaceRefreshScheduler';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
+import { createEditorOperationApplyContext } from './appControllerEditorHandlers';
 import { createPaletteReviewActions } from './appControllerPaletteReviewActions';
 import { createPaletteRuntimeActions } from './appControllerPaletteRuntimeActions';
 import { createPublishingPaletteActions } from './appControllerPublishingActions';
@@ -179,6 +180,7 @@ export function createPaletteRunnerArgs(args: {
     ...createPaletteReviewActions(args),
     ...createPaletteHistoryActions({
       flushPendingEditorDraft: args.runtime.flushPendingEditorDraft,
+      getEditorOperationContext: () => createEditorOperationApplyContext(args),
       ws: args.ws
     }),
     ...createPaletteStudyActions(args),

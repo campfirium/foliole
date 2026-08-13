@@ -145,20 +145,35 @@ it('keeps body edits made before root creation confirmation', async () => {
 
     const createPromise = actions.createRootNode('');
     const createdNodeId = harness.getState().activeNodeId!;
+    const creationOrder = [...harness.getState().nodeOrder];
     expect(createdNodeId).toContain('node-');
 
     await actions.updateNodeContent(createdNodeId, 'Typed body before create confirmation');
     expect(harness.getState().nodesById[createdNodeId]?.content).toBe('Typed body before create confirmation');
+    const switchedOrder = [...harness.getState().nodeOrder].reverse();
+    harness.setState({
+      activeNodeId: 'node-1',
+      nodeOrder: switchedOrder,
+      reviewSession: {
+        currentNodeId: 'node-1',
+        isAnswerRevealed: false,
+        queueNodeIds: ['node-1'],
+        totalNodeCount: 1
+      }
+    });
 
     resolveCreateMutation({
       activeNodeId: createdNodeId,
       createdNodeIds: [createdNodeId],
-      nodeOrder: harness.getState().nodeOrder,
+      nodeOrder: creationOrder,
       nodes: []
     });
     await createPromise;
 
     expect(harness.getState().nodesById[createdNodeId]?.content).toBe('Typed body before create confirmation');
+    expect(harness.getState().activeNodeId).toBe('node-1');
+    expect(harness.getState().nodeOrder).toEqual(switchedOrder);
+    expect(harness.getState().reviewSession.currentNodeId).toBe('node-1');
   } finally {
     vi.clearAllTimers();
     vi.useRealTimers();
@@ -181,7 +196,11 @@ it('keeps child creation content local when native persistence rejects creation 
 
 it('caches selection highlight content before runtime creation confirmation', async () => {
   vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);
-  vi.mocked(syncCreateNodeMutationToRuntime).mockResolvedValueOnce(null);
+  vi.mocked(syncCreateNodeMutationToRuntime).mockImplementationOnce(async (node, nodeOrder) => ({
+    createdNodeIds: [node.id],
+    nodeOrder,
+    nodes: []
+  }));
   const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
   const actions = createWorkspaceNodeActions(harness.setState);
 
@@ -202,7 +221,11 @@ it('caches selection highlight content before runtime creation confirmation', as
 
 it('caches selection cloze prompt and reveal before runtime creation confirmation', async () => {
   vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);
-  vi.mocked(syncCreateNodeMutationToRuntime).mockResolvedValueOnce(null);
+  vi.mocked(syncCreateNodeMutationToRuntime).mockImplementationOnce(async (node, nodeOrder) => ({
+    createdNodeIds: [node.id],
+    nodeOrder,
+    nodes: []
+  }));
   const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
   const actions = createWorkspaceNodeActions(harness.setState);
 

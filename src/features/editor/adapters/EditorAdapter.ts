@@ -12,6 +12,8 @@ export interface EditorRevealOptions {
 export interface EditorContentChangeMeta {
   contentLength?: number;
   nodeId: string | null;
+  origin?: 'history' | 'user';
+  textTransactions?: readonly import('../model/editorOperationHistory').EditorTextEditOperationEntry[];
 }
 
 export interface EditorSearchDecorations {
@@ -53,6 +55,7 @@ export interface EditorAdapter {
   getPositionClientRect?(position: number): DOMRect | null;
   getPositionViewportTop?(position: number): number | null;
   isPositionNearViewportRatio?(position: number, ratio: number, toleranceRatio?: number): boolean;
+  applyTextHistory?(entry: import('../model/editorOperationHistory').EditorTextEditOperationEntry, mode: 'redo' | 'undo'): boolean;
   getViewportRect?(): DOMRect | null;
   revealPosition(position: number): void;
   revealSelectionCentered?(selection: EditorSelection, options?: EditorRevealOptions): void;

@@ -17,12 +17,12 @@ function createAdapter() {
   return { adapter, onChange, onDocumentInput, view };
 }
 
-describe('CodeMirrorEditorAdapter external change flush boundaries', () => {
-  afterEach(() => {
-    document.body.innerHTML = '';
-    vi.useRealTimers();
-  });
+afterEach(() => {
+  document.body.innerHTML = '';
+  vi.useRealTimers();
+});
 
+describe('CodeMirrorEditorAdapter external change flush boundaries', () => {
   it('flushes pending old-node content before switching node id', () => {
     vi.useFakeTimers();
     const { adapter, onChange, view } = createAdapter();
@@ -62,7 +62,12 @@ describe('CodeMirrorEditorAdapter external change flush boundaries', () => {
 
     view.dispatch({ changes: { from: 11, insert: ' draft' } });
 
-    expect(onDocumentInput).toHaveBeenCalledWith({ contentLength: 'old content draft'.length, isComposing: false, nodeId: 'node-A' });
+    expect(onDocumentInput).toHaveBeenCalledWith({
+      contentLength: 'old content draft'.length,
+      isComposing: false,
+      nodeId: 'node-A',
+      origin: 'user'
+    });
     expect(onChange).not.toHaveBeenCalled();
 
     vi.runAllTimers();
@@ -70,4 +75,48 @@ describe('CodeMirrorEditorAdapter external change flush boundaries', () => {
     expect(onChange).toHaveBeenCalledWith('old content draft', { nodeId: 'node-A' });
     adapter.destroy();
   });
+
+});
+
+it('discards the delayed user buffer and publishes history replay immediately', () => {
+  vi.useFakeTimers();
+  const { adapter, onChange, onDocumentInput, view } = createAdapter();
+  adapter.setNodeId('node-A');
+  view.dispatch({ changes: { from: 11, insert: ' draft' }, userEvent: 'input.type' });
+  const meta = onDocumentInput.mock.calls[0]?.[0] as {
+    textTransactions?: Parameters<NonNullable<typeof adapter.applyTextHistory>>[0][];
+  };
+  const entry = meta.textTransactions?.[0];
+  const buffer = (adapter as unknown as { externalChangeBuffer: { discardPending: () => void } }).externalChangeBuffer;
+  const discardPending = vi.spyOn(buffer, 'discardPending');
+  expect(entry).toBeTruthy();
+
+  expect(adapter.applyTextHistory(entry!, 'undo')).toBe(true);
+  expect(onChange).toHaveBeenCalledTimes(1);
+  expect(onChange).toHaveBeenCalledWith('old content', { nodeId: 'node-A', origin: 'history' });
+  expect(discardPending).toHaveBeenCalledOnce();
+  adapter.destroy();
+});
+
+it('preserves the delayed user buffer when history evidence no longer matches', () => {
+  vi.useFakeTimers();
+  const { adapter, onChange, onDocumentInput, view } = createAdapter();
+  adapter.setNodeId('node-A');
+  view.dispatch({ changes: { from: 11, insert: ' draft' }, userEvent: 'input.type' });
+  const meta = onDocumentInput.mock.calls[0]?.[0] as {
+    textTransactions?: Parameters<NonNullable<typeof adapter.applyTextHistory>>[0][];
+  };
+  const entry = meta.textTransactions?.[0];
+  const buffer = (adapter as unknown as { externalChangeBuffer: { discardPending: () => void } }).externalChangeBuffer;
+  const discardPending = vi.spyOn(buffer, 'discardPending');
+  expect(entry).toBeTruthy();
+
+  view.dispatch({ changes: { from: view.state.doc.length, insert: ' newer' } });
+  expect(adapter.applyTextHistory(entry!, 'undo')).toBe(false);
+  expect(discardPending).not.toHaveBeenCalled();
+  expect(onChange).not.toHaveBeenCalled();
+
+  vi.runAllTimers();
+  expect(onChange).toHaveBeenCalledWith('old content draft newer', { nodeId: 'node-A' });
+  adapter.destroy();
 });

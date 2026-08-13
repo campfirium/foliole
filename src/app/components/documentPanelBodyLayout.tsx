@@ -1,6 +1,6 @@
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 
-import type { EditorAdapter, EditorDiffDecorations, EditorSelection, EditorTextAnchorDecoration, EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorAdapter, EditorContentChangeMeta, EditorDiffDecorations, EditorSelection, EditorTextAnchorDecoration, EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
 import type { EditorRestoreSelectionMode } from '../../features/editor/model/editorRestoreCommand';
@@ -55,7 +55,7 @@ export interface DocumentPanelBodyLayoutProps {
   onAnswerChange: (answer: string) => void;
   onAnswerImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   onEditorChange: (content: string) => void;
-  onEditorInput?: (meta: { contentLength?: number; nodeId: string | null }) => void;
+  onEditorInput?: (meta: EditorContentChangeMeta) => void;
   onEditorUndo?: () => boolean;
   onEditorRedo?: () => boolean;
   onEditorContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;

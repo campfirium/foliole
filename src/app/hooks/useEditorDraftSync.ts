@@ -3,15 +3,22 @@ import { startTransition, useCallback, useEffect, useMemo, useRef, useState, typ
 import type { EditorContentChangeMeta } from '../../features/editor/adapters/EditorAdapter';
 import { deferNodeContentRuntimePersist } from '../../store/workspaceStoreContentRuntimePersist';
 
-import { useDraftFlushCallbacks, type EditorDraftCommit, type EditorDraftFlushRegistration } from './useEditorDraftFlushCallbacks';
+import {
+  applyEditorDraftHistoryReplay,
+  type EditorDraftHistoryReplayArgs
+} from './editorDraftHistoryReplay';
+import {
+  useDraftFlushCallbacks,
+  type EditorDraftCommit,
+  type EditorDraftFlushRegistration
+} from './useEditorDraftFlushCallbacks';
 import { useEditorDraftInputWithEvidence } from './useEditorDraftInputWithEvidence';
 import {
   clearDraftTimer,
   runPendingTitleRefresh,
   usePendingDraftCommit,
   type DraftFlushResult,
-  type PendingDraftCommit,
-  type PendingTitleRefresh
+  type PendingDraftCommit
 } from './useEditorDraftPendingCommit';
 import { createEditorDraftSyncApi } from './useEditorDraftSyncApi';
 import { useEditorDraftUserInputEvidence } from './useEditorDraftUserInputEvidence';
@@ -29,18 +36,11 @@ interface EditorDraftState {
   nodeId: string | null;
 }
 
-interface DraftChangeHandlerArgs {
-  clearPendingDraftCommit: () => void;
-  clearPendingUserInputEvidence: (nodeId: string | null) => void;
+interface DraftChangeHandlerArgs extends Omit<EditorDraftHistoryReplayArgs, 'content'> {
   hasPendingUserInputEvidence: (nodeId: string | null, content: string) => boolean;
   latestCommittedContentRef: MutableRefObject<string>;
-  nodeId: string | null;
-  onCommit: (nodeId: string | null, content: string, options?: { publishLocal?: boolean }) => void;
   scheduleFlush: () => void;
-  setDraftState: Dispatch<SetStateAction<EditorDraftState>>;
   setPendingDraftCommit: (pendingCommit: PendingDraftCommit) => void;
-  setPendingTitleRefresh: (pendingTitle: PendingTitleRefresh) => void;
-  timerRef: MutableRefObject<number | null>;
 }
 
 interface CommittedContentSyncArgs {
@@ -79,6 +79,10 @@ function useEditorDraftState(committedContent: string, nodeId: string | null) {
 function useDraftChangeHandler(args: DraftChangeHandlerArgs) {
   return useCallback((content: string, meta?: EditorContentChangeMeta) => {
     const sourceNodeId = meta?.nodeId ?? args.nodeId;
+    if (meta?.origin === 'history') {
+      applyEditorDraftHistoryReplay({ ...args, content, nodeId: sourceNodeId });
+      return;
+    }
     if (!sourceNodeId) {
       if (content === '') {
         return;

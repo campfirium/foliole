@@ -1,6 +1,11 @@
 import { beforeAll, expect, it } from 'vitest';
 
-import { createEmptyEditorOperationHistory } from '../../features/editor/model/editorOperationHistory';
+import {
+  createEmptyEditorOperationHistory,
+  moveEditorOperationEntry,
+  pushEditorOperationEntry
+} from '../../features/editor/model/editorOperationHistory';
+import { createAnnotationHistoryEntry } from '../../features/editor/model/editorOperationHistory.testSupport';
 import { preloadTranslationCatalog, translate } from '../../shared/localization/translations';
 import { createEmptyWorkspaceActionHistory } from '../../store/workspaceActionHistory';
 
@@ -14,61 +19,67 @@ beforeAll(async () => {
   await preloadTranslationCatalog('zh-Hans');
 });
 
-it('enables app undo for the current editor operation stack', () => {
-  const options = resolveEditorAwarePaletteHistoryOptions({
+it('enables content undo only for the active topic session', () => {
+  const history = pushEditorOperationEntry(
+    createEmptyEditorOperationHistory(),
+    createAnnotationHistoryEntry('node-1', 'annotation.create')
+  );
+  const active = resolveEditorAwarePaletteHistoryOptions({
     activeNodeId: 'node-1',
     appActionHistory: createEmptyWorkspaceActionHistory(),
-    editorOperationHistory: {
-      ...createEmptyEditorOperationHistory(),
-      undoStack: [{
-        annotations: [{ kind: 'highlight', nodeId: 'highlight-1', parentNodeId: 'node-1' }],
-        nodeId: 'node-1',
-        title: 'Create Annotation',
-        type: 'annotation.create'
-      }]
-    },
+    editorOperationHistory: history,
+    owner: 'content',
     t
   });
-
-  expect(options.canUndoWorkspaceAction).toBe(true);
-  expect(options.undoWorkspaceActionTitle).toBe('Undo Create Annotation');
-});
-
-it('enables annotation redo even when focus moved away from the editor node', () => {
-  const options = resolveEditorAwarePaletteHistoryOptions({
+  const other = resolveEditorAwarePaletteHistoryOptions({
     activeNodeId: 'node-2',
     appActionHistory: createEmptyWorkspaceActionHistory(),
-    editorOperationHistory: {
-      ...createEmptyEditorOperationHistory(),
-      redoStack: [{
-        annotations: [{ kind: 'highlight', nodeId: 'highlight-1', parentNodeId: 'node-1' }],
-        nodeId: 'node-1',
-        title: 'Create Annotation',
-        type: 'annotation.create'
-      }]
-    },
+    editorOperationHistory: history,
+    owner: 'content',
     t
   });
 
-  expect(options.canRedoWorkspaceAction).toBe(true);
-  expect(options.redoWorkspaceActionTitle).toBe('Redo Create Annotation');
+  expect(active).toMatchObject({ canUndoWorkspaceAction: true, undoWorkspaceActionTitle: 'Undo Create Annotation' });
+  expect(other).toMatchObject({ canUndoWorkspaceAction: false, undoWorkspaceActionTitle: 'Undo' });
 });
 
-it('localizes editor operation history titles', () => {
+it('exposes redo only when the active topic owns the redo entry', () => {
+  let history = pushEditorOperationEntry(
+    createEmptyEditorOperationHistory(),
+    createAnnotationHistoryEntry('node-1', 'annotation.create')
+  );
+  history = moveEditorOperationEntry(history, 'node-1', 'undo');
   const options = resolveEditorAwarePaletteHistoryOptions({
     activeNodeId: 'node-1',
     appActionHistory: createEmptyWorkspaceActionHistory(),
-    editorOperationHistory: {
-      ...createEmptyEditorOperationHistory(),
-      undoStack: [{
-        annotations: [{ kind: 'highlight', nodeId: 'highlight-1', parentNodeId: 'node-1' }],
-        nodeId: 'node-1',
-        title: 'Create Annotation',
-        type: 'annotation.create'
-      }]
-    },
-    t: zhHans
+    editorOperationHistory: history,
+    owner: 'content',
+    t
   });
 
-  expect(options.undoWorkspaceActionTitle).toBe('撤销创建批注');
+  expect(options).toMatchObject({ canRedoWorkspaceAction: true, redoWorkspaceActionTitle: 'Redo Create Annotation' });
+});
+
+it('keeps workspace ownership independent from content history and localizes content titles', () => {
+  const history = pushEditorOperationEntry(
+    createEmptyEditorOperationHistory(),
+    createAnnotationHistoryEntry('node-1', 'annotation.create')
+  );
+  const content = resolveEditorAwarePaletteHistoryOptions({
+    activeNodeId: 'node-1',
+    appActionHistory: createEmptyWorkspaceActionHistory(),
+    editorOperationHistory: history,
+    owner: 'content',
+    t: zhHans
+  });
+  const workspace = resolveEditorAwarePaletteHistoryOptions({
+    activeNodeId: 'node-1',
+    appActionHistory: createEmptyWorkspaceActionHistory(),
+    editorOperationHistory: history,
+    owner: 'workspace',
+    t
+  });
+
+  expect(content.undoWorkspaceActionTitle).toBe('撤销创建批注');
+  expect(workspace.canUndoWorkspaceAction).toBe(false);
 });

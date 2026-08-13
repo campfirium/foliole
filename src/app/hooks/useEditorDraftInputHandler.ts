@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 
 import type { EditorContentChangeMeta } from '../../features/editor/adapters/EditorAdapter';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 import { deferNodeContentRuntimePersist } from '../../store/workspaceStoreContentRuntimePersist';
 
 export function useEditorDraftInputHandler(
@@ -9,6 +10,11 @@ export function useEditorDraftInputHandler(
 ) {
   return useCallback((meta?: EditorContentChangeMeta) => {
     const sourceNodeId = meta?.nodeId ?? nodeId;
+    for (const transaction of meta?.textTransactions ?? []) {
+      if (transaction.nodeId === sourceNodeId) {
+        useWorkspaceStore.getState().pushEditorOperationEntry(transaction);
+      }
+    }
     if (sourceNodeId) {
       deferNodeContentRuntimePersist(sourceNodeId);
     }

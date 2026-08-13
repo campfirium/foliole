@@ -1,45 +1,28 @@
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import { getEditorOperationSession } from '../../features/editor/model/editorOperationHistory';
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
-import { INBOX_NODE_ID, isProtectedRootNode } from '../../features/nodes/model/specialNodes';
-import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
+import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
+import type { EditorOperationApplyContext } from '../../store/workspaceStoreTypes';
 
 import { isVirtualEditorNode } from './appControllerLayoutContext';
 import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
+import type { EditorDraftCommitOptions } from './useEditorDraftFlushCallbacks';
+
 
 export type SelectNodeHandler = (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
 
 function isBlankTextEditAfterAnnotation(args: BuildControllerLayoutPropsArgs, nodeId: string, content: string) {
   const node = args.ws.nodesById[nodeId];
+  const session = getEditorOperationSession(args.ws.editorOperationHistory, nodeId);
   const topEntries = [
-    args.ws.editorOperationHistory.undoStack.at(-1),
-    args.ws.editorOperationHistory.redoStack.at(-1)
+    session.undoStack.at(-1),
+    session.redoStack.at(-1)
   ];
   return (
     content.length === 0 &&
     Boolean(node?.content) &&
     topEntries.some((entry) => entry?.type === 'annotation.create' && entry.nodeId === nodeId)
   );
-}
-
-function pushTextEditOperation(args: BuildControllerLayoutPropsArgs, nodeId: string, content: string) {
-  const node = args.ws.nodesById[nodeId];
-  if (
-    !node ||
-    node.content === content ||
-    isBlankTextEditAfterAnnotation(args, nodeId, content) ||
-    args.ws.trashedNodeIds.includes(nodeId) ||
-    !isNodeDocumentLoaded(node) ||
-    isProtectedRootNode(node)
-  ) {
-    return;
-  }
-  args.ws.pushEditorOperationEntry({
-    afterContent: content,
-    beforeContent: node.content,
-    nodeId,
-    title: 'Edit Text',
-    type: 'text.edit'
-  });
 }
 
 export function createAnswerChangeHandler(args: BuildControllerLayoutPropsArgs) {
@@ -68,8 +51,33 @@ export function createEditorReadyHandler(args: BuildControllerLayoutPropsArgs) {
   };
 }
 
+export function createEditorOperationApplyContext(
+  args: {
+    runtime: { editorRef: { current: EditorAdapter | null } };
+    ws: Pick<BuildControllerLayoutPropsArgs['ws'], 'activeNodeId' | 'nodesById'>;
+  }
+): EditorOperationApplyContext | undefined {
+  const nodeId = args.ws.activeNodeId;
+  const node = nodeId ? args.ws.nodesById[nodeId] : undefined;
+  if (!nodeId || !node) return undefined;
+  const editor = args.runtime.editorRef.current;
+  return {
+    applyText: (entry, mode) => editor?.applyTextHistory?.(entry, mode) ?? false,
+    currentContent: editor?.getContent() ?? node.content,
+    nodeId
+  };
+}
+
+export function createEditorUndoHandler(args: BuildControllerLayoutPropsArgs) {
+  return () => args.ws.undoEditorOperation(createEditorOperationApplyContext(args));
+}
+
+export function createEditorRedoHandler(args: BuildControllerLayoutPropsArgs) {
+  return () => args.ws.redoEditorOperation(createEditorOperationApplyContext(args));
+}
+
 export function createNodeContentChangeHandler(args: BuildControllerLayoutPropsArgs) {
-  return (nodeId: string, content: string, options?: { publishLocal?: boolean }) => {
+  return (nodeId: string, content: string, options?: EditorDraftCommitOptions) => {
     if (args.runtime.isViewingTrashNode) {
       return;
     }
@@ -77,10 +85,11 @@ export function createNodeContentChangeHandler(args: BuildControllerLayoutPropsA
       args.ws.updateVirtualNodeFilter(nodeId, content);
       return;
     }
-    if (isBlankTextEditAfterAnnotation(args, nodeId, content)) {
+    if (!options?.historyReplay && isBlankTextEditAfterAnnotation(args, nodeId, content)) {
       return;
     }
-    pushTextEditOperation(args, nodeId, content);
-    args.ws.updateNodeContent(nodeId, content, options);
+    args.ws.updateNodeContent(nodeId, content, options && 'publishLocal' in options
+      ? { publishLocal: options.publishLocal }
+      : undefined);
   };
 }

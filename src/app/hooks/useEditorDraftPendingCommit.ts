@@ -1,5 +1,6 @@
 import { startTransition, useCallback, useRef, type MutableRefObject } from 'react';
 
+import type { EditorDraftCommitOptions } from './useEditorDraftFlushCallbacks';
 import {
   isEditorInputDiagnosticEnabled,
   logDraftFlushDiagnostic,
@@ -10,7 +11,7 @@ export interface PendingDraftCommit {
   committedContent: string | null;
   content: string;
   nodeId: string | null;
-  onCommit: (nodeId: string | null, content: string, options?: { publishLocal?: boolean }) => void;
+  onCommit: (nodeId: string | null, content: string, options?: EditorDraftCommitOptions) => void;
 }
 
 export interface PendingTitleRefresh {
@@ -38,7 +39,7 @@ interface FlushFreshDraftArgs {
   finalizeTitle: boolean;
   finalizeTitleRefresh: (nodeId?: string | null) => PendingTitleRefresh | null;
   nodeId: string | null;
-  onCommit: (nodeId: string | null, content: string, options?: { publishLocal?: boolean }) => void;
+  onCommit: (nodeId: string | null, content: string, options?: EditorDraftCommitOptions) => void;
   pendingCommitRef: MutableRefObject<PendingDraftCommit | null>;
   pendingCommitStartedAtRef: MutableRefObject<number | null>;
   timerRef: MutableRefObject<number | null>;
@@ -74,7 +75,7 @@ function flushPendingDraft(args: FlushPendingDraftArgs): DraftFlushResult {
     }
     return { flushed: false, pendingTitle };
   }
-  const commitPendingDraft = (options?: { publishLocal?: boolean }) =>
+  const commitPendingDraft = (options?: EditorDraftCommitOptions) =>
     pendingCommit.onCommit(pendingCommit.nodeId, pendingCommit.content, options);
   if (args.finalizeTitle || args.syncCommit === true) {
     commitPendingDraft({ publishLocal: false });
@@ -193,7 +194,7 @@ export function usePendingDraftCommit(timerRef: MutableRefObject<number | null>)
     pendingCommitStartedAtRef.current = readEditorInputDiagnosticTime();
   }, []);
   const getPendingDraftCommit = useCallback(() => pendingCommitRef.current, []);
-  const setPendingTitleRefresh = useCallback((pendingTitle: PendingTitleRefresh) => {
+  const setPendingTitleRefresh = useCallback((pendingTitle: PendingTitleRefresh | null) => {
     pendingTitleRefreshRef.current = pendingTitle;
   }, []);
   const flushPendingDraftForDifferentNode = useCallback((nodeId: string): DraftFlushResult => {

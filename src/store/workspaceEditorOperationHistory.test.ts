@@ -1,11 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { getEditorOperationSession } from '../features/editor/model/editorOperationHistory';
+import { createTextHistoryEntry } from '../features/editor/model/editorOperationHistory.testSupport';
+
 import { createWorkspaceEditorOperationHistoryActions } from './workspaceEditorOperationHistory';
+import {
+  hasWorkspaceNodeMutationRuntime,
+  syncCreateNodeMutationToRuntime
+} from './workspaceRuntimeSync';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
 import {
+  createHighlightLocator,
   createWorkspaceNodeActionsFixture,
-  createWorkspaceNodeActionsSetStateHarness,
-  createHighlightLocator
+  createWorkspaceNodeActionsSetStateHarness
 } from './workspaceStoreNodeActions.test-support';
 
 vi.mock('./workspaceRuntimeSync', () => ({
@@ -22,146 +29,205 @@ vi.mock('./workspaceRuntimeSync', () => ({
   syncNodeOrderToRuntime: vi.fn(),
   syncNodeRevealToRuntime: vi.fn(),
   syncRestoreNodesToRuntime: vi.fn(),
-  syncSoftDeleteNodesToRuntime: vi.fn()
+  syncSoftDeleteNodesToRuntime: vi.fn(async ({ nodeIds }: { nodeIds: string[] }) => ({ deletedNodeIds: nodeIds }))
 }));
 
 function createHarness() {
   const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
-  const nodeActions = createWorkspaceNodeActions(harness.setState);
+  const nodeActions = createWorkspaceNodeActions(harness.setState, harness.getState);
   const historyActions = createWorkspaceEditorOperationHistoryActions(harness.setState, harness.getState);
   harness.setState({ ...nodeActions, ...historyActions });
   return { harness, historyActions };
 }
 
 function pushTextEdit(historyActions: ReturnType<typeof createWorkspaceEditorOperationHistoryActions>) {
-  historyActions.pushEditorOperationEntry({
+  historyActions.pushEditorOperationEntry(createTextHistoryEntry({
     afterContent: '# Seed\n\nTyped body',
     beforeContent: '# Seed',
-    nodeId: 'node-1',
-    title: 'Edit Text',
-    type: 'text.edit'
-  });
+    nodeId: 'node-1'
+  }));
 }
 
-async function runCreatedHighlightUndoRedoCase() {
-  const { harness, historyActions } = createHarness();
-  const createdId = (await harness
-    .getState()
-    .createHighlightNodeFromSelection('node-1', 'Seed', 'anchor-1', createHighlightLocator('anchor-1', 'Seed')))!;
-
-  expect(createdId).toBeTruthy();
-  expect(harness.getState().editorOperationHistory.undoStack.at(-1)?.type).toBe('annotation.create');
-
-  expect(historyActions.undoEditorOperation()).toBe(true);
-  expect(harness.getState().trashedNodeIds).toContain(createdId as string);
-
-  expect(historyActions.redoEditorOperation()).toBe(true);
-  expect(harness.getState().trashedNodeIds).not.toContain(createdId as string);
-  expect(harness.getState().nodesById[createdId as string]?.id).toBe(createdId);
+function createTextContext(harness: ReturnType<typeof createHarness>['harness']) {
+  return {
+    applyText: (entry: ReturnType<typeof createTextHistoryEntry>, mode: 'redo' | 'undo') => {
+      const content = mode === 'undo' ? entry.beforeContent : entry.afterContent;
+      void harness.getState().updateNodeContent(entry.nodeId, content, { publishLocal: false });
+      return true;
+    },
+    currentContent: harness.getState().nodesById['node-1']!.content,
+    nodeId: 'node-1'
+  };
 }
 
-async function runAnnotationDeleteUndoRedoCase() {
-  const { harness, historyActions } = createHarness();
-  const createdId = (await harness
-    .getState()
-    .createHighlightNodeFromSelection('node-1', 'Seed', 'anchor-1', createHighlightLocator('anchor-1', 'Seed')))!;
-  harness.getState().deleteEditorAnnotationNodes([createdId]);
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(false);
+});
 
-  expect(harness.getState().editorOperationHistory.undoStack.at(-1)?.type).toBe('annotation.delete');
-  expect(harness.getState().trashedNodeIds).toContain(createdId as string);
-
-  expect(historyActions.undoEditorOperation()).toBe(true);
-  expect(harness.getState().trashedNodeIds).not.toContain(createdId as string);
-
-  expect(historyActions.redoEditorOperation()).toBe(true);
-  expect(harness.getState().trashedNodeIds).toContain(createdId as string);
-  expect(harness.getState().nodesById[createdId as string]?.id).toBe(createdId);
-}
-
-async function runTextThenHighlightUndoOrderCase() {
-  const { harness, historyActions } = createHarness();
-  pushTextEdit(historyActions);
-  await harness.getState().updateNodeContent('node-1', '# Seed\n\nTyped body');
-  const createdId = (await harness
-    .getState()
-    .createHighlightNodeFromSelection('node-1', 'Seed', 'anchor-1', createHighlightLocator('anchor-1', 'Seed')))!;
-
-  expect(historyActions.undoEditorOperation()).toBe(true);
-  expect(harness.getState().trashedNodeIds).toContain(createdId as string);
-  expect(harness.getState().nodesById['node-1']?.content).toBe('# Seed\n\nTyped body');
-
-  expect(historyActions.undoEditorOperation()).toBe(true);
-  expect(harness.getState().nodesById['node-1']?.content).toBe('# Seed');
-}
-
-async function runHighlightThenTextUndoOrderCase() {
-  const { harness, historyActions } = createHarness();
-  const createdId = (await harness
-    .getState()
-    .createHighlightNodeFromSelection('node-1', 'Seed', 'anchor-1', createHighlightLocator('anchor-1', 'Seed')))!;
-  pushTextEdit(historyActions);
-  await harness.getState().updateNodeContent('node-1', '# Seed\n\nTyped body');
-
-  expect(historyActions.undoEditorOperation()).toBe(true);
-  expect(harness.getState().nodesById['node-1']?.content).toBe('# Seed');
-  expect(harness.getState().trashedNodeIds).not.toContain(createdId as string);
-
-  expect(historyActions.undoEditorOperation()).toBe(true);
-  expect(harness.getState().trashedNodeIds).toContain(createdId as string);
-}
-
-describe('workspace editor operation history', () => {
-  beforeEach(async () => {
-    vi.clearAllMocks();
-  });
-
-  it('undoes and redoes a committed text edit through node content sync', async () => {
+describe('workspace editor text history', () => {
+  it('replays text through the supplied editor/save context and moves only that topic stack', async () => {
     const { harness, historyActions } = createHarness();
     pushTextEdit(historyActions);
     await harness.getState().updateNodeContent('node-1', '# Seed\n\nTyped body');
 
-    expect(historyActions.undoEditorOperation()).toBe(true);
+    expect(historyActions.undoEditorOperation(createTextContext(harness))).toBe(true);
     expect(harness.getState().nodesById['node-1']?.content).toBe('# Seed');
-    expect(harness.getState().editorOperationHistory.redoStack).toHaveLength(1);
+    expect(getEditorOperationSession(harness.getState().editorOperationHistory, 'node-1').redoStack).toHaveLength(1);
 
-    expect(historyActions.redoEditorOperation()).toBe(true);
+    expect(historyActions.redoEditorOperation(createTextContext(harness))).toBe(true);
     expect(harness.getState().nodesById['node-1']?.content).toBe('# Seed\n\nTyped body');
-    expect(harness.getState().editorOperationHistory.undoStack).toHaveLength(1);
   });
 
-  it('does not consume a text edit when the node content no longer matches the snapshot', async () => {
+  it('invalidates only the topic session when current content no longer matches', async () => {
     const { harness, historyActions } = createHarness();
     pushTextEdit(historyActions);
     await harness.getState().updateNodeContent('node-1', '# Seed\n\nOther body');
 
-    expect(historyActions.undoEditorOperation()).toBe(false);
-    expect(harness.getState().nodesById['node-1']?.content).toBe('# Seed\n\nOther body');
-    expect(harness.getState().editorOperationHistory.undoStack).toHaveLength(1);
-    expect(harness.getState().editorOperationHistory.redoStack).toHaveLength(0);
+    expect(historyActions.undoEditorOperation(createTextContext(harness))).toBe(false);
+    expect(getEditorOperationSession(harness.getState().editorOperationHistory, 'node-1').undoStack).toEqual([]);
+    expect(harness.getState().editorOperationHistory.invalidations.at(-1)).toEqual({
+      nodeId: 'node-1',
+      reason: 'current-content-mismatch'
+    });
   });
 
-  it('keeps a cross-node text edit on the stack until its node is current', async () => {
+  it('does not consume topic A history while topic B is active', () => {
     const { harness, historyActions } = createHarness();
     pushTextEdit(historyActions);
-    harness.setState({ activeNodeId: 'missing-node' });
+    harness.setState({ activeNodeId: 'node-b' });
 
     expect(historyActions.undoEditorOperation()).toBe(false);
-    expect(harness.getState().editorOperationHistory.undoStack).toHaveLength(1);
+    expect(getEditorOperationSession(harness.getState().editorOperationHistory, 'node-1').undoStack).toHaveLength(1);
+  });
+});
+
+describe('workspace editor annotation history', () => {
+  it('waits for canonical create, delete, and restore before moving local annotation state', async () => {
+    const { harness, historyActions } = createHarness();
+    const createdId = await harness.getState().createHighlightNodeFromSelection(
+      'node-1',
+      'Seed',
+      'anchor-1',
+      createHighlightLocator('anchor-1', 'Seed')
+    );
+    expect(createdId).toBeTruthy();
+    expect(getEditorOperationSession(harness.getState().editorOperationHistory, 'node-1').undoStack.at(-1)).toMatchObject({
+      canonical: 'confirmed',
+      type: 'annotation.create'
+    });
+
+    expect(historyActions.undoEditorOperation()).toBe(true);
+    await vi.waitFor(() => expect(harness.getState().trashedNodeIds).toContain(createdId));
+    expect(historyActions.redoEditorOperation()).toBe(true);
+    await vi.waitFor(() => expect(harness.getState().trashedNodeIds).not.toContain(createdId));
   });
 
-  it('undoes and redoes a created highlight as the same annotation node', async () => {
-    await runCreatedHighlightUndoRedoCase()
+  it('records user annotation deletion only after the canonical delete succeeds', async () => {
+    const { harness, historyActions } = createHarness();
+    const createdId = (await harness.getState().createHighlightNodeFromSelection(
+      'node-1', 'Seed', 'anchor-1', createHighlightLocator('anchor-1', 'Seed')
+    ))!;
+    historyActions.deleteEditorAnnotationNodes([createdId]);
+    await vi.waitFor(() => expect(harness.getState().trashedNodeIds).toContain(createdId));
+
+    expect(getEditorOperationSession(harness.getState().editorOperationHistory, 'node-1').undoStack.at(-1)?.type)
+      .toBe('annotation.delete');
+    expect(historyActions.undoEditorOperation()).toBe(true);
+    await vi.waitFor(() => expect(harness.getState().trashedNodeIds).not.toContain(createdId));
   });
 
-  it('undoes and redoes editor annotation deletion without using permanent delete', async () => {
-    await runAnnotationDeleteUndoRedoCase()
+  it('preserves mixed text and annotation user order in one topic', async () => {
+    const { harness, historyActions } = createHarness();
+    pushTextEdit(historyActions);
+    await harness.getState().updateNodeContent('node-1', '# Seed\n\nTyped body');
+    const createdId = await harness.getState().createHighlightNodeFromSelection(
+      'node-1', 'Seed', 'anchor-1', createHighlightLocator('anchor-1', 'Seed')
+    );
+
+    expect(historyActions.undoEditorOperation()).toBe(true);
+    await vi.waitFor(() => expect(harness.getState().trashedNodeIds).toContain(createdId));
+    expect(historyActions.undoEditorOperation(createTextContext(harness))).toBe(true);
+    expect(harness.getState().nodesById['node-1']?.content).toBe('# Seed');
   });
 
-  it('undoes a highlight before an earlier text edit when the highlight was created last', async () => {
-    await runTextThenHighlightUndoOrderCase()
-  });
+});
 
-  it('undoes a text edit before an earlier highlight when the text was edited last', async () => {
-    await runHighlightThenTextUndoOrderCase()
+it('keeps a visible pending annotation at the stack top and serializes undo behind its acknowledgement', async () => {
+  vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);
+  let resolveCreate!: (value: Awaited<ReturnType<typeof syncCreateNodeMutationToRuntime>>) => void;
+  vi.mocked(syncCreateNodeMutationToRuntime).mockImplementationOnce(() => new Promise((resolve) => {
+    resolveCreate = resolve;
+  }));
+  const { harness, historyActions } = createHarness();
+  pushTextEdit(historyActions);
+  const createPromise = harness.getState().createHighlightNodeFromSelection(
+    'node-1', 'Seed', 'anchor-1', createHighlightLocator('anchor-1', 'Seed')
+  );
+  const createdId = harness.getState().nodeOrder.at(-1)!;
+
+  expect(historyActions.undoEditorOperation()).toBe(true);
+  expect(harness.getState().trashedNodeIds).not.toContain(createdId);
+  expect(getEditorOperationSession(harness.getState().editorOperationHistory, 'node-1').undoStack.at(-1))
+    .toMatchObject({ canonical: 'pending', queuedMode: 'undo', type: 'annotation.create' });
+
+  resolveCreate({
+    createdNodeIds: [createdId],
+    nodeOrder: harness.getState().nodeOrder,
+    nodes: []
   });
+  await createPromise;
+  await vi.waitFor(() => expect(harness.getState().trashedNodeIds).toContain(createdId));
+  expect(getEditorOperationSession(harness.getState().editorOperationHistory, 'node-1')).toMatchObject({
+    redoStack: [expect.objectContaining({ canonical: 'confirmed', type: 'annotation.create' })],
+    undoStack: [expect.objectContaining({ type: 'text.edit' })]
+  });
+});
+
+it('does not let a late topic A creation acknowledgement replay topic B state or history', async () => {
+    vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);
+    let resolveCreate!: (value: Awaited<ReturnType<typeof syncCreateNodeMutationToRuntime>>) => void;
+    vi.mocked(syncCreateNodeMutationToRuntime).mockImplementationOnce(() => new Promise((resolve) => {
+      resolveCreate = resolve;
+    }));
+    const { harness, historyActions } = createHarness();
+    const createPromise = harness.getState().createHighlightNodeFromSelection(
+      'node-1', 'Seed', 'anchor-1', createHighlightLocator('anchor-1', 'Seed')
+    );
+    const createdId = harness.getState().nodeOrder.at(-1)!;
+    const nodeB = { ...harness.getState().nodesById['node-1']!, id: 'node-b', content: 'Topic B', title: 'Topic B' };
+    harness.setState({
+      activeNodeId: 'node-b',
+      nodeOrder: [...harness.getState().nodeOrder, 'node-b'],
+      nodesById: { ...harness.getState().nodesById, 'node-b': nodeB }
+    });
+    historyActions.pushEditorOperationEntry(createTextHistoryEntry({
+      afterContent: 'Topic B!', beforeContent: 'Topic B', nodeId: 'node-b'
+    }));
+    const node = harness.getState().nodesById[createdId]!;
+    resolveCreate({
+      activeNodeId: 'node-1',
+      createdNodeIds: [createdId],
+      nodeOrder: ['node-1', createdId],
+      nodes: [{
+        anchorLink: node.anchorLink ?? null,
+        content: node.content,
+        createdAt: node.createdAt,
+        imageRegions: node.imageRegions ?? null,
+        isTitleManual: node.isTitleManual ?? false,
+        kind: node.kind,
+        nodeId: node.id,
+        parentNodeId: node.parentNodeId,
+        position: 1,
+        reveal: node.reveal,
+        title: node.title,
+        updatedAt: node.updatedAt
+      }]
+    });
+    await createPromise;
+
+    expect(harness.getState()).toMatchObject({ activeNodeId: 'node-b' });
+    expect(harness.getState().nodeOrder).toContain('node-b');
+    expect(harness.getState().nodesById['node-b']?.content).toBe('Topic B');
+    expect(getEditorOperationSession(harness.getState().editorOperationHistory, 'node-b').undoStack).toHaveLength(1);
 });

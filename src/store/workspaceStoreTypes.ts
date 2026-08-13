@@ -2,7 +2,8 @@ import type { NodeOpenState } from '../../lib/core/database/nodeOpenState';
 import type { NodeKind } from '../../lib/core/nodes/nodeKind';
 import type {
   EditorOperationHistoryEntry,
-  EditorOperationHistoryState
+  EditorOperationHistoryState,
+  EditorTextEditOperationEntry
 } from '../features/editor/model/editorOperationHistory';
 import type { FormulaClozeCreatePayload, FormulaClozeSourcePayload } from '../features/formula-cloze/model/formulaCloze';
 import type { ImageClozeDraftRegion, ImageClozeSourcePayload } from '../features/image-cloze/model/imageCloze';
@@ -66,8 +67,13 @@ export interface WorkspaceState {
   redoWorkspaceAction: (now?: string) => boolean;
   pushEditorOperationEntry: (entry: EditorOperationHistoryEntry) => void;
   deleteEditorAnnotationNodes: (nodeIds: string[]) => void;
-  undoEditorOperation: () => boolean;
-  redoEditorOperation: () => boolean;
+  undoEditorOperation: (context?: EditorOperationApplyContext) => boolean;
+  redoEditorOperation: (context?: EditorOperationApplyContext) => boolean;
+  settleEditorAnnotationCreation: (args: {
+    annotationNodeIds: string[];
+    nodeId: string;
+    succeeded: boolean;
+  }) => void;
   relearnNode: (nodeId: string, now?: string) => boolean;
   startReviewSession: (now?: string, options?: ReviewSessionStartOptions) => boolean;
   continueReviewSessionReading: (now?: string) => boolean;
@@ -124,6 +130,12 @@ export interface WorkspaceState {
     targetNodeId: string | null,
     intent: 'before' | 'after' | 'child' | 'root'
   ) => Promise<boolean>;
+}
+
+export interface EditorOperationApplyContext {
+  applyText: (entry: EditorTextEditOperationEntry, mode: 'redo' | 'undo') => boolean;
+  currentContent: string;
+  nodeId: string;
 }
 
 export interface ReviewSessionStartOptions {

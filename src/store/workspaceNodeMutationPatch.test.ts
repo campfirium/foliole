@@ -9,7 +9,8 @@ import {
 } from './workspaceNodeContentVersionGuard';
 import {
   createWorkspaceNodeMutationPatch,
-  createWorkspaceNodeMutationPatchWithLocalSideEffects
+  createWorkspaceNodeCreateAckPatch,
+  didRuntimeConfirmNodeCreation
 } from './workspaceNodeMutationPatch';
 import { createInitialWorkspaceState } from './workspaceStore';
 
@@ -49,6 +50,12 @@ beforeEach(() => {
 });
 
 describe('createWorkspaceNodeMutationPatch metadata merge', () => {
+  it('requires the requested node id in a creation acknowledgement', () => {
+    expect(didRuntimeConfirmNodeCreation({ createdNodeIds: ['other-node'], nodes: [] }, 'node-local')).toBe(false);
+    expect(didRuntimeConfirmNodeCreation({ createdNodeIds: ['node-local'], nodes: [] }, 'node-local')).toBe(true);
+    expect(didRuntimeConfirmNodeCreation(null, 'node-local')).toBe(false);
+  });
+
   it('preserves local special node kind when runtime snapshot omits renderer-only metadata', () => {
     const state = createInitialWorkspaceState(new Date('2026-03-06T00:00:00.000Z'));
     const patch = createWorkspaceNodeMutationPatch(state, {
@@ -70,40 +77,59 @@ describe('createWorkspaceNodeMutationPatch metadata merge', () => {
     expect(patch.nodesById?.[INBOX_NODE_ID]?.specialKind).toBe('inbox');
   });
 
-  it('keeps local created content while preserving runtime metadata for the same id', () => {
+  it('merges only the acknowledged node and cannot replay late collection or session state', () => {
     const state = createInitialWorkspaceState(new Date('2026-03-06T00:00:00.000Z'));
     const localNode = createLocalNode(state);
+    const nodeB = { ...localNode, content: 'Local B', id: 'node-b', title: 'Local B' };
 
-    const patch = createWorkspaceNodeMutationPatchWithLocalSideEffects(state, {
-      activeNodeId: 'node-local',
-      nodeOrder: [INBOX_NODE_ID, 'node-local'],
-      nodes: [{
-        nodeId: 'node-local',
-        parentNodeId: INBOX_NODE_ID,
-        kind: 'topic',
-        title: 'Runtime topic',
-        isTitleManual: false,
-        content: '',
-        reveal: null,
-        anchorLink: null,
-        position: 1,
-        createdAt: '2026-03-07T00:00:00.000Z',
-        updatedAt: '2026-03-07T00:00:02.000Z'
-      }]
+    const patch = createWorkspaceNodeCreateAckPatch({
+      ...state,
+      nodesById: { ...state.nodesById, 'node-b': nodeB, 'node-local': localNode }
     }, {
       activeNodeId: 'node-local',
+      createdNodeIds: ['node-local', 'node-b'],
       nodeOrder: [INBOX_NODE_ID, 'node-local'],
-      nodesById: {
-        ...state.nodesById,
-        'node-local': localNode
-      }
-    });
+      nodes: [
+        createRuntimeSnapshot({ content: '', updatedAt: '2026-03-07T00:00:02.000Z' }),
+        createRuntimeSnapshot({ content: 'Runtime B', nodeId: 'node-b', title: 'Runtime B' })
+      ]
+    }, ['node-local']);
 
-    expect(patch.activeNodeId).toBe('node-local');
-    expect(patch.nodeOrder).toEqual([INBOX_NODE_ID, 'node-local']);
+    expect(patch).not.toHaveProperty('activeNodeId');
+    expect(patch).not.toHaveProperty('nodeOrder');
+    expect(patch).not.toHaveProperty('editorOperationHistory');
     expect(patch.nodesById?.['node-local']?.content).toBe('Local body');
     expect(patch.nodesById?.['node-local']?.title).toBe('Runtime topic');
     expect(patch.nodesById?.['node-local']?.updatedAt).toBe('2026-03-07T00:00:02.000Z');
+    expect(patch.nodesById?.['node-b']).toEqual(nodeB);
+  });
+
+});
+
+describe('createWorkspaceNodeCreateAckPatch renderer boundary', () => {
+  it('keeps current renderer loading markers without restoring an old node body', () => {
+    const state = createInitialWorkspaceState(new Date('2026-03-06T00:00:00.000Z'));
+    const localNode = {
+      ...createLocalNode(state),
+      content: '',
+      hasContent: true,
+      hasReveal: true,
+      reveal: null
+    };
+    const patch = createWorkspaceNodeCreateAckPatch({
+      ...state,
+      nodesById: { ...state.nodesById, 'node-local': localNode }
+    }, {
+      createdNodeIds: ['node-local'],
+      nodes: []
+    }, ['node-local']);
+
+    expect(patch.nodesById?.['node-local']).toMatchObject({
+      content: '',
+      hasContent: true,
+      hasReveal: true,
+      reveal: null
+    });
   });
 });
 

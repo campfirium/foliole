@@ -22,7 +22,11 @@ beforeEach(async () => {
   runtimeInvoke.mockReset();
   runtimeInvoke.mockImplementation(async (command: string, payload?: { activeNodeId?: string | null; nodeId?: string; nodeIds?: string[]; nodeOrder?: string[] }) => {
     if (command === 'create_item') {
-      return null;
+      return {
+        createdNodeIds: payload?.nodeId ? [payload.nodeId] : [],
+        nodeOrder: payload?.nodeOrder ?? [],
+        nodes: []
+      };
     }
     if (command === 'update_node_content') {
       return null;

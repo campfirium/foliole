@@ -158,24 +158,27 @@ function buildImageClozeStateUpdate(args: {
     args.parentNodeId,
     nextNodeOrder
   );
-  const nextState = {
-    ...(operationEntry
-      ? { editorOperationHistory: pushEditorOperationEntry(args.state.editorOperationHistory, operationEntry) }
-      : {}),
+  const localState = {
     nodeOrder: nextNodeOrder,
     nodesById: batch.nextNodesById,
     untitledSequenceByParent: batch.untitledSequenceByParent
+  };
+  const localPatch = {
+    ...localState,
+    reviewSession: args.reconcileReviewSession({
+      ...args.state,
+      ...localState
+    })
   };
 
   return {
     createdNodes: batch.createdNodes,
     nextNodeOrder,
     nextState: {
-      ...nextState,
-      reviewSession: args.reconcileReviewSession({
-        ...args.state,
-        ...nextState
-      })
+      ...localPatch,
+      ...(operationEntry
+        ? { editorOperationHistory: pushEditorOperationEntry(args.state.editorOperationHistory, operationEntry) }
+        : {})
     },
     updatedParentNode
   };
@@ -184,7 +187,8 @@ function buildImageClozeStateUpdate(args: {
 export function createImageClozeNodesAction(
   set: WorkspaceSet,
   handlers: RuntimeSyncHandlers,
-  reconcileReviewSession: (state: WorkspaceState, activeNodeId?: string | null) => WorkspaceState['reviewSession']
+  reconcileReviewSession: (state: WorkspaceState, activeNodeId?: string | null) => WorkspaceState['reviewSession'],
+  get?: () => WorkspaceState
 ): WorkspaceState['createImageClozeNodes'] {
   return async (parentNodeId, attachmentId, sourcePayload, regions) => {
     const normalizedAttachmentId = attachmentId.trim();
@@ -197,7 +201,6 @@ export function createImageClozeNodesAction(
     const createdNodes: WorkspaceNode[] = [];
     let updatedParentNode: WorkspaceNode | null = null;
     let nextNodeOrder: string[] | null = null;
-    let localPatch: Partial<WorkspaceState> | null = null;
 
     set((state) => {
       const nextResult = buildImageClozeStateUpdate({
@@ -215,17 +218,17 @@ export function createImageClozeNodesAction(
       createdNodes.push(...nextResult.createdNodes);
       updatedParentNode = nextResult.updatedParentNode;
       nextNodeOrder = nextResult.nextNodeOrder;
-      localPatch = nextResult.nextState;
-      return localPatch;
+      return nextResult.nextState;
     });
 
     return applyCreatedImageClozeNodes({
       createdNodes,
       handlers,
-      localPatch,
       nextNodeOrder,
+      parentNodeId,
       set,
-      updatedParentNode
+      updatedParentNode,
+      ...(get ? { get } : {})
     });
   };
 }

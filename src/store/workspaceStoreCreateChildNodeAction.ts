@@ -3,7 +3,7 @@ import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/worksp
 
 import { markNodeCreatePending } from './workspaceNodeContentVersionGuard';
 import { canCreateChildUnderParent } from './workspaceNodeKindRules';
-import { createWorkspaceNodeMutationPatchWithLocalSideEffects } from './workspaceNodeMutationPatch';
+import { createWorkspaceNodeCreateAckPatch } from './workspaceNodeMutationPatch';
 import type { WorkspaceState } from './workspaceStore';
 import {
   completeNodeCreateRuntimePersist,
@@ -61,7 +61,7 @@ export function createChildNodeAction(
     const orderForSync = [...(nextNodeOrder ?? [])] as string[];
     const result = await onNodeCreated?.(createdNode, orderForSync, nodeId, orderForSync.indexOf(nodeId));
     if (result) {
-      set((state) => createWorkspaceNodeMutationPatchWithLocalSideEffects(state, result, localPatch));
+      set((state) => createWorkspaceNodeCreateAckPatch(state, result, [nodeId]));
     }
     if (applied && !result && kind === 'folder' && nextNodeOrder) {
       onNodeOrderChanged?.(nextNodeOrder);

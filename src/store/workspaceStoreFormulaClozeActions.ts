@@ -10,10 +10,20 @@ import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/worksp
 import { createEditorAnnotationCreateEntry } from './workspaceEditorAnnotationOperationEntry';
 import { createImageClozeReviewProfile } from './workspaceImageClozeReview';
 import { markNodeCreatePending } from './workspaceNodeContentVersionGuard';
-import { syncWorkspaceNodeDocumentCacheFromNode } from './workspaceNodeDocumentCache';
-import { createWorkspaceNodeMutationPatchWithLocalSideEffects } from './workspaceNodeMutationPatch';
+import {
+  removeCachedWorkspaceNodeDocument,
+  syncWorkspaceNodeDocumentCacheFromNode
+} from './workspaceNodeDocumentCache';
+import {
+  createWorkspaceNodeCreateAckPatch,
+  didRuntimeConfirmNodeCreation
+} from './workspaceNodeMutationPatch';
+import { hasWorkspaceNodeMutationRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
-import { completeNodeCreateRuntimePersist } from './workspaceStoreContentRuntimePersist';
+import {
+  cancelNodeCreateRuntimePersist,
+  completeNodeCreateRuntimePersist
+} from './workspaceStoreContentRuntimePersist';
 import { resolveCreatedNodeTitleState } from './workspaceUntitledNodeTitle';
 
 type WorkspaceNode = WorkspaceState['nodesById'][string];
@@ -51,6 +61,13 @@ function normalizeFormulaPayload(payload: FormulaClozeCreatePayload): FormulaClo
     formulaSource: payload.formulaSource.trim(),
     occurrenceKey: payload.occurrenceKey.trim()
   };
+}
+
+function normalizeFormulaCreateInput(payload: FormulaClozeCreatePayload, sourcePayload: FormulaClozeSourcePayload) {
+  const normalizedPayload = normalizeFormulaPayload(payload);
+  const normalizedSourcePayload = normalizeFormulaClozeSourcePayload(sourcePayload);
+  if (!normalizedPayload || normalizedSourcePayload.revealContent.length === 0) return null;
+  return { normalizedPayload, normalizedSourcePayload };
 }
 
 function createFormulaClozeNode(args: {
@@ -103,14 +120,15 @@ function createFormulaClozeNode(args: {
 
 async function applyCreatedFormulaClozeNode(
   args: {
-  localPatch: Partial<WorkspaceState> | null;
   node: WorkspaceNode | null;
   handlers: RuntimeSyncHandlers,
   nextNodeOrder: string[] | null;
+  get?: () => WorkspaceState;
+  parentNodeId: string;
   set: WorkspaceSet;
   }
 ) {
-  const { handlers, localPatch, nextNodeOrder, node, set } = args;
+  const { get, handlers, nextNodeOrder, node, parentNodeId, set } = args;
   if (!node || !nextNodeOrder) {
     return null;
   }
@@ -122,28 +140,33 @@ async function applyCreatedFormulaClozeNode(
     node.parentNodeId ?? node.id,
     nextNodeOrder.indexOf(node.id)
   );
-  if (result) {
-    set((state) => createWorkspaceNodeMutationPatchWithLocalSideEffects(state, result, localPatch));
+  const runtimeConfirmed = didRuntimeConfirmNodeCreation(result, node.id);
+  if (runtimeConfirmed && result) {
+    set((state) => createWorkspaceNodeCreateAckPatch(state, result, [node.id]));
   }
-  await completeNodeCreateRuntimePersist(node.id);
-  return node.id;
+  const succeeded = runtimeConfirmed || !hasWorkspaceNodeMutationRuntime();
+  get?.().settleEditorAnnotationCreation({ annotationNodeIds: [node.id], nodeId: parentNodeId, succeeded });
+  if (succeeded) await completeNodeCreateRuntimePersist(node.id);
+  else {
+    cancelNodeCreateRuntimePersist(node.id);
+    removeCachedWorkspaceNodeDocument(node.id);
+  }
+  return succeeded ? node.id : null;
 }
 
 export function createFormulaClozeNodeAction(
   set: WorkspaceSet,
   handlers: RuntimeSyncHandlers,
-  reconcileReviewSession: (state: WorkspaceState, activeNodeId?: string | null) => WorkspaceState['reviewSession']
+  reconcileReviewSession: (state: WorkspaceState, activeNodeId?: string | null) => WorkspaceState['reviewSession'],
+  get?: () => WorkspaceState
 ): WorkspaceState['createFormulaClozeNode'] {
   return async (parentNodeId, payload, sourcePayload) => {
-    const normalizedPayload = normalizeFormulaPayload(payload);
-    const normalizedSourcePayload = normalizeFormulaClozeSourcePayload(sourcePayload);
-    if (!normalizedPayload || normalizedSourcePayload.revealContent.length === 0) {
-      return null;
-    }
+    const normalized = normalizeFormulaCreateInput(payload, sourcePayload);
+    if (!normalized) return null;
+    const { normalizedPayload, normalizedSourcePayload } = normalized;
     const timestamp = new Date().toISOString();
     let createdNode: WorkspaceNode | null = null;
     let nextNodeOrder: string[] | null = null;
-    let localPatch: Partial<WorkspaceState> | null = null;
 
     set((state) => {
       const parentNode = state.nodesById[parentNodeId];
@@ -165,25 +188,30 @@ export function createFormulaClozeNodeAction(
         [nextNode.createdNode.id]: nextNode.createdNode
       };
       const operationEntry = createEditorAnnotationCreateEntry([nextNode.createdNode], parentNodeId, nextNodeOrder);
-      const nextState = {
-        ...(operationEntry ? { editorOperationHistory: pushEditorOperationEntry(state.editorOperationHistory, operationEntry) } : {}),
+      const localState = {
         nodeOrder: nextNodeOrder,
         nodesById: nextNodesById,
         untitledSequenceByParent: nextNode.untitledSequenceByParent
       };
-      localPatch = {
-        ...nextState,
-        reviewSession: reconcileReviewSession({ ...state, ...nextState })
+      const localPatch = {
+        ...localState,
+        reviewSession: reconcileReviewSession({ ...state, ...localState })
       };
-      return localPatch;
+      return {
+        ...localPatch,
+        ...(operationEntry
+          ? { editorOperationHistory: pushEditorOperationEntry(state.editorOperationHistory, operationEntry) }
+          : {})
+      };
     });
 
     return applyCreatedFormulaClozeNode({
       handlers,
-      localPatch,
       nextNodeOrder,
       node: createdNode,
-      set
+      parentNodeId,
+      set,
+      ...(get ? { get } : {})
     });
   };
 }

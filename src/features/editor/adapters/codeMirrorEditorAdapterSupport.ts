@@ -32,10 +32,8 @@ export interface CodeMirrorEditorAdapterOptions {
   trailingDivider?: boolean;
 }
 
-export interface EditorDocumentChangeMeta {
-  contentLength?: number;
+export interface EditorDocumentChangeMeta extends EditorContentChangeMeta {
   isComposing: boolean;
-  nodeId: string | null;
 }
 
 export function createLiveMarkdownReconfigureEffect(args: {

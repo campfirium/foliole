@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 
 import { isProtectedRootNode } from '../../features/nodes/model/specialNodes';
+import type { EditorDraftCommitOptions } from '../hooks/useEditorDraftFlushCallbacks';
 import { useEditorDraftSync } from '../hooks/useEditorDraftSync';
 
 import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
@@ -16,7 +17,7 @@ export function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
     }
     return activeNode.id;
   }, [props.activeNodeId, props.editorNodeId, props.nodesById, props.trashedNodeIds]);
-  const commitEditorContent = useCallback((nodeId: string | null, content: string, options?: { publishLocal?: boolean }) => {
+  const commitEditorContent = useCallback((nodeId: string | null, content: string, options?: EditorDraftCommitOptions) => {
     if (nodeId) {
       props.onNodeContentChange(nodeId, content, options);
       return;
@@ -31,13 +32,11 @@ export function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
     ...(props.onRegisterEditorDraftFlush ? { onRegisterFlush: props.onRegisterEditorDraftFlush } : {})
   });
   const handleEditorUndo = useCallback(() => {
-    editorDraft.flushDraftSynchronously();
     return props.onEditorUndo?.() ?? false;
-  }, [editorDraft.flushDraftSynchronously, props.onEditorUndo]);
+  }, [props.onEditorUndo]);
   const handleEditorRedo = useCallback(() => {
-    editorDraft.flushDraftSynchronously();
     return props.onEditorRedo?.() ?? false;
-  }, [editorDraft.flushDraftSynchronously, props.onEditorRedo]);
+  }, [props.onEditorRedo]);
   return useMemo(
     () => ({
       ...props,

@@ -1,5 +1,7 @@
 import { vi } from 'vitest';
 
+import { createEmptyEditorOperationHistory } from '../../features/editor/model/editorOperationHistory';
+
 function createWorkspaceNode() {
   return {
     id: 'node-1',
@@ -32,7 +34,7 @@ function createWorkspaceNavigation() {
 
 function createWorkspaceEditorOperationState() {
   return {
-    editorOperationHistory: { redoStack: [], undoStack: [] },
+    editorOperationHistory: createEmptyEditorOperationHistory(),
     pushEditorOperationEntry: vi.fn(),
     redoEditorOperation: vi.fn(),
     undoEditorOperation: vi.fn()

@@ -1,5 +1,5 @@
 import { type Compartment, EditorState } from '@codemirror/state';
-import { EditorView } from '@codemirror/view';
+import { EditorView, type ViewUpdate } from '@codemirror/view';
 
 import { createCodeMirrorEditorExtensions } from './codeMirrorEditorAdapterConfig';
 import {
@@ -18,7 +18,7 @@ export function createCodeMirrorEditorView(args: {
   liveMarkdownStateCompartment: Compartment;
   nodeId: string | null;
   onCompositionEnd: () => void;
-  onDocChanged: (content: string | null, meta: EditorDocumentChangeMeta) => void;
+  onDocChanged: (content: string | null, meta: EditorDocumentChangeMeta, update: ViewUpdate) => void;
   options: CodeMirrorEditorAdapterOptions;
   paragraphMarkerCompartment: Compartment;
   readOnlyCompartment: Compartment;

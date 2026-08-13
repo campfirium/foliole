@@ -153,7 +153,6 @@ test('keeps redo available after undoing a committed body edit', async ({ deskto
   await seedSaveWorkspace(desktopWindow);
 
   await pasteAtEnd(desktopWindow, '\nRedo candidate');
-  await desktopWindow.waitForTimeout(1500);
   await expect.poll(() => collectEditorOperationHistory(desktopWindow)).toMatchObject({
     undoStack: [expect.objectContaining({ nodeId: SOURCE_ID, type: 'text.edit' })]
   });

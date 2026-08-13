@@ -8,10 +8,15 @@ import {
 
 const EDITOR_DRAFT_FLUSH_DEBOUNCE_MS = 1200;
 
+export interface EditorDraftCommitOptions {
+  historyReplay?: boolean;
+  publishLocal?: boolean;
+}
+
 export type EditorDraftCommit = (
   nodeId: string | null,
   content: string,
-  options?: { publishLocal?: boolean }
+  options?: EditorDraftCommitOptions
 ) => void;
 
 export type EditorDraftFlushRegistration = (

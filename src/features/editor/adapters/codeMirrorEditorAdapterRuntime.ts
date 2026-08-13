@@ -7,6 +7,7 @@ import type {
   CodeMirrorEditorAdapterOptions
 } from './codeMirrorEditorAdapterSupport';
 import { createCodeMirrorEditorControllers } from './codeMirrorEditorControllers';
+import { collectCodeMirrorTextHistoryEntries } from './codeMirrorTextHistory';
 import { createCodeMirrorEditorView } from './createCodeMirrorEditorView';
 import type { EditorContentChangeMeta, EditorTextAnchorDecoration } from './EditorAdapter';
 import type { EditorExternalChangeBuffer } from './editorExternalChangeBuffer';
@@ -20,6 +21,7 @@ interface CodeMirrorEditorAdapterRuntimeArgs {
   hideTitleHeading: boolean;
   imageClozePresentationVersion: number;
   isApplyingExternalContent: () => boolean;
+  isApplyingHistoryReplay: () => boolean;
   liveMarkdownCompartment: Compartment;
   liveMarkdownStateCompartment: Compartment;
   onOpenNodeLink: ((title: string) => void) | null;
@@ -77,11 +79,23 @@ function createEditorViewRuntime(
     liveMarkdownStateCompartment: args.liveMarkdownStateCompartment,
     nodeId: args.getNodeId(),
     onCompositionEnd: () => externalChangeBuffer.handleCompositionEnd(),
-    onDocChanged: (content, meta) => {
-      if (!args.getOnChange() || args.isApplyingExternalContent()) {
+    onDocChanged: (content, meta, update) => {
+      const onChange = args.getOnChange();
+      if (!onChange || args.isApplyingExternalContent()) {
         return;
       }
-      const inputMeta = { ...meta, nodeId: args.getNodeId() };
+      const nodeId = args.getNodeId();
+      if (args.isApplyingHistoryReplay()) {
+        onChange(content ?? args.getContent(), { nodeId, origin: 'history' });
+        return;
+      }
+      const textTransactions = collectCodeMirrorTextHistoryEntries(update, nodeId);
+      const inputMeta = {
+        ...meta,
+        nodeId,
+        origin: 'user' as const,
+        ...(textTransactions.length ? { textTransactions } : {})
+      };
       args.options.onDocumentInput?.(inputMeta);
       externalChangeBuffer.handleDocumentChange(content, inputMeta);
     },

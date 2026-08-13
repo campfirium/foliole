@@ -46,6 +46,7 @@ function createWorkspaceEditActionStubs() {
     deleteEditorAnnotationNodes: () => undefined,
     undoEditorOperation: () => false,
     redoEditorOperation: () => false,
+    settleEditorAnnotationCreation: () => undefined,
     relearnNode: () => false,
     startReviewSession: () => false,
     continueReviewSessionReading: () => false,

@@ -1,4 +1,7 @@
-import type { EditorAnnotationOperationSnapshot, EditorOperationHistoryEntry } from '../features/editor/model/editorOperationHistory';
+import type {
+  EditorAnnotationOperationEntry,
+  EditorAnnotationOperationSnapshot
+} from '../features/editor/model/editorOperationHistory';
 import type { Node } from '../features/nodes/model/nodeTypes';
 
 import type { WorkspaceState } from './workspaceStore';
@@ -33,7 +36,7 @@ export function createEditorAnnotationCreateEntry(
   nodes: WorkspaceNode[],
   parentNodeId: string,
   nodeOrder: string[]
-): EditorOperationHistoryEntry | null {
+): EditorAnnotationOperationEntry | null {
   const annotations: EditorAnnotationOperationSnapshot[] = nodes
     .map((node): EditorAnnotationOperationSnapshot => ({
       ...(node.anchorLink?.id ? { anchorId: node.anchorLink.id } : {}),
@@ -48,6 +51,7 @@ export function createEditorAnnotationCreateEntry(
   }
   return {
     annotations,
+    canonical: 'pending',
     nodeId: parentNodeId,
     title: 'Create Annotation',
     type: 'annotation.create'
@@ -58,7 +62,7 @@ export function createEditorAnnotationDeleteEntry(
   state: WorkspaceState,
   nodeIds: string[],
   fallbackParentNodeId?: string
-): EditorOperationHistoryEntry | null {
+): EditorAnnotationOperationEntry | null {
   const annotations = nodeIds
     .map((nodeId) => createEditorAnnotationSnapshot(state, nodeId, fallbackParentNodeId))
     .filter((snapshot): snapshot is EditorAnnotationOperationSnapshot => Boolean(snapshot));
@@ -68,6 +72,7 @@ export function createEditorAnnotationDeleteEntry(
   }
   return {
     annotations,
+    canonical: 'confirmed',
     nodeId: parentNodeId,
     title: 'Delete Annotation',
     type: 'annotation.delete'

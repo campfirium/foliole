@@ -9,9 +9,9 @@ import { selectImmersiveReadingModeSource } from './immersiveReadingModeSource';
 import { ImmersiveShortcutsOverlay } from './ImmersiveShortcutsOverlay';
 import { CLIPBOARD_IMPORT_REQUEST_EVENT, FILE_IMPORT_REQUEST_EVENT } from './importActivityRequests';
 import { ImportSourceWorkspace } from './ImportSourceWorkspace';
-import { useDesktopResizeRemeasureBridge } from './useDesktopResizeRemeasureBridge';
 import { useImmersiveReadingMode } from './useImmersiveReadingMode';
 import { useWorkspaceActivityNotice } from './useWorkspaceActivityNotice';
+import { useWorkspaceShellBridges } from './useWorkspaceShellBridges';
 import { WorkspaceActivityNotice } from './WorkspaceActivityNotice';
 import { WorkspaceLayoutGrid, type WorkspaceLayoutGridSource } from './WorkspaceLayoutGrid';
 import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
@@ -109,7 +109,7 @@ function useWorkspaceImportNoticeController(imports: WorkspaceLayoutProps['impor
 export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
   const t = useTranslation();
   const { imports, layoutChrome, navigation, settings, trash } = props;
-  useDesktopResizeRemeasureBridge();
+  useWorkspaceShellBridges();
   const [activeRightPanelId, setActiveRightPanelId] = useState<WorkspaceRightPanelId>(() =>
     loadWorkspaceRightPanelPreference()
   );

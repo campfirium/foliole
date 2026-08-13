@@ -86,8 +86,8 @@ function mergeNodeWithLocalUserFields(runtimeNode: Node | undefined, localNode: 
   };
   return {
     ...merged,
-    hasContent: merged.content.trim().length > 0,
-    hasReveal: merged.reveal !== null
+    hasContent: merged.content.trim().length > 0 || localNode.hasContent === true,
+    hasReveal: merged.reveal !== null || localNode.hasReveal === true
   };
 }
 
@@ -153,35 +153,29 @@ export function createWorkspaceNodeMutationPatch(
   };
 }
 
-export function createWorkspaceNodeMutationPatchWithLocalSideEffects(
+export function createWorkspaceNodeCreateAckPatch(
   state: Pick<WorkspaceState, 'nodesById'>,
   result: WorkspaceNodeMutationPatchResult,
-  localPatch: Partial<WorkspaceState> | null
+  requestedNodeIds: string[]
 ): WorkspacePatch & Partial<WorkspaceState> {
-  const localUserNodesById = localPatch?.nodesById
-    ? {
-        ...localPatch.nodesById,
-        ...state.nodesById
-      }
-    : state.nodesById;
-  const runtimeBaseState = localPatch?.nodesById
-    ? {
-        ...state,
-        nodesById: {
-          ...localPatch.nodesById,
-          ...state.nodesById
-        }
-      }
-    : state;
-  const runtimePatch = createWorkspaceNodeMutationPatch(runtimeBaseState, result);
-  if (!localPatch) return runtimePatch;
+  const acknowledgedNodeIds = new Set(result.createdNodeIds ?? []);
+  const createdNodeIds = new Set(requestedNodeIds.filter((nodeId) => acknowledgedNodeIds.has(nodeId)));
+  const runtimePatch = createWorkspaceNodeMutationPatch(state, {
+    createdNodeIds: [...createdNodeIds],
+    nodes: result.nodes.filter((node) => createdNodeIds.has(node.nodeId))
+  });
   return {
-    ...localPatch,
-    ...runtimePatch,
     nodesById: mergeNodesByIdWithLocalUserFields(
       runtimePatch.nodesById,
-      localUserNodesById,
-      new Set(result.nodes.map((node) => node.nodeId))
+      state.nodesById,
+      createdNodeIds
     )
   };
+}
+
+export function didRuntimeConfirmNodeCreation(
+  result: WorkspaceNodeMutationPatchResult | null,
+  nodeId: string
+) {
+  return result?.createdNodeIds?.includes(nodeId) === true;
 }

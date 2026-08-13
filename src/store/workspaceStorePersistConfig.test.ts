@@ -71,6 +71,7 @@ it('roundtrips a partialized persisted workspace payload through merge', () => {
     totalNodeCount: 1
   });
   expect(partialized).not.toHaveProperty('reviewSessionMode');
+  expect(partialized).not.toHaveProperty('editorOperationHistory');
   expect(merged?.reviewSessionMode).toBe('recommended');
   expect(merged?.nodesById[INBOX_NODE_ID]?.id).toBe(INBOX_NODE_ID);
 });
