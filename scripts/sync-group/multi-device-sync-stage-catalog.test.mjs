@@ -19,6 +19,11 @@ it('declares every required product stage without embedding its business impleme
 });
 
 it('declares ordered milestones and deadlines that cover legal sibling waits', () => {
+  expect(resolveStage('candidate-preparation')).toMatchObject({
+    activities: expect.arrayContaining([
+      'candidate-macos-started', 'candidate-android-built', 'candidate-windows-started'
+    ]), milestones: ['candidate-prepared']
+  });
   const stage = resolveStage('b-admit-empty-c');
   expect(stage).toMatchObject({
     milestones: ['a-listener-ready', 'a-fact-created', 'b-provider-stopped', 'b-transport-ready',

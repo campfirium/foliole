@@ -7,6 +7,7 @@ it('freezes the provider lifecycle helpers used by formal sync journeys', () => 
     'scripts/android/android-device-snapshot.mjs',
     'scripts/desktop/sync-from-zero-dataset-action.mjs',
     'scripts/sync-group/multi-device-sync-a-rejoin-provider.mjs',
+    'scripts/sync-group/multi-device-sync-candidate-preparation.mjs',
     'scripts/sync-group/multi-device-sync-from-zero-evidence.mjs',
     'scripts/sync-group/multi-device-sync-from-zero.mjs',
     'scripts/sync-group/multi-device-sync-participation-evidence.mjs',

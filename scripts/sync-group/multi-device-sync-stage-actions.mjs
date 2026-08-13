@@ -21,7 +21,7 @@ import { proveSyncFromZero } from './multi-device-sync-from-zero.mjs';
 import { proveParticipationControl } from './multi-device-sync-participation.mjs';
 import { createActionExecutor } from './multi-device-sync-action-executor.mjs';
 import { createApprovalReceiptRelease } from './multi-device-sync-approval-release.mjs';
-import { prepareCandidate } from './multi-device-sync-candidate-preparation.mjs';
+import { prepareCandidateStage } from './multi-device-sync-candidate-preparation.mjs';
 import { runAOfflineAdmissionPrelude } from './multi-device-sync-fact-preparation.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
@@ -177,10 +177,9 @@ export function createDiagnosticStageActions({ repoRoot, requiredHosts, runId })
   return {
     'admit-empty-c': (context) => admitEmptyC(repoRoot, runId, context),
     'establish-a-b': (context) => establishAB(repoRoot, runId, context),
-    'prepare-candidate': async ({ reportProgress }) => {
-      const result = await prepareCandidate({ repoRoot, requiredHosts, runId });
-      reportProgress('candidate-prepared'); return result;
-    },
+    'prepare-candidate': (context) => prepareCandidateStage({
+      ...context, repoRoot, requiredHosts, runId
+    }),
     'prove-a-b-convergence': (context) => proveABConvergence({ repoRoot, runId,
       execute: actionExecute(convergenceRoot, context.signal, context.stage),
       reportProgress: context.reportProgress }),

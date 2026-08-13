@@ -8,6 +8,9 @@ const WINDOWS_C_JOIN_DEADLINE = 15 * 60_000;
 
 const stages = [
   { action: 'prepare-candidate', hardDeadlineMs: 30 * 60_000, host: 'all', inputs: [],
+    activities: ['candidate-macos-started', 'candidate-macos-prepared',
+      'candidate-android-started', 'candidate-android-built', 'candidate-android-installed',
+      'candidate-android-launched', 'candidate-windows-started', 'candidate-windows-prepared'],
     milestones: ['candidate-prepared'], name: 'candidate-preparation', hosts: [],
     outputs: ['candidate_bound'], progressDeadlineMs: 20 * 60_000, siblings: [] },
   { action: 'establish-a-b', host: 'all', inputs: ['candidate_bound'], name: 'a-b-group-sync',
