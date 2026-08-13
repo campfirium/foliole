@@ -18,6 +18,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionQueryDefinitionShapeKeys.java',
       'FolioleCompanionResourceQueryStringKeys.java',
       'FolioleCompanionResourceReadQueryRules.java',
+      'FolioleCompanionSyncParticipationContractDefinitions.java',
       'FolioleCompanionSyncPackContract.java',
       'FolioleCompanionSyncPackProviderDefinitions.java',
       'FolioleCompanionSyncProtocolDefinitions.java'
@@ -70,12 +71,14 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionSyncGroupPairCrypto.java',
       'FolioleCompanionSyncGroupPeerStore.java',
       'FolioleCompanionSyncGroupProvider.java',
+      'FolioleCompanionSyncGroupProviderState.java',
       'FolioleCompanionSyncGroupRequestAuth.java',
       'FolioleCompanionSyncScreenAwake.java',
       'FolioleCompanionSyncGroupServer.java',
       'FolioleCompanionSyncGroupSnapshot.java',
       'FolioleCompanionSyncPackEnvelopeValidator.java',
       'FolioleCompanionSyncPackTransfer.java',
+      'FolioleCompanionSyncParticipationStore.java',
       'FolioleCompanionWebView.java',
       'MainActivity.java'
     ]

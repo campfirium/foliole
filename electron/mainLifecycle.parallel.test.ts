@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
   ensureLanWorkspaceSyncServer: vi.fn().mockResolvedValue(undefined),
   initializeDatabase: vi.fn(),
   installAppMenu: vi.fn(),
-  isDesktopCompanionSyncEnabled: vi.fn(() => false),
+  isDesktopCompanionSyncParticipating: vi.fn(() => false),
   focusWindow: vi.fn(),
   presentInitialRendererWindow: vi.fn(),
   wasOpenedAtLogin: vi.fn(() => false),
@@ -93,7 +93,7 @@ vi.mock('./windowRuntimeDiagnostics.js', () => ({
 }));
 vi.mock('./startupTasks.js', () => ({ runStartupTask: vi.fn() }));
 vi.mock('./sync/desktopCompanionSyncPreference.js', () => ({
-  isDesktopCompanionSyncEnabled: mocks.isDesktopCompanionSyncEnabled
+  isDesktopCompanionSyncParticipating: mocks.isDesktopCompanionSyncParticipating
 }));
 vi.mock('./sync/lanWorkspaceSyncServer.js', () => ({
   ensureLanWorkspaceSyncServer: mocks.ensureLanWorkspaceSyncServer,
@@ -120,8 +120,8 @@ afterEach(async () => {
   mocks.initializeDatabase.mockReset();
   mocks.ensureLanWorkspaceSyncServer.mockReset();
   mocks.ensureLanWorkspaceSyncServer.mockResolvedValue(undefined);
-  mocks.isDesktopCompanionSyncEnabled.mockReset();
-  mocks.isDesktopCompanionSyncEnabled.mockReturnValue(false);
+  mocks.isDesktopCompanionSyncParticipating.mockReset();
+  mocks.isDesktopCompanionSyncParticipating.mockReturnValue(false);
   mocks.wasOpenedAtLogin.mockReset();
   mocks.wasOpenedAtLogin.mockReturnValue(false);
   const { resetDatabaseReadinessForTests } = await import('./database/databaseReadiness.js');
@@ -237,7 +237,7 @@ it('fails database readiness when startup stops before database initialization s
 it('starts companion sync after database startup before activating the renderer', async () => {
   const window = { isDestroyed: vi.fn(() => false), isVisible: vi.fn(() => false), show: vi.fn() };
   const activateMainWindow = vi.fn().mockResolvedValue(undefined);
-  mocks.isDesktopCompanionSyncEnabled.mockReturnValue(true);
+  mocks.isDesktopCompanionSyncParticipating.mockReturnValue(true);
   mocks.app.whenReady.mockResolvedValue(undefined);
 
   const { installMainLifecycle } = await import('./mainLifecycle.js');

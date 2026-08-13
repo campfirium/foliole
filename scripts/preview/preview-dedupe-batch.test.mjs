@@ -110,7 +110,7 @@ describe('preview-dedupe batching', () => {
       expect(runs[0]).toBe('first');
       expect(['second', 'third']).toContain(runs[1]);
     } finally {
-      await rm(repoRoot, { force: true, recursive: true });
+      await rm(repoRoot, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
     }
   }, 30_000);
 
@@ -141,7 +141,7 @@ describe('preview-dedupe batching', () => {
       expect(runs[0]).toBe('first');
       expect(['second', 'third']).toContain(runs[1]);
     } finally {
-      await rm(repoRoot, { force: true, recursive: true });
+      await rm(repoRoot, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
     }
   }, 30_000);
 
@@ -176,7 +176,7 @@ describe('preview-dedupe batching', () => {
       expect(secondResult.stdout).toContain('[windows-preview] status: STARTED');
       expect(await readFile(path.join(repoRoot, 'runs.log'), 'utf8')).toBe('first\nsecond\nthird\n');
     } finally {
-      await rm(repoRoot, { force: true, recursive: true });
+      await rm(repoRoot, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
     }
   }, 10_000);
 
@@ -196,7 +196,7 @@ describe('preview-dedupe batching', () => {
       expect(result.stdout).not.toContain('reason=waiting-for-success');
       expect(await readFile(path.join(repoRoot, 'runs.log'), 'utf8')).toBe('first\n');
     } finally {
-      await rm(repoRoot, { force: true, recursive: true });
+      await rm(repoRoot, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
     }
   }, INTEGRATION_TIMEOUT_MS);
 
@@ -222,7 +222,7 @@ describe('preview-dedupe batching', () => {
       expect(secondResult.stdout).toMatch(/requireActualPreview=true[\s\S]*\[windows-preview\] dedupe: claimed hash=/);
       expect(await readFile(path.join(repoRoot, 'runs.log'), 'utf8')).toBe('first\nsecond\n');
     } finally {
-      await rm(repoRoot, { force: true, recursive: true });
+      await rm(repoRoot, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
     }
   }, 10_000);
 
@@ -245,7 +245,7 @@ describe('preview-dedupe batching', () => {
       expect(second.code).toBe(0);
       expect(await readFile(path.join(repoRoot, 'runs.log'), 'utf8')).toBe('first\nsecond\n');
     } finally {
-      await rm(repoRoot, { force: true, recursive: true });
+      await rm(repoRoot, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
     }
   }, 10_000);
 });

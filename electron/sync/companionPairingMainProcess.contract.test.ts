@@ -62,6 +62,12 @@ vi.mock('../database/syncGroupStore.js', () => ({
 
 vi.mock('./desktopCompanionSyncPreference.js', () => ({
   isDesktopCompanionSyncEnabled: vi.fn(() => true),
+  loadDesktopCompanionSyncParticipation: vi.fn(() => ({
+    lifecycle_active: true,
+    participating: true,
+    sync_enabled: true,
+    sync_paused: false
+  })),
   setDesktopCompanionSyncEnabled: vi.fn()
 }));
 
