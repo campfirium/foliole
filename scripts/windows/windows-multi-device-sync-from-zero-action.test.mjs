@@ -17,7 +17,8 @@ it('interrupts only after a committed cursor and resumes without cursor regressi
   const progress = [];
   const sessions = [session(events, 'first'), session(events, 'restarted')];
   const partial = { ...dataset, datasetCachedAttachmentCount: 12,
-    datasetCachedContentBlobCount: 32, receiveCursor: 80 };
+    datasetCachedContentBlobCount: 32, receiveCursor: 80,
+    activeMemberCount: 3, localGroupId: 'group-1', localMemberState: 'active' };
   const result = await runWindowsSyncFromZeroJourney({
     closeSession: async (current, options) => {
       events.push(`${current.page.name}-${options?.force ? 'interrupted' : 'closed'}`);
@@ -36,13 +37,12 @@ it('interrupts only after a committed cursor and resumes without cursor regressi
       return { ...dataset, activeMemberCount: 3, integrity: 'ok', localMemberState: 'active',
         missingAttachmentCount: 0, missingContentBlobCount: 0, receiveCursor: 90 };
     },
-    waitForCursorCommitted: async () => { events.push('cursor-committed'); },
-    waitForJoined: async () => { events.push('joined'); }
+    waitForCursorCommitted: async () => { events.push('cursor-committed'); }
   });
   expect(result).toMatchObject({ finalFacts: { receiveCursor: 90 },
     initialFacts: { receiveCursor: 0 }, interruptedFacts: { receiveCursor: 80 },
     restartedFacts: { receiveCursor: 80 } });
-  expect(events).toEqual(['enabled', 'join-requested', 'joined', 'cursor-committed',
+  expect(events).toEqual(['enabled', 'join-requested', 'cursor-committed',
     'first-interrupted', 'restarted-closed']);
   expect(sessionOptions).toEqual([{ holdAfterCursorCommit: true }, undefined]);
   expect(progress).toEqual([
@@ -55,7 +55,8 @@ it('interrupts only after a committed cursor and resumes without cursor regressi
 it('rejects a restart that falls behind the committed cursor', async () => {
   const sessions = [session([], 'first'), session([], 'restarted')];
   const partial = { ...dataset, datasetCachedAttachmentCount: 1,
-    datasetCachedContentBlobCount: 1, receiveCursor: 80 };
+    datasetCachedContentBlobCount: 1, receiveCursor: 80,
+    activeMemberCount: 3, localGroupId: 'group-1', localMemberState: 'active' };
   const inspect = vi.fn()
     .mockResolvedValueOnce(partial)
     .mockResolvedValueOnce({ ...partial, receiveCursor: 0 });
@@ -66,6 +67,19 @@ it('rejects a restart that falls behind the committed cursor', async () => {
     openSession: async () => sessions.shift(), reportProgress: vi.fn(), requestJoin: vi.fn(),
     reset: async () => ({ datasetAttachmentCount: 0, datasetNodeCount: 0,
       receiveCursor: 0, syncPeerCursorCount: 0 }), waitForCursorCommitted: vi.fn(),
-    waitForJoined: vi.fn()
   })).rejects.toThrow('restarted behind');
+});
+
+it('rejects a committed cursor without persisted three-member membership', async () => {
+  const partial = { ...dataset, datasetCachedAttachmentCount: 1,
+    datasetCachedContentBlobCount: 1, receiveCursor: 80,
+    activeMemberCount: 2, localGroupId: 'group-1', localMemberState: 'active' };
+  await expect(runWindowsSyncFromZeroJourney({
+    closeSession: vi.fn(),
+    discover: async () => ({ endpoint_url: 'http://provider', group_id: 'group-1' }),
+    enable: vi.fn(), inspect: async () => partial,
+    openSession: async () => session([], 'first'), reportProgress: vi.fn(), requestJoin: vi.fn(),
+    reset: async () => ({ datasetAttachmentCount: 0, datasetNodeCount: 0,
+      receiveCursor: 0, syncPeerCursorCount: 0 }), waitForCursorCommitted: vi.fn()
+  })).rejects.toThrow('did not persist active membership');
 });

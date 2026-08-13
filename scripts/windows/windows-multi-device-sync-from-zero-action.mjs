@@ -14,8 +14,7 @@ import { enableWindowsSyncParticipation } from './windows-sync-group-participati
 import { closeWindowsSyncGroupSession } from './windows-sync-group-session-close.mjs';
 import {
   controlWindowsNativeClient, discoverUniqueGroup, inspectWindowsSyncGroupDatabase,
-  invokeWindowsSyncGroupCommand, openWindowsSyncGroupSession, resetOwnedClient,
-  waitForJoinedGroup
+  invokeWindowsSyncGroupCommand, openWindowsSyncGroupSession, resetOwnedClient
 } from './windows-sync-group-recovery-action.mjs';
 
 function assertEmptyCursor(facts) {
@@ -30,6 +29,13 @@ function assertCommittedPartial(facts) {
       || (facts.datasetCachedContentBlobCount === SYNC_FROM_ZERO_DATASET.nodeCount
         && facts.datasetCachedAttachmentCount === SYNC_FROM_ZERO_DATASET.attachmentCount)) {
     throw new Error(`Windows C did not expose a committed partial sync boundary: ${JSON.stringify(facts)}`);
+  }
+}
+
+function assertJoinedGroup(facts, expectedGroupId) {
+  if (facts.localGroupId !== expectedGroupId || facts.localMemberState !== 'active'
+      || facts.activeMemberCount !== 3) {
+    throw new Error(`Windows C did not persist active membership: ${JSON.stringify(facts)}`);
   }
 }
 
@@ -89,13 +95,14 @@ export async function runWindowsSyncFromZeroJourney(actions) {
     await actions.enable(session.page);
     const candidate = await actions.discover(session.page); report('c-group-discovered');
     await actions.requestJoin(session.page, candidate.endpoint_url); report('c-join-requested');
-    await actions.waitForJoined(session.page, candidate.group_id); report('c-membership-active');
     await actions.waitForCursorCommitted(session.cursorCommitted);
-    report('c-first-cursor-committed'); report('c-object-batches-received');
     await actions.closeSession(session, { force: true }); session = null;
     const interruptedFacts = await actions.inspect();
     assertCommittedPartial(interruptedFacts);
+    assertJoinedGroup(interruptedFacts, candidate.group_id);
     const firstCommittedFacts = interruptedFacts;
+    report('c-membership-active');
+    report('c-first-cursor-committed'); report('c-object-batches-received');
     report('c-controlled-interruption');
     session = await actions.openSession();
     const restartedFacts = await actions.inspect();
@@ -136,8 +143,7 @@ export async function runWindowsMultiDeviceSyncFromZero({ evidenceRoot, execute,
       ),
       reset: () => resetOwnedClient(paths, evidenceRoot, execute),
       waitForComplete: (report) => waitForCompleteFacts(inspect, report),
-      waitForCursorCommitted: waitForCursorCommitSignal,
-      waitForJoined: waitForJoinedGroup
+      waitForCursorCommitted: waitForCursorCommitSignal
     });
   } catch (error) { primaryError = error; }
   try {
