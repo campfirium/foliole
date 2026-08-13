@@ -15,7 +15,9 @@ export function applyMacosDockPresentation(
 ) {
   if (platform !== 'darwin' || !app.dock) return false;
   if (env.FOLIOLE_ELECTRON_NATIVE_HIDDEN?.trim() === '1') {
-    app.setActivationPolicy?.('accessory');
+    // Keep the process unable to activate while AppKit finishes launching. The hidden
+    // window path switches to accessory immediately before creating its non-focusable window.
+    app.setActivationPolicy?.('prohibited');
     app.dock.hide();
     return true;
   }

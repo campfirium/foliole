@@ -9,12 +9,14 @@ test('hidden native desktop presents a noninterfering renderer without focus', a
 }) => {
   expect(desktopSession.launchOptions.env.FOLIOLE_ELECTRON_NATIVE_HIDDEN).toBe('1');
 
-  const dockPresentation = await desktopSession.electronApp.evaluate(({ app }) => ({
+  const dockPresentation = await desktopSession.electronApp.evaluate(({ app, BrowserWindow }) => ({
     dockVisible: app.dock?.isVisible() ?? null,
+    hasFocusedWindow: BrowserWindow.getFocusedWindow() !== null,
     platform: process.platform
   }));
   if (dockPresentation.platform === 'darwin') {
     expect(dockPresentation.dockVisible).toBe(false);
+    expect(dockPresentation.hasFocusedWindow).toBe(false);
   }
 
   const browserWindow = await desktopSession.electronApp.browserWindow(desktopWindow);

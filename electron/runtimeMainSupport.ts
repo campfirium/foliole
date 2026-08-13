@@ -4,7 +4,10 @@ import path from 'node:path';
 import { app, type BrowserWindowConstructorOptions, type Session, type WebContents, type WebPreferences } from 'electron';
 
 import { logMainProcessException } from './diagnostics/mainProcessDiagnostics.js';
-import { applyHiddenNativeDesktopWindowOptions } from './hiddenNativeDesktopTest.js';
+import {
+  applyHiddenNativeDesktopWindowOptions,
+  prepareHiddenNativeDesktopWindowCreation
+} from './hiddenNativeDesktopTest.js';
 import { LINK_PANEL_WEBVIEW_PARTITION } from './linkPanelBrowsingData.js';
 import { createMainWindowChromeOptions } from './mainWindowChrome.js';
 import {
@@ -25,6 +28,7 @@ export function resolveMainWindowIconPath(preloadPath: string) {
 }
 
 export function createMainWindowOptions(preloadPath: string): BrowserWindowConstructorOptions {
+  prepareHiddenNativeDesktopWindowCreation(app);
   const previewTitle = resolvePreviewWindowTitle();
   const windowTitle = previewTitle || resolveMainWindowTitle();
   return {

@@ -15,7 +15,7 @@ it('hides unpackaged macOS hidden-native runtimes instead of publishing a dock i
     'darwin',
     { FOLIOLE_ELECTRON_NATIVE_HIDDEN: '1' }
   )).toBe(true);
-  expect(setActivationPolicy).toHaveBeenCalledWith('accessory');
+  expect(setActivationPolicy).toHaveBeenCalledWith('prohibited');
   expect(hide).toHaveBeenCalledOnce();
   expect(setIcon).not.toHaveBeenCalled();
 });

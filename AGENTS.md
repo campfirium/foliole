@@ -11,7 +11,7 @@
 - 人工创建或交接 Foliole Codex 任务走 Codex Desktop 正常任务入口：`list_projects` 定位 saved project，`create_thread` 显式使用 `environment.type = local` 并发送完整首条提示，`wait_threads` 等待就绪，`set_thread_title` 命名，`read_thread` 确认正文可读，最后才可 `navigate_to_codex_page`；不得采用 Git 仓库默认 worktree。
 - 关联已编号正式实施方案的 Codex 任务标题必须从方案读取不可变编号：方案级任务使用 `T<n>-0`，执行任务使用方案唯一的 `Current closure: T<n>-<k>`；只有 `/2` 可按 rolling contract 分配、重开或退休闭环 id，同一验收句的重规划与 continuation 保留原 id，执行任务不得自行改号。
 - `rolling-v1` 方案同时最多一个当前闭环；同一验收句未成立时，不因缺口、提交、文件、平台、重试或耗时数量更换 Codex 任务。只有 `/2` 审定后的正式路线失效交接、闭环完成后的新验收责任、`final-ready` 进入 `/4`，或用户确认且无 live side effect / 未记录现场 / 外部等待的 continuation 才开新任务。
-- 无人值守 monitor handoff 只能走 `codex-desktop-handoff` daemon：事件级 App Server 创建持久任务，确认 `item/completed(userMessage)` 与完整 prompt 一致后立即 `turn/interrupt`，确认最终状态为 `interrupted`，关闭外部 App Server，再请求 Desktop 打开；该任务必须等待用户在 Desktop 继续，不得在 daemon 内持续执行。禁止启用或恢复 `task-seed-queue`、queue runner、Daemon V2、直接数据库 / session 注入或其他后台执行分支；仅有 thread id、标题或成功跳转不算交付成功，正文未确认或主动中断未完成时必须归档并重试。
+- monitor 触发的任务交接只能走 `codex-desktop-handoff` daemon：事件级 App Server 创建持久任务，确认 `item/completed(userMessage)` 与完整 prompt 一致后立即 `turn/interrupt`，确认最终状态为 `interrupted`，关闭外部 App Server，再请求 Desktop 打开；该任务必须等待用户在 Desktop 继续，不得在 daemon 内持续执行。禁止启用或恢复 `task-seed-queue`、queue runner、Daemon V2、直接数据库 / session 注入或其他后台执行分支；仅有 thread id、标题或成功跳转不算交付成功，正文未确认或主动中断未完成时必须归档并重试。
 - 用户要求继续某个平台的产品主线时，创建任务前必须先按该平台局部 `AGENTS.md` 区分产品实现、验收证据与宿主控制流；不得仅凭未勾选 checkbox 或未标 `done` 状态把验收 / 控制任务包装成产品代码任务。
 - 单次只交付一个可运行、可验证、可回退的能力闭环；闭环以用户可验收行为、数据语义或迁移语义为边界，不以文件、函数、测试断言、提交数量或“超过 3 个文件”为边界。
 - 能力闭环必须覆盖本轮承诺所需的入口、模型、消费侧、必要持久化、边界防护和验证；新增功能覆盖用户入口、状态模型、业务行为、失败或空状态，Bug 修复覆盖现象确认、根因修复、回归验证和用户可见结果恢复。
