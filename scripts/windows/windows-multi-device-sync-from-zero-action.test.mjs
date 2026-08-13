@@ -13,6 +13,7 @@ function session(events, name) {
 
 it('interrupts only after a committed cursor and resumes without cursor regression', async () => {
   const events = [];
+  const sessionOptions = [];
   const progress = [];
   const sessions = [session(events, 'first'), session(events, 'restarted')];
   const partial = { ...dataset, datasetCachedAttachmentCount: 12,
@@ -25,7 +26,7 @@ it('interrupts only after a committed cursor and resumes without cursor regressi
       provider_device_kind: 'android-capacitor' }),
     enable: async () => { events.push('enabled'); },
     inspect: async () => partial,
-    openSession: async () => sessions.shift(),
+    openSession: async (options) => { sessionOptions.push(options); return sessions.shift(); },
     reportProgress: (value) => { progress.push(value.milestone); },
     requestJoin: async () => { events.push('join-requested'); },
     reset: async () => ({ datasetAttachmentCount: 0, datasetNodeCount: 0,
@@ -43,6 +44,7 @@ it('interrupts only after a committed cursor and resumes without cursor regressi
     restartedFacts: { receiveCursor: 80 } });
   expect(events).toEqual(['enabled', 'join-requested', 'joined', 'cursor-committed',
     'first-interrupted', 'restarted-closed']);
+  expect(sessionOptions).toEqual([{ holdAfterCursorCommit: true }, undefined]);
   expect(progress).toEqual([
     'c-cursor-zero', 'c-group-discovered', 'c-join-requested', 'c-membership-active',
     'c-first-cursor-committed', 'c-object-batches-received', 'c-controlled-interruption',

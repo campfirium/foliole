@@ -4,6 +4,7 @@ import { acceptanceControllerFiles } from './multi-device-sync-candidate.mjs';
 
 it('freezes the provider lifecycle helpers used by formal sync journeys', () => {
   expect(acceptanceControllerFiles()).toEqual(expect.arrayContaining([
+    'electron/sync/desktopSyncGroupCursorCommit.ts',
     'electron/sync/desktopSyncGroupJoin.ts',
     'scripts/android/android-device-snapshot.mjs',
     'scripts/desktop/sync-from-zero-dataset-action.mjs',

@@ -84,7 +84,7 @@ export async function runWindowsSyncFromZeroJourney(actions) {
   const report = (milestone) => actions.reportProgress({ factId: 'sync-from-zero', milestone });
   const initialFacts = await actions.reset();
   assertEmptyCursor(initialFacts); report('c-cursor-zero');
-  let session = await actions.openSession();
+  let session = await actions.openSession({ holdAfterCursorCommit: true });
   try {
     await actions.enable(session.page);
     const candidate = await actions.discover(session.page); report('c-group-discovered');
@@ -129,7 +129,7 @@ export async function runWindowsMultiDeviceSyncFromZero({ evidenceRoot, execute,
       closeSession: closeWindowsSyncGroupSession,
       enable: (page) => enableWindowsSyncParticipation(page, invokeWindowsSyncGroupCommand),
       inspect,
-      openSession: () => openWindowsSyncGroupSession(paths, evidenceRoot),
+      openSession: (options) => openWindowsSyncGroupSession(paths, evidenceRoot, undefined, options),
       reportProgress,
       requestJoin: (page, endpoint_url) => invokeWindowsSyncGroupCommand(
         page, 'request_sync_group_join', { endpoint_url }

@@ -8,6 +8,7 @@ import { scenarioCatalog, scenarioCatalogDigest } from './multi-device-sync-scen
 import { stageCatalog, stageCatalogDigest } from './multi-device-sync-stage-catalog.mjs';
 
 const CONTROLLER_FILES = [
+  'electron/sync/desktopSyncGroupCursorCommit.ts',
   'electron/sync/desktopSyncGroupJoin.ts',
   'scripts/android/android-device-snapshot.mjs',
   'scripts/android/macos-a5-sync-group-maintenance-action.mjs',
