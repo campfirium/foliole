@@ -179,9 +179,9 @@ test('keeps create, rename, move, and delete in one exact workspace history', as
   expect(await desktopWindow.evaluate(([nodeId, title]) =>
     window.__folioleWorkspaceDebug?.updateNodeTitle?.(nodeId!, title!) ?? false,
   [createdId, 'Renamed Structure Topic'])).toBe(true);
-  await clickNativeHistoryCommand(desktopApp, 'app.undo');
+  await clickNativeHistoryCommand(desktopApp, desktopWindow, 'app.undo');
   await expect.poll(() => collectNode(desktopWindow, createdId)).toMatchObject({ title: originalTitle });
-  await clickNativeHistoryCommand(desktopApp, 'app.redo');
+  await clickNativeHistoryCommand(desktopApp, desktopWindow, 'app.redo');
   await expect.poll(() => collectNode(desktopWindow, createdId)).toMatchObject({ title: 'Renamed Structure Topic' });
 
   const beforeMoveOrder = await readStructureOrder(desktopWindow);

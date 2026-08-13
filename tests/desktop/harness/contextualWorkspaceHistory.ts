@@ -36,13 +36,19 @@ export async function createStructureTopic(page: Page) {
   return nodeId!;
 }
 
-export async function clickNativeHistoryCommand(app: ElectronApplication, commandId: 'app.redo' | 'app.undo') {
-  await app.evaluate(({ BrowserWindow, Menu }, id) => {
-    const item = Menu.getApplicationMenu()?.getMenuItemById(id);
-    const window = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
-    if (!item || !window) throw new Error(`missing native menu command target: ${id}`);
+export async function clickNativeHistoryCommand(
+  app: ElectronApplication,
+  page: Page,
+  commandId: 'app.redo' | 'app.undo'
+) {
+  const targetWindow = await app.browserWindow(page);
+  const windowId = await targetWindow.evaluate((window) => window.id);
+  await app.evaluate(({ BrowserWindow, Menu }, target) => {
+    const item = Menu.getApplicationMenu()?.getMenuItemById(target.commandId);
+    const window = BrowserWindow.fromId(target.windowId);
+    if (!item || !window) throw new Error(`missing native menu command target: ${target.commandId}`);
     item.click(undefined, window, window.webContents);
-  }, commandId);
+  }, { commandId, windowId });
 }
 
 export async function runPaletteHistoryCommand(page: Page, title: string) {
