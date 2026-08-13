@@ -17,6 +17,7 @@ import {
 } from './multi-device-sync-ab-convergence.mjs';
 import { proveALeave } from './multi-device-sync-a-leave.mjs';
 import { proveARejoin } from './multi-device-sync-a-rejoin.mjs';
+import { proveSyncFromZero } from './multi-device-sync-from-zero.mjs';
 import { proveParticipationControl } from './multi-device-sync-participation.mjs';
 import { createActionExecutor } from './multi-device-sync-action-executor.mjs';
 import { createApprovalReceiptRelease } from './multi-device-sync-approval-release.mjs';
@@ -171,6 +172,8 @@ async function admitEmptyC(repoRoot, runId, { reportProgress, signal, stage }) {
 export function createDiagnosticStageActions({ repoRoot, requiredHosts, runId }) {
   const convergenceRoot = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId,
     'a-b-convergence');
+  const zeroRoot = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId,
+    'sync-from-zero');
   return {
     'admit-empty-c': (context) => admitEmptyC(repoRoot, runId, context),
     'establish-a-b': (context) => establishAB(repoRoot, runId, context),
@@ -181,6 +184,11 @@ export function createDiagnosticStageActions({ repoRoot, requiredHosts, runId })
     'prove-a-b-convergence': (context) => proveABConvergence({ repoRoot, runId,
       execute: actionExecute(convergenceRoot, context.signal, context.stage),
       reportProgress: context.reportProgress }),
+    'prove-sync-from-zero': (context) => proveSyncFromZero({ repoRoot, runId, ...context,
+      createExecute: (signal, onOutput) => {
+        const execute = actionExecute(zeroRoot, signal, context.stage);
+        return (command, args, options = {}) => execute(command, args, { ...options, onOutput });
+      }, execute: actionExecute(zeroRoot, context.signal, context.stage) }),
     'set-participation': (context) => proveParticipationControl({ repoRoot, runId,
       execute: actionExecute(path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId,
         'participation-control'), context.signal, context.stage),

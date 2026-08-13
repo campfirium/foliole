@@ -88,3 +88,19 @@ it('runs participation control against the prepared Windows candidate without re
     multiDeviceSyncParticipation: { manifestPath: 'participation.json' } });
   fs.rmSync(root, { force: true, recursive: true });
 });
+
+it('runs sync-from-zero against the prepared Windows candidate without rebuilding', async () => {
+  const { paths, root } = fixture();
+  fs.writeFileSync(paths.systemNode, 'node');
+  const deviceAction = vi.fn(async () => ({
+    multiDeviceSyncFromZero: { manifestPath: 'sync-from-zero.json' }, output: 'complete\n'
+  }));
+  const prepareHost = vi.fn();
+  const result = await runWindowsDevBuild({ action: 'multi-device-sync-from-zero', deviceAction,
+    execute: vi.fn(async () => ({ code: 0, lines: [], output: '[]\n', stderr: '', stdout: '[]\n' })),
+    paths, platform: 'win32', prepareHost });
+  expect(result.summary).toMatchObject({ action: 'multi-device-sync-from-zero',
+    multiDeviceSyncFromZero: { manifestPath: 'sync-from-zero.json' } });
+  expect(prepareHost).not.toHaveBeenCalled();
+  fs.rmSync(root, { force: true, recursive: true });
+});

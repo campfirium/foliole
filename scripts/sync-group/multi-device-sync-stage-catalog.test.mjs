@@ -54,6 +54,19 @@ it('declares ordered milestones and deadlines that cover legal sibling waits', (
       'all-restarted-unbound'
     ]
   });
+  expect(resolveStage('sync-from-zero')).toMatchObject({
+    action: 'prove-sync-from-zero', activities: expect.arrayContaining([
+      'dataset-mutation-progress', 'windows-cursor-progress', 'windows-resource-progress'
+    ]), milestones: [
+      'dataset-created', 'b-provider-stopped', 'b-transport-ready',
+      'android-structure-batches-complete', 'android-content-batches-complete',
+      'android-attachment-batches-complete', 'macos-offline', 'windows-join-started',
+      'android-approval-completed', 'windows-cursor-resumed',
+      'windows-structure-batches-complete', 'windows-content-batches-complete',
+      'windows-attachment-batches-complete', 'three-host-converged',
+      'provider-resources-preserved', 'peer-progress-converged'
+    ], progressDeadlineMs: 60_000
+  });
   expect(() => assertStageTiming({ hardDeadlineMs: 100, name: 'invalid', progressDeadlineMs: 50,
     siblings: [{ hardDeadlineMs: 80, name: 'waiter', waitsFor: 'worker' },
       { hardDeadlineMs: 80, name: 'worker', waitsFor: null }] }))
@@ -81,5 +94,8 @@ it('builds only the shortest missing product prerequisite chain', () => {
   expect(shortestStageChain('participation-control').map(({ name }) => name)).toEqual([
     'candidate-preparation', 'a-b-group-sync', 'b-admit-empty-c', 'a-rejoin',
     'participation-control'
+  ]);
+  expect(shortestStageChain('sync-from-zero').map(({ name }) => name)).toEqual([
+    'candidate-preparation', 'a-b-group-sync', 'sync-from-zero'
   ]);
 });

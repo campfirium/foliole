@@ -16,6 +16,9 @@ const scenarios = [{
   name: 'participation-control-continuity',
   stages: ['candidate-preparation', 'a-b-group-sync', 'b-admit-empty-c', 'a-rejoin',
     'participation-control']
+}, {
+  name: 'sync-from-zero-continuity',
+  stages: ['candidate-preparation', 'a-b-group-sync', 'sync-from-zero']
 }];
 
 function assertAcyclic(stages) {

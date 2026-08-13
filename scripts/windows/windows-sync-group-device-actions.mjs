@@ -5,6 +5,7 @@ import { provisionWindowsAcceptanceRoot } from './windows-multi-device-sync-read
 import { runWindowsMultiDeviceSyncALeave } from './windows-multi-device-sync-a-leave-action.mjs';
 import { runWindowsMultiDeviceSyncC } from './windows-multi-device-sync-c-action.mjs';
 import { runWindowsMultiDeviceSyncARejoin } from './windows-multi-device-sync-a-rejoin-action.mjs';
+import { runWindowsMultiDeviceSyncFromZero } from './windows-multi-device-sync-from-zero-action.mjs';
 import {
   runWindowsMultiDeviceSyncParticipation
 } from './windows-multi-device-sync-participation-action.mjs';
@@ -18,6 +19,9 @@ export async function runWindowsSyncGroupDeviceAction(options) {
   }
   if (options.action === 'multi-device-sync-c') {
     return runWindowsMultiDeviceSyncC(options);
+  }
+  if (options.action === 'multi-device-sync-from-zero') {
+    return runWindowsMultiDeviceSyncFromZero(options);
   }
   if (options.action === 'multi-device-sync-participation') {
     return runWindowsMultiDeviceSyncParticipation(options);

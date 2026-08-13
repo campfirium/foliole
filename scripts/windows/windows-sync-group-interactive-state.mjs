@@ -3,10 +3,11 @@ import path from 'node:path';
 import {
   interactiveStatePaths, readJson, writeJsonAtomic
 } from './windows-client-native-interactive-state.mjs';
+import { WINDOWS_SYNC_FROM_ZERO_PROGRESS } from '../sync-group/sync-from-zero-contract.mjs';
 
 export const WINDOWS_SYNC_GROUP_INTERACTIVE_ACTIONS = new Set([
   'multi-device-sync-a-leave', 'multi-device-sync-a-rejoin', 'multi-device-sync-c',
-  'multi-device-sync-participation'
+  'multi-device-sync-from-zero', 'multi-device-sync-participation'
 ]);
 export const WINDOWS_SYNC_GROUP_INTERACTIVE_WORKER_ENV = 'FOLIOLE_SYNC_GROUP_INTERACTIVE_WORKER';
 
@@ -30,6 +31,11 @@ export function validateSyncGroupInteractiveRequest(request, repoRoot) {
 }
 
 export function validateSyncGroupInteractiveProgress(progress, action) {
+  if (action === 'multi-device-sync-from-zero'
+      && WINDOWS_SYNC_FROM_ZERO_PROGRESS.includes(progress?.milestone)
+      && progress.factId === 'sync-from-zero') {
+    return { factId: progress.factId, milestone: progress.milestone };
+  }
   if (action === 'multi-device-sync-participation'
       && ['windows-paused', 'macos-departure-observed'].includes(progress?.milestone)
       && progress.factId === 'participation-control') {

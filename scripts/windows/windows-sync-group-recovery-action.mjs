@@ -59,7 +59,7 @@ function captureSyncRuntimeLog(child, logPath) {
   child.stderr?.on('data', capture);
 }
 
-async function discoverUniqueGroup(page, timeoutMs = 60_000) {
+export async function discoverUniqueGroup(page, timeoutMs = 60_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const overview = await invokeWindowsSyncGroupCommand(page, 'discover_sync_groups');
@@ -70,7 +70,7 @@ async function discoverUniqueGroup(page, timeoutMs = 60_000) {
   throw new Error('Timed out discovering the A5 Sync Group.');
 }
 
-async function waitForJoinedGroup(page, expectedGroupId, timeoutMs = 12 * 60_000) {
+export async function waitForJoinedGroup(page, expectedGroupId, timeoutMs = 12 * 60_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const overview = await invokeWindowsSyncGroupCommand(page, 'load_companion_pairing_overview');
@@ -163,7 +163,7 @@ function assertEmpty(facts) {
   }
 }
 
-async function resetOwnedClient(paths, evidenceRoot, execute) {
+export async function resetOwnedClient(paths, evidenceRoot, execute) {
   provisionWindowsAcceptanceRoot({ paths });
   const client = windowsSyncGroupClientPaths(paths);
   fs.rmSync(path.dirname(client.libraryHome), { force: true, recursive: true });

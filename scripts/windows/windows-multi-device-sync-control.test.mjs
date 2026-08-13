@@ -71,3 +71,23 @@ it('copies only the fixed participation receipt', async () => {
   expect(result.manifestPath).toBe(path.join('/repo', '.tmp', 'artifacts',
     'multi-device-sync', 'windows-c', 'run-4', 'multi-device-sync-participation-receipt.json'));
 });
+
+it('streams progress and copies only the fixed sync-from-zero receipt', async () => {
+  const progress = '[windows-dev-action] progress action=multi-device-sync-from-zero '
+    + 'nonce=12345678-1234-1234-1234-123456789abc milestone=c-first-cursor-committed '
+    + 'fact=sync-from-zero\n';
+  const receipt = '[windows-dev-action] multi-device-sync-from-zero '
+    + 'identity=run-5 manifest=C:\\dev\\foliole-android-lab-preview\\.tmp\\artifacts\\'
+    + 'windows-dev-action\\run-5\\multi-device-sync-from-zero-receipt.json\n';
+  const stdout = { write: vi.fn() };
+  const result = await runWindowsMultiDeviceSyncControl({ action: 'multi-device-sync-from-zero',
+    buildPushSpec: () => ({ args: ['push'], env: {} }),
+    buildScpSpec: (_host, remote, local) => [remote, local], buildSshSpec: () => ['ssh'],
+    env: {}, executeGit: vi.fn(async () => ''), executeScp: vi.fn(async () => 'copied'),
+    executeSsh: vi.fn(async (_args, options) => {
+      options.onOutput(progress); options.onOutput(receipt); return `${progress}${receipt}`;
+    }), fsApi: { mkdirSync: vi.fn() }, host: 'user@host', repoRoot: '/repo', stdout });
+  expect(result.manifestPath).toBe(path.join('/repo', '.tmp', 'artifacts',
+    'multi-device-sync', 'windows-c', 'run-5', 'multi-device-sync-from-zero-receipt.json'));
+  expect(stdout.write.mock.calls.map(([value]) => value).join('')).toBe(`${progress}${receipt}`);
+});

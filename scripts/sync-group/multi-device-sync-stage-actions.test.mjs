@@ -14,6 +14,7 @@ it('binds the A-leave product stage to its real cross-host action', () => {
   });
   expect(actions['leave-a']).toBeTypeOf('function');
   expect(actions['set-participation']).toBeTypeOf('function');
+  expect(actions['prove-sync-from-zero']).toBeTypeOf('function');
 });
 
 it('cancels Android immediately when Windows join fails before approval', () => {

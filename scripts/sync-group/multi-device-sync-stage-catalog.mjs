@@ -51,8 +51,17 @@ const stages = [
       'windows-resumed-cursor', 'windows-sync-off-persisted', 'windows-last-member-left',
       'all-restarted-unbound'], outputs: ['participation_converged'],
     progressDeadlineMs: PRODUCT_PROGRESS_DEADLINE + CONTROL_DEADLINE, siblings: [] },
-  { action: 'sync-from-zero', host: 'all', inputs: ['a_b_group_active'], name: 'sync-from-zero',
-    hardDeadlineMs: 20 * 60_000, hosts: ['macos-a', 'android-b', 'windows-c'], milestones: [],
+  { action: 'prove-sync-from-zero', host: 'all', inputs: ['a_b_group_active'], name: 'sync-from-zero',
+    hardDeadlineMs: 20 * 60_000, hosts: ['macos-a', 'android-b', 'windows-c'],
+    activities: ['dataset-mutation-progress', 'android-batch-progress', 'windows-join-progress',
+      'windows-cursor-progress', 'windows-resource-progress', 'three-host-rejoin-progress'],
+    milestones: ['dataset-created', 'b-provider-stopped', 'b-transport-ready',
+      'android-structure-batches-complete', 'android-content-batches-complete',
+      'android-attachment-batches-complete', 'macos-offline', 'windows-join-started',
+      'android-approval-completed', 'windows-cursor-resumed',
+      'windows-structure-batches-complete', 'windows-content-batches-complete',
+      'windows-attachment-batches-complete', 'three-host-converged',
+      'provider-resources-preserved', 'peer-progress-converged'],
     outputs: ['fresh_client_converged'], progressDeadlineMs: PRODUCT_PROGRESS_DEADLINE, siblings: [] }
 ];
 
