@@ -1,6 +1,11 @@
 import { createCompanionUuid } from '../../companionUuid';
 import { createSignedRequestHeaders } from '../../companionWorkspacePairing';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
+import {
+  bindCompanionWorkspaceSyncTarget,
+  resolveReachableCompanionWorkspaceSyncEndpoints,
+  type CompanionWorkspaceSyncTarget
+} from '../network/companionWorkspaceEndpoint';
 
 import {
   loadCompanionSyncGroup,
@@ -9,6 +14,35 @@ import {
 } from './syncGroupStore';
 
 export const COMPANION_SYNC_GROUP_DEPARTURE_PATH = '/companion/sync-group/departure';
+
+async function sendDepartureToTarget(target: CompanionWorkspaceSyncTarget, body: string) {
+  await bindCompanionWorkspaceSyncTarget(target);
+  const headers = await createSignedRequestHeaders({
+    bodyText: body, endpointUrl: target.endpointUrl, method: 'POST', pathWithQuery: COMPANION_SYNC_GROUP_DEPARTURE_PATH
+  });
+  const response = await FolioleCompanionSync.desktopHttpRequest({
+    body, headers: { 'Content-Type': 'application/json', ...headers }, method: 'POST',
+    url: `${target.endpointUrl}${COMPANION_SYNC_GROUP_DEPARTURE_PATH}`
+  });
+  if (response.status < 200 || response.status >= 300) {
+    throw new Error(`sync_group_departure_http_${response.status}`);
+  }
+}
+
+async function deliverDeparture(endpoint: string, body: string) {
+  const targets = await resolveReachableCompanionWorkspaceSyncEndpoints(endpoint);
+  let lastError: unknown;
+  for (const target of targets) {
+    try {
+      await sendDepartureToTarget(target, body);
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  if (lastError) throw lastError;
+  throw new Error('sync_group_departure_peer_unavailable');
+}
 
 export async function leaveCompanionSyncGroup() {
   const group = await loadCompanionSyncGroup();
@@ -26,17 +60,7 @@ export async function leaveCompanionSyncGroup() {
     left_at: new Date().toISOString()
   };
   if (hasOtherActiveMember && endpoint) {
-    const body = JSON.stringify(departure);
-    const headers = await createSignedRequestHeaders({
-      bodyText: body, endpointUrl: endpoint, method: 'POST', pathWithQuery: COMPANION_SYNC_GROUP_DEPARTURE_PATH
-    });
-    const response = await FolioleCompanionSync.desktopHttpRequest({
-      body, headers: { 'Content-Type': 'application/json', ...headers }, method: 'POST',
-      url: `${endpoint}${COMPANION_SYNC_GROUP_DEPARTURE_PATH}`
-    });
-    if (response.status < 200 || response.status >= 300) {
-      throw new Error(`sync_group_departure_http_${response.status}`);
-    }
+    await deliverDeparture(endpoint, JSON.stringify(departure));
   }
   await recordLocalCompanionSyncGroupDeparture({
     authorizationId: departure.authorization_id,

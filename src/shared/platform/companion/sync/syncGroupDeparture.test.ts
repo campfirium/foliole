@@ -1,8 +1,8 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  clear: vi.fn(), endpoint: vi.fn(), group: vi.fn(), headers: vi.fn(),
-  record: vi.fn(), request: vi.fn(), stop: vi.fn(), uuid: vi.fn(() => 'departure-1')
+  bind: vi.fn(), clear: vi.fn(), endpoint: vi.fn(), group: vi.fn(), headers: vi.fn(),
+  record: vi.fn(), request: vi.fn(), resolveTargets: vi.fn(), stop: vi.fn(), uuid: vi.fn(() => 'departure-1')
 }));
 
 vi.mock('../../companionWorkspacePairing', () => ({ createSignedRequestHeaders: mocks.headers }));
@@ -14,6 +14,10 @@ vi.mock('../../companionWorkspaceRuntimeRepository', () => ({
   }
 }));
 vi.mock('../../companionUuid', () => ({ createCompanionUuid: mocks.uuid }));
+vi.mock('../network/companionWorkspaceEndpoint', () => ({
+  bindCompanionWorkspaceSyncTarget: mocks.bind,
+  resolveReachableCompanionWorkspaceSyncEndpoints: mocks.resolveTargets
+}));
 vi.mock('./syncGroupStore', () => ({
   loadCompanionSyncGroup: mocks.group,
   loadCompanionSyncGroupEndpoint: mocks.endpoint,
@@ -30,6 +34,8 @@ beforeEach(() => {
     members: [{ device_id: 'android-1', state: 'active' }, { device_id: 'desktop-1', state: 'active' }]
   });
   mocks.headers.mockResolvedValue({ 'X-Signature': 'signed' });
+  mocks.resolveTargets.mockResolvedValue([{ endpointUrl: 'http://192.168.1.2:38641' }]);
+  mocks.bind.mockResolvedValue(undefined);
   mocks.request.mockResolvedValue({ body: '{"status":"accepted"}', status: 200 });
   mocks.record.mockResolvedValue(undefined);
   mocks.stop.mockResolvedValue(undefined);
@@ -41,6 +47,7 @@ it('records a local departure only after another Device accepts it', async () =>
   expect(mocks.request).toHaveBeenCalledWith(expect.objectContaining({
     method: 'POST', url: 'http://192.168.1.2:38641/companion/sync-group/departure'
   }));
+  expect(mocks.bind).toHaveBeenCalledWith({ endpointUrl: 'http://192.168.1.2:38641' });
   expect(mocks.record).toHaveBeenCalledWith(expect.objectContaining({
     authorizationId: 'leave-departure-1', deviceId: 'android-1', groupId: 'group-1'
   }));
@@ -57,6 +64,37 @@ it('records a local departure only after another Device accepts it', async () =>
 it('keeps local membership and credentials when no Device accepts the departure', async () => {
   mocks.request.mockResolvedValue({ body: '{}', status: 503 });
   await expect(leaveCompanionSyncGroup()).rejects.toThrow('sync_group_departure_http_503');
+  expect(mocks.record).not.toHaveBeenCalled();
+  expect(mocks.clear).not.toHaveBeenCalled();
+});
+
+it('routes Leave to an active identity-bound peer when the stored endpoint has departed', async () => {
+  mocks.resolveTargets.mockResolvedValue([{
+    deviceId: 'desktop-2', endpointUrl: 'http://192.168.1.3:38641', groupId: 'group-1'
+  }]);
+
+  await leaveCompanionSyncGroup();
+
+  expect(mocks.resolveTargets).toHaveBeenCalledWith('http://192.168.1.2:38641');
+  expect(mocks.bind).toHaveBeenCalledWith({
+    deviceId: 'desktop-2', endpointUrl: 'http://192.168.1.3:38641', groupId: 'group-1'
+  });
+  expect(mocks.headers).toHaveBeenCalledWith(expect.objectContaining({
+    endpointUrl: 'http://192.168.1.3:38641'
+  }));
+  expect(mocks.request).toHaveBeenCalledWith(expect.objectContaining({
+    url: 'http://192.168.1.3:38641/companion/sync-group/departure'
+  }));
+  expect(mocks.record).toHaveBeenCalledOnce();
+  expect(mocks.clear).toHaveBeenCalledOnce();
+});
+
+it('keeps local membership when no active identity-bound peer is reachable', async () => {
+  mocks.resolveTargets.mockResolvedValue([]);
+
+  await expect(leaveCompanionSyncGroup()).rejects.toThrow('sync_group_departure_peer_unavailable');
+
+  expect(mocks.request).not.toHaveBeenCalled();
   expect(mocks.record).not.toHaveBeenCalled();
   expect(mocks.clear).not.toHaveBeenCalled();
 });
