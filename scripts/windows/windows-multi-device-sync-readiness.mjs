@@ -6,6 +6,8 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { executeBounded } from './windows-bounded-process.mjs';
+import { dispatchWindowsNativeClientAction } from './windows-client-native-interactive.mjs';
+import { resolveWindowsNativePaths } from './windows-native-paths.mjs';
 import { windowsDevPaths } from './windows-dev-paths.mjs';
 
 const OWNER = { owner: 'windows-c-fixed', purpose: 'multi-device-sync-acceptance', schemaVersion: 1 };
@@ -42,8 +44,19 @@ async function git(execute, paths, args) {
   return result.stdout.trim();
 }
 
+export async function probeWindowsInteractiveAction(repoRoot) {
+  const native = resolveWindowsNativePaths(repoRoot);
+  const dispatched = await dispatchWindowsNativeClientAction({
+    action: 'status', installScript: native.nativeTaskInstallScript,
+    repoRoot, stateRoot: native.nativeTaskStateRoot,
+    workerScript: native.nativeTaskWorkerScript
+  });
+  if (!dispatched) throw new Error('Windows interactive action probe was not dispatched.');
+}
+
 export async function inspectWindowsAcceptanceReadiness({ execute = executeBounded,
-  fsApi = fs, paths = windowsDevPaths(), platform = process.platform } = {}) {
+  fsApi = fs, interactiveProbe = probeWindowsInteractiveAction,
+  paths = windowsDevPaths(), platform = process.platform } = {}) {
   if (platform !== 'win32') throw failure('Windows host is required.', 'windows_host_mismatch', 'entry');
   if (!fsApi.existsSync(paths.systemNode) || !fsApi.existsSync(paths.gitPath)) {
     throw failure('Fixed Windows runtime is missing.', 'windows_runtime_missing', 'host_confirmed');
@@ -67,7 +80,13 @@ export async function inspectWindowsAcceptanceReadiness({ execute = executeBound
   if (stats.bavail * stats.bsize < 4 * 1024 ** 3) {
     throw failure('Windows acceptance disk is low.', 'windows_disk_budget_missing', 'owner_checked');
   }
-  return { facts: ['windows_ssh_ready', 'windows_repo_ready', 'windows_isolated_owner_ready'], root };
+  try { await interactiveProbe(paths.repoRoot); }
+  catch (error) {
+    throw failure(`Windows interactive action is unavailable: ${error.message}`,
+      'windows_interactive_action_unavailable', 'windows_disk_ready');
+  }
+  return { facts: ['windows_ssh_ready', 'windows_repo_ready', 'windows_isolated_owner_ready',
+    'windows_interactive_action_ready'], root };
 }
 
 async function main(argv) {

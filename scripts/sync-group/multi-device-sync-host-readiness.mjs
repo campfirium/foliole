@@ -103,7 +103,8 @@ export function createHostReadinessAdapters({ env = process.env, execute = bound
           missingFact: 'windows_readiness_missing', lastSuccessfulAction: 'windows_ssh_connected'
         });
       }
-      return { facts: ['windows_ssh_ready', 'windows_repo_ready', 'windows_isolated_owner_ready'] };
+      return { facts: ['windows_ssh_ready', 'windows_repo_ready', 'windows_isolated_owner_ready',
+        'windows_interactive_action_ready'] };
     }
   };
 }

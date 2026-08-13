@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { expect, it, vi } from 'vitest';
 
 import {
@@ -22,9 +24,27 @@ it('provisions the fixed root separately and keeps readiness read-only', async (
   provisionWindowsAcceptanceRoot({ fsApi, paths });
   const execute = vi.fn(async (_command, args) => ({ code: 0, stdout:
     args.includes('branch') ? 'dev\n' : '' }));
-  await expect(inspectWindowsAcceptanceReadiness({ execute, fsApi, paths, platform: 'win32' }))
-    .resolves.toMatchObject({ facts: expect.arrayContaining(['windows_repo_ready']) });
+  const interactiveProbe = vi.fn(async () => undefined);
+  await expect(inspectWindowsAcceptanceReadiness({
+    execute, fsApi, interactiveProbe, paths, platform: 'win32'
+  })).resolves.toMatchObject({ facts: expect.arrayContaining([
+    'windows_repo_ready', 'windows_interactive_action_ready'
+  ]) });
   expect(execute).toHaveBeenCalledTimes(2);
+  expect(interactiveProbe).toHaveBeenCalledWith(paths.repoRoot);
+});
+
+it('blocks before mutation when the interactive action channel cannot start', async () => {
+  const { fsApi, paths } = fixture();
+  provisionWindowsAcceptanceRoot({ fsApi, paths });
+  const execute = vi.fn(async (_command, args) => ({ code: 0, stdout:
+    args.includes('branch') ? 'dev\n' : '' }));
+  await expect(inspectWindowsAcceptanceReadiness({ execute, fsApi,
+    interactiveProbe: async () => { throw new Error('task did not start'); },
+    paths, platform: 'win32' })).rejects.toMatchObject({
+    lastSuccessfulAction: 'windows_disk_ready',
+    missingFact: 'windows_interactive_action_unavailable'
+  });
 });
 
 it('refuses an unknown Windows owner without replacing its marker', () => {
