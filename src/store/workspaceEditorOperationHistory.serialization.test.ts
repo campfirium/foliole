@@ -6,6 +6,7 @@ import { createTextHistoryEntry } from '../features/editor/model/editorOperation
 import { createWorkspaceEditorOperationHistoryActions } from './workspaceEditorOperationHistory';
 import {
   hasWorkspaceNodeMutationRuntime,
+  syncCreateNodeMutationToRuntime,
   syncRestoreNodesToRuntime,
   syncSoftDeleteNodesToRuntime
 } from './workspaceRuntimeSync';
@@ -165,4 +166,52 @@ it('preserves every rapid undo and redo across annotation and text history', asy
     undoStack: [expect.objectContaining({ type: 'text.edit' }), expect.objectContaining({ type: 'annotation.create' })]
   });
   expect(harness.getState().editorOperationHistory.invalidations).toEqual([]);
+});
+
+it('keeps queued undo and redo while an earlier annotation creation is still pending', async () => {
+  const { harness, historyActions } = createHarness();
+  const firstCreate = deferredResult<Awaited<ReturnType<typeof syncCreateNodeMutationToRuntime>>>();
+  const secondCreate = deferredResult<Awaited<ReturnType<typeof syncCreateNodeMutationToRuntime>>>();
+  vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);
+  vi.mocked(syncCreateNodeMutationToRuntime)
+    .mockImplementationOnce(() => firstCreate.promise)
+    .mockImplementationOnce(() => secondCreate.promise);
+  vi.mocked(syncRestoreNodesToRuntime).mockImplementation(async ({ nodeIds }) => ({
+    restoredNodeIds: nodeIds,
+    skippedConflicts: []
+  }));
+
+  const firstPromise = createHighlight(harness, 'pending-1');
+  const firstId = harness.getState().nodeOrder.at(-1)!;
+  const secondPromise = createHighlight(harness, 'pending-2');
+  const secondId = harness.getState().nodeOrder.at(-1)!;
+
+  expect(historyActions.undoEditorOperation()).toBe(true);
+  expect(historyActions.undoEditorOperation()).toBe(true);
+  expect(historyActions.redoEditorOperation()).toBe(true);
+  expect(historyActions.redoEditorOperation()).toBe(true);
+
+  secondCreate.resolve({
+    createdNodeIds: [secondId],
+    nodeOrder: harness.getState().nodeOrder,
+    nodes: []
+  });
+  await secondPromise;
+  await vi.waitFor(() => expect(harness.getState().trashedNodeIds).toContain(secondId));
+
+  firstCreate.resolve({
+    createdNodeIds: [firstId],
+    nodeOrder: harness.getState().nodeOrder,
+    nodes: []
+  });
+  await firstPromise;
+
+  await vi.waitFor(() => expect(harness.getState().trashedNodeIds).toEqual([]));
+  expect(getEditorOperationSession(harness.getState().editorOperationHistory, 'node-1')).toMatchObject({
+    redoStack: [],
+    undoStack: [
+      expect.objectContaining({ type: 'annotation.create' }),
+      expect.objectContaining({ type: 'annotation.create' })
+    ]
+  });
 });

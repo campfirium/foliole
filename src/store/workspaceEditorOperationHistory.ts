@@ -27,7 +27,7 @@ import { computeDeleteNodesMutation } from './workspaceTrashMutations';
 type WorkspaceSet = (partial: Partial<WorkspaceState> | ((state: WorkspaceState) => Partial<WorkspaceState> | WorkspaceState)) => void;
 type WorkspaceGet = () => WorkspaceState;
 type EditorOperationMode = 'redo' | 'undo';
-type ApplyOutcome = 'applied' | 'failed' | 'noop' | 'pending';
+type ApplyOutcome = 'applied' | 'blocked' | 'failed' | 'noop' | 'pending';
 
 interface QueuedEditorOperation {
   context?: EditorOperationApplyContext;
@@ -96,9 +96,11 @@ function createOperationRunner(set: WorkspaceSet, get: WorkspaceGet) {
   const drain = (nodeId: string) => {
     const queued = queuedByNodeId.get(nodeId);
     if (!queued || queued.length === 0) return clearQueued(nodeId);
-    const next = queued.shift()!;
-    if (queued.length === 0) clearQueued(nodeId);
+    const next = queued[0]!;
     const outcome = applyForNode(nodeId, next.mode, next.context, false);
+    if (outcome === 'blocked') return;
+    queued.shift();
+    if (queued.length === 0) clearQueued(nodeId);
     if (outcome === 'applied' || outcome === 'noop') queueMicrotask(() => drain(nodeId));
     else if (outcome === 'failed') clearQueued(nodeId);
   };
@@ -108,9 +110,8 @@ function createOperationRunner(set: WorkspaceSet, get: WorkspaceGet) {
   };
   applyForNode = (nodeId, mode, context, queueWhenBlocked = true) => {
     if (hasBlockingAnnotation(get, nodeId)) {
-      return queueWhenBlocked && enqueue(nodeId, { ...(context ? { context } : {}), mode })
-        ? 'pending'
-        : 'failed';
+      if (!queueWhenBlocked) return 'blocked';
+      return enqueue(nodeId, { ...(context ? { context } : {}), mode }) ? 'pending' : 'failed';
     }
     const entry = getEditorOperationTopEntry(get().editorOperationHistory, nodeId, mode);
     if (!entry) return 'noop';
