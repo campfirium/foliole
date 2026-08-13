@@ -11,7 +11,8 @@ it('isolates multi-device macOS acceptance from the default product listener', a
   await closeMacosAcceptanceTransport(runAdb);
   expect(MACOS_ACCEPTANCE_SYNC_PORT).toBe('38642');
   expect(macosAcceptanceEnv({ BASE: 'kept' })).toEqual({
-    BASE: 'kept', FOLIOLE_COMPANION_SYNC_PORT: '38642'
+    BASE: 'kept', FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1',
+    FOLIOLE_COMPANION_SYNC_PORT: '38642'
   });
   expect(runAdb.mock.calls).toEqual([
     [['reverse', 'tcp:38641', 'tcp:38642'], 'pair-sync-transport-open'],

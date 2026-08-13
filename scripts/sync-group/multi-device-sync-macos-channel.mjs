@@ -9,7 +9,8 @@ import {
 export const MACOS_ACCEPTANCE_SYNC_PORT = '38642';
 
 export function macosAcceptanceEnv(env = process.env) {
-  return { ...env, FOLIOLE_COMPANION_SYNC_PORT: MACOS_ACCEPTANCE_SYNC_PORT };
+  return { ...env, FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1',
+    FOLIOLE_COMPANION_SYNC_PORT: MACOS_ACCEPTANCE_SYNC_PORT };
 }
 
 export function macosAcceptanceSessionOptions(options) {
