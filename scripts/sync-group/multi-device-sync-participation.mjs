@@ -120,7 +120,13 @@ async function proveAndroidParticipation(context, macosSession) {
   context.reportProgress('android-resumed-cursor');
   assertAndroidResumeData(before, after, fact.factId,
     (message) => productFailure('android-b', 'android_resume_data_missing', message));
-  return after;
+  const excluded = new Set(Object.keys(after.database?.inspection?.journeyFacts ?? {}));
+  await maintenance(context, 'create-journey-fact', 'android-post-resume-route-fact');
+  const routeFactId = await newestAndroidFact(context, 'B', excluded);
+  await waitUntil('macOS consumes Android post-resume route fact',
+    () => context.inspectMac([routeFactId]), (facts) => facts.facts?.[routeFactId] === true,
+    'android_post_resume_route_missing');
+  return androidSnapshot(context.paths);
 }
 
 async function leaveAndroid(context, before) {

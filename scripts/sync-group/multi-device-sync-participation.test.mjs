@@ -20,6 +20,7 @@ describe('Android resume evidence', () => {
 
   it('leaves connected leaf A before hub B and the final Windows member', () => {
     const source = fs.readFileSync('scripts/sync-group/multi-device-sync-participation.mjs', 'utf8');
+    expect(source.indexOf('android-post-resume-route-fact')).toBeLessThan(source.indexOf('await leaveMacos'));
     expect(source.indexOf('await leaveMacos')).toBeLessThan(source.indexOf('await leaveAndroid'));
     expect(source.indexOf('await leaveAndroid')).toBeLessThan(source.indexOf('await windows.finish'));
   });
