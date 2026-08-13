@@ -159,7 +159,9 @@ function assertEmpty(facts) {
 export async function resetOwnedClient(paths, evidenceRoot, execute) {
   provisionWindowsAcceptanceRoot({ paths });
   const client = windowsSyncGroupClientPaths(paths);
-  fs.rmSync(path.dirname(client.libraryHome), { force: true, recursive: true });
+  fs.rmSync(path.dirname(client.libraryHome), {
+    force: true, maxRetries: 5, recursive: true, retryDelay: 250
+  });
   fs.mkdirSync(client.libraryHome, { recursive: true });
   fs.mkdirSync(client.userData, { recursive: true });
   const session = await openWindowsSyncGroupSession(paths, evidenceRoot);

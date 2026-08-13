@@ -18,6 +18,7 @@ it('keeps stable desktop A and Windows C on a real LAN Sync Group path', () => {
   expect(remote).toContain("FOLIOLE_LIBRARY_HOME: libraryHome");
   expect(remote).toContain("windowsAcceptanceRoot(paths), 'client'");
   expect(remote).toContain('provisionWindowsAcceptanceRoot({ paths })');
+  expect(remote).toContain('maxRetries: 5, recursive: true, retryDelay: 250');
   expect(remote).toContain("invokeWindowsSyncGroupCommand(session.page, 'request_sync_group_join'");
   expect(remote).toContain('firstFacts = await waitForOrdinarySyncFacts(execute, paths, evidenceRoot)');
   expect(remote.indexOf('firstFacts = await waitForOrdinarySyncFacts(execute, paths, evidenceRoot)'))
