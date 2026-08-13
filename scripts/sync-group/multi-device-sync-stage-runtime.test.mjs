@@ -81,9 +81,9 @@ it('lets a declared terminal sibling release its bounded waiter before joining b
 });
 
 it('tells sibling cancellation whether the first terminal failed or succeeded', async () => {
-  let resolveFailedApproval;
-  const failedApproval = new Promise((resolve) => { resolveFailedApproval = resolve; });
-  const failed = vi.fn(() => resolveFailedApproval('cancelled'));
+  let rejectFailedApproval;
+  const failedApproval = new Promise((_resolve, reject) => { rejectFailedApproval = reject; });
+  const failed = vi.fn(() => rejectFailedApproval(new Error('approval cancelled')));
   await expect(settleSiblingActions([
     { name: 'approval', work: failedApproval },
     { name: 'windows', work: Promise.reject(new Error('start failed')) }

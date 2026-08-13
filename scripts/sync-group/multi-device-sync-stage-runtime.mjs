@@ -84,7 +84,9 @@ export async function settleSiblingActions(entries, cancel = () => {}, cancelOnS
     cancel(first.name, first.status);
   }
   const settled = await Promise.all(wrapped);
-  const failure = settled.find(({ status }) => status === 'rejected');
+  const failure = first.status === 'rejected'
+    ? first
+    : settled.find(({ status }) => status === 'rejected');
   if (failure) {
     failure.reason.siblingOutcomes = settled.map(({ name, status }) => ({ name, status }));
     throw failure.reason;
