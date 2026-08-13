@@ -29,6 +29,12 @@ it('prepares an A/B-only candidate without invoking Windows or LAN Git control',
   const receipt = JSON.parse(fs.readFileSync(result.evidenceRef, 'utf8'));
   expect(calls.some(([, args]) => args.some((arg) => arg.endsWith('windows-dev-control.mjs'))))
     .toBe(false);
+  expect(calls.slice(0, 4)).toEqual([
+    ['npm', ['run', 'build']],
+    ['npm', ['run', 'electron:rebuild:native']],
+    ['npm', ['run', 'electron:compile']],
+    [process.execPath, ['scripts/electron-sqlite-runner.mjs', '--preflight']]
+  ]);
   expect(receipt).toMatchObject({ preparedHosts: ['macos-a', 'android-b'], runId: 'run-ab' });
   expect(receipt).not.toHaveProperty('windowsReceipt');
 });

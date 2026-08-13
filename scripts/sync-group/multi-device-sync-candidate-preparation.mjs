@@ -19,7 +19,10 @@ function run(command, args, repoRoot, timeout = 20 * 60_000, signal) {
 async function prepareMacos(execute, repoRoot, progress, signal) {
   progress('candidate-macos-started');
   await execute('npm', ['run', 'build'], repoRoot, 10 * 60_000, signal);
+  await execute('npm', ['run', 'electron:rebuild:native'], repoRoot, 10 * 60_000, signal);
   await execute('npm', ['run', 'electron:compile'], repoRoot, 5 * 60_000, signal);
+  await execute(process.execPath, ['scripts/electron-sqlite-runner.mjs', '--preflight'],
+    repoRoot, 60_000, signal);
   progress('candidate-macos-prepared');
 }
 
