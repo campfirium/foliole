@@ -66,6 +66,12 @@ it('activates persisted Sync participation through visible product controls', as
   expect(source).toContain('FolioleCompanionSyncGroupMaintenanceScenario.togglePause');
   expect(source).toContain('waitParticipation(instrumentation, true, false)');
   expect(source).toContain('put("activated", true)');
+  const scenario = fs.readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupMaintenanceScenario.java',
+    'utf8'
+  );
+  expect(scenario).toContain('clickEnabled(instrumentation, webView, "companion-sync-toggle")');
+  expect(scenario).toContain('!item.optBoolean("disabled")');
 });
 
 it('preserves a lost Android window focus as an environment failure', async () => {

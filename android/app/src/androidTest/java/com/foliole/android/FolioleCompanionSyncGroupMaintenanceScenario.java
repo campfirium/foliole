@@ -21,12 +21,12 @@ final class FolioleCompanionSyncGroupMaintenanceScenario {
 
     static JSONObject toggleSync(Instrumentation instrumentation, WebView webView) throws Exception {
         openSyncSettings(instrumentation, webView);
-        return click(instrumentation, webView, "companion-sync-toggle");
+        return clickEnabled(instrumentation, webView, "companion-sync-toggle");
     }
 
     static JSONObject togglePause(Instrumentation instrumentation, WebView webView) throws Exception {
         openSyncSettings(instrumentation, webView);
-        return click(instrumentation, webView, "companion-sync-pause-toggle");
+        return clickEnabled(instrumentation, webView, "companion-sync-pause-toggle");
     }
 
     static JSONObject clearAppData(Instrumentation instrumentation, WebView webView) throws Exception {
@@ -68,6 +68,24 @@ final class FolioleCompanionSyncGroupMaintenanceScenario {
         );
         if (!receipt.optBoolean("ok")) throw new IllegalStateException(receipt.toString());
         return receipt;
+    }
+
+    private static JSONObject clickEnabled(
+        Instrumentation instrumentation, WebView webView, String testId
+    ) throws Exception {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
+        while (System.nanoTime() < deadline) {
+            JSONObject snapshot = FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView);
+            for (int index = 0; index < snapshot.getJSONArray("elements").length(); index += 1) {
+                JSONObject item = snapshot.getJSONArray("elements").getJSONObject(index);
+                if (testId.equals(item.optString("testId"))
+                    && item.optBoolean("visible") && !item.optBoolean("disabled")) {
+                    return click(instrumentation, webView, testId);
+                }
+            }
+            Thread.sleep(100);
+        }
+        throw new IllegalStateException("Timed out waiting for enabled product state: " + testId);
     }
 
     private static void waitUntilMissing(
