@@ -45,10 +45,13 @@ it('declares ordered milestones and deadlines that cover legal sibling waits', (
     progressDeadlineMs: 70_000
   });
   expect(resolveStage('participation-control')).toMatchObject({
-    action: 'set-participation', milestones: expect.arrayContaining([
-      'macos-pause-persisted', 'android-resumed-cursor', 'windows-last-member-left',
+    action: 'set-participation', milestones: [
+      'windows-paused', 'macos-pause-persisted', 'macos-resumed-cursor',
+      'macos-sync-off-persisted', 'android-sync-off-persisted', 'android-pause-persisted',
+      'android-resumed-cursor', 'android-left-while-paused', 'macos-left-while-sync-off',
+      'windows-resumed-cursor', 'windows-sync-off-persisted', 'windows-last-member-left',
       'all-restarted-unbound'
-    ])
+    ]
   });
   expect(() => assertStageTiming({ hardDeadlineMs: 100, name: 'invalid', progressDeadlineMs: 50,
     siblings: [{ hardDeadlineMs: 80, name: 'waiter', waitsFor: 'worker' },
