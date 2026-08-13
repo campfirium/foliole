@@ -10,6 +10,8 @@ import org.json.JSONObject;
 
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
@@ -69,6 +71,16 @@ final class FolioleCompanionSyncGroupOutboundPeerStore {
         JSONObject peer = new JSONObject(decrypt(encoded));
         return groupId.trim().equals(peer.optString("group_id"))
             && normalizedPeerId.equals(peer.optString("peer_device_id"));
+    }
+
+    static List<String> discoveryEndpointUrls(Context context) throws Exception {
+        List<String> endpoints = new ArrayList<>();
+        for (Object encoded : prefs(context).getAll().values()) {
+            if (!(encoded instanceof String)) continue;
+            String endpointUrl = new JSONObject(decrypt((String) encoded)).optString("endpoint_url").trim();
+            if (!endpointUrl.isEmpty() && !endpoints.contains(endpointUrl)) endpoints.add(endpointUrl);
+        }
+        return endpoints;
     }
 
     static void clear(Context context) {

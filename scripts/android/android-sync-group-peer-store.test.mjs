@@ -31,6 +31,10 @@ const PAIRING_ACTIONS = path.join(
   REPO_ROOT, 'android', 'app', 'src', 'main', 'java', 'com', 'foliole', 'android',
   'FolioleCompanionPairingPluginActions.java'
 );
+const NETWORK_ACTIONS = path.join(
+  REPO_ROOT, 'android', 'app', 'src', 'main', 'java', 'com', 'foliole', 'android',
+  'FolioleCompanionNetworkPluginActions.java'
+);
 
 describe('FolioleCompanionSyncGroupPeerStore', () => {
   it('lets Android Keystore generate the AES-GCM encryption IV', async () => {
@@ -52,7 +56,7 @@ describe('FolioleCompanionSyncGroupPeerStore', () => {
 
   it('rebinds a discovered route by peer identity and fails closed on group mismatch', async () => {
     const source = await readFile(OUTBOUND_STORE, 'utf8');
-    const bindBody = source.slice(source.indexOf('static void bindRoute'), source.indexOf('static void clear'));
+    const bindBody = source.slice(source.indexOf('static void bindRoute'), source.indexOf('static boolean contains'));
 
     expect(bindBody).toContain('prefs(context).getString(normalizedPeerId, null)');
     expect(bindBody).toContain('groupId.trim().equals(peer.optString("group_id"))');
@@ -71,5 +75,18 @@ describe('FolioleCompanionSyncGroupPeerStore', () => {
     expect(action).toContain('routeBindingKey(context, "peerDeviceId")');
     expect(action).toContain('routeBindingKey(context, "endpointUrl")');
     expect(action).toContain('FolioleCompanionSyncGroupOutboundPeerStore.bindRoute(');
+  });
+
+  it('offers persisted peer routes as identity-verified discovery candidates', async () => {
+    const [store, network] = await Promise.all([
+      readFile(OUTBOUND_STORE, 'utf8'), readFile(NETWORK_ACTIONS, 'utf8')
+    ]);
+    const routes = store.slice(store.indexOf('static List<String> discoveryEndpointUrls'),
+      store.indexOf('static void clear'));
+
+    expect(routes).toContain('optString("endpoint_url")');
+    expect(routes).not.toContain('getString("secret")');
+    expect(network).toContain('FolioleCompanionSyncGroupOutboundPeerStore.discoveryEndpointUrls(context)');
+    expect(network).toContain('addDirectEndpointCandidate(context, candidates, endpointUrl)');
   });
 });

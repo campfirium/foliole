@@ -44,8 +44,12 @@ final class FolioleCompanionNetworkPluginActions {
         new Thread(() -> {
             try {
                 JSArray candidates = new JSArray();
+                for (String endpointUrl : FolioleCompanionSyncGroupOutboundPeerStore.discoveryEndpointUrls(context)) {
+                    addDirectEndpointCandidate(context, candidates, endpointUrl);
+                }
                 if (isEmulator(context)) {
-                    addDirectCandidate(context, candidates, FolioleCompanionHostBridgeContractDefinitions.networkEmulatorHost(context));
+                    addDirectHostCandidate(context, candidates,
+                        FolioleCompanionHostBridgeContractDefinitions.networkEmulatorHost(context));
                 }
                 for (JSObject candidate : FolioleCompanionNsdDiscovery.discoverCandidates(context)) {
                     candidates.put(candidate);
@@ -59,11 +63,16 @@ final class FolioleCompanionNetworkPluginActions {
         }).start();
     }
 
-    private static void addDirectCandidate(Context context, JSArray candidates, String hostAddress) throws Exception {
+    private static void addDirectHostCandidate(Context context, JSArray candidates, String hostAddress) throws Exception {
+        addDirectEndpointCandidate(context, candidates,
+            FolioleCompanionHostBridgeContractDefinitions.networkEndpointUrl(context, hostAddress));
+    }
+
+    private static void addDirectEndpointCandidate(Context context, JSArray candidates, String endpointUrl) throws Exception {
         JSObject candidate = new JSObject();
         candidate.put(
             FolioleCompanionHostBridgeContractDefinitions.networkEndpointUrlCandidateKey(context),
-            FolioleCompanionHostBridgeContractDefinitions.networkEndpointUrl(context, hostAddress)
+            endpointUrl
         );
         candidate.put(FolioleCompanionHostBridgeContractDefinitions.networkSourceCandidateKey(context), "direct");
         candidates.put(candidate);
