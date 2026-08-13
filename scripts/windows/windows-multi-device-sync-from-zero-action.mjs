@@ -11,6 +11,7 @@ import {
   restoreWindowsNativeClient, suspendWindowsNativeClient
 } from './windows-sync-group-native-lifecycle.mjs';
 import { enableWindowsSyncParticipation } from './windows-sync-group-participation-control.mjs';
+import { closeWindowsSyncGroupSession } from './windows-sync-group-session-close.mjs';
 import {
   controlWindowsNativeClient, discoverUniqueGroup, inspectWindowsSyncGroupDatabase,
   invokeWindowsSyncGroupCommand, openWindowsSyncGroupSession, resetOwnedClient,
@@ -91,7 +92,7 @@ export async function runWindowsSyncFromZeroJourney(actions) {
     await actions.waitForJoined(session.page, candidate.group_id); report('c-membership-active');
     await actions.waitForCursorCommitted(session.cursorCommitted);
     report('c-first-cursor-committed'); report('c-object-batches-received');
-    await session.app.close(); session = null;
+    await actions.closeSession(session, { force: true }); session = null;
     const interruptedFacts = await actions.inspect();
     assertCommittedPartial(interruptedFacts);
     const firstCommittedFacts = interruptedFacts;
@@ -109,7 +110,7 @@ export async function runWindowsSyncFromZeroJourney(actions) {
     assertSyncFromZeroCursorContinuity(receipt);
     return receipt;
   } finally {
-    await session?.app.close().catch(() => undefined);
+    if (session) await actions.closeSession(session).catch(() => undefined);
   }
 }
 
@@ -125,6 +126,7 @@ export async function runWindowsMultiDeviceSyncFromZero({ evidenceRoot, execute,
     const inspect = () => inspectWindowsSyncGroupDatabase(execute, paths);
     receipt = await runWindowsSyncFromZeroJourney({
       discover: discoverUniqueGroup,
+      closeSession: closeWindowsSyncGroupSession,
       enable: (page) => enableWindowsSyncParticipation(page, invokeWindowsSyncGroupCommand),
       inspect,
       openSession: () => openWindowsSyncGroupSession(paths, evidenceRoot),

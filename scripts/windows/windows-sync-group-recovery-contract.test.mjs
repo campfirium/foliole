@@ -21,7 +21,7 @@ it('keeps stable desktop A and Windows C on a real LAN Sync Group path', () => {
   expect(remote).toContain("invokeWindowsSyncGroupCommand(session.page, 'request_sync_group_join'");
   expect(remote).toContain('firstFacts = await waitForOrdinarySyncFacts(execute, paths, evidenceRoot)');
   expect(remote.indexOf('firstFacts = await waitForOrdinarySyncFacts(execute, paths, evidenceRoot)'))
-    .toBeLessThan(remote.indexOf('finally { await session.app.close(); }'));
+    .toBeLessThan(remote.indexOf('finally { await closeWindowsSyncGroupSession(session); }'));
   expect(inspector).toContain("missingContentBlobCount");
   expect(inspector).toContain('localMemberState');
   expect(inspector).toContain('departedDeviceIdentities');
@@ -41,6 +41,7 @@ it('keeps stable desktop A and Windows C on a real LAN Sync Group path', () => {
   expect(remote).toContain('primaryError.message +=');
   expect(remote).toContain("slice(-12).join(' | ')");
   expect(remote).toContain('captureWindowsSyncRuntimeProgress');
+  expect(remote).toContain('closeWindowsSyncGroupSession');
   expect(runtimeProgress).toContain("line.includes('[sync-group]')");
   expect(runtimeProgress).toContain('RECEIVE_CURSOR_COMMITTED_EVENT');
   expect(remote).toContain("'sync-group-runtime.log'");

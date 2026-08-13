@@ -13,6 +13,7 @@ import {
 import { createSyncProgressWatchdog } from '../sync-group/sync-progress-watchdog.mjs';
 import { enableWindowsSyncParticipation } from './windows-sync-group-participation-control.mjs';
 import { captureWindowsSyncRuntimeProgress } from './windows-sync-group-runtime-progress.mjs';
+import { closeWindowsSyncGroupSession } from './windows-sync-group-session-close.mjs';
 
 export async function invokeWindowsSyncGroupCommand(page, command, args = {}) {
   return page.evaluate(async ({ command, args }) => {
@@ -162,7 +163,7 @@ export async function resetOwnedClient(paths, evidenceRoot, execute) {
   fs.mkdirSync(client.libraryHome, { recursive: true });
   fs.mkdirSync(client.userData, { recursive: true });
   const session = await openWindowsSyncGroupSession(paths, evidenceRoot);
-  await session.app.close();
+  await closeWindowsSyncGroupSession(session);
   const facts = await inspectWindowsSyncGroupDatabase(execute, paths);
   assertEmpty(facts);
   return facts;
@@ -190,7 +191,7 @@ export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths
       await invokeWindowsSyncGroupCommand(session.page, 'request_sync_group_join', { endpoint_url: candidate.endpoint_url });
       await waitForJoinedGroup(session.page, candidate.group_id);
       firstFacts = await waitForOrdinarySyncFacts(execute, paths, evidenceRoot);
-    } finally { await session.app.close(); }
+    } finally { await closeWindowsSyncGroupSession(session); }
     session = await openWindowsSyncGroupSession(paths, evidenceRoot);
     const screenshotPath = path.join(evidenceRoot, 'sync-group-recovery.png');
     try {
@@ -199,7 +200,7 @@ export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths
         throw new Error('Windows C lost Sync Group membership after restart.');
       }
       await captureSyncSettings(session.page, screenshotPath);
-    } finally { await session.app.close(); }
+    } finally { await closeWindowsSyncGroupSession(session); }
     const restartedFacts = await inspectWindowsSyncGroupDatabase(execute, paths);
     assertComplete(restartedFacts);
     const receipt = { candidate: { groupId: candidate.group_id, providerKind: candidate.provider_device_kind },

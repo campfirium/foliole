@@ -18,6 +18,9 @@ it('interrupts only after a committed cursor and resumes without cursor regressi
   const partial = { ...dataset, datasetCachedAttachmentCount: 12,
     datasetCachedContentBlobCount: 32, receiveCursor: 80 };
   const result = await runWindowsSyncFromZeroJourney({
+    closeSession: async (current, options) => {
+      events.push(`${current.page.name}-${options?.force ? 'interrupted' : 'closed'}`);
+    },
     discover: async () => ({ endpoint_url: 'http://provider', group_id: 'group-1',
       provider_device_kind: 'android-capacitor' }),
     enable: async () => { events.push('enabled'); },
@@ -38,9 +41,8 @@ it('interrupts only after a committed cursor and resumes without cursor regressi
   expect(result).toMatchObject({ finalFacts: { receiveCursor: 90 },
     initialFacts: { receiveCursor: 0 }, interruptedFacts: { receiveCursor: 80 },
     restartedFacts: { receiveCursor: 80 } });
-  expect(events).toEqual([
-    'enabled', 'join-requested', 'joined', 'cursor-committed', 'first-closed', 'restarted-closed'
-  ]);
+  expect(events).toEqual(['enabled', 'join-requested', 'joined', 'cursor-committed',
+    'first-interrupted', 'restarted-closed']);
   expect(progress).toEqual([
     'c-cursor-zero', 'c-group-discovered', 'c-join-requested', 'c-membership-active',
     'c-first-cursor-committed', 'c-object-batches-received', 'c-controlled-interruption',
@@ -56,6 +58,7 @@ it('rejects a restart that falls behind the committed cursor', async () => {
     .mockResolvedValueOnce(partial)
     .mockResolvedValueOnce({ ...partial, receiveCursor: 0 });
   await expect(runWindowsSyncFromZeroJourney({
+    closeSession: async () => {},
     discover: async () => ({ endpoint_url: 'http://provider', group_id: 'group-1' }),
     enable: vi.fn(), inspect,
     openSession: async () => sessions.shift(), reportProgress: vi.fn(), requestJoin: vi.fn(),
