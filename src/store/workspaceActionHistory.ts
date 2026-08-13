@@ -1,27 +1,9 @@
-import {
-  applyTopicDeleteWorkspaceHistory,
-  type WorkspaceTopicDeleteHistoryEntry
-} from './workspaceDeleteActionHistory';
-import {
-  applyReviewGradeWorkspaceHistory,
-  type WorkspaceReviewGradeHistoryEntry
-} from './workspaceReviewGradeActionHistory';
-import {
-  applyTopicShelveWorkspaceHistory,
-  type WorkspaceTopicShelveHistoryEntry
-} from './workspaceShelveActionHistory';
 import type { WorkspaceState } from './workspaceStore';
-import {
-  applyTopicDismissWorkspaceHistory,
-  type WorkspaceTopicDismissHistoryEntry,
-} from './workspaceTopicDismissActionHistory';
-
-export { cloneReadingProfile } from './workspaceActionHistoryReading';
-export {
-  createTopicDismissHistoryEntry,
-  type WorkspaceTopicDismissHistoryEntry,
-  type WorkspaceTopicReadingActionTitle
-} from './workspaceTopicDismissActionHistory';
+import { applyWorkspaceStructureHistory } from './workspaceStructureHistoryApply';
+import type {
+  WorkspaceStructureHistoryEntry,
+  WorkspaceStructurePendingCreate
+} from './workspaceStructureHistoryTypes';
 
 const ACTION_HISTORY_LIMIT = 50;
 
@@ -30,43 +12,58 @@ type WorkspaceSet = (
 ) => void;
 type WorkspaceGet = () => WorkspaceState;
 
-export type WorkspaceActionHistoryEntry =
-  | WorkspaceReviewGradeHistoryEntry
-  | WorkspaceTopicDeleteHistoryEntry
-  | WorkspaceTopicDismissHistoryEntry
-  | WorkspaceTopicShelveHistoryEntry;
+export type WorkspaceActionHistoryEntry = WorkspaceStructureHistoryEntry;
 
 export interface WorkspaceActionHistoryState {
+  applying?: { entryId: string; mode: 'redo' | 'undo' } | null;
+  pendingCreate?: WorkspaceStructurePendingCreate | null;
   redoStack: WorkspaceActionHistoryEntry[];
   undoStack: WorkspaceActionHistoryEntry[];
 }
 
 export function createEmptyWorkspaceActionHistory(): WorkspaceActionHistoryState {
-  return { redoStack: [], undoStack: [] };
+  return { applying: null, pendingCreate: null, redoStack: [], undoStack: [] };
 }
 
 function trimHistoryStack(stack: WorkspaceActionHistoryEntry[]) {
   return stack.slice(Math.max(0, stack.length - ACTION_HISTORY_LIMIT));
 }
 
-export function pushWorkspaceUndoEntry(history: WorkspaceActionHistoryState, entry: WorkspaceActionHistoryEntry): WorkspaceActionHistoryState {
+export function pushWorkspaceUndoEntry(
+  history: WorkspaceActionHistoryState,
+  entry: WorkspaceActionHistoryEntry
+): WorkspaceActionHistoryState {
   return {
+    ...history,
     redoStack: [],
     undoStack: trimHistoryStack([...history.undoStack, entry])
   };
 }
 
-function popStack(stack: WorkspaceActionHistoryEntry[]) {
-  return stack.slice(0, -1);
+export function beginWorkspaceStructureCreate(
+  history: WorkspaceActionHistoryState,
+  entry: WorkspaceStructurePendingCreate['entry']
+): WorkspaceActionHistoryState {
+  return { ...history, pendingCreate: { entry, undoRequested: false } };
 }
 
-function popInvalidTopEntry(
+export function failWorkspaceStructureCreate(
   history: WorkspaceActionHistoryState,
-  mode: 'redo' | 'undo'
+  entryId: string
 ): WorkspaceActionHistoryState {
-  return mode === 'undo'
-    ? { ...history, undoStack: popStack(history.undoStack) }
-    : { ...history, redoStack: popStack(history.redoStack) };
+  return history.pendingCreate?.entry.id === entryId ? { ...history, pendingCreate: null } : history;
+}
+
+export function settleWorkspaceStructureCreate(
+  history: WorkspaceActionHistoryState,
+  entryId: string
+) {
+  const pending = history.pendingCreate;
+  if (!pending || pending.entry.id !== entryId) return { history, undoRequested: false };
+  return {
+    history: pushWorkspaceUndoEntry({ ...history, pendingCreate: null }, pending.entry),
+    undoRequested: pending.undoRequested
+  };
 }
 
 function getTopEntry(history: WorkspaceActionHistoryState, mode: 'redo' | 'undo') {
@@ -74,49 +71,74 @@ function getTopEntry(history: WorkspaceActionHistoryState, mode: 'redo' | 'undo'
   return stack[stack.length - 1] ?? null;
 }
 
-function updateHistoryAfterApply(
+function moveHistoryCursor(
   history: WorkspaceActionHistoryState,
   entry: WorkspaceActionHistoryEntry,
   mode: 'redo' | 'undo'
 ): WorkspaceActionHistoryState {
   if (mode === 'undo') {
     return {
+      ...history,
+      applying: null,
       redoStack: trimHistoryStack([...history.redoStack, entry]),
-      undoStack: popStack(history.undoStack)
+      undoStack: history.undoStack.slice(0, -1)
     };
   }
   return {
-    redoStack: popStack(history.redoStack),
+    ...history,
+    applying: null,
+    redoStack: history.redoStack.slice(0, -1),
     undoStack: trimHistoryStack([...history.undoStack, entry])
   };
 }
 
-function createApplyWorkspaceHistoryAction(
-  set: WorkspaceSet,
-  get: WorkspaceGet,
-  mode: 'redo' | 'undo'
-) {
-  return (now = new Date().toISOString()) => {
+function requestPendingCreateUndo(set: WorkspaceSet, expectedEntryId?: string) {
+  let requested = false;
+  set((state) => {
+    const pending = state.appActionHistory.pendingCreate;
+    if (!pending || (expectedEntryId && pending.entry.id !== expectedEntryId)) return state;
+    requested = true;
+    return {
+      appActionHistory: {
+        ...state.appActionHistory,
+        pendingCreate: { ...pending, undoRequested: true }
+      }
+    };
+  });
+  return requested;
+}
+
+function createApplyWorkspaceHistoryAction(set: WorkspaceSet, get: WorkspaceGet, mode: 'redo' | 'undo') {
+  return (expectedEntryId?: string) => {
     const snapshot = get();
+    if (snapshot.appActionHistory.applying) return false;
+    if (mode === 'undo' && snapshot.appActionHistory.pendingCreate) {
+      return requestPendingCreateUndo(set, expectedEntryId);
+    }
     const entry = getTopEntry(snapshot.appActionHistory, mode);
-    if (entry?.type === 'topic.delete') {
-      return applyTopicDeleteWorkspaceHistory({ entry, mode, popInvalidTopEntry, set, updateHistoryAfterApply });
-    }
-    if (entry?.type === 'topic.shelve') {
-      return applyTopicShelveWorkspaceHistory({ entry, mode, now, popInvalidTopEntry, set, updateHistoryAfterApply });
-    }
-    if (entry?.type === 'review.grade') {
-      return applyReviewGradeWorkspaceHistory({ entry, mode, now, popInvalidTopEntry, set, updateHistoryAfterApply });
-    }
-    if (entry?.type === 'topic.dismiss') {
-      return applyTopicDismissWorkspaceHistory({ entry, mode, now, popInvalidTopEntry, set, updateHistoryAfterApply });
-    }
-    return false;
+    if (!entry || (expectedEntryId && entry.id !== expectedEntryId)) return false;
+    set((state) => ({
+      appActionHistory: { ...state.appActionHistory, applying: { entryId: entry.id, mode } }
+    }));
+    void applyWorkspaceStructureHistory({ entry, get, mode }).then((patch) => {
+      set((state) => {
+        const applying = state.appActionHistory.applying;
+        const top = getTopEntry(state.appActionHistory, mode);
+        if (applying?.entryId !== entry.id || applying.mode !== mode || top?.id !== entry.id) return state;
+        return {
+          ...(patch ?? {}),
+          appActionHistory: patch
+            ? moveHistoryCursor(state.appActionHistory, entry, mode)
+            : { ...state.appActionHistory, applying: null }
+        };
+      });
+    });
+    return true;
   };
 }
 
 export function getWorkspaceUndoTitle(history: WorkspaceActionHistoryState) {
-  const entry = history.undoStack[history.undoStack.length - 1] ?? null;
+  const entry = history.pendingCreate?.entry ?? history.undoStack[history.undoStack.length - 1] ?? null;
   return entry ? `Undo ${entry.title}` : 'Undo';
 }
 

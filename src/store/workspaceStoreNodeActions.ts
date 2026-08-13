@@ -14,6 +14,7 @@ import { createFormulaClozeNodeAction } from './workspaceStoreFormulaClozeAction
 import { createUpdateHighlightAnchorRangeAction } from './workspaceStoreHighlightRangeActions';
 import { createImageClozeNodesAction } from './workspaceStoreImageClozeActions';
 import { createSetFolderManualChildOrderAction } from './workspaceStoreManualChildOrderActions';
+import { createMoveNodeAction } from './workspaceStoreMoveNodeAction';
 import { createDismissNodeAction } from './workspaceStoreNodeDismissAction';
 import {
   createUpdateNodeDerivedTitleAction,
@@ -31,7 +32,6 @@ import { createSetNodeViewStateAction } from './workspaceStoreNodeViewActions';
 import { createSetNodeSequentialReadingAction } from './workspaceStoreSequentialReadingActions';
 import { createWorkspaceTrashActions } from './workspaceStoreTrashActions';
 import {
-  createMoveNodeAction,
   createMoveNodesAction
 } from './workspaceStoreTreeActions';
 import { createVirtualNodeAction } from './workspaceStoreVirtualNodeActions';
@@ -95,10 +95,10 @@ export function createWorkspaceNodeActions(set: WorkspaceSet, get?: () => Worksp
     syncRestoreNodes: (payload) => getWorkspaceMutationRepository().syncRestoreNodes(payload),
     syncDeleteNodesPermanently: (payload) =>
       getWorkspaceMutationRepository().syncDeleteNodesPermanently(payload)
-  });
+  }, get);
   const runtimeHandlers = createRuntimeHandlers();
-  const syncMovedNodes = async (payload: WorkspaceMoveNodesPayload) =>
-    Boolean(await getWorkspaceMutationRepository().syncMoveNodes(payload));
+  const syncMovedNodes = (payload: WorkspaceMoveNodesPayload) =>
+    getWorkspaceMutationRepository().syncMoveNodes(payload);
   return {
     ...trashActions,
     setNodeViewState: createSetNodeViewStateAction(set),
@@ -117,16 +117,18 @@ export function createWorkspaceNodeActions(set: WorkspaceSet, get?: () => Worksp
     updateNodeShortTerm: createUpdateNodeShortTermAction(set),
     setNodeSequentialReading: createSetNodeSequentialReadingAction(set),
     setFolderManualChildOrder: createSetFolderManualChildOrderAction(set),
-    createRootNode: createRootNodeAction(set, runtimeHandlers),
+    createRootNode: createRootNodeAction(set, runtimeHandlers, get),
     createChildNode: createChildNodeAction(
       set,
       runtimeHandlers.syncNodeCreation,
-      runtimeHandlers.syncNodeOrder
+      runtimeHandlers.syncNodeOrder,
+      get
     ),
     createVirtualNode: createVirtualNodeAction(
       set,
       runtimeHandlers.syncNodeCreation,
-      runtimeHandlers.syncNodeOrder
+      runtimeHandlers.syncNodeOrder,
+      get
     ),
     createHighlightNodeFromSelection: createHighlightFromSelectionAction(set, runtimeHandlers, get),
     createFormulaClozeNode: createFormulaClozeNodeAction(set, runtimeHandlers, reconcileReviewSession, get),

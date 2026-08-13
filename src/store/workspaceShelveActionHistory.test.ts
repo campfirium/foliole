@@ -141,30 +141,18 @@ describe('workspace application shelve action history', () => {
     vi.clearAllMocks();
   });
 
-  it('undoes and redoes Shelve Topic without changing reading state', () => {
+  it('does not add Shelve Topic to workspace structure history', () => {
     const harness = createShelveHarness();
     const nodeActions = createWorkspaceNodeActions(harness.setState);
     const historyActions = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
-    const beforeReading = harness.getState().nodesById['node-1']?.reading;
-
     expect(nodeActions.shelveNode('node-1', '2026-05-01T00:00:00.000Z')).toBe(true);
-    expect(harness.getState().nodesById['node-1']?.reading).toEqual(beforeReading);
-    expect(harness.getState().appActionHistory.undoStack[0]).toMatchObject({
-      nodeId: 'node-1',
-      title: 'Shelve Topic',
-      type: 'topic.shelve'
-    });
-
-    expect(historyActions.undoWorkspaceAction('2026-05-02T00:00:00.000Z')).toBe(true);
-    expect(harness.getState().nodesById['node-1']?.shelvedAt).toBeNull();
-    expect(harness.getState().nodesById['node-1']?.reading).toEqual(beforeReading);
-
-    expect(historyActions.redoWorkspaceAction('2026-05-03T00:00:00.000Z')).toBe(true);
+    expect(harness.getState().appActionHistory.undoStack).toEqual([]);
+    expect(historyActions.undoWorkspaceAction()).toBe(false);
     expect(harness.getState().nodesById['node-1']?.shelvedAt).toBe('2026-05-01T00:00:00.000Z');
     expect(syncNodeContentToRuntime).toHaveBeenCalled();
   });
 
-  it('undoes and redoes sequential reading changes caused by Shelve Topic', () => {
+  it('keeps sequential reading changes outside workspace structure history', () => {
     const harness = createSequentialHarness();
     const nodeActions = createWorkspaceNodeActions(harness.setState);
     const historyActions = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
@@ -173,11 +161,8 @@ describe('workspace application shelve action history', () => {
     expect(harness.getState().nodesById['node-1']?.reading?.state).toBe('active');
     expect(harness.getState().nodesById['node-2']?.reading?.state).toBe('active');
 
-    expect(historyActions.undoWorkspaceAction('2026-05-02T00:00:00.000Z')).toBe(true);
-    expect(harness.getState().nodesById['node-1']?.shelvedAt).toBeNull();
-    expect(harness.getState().nodesById['node-2']?.reading?.state).toBe('locked');
-
-    expect(historyActions.redoWorkspaceAction('2026-05-03T00:00:00.000Z')).toBe(true);
+    expect(historyActions.undoWorkspaceAction()).toBe(false);
+    expect(harness.getState().appActionHistory.undoStack).toEqual([]);
     expect(harness.getState().nodesById['node-1']?.shelvedAt).toBe('2026-05-01T00:00:00.000Z');
     expect(harness.getState().nodesById['node-2']?.reading?.state).toBe('active');
   });
@@ -193,9 +178,8 @@ describe('workspace application shelve action history', () => {
     expect(harness.getState().reviewSession.queueNodeIds).toEqual(['other']);
     expect(harness.getState().reviewSession.readTopicCount).toBe(0);
 
-    expect(historyActions.undoWorkspaceAction('2026-05-01T00:06:00.000Z')).toBe(true);
-    expect(harness.getState().nodesById.source?.shelvedAt).toBeNull();
-    expect(harness.getState().reviewSession.currentNodeId).toBe('child');
-    expect(harness.getState().reviewSession.queueNodeIds).toEqual(['child', 'other']);
+    expect(historyActions.undoWorkspaceAction()).toBe(false);
+    expect(harness.getState().appActionHistory.undoStack).toEqual([]);
+    expect(harness.getState().reviewSession.currentNodeId).toBe('other');
   });
 });

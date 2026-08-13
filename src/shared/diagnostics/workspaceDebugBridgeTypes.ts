@@ -4,6 +4,7 @@ import type { WorkspaceDebugOperationHistory } from './workspaceDebugHistory';
 import type { SeedNodeDebugApi } from './workspaceDebugSeedApi';
 
 export interface WorkspaceDebugApi {
+  createRootNode: (content?: string, kind?: 'folder' | 'topic') => Promise<string | null>;
   createTextClozeChild: (args: {
     anchorId: string;
     anchorLink?: NodeAnchorLink | null;
@@ -41,6 +42,12 @@ export interface WorkspaceDebugApi {
     queueNodeIds: string[];
     soonNodeIds?: string[];
   };
+  getWorkspaceStructureHistory: () => {
+    pendingCreate: { id: string; type: string } | null;
+    redoStack: Array<{ id: string; type: string }>;
+    undoStack: Array<{ id: string; type: string }>;
+  };
+  getWorkspaceStructureState: () => { nodeOrder: string[] };
   importClipboardImageAttachment: (args: {
     bytesBase64: string;
     mimeType: string;
@@ -55,6 +62,12 @@ export interface WorkspaceDebugApi {
   seedNodes: SeedNodeDebugApi['seedNodes'];
   setNodeViewState: (args: { from: number; nodeId: string; scrollTop?: number; to: number }) => boolean;
   shelveNode: (nodeId: string, now?: string) => boolean;
+  moveNodes: (
+    nodeIds: string[],
+    targetNodeId: string | null,
+    intent: 'before' | 'after' | 'child' | 'root'
+  ) => Promise<boolean>;
+  updateNodeTitle: (nodeId: string, title: string) => Promise<boolean>;
   updateNodeContent: (nodeId: string, content: string) => Promise<boolean>;
   upsertTopicForDebug: (args: { content: string; id: string; title: string }) => boolean;
 }

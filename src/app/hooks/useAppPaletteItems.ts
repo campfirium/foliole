@@ -72,8 +72,14 @@ export function resolveEditorAwarePaletteHistoryOptions(args: {
   const canUndoEditorOperation = Boolean(undoEntry && (undoEntry.type === 'text.edit' || !undoEntry.applyingMode));
   const canRedoEditorOperation = Boolean(redoEntry && (redoEntry.type === 'text.edit' || !redoEntry.applyingMode));
   return {
-    canRedoWorkspaceAction: contentOwner ? canRedoEditorOperation : args.appActionHistory.redoStack.length > 0,
-    canUndoWorkspaceAction: contentOwner ? canUndoEditorOperation : args.appActionHistory.undoStack.length > 0,
+    canRedoWorkspaceAction: contentOwner
+      ? canRedoEditorOperation
+      : !args.appActionHistory.applying && args.appActionHistory.redoStack.length > 0,
+    canUndoWorkspaceAction: contentOwner
+      ? canUndoEditorOperation
+      : !args.appActionHistory.applying && Boolean(
+          args.appActionHistory.pendingCreate || args.appActionHistory.undoStack.length > 0
+        ),
     redoWorkspaceActionTitle: contentOwner
       ? getEditorOperationRedoTitle(args.editorOperationHistory, args.activeNodeId, args.t)
       : getWorkspaceRedoTitle(args.appActionHistory),

@@ -1,13 +1,7 @@
 import type { ReviewGrade, SchedulerCard } from '../features/review/model/reviewTypes';
 import type { SharedReviewGradeResult } from '../features/review/model/sharedReviewGradeService';
 
-import {
-  createTopicDismissHistoryEntry,
-  pushWorkspaceUndoEntry,
-  type WorkspaceTopicReadingActionTitle
-} from './workspaceActionHistory';
 import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
-import { createReviewGradeHistoryEntry } from './workspaceReviewGradeActionHistory';
 import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue';
 import {
   runtimeWorkspaceReviewPersistence,
@@ -17,6 +11,7 @@ import { advanceReviewSession, completeReviewSession } from './workspaceReviewRe
 import { calculateReviewStepElapsedMs } from './workspaceReviewSessionProgress';
 import type { SequentialReadingChange } from './workspaceSequentialReading';
 import type { WorkspaceState } from './workspaceStore';
+import type { WorkspaceTopicReadingActionTitle } from './workspaceTopicDismissActionHistory';
 
 type WorkspaceSet = (
   partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)
@@ -101,23 +96,13 @@ export function applyGradedReviewState(args: {
     });
     return {
       ...buildReviewActiveNodeContext(state, nextNodeId ?? continueNodeId),
-      appActionHistory: pushWorkspaceUndoEntry(
-        state.appActionHistory,
-        createReviewGradeHistoryEntry({
-          afterReview: args.nodePatch.review,
-          afterReviewSession: nextReviewSession,
-          beforeReview: args.snapshot.nodesById[args.currentNodeId]!.review!,
-          beforeReviewSession: args.snapshot.reviewSession,
-          nodeId: args.currentNodeId
-        })
-      ),
       nodesById: nextNodesById,
       reviewSession: nextReviewSession
     };
   });
 }
 
-export function createReadingReviewHistoryPatch(args: {
+export function createReadingReviewHistoryPatch(_args: {
   afterReading: WorkspaceState['nodesById'][string]['reading'] | null | undefined;
   afterReviewSession: WorkspaceState['reviewSession'];
   beforeReading: WorkspaceState['nodesById'][string]['reading'] | null | undefined;
@@ -127,18 +112,6 @@ export function createReadingReviewHistoryPatch(args: {
   state: WorkspaceState;
   title: WorkspaceTopicReadingActionTitle;
 }) {
-  return {
-    appActionHistory: pushWorkspaceUndoEntry(
-      args.state.appActionHistory,
-      createTopicDismissHistoryEntry({
-        afterReading: args.afterReading,
-        afterReviewSession: args.afterReviewSession,
-        beforeReading: args.beforeReading,
-        beforeReviewSession: args.beforeReviewSession,
-        nodeId: args.nodeId,
-        ...(args.relatedReadings?.length ? { relatedReadings: args.relatedReadings } : {}),
-        title: args.title
-      })
-    )
-  };
+  void _args;
+  return {};
 }

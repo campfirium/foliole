@@ -8,11 +8,17 @@ import { VIRTUAL_ROOT_NODE_ID, isVirtualNode } from '../features/nodes/model/spe
 import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
 
 import { markNodeCreatePending } from './workspaceNodeContentVersionGuard';
-import { createWorkspaceNodeCreateAckPatch } from './workspaceNodeMutationPatch';
+import { createWorkspaceNodeCreateAckPatch, didRuntimeConfirmNodeCreation } from './workspaceNodeMutationPatch';
 import { insertNodeBlockUnderParent } from './workspaceNodeTreeOrder';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
+import { hasWorkspaceNodeMutationRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
-import { completeNodeCreateRuntimePersist } from './workspaceStoreContentRuntimePersist';
+import { cancelNodeCreateRuntimePersist, completeNodeCreateRuntimePersist } from './workspaceStoreContentRuntimePersist';
+import {
+  beginStructureCreateHistory,
+  completeStructureCreateHistory,
+  failStructureCreateHistory
+} from './workspaceStructureCreateHistory';
 import { resolveCreatedNodeTitleState } from './workspaceUntitledNodeTitle';
 
 type WorkspaceSet = (
@@ -85,6 +91,47 @@ function createVirtualNodeLocalPatch(args: {
   };
 }
 
+function prepareVirtualNodeCreation(args: {
+  mode: 'manual' | 'saved-search';
+  nodeId: string;
+  parentNodeId: string;
+  state: WorkspaceState;
+  timestamp: string;
+}) {
+  if (args.parentNodeId !== VIRTUAL_ROOT_NODE_ID && !isVirtualNode(args.state.nodesById[args.parentNodeId])) {
+    return null;
+  }
+  const untitledState = resolveCreatedNodeTitleState(deriveNodeTitleFromContent(''), args.parentNodeId, args.state);
+  const node = createVirtualNodeSnapshot({
+    mode: args.mode,
+    nodeId: args.nodeId,
+    parentNodeId: args.parentNodeId,
+    timestamp: args.timestamp,
+    title: untitledState.title
+  });
+  const nodesById = { ...args.state.nodesById, [args.nodeId]: node };
+  const nodeOrder = insertNodeBlockUnderParent(args.state.nodeOrder, [args.nodeId], args.parentNodeId, nodesById);
+  const patch = createVirtualNodeLocalPatch({
+    nodeId: args.nodeId,
+    nextNodeOrder: nodeOrder,
+    state: args.state,
+    untitledSequenceByParent: untitledState.untitledSequenceByParent,
+    updatedNodesById: nodesById
+  });
+  const pendingHistory = beginStructureCreateHistory({
+    afterActiveNodeId: args.nodeId,
+    beforeActiveNodeId: args.state.activeNodeId,
+    history: args.state.appActionHistory,
+    node
+  });
+  return {
+    historyEntryId: pendingHistory?.entry.id ?? null,
+    node,
+    nodeOrder,
+    patch: pendingHistory ? { ...patch, appActionHistory: pendingHistory.history } : patch
+  };
+}
+
 async function applyCreatedVirtualNode(args: {
   createdNode: NodeSnapshot | null;
   localPatch: Partial<WorkspaceState> | null;
@@ -97,6 +144,8 @@ async function applyCreatedVirtualNode(args: {
     position?: number
   ) => Promise<WorkspaceNodeMutationPatchResult | null>) | undefined;
   onNodeOrderChanged: ((nodeOrder: string[]) => void) | undefined;
+  get?: () => WorkspaceState;
+  historyEntryId: string | null;
   set: WorkspaceSet;
 }) {
   if (!args.createdNode) {
@@ -110,12 +159,23 @@ async function applyCreatedVirtualNode(args: {
     args.nodeId,
     orderForSync.indexOf(args.nodeId)
   );
-  if (result) {
+  const succeeded = didRuntimeConfirmNodeCreation(result ?? null, args.nodeId) || !hasWorkspaceNodeMutationRuntime();
+  if (result && succeeded) {
     args.set((state) => createWorkspaceNodeCreateAckPatch(state, result, [args.nodeId]));
   }
-  if (!result && args.nextNodeOrder) {
+  if (!hasWorkspaceNodeMutationRuntime() && args.nextNodeOrder) {
     args.onNodeOrderChanged?.(args.nextNodeOrder);
   }
+  if (!succeeded) {
+    cancelNodeCreateRuntimePersist(args.nodeId);
+    failStructureCreateHistory({ entryId: args.historyEntryId, nodeId: args.nodeId, set: args.set });
+    return null;
+  }
+  completeStructureCreateHistory({
+    entryId: args.historyEntryId,
+    ...(args.get ? { get: args.get } : {}),
+    set: args.set
+  });
   await completeNodeCreateRuntimePersist(args.nodeId);
   return args.nodeId;
 }
@@ -128,7 +188,8 @@ export function createVirtualNodeAction(
     activeNodeId?: string | null,
     position?: number
   ) => Promise<WorkspaceNodeMutationPatchResult | null>,
-  onNodeOrderChanged?: (nodeOrder: string[]) => void
+  onNodeOrderChanged?: (nodeOrder: string[]) => void,
+  get?: () => WorkspaceState
 ): WorkspaceState['createVirtualNode'] {
   return async (options) => {
     const nodeId = `node-${crypto.randomUUID()}`;
@@ -138,40 +199,27 @@ export function createVirtualNodeAction(
     let nextNodeOrder: string[] | null = null;
     let localPatch: Partial<WorkspaceState> | null = null;
     let applied = false;
+    let historyEntryId: string | null = null;
 
     set((state) => {
-      if (parentNodeId !== VIRTUAL_ROOT_NODE_ID && !isVirtualNode(state.nodesById[parentNodeId])) {
-        return state;
-      }
-      const untitledState = resolveCreatedNodeTitleState(deriveNodeTitleFromContent(''), parentNodeId, state);
-      const nextNode = createVirtualNodeSnapshot({
-        mode: options?.mode ?? 'saved-search',
-        nodeId,
-        parentNodeId,
-        timestamp,
-        title: untitledState.title
+      const prepared = prepareVirtualNodeCreation({
+        mode: options?.mode ?? 'saved-search', nodeId, parentNodeId, state, timestamp
       });
-      const updatedNodesById = {
-        ...state.nodesById,
-        [nodeId]: nextNode
-      };
-      nextNodeOrder = insertNodeBlockUnderParent(state.nodeOrder, [nodeId], parentNodeId, updatedNodesById);
-      createdNode = nextNode;
-      localPatch = createVirtualNodeLocalPatch({
-        nextNodeOrder,
-        nodeId,
-        state,
-        untitledSequenceByParent: untitledState.untitledSequenceByParent,
-        updatedNodesById
-      });
+      if (!prepared) return state;
+      ({ historyEntryId, node: createdNode, nodeOrder: nextNodeOrder, patch: localPatch } = prepared);
       applied = true;
       return localPatch;
     });
     if (!applied) return null;
+    const nodeForPersist = createdNode as NodeSnapshot | null;
+    const patchForPersist = localPatch as Partial<WorkspaceState> | null;
+    const orderForPersist = nextNodeOrder as string[] | null;
     return await applyCreatedVirtualNode({
-      createdNode,
-      localPatch,
-      nextNodeOrder,
+      createdNode: nodeForPersist,
+      ...(get ? { get } : {}),
+      historyEntryId,
+      localPatch: patchForPersist,
+      nextNodeOrder: orderForPersist,
       nodeId,
       onNodeCreated,
       onNodeOrderChanged,

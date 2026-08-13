@@ -115,17 +115,17 @@ it('keeps local creation side effects when runtime accepts the created root node
   expect(harness.getState().untitledSequenceByParent[INBOX_NODE_ID]).toBe(1);
 });
 
-it('keeps root creation content local when native persistence rejects creation mutation', async () => {
+it('rolls back root creation when native persistence rejects the canonical mutation', async () => {
   vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);
   vi.mocked(syncCreateNodeMutationToRuntime).mockResolvedValueOnce(null);
   const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
   const actions = createWorkspaceNodeActions(harness.setState);
 
-  const createdNodeId = (await actions.createRootNode('# Local root'))!;
+  const createdNodeId = await actions.createRootNode('# Local root');
 
-  expect(createdNodeId).toContain('node-');
-  expect(harness.getState().activeNodeId).toBe(createdNodeId);
-  expect(harness.getState().nodesById[createdNodeId]?.content).toBe('# Local root');
+  expect(createdNodeId).toBeNull();
+  expect(harness.getState().activeNodeId).toBe('node-1');
+  expect(Object.values(harness.getState().nodesById)).not.toContainEqual(expect.objectContaining({ content: '# Local root' }));
 });
 
 it('keeps body edits made before root creation confirmation', async () => {
@@ -181,17 +181,17 @@ it('keeps body edits made before root creation confirmation', async () => {
 });
 
 
-it('keeps child creation content local when native persistence rejects creation mutation', async () => {
+it('rolls back child creation when native persistence rejects the canonical mutation', async () => {
   vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);
   vi.mocked(syncCreateNodeMutationToRuntime).mockResolvedValueOnce(null);
   const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
   const actions = createWorkspaceNodeActions(harness.setState);
 
-  const createdNodeId = (await actions.createChildNode('node-1', 'Local child'))!;
+  const createdNodeId = await actions.createChildNode('node-1', 'Local child');
 
-  expect(createdNodeId).toContain('node-');
-  expect(harness.getState().activeNodeId).toBe(createdNodeId);
-  expect(harness.getState().nodesById[createdNodeId]?.content).toBe('Local child');
+  expect(createdNodeId).toBeNull();
+  expect(harness.getState().activeNodeId).toBe('node-1');
+  expect(Object.values(harness.getState().nodesById)).not.toContainEqual(expect.objectContaining({ content: 'Local child' }));
 });
 
 it('caches selection highlight content before runtime creation confirmation', async () => {

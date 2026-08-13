@@ -1,6 +1,7 @@
 import { canNodeBeMoved } from '../features/nodes/model/nodeMovementRules';
+import type { WorkspaceMoveNodesResult } from '../shared/platform/workspaceRuntimeTypes';
 
-import { resolveWorkspaceBrowseRootForTarget } from './workspaceBrowseRoot';
+import { commitMoveTransaction } from './workspaceMoveHistoryCommit';
 import {
   isSameNodeOrder,
   resolveInsertIndex,
@@ -21,7 +22,7 @@ type WorkspaceSet = (
 ) => void;
 
 type NodeSnapshot = WorkspaceState['nodesById'][string];
-type MoveNodesRuntimePayload = {
+export type MoveNodesRuntimePayload = {
   nodeOrder: string[];
   nodes: Array<{
     nodeId: string;
@@ -31,10 +32,14 @@ type MoveNodesRuntimePayload = {
     updatedAt: string;
   }>;
 };
-type MoveNodesTransaction = {
+export type MoveNodesTransaction = {
   activeNodeIdAtRequest: string | null;
   browseRootNodeIdAtRequest: string | null;
   movedActiveTopic: boolean;
+  movedNodeIds: string[];
+  rootNodeIds: string[];
+  sourceNodeOrder: string[];
+  sourceNodesById: Record<string, NodeSnapshot>;
   patch: Pick<WorkspaceState, 'nodeOrder' | 'nodesById'>;
   runtimePayload: MoveNodesRuntimePayload;
 };
@@ -151,6 +156,12 @@ function prepareMoveNodesTransaction(
     rootNodeIds, state.nodeOrder, collectOrderedSubtreeIds, state.nodesById
   );
   const sequentialState = applySequentialReadingMovedNodes({ patch: movePatch, rootNodeIds, state });
+  const syncNodeIds = [...new Set([
+    ...rootNodeIds,
+    ...Object.keys(sequentialState.patch.nodesById).filter(
+      (nodeId) => sequentialState.patch.nodesById[nodeId] !== state.nodesById[nodeId]
+    )
+  ])];
   return {
     activeNodeIdAtRequest: state.activeNodeId,
     browseRootNodeIdAtRequest: state.browseRootNodeId,
@@ -159,10 +170,16 @@ function prepareMoveNodesTransaction(
       state.nodesById[state.activeNodeId]?.kind !== 'folder' &&
       movedBlockNodeIds.includes(state.activeNodeId)
     ),
+    movedNodeIds: movedBlockNodeIds,
+    rootNodeIds,
+    sourceNodeOrder: [...state.nodeOrder],
+    sourceNodesById: Object.fromEntries(syncNodeIds.flatMap((nodeId) => state.nodesById[nodeId]
+      ? [[nodeId, state.nodesById[nodeId]!]]
+      : [])),
     patch: sequentialState.patch,
     runtimePayload: {
       nodeOrder: sequentialState.patch.nodeOrder,
-      nodes: sequentialState.syncNodeIds
+      nodes: syncNodeIds
         .map((nodeId) => sequentialState.patch.nodesById[nodeId])
         .filter((node): node is NodeSnapshot => Boolean(node))
         .map((node) => ({
@@ -176,30 +193,9 @@ function prepareMoveNodesTransaction(
   };
 }
 
-function buildCommittedMovePatch(state: WorkspaceState, transaction: MoveNodesTransaction) {
-  if (
-    !transaction.movedActiveTopic ||
-    !transaction.activeNodeIdAtRequest ||
-    state.activeNodeId !== transaction.activeNodeIdAtRequest ||
-    state.browseRootNodeId !== transaction.browseRootNodeIdAtRequest
-  ) {
-    return transaction.patch;
-  }
-  return {
-    ...transaction.patch,
-    browseRootNodeId: resolveWorkspaceBrowseRootForTarget({
-      browseRootNodeId: state.browseRootNodeId,
-      intent: 'target-context',
-      nodesById: transaction.patch.nodesById,
-      targetNodeId: transaction.activeNodeIdAtRequest,
-      trashedNodeIds: state.trashedNodeIds
-    })
-  };
-}
-
 export function createMoveNodesAction(
   set: WorkspaceSet,
-  onNodesMoved?: (payload: MoveNodesRuntimePayload) => Promise<boolean>
+  onNodesMoved?: (payload: MoveNodesRuntimePayload) => Promise<WorkspaceMoveNodesResult | undefined>
 ): WorkspaceState['moveNodes'] {
   return async (nodeIds, targetNodeId, intent) => {
     let transaction: MoveNodesTransaction | null = null;
@@ -210,19 +206,22 @@ export function createMoveNodesAction(
     });
 
     const preparedTransaction = transaction as MoveNodesTransaction | null;
-    if (!preparedTransaction || !(await onNodesMoved?.(preparedTransaction.runtimePayload))) {
+    if (!preparedTransaction) {
       return false;
     }
+    const result = await onNodesMoved?.(preparedTransaction.runtimePayload);
+    const expectedIds = preparedTransaction.runtimePayload.nodes.map((node) => node.nodeId);
+    if (!result || result.movedNodeIds.length !== expectedIds.length ||
+        !result.movedNodeIds.every((nodeId) => expectedIds.includes(nodeId)) ||
+        result.nodeOrder.join('\0') !== preparedTransaction.runtimePayload.nodeOrder.join('\0')) return false;
 
-    set((state) => buildCommittedMovePatch(state, preparedTransaction));
-    return true;
+    let applied = false;
+    set((state) => {
+      const committedPatch = commitMoveTransaction(state, preparedTransaction);
+      if (!committedPatch) return state;
+      applied = true;
+      return committedPatch;
+    });
+    return applied;
   };
-}
-
-export function createMoveNodeAction(
-  set: WorkspaceSet,
-  onNodesMoved?: (payload: MoveNodesRuntimePayload) => Promise<boolean>
-): WorkspaceState['moveNode'] {
-  const moveNodes = createMoveNodesAction(set, onNodesMoved);
-  return (nodeId, nextParentNodeId) => moveNodes([nodeId], nextParentNodeId, 'child');
 }

@@ -1,3 +1,4 @@
+import { createWorkspaceRuntimeNodeSnapshot } from '../shared/platform/workspaceRuntimeRepository';
 import type { WorkspaceMoveNodesPayload, WorkspaceMoveNodesResult } from '../shared/platform/workspaceRuntimeTypes';
 
 import {
@@ -5,6 +6,7 @@ import {
   syncCreateNodeToRuntime,
   syncDeleteNodesPermanentlyToRuntime,
   syncMoveNodesToRuntime,
+  syncNodeContentMutationToRuntime,
   syncNodeContentToRuntime,
   syncNodeOrderToRuntime,
   syncRestoreNodesToRuntime,
@@ -24,12 +26,14 @@ export interface WorkspaceMutationRepository extends TrashRuntimeHandlers {
   ) => ReturnType<typeof syncCreateNodeMutationToRuntime>;
   syncNodeOrder: (nodeOrder: string[]) => void;
   syncMoveNodes: (payload: WorkspaceMoveNodesPayload) => Promise<WorkspaceMoveNodesResult | undefined>;
+  syncNodeMutation: typeof syncNodeContentMutationToRuntime;
 }
 
 function createRuntimeWorkspaceMutationRepository(): WorkspaceMutationRepository {
   return {
     syncDeleteNodesPermanently: syncDeleteNodesPermanentlyToRuntime,
     syncMoveNodes: syncMoveNodesToRuntime,
+    syncNodeMutation: (node, position) => syncNodeContentMutationToRuntime(node, position),
     syncNodeContent: syncNodeContentToRuntime,
     syncNodeCreation: async (node, nodeOrder, activeNodeId, position) => {
       if (!nodeOrder) {
@@ -51,6 +55,12 @@ export function createBrowserLocalWorkspaceMutationRepository(): WorkspaceMutati
       movedNodeIds: nodes.map((node) => node.nodeId),
       nodeOrder
     }),
+    syncNodeMutation: async (node, position) => {
+      return {
+        nodes: [createWorkspaceRuntimeNodeSnapshot(node, position)],
+        updatedNodeIds: [node.id]
+      };
+    },
     syncNodeContent: () => undefined,
     syncNodeCreation: async () => null,
     syncNodeOrder: () => undefined,

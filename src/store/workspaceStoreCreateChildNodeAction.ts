@@ -3,13 +3,20 @@ import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/worksp
 
 import { markNodeCreatePending } from './workspaceNodeContentVersionGuard';
 import { canCreateChildUnderParent } from './workspaceNodeKindRules';
-import { createWorkspaceNodeCreateAckPatch } from './workspaceNodeMutationPatch';
+import { createWorkspaceNodeCreateAckPatch, didRuntimeConfirmNodeCreation } from './workspaceNodeMutationPatch';
+import { hasWorkspaceNodeMutationRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
 import {
+  cancelNodeCreateRuntimePersist,
   completeNodeCreateRuntimePersist,
   drainPendingNodeContentRuntimePersists
 } from './workspaceStoreContentRuntimePersist';
 import { buildCreatedChildState } from './workspaceStoreTreeCreateChildState';
+import {
+  beginStructureCreateHistory,
+  completeStructureCreateHistory,
+  failStructureCreateHistory
+} from './workspaceStructureCreateHistory';
 
 type WorkspaceSet = (
   partial:
@@ -19,6 +26,38 @@ type WorkspaceSet = (
 ) => void;
 type NodeSnapshot = WorkspaceState['nodesById'][string];
 
+async function persistChildNodeCreation(args: {
+  get?: () => WorkspaceState;
+  historyEntryId: string | null;
+  kind: NodeKind;
+  node: NodeSnapshot;
+  nodeId: string;
+  nodeOrder: string[];
+  onNodeCreated: Parameters<typeof createChildNodeAction>[1];
+  onNodeOrderChanged: Parameters<typeof createChildNodeAction>[2];
+  set: WorkspaceSet;
+}) {
+  markNodeCreatePending(args.nodeId);
+  const result = await args.onNodeCreated?.(
+    args.node, args.nodeOrder, args.nodeId, args.nodeOrder.indexOf(args.nodeId)
+  );
+  const succeeded = didRuntimeConfirmNodeCreation(result ?? null, args.nodeId) || !hasWorkspaceNodeMutationRuntime();
+  if (result && succeeded) args.set((state) => createWorkspaceNodeCreateAckPatch(state, result, [args.nodeId]));
+  if (!hasWorkspaceNodeMutationRuntime() && args.kind === 'folder') args.onNodeOrderChanged?.(args.nodeOrder);
+  if (!succeeded) {
+    cancelNodeCreateRuntimePersist(args.nodeId);
+    failStructureCreateHistory({ entryId: args.historyEntryId, nodeId: args.nodeId, set: args.set });
+    return false;
+  }
+  completeStructureCreateHistory({
+    entryId: args.historyEntryId,
+    ...(args.get ? { get: args.get } : {}),
+    set: args.set
+  });
+  await completeNodeCreateRuntimePersist(args.nodeId);
+  return true;
+}
+
 export function createChildNodeAction(
   set: WorkspaceSet,
   onNodeCreated?: (
@@ -27,7 +66,8 @@ export function createChildNodeAction(
     activeNodeId?: string | null,
     position?: number
   ) => Promise<WorkspaceNodeMutationPatchResult | null>,
-  onNodeOrderChanged?: (nodeOrder: string[]) => void
+  onNodeOrderChanged?: (nodeOrder: string[]) => void,
+  get?: () => WorkspaceState
 ): WorkspaceState['createChildNode'] {
   return async (parentNodeId, content = '', kind: NodeKind = 'topic', options) => {
     await drainPendingNodeContentRuntimePersists();
@@ -37,6 +77,7 @@ export function createChildNodeAction(
     let nextNodeOrder: string[] | null = null;
     let localPatch: Partial<WorkspaceState> | null = null;
     let applied = false;
+    let historyEntryId: string | null = null;
 
     set((state) => {
       if (!state.nodesById[parentNodeId] || state.trashedNodeIds.includes(parentNodeId)) return state;
@@ -53,20 +94,27 @@ export function createChildNodeAction(
       createdNode = nextChildState.nextNode;
       nextNodeOrder = nextChildState.nextNodeOrder;
       localPatch = nextChildState.patch;
+      const pendingHistory = beginStructureCreateHistory({
+        afterActiveNodeId: nodeId,
+        beforeActiveNodeId: state.activeNodeId,
+        history: state.appActionHistory,
+        node: nextChildState.nextNode
+      });
+      if (pendingHistory) {
+        historyEntryId = pendingHistory.entry.id;
+        localPatch.appActionHistory = pendingHistory.history;
+      }
       applied = true;
       return localPatch;
     });
     if (!createdNode) return null;
-    markNodeCreatePending(nodeId);
+    const nodeForPersist = createdNode as NodeSnapshot;
     const orderForSync = [...(nextNodeOrder ?? [])] as string[];
-    const result = await onNodeCreated?.(createdNode, orderForSync, nodeId, orderForSync.indexOf(nodeId));
-    if (result) {
-      set((state) => createWorkspaceNodeCreateAckPatch(state, result, [nodeId]));
-    }
-    if (applied && !result && kind === 'folder' && nextNodeOrder) {
-      onNodeOrderChanged?.(nextNodeOrder);
-    }
-    await completeNodeCreateRuntimePersist(nodeId);
+    const succeeded = await persistChildNodeCreation({
+      ...(get ? { get } : {}), historyEntryId, kind, node: nodeForPersist, nodeId, nodeOrder: orderForSync,
+      onNodeCreated, onNodeOrderChanged, set
+    });
+    if (!succeeded) return null;
     return applied ? nodeId : null;
   };
 }

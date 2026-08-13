@@ -1,11 +1,11 @@
 import { pushEditorOperationEntry } from '../features/editor/model/editorOperationHistory';
 import { removeImageClozeRegion } from '../features/image-cloze/model/imageCloze';
 
-import { createTopicDeleteHistoryPatch } from './workspaceDeleteActionHistory';
 import { createEditorAnnotationDeleteEntry } from './workspaceEditorAnnotationOperationEntry';
 import { findLiveImageClozeChildNodeIds } from './workspaceImageClozeRegionDeleteTargets';
 import type { WorkspaceState } from './workspaceStore';
 import { createRestoreNodeAction } from './workspaceStoreRestoreAction';
+import { createDeleteNodesAction } from './workspaceStoreStructureDeleteAction';
 import { computeDeleteNodesMutation, computeDeleteNodesPermanentlyMutation, type DeleteNodeMutationResult } from './workspaceTrashMutations';
 import { collectDeleteActionTargets } from './workspaceTrashMutationTargets';
 import {
@@ -30,29 +30,6 @@ type WorkspaceTrashActions = Pick<
   | 'deleteNodePermanently'
   | 'deleteNodesPermanently'
 >;
-
-function createDeleteNodesAction(
-  set: WorkspaceSet,
-  runtimeHandlers: TrashRuntimeHandlers
-): WorkspaceTrashActions['deleteNodes'] {
-  return async (nodeIds) => {
-    let mutation: DeleteNodeMutationResult | null = null;
-    set((state) => {
-      mutation = computeDeleteNodesMutation(state, nodeIds);
-      return state;
-    });
-    const pendingMutation = mutation as DeleteNodeMutationResult | null;
-    const deletedAt = pendingMutation?.deletedAt;
-    const result = await commitSoftDeleteMutation(runtimeHandlers, pendingMutation);
-    set((state) => {
-      if (!pendingMutation || !deletedAt || !result) {
-        return state;
-      }
-      const committedMutation = computeDeleteNodesMutation(state, result.deletedNodeIds, deletedAt);
-      return committedMutation ? createTopicDeleteHistoryPatch(state, committedMutation) : state;
-    });
-  };
-}
 
 function reconcileExplicitImageRegionRemoval(
   mutation: DeleteNodeMutationResult,
@@ -194,8 +171,12 @@ function createDeleteNodesPermanentlyAction(
   };
 }
 
-export function createWorkspaceTrashActions(set: WorkspaceSet, runtimeHandlers: TrashRuntimeHandlers): WorkspaceTrashActions {
-  const deleteNodes = createDeleteNodesAction(set, runtimeHandlers);
+export function createWorkspaceTrashActions(
+  set: WorkspaceSet,
+  runtimeHandlers: TrashRuntimeHandlers,
+  get?: () => WorkspaceState
+): WorkspaceTrashActions {
+  const deleteNodes = createDeleteNodesAction(set, runtimeHandlers, get);
   const deleteNodesPermanently = createDeleteNodesPermanentlyAction(set, runtimeHandlers);
 
   return {

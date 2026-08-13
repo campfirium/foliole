@@ -1,10 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
-import type { NodeReadingProfile } from '../features/nodes/model/nodeTypes';
-import { saveNodeReadingStateToRuntime } from '../shared/platform/runtime/nodeReadingStateRuntimeRepository';
+import { showAppRuntimeNotice } from '../shared/ui/AppRuntimeNotice';
 
 import { createWorkspaceActionHistoryActions } from './workspaceActionHistory';
 import {
+  hasWorkspaceNodeMutationRuntime,
+  syncCreateNodeMutationToRuntime,
   syncRestoreNodesToRuntime,
   syncSoftDeleteNodesToRuntime
 } from './workspaceRuntimeSync';
@@ -16,10 +17,11 @@ import {
 
 vi.mock('./workspaceRuntimeSync', () => ({
   hasWorkspaceNodeMutationRuntime: vi.fn(() => false),
+  syncCreateNodeMutationToRuntime: vi.fn(async () => null),
   syncCreateNodeToRuntime: vi.fn(),
-  syncCreateNodeMutationToRuntime: vi.fn(),
   syncDeleteNodesPermanentlyToRuntime: vi.fn(),
   syncMoveNodesToRuntime: vi.fn(),
+  syncNodeContentMutationToRuntime: vi.fn(),
   syncNodeContentToRuntime: vi.fn(),
   syncNodeContentWithAnchorsToRuntime: vi.fn(),
   syncNodeOrderToRuntime: vi.fn(),
@@ -27,212 +29,97 @@ vi.mock('./workspaceRuntimeSync', () => ({
   syncRestoreNodesToRuntime: vi.fn(),
   syncSoftDeleteNodesToRuntime: vi.fn()
 }));
-vi.mock('../shared/platform/runtime/nodeReadingStateRuntimeRepository', () => ({
-  saveNodeReadingStateToRuntime: vi.fn(async () => true)
-}));
+vi.mock('../shared/ui/AppRuntimeNotice', () => ({ showAppRuntimeNotice: vi.fn() }));
 
-function createReadingProfile(overrides: Partial<NodeReadingProfile> = {}): NodeReadingProfile {
+function createHarness() {
+  const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
+  const history = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
+  harness.setState(history);
   return {
-    intervalDurationMs: 86_400_000,
-    intervalGrowthFactor: 1.8,
-    lastHandledAt: '2026-03-01T00:00:00.000Z',
-    nextAt: '2026-03-02T00:00:00.000Z',
-    priority: 2,
-    readingPosition: 0.42,
-    repetitionCount: 3,
-    state: 'active' as const,
-    ...overrides
+    actions: createWorkspaceNodeActions(harness.setState, harness.getState),
+    harness,
+    history
   };
 }
 
-function createHarness() {
-  const fixture = createWorkspaceNodeActionsFixture();
-  const node = fixture.nodesById['node-1']!;
-  return createWorkspaceNodeActionsSetStateHarness({
-    ...fixture,
-    nodesById: {
-      ...fixture.nodesById,
-      'node-1': {
-        ...node,
-        kind: 'topic',
-        reading: createReadingProfile(),
-        reveal: 'Answer'
-      }
-    }
-  });
-}
-
-describe('workspace application action history', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('records Dismiss Topic with the full before and after reading profile', () => {
-    const harness = createHarness();
-    const actions = createWorkspaceNodeActions(harness.setState);
-    const beforeReading = harness.getState().nodesById['node-1']?.reading;
-
-    expect(actions.dismissNode('node-1', '2026-03-18T00:00:00.000Z')).toBe(true);
-
-    const entry = harness.getState().appActionHistory.undoStack[0];
-    expect(entry).toMatchObject({
-      beforeReading,
-      nodeId: 'node-1',
-      title: 'Dismiss Topic',
-      type: 'topic.dismiss'
-    });
-    if (entry?.type !== 'topic.dismiss') {
-      throw new Error('Expected topic dismiss history entry');
-    }
-    expect(entry?.afterReading).toMatchObject({
-      lastHandledAt: '2026-03-18T00:00:00.000Z',
-      state: 'dismissed'
-    });
-    expect(harness.getState().appActionHistory.redoStack).toEqual([]);
-  });
-
-  it('undoes and redoes Dismiss Topic without losing reading schedule fields', () => {
-    const harness = createHarness();
-    const nodeActions = createWorkspaceNodeActions(harness.setState);
-    const historyActions = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
-    const beforeReading = harness.getState().nodesById['node-1']?.reading;
-    const modifiedAt = harness.getState().nodesById['node-1']?.updatedAt;
-
-    nodeActions.dismissNode('node-1', '2026-03-18T00:00:00.000Z');
-    const afterReading = harness.getState().nodesById['node-1']?.reading;
-
-    expect(historyActions.undoWorkspaceAction('2026-03-19T00:00:00.000Z')).toBe(true);
-    expect(harness.getState().nodesById['node-1']?.reading).toEqual(beforeReading);
-    expect(harness.getState().nodesById['node-1']?.updatedAt).toBe(modifiedAt);
-    expect(saveNodeReadingStateToRuntime).toHaveBeenLastCalledWith(
-      expect.objectContaining({ nodeId: 'node-1', reading: beforeReading })
-    );
-
-    expect(historyActions.redoWorkspaceAction('2026-03-20T00:00:00.000Z')).toBe(true);
-    expect(harness.getState().nodesById['node-1']?.reading).toEqual(afterReading);
-    expect(harness.getState().nodesById['node-1']?.updatedAt).toBe(modifiedAt);
-  });
-
-  it('returns to the restored topic after undoing Dismiss Topic', () => {
-    const harness = createHarness();
-    const nodeActions = createWorkspaceNodeActions(harness.setState);
-    const historyActions = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
-
-    nodeActions.dismissNode('node-1', '2026-03-18T00:00:00.000Z');
-    harness.setState({ activeNodeId: 'special-inbox' });
-
-    expect(historyActions.undoWorkspaceAction('2026-03-19T00:00:00.000Z')).toBe(true);
-
-    expect(harness.getState().activeNodeId).toBe('node-1');
-    expect(harness.getState().nodeViewById['node-1']).toBeUndefined();
-  });
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(false);
 });
 
-describe('workspace application delete action history', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+it('moves the delete cursor only after exact restore and delete confirmations', async () => {
+  const { actions, harness, history } = createHarness();
+  vi.mocked(syncSoftDeleteNodesToRuntime).mockImplementation(async ({ nodeIds }) => ({ deletedNodeIds: nodeIds }));
+  vi.mocked(syncRestoreNodesToRuntime).mockImplementation(async ({ nodeIds }) => ({
+    restoredNodeIds: nodeIds,
+    skippedConflicts: []
+  }));
 
-  it('restores a deleted current review topic and session position when undoing Delete Topic', async () => {
-    const harness = createHarness();
-    const nodeActions = createWorkspaceNodeActions(harness.setState);
-    const historyActions = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
-    const secondNode = {
-      ...harness.getState().nodesById['node-1']!,
-      content: 'Second',
-      id: 'node-2',
-      title: 'Second'
-    };
-    harness.setState((state) => ({
-      activeNodeId: 'node-1',
-      nodeOrder: [...state.nodeOrder, 'node-2'],
-      nodesById: {
-        ...state.nodesById,
-        'node-2': secondNode
-      },
-      reviewSession: {
-        currentNodeId: 'node-1',
-        isAnswerRevealed: true,
-        queueNodeIds: ['node-1', 'node-2'],
-        totalNodeCount: 2
-      }
-    }));
+  await actions.deleteNode('node-1');
+  const entry = harness.getState().appActionHistory.undoStack[0];
+  expect(entry).toMatchObject({ nodeIds: ['node-1'], type: 'structure.delete' });
 
-    vi.mocked(syncSoftDeleteNodesToRuntime).mockImplementation(async (payload) => ({ deletedNodeIds: payload.nodeIds }));
-    await nodeActions.deleteNode('node-1');
+  expect(history.undoWorkspaceAction(entry?.id)).toBe(true);
+  await vi.waitFor(() => expect(harness.getState().trashedNodeIds).not.toContain('node-1'));
+  expect(harness.getState().appActionHistory.redoStack[0]?.id).toBe(entry?.id);
 
-    expect(harness.getState().activeNodeId).toBe('node-2');
-    expect(harness.getState().reviewSession.currentNodeId).toBe('node-2');
-    expect(harness.getState().appActionHistory.undoStack[0]).toMatchObject({
-      nodeIds: ['node-1'],
-      title: 'Delete Topic',
-      type: 'topic.delete'
-    });
-
-    expect(historyActions.undoWorkspaceAction('2026-03-19T00:00:00.000Z')).toBe(true);
-
-    expect(harness.getState().trashedNodeIds).not.toContain('node-1');
-    expect(harness.getState().activeNodeId).toBe('node-1');
-    expect(harness.getState().reviewSession).toMatchObject({
-      currentNodeId: 'node-1',
-      isAnswerRevealed: true,
-      queueNodeIds: ['node-1', 'node-2'],
-      totalNodeCount: 2
-    });
-    expect(syncRestoreNodesToRuntime).toHaveBeenCalledWith({ nodeIds: ['node-1'] });
-
-    expect(historyActions.redoWorkspaceAction('2026-03-20T00:00:00.000Z')).toBe(true);
-
-    expect(harness.getState().trashedNodeIds).toContain('node-1');
-    expect(harness.getState().activeNodeId).toBe('node-2');
-    expect(syncSoftDeleteNodesToRuntime).toHaveBeenLastCalledWith({
-      deletedAt: expect.any(String),
-      nodeIds: ['node-1']
-    });
-  });
+  expect(history.redoWorkspaceAction(entry?.id)).toBe(true);
+  await vi.waitFor(() => expect(harness.getState().trashedNodeIds).toContain('node-1'));
+  expect(harness.getState().appActionHistory.undoStack[0]?.id).toBe(entry?.id);
 });
 
-describe('workspace application action history conflicts', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+it('keeps the delete cursor and selection when restore is partial or conflicted', async () => {
+  const { actions, harness, history } = createHarness();
+  vi.mocked(syncSoftDeleteNodesToRuntime).mockResolvedValue({ deletedNodeIds: ['node-1'] });
+  await actions.deleteNode('node-1');
+  const entry = harness.getState().appActionHistory.undoStack[0]!;
+  const activeNodeId = harness.getState().activeNodeId;
+  vi.mocked(syncRestoreNodesToRuntime).mockResolvedValue({
+    restoredNodeIds: [],
+    skippedConflicts: [{ liveNodeId: 'other', trashNodeId: 'node-1' }]
   });
 
-  it('does not overwrite a topic whose reading profile changed after dismiss', () => {
-    const harness = createHarness();
-    const nodeActions = createWorkspaceNodeActions(harness.setState);
-    const historyActions = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
+  expect(history.undoWorkspaceAction(entry.id)).toBe(true);
+  await vi.waitFor(() => expect(harness.getState().appActionHistory.applying).toBeNull());
+  expect(harness.getState().appActionHistory.undoStack[0]?.id).toBe(entry.id);
+  expect(harness.getState().activeNodeId).toBe(activeNodeId);
+  expect(harness.getState().trashedNodeIds).toContain('node-1');
+});
 
-    nodeActions.dismissNode('node-1', '2026-03-18T00:00:00.000Z');
-    const state = harness.getState();
-    const node = state.nodesById['node-1']!;
-    harness.setState({
-      nodesById: {
-        ...state.nodesById,
-        'node-1': {
-          ...node,
-          reading: createReadingProfile({ lastHandledAt: '2026-03-19T00:00:00.000Z' })
-        }
-      }
-    });
+it('binds the delete notice to the same exact workspace undo entry', async () => {
+  const { actions, harness } = createHarness();
+  vi.mocked(syncSoftDeleteNodesToRuntime).mockResolvedValue({ deletedNodeIds: ['node-1'] });
+  vi.mocked(syncRestoreNodesToRuntime).mockResolvedValue({ restoredNodeIds: ['node-1'], skippedConflicts: [] });
+  await actions.deleteNode('node-1');
+  const entryId = harness.getState().appActionHistory.undoStack[0]?.id;
+  const noticeAction = vi.mocked(showAppRuntimeNotice).mock.calls.at(-1)?.[2];
 
-    expect(historyActions.undoWorkspaceAction('2026-03-20T00:00:00.000Z')).toBe(false);
-    expect(harness.getState().nodesById['node-1']?.reading).toMatchObject({
-      lastHandledAt: '2026-03-19T00:00:00.000Z',
-      state: 'active'
-    });
-    expect(harness.getState().appActionHistory.undoStack).toEqual([]);
+  noticeAction?.onSelect();
+  await vi.waitFor(() => expect(harness.getState().trashedNodeIds).not.toContain('node-1'));
+  expect(harness.getState().appActionHistory.redoStack[0]?.id).toBe(entryId);
+  noticeAction?.onSelect();
+  expect(syncRestoreNodesToRuntime).toHaveBeenCalledOnce();
+});
+
+it('queues undo behind a pending canonical create without reaching older history', async () => {
+  vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);
+  let finishCreate!: (value: Awaited<ReturnType<typeof syncCreateNodeMutationToRuntime>>) => void;
+  vi.mocked(syncCreateNodeMutationToRuntime).mockImplementationOnce(() => new Promise((resolve) => {
+    finishCreate = resolve;
+  }));
+  vi.mocked(syncSoftDeleteNodesToRuntime).mockImplementation(async ({ nodeIds }) => ({ deletedNodeIds: nodeIds }));
+  const { actions, harness, history } = createHarness();
+  const createPromise = actions.createRootNode('', 'topic');
+  const pending = harness.getState().appActionHistory.pendingCreate!;
+
+  expect(history.undoWorkspaceAction()).toBe(true);
+  expect(harness.getState().appActionHistory.pendingCreate?.undoRequested).toBe(true);
+  finishCreate({
+    createdNodeIds: [pending.entry.rootNodeId],
+    nodeOrder: harness.getState().nodeOrder,
+    nodes: []
   });
-
-  it('drops an undo entry for a trashed topic instead of keeping a stuck stack top', () => {
-    const harness = createHarness();
-    const nodeActions = createWorkspaceNodeActions(harness.setState);
-    const historyActions = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
-
-    nodeActions.dismissNode('node-1', '2026-03-18T00:00:00.000Z');
-    harness.setState({ trashedNodeIds: ['node-1'] });
-
-    expect(historyActions.undoWorkspaceAction('2026-03-20T00:00:00.000Z')).toBe(false);
-    expect(harness.getState().appActionHistory.undoStack).toEqual([]);
-    expect(saveNodeReadingStateToRuntime).toHaveBeenCalledTimes(1);
-  });
+  await expect(createPromise).resolves.toBe(pending.entry.rootNodeId);
+  await vi.waitFor(() => expect(harness.getState().trashedNodeIds).toContain(pending.entry.rootNodeId));
+  expect(harness.getState().appActionHistory.redoStack[0]?.id).toBe(pending.entry.id);
 });

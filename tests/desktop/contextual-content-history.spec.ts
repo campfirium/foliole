@@ -21,6 +21,16 @@ import {
   undoShortcut,
   WORKSPACE_TARGET_ID
 } from './harness/contextualContentHistory';
+import {
+  clickNativeHistoryCommand,
+  createStructureTopic,
+  pressWorkspaceHistory,
+  readStructureHistory,
+  readStructureOrder,
+  runPaletteHistoryCommand,
+  seedStructureWorkspace,
+  STRUCTURE_TARGET_ID
+} from './harness/contextualWorkspaceHistory';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
@@ -149,5 +159,58 @@ test('undoes and redoes a PDF highlight through the current content owner', asyn
   await expect.poll(() => collectNode(desktopWindow, highlightId!)).toMatchObject({ trashed: false });
   await desktopWindow.screenshot({
     path: path.join(EVIDENCE_ROOT, `${process.platform}-pdf-content-history-hidden-native.png`)
+  });
+});
+
+test('keeps create, rename, move, and delete in one exact workspace history', async ({ desktopApp, desktopWindow }) => {
+  await expectWorkspaceShell(desktopWindow);
+  await seedStructureWorkspace(desktopWindow);
+
+  const createdId = await createStructureTopic(desktopWindow);
+  await expect.poll(() => readStructureHistory(desktopWindow)).toMatchObject({
+    undoStack: [{ type: 'structure.create' }]
+  });
+  await pressWorkspaceHistory(desktopWindow, 'undo');
+  await expect.poll(() => collectNode(desktopWindow, createdId)).toMatchObject({ trashed: true });
+  await pressWorkspaceHistory(desktopWindow, 'redo');
+  await expect.poll(() => collectNode(desktopWindow, createdId)).toMatchObject({ trashed: false });
+
+  const originalTitle = (await collectNode(desktopWindow, createdId))?.title;
+  expect(await desktopWindow.evaluate(([nodeId, title]) =>
+    window.__folioleWorkspaceDebug?.updateNodeTitle?.(nodeId!, title!) ?? false,
+  [createdId, 'Renamed Structure Topic'])).toBe(true);
+  await clickNativeHistoryCommand(desktopApp, 'app.undo');
+  await expect.poll(() => collectNode(desktopWindow, createdId)).toMatchObject({ title: originalTitle });
+  await clickNativeHistoryCommand(desktopApp, 'app.redo');
+  await expect.poll(() => collectNode(desktopWindow, createdId)).toMatchObject({ title: 'Renamed Structure Topic' });
+
+  const beforeMoveOrder = await readStructureOrder(desktopWindow);
+  expect(await desktopWindow.evaluate(([nodeId, targetId]) =>
+    window.__folioleWorkspaceDebug?.moveNodes?.([nodeId!], targetId!, 'before') ?? false,
+  [createdId, STRUCTURE_TARGET_ID])).toBe(true);
+  await expect.poll(() => readStructureOrder(desktopWindow)).not.toEqual(beforeMoveOrder);
+  await runPaletteHistoryCommand(desktopWindow, 'Undo Move Topic');
+  await expect.poll(() => readStructureOrder(desktopWindow)).toEqual(beforeMoveOrder);
+  await runPaletteHistoryCommand(desktopWindow, 'Redo Move Topic');
+  await expect.poll(() => readStructureOrder(desktopWindow)).not.toEqual(beforeMoveOrder);
+
+  await desktopWindow.evaluate(async (nodeId) => window.__folioleWorkspaceDebug?.deleteNode?.(nodeId), createdId);
+  await expect.poll(() => collectNode(desktopWindow, createdId)).toMatchObject({ trashed: true });
+  const notice = desktopWindow.getByText('Moved to Trash.', { exact: true });
+  await expect(notice).toBeVisible();
+  await notice.locator('..').getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect.poll(() => collectNode(desktopWindow, createdId)).toMatchObject({ trashed: false });
+  await expect(notice).toBeHidden();
+
+  const historyBeforeControl = await readStructureHistory(desktopWindow);
+  expect(await desktopWindow.evaluate(() =>
+    window.__folioleWorkspaceDebug?.shelveNode?.('playwright-review-control', '2026-08-13T01:00:00.000Z') ?? false
+  )).toBe(true);
+  expect(await readStructureHistory(desktopWindow)).toEqual(historyBeforeControl);
+  await pressWorkspaceHistory(desktopWindow, 'redo');
+  await expect.poll(() => collectNode(desktopWindow, createdId)).toMatchObject({ trashed: true });
+
+  await desktopWindow.screenshot({
+    path: path.join(EVIDENCE_ROOT, `${process.platform}-workspace-structure-history-hidden-native.png`)
   });
 });

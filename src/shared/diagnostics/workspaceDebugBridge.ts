@@ -7,8 +7,10 @@ import { isWorkspaceDebugEnabledForRuntime } from './workspaceDebugBridgeGate';
 import type { WorkspaceDebugApi, WorkspaceDebugWindow } from './workspaceDebugBridgeTypes';
 import { getEditorOperationHistory } from './workspaceDebugHistory';
 import { forceUpdateDebugNodeContent } from './workspaceDebugNodeContent';
+import { getDebugNode, getDebugReviewSession } from './workspaceDebugNodeRead';
 import { completeDebugReviewSession } from './workspaceDebugReviewSession';
 import { createSeedNodeDebugApi } from './workspaceDebugSeedApi';
+import { getWorkspaceStructureHistory, getWorkspaceStructureState } from './workspaceStructureHistoryDebug';
 import { type WorkspaceSyncDebugApi, createWorkspaceSyncDebugApi } from './workspaceSyncDebugBridge';
 
 function isWorkspaceDebugEnabled() {
@@ -32,37 +34,6 @@ function getExistingNodeState(nodeId: string) {
     return null;
   }
   return state;
-}
-
-function getDebugNode(nodeId: string): ReturnType<WorkspaceDebugApi['getNode']> {
-  const state = useWorkspaceStore.getState();
-  const node = state.nodesById[nodeId];
-  if (!node) {
-    return null;
-  }
-  return {
-    anchorKind: node.anchorLink?.kind ?? null,
-    anchorLink: node.anchorLink ?? null,
-    content: node.content,
-    id: node.id,
-    kind: node.kind,
-    parentNodeId: node.parentNodeId,
-    reading: node.reading ? { nextAt: node.reading.nextAt, state: node.reading.state } : null,
-    reveal: node.reveal,
-    review: node.review ? { due: node.review.due, state: node.review.state } : null,
-    shelvedAt: node.shelvedAt ?? null,
-    title: node.title,
-    trashed: state.trashedNodeIds.includes(nodeId)
-  };
-}
-
-function getDebugReviewSession(): ReturnType<WorkspaceDebugApi['getReviewSession']> {
-  const reviewSession = useWorkspaceStore.getState().reviewSession;
-  return {
-    currentNodeId: reviewSession.currentNodeId,
-    queueNodeIds: [...reviewSession.queueNodeIds],
-    ...(reviewSession.soonNodeIds ? { soonNodeIds: [...reviewSession.soonNodeIds] } : {})
-  };
 }
 
 const upsertTopicForDebug: WorkspaceDebugApi['upsertTopicForDebug'] = ({ content, id, title }) => {
@@ -97,12 +68,15 @@ function createNodeMutationDebugApi(): Pick<
   WorkspaceDebugApi,
   | 'createTextClozeChild'
   | 'createTextHighlightChild'
+  | 'createRootNode'
   | 'completeReviewSessionForDebug'
   | 'deleteNode'
   | 'deleteNodePermanently'
   | 'restoreNode'
   | 'shelveNode'
+  | 'moveNodes'
   | 'updateNodeContent'
+  | 'updateNodeTitle'
   | 'upsertTopicForDebug'
 > {
   return {
@@ -111,16 +85,17 @@ function createNodeMutationDebugApi(): Pick<
       useWorkspaceStore.getState().createQANodeFromSelection(parentNodeId, prompt, answer, anchorId, anchorLink ?? undefined),
     createTextHighlightChild: async ({ anchorId, anchorLink, parentNodeId, text }) =>
       useWorkspaceStore.getState().createHighlightNodeFromSelection(parentNodeId, text, anchorId, anchorLink ?? undefined),
+    createRootNode: (content, kind) => useWorkspaceStore.getState().createRootNode(content, kind),
     deleteNode: async (nodeId) => {
       const state = getExistingNodeState(nodeId);
       if (!state) return false;
-      state.deleteNode(nodeId);
+      await state.deleteNode(nodeId);
       return true;
     },
     deleteNodePermanently: async (nodeId) => {
       const state = getExistingNodeState(nodeId);
       if (!state) return false;
-      state.deleteNodePermanently(nodeId);
+      await state.deleteNodePermanently(nodeId);
       return true;
     },
     restoreNode: async (nodeId) => {
@@ -129,6 +104,8 @@ function createNodeMutationDebugApi(): Pick<
       await state.restoreNode(nodeId);
       return true;
     },
+    moveNodes: (nodeIds, targetNodeId, intent) =>
+      useWorkspaceStore.getState().moveNodes(nodeIds, targetNodeId, intent),
     shelveNode: (nodeId, now) => {
       const state = getExistingNodeState(nodeId);
       return state ? state.shelveNode(nodeId, now) : false;
@@ -141,6 +118,7 @@ function createNodeMutationDebugApi(): Pick<
       forceUpdateDebugNodeContent(nodeId, content);
       return true;
     },
+    updateNodeTitle: (nodeId, title) => useWorkspaceStore.getState().updateNodeTitle(nodeId, title),
     upsertTopicForDebug
   };
 }
@@ -152,6 +130,8 @@ function createNodeReadDebugApi(): Pick<
   | 'getNode'
   | 'getNodeViewState'
   | 'getReviewSession'
+  | 'getWorkspaceStructureHistory'
+  | 'getWorkspaceStructureState'
   | 'isHydrated'
   | 'listNodes'
   | 'openNode'
@@ -164,6 +144,8 @@ function createNodeReadDebugApi(): Pick<
     getNodeViewState: (nodeId) => useWorkspaceStore.getState().nodeViewById[nodeId] ?? null,
     isHydrated: () => useWorkspaceStore.getState().isHydrated,
     getReviewSession: getDebugReviewSession,
+    getWorkspaceStructureHistory,
+    getWorkspaceStructureState,
     listNodes: () => {
       const state = useWorkspaceStore.getState();
       return state.nodeOrder.map((nodeId) => ({ id: nodeId, title: state.nodesById[nodeId]?.title ?? nodeId }));

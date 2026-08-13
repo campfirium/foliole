@@ -24,7 +24,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-it('undoes a read reading topic back to the previous session step', async () => {
+it('does not add Read to workspace structure history', async () => {
   const now = '2026-03-03T00:00:00.000Z';
   const firstDue = '2026-03-02T00:00:00.000Z';
   const harness = createSetStateHarness(
@@ -33,26 +33,12 @@ it('undoes a read reading topic back to the previous session step', async () => 
   const actions = createWorkspaceReviewActions(harness.setState, harness.getState, { grade: createSchedulerGradeMock(), preview: previewStub });
   const historyActions = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
   actions.startReviewSession(now);
-  const firstNodeId = harness.getState().reviewSession.currentNodeId!;
-  const queueNodeIds = [...harness.getState().reviewSession.queueNodeIds];
-
   await expect(actions.readReviewTopic(now)).resolves.toBe(true);
-  expect(harness.getState().appActionHistory.undoStack[0]).toMatchObject({ title: 'Read Topic' });
-  expect(historyActions.undoWorkspaceAction('2026-03-04T00:00:00.000Z')).toBe(true);
-
-  expect(harness.getState().activeNodeId).toBe(firstNodeId);
-  expect(harness.getState().reviewSession).toMatchObject({
-    currentNodeId: firstNodeId,
-    queueNodeIds,
-    readTopicCount: 0
-  });
-  expect(harness.getState().nodesById[firstNodeId]?.reading).toMatchObject({
-    lastHandledAt: '2026-03-02T00:00:00.000Z',
-    repetitionCount: 1
-  });
+  expect(harness.getState().appActionHistory.undoStack).toEqual([]);
+  expect(historyActions.undoWorkspaceAction()).toBe(false);
 });
 
-it('records postponed reading topics as the latest undo step', async () => {
+it('does not add Later to workspace structure history', async () => {
   const now = '2026-03-03T00:00:00.000Z';
   const firstDue = '2026-03-02T00:00:00.000Z';
   const harness = createSetStateHarness(
@@ -61,16 +47,12 @@ it('records postponed reading topics as the latest undo step', async () => {
   const actions = createWorkspaceReviewActions(harness.setState, harness.getState, { grade: createSchedulerGradeMock(), preview: previewStub });
   const historyActions = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
   actions.startReviewSession(now);
-  const firstNodeId = harness.getState().reviewSession.currentNodeId!;
   vi.useFakeTimers();
   vi.setSystemTime(new Date(now));
 
   await expect(actions.postponeReviewTopic()).resolves.toBe(true);
-  expect(harness.getState().appActionHistory.undoStack[0]).toMatchObject({ title: 'Later Topic' });
-  expect(historyActions.undoWorkspaceAction('2026-03-04T00:00:00.000Z')).toBe(true);
-
-  expect(harness.getState().activeNodeId).toBe(firstNodeId);
-  expect(harness.getState().reviewSession.currentNodeId).toBe(firstNodeId);
+  expect(harness.getState().appActionHistory.undoStack).toEqual([]);
+  expect(historyActions.undoWorkspaceAction()).toBe(false);
 });
 
 it('replays soon reading topics after the current queue in click order without rescheduling them', async () => {
@@ -176,7 +158,7 @@ it('ignores duplicate reading actions while persistence is in flight', async () 
   await expect(first).resolves.toBe(true);
 
   expect(saveNodeReadingStateToRuntime).toHaveBeenCalledTimes(1);
-  expect(harness.getState().appActionHistory.undoStack).toHaveLength(1);
+  expect(harness.getState().appActionHistory.undoStack).toEqual([]);
 });
 
 it('postpones reading items with a shorter interval and removes them from the current queue', async () => {

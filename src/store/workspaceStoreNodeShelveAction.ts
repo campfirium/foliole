@@ -1,12 +1,10 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
-import { pushWorkspaceUndoEntry } from './workspaceActionHistory';
 import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue';
 import { completeReviewSession } from './workspaceReviewReading';
 import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
 import { buildSequentialReadingMaintenancePatch } from './workspaceSequentialReadingMaintenance';
-import { createTopicShelveHistoryEntry } from './workspaceShelveActionHistory';
 import type { WorkspaceState } from './workspaceStore';
 
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
@@ -121,21 +119,6 @@ function buildNodeShelveMutation(args: {
     nextNodesForSync,
     patch: {
       ...(reviewSessionPatch ?? {}),
-      appActionHistory: pushWorkspaceUndoEntry(
-        args.state.appActionHistory,
-        createTopicShelveHistoryEntry({
-          ...(reviewSessionPatch
-            ? {
-                afterReviewSession: reviewSessionPatch.reviewSession,
-                beforeReviewSession: args.state.reviewSession
-              }
-            : {}),
-          afterShelvedAt,
-          beforeShelvedAt,
-          nodeId: args.nodeId,
-          ...(sequentialPatch?.changes.length ? { relatedReadings: sequentialPatch.changes } : {})
-        })
-      ),
       nodesById: finalNodesById
     }
   };

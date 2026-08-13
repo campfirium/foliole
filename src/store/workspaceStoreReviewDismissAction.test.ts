@@ -42,16 +42,7 @@ it('creates a persisted reading profile when dismissing a first-time reading ite
     readingPosition: 0,
     state: 'dismissed'
   });
-  expect(harness.getState().appActionHistory.undoStack).toHaveLength(1);
-  expect(harness.getState().appActionHistory.undoStack[0]).toMatchObject({
-    beforeReviewSession: {
-      currentNodeId: 'reading-1',
-      queueNodeIds: ['reading-1']
-    },
-    nodeId: 'reading-1',
-    title: 'Dismiss Topic',
-    type: 'topic.dismiss'
-  });
+  expect(harness.getState().appActionHistory.undoStack).toEqual([]);
   expect(saveNodeReadingStateToRuntime).toHaveBeenCalledWith(
     expect.objectContaining({
       nodeId: 'reading-1',
@@ -82,7 +73,7 @@ it('counts a dismissed reading topic as handled material', async () => {
   });
 });
 
-it('restores the dismissed review item as the current review item when undoing', async () => {
+it('does not route dismissed review items through workspace undo', async () => {
   const now = '2026-03-03T00:00:00.000Z';
   const harness = createSetStateHarness(
     createWorkspaceFixture([createReadingNode('reading-1', now), createReadingNode('reading-2', now)])
@@ -99,22 +90,9 @@ it('restores the dismissed review item as the current review item when undoing',
   await expect(actions.dismissReviewTopic(now)).resolves.toBe(true);
   expect(harness.getState().reviewSession.currentNodeId).toBe(nextNodeId);
 
-  expect(historyActions.undoWorkspaceAction('2026-03-04T00:00:00.000Z')).toBe(true);
-
-  expect(harness.getState().activeNodeId).toBe(currentNodeId);
-  expect(harness.getState().reviewSession).toMatchObject({
-    currentNodeId,
-    isAnswerRevealed: false,
-    queueNodeIds: expect.arrayContaining(['reading-1', 'reading-2'])
-  });
-
-  expect(historyActions.redoWorkspaceAction('2026-03-05T00:00:00.000Z')).toBe(true);
+  expect(historyActions.undoWorkspaceAction()).toBe(false);
   expect(harness.getState().activeNodeId).toBe(nextNodeId);
-  expect(harness.getState().reviewSession).toMatchObject({
-    currentNodeId: nextNodeId,
-    isAnswerRevealed: false,
-    queueNodeIds: [nextNodeId]
-  });
+  expect(harness.getState().appActionHistory.undoStack).toEqual([]);
 });
 
 it('does not dismiss the current review item while another topic is open', async () => {
@@ -180,5 +158,5 @@ it('continues within the same sequential book after dismissing its cover topic',
 
   expect(harness.getState().reviewSession.currentNodeId).toBe('copyright');
   expect(harness.getState().nodesById.drucker?.reading?.state).toBe('locked');
-  expect(harness.getState().appActionHistory.undoStack).toHaveLength(1);
+  expect(harness.getState().appActionHistory.undoStack).toEqual([]);
 });

@@ -56,12 +56,7 @@ describe('createWorkspaceNodeActions dismiss', () => {
       state: 'dismissed',
       repetitionCount: 0
     });
-    expect(harness.getState().appActionHistory.undoStack).toHaveLength(1);
-    expect(harness.getState().appActionHistory.undoStack[0]).toMatchObject({
-      nodeId: 'node-1',
-      title: 'Dismiss Topic',
-      type: 'topic.dismiss'
-    });
+    expect(harness.getState().appActionHistory.undoStack).toEqual([]);
     expect(saveNodeReadingStateToRuntime).toHaveBeenCalledWith(expect.objectContaining({
       nodeId: 'node-1',
       reading: expect.objectContaining({ state: 'dismissed' })

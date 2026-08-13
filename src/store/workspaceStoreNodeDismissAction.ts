@@ -4,11 +4,6 @@ import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 import { saveNodeReadingStateToRuntime } from '../shared/platform/runtime/nodeReadingStateRuntimeRepository';
 
-import {
-  cloneReadingProfile,
-  createTopicDismissHistoryEntry,
-  pushWorkspaceUndoEntry
-} from './workspaceActionHistory';
 import { buildDismissedReadingProfile } from './workspaceReviewReading';
 import { buildSequentialReadingDismissPatch } from './workspaceSequentialReading';
 import type { WorkspaceState } from './workspaceStore';
@@ -39,7 +34,6 @@ export function createDismissNodeAction(set: WorkspaceSet): WorkspaceState['dism
         return state;
       }
       dismissed = true;
-      const beforeReading = cloneReadingProfile(node.reading);
       const defaultPriority = getCurrentReviewSchedulerSettings().pushQueue.defaultPriority;
       const afterReading = buildDismissedReadingProfile({
         currentNodeId: nodeId,
@@ -65,15 +59,6 @@ export function createDismissNodeAction(set: WorkspaceSet): WorkspaceState['dism
         .map((change) => finalNodesById[change.nodeId])
         .filter((changedNode): changedNode is Node => Boolean(changedNode))];
       return {
-        appActionHistory: pushWorkspaceUndoEntry(
-          state.appActionHistory,
-          createTopicDismissHistoryEntry({
-            afterReading,
-            beforeReading,
-            nodeId,
-            ...(sequentialPatch?.changes.length ? { relatedReadings: sequentialPatch.changes } : {})
-          })
-        ),
         nodesById: finalNodesById
       };
     });

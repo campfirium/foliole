@@ -13,6 +13,7 @@ import {
   syncNodeRevealMutationToRuntime
 } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
+import { buildCommittedTitleMutation, preserveCurrentBodyInPatch } from './workspaceStructureRenameCommit';
 
 type WorkspaceSet = (
   partial:
@@ -20,35 +21,6 @@ type WorkspaceSet = (
     | Partial<WorkspaceState>
     | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)
 ) => void;
-
-function preserveCurrentNodeBody(current: WorkspaceState['nodesById'][string] | undefined, next: WorkspaceState['nodesById'][string]) {
-  if (!current) {
-    return next;
-  }
-  return {
-    ...next,
-    content: current.content,
-    ...(current.hasContent === undefined ? {} : { hasContent: current.hasContent })
-  };
-}
-
-function preserveCurrentBodyInPatch(
-  state: WorkspaceState,
-  nodeId: string,
-  patch: Partial<WorkspaceState>
-): Partial<WorkspaceState> {
-  const nextNode = patch.nodesById?.[nodeId];
-  if (!nextNode || !patch.nodesById) {
-    return patch;
-  }
-  return {
-    ...patch,
-    nodesById: {
-      ...patch.nodesById,
-      [nodeId]: preserveCurrentNodeBody(state.nodesById[nodeId], nextNode)
-    }
-  };
-}
 
 function syncUniqueArticleHeadingFromTitle(
   node: WorkspaceState['nodesById'][string],
@@ -74,12 +46,15 @@ export function createUpdateNodeTitleAction(set: WorkspaceSet): WorkspaceState['
   return async (nodeId, title) => {
     let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
     let localPatch: Partial<WorkspaceState> | null = null;
+    let beforeTitle: string | null = null;
     set((state) => {
       const node = state.nodesById[nodeId];
       if (!node || isProtectedRootNode(node)) {
         return state;
       }
       const nextTitle = title.trim() || UNTITLED_NODE_TITLE;
+      if (node.title === nextTitle) return state;
+      beforeTitle = node.title;
       const nextContent = syncUniqueArticleHeadingFromTitle(node, nextTitle);
       const nextNode = {
         ...node,
@@ -105,17 +80,14 @@ export function createUpdateNodeTitleAction(set: WorkspaceSet): WorkspaceState['
     let applied = false;
     let nodesToCache: WorkspaceState['nodesById'][string][] = [];
     set((state) => {
-      const acceptedPatch = result
-        ? createWorkspaceNodeMutationPatch(state, result)
-        : shouldUseLocalFallback ? localPatch : null;
-      if (!acceptedPatch) return state;
+      const committed = buildCommittedTitleMutation({
+        beforeTitle, localPatch, nextNodeForSync: nextNodeForSync!, nodeId, result,
+        shouldUseLocalFallback, state
+      });
+      if (!committed) return state;
       applied = true;
-      nodesToCache = result
-        ? result.nodes.flatMap((snapshot) => acceptedPatch.nodesById?.[snapshot.nodeId]
-            ? [acceptedPatch.nodesById[snapshot.nodeId]!]
-            : [])
-        : [nextNodeForSync!];
-      return acceptedPatch;
+      nodesToCache = committed.nodesToCache;
+      return committed.patch;
     });
     if (applied) {
       nodesToCache.forEach(syncWorkspaceNodeDocumentCacheFromNode);

@@ -7,10 +7,16 @@ import { normalizePushQueuePriority } from '../features/review/model/unifiedPush
 
 import { createNewItemReviewProfiles } from './newItemReviewSlots';
 import { markNodeCreatePending } from './workspaceNodeContentVersionGuard';
-import { createWorkspaceNodeCreateAckPatch } from './workspaceNodeMutationPatch';
+import { createWorkspaceNodeCreateAckPatch, didRuntimeConfirmNodeCreation } from './workspaceNodeMutationPatch';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
+import { hasWorkspaceNodeMutationRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
-import { completeNodeCreateRuntimePersist } from './workspaceStoreContentRuntimePersist';
+import { cancelNodeCreateRuntimePersist, completeNodeCreateRuntimePersist } from './workspaceStoreContentRuntimePersist';
+import {
+  beginStructureCreateHistory,
+  completeStructureCreateHistory,
+  failStructureCreateHistory
+} from './workspaceStructureCreateHistory';
 import { resolveCreatedNodeTitleState } from './workspaceUntitledNodeTitle';
 
 type WorkspaceNode = WorkspaceState['nodesById'][string];
@@ -76,56 +82,100 @@ function createRootNodeRecord(args: {
   return { node, untitledState };
 }
 
+async function persistRootNodeCreation(args: {
+  createdNode: WorkspaceNode;
+  get?: () => WorkspaceState;
+  handlers: RuntimeSyncHandlers;
+  historyEntryId: string | null;
+  nodeId: string;
+  nodeOrder: string[];
+  set: WorkspaceSet;
+}) {
+  markNodeCreatePending(args.nodeId);
+  const result = await args.handlers.syncNodeCreation(
+    args.createdNode, args.nodeOrder, args.nodeId, args.nodeOrder.indexOf(args.nodeId)
+  );
+  const succeeded = didRuntimeConfirmNodeCreation(result, args.nodeId) || !hasWorkspaceNodeMutationRuntime();
+  if (result && succeeded) args.set((state) => createWorkspaceNodeCreateAckPatch(state, result, [args.nodeId]));
+  if (!succeeded) {
+    cancelNodeCreateRuntimePersist(args.nodeId);
+    failStructureCreateHistory({ entryId: args.historyEntryId, nodeId: args.nodeId, set: args.set });
+    return false;
+  }
+  completeStructureCreateHistory({
+    entryId: args.historyEntryId,
+    ...(args.get ? { get: args.get } : {}),
+    set: args.set
+  });
+  await completeNodeCreateRuntimePersist(args.nodeId);
+  return true;
+}
+
+function prepareRootNodeCreation(args: {
+  content: string;
+  kind: NodeKind;
+  nodeId: string;
+  options: Parameters<WorkspaceState['createRootNode']>[2];
+  state: WorkspaceState;
+  timestamp: string;
+}) {
+  const parentNodeId = resolveRootCreationParentId(args.kind, args.state);
+  const created = createRootNodeRecord({
+    content: args.content, kind: args.kind, nodeId: args.nodeId, parentNodeId,
+    ...resolveCreationPriority(args.options), state: args.state, timestamp: args.timestamp
+  });
+  const nodeOrder = parentNodeId === INBOX_NODE_ID
+    ? [INBOX_NODE_ID, args.nodeId, ...args.state.nodeOrder.filter((id) => id !== INBOX_NODE_ID)]
+    : [...args.state.nodeOrder, args.nodeId];
+  const nodesById = { ...args.state.nodesById, [args.nodeId]: created.node };
+  const patch: Partial<WorkspaceState> = {
+    activeNodeId: args.nodeId,
+    nodeOrder,
+    nodesById,
+    untitledSequenceByParent: created.untitledState.untitledSequenceByParent,
+    reviewSession: reconcileReviewSession({ ...args.state, activeNodeId: args.nodeId, nodeOrder, nodesById }, args.nodeId)
+  };
+  const pending = beginStructureCreateHistory({
+    afterActiveNodeId: args.nodeId,
+    beforeActiveNodeId: args.state.activeNodeId,
+    history: args.state.appActionHistory,
+    node: created.node
+  });
+  if (pending) patch.appActionHistory = pending.history;
+  return { historyEntryId: pending?.entry.id ?? null, node: created.node, nodeOrder, patch };
+}
+
 export function createRootNodeAction(
   set: WorkspaceSet,
-  handlers: RuntimeSyncHandlers
+  handlers: RuntimeSyncHandlers,
+  get?: () => WorkspaceState
 ): WorkspaceState['createRootNode'] {
   return async (content = '', kind: NodeKind = 'topic', options) => {
     const nodeId = `node-${crypto.randomUUID()}`;
     const timestamp = new Date().toISOString();
     let createdNode: WorkspaceNode | null = null;
     let nextNodeOrder: string[] | null = null;
-    let localPatch: Partial<WorkspaceState> | null = null;
-    let applied = false;
+    let historyEntryId: string | null = null;
 
     set((state) => {
-      const parentNodeId = resolveRootCreationParentId(kind, state);
-      const created = createRootNodeRecord({
-        content, kind, nodeId, parentNodeId, ...resolveCreationPriority(options), state, timestamp
-      });
-      nextNodeOrder = parentNodeId === INBOX_NODE_ID
-        ? [INBOX_NODE_ID, nodeId, ...state.nodeOrder.filter((id) => id !== INBOX_NODE_ID)]
-        : [...state.nodeOrder, nodeId];
-      createdNode = created.node;
-      const nextNodesById = { ...state.nodesById, [nodeId]: createdNode };
-      localPatch = {
-        activeNodeId: nodeId,
-        nodeOrder: nextNodeOrder,
-        nodesById: nextNodesById,
-        untitledSequenceByParent: created.untitledState.untitledSequenceByParent,
-        reviewSession: reconcileReviewSession(
-          {
-            ...state,
-            activeNodeId: nodeId,
-            nodeOrder: nextNodeOrder,
-            nodesById: nextNodesById,
-            untitledSequenceByParent: created.untitledState.untitledSequenceByParent
-          },
-          nodeId
-        )
-      };
-      applied = true;
-      return localPatch;
+      const prepared = prepareRootNodeCreation({ content, kind, nodeId, options, state, timestamp });
+      ({ historyEntryId, node: createdNode, nodeOrder: nextNodeOrder } = prepared);
+      return prepared.patch;
     });
     if (createdNode && nextNodeOrder) {
-      markNodeCreatePending(nodeId);
-      const acceptedOrder = [...nextNodeOrder] as string[];
-      const result = await handlers.syncNodeCreation(createdNode, acceptedOrder, nodeId, acceptedOrder.indexOf(nodeId));
-      if (result) {
-        set((state) => createWorkspaceNodeCreateAckPatch(state, result, [nodeId]));
-      }
-      await completeNodeCreateRuntimePersist(nodeId);
+      const nodeForPersist = createdNode as WorkspaceNode;
+      const orderForPersist = [...nextNodeOrder] as string[];
+      const succeeded = await persistRootNodeCreation({
+        createdNode: nodeForPersist,
+        ...(get ? { get } : {}),
+        handlers,
+        historyEntryId,
+        nodeId,
+        nodeOrder: orderForPersist,
+        set
+      });
+      if (!succeeded) return null;
     }
-    return createdNode && applied ? nodeId : null;
+    return createdNode ? nodeId : null;
   };
 }

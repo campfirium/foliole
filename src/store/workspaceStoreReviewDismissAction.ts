@@ -1,10 +1,5 @@
 import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 
-import {
-  cloneReadingProfile,
-  createTopicDismissHistoryEntry,
-  pushWorkspaceUndoEntry
-} from './workspaceActionHistory';
 import { buildReadingReviewDomainPatch } from './workspaceReadingReviewDomain';
 import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
 import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue';
@@ -91,24 +86,11 @@ function buildDismissReviewPatch(args: {
     state: args.state
   });
   if (!result) return null;
-  const beforeReading = cloneReadingProfile(result.beforeReading);
-  const afterReading = cloneReadingProfile(result.afterReading);
   const { nextNodeId, nextReviewSession } = buildNextDismissReviewSession({ ...args, nextNodesById: result.nextNodesById });
   return {
     nextNodesForSync: result.nextNodesForSync,
     patch: {
       ...buildReviewActiveNodeContext(args.state, nextNodeId ?? nextReviewSession.continueNodeId ?? null),
-      appActionHistory: pushWorkspaceUndoEntry(
-        args.state.appActionHistory,
-        createTopicDismissHistoryEntry({
-          afterReading,
-          afterReviewSession: nextReviewSession,
-          beforeReading,
-          beforeReviewSession: args.snapshot.reviewSession,
-          nodeId: args.currentNodeId,
-          ...(result.sequentialChanges.length ? { relatedReadings: result.sequentialChanges } : {})
-        })
-      ),
       nodesById: result.nextNodesById,
       reviewSession: nextReviewSession
     }
