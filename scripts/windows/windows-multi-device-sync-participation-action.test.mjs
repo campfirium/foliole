@@ -23,7 +23,7 @@ vi.mock('./windows-sync-group-provider-release.mjs', () => ({
 }));
 
 import {
-  runWindowsMultiDeviceSyncParticipation
+  isWindowsLastMemberInputReady, runWindowsMultiDeviceSyncParticipation
 } from './windows-multi-device-sync-participation-action.mjs';
 
 function facts(overrides = {}) {
@@ -38,6 +38,12 @@ function overview(enabled, paused, group = true) {
     sync_group: group ? { group_id: 'group-1', local_member_state: 'active' } : null,
     sync_paused: paused };
 }
+
+it('waits for complete local resources before the last member leaves', () => {
+  expect(isWindowsLastMemberInputReady(facts({ activeMemberCount: 1,
+    missingContentBlobCount: 2 }))).toBe(false);
+  expect(isWindowsLastMemberInputReady(facts({ activeMemberCount: 1 }))).toBe(true);
+});
 
 it('persists independent controls, catches up, and leaves as the last member', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-participation-'));

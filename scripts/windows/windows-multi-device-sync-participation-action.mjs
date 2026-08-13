@@ -32,6 +32,11 @@ function assertDataRetained(before, after) {
   }
 }
 
+export function isWindowsLastMemberInputReady(facts) {
+  return facts.activeMemberCount === 1 && facts.localMemberState === 'active'
+    && facts.missingAttachmentCount === 0 && facts.missingContentBlobCount === 0;
+}
+
 async function withSession(paths, evidenceRoot, action) {
   const opened = await openWindowsSyncGroupSession(paths, evidenceRoot);
   try { return await action(opened.page); } finally { await opened.app.close(); }
@@ -77,7 +82,7 @@ async function proveParticipationCycle(options, initial) {
     assertParticipation(enabled, { enabled: true, paused: false }, initial.localGroupId);
     await waitUntil('Windows last-member input',
       () => inspectWindowsSyncGroupDatabase(execute, paths),
-      (facts) => facts.activeMemberCount === 1 && facts.localMemberState === 'active');
+      isWindowsLastMemberInputReady);
     const beforeLeave = await inspectWindowsSyncGroupDatabase(execute, paths);
     await invokeWindowsSyncGroupCommand(page, 'disable_companion_sync');
     const left = await invokeWindowsSyncGroupCommand(page, 'leave_sync_group');
