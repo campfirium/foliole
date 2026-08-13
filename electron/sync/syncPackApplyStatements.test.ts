@@ -39,7 +39,9 @@ it('builds external document pack apply statement', () => {
 it('builds content blob metadata upsert for referenced body blobs', () => {
   const sql = buildSyncPackContentBlobUpsertSql({ incomingAlias: 'incoming' });
 
-  expect(sql).toContain('INSERT OR REPLACE INTO main.content_blobs');
+  expect(sql).toContain('INSERT INTO main.content_blobs');
+  expect(sql).not.toContain('INSERT OR REPLACE INTO main.content_blobs');
+  expect(sql).toContain('ON CONFLICT(hash) DO UPDATE SET');
   expect(sql).toContain('FROM incoming.content_blobs incoming');
   expect(sql).toContain('SELECT body_blob_hash FROM incoming.nodes');
   expect(sql).toContain("incoming.object_type = 'node'");

@@ -16,6 +16,11 @@ export interface SyncPackNodeApplyOptions extends SyncPackApplyableRowsOptions {
 }
 
 const SYNC_PACK_NODE_UPDATE_COLUMNS = SYNC_PACK_NODE_COLUMNS.filter((column) => column !== 'id');
+const SYNC_PACK_CONTENT_BLOB_UPDATE_COLUMNS = [
+  'storage_key', 'kind', 'mime_type', 'compression', 'original_size_bytes', 'stored_size_bytes',
+  'original_sha256', 'stored_sha256', 'availability', 'source_device_id', 'created_at',
+  'cached_at', 'last_verified_at'
+] as const;
 const NODE_PROVENANCE_COLUMNS = [
   'import_source_fingerprint',
   'import_content_fingerprint'
@@ -147,7 +152,7 @@ export function buildSyncPackNodeAttachmentInsertSql(options: SyncPackApplyableR
 
 export function buildSyncPackContentBlobUpsertSql(options: SyncPackApplyableRowsOptions = {}) {
   const alias = incomingAlias(options);
-  return `INSERT OR REPLACE INTO main.content_blobs (` +
+  return `INSERT INTO main.content_blobs (` +
     `hash, storage_key, kind, mime_type, compression, original_size_bytes, stored_size_bytes, ` +
     `original_sha256, stored_sha256, availability, source_device_id, created_at, cached_at, last_verified_at) ` +
     `SELECT incoming.hash, incoming.storage_key, incoming.kind, incoming.mime_type, incoming.compression, ` +
@@ -169,7 +174,9 @@ export function buildSyncPackContentBlobUpsertSql(options: SyncPackApplyableRows
     `AND document_id IN (SELECT object_id FROM ${buildSyncPackApplyableRowsSql({
       incomingAlias: alias,
       objectType: 'external_document'
-    })}))`;
+    })})) ` +
+    `ON CONFLICT(hash) DO UPDATE SET ${SYNC_PACK_CONTENT_BLOB_UPDATE_COLUMNS
+      .map((column) => `${column} = excluded.${column}`).join(', ')}`;
 }
 
 export function buildSyncPackExternalDocumentUpsertSql(options: SyncPackApplyableRowsOptions = {}) {
