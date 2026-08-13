@@ -33,6 +33,7 @@ const CONTROLLER_FILES = [
   'scripts/sync-group/multi-device-sync-workspace.mjs',
   'scripts/sync-group/sync-progress-watchdog.mjs',
   'scripts/sync-group/sync-from-zero-contract.mjs',
+  'scripts/sync-group/sync-from-zero-dataset-inspect.mjs',
   'scripts/desktop/sync-from-zero-dataset-action.mjs',
   'scripts/windows/windows-multi-device-sync-from-zero-action.mjs',
   'scripts/windows/windows-multi-device-sync-participation-action.mjs',

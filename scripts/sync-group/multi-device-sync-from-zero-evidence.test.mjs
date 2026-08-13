@@ -5,9 +5,8 @@ import { DatabaseSync } from 'node:sqlite';
 import { expect, it } from 'vitest';
 
 import { syncFromZeroDatasetDigest } from './sync-from-zero-contract.mjs';
-import {
-  assertSyncFromZeroFinalProof, inspectSyncFromZeroDatasetFacts
-} from './multi-device-sync-from-zero-evidence.mjs';
+import { inspectSyncFromZeroDatasetFacts } from './sync-from-zero-dataset-inspect.mjs';
+import { assertSyncFromZeroFinalProof } from './multi-device-sync-from-zero-evidence.mjs';
 
 const datasetReceipt = { attachmentIds: Array.from({ length: 65 }, (_, i) => `a-${i}`),
   contentHashes: Array.from({ length: 40 }, (_, i) => `h-${i}`),

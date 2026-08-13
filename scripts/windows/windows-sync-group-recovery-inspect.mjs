@@ -8,9 +8,7 @@ import BetterSqlite3 from 'better-sqlite3';
 import {
   identityFingerprint, inspectPairSyncRecoveryWorkspace
 } from '../android/android-pair-sync-recovery-readiness.mjs';
-import {
-  syncFromZeroDatasetDigest, SYNC_FROM_ZERO_DATASET
-} from '../sync-group/sync-from-zero-contract.mjs';
+import { inspectSyncFromZeroDatasetFacts } from '../sync-group/sync-from-zero-dataset-inspect.mjs';
 
 function identitiesByKind(rows) {
   return rows.reduce((result, row) => {
@@ -59,36 +57,6 @@ function storedDesktopDeviceIdentity(database) {
   return typeof value === 'string' && value.trim() ? identityFingerprint(value.trim()) : null;
 }
 
-function datasetFacts(database) {
-  const prefix = `${SYNC_FROM_ZERO_DATASET.nodePrefix}%`;
-  const scalar = (sql) => Number(database.prepare(sql).pluck().get(prefix) ?? 0);
-  const nodes = database.prepare(`SELECT id, content_hash FROM nodes
-    WHERE id LIKE ? AND deleted_at IS NULL ORDER BY id`).all(prefix);
-  const attachments = database.prepare(`SELECT na.node_id, ab.attachment_id, ab.content_hash
-    FROM node_attachments na JOIN attachment_blobs ab ON ab.attachment_id = na.attachment_id
-    WHERE na.node_id LIKE ? ORDER BY na.node_id, ab.attachment_id`).all(prefix);
-  const attachmentIds = attachments.map(({ attachment_id }) => attachment_id);
-  const contentHashes = nodes.map(({ content_hash }) => content_hash);
-  const nodeIds = nodes.map(({ id }) => id);
-  return {
-    datasetAttachmentCount: attachments.length,
-    datasetAttachmentIds: attachmentIds,
-    datasetCachedAttachmentCount: scalar(`SELECT COUNT(*) FROM node_attachments na
-      JOIN attachment_blobs ab ON ab.attachment_id = na.attachment_id
-      WHERE na.node_id LIKE ? AND ab.availability = 'cached'`),
-    datasetCachedContentBlobCount: scalar(`SELECT COUNT(DISTINCT n.content_hash) FROM nodes n
-      JOIN content_blob_data cbd ON cbd.hash = n.content_hash
-      WHERE n.id LIKE ? AND n.deleted_at IS NULL`),
-    datasetContentBlobCount: scalar(`SELECT COUNT(DISTINCT n.content_hash) FROM nodes n
-      JOIN content_blobs cb ON cb.hash = n.content_hash
-      WHERE n.id LIKE ? AND n.deleted_at IS NULL`),
-    datasetContentHashes: contentHashes,
-    datasetDigest: syncFromZeroDatasetDigest({ attachmentIds, contentHashes, nodeIds }),
-    datasetNodeCount: nodes.length,
-    datasetNodeIds: nodeIds
-  };
-}
-
 function peerProgress(database) {
   const cursors = database.prepare(`SELECT peer_id, stream_name, cursor_value
     FROM sync_peer_cursors ORDER BY stream_name, peer_id`).all();
@@ -117,7 +85,7 @@ export function inspectSyncGroupRecoveryDatabase(databasePath, factIds = []) {
     const factExists = db.prepare('SELECT COUNT(*) FROM nodes WHERE id = ? AND deleted_at IS NULL').pluck();
     const facts = Object.fromEntries(factIds.map((id) => [id, Number(factExists.get(id)) === 1]));
     return {
-      ...datasetFacts(db),
+      ...inspectSyncFromZeroDatasetFacts(db),
       ...peerProgress(db),
       activeDeviceIdentities: activeDeviceIdentities(db),
       activeMemberCount: count("SELECT COUNT(*) FROM sync_group_members WHERE state = 'active'"),

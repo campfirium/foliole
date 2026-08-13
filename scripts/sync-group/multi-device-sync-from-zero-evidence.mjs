@@ -10,43 +10,10 @@ import {
   assertSyncFromZeroCursorContinuity, assertSyncFromZeroDatasetFacts,
   syncFromZeroDatasetDigest, SYNC_FROM_ZERO_DATASET
 } from './sync-from-zero-contract.mjs';
+import { inspectSyncFromZeroDatasetFacts } from './sync-from-zero-dataset-inspect.mjs';
 import { createSyncProgressWatchdog } from './sync-progress-watchdog.mjs';
 
 const APP_ID = 'com.foliole.android';
-
-export function inspectSyncFromZeroDatasetFacts(database) {
-  const prefix = `${SYNC_FROM_ZERO_DATASET.nodePrefix}%`;
-  const scalar = (sql) => {
-    const statement = database.prepare(sql);
-    return Number(typeof statement.pluck === 'function'
-      ? statement.pluck().get(prefix) ?? 0 : statement.get(prefix)?.count ?? 0);
-  };
-  const nodes = database.prepare(`SELECT id, body_blob_hash FROM nodes
-    WHERE id LIKE ? AND deleted_at IS NULL ORDER BY id`).all(prefix);
-  const attachments = database.prepare(`SELECT na.node_id, ab.attachment_id, ab.content_hash
-    FROM node_attachments na JOIN attachment_blobs ab ON ab.attachment_id = na.attachment_id
-    WHERE na.node_id LIKE ? ORDER BY na.node_id, ab.attachment_id`).all(prefix);
-  const attachmentIds = attachments.map(({ attachment_id }) => attachment_id);
-  const contentHashes = nodes.map(({ body_blob_hash }) => body_blob_hash);
-  const nodeIds = nodes.map(({ id }) => id);
-  return {
-    datasetAttachmentCount: attachments.length,
-    datasetAttachmentIds: attachmentIds,
-    datasetCachedAttachmentCount: scalar(`SELECT COUNT(*) AS count FROM node_attachments na
-      JOIN attachment_blobs ab ON ab.attachment_id = na.attachment_id
-      WHERE na.node_id LIKE ? AND ab.availability = 'cached'`),
-    datasetCachedContentBlobCount: scalar(`SELECT COUNT(DISTINCT n.body_blob_hash) AS count FROM nodes n
-      JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
-      WHERE n.id LIKE ? AND n.deleted_at IS NULL`),
-    datasetContentBlobCount: scalar(`SELECT COUNT(DISTINCT n.body_blob_hash) AS count FROM nodes n
-      JOIN content_blobs cb ON cb.hash = n.body_blob_hash
-      WHERE n.id LIKE ? AND n.deleted_at IS NULL`),
-    datasetContentHashes: contentHashes,
-    datasetDigest: syncFromZeroDatasetDigest({ attachmentIds, contentHashes, nodeIds }),
-    datasetNodeCount: nodes.length,
-    datasetNodeIds: nodeIds
-  };
-}
 
 function peerProgress(database) {
   return database.prepare(`SELECT peer_id, stream_name, cursor_value FROM sync_peer_cursors
