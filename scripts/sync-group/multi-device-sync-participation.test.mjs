@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+
 import { describe, expect, it } from 'vitest';
 
 import { assertAndroidResumeData } from './multi-device-sync-participation-evidence.mjs';
@@ -9,6 +11,11 @@ function snapshot(facts, counts = { attachments: 1, content_blobs: 5, nodes: 8 }
 }
 
 describe('Android resume evidence', () => {
+  it('uses a database-only device snapshot for participation facts', () => {
+    const source = fs.readFileSync('scripts/sync-group/multi-device-sync-participation.mjs', 'utf8');
+    expect(source).toContain('includeAttachments: false');
+  });
+
   it('accepts exact fact convergence without requiring an incidental count delta', () => {
     expect(() => assertAndroidResumeData(
       snapshot({ existing: 'B' }), snapshot({ existing: 'B', resumed: 'A' }), 'resumed', fail

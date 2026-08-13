@@ -33,7 +33,8 @@ async function waitUntil(label, inspect, accept, missingFact, timeoutMs = 60_000
 }
 
 function androidSnapshot(paths) {
-  return collectAndroidDeviceSnapshot({ adb: paths.adb, appId: APP_ID, includeEvents: false,
+  return collectAndroidDeviceSnapshot({ adb: paths.adb, appId: APP_ID,
+    includeAttachments: false, includeEvents: false,
     serial: A5_SERIAL, tables: ['attachments', 'content_blobs', 'nodes'],
     databaseInspector: (database) => ({ ...inspectPairSyncRecoveryWorkspace(database),
       syncDeliveryReceiptCount: Number(database.prepare(

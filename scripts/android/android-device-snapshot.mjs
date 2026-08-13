@@ -173,7 +173,7 @@ export async function collectAndroidDeviceSnapshot(rawOptions) {
   try {
     const [packageInfo, events, attachments] = await Promise.all([
       collectPackageInfo(options), rawOptions.includeEvents === false ? [] : collectEvents(options),
-      pullAttachmentArchive(options, attachmentArchivePath)
+      rawOptions.includeAttachments === false ? null : pullAttachmentArchive(options, attachmentArchivePath)
     ]);
     const sidecarPaths = await pullDatabase(options, dbPath);
     const database = sidecarPaths
