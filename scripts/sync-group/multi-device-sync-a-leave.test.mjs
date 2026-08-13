@@ -3,7 +3,7 @@
 import { expect, it } from 'vitest';
 
 import {
-  assertAndroidConsumerComplete, assertSurvivorProof
+  assertAndroidConsumerComplete, assertSurvivorProof, projectAndroidConsumerProgress
 } from './multi-device-sync-a-leave-proof.mjs';
 
 const factIds = { B: 'fact-b', C: 'fact-c' };
@@ -43,6 +43,10 @@ it('releases C only after B has the new identities, bodies, and attachment inven
     ...android.database.inspection, journeyFacts: { old: 'A' }, userNodeCount: 4
   } } };
   expect(assertAndroidConsumerComplete({ before, expected, snapshot: android })).toEqual(factIds);
+  expect(projectAndroidConsumerProgress({ before, expected, snapshot: android })).toMatchObject({
+    active: 2, activeIds: 2, departed: true, factIds, group: true,
+    inventory: { before: [4, 4, 1], current: [6, 6, 2] }, missing: [0, 0], timeline: true
+  });
   expect(() => assertAndroidConsumerComplete({ before, expected, snapshot: {
     ...android, database: { ...android.database, inspection: {
       ...android.database.inspection, missingAttachmentCount: 1

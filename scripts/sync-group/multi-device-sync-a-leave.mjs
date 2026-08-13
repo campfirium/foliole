@@ -10,7 +10,8 @@ import { macosA5GradleEnv, macosA5Paths, A5_SERIAL } from '../android/macos-a5-d
 import { runMacosA5SyncGroupMaintenance } from '../android/macos-a5-sync-group-maintenance-action.mjs';
 import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desktop-session.mjs';
 import {
-  assertAndroidConsumerComplete, assertSurvivorProof, matchesAndroidSurvivorState
+  assertAndroidConsumerComplete, assertSurvivorProof, matchesAndroidSurvivorState,
+  projectAndroidConsumerProgress
 } from './multi-device-sync-a-leave-proof.mjs';
 import { createSyncProgressWatchdog } from './sync-progress-watchdog.mjs';
 import { restartARejoinAndroidProvider } from './multi-device-sync-a-rejoin.mjs';
@@ -41,7 +42,8 @@ async function waitUntil(label, inspect, accept, progress, signal, reportActivit
     signal?.throwIfAborted();
     value = await inspect();
     signal?.throwIfAborted();
-    if (observe(JSON.stringify(progress(value)), value)) reportActivity();
+    const detail = progress(value);
+    if (observe(JSON.stringify(detail), detail)) reportActivity();
     if (accept(value)) return value;
     await delay(1_000, undefined, signal ? { signal } : undefined);
   }
@@ -137,9 +139,8 @@ async function runWindowsContinuity(context, before) {
       () => androidSnapshot(paths), (value) => {
         try { assertAndroidConsumerComplete({ before: beforeWindows, expected, snapshot: value });
           return true; } catch { return false; }
-      }, (value) => [value.database?.inspection?.journeyFacts,
-        value.database?.inspection?.missingAttachmentCount,
-        value.database?.inspection?.missingContentBlobCount, value.database?.counts],
+      }, (value) => projectAndroidConsumerProgress({ before: beforeWindows, expected,
+        snapshot: value }),
       consumerController.signal, () => reportActivity('b-consumer-progress'));
     let completed;
     try { completed = await windowsProvider.raceConsumer(consumer); }

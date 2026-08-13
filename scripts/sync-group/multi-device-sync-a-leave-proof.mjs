@@ -19,6 +19,21 @@ function freshFactIds(journeyFacts, excluded) {
   return result;
 }
 
+export function projectAndroidConsumerProgress({ before, expected, snapshot }) {
+  const facts = snapshot.database?.inspection ?? {};
+  const excluded = new Set(Object.keys(before.database?.inspection?.journeyFacts ?? {}));
+  return { active: facts.activeSyncGroupMemberCount, activeIds: facts.activeMemberIdentities?.length,
+    departed: facts.departedMemberIdentities?.includes(expected.formerDeviceIdentity) ?? false,
+    factIds: freshFactIds(facts.journeyFacts, excluded),
+    group: facts.syncGroupId === expected.groupId, integrity: snapshot.database?.integrity,
+    inventory: { before: [before.database?.inspection?.userNodeCount,
+      before.database?.counts?.content_blobs, before.database?.counts?.attachments],
+    current: [facts.userNodeCount, snapshot.database?.counts?.content_blobs,
+      snapshot.database?.counts?.attachments] },
+    missing: [facts.missingContentBlobCount, facts.missingAttachmentCount],
+    timeline: facts.syncGroupTimelineId === expected.timelineId };
+}
+
 export function assertAndroidConsumerComplete({ before, expected, snapshot }) {
   const facts = assertAndroidSurvivorState(snapshot, expected);
   const excluded = new Set(Object.keys(before.database?.inspection?.journeyFacts ?? {}));
