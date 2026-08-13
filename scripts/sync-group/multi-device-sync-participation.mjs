@@ -11,6 +11,7 @@ import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey
 import {
   assertAndroidResumeData, assertDesktopDepartureData
 } from './multi-device-sync-participation-evidence.mjs';
+import { macosAcceptanceEnv, macosAcceptanceSessionOptions } from './multi-device-sync-macos-channel.mjs';
 import { startWindowsSyncGroupProvider } from './multi-device-sync-windows-provider.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
@@ -174,10 +175,12 @@ function createContext(options) {
   const databasePath = path.join(owned.root, 'library', 'Data', 'foliole.db');
   const evidenceRoot = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId,
     'participation-control');
-  return { databasePath, env: macosA5GradleEnv(), evidenceRoot, execute,
+  const env = macosAcceptanceEnv(macosA5GradleEnv());
+  return { databasePath, env, evidenceRoot, execute,
     inspectMac: (ids) => macosFacts(execute, repoRoot, databasePath, ids),
-    openSession: () => openMacosPairSyncDesktopSession({ libraryHome: path.join(owned.root, 'library'),
-      repoRoot, userDataPath: path.join(owned.root, 'user-data') }),
+    openSession: () => openMacosPairSyncDesktopSession(macosAcceptanceSessionOptions({ env,
+      libraryHome: path.join(owned.root, 'library'), repoRoot,
+      userDataPath: path.join(owned.root, 'user-data') })),
     paths: macosA5Paths(repoRoot), reportProgress, repoRoot, runId };
 }
 

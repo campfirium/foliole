@@ -44,6 +44,27 @@ it('uses the fixed product instrumentation method and records its receipt', asyn
   ]);
 });
 
+it('maps the fixed device port to an explicit isolated macOS listener', async () => {
+  const root = fs.mkdtempSync(path.join(process.cwd(), '.tmp/artifacts/a5-maintenance-test-'));
+  roots.push(root);
+  const execute = vi.fn(async (_command, args) => args.includes('instrument') ? {
+    code: 0,
+    output: 'instrumentation',
+    stdout: [
+      'INSTRUMENTATION_STATUS: folioleActionReceipt={"departurePersisted":true}',
+      'INSTRUMENTATION_STATUS: folioleAfterSemantic={}',
+      'INSTRUMENTATION_CODE: -1'
+    ].join('\n')
+  } : { code: 0, output: 'Success\n', stdout: 'Success\n' });
+  await runMacosA5SyncGroupMaintenance({
+    action: 'leave-sync-group', buildIdentity: 'isolated',
+    env: { FOLIOLE_COMPANION_SYNC_PORT: '38642' }, evidenceRoot: root, execute,
+    paths: { adb: '/fixed/adb', apk: '/fixed/app.apk', repoRoot: process.cwd() }, serial: '87a33a4b'
+  });
+  expect(execute.mock.calls.some(([, args]) => args.join(' ') ===
+    '-s 87a33a4b reverse tcp:38641 tcp:38642')).toBe(true);
+});
+
 it('creates journey facts only through the visible Capture product entry', async () => {
   const source = fs.readFileSync(
     'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupMaintenanceScenario.java',

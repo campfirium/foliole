@@ -15,6 +15,7 @@ import {
 } from './multi-device-sync-a-leave-proof.mjs';
 import { createSyncProgressWatchdog } from './sync-progress-watchdog.mjs';
 import { restartARejoinAndroidProvider } from './multi-device-sync-a-rejoin.mjs';
+import { macosAcceptanceEnv, macosAcceptanceSessionOptions } from './multi-device-sync-macos-channel.mjs';
 import { startWindowsSyncGroupProvider } from './multi-device-sync-windows-provider.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
@@ -84,14 +85,15 @@ async function createAndroidFact({ env, evidenceRoot, execute, paths, runId }) {
     env, evidenceRoot: path.join(evidenceRoot, 'b-fact'), execute, paths, serial: A5_SERIAL });
 }
 
-function openMacosSession({ owned, repoRoot }) {
-  return openMacosPairSyncDesktopSession({ libraryHome: path.join(owned.root, 'library'),
-    repoRoot, userDataPath: path.join(owned.root, 'user-data') });
+function openMacosSession({ env, owned, repoRoot }) {
+  return openMacosPairSyncDesktopSession(macosAcceptanceSessionOptions({ env,
+    libraryHome: path.join(owned.root, 'library'), repoRoot,
+    userDataPath: path.join(owned.root, 'user-data') }));
 }
 
 async function leaveAndRestartA(context) {
   const { databasePath, env, execute, owned, paths, rejoin, reportProgress, repoRoot } = context;
-  let session = await openMacosSession({ owned, repoRoot });
+  let session = await openMacosSession({ env, owned, repoRoot });
   try {
     await restartARejoinAndroidProvider({ env, execute, paths });
     reportProgress('survivor-provider-ready');
@@ -103,7 +105,7 @@ async function leaveAndRestartA(context) {
     }
     reportProgress('a-left');
     await session.close();
-    session = await openMacosSession({ owned, repoRoot });
+    session = await openMacosSession({ env, owned, repoRoot });
     const restartedOverview = await session.load();
     if (restartedOverview.sync_group !== null || restartedOverview.paired_devices.length !== 0) {
       throw new Error('macOS A restored obsolete membership after restart.');
@@ -196,7 +198,8 @@ function createContext({ execute, reportActivity = () => {}, reportProgress, rep
   const rejoin = JSON.parse(fs.readFileSync(path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs',
     runId, 'a-rejoin/a-rejoin-proof.json'), 'utf8'));
   return { databasePath: path.join(owned.root, 'library', 'Data', 'foliole.db'),
-    env: macosA5GradleEnv(), evidenceRoot, execute, owned, paths: macosA5Paths(repoRoot),
+    env: macosAcceptanceEnv(macosA5GradleEnv()), evidenceRoot, execute, owned,
+    paths: macosA5Paths(repoRoot),
     rejoin, reportActivity, reportProgress, repoRoot, runId };
 }
 

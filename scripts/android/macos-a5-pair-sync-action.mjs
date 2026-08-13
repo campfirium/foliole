@@ -156,7 +156,7 @@ async function macosDesktopControl(execute, _paths, _env, action) {
 export async function runMacosA5PairSync({
   buildIdentity, credentialRepairRequired, desktopControl = macosDesktopControl,
   deviceFingerprint, existingPairing, env, evidenceRoot, execute,
-  libraryHome, paths, protectData, remotePeerFingerprint,
+  libraryHome, paths, protectData, remotePeerFingerprint, openTransport, closeTransport,
   runPairSyncRecovery = runWindowsA5PairSyncRecovery, serial,
   userDataPath = path.join(paths.repoRoot, MACOS_DAILY_DEBUG_ROOT, 'user-data'),
   validateDesktop = reconcileAuthorizedMacosDailyPairing
@@ -165,9 +165,11 @@ export async function runMacosA5PairSync({
   return runPairSyncRecovery({
     adbPort: '5037', buildIdentity, deviceFingerprint, env, evidenceRoot, execute,
     existingPairing,
+    ...(closeTransport ? { closeTransport } : {}),
     openDesktopSession: (options) => openMacosPairSyncDesktopSession({
       ...options, libraryHome, userDataPath
     }),
+    ...(openTransport ? { openTransport } : {}),
     desktopControl, validateDesktop,
     paths: {
       adbPath: paths.adb,

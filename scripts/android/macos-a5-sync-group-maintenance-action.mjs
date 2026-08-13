@@ -1,7 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { PAIR_SYNC_PORT } from '../windows/windows-a5-pair-sync-recovery-transport.mjs';
+import {
+  pairSyncHostPort, PAIR_SYNC_PORT
+} from '../windows/windows-a5-pair-sync-recovery-transport.mjs';
 
 const APP_ID = 'com.foliole.android';
 const RUNNER = `${APP_ID}.test/androidx.test.runner.AndroidJUnitRunner`;
@@ -60,6 +62,7 @@ export async function runMacosA5SyncGroupMaintenance({
   const testApk = path.join(paths.repoRoot, TEST_APK);
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const options = { env, timeoutCode: 'sync_group_maintenance_timeout', timeoutMs: 3 * 60_000 };
+  const hostPort = pairSyncHostPort(env);
   const output = [];
   let reverseCreated = false;
   let testInstalled = false;
@@ -69,7 +72,7 @@ export async function runMacosA5SyncGroupMaintenance({
     testInstalled = true;
     if (action === 'leave-sync-group' || action === 'pause-and-leave') {
       output.push((await checked(execute, paths.adb,
-        ['-s', serial, 'reverse', `tcp:${PAIR_SYNC_PORT}`, `tcp:${PAIR_SYNC_PORT}`],
+        ['-s', serial, 'reverse', `tcp:${PAIR_SYNC_PORT}`, `tcp:${hostPort}`],
         options, 'product transport')).output);
       reverseCreated = true;
     }
