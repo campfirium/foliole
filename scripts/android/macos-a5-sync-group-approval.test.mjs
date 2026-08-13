@@ -70,6 +70,9 @@ it('reuses bounded Settings navigation that exits Review and nested Settings sur
   expect(navigation).toContain('"companion-top-bar-left-action"');
   expect(navigation).toContain('"companion-top-bar-back"');
   expect(navigation).toContain('"companion-tab-settings"');
+  expect(navigation).toContain('FolioleCompanionWebViewSemanticAdapter.perform');
+  expect(navigation).toContain('"target_missing".equals(code) || "target_hidden".equals(code)');
+  expect(navigation).not.toContain('clickVisible');
 });
 
 it('opens transport after provider stop and starts the peer only after the product surface is stable', async () => {
