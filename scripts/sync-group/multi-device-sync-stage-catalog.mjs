@@ -33,6 +33,7 @@ const stages = [
       { hardDeadlineMs: WINDOWS_C_JOIN_DEADLINE, name: 'windows-c-join', waitsFor: null }] },
   { action: 'rejoin-a', host: 'all', inputs: ['b_c_group_active'], name: 'a-rejoin',
     hardDeadlineMs: 20 * 60_000, hosts: ['macos-a', 'android-b', 'windows-c'],
+    activities: ['windows-provider-progress'],
     milestones: ['a-listener-ready', 'three-members-converged', 'a-fact-created',
       'b-fact-created', 'c-fact-created', 'three-facts-converged', 'three-members-restarted'],
     outputs: ['three_members_active'],

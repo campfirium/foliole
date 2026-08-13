@@ -169,6 +169,7 @@ export async function proveSyncFromZero(options) {
     const androidAfterC = await collectAndroidSyncFromZeroSnapshot(context.paths, true);
     const rejoin = await proveARejoin({ execute: context.execute, repoRoot: context.repoRoot,
       runId: context.runId,
+      reportActivity: () => context.reportActivity('three-host-rejoin-progress'),
       reportProgress: () => context.reportActivity('three-host-rejoin-progress') });
     context.reportProgress('three-host-converged');
     session = await openMacosPairSyncDesktopSession({

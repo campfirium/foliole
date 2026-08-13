@@ -135,13 +135,14 @@ export async function waitForThreeDeviceProof({ ids, inspect, intervalMs = 1_000
   return result.proof;
 }
 
-export async function proveARejoin({ execute, reportProgress, repoRoot, runId }) {
+export async function proveARejoin({ execute, reportActivity = () => {}, reportProgress, repoRoot, runId }) {
   const owned = createIsolatedMacosRoot({ repoRoot, runId });
   const paths = macosA5Paths(repoRoot);
   const env = macosA5GradleEnv();
   const evidenceRoot = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId, 'a-rejoin');
   fs.mkdirSync(evidenceRoot, { recursive: true });
-  const windowsProvider = startWindowsARejoinProvider({ evidenceRoot, execute, repoRoot });
+  const windowsProvider = startWindowsARejoinProvider({ evidenceRoot, execute, repoRoot,
+    reportProgress: () => reportActivity('windows-provider-progress') });
   let windowsSettled = false;
   const restartProvider = () => restartARejoinAndroidProvider({ env, execute, paths });
   let session = await openMacosPairSyncDesktopSession({ libraryHome: path.join(owned.root, 'library'),

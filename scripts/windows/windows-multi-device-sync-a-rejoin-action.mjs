@@ -38,14 +38,16 @@ async function waitForFreshFacts(execute, inspect, paths, excluded, origins, fac
   throw new Error(`Windows C timed out during A rejoin: ${JSON.stringify(facts)}`);
 }
 
-async function withSession(paths, evidenceRoot, openSession, action) {
+async function withSession(paths, evidenceRoot, openSession, action, onOpened = () => {}) {
   const opened = await openSession(paths, evidenceRoot);
+  onOpened();
   try { return await action(opened); } finally { await opened.app.close(); }
 }
 
 export async function runWindowsMultiDeviceSyncARejoin({ evidenceRoot, execute, paths,
   control, createFact = createDesktopSyncGroupJourneyFact, inspect, invoke, openSession, restore,
-  suspend, waitForConsumerRelease = waitForWindowsSyncGroupProviderRelease }) {
+  reportProgress = () => {}, suspend,
+  waitForConsumerRelease = waitForWindowsSyncGroupProviderRelease }) {
   const recovery = control && inspect && invoke && openSession ? null
     : await import('./windows-sync-group-recovery-action.mjs');
   const lifecycle = restore && suspend ? null : await import('./windows-sync-group-native-lifecycle.mjs');
@@ -57,6 +59,7 @@ export async function runWindowsMultiDeviceSyncARejoin({ evidenceRoot, execute, 
   suspend ??= lifecycle.suspendWindowsNativeClient;
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const suspended = await suspend({ control, execute, paths });
+  reportProgress({ factId: 'a-rejoin', milestone: 'c-native-suspended' });
   let primaryError;
   let result;
   try {
@@ -64,15 +67,18 @@ export async function runWindowsMultiDeviceSyncARejoin({ evidenceRoot, execute, 
     const excluded = new Set(Object.keys(initial.journeyFacts ?? {}));
     const continuous = await withSession(paths, evidenceRoot, openSession, async ({ page }) => {
       const ab = await waitForFreshFacts(execute, inspect, paths, excluded, ['A', 'B']);
+      reportProgress({ factId: 'a-rejoin', milestone: 'c-a-b-facts-received' });
       const created = await createFact({ device: 'C', evidenceRoot, session: {
         invoke: (command, args) => invoke(page, command, args)
       } });
+      reportProgress({ factId: 'a-rejoin', milestone: 'c-fact-created' });
       const ids = { A: ab.fresh.A, B: ab.fresh.B, C: created.factId };
       const value = (await waitForFreshFacts(execute, inspect, paths, excluded, ['A', 'B', 'C'],
         Object.values(ids))).facts;
       assertComplete(value, ids);
+      reportProgress({ factId: 'a-rejoin', milestone: 'c-three-facts-converged' });
       return { converged: value, ids };
-    });
+    }, () => reportProgress({ factId: 'a-rejoin', milestone: 'c-session-opened' }));
     const { converged, ids } = continuous;
     const restarted = await withSession(paths, evidenceRoot, openSession, async () => {
       const value = (await waitForFreshFacts(execute, inspect, paths, excluded, ['A', 'B', 'C'],
@@ -80,7 +86,7 @@ export async function runWindowsMultiDeviceSyncARejoin({ evidenceRoot, execute, 
       assertComplete(value, ids);
       await waitForConsumerRelease({ action: 'multi-device-sync-a-rejoin', repoRoot: paths.repoRoot });
       return value;
-    });
+    }, () => reportProgress({ factId: 'a-rejoin', milestone: 'c-session-restarted' }));
     const receiptPath = path.join(evidenceRoot, 'multi-device-sync-a-rejoin-receipt.json');
     fs.writeFileSync(receiptPath, `${JSON.stringify({ completedAt: new Date().toISOString(),
       converged, factIds: ids, initialJourneyFacts: initial.journeyFacts,

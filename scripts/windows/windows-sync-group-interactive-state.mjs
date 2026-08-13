@@ -10,6 +10,10 @@ export const WINDOWS_SYNC_GROUP_INTERACTIVE_ACTIONS = new Set([
   'multi-device-sync-from-zero', 'multi-device-sync-participation'
 ]);
 export const WINDOWS_SYNC_GROUP_INTERACTIVE_WORKER_ENV = 'FOLIOLE_SYNC_GROUP_INTERACTIVE_WORKER';
+const WINDOWS_A_REJOIN_PROGRESS = [
+  'c-native-suspended', 'c-session-opened', 'c-a-b-facts-received',
+  'c-fact-created', 'c-three-facts-converged', 'c-session-restarted'
+];
 
 export function syncGroupInteractivePaths(repoRoot) {
   const stateRoot = path.join(repoRoot, '.tmp', 'windows-sync-group-interactive');
@@ -31,6 +35,11 @@ export function validateSyncGroupInteractiveRequest(request, repoRoot) {
 }
 
 export function validateSyncGroupInteractiveProgress(progress, action) {
+  if (action === 'multi-device-sync-a-rejoin'
+      && WINDOWS_A_REJOIN_PROGRESS.includes(progress?.milestone)
+      && progress.factId === 'a-rejoin') {
+    return { factId: progress.factId, milestone: progress.milestone };
+  }
   if (action === 'multi-device-sync-from-zero'
       && WINDOWS_SYNC_FROM_ZERO_PROGRESS.includes(progress?.milestone)
       && progress.factId === 'sync-from-zero') {

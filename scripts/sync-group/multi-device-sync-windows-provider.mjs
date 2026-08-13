@@ -13,7 +13,11 @@ const PROVIDER_ACTIONS = Object.freeze({
     progressMilestone: 'c-fact-created'
   },
   'multi-device-sync-a-rejoin': {
-    controllerAction: 'windows-c-a-rejoin', label: 'A-rejoin', missingPrefix: 'windows_a_rejoin'
+    controllerAction: 'windows-c-a-rejoin', label: 'A-rejoin', missingPrefix: 'windows_a_rejoin',
+    progressFactPattern: 'a-rejoin', progressMilestones: [
+      'c-native-suspended', 'c-session-opened', 'c-a-b-facts-received',
+      'c-fact-created', 'c-three-facts-converged', 'c-session-restarted'
+    ]
   },
   'multi-device-sync-participation': {
     controllerAction: 'windows-c-participation', label: 'participation',

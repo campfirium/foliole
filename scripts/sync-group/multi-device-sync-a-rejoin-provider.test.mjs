@@ -45,6 +45,17 @@ it('derives one fresh identity per device without reusing the prior journey', ()
     .toEqual({ A: 'a', B: 'b', C: 'c' });
 });
 
+it('forwards A-rejoin provider lifecycle progress from the nonce-bound worker', () => {
+  const reportProgress = vi.fn();
+  const execute = vi.fn((_command, _args, options) => {
+    options.onOutput({ stdout: '[windows-dev-action] progress action=multi-device-sync-a-rejoin '
+      + 'nonce=12345678-1234-1234-1234-123456789abc milestone=c-session-opened fact=a-rejoin\n' });
+    return new Promise(() => {});
+  });
+  startWindowsARejoinProvider({ execute, reportProgress, repoRoot: process.cwd() });
+  expect(reportProgress).toHaveBeenCalledWith('c-session-opened');
+});
+
 it('reads the A-leave receipt only after the same fixed provider is released', async () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'a-leave-provider-'));
   roots.push(repoRoot);

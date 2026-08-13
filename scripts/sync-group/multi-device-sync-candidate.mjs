@@ -37,6 +37,7 @@ const CONTROLLER_FILES = [
   'scripts/sync-group/sync-from-zero-contract.mjs',
   'scripts/sync-group/sync-from-zero-dataset-inspect.mjs',
   'scripts/desktop/sync-from-zero-dataset-action.mjs',
+  'scripts/windows/windows-multi-device-sync-a-rejoin-action.mjs',
   'scripts/windows/windows-multi-device-sync-from-zero-action.mjs',
   'scripts/windows/windows-multi-device-sync-participation-action.mjs',
   'scripts/windows/windows-sync-group-participation-control.mjs',
@@ -44,6 +45,7 @@ const CONTROLLER_FILES = [
   'scripts/windows/windows-sync-group-recovery-inspect.mjs',
   'scripts/windows/windows-sync-group-runtime-progress.mjs',
   'scripts/windows/windows-sync-group-interactive-action.mjs',
+  'scripts/windows/windows-sync-group-interactive-state.mjs',
   'scripts/windows/windows-sync-group-interactive-worker.mjs',
   'scripts/windows/windows-process-alive.mjs',
   'scripts/windows/windows-sync-group-session-close.mjs'
