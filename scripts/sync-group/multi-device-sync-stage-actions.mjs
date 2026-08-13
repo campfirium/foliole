@@ -48,7 +48,10 @@ async function establishAB(repoRoot, runId, { reportProgress, signal, stage }) {
   try {
     await runMacosA5SyncGroupMaintenance({ action: 'clear-app-data', buildIdentity: runId,
       env, evidenceRoot: path.join(evidenceRoot, 'clear-a5'), execute, paths, serial: A5_SERIAL });
-    lastSuccessfulAction = 'a5_cleared'; reportProgress('a5-cleared');
+    lastSuccessfulAction = 'a5_cleared';
+    await runMacosA5SyncGroupMaintenance({ action: 'activate-participation', buildIdentity: runId,
+      env, evidenceRoot: path.join(evidenceRoot, 'activate-a5'), execute, paths, serial: A5_SERIAL });
+    lastSuccessfulAction = 'a5_participation_activated'; reportProgress('a5-cleared');
     const readiness = resolveMacosA5PairSyncReadiness(paths);
     lastSuccessfulAction = 'a5_pairing_readiness';
     const result = await runMacosA5PairSync({ buildIdentity: runId,

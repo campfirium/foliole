@@ -56,6 +56,18 @@ it('creates journey facts only through the visible Capture product entry', async
   expect(source).toContain('put("factPersisted", true)');
 });
 
+it('activates persisted Sync participation through visible product controls', async () => {
+  const source = fs.readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupMaintenanceTest.java',
+    'utf8'
+  );
+  expect(source).toContain('activatesSyncParticipationThroughProduct');
+  expect(source).toContain('FolioleCompanionSyncGroupMaintenanceScenario.toggleSync');
+  expect(source).toContain('FolioleCompanionSyncGroupMaintenanceScenario.togglePause');
+  expect(source).toContain('waitParticipation(instrumentation, true, false)');
+  expect(source).toContain('put("activated", true)');
+});
+
 it('preserves a lost Android window focus as an environment failure', async () => {
   const root = fs.mkdtempSync(path.join(process.cwd(), '.tmp/artifacts/a5-maintenance-test-'));
   roots.push(root);

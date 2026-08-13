@@ -24,6 +24,7 @@ public class FolioleCompanionSyncGroupMaintenanceTest {
     @Test public void clearsAppDataThroughProduct() throws Exception { run(false); }
     @Test public void createsJourneyFactThroughProduct() throws Exception { runFact(); }
     @Test public void controlsSyncParticipationThroughProduct() throws Exception { runParticipation(); }
+    @Test public void activatesSyncParticipationThroughProduct() throws Exception { runActivate(); }
     @Test public void pausesSyncParticipationThroughProduct() throws Exception { runSetPause(true); }
     @Test public void resumesSyncParticipationThroughProduct() throws Exception { runSetPause(false); }
     @Test public void pausesAndLeavesSyncGroupThroughProduct() throws Exception { runPauseAndLeave(); }
@@ -99,6 +100,26 @@ public class FolioleCompanionSyncGroupMaintenanceTest {
         }
     }
 
+    private void runActivate() throws Exception {
+        Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
+        Activity activity = start(instrumentation);
+        try {
+            WebView webView = readyWebView(instrumentation, activity);
+            JSONObject state = participationState(instrumentation);
+            if (!state.optBoolean("sync_enabled")) {
+                FolioleCompanionSyncGroupMaintenanceScenario.toggleSync(instrumentation, webView);
+                state = participationState(instrumentation);
+            }
+            if (state.optBoolean("sync_paused")) {
+                FolioleCompanionSyncGroupMaintenanceScenario.togglePause(instrumentation, webView);
+            }
+            waitParticipation(instrumentation, true, false);
+            sendEvidence(instrumentation, webView, new JSONObject().put("activated", true));
+        } finally {
+            instrumentation.runOnMainSync(activity::finish);
+        }
+    }
+
     private void runPauseAndLeave() throws Exception {
         Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
         Activity activity = start(instrumentation);
@@ -158,6 +179,10 @@ public class FolioleCompanionSyncGroupMaintenanceTest {
             Thread.sleep(100);
         }
         throw new IllegalStateException("Timed out waiting for Sync participation state.");
+    }
+
+    private static JSONObject participationState(Instrumentation instrumentation) throws Exception {
+        return FolioleCompanionSyncParticipationStore.state(instrumentation.getTargetContext(), true);
     }
 
     private static Activity start(Instrumentation instrumentation) {

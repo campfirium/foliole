@@ -43,12 +43,13 @@ function bundle(output, key) {
 export async function runMacosA5SyncGroupMaintenance({
   action, buildIdentity, env, evidenceRoot, execute, paths, serial
 }) {
-  if (!['leave-sync-group', 'clear-app-data', 'control-participation',
+  if (!['leave-sync-group', 'clear-app-data', 'activate-participation', 'control-participation',
     'create-journey-fact', 'pause-and-leave', 'pause-participation',
     'resume-participation'].includes(action)) {
     throw new Error('Unsupported maintenance action');
   }
-  const methods = { 'clear-app-data': 'clearsAppDataThroughProduct',
+  const methods = { 'activate-participation': 'activatesSyncParticipationThroughProduct',
+    'clear-app-data': 'clearsAppDataThroughProduct',
     'control-participation': 'controlsSyncParticipationThroughProduct',
     'create-journey-fact': 'createsJourneyFactThroughProduct',
     'leave-sync-group': 'leavesSyncGroupThroughProduct',
@@ -81,10 +82,12 @@ export async function runMacosA5SyncGroupMaintenance({
     const receipt = bundle(instrumentation.stdout, 'folioleActionReceipt');
     const expected = action === 'leave-sync-group' || action === 'pause-and-leave'
       ? 'departurePersisted' : action === 'create-journey-fact' ? 'factPersisted'
-        : action === 'control-participation' || action === 'resume-participation' ? 'resumed'
+        : action === 'activate-participation' ? 'activated'
+          : action === 'control-participation' || action === 'resume-participation' ? 'resumed'
           : action === 'pause-participation' ? 'paused' : 'appDataCleared';
     if (receipt[expected] !== true) throw new Error(`Product receipt did not prove ${expected}`);
-    if (['control-participation', 'create-journey-fact', 'resume-participation'].includes(action)) {
+    if (['activate-participation', 'control-participation',
+      'create-journey-fact', 'resume-participation'].includes(action)) {
       output.push((await checked(execute, paths.adb, [
         '-s', serial, 'shell', 'am', 'start', '-n', `${APP_ID}/.MainActivity`
       ], options, 'provider resume')).output);
