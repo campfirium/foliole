@@ -42,7 +42,8 @@ public class FolioleCompanionSyncGroupMaintenanceTest {
             Bundle evidence = new Bundle();
             evidence.putString("folioleBeforeSemantic", before.toString());
             evidence.putString("folioleAfterSemantic",
-                FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView).toString());
+                (leave ? departureSemantic(instrumentation)
+                    : FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView)).toString());
             evidence.putString("folioleActionReceipt", receipt.toString());
             instrumentation.sendStatus(2, evidence);
         } finally {
@@ -129,7 +130,7 @@ public class FolioleCompanionSyncGroupMaintenanceTest {
             waitParticipation(instrumentation, true, true);
             JSONObject receipt = FolioleCompanionSyncGroupMaintenanceScenario.leave(instrumentation, webView)
                 .put("pausedBeforeLeave", true);
-            sendEvidence(instrumentation, webView, receipt);
+            sendDepartureEvidence(instrumentation, receipt);
         } finally {
             instrumentation.runOnMainSync(activity::finish);
         }
@@ -164,6 +165,22 @@ public class FolioleCompanionSyncGroupMaintenanceTest {
             FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView).toString());
         evidence.putString("folioleActionReceipt", receipt.toString());
         instrumentation.sendStatus(2, evidence);
+    }
+
+    private static void sendDepartureEvidence(
+        Instrumentation instrumentation, JSONObject receipt
+    ) throws Exception {
+        Bundle evidence = new Bundle();
+        evidence.putString("folioleAfterSemantic", departureSemantic(instrumentation).toString());
+        evidence.putString("folioleActionReceipt", receipt.toString());
+        instrumentation.sendStatus(2, evidence);
+    }
+
+    private static JSONObject departureSemantic(Instrumentation instrumentation) throws Exception {
+        Context context = instrumentation.getTargetContext();
+        return new JSONObject()
+            .put("pairing", FolioleCompanionPairingStore.loadPairingState(context))
+            .put("participation", participationState(instrumentation));
     }
 
     private static void waitParticipation(

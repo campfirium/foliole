@@ -78,7 +78,13 @@ export async function runMacosA5SyncGroupMaintenance({
       '-s', serial, 'shell', 'am', 'instrument', '-w', '-r', '-e', 'class', testClass, RUNNER
     ], options, 'product instrumentation');
     output.push(instrumentation.output);
-    if (!/^INSTRUMENTATION_CODE: -1$/mu.test(instrumentation.stdout)) throw new Error('Product instrumentation did not finish');
+    if (!/^INSTRUMENTATION_CODE: -1$/mu.test(instrumentation.stdout)) {
+      throw Object.assign(new Error('Product instrumentation did not finish'), {
+        failureOwner: 'product', host: 'android-b',
+        lastSuccessfulAction: 'android_activity_started', missingFact: 'product_instrumentation_failed',
+        result: instrumentation
+      });
+    }
     const receipt = bundle(instrumentation.stdout, 'folioleActionReceipt');
     const expected = action === 'leave-sync-group' || action === 'pause-and-leave'
       ? 'departurePersisted' : action === 'create-journey-fact' ? 'factPersisted'

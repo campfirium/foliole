@@ -74,6 +74,38 @@ it('activates persisted Sync participation through visible product controls', as
   expect(scenario).toContain('!item.optBoolean("disabled")');
 });
 
+it('observes Leave through durable host state after the visible confirmation', () => {
+  const test = fs.readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupMaintenanceTest.java',
+    'utf8'
+  );
+  const scenario = fs.readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupMaintenanceScenario.java',
+    'utf8'
+  );
+  expect(scenario).toContain('"companion-sync-group-leave-confirm"');
+  expect(scenario).toContain('FolioleCompanionPairingStore.loadStoredDeviceId(context) == null');
+  expect(scenario).toContain('put("credentialsCleared", true)');
+  expect(test).toContain('sendDepartureEvidence(instrumentation, receipt)');
+  expect(test).toContain('FolioleCompanionPairingStore.loadPairingState(context)');
+});
+
+it('classifies an abnormal instrumentation exit as an Android product failure', async () => {
+  const root = fs.mkdtempSync(path.join(process.cwd(), '.tmp/artifacts/a5-maintenance-test-'));
+  roots.push(root);
+  const execute = vi.fn(async (_command, args) => args.includes('instrument') ? {
+    code: 0,
+    output: 'INSTRUMENTATION_RESULT: shortMsg=Process crashed.\nINSTRUMENTATION_CODE: 0',
+    stdout: 'INSTRUMENTATION_RESULT: shortMsg=Process crashed.\nINSTRUMENTATION_CODE: 0'
+  } : { code: 0, output: 'Success\n', stdout: 'Success\n' });
+  await expect(runMacosA5SyncGroupMaintenance({
+    action: 'leave-sync-group', buildIdentity: 'build-crashed', env: {}, evidenceRoot: root, execute,
+    paths: { adb: '/fixed/adb', apk: '/fixed/app.apk', repoRoot: process.cwd() }, serial: '87a33a4b'
+  })).rejects.toMatchObject({
+    failureOwner: 'product', host: 'android-b', missingFact: 'product_instrumentation_failed'
+  });
+});
+
 it('preserves a lost Android window focus as an environment failure', async () => {
   const root = fs.mkdtempSync(path.join(process.cwd(), '.tmp/artifacts/a5-maintenance-test-'));
   roots.push(root);

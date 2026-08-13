@@ -1,6 +1,7 @@
 package com.foliole.android;
 
 import android.app.Instrumentation;
+import android.content.Context;
 import android.webkit.WebView;
 
 import org.json.JSONObject;
@@ -15,8 +16,8 @@ final class FolioleCompanionSyncGroupMaintenanceScenario {
         click(instrumentation, webView, "companion-settings-sync");
         click(instrumentation, webView, "companion-sync-group-leave");
         JSONObject receipt = click(instrumentation, webView, "companion-sync-group-leave-confirm");
-        waitForLeaveOutcome(instrumentation, webView, 30_000);
-        return receipt.put("departurePersisted", true);
+        waitForDeparture(instrumentation, webView, 30_000);
+        return receipt.put("credentialsCleared", true).put("departurePersisted", true);
     }
 
     static JSONObject toggleSync(Instrumentation instrumentation, WebView webView) throws Exception {
@@ -94,27 +95,23 @@ final class FolioleCompanionSyncGroupMaintenanceScenario {
         waitForVisibility(instrumentation, webView, testId, timeoutMs, false);
     }
 
-    private static void waitForLeaveOutcome(
+    private static void waitForDeparture(
         Instrumentation instrumentation, WebView webView, long timeoutMs
     ) throws Exception {
+        Context context = instrumentation.getTargetContext();
         long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
         while (System.nanoTime() < deadline) {
-            JSONObject snapshot = FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView);
-            boolean confirmationVisible = false;
-            for (int index = 0; index < snapshot.getJSONArray("elements").length(); index += 1) {
-                JSONObject item = snapshot.getJSONArray("elements").getJSONObject(index);
-                if (!item.optBoolean("visible")) continue;
-                String testId = item.optString("testId");
-                confirmationVisible |= "companion-sync-group-leave-confirm".equals(testId);
-                if ("companion-sync-group-leave-error".equals(testId)) {
-                    JSONObject error = FolioleCompanionWebViewSemanticAdapter.readAttribute(
-                        instrumentation, webView, testId, "data-error-code"
-                    );
-                    throw new IllegalStateException("Product Leave failed: " + error.optString("value"));
-                }
-            }
-            if (!confirmationVisible) return;
-            Thread.sleep(100);
+            if (FolioleCompanionPairingStore.loadStoredDeviceId(context) == null) return;
+            Thread.sleep(250);
+        }
+        JSONObject snapshot = FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView);
+        for (int index = 0; index < snapshot.getJSONArray("elements").length(); index += 1) {
+            JSONObject item = snapshot.getJSONArray("elements").getJSONObject(index);
+            if (!"companion-sync-group-leave-error".equals(item.optString("testId"))) continue;
+            JSONObject error = FolioleCompanionWebViewSemanticAdapter.readAttribute(
+                instrumentation, webView, item.optString("testId"), "data-error-code"
+            );
+            throw new IllegalStateException("Product Leave failed: " + error.optString("value"));
         }
         throw new IllegalStateException("Timed out waiting for product Leave completion.");
     }
