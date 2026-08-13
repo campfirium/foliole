@@ -46,7 +46,7 @@ const stages = [
     hardDeadlineMs: 30 * 60_000, hosts: ['macos-a', 'android-b', 'windows-c'],
     milestones: ['windows-paused', 'macos-pause-persisted', 'macos-resumed-cursor',
       'macos-sync-off-persisted', 'android-sync-off-persisted', 'android-pause-persisted',
-      'android-resumed-cursor', 'android-left-while-paused', 'macos-left-while-sync-off',
+      'android-resumed-cursor', 'macos-left-while-sync-off', 'android-left-while-paused',
       'windows-resumed-cursor', 'windows-sync-off-persisted', 'windows-last-member-left',
       'all-restarted-unbound'], outputs: ['participation_converged'],
     progressDeadlineMs: PRODUCT_PROGRESS_DEADLINE + CONTROL_DEADLINE, siblings: [] },

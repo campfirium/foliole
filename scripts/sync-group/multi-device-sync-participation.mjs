@@ -143,9 +143,6 @@ async function leaveAndroid(context, before) {
 }
 
 async function leaveMacos(context, session) {
-  await waitUntil('macOS observes Android departure', () => session.load(),
-    (overview) => overview.sync_group?.members.filter(({ state }) => state === 'active').length === 2,
-    'macos_android_departure_missing');
   const before = await context.inspectMac();
   await session.invoke('disable_companion_sync');
   const left = await session.leave();
@@ -195,9 +192,12 @@ export async function proveParticipationControl(options) {
       evidenceRoot: path.join(context.evidenceRoot, 'windows-offline-a-fact'), session: macos.session });
     await windows.release('consumer_complete');
     const androidBeforeLeave = await proveAndroidParticipation(context, macos.session);
-    const androidAfterLeave = await leaveAndroid(context, androidBeforeLeave);
     await leaveMacos(context, macos.session);
     macos.session = null;
+    await waitUntil('Android observes macOS departure', () => androidSnapshot(context.paths),
+      (snapshot) => snapshot.database?.inspection?.activeSyncGroupMemberCount === 2,
+      'android_macos_departure_missing');
+    const androidAfterLeave = await leaveAndroid(context, androidBeforeLeave);
     const remote = await windows.finish();
     settled = true;
     context.reportProgress('windows-resumed-cursor');
