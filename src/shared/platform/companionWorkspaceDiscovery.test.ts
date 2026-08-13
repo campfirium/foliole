@@ -5,7 +5,8 @@ const capacitorMock = vi.hoisted(() => ({
   isNativePlatform: vi.fn(() => true),
   plugin: {
     desktopHttpRequest: vi.fn(),
-    loadDiscoveryCandidates: vi.fn()
+    loadDiscoveryCandidates: vi.fn(),
+    loadSyncParticipationState: vi.fn()
   }
 }));
 
@@ -57,6 +58,9 @@ beforeEach(() => {
   vi.unstubAllGlobals();
   capacitorMock.getPlatform.mockReturnValue('android');
   capacitorMock.isNativePlatform.mockReturnValue(true);
+  capacitorMock.plugin.loadSyncParticipationState.mockResolvedValue({
+    lifecycle_active: true, participating: true, sync_enabled: true, sync_paused: false
+  });
 });
 
 describe('companionWorkspaceDiscovery endpoint selection', () => {
@@ -120,6 +124,30 @@ describe('companionWorkspaceDiscovery endpoint selection', () => {
 
     expect(result.endpointUrl).toBe('http://127.0.0.1:38641');
   });
+});
+
+it('keeps ordinary discovery stopped while allowing explicit Leave routing when paused', async () => {
+  capacitorMock.plugin.loadSyncParticipationState.mockResolvedValue({
+    lifecycle_active: true, participating: false, sync_enabled: true, sync_paused: true
+  });
+  capacitorMock.plugin.loadDiscoveryCandidates.mockResolvedValue({
+    candidates: [nsdCandidate('http://192.168.1.44:38641')]
+  });
+  capacitorMock.plugin.desktopHttpRequest.mockResolvedValue(
+    desktopResponse({ hostName: 'ZEPHU-PC', peerId: 'desktop-c', platform: 'Windows' })
+  );
+
+  await expect(discoverCompanionDesktops('http://old:38641')).rejects.toThrow(
+    'No desktop sync device found'
+  );
+  expect(capacitorMock.plugin.loadDiscoveryCandidates).not.toHaveBeenCalled();
+  expect(capacitorMock.plugin.desktopHttpRequest).not.toHaveBeenCalled();
+
+  const result = await discoverCompanionDesktop('http://old:38641', {
+    allowWhileNotParticipating: true
+  });
+  expect(result.discovery.peer_id).toBe('desktop-c');
+  expect(capacitorMock.plugin.loadDiscoveryCandidates).toHaveBeenCalledOnce();
 });
 
 describe('companionWorkspaceDiscovery compatibility', () => {

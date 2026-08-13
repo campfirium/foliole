@@ -19,6 +19,15 @@ it('keeps permanent Android choices in private preferences and lifecycle transie
   expect(plugin).not.toMatch(/setSyncPaused\([^)]*(?:handleOnPause|handleOnResume)/u);
 });
 
+it('keeps the native discovery adapter available for explicit Leave routing', async () => {
+  const plugin = await readFile(path.join(JAVA, 'FolioleCompanionSyncPlugin.java'), 'utf8');
+  const discoveryMethod = plugin.match(
+    /@PluginMethod public void loadDiscoveryCandidates\(PluginCall call\) \{[\s\S]*?^[ ]{4}\}/mu
+  )?.[0] ?? '';
+  expect(discoveryMethod).toContain('FolioleCompanionNetworkPluginActions.loadDiscoveryCandidates');
+  expect(discoveryMethod).not.toContain('isParticipating()');
+});
+
 it('generates narrow Capacitor request and state keys for participation', async () => {
   const contract = JSON.parse(await readFile(path.join(
     ROOT, 'android/app/src/main/assets/companion-bridge-contract-definitions.json'

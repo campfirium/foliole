@@ -20,6 +20,10 @@ export type CompanionDiscoveryResult = {
   endpointUrl: string;
 };
 
+export type CompanionDiscoveryOptions = {
+  allowWhileNotParticipating?: boolean;
+};
+
 type DiscoveryCandidate = {
   endpointUrl: string;
   protocolTxt: Record<string, string> | null;
@@ -51,9 +55,16 @@ function createDiscoveryTimeout() {
   return { controller, timeoutId };
 }
 
-async function loadNativeDiscoveryCandidates(preferredEndpointUrl: string) {
+async function loadNativeDiscoveryCandidates(
+  preferredEndpointUrl: string,
+  options: CompanionDiscoveryOptions
+) {
   if (!isNativeCompanionPairingRuntime()) {
     return uniqueCandidates([directCandidate(preferredEndpointUrl)]);
+  }
+  if (!options.allowWhileNotParticipating) {
+    const participation = await FolioleCompanionSync.loadSyncParticipationState().catch(() => null);
+    if (participation?.participating !== true) return [];
   }
   const runtime = getCompanionRuntimeCapability();
   const direct = runtime.kind === 'android-native'
@@ -135,8 +146,11 @@ function providerRank(result: CompanionDiscoveryResult) {
   return result.discovery.desktop_platform === 'android-capacitor' ? 1 : 0;
 }
 
-export async function discoverCompanionDesktops(preferredEndpointUrl: string): Promise<CompanionDiscoveryResult[]> {
-  const candidates = await loadNativeDiscoveryCandidates(preferredEndpointUrl);
+export async function discoverCompanionDesktops(
+  preferredEndpointUrl: string,
+  options: CompanionDiscoveryOptions = {}
+): Promise<CompanionDiscoveryResult[]> {
+  const candidates = await loadNativeDiscoveryCandidates(preferredEndpointUrl, options);
   const discovered: CompanionDiscoveryResult[] = [];
   for (let index = 0; index < candidates.length; index += DISCOVERY_BATCH_SIZE) {
     const batch = candidates.slice(index, index + DISCOVERY_BATCH_SIZE);
@@ -153,8 +167,11 @@ export async function discoverCompanionDesktops(preferredEndpointUrl: string): P
   return discovered;
 }
 
-export async function discoverCompanionDesktop(preferredEndpointUrl: string): Promise<CompanionDiscoveryResult> {
-  const results = await discoverCompanionDesktops(preferredEndpointUrl);
+export async function discoverCompanionDesktop(
+  preferredEndpointUrl: string,
+  options: CompanionDiscoveryOptions = {}
+): Promise<CompanionDiscoveryResult> {
+  const results = await discoverCompanionDesktops(preferredEndpointUrl, options);
   const [firstResult] = results;
   if (!firstResult) {
     throw new Error('No desktop sync device found. Make sure desktop Sync is on and both devices are on the same Wi-Fi.');

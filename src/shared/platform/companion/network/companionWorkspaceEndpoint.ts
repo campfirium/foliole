@@ -1,6 +1,9 @@
 import type { CompanionWorkspaceVersionPayload } from '../../../../../lib/platform/nativeCompanionSyncContract';
 import type { SyncGroupPayload } from '../../../../../lib/platform/syncGroupContract';
-import { discoverCompanionDesktops } from '../../companionWorkspaceDiscovery';
+import {
+  discoverCompanionDesktops,
+  type CompanionDiscoveryOptions
+} from '../../companionWorkspaceDiscovery';
 import { createSignedRequestHeaders, loadCompanionPairingState } from '../../companionWorkspacePairing';
 import {
   FolioleCompanionSync,
@@ -31,12 +34,17 @@ export async function bindCompanionWorkspaceSyncTarget(target: CompanionWorkspac
   });
 }
 
-export async function resolveReachableCompanionWorkspaceSyncEndpoints(endpointUrl: string) {
+export async function resolveReachableCompanionWorkspaceSyncEndpoints(
+  endpointUrl: string,
+  options: CompanionDiscoveryOptions = {}
+) {
   const normalizedEndpointUrl = normalizeEndpointUrl(endpointUrl);
   if (!isNativeCompanionPairingRuntime()) return [{ endpointUrl: normalizedEndpointUrl }];
   const group = await loadCompanionSyncGroup().catch(() => null);
-  if (!group) return [{ endpointUrl: await resolveReachableCompanionWorkspaceSyncEndpoint(normalizedEndpointUrl) }];
-  const discovered = await discoverCompanionDesktops(normalizedEndpointUrl).catch(() => []);
+  if (!group) {
+    return [{ endpointUrl: await resolveReachableCompanionWorkspaceSyncEndpoint(normalizedEndpointUrl, options) }];
+  }
+  const discovered = await discoverCompanionDesktops(normalizedEndpointUrl, options).catch(() => []);
   return activeRemoteDeviceIds(group).flatMap((deviceId) => {
     const match = discovered.find((candidate) => candidate.compatibility.status === 'compatible'
       && candidate.discovery.group_id === group.group_id
@@ -46,7 +54,10 @@ export async function resolveReachableCompanionWorkspaceSyncEndpoints(endpointUr
   });
 }
 
-export async function resolveReachableCompanionWorkspaceSyncEndpoint(endpointUrl: string) {
+export async function resolveReachableCompanionWorkspaceSyncEndpoint(
+  endpointUrl: string,
+  options: CompanionDiscoveryOptions = {}
+) {
   const normalizedEndpointUrl = normalizeEndpointUrl(endpointUrl);
   if (!isNativeCompanionPairingRuntime()) {
     return normalizedEndpointUrl;
@@ -54,7 +65,7 @@ export async function resolveReachableCompanionWorkspaceSyncEndpoint(endpointUrl
   const pairing = await loadCompanionPairingState().catch(() => null);
   const remotePeerId = pairing?.remote_peer_id?.trim();
   if (!remotePeerId) return normalizedEndpointUrl;
-  const discovered = await discoverCompanionDesktops(normalizedEndpointUrl).catch(() => []);
+  const discovered = await discoverCompanionDesktops(normalizedEndpointUrl, options).catch(() => []);
   const pairedDesktop = discovered.find((candidate) => candidate.discovery.peer_id === remotePeerId);
   return pairedDesktop?.endpointUrl ?? normalizedEndpointUrl;
 }

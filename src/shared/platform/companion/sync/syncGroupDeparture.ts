@@ -30,7 +30,9 @@ async function sendDepartureToTarget(target: CompanionWorkspaceSyncTarget, body:
 }
 
 async function deliverDeparture(endpoint: string, body: string) {
-  const targets = await resolveReachableCompanionWorkspaceSyncEndpoints(endpoint);
+  const targets = await resolveReachableCompanionWorkspaceSyncEndpoints(endpoint, {
+    allowWhileNotParticipating: true
+  });
   let lastError: unknown;
   for (const target of targets) {
     try {

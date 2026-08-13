@@ -1,6 +1,5 @@
 package com.foliole.android;
 
-import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -32,8 +31,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
     @PluginMethod public void loadDiscoveryCandidates(PluginCall call) {
         try {
-            if (isParticipating()) FolioleCompanionNetworkPluginActions.loadDiscoveryCandidates(getContext(), call);
-            else call.resolve(emptyDiscoveryCandidates());
+            FolioleCompanionNetworkPluginActions.loadDiscoveryCandidates(getContext(), call);
         } catch (Exception error) {
             call.reject(FolioleCompanionPluginErrors.withCause("Failed to load Sync Group candidates.", error), error);
         }
@@ -188,12 +186,6 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
     private boolean isParticipating() throws Exception {
         return FolioleCompanionSyncParticipationStore.isParticipating(getContext(), lifecycleActive);
-    }
-
-    private JSObject emptyDiscoveryCandidates() {
-        JSObject result = new JSObject();
-        result.put("candidates", new JSArray());
-        return result;
     }
 
     private void reconcileServiceMonitor() throws Exception {

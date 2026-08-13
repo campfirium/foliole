@@ -75,7 +75,9 @@ it('routes Leave to an active identity-bound peer when the stored endpoint has d
 
   await leaveCompanionSyncGroup();
 
-  expect(mocks.resolveTargets).toHaveBeenCalledWith('http://192.168.1.2:38641');
+  expect(mocks.resolveTargets).toHaveBeenCalledWith('http://192.168.1.2:38641', {
+    allowWhileNotParticipating: true
+  });
   expect(mocks.bind).toHaveBeenCalledWith({
     deviceId: 'desktop-2', endpointUrl: 'http://192.168.1.3:38641', groupId: 'group-1'
   });
