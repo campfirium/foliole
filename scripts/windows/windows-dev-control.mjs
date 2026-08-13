@@ -11,7 +11,6 @@ import { CAPTURE_ANNOTATION_EVIDENCE_FILES } from './windows-a5-capture-annotati
 import {
   copyWindowsDevPairSyncRecoveryEvidence, WINDOWS_DEV_PAIR_SYNC_RECOVERY_FILES
 } from './windows-dev-pair-sync-evidence.mjs';
-import { toWindowsDevWireAction } from './windows-dev-action-contract.mjs';
 import {
   parseWindowsDevCaptureAnnotationEvidence, parseWindowsDevFailureEvidence,
   parseWindowsDevLiveEvidence, parseWindowsDevPairSyncRecoveryEvidence
@@ -20,6 +19,8 @@ import { runWindowsSyncGroupControl } from './windows-sync-group-control-router.
 import {
   collectWindowsCandidateControl, extractCandidateSourceRef, freezeWindowsCandidate, windowsCandidatePushArgs
 } from './windows-dev-candidate-control.mjs';
+import { stopWindowsDevCandidateRuntime } from './windows-dev-candidate-runtime-control.mjs';
+import { windowsDevScpSpec, windowsDevSshSpec } from './windows-dev-remote-spec.mjs';
 import {
   isWindowsSyncGroupProviderReleaseAction, WINDOWS_SYNC_GROUP_PROVIDER_RELEASE_ACTIONS
 } from './windows-sync-group-provider-release-control.mjs';
@@ -30,6 +31,7 @@ export {
   parseWindowsDevLiveEvidence, parseWindowsDevPairSyncRecoveryEvidence,
   parseWindowsDevSuccessEvidence
 } from './windows-dev-control-evidence.mjs';
+export { windowsDevScpSpec, windowsDevSshSpec } from './windows-dev-remote-spec.mjs';
 
 export const WINDOWS_DEV_SOURCE_REF = 'refs/heads/dev';
 export const WINDOWS_DEV_DEFAULT_SSH = 'zephu@192.168.0.11';
@@ -40,7 +42,6 @@ export const WINDOWS_DEV_ACTIONS = [
   ...Object.values(WINDOWS_SYNC_GROUP_PROVIDER_RELEASE_ACTIONS),
   'verify'
 ];
-const WINDOWS_DEV_REMOTE_ACTION = 'C:/dev/foliole-android-lab-preview/scripts/windows/windows-dev-action.ps1';
 const CAPTURE_ANNOTATION_FILES = [...CAPTURE_ANNOTATION_EVIDENCE_FILES, 'summary.json'];
 const CAPTURE_ANNOTATION_FAILURE_FILES = ['action.log', 'summary.json'];
 
@@ -98,15 +99,6 @@ export function windowsDevPushSpec(host, env = process.env, home = os.homedir(),
   };
 }
 
-export function windowsDevSshSpec(host, action, env = process.env, home = os.homedir()) {
-  const key = env.FOLIOLE_WINDOWS_DEV_SSH_KEY
-    || path.join(home, '.ssh', 'agent', 'foliole-windows-android-lab');
-  return ['-T', '-i', key, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=15',
-    '-o', 'IdentitiesOnly=yes', '-o', 'StrictHostKeyChecking=yes', host,
-    'powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
-    '-File', WINDOWS_DEV_REMOTE_ACTION, toWindowsDevWireAction(action)];
-}
-
 
 async function copyCaptureAnnotationFiles({ env, executeScp, fsApi, host, names, remoteRoot, repoRoot }) {
   const localRoot = path.join(repoRoot, '.tmp', 'artifacts', 'a5-capture-annotation', path.basename(remoteRoot));
@@ -115,14 +107,6 @@ async function copyCaptureAnnotationFiles({ env, executeScp, fsApi, host, names,
     await executeScp(windowsDevScpSpec(host, `${remoteRoot}/${name}`, path.join(localRoot, name), env), { env });
   }
   return localRoot;
-}
-
-export function windowsDevScpSpec(host, remotePath, localPath, env = process.env, home = os.homedir()) {
-  const key = env.FOLIOLE_WINDOWS_DEV_SSH_KEY
-    || path.join(home, '.ssh', 'agent', 'foliole-windows-android-lab');
-  return ['-q', '-i', key, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=15',
-    '-o', 'IdentitiesOnly=yes', '-o', 'StrictHostKeyChecking=yes',
-    `${host}:${remotePath}`, localPath];
 }
 
 export async function runWindowsDevControl({
@@ -148,6 +132,9 @@ export async function runWindowsDevControl({
     ? freezeWindowsCandidate(repoRoot, sourceRef) : null;
   const spec = windowsDevPushSpec(host, env, os.homedir(), sourceRef);
   await executeGit(spec.args, { env: spec.env });
+  if (action === 'multi-device-sync-candidate') {
+    await stopWindowsDevCandidateRuntime({ env, executeSsh, host, stdout });
+  }
   let remoteError = null;
   let remoteOutput = '';
   try {
