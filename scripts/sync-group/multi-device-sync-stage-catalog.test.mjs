@@ -48,7 +48,8 @@ it('declares ordered milestones and deadlines that cover legal sibling waits', (
     action: 'set-participation', milestones: [
       'windows-paused', 'macos-pause-persisted', 'macos-resumed-cursor',
       'macos-sync-off-persisted', 'android-sync-off-persisted', 'android-pause-persisted',
-      'android-resumed-cursor', 'macos-left-while-sync-off', 'android-left-while-paused',
+      'android-resumed-cursor', 'macos-left-while-sync-off', 'macos-departure-observed',
+      'android-left-while-paused',
       'windows-resumed-cursor', 'windows-sync-off-persisted', 'windows-last-member-left',
       'all-restarted-unbound'
     ]

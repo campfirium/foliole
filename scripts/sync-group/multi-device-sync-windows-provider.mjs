@@ -18,7 +18,9 @@ const PROVIDER_ACTIONS = Object.freeze({
   'multi-device-sync-participation': {
     controllerAction: 'windows-c-participation', label: 'participation',
     missingPrefix: 'windows_participation', progressFactPattern: 'participation-control',
-    progressMilestone: 'windows-paused'
+    progressMilestone: 'windows-paused', progressMilestones: [
+      'windows-paused', 'macos-departure-observed'
+    ]
   }
 });
 
@@ -66,20 +68,25 @@ function receiptFromResult(result, repoRoot, action, spec) {
 
 export function startWindowsSyncGroupProvider({ action, execute, reportProgress = () => {}, repoRoot }) {
   const spec = actionSpec(action);
-  let providerFactId = null;
-  let resolveProgress;
-  const progress = new Promise((resolve) => { resolveProgress = resolve; });
+  const milestones = spec.progressMilestones ?? (spec.progressMilestone ? [spec.progressMilestone] : []);
+  const progress = new Map(milestones.map((milestone) => {
+    let resolve;
+    const promise = new Promise((accept) => { resolve = accept; });
+    return [milestone, { factId: null, promise, resolve }];
+  }));
   const work = execute(process.execPath, ['scripts/windows/windows-dev-control.mjs', action], {
     action: spec.controllerAction, cwd: repoRoot, host: 'windows-c',
     onOutput: ({ stdout }) => {
-      if (!spec.progressMilestone || providerFactId) return;
-      const expression = new RegExp(`^\\[windows-dev-action\\] progress action=${action}`
-        + ` nonce=[0-9a-f-]{36} milestone=${spec.progressMilestone}`
-        + ` fact=(${spec.progressFactPattern ?? 'multi-device-sync-c-\\d{17}'})$`, 'mu');
-      providerFactId = expression.exec(stdout)?.[1] ?? null;
-      if (providerFactId) {
-        reportProgress(spec.progressMilestone);
-        resolveProgress(providerFactId);
+      for (const [milestone, state] of progress) {
+        if (state.factId) continue;
+        const expression = new RegExp(`^\\[windows-dev-action\\] progress action=${action}`
+          + ` nonce=[0-9a-f-]{36} milestone=${milestone}`
+          + ` fact=(${spec.progressFactPattern ?? 'multi-device-sync-c-\\d{17}'})$`, 'mu');
+        state.factId = expression.exec(stdout)?.[1] ?? null;
+        if (state.factId) {
+          reportProgress(milestone);
+          state.resolve(state.factId);
+        }
       }
     }, timeoutMs: 15 * 60_000
   }).then((value) => ({ value }), (error) => ({ error }));
@@ -112,19 +119,27 @@ export function startWindowsSyncGroupProvider({ action, execute, reportProgress 
     await release('cancelled').catch(() => undefined);
     await work;
   };
-  const confirmProgress = (factId) => {
-    if (providerFactId && providerFactId !== factId) {
+  const progressState = (milestone = spec.progressMilestone) => {
+    const state = progress.get(milestone);
+    if (!state) throw controllerFailure('Windows C provider progress milestone is invalid.',
+      `${spec.missingPrefix}_progress_invalid`);
+    return state;
+  };
+  const confirmProgress = (factId, milestone = spec.progressMilestone) => {
+    const state = progressState(milestone);
+    if (state.factId && state.factId !== factId) {
       throw controllerFailure('Windows C provider progress reported a different fact identity.',
         `${spec.missingPrefix}_progress_identity_mismatch`);
     }
-    if (!providerFactId && spec.progressMilestone) {
-      providerFactId = factId; reportProgress(spec.progressMilestone); resolveProgress(factId);
+    if (!state.factId) {
+      state.factId = factId; reportProgress(milestone); state.resolve(factId);
     }
   };
-  const waitForProgress = () => Promise.race([progress, work.then((result) => {
+  const waitForProgress = (milestone = spec.progressMilestone) => Promise.race([
+    progressState(milestone).promise, work.then((result) => {
     const failure = providerFailure(result, spec);
     throw failure || controllerFailure(`Windows C ${spec.label} ended before progress.`,
       `${spec.missingPrefix}_progress_missing`);
-  })]);
+    })]);
   return { cancelAndSettle, confirmProgress, finish, raceConsumer, release, waitForProgress };
 }

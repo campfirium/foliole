@@ -31,7 +31,7 @@ export function validateSyncGroupInteractiveRequest(request, repoRoot) {
 
 export function validateSyncGroupInteractiveProgress(progress, action) {
   if (action === 'multi-device-sync-participation'
-      && progress?.milestone === 'windows-paused'
+      && ['windows-paused', 'macos-departure-observed'].includes(progress?.milestone)
       && progress.factId === 'participation-control') {
     return { factId: progress.factId, milestone: progress.milestone };
   }

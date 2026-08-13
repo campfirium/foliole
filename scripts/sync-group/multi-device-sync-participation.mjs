@@ -200,6 +200,7 @@ export async function proveParticipationControl(options) {
     await waitUntil('Android observes macOS departure', () => androidSnapshot(context.paths),
       (snapshot) => snapshot.database?.inspection?.activeSyncGroupMemberCount === 2,
       'android_macos_departure_missing');
+    await windows.waitForProgress('macos-departure-observed');
     const androidAfterLeave = await leaveAndroid(context, androidBeforeLeave);
     const remote = await windows.finish();
     settled = true;

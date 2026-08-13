@@ -65,6 +65,11 @@ it('accepts only registered actions and evidence inside the action-owned root', 
   }, 'multi-device-sync-participation')).toEqual({
     factId: 'participation-control', milestone: 'windows-paused'
   });
+  expect(validateSyncGroupInteractiveProgress({
+    factId: 'participation-control', milestone: 'macos-departure-observed'
+  }, 'multi-device-sync-participation')).toEqual({
+    factId: 'participation-control', milestone: 'macos-departure-observed'
+  });
 });
 
 it('streams the created C fact as nonce-bound provider progress', async () => {

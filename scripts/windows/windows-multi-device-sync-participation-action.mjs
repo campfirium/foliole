@@ -80,6 +80,10 @@ async function proveParticipationCycle(options, initial) {
     assertParticipation(restarted, { enabled: false, paused: false }, initial.localGroupId);
     const enabled = await invokeWindowsSyncGroupCommand(page, 'enable_companion_sync');
     assertParticipation(enabled, { enabled: true, paused: false }, initial.localGroupId);
+    await waitUntil('Windows macOS departure convergence',
+      () => inspectWindowsSyncGroupDatabase(execute, paths),
+      (facts) => facts.activeMemberCount === 2 && facts.localMemberState === 'active');
+    reportProgress({ factId: 'participation-control', milestone: 'macos-departure-observed' });
     await waitUntil('Windows last-member input',
       () => inspectWindowsSyncGroupDatabase(execute, paths),
       isWindowsLastMemberInputReady);

@@ -88,6 +88,32 @@ it('reports a Windows provider terminal before the consumer watchdog can mask it
   });
 });
 
+it('exposes each participation milestone before the hub Device leaves', async () => {
+  let finishWindows;
+  const reportProgress = vi.fn();
+  const execute = vi.fn((_command, args, options) => {
+    if (args.at(-1) === 'multi-device-sync-provider-cancel') return Promise.resolve({ code: 0 });
+    options.onOutput({ stdout: '[windows-dev-action] progress action=multi-device-sync-participation '
+      + 'nonce=12345678-1234-1234-1234-123456789abc milestone=windows-paused '
+      + 'fact=participation-control\n' });
+    options.onOutput({ stdout: '[windows-dev-action] progress action=multi-device-sync-participation '
+      + 'nonce=12345678-1234-1234-1234-123456789abc milestone=macos-departure-observed '
+      + 'fact=participation-control\n' });
+    return new Promise((resolve) => { finishWindows = () => resolve({ code: 1, stderr: 'cancelled' }); });
+  });
+  const provider = startWindowsSyncGroupProvider({
+    action: 'multi-device-sync-participation', execute, reportProgress, repoRoot: process.cwd()
+  });
+  await expect(provider.waitForProgress()).resolves.toBe('participation-control');
+  await expect(provider.waitForProgress('macos-departure-observed'))
+    .resolves.toBe('participation-control');
+  expect(reportProgress.mock.calls.map(([milestone]) => milestone)).toEqual([
+    'windows-paused', 'macos-departure-observed'
+  ]);
+  finishWindows();
+  await provider.cancelAndSettle();
+});
+
 it('rejects a provider that ends successfully before its consumer is complete', async () => {
   const provider = startWindowsSyncGroupProvider({ action: 'multi-device-sync-a-leave',
     execute: vi.fn(() => Promise.resolve({ code: 0, output: '' })), repoRoot: process.cwd() });

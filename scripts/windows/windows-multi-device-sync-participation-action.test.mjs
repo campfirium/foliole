@@ -52,6 +52,7 @@ it('persists independent controls, catches up, and leaves as the last member', a
     page: pages.shift() }));
   mocks.inspect.mockResolvedValueOnce(facts())
     .mockResolvedValueOnce(facts({ journeyFacts: { 'fact-a': 'A' }, userNodeCount: 4 }))
+    .mockResolvedValueOnce(facts({ activeMemberCount: 2, userNodeCount: 4 }))
     .mockResolvedValueOnce(facts({ activeMemberCount: 1, userNodeCount: 4 }))
     .mockResolvedValueOnce(facts({ activeMemberCount: 1, userNodeCount: 4 }))
     .mockResolvedValueOnce(facts({ activeMemberCount: 0, localGroupId: null,
@@ -75,6 +76,9 @@ it('persists independent controls, catches up, and leaves as the last member', a
     .toBe(path.join(root, 'multi-device-sync-participation-receipt.json'));
   expect(reportProgress).toHaveBeenCalledWith({
     factId: 'participation-control', milestone: 'windows-paused'
+  });
+  expect(reportProgress).toHaveBeenCalledWith({
+    factId: 'participation-control', milestone: 'macos-departure-observed'
   });
   expect(mocks.release).toHaveBeenCalledWith(expect.objectContaining({
     action: 'multi-device-sync-participation'
