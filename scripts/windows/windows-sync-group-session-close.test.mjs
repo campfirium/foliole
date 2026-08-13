@@ -1,7 +1,6 @@
 // @vitest-environment node
 
 import { EventEmitter } from 'node:events';
-import { setImmediate } from 'node:timers';
 
 import { expect, it, vi } from 'vitest';
 
@@ -13,12 +12,7 @@ function fixture(close = vi.fn(async () => {})) {
   const child = Object.assign(new EventEmitter(), {
     exitCode: null, pid: 4321, signalCode: null
   });
-  const terminateTree = vi.fn(async () => {
-    setImmediate(() => {
-      child.signalCode = 'SIGTERM';
-      child.emit('close');
-    });
-  });
+  const terminateTree = vi.fn(async () => {});
   return { child, session: { app: { close, process: () => child } }, terminateTree };
 }
 
