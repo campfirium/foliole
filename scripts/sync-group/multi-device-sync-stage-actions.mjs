@@ -82,6 +82,26 @@ function windowsFormalReceipt(output, repoRoot) {
   return evidenceRef;
 }
 
+export function windowsJoinFailure(result) {
+  const output = `${result.stderr || ''}${result.stdout || ''}`;
+  const failureLine = output.split(/\r?\n/u)
+    .find((line) => line.includes('[windows-dev-action] failure'));
+  const detail = /\bmessage=(.+)$/u.exec(failureLine || '')?.[1]?.trim();
+  const nativeStartFailed = /native client interactive task did not start/u.test(detail || '');
+  return Object.assign(new Error(
+    `Windows C join action failed${detail ? `: ${detail}` : '.'}`
+  ), { failureOwner: nativeStartFailed || result.terminationReason ? 'controller' : 'product',
+    host: 'windows-c', missingFact: nativeStartFailed
+      ? 'windows_native_interactive_start_failed'
+      : result.terminationReason || 'windows_c_sync_receipt', result });
+}
+
+export function cancelAdmissionSibling(approvalController, approvalRelease, name, status) {
+  if (name !== 'windows-c-join') return;
+  if (status === 'rejected') approvalController.abort();
+  else if (status === 'fulfilled') void approvalRelease.release();
+}
+
 async function admitEmptyC(repoRoot, runId, { reportProgress, signal, stage }) {
   const evidenceRoot = path.join(repoRoot, '.tmp', 'artifacts', 'multi-device-sync', 'runs', runId,
     'b-admit-empty-c');
@@ -108,9 +128,9 @@ async function admitEmptyC(repoRoot, runId, { reportProgress, signal, stage }) {
     });
   };
   const { approval, windows } = await runAOfflineAdmissionPrelude({
-    cancelSiblings: (failedName) => {
-      if (failedName === 'windows-c-join') void approvalRelease.release();
-    },
+    cancelSiblings: (name, status) => cancelAdmissionSibling(
+      approvalController, approvalRelease, name, status
+    ),
     closeTransport: () => closePairSyncRecoveryTransport(runTransport),
     createFact: (session) => createDesktopSyncGroupJourneyFact({
       device: 'A', evidenceRoot: path.join(evidenceRoot, 'a-fact'), session
@@ -130,9 +150,7 @@ async function admitEmptyC(repoRoot, runId, { reportProgress, signal, stage }) {
         action: 'windows-c-join', cwd: repoRoot, host: 'windows-c', timeoutMs: 15 * 60_000
         });
       if (result.code === 0) return result;
-      throw Object.assign(new Error('Windows C join action failed.'), { result,
-        failureOwner: result.terminationReason ? 'controller' : 'product', host: 'windows-c',
-        missingFact: result.terminationReason || 'windows_c_sync_receipt' });
+      throw windowsJoinFailure(result);
     },
     reportProgress,
     waitForFact: (factId) => waitForAndroidJourneyFact(paths, factId)

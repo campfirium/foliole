@@ -79,3 +79,23 @@ it('lets a declared terminal sibling release its bounded waiter before joining b
     approval: 'approved', windows: 'synced'
   });
 });
+
+it('tells sibling cancellation whether the first terminal failed or succeeded', async () => {
+  let resolveFailedApproval;
+  const failedApproval = new Promise((resolve) => { resolveFailedApproval = resolve; });
+  const failed = vi.fn(() => resolveFailedApproval('cancelled'));
+  await expect(settleSiblingActions([
+    { name: 'approval', work: failedApproval },
+    { name: 'windows', work: Promise.reject(new Error('start failed')) }
+  ], failed)).rejects.toThrow('start failed');
+  expect(failed).toHaveBeenCalledWith('windows', 'rejected');
+
+  let resolveSucceededApproval;
+  const succeededApproval = new Promise((resolve) => { resolveSucceededApproval = resolve; });
+  const succeeded = vi.fn(() => resolveSucceededApproval('approved'));
+  await settleSiblingActions([
+    { name: 'approval', work: succeededApproval },
+    { name: 'windows', work: Promise.resolve('synced') }
+  ], succeeded, ['windows']);
+  expect(succeeded).toHaveBeenCalledWith('windows', 'fulfilled');
+});

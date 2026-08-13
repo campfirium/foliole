@@ -79,8 +79,10 @@ export async function settleSiblingActions(entries, cancel = () => {}, cancelOnS
     (reason) => ({ name, reason, status: 'rejected' })
   ));
   const first = await Promise.race(wrapped);
-  if (first.status === 'rejected') cancel(first.name);
-  if (first.status === 'fulfilled' && cancelOnSuccess.includes(first.name)) cancel(first.name);
+  if (first.status === 'rejected') cancel(first.name, first.status);
+  if (first.status === 'fulfilled' && cancelOnSuccess.includes(first.name)) {
+    cancel(first.name, first.status);
+  }
   const settled = await Promise.all(wrapped);
   const failure = settled.find(({ status }) => status === 'rejected');
   if (failure) {
