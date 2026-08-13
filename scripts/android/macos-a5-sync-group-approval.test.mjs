@@ -3,11 +3,19 @@ import fs from 'node:fs';
 import { expect, it } from 'vitest';
 
 import {
+  finalizeSyncGroupApprovalEvidence,
   installedMainMatches,
   parseSyncGroupApprovalReceipt,
   startMacosA5SyncGroupApprovalProvider,
   stopMacosA5SyncGroupApprovalProvider
 } from './macos-a5-sync-group-approval.mjs';
+
+it('preserves provider failure details when approval instrumentation has no receipt', () => {
+  const run = { code: 0, output: 'INSTRUMENTATION_CODE: -1\n', terminationReason: null };
+  expect(() => finalizeSyncGroupApprovalEvidence({
+    providerOutput: 'FolioleSyncProvider: Request failed: sync_group_data_payload_invalid\n', run
+  })).toThrow(/sync_group_data_payload_invalid/u);
+});
 
 it('reuses an installed main APK only when its SHA-256 matches exactly', async () => {
   const execute = async (_command, args) => {

@@ -57,6 +57,15 @@ export function parseSyncGroupApprovalReceipt(output, allowControlledCancellatio
   return receipt;
 }
 
+export function finalizeSyncGroupApprovalEvidence({
+  allowControlledCancellation = false, providerOutput = '', run
+}) {
+  const output = `${run.output}${providerOutput}`;
+  const controlled = allowControlledCancellation && run.terminationReason === 'cancelled';
+  if (!controlled) requireSuccess({ ...run, output }, 'sync-group-approval');
+  return { output, receipt: parseSyncGroupApprovalReceipt(output, controlled) };
+}
+
 export async function startMacosA5SyncGroupApprovalProvider({
   execute, onProviderStopped, onReady, paths, env
 }) {
@@ -108,14 +117,14 @@ export async function runMacosA5SyncGroupApproval({ execute, onProviderStopped =
       '-w', '-r', '-e', 'class', `${TEST_CLASS}#approvesJoinWhileProviderStaysForeground`, TEST_RUNNER], {
       env, timeoutMs: 15 * 60_000
     });
-    const controlled = allowControlledCancellation && run.terminationReason === 'cancelled';
-    if (!controlled) requireSuccess(run, 'sync-group-approval');
-    const receipt = parseSyncGroupApprovalReceipt(run.output, controlled);
     const providerLog = requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'logcat', '-d',
       '-v', 'time', 'FolioleSyncProvider:V', '*:S'], { env, timeoutMs: 30_000 }), 'provider-log');
+    const evidence = finalizeSyncGroupApprovalEvidence({
+      allowControlledCancellation, providerOutput: providerLog.output, run
+    });
     const resume = requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start',
       '-W', '-n', `${APP_ID}/.MainActivity`], { env, timeoutMs: 60_000 }), 'provider-resume');
-    return { output: `${run.output}${providerLog.output}${resume.output}`, receipt };
+    return { output: `${evidence.output}${resume.output}`, receipt: evidence.receipt };
   } finally {
     await execute(paths.adb, ['-s', A5_SERIAL, 'uninstall', TEST_APP_ID], { env, timeoutMs: 60_000 });
     await execute(paths.adb, ['kill-server'], { env, timeoutMs: 30_000 });
