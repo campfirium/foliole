@@ -9,7 +9,8 @@
 - 正式发布只使用唯一、短期存在的精确分支 `release`：从已推送的 `dev` 切出，首个 release 提交写入已确定版本，首次 push 自动进入唯一 T7；此后不接收 dev，所有发布修复只落 release，并用普通 Git merge 按 first-parent 顺序回灌 dev。完成公开后元数据与 Pages 核对且最终 tip 已是 dev 祖先后才删除分支；禁止版本化 release 分支、cherry-pick、rebase、force-push 和人类 SHA 编排。
 - 每个 release 只由一个 pinned 发布主任务从切分持有到删分支；T7 及其内层失败回到该任务，不由 monitor 创建 repair 任务。发布文案可在仓库外工作稿和未公开 Draft body 中与技术流程并行，公开必须由用户确认，最终正文归档、notes 与 manifest 只在公开后提交。
 - 人工创建或交接 Foliole Codex 任务走 Codex Desktop 正常任务入口：`list_projects` 定位 saved project，`create_thread` 显式使用 `environment.type = local` 并发送完整首条提示，`wait_threads` 等待就绪，`set_thread_title` 命名，`read_thread` 确认正文可读，最后才可 `navigate_to_codex_page`；不得采用 Git 仓库默认 worktree。
-- 关联已编号正式实施方案的 Codex 任务标题必须从方案读取不可变 Track 编号：方案级任务使用 `T<n>-0`，闭环任务使用 `T<n>-<闭环序号>`；不得由任务自行分配或修改。
+- 关联已编号正式实施方案的 Codex 任务标题必须从方案读取不可变编号：方案级任务使用 `T<n>-0`，执行任务使用方案唯一的 `Current closure: T<n>-<k>`；只有 `/2` 可按 rolling contract 分配、重开或退休闭环 id，同一验收句的重规划与 continuation 保留原 id，执行任务不得自行改号。
+- `rolling-v1` 方案同时最多一个当前闭环；同一验收句未成立时，不因缺口、提交、文件、平台、重试或耗时数量更换 Codex 任务。只有 `/2` 审定后的正式路线失效交接、闭环完成后的新验收责任、`final-ready` 进入 `/4`，或用户确认且无 live side effect / 未记录现场 / 外部等待的 continuation 才开新任务。
 - 无人值守 monitor handoff 只能走 `codex-desktop-handoff` daemon：事件级 App Server 创建持久任务，确认 `item/completed(userMessage)` 与完整 prompt 一致后立即 `turn/interrupt`，确认最终状态为 `interrupted`，关闭外部 App Server，再请求 Desktop 打开；该任务必须等待用户在 Desktop 继续，不得在 daemon 内持续执行。禁止启用或恢复 `task-seed-queue`、queue runner、Daemon V2、直接数据库 / session 注入或其他后台执行分支；仅有 thread id、标题或成功跳转不算交付成功，正文未确认或主动中断未完成时必须归档并重试。
 - 用户要求继续某个平台的产品主线时，创建任务前必须先按该平台局部 `AGENTS.md` 区分产品实现、验收证据与宿主控制流；不得仅凭未勾选 checkbox 或未标 `done` 状态把验收 / 控制任务包装成产品代码任务。
 - 单次只交付一个可运行、可验证、可回退的能力闭环；闭环以用户可验收行为、数据语义或迁移语义为边界，不以文件、函数、测试断言、提交数量或“超过 3 个文件”为边界。
@@ -72,10 +73,10 @@
 5. 需求、边界、验收标准或预期行为存在歧义时，先澄清；根因未确认时只写“现象 + 当前怀疑 + 待确认点”，禁止把猜测写成事实。
 6. 命中高风险路径时，在开工判断或任务评估中明确“建议 High / XHigh”，但不得伪装工具层已切档；高风险包括 sync、数据库 / schema / migration、Electron preload / IPC / native bridge、Capacitor / Android lifecycle、review queue、delete / restore、import / reimport、持久化、重启后行为、冲突处理、安全边界、不可逆数据风险、人工验收失败后的复修和非显然 bug。
 7. 若方案包含扫描、轮询、自造协议、新依赖、长期双写、运行时迁移、隐式 fallback、局部复制或先污染后清理，必须进入 `STOP_CONFIRM`，并说明方案身份是正式主方案、spike、诊断、兜底还是一次性迁移工具。
-8. 执行中发现不再属于同一能力闭环，或新增 schema / bridge / IPC / 协议 / 依赖 / 后台任务 / fallback / migration / 双写 / scan / poll，必须停下进入 `NEEDS_EVAL` 或 `STOP_CONFIRM`。
+8. 执行中发现不再属于当前验收句，或需要改变已审定的 schema / bridge / IPC / 协议 / 依赖 / 后台任务 / fallback / migration / 双写 / scan / poll 路线，必须停止实现并进入 `/2` Roll、`NEEDS_EVAL` 或 `STOP_CONFIRM`；先更新和验证正式合同再继续。已在方案中审定、且不改变正式边界的闭环内部实现不重复升级。
 9. 只有用户明确要求 spike，或任务评估把某段代码标为 spike / diagnostic / fallback / one-off migration 时，才允许写临时验证代码；否则临时代码不得接入正式入口。
 10. 闭环最终宿主验收只消费已完成前置验证的冻结候选；真实设备 / 数据旅程开始后，不得在同一次验收尝试中修改产品代码、验收控制器或成功判据。红灯若需要源码改动，当前尝试立即失效：先保留证据并退出旅程，回到实现与前置验证，重新建立验收基线后从头执行；不得拼接改动前后的局部证据宣称闭环完成。
-11. 真实安装、配对、同步、恢复或其他难恢复副作用失败后，只有新证据已经改变下一安全动作且验收基线重新成立时才可重试；同一路线无新事实不得重复等待。最终宿主验收暴露第二个独立产品 / contract / 控制器缺口，或发生数据损坏、意外删除、静默覆盖时，必须停止当前旅程并返回 `/2` 重新执行 Scale Gate。
+11. 真实安装、配对、同步、恢复或其他难恢复副作用失败后，只有新证据已经改变下一安全动作且验收基线重新成立时才可重试；同一路线无新事实不得重复等待。缺口数量不触发换任务；仍属同一验收句且正式路线有效时留在当前 `/3`。正式 contract / 路线 / 授权失效时退出旅程并在当前任务执行 `/2` Roll；所有授权路线已否证、下一动作只是重复失败路线或剩余路线都需新授权时进入 `HOLD`。数据损坏、意外删除或静默覆盖必须先保护现场和恢复边界。
 
 ## Delegation
 
