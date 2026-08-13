@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 final class FolioleCompanionWebViewSemanticAdapter {
     private static final long EVALUATION_TIMEOUT_SECONDS = 2;
+    private static final long SNAPSHOT_TIMEOUT_SECONDS = 30;
 
     private FolioleCompanionWebViewSemanticAdapter() {}
 
@@ -24,7 +25,16 @@ final class FolioleCompanionWebViewSemanticAdapter {
             "ariaCurrent:node.getAttribute('aria-current')||'',disabled:!!node.disabled," +
             "visible:!!(rect.width&&rect.height),bounds:{x:Math.round(rect.x),y:Math.round(rect.y)," +
             "width:Math.round(rect.width),height:Math.round(rect.height)}};})});})()";
-        return evaluateJson(instrumentation, webView, script);
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(SNAPSHOT_TIMEOUT_SECONDS);
+        WebViewEvaluationTimeoutException lastTimeout = null;
+        while (System.nanoTime() < deadline) {
+            try {
+                return evaluateJson(instrumentation, webView, script);
+            } catch (WebViewEvaluationTimeoutException timeout) {
+                lastTimeout = timeout;
+            }
+        }
+        throw new IllegalStateException("Timed out waiting for a WebView semantic snapshot.", lastTimeout);
     }
 
     static JSONObject perform(
@@ -131,8 +141,14 @@ final class FolioleCompanionWebViewSemanticAdapter {
             latch.countDown();
         }));
         if (!latch.await(EVALUATION_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
-            throw new IllegalStateException("Timed out while evaluating the WebView semantic action.");
+            throw new WebViewEvaluationTimeoutException();
         }
         return result.get();
+    }
+
+    private static final class WebViewEvaluationTimeoutException extends IllegalStateException {
+        WebViewEvaluationTimeoutException() {
+            super("Timed out while evaluating the WebView semantic action.");
+        }
     }
 }
