@@ -120,11 +120,18 @@ export function createMutationReadinessAdapters(options) {
       lastSuccessfulAction: `${host}_environment_ready`, missingFact: 'candidate_receipt_missing'
     });
     const receipt = JSON.parse(fs.readFileSync(receiptPath, 'utf8'));
+    const current = await options.candidateProvider();
     const required = new Set(options.requiredHosts);
     const baseMismatch = receipt.runId !== options.runId || receipt.resultStatus !== 'success'
-      || (!required.has(host) && receipt.preparedHosts?.includes(host));
+      || (!required.has(host) && receipt.preparedHosts?.includes(host))
+      || receipt.candidateBoundary?.branch !== current.branch
+      || receipt.candidateBoundary?.sourceRef !== current.sourceRef
+      || receipt.candidateBoundary?.treeDigest !== current.treeDigest
+      || receipt.candidateBoundary?.controllerDigest !== current.controllerDigest;
     const hostMismatch = required.has(host) && (!receipt.preparedHosts?.includes(host)
-      || (host === 'windows-c' && !receipt.windowsReceipt)
+      || (host === 'windows-c' && (receipt.windowsReceipt?.sourceRef !== current.sourceRef
+        || receipt.windowsReceipt?.treeDigest !== current.treeDigest
+        || receipt.windowsReceipt?.controllerDigest !== current.controllerDigest))
       || (host === 'android-b' && (!fs.existsSync(apkPath)
         || createHash('sha256').update(fs.readFileSync(apkPath)).digest('hex')
           !== receipt.androidApkSha256)));

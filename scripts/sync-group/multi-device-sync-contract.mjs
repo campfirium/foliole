@@ -1,5 +1,7 @@
 import { createHash } from 'node:crypto';
 
+import { branchForCandidateSourceRef } from './multi-device-sync-source-ref.mjs';
+
 /* global structuredClone */
 
 export const FAILURE_OWNERS = ['environment', 'controller', 'product', 'candidate'];
@@ -21,7 +23,10 @@ export function assertCandidate(candidate, mode = 'diagnostic') {
       || !candidate.controllerDigest || !candidate.scenarioDigest || !candidate.criteriaDigest) {
     fail('candidate digests are incomplete');
   }
-  if (candidate.branch !== 'dev' || candidate.committed !== true
+  let sourceBranch;
+  try { sourceBranch = branchForCandidateSourceRef(candidate.sourceRef); }
+  catch { fail('candidate source ref is invalid'); }
+  if (candidate.branch !== sourceBranch || candidate.committed !== true
       || (mode === 'formal' && candidate.clean !== true)) fail('candidate is not frozen');
   return candidate;
 }

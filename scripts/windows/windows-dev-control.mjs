@@ -18,6 +18,9 @@ import {
 } from './windows-dev-control-evidence.mjs';
 import { runWindowsSyncGroupControl } from './windows-sync-group-control-router.mjs';
 import {
+  collectWindowsCandidateControl, extractCandidateSourceRef, freezeWindowsCandidate, windowsCandidatePushArgs
+} from './windows-dev-candidate-control.mjs';
+import {
   isWindowsSyncGroupProviderReleaseAction, WINDOWS_SYNC_GROUP_PROVIDER_RELEASE_ACTIONS
 } from './windows-sync-group-provider-release-control.mjs';
 import { copyWindowsDeviceProfileEvidence } from './windows-device-profile-control.mjs';
@@ -60,7 +63,8 @@ function execute(command, args, options = {}) {
 }
 
 export function parseWindowsDevControlArgs(argv, env = process.env) {
-  const args = [...argv];
+  const parsedSource = extractCandidateSourceRef(argv);
+  const args = parsedSource.args;
   const hostIndex = args.indexOf('--host');
   const host = hostIndex >= 0
     ? args.splice(hostIndex, 2)[1]
@@ -73,15 +77,19 @@ export function parseWindowsDevControlArgs(argv, env = process.env) {
       'Windows DEV control only accepts a registered fixed action'
     );
   }
-  return { action: args[0], host };
+  if (parsedSource.explicit && args[0] !== 'multi-device-sync-candidate') {
+    throw new Error('Windows DEV source ref is only accepted for candidate preparation');
+  }
+  return { action: args[0], host,
+    ...(parsedSource.explicit ? { sourceRef: parsedSource.sourceRef } : {}) };
 }
 
-export function windowsDevPushSpec(host, env = process.env, home = os.homedir()) {
+export function windowsDevPushSpec(host, env = process.env, home = os.homedir(), sourceRef) {
   const key = env.FOLIOLE_WINDOWS_DEV_GIT_SSH_KEY
     || path.join(home, '.ssh', 'agent', 'foliole-windows-android-lab-git');
   if (/['\0\r\n]/u.test(key)) throw new Error('Windows DEV Git key path contains unsupported characters');
   return {
-    args: ['push', '--no-verify', '--porcelain', `${host}:foliole-dev.git`, `+dev:${WINDOWS_DEV_SOURCE_REF}`],
+    args: windowsCandidatePushArgs(host, sourceRef),
     env: {
       ...env,
       GIT_SSH_COMMAND: `ssh -i '${key}' -o BatchMode=yes -o IdentitiesOnly=yes `
@@ -124,7 +132,7 @@ export async function runWindowsDevControl({
   executeSsh = (args, options) => execute('ssh', args, options), fsApi = fs,
   repoRoot = process.cwd(), stdout = process.stdout
 } = {}) {
-  const { action, host } = parseWindowsDevControlArgs(argv, env);
+  const { action, host, sourceRef = WINDOWS_DEV_SOURCE_REF } = parseWindowsDevControlArgs(argv, env);
   if (isWindowsSyncGroupProviderReleaseAction(action)) {
     const output = await executeSsh(windowsDevSshSpec(host, action, env), { env });
     if (output) stdout.write(output);
@@ -136,7 +144,9 @@ export async function runWindowsDevControl({
     host, repoRoot, stdout
   });
   if (syncGroup) return syncGroup;
-  const spec = windowsDevPushSpec(host, env);
+  const localCandidate = action === 'multi-device-sync-candidate'
+    ? freezeWindowsCandidate(repoRoot, sourceRef) : null;
+  const spec = windowsDevPushSpec(host, env, os.homedir(), sourceRef);
   await executeGit(spec.args, { env: spec.env });
   let remoteError = null;
   let remoteOutput = '';
@@ -148,6 +158,11 @@ export async function runWindowsDevControl({
   }
   if (remoteOutput) stdout.write(remoteOutput);
   const result = { action, operation: 'complete', ref: WINDOWS_DEV_SOURCE_REF };
+  if (action === 'multi-device-sync-candidate' && !remoteError) {
+    Object.assign(result, await collectWindowsCandidateControl({ fsApi, localCandidate,
+      output: remoteOutput, repoRoot, sourceRef, stdout, copyFile: (remote, local) => executeScp(
+        windowsDevScpSpec(host, remote, local, env), { env }) }));
+  }
   if (action === 'capture-annotation') {
     let evidence;
     try {

@@ -37,32 +37,40 @@ async function prepareAndroid(execute, paths, repoRoot, progress, signal) {
   progress('candidate-android-launched');
 }
 
-async function prepareWindows(execute, repoRoot, progress, signal) {
+async function prepareWindows(candidate, execute, repoRoot, progress, signal) {
   progress('candidate-windows-started');
   const result = await execute(process.execPath,
-    ['scripts/windows/windows-dev-control.mjs', 'multi-device-sync-candidate'], repoRoot,
+    ['scripts/windows/windows-dev-control.mjs', 'multi-device-sync-candidate',
+      '--source-ref', candidate.sourceRef], repoRoot,
     18 * 60_000, signal);
-  const receipt = result.stdout.split(/\r?\n/u).find((line) =>
-    line.includes('[windows-dev-action] multi-device-sync-candidate'));
-  if (!receipt) throw Object.assign(new Error('Windows candidate did not report fixed evidence.'), {
-    failureOwner: 'candidate', host: 'windows-c', missingFact: 'windows_candidate_unbound'
-  });
+  const line = result.stdout.split(/\r?\n/u).find((value) =>
+    value.startsWith('[windows-dev-control] candidate-receipt='));
+  const receipt = line ? JSON.parse(line.slice(line.indexOf('=') + 1)) : null;
+  if (!receipt || receipt.sourceRef !== candidate.sourceRef
+      || receipt.treeDigest !== candidate.treeDigest
+      || receipt.controllerDigest !== candidate.controllerDigest) {
+    throw Object.assign(new Error('Windows candidate did not report the frozen boundary.'), {
+      failureOwner: 'candidate', host: 'windows-c', missingFact: 'windows_candidate_unbound'
+    });
+  }
   progress('candidate-windows-prepared');
   return receipt;
 }
 
-export async function prepareCandidate({ execute = run, repoRoot,
+export async function prepareCandidate({ candidate, execute = run, repoRoot,
   onProgress = () => {}, paths = macosA5Paths(repoRoot), requiredHosts, runId, signal }) {
   const hosts = new Set(requiredHosts);
   if (hosts.has('macos-a')) await prepareMacos(execute, repoRoot, onProgress, signal);
   if (hosts.has('android-b')) await prepareAndroid(execute, paths, repoRoot, onProgress, signal);
   const windowsReceipt = hosts.has('windows-c')
-    ? await prepareWindows(execute, repoRoot, onProgress, signal) : undefined;
+    ? await prepareWindows(candidate, execute, repoRoot, onProgress, signal) : undefined;
   const apk = path.join(repoRoot, 'android/app/build/outputs/apk/debug/app-debug.apk');
   const receipt = {
     ...(hosts.has('android-b') ? {
       androidApkSha256: createHash('sha256').update(fs.readFileSync(apk)).digest('hex')
     } : {}),
+    candidateBoundary: { branch: candidate.branch, controllerDigest: candidate.controllerDigest,
+      sourceRef: candidate.sourceRef, treeDigest: candidate.treeDigest },
     completedAt: new Date().toISOString(), preparedHosts: [...hosts],
     resultStatus: 'success', runId, ...(windowsReceipt ? { windowsReceipt } : {})
   };
@@ -81,10 +89,10 @@ function failureHost(activity) {
 }
 
 export async function prepareCandidateStage({ execute, reportActivity, reportProgress, repoRoot,
-  requiredHosts, runId, signal }) {
+  requiredHosts, run, runId, signal }) {
   let lastActivity = 'stage_started';
   try {
-    const result = await prepareCandidate({ execute, repoRoot, requiredHosts, runId, signal,
+    const result = await prepareCandidate({ candidate: run.candidate, execute, repoRoot, requiredHosts, runId, signal,
       onProgress: (activity) => { lastActivity = activity; reportActivity(activity); } });
     reportProgress('candidate-prepared');
     return result;

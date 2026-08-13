@@ -7,7 +7,7 @@ import {
 function candidate(overrides = {}) {
   return { branch: 'dev', clean: true, committed: true, controllerDigest: 'controller',
     criteriaDigest: 'criteria', revision: 'a'.repeat(40), scenarioDigest: 'scenario',
-    treeDigest: 'tree', ...overrides };
+    sourceRef: 'refs/heads/dev', treeDigest: 'tree', ...overrides };
 }
 
 function receipt(overrides = {}) {
@@ -24,6 +24,15 @@ it('pins candidate identity and invalidates a run when any frozen digest changes
   expect(finalizeRun(run, candidate({ controllerDigest: 'changed' }))).toMatchObject({
     invalidatedBy: 'controllerDigest', status: 'invalidated'
   });
+});
+
+it('accepts an explicitly bound branch and rejects a source-ref mismatch', () => {
+  expect(() => createRun({ candidate: candidate({
+    branch: 'codex/t121-8', sourceRef: 'refs/heads/codex/t121-8'
+  }), mode: 'diagnostic', runId: 'branch-run', scenario: 'a-b' })).not.toThrow();
+  expect(() => createRun({ candidate: candidate({ branch: 'codex/t121-8' }),
+    mode: 'diagnostic', runId: 'mismatch-run', scenario: 'a-b' }))
+    .toThrow('candidate is not frozen');
 });
 
 it('requires precise attribution on every non-passing receipt', () => {

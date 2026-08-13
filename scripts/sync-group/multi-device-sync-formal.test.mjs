@@ -5,7 +5,8 @@ import { runDiagnostic } from './multi-device-sync-diagnostic.mjs';
 import { runFormal } from './multi-device-sync-formal.mjs';
 
 const candidate = { branch: 'dev', clean: true, committed: true, controllerDigest: 'controller',
-  criteriaDigest: 'criteria', revision: 'a'.repeat(40), scenarioDigest: 'scenario', treeDigest: 'tree' };
+  criteriaDigest: 'criteria', revision: 'a'.repeat(40), scenarioDigest: 'scenario',
+  sourceRef: 'refs/heads/dev', treeDigest: 'tree' };
 const ready = async () => ({ facts: ['ready'] });
 const adapters = { 'android-b': ready, 'macos-a': ready, 'windows-c': ready };
 
