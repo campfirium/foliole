@@ -4,10 +4,7 @@ import { getEditorOperationSession } from '../features/editor/model/editorOperat
 import { createTextHistoryEntry } from '../features/editor/model/editorOperationHistory.testSupport';
 
 import { createWorkspaceEditorOperationHistoryActions } from './workspaceEditorOperationHistory';
-import {
-  hasWorkspaceNodeMutationRuntime,
-  syncCreateNodeMutationToRuntime
-} from './workspaceRuntimeSync';
+import { hasWorkspaceNodeMutationRuntime, syncCreateNodeMutationToRuntime } from './workspaceRuntimeSync';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
 import {
   createHighlightLocator,

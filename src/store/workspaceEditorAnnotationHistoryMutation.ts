@@ -71,11 +71,21 @@ function createRestorePatch(state: WorkspaceState, restoredNodeIds: string[]) {
   };
 }
 
-function finishDelete(set: WorkspaceSet, entry: EditorAnnotationOperationEntry, mode: 'redo' | 'undo', result: Awaited<ReturnType<typeof commitDelete>>) {
+function finishDelete(
+  set: WorkspaceSet,
+  entry: EditorAnnotationOperationEntry,
+  mode: 'redo' | 'undo',
+  result: Awaited<ReturnType<typeof commitDelete>>,
+  onSettled?: (queuedMode?: 'redo' | 'undo') => void
+) {
   if (!result) return finishFailure(set, entry, mode);
+  let queuedMode: 'redo' | 'undo' | undefined;
   set((state) => {
     const current = getEditorOperationTopEntry(state.editorOperationHistory, entry.nodeId, mode);
     const mutation = computeDeleteNodesMutation(state, result.deletedNodeIds, result.mutation.deletedAt);
+    queuedMode = current && current.type !== 'text.edit' && isApplyingEntry(current, entry, mode)
+      ? current.queuedMode
+      : undefined;
     const history = finishSuccessfulHistory(state, entry, mode, current);
     if (!mutation) return { editorOperationHistory: history };
     mutation.parentNodesToSync.forEach(syncNodeContentToRuntime);
@@ -87,17 +97,29 @@ function finishDelete(set: WorkspaceSet, entry: EditorAnnotationOperationEntry, 
       editorOperationHistory: history
     };
   });
+  onSettled?.(queuedMode);
 }
 
-function finishRestore(set: WorkspaceSet, entry: EditorAnnotationOperationEntry, mode: 'redo' | 'undo', restoredNodeIds: string[] | null) {
+function finishRestore(
+  set: WorkspaceSet,
+  entry: EditorAnnotationOperationEntry,
+  mode: 'redo' | 'undo',
+  restoredNodeIds: string[] | null,
+  onSettled?: (queuedMode?: 'redo' | 'undo') => void
+) {
   if (!restoredNodeIds) return finishFailure(set, entry, mode);
+  let queuedMode: 'redo' | 'undo' | undefined;
   set((state) => {
     const current = getEditorOperationTopEntry(state.editorOperationHistory, entry.nodeId, mode);
+    queuedMode = current && current.type !== 'text.edit' && isApplyingEntry(current, entry, mode)
+      ? current.queuedMode
+      : undefined;
     return {
       ...createRestorePatch(state, restoredNodeIds),
       editorOperationHistory: finishSuccessfulHistory(state, entry, mode, current)
     };
   });
+  onSettled?.(queuedMode);
 }
 
 function finishSuccessfulHistory(
@@ -137,6 +159,7 @@ export function startEditorAnnotationHistoryMutation(args: {
   entry: EditorAnnotationOperationEntry;
   get: WorkspaceGet;
   mode: 'redo' | 'undo';
+  onSettled?: (queuedMode?: 'redo' | 'undo') => void;
   set: WorkspaceSet;
 }) {
   args.set((state) => ({
@@ -148,11 +171,11 @@ export function startEditorAnnotationHistoryMutation(args: {
   const shouldDelete = (args.entry.type === 'annotation.create') === (args.mode === 'undo');
   if (shouldDelete) {
     void commitDelete(args.entry, args.get())
-      .then((result) => finishDelete(args.set, args.entry, args.mode, result))
+      .then((result) => finishDelete(args.set, args.entry, args.mode, result, args.onSettled))
       .catch(() => finishFailure(args.set, args.entry, args.mode));
   } else {
     void commitRestore(args.entry)
-      .then((result) => finishRestore(args.set, args.entry, args.mode, result))
+      .then((result) => finishRestore(args.set, args.entry, args.mode, result, args.onSettled))
       .catch(() => finishFailure(args.set, args.entry, args.mode));
   }
   return true;

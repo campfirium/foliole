@@ -141,6 +141,8 @@ test('undoes and redoes a PDF highlight through the current content owner', asyn
   const highlightRect = desktopWindow.getByRole('region', { name: /PDF reader panel|PDF 阅读器面板/ })
     .getByTestId('pdf-highlight-rect').first();
   await expect(highlightRect).toBeVisible();
+  const originalRect = await highlightRect.boundingBox();
+  expect(originalRect).not.toBeNull();
   const highlightId = await desktopWindow.evaluate((existingIds) => (
     window.__folioleWorkspaceDebug?.listNodes?.().find(({ id }) => !existingIds.includes(id))?.id ?? null
   ), beforeIds);
@@ -155,7 +157,14 @@ test('undoes and redoes a PDF highlight through the current content owner', asyn
   await expect.poll(() => collectNode(desktopWindow, highlightId!)).toMatchObject({ trashed: true });
 
   await pressRedo(desktopWindow);
+  await expect(highlightRect).toBeVisible();
+  expect(await highlightRect.boundingBox()).toEqual(originalRect);
   await expect(desktopWindow.getByRole('treeitem', { name: PDF_HIGHLIGHT_TEXT })).toBeVisible();
+  await expect.poll(() => collectNode(desktopWindow, highlightId!)).toMatchObject({ trashed: false });
+  await pressUndo(desktopWindow);
+  await pressRedo(desktopWindow);
+  await expect(highlightRect).toBeVisible();
+  expect(await highlightRect.boundingBox()).toEqual(originalRect);
   await expect.poll(() => collectNode(desktopWindow, highlightId!)).toMatchObject({ trashed: false });
   await desktopWindow.screenshot({
     path: path.join(EVIDENCE_ROOT, `${process.platform}-pdf-content-history-hidden-native.png`)

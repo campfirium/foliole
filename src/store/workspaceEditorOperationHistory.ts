@@ -65,7 +65,9 @@ function applyTextEntry(args: {
 function createApplyForNode(set: WorkspaceSet, get: WorkspaceGet) {
   return (nodeId: string, mode: 'redo' | 'undo', context?: EditorOperationApplyContext) => {
     const entry = getEditorOperationTopEntry(get().editorOperationHistory, nodeId, mode);
-    if (!entry) return false;
+    if (!entry) {
+      return queueBehindApplyingAnnotation(set, get, nodeId, mode);
+    }
     if (entry.type === 'text.edit') return applyTextEntry({
       entry,
       mode,
@@ -73,7 +75,15 @@ function createApplyForNode(set: WorkspaceSet, get: WorkspaceGet) {
       set,
       ...(context ? { context } : {})
     });
-    if (entry.applyingMode) return false;
+    if (entry.applyingMode) {
+      set((state) => ({
+        editorOperationHistory: replaceEditorOperationEntry(state.editorOperationHistory, nodeId, mode, {
+          ...entry,
+          queuedMode: mode
+        })
+      }));
+      return true;
+    }
     if (entry.canonical === 'pending') {
       if (mode !== 'undo') return false;
       set((state) => ({
@@ -84,8 +94,34 @@ function createApplyForNode(set: WorkspaceSet, get: WorkspaceGet) {
       }));
       return true;
     }
-    return startEditorAnnotationHistoryMutation({ entry, get, mode, set });
+    return startEditorAnnotationHistoryMutation({
+      entry,
+      get,
+      mode,
+      onSettled: (queuedMode) => {
+        if (queuedMode) queueMicrotask(() => createApplyForNode(set, get)(nodeId, queuedMode));
+      },
+      set
+    });
   };
+}
+
+function queueBehindApplyingAnnotation(
+  set: WorkspaceSet,
+  get: WorkspaceGet,
+  nodeId: string,
+  mode: 'redo' | 'undo'
+) {
+  const oppositeMode = mode === 'undo' ? 'redo' : 'undo';
+  const applyingEntry = getEditorOperationTopEntry(get().editorOperationHistory, nodeId, oppositeMode);
+  if (!applyingEntry || applyingEntry.type === 'text.edit' || !applyingEntry.applyingMode) return false;
+  set((state) => ({
+    editorOperationHistory: replaceEditorOperationEntry(state.editorOperationHistory, nodeId, oppositeMode, {
+      ...applyingEntry,
+      queuedMode: mode
+    })
+  }));
+  return true;
 }
 
 function deleteEditorAnnotations(set: WorkspaceSet, get: WorkspaceGet, nodeIds: string[]) {
