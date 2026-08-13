@@ -9,6 +9,7 @@ import { AppSpinner } from '../shared/ui';
 import type { CompanionHandoffReminderSettings } from './companionHandoffReminderSettings';
 import { CompanionHandoffReminderSettingsPanel } from './CompanionHandoffReminderSettingsPanel';
 import { CompanionSyncDiscoveryDialog } from './CompanionSyncDiscoveryDialog';
+import { CompanionSyncParticipationControls } from './CompanionSyncParticipationControls';
 import { CompanionSyncRepairPairingState } from './CompanionSyncRepairPairingState';
 import { AwaitingApprovalState, EmptyDiscoveryState } from './CompanionSyncSetupStates';
 import { CompanionSyncStatusDetails } from './CompanionSyncStatusDetails';
@@ -194,6 +195,7 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
   return (
     <section className="mb-8 px-5 py-5">
       <div className="flex flex-col gap-5">
+        {props.page === 'sync' ? <CompanionSyncParticipationControls /> : null}
         <MainSyncContent
           {...props}
           endpointUrl={endpointUrl}
