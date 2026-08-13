@@ -11,7 +11,10 @@ function factPayload(device, snapshot, now) {
     title: `Multi-device sync ${device} fact`, updatedAt: stamp };
 }
 
-const JOURNEY_PNG_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB';
+const JOURNEY_PNG_BASE64 = Object.freeze({
+  A: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+  C: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/bo8wWQAAAABJRU5ErkJggg=='
+});
 
 export async function createDesktopSyncGroupJourneyFact({ device, evidenceRoot, now = () => new Date(),
   session, withAttachment = false }) {
@@ -24,7 +27,7 @@ export async function createDesktopSyncGroupJourneyFact({ device, evidenceRoot, 
     throw new Error('Desktop product command did not persist the journey fact.');
   }
   const attachment = withAttachment ? await session.invoke('import_clipboard_image_attachment', {
-    bytesBase64: JOURNEY_PNG_BASE64, mimeType: 'image/png', nodeId: payload.nodeId,
+    bytesBase64: JOURNEY_PNG_BASE64[device], mimeType: 'image/png', nodeId: payload.nodeId,
     originalName: `${payload.nodeId}.png`
   }) : null;
   if (withAttachment && attachment?.status !== 'imported') {
