@@ -8,7 +8,9 @@ import { macosA5GradleEnv, macosA5Paths, A5_SERIAL } from '../android/macos-a5-d
 import { runMacosA5SyncGroupMaintenance } from '../android/macos-a5-sync-group-maintenance-action.mjs';
 import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desktop-session.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
-import { assertAndroidResumeData } from './multi-device-sync-participation-evidence.mjs';
+import {
+  assertAndroidResumeData, assertDesktopDepartureData
+} from './multi-device-sync-participation-evidence.mjs';
 import { startWindowsSyncGroupProvider } from './multi-device-sync-windows-provider.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
@@ -161,13 +163,8 @@ async function leaveMacos(context, session) {
   try {
     const overview = await restarted.load();
     const after = await context.inspectMac();
-    const counts = ['attachmentCount', 'contentBlobCount', 'userNodeCount'];
-    if (overview.sync_group !== null || after.localGroupId !== null || after.activeMemberCount !== 0
-        || after.syncPeerCursorCount !== 0 || after.syncDeliveryReceiptCount !== 0
-        || counts.some((key) => after[key] !== before[key])) {
-      throw productFailure('macos-a', 'macos_departure_cleanup_invalid',
-        `macOS departed state is incomplete: ${JSON.stringify({ after, overview })}`);
-    }
+    assertDesktopDepartureData(before, after, overview, (message) =>
+      productFailure('macos-a', 'macos_departure_cleanup_invalid', message));
   } finally { await restarted.close(); }
 }
 

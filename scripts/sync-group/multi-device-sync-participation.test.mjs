@@ -2,7 +2,9 @@ import fs from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
 
-import { assertAndroidResumeData } from './multi-device-sync-participation-evidence.mjs';
+import {
+  assertAndroidResumeData, assertDesktopDepartureData
+} from './multi-device-sync-participation-evidence.mjs';
 
 const fail = (message) => new Error(message);
 
@@ -38,5 +40,24 @@ describe('Android resume evidence', () => {
     expect(() => assertAndroidResumeData(
       snapshot({ existing: 'B' }), snapshot({ resumed: 'A' }), 'resumed', fail
     )).toThrow(/Android did not retain resumed data/u);
+  });
+});
+
+describe('desktop departure evidence', () => {
+  const before = { activeMemberCount: 3, attachmentCount: 1, contentBlobCount: 4,
+    deviceIdentity: 'desktop-a', userNodeCount: 5 };
+  const after = { ...before, activeMemberCount: 2,
+    departedAtByDeviceIdentity: { 'desktop-a': '2026-08-13T00:00:00Z' },
+    localGroupId: null, localMemberState: null, syncDeliveryReceiptCount: 0, syncPeerCursorCount: 0 };
+  const overview = { sync_enabled: false, sync_group: null };
+
+  it('retains the surviving member facts after the local Device unbinds', () => {
+    expect(() => assertDesktopDepartureData(before, after, overview, fail)).not.toThrow();
+  });
+
+  it('requires the local departure and cleared progress', () => {
+    expect(() => assertDesktopDepartureData(before,
+      { ...after, departedAtByDeviceIdentity: {}, syncPeerCursorCount: 1 }, overview, fail
+    )).toThrow(/macOS departed state is incomplete/u);
   });
 });
