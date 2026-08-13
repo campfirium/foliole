@@ -14,6 +14,8 @@ describe('Android resume evidence', () => {
   it('uses a database-only device snapshot for participation facts', () => {
     const source = fs.readFileSync('scripts/sync-group/multi-device-sync-participation.mjs', 'utf8');
     expect(source).toContain('includeAttachments: false');
+    expect(source).not.toContain('waitForAndroidJourneyFact');
+    expect(source.match(/const after = await androidSnapshot/g)).toHaveLength(1);
   });
 
   it('leaves connected leaf A before hub B and the final Windows member', () => {

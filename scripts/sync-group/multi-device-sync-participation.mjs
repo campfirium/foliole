@@ -8,7 +8,6 @@ import { macosA5GradleEnv, macosA5Paths, A5_SERIAL } from '../android/macos-a5-d
 import { runMacosA5SyncGroupMaintenance } from '../android/macos-a5-sync-group-maintenance-action.mjs';
 import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desktop-session.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
-import { waitForAndroidJourneyFact } from './multi-device-sync-ab-convergence.mjs';
 import { assertAndroidResumeData } from './multi-device-sync-participation-evidence.mjs';
 import { startWindowsSyncGroupProvider } from './multi-device-sync-windows-provider.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
@@ -115,9 +114,10 @@ async function proveAndroidParticipation(context, macosSession) {
   const fact = await createDesktopSyncGroupJourneyFact({ device: 'A',
     evidenceRoot: path.join(context.evidenceRoot, 'android-offline-a-fact'), session: macosSession });
   await maintenance(context, 'resume-participation', 'android-resume');
-  await waitForAndroidJourneyFact(context.paths, fact.factId);
+  const after = await waitUntil('Android resumed cursor', () => androidSnapshot(context.paths),
+    (snapshot) => snapshot.database?.inspection?.journeyFacts?.[fact.factId] === 'A',
+    'android_resume_cursor_missing');
   context.reportProgress('android-resumed-cursor');
-  const after = await androidSnapshot(context.paths);
   assertAndroidResumeData(before, after, fact.factId,
     (message) => productFailure('android-b', 'android_resume_data_missing', message));
   return after;
