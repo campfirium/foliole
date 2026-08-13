@@ -6,7 +6,7 @@ import path from 'node:path';
 import { expect, it } from 'vitest';
 
 import {
-  prepareCandidate, prepareCandidateStage
+  assertCandidateStillFrozen, prepareCandidate, prepareCandidateStage
 } from './multi-device-sync-candidate-preparation.mjs';
 
 const candidate = { branch: 'codex/t121-8', controllerDigest: 'controller',
@@ -38,6 +38,17 @@ it('resolves default host paths from the supplied repository root', async () => 
   delete input.paths;
   await expect(prepareCandidate({ ...input, candidate, requiredHosts: [] })).resolves.toMatchObject({
     progress: []
+  });
+});
+
+it('rejects a candidate build that dirties the frozen source worktree', () => {
+  const frozen = { ...candidate, clean: true, mode: 'diagnostic', revision: 'revision' };
+  let failure;
+  try {
+    assertCandidateStillFrozen(frozen, '/repo', () => ({ ...frozen, clean: false }));
+  } catch (error) { failure = error; }
+  expect(failure).toMatchObject({
+    failureOwner: 'candidate', missingFact: 'candidate_source_boundary_changed'
   });
 });
 

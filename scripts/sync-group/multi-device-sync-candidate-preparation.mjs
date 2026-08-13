@@ -5,6 +5,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 
 import { A5_SERIAL, macosA5Paths } from '../android/macos-a5-dev.mjs';
+import { currentAcceptanceCandidate } from './multi-device-sync-candidate.mjs';
 
 /* global process */
 
@@ -22,11 +23,12 @@ async function prepareMacos(execute, repoRoot, progress, signal) {
   progress('candidate-macos-prepared');
 }
 
-async function prepareAndroid(execute, paths, repoRoot, progress, signal) {
+async function prepareAndroid(execute, paths, repoRoot, progress, signal, assertFrozen) {
   progress('candidate-android-started');
   await execute(process.execPath, ['scripts/android/macos-a5-dev.mjs', 'build'],
     repoRoot, 12 * 60_000, signal);
   progress('candidate-android-built');
+  assertFrozen();
   await execute(paths.adb, ['-s', A5_SERIAL, 'install', '-r', paths.apk], repoRoot,
     5 * 60_000, signal);
   progress('candidate-android-installed');
@@ -57,11 +59,28 @@ async function prepareWindows(candidate, execute, repoRoot, progress, signal) {
   return receipt;
 }
 
+export function assertCandidateStillFrozen(candidate, repoRoot,
+  inspect = currentAcceptanceCandidate) {
+  const current = inspect(repoRoot, candidate.mode, candidate.sourceRef);
+  const keys = ['branch', 'controllerDigest', 'revision', 'sourceRef', 'treeDigest'];
+  if (!current.clean || keys.some((key) => current[key] !== candidate[key])) {
+    throw Object.assign(new Error('Candidate build changed the frozen source boundary.'), {
+      failureOwner: 'candidate', missingFact: 'candidate_source_boundary_changed'
+    });
+  }
+  return current;
+}
+
 export async function prepareCandidate({ candidate, execute = run, repoRoot,
-  onProgress = () => {}, paths = macosA5Paths(repoRoot), requiredHosts, runId, signal }) {
+  assertFrozen = () => {}, onProgress = () => {}, paths = macosA5Paths(repoRoot),
+  requiredHosts, runId, signal }) {
   const hosts = new Set(requiredHosts);
-  if (hosts.has('macos-a')) await prepareMacos(execute, repoRoot, onProgress, signal);
-  if (hosts.has('android-b')) await prepareAndroid(execute, paths, repoRoot, onProgress, signal);
+  if (hosts.has('macos-a')) {
+    await prepareMacos(execute, repoRoot, onProgress, signal); assertFrozen();
+  }
+  if (hosts.has('android-b')) {
+    await prepareAndroid(execute, paths, repoRoot, onProgress, signal, assertFrozen);
+  }
   const windowsReceipt = hosts.has('windows-c')
     ? await prepareWindows(candidate, execute, repoRoot, onProgress, signal) : undefined;
   const apk = path.join(repoRoot, 'android/app/build/outputs/apk/debug/app-debug.apk');
@@ -92,7 +111,8 @@ export async function prepareCandidateStage({ execute, reportActivity, reportPro
   requiredHosts, run, runId, signal }) {
   let lastActivity = 'stage_started';
   try {
-    const result = await prepareCandidate({ candidate: run.candidate, execute, repoRoot, requiredHosts, runId, signal,
+    const result = await prepareCandidate({ candidate: run.candidate, execute, repoRoot,
+      assertFrozen: () => assertCandidateStillFrozen(run.candidate, repoRoot), requiredHosts, runId, signal,
       onProgress: (activity) => { lastActivity = activity; reportActivity(activity); } });
     reportProgress('candidate-prepared');
     return result;
