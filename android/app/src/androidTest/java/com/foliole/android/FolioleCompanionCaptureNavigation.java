@@ -86,8 +86,8 @@ final class FolioleCompanionCaptureNavigation {
         WebView webView,
         String testId
     ) throws Exception {
-        return FolioleCompanionCaptureAnnotationScenario.evaluate(instrumentation, webView,
+        return FolioleCompanionWebViewSemanticAdapter.tryEvaluateBoolean(instrumentation, webView,
             "(function(){return JSON.stringify({ok:document.querySelector('[data-testid=\"" +
-                testId + "\"]')!==null});})()").optBoolean("ok");
+                testId + "\"]')!==null});})()");
     }
 }

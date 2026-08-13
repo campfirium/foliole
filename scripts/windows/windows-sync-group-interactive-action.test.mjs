@@ -39,6 +39,8 @@ it('runs the Windows C Electron journey in the bounded interactive user task', a
   expect(installTask).toHaveBeenCalledWith(expect.objectContaining({ executionTimeLimitMinutes: 20 }));
   expect(options.execute).toHaveBeenCalledWith('schtasks.exe',
     ['/Run', '/TN', 'FolioleNativeClient'], expect.any(Object));
+  expect(waitForResult).toHaveBeenCalledWith(expect.any(Object), expect.any(String),
+    expect.objectContaining({ resultTimeoutMs: 20 * 60_000, startTimeoutMs: 30_000 }));
   const request = readJson(syncGroupInteractivePaths(options.paths.repoRoot).request);
   expect(request).toMatchObject({ action: options.action, evidenceRoot: options.evidenceRoot, schemaVersion: 1 });
   expect(fs.existsSync(interactive.providerRelease)).toBe(false);

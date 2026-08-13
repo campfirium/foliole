@@ -160,8 +160,8 @@ final class FolioleCompanionCaptureAnnotationScenario {
             "),function(node){return (node.textContent||'').includes(" + JSONObject.quote(text) + ");})";
         long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
         while (System.nanoTime() < deadline) {
-            if (evaluate(instrumentation, webView,
-                "(function(){return JSON.stringify({ok:!!(" + expression + ")});})()").optBoolean("ok")) return;
+            if (FolioleCompanionWebViewSemanticAdapter.tryEvaluateBoolean(instrumentation, webView,
+                "(function(){return JSON.stringify({ok:!!(" + expression + ")});})()")) return;
             Thread.sleep(100);
         }
         JSONObject page = evaluate(instrumentation, webView,

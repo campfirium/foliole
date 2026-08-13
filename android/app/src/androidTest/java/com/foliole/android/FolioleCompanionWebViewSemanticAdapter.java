@@ -129,6 +129,25 @@ final class FolioleCompanionWebViewSemanticAdapter {
         return new JSONObject(new JSONArray("[" + raw + "]").getString(0));
     }
 
+    static JSONObject tryEvaluateJson(
+        Instrumentation instrumentation,
+        WebView webView,
+        String script
+    ) throws Exception {
+        try {
+            return evaluateJson(instrumentation, webView, script);
+        } catch (WebViewEvaluationTimeoutException timeout) {
+            return null;
+        }
+    }
+
+    static boolean tryEvaluateBoolean(
+        Instrumentation instrumentation, WebView webView, String script
+    ) throws Exception {
+        JSONObject result = tryEvaluateJson(instrumentation, webView, script);
+        return result != null && result.optBoolean("ok");
+    }
+
     private static String evaluateRaw(
         Instrumentation instrumentation,
         WebView webView,

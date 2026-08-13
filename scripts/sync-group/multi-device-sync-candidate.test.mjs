@@ -18,6 +18,7 @@ it('freezes the provider lifecycle helpers used by formal sync journeys', () => 
     'scripts/sync-group/sync-from-zero-contract.mjs',
     'scripts/sync-group/sync-from-zero-dataset-inspect.mjs',
     'scripts/windows/windows-multi-device-sync-from-zero-action.mjs',
+    'scripts/windows/windows-sync-group-interactive-action.mjs',
     'scripts/windows/windows-sync-group-runtime-progress.mjs',
     'scripts/windows/windows-sync-group-session-close.mjs'
   ]));

@@ -49,7 +49,7 @@ export async function runWindowsSyncGroupInteractiveAction(options, {
         + ` milestone=${progress.milestone} fact=${progress.factId}\n`;
       (options.stdout ?? process.stdout).write(line);
     },
-    resultTimeoutMs: RESULT_TIMEOUT_MS
+    resultTimeoutMs: RESULT_TIMEOUT_MS, startTimeoutMs: 30_000
   });
   if (result.exitCode !== 0) throw new Error(result.error || `interactive ${options.action} failed`);
   return result.actionResult;
