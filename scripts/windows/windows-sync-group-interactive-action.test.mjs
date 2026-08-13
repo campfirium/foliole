@@ -7,7 +7,9 @@ import path from 'node:path';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { runWindowsDevDeviceAction } from './windows-dev-device-action.mjs';
-import { runWindowsSyncGroupInteractiveAction } from './windows-sync-group-interactive-action.mjs';
+import {
+  runWindowsSyncGroupInteractiveAction, waitForInteractiveWorkerExit
+} from './windows-sync-group-interactive-action.mjs';
 import {
   readJson, syncGroupInteractivePaths, validateSyncGroupInteractiveProgress,
   validateSyncGroupInteractiveRequest
@@ -29,21 +31,32 @@ it('runs the Windows C Electron journey in the bounded interactive user task', a
     execute: vi.fn(async () => ({ code: 0 })), ...fixture() };
   const installTask = vi.fn(async () => undefined);
   const actionResult = { multiDeviceSyncC: { manifestPath: 'receipt.json' }, output: '' };
-  const waitForResult = vi.fn(async () => ({ actionResult, exitCode: 0 }));
+  const waitForResult = vi.fn(async () => ({ actionResult, exitCode: 0, workerPid: 1234 }));
+  const waitForWorkerExit = vi.fn(async () => undefined);
   const interactive = syncGroupInteractivePaths(options.paths.repoRoot);
   fs.mkdirSync(path.dirname(interactive.providerRelease), { recursive: true });
   fs.writeFileSync(interactive.providerRelease, '{}', 'utf8');
   await expect(runWindowsSyncGroupInteractiveAction(options, {
-    installTask, waitForResult
+    installTask, waitForResult, waitForWorkerExit
   })).resolves.toEqual(actionResult);
   expect(installTask).toHaveBeenCalledWith(expect.objectContaining({ executionTimeLimitMinutes: 20 }));
   expect(options.execute).toHaveBeenCalledWith('schtasks.exe',
     ['/Run', '/TN', 'FolioleNativeClient'], expect.any(Object));
   expect(waitForResult).toHaveBeenCalledWith(expect.any(Object), expect.any(String),
     expect.objectContaining({ resultTimeoutMs: 20 * 60_000, startTimeoutMs: 30_000 }));
+  expect(waitForWorkerExit).toHaveBeenCalledWith(1234);
   const request = readJson(syncGroupInteractivePaths(options.paths.repoRoot).request);
   expect(request).toMatchObject({ action: options.action, evidenceRoot: options.evidenceRoot, schemaVersion: 1 });
   expect(fs.existsSync(interactive.providerRelease)).toBe(false);
+});
+
+it('waits for the nonce-bound worker process to exit before releasing the task slot', async () => {
+  let current = 0;
+  const isAlive = vi.fn(() => current < 200);
+  await waitForInteractiveWorkerExit(1234, {
+    isAlive, now: () => current, wait: async (ms) => { current += ms; }
+  });
+  expect(isAlive).toHaveBeenCalledTimes(3);
 });
 
 it('accepts only registered actions and evidence inside the action-owned root', () => {
@@ -86,10 +99,11 @@ it('streams the created C fact as nonce-bound provider progress', async () => {
     milestone: 'c-fact-created' };
   const waitForResult = vi.fn(async (_paths, _nonce, settings) => {
     settings.onProgress(progress);
-    return { actionResult: {}, exitCode: 0 };
+    return { actionResult: {}, exitCode: 0, workerPid: 1234 };
   });
   await runWindowsSyncGroupInteractiveAction(options, {
-    installTask: vi.fn(async () => undefined), waitForResult
+    installTask: vi.fn(async () => undefined), waitForResult,
+    waitForWorkerExit: vi.fn(async () => undefined)
   });
   expect(options.stdout.write).toHaveBeenCalledWith(expect.stringMatching(
     /^\[windows-dev-action\] progress action=multi-device-sync-a-leave nonce=[0-9a-f-]{36} milestone=c-fact-created fact=multi-device-sync-c-20260813080000000\n$/u

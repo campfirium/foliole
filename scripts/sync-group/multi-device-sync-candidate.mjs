@@ -44,6 +44,8 @@ const CONTROLLER_FILES = [
   'scripts/windows/windows-sync-group-recovery-inspect.mjs',
   'scripts/windows/windows-sync-group-runtime-progress.mjs',
   'scripts/windows/windows-sync-group-interactive-action.mjs',
+  'scripts/windows/windows-sync-group-interactive-worker.mjs',
+  'scripts/windows/windows-process-alive.mjs',
   'scripts/windows/windows-sync-group-session-close.mjs'
 ];
 

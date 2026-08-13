@@ -36,15 +36,15 @@ async function main() {
       evidenceRoot: request.evidenceRoot, execute: executeBounded,
       paths: windowsDevPaths({ repoRoot }), reportProgress
     });
-    completed = { actionResult, exitCode: 0, nonce: request.nonce,
+    completed = { actionResult, exitCode: 0, nonce: request.nonce, workerPid: process.pid,
       progress, schemaVersion: 1, state: 'completed' };
   } catch (error) {
     completed = { error: error instanceof Error ? error.message : String(error), exitCode: 1,
-      nonce: request.nonce, progress, schemaVersion: 1, state: 'completed' };
+      nonce: request.nonce, progress, schemaVersion: 1, state: 'completed', workerPid: process.pid };
   }
   writeJsonAtomic(state.result, { ...completed, completedAt: new Date().toISOString() });
   writeJsonAtomic(state.status, { ...completed, completedAt: new Date().toISOString() });
-  process.exitCode = completed.exitCode;
+  process.exit(completed.exitCode);
 }
 
 process.env[WINDOWS_SYNC_GROUP_INTERACTIVE_WORKER_ENV] = '1';

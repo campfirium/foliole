@@ -2,22 +2,43 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 
-/* global process */
+/* global process, setTimeout */
 
 import {
   installInteractiveTask, waitForInteractiveResult
 } from './windows-client-native-interactive.mjs';
 import { WINDOWS_NATIVE_CLIENT_TASK } from './windows-client-native-interactive-state.mjs';
 import { resolveWindowsNativePaths } from './windows-native-paths.mjs';
+import { processAlive } from './windows-process-alive.mjs';
 import {
   syncGroupInteractivePaths, WINDOWS_SYNC_GROUP_INTERACTIVE_ACTIONS,
   validateSyncGroupInteractiveProgress, writeJsonAtomic
 } from './windows-sync-group-interactive-state.mjs';
 
 const RESULT_TIMEOUT_MS = 20 * 60_000;
+const WORKER_EXIT_TIMEOUT_MS = 10_000;
+
+function pause(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function waitForInteractiveWorkerExit(workerPid, {
+  isAlive = processAlive, now = Date.now, wait = pause
+} = {}) {
+  if (!Number.isInteger(workerPid) || workerPid <= 0) {
+    throw new Error('Sync Group interactive worker did not report its process identity.');
+  }
+  const deadline = now() + WORKER_EXIT_TIMEOUT_MS;
+  while (now() < deadline) {
+    if (!isAlive(workerPid)) return;
+    await wait(100);
+  }
+  throw new Error('Sync Group interactive worker did not exit after publishing its result.');
+}
 
 export async function runWindowsSyncGroupInteractiveAction(options, {
-  installTask = installInteractiveTask, waitForResult = waitForInteractiveResult
+  installTask = installInteractiveTask, waitForResult = waitForInteractiveResult,
+  waitForWorkerExit = waitForInteractiveWorkerExit
 } = {}) {
   if (!WINDOWS_SYNC_GROUP_INTERACTIVE_ACTIONS.has(options.action)) return null;
   const native = resolveWindowsNativePaths(options.paths.repoRoot);
@@ -51,6 +72,7 @@ export async function runWindowsSyncGroupInteractiveAction(options, {
     },
     resultTimeoutMs: RESULT_TIMEOUT_MS, startTimeoutMs: 30_000
   });
+  await waitForWorkerExit(result.workerPid);
   if (result.exitCode !== 0) throw new Error(result.error || `interactive ${options.action} failed`);
   return result.actionResult;
 }
