@@ -59,8 +59,8 @@ it('treats external, trash, and virtual surfaces as paused review surfaces', () 
     externalLibrary: { isExternalViewOpen: true },
     layoutChrome: { isImmersiveMode: false, isListCollapsed: false },
     navigation: { activeNodeId: 'node-1', onSelectNode },
-    nodeList: { nodesById: { 'node-1': { title: 'Review topic' } }, onOpenNotesView },
-    review: createReviewProps({ onResumeReviewItem }),
+    nodeList: { nodesById: { 'node-1': { kind: 'item', title: 'Review topic' } }, onOpenNotesView },
+    review: { ...createReviewProps({ onResumeReviewItem }), reviewPanelQueueNodeIds: ['node-1'] },
     trash: { isTrashViewOpen: false, isViewingTrashNode: false },
     virtualView: { isVirtualViewOpen: false }
   };
@@ -90,8 +90,8 @@ it('treats a different queued topic as a paused review surface', () => {
     externalLibrary: { isExternalViewOpen: false },
     layoutChrome: { isImmersiveMode: false, isListCollapsed: false },
     navigation: { activeNodeId: 'node-2', onSelectNode: vi.fn() },
-    nodeList: { nodesById: { 'node-1': { title: 'Review topic' } }, onOpenNotesView: vi.fn() },
-    review: createReviewProps({ reviewCurrentNodeId: 'node-1' }),
+    nodeList: { nodesById: { 'node-1': { kind: 'item', title: 'Review topic' } }, onOpenNotesView: vi.fn() },
+    review: { ...createReviewProps({ reviewCurrentNodeId: 'node-1' }), reviewPanelQueueNodeIds: ['node-1'] },
     trash: { isTrashViewOpen: false, isViewingTrashNode: false },
     virtualView: { isVirtualViewOpen: false }
   };

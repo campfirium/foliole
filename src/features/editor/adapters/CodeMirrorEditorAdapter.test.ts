@@ -51,7 +51,9 @@ const {
 
 vi.mock('@codemirror/commands', () => ({
   defaultKeymap: ['default-keymap'],
-  toggleComment: vi.fn()
+  redo: vi.fn(),
+  toggleComment: vi.fn(),
+  undo: vi.fn()
 }));
 
 vi.mock('@codemirror/lang-markdown', () => ({

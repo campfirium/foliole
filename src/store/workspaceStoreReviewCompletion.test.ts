@@ -108,7 +108,7 @@ it('continues the recommended Flow from queue clear into reading topics', async 
   expect(harness.getState().activeNodeId).toBe('reading-1');
 });
 
-it('does not start review-first by falling back to due reading topics', () => {
+it('falls back from review-first to recommended when only reading topics are due', () => {
   const now = '2026-03-03T00:00:00.000Z';
   const harness = createSetStateHarness({
     ...createWorkspaceFixture([createReadingNode('reading-1', now)]),
@@ -119,12 +119,14 @@ it('does not start review-first by falling back to due reading topics', () => {
     preview: previewStub
   });
 
-  expect(actions.startReviewSession(now)).toBe(false);
+  expect(actions.startReviewSession(now)).toBe(true);
+  expect(harness.getState().reviewSessionMode).toBe('recommended');
   expect(harness.getState().reviewSession).toMatchObject({
-    currentNodeId: null,
-    queueNodeIds: [],
-    totalNodeCount: 0
+    currentNodeId: 'reading-1',
+    queueNodeIds: ['reading-1'],
+    totalNodeCount: 1
   });
+  expect(harness.getState().activeNodeId).toBe('reading-1');
 });
 
 it('keeps a completed session checkpoint after reading the last topic', async () => {
