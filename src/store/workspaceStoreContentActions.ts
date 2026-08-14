@@ -119,6 +119,7 @@ function syncTextAnchorLocatorsForNextContentNode(
   args.metrics.cloneNodesByIdMs = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() - cloneStartedAt : 0;
   const syncStartedAt = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() : 0;
   const locatorSync = syncTextAnchorLocatorsForParentContent({
+    excludedNodeIds: new Set(args.state.trashedNodeIds),
     nextContent: args.content,
     nodesById: nextNodesByIdForLocatorSync,
     parentNodeId: args.nodeId,

@@ -47,8 +47,14 @@ function areImageRegionsEqual(left: Node['imageRegions'], right: Node['imageRegi
   return JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
 }
 
-function shouldSyncTextAnchorNode(node: Node, parentNodeId: string) {
-  return node.parentNodeId === parentNodeId && getTextAnchorLocators(node.anchorLink?.locator).length > 0;
+function shouldSyncTextAnchorNode(
+  node: Node,
+  parentNodeId: string,
+  excludedNodeIds?: ReadonlySet<string>
+) {
+  return !excludedNodeIds?.has(node.id) &&
+    node.parentNodeId === parentNodeId &&
+    getTextAnchorLocators(node.anchorLink?.locator).length > 0;
 }
 
 function buildNextTextAnchorNode(args: {
@@ -117,6 +123,7 @@ function readTextAnchorLocatorSyncNodes(args: {
 
 function syncTextAnchorLocatorNode(args: {
   diagnostics: TextAnchorLocatorSyncDiagnosticStats | null;
+  excludedNodeIds?: ReadonlySet<string>;
   nextContent: string;
   node: Node;
   parentNodeId: string;
@@ -124,7 +131,7 @@ function syncTextAnchorLocatorNode(args: {
   state: TextAnchorLocatorSyncState;
   timestamp: string;
 }) {
-  if (!shouldSyncTextAnchorNode(args.node, args.parentNodeId)) {
+  if (!shouldSyncTextAnchorNode(args.node, args.parentNodeId, args.excludedNodeIds)) {
     return;
   }
   if (args.diagnostics) {
@@ -151,6 +158,7 @@ function syncTextAnchorLocatorNode(args: {
 }
 
 export function syncTextAnchorLocatorsForParentContent(args: {
+  excludedNodeIds?: ReadonlySet<string>;
   nextContent: string;
   nodesById: Record<string, Node>;
   parentNodeId: string;
@@ -166,6 +174,7 @@ export function syncTextAnchorLocatorsForParentContent(args: {
   readTextAnchorLocatorSyncNodes({ diagnostics, nodesById: args.nodesById }).forEach((node) => {
     syncTextAnchorLocatorNode({
       diagnostics,
+      ...(args.excludedNodeIds ? { excludedNodeIds: args.excludedNodeIds } : {}),
       nextContent: args.nextContent,
       node,
       parentNodeId: args.parentNodeId,
