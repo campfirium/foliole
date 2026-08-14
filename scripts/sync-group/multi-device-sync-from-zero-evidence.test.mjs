@@ -45,13 +45,14 @@ it('reads dataset content identity through the current nodes body blob schema', 
   database.close();
 });
 
-it('requires cursor-zero supply evidence and one exact three-host dataset identity', () => {
+it('accepts later provider supply after Windows proves cursor-zero continuity', () => {
   const windowsReceipt = { candidate: { groupId: 'group-1' },
-    finalFacts: { ...facts, activeMemberCount: 3, localTimelineId: 'timeline-1', receiveCursor: 80 },
+    finalFacts: { ...facts, activeMemberCount: 3, deviceIdentity: 'windows-1',
+      localTimelineId: 'timeline-1', receiveCursor: 80 },
     firstCommittedFacts: { receiveCursor: 80 }, initialFacts: { receiveCursor: 0 },
     interruptedFacts: { receiveCursor: 80 }, restartedFacts: { receiveCursor: 80 } };
   const inspection = { ...facts, activeSyncGroupMemberCount: 3, peerCursors: [{
-    cursorValue: '0:80', streamName: 'sync-pack-supply'
+    cursorValue: '80:95', peerFingerprint: 'windows-1', streamName: 'sync-pack-supply'
   }], syncGroupId: 'group-1', syncGroupTimelineId: 'timeline-1' };
   const proof = assertSyncFromZeroFinalProof({
     androidAfterC: { database: { inspection } },
@@ -60,4 +61,21 @@ it('requires cursor-zero supply evidence and one exact three-host dataset identi
       readyAttachmentCount: 65, timelineId: 'timeline-1' }, windowsReceipt
   });
   expect(proof).toMatchObject({ attachmentCount: 65, cursor: 80, nodeCount: 40 });
+});
+
+it('rejects provider supply that remains behind the proven Windows cursor', () => {
+  const windowsReceipt = { candidate: { groupId: 'group-1' },
+    finalFacts: { ...facts, activeMemberCount: 3, deviceIdentity: 'windows-1',
+      localTimelineId: 'timeline-1', receiveCursor: 80 },
+    firstCommittedFacts: { receiveCursor: 80 }, initialFacts: { receiveCursor: 0 },
+    interruptedFacts: { receiveCursor: 80 }, restartedFacts: { receiveCursor: 80 } };
+  const inspection = { ...facts, activeSyncGroupMemberCount: 3, peerCursors: [{
+    cursorValue: '0:79', peerFingerprint: 'windows-1', streamName: 'sync-pack-supply'
+  }], syncGroupId: 'group-1', syncGroupTimelineId: 'timeline-1' };
+  expect(() => assertSyncFromZeroFinalProof({
+    androidAfterC: { database: { inspection } },
+    androidFinal: { attachments: { size: 1 }, database: { inspection } }, datasetReceipt,
+    macos: { activeMemberCount: 3, datasetDigest, datasetNodeCount: 40, groupId: 'group-1',
+      readyAttachmentCount: 65, timelineId: 'timeline-1' }, windowsReceipt
+  })).toThrow(/providerSupply.*79.*windowsCursor.*80/u);
 });

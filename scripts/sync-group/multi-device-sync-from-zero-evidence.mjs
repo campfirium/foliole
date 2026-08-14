@@ -88,6 +88,17 @@ export async function inspectMacosSyncFromZeroDataset(session, datasetReceipt) {
   };
 }
 
+function suppliedCursorForPeer(facts, peerFingerprint) {
+  const supply = facts.peerCursors?.find(({ peerFingerprint: current, streamName }) =>
+    streamName === 'sync-pack-supply' && current === peerFingerprint);
+  const match = /^(\d+):(\d+)$/u.exec(supply?.cursorValue ?? '');
+  if (!match) return null;
+  const from = Number(match[1]);
+  const to = Number(match[2]);
+  return Number.isSafeInteger(from) && Number.isSafeInteger(to) && to >= from
+    ? { from, to } : null;
+}
+
 export function assertSyncFromZeroFinalProof({ androidAfterC, androidFinal, datasetReceipt,
   macos, windowsReceipt }) {
   assertSyncFromZeroCursorContinuity(windowsReceipt);
@@ -100,9 +111,7 @@ export function assertSyncFromZeroFinalProof({ androidAfterC, androidFinal, data
   const groups = [macos.groupId, android.syncGroupId, windowsReceipt.candidate.groupId];
   const timelines = [macos.timelineId, android.syncGroupTimelineId,
     windowsReceipt.finalFacts.localTimelineId];
-  const zeroSupply = afterC.peerCursors?.find(({ cursorValue, streamName }) =>
-    streamName === 'sync-pack-supply' && /^0:\d+$/u.test(cursorValue));
-  const suppliedTo = Number(zeroSupply?.cursorValue.split(':')[1] ?? -1);
+  const supplied = suppliedCursorForPeer(afterC, windowsReceipt.finalFacts.deviceIdentity);
   if (macos.datasetNodeCount !== SYNC_FROM_ZERO_DATASET.nodeCount
       || macos.readyAttachmentCount !== SYNC_FROM_ZERO_DATASET.attachmentCount
       || [macos.datasetDigest, android.datasetDigest, windowsReceipt.finalFacts.datasetDigest]
@@ -111,9 +120,11 @@ export function assertSyncFromZeroFinalProof({ androidAfterC, androidFinal, data
       || timelines.some((value) => !value) || new Set(timelines).size !== 1
       || macos.activeMemberCount !== 3 || android.activeSyncGroupMemberCount !== 3
       || windowsReceipt.finalFacts.activeMemberCount !== 3
-      || suppliedTo !== windowsReceipt.finalFacts.receiveCursor
+      || !supplied || supplied.to < windowsReceipt.finalFacts.receiveCursor
       || !androidFinal.attachments || androidFinal.attachments.size <= 0) {
-    throw new Error('Three-host sync-from-zero evidence is incomplete.');
+    throw new Error(`Three-host sync-from-zero evidence is incomplete: ${JSON.stringify({
+      providerSupply: supplied, windowsCursor: windowsReceipt.finalFacts.receiveCursor
+    })}`);
   }
   return { attachmentCount: SYNC_FROM_ZERO_DATASET.attachmentCount,
     contentBlobCount: SYNC_FROM_ZERO_DATASET.nodeCount, cursor: windowsReceipt.finalFacts.receiveCursor,
