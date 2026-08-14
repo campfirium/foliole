@@ -26,6 +26,7 @@ import {
 } from './useSettingsSearch';
 
 import { definedProps } from '@/shared/lib/definedProps';
+import { AppStatusBadge } from '@/shared/ui';
 
 interface SettingsPanelProps {
   contentNotice?: ReactNode;
@@ -170,6 +171,7 @@ function createSettingsCategoryProps(
 }
 
 function SettingsPanelBody(props: SettingsPanelBodyProps) {
+  const t = useTranslation();
   const hotkeys = useHotkeySettings();
   const preview = useSettingsPreviewMode();
   const [isBackdropTransparent, setIsBackdropTransparent] = useState(false);
@@ -190,6 +192,9 @@ function SettingsPanelBody(props: SettingsPanelBodyProps) {
       description={props.description}
       headerNotice={props.headerNotice}
       hotkeys={hotkeys}
+      headerActions={props.activeCategory === 'companion-sync' ? (
+        <AppStatusBadge label={t('settings.companionSync.status.inDevelopment')} />
+      ) : undefined}
       isBackdropTransparent={isBackdropTransparent}
       isPreviewActive={preview.isPreviewActive}
       onActiveResultIndexChange={search.setActiveResultIndex}

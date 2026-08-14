@@ -46,6 +46,7 @@ export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'settings.companionSync.sectionAria': '同步设置区',
   'settings.companionSync.title': '同步',
   'settings.companionSync.description': '让同步组内的设备通过局域网保持最新。',
+  'settings.companionSync.status.inDevelopment': '开发中',
   'settings.companionSync.enableDesktop.title': '在这台桌面端启用',
   'settings.companionSync.enableDesktop.aria': '启用桌面同步',
   'settings.companionSync.error.open': '无法打开同步。{error}',
