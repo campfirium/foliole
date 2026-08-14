@@ -6,6 +6,27 @@ import path from 'node:path';
 export const WINDOWS_NATIVE_CLIENT_TASK = 'FolioleNativeClient';
 export const WINDOWS_NATIVE_CLIENT_WORKER_ENV = 'FOLIOLE_NATIVE_CLIENT_INTERACTIVE_WORKER';
 export const INTERACTIVE_ACTIONS = new Set(['status', 'start', 'restart', 'full-restart']);
+const WINDOWS_RENAME_RETRY_CODES = new Set(['EACCES', 'EBUSY', 'EPERM']);
+const WINDOWS_RENAME_RETRY_LIMIT = 10;
+const renameWaitBuffer = new Int32Array(new SharedArrayBuffer(4));
+
+function waitForRename(attempt) {
+  Atomics.wait(renameWaitBuffer, 0, 0, attempt * 10);
+}
+
+function replaceAtomic(temporary, filePath, {
+  platform = process.platform, rename = fs.renameSync, wait = waitForRename
+} = {}) {
+  for (let attempt = 1; attempt <= WINDOWS_RENAME_RETRY_LIMIT; attempt += 1) {
+    try { rename(temporary, filePath); return; }
+    catch (error) {
+      const retry = platform === 'win32' && WINDOWS_RENAME_RETRY_CODES.has(error.code)
+        && attempt < WINDOWS_RENAME_RETRY_LIMIT;
+      if (!retry) throw error;
+      wait(attempt);
+    }
+  }
+}
 
 export function interactiveStatePaths(stateRoot) {
   return {
@@ -24,11 +45,11 @@ export function readJson(filePath, fallback = null) {
   }
 }
 
-export function writeJsonAtomic(filePath, value) {
+export function writeJsonAtomic(filePath, value, options) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   const temporary = `${filePath}.${process.pid}.tmp`;
   fs.writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 });
-  fs.renameSync(temporary, filePath);
+  replaceAtomic(temporary, filePath, options);
 }
 
 export function validateInteractiveRequest(request) {

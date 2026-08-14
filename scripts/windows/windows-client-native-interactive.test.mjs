@@ -37,6 +37,23 @@ it('publishes request state atomically inside the dedicated state root', () => {
   expect(fs.readdirSync(root)).toEqual(['status.json']);
 });
 
+it('preserves atomic status publication across a transient Windows destination lock', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-native-client-retry-'));
+  roots.push(root);
+  const paths = interactiveStatePaths(root);
+  const rename = vi.fn()
+    .mockImplementationOnce(() => { throw Object.assign(new Error('locked'), { code: 'EPERM' }); })
+    .mockImplementation(fs.renameSync);
+  const wait = vi.fn();
+  writeJsonAtomic(paths.status, { schemaVersion: 1, state: 'running' }, {
+    platform: 'win32', rename, wait
+  });
+  expect(JSON.parse(fs.readFileSync(paths.status, 'utf8'))).toEqual({
+    schemaVersion: 1, state: 'running'
+  });
+  expect(wait).toHaveBeenCalledOnce();
+});
+
 it('fails quickly when the interactive worker never starts', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-native-client-timeout-'));
   roots.push(root);
