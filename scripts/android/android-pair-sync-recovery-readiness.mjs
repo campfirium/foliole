@@ -119,7 +119,8 @@ export function inspectPairSyncRecoveryWorkspace(database) {
     latestSyncWaitingSendCount: waitingCount(latestSyncRun, 'waiting_send_count'),
     journeyFacts: journeyFacts(database),
     missingAttachmentCount: tableExists(database, 'attachment_blobs')
-      ? scalar(database, "SELECT COUNT(*) AS count FROM attachment_blobs WHERE availability != 'cached'") : null,
+      ? scalar(database, `SELECT COUNT(*) AS count FROM attachment_blobs
+        WHERE availability NOT IN ('cached', 'local')`) : null,
     missingContentBlobCount: tableExists(database, 'content_blobs')
       && tableExists(database, 'content_blob_data')
       ? scalar(database, `SELECT COUNT(*) AS count FROM content_blobs cb

@@ -42,7 +42,7 @@ export function assertDesktopSyncGroupResourcesComplete() {
      LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash WHERE cbd.hash IS NULL`
   )?.value ?? 0;
   const missingAttachments = driver.queryOne<{ value: number }>(
-    "SELECT COUNT(*) AS value FROM attachment_blobs WHERE availability != 'cached'"
+    "SELECT COUNT(*) AS value FROM attachment_blobs WHERE availability NOT IN ('cached', 'local')"
   )?.value ?? 0;
   if (missingBlobs || missingAttachments) throw new Error('sync_group_resources_incomplete');
 }
@@ -62,7 +62,8 @@ export async function downloadDesktopSyncGroupResources(peer: ResourcePeer) {
   }
   const attachments = await port.query<AttachmentRow>(
     `SELECT attachment_id, content_hash FROM attachment_blobs
-     WHERE content_hash IS NOT NULL AND availability != 'cached' ORDER BY attachment_id`
+     WHERE content_hash IS NOT NULL AND availability NOT IN ('cached', 'local')
+     ORDER BY attachment_id`
   );
   for (let index = 0; index < attachments.length; index += ATTACHMENT_CONCURRENCY) {
     const wave = attachments.slice(index, index + ATTACHMENT_CONCURRENCY);

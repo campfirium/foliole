@@ -19,7 +19,7 @@ const baselineFacts = { activeMemberCount: 0, attachmentCount: 2, contentBlobCou
 function seededFacts(factId) {
   return { activeMemberCount: 0, attachmentCount: 3,
     attachmentIds: ['onboarding-a', 'onboarding-b', 'hash-c'],
-    cachedAttachmentIds: ['onboarding-a', 'onboarding-b', 'hash-c'],
+    availableAttachmentIds: ['onboarding-a', 'onboarding-b', 'hash-c'],
     contentBlobCount: 10, facts: { [factId]: true },
     integrity: 'ok', localGroupId: null, localMemberState: null, localTimelineId: null,
     missingAttachmentCount: 0, missingContentBlobCount: 0, userNodeCount: 9 };
@@ -51,9 +51,9 @@ it('creates C material through product commands before inspecting the pre-join d
   }
 });
 
-it('rejects a seed receipt when the exact hash attachment is not cached', () => {
+it('rejects a seed receipt when the exact hash attachment is not available', () => {
   expect(() => assertOwnedClientSeedFacts({
-    ...seededFacts('fact-c'), cachedAttachmentIds: []
+    ...seededFacts('fact-c'), availableAttachmentIds: []
   }, { attachmentId: 'hash-c', factId: 'fact-c' }, baselineFacts))
     .toThrow('pre-join material is incomplete');
 });

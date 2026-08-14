@@ -3,7 +3,7 @@ import { expect, it, vi } from 'vitest';
 import { runWindowsMultiDeviceSyncC } from './windows-multi-device-sync-c-action.mjs';
 
 const localFact = { attachmentId: 'hash-c', factId: 'multi-device-sync-c-1' };
-const facts = { activeMemberCount: 3, attachmentIds: ['hash-c'], cachedAttachmentIds: ['hash-c'],
+const facts = { activeMemberCount: 3, attachmentIds: ['hash-c'], availableAttachmentIds: ['hash-c'],
   contentBlobCount: 1, facts: { 'multi-device-sync-c-1': true }, localMemberState: 'active',
   missingAttachmentCount: 0, missingContentBlobCount: 0, nodeCount: 1 };
 

@@ -37,6 +37,9 @@ function androidSnapshot(paths) {
       activeMemberIdentities: database.prepare(`SELECT device_id FROM sync_group_members
         WHERE state = 'active' ORDER BY device_id`).all().map(({ device_id }) =>
         identityFingerprint(device_id)),
+      availableAttachmentIds: database.prepare(`SELECT attachment_id FROM attachment_blobs
+        WHERE availability IN ('cached', 'local') ORDER BY attachment_id`).all()
+        .map(({ attachment_id }) => attachment_id),
       cachedAttachmentIds: database.prepare(`SELECT attachment_id FROM attachment_blobs
         WHERE availability = 'cached' ORDER BY attachment_id`).all()
         .map(({ attachment_id }) => attachment_id) }) });

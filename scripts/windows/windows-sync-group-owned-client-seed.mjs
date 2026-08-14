@@ -21,7 +21,7 @@ export function assertOwnedClientUnboundFacts(facts) {
 }
 
 export function assertOwnedClientSeedFacts(facts, material, baselineFacts) {
-  const attachmentReady = facts.cachedAttachmentIds?.includes(material.attachmentId)
+  const attachmentReady = facts.availableAttachmentIds?.includes(material.attachmentId)
     && facts.attachmentIds?.includes(material.attachmentId);
   if (facts.integrity !== 'ok' || facts.localGroupId !== null
       || facts.localTimelineId !== null || facts.localMemberState !== null

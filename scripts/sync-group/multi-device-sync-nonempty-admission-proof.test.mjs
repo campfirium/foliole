@@ -13,7 +13,7 @@ import {
 /* global process */
 
 const material = { attachmentId: 'hash-c', factId: 'multi-device-sync-c-1' };
-const materialFacts = { attachmentIds: ['hash-c'], cachedAttachmentIds: ['hash-c'],
+const materialFacts = { attachmentIds: ['hash-c'], availableAttachmentIds: ['hash-c'],
   facts: { 'multi-device-sync-c-1': true } };
 const receipt = { firstFacts: materialFacts, localFact: material,
   preJoinFacts: { ...materialFacts, localGroupId: null, localMemberState: null,
@@ -35,6 +35,6 @@ it('persists the exact pre-join C fact and hash attachment for later three-host 
 
 it('rejects a Windows receipt that loses the C attachment after restart', () => {
   expect(() => assertWindowsNonemptyAdmissionReceipt({
-    ...receipt, restartedFacts: { ...materialFacts, cachedAttachmentIds: [] }
+    ...receipt, restartedFacts: { ...materialFacts, availableAttachmentIds: [] }
   })).toThrow('did not preserve its pre-join material');
 });

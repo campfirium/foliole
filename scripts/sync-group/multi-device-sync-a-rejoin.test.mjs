@@ -35,11 +35,11 @@ it('rejects a same-count member set that does not converge by device identity', 
 it('requires the exact pre-join C fact and hash attachment on every restarted host', () => {
   const requiredIds = { ...ids, preJoinA: 'fact-a-before-join',
     preJoinB: 'fact-b-before-join', preJoinC: 'fact-c-before-join' };
-  const desktop = { ...facts, cachedAttachmentIds: ['hash-c'],
+  const desktop = { ...facts, availableAttachmentIds: ['hash-c'],
     journeyFacts: { 'fact-a-before-join': 'A', 'fact-b-before-join': 'B',
       'fact-c-before-join': 'C' } };
   const androidWithMaterial = { ...android, database: { ...android.database,
-    inspection: { ...android.database.inspection, cachedAttachmentIds: ['hash-c'],
+    inspection: { ...android.database.inspection, availableAttachmentIds: ['hash-c'],
       journeyFacts: { ...android.database.inspection.journeyFacts,
         'fact-a-before-join': 'A', 'fact-b-before-join': 'B',
         'fact-c-before-join': 'C' } } } };
@@ -48,7 +48,7 @@ it('requires the exact pre-join C fact and hash attachment on every restarted ho
     groupId: 'group-1'
   });
   expect(() => assertThreeDeviceProof({ android: androidWithMaterial, ids: requiredIds,
-    macos: { ...desktop, cachedAttachmentIds: [] }, requiredAttachmentId: 'hash-c',
+    macos: { ...desktop, availableAttachmentIds: [] }, requiredAttachmentId: 'hash-c',
     windows: desktop })).toThrow('one complete three-member timeline');
 });
 

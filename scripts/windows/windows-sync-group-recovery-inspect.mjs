@@ -91,6 +91,8 @@ export function inspectSyncGroupRecoveryDatabase(databasePath, factIds = []) {
       activeMemberCount: count("SELECT COUNT(*) FROM sync_group_members WHERE state = 'active'"),
       attachmentCount: count('SELECT COUNT(*) FROM attachments'),
       attachmentIds: db.prepare('SELECT id FROM attachments ORDER BY id').pluck().all(),
+      availableAttachmentIds: db.prepare(`SELECT attachment_id FROM attachment_blobs
+        WHERE availability IN ('cached', 'local') ORDER BY attachment_id`).pluck().all(),
       cachedAttachmentIds: db.prepare(`SELECT attachment_id FROM attachment_blobs
         WHERE availability = 'cached' ORDER BY attachment_id`).pluck().all(),
       contentBlobCount: count('SELECT COUNT(*) FROM content_blobs'),
@@ -104,7 +106,8 @@ export function inspectSyncGroupRecoveryDatabase(databasePath, factIds = []) {
       localGroupId: local?.group_id ?? null,
       localMemberState: local?.member_state ?? null,
       localTimelineId: local?.timeline_id ?? null,
-      missingAttachmentCount: count("SELECT COUNT(*) FROM attachment_blobs WHERE availability != 'cached'"),
+      missingAttachmentCount: count(`SELECT COUNT(*) FROM attachment_blobs
+        WHERE availability NOT IN ('cached', 'local')`),
       missingContentBlobCount: count(`SELECT COUNT(*) FROM content_blobs cb
         LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash WHERE cbd.hash IS NULL`),
       maxStateSeq: count('SELECT MAX(state_seq) FROM sync_object_state'),

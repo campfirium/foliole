@@ -6,7 +6,7 @@ const MATERIAL_FILE = 'nonempty-c-material.json';
 function hasLocalMaterial(facts, material) {
   return facts?.facts?.[material.factId] === true
     && facts?.attachmentIds?.includes(material.attachmentId)
-    && facts?.cachedAttachmentIds?.includes(material.attachmentId);
+    && facts?.availableAttachmentIds?.includes(material.attachmentId);
 }
 
 export function assertWindowsNonemptyAdmissionReceipt(receipt) {

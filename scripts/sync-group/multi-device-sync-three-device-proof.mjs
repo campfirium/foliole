@@ -38,9 +38,9 @@ export function assertThreeDeviceProof({ android, macos, windows, ids, requiredA
     android.database.counts.attachments]);
   const androidHasFacts = Object.values(ids).every((id) => androidFacts?.journeyFacts?.[id]);
   const desktopHasAttachment = !requiredAttachmentId || points.every((value) =>
-    value.cachedAttachmentIds?.includes(requiredAttachmentId));
+    value.availableAttachmentIds?.includes(requiredAttachmentId));
   const androidHasAttachment = !requiredAttachmentId
-    || androidFacts?.cachedAttachmentIds?.includes(requiredAttachmentId);
+    || androidFacts?.availableAttachmentIds?.includes(requiredAttachmentId);
   const memberIdentities = [desktopMemberIdentities(macos), desktopMemberIdentities(windows),
     [...(androidFacts?.activeMemberIdentities ?? [])].sort()];
   if (!groupIds[0] || !timelines[0] || new Set(groupIds).size !== 1 || new Set(timelines).size !== 1

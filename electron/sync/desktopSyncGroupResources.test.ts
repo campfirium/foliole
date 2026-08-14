@@ -34,7 +34,9 @@ vi.mock('../database/connection.js', () => ({
   openDatabaseConnection: runtime.openConnection
 }));
 
-import { downloadDesktopSyncGroupResources } from './desktopSyncGroupResources.js';
+import {
+  assertDesktopSyncGroupResourcesComplete, downloadDesktopSyncGroupResources
+} from './desktopSyncGroupResources.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -93,6 +95,20 @@ it('keeps a completed attachment when another concurrent request interrupts the 
   expect(runtime.run).not.toHaveBeenCalledWith(
     expect.any(String), expect.arrayContaining(['interrupted'])
   );
+});
+
+it('treats locally owned and downloaded attachment resources as complete', async () => {
+  const queryOne = vi.fn().mockReturnValue({ value: 0 });
+  runtime.openConnection.mockReturnValue({ driver: { queryOne }, sqlite: {} });
+  runtime.query.mockReset().mockReturnValueOnce([]).mockReturnValueOnce([]);
+  expect(() => assertDesktopSyncGroupResourcesComplete()).not.toThrow();
+  expect(queryOne).toHaveBeenCalledWith(expect.stringContaining(
+    "availability NOT IN ('cached', 'local')"
+  ));
+  await downloadDesktopSyncGroupResources({
+    endpoint_url: 'http://provider', group_id: 'group-1', local_device_id: 'desktop-c', secret: 'secret'
+  });
+  expect(runtime.query.mock.calls[1]?.[0]).toContain("availability NOT IN ('cached', 'local')");
 });
 
 function sha256(value: string | Buffer) {

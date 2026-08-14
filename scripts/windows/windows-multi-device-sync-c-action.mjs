@@ -1,7 +1,7 @@
 function assertFormalFacts(facts, localFact) {
   const localMaterialReady = facts.facts?.[localFact?.factId] === true
     && facts.attachmentIds?.includes(localFact?.attachmentId)
-    && facts.cachedAttachmentIds?.includes(localFact?.attachmentId);
+    && facts.availableAttachmentIds?.includes(localFact?.attachmentId);
   if (facts.activeMemberCount !== 3 || facts.localMemberState !== 'active'
       || facts.nodeCount === 0 || facts.contentBlobCount === 0
       || facts.missingAttachmentCount !== 0 || facts.missingContentBlobCount !== 0
