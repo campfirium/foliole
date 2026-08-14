@@ -15,7 +15,7 @@ import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desk
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import { readABConvergenceMaterial } from './multi-device-sync-ab-convergence.mjs';
 import {
-  freshJourneyFactIds, startWindowsARejoinProvider
+  existingJourneyFactIds, freshJourneyFactIds, startWindowsARejoinProvider
 } from './multi-device-sync-a-rejoin-provider.mjs';
 import {
   macosAcceptanceEnv, macosAcceptanceSessionOptions
@@ -106,16 +106,16 @@ export async function proveARejoin({ execute, reportActivity = () => {}, reportP
     (value) => value === 3,
       'three_members_missing');
     reportProgress('three-members-converged');
-    const before = await session.invoke('load_workspace_list_snapshot', { includePdfOpenings: false });
-    const excluded = new Set(Object.keys(before.nodesById ?? {}).filter((id) =>
-      /^multi-device-sync-[abc]-/u.test(id)));
+    const databasePath = path.join(owned.root, 'library', 'Data', 'foliole.db');
+    const excluded = existingJourneyFactIds(
+      (await macosFacts(execute, repoRoot, databasePath, [])).journeyFacts
+    );
     const aFact = await createDesktopSyncGroupJourneyFact({ device: 'A', evidenceRoot,
       session, withAttachment: true });
     reportProgress('a-fact-created');
     await createAndroidFact({ env, evidenceRoot, execute, paths, runId });
     reportProgress('b-fact-created');
     await restartProvider();
-    const databasePath = path.join(owned.root, 'library', 'Data', 'foliole.db');
     await windowsProvider.waitForProgress('c-fact-created');
     const ids = await windowsProvider.raceConsumer(waitUntil('macOS A fresh fact identities', async () =>
       freshJourneyFactIds((await macosFacts(execute, repoRoot, databasePath, [])).journeyFacts, excluded),

@@ -8,7 +8,7 @@ import path from 'node:path';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import {
-  freshJourneyFactIds, startWindowsARejoinProvider
+  existingJourneyFactIds, freshJourneyFactIds, startWindowsARejoinProvider
 } from './multi-device-sync-a-rejoin-provider.mjs';
 import { startWindowsSyncGroupProvider } from './multi-device-sync-windows-provider.mjs';
 
@@ -41,7 +41,10 @@ it('releases the fixed Windows provider only after consumer completion', async (
 });
 
 it('derives one fresh identity per device without reusing the prior journey', () => {
-  expect(freshJourneyFactIds({ old: 'A', a: 'A', b: 'B', c: 'C' }, new Set(['old'])))
+  const facts = { oldA: 'A', 'node-old-b': 'B', oldC: 'C', a: 'A', b: 'B', c: 'C' };
+  expect(freshJourneyFactIds(facts, existingJourneyFactIds({
+    oldA: 'A', 'node-old-b': 'B', oldC: 'C'
+  })))
     .toEqual({ A: 'a', B: 'b', C: 'c' });
 });
 

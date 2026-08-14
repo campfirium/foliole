@@ -1,5 +1,9 @@
 import { startWindowsSyncGroupProvider } from './multi-device-sync-windows-provider.mjs';
 
+export function existingJourneyFactIds(journeyFacts) {
+  return new Set(Object.keys(journeyFacts ?? {}));
+}
+
 export function freshJourneyFactIds(journeyFacts, excluded) {
   const result = {};
   for (const [id, origin] of Object.entries(journeyFacts ?? {})) {
