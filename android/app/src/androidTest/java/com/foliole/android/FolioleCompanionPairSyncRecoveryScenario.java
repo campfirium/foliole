@@ -14,12 +14,9 @@ final class FolioleCompanionPairSyncRecoveryScenario {
     private static final String SETTINGS_TARGET = "companion-tab-settings";
 
     private FolioleCompanionPairSyncRecoveryScenario() {}
-
     static JSONObject run(
-        Instrumentation instrumentation,
-        WebView webView,
-        boolean forceRePair,
-        long timeoutMs
+        Instrumentation instrumentation, WebView webView,
+        boolean forceRePair, String expectedEndpointUrl, long timeoutMs
     ) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
         FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "settings-tab");
@@ -70,9 +67,11 @@ final class FolioleCompanionPairSyncRecoveryScenario {
         FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "discovery-request");
         clickVisible(instrumentation, webView, "companion-sync-discover", deadline);
         FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "pair-target");
-        waitForUniqueVisible(instrumentation, webView, "companion-sync-pair", deadline);
         FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "pair-request");
-        clickVisible(instrumentation, webView, "companion-sync-pair", deadline);
+        FolioleCompanionWebViewSemanticAdapter.clickUniqueVisibleMatchingAttribute(
+            instrumentation, webView, "companion-sync-pair", "data-sync-endpoint",
+            expectedEndpointUrl, deadline
+        );
         FolioleCompanionPairRequestEvidence.awaitSubmission(instrumentation, webView, deadline);
         FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "pair-completion");
         JSONObject recoveryEvidence = awaitRecoveryEvidence(instrumentation, webView, deadline);

@@ -26,8 +26,9 @@ it('accepts only the fixed product pairing receipt', () => {
 });
 
 it('routes an approved peer replacement through product re-pair and fresh desktop approval', () => {
-  expect(pairSyncRecoveryModeArgs(true)).toEqual(['-e', 'foliolePairSyncMode', 're-pair']);
-  expect(pairSyncRecoveryModeArgs(false)).toEqual([]);
+  const target = ['-e', 'foliolePairSyncEndpoint', 'http://127.0.0.1:38641'];
+  expect(pairSyncRecoveryModeArgs(true)).toEqual([...target, '-e', 'foliolePairSyncMode', 're-pair']);
+  expect(pairSyncRecoveryModeArgs(false)).toEqual(target);
   expect(pairSyncRecoveryRequiresApproval(true, true)).toBe(true);
   expect(pairSyncRecoveryRequiresApproval(true, false)).toBe(false);
 });
@@ -130,8 +131,10 @@ it('observes request submission without global errors or click-return evidence',
     'utf8'
   );
   expect(source.indexOf('installPairSyncObserver')).toBeLessThan(
-    source.indexOf('clickVisible(instrumentation, webView, "companion-sync-pair"')
+    source.indexOf('clickUniqueVisibleMatchingAttribute')
   );
+  expect(source).toContain('"data-sync-endpoint",');
+  expect(source).toContain('expectedEndpointUrl, deadline');
   expect(source).toContain('clickVisible(instrumentation, webView, CONNECTED_TARGET, deadline)');
   const rePairGuard = source.indexOf('if (existingPairing && forceRePair)');
   const disconnect = source.indexOf('"companion-sync-disconnect"');
