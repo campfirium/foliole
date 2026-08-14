@@ -6,9 +6,12 @@ import {
   finalizeSyncGroupApprovalEvidence,
   installedMainMatches,
   parseSyncGroupApprovalReceipt,
+  runMacosA5SyncGroupApproval,
   startMacosA5SyncGroupApprovalProvider,
   stopMacosA5SyncGroupApprovalProvider
 } from './macos-a5-sync-group-approval.mjs';
+
+/* global process */
 
 it('preserves provider failure details when approval instrumentation has no receipt', () => {
   const run = { code: 0, output: 'INSTRUMENTATION_CODE: -1\n', terminationReason: null };
@@ -101,4 +104,21 @@ it('ends the previous provider lifecycle before a staged foreground restart', as
     args: ['-s', '87a33a4b', 'shell', 'am', 'force-stop', 'com.foliole.android'],
     command: 'adb', options: { env: {}, timeoutMs: 30_000 }
   }]);
+});
+
+it('restores the provider only after approval instrumentation is removed', async () => {
+  const events = [];
+  const receipt = { approved: true, foreground: true, ok: true,
+    targetTestId: 'sync-group-approval' };
+  const execute = async (_command, args) => {
+    if (args.includes('uninstall')) events.push('test-uninstalled');
+    else if (args.includes('kill-server')) events.push('adb-stopped');
+    return { code: 0, output: '' };
+  };
+  await runMacosA5SyncGroupApproval({ execute, instrumentationExecute: async () => ({
+    code: 0,
+    output: `INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReceipt=${JSON.stringify(receipt)}\nINSTRUMENTATION_CODE: -1`
+  }), mainMatches: async () => true, prepare: () => {}, repoRoot: process.cwd(),
+  startProvider: async () => { events.push('provider-started'); } });
+  expect(events).toEqual(['provider-started', 'test-uninstalled', 'adb-stopped', 'provider-started']);
 });

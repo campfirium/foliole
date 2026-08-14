@@ -88,17 +88,19 @@ export async function stopMacosA5SyncGroupApprovalProvider({ execute, paths, env
 
 export async function runMacosA5SyncGroupApproval({ execute, onProviderStopped = async () => {},
   onReady = async () => {}, prepare = build, repoRoot,
-  allowControlledCancellation = false, instrumentationExecute = execute }) {
+  allowControlledCancellation = false, instrumentationExecute = execute,
+  mainMatches = installedMainMatches, startProvider = startMacosA5SyncGroupApprovalProvider }) {
   const paths = macosA5Paths(repoRoot);
   const env = macosA5GradleEnv();
   assertFixedA5(paths);
   prepare(paths);
-  const reuseInstalledMain = await installedMainMatches({ execute, paths, env });
+  const reuseInstalledMain = await mainMatches({ execute, paths, env });
   const evidenceRoot = path.join(repoRoot, '.tmp/artifacts/a5-sync-group-approval');
   fs.mkdirSync(evidenceRoot, { recursive: true });
   requireSuccess(await execute(paths.adb, [
     '-s', A5_SERIAL, 'shell', 'am', 'force-stop', APP_ID
   ], { env, timeoutMs: 30_000 }), 'provider-stop-before-install');
+  let evidence;
   try {
     if (!reuseInstalledMain) {
       requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'install', '-r', paths.apk], {
@@ -112,21 +114,20 @@ export async function runMacosA5SyncGroupApproval({ execute, onProviderStopped =
     requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'logcat', '-c'], {
       env, timeoutMs: 30_000
     }), 'provider-log-clear');
-    await startMacosA5SyncGroupApprovalProvider({ execute, onProviderStopped, onReady, paths, env });
+    await startProvider({ execute, onProviderStopped, onReady, paths, env });
     const run = await instrumentationExecute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'instrument',
       '-w', '-r', '-e', 'class', `${TEST_CLASS}#approvesJoinWhileProviderStaysForeground`, TEST_RUNNER], {
       env, timeoutMs: 15 * 60_000
     });
     const providerLog = requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'logcat', '-d',
       '-v', 'time', 'FolioleSyncProvider:V', '*:S'], { env, timeoutMs: 30_000 }), 'provider-log');
-    const evidence = finalizeSyncGroupApprovalEvidence({
+    evidence = finalizeSyncGroupApprovalEvidence({
       allowControlledCancellation, providerOutput: providerLog.output, run
     });
-    const resume = requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start',
-      '-W', '-n', `${APP_ID}/.MainActivity`], { env, timeoutMs: 60_000 }), 'provider-resume');
-    return { output: `${evidence.output}${resume.output}`, receipt: evidence.receipt };
   } finally {
     await execute(paths.adb, ['-s', A5_SERIAL, 'uninstall', TEST_APP_ID], { env, timeoutMs: 60_000 });
     await execute(paths.adb, ['kill-server'], { env, timeoutMs: 30_000 });
   }
+  await startProvider({ execute, onProviderStopped: async () => {}, onReady: async () => {}, paths, env });
+  return { output: evidence.output, receipt: evidence.receipt };
 }
