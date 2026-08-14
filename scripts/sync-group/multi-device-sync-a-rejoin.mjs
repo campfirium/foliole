@@ -174,10 +174,11 @@ export async function proveARejoin({ execute, reportActivity = () => {}, reportP
     reportProgress('b-fact-created');
     await restartProvider();
     const databasePath = path.join(owned.root, 'library', 'Data', 'foliole.db');
-    const ids = await waitUntil('macOS A fresh fact identities', async () =>
+    await windowsProvider.waitForProgress('c-fact-created');
+    const ids = await windowsProvider.raceConsumer(waitUntil('macOS A fresh fact identities', async () =>
       freshJourneyFactIds((await macosFacts(execute, repoRoot, databasePath, [])).journeyFacts, excluded),
     (value) => ['A', 'B', 'C'].every((origin) => value[origin]),
-    'three_facts_missing');
+    'three_facts_missing'));
     reportProgress('c-fact-created');
     if (ids.A !== aFact.factId || !ids.B || !ids.C) throw productFailure('windows-c',
       'windows_a_rejoin_fact_identity_mismatch', 'Windows C reported incomplete fresh facts.');

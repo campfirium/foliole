@@ -56,6 +56,14 @@ it('forwards A-rejoin provider lifecycle progress from the nonce-bound worker', 
   expect(reportProgress).toHaveBeenCalledWith('c-session-opened');
 });
 
+it('starts the local identity deadline only after Windows C creates its fact', () => {
+  const source = fs.readFileSync('scripts/sync-group/multi-device-sync-a-rejoin.mjs', 'utf8');
+  const created = source.indexOf("await windowsProvider.waitForProgress('c-fact-created')");
+  const identities = source.indexOf("raceConsumer(waitUntil('macOS A fresh fact identities'");
+  expect(created).toBeGreaterThan(-1);
+  expect(created).toBeLessThan(identities);
+});
+
 it('reads the A-leave receipt only after the same fixed provider is released', async () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'a-leave-provider-'));
   roots.push(repoRoot);
