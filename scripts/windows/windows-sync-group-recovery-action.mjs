@@ -82,7 +82,7 @@ export async function waitForJoinedGroup(page, expectedGroupId, timeoutMs = 12 *
 }
 
 async function waitForOrdinarySyncFacts(
-  execute, paths, evidenceRoot, factIds = [], timeoutMs = 12 * 60_000
+  execute, paths, evidenceRoot, factIds = [], requiredOrigins = [], timeoutMs = 12 * 60_000
 ) {
   const deadline = Date.now() + timeoutMs;
   const nodeSurfaceDeadline = Date.now() + 90_000;
@@ -96,7 +96,7 @@ async function waitForOrdinarySyncFacts(
       lastFacts.contentBlobCount, lastFacts.attachmentCount,
       lastFacts.missingContentBlobCount, lastFacts.missingAttachmentCount]), lastFacts);
     try {
-      assertOwnedClientCompleteFacts(lastFacts);
+      assertOwnedClientCompleteFacts(lastFacts, requiredOrigins);
       return lastFacts;
     } catch {
       const runtimeLog = readSyncRuntimeLog(evidenceRoot);
@@ -166,7 +166,7 @@ export async function resetOwnedClient(paths, evidenceRoot, execute) {
 }
 
 export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths,
-  resetOwnedState = false, seedOwnedState = false }) {
+  requiredJourneyOrigins = [], resetOwnedState = false, seedOwnedState = false }) {
   if (seedOwnedState && !resetOwnedState) throw new Error('Windows C seed requires an owned reset.');
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const suspended = await suspendWindowsNativeClient({
@@ -197,7 +197,9 @@ export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths
       candidate = await discoverUniqueGroup(session.page);
       await invokeWindowsSyncGroupCommand(session.page, 'request_sync_group_join', { endpoint_url: candidate.endpoint_url });
       await waitForJoinedGroup(session.page, candidate.group_id);
-      firstFacts = await waitForOrdinarySyncFacts(execute, paths, evidenceRoot, factIds);
+      firstFacts = await waitForOrdinarySyncFacts(
+        execute, paths, evidenceRoot, factIds, requiredJourneyOrigins
+      );
     } finally { await closeWindowsSyncGroupSession(session); }
     session = await openWindowsSyncGroupSession(paths, evidenceRoot);
     const screenshotPath = path.join(evidenceRoot, 'sync-group-recovery.png');
@@ -209,7 +211,7 @@ export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths
       await captureSyncSettings(session.page, screenshotPath);
     } finally { await closeWindowsSyncGroupSession(session); }
     const restartedFacts = await inspectWindowsSyncGroupDatabase(execute, paths, undefined, factIds);
-    assertOwnedClientCompleteFacts(restartedFacts);
+    assertOwnedClientCompleteFacts(restartedFacts, requiredJourneyOrigins);
     const receipt = { candidate: { groupId: candidate.group_id, providerKind: candidate.provider_device_kind },
       firstFacts, localFact, preJoinFacts: initialFacts, restartedFacts,
       resultStatus: 'success', schemaVersion: 1 };

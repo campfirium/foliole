@@ -4,8 +4,10 @@ import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey
 
 import { closeWindowsSyncGroupSession } from './windows-sync-group-session-close.mjs';
 
-export function assertOwnedClientCompleteFacts(facts) {
+export function assertOwnedClientCompleteFacts(facts, requiredOrigins = []) {
+  const origins = new Set(Object.values(facts.journeyFacts ?? {}));
   if (facts.activeMemberCount < 2 || facts.nodeCount === 0 || facts.contentBlobCount === 0
+      || requiredOrigins.some((origin) => !origins.has(origin))
       || facts.missingAttachmentCount !== 0 || facts.missingContentBlobCount !== 0) {
     throw new Error(`Windows C did not complete ordinary sync: ${JSON.stringify(facts)}`);
   }

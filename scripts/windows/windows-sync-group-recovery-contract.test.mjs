@@ -26,12 +26,8 @@ it('keeps stable desktop A and Windows C on a real LAN Sync Group path', () => {
   expect(remote).toContain('provisionWindowsAcceptanceRoot({ paths })');
   expect(remote).toContain('maxRetries: 5, recursive: true, retryDelay: 250');
   expect(remote).toContain("invokeWindowsSyncGroupCommand(session.page, 'request_sync_group_join'");
-  expect(remote).toContain(
-    'firstFacts = await waitForOrdinarySyncFacts(execute, paths, evidenceRoot, factIds)'
-  );
-  expect(remote.indexOf(
-    'firstFacts = await waitForOrdinarySyncFacts(execute, paths, evidenceRoot, factIds)'
-  ))
+  expect(remote).toContain('execute, paths, evidenceRoot, factIds, requiredJourneyOrigins');
+  expect(remote.indexOf('firstFacts = await waitForOrdinarySyncFacts('))
     .toBeLessThan(remote.indexOf('finally { await closeWindowsSyncGroupSession(session); }'));
   expect(inspector).toContain("missingContentBlobCount");
   expect(inspector).toContain('localMemberState');
@@ -60,6 +56,7 @@ it('keeps stable desktop A and Windows C on a real LAN Sync Group path', () => {
   expect(remote).toContain("'sync-group-runtime.log'");
   expect(remote).toContain('Ordinary sync pack failed before apply');
   expect(ownedClient).toContain('facts.activeMemberCount < 2');
+  expect(ownedClient).toContain('requiredOrigins.some((origin) => !origins.has(origin))');
   expect(remote).toContain('seedOwnedWindowsClient');
   expect(control).not.toContain('runMacosA5SyncGroupApproval');
   expect(provider).toContain(
