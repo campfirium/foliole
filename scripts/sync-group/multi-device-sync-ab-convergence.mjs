@@ -52,15 +52,15 @@ export async function runABConvergenceJourney(actions) {
   }
 }
 
-export async function waitForAndroidJourneyFact(paths, factId, wait = delay) {
+export async function waitForAndroidJourneyFact(paths, factId, expectedDevice = 'A', wait = delay) {
   const deadline = Date.now() + 60_000;
   while (Date.now() < deadline) {
-    const snapshot = await androidSnapshot(paths, factId, null);
+    const snapshot = await androidSnapshot(paths, factId, null, expectedDevice);
     if (snapshot.database?.inspection?.desktopFactPresent) return snapshot;
     await wait(1_000);
   }
-  throw productFailure('android-b', 'deterministic_a_fact_missing',
-    'Android B did not receive the deterministic A fact.', 'stalled');
+  throw productFailure('android-b', `deterministic_${expectedDevice.toLowerCase()}_fact_missing`,
+    `Android B did not receive the deterministic ${expectedDevice} fact.`, 'stalled');
 }
 
 export async function proveABConvergence({ execute, reportProgress, repoRoot, runId }) {
@@ -156,7 +156,11 @@ async function inspectRestarted({ androidFactText, desktopFactId, paths, session
     groupId: overview.sync_group.group_id, restarted: true, timelineId: overview.sync_group.timeline_id };
 }
 
-function androidSnapshot(paths, desktopFactId, androidFactText) {
+export function expectedJourneyFactPresent(journeyFacts, factId, expectedDevice = 'A') {
+  return journeyFacts?.[factId] === expectedDevice;
+}
+
+function androidSnapshot(paths, desktopFactId, androidFactText, expectedDevice = 'A') {
   return collectAndroidDeviceSnapshot({ adb: paths.adb, appId: APP_ID, includeEvents: false,
     serial: A5_SERIAL, tables: ['nodes'], databaseInspector: (database) => {
       const workspace = inspectPairSyncRecoveryWorkspace(database);
@@ -165,7 +169,9 @@ function androidSnapshot(paths, desktopFactId, androidFactText) {
       ).get(androidFactText) : null;
       return { ...workspace, androidFactId: androidFact?.id ?? null,
         androidFactPresent: Boolean(androidFact),
-        desktopFactPresent: workspace.journeyFacts?.[desktopFactId] === 'A' };
+        desktopFactPresent: expectedJourneyFactPresent(
+          workspace.journeyFacts, desktopFactId, expectedDevice
+        ) };
     } });
 }
 

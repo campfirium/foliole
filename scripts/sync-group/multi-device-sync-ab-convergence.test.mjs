@@ -7,7 +7,7 @@ import path from 'node:path';
 import { expect, it } from 'vitest';
 
 import {
-  readABConvergenceMaterial, runABConvergenceJourney
+  expectedJourneyFactPresent, readABConvergenceMaterial, runABConvergenceJourney
 } from './multi-device-sync-ab-convergence.mjs';
 
 /* global process */
@@ -72,4 +72,11 @@ it('reads the exact A and B pre-join fact identities for the final union proof',
   } finally {
     await rm(repoRoot, { force: true, recursive: true });
   }
+});
+
+it('observes a journey fact only when its exact device origin matches', () => {
+  const facts = { 'fact-a': 'A', 'fact-c': 'C' };
+  expect(expectedJourneyFactPresent(facts, 'fact-a', 'A')).toBe(true);
+  expect(expectedJourneyFactPresent(facts, 'fact-c', 'C')).toBe(true);
+  expect(expectedJourneyFactPresent(facts, 'fact-c', 'A')).toBe(false);
 });

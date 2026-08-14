@@ -151,7 +151,7 @@ async function admitC(repoRoot, runId, { reportProgress, signal, stage }) {
       waitForFact: (factId) => waitForAndroidJourneyFact(paths, factId)
     });
     if (!windowsProvider || !windows?.factId) throw windowsJoinFailure({ code: 1 });
-    await windowsProvider.raceConsumer(waitForAndroidJourneyFact(paths, windows.factId));
+    await windowsProvider.raceConsumer(waitForAndroidJourneyFact(paths, windows.factId, 'C'));
     await windowsProvider.release('consumer_complete');
     const admission = await windowsProvider.finish();
     windowsSettled = true;
