@@ -55,12 +55,13 @@ export async function openWindowsSyncGroupSession(
   return { app, page, ...progress };
 }
 
-export async function discoverUniqueGroup(page, timeoutMs = 60_000) {
+export async function discoverUniqueGroup(page, timeoutMs = 60_000, accept = () => true) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const overview = await invokeWindowsSyncGroupCommand(page, 'discover_sync_groups');
-    if (overview.join_candidates.length > 1) throw new Error('Multiple Sync Groups were discovered.');
-    if (overview.join_candidates.length === 1) return overview.join_candidates[0];
+    const candidates = overview.join_candidates.filter(accept);
+    if (candidates.length > 1) throw new Error('Multiple Sync Groups were discovered.');
+    if (candidates.length === 1) return candidates[0];
     await delay(1_000);
   }
   throw new Error('Timed out discovering the A5 Sync Group.');
