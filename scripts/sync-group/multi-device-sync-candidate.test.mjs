@@ -26,6 +26,7 @@ it('freezes the provider lifecycle helpers used by formal sync journeys', () => 
     'scripts/windows/windows-dev-candidate-runtime-control.mjs',
     'scripts/windows/windows-dev-remote-spec.mjs',
     'scripts/windows/windows-pair-sync-desktop-readiness.mjs',
+    'scripts/windows/windows-client-native-interactive-state.mjs',
     'scripts/windows/windows-sync-group-interactive-action.mjs',
     'scripts/windows/windows-sync-group-runtime-progress.mjs',
     'scripts/windows/windows-sync-group-session-close.mjs'
