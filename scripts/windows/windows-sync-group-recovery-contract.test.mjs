@@ -22,6 +22,7 @@ it('keeps stable desktop A and Windows C on a real LAN Sync Group path', () => {
     'android/app/src/main/java/com/foliole/android/FolioleCompanionSyncPlugin.java', 'utf8'
   );
   expect(remote).toContain("FOLIOLE_LIBRARY_HOME: libraryHome");
+  expect(remote).toContain("FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1'");
   expect(remote).toContain("windowsAcceptanceRoot(paths), 'client'");
   expect(remote).toContain('provisionWindowsAcceptanceRoot({ paths })');
   expect(remote).toContain('maxRetries: 5, recursive: true, retryDelay: 250');

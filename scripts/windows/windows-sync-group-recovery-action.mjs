@@ -34,7 +34,8 @@ function launchOptions(paths, { holdAfterCursorCommit = false } = {}) {
   const { libraryHome, userData } = windowsSyncGroupClientPaths(paths);
   return {
     args: [path.join(paths.repoRoot, 'dist/electron/main.js')], cwd: paths.repoRoot,
-    env: { ...process.env, FOLIOLE_DISABLE_HARDWARE_ACCELERATION: '1',
+    env: { ...process.env, FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1',
+      FOLIOLE_DISABLE_HARDWARE_ACCELERATION: '1',
       FOLIOLE_DISABLE_IN_APP_RELAUNCH: '1', FOLIOLE_ELECTRON_NATIVE_HIDDEN: '1',
       FOLIOLE_LIBRARY_HOME: libraryHome, FOLIOLE_SESSION_DATA_PATH: userData,
       FOLIOLE_USER_DATA_PATH: userData, FOLIOLE_WORKDIR: paths.repoRoot,
