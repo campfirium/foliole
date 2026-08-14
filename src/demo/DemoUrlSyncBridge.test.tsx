@@ -3,10 +3,11 @@ import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
 
 import { LocalizationProvider, useLocalization } from '../shared/localization/LocalizationProvider';
 import { preloadTranslationCatalog } from '../shared/localization/translations';
-import { createInitialWorkspaceState, useWorkspaceStore } from '../store/workspaceStore';
+import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { DEFAULT_DEMO_TOPIC, getDemoTopicNodeId } from './demoContent';
 import { DemoUrlSyncBridge } from './DemoUrlSyncBridge';
+import { createDemoWorkspaceSnapshot } from './demoWorkspaceSnapshot';
 
 const DEMO_TOPIC = DEFAULT_DEMO_TOPIC;
 
@@ -17,7 +18,7 @@ if (!DEMO_TOPIC) {
 function LanguageSwitchHarness() {
   const { setLanguagePreference } = useLocalization();
   return (
-    <button onClick={() => setLanguagePreference('de')} type="button">
+    <button onClick={() => setLanguagePreference('zh-Hans')} type="button">
       Switch
     </button>
   );
@@ -29,14 +30,12 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
-  window.history.replaceState(null, '', `/en/guides/${DEMO_TOPIC.slug}/`);
-  useWorkspaceStore.setState({
-    ...createInitialWorkspaceState(new Date('2026-06-17T00:00:00.000Z')),
-    activeNodeId: getDemoTopicNodeId(DEMO_TOPIC)
-  });
+  window.localStorage.clear();
+  window.history.replaceState(null, '', '/en/demo/');
+  useWorkspaceStore.setState(createDemoWorkspaceSnapshot('/en/demo/', new Date('2026-06-17T00:00:00.000Z')));
 });
 
-it('keeps explicit Demo language changes on refresh-safe published URLs', async () => {
+it('switches the published URL and seeded Demo content without a refresh', async () => {
   const replaceState = vi.spyOn(window.history, 'replaceState');
 
   render(
@@ -52,8 +51,9 @@ it('keeps explicit Demo language changes on refresh-safe published URLs', async 
     expect(replaceState).toHaveBeenCalledWith(
       null,
       '',
-      '/en/demo/?lang=de'
+      '/zh-hans/demo/'
     );
+    expect(useWorkspaceStore.getState().nodesById[getDemoTopicNodeId(DEMO_TOPIC)]?.title).toBe('欢迎使用 Foliole');
   });
   replaceState.mockRestore();
 });
