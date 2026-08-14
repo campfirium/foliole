@@ -31,38 +31,45 @@ export function startDesktopSyncGroupAutoSync() {
     const groupId = typeof txt.group_id === 'string' ? txt.group_id : null;
     const peerDeviceId = typeof txt.peer_id === 'string' ? txt.peer_id : null;
     const timelineId = typeof txt.timeline_id === 'string' ? txt.timeline_id : null;
-    if (!endpoint || !groupId || !peerDeviceId) return;
+    if (!endpoint || !groupId || !peerDeviceId) return null;
     if (timelineId && refreshDesktopSyncGroupPendingJoinEndpoint({
       endpointUrl: endpoint, groupId, providerDeviceId: peerDeviceId, timelineId
     })) {
-      void completeDesktopSyncGroupJoin().catch((error) => {
+      return completeDesktopSyncGroupJoin().catch((error) => {
         console.info('[sync-group] approved join waiting for provider', {
           error: error instanceof Error ? error.message : String(error), peerDeviceId
         });
       });
-      return;
     }
-    void syncAvailablePeer({ endpoint, groupId, peerDeviceId });
+    return syncAvailablePeer({ endpoint, groupId, peerDeviceId });
   };
+  const consumeService = (service: DiscoveredService) => { void handleService(service); };
   const addresses = resolveCompanionMdnsIpv4Addresses();
   const interfaces = [null, ...addresses];
   runtimes = interfaces.map((networkInterface) => {
     const options = networkInterface ? { interface: networkInterface } as BonjourOptions : undefined;
     const bonjour = new Bonjour(options);
-    const browser = bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, handleService);
-    browser.on('down', handleService);
-    browser.on('txt-update', handleService);
-    browser.on('srv-update', handleService);
-    return { bonjour, browser };
+    const browser = bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, consumeService);
+    const runtime = { bonjour, browser };
+    browser.on('down', (service) => {
+      const work = handleService(service);
+      void Promise.resolve(work).finally(() => {
+        if (runtimes.includes(runtime)) browser.update();
+      });
+    });
+    browser.on('txt-update', consumeService);
+    browser.on('srv-update', consumeService);
+    return runtime;
   });
 }
 
 export function stopDesktopSyncGroupAutoSync() {
-  runtimes.forEach(({ bonjour, browser }) => {
+  const activeRuntimes = runtimes;
+  runtimes = [];
+  activeRuntimes.forEach(({ bonjour, browser }) => {
     browser.stop();
     bonjour.destroy();
   });
-  runtimes = [];
   retryAfterFlight.clear();
 }
 
