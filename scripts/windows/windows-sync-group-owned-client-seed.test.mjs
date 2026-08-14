@@ -58,6 +58,12 @@ it('rejects a seed receipt when the exact hash attachment is not available', () 
     .toThrow('pre-join material is incomplete');
 });
 
+it('accepts onboarding material that finishes while the exact C material is created', () => {
+  expect(() => assertOwnedClientSeedFacts({
+    ...seededFacts('fact-c'), attachmentCount: 4, userNodeCount: 10
+  }, { attachmentId: 'hash-c', factId: 'fact-c' }, baselineFacts)).not.toThrow();
+});
+
 it('accepts onboarding material in an unbound baseline but rejects stale journey facts', () => {
   expect(() => assertOwnedClientUnboundFacts(baselineFacts)).not.toThrow();
   expect(() => assertOwnedClientUnboundFacts({

@@ -26,9 +26,9 @@ export function assertOwnedClientSeedFacts(facts, material, baselineFacts) {
   if (facts.integrity !== 'ok' || facts.localGroupId !== null
       || facts.localTimelineId !== null || facts.localMemberState !== null
       || facts.activeMemberCount !== 0
-      || facts.userNodeCount !== baselineFacts.userNodeCount + 1
+      || facts.userNodeCount < baselineFacts.userNodeCount + 1
       || facts.contentBlobCount <= baselineFacts.contentBlobCount
-      || facts.attachmentCount !== baselineFacts.attachmentCount + 1
+      || facts.attachmentCount < baselineFacts.attachmentCount + 1
       || facts.facts?.[material.factId] !== true || !attachmentReady
       || facts.missingAttachmentCount !== 0 || facts.missingContentBlobCount !== 0) {
     throw new Error(`Windows C pre-join material is incomplete: ${JSON.stringify(facts)}`);
