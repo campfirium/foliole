@@ -18,7 +18,8 @@ it('places the generated Guides content under Guides while keeping Inbox empty f
   const guides = snapshot.nodesById[DEMO_GUIDES_NODE_ID];
   const inbox = snapshot.nodesById[INBOX_NODE_ID];
   const welcomeNodeId = getDemoTopicNodeId(DEFAULT_DEMO_TOPIC);
-  const childNodeIds = DEMO_TOPICS.slice(1).map(getDemoTopicNodeId);
+  const topLevelNodeIds = DEMO_TOPICS.filter((topic) => topic.parentId === null).map(getDemoTopicNodeId);
+  const childNodeIds = DEMO_TOPICS.filter((topic) => topic.parentId === DEFAULT_DEMO_TOPIC.id).map(getDemoTopicNodeId);
   const welcome = snapshot.nodesById[welcomeNodeId];
 
   expect(snapshot.nodeOrder.slice(0, 3)).toEqual([HOME_NODE_ID, DEMO_GUIDES_NODE_ID, INBOX_NODE_ID]);
@@ -26,7 +27,7 @@ it('places the generated Guides content under Guides while keeping Inbox empty f
     kind: 'folder',
     parentNodeId: null,
     title: DEMO_GUIDES_TITLE,
-    manualChildOrder: [welcomeNodeId]
+    manualChildOrder: topLevelNodeIds
   });
   expect(welcome).toMatchObject({
     kind: 'topic',
@@ -47,8 +48,9 @@ it('places the generated Guides content under Guides while keeping Inbox empty f
 it('uses generated zh-hans Guides content for zh-hans routes', () => {
   const snapshot = createDemoWorkspaceSnapshot('/zh-hans/guides/welcome-to-foliole/', NOW);
   const welcomeNodeId = getDemoTopicNodeId(DEFAULT_DEMO_TOPIC);
+  const topLevelNodeIds = DEMO_TOPICS.filter((topic) => topic.parentId === null).map(getDemoTopicNodeId);
 
-  expect(snapshot.nodesById[DEMO_GUIDES_NODE_ID]?.manualChildOrder).toEqual([welcomeNodeId]);
+  expect(snapshot.nodesById[DEMO_GUIDES_NODE_ID]?.manualChildOrder).toEqual(topLevelNodeIds);
   expect(snapshot.nodesById[welcomeNodeId]?.content).toContain('请先点击底部动作条里的 Read');
   expect(snapshot.nodesById[welcomeNodeId]?.content).toContain('# 欢迎使用 Foliole');
   expect(snapshot.nodesById[welcomeNodeId]?.content.match(/请先点击底部动作条里的 Read/g)).toHaveLength(1);

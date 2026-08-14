@@ -1,13 +1,22 @@
 import { describe, expect, it } from 'vitest';
 
 import { assertDemoPack, DEMO_SOURCE_LOCALE_DEFAULT, DEMO_TRANSLATABLE_FIELDS, type DemoPack } from './demoPack';
-import { GENERATED_DEMO_PACK } from './generated/demoPack';
+import { GENERATED_DEMO_PACK, GENERATED_DEMO_PACKS } from './generated/demoPack';
 
 function clonePack(): DemoPack {
   return structuredClone(GENERATED_DEMO_PACK);
 }
 
 describe('Demo Pack contract', () => {
+  it('publishes complete localized Guides without English fallbacks', () => {
+    expect(Object.keys(GENERATED_DEMO_PACKS).sort()).toEqual([
+      'de', 'en', 'es', 'fr', 'it', 'ja', 'ko', 'pl', 'pt', 'ru', 'zh-hans', 'zh-hant'
+    ]);
+    expect(Object.values(GENERATED_DEMO_PACKS).every((pack) => (
+      pack.topics.length === 9 && pack.source.warnings.length === 0
+    ))).toBe(true);
+  });
+
   it('accepts the generated v3 Demo Pack', () => {
     expect(assertDemoPack(clonePack())).toBeTruthy();
   });

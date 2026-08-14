@@ -75,7 +75,7 @@ describe('Demo manifest contract', () => {
     expect(manifestTopic.alternates).toEqual(expect.arrayContaining([
       { locale: 'en', hreflang: 'en', path: '/en/guides/welcome-to-foliole/' },
       { locale: 'de', hreflang: 'de', path: '/de/guides/welcome-to-foliole/' },
-      { locale: 'pt-br', hreflang: 'pt-BR', path: '/pt-br/guides/welcome-to-foliole/' },
+      { locale: 'pt', hreflang: 'pt-BR', path: '/pt/guides/welcome-to-foliole/' },
       { locale: 'zh-hans', hreflang: 'zh-Hans', path: '/zh-hans/guides/welcome-to-foliole/' }
     ]));
     expect(manifestTopic.alternates).toHaveLength(12);

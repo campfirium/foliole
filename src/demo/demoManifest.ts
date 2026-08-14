@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import { APP_LOCALES } from '../../lib/core/localization/appLocaleRegistry';
+import { APP_LOCALES, appLocaleRouteSegment } from '../../lib/core/localization/appLocaleRegistry';
 
 import { canonicalDemoPath, canonicalGuidePath, getDemoTopicsForLocale, type DemoTopic } from './demoContent';
 import { GENERATED_DEMO_PACKS } from './generated/demoPacks';
@@ -8,7 +8,7 @@ import { GENERATED_DEMO_PACKS } from './generated/demoPacks';
 export const DEMO_MANIFEST_FILE = 'demo-manifest.json';
 export const DEMO_CONTRACT_VERSION = 3;
 const DEMO_LOCALE_REGISTRY = APP_LOCALES.map((locale) => ({
-  locale: locale.toLowerCase(),
+  locale: appLocaleRouteSegment(locale),
   hreflang: locale
 }));
 export const DEMO_PUBLISHED_LOCALES = DEMO_LOCALE_REGISTRY;
