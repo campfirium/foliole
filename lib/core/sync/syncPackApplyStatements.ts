@@ -13,6 +13,7 @@ export interface SyncPackApplyableRowsOptions {
 
 export interface SyncPackNodeApplyOptions extends SyncPackApplyableRowsOptions {
   incomingNodeColumns?: readonly string[];
+  preserveExistingNodes?: boolean;
 }
 
 const SYNC_PACK_NODE_UPDATE_COLUMNS = SYNC_PACK_NODE_COLUMNS.filter((column) => column !== 'id');
@@ -60,8 +61,11 @@ export function buildSyncPackApplyableRowsSql(options: SyncPackApplyableRowsOpti
     `incoming.updated_at, incoming.deleted_at FROM ${alias}.sync_object_state incoming ` +
     `LEFT JOIN main.sync_object_state current ON current.object_type = incoming.object_type ` +
     `AND current.object_id = incoming.object_id WHERE ` +
-    `(current.object_id IS NULL OR (current.updated_at <= incoming.updated_at ` +
-    `AND (incoming.object_type IN ('node', 'view_state') OR current.sync_dirty <> 1 OR ` +
+    `(current.object_id IS NULL OR incoming.object_type IN ('node', 'node_reading', 'node_review', 'view_state') OR (` +
+    `(current.updated_at < incoming.updated_at OR (current.updated_at = incoming.updated_at ` +
+    `AND (current.content_hash < incoming.content_hash OR (current.content_hash = incoming.content_hash ` +
+    `AND incoming.deleted_at IS NOT NULL)))) ` +
+    `AND (current.sync_dirty <> 1 OR ` +
     `${acceptedDeliveryFilter(options)})))` +
     ` AND (incoming.object_type <> 'node' OR incoming.deleted_at IS NOT NULL OR EXISTS (` +
     `SELECT 1 FROM ${alias}.nodes node_payload WHERE node_payload.id = incoming.object_id))` +
@@ -90,7 +94,9 @@ export function buildSyncPackNodeUpsertSql(options: SyncPackNodeApplyOptions = {
     `FROM ${alias}.nodes incoming ` +
     `INNER JOIN (SELECT id, MIN(depth) AS depth FROM node_depth GROUP BY id) sorted ON sorted.id = incoming.id ` +
     `WHERE true ORDER BY sorted.depth ASC, incoming.updated_at ASC, incoming.id ASC ` +
-    `ON CONFLICT(id) DO UPDATE SET ${SYNC_PACK_NODE_UPDATE_COLUMNS.map((column) => `${column} = excluded.${column}`).join(', ')}`;
+    (options.preserveExistingNodes
+      ? 'ON CONFLICT(id) DO NOTHING'
+      : `ON CONFLICT(id) DO UPDATE SET ${SYNC_PACK_NODE_UPDATE_COLUMNS.map((column) => `${column} = excluded.${column}`).join(', ')}`);
 }
 
 function incomingNodeColumnExpression(column: SyncPackNodeColumn, options: SyncPackNodeApplyOptions) {

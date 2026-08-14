@@ -174,10 +174,21 @@ it('applies mobile review state and review log without duplicating op ids', asyn
 });
 
 it('can acknowledge already applied review log ops for push cursor delivery', async () => {
-  insertReviewLog('mobile-op-1', '2026-04-25T00:10:00.000Z');
+  insertReviewLog('seed-op', '2026-04-24T00:00:00.000Z');
+  const record = createMobileReviewLog('mobile-op-1');
+  await applySyncReviewLogAsync([record]);
 
-  await expect(applySyncReviewLogAsync([createMobileReviewLog('mobile-op-1')], { includeAlreadyApplied: true }))
+  await expect(applySyncReviewLogAsync([record], { includeAlreadyApplied: true }))
     .resolves.toEqual(['mobile-op-1']);
+});
+
+it('rejects a reused review op id with different facts', async () => {
+  insertReviewLog('seed-op', '2026-04-24T00:00:00.000Z');
+  const record = createMobileReviewLog('mobile-op-conflict');
+  await applySyncReviewLogAsync([record]);
+
+  await expect(applySyncReviewLogAsync([{ ...record, grade: 4 }]))
+    .rejects.toThrow('sync_review_log_op_mismatch:mobile-op-conflict');
 });
 
 it('applies mobile learning state and review event as clean desktop facts', async () => {

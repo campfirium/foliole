@@ -138,8 +138,8 @@ export async function applySyncNodesWithDbPort(
       }
       await upsertRemoteVersion(tx, record);
       if (decision === 'already_applied') {
-        await upsertAppliedNodeSyncState(tx, record);
-        if (options.includeAlreadyApplied) {
+        const stateResult = await upsertAppliedNodeSyncState(tx, record);
+        if (stateResult.changes > 0 || options.includeAlreadyApplied) {
           result.appliedIds.push(record.object_id);
         }
         continue;

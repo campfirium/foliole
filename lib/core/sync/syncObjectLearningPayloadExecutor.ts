@@ -23,16 +23,57 @@ export async function applyNodeReadingObject(
   if (!isReadingState(state)) {
     throw new Error('invalid node_reading state');
   }
+  const incomingLastHandledAt = text(payload.last_handled_at) ?? record.updated_at;
+  const incomingRepetitionCount = integer(payload.repetition_count);
+  if (!await shouldApplyNodeReading(
+    port,
+    record,
+    incomingLastHandledAt,
+    incomingRepetitionCount
+  )) {
+    return false;
+  }
   await port.run(
     `INSERT INTO node_reading (node_id, interval_duration_ms, interval_growth_factor, last_handled_at, next_at, priority, repetition_count, state) ` +
     `VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(node_id) DO UPDATE SET interval_duration_ms = excluded.interval_duration_ms, ` +
     `interval_growth_factor = excluded.interval_growth_factor, last_handled_at = excluded.last_handled_at, next_at = excluded.next_at, ` +
     `priority = excluded.priority, repetition_count = excluded.repetition_count, state = excluded.state`,
     [record.object_id, integer(payload.interval_duration_ms), numberOrNull(payload.interval_growth_factor) ?? 1,
-      text(payload.last_handled_at) ?? record.updated_at, text(payload.next_at) ?? record.updated_at,
-      numberOrNull(payload.priority) ?? 0, integer(payload.repetition_count), state]
+      incomingLastHandledAt, text(payload.next_at) ?? record.updated_at,
+      numberOrNull(payload.priority) ?? 0, incomingRepetitionCount, state]
   );
   await applyReadingPosition(port, record, payload, options.deviceId);
+}
+
+async function shouldApplyNodeReading(
+  port: DbPort,
+  record: SyncPackSyncObjectRecord,
+  incomingLastHandledAt: string,
+  incomingRepetitionCount: number
+) {
+  const existing = (await port.query<{
+    content_hash: string | null;
+    last_handled_at: string;
+    repetition_count: number;
+  }>(
+    `SELECT r.last_handled_at, r.repetition_count, s.content_hash
+     FROM node_reading r LEFT JOIN sync_object_state s
+       ON s.object_type = 'node_reading' AND s.object_id = r.node_id
+     WHERE r.node_id = ?`,
+    [record.object_id]
+  ))[0];
+  if (!existing) return true;
+  const incomingKey = [
+    incomingLastHandledAt,
+    String(incomingRepetitionCount).padStart(12, '0'),
+    record.content_hash
+  ];
+  const existingKey = [
+    existing.last_handled_at,
+    String(existing.repetition_count).padStart(12, '0'),
+    existing.content_hash ?? ''
+  ];
+  return incomingKey.join('\n') > existingKey.join('\n');
 }
 
 export async function applyNodeReviewObject(port: DbPort, record: SyncPackSyncObjectRecord) {

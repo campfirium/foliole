@@ -3,7 +3,7 @@ import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js'
 import type { DbPort } from './dbPort.js';
 
 export async function upsertAppliedNodeSyncState(port: DbPort, record: NativeSyncNodeRecord) {
-  await port.run(
+  return await port.run(
     `INSERT INTO sync_object_state (
        object_type,
        object_id,

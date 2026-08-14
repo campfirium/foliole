@@ -124,3 +124,35 @@ it('can acknowledge already applied records for push cursor delivery', async () 
     updated_at: '2026-04-21T18:00:00.000Z'
   }], { includeAlreadyApplied: true })).resolves.toEqual(['node_reading:node-1']);
 });
+
+it('uses the content identity to settle equal-time reading records', async () => {
+  insertNewerReadingState();
+  const record = (contentHash: string, nextAt: string) => ({
+    content_hash: contentHash,
+    deleted_at: null,
+    object_id: 'node-1',
+    object_type: 'node_reading' as const,
+    payload_json: JSON.stringify({
+      interval_duration_ms: 0,
+      interval_growth_factor: 1,
+      last_handled_at: '2026-04-21T18:00:00.000Z',
+      next_at: nextAt,
+      priority: 0,
+      repetition_count: 0,
+      state: 'active'
+    }),
+    updated_at: '2026-04-21T18:00:00.000Z'
+  });
+
+  await expect(applySyncObjectsAsync([
+    record('z-reading-hash', '2026-04-23T18:00:00.000Z')
+  ])).resolves.toEqual(['node_reading:node-1']);
+  await expect(applySyncObjectsAsync([
+    record('a-reading-hash', '2026-04-24T18:00:00.000Z')
+  ])).resolves.toEqual([]);
+
+  expect(openDatabaseConnection().driver.queryOne<{ content_hash: string }>(
+    `SELECT content_hash FROM sync_object_state
+     WHERE object_type = 'node_reading' AND object_id = 'node-1'`
+  )).toEqual({ content_hash: 'z-reading-hash' });
+});

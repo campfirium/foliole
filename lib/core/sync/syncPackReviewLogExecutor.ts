@@ -81,6 +81,32 @@ function insertReviewLog(port: DbPort, record: ReviewLogRecordInput) {
   );
 }
 
+async function existingReviewLog(port: DbPort, opId: string) {
+  const [record] = await port.query<SyncPackReviewLogRecord>(
+    `SELECT id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at,
+       due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after
+     FROM review_log WHERE op_id = ? LIMIT 1`,
+    [opId]
+  );
+  return record ?? null;
+}
+
+function sameReviewLog(left: ReviewLogRecordInput, right: ReviewLogRecordInput) {
+  return left.id === right.id
+    && left.op_id === right.op_id
+    && left.device_id === right.device_id
+    && left.node_id === right.node_id
+    && left.grade === right.grade
+    && left.scheduler_version === right.scheduler_version
+    && left.reviewed_at === right.reviewed_at
+    && left.due_before === right.due_before
+    && left.stability_before === right.stability_before
+    && left.difficulty_before === right.difficulty_before
+    && left.due_after === right.due_after
+    && left.stability_after === right.stability_after
+    && left.difficulty_after === right.difficulty_after;
+}
+
 export async function applyReviewLogRecordsWithDbPort(
   port: DbPort,
   records: ReviewLogRecordInput[],
@@ -91,6 +117,14 @@ export async function applyReviewLogRecordsWithDbPort(
     for (const record of records) {
       if (!record.op_id.trim()) continue;
       if (options.requireExistingNode && !await nodeExists(tx, record.node_id)) continue;
+      const existing = await existingReviewLog(tx, record.op_id);
+      if (existing) {
+        if (!sameReviewLog(existing, record)) {
+          throw new Error(`sync_review_log_op_mismatch:${record.op_id}`);
+        }
+        if (options.includeAlreadyApplied) appliedOpIds.push(record.op_id);
+        continue;
+      }
       const result = await insertReviewLog(tx, record);
       if (result.changes > 0 || options.includeAlreadyApplied) {
         appliedOpIds.push(record.op_id);

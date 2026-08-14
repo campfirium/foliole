@@ -142,7 +142,9 @@ async function getSyncObjectApplyStatus(port: DbPort, record: SyncPackSyncObject
   ))[0];
   if (!current) return 'apply';
   if (current.content_hash === record.content_hash && current.deleted_at === record.deleted_at) return 'already_applied';
-  return current.updated_at <= record.updated_at ? 'apply' : 'stale';
+  const currentKey = `${current.updated_at}\n${current.content_hash}\n${current.deleted_at ?? ''}`;
+  const incomingKey = `${record.updated_at}\n${record.content_hash}\n${record.deleted_at ?? ''}`;
+  return currentKey < incomingKey ? 'apply' : 'stale';
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

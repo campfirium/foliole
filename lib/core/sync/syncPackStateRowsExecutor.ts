@@ -21,8 +21,9 @@ export async function applySyncPackStateRowsWithDbPort(
   const objectTypes = normalizedObjectTypes(options);
   if (objectTypes.length === 0) return 0;
   const nextStateSeq = await loadNextStateSeq(port);
+  const appliedCount = await loadPackStateRowCount(port, options, objectTypes);
   await insertCleanStateRows(port, options, objectTypes, nextStateSeq);
-  return await loadPackStateRowCount(port, options, objectTypes);
+  return appliedCount;
 }
 
 async function loadNextStateSeq(port: DbPort) {
@@ -60,6 +61,18 @@ function applyableStateRowsSql(options: SyncPackStateRowsApplyOptions, objectTyp
     `COALESCE(json_extract(payload_json, '$.reps'), 0), content_hash ` +
     `FROM ${alias}.sync_objects incoming_review WHERE incoming_review.object_type = 'node_review' ` +
     `AND incoming_review.object_id = applyable_state.object_id LIMIT 1)` +
+    `)) ` +
+    `AND (object_type <> 'node_reading' OR NOT EXISTS (` +
+    `SELECT 1 FROM node_reading local_reading ` +
+    `LEFT JOIN sync_object_state local_state ON local_state.object_type = 'node_reading' ` +
+    `AND local_state.object_id = local_reading.node_id ` +
+    `WHERE local_reading.node_id = applyable_state.object_id AND (` +
+    `COALESCE(local_reading.last_handled_at, ''), local_reading.repetition_count, ` +
+    `COALESCE(local_state.content_hash, '')` +
+    `) > (SELECT COALESCE(json_extract(payload_json, '$.last_handled_at'), ''), ` +
+    `COALESCE(json_extract(payload_json, '$.repetition_count'), 0), content_hash ` +
+    `FROM ${alias}.sync_objects incoming_reading WHERE incoming_reading.object_type = 'node_reading' ` +
+    `AND incoming_reading.object_id = applyable_state.object_id LIMIT 1)` +
     `))`;
 }
 

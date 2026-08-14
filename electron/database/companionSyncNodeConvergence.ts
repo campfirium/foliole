@@ -1,16 +1,12 @@
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
-import { mergeSyncText } from '../../lib/core/sync/syncTextDiff3.js';
+import { resolveTopicConflict } from '../../lib/core/sync/syncNodeConvergence.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
-import { isStoredVersionIdentical, loadCurrentSyncNodeRecord, loadMergeBase } from './companionSyncNodeGraph.js';
+import { isStoredVersionIdentical, loadCurrentSyncNodeRecord } from './companionSyncNodeGraph.js';
 import {
-  buildResolutionRecord,
-  chooseEvidenceProjection,
-  chooseProjection,
   hashText,
-  semanticSnapshot,
-  storeAlternative
+  semanticSnapshot
 } from './companionSyncNodeResolution.js';
 import {
   parseNodeVersionPush,
@@ -70,36 +66,12 @@ async function resolveTopic(
 ) {
   const ordered = [...entries].sort((left, right) =>
     (left.record.version_id ?? '').localeCompare(right.record.version_id ?? ''));
-  const local = await loadCurrentSyncNodeRecord(port, ordered[0]!.record.object_id);
-  if (!local?.version_id || ordered.some(({ record }) => !record.version_id)) {
+  try {
+    await resolveTopicConflict(port, ordered.map(({ record }) => record));
+  } catch {
     ordered.forEach((entry) => appendNodeAck(result, entry, false));
     return;
   }
-  let body = local.body_text ?? local.snapshot.content ?? '';
-  let winner = local;
-  let alternative: NativeSyncNodeRecord | null = null;
-  for (const entry of ordered) {
-    const base = await loadMergeBase(port, local.version_id, entry.record.version_id!);
-    const baseBody = base?.body_text ?? '';
-    const incomingBody = entry.record.body_text ?? entry.record.snapshot.content ?? '';
-    const merge = base?.body_text == null ? { kind: 'conflict' as const } : mergeSyncText(baseBody, body, incomingBody);
-    if (merge.kind === 'merged') {
-      body = merge.text;
-      winner = chooseProjection(winner, entry.record, baseBody, 0, 0);
-      continue;
-    }
-    const projection = await chooseEvidenceProjection(port, winner, entry.record, baseBody);
-    body = projection.body;
-    winner = projection.winner;
-    alternative = projection.loser;
-  }
-  const resolution = buildResolutionRecord([local, ...ordered.map(({ record }) => record)], winner, body);
-  const applied = await applySyncNodesWithDbPort(port, [resolution], {
-    enqueueSearchInvalidations: false,
-    includeAlreadyApplied: true
-  });
-  if (!applied.appliedIds.includes(local.object_id)) throw new Error('sync_resolution_not_applied');
-  if (alternative) await storeAlternative(port, alternative, resolution.version_created_at!);
   ordered.forEach((entry) => appendNodeAck(result, entry, true));
 }
 

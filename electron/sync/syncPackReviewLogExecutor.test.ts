@@ -40,7 +40,7 @@ function createReviewLogPort(options: {
       if (sql.includes('sqlite_master')) return [{ ok: 1 }];
       if (sql.includes('FROM incoming.review_log')) return [reviewLogRow()];
       if (sql.includes('FROM nodes')) return params[0] === 'node-1' ? [{ ok: 1 }] : [];
-      if (sql.includes('FROM review_log')) return existingOpIds.has(String(params[0])) ? [{ ok: 1 }] : [];
+      if (sql.includes('FROM review_log')) return existingOpIds.has(String(params[0])) ? [reviewLogRow()] : [];
       return [];
     }),
     run: vi.fn(async (_sql: string, params: unknown[] = []) => {
