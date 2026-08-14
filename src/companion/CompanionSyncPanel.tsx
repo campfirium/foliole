@@ -195,7 +195,9 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
   return (
     <section className="mb-8 px-5 py-5">
       <div className="flex flex-col gap-5">
-        {props.page === 'sync' ? <CompanionSyncParticipationControls /> : null}
+        {props.page === 'sync' && props.bootstrapState.runtime_kind === 'android-capacitor'
+          ? <CompanionSyncParticipationControls />
+          : null}
         <MainSyncContent
           {...props}
           endpointUrl={endpointUrl}

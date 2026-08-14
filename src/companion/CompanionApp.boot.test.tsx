@@ -1,8 +1,21 @@
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const useCompanionBootstrap = vi.fn();
 const useCompanionWorkspaceSync = vi.fn();
+const syncGroupStore = vi.hoisted(() => ({
+  loadCompanionSyncGroup: vi.fn(async () => null)
+}));
+const syncGroupProvider = vi.hoisted(() => ({
+  loadCompanionSyncGroupProviderState: vi.fn(async () => ({
+    pending_requests: [],
+    sync_enabled: true,
+    sync_paused: false
+  })),
+  reconcileCompanionSyncGroupProvider: vi.fn(async () => undefined),
+  setCompanionSyncEnabled: vi.fn(async () => undefined),
+  setCompanionSyncPaused: vi.fn(async () => undefined)
+}));
 
 vi.setConfig({ testTimeout: 30_000 });
 
@@ -14,18 +27,21 @@ vi.mock('./useCompanionWorkspaceSync', () => ({
   useCompanionWorkspaceSync
 }));
 
+vi.mock('../shared/platform/companion/sync/syncGroupProvider', () => syncGroupProvider);
+vi.mock('../shared/platform/companion/sync/syncGroupStore', () => syncGroupStore);
+
 vi.mock('@/features/pdf/components/SimplePdfDocument', () => ({
   SimplePdfDocument: () => <div>PDF original viewer</div>
 }));
 
-function mockCompanionWorkspaceSync() {
+function mockCompanionWorkspaceSync(runtimeKind: 'android-capacitor' | 'ios-capacitor' = 'android-capacitor') {
   useCompanionWorkspaceSync.mockReturnValue({
     bootstrapState: {
       booted_at: '2026-04-22T02:00:00.000Z',
       database_path: '/data/user/0/com.foliole.android/databases/foliole-companionSQLite.db',
       database_ready: true,
       device_id: 'android-test-device',
-      runtime_kind: 'android-capacitor'
+      runtime_kind: runtimeKind
     },
     isWorkspaceSyncStateReady: true,
     checkDesktop: vi.fn(),
@@ -72,6 +88,8 @@ beforeEach(() => {
   cleanup();
   useCompanionBootstrap.mockReset();
   useCompanionWorkspaceSync.mockReset();
+  syncGroupStore.loadCompanionSyncGroup.mockClear();
+  Object.values(syncGroupProvider).forEach((mock) => mock.mockClear());
   mockCompanionWorkspaceSync();
 });
 
@@ -124,9 +142,13 @@ describe('CompanionApp ready hosts', () => {
     expect(within(bottomBar).getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('button', { name: /Sync/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Connect or refresh this device/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('companion-settings-sync'));
+    expect(screen.getByTestId('companion-sync-toggle')).toBeInTheDocument();
+    expect(screen.getByTestId('companion-sync-pause-toggle')).toBeInTheDocument();
   });
 
   it('renders the shared pairing surface after iOS bootstrap succeeds', async () => {
+    mockCompanionWorkspaceSync('ios-capacitor');
     useCompanionBootstrap.mockReturnValue({
       status: 'ready',
       state: {
@@ -148,6 +170,12 @@ describe('CompanionApp ready hosts', () => {
     expect(within(bottomBar).getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('button', { name: /Sync/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Connect or refresh this device/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('companion-settings-sync'));
+    expect(screen.queryByTestId('companion-sync-toggle')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('companion-sync-pause-toggle')).not.toBeInTheDocument();
+    expect(syncGroupStore.loadCompanionSyncGroup).not.toHaveBeenCalled();
+    expect(syncGroupProvider.loadCompanionSyncGroupProviderState).not.toHaveBeenCalled();
+    expect(syncGroupProvider.reconcileCompanionSyncGroupProvider).not.toHaveBeenCalled();
     expect(useCompanionWorkspaceSync).toHaveBeenCalledWith(expect.objectContaining({ runtime_kind: 'ios-capacitor' }));
   });
 
