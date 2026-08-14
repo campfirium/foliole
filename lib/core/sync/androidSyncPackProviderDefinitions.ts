@@ -69,10 +69,13 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
     `INSERT INTO nodes (${nodeColumns}) SELECT ${nodeColumns} FROM source.nodes
      WHERE id IN (SELECT object_id FROM sync_object_state WHERE object_type = 'node')`,
     `INSERT INTO node_sync_versions SELECT v.version_id, v.object_id, v.parent_version_id, v.device_id,
-       v.created_at, v.content_hash, v.body_text, v.snapshot_json FROM source.node_sync_versions v
-     WHERE v.object_id IN (SELECT id FROM nodes)`,
+       v.created_at, v.content_hash, v.body_text, v.snapshot_json
+     FROM source.node_sync_versions v JOIN nodes n
+       ON n.id = v.object_id AND n.current_version_id = v.version_id`,
     `INSERT INTO node_sync_version_parents SELECT p.version_id, p.parent_version_id, p.ordinal
-     FROM source.node_sync_version_parents p WHERE p.version_id IN (SELECT version_id FROM node_sync_versions)`,
+     FROM source.node_sync_version_parents p
+     WHERE p.version_id IN (SELECT version_id FROM node_sync_versions)
+       AND p.parent_version_id IN (SELECT version_id FROM node_sync_versions)`,
     `INSERT INTO node_order SELECT o.node_id, o.position FROM source.node_order o WHERE o.node_id IN (SELECT id FROM nodes)`,
     `INSERT INTO node_attachments SELECT a.node_id, a.attachment_id, a.role FROM source.node_attachments a
      WHERE a.node_id IN (SELECT id FROM nodes)`,

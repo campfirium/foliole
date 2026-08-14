@@ -82,6 +82,25 @@ it('keeps the Android provider independent of optional SQLite JSON functions', (
   expect(definitions.payloadPlans.map((plan) => plan.sql).join('\n')).not.toContain('json_object');
 });
 
+it('packs current node heads without dangling historical parent edges', () => {
+  source.exec(`
+    INSERT INTO node_sync_versions (
+      version_id, object_id, parent_version_id, device_id, created_at,
+      content_hash, body_text, snapshot_json
+    ) VALUES (
+      'android-b#2', 'node-1', 'android-b#1', 'android-b', '2026-08-08T00:00:00.000Z',
+      'node-hash', 'provider body', '{"id":"node-1"}'
+    );
+    INSERT INTO node_sync_version_parents VALUES ('android-b#2', 'android-b#1', 0);
+    UPDATE nodes SET current_version_id = 'android-b#2' WHERE id = 'node-1';
+  `);
+  const pack = buildPack(0);
+  expect(pack.prepare('SELECT version_id FROM node_sync_versions').all())
+    .toEqual([{ version_id: 'android-b#2' }]);
+  expect(pack.prepare('SELECT * FROM node_sync_version_parents').all()).toEqual([]);
+  pack.close();
+});
+
 it('loads each payload surface in bulk instead of querying once per state row', () => {
   for (const plan of definitions.payloadPlans) {
     expect(plan.sql).toContain('__object_id');
