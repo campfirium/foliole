@@ -11,6 +11,7 @@ it('freezes the provider lifecycle helpers used by formal sync journeys', () => 
     'scripts/desktop/sync-from-zero-dataset-action.mjs',
     'scripts/sync-group/multi-device-sync-a-rejoin-provider.mjs',
     'scripts/sync-group/multi-device-sync-candidate-preparation.mjs',
+    'scripts/sync-group/multi-device-sync-cli.mjs',
     'scripts/sync-group/multi-device-sync-from-zero-evidence.mjs',
     'scripts/sync-group/multi-device-sync-from-zero.mjs',
     'scripts/sync-group/multi-device-sync-macos-channel.mjs',
