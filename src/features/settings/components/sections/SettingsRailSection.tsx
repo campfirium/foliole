@@ -73,7 +73,7 @@ function RailManagerRow({
         <GripVertical aria-hidden="true" size={16} />
       </div>
       <div className="pointer-events-none absolute left-12 top-1/2 -translate-y-1/2 text-foreground/68">
-        <RailItemIcon {...(item.iconId ? { iconId: item.iconId } : {})} />
+        <RailItemIcon commandId={item.commandId} {...(item.iconId ? { iconId: item.iconId } : {})} />
       </div>
       <div className="flex flex-[0_0_auto] items-center justify-end gap-2">
         {item.source === 'user' ? (

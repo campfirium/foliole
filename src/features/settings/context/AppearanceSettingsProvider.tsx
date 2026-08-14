@@ -26,6 +26,7 @@ import { getInitialAppearanceModeState } from './appearanceModeState';
 import { useReadingAppearanceState } from './appearanceReadingState';
 import { AppearanceSettingsContext, useAppearanceSettings, useOptionalAppearanceSettings } from './appearanceSettingsContext';
 import { useAppearanceSettingsValue } from './appearanceSettingsValue';
+import { useBaseColorModeCycle } from './baseColorModeCycle';
 import { useNavigationTypographyState } from './navigationTypographyState';
 
 const usePrePaintEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
@@ -62,6 +63,7 @@ export function useAppearanceStateValues() {
   const readingSettings = useReadingAppearanceState();
   const navigationTypography = useNavigationTypographyState();
   const modeScoped = useModeScopedAppearanceState(initialModeState.resolvedBaseColorMode);
+  const baseColorModeCycle = useBaseColorModeCycle();
   const [baseColorModeState, setBaseColorModeState] = useState(() => initialModeState.baseColorMode);
   const [dimImagesInDarkModeState, setDimImagesInDarkModeState] = useState(() => getDimImagesInDarkMode());
   const [resolvedBaseColorModeState, setResolvedBaseColorModeState] = useState(() => initialModeState.resolvedBaseColorMode);
@@ -79,6 +81,7 @@ export function useAppearanceStateValues() {
     ...editorSettings,
     ...readingSettings,
     ...navigationTypography,
+    ...baseColorModeCycle,
     baseColorModeState,
     dimImagesInDarkModeState,
     customInterfaceFontState,

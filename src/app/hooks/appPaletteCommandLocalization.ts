@@ -51,7 +51,7 @@ const COMMAND_TITLE_KEYS: Partial<Record<AppCommandId, TranslationKey>> = {
   [APP_COMMAND_IDS.toggleEditorDisplayMode]: 'desktop.command.toggleEditorDisplayMode',
   [APP_COMMAND_IDS.openSettings]: 'desktop.command.openSettings',
   [APP_COMMAND_IDS.openReadwiseReaderSettings]: 'desktop.command.openReadwiseReaderSettings',
-  [APP_COMMAND_IDS.toggleBaseColorMode]: 'desktop.command.toggleBaseColorMode',
+  [APP_COMMAND_IDS.toggleBaseColorMode]: 'desktop.command.cycleAppearanceMode',
   [APP_COMMAND_IDS.setPdfDarkAppearanceOriginal]: 'desktop.command.pdfDarkOriginal',
   [APP_COMMAND_IDS.setPdfDarkAppearanceInverted]: 'desktop.command.pdfDarkInverted',
   [APP_COMMAND_IDS.setPdfDarkAppearanceWarm]: 'desktop.command.pdfDarkWarm',

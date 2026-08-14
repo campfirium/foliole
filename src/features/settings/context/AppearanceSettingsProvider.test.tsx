@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, expect, it } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 
@@ -15,6 +15,9 @@ function AppearanceHarness() {
       <div>{appearance.frontmatterMetaFields}</div>
       <div>{appearance.markdownSyntaxVisibility}</div>
       <div>{appearance.baseColorMode}</div>
+      <div data-testid="base-color-mode-selection-state">
+        {appearance.isBaseColorModeSelectionActive ? 'selecting' : 'idle'}
+      </div>
       <div>{appearance.dimImagesInDarkMode ? 'dim-on' : 'dim-off'}</div>
       <div>{appearance.pdfReadingMode}</div>
       <div>{appearance.readingLineHeight}</div>
@@ -63,6 +66,7 @@ function AppearanceHarness() {
 }
 
 beforeEach(() => {
+  vi.useRealTimers();
   window.localStorage.clear();
   delete document.body.dataset.bootSkeleton;
 });
@@ -179,7 +183,7 @@ it('keeps light mode PDFs original while preserving the dark mode PDF preference
   expect(document.documentElement.dataset.pdfReadingMode).toBe('warm');
 });
 
-it('applies the resolved color mode immediately when returning to light mode', () => {
+it('cycles through light, dark, system, and back to light', () => {
   render(
     <AppearanceSettingsProvider>
       <AppearanceHarness />
@@ -195,9 +199,30 @@ it('applies the resolved color mode immediately when returning to light mode', (
 
   fireEvent.click(screen.getByRole('button', { name: 'Toggle light/dark' }));
 
+  expect(document.documentElement.dataset.baseColor).toBe('system');
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.baseColor)).toBe('system');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Toggle light/dark' }));
+
   expect(document.documentElement.dataset.baseColor).toBe('light');
   expect(document.documentElement.dataset.resolvedBaseColor).toBe('light');
   expect(document.documentElement.dataset.pdfReadingMode).toBe('original');
+});
+
+it('ends the temporary appearance mode selection phase after two seconds', () => {
+  vi.useFakeTimers();
+  render(
+    <AppearanceSettingsProvider>
+      <AppearanceHarness />
+    </AppearanceSettingsProvider>
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Toggle light/dark' }));
+  expect(screen.getByTestId('base-color-mode-selection-state')).toHaveTextContent('selecting');
+
+  act(() => vi.advanceTimersByTime(2_000));
+  expect(screen.getByTestId('base-color-mode-selection-state')).toHaveTextContent('idle');
+  expect(document.documentElement.dataset.baseColor).toBe('dark');
 });
 
 it('keeps the selected reading line height when the color mode changes', () => {

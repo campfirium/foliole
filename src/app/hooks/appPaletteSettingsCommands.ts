@@ -17,9 +17,9 @@ export const SETTINGS_PALETTE_COMMANDS: AppPaletteSettingsCommandMeta[] = [
   },
   {
     id: APP_COMMAND_IDS.toggleBaseColorMode,
-    title: 'Toggle Light/Dark Mode',
+    title: 'Cycle Appearance Mode',
     section: 'Settings',
-    keywords: ['appearance', 'theme', 'dark', 'light', 'color', 'mode']
+    keywords: ['appearance', 'theme', 'dark', 'light', 'system', 'color', 'mode']
   },
   {
     id: APP_COMMAND_IDS.setPdfDarkAppearanceOriginal,

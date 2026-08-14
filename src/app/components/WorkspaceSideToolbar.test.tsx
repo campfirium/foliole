@@ -85,7 +85,7 @@ it('shows the bottom divider only while review mode is active', () => {
   expect(screen.getByTestId('workspace-study-divider')).toBeInTheDocument();
 });
 
-it('runs the shared light and dark mode command from the rail theme button', () => {
+it('runs the shared appearance mode command from the customizable rail action', () => {
   const onRunRailAction = vi.fn();
   renderWithLocalization(
     <AppearanceSettingsProvider>
@@ -93,7 +93,7 @@ it('runs the shared light and dark mode command from the rail theme button', () 
     </AppearanceSettingsProvider>
   );
 
-  fireEvent.click(screen.getByRole('button', { name: 'Toggle Light/Dark Mode' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance mode: Light' }));
 
   expect(onRunRailAction).toHaveBeenCalledWith(APP_COMMAND_IDS.toggleBaseColorMode);
 });
@@ -244,5 +244,5 @@ it('exposes shortcuts on visible rail command buttons', () => {
 
   renderToolbar(false);
 
-  expect(screen.getByRole('button', { name: 'Toggle List' })).toHaveAttribute('aria-keyshortcuts', '[ Control+Shift+L Meta+Shift+L');
+  expect(screen.getByRole('button', { name: 'Toggle List' })).toHaveAttribute('aria-keyshortcuts', '[ Control+Shift+L');
 });

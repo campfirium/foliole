@@ -43,6 +43,7 @@ export interface AppearanceSettingsContextValue {
   highlightColorPreset: HighlightColorPreset;
   interfaceFontPreset: InterfaceFontPreset;
   interfaceFontSize: number;
+  isBaseColorModeSelectionActive: boolean;
   markdownSyntaxVisibility: MarkdownSyntaxVisibility;
   monospaceFontPreset: MonospaceFontPreset;
   nodeListRowSpacing: number;

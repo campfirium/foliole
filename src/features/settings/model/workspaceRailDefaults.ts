@@ -58,6 +58,16 @@ export const DEFAULT_WORKSPACE_RAIL_ITEMS: WorkspaceRailItemConfig[] = [
     iconId: 'MessageSquareWarning'
   },
   {
+    id: 'system.appearance-mode',
+    commandId: APP_COMMAND_IDS.toggleBaseColorMode,
+    section: 'bottom',
+    order: 1,
+    visible: true,
+    source: 'system',
+    iconId: 'Sun',
+    labelOverride: 'desktop.command.cycleAppearanceMode'
+  },
+  {
     id: 'fixed.review',
     commandId: APP_COMMAND_IDS.startStudyMode,
     section: 'fixed',
@@ -86,6 +96,7 @@ export const WORKSPACE_RAIL_COMMAND_LABELS: Record<string, string> = {
   [APP_COMMAND_IDS.clipboardImport]: 'Import Clipboard',
   [APP_COMMAND_IDS.toggleImmersiveMode]: 'Reading Mode',
   [APP_COMMAND_IDS.sendFeedback]: 'Send Feedback',
+  [APP_COMMAND_IDS.toggleBaseColorMode]: 'Appearance Mode',
   [APP_COMMAND_IDS.startStudyMode]: 'Study',
   [APP_COMMAND_IDS.openSettings]: 'Settings'
 };

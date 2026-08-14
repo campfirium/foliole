@@ -134,7 +134,7 @@ describe('buildAppPaletteItems', () => {
   it('shows the light or dark mode toggle action', () => {
     const lightItems = buildAppPaletteItems(createPaletteOptions(false));
 
-    expect(lightItems.find((item) => item.id === APP_COMMAND_IDS.toggleBaseColorMode)?.title).toBe('Toggle Light/Dark Mode');
+    expect(lightItems.find((item) => item.id === APP_COMMAND_IDS.toggleBaseColorMode)?.title).toBe('Cycle Appearance Mode');
   });
 
   it('uses dynamic undo and redo action titles', () => {

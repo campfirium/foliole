@@ -21,7 +21,6 @@ import {
 } from './WorkspaceRailTooltipButton';
 import { useDemoMarkdownRailImport } from './WorkspaceSideToolbarDemoImport';
 import { renderStudyDock } from './WorkspaceStudyDock';
-import { WorkspaceThemeModeAction } from './WorkspaceThemeModeAction';
 import { WorkspaceUpdateAction } from './WorkspaceUpdateAction';
 
 interface WorkspaceSideToolbarProps {
@@ -137,7 +136,6 @@ export function WorkspaceSideToolbar(props: WorkspaceSideToolbarProps) {
           onRun={state.runRailCommand}
         />
         {state.demoImport.isDemo ? <WorkspaceDemoRailBottomActions {...definedProps({ onRunRailAction: props.onRunRailAction })} /> : null}
-        <WorkspaceThemeModeAction {...definedProps({ onRunRailAction: props.onRunRailAction })} />
         <SettingsAction isSettingsOpen={props.isSettingsOpen} onOpenSettings={props.onOpenSettings} />
       </div>
       {renderStudyDock({

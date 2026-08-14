@@ -5,7 +5,7 @@ import {
   getWorkspaceRailItemLabel,
   type WorkspaceRailItemConfig
 } from '../../features/settings/model/workspaceRailSettings';
-import type { AppCommandId } from '../../shared/commands/ids';
+import { APP_COMMAND_IDS, type AppCommandId } from '../../shared/commands/ids';
 import { formatAriaKeyShortcuts } from '../../shared/commands/shortcuts';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
@@ -15,22 +15,29 @@ import {
   ToolbarActionGroup
 } from '../../shared/ui';
 
+import { WorkspaceAppearanceModeIcon } from './WorkspaceAppearanceModeIcon';
 import {
   WORKSPACE_RAIL_BUTTON_FOCUS_CLASS_NAME,
   WorkspaceRailTooltipButton
 } from './WorkspaceRailTooltipButton';
+import { WorkspaceThemeModeAction } from './WorkspaceThemeModeAction';
 
 const RAIL_BUTTON_CLASS_NAME =
   `size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground ${WORKSPACE_RAIL_BUTTON_FOCUS_CLASS_NAME}`;
 export function RailItemIcon({
+  commandId,
   iconId,
   size = 16,
   strokeWidth = 1.75
 }: {
+  commandId?: string;
   iconId?: string;
   size?: number;
   strokeWidth?: number;
 }) {
+  if (commandId === APP_COMMAND_IDS.toggleBaseColorMode) {
+    return <WorkspaceAppearanceModeIcon size={size} strokeWidth={strokeWidth} />;
+  }
   return <LucideCatalogIcon {...(iconId ? { iconId } : {})} size={size} strokeWidth={strokeWidth} />;
 }
 
@@ -43,11 +50,14 @@ function RailCommandButton({
 }) {
   const t = useTranslation();
   const shortcutMap = useCommandShortcutMap();
+  if (item.commandId === APP_COMMAND_IDS.toggleBaseColorMode) {
+    return <WorkspaceThemeModeAction onRunRailAction={onRun} />;
+  }
   return (
     <div className="flex h-[var(--workspace-top-toolbar-height)] items-center justify-center">
       <WorkspaceRailTooltipButton
         className={RAIL_BUTTON_CLASS_NAME}
-        icon={<RailItemIcon {...(item.iconId ? { iconId: item.iconId } : {})} />}
+        icon={<RailItemIcon commandId={item.commandId} {...(item.iconId ? { iconId: item.iconId } : {})} />}
         label={getWorkspaceRailItemLabel(item, t)}
         onClick={() => onRun(item.commandId)}
         aria-keyshortcuts={formatAriaKeyShortcuts(shortcutMap[item.commandId as AppCommandId])}
@@ -107,7 +117,7 @@ export function WorkspaceRailContextMenu({
           onClick={() => onToggle(item.id, !item.visible)}
         >
           <span className="inline-flex min-w-0 items-center gap-3">
-            <RailItemIcon {...(item.iconId ? { iconId: item.iconId } : {})} />
+            <RailItemIcon commandId={item.commandId} {...(item.iconId ? { iconId: item.iconId } : {})} />
             <span className="truncate">{getWorkspaceRailItemLabel(item, t)}</span>
           </span>
           {item.visible ? <Check aria-hidden="true" className="shrink-0" size={15} /> : <span className="size-[15px] shrink-0" />}

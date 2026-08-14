@@ -45,7 +45,7 @@ it('normalizes top, bottom, and fixed rail sections independently', () => {
     'system.workspace-search',
     'system.command-palette'
   ]);
-  expect(itemIds(getWorkspaceRailSectionItems(normalized, 'bottom'))).toEqual(['user.command', 'system.feedback']);
+  expect(itemIds(getWorkspaceRailSectionItems(normalized, 'bottom'))).toEqual(['user.command', 'system.feedback', 'system.appearance-mode']);
   expect(itemIds(getWorkspaceRailSectionItems(normalized, 'fixed'))).toEqual(['fixed.review', 'fixed.settings']);
 });
 
@@ -120,7 +120,7 @@ it('moves ordinary items across top and bottom sections', () => {
     'system.workspace-search',
     'system.command-palette'
   ]);
-  expect(itemIds(getWorkspaceRailSectionItems(moved, 'bottom'))).toEqual(['system.import-file', 'system.feedback']);
+  expect(itemIds(getWorkspaceRailSectionItems(moved, 'bottom'))).toEqual(['system.import-file', 'system.feedback', 'system.appearance-mode']);
 });
 
 it('adds a new action to the top rail by default', () => {

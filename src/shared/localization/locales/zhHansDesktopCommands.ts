@@ -69,6 +69,7 @@ export const ZH_HANS_DESKTOP_COMMAND_TRANSLATIONS: Partial<Record<TranslationKey
   'desktop.command.openSettings': '打开设置',
   'desktop.command.openReadwiseReaderSettings': '打开 Readwise Reader 设置',
   'desktop.command.toggleBaseColorMode': '切换浅色/深色模式',
+  'desktop.command.cycleAppearanceMode': '循环切换外观模式',
   'desktop.command.pdfDarkOriginal': '深色模式使用原始 PDF',
   'desktop.command.pdfDarkInverted': '深色模式使用反色 PDF',
   'desktop.command.pdfDarkWarm': '深色模式使用暖色 PDF',

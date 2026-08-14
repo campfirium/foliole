@@ -44,6 +44,7 @@ import type { AppearanceSettingsContextValue } from './appearanceSettingsContext
 type Setter<T> = Dispatch<SetStateAction<T>>;
 
 export type AppearanceState = {
+  advanceBaseColorModeCycle: (resolvedMode: ResolvedBaseColorMode) => BaseColorMode;
   accentColorPresetState: AccentColorPreset;
   baseColorModeState: BaseColorMode;
   resolvedBaseColorModeState: ResolvedBaseColorMode;
@@ -58,6 +59,7 @@ export type AppearanceState = {
   highlightColorPresetState: HighlightColorPreset;
   interfaceFontPresetState: InterfaceFontPreset;
   interfaceFontSizeState: number;
+  isBaseColorModeSelectionActiveState: boolean;
   markdownSyntaxVisibilityState: MarkdownSyntaxVisibility;
   monospaceFontPresetState: MonospaceFontPreset;
   pdfReadingModeState: PdfReadingMode;

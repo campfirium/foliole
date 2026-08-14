@@ -82,8 +82,7 @@ export function createGeneralAppearanceActions(state: AppearanceState): GeneralA
     setReadingLineHeight: (value: ReadingLineHeight) => state.setReadingLineHeightState(setReadingLineHeight(value)),
     setReadingParagraphSpacing: (value: ReadingParagraphSpacing) => state.setReadingParagraphSpacingState(setReadingParagraphSpacing(value)),
     toggleBaseColorMode: () => {
-      const next = state.resolvedBaseColorModeState === 'dark' ? 'light' : 'dark';
-      applyBaseColorMode(next);
+      applyBaseColorMode(state.advanceBaseColorModeCycle(state.resolvedBaseColorModeState));
     },
     toggleEditorDisplayMode: () => {
       const next = state.editorDisplayModeState === 'preview' ? 'source' : 'preview';

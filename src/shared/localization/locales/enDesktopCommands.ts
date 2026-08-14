@@ -67,6 +67,7 @@ export const EN_DESKTOP_COMMAND_TRANSLATIONS = {
   'desktop.command.openSettings': 'Open Settings',
   'desktop.command.openReadwiseReaderSettings': 'Open Readwise Reader Settings',
   'desktop.command.toggleBaseColorMode': 'Toggle Light/Dark Mode',
+  'desktop.command.cycleAppearanceMode': 'Cycle Appearance Mode',
   'desktop.command.pdfDarkOriginal': 'Use Original PDF in Dark Mode',
   'desktop.command.pdfDarkInverted': 'Use Inverted PDF in Dark Mode',
   'desktop.command.pdfDarkWarm': 'Use Warm PDF in Dark Mode',
