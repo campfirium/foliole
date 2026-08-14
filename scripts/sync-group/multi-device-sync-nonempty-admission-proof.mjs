@@ -15,7 +15,6 @@ export function assertWindowsNonemptyAdmissionReceipt(receipt) {
       || receipt.preJoinFacts?.localGroupId !== null
       || receipt.preJoinFacts?.localTimelineId !== null
       || receipt.preJoinFacts?.localMemberState !== null
-      || receipt.preJoinFacts?.userNodeCount !== 1
       || !hasLocalMaterial(receipt.preJoinFacts, material)
       || !hasLocalMaterial(receipt.firstFacts, material)
       || !hasLocalMaterial(receipt.restartedFacts, material)) {

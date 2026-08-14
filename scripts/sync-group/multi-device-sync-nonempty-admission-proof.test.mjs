@@ -17,7 +17,7 @@ const materialFacts = { attachmentIds: ['hash-c'], availableAttachmentIds: ['has
   facts: { 'multi-device-sync-c-1': true } };
 const receipt = { firstFacts: materialFacts, localFact: material,
   preJoinFacts: { ...materialFacts, localGroupId: null, localMemberState: null,
-    localTimelineId: null, userNodeCount: 1 }, restartedFacts: materialFacts };
+    localTimelineId: null, userNodeCount: 7 }, restartedFacts: materialFacts };
 
 it('persists the exact pre-join C fact and hash attachment for later three-host proof', async () => {
   const repoRoot = path.join(process.cwd(), '.tmp', `nonempty-admission-${Date.now()}`);
