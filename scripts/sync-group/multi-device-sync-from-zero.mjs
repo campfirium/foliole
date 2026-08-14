@@ -11,8 +11,8 @@ import { createSyncFromZeroDataset } from '../desktop/sync-from-zero-dataset-act
 import { proveARejoin } from './multi-device-sync-a-rejoin.mjs';
 import { createApprovalReceiptRelease } from './multi-device-sync-approval-release.mjs';
 import {
-  assertSyncFromZeroFinalProof, collectAndroidSyncFromZeroSnapshot,
-  inspectMacosSyncFromZeroDataset, waitForAndroidSyncFromZeroDataset
+  assertSyncFromZeroFinalProof, inspectMacosSyncFromZeroDataset,
+  waitForAndroidSyncFromZeroDataset, waitForAndroidSyncFromZeroProofSnapshot
 } from './multi-device-sync-from-zero-evidence.mjs';
 import { settleSiblingActions } from './multi-device-sync-stage-runtime.mjs';
 import {
@@ -167,7 +167,7 @@ export async function proveSyncFromZero(options) {
     context.reportProgress('windows-structure-batches-complete');
     context.reportProgress('windows-content-batches-complete');
     context.reportProgress('windows-attachment-batches-complete');
-    const androidAfterC = await collectAndroidSyncFromZeroSnapshot(context.paths, true);
+    const androidAfterC = await waitForAndroidSyncFromZeroProofSnapshot(context.paths);
     const rejoin = await proveARejoin({ execute: context.execute, repoRoot: context.repoRoot,
       runId: context.runId,
       reportActivity: () => context.reportActivity('three-host-rejoin-progress'),
@@ -178,7 +178,9 @@ export async function proveSyncFromZero(options) {
       userDataPath: path.join(context.owned.root, 'user-data')
     }));
     const macos = await inspectMacosSyncFromZeroDataset(session, datasetReceipt);
-    const androidFinal = await collectAndroidSyncFromZeroSnapshot(context.paths, true);
+    const androidFinal = await waitForAndroidSyncFromZeroProofSnapshot(context.paths, {
+      includeAttachments: true
+    });
     const proof = assertSyncFromZeroFinalProof({ androidAfterC, androidFinal,
       datasetReceipt, macos, windowsReceipt: windows.receipt });
     context.reportProgress('provider-resources-preserved');
