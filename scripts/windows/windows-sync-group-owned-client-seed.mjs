@@ -11,28 +11,32 @@ export function assertOwnedClientCompleteFacts(facts) {
   }
 }
 
-export function assertOwnedClientEmptyFacts(facts) {
+export function assertOwnedClientUnboundFacts(facts) {
   if (facts.integrity !== 'ok' || facts.localGroupId !== null || facts.localTimelineId !== null
-      || facts.localMemberState !== null || facts.activeMemberCount !== 0 || facts.userNodeCount !== 0
-      || facts.contentBlobCount !== 0 || facts.attachmentCount !== 0) {
-    throw new Error(`Windows C did not start empty: ${JSON.stringify(facts)}`);
+      || facts.localMemberState !== null || facts.activeMemberCount !== 0
+      || Object.keys(facts.journeyFacts ?? {}).length !== 0
+      || facts.missingAttachmentCount !== 0 || facts.missingContentBlobCount !== 0) {
+    throw new Error(`Windows C did not start unbound: ${JSON.stringify(facts)}`);
   }
 }
 
-export function assertOwnedClientSeedFacts(facts, material) {
+export function assertOwnedClientSeedFacts(facts, material, baselineFacts) {
   const attachmentReady = facts.cachedAttachmentIds?.includes(material.attachmentId)
     && facts.attachmentIds?.includes(material.attachmentId);
   if (facts.integrity !== 'ok' || facts.localGroupId !== null
       || facts.localTimelineId !== null || facts.localMemberState !== null
-      || facts.activeMemberCount !== 0 || facts.userNodeCount !== 1
-      || facts.contentBlobCount !== 1 || facts.attachmentCount !== 1
+      || facts.activeMemberCount !== 0
+      || facts.userNodeCount !== baselineFacts.userNodeCount + 1
+      || facts.contentBlobCount <= baselineFacts.contentBlobCount
+      || facts.attachmentCount !== baselineFacts.attachmentCount + 1
       || facts.facts?.[material.factId] !== true || !attachmentReady
       || facts.missingAttachmentCount !== 0 || facts.missingContentBlobCount !== 0) {
     throw new Error(`Windows C pre-join material is incomplete: ${JSON.stringify(facts)}`);
   }
 }
 
-export async function seedOwnedWindowsClient({ evidenceRoot, inspect, invoke, openSession }) {
+export async function seedOwnedWindowsClient({ baselineFacts, evidenceRoot, inspect, invoke,
+  openSession }) {
   const session = await openSession();
   let material;
   try {
@@ -45,6 +49,6 @@ export async function seedOwnedWindowsClient({ evidenceRoot, inspect, invoke, op
     await closeWindowsSyncGroupSession(session);
   }
   const facts = await inspect([material.factId]);
-  assertOwnedClientSeedFacts(facts, material);
+  assertOwnedClientSeedFacts(facts, material, baselineFacts);
   return { facts, material };
 }

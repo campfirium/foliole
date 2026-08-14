@@ -6,16 +6,23 @@ import path from 'node:path';
 import { expect, it } from 'vitest';
 
 import {
-  assertOwnedClientSeedFacts, seedOwnedWindowsClient
+  assertOwnedClientSeedFacts, assertOwnedClientUnboundFacts, seedOwnedWindowsClient
 } from './windows-sync-group-owned-client-seed.mjs';
 
 /* global process */
 
+const baselineFacts = { activeMemberCount: 0, attachmentCount: 2, contentBlobCount: 8,
+  integrity: 'ok', journeyFacts: {}, localGroupId: null, localMemberState: null,
+  localTimelineId: null, missingAttachmentCount: 0, missingContentBlobCount: 0,
+  userNodeCount: 8 };
+
 function seededFacts(factId) {
-  return { activeMemberCount: 0, attachmentCount: 1, attachmentIds: ['hash-c'],
-    cachedAttachmentIds: ['hash-c'], contentBlobCount: 1, facts: { [factId]: true },
+  return { activeMemberCount: 0, attachmentCount: 3,
+    attachmentIds: ['onboarding-a', 'onboarding-b', 'hash-c'],
+    cachedAttachmentIds: ['onboarding-a', 'onboarding-b', 'hash-c'],
+    contentBlobCount: 10, facts: { [factId]: true },
     integrity: 'ok', localGroupId: null, localMemberState: null, localTimelineId: null,
-    missingAttachmentCount: 0, missingContentBlobCount: 0, userNodeCount: 1 };
+    missingAttachmentCount: 0, missingContentBlobCount: 0, userNodeCount: 9 };
 }
 
 it('creates C material through product commands before inspecting the pre-join database', async () => {
@@ -33,7 +40,7 @@ it('creates C material through product commands before inspecting the pre-join d
     throw new Error(`unexpected command: ${command}`);
   };
   try {
-    const result = await seedOwnedWindowsClient({ evidenceRoot,
+    const result = await seedOwnedWindowsClient({ baselineFacts, evidenceRoot,
       inspect: async ([factId]) => { events.push('inspected'); return seededFacts(factId); },
       invoke, openSession: async () => ({ app, page: {} }) });
     expect(result.material).toMatchObject({ attachmentId: 'hash-c' });
@@ -47,5 +54,13 @@ it('creates C material through product commands before inspecting the pre-join d
 it('rejects a seed receipt when the exact hash attachment is not cached', () => {
   expect(() => assertOwnedClientSeedFacts({
     ...seededFacts('fact-c'), cachedAttachmentIds: []
-  }, { attachmentId: 'hash-c', factId: 'fact-c' })).toThrow('pre-join material is incomplete');
+  }, { attachmentId: 'hash-c', factId: 'fact-c' }, baselineFacts))
+    .toThrow('pre-join material is incomplete');
+});
+
+it('accepts onboarding material in an unbound baseline but rejects stale journey facts', () => {
+  expect(() => assertOwnedClientUnboundFacts(baselineFacts)).not.toThrow();
+  expect(() => assertOwnedClientUnboundFacts({
+    ...baselineFacts, journeyFacts: { 'multi-device-sync-c-old': 'C' }
+  })).toThrow('did not start unbound');
 });

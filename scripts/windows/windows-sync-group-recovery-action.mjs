@@ -13,7 +13,7 @@ import {
 import { createSyncProgressWatchdog } from '../sync-group/sync-progress-watchdog.mjs';
 import { enableWindowsSyncParticipation } from './windows-sync-group-participation-control.mjs';
 import {
-  assertOwnedClientCompleteFacts, assertOwnedClientEmptyFacts, seedOwnedWindowsClient
+  assertOwnedClientCompleteFacts, assertOwnedClientUnboundFacts, seedOwnedWindowsClient
 } from './windows-sync-group-owned-client-seed.mjs';
 import { captureWindowsSyncRuntimeProgress } from './windows-sync-group-runtime-progress.mjs';
 import { closeWindowsSyncGroupSession } from './windows-sync-group-session-close.mjs';
@@ -161,7 +161,7 @@ export async function resetOwnedClient(paths, evidenceRoot, execute) {
   const session = await openWindowsSyncGroupSession(paths, evidenceRoot);
   await closeWindowsSyncGroupSession(session);
   const facts = await inspectWindowsSyncGroupDatabase(execute, paths);
-  assertOwnedClientEmptyFacts(facts);
+  assertOwnedClientUnboundFacts(facts);
   return facts;
 }
 
@@ -181,7 +181,7 @@ export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths
       ? await resetOwnedClient(paths, evidenceRoot, execute)
       : await inspectWindowsSyncGroupDatabase(execute, paths);
     if (seedOwnedState) {
-      const seeded = await seedOwnedWindowsClient({ evidenceRoot,
+      const seeded = await seedOwnedWindowsClient({ baselineFacts: initialFacts, evidenceRoot,
         inspect: (factIds) => inspectWindowsSyncGroupDatabase(execute, paths, undefined, factIds),
         invoke: invokeWindowsSyncGroupCommand,
         openSession: () => openWindowsSyncGroupSession(paths, evidenceRoot) });
