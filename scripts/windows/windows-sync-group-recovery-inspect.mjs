@@ -90,6 +90,9 @@ export function inspectSyncGroupRecoveryDatabase(databasePath, factIds = []) {
       activeDeviceIdentities: activeDeviceIdentities(db),
       activeMemberCount: count("SELECT COUNT(*) FROM sync_group_members WHERE state = 'active'"),
       attachmentCount: count('SELECT COUNT(*) FROM attachments'),
+      attachmentIds: db.prepare('SELECT id FROM attachments ORDER BY id').pluck().all(),
+      cachedAttachmentIds: db.prepare(`SELECT attachment_id FROM attachment_blobs
+        WHERE availability = 'cached' ORDER BY attachment_id`).pluck().all(),
       contentBlobCount: count('SELECT COUNT(*) FROM content_blobs'),
       departedAtByDeviceIdentity: departedAtByDeviceIdentity(db),
       departedDeviceIdentities: departedDeviceIdentities(db),

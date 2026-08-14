@@ -1,8 +1,16 @@
 // @vitest-environment node
 
+import fs from 'node:fs';
+import { rm } from 'node:fs/promises';
+import path from 'node:path';
+
 import { expect, it } from 'vitest';
 
-import { runABConvergenceJourney } from './multi-device-sync-ab-convergence.mjs';
+import {
+  readABConvergenceMaterial, runABConvergenceJourney
+} from './multi-device-sync-ab-convergence.mjs';
+
+/* global process */
 
 function session(events, name) {
   return {
@@ -48,4 +56,20 @@ it('closes transport and desktop session when A to B convergence fails', async (
     waitForAndroidFact: async () => { throw new Error('missing'); }
   })).rejects.toThrow('missing');
   expect(events).toEqual(['first-enabled', 'transport-opened', 'transport-closed', 'first-closed']);
+});
+
+it('reads the exact A and B pre-join fact identities for the final union proof', async () => {
+  const repoRoot = path.join(process.cwd(), '.tmp', `a-b-material-${Date.now()}`);
+  const evidenceRoot = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/proofs');
+  fs.mkdirSync(evidenceRoot, { recursive: true });
+  fs.writeFileSync(path.join(evidenceRoot, 'run-1-a-b.json'), JSON.stringify({
+    androidFactId: 'fact-b-before-c', desktopFactId: 'fact-a-before-c', resultStatus: 'success'
+  }));
+  try {
+    expect(readABConvergenceMaterial(repoRoot, 'run-1')).toEqual({
+      androidFactId: 'fact-b-before-c', desktopFactId: 'fact-a-before-c'
+    });
+  } finally {
+    await rm(repoRoot, { force: true, recursive: true });
+  }
 });

@@ -5,6 +5,9 @@ import { expect, it } from 'vitest';
 it('keeps stable desktop A and Windows C on a real LAN Sync Group path', () => {
   const remote = fs.readFileSync('scripts/windows/windows-sync-group-recovery-action.mjs', 'utf8');
   const inspector = fs.readFileSync('scripts/windows/windows-sync-group-recovery-inspect.mjs', 'utf8');
+  const ownedClient = fs.readFileSync(
+    'scripts/windows/windows-sync-group-owned-client-seed.mjs', 'utf8'
+  );
   const control = fs.readFileSync('scripts/windows/windows-sync-group-recovery-control.mjs', 'utf8');
   const runtimeProgress = fs.readFileSync(
     'scripts/windows/windows-sync-group-runtime-progress.mjs', 'utf8'
@@ -23,8 +26,12 @@ it('keeps stable desktop A and Windows C on a real LAN Sync Group path', () => {
   expect(remote).toContain('provisionWindowsAcceptanceRoot({ paths })');
   expect(remote).toContain('maxRetries: 5, recursive: true, retryDelay: 250');
   expect(remote).toContain("invokeWindowsSyncGroupCommand(session.page, 'request_sync_group_join'");
-  expect(remote).toContain('firstFacts = await waitForOrdinarySyncFacts(execute, paths, evidenceRoot)');
-  expect(remote.indexOf('firstFacts = await waitForOrdinarySyncFacts(execute, paths, evidenceRoot)'))
+  expect(remote).toContain(
+    'firstFacts = await waitForOrdinarySyncFacts(execute, paths, evidenceRoot, factIds)'
+  );
+  expect(remote.indexOf(
+    'firstFacts = await waitForOrdinarySyncFacts(execute, paths, evidenceRoot, factIds)'
+  ))
     .toBeLessThan(remote.indexOf('finally { await closeWindowsSyncGroupSession(session); }'));
   expect(inspector).toContain("missingContentBlobCount");
   expect(inspector).toContain('localMemberState');
@@ -52,7 +59,8 @@ it('keeps stable desktop A and Windows C on a real LAN Sync Group path', () => {
   expect(runtimeProgress).toContain('RECEIVE_CURSOR_COMMITTED_EVENT');
   expect(remote).toContain("'sync-group-runtime.log'");
   expect(remote).toContain('Ordinary sync pack failed before apply');
-  expect(remote).toContain('facts.activeMemberCount < 2');
+  expect(ownedClient).toContain('facts.activeMemberCount < 2');
+  expect(remote).toContain('seedOwnedWindowsClient');
   expect(control).not.toContain('runMacosA5SyncGroupApproval');
   expect(provider).toContain(
     'new FolioleCompanionSyncGroupServer(activeContext, activeConfig, joinRequests, requireDataBridge())'

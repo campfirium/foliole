@@ -2,11 +2,10 @@
 
 import { expect, it } from 'vitest';
 
+import { restartARejoinAndroidProvider } from './multi-device-sync-a-rejoin.mjs';
 import {
-  assertThreeDeviceProof,
-  restartARejoinAndroidProvider,
-  waitForThreeDeviceProof
-} from './multi-device-sync-a-rejoin.mjs';
+  assertThreeDeviceProof, waitForThreeDeviceProof
+} from './multi-device-sync-three-device-proof.mjs';
 
 const ids = { A: 'fact-a', B: 'fact-b', C: 'fact-c' };
 const identities = { desktop: ['a', 'c'], mobile: ['b'] };
@@ -31,6 +30,26 @@ it('rejects a same-count member set that does not converge by device identity', 
   const divergent = { ...facts, activeDeviceIdentities: { desktop: ['a', 'x'], mobile: ['b'] } };
   expect(() => assertThreeDeviceProof({ android, ids, macos: facts, windows: divergent }))
     .toThrow('one complete three-member timeline');
+});
+
+it('requires the exact pre-join C fact and hash attachment on every restarted host', () => {
+  const requiredIds = { ...ids, preJoinA: 'fact-a-before-join',
+    preJoinB: 'fact-b-before-join', preJoinC: 'fact-c-before-join' };
+  const desktop = { ...facts, cachedAttachmentIds: ['hash-c'],
+    journeyFacts: { 'fact-a-before-join': 'A', 'fact-b-before-join': 'B',
+      'fact-c-before-join': 'C' } };
+  const androidWithMaterial = { ...android, database: { ...android.database,
+    inspection: { ...android.database.inspection, cachedAttachmentIds: ['hash-c'],
+      journeyFacts: { ...android.database.inspection.journeyFacts,
+        'fact-a-before-join': 'A', 'fact-b-before-join': 'B',
+        'fact-c-before-join': 'C' } } } };
+  expect(assertThreeDeviceProof({ android: androidWithMaterial, ids: requiredIds,
+    macos: desktop, requiredAttachmentId: 'hash-c', windows: desktop })).toMatchObject({
+    groupId: 'group-1'
+  });
+  expect(() => assertThreeDeviceProof({ android: androidWithMaterial, ids: requiredIds,
+    macos: { ...desktop, cachedAttachmentIds: [] }, requiredAttachmentId: 'hash-c',
+    windows: desktop })).toThrow('one complete three-member timeline');
 });
 
 it('waits for restarted resource bodies instead of failing on the transient metadata state', async () => {

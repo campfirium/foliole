@@ -12,6 +12,7 @@ it('binds the A-leave product stage to its real cross-host action', () => {
   const actions = createDiagnosticStageActions({
     repoRoot: process.cwd(), requiredHosts: ['macos-a', 'android-b', 'windows-c'], runId: 'run-1'
   });
+  expect(actions['admit-c']).toBeTypeOf('function');
   expect(actions['leave-a']).toBeTypeOf('function');
   expect(actions['set-participation']).toBeTypeOf('function');
   expect(actions['prove-sync-from-zero']).toBeTypeOf('function');

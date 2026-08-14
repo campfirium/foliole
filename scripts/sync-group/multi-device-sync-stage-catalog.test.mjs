@@ -7,7 +7,7 @@ import {
 it('declares every required product stage without embedding its business implementation', () => {
   const names = stageCatalog().map(({ name }) => name);
   expect(names).toEqual([
-    'candidate-preparation', 'a-b-group-sync', 'a-b-convergence', 'b-admit-empty-c', 'a-rejoin', 'a-leave',
+    'candidate-preparation', 'a-b-group-sync', 'a-b-convergence', 'b-admit-c', 'a-rejoin', 'a-leave',
     'participation-control', 'sync-from-zero'
   ]);
   expect(resolveStage('a-b-group-sync')).toMatchObject({
@@ -24,7 +24,7 @@ it('declares ordered milestones and deadlines that cover legal sibling waits', (
       'candidate-macos-started', 'candidate-android-built', 'candidate-windows-started'
     ]), milestones: ['candidate-prepared']
   });
-  const stage = resolveStage('b-admit-empty-c');
+  const stage = resolveStage('b-admit-c');
   expect(stage).toMatchObject({
     milestones: ['a-listener-ready', 'a-fact-created', 'b-provider-stopped', 'b-transport-ready',
       'b-fact-received', 'a-offline', 'c-join-started', 'b-approval-completed',
@@ -85,19 +85,19 @@ it('limits candidate hosts to the selected product stage closure', () => {
   expect(stageHostClosure(shortestStageChain('a-b-convergence'))).toEqual([
     'macos-a', 'android-b'
   ]);
-  expect(stageHostClosure(shortestStageChain('b-admit-empty-c'))).toEqual([
+  expect(stageHostClosure(shortestStageChain('b-admit-c'))).toEqual([
     'macos-a', 'android-b', 'windows-c'
   ]);
 });
 
 it('builds only the shortest missing product prerequisite chain', () => {
   expect(shortestStageChain('a-rejoin').map(({ name }) => name)).toEqual([
-    'candidate-preparation', 'a-b-group-sync', 'b-admit-empty-c', 'a-rejoin'
+    'candidate-preparation', 'a-b-group-sync', 'b-admit-c', 'a-rejoin'
   ]);
   expect(shortestStageChain('a-rejoin', ['a_b_group_active']).map(({ name }) => name))
-    .toEqual(['b-admit-empty-c', 'a-rejoin']);
+    .toEqual(['b-admit-c', 'a-rejoin']);
   expect(shortestStageChain('participation-control').map(({ name }) => name)).toEqual([
-    'candidate-preparation', 'a-b-group-sync', 'b-admit-empty-c', 'a-rejoin',
+    'candidate-preparation', 'a-b-group-sync', 'b-admit-c', 'a-rejoin',
     'participation-control'
   ]);
   expect(shortestStageChain('sync-from-zero').map(({ name }) => name)).toEqual([

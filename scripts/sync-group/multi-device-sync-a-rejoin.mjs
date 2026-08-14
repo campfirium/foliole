@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { setTimeout as delay } from 'node:timers/promises';
 
 import { collectAndroidDeviceSnapshot } from '../android/android-device-snapshot.mjs';
 import {
@@ -14,37 +13,22 @@ import {
 import { runMacosA5SyncGroupMaintenance } from '../android/macos-a5-sync-group-maintenance-action.mjs';
 import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desktop-session.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
-import { createSyncProgressWatchdog } from './sync-progress-watchdog.mjs';
+import { readABConvergenceMaterial } from './multi-device-sync-ab-convergence.mjs';
 import {
   freshJourneyFactIds, startWindowsARejoinProvider
 } from './multi-device-sync-a-rejoin-provider.mjs';
 import {
   macosAcceptanceEnv, macosAcceptanceSessionOptions
 } from './multi-device-sync-macos-channel.mjs';
+import { readNonemptyAdmissionMaterial } from './multi-device-sync-nonempty-admission-proof.mjs';
+import {
+  productFailure, waitForThreeDeviceProof, waitUntil
+} from './multi-device-sync-three-device-proof.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
 /* global process */
 
 const APP_ID = 'com.foliole.android';
-
-function productFailure(host, missingFact, message) {
-  return Object.assign(new Error(message), { failureOwner: 'product', host, missingFact, status: 'stalled' });
-}
-
-async function waitUntil(
-  label, inspect, accept, missingFact, progress = (value) => value, intervalMs = 1_000
-) {
-  const deadline = Date.now() + 60_000;
-  const observe = createSyncProgressWatchdog({ label, stallMs: 60_000 });
-  let value;
-  while (Date.now() < deadline) {
-    value = await inspect();
-    observe(JSON.stringify(progress(value)));
-    if (accept(value)) return value;
-    await delay(intervalMs);
-  }
-  throw productFailure('all', missingFact, `${label} did not converge.`);
-}
 
 function androidSnapshot(paths) {
   return collectAndroidDeviceSnapshot({ adb: paths.adb, appId: APP_ID, includeEvents: false,
@@ -52,7 +36,10 @@ function androidSnapshot(paths) {
     databaseInspector: (database) => ({ ...inspectPairSyncRecoveryWorkspace(database),
       activeMemberIdentities: database.prepare(`SELECT device_id FROM sync_group_members
         WHERE state = 'active' ORDER BY device_id`).all().map(({ device_id }) =>
-        identityFingerprint(device_id)) }) });
+        identityFingerprint(device_id)),
+      cachedAttachmentIds: database.prepare(`SELECT attachment_id FROM attachment_blobs
+        WHERE availability = 'cached' ORDER BY attachment_id`).all()
+        .map(({ attachment_id }) => attachment_id) }) });
 }
 
 async function createAndroidFact({ env, evidenceRoot, execute, paths, runId }) {
@@ -76,10 +63,6 @@ async function macosFacts(execute, repoRoot, databasePath, factIds) {
   return JSON.parse(result.stdout.trim());
 }
 
-function desktopMemberIdentities(facts) {
-  return Object.values(facts.activeDeviceIdentities ?? {}).flat().sort();
-}
-
 export async function restartARejoinAndroidProvider({
   env, execute, paths,
   startProvider = startMacosA5SyncGroupApprovalProvider,
@@ -92,58 +75,14 @@ export async function restartARejoinAndroidProvider({
   });
 }
 
-export function assertThreeDeviceProof({ android, macos, windows, ids }) {
-  const androidFacts = android.database?.inspection;
-  const points = [macos, windows];
-  const groupIds = [macos.localGroupId, windows.localGroupId, androidFacts?.syncGroupId];
-  const timelines = [macos.localTimelineId, windows.localTimelineId, androidFacts?.syncGroupTimelineId];
-  const counts = points.map((value) => [value.userNodeCount, value.contentBlobCount, value.attachmentCount]);
-  counts.push([androidFacts?.userNodeCount, android.database.counts.content_blobs,
-    android.database.counts.attachments]);
-  const androidHasFacts = Object.values(ids).every((id) => androidFacts?.journeyFacts?.[id]);
-  const memberIdentities = [desktopMemberIdentities(macos), desktopMemberIdentities(windows),
-    [...(androidFacts?.activeMemberIdentities ?? [])].sort()];
-  if (!groupIds[0] || !timelines[0] || new Set(groupIds).size !== 1 || new Set(timelines).size !== 1
-      || points.some((value) => value.activeMemberCount !== 3 || value.localMemberState !== 'active'
-        || value.integrity !== 'ok'
-        || value.missingAttachmentCount !== 0 || value.missingContentBlobCount !== 0
-        || Object.values(ids).some((id) => value.facts?.[id] !== true))
-      || android.database?.integrity !== 'ok' || androidFacts?.activeSyncGroupMemberCount !== 3
-      || !androidHasFacts || memberIdentities.some((value) => value.length !== 3)
-      || new Set(memberIdentities.map((value) => JSON.stringify(value))).size !== 1
-      || androidFacts.missingAttachmentCount !== 0 || androidFacts.missingContentBlobCount !== 0
-      || new Set(counts.map((value) => JSON.stringify(value))).size !== 1 || counts[0][2] < 1) {
-    throw productFailure('all', 'three_device_restart_convergence_missing',
-      'A, B, and C did not preserve one complete three-member timeline.');
-  }
-  return { attachmentCount: counts[0][2], contentBlobCount: counts[0][1],
-    groupId: groupIds[0], nodeCount: counts[0][0], timelineId: timelines[0] };
-}
-
-export async function waitForThreeDeviceProof({ ids, inspect, intervalMs = 1_000 }) {
-  const result = await waitUntil('A, B, and C restarted convergence', async () => {
-    const evidence = await inspect();
-    try {
-      return { evidence, proof: assertThreeDeviceProof({ ...evidence, ids }) };
-    } catch (error) {
-      if (error?.missingFact !== 'three_device_restart_convergence_missing') throw error;
-      return { evidence, proof: null };
-    }
-  }, (value) => value.proof !== null, 'three_device_restart_convergence_missing',
-  ({ evidence }) => ({
-    android: evidence.android.database?.inspection,
-    macos: evidence.macos,
-    windows: evidence.windows
-  }), intervalMs);
-  return result.proof;
-}
-
 export async function proveARejoin({ execute, reportActivity = () => {}, reportProgress, repoRoot, runId }) {
   const owned = createIsolatedMacosRoot({ repoRoot, runId });
   const paths = macosA5Paths(repoRoot);
   const env = macosAcceptanceEnv(macosA5GradleEnv());
   const evidenceRoot = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId, 'a-rejoin');
   fs.mkdirSync(evidenceRoot, { recursive: true });
+  const abMaterial = readABConvergenceMaterial(repoRoot, runId, false);
+  const preJoinMaterial = readNonemptyAdmissionMaterial(repoRoot, runId);
   const windowsProvider = startWindowsARejoinProvider({ evidenceRoot, execute, repoRoot,
     reportProgress: () => reportActivity('windows-provider-progress') });
   let windowsSettled = false;
@@ -208,15 +147,18 @@ export async function proveARejoin({ execute, reportActivity = () => {}, reportP
     await session.close(); session = null;
     await restartProvider();
     session = await openMacosPairSyncDesktopSession(sessionOptions);
-    const proof = await waitForThreeDeviceProof({ ids, inspect: async () => ({
+    const requiredIds = { ...ids, ...(abMaterial ? {
+      preJoinA: abMaterial.desktopFactId, preJoinB: abMaterial.androidFactId
+    } : {}), preJoinC: preJoinMaterial.factId };
+    const proof = await waitForThreeDeviceProof({ ids: requiredIds, inspect: async () => ({
       android: await androidSnapshot(paths),
-      macos: await macosFacts(execute, repoRoot, databasePath, Object.values(ids)),
+      macos: await macosFacts(execute, repoRoot, databasePath, Object.values(requiredIds)),
       windows: remote.receipt.restarted
-    }) });
+    }), requiredAttachmentId: preJoinMaterial.attachmentId });
     reportProgress('three-members-restarted');
     const evidenceRef = path.join(evidenceRoot, 'a-rejoin-proof.json');
     fs.writeFileSync(evidenceRef, `${JSON.stringify({ completedAt: new Date().toISOString(),
-      factIds: ids, proof, resultStatus: 'success', schemaVersion: 1
+      abMaterial, factIds: ids, preJoinMaterial, proof, resultStatus: 'success', schemaVersion: 1
     }, null, 2)}\n`, 'utf8');
     return { evidenceRef };
   } finally {

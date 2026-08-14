@@ -15,6 +15,9 @@ import { proveALeave } from './multi-device-sync-a-leave.mjs';
 import { proveARejoin } from './multi-device-sync-a-rejoin.mjs';
 import { proveSyncFromZero } from './multi-device-sync-from-zero.mjs';
 import { proveParticipationControl } from './multi-device-sync-participation.mjs';
+import {
+  assertWindowsNonemptyAdmissionReceipt, writeNonemptyAdmissionMaterial
+} from './multi-device-sync-nonempty-admission-proof.mjs';
 import { createActionExecutor } from './multi-device-sync-action-executor.mjs';
 import { createApprovalReceiptRelease } from './multi-device-sync-approval-release.mjs';
 import { prepareCandidateStage } from './multi-device-sync-candidate-preparation.mjs';
@@ -86,7 +89,7 @@ function windowsFormalReceipt(output, repoRoot) {
       failureOwner: 'product', host: 'windows-c', missingFact: 'windows_c_sync_incomplete'
     });
   }
-  return evidenceRef;
+  return { evidenceRef, receipt };
 }
 
 export function windowsJoinFailure(result) {
@@ -109,9 +112,9 @@ export function cancelAdmissionSibling(approvalController, approvalRelease, name
   else if (status === 'fulfilled') void approvalRelease.release();
 }
 
-async function admitEmptyC(repoRoot, runId, { reportProgress, signal, stage }) {
+async function admitC(repoRoot, runId, { reportProgress, signal, stage }) {
   const evidenceRoot = path.join(repoRoot, '.tmp', 'artifacts', 'multi-device-sync', 'runs', runId,
-    'b-admit-empty-c');
+    'b-admit-c');
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const approvalController = new AbortController();
   const approvalSignal = AbortSignal.any([signal, approvalController.signal]);
@@ -166,7 +169,10 @@ async function admitEmptyC(repoRoot, runId, { reportProgress, signal, stage }) {
     throw Object.assign(new Error('Windows C ordinary sync failed.'), { evidenceRef: evidenceRoot,
       failureOwner: 'product', host: 'windows-c', missingFact: 'windows_c_sync_receipt' });
   }
-  const evidenceRef = windowsFormalReceipt(windows.output, repoRoot);
+  const admission = windowsFormalReceipt(windows.output, repoRoot);
+  const material = assertWindowsNonemptyAdmissionReceipt(admission.receipt);
+  await waitForAndroidJourneyFact(paths, material.factId);
+  const { evidenceRef } = writeNonemptyAdmissionMaterial(evidenceRoot, admission.receipt);
   reportProgress('c-ordinary-sync-completed');
   return { evidenceRef, lastProgressAt: new Date().toISOString(), approval };
 }
@@ -177,7 +183,7 @@ export function createDiagnosticStageActions({ repoRoot, requiredHosts, runId })
   const zeroRoot = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId,
     'sync-from-zero');
   return {
-    'admit-empty-c': (context) => admitEmptyC(repoRoot, runId, context),
+    'admit-c': (context) => admitC(repoRoot, runId, context),
     'establish-a-b': (context) => establishAB(repoRoot, runId, context),
     'prepare-candidate': (context) => prepareCandidateStage({
       ...context, repoRoot, requiredHosts, runId

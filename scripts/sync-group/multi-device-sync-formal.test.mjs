@@ -15,7 +15,7 @@ const adapters = { 'android-b': ready, 'macos-a': ready, 'windows-c': ready };
 
 function actions(failAt = null) {
   const milestones = {
-    'admit-empty-c': ['a-listener-ready', 'a-fact-created', 'b-provider-stopped',
+    'admit-c': ['a-listener-ready', 'a-fact-created', 'b-provider-stopped',
       'b-transport-ready', 'b-fact-received', 'a-offline', 'c-join-started',
       'b-approval-completed', 'c-ordinary-sync-completed'],
     'establish-a-b': ['a5-cleared', 'macos-group-created', 'a5-paired', 'a-b-synced'],
@@ -23,7 +23,7 @@ function actions(failAt = null) {
   };
   return Object.fromEntries([
     ['prepare-candidate', 'candidate.json'], ['establish-a-b', 'a-b.json'],
-    ['admit-empty-c', 'b-c.json']
+    ['admit-c', 'b-c.json']
   ].map(([name, evidenceRef]) => [name, vi.fn(async ({ reportProgress }) => {
     if (name === failAt) throw Object.assign(new Error('product red'), {
       failureOwner: 'product', host: 'windows-c', missingFact: 'c_sync_missing'
@@ -34,11 +34,11 @@ function actions(failAt = null) {
 }
 
 function run(mode, stageActions) {
-  const scenario = mode === 'formal' ? 'a-offline-b-admits-c' : 'b-admit-empty-c';
+  const scenario = mode === 'formal' ? 'a-offline-b-admits-c' : 'b-admit-c';
   const options = { adapters, candidateProvider: async () => candidate, mutationAdapters: adapters,
     run: createRun({ candidate, mode, runId: `${mode}-run`, scenario }), stageActions };
   return mode === 'formal' ? runFormal(options)
-    : runDiagnostic({ ...options, targetStage: 'b-admit-empty-c' });
+    : runDiagnostic({ ...options, targetStage: 'b-admit-c' });
 }
 
 it('uses homologous stage facts in diagnostic and formal modes', async () => {
@@ -55,7 +55,7 @@ it('stops every later mutation at the first formal red light without retrying', 
   const result = await run('formal', stageActions);
   expect(result.status).toBe('failed');
   expect(stageActions['establish-a-b']).toHaveBeenCalledTimes(1);
-  expect(stageActions['admit-empty-c']).not.toHaveBeenCalled();
+  expect(stageActions['admit-c']).not.toHaveBeenCalled();
 });
 
 it('clears passed host state while retaining only formal run evidence', async () => {

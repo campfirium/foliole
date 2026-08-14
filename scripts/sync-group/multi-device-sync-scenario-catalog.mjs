@@ -5,17 +5,20 @@ import { resolveStage } from './multi-device-sync-stage-catalog.mjs';
 
 const scenarios = [{
   name: 'a-offline-b-admits-c',
-  stages: ['candidate-preparation', 'a-b-group-sync', 'b-admit-empty-c']
+  stages: ['candidate-preparation', 'a-b-group-sync', 'b-admit-c']
 }, {
   name: 'three-device-convergence',
-  stages: ['candidate-preparation', 'a-b-group-sync', 'b-admit-empty-c', 'a-rejoin']
+  stages: ['candidate-preparation', 'a-b-group-sync', 'b-admit-c', 'a-rejoin']
 }, {
   name: 'founder-leave-continuity',
-  stages: ['candidate-preparation', 'a-b-group-sync', 'b-admit-empty-c', 'a-rejoin', 'a-leave']
+  stages: ['candidate-preparation', 'a-b-group-sync', 'b-admit-c', 'a-rejoin', 'a-leave']
 }, {
   name: 'participation-control-continuity',
-  stages: ['candidate-preparation', 'a-b-group-sync', 'b-admit-empty-c', 'a-rejoin',
+  stages: ['candidate-preparation', 'a-b-group-sync', 'b-admit-c', 'a-rejoin',
     'participation-control']
+}, {
+  name: 'nonempty-library-convergence',
+  stages: ['candidate-preparation', 'a-b-group-sync', 'a-b-convergence', 'b-admit-c', 'a-rejoin']
 }, {
   name: 'sync-from-zero-continuity',
   stages: ['candidate-preparation', 'a-b-group-sync', 'sync-from-zero']

@@ -22,7 +22,7 @@ const stages = [
     milestones: ['a-fact-synced-to-b', 'b-fact-synced-to-a', 'a-b-restarted',
       'a-b-bidirectional-converged'], outputs: ['a_b_bidirectional_converged'],
     progressDeadlineMs: PRODUCT_PROGRESS_DEADLINE, siblings: [] },
-  { action: 'admit-empty-c', host: 'all', inputs: ['a_b_group_active'], name: 'b-admit-empty-c',
+  { action: 'admit-c', host: 'all', inputs: ['a_b_group_active'], name: 'b-admit-c',
     hardDeadlineMs: 20 * 60_000, hosts: ['macos-a', 'android-b', 'windows-c'],
     milestones: ['a-listener-ready', 'a-fact-created', 'b-provider-stopped', 'b-transport-ready',
       'b-fact-received', 'a-offline', 'c-join-started', 'b-approval-completed',

@@ -6,23 +6,26 @@ import {
 
 it('accepts only a complete ordered formal topology', () => {
   expect(resolveScenario('a-offline-b-admits-c').stages).toEqual([
-    'candidate-preparation', 'a-b-group-sync', 'b-admit-empty-c'
+    'candidate-preparation', 'a-b-group-sync', 'b-admit-c'
   ]);
   expect(resolveScenario('three-device-convergence').stages).toEqual([
-    'candidate-preparation', 'a-b-group-sync', 'b-admit-empty-c', 'a-rejoin'
+    'candidate-preparation', 'a-b-group-sync', 'b-admit-c', 'a-rejoin'
   ]);
   expect(resolveScenario('founder-leave-continuity').stages).toEqual([
-    'candidate-preparation', 'a-b-group-sync', 'b-admit-empty-c', 'a-rejoin', 'a-leave'
+    'candidate-preparation', 'a-b-group-sync', 'b-admit-c', 'a-rejoin', 'a-leave'
   ]);
   expect(resolveScenario('participation-control-continuity').stages).toEqual([
-    'candidate-preparation', 'a-b-group-sync', 'b-admit-empty-c', 'a-rejoin',
+    'candidate-preparation', 'a-b-group-sync', 'b-admit-c', 'a-rejoin',
     'participation-control'
+  ]);
+  expect(resolveScenario('nonempty-library-convergence').stages).toEqual([
+    'candidate-preparation', 'a-b-group-sync', 'a-b-convergence', 'b-admit-c', 'a-rejoin'
   ]);
   expect(resolveScenario('sync-from-zero-continuity').stages).toEqual([
     'candidate-preparation', 'a-b-group-sync', 'sync-from-zero'
   ]);
   expect(() => assertScenarioTopology({
-    stages: ['candidate-preparation', 'b-admit-empty-c']
+    stages: ['candidate-preparation', 'b-admit-c']
   })).toThrow('requires a_b_group_active');
 });
 

@@ -100,7 +100,8 @@ export async function proveABConvergence({ execute, reportProgress, repoRoot, ru
   const evidenceRef = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/proofs', `${runId}-a-b.json`);
   fs.mkdirSync(path.dirname(evidenceRef), { recursive: true });
   fs.writeFileSync(evidenceRef, `${JSON.stringify({ completedAt: new Date().toISOString(),
-    desktopFactId: result.desktopFact.factId, resultStatus: 'success', runId, ...result.proof
+    androidFactId: result.androidFact.factId, desktopFactId: result.desktopFact.factId,
+    resultStatus: 'success', runId, ...result.proof
   }, null, 2)}\n`, 'utf8');
   return { evidenceRef, progress: ['a-fact-synced-to-b', 'b-fact-synced-to-a',
     'a-b-restarted', 'a-b-bidirectional-converged'] };
@@ -115,7 +116,11 @@ async function createAndroidFact({ env, evidenceRoot, execute, paths, runId }) {
   if (typeof factText !== 'string' || !factText) {
     throw productFailure('android-b', 'deterministic_b_fact_missing', 'Android B fact receipt is incomplete.');
   }
-  return { factText };
+  const factId = androidSnapshot(paths, null, factText).database?.inspection?.androidFactId;
+  if (typeof factId !== 'string' || !factId) {
+    throw productFailure('android-b', 'deterministic_b_fact_missing', 'Android B fact identity is missing.');
+  }
+  return { factId, factText };
 }
 
 async function waitForDesktopFact(session, factText) {
@@ -154,12 +159,30 @@ function androidSnapshot(paths, desktopFactId, androidFactText) {
   return collectAndroidDeviceSnapshot({ adb: paths.adb, appId: APP_ID, includeEvents: false,
     serial: A5_SERIAL, tables: ['nodes'], databaseInspector: (database) => {
       const workspace = inspectPairSyncRecoveryWorkspace(database);
-      const androidFactPresent = androidFactText ? Number(database.prepare(`SELECT COUNT(*) AS value
+      const androidFact = androidFactText ? database.prepare(`SELECT id
         FROM nodes WHERE instr(COALESCE(title, '') || '\n' || COALESCE(content, ''), ?) > 0`
-      ).get(androidFactText)?.value ?? 0) > 0 : false;
-      return { ...workspace, androidFactPresent,
+      ).get(androidFactText) : null;
+      return { ...workspace, androidFactId: androidFact?.id ?? null,
+        androidFactPresent: Boolean(androidFact),
         desktopFactPresent: workspace.journeyFacts?.[desktopFactId] === 'A' };
     } });
+}
+
+export function readABConvergenceMaterial(repoRoot, runId, required = true) {
+  const evidenceRef = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/proofs',
+    `${runId}-a-b.json`);
+  let evidence;
+  try {
+    evidence = JSON.parse(fs.readFileSync(evidenceRef, 'utf8'));
+  } catch (error) {
+    if (!required && error?.code === 'ENOENT') return null;
+    throw error;
+  }
+  if (evidence.resultStatus !== 'success' || typeof evidence.desktopFactId !== 'string'
+      || typeof evidence.androidFactId !== 'string') {
+    throw new Error('A and B pre-join convergence material is invalid.');
+  }
+  return { androidFactId: evidence.androidFactId, desktopFactId: evidence.desktopFactId };
 }
 
 function stopAndroid(execute, paths, env) {
