@@ -13,9 +13,9 @@ import {
   writeElectronDevClientState
 } from '../desktop/electron-dev-control-state.mjs';
 import { createElectronRuntimeWatcher } from '../desktop/electron-dev-runtime-watch.mjs';
-import { createDesktopIsolationContext } from '../desktop/playwright-desktop-isolation.mjs';
 import { withResourceGate } from '../lib/resource-gate.mjs';
 import { requestMacosElectronRuntimeRestart, requestMacosElectronShellExit } from './macos-electron-dev-actions.mjs';
+import { createMacosDailyEnvironment } from './macos-electron-dev-environment.mjs';
 import {
   MACOS_DAILY_LIBRARY_HOME,
   resolveMacosElectronDevPaths,
@@ -26,25 +26,6 @@ import {
   runLoggedCommand,
   spawnLoggedChild
 } from './macos-electron-dev-process.mjs';
-
-function createDailyEnvironment({ env, homeDir, paths, platform }) {
-  const isolation = createDesktopIsolationContext({
-    ...env,
-    FOLIOLE_ELECTRON_TEST_STATE_ROOT: paths.dailyRoot
-  }, { homeDir, platform });
-  return {
-    ...env,
-    ...isolation.env,
-    FOLIOLE_DEV_SHELL_RESTART_REQUEST_FILE: paths.shellRequestFile,
-    FOLIOLE_ELECTRON_APP_ROOT: paths.appRoot,
-    FOLIOLE_LIBRARY_HOME: MACOS_DAILY_LIBRARY_HOME,
-    FOLIOLE_MACOS_DAILY_DEBUG: '1',
-    FOLIOLE_PREVIEW_SANDBOX: '1',
-    FOLIOLE_PREVIEW_SANDBOX_RESET: '0',
-    FOLIOLE_PREVIEW_SANDBOX_ROOT: paths.dailyRoot,
-    FOLIOLE_VITE_HMR: '1'
-  };
-}
 
 function createCompileRunner({ env, logger, paths }) {
   let inFlight = null;
@@ -203,9 +184,10 @@ export async function runMacosElectronDevSupervisor(options = {}) {
   const paths = options.paths ?? resolveMacosElectronDevPaths(options.cwd);
   const existing = readElectronDevSnapshot(paths, options.isAlive ?? processIsAlive);
   if (existing.supervisorAlive) throw new Error(`macOS Electron daily debug already running pid=${existing.client.supervisorPid}`);
-  const dailyEnv = createDailyEnvironment({
+  const dailyEnv = createMacosDailyEnvironment({
     env: options.env ?? process.env,
     homeDir: options.homeDir,
+    libraryHome: options.libraryHome ?? MACOS_DAILY_LIBRARY_HOME,
     paths,
     platform
   });

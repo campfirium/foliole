@@ -7,6 +7,10 @@ import { describe, expect, it } from 'vitest';
 
 import { resolveMacosElectronDevAction } from './macos-electron-dev.mjs';
 import {
+  createMacosDailyEnvironment,
+  resolveMacosElectronDevLibraryHome
+} from './macos-electron-dev-environment.mjs';
+import {
   MACOS_DAILY_DEBUG_ROOT,
   MACOS_DAILY_LIBRARY_HOME,
   MACOS_RESET_PREVIEW_ROOT,
@@ -29,6 +33,33 @@ describe('macOS Electron dev entry', () => {
       expect(resolveMacosElectronDevAction(['node', 'entry', action])).toBe(action);
     }
     expect(() => resolveMacosElectronDevAction(['node', 'entry', 'publish'])).toThrow('unsupported');
+  });
+
+  it('resolves a persistent explicit Demo library without changing the isolated runtime root', () => {
+    const paths = resolveMacosElectronDevPaths('/repo/foliole');
+    const libraryHome = resolveMacosElectronDevLibraryHome([
+      '--library-home', '/Users/tester/Documents/FolioleDemo'
+    ], paths.appRoot);
+    const environment = createMacosDailyEnvironment({
+      env: {},
+      homeDir: '/Users/tester',
+      libraryHome,
+      paths,
+      platform: 'darwin'
+    });
+
+    expect(libraryHome).toBe('/Users/tester/Documents/FolioleDemo');
+    expect(environment).toMatchObject({
+      FOLIOLE_LIBRARY_HOME: libraryHome,
+      FOLIOLE_PREVIEW_SANDBOX_RESET: '0',
+      FOLIOLE_PREVIEW_SANDBOX_ROOT: paths.dailyRoot,
+      FOLIOLE_USER_DATA_PATH: path.join(paths.dailyRoot, 'user-data')
+    });
+  });
+
+  it('rejects an empty explicit library home', () => {
+    expect(() => resolveMacosElectronDevLibraryHome(['--library-home'], '/repo/foliole'))
+      .toThrow('--library-home requires a path');
   });
 
   it('watches main, IPC, and preload compile inputs', () => {

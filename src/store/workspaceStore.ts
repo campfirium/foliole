@@ -64,6 +64,7 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
   | 'nodeViewById'
   | 'reviewSession'
   | 'reviewSessionMode'
+  | 'reviewSessionModeExpiresAt'
   | 'trashedNodeDeletedAtById'
   | 'trashedNodeIds'
   | 'untitledSequenceByParent'
@@ -84,6 +85,7 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
       totalNodeCount: 0
     },
     reviewSessionMode: DEFAULT_REVIEW_SESSION_MODE,
+    reviewSessionModeExpiresAt: null,
     trashedNodeDeletedAtById: {},
     untitledSequenceByParent: {}
   };

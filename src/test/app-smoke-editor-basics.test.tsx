@@ -55,22 +55,18 @@ function clearActiveNodeSelection() {
   });
 }
 
-it('does not create the guided sample in a newly hydrated desktop workspace', async () => {
+it('opens the guided sample when no topic exists yet', async () => {
   keepOnlyInboxWithoutActiveNode();
 
   render(<App />);
 
-  await act(async () => {
-    await Promise.resolve();
-    await Promise.resolve();
+  await waitFor(() => {
+    const workspace = useWorkspaceStore.getState();
+    expect(workspace.nodeOrder.some((nodeId) =>
+      workspace.nodesById[nodeId]?.title === 'Welcome to Foliole'
+    )).toBe(true);
   });
-  const workspace = useWorkspaceStore.getState();
-  const userNodes = workspace.nodeOrder
-    .map((nodeId) => workspace.nodesById[nodeId])
-    .filter((node) => node && !node.specialKind);
-
-  expect(userNodes).toEqual([]);
-  expect(screen.queryByText('Welcome to Foliole')).not.toBeInTheDocument();
+  expect(screen.queryByText('Nothing here yet')).not.toBeInTheDocument();
 }, RELEASE_GATE_TEST_TIMEOUT_MS);
 
 it('shows the document empty state when no note is selected', () => {

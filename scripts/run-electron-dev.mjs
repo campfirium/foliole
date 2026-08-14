@@ -4,17 +4,25 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export function resolveElectronDevInvocation(platform = process.platform, nodeBin = process.execPath) {
+export function resolveElectronDevInvocation(
+  platform = process.platform,
+  nodeBin = process.execPath,
+  argv = []
+) {
   return {
     args: platform === 'darwin'
-      ? ['scripts/macos/macos-electron-dev.mjs', 'start']
-      : ['scripts/electron-dev.mjs'],
+      ? ['scripts/macos/macos-electron-dev.mjs', 'start', ...argv]
+      : ['scripts/electron-dev.mjs', ...argv],
     bin: nodeBin
   };
 }
 
 export async function runElectronDev(options = {}) {
-  const invocation = resolveElectronDevInvocation(options.platform, options.nodeBin);
+  const invocation = resolveElectronDevInvocation(
+    options.platform,
+    options.nodeBin,
+    options.argv ?? process.argv.slice(2)
+  );
   const child = spawn(invocation.bin, invocation.args, {
     cwd: options.cwd ?? process.cwd(),
     env: options.env ?? process.env,

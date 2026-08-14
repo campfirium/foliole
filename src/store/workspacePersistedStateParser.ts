@@ -3,9 +3,9 @@ import { normalizeWorkspaceSnapshot } from '../../lib/core/database/workspaceSna
 import type { Node } from '../features/nodes/model/nodeTypes';
 
 import { resolveWorkspaceBrowseRootNodeId } from './workspaceBrowseRoot';
+import { parsePersistedReviewState } from './workspacePersistedReviewStateParser';
 import type {
   NodeViewState,
-  ReviewSessionState,
   WorkspaceLayoutState,
   WorkspacePersistedState
 } from './workspaceStore';
@@ -147,41 +147,6 @@ function normalizeParsedWorkspaceSnapshot(
   });
 }
 
-function parseReviewSession(value: unknown): ReviewSessionState | undefined {
-  if (!isPlainRecord(value)) {
-    return undefined;
-  }
-  if (
-    (value.currentNodeId !== null && typeof value.currentNodeId !== 'string') ||
-    typeof value.isAnswerRevealed !== 'boolean' ||
-    !isStringArray(value.queueNodeIds) ||
-    typeof value.totalNodeCount !== 'number'
-  ) {
-    return undefined;
-  }
-  const nextReviewDueAt =
-    typeof value.nextReviewDueAt === 'string' && Number.isFinite(Date.parse(value.nextReviewDueAt))
-      ? value.nextReviewDueAt
-      : value.nextReviewDueAt === null
-        ? null
-        : undefined;
-  return {
-    ...(typeof value.completedAt === 'string' || value.completedAt === null ? { completedAt: value.completedAt } : {}),
-    ...(typeof value.continueNodeId === 'string' || value.continueNodeId === null ? { continueNodeId: value.continueNodeId } : {}),
-    ...(typeof value.currentItemStartedAt === 'string' || value.currentItemStartedAt === null ? { currentItemStartedAt: value.currentItemStartedAt } : {}),
-    currentNodeId: value.currentNodeId,
-    isAnswerRevealed: value.isAnswerRevealed,
-    queueNodeIds: value.queueNodeIds,
-    ...(typeof value.readingElapsedMs === 'number' ? { readingElapsedMs: value.readingElapsedMs } : {}),
-    ...(typeof value.readTopicCount === 'number' ? { readTopicCount: value.readTopicCount } : {}),
-    ...(typeof value.reviewElapsedMs === 'number' ? { reviewElapsedMs: value.reviewElapsedMs } : {}),
-    ...(typeof value.reviewedItemCount === 'number' ? { reviewedItemCount: value.reviewedItemCount } : {}),
-    ...(nextReviewDueAt !== undefined ? { nextReviewDueAt } : {}),
-    ...(typeof value.sessionStartedAt === 'string' || value.sessionStartedAt === null ? { sessionStartedAt: value.sessionStartedAt } : {}),
-    totalNodeCount: value.totalNodeCount
-  };
-}
-
 export function parsePersistedWorkspaceState(value: unknown): Partial<WorkspacePersistedState> {
   if (!isPlainRecord(value)) {
     return {};
@@ -192,7 +157,7 @@ export function parsePersistedWorkspaceState(value: unknown): Partial<WorkspaceP
   const layout = parseLayout(value.layout);
   const nodeOpenStateById = parseNodeOpenStateById(value.nodeOpenStateById);
   const nodeViewById = parseNodeViewById(value.nodeViewById ?? value.persistedNodeViewById);
-  const reviewSession = parseReviewSession(value.reviewSession);
+  const persistedReviewState = parsePersistedReviewState(value);
   const rendererBoundaryKeepNodeIds = isStringArray(value.rendererBoundaryKeepNodeIds)
     ? value.rendererBoundaryKeepNodeIds
     : undefined;
@@ -211,7 +176,7 @@ export function parsePersistedWorkspaceState(value: unknown): Partial<WorkspaceP
     ...(nodeOpenStateById ? { nodeOpenStateById } : {}),
     ...(nodeViewById ? { nodeViewById } : {}),
     ...(isStringArray(value.nodeOrder) ? { nodeOrder: value.nodeOrder } : {}),
-    ...(reviewSession ? { reviewSession } : {}),
+    ...persistedReviewState,
     ...(rendererBoundaryKeepNodeIds ? { rendererBoundaryKeepNodeIds } : {}),
     ...(trashedNodeDeletedAtById ? { trashedNodeDeletedAtById } : {}),
     ...(isStringArray(value.trashedNodeIds) ? { trashedNodeIds: value.trashedNodeIds } : {}),

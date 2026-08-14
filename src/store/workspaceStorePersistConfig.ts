@@ -10,6 +10,7 @@ import { parsePersistedWorkspaceState } from './workspacePersistedStateParser';
 import { workspacePersistStorage } from './workspacePersistStorage';
 import { trimWorkspaceNodesForRendererBoundary } from './workspaceRendererBoundary';
 import { collectRendererBoundaryKeepNodeIds } from './workspaceRendererBoundaryKeepNodeIds';
+import { resolveReviewSessionModePreference } from './workspaceReviewSessionModePreference';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspacePersistedState, WorkspaceState } from './workspaceStore';
 import { withWorkspaceRendererBoundary } from './workspaceStoreRendererBoundary';
@@ -59,6 +60,8 @@ function partializeWorkspaceState(state: WorkspaceState): WorkspacePersistedStat
     nodesById,
     rendererBoundaryKeepNodeIds: state.rendererBoundaryKeepNodeIds,
     reviewSession: toPersistedReviewSession(state.reviewSession),
+    reviewSessionMode: state.reviewSessionMode,
+    reviewSessionModeExpiresAt: state.reviewSessionModeExpiresAt,
     trashedNodeDeletedAtById: state.trashedNodeDeletedAtById,
     trashedNodeIds: state.trashedNodeIds,
     untitledSequenceByParent: state.untitledSequenceByParent
@@ -66,7 +69,8 @@ function partializeWorkspaceState(state: WorkspaceState): WorkspacePersistedStat
 }
 
 export function createWorkspaceStorePersistConfig(
-  onHydrated: (error?: unknown) => void
+  onHydrated: (error?: unknown) => void,
+  now: () => Date = () => new Date()
 ): PersistOptions<WorkspaceState, WorkspacePersistedState> {
   return {
     name: 'foliole-workspace-v1',
@@ -75,6 +79,11 @@ export function createWorkspaceStorePersistConfig(
     partialize: partializeWorkspaceState,
     merge: (persistedState, current) => {
       const persisted = parsePersistedWorkspaceState(persistedState);
+      const reviewSessionModePreference = resolveReviewSessionModePreference(
+        persisted.reviewSessionMode ?? current.reviewSessionMode,
+        persisted.reviewSessionModeExpiresAt ?? current.reviewSessionModeExpiresAt,
+        now().toISOString()
+      );
       const nextState = {
         ...current,
         ...persisted,
@@ -88,6 +97,7 @@ export function createWorkspaceStorePersistConfig(
         nodeViewById: persisted.nodeViewById ?? current.nodeViewById,
         rendererBoundaryKeepNodeIds: persisted.rendererBoundaryKeepNodeIds ?? current.rendererBoundaryKeepNodeIds,
         reviewSession: persisted.reviewSession ?? current.reviewSession,
+        ...reviewSessionModePreference,
         untitledSequenceByParent:
           persisted.untitledSequenceByParent ?? current.untitledSequenceByParent
       };

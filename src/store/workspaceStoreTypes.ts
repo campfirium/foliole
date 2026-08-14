@@ -32,6 +32,7 @@ export interface WorkspaceState {
   rendererBoundaryKeepNodeIds: string[];
   reviewSession: ReviewSessionState;
   reviewSessionMode: ReviewSessionMode;
+  reviewSessionModeExpiresAt: string | null;
   trashedNodeDeletedAtById: Record<string, string | undefined>;
   trashedNodeIds: string[];
   untitledSequenceByParent: Record<string, number>;
@@ -166,6 +167,8 @@ export interface WorkspacePersistedState {
   nodeOrder: string[];
   nodesById: Record<string, Node>;
   reviewSession: ReviewSessionState;
+  reviewSessionMode?: ReviewSessionMode;
+  reviewSessionModeExpiresAt?: string | null;
   rendererBoundaryKeepNodeIds?: string[];
   trashedNodeDeletedAtById: Record<string, string | undefined>;
   trashedNodeIds: string[];

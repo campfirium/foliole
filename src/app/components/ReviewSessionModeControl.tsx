@@ -1,7 +1,10 @@
 import { BookOpenText, Check, ListChecks, ListFilter, Route } from 'lucide-react';
 import { useState, type SVGProps } from 'react';
 
-import type { ReviewSessionMode } from '../../features/review/model/reviewSessionMode';
+import type {
+  ReviewSessionMode,
+  ReviewSessionModeAvailability
+} from '../../features/review/model/reviewSessionMode';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppDropdownMenu,
@@ -9,6 +12,7 @@ import {
   AppDropdownMenuItem,
   AppDropdownMenuTrigger
 } from '../../shared/ui';
+import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 
 const SESSION_MODES: Array<{
   id: ReviewSessionMode;
@@ -52,17 +56,75 @@ function queueClearButtonClassName() {
   ].join(' ');
 }
 
-function menuItemClassName(isSelected: boolean) {
+function menuItemClassName(isSelected: boolean, isAvailable: boolean) {
   return [
     'grid min-h-10 grid-cols-[1.25rem_minmax(0,1fr)_1rem] items-center gap-2 rounded-md px-3 py-2',
-    isSelected ? 'bg-foreground/[0.055] text-foreground' : 'text-foreground/80'
+    isSelected ? 'bg-foreground/[0.055] text-foreground' : 'text-foreground/80',
+    isAvailable ? '' : 'text-foreground/32'
   ].join(' ');
 }
 
+function modeLabelClassName(isAvailable: boolean) {
+  return [
+    'truncate text-[13px] font-medium',
+    isAvailable ? '' : 'text-foreground/32'
+  ].join(' ');
+}
+
+function getUnavailableModeNotice(mode: ReviewSessionMode, t: ReviewSessionTranslate) {
+  if (mode === 'review-first') return t('desktop.reviewSession.mode.unavailable.reviewFirst');
+  if (mode === 'reading-only') return t('desktop.reviewSession.mode.unavailable.readingOnly');
+  return t('desktop.reviewSession.mode.unavailable.recommended');
+}
+
+function SessionModeMenuItems({
+  availability,
+  mode,
+  onChangeMode,
+  setIsMenuOpen,
+  t
+}: {
+  availability: ReviewSessionModeAvailability | undefined;
+  mode: ReviewSessionMode;
+  onChangeMode: (mode: ReviewSessionMode) => void;
+  setIsMenuOpen: (isOpen: boolean) => void;
+  t: ReviewSessionTranslate;
+}) {
+  return SESSION_MODES.map((item) => {
+    const Icon = item.Icon;
+    const isSelected = item.id === mode;
+    const isAvailable = availability?.[item.id] ?? true;
+    const itemLabel = getSessionModeLabel(item.id, t);
+    return (
+      <AppDropdownMenuItem
+        className={menuItemClassName(isSelected, isAvailable)}
+        data-unavailable={!isAvailable || undefined}
+        key={item.id}
+        onSelect={() => {
+          if (isAvailable) onChangeMode(item.id);
+          else showAppRuntimeNotice(getUnavailableModeNotice(item.id, t));
+          setIsMenuOpen(false);
+        }}
+      >
+        <Icon aria-hidden="true" className={isAvailable ? 'size-4 text-foreground/62' : 'size-4 text-foreground/28'} strokeWidth={1.9} />
+        <span className="min-w-0">
+          <span className="flex min-w-0 items-baseline gap-2">
+            <span className={modeLabelClassName(isAvailable)} data-mode-label="true">{itemLabel}</span>
+            {item.id === 'recommended' ? <span className="shrink-0 text-[10px] font-medium text-foreground/38">{t('desktop.reviewSession.mode.recommendedBadge')}</span> : null}
+          </span>
+        </span>
+        {isSelected ? <Check aria-hidden="true" className="size-4 text-accent-strong" strokeWidth={2.1} /> : null}
+      </AppDropdownMenuItem>
+    );
+  });
+}
+
 export function ReviewSessionModeControl({
+  availability,
   mode,
   onChangeMode
 }: {
+  availability?: ReviewSessionModeAvailability;
   mode: ReviewSessionMode;
   onChangeMode: (mode: ReviewSessionMode) => void;
 }) {
@@ -87,32 +149,7 @@ export function ReviewSessionModeControl({
         </button>
       </AppDropdownMenuTrigger>
       <AppDropdownMenuContent align="start" className="w-80 max-w-[calc(100vw-2rem)] p-1" sideOffset={8}>
-        {SESSION_MODES.map((item) => {
-          const Icon = item.Icon;
-          const isSelected = item.id === mode;
-          const itemLabel = getSessionModeLabel(item.id, t);
-          return (
-            <AppDropdownMenuItem
-              className={menuItemClassName(isSelected)}
-              key={item.id}
-              onSelect={() => {
-                onChangeMode(item.id);
-                setIsMenuOpen(false);
-              }}
-            >
-              <Icon aria-hidden="true" className="size-4 text-foreground/62" strokeWidth={1.9} />
-              <span className="min-w-0">
-                <span className="flex min-w-0 items-baseline gap-2">
-                  <span className="truncate text-[13px] font-medium">{itemLabel}</span>
-                  {item.id === 'recommended' ? (
-                    <span className="shrink-0 text-[10px] font-medium text-foreground/38">{t('desktop.reviewSession.mode.recommendedBadge')}</span>
-                  ) : null}
-                </span>
-              </span>
-              {isSelected ? <Check aria-hidden="true" className="size-4 text-accent-strong" strokeWidth={2.1} /> : null}
-            </AppDropdownMenuItem>
-          );
-        })}
+        <SessionModeMenuItems availability={availability} mode={mode} onChangeMode={onChangeMode} setIsMenuOpen={setIsMenuOpen} t={t} />
         <div className="px-3 pt-1 pb-2 text-xs text-foreground/45">{t('desktop.reviewSession.mode.temporary')}</div>
       </AppDropdownMenuContent>
     </AppDropdownMenu>

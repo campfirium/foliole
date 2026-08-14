@@ -1,7 +1,7 @@
 import { Sprout } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
 
-import type { ReviewSessionMode } from '../../features/review/model/reviewSessionMode';
+import type { ReviewSessionMode, ReviewSessionModeAvailability } from '../../features/review/model/reviewSessionMode';
 import { definedProps } from '../../shared/lib/definedProps';
 import { cn } from '../../shared/lib/utils';
 import {
@@ -154,6 +154,7 @@ export function ReviewToolbarSessionActions({
   modeControl,
   onSetReviewSessionMode,
   reviewSessionMode,
+  reviewSessionModeAvailability,
   surface = 'panel',
   summary
 }: {
@@ -161,13 +162,14 @@ export function ReviewToolbarSessionActions({
   modeControl?: ReactNode;
   onSetReviewSessionMode?: (mode: ReviewSessionMode) => void;
   reviewSessionMode?: ReviewSessionMode;
+  reviewSessionModeAvailability?: ReviewSessionModeAvailability;
   surface?: 'panel' | 'overlay';
   summary?: ReviewToolbarSessionSummary;
 }) {
   const resolvedModeControl =
     modeControl ??
     (onSetReviewSessionMode && reviewSessionMode ? (
-      <ReviewSessionModeControl mode={reviewSessionMode} onChangeMode={onSetReviewSessionMode} />
+      <ReviewSessionModeControl {...definedProps({ availability: reviewSessionModeAvailability })} mode={reviewSessionMode} onChangeMode={onSetReviewSessionMode} />
     ) : null);
 
   return <ReviewToolbarSessionFrame actions={actions} modeControl={resolvedModeControl} surface={surface} {...definedProps({ summary })} />;

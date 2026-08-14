@@ -3,7 +3,6 @@ import type { ReviewSessionMode } from '../features/review/model/reviewSessionMo
 
 import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
 import {
-  buildLiveReviewQueue,
   buildReviewSessionReadingContinuationQueue,
   buildStartReviewSessionQueue
 } from './workspaceReviewLiveQueue';
@@ -13,6 +12,10 @@ import {
   createStartedReviewSession
 } from './workspaceReviewReading';
 import { buildResumeReviewSessionQueue } from './workspaceReviewResumeQueue';
+import {
+  createReviewSessionModePreference,
+  resolveReviewSessionModePreference
+} from './workspaceReviewSessionModePreference';
 import { resolveReviewSessionProgress } from './workspaceReviewSessionProgress';
 import type { ReviewSessionStartOptions, WorkspaceState } from './workspaceStore';
 import { persistNodeOpened } from './workspaceStoreNodeOpenState';
@@ -20,7 +23,25 @@ import { persistNodeOpened } from './workspaceStoreNodeOpenState';
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
 
 function buildReviewQueue(state: WorkspaceState, now: string, mode: ReviewSessionMode): string[] {
-  return buildLiveReviewQueue(state, now, { mode });
+  return buildStartReviewSessionQueue({ ...state, reviewSessionMode: mode }, now);
+}
+
+function buildStartQueue(state: WorkspaceState, now: string, options: ReviewSessionStartOptions) {
+  const preference = resolveReviewSessionModePreference(
+    state.reviewSessionMode,
+    state.reviewSessionModeExpiresAt,
+    now
+  );
+  const modeState = { ...state, ...preference };
+  const queueNodeIds = buildStartReviewSessionQueue(modeState, now, options);
+  if (queueNodeIds.length > 0 || preference.reviewSessionMode === 'recommended') {
+    return { preference, queueNodeIds };
+  }
+  const fallbackPreference = createReviewSessionModePreference('recommended', now);
+  return {
+    preference: fallbackPreference,
+    queueNodeIds: buildStartReviewSessionQueue({ ...state, ...fallbackPreference }, now, options)
+  };
 }
 
 export function createStartReviewSessionAction(
@@ -32,8 +53,8 @@ export function createStartReviewSessionAction(
     let openedNodeId: string | null = null;
     const startOptions = { ...defaultOptions, ...options };
     set((state) => {
-      const queueNodeIds = buildStartReviewSessionQueue(state, now, startOptions);
-      if (queueNodeIds.length === 0) return state;
+      const { preference, queueNodeIds } = buildStartQueue(state, now, startOptions);
+      if (queueNodeIds.length === 0) return preference;
       started = true;
       openedNodeId = queueNodeIds[0]!;
       return {
@@ -44,7 +65,8 @@ export function createStartReviewSessionAction(
           queueNodeIds,
           sessionStartedAt: now,
           totalNodeCount: queueNodeIds.length
-        })
+        }),
+        ...preference
       };
     });
     if (openedNodeId) void persistNodeOpened(set, openedNodeId, now);
@@ -84,9 +106,14 @@ export function createResumeReviewSessionAction(set: WorkspaceSet): WorkspaceSta
     let resumed = false;
     let openedNodeId: string | null = null;
     set((state) => {
-      const queueNodeIds = buildResumeReviewSessionQueue(state, now, options);
+      const preference = resolveReviewSessionModePreference(
+        state.reviewSessionMode,
+        state.reviewSessionModeExpiresAt,
+        now
+      );
+      const queueNodeIds = buildResumeReviewSessionQueue({ ...state, ...preference }, now, options);
       const currentNodeId = queueNodeIds[0] ?? null;
-      if (!currentNodeId) return state;
+      if (!currentNodeId) return preference;
       resumed = true;
       openedNodeId = currentNodeId;
       return {
@@ -97,7 +124,8 @@ export function createResumeReviewSessionAction(set: WorkspaceSet): WorkspaceSta
           queueNodeIds,
           sessionStartedAt: state.reviewSession.sessionStartedAt ?? now,
           totalNodeCount: queueNodeIds.length
-        })
+        }),
+        ...preference
       };
     });
     if (openedNodeId) void persistNodeOpened(set, openedNodeId, now);
@@ -109,11 +137,15 @@ export function createSetReviewSessionModeAction(set: WorkspaceSet): WorkspaceSt
   return (mode, now = new Date().toISOString()) => {
     let openedNodeId: string | null = null;
     set((state) => {
+      const preference = createReviewSessionModePreference(mode, now);
       const isSameMode = state.reviewSessionMode === mode;
       if (!state.reviewSession.currentNodeId) {
-        return isSameMode ? state : { reviewSessionMode: mode };
+        return isSameMode && state.reviewSessionModeExpiresAt === preference.reviewSessionModeExpiresAt
+          ? state
+          : preference;
       }
       const queueNodeIds = buildReviewQueue(state, now, mode);
+      if (queueNodeIds.length === 0) return state;
       const completedCount = resolveReviewSessionProgress(state.reviewSession).reviewCompletedCount;
       openedNodeId = queueNodeIds[0] ?? null;
       return {
@@ -125,7 +157,7 @@ export function createSetReviewSessionModeAction(set: WorkspaceSet): WorkspaceSt
               totalNodeCount: completedCount + queueNodeIds.length
             })
           : createEmptyReviewSession(),
-        reviewSessionMode: mode
+        ...preference
       };
     });
     if (openedNodeId) void persistNodeOpened(set, openedNodeId, now);

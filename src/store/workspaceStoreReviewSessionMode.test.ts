@@ -67,6 +67,27 @@ it('rebuilds the active session for reading-only without carrying stale total co
   expect(harness.getState().activeNodeId).toBe('reading-1');
 });
 
+it('keeps the active session when the selected mode has no matching content', () => {
+  const now = '2026-03-10T12:00:00.000Z';
+  const fixture = {
+    ...createWorkspaceFixture([createReadingNode('reading-1', now)]),
+    reviewSession: {
+      currentNodeId: 'reading-1',
+      isAnswerRevealed: false,
+      queueNodeIds: ['reading-1'],
+      totalNodeCount: 1
+    }
+  };
+  const harness = createSetStateHarness(fixture);
+  const actions = createWorkspaceReviewActions(harness.setState, harness.getState, schedulerStub);
+
+  actions.setReviewSessionMode('review-first', now);
+
+  expect(harness.getState().reviewSessionMode).toBe('recommended');
+  expect(harness.getState().reviewSession).toEqual(fixture.reviewSession);
+  expect(harness.getState().activeNodeId).toBe('reading-1');
+});
+
 it('keeps a completed checkpoint when changing temporary mode after the queue is clear', () => {
   const now = '2026-03-10T12:00:00.000Z';
   const fixture = {

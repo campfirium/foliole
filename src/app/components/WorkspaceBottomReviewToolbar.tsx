@@ -1,4 +1,4 @@
-import type { ReviewSessionMode } from '../../features/review/model/reviewSessionMode';
+import type { ReviewSessionMode, ReviewSessionModeAvailability } from '../../features/review/model/reviewSessionMode';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import { definedProps } from '../../shared/lib/definedProps';
 import { findEnabledSequentialReadingSourceId } from '../../store/workspaceSequentialReading';
@@ -9,7 +9,8 @@ import type { ReviewToolbarProgressCounts } from './reviewToolbarProgressLabel';
 import { ReviewToolbarProgressLine } from './ReviewToolbarSessionFrame';
 import {
   getReviewCurrentTitle,
-  getReviewProgressCounts
+  getReviewProgressCounts,
+  getReviewSessionModeAvailability
 } from './workspaceBottomReviewToolbarModel';
 import { getWorkspaceGridColumns } from './workspaceGridColumns';
 import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
@@ -35,6 +36,7 @@ export interface WorkspaceBottomReviewToolbarProps {
   reviewSummary: WorkspaceLayoutProps['review']['reviewSummary'];
   reviewStatus: WorkspaceLayoutProps['review']['reviewStatus'];
   reviewSessionMode: ReviewSessionMode;
+  reviewSessionModeAvailability?: ReviewSessionModeAvailability;
   editorAdapterRef: WorkspaceLayoutProps['document']['editorAdapterRef'];
   onReadReviewTopic: WorkspaceLayoutProps['review']['onReadReviewTopic'];
   onPostponeReviewTopic: () => Promise<boolean>;
@@ -90,6 +92,7 @@ function BottomReviewModeToolbar(props: WorkspaceBottomReviewToolbarRenderProps)
       onResumeReviewItem={props.onResumeReviewItem}
       onSetReviewSessionMode={props.onSetReviewSessionMode}
       reviewSessionMode={props.reviewSessionMode}
+      {...definedProps({ reviewSessionModeAvailability: props.reviewSessionModeAvailability })}
       surface={props.isImmersiveMode ? 'overlay' : 'panel'}
     />
   );
@@ -139,7 +142,8 @@ export function selectWorkspaceBottomReviewToolbarProps(props: WorkspaceBottomRe
     reviewQueueCount: review.reviewQueueCount,
     reviewSummary: review.reviewSummary,
     reviewStatus: review.reviewStatus,
-    reviewSessionMode: review.reviewSessionMode
+    reviewSessionMode: review.reviewSessionMode,
+    reviewSessionModeAvailability: getReviewSessionModeAvailability(props)
   };
 }
 

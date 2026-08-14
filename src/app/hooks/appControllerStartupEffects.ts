@@ -1,6 +1,7 @@
 import { isReviewSessionCompleted } from '../../store/workspaceReviewReading';
 
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
+import { useGuidedSampleAutoOpen } from './useGuidedSampleAutoOpen';
 import {
   useReviewModeRestoredSessionAutoOpen,
   useReviewModeStartupSessionRestore
@@ -43,5 +44,9 @@ export function useControllerStartupEffects(args: {
     resumeReviewSession: args.ws.resumeReviewSession,
     reviewCurrentNodeId: args.ws.reviewSession.currentNodeId,
     startReviewSession: args.ws.startReviewSession
+  });
+  useGuidedSampleAutoOpen(args.isWorkspaceHydrated, {
+    openNotesView: args.controller.trash.closeTrashView,
+    startStudyMode: args.startStudyMode
   });
 }

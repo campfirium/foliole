@@ -20,6 +20,16 @@ describe('desktop platform adapters', () => {
     expect(resolveElectronNativeHealthInvocation('linux', 'node').args).toEqual(['scripts/windows/electron-native-health-check.mjs']);
   });
 
+  it('forwards an explicit library home through the platform development adapter', () => {
+    const argv = ['--library-home', '/Users/tester/Documents/FolioleDemo'];
+    expect(resolveElectronDevInvocation('darwin', 'node', argv).args).toEqual([
+      'scripts/macos/macos-electron-dev.mjs', 'start', ...argv
+    ]);
+    expect(resolveElectronDevInvocation('win32', 'node', argv).args).toEqual([
+      'scripts/electron-dev.mjs', ...argv
+    ]);
+  });
+
   it('forces the macOS development preview through one isolated resource-gated root', () => {
     const cwd = '/repo/foliole';
     const command = createMacosElectronDevCommand({

@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 
-import type { ReviewSessionMode } from '../../features/review/model/reviewSessionMode';
+import type { ReviewSessionMode, ReviewSessionModeAvailability } from '../../features/review/model/reviewSessionMode';
 import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
 import { definedProps } from '../../shared/lib/definedProps';
 import { ReviewActionBar } from '../../shared/ui';
@@ -35,6 +35,7 @@ interface ReviewModeToolbarProps {
   reviewSummary?: ReviewToolbarSessionSummaryValues;
   reviewStatus: 'idle' | 'awaiting-answer' | 'answer-revealed' | 'completed';
   reviewSessionMode: ReviewSessionMode;
+  reviewSessionModeAvailability?: ReviewSessionModeAvailability;
   readActionAdvanceReady?: boolean;
   surface?: 'panel' | 'overlay';
   onGrade: (grade: ReviewGrade) => Promise<boolean>;

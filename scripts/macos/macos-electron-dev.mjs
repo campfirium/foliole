@@ -13,6 +13,7 @@ import {
   resetMacosElectronDev,
   stopMacosElectronDev
 } from './macos-electron-dev-actions.mjs';
+import { resolveMacosElectronDevLibraryHome } from './macos-electron-dev-environment.mjs';
 import { resolveMacosElectronDevPaths } from './macos-electron-dev-paths.mjs';
 import { runMacosElectronDev } from './electron-dev-preview.mjs';
 import { runMacosElectronDevSupervisor } from './macos-electron-dev-supervisor.mjs';
@@ -33,7 +34,13 @@ export async function runMacosElectronDevAction(action, options = {}) {
   const platform = options.platform ?? process.platform;
   if (platform !== 'darwin') throw new Error('macOS Electron dev control requires a darwin host');
   const paths = options.paths ?? resolveMacosElectronDevPaths(options.cwd);
-  if (action === 'start') return runMacosElectronDevSupervisor({ ...options, paths });
+  if (action === 'start') {
+    const libraryHome = options.libraryHome ?? resolveMacosElectronDevLibraryHome(
+      options.argv ?? process.argv.slice(3),
+      paths.appRoot
+    );
+    return runMacosElectronDevSupervisor({ ...options, libraryHome, paths });
+  }
   if (action === 'status') {
     console.log(formatMacosElectronDevStatus(readElectronDevSnapshot(paths)));
     return 0;

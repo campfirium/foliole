@@ -70,7 +70,10 @@ it('roundtrips a partialized persisted workspace payload through merge', () => {
     queueNodeIds: [INBOX_NODE_ID],
     totalNodeCount: 1
   });
-  expect(partialized).not.toHaveProperty('reviewSessionMode');
+  expect(partialized).toMatchObject({
+    reviewSessionMode: 'recommended',
+    reviewSessionModeExpiresAt: null
+  });
   expect(partialized).not.toHaveProperty('editorOperationHistory');
   expect(merged?.reviewSessionMode).toBe('recommended');
   expect(merged?.nodesById[INBOX_NODE_ID]?.id).toBe(INBOX_NODE_ID);

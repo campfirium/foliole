@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 
-import type { ReviewSessionMode } from '../../features/review/model/reviewSessionMode';
+import type { ReviewSessionMode, ReviewSessionModeAvailability } from '../../features/review/model/reviewSessionMode';
 import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useActionHelpCardsEnabled } from '../../shared/platform/actionHelpCards';
@@ -35,6 +35,7 @@ export interface ActiveReviewActionBarProps {
   reviewProgressCounts?: ReviewToolbarProgressCounts;
   reviewQueueCount: number;
   reviewSessionMode: ReviewSessionMode;
+  reviewSessionModeAvailability?: ReviewSessionModeAvailability;
   reviewSummary?: ReviewToolbarSessionSummary;
   showProgress?: boolean;
   showSessionModeControl?: boolean;
@@ -145,7 +146,7 @@ function createActiveReviewPrimary(props: ActiveReviewActionBarProps, showAction
     return (
       <ReviewToolbarSessionActions
         actions={actions}
-        modeControl={<ReviewSessionModeControl mode={props.reviewSessionMode} onChangeMode={props.onSetReviewSessionMode} />}
+        modeControl={<ReviewSessionModeControl {...definedProps({ availability: props.reviewSessionModeAvailability })} mode={props.reviewSessionMode} onChangeMode={props.onSetReviewSessionMode} />}
         {...definedProps({ surface: props.surface })}
         {...definedProps({ summary: props.reviewSummary ? { ...props.reviewSummary, status: 'clear' as const } : undefined })}
       />
@@ -156,6 +157,7 @@ function createActiveReviewPrimary(props: ActiveReviewActionBarProps, showAction
       actions={actions}
       onSetReviewSessionMode={props.onSetReviewSessionMode}
       reviewSessionMode={props.reviewSessionMode}
+      {...definedProps({ reviewSessionModeAvailability: props.reviewSessionModeAvailability })}
       {...definedProps({ surface: props.surface })}
       {...definedProps({ summary: props.reviewSummary })}
     />

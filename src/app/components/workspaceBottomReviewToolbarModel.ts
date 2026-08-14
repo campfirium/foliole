@@ -1,5 +1,22 @@
+import type { ReviewSessionModeAvailability } from '../../features/review/model/reviewSessionMode';
+
 import type { ReviewToolbarProgressCounts } from './reviewToolbarProgressLabel';
 import type { WorkspaceBottomReviewToolbarProps, WorkspaceBottomReviewToolbarSource } from './WorkspaceBottomReviewToolbar';
+
+export function getReviewSessionModeAvailability(source: WorkspaceBottomReviewToolbarSource): ReviewSessionModeAvailability {
+  let hasReview = false;
+  let hasReading = false;
+  for (const nodeId of source.review.reviewPanelQueueNodeIds) {
+    const kind = source.nodeList.nodesById[nodeId]?.kind;
+    if (kind === 'item') hasReview = true;
+    if (kind === 'topic') hasReading = true;
+  }
+  return {
+    recommended: hasReview || hasReading,
+    'review-first': hasReview,
+    'reading-only': hasReading
+  };
+}
 
 export function getReviewCurrentTitle(source: WorkspaceBottomReviewToolbarSource) {
   const currentNodeId = source.review.reviewCurrentNodeId;
