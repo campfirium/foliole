@@ -113,12 +113,18 @@ it('restores the provider only after approval instrumentation is removed', async
   const execute = async (_command, args) => {
     if (args.includes('uninstall')) events.push('test-uninstalled');
     else if (args.includes('kill-server')) events.push('adb-stopped');
+    else if (args.includes('force-stop')) events.push('provider-stopped');
     return { code: 0, output: '' };
   };
   await runMacosA5SyncGroupApproval({ execute, instrumentationExecute: async () => ({
     code: 0,
     output: `INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReceipt=${JSON.stringify(receipt)}\nINSTRUMENTATION_CODE: -1`
   }), mainMatches: async () => true, prepare: () => {}, repoRoot: process.cwd(),
-  startProvider: async () => { events.push('provider-started'); } });
-  expect(events).toEqual(['provider-started', 'test-uninstalled', 'adb-stopped', 'provider-started']);
+  startProvider: async ({ onProviderStopped }) => {
+    await onProviderStopped(); events.push('provider-started');
+  } });
+  expect(events).toEqual([
+    'provider-stopped', 'provider-started', 'test-uninstalled', 'adb-stopped',
+    'provider-stopped', 'provider-started'
+  ]);
 });

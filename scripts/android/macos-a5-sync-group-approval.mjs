@@ -128,6 +128,8 @@ export async function runMacosA5SyncGroupApproval({ execute, onProviderStopped =
     await execute(paths.adb, ['-s', A5_SERIAL, 'uninstall', TEST_APP_ID], { env, timeoutMs: 60_000 });
     await execute(paths.adb, ['kill-server'], { env, timeoutMs: 30_000 });
   }
-  await startProvider({ execute, onProviderStopped: async () => {}, onReady: async () => {}, paths, env });
+  await startProvider({ execute,
+    onProviderStopped: () => stopMacosA5SyncGroupApprovalProvider({ execute, paths, env }),
+    onReady: async () => {}, paths, env });
   return { output: evidence.output, receipt: evidence.receipt };
 }
