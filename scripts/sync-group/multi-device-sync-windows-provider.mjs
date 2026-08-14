@@ -8,6 +8,10 @@ import {
 /* global process */
 
 const PROVIDER_ACTIONS = Object.freeze({
+  'multi-device-sync-c': {
+    controllerAction: 'windows-c-join', label: 'join', missingPrefix: 'windows_c',
+    progressMilestone: 'c-provider-ready'
+  },
   'multi-device-sync-a-leave': {
     controllerAction: 'windows-c-a-leave', label: 'A-leave', missingPrefix: 'windows_a_leave',
     progressMilestone: 'c-fact-created'

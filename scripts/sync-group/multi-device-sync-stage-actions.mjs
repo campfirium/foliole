@@ -22,13 +22,14 @@ import { createActionExecutor } from './multi-device-sync-action-executor.mjs';
 import { createApprovalReceiptRelease } from './multi-device-sync-approval-release.mjs';
 import { prepareCandidateStage } from './multi-device-sync-candidate-preparation.mjs';
 import { runAOfflineAdmissionPrelude } from './multi-device-sync-fact-preparation.mjs';
+import { startWindowsSyncGroupProvider } from './multi-device-sync-windows-provider.mjs';
 import {
   closeMacosAcceptanceTransport, macosAcceptanceEnv, macosAcceptanceSessionOptions,
   openMacosAcceptanceTransport, validateMacosAcceptanceDesktopPreflight
 } from './multi-device-sync-macos-channel.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
-/* global AbortController, AbortSignal, process */
+/* global AbortController, AbortSignal */
 
 function actionExecute(evidenceRoot, signal, stage) {
   const execute = createActionExecutor({ logPath: path.join(evidenceRoot, 'action.log'),
@@ -76,22 +77,6 @@ async function establishAB(repoRoot, runId, { reportProgress, signal, stage }) {
   }
 }
 
-function windowsFormalReceipt(output, repoRoot) {
-  const match = /^\[windows-dev-action\] multi-device-sync-c identity=([A-Za-z0-9.-]{1,96})/mu.exec(output);
-  if (!match) throw new Error('Windows C formal action did not report fixed evidence.');
-  const evidenceRef = path.join(repoRoot, '.tmp', 'artifacts', 'multi-device-sync',
-    'windows-c', match[1], 'multi-device-sync-c-receipt.json');
-  if (!fs.existsSync(evidenceRef)) throw new Error('Windows C formal receipt is missing.');
-  const receipt = JSON.parse(fs.readFileSync(evidenceRef, 'utf8'));
-  if (receipt.resultStatus !== 'success' || receipt.firstFacts?.activeMemberCount !== 3
-      || receipt.restartedFacts?.activeMemberCount !== 3) {
-    throw Object.assign(new Error('Windows C ordinary sync facts are incomplete.'), {
-      failureOwner: 'product', host: 'windows-c', missingFact: 'windows_c_sync_incomplete'
-    });
-  }
-  return { evidenceRef, receipt };
-}
-
 export function windowsJoinFailure(result) {
   const output = `${result.stderr || ''}${result.stdout || ''}`;
   const failureLine = output.split(/\r?\n/u)
@@ -137,44 +122,46 @@ async function admitC(repoRoot, runId, { reportProgress, signal, stage }) {
       missingFact: 'a5_product_transport_unavailable'
     });
   };
-  const { approval, windows } = await runAOfflineAdmissionPrelude({
-    cancelSiblings: (name, status) => cancelAdmissionSibling(
-      approvalController, approvalRelease, name, status
-    ),
-    closeTransport: () => closeMacosAcceptanceTransport(runTransport),
-    createFact: (session) => createDesktopSyncGroupJourneyFact({
-      device: 'A', evidenceRoot: path.join(evidenceRoot, 'a-fact'), session
-    }),
-    openSession: () => openMacosPairSyncDesktopSession(macosAcceptanceSessionOptions({
-      libraryHome: path.join(owned.root, 'library'), repoRoot,
-      userDataPath: path.join(owned.root, 'user-data')
-    })),
-    openTransport: () => openMacosAcceptanceTransport(runTransport),
-    runApproval: (lifecycle) => runMacosA5SyncGroupApproval({
-      allowControlledCancellation: true, execute, instrumentationExecute: executeApproval,
-      ...lifecycle, prepare: () => {}, repoRoot
-    }),
-    startWindows: async () => {
-      const result = await executeWindows(process.execPath,
-        ['scripts/windows/windows-dev-control.mjs', 'multi-device-sync-c'], {
-        action: 'windows-c-join', cwd: repoRoot, host: 'windows-c', timeoutMs: 15 * 60_000
-        });
-      if (result.code === 0) return result;
-      throw windowsJoinFailure(result);
-    },
-    reportProgress,
-    waitForFact: (factId) => waitForAndroidJourneyFact(paths, factId)
-  });
-  if (!windows || windows.code !== 0) {
-    throw Object.assign(new Error('Windows C ordinary sync failed.'), { evidenceRef: evidenceRoot,
-      failureOwner: 'product', host: 'windows-c', missingFact: 'windows_c_sync_receipt' });
+  let windowsProvider;
+  let windowsSettled = false;
+  try {
+    const { approval, windows } = await runAOfflineAdmissionPrelude({
+      cancelSiblings: (name, status) => cancelAdmissionSibling(
+        approvalController, approvalRelease, name, status
+      ),
+      closeTransport: () => closeMacosAcceptanceTransport(runTransport),
+      createFact: (session) => createDesktopSyncGroupJourneyFact({
+        device: 'A', evidenceRoot: path.join(evidenceRoot, 'a-fact'), session
+      }),
+      openSession: () => openMacosPairSyncDesktopSession(macosAcceptanceSessionOptions({
+        libraryHome: path.join(owned.root, 'library'), repoRoot,
+        userDataPath: path.join(owned.root, 'user-data')
+      })),
+      openTransport: () => openMacosAcceptanceTransport(runTransport),
+      runApproval: (lifecycle) => runMacosA5SyncGroupApproval({
+        allowControlledCancellation: true, execute, instrumentationExecute: executeApproval,
+        ...lifecycle, prepare: () => {}, repoRoot
+      }),
+      startWindows: async () => {
+        windowsProvider = startWindowsSyncGroupProvider({ action: 'multi-device-sync-c',
+          execute: executeWindows, repoRoot });
+        return { code: 0, factId: await windowsProvider.waitForProgress() };
+      },
+      reportProgress,
+      waitForFact: (factId) => waitForAndroidJourneyFact(paths, factId)
+    });
+    if (!windowsProvider || !windows?.factId) throw windowsJoinFailure({ code: 1 });
+    await windowsProvider.raceConsumer(waitForAndroidJourneyFact(paths, windows.factId));
+    await windowsProvider.release('consumer_complete');
+    const admission = await windowsProvider.finish();
+    windowsSettled = true;
+    const material = assertWindowsNonemptyAdmissionReceipt(admission.receipt);
+    const { evidenceRef } = writeNonemptyAdmissionMaterial(evidenceRoot, admission.receipt);
+    reportProgress('c-ordinary-sync-completed');
+    return { evidenceRef, lastProgressAt: new Date().toISOString(), approval, material };
+  } finally {
+    if (windowsProvider && !windowsSettled) await windowsProvider.cancelAndSettle();
   }
-  const admission = windowsFormalReceipt(windows.output, repoRoot);
-  const material = assertWindowsNonemptyAdmissionReceipt(admission.receipt);
-  await waitForAndroidJourneyFact(paths, material.factId);
-  const { evidenceRef } = writeNonemptyAdmissionMaterial(evidenceRoot, admission.receipt);
-  reportProgress('c-ordinary-sync-completed');
-  return { evidenceRef, lastProgressAt: new Date().toISOString(), approval };
 }
 
 export function createDiagnosticStageActions({ repoRoot, requiredHosts, runId }) {

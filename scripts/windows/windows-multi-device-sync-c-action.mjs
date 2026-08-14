@@ -1,3 +1,7 @@
+import {
+  waitForWindowsSyncGroupProviderRelease
+} from './windows-sync-group-provider-release.mjs';
+
 function assertFormalFacts(facts, localFact) {
   const localMaterialReady = facts.facts?.[localFact?.factId] === true
     && facts.attachmentIds?.includes(localFact?.attachmentId)
@@ -12,12 +16,17 @@ function assertFormalFacts(facts, localFact) {
 }
 
 export async function runWindowsMultiDeviceSyncC({
-  runRecovery, ...options
+  runRecovery, waitForConsumerRelease = waitForWindowsSyncGroupProviderRelease, ...options
 }) {
   const recovery = runRecovery
     ?? (await import('./windows-sync-group-recovery-action.mjs')).runWindowsSyncGroupRecovery;
   const result = await recovery({ ...options, requiredJourneyOrigins: ['A', 'B'],
-    resetOwnedState: true, seedOwnedState: true });
+    resetOwnedState: true, seedOwnedState: true, onRestartedReady: async (localFact) => {
+      options.reportProgress?.({ factId: localFact.factId, milestone: 'c-provider-ready' });
+      await waitForConsumerRelease({
+        action: 'multi-device-sync-c', repoRoot: options.paths.repoRoot
+      });
+    } });
   assertFormalFacts(result.receipt.firstFacts, result.receipt.localFact);
   assertFormalFacts(result.receipt.restartedFacts, result.receipt.localFact);
   return {

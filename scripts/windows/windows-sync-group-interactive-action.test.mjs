@@ -95,6 +95,11 @@ it('accepts only registered actions and evidence inside the action-owned root', 
   }, 'multi-device-sync-a-rejoin')).toEqual({
     factId: 'a-rejoin', milestone: 'c-session-restarted'
   });
+  expect(validateSyncGroupInteractiveProgress({
+    factId: 'multi-device-sync-c-20260813080000000', milestone: 'c-provider-ready'
+  }, 'multi-device-sync-c')).toEqual({
+    factId: 'multi-device-sync-c-20260813080000000', milestone: 'c-provider-ready'
+  });
 });
 
 it('streams the created C fact as nonce-bound provider progress', async () => {

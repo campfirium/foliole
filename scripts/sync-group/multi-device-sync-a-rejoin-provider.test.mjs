@@ -56,6 +56,21 @@ it('forwards A-rejoin provider lifecycle progress from the nonce-bound worker', 
   expect(reportProgress).toHaveBeenCalledWith('c-session-opened');
 });
 
+it('holds the joined Windows C provider until Android consumes its fact', async () => {
+  const reportProgress = vi.fn();
+  const execute = vi.fn((_command, _args, options) => {
+    options.onOutput({ stdout: '[windows-dev-action] progress action=multi-device-sync-c '
+      + 'nonce=12345678-1234-1234-1234-123456789abc milestone=c-provider-ready '
+      + 'fact=multi-device-sync-c-20260813080000000\n' });
+    return new Promise(() => {});
+  });
+  const provider = startWindowsSyncGroupProvider({
+    action: 'multi-device-sync-c', execute, reportProgress, repoRoot: process.cwd()
+  });
+  await expect(provider.waitForProgress()).resolves.toBe('multi-device-sync-c-20260813080000000');
+  expect(reportProgress).toHaveBeenCalledWith('c-provider-ready');
+});
+
 it('starts the local identity deadline only after Windows C creates its fact', () => {
   const source = fs.readFileSync('scripts/sync-group/multi-device-sync-a-rejoin.mjs', 'utf8');
   const created = source.indexOf("await windowsProvider.waitForProgress('c-fact-created')");

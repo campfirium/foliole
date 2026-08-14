@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import path from 'node:path';
 
 export const RECEIVE_CURSOR_COMMITTED_EVENT = '[sync-group] receive cursor committed';
 
@@ -14,6 +15,13 @@ export function captureWindowsSyncRuntimeProgress(child, logPath) {
   child.stdout?.on('data', capture.stdout);
   child.stderr?.on('data', capture.stderr);
   return { cursorCommitted: committed };
+}
+
+export function readWindowsSyncRuntimeLog(evidenceRoot) {
+  const logPath = path.join(evidenceRoot, 'sync-group-runtime.log');
+  return fs.existsSync(logPath)
+    ? fs.readFileSync(logPath, 'utf8').trim().split(/\r?\n/u).slice(-8).join(' | ')
+    : 'unavailable';
 }
 
 function createStreamCapture({ logPath, onText }) {

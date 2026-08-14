@@ -15,7 +15,9 @@ import { enableWindowsSyncParticipation } from './windows-sync-group-participati
 import {
   assertOwnedClientCompleteFacts, assertOwnedClientUnboundFacts, seedOwnedWindowsClient
 } from './windows-sync-group-owned-client-seed.mjs';
-import { captureWindowsSyncRuntimeProgress } from './windows-sync-group-runtime-progress.mjs';
+import {
+  captureWindowsSyncRuntimeProgress, readWindowsSyncRuntimeLog
+} from './windows-sync-group-runtime-progress.mjs';
 import { closeWindowsSyncGroupSession } from './windows-sync-group-session-close.mjs';
 
 export async function invokeWindowsSyncGroupCommand(page, command, args = {}) {
@@ -100,22 +102,15 @@ async function waitForOrdinarySyncFacts(
       assertOwnedClientCompleteFacts(lastFacts, requiredOrigins);
       return lastFacts;
     } catch {
-      const runtimeLog = readSyncRuntimeLog(evidenceRoot);
+      const runtimeLog = readWindowsSyncRuntimeLog(evidenceRoot);
       if (Date.now() >= nodeSurfaceDeadline && lastFacts.nodeCount <= 2 && runtimeLog !== 'unavailable') {
         throw new Error(`Ordinary sync pack failed before apply: ${JSON.stringify(lastFacts)}; runtime=${runtimeLog}`);
       }
       await delay(1_000);
     }
   }
-  const runtimeLog = readSyncRuntimeLog(evidenceRoot);
+  const runtimeLog = readWindowsSyncRuntimeLog(evidenceRoot);
   throw new Error(`Timed out waiting for ordinary sync facts: ${JSON.stringify(lastFacts)}; runtime=${runtimeLog}`);
-}
-
-function readSyncRuntimeLog(evidenceRoot) {
-  const logPath = path.join(evidenceRoot, 'sync-group-runtime.log');
-  return fs.existsSync(logPath)
-    ? fs.readFileSync(logPath, 'utf8').trim().split(/\r?\n/u).slice(-8).join(' | ')
-    : 'unavailable';
 }
 
 export async function inspectWindowsSyncGroupDatabase(execute, paths, databasePath = path.join(
@@ -166,7 +161,7 @@ export async function resetOwnedClient(paths, evidenceRoot, execute) {
   return facts;
 }
 
-export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths,
+export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, onRestartedReady = async () => {}, paths,
   requiredJourneyOrigins = [], resetOwnedState = false, seedOwnedState = false }) {
   if (seedOwnedState && !resetOwnedState) throw new Error('Windows C seed requires an owned reset.');
   fs.mkdirSync(evidenceRoot, { recursive: true });
@@ -210,6 +205,7 @@ export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, paths
         throw new Error('Windows C lost Sync Group membership after restart.');
       }
       await captureSyncSettings(session.page, screenshotPath);
+      await onRestartedReady(localFact);
     } finally { await closeWindowsSyncGroupSession(session); }
     const restartedFacts = await inspectWindowsSyncGroupDatabase(execute, paths, undefined, factIds);
     assertOwnedClientCompleteFacts(restartedFacts, requiredJourneyOrigins);

@@ -35,6 +35,10 @@ export function validateSyncGroupInteractiveRequest(request, repoRoot) {
 }
 
 export function validateSyncGroupInteractiveProgress(progress, action) {
+  if (action === 'multi-device-sync-c' && progress?.milestone === 'c-provider-ready'
+      && /^multi-device-sync-c-\d{17}$/u.test(progress.factId || '')) {
+    return { factId: progress.factId, milestone: progress.milestone };
+  }
   if (action === 'multi-device-sync-a-rejoin'
       && WINDOWS_A_REJOIN_PROGRESS.includes(progress?.milestone)
       && progress.factId === 'a-rejoin') {
