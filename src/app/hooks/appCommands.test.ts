@@ -163,7 +163,7 @@ describe('buildAppPaletteItems', () => {
       redoWorkspaceActionTitle: 'Redo Create Annotation'
     });
 
-    expect(items.find((item) => item.id === APP_COMMAND_IDS.redo)?.shortcuts?.tertiary).toMatchObject({
+    expect(items.find((item) => item.id === APP_COMMAND_IDS.redo)?.shortcuts?.secondary).toMatchObject({
       ctrlKey: true,
       key: 'y'
     });

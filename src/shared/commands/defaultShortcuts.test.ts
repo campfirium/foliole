@@ -213,7 +213,8 @@ it('registers app undo and redo without editor-only modifiers', () => {
   expect(matchesShortcutSet(keyEvent({ key: 'z', ctrlKey: true }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.undo])).toBe(true);
   expect(matchesShortcutSet(keyEvent({ key: 'z', metaKey: true }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.undo])).toBe(true);
   expect(matchesShortcutSet(keyEvent({ key: 'z', ctrlKey: true, shiftKey: true }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.redo])).toBe(true);
-  expect(matchesShortcutSet(keyEvent({ key: 'z', metaKey: true, shiftKey: true }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.redo])).toBe(true);
+  expect(matchesShortcutSet(keyEvent({ key: 'y', ctrlKey: true }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.redo])).toBe(true);
+  expect(DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.redo]?.tertiary).toBeUndefined();
 });
 
 it('registers core selection annotation shortcuts on Alt Z, Alt X, and Alt A', () => {

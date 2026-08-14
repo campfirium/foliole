@@ -52,7 +52,7 @@ export function mapPaletteItemsToHotkeyItems(items: CommandPaletteItem[], overri
       secondaryShortcutLabel: item.shortcuts?.secondary ? buildShortcutOverrideLabel(item.shortcuts.secondary) : '',
       shortcutSummaryLabel: formatShortcutSetSearchLabel(item.shortcuts),
       shortcutDisplayEntries,
-      isCustomized: Boolean(overrides[item.id]?.primary || overrides[item.id]?.secondary),
+      isCustomized: Boolean(overrides[item.id]),
       ...definedProps({ section: item.section })
     };
   });
@@ -84,15 +84,10 @@ export function useCommandShortcutState(commandIds: readonly string[]) {
     }
     setOverrides((current) => {
       const next = { ...current };
-      const entry = definedProps({
-        primary: slot === 'primary' ? normalized || undefined : current[commandId]?.primary,
-        secondary: slot === 'secondary' ? normalized || undefined : current[commandId]?.secondary
-      });
-      if (!entry.primary && !entry.secondary) {
-        delete next[commandId];
-      } else {
-        next[commandId] = entry;
-      }
+      const entry = slot === 'primary'
+        ? { ...current[commandId], primary: normalized }
+        : { ...current[commandId], secondary: normalized };
+      next[commandId] = entry;
       setCommandShortcutOverrides(next);
       return next;
     });

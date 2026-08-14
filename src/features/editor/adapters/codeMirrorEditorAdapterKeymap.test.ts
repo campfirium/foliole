@@ -3,13 +3,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const mockKeymapOf = vi.hoisted(() => vi.fn((value) => value));
 const mockDomEventHandlers = vi.hoisted(() => vi.fn((value) => value));
 const mockCreateLiveMarkdownExtensions = vi.hoisted(() => vi.fn(() => 'live-markdown-extensions'));
+const mockRedo = vi.hoisted(() => vi.fn());
 const mockToggleComment = vi.hoisted(() => vi.fn());
+const mockUndo = vi.hoisted(() => vi.fn());
 
 vi.mock('@codemirror/commands', () => ({
   defaultKeymap: [
+    { key: 'Mod-z', run: mockUndo },
+    { key: 'Mod-y', run: mockRedo },
     { key: 'Mod-a', run: vi.fn() },
     { key: 'Mod-/', run: mockToggleComment }
   ],
+  redo: mockRedo,
+  undo: mockUndo,
   toggleComment: mockToggleComment
 }));
 
@@ -122,26 +128,18 @@ describe('CodeMirror editor keymap', () => {
     const extensions = createCodeMirrorEditorExtensions(createEditorExtensionArgs());
 
     expect(mockKeymapOf).toHaveBeenCalledWith([
-      { key: 'Mod-z', run: expect.any(Function) },
-      { key: 'Mod-Shift-z', run: expect.any(Function) },
-      { key: 'Ctrl-y', run: expect.any(Function) },
       { key: 'Escape', run: expect.any(Function) },
       { key: 'Mod-a', run: expect.any(Function) }
     ]);
     expect(extensions).not.toContain('history-extension');
   });
 
-  it('routes editor undo and redo before the default CodeMirror keymap', () => {
-    const onUndo = vi.fn(() => true);
-    const onRedo = vi.fn(() => true);
-    createCodeMirrorEditorExtensions(createEditorExtensionArgs({ initialContent: 'abc', onRedo, onUndo }));
+  it('leaves undo and redo routing to the configurable app command map', () => {
+    createCodeMirrorEditorExtensions(createEditorExtensionArgs());
     const installedKeymap = mockKeymapOf.mock.calls.at(-1)?.[0] ?? [];
 
-    expect(installedKeymap[0]?.run()).toBe(true);
-    expect(installedKeymap[1]?.run()).toBe(true);
-    expect(installedKeymap[2]?.run()).toBe(true);
-    expect(onUndo).toHaveBeenCalledTimes(1);
-    expect(onRedo).toHaveBeenCalledTimes(2);
+    expect(installedKeymap.some((binding: { run?: unknown }) => binding.run === mockUndo)).toBe(false);
+    expect(installedKeymap.some((binding: { run?: unknown }) => binding.run === mockRedo)).toBe(false);
   });
 
   it('does not install CodeMirror comment toggling shortcut', () => {

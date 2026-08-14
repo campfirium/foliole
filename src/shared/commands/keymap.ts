@@ -22,7 +22,10 @@ function sanitizeShortcutLabel(value: unknown) {
     return undefined;
   }
   const normalized = value.trim();
-  if (!normalized || !parseShortcutLabel(normalized)) {
+  if (!normalized) {
+    return '';
+  }
+  if (!parseShortcutLabel(normalized)) {
     return undefined;
   }
   return normalized;
@@ -48,12 +51,12 @@ export function parseCommandShortcutOverrides(value: unknown): CommandShortcutOv
     }
     const primary = sanitizeShortcutLabel((rawEntry as CommandShortcutOverrideEntry).primary);
     const secondary = sanitizeShortcutLabel((rawEntry as CommandShortcutOverrideEntry).secondary);
-    if (!primary && !secondary) {
+    if (primary === undefined && secondary === undefined) {
       continue;
     }
     sanitized[commandId] = {
-      ...(primary ? { primary } : {}),
-      ...(secondary ? { secondary } : {})
+      ...(primary !== undefined ? { primary } : {}),
+      ...(secondary !== undefined ? { secondary } : {})
     };
   }
 
@@ -77,8 +80,19 @@ export function setCommandShortcutOverrides(overrides: CommandShortcutOverrides)
   setWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.commandShortcutOverrides, JSON.stringify(overrides));
 }
 
-function resolveOverrideShortcut(value: string | undefined) {
-  return value ? parseShortcutLabel(value) : null;
+function resolveShortcutSlot(
+  overrideEntry: CommandShortcutOverrideEntry | undefined,
+  slot: keyof CommandShortcutOverrideEntry,
+  fallback: CommandShortcut | undefined
+) {
+  if (!overrideEntry || !Object.prototype.hasOwnProperty.call(overrideEntry, slot)) {
+    return fallback;
+  }
+  const value = overrideEntry[slot];
+  if (!value) {
+    return undefined;
+  }
+  return parseShortcutLabel(value) ?? fallback;
 }
 
 export function resolveCommandShortcutMap({ commandIds, defaults, overrides }: ResolveShortcutMapOptions): Record<string, CommandShortcutSet | undefined> {
@@ -87,8 +101,8 @@ export function resolveCommandShortcutMap({ commandIds, defaults, overrides }: R
   for (const commandId of commandIds) {
     const overrideEntry = overrides[commandId];
     const defaultEntry = defaults[commandId];
-    const primary = resolveOverrideShortcut(overrideEntry?.primary) ?? defaultEntry?.primary;
-    const secondary = resolveOverrideShortcut(overrideEntry?.secondary) ?? defaultEntry?.secondary;
+    const primary = resolveShortcutSlot(overrideEntry, 'primary', defaultEntry?.primary);
+    const secondary = resolveShortcutSlot(overrideEntry, 'secondary', defaultEntry?.secondary);
     const tertiary = defaultEntry?.tertiary;
     if (primary || secondary || tertiary) {
       resolved[commandId] = {

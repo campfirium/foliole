@@ -16,7 +16,6 @@ import { useMarkdownEditorPropsDiagnostic } from './markdownEditorInputDiagnosti
 import { useMarkdownEditorModelEffects } from './markdownEditorModelEffects';
 import { handleMarkdownEditorKeyDownCapture } from './markdownEditorReviewEscape';
 import type { MarkdownEditorProps } from './markdownEditorTypes';
-import { handleEditorUndoRedoBeforeInput } from './markdownEditorUndoRedoShortcut';
 import { MarkdownImagePreviewDialog } from './MarkdownImagePreviewDialog';
 import { MarkdownMermaidPreviewDialog } from './MarkdownMermaidPreviewDialog';
 import { MarkdownTablePreviewDialog } from './MarkdownTablePreviewDialog';
@@ -195,7 +194,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
         immersiveEditing={props.immersiveEditing === true}
         mouseGesture={surface.mouseGesture}
         onBlurCapture={props.onBlurCapture}
-        onBeforeInputCapture={(event) => handleEditorUndoRedoBeforeInput(event, props)}
+        onBeforeInputCapture={props.onBeforeInputCapture}
         onContextMenu={props.onContextMenu}
         onDoubleClick={props.onDoubleClick}
         onKeyDownCapture={(event) => handleMarkdownEditorKeyDownCapture(event, props)}

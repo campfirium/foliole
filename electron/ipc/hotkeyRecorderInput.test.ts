@@ -52,7 +52,7 @@ describe('bindHotkeyRecorderInput command shortcuts', () => {
     });
   });
 
-  it('routes undo and redo shortcuts through the native menu command channel before page keydown', () => {
+  it('leaves undo and redo to the configured native menu and renderer shortcut map', () => {
     const window = createWindow();
     bindHotkeyRecorderInput(window as unknown as Parameters<typeof bindHotkeyRecorderInput>[0]);
 
@@ -60,18 +60,10 @@ describe('bindHotkeyRecorderInput command shortcuts', () => {
     const redoShiftEvent = emitInput(window, { control: true, key: 'z', shift: true });
     const redoYEvent = emitInput(window, { control: true, key: 'y' });
 
-    expect(undoEvent.preventDefault).toHaveBeenCalledTimes(1);
-    expect(redoShiftEvent.preventDefault).toHaveBeenCalledTimes(1);
-    expect(redoYEvent.preventDefault).toHaveBeenCalledTimes(1);
-    expect(window.webContents.send).toHaveBeenNthCalledWith(1, 'foliole:native-menu-command', {
-      commandId: 'app.undo'
-    });
-    expect(window.webContents.send).toHaveBeenNthCalledWith(2, 'foliole:native-menu-command', {
-      commandId: 'app.redo'
-    });
-    expect(window.webContents.send).toHaveBeenNthCalledWith(3, 'foliole:native-menu-command', {
-      commandId: 'app.redo'
-    });
+    expect(undoEvent.preventDefault).not.toHaveBeenCalled();
+    expect(redoShiftEvent.preventDefault).not.toHaveBeenCalled();
+    expect(redoYEvent.preventDefault).not.toHaveBeenCalled();
+    expect(window.webContents.send).not.toHaveBeenCalled();
   });
 
   it('leaves unrelated shortcuts on the normal page path', () => {

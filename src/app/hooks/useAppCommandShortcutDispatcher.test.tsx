@@ -33,7 +33,7 @@ function Harness({
     runCommand,
     shortcutMap: {
       'app.undo': { primary: { ctrlKey: true, key: 'z' } },
-      'app.redo': { primary: { ctrlKey: true, key: 'z', shiftKey: true }, tertiary: { ctrlKey: true, key: 'y' } },
+      'app.redo': { primary: { ctrlKey: true, key: 'z', shiftKey: true }, secondary: { ctrlKey: true, key: 'y' } },
       'import.clipboard': { primary: { ctrlKey: true, altKey: true, key: 'v' } },
       'import.singleFileToInbox': { primary: { ctrlKey: true, key: 'o' } },
       'workspace.createFolder': { primary: { ctrlKey: true, altKey: true, key: 'f' } },
@@ -43,7 +43,7 @@ function Harness({
       'workspace.toggleBothSidebars': { primary: { key: '\\' } }
     }
   });
-  return <input aria-label="text input" />;
+  return <section data-undo-history-owner="content"><input aria-label="text input" /></section>;
 }
 
 it('runs the enabled palette command matched by a configured shortcut', () => {
@@ -168,7 +168,7 @@ it('dispatches app undo when no editable text is focused', () => {
   expect(runCommand).toHaveBeenCalledWith('app.undo');
 });
 
-it('does not dispatch app undo or redo while editable text is focused', () => {
+it('dispatches configured app undo and redo through the content owner while editing', () => {
   const runCommand = vi.fn();
   render(
     <Harness
@@ -182,10 +182,12 @@ it('does not dispatch app undo or redo while editable text is focused', () => {
   const input = document.querySelector('input')!;
   input.focus();
 
-  expect(dispatchShortcut({ ctrlKey: true, key: 'z' }).defaultPrevented).toBe(false);
-  expect(dispatchShortcut({ ctrlKey: true, key: 'z', shiftKey: true }).defaultPrevented).toBe(false);
-  expect(dispatchShortcut({ ctrlKey: true, key: 'y' }).defaultPrevented).toBe(false);
-  expect(runCommand).not.toHaveBeenCalled();
+  expect(dispatchShortcutFrom(input, { ctrlKey: true, key: 'z' }).defaultPrevented).toBe(true);
+  expect(dispatchShortcutFrom(input, { ctrlKey: true, key: 'z', shiftKey: true }).defaultPrevented).toBe(true);
+  expect(dispatchShortcutFrom(input, { ctrlKey: true, key: 'y' }).defaultPrevented).toBe(true);
+  expect(runCommand).toHaveBeenNthCalledWith(1, 'app.undo');
+  expect(runCommand).toHaveBeenNthCalledWith(2, 'app.redo');
+  expect(runCommand).toHaveBeenNthCalledWith(3, 'app.redo');
 });
 
 it('dispatches app redo from Ctrl+Y when no editable text is focused', () => {

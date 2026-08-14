@@ -4,7 +4,6 @@ import { onNativeEditingEscape, onWindowPriorityEscape } from '../../../shared/p
 import { dispatchReviewEditorEscapeBlur } from '../../../shared/platform/reviewEditorEscape';
 
 import type { MarkdownEditorProps } from './markdownEditorTypes';
-import { handleEditorUndoRedoKeyDown } from './markdownEditorUndoRedoShortcut';
 
 function isReviewEditorActive(activeElement: Element) {
   return Boolean(activeElement.closest('.markdown-editor-host[data-review-escape-blur="true"]'));
@@ -74,8 +73,6 @@ function blurActiveEditorForNativeEscape(enabled: boolean) {
 
 export function useReviewEditorEscapeBlur(args: {
   enabled: boolean;
-  onRedo: MarkdownEditorProps['onRedo'];
-  onUndo: MarkdownEditorProps['onUndo'];
   rootRef: MutableRefObject<HTMLDivElement | null>;
 }) {
   useEffect(() => {
@@ -89,10 +86,6 @@ export function useReviewEditorEscapeBlur(args: {
       } else {
         blurActiveMarkdownEditorIfEscape(event);
       }
-      handleEditorUndoRedoKeyDown(event, {
-        ...(args.onRedo ? { onRedo: args.onRedo } : {}),
-        ...(args.onUndo ? { onUndo: args.onUndo } : {})
-      });
     };
     const handlePriorityEscape = (event: KeyboardEvent) => {
       if (isDialogOpen()) {
@@ -118,7 +111,7 @@ export function useReviewEditorEscapeBlur(args: {
       unlistenPriorityEscape();
       unlistenNativeEscape();
     };
-  }, [args.enabled, args.onRedo, args.onUndo, args.rootRef]);
+  }, [args.enabled, args.rootRef]);
 }
 
 export function handleMarkdownEditorKeyDownCapture(
@@ -129,5 +122,4 @@ export function handleMarkdownEditorKeyDownCapture(
     return;
   }
   blurActiveMarkdownEditorIfEscape(event);
-  handleEditorUndoRedoKeyDown(event, props);
 }

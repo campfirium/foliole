@@ -85,6 +85,36 @@ describe('command keymap tertiary defaults', () => {
   });
 });
 
+describe('command keymap cleared slots', () => {
+  it('keeps explicit blank slots cleared until the command is reset', () => {
+    const resolved = resolveCommandShortcutMap({
+      commandIds: ['app.redo'],
+      defaults: {
+        'app.redo': {
+          primary: { key: 'z', ctrlKey: true, shiftKey: true },
+          secondary: { key: 'y', ctrlKey: true }
+        }
+      },
+      overrides: {
+        'app.redo': { primary: '', secondary: '' }
+      }
+    });
+
+    expect(resolved['app.redo']).toBeUndefined();
+  });
+
+  it('preserves blank slot overrides loaded from storage', () => {
+    window.localStorage.setItem(
+      APP_SETTINGS_STORAGE_KEYS.commandShortcutOverrides,
+      JSON.stringify({ 'app.redo': { primary: '', secondary: 'Ctrl+R' } })
+    );
+
+    expect(getCommandShortcutOverrides()).toEqual({
+      'app.redo': { primary: '', secondary: 'Ctrl+R' }
+    });
+  });
+});
+
 describe('command keymap parsing', () => {
   beforeEach(() => {
     clearStorage();

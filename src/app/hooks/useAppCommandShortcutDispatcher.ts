@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { resolveCommandShortcutDispatch } from '../../shared/commands/shortcutDispatcher';
+import { matchesShortcutSet } from '../../shared/commands/shortcuts';
 import type { CommandPaletteItem, CommandShortcutSet } from '../../shared/commands/types';
 import { onWindowKeydownCapture } from '../../shared/platform/keyboard';
 
@@ -39,6 +40,7 @@ function isEditableElement(target: EventTarget | null) {
 function shouldSkipCommandShortcut(args: {
   event: KeyboardEvent;
   isCommandSurfaceOpen: boolean;
+  shortcutMap: Record<string, CommandShortcutSet | undefined>;
 }) {
   if (args.isCommandSurfaceOpen) {
     return true;
@@ -47,13 +49,15 @@ function shouldSkipCommandShortcut(args: {
   if (!isEditing) {
     return false;
   }
-  const key = args.event.key.toLowerCase();
-  const isAppUndoRedoShortcut =
-    (key === 'z' || key === 'y') &&
-    !args.event.altKey &&
-    (args.event.ctrlKey || args.event.metaKey);
-  if (isAppUndoRedoShortcut) {
-    return true;
+  const isContentHistoryShortcut =
+    args.event.target instanceof Element &&
+    Boolean(args.event.target.closest('[data-undo-history-owner="content"]')) &&
+    (
+      matchesShortcutSet(args.event, args.shortcutMap[APP_COMMAND_IDS.undo]) ||
+      matchesShortcutSet(args.event, args.shortcutMap[APP_COMMAND_IDS.redo])
+    );
+  if (isContentHistoryShortcut) {
+    return false;
   }
   return !args.event.altKey && !args.event.ctrlKey && !args.event.metaKey && !FUNCTION_KEY_PATTERN.test(args.event.key);
 }
@@ -67,7 +71,11 @@ export function useAppCommandShortcutDispatcher(args: {
   useEffect(
     () =>
       onWindowKeydownCapture((event) => {
-        if (shouldSkipCommandShortcut({ event, isCommandSurfaceOpen: args.isCommandSurfaceOpen })) {
+        if (shouldSkipCommandShortcut({
+          event,
+          isCommandSurfaceOpen: args.isCommandSurfaceOpen,
+          shortcutMap: args.shortcutMap
+        })) {
           return;
         }
         const commandId = resolveCommandShortcutDispatch({

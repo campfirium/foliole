@@ -1,4 +1,4 @@
-import { defaultKeymap, toggleComment } from '@codemirror/commands';
+import { defaultKeymap, redo, toggleComment, undo } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { EditorState, type Extension } from '@codemirror/state';
 import { Decoration, EditorView, highlightActiveLine, keymap, type ViewUpdate } from '@codemirror/view';
@@ -20,24 +20,9 @@ import { createLiveMarkdownStateExtensions, trailingDividerFacet } from './liveM
 import { trailingDividerExtension } from './liveMarkdownTrailingDivider';
 import { markdownInputAssist } from './markdownInputAssist';
 
-const folioleDefaultKeymap = defaultKeymap.filter((binding) => binding.run !== toggleComment);
-
-function createEditorUndoRedoKeymap(options: CodeMirrorEditorAdapterOptions) {
-  return [
-    {
-      key: 'Mod-z',
-      run: () => options.onUndo?.() ?? false
-    },
-    {
-      key: 'Mod-Shift-z',
-      run: () => options.onRedo?.() ?? false
-    },
-    {
-      key: 'Ctrl-y',
-      run: () => options.onRedo?.() ?? false
-    }
-  ];
-}
+const folioleDefaultKeymap = defaultKeymap.filter(
+  (binding) => binding.run !== toggleComment && binding.run !== undo && binding.run !== redo
+);
 
 function createEditorUpdateListener(args: {
   nodeId: string | null;
@@ -134,7 +119,7 @@ export function createCodeMirrorEditorExtensions(args: {
   return [
     markdown({ base: markdownLanguage, extensions: folioleMarkdownLanguageExtensions }),
     EditorState.allowMultipleSelections.of(true),
-    keymap.of([...createEditorUndoRedoKeymap(args.options), ...escapeBlurKeymap, ...folioleDefaultKeymap]),
+    keymap.of([...escapeBlurKeymap, ...folioleDefaultKeymap]),
     args.readOnlyCompartment.of(createReadOnlyExtensions(args.options.readOnly === true)),
     ...createReadOnlyInteractionExtensions(args.options),
     EditorView.lineWrapping,

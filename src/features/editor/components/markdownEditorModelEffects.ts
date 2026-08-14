@@ -31,8 +31,6 @@ export function useMarkdownEditorModelEffects(args: {
   );
   useReviewEditorEscapeBlur({
     enabled: props.reviewEscapeBlurEnabled === true,
-    onRedo: props.onRedo,
-    onUndo: props.onUndo,
     rootRef
   });
 }

@@ -20,25 +20,7 @@ function toNativeKeyboardInputEvent(input: Input): NativeKeyboardInputEvent {
   };
 }
 
-function getUndoRedoCommandShortcutId(input: Input) {
-  if (input.type !== 'keyDown' || input.meta || input.alt || !input.control) {
-    return null;
-  }
-  const key = input.key.toLowerCase();
-  if (key === 'z') {
-    return input.shift ? 'app.redo' : 'app.undo';
-  }
-  if (!input.shift && key === 'y') {
-    return 'app.redo';
-  }
-  return null;
-}
-
 function getNativeCommandShortcutId(input: Input) {
-  const historyCommandId = getUndoRedoCommandShortcutId(input);
-  if (historyCommandId) {
-    return historyCommandId;
-  }
   if (input.type !== 'keyDown' || input.meta || input.shift) {
     return null;
   }
