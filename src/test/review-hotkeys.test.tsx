@@ -180,7 +180,7 @@ it('deletes the current review item with T and Delete', async () => {
   });
 });
 
-it('confirms source topic deletion with T after Alt+T opens the dialog', async () => {
+it('confirms source topic deletion by repeating Alt+T in the dialog', async () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'review-item',
     nodeOrder: [...state.nodeOrder, 'source-topic', 'review-item'],
@@ -224,7 +224,7 @@ it('confirms source topic deletion with T after Alt+T opens the dialog', async (
   expect(useWorkspaceStore.getState().trashedNodeIds).not.toContain('source-topic');
   expect(useWorkspaceStore.getState().trashedNodeIds).not.toContain('review-item');
 
-  fireEvent.keyDown(dialog, { code: 'KeyT', key: 't' });
+  fireEvent.keyDown(dialog, { altKey: true, code: 'KeyT', key: 't' });
 
   await waitFor(() => {
     expect(useWorkspaceStore.getState().trashedNodeIds).toContain('source-topic');

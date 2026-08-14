@@ -24,6 +24,7 @@ vi.mock('./managedInboxEvents.js', () => ({
 }));
 
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
+import { closeExternalSearchCacheDatabase } from '../database/externalSearchCacheDatabase.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 
@@ -45,12 +46,15 @@ import { seedMirrorTopic } from './nodeSourceUpdatePreview.testSupport.js';
 let tempRoot = '';
 
 beforeEach(async () => {
+  closeExternalSearchCacheDatabase();
+  closeDatabaseConnection();
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-node-source-update-preview-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabase();
 });
 
 afterEach(async () => {
+  closeExternalSearchCacheDatabase();
   closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
 });
