@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 
 import { collectAndroidDeviceSnapshot } from '../android/android-device-snapshot.mjs';
@@ -117,8 +116,7 @@ export async function waitForAndroidSyncFromZeroDataset(paths, reportActivity, r
 
 export async function inspectMacosSyncFromZeroDataset(session, datasetReceipt) {
   const snapshot = await session.invoke('load_workspace_list_snapshot', { includePdfOpenings: false });
-  const contentHashes = datasetReceipt.nodeIds.map((id) => createHash('sha256')
-    .update(snapshot.nodesById?.[id]?.content ?? '').digest('hex'));
+  const contentHashes = datasetReceipt.nodeIds.map((id) => snapshot.nodesById?.[id]?.bodyBlobHash ?? '');
   let readyAttachmentCount = 0;
   for (const attachmentId of datasetReceipt.attachmentIds) {
     const resolved = await session.invoke('resolve_attachment_resource', { attachment_id: attachmentId });

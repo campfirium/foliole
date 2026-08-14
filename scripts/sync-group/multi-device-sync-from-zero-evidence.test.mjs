@@ -7,7 +7,8 @@ import { expect, it } from 'vitest';
 import { syncFromZeroDatasetDigest } from './sync-from-zero-contract.mjs';
 import { inspectSyncFromZeroDatasetFacts } from './sync-from-zero-dataset-inspect.mjs';
 import {
-  assertSyncFromZeroFinalProof, waitForAndroidSyncFromZeroProofSnapshot
+  assertSyncFromZeroFinalProof, inspectMacosSyncFromZeroDataset,
+  waitForAndroidSyncFromZeroProofSnapshot
 } from './multi-device-sync-from-zero-evidence.mjs';
 
 const datasetReceipt = { attachmentIds: Array.from({ length: 65 }, (_, i) => `a-${i}`),
@@ -45,6 +46,21 @@ it('reads dataset content identity through the current nodes body blob schema', 
     datasetNodeIds: ['sync-from-zero-a-001']
   });
   database.close();
+});
+
+it('uses the desktop body blob identity when list content is intentionally empty', async () => {
+  const receipt = { attachmentIds: ['attachment-1'], contentHashes: ['body-1'], nodeIds: ['node-1'] };
+  const session = {
+    invoke: async (channel) => channel === 'load_workspace_list_snapshot'
+      ? { nodesById: { 'node-1': { bodyBlobHash: 'body-1', content: '' } } }
+      : { status: 'ready' },
+    load: async () => ({ sync_group: { group_id: 'group-1', members: [{ state: 'active' }],
+      timeline_id: 'timeline-1' } })
+  };
+  await expect(inspectMacosSyncFromZeroDataset(session, receipt)).resolves.toMatchObject({
+    datasetDigest: syncFromZeroDatasetDigest(receipt), datasetNodeCount: 1,
+    readyAttachmentCount: 1
+  });
 });
 
 it('accepts later provider supply after Windows proves cursor-zero continuity', () => {
