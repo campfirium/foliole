@@ -23,6 +23,16 @@ it('observes a split committed-cursor event and preserves the runtime log', asyn
   expect(fs.readFileSync(logPath, 'utf8')).toContain('receive cursor committed');
 });
 
+it('preserves multiline failure details after a sync runtime label', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sync-runtime-progress-'));
+  const logPath = path.join(root, 'runtime.log');
+  const child = { stderr: new PassThrough(), stdout: new PassThrough() };
+  captureWindowsSyncRuntimeProgress(child, logPath);
+  child.stdout.write('[sync-group] initial sync waiting for provider {\n');
+  child.stdout.write("  error: 'sync_group_sync_pack_failed: fetch failed'\n}\n");
+  expect(fs.readFileSync(logPath, 'utf8')).toContain('sync_group_sync_pack_failed: fetch failed');
+});
+
 it('does not resolve for unrelated sync runtime output', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sync-runtime-progress-'));
   const child = { stderr: new PassThrough(), stdout: new PassThrough() };

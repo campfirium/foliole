@@ -25,9 +25,7 @@ function createStreamCapture({ logPath, onText }) {
       const lines = pending.split(/\r?\n/u);
       pending = lines.pop() ?? '';
       for (const line of lines) {
-        if (line.includes('[sync-group]') || line.includes('[companion-sync]')) {
-          fs.appendFileSync(logPath, `${line}\n`, 'utf8');
-        }
+        fs.appendFileSync(logPath, `${line}\n`, 'utf8');
       }
     };
   };
