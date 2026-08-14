@@ -1,3 +1,4 @@
+import { createServer, type Server } from 'node:net';
 import process from 'node:process';
 
 import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
@@ -15,6 +16,25 @@ type Candidate = {
   provider_device_name: string;
   timeline_id: string;
 };
+
+function listenOnRandomPort() {
+  return new Promise<Server>((resolve, reject) => {
+    const server = createServer();
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => resolve(server));
+  });
+}
+
+async function allocateFreePorts() {
+  const servers = await Promise.all([listenOnRandomPort(), listenOnRandomPort()]);
+  const ports = servers.map((server) => {
+    const address = server.address();
+    if (!address || typeof address === 'string') throw new Error('Missing allocated test port.');
+    return address.port;
+  });
+  await Promise.all(servers.map((server) => new Promise<void>((resolve) => server.close(() => resolve()))));
+  return ports;
+}
 
 async function createTopic(windowPage: WindowPage) {
   await windowPage.waitForFunction(() => Boolean(globalThis.window?.__folioleWorkspaceDebug));
@@ -128,54 +148,78 @@ async function restartAndVerify(
   return session;
 }
 
-test('two nonempty desktop Libraries join and converge through ordinary Sync Group sync', async ({
-  desktopSession,
-  desktopWindow
-}, testInfo) => {
+async function joinAndConverge(args: {
+  joiningEnv: NodeJS.ProcessEnv;
+  joiningPort: number;
+  joiningSession: DesktopSession;
+  provider: Awaited<ReturnType<typeof createProvider>>;
+  providerSession: DesktopSession;
+}) {
+  const joiningWindow = args.joiningSession.firstWindow;
+  const desktopWindow = args.providerSession.firstWindow;
+  await joiningWindow.setViewportSize({ width: 1600, height: 1000 });
+  await expectWorkspaceShell(joiningWindow);
+  const joiningTopicId = await createTopic(joiningWindow);
+  await expect.poll(() => hasPersistedNode(args.joiningSession, joiningTopicId)).toBe(true);
+  await invoke(joiningWindow, 'enable_companion_sync');
+  await seedDiscoveredCandidate(args.joiningSession, args.provider.candidate);
+  await invoke(joiningWindow, 'request_sync_group_join', {
+    endpoint_url: args.provider.candidate.endpoint_url
+  });
+  let requestId: string | null = null;
+  await expect.poll(async () => {
+    const overview = await invoke<{ pending_requests: Array<{ pair_request_id: string }> }>(
+      desktopWindow, 'load_companion_pairing_overview'
+    );
+    requestId = overview.pending_requests[0]?.pair_request_id ?? null;
+    return requestId;
+  }).not.toBeNull();
+  await invoke(desktopWindow, 'approve_companion_pair_request', { pair_request_id: requestId });
+  await invoke(joiningWindow, 'complete_sync_group_join');
+  await expect.poll(() => hasPersistedNode(args.joiningSession, args.provider.topicId), { timeout: 20_000 }).toBe(true);
+  await expect.poll(() => hasNode(joiningWindow, args.provider.topicId), { timeout: 20_000 }).toBe(true);
+  await syncDiscoveredPeer(args.providerSession, args.provider.candidate.group_id,
+    `http://127.0.0.1:${args.joiningPort}`);
+  await expect.poll(() => hasPersistedNode(args.providerSession, joiningTopicId), { timeout: 20_000 }).toBe(true);
+  await expect.poll(() => hasNode(desktopWindow, joiningTopicId), { timeout: 20_000 }).toBe(true);
+  await args.joiningSession.close();
+  return restartAndVerify(args.joiningEnv, args.provider.candidate.group_id,
+    [args.provider.topicId, joiningTopicId]);
+}
+
+test('two nonempty desktop Libraries join and converge through ordinary Sync Group sync', async ({ browserName }, testInfo) => {
+  void browserName;
+  let providerSession: Awaited<ReturnType<typeof launchDesktopSession>> | null = null;
   let joiningSession: Awaited<ReturnType<typeof launchDesktopSession>> | null = null;
   try {
+    const [providerPort, joiningPort] = await allocateFreePorts();
+    const providerEnv = {
+      ...process.env,
+      FOLIOLE_COMPANION_SYNC_PORT: String(providerPort),
+      FOLIOLE_ELECTRON_TEST_STATE_ROOT: testInfo.outputPath('provider-state')
+    };
+    providerSession = await launchDesktopSession({ env: providerEnv });
+    const desktopSession = providerSession;
+    const desktopWindow = providerSession.firstWindow;
+    await desktopWindow.setViewportSize({ width: 1600, height: 1000 });
     await expectWorkspaceShell(desktopWindow);
     const provider = await createProvider(desktopSession, desktopWindow);
-    const groupId = provider.candidate.group_id;
-
     const joiningEnv = {
       ...process.env,
-      FOLIOLE_COMPANION_SYNC_PORT: '38642',
+      FOLIOLE_COMPANION_SYNC_PORT: String(joiningPort),
       FOLIOLE_ELECTRON_TEST_STATE_ROOT: testInfo.outputPath('joining-state')
     };
     joiningSession = await launchDesktopSession({ env: joiningEnv });
-    const joiningWindow = joiningSession.firstWindow;
-    await joiningWindow.setViewportSize({ width: 1600, height: 1000 });
-    await expectWorkspaceShell(joiningWindow);
-    const joiningTopicId = await createTopic(joiningWindow);
-    await expect.poll(() => hasPersistedNode(joiningSession!, joiningTopicId)).toBe(true);
-    await invoke(joiningWindow, 'enable_companion_sync');
-    const candidate = provider.candidate;
-    await seedDiscoveredCandidate(joiningSession, candidate);
-    await invoke(joiningWindow, 'request_sync_group_join', { endpoint_url: candidate.endpoint_url });
-    let requestId: string | null = null;
-    await expect.poll(async () => {
-      const overview = await invoke<{ pending_requests: Array<{ pair_request_id: string }> }>(
-        desktopWindow, 'load_companion_pairing_overview'
-      );
-      requestId = overview.pending_requests[0]?.pair_request_id ?? null;
-      return requestId;
-    }).not.toBeNull();
-    await invoke(desktopWindow, 'approve_companion_pair_request', { pair_request_id: requestId });
-    await invoke(joiningWindow, 'complete_sync_group_join');
-
-    await expect.poll(() => hasPersistedNode(joiningSession!, provider.topicId), { timeout: 20_000 }).toBe(true);
-    await expect.poll(() => hasNode(joiningWindow, provider.topicId), { timeout: 20_000 }).toBe(true);
-    await syncDiscoveredPeer(desktopSession, groupId, 'http://127.0.0.1:38642');
-    await expect.poll(() => hasPersistedNode(desktopSession, joiningTopicId), { timeout: 20_000 }).toBe(true);
-    await expect.poll(() => hasNode(desktopWindow, joiningTopicId), { timeout: 20_000 }).toBe(true);
-    const joined = await invoke<{ sync_group: { group_id: string } }>(
-      joiningWindow, 'load_companion_pairing_overview'
-    );
-    expect(joined.sync_group.group_id).toBe(groupId);
-    await joiningSession.close();
-    joiningSession = await restartAndVerify(joiningEnv, groupId, [provider.topicId, joiningTopicId]);
+    joiningSession = await joinAndConverge({
+      joiningEnv, joiningPort, joiningSession, provider, providerSession
+    });
   } catch (error) {
+    if (providerSession) {
+      await testInfo.attach('provider-desktop-diagnostics', {
+        body: JSON.stringify(await providerSession.collectDiagnostics(), null, 2),
+        contentType: 'application/json'
+      });
+    }
     if (joiningSession) {
       await testInfo.attach('joining-desktop-diagnostics', {
         body: JSON.stringify(await joiningSession.collectDiagnostics(), null, 2),
@@ -185,5 +229,6 @@ test('two nonempty desktop Libraries join and converge through ordinary Sync Gro
     throw error;
   } finally {
     await joiningSession?.close();
+    await providerSession?.close();
   }
 });
