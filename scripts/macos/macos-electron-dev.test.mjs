@@ -48,7 +48,7 @@ describe('macOS Electron dev entry', () => {
       platform: 'darwin'
     });
 
-    expect(libraryHome).toBe('/Users/tester/Documents/FolioleDemo');
+    expect(libraryHome).toBe(path.resolve('/Users/tester/Documents/FolioleDemo'));
     expect(environment).toMatchObject({
       FOLIOLE_LIBRARY_HOME: libraryHome,
       FOLIOLE_PREVIEW_SANDBOX_RESET: '0',

@@ -168,7 +168,7 @@ describe('vite config', () => {
     });
     expect(manifest.contractVersion).toBe(3);
     expect(manifest.publishedLocales.map((locale) => locale.locale)).toEqual([
-      'en', 'de', 'es', 'fr', 'it', 'ja', 'ko', 'pl', 'pt-br', 'ru', 'zh-hans', 'zh-hant'
+      'en', 'de', 'es', 'fr', 'it', 'ja', 'ko', 'pl', 'pt', 'ru', 'zh-hans', 'zh-hant'
     ]);
     expect(manifest.localePublishPacks[0].topics[0]).toMatchObject({
       slug: 'welcome-to-foliole',
