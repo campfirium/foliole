@@ -57,11 +57,6 @@ export function createNodeTreeRowButtonHandlers(
     onContextMenu: onContextMenu ? (event: ReactMouseEvent<HTMLButtonElement>) => onContextMenu(nodeId, event) : undefined,
     onDoubleClick: (event: ReactMouseEvent<HTMLButtonElement>) => (event.stopPropagation(), rename.beginRename()),
     onKeyDown: (event: ReactKeyboardEvent<HTMLButtonElement>) => {
-      if (event.key === 'F2') {
-        event.preventDefault();
-        rename.beginRename();
-        return;
-      }
       onKeyDown?.(nodeId, event);
     }
   };

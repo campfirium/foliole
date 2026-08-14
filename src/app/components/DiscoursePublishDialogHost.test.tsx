@@ -101,7 +101,7 @@ it('shows cached Discourse catalog before replacing it with refreshed forum data
   expect(screen.getAllByText('fresh-tag').length).toBeGreaterThan(0);
 });
 
-it('uses catalog defaults and publishes only through the publish shortcut', async () => {
+it('uses catalog defaults and publishes only through the visible publish action', async () => {
   discourseRepositoryMocks.loadDiscoursePublishCatalogFromRuntime.mockResolvedValue(
     catalog({ categoryId: 17, categoryName: 'Cached Category', fromCache: false, tag: 'cached-tag' })
   );
@@ -120,7 +120,9 @@ it('uses catalog defaults and publishes only through the publish shortcut', asyn
   await waitFor(() => expect(category).toHaveTextContent('Cached Category'));
   expect(screen.getAllByText('cached-tag').length).toBeGreaterThan(0);
 
-  fireEvent.keyDown(category, { ctrlKey: true, key: 'Enter' });
+  fireEvent.keyDown(screen.getByRole('dialog'), { ctrlKey: true, key: 'Enter' });
+  expect(discourseRepositoryMocks.publishTopicToDiscourse).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Publish' }));
   expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   await waitFor(() =>
     expect(discourseRepositoryMocks.publishTopicToDiscourse).toHaveBeenCalledWith(expect.objectContaining({
@@ -148,7 +150,7 @@ it('keeps publishing choices but clears a failed attempt when the dialog is reop
   requestPublishDialog();
   const category = await screen.findByRole('button', { name: 'Category' });
   await waitFor(() => expect(category).toHaveTextContent('Cached Category'));
-  fireEvent.keyDown(category, { ctrlKey: true, key: 'Enter' });
+  fireEvent.click(screen.getByRole('button', { name: 'Publish' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('Body is too short');
 
   fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));

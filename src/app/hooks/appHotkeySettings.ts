@@ -11,6 +11,7 @@ export interface AppHotkeySettings {
   onHotkeyReset: (commandId: string) => void;
   onHotkeyResetAll: () => void;
   onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
+  shortcutMap: Record<string, import('../../shared/commands/types').CommandShortcutSet | undefined>;
 }
 
 export function buildHotkeySettings(
@@ -42,6 +43,7 @@ export function buildHotkeySettings(
     hotkeyItems: [globalCaptureItem, ...mapPaletteItemsToHotkeyItems(paletteItems, hotkeys.overrides)],
     onHotkeyReset: hotkeys.resetShortcut,
     onHotkeyResetAll: hotkeys.resetAllShortcuts,
-    onHotkeyUpdate: hotkeys.updateShortcut
+    onHotkeyUpdate: hotkeys.updateShortcut,
+    shortcutMap: hotkeys.shortcutMap
   };
 }

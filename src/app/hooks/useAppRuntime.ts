@@ -11,7 +11,6 @@ import { getRecentNodeIds, pushRecentNodeId, setRecentNodeIds } from '../compone
 
 import { useMoveToNodeSourceState } from './appMoveToNodeSourceState';
 import { useEditorDraftFlushRegistry, type EditorDraftFreshFlush } from './useAppRuntimeEditorDraftFlush';
-import { useWindowHotkeys } from './useAppRuntimeHotkeys';
 
 export interface ReadingPositionSyncState {
   commandId?: string;
@@ -174,7 +173,6 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
   const moveToNodeSource = useMoveToNodeSourceState(flags.setIsMoveToNodePaletteOpen);
   const settingsRequest = useSettingsRequestState();
   const recentHistory = useRecentHistory();
-  useWindowHotkeys();
 
   useEffect(() => {
     return subscribeOpenClozeGuardSettings(() => {

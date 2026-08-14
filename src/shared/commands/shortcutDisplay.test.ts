@@ -20,19 +20,15 @@ it('shows the current platform modifier for Ctrl and Cmd equivalent shortcuts', 
 
 it('keeps real alternate shortcuts while folding platform equivalents', () => {
   const shortcuts = {
-    primary: { key: '[' },
-    secondary: { ctrlKey: true, key: 'l', shiftKey: true },
-    tertiary: { key: 'l', metaKey: true, shiftKey: true }
+    primary: { ctrlKey: true, key: 'z', shiftKey: true },
+    secondary: { ctrlKey: true, key: 'y' }
   };
 
   expect(formatShortcutSetDisplayEntries(shortcuts, 'Windows')).toEqual([
-    { label: '[', slot: 'primary' },
-    { label: 'Ctrl+Shift+L', slot: 'secondary' }
+    { label: 'Ctrl+Shift+Z', slot: 'primary' },
+    { label: 'Ctrl+Y', slot: 'secondary' }
   ]);
-  expect(formatShortcutSetDisplayEntries(shortcuts, 'MacIntel')).toEqual([
-    { label: '[', slot: 'primary' },
-    { label: '⇧ ⌘ L', slot: 'tertiary' }
-  ]);
+  expect(formatShortcutSetDisplayEntries(shortcuts, 'MacIntel')).toEqual([]);
 });
 
 it('hides non-current platform shortcuts even when their keys differ', () => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { normalizeFolioleWebFields } from '../../../lib/core/foliolePublish/folioleWebPublishFrontmatter';
 import type { NativeFoliolePublishField, NativeFoliolePublishResult } from '../../../lib/platform/nativeFoliolePublishContract';
@@ -104,14 +104,9 @@ export function FoliolePublishDialogHost() {
       setError(caught instanceof Error ? caught.message : 'Foliole Publish failed.');
     } finally { setBusy('idle'); }
   };
-  const keyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== 'Enter' || (!event.ctrlKey && !event.metaKey) || !configured || busy !== 'idle') return;
-    event.preventDefault();
-    void run('publish');
-  };
   return (
     <AppDialog open onOpenChange={(open) => !open && busy === 'idle' && setRequest(null)}>
-      <AppDialogPortal><AppDialogOverlay /><AppDialogContent aria-describedby={undefined} className="w-[min(960px,calc(100vw-32px))] p-6" onKeyDownCapture={keyDown}>
+      <AppDialogPortal><AppDialogOverlay /><AppDialogContent aria-describedby={undefined} className="w-[min(960px,calc(100vw-32px))] p-6">
         <AppDialogTitle>{t('desktop.foliolePublish.title')}</AppDialogTitle>
         <FoliolePublishFields
           choices={choices}

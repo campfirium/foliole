@@ -1,7 +1,7 @@
 import { formatShortcutLabel, getShortcutSetShortcuts, parseShortcutLabel } from './shortcuts';
 import type { CommandShortcut, CommandShortcutSet, CommandShortcutSlot } from './types';
 
-const SHORTCUT_SET_SLOTS: CommandShortcutSlot[] = ['primary', 'secondary', 'tertiary'];
+const SHORTCUT_SET_SLOTS: CommandShortcutSlot[] = ['primary', 'secondary'];
 const MAC_KEY_SEPARATOR = ' ';
 
 export interface ShortcutDisplayEntry {

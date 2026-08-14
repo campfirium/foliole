@@ -36,9 +36,12 @@ function Harness({
       'app.redo': { primary: { ctrlKey: true, key: 'z', shiftKey: true }, secondary: { ctrlKey: true, key: 'y' } },
       'import.clipboard': { primary: { ctrlKey: true, altKey: true, key: 'v' } },
       'import.singleFileToInbox': { primary: { ctrlKey: true, key: 'o' } },
+      'editor.toggleImmersiveMode': { primary: { key: 'F10' } },
+      'workspace.renameNode': { primary: { key: 'F4' } },
+      'workspace.toggleDevTools': { primary: { altKey: true, key: 'i' } },
       'workspace.createFolder': { primary: { ctrlKey: true, altKey: true, key: 'f' } },
       'editor.toggleDisplayMode': { primary: { ctrlKey: true, key: '\\' } },
-      'workspace.toggleList': { primary: { ctrlKey: true, key: 'l' }, tertiary: { key: '[' } },
+      'workspace.toggleList': { primary: { key: '[' }, secondary: { ctrlKey: true, key: 'l' } },
       'workspace.toggleRightSidebar': { primary: { key: ']' } },
       'workspace.toggleBothSidebars': { primary: { key: '\\' } }
     }
@@ -89,6 +92,26 @@ it('can dispatch newly routed create command shortcuts', () => {
 
   expect(event.defaultPrevented).toBe(true);
   expect(runCommand).toHaveBeenCalledWith('workspace.createFolder');
+});
+
+it('routes remapped app commands without retaining their former hardcoded keys', () => {
+  const runCommand = vi.fn();
+  render(
+    <Harness
+      items={[
+        { enabled: true, id: APP_COMMAND_IDS.toggleDevTools, title: 'Toggle DevTools' },
+        { enabled: true, id: APP_COMMAND_IDS.renameNode, title: 'Rename Node' }
+      ]}
+      runCommand={runCommand}
+    />
+  );
+
+  expect(dispatchShortcut({ ctrlKey: true, key: 'i', shiftKey: true }).defaultPrevented).toBe(false);
+  expect(dispatchShortcut({ key: 'F2' }).defaultPrevented).toBe(false);
+  expect(dispatchShortcut({ altKey: true, key: 'i' }).defaultPrevented).toBe(true);
+  expect(dispatchShortcut({ key: 'F4' }).defaultPrevented).toBe(true);
+  expect(runCommand).toHaveBeenNthCalledWith(1, APP_COMMAND_IDS.toggleDevTools);
+  expect(runCommand).toHaveBeenNthCalledWith(2, APP_COMMAND_IDS.renameNode);
 });
 
 it('dispatches import shortcuts before an editor target can stop bubbling', () => {

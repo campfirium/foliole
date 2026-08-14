@@ -3,13 +3,17 @@ import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../model/hotkeySettings';
 
 import {
+  CommandShortcutMapContext,
   HotkeySettingsContext,
+  type CommandShortcutMap,
+  useCommandShortcutMap,
   useHotkeySettings
 } from './hotkeySettingsContext';
 
 interface HotkeySettingsProviderProps {
   children: ReactNode;
   hotkeyItems: HotkeySettingItem[];
+  shortcutMap?: CommandShortcutMap;
   onHotkeyReset: (commandId: string) => void;
   onHotkeyResetAll: () => void;
   onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
@@ -34,7 +38,11 @@ export function HotkeySettingsProvider(props: HotkeySettingsProviderProps) {
     [onConfigureShortcut, onRequestedCommandConsumed, props.hotkeyItems, props.onHotkeyReset, props.onHotkeyResetAll, props.onHotkeyUpdate, requestedCommandId]
   );
 
-  return <HotkeySettingsContext.Provider value={value}>{props.children}</HotkeySettingsContext.Provider>;
+  return (
+    <CommandShortcutMapContext.Provider value={props.shortcutMap ?? {}}>
+      <HotkeySettingsContext.Provider value={value}>{props.children}</HotkeySettingsContext.Provider>
+    </CommandShortcutMapContext.Provider>
+  );
 }
 
-export { useHotkeySettings };
+export { useCommandShortcutMap, useHotkeySettings };

@@ -5,12 +5,11 @@ import { formatAriaKeyShortcuts, formatShortcutSetLabel } from './shortcuts';
 it('formats visual shortcut labels separately from aria key shortcuts', () => {
   const shortcuts = {
     primary: { ctrlKey: true, key: 'p' },
-    secondary: { key: 'p', metaKey: true },
-    tertiary: { altKey: true, key: 'p' }
+    secondary: { key: 'p', metaKey: true }
   };
 
-  expect(formatShortcutSetLabel(shortcuts)).toBe('Ctrl+P / Cmd+P / Alt+P');
-  expect(formatAriaKeyShortcuts(shortcuts)).toBe('Control+P Meta+P Alt+P');
+  expect(formatShortcutSetLabel(shortcuts)).toBe('Ctrl+P / Cmd+P');
+  expect(formatAriaKeyShortcuts(shortcuts)).toBe('Control+P Meta+P');
 });
 
 it('formats non-letter keys for aria key shortcuts', () => {

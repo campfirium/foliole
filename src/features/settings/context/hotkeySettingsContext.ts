@@ -1,6 +1,10 @@
 import { createContext, useContext } from 'react';
 
+import { getPlatformDefaultCommandShortcuts } from '../../../shared/commands/defaultShortcuts';
+import type { CommandShortcutSet } from '../../../shared/commands/types';
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../model/hotkeySettings';
+
+export type CommandShortcutMap = Record<string, CommandShortcutSet | undefined>;
 
 export interface HotkeySettingsContextValue {
   hotkeyItems: HotkeySettingItem[];
@@ -13,6 +17,9 @@ export interface HotkeySettingsContextValue {
 }
 
 export const HotkeySettingsContext = createContext<HotkeySettingsContextValue | null>(null);
+export const CommandShortcutMapContext = createContext<CommandShortcutMap>(
+  getPlatformDefaultCommandShortcuts({ includeBrowserReservedShortcuts: true })
+);
 
 export function useHotkeySettings() {
   const context = useContext(HotkeySettingsContext);
@@ -20,4 +27,8 @@ export function useHotkeySettings() {
     throw new Error('HotkeySettingsProvider is missing.');
   }
   return context;
+}
+
+export function useCommandShortcutMap() {
+  return useContext(CommandShortcutMapContext);
 }

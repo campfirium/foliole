@@ -2,6 +2,7 @@ import { act, fireEvent, renderHook } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
+import { CommandShortcutMapContext } from '../../features/settings/context/hotkeySettingsContext';
 
 import { useImmersiveReadingMode } from './useImmersiveReadingMode';
 
@@ -177,13 +178,34 @@ it('captures the viewport reading position and starts an applying lock when ente
 it('leaves F11 to browser fullscreen outside Electron', () => {
   const { props } = buildProps();
   props.isImmersiveMode = false;
-  renderHook(() => useImmersiveReadingMode(props));
+  renderHook(() => useImmersiveReadingMode(props), {
+    wrapper: ({ children }) => <CommandShortcutMapContext.Provider value={{}}>{children}</CommandShortcutMapContext.Provider>
+  });
 
   act(() => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F11' }));
   });
 
   expect(props.onToggleImmersiveMode).not.toHaveBeenCalled();
+});
+
+it('retires F11 when immersive reading is remapped', () => {
+  const { props } = buildProps();
+  props.isImmersiveMode = false;
+  renderHook(() => useImmersiveReadingMode(props), {
+    wrapper: ({ children }) => (
+      <CommandShortcutMapContext.Provider value={{
+        'editor.toggleImmersiveMode': { primary: { key: 'F10' } }
+      }}>
+        {children}
+      </CommandShortcutMapContext.Provider>
+    )
+  });
+
+  act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F11' })));
+  expect(props.onToggleImmersiveMode).not.toHaveBeenCalled();
+  act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F10' })));
+  expect(props.onToggleImmersiveMode).toHaveBeenCalledTimes(1);
 });
 
 it('allows F11 to enter immersive reading while review mode is active', () => {

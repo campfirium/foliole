@@ -129,21 +129,13 @@ function useOpenedLocalFileWindowBindings(args: {
     const onFocus = () => {
       if (!dirtyRef.current) void reloadFromDisk();
     };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
-        event.preventDefault();
-        void flushSave({ updateSearchIndex: true });
-      }
-    };
     const onPageHide = () => void flushSave({ updateSearchIndex: true });
     window.addEventListener('focus', onFocus);
-    window.addEventListener('keydown', onKeyDown);
     window.addEventListener('pagehide', onPageHide);
     document.addEventListener('visibilitychange', onFocus);
     return () => {
       if (window.__folioleFlushLocalFileBeforeClose === flushSave) delete window.__folioleFlushLocalFileBeforeClose;
       window.removeEventListener('focus', onFocus);
-      window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('pagehide', onPageHide);
       document.removeEventListener('visibilitychange', onFocus);
     };

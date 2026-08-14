@@ -146,6 +146,8 @@ it('publishes with the selected status and saves the returned binding locally', 
   fireEvent.click(await screen.findByRole('button', { name: '1 Writing' }));
   fireEvent.click(screen.getByRole('button', { name: '1 foliole' }));
   fireEvent.change(status, { target: { value: 'publish' } });
+  fireEvent.keyDown(screen.getByRole('dialog'), { ctrlKey: true, key: 'Enter' });
+  expect(repositoryMocks.publishTopicToWordPress).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: 'Publish' }));
 
   await waitFor(() => expect(repositoryMocks.publishTopicToWordPress).toHaveBeenCalledWith({

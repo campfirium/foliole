@@ -67,28 +67,26 @@ it('uses only the resolved macOS defaults and captures before editable targets s
   expectSurface('search');
 });
 
-it('matches every resolved slot without adding platform-specific keys', () => {
+it('matches both editable slots without adding platform-specific keys', () => {
   const onRunCommand = vi.fn();
   const shortcutMap: ShortcutMap = {
     [APP_COMMAND_IDS.openCommandPalette]: {
       primary: { ctrlKey: true, key: 'p' },
-      secondary: { altKey: true, key: 'p' },
-      tertiary: { key: 'F10', shiftKey: true }
+      secondary: { altKey: true, key: 'p' }
     }
   };
   render(<Harness onRunCommand={onRunCommand} shortcutMap={shortcutMap} />);
 
   for (const shortcut of [
     { ctrlKey: true, key: 'p' },
-    { altKey: true, key: 'p' },
-    { key: 'F10', shiftKey: true }
+    { altKey: true, key: 'p' }
   ]) {
     dispatchShortcut(shortcut);
     expectSurface('command');
     dispatchShortcut(shortcut);
     expectSurface('none');
   }
-  expect(onRunCommand).toHaveBeenCalledTimes(3);
+  expect(onRunCommand).toHaveBeenCalledTimes(2);
 });
 
 it('uses a same-window shortcut map update immediately and retires the removed key', () => {

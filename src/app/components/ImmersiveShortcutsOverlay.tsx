@@ -1,3 +1,5 @@
+import { useCommandShortcutMap } from '../../features/settings/context/hotkeySettingsContext';
+import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { appFloatingSurfaceClassName } from '../../shared/ui';
 
@@ -5,7 +7,8 @@ import { getImmersiveReadingShortcuts } from './immersiveReadingShortcuts';
 
 export function ImmersiveShortcutsOverlay({ visible }: { visible: boolean }) {
   const t = useTranslation();
-  const shortcuts = getImmersiveReadingShortcuts();
+  const shortcutMap = useCommandShortcutMap();
+  const shortcuts = getImmersiveReadingShortcuts(shortcutMap[APP_COMMAND_IDS.toggleImmersiveMode]);
   if (!visible) {
     return null;
   }

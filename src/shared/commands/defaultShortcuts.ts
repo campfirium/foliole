@@ -41,8 +41,7 @@ export const DEFAULT_APP_COMMAND_SHORTCUTS: DefaultCommandShortcuts = {
   [APP_COMMAND_IDS.toggleDevTools]: { primary: { key: 'i', ctrlKey: true, shiftKey: true }, secondary: { key: 'i', metaKey: true, altKey: true } },
   [APP_COMMAND_IDS.toggleList]: {
     primary: { key: '[' },
-    secondary: { key: 'l', ctrlKey: true, shiftKey: true },
-    tertiary: { key: 'l', metaKey: true, shiftKey: true }
+    secondary: { key: 'l', ctrlKey: true, shiftKey: true }
   },
   [APP_COMMAND_IDS.toggleRightSidebar]: { primary: { key: ']' } },
   [APP_COMMAND_IDS.toggleBothSidebars]: { primary: { key: '\\' } },
@@ -69,7 +68,7 @@ export const DEFAULT_APP_COMMAND_SHORTCUTS: DefaultCommandShortcuts = {
   [APP_COMMAND_IDS.deleteReviewSourceTopic]: { primary: { key: 't', altKey: true } }
 };
 
-const SHORTCUT_SET_SLOTS = ['primary', 'secondary', 'tertiary'] as const;
+const SHORTCUT_SET_SLOTS = ['primary', 'secondary'] as const;
 
 function resolvePlatformText() {
   if (typeof navigator === 'undefined') {

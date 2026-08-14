@@ -16,7 +16,7 @@ function RequestHarness() {
 
 it('keeps shortcut configuration targets as consumable provider-local UI state', () => {
   render(
-    <HotkeySettingsProvider hotkeyItems={[]} onHotkeyReset={vi.fn()} onHotkeyResetAll={vi.fn()} onHotkeyUpdate={() => ({ status: 'blocked' })}>
+    <HotkeySettingsProvider hotkeyItems={[]} onHotkeyReset={vi.fn()} onHotkeyResetAll={vi.fn()} onHotkeyUpdate={() => ({ status: 'blocked' })} shortcutMap={{}}>
       <RequestHarness />
     </HotkeySettingsProvider>
   );

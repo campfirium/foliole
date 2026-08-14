@@ -1,4 +1,4 @@
-export type CommandShortcutSlot = 'primary' | 'secondary' | 'tertiary';
+export type CommandShortcutSlot = 'primary' | 'secondary';
 
 export interface CommandShortcut {
   key: string;
@@ -11,7 +11,6 @@ export interface CommandShortcut {
 export interface CommandShortcutSet {
   primary?: CommandShortcut;
   secondary?: CommandShortcut;
-  tertiary?: CommandShortcut;
 }
 
 export interface CommandPaletteItem {

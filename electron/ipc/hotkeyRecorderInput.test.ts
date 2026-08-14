@@ -35,31 +35,18 @@ function emitInput(window: ReturnType<typeof createWindow>, input: Record<string
 }
 
 describe('bindHotkeyRecorderInput command shortcuts', () => {
-  it('routes import shortcuts through the native menu command channel before page keydown', () => {
+  it('leaves formal command shortcuts to the configured native menu and renderer map', () => {
     const window = createWindow();
     bindHotkeyRecorderInput(window as unknown as Parameters<typeof bindHotkeyRecorderInput>[0]);
 
     const importFileEvent = emitInput(window, { control: true, key: 'o' });
     const clipboardEvent = emitInput(window, { alt: true, control: true, key: 'v' });
-
-    expect(importFileEvent.preventDefault).toHaveBeenCalledTimes(1);
-    expect(clipboardEvent.preventDefault).toHaveBeenCalledTimes(1);
-    expect(window.webContents.send).toHaveBeenNthCalledWith(1, 'foliole:native-menu-command', {
-      commandId: 'import.singleFileToInbox'
-    });
-    expect(window.webContents.send).toHaveBeenNthCalledWith(2, 'foliole:native-menu-command', {
-      commandId: 'import.clipboard'
-    });
-  });
-
-  it('leaves undo and redo to the configured native menu and renderer shortcut map', () => {
-    const window = createWindow();
-    bindHotkeyRecorderInput(window as unknown as Parameters<typeof bindHotkeyRecorderInput>[0]);
-
     const undoEvent = emitInput(window, { control: true, key: 'z' });
     const redoShiftEvent = emitInput(window, { control: true, key: 'z', shift: true });
     const redoYEvent = emitInput(window, { control: true, key: 'y' });
 
+    expect(importFileEvent.preventDefault).not.toHaveBeenCalled();
+    expect(clipboardEvent.preventDefault).not.toHaveBeenCalled();
     expect(undoEvent.preventDefault).not.toHaveBeenCalled();
     expect(redoShiftEvent.preventDefault).not.toHaveBeenCalled();
     expect(redoYEvent.preventDefault).not.toHaveBeenCalled();

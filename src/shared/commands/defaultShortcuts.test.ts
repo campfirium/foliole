@@ -33,7 +33,7 @@ it('uses an explicit Apple-native default table on macOS', () => {
   expect(macShortcuts[APP_COMMAND_IDS.createFolder]).toEqual({
     primary: { key: 'n', metaKey: true, shiftKey: true }
   });
-  expect(macShortcuts[APP_COMMAND_IDS.renameNode]).toBeUndefined();
+  expect(macShortcuts[APP_COMMAND_IDS.renameNode]).toEqual({ primary: { key: 'F2' } });
   expect(macShortcuts[APP_COMMAND_IDS.enterPriorityMode]).toBeUndefined();
   expect(macShortcuts[APP_COMMAND_IDS.toggleImmersiveMode]).toBeUndefined();
 });
@@ -128,7 +128,6 @@ describe('workspace default command shortcuts', () => {
 
     expect(matchesShortcutSet(keyEvent({ key: '[' }), shortcuts)).toBe(true);
     expect(matchesShortcutSet(keyEvent({ key: 'l', ctrlKey: true, shiftKey: true }), shortcuts)).toBe(true);
-    expect(matchesShortcutSet(keyEvent({ key: 'l', metaKey: true, shiftKey: true }), shortcuts)).toBe(true);
   });
 
   it('registers bracket sidebar shortcuts', () => {
@@ -150,9 +149,11 @@ describe('workspace default command shortcuts', () => {
 
   it('keeps immersive reading on F11 only when browser-reserved shortcuts are available to the app', () => {
     const desktopShortcuts = getPlatformDefaultCommandShortcuts({ includeBrowserReservedShortcuts: true });
+    const macDesktopShortcuts = getPlatformDefaultCommandShortcuts({ includeBrowserReservedShortcuts: true, platform: 'MacIntel' });
     const webShortcuts = getPlatformDefaultCommandShortcuts({ includeBrowserReservedShortcuts: false });
 
     expect(matchesShortcutSet(keyEvent({ key: 'F11' }), desktopShortcuts[APP_COMMAND_IDS.toggleImmersiveMode])).toBe(true);
+    expect(matchesShortcutSet(keyEvent({ key: 'F11' }), macDesktopShortcuts[APP_COMMAND_IDS.toggleImmersiveMode])).toBe(true);
     expect(webShortcuts[APP_COMMAND_IDS.toggleImmersiveMode]).toBeUndefined();
   });
 
@@ -214,7 +215,6 @@ it('registers app undo and redo without editor-only modifiers', () => {
   expect(matchesShortcutSet(keyEvent({ key: 'z', metaKey: true }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.undo])).toBe(true);
   expect(matchesShortcutSet(keyEvent({ key: 'z', ctrlKey: true, shiftKey: true }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.redo])).toBe(true);
   expect(matchesShortcutSet(keyEvent({ key: 'y', ctrlKey: true }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.redo])).toBe(true);
-  expect(DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.redo]?.tertiary).toBeUndefined();
 });
 
 it('registers core selection annotation shortcuts on Alt Z, Alt X, and Alt A', () => {

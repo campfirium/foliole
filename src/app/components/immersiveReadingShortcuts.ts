@@ -1,4 +1,6 @@
-import { canUseBrowserReservedAppShortcuts } from '../../shared/platform/browserReservedShortcuts';
+import { formatShortcutSetDisplayEntries } from '../../shared/commands/shortcutDisplay';
+import { formatAriaKeyShortcuts } from '../../shared/commands/shortcuts';
+import type { CommandShortcutSet } from '../../shared/commands/types';
 
 export interface ImmersiveReadingShortcut {
   ariaKeyShortcuts: string;
@@ -14,12 +16,6 @@ export interface ImmersiveReadingShortcut {
     | 'desktop.immersiveShortcuts.exit';
 }
 
-const IMMERSIVE_READING_TOGGLE_SHORTCUT: ImmersiveReadingShortcut = {
-  ariaKeyShortcuts: 'F11',
-  key: 'F11',
-  summaryKey: 'desktop.immersiveShortcuts.toggle'
-};
-
 const IMMERSIVE_READING_MODE_SHORTCUTS: ImmersiveReadingShortcut[] = [
   { ariaKeyShortcuts: 'Space', key: 'Space', summaryKey: 'desktop.immersiveShortcuts.nextParagraph' },
   { ariaKeyShortcuts: 'Shift+Space', key: 'Shift+Space', summaryKey: 'desktop.immersiveShortcuts.previousParagraph' },
@@ -32,8 +28,14 @@ const IMMERSIVE_READING_MODE_SHORTCUTS: ImmersiveReadingShortcut[] = [
   { ariaKeyShortcuts: 'Escape', key: 'Esc', summaryKey: 'desktop.immersiveShortcuts.exit' }
 ];
 
-export function getImmersiveReadingShortcuts() {
-  return canUseBrowserReservedAppShortcuts()
-    ? [IMMERSIVE_READING_TOGGLE_SHORTCUT, ...IMMERSIVE_READING_MODE_SHORTCUTS]
-    : IMMERSIVE_READING_MODE_SHORTCUTS;
+export function getImmersiveReadingShortcuts(toggleShortcuts: CommandShortcutSet | undefined) {
+  const toggleEntries = formatShortcutSetDisplayEntries(toggleShortcuts).flatMap((entry) => {
+    const shortcut = toggleShortcuts?.[entry.slot];
+    return shortcut ? [{
+      ariaKeyShortcuts: formatAriaKeyShortcuts({ primary: shortcut }) ?? '',
+      key: entry.label,
+      summaryKey: 'desktop.immersiveShortcuts.toggle' as const
+    }] : [];
+  });
+  return [...toggleEntries, ...IMMERSIVE_READING_MODE_SHORTCUTS];
 }

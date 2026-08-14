@@ -1,6 +1,6 @@
 import type { KeyboardEvent } from 'react';
 
-import { matchesShortcut, matchesShortcutSet } from '../../shared/commands/shortcuts';
+import { matchesShortcutSet } from '../../shared/commands/shortcuts';
 import type { CommandShortcutSet } from '../../shared/commands/types';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
@@ -69,5 +69,5 @@ function shouldConfirmSourceTopicDelete(event: KeyboardEvent, shortcuts: Command
   ) {
     return false;
   }
-  return matchesShortcut(nativeEvent, { key: 't' }) || matchesShortcutSet(nativeEvent, shortcuts);
+  return matchesShortcutSet(nativeEvent, shortcuts);
 }

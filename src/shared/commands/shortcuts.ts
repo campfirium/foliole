@@ -1,6 +1,6 @@
 import type { CommandShortcut, CommandShortcutSet } from './types';
 
-const SHORTCUT_SET_SLOTS = ['primary', 'secondary', 'tertiary'] as const;
+const SHORTCUT_SET_SLOTS = ['primary', 'secondary'] as const;
 
 export function getShortcutSetShortcuts(shortcuts: CommandShortcutSet | undefined) {
   if (!shortcuts) {

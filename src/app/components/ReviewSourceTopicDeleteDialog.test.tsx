@@ -34,15 +34,15 @@ function renderDialog(input: {
   return { dialog: screen.getByRole('dialog', { name: 'Delete source topic?' }), onCancel, onConfirm };
 }
 
-it('confirms with T before the global review shortcut layer can consume it', () => {
+it('does not retain plain T when the configured command uses Alt+T', () => {
   const globalDeleteCurrentItem = vi.fn();
   window.addEventListener('keydown', globalDeleteCurrentItem);
   const { dialog, onConfirm } = renderDialog();
 
   fireEvent.keyDown(dialog, { key: 't' });
 
-  expect(onConfirm).toHaveBeenCalledTimes(1);
-  expect(globalDeleteCurrentItem).not.toHaveBeenCalled();
+  expect(onConfirm).not.toHaveBeenCalled();
+  expect(globalDeleteCurrentItem).toHaveBeenCalledTimes(1);
   window.removeEventListener('keydown', globalDeleteCurrentItem);
 });
 

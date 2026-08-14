@@ -1,4 +1,4 @@
-import { useState, type Dispatch, type KeyboardEvent, type SetStateAction } from 'react';
+import { useState, type Dispatch, type SetStateAction } from 'react';
 
 import type { NativeWordPressPostStatus } from '../../../lib/platform/nativeWordPressPublishContract';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
@@ -123,11 +123,6 @@ function WordPressPublishDialogBody(props: WordPressDialogProps & { canPublish: 
 function WordPressPublishDialog(props: WordPressDialogProps) {
   const t = useTranslation();
   const canPublish = props.action.state === 'idle' && !props.details.parseError && !props.catalog.loading && !props.catalog.error;
-  const handleKeyDownCapture = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== 'Enter' || (!event.ctrlKey && !event.metaKey)) return;
-    event.preventDefault();
-    if (canPublish) props.action.publish();
-  };
   const handleEscapeKeyDown = (event: Event) => {
     event.preventDefault();
     if (props.action.state !== 'idle') return;
@@ -138,7 +133,7 @@ function WordPressPublishDialog(props: WordPressDialogProps) {
     <AppDialog open onOpenChange={(open) => !open && props.action.state === 'idle' && props.close()}>
       <AppDialogPortal>
         <AppDialogOverlay />
-        <AppDialogContent aria-describedby={undefined} className="w-[min(960px,calc(100vw-32px))] p-6" onEscapeKeyDown={handleEscapeKeyDown} onKeyDownCapture={handleKeyDownCapture}>
+        <AppDialogContent aria-describedby={undefined} className="w-[min(960px,calc(100vw-32px))] p-6" onEscapeKeyDown={handleEscapeKeyDown}>
           <AppDialogTitle>{t('desktop.wordpressPublish.dialogTitle')}</AppDialogTitle>
           <WordPressPublishDialogBody {...props} canPublish={canPublish} />
         </AppDialogContent>

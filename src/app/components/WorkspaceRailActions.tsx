@@ -1,10 +1,10 @@
 import { Check, Settings } from 'lucide-react';
 
+import { useCommandShortcutMap } from '../../features/settings/context/hotkeySettingsContext';
 import {
   getWorkspaceRailItemLabel,
   type WorkspaceRailItemConfig
 } from '../../features/settings/model/workspaceRailSettings';
-import { getPlatformDefaultCommandShortcuts } from '../../shared/commands/defaultShortcuts';
 import type { AppCommandId } from '../../shared/commands/ids';
 import { formatAriaKeyShortcuts } from '../../shared/commands/shortcuts';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
@@ -22,8 +22,6 @@ import {
 
 const RAIL_BUTTON_CLASS_NAME =
   `size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground ${WORKSPACE_RAIL_BUTTON_FOCUS_CLASS_NAME}`;
-const PLATFORM_DEFAULT_APP_COMMAND_SHORTCUTS = getPlatformDefaultCommandShortcuts();
-
 export function RailItemIcon({
   iconId,
   size = 16,
@@ -44,6 +42,7 @@ function RailCommandButton({
   onRun: (commandId: string) => void;
 }) {
   const t = useTranslation();
+  const shortcutMap = useCommandShortcutMap();
   return (
     <div className="flex h-[var(--workspace-top-toolbar-height)] items-center justify-center">
       <WorkspaceRailTooltipButton
@@ -51,7 +50,7 @@ function RailCommandButton({
         icon={<RailItemIcon {...(item.iconId ? { iconId: item.iconId } : {})} />}
         label={getWorkspaceRailItemLabel(item, t)}
         onClick={() => onRun(item.commandId)}
-        aria-keyshortcuts={formatAriaKeyShortcuts(PLATFORM_DEFAULT_APP_COMMAND_SHORTCUTS[item.commandId as AppCommandId])}
+        aria-keyshortcuts={formatAriaKeyShortcuts(shortcutMap[item.commandId as AppCommandId])}
       />
     </div>
   );

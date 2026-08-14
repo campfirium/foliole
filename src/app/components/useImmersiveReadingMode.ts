@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 
+import { useCommandShortcutMap } from '../../features/settings/context/hotkeySettingsContext';
+import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { onWindowKeydown } from '../../shared/platform/keyboard';
 
 import { handleImmersiveKeydown } from './immersiveReadingKeydown';
@@ -66,6 +68,7 @@ function useImmersiveKeyboardHandler(args: {
   setIsShortcutsOverlayOpen: (value: boolean | ((current: boolean) => boolean)) => void;
   setReadingSelection: (selection: { from: number; to: number }, source?: string) => void;
   suppressNextSelectionRestore: () => void;
+  toggleShortcuts: ReturnType<typeof useCommandShortcutMap>[string];
 }) {
   useEffect(
     () =>
@@ -83,7 +86,8 @@ function useImmersiveKeyboardHandler(args: {
           setIsImmersiveEditing: args.setIsImmersiveEditing,
           setIsShortcutsOverlayOpen: args.setIsShortcutsOverlayOpen,
           setReadingSelection: args.setReadingSelection,
-          suppressNextSelectionRestore: args.suppressNextSelectionRestore
+          suppressNextSelectionRestore: args.suppressNextSelectionRestore,
+          toggleShortcuts: args.toggleShortcuts
         })
       ),
     [
@@ -98,7 +102,8 @@ function useImmersiveKeyboardHandler(args: {
       args.setIsImmersiveEditing,
       args.setIsShortcutsOverlayOpen,
       args.setReadingSelection,
-      args.suppressNextSelectionRestore
+      args.suppressNextSelectionRestore,
+      args.toggleShortcuts
     ]
   );
 }
@@ -157,7 +162,20 @@ function useImmersiveEditingFocusEffect(
   }, [editorAdapterRef, isImmersiveEditing, isImmersiveMode]);
 }
 
+function createImmersiveReadingModeResult(args: {
+  isImmersiveEditing: boolean;
+  setIsImmersiveEditing: (value: boolean) => void;
+  isShortcutsOverlayOpen: boolean;
+  shouldSuppressSelectionRestore: () => boolean;
+}) {
+  return {
+    enterImmersiveEdit: () => args.setIsImmersiveEditing(true),
+    ...args
+  };
+}
+
 export function useImmersiveReadingMode(props: ImmersiveReadingModeSource) {
+  const shortcutMap = useCommandShortcutMap();
   const [isImmersiveEditing, setIsImmersiveEditing] = useState(false);
   const [isShortcutsOverlayOpen, setIsShortcutsOverlayOpen] = useState(false);
   const exitImmersiveModeRef = useRef(props.onExitImmersiveMode);
@@ -172,49 +190,34 @@ export function useImmersiveReadingMode(props: ImmersiveReadingModeSource) {
         : [],
     [props.isImmersiveMode, props.nodeOrder, props.nodesById, props.trashedNodeIds]
   );
-  const {
-    canToggleImmersiveMode,
-    captureReadingSelectionFromViewport,
-    clearPendingSelection,
-    getPendingSelection,
-    getReadingSelection,
-    queueReadingSelectionRestore,
-    setReadingSelection
-  } = useImmersiveModeDependencies(props);
+  const modeDependencies = useImmersiveModeDependencies(props);
   useImmersiveLifecycleReset(props, setIsImmersiveEditing, setIsShortcutsOverlayOpen, shouldSkipNextScrollSyncRef, exitImmersiveModeRef);
   useImmersiveReadingPositionSync({
-    clearPendingSelection,
-    getPendingSelection,
-    getReadingSelection,
+    ...modeDependencies,
     isImmersiveEditing,
     props,
-    setReadingSelection,
     shouldSkipNextScrollSyncRef,
     wasImmersiveModeRef
   });
   useImmersiveEditingFocusEffect(props.editorAdapterRef, isImmersiveEditing, props.isImmersiveMode);
   useImmersiveKeyboardHandler({
-    canToggleImmersiveMode,
-    captureReadingSelectionFromViewport,
-    getReadingSelection,
+    ...modeDependencies,
     isImmersiveEditing,
     markNextProgrammaticScroll: () => {
       shouldSkipNextScrollSyncRef.current = true;
     },
     props,
-    queueReadingSelectionRestore,
     readableNodeIds,
     setIsImmersiveEditing,
     setIsShortcutsOverlayOpen,
-    setReadingSelection,
-    suppressNextSelectionRestore: selectionRestoreSuppression.suppressNextSelectionRestore
+    suppressNextSelectionRestore: selectionRestoreSuppression.suppressNextSelectionRestore,
+    toggleShortcuts: shortcutMap[APP_COMMAND_IDS.toggleImmersiveMode]
   });
 
-  return {
-    enterImmersiveEdit: () => setIsImmersiveEditing(true),
+  return createImmersiveReadingModeResult({
     isImmersiveEditing,
     isShortcutsOverlayOpen,
     setIsImmersiveEditing,
     shouldSuppressSelectionRestore: selectionRestoreSuppression.shouldSuppressSelectionRestore
-  };
+  });
 }

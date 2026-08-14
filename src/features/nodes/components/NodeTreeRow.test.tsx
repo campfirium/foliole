@@ -201,7 +201,8 @@ it('starts inline rename on double click', () => {
   expect(input.className).not.toContain('ring-ring');
 });
 
-it('starts inline rename on F2', () => {
+it('leaves F2 to the configurable app command route', () => {
+  const onKeyDown = vi.fn();
   render(
     <NodeTreeRow
       depth={0}
@@ -211,6 +212,7 @@ it('starts inline rename on F2', () => {
       isSelected={false}
       label="Draft topic"
       nodeId="node-1"
+      onKeyDown={onKeyDown}
       onRename={vi.fn()}
       onSelect={vi.fn()}
       onToggleCollapse={vi.fn()}
@@ -220,5 +222,6 @@ it('starts inline rename on F2', () => {
 
   fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Draft topic' }), { key: 'F2' });
 
-  expect(screen.getByRole('textbox', { name: 'Rename Draft topic' })).toHaveValue('Draft topic');
+  expect(onKeyDown).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole('textbox', { name: 'Rename Draft topic' })).not.toBeInTheDocument();
 });

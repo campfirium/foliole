@@ -74,6 +74,8 @@ it('keeps empty fields in a confirmed publish binding request', async () => {
   expect(await screen.findByDisplayValue('category')).toBeVisible();
   expect(screen.getByDisplayValue('tags')).toBeVisible();
   fireEvent.click(await screen.findByRole('button', { name: 'Add field' }));
+  fireEvent.keyDown(screen.getByRole('dialog'), { metaKey: true, key: 'Enter' });
+  expect(repository.publishTopicToFoliole).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: 'Publish' }));
   await waitFor(() => expect(repository.publishTopicToFoliole).toHaveBeenCalledWith(expect.objectContaining({
     fields: [

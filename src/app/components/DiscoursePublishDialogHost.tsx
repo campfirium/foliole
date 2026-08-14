@@ -1,4 +1,4 @@
-import { useEffect, useState, type KeyboardEvent } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { publishTopicToDiscourse, saveDiscoursePublishDraftToRuntime } from '../../shared/platform/discoursePublishRepository';
@@ -62,13 +62,6 @@ function DiscoursePublishDialog(props: {
   const t = useTranslation();
   const canPublish = props.state === 'idle' && !props.details.parseError && props.form.categoryId.trim().length > 0;
   const panelsOpen = props.showAllCategories || props.showAllTags;
-  const handleKeyDownCapture = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== 'Enter' || (!event.ctrlKey && !event.metaKey)) return;
-    event.preventDefault();
-    event.stopPropagation();
-    if (!canPublish) return;
-    props.onPublish();
-  };
   useDiscoursePublishDialogEscape({
     onClose: props.onClose,
     onClosePanels: props.onClosePanels,
@@ -88,7 +81,7 @@ function DiscoursePublishDialog(props: {
     <AppDialog open onOpenChange={(open) => !open && props.state === 'idle' && props.onClose()}>
       <AppDialogPortal>
         <AppDialogOverlay />
-        <AppDialogContent aria-describedby={undefined} className="w-[min(960px,calc(100vw-32px))]" layout="task" onEscapeKeyDown={handleEscapeKeyDown} onKeyDownCapture={handleKeyDownCapture}>
+        <AppDialogContent aria-describedby={undefined} className="w-[min(960px,calc(100vw-32px))]" layout="task" onEscapeKeyDown={handleEscapeKeyDown}>
           <AppDialogTitle>{t('desktop.discoursePublish.title')}</AppDialogTitle>
           <AppDialogBody>
             <DiscoursePublishFields catalog={props.catalog} form={props.form} setForm={props.setForm} showAllCategories={props.showAllCategories} showAllTags={props.showAllTags} toggleShowAllCategories={props.toggleShowAllCategories} toggleShowAllTags={props.toggleShowAllTags} />

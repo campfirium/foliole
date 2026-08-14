@@ -1,5 +1,6 @@
+import { matchesShortcutSet } from '../../shared/commands/shortcuts';
+import type { CommandShortcutSet } from '../../shared/commands/types';
 import { pushDebugTrace } from '../../shared/diagnostics/debugTrace';
-import { canUseBrowserReservedAppShortcuts } from '../../shared/platform/browserReservedShortcuts';
 
 import type { ImmersiveKeydownSource } from './immersiveReadingKeydownTypes';
 
@@ -11,16 +12,10 @@ export function handleImmersiveToggleKey(args: {
   isImmersiveEditing: boolean;
   props: ImmersiveKeydownSource;
   queueReadingSelectionRestore: () => void;
+  shortcuts: CommandShortcutSet | undefined;
   suppressNextSelectionRestore: () => void;
 }) {
-  if (
-    !canUseBrowserReservedAppShortcuts() ||
-    args.event.key !== 'F11' ||
-    args.event.altKey ||
-    args.event.ctrlKey ||
-    args.event.metaKey ||
-    args.event.shiftKey
-  ) {
+  if (!matchesShortcutSet(args.event, args.shortcuts)) {
     return false;
   }
   if (!args.canToggleImmersiveMode && !args.props.isImmersiveMode) {

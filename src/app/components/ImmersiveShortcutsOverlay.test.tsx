@@ -1,24 +1,21 @@
 import { screen } from '@testing-library/react';
-import { afterEach, expect, it } from 'vitest';
+import { expect, it } from 'vitest';
 
+import { CommandShortcutMapContext } from '../../features/settings/context/hotkeySettingsContext';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { ImmersiveShortcutsOverlay } from './ImmersiveShortcutsOverlay';
 
-function setElectronHost(enabled: boolean) {
-  Object.defineProperty(window, 'electronAPI', {
-    configurable: true,
-    value: enabled ? {} : undefined
-  });
+function renderOverlay(shortcutMap: Record<string, { primary: { key: string } }> = {}) {
+  return renderWithLocalization(
+    <CommandShortcutMapContext.Provider value={shortcutMap}>
+      <ImmersiveShortcutsOverlay visible />
+    </CommandShortcutMapContext.Provider>
+  );
 }
 
-afterEach(() => {
-  setElectronHost(false);
-});
-
 it('renders the registered immersive reading shortcuts', () => {
-  setElectronHost(true);
-  renderWithLocalization(<ImmersiveShortcutsOverlay visible />);
+  renderOverlay({ 'editor.toggleImmersiveMode': { primary: { key: 'F11' } } });
 
   expect(screen.getByLabelText('Immersive reading shortcuts')).toHaveTextContent('Toggle immersive reading');
   expect(screen.getByLabelText('Immersive reading shortcuts')).toHaveAttribute('aria-live', 'polite');
@@ -31,9 +28,16 @@ it('renders the registered immersive reading shortcuts', () => {
 });
 
 it('does not advertise F11 for immersive reading in the browser host', () => {
-  renderWithLocalization(<ImmersiveShortcutsOverlay visible />);
+  renderOverlay();
 
   expect(screen.queryByText('F11')).not.toBeInTheDocument();
   expect(screen.queryByText('Toggle immersive reading')).not.toBeInTheDocument();
   expect(screen.getByText('ArrowDown')).toBeInTheDocument();
+});
+
+it('shows the configured immersive reading shortcut instead of F11', () => {
+  renderOverlay({ 'editor.toggleImmersiveMode': { primary: { key: 'F10' } } });
+
+  expect(screen.getByText('F10')).toBeInTheDocument();
+  expect(screen.queryByText('F11')).not.toBeInTheDocument();
 });

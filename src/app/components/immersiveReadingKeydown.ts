@@ -1,3 +1,5 @@
+import type { CommandShortcutSet } from '../../shared/commands/types';
+
 import { isImmersiveEditableElement, isImmersiveEscapeKey } from './immersiveReadingKeyboard';
 import type { ImmersiveKeydownSource } from './immersiveReadingKeydownTypes';
 import { blurImmersiveActiveElement, clearParagraphMarker } from './immersiveReadingMarker';
@@ -156,11 +158,12 @@ export function handleImmersiveKeydown(args: {
   setIsImmersiveEditing: (value: boolean) => void;
   setIsShortcutsOverlayOpen: (value: boolean | ((current: boolean) => boolean)) => void;
   suppressNextSelectionRestore: () => void;
+  toggleShortcuts: CommandShortcutSet | undefined;
 }) {
   if (args.event.defaultPrevented || args.event.repeat || args.event.isComposing) {
     return;
   }
-  if (handleImmersiveToggleKey(args)) {
+  if (handleImmersiveToggleKey({ ...args, shortcuts: args.toggleShortcuts })) {
     return;
   }
   if (!args.props.isImmersiveMode || args.event.altKey || args.event.ctrlKey || args.event.metaKey) {
