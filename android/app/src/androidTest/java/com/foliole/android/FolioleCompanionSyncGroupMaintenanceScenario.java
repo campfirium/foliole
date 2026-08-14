@@ -2,6 +2,8 @@ package com.foliole.android;
 
 import android.app.Instrumentation;
 import android.content.Context;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.webkit.WebView;
 
 import org.json.JSONObject;
@@ -50,7 +52,23 @@ final class FolioleCompanionSyncGroupMaintenanceScenario {
         if (!input.optBoolean("ok")) throw new IllegalStateException(input.toString());
         click(instrumentation, webView, "companion-capture-save");
         waitUntilMissing(instrumentation, webView, "companion-capture-save", 30_000);
-        return new JSONObject().put("factPersisted", true).put("factText", factText);
+        String factId = findFactId(instrumentation.getTargetContext(), factText);
+        return new JSONObject().put("factId", factId)
+            .put("factPersisted", true).put("factText", factText);
+    }
+
+    private static String findFactId(Context context, String factText) {
+        String path = context.getDatabasePath("foliole-companionSQLite.db").getPath();
+        try (SQLiteDatabase database = SQLiteDatabase.openDatabase(
+            path, null, SQLiteDatabase.OPEN_READONLY
+        ); Cursor cursor = database.rawQuery(
+            "SELECT id FROM nodes WHERE deleted_at IS NULL AND (title = ? OR content = ?) " +
+                "ORDER BY updated_at DESC LIMIT 1",
+            new String[] { factText, factText }
+        )) {
+            if (cursor.moveToFirst()) return cursor.getString(0);
+        }
+        throw new IllegalStateException("Captured Topic identity is missing.");
     }
 
     private static void openSettings(Instrumentation instrumentation, WebView webView) throws Exception {

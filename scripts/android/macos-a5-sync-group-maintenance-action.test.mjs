@@ -75,6 +75,8 @@ it('creates journey facts only through the visible Capture product entry', async
   expect(source).toContain('"companion-capture-text", "input", factText');
   expect(source).toContain('"companion-capture-save"');
   expect(source).toContain('put("factPersisted", true)');
+  expect(source).toContain('put("factId", factId)');
+  expect(source).toContain('SQLiteDatabase.OPEN_READONLY');
   const capture = fs.readFileSync(
     'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionCaptureAnnotationScenario.java',
     'utf8'

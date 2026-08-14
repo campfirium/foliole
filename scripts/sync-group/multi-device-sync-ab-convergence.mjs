@@ -112,11 +112,12 @@ async function createAndroidFact({ env, evidenceRoot, execute, paths, runId }) {
     buildIdentity: runId, env, evidenceRoot: path.join(evidenceRoot, 'b-fact'), execute,
     paths, serial: A5_SERIAL });
   const manifest = JSON.parse(fs.readFileSync(result.manifestPath, 'utf8'));
-  const factText = manifest.receipt?.factText;
+  const receipt = manifest.receipt;
+  const factText = receipt?.factText;
   if (typeof factText !== 'string' || !factText) {
     throw productFailure('android-b', 'deterministic_b_fact_missing', 'Android B fact receipt is incomplete.');
   }
-  const factId = androidSnapshot(paths, null, factText).database?.inspection?.androidFactId;
+  const factId = receipt?.factId;
   if (typeof factId !== 'string' || !factId) {
     throw productFailure('android-b', 'deterministic_b_fact_missing', 'Android B fact identity is missing.');
   }
