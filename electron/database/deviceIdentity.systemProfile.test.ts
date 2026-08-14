@@ -1,8 +1,11 @@
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+vi.mock('../sync/companionLanPayloads.js', () => ({ resolveDesktopDeviceName: () => 'Maci' }));
+
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { refreshDesktopDeviceProfile } from './deviceIdentity.js';
+import { refreshHostOwnedDeviceProfile } from './deviceProfileMigration.js';
 
 let sqlite: Database.Database;
 
@@ -70,4 +73,20 @@ it('keeps a reset marker until local credentials are actually cleared', () => {
   expect(clearCredentials).toHaveBeenCalledOnce();
   expect(sqlite.prepare("SELECT value FROM settings WHERE key = 'device_identity_reset_pending'").get())
     .toBeUndefined();
+});
+
+it('keeps an approved active group identity across a same-name host restart', () => {
+  sqlite.exec(`
+    DELETE FROM sync_group_local_state;
+    DELETE FROM sync_group_members;
+    UPDATE settings SET value = '"Maci 2"' WHERE key = 'device_id';
+    INSERT INTO sync_group_local_state VALUES (1, 'group-1', 'Maci 2', 'active', '2026-08-01');
+    INSERT INTO sync_group_members VALUES ('group-1', 'Maci 2', 'active', 'Maci 2');
+  `);
+  const connection = { driver: createBetterSqlite3Driver(sqlite), sqlite } as never;
+
+  refreshHostOwnedDeviceProfile(connection, 'Maci 2');
+
+  expect(sqlite.prepare('SELECT local_device_id FROM sync_group_local_state').pluck().get()).toBe('Maci 2');
+  expect(sqlite.prepare("SELECT value FROM settings WHERE key = 'device_id'").pluck().get()).toBe('"Maci 2"');
 });

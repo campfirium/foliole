@@ -68,11 +68,14 @@ export async function loadCompanionDiscovery(endpointUrl: string) {
 
 export async function requestCompanionPairing(args: RequestCompanionPairingArgs) {
   const normalizedEndpointUrl = normalizeEndpointUrl(args.endpointUrl);
+  const usesSyncGroup = Boolean(args.groupId && args.timelineId);
+  const existingGroup = usesSyncGroup ? await loadCompanionSyncGroup() : null;
+  if (existingGroup && (existingGroup.group_id !== args.groupId || existingGroup.timeline_id !== args.timelineId)) {
+    throw new Error('sync_group_identity_mismatch');
+  }
   const pairingKeyId = createCompanionUuid();
   const pairingPublicKey = await createCompanionPairingPublicKey(pairingKeyId);
-  const usesSyncGroup = Boolean(args.groupId && args.timelineId);
   const libraryFacts = usesSyncGroup ? await loadCompanionSyncGroupLibraryFacts() : null;
-  const existingGroup = usesSyncGroup ? await loadCompanionSyncGroup() : null;
   const existingMember = existingGroup?.group_id === args.groupId && existingGroup?.timeline_id === args.timelineId
     ? existingGroup?.members.find((member) => member.device_id === existingGroup.local_device_id)
     : null;
@@ -190,7 +193,6 @@ async function saveNativePairing(
       } else {
         await joinCompanionSyncGroup({
           deviceId: payload.device_id,
-          emptyFacts: await loadCompanionSyncGroupLibraryFacts(),
           group: payload.sync_group
         });
       }

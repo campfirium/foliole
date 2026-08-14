@@ -5,9 +5,11 @@ const SPECIAL_ROOT_NODE_RECORDS = {
   'special-virtual-root': { title: 'Virtual' }
 } as const;
 
+export const SPECIAL_ROOT_NODE_IDS = Object.keys(SPECIAL_ROOT_NODE_RECORDS) as Array<keyof typeof SPECIAL_ROOT_NODE_RECORDS>;
+
 type SpecialRootNodeId = keyof typeof SPECIAL_ROOT_NODE_RECORDS;
 
-function isSpecialRootNode(nodeId: string): nodeId is SpecialRootNodeId {
+export function isSpecialRootNode(nodeId: string): nodeId is SpecialRootNodeId {
   return nodeId in SPECIAL_ROOT_NODE_RECORDS;
 }
 

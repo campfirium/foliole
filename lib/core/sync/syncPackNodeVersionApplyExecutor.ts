@@ -15,10 +15,14 @@ export async function applySyncPackNodeVersionsWithDbPort(
 ) {
   const alias = quoteIdentifier(options.incomingAlias ?? 'inc');
   const incoming = (await port.query(
-    `SELECT ${SYNC_PACK_NODE_VERSION_COLUMNS.join(', ')} FROM ${alias}.node_sync_versions`
+    `SELECT ${SYNC_PACK_NODE_VERSION_COLUMNS.join(', ')} FROM ${alias}.node_sync_versions
+     WHERE object_id NOT IN ('special-inbox', 'special-virtual-root')`
   )).map(normalizeVersionRow);
   const parents = (await port.query(
-    `SELECT ${VERSION_PARENT_COLUMNS.join(', ')} FROM ${alias}.node_sync_version_parents`
+    `SELECT parent.version_id, parent.parent_version_id, parent.ordinal
+     FROM ${alias}.node_sync_version_parents parent
+     JOIN ${alias}.node_sync_versions version ON version.version_id = parent.version_id
+     WHERE version.object_id NOT IN ('special-inbox', 'special-virtual-root')`
   )).map(normalizeVersionParentRow);
   const ordered = validateIncomingDag(incoming, parents);
   await assertIncomingCurrentPointers(port, alias, new Map(ordered.map((row) => [row.version_id, row])));
@@ -110,7 +114,8 @@ async function assertIncomingCurrentPointers(
   versions: Map<string, SyncPackNodeVersionRow>
 ) {
   const nodes = await port.query<{ current_version_id: unknown; id: unknown }>(
-    `SELECT id, current_version_id FROM ${alias}.nodes`
+    `SELECT id, current_version_id FROM ${alias}.nodes
+     WHERE id NOT IN ('special-inbox', 'special-virtual-root')`
   );
   for (const node of nodes) {
     const nodeId = requireString(node.id, 'node_id');

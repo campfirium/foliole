@@ -126,6 +126,9 @@ it('applies pack nodes only when the attached pack cursor is contiguous', async 
     `SELECT object_id FROM sync_object_state WHERE object_type = 'setting' AND object_id = 'setting-1'`
   ).get()).toEqual({ object_id: 'setting-1' });
   expect(connection.sqlite.prepare(
+    "SELECT snapshot_json FROM node_sync_versions WHERE version_id = 'desktop#1'"
+  ).get()).toEqual({ snapshot_json: '{"id":"node-1","title":"Packed Node"}' });
+  expect(connection.sqlite.prepare(
     `SELECT value_json FROM setting_records
      WHERE scope = 'device' AND platform = 'android' AND form_factor = 'phone' AND device_id = '*' AND key = 'theme'`
   ).get()).toEqual({ value_json: '{"mode":"dark"}' });

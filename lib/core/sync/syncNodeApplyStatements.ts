@@ -48,14 +48,7 @@ ON CONFLICT(id) DO UPDATE SET
 export const UPSERT_REMOTE_NODE_VERSION_SQL = `INSERT INTO node_sync_versions (
   version_id, object_id, parent_version_id, device_id, created_at, content_hash, body_text, snapshot_json
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(version_id) DO UPDATE SET
-  object_id = excluded.object_id,
-  parent_version_id = excluded.parent_version_id,
-  device_id = excluded.device_id,
-  created_at = excluded.created_at,
-  content_hash = excluded.content_hash,
-  body_text = excluded.body_text,
-  snapshot_json = excluded.snapshot_json`;
+ON CONFLICT(version_id) DO NOTHING`;
 
 export const DELETE_NODE_ORDER_SQL = 'DELETE FROM node_order WHERE node_id = ?';
 

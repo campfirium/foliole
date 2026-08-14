@@ -6,6 +6,7 @@ import type {
 } from '../../lib/platform/syncGroupContract.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { rekeyLocalSyncHistory } from './syncGroupLocalIdentityRekey.js';
 import { saveApprovedSyncGroupMember } from './syncGroupMemberRegistration.js';
 
 interface GroupRow {
@@ -104,6 +105,7 @@ export function joinDesktopSyncGroup(args: {
   deviceId: string;
   group: SyncGroupPayload;
   now?: string;
+  previousDeviceId?: string;
 }) {
   if (loadDesktopSyncGroup()) throw new Error('sync_group_identity_mismatch');
   const localMember = args.group.members.find((member) => member.device_id === args.deviceId);
@@ -111,6 +113,7 @@ export function joinDesktopSyncGroup(args: {
   const now = args.now ?? new Date().toISOString();
   const driver = openDatabaseConnection().driver;
   driver.transaction(() => {
+    if (args.previousDeviceId) rekeyLocalSyncHistory(driver, args.previousDeviceId, args.deviceId);
     driver.execute(
       'INSERT INTO sync_groups VALUES (?, ?, ?, ?, ?, ?)',
       [args.group.group_id, args.group.display_name, args.group.timeline_id,

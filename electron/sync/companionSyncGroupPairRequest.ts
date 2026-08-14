@@ -1,4 +1,4 @@
-import { isEmptySyncGroupLibrary, type SyncGroupLibraryFacts } from '../../lib/platform/syncGroupContract.js';
+import type { SyncGroupLibraryFacts } from '../../lib/platform/syncGroupContract.js';
 
 export function parseSyncGroupLibraryFacts(value: unknown): SyncGroupLibraryFacts | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
@@ -17,7 +17,6 @@ export function parseSyncGroupLibraryFacts(value: unknown): SyncGroupLibraryFact
 
 export function isEligibleSyncGroupJoin(args: {
   groupId: string;
-  isExistingActiveMember?: boolean;
   libraryFacts: SyncGroupLibraryFacts | null;
   requestedGroupId: string;
   requestedTimelineId: string;
@@ -26,5 +25,5 @@ export function isEligibleSyncGroupJoin(args: {
   return args.groupId === args.requestedGroupId
     && args.timelineId === args.requestedTimelineId
     && args.libraryFacts !== null
-    && (args.isExistingActiveMember === true || isEmptySyncGroupLibrary(args.libraryFacts));
+    && (args.libraryFacts.timeline_id === null || args.libraryFacts.timeline_id === args.timelineId);
 }

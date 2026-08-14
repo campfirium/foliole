@@ -1,4 +1,5 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
+import { SPECIAL_ROOT_NODE_IDS } from '../database/nodeMutationSpecialRoots.js';
 
 import type { DbPort } from './dbPort.js';
 import { applyConvergentSyncNodesWithDbPort } from './syncNodeConvergence.js';
@@ -18,6 +19,7 @@ export async function applySyncPackVersionedNodesWithDbPort(
      INNER JOIN ${alias}.sync_object_state state
        ON state.object_type = 'node' AND state.object_id = node.id
      WHERE node.current_version_id IS NOT NULL
+       AND node.id NOT IN ('special-inbox', 'special-virtual-root')
      ORDER BY state.state_seq ASC, node.id ASC`
   );
   const records: NativeSyncNodeRecord[] = [];
@@ -36,7 +38,7 @@ export async function applySyncPackVersionedNodesWithDbPort(
     });
   }
   if (records.length === 0) {
-    return { appliedNodeCount: 0, handledConflictCount: 0, processedNodeIds: [] as string[] };
+    return { appliedNodeCount: 0, handledConflictCount: 0, processedNodeIds: SPECIAL_ROOT_NODE_IDS };
   }
   const result = await applyConvergentSyncNodesWithDbPort(port, records);
   for (const record of records) {
@@ -46,7 +48,7 @@ export async function applySyncPackVersionedNodesWithDbPort(
       [deviceId, record.object_id, record.version_id]
     );
   }
-  return result;
+  return { ...result, processedNodeIds: [...new Set([...result.processedNodeIds, ...SPECIAL_ROOT_NODE_IDS])] };
 }
 
 async function buildCurrentSnapshot(

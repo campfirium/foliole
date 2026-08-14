@@ -1,13 +1,7 @@
-import { promises as fs } from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-
 import { getPeerCursor, setPeerCursor } from '../../lib/core/database/syncState.js';
-import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
 import type { CompanionWorkspacePairPayload } from '../../lib/platform/nativeCompanionSyncContract.js';
 import type { SyncGroupLibraryFacts } from '../../lib/platform/syncGroupContract.js';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
-import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { loadOrCreateDesktopDeviceId } from '../database/deviceIdentity.js';
 import { joinDesktopSyncGroup, loadDesktopSyncGroup } from '../database/syncGroupStore.js';
@@ -21,13 +15,13 @@ import { reportDesktopSyncGroupCursorCommitted } from './desktopSyncGroupCursorC
 import { createDesktopSyncGroupSignedHeaders, requestJson } from './desktopSyncGroupHttp.js';
 import { refreshDesktopSyncGroupPendingJoinFromDiscovery } from './desktopSyncGroupJoinEndpoint.js';
 import { loadDesktopSyncGroupJoinState, saveDesktopSyncGroupPendingJoin } from './desktopSyncGroupJoinState.js';
+import { downloadAndApplyDesktopSyncGroupPack } from './desktopSyncGroupPackApply.js';
 import { createDesktopSyncGroupPairingKey, decryptDesktopSyncGroupPairingSecret } from './desktopSyncGroupPairingCrypto.js';
 import { runDesktopSyncGroupPeerSingleFlight } from './desktopSyncGroupPeerSingleFlight.js';
 import {
   assertDesktopSyncGroupResourcesComplete,
   downloadDesktopSyncGroupResources
 } from './desktopSyncGroupResources.js';
-import { extractSyncPackDatabase } from './syncPackContainerReader.js';
 
 const JOIN_APPROVAL_POLL_MS = 1_500;
 let joinApprovalTimer: NodeJS.Timeout | null = null;
@@ -47,7 +41,7 @@ export async function requestDesktopSyncGroupJoin(endpointUrl: string) {
   const isActiveSameGroup = existingGroup?.local_member_state === 'active'
     && existingGroup.group_id === candidate.group_id
     && existingGroup.timeline_id === candidate.timeline_id;
-  if (!isActiveSameGroup && !isEmpty(facts)) throw new Error('sync_group_requires_empty_library');
+  if (existingGroup && !isActiveSameGroup) throw new Error('sync_group_identity_mismatch');
   const key = await createDesktopSyncGroupPairingKey();
   const deviceId = loadOrCreateDesktopDeviceId();
   const payload = await requestJson(`${endpointUrl}/companion/pair-requests`, {
@@ -79,6 +73,7 @@ export async function completeDesktopSyncGroupJoin() {
 async function completeDesktopSyncGroupJoinOnce() {
   const pending = loadDesktopSyncGroupJoinState().pending;
   if (!pending) throw new Error('sync_group_join_not_pending');
+  const previousDeviceId = loadOrCreateDesktopDeviceId();
   const payload = await requestJson(`${pending.candidate.endpoint_url}/companion/pair`, {
     body: JSON.stringify({ pair_request_id: pending.request.pair_request_id }),
     headers: { 'Content-Type': 'application/json' }, method: 'POST'
@@ -106,7 +101,9 @@ async function completeDesktopSyncGroupJoinOnce() {
     negotiatedProtocolVersion: 1, pairedAt: payload.paired_at,
     remoteProtocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
   });
-  if (!loadDesktopSyncGroup()) joinDesktopSyncGroup({ deviceId: localDeviceId, group: payload.sync_group });
+  if (!loadDesktopSyncGroup()) joinDesktopSyncGroup({
+    deviceId: localDeviceId, group: payload.sync_group, previousDeviceId
+  });
   saveDesktopSyncGroupPendingJoin(null);
   await continueDesktopSyncGroupSync(peer).catch((error) => {
     console.info('[sync-group] initial sync waiting for provider', {
@@ -149,33 +146,10 @@ async function runPeerSyncStage<T>(stage: 'resources' | 'sync_pack', execute: ()
 }
 
 async function downloadAndApply(peer: ReturnType<typeof savePairedSyncGroupPeer>, after: number) {
-  const pathWithQuery = `/companion/sync-pack?after_state_seq=${after}`;
-  const response = await fetch(`${peer.endpoint_url}${pathWithQuery}`, {
-    headers: createDesktopSyncGroupSignedHeaders({ groupId: peer.group_id, localDeviceId: peer.local_device_id,
-      method: 'GET', pathWithQuery, secret: peer.secret })
+  return downloadAndApplyDesktopSyncGroupPack({
+    after, peer,
+    createHeaders: createDesktopSyncGroupSignedHeaders
   });
-  if (!response.ok) throw new Error(`sync_pack_http_${response.status}`);
-  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-desktop-initial-sync-'));
-  const incomingPath = path.join(tempRoot, 'incoming.db');
-  try {
-    const manifest = await extractSyncPackDatabase({
-      body: Buffer.from(await response.arrayBuffer()),
-      expectedPeerId: peer.local_device_id,
-      expectedSourcePeerId: peer.peer_device_id,
-      outputPath: incomingPath
-    });
-    const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'desktop-sync-group-initial-sync' });
-    await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
-    try {
-      await applySyncPackNodeSurfaceWithDbPort(port, {
-        currentCursor: after,
-        deviceId: peer.local_device_id,
-        incomingAlias: 'inc',
-        sourcePeerId: peer.peer_device_id
-      });
-    } finally { await port.run('DETACH DATABASE inc'); }
-    return manifest.toStateSeq;
-  } finally { await fs.rm(tempRoot, { recursive: true, force: true }); }
 }
 
 function loadReceiveCursor(peerDeviceId: string) {
@@ -205,10 +179,6 @@ function loadDesktopLibraryFacts(): SyncGroupLibraryFacts {
   )?.value ?? 0);
   return { attachment_count: count('attachments'), content_blob_count: count('content_blobs'), node_count: nodeCount,
     review_log_count: count('review_log'), timeline_id: null };
-}
-
-function isEmpty(facts: SyncGroupLibraryFacts) {
-  return facts.attachment_count === 0 && facts.content_blob_count === 0 && facts.node_count === 0 && facts.review_log_count === 0 && facts.timeline_id === null;
 }
 
 function scheduleJoinCompletion() {

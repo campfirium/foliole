@@ -5,6 +5,7 @@ const capacitorMock = vi.hoisted(() => ({
   isNativePlatform: vi.fn(() => false),
   plugin: {}
 }));
+const syncGroupMock = vi.hoisted(() => ({ load: vi.fn() }));
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
@@ -20,6 +21,12 @@ vi.mock('./companionPairingEncryption', () => ({
   dropCompanionPairingPrivateKey: vi.fn()
 }));
 
+vi.mock('./companion/sync/syncGroupStore', async (importOriginal) => ({
+  ...await importOriginal<typeof import('./companion/sync/syncGroupStore')>(),
+  loadCompanionSyncGroup: syncGroupMock.load,
+  loadCompanionSyncGroupLibraryFacts: vi.fn()
+}));
+
 import { writeWebPairingState } from './companionPairingState';
 import { createSignedRequestHeaders, requestCompanionPairing } from './companionWorkspacePairing';
 import { loadCompanionDiscovery, loadCompanionPairingState, pairCompanionWithDesktop } from './companionWorkspaceSync';
@@ -32,7 +39,10 @@ const protocol = {
   version: 1
 };
 
-beforeEach(() => resetCompanionWorkspaceSyncTestState(capacitorMock));
+beforeEach(() => {
+  resetCompanionWorkspaceSyncTestState(capacitorMock);
+  syncGroupMock.load.mockResolvedValue(null);
+});
 
 describe('companionWorkspaceSync negotiated pairing', () => {
   it('stores negotiated Web pairing metadata after approval', async () => {
@@ -97,6 +107,18 @@ describe('companionWorkspaceSync negotiated pairing', () => {
 });
 
 describe('companionWorkspaceSync pairing rejection', () => {
+  it('rejects replacing a different local Sync Group before sending a pairing request', async () => {
+    syncGroupMock.load.mockResolvedValue({ group_id: 'group-old', timeline_id: 'timeline-old' });
+    const fetchSpy = vi.spyOn(global, 'fetch');
+
+    await expect(requestCompanionPairing({
+      deviceId: 'android-test-device', deviceKind: 'android', deviceName: 'Pixel 9',
+      endpointUrl: 'http://10.0.2.2:38641', groupId: 'group-new', timelineId: 'timeline-new'
+    })).rejects.toThrow('sync_group_identity_mismatch');
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
+
   it('treats a structured protocol 409 as rejection instead of a pending request', async () => {
     mockFetchJson({
       compatibility: {

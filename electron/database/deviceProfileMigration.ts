@@ -24,7 +24,7 @@ export function refreshHostOwnedDeviceProfile(
     refreshDesktopDeviceProfile({
       clearCredentials: clearPairedCompanionDevices,
       connection,
-      currentDeviceId: resolveDesktopDeviceName(),
+      currentDeviceId: loadActiveGroupDeviceId(connection) ?? resolveDesktopDeviceName(),
       previousDeviceId,
       protect: () => {
         pendingSnapshot.value = createManagedSafetySnapshotForMigration({
@@ -39,4 +39,15 @@ export function refreshHostOwnedDeviceProfile(
   if (pendingSnapshot.value) {
     settleManagedMigrationSnapshot(pendingSnapshot.value.snapshot, pendingSnapshot.value.protection);
   }
+}
+
+function loadActiveGroupDeviceId(connection: DatabaseConnection) {
+  return connection.driver.queryOne<{ local_device_id: string }>(
+    `SELECT local.local_device_id
+     FROM sync_group_local_state local
+     JOIN sync_group_members member
+       ON member.group_id = local.group_id AND member.device_id = local.local_device_id
+     WHERE local.singleton_id = 1 AND local.member_state = 'active' AND member.state = 'active'
+     LIMIT 1`
+  )?.local_device_id ?? null;
 }

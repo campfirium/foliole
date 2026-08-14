@@ -1,9 +1,5 @@
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
-import {
-  isEmptySyncGroupLibrary,
-  type SyncGroupLibraryFacts,
-  type SyncGroupPayload
-} from '../../../../../lib/platform/syncGroupContract';
+import type { SyncGroupLibraryFacts, SyncGroupPayload } from '../../../../../lib/platform/syncGroupContract';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
 function owner() {
@@ -36,13 +32,19 @@ export function loadCompanionSyncGroupLibraryFacts(): Promise<SyncGroupLibraryFa
 
 export function joinCompanionSyncGroup(args: {
   deviceId: string;
-  emptyFacts: SyncGroupLibraryFacts;
   group: SyncGroupPayload;
 }) {
-  if (!isEmptySyncGroupLibrary(args.emptyFacts)) throw new Error('sync_group_requires_empty_library');
   return owner().runWriter((db) => db.transaction(async (tx) => {
-    if (!isEmptySyncGroupLibrary(await loadFacts(tx))) throw new Error('sync_group_requires_empty_library');
     const group = args.group;
+    const local = (await tx.query<DbRow>(
+      `SELECT l.group_id, l.local_device_id, l.member_state, g.timeline_id
+       FROM sync_group_local_state l JOIN sync_groups g ON g.group_id = l.group_id
+       WHERE l.singleton_id = 1`
+    ))[0];
+    if (local && (local.group_id !== group.group_id || local.timeline_id !== group.timeline_id
+      || local.local_device_id !== args.deviceId || local.member_state !== 'active')) {
+      throw new Error('sync_group_identity_mismatch');
+    }
     const localMember = group.members.find((member) => member.device_id === args.deviceId);
     if (!localMember || localMember.state !== 'active') throw new Error('sync_group_member_not_authorized');
     const now = new Date().toISOString();
@@ -171,14 +173,6 @@ async function saveMember(db: DbPort, groupId: string, member: SyncGroupPayload[
     [groupId, member.device_id, member.device_kind, member.device_name, member.state,
       member.approved_by_device_id, member.authorization_id, member.joined_at, now]
   );
-}
-
-async function loadFacts(db: DbPort): Promise<SyncGroupLibraryFacts> {
-  return {
-    attachment_count: await count(db, 'attachments'), content_blob_count: await count(db, 'content_blobs'),
-    node_count: await count(db, 'nodes'), review_log_count: await count(db, 'review_log'),
-    timeline_id: await loadTimelineId(db)
-  };
 }
 
 async function count(db: DbPort, table: string) {

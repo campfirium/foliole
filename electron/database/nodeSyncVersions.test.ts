@@ -149,6 +149,15 @@ it('creates an initial sync version for an unversioned clean node', () => {
   ).toEqual({ object_id: 'node-1' });
 });
 
+it('keeps fixed system roots outside user node version history', () => {
+  upsertTestNode();
+
+  expect(flushDirtyNodeSyncVersions('2026-04-21T10:01:00.000Z')).not.toContain('special-inbox');
+  expect(openDatabaseConnection().driver.queryOne<{ count: number }>(
+    "SELECT COUNT(*) AS count FROM node_sync_versions WHERE object_id IN ('special-inbox', 'special-virtual-root')"
+  )).toEqual({ count: 0 });
+});
+
 it('uses node_order as the sync snapshot position source', () => {
   upsertTestNode();
   const connection = openDatabaseConnection();

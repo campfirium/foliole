@@ -5,7 +5,7 @@ import {
   evaluateSyncProtocolCompatibility,
   parseSyncProtocolDescriptor
 } from '../../lib/platform/syncProtocolContract.js';
-import { isActiveSyncGroupMember, loadDesktopSyncGroup } from '../database/syncGroupStore.js';
+import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import { readCompanionRequestBody } from './companionLanRequestBody.js';
 import { isSupportedPairingPublicKey } from './companionPairingEncryption.js';
@@ -48,7 +48,7 @@ function normalizeClientAddress(address: string | undefined) {
   return address.startsWith('::ffff:') ? address.slice('::ffff:'.length) : address;
 }
 
-function resolveSyncGroupJoin(payload: Record<string, unknown>, deviceId: string) {
+function resolveSyncGroupJoin(payload: Record<string, unknown>) {
   const requestedGroupId = typeof payload.group_id === 'string' ? payload.group_id.trim() : '';
   const requestedTimelineId = typeof payload.timeline_id === 'string' ? payload.timeline_id.trim() : '';
   const libraryFacts = parseSyncGroupLibraryFacts(payload.library_facts);
@@ -58,14 +58,13 @@ function resolveSyncGroupJoin(payload: Record<string, unknown>, deviceId: string
   if (!syncGroup) return { error: 'sync_group_identity_mismatch', syncGroup: null };
   const eligible = isEligibleSyncGroupJoin({
     groupId: syncGroup.group_id,
-    isExistingActiveMember: libraryFacts?.timeline_id === syncGroup.timeline_id
-      && isActiveSyncGroupMember(syncGroup.group_id, deviceId),
     libraryFacts,
     requestedGroupId,
     requestedTimelineId,
     timelineId: syncGroup.timeline_id
   });
-  return { error: eligible ? null : 'sync_group_requires_empty_library', syncGroup };
+  const error = libraryFacts === null ? 'sync_group_library_facts_invalid' : 'sync_group_identity_mismatch';
+  return { error: eligible ? null : error, syncGroup };
 }
 
 function writePairRequestResult(args: {
@@ -116,7 +115,7 @@ export async function handlePairRequestCreate(
     writeJson(request, response, 400, { error: 'invalid_pair_request' });
     return;
   }
-  const groupJoin = resolveSyncGroupJoin(payload, deviceId);
+  const groupJoin = resolveSyncGroupJoin(payload);
   if (groupJoin.error) {
     writeJson(request, response, 409, { error: groupJoin.error });
     return;

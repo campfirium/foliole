@@ -50,11 +50,11 @@ function response() {
   return { end: vi.fn(), writeHead: vi.fn() } as unknown as http.ServerResponse;
 }
 
-it('registers an approved empty Windows desktop and returns bidirectional provider credentials', async () => {
+it('registers an approved nonempty Windows desktop and returns bidirectional provider credentials', async () => {
   const writeJson = vi.fn();
   await handlePairRequestCreate(request({
     device_id: 'desktop-c', device_kind: 'win32', device_name: 'Desktop C', group_id: 'group-1',
-    library_facts: { attachment_count: 0, content_blob_count: 0, node_count: 0, review_log_count: 0, timeline_id: null },
+    library_facts: { attachment_count: 2, content_blob_count: 2, node_count: 5, review_log_count: 8, timeline_id: null },
     pairing_public_key: PAIRING_KEY, protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR, timeline_id: 'timeline-1'
   }), response(), vi.fn(), null, writeJson);
   const requestId = writeJson.mock.calls.at(-1)?.[3]?.pair_request_id as string;

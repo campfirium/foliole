@@ -26,6 +26,18 @@ it('listens on the same stable port persisted by bidirectional peer pairing', as
   expect(server).not.toContain('new ServerSocket(0)');
 });
 
+it('admits complete nonempty library facts while preserving Sync Group identity checks', async () => {
+  const server = await readJava('FolioleCompanionSyncGroupServer.java');
+  const facts = await readJava('FolioleCompanionSyncGroupLibraryFacts.java');
+  const createRequest = server.slice(server.indexOf('private void createRequest('),
+    server.indexOf('private void completePair('));
+  expect(createRequest).toContain('sync_group_identity_mismatch');
+  expect(createRequest).toContain('FolioleCompanionSyncGroupLibraryFacts.valid(facts)');
+  expect(createRequest).not.toContain('sync_group_requires_empty_library');
+  expect(facts).toContain('((Number) value).longValue() < 0');
+  expect(facts).not.toContain('== 0');
+});
+
 it('normalizes the Android NSD trailing-dot service type without changing the requested type', async () => {
   const discovery = await readJava('FolioleCompanionNsdDiscovery.java');
   expect(discovery).toContain('normalizeServiceType(requested).equalsIgnoreCase');

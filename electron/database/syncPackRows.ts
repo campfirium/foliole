@@ -92,6 +92,7 @@ function listChangedStateRows(driver: DatabaseDriver, fromStateSeq: number, toSt
     `SELECT object_type, object_id, state_seq, content_hash, updated_at, deleted_at
      FROM sync_object_state
      WHERE state_seq > ? AND state_seq <= ?
+     AND (object_type <> 'node' OR object_id NOT IN ('special-inbox', 'special-virtual-root'))
      AND (object_type <> 'node' OR deleted_at IS NOT NULL OR EXISTS (
        SELECT 1 FROM nodes WHERE nodes.id = sync_object_state.object_id
      ))

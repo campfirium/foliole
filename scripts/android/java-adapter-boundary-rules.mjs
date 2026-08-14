@@ -66,6 +66,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionSyncGroupDataBridge.java',
       'FolioleCompanionSyncGroupJoinGrantStore.java',
       'FolioleCompanionSyncGroupJoinRequest.java',
+      'FolioleCompanionSyncGroupLibraryFacts.java',
       'FolioleCompanionSyncGroupOutboundPairing.java',
       'FolioleCompanionSyncGroupOutboundPeerStore.java',
       'FolioleCompanionSyncGroupPairCrypto.java',

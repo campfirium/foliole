@@ -98,15 +98,15 @@ final class FolioleCompanionSyncGroupServer {
         JSONObject body = new JSONObject(request.bodyText());
         JSONObject group = config.getJSONObject("sync_group");
         JSONObject facts = body.optJSONObject("library_facts");
-        boolean existingMember = facts != null
-            && group.getString("timeline_id").equals(facts.optString("timeline_id"))
-            && FolioleCompanionSyncGroupDatabase.isAuthorizedMember(
-                dataBridge, group.getString("group_id"), body.optString("device_id")
-            );
         if (!group.getString("group_id").equals(body.optString("group_id")) ||
-            !group.getString("timeline_id").equals(body.optString("timeline_id")) ||
-            (!existingMember && !empty(body.optJSONObject("library_facts")))) {
-            FolioleCompanionHttpResponse.json(output, 409, new JSONObject().put("error", "sync_group_requires_empty_library")); return;
+            !group.getString("timeline_id").equals(body.optString("timeline_id"))) {
+            FolioleCompanionHttpResponse.json(output, 409, new JSONObject().put("error", "sync_group_identity_mismatch")); return;
+        }
+        if (!FolioleCompanionSyncGroupLibraryFacts.valid(facts)) {
+            FolioleCompanionHttpResponse.json(output, 409, new JSONObject().put("error", "sync_group_library_facts_invalid")); return;
+        }
+        if (!facts.isNull("timeline_id") && !group.getString("timeline_id").equals(facts.optString("timeline_id"))) {
+            FolioleCompanionHttpResponse.json(output, 409, new JSONObject().put("error", "sync_group_identity_mismatch")); return;
         }
         if (!compatibleWith(body.optJSONObject("protocol"))) {
             FolioleCompanionHttpResponse.json(output, 409, new JSONObject().put("error", "sync_protocol_incompatible")); return;
@@ -202,7 +202,6 @@ final class FolioleCompanionSyncGroupServer {
         else FolioleCompanionHttpResponse.bytes(output, 200, resource.mimeType, resource.body);
     }
 
-    private static boolean empty(JSONObject facts) { return facts != null && facts.optInt("node_count", -1) == 0 && facts.optInt("review_log_count", -1) == 0 && facts.optInt("attachment_count", -1) == 0 && facts.optInt("content_blob_count", -1) == 0 && facts.isNull("timeline_id"); }
     private JSONObject protocol() throws Exception { return config.getJSONObject("protocol"); }
     private String authenticate(FolioleCompanionHttpRequest request) throws Exception {
         return FolioleCompanionSyncGroupRequestAuth.authenticate(context, request,
