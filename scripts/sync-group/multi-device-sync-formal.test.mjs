@@ -1,5 +1,8 @@
+// @vitest-environment node
+
 import { expect, it, vi } from 'vitest';
 
+import { cleanupPassedState } from './multi-device-sync-cli.mjs';
 import { createRun } from './multi-device-sync-contract.mjs';
 import { runDiagnostic } from './multi-device-sync-diagnostic.mjs';
 import { runFormal } from './multi-device-sync-formal.mjs';
@@ -53,4 +56,15 @@ it('stops every later mutation at the first formal red light without retrying', 
   expect(result.status).toBe('failed');
   expect(stageActions['establish-a-b']).toHaveBeenCalledTimes(1);
   expect(stageActions['admit-empty-c']).not.toHaveBeenCalled();
+});
+
+it('clears passed host state while retaining only formal run evidence', async () => {
+  const clearHosts = vi.fn(async () => {});
+  const removeRun = vi.fn();
+  const options = { repoRoot: '/repo', runId: 'run-1' };
+  await cleanupPassedState({ clearHosts, mode: 'formal', options, removeRun });
+  expect(clearHosts).toHaveBeenCalledWith(options);
+  expect(removeRun).not.toHaveBeenCalled();
+  await cleanupPassedState({ clearHosts, mode: 'diagnostic', options, removeRun });
+  expect(removeRun).toHaveBeenCalledWith(options);
 });

@@ -47,6 +47,12 @@ function writeSummary(repoRoot, run) {
   return summaryPath;
 }
 
+export async function cleanupPassedState({ mode, options,
+  clearHosts = cleanupDiagnosticState, removeRun = cleanupOwnedRun }) {
+  await clearHosts(options);
+  if (mode === 'diagnostic') removeRun(options);
+}
+
 export async function runCli({ argv = process.argv.slice(2), repoRoot = process.cwd(),
   runId = identity() } = {}) {
   const request = parse(argv);
@@ -70,8 +76,7 @@ export async function runCli({ argv = process.argv.slice(2), repoRoot = process.
     stageActions: createDiagnosticStageActions(options), targetStage: request.target });
   const summaryPath = writeSummary(repoRoot, result);
   if (result.status === 'passed') {
-    await cleanupDiagnosticState(options);
-    cleanupOwnedRun(options);
+    await cleanupPassedState({ mode: request.mode, options });
   }
   return { result, summaryPath };
 }
