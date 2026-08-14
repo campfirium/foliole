@@ -24,11 +24,15 @@ import {
 } from './multi-device-sync-workspace.mjs';
 
 function parse(argv) {
-  if (argv.length !== 3 || !['diagnostic', 'formal'].includes(argv[0])
-      || argv[1] !== (argv[0] === 'formal' ? '--scenario' : '--stage')) {
-    throw new Error('usage: multi-device-sync-cli <diagnostic --stage|formal --scenario> <name>');
+  const sourceIndex = argv.indexOf('--source-ref');
+  const sourceRef = sourceIndex < 0 ? undefined : argv[sourceIndex + 1];
+  const args = sourceIndex < 0 ? [...argv] : argv.toSpliced(sourceIndex, 2);
+  if (args.length !== 3 || !['diagnostic', 'formal'].includes(args[0])
+      || args[1] !== (args[0] === 'formal' ? '--scenario' : '--stage')
+      || (sourceIndex >= 0 && !sourceRef)) {
+    throw new Error('usage: multi-device-sync-cli <diagnostic --stage|formal --scenario> <name> [--source-ref refs/heads/<branch>]');
   }
-  return { mode: argv[0], target: argv[2] };
+  return { mode: args[0], sourceRef, target: args[2] };
 }
 
 function identity() {
@@ -43,17 +47,26 @@ function writeSummary(repoRoot, run) {
   return summaryPath;
 }
 
+export async function cleanupPassedState({ mode, options,
+  clearHosts = cleanupDiagnosticState, removeRun = cleanupOwnedRun }) {
+  await clearHosts(options);
+  if (mode === 'diagnostic') removeRun(options);
+}
+
 export async function runCli({ argv = process.argv.slice(2), repoRoot = process.cwd(),
   runId = identity() } = {}) {
   const request = parse(argv);
-  const candidateProvider = async () => currentAcceptanceCandidate(repoRoot, request.mode);
+  const candidateProvider = async () => currentAcceptanceCandidate(
+    repoRoot, request.mode, request.sourceRef
+  );
   const candidate = await candidateProvider();
   cleanupPreviousOwnedRuns({ repoRoot, runId });
   createIsolatedMacosRoot({ repoRoot, runId });
   const selectedStages = request.mode === 'formal'
     ? resolveScenario(request.target).stages.map(resolveStage)
     : shortestStageChain(request.target);
-  const options = { repoRoot, requiredHosts: stageHostClosure(selectedStages), runId };
+  const options = { candidateProvider, repoRoot, requiredHosts: stageHostClosure(selectedStages), runId,
+    sourceRef: candidate.sourceRef };
   const run = createRun({ candidate, mode: request.mode, runId, scenario: request.target });
   const runner = request.mode === 'formal' ? runFormal : runDiagnostic;
   const result = await runner({ adapters: createHostReadinessAdapters(options),
@@ -63,8 +76,7 @@ export async function runCli({ argv = process.argv.slice(2), repoRoot = process.
     stageActions: createDiagnosticStageActions(options), targetStage: request.target });
   const summaryPath = writeSummary(repoRoot, result);
   if (result.status === 'passed') {
-    await cleanupDiagnosticState(options);
-    cleanupOwnedRun(options);
+    await cleanupPassedState({ mode: request.mode, options });
   }
   return { result, summaryPath };
 }

@@ -25,7 +25,8 @@ export const PAIR_SYNC_RECOVERY_TEST_RUNNER =
   `${PAIR_SYNC_RECOVERY_TEST_APP_ID}/androidx.test.runner.AndroidJUnitRunner`;
 
 export function pairSyncRecoveryModeArgs(rePairRequired) {
-  return rePairRequired ? ['-e', 'foliolePairSyncMode', 're-pair'] : [];
+  const target = ['-e', 'foliolePairSyncEndpoint', 'http://127.0.0.1:38641'];
+  return rePairRequired ? [...target, '-e', 'foliolePairSyncMode', 're-pair'] : target;
 }
 
 export function pairSyncRecoveryRequiresApproval(existingPairing, rePairRequired) {

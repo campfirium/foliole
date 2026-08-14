@@ -65,6 +65,35 @@ final class FolioleCompanionWebViewSemanticAdapter {
         return evaluateJson(instrumentation, webView, script);
     }
 
+    static JSONObject clickUniqueVisibleMatchingAttribute(
+        Instrumentation instrumentation,
+        WebView webView,
+        String testId,
+        String attribute,
+        String expected,
+        long deadline
+    ) throws Exception {
+        String quotedId = JSONObject.quote(testId);
+        String quotedAttribute = JSONObject.quote(attribute);
+        String quotedExpected = JSONObject.quote(expected);
+        String script = "(function(){var nodes=Array.prototype.slice.call(" +
+            "document.querySelectorAll('[data-testid=\"'+" + quotedId + "+'\"]'));" +
+            "var matches=nodes.filter(function(node){var rect=node.getBoundingClientRect();" +
+            "return !!(rect.width&&rect.height)&&node.getAttribute(" + quotedAttribute + ")===" +
+            quotedExpected + ";});if(matches.length!==1)return JSON.stringify({ok:false," +
+            "code:matches.length>1?'target_ambiguous':'target_missing'});matches[0].click();" +
+            "return JSON.stringify({ok:true});})()";
+        while (System.nanoTime() < deadline) {
+            JSONObject receipt = evaluateJson(instrumentation, webView, script);
+            if (receipt.optBoolean("ok")) return receipt;
+            if ("target_ambiguous".equals(receipt.optString("code"))) {
+                throw new IllegalStateException("Pairing target is not unique: " + testId);
+            }
+            Thread.sleep(150);
+        }
+        throw new IllegalStateException("Timed out waiting for semantic target: " + testId);
+    }
+
     static JSONObject waitForAttribute(
         Instrumentation instrumentation,
         WebView webView,

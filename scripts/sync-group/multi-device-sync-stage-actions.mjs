@@ -7,10 +7,6 @@ import { runMacosA5SyncGroupApproval } from '../android/macos-a5-sync-group-appr
 import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desktop-session.mjs';
 import { resolveMacosA5PairSyncReadiness } from '../android/macos-a5-product-bootstrap.mjs';
 import { runMacosA5SyncGroupMaintenance } from '../android/macos-a5-sync-group-maintenance-action.mjs';
-import { validateOwnedDesktopPreflight } from '../windows/windows-pair-sync-desktop-readiness.mjs';
-import {
-  closePairSyncRecoveryTransport, openPairSyncRecoveryTransport
-} from '../windows/windows-a5-pair-sync-recovery-transport.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import {
   proveABConvergence, waitForAndroidJourneyFact
@@ -23,6 +19,10 @@ import { createActionExecutor } from './multi-device-sync-action-executor.mjs';
 import { createApprovalReceiptRelease } from './multi-device-sync-approval-release.mjs';
 import { prepareCandidateStage } from './multi-device-sync-candidate-preparation.mjs';
 import { runAOfflineAdmissionPrelude } from './multi-device-sync-fact-preparation.mjs';
+import {
+  closeMacosAcceptanceTransport, macosAcceptanceEnv, macosAcceptanceSessionOptions,
+  openMacosAcceptanceTransport, validateMacosAcceptanceDesktopPreflight
+} from './multi-device-sync-macos-channel.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
 /* global AbortController, AbortSignal, process */
@@ -39,7 +39,7 @@ function actionExecute(evidenceRoot, signal, stage) {
 async function establishAB(repoRoot, runId, { reportProgress, signal, stage }) {
   const owned = createIsolatedMacosRoot({ repoRoot, runId });
   const paths = macosA5Paths(repoRoot);
-  const env = macosA5GradleEnv();
+  const env = macosAcceptanceEnv(macosA5GradleEnv());
   const evidenceRoot = path.join(repoRoot, '.tmp', 'artifacts', 'multi-device-sync', 'runs', runId,
     'a-b-group-sync');
   fs.mkdirSync(evidenceRoot, { recursive: true });
@@ -60,8 +60,10 @@ async function establishAB(repoRoot, runId, { reportProgress, signal, stage }) {
       desktopControl: async () => ({ code: 0, output: '' }),
       deviceFingerprint: readiness.deviceIdentityFingerprint, env, evidenceRoot, execute,
       existingPairing: readiness.existingPairing, libraryHome: path.join(owned.root, 'library'),
+      openTransport: openMacosAcceptanceTransport, closeTransport: closeMacosAcceptanceTransport,
       paths, remotePeerFingerprint: readiness.remotePeerFingerprint, serial: A5_SERIAL,
-      userDataPath: path.join(owned.root, 'user-data'), validateDesktop: validateOwnedDesktopPreflight });
+      userDataPath: path.join(owned.root, 'user-data'),
+      validateDesktop: validateMacosAcceptanceDesktopPreflight });
     reportProgress('macos-group-created'); reportProgress('a5-paired'); reportProgress('a-b-synced');
     return { evidenceRef: result.pairSyncRecovery.manifestPath };
   } catch (error) {
@@ -121,7 +123,7 @@ async function admitEmptyC(repoRoot, runId, { reportProgress, signal, stage }) {
   });
   const executeWindows = actionExecute(evidenceRoot, signal, stage);
   const paths = macosA5Paths(repoRoot);
-  const env = macosA5GradleEnv();
+  const env = macosAcceptanceEnv(macosA5GradleEnv());
   const owned = createIsolatedMacosRoot({ repoRoot, runId });
   const runTransport = async (args, stage) => {
     const result = await execute(paths.adb, ['-s', A5_SERIAL, ...args], { env, timeoutMs: 10_000 });
@@ -136,15 +138,15 @@ async function admitEmptyC(repoRoot, runId, { reportProgress, signal, stage }) {
     cancelSiblings: (name, status) => cancelAdmissionSibling(
       approvalController, approvalRelease, name, status
     ),
-    closeTransport: () => closePairSyncRecoveryTransport(runTransport),
+    closeTransport: () => closeMacosAcceptanceTransport(runTransport),
     createFact: (session) => createDesktopSyncGroupJourneyFact({
       device: 'A', evidenceRoot: path.join(evidenceRoot, 'a-fact'), session
     }),
-    openSession: () => openMacosPairSyncDesktopSession({
+    openSession: () => openMacosPairSyncDesktopSession(macosAcceptanceSessionOptions({
       libraryHome: path.join(owned.root, 'library'), repoRoot,
       userDataPath: path.join(owned.root, 'user-data')
-    }),
-    openTransport: () => openPairSyncRecoveryTransport(runTransport),
+    })),
+    openTransport: () => openMacosAcceptanceTransport(runTransport),
     runApproval: (lifecycle) => runMacosA5SyncGroupApproval({
       allowControlledCancellation: true, execute, instrumentationExecute: executeApproval,
       ...lifecycle, prepare: () => {}, repoRoot

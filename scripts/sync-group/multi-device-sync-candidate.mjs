@@ -6,18 +6,25 @@ import path from 'node:path';
 import { digest } from './multi-device-sync-contract.mjs';
 import { scenarioCatalog, scenarioCatalogDigest } from './multi-device-sync-scenario-catalog.mjs';
 import { stageCatalog, stageCatalogDigest } from './multi-device-sync-stage-catalog.mjs';
+import {
+  branchForCandidateSourceRef, DEFAULT_CANDIDATE_SOURCE_REF, normalizeCandidateSourceRef
+} from './multi-device-sync-source-ref.mjs';
 
 const CONTROLLER_FILES = [
   'electron/sync/desktopSyncGroupCursorCommit.ts',
   'electron/sync/desktopSyncGroupJoin.ts',
   'scripts/android/android-device-snapshot.mjs',
+  'scripts/android/macos-a5-pair-sync-action.mjs',
   'scripts/android/macos-a5-sync-group-maintenance-action.mjs',
+  'scripts/android/macos-pair-sync-desktop-session.mjs',
   'scripts/sync-group/multi-device-sync-action-executor.mjs',
   'scripts/sync-group/multi-device-sync-a-leave.mjs',
   'scripts/sync-group/multi-device-sync-a-leave-proof.mjs',
   'scripts/sync-group/multi-device-sync-a-rejoin.mjs',
   'scripts/sync-group/multi-device-sync-a-rejoin-provider.mjs',
   'scripts/sync-group/multi-device-sync-candidate-preparation.mjs',
+  'scripts/sync-group/multi-device-sync-candidate.mjs',
+  'scripts/sync-group/multi-device-sync-cli.mjs',
   'scripts/sync-group/multi-device-sync-contract.mjs',
   'scripts/sync-group/multi-device-sync-diagnostic.mjs',
   'scripts/sync-group/multi-device-sync-formal.mjs',
@@ -25,10 +32,12 @@ const CONTROLLER_FILES = [
   'scripts/sync-group/multi-device-sync-from-zero-evidence.mjs',
   'scripts/sync-group/multi-device-sync-from-zero.mjs',
   'scripts/sync-group/multi-device-sync-host-readiness.mjs',
+  'scripts/sync-group/multi-device-sync-macos-channel.mjs',
   'scripts/sync-group/multi-device-sync-participation-evidence.mjs',
   'scripts/sync-group/multi-device-sync-participation.mjs',
   'scripts/sync-group/multi-device-sync-stage-actions.mjs',
   'scripts/sync-group/multi-device-sync-stage-runtime.mjs',
+  'scripts/sync-group/multi-device-sync-source-ref.mjs',
   'scripts/sync-group/multi-device-sync-scenario-catalog.mjs',
   'scripts/sync-group/multi-device-sync-stage-catalog.mjs',
   'scripts/sync-group/multi-device-sync-windows-provider.mjs',
@@ -37,15 +46,25 @@ const CONTROLLER_FILES = [
   'scripts/sync-group/sync-from-zero-contract.mjs',
   'scripts/sync-group/sync-from-zero-dataset-inspect.mjs',
   'scripts/desktop/sync-from-zero-dataset-action.mjs',
+  'scripts/windows/windows-a5-pair-sync-recovery-action.mjs',
+  'scripts/windows/windows-a5-pair-sync-recovery-transport.mjs',
   'scripts/windows/windows-multi-device-sync-a-rejoin-action.mjs',
   'scripts/windows/windows-multi-device-sync-from-zero-action.mjs',
   'scripts/windows/windows-multi-device-sync-participation-action.mjs',
+  'scripts/windows/windows-pair-sync-desktop-readiness.mjs',
+  'scripts/windows/windows-dev-candidate-control.mjs',
+  'scripts/windows/windows-dev-action.ps1',
+  'scripts/windows/windows-dev-candidate-runtime-control.mjs',
+  'scripts/windows/windows-dev-control.mjs',
+  'scripts/windows/windows-dev-remote-spec.mjs',
+  'scripts/windows/windows-sync-group-device-actions.mjs',
   'scripts/windows/windows-sync-group-participation-control.mjs',
   'scripts/windows/windows-sync-group-recovery-action.mjs',
   'scripts/windows/windows-sync-group-recovery-inspect.mjs',
   'scripts/windows/windows-sync-group-runtime-progress.mjs',
   'scripts/windows/windows-sync-group-interactive-action.mjs',
   'scripts/windows/windows-sync-group-interactive-state.mjs',
+  'scripts/windows/windows-client-native-interactive-state.mjs',
   'scripts/windows/windows-sync-group-interactive-worker.mjs',
   'scripts/windows/windows-process-alive.mjs',
   'scripts/windows/windows-sync-group-session-close.mjs'
@@ -61,15 +80,21 @@ function controllerDigest(repoRoot) {
   return hash.digest('hex');
 }
 
-export function currentAcceptanceCandidate(repoRoot, mode = 'diagnostic') {
+export function currentAcceptanceCandidate(repoRoot, mode = 'diagnostic',
+  sourceRef = DEFAULT_CANDIDATE_SOURCE_REF) {
   const status = git(repoRoot, ['status', '--porcelain']);
+  const branch = git(repoRoot, ['branch', '--show-current']);
+  const normalizedSourceRef = normalizeCandidateSourceRef(sourceRef);
+  if (branch !== branchForCandidateSourceRef(normalizedSourceRef)) {
+    throw new Error(`Candidate branch ${branch || '<detached>'} does not match ${normalizedSourceRef}`);
+  }
   return {
-    branch: git(repoRoot, ['branch', '--show-current']), clean: status === '',
+    branch, clean: status === '',
     committed: true, controllerDigest: controllerDigest(repoRoot),
     criteriaDigest: digest({ deadlineMs: 45_000, hosts: ['macos-a', 'android-b', 'windows-c'],
       progressStallMs: 60_000, statuses: ['passed', 'blocked', 'failed', 'stalled', 'invalidated'] }),
     mode, revision: git(repoRoot, ['rev-parse', 'HEAD']),
-    scenarioDigest: digest({ scenarios: scenarioCatalogDigest(), stages: stageCatalogDigest() }),
+    scenarioDigest: digest({ scenarios: scenarioCatalogDigest(), stages: stageCatalogDigest() }), sourceRef: normalizedSourceRef,
     treeDigest: git(repoRoot, ['rev-parse', 'HEAD^{tree}'])
   };
 }

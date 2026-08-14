@@ -10,8 +10,9 @@ import { runMacosA5SyncGroupMaintenance } from '../android/macos-a5-sync-group-m
 import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desktop-session.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import {
-  closePairSyncRecoveryTransport, openPairSyncRecoveryTransport
-} from '../windows/windows-a5-pair-sync-recovery-transport.mjs';
+  closeMacosAcceptanceTransport, macosAcceptanceEnv, macosAcceptanceSessionOptions,
+  openMacosAcceptanceTransport
+} from './multi-device-sync-macos-channel.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
 const APP_ID = 'com.foliole.android';
@@ -65,19 +66,21 @@ export async function waitForAndroidJourneyFact(paths, factId, wait = delay) {
 export async function proveABConvergence({ execute, reportProgress, repoRoot, runId }) {
   const owned = createIsolatedMacosRoot({ repoRoot, runId });
   const paths = macosA5Paths(repoRoot);
-  const env = macosA5GradleEnv();
+  const env = macosAcceptanceEnv(macosA5GradleEnv());
   const evidenceRoot = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId,
     'a-b-convergence');
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const runTransport = async (args, stage) => checked(
     execute, paths.adb, ['-s', A5_SERIAL, ...args], { env, timeoutMs: 30_000 }, stage
   );
-  const sessionOptions = { libraryHome: path.join(owned.root, 'library'), repoRoot,
-    userDataPath: path.join(owned.root, 'user-data') };
+  const sessionOptions = macosAcceptanceSessionOptions({
+    libraryHome: path.join(owned.root, 'library'), repoRoot,
+    userDataPath: path.join(owned.root, 'user-data')
+  });
   const startAndroid = () => startMacosA5SyncGroupApprovalProvider({ execute,
     onProviderStopped: async () => {}, onReady: async () => {}, paths, env });
   const result = await runABConvergenceJourney({
-    closeTransport: () => closePairSyncRecoveryTransport(runTransport),
+    closeTransport: () => closeMacosAcceptanceTransport(runTransport),
     createAndroidFact: () => createAndroidFact({ env, evidenceRoot, execute, paths, runId }),
     createDesktopFact: (session) => createDesktopSyncGroupJourneyFact({
       device: 'A', evidenceRoot: path.join(evidenceRoot, 'a-fact'), session
@@ -86,7 +89,7 @@ export async function proveABConvergence({ execute, reportProgress, repoRoot, ru
       androidFactText, desktopFactId, paths, session
     }),
     openSession: () => openMacosPairSyncDesktopSession(sessionOptions),
-    openTransport: () => openPairSyncRecoveryTransport(runTransport),
+    openTransport: () => openMacosAcceptanceTransport(runTransport),
     reportProgress,
     restartAndroid: async () => { await stopAndroid(execute, paths, env); await startAndroid(); },
     startAndroid,

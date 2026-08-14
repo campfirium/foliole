@@ -199,6 +199,7 @@ describe('CompanionSyncPanel multiple discovery list', () => {
     expect(screen.getByText('Foliole Desktop on V')).toBeInTheDocument();
     expect(screen.getByText('Foliole Desktop on Studio')).toBeInTheDocument();
     const pairButtons = screen.getAllByRole('button', { name: 'Join' });
+    expect(pairButtons[1]).toHaveAttribute('data-sync-endpoint', 'http://192.168.1.12:38641');
     fireEvent.click(pairButtons[1]!);
 
     await waitFor(() => {

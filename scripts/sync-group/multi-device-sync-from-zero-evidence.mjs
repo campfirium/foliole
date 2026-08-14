@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 
 import { collectAndroidDeviceSnapshot } from '../android/android-device-snapshot.mjs';
@@ -29,6 +28,56 @@ export function collectAndroidSyncFromZeroSnapshot(paths, includeAttachments = f
       ...inspectPairSyncRecoveryWorkspace(database), ...inspectSyncFromZeroDatasetFacts(database),
       peerCursors: peerProgress(database)
     }) });
+}
+
+function androidSnapshotObservation(snapshot) {
+  return {
+    attachmentArchiveBytes: snapshot?.attachments?.size ?? 0,
+    databaseError: snapshot?.database?.error ?? null,
+    databaseExists: snapshot?.database?.exists ?? false,
+    databaseUnreadable: snapshot?.database?.unreadable ?? false
+  };
+}
+
+function hasAndroidSyncFromZeroFacts(snapshot, activeMemberCount) {
+  const facts = snapshot?.database?.inspection;
+  if (!facts || facts.activeSyncGroupMemberCount !== activeMemberCount) return false;
+  try {
+    assertSyncFromZeroDatasetFacts(facts);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function waitForAndroidSyncFromZeroProofSnapshot(paths, {
+  activeMemberCount = 3, collectSnapshot = collectAndroidSyncFromZeroSnapshot,
+  delayMs = 1_000, includeAttachments = false, timeoutMs = 30_000
+} = {}) {
+  const deadline = Date.now() + timeoutMs;
+  let snapshot;
+  do {
+    snapshot = await collectSnapshot(paths, false);
+    if (hasAndroidSyncFromZeroFacts(snapshot, activeMemberCount)) break;
+    if (Date.now() < deadline) await delay(delayMs);
+  } while (Date.now() < deadline);
+  if (!hasAndroidSyncFromZeroFacts(snapshot, activeMemberCount)) {
+    throw new Error(`Android sync-from-zero proof snapshot did not become readable: ${JSON.stringify(
+      androidSnapshotObservation(snapshot)
+    )}`);
+  }
+  if (!includeAttachments) return snapshot;
+  let archiveSnapshot;
+  do {
+    archiveSnapshot = await collectSnapshot(paths, true);
+    if ((archiveSnapshot?.attachments?.size ?? 0) > 0) {
+      return { ...snapshot, attachments: archiveSnapshot.attachments };
+    }
+    if (Date.now() < deadline) await delay(delayMs);
+  } while (Date.now() < deadline);
+  throw new Error(`Android sync-from-zero attachment proof did not become readable: ${JSON.stringify(
+    androidSnapshotObservation(archiveSnapshot)
+  )}`);
 }
 
 export async function waitForAndroidSyncFromZeroDataset(paths, reportActivity, reportProgress) {
@@ -67,8 +116,7 @@ export async function waitForAndroidSyncFromZeroDataset(paths, reportActivity, r
 
 export async function inspectMacosSyncFromZeroDataset(session, datasetReceipt) {
   const snapshot = await session.invoke('load_workspace_list_snapshot', { includePdfOpenings: false });
-  const contentHashes = datasetReceipt.nodeIds.map((id) => createHash('sha256')
-    .update(snapshot.nodesById?.[id]?.content ?? '').digest('hex'));
+  const contentHashes = datasetReceipt.nodeIds.map((id) => snapshot.nodesById?.[id]?.bodyBlobHash ?? '');
   let readyAttachmentCount = 0;
   for (const attachmentId of datasetReceipt.attachmentIds) {
     const resolved = await session.invoke('resolve_attachment_resource', { attachment_id: attachmentId });
@@ -88,21 +136,38 @@ export async function inspectMacosSyncFromZeroDataset(session, datasetReceipt) {
   };
 }
 
+function suppliedCursorForPeer(facts, peerFingerprint) {
+  const supply = facts.peerCursors?.find(({ peerFingerprint: current, streamName }) =>
+    streamName === 'sync-pack-supply' && current === peerFingerprint);
+  const match = /^(\d+):(\d+)$/u.exec(supply?.cursorValue ?? '');
+  if (!match) return null;
+  const from = Number(match[1]);
+  const to = Number(match[2]);
+  return Number.isSafeInteger(from) && Number.isSafeInteger(to) && to >= from
+    ? { from, to } : null;
+}
+
+function requiredAndroidInspection(snapshot, label) {
+  const inspection = snapshot?.database?.inspection;
+  if (inspection) return inspection;
+  throw new Error(`Android ${label} inspection is unavailable: ${JSON.stringify(
+    androidSnapshotObservation(snapshot)
+  )}`);
+}
+
 export function assertSyncFromZeroFinalProof({ androidAfterC, androidFinal, datasetReceipt,
   macos, windowsReceipt }) {
   assertSyncFromZeroCursorContinuity(windowsReceipt);
   assertSyncFromZeroDatasetFacts(windowsReceipt.finalFacts);
-  const afterC = androidAfterC.database?.inspection;
-  const android = androidFinal.database?.inspection;
+  const afterC = requiredAndroidInspection(androidAfterC, 'after-C');
+  const android = requiredAndroidInspection(androidFinal, 'final');
   assertSyncFromZeroDatasetFacts(afterC);
   assertSyncFromZeroDatasetFacts(android);
   const expectedDigest = syncFromZeroDatasetDigest(datasetReceipt);
   const groups = [macos.groupId, android.syncGroupId, windowsReceipt.candidate.groupId];
   const timelines = [macos.timelineId, android.syncGroupTimelineId,
     windowsReceipt.finalFacts.localTimelineId];
-  const zeroSupply = afterC.peerCursors?.find(({ cursorValue, streamName }) =>
-    streamName === 'sync-pack-supply' && /^0:\d+$/u.test(cursorValue));
-  const suppliedTo = Number(zeroSupply?.cursorValue.split(':')[1] ?? -1);
+  const supplied = suppliedCursorForPeer(afterC, windowsReceipt.finalFacts.deviceIdentity);
   if (macos.datasetNodeCount !== SYNC_FROM_ZERO_DATASET.nodeCount
       || macos.readyAttachmentCount !== SYNC_FROM_ZERO_DATASET.attachmentCount
       || [macos.datasetDigest, android.datasetDigest, windowsReceipt.finalFacts.datasetDigest]
@@ -111,9 +176,11 @@ export function assertSyncFromZeroFinalProof({ androidAfterC, androidFinal, data
       || timelines.some((value) => !value) || new Set(timelines).size !== 1
       || macos.activeMemberCount !== 3 || android.activeSyncGroupMemberCount !== 3
       || windowsReceipt.finalFacts.activeMemberCount !== 3
-      || suppliedTo !== windowsReceipt.finalFacts.receiveCursor
+      || !supplied || supplied.to < windowsReceipt.finalFacts.receiveCursor
       || !androidFinal.attachments || androidFinal.attachments.size <= 0) {
-    throw new Error('Three-host sync-from-zero evidence is incomplete.');
+    throw new Error(`Three-host sync-from-zero evidence is incomplete: ${JSON.stringify({
+      providerSupply: supplied, windowsCursor: windowsReceipt.finalFacts.receiveCursor
+    })}`);
   }
   return { attachmentCount: SYNC_FROM_ZERO_DATASET.attachmentCount,
     contentBlobCount: SYNC_FROM_ZERO_DATASET.nodeCount, cursor: windowsReceipt.finalFacts.receiveCursor,

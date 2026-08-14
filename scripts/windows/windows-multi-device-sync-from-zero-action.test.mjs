@@ -3,6 +3,7 @@
 import { expect, it, vi } from 'vitest';
 
 import { runWindowsSyncFromZeroJourney } from './windows-multi-device-sync-from-zero-action.mjs';
+import { discoverUniqueGroup } from './windows-sync-group-recovery-action.mjs';
 
 const dataset = { datasetAttachmentCount: 65, datasetCachedAttachmentCount: 65,
   datasetCachedContentBlobCount: 40, datasetContentBlobCount: 40, datasetNodeCount: 40 };
@@ -10,6 +11,17 @@ const dataset = { datasetAttachmentCount: 65, datasetCachedAttachmentCount: 65,
 function session(events, name) {
   return { app: { close: async () => { events.push(`${name}-closed`); } }, page: { name } };
 }
+
+it('selects the fixed Android provider without occupying unrelated desktop groups', async () => {
+  const candidates = [
+    { group_id: 'user-group', provider_device_kind: 'darwin' },
+    { group_id: 'acceptance-group', provider_device_kind: 'android-capacitor' }
+  ];
+  const page = { evaluate: vi.fn(async () => ({ join_candidates: candidates })) };
+  await expect(discoverUniqueGroup(page, 10,
+    (candidate) => candidate.provider_device_kind === 'android-capacitor'
+  )).resolves.toMatchObject({ group_id: 'acceptance-group' });
+});
 
 it('interrupts only after a committed cursor and resumes without cursor regression', async () => {
   const events = [];

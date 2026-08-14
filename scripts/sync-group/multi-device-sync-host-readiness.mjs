@@ -8,13 +8,13 @@ import { promisify } from 'node:util';
 import { A5_SERIAL, macosA5Paths } from '../android/macos-a5-dev.mjs';
 import { verifyAndroidLaunch } from '../android/verify-android-launch.mjs';
 import { WINDOWS_DEV_DEFAULT_SSH } from '../windows/windows-dev-control.mjs';
+import { MACOS_ACCEPTANCE_SYNC_PORT } from './multi-device-sync-macos-channel.mjs';
 import { assertIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
 /* global process */
 
 const exec = promisify(execFile);
 const APP = 'com.foliole.android';
-const MACOS_SYNC_PORT = 38641;
 const WINDOWS_NODE = 'C:/Progra~1/nodejs/node.exe';
 const WINDOWS_READINESS = 'C:/dev/foliole-android-lab-preview/scripts/windows/windows-multi-device-sync-readiness.mjs';
 
@@ -55,7 +55,7 @@ export function createHostReadinessAdapters({ env = process.env, execute = bound
       if (free < 4 * 1024 ** 3) throw Object.assign(new Error('macOS acceptance disk is low.'), {
         missingFact: 'macos_disk_budget_missing', lastSuccessfulAction: 'isolated_owner_checked'
       });
-      try { await probeMacosSyncPort(MACOS_SYNC_PORT); }
+      try { await probeMacosSyncPort(Number(MACOS_ACCEPTANCE_SYNC_PORT)); }
       catch (error) {
         throw Object.assign(new Error('macOS sync port is unavailable.', { cause: error }), {
           missingFact: error.code === 'EADDRINUSE'
@@ -120,11 +120,18 @@ export function createMutationReadinessAdapters(options) {
       lastSuccessfulAction: `${host}_environment_ready`, missingFact: 'candidate_receipt_missing'
     });
     const receipt = JSON.parse(fs.readFileSync(receiptPath, 'utf8'));
+    const current = await options.candidateProvider();
     const required = new Set(options.requiredHosts);
     const baseMismatch = receipt.runId !== options.runId || receipt.resultStatus !== 'success'
-      || (!required.has(host) && receipt.preparedHosts?.includes(host));
+      || (!required.has(host) && receipt.preparedHosts?.includes(host))
+      || receipt.candidateBoundary?.branch !== current.branch
+      || receipt.candidateBoundary?.sourceRef !== current.sourceRef
+      || receipt.candidateBoundary?.treeDigest !== current.treeDigest
+      || receipt.candidateBoundary?.controllerDigest !== current.controllerDigest;
     const hostMismatch = required.has(host) && (!receipt.preparedHosts?.includes(host)
-      || (host === 'windows-c' && !receipt.windowsReceipt)
+      || (host === 'windows-c' && (receipt.windowsReceipt?.sourceRef !== current.sourceRef
+        || receipt.windowsReceipt?.treeDigest !== current.treeDigest
+        || receipt.windowsReceipt?.controllerDigest !== current.controllerDigest))
       || (host === 'android-b' && (!fs.existsSync(apkPath)
         || createHash('sha256').update(fs.readFileSync(apkPath)).digest('hex')
           !== receipt.androidApkSha256)));

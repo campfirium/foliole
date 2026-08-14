@@ -11,6 +11,7 @@ const runtime = vi.hoisted(() => ({
   peers: [{ endpoint_url: 'http://old', group_id: 'group-1', peer_device_id: 'android-b' }],
   savePeer: vi.fn((peer) => peer),
   stop: vi.fn(),
+  update: vi.fn(),
   refreshPending: vi.fn(() => false)
 }));
 
@@ -30,7 +31,8 @@ vi.mock('bonjour-service', () => ({
         on: (event: string, handler: (service: unknown) => void) => {
           runtime.updateCallbacks.set(event, handler);
         },
-        stop: runtime.stop
+        stop: runtime.stop,
+        update: runtime.update
       };
     }
   }
@@ -128,7 +130,9 @@ it('continues sync when an existing service publishes a newer facts revision', a
   await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
 });
 
-it('uses service withdrawal as a final fact-change hint while the authenticated endpoint remains available', async () => {
+it('requeries the replacement instance after withdrawal-triggered sync settles', async () => {
+  const first = deferred<{ complete: boolean; cursor: number }>();
+  runtime.continueSync.mockReturnValueOnce(first.promise);
   startDesktopSyncGroupAutoSync();
   runtime.updateCallbacks.get('down')?.({
     addresses: ['192.168.1.12'], port: 43121,
@@ -136,4 +140,24 @@ it('uses service withdrawal as a final fact-change hint while the authenticated 
   });
 
   await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
+  expect(runtime.update).not.toHaveBeenCalled();
+  first.resolve({ complete: true, cursor: 9 });
+  await vi.waitFor(() => expect(runtime.update).toHaveBeenCalledOnce());
+});
+
+it('does not requery a replacement after automatic sync stops', async () => {
+  const first = deferred<{ complete: boolean; cursor: number }>();
+  runtime.continueSync.mockReturnValueOnce(first.promise);
+  startDesktopSyncGroupAutoSync();
+  runtime.updateCallbacks.get('down')?.({
+    addresses: ['192.168.1.12'], port: 43121,
+    txt: { group_id: 'group-1', peer_id: 'android-b' }
+  });
+  await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
+
+  stopDesktopSyncGroupAutoSync();
+  first.resolve({ complete: true, cursor: 9 });
+  await first.promise;
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(runtime.update).not.toHaveBeenCalled();
 });

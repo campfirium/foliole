@@ -18,6 +18,9 @@ import { createSyncProgressWatchdog } from './sync-progress-watchdog.mjs';
 import {
   freshJourneyFactIds, startWindowsARejoinProvider
 } from './multi-device-sync-a-rejoin-provider.mjs';
+import {
+  macosAcceptanceEnv, macosAcceptanceSessionOptions
+} from './multi-device-sync-macos-channel.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
 /* global process */
@@ -138,15 +141,18 @@ export async function waitForThreeDeviceProof({ ids, inspect, intervalMs = 1_000
 export async function proveARejoin({ execute, reportActivity = () => {}, reportProgress, repoRoot, runId }) {
   const owned = createIsolatedMacosRoot({ repoRoot, runId });
   const paths = macosA5Paths(repoRoot);
-  const env = macosA5GradleEnv();
+  const env = macosAcceptanceEnv(macosA5GradleEnv());
   const evidenceRoot = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId, 'a-rejoin');
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const windowsProvider = startWindowsARejoinProvider({ evidenceRoot, execute, repoRoot,
     reportProgress: () => reportActivity('windows-provider-progress') });
   let windowsSettled = false;
   const restartProvider = () => restartARejoinAndroidProvider({ env, execute, paths });
-  let session = await openMacosPairSyncDesktopSession({ libraryHome: path.join(owned.root, 'library'),
-    repoRoot, userDataPath: path.join(owned.root, 'user-data') });
+  const sessionOptions = macosAcceptanceSessionOptions({
+    libraryHome: path.join(owned.root, 'library'), repoRoot,
+    userDataPath: path.join(owned.root, 'user-data')
+  });
+  let session = await openMacosPairSyncDesktopSession(sessionOptions);
   try {
     const enabled = await session.enable();
     if (enabled.server_status?.state !== 'running') throw productFailure('macos-a',
@@ -168,10 +174,11 @@ export async function proveARejoin({ execute, reportActivity = () => {}, reportP
     reportProgress('b-fact-created');
     await restartProvider();
     const databasePath = path.join(owned.root, 'library', 'Data', 'foliole.db');
-    const ids = await waitUntil('macOS A fresh fact identities', async () =>
+    await windowsProvider.waitForProgress('c-fact-created');
+    const ids = await windowsProvider.raceConsumer(waitUntil('macOS A fresh fact identities', async () =>
       freshJourneyFactIds((await macosFacts(execute, repoRoot, databasePath, [])).journeyFacts, excluded),
     (value) => ['A', 'B', 'C'].every((origin) => value[origin]),
-    'three_facts_missing');
+    'three_facts_missing'));
     reportProgress('c-fact-created');
     if (ids.A !== aFact.factId || !ids.B || !ids.C) throw productFailure('windows-c',
       'windows_a_rejoin_fact_identity_mismatch', 'Windows C reported incomplete fresh facts.');
@@ -200,8 +207,7 @@ export async function proveARejoin({ execute, reportActivity = () => {}, reportP
     reportProgress('three-facts-converged');
     await session.close(); session = null;
     await restartProvider();
-    session = await openMacosPairSyncDesktopSession({ libraryHome: path.join(owned.root, 'library'),
-      repoRoot, userDataPath: path.join(owned.root, 'user-data') });
+    session = await openMacosPairSyncDesktopSession(sessionOptions);
     const proof = await waitForThreeDeviceProof({ ids, inspect: async () => ({
       android: await androidSnapshot(paths),
       macos: await macosFacts(execute, repoRoot, databasePath, Object.values(ids)),

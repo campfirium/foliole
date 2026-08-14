@@ -8,16 +8,17 @@ import {
 } from '../android/macos-a5-sync-group-approval.mjs';
 import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desktop-session.mjs';
 import { createSyncFromZeroDataset } from '../desktop/sync-from-zero-dataset-action.mjs';
-import {
-  closePairSyncRecoveryTransport, openPairSyncRecoveryTransport
-} from '../windows/windows-a5-pair-sync-recovery-transport.mjs';
 import { proveARejoin } from './multi-device-sync-a-rejoin.mjs';
 import { createApprovalReceiptRelease } from './multi-device-sync-approval-release.mjs';
 import {
-  assertSyncFromZeroFinalProof, collectAndroidSyncFromZeroSnapshot,
-  inspectMacosSyncFromZeroDataset, waitForAndroidSyncFromZeroDataset
+  assertSyncFromZeroFinalProof, inspectMacosSyncFromZeroDataset,
+  waitForAndroidSyncFromZeroDataset, waitForAndroidSyncFromZeroProofSnapshot
 } from './multi-device-sync-from-zero-evidence.mjs';
 import { settleSiblingActions } from './multi-device-sync-stage-runtime.mjs';
+import {
+  closeMacosAcceptanceTransport, macosAcceptanceEnv, macosAcceptanceSessionOptions,
+  openMacosAcceptanceTransport
+} from './multi-device-sync-macos-channel.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 import {
   assertSyncFromZeroCursorContinuity, assertSyncFromZeroDatasetFacts,
@@ -79,7 +80,7 @@ function windowsProgressCapture(reportActivity) {
 async function syncDatasetToAndroid(context) {
   await stopMacosA5SyncGroupApprovalProvider(context);
   context.reportProgress('b-provider-stopped');
-  await openPairSyncRecoveryTransport(context.runTransport);
+  await openMacosAcceptanceTransport(context.runTransport);
   context.transportOpen = true;
   context.reportProgress('b-transport-ready');
   await startMacosA5SyncGroupApprovalProvider({
@@ -88,7 +89,7 @@ async function syncDatasetToAndroid(context) {
   const snapshot = await waitForAndroidSyncFromZeroDataset(
     context.paths, context.reportActivity, context.reportProgress
   );
-  await closePairSyncRecoveryTransport(context.runTransport);
+  await closeMacosAcceptanceTransport(context.runTransport);
   context.transportOpen = false;
   await stopMacosA5SyncGroupApprovalProvider(context);
   return snapshot;
@@ -134,7 +135,7 @@ async function admitWindowsFromZero(context) {
 function createContext(options) {
   const owned = createIsolatedMacosRoot(options);
   const paths = macosA5Paths(options.repoRoot);
-  const env = macosA5GradleEnv();
+  const env = macosAcceptanceEnv(macosA5GradleEnv());
   const evidenceRoot = path.join(options.repoRoot, '.tmp/artifacts/multi-device-sync/runs',
     options.runId, 'sync-from-zero');
   const runTransport = (args, stage) => checked(options.execute, paths.adb,
@@ -145,10 +146,10 @@ function createContext(options) {
 export async function proveSyncFromZero(options) {
   const context = createContext(options);
   fs.mkdirSync(context.evidenceRoot, { recursive: true });
-  let session = await openMacosPairSyncDesktopSession({
+  let session = await openMacosPairSyncDesktopSession(macosAcceptanceSessionOptions({
     libraryHome: path.join(context.owned.root, 'library'), repoRoot: context.repoRoot,
     userDataPath: path.join(context.owned.root, 'user-data')
-  });
+  }));
   try {
     const overview = await session.enable();
     if (overview.sync_group?.members.filter(({ state }) => state === 'active').length !== 2) {
@@ -166,18 +167,20 @@ export async function proveSyncFromZero(options) {
     context.reportProgress('windows-structure-batches-complete');
     context.reportProgress('windows-content-batches-complete');
     context.reportProgress('windows-attachment-batches-complete');
-    const androidAfterC = await collectAndroidSyncFromZeroSnapshot(context.paths, true);
+    const androidAfterC = await waitForAndroidSyncFromZeroProofSnapshot(context.paths);
     const rejoin = await proveARejoin({ execute: context.execute, repoRoot: context.repoRoot,
       runId: context.runId,
       reportActivity: () => context.reportActivity('three-host-rejoin-progress'),
       reportProgress: () => context.reportActivity('three-host-rejoin-progress') });
     context.reportProgress('three-host-converged');
-    session = await openMacosPairSyncDesktopSession({
+    session = await openMacosPairSyncDesktopSession(macosAcceptanceSessionOptions({
       libraryHome: path.join(context.owned.root, 'library'), repoRoot: context.repoRoot,
       userDataPath: path.join(context.owned.root, 'user-data')
-    });
+    }));
     const macos = await inspectMacosSyncFromZeroDataset(session, datasetReceipt);
-    const androidFinal = await collectAndroidSyncFromZeroSnapshot(context.paths, true);
+    const androidFinal = await waitForAndroidSyncFromZeroProofSnapshot(context.paths, {
+      includeAttachments: true
+    });
     const proof = assertSyncFromZeroFinalProof({ androidAfterC, androidFinal,
       datasetReceipt, macos, windowsReceipt: windows.receipt });
     context.reportProgress('provider-resources-preserved');
@@ -189,7 +192,7 @@ export async function proveSyncFromZero(options) {
     }, null, 2)}\n`, 'utf8');
     return { evidenceRef };
   } finally {
-    if (context.transportOpen) await closePairSyncRecoveryTransport(context.runTransport).catch(() => undefined);
+    if (context.transportOpen) await closeMacosAcceptanceTransport(context.runTransport).catch(() => undefined);
     await session?.close().catch(() => undefined);
   }
 }

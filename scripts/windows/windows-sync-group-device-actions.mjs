@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { currentAcceptanceCandidate } from '../sync-group/multi-device-sync-candidate.mjs';
+
 import { provisionWindowsAcceptanceRoot } from './windows-multi-device-sync-readiness.mjs';
 import { runWindowsMultiDeviceSyncALeave } from './windows-multi-device-sync-a-leave-action.mjs';
 import { runWindowsMultiDeviceSyncC } from './windows-multi-device-sync-c-action.mjs';
@@ -28,10 +30,11 @@ export async function runWindowsSyncGroupDeviceAction(options) {
   }
   if (options.action === 'multi-device-sync-candidate') {
     const owned = provisionWindowsAcceptanceRoot({ paths: options.paths });
+    const candidate = currentAcceptanceCandidate(options.paths.repoRoot, 'diagnostic');
     const manifestPath = path.win32.join(options.evidenceRoot, 'multi-device-sync-candidate.json');
     fs.writeFileSync(manifestPath, `${JSON.stringify({
       buildIdentity: options.buildIdentity, completedAt: new Date().toISOString(),
-      isolatedRoot: owned.root, resultStatus: 'success', schemaVersion: 1
+      candidate, isolatedRoot: owned.root, resultStatus: 'success', schemaVersion: 1
     }, null, 2)}\n`, 'utf8');
     return { multiDeviceSyncCandidate: { manifestPath }, output: '' };
   }
