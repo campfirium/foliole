@@ -19,7 +19,7 @@ function createFixture() {
     if (command === 'ditto') cpSync(args[0], args[1], { recursive: true });
     return { status: 0 };
   });
-  return { run, sourcePath, targetPath };
+  return { logEvent: vi.fn(), operationId: 'test-install', run, sourcePath, targetPath };
 }
 
 function readVersion(targetPath) {
@@ -31,19 +31,27 @@ it('waits for a running Internal app before swapping and reopening it', async ()
   const events = [];
   const running = [true, false];
   const log = vi.fn();
+  const timeline = [];
   const lifecycle = {
     isRunning: vi.fn(() => running.shift()),
     quitAndWait: vi.fn(async () => events.push('quit')),
     open: vi.fn(() => events.push('open'))
   };
 
-  await installMasDevelopmentApp({ ...fixture, lifecycle, log });
+  await installMasDevelopmentApp({
+    ...fixture, lifecycle, log, logEvent: (event) => timeline.push(event), operationId: 'install-1'
+  });
 
   expect(events).toEqual(['quit', 'open']);
   expect(lifecycle.isRunning).toHaveBeenCalledTimes(2);
   expect(log).toHaveBeenCalledWith('[macos-package] stage: EXIT_CONFIRMED');
   expect(log).toHaveBeenCalledWith('[macos-package] stage: INSTALLED');
   expect(log).toHaveBeenCalledWith('[macos-package] stage: REOPENED');
+  expect(timeline.map((entry) => entry.event)).toEqual([
+    'install_started', 'staged_app_verified', 'quit_requested', 'exit_confirmed',
+    'app_installed', 'background_reopen_requested', 'install_finished'
+  ]);
+  expect(timeline.every((entry) => entry.operationId === 'install-1')).toBe(true);
   expect(readVersion(fixture.targetPath)).toBe('new');
 });
 

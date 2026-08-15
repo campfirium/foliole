@@ -1,9 +1,11 @@
 /* global process */
 
 import { spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import { appendDesktopHostTimelineEvent } from '../diagnostics/desktop-host-timeline.mjs';
 import { normalizeSpawnCommand } from '../lib/spawn-command.mjs';
 import { prepareMacosHiddenElectronRuntime } from './macos-hidden-electron-runtime.mjs';
 
@@ -98,10 +100,22 @@ export function createNativeHiddenDesktopBuildCommands({
 }
 
 export async function runNativeHiddenDesktopGate(options = {}) {
+  const execute = options.runCommand ?? runCommand;
+  const logEvent = options.logEvent ?? appendDesktopHostTimelineEvent;
+  const operationId = options.operationId ?? randomUUID();
+  const record = (event, payload = {}) => {
+    try {
+      logEvent({ event, operationId, payload, source: 'hidden_native' });
+    } catch (error) {
+      process.stderr.write(`[desktop-native-hidden] timeline log failed: ${error.message}\n`);
+    }
+  };
+  record('run_started', { skipBuild: shouldSkipBuild(options.env ?? process.env) });
   const buildCommands = createNativeHiddenDesktopBuildCommands(options);
   for (const buildCommand of buildCommands) {
-    const code = await runCommand(buildCommand);
+    const code = await execute(buildCommand);
     if (code !== 0) {
+      record('run_finished', { exitCode: code, stage: 'build' });
       return code;
     }
   }
@@ -112,10 +126,13 @@ export async function runNativeHiddenDesktopGate(options = {}) {
     ? prepareMacosHiddenElectronRuntime({ appRoot, env })
     : null;
   try {
-    return await runCommand(createNativeHiddenDesktopGateCommand({
+    record('electron_launch_started', { platform });
+    const code = await execute(createNativeHiddenDesktopGateCommand({
       ...options,
       env: runtime ? { ...env, FOLIOLE_ELECTRON_EXECUTABLE_PATH: runtime.executablePath } : env
     }));
+    record('run_finished', { exitCode: code, stage: 'electron' });
+    return code;
   } finally {
     runtime?.cleanup();
   }

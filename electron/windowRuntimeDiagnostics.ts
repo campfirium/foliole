@@ -135,6 +135,7 @@ export async function presentInitialRendererWindow(window: BrowserWindow, option
     if (isHiddenNativeDesktopTest()) {
       window.setSkipTaskbar(true);
       window.setFocusable(false);
+      window.setIgnoreMouseEvents(true);
       window.showInactive();
     } else {
       window.show();

@@ -13,6 +13,17 @@ it('checks the exact Foliole Internal bundle id', () => {
   ], { encoding: 'utf8' });
 });
 
+it('reopens an installed Internal build without activating its initial window', () => {
+  const run = vi.fn(() => ({ status: 0 }));
+  const lifecycle = createInternalLifecycle({ run, targetPath: '/Applications/Foliole.app' });
+
+  lifecycle.open();
+
+  expect(run).toHaveBeenCalledWith('open', [
+    '-g', '-a', '/Applications/Foliole.app', '--args', '--foliole-background-update-reopen'
+  ], { stdio: 'ignore' });
+});
+
 it('uses the process-exit helper as the bounded cooperative quit wait', async () => {
   const run = vi.fn(() => ({ status: 0 }));
   const lifecycle = createInternalLifecycle({ run, targetPath: '/Applications/Foliole.app' });

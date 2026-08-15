@@ -3,6 +3,7 @@ import { app, BrowserWindow } from 'electron';
 import { stopAgentControlApiServer } from './agentControl/agentControlServer.js';
 import { resolveFolioleAppVersion } from './appVersion.js';
 import { markAppQuittingForBackgroundPresence } from './backgroundPresence.js';
+import { shouldShowInitialWindow } from './backgroundStartup.js';
 import { createBeforeQuitCoordinator } from './beforeQuitCoordinator.js';
 import { beginDatabaseStartup, markDatabaseReady, markDatabaseStartupFailed } from './database/databaseReadiness.js';
 import { loadOrCreateDesktopDeviceId } from './database/deviceIdentity.js';
@@ -205,7 +206,10 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
         installPairingFocusHandler: () => installPairingFocusHandler(openMainWindow),
         loadStartupErrorSurface: (input) => loadStartupErrorSurface({ ...input, loadMainWindow: args.loadMainWindow }),
         mainWindow,
-        showInitialWindow: !wasOpenedAtLogin() && !capturePanelLaunchIntent.hasInitialIntent,
+        showInitialWindow: shouldShowInitialWindow({
+          capturePanelLaunchIntent: capturePanelLaunchIntent.hasInitialIntent,
+          openedAtLogin: wasOpenedAtLogin()
+        }),
         startCompanionSyncIfEnabled: () => startCompanionSyncIfEnabled({
           appVersion: resolveFolioleAppVersion(app),
           isEnabled: isDesktopCompanionSyncParticipating,

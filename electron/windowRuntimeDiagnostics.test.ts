@@ -54,6 +54,7 @@ function createWindowMock() {
       fullScreen = next;
     }),
     setFocusable: vi.fn(),
+    setIgnoreMouseEvents: vi.fn(),
     setSkipTaskbar: vi.fn(),
     show: vi.fn(() => {
       visible = true;
@@ -140,7 +141,7 @@ describe('window runtime startup visibility', () => {
 });
 
 describe('window runtime hidden native desktop presentation', () => {
-  it('presents hidden native desktop test windows without focusing them', async () => {
+  it('presents hidden native desktop test windows without intercepting focus or pointer input', async () => {
     const originalHiddenFlag = process.env.FOLIOLE_ELECTRON_NATIVE_HIDDEN;
     process.env.FOLIOLE_ELECTRON_NATIVE_HIDDEN = '1';
     try {
@@ -151,6 +152,10 @@ describe('window runtime hidden native desktop presentation', () => {
 
       expect(window.setSkipTaskbar).toHaveBeenCalledWith(true);
       expect(window.setFocusable).toHaveBeenCalledWith(false);
+      expect(window.setIgnoreMouseEvents).toHaveBeenCalledWith(true);
+      expect(window.setIgnoreMouseEvents.mock.invocationCallOrder.at(0)!).toBeLessThan(
+        window.showInactive.mock.invocationCallOrder.at(0)!
+      );
       expect(window.showInactive).toHaveBeenCalledTimes(1);
       expect(window.show).not.toHaveBeenCalled();
     } finally {

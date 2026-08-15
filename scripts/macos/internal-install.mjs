@@ -1,9 +1,11 @@
 /* global console */
 
 import { spawnSync } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { mkdtemp, rename, rm } from 'node:fs/promises';
 import path from 'node:path';
 
+import { appendDesktopHostTimelineEvent } from '../diagnostics/desktop-host-timeline.mjs';
 import { createInternalLifecycle } from './internal-lifecycle.mjs';
 
 const INSTALLED_APP = '/Applications/Foliole.app';
@@ -47,19 +49,32 @@ export async function installMasDevelopmentApp(options = {}) {
   const makeTempDirectory = options.makeTempDirectory ?? mkdtemp;
   const lifecycle = options.lifecycle ?? createInternalLifecycle({ targetPath });
   const log = options.log ?? console.log;
+  const logEvent = options.logEvent ?? appendDesktopHostTimelineEvent;
+  const operationId = options.operationId ?? randomUUID();
+  const record = (event, payload = {}) => {
+    try {
+      logEvent({ event, operationId, payload, source: 'macos_internal_install' });
+    } catch (error) {
+      console.error(`[macos-package] timeline log failed: ${error.message}`);
+    }
+  };
   const stagingRoot = await makeTempDirectory(path.join(path.dirname(targetPath), '.foliole-internal-install-'));
   const stagedPath = path.join(stagingRoot, 'Foliole.app');
   const backupPath = path.join(stagingRoot, 'previous.app');
   let preserveStaging = false;
+  record('install_started');
   try {
     runStep('stage internal app', 'ditto', [sourcePath, stagedPath], run);
     runStep('verify staged internal app', 'codesign', ['--verify', '--deep', '--strict', stagedPath], run);
     log('[macos-package] stage: VERIFIED');
+    record('staged_app_verified');
     if (lifecycle.isRunning()) {
       log('[macos-package] stage: QUIT_REQUESTED');
+      record('quit_requested');
       await lifecycle.quitAndWait();
     }
     log('[macos-package] stage: EXIT_CONFIRMED');
+    record('exit_confirmed');
     let hadInstalledApp;
     try {
       hadInstalledApp = await moveIfPresent(targetPath, backupPath, move);
@@ -71,8 +86,10 @@ export async function installMasDevelopmentApp(options = {}) {
       if (lifecycle.isRunning()) throw new Error('Foliole Internal reopened before the app swap');
       await move(stagedPath, targetPath);
       log('[macos-package] stage: INSTALLED');
+      record('app_installed');
       lifecycle.open();
       log('[macos-package] stage: REOPENED');
+      record('background_reopen_requested');
     } catch (error) {
       if (!hadInstalledApp) {
         await remove(targetPath, { force: true, recursive: true });
@@ -89,6 +106,12 @@ export async function installMasDevelopmentApp(options = {}) {
       }
       throw error;
     }
+    record('install_finished', { status: 'success' });
+  } catch (error) {
+    record('install_finished', {
+      message: error instanceof Error ? error.message : String(error), status: 'failed'
+    });
+    throw error;
   } finally {
     if (!preserveStaging) await remove(stagingRoot, { force: true, recursive: true });
   }

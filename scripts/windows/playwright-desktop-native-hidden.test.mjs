@@ -7,7 +7,8 @@ import { describe, expect, it } from 'vitest';
 import {
   createNativeHiddenDesktopBuildCommands,
   createNativeHiddenDesktopGateCommand,
-  HIDDEN_MODE_HEALTH_SPECS
+  HIDDEN_MODE_HEALTH_SPECS,
+  runNativeHiddenDesktopGate
 } from '../desktop/playwright-desktop-native-hidden.mjs';
 
 describe('playwright desktop native hidden runner', () => {
@@ -92,5 +93,21 @@ describe('playwright desktop native hidden runner', () => {
       env: { FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: '1' },
       npmBin: 'npm.cmd'
     })).toEqual([]);
+  });
+
+  it('records a timestamped run boundary around the real Electron launch', async () => {
+    const events = [];
+    const runCommand = async () => 0;
+
+    await expect(runNativeHiddenDesktopGate({
+      cwd: 'D:\\C\\foliole', env: { FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: '1' },
+      logEvent: (event) => events.push(event), operationId: 'hidden-1', platform: 'win32', runCommand
+    })).resolves.toBe(0);
+
+    expect(events).toEqual([
+      expect.objectContaining({ event: 'run_started', operationId: 'hidden-1', source: 'hidden_native' }),
+      expect.objectContaining({ event: 'electron_launch_started', operationId: 'hidden-1' }),
+      expect.objectContaining({ event: 'run_finished', operationId: 'hidden-1', payload: { exitCode: 0, stage: 'electron' } })
+    ]);
   });
 });
