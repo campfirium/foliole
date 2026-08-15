@@ -2,7 +2,7 @@
 /* global console, process */
 
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { clearTimeout, setTimeout } from 'node:timers';
 import { pathToFileURL } from 'node:url';
@@ -119,19 +119,31 @@ export function build(paths) {
   if (!existsSync(paths.apk)) throw new Error(`Debug APK was not produced: ${paths.apk}`);
 }
 
-function deploy(paths) {
-  assertFixedA5(paths);
-  readiness(paths);
-  build(paths);
-  checked(paths.adb, ['-s', A5_SERIAL, 'install', '-r', paths.apk]);
-  checked(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'force-stop', APP_ID]);
+function launchAndVerify(paths) {
   checked(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start', '-n', COMPONENT]);
   checked(process.execPath, [
     path.join(paths.repoRoot, 'scripts/android/verify-android-launch.mjs'),
     '--adb', paths.adb, '--serial', A5_SERIAL, '--app-id', APP_ID,
     '--component', COMPONENT, '--timeout-seconds', '30', '--stability-seconds', '3'
   ], { cwd: paths.repoRoot });
-  readiness(paths);
+}
+
+async function deploy(paths) {
+  assertFixedA5(paths);
+  build(paths);
+  const runId = captureIdentity();
+  const evidenceRoot = path.join(paths.repoRoot, '.tmp/artifacts/a5-deploy', runId);
+  const snapshotRoot = path.join(paths.repoRoot, '.lab/internal/android-device-backups', runId);
+  const baselineManifest = path.join(evidenceRoot, 'baseline.json');
+  mkdirSync(evidenceRoot, { recursive: true });
+  checked(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'force-stop', APP_ID]);
+  await protectData(paths, macosA5GradleEnv(), 'backup', baselineManifest, snapshotRoot);
+  checked(paths.adb, ['-s', A5_SERIAL, 'install', '-r', paths.apk]);
+  launchAndVerify(paths);
+  checked(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'force-stop', APP_ID]);
+  await protectData(paths, macosA5GradleEnv(), 'check', baselineManifest, snapshotRoot);
+  launchAndVerify(paths);
+  console.log(`[macos-a5-dev] deploy evidence=${baselineManifest}`);
 }
 
 export async function protectData(paths, env, mode, manifest, backupRoot) {
@@ -178,7 +190,7 @@ export async function runMacosA5Action(action, repoRoot = process.cwd()) {
       pairingReadiness(paths);
       readiness(paths);
     }
-    if (action === 'deploy') deploy(paths);
+    if (action === 'deploy') await deploy(paths);
     if (action === 'capture-annotation') await captureAnnotation(paths);
     if (action === 'database-performance') await runMacosA5DatabasePerformanceEntry({
       assertFixed: () => assertFixedA5(paths), build: () => build(paths), env: macosA5GradleEnv(), execute, paths, serial: A5_SERIAL });
