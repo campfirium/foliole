@@ -9,8 +9,9 @@
 - 正式发布只使用唯一、短期存在的精确分支 `release`：从已推送的 `dev` 切出，首个 release 提交写入已确定版本，首次 push 自动进入唯一 T7；此后不接收 dev，所有发布修复只落 release，并用普通 Git merge 按 first-parent 顺序回灌 dev。完成公开后元数据与 Pages 核对且最终 tip 已是 dev 祖先后才删除分支；禁止版本化 release 分支、cherry-pick、rebase、force-push 和人类 SHA 编排。
 - 每个 release 只由一个 pinned 发布主任务从切分持有到删分支；T7 及其内层失败回到该任务，不由 monitor 创建 repair 任务。发布文案可在仓库外工作稿和未公开 Draft body 中与技术流程并行，公开必须由用户确认，最终正文归档、notes 与 manifest 只在公开后提交。
 - 人工创建或交接 Foliole Codex 任务走 Codex Desktop 正常任务入口：`list_projects` 定位 saved project，`create_thread` 显式使用 `environment.type = local` 并发送完整首条提示，`wait_threads` 等待就绪，`set_thread_title` 命名，`read_thread` 确认正文可读，最后才可 `navigate_to_codex_page`；不得采用 Git 仓库默认 worktree。
-- 关联已编号正式实施方案的 Codex 任务标题必须从方案读取不可变编号：方案级任务使用 `T<n>-0`，执行任务使用方案唯一的 `Current closure: T<n>-<k>`；只有 `/2` 可按 rolling contract 分配、重开或退休闭环 id，同一验收句的重规划与 continuation 保留原 id，执行任务不得自行改号。
-- `rolling-v1` 方案同时最多一个当前闭环；同一验收句未成立时，不因缺口、提交、文件、平台、重试或耗时数量更换 Codex 任务。只有 `/2` 审定后的正式路线失效交接、闭环完成后的新验收责任、`final-ready` 进入 `/4`，或用户确认且无 live side effect / 未记录现场 / 外部等待的 continuation 才开新任务。
+- 关联已编号正式实施方案的 Codex 任务标题必须从方案读取不可变编号：方案级任务使用 `T<n>-0`，执行任务使用方案唯一的 `Current closure: T<n>-<k>`；只有 `/2` 可分配或重开闭环、推进 `Next closure`、确认 `Review gate` 与 `final-ready`，执行任务不得自行改号或写这些决策。
+- `rolling-v1` 必须同时保存完整系统主方案、从综合验收反推的系统覆盖图和唯一当前闭环；`/3` 只执行 `Review gate: confirmed` 的当前闭环。失败、诊断、重试、提交和被放弃的施工方法留在持有任务或证据载体，不进入方案。
+- 同一验收句未成立时，不因缺口、提交、文件、平台、重试或耗时数量更换 Codex 任务；正式合同失效时在原任务执行 `/2`，会审确认后仍由原任务继续。只有闭环完成后的新验收责任、`final-ready` 进入 `/4`，或用户确认且无 live side effect / 未记录现场 / 外部等待的 continuation 才开新任务。
 - monitor 触发的任务交接只能走 `codex-desktop-handoff` daemon：事件级 App Server 创建持久任务，确认 `item/completed(userMessage)` 与完整 prompt 一致后立即 `turn/interrupt`，确认最终状态为 `interrupted`，关闭外部 App Server，再请求 Desktop 打开；该任务必须等待用户在 Desktop 继续，不得在 daemon 内持续执行、直接修改数据库 / session 或启用其他后台执行分支；仅有 thread id、标题或成功跳转不算交付成功，正文未确认或主动中断未完成时必须归档并重试。
 - 用户要求继续某个平台的产品主线时，创建任务前必须先按该平台局部 `AGENTS.md` 区分产品实现、验收证据与宿主控制流；不得仅凭未勾选 checkbox 或未标 `done` 状态把验收 / 控制任务包装成产品代码任务。
 - 单次只交付一个可运行、可验证、可回退的能力闭环；闭环以用户可验收行为、数据语义或迁移语义为边界，不以文件、函数、测试断言、提交数量或“超过 3 个文件”为边界。
@@ -68,7 +69,7 @@
 
 1. 任务开工判断是首个动作规则：在第一次读文件、跑命令或改代码前，把最新用户请求归类为 `DIRECT`、`FOLLOW_PLAN`、`NEEDS_EVAL` 或 `STOP_CONFIRM`；只有 `DIRECT` 可以静默执行。
 2. `FOLLOW_PLAN` 必须先读实施说明并遵守其中评估；`NEEDS_EVAL` 必须先输出轻量任务评估；`STOP_CONFIRM` 必须先等待用户确认。
-3. 轻量任务评估必须写出 5 项：`任务类型`、`影响范围`、`已定路线`、`拒绝路线`、`停工点`；细则见 `.lab/specs/_governance/task-evaluation-expectation.md`。
+3. 轻量任务评估必须写出 5 项：`任务类型`、`影响范围`、`已定路线`、`边界排除`、`停工点`；细则见 `.lab/specs/_governance/task-evaluation-expectation.md`。`边界排除` 只声明当前合同不允许出现的技术类别或行为，不记录失败或被否定的施工方案。
 4. 用户只给短标题、笼统“继续 / 修一下 / 处理一下”时，按顺序解析：本轮点名文件 / 实施说明 > 本轮 active file 若是实施说明 > 最近一条未完成的用户明确指令；仍无单一任务时只问一个澄清问题。
 5. 需求、边界、验收标准或预期行为存在歧义时，先澄清；根因未确认时只写“现象 + 当前怀疑 + 待确认点”，禁止把猜测写成事实。
 6. 命中高风险路径时，在开工判断或任务评估中明确“建议 High / XHigh”，但不得伪装工具层已切档；高风险包括 sync、数据库 / schema / migration、Electron preload / IPC / native bridge、Capacitor / Android lifecycle、review queue、delete / restore、import / reimport、持久化、重启后行为、冲突处理、安全边界、不可逆数据风险、人工验收失败后的复修和非显然 bug。
