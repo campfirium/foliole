@@ -67,6 +67,7 @@ describe('companion mDNS advertisement', () => {
       appVersion: '0.1.0-test',
       groupDisplayName: 'V',
       groupId: 'group-1',
+      groupTag: 'tag-1',
       onWarning,
       peerId: 'desktop-local',
       port: 38683,
@@ -84,6 +85,7 @@ describe('companion mDNS advertisement', () => {
       appVersion: '0.1.0-test',
       groupDisplayName: 'V',
       groupId: 'group-1',
+      groupTag: 'tag-1',
       peerId: 'desktop-local',
       port: 38683,
       timelineId: 'timeline-1'
@@ -100,9 +102,10 @@ describe('companion mDNS advertisement', () => {
         app_version: '0.1.0-test',
         facts_revision: expect.any(String),
         group_id: 'group-1',
+        group_tag: 'tag-1',
         ipv4_addresses: '192.168.0.11',
         peer_id: 'desktop-local',
-        protocol_capabilities: 'lan-sync-v1,sync-group-facts-v1',
+        protocol_capabilities: 'lan-sync-v1,sync-group-facts-v1,workgroup-aead-v1',
         protocol_max_version: '1',
         protocol_min_version: '1',
         protocol_version: '1',
@@ -123,7 +126,7 @@ describe('companion mDNS facts hints', () => {
       './companionMdnsAdvertisement.js'
     );
     startCompanionMdnsAdvertisement({
-      appVersion: '0.1.0-test', groupDisplayName: 'V', groupId: 'group-1',
+      appVersion: '0.1.0-test', groupDisplayName: 'V', groupId: 'group-1', groupTag: 'tag-1',
       peerId: 'desktop-local', port: 38683, timelineId: 'timeline-1'
     });
     const initial = (bonjourMock.publish.mock.calls[0]?.[0] as { txt: { facts_revision: string } }).txt.facts_revision;
@@ -142,7 +145,7 @@ describe('companion mDNS facts hints', () => {
       './companionMdnsAdvertisement.js'
     );
     startCompanionMdnsAdvertisement({
-      appVersion: '0.1.0-test', groupDisplayName: 'V', groupId: 'group-1',
+      appVersion: '0.1.0-test', groupDisplayName: 'V', groupId: 'group-1', groupTag: 'tag-1',
       peerId: 'desktop-local', port: 38683, timelineId: 'timeline-1'
     });
 
@@ -159,7 +162,7 @@ describe('companion mDNS facts hints', () => {
       './companionMdnsAdvertisement.js'
     );
     startCompanionMdnsAdvertisement({
-      appVersion: '0.1.0-test', groupDisplayName: 'Shared group', groupId: 'group-1',
+      appVersion: '0.1.0-test', groupDisplayName: 'Shared group', groupId: 'group-1', groupTag: 'tag-1',
       peerId: 'desktop-local', port: 38683, timelineId: 'timeline-1'
     });
     await refreshCompanionMdnsAdvertisement();
@@ -202,7 +205,7 @@ describe('companion mDNS lifecycle', () => {
     const { startCompanionMdnsAdvertisement } = await import('./companionMdnsAdvertisement.js');
 
     startCompanionMdnsAdvertisement({
-      appVersion: '0.1.0-test', groupDisplayName: 'V', groupId: 'group-1',
+      appVersion: '0.1.0-test', groupDisplayName: 'V', groupId: 'group-1', groupTag: 'tag-1',
       peerId: 'desktop-local', port: 38683, timelineId: 'timeline-1'
     });
 
@@ -218,7 +221,7 @@ describe('companion mDNS lifecycle', () => {
     const { startCompanionMdnsAdvertisement } = await import('./companionMdnsAdvertisement.js');
 
     startCompanionMdnsAdvertisement({
-      appVersion: '0.1.0-test', groupDisplayName: 'V', groupId: 'group-1',
+      appVersion: '0.1.0-test', groupDisplayName: 'V', groupId: 'group-1', groupTag: 'tag-1',
       peerId: 'desktop-local', port: 38683, timelineId: 'timeline-1'
     });
 
@@ -237,6 +240,7 @@ describe('companion mDNS lifecycle', () => {
       appVersion: '0.1.0-test',
       groupDisplayName: 'V',
       groupId: 'group-1',
+      groupTag: 'tag-1',
       peerId: 'desktop-local',
       port: 38683,
       timelineId: 'timeline-1'

@@ -29,7 +29,8 @@ const COLUMN_ACTIONS: Partial<Record<string, RepairName>> = {
   [ACTIONS.addNodesManualChildOrderIfMissing]: 'nodesManualChildOrder',
   [ACTIONS.addNodesSequentialReadingEnabledIfMissing]: 'nodesSequentialReadingEnabled',
   [ACTIONS.addNodesShelvedAtIfMissing]: 'nodesShelvedAt',
-  [ACTIONS.addSyncBaseContentHashIfMissing]: 'syncBaseContentHash'
+  [ACTIONS.addSyncBaseContentHashIfMissing]: 'syncBaseContentHash',
+  [ACTIONS.addSyncGroupsWorkgroupKeyIfMissing]: 'syncGroupsWorkgroupKey'
 };
 
 export async function migrateCompanionDatabase(

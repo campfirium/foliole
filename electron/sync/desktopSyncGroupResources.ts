@@ -9,7 +9,12 @@ import { openDatabaseConnection } from '../database/connection.js';
 
 import { boundedConcurrentMap } from './boundedConcurrentMap.js';
 import { parseCompanionContentBlobMultipart } from './companionContentBlobMultipart.js';
-import { createDesktopSyncGroupSignedHeaders } from './desktopSyncGroupHttp.js';
+import {
+  createDesktopSyncGroupSignedHeaders,
+  createDesktopWorkgroupPost,
+  readDesktopWorkgroupResponse
+} from './desktopSyncGroupHttp.js';
+import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
 const CONTENT_BLOB_BATCH_SIZE = 32;
 const ATTACHMENT_CONCURRENCY = 6;
@@ -19,7 +24,6 @@ interface ResourcePeer {
   endpoint_url: string;
   group_id: string;
   local_device_id: string;
-  secret: string;
 }
 
 interface BlobRow {
@@ -78,16 +82,19 @@ export async function downloadDesktopSyncGroupResources(peer: ResourcePeer) {
 async function downloadBlobBatch(peer: ResourcePeer, blobs: BlobRow[]) {
   const pathWithQuery = '/companion/content-blobs';
   const requestBody = JSON.stringify({ hashes: blobs.map((blob) => blob.hash) });
+  const encrypted = createDesktopWorkgroupPost({ body: requestBody, groupId: peer.group_id,
+    localDeviceId: peer.local_device_id, pathWithQuery, secret: requireGroupKey(peer.group_id) });
   const response = await fetch(`${peer.endpoint_url}${pathWithQuery}`, {
-    body: requestBody,
-    headers: { ...createDesktopSyncGroupSignedHeaders({ body: requestBody, groupId: peer.group_id,
-      localDeviceId: peer.local_device_id, method: 'POST', pathWithQuery, secret: peer.secret }),
-      'Content-Type': 'application/json' },
+    body: encrypted.body,
+    headers: encrypted.headers,
     method: 'POST', signal: AbortSignal.timeout(RESOURCE_TIMEOUT_MS)
   });
-  if (!response.ok) throw new Error(`sync_resource_http_${response.status}`);
+  const body = await readDesktopWorkgroupResponse({
+    contentType: response.headers.get('x-foliole-original-content-type') ?? 'multipart/mixed',
+    groupId: peer.group_id, method: 'POST', pathWithQuery, response
+  });
   const received = new Map(parseCompanionContentBlobMultipart(
-    await readResponseBody(response), response.headers.get('content-type')
+    body, response.headers.get('x-foliole-original-content-type')
   ).map((item) => [item.hash, item.body]));
   return blobs.map((blob) => {
     const body = received.get(blob.hash);
@@ -96,22 +103,6 @@ async function downloadBlobBatch(peer: ResourcePeer, blobs: BlobRow[]) {
     }
     return { blob, body };
   });
-}
-
-async function readResponseBody(response: Response) {
-  const reader = response.body?.getReader();
-  if (!reader) return Buffer.alloc(0);
-  const chunks: Uint8Array[] = [];
-  let received = 0;
-  try {
-    for (let item = await reader.read(); !item.done; item = await reader.read()) {
-      chunks.push(item.value); received += item.value.byteLength;
-    }
-    return Buffer.concat(chunks);
-  } catch (error) {
-    const expected = response.headers.get('content-length') ?? 'unknown';
-    throw new Error(`resource_body_truncated expected=${expected} received=${received}`, { cause: error });
-  }
 }
 
 async function downloadAttachment(peer: ResourcePeer, attachment: AttachmentRow) {
@@ -145,13 +136,21 @@ async function persistAttachmentRow(port: DbPort, input: Awaited<ReturnType<type
 async function downloadResource(peer: ResourcePeer, pathWithQuery: string) {
   const response = await fetch(`${peer.endpoint_url}${pathWithQuery}`, {
     headers: createDesktopSyncGroupSignedHeaders({ groupId: peer.group_id, localDeviceId: peer.local_device_id,
-      method: 'GET', pathWithQuery, secret: peer.secret }),
+      method: 'GET', pathWithQuery, secret: requireGroupKey(peer.group_id) }),
     signal: AbortSignal.timeout(RESOURCE_TIMEOUT_MS)
   });
-  if (!response.ok) throw new Error(`sync_resource_http_${response.status}`);
-  return Buffer.from(await response.arrayBuffer());
+  return readDesktopWorkgroupResponse({
+    contentType: response.headers.get('x-foliole-original-content-type') ?? 'application/octet-stream',
+    groupId: peer.group_id, method: 'GET', pathWithQuery, response
+  });
 }
 
 function sha256(body: Buffer) {
   return createHash('sha256').update(body).digest('hex');
+}
+
+function requireGroupKey(groupId: string) {
+  const key = loadDesktopWorkgroupKey(groupId);
+  if (!key) throw new Error('sync_group_workgroup_key_missing');
+  return key.group_key;
 }

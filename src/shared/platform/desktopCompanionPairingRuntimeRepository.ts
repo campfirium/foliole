@@ -60,7 +60,7 @@ function normalizePendingRequest(value: unknown): DesktopCompanionPairRequestPay
     expires_at: raw.expires_at,
     pair_request_id: raw.pair_request_id,
     requested_at: raw.requested_at,
-    status: raw.status
+    status: raw.status,
   };
 }
 

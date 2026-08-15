@@ -115,10 +115,10 @@ export const EN_COMPANION_TRANSLATIONS = {
     "Look at the desktop you're connecting to and tap Approve. We'll continue automatically as soon as you do.",
   'companion.syncSetup.expired': 'Request expired. Tap Cancel and try again.',
   'companion.syncSetup.waiting': 'Waiting for approval... {seconds}s left',
-  'companion.syncSetup.title': 'Join a Sync Group',
+  'companion.syncSetup.title': 'Connect to a Sync Group',
   'companion.syncSetup.instructions':
     'Open Sync Group on an active device on this network, then approve this device.',
-  'companion.syncSetup.connect': 'Join Sync Group',
+  'companion.syncSetup.connect': 'Connect to Sync Group',
   'companion.syncSetup.looking': 'Looking...',
   'companion.topicBody.waiting.title': 'Waiting for topic body.',
   'companion.topicBody.waiting.detail': 'This device has the topic list, but this body has not reached the device yet.',

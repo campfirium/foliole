@@ -2,6 +2,13 @@ import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('../sync/companionLanPayloads.js', () => ({ resolveDesktopDeviceName: () => 'Maci' }));
+vi.mock('../sync/companionPairingStore.js', () => ({ clearPairedCompanionDevices: vi.fn() }));
+vi.mock('./managedSafetySnapshots.js', () => ({
+  createManagedSafetySnapshotForMigration: vi.fn(() => ({
+    protection: { release: vi.fn() }, snapshot: {}
+  })),
+  settleManagedMigrationSnapshot: vi.fn()
+}));
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { refreshDesktopDeviceProfile } from './deviceIdentity.js';
@@ -89,4 +96,15 @@ it('keeps an approved active group identity across a same-name host restart', ()
 
   expect(sqlite.prepare('SELECT local_device_id FROM sync_group_local_state').pluck().get()).toBe('Maci 2');
   expect(sqlite.prepare("SELECT value FROM settings WHERE key = 'device_id'").pluck().get()).toBe('"Maci 2"');
+});
+
+it('does not let a copied database overwrite another host public name', () => {
+  const connection = { driver: createBetterSqlite3Driver(sqlite), sqlite } as never;
+
+  refreshHostOwnedDeviceProfile(connection, 'device-legacy');
+
+  expect(sqlite.prepare('SELECT COUNT(*) FROM sync_group_local_state').pluck().get()).toBe(0);
+  expect(sqlite.prepare("SELECT value FROM settings WHERE key = 'device_id'").pluck().get()).toBe('"Maci"');
+  expect(sqlite.prepare('SELECT device_id, state FROM sync_group_members').get())
+    .toEqual({ device_id: 'device-legacy', state: 'active' });
 });

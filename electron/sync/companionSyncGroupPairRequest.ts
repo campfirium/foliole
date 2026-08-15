@@ -19,11 +19,7 @@ export function isEligibleSyncGroupJoin(args: {
   groupId: string;
   libraryFacts: SyncGroupLibraryFacts | null;
   requestedGroupId: string;
-  requestedTimelineId: string;
-  timelineId: string;
 }) {
   return args.groupId === args.requestedGroupId
-    && args.timelineId === args.requestedTimelineId
-    && args.libraryFacts !== null
-    && (args.libraryFacts.timeline_id === null || args.libraryFacts.timeline_id === args.timelineId);
+    && args.libraryFacts !== null;
 }

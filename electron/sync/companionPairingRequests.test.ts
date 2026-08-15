@@ -80,6 +80,22 @@ describe('companion pairing request lifecycle', () => {
   });
 });
 
+it('binds an ordinary approval to the selected assigned member name', () => {
+  const nowMs = Date.parse('2026-04-24T10:00:00.000Z');
+  const created = createCompanionPairRequest({
+    ...protocolArgs, deviceId: 'A5', deviceKind: 'android-capacitor', deviceName: 'A5',
+    nowMs, pairingPublicKey: TEST_PAIRING_PUBLIC_KEY
+  });
+  if (created.rate_limited) throw new Error('unexpected_pair_request_rate_limit');
+  approveCompanionPairRequest(
+    created.request.pair_request_id, nowMs + 1, 'recover_existing_member', 'A5 2'
+  );
+  expect(loadCompanionPairRequestForCompletion(created.request.pair_request_id, nowMs + 2))
+    .toMatchObject({ request: {
+      device_id: 'A5 2', membership_action: 'recover_existing_member', status: 'approved'
+    } });
+});
+
 describe('companion pairing request rate limiting', () => {
   it('rate limits new pairing requests by client address', () => {
     const nowMs = Date.parse('2026-04-24T10:00:00.000Z');

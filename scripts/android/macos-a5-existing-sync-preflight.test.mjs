@@ -1,6 +1,8 @@
 import { expect, it, vi } from 'vitest';
 
-import { runMacosA5ExistingSyncPreflight } from './macos-a5-pair-sync-preflight.mjs';
+import {
+  inspectMacosA5SyncGroupFacts, runMacosA5ExistingSyncPreflight
+} from './macos-a5-pair-sync-preflight.mjs';
 
 function result(prefix, value, status = 0) {
   return { status, stderr: '', stdout: `${prefix}${JSON.stringify(value)}\n` };
@@ -43,4 +45,21 @@ it('rejects ambiguous Sync Group credentials even when legacy pairing exists', (
       ...groupState, pairingCredentialsPresent: true, syncGroupPeerConflict: true
     }, workspace)
   )).toThrow('authorized existing Sync Group state');
+});
+
+it('reads protected Sync Group facts without treating a missing secure key as authority', () => {
+  const recovery = {
+    ...groupState, syncGroupCredentialsPresent: false, syncGroupRemotePeerFingerprint: null
+  };
+  expect(inspectMacosA5SyncGroupFacts(
+    { adb: '/adb', repoRoot: '/repo' }, runFor(recovery, workspace)
+  )).toEqual(recovery);
+});
+
+it('rejects facts when the protected workspace no longer matches', () => {
+  expect(() => inspectMacosA5SyncGroupFacts(
+    { adb: '/adb', repoRoot: '/repo' }, runFor(groupState, {
+      ...workspace, counts: { nodes: 1394 }
+    })
+  )).toThrow('protected Sync Group workspace');
 });

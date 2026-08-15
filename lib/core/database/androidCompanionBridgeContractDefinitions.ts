@@ -130,6 +130,7 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
   pairingPlugin: {
     routeBindingRequestKeys: {
       endpointUrl: 'endpoint_url',
+      localDeviceId: 'local_device_id',
       peerDeviceId: 'peer_device_id',
       syncGroupId: 'sync_group_id'
     },

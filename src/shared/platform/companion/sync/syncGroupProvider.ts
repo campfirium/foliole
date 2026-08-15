@@ -12,6 +12,7 @@ import {
 } from '../../companionWorkspaceRuntimeRepository';
 
 import { ensureCompanionSyncGroupDataOwner } from './syncGroupProviderDataOwner';
+import { loadCompanionSyncGroupWorkgroupKey } from './syncGroupStore';
 
 export interface CompanionSyncGroupServiceHint {
   endpoint_url: string;
@@ -48,13 +49,16 @@ export async function reconcileCompanionSyncGroupProvider(
   }
   const localMember = group.members.find((member) => member.device_id === group.local_device_id);
   if (!localMember) throw new Error('sync_group_member_not_authorized');
+  const workgroupKey = await loadCompanionSyncGroupWorkgroupKey();
+  if (!workgroupKey) throw new Error('sync_group_workgroup_key_missing');
   await ensureCompanionSyncGroupDataOwner();
   return FolioleCompanionSync.startSyncGroupProvider({
     app_version: await loadAppVersion(),
     device_id: localMember.device_id,
     device_name: localMember.device_name,
     facts_revision: factsRevision,
-    sync_group: group
+    sync_group: group,
+    workgroup_key: workgroupKey
   });
 }
 

@@ -10,7 +10,9 @@ it('preserves binary HTTP failure while exposing only fixed desktop auth reasons
     'utf8'
   );
 
-  expect(source.match(/throw binaryResourceError\(status, errorCode\);/gu)).toHaveLength(2);
+  expect(source).toContain('throw binaryResourceError(status, errorCode, method, prepared.path);');
+  expect(source).toContain('"/companion/sync-pack".equals(route)');
+  expect(source).toContain('"Desktop binary resource " + method + " " + safeResourcePath(path)');
   expect(source).toContain('new JSONObject(readBody(connection, status)).optString("error", "")');
   expect(source).toContain('"unknown_device".equals(value)');
   expect(source).toContain('"invalid_signature".equals(value)');

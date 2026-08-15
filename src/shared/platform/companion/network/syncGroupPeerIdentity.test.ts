@@ -26,14 +26,13 @@ describe('syncGroupPeerIdentity', () => {
     await expect(resolveCompanionSyncPeerId('http://device-c/')).resolves.toBe('device-c');
   });
 
-  it('rejects an endpoint from a different timeline', async () => {
+  it('accepts legacy timeline metadata changes inside the same workgroup', async () => {
     mocks.loadGroup.mockResolvedValue({ group_id: 'group-1', timeline_id: 'timeline-1' });
     mocks.loadDiscovery.mockResolvedValue({
       group_id: 'group-1', peer_id: 'device-c', timeline_id: 'timeline-2'
     });
 
-    await expect(resolveCompanionSyncPeerId('http://device-c/'))
-      .rejects.toThrow('sync_group_identity_mismatch');
+    await expect(resolveCompanionSyncPeerId('http://device-c/')).resolves.toBe('device-c');
   });
 
   it('retains the original pairing identity outside a Sync Group', async () => {

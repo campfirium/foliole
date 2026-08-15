@@ -14,7 +14,17 @@ import {
   ANDROID_COMPANION_NODE_PROVENANCE_MIGRATION_REPAIR_RULES,
   ANDROID_COMPANION_NODE_PROVENANCE_MIGRATION_STATEMENTS
 } from './androidCompanionNodeProvenanceMigration.js';
+import {
+  ANDROID_COMPANION_NODE_SCHEDULING_MIGRATION_REPAIR_RULES,
+  ANDROID_COMPANION_NODE_SCHEDULING_MIGRATION_STATEMENTS
+} from './androidCompanionNodeSchedulingMigration.js';
 import { ANDROID_COMPANION_SYNC_STATE_MIGRATION_REPAIR_RULES } from './androidCompanionSyncStateMigrationRules.js';
+import {
+  ANDROID_COMPANION_WORKGROUP_KEY_MIGRATION_ACTION_TYPES,
+  ANDROID_COMPANION_WORKGROUP_KEY_MIGRATION_PLAN_STEP,
+  ANDROID_COMPANION_WORKGROUP_KEY_MIGRATION_REPAIR_RULES,
+  ANDROID_COMPANION_WORKGROUP_KEY_MIGRATION_STATEMENTS
+} from './androidCompanionWorkgroupKeyMigration.js';
 export {
   ANDROID_COMPANION_MIGRATION_ACTION_KEYS,
   ANDROID_COMPANION_MIGRATION_ASSET_KEYS,
@@ -27,10 +37,8 @@ export const ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS = {
   ...ANDROID_COMPANION_CONVERGENCE_MIGRATION_STATEMENTS,
   ...ANDROID_COMPANION_NODE_PROVENANCE_MIGRATION_STATEMENTS,
   ...ANDROID_COMPANION_EXTERNAL_FOLDER_OWNERSHIP_MIGRATION_STATEMENTS,
-  nodesEnableShortTermColumn: 'ALTER TABLE nodes ADD COLUMN enable_short_term INTEGER',
-  nodesSequentialReadingEnabledColumn: 'ALTER TABLE nodes ADD COLUMN sequential_reading_enabled INTEGER',
-  nodesShelvedAtColumn: 'ALTER TABLE nodes ADD COLUMN shelved_at TEXT',
-  nodesManualChildOrderColumn: 'ALTER TABLE nodes ADD COLUMN manual_child_order TEXT',
+  ...ANDROID_COMPANION_NODE_SCHEDULING_MIGRATION_STATEMENTS,
+  ...ANDROID_COMPANION_WORKGROUP_KEY_MIGRATION_STATEMENTS,
   nodeViewStateSourceColumn: "ALTER TABLE node_view_state ADD COLUMN source TEXT NOT NULL DEFAULT 'user-scroll'",
   syncPushAckDropLegacyTable: 'DROP TABLE IF EXISTS sync_push_ack',
   syncObjectStateDropLegacyTable: 'DROP TABLE sync_object_state',
@@ -59,6 +67,7 @@ export const ANDROID_COMPANION_MIGRATION_ACTION_TYPES = {
   ...ANDROID_COMPANION_CONVERGENCE_MIGRATION_ACTION_TYPES,
   ...ANDROID_COMPANION_NODE_PROVENANCE_MIGRATION_ACTION_TYPES,
   ...ANDROID_COMPANION_EXTERNAL_FOLDER_OWNERSHIP_ACTION_TYPES,
+  ...ANDROID_COMPANION_WORKGROUP_KEY_MIGRATION_ACTION_TYPES,
   addNodesEnableShortTermIfMissing: 'addNodesEnableShortTermIfMissing',
   addNodesSequentialReadingEnabledIfMissing: 'addNodesSequentialReadingEnabledIfMissing',
   addNodesShelvedAtIfMissing: 'addNodesShelvedAtIfMissing',
@@ -178,37 +187,16 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
   {
     actions: [{ errorMessage: 'Failed to install Sync Group departure facts.', type: 'installSchema' }],
     beforeVersion: 25
-  }
+  },
+  ANDROID_COMPANION_WORKGROUP_KEY_MIGRATION_PLAN_STEP
 ] as const;
 
 export const ANDROID_COMPANION_MIGRATION_REPAIR_RULES = {
   ...ANDROID_COMPANION_CONVERGENCE_MIGRATION_REPAIR_RULES,
   ...ANDROID_COMPANION_SYNC_STATE_MIGRATION_REPAIR_RULES,
   ...ANDROID_COMPANION_NODE_PROVENANCE_MIGRATION_REPAIR_RULES,
-  nodesEnableShortTerm: {
-    columnName: 'enable_short_term',
-    errorMessage: 'Failed to add node short-term scheduling column.',
-    statementName: 'nodesEnableShortTermColumn',
-    tableName: 'nodes'
-  },
-  nodesSequentialReadingEnabled: {
-    columnName: 'sequential_reading_enabled',
-    errorMessage: 'Failed to add node sequential reading column.',
-    statementName: 'nodesSequentialReadingEnabledColumn',
-    tableName: 'nodes'
-  },
-  nodesShelvedAt: {
-    columnName: 'shelved_at',
-    errorMessage: 'Failed to add node shelved topic column.',
-    statementName: 'nodesShelvedAtColumn',
-    tableName: 'nodes'
-  },
-  nodesManualChildOrder: {
-    columnName: 'manual_child_order',
-    errorMessage: 'Failed to add node manual child order column.',
-    statementName: 'nodesManualChildOrderColumn',
-    tableName: 'nodes'
-  },
+  ...ANDROID_COMPANION_NODE_SCHEDULING_MIGRATION_REPAIR_RULES,
+  ...ANDROID_COMPANION_WORKGROUP_KEY_MIGRATION_REPAIR_RULES,
   nodeViewStateSource: {
     columnName: 'source',
     errorMessage: 'Failed to add node view state source column.',

@@ -8,10 +8,12 @@ import {
 } from './companionLanContentBlobs.js';
 import { handlePrimaryDeviceTakeover, PRIMARY_DEVICE_TAKEOVER_PATH } from './companionLanPrimaryDeviceTakeover.js';
 import { readCompanionRequestBody } from './companionLanRequestBody.js';
+import { writeWorkgroupBinary } from './companionLanResponses.js';
 import { isRetiredSyncJsonEndpoint } from './companionLanSyncObjects.js';
 import { handleCompanionSyncPush, SYNC_PUSH_PATH } from './companionLanSyncPush.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
 import { acceptSyncGroupDeparture, SYNC_GROUP_DEPARTURE_PATH } from './syncGroupDeparture.js';
+import { decryptWorkgroupRequestBody } from './workgroupHttpCrypto.js';
 
 type WriteJson = (
   request: http.IncomingMessage,
@@ -20,14 +22,6 @@ type WriteJson = (
   payload: unknown,
   methods?: string
 ) => void;
-
-function writeBinary(response: http.ServerResponse, statusCode: number, body: Buffer, mimeType: string) {
-  response.writeHead(statusCode, {
-    'Content-Length': body.byteLength,
-    'Content-Type': mimeType
-  });
-  response.end(body);
-}
 
 function resolveAuthenticatedPostRoute(parsedRequestUrl: URL) {
   if (parsedRequestUrl.pathname === CONTENT_BLOB_ACK_PATH) return 'content-blob-ack';
@@ -68,7 +62,7 @@ async function handleAuthenticatedRoute(args: {
       ack.status === 'ok' ? ack : { error: ack.error }, 'POST, OPTIONS');
   } else if (route === 'content-blob-batch') {
     const batch = loadCompanionContentBlobBatch(bodyText);
-    if (batch.status === 'ready') writeBinary(response, 200, batch.body, batch.mimeType);
+    if (batch.status === 'ready') writeWorkgroupBinary(request, response, 200, batch.body, batch.mimeType);
     else writeJson(request, response, batch.statusCode, { error: batch.error }, 'POST, OPTIONS');
   } else if (route === 'sync-push') {
     try {
@@ -116,6 +110,13 @@ export async function handleAuthenticatedPost(
     writeJson(request, response, auth.status_code, { error: auth.error });
     return true;
   }
-  await handleAuthenticatedRoute({ auth, bodyText, request, response, route, writeJson });
+  let plaintext: string;
+  try {
+    plaintext = decryptWorkgroupRequestBody(request, bodyText).toString('utf8');
+  } catch (error) {
+    writeJson(request, response, 401, { error: error instanceof Error ? error.message : 'workgroup_aead_invalid' });
+    return true;
+  }
+  await handleAuthenticatedRoute({ auth, bodyText: plaintext, request, response, route, writeJson });
   return true;
 }

@@ -26,20 +26,12 @@ final class FolioleCompanionBootstrapState {
         this.databasePath = databasePath;
         this.databaseReady = databaseReady;
         this.deviceId = deviceId;
-        this.deviceName = deviceId;
+        this.deviceName = resolveDeviceName(context);
     }
 
     static String loadDeviceId(Context context) throws Exception {
         String current = resolveDeviceName(context);
         SharedPreferences preferences = context.getSharedPreferences(IDENTITY_PREFERENCES, Context.MODE_PRIVATE);
-        String legacy = trimToNull(preferences.getString(DEVICE_ID_KEY, null));
-        String paired = FolioleCompanionPairingStore.loadStoredDeviceId(context);
-        if ((legacy != null && !legacy.equals(current)) || (paired != null && !paired.equals(current))) {
-            FolioleCompanionPairingStore.clearPairingCredentials(context);
-            FolioleCompanionSyncGroupJoinGrantStore.clear(context);
-            FolioleCompanionSyncGroupPeerStore.clear(context);
-            FolioleCompanionSyncGroupOutboundPeerStore.clear(context);
-        }
         if (!preferences.edit().remove(DEVICE_ID_KEY).commit()) {
             throw new IllegalStateException("Failed to retire legacy companion device identity.");
         }

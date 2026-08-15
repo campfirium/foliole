@@ -25,13 +25,12 @@ final class FolioleCompanionSyncGroupOutboundPeerStore {
     private FolioleCompanionSyncGroupOutboundPeerStore() {}
 
     static void save(Context context, String groupId, String localDeviceId, String peerDeviceId,
-                     String endpointUrl, String secret) throws Exception {
+                     String endpointUrl) throws Exception {
         JSONObject record = new JSONObject()
             .put("endpoint_url", normalizeEndpoint(endpointUrl))
             .put("group_id", groupId.trim())
             .put("local_device_id", localDeviceId.trim())
-            .put("peer_device_id", peerDeviceId.trim())
-            .put("secret", secret);
+            .put("peer_device_id", peerDeviceId.trim());
         if (!prefs(context).edit().putString(peerDeviceId.trim(), encrypt(record.toString())).commit()) {
             throw new IllegalStateException("Failed to persist Sync Group outbound peer.");
         }
@@ -39,13 +38,22 @@ final class FolioleCompanionSyncGroupOutboundPeerStore {
 
     static JSObject sign(Context context, String groupId, String endpointUrl, String method,
                          String pathWithQuery, String timestamp, String nonce, String bodyHash) throws Exception {
+        return signWithWorkgroupKey(context, groupId, endpointUrl, method, pathWithQuery,
+            timestamp, nonce, bodyHash, FolioleCompanionWorkgroupSession.requireKey());
+    }
+
+    static JSObject signWithWorkgroupKey(
+        Context context, String groupId, String endpointUrl, String method, String pathWithQuery,
+        String timestamp, String nonce, String bodyHash, String workgroupKey
+    ) throws Exception {
         JSONObject peer = find(context, groupId.trim(), normalizeEndpoint(endpointUrl));
         String canonical = method.toUpperCase() + "\n" + pathWithQuery + "\n" + timestamp + "\n" + nonce + "\n" + bodyHash;
         JSObject headers = new JSObject();
         headers.put("X-Device-Id", peer.getString("local_device_id"));
         headers.put("X-Timestamp", timestamp);
         headers.put("X-Nonce", nonce);
-        headers.put("X-Signature", FolioleCompanionPairingCrypto.signCanonicalRequest(peer.getString("secret"), canonical));
+        headers.put("X-Signature", FolioleCompanionPairingCrypto.signCanonicalRequest(
+            workgroupKey, canonical));
         return new JSObject().put("headers", headers);
     }
 

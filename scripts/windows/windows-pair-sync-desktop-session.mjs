@@ -109,8 +109,9 @@ export async function openPairSyncDesktopSession({
     }), { exitCode: 74, stage });
   }
   return {
-    approve: (pairRequestId) => invoke(page, 'approve_companion_pair_request', {
-      pair_request_id: pairRequestId
+    approve: (pairRequestId, membershipAction) => invoke(page, 'approve_companion_pair_request', {
+      pair_request_id: pairRequestId,
+      ...(membershipAction ? { membership_action: membershipAction } : {})
     }),
     assertActive: () => assertElectronAppActive(app),
     close: () => app.close(),

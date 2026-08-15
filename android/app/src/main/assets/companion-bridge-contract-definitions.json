@@ -274,7 +274,8 @@
         "deviceName": "device_name",
         "factsRevision": "facts_revision",
         "group": "sync_group",
-        "pairRequestId": "pair_request_id"
+        "pairRequestId": "pair_request_id",
+        "workgroupKey": "workgroup_key"
       }
     },
     "syncParticipation": {
@@ -321,6 +322,7 @@
   "pairingPlugin": {
     "routeBindingRequestKeys": {
       "endpointUrl": "endpoint_url",
+      "localDeviceId": "local_device_id",
       "peerDeviceId": "peer_device_id",
       "syncGroupId": "sync_group_id"
     },

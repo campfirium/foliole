@@ -11,14 +11,13 @@ final class FolioleCompanionSyncGroupOutboundPairing {
         Context context,
         JSONObject config,
         FolioleCompanionSyncGroupJoinRequest pending,
-        String secret,
         FolioleCompanionSyncGroupDataBridge dataBridge
     ) throws Exception {
         String now = java.time.Instant.now().toString();
         String endpointUrl = "http://" + pending.remoteAddress + ":38641";
         FolioleCompanionSyncGroupOutboundPeerStore.save(
             context, config.getJSONObject("sync_group").getString("group_id"),
-            config.getString("device_id"), pending.deviceId, endpointUrl, secret
+            config.getString("device_id"), pending.deviceId, endpointUrl
         );
         FolioleCompanionSyncGroupDatabase.saveSyncEndpoint(dataBridge, endpointUrl, now);
     }

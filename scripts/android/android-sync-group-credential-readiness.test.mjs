@@ -35,3 +35,12 @@ it('reports an absent Sync Group outbound credential independently of legacy pai
     syncGroupRemotePeerFingerprint: null
   });
 });
+
+it('treats grep zero matches as an inspectable empty credential set', async () => {
+  const run = vi.fn(async (_command, args) => ({
+    stdout: String(args.at(-1)).includes('grep -c') ? '0\n' : ''
+  }));
+  await inspectSyncGroupOutboundPreferences(options, run);
+  expect(run.mock.calls[0][1].at(-1)).toContain("grep -c '<string name=' "
+    + 'shared_prefs/foliole_sync_group_outbound_peers.xml || true');
+});

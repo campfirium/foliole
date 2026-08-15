@@ -91,8 +91,8 @@ export async function inspectPairingPreferences(options, run = execFileAsync) {
 export async function inspectSyncGroupOutboundPreferences(options, run = execFileAsync) {
   const backup = `${SYNC_GROUP_OUTBOUND_PREFS}.bak`;
   const countScript = quoteAdbShellScript(
-    `if test -f ${SYNC_GROUP_OUTBOUND_PREFS}; then grep -c '<string name=' ${SYNC_GROUP_OUTBOUND_PREFS}; `
-      + `elif test -f ${backup}; then grep -c '<string name=' ${backup}; else printf '0\\n'; fi`
+    `if test -f ${SYNC_GROUP_OUTBOUND_PREFS}; then grep -c '<string name=' ${SYNC_GROUP_OUTBOUND_PREFS} || true; `
+      + `elif test -f ${backup}; then grep -c '<string name=' ${backup} || true; else printf '0\\n'; fi`
   );
   const countResult = await run(options.adb, [
     '-s', options.serial, 'shell', 'run-as', options.appId, 'sh', '-c', countScript
@@ -128,9 +128,12 @@ export async function runPairSyncRecoveryReadiness(options) {
   return {
     ...pairSyncRecoveryReadiness(
       snapshot, pairing.pairingCredentialsPresent, pairing.remotePeerFingerprint,
-      pairing.pairingPeerConflict, pairing.storedDeviceFingerprint
+      pairing.pairingPeerConflict, pairing.storedDeviceFingerprint,
+      snapshot.database?.inspection?.workgroupKeyPresent === true
     ),
     ...syncGroup,
+    syncGroupCredentialsPresent: snapshot.database?.inspection?.workgroupKeyPresent === true,
+    syncGroupRoutePresent: syncGroup.syncGroupCredentialsPresent,
     syncGroupRemotePeerPendingDeliveryCount: remotePeerPendingDeliveryCount
   };
 }

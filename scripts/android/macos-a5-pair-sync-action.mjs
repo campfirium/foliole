@@ -157,7 +157,8 @@ export async function runMacosA5PairSync({
   buildIdentity, credentialRepairRequired, desktopControl = macosDesktopControl,
   deviceFingerprint, existingPairing, env, evidenceRoot, execute,
   libraryHome, paths, protectData, remotePeerFingerprint, openTransport, closeTransport,
-  runPairSyncRecovery = runWindowsA5PairSyncRecovery, serial,
+  instrumentationModeArgs, pairedDeviceFingerprint, pairRequestFingerprint,
+  recoveryEvidenceGoal, runPairSyncRecovery = runWindowsA5PairSyncRecovery, serial,
   userDataPath = path.join(paths.repoRoot, MACOS_DAILY_DEBUG_ROOT, 'user-data'),
   validateDesktop = reconcileAuthorizedMacosDailyPairing
 }) {
@@ -170,6 +171,10 @@ export async function runMacosA5PairSync({
       ...options, libraryHome, userDataPath
     }),
     ...(openTransport ? { openTransport } : {}),
+    ...(instrumentationModeArgs ? { instrumentationModeArgs } : {}),
+    ...(pairedDeviceFingerprint !== undefined ? { pairedDeviceFingerprint } : {}),
+    ...(pairRequestFingerprint ? { pairRequestFingerprint } : {}),
+    ...(recoveryEvidenceGoal ? { recoveryEvidenceGoal } : {}),
     desktopControl, validateDesktop,
     paths: {
       adbPath: paths.adb,

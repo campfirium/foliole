@@ -62,7 +62,9 @@ export function createDesktopSyncGroup(args: {
   const now = args.now ?? new Date().toISOString();
   driver.transaction(() => {
     driver.execute(
-      `INSERT INTO sync_groups VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO sync_groups (
+        group_id, display_name, timeline_id, created_by_device_id, created_at, updated_at, workgroup_key
+      ) VALUES (?, ?, ?, ?, ?, ?, NULL)`,
       [groupId, args.deviceName, timelineId, args.deviceId, now, now]
     );
     driver.execute(
@@ -106,6 +108,7 @@ export function joinDesktopSyncGroup(args: {
   group: SyncGroupPayload;
   now?: string;
   previousDeviceId?: string;
+  workgroupKey: string;
 }) {
   if (loadDesktopSyncGroup()) throw new Error('sync_group_identity_mismatch');
   const localMember = args.group.members.find((member) => member.device_id === args.deviceId);
@@ -115,9 +118,11 @@ export function joinDesktopSyncGroup(args: {
   driver.transaction(() => {
     if (args.previousDeviceId) rekeyLocalSyncHistory(driver, args.previousDeviceId, args.deviceId);
     driver.execute(
-      'INSERT INTO sync_groups VALUES (?, ?, ?, ?, ?, ?)',
+      `INSERT INTO sync_groups (
+        group_id, display_name, timeline_id, created_by_device_id, created_at, updated_at, workgroup_key
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [args.group.group_id, args.group.display_name, args.group.timeline_id,
-        args.group.created_by_device_id, args.group.created_at, now]
+        args.group.created_by_device_id, args.group.created_at, now, args.workgroupKey]
     );
     for (const member of args.group.members) {
       driver.execute(
@@ -189,7 +194,11 @@ export function recordSyncGroupDeparture(args: {
       `INSERT INTO sync_group_member_departures
         (group_id, device_id, authorized_by_device_id, authorization_id, left_at)
        VALUES (?, ?, ?, ?, ?)
-       ON CONFLICT(group_id, device_id) DO NOTHING`,
+       ON CONFLICT(group_id, device_id) DO UPDATE SET
+         authorized_by_device_id = excluded.authorized_by_device_id,
+         authorization_id = excluded.authorization_id,
+         left_at = excluded.left_at
+       WHERE excluded.left_at > sync_group_member_departures.left_at`,
       [args.groupId, args.deviceId, args.authorizedByDeviceId, args.authorizationId, args.leftAt]
     );
     driver.execute(
@@ -198,6 +207,8 @@ export function recordSyncGroupDeparture(args: {
       [args.leftAt, args.leftAt, args.groupId, args.deviceId]
     );
     if (args.local) {
+      driver.execute('UPDATE sync_groups SET workgroup_key = NULL, updated_at = ? WHERE group_id = ?',
+        [args.leftAt, args.groupId]);
       driver.execute('DELETE FROM sync_delivery_receipts');
       driver.execute('DELETE FROM sync_peer_cursors');
       driver.execute('DELETE FROM sync_group_local_state WHERE singleton_id = 1 AND local_device_id = ?',

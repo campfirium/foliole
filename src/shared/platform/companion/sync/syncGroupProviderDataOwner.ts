@@ -67,7 +67,8 @@ async function authorizeMember(payload: Record<string, unknown>) {
     ))[0];
     if (existing) return { authorized: true, device_id: text(existing.device_id), device_name: text(existing.device_name) };
     const occupied = await tx.query<DbRow>(
-      'SELECT device_name FROM sync_group_members WHERE group_id = ?', [groupId]
+      `SELECT device_name FROM sync_group_members
+       WHERE group_id = ? AND state = 'active'`, [groupId]
     );
     const assigned = allocateSyncGroupDeviceProfile(
       text(member.device_name), occupied.map((row) => text(row.device_name))
@@ -77,9 +78,27 @@ async function authorizeMember(payload: Record<string, unknown>) {
       `INSERT INTO sync_group_members (
         group_id, device_id, device_kind, device_name, state, approved_by_device_id,
         authorization_id, provisioning_cursor, joined_at, activated_at, left_at, updated_at
-      ) VALUES (?, ?, ?, ?, 'active', ?, ?, NULL, ?, NULL, NULL, ?)`,
+      ) VALUES (?, ?, ?, ?, 'active', ?, ?, NULL, ?, NULL, NULL, ?)
+      ON CONFLICT(group_id, device_id) DO UPDATE SET
+        device_kind = excluded.device_kind,
+        device_name = excluded.device_name,
+        state = 'active',
+        approved_by_device_id = excluded.approved_by_device_id,
+        authorization_id = excluded.authorization_id,
+        provisioning_cursor = NULL,
+        joined_at = excluded.joined_at,
+        activated_at = NULL,
+        left_at = NULL,
+        updated_at = excluded.updated_at
+      WHERE sync_group_members.state = 'left'
+        AND excluded.joined_at > sync_group_members.joined_at`,
       [groupId, assigned.device_id, text(member.device_kind), assigned.device_name,
         text(payload.approved_by_device_id), authorizationId, text(member.joined_at), now]
+    );
+    await tx.run(
+      `DELETE FROM sync_group_member_departures
+       WHERE group_id = ? AND device_id = ? AND left_at < ?`,
+      [groupId, assigned.device_id, text(member.joined_at)]
     );
     return { authorized: true, ...assigned };
   })));
@@ -129,8 +148,13 @@ async function recordDeparture(payload: Record<string, unknown>) {
     }
     await db.transaction(async (tx) => {
       await tx.run(
-        `INSERT OR IGNORE INTO sync_group_member_departures
-         (group_id, device_id, authorized_by_device_id, authorization_id, left_at) VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO sync_group_member_departures
+         (group_id, device_id, authorized_by_device_id, authorization_id, left_at) VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(group_id, device_id) DO UPDATE SET
+           authorized_by_device_id = excluded.authorized_by_device_id,
+           authorization_id = excluded.authorization_id,
+           left_at = excluded.left_at
+         WHERE excluded.left_at > sync_group_member_departures.left_at`,
         [groupId, deviceId, deviceId, text(value.authorization_id), leftAt]
       );
       await tx.run(

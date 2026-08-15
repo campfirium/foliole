@@ -8,7 +8,6 @@ import org.json.JSONObject;
 import java.util.concurrent.TimeUnit;
 
 final class FolioleCompanionSettingsNavigation {
-    private static final String REVIEW_ACTION = "companion-review-action-later";
     private static final String SETTINGS_TAB = "companion-tab-settings";
     private static final String TOP_BAR_BACK = "companion-top-bar-back";
     private static final String TOP_BAR_LEFT_ACTION = "companion-top-bar-left-action";
@@ -17,18 +16,22 @@ final class FolioleCompanionSettingsNavigation {
 
     static void open(Instrumentation instrumentation, WebView webView) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
+        JSONObject latestSnapshot = null;
         while (System.nanoTime() < deadline) {
             JSONObject snapshot = FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView);
+            latestSnapshot = snapshot;
             if (isVisible(snapshot, SETTINGS_TAB)) {
                 if (clickObserved(instrumentation, webView, SETTINGS_TAB)) return;
             }
-            String exit = isVisible(snapshot, REVIEW_ACTION) && isVisible(snapshot, TOP_BAR_LEFT_ACTION)
+            String exit = isVisible(snapshot, TOP_BAR_LEFT_ACTION)
                 ? TOP_BAR_LEFT_ACTION
                 : isVisible(snapshot, TOP_BAR_BACK) ? TOP_BAR_BACK : null;
             if (exit != null) clickObserved(instrumentation, webView, exit);
             Thread.sleep(500);
         }
-        throw new IllegalStateException("Timed out navigating to companion Settings.");
+        throw new IllegalStateException(
+            "Timed out navigating to companion Settings; semantic=" + latestSnapshot
+        );
     }
 
     private static boolean isVisible(JSONObject snapshot, String testId) throws Exception {

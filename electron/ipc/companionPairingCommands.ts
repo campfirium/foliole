@@ -8,6 +8,9 @@ import { commitPrimaryDeviceToPeer } from '../database/primaryDeviceCommit.js';
 import { createDesktopSyncGroup, loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import { resolveDesktopDeviceName } from '../sync/companionLanPayloads.js';
 import {
+  resolveCompanionMembershipApproval, resolveCompanionMembershipDeviceId
+} from '../sync/companionMembershipApproval.js';
+import {
   approveCompanionPairRequest,
   loadPendingCompanionPairRequests,
   rejectCompanionPairRequest
@@ -90,7 +93,19 @@ function handleCompanionPairRequestMutation(
 ) {
   if (mutate === approveCompanionPairRequest) assertDesktopCompanionSyncParticipating();
   const pairRequestId = asString(args.pair_request_id, 'pair_request_id');
-  requireCompanionPairRequestMutationResult(mutate(pairRequestId), pairRequestId);
+  if (mutate === approveCompanionPairRequest) {
+    const request = loadPendingCompanionPairRequests().find(({ pair_request_id: id }) => id === pairRequestId);
+    if (!request) throw new Error(`unknown companion pair request: ${pairRequestId}`);
+    const group = loadDesktopSyncGroup();
+    const action = resolveCompanionMembershipApproval(request, group);
+    const deviceId = resolveCompanionMembershipDeviceId(request, group);
+    requireCompanionPairRequestMutationResult(
+      approveCompanionPairRequest(pairRequestId, Date.now(), action, deviceId),
+      pairRequestId
+    );
+  } else {
+    requireCompanionPairRequestMutationResult(mutate(pairRequestId), pairRequestId);
+  }
   return buildDesktopCompanionPairingOverview();
 }
 

@@ -32,7 +32,8 @@ async function invoke(page, command, args) {
 
 export async function ensureMacosSyncGroup(actions) {
   const overview = await actions.load();
-  return overview.sync_group ? actions.enable() : actions.create();
+  if (!overview.sync_group) return actions.create();
+  return overview.sync_paused === true ? actions.resume() : actions.enable();
 }
 
 function launchOptions(repoRoot, env, userDataPath, libraryHome, executablePath) {
@@ -73,7 +74,8 @@ export async function openMacosPairSyncDesktopSession({
     const syncGroupActions = {
       create: () => invoke(page, 'create_sync_group'),
       enable: () => invoke(page, 'enable_companion_sync'),
-      load: () => invoke(page, 'load_companion_pairing_overview')
+      load: () => invoke(page, 'load_companion_pairing_overview'),
+      resume: () => invoke(page, 'resume_companion_sync')
     };
     return {
       approve: (pairRequestId) => invoke(page, 'approve_companion_pair_request', {

@@ -31,7 +31,7 @@ function workspaceSync() {
       database_path: 'foliole-companion-preview.db', device_id: 'android-b',
       runtime_kind: 'android-capacitor'
     },
-    pairingState: { is_paired: true },
+    pairingState: { device_id: 'android-b', is_paired: true },
     state: { last_synced_at: null }
   } as unknown as ReturnType<typeof useCompanionWorkspaceSync>;
 }
@@ -39,7 +39,7 @@ function workspaceSync() {
 const bootstrapState = workspaceSync().bootstrapState;
 
 it('maintains the member provider before any settings surface is mounted', async () => {
-  const group = { group_id: 'group-1', local_member_state: 'active' };
+  const group = { group_id: 'group-1', local_device_id: 'android-b', local_member_state: 'active' };
   runtime.load.mockResolvedValue(group);
   render(<CompanionSyncGroupRuntime bootstrapState={bootstrapState} workspaceSync={workspaceSync()}>
     <main>Reader</main>
@@ -48,6 +48,18 @@ it('maintains the member provider before any settings surface is mounted', async
   expect(runtime.reconcile).toHaveBeenCalledWith(
     expect.objectContaining({ device_id: 'android-b' }), group, '0:'
   );
+});
+
+it('starts a copied group database without requiring separate host credentials', async () => {
+  const group = { group_id: 'group-1', local_device_id: 'android-b', local_member_state: 'active' };
+  const sync = workspaceSync();
+  sync.pairingState = { device_id: null, is_paired: false } as typeof sync.pairingState;
+  runtime.load.mockResolvedValue(group);
+  render(<CompanionSyncGroupRuntime bootstrapState={bootstrapState} workspaceSync={sync}>
+    <main>Reader</main>
+  </CompanionSyncGroupRuntime>);
+  await act(async () => Promise.resolve());
+  expect(runtime.reconcile).toHaveBeenCalledWith(expect.anything(), group, '0:');
 });
 
 it('does not stop the provider while persisted membership is loading', async () => {

@@ -20,7 +20,9 @@ import {
   buildWorkspaceSnapshotPayload,
   buildWorkspaceVersionPayload
 } from './companionLanPayloads.js';
-import { writeBinary, writeFileStream, writeJson, writeOptions } from './companionLanResponses.js';
+import {
+  writeJson, writeOptions, writeWorkgroupBinary, writeWorkgroupFileStream
+} from './companionLanResponses.js';
 import {
   isRetiredSyncJsonEndpoint,
   SYNC_INDEX_PATH,
@@ -131,7 +133,7 @@ async function handleAuthenticatedGet(
       parsedRequestUrl.searchParams.get('content_hash')
     );
     if (resource.status === 'ready') {
-      await writeFileStream(response, 200, resource);
+      await writeWorkgroupFileStream(request, response, 200, resource);
     } else {
       writeJson(request, response, resource.statusCode, { error: resource.error }, 'GET, OPTIONS');
     }
@@ -140,7 +142,7 @@ async function handleAuthenticatedGet(
   if (parsedRequestUrl.pathname === CONTENT_BLOB_RESOURCE_PATH) {
     const resource = await loadCompanionContentBlobResource(parsedRequestUrl.searchParams.get('hash'));
     if (resource.status === 'ready') {
-      writeBinary(response, 200, resource.body, resource.mimeType);
+      writeWorkgroupBinary(request, response, 200, resource.body, resource.mimeType);
     } else {
       writeJson(request, response, resource.statusCode, { error: resource.error }, 'GET, OPTIONS');
     }

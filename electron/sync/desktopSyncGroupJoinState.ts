@@ -25,8 +25,7 @@ export function refreshDesktopSyncGroupPendingJoinEndpoint(args: {
   timelineId: string;
 }) {
   if (!pending || pending.candidate.group_id !== args.groupId ||
-      pending.candidate.provider_device_id !== args.providerDeviceId ||
-      pending.candidate.timeline_id !== args.timelineId) return false;
+      pending.candidate.provider_device_id !== args.providerDeviceId) return false;
   pending = {
     ...pending,
     candidate: { ...pending.candidate, endpoint_url: args.endpointUrl },

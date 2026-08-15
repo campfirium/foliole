@@ -10,6 +10,18 @@ export function loadCompanionSyncGroup() {
   return owner().read(loadGroup);
 }
 
+export function loadCompanionSyncGroupWorkgroupKey() {
+  return owner().read(async (db) => {
+    const row = (await db.query<DbRow>(
+      `SELECT g.workgroup_key FROM sync_groups g
+       JOIN sync_group_local_state l ON l.group_id = g.group_id
+       WHERE l.singleton_id = 1 LIMIT 1`
+    ))[0];
+    return typeof row?.workgroup_key === 'string' && row.workgroup_key.trim()
+      ? row.workgroup_key.trim() : null;
+  });
+}
+
 export function loadCompanionSyncGroupEndpoint() {
   return owner().read(async (db) => {
     const row = (await db.query<DbRow>(
@@ -33,6 +45,7 @@ export function loadCompanionSyncGroupLibraryFacts(): Promise<SyncGroupLibraryFa
 export function joinCompanionSyncGroup(args: {
   deviceId: string;
   group: SyncGroupPayload;
+  workgroupKey: string;
 }) {
   return owner().runWriter((db) => db.transaction(async (tx) => {
     const group = args.group;
@@ -41,7 +54,7 @@ export function joinCompanionSyncGroup(args: {
        FROM sync_group_local_state l JOIN sync_groups g ON g.group_id = l.group_id
        WHERE l.singleton_id = 1`
     ))[0];
-    if (local && (local.group_id !== group.group_id || local.timeline_id !== group.timeline_id
+    if (local && (local.group_id !== group.group_id
       || local.local_device_id !== args.deviceId || local.member_state !== 'active')) {
       throw new Error('sync_group_identity_mismatch');
     }
@@ -49,9 +62,13 @@ export function joinCompanionSyncGroup(args: {
     if (!localMember || localMember.state !== 'active') throw new Error('sync_group_member_not_authorized');
     const now = new Date().toISOString();
     await tx.run(
-      `INSERT INTO sync_groups VALUES (?, ?, ?, ?, ?, ?)
-       ON CONFLICT(group_id) DO UPDATE SET display_name = excluded.display_name, updated_at = excluded.updated_at`,
-      [group.group_id, group.display_name, group.timeline_id, group.created_by_device_id, group.created_at, now]
+      `INSERT INTO sync_groups (
+        group_id, display_name, timeline_id, created_by_device_id, created_at, updated_at, workgroup_key
+       ) VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(group_id) DO UPDATE SET display_name = excluded.display_name,
+         updated_at = excluded.updated_at, workgroup_key = excluded.workgroup_key`,
+      [group.group_id, group.display_name, group.timeline_id, group.created_by_device_id,
+        group.created_at, now, args.workgroupKey]
     );
     for (const member of group.members) await saveMember(tx, group.group_id, member, now);
     await tx.run(
@@ -61,6 +78,7 @@ export function joinCompanionSyncGroup(args: {
       ) VALUES (1, ?, ?, 'active', NULL, NULL, ?)`,
       [group.group_id, args.deviceId, now]
     );
+    await saveLocalDeviceProfile(tx, args.deviceId, now);
     return (await loadGroup(tx))!;
   }));
 }
@@ -68,6 +86,7 @@ export function joinCompanionSyncGroup(args: {
 export function refreshActiveCompanionSyncGroupMembership(args: {
   deviceId: string;
   group: SyncGroupPayload;
+  workgroupKey: string;
 }) {
   return owner().runWriter((db) => db.transaction(async (tx) => {
     const local = (await tx.query<DbRow>(
@@ -76,18 +95,18 @@ export function refreshActiveCompanionSyncGroupMembership(args: {
        WHERE l.singleton_id = 1`
     ))[0];
     if (local?.group_id !== args.group.group_id
-      || local.timeline_id !== args.group.timeline_id
       || local.local_device_id !== args.deviceId
       || local.member_state !== 'active') {
       throw new Error('sync_group_identity_mismatch');
     }
     const now = new Date().toISOString();
     await tx.run(
-      'UPDATE sync_groups SET display_name = ?, updated_at = ? WHERE group_id = ?',
-      [args.group.display_name, now, args.group.group_id]
+      'UPDATE sync_groups SET display_name = ?, updated_at = ?, workgroup_key = ? WHERE group_id = ?',
+      [args.group.display_name, now, args.workgroupKey, args.group.group_id]
     );
     for (const member of args.group.members) await saveMember(tx, args.group.group_id, member, now);
     await tx.run('UPDATE sync_group_local_state SET updated_at = ? WHERE singleton_id = 1', [now]);
+    await saveLocalDeviceProfile(tx, args.deviceId, now);
     return (await loadGroup(tx))!;
   }));
 }
@@ -110,9 +129,14 @@ export function recordLocalCompanionSyncGroupDeparture(args: {
       throw new Error('sync_group_departure_authorization_invalid');
     }
     await tx.run(
-      `INSERT OR IGNORE INTO sync_group_member_departures
+      `INSERT INTO sync_group_member_departures
        (group_id, device_id, authorized_by_device_id, authorization_id, left_at)
-       VALUES (?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(group_id, device_id) DO UPDATE SET
+         authorized_by_device_id = excluded.authorized_by_device_id,
+         authorization_id = excluded.authorization_id,
+         left_at = excluded.left_at
+       WHERE excluded.left_at > sync_group_member_departures.left_at`,
       [args.groupId, args.deviceId, args.deviceId, args.authorizationId, args.leftAt]
     );
     await tx.run(
@@ -120,6 +144,8 @@ export function recordLocalCompanionSyncGroupDeparture(args: {
        WHERE group_id = ? AND device_id = ?`,
       [args.leftAt, args.leftAt, args.groupId, args.deviceId]
     );
+    await tx.run('UPDATE sync_groups SET workgroup_key = NULL, updated_at = ? WHERE group_id = ?',
+      [args.leftAt, args.groupId]);
     await tx.run('DELETE FROM sync_delivery_receipts');
     await tx.run('DELETE FROM sync_peer_cursors');
     await tx.run('DELETE FROM sync_group_local_state WHERE singleton_id = 1 AND local_device_id = ?',
@@ -168,10 +194,25 @@ async function saveMember(db: DbPort, groupId: string, member: SyncGroupPayload[
       device_name = excluded.device_name,
       state = excluded.state,
       approved_by_device_id = excluded.approved_by_device_id,
-      authorization_id = excluded.authorization_id,
+      authorization_id = CASE WHEN excluded.joined_at >= joined_at
+        THEN excluded.authorization_id ELSE authorization_id END,
+      joined_at = MAX(joined_at, excluded.joined_at),
+      left_at = CASE WHEN excluded.joined_at > joined_at THEN NULL ELSE left_at END,
       updated_at = excluded.updated_at`,
     [groupId, member.device_id, member.device_kind, member.device_name, member.state,
       member.approved_by_device_id, member.authorization_id, member.joined_at, now]
+  );
+  await db.run(
+    `DELETE FROM sync_group_member_departures
+     WHERE group_id = ? AND device_id = ? AND left_at < ?`,
+    [groupId, member.device_id, member.joined_at]
+  );
+}
+
+function saveLocalDeviceProfile(db: DbPort, deviceId: string, now: string) {
+  return db.run(
+    `INSERT OR REPLACE INTO companion_meta (key, value, updated_at) VALUES ('device_id', ?, ?)`,
+    [deviceId, now]
   );
 }
 

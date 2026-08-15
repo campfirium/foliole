@@ -2,19 +2,15 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract';
+
 import { CompanionHandoffReminderRuntime } from './CompanionHandoffReminderRuntime';
 import { CompanionSyncContent } from './CompanionSyncContent';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
-const protocol = {
-  capabilities: ['lan-sync-v1', 'sync-group-facts-v1'],
-  max_supported_version: 1,
-  min_supported_version: 1,
-  version: 1
-};
 const usablePairingMetadata = {
-  negotiated_protocol_version: 1,
-  remote_protocol: protocol,
+  negotiated_protocol_version: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
+  remote_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
   sync_usable: true
 };
 
@@ -80,7 +76,7 @@ describe('CompanionSyncContent', () => {
 
     render(<TestSyncContent workspaceSync={workspaceSync} />);
 
-    expect(screen.getByRole('button', { name: 'Join Sync Group' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Connect to Sync Group' })).toBeInTheDocument();
     expect(workspaceSync.checkDesktop).not.toHaveBeenCalled();
   });
 

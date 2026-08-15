@@ -6,7 +6,8 @@ import { getMainWindow, setMainWindow } from './mainWindowRegistry.js';
 import type { StartupRendererView } from './rendererLoader.js';
 import { focusWindow } from './runtimeMainSupport.js';
 import { resolveDesktopDeviceName } from './sync/companionLanPayloads.js';
-import { ensureLanWorkspaceSyncServer, setLanWorkspaceSyncPairRequestHandler } from './sync/lanWorkspaceSyncServer.js';
+import { reconcileDesktopCompanionSyncRuntime } from './sync/desktopCompanionSyncParticipation.js';
+import { setLanWorkspaceSyncPairRequestHandler } from './sync/lanWorkspaceSyncServer.js';
 import { applyStartupWindowPresentation, presentInitialRendererWindow } from './windowRuntimeDiagnostics.js';
 
 export interface MainWindowLifecycleRuntime {
@@ -55,5 +56,5 @@ export async function startCompanionSyncIfEnabled(args: {
   if (!args.isEnabled()) {
     return;
   }
-  await ensureLanWorkspaceSyncServer({ appVersion: args.appVersion, peerId: args.peerId });
+  await reconcileDesktopCompanionSyncRuntime({ appVersion: args.appVersion, peerId: args.peerId });
 }

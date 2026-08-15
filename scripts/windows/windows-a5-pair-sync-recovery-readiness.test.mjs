@@ -99,6 +99,43 @@ it('waits for restart-created dirty state to receive its foreground sync acknowl
   expect(wait).toHaveBeenCalledWith(1_000);
 });
 
+it('quiesces database writers only while each readiness snapshot is collected', async () => {
+  const events = [];
+  const run = vi.fn().mockImplementation(async () => {
+    events.push('snapshot');
+    return result('[android-data] pair-sync-recovery-readiness=', pairing);
+  });
+
+  await postPairSyncRecoveryReadiness({
+    afterSnapshot: async () => events.push('provider-resumed'),
+    beforeSnapshot: async () => events.push('provider-stopped'),
+    deviceFingerprint: pairing.deviceIdentityFingerprint,
+    env: {}, paths: { adbPath: '/adb', repoRoot: '/repo', systemNode: '/node' },
+    run, serial: 'fixed-a5'
+  });
+
+  expect(events).toEqual(['provider-stopped', 'snapshot', 'provider-resumed']);
+});
+
+it('gives the foreground provider a sync window before a managed stopped snapshot', async () => {
+  const events = [];
+  const run = vi.fn(async (command, args) => {
+    if (command === '/node') {
+      events.push('snapshot');
+      return result('[android-data] pair-sync-recovery-readiness=', pairing);
+    }
+    events.push(args.includes('force-stop') ? 'stopped' : 'resumed');
+    return result('', {});
+  });
+  await postPairSyncRecoveryReadiness({
+    adbPort: '5037', deviceFingerprint: pairing.deviceIdentityFingerprint, env: {},
+    paths: { adbPath: '/adb', repoRoot: '/repo', systemNode: '/node' },
+    quiesceProvider: true, run, serial: 'fixed-a5',
+    wait: async (milliseconds) => events.push(`settled-${milliseconds}`)
+  });
+  expect(events).toEqual(['settled-8000', 'stopped', 'snapshot', 'resumed']);
+});
+
 it('accepts current Mac convergence while another active member remains pending', async () => {
   const run = vi.fn().mockResolvedValueOnce(result(
     '[android-data] pair-sync-recovery-readiness=', {

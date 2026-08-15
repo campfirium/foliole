@@ -11,6 +11,7 @@
     "addNodesImportSourceFingerprintIfMissing": "addNodesImportSourceFingerprintIfMissing",
     "addNodesImportContentFingerprintIfMissing": "addNodesImportContentFingerprintIfMissing",
     "migrateExternalFolderOwnership": "migrateExternalFolderOwnership",
+    "addSyncGroupsWorkgroupKeyIfMissing": "addSyncGroupsWorkgroupKeyIfMissing",
     "addNodesEnableShortTermIfMissing": "addNodesEnableShortTermIfMissing",
     "addNodesSequentialReadingEnabledIfMissing": "addNodesSequentialReadingEnabledIfMissing",
     "addNodesShelvedAtIfMissing": "addNodesShelvedAtIfMissing",
@@ -265,6 +266,18 @@
         }
       ],
       "beforeVersion": 25
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to install Sync Group key storage.",
+          "type": "installSchema"
+        },
+        {
+          "type": "addSyncGroupsWorkgroupKeyIfMissing"
+        }
+      ],
+      "beforeVersion": 26
     }
   ],
   "planKeys": {
@@ -350,6 +363,12 @@
       "statementName": "nodesEnableShortTermColumn",
       "tableName": "nodes"
     },
+    "nodesManualChildOrder": {
+      "columnName": "manual_child_order",
+      "errorMessage": "Failed to add node manual child order column.",
+      "statementName": "nodesManualChildOrderColumn",
+      "tableName": "nodes"
+    },
     "nodesSequentialReadingEnabled": {
       "columnName": "sequential_reading_enabled",
       "errorMessage": "Failed to add node sequential reading column.",
@@ -362,11 +381,11 @@
       "statementName": "nodesShelvedAtColumn",
       "tableName": "nodes"
     },
-    "nodesManualChildOrder": {
-      "columnName": "manual_child_order",
-      "errorMessage": "Failed to add node manual child order column.",
-      "statementName": "nodesManualChildOrderColumn",
-      "tableName": "nodes"
+    "syncGroupsWorkgroupKey": {
+      "columnName": "workgroup_key",
+      "errorMessage": "Failed to add Sync Group workgroup key column.",
+      "statementName": "syncGroupsWorkgroupKeyColumn",
+      "tableName": "sync_groups"
     },
     "nodeViewStateSource": {
       "columnName": "source",
@@ -395,9 +414,10 @@
     "externalFoldersOwnerPathIndex": "CREATE UNIQUE INDEX IF NOT EXISTS idx_external_search_folders_owner_path\n    ON external_search_folders (owner_installation_id, folder_path) WHERE owner_installation_id IS NOT NULL",
     "externalFoldersRenameNextTable": "ALTER TABLE external_search_folders_next RENAME TO external_search_folders",
     "nodesEnableShortTermColumn": "ALTER TABLE nodes ADD COLUMN enable_short_term INTEGER",
+    "nodesManualChildOrderColumn": "ALTER TABLE nodes ADD COLUMN manual_child_order TEXT",
     "nodesSequentialReadingEnabledColumn": "ALTER TABLE nodes ADD COLUMN sequential_reading_enabled INTEGER",
     "nodesShelvedAtColumn": "ALTER TABLE nodes ADD COLUMN shelved_at TEXT",
-    "nodesManualChildOrderColumn": "ALTER TABLE nodes ADD COLUMN manual_child_order TEXT",
+    "syncGroupsWorkgroupKeyColumn": "ALTER TABLE sync_groups ADD COLUMN workgroup_key TEXT",
     "nodeViewStateSourceColumn": "ALTER TABLE node_view_state ADD COLUMN source TEXT NOT NULL DEFAULT 'user-scroll'",
     "syncPushAckDropLegacyTable": "DROP TABLE IF EXISTS sync_push_ack",
     "syncObjectStateDropLegacyTable": "DROP TABLE sync_object_state",

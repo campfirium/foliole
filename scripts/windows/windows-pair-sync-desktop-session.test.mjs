@@ -36,6 +36,7 @@ it('launches the real current-library runtime and invokes only existing product 
   });
   await session.enable();
   await session.approve('pair-1');
+  await session.approve('pair-2', 'recover_existing_member');
   await session.remove('old-device');
   const launchEnv = fixture.launcher.launch.mock.calls[0][0].env;
   expect(launchEnv.FOLIOLE_LIBRARY_HOME).toBe('D:\\X\\U\\Foliole');
@@ -43,8 +44,12 @@ it('launches the real current-library runtime and invokes only existing product 
   expect(launchEnv).not.toHaveProperty('FOLIOLE_SESSION_DATA_PATH');
   expect(fixture.calls.map((call) => call.commandName)).toEqual([
     'load_library_path_settings', 'enable_companion_sync', 'approve_companion_pair_request',
+    'approve_companion_pair_request',
     'remove_companion_paired_device'
   ]);
+  expect(fixture.calls.at(-2).commandArgs).toEqual({
+    membership_action: 'recover_existing_member', pair_request_id: 'pair-2'
+  });
   expect(fixture.calls.at(-1).commandArgs).toEqual({ device_id: 'old-device' });
   expect(session.sanitize(await session.load()).desktopPeerFingerprint)
     .toBe(pairSyncIdentityFingerprint('desktop-device-1'));

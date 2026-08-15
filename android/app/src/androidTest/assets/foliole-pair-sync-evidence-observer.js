@@ -8,7 +8,8 @@
   var state = {
     keyState: 'not-started', requestState: 'not-started', completion: 'not_started',
     credentials: 'not_saved', initialSync: 'not_started',
-    syncPackApplied: false, syncPackDownloaded: false
+    syncPackApplied: false, syncPackDownloaded: false,
+    syncFailure: null, syncPackUrl: null
   };
   window.__foliolePairSyncObserver = state;
   var originalGenerateKey = proto.generateKey;
@@ -31,11 +32,15 @@
       catch (error) { return Promise.reject(error); }
     };
     if (pluginName === 'FolioleCompanionSyncPackTransfer') {
-      return observeSyncPack(state, methodName, call);
+      return observeSyncPack(state, methodName, call, args);
     }
     if (pluginName !== 'FolioleCompanionSync') return call();
     if (methodName === 'desktopHttpRequest') return observeHttp(state, args, call);
     if (methodName === 'savePairingCredentials' && state.completion === 'http_200') {
+      return call().then(function (value) { state.credentials = 'saved_not_signable'; return value; },
+        function (error) { state.credentials = 'save_failed'; throw error; });
+    }
+    if (methodName === 'bindSyncGroupPeerRoute' && state.completion === 'http_200') {
       return call().then(function (value) { state.credentials = 'saved_not_signable'; return value; },
         function (error) { state.credentials = 'save_failed'; throw error; });
     }
@@ -65,9 +70,11 @@
     if (isSyncPush(args) && pairingCanSync(state)) {
       state.initialSync = 'started';
       return call().then(function (value) {
-        if (!value || value.status < 200 || value.status >= 300) state.initialSync = 'failed';
+        if (!value || value.status < 200 || value.status >= 300) {
+          state.initialSync = 'failed'; state.syncFailure = 'sync-push-http-' + (value && value.status);
+        }
         return value;
-      }, function (error) { state.initialSync = 'failed'; throw error; });
+      }, function (error) { state.initialSync = 'failed'; state.syncFailure = String(error); throw error; });
     }
     return call();
   }
@@ -79,13 +86,14 @@
   function pairingCanSync(state) {
     return state.credentials === 'saved_signable' || state.completion === 'existing_pairing';
   }
-  function observeSyncPack(state, methodName, call) {
+  function observeSyncPack(state, methodName, call, args) {
     if (!pairingCanSync(state)) return call();
     if (methodName === 'downloadDesktopSyncPack') {
+      state.syncPackUrl = args && args.url || null;
       if (state.initialSync === 'not_started') state.initialSync = 'started';
       return call().then(function (value) {
         state.syncPackDownloaded = true; return value;
-      }, function (error) { state.initialSync = 'failed'; throw error; });
+      }, function (error) { state.initialSync = 'failed'; state.syncFailure = String(error); throw error; });
     }
     if (methodName === 'deleteDownloadedSyncPack' && state.syncPackDownloaded) {
       return call().then(function (value) {

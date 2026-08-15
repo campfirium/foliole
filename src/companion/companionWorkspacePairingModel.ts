@@ -14,6 +14,7 @@ export type CompanionDesktopDiscovery = {
   peerId: string;
   groupDisplayName?: string;
   groupId?: string | undefined;
+  groupTag?: string | undefined;
   timelineId?: string | undefined;
 };
 
@@ -25,6 +26,7 @@ export type PendingPairRequest = {
   remotePeerName: string;
   remotePeerPlatform: string;
   groupId?: string | undefined;
+  groupTag?: string | undefined;
   timelineId?: string | undefined;
 } | null;
 
@@ -43,6 +45,7 @@ export function normalizeDiscovery(endpointUrl: string, discovery: {
   peer_id: string;
   group_display_name: string;
   group_id: string;
+  group_tag: string;
   timeline_id: string;
 }, compatibility: SyncProtocolCompatibilityResult) {
   return {
@@ -55,6 +58,7 @@ export function normalizeDiscovery(endpointUrl: string, discovery: {
     peerId: discovery.peer_id,
     groupDisplayName: discovery.group_display_name,
     groupId: discovery.group_id,
+    groupTag: discovery.group_tag,
     timelineId: discovery.timeline_id
   };
 }

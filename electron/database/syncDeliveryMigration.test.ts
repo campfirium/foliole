@@ -107,7 +107,8 @@ function installDeliveryPrerequisites(sqlite: Database.Database) {
 
 function installGroup(sqlite: Database.Database) {
   sqlite.exec(`
-    INSERT INTO sync_groups VALUES ('group','Group','timeline','local','2026-08-01','2026-08-09');
+    INSERT INTO sync_groups (group_id, display_name, timeline_id, created_by_device_id, created_at, updated_at)
+    VALUES ('group','Group','timeline','local','2026-08-01','2026-08-09');
     INSERT INTO sync_group_local_state VALUES (1,'group','local','active',NULL,NULL,'2026-08-09');
     INSERT INTO sync_group_members VALUES
       ('group','local','desktop','Local','active','local','auth-local',NULL,'2026-08-01',NULL,NULL,'2026-08-09'),

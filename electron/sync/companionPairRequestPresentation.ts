@@ -12,6 +12,7 @@ export interface PendingCompanionPairRequest {
   pair_request_id: string;
   requested_at: string;
   status: 'approved' | 'pending' | 'rejected';
+  membership_action?: 'join_as_new_member' | 'recover_existing_member';
   group_id?: string;
   timeline_id?: string;
 }
@@ -40,6 +41,7 @@ export function toPublicPairRequest(request: StoredCompanionPairRequest): Pendin
     pair_request_id: request.pair_request_id,
     requested_at: request.requested_at,
     status: request.status,
+    ...(request.membership_action ? { membership_action: request.membership_action } : {}),
     ...(request.group_id ? { group_id: request.group_id } : {}),
     ...(request.timeline_id ? { timeline_id: request.timeline_id } : {})
   };

@@ -94,6 +94,7 @@ final class FolioleCompanionAttachmentResourceBatchStore {
             throw new IllegalStateException("Failed to create attachment directory.");
         }
         FolioleCompanionDesktopHttpClient.downloadToFile(
+            context,
             requireText(resource.optString(urlKey, null), urlKey),
             resource.optJSONObject(FolioleCompanionBridgeContractDefinitions.resourceHeadersRequestKey(context)),
             tempFile

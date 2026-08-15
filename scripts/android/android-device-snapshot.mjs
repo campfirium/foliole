@@ -8,6 +8,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 
 import { openReadonlySqliteDatabase } from './sqlite-readonly.mjs';
+import { classifySqliteReadError } from './android-database-read-error.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -49,7 +50,7 @@ async function resolveSerial(options) {
 }
 
 function parsePackageInfo(output) {
-  const info = {};
+  const info = { debuggable: /\bDEBUGGABLE\b/u.test(output) };
   for (const line of output.split(/\r?\n/u)) {
     const trimmed = line.trim();
     for (const key of ['firstInstallTime', 'lastUpdateTime', 'initiatingPackageName', 'dataDir']) {
@@ -138,8 +139,10 @@ async function inspectDatabase(filePath, sidecarPaths, tables, inspector) {
     return { counts, exists: true, inspection: inspector?.(database), integrity, path: filePath,
       sidecarPaths, size };
   } catch (error) {
+    const errorDetail = String(error?.message ?? error).replaceAll(filePath, '<snapshot>').slice(0, 500);
     return {
-      counts: {}, error: error.message, exists: true, path: filePath, sidecarPaths, size, unreadable: true
+      counts: {}, error: errorDetail, errorCode: classifySqliteReadError(error), exists: true,
+      path: filePath, sidecarPaths, size, unreadable: true
     };
   } finally {
     database?.close();

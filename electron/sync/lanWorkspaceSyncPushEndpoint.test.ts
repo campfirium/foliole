@@ -23,6 +23,10 @@ const pushApplyMock = vi.hoisted(() => ({
   }))
 }));
 const syncAppliedEventsMock = vi.hoisted(() => ({ notifyWorkspaceSyncApplied: vi.fn() }));
+const WORKGROUP = vi.hoisted(() => ({
+  groupId: 'group-test', groupKey: 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8',
+  groupTag: '630dcd2966c4336691125448bbb25b4f'
+}));
 
 vi.mock('electron', () => ({
   app: { getPath: vi.fn(() => electronMock.userDataPath) },
@@ -38,6 +42,24 @@ vi.mock('../database/companionSyncPushAsyncApply.js', () => ({
 }));
 vi.mock('./workspaceSyncAppliedEvents.js', () => ({
   notifyWorkspaceSyncApplied: syncAppliedEventsMock.notifyWorkspaceSyncApplied
+}));
+vi.mock('../database/syncGroupStore.js', () => ({
+  loadDesktopSyncGroup: vi.fn(() => ({
+    group_id: WORKGROUP.groupId, local_member_state: 'active', timeline_id: 'timeline-test', members: []
+  })),
+  loadSyncGroupMemberAuthorization: vi.fn(() => ({ state: 'active' })),
+  registerSyncGroupMember: vi.fn((args: { authorizationId: string; deviceName: string }) => ({
+    group_id: WORKGROUP.groupId, local_member_state: 'active', timeline_id: 'timeline-test', members: [{
+      authorization_id: args.authorizationId, device_id: args.deviceName,
+      device_kind: 'android', device_name: args.deviceName, state: 'active'
+    }]
+  }))
+}));
+vi.mock('./workgroupKeyStore.js', () => ({
+  consumeDesktopWorkgroupNonce: vi.fn(() => true),
+  loadDesktopWorkgroupKey: vi.fn(() => ({
+    group_id: WORKGROUP.groupId, group_key: WORKGROUP.groupKey, group_tag: WORKGROUP.groupTag
+  }))
 }));
 
 async function resetTestState() {
@@ -71,7 +93,7 @@ describe('lan workspace sync push endpoint', () => {
   it('accepts signed push payloads on the new endpoint', async () => {
     const { createWorkspaceSyncHttpServer } = await import('./lanWorkspaceSyncServer.js');
     const server = createWorkspaceSyncHttpServer({ appVersion: '0.1.0-test', peerId: 'desktop-local' });
-    const paired = await pairTestDevice(server);
+    const paired = await pairTestDevice(server, WORKGROUP);
 
     const response = await postSigned(server, '/companion/sync-push', buildPushBody(), paired);
 
@@ -86,7 +108,7 @@ describe('lan workspace sync push endpoint', () => {
     });
     expect(pushApplyMock.applyCompanionSyncPushAsync).toHaveBeenCalledWith(
       JSON.parse(buildPushBody()).items,
-      'android-test-device'
+      'Pixel Test'
     );
     expect(syncAppliedEventsMock.notifyWorkspaceSyncApplied).toHaveBeenCalledWith({
       appliedNodeIds: [],
@@ -98,7 +120,7 @@ describe('lan workspace sync push endpoint', () => {
   it('keeps invalid push payloads out of desktop apply', async () => {
     const { createWorkspaceSyncHttpServer } = await import('./lanWorkspaceSyncServer.js');
     const server = createWorkspaceSyncHttpServer({ appVersion: '0.1.0-test', peerId: 'desktop-local' });
-    const paired = await pairTestDevice(server);
+    const paired = await pairTestDevice(server, WORKGROUP);
 
     const response = await postSigned(server, '/companion/sync-push', '{"items":[{}]}', paired);
 

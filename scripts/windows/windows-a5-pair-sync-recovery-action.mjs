@@ -113,6 +113,10 @@ export async function runWindowsA5PairSyncRecovery({
   credentialRepairRequired = false, existingPairing = false, openDesktopSession = openPairSyncDesktopSession,
   desktopControl = clientControl, openTransport = openPairSyncRecoveryTransport,
   closeTransport = closePairSyncRecoveryTransport,
+  approvalMembershipAction,
+  recoveryEvidenceGoal = 'initial-sync-completed',
+  instrumentationModeArgs = pairSyncRecoveryModeArgs,
+  pairedDeviceFingerprint = deviceFingerprint, pairRequestFingerprint = deviceFingerprint,
   validateDesktop = validateOwnedDesktopPreflight, paths,
   remotePeerFingerprint, serial
 }) {
@@ -126,7 +130,7 @@ export async function runWindowsA5PairSyncRecovery({
   let instrumentationPromise = null;
   let proof;
   let receipt;
-  const recoveryEvidence = createPairSyncRecoveryEvidenceTracker();
+  const recoveryEvidence = createPairSyncRecoveryEvidenceTracker(recoveryEvidenceGoal);
   await desktopControl(execute, paths, env, 'stop');
   try {
     output.push(await install(execute, paths, env, adbPort, serial, builtApks.main.filePath, false));
@@ -147,14 +151,14 @@ export async function runWindowsA5PairSyncRecovery({
     const recoveryWindow = createPairSyncRecoveryWindow();
     instrumentationPromise = checked(execute, paths.adbPath, [
       '-P', adbPort, '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',
-      ...pairSyncRecoveryModeArgs(rePairRequired),
+      ...instrumentationModeArgs(rePairRequired),
       '-e', 'class', PAIR_SYNC_RECOVERY_TEST_CLASS, PAIR_SYNC_RECOVERY_TEST_RUNNER
     ], options(env, 'pair_sync_instrumentation_timeout', recoveryWindow.instrumentationTimeoutMs), 'pair-sync-instrumentation');
     if (pairSyncRecoveryRequiresApproval(existingPairing, rePairRequired)) await desktopStep('desktop-pair-request', async () => {
       const pending = await recoveryWindow.waitForPairRequest(
-        waitForUniquePairRequest(session, deviceFingerprint, recoveryWindow), instrumentationPromise
+        waitForUniquePairRequest(session, pairRequestFingerprint, recoveryWindow), instrumentationPromise
       );
-      await recoveryEvidence.approve(session, pending);
+      await recoveryEvidence.approve(session, pending, approvalMembershipAction);
     });
     const instrumentation = await instrumentationPromise;
     output.push(instrumentation.output);
@@ -166,14 +170,14 @@ export async function runWindowsA5PairSyncRecovery({
       ['-P', adbPort, '-s', serial, 'shell', 'am', 'start', '-W', '-n', PAIR_SYNC_RECOVERY_MAIN_COMPONENT],
       options(env, 'pair_sync_restart_timeout', 60_000), 'pair-sync-restart');
     const android = await postPairSyncRecoveryReadiness({
-      deviceFingerprint, env, paths, serial,
+      adbPort, deviceFingerprint, env, paths, quiesceProvider: true, serial,
       run: (command, args, commandOptions, stage) => checked(
         execute, command, args, commandOptions, stage
       )
     });
     output.push(android.output);
     const desktop = session.sanitize(await desktopStep('desktop-pairing-result', () => session.load()));
-    if (!desktop.pairedDeviceFingerprints.includes(deviceFingerprint)) {
+    if (pairedDeviceFingerprint && !desktop.pairedDeviceFingerprints.includes(pairedDeviceFingerprint)) {
       throw pairSyncRecoveryFailure('Windows pairing overview does not contain the fixed A5', 'desktop-pairing-result');
     }
     proof = { android: android.readiness, desktop, receipt };

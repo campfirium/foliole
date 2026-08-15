@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   focusWindow: vi.fn(),
   pairingHandler: null as (() => void) | null,
   presentInitialRendererWindow: vi.fn().mockResolvedValue(undefined),
+  reconcileDesktopCompanionSyncRuntime: vi.fn().mockResolvedValue(undefined),
   setLanWorkspaceSyncPairRequestHandler: vi.fn((handler: () => void) => {
     mocks.pairingHandler = handler;
   }),
@@ -17,13 +18,15 @@ vi.mock('./database/syncGroupIdentityStore.js', () => ({
   updateLocalSyncGroupDeviceName: mocks.updateLocalSyncGroupDeviceName
 }));
 vi.mock('./sync/companionLanPayloads.js', () => ({ resolveDesktopDeviceName: () => 'Maci' }));
+vi.mock('./sync/desktopCompanionSyncParticipation.js', () => ({
+  reconcileDesktopCompanionSyncRuntime: mocks.reconcileDesktopCompanionSyncRuntime
+}));
 vi.mock('./runtimeMainSupport.js', () => ({ focusWindow: mocks.focusWindow }));
 vi.mock('./windowRuntimeDiagnostics.js', () => ({
   applyStartupWindowPresentation: mocks.applyStartupWindowPresentation,
   presentInitialRendererWindow: mocks.presentInitialRendererWindow
 }));
 vi.mock('./sync/lanWorkspaceSyncServer.js', () => ({
-  ensureLanWorkspaceSyncServer: vi.fn(),
   setLanWorkspaceSyncPairRequestHandler: mocks.setLanWorkspaceSyncPairRequestHandler
 }));
 
@@ -104,4 +107,14 @@ it('refreshes the persisted local Device name even while Sync is paused', async 
   await startCompanionSyncIfEnabled({ appVersion: '0.7.5', isEnabled: () => false, peerId: 'desktop-a' });
 
   expect(mocks.updateLocalSyncGroupDeviceName).toHaveBeenCalledWith('Maci');
+});
+
+it('reconciles enabled Sync through the workgroup security boundary', async () => {
+  const { startCompanionSyncIfEnabled } = await import('./mainWindowLifecycle.js');
+
+  await startCompanionSyncIfEnabled({ appVersion: '0.7.5', isEnabled: () => true, peerId: 'desktop-a' });
+
+  expect(mocks.reconcileDesktopCompanionSyncRuntime).toHaveBeenCalledWith({
+    appVersion: '0.7.5', peerId: 'desktop-a'
+  });
 });

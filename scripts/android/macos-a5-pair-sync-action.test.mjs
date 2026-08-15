@@ -222,6 +222,16 @@ it('passes the A5 trusted remote peer into desktop readiness', async () => {
   expect(runPairSyncRecovery).toHaveBeenCalledOnce();
 });
 
+it('preserves an explicit absent legacy pairing requirement for workgroup joins', async () => {
+  const runPairSyncRecovery = vi.fn(async (options) => options);
+  const result = await runMacosA5PairSync({
+    buildIdentity: 'group-join', deviceFingerprint: 'device-peer', env: {}, evidenceRoot: '.tmp',
+    execute: vi.fn(), pairedDeviceFingerprint: null,
+    paths: { adb: '/adb', repoRoot: '/repo' }, runPairSyncRecovery, serial: 'fixed-a5'
+  });
+  expect(result).toHaveProperty('pairedDeviceFingerprint', null);
+});
+
 it('does not restore the default installed desktop after the DEV-owned session', () => {
   const source = fs.readFileSync('scripts/android/macos-a5-pair-sync-action.mjs', 'utf8');
   expect(source).toContain('registered DEV restart required');

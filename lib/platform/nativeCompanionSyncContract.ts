@@ -92,6 +92,7 @@ export interface CompanionWorkspaceDiscoveryPayload {
   protocol: SyncProtocolDescriptor;
   group_display_name: string;
   group_id: string;
+  group_tag: string;
   timeline_id: string;
 }
 
@@ -157,6 +158,7 @@ export interface DesktopSyncGroupJoinCandidatePayload {
   endpoint_url: string;
   group_display_name: string;
   group_id: string;
+  group_tag: string;
   provider_device_id: string;
   provider_device_kind: string;
   provider_device_name: string;

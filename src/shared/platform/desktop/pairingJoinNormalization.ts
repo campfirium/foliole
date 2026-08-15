@@ -8,7 +8,7 @@ export function normalizeJoinCandidates(value: unknown): DesktopSyncGroupJoinCan
   return value.filter((item): item is DesktopSyncGroupJoinCandidatePayload => {
     if (!item || typeof item !== 'object' || Array.isArray(item)) return false;
     const raw = item as Record<string, unknown>;
-    return ['endpoint_url', 'group_display_name', 'group_id', 'provider_device_id', 'provider_device_kind',
+    return ['endpoint_url', 'group_display_name', 'group_id', 'group_tag', 'provider_device_id', 'provider_device_kind',
       'provider_device_name', 'timeline_id'].every((key) => typeof raw[key] === 'string');
   });
 }

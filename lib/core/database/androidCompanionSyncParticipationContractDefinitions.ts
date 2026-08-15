@@ -21,7 +21,8 @@ export const ANDROID_COMPANION_SYNC_GROUP_PROVIDER_CONTRACT_DEFINITIONS = {
     deviceName: 'device_name',
     factsRevision: 'facts_revision',
     group: 'sync_group',
-    pairRequestId: 'pair_request_id'
+    pairRequestId: 'pair_request_id',
+    workgroupKey: 'workgroup_key'
   }
 } as const;
 

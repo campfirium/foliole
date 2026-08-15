@@ -85,13 +85,14 @@
   "protocol": {
     "capabilities": [
       "lan-sync-v1",
-      "sync-group-facts-v1"
+      "sync-group-facts-v1",
+      "workgroup-aead-v1"
     ],
     "max_supported_version": 1,
     "min_supported_version": 1,
     "version": 1
   },
-  "schemaVersion": 65,
+  "schemaVersion": 66,
   "stateCopyIndex": 3,
   "tableNames": [
     "sync_groups",

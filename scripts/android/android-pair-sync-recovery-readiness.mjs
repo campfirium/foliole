@@ -4,6 +4,12 @@ import {
   currentDeliveryStatusCountsByPeerFingerprint,
   pendingDeliveryCountsByPeerFingerprint
 } from './android-pair-sync-peer-delivery-readiness.mjs';
+import {
+  inspectStoredSyncGroup, inspectSyncGroupBinding, inspectWorkgroupKeyPresent
+} from './android-sync-group-readiness-inspection.mjs';
+import {
+  classifySyncFailure, classifySyncFailureRoute, classifySyncFailureStage
+} from './android-sync-failure-classification.mjs';
 
 function tableExists(database, table) {
   return database.prepare(
@@ -38,16 +44,6 @@ function latestFinishedSyncEvent(database) {
     return Array.isArray(events)
       ? events.find((event) => event?.kind === 'run_finished') ?? null : null;
   } catch { return null; }
-}
-
-function syncGroup(database) {
-  if (!tableExists(database, 'sync_groups') || !tableExists(database, 'sync_group_local_state')) {
-    return null;
-  }
-  return database.prepare(`SELECT groups.group_id, groups.timeline_id
-    FROM sync_group_local_state local
-    JOIN sync_groups groups ON groups.group_id = local.group_id
-    WHERE local.singleton_id = 1 LIMIT 1`).get() ?? null;
 }
 
 function pairingCredentialRejection(event) {
@@ -112,7 +108,8 @@ export function inspectPairSyncRecoveryWorkspace(database) {
   const deviceId = meta(database, 'device_id');
   const latestSyncRun = latestFinishedSyncEvent(database);
   const rejection = pairingCredentialRejection(latestSyncRun);
-  const group = syncGroup(database);
+  const group = inspectSyncGroupBinding(database, deviceId);
+  const storedGroup = inspectStoredSyncGroup(database);
   return {
     activeSyncGroupMemberCount: count(database, 'sync_group_members', " WHERE state = 'active'"),
     deviceIdentityFingerprint: identityFingerprint(deviceId),
@@ -126,6 +123,9 @@ export function inspectPairSyncRecoveryWorkspace(database) {
     nodeCount: count(database, 'nodes'),
     latestSyncRunResult: typeof latestSyncRun?.result === 'string'
       ? latestSyncRun.result : null,
+    latestSyncFailureKind: classifySyncFailure(latestSyncRun),
+    latestSyncFailureRoute: classifySyncFailureRoute(latestSyncRun),
+    latestSyncFailureStage: classifySyncFailureStage(latestSyncRun),
     latestSyncRunStatus: typeof latestSyncRun?.status === 'string'
       ? latestSyncRun.status : null,
     latestSyncWaitingConfirmationCount: waitingCount(
@@ -146,8 +146,11 @@ export function inspectPairSyncRecoveryWorkspace(database) {
       currentDeliveryStatusCountsByPeerFingerprint(database),
     pendingDeliveryCountsByPeerFingerprint: pendingDeliveryCountsByPeerFingerprint(database),
     protectedContentDigest: protectedContentDigest(database),
+    storedSyncGroupId: storedGroup?.group_id ?? null,
+    storedSyncGroupTimelineId: storedGroup?.timeline_id ?? null,
     syncGroupId: group?.group_id ?? null,
     syncGroupTimelineId: group?.timeline_id ?? null,
+    workgroupKeyPresent: inspectWorkgroupKeyPresent(database),
     userNodeCount: count(database, 'nodes',
       " WHERE id NOT IN ('special-inbox', 'special-virtual-root')")
   };
@@ -155,9 +158,15 @@ export function inspectPairSyncRecoveryWorkspace(database) {
 
 export function pairSyncRecoveryReadiness(
   snapshot, pairingCredentialsPresent, remotePeerFingerprint = null, pairingPeerConflict = false,
-  storedDeviceFingerprint = null
+  storedDeviceFingerprint = null, databaseWorkgroupKeyPresent = false
 ) {
   const inspection = snapshot.database?.inspection;
+  const databaseAvailabilityReason = inspection ? null
+    : snapshot.packageInfo?.installed && snapshot.packageInfo.debuggable === false
+      ? 'installed_app_not_debuggable'
+      : snapshot.database?.unreadable
+        ? snapshot.database.errorCode ?? 'database_snapshot_unreadable'
+        : 'database_missing_or_inaccessible';
   const missingPrerequisites = [];
   if (!snapshot.packageInfo?.installed && !snapshot.database?.exists) {
     missingPrerequisites.push('app_missing');
@@ -168,13 +177,14 @@ export function pairSyncRecoveryReadiness(
   if (inspection && !inspection.deviceIdentityFingerprint) {
     missingPrerequisites.push('device_identity_missing');
   }
-  if (inspection && (inspection.nodeCount ?? 0) > 1 && !pairingCredentialsPresent) {
+  const groupAuthorityPresent = databaseWorkgroupKeyPresent || pairingCredentialsPresent;
+  if (inspection && (inspection.nodeCount ?? 0) > 1 && !groupAuthorityPresent) {
     missingPrerequisites.push('nonempty_workspace_requires_review');
   }
   if (inspection && (inspection.dirtyRecordCount ?? 0) > 0) {
     missingPrerequisites.push('unsynced_device_data_requires_review');
   }
-  if (pairingPeerConflict) {
+  if (!databaseWorkgroupKeyPresent && pairingPeerConflict) {
     missingPrerequisites.push('existing_pairing_peer_conflict');
   } else if (pairingCredentialsPresent && !remotePeerFingerprint) {
     missingPrerequisites.push('existing_pairing_peer_unproven');
@@ -183,12 +193,17 @@ export function pairSyncRecoveryReadiness(
     activeSyncGroupMemberCount: inspection?.activeSyncGroupMemberCount ?? null,
     currentDeliveryStatusCountsByPeerFingerprint:
       inspection?.currentDeliveryStatusCountsByPeerFingerprint ?? {},
+    databaseAvailabilityDetail: inspection ? null : snapshot.database?.error ?? null,
+    databaseAvailabilityReason,
     deviceIdentityFingerprint: inspection?.deviceIdentityFingerprint ?? null,
     dirtyRecordCount: inspection?.dirtyRecordCount ?? null,
     dirtyObjectCounts: inspection?.dirtyObjectCounts ?? {},
     missingPrerequisites,
     nodeCount: inspection?.nodeCount ?? null,
     latestSyncRunResult: inspection?.latestSyncRunResult ?? null,
+    latestSyncFailureKind: inspection?.latestSyncFailureKind ?? null,
+    latestSyncFailureRoute: inspection?.latestSyncFailureRoute ?? null,
+    latestSyncFailureStage: inspection?.latestSyncFailureStage ?? null,
     latestSyncRunStatus: inspection?.latestSyncRunStatus ?? null,
     latestSyncWaitingConfirmationCount:
       inspection?.latestSyncWaitingConfirmationCount ?? 0,
@@ -199,8 +214,11 @@ export function pairSyncRecoveryReadiness(
     pairingPeerConflict,
     remotePeerFingerprint,
     storedDeviceFingerprint,
+    storedSyncGroupId: inspection?.storedSyncGroupId ?? null,
+    storedSyncGroupTimelineId: inspection?.storedSyncGroupTimelineId ?? null,
     syncGroupId: inspection?.syncGroupId ?? null,
     syncGroupTimelineId: inspection?.syncGroupTimelineId ?? null,
+    workgroupKeyPresent: databaseWorkgroupKeyPresent,
     resultStatus: missingPrerequisites.length === 0 ? 'ready' : 'approval_required',
     schemaVersion: 1
   };

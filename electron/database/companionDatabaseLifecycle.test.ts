@@ -53,6 +53,8 @@ describe('shared companion database migration executor', () => {
       expect(sqlite.pragma('user_version', { simple: true })).toBe(COMPANION_DATABASE_VERSION);
       expect(sqlite.prepare("SELECT value FROM workspace_meta WHERE key = 'fixture_version'").pluck().get())
         .toBe(String(version));
+      expect(sqlite.prepare("SELECT name FROM pragma_table_info('sync_groups') WHERE name = 'workgroup_key'")
+        .pluck().get()).toBe('workgroup_key');
       sqlite.close();
     }
   });
@@ -109,7 +111,8 @@ describe('shared companion delivery migration', () => {
       DROP TRIGGER trg_sync_delivery_review_insert;
       DROP TABLE sync_delivery_receipts;
       CREATE TABLE sync_push_ack (client_op_id TEXT PRIMARY KEY, status TEXT NOT NULL);
-      INSERT INTO sync_groups VALUES ('group','Group','timeline','local','2026-08-01','2026-08-09');
+      INSERT INTO sync_groups (group_id, display_name, timeline_id, created_by_device_id, created_at, updated_at)
+      VALUES ('group','Group','timeline','local','2026-08-01','2026-08-09');
       INSERT INTO sync_group_local_state VALUES (1,'group','local','active',NULL,NULL,'2026-08-09');
       INSERT INTO sync_group_members VALUES
         ('group','local','desktop','Local','active','local','auth-local',NULL,'2026-08-01',NULL,NULL,'2026-08-09'),
@@ -160,11 +163,13 @@ describe('shared companion database lifecycle guardrails', () => {
   });
 });
 
-describe('shared companion device profile migration', () => {
-  it('adopts the host profile, unbinds only local participation, and preserves history', async () => {
+describe('shared companion public host name handling', () => {
+  it('keeps the copied group key but requires a new host name to establish its own member', async () => {
     const identity = fixture();
     identity.sqlite.exec(`
-      INSERT INTO sync_groups VALUES ('group','Group','timeline','fixture-device','2026-08-01','2026-08-01');
+      INSERT INTO sync_groups (group_id, display_name, timeline_id, created_by_device_id, created_at, updated_at)
+      VALUES ('group','Group','timeline','fixture-device','2026-08-01','2026-08-01');
+      UPDATE sync_groups SET workgroup_key = 'copied-workgroup-key' WHERE group_id = 'group';
       INSERT INTO sync_group_local_state VALUES (1,'group','fixture-device','active',NULL,NULL,'2026-08-01');
       INSERT INTO sync_group_members VALUES
         ('group','fixture-device','ios','Legacy','active','fixture-device','auth',NULL,'2026-08-01',NULL,NULL,'2026-08-01');
@@ -186,11 +191,31 @@ describe('shared companion device profile migration', () => {
       .toEqual({ device_id: 'fixture-device', state: 'active' });
     expect(identity.sqlite.prepare('SELECT content FROM nodes').pluck().get()).toBe('content');
     expect(identity.sqlite.prepare('SELECT device_id FROM review_log').pluck().get()).toBe('fixture-device');
+    expect(identity.sqlite.prepare('SELECT workgroup_key FROM sync_groups').pluck().get())
+      .toBe('copied-workgroup-key');
 
     await acknowledgeCompanionDeviceProfileReset(identity.port, 'iPhone');
     await expect(bootstrapCompanionDatabase(identity.port, {
       allowCreate: false, expectedDeviceId: 'iPhone', now: '2026-08-12T00:00:00Z'
     })).resolves.toMatchObject({ credentialResetPending: false, deviceId: 'iPhone' });
+    identity.sqlite.close();
+  });
+
+  it('keeps an allocated suffix only while its local membership is active', async () => {
+    const identity = fixture();
+    identity.sqlite.prepare("UPDATE companion_meta SET value = 'iPhone 2' WHERE key = 'device_id'").run();
+    identity.sqlite.exec(`
+      INSERT INTO sync_groups (group_id, display_name, timeline_id, created_by_device_id, created_at, updated_at)
+      VALUES ('group','Group','timeline','iPhone 2','2026-08-01','2026-08-01');
+      INSERT INTO sync_group_local_state VALUES (1,'group','iPhone 2','active',NULL,NULL,'2026-08-01');
+    `);
+    await expect(bootstrapCompanionDatabase(identity.port, {
+      allowCreate: false, expectedDeviceId: 'iPhone', now: '2026-08-11T00:00:00Z'
+    })).resolves.toMatchObject({ credentialResetPending: false, deviceId: 'iPhone 2' });
+    identity.sqlite.prepare('DELETE FROM sync_group_local_state').run();
+    await expect(bootstrapCompanionDatabase(identity.port, {
+      allowCreate: false, expectedDeviceId: 'iPhone', now: '2026-08-12T00:00:00Z'
+    })).resolves.toMatchObject({ credentialResetPending: true, deviceId: 'iPhone' });
     identity.sqlite.close();
   });
 });

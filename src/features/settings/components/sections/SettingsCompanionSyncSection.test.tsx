@@ -123,6 +123,7 @@ it('requests a discovered Sync Group from its active mobile Device', () => {
       ...createState().overview,
       join_candidates: [{
         endpoint_url: 'http://192.168.1.8:43123', group_display_name: 'Studio', group_id: 'group-1',
+        group_tag: 'tag-1',
         provider_device_id: 'android-b', provider_device_kind: 'android-capacitor',
         provider_device_name: 'A5', timeline_id: 'timeline-1'
       }]

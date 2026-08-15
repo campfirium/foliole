@@ -15,6 +15,8 @@ final class FolioleCompanionAppDataStore {
         FolioleCompanionSyncGroupJoinGrantStore.clear(context);
         FolioleCompanionSyncGroupPeerStore.clear(context);
         FolioleCompanionSyncGroupOutboundPeerStore.clear(context);
+        context.getSharedPreferences("foliole_workgroup_request_nonces", Context.MODE_PRIVATE).edit().clear().commit();
+        context.getSharedPreferences("foliole_workgroup_response_nonces", Context.MODE_PRIVATE).edit().clear().commit();
         return new JSObject();
     }
 

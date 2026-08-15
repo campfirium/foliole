@@ -1,3 +1,5 @@
+import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
+
 import {
   isDesktopCompanionSyncParticipating,
   setDesktopCompanionSyncEnabled,
@@ -7,6 +9,7 @@ import {
   ensureLanWorkspaceSyncServer,
   stopLanWorkspaceSyncServer
 } from './lanWorkspaceSyncServer.js';
+import { enableDesktopWorkgroupKey, loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
 interface DesktopSyncRuntimeIdentity {
   appVersion: string;
@@ -22,12 +25,13 @@ export function assertDesktopCompanionSyncParticipating() {
 export async function reconcileDesktopCompanionSyncRuntime(
   identity: DesktopSyncRuntimeIdentity
 ) {
-  return isDesktopCompanionSyncParticipating()
+  return isDesktopCompanionSyncParticipating() && hasCurrentWorkgroupSecurity()
     ? ensureLanWorkspaceSyncServer(identity)
     : stopLanWorkspaceSyncServer();
 }
 
 export function enableDesktopCompanionSync(identity: DesktopSyncRuntimeIdentity) {
+  enableCurrentWorkgroupSecurity();
   setDesktopCompanionSyncEnabled(true);
   return reconcileDesktopCompanionSyncRuntime(identity);
 }
@@ -48,7 +52,20 @@ export function resumeDesktopCompanionSync(identity: DesktopSyncRuntimeIdentity)
 }
 
 export function activateDesktopCompanionSync(identity: DesktopSyncRuntimeIdentity) {
+  enableCurrentWorkgroupSecurity();
   setDesktopCompanionSyncEnabled(true);
   setDesktopCompanionSyncPaused(false);
   return ensureLanWorkspaceSyncServer(identity);
+}
+
+function enableCurrentWorkgroupSecurity() {
+  const group = loadDesktopSyncGroup();
+  if (!group || group.local_member_state !== 'active') throw new Error('sync_group_not_available');
+  enableDesktopWorkgroupKey(group.group_id);
+}
+
+function hasCurrentWorkgroupSecurity() {
+  const group = loadDesktopSyncGroup();
+  return Boolean(group?.local_member_state === 'active'
+    && loadDesktopWorkgroupKey(group.group_id));
 }

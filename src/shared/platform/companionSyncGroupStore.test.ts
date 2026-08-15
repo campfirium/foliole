@@ -36,6 +36,7 @@ const group = {
 beforeEach(() => {
   sqlite = new Database(':memory:');
   for (const statement of SYNC_GROUP_SCHEMA_STATEMENTS) sqlite.exec(statement);
+  sqlite.exec('CREATE TABLE companion_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL)');
   for (const table of ['attachments', 'content_blobs', 'nodes', 'review_log']) {
     sqlite.exec(`CREATE TABLE ${table} (id TEXT)`);
   }
@@ -49,23 +50,26 @@ beforeEach(() => {
 afterEach(() => sqlite.close());
 
 it('persists membership immediately when the approved group payload is accepted', async () => {
-  await joinCompanionSyncGroup({ deviceId: 'android-1', group });
+  await joinCompanionSyncGroup({ deviceId: 'android-1', group, workgroupKey: 'group-key' });
   expect(await loadCompanionSyncGroup()).toMatchObject({
     group_id: 'group-1', local_device_id: 'android-1', local_member_state: 'active'
   });
+  expect(sqlite.prepare("SELECT value FROM companion_meta WHERE key = 'device_id'").pluck().get())
+    .toBe('android-1');
 });
 
 it('joins without deleting persistent content that already exists', async () => {
   sqlite.prepare("INSERT INTO nodes VALUES ('node-1')").run();
-  await joinCompanionSyncGroup({ deviceId: 'android-1', group });
+  await joinCompanionSyncGroup({ deviceId: 'android-1', group, workgroupKey: 'group-key' });
   expect(sqlite.prepare('SELECT id FROM nodes').all()).toEqual([{ id: 'node-1' }]);
   expect(await loadCompanionSyncGroup()).toMatchObject({ group_id: 'group-1', local_member_state: 'active' });
 });
 
 it('rejects replacing an existing local Sync Group identity', async () => {
-  sqlite.exec(`INSERT INTO sync_groups VALUES ('group-old', 'Old', 'timeline-old', 'desktop-old', '2026-08-08', '2026-08-08');
+  sqlite.exec(`INSERT INTO sync_groups (group_id, display_name, timeline_id, created_by_device_id, created_at, updated_at)
+    VALUES ('group-old', 'Old', 'timeline-old', 'desktop-old', '2026-08-08', '2026-08-08');
     INSERT INTO sync_group_local_state VALUES (1, 'group-old', 'android-1', 'active', NULL, NULL, '2026-08-08')`);
-  await expect(joinCompanionSyncGroup({ deviceId: 'android-1', group }))
+  await expect(joinCompanionSyncGroup({ deviceId: 'android-1', group, workgroupKey: 'group-key' }))
     .rejects.toThrow('sync_group_identity_mismatch');
 });
 
@@ -79,11 +83,14 @@ it('refreshes authorization for the same active member without requiring an empt
       device_name: 'Pixel', joined_at: '2026-08-08T00:01:00.000Z', state: 'active' as const
     }], timeline_id: 'timeline-1'
   };
-  sqlite.exec(`INSERT INTO sync_groups VALUES ('group-1', 'Studio', 'timeline-1', 'desktop-1', '2026-08-08', '2026-08-08');
+  sqlite.exec(`INSERT INTO sync_groups (group_id, display_name, timeline_id, created_by_device_id, created_at, updated_at)
+    VALUES ('group-1', 'Studio', 'timeline-1', 'desktop-1', '2026-08-08', '2026-08-08');
     INSERT INTO sync_group_local_state VALUES (1, 'group-1', 'android-1', 'active', NULL, NULL, '2026-08-08');
     INSERT INTO nodes VALUES ('node-1')`);
 
-  const refreshed = await refreshActiveCompanionSyncGroupMembership({ deviceId: 'android-1', group });
+  const refreshed = await refreshActiveCompanionSyncGroupMembership({
+    deviceId: 'android-1', group, workgroupKey: 'group-key'
+  });
 
   expect(refreshed).toMatchObject({ local_member_state: 'active' });
   expect(refreshed.members[0]).toMatchObject({ authorization_id: 'request-2', state: 'active' });

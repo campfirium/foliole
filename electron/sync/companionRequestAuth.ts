@@ -2,8 +2,8 @@ import type http from 'node:http';
 
 import { loadDesktopSyncGroup, loadSyncGroupMemberAuthorization } from '../database/syncGroupStore.js';
 
-import { loadPairedCompanionDevice } from './companionPairingStore.js';
 import { verifyCompanionRequestSignature } from './companionRequestSignature.js';
+import { consumeDesktopWorkgroupNonce, loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
 const AUTH_WINDOW_MS = 60 * 1000;
 const NONCE_TTL_MS = 2 * 60 * 1000;
@@ -23,9 +23,8 @@ interface CompanionRequestAuthFailure {
     | 'invalid_signature'
     | 'missing_headers'
     | 'sync_group_member_not_authorized'
-    | 'protocol_pairing_repair_required'
     | 'replayed_nonce'
-    | 'unknown_device';
+    | 'sync_group_workgroup_key_missing';
   ok: false;
   status_code: 401 | 409;
 }
@@ -99,12 +98,10 @@ export function authenticateCompanionRequest(args: {
       status_code: 401
     };
   }
-  const pairedDevice = loadPairedCompanionDevice(deviceId);
-  const pairedDeviceError = validatePairedDevice(pairedDevice);
-  if (pairedDeviceError) return pairedDeviceError;
-  const authenticatedDevice = pairedDevice!;
-  const groupMembership = validateSyncGroupMembership(authenticatedDevice.device_kind, groupId, deviceId);
+  const groupMembership = validateSyncGroupMembership(groupId, deviceId);
   if (!groupMembership.ok) return groupMembership;
+  const workgroupKey = groupId ? loadDesktopWorkgroupKey(groupId) : null;
+  if (!workgroupKey) return { error: 'sync_group_workgroup_key_missing', ok: false, status_code: 401 };
   const nowMs = args.nowMs ?? Date.now();
   if (!isFreshTimestamp(timestamp, nowMs)) {
     return {
@@ -118,7 +115,7 @@ export function authenticateCompanionRequest(args: {
     method: args.request.method ?? 'GET',
     nonce,
     pathWithQuery: parsePathWithQuery(args.request),
-    secret: authenticatedDevice.device_secret,
+    secret: workgroupKey.group_key,
     signature,
     timestamp
   });
@@ -129,7 +126,8 @@ export function authenticateCompanionRequest(args: {
       status_code: 401
     };
   }
-  if (!consumeNonce(deviceId, nonce, nowMs)) {
+  if (!consumeNonce(deviceId, nonce, nowMs)
+    || !consumeDesktopWorkgroupNonce(groupId!, `${timestamp}:${nonce}`, nowMs)) {
     return {
       error: 'replayed_nonce',
       ok: false,
@@ -143,8 +141,7 @@ export function authenticateCompanionRequest(args: {
   };
 }
 
-function validateSyncGroupMembership(deviceKind: string, groupId: string | null, deviceId: string) {
-  if (deviceKind !== 'android-capacitor' && !groupId) return { member_state: null, ok: true as const };
+function validateSyncGroupMembership(groupId: string | null, deviceId: string) {
   const group = loadDesktopSyncGroup();
   const membership = groupId && group?.group_id === groupId
     ? loadSyncGroupMemberAuthorization(groupId, deviceId)
@@ -153,18 +150,4 @@ function validateSyncGroupMembership(deviceKind: string, groupId: string | null,
     return { error: 'sync_group_member_not_authorized' as const, ok: false as const, status_code: 401 as const };
   }
   return { member_state: membership.state, ok: true as const };
-}
-
-function validatePairedDevice(pairedDevice: ReturnType<typeof loadPairedCompanionDevice>) {
-  if (!pairedDevice) {
-    return { error: 'unknown_device' as const, ok: false as const, status_code: 401 as const };
-  }
-  if (!pairedDevice.remote_protocol || pairedDevice.negotiated_protocol_version !== 1) {
-    return {
-      error: 'protocol_pairing_repair_required' as const,
-      ok: false as const,
-      status_code: 409 as const
-    };
-  }
-  return null;
 }

@@ -16,10 +16,11 @@ final class FolioleCompanionSyncGroupMaintenanceScenario {
     static JSONObject leave(Instrumentation instrumentation, WebView webView) throws Exception {
         openSettings(instrumentation, webView);
         click(instrumentation, webView, "companion-settings-sync");
+        click(instrumentation, webView, "companion-sync-group-open");
         click(instrumentation, webView, "companion-sync-group-leave");
         JSONObject receipt = click(instrumentation, webView, "companion-sync-group-leave-confirm");
-        waitForDeparture(instrumentation, webView, 30_000);
-        return receipt.put("credentialsCleared", true).put("departurePersisted", true);
+        waitForDeparture(instrumentation, webView);
+        return receipt.put("workgroupKeyRemoved", true).put("departurePersisted", true);
     }
 
     static JSONObject toggleSync(Instrumentation instrumentation, WebView webView) throws Exception {
@@ -114,24 +115,9 @@ final class FolioleCompanionSyncGroupMaintenanceScenario {
     }
 
     private static void waitForDeparture(
-        Instrumentation instrumentation, WebView webView, long timeoutMs
+        Instrumentation instrumentation, WebView webView
     ) throws Exception {
-        Context context = instrumentation.getTargetContext();
-        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
-        while (System.nanoTime() < deadline) {
-            if (FolioleCompanionPairingStore.loadStoredDeviceId(context) == null) return;
-            Thread.sleep(250);
-        }
-        JSONObject snapshot = FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView);
-        for (int index = 0; index < snapshot.getJSONArray("elements").length(); index += 1) {
-            JSONObject item = snapshot.getJSONArray("elements").getJSONObject(index);
-            if (!"companion-sync-group-leave-error".equals(item.optString("testId"))) continue;
-            JSONObject error = FolioleCompanionWebViewSemanticAdapter.readAttribute(
-                instrumentation, webView, item.optString("testId"), "data-error-code"
-            );
-            throw new IllegalStateException("Product Leave failed: " + error.optString("value"));
-        }
-        throw new IllegalStateException("Timed out waiting for product Leave completion.");
+        waitUntilMissing(instrumentation, webView, "companion-sync-group-leave-confirm", 30_000);
     }
 
     private static void waitUntilVisible(

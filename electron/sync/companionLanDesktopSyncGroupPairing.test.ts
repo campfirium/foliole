@@ -7,28 +7,43 @@ import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtoco
 
 const pairingStoreMock = vi.hoisted(() => ({
   countPairedCompanionDevices: vi.fn(() => 1),
-  loadPairedSyncGroupPeer: vi.fn(() => null),
+  loadPairedSyncGroupPeer: vi.fn((): { secret: string } | null => null),
   registerPairedCompanionDevice: vi.fn((args: { deviceId: string }) => ({
     device_id: args.deviceId, device_secret: 'secret-c', paired_at: '2026-08-10T01:00:00.000Z'
   })),
+  registerPairedCompanionDeviceWithSecret: vi.fn((args: { deviceId: string; deviceSecret: string }) => ({
+    device_id: args.deviceId, device_secret: args.deviceSecret, paired_at: '2026-08-10T01:00:00.000Z'
+  })),
   savePairedSyncGroupPeer: vi.fn()
+}));
+const workgroupKeyStoreMock = vi.hoisted(() => ({
+  loadDesktopWorkgroupKey: vi.fn(() => ({ group_id: 'group-1', group_key: 'group-key', group_tag: 'tag-1' }))
 }));
 const pairingEncryptionMock = vi.hoisted(() => ({
   encryptCompanionPairingSecret: vi.fn(async () => 'encrypted-secret'),
   isSupportedPairingPublicKey: vi.fn(() => true)
 }));
-const syncGroupStoreMock = vi.hoisted(() => ({
-  isActiveSyncGroupMember: vi.fn(() => false),
-  loadDesktopSyncGroup: vi.fn(() => ({ group_id: 'group-1', members: [], timeline_id: 'timeline-1' })),
-  registerSyncGroupMember: vi.fn((args: { authorizationId: string }) => ({
-    group_id: 'group-1', timeline_id: 'timeline-1',
-    members: [{ authorization_id: args.authorizationId, device_id: 'Desktop C 2', device_kind: 'win32', device_name: 'Desktop C 2' }]
-  }))
-}));
+const syncGroupStoreMock = vi.hoisted(() => {
+  type Group = { group_id: string; timeline_id: string; members: Array<{
+    authorization_id: string; device_id: string; device_kind: string; device_name: string;
+  }> };
+  return {
+    isActiveSyncGroupMember: vi.fn(() => false),
+    loadDesktopSyncGroup: vi.fn<() => Group>(() => ({
+      group_id: 'group-1', members: [], timeline_id: 'timeline-1'
+    })),
+    registerSyncGroupMember: vi.fn((args: { authorizationId: string }): Group => ({
+      group_id: 'group-1', timeline_id: 'timeline-1',
+      members: [{ authorization_id: args.authorizationId, device_id: 'Desktop C 2',
+        device_kind: 'win32', device_name: 'Desktop C 2' }]
+    }))
+  };
+});
 
 vi.mock('./companionPairingStore.js', () => pairingStoreMock);
 vi.mock('./companionPairingEncryption.js', () => pairingEncryptionMock);
 vi.mock('../database/syncGroupStore.js', () => syncGroupStoreMock);
+vi.mock('./workgroupKeyStore.js', () => workgroupKeyStoreMock);
 
 import { handlePairRequest, handlePairRequestCreate } from './companionLanPairingEndpoints.js';
 import { approveCompanionPairRequest, clearCompanionPairRequests } from './companionPairingRequests.js';
@@ -38,6 +53,7 @@ const PAIRING_KEY = Buffer.concat([Buffer.from([4]), Buffer.alloc(64)]).toString
 afterEach(() => {
   clearCompanionPairRequests();
   vi.clearAllMocks();
+  pairingStoreMock.loadPairedSyncGroupPeer.mockReturnValue(null);
 });
 
 function request(payload: unknown) {
@@ -53,7 +69,7 @@ function response() {
 it('registers an approved nonempty Windows desktop and returns bidirectional provider credentials', async () => {
   const writeJson = vi.fn();
   await handlePairRequestCreate(request({
-    device_id: 'desktop-c', device_kind: 'win32', device_name: 'Desktop C', group_id: 'group-1',
+    device_id: 'desktop-c', device_kind: 'win32', device_name: 'Desktop C', group_id: 'group-1', group_tag: 'tag-1',
     library_facts: { attachment_count: 2, content_blob_count: 2, node_count: 5, review_log_count: 8, timeline_id: null },
     pairing_public_key: PAIRING_KEY, protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR, timeline_id: 'timeline-1'
   }), response(), vi.fn(), null, writeJson);
@@ -71,4 +87,73 @@ it('registers an approved nonempty Windows desktop and returns bidirectional pro
   expect(writeJson).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), 200,
     expect.objectContaining({ device_id: 'Desktop C 2', provider_device_id: 'desktop-a', provider_encrypted_device_secret: 'encrypted-secret',
       sync_group: expect.objectContaining({ group_id: 'group-1', timeline_id: 'timeline-1' }) }));
+});
+
+it('reuses the one workgroup key when a released display name is approved again', async () => {
+  pairingStoreMock.loadPairedSyncGroupPeer.mockReturnValue({ secret: 'old-secret' });
+  const writeJson = vi.fn();
+  await handlePairRequestCreate(request({
+    device_id: 'desktop-c', device_kind: 'win32', device_name: 'Desktop C', group_id: 'group-1', group_tag: 'tag-1',
+    library_facts: { attachment_count: 2, content_blob_count: 2, node_count: 5, review_log_count: 8, timeline_id: null },
+    pairing_public_key: PAIRING_KEY, protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR, timeline_id: 'timeline-1'
+  }), response(), vi.fn(), null, writeJson);
+  const requestId = writeJson.mock.calls.at(-1)?.[3]?.pair_request_id as string;
+  approveCompanionPairRequest(requestId);
+  await handlePairRequest(request({ pair_request_id: requestId }), response(),
+    '0.1.0-test', 'desktop-a', vi.fn(), writeJson);
+
+  expect(pairingStoreMock.loadPairedSyncGroupPeer).not.toHaveBeenCalled();
+  expect(pairingStoreMock.savePairedSyncGroupPeer).toHaveBeenCalledWith(expect.objectContaining({
+    peer_device_id: 'Desktop C 2'
+  }));
+  expect(pairingStoreMock.savePairedSyncGroupPeer.mock.calls[0]?.[0]).not.toHaveProperty('secret');
+});
+
+it('reissues the workgroup key to an approved active member without creating another member', async () => {
+  const activeGroup = { group_id: 'group-1', timeline_id: 'timeline-1', members: [{
+    authorization_id: 'join-a5', device_id: 'Xiaomi 23049RAD8C',
+    device_kind: 'android-capacitor', device_name: 'Xiaomi 23049RAD8C'
+  }] };
+  syncGroupStoreMock.loadDesktopSyncGroup.mockReturnValue(activeGroup);
+  syncGroupStoreMock.registerSyncGroupMember.mockReturnValue(activeGroup);
+  const writeJson = vi.fn();
+  await handlePairRequestCreate(request({
+    device_id: 'Xiaomi 23049RAD8C', device_kind: 'android-capacitor',
+    device_name: 'Xiaomi 23049RAD8C', group_id: 'group-1', group_tag: 'tag-1',
+    library_facts: { attachment_count: 2, content_blob_count: 2, node_count: 1399, review_log_count: 8, timeline_id: null },
+    pairing_public_key: PAIRING_KEY, protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR, timeline_id: 'timeline-1'
+  }), response(), vi.fn(), null, writeJson);
+  const requestId = writeJson.mock.calls.at(-1)?.[3]?.pair_request_id as string;
+  approveCompanionPairRequest(requestId);
+  await handlePairRequest(request({ pair_request_id: requestId }), response(),
+    '0.1.0-test', 'desktop-a', vi.fn(), writeJson);
+
+  expect(writeJson).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), 200,
+    expect.objectContaining({ device_id: 'Xiaomi 23049RAD8C',
+      sync_group: expect.objectContaining({ members: [expect.objectContaining({ authorization_id: 'join-a5' })] }) }));
+});
+
+it('restores an explicitly selected active member when its current public name differs', async () => {
+  const activeGroup = { group_id: 'group-1', timeline_id: 'timeline-1', members: [{
+    authorization_id: 'join-a5', device_id: 'Xiaomi 23049RAD8C 2',
+    device_kind: 'android-capacitor', device_name: 'Xiaomi 23049RAD8C 2'
+  }] };
+  syncGroupStoreMock.loadDesktopSyncGroup.mockReturnValue(activeGroup);
+  const writeJson = vi.fn();
+  await handlePairRequestCreate(request({
+    device_id: 'Xiaomi 23049RAD8C 2', device_kind: 'android-capacitor',
+    device_name: 'Xiaomi 23049RAD8C', group_id: 'group-1', group_tag: 'tag-1',
+    library_facts: { attachment_count: 2, content_blob_count: 2, node_count: 1399,
+      review_log_count: 8, timeline_id: null },
+    pairing_public_key: PAIRING_KEY, protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+    timeline_id: 'timeline-1'
+  }), response(), vi.fn(), null, writeJson);
+  const requestId = writeJson.mock.calls.at(-1)?.[3]?.pair_request_id as string;
+  approveCompanionPairRequest(requestId, Date.now(), 'recover_existing_member');
+  await handlePairRequest(request({ pair_request_id: requestId }), response(),
+    '0.1.0-test', 'desktop-a', vi.fn(), writeJson);
+
+  expect(syncGroupStoreMock.registerSyncGroupMember).not.toHaveBeenCalled();
+  expect(writeJson).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), 200,
+    expect.objectContaining({ device_id: 'Xiaomi 23049RAD8C 2' }));
 });

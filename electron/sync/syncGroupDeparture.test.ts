@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   loadPeers: vi.fn(),
   recordDeparture: vi.fn(),
   removeCredentials: vi.fn(),
-  requestJson: vi.fn()
+  post: vi.fn()
 }));
 
 vi.mock('../database/deviceIdentity.js', () => ({ loadOrCreateDesktopDeviceId: mocks.loadDeviceId }));
@@ -20,8 +20,11 @@ vi.mock('./companionPairingStore.js', () => ({
   removeSyncGroupPeerCredentials: mocks.removeCredentials
 }));
 vi.mock('./desktopSyncGroupHttp.js', () => ({
-  createDesktopSyncGroupSignedHeaders: mocks.headers,
-  requestJson: mocks.requestJson
+  postDesktopWorkgroupJson: mocks.post
+}));
+vi.mock('./workgroupKeyStore.js', () => ({
+  loadDesktopWorkgroupKey: () => ({ group_key: 'group-key' }),
+  removeDesktopWorkgroupKey: vi.fn()
 }));
 
 import { acceptSyncGroupDeparture, leaveDesktopSyncGroup, removeDesktopSyncGroupMember } from './syncGroupDeparture.js';
@@ -35,9 +38,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.loadGroup.mockReturnValue(GROUP);
   mocks.loadPeers.mockReturnValue([{
-    endpoint_url: 'http://device-b', peer_device_id: 'device-b', secret: 'secret-b'
+    endpoint_url: 'http://device-b', peer_device_id: 'device-b'
   }]);
-  mocks.requestJson.mockResolvedValue({ status: 'accepted' });
+  mocks.post.mockResolvedValue({ status: 'accepted' });
 });
 
 it('accepts only a self-authorized departure from the authenticated Device', () => {
@@ -67,7 +70,7 @@ it('accepts removal of another Device when attributed to the authenticated membe
 });
 
 it('records and revokes a remote member even when no peer is currently reachable', async () => {
-  mocks.requestJson.mockRejectedValue(new Error('offline'));
+  mocks.post.mockRejectedValue(new Error('offline'));
   await removeDesktopSyncGroupMember('device-b');
   expect(mocks.recordDeparture).toHaveBeenCalledWith(expect.objectContaining({
     authorizedByDeviceId: 'device-a', deviceId: 'device-b'
@@ -78,9 +81,9 @@ it('records and revokes a remote member even when no peer is currently reachable
 it('delivers a self-authorized fact before locally unbinding the departing Device', async () => {
   await leaveDesktopSyncGroup();
 
-  const sent = JSON.parse(mocks.requestJson.mock.calls[0]?.[1]?.body as string) as Record<string, unknown>;
+  const sent = JSON.parse(mocks.post.mock.calls[0]?.[0]?.body as string) as Record<string, unknown>;
   expect(sent).toMatchObject({ authorized_by_device_id: 'device-a', device_id: 'device-a', group_id: 'group-1' });
-  expect(mocks.requestJson.mock.invocationCallOrder[0]!)
+  expect(mocks.post.mock.invocationCallOrder[0]!)
     .toBeLessThan(mocks.recordDeparture.mock.invocationCallOrder[0]!);
   expect(mocks.recordDeparture).toHaveBeenCalledWith(expect.objectContaining({ local: true }));
   expect(mocks.removeCredentials).toHaveBeenCalledWith('group-1', 'device-b');
@@ -95,7 +98,7 @@ it('lets the last active member Leave without a reachable peer', async () => {
 
   await leaveDesktopSyncGroup();
 
-  expect(mocks.requestJson).not.toHaveBeenCalled();
+  expect(mocks.post).not.toHaveBeenCalled();
   expect(mocks.recordDeparture).toHaveBeenCalledWith(expect.objectContaining({
     deviceId: 'device-a', groupId: 'group-1', local: true
   }));

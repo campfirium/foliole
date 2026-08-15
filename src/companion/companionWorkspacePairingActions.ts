@@ -87,6 +87,7 @@ function createRequestPairingAction(
         deviceName: createCompanionDeviceName(args.bootstrapState),
         endpointUrl: normalizedDiscovery.endpointUrl,
         groupId: normalizedDiscovery.groupId,
+        groupTag: normalizedDiscovery.groupTag,
         timelineId: normalizedDiscovery.timelineId
       });
       args.setDesktopDiscoveries(mergeSelectedDiscovery(args.desktopDiscoveries, normalizedDiscovery));
@@ -98,6 +99,7 @@ function createRequestPairingAction(
         remotePeerName: normalizedDiscovery.desktopDeviceName,
         remotePeerPlatform: normalizedDiscovery.desktopPlatform,
         groupId: normalizedDiscovery.groupId,
+        groupTag: normalizedDiscovery.groupTag,
         timelineId: normalizedDiscovery.timelineId
       });
       await args.onSaveEndpoint(normalizedDiscovery.endpointUrl);
@@ -176,6 +178,7 @@ function createCompletePairingAction(args: CompletePairingActionArgs) {
         remotePeerName: pendingPairRequest.remotePeerName,
         remotePeerPlatform: pendingPairRequest.remotePeerPlatform,
         groupId: pendingPairRequest.groupId,
+        groupTag: pendingPairRequest.groupTag,
         timelineId: pendingPairRequest.timelineId
       });
       args.setPairingState(nextPairingState);

@@ -8,9 +8,12 @@ import { clearTimeout, setTimeout } from 'node:timers';
 import { pathToFileURL } from 'node:url';
 
 import {
+  recoverMacosA5SyncGroupRejoinEntry,
+  runMacosA5SettledStoppedStatus,
   runMacosA5DatabasePerformanceEntry,
   runMacosA5ExistingSyncEntry,
-  runMacosA5PairSyncEntry
+  runMacosA5PairSyncEntry,
+  runMacosA5SyncGroupRejoinEntry
 } from './macos-a5-extended-actions.mjs';
 import {
   createMacosA5CaptureIdentity as captureIdentity,
@@ -178,7 +181,8 @@ async function captureAnnotation(paths) {
 
 export async function runMacosA5Action(action, repoRoot = process.cwd()) {
   if (!['status', 'build', 'capture-annotation', 'database-performance', 'deploy',
-    'device-profile', 'pair-sync', 'sync-existing'].includes(action)) {
+    'device-profile', 'pair-sync', 'sync-existing', 'sync-group-rejoin',
+    'sync-group-rejoin-recover', 'sync-group-stopped-status'].includes(action)) {
     throw new Error('Usage: node scripts/android/macos-a5-dev.mjs <registered-action>');
   }
   const paths = macosA5Paths(repoRoot);
@@ -189,6 +193,10 @@ export async function runMacosA5Action(action, repoRoot = process.cwd()) {
       assertFixedA5(paths);
       pairingReadiness(paths);
       readiness(paths);
+    }
+    if (action === 'sync-group-stopped-status') {
+      await runMacosA5SettledStoppedStatus({ assertFixed: () => assertFixedA5(paths), checked,
+        env: macosA5GradleEnv(), pairingReadiness, paths, readiness, serial: A5_SERIAL });
     }
     if (action === 'deploy') await deploy(paths);
     if (action === 'capture-annotation') await captureAnnotation(paths);
@@ -212,6 +220,10 @@ export async function runMacosA5Action(action, repoRoot = process.cwd()) {
     };
     if (action === 'pair-sync') await runMacosA5PairSyncEntry(productArgs);
     if (action === 'sync-existing') await runMacosA5ExistingSyncEntry(productArgs);
+    if (action === 'sync-group-rejoin') await runMacosA5SyncGroupRejoinEntry(productArgs);
+    if (action === 'sync-group-rejoin-recover') {
+      await recoverMacosA5SyncGroupRejoinEntry(productArgs);
+    }
   } finally {
     spawnSync(paths.adb, ['kill-server']);
   }

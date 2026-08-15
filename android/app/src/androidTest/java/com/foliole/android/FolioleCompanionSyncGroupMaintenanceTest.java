@@ -177,9 +177,7 @@ public class FolioleCompanionSyncGroupMaintenanceTest {
     }
 
     private static JSONObject departureSemantic(Instrumentation instrumentation) throws Exception {
-        Context context = instrumentation.getTargetContext();
-        return new JSONObject()
-            .put("pairing", FolioleCompanionPairingStore.loadPairingState(context))
+        return new JSONObject().put("bindingPresent", false).put("workgroupKeyPresent", false)
             .put("participation", participationState(instrumentation));
     }
 

@@ -12,16 +12,21 @@ const syncGroupStoreMock = vi.hoisted(() => ({
   loadDesktopSyncGroup: vi.fn(() => ({ group_id: 'group-1' })),
   loadSyncGroupMemberAuthorization: vi.fn((): { state: 'active' } | null => ({ state: 'active' }))
 }));
+const workgroupKeyStoreMock = vi.hoisted(() => ({
+  consumeDesktopWorkgroupNonce: vi.fn(() => true),
+  loadDesktopWorkgroupKey: vi.fn((): { group_key: string } | null => ({ group_key: 'paired-device-secret' }))
+}));
 
 vi.mock('./companionPairingStore.js', () => pairingStoreMock);
 vi.mock('../database/syncGroupStore.js', () => syncGroupStoreMock);
+vi.mock('./workgroupKeyStore.js', () => workgroupKeyStoreMock);
 
 import { authenticateCompanionRequest, clearCompanionRequestNonceCache } from './companionRequestAuth.js';
 
 const DEVICE_ID = 'paired-device-1';
 const DEVICE_SECRET = 'paired-device-secret';
 const SECOND_DEVICE_ID = 'paired-device-2';
-const SECOND_DEVICE_SECRET = 'paired-device-secret-2';
+const SECOND_DEVICE_SECRET = DEVICE_SECRET;
 const NOW_MS = Date.parse('2026-05-01T10:00:00.000Z');
 const TIMESTAMP = new Date(NOW_MS).toISOString();
 const NONCE_TTL_MS = 2 * 60 * 1000;
@@ -32,6 +37,8 @@ afterEach(() => {
   vi.clearAllMocks();
   syncGroupStoreMock.loadDesktopSyncGroup.mockReturnValue({ group_id: 'group-1' });
   syncGroupStoreMock.loadSyncGroupMemberAuthorization.mockReturnValue({ state: 'active' });
+  workgroupKeyStoreMock.loadDesktopWorkgroupKey.mockReturnValue({ group_key: DEVICE_SECRET });
+  workgroupKeyStoreMock.consumeDesktopWorkgroupNonce.mockReturnValue(true);
 });
 
 function createRequest(headers: http.IncomingHttpHeaders): http.IncomingMessage {
@@ -66,6 +73,7 @@ function signedHeaders(args: {
       ...(args.secret ? { secret: args.secret } : {}),
       timestamp
     }),
+    'x-sync-group-id': 'group-1',
     'x-timestamp': timestamp
   };
 }
@@ -98,7 +106,7 @@ function assertInvalidSignatureDoesNotConsumeNonce() {
   expect(authenticateCompanionRequest({
     nowMs: NOW_MS,
     request: createRequest(signedHeaders({ nonce }))
-  })).toEqual({ device_id: DEVICE_ID, ok: true });
+  })).toMatchObject({ device_id: DEVICE_ID, ok: true });
 }
 
 function assertRejectsReplayedSignedRequests() {
@@ -106,7 +114,7 @@ function assertRejectsReplayedSignedRequests() {
   const nonce = 'nonce-2';
   const request = createRequest(signedHeaders({ nonce }));
 
-  expect(authenticateCompanionRequest({ nowMs: NOW_MS, request })).toEqual({ device_id: DEVICE_ID, ok: true });
+  expect(authenticateCompanionRequest({ nowMs: NOW_MS, request })).toMatchObject({ device_id: DEVICE_ID, ok: true });
   expect(authenticateCompanionRequest({ nowMs: NOW_MS, request })).toMatchObject({
     error: 'replayed_nonce',
     ok: false,
@@ -122,7 +130,7 @@ function assertPrunesExpiredNoncesBeforeCapacityEviction() {
     expect(authenticateCompanionRequest({
       nowMs: NOW_MS,
       request: createRequest(signedHeaders({ nonce, timestamp: expiredNonceTimestamp }))
-    })).toEqual({ device_id: DEVICE_ID, ok: true });
+    })).toMatchObject({ device_id: DEVICE_ID, ok: true });
   }
 
   const replayNowMs = NOW_MS + NONCE_TTL_MS + 1;
@@ -132,7 +140,7 @@ function assertPrunesExpiredNoncesBeforeCapacityEviction() {
   expect(authenticateCompanionRequest({
     nowMs: replayNowMs,
     request: createRequest(signedHeaders({ nonce: sentinelNonce, timestamp: replayTimestamp }))
-  })).toEqual({ device_id: DEVICE_ID, ok: true });
+  })).toMatchObject({ device_id: DEVICE_ID, ok: true });
   expect(authenticateCompanionRequest({
     nowMs: replayNowMs,
     request: createRequest(signedHeaders({ nonce: sentinelNonce, timestamp: replayTimestamp }))
@@ -148,7 +156,7 @@ function assertCrossDeviceNonceFloodDoesNotAllowReplay() {
   const sentinelNonce = 'device-a-live-nonce';
   const sentinelRequest = createRequest(signedHeaders({ nonce: sentinelNonce }));
 
-  expect(authenticateCompanionRequest({ nowMs: NOW_MS, request: sentinelRequest })).toEqual({ device_id: DEVICE_ID, ok: true });
+  expect(authenticateCompanionRequest({ nowMs: NOW_MS, request: sentinelRequest })).toMatchObject({ device_id: DEVICE_ID, ok: true });
 
   for (let index = 0; index < NONCE_CACHE_LIMIT_PER_DEVICE + 1; index += 1) {
     const nonce = `device-b-nonce-${index}`;
@@ -159,7 +167,7 @@ function assertCrossDeviceNonceFloodDoesNotAllowReplay() {
         nonce,
         secret: SECOND_DEVICE_SECRET
       }))
-    })).toEqual({ device_id: SECOND_DEVICE_ID, ok: true });
+    })).toMatchObject({ device_id: SECOND_DEVICE_ID, ok: true });
   }
 
   expect(authenticateCompanionRequest({ nowMs: NOW_MS, request: sentinelRequest })).toMatchObject({
@@ -180,19 +188,16 @@ describe('companion request auth', () => {
     });
   });
 
-  it('blocks old pairing records before signature or nonce processing', () => {
-    pairingStoreMock.loadPairedCompanionDevice.mockReturnValue({
-      device_id: DEVICE_ID,
-      device_secret: DEVICE_SECRET
-    });
+  it('fails closed when the database membership has no safe-storage workgroup key', () => {
+    workgroupKeyStoreMock.loadDesktopWorkgroupKey.mockReturnValue(null);
 
     expect(authenticateCompanionRequest({
       nowMs: NOW_MS,
       request: createRequest(signedHeaders({ nonce: 'repair-nonce' }))
     })).toEqual({
-      error: 'protocol_pairing_repair_required',
+      error: 'sync_group_workgroup_key_missing',
       ok: false,
-      status_code: 409
+      status_code: 401
     });
   });
 

@@ -34,8 +34,10 @@ final class FolioleCompanionSyncGroupProvider {
             .put("device_id", value(context, call, "deviceId"))
             .put("device_name", value(context, call, "deviceName"))
             .put("facts_revision", value(context, call, "factsRevision"))
+            .put("workgroup_key", value(context, call, "workgroupKey"))
             .put("protocol", FolioleCompanionSyncPackProviderDefinitions.load(context).protocol())
             .put("sync_group", call.getData().getJSONObject(key(context, "group")));
+        next.put("group_tag", FolioleCompanionSyncGroupCrypto.groupTag(next.getString("workgroup_key")));
         if (sameProvider(next)) {
             next.put("runtime_instance_id", activeConfig.getString("runtime_instance_id"));
             boolean factsChanged = !next.optString("facts_revision").equals(activeConfig.optString("facts_revision"));
@@ -97,6 +99,7 @@ final class FolioleCompanionSyncGroupProvider {
     }
 
     private static void stopRuntime() {
+        FolioleCompanionWorkgroupSession.close();
         FolioleCompanionSyncScreenAwake.clear();
         if (advertisement != null) advertisement.stop();
         if (server != null) server.stop();
@@ -104,6 +107,7 @@ final class FolioleCompanionSyncGroupProvider {
     }
 
     private static void startRuntime() throws Exception {
+        FolioleCompanionWorkgroupSession.open(activeConfig.getString("workgroup_key"));
         server = new FolioleCompanionSyncGroupServer(activeContext, activeConfig, joinRequests, requireDataBridge());
         advertisement = FolioleCompanionNsdAdvertisement.start(activeContext, server.port(), activeConfig);
     }
@@ -134,14 +138,12 @@ final class FolioleCompanionSyncGroupProvider {
     static synchronized JSObject approve(Context context, PluginCall call) throws Exception {
         if (server == null) throw new IllegalStateException("sync_participation_inactive");
         FolioleCompanionSyncGroupJoinRequest request = require(call.getString(key(context, "pairRequestId")));
-        request.deviceSecret = FolioleCompanionSyncGroupPeerStore.createSecret(activeContext, request.deviceId);
-        request.providerSecret = FolioleCompanionSyncGroupPeerStore.randomSecret();
+        FolioleCompanionWorkgroupSession.requireKey();
         request.status = "approved";
         try {
             FolioleCompanionSyncGroupJoinGrantStore.save(activeContext, activeConfig, request);
         } catch (Exception error) {
             request.status = "pending";
-            FolioleCompanionSyncGroupPeerStore.remove(activeContext, request.deviceId);
             throw error;
         }
         FolioleCompanionSyncScreenAwake.touch();
@@ -176,15 +178,10 @@ final class FolioleCompanionSyncGroupProvider {
         JSONObject config,
         FolioleCompanionSyncGroupJoinRequest request
     ) throws Exception {
-        String previousDeviceId = request.deviceId;
         String approvedBy = FolioleCompanionSyncGroupJoinGrantStore.approvedByDeviceId(context, request.pairRequestId);
         request.assign(FolioleCompanionSyncGroupDatabase.registerMember(
             bridge, config.getJSONObject("sync_group").getString("group_id"), approvedBy, request
         ));
-        if (!previousDeviceId.equals(request.deviceId)) {
-            FolioleCompanionSyncGroupPeerStore.saveSecret(context, request.deviceId, request.deviceSecret);
-            FolioleCompanionSyncGroupPeerStore.remove(context, previousDeviceId);
-        }
         FolioleCompanionSyncGroupJoinGrantStore.save(context, config, request);
     }
 
@@ -199,7 +196,6 @@ final class FolioleCompanionSyncGroupProvider {
             if (!request.expired()) return false;
             if ("approved".equals(request.status)) {
                 FolioleCompanionSyncGroupJoinGrantStore.remove(context, request.pairRequestId);
-                FolioleCompanionSyncGroupPeerStore.remove(context, request.deviceId);
             }
             return true;
         });

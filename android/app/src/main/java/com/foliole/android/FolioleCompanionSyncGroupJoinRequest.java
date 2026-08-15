@@ -14,8 +14,6 @@ final class FolioleCompanionSyncGroupJoinRequest {
     final String pairRequestId;
     final String requestedAt;
     final String remoteAddress;
-    volatile String deviceSecret;
-    volatile String providerSecret;
     volatile String status = "pending";
 
     FolioleCompanionSyncGroupJoinRequest(JSONObject payload, String remoteAddress) throws Exception {
@@ -40,8 +38,7 @@ final class FolioleCompanionSyncGroupJoinRequest {
     }
 
     JSONObject grantJson() throws Exception {
-        return publicJson().put("pairing_public_key", pairingPublicKey).put("remote_address", remoteAddress)
-            .put("device_secret", deviceSecret).put("provider_secret", providerSecret);
+        return publicJson().put("pairing_public_key", pairingPublicKey).put("remote_address", remoteAddress);
     }
 
     static FolioleCompanionSyncGroupJoinRequest fromGrantJson(JSONObject value) {
@@ -51,8 +48,6 @@ final class FolioleCompanionSyncGroupJoinRequest {
             required(value, "pair_request_id"), required(value, "requested_at"), required(value, "remote_address")
         );
         request.status = required(value, "status");
-        request.deviceSecret = required(value, "device_secret");
-        request.providerSecret = required(value, "provider_secret");
         return request;
     }
 

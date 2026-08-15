@@ -109,12 +109,16 @@ it('keeps routing reachable members when another active peer is unavailable', as
 });
 
 it('binds a discovered route to the stored peer identity through the native bridge', async () => {
+  mocks.loadGroup.mockResolvedValue({
+    group_id: 'group-1', local_device_id: 'android-b', members: [], timeline_id: 'timeline-1'
+  });
   await bindCompanionWorkspaceSyncTarget({
     deviceId: 'desktop-a', endpointUrl: 'http://192.168.1.20:38641', groupId: 'group-1'
   });
 
   expect(mocks.bindRoute).toHaveBeenCalledWith({
     endpoint_url: 'http://192.168.1.20:38641',
+    local_device_id: 'android-b',
     peer_device_id: 'desktop-a',
     sync_group_id: 'group-1'
   });

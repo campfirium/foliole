@@ -10,6 +10,7 @@ import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey
 import { MACOS_DAILY_DEBUG_ROOT, MACOS_DAILY_LIBRARY_HOME } from '../macos/macos-electron-dev-paths.mjs';
 
 const APP_ID = 'com.foliole.android';
+const COMPONENT = `${APP_ID}/.MainActivity`;
 
 function activeMemberIds(overview) {
   return (overview.sync_group?.members ?? [])
@@ -23,7 +24,7 @@ function hasDesktopFact(snapshot, factId) {
 }
 
 async function waitUntil(label, inspect, accept, wait = delay) {
-  const deadline = Date.now() + 90_000;
+  const deadline = Date.now() + 5 * 60_000;
   let latest;
   while (Date.now() < deadline) {
     try {
@@ -61,11 +62,27 @@ export async function runExistingSyncRestartJourney(actions) {
   }
 }
 
-function androidSnapshot(paths, serial) {
-  return collectAndroidDeviceSnapshot({
-    adb: paths.adb, appId: APP_ID, includeAttachments: false, includeEvents: false, serial,
-    tables: ['nodes'], databaseInspector: inspectPairSyncRecoveryWorkspace
+async function checkedDeviceAction(context, args) {
+  const result = await context.execute(context.paths.adb, ['-s', context.serial, ...args], {
+    env: context.env, timeoutMs: 60_000
   });
+  if (result.code !== 0) throw Object.assign(new Error('A5 snapshot lifecycle failed.'), { result });
+}
+
+export async function collectStoppedAndroidSnapshot(
+  context, collectSnapshot = collectAndroidDeviceSnapshot, settle = delay
+) {
+  await settle(90_000);
+  await checkedDeviceAction(context, ['shell', 'am', 'force-stop', APP_ID]);
+  try {
+    return await collectSnapshot({
+      adb: context.paths.adb, appId: APP_ID, includeAttachments: false,
+      includeEvents: false, serial: context.serial, tables: ['nodes'],
+      databaseInspector: inspectPairSyncRecoveryWorkspace
+    });
+  } finally {
+    await checkedDeviceAction(context, ['shell', 'am', 'start', '-W', '-n', COMPONENT]);
+  }
 }
 
 async function createAndroidFact({ buildIdentity, env, evidenceRoot, execute, paths, serial }) {
@@ -113,7 +130,7 @@ function validAndroidProof(snapshot, readiness, desktopFactId, androidFactId) {
 
 async function inspectFinal(session, before, desktopFact, androidFact, context) {
   const android = await waitUntil('Restarted automatic bidirectional sync',
-    () => androidSnapshot(context.paths, context.serial),
+    () => collectStoppedAndroidSnapshot(context),
     (snapshot) => validAndroidProof(
       snapshot, context.readiness, desktopFact.factId, androidFact.factId
     ));
@@ -135,7 +152,7 @@ async function inspectFinal(session, before, desktopFact, androidFact, context) 
 export async function proveMacosA5ExistingSyncContinuation({
   buildIdentity, env, evidenceRoot, execute, paths, readiness, serial
 }) {
-  const context = { paths, readiness, serial };
+  const context = { env, execute, paths, readiness, serial };
   const sessionOptions = {
     env, libraryHome: MACOS_DAILY_LIBRARY_HOME, repoRoot: paths.repoRoot,
     userDataPath: path.join(paths.repoRoot, MACOS_DAILY_DEBUG_ROOT, 'user-data')
@@ -153,7 +170,7 @@ export async function proveMacosA5ExistingSyncContinuation({
     inspectFinal: (...args) => inspectFinal(...args, context),
     openDesktopSession: () => openMacosPairSyncDesktopSession(sessionOptions),
     waitForAndroidFact: (factId) => waitUntil('Automatic Mac-to-Android sync',
-      () => androidSnapshot(paths, serial), (snapshot) => hasDesktopFact(snapshot, factId)),
+      () => collectStoppedAndroidSnapshot(context), (snapshot) => hasDesktopFact(snapshot, factId)),
     waitForDesktopFact
   });
   const manifestPath = path.join(evidenceRoot, 'existing-sync-continuation-manifest.json');

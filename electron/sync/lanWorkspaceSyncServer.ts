@@ -23,6 +23,7 @@ import { countPendingCompanionPairRequests } from './companionPairingRequests.js
 import { countPairedCompanionDevices } from './companionPairingStore.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import { startDesktopSyncGroupAutoSync, stopDesktopSyncGroupAutoSync } from './desktopSyncGroupAutoSync.js';
+import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
 const DEFAULT_SYNC_PORT = 38641;
 export const LAN_WORKSPACE_SYNC_HTTP_LIMITS = {
@@ -157,10 +158,13 @@ function recordMdnsWarning(error: unknown) {
 function advertiseActiveSyncGroup(args: { appVersion: string; peerId: string; port: number }) {
   const group = loadDesktopSyncGroup();
   if (!group || group.local_member_state !== 'active') return;
+  const workgroup = loadDesktopWorkgroupKey(group.group_id);
+  if (!workgroup) throw new Error('sync_group_workgroup_key_missing');
   startCompanionMdnsAdvertisement({
     ...args,
     groupDisplayName: resolveSyncGroupDisplayDeviceName(group),
     groupId: group.group_id,
+    groupTag: workgroup.group_tag,
     onWarning: recordMdnsWarning,
     timelineId: group.timeline_id
   });
@@ -168,6 +172,8 @@ function advertiseActiveSyncGroup(args: { appVersion: string; peerId: string; po
 
 export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; peerId: string }) {
   if (!isDesktopCompanionSyncParticipating()) return activeStatus;
+  const group = loadDesktopSyncGroup();
+  if (!group || !loadDesktopWorkgroupKey(group.group_id)) throw new Error('sync_group_workgroup_key_missing');
   startDesktopSyncGroupAutoSync();
   if (activeServer) {
     if (activeStatus.port) advertiseActiveSyncGroup({ ...args, port: activeStatus.port });

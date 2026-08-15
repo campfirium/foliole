@@ -18,7 +18,7 @@ final class FolioleCompanionSyncPackTransfer {
         String expectedPeerId,
         String expectedSourcePeerId
     ) throws Exception {
-        byte[] body = FolioleCompanionDesktopHttpClient.requestBytes(url, headers);
+        byte[] body = FolioleCompanionDesktopHttpClient.requestBytes(context, url, headers);
         return storeDownloadedPack(context, body, expectedPeerId, expectedSourcePeerId);
     }
 

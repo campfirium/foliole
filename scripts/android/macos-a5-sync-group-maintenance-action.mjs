@@ -43,7 +43,7 @@ function bundle(output, key) {
 }
 
 export async function runMacosA5SyncGroupMaintenance({
-  action, buildIdentity, env, evidenceRoot, execute, paths, serial
+  action, buildIdentity, env, evidenceRoot, execute, installMain = true, paths, serial
 }) {
   if (!['leave-sync-group', 'clear-app-data', 'activate-participation', 'control-participation',
     'create-journey-fact', 'pause-and-leave', 'pause-participation',
@@ -67,7 +67,9 @@ export async function runMacosA5SyncGroupMaintenance({
   let reverseCreated = false;
   let testInstalled = false;
   try {
-    output.push((await checked(execute, paths.adb, ['-s', serial, 'install', '-r', paths.apk], options, 'main install')).output);
+    if (installMain) {
+      output.push((await checked(execute, paths.adb, ['-s', serial, 'install', '-r', paths.apk], options, 'main install')).output);
+    }
     output.push((await checked(execute, paths.adb, ['-s', serial, 'install', '-r', '-t', testApk], options, 'test install')).output);
     testInstalled = true;
     if (action === 'leave-sync-group' || action === 'pause-and-leave') {

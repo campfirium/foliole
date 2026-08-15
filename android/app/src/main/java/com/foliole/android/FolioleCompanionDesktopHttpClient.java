@@ -37,72 +37,76 @@ final class FolioleCompanionDesktopHttpClient {
     }
 
     static JSObject request(Context context, String url, String method, JSONObject headers, String body) throws Exception {
+        FolioleCompanionWorkgroupHttp.PreparedRequest prepared =
+            FolioleCompanionWorkgroupHttp.prepare(context, url, method, headers, body);
         HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
         connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
         connection.setReadTimeout(READ_TIMEOUT_MS);
         connection.setRequestMethod(method);
-        applyHeaders(connection, headers);
-        if (body != null) {
+        applyHeaders(connection, prepared.headers);
+        if (prepared.body != null) {
             connection.setDoOutput(true);
             try (OutputStream outputStream = connection.getOutputStream()) {
-                outputStream.write(body.getBytes(StandardCharsets.UTF_8));
+                outputStream.write(prepared.body.getBytes(StandardCharsets.UTF_8));
             }
         }
         int status = connection.getResponseCode();
         JSObject result = new JSObject();
         result.put(FolioleCompanionHostBridgeContractDefinitions.networkStatusResponseKey(context), status);
-        result.put(FolioleCompanionHostBridgeContractDefinitions.networkBodyResponseKey(context), readBody(connection, status));
+        byte[] responseBody = readBytes(status >= 400 ? connection.getErrorStream() : connection.getInputStream());
+        if (prepared.headers.has("X-Sync-Group-Id")) {
+            responseBody = FolioleCompanionWorkgroupHttp.decryptResponse(
+                context, connection, method, prepared.path, responseBody);
+        }
+        result.put(FolioleCompanionHostBridgeContractDefinitions.networkBodyResponseKey(context),
+            new String(responseBody, StandardCharsets.UTF_8));
         return result;
     }
 
-    static byte[] requestBytes(String url, JSONObject headers) throws Exception {
-        return requestBytes(url, "GET", headers, null);
+    static byte[] requestBytes(Context context, String url, JSONObject headers) throws Exception {
+        return requestBytes(context, url, "GET", headers, null);
     }
 
-    static byte[] requestBytes(String url, String method, JSONObject headers, String body) throws Exception {
-        return requestBinary(url, method, headers, body).body;
+    static byte[] requestBytes(Context context, String url, String method, JSONObject headers, String body) throws Exception {
+        return requestBinary(context, url, method, headers, body).body;
     }
 
-    static BinaryResponse requestBinary(String url, String method, JSONObject headers, String body) throws Exception {
+    static BinaryResponse requestBinary(Context context, String url, String method, JSONObject headers, String body) throws Exception {
+        FolioleCompanionWorkgroupHttp.PreparedRequest prepared =
+            FolioleCompanionWorkgroupHttp.prepare(context, url, method, headers, body);
         HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
         connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
         connection.setReadTimeout(READ_TIMEOUT_MS);
         connection.setRequestMethod(method);
-        applyHeaders(connection, headers);
-        if (body != null) {
+        applyHeaders(connection, prepared.headers);
+        if (prepared.body != null) {
             connection.setDoOutput(true);
             try (OutputStream outputStream = connection.getOutputStream()) {
-                outputStream.write(body.getBytes(StandardCharsets.UTF_8));
+                outputStream.write(prepared.body.getBytes(StandardCharsets.UTF_8));
             }
         }
         int status = connection.getResponseCode();
         if (status < 200 || status >= 300) {
             String errorCode = readSafeErrorCode(connection, status);
             connection.disconnect();
-            throw binaryResourceError(status, errorCode);
+            throw binaryResourceError(status, errorCode, method, prepared.path);
         }
         try (InputStream inputStream = connection.getInputStream()) {
-            return new BinaryResponse(readBytes(inputStream), connection.getContentType());
+            byte[] responseBody = readBytes(inputStream);
+            String contentType = connection.getContentType();
+            if (prepared.headers.has("X-Sync-Group-Id")) {
+                responseBody = FolioleCompanionWorkgroupHttp.decryptResponse(
+                    context, connection, method, prepared.path, responseBody);
+                contentType = connection.getHeaderField("X-Foliole-Original-Content-Type");
+            }
+            return new BinaryResponse(responseBody, contentType);
         }
     }
 
-    static void downloadToFile(String url, JSONObject headers, java.io.File outputFile) throws Exception {
-        HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
-        connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
-        connection.setReadTimeout(READ_TIMEOUT_MS);
-        connection.setRequestMethod("GET");
-        applyHeaders(connection, headers);
-        int status = connection.getResponseCode();
-        if (status < 200 || status >= 300) {
-            String errorCode = readSafeErrorCode(connection, status);
-            connection.disconnect();
-            throw binaryResourceError(status, errorCode);
-        }
-        try (
-            InputStream inputStream = new BufferedInputStream(connection.getInputStream(), COPY_BUFFER_BYTES);
-            OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(outputFile), COPY_BUFFER_BYTES)
-        ) {
-            copy(inputStream, outputStream);
+    static void downloadToFile(Context context, String url, JSONObject headers, java.io.File outputFile) throws Exception {
+        byte[] body = requestBytes(context, url, headers);
+        try (OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(outputFile), COPY_BUFFER_BYTES)) {
+            outputStream.write(body);
         }
     }
 
@@ -135,9 +139,22 @@ final class FolioleCompanionDesktopHttpClient {
         return body.toString();
     }
 
-    private static IllegalStateException binaryResourceError(int status, String errorCode) {
+    private static IllegalStateException binaryResourceError(
+        int status, String errorCode, String method, String path
+    ) {
         String detail = errorCode == null ? "." : " (" + errorCode + ").";
-        return new IllegalStateException("Desktop binary resource returned " + status + detail);
+        return new IllegalStateException(
+            "Desktop binary resource " + method + " " + safeResourcePath(path) +
+            " returned " + status + detail
+        );
+    }
+
+    private static String safeResourcePath(String path) {
+        String route = path == null ? "" : path.split("\\?", 2)[0];
+        return "/companion/sync-pack".equals(route)
+            || "/companion/attachment-resource".equals(route)
+            || "/companion/content-blob".equals(route)
+            || "/companion/content-blobs".equals(route) ? route : "/companion/resource";
     }
 
     private static String readSafeErrorCode(HttpURLConnection connection, int status) {
@@ -159,6 +176,7 @@ final class FolioleCompanionDesktopHttpClient {
     }
 
     private static byte[] readBytes(InputStream inputStream) throws Exception {
+        if (inputStream == null) return new byte[0];
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         try (InputStream buffered = new BufferedInputStream(inputStream, COPY_BUFFER_BYTES)) {
             copy(buffered, output);

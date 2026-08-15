@@ -8,7 +8,9 @@ import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
 import type { createDesktopSyncGroupSignedHeaders } from './desktopSyncGroupHttp.js';
+import { readDesktopWorkgroupResponse } from './desktopSyncGroupHttp.js';
 import { extractSyncPackDatabase } from './syncPackContainerReader.js';
+import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 import { notifyWorkspaceSyncApplied } from './workspaceSyncAppliedEvents.js';
 
 type Peer = {
@@ -16,7 +18,6 @@ type Peer = {
   group_id: string;
   local_device_id: string;
   peer_device_id: string;
-  secret: string;
 };
 
 type ApplyResult = Awaited<ReturnType<typeof applySyncPackNodeSurfaceWithDbPort>>;
@@ -40,14 +41,19 @@ export async function downloadAndApplyDesktopSyncGroupPack(args: {
   peer: Peer;
 }) {
   const pathWithQuery = `/companion/sync-pack?after_state_seq=${args.after}`;
+  const key = loadDesktopWorkgroupKey(args.peer.group_id);
+  if (!key) throw new Error('sync_group_workgroup_key_missing');
   const response = await fetch(`${args.peer.endpoint_url}${pathWithQuery}`, {
     headers: args.createHeaders({ groupId: args.peer.group_id, localDeviceId: args.peer.local_device_id,
-      method: 'GET', pathWithQuery, secret: args.peer.secret })
+      method: 'GET', pathWithQuery, secret: key.group_key })
   });
-  if (!response.ok) throw new Error(`sync_pack_http_${response.status}`);
+  const body = await readDesktopWorkgroupResponse({
+    contentType: 'application/zip', groupId: args.peer.group_id,
+    method: 'GET', pathWithQuery, response
+  });
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-desktop-initial-sync-'));
   try {
-    return await applyDownloadedPack(args, Buffer.from(await response.arrayBuffer()), tempRoot);
+    return await applyDownloadedPack(args, body, tempRoot);
   } finally {
     await fs.rm(tempRoot, { recursive: true, force: true });
   }
@@ -63,6 +69,7 @@ async function applyDownloadedPack(
     body, expectedPeerId: args.peer.local_device_id,
     expectedSourcePeerId: args.peer.peer_device_id, outputPath: incomingPath
   });
+  if (manifest.toStateSeq < args.after) throw new Error('sync_pack_provider_frontier_rollback');
   const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'desktop-sync-group-pack-apply' });
   await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
   let event;

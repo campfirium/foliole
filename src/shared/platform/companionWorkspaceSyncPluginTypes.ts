@@ -37,6 +37,7 @@ export interface CompanionWorkspaceSyncPlugin
   loadDiscoveryCandidates(): Promise<CompanionDiscoveryCandidatesPayload>;
   bindSyncGroupPeerRoute(args: {
     endpoint_url: string;
+    local_device_id: string;
     peer_device_id: string;
     sync_group_id: string;
   }): Promise<void>;
@@ -58,6 +59,7 @@ export interface CompanionWorkspaceSyncPlugin
     device_name: string;
     facts_revision: string;
     sync_group: import('../../../lib/platform/syncGroupContract').SyncGroupPayload;
+    workgroup_key: string;
   }): Promise<CompanionSyncGroupProviderState>;
   stopSyncGroupProvider(): Promise<CompanionSyncGroupProviderState>;
   resolveAttachmentResource(args: {

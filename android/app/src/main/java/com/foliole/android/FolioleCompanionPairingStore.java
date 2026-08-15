@@ -58,6 +58,11 @@ final class FolioleCompanionPairingStore {
         ));
     }
 
+    static String loadAuthorizedDeviceId(Context context) throws Exception {
+        String deviceId = loadStoredDeviceId(context);
+        return canReadPairingSecret(context, deviceId) ? deviceId : null;
+    }
+
     static JSObject savePairingCredentials(
         Context context,
         String deviceId,

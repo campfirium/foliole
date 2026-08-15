@@ -143,5 +143,12 @@ export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   {
     version: 65,
     migrate: migrateSyncGroupDepartures
+  },
+  {
+    version: 66,
+    migrate: (sqlite) => {
+      addColumnIfMissing(sqlite, 'sync_groups', 'workgroup_key', 'TEXT');
+      for (const statement of SYNC_GROUP_SCHEMA_STATEMENTS) sqlite.exec(statement);
+    }
   }
 ];

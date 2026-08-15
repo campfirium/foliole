@@ -9,6 +9,7 @@ import {
   macosA5Paths,
   runMacosA5Action
 } from './macos-a5-dev.mjs';
+import { macosA5ParallelDesktopEnv } from './macos-a5-extended-actions.mjs';
 import { runMacosA5ProductBootstrap } from './macos-a5-product-bootstrap.mjs';
 
 describe('macOS fixed A5 development entry', () => {
@@ -70,6 +71,24 @@ describe('macOS fixed A5 development entry', () => {
     expect(source).not.toContain('process.argv[3]');
   });
 
+  it('exposes one fixed T132 rejoin journey without exposing raw Leave', () => {
+    const source = fs.readFileSync('scripts/android/macos-a5-dev.mjs', 'utf8');
+    const extended = fs.readFileSync('scripts/android/macos-a5-extended-actions.mjs', 'utf8');
+    expect(source).toContain("'sync-group-rejoin'");
+    expect(source).not.toContain("'leave-sync-group'");
+    expect(source).not.toContain('process.argv[3]');
+    expect(extended).toContain('assertT132CredentialRecoveryBaseline');
+    expect(extended).toContain("'force-stop', 'com.foliole.android'");
+    expect(extended).toContain("args.protectData('backup'");
+    expect(extended).toContain('runMacosA5SyncGroupRejoinJourney');
+  });
+
+  it('keeps the installed Foliole open while the fixed journey owns the default listener', () => {
+    expect(macosA5ParallelDesktopEnv({ FOLIOLE_COMPANION_SYNC_PORT: '38641' })).toEqual({
+      FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1', FOLIOLE_COMPANION_SYNC_PORT: '38641'
+    });
+  });
+
   it('bootstraps only through the installed product before identity is rechecked', () => {
     const calls = [];
     runMacosA5ProductBootstrap({ adb: '/adb', repoRoot: '/repo' }, (command, args) => {
@@ -100,6 +119,21 @@ describe('macOS fixed A5 development entry', () => {
 
     expect(statusBlock.indexOf('pairingReadiness(paths)')).toBeGreaterThan(-1);
     expect(statusBlock.indexOf('pairingReadiness(paths)')).toBeLessThan(statusBlock.indexOf('readiness(paths)'));
+  });
+
+  it('offers one fixed stopped status for a consistent T132 database snapshot', () => {
+    const source = fs.readFileSync('scripts/android/macos-a5-dev.mjs', 'utf8');
+    const block = source.slice(source.indexOf("if (action === 'sync-group-stopped-status')"),
+      source.indexOf("if (action === 'deploy')"));
+    expect(block).toContain('runMacosA5SettledStoppedStatus');
+    expect(block).not.toContain("'install'");
+    const extended = fs.readFileSync('scripts/android/macos-a5-extended-actions.mjs', 'utf8');
+    const settled = extended.slice(extended.indexOf('runMacosA5SettledStoppedStatus'),
+      extended.indexOf('runMacosA5DatabasePerformanceEntry'));
+    expect(settled.match(/'force-stop'/gu)).toHaveLength(2);
+    expect(settled).toContain('delay(90_000)');
+    expect(settled).toContain('openMacosPairSyncDesktopSession');
+    expect(settled.lastIndexOf("'force-stop'")).toBeLessThan(settled.indexOf('readiness(args.paths)'));
   });
 
   it('protects data without requiring the Capture acceptance workspace during deploy', () => {

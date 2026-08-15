@@ -68,18 +68,33 @@ describe('CompanionSyncPanel', () => {
 
     expect(screen.queryByText('Handoff reminders')).not.toBeInTheDocument();
     expect(screen.queryByText('Set up sync')).not.toBeInTheDocument();
-    expect(screen.getByText('Join a Sync Group')).toBeInTheDocument();
+    expect(screen.getByText('Connect to a Sync Group')).toBeInTheDocument();
     expect(screen.getByText(/open Sync Group on an active device/i)).toBeInTheDocument();
     expect(screen.queryByDisplayValue('http://10.0.2.2:38641')).not.toBeInTheDocument();
     expect(screen.queryByText('This device')).not.toBeInTheDocument();
     expect(screen.queryByText('Sync now')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Pause Sync' })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Join Sync Group' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Connect to Sync Group' }));
 
     await waitFor(() => {
       expect(props.onCheckDesktop).toHaveBeenCalledWith('http://10.0.2.2:38641');
     });
+  });
+
+  it('uses the ordinary connection entry when a group key is unavailable', () => {
+    const props = createProps();
+    renderWithLocalization(<CompanionSyncPanel {...props} syncGroup={{
+      created_at: '2026-08-08T00:00:00.000Z', created_by_device_id: 'Maci', display_name: 'Maci',
+      group_id: 'group-1', local_device_id: 'Xiaomi 23049RAD8C', local_member_state: 'active',
+      members: [{ approved_by_device_id: 'Maci', authorization_id: 'join-a5',
+        device_id: 'Xiaomi 23049RAD8C', device_kind: 'android-capacitor',
+        device_name: 'Xiaomi 23049RAD8C', joined_at: '2026-08-08T00:00:00.000Z', state: 'active' }],
+      timeline_id: 'timeline-1'
+    }} />);
+
+    expect(screen.queryByText('Current Sync Group')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Connect to Sync Group' })).toBeInTheDocument();
   });
 
 });
@@ -95,8 +110,8 @@ describe('CompanionSyncPanel pairing states', () => {
     expect(screen.getByRole('heading', { name: 'Looking for a Sync Group' })).toBeInTheDocument();
     expect(screen.getByText(/open Sync Group on an active member/)).toBeInTheDocument();
     expect(screen.getByText('Searching...')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Join Sync Group' })).not.toBeInTheDocument();
-    expect(screen.queryByText('Join a Sync Group')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Connect to Sync Group' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Connect to a Sync Group')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
 
@@ -128,7 +143,7 @@ describe('CompanionSyncPanel discovery list', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Found 1 device' })).toBeInTheDocument();
     expect(screen.getByText('Request to join this Sync Group.')).toBeInTheDocument();
-    expect(screen.queryByText('Join a Sync Group')).not.toBeInTheDocument();
+    expect(screen.queryByText('Connect to a Sync Group')).not.toBeInTheDocument();
     expect(screen.queryByText('Set up sync')).not.toBeInTheDocument();
     expect(screen.queryByText('Choose the device to pair and sync with.')).not.toBeInTheDocument();
     expect(screen.getByText('Foliole Desktop on ZEPHU-PC')).toBeInTheDocument();

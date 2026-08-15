@@ -47,8 +47,11 @@ export function CompanionSyncGroupRuntime(props: {
   useEffect(() => {
     if (!isNativeCompanionSyncGroupRuntime() || !loaded) return;
     const factsRevision = `${mutationRevision}:${workspaceSync.state.last_synced_at ?? ''}`;
-    void reconcileCompanionSyncGroupProvider(bootstrapState, group, factsRevision).catch(() => undefined);
-  }, [bootstrapState, group, loaded, mutationRevision, workspaceSync.state.last_synced_at]);
+    void reconcileCompanionSyncGroupProvider(
+      bootstrapState, group, factsRevision
+    ).catch(() => undefined);
+  }, [bootstrapState, group, loaded, mutationRevision, workspaceSync.pairingState,
+    workspaceSync.state.last_synced_at]);
 
   return (
     <CompanionSyncGroupContext.Provider value={group}>

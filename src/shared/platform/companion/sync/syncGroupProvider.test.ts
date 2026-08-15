@@ -24,6 +24,9 @@ vi.mock('../../companionWorkspaceRuntimeRepository', () => ({
   isNativeCompanionSyncGroupRuntime: () => runtime.available,
   isNativeCompanionSyncParticipationRuntime: () => runtime.available
 }));
+vi.mock('./syncGroupStore', () => ({
+  loadCompanionSyncGroupWorkgroupKey: vi.fn(async () => 'workgroup-key')
+}));
 
 import { reconcileCompanionSyncGroupProvider } from './syncGroupProvider';
 
@@ -64,7 +67,8 @@ it('lands an active Android member on the native provider bridge with its persis
   await reconcileCompanionSyncGroupProvider(bootstrap, group, '4:2026-08-12T00:00:00.000Z');
   expect(runtime.start).toHaveBeenCalledWith({
     app_version: '0.7.5', device_id: 'A5 2',
-    device_name: 'A5 2', facts_revision: '4:2026-08-12T00:00:00.000Z', sync_group: group
+    device_name: 'A5 2', facts_revision: '4:2026-08-12T00:00:00.000Z', sync_group: group,
+    workgroup_key: 'workgroup-key'
   });
   expect(runtime.listen).toHaveBeenCalledWith('syncGroupDataRequest', expect.any(Function));
 });

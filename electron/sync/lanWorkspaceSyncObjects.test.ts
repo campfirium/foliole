@@ -4,11 +4,17 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { postSigned, signRequest } from './lanWorkspaceSyncObjects.testSupport.js';
-import { pairTestDevice, requestWorkspaceSyncServer } from './lanWorkspaceSyncServer.testSupport.js';
+import { postSigned, readWorkgroupResponse, signRequest } from './lanWorkspaceSyncObjects.testSupport.js';
+import {
+  pairTestDevice, requestWorkspaceSyncServer, type TestPairedDevice
+} from './lanWorkspaceSyncServer.testSupport.js';
 
 const electronMock = vi.hoisted(() => ({
   userDataPath: `${process.cwd()}/.tmp/foliole-sync-objects-${Math.random().toString(16).slice(2)}`
+}));
+const WORKGROUP = vi.hoisted(() => ({
+  groupId: 'group-test', groupKey: 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8',
+  groupTag: '630dcd2966c4336691125448bbb25b4f'
 }));
 
 const syncDatabaseMock = vi.hoisted(() => ({
@@ -84,6 +90,24 @@ vi.mock('./workspaceSyncAppliedEvents.js', () => ({
 vi.mock('../database/nodeSyncVersions.js', () => ({
   flushDirtyNodeSyncVersions: syncDatabaseMock.flushDirtyNodeSyncVersions
 }));
+vi.mock('../database/syncGroupStore.js', () => ({
+  loadDesktopSyncGroup: vi.fn(() => ({
+    group_id: WORKGROUP.groupId, local_member_state: 'active', timeline_id: 'timeline-test', members: []
+  })),
+  loadSyncGroupMemberAuthorization: vi.fn(() => ({ state: 'active' })),
+  registerSyncGroupMember: vi.fn((args: { authorizationId: string; deviceName: string }) => ({
+    group_id: WORKGROUP.groupId, local_member_state: 'active', timeline_id: 'timeline-test', members: [{
+      authorization_id: args.authorizationId, device_id: args.deviceName, device_kind: 'android',
+      device_name: args.deviceName, state: 'active'
+    }]
+  }))
+}));
+vi.mock('./workgroupKeyStore.js', () => ({
+  consumeDesktopWorkgroupNonce: vi.fn(() => true),
+  loadDesktopWorkgroupKey: vi.fn(() => ({
+    group_id: WORKGROUP.groupId, group_key: WORKGROUP.groupKey, group_tag: WORKGROUP.groupTag
+  }))
+}));
 async function resetTestState() {
   const { clearCompanionPairRequests } = await import('./companionPairingRequests.js');
   const { clearCompanionRequestNonceCache } = await import('./companionRequestAuth.js');
@@ -93,14 +117,17 @@ async function resetTestState() {
   electronMock.userDataPath = fs.mkdtempSync(path.join(process.cwd(), '.tmp', 'foliole-sync-objects-'));
 }
 
-async function fetchSignedGet(server: http.Server, pathWithQuery: string, paired: { device_id: string; device_secret: string }) {
-  return await requestWorkspaceSyncServer(server, {
-    headers: signRequest({ deviceId: paired.device_id, method: 'GET', pathWithQuery, secret: paired.device_secret }),
+async function fetchSignedGet(server: http.Server, pathWithQuery: string, paired: TestPairedDevice) {
+  const response = await requestWorkspaceSyncServer(server, {
+    headers: signRequest({ deviceId: paired.device_id,
+      ...(paired.group_id ? { groupId: paired.group_id } : {}),
+      method: 'GET', pathWithQuery, secret: paired.device_secret }),
     path: pathWithQuery
   });
+  return readWorkgroupResponse(response, 'GET', pathWithQuery, paired);
 }
 
-async function expectRetiredGet(server: http.Server, pathWithQuery: string, paired: { device_id: string; device_secret: string }) {
+async function expectRetiredGet(server: http.Server, pathWithQuery: string, paired: TestPairedDevice) {
   const response = await fetchSignedGet(server, pathWithQuery, paired);
   expect(response.status).toBe(410);
   expect(response.json()).toEqual({ error: 'sync_json_endpoint_retired' });
@@ -110,7 +137,7 @@ async function testRetiresSyncStreamsForPairedDevices() {
   const { createWorkspaceSyncHttpServer } = await import('./lanWorkspaceSyncServer.js');
   const server = createWorkspaceSyncHttpServer({ appVersion: '0.1.0-test', peerId: 'desktop-local' });
   expect((await requestWorkspaceSyncServer(server, { path: '/companion/sync-index' })).status).toBe(401);
-  const paired = await pairTestDevice(server);
+  const paired = await pairTestDevice(server, WORKGROUP);
   await expectRetiredGet(server, '/companion/sync-state?after_state_seq=0&limit=500', paired);
   await expectRetiredGet(server, '/companion/sync-index', paired);
   await expectRetiredGet(server, '/companion/sync-objects?object_type=setting&object_id=setting%3Atheme', paired);
@@ -170,7 +197,7 @@ function buildMobileStateObjectsBody() {
 async function testRetiresPushedMobileStateObjects() {
   const { createWorkspaceSyncHttpServer } = await import('./lanWorkspaceSyncServer.js');
   const server = createWorkspaceSyncHttpServer({ appVersion: '0.1.0-test', peerId: 'desktop-local' });
-  const paired = await pairTestDevice(server);
+  const paired = await pairTestDevice(server, WORKGROUP);
 
   const response = await postSigned(
     server,

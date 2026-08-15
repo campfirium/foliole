@@ -64,6 +64,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionPairingProtocolStore.java',
       'FolioleCompanionPairingStore.java',
       'FolioleCompanionSyncGroupDataBridge.java',
+      'FolioleCompanionSyncGroupCrypto.java',
       'FolioleCompanionSyncGroupJoinGrantStore.java',
       'FolioleCompanionSyncGroupJoinRequest.java',
       'FolioleCompanionSyncGroupLibraryFacts.java',
@@ -80,6 +81,8 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionSyncPackEnvelopeValidator.java',
       'FolioleCompanionSyncPackTransfer.java',
       'FolioleCompanionSyncParticipationStore.java',
+      'FolioleCompanionWorkgroupHttp.java',
+      'FolioleCompanionWorkgroupSession.java',
       'FolioleCompanionWebView.java',
       'MainActivity.java'
     ]

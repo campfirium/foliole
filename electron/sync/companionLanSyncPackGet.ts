@@ -1,5 +1,6 @@
 import type http from 'node:http';
 
+import { writeWorkgroupBinary } from './companionLanResponses.js';
 import { buildCompanionSyncPackResource, SYNC_PACK_PATH } from './companionLanSyncPack.js';
 
 export async function handleSyncPackGet(
@@ -23,11 +24,6 @@ export async function handleSyncPackGet(
     writeJson(request, response, resource.statusCode, { error: resource.error }, 'GET, OPTIONS');
     return true;
   }
-  response.writeHead(200, {
-    'Content-Disposition': `attachment; filename="${resource.fileName ?? 'sync-pack.syncpack'}"`,
-    'Content-Length': resource.body?.byteLength ?? 0,
-    'Content-Type': 'application/zip'
-  });
-  response.end(resource.body);
+  writeWorkgroupBinary(request, response, 200, resource.body ?? Buffer.alloc(0), 'application/zip');
   return true;
 }

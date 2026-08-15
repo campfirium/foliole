@@ -8,9 +8,15 @@ import {
   requestWorkspaceSyncServer,
   signWorkspaceSyncRequest
 } from './lanWorkspaceSyncServer.testSupport.js';
+import { decryptWorkgroupPayloadNode } from './workgroupAeadNode.js';
 
 const electronMock = vi.hoisted(() => ({
   userDataPath: `${process.cwd()}/.tmp/foliole-companion-pairing-${Math.random().toString(16).slice(2)}`
+}));
+const WORKGROUP = vi.hoisted(() => ({
+  groupId: 'group-test',
+  groupKey: 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8',
+  groupTag: '630dcd2966c4336691125448bbb25b4f'
 }));
 
 vi.mock('electron', () => ({
@@ -69,8 +75,34 @@ vi.mock('../database/syncGroupStore.js', () => ({
     }],
     timeline_id: 'timeline-test'
   })),
-  loadSyncGroupMemberAuthorization: vi.fn(() => null)
+  loadSyncGroupMemberAuthorization: vi.fn(() => ({ state: 'active' })),
+  registerSyncGroupMember: vi.fn((args: { authorizationId: string; deviceName: string }) => ({
+    created_at: '2026-08-08T00:00:00.000Z', created_by_device_id: 'desktop-local',
+    display_name: 'Foliole Desktop', group_id: 'group-test', local_device_id: 'desktop-local',
+    local_member_state: 'active', timeline_id: 'timeline-test', members: [{
+      approved_by_device_id: 'desktop-local', authorization_id: args.authorizationId,
+      device_id: args.deviceName, device_kind: 'android', device_name: args.deviceName,
+      joined_at: '2026-08-08T00:00:01.000Z', state: 'active'
+    }]
+  }))
 }));
+vi.mock('./workgroupKeyStore.js', () => ({
+  consumeDesktopWorkgroupNonce: vi.fn(() => true),
+  loadDesktopWorkgroupKey: vi.fn(() => ({
+    group_id: WORKGROUP.groupId, group_key: WORKGROUP.groupKey, group_tag: WORKGROUP.groupTag
+  }))
+}));
+
+function workgroupJson(response: Awaited<ReturnType<typeof requestWorkspaceSyncServer>>, pathWithQuery: string) {
+  const envelope = JSON.parse(response.body.toString('utf8'));
+  const contentType = String(response.headers['X-Foliole-Original-Content-Type']);
+  const body = decryptWorkgroupPayloadNode({
+    context: { contentType, direction: 'response', groupTag: WORKGROUP.groupTag,
+      method: 'GET', pathWithQuery },
+    envelope, groupKey: WORKGROUP.groupKey
+  });
+  return JSON.parse(body.toString('utf8')) as Record<string, unknown>;
+}
 
 async function resetLanWorkspaceSyncServerTestState() {
   const { clearCompanionPairRequests } = await import('./companionPairingRequests.js');
@@ -98,12 +130,13 @@ function registerSnapshotProtectionTest() {
     });
     const unauthorizedResponse = await requestWorkspaceSyncServer(server, { path: '/companion/workspace-snapshot' });
     expect(unauthorizedResponse.status).toBe(401);
-    const paired = await pairTestDevice(server);
-    expect(getLanWorkspaceSyncServerStatus().paired_device_count).toBe(1);
+    const paired = await pairTestDevice(server, WORKGROUP);
+    expect(getLanWorkspaceSyncServerStatus().paired_device_count).toBe(0);
     expect(getLanWorkspaceSyncServerStatus().pending_pair_request_count).toBe(0);
     const response = await requestWorkspaceSyncServer(server, {
       headers: signWorkspaceSyncRequest({
         deviceId: paired.device_id,
+        groupId: WORKGROUP.groupId,
         method: 'GET',
         pathWithQuery: '/companion/workspace-snapshot',
         secret: paired.device_secret
@@ -111,7 +144,7 @@ function registerSnapshotProtectionTest() {
       path: '/companion/workspace-snapshot'
     });
     expect(response.status).toBe(200);
-    expect(response.json()).toMatchObject({
+    expect(workgroupJson(response, '/companion/workspace-snapshot')).toMatchObject({
       app_version: '0.1.0-test',
       peer_id: 'desktop-local',
       workspace_snapshot: {
@@ -128,10 +161,11 @@ function registerWorkspaceVersionProtectionTest() {
       appVersion: '0.1.0-test',
       peerId: 'desktop-local'
     });
-    const paired = await pairTestDevice(server);
+    const paired = await pairTestDevice(server, WORKGROUP);
     const response = await requestWorkspaceSyncServer(server, {
       headers: signWorkspaceSyncRequest({
         deviceId: paired.device_id,
+        groupId: WORKGROUP.groupId,
         method: 'GET',
         pathWithQuery: '/companion/workspace-version',
         secret: paired.device_secret
@@ -139,7 +173,7 @@ function registerWorkspaceVersionProtectionTest() {
       path: '/companion/workspace-version'
     });
     expect(response.status).toBe(200);
-    expect(response.json()).toMatchObject({
+    expect(workgroupJson(response, '/companion/workspace-version')).toMatchObject({
       app_version: '0.1.0-test',
       has_snapshot: true,
       peer_id: 'desktop-local'
@@ -154,9 +188,10 @@ function registerReplayProtectionTest() {
       appVersion: '0.1.0-test',
       peerId: 'desktop-local'
     });
-    const paired = await pairTestDevice(server);
+    const paired = await pairTestDevice(server, WORKGROUP);
     const headers = signWorkspaceSyncRequest({
       deviceId: paired.device_id,
+      groupId: WORKGROUP.groupId,
       method: 'GET',
       pathWithQuery: '/companion/workspace-version',
       secret: paired.device_secret

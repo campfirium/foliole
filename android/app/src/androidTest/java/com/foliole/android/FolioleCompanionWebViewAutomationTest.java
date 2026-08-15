@@ -132,6 +132,9 @@ public class FolioleCompanionWebViewAutomationTest {
         String expectedEndpointUrl = InstrumentationRegistry.getArguments().getString(
             "foliolePairSyncEndpoint", ""
         );
+        boolean credentialsOnly = "credentials-signable".equals(
+            InstrumentationRegistry.getArguments().getString("foliolePairSyncEvidenceGoal", "")
+        );
         Activity activity = startMainActivity(instrumentation);
         FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "activity-started");
         try {
@@ -142,7 +145,7 @@ public class FolioleCompanionWebViewAutomationTest {
             FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "webview-ready");
             JSONObject before = FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView);
             JSONObject receipt = FolioleCompanionPairSyncRecoveryScenario.run(
-                instrumentation, webView, forceRePair, expectedEndpointUrl, 600_000
+                instrumentation, webView, forceRePair, credentialsOnly, expectedEndpointUrl, 600_000
             );
             sendEvidence(instrumentation, before,
                 FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView), receipt);

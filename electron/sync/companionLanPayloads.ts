@@ -6,6 +6,7 @@ import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import type { WorkspaceSnapshot, WorkspaceVersionMetadata } from '../database/workspaceSnapshot.js';
 
 import { loadSyncGroupRuntimeInstanceId } from './syncGroupRuntimeInstance.js';
+import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
 export function buildWorkspaceSnapshotPayload(appVersion: string, peerId: string, snapshot: WorkspaceSnapshot | null) {
   return {
@@ -49,6 +50,8 @@ export function normalizeDesktopHostName(value: string) {
 export function buildDiscoveryPayload(appVersion: string, peerId: string) {
   const group = loadDesktopSyncGroup();
   if (!group || group.local_member_state !== 'active') return null;
+  const workgroup = loadDesktopWorkgroupKey(group.group_id);
+  if (!workgroup) return null;
   return {
     app_version: appVersion,
     desktop_device_name: resolveDesktopDeviceName(),
@@ -59,6 +62,7 @@ export function buildDiscoveryPayload(appVersion: string, peerId: string) {
     runtime_instance_id: loadSyncGroupRuntimeInstanceId(),
     group_display_name: resolveSyncGroupDisplayDeviceName(group),
     group_id: group.group_id,
+    group_tag: workgroup.group_tag,
     timeline_id: group.timeline_id,
     protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
   };

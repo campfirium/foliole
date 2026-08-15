@@ -9,7 +9,7 @@ export async function resolveCompanionSyncPeerId(endpointUrl: string) {
     return peerId;
   }
   const discovery = await pairingModule.loadCompanionDiscovery(endpointUrl);
-  if (discovery.group_id !== group.group_id || discovery.timeline_id !== group.timeline_id) {
+  if (discovery.group_id !== group.group_id) {
     throw new Error('sync_group_identity_mismatch');
   }
   const peerId = discovery.peer_id?.trim();

@@ -5,7 +5,8 @@ export const SYNC_GROUP_SCHEMA_STATEMENTS = [
     timeline_id TEXT NOT NULL,
     created_by_device_id TEXT NOT NULL,
     created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    workgroup_key TEXT
   )`,
   `CREATE TABLE IF NOT EXISTS sync_group_members (
     group_id TEXT NOT NULL REFERENCES sync_groups(group_id) ON DELETE CASCADE,
@@ -41,5 +42,11 @@ export const SYNC_GROUP_SCHEMA_STATEMENTS = [
     provisioning_cursor INTEGER,
     created_empty_proof_json TEXT,
     updated_at TEXT NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS sync_group_nonce_ledger (
+    group_id TEXT NOT NULL REFERENCES sync_groups(group_id) ON DELETE CASCADE,
+    identity TEXT NOT NULL,
+    expires_at INTEGER NOT NULL,
+    PRIMARY KEY (group_id, identity)
   )`
 ];

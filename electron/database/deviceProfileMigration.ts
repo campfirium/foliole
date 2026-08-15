@@ -1,3 +1,4 @@
+import { isAssignedSyncGroupDeviceName } from '../../lib/platform/syncGroupDeviceProfile.js';
 import { resolveDesktopDeviceName } from '../sync/companionLanPayloads.js';
 import { clearPairedCompanionDevices } from '../sync/companionPairingStore.js';
 
@@ -20,11 +21,15 @@ export function refreshHostOwnedDeviceProfile(
   previousDeviceId: string | null
 ) {
   const pendingSnapshot: { value: PendingDeviceProfileSnapshot | null } = { value: null };
+  const publicDeviceName = resolveDesktopDeviceName();
+  const activeGroupDeviceId = loadActiveGroupDeviceId(connection);
   try {
     refreshDesktopDeviceProfile({
       clearCredentials: clearPairedCompanionDevices,
       connection,
-      currentDeviceId: loadActiveGroupDeviceId(connection) ?? resolveDesktopDeviceName(),
+      currentDeviceId: activeGroupDeviceId
+        && isAssignedSyncGroupDeviceName(activeGroupDeviceId, publicDeviceName)
+        ? activeGroupDeviceId : publicDeviceName,
       previousDeviceId,
       protect: () => {
         pendingSnapshot.value = createManagedSafetySnapshotForMigration({

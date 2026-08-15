@@ -3,8 +3,25 @@
 import { expect, it } from 'vitest';
 
 import {
-  afterDesktopSyncTransaction, runExistingSyncRestartJourney
+  afterDesktopSyncTransaction, collectStoppedAndroidSnapshot, runExistingSyncRestartJourney
 } from './macos-a5-existing-sync-acceptance.mjs';
+
+it('stops Android writers for a coherent snapshot and resumes the foreground provider', async () => {
+  const events = [];
+  const context = {
+    env: {}, paths: { adb: '/adb' }, serial: 'fixed-a5',
+    execute: async (_command, args) => {
+      events.push(args.includes('force-stop') ? 'stopped' : 'resumed');
+      return { code: 0 };
+    }
+  };
+  const snapshot = await collectStoppedAndroidSnapshot(context, async () => {
+    events.push('snapshot');
+    return { database: { integrity: 'ok' } };
+  }, async (milliseconds) => events.push(`settled-${milliseconds}`));
+  expect(snapshot.database.integrity).toBe('ok');
+  expect(events).toEqual(['settled-90000', 'stopped', 'snapshot', 'resumed']);
+});
 
 it('waits only for the exact transient desktop sync transaction owner', async () => {
   let attempts = 0;

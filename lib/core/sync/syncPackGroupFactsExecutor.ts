@@ -171,8 +171,10 @@ async function mergeDeparture(port: DbPort, departure: DepartureRow, now: string
        SELECT 1 FROM main.sync_group_members WHERE group_id = ? AND device_id = ? AND joined_at <= ?
      )
      ON CONFLICT(group_id, device_id) DO UPDATE SET
-       authorization_id = MIN(authorization_id, excluded.authorization_id),
-       left_at = MIN(left_at, excluded.left_at)`,
+       authorized_by_device_id = excluded.authorized_by_device_id,
+       authorization_id = excluded.authorization_id,
+       left_at = excluded.left_at
+     WHERE excluded.left_at > left_at`,
     [departure.group_id, departure.device_id, departure.authorized_by_device_id,
       departure.authorization_id, departure.left_at, departure.group_id, departure.device_id, departure.left_at]
   );

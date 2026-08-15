@@ -114,7 +114,9 @@ function PairingDialogActions({
 }) {
   const disabled = state.pendingActionId === request.pair_request_id;
   const [errorMessage, setErrorMessage] = useState('');
-  const runPairingAction = async (action: (pairRequestId: string) => Promise<unknown>) => {
+  const runPairingAction = async (
+    action: (pairRequestId: string) => Promise<unknown>
+  ) => {
     setErrorMessage('');
     try {
       await action(request.pair_request_id);
@@ -125,8 +127,13 @@ function PairingDialogActions({
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-3">
+      <AppButton className="w-full border border-border-strong" disabled={disabled} loading={disabled}
+        loadingLabel="Working…" onClick={() => void runPairingAction(state.approveRequest)} variant="emphasis">
+        Allow
+      </AppButton>
+      <div>
         <AppButton
+          className="w-full"
           disabled={disabled}
           loading={disabled}
           loadingLabel="Working…"
@@ -134,16 +141,6 @@ function PairingDialogActions({
           variant="danger"
         >
           Reject
-        </AppButton>
-        <AppButton
-          className="border border-border-strong"
-          disabled={disabled}
-          loading={disabled}
-          loadingLabel="Working…"
-          onClick={() => void runPairingAction(state.approveRequest)}
-          variant="emphasis"
-        >
-          Allow
         </AppButton>
       </div>
       {errorMessage ? (

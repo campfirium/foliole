@@ -48,6 +48,7 @@ final class FolioleCompanionPairSyncEvidence {
             "completion:state?state.completion:'not_started'," +
             "credentials:state?state.credentials:'not_saved'," +
             "initialSync:state?state.initialSync:'not_started'," +
+            "syncFailure:state?state.syncFailure:null,syncPackUrl:state?state.syncPackUrl:null," +
             "syncPackApplied:!!(state&&state.syncPackApplied)," +
             "syncPackDownloaded:!!(state&&state.syncPackDownloaded)," +
             "pairFound:!!document.querySelector('[data-testid=\"companion-sync-pair\"]')," +

@@ -163,15 +163,25 @@ it('promotes an approved join only after the new member proves key possession', 
   const promote = provider.slice(provider.indexOf('static void promoteApprovedJoin'),
     provider.indexOf('static synchronized void pruneExpired'));
   expect(approve).toContain('FolioleCompanionSyncGroupJoinGrantStore.save');
+  expect(approve).toContain('FolioleCompanionWorkgroupSession.requireKey()');
+  expect(approve).not.toContain('FolioleCompanionSyncGroupPeerStore.createSecret');
+  expect(approve).not.toContain('FolioleCompanionSyncGroupPeerStore.remove');
   expect(approve).not.toContain('registerMember');
   expect(auth.indexOf('MessageDigest.isEqual')).toBeLessThan(auth.indexOf('promoteApprovedJoin'));
   expect(auth.indexOf('promoteApprovedJoin')).toBeLessThan(auth.indexOf('requireAuthorizedMember'));
   expect(grantStore).toContain('AES/GCM/NoPadding');
   expect(grantStore).toContain('AndroidKeyStore');
+  expect(grantStore).not.toContain('device_secret');
+  expect(grantStore).not.toContain('provider_secret');
   expect(server).toContain('groupForApprovedRequest');
+  expect(server).toContain('FolioleCompanionWorkgroupSession.requireKey()');
   expect(server).not.toContain('/companion/sync-group/activate');
   expect(provider).not.toContain('static synchronized void promoteApprovedJoin');
   expect(promote).toMatch(/isAuthorizedMember[\s\S]*request != null[\s\S]*consumeApprovedJoin\(request\)/u);
+  const assign = provider.slice(provider.indexOf('static synchronized void assignApprovedProfile'),
+    provider.indexOf('private static void consumeApprovedJoin'));
+  expect(assign).not.toContain('saveSecret(context, request.deviceId, request.deviceSecret)');
+  expect(assign).not.toContain('remove(context, previousDeviceId)');
 });
 
 it('keeps the Android screen awake only around foreground provider activity', async () => {
@@ -208,4 +218,12 @@ it('records the exact cursor returned by the Android pack snapshot', async () =>
   expect(provider).toContain('pack.execSQL("BEGIN")');
   expect(provider).toContain('new BuildResult(zip(');
   expect(server).toContain('peer, after, pack.toSeq');
+});
+
+it('encrypts authenticated not-found responses without losing their HTTP status', async () => {
+  const server = await readJava('FolioleCompanionSyncGroupServer.java');
+  const workgroupHttp = await readJava('FolioleCompanionWorkgroupHttp.java');
+  expect(server).toContain('workgroupJson(request, output, 404, new JSONObject().put("error", "blob_not_found"))');
+  expect(server).toContain('workgroupJson(request, output, 404, new JSONObject().put("error", "missing_file"))');
+  expect(workgroupHttp).toContain('output, status, ENVELOPE_CONTENT_TYPE, contentType, encrypted');
 });

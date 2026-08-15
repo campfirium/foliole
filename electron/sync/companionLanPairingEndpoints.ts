@@ -15,6 +15,7 @@ import {
 } from './companionPairingRequests.js';
 import { countPairedCompanionDevices } from './companionPairingStore.js';
 import { isEligibleSyncGroupJoin, parseSyncGroupLibraryFacts } from './companionSyncGroupPairRequest.js';
+import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
 export { handlePairRequest } from './companionLanPairCompletion.js';
 
@@ -50,18 +51,20 @@ function normalizeClientAddress(address: string | undefined) {
 
 function resolveSyncGroupJoin(payload: Record<string, unknown>) {
   const requestedGroupId = typeof payload.group_id === 'string' ? payload.group_id.trim() : '';
-  const requestedTimelineId = typeof payload.timeline_id === 'string' ? payload.timeline_id.trim() : '';
+  const requestedGroupTag = typeof payload.group_tag === 'string' ? payload.group_tag.trim() : '';
   const libraryFacts = parseSyncGroupLibraryFacts(payload.library_facts);
-  const requestsGroupJoin = Boolean(requestedGroupId || requestedTimelineId || payload.library_facts !== undefined);
+  const requestsGroupJoin = Boolean(requestedGroupId || requestedGroupTag || payload.library_facts !== undefined);
   if (!requestsGroupJoin) return { error: null, syncGroup: null };
   const syncGroup = loadDesktopSyncGroup();
   if (!syncGroup) return { error: 'sync_group_identity_mismatch', syncGroup: null };
+  const workgroup = loadDesktopWorkgroupKey(syncGroup.group_id);
+  if (!workgroup || workgroup.group_tag !== requestedGroupTag) {
+    return { error: 'sync_group_identity_mismatch', syncGroup: null };
+  }
   const eligible = isEligibleSyncGroupJoin({
     groupId: syncGroup.group_id,
     libraryFacts,
-    requestedGroupId,
-    requestedTimelineId,
-    timelineId: syncGroup.timeline_id
+    requestedGroupId
   });
   const error = libraryFacts === null ? 'sync_group_library_facts_invalid' : 'sync_group_identity_mismatch';
   return { error: eligible ? null : error, syncGroup };

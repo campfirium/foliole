@@ -32,16 +32,30 @@ function retryableConvergence(pairing, deviceFingerprint) {
 }
 
 export async function postPairSyncRecoveryReadiness({
-  deviceFingerprint, env, maxAttempts = 60, paths, run, serial, wait = delay
+  adbPort, afterSnapshot, beforeSnapshot, deviceFingerprint, env, maxAttempts = 60,
+  paths, quiesceProvider = false, run, serial, wait = delay
 }) {
+  beforeSnapshot ??= quiesceProvider ? () => run(paths.adbPath, [
+    '-P', adbPort, '-s', serial, 'shell', 'am', 'force-stop', 'com.foliole.android'
+  ], options(env), 'post-sync-snapshot') : async () => {};
+  afterSnapshot ??= quiesceProvider ? () => run(paths.adbPath, [
+    '-P', adbPort, '-s', serial, 'shell', 'am', 'start', '-W', '-n',
+    'com.foliole.android/com.foliole.android.MainActivity'
+  ], options(env), 'post-sync-snapshot') : async () => {};
   const pairingScript = path.join(paths.repoRoot, 'scripts/android/android-pair-sync-recovery-readiness-runner.mjs');
   const common = ['--adb', paths.adbPath, '--serial', serial, '--app-id', 'com.foliole.android'];
   let pairingResult;
   let pairing;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    pairingResult = await runReadiness(
-      run, paths.systemNode, [pairingScript, ...common], options(env), 'post-sync-convergence'
-    );
+    if (quiesceProvider) await wait(8_000);
+    await beforeSnapshot();
+    try {
+      pairingResult = await runReadiness(
+        run, paths.systemNode, [pairingScript, ...common], options(env), 'post-sync-convergence'
+      );
+    } finally {
+      await afterSnapshot();
+    }
     pairing = parsePairSyncRecoveryReadiness(pairingResult.stdout);
     if (pairing.deviceIdentityFingerprint === deviceFingerprint
         && pairing.syncGroupRemotePeerPendingDeliveryCount === 0) break;

@@ -10,7 +10,8 @@ describe('macOS pair sync desktop session', () => {
     const actions = {
       create: vi.fn().mockResolvedValue({ sync_group: { group_id: 'group-1' } }),
       enable: vi.fn(),
-      load: vi.fn().mockResolvedValue({ sync_group: null })
+      load: vi.fn().mockResolvedValue({ sync_group: null }),
+      resume: vi.fn()
     };
 
     await expect(ensureMacosSyncGroup(actions)).resolves.toEqual({
@@ -24,12 +25,25 @@ describe('macOS pair sync desktop session', () => {
     const actions = {
       create: vi.fn(),
       enable: vi.fn().mockResolvedValue({ sync_group: { group_id: 'group-1' } }),
-      load: vi.fn().mockResolvedValue({ sync_group: { group_id: 'group-1' } })
+      load: vi.fn().mockResolvedValue({ sync_group: { group_id: 'group-1' } }),
+      resume: vi.fn()
     };
 
     await ensureMacosSyncGroup(actions);
     expect(actions.enable).toHaveBeenCalledOnce();
     expect(actions.create).not.toHaveBeenCalled();
+  });
+
+  it('resumes an existing paused Sync Group through the product command', async () => {
+    const actions = {
+      create: vi.fn(), enable: vi.fn(),
+      load: vi.fn().mockResolvedValue({ sync_group: { group_id: 'group-1' }, sync_paused: true }),
+      resume: vi.fn().mockResolvedValue({ sync_group: { group_id: 'group-1' }, sync_paused: false })
+    };
+
+    await ensureMacosSyncGroup(actions);
+    expect(actions.resume).toHaveBeenCalledOnce();
+    expect(actions.enable).not.toHaveBeenCalled();
   });
 
   it('launches multi-device desktop work through the prepared background runtime', async () => {

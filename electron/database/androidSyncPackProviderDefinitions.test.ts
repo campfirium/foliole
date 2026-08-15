@@ -166,7 +166,8 @@ it('projects an alternative under a deleted node as a tombstone', () => {
 it('keeps local provisioning rows out of shared group facts', () => {
   const now = '2026-08-08T00:00:00.000Z';
   source.exec(`
-    INSERT INTO sync_groups VALUES ('group-1', 'Daily Group', 'timeline-1', 'android-b', '${now}', '${now}');
+    INSERT INTO sync_groups (group_id, display_name, timeline_id, created_by_device_id, created_at, updated_at)
+    VALUES ('group-1', 'Daily Group', 'timeline-1', 'android-b', '${now}', '${now}');
     INSERT INTO sync_group_local_state
       (singleton_id, group_id, local_device_id, member_state, updated_at)
       VALUES (1, 'group-1', 'android-b', 'active', '${now}');

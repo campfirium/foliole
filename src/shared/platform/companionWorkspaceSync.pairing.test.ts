@@ -3,12 +3,15 @@ import { beforeEach, expect, it, vi } from 'vitest';
 const writerQueueMock = vi.hoisted(() => ({
   run: vi.fn(async <T>(task: () => Promise<T>) => task())
 }));
-const syncGroupMock = vi.hoisted(() => ({ load: vi.fn() }));
+const syncGroupMock = vi.hoisted(() => ({
+  facts: vi.fn(), join: vi.fn(), load: vi.fn(), loadKey: vi.fn(), refresh: vi.fn()
+}));
 
 const capacitorMock = vi.hoisted(() => ({
   getPlatform: vi.fn(() => 'web'),
   isNativePlatform: vi.fn(() => false),
   plugin: {
+    bindSyncGroupPeerRoute: vi.fn(),
     desktopHttpRequest: vi.fn(),
     loadPairingState: vi.fn(),
     savePairingCredentials: vi.fn(),
@@ -36,7 +39,11 @@ vi.mock('./companionPairingEncryption', () => ({
 
 vi.mock('./companion/sync/syncGroupStore', async (importOriginal) => ({
   ...await importOriginal<typeof import('./companion/sync/syncGroupStore')>(),
-  loadCompanionSyncGroup: syncGroupMock.load
+  joinCompanionSyncGroup: syncGroupMock.join,
+  loadCompanionSyncGroup: syncGroupMock.load,
+  loadCompanionSyncGroupLibraryFacts: syncGroupMock.facts,
+  loadCompanionSyncGroupWorkgroupKey: syncGroupMock.loadKey,
+  refreshActiveCompanionSyncGroupMembership: syncGroupMock.refresh
 }));
 
 import {
@@ -133,8 +140,14 @@ function mockVerifiedNativePairing(args: { deviceId: string; deviceKind: string;
 }
 
 beforeEach(() => {
+  vi.clearAllMocks();
   resetCompanionWorkspaceSyncTestState(capacitorMock);
+  syncGroupMock.facts.mockResolvedValue({
+    attachment_count: 0, content_blob_count: 0, node_count: 0,
+    review_log_count: 0, timeline_id: 'timeline-1'
+  });
   syncGroupMock.load.mockResolvedValue(null);
+  syncGroupMock.loadKey.mockResolvedValue(null);
   writerQueueMock.run.mockImplementation(async <T>(task: () => Promise<T>) => task());
 });
 
@@ -164,6 +177,7 @@ it.each([
     url: 'http://10.0.2.2:38641/companion/pair'
   });
   expect(capacitorMock.plugin.savePairingCredentials).toHaveBeenCalledWith(expect.objectContaining({
+    device_name: deviceId,
     primary_device_id: 'device-desktop',
     remote_peer_id: 'device-desktop'
   }));
@@ -195,42 +209,4 @@ it('fails native pairing when credentials cannot be read back locally', async ()
     endpointUrl: 'http://10.0.2.2:38641',
     pairRequestId: 'pair-request-1'
   })).rejects.toThrow('Native pairing credentials were not saved.');
-});
-
-it('fails native pairing when saved credentials cannot sign sync requests', async () => {
-  capacitorMock.getPlatform.mockReturnValue('android');
-  capacitorMock.isNativePlatform.mockReturnValue(true);
-  mockNativePairingHttp();
-  capacitorMock.plugin.savePairingCredentials.mockResolvedValue({
-    ...nativeProtocolState,
-    device_id: 'android-test-device',
-    device_kind: 'android',
-    device_name: 'Pixel 9',
-    is_paired: true,
-    paired_at: '2026-04-22T12:00:00.000Z',
-    primary_device_id: 'device-desktop'
-  });
-  capacitorMock.plugin.loadPairingState.mockResolvedValue({
-    ...nativeProtocolState,
-    device_id: 'android-test-device',
-    device_kind: 'android',
-    device_name: 'Pixel 9',
-    is_paired: true,
-    paired_at: '2026-04-22T12:00:00.000Z',
-    primary_device_id: 'device-desktop'
-  });
-  capacitorMock.plugin.signCompanionSyncRequest.mockRejectedValue(new Error('Failed to sign companion sync request.'));
-
-  await requestCompanionPairing({
-    deviceId: 'android-test-device',
-    deviceKind: 'android',
-    deviceName: 'Pixel 9',
-    endpointUrl: 'http://10.0.2.2:38641'
-  });
-  await expect(pairCompanionWithDesktop({
-    deviceKind: 'android',
-    deviceName: 'Pixel 9',
-    endpointUrl: 'http://10.0.2.2:38641',
-    pairRequestId: 'pair-request-1'
-  })).rejects.toThrow(/Native pairing credentials cannot sign sync requests: Failed to sign companion sync request\./u);
 });

@@ -30,6 +30,7 @@ export interface CompanionMdnsAdvertisementInput {
   port: number;
   groupDisplayName: string;
   groupId: string;
+  groupTag: string;
   timelineId: string;
 }
 
@@ -90,6 +91,7 @@ function publishCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisementInpu
         app_version: input.appVersion,
         facts_revision: String(factsRevision),
         group_id: input.groupId,
+        group_tag: input.groupTag,
         ipv4_addresses: ipv4Addresses.join(','),
         peer_id: input.peerId,
         runtime_instance_id: runtimeInstanceId,

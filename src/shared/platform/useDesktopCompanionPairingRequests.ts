@@ -41,7 +41,10 @@ function useCompanionPairingAction(
   setIsLoading: (value: boolean) => void,
   setPendingActionId: (value: string | null) => void
 ) {
-  return useCallback(async (pairRequestId: string, action: 'approve' | 'reject') => {
+  return useCallback(async (
+    pairRequestId: string,
+    action: 'approve' | 'reject'
+  ) => {
     setPendingActionId(pairRequestId);
     try {
       const nextOverview =

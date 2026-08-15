@@ -30,6 +30,10 @@ const primaryDeviceTakeoverMock = vi.hoisted(() => ({
 const syncPushMock = vi.hoisted(() => ({
   handleCompanionSyncPush: vi.fn()
 }));
+const workgroupHttpMock = vi.hoisted(() => ({
+  decryptWorkgroupRequestBody: vi.fn((_request, body: string) => Buffer.from(body)),
+  writeWorkgroupBinary: vi.fn()
+}));
 
 vi.mock('./companionRequestAuth.js', () => ({
   authenticateCompanionRequest: authMock.authenticateCompanionRequest
@@ -50,6 +54,12 @@ vi.mock('./companionLanSyncPush.js', () => ({
 vi.mock('./companionLanPrimaryDeviceTakeover.js', () => ({
   PRIMARY_DEVICE_TAKEOVER_PATH: '/companion/primary-device/takeover',
   handlePrimaryDeviceTakeover: primaryDeviceTakeoverMock.handlePrimaryDeviceTakeover
+}));
+vi.mock('./companionLanResponses.js', () => ({
+  writeWorkgroupBinary: workgroupHttpMock.writeWorkgroupBinary
+}));
+vi.mock('./workgroupHttpCrypto.js', () => ({
+  decryptWorkgroupRequestBody: workgroupHttpMock.decryptWorkgroupRequestBody
 }));
 
 import { handleAuthenticatedPost } from './companionLanAuthenticatedPost.js';
@@ -74,6 +84,9 @@ beforeEach(() => {
     missingHashes: [],
     status: 'ready'
   });
+  workgroupHttpMock.decryptWorkgroupRequestBody.mockImplementation(
+    (_request, body: string) => Buffer.from(body)
+  );
 });
 
 it('routes signed primary device takeover requests with the authenticated device id', async () => {
@@ -179,9 +192,7 @@ it('serves signed content body blob batches', async () => {
   await handleAuthenticatedPost(request, response, new URL(request.url, 'http://127.0.0.1'), writeJson);
 
   expect(contentBlobMock.loadCompanionContentBlobBatch).toHaveBeenCalledWith(requestBody);
-  expect(response.writeHead).toHaveBeenCalledWith(200, {
-    'Content-Length': Buffer.byteLength('multipart-body'),
-    'Content-Type': 'multipart/mixed; boundary=foliole-test'
-  });
-  expect(response.end).toHaveBeenCalledWith(Buffer.from('multipart-body'));
+  expect(workgroupHttpMock.writeWorkgroupBinary).toHaveBeenCalledWith(
+    request, response, 200, Buffer.from('multipart-body'), 'multipart/mixed; boundary=foliole-test'
+  );
 });

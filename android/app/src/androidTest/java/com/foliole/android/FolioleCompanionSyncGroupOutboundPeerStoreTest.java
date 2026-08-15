@@ -2,7 +2,6 @@ package com.foliole.android;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
@@ -35,11 +34,11 @@ public class FolioleCompanionSyncGroupOutboundPeerStoreTest {
     }
 
     @Test
-    public void signsWithThePeerMatchingTheExactGroupAndEndpoint() throws Exception {
+    public void signsRoutesWithTheOneWorkgroupKey() throws Exception {
         FolioleCompanionSyncGroupOutboundPeerStore.save(
-            context, "group-1", "mobile-b", "desktop-a", "http://10.0.0.1:38641", "secret-a");
+            context, "group-1", "mobile-b", "desktop-a", "http://10.0.0.1:38641");
         FolioleCompanionSyncGroupOutboundPeerStore.save(
-            context, "group-1", "mobile-b", "desktop-c", "http://10.0.0.3:38641/", "secret-c");
+            context, "group-1", "mobile-b", "desktop-c", "http://10.0.0.3:38641/");
 
         assertTrue(FolioleCompanionSyncGroupOutboundPeerStore.contains(context, "group-1", "desktop-a"));
         assertTrue(FolioleCompanionSyncGroupOutboundPeerStore.contains(context, "group-1", "desktop-c"));
@@ -47,7 +46,7 @@ public class FolioleCompanionSyncGroupOutboundPeerStoreTest {
         JSObject signedA = sign("http://10.0.0.1:38641");
         JSObject signedC = sign("http://10.0.0.3:38641");
         assertEquals("mobile-b", signedA.getJSObject("headers").getString("X-Device-Id"));
-        assertNotEquals(
+        assertEquals(
             signedA.getJSObject("headers").getString("X-Signature"),
             signedC.getJSObject("headers").getString("X-Signature")
         );
@@ -61,7 +60,7 @@ public class FolioleCompanionSyncGroupOutboundPeerStoreTest {
     @Test
     public void bindsTheCurrentRouteByPeerIdentityWithoutChangingItsCredential() throws Exception {
         FolioleCompanionSyncGroupOutboundPeerStore.save(
-            context, "group-1", "mobile-b", "desktop-a", "http://10.0.0.1:38641", "secret-a");
+            context, "group-1", "mobile-b", "desktop-a", "http://10.0.0.1:38641");
         String firstSignature = sign("http://10.0.0.1:38641").getJSObject("headers").getString("X-Signature");
 
         FolioleCompanionSyncGroupOutboundPeerStore.bindRoute(
@@ -77,7 +76,7 @@ public class FolioleCompanionSyncGroupOutboundPeerStoreTest {
     public void appDataClearRemovesInboundAndOutboundGroupCredentials() throws Exception {
         FolioleCompanionSyncGroupPeerStore.createSecret(context, "desktop-c");
         FolioleCompanionSyncGroupOutboundPeerStore.save(
-            context, "group-1", "mobile-b", "desktop-c", "http://10.0.0.3:38641", "secret-c");
+            context, "group-1", "mobile-b", "desktop-c", "http://10.0.0.3:38641");
 
         FolioleCompanionAppDataStore.clear(context);
 
@@ -86,9 +85,9 @@ public class FolioleCompanionSyncGroupOutboundPeerStoreTest {
     }
 
     private JSObject sign(String endpoint) throws Exception {
-        return FolioleCompanionSyncGroupOutboundPeerStore.sign(
+        return FolioleCompanionSyncGroupOutboundPeerStore.signWithWorkgroupKey(
             context, "group-1", endpoint, "GET", "/companion/sync-pack?after_state_seq=0",
-            "2026-08-09T00:00:00.000Z", "nonce", "body-hash"
+            "2026-08-09T00:00:00.000Z", "nonce", "body-hash", "one-workgroup-key"
         );
     }
 

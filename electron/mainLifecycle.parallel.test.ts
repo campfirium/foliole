@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
     requestSingleInstanceLock: vi.fn(() => true),
     whenReady: vi.fn()
   },
-  ensureLanWorkspaceSyncServer: vi.fn().mockResolvedValue(undefined),
+  reconcileDesktopCompanionSyncRuntime: vi.fn().mockResolvedValue(undefined),
   initializeDatabase: vi.fn(),
   installAppMenu: vi.fn(),
   isDesktopCompanionSyncParticipating: vi.fn(() => false),
@@ -95,8 +95,10 @@ vi.mock('./startupTasks.js', () => ({ runStartupTask: vi.fn() }));
 vi.mock('./sync/desktopCompanionSyncPreference.js', () => ({
   isDesktopCompanionSyncParticipating: mocks.isDesktopCompanionSyncParticipating
 }));
+vi.mock('./sync/desktopCompanionSyncParticipation.js', () => ({
+  reconcileDesktopCompanionSyncRuntime: mocks.reconcileDesktopCompanionSyncRuntime
+}));
 vi.mock('./sync/lanWorkspaceSyncServer.js', () => ({
-  ensureLanWorkspaceSyncServer: mocks.ensureLanWorkspaceSyncServer,
   setLanWorkspaceSyncPairRequestHandler: vi.fn(),
   stopLanWorkspaceSyncServer: vi.fn().mockResolvedValue(undefined)
 }));
@@ -118,8 +120,8 @@ function createDeferred<T = void>() {
 afterEach(async () => {
   vi.clearAllMocks();
   mocks.initializeDatabase.mockReset();
-  mocks.ensureLanWorkspaceSyncServer.mockReset();
-  mocks.ensureLanWorkspaceSyncServer.mockResolvedValue(undefined);
+  mocks.reconcileDesktopCompanionSyncRuntime.mockReset();
+  mocks.reconcileDesktopCompanionSyncRuntime.mockResolvedValue(undefined);
   mocks.isDesktopCompanionSyncParticipating.mockReset();
   mocks.isDesktopCompanionSyncParticipating.mockReturnValue(false);
   mocks.wasOpenedAtLogin.mockReset();
@@ -251,7 +253,9 @@ it('starts companion sync after database startup before activating the renderer'
   await vi.waitFor(() => expect(activateMainWindow).toHaveBeenCalledWith(window));
 
   expect(firstInvocationOrder(mocks.initializeDatabase)).toBeLessThan(
-    firstInvocationOrder(mocks.ensureLanWorkspaceSyncServer)
+    firstInvocationOrder(mocks.reconcileDesktopCompanionSyncRuntime)
   );
-  expect(firstInvocationOrder(mocks.ensureLanWorkspaceSyncServer)).toBeLessThan(firstInvocationOrder(activateMainWindow));
+  expect(firstInvocationOrder(mocks.reconcileDesktopCompanionSyncRuntime)).toBeLessThan(
+    firstInvocationOrder(activateMainWindow)
+  );
 });

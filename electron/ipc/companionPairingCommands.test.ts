@@ -4,7 +4,10 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { handleCompanionPairingCommand } from './companionPairingCommands.js';
 
 const commandMocks = vi.hoisted(() => ({
-  completeDesktopSyncGroupJoin: vi.fn().mockResolvedValue({ group_id: 'group-1' }),
+  completeDesktopSyncGroupJoin: vi.fn(async () => {
+    commandMocks.joined = true;
+    return { group_id: 'group-1' };
+  }),
   commitPrimaryDeviceToPeer: vi.fn().mockReturnValue({
     committedAt: '2026-04-24T10:05:00.000Z',
     primaryDeviceEpoch: 2,
@@ -36,7 +39,9 @@ const commandMocks = vi.hoisted(() => ({
   setDesktopCompanionSyncPaused: vi.fn(),
   setJoinCompletionExecutor: vi.fn(),
   ensureLanWorkspaceSyncServer: vi.fn().mockResolvedValue(undefined),
+  enableDesktopWorkgroupKey: vi.fn(),
   enabled: true,
+  joined: false,
   paused: false,
   stopLanWorkspaceSyncServer: vi.fn().mockResolvedValue(undefined)
 }));
@@ -55,7 +60,9 @@ vi.mock('../database/primaryDeviceCommit.js', () => ({
 }));
 vi.mock('../database/syncGroupStore.js', () => ({
   createDesktopSyncGroup: vi.fn(),
-  loadDesktopSyncGroup: vi.fn(() => null)
+  loadDesktopSyncGroup: vi.fn(() => commandMocks.joined ? {
+    group_id: 'group-1', local_member_state: 'active', members: []
+  } : null)
 }));
 vi.mock('../sync/companionPairingRequests.js', () => ({
   approveCompanionPairRequest: vi.fn(),
@@ -109,10 +116,15 @@ vi.mock('../sync/lanWorkspaceSyncServer.js', () => ({
 vi.mock('../sync/primaryDeviceState.js', () => ({
   loadDesktopPrimaryDeviceStatePayload: commandMocks.loadDesktopPrimaryDeviceStatePayload
 }));
+vi.mock('../sync/workgroupKeyStore.js', () => ({
+  enableDesktopWorkgroupKey: commandMocks.enableDesktopWorkgroupKey,
+  loadDesktopWorkgroupKey: vi.fn(() => ({ group_id: 'group-1' }))
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
   commandMocks.enabled = true;
+  commandMocks.joined = false;
   commandMocks.paused = false;
   commandMocks.setDesktopCompanionSyncEnabled.mockImplementation((enabled: boolean) => {
     commandMocks.enabled = enabled;
@@ -174,6 +186,7 @@ it('finishes an approved join inside the database owner and enables automatic co
   expect(execute).toBeTypeOf('function');
   await execute();
   expect(commandMocks.completeDesktopSyncGroupJoin).toHaveBeenCalledOnce();
+  expect(commandMocks.enableDesktopWorkgroupKey).toHaveBeenCalledWith('group-1');
   expect(commandMocks.setDesktopCompanionSyncEnabled).toHaveBeenCalledWith(true);
   expect(commandMocks.setDesktopCompanionSyncPaused).toHaveBeenCalledWith(false);
   expect(commandMocks.ensureLanWorkspaceSyncServer).toHaveBeenCalledOnce();

@@ -145,8 +145,17 @@ function updateRequestStatus(pairRequestId: string, status: PendingCompanionPair
   return toPublicPairRequest(request);
 }
 
-export function approveCompanionPairRequest(pairRequestId: string, nowMs = Date.now()) {
-  return updateRequestStatus(pairRequestId, 'approved', nowMs);
+export function approveCompanionPairRequest(
+  pairRequestId: string,
+  nowMs = Date.now(),
+  membershipAction?: PendingCompanionPairRequest['membership_action'],
+  approvedDeviceId?: string
+) {
+  const result = updateRequestStatus(pairRequestId, 'approved', nowMs);
+  const request = requestsById.get(pairRequestId);
+  if (request && membershipAction) request.membership_action = membershipAction;
+  if (request && approvedDeviceId?.trim()) request.device_id = approvedDeviceId.trim();
+  return result && request ? toPublicPairRequest(request) : result;
 }
 
 export function rejectCompanionPairRequest(pairRequestId: string, nowMs = Date.now()) {

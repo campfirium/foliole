@@ -9,7 +9,6 @@ import { joinDesktopSyncGroup, loadDesktopSyncGroup } from '../database/syncGrou
 import { resolveDesktopDeviceName } from './companionLanPayloads.js';
 import { refreshCompanionMdnsAdvertisement } from './companionMdnsAdvertisement.js';
 import { loadPairedSyncGroupPeers, savePairedSyncGroupPeer } from './companionPairingStore.js';
-import { registerPairedCompanionDeviceWithSecret } from './companionPairingStore.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import { reportDesktopSyncGroupCursorCommitted } from './desktopSyncGroupCursorCommit.js';
 import { createDesktopSyncGroupSignedHeaders, requestJson } from './desktopSyncGroupHttp.js';
@@ -22,6 +21,7 @@ import {
   assertDesktopSyncGroupResourcesComplete,
   downloadDesktopSyncGroupResources
 } from './desktopSyncGroupResources.js';
+import { saveDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
 const JOIN_APPROVAL_POLL_MS = 1_500;
 let joinApprovalTimer: NodeJS.Timeout | null = null;
@@ -39,15 +39,15 @@ export async function requestDesktopSyncGroupJoin(endpointUrl: string) {
   const facts = loadDesktopLibraryFacts();
   const existingGroup = loadDesktopSyncGroup();
   const isActiveSameGroup = existingGroup?.local_member_state === 'active'
-    && existingGroup.group_id === candidate.group_id
-    && existingGroup.timeline_id === candidate.timeline_id;
+    && existingGroup.group_id === candidate.group_id;
   if (existingGroup && !isActiveSameGroup) throw new Error('sync_group_identity_mismatch');
   const key = await createDesktopSyncGroupPairingKey();
   const deviceId = loadOrCreateDesktopDeviceId();
   const payload = await requestJson(`${endpointUrl}/companion/pair-requests`, {
     body: JSON.stringify({
       device_id: deviceId, device_kind: process.platform, device_name: resolveDesktopDeviceName(),
-      group_id: candidate.group_id, library_facts: facts, pairing_public_key: key.publicKey,
+      group_id: candidate.group_id, group_tag: candidate.group_tag, library_facts: facts,
+      pairing_public_key: key.publicKey,
       protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR, timeline_id: candidate.timeline_id
     }), headers: { 'Content-Type': 'application/json' }, method: 'POST'
   });
@@ -87,22 +87,19 @@ async function completeDesktopSyncGroupJoinOnce() {
   const providerSecret = await decryptDesktopSyncGroupPairingSecret(
     pending.key.privateKey, payload.provider_encrypted_device_secret
   );
+  if (providerSecret !== secret) throw new Error('sync_group_workgroup_key_mismatch');
   const localDeviceId = payload.device_id.trim();
   if (!localDeviceId) throw new Error('sync_group_membership_invalid');
+  const existingGroup = loadDesktopSyncGroup();
+  if (!existingGroup) joinDesktopSyncGroup({
+    deviceId: localDeviceId, group: payload.sync_group, previousDeviceId, workgroupKey: secret
+  });
+  else saveDesktopWorkgroupKey({ groupId: pending.candidate.group_id, groupKey: secret });
   const peer = savePairedSyncGroupPeer({
     endpoint_url: pending.candidate.endpoint_url, group_id: pending.candidate.group_id,
     local_device_id: localDeviceId, peer_device_id: pending.candidate.provider_device_id,
     peer_device_kind: pending.candidate.provider_device_kind, peer_device_name: pending.candidate.provider_device_name,
-    secret, timeline_id: pending.candidate.timeline_id
-  });
-  registerPairedCompanionDeviceWithSecret({
-    deviceId: payload.provider_device_id, deviceKind: payload.provider_device_kind,
-    deviceName: payload.provider_device_name, deviceSecret: providerSecret,
-    negotiatedProtocolVersion: 1, pairedAt: payload.paired_at,
-    remoteProtocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
-  });
-  if (!loadDesktopSyncGroup()) joinDesktopSyncGroup({
-    deviceId: localDeviceId, group: payload.sync_group, previousDeviceId
+    timeline_id: pending.candidate.timeline_id
   });
   saveDesktopSyncGroupPendingJoin(null);
   await continueDesktopSyncGroupSync(peer).catch((error) => {
@@ -146,10 +143,26 @@ async function runPeerSyncStage<T>(stage: 'resources' | 'sync_pack', execute: ()
 }
 
 async function downloadAndApply(peer: ReturnType<typeof savePairedSyncGroupPeer>, after: number) {
+  try {
+    return await requestAndApply(peer, after);
+  } catch (error) {
+    if (after === 0 || !requiresCursorReenumeration(error)) throw error;
+    saveReceiveCursor(peer.peer_device_id, 0);
+    return requestAndApply(peer, 0);
+  }
+}
+
+function requestAndApply(peer: ReturnType<typeof savePairedSyncGroupPeer>, after: number) {
   return downloadAndApplyDesktopSyncGroupPack({
-    after, peer,
-    createHeaders: createDesktopSyncGroupSignedHeaders
+    after, peer, createHeaders: createDesktopSyncGroupSignedHeaders
   });
+}
+
+function requiresCursorReenumeration(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  if (['sync_pack_cursor_not_contiguous', 'sync_pack_provider_frontier_rollback']
+    .some((code) => error.message.includes(code))) return true;
+  return requiresCursorReenumeration(error.cause);
 }
 
 function loadReceiveCursor(peerDeviceId: string) {

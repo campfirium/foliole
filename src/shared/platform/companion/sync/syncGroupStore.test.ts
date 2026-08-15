@@ -23,6 +23,7 @@ it('clears peer progress when local Leave unbinds the Sync Group', async () => {
   });
 
   const statements = port.run.mock.calls.map((call) => (call as unknown[])[0]);
+  expect(statements.some((statement) => String(statement).includes('workgroup_key = NULL'))).toBe(true);
   expect(statements).toContain('DELETE FROM sync_delivery_receipts');
   expect(statements).toContain('DELETE FROM sync_peer_cursors');
   expect(statements.at(-1)).toContain('DELETE FROM sync_group_local_state');

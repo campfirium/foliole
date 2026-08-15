@@ -164,6 +164,7 @@ export type PairCompanionWithDesktopArgs = {
   endpointUrl: string;
   pairRequestId: string;
   groupId?: string | undefined;
+  groupTag?: string | undefined;
   timelineId?: string | undefined;
   remotePeerId?: string | null;
   remotePeerName?: string | null;
@@ -176,6 +177,7 @@ export type RequestCompanionPairingArgs = {
   deviceName: string;
   endpointUrl: string;
   groupId?: string | undefined;
+  groupTag?: string | undefined;
   timelineId?: string | undefined;
 };
 

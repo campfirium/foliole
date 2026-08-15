@@ -46,7 +46,6 @@ final class FolioleCompanionSyncGroupJoinGrantStore {
             if (!request.expired() && "approved".equals(request.status)) result.put(request.pairRequestId, request);
             else {
                 remove(context, request.pairRequestId);
-                FolioleCompanionSyncGroupPeerStore.remove(context, request.deviceId);
             }
         }
         return result;

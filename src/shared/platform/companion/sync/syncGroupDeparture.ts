@@ -64,12 +64,12 @@ export async function leaveCompanionSyncGroup() {
   if (hasOtherActiveMember && endpoint) {
     await deliverDeparture(endpoint, JSON.stringify(departure));
   }
+  await FolioleCompanionSync.stopSyncGroupProvider();
+  await FolioleCompanionSync.clearSyncGroupCredentials();
   await recordLocalCompanionSyncGroupDeparture({
     authorizationId: departure.authorization_id,
     deviceId: departure.device_id,
     groupId: departure.group_id,
     leftAt: departure.left_at
   });
-  await FolioleCompanionSync.stopSyncGroupProvider();
-  await FolioleCompanionSync.clearSyncGroupCredentials();
 }

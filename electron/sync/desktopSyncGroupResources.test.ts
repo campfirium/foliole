@@ -33,6 +33,17 @@ vi.mock('../database/betterSqliteDbPort.js', () => ({
 vi.mock('../database/connection.js', () => ({
   openDatabaseConnection: runtime.openConnection
 }));
+vi.mock('./workgroupKeyStore.js', () => ({
+  loadDesktopWorkgroupKey: () => ({ group_key: 'group-key' })
+}));
+vi.mock('./desktopSyncGroupHttp.js', () => ({
+  createDesktopSyncGroupSignedHeaders: () => ({}),
+  createDesktopWorkgroupPost: ({ body }: { body: string }) => ({ body, headers: {} }),
+  readDesktopWorkgroupResponse: async ({ response }: { response: Response }) => {
+    if (!response.ok) throw new Error(`sync_resource_http_${response.status}`);
+    return Buffer.from(await response.arrayBuffer());
+  }
+}));
 
 import {
   assertDesktopSyncGroupResourcesComplete, downloadDesktopSyncGroupResources
@@ -64,10 +75,10 @@ it('persists a content body batch through the transaction owner that enumerated 
     Buffer.from(`--${boundary}\r\nContent-Type: text/plain\r\nContent-Length: ${body.length}\r\nX-Blob-Hash: ${hash}\r\n\r\n`),
     body,
     Buffer.from(`\r\n--${boundary}--\r\n`)
-  ]), { headers: { 'Content-Type': `multipart/mixed; boundary=${boundary}` } })));
+  ]), { headers: { 'X-Foliole-Original-Content-Type': `multipart/mixed; boundary=${boundary}` } })));
 
   await downloadDesktopSyncGroupResources({
-    endpoint_url: 'http://provider', group_id: 'group-1', local_device_id: 'desktop-c', secret: 'secret'
+    endpoint_url: 'http://provider', group_id: 'group-1', local_device_id: 'desktop-c'
   });
 
   expect(runtime.openConnection).toHaveBeenCalledTimes(1);
@@ -78,6 +89,10 @@ it('persists a content body batch through the transaction owner that enumerated 
 });
 
 it('keeps a completed attachment when another concurrent request interrupts the sync', async () => {
+  runtime.query.mockReset().mockReturnValueOnce([]).mockReturnValueOnce([
+    { attachment_id: 'complete', content_hash: sha256('complete-body') },
+    { attachment_id: 'interrupted', content_hash: sha256('interrupted-body') }
+  ]);
   vi.stubGlobal('fetch', vi.fn(async (url: string) => (
     url.includes('attachment_id=complete')
       ? new Response('complete-body')
@@ -85,7 +100,7 @@ it('keeps a completed attachment when another concurrent request interrupts the 
   )));
 
   await expect(downloadDesktopSyncGroupResources({
-    endpoint_url: 'http://provider', group_id: 'group-1', local_device_id: 'desktop-c', secret: 'secret'
+    endpoint_url: 'http://provider', group_id: 'group-1', local_device_id: 'desktop-c'
   })).rejects.toThrow('sync_resource_http_503');
 
   await vi.waitFor(() => expect(runtime.run).toHaveBeenCalledWith(
@@ -106,7 +121,7 @@ it('treats locally owned and downloaded attachment resources as complete', async
     "availability NOT IN ('cached', 'local')"
   ));
   await downloadDesktopSyncGroupResources({
-    endpoint_url: 'http://provider', group_id: 'group-1', local_device_id: 'desktop-c', secret: 'secret'
+    endpoint_url: 'http://provider', group_id: 'group-1', local_device_id: 'desktop-c'
   });
   expect(runtime.query.mock.calls[1]?.[0]).toContain("availability NOT IN ('cached', 'local')");
 });

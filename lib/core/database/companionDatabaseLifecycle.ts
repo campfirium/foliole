@@ -1,4 +1,5 @@
 import { COMPANION_DATABASE_VERSION } from '../../platform/nativeCompanionContract.js';
+import { isAssignedSyncGroupDeviceName } from '../../platform/syncGroupDeviceProfile.js';
 import type { DbPort, DbRow } from '../sync/dbPort.js';
 
 import { createCompanionDatabase, migrateCompanionDatabase } from './companionDatabaseMigrationExecutor.js';
@@ -40,6 +41,10 @@ export async function bootstrapCompanionDatabase(
   if (version > COMPANION_DATABASE_VERSION) throw new CompanionDatabaseBlockedError('newer-version');
   const existingDeviceId = hasSchema ? await requireExistingDeviceIdentity(db) : null;
   if (!hasSchema && !request.expectedDeviceId) throw new CompanionDatabaseBlockedError('identity-missing');
+  const keepsAssignedDeviceId = hasSchema && existingDeviceId && request.expectedDeviceId
+    ? await hasActiveLocalDeviceBinding(db, existingDeviceId, request.expectedDeviceId) : false;
+  const replacesDeviceId = Boolean(request.expectedDeviceId && existingDeviceId
+    && existingDeviceId !== request.expectedDeviceId && !keepsAssignedDeviceId);
   const journalMode = await restoreExpectedJournalMode(db, openedJournalMode, request.expectedJournalMode);
   await db.transaction(async (tx) => {
     if (!hasSchema) {
@@ -50,12 +55,13 @@ export async function bootstrapCompanionDatabase(
     }
     else {
       await migrateCompanionDatabase(tx, version, COMPANION_DATABASE_VERSION, request.beforeVersionCommit);
-      if (request.expectedDeviceId && existingDeviceId !== request.expectedDeviceId) {
-        await replaceCompanionDeviceProfile(tx, existingDeviceId!, request.expectedDeviceId, request.now);
+      if (request.expectedDeviceId && existingDeviceId && replacesDeviceId) {
+        await replaceCompanionDeviceProfile(tx, existingDeviceId, request.expectedDeviceId, request.now);
       }
     }
   });
-  const deviceId = request.expectedDeviceId ?? existingDeviceId!;
+  const deviceId = request.expectedDeviceId && replacesDeviceId
+    ? request.expectedDeviceId : existingDeviceId ?? request.expectedDeviceId!;
   const credentialResetPending = await readMeta(db, 'device_identity_reset_pending') === deviceId;
   return { created: !hasSchema, credentialResetPending, deviceId, journalMode, version: COMPANION_DATABASE_VERSION };
 }
@@ -125,6 +131,20 @@ async function requireExistingDeviceIdentity(db: DbPort) {
   const stored = await readMeta(db, 'device_id');
   if (stored) return stored;
   throw new CompanionDatabaseBlockedError('identity-missing');
+}
+
+async function hasActiveLocalDeviceBinding(db: DbPort, storedId: string, publicId: string) {
+  if (!isAssignedSyncGroupDeviceName(storedId, publicId) || storedId === publicId) return false;
+  const table = await db.query(
+    "SELECT 1 AS present FROM sqlite_master WHERE type = 'table' AND name = 'sync_group_local_state' LIMIT 1"
+  );
+  if (table.length === 0) return false;
+  const rows = await db.query(
+    `SELECT 1 AS present FROM sync_group_local_state
+     WHERE singleton_id = 1 AND local_device_id = ? AND member_state = 'active' LIMIT 1`,
+    [storedId]
+  );
+  return rows.length > 0;
 }
 
 async function readMeta(db: DbPort, key: string) {

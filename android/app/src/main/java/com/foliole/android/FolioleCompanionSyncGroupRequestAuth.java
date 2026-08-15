@@ -1,15 +1,13 @@
 package com.foliole.android;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 final class FolioleCompanionSyncGroupRequestAuth {
-    private static final Map<String, Long> NONCES = new ConcurrentHashMap<>();
     private FolioleCompanionSyncGroupRequestAuth() {}
 
     static String authenticate(
@@ -26,20 +24,27 @@ final class FolioleCompanionSyncGroupRequestAuth {
             !groupId.equals(request.header("x-sync-group-id"))) throw new SecurityException("missing_headers");
         long drift = Math.abs(System.currentTimeMillis() - Instant.parse(timestamp).toEpochMilli());
         if (drift > 60_000) throw new SecurityException("expired_timestamp");
-        byte[] secret = FolioleCompanionSyncGroupPeerStore.load(context, deviceId);
-        if (secret == null) throw new SecurityException("unknown_device");
+        String encodedSecret = FolioleCompanionWorkgroupSession.requireKey();
         String canonical = request.method + "\n" + request.path + "\n" + timestamp + "\n" + nonce + "\n" + sha256(request.body);
-        String encodedSecret = android.util.Base64.encodeToString(secret, android.util.Base64.NO_WRAP | android.util.Base64.URL_SAFE | android.util.Base64.NO_PADDING);
         String expected = FolioleCompanionPairingCrypto.signCanonicalRequest(encodedSecret, canonical);
         if (!MessageDigest.isEqual(expected.getBytes(StandardCharsets.US_ASCII), signature.getBytes(StandardCharsets.US_ASCII))) {
             throw new SecurityException("invalid_signature");
         }
         long now = System.currentTimeMillis();
-        NONCES.entrySet().removeIf(entry -> entry.getValue() < now);
-        if (NONCES.putIfAbsent(deviceId + ":" + nonce, now + 60_000) != null) throw new SecurityException("replayed_nonce");
+        consumeNonce(context, groupId + ":" + timestamp + ":" + nonce, now);
         FolioleCompanionSyncGroupProvider.promoteApprovedJoin(groupId, deviceId);
         FolioleCompanionSyncGroupDatabase.requireAuthorizedMember(bridge, groupId, deviceId);
         return deviceId;
+    }
+
+    private static void consumeNonce(Context context, String identity, long now) {
+        SharedPreferences prefs = context.getSharedPreferences("foliole_workgroup_request_nonces", Context.MODE_PRIVATE);
+        if (prefs.contains(identity)) throw new SecurityException("replayed_nonce");
+        SharedPreferences.Editor editor = prefs.edit();
+        for (String key : prefs.getAll().keySet()) if (prefs.getLong(key, 0) < now) editor.remove(key);
+        if (!editor.putLong(identity, now + 60_000).commit()) {
+            throw new IllegalStateException("Failed to persist workgroup request nonce.");
+        }
     }
 
     private static String sha256(byte[] value) throws Exception {

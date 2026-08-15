@@ -20,6 +20,7 @@ final class FolioleCompanionContentBlobBatchStore {
         long httpStartedAt = System.nanoTime();
         try {
             FolioleCompanionDesktopHttpClient.BinaryResponse response = FolioleCompanionDesktopHttpClient.requestBinary(
+                context,
                 FolioleCompanionContentBlobBatchText.requireText(
                     url,
                     FolioleCompanionBridgeContractDefinitions.resourceUrlRequestKey(context)

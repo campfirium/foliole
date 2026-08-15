@@ -2,7 +2,7 @@ import { promises as fs } from 'node:fs';
 import type http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
-import { Writable } from 'node:stream';
+import { PassThrough, Writable } from 'node:stream';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
@@ -78,6 +78,14 @@ vi.mock('./companionLanSyncPack.js', () => ({
 }));
 vi.mock('./buildCompanionSyncDiagnostics.js', () => ({
   buildCompanionSyncDiagnostics: diagnosticsMock.buildCompanionSyncDiagnostics
+}));
+vi.mock('./workgroupHttpCrypto.js', () => ({
+  createWorkgroupResponseStreamCipher: vi.fn(() => ({
+    authTag: () => Buffer.alloc(0), cipher: new PassThrough(),
+    prefix: Buffer.alloc(0), suffix: Buffer.alloc(0)
+  })),
+  encryptWorkgroupResponse: vi.fn(() => Buffer.from('encrypted-resource')),
+  WORKGROUP_ENVELOPE_CONTENT_TYPE: 'application/vnd.foliole.workgroup-aead+json'
 }));
 
 import {
@@ -212,10 +220,10 @@ it('serves signed attachment resources without loading the workspace snapshot', 
   } as http.IncomingMessage, response);
 
   expect(response.writeHead).toHaveBeenCalledWith(200, {
-    'Content-Length': Buffer.byteLength('attachment-bytes'),
-    'Content-Type': 'image/png'
+    'Content-Type': 'application/vnd.foliole.workgroup-aead+json',
+    'X-Foliole-Original-Content-Type': 'image/png'
   });
-  expect(response.body()).toEqual(Buffer.from('attachment-bytes'));
+  expect(response.body().toString()).toBe(Buffer.from('attachment-bytes').toString('base64url'));
   expect(attachmentResourceMock.loadCompanionAttachmentResource).toHaveBeenCalledWith('att-1', 'hash-1');
   expect(workspaceSnapshotMock.loadWorkspaceSnapshot).not.toHaveBeenCalled();
 });
@@ -248,10 +256,11 @@ it('serves signed content body blobs without loading the workspace snapshot', as
   } as http.IncomingMessage, response);
 
   expect(response.writeHead).toHaveBeenCalledWith(200, {
-    'Content-Length': Buffer.byteLength('body-bytes'),
-    'Content-Type': 'text/plain'
+    'Content-Length': Buffer.byteLength('encrypted-resource'),
+    'Content-Type': 'application/vnd.foliole.workgroup-aead+json',
+    'X-Foliole-Original-Content-Type': 'text/plain'
   });
-  expect(response.end).toHaveBeenCalledWith(Buffer.from('body-bytes'));
+  expect(response.end).toHaveBeenCalledWith(Buffer.from('encrypted-resource'));
   expect(contentBlobResourceMock.loadCompanionContentBlobResource).toHaveBeenCalledWith('abc');
   expect(workspaceSnapshotMock.loadWorkspaceSnapshot).not.toHaveBeenCalled();
 });

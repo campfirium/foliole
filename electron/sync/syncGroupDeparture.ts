@@ -7,7 +7,8 @@ import {
   loadPairedSyncGroupPeers,
   removeSyncGroupPeerCredentials
 } from './companionPairingStore.js';
-import { createDesktopSyncGroupSignedHeaders, requestJson } from './desktopSyncGroupHttp.js';
+import { postDesktopWorkgroupJson } from './desktopSyncGroupHttp.js';
+import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
 export const SYNC_GROUP_DEPARTURE_PATH = '/companion/sync-group/departure';
 
@@ -82,14 +83,15 @@ function createDeparture(groupId: string, deviceId: string, authorizerId: string
 
 async function broadcastDeparture(departure: ReturnType<typeof createDeparture>, peers: ReturnType<typeof loadPairedSyncGroupPeers>) {
   const body = JSON.stringify(departure);
+  const key = loadDesktopWorkgroupKey(departure.group_id);
+  if (!key) throw new Error('sync_group_workgroup_key_missing');
   let delivered = false;
   for (const peer of peers) {
     try {
-      await requestJson(`${peer.endpoint_url}${SYNC_GROUP_DEPARTURE_PATH}`, {
-        body, method: 'POST', headers: { 'Content-Type': 'application/json', ...createDesktopSyncGroupSignedHeaders({
-          body, groupId: departure.group_id, localDeviceId: departure.authorized_by_device_id, method: 'POST',
-          pathWithQuery: SYNC_GROUP_DEPARTURE_PATH, secret: peer.secret
-        }) }
+      await postDesktopWorkgroupJson({
+        body, endpointUrl: peer.endpoint_url, groupId: departure.group_id,
+        localDeviceId: departure.authorized_by_device_id,
+        pathWithQuery: SYNC_GROUP_DEPARTURE_PATH, secret: key.group_key
       });
       delivered = true;
     } catch { /* the persisted departure still revokes the member on later group-fact sync */ }

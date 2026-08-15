@@ -27,8 +27,11 @@ export interface CompanionWorkspaceSyncTarget {
 
 export async function bindCompanionWorkspaceSyncTarget(target: CompanionWorkspaceSyncTarget) {
   if (!target.deviceId || !target.groupId || !isNativeCompanionPairingRuntime()) return;
+  const group = await loadCompanionSyncGroup();
+  if (!group || group.group_id !== target.groupId) throw new Error('sync_group_identity_mismatch');
   await FolioleCompanionSync.bindSyncGroupPeerRoute({
     endpoint_url: target.endpointUrl,
+    local_device_id: group.local_device_id,
     peer_device_id: target.deviceId,
     sync_group_id: target.groupId
   });
@@ -48,7 +51,6 @@ export async function resolveReachableCompanionWorkspaceSyncEndpoints(
   return activeRemoteDeviceIds(group).flatMap((deviceId) => {
     const match = discovered.find((candidate) => candidate.compatibility.status === 'compatible'
       && candidate.discovery.group_id === group.group_id
-      && candidate.discovery.timeline_id === group.timeline_id
       && candidate.discovery.peer_id === deviceId);
     return match ? [{ deviceId, endpointUrl: match.endpointUrl, groupId: group.group_id }] : [];
   });

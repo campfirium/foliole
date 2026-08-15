@@ -5,7 +5,9 @@ import {
   createPairSyncApprovalEvidence, validatePairSyncApprovalEvidence
 } from './windows-a5-pair-sync-recovery-approval-evidence.mjs';
 
-export function validatePairSyncRecoveryResult({ android, approval, pairingPath }) {
+export function validatePairSyncRecoveryResult({
+  android, approval, evidenceGoal = 'initial-sync-completed', pairingPath
+}) {
   const safeAndroid = validatePairSyncAndroidEvidence(android);
   const safeApproval = validatePairSyncApprovalEvidence(approval);
   const approvalComplete = safeApproval.pending_observed
@@ -16,9 +18,10 @@ export function validatePairSyncRecoveryResult({ android, approval, pairingPath 
     ? approvalComplete && safeAndroid.completion === 'http_200'
     : pairingPath === 'existing'
       && approvalSkipped && safeAndroid.completion === 'existing_pairing';
-  if (!pathComplete
-      || safeAndroid.credentials !== 'saved_signable'
-      || safeAndroid.initialSync !== 'completed') {
+  const goalComplete = evidenceGoal === 'credentials-signable'
+    ? safeAndroid.initialSync !== 'failed'
+    : safeAndroid.initialSync === 'completed';
+  if (!pathComplete || safeAndroid.credentials !== 'saved_signable' || !goalComplete) {
     throw new Error('Pair sync recovery evidence did not prove the ordered recovery result.');
   }
   return { android: safeAndroid, approval: safeApproval };
@@ -31,18 +34,18 @@ export function sanitizePairSyncRecoveryProgressEvidence({ android, approval } =
   return { android: safeAndroid, approval: validatePairSyncApprovalEvidence(approval) };
 }
 
-export function createPairSyncRecoveryEvidenceTracker() {
+export function createPairSyncRecoveryEvidenceTracker(evidenceGoal = 'initial-sync-completed') {
   const approval = createPairSyncApprovalEvidence();
   return {
-    async approve(session, pending) {
+    async approve(session, pending, membershipAction) {
       approval.markPendingObserved();
       approval.markApproveInvoked();
-      await session.approve(pending.pair_request_id);
+      await session.approve(pending.pair_request_id, membershipAction);
       approval.markApproveSucceeded();
     },
     complete(receipt) {
       const result = validatePairSyncRecoveryResult({
-        android: receipt, approval: approval.snapshot(), pairingPath: receipt.pairingPath
+        android: receipt, approval: approval.snapshot(), evidenceGoal, pairingPath: receipt.pairingPath
       });
       return { ...receipt, approval: result.approval };
     },

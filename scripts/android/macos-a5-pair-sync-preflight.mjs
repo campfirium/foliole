@@ -64,8 +64,20 @@ function inspectMacosA5SyncState(paths, run) {
   return { pairState, pairing, workspaceState };
 }
 
-export function runMacosA5ExistingSyncPreflight(paths, run = spawnSync) {
+export function inspectMacosA5SyncGroupFacts(paths, run = spawnSync) {
   const { pairState, workspaceState } = inspectMacosA5SyncState(paths, run);
+  const workspacePresent = workspaceState.counts?.nodes === pairState.nodeCount
+    && workspaceState.canonicalInbox?.active === true
+    && workspaceState.pairingWorkspace?.localDeviceIdentityPresent === true
+    && workspaceState.pairingWorkspace?.syncEndpointPresent === true;
+  if (!workspacePresent) {
+    throw new Error('Fixed A5 no longer matches the protected Sync Group workspace.');
+  }
+  return pairState;
+}
+
+export function runMacosA5ExistingSyncPreflight(paths, run = spawnSync) {
+  const pairState = inspectMacosA5SyncGroupFacts(paths, run);
   const groupAuthority = pairState.syncGroupCredentialsPresent === true
     && pairState.syncGroupPeerConflict === false
     && /^[0-9a-f]{16}$/u.test(pairState.syncGroupRemotePeerFingerprint ?? '')
@@ -73,11 +85,7 @@ export function runMacosA5ExistingSyncPreflight(paths, run = spawnSync) {
     && typeof pairState.syncGroupId === 'string'
     && typeof pairState.syncGroupTimelineId === 'string'
     && pairState.activeSyncGroupMemberCount >= 2;
-  const workspacePresent = workspaceState.counts?.nodes === pairState.nodeCount
-    && workspaceState.canonicalInbox?.active === true
-    && workspaceState.pairingWorkspace?.localDeviceIdentityPresent === true
-    && workspaceState.pairingWorkspace?.syncEndpointPresent === true;
-  if (!groupAuthority || !workspacePresent) {
+  if (!groupAuthority) {
     throw new Error('Fixed A5 no longer matches the authorized existing Sync Group state.');
   }
   return pairState;

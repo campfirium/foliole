@@ -27,10 +27,12 @@ final class FolioleCompanionPairingPluginActions {
 
     static void clearSyncGroupCredentials(Context context, PluginCall call) {
         try {
-            FolioleCompanionPairingStore.clearPairingCredentials(context);
+            FolioleCompanionWorkgroupSession.close();
             FolioleCompanionSyncGroupJoinGrantStore.clear(context);
             FolioleCompanionSyncGroupPeerStore.clear(context);
             FolioleCompanionSyncGroupOutboundPeerStore.clear(context);
+            context.getSharedPreferences("foliole_workgroup_request_nonces", Context.MODE_PRIVATE).edit().clear().commit();
+            context.getSharedPreferences("foliole_workgroup_response_nonces", Context.MODE_PRIVATE).edit().clear().commit();
             call.resolve();
         } catch (Exception exception) {
             call.reject("Failed to clear Sync Group credentials.", exception);
@@ -102,8 +104,7 @@ final class FolioleCompanionPairingPluginActions {
             );
             if (syncGroupId != null || endpointUrl != null) {
                 FolioleCompanionSyncGroupOutboundPeerStore.save(
-                    context, syncGroupId, deviceId, remotePeerId, endpointUrl, deviceSecret);
-                FolioleCompanionSyncGroupPeerStore.saveSecret(context, primaryDeviceId, providerDeviceSecret);
+                    context, syncGroupId, deviceId, remotePeerId, endpointUrl);
             }
             call.resolve(saved);
         } catch (Exception exception) {
@@ -152,15 +153,18 @@ final class FolioleCompanionPairingPluginActions {
     static void bindSyncGroupPeerRoute(Context context, PluginCall call) {
         try {
             String groupKey = routeBindingKey(context, "syncGroupId");
+            String localKey = routeBindingKey(context, "localDeviceId");
             String peerKey = routeBindingKey(context, "peerDeviceId");
             String endpointKey = routeBindingKey(context, "endpointUrl");
             String groupId = call.getString(groupKey);
+            String localDeviceId = call.getString(localKey);
             String peerDeviceId = call.getString(peerKey);
             String endpointUrl = call.getString(endpointKey);
-            if (rejectIfBlank(call, groupKey, groupId) || rejectIfBlank(call, peerKey, peerDeviceId) ||
+            if (rejectIfBlank(call, groupKey, groupId) || rejectIfBlank(call, localKey, localDeviceId) ||
+                rejectIfBlank(call, peerKey, peerDeviceId) ||
                 rejectIfBlank(call, endpointKey, endpointUrl)) return;
-            FolioleCompanionSyncGroupOutboundPeerStore.bindRoute(
-                context, groupId, peerDeviceId, endpointUrl);
+            FolioleCompanionSyncGroupOutboundPeerStore.save(
+                context, groupId, localDeviceId, peerDeviceId, endpointUrl);
             call.resolve();
         } catch (Exception exception) {
             call.reject("Failed to bind Sync Group peer route.", exception);

@@ -23,6 +23,13 @@ export interface TestHttpResponse {
   status: number;
 }
 
+export interface TestPairedDevice {
+  device_id: string;
+  device_secret: string;
+  group_id?: string;
+  group_tag?: string;
+}
+
 function normalizeHeaders(headers: Record<string, string> = {}) {
   return Object.fromEntries(Object.entries(headers).map(([key, value]) => [key.toLowerCase(), value]));
 }
@@ -74,6 +81,7 @@ export async function requestWorkspaceSyncServer(server: http.Server, args: Test
 
 export function signWorkspaceSyncRequest(args: {
   deviceId: string;
+  groupId?: string;
   method: string;
   pathWithQuery: string;
   secret: string;
@@ -86,17 +94,29 @@ export function signWorkspaceSyncRequest(args: {
     'X-Device-Id': args.deviceId,
     'X-Nonce': nonce,
     'X-Signature': crypto.createHmac('sha256', args.secret).update(canonical).digest('hex'),
+    ...(args.groupId ? { 'X-Sync-Group-Id': args.groupId } : {}),
     'X-Timestamp': timestamp
   };
 }
 
-export async function pairTestDevice(server: http.Server) {
+export async function pairTestDevice(server: http.Server, workgroup?: {
+  groupId: string;
+  groupTag: string;
+}) {
   const clientKeyPair = await createTestPairingKeyPair();
   const created = await requestWorkspaceSyncServer(server, {
     body: {
       device_id: 'android-test-device',
       device_kind: 'android',
       device_name: 'Pixel Test',
+      ...(workgroup ? {
+        group_id: workgroup.groupId,
+        group_tag: workgroup.groupTag,
+        library_facts: {
+          attachment_count: 0, content_blob_count: 0, node_count: 0,
+          review_log_count: 0, timeline_id: null
+        }
+      } : {}),
       pairing_public_key: clientKeyPair.publicKey,
       protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
     },
@@ -124,6 +144,7 @@ export async function pairTestDevice(server: http.Server) {
     device_secret: await decryptTestPairingSecret({
       encrypted: payload.encrypted_device_secret,
       privateKey: clientKeyPair.privateKey
-    })
-  };
+    }),
+    ...(workgroup ? { group_id: workgroup.groupId, group_tag: workgroup.groupTag } : {})
+  } satisfies TestPairedDevice;
 }

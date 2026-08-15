@@ -116,11 +116,13 @@ it('observes Leave through durable host state after the visible confirmation', (
     'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupMaintenanceScenario.java',
     'utf8'
   );
+  expect(scenario).toContain('click(instrumentation, webView, "companion-sync-group-open")');
   expect(scenario).toContain('"companion-sync-group-leave-confirm"');
-  expect(scenario).toContain('FolioleCompanionPairingStore.loadStoredDeviceId(context) == null');
-  expect(scenario).toContain('put("credentialsCleared", true)');
+  expect(scenario).toContain('waitUntilMissing(instrumentation, webView, "companion-sync-group-leave-confirm"');
+  expect(scenario).not.toContain('departureState(Context context)');
+  expect(scenario).toContain('put("workgroupKeyRemoved", true)');
   expect(test).toContain('sendDepartureEvidence(instrumentation, receipt)');
-  expect(test).toContain('FolioleCompanionPairingStore.loadPairingState(context)');
+  expect(test).toContain('put("bindingPresent", false)');
 });
 
 it('classifies an abnormal instrumentation exit as an Android product failure', async () => {

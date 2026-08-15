@@ -69,10 +69,11 @@ it('reuses bounded Settings navigation that exits Review and nested Settings sur
     'utf8'
   );
   expect(approval).toContain('FolioleCompanionSettingsNavigation.open(instrumentation, webView)');
-  expect(navigation).toContain('"companion-review-action-later"');
   expect(navigation).toContain('"companion-top-bar-left-action"');
   expect(navigation).toContain('"companion-top-bar-back"');
   expect(navigation).toContain('"companion-tab-settings"');
+  expect(navigation).toContain('"Timed out navigating to companion Settings; semantic="');
+  expect(navigation).not.toContain('"companion-review-action-later"');
   expect(navigation).toContain('FolioleCompanionWebViewSemanticAdapter.perform');
   expect(navigation).toContain('"target_missing".equals(code) || "target_hidden".equals(code)');
   expect(navigation).not.toContain('clickVisible');
