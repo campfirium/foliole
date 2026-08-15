@@ -5,7 +5,11 @@ import {
   type SyncParticipationSnapshot
 } from '../../../../../lib/platform/syncParticipationContract';
 import { loadAppVersion } from '../../appVersion';
-import { FolioleCompanionSync, isAvailableNativeAndroidCompanionRuntime } from '../../companionWorkspaceRuntimeRepository';
+import {
+  FolioleCompanionSync,
+  isNativeCompanionSyncGroupRuntime,
+  isNativeCompanionSyncParticipationRuntime
+} from '../../companionWorkspaceRuntimeRepository';
 
 import { ensureCompanionSyncGroupDataOwner } from './syncGroupProviderDataOwner';
 
@@ -38,7 +42,7 @@ export async function reconcileCompanionSyncGroupProvider(
   group: SyncGroupPayload | null,
   factsRevision = '0'
 ) {
-  if (!isAvailableNativeAndroidCompanionRuntime()) return null;
+  if (!isNativeCompanionSyncGroupRuntime()) return null;
   if (!group || group.local_member_state !== 'active' || !bootstrap.database_path) {
     return FolioleCompanionSync.stopSyncGroupProvider();
   }
@@ -57,7 +61,7 @@ export async function reconcileCompanionSyncGroupProvider(
 export async function subscribeCompanionSyncGroupServiceHint(
   listener: (hint: CompanionSyncGroupServiceHint) => void
 ) {
-  if (!isAvailableNativeAndroidCompanionRuntime()) return () => undefined;
+  if (!isNativeCompanionSyncGroupRuntime()) return () => undefined;
   const eventSource = FolioleCompanionSync as typeof FolioleCompanionSync & {
     addListener(
       eventName: 'syncGroupServiceHint', next: (hint: CompanionSyncGroupServiceHint) => void
@@ -72,7 +76,7 @@ export function loadCompanionSyncGroupProviderState() {
 }
 
 export async function loadCompanionSyncParticipationState() {
-  if (!isAvailableNativeAndroidCompanionRuntime()) return participationSnapshot;
+  if (!isNativeCompanionSyncParticipationRuntime()) return participationSnapshot;
   return publishParticipation(await FolioleCompanionSync.loadSyncParticipationState());
 }
 

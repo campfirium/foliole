@@ -14,9 +14,12 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "finishContentBlobBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadDiscoveryCandidates", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadPairingState", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "loadSyncParticipationState", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "resolveAttachmentResource", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "savePairingCredentials", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "savePrimaryDeviceId", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setSyncEnabled", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setSyncPaused", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "signCompanionSyncRequest", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "stageAttachmentResourceBatch", returnType: CAPPluginReturnPromise)
     ]

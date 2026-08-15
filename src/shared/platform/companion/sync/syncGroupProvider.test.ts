@@ -21,7 +21,8 @@ vi.mock('../../companionWorkspaceRuntimeRepository', () => ({
     setSyncPaused: runtime.setPaused,
     stopSyncGroupProvider: runtime.stop
   },
-  isAvailableNativeAndroidCompanionRuntime: () => runtime.available
+  isNativeCompanionSyncGroupRuntime: () => runtime.available,
+  isNativeCompanionSyncParticipationRuntime: () => runtime.available
 }));
 
 import { reconcileCompanionSyncGroupProvider } from './syncGroupProvider';

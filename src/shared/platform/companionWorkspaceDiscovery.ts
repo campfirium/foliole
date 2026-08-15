@@ -161,9 +161,6 @@ export async function discoverCompanionDesktops(
       }
     });
   }
-  if (discovered.length === 0) {
-    throw new Error('No desktop sync device found. Make sure desktop Sync is on and both devices are on the same Wi-Fi.');
-  }
   return discovered;
 }
 

@@ -36,6 +36,8 @@ const IOS_NATIVE_CAPABILITIES = new Set([
   'sync-diagnostics',
   'sync-object-read',
   'setting-write',
+  'sync-group-store',
+  'sync-participation',
   'topic-search',
   'view-state-write'
 ]);
@@ -51,10 +53,15 @@ export function getCompanionRuntimeCapability(): CompanionRuntimeCapability {
   return { kind: 'native-unavailable', platform };
 }
 
+export function isCompanionRuntimeCapabilityAvailable(capability: string) {
+  const runtime = getCompanionRuntimeCapability();
+  return runtime.kind !== 'native-unavailable'
+    && !(runtime.kind === 'ios-native' && !IOS_NATIVE_CAPABILITIES.has(capability));
+}
+
 export function requireAvailableCompanionRuntime(capability: string) {
   const runtime = getCompanionRuntimeCapability();
-  const iosCapabilityUnavailable = runtime.kind === 'ios-native' && !IOS_NATIVE_CAPABILITIES.has(capability);
-  if (runtime.kind === 'native-unavailable' || iosCapabilityUnavailable) {
+  if (!isCompanionRuntimeCapabilityAvailable(capability)) {
     throw new NativeCompanionCapabilityUnavailableError(capability, runtime.platform);
   }
   return runtime;

@@ -6,7 +6,11 @@ import type {
   CompanionWorkspacePairRequestPayload
 } from '../../../lib/platform/nativeCompanionSyncContract';
 
-import { getCompanionRuntimeCapability, requireAvailableCompanionRuntime } from './companionRuntimeCapabilities';
+import {
+  getCompanionRuntimeCapability,
+  isCompanionRuntimeCapabilityAvailable,
+  requireAvailableCompanionRuntime
+} from './companionRuntimeCapabilities';
 import type { CompanionWorkspaceSyncPlugin } from './companionWorkspaceSyncPluginTypes';
 
 export const DISCOVERY_ENDPOINT_PATH = '/companion/discovery';
@@ -111,6 +115,22 @@ export function getNativeCompanionSettingWritePlatform() {
 
 export function isAvailableNativeAndroidCompanionRuntime() {
   return getCompanionRuntimeCapability().kind === 'android-native';
+}
+
+export function isNativeCompanionSyncGroupRuntime() {
+  const runtime = getCompanionRuntimeCapability();
+  if (!isCompanionRuntimeCapabilityAvailable('sync-group-provider')) return false;
+  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
+}
+
+export function isNativeCompanionSyncGroupStoreRuntime() {
+  const runtime = requireAvailableCompanionRuntime('sync-group-store');
+  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
+}
+
+export function isNativeCompanionSyncParticipationRuntime() {
+  const runtime = requireAvailableCompanionRuntime('sync-participation');
+  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
 }
 
 export function isAvailableNativeCompanionRuntime() {

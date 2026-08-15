@@ -8,6 +8,10 @@ import {
 } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
 import { reconcileCompanionSyncGroupProvider } from '../shared/platform/companion/sync/syncGroupProvider';
 import { loadCompanionSyncGroup } from '../shared/platform/companion/sync/syncGroupStore';
+import {
+  isNativeCompanionSyncGroupRuntime,
+  isNativeCompanionSyncGroupStoreRuntime
+} from '../shared/platform/companionWorkspaceRuntimeRepository';
 
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
@@ -28,7 +32,7 @@ export function CompanionSyncGroupRuntime(props: {
   );
 
   useEffect(() => {
-    if (bootstrapState.runtime_kind !== 'android-capacitor') return;
+    if (!isNativeCompanionSyncGroupStoreRuntime()) return;
     setLoaded(false);
     void Promise.resolve().then(loadCompanionSyncGroup).then((next) => {
       setGroup(next);
@@ -41,7 +45,7 @@ export function CompanionSyncGroupRuntime(props: {
     workspaceSync.state.last_synced_at]);
 
   useEffect(() => {
-    if (bootstrapState.runtime_kind !== 'android-capacitor' || !loaded) return;
+    if (!isNativeCompanionSyncGroupRuntime() || !loaded) return;
     const factsRevision = `${mutationRevision}:${workspaceSync.state.last_synced_at ?? ''}`;
     void reconcileCompanionSyncGroupProvider(bootstrapState, group, factsRevision).catch(() => undefined);
   }, [bootstrapState, group, loaded, mutationRevision, workspaceSync.state.last_synced_at]);

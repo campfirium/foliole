@@ -47,12 +47,13 @@ describe('iOS pairing host contract', () => {
     expect(discovery).toContain('contract.discoveryCandidateKeys[name]');
   });
 
-  it('starts Bonjour discovery on the main run loop used for delegate callbacks', () => {
+  it('browses Bonjour with Network.framework and resolves services on the main queue', () => {
     const discovery = read('ios/App/App/FolioleCompanionBonjourDiscovery.swift');
 
     expect(discovery).toMatch(/DispatchQueue\.main\.async[\s\S]*startOnMainRunLoop\(\)/);
     expect(discovery).toMatch(
-      /private func startOnMainRunLoop\(\)[\s\S]*NetServiceBrowser\(\)[\s\S]*searchForServices/
+      /private func startOnMainRunLoop\(\)[\s\S]*NWBrowser\([\s\S]*\.bonjour\(type: "_foliole-sync\._tcp"[\s\S]*browser\.start\(queue: \.main\)/
     );
+    expect(discovery).toContain('service.resolve(withTimeout: 3.0)');
   });
 });

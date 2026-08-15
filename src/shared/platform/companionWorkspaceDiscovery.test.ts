@@ -86,9 +86,7 @@ describe('companionWorkspaceDiscovery endpoint selection', () => {
     capacitorMock.getPlatform.mockReturnValue('ios');
     capacitorMock.plugin.loadDiscoveryCandidates.mockResolvedValue({ candidates: [] });
 
-    await expect(discoverCompanionDesktops('http://10.0.2.2:38641')).rejects.toThrow(
-      'No desktop sync device found'
-    );
+    await expect(discoverCompanionDesktops('http://10.0.2.2:38641')).resolves.toEqual([]);
 
     expect(capacitorMock.plugin.desktopHttpRequest).not.toHaveBeenCalled();
   });
@@ -137,9 +135,7 @@ it('keeps ordinary discovery stopped while allowing explicit Leave routing when 
     desktopResponse({ hostName: 'ZEPHU-PC', peerId: 'desktop-c', platform: 'Windows' })
   );
 
-  await expect(discoverCompanionDesktops('http://old:38641')).rejects.toThrow(
-    'No desktop sync device found'
-  );
+  await expect(discoverCompanionDesktops('http://old:38641')).resolves.toEqual([]);
   expect(capacitorMock.plugin.loadDiscoveryCandidates).not.toHaveBeenCalled();
   expect(capacitorMock.plugin.desktopHttpRequest).not.toHaveBeenCalled();
 

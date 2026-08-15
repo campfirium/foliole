@@ -12,6 +12,10 @@ vi.mock('../shared/platform/companion/sync/syncGroupStore', () => ({
 vi.mock('../shared/platform/companion/sync/syncGroupProvider', () => ({
   reconcileCompanionSyncGroupProvider: runtime.reconcile
 }));
+vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
+  isNativeCompanionSyncGroupRuntime: () => true,
+  isNativeCompanionSyncGroupStoreRuntime: () => true
+}));
 
 import { CompanionSyncGroupRuntime } from './CompanionSyncGroupRuntime';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';

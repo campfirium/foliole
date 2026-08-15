@@ -1,4 +1,5 @@
 import Foundation
+import Network
 
 final class FolioleCompanionBonjourDiscoveryPool {
     private var active: [UUID: FolioleCompanionBonjourDiscovery] = [:]
@@ -16,13 +17,14 @@ final class FolioleCompanionBonjourDiscoveryPool {
     }
 }
 
-final class FolioleCompanionBonjourDiscovery: NSObject, NetServiceBrowserDelegate, NetServiceDelegate {
-    private var browser: NetServiceBrowser?
+final class FolioleCompanionBonjourDiscovery: NSObject, NetServiceDelegate {
+    private var browser: NWBrowser?
     private let completion: ([[String: Any]]) -> Void
     private let contract: FolioleCompanionPairingContract
     private var finished = false
     private var results: [[String: Any]] = []
     private var services: [NetService] = []
+    private var serviceKeys = Set<String>()
 
     init(contract: FolioleCompanionPairingContract, completion: @escaping ([[String: Any]]) -> Void) {
         self.completion = completion
@@ -36,21 +38,31 @@ final class FolioleCompanionBonjourDiscovery: NSObject, NetServiceBrowserDelegat
 
     private func startOnMainRunLoop() {
         guard !finished else { return }
-        let browser = NetServiceBrowser()
+        let browser = NWBrowser(
+            for: .bonjour(type: "_foliole-sync._tcp", domain: "local."),
+            using: .tcp
+        )
         self.browser = browser
-        browser.delegate = self
-        browser.searchForServices(ofType: "_foliole-sync._tcp.", inDomain: "local.")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in self?.finish() }
+        browser.browseResultsChangedHandler = { [weak self] results, _ in
+            DispatchQueue.main.async { self?.resolve(results) }
+        }
+        browser.stateUpdateHandler = { [weak self] state in
+            if case .failed = state { DispatchQueue.main.async { self?.finish() } }
+        }
+        browser.start(queue: .main)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) { [weak self] in self?.finish() }
     }
 
-    func netServiceBrowser(
-        _ browser: NetServiceBrowser,
-        didFind service: NetService,
-        moreComing: Bool
-    ) {
-        services.append(service)
-        service.delegate = self
-        service.resolve(withTimeout: 1.0)
+    private func resolve(_ results: Set<NWBrowser.Result>) {
+        for result in results {
+            guard case let .service(name, type, domain, _) = result.endpoint else { continue }
+            let key = "\(name)|\(type)|\(domain)"
+            guard serviceKeys.insert(key).inserted else { continue }
+            let service = NetService(domain: domain, type: type, name: name)
+            services.append(service)
+            service.delegate = self
+            service.resolve(withTimeout: 3.0)
+        }
     }
 
     func netServiceDidResolveAddress(_ sender: NetService) {
@@ -66,14 +78,10 @@ final class FolioleCompanionBonjourDiscovery: NSObject, NetServiceBrowserDelegat
         results.append(candidate)
     }
 
-    func netServiceBrowser(_ browser: NetServiceBrowser, didNotSearch errorDict: [String: NSNumber]) {
-        finish()
-    }
-
     private func finish() {
         guard !finished else { return }
         finished = true
-        browser?.stop()
+        browser?.cancel()
         browser = nil
         services.forEach { $0.stop() }
         completion(results)
