@@ -34,8 +34,9 @@ describe('iOS active database ownership', () => {
     expect(methods).toEqual([
       'clearPairingCredentials', 'desktopHttpRequest', 'downloadAttachmentResourceBatch',
       'downloadContentBlobBatch', 'finishAttachmentResourceBatch', 'finishContentBlobBatch',
-      'loadDiscoveryCandidates', 'loadPairingState', 'resolveAttachmentResource',
-      'savePairingCredentials', 'savePrimaryDeviceId', 'signCompanionSyncRequest',
+      'loadDiscoveryCandidates', 'loadPairingState', 'loadSyncParticipationState',
+      'resolveAttachmentResource', 'savePairingCredentials', 'savePrimaryDeviceId',
+      'setSyncEnabled', 'setSyncPaused', 'signCompanionSyncRequest',
       'stageAttachmentResourceBatch'
     ].sort());
   });

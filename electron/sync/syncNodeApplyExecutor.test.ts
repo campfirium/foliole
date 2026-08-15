@@ -144,6 +144,36 @@ it('allows host adapters to provide the text body hash implementation', async ()
   });
 });
 
+it('updates an existing node through the native-safe fast-forward path', async () => {
+  const connection = openDatabaseConnection();
+  connection.sqlite.prepare(
+    `INSERT INTO nodes (
+       id, kind, title, content, current_version_id, last_modified_by_device_id,
+       sync_dirty, created_at, updated_at
+     ) VALUES (?, 'topic', 'Local Node', 'local body', ?, 'desktop', 0, ?, ?)`
+  ).run(
+    'node-1',
+    'desktop#0',
+    '2026-04-21T10:00:00.000Z',
+    '2026-04-21T10:00:00.000Z'
+  );
+  const port = createBetterSqliteDbPort(connection.sqlite, { name: 'sync-node-fast-forward-test' });
+
+  await expect(applySyncNodesWithDbPort(port, [createRemoteNodeRecord()])).resolves.toMatchObject({
+    appliedIds: ['node-1']
+  });
+
+  expect(connection.sqlite.prepare(
+    `SELECT current_version_id, last_modified_by_device_id, sync_dirty, title
+     FROM nodes WHERE id = ?`
+  ).get('node-1')).toEqual({
+    current_version_id: 'phone#1',
+    last_modified_by_device_id: 'phone',
+    sync_dirty: 0,
+    title: 'Remote Node'
+  });
+});
+
 it('applies conflict copies as ordinary sync topics', async () => {
   const connection = openDatabaseConnection();
   const port = createBetterSqliteDbPort(connection.sqlite, { name: 'sync-node-conflict-copy-test' });

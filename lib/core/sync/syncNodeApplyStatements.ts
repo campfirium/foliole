@@ -45,6 +45,17 @@ ON CONFLICT(id) DO UPDATE SET
   updated_at = excluded.updated_at,
   deleted_at = excluded.deleted_at`;
 
+export const UPDATE_REMOTE_NODE_SQL = `UPDATE nodes SET
+  parent_id = ?, kind = ?, priority = ?, desired_retention = ?, enable_short_term = ?,
+  sequential_reading_enabled = ?, shelved_at = ?, manual_child_order = ?, title = ?,
+  is_title_manual = ?, hide_title_heading = ?, content = ?, body_blob_hash = ?,
+  opening_text = ?, virtual_filter = ?, reveal = ?, anchor_link = ?,
+  anchor_resolution_status = ?, anchor_source_version_id = ?, image_regions = ?,
+  import_source_fingerprint = ?, import_content_fingerprint = ?, position = ?,
+  current_version_id = ?, last_modified_by_device_id = ?, sync_dirty = 0,
+  created_at = ?, updated_at = ?, deleted_at = ?
+WHERE id = ?`;
+
 export const UPSERT_REMOTE_NODE_VERSION_SQL = `INSERT INTO node_sync_versions (
   version_id, object_id, parent_version_id, device_id, created_at, content_hash, body_text, snapshot_json
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -65,13 +76,27 @@ VALUES (?, ?, ?)
 ON CONFLICT(node_id, attachment_id, role) DO NOTHING`;
 
 export function buildRemoteNodeUpsert(record: NativeSyncNodeRecord, bodyBlobHash: string): SyncNodeStatement {
+  return {
+    params: buildRemoteNodeParams(record, bodyBlobHash),
+    sql: UPSERT_REMOTE_NODE_SQL
+  };
+}
+
+export function buildRemoteNodeUpdate(record: NativeSyncNodeRecord, bodyBlobHash: string): SyncNodeStatement {
+  const params = buildRemoteNodeParams(record, bodyBlobHash);
+  return {
+    params: [...params.slice(1), params[0]!],
+    sql: UPDATE_REMOTE_NODE_SQL
+  };
+}
+
+function buildRemoteNodeParams(record: NativeSyncNodeRecord, bodyBlobHash: string): DbParams {
   const { snapshot } = record;
   const provenance = normalizeNodeImportProvenance({
     importContentFingerprint: snapshot.import_content_fingerprint,
     importSourceFingerprint: snapshot.import_source_fingerprint
   });
-  return {
-    params: [
+  return [
       snapshot.id,
       snapshot.parent_id,
       snapshot.kind,
@@ -101,9 +126,7 @@ export function buildRemoteNodeUpsert(record: NativeSyncNodeRecord, bodyBlobHash
       snapshot.created_at,
       snapshot.updated_at,
       snapshot.deleted_at
-    ],
-    sql: UPSERT_REMOTE_NODE_SQL
-  };
+    ];
 }
 
 export function buildRemoteNodeVersionUpsert(record: NativeSyncNodeRecord): SyncNodeStatement | null {

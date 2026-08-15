@@ -5,6 +5,7 @@ import {
   buildNodeAttachmentDelete,
   buildNodeAttachmentInsert,
   buildNodeOrderReplace,
+  buildRemoteNodeUpdate,
   buildRemoteNodeUpsert,
   buildRemoteNodeVersionUpsert
 } from '../../lib/core/sync/syncNodeApplyStatements.js';
@@ -98,6 +99,20 @@ it('normalizes incomplete remote provenance to a double null', () => {
   });
 
   expect(buildRemoteNodeUpsert(record, 'body-hash').params.slice(21, 23)).toEqual([null, null]);
+});
+
+it('builds an explicit update for an existing remote node', () => {
+  const statement = buildRemoteNodeUpdate(createNodeRecord(), 'body-hash');
+
+  expect(statement.sql).toMatch(/^UPDATE nodes SET/);
+  expect(statement.sql).not.toContain('ON CONFLICT');
+  expect(statement.sql).toContain('current_version_id = ?');
+  expect(statement.sql).toContain('sync_dirty = 0');
+  expect(statement.sql).toContain('WHERE id = ?');
+  expect(statement.params).toEqual([
+    ...buildRemoteNodeUpsert(createNodeRecord(), 'body-hash').params.slice(1),
+    'node-1'
+  ]);
 });
 
 it('builds remote version upsert only for complete version metadata', () => {

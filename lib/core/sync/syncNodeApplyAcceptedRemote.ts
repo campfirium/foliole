@@ -11,6 +11,7 @@ import {
   buildNodeAttachmentDelete,
   buildNodeAttachmentInsert,
   buildNodeOrderReplace,
+  buildRemoteNodeUpdate,
   buildRemoteNodeUpsert,
   buildRemoteNodeVersionUpsert
 } from './syncNodeApplyStatements.js';
@@ -52,7 +53,8 @@ async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord) {
 async function upsertRemoteNode(
   port: DbPort,
   record: NativeSyncNodeRecord,
-  preparedTextBodyHashes: ReadonlyMap<NativeSyncNodeRecord, string>
+  preparedTextBodyHashes: ReadonlyMap<NativeSyncNodeRecord, string>,
+  nodeExists: boolean
 ) {
   const content = record.snapshot.content ?? '';
   const preparedHash = preparedTextBodyHashes.get(record);
@@ -61,7 +63,9 @@ async function upsertRemoteNode(
   }
   const bodyBlobHash = record.snapshot.body_blob_hash
     ?? await upsertTextBodyBlob(port, content, record.snapshot.updated_at, preparedHash!);
-  const statement = buildRemoteNodeUpsert(record, bodyBlobHash);
+  const statement = nodeExists
+    ? buildRemoteNodeUpdate(record, bodyBlobHash)
+    : buildRemoteNodeUpsert(record, bodyBlobHash);
   await port.run(statement.sql, statement.params);
 }
 
@@ -85,9 +89,10 @@ async function replaceNodeAttachmentLinks(port: DbPort, record: NativeSyncNodeRe
 async function applyRemoteNode(
   port: DbPort,
   record: NativeSyncNodeRecord,
-  preparedTextBodyHashes: ReadonlyMap<NativeSyncNodeRecord, string>
+  preparedTextBodyHashes: ReadonlyMap<NativeSyncNodeRecord, string>,
+  nodeExists: boolean
 ) {
-  await upsertRemoteNode(port, record, preparedTextBodyHashes);
+  await upsertRemoteNode(port, record, preparedTextBodyHashes, nodeExists);
   await upsertRemoteVersion(port, record);
   await replaceNodeOrder(port, record);
   await replaceNodeAttachmentLinks(port, record);
@@ -103,7 +108,7 @@ export async function applyAcceptedRemoteNode(input: {
   result: AcceptedRemoteNodeResult;
   tx: DbPort;
 }) {
-  await applyRemoteNode(input.tx, input.record, input.preparedTextBodyHashes);
+  await applyRemoteNode(input.tx, input.record, input.preparedTextBodyHashes, input.localNode !== null);
   if (!input.record.snapshot.deleted_at && input.record.snapshot.content !== undefined) {
     const repairResult = await repairDirectChildAnchorsForAppliedParent({
       content: input.record.snapshot.content,
