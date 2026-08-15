@@ -1,5 +1,6 @@
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import { definedProps } from '../shared/lib/definedProps';
+import type { CompanionWorkspaceSyncTarget } from '../shared/platform/companion/network/companionWorkspaceEndpoint';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 import { createCompanionSyncRunId } from '../shared/platform/companionSyncActivityEvents';
@@ -10,7 +11,8 @@ import {
   persistCompanionWorkspaceSnapshot,
   recordCompanionWorkspaceSyncEvent,
   removeCompanionWorkspaceSyncRememberedTarget,
-  resolveReachableCompanionWorkspaceSyncEndpoint,
+  bindCompanionWorkspaceSyncTarget,
+  resolveReachableCompanionWorkspaceSyncEndpoints,
   saveCompanionSyncOnboardingStatus,
   saveCompanionWorkspaceSyncEndpoint
 } from '../shared/platform/companionWorkspaceSync';
@@ -53,60 +55,59 @@ async function refreshConflictAwareState(args: {
   return nextState;
 }
 
-async function saveResolvedSyncEndpoint(args: WorkspaceSnapshotActionArgs, endpointUrl: string) {
-  const syncEndpointUrl = await resolveReachableCompanionWorkspaceSyncEndpoint(endpointUrl);
-  const savedEndpointState = await saveCompanionWorkspaceSyncEndpoint(syncEndpointUrl);
+async function saveResolvedSyncTarget(args: WorkspaceSnapshotActionArgs, target: CompanionWorkspaceSyncTarget) {
+  await bindCompanionWorkspaceSyncTarget(target);
+  const savedEndpointState = await saveCompanionWorkspaceSyncEndpoint(target.endpointUrl);
   args.setState({ ...savedEndpointState, workspace_snapshot: args.state.workspace_snapshot });
-  return syncEndpointUrl;
+  return target.endpointUrl;
+}
+
+async function runManualSyncTarget(args: WorkspaceSnapshotActionArgs, target: CompanionWorkspaceSyncTarget) {
+  const endpointUrl = target.endpointUrl;
+  const run = await runCompanionSyncAsOwner(endpointUrl, async () => {
+    args.setStatus('syncing');
+    args.setSyncProgress(STARTING_STRUCTURE_PROGRESS);
+    args.setError(null);
+    const syncEndpointUrl = await saveResolvedSyncTarget(args, target);
+    const runId = createCompanionSyncRunId();
+    const startedAt = new Date().toISOString();
+    try {
+      const startedState = await recordCompanionWorkspaceSyncEvent({
+        endpointUrl: syncEndpointUrl, kind: 'run_started', message: 'Sync started.',
+        runId, startedAt, status: 'started'
+      });
+      args.setState({ ...startedState, workspace_snapshot: args.state.workspace_snapshot });
+      const nextState = await syncCompanionDesktopStreams({
+        endpointUrl: syncEndpointUrl, runId, setReadableArticle: args.setReadableArticle,
+        setSyncConflictCount: args.setSyncConflictCount, setState: args.setState,
+        setSyncProgress: args.setSyncProgress, startedAt,
+        workspaceSnapshot: args.state.workspace_snapshot
+      });
+      await hydrateCompanionReviewSchedulerSettings().catch(() => null);
+      args.setStatus('idle');
+      return nextState;
+    } catch (syncError) {
+      await handleSyncFailure(args, syncEndpointUrl, runId, startedAt, syncError);
+      throw syncError;
+    }
+  });
+  if (run.owned) return run.result;
+  args.setStatus('idle');
+  return refreshConflictAwareState({
+    setReadableArticle: args.setReadableArticle,
+    setSyncConflictCount: args.setSyncConflictCount,
+    setState: args.setState
+  });
 }
 
 function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
   return async function pullFromDesktop(endpointUrl: string) {
-    args.setStatus('syncing');
-    const run = await runCompanionSyncAsOwner(endpointUrl, async () => {
-      args.setSyncProgress(STARTING_STRUCTURE_PROGRESS);
-      args.setError(null);
-      const syncEndpointUrl = await saveResolvedSyncEndpoint(args, endpointUrl);
-      const runId = createCompanionSyncRunId();
-      const startedAt = new Date().toISOString();
-      try {
-        const startedState = await recordCompanionWorkspaceSyncEvent({
-          endpointUrl: syncEndpointUrl,
-          kind: 'run_started',
-          message: 'Sync started.',
-          runId,
-          startedAt,
-          status: 'started'
-        });
-        args.setState({ ...startedState, workspace_snapshot: args.state.workspace_snapshot });
-        const nextState = await syncCompanionDesktopStreams({
-          endpointUrl: syncEndpointUrl,
-          runId,
-          setReadableArticle: args.setReadableArticle,
-          setSyncConflictCount: args.setSyncConflictCount,
-          setState: args.setState,
-          setSyncProgress: args.setSyncProgress,
-          startedAt,
-          workspaceSnapshot: args.state.workspace_snapshot
-        });
-        await hydrateCompanionReviewSchedulerSettings().catch(() => null);
-        args.setStatus('idle');
-        return nextState;
-      } catch (syncError) {
-        await handleSyncFailure(args, syncEndpointUrl, runId, startedAt, syncError);
-        throw syncError;
-      }
-    });
-    if (!run.owned) {
-      const nextState = await refreshConflictAwareState({
-        setReadableArticle: args.setReadableArticle,
-        setSyncConflictCount: args.setSyncConflictCount,
-        setState: args.setState
-      });
-      args.setStatus('idle');
-      return nextState;
-    }
-    return run.result;
+    const targets = await resolveReachableCompanionWorkspaceSyncEndpoints(endpointUrl);
+    if (targets.length === 0) throw new Error('No reachable Sync Group member is available.');
+    let state: NativeCompanionWorkspaceSyncState | undefined;
+    for (const target of targets) state = await runManualSyncTarget(args, target);
+    if (!state) throw new Error('Manual sync did not run.');
+    return state;
   };
 }
 

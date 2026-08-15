@@ -18,7 +18,11 @@ const pairing = {
   remotePeerFingerprint: '82cc2dc5c98135c8',
   resultStatus: 'ready',
   schemaVersion: 1,
+  syncGroupCredentialsPresent: true,
   syncGroupId: 'group-1',
+  syncGroupPeerConflict: false,
+  syncGroupRemotePeerPendingDeliveryCount: 0,
+  syncGroupRemotePeerFingerprint: '82cc2dc5c98135c8',
   syncGroupTimelineId: 'timeline-1'
 };
 
@@ -41,10 +45,27 @@ it('accepts an empty paired workspace from Sync Group facts without Capture prer
   expect(run.mock.calls[0][1][0]).toContain('android-pair-sync-recovery-readiness-runner.mjs');
 });
 
+it('accepts convergence from Sync Group credentials without legacy pairing credentials', async () => {
+  const run = vi.fn().mockResolvedValueOnce(
+    result('[android-data] pair-sync-recovery-readiness=', {
+      ...pairing, pairingCredentialsPresent: false, remotePeerFingerprint: null
+    })
+  );
+
+  await expect(postPairSyncRecoveryReadiness({
+    deviceFingerprint: pairing.deviceIdentityFingerprint,
+    env: {},
+    paths: { adbPath: '/adb', repoRoot: '/repo', systemNode: '/node' },
+    run,
+    serial: 'fixed-a5'
+  })).resolves.toMatchObject({ readiness: { syncGroupCredentialsPresent: true } });
+});
+
 it('rejects a UI-complete run whose dirty records did not receive acknowledgements', async () => {
   const run = vi.fn()
     .mockResolvedValueOnce(result('[android-data] pair-sync-recovery-readiness=', {
       ...pairing, dirtyRecordCount: 6, resultStatus: 'approval_required',
+      syncGroupRemotePeerPendingDeliveryCount: 1,
       missingPrerequisites: ['unsynced_device_data_requires_review']
     }, 77));
 
@@ -61,6 +82,7 @@ it('rejects a UI-complete run whose dirty records did not receive acknowledgemen
 it('waits for restart-created dirty state to receive its foreground sync acknowledgement', async () => {
   const dirty = result('[android-data] pair-sync-recovery-readiness=', {
     ...pairing, dirtyRecordCount: 1, resultStatus: 'approval_required',
+    syncGroupRemotePeerPendingDeliveryCount: 1,
     missingPrerequisites: ['unsynced_device_data_requires_review']
   }, 77);
   const run = vi.fn()
@@ -75,6 +97,24 @@ it('waits for restart-created dirty state to receive its foreground sync acknowl
     run, serial: 'fixed-a5', wait
   })).resolves.toMatchObject({ readiness: { dirtyRecordCount: 0 } });
   expect(wait).toHaveBeenCalledWith(1_000);
+});
+
+it('accepts current Mac convergence while another active member remains pending', async () => {
+  const run = vi.fn().mockResolvedValueOnce(result(
+    '[android-data] pair-sync-recovery-readiness=', {
+      ...pairing, dirtyRecordCount: 1, resultStatus: 'approval_required',
+      missingPrerequisites: ['unsynced_device_data_requires_review']
+    }, 77
+  ));
+
+  await expect(postPairSyncRecoveryReadiness({
+    deviceFingerprint: pairing.deviceIdentityFingerprint,
+    env: {}, maxAttempts: 1,
+    paths: { adbPath: '/adb', repoRoot: '/repo', systemNode: '/node' },
+    run, serial: 'fixed-a5'
+  })).resolves.toMatchObject({ readiness: {
+    dirtyRecordCount: 1, syncGroupRemotePeerPendingDeliveryCount: 0
+  } });
 });
 
 it('waits for the preserved database to reopen after Android process restart', async () => {
@@ -98,6 +138,8 @@ it('waits for the preserved database to reopen after Android process restart', a
 
 it.each([
   { label: 'active group membership', override: { activeSyncGroupMemberCount: 1 } },
+  { label: 'group credentials', override: { syncGroupCredentialsPresent: false } },
+  { label: 'unique group peer', override: { syncGroupPeerConflict: true } },
   { label: 'group identity', override: { syncGroupId: null } },
   { label: 'group timeline', override: { syncGroupTimelineId: null } }
 ])('rejects convergence without $label', async ({ override }) => {

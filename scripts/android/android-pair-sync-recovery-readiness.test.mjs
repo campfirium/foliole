@@ -44,6 +44,38 @@ it('excludes device-private view state from the unsynced push gate', () => {
   expect(queries).toContainEqual(expect.stringContaining("object_type <> 'view_state'"));
 });
 
+it('reports only bounded dirty object type counts', () => {
+  const database = { prepare: (sql) => ({
+    all: () => sql.includes('GROUP BY object_type')
+      ? [{ count: 1, object_type: 'node' }] : [],
+    get: (value) => {
+      if (sql.includes('sqlite_master')) return { present: 1 };
+      if (sql.includes('companion_meta')) return value === 'device_id'
+        ? { value: 'android-1' } : undefined;
+      return { count: 1 };
+    }
+  }) };
+  expect(inspectPairSyncRecoveryWorkspace(database).dirtyObjectCounts).toEqual({ node: 1 });
+});
+
+it('reports pending delivery counts only by hashed group member identity', () => {
+  const peerId = 'desktop-device-1';
+  const database = { prepare: (sql) => ({
+    all: () => sql.includes('GROUP BY member.device_id')
+      ? [{ count: 2, peer_id: peerId }] : [],
+    get: (value) => {
+      if (sql.includes('sqlite_master')) return { present: 1 };
+      if (sql.includes('companion_meta')) return value === 'device_id'
+        ? { value: 'android-1' } : undefined;
+      return { count: 0 };
+    }
+  }) };
+  const inspection = inspectPairSyncRecoveryWorkspace(database);
+  const fingerprint = createHash('sha256').update(peerId).digest('hex').slice(0, 16);
+  expect(inspection.pendingDeliveryCountsByPeerFingerprint).toEqual({ [fingerprint]: 2 });
+  expect(JSON.stringify(inspection)).not.toContain(peerId);
+});
+
 it('reports the persisted Sync Group identity without deriving it from pairing metadata', () => {
   const tables = new Set([
     'companion_meta', 'nodes', 'sync_group_local_state', 'sync_group_members',

@@ -69,6 +69,16 @@ function createNodeReadingPush(): CompanionSyncPushPayload {
   };
 }
 
+function createAlternativeTombstonePush(): CompanionSyncPushPayload {
+  return {
+    base: { baseContentHash: null, kind: 'content_hash' },
+    clientOpId: 'node_text_alternative:alternative-1:11',
+    contentHash: 'android-tombstone', deletedAt: '2026-04-30T01:00:00.000Z',
+    identity: { objectId: 'alternative-1', objectType: 'node_text_alternative', scope: 'workspace' },
+    payloadJson: null, updatedAt: '2026-04-30T01:00:00.001Z'
+  };
+}
+
 it('treats a repeated node_reading push as already applied', async () => {
   openDatabaseConnection().driver.execute(
     `INSERT INTO sync_object_state (
@@ -81,6 +91,23 @@ it('treats a repeated node_reading push as already applied', async () => {
 
   expect(result.appliedObjectIds).toEqual([]);
   expect(result.acks).toMatchObject([{ stateSeq: 2, status: 'already_applied' }]);
+});
+
+it('confirms an alternative tombstone when the desktop already deleted that alternative', async () => {
+  openDatabaseConnection().driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id,
+       updated_at, deleted_at, sync_dirty
+     ) VALUES ('node_text_alternative', 'alternative-1', 1, 'desktop-tombstone', 'desktop',
+       '2026-04-30T00:00:00.001Z', '2026-04-30T00:00:00.000Z', 0)`
+  );
+
+  const result = await applyCompanionSyncPushAsync(
+    [createAlternativeTombstonePush()], 'android-device'
+  );
+
+  expect(result.appliedObjectIds).toEqual([]);
+  expect(result.acks).toMatchObject([{ stateSeq: 1, status: 'already_applied' }]);
 });
 
 it('inserts review_log once and rejects a mismatched duplicate operation payload', async () => {

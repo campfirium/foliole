@@ -45,7 +45,7 @@ export function assertMacosA5ProductBootstrap(before, after) {
   return after;
 }
 
-export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
+function inspectMacosA5SyncState(paths, run) {
   const common = ['--adb', paths.adb, '--serial', A5_SERIAL, '--app-id', APP_ID];
   const pairing = evidence(process.execPath, [
     path.join(paths.repoRoot, 'scripts/android/android-pair-sync-recovery-readiness-runner.mjs'),
@@ -61,6 +61,30 @@ export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
   const workspaceState = parseEvidence(
     workspace.stdout, '[android-data] capture-annotation-readiness='
   );
+  return { pairState, pairing, workspaceState };
+}
+
+export function runMacosA5ExistingSyncPreflight(paths, run = spawnSync) {
+  const { pairState, workspaceState } = inspectMacosA5SyncState(paths, run);
+  const groupAuthority = pairState.syncGroupCredentialsPresent === true
+    && pairState.syncGroupPeerConflict === false
+    && /^[0-9a-f]{16}$/u.test(pairState.syncGroupRemotePeerFingerprint ?? '')
+    && /^[0-9a-f]{16}$/u.test(pairState.deviceIdentityFingerprint ?? '')
+    && typeof pairState.syncGroupId === 'string'
+    && typeof pairState.syncGroupTimelineId === 'string'
+    && pairState.activeSyncGroupMemberCount >= 2;
+  const workspacePresent = workspaceState.counts?.nodes === pairState.nodeCount
+    && workspaceState.canonicalInbox?.active === true
+    && workspaceState.pairingWorkspace?.localDeviceIdentityPresent === true
+    && workspaceState.pairingWorkspace?.syncEndpointPresent === true;
+  if (!groupAuthority || !workspacePresent) {
+    throw new Error('Fixed A5 no longer matches the authorized existing Sync Group state.');
+  }
+  return pairState;
+}
+
+export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
+  const { pairState, pairing, workspaceState } = inspectMacosA5SyncState(paths, run);
   const authorizedPairing = pairState.pairingCredentialsPresent === true
     && pairState.pairingPeerConflict === false
     && /^[0-9a-f]{16}$/u.test(pairState.remotePeerFingerprint);

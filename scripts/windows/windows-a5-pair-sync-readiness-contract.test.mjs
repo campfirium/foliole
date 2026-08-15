@@ -11,6 +11,9 @@ it('keeps readiness evidence non-sensitive and fails closed', () => {
       missingPrerequisites: [], nodeCount: 0, pairingCredentialsPresent: false,
       pairingCredentialRejectionReason: 'unknown_device', pairingCredentialsRejected: true,
       pairingPeerConflict: false, remotePeerFingerprint: null,
+      syncGroupCredentialsPresent: true, syncGroupPeerConflict: false,
+      syncGroupRemotePeerPendingDeliveryCount: 0,
+      syncGroupRemotePeerFingerprint: 'fedcba9876543210',
       resultStatus: 'ready', schemaVersion: 1, endpoint: 'must-be-dropped'
     })}`
   );
@@ -18,6 +21,10 @@ it('keeps readiness evidence non-sensitive and fails closed', () => {
   expect(readiness).toMatchObject({
     pairingCredentialRejectionReason: 'unknown_device',
     pairingCredentialsRejected: true,
-    resultStatus: 'ready'
+    resultStatus: 'ready',
+    syncGroupCredentialsPresent: true,
+    syncGroupPeerConflict: false,
+    syncGroupRemotePeerPendingDeliveryCount: 0,
+    syncGroupRemotePeerFingerprint: 'fedcba9876543210'
   });
 });

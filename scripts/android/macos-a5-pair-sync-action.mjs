@@ -141,7 +141,7 @@ export async function reconcileAuthorizedMacosDailyPairing(
 async function macosDesktopControl(execute, _paths, _env, action) {
   if (action === 'stop') {
     const result = await execute('/usr/bin/pkill', [
-      '-TERM', '-f', '^/Applications/Foliole.app/Contents/MacOS/Foliole$'
+      '-TERM', '-f', '^/Applications/Foliole[.]app/Contents/MacOS/Foliole( |$)'
     ], { timeoutCode: 'desktop_stop_timeout', timeoutMs: 30_000 });
     if (![0, 1].includes(result.code)) throw new Error('Installed Foliole did not stop cleanly.');
     await delay(1_500);

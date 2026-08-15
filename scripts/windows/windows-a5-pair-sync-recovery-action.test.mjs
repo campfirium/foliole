@@ -9,7 +9,7 @@ import {
   inspectWindowsPairSyncRecoveryDesktop, runWindowsA5PairSyncRecovery
 } from './windows-a5-pair-sync-recovery-action.mjs';
 import {
-  createPairSyncRecoveryWindow, resolvePairSyncConcurrentFailure,
+  createPairSyncRecoveryWindow, PAIR_SYNC_RECOVERY_TIMEOUT_MS, resolvePairSyncConcurrentFailure,
   waitForPairRequestWhileInstrumentationRuns
 } from './windows-a5-pair-sync-recovery-concurrency.mjs';
 import { assertPairSyncRuntimeOwnership } from './windows-a5-pair-sync-recovery-transport.mjs';
@@ -183,6 +183,7 @@ it('accepts only a live current session that owns the fixed running listener', (
 });
 
 it('shares one bounded recovery window and cancels request observation at the first terminal', async () => {
+  expect(PAIR_SYNC_RECOVERY_TIMEOUT_MS).toBe(11 * 60_000);
   const window = createPairSyncRecoveryWindow({ now: () => 20, timeoutMs: 180_000 });
   expect(window).toMatchObject({ deadline: 180_020, instrumentationTimeoutMs: 180_000 });
   const cancelPairRequest = vi.fn();

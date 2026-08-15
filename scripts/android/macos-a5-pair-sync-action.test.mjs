@@ -225,5 +225,6 @@ it('passes the A5 trusted remote peer into desktop readiness', async () => {
 it('does not restore the default installed desktop after the DEV-owned session', () => {
   const source = fs.readFileSync('scripts/android/macos-a5-pair-sync-action.mjs', 'utf8');
   expect(source).toContain('registered DEV restart required');
+  expect(source).toContain("Foliole( |$)'");
   expect(source).not.toContain("['-gj', '-a', 'Foliole']");
 });

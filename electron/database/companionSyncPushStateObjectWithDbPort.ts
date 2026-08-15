@@ -38,7 +38,7 @@ export async function applyStateObjectPushWithDbPort(
     const record = buildStateObjectRecord(item, objectType);
     if (!record || item.base.kind !== 'content_hash') return rejectedStateObjectPushResult(item, `invalid_${objectType}_push`);
     if (objectType === 'view_state') return rejectedStateObjectPushResult(item, 'device_private_view_state_push');
-    if (current?.content_hash === record.content_hash && current.deleted_at === record.deleted_at) {
+    if (sameStateObject(current, record, objectType)) {
       return emptyResult(stateAck(item, current, 'already_applied'));
     }
     if (objectType === 'node_open_state') {
@@ -71,6 +71,17 @@ export async function applyStateObjectPushWithDbPort(
       appliedReviewOpIds: []
     };
   });
+}
+
+function sameStateObject(
+  current: SyncObjectStateRow | undefined,
+  record: NativeSyncObjectRecord,
+  objectType: StatePushObjectType
+) {
+  if (!current) return false;
+  if (current.content_hash === record.content_hash && current.deleted_at === record.deleted_at) return true;
+  return objectType === 'node_text_alternative'
+    && typeof current.deleted_at === 'string' && typeof record.deleted_at === 'string';
 }
 
 function buildStateObjectRecord(

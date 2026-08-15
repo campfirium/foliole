@@ -96,7 +96,7 @@ export async function storeAlternative(port: DbPort, loser: NativeSyncNodeRecord
     source_version_id: sourceVersionId,
     status: 'available'
   };
-  await port.run(
+  const inserted = await port.run(
     `INSERT INTO node_text_alternatives (
        alternative_id, node_id, source_version_id, body_text, source_device_id, created_at, status, updated_at
      ) VALUES (?, ?, ?, ?, ?, ?, 'available', ?)
@@ -104,7 +104,44 @@ export async function storeAlternative(port: DbPort, loser: NativeSyncNodeRecord
     [alternativeId, alternative.node_id, sourceVersionId, alternative.body_text,
       sourceDeviceId, alternative.created_at, updatedAt]
   );
-  await markAlternativeDirty(port, alternative, updatedAt);
+  if (inserted.changes > 0) await markAlternativeDirty(port, alternative, updatedAt);
+}
+
+export async function reconcileResolutionAlternatives(
+  port: DbPort,
+  resolution: NativeSyncNodeRecord,
+  alternative: NativeSyncNodeRecord | null
+) {
+  const updatedAt = resolution.version_created_at!;
+  if (resolution.snapshot.deleted_at) {
+    await tombstoneNodeAlternatives(port, resolution.object_id, updatedAt);
+    return;
+  }
+  if (alternative) await storeAlternative(port, alternative, updatedAt);
+}
+
+async function tombstoneNodeAlternatives(port: DbPort, nodeId: string, updatedAt: string) {
+  const alternatives = await port.query<{ alternative_id: string }>(
+    'SELECT alternative_id FROM node_text_alternatives WHERE node_id = ?', [nodeId]
+  );
+  await port.run('DELETE FROM node_text_alternatives WHERE node_id = ?', [nodeId]);
+  for (const { alternative_id: alternativeId } of alternatives) {
+    await markAlternativeTombstoneDirty(port, alternativeId, updatedAt);
+  }
+}
+
+async function markAlternativeTombstoneDirty(port: DbPort, alternativeId: string, updatedAt: string) {
+  await port.run(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, deleted_at, sync_dirty
+     ) VALUES ('node_text_alternative', ?, (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state), ?,
+       'desktop-resolution', ?, ?, 1)
+     ON CONFLICT(object_type, object_id) DO UPDATE SET
+       state_seq = excluded.state_seq, content_hash = excluded.content_hash,
+       last_modified_by_device_id = excluded.last_modified_by_device_id,
+       updated_at = excluded.updated_at, deleted_at = excluded.deleted_at, sync_dirty = 1`,
+    [alternativeId, hashText(`deleted\n${alternativeId}\n${updatedAt}`), updatedAt, updatedAt]
+  );
 }
 
 async function supersedePreviousAlternative(

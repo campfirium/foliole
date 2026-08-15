@@ -1,5 +1,10 @@
 import { createHash } from 'node:crypto';
 
+import {
+  currentDeliveryStatusCountsByPeerFingerprint,
+  pendingDeliveryCountsByPeerFingerprint
+} from './android-pair-sync-peer-delivery-readiness.mjs';
+
 function tableExists(database, table) {
   return database.prepare(
     "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1"
@@ -9,6 +14,15 @@ function tableExists(database, table) {
 function count(database, table, where = '') {
   if (!tableExists(database, table)) return null;
   return database.prepare(`SELECT COUNT(*) AS count FROM ${table}${where}`).get().count;
+}
+
+function dirtyObjectCounts(database) {
+  if (!tableExists(database, 'sync_object_state')) return {};
+  const statement = database.prepare(`SELECT object_type, COUNT(*) AS count
+    FROM sync_object_state WHERE sync_dirty = 1 AND object_type <> 'view_state'
+    GROUP BY object_type ORDER BY object_type`);
+  if (typeof statement.all !== 'function') return {};
+  return Object.fromEntries(statement.all().map((row) => [row.object_type, Number(row.count)]));
 }
 
 function meta(database, key) {
@@ -108,6 +122,7 @@ export function inspectPairSyncRecoveryWorkspace(database) {
       'sync_object_state',
       " WHERE sync_dirty = 1 AND object_type <> 'view_state'"
     ),
+    dirtyObjectCounts: dirtyObjectCounts(database),
     nodeCount: count(database, 'nodes'),
     latestSyncRunResult: typeof latestSyncRun?.result === 'string'
       ? latestSyncRun.result : null,
@@ -127,6 +142,9 @@ export function inspectPairSyncRecoveryWorkspace(database) {
         LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash WHERE cbd.hash IS NULL`) : null,
     pairingCredentialRejectionReason: rejection.reason,
     pairingCredentialsRejected: rejection.rejected,
+    currentDeliveryStatusCountsByPeerFingerprint:
+      currentDeliveryStatusCountsByPeerFingerprint(database),
+    pendingDeliveryCountsByPeerFingerprint: pendingDeliveryCountsByPeerFingerprint(database),
     protectedContentDigest: protectedContentDigest(database),
     syncGroupId: group?.group_id ?? null,
     syncGroupTimelineId: group?.timeline_id ?? null,
@@ -163,8 +181,11 @@ export function pairSyncRecoveryReadiness(
   }
   return {
     activeSyncGroupMemberCount: inspection?.activeSyncGroupMemberCount ?? null,
+    currentDeliveryStatusCountsByPeerFingerprint:
+      inspection?.currentDeliveryStatusCountsByPeerFingerprint ?? {},
     deviceIdentityFingerprint: inspection?.deviceIdentityFingerprint ?? null,
     dirtyRecordCount: inspection?.dirtyRecordCount ?? null,
+    dirtyObjectCounts: inspection?.dirtyObjectCounts ?? {},
     missingPrerequisites,
     nodeCount: inspection?.nodeCount ?? null,
     latestSyncRunResult: inspection?.latestSyncRunResult ?? null,

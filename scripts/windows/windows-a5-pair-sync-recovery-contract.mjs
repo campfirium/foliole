@@ -76,7 +76,15 @@ export function parsePairSyncRecoveryReadiness(output) {
       ? value.remotePeerFingerprint : null,
     resultStatus: value.resultStatus,
     schemaVersion: 1,
+    syncGroupCredentialsPresent: value.syncGroupCredentialsPresent === true,
     syncGroupId: typeof value.syncGroupId === 'string' ? value.syncGroupId : null,
+    syncGroupPeerConflict: value.syncGroupPeerConflict === true,
+    syncGroupRemotePeerPendingDeliveryCount: Number.isSafeInteger(
+      value.syncGroupRemotePeerPendingDeliveryCount
+    ) ? value.syncGroupRemotePeerPendingDeliveryCount : null,
+    syncGroupRemotePeerFingerprint: /^[0-9a-f]{16}$/u.test(
+      value.syncGroupRemotePeerFingerprint
+    ) ? value.syncGroupRemotePeerFingerprint : null,
     syncGroupTimelineId: typeof value.syncGroupTimelineId === 'string'
       ? value.syncGroupTimelineId : null
   };

@@ -118,6 +118,51 @@ it('selects an independent delta for each member cursor', () => {
   baseline.close(); laterPeer.close();
 });
 
+it('packs the base node required by a delta text alternative', () => {
+  const now = '2026-08-08T00:01:00.000Z';
+  source.exec(`
+    INSERT INTO node_text_alternatives VALUES (
+      'alternative-1', 'node-1', 'android-b#alternative', 'alternate body',
+      'android-b', '${now}', 'available', '${now}'
+    );
+  `);
+  source.prepare(`INSERT INTO sync_object_state (
+    object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+  ) VALUES ('node_text_alternative', 'alternative-1', 4, 'alternative-hash', 'android-b', ?, 1)`
+  ).run(now);
+
+  const pack = buildPack(3, 4);
+  expect(pack.prepare('SELECT object_type, object_id FROM sync_object_state').all()).toEqual([
+    { object_id: 'node-1', object_type: 'node' },
+    { object_id: 'alternative-1', object_type: 'node_text_alternative' }
+  ]);
+  expect(pack.prepare("SELECT id FROM nodes WHERE id = 'node-1'").get()).toEqual({ id: 'node-1' });
+  pack.close();
+});
+
+it('projects an alternative under a deleted node as a tombstone', () => {
+  const now = '2026-08-08T00:01:00.000Z';
+  source.exec(`
+    UPDATE nodes SET deleted_at = '${now}' WHERE id = 'node-1';
+    INSERT INTO node_text_alternatives VALUES (
+      'alternative-1', 'node-1', 'android-b#alternative', 'alternate body',
+      'android-b', '${now}', 'available', '${now}'
+    );
+    INSERT INTO sync_object_state (
+      object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+    ) VALUES ('node_text_alternative', 'alternative-1', 4, 'alternative-hash', 'android-b', '${now}', 1);
+  `);
+
+  const pack = buildPack(3, 4);
+  expect(pack.prepare(`SELECT deleted_at FROM sync_object_state
+    WHERE object_type = 'node_text_alternative'`).get()).toEqual({ deleted_at: now });
+  expect(pack.prepare(`SELECT deleted_at, payload_json FROM sync_objects
+    WHERE object_type = 'node_text_alternative'`).get()).toEqual({
+    deleted_at: now, payload_json: null
+  });
+  pack.close();
+});
+
 it('keeps local provisioning rows out of shared group facts', () => {
   const now = '2026-08-08T00:00:00.000Z';
   source.exec(`
@@ -139,12 +184,12 @@ it('keeps local provisioning rows out of shared group facts', () => {
   pack.close();
 });
 
-function buildPack(fromStateSeq: number) {
+function buildPack(fromStateSeq: number, toStateSeq = 3) {
   const pack = new Database(':memory:');
   for (const statement of definitions.packSchema) pack.exec(statement);
   pack.prepare('ATTACH DATABASE ? AS source').run(sourcePath);
   definitions.copyStatements.forEach((statement, index) => {
-    if (index === definitions.stateCopyIndex) pack.prepare(statement).run(fromStateSeq, 3);
+    if (index === definitions.stateCopyIndex) pack.prepare(statement).run(fromStateSeq, toStateSeq);
     else if (index === definitions.payloadCopyIndex) {
       copyPayloads(pack);
       pack.exec(statement);

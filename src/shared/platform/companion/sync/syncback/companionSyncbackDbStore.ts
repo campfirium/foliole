@@ -114,10 +114,18 @@ async function loadStateChanges(port: DbPort, peerId: string, cursor: number | n
     CONTRACT.sql.state,
     [normalizeNumberCursor(cursor), peerId, normalizeLimit(limit)]
   ) as unknown as NativeSyncStateObjectRecord[];
-  return Promise.all(rows.map(async (row) => ({
-    ...row,
-    payload_json: row.deleted_at ? null : await loadPayloadJson(port, row)
-  })));
+  return Promise.all(rows.map(async (sourceRow) => {
+    const row = await projectAlternativeDeletion(port, sourceRow);
+    return { ...row, payload_json: row.deleted_at ? null : await loadPayloadJson(port, row) };
+  }));
+}
+
+async function projectAlternativeDeletion(port: DbPort, row: NativeSyncStateObjectRecord) {
+  if (row.object_type !== 'node_text_alternative' || row.deleted_at) return row;
+  const parent = (await port.query<{ deleted_at: string | null }>(
+    CONTRACT.sql.alternativeNodeDeletion, [row.object_id]
+  ))[0];
+  return parent?.deleted_at ? { ...row, deleted_at: parent.deleted_at } : row;
 }
 
 async function loadPayloadJson(port: DbPort, row: NativeSyncStateObjectRecord) {

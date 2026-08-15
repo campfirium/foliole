@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
+import type { CompanionWorkspaceSyncTarget } from '../shared/platform/companion/network/companionWorkspaceEndpoint';
 import type { CompanionDesktopSyncResult } from '../shared/platform/companionDesktopSyncObjects';
 
 import { createWorkspaceSnapshotActions } from './companionWorkspaceSyncActions';
@@ -12,12 +13,15 @@ const syncObjectsMock = vi.hoisted(() => ({
 }));
 
 const workspaceSyncMock = vi.hoisted(() => ({
+  bindCompanionWorkspaceSyncTarget: vi.fn(async () => undefined),
   loadCompanionReadableArticle: vi.fn(async () => null),
   loadCompanionWorkspaceSyncState: vi.fn(),
   persistCompanionWorkspaceSnapshot: vi.fn(),
   recordCompanionWorkspaceSyncEvent: vi.fn(),
   removeCompanionWorkspaceSyncRememberedTarget: vi.fn(),
-  resolveReachableCompanionWorkspaceSyncEndpoint: vi.fn(async (endpointUrl: string) => endpointUrl),
+  resolveReachableCompanionWorkspaceSyncEndpoints: vi.fn(
+    async (endpointUrl: string): Promise<CompanionWorkspaceSyncTarget[]> => [{ endpointUrl }]
+  ),
   saveCompanionSyncOnboardingStatus: vi.fn(),
   saveCompanionWorkspaceSyncEndpoint: vi.fn()
 }));
@@ -125,7 +129,9 @@ describe('companion workspace manual sync failures', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     workspaceSyncMock.recordCompanionWorkspaceSyncEvent.mockResolvedValue(createSyncState());
-    workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoint.mockImplementation(async (endpointUrl: string) => endpointUrl);
+    workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoints.mockImplementation(
+      async (endpointUrl: string) => [{ endpointUrl }]
+    );
     workspaceSyncMock.saveCompanionWorkspaceSyncEndpoint.mockResolvedValue(createSyncState());
   });
 
@@ -172,7 +178,9 @@ describe('companion workspace manual sync refresh', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     workspaceSyncMock.recordCompanionWorkspaceSyncEvent.mockResolvedValue(createSyncState());
-    workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoint.mockImplementation(async (endpointUrl: string) => endpointUrl);
+    workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoints.mockImplementation(
+      async (endpointUrl: string) => [{ endpointUrl }]
+    );
     workspaceSyncMock.saveCompanionWorkspaceSyncEndpoint.mockResolvedValue(createSyncState());
   });
 
@@ -215,7 +223,9 @@ describe('companion workspace manual sync refresh', () => {
 
   it('repairs a stale emulator endpoint before manual sync on a real device', async () => {
     const { actions } = createActions();
-    workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoint.mockResolvedValueOnce('http://192.168.0.11:38641');
+    workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoints.mockResolvedValueOnce([{
+      deviceId: 'Maci', endpointUrl: 'http://192.168.0.11:38641', groupId: 'group-1'
+    }]);
     workspaceSyncMock.saveCompanionWorkspaceSyncEndpoint.mockResolvedValueOnce(createSyncState({
       endpoint_url: 'http://192.168.0.11:38641',
       remembered_targets: ['http://192.168.0.11:38641', 'http://10.0.2.2:38641']

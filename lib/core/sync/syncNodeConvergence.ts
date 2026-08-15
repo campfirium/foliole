@@ -7,7 +7,7 @@ import {
   buildResolutionRecord,
   chooseEvidenceProjection,
   chooseProjection,
-  storeAlternative
+  reconcileResolutionAlternatives
 } from './syncNodeResolution.js';
 import { mergeSyncText } from './syncTextDiff3.js';
 
@@ -90,7 +90,7 @@ export async function resolveTopicConflict(
   if (!applied.appliedIds.includes(local.object_id)) {
     throw new Error(`sync_topic_resolution_not_applied:${local.object_id}`);
   }
-  if (alternative) await storeAlternative(port, alternative, resolution.version_created_at!);
+  await reconcileResolutionAlternatives(port, resolution, alternative);
   return resolution;
 }
 

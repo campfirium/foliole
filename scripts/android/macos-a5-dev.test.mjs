@@ -49,8 +49,14 @@ describe('macOS fixed A5 development entry', () => {
     const source = fs.readFileSync('scripts/android/macos-a5-dev.mjs', 'utf8');
     const extended = fs.readFileSync('scripts/android/macos-a5-extended-actions.mjs', 'utf8');
     expect(source).toContain("'sync-existing'");
-    expect(extended).toContain('FolioleCompanionWebViewAutomationTest#recoversPairingAndInitialSync');
-    expect(extended).toContain('"pairingPath":"existing"');
+    expect(extended).toContain('args.assertFixed();');
+    expect(extended).toContain('credentialRepairRequired: false');
+    expect(extended).toContain('existingPairing: true');
+    expect(extended).toContain('readiness.syncGroupCredentialsPresent === true');
+    expect(extended).toContain('readiness.syncGroupRemotePeerFingerprint');
+    expect(extended).toContain("args.protectData('backup'");
+    expect(extended).toContain('runMacosA5ExistingSyncPreflight');
+    expect(extended).toContain('proveMacosA5ExistingSyncContinuation');
     expect(source).not.toContain('process.argv[3]');
   });
 

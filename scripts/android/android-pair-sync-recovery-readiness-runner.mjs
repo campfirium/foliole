@@ -14,6 +14,7 @@ import {
 
 const execFileAsync = promisify(execFile);
 const PAIRING_PREFS = 'shared_prefs/foliole_companion_pairing.xml';
+const SYNC_GROUP_OUTBOUND_PREFS = 'shared_prefs/foliole_sync_group_outbound_peers.xml';
 const EMPTY_SHA256 = createHash('sha256').update('').digest('hex');
 const PAIRING_REQUIRED_KEYS = ['device_id', 'device_secret', 'device_secret_iv'];
 
@@ -87,18 +88,51 @@ export async function inspectPairingPreferences(options, run = execFileAsync) {
   };
 }
 
+export async function inspectSyncGroupOutboundPreferences(options, run = execFileAsync) {
+  const backup = `${SYNC_GROUP_OUTBOUND_PREFS}.bak`;
+  const countScript = quoteAdbShellScript(
+    `if test -f ${SYNC_GROUP_OUTBOUND_PREFS}; then grep -c '<string name=' ${SYNC_GROUP_OUTBOUND_PREFS}; `
+      + `elif test -f ${backup}; then grep -c '<string name=' ${backup}; else printf '0\\n'; fi`
+  );
+  const countResult = await run(options.adb, [
+    '-s', options.serial, 'shell', 'run-as', options.appId, 'sh', '-c', countScript
+  ], { encoding: 'utf8', timeout: 30_000 });
+  const count = Number.parseInt(countResult.stdout.trim(), 10) || 0;
+  const hashScript = quoteAdbShellScript(
+    `if test -f ${SYNC_GROUP_OUTBOUND_PREFS}; then sed -n 's@.*<string name="\\([^"]*\\)">.*@\\1@p' `
+      + `${SYNC_GROUP_OUTBOUND_PREFS}; elif test -f ${backup}; then sed -n `
+      + `'s@.*<string name="\\([^"]*\\)">.*@\\1@p' ${backup}; fi | head -n 1 | tr -d '\\n' | sha256sum`
+  );
+  const hashResult = count === 1 ? await run(options.adb, [
+    '-s', options.serial, 'shell', 'run-as', options.appId, 'sh', '-c', hashScript
+  ], { encoding: 'utf8', timeout: 30_000 }) : { stdout: '' };
+  const hash = /^([0-9a-f]{64})\b/mu.exec(hashResult.stdout)?.[1] ?? null;
+  return {
+    syncGroupCredentialsPresent: count > 0,
+    syncGroupPeerConflict: count > 1,
+    syncGroupRemotePeerFingerprint: hash && hash !== EMPTY_SHA256 ? hash.slice(0, 16) : null
+  };
+}
+
 export async function runPairSyncRecoveryReadiness(options) {
-  const [snapshot, pairing] = await Promise.all([
+  const [snapshot, pairing, syncGroup] = await Promise.all([
     collectAndroidDeviceSnapshot({
       ...options, databaseInspector: inspectPairSyncRecoveryWorkspace, includeEvents: false,
       tables: ['nodes', 'sync_object_state', 'companion_meta']
     }),
-    inspectPairingPreferences(options)
+    inspectPairingPreferences(options),
+    inspectSyncGroupOutboundPreferences(options)
   ]);
-  return pairSyncRecoveryReadiness(
-    snapshot, pairing.pairingCredentialsPresent, pairing.remotePeerFingerprint,
-    pairing.pairingPeerConflict, pairing.storedDeviceFingerprint
-  );
+  const remotePeerPendingDeliveryCount = snapshot.database?.inspection
+    ?.pendingDeliveryCountsByPeerFingerprint?.[syncGroup.syncGroupRemotePeerFingerprint] ?? 0;
+  return {
+    ...pairSyncRecoveryReadiness(
+      snapshot, pairing.pairingCredentialsPresent, pairing.remotePeerFingerprint,
+      pairing.pairingPeerConflict, pairing.storedDeviceFingerprint
+    ),
+    ...syncGroup,
+    syncGroupRemotePeerPendingDeliveryCount: remotePeerPendingDeliveryCount
+  };
 }
 
 async function main() {

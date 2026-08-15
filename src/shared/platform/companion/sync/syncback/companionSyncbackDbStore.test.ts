@@ -59,6 +59,24 @@ it('selects only supported local state through the shared macOS payload contract
   ]);
 });
 
+it('pushes an alternative under a deleted node as a tombstone', async () => {
+  const deletedAt = '2026-07-21T00:00:00.000Z';
+  fake.stateRows = [stateRow('node_text_alternative', 'alternative-hash', 7, 'alternative-1')];
+  fake.alternativeNodeDeletionRows = [{ deleted_at: deletedAt }];
+
+  await expect(createCompanionSyncbackDbStore(fake)
+    .loadStateChanges('desktop-peer', null, 20)).resolves.toEqual([
+    expect.objectContaining({
+      deleted_at: deletedAt,
+      object_id: 'alternative-1',
+      object_type: 'node_text_alternative',
+      payload_json: null
+    })
+  ]);
+  expect(CONTRACT.sql.state).toContain("'node_text_alternative'");
+  expect(fake.queries).toContainEqual([CONTRACT.sql.alternativeNodeDeletion, ['alternative-1']]);
+});
+
 it('loads local node versions with shared ordering and ancestor semantics', async () => {
   fake.meta.set('device_id', 'ios-device');
   fake.nodeRows = [{
@@ -121,7 +139,7 @@ it('persists cursors and saves valid acknowledgements atomically', async () => {
 });
 
 function stateRow(
-  objectType: 'node_open_state' | 'node_reading' | 'node_review' | 'setting',
+  objectType: 'node_open_state' | 'node_reading' | 'node_review' | 'node_text_alternative' | 'setting',
   contentHash: string,
   stateSeq: number,
   objectId = 'node-1'
@@ -162,6 +180,7 @@ class FakeDbPort implements DbPort {
   readonly meta = new Map<string, string>();
   readonly queries: Array<[string, DbParams]> = [];
   acks: Array<{ clientOpId: string; objectId: string; objectType: string }> = [];
+  alternativeNodeDeletionRows: DbRow[] = [];
   failClientOpId: string | null = null;
   nodeParents = new Map<string, string>();
   nodeRows: DbRow[] = [];
@@ -179,6 +198,7 @@ class FakeDbPort implements DbPort {
       return (value === undefined ? [] : [{ value }]) as unknown as T[];
     }
     if (sql === CONTRACT.sql.nodeVersions) return this.nodeRows as T[];
+    if (sql === CONTRACT.sql.alternativeNodeDeletion) return this.alternativeNodeDeletionRows as T[];
     if (sql === CONTRACT.sql.nodeVersionParent) {
       const parentVersionId = this.nodeParents.get(String(params[0]));
       return (parentVersionId ? [{ parent_version_id: parentVersionId }] : []) as unknown as T[];

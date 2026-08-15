@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
+import type { CompanionWorkspaceSyncTarget } from '../shared/platform/companion/network/companionWorkspaceEndpoint';
 import type { CompanionDesktopSyncResult } from '../shared/platform/companionDesktopSyncObjects';
 
 const syncObjectsMock = vi.hoisted(() => ({
@@ -16,7 +17,9 @@ const workspaceSyncMock = vi.hoisted(() => ({
   recordCompanionWorkspaceSyncEvent: vi.fn(),
   removeCompanionWorkspaceSyncRememberedTarget: vi.fn(),
   resolveReachableCompanionWorkspaceSyncEndpoint: vi.fn(async (endpointUrl: string) => endpointUrl),
-  resolveReachableCompanionWorkspaceSyncEndpoints: vi.fn(async (endpointUrl: string) => [{ endpointUrl }]),
+  resolveReachableCompanionWorkspaceSyncEndpoints: vi.fn(
+    async (endpointUrl: string): Promise<CompanionWorkspaceSyncTarget[]> => [{ endpointUrl }]
+  ),
   saveCompanionSyncOnboardingStatus: vi.fn(),
   saveCompanionWorkspaceSyncEndpoint: vi.fn()
 }));
@@ -162,5 +165,27 @@ describe('companion sync run owner', () => {
     await Promise.all([autoSync, manualSync]);
     expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledTimes(1);
     expect(countRunEvents()).toBe(2);
+  });
+
+  it('runs immediate sync through the discovered active group member instead of the remembered target', async () => {
+    const { createWorkspaceSnapshotActions } = await import('./companionWorkspaceSyncActions');
+    workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoints.mockResolvedValueOnce([{
+      deviceId: 'Maci', endpointUrl: 'http://192.168.1.20:38641', groupId: 'group-1'
+    }]);
+    syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValueOnce(syncResult());
+    const actions = createWorkspaceSnapshotActions({
+      setError: vi.fn(), setReadableArticle: vi.fn(), setState: vi.fn(),
+      setSyncConflictCount: vi.fn(), setSyncProgress: vi.fn(), setStatus: vi.fn(),
+      state: syncState()
+    });
+
+    await actions.pullFromDesktop('http://remembered:38641');
+
+    expect(workspaceSyncMock.bindCompanionWorkspaceSyncTarget).toHaveBeenCalledWith({
+      deviceId: 'Maci', endpointUrl: 'http://192.168.1.20:38641', groupId: 'group-1'
+    });
+    expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledWith(
+      'http://192.168.1.20:38641', expect.any(Object)
+    );
   });
 });

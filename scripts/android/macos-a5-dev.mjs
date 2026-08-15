@@ -205,7 +205,10 @@ export async function runMacosA5Action(action, repoRoot = process.cwd()) {
     }
     const productArgs = {
       assertFixed: () => assertFixedA5(paths), build: () => build(paths), buildIdentity: captureIdentity,
-      checked, env: macosA5GradleEnv(), execute, paths, serial: A5_SERIAL
+      checked, env: macosA5GradleEnv(), execute, paths,
+      protectData: (mode, manifest, backupRoot) => protectData(
+        paths, macosA5GradleEnv(), mode, manifest, backupRoot
+      ), serial: A5_SERIAL
     };
     if (action === 'pair-sync') await runMacosA5PairSyncEntry(productArgs);
     if (action === 'sync-existing') await runMacosA5ExistingSyncEntry(productArgs);

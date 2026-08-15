@@ -52,18 +52,26 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
     `INSERT INTO sync_group_member_departures SELECT group_id, device_id, authorized_by_device_id,
        authorization_id, left_at FROM source.sync_group_member_departures
      WHERE group_id IN (SELECT group_id FROM sync_groups)`,
-    `INSERT INTO sync_object_state SELECT object_type, object_id, state_seq, content_hash, updated_at, deleted_at
-     FROM source.sync_object_state WHERE state_seq > ? AND state_seq <= ? AND object_type IN
+    `INSERT INTO sync_object_state SELECT state.object_type, state.object_id, state.state_seq,
+       state.content_hash, state.updated_at,
+       CASE WHEN state.object_type = 'node_text_alternative' THEN COALESCE(state.deleted_at,
+         (SELECT node.deleted_at FROM source.node_text_alternatives alternative
+          JOIN source.nodes node ON node.id = alternative.node_id
+          WHERE alternative.alternative_id = state.object_id)) ELSE state.deleted_at END
+     FROM source.sync_object_state state WHERE state.state_seq > ? AND state.state_seq <= ? AND state.object_type IN
        ('attachment','external_document','external_folder','import_source','node','node_open_state','node_reading',
         'node_review','node_text_alternative','pdf_page_text','setting','view_state')
-       AND (object_type != 'node' OR deleted_at IS NOT NULL OR EXISTS
-         (SELECT 1 FROM source.nodes WHERE id = source.sync_object_state.object_id))
-       AND (object_type NOT IN ('node_reading','node_review') OR EXISTS
-         (SELECT 1 FROM source.nodes WHERE id = source.sync_object_state.object_id))
+       AND (state.object_type != 'node' OR state.deleted_at IS NOT NULL OR EXISTS
+         (SELECT 1 FROM source.nodes WHERE id = state.object_id))
+       AND (state.object_type NOT IN ('node_reading','node_review') OR EXISTS
+         (SELECT 1 FROM source.nodes WHERE id = state.object_id))
        `,
     `INSERT OR IGNORE INTO sync_object_state SELECT s.object_type, s.object_id, s.state_seq, s.content_hash, s.updated_at, s.deleted_at
      FROM source.sync_object_state s WHERE s.object_type = 'node' AND s.object_id IN
-       (SELECT object_id FROM sync_object_state WHERE object_type IN ('node_reading','node_review'))`,
+       (SELECT object_id FROM sync_object_state WHERE object_type IN ('node_reading','node_review')
+        UNION SELECT alternative.node_id FROM source.node_text_alternatives alternative
+          JOIN sync_object_state selected ON selected.object_type = 'node_text_alternative'
+            AND selected.object_id = alternative.alternative_id)`,
     `DELETE FROM sync_object_state WHERE object_type NOT IN ('external_document','node') AND NOT EXISTS
       (SELECT 1 FROM sync_objects o WHERE o.object_type = sync_object_state.object_type AND o.object_id = sync_object_state.object_id)`,
     `INSERT INTO nodes (${nodeColumns}) SELECT ${nodeColumns} FROM source.nodes
