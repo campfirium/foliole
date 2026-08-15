@@ -92,7 +92,18 @@ it('binds the delete notice to the same exact workspace undo entry', async () =>
   vi.mocked(syncRestoreNodesToRuntime).mockResolvedValue({ restoredNodeIds: ['node-1'], skippedConflicts: [] });
   await actions.deleteNode('node-1');
   const entryId = harness.getState().appActionHistory.undoStack[0]?.id;
-  const noticeAction = vi.mocked(showAppRuntimeNotice).mock.calls.at(-1)?.[2];
+  const noticeCall = vi.mocked(showAppRuntimeNotice).mock.calls.at(-1);
+  const noticeAction = noticeCall?.[2];
+
+  expect(noticeCall).toMatchObject([
+    'Topic moved to Trash',
+    'success',
+    { label: 'Undo' },
+    {
+      durationMs: 8000,
+      presentation: 'trash-row'
+    }
+  ]);
 
   noticeAction?.onSelect();
   await vi.waitFor(() => expect(harness.getState().trashedNodeIds).not.toContain('node-1'));

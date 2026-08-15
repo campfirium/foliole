@@ -8,6 +8,7 @@ interface NodeTreeRowFrameProps {
   isDragDisabled: boolean;
   isDropTarget: boolean;
   nodeId: string;
+  rowAction?: ReactNode;
   onDragEnd?: () => void;
   onDragEnter?: (nodeId: string, event: ReactDragEvent<HTMLDivElement>) => void;
   onDragLeave?: (nodeId: string, event: ReactDragEvent<HTMLDivElement>) => void;
@@ -18,6 +19,7 @@ interface NodeTreeRowFrameProps {
 
 function resolveNodeRowFrameClassName(isDropTarget: boolean, dropIntent: NodeTreeRowFrameProps['dropIntent']) {
   return cn(
+    'relative',
     isDropTarget && dropIntent === 'child' && 'border border-border-strong bg-foreground/[0.06]',
     isDropTarget && dropIntent === 'before' && 'border-t-2 border-border-strong',
     isDropTarget && dropIntent === 'after' && 'border-b-2 border-border-strong'
@@ -37,6 +39,11 @@ export function NodeTreeRowFrame(props: NodeTreeRowFrameProps) {
       onDrop={props.onDrop ? (event) => props.onDrop?.(props.nodeId, event) : undefined}
     >
       {props.children}
+      {props.rowAction ? (
+        <div className="absolute right-1 top-1/2 -translate-y-1/2" data-node-row-action="true">
+          {props.rowAction}
+        </div>
+      ) : null}
     </div>
   );
 }

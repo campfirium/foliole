@@ -2,13 +2,15 @@ import { cn } from '../../../shared/lib/utils';
 
 export function resolveNodeRowButtonClassName(args: {
   depth: number;
+  hasRowAction?: boolean;
   isBulkSelectionActive: boolean;
   isDerived: boolean;
   isHighlighted: boolean;
   isSelected: boolean;
 }) {
   return cn(
-    'gap-0 overflow-hidden pl-[calc(0.4rem+var(--node-depth,0)*1rem)] pr-[0.4rem] leading-5',
+    'gap-0 overflow-hidden pl-[calc(0.4rem+var(--node-depth,0)*1rem)] leading-5',
+    args.hasRowAction ? 'pr-10' : 'pr-[0.4rem]',
     'text-foreground',
     'font-normal',
     '[&[data-node-visibility=muted]_.node-tree-row-text]:opacity-[var(--node-muted-opacity,1)]',

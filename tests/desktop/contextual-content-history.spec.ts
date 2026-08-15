@@ -209,11 +209,18 @@ test('keeps create, rename, move, and delete in one exact workspace history', as
 
   await desktopWindow.evaluate(async (nodeId) => window.__folioleWorkspaceDebug?.deleteNode?.(nodeId), createdId);
   await expect.poll(() => collectNode(desktopWindow, createdId)).toMatchObject({ trashed: true });
-  const notice = desktopWindow.getByText('Moved to Trash.', { exact: true });
-  await expect(notice).toBeVisible();
-  await notice.locator('..').getByRole('button', { name: 'Undo', exact: true }).click();
+  const undoMoveToTrash = desktopWindow.getByRole('button', { name: 'Restore last deleted item' });
+  await expect(undoMoveToTrash).toBeVisible();
+  await expect(desktopWindow.getByRole('status')).toHaveClass(/sr-only/);
+  await expect(desktopWindow.getByTestId('app-runtime-notice')).toHaveCount(0);
+  await undoMoveToTrash.hover();
+  await expect(desktopWindow.getByRole('tooltip')).toContainText('Restore last deleted item');
+  await desktopWindow.screenshot({
+    path: path.join(EVIDENCE_ROOT, `${process.platform}-trash-contextual-undo-hidden-native.png`)
+  });
+  await undoMoveToTrash.click();
   await expect.poll(() => collectNode(desktopWindow, createdId)).toMatchObject({ trashed: false });
-  await expect(notice).toBeHidden();
+  await expect(undoMoveToTrash).toBeHidden();
 
   const historyBeforeControl = await readStructureHistory(desktopWindow);
   expect(await desktopWindow.evaluate(() =>

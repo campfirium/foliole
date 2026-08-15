@@ -7,10 +7,17 @@ export interface AppRuntimeNoticeAction {
   onSelect: () => void;
 }
 
+export interface AppRuntimeNoticeOptions {
+  durationMs?: number;
+  presentation?: 'overlay' | 'trash-row';
+}
+
 interface AppRuntimeNoticeState {
   action?: AppRuntimeNoticeAction;
+  durationMs?: number;
   id: number;
   message: string;
+  presentation?: 'overlay' | 'trash-row';
   tone: AppRuntimeNoticeTone;
 }
 
@@ -34,7 +41,8 @@ function getAppRuntimeNoticeSnapshot() {
 export function showAppRuntimeNotice(
   message: string,
   tone: AppRuntimeNoticeTone = 'error',
-  action?: AppRuntimeNoticeAction
+  action?: AppRuntimeNoticeAction,
+  options?: AppRuntimeNoticeOptions
 ) {
   const trimmedMessage = message.trim();
   if (!trimmedMessage) {
@@ -44,7 +52,9 @@ export function showAppRuntimeNotice(
   currentNotice = {
     id,
     ...(action ? { action } : {}),
+    ...(options?.durationMs ? { durationMs: options.durationMs } : {}),
     message: trimmedMessage,
+    ...(options?.presentation ? { presentation: options.presentation } : {}),
     tone
   };
   nextNoticeId += 1;

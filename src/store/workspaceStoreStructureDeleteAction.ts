@@ -10,6 +10,27 @@ type WorkspaceSet = (
   partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)
 ) => void;
 
+const TRASH_NOTICE_DURATION_MS = 8000;
+
+function getTrashNoticeMessage(kind: 'folder' | 'topic') {
+  return `${kind === 'folder' ? 'Folder' : 'Topic'} moved to Trash`;
+}
+
+function showTrashUndoNotice(entry: NonNullable<ReturnType<typeof createStructureDeleteEntry>>, get: () => WorkspaceState) {
+  showAppRuntimeNotice(
+    getTrashNoticeMessage(entry.kind),
+    'success',
+    {
+      label: 'Undo',
+      onSelect: () => { get().undoWorkspaceAction(entry.id); }
+    },
+    {
+      durationMs: TRASH_NOTICE_DURATION_MS,
+      presentation: 'trash-row'
+    }
+  );
+}
+
 export function createDeleteNodesAction(
   set: WorkspaceSet,
   runtimeHandlers: TrashRuntimeHandlers,
@@ -56,10 +77,7 @@ export function createDeleteNodesAction(
     });
     const committedEntry = historyEntry as ReturnType<typeof createStructureDeleteEntry> | null;
     if (committedEntry && get) {
-      showAppRuntimeNotice('Moved to Trash.', 'success', {
-        label: 'Undo',
-        onSelect: () => { get().undoWorkspaceAction(committedEntry.id); }
-      });
+      showTrashUndoNotice(committedEntry, get);
     }
   };
 }

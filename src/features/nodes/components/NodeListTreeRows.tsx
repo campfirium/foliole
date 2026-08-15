@@ -20,6 +20,7 @@ import type { NodeSelectModifiers } from './NodeListTreeState';
 import { NodeTreeRow as NodeTreeRowItem } from './NodeTreeRow';
 import { resolveNodeTreeRowIconKind, resolveNodeTreeRowIconState, type NodeTreeRowIconKind } from './NodeTreeRowIconModel';
 import { TrashListRows } from './TrashListRows';
+import { TrashUndoAction } from './TrashUndoAction';
 
 interface NodeListRowsProps {
   activeNodeId: string | null;
@@ -85,6 +86,7 @@ function renderNodeListRow(
       showIcon={false}
       showLeafChevronPlaceholder={false}
       rowSpacing={props.rowSpacing}
+      {...(rowModel.isTrashRoot ? { rowAction: <TrashUndoAction /> } : {})}
       onContextMenu={props.onContextMenu}
       onDragEnd={props.drag.onDragEnd}
       onDragEnter={props.drag.onDragEnterNode}

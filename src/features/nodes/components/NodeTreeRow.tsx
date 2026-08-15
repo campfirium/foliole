@@ -40,6 +40,7 @@ interface NodeTreeRowProps {
   labelTooltipText?: string;
   nodeId: string;
   rowSpacing: number;
+  rowAction?: ReactNode;
   secondaryLabel?: ReactNode;
   trailingLabelContent?: ReactNode;
   onDragEnd?: () => void;
@@ -67,6 +68,7 @@ function renderNodeTreeRowButton(props: {
   descendantCount: number;
   depth: number;
   hasChildren: boolean;
+  hasRowAction: boolean;
   isActive: boolean;
   isBulkSelectionActive: boolean;
   isCollapsed: boolean;
@@ -106,6 +108,7 @@ function NodeTreeRowImpl(props: NodeTreeRowProps) {
       isDragDisabled={props.isDragDisabled ?? false}
       isDropTarget={props.isDropTarget ?? false}
       nodeId={props.nodeId}
+      {...(props.rowAction !== undefined ? { rowAction: props.rowAction } : {})}
       {...(props.onDragEnd ? { onDragEnd: props.onDragEnd } : {})}
       {...(props.onDragEnter ? { onDragEnter: props.onDragEnter } : {})}
       {...(props.onDragLeave ? { onDragLeave: props.onDragLeave } : {})}
@@ -117,6 +120,7 @@ function NodeTreeRowImpl(props: NodeTreeRowProps) {
         descendantCount: props.descendantCount ?? 0,
         depth: props.depth,
         hasChildren: props.hasChildren,
+        hasRowAction: props.rowAction !== undefined,
         isActive: props.isActive,
         isBulkSelectionActive: props.isBulkSelectionActive ?? false,
         isCollapsed: props.isCollapsed,
@@ -174,6 +178,7 @@ function areNodeTreeRowPropsEqual(previous: NodeTreeRowProps, next: NodeTreeRowP
     previous.showIcon === next.showIcon &&
     previous.showLeafChevronPlaceholder === next.showLeafChevronPlaceholder &&
     previous.rowSpacing === next.rowSpacing &&
+    previous.rowAction === next.rowAction &&
     previous.secondaryLabel === next.secondaryLabel &&
     previous.trailingLabelContent === next.trailingLabelContent &&
     previous.onContextMenu === next.onContextMenu &&
