@@ -26,7 +26,7 @@ it('keeps Android approval active while the fixed Windows recovery runs', async 
   expect(writeWindowsLog).toHaveBeenCalledWith(
     path.join('/repo', '.tmp/artifacts/a5-sync-group-approval/windows-control.log'), 'windows-complete\n'
   );
-  expect(approvalSource).toContain('const reuseInstalledMain = await installedMainMatches');
+  expect(approvalSource).toContain('const reuseInstalledMain = await mainMatches');
   expect(approvalSource).toContain('if (!reuseInstalledMain)');
   expect(approvalSource).not.toContain('protectData(');
 });

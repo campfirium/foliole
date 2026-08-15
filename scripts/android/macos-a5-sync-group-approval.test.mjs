@@ -116,7 +116,7 @@ it('restores the provider only after approval instrumentation is removed', async
     else if (args.includes('force-stop')) events.push('provider-stopped');
     return { code: 0, output: '' };
   };
-  await runMacosA5SyncGroupApproval({ execute, instrumentationExecute: async () => ({
+  await runMacosA5SyncGroupApproval({ assertFixed: () => {}, execute, instrumentationExecute: async () => ({
     code: 0,
     output: `INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReceipt=${JSON.stringify(receipt)}\nINSTRUMENTATION_CODE: -1`
   }), mainMatches: async () => true, prepare: () => {}, repoRoot: process.cwd(),

@@ -89,10 +89,11 @@ export async function stopMacosA5SyncGroupApprovalProvider({ execute, paths, env
 export async function runMacosA5SyncGroupApproval({ execute, onProviderStopped = async () => {},
   onReady = async () => {}, prepare = build, repoRoot,
   allowControlledCancellation = false, instrumentationExecute = execute,
-  mainMatches = installedMainMatches, startProvider = startMacosA5SyncGroupApprovalProvider }) {
+  assertFixed = assertFixedA5, mainMatches = installedMainMatches,
+  startProvider = startMacosA5SyncGroupApprovalProvider }) {
   const paths = macosA5Paths(repoRoot);
   const env = macosA5GradleEnv();
-  assertFixedA5(paths);
+  assertFixed(paths);
   prepare(paths);
   const reuseInstalledMain = await mainMatches({ execute, paths, env });
   const evidenceRoot = path.join(repoRoot, '.tmp/artifacts/a5-sync-group-approval');
