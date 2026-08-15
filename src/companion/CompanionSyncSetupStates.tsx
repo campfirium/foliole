@@ -93,16 +93,12 @@ export function EmptyDiscoveryState(props: {
 }) {
   const t = useTranslation();
   return (
-    <div className="text-center">
-      <h2 className="text-xl font-semibold leading-tight text-foreground">{t('companion.syncSetup.title')}</h2>
-      <p className="mx-auto mt-4 max-w-sm text-sm leading-6 text-accent">
-        {t('companion.syncSetup.instructions')}
-      </p>
-      <div className="mt-6">
+    <SyncStatusCard detail={t('companion.syncSetup.instructions')} title={t('companion.syncSetup.title')}>
+      <div>
         <PrimaryAction loading={props.disabled} loadingLabel={t('companion.syncSetup.looking')} onClick={props.onTryAgain} testId="companion-sync-discover">
           {t('companion.syncSetup.connect')}
         </PrimaryAction>
       </div>
-    </div>
+    </SyncStatusCard>
   );
 }

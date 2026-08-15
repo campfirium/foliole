@@ -1,6 +1,6 @@
 export const EN_COMPANION_SETTINGS_TRANSLATIONS = {
   'companion.settings.sync.title': 'Sync',
-  'companion.settings.sync.detail': 'Connect or refresh this device.',
+  'companion.settings.sync.detail': 'Sync content and view sync status.',
   'companion.settings.device.title': 'Device',
   'companion.settings.device.detail': 'Device details are not available yet.',
   'companion.settings.storage.title': 'Storage',

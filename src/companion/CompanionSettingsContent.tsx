@@ -1,4 +1,4 @@
-import { Bug, Database, Palette, RefreshCw, Smartphone, type LucideIcon } from 'lucide-react';
+import { Bug, Database, Palette, RefreshCw, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
@@ -63,13 +63,12 @@ function DataAppearanceSettingsSection(props: {
 export function CompanionSettingsList(props: {
   onOpenAppearance(): void;
   onOpenDebug(): void;
-  onOpenDevice(): void;
   onOpenStorage(): void;
   onOpenSync(): void;
   showStorage: boolean;
 }) {
   const t = useTranslation();
-  const sectionCount = props.showStorage ? 5 : 4;
+  const sectionCount = props.showStorage ? 4 : 3;
   return (
     <section className="px-1 pb-4 pt-3">
       <CompanionScreenHeader
@@ -86,12 +85,6 @@ export function CompanionSettingsList(props: {
             onClick={props.onOpenSync}
             testId="companion-settings-sync"
             title={t('companion.settings.sync.title')}
-          />
-          <SettingsListItem
-            Icon={Smartphone}
-            detail={t('companion.settings.device.detail')}
-            onClick={props.onOpenDevice}
-            title={t('companion.settings.device.title')}
           />
         </SettingsListSection>
         <DataAppearanceSettingsSection

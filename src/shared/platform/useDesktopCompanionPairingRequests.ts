@@ -122,7 +122,7 @@ function useToggleCompanionSyncAction(
       setError(null);
       return nextOverview;
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : 'Failed to update device sync availability.');
+      setError(actionError instanceof Error ? actionError.message : 'Could not update Sync Group availability.');
       throw actionError;
     } finally {
       setPendingActionId(null);

@@ -68,13 +68,14 @@ describe('CompanionSyncPanel', () => {
 
     expect(screen.queryByText('Handoff reminders')).not.toBeInTheDocument();
     expect(screen.queryByText('Set up sync')).not.toBeInTheDocument();
-    expect(screen.getByText('Bring content from another device')).toBeInTheDocument();
-    expect(screen.getByText(/device that already has your content/i)).toBeInTheDocument();
+    expect(screen.getByText('Join a Sync Group')).toBeInTheDocument();
+    expect(screen.getByText(/open Sync Group on an active device/i)).toBeInTheDocument();
     expect(screen.queryByDisplayValue('http://10.0.2.2:38641')).not.toBeInTheDocument();
     expect(screen.queryByText('This device')).not.toBeInTheDocument();
     expect(screen.queryByText('Sync now')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Pause Sync' })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Connect another device' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Join Sync Group' }));
 
     await waitFor(() => {
       expect(props.onCheckDesktop).toHaveBeenCalledWith('http://10.0.2.2:38641');
@@ -91,11 +92,11 @@ describe('CompanionSyncPanel pairing states', () => {
     renderWithLocalization(<CompanionSyncPanel {...props} pairingStatus="checking-desktop" />);
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Looking for another device' })).toBeInTheDocument();
-    expect(screen.getByText(/open Device sync on the desktop/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Looking for a Sync Group' })).toBeInTheDocument();
+    expect(screen.getByText(/open Sync Group on an active member/)).toBeInTheDocument();
     expect(screen.getByText('Searching...')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Connect another device' })).not.toBeInTheDocument();
-    expect(screen.queryByText('Bring content from another device')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Join Sync Group' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Join a Sync Group')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
 
@@ -126,8 +127,8 @@ describe('CompanionSyncPanel discovery list', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Found 1 device' })).toBeInTheDocument();
-    expect(screen.getByText('Connect to this desktop to bring your topics onto this device.')).toBeInTheDocument();
-    expect(screen.queryByText('Bring content from another device')).not.toBeInTheDocument();
+    expect(screen.getByText('Request to join this Sync Group.')).toBeInTheDocument();
+    expect(screen.queryByText('Join a Sync Group')).not.toBeInTheDocument();
     expect(screen.queryByText('Set up sync')).not.toBeInTheDocument();
     expect(screen.queryByText('Choose the device to pair and sync with.')).not.toBeInTheDocument();
     expect(screen.getByText('Foliole Desktop on ZEPHU-PC')).toBeInTheDocument();
@@ -222,7 +223,7 @@ describe('CompanionSyncPanel approval states', () => {
 
     renderWithLocalization(<CompanionSyncPanel {...props} />);
 
-    expect(screen.getByText(/Asking the desktop to allow this device/i)).toBeInTheDocument();
+    expect(screen.getByText(/Asking a Sync Group member to approve this device/i)).toBeInTheDocument();
     expect(screen.getByText(/Waiting for approval\.\.\./i)).toBeInTheDocument();
     expect(screen.getByText(/s left/i)).toBeInTheDocument();
 

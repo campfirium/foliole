@@ -80,7 +80,7 @@ describe('CompanionSyncContent', () => {
 
     render(<TestSyncContent workspaceSync={workspaceSync} />);
 
-    expect(screen.getByRole('button', { name: 'Connect another device' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Join Sync Group' })).toBeInTheDocument();
     expect(workspaceSync.checkDesktop).not.toHaveBeenCalled();
   });
 

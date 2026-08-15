@@ -1,16 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import type { SyncGroupPayload } from '../../lib/platform/syncGroupContract';
+import { resolveSyncGroupDisplayDeviceName, type SyncGroupPayload } from '../../lib/platform/syncGroupContract';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { leaveCompanionSyncGroup } from '../shared/platform/companion/sync/syncGroupDeparture';
 import {
-  approveCompanionSyncGroupJoinRequest,
   loadCompanionSyncGroupProviderState,
-  rejectCompanionSyncGroupJoinRequest
+  setCompanionSyncPaused
 } from '../shared/platform/companion/sync/syncGroupProvider';
 import type { CompanionSyncGroupProviderState } from '../shared/platform/companionWorkspaceSyncPluginTypes';
 
-function useJoinRequests() {
+function useSyncGroupProviderState() {
   const [state, setState] = useState<CompanionSyncGroupProviderState | null>(null);
   const refresh = useCallback(() => {
     void loadCompanionSyncGroupProviderState().then(setState).catch(() => setState(null));
@@ -38,84 +37,93 @@ function LeaveSyncGroup() {
       setErrorCode(error instanceof Error ? error.message : 'sync_group_departure_failed');
     }
   }
-  if (!confirming) return (
-    <button className="w-full rounded-xl border border-error/60 px-3 py-2 text-sm font-semibold text-error"
-      data-testid="companion-sync-group-leave" onClick={() => setConfirming(true)} type="button">
-      {t('companion.sync.leave.button')}
-    </button>
-  );
   return (
-    <div className="rounded-xl border border-error/40 px-4 py-3">
-      <p className="text-sm leading-6 text-companion-text-secondary">{t('companion.sync.leave.description')}</p>
-      <div className="mt-3 flex gap-2">
-        <button className="flex-1 rounded-xl border border-companion-divider px-3 py-2 text-sm font-semibold"
-          disabled={leaving} onClick={() => setConfirming(false)} type="button">{t('common.cancel')}</button>
-        <button className="flex-1 rounded-xl border border-error/60 px-3 py-2 text-sm font-semibold text-error"
-          data-testid="companion-sync-group-leave-confirm" disabled={leaving}
-          onClick={() => void leave()} type="button">
-          {t(leaving ? 'companion.sync.leave.progress' : 'companion.sync.leave.button')}
+    <div className={confirming ? 'basis-full' : 'shrink-0'}>
+      {!confirming ? (
+        <button className="min-h-11 touch-manipulation rounded-md px-2 py-2 text-sm font-medium text-companion-text-secondary transition-colors active:bg-companion-subtle/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-companion-accent"
+          data-testid="companion-sync-group-leave" onClick={() => setConfirming(true)} type="button">
+          {t('companion.sync.leave.button')}
         </button>
-      </div>
-      {errorCode ? <p className="mt-3 text-sm text-error" data-error-code={errorCode}
-        data-testid="companion-sync-group-leave-error">{t('companion.sync.leave.error')}</p> : null}
+      ) : (
+        <div className="border-t border-error/30 py-3">
+          <p className="text-sm leading-6 text-companion-text-secondary">{t('companion.sync.leave.description')}</p>
+          <div className="mt-3 flex gap-2">
+            <button className="min-h-11 flex-1 touch-manipulation rounded-md border border-companion-divider px-3 py-2 text-sm font-semibold"
+              disabled={leaving} onClick={() => setConfirming(false)} type="button">{t('common.cancel')}</button>
+            <button className="min-h-11 flex-1 touch-manipulation rounded-md border border-error/60 px-3 py-2 text-sm font-semibold text-error"
+              data-testid="companion-sync-group-leave-confirm" disabled={leaving}
+              onClick={() => void leave()} type="button">
+              {t(leaving ? 'companion.sync.leave.progress' : 'companion.sync.leave.button')}
+            </button>
+          </div>
+          {errorCode ? <p className="mt-3 text-sm text-error" data-error-code={errorCode}
+            data-testid="companion-sync-group-leave-error">{t('companion.sync.leave.error')}</p> : null}
+        </div>
+      )}
     </div>
   );
 }
 
+const PLATFORM_LABELS: Record<string, string> = {
+  android: 'Android', darwin: 'macOS', ios: 'iOS', linux: 'Linux', win32: 'Windows'
+};
+
+function platformFor(kind: string) {
+  const key = Object.keys(PLATFORM_LABELS).find((candidate) => kind.toLowerCase().includes(candidate));
+  return key ? PLATFORM_LABELS[key]! : kind;
+}
+
 function SyncGroupDevices(props: {
   group: SyncGroupPayload;
+  onTogglePause(): void;
+  providerState: CompanionSyncGroupProviderState | null;
 }) {
   const t = useTranslation();
+  const paused = props.providerState?.sync_paused ?? false;
   return (
-    <div className="rounded-xl bg-companion-content px-4 py-3">
-      <p className="text-sm text-companion-text-secondary">{t('companion.sync.devices')}</p>
-      <ul className="mt-2 space-y-2">
-        {props.group.members.map((member) => (
-          <li className="flex items-center justify-between gap-3 text-sm" key={member.device_id}>
-            <span className="font-semibold text-foreground">{member.device_name}</span>
-            <span className="text-companion-text-secondary">
-              {t(member.state === 'active' ? 'companion.sync.member.active' : 'companion.sync.member.settingUp')}
+    <div aria-label={t('companion.sync.devices')} className="ml-4 divide-y divide-companion-divider border-t border-companion-divider pl-4" role="list">
+      {props.group.members.filter((member) => member.state === 'active').map((member) => {
+        const isLocal = member.device_id === props.group.local_device_id;
+        return (
+          <div className="flex min-h-14 items-center justify-between gap-4 py-2.5" key={member.device_id} role="listitem">
+            <span className="flex min-w-0 items-baseline gap-2">
+              <span className="truncate text-sm font-semibold text-foreground">{member.device_name}</span>
+              <span className="shrink-0 text-xs text-companion-text-tertiary">{platformFor(member.device_kind)}</span>
             </span>
-          </li>
-        ))}
-      </ul>
+            {isLocal ? (
+              <button className="min-h-11 shrink-0 touch-manipulation rounded-md px-2 py-2 text-sm font-medium text-companion-text-secondary transition-colors active:bg-companion-subtle/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-companion-accent disabled:opacity-45"
+                data-testid="companion-sync-pause-toggle" disabled={!props.providerState}
+                onClick={props.onTogglePause} type="button">
+                {t(paused ? 'companion.sync.participation.resume' : 'companion.sync.participation.pause')}
+              </button>
+            ) : (
+              <span className="shrink-0 text-sm text-companion-text-secondary">
+                {t('companion.sync.member.active')}
+              </span>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
 export function CompanionSyncGroupRows(props: { group: SyncGroupPayload }) {
   const t = useTranslation();
-  const provider = useJoinRequests();
-  const requests = provider.state?.pending_requests ?? [];
+  const provider = useSyncGroupProviderState();
+  function togglePause() {
+    if (!provider.state) return;
+    void setCompanionSyncPaused(!provider.state.sync_paused).then(provider.refresh);
+  }
   return (
-    <div className="space-y-3">
-      <div className="rounded-xl bg-companion-content px-4 py-3">
-        <p className="text-sm text-companion-text-secondary">{t('companion.sync.group')}</p>
-        <p className="mt-1 text-sm font-semibold text-foreground">{props.group.display_name}</p>
+    <section className="border-y border-companion-divider text-foreground">
+      <div className="flex min-h-14 flex-wrap items-center justify-between gap-x-4">
+        <h2 className="truncate text-base font-semibold text-foreground">
+          {t('settings.companionSync.group.named', { name: resolveSyncGroupDisplayDeviceName(props.group) })}
+        </h2>
+        <LeaveSyncGroup />
       </div>
-      <SyncGroupDevices group={props.group} />
-      {requests.map((request) => (
-        <div className="rounded-xl bg-companion-content px-4 py-3" key={request.pair_request_id}>
-          <p className="text-sm font-semibold text-foreground">{request.device_name}</p>
-          <p className="mt-1 text-sm text-companion-text-secondary">{t('companion.sync.joinRequest.description')}</p>
-          <div className="mt-3 flex gap-2">
-            <button className="flex-1 rounded-xl border border-companion-divider px-3 py-2 text-sm font-semibold"
-              data-testid="companion-sync-group-reject"
-              onClick={() => void rejectCompanionSyncGroupJoinRequest(request.pair_request_id).then(provider.refresh)} type="button">
-              {t('companion.sync.joinRequest.reject')}
-            </button>
-            <button className="flex-1 rounded-xl bg-foreground px-3 py-2 text-sm font-semibold text-companion-content"
-              data-testid="companion-sync-group-approve"
-              onClick={() => void approveCompanionSyncGroupJoinRequest(request.pair_request_id).then(provider.refresh)} type="button">
-              {t('companion.sync.joinRequest.approve')}
-            </button>
-          </div>
-        </div>
-      ))}
-      <LeaveSyncGroup />
-      <p className="px-1 text-xs leading-5 text-companion-text-secondary">
-        {t('companion.sync.provider.foregroundHint')}
-      </p>
-    </div>
+      <SyncGroupDevices group={props.group} onTogglePause={togglePause} providerState={provider.state} />
+    </section>
   );
 }

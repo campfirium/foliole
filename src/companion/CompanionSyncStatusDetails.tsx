@@ -7,6 +7,7 @@ import { AppSpinner } from '../shared/ui';
 
 import { isReportableSyncEvent } from './companionSyncActivityCopy';
 import { CompanionSyncActivityPage } from './CompanionSyncActivityPage';
+import { CompanionSyncGroupOverview } from './CompanionSyncGroupOverview';
 import { CompanionSyncGroupRows } from './CompanionSyncGroupRows';
 import { formatClock, resolveLastSyncRow } from './companionSyncStatusRows';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
@@ -48,7 +49,7 @@ function SettingsRow(props: {
       ? 'text-companion-accent'
       : 'text-foreground';
   return (
-    <div className="rounded-xl bg-companion-content px-4 py-3">
+    <div className="min-h-14 border-b border-companion-divider px-1 py-3 last:border-b-0">
       <div className="flex items-start justify-between gap-3">
         <span className="text-sm font-semibold leading-5 text-foreground">{props.label}</span>
         <span className={`max-w-[52%] shrink-0 break-words text-right text-sm font-semibold leading-5 ${valueClass}`}>
@@ -75,7 +76,7 @@ function SettingsLinkRow(props: {
 }) {
   return (
     <button
-      className="w-full rounded-xl bg-companion-content px-4 py-3 text-left transition active:bg-companion-subtle/80"
+      className="min-h-14 w-full touch-manipulation border-b border-companion-divider px-1 py-3 text-left transition active:bg-companion-subtle/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-companion-accent"
       data-testid={props.testId}
       onClick={props.onClick}
       type="button"
@@ -157,29 +158,51 @@ function SyncOverview(props: SyncStatusDetailsProps) {
   const t = useTranslation();
   const lastSync = resolveLastSyncRow({ ...props, t });
   return (
-    <div className="space-y-3">
-      <SettingsRow
-        detail={lastSync.detail}
-        label={lastSync.label}
-        value={lastSync.value}
-        valueTone={lastSync.valueTone}
-      />
-      {props.syncConflictCount > 0 ? (
-        <SettingsRow label={t('companion.sync.issuesToResolve')} value={`${props.syncConflictCount}`} valueTone="error" />
+    <div className="space-y-5">
+      {!props.syncGroup || props.syncConflictCount > 0 ? (
+        <div className="border-y border-companion-divider">
+          {!props.syncGroup ? (
+            <SettingsRow
+              detail={lastSync.detail}
+              label={lastSync.label}
+              value={lastSync.value}
+              valueTone={lastSync.valueTone}
+            />
+          ) : null}
+          {props.syncConflictCount > 0 ? (
+            <SettingsRow label={t('companion.sync.issuesToResolve')} value={`${props.syncConflictCount}`} valueTone="error" />
+          ) : null}
+        </div>
       ) : null}
-      {props.syncGroup ? <CompanionSyncGroupRows group={props.syncGroup} /> : null}
-      <SettingsLinkRow
-        label={t('companion.sync.pairedDevice')}
-        onClick={() => props.onOpenPage('syncConnection')}
-        testId="companion-sync-connection"
-        value={formatPairedDevice(props.pairingState, t)}
-      />
-      <SyncActivitySummary events={props.syncEvents} onOpen={() => props.onOpenPage('syncActivity')} />
+      {props.syncGroup ? (
+        <CompanionSyncGroupOverview
+          group={props.syncGroup}
+          isSyncing={props.status === 'syncing'}
+          onOpen={() => props.onOpenPage('syncGroup')}
+          sourceDeviceId={props.pairingState.remote_peer_id ?? null}
+        />
+      ) : null}
+      {props.syncGroup ? null : (
+        <div className="border-y border-companion-divider">
+          <SettingsLinkRow
+            label={t('companion.sync.pairedDevice')}
+            onClick={() => props.onOpenPage('syncConnection')}
+            testId="companion-sync-connection"
+            value={formatPairedDevice(props.pairingState, t)}
+          />
+        </div>
+      )}
+      <div className="border-y border-companion-divider">
+        <SyncActivitySummary events={props.syncEvents} onOpen={() => props.onOpenPage('syncActivity')} />
+      </div>
     </div>
   );
 }
 
 export function CompanionSyncStatusDetails(props: SyncStatusDetailsProps) {
+  if (props.page === 'syncGroup' && props.syncGroup) {
+    return <CompanionSyncGroupRows group={props.syncGroup} />;
+  }
   if (props.page === 'syncActivity') {
     return <CompanionSyncActivityPage events={props.syncEvents} status={props.status} syncProgress={props.syncProgress} />;
   }

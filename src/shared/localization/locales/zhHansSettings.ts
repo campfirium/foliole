@@ -51,7 +51,7 @@ export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'settings.companionSync.enableDesktop.aria': '启用桌面同步',
   'settings.companionSync.error.open': '无法打开同步。{error}',
   'settings.companionSync.error.desktopUnavailable': '桌面同步不可用',
-  'settings.companionSync.error.devicesUnavailable': '同步设备不可用',
+  'settings.companionSync.error.devicesUnavailable': '同步组不可用',
   'settings.companionSync.connected.title': '已连接设备',
   'settings.companionSync.connected.description': '已批准、可与这台桌面端同步的设备。',
   'settings.companionSync.connected.empty': '0 台设备',

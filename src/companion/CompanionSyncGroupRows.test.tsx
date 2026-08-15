@@ -5,21 +5,22 @@ import { renderWithLocalization } from '../shared/localization/testLocalization'
 
 import { CompanionSyncGroupRows } from './CompanionSyncGroupRows';
 
-const providerMocks = vi.hoisted(() => ({ load: vi.fn() }));
+const providerMocks = vi.hoisted(() => ({ load: vi.fn(), setPaused: vi.fn() }));
 
 vi.mock('../shared/platform/companion/sync/syncGroupProvider', () => ({
-  approveCompanionSyncGroupJoinRequest: vi.fn(),
   loadCompanionSyncGroupProviderState: providerMocks.load,
-  rejectCompanionSyncGroupJoinRequest: vi.fn()
+  setCompanionSyncPaused: providerMocks.setPaused
 }));
 
 beforeEach(() => {
   vi.clearAllMocks();
   const state = {
-    lifecycle_active: true, participating: true, pending_requests: [], port: 38641,
+    lifecycle_active: true, participating: true,
+    pending_requests: [{ device_name: 'Waiting phone', pair_request_id: 'request-2' }], port: 38641,
     state: 'running', sync_enabled: true, sync_paused: false
   };
   providerMocks.load.mockResolvedValue(state);
+  providerMocks.setPaused.mockResolvedValue({ ...state, sync_paused: true });
 });
 
 it('shows persistent membership and keeps Leave independent from participation controls', async () => {
@@ -34,10 +35,11 @@ it('shows persistent membership and keeps Leave independent from participation c
     timeline_id: 'timeline-1'
   }} />);
 
-  expect(screen.getByText('Studio')).toBeInTheDocument();
+  expect(screen.getByText("Studio's Sync Group")).toBeInTheDocument();
   expect(screen.getByText('Pixel')).toBeInTheDocument();
-  expect(await screen.findByText('Active')).toBeInTheDocument();
-  expect(screen.queryByTestId('companion-sync-pause-toggle')).not.toBeInTheDocument();
+  expect(screen.queryByText('Waiting phone')).not.toBeInTheDocument();
+  fireEvent.click(await screen.findByRole('button', { name: 'Pause Sync' }));
+  expect(providerMocks.setPaused).toHaveBeenCalledWith(true);
   fireEvent.click(screen.getByRole('button', { name: 'Leave Sync Group' }));
   expect(screen.getByText(/Topics and attachments stay on this device/)).toBeInTheDocument();
   expect(screen.getByTestId('companion-sync-group-leave-confirm')).toBeInTheDocument();

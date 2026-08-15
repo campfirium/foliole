@@ -203,16 +203,16 @@ describe('CompanionShell review surfaces', () => {
     });
 
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Connect or refresh this device/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Device details are not available yet/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Sync content and view sync status/ })).toBeInTheDocument();
+    expect(screen.queryByText('Device')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Storage/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Customize Topic reading with saved styles/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Diagnostics/ })).toBeInTheDocument();
     expect(screen.queryByText('Connected')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Connect or refresh this device/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Sync content and view sync status/ }));
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Device sync' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Sync' })).toBeInTheDocument();
     expect(screen.getByText('Last sync')).toBeInTheDocument();
     expect(screen.getByText('Activity')).toBeInTheDocument();
     expect(screen.getByText('Paired device')).toBeInTheDocument();

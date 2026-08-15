@@ -63,21 +63,16 @@ function HandoffReminderSummary(props: {
 }) {
   const t = useTranslation();
   return (
-    <section className="text-foreground">
+    <section className="border-y border-companion-divider text-foreground">
       <button
-        className="w-full rounded-xl bg-companion-content px-4 py-3 text-left transition active:bg-companion-subtle/80"
+        className="flex min-h-14 w-full touch-manipulation items-center justify-between gap-3 px-1 py-3 text-left transition active:bg-companion-subtle/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-companion-accent"
         onClick={props.onOpen}
         type="button"
       >
-        <div className="flex items-start justify-between gap-3">
-          <span className="text-sm font-semibold leading-5 text-foreground">{t('companion.sync.handoff.title')}</span>
-          <span className="flex shrink-0 items-center gap-1 text-sm font-semibold leading-5 text-foreground">
-            <span>{props.isEnabled ? t('companion.sync.handoff.on') : t('companion.sync.handoff.off')}</span>
-            <span className="text-companion-text-secondary"><ChevronIcon /></span>
-          </span>
-        </div>
-        <span className="mt-2 block text-sm leading-6 text-companion-text-secondary">
-          {t('companion.sync.handoff.description')}
+        <span className="text-sm font-semibold leading-5 text-foreground">{t('companion.sync.handoff.title')}</span>
+        <span className="flex shrink-0 items-center gap-1 text-sm font-semibold leading-5 text-foreground">
+          <span>{props.isEnabled ? t('companion.sync.handoff.on') : t('companion.sync.handoff.off')}</span>
+          <span className="text-companion-text-secondary"><ChevronIcon /></span>
         </span>
       </button>
     </section>

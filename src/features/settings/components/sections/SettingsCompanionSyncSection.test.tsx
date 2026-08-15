@@ -225,13 +225,13 @@ it('shows sync server errors through the settings state surface', () => {
   expect(screen.getByRole('alert')).toHaveTextContent('Could not open sync. Port unavailable.');
 });
 
-it('shows pairing state errors through the settings state surface', () => {
+it('shows Sync Group state errors through the settings state surface', () => {
   companionPairingMock.useDesktopCompanionPairingRequests.mockReturnValue(createState({
-    error: 'Could not refresh paired devices.'
+    error: 'Could not refresh the Sync Group.'
   }));
 
   renderWithLocalization(<SettingsCompanionSyncSection />);
 
-  expect(screen.getByRole('alert')).toHaveTextContent('Sync devices unavailable');
-  expect(screen.getByRole('alert')).toHaveTextContent('Could not refresh paired devices.');
+  expect(screen.getByRole('alert')).toHaveTextContent('Sync Group unavailable');
+  expect(screen.getByRole('alert')).toHaveTextContent('Could not refresh the Sync Group.');
 });

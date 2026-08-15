@@ -40,7 +40,8 @@ describe('CompanionTopBarPropsModel', () => {
   });
 
   it('keeps settings detail pages on their existing back chrome', () => {
-    expect(buildTopBarProps('sync')).toMatchObject({ backLabel: 'Settings', title: 'Device sync' });
+    expect(buildTopBarProps('sync')).toMatchObject({ backLabel: 'Settings', title: 'Sync' });
+    expect(buildTopBarProps('syncGroup')).toMatchObject({ backLabel: 'Sync', title: 'Sync Group' });
     expect(buildTopBarProps('device')).toMatchObject({ backLabel: 'Settings', title: 'Device' });
     expect(buildTopBarProps('appearance')).toMatchObject({ backLabel: 'Settings', title: 'Appearance' });
     expect(buildTopBarProps('debug')).toMatchObject({ backLabel: 'Settings', title: 'Debug' });

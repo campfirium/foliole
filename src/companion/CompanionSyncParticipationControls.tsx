@@ -3,8 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import {
   loadCompanionSyncGroupProviderState,
-  setCompanionSyncEnabled,
-  setCompanionSyncPaused
+  setCompanionSyncEnabled
 } from '../shared/platform/companion/sync/syncGroupProvider';
 import type { CompanionSyncGroupProviderState } from '../shared/platform/companionWorkspaceSyncPluginTypes';
 
@@ -20,22 +19,15 @@ export function CompanionSyncParticipationControls() {
     return () => window.clearInterval(timer);
   }, [refresh]);
   const syncEnabled = state?.sync_enabled ?? false;
-  const syncPaused = state?.sync_paused ?? false;
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl bg-companion-content px-4 py-3">
+    <div className="flex min-h-14 items-center justify-between gap-4 border-y border-companion-divider px-1 py-2 text-foreground">
       <span className="text-sm font-semibold text-foreground">{t('companion.sync.participation.sync')}</span>
-      <div className="flex gap-2">
-        <button className="rounded-xl border border-companion-divider px-3 py-2 text-sm font-semibold"
-          data-testid="companion-sync-toggle" disabled={!state}
-          onClick={() => void setCompanionSyncEnabled(!syncEnabled).then(refresh)} type="button">
-          {t(syncEnabled ? 'companion.sync.participation.turnOff' : 'companion.sync.participation.turnOn')}
-        </button>
-        <button className="rounded-xl border border-companion-divider px-3 py-2 text-sm font-semibold"
-          data-testid="companion-sync-pause-toggle" disabled={!state}
-          onClick={() => void setCompanionSyncPaused(!syncPaused).then(refresh)} type="button">
-          {t(syncPaused ? 'companion.sync.participation.resume' : 'companion.sync.participation.pause')}
-        </button>
-      </div>
+      <button aria-checked={syncEnabled} aria-label={t('companion.sync.participation.sync')}
+        className={`flex h-7 w-12 shrink-0 items-center rounded-full px-1 transition ${syncEnabled ? 'justify-end bg-companion-accent' : 'justify-start bg-companion-divider-strong'}`}
+        data-testid="companion-sync-toggle" disabled={!state}
+        onClick={() => void setCompanionSyncEnabled(!syncEnabled).then(refresh)} role="switch" type="button">
+        <span aria-hidden="true" className="h-5 w-5 rounded-full bg-canvas shadow-marker" />
+      </button>
     </div>
   );
 }

@@ -73,7 +73,6 @@ function CompanionSettingsContentSurface(props: CompanionSettingsContentProps) {
       <CompanionSettingsList
         onOpenAppearance={() => props.onOpenSyncSettingsPage('appearance')}
         onOpenDebug={() => props.onOpenSyncSettingsPage('debug')}
-        onOpenDevice={() => props.onOpenSyncSettingsPage('device')}
         onOpenStorage={() => props.onOpenSyncSettingsPage('storage')}
         onOpenSync={props.onOpenSyncSettings}
         showStorage={showStorage}

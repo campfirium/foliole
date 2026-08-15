@@ -49,7 +49,7 @@ export const EN_SETTINGS_TRANSLATIONS = {
   'settings.companionSync.enableDesktop.aria': 'Enable desktop sync',
   'settings.companionSync.error.open': 'Could not open sync. {error}',
   'settings.companionSync.error.desktopUnavailable': 'Desktop sync unavailable',
-  'settings.companionSync.error.devicesUnavailable': 'Sync devices unavailable',
+  'settings.companionSync.error.devicesUnavailable': 'Sync Group unavailable',
   'settings.companionSync.connected.title': 'Connected devices',
   'settings.companionSync.connected.description': 'Approved devices that can sync with this desktop.',
   'settings.companionSync.connected.empty': '0 devices',

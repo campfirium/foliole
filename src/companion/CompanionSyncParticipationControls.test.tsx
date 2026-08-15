@@ -6,13 +6,12 @@ import { renderWithLocalization } from '../shared/localization/testLocalization'
 import { CompanionSyncParticipationControls } from './CompanionSyncParticipationControls';
 
 const providerMocks = vi.hoisted(() => ({
-  load: vi.fn(), setEnabled: vi.fn(), setPaused: vi.fn()
+  load: vi.fn(), setEnabled: vi.fn()
 }));
 
 vi.mock('../shared/platform/companion/sync/syncGroupProvider', () => ({
   loadCompanionSyncGroupProviderState: providerMocks.load,
-  setCompanionSyncEnabled: providerMocks.setEnabled,
-  setCompanionSyncPaused: providerMocks.setPaused
+  setCompanionSyncEnabled: providerMocks.setEnabled
 }));
 
 beforeEach(() => {
@@ -21,15 +20,15 @@ beforeEach(() => {
     state: 'paused', sync_enabled: true, sync_paused: true };
   providerMocks.load.mockResolvedValue(paused);
   providerMocks.setEnabled.mockResolvedValue({ ...paused, sync_enabled: false });
-  providerMocks.setPaused.mockResolvedValue({ ...paused, participating: true, sync_paused: false });
 });
 
-it('offers Sync and Resume without requiring Sync Group membership', async () => {
+it('keeps the global Sync control separate from the local member pause action', async () => {
   renderWithLocalization(<CompanionSyncParticipationControls />);
 
-  fireEvent.click(await screen.findByRole('button', { name: 'Turn Off' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Resume Sync' }));
+  const syncSwitch = await screen.findByRole('switch', { name: 'Sync' });
+  expect(syncSwitch).toHaveAttribute('aria-checked', 'true');
+  fireEvent.click(syncSwitch);
 
   expect(providerMocks.setEnabled).toHaveBeenCalledWith(false);
-  expect(providerMocks.setPaused).toHaveBeenCalledWith(false);
+  expect(screen.queryByRole('button', { name: 'Resume Sync' })).not.toBeInTheDocument();
 });

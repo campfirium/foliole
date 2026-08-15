@@ -4,11 +4,12 @@ import type { SyncGroupPayload } from '../../lib/platform/syncGroupContract';
 import { useTranslation, type Translate } from '../shared/localization/LocalizationProvider';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import { isCompanionPairingSyncUsable } from '../shared/platform/companionPairingState';
-import { AppSpinner } from '../shared/ui';
+import { isNativeCompanionSyncParticipationRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
 import type { CompanionHandoffReminderSettings } from './companionHandoffReminderSettings';
 import { CompanionHandoffReminderSettingsPanel } from './CompanionHandoffReminderSettingsPanel';
 import { CompanionSyncDiscoveryDialog } from './CompanionSyncDiscoveryDialog';
+import { CompanionSyncNowButton } from './CompanionSyncNowButton';
 import { CompanionSyncParticipationControls } from './CompanionSyncParticipationControls';
 import { CompanionSyncRepairPairingState } from './CompanionSyncRepairPairingState';
 import { AwaitingApprovalState, EmptyDiscoveryState } from './CompanionSyncSetupStates';
@@ -62,6 +63,10 @@ function resolveDesktopDiscoveries(props: CompanionSyncPanelProps) {
   return props.desktopDiscoveries?.length ? props.desktopDiscoveries : props.desktopDiscovery ? [props.desktopDiscovery] : [];
 }
 
+function shouldShowStandaloneParticipation(props: CompanionSyncPanelProps) {
+  return props.page === 'sync' && !props.syncGroup && isNativeCompanionSyncParticipationRuntime();
+}
+
 function formatSyncPanelError(message: string, t: Translate) {
   if (message.includes('sync_participation_inactive')) return t('companion.sync.participation.inactive');
   const lowerMessage = message.toLowerCase();
@@ -94,9 +99,17 @@ function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'o
   endpointUrl: string;
   onSync(): void;
 }) {
-  const t = useTranslation();
+  const showSyncActionFirst = props.page === 'sync' && Boolean(props.syncGroup);
+  const syncAction = props.page === 'sync' ? (
+    <CompanionSyncNowButton isSyncing={props.status === 'syncing'} onSync={props.onSync} />
+  ) : null;
+  const participationControl = props.page === 'sync' && props.syncGroup && isNativeCompanionSyncParticipationRuntime()
+    ? <CompanionSyncParticipationControls />
+    : null;
   return (
     <>
+      {showSyncActionFirst ? syncAction : null}
+      {participationControl}
       <CompanionSyncStatusDetails
         endpointUrl={props.endpointUrl}
         lastSyncedAt={props.lastSyncedAt}
@@ -110,21 +123,7 @@ function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'o
         onDisconnectPairing={props.onDisconnectPairing}
         onOpenPage={props.onOpenSettingsPage}
       />
-      {props.page !== 'sync' ? null : (
-        <>
-          <button
-            aria-busy={props.status === 'syncing' || undefined}
-            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border-strong bg-foreground px-4 py-3 text-sm font-semibold text-bg-panel transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-foreground disabled:text-bg-panel"
-            disabled={props.status === 'syncing'}
-            data-testid="companion-sync-now"
-            onClick={props.onSync}
-            type="button"
-          >
-            {props.status === 'syncing' ? <AppSpinner className="pointer-events-none shrink-0" decorative size="sm" /> : null}
-            <span>{t(props.status === 'syncing' ? 'companion.browse.syncing' : 'companion.settings.sync.title')}</span>
-          </button>
-        </>
-      )}
+      {!showSyncActionFirst ? syncAction : null}
     </>
   );
 }
@@ -171,6 +170,7 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
   const hasPairing = props.pairingState.is_paired;
   const hasUsablePairing = isCompanionPairingSyncUsable(props.pairingState);
   const isDiscovering = props.pairingStatus === 'checking-desktop' || desktopDiscoveries.length > 0;
+  const showStandaloneParticipation = shouldShowStandaloneParticipation(props);
 
   async function handleTryAgain() {
     props.onClearError();
@@ -193,11 +193,9 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
   }
 
   return (
-    <section className="mb-8 px-5 py-5">
+    <section className="mb-8 px-5 py-3">
       <div className="flex flex-col gap-5">
-        {props.page === 'sync' && props.bootstrapState.runtime_kind === 'android-capacitor'
-          ? <CompanionSyncParticipationControls />
-          : null}
+        {showStandaloneParticipation ? <CompanionSyncParticipationControls /> : null}
         <MainSyncContent
           {...props}
           endpointUrl={endpointUrl}

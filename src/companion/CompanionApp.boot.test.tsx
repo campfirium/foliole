@@ -29,6 +29,12 @@ vi.mock('./useCompanionWorkspaceSync', () => ({
 
 vi.mock('../shared/platform/companion/sync/syncGroupProvider', () => syncGroupProvider);
 vi.mock('../shared/platform/companion/sync/syncGroupStore', () => syncGroupStore);
+vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../shared/platform/companionWorkspaceRuntimeRepository')>(),
+  isNativeCompanionSyncGroupRuntime: () => false,
+  isNativeCompanionSyncGroupStoreRuntime: () => true,
+  isNativeCompanionSyncParticipationRuntime: () => true
+}));
 
 vi.mock('@/features/pdf/components/SimplePdfDocument', () => ({
   SimplePdfDocument: () => <div>PDF original viewer</div>
@@ -141,13 +147,13 @@ describe('CompanionApp ready hosts', () => {
     }
     expect(within(bottomBar).getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('button', { name: /Sync/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Connect or refresh this device/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Sync content and view sync status/ })).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('companion-settings-sync'));
     expect(screen.getByTestId('companion-sync-toggle')).toBeInTheDocument();
-    expect(screen.getByTestId('companion-sync-pause-toggle')).toBeInTheDocument();
+    expect(screen.queryByTestId('companion-sync-pause-toggle')).not.toBeInTheDocument();
   });
 
-  it('renders the shared pairing surface after iOS bootstrap succeeds', async () => {
+  it('renders the shared Sync Group surface after iOS bootstrap succeeds', async () => {
     mockCompanionWorkspaceSync('ios-capacitor');
     useCompanionBootstrap.mockReturnValue({
       status: 'ready',
@@ -169,12 +175,12 @@ describe('CompanionApp ready hosts', () => {
     }
     expect(within(bottomBar).getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('button', { name: /Sync/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Connect or refresh this device/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Sync content and view sync status/ })).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('companion-settings-sync'));
-    expect(screen.queryByTestId('companion-sync-toggle')).not.toBeInTheDocument();
+    expect(screen.getByTestId('companion-sync-toggle')).toBeInTheDocument();
     expect(screen.queryByTestId('companion-sync-pause-toggle')).not.toBeInTheDocument();
-    expect(syncGroupStore.loadCompanionSyncGroup).not.toHaveBeenCalled();
-    expect(syncGroupProvider.loadCompanionSyncGroupProviderState).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(syncGroupStore.loadCompanionSyncGroup).toHaveBeenCalled());
+    await vi.waitFor(() => expect(syncGroupProvider.loadCompanionSyncGroupProviderState).toHaveBeenCalled());
     expect(syncGroupProvider.reconcileCompanionSyncGroupProvider).not.toHaveBeenCalled();
     expect(useCompanionWorkspaceSync).toHaveBeenCalledWith(expect.objectContaining({ runtime_kind: 'ios-capacitor' }));
   });

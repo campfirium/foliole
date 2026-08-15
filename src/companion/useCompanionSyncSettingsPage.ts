@@ -11,6 +11,7 @@ export type CompanionSettingsPage =
   | 'appearance'
   | 'debug'
   | 'tabs'
+  | 'syncGroup'
   | 'syncActivity'
   | 'syncConnection'
   | 'syncHandoff';

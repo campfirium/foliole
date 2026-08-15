@@ -36,16 +36,15 @@ describe('CompanionSettingsShellContent', () => {
     appDataRuntime.supportsClear.mockReturnValue(true);
   });
 
-  it('opens placeholder settings detail rows instead of leaving dead controls', () => {
+  it('keeps the settings entry focused on Sync and omits unavailable Device details', () => {
     render(<SettingsHarness />);
 
     expect(screen.getByText('Sync and device')).toBeInTheDocument();
     expect(screen.getByText('Data and appearance')).toBeInTheDocument();
     expect(screen.getByText('Development')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Device details are not available yet/ }));
-    expect(screen.getByText('Device information')).toBeInTheDocument();
-    expect(screen.getByText('Device details are not available yet.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Sync content and view sync status/ })).toBeInTheDocument();
+    expect(screen.queryByText('Device')).not.toBeInTheDocument();
   });
 
   it('opens the web-preview custom CSS management surface', () => {
@@ -70,7 +69,7 @@ describe('CompanionSettingsShellContent', () => {
 
     render(<SettingsHarness />);
 
-    expect(screen.getByText('4 sections')).toBeInTheDocument();
+    expect(screen.getByText('3 sections')).toBeInTheDocument();
     expect(screen.queryByText('Storage')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Clear local app data/ })).not.toBeInTheDocument();
   });

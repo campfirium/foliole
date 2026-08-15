@@ -25,7 +25,7 @@ it('keeps incomplete app-data clearing out of the iOS settings surface', () => {
   } as const;
   const view = render(renderCompanionSettingsContent(props));
 
-  expect(screen.getByText('4 sections')).toBeInTheDocument();
+  expect(screen.getByText('3 sections')).toBeInTheDocument();
   expect(screen.queryByText('Storage')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /Clear local app data/ })).not.toBeInTheDocument();
   view.rerender(renderCompanionSettingsContent({ ...props, settingsPage: 'appearance' }));

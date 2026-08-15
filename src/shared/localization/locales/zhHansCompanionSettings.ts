@@ -2,7 +2,7 @@ import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
   'companion.settings.sync.title': '同步',
-  'companion.settings.sync.detail': '连接或刷新这台设备。',
+  'companion.settings.sync.detail': '同步内容并查看同步状态。',
   'companion.settings.device.title': '设备',
   'companion.settings.device.detail': '设备详情暂不可用。',
   'companion.settings.storage.title': '存储',

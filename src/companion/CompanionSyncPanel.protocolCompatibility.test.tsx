@@ -66,7 +66,7 @@ describe('CompanionSyncPanel protocol compatibility', () => {
     };
 
     renderWithLocalization(<CompanionSyncPanel {...props} />);
-    expect(screen.getByText('Desktop discovery failed.')).toBeInTheDocument();
+    expect(screen.getByText('Could not look for Sync Groups.')).toBeInTheDocument();
     expect(screen.queryByText(/No desktop sync device found/)).not.toBeInTheDocument();
   });
 
@@ -74,7 +74,7 @@ describe('CompanionSyncPanel protocol compatibility', () => {
     const props = { ...createProps(), error: 'Desktop pairing failed with 429: pair_completion_rate_limited.' };
 
     renderWithLocalization(<CompanionSyncPanel {...props} />);
-    expect(screen.getByText('Failed to request desktop pairing.')).toBeInTheDocument();
+    expect(screen.getByText('Could not request to join this Sync Group.')).toBeInTheDocument();
     expect(screen.queryByText(/pair_completion_rate_limited/)).not.toBeInTheDocument();
   });
 
@@ -91,7 +91,7 @@ describe('CompanionSyncPanel protocol compatibility', () => {
     };
 
     renderWithLocalization(<CompanionSyncPanel {...props} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Sync' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sync Now' }));
     await waitFor(() => {
       expect(props.onClearError).toHaveBeenCalledTimes(1);
       expect(props.onPull).toHaveBeenCalledWith('http://10.0.2.2:38641');
