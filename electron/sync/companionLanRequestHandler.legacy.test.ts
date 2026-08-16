@@ -150,7 +150,7 @@ it('serves signed sync pack containers without loading the workspace snapshot', 
     headers: { 'x-sync-group-id': 'group-1' },
     method: 'GET',
     url: `${SYNC_PACK_PATH}?after_state_seq=4`
-  } as http.IncomingMessage, response);
+  } as unknown as http.IncomingMessage, response);
 
   expect(response.writeHead).toHaveBeenCalledWith(200, expect.objectContaining({
     'Content-Type': WORKGROUP_ENVELOPE_CONTENT_TYPE,

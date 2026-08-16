@@ -142,6 +142,7 @@ it('shows the imported PDF node in Inbox after manual import', async () => {
   const invoke = createImportedNodeRuntimeInvoke({
     importedNodeTitle: 'Imported PDF',
     importResult: createSuccessfulImportResult({
+      import_id: 'import-pdf',
       node_id: 'node-imported',
       source_kind: 'pdf',
       source_locator: '/tmp/imported-paper.pdf',

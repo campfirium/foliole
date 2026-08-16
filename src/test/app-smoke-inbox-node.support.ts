@@ -88,10 +88,10 @@ export function createImportedNodeRuntimeInvoke(options?: {
     if (command === 'load_readwise_books_inventory') return { books: [] };
     if (command === 'select_import_text_file') {
       return {
-        content: '# Imported note',
-        file_name: 'imported-note.md',
-        file_path: '/tmp/imported-note.md',
-        kind: 'markdown'
+        content: '',
+        file_name: importResult.source_name,
+        file_path: importResult.source_locator,
+        kind: importResult.source_kind
       };
     }
     if (command === 'load_node_document' && payload?.nodeId === 'special-inbox') {
