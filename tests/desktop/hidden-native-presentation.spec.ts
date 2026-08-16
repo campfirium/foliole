@@ -24,6 +24,8 @@ test('hidden native desktop presents a noninterfering renderer without focus', a
     return {
       bounds: window.getBounds(),
       isFocusable: window.isFocusable(),
+      isFullScreen: window.isFullScreen(),
+      isMaximized: window.isMaximized(),
       isVisible: window.isVisible(),
       opacity: window.getOpacity(),
       platform: process.platform
@@ -32,6 +34,8 @@ test('hidden native desktop presents a noninterfering renderer without focus', a
 
   expect(presentation).toMatchObject({
     isFocusable: false,
+    isFullScreen: false,
+    isMaximized: false,
     isVisible: true
   });
   expect(presentation.bounds.width).toBeGreaterThanOrEqual(MINIMUM_DESKTOP_BOUNDS.width);
