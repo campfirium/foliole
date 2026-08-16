@@ -18,6 +18,7 @@ async function createFixtureRoot() {
   tempDirs.push(fixtureRoot);
 
   const directoryNames = [
+    '.cache',
     '.claude',
     '.git',
     '.github',
@@ -95,6 +96,7 @@ describe('check-repository-root-boundary', () => {
     expect(output).toContain('unauthorized=.tmp-fixture,playwright-report,test-results');
     expect(output).toContain('allowed=android,artifacts,assets,build,docs,electron,ios,lib,public,releases,scripts,src,tests,.agents,.claude,.codex,.git,.github,.githooks,.lab');
     expect(output).not.toContain('ref');
+    expect(cliResult.result.exemptRoots).toContain('.cache');
     expect(output).not.toContain('src-tauri');
     expect(output).not.toContain('unauthorized=release');
     expect(output).not.toContain('unauthorized=artifacts/windows');
