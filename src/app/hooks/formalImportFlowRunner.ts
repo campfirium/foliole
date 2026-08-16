@@ -9,10 +9,10 @@ import {
   applyImportFailureStatus,
   useFormalImportState
 } from './formalImportState';
-import { applyImportWorkspacePatch } from './formalImportWorkspacePatch';
+import { applyImportWorkspacePatch, refreshImportWorkspaceOnce } from './formalImportWorkspacePatch';
 
 export function shouldRehydrateWorkspace(result: RuntimeTextImportResult) {
-  return result.resultStatus === 'imported' && result.duplicateSemantic !== 'duplicate';
+  return Boolean(result.nodeId);
 }
 
 export function shouldRehydrateDirectoryImport(result: RuntimeDirectoryImportResult) {
@@ -35,16 +35,17 @@ export async function runImportFlow<Result extends RuntimeTextImportResult | Run
       applyCancelledImportStatus();
       return false;
     }
+    const importId = 'importId' in importResult
+      ? importResult.importId
+      : importResult.entries[importResult.entries.length - 1]?.importId;
     const didApplyPatch = 'nodeMutationPatch' in importResult
       ? applyImportWorkspacePatch(
-          'importId' in importResult
-            ? importResult.importId
-            : importResult.entries[importResult.entries.length - 1]?.importId,
+          importId,
           importResult.nodeMutationPatch
         )
       : false;
     if (!didApplyPatch && shouldRehydrate(importResult)) {
-      await refreshWorkspaceState('formal-import');
+      await refreshImportWorkspaceOnce(importId, () => refreshWorkspaceState('formal-import'));
     }
     if (applyResultStatus) {
       applyResultStatus(importResult);

@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import type { NativeTextImportResult } from '../../lib/platform/nativeContract.js';
 import { closeDatabaseConnection } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
 import { initializeDatabase } from '../database/migrate.js';
@@ -32,6 +33,28 @@ beforeEach(async () => {
 afterEach(() => {
   closeDatabaseConnection();
 });
+
+function toNativeResult(
+  imported: ReturnType<typeof runPreparedImport>,
+  overrides: Partial<NativeTextImportResult> = {}
+): NativeTextImportResult {
+  return {
+    content_fingerprint: imported.contentFingerprint,
+    degraded_reason: imported.degradedReason,
+    duplicate_semantic: imported.duplicateSemantic,
+    failure_reason: imported.failureReason,
+    import_id: imported.importId,
+    imported_at: imported.importedAt,
+    node_id: imported.nodeId,
+    provider: imported.provider,
+    result_status: imported.resultStatus,
+    source_fingerprint: imported.sourceFingerprint,
+    source_kind: imported.sourceKind,
+    source_locator: imported.sourceLocator,
+    source_name: imported.sourceName,
+    ...overrides
+  };
+}
 
 it('builds a node mutation patch from imported sqlite nodes without loading a full workspace snapshot', () => {
   const imported = runPreparedImport({
@@ -49,21 +72,7 @@ it('builds a node mutation patch from imported sqlite nodes without loading a fu
     hideTitleHeading: false
   });
 
-  const patch = buildImportNodeMutationPatch([{
-    content_fingerprint: imported.contentFingerprint,
-    degraded_reason: imported.degradedReason,
-    duplicate_semantic: imported.duplicateSemantic,
-    failure_reason: imported.failureReason,
-    import_id: imported.importId,
-    imported_at: imported.importedAt,
-    node_id: imported.nodeId,
-    provider: imported.provider,
-    result_status: imported.resultStatus,
-    source_fingerprint: imported.sourceFingerprint,
-    source_kind: imported.sourceKind,
-    source_locator: imported.sourceLocator,
-    source_name: imported.sourceName
-  }]);
+  const patch = buildImportNodeMutationPatch([toNativeResult(imported)]);
 
   expect(patch).toMatchObject({
     createdNodeIds: [imported.nodeId],
@@ -76,4 +85,56 @@ it('builds a node mutation patch from imported sqlite nodes without loading a fu
       })
     ]
   });
+});
+
+it('does not reduce a persisted EPUB hierarchy to a root-only mutation patch', () => {
+  const imported = runPreparedImport({
+    content: 'Book cover',
+    contentFingerprint: 'epub-content-fp',
+    degradedReason: null,
+    importedAt: '2026-06-09T10:00:00.000Z',
+    nodeTitle: 'Imported book',
+    provider: 'desktop_text_file',
+    sourceFingerprint: 'epub-source-fp',
+    sourceKind: 'epub',
+    sourceLocator: '/tmp/imported.epub',
+    sourceName: 'imported.epub',
+    sourceTrackingMode: 'untracked',
+    hideTitleHeading: false
+  });
+
+  expect(buildImportNodeMutationPatch([toNativeResult(imported)])).toBeNull();
+});
+
+it('rejects a partial batch patch when a Markdown result shares the batch with an EPUB', () => {
+  const markdown = runPreparedImport({
+    content: 'Markdown body',
+    contentFingerprint: 'markdown-content-fp',
+    degradedReason: null,
+    importedAt: '2026-06-09T10:00:00.000Z',
+    nodeTitle: 'Imported note',
+    provider: 'desktop_text_file',
+    sourceFingerprint: 'markdown-source-fp',
+    sourceKind: 'markdown',
+    sourceLocator: '/tmp/imported.md',
+    sourceName: 'imported.md',
+    sourceTrackingMode: 'untracked',
+    hideTitleHeading: false
+  });
+  const epub = runPreparedImport({
+    content: 'Book cover',
+    contentFingerprint: 'mixed-epub-content-fp',
+    degradedReason: null,
+    importedAt: '2026-06-09T10:00:01.000Z',
+    nodeTitle: 'Imported book',
+    provider: 'desktop_text_file',
+    sourceFingerprint: 'mixed-epub-source-fp',
+    sourceKind: 'epub',
+    sourceLocator: '/tmp/mixed.epub',
+    sourceName: 'mixed.epub',
+    sourceTrackingMode: 'untracked',
+    hideTitleHeading: false
+  });
+
+  expect(buildImportNodeMutationPatch([toNativeResult(markdown), toNativeResult(epub)])).toBeNull();
 });

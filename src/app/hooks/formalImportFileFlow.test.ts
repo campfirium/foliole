@@ -82,7 +82,7 @@ it('imports the selected EPUB before asking for a post-import reading mode', asy
     kind: 'epub'
   };
   selectRuntimeImportTextFile.mockResolvedValue(selectedFile);
-  runRuntimeTextFileImport.mockResolvedValue({ nodeId: 'node-book', resultStatus: 'imported' });
+  runRuntimeTextFileImport.mockResolvedValue({ importId: 'import-book', nodeId: 'node-book', resultStatus: 'imported' });
   requestEpubImportReleaseMode.mockResolvedValue('free');
 
   await runFormalImportFileFlow();
@@ -102,10 +102,14 @@ it('keeps the imported EPUB when the post-import reading mode dialog is dismisse
     filePath: '/tmp/book.epub',
     kind: 'epub'
   });
-  runRuntimeTextFileImport.mockResolvedValue({ nodeId: 'node-book', resultStatus: 'imported' });
+  runRuntimeTextFileImport.mockResolvedValue({ importId: 'import-book', nodeId: 'node-book', resultStatus: 'imported' });
   requestEpubImportReleaseMode.mockResolvedValue(null);
 
-  await expect(runFormalImportFileFlow()).resolves.toEqual({ nodeId: 'node-book', resultStatus: 'imported' });
+  await expect(runFormalImportFileFlow()).resolves.toEqual({
+    importId: 'import-book',
+    nodeId: 'node-book',
+    resultStatus: 'imported'
+  });
 
   expect(runRuntimeTextFileImport).toHaveBeenCalledWith(undefined, undefined, {
     filePath: '/tmp/book.epub'

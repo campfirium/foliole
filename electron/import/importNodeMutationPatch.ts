@@ -62,8 +62,12 @@ interface NodeIdRow extends DatabaseRow {
   id: string;
 }
 
+function hasPersistedNode(result: NativeTextImportResult) {
+  return typeof result.node_id === 'string';
+}
+
 function isPatchableImport(result: NativeTextImportResult) {
-  return result.result_status === 'imported' && result.duplicate_semantic !== 'duplicate' && typeof result.node_id === 'string';
+  return hasPersistedNode(result) && result.result_status !== 'failed' && result.source_kind !== 'epub';
 }
 
 function readImportedNodeRows(driver: DatabaseDriver, nodeIds: string[]) {
@@ -177,10 +181,11 @@ function toNodeMutationSnapshot(row: ImportedNodeRow, nodeOrder: string[]): Nati
 export function buildImportNodeMutationPatch(
   results: Array<NativeTextImportResult | null | undefined>
 ): NativeNodeMutationPatchResult | null {
-  const patchable = results.filter((result): result is NativeTextImportResult => Boolean(result && isPatchableImport(result)));
-  if (patchable.length === 0) {
+  const persisted = results.filter((result): result is NativeTextImportResult => Boolean(result && hasPersistedNode(result)));
+  if (persisted.length === 0 || persisted.some((result) => !isPatchableImport(result))) {
     return null;
   }
+  const patchable = persisted;
   const nodeIds = [...new Set(patchable.map((result) => result.node_id).filter((nodeId): nodeId is string => Boolean(nodeId)))];
   let driver: DatabaseDriver;
   try {
@@ -191,7 +196,7 @@ export function buildImportNodeMutationPatch(
   const nodeOrder = readNodeOrder(driver);
   const nodeRows = readImportedNodeRows(driver, nodeIds);
   const nodes = nodeRows.map((row) => toNodeMutationSnapshot(row, nodeOrder));
-  if (nodes.length === 0) {
+  if (nodes.length !== nodeIds.length) {
     return null;
   }
   return {

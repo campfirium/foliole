@@ -28,8 +28,7 @@ import {
   DEFAULT_FORMAL_IMPORT_STATUS
 } from './formalImportStatus';
 import {
-  hasHandledImportWorkspaceChange,
-  markImportWorkspaceChangeHandled,
+  refreshImportWorkspaceOnce,
   resetAppliedImportWorkspacePatches
 } from './formalImportWorkspacePatch';
 import { useManagedInboxFocusRefresh, useManagedInboxUpdateSubscription } from './useManagedInboxRefresh';
@@ -58,11 +57,9 @@ async function refreshFormalImportOverview(
   const triggeredLatestResult = triggerImportId && latestResult?.importId === triggerImportId ? latestResult : null;
   if (
     triggeredLatestResult &&
-    !hasHandledImportWorkspaceChange(triggerImportId) &&
     shouldRehydrateWorkspace(triggeredLatestResult)
   ) {
-    await refreshWorkspaceState('managed-inbox');
-    markImportWorkspaceChangeHandled(triggerImportId);
+    await refreshImportWorkspaceOnce(triggerImportId, () => refreshWorkspaceState('managed-inbox'));
   } else if (
     !triggerImportId &&
     options.rehydrateFreshResult !== false &&
@@ -70,7 +67,7 @@ async function refreshFormalImportOverview(
     hasFreshImport &&
     shouldRehydrateWorkspace(latestResult)
   ) {
-    await refreshWorkspaceState('formal-import');
+    await refreshImportWorkspaceOnce(latestResult.importId, () => refreshWorkspaceState('formal-import'));
   }
 
   useFormalImportState.setState({
