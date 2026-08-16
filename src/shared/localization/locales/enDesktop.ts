@@ -52,7 +52,6 @@ export const EN_DESKTOP_TRANSLATIONS = {
   'desktop.annotation.cancel': 'Cancel',
   'desktop.annotation.save': 'Save',
   'desktop.editor.frontmatter.close': 'Close',
-  'desktop.editor.frontmatter.meta': 'Meta',
   'desktop.highlightToolbar.close': 'Close Highlight',
   'desktop.highlightToolbar.addComment': 'Add Comment',
   'desktop.highlightToolbar.open': 'Open',

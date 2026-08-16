@@ -54,7 +54,6 @@ export const ZH_HANS_DESKTOP_TRANSLATIONS: Partial<Record<TranslationKey, string
   'desktop.annotation.cancel': '取消',
   'desktop.annotation.save': '保存',
   'desktop.editor.frontmatter.close': '关闭',
-  'desktop.editor.frontmatter.meta': '文档元信息',
   'desktop.highlightToolbar.close': '关闭高亮',
   'desktop.highlightToolbar.addComment': '添加批注',
   'desktop.highlightToolbar.open': '打开',

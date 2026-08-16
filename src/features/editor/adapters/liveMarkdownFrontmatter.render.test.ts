@@ -1,13 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../../shared/platform/runtimeInvoke', () => ({
-  getRuntimeInvoke: vi.fn(() => null)
-}));
-
-vi.mock('../../../shared/platform/bridge', () => ({
-  openExternalUrl: vi.fn()
-}));
-
+import { APP_LOCALES } from '../../../../lib/core/localization/appLocaleRegistry';
+import { setStoredAppLocale } from '../../../shared/localization/appLanguage';
 import { setEditorDisplayMode } from '../model/editorDisplayMode';
 import { setFrontmatterDisplayMode } from '../model/frontmatterDisplayModeSetting';
 import { FRONTMATTER_META_FIELDS_DEFAULT, setFrontmatterMetaFields } from '../model/frontmatterMetaFieldsSetting';
@@ -15,6 +9,14 @@ import { setMarkdownSyntaxVisibility } from '../model/markdownSyntaxSetting';
 
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
 import type { CodeMirrorEditorAdapterOptions } from './codeMirrorEditorAdapterSupport';
+
+vi.mock('../../../shared/platform/runtimeInvoke', () => ({
+  getRuntimeInvoke: vi.fn(() => null)
+}));
+
+vi.mock('../../../shared/platform/bridge', () => ({
+  openExternalUrl: vi.fn()
+}));
 
 function createAdapterHost(initialContent: string, options: Partial<CodeMirrorEditorAdapterOptions> = {}) {
   const host = document.createElement('div');
@@ -53,6 +55,7 @@ afterEach(() => {
   setFrontmatterMetaFields(FRONTMATTER_META_FIELDS_DEFAULT);
   setEditorDisplayMode('preview');
   setMarkdownSyntaxVisibility('hidden');
+  setStoredAppLocale('en');
 });
 
 describe('live markdown frontmatter rendering', () => {
@@ -72,7 +75,7 @@ describe('live markdown frontmatter rendering', () => {
     expect(host.textContent).not.toContain('[[');
     expect(host.textContent).not.toContain('notes');
     expect(host.textContent).toContain('Title');
-    expect(host.textContent).toContain('Meta');
+    expect(host.textContent).toContain('meta');
 
     adapter.destroy();
   });
@@ -111,17 +114,31 @@ describe('live markdown frontmatter rendering', () => {
     adapter.destroy();
   });
 
-  it('shows only Meta when configured fields parse empty or are absent', () => {
+  it('shows only meta when configured fields parse empty or are absent', () => {
     setFrontmatterMetaFields(' ,,, ');
     const { adapter, host } = createAdapterHost('---\nauthor: Jane\n---\n# Title');
 
     expect(host.querySelector('.cm-md-frontmatter-meta-line')?.textContent).toBe('');
-    expect(host.textContent).toContain('Meta');
+    expect(host.textContent).toContain('meta');
     expect(host.textContent).not.toContain('Jane');
 
     adapter.destroy();
   });
 
+});
+
+describe('live markdown frontmatter locale contract', () => {
+  it('keeps the compact entry as exact lowercase ASCII meta in every app locale', () => {
+    for (const locale of APP_LOCALES) {
+      setStoredAppLocale(locale);
+      const { adapter, host } = createAdapterHost('---\nauthor: Jane\n---\n# Title');
+
+      expect(host.querySelector<HTMLButtonElement>('.cm-md-frontmatter-toggle')?.textContent).toBe('meta');
+
+      adapter.destroy();
+      host.remove();
+    }
+  });
 });
 
 describe('live markdown frontmatter Discourse metadata', () => {

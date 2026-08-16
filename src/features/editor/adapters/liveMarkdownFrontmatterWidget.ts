@@ -137,7 +137,7 @@ export class FrontmatterCompactWidget extends WidgetType {
     element.className = 'cm-md-frontmatter-compact';
 
     const metaLine = createFrontmatterMetaLine(view, this.entries, this.metaFields, this.discourseMeta);
-    const button = createFrontmatterToggle(t('desktop.editor.frontmatter.meta'), () => {
+    const button = createFrontmatterToggle('meta', () => {
       view.dispatch({ effects: setFrontmatterModeEffect.of('full') });
     });
 
