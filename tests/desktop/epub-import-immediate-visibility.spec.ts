@@ -62,6 +62,13 @@ async function expectReadableBook(desktopWindow: Page, title: string, chapterTit
   await expect(desktopWindow.getByRole('main', { name: /Foliole workspace/ })).toContainText(body);
 }
 
+async function expectLatestImportStatus(desktopWindow: Page, expectedStatus: 'degraded' | 'imported') {
+  await expect.poll(() => desktopWindow.evaluate(async () => {
+    const overview = await window.electronAPI?.invoke('load_import_overview', {});
+    return overview?.latest_result?.result_status ?? null;
+  })).toBe(expectedStatus);
+}
+
 test('shows successful and degraded EPUB chapters immediately without restarting', async ({
   desktopApp,
   desktopWindow
@@ -74,9 +81,11 @@ test('shows successful and degraded EPUB chapters immediately without restarting
   await expectWorkspaceShell(desktopWindow);
 
   await importEpub(desktopApp, desktopWindow, completePath, 'Sequential reading');
+  await expectLatestImportStatus(desktopWindow, 'imported');
   await expectReadableBook(desktopWindow, 'Manual Book', 'Chapter 1', 'First chapter keeps the early remembered quote');
 
   await importEpub(desktopApp, desktopWindow, degradedPath, 'Free reading');
+  await expectLatestImportStatus(desktopWindow, 'degraded');
   await expectReadableBook(desktopWindow, 'Degraded Book', 'Degraded Chapter 2', 'Second degraded chapter remains readable');
 
   await desktopWindow.screenshot({ path: SCREENSHOT_PATH });
