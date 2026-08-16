@@ -58,10 +58,12 @@ const syncObjectsMock = vi.hoisted(() => ({
   }))
 }));
 const workspaceSyncMock = vi.hoisted(() => ({
+  bindCompanionWorkspaceSyncTarget: vi.fn(async () => undefined),
   loadCompanionReadableArticle: vi.fn<() => Promise<CompanionReadableArticle | null>>(async () => null),
   loadCompanionWorkspaceSyncState: vi.fn(),
   recordCompanionWorkspaceSyncEvent: vi.fn(),
-  resolveReachableCompanionWorkspaceSyncEndpoint: vi.fn(async (endpointUrl: string) => endpointUrl)
+  resolveReachableCompanionWorkspaceSyncEndpoint: vi.fn(async (endpointUrl: string) => endpointUrl),
+  resolveReachableCompanionWorkspaceSyncEndpoints: vi.fn(async (endpointUrl: string) => [{ endpointUrl }])
 }));
 const schedulerSettingsMock = vi.hoisted(() => ({ hydrate: vi.fn(async () => undefined) }));
 
@@ -70,12 +72,14 @@ vi.mock('../shared/platform/companionSyncObjects', () => ({
   loadCompanionSyncNodeConflicts: syncObjectsMock.loadCompanionSyncNodeConflicts
 }));
 vi.mock('../shared/platform/companionWorkspaceSync', () => ({
+  bindCompanionWorkspaceSyncTarget: workspaceSyncMock.bindCompanionWorkspaceSyncTarget,
   loadCompanionReadableArticle: workspaceSyncMock.loadCompanionReadableArticle,
   loadCompanionWorkspaceSyncState: workspaceSyncMock.loadCompanionWorkspaceSyncState,
   persistCompanionWorkspaceSnapshot: vi.fn(),
   recordCompanionWorkspaceSyncEvent: workspaceSyncMock.recordCompanionWorkspaceSyncEvent,
   removeCompanionWorkspaceSyncRememberedTarget: vi.fn(),
   resolveReachableCompanionWorkspaceSyncEndpoint: workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoint,
+  resolveReachableCompanionWorkspaceSyncEndpoints: workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoints,
   saveCompanionSyncOnboardingStatus: vi.fn(),
   saveCompanionWorkspaceSyncEndpoint: vi.fn()
 }));
@@ -118,8 +122,10 @@ function resetCompanionWorkspaceSyncMocks() {
   syncObjectsMock.loadCompanionSyncNodeConflicts.mockResolvedValue([]);
   workspaceSyncMock.recordCompanionWorkspaceSyncEvent
     .mockResolvedValueOnce(createSyncState(null))
-    .mockResolvedValueOnce(createSyncState(createSnapshot()));
+    .mockResolvedValue(createSyncState(createSnapshot()));
   workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoint.mockImplementation(async (endpointUrl) => endpointUrl);
+  workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoints
+    .mockImplementation(async (endpointUrl) => [{ endpointUrl }]);
   workspaceSyncMock.loadCompanionReadableArticle.mockResolvedValue({
     content: '# Synced topic\n\nBody',
     hideTitleHeading: false,

@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+  serializeSyncProtocolTxt
+} from '../../../lib/platform/syncProtocolContract';
+
 const capacitorMock = vi.hoisted(() => ({
   getPlatform: vi.fn(() => 'android'),
   isNativePlatform: vi.fn(() => true),
@@ -20,18 +25,8 @@ vi.mock('@capacitor/core', () => ({
 
 import { discoverCompanionDesktop, discoverCompanionDesktops } from './companionWorkspaceDiscovery';
 
-const protocol = {
-  capabilities: ['lan-sync-v1', 'sync-group-facts-v1'],
-  max_supported_version: 1,
-  min_supported_version: 1,
-  version: 1
-};
-const protocolTxt = {
-  protocol_capabilities: 'lan-sync-v1,sync-group-facts-v1',
-  protocol_max_version: '1',
-  protocol_min_version: '1',
-  protocol_version: '1'
-};
+const protocol = CURRENT_SYNC_PROTOCOL_DESCRIPTOR;
+const protocolTxt = serializeSyncProtocolTxt(protocol);
 
 function nsdCandidate(endpoint_url: string) {
   return { endpoint_url, protocol_txt: protocolTxt, source: 'nsd' };

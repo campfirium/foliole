@@ -112,7 +112,7 @@ function mockWorkspaceSync(args: {
       negotiated_protocol_version: args.isPaired === false ? undefined : 1,
       paired_at: args.isPaired === false ? null : '2026-04-22T09:00:00.000Z',
       remote_protocol: args.isPaired === false ? undefined : {
-        capabilities: ['lan-sync-v1', 'sync-group-facts-v1'],
+        capabilities: ['lan-sync-v1', 'sync-group-facts-v1', 'workgroup-aead-v1'],
         max_supported_version: 1,
         min_supported_version: 1,
         version: 1

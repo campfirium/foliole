@@ -13,23 +13,24 @@ async function source(relativePath) {
 }
 
 it('persists reciprocal credentials for authenticated requests in both Android roles', async () => {
-  const [pairing, encryption, actions, peerStore, server, outbound, contract] = await Promise.all([
+  const [pairing, encryption, actions, server, outbound, contract] = await Promise.all([
     source('src/shared/platform/companionWorkspacePairing.ts'),
     source('src/shared/platform/companionPairingEncryption.ts'),
     source('android/app/src/main/java/com/foliole/android/FolioleCompanionPairingPluginActions.java'),
-    source('android/app/src/main/java/com/foliole/android/FolioleCompanionSyncGroupPeerStore.java'),
     source('android/app/src/main/java/com/foliole/android/FolioleCompanionSyncGroupServer.java'),
     source('android/app/src/main/java/com/foliole/android/FolioleCompanionSyncGroupOutboundPairing.java'),
     source('android/app/src/main/assets/companion-bridge-contract-definitions.json')
   ]);
 
   expect(pairing).toContain('payload.provider_encrypted_device_secret');
-  expect(pairing).toContain('provider_device_secret: providerSecret');
+  expect(pairing).toContain('providerSecret !== deviceSecret');
+  expect(pairing).toContain('workgroupKey: deviceSecret');
   expect(encryption.slice(encryption.indexOf('export async function decryptCompanionPairingSecret')))
     .not.toContain('pairingPrivateKeys.delete(pairRequestClientId)');
-  expect(actions).toContain('FolioleCompanionSyncGroupPeerStore.saveSecret(context, primaryDeviceId, providerDeviceSecret);');
-  expect(peerStore).toContain('static void saveSecret(Context context, String deviceId, String encodedSecret)');
+  expect(actions).toContain('FolioleCompanionSyncGroupOutboundPeerStore.save(');
   expect(server).toContain('FolioleCompanionSyncGroupOutboundPairing.save(');
+  expect(server).toContain('FolioleCompanionWorkgroupSession.requireKey()');
+  expect(server).toContain('provider_encrypted_device_secret", FolioleCompanionSyncGroupPairCrypto.encrypt(pending.pairingPublicKey, workgroupKey)');
   expect(outbound).not.toContain('FolioleCompanionPairingStore.savePairingCredentials(');
   expect(outbound).toContain('FolioleCompanionSyncGroupOutboundPeerStore.save(');
   expect(outbound).toContain('FolioleCompanionSyncGroupDatabase.saveSyncEndpoint(dataBridge, endpointUrl, now)');

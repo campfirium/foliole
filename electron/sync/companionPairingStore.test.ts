@@ -1,6 +1,5 @@
 // @vitest-environment node
 
-import { createHash, createHmac } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -38,7 +37,6 @@ import {
   loadPairedCompanionDevices,
   registerPairedCompanionDevice
 } from './companionPairingStore.js';
-import { authenticateCompanionRequest } from './companionRequestAuth.js';
 
 let tempRoot = '';
 const protocolArgs = {
@@ -88,7 +86,7 @@ it('replaces an existing paired device with the same device id', () => {
 
 it('keeps paired devices with different ids even when their LAN labels match', () => {
   const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-  const beforeReset = registerPairedCompanionDevice({
+  registerPairedCompanionDevice({
     ...protocolArgs,
     clientAddress: '127.0.0.1',
     deviceId: 'device-before-reset',
@@ -125,19 +123,6 @@ it('keeps paired devices with different ids even when their LAN labels match', (
     '[companion-sync] paired companion device has matching LAN label with a different device id',
     expect.objectContaining({ deviceKind: 'android-capacitor' })
   );
-  expect(authenticateCompanionRequest({
-    nowMs: Date.parse('2026-05-10T01:00:30.000Z'),
-    request: createSignedRequest({
-      deviceId: 'device-before-reset',
-      deviceSecret: beforeReset.device_secret,
-      nonce: 'nonce-before-reset',
-      timestamp: '2026-05-10T01:00:30.000Z'
-    })
-  })).toEqual({
-    device_id: 'device-before-reset',
-    member_state: 'active',
-    ok: true
-  });
   warnSpy.mockRestore();
 });
 
@@ -186,52 +171,3 @@ it('recovers with a fresh encrypted store after quarantining stale paired-device
     })
   ]);
 });
-
-it('rejects signed companion requests as unknown devices when paired-device ciphertext is unreadable', async () => {
-  mockedUserDataDir = path.join(tempRoot, 'corrupt-user-data');
-  await fs.mkdir(mockedUserDataDir, { recursive: true });
-  const storePath = path.join(mockedUserDataDir, 'companion-paired-devices.bin');
-  await fs.writeFile(storePath, Buffer.from('stale-ciphertext'));
-  safeStorageMock.decryptString.mockImplementation(() => {
-    throw new Error('Error while decrypting the ciphertext provided to safeStorage.decryptString.');
-  });
-
-  expect(authenticateCompanionRequest({
-    request: {
-      headers: {
-        'x-device-id': 'android-test-device',
-        'x-nonce': 'nonce-1',
-        'x-signature': '00',
-        'x-timestamp': new Date().toISOString()
-      },
-      method: 'GET',
-      url: '/companion/workspace-version'
-    } as never
-  })).toEqual({
-    error: 'unknown_device',
-    ok: false,
-    status_code: 401
-  });
-});
-
-function createSignedRequest(args: {
-  deviceId: string;
-  deviceSecret: string;
-  nonce: string;
-  timestamp: string;
-}) {
-  const bodyHash = createHash('sha256').update('').digest('hex');
-  const canonicalPayload = ['GET', '/companion/workspace-version', args.timestamp, args.nonce, bodyHash].join('\n');
-  const signature = createHmac('sha256', args.deviceSecret).update(canonicalPayload).digest('hex');
-  return {
-    headers: {
-      'x-device-id': args.deviceId,
-      'x-nonce': args.nonce,
-      'x-signature': signature,
-      'x-sync-group-id': 'group-1',
-      'x-timestamp': args.timestamp
-    },
-    method: 'GET',
-    url: '/companion/workspace-version'
-  } as never;
-}

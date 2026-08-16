@@ -74,7 +74,8 @@ describe('FolioleCompanionSyncGroupPeerStore', () => {
     expect(action).toContain('routeBindingKey(context, "syncGroupId")');
     expect(action).toContain('routeBindingKey(context, "peerDeviceId")');
     expect(action).toContain('routeBindingKey(context, "endpointUrl")');
-    expect(action).toContain('FolioleCompanionSyncGroupOutboundPeerStore.bindRoute(');
+    expect(action).toContain('FolioleCompanionSyncGroupOutboundPeerStore.save(');
+    expect(action).toContain('context, groupId, localDeviceId, peerDeviceId, endpointUrl');
   });
 
   it('offers persisted peer routes as identity-verified discovery candidates', async () => {

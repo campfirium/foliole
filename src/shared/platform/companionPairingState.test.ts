@@ -1,13 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../lib/platform/syncProtocolContract';
+
 import { normalizePairingState } from './companionPairingState';
 
-const protocol = {
-  capabilities: ['lan-sync-v1', 'sync-group-facts-v1'],
-  max_supported_version: 1,
-  min_supported_version: 1,
-  version: 1
-};
+const protocol = CURRENT_SYNC_PROTOCOL_DESCRIPTOR;
 
 describe('companionPairingState', () => {
   it('marks old paired credentials without protocol metadata for repair', () => {

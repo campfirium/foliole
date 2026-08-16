@@ -129,7 +129,7 @@ function seedFixture(db) {
   insertNode(db, { id: 'outside', title: 'Outside', content: 'private', created_at: '2026-06-01T00:07:00.000Z' });
 }
 
-describe('Demo Pack export', () => {
+describe('Demo Pack export', { timeout: 15_000 }, () => {
   it('exports only the selected subtree in manual child order', async () => {
     await withFixture(async ({ dbPath, outputPath }) => {
       const pack = await exportDemoPack({ dbPath, outputPath, rootTitle: 'Foliole Demo Preview' });

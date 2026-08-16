@@ -113,7 +113,7 @@ describe('companionWorkspaceSync pairing rejection', () => {
 
     await expect(requestCompanionPairing({
       deviceId: 'android-test-device', deviceKind: 'android', deviceName: 'Pixel 9',
-      endpointUrl: 'http://10.0.2.2:38641', groupId: 'group-new', timelineId: 'timeline-new'
+      endpointUrl: 'http://10.0.2.2:38641', groupId: 'group-new', groupTag: 'tag-new', timelineId: 'timeline-new'
     })).rejects.toThrow('sync_group_identity_mismatch');
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();

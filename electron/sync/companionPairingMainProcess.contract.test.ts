@@ -14,6 +14,10 @@ import { requestWorkspaceSyncServer } from './lanWorkspaceSyncServer.testSupport
 const electronMock = vi.hoisted(() => ({
   userDataPath: `${process.cwd()}/.tmp/foliole-pairing-main-${Math.random().toString(16).slice(2)}`
 }));
+const workgroupKeyMock = vi.hoisted(() => ({
+  group_key: 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8',
+  group_tag: '630dcd2966c4336691125448bbb25b4f'
+}));
 
 vi.mock('electron', () => ({
   app: {
@@ -86,6 +90,10 @@ vi.mock('../database/workspaceSnapshot.js', () => ({
   loadWorkspaceVersionMetadata: vi.fn()
 }));
 
+vi.mock('./workgroupKeyStore.js', () => ({
+  loadDesktopWorkgroupKey: vi.fn(() => workgroupKeyMock)
+}));
+
 async function resetRuntimeState() {
   vi.useRealTimers();
   const requests = await import('./companionPairingRequests.js');
@@ -105,6 +113,7 @@ async function postPairRequest(server: ReturnType<typeof import('./lanWorkspaceS
       device_kind: 'android-capacitor',
       device_name: 'Fixed Android companion',
       group_id: 'group-test',
+      group_tag: workgroupKeyMock.group_tag,
       library_facts: {
         attachment_count: 0,
         content_blob_count: 0,

@@ -5,6 +5,10 @@ import { requestWorkspaceSyncServer } from './lanWorkspaceSyncServer.testSupport
 const electronMock = vi.hoisted(() => ({
   userDataPath: `${process.cwd()}/.tmp/foliole-companion-pairing-${Math.random().toString(16).slice(2)}`
 }));
+const workgroupKeyMock = vi.hoisted(() => ({
+  group_key: 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8',
+  group_tag: '630dcd2966c4336691125448bbb25b4f'
+}));
 
 vi.mock('electron', () => ({
   app: {
@@ -46,6 +50,10 @@ vi.mock('../database/syncGroupStore.js', () => ({
     members: [],
     timeline_id: 'timeline-test'
   }))
+}));
+
+vi.mock('./workgroupKeyStore.js', () => ({
+  loadDesktopWorkgroupKey: vi.fn(() => workgroupKeyMock)
 }));
 
 async function resetLanWorkspaceSyncServerTestState() {

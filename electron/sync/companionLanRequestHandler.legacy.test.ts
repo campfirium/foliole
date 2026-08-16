@@ -37,6 +37,11 @@ const diagnosticsMock = vi.hoisted(() => ({
     verdicts: []
   }))
 }));
+const workgroupKeyMock = vi.hoisted(() => ({
+  group_id: 'group-1',
+  group_key: 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8',
+  group_tag: '630dcd2966c4336691125448bbb25b4f'
+}));
 
 vi.mock('../database/workspaceSnapshot.js', () => ({
   loadWorkspaceSnapshot: workspaceSnapshotMock.loadWorkspaceSnapshot,
@@ -59,10 +64,13 @@ vi.mock('./companionLanSyncPack.js', () => ({
 vi.mock('./buildCompanionSyncDiagnostics.js', () => ({
   buildCompanionSyncDiagnostics: diagnosticsMock.buildCompanionSyncDiagnostics
 }));
+vi.mock('./workgroupKeyStore.js', () => ({
+  consumeDesktopWorkgroupNonce: vi.fn(() => true),
+  loadDesktopWorkgroupKey: vi.fn(() => workgroupKeyMock)
+}));
 
 import {
   CONTENT_BLOB_ACK_PATH,
-  createLanWorkspaceSyncRequestHandler,
   SYNC_DIAGNOSTICS_PATH,
   SYNC_INDEX_PATH,
   SYNC_NODE_VERSIONS_PATH,
@@ -71,6 +79,9 @@ import {
   SYNC_REVIEW_LOG_PATH,
   SYNC_STATE_PATH
 } from './companionLanRequestHandler.js';
+import { createLegacyLanWorkspaceSyncHandler } from './companionLanRequestHandler.legacy.testSupport.js';
+import { WORKGROUP_ENVELOPE_CONTENT_TYPE } from './workgroupHttpCrypto.js';
+import { decryptWorkgroupResponse, encryptJsonWorkgroupRequest } from './workgroupHttpCrypto.testSupport.js';
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -104,58 +115,52 @@ function createResponse() {
   return response as unknown as http.ServerResponse & typeof response;
 }
 
-function createHandler() {
-  return createLanWorkspaceSyncRequestHandler({
-    appVersion: '0.1.0-test',
-    onPairRequestCreated: null,
-    peerId: 'desktop-local',
-    updatePairingStatus: vi.fn(),
-    getSyncStatus: () => ({
-      advertised_urls: ['http://127.0.0.1:38641'],
-      last_error: null,
-      paired_device_count: 1,
-      pending_pair_request_count: 0,
-      port: 38641,
-      state: 'running'
-    })
-  });
-}
-
 it('accepts signed content body blob ack without loading the workspace snapshot', async () => {
   const response = createResponse();
   const requestBody = JSON.stringify({ hashes: ['a'.repeat(64)] });
-  const request = Readable.from([requestBody]) as http.IncomingMessage;
-  request.headers = {};
+  const encryptedBody = encryptJsonWorkgroupRequest({
+    body: requestBody, groupId: 'group-1', method: 'POST', pathWithQuery: CONTENT_BLOB_ACK_PATH
+  });
+  const request = Readable.from([encryptedBody]) as http.IncomingMessage;
+  request.headers = { 'x-sync-group-id': 'group-1' };
   request.method = 'POST';
   request.url = CONTENT_BLOB_ACK_PATH;
 
-  await createHandler()(request, response);
+  await createLegacyLanWorkspaceSyncHandler()(request, response);
 
   expect(response.writeHead).toHaveBeenCalledWith(200, expect.objectContaining({
-    'Content-Type': 'application/json; charset=utf-8'
+    'Content-Type': WORKGROUP_ENVELOPE_CONTENT_TYPE,
+    'X-Foliole-Original-Content-Type': 'application/json; charset=utf-8'
   }));
-  expect(response.end).toHaveBeenCalledWith(JSON.stringify({
+  const responseBody = response.end.mock.calls[0]?.[0] as Buffer;
+  expect(JSON.parse(decryptWorkgroupResponse({
+    body: responseBody, contentType: 'application/json; charset=utf-8', groupId: 'group-1',
+    method: 'POST', pathWithQuery: CONTENT_BLOB_ACK_PATH
+  }).toString('utf8'))).toEqual({
     acked_hashes: ['a'.repeat(64)],
     status: 'ok'
-  }));
+  });
   expect(contentBlobResourceMock.acknowledgeCompanionContentBlobs).toHaveBeenCalledWith(requestBody);
   expect(workspaceSnapshotMock.loadWorkspaceSnapshot).not.toHaveBeenCalled();
 });
 
 it('serves signed sync pack containers without loading the workspace snapshot', async () => {
   const response = createResponse();
-  await createHandler()({
-    headers: {},
+  await createLegacyLanWorkspaceSyncHandler()({
+    headers: { 'x-sync-group-id': 'group-1' },
     method: 'GET',
     url: `${SYNC_PACK_PATH}?after_state_seq=4`
   } as http.IncomingMessage, response);
 
-  expect(response.writeHead).toHaveBeenCalledWith(200, {
-    'Content-Disposition': 'attachment; filename="pack-1.syncpack"',
-    'Content-Length': Buffer.byteLength('sqlite-pack'),
-    'Content-Type': 'application/zip'
-  });
-  expect(response.end).toHaveBeenCalledWith(Buffer.from('sqlite-pack'));
+  expect(response.writeHead).toHaveBeenCalledWith(200, expect.objectContaining({
+    'Content-Type': WORKGROUP_ENVELOPE_CONTENT_TYPE,
+    'X-Foliole-Original-Content-Type': 'application/zip'
+  }));
+  const responseBody = response.end.mock.calls[0]?.[0] as Buffer;
+  expect(decryptWorkgroupResponse({
+    body: responseBody, contentType: 'application/zip', groupId: 'group-1', method: 'GET',
+    pathWithQuery: `${SYNC_PACK_PATH}?after_state_seq=4`
+  })).toEqual(Buffer.from('sqlite-pack'));
   expect(syncPackMock.buildCompanionSyncPackResource).toHaveBeenCalledWith(expect.objectContaining({
     pathname: SYNC_PACK_PATH
   }), 'android-fixture');
@@ -164,7 +169,7 @@ it('serves signed sync pack containers without loading the workspace snapshot', 
 
 it('serves signed sync diagnostics without loading content bodies or the workspace snapshot', async () => {
   const response = createResponse();
-  await createHandler()({
+  await createLegacyLanWorkspaceSyncHandler()({
     headers: {},
     method: 'GET',
     url: SYNC_DIAGNOSTICS_PATH
@@ -190,7 +195,7 @@ it.each([
   `${SYNC_STATE_PATH}?after_state_seq=0`
 ])('retires signed legacy JSON GET endpoint %s', async (pathWithQuery) => {
   const response = createResponse();
-  await createHandler()({
+  await createLegacyLanWorkspaceSyncHandler()({
     headers: {},
     method: 'GET',
     url: pathWithQuery
@@ -214,7 +219,7 @@ it.each([
   request.method = 'POST';
   request.url = path;
 
-  await createHandler()(request, response);
+  await createLegacyLanWorkspaceSyncHandler()(request, response);
 
   expect(response.writeHead).toHaveBeenCalledWith(410, expect.objectContaining({
     'Content-Type': 'application/json; charset=utf-8'
