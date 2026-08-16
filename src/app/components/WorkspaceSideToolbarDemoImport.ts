@@ -1,6 +1,8 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { importDemoMarkdown, useDemoRuntimeState, type DemoMarkdownRuntimeEntry } from '../../shared/platform/runtime/demoRuntime';
+
+import { CLIPBOARD_IMPORT_REQUEST_EVENT, FILE_IMPORT_REQUEST_EVENT } from './importActivityRequests';
 
 export function useDemoMarkdownRailImport() {
   const demoState = useDemoRuntimeState();
@@ -27,6 +29,20 @@ export function useDemoMarkdownRailImport() {
     importMarkdownFiles,
     isDemo: demoState.isDemo
   };
+}
+
+export function useDemoImportRequestBridge(controller: ReturnType<typeof useDemoMarkdownRailImport>) {
+  useEffect(() => {
+    if (!controller.isDemo) return undefined;
+    const handleClipboardRequest = () => void controller.importClipboardMarkdown();
+    const handleFileRequest = () => controller.fileInputRef.current?.click();
+    window.addEventListener(CLIPBOARD_IMPORT_REQUEST_EVENT, handleClipboardRequest);
+    window.addEventListener(FILE_IMPORT_REQUEST_EVENT, handleFileRequest);
+    return () => {
+      window.removeEventListener(CLIPBOARD_IMPORT_REQUEST_EVENT, handleClipboardRequest);
+      window.removeEventListener(FILE_IMPORT_REQUEST_EVENT, handleFileRequest);
+    };
+  }, [controller.fileInputRef, controller.importClipboardMarkdown, controller.isDemo]);
 }
 
 async function readDemoMarkdownFiles(files: File[]): Promise<DemoMarkdownRuntimeEntry[]> {

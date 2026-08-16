@@ -73,6 +73,7 @@
   "desktop.palette.command.search": "Команды поиска",
   "desktop.palette.command.placeholder": "Введите команду...",
   "desktop.palette.command.empty": "Нет подходящих команд",
+  "desktop.demo.operationNotDemonstrable": "Это действие нельзя продемонстрировать в Demo.",
   "desktop.palette.command.configureShortcut": "Настройте ярлык для {title}",
   "desktop.palette.node.dialog": "Перейти к",
   "desktop.palette.node.empty": "Поиск папок, тем и элементов",

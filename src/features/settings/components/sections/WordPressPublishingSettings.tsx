@@ -38,9 +38,9 @@ function PasswordDescription({ siteKind }: { siteKind: WordPressSiteKind }) {
   </>;
 }
 
-export function WordPressPublishingSettings(props: { expanded: boolean; onExpandedChange: (expanded: boolean) => void }) {
+export function WordPressPublishingSettings(props: { expanded: boolean; onExpandedChange: (expanded: boolean) => void; previewDesktopSettings?: boolean }) {
   const t = useTranslation();
-  const state = useWordPressPublishingSettings();
+  const state = useWordPressPublishingSettings(Boolean(props.previewDesktopSettings));
   return (
     <SettingsSection
       ariaLabel={t('settings.publishing.wordpress.sectionAria')}

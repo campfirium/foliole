@@ -130,9 +130,9 @@ function LocalStaticPagesOverview({ state }: { state: FoliolePublishingSettingsS
   );
 }
 
-export function FoliolePublishingSettings(props: { expanded: boolean; onExpandedChange: (expanded: boolean) => void }) {
+export function FoliolePublishingSettings(props: { expanded: boolean; onExpandedChange: (expanded: boolean) => void; previewDesktopSettings?: boolean }) {
   const t = useTranslation();
-  const state = useFoliolePublishingSettings();
+  const state = useFoliolePublishingSettings(Boolean(props.previewDesktopSettings));
   return (
     <SettingsSection
       ariaLabel={t('settings.publishing.foliole.sectionAria')}

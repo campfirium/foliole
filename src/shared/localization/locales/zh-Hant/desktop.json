@@ -73,6 +73,7 @@
   "desktop.palette.command.search": "搜尋命令",
   "desktop.palette.command.placeholder": "輸入指令...",
   "desktop.palette.command.empty": "沒有符合的命令",
+  "desktop.demo.operationNotDemonstrable": "此操作無法在 Demo 中示範。",
   "desktop.palette.command.configureShortcut": "配置{title}的捷徑",
   "desktop.palette.node.dialog": "前往",
   "desktop.palette.node.empty": "搜尋資料夾、主題和項目",

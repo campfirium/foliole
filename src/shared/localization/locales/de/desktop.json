@@ -73,6 +73,7 @@
   "desktop.palette.command.search": "Suchbefehle",
   "desktop.palette.command.placeholder": "Geben Sie einen Befehl ein...",
   "desktop.palette.command.empty": "Keine passenden Befehle",
+  "desktop.demo.operationNotDemonstrable": "Diese Aktion kann in der Demo nicht vorgeführt werden.",
   "desktop.palette.command.configureShortcut": "Verknüpfung für {title} konfigurieren",
   "desktop.palette.node.dialog": "Gehe zu",
   "desktop.palette.node.empty": "Ordner, Themen und Elemente durchsuchen",

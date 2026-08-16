@@ -9,6 +9,7 @@ import { preloadTranslationCatalog } from '../../shared/localization/translation
 import { installDemoRuntimeController, type DemoRuntimeController, type DemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
 import { openExternalUrl } from '../../shared/platform/runtimeExternalNavigation';
 
+import { FILE_IMPORT_REQUEST_EVENT } from './importActivityRequests';
 import { WorkspaceSideToolbar } from './WorkspaceSideToolbar';
 
 vi.mock('../../shared/platform/runtimeExternalNavigation', () => ({
@@ -183,6 +184,22 @@ it('shows Demo conversion actions in the bottom rail', () => {
 
   expect(screen.getByRole('button', { name: 'Reset data' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument();
+});
+
+it('routes command requests to the Demo browser file picker', () => {
+  installDemoState(true);
+  const { container } = renderWithLocalization(
+    <AppearanceSettingsProvider>
+      <WorkspaceRailSettingsProvider>{toolbar(false)}</WorkspaceRailSettingsProvider>
+    </AppearanceSettingsProvider>
+  );
+  const input = container.querySelector<HTMLInputElement>('input[type="file"]');
+  if (!input) throw new Error('Demo file input is missing.');
+  const click = vi.spyOn(input, 'click');
+
+  window.dispatchEvent(new Event(FILE_IMPORT_REQUEST_EVENT));
+
+  expect(click).toHaveBeenCalledOnce();
 });
 
 it('shows localized Demo conversion actions in the bottom rail', () => {

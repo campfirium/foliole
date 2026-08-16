@@ -73,6 +73,7 @@
   "desktop.palette.command.search": "Polecenia wyszukiwania",
   "desktop.palette.command.placeholder": "Wpisz polecenie...",
   "desktop.palette.command.empty": "Brak pasujących poleceń",
+  "desktop.demo.operationNotDemonstrable": "Tej operacji nie można zaprezentować w Demo.",
   "desktop.palette.command.configureShortcut": "Skonfiguruj skrót dla {title}",
   "desktop.palette.node.dialog": "Idź do",
   "desktop.palette.node.empty": "Przeszukuj foldery, tematy i elementy",

@@ -6,6 +6,7 @@ import { connectFoliolePublishSettingsToRuntime, disconnectFoliolePublishSetting
 import { requestOpenFoliolePublishedTopics } from '../../../../shared/platform/runtime/foliolePublishedNavigation';
 import { openExternalUrl } from '../../../../shared/platform/runtimeExternalNavigation';
 import { requestAppConfirmation } from '../../../../shared/ui';
+import { showDemoOperationNotice } from '../../../../shared/ui/DemoOperationNotice';
 
 import { isCloudflareAccountId, isCloudflareApiToken } from './cloudflareCredentialValidation';
 import {
@@ -126,12 +127,13 @@ function siteActions(state: LoadedState, requireSiteTitle: () => Promise<boolean
   };
 }
 
-export function useFoliolePublishingSettings() {
-  const state = useFoliolePublishingDraftState();
-  const siteTitle = useFoliolePublishingSiteTitle(state);
+export function useFoliolePublishingSettings(previewDesktopSettings = false) {
+  const t = useTranslation();
+  const state = useFoliolePublishingDraftState(previewDesktopSettings);
+  const siteTitle = useFoliolePublishingSiteTitle(state, previewDesktopSettings);
   const connection = useConnectionActions(state, siteTitle.requireSiteTitle);
   const site = siteActions(state, siteTitle.requireSiteTitle);
-  const theme = useFoliolePublishingTheme(state, siteTitle.requireSiteTitle);
+  const theme = useFoliolePublishingTheme(state, siteTitle.requireSiteTitle, previewDesktopSettings);
   const disabled = state.status !== 'idle';
   const connected = Boolean(state.settings?.pages_url && state.settings.account_id && state.settings.project_name);
   const hasSavedToken = Boolean(state.settings?.has_credentials);
@@ -145,12 +147,31 @@ export function useFoliolePublishingSettings() {
     ? isCloudflareApiToken(state.form.apiToken)
     : Boolean(state.settings?.credentials_valid);
   const saveDraft = async () => {
+    if (previewDesktopSettings) return;
     if (connected) return;
     state.setError(null);
     try {
       await persistFoliolePublishingDraft(state, state.form);
       state.setError(null);
     } catch (reason) { state.setError(reason instanceof Error ? reason.message : "Couldn't save Foliole Publish settings."); }
+  };
+  const demoOperation = () => showDemoOperationNotice(t);
+  const actions = previewDesktopSettings ? {
+    deploy: demoOperation,
+    disconnect: demoOperation,
+    manageContent: demoOperation,
+    updateSiteAddress: demoOperation,
+    visitPages: demoOperation,
+    viewLocal: demoOperation,
+    viewWeb: demoOperation
+  } : {
+    deploy: connection.deploy,
+    disconnect: connection.disconnect,
+    manageContent: requestOpenFoliolePublishedTopics,
+    updateSiteAddress: site.updateSiteAddress,
+    visitPages: site.visitPages,
+    viewLocal: site.viewLocal,
+    viewWeb: site.viewWeb
   };
   return {
     accountIdInvalid, apiTokenInvalid,
@@ -160,10 +181,9 @@ export function useFoliolePublishingSettings() {
     canUpdateAddress: connected && !disabled && state.form.customDomain.trim() !== savedCustomDomain,
     canViewWeb: connected && !disabled && Boolean(state.settings?.site_address),
     connected, disabled, error: state.error, form: state.form, hasSavedToken, pagesUrl: state.settings?.pages_url ?? '',
-    manageContent: requestOpenFoliolePublishedTopics,
     saveDraft: () => void saveDraft(),
     siteAddress: state.settings?.site_address ?? '', status: state.status,
-    ...connection, ...site, ...siteTitle, ...theme, updateForm
+    ...connection, ...site, ...siteTitle, ...theme, ...actions, updateForm
   };
 }
 

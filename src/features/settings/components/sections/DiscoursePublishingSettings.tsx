@@ -12,9 +12,9 @@ import { PublishingConnectionFooter } from './PublishingConnectionFooter';
 import { PublishingSetupStep } from './PublishingSetupStep';
 import { usePublishingSettings } from './usePublishingSettings';
 
-export function DiscoursePublishingSettings(props: { expanded: boolean; onExpandedChange: (expanded: boolean) => void }) {
+export function DiscoursePublishingSettings(props: { expanded: boolean; onExpandedChange: (expanded: boolean) => void; previewDesktopSettings?: boolean }) {
   const t = useTranslation();
-  const state = usePublishingSettings();
+  const state = usePublishingSettings(Boolean(props.previewDesktopSettings));
   return (
     <SettingsSection ariaLabel={t('settings.publishing.sectionAria')} description={t('settings.publishing.discourse.description')} expanded={props.expanded} onExpandedChange={props.onExpandedChange} title={t('settings.publishing.discourse.title')}>
       {state.error ? <AppErrorState description={t('settings.publishing.error.tryAgain')} surface="panel" title={state.error} /> : null}

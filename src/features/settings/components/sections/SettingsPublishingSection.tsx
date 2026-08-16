@@ -10,7 +10,9 @@ import { DiscoursePublishingSettings } from './DiscoursePublishingSettings';
 import { FoliolePublishingSettings } from './FoliolePublishingSettings';
 import { WordPressPublishingSettings } from './WordPressPublishingSettings';
 
-export function SettingsPublishingSection() {
+export function SettingsPublishingSection({ previewDesktopSettings = false }: {
+  previewDesktopSettings?: boolean;
+}) {
   const [expanded, setExpanded] = useState(loadPublishingSectionExpansion);
 
   const updateExpanded = (id: PublishingSectionId, value: boolean) => {
@@ -24,9 +26,9 @@ export function SettingsPublishingSection() {
 
   return (
     <>
-      <FoliolePublishingSettings expanded={expanded.foliole} onExpandedChange={(value) => updateExpanded('foliole', value)} />
-      <WordPressPublishingSettings expanded={expanded.wordpress} onExpandedChange={(value) => updateExpanded('wordpress', value)} />
-      <DiscoursePublishingSettings expanded={expanded.discourse} onExpandedChange={(value) => updateExpanded('discourse', value)} />
+      <FoliolePublishingSettings expanded={expanded.foliole} onExpandedChange={(value) => updateExpanded('foliole', value)} previewDesktopSettings={previewDesktopSettings} />
+      <WordPressPublishingSettings expanded={expanded.wordpress} onExpandedChange={(value) => updateExpanded('wordpress', value)} previewDesktopSettings={previewDesktopSettings} />
+      <DiscoursePublishingSettings expanded={expanded.discourse} onExpandedChange={(value) => updateExpanded('discourse', value)} previewDesktopSettings={previewDesktopSettings} />
     </>
   );
 }

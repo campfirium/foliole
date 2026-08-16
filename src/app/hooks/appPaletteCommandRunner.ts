@@ -3,6 +3,7 @@ import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 
 import { runAppCommand } from './appCommands';
+import { runDemoCommandPreview } from './appPaletteDemoCommand';
 import {
   createPaletteEditorCommandActions,
   type PaletteEditorCommandRunnerArgs
@@ -40,6 +41,7 @@ interface PaletteCommandRunnerArgs extends PaletteHelpCommandRunnerArgs, Palette
   readReviewTopic: () => Promise<boolean>;
   deleteCurrentReviewItem: () => boolean;
   deleteReviewSourceTopic: () => boolean;
+  demoOperationTranslate: Parameters<typeof runDemoCommandPreview>[1];
   postponeReviewTopic: () => Promise<boolean>;
   openPostponeTopicPanel: () => void;
   dismissReviewTopic: () => Promise<boolean>;
@@ -207,6 +209,10 @@ export function createPaletteCommandRunner(args: PaletteCommandRunnerArgs) {
       || CONTEXTUAL_COMMAND_IDS.has(id)
       || args.paletteItems.some((item) => item.id === id && item.enabled);
     if (!canRun) {
+      return;
+    }
+    if (runDemoCommandPreview(id, args.demoOperationTranslate)) {
+      args.setCommandPaletteOpen(false);
       return;
     }
     const handled = runAppCommand(id, createPaletteCommandActions(args, toggleReviewMode));

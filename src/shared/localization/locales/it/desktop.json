@@ -73,6 +73,7 @@
   "desktop.palette.command.search": "Comandi di ricerca",
   "desktop.palette.command.placeholder": "Digita un comando...",
   "desktop.palette.command.empty": "Nessun comando corrispondente",
+  "desktop.demo.operationNotDemonstrable": "Questa operazione non può essere mostrata nella Demo.",
   "desktop.palette.command.configureShortcut": "Configura scorciatoia per {title}",
   "desktop.palette.node.dialog": "Vai a",
   "desktop.palette.node.empty": "Cerca cartelle, argomenti ed elementi",

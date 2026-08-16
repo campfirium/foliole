@@ -7,7 +7,7 @@ import {
   type FoliolePublishingDraftState
 } from './useFoliolePublishingDraft';
 
-export function useFoliolePublishingSiteTitle(state: FoliolePublishingDraftState) {
+export function useFoliolePublishingSiteTitle(state: FoliolePublishingDraftState, previewDesktopSettings = false) {
   const t = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [invalid, setInvalid] = useState(false);
@@ -19,6 +19,10 @@ export function useFoliolePublishingSiteTitle(state: FoliolePublishingDraftState
   };
   const requireSiteTitle = async () => {
     if (!state.form.siteTitle.trim()) return rejectEmpty();
+    if (previewDesktopSettings) {
+      setInvalid(false);
+      return true;
+    }
     try {
       await persistFoliolePublishingSiteTitle(state);
       setInvalid(false);

@@ -62,6 +62,17 @@ it('keeps the real hotkey settings surface in the Live Demo preview', async () =
   expect(screen.getByRole('button', { name: 'Add shortcut for Open settings' })).toBeInTheDocument();
 });
 
+it('shows the complete Publish settings preview without requiring a host runtime', async () => {
+  renderWithMouseGestureProvider(
+    <DemoSettingsPreviewOverlay onClose={vi.fn()} requestedCategory="publishing" />
+  );
+
+  expect(await screen.findByRole('heading', { name: 'Publish to the site' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Publish to WordPress' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Publish to Discourse' })).toBeInTheDocument();
+  expect(screen.getByText('Desktop Settings Preview')).toBeInTheDocument();
+});
+
 it('keeps external folders in the Live Demo settings preview', async () => {
   renderWithMouseGestureProvider(
     <DemoSettingsPreviewOverlay onClose={vi.fn()} requestedCategory="external-search" />

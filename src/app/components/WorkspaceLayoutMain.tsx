@@ -7,10 +7,10 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
 import { selectImmersiveReadingModeSource } from './immersiveReadingModeSource';
 import { ImmersiveShortcutsOverlay } from './ImmersiveShortcutsOverlay';
-import { CLIPBOARD_IMPORT_REQUEST_EVENT, FILE_IMPORT_REQUEST_EVENT } from './importActivityRequests';
 import { ImportSourceWorkspace } from './ImportSourceWorkspace';
 import { useImmersiveReadingMode } from './useImmersiveReadingMode';
 import { useWorkspaceActivityNotice } from './useWorkspaceActivityNotice';
+import { useWorkspaceImportRequests } from './useWorkspaceImportRequests';
 import { useWorkspaceShellBridges } from './useWorkspaceShellBridges';
 import { WorkspaceActivityNotice } from './WorkspaceActivityNotice';
 import { WorkspaceLayoutGrid, type WorkspaceLayoutGridSource } from './WorkspaceLayoutGrid';
@@ -72,24 +72,6 @@ function renderWorkspaceActivityNotice(controller: ReturnType<typeof useWorkspac
       {...definedProps({ onOpen: controller.notice.nodeId ? controller.openImportedTopic : undefined })}
     />
   );
-}
-
-function useWorkspaceImportRequests(controller: ReturnType<typeof useWorkspaceActivityNotice>) {
-  useEffect(() => {
-    const handleClipboardRequest = (event: Event) => {
-      const detail = event instanceof CustomEvent ? event.detail as { targetParentNodeId?: string } | undefined : undefined;
-      void controller.startClipboardImport(detail);
-    };
-    const handleFileRequest = () => {
-      void controller.startFileImport();
-    };
-    window.addEventListener(CLIPBOARD_IMPORT_REQUEST_EVENT, handleClipboardRequest);
-    window.addEventListener(FILE_IMPORT_REQUEST_EVENT, handleFileRequest);
-    return () => {
-      window.removeEventListener(CLIPBOARD_IMPORT_REQUEST_EVENT, handleClipboardRequest);
-      window.removeEventListener(FILE_IMPORT_REQUEST_EVENT, handleFileRequest);
-    };
-  }, [controller.startClipboardImport, controller.startFileImport]);
 }
 
 function useWorkspaceImportNoticeController(imports: WorkspaceLayoutProps['imports'], navigation: WorkspaceLayoutProps['navigation']) {

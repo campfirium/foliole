@@ -16,6 +16,7 @@ import {
   loadWordPressPublishSettingsFromRuntime,
   saveWordPressPublishDraftToRuntime
 } from '../../../../shared/platform/wordpressPublishRepository';
+import { showDemoOperationNotice } from '../../../../shared/ui/DemoOperationNotice';
 
 export interface WordPressPublishingForm {
   applicationPassword: string;
@@ -28,15 +29,16 @@ const EMPTY_FORM: WordPressPublishingForm = { applicationPassword: '', siteUrl: 
 
 export type { WordPressSiteKind };
 
-function useWordPressPublishingState(t: ReturnType<typeof useTranslation>) {
+function useWordPressPublishingState(t: ReturnType<typeof useTranslation>, previewDesktopSettings: boolean) {
   const [form, setForm] = useState<WordPressPublishingForm>(EMPTY_FORM);
   const [hasCredentials, setHasCredentials] = useState(false);
-  const [status, setStatus] = useState<WordPressPublishingStatus>('loading');
+  const [status, setStatus] = useState<WordPressPublishingStatus>(previewDesktopSettings ? 'idle' : 'loading');
   const [error, setError] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
   const [settings, setSettings] = useState<NativeWordPressPublishSettings | null>(null);
   const saveQueue = useRef<Promise<unknown>>(Promise.resolve());
   useEffect(() => {
+    if (previewDesktopSettings) return undefined;
     void loadWordPressPublishSettingsFromRuntime()
       .then((settings) => {
         if (!settings) return;
@@ -47,7 +49,8 @@ function useWordPressPublishingState(t: ReturnType<typeof useTranslation>) {
       })
       .catch(() => setError(t('settings.publishing.wordpress.error.load')))
       .finally(() => setStatus('idle'));
-  }, [t]);
+    return undefined;
+  }, [previewDesktopSettings, t]);
   const enqueueSave = <T,>(save: () => Promise<T>) => {
     const queued = saveQueue.current.then(save, save);
     saveQueue.current = queued.then(() => undefined, () => undefined);
@@ -118,9 +121,9 @@ async function disconnectWordPress(state: PublishingState, t: ReturnType<typeof 
   }
 }
 
-export function useWordPressPublishingSettings() {
+export function useWordPressPublishingSettings(previewDesktopSettings = false) {
   const t = useTranslation();
-  const state = useWordPressPublishingState(t);
+  const state = useWordPressPublishingState(t, previewDesktopSettings);
   const disabled = state.status !== 'idle';
   const siteKind = getWordPressSiteKind(state.form.siteUrl);
   const siteUrlInvalid = Boolean(state.form.siteUrl.trim()) && siteKind === 'unknown';
@@ -138,6 +141,7 @@ export function useWordPressPublishingSettings() {
     state.setForm((current) => ({ ...current, ...patch }));
   };
   const saveDraft = () => {
+    if (previewDesktopSettings) return;
     void persistWordPressDraft(state).catch((error) => {
       state.setError(readConnectionError(error, t('settings.publishing.wordpress.error.connect')));
     });
@@ -156,7 +160,11 @@ export function useWordPressPublishingSettings() {
     siteUrlInvalid,
     saveDraft,
     status: state.status,
-    submit: () => { if (canConnect) void connectWordPress(state, t); else saveDraft(); },
+    submit: () => {
+      if (previewDesktopSettings) showDemoOperationNotice(t);
+      else if (canConnect) void connectWordPress(state, t);
+      else saveDraft();
+    },
     updateForm
   };
 }

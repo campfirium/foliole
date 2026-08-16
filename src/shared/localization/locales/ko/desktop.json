@@ -73,6 +73,7 @@
   "desktop.palette.command.search": "검색 명령",
   "desktop.palette.command.placeholder": "명령을 입력하세요...",
   "desktop.palette.command.empty": "일치하는 명령이 없습니다.",
+  "desktop.demo.operationNotDemonstrable": "이 작업은 Demo에서 시연할 수 없습니다.",
   "desktop.palette.command.configureShortcut": "{title}에 대한 바로가기 구성",
   "desktop.palette.node.dialog": "이동",
   "desktop.palette.node.empty": "폴더, 주제, 항목 검색",

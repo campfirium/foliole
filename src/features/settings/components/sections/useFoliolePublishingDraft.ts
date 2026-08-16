@@ -35,19 +35,21 @@ export function foliolePublishingFormFromSettings(settings: NativeFoliolePublish
   };
 }
 
-export function useFoliolePublishingDraftState() {
+export function useFoliolePublishingDraftState(previewDesktopSettings = false) {
   const [form, setForm] = useState(EMPTY_FOLIOLE_PUBLISHING_FORM);
   const [settings, setSettings] = useState<NativeFoliolePublishSettings | null>(null);
-  const [status, setStatus] = useState<FoliolePublishingStatus>('loading');
+  const [status, setStatus] = useState<FoliolePublishingStatus>(previewDesktopSettings ? 'idle' : 'loading');
   const [error, setError] = useState<string | null>(null);
   const saveQueue = useRef<Promise<unknown>>(Promise.resolve());
   useEffect(() => {
+    if (previewDesktopSettings) return undefined;
     void Promise.all([loadFoliolePublishSettingsFromRuntime(), loadFoliolePublishSiteTitleFromRuntime()]).then(([value, identity]) => {
       if (!value) return;
       setSettings(value);
       setForm(foliolePublishingFormFromSettings(value, identity?.site_title ?? ''));
     }).catch(() => setError("Couldn't load Foliole Publish settings.")).finally(() => setStatus('idle'));
-  }, []);
+    return undefined;
+  }, [previewDesktopSettings]);
   const enqueueSave = <T,>(save: () => Promise<T>) => {
     const queued = saveQueue.current.then(save, save);
     saveQueue.current = queued.then(() => undefined, () => undefined);

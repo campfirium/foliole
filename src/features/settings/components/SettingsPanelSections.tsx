@@ -188,7 +188,11 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
     case 'web-lookup':
       return <SettingsWebLookupSection />;
     case 'publishing':
-      return <SettingsPublishingSection />;
+      return (
+        <SettingsPublishingSection
+          {...definedProps({ previewDesktopSettings: props.previewDesktopSettings })}
+        />
+      );
     case 'appearance':
       return <SettingsAppearanceSection onEnterPreview={props.onEnterPreview} onSettingsBackdropTransparentChange={props.onSettingsBackdropTransparentChange} />;
     case 'typography':

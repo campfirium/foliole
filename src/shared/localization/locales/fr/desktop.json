@@ -73,6 +73,7 @@
   "desktop.palette.command.search": "Commandes de recherche",
   "desktop.palette.command.placeholder": "Tapez une commande...",
   "desktop.palette.command.empty": "Aucune commande correspondante",
+  "desktop.demo.operationNotDemonstrable": "Cette action ne peut pas être présentée dans la démo.",
   "desktop.palette.command.configureShortcut": "Configurer le raccourci pour {title}",
   "desktop.palette.node.dialog": "Aller à",
   "desktop.palette.node.empty": "Rechercher des dossiers, des rubriques et des éléments",

@@ -10,6 +10,7 @@ import {
   saveDiscoursePublishSettingsToRuntime
 } from '../../../../shared/platform/discoursePublishRepository';
 import { openExternalUrl } from '../../../../shared/platform/runtimeExternalNavigation';
+import { showDemoOperationNotice } from '../../../../shared/ui/DemoOperationNotice';
 
 export interface PublishingFormState {
   authorizationResult: string;
@@ -20,14 +21,15 @@ export type PublishingStatus = 'authorizing' | 'connecting' | 'idle' | 'loading'
 
 const EMPTY_FORM: PublishingFormState = { authorizationResult: '', siteUrl: '' };
 
-function usePublishingFormState() {
+function usePublishingFormState(previewDesktopSettings: boolean) {
   const t = useTranslation();
   const [form, setForm] = useState<PublishingFormState>(EMPTY_FORM);
-  const [status, setStatus] = useState<PublishingStatus>('loading');
+  const [status, setStatus] = useState<PublishingStatus>(previewDesktopSettings ? 'idle' : 'loading');
   const [error, setError] = useState<string | null>(null);
   const [hasApiKey, setHasApiKey] = useState(false);
   const [savedSiteUrl, setSavedSiteUrl] = useState('');
   useEffect(() => {
+    if (previewDesktopSettings) return undefined;
     void loadDiscoursePublishSettingsFromRuntime()
       .then((settings) => {
         if (settings) {
@@ -41,7 +43,8 @@ function usePublishingFormState() {
         setError(t('settings.publishing.error.load'));
         setStatus('idle');
       });
-  }, [t]);
+    return undefined;
+  }, [previewDesktopSettings, t]);
   return { error, form, hasApiKey, savedSiteUrl, setError, setForm, setHasApiKey, setSavedSiteUrl, setStatus, status };
 }
 
@@ -126,25 +129,32 @@ async function disconnectPublishingSettings(state: PublishingState, t: ReturnTyp
   }
 }
 
-export function usePublishingSettings() {
+export function usePublishingSettings(previewDesktopSettings = false) {
   const t = useTranslation();
-  const state = usePublishingFormState();
+  const state = usePublishingFormState(previewDesktopSettings);
   const updateForm = (patch: Partial<PublishingFormState>) => {
     state.setError(null);
     state.setForm((current) => ({ ...current, ...patch }));
   };
   const saveForumUrl = () => {
+    if (previewDesktopSettings) return;
     if (state.form.siteUrl.trim() !== state.savedSiteUrl) void savePublishingSettings(state, t, state.form);
   };
   const disabled = state.status !== 'idle';
   const hasSiteUrl = Boolean(state.form.siteUrl.trim());
   return {
     ...state,
-    beginAuthorization: () => void beginAuthorization(state, t),
+    beginAuthorization: () => previewDesktopSettings
+      ? showDemoOperationNotice(t)
+      : void beginAuthorization(state, t),
     canAuthorize: !disabled && !state.hasApiKey && hasSiteUrl,
     canCompleteAuthorization: !disabled && !state.hasApiKey && hasSiteUrl && Boolean(state.form.authorizationResult.trim()),
-    completeAuthorization: () => void completeAuthorization(state, t),
-    disconnect: () => void disconnectPublishingSettings(state, t),
+    completeAuthorization: () => previewDesktopSettings
+      ? showDemoOperationNotice(t)
+      : void completeAuthorization(state, t),
+    disconnect: () => previewDesktopSettings
+      ? showDemoOperationNotice(t)
+      : void disconnectPublishingSettings(state, t),
     disabled,
     saveForumUrl,
     updateForm

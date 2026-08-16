@@ -9,20 +9,26 @@ import {
   updateFoliolePublishLocalPagesFromRuntime,
   useFoliolePublishThemeFromRuntime
 } from '../../../../shared/platform/foliolePublishRepository';
+import { showDemoOperationNotice } from '../../../../shared/ui/DemoOperationNotice';
 
 import type { FoliolePublishingDraftState, FoliolePublishingStatus } from './useFoliolePublishingDraft';
 
 export function useFoliolePublishingTheme(
   state: FoliolePublishingDraftState,
-  requireSiteTitle: () => Promise<boolean>
+  requireSiteTitle: () => Promise<boolean>,
+  previewDesktopSettings = false
 ) {
   const t = useTranslation();
-  const [theme, setTheme] = useState<NativeFoliolePublishThemeStatus | null>(null);
+  const [theme, setTheme] = useState<NativeFoliolePublishThemeStatus | null>(() => previewDesktopSettings
+    ? { active_theme: 'foliole', custom_theme: null, official_theme_version: 4 }
+    : null);
   useEffect(() => {
+    if (previewDesktopSettings) return undefined;
     void loadFoliolePublishThemeFromRuntime().then(setTheme).catch((reason) => {
       state.setError(reason instanceof Error ? reason.message : t('settings.publishing.foliole.theme.error.load'));
     });
-  }, [state.setError, t]);
+    return undefined;
+  }, [previewDesktopSettings, state.setError, t]);
   const run = async (
     status: FoliolePublishingStatus,
     action: () => Promise<unknown>,
@@ -47,9 +53,9 @@ export function useFoliolePublishingTheme(
     if (await requireSiteTitle()) await run(...args);
   };
   return {
-    openCustomTheme: () => void openCustomTheme(), theme,
-    updateLocal: () => void runWithSiteTitle('updatingLocal', updateFoliolePublishLocalPagesFromRuntime, 'settings.publishing.foliole.theme.error.updateLocal', true),
-    updateWeb: () => void runWithSiteTitle('updatingWeb', publishFoliolePublishThemeChangesFromRuntime, 'settings.publishing.foliole.theme.error.updateWeb', true),
-    useFolioleTheme: () => void useFolioleTheme()
+    openCustomTheme: () => previewDesktopSettings ? showDemoOperationNotice(t) : void openCustomTheme(), theme,
+    updateLocal: () => previewDesktopSettings ? showDemoOperationNotice(t) : void runWithSiteTitle('updatingLocal', updateFoliolePublishLocalPagesFromRuntime, 'settings.publishing.foliole.theme.error.updateLocal', true),
+    updateWeb: () => previewDesktopSettings ? showDemoOperationNotice(t) : void runWithSiteTitle('updatingWeb', publishFoliolePublishThemeChangesFromRuntime, 'settings.publishing.foliole.theme.error.updateWeb', true),
+    useFolioleTheme: () => previewDesktopSettings ? showDemoOperationNotice(t) : void useFolioleTheme()
   };
 }

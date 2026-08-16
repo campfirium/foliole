@@ -75,6 +75,7 @@ export const ZH_HANS_DESKTOP_TRANSLATIONS: Partial<Record<TranslationKey, string
   'desktop.palette.command.search': '搜索命令',
   'desktop.palette.command.placeholder': '输入命令...',
   'desktop.palette.command.empty': '没有匹配的命令',
+  'desktop.demo.operationNotDemonstrable': '此操作无法在 Demo 中演示。',
   'desktop.palette.command.configureShortcut': '设置“{title}”的快捷键',
   'desktop.palette.node.dialog': '前往',
   'desktop.palette.node.empty': '搜索文件夹、主题和检测项',

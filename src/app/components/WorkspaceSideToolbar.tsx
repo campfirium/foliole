@@ -19,7 +19,7 @@ import {
   WORKSPACE_RAIL_BUTTON_FOCUS_CLASS_NAME,
   WorkspaceRailTooltipButton
 } from './WorkspaceRailTooltipButton';
-import { useDemoMarkdownRailImport } from './WorkspaceSideToolbarDemoImport';
+import { useDemoImportRequestBridge, useDemoMarkdownRailImport } from './WorkspaceSideToolbarDemoImport';
 import { renderStudyDock } from './WorkspaceStudyDock';
 import { WorkspaceUpdateAction } from './WorkspaceUpdateAction';
 
@@ -65,6 +65,7 @@ function useWorkspaceRailToolbarState({
   'onOpenSettings' | 'onRunRailAction' | 'onStartClipboardImport' | 'onStartImport'
 >) {
   const demoImport = useDemoMarkdownRailImport();
+  useDemoImportRequestBridge(demoImport);
   const { isDemo } = useDemoRuntimeState();
   const rail = useWorkspaceRailSettings();
   const [contextMenuPosition, setContextMenuPosition] = useState<{ left: number; top: number } | null>(null);

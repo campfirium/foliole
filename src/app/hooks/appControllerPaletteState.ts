@@ -1,5 +1,6 @@
 import type { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import type { CommandPaletteItem } from '../../shared/commands/types';
+import type { Translate } from '../../shared/localization/LocalizationProvider';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
 import { buildPaletteState } from './appControllerHelpers';
@@ -10,6 +11,7 @@ import type { useFormalImport } from './useFormalImport';
 
 export function buildControllerPaletteState(args: {
   appearance: ReturnType<typeof useAppearanceSettings>;
+  demoOperationTranslate: Translate;
   formalImport: ReturnType<typeof useFormalImport>;
   isStudyMode: boolean;
   layoutProps: WorkspaceLayoutProps;

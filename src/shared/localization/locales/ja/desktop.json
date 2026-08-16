@@ -73,6 +73,7 @@
   "desktop.palette.command.search": "検索コマンド",
   "desktop.palette.command.placeholder": "コマンドを入力してください...",
   "desktop.palette.command.empty": "一致するコマンドはありません",
+  "desktop.demo.operationNotDemonstrable": "この操作は Demo では実演できません。",
   "desktop.palette.command.configureShortcut": "{title} のショートカットを構成します",
   "desktop.palette.node.dialog": "に移動",
   "desktop.palette.node.empty": "フォルダー、トピック、およびアイテムを検索します",

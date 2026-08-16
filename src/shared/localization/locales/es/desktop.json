@@ -73,6 +73,7 @@
   "desktop.palette.command.search": "Comandos de búsqueda",
   "desktop.palette.command.placeholder": "Escriba un comando...",
   "desktop.palette.command.empty": "No hay comandos coincidentes",
+  "desktop.demo.operationNotDemonstrable": "Esta acción no se puede mostrar en la Demo.",
   "desktop.palette.command.configureShortcut": "Configurar acceso directo para {title}",
   "desktop.palette.node.dialog": "Ir a",
   "desktop.palette.node.empty": "Buscar carpetas, temas y elementos",

@@ -35,10 +35,12 @@ const folioleRepositoryMocks = vi.hoisted(() => ({
   viewFoliolePublishSiteFromRuntime: vi.fn(),
   updateFoliolePublishSiteAddressInRuntime: vi.fn()
 }));
+const demoNoticeMocks = vi.hoisted(() => ({ showDemoOperationNotice: vi.fn() }));
 
 vi.mock('../../../../shared/platform/discoursePublishRepository', () => repositoryMocks);
 vi.mock('../../../../shared/platform/foliolePublishRepository', () => folioleRepositoryMocks);
 vi.mock('../../../../shared/platform/wordpressPublishRepository', () => wordpressRepositoryMocks);
+vi.mock('../../../../shared/ui/DemoOperationNotice', () => demoNoticeMocks);
 
 const SAVED_SETTINGS = {
   has_api_key: true,
@@ -69,6 +71,7 @@ function resetWordPressRepositoryMocks() {
 
 beforeEach(() => {
   window.localStorage.clear();
+  demoNoticeMocks.showDemoOperationNotice.mockReset();
   repositoryMocks.loadDiscoursePublishSettingsFromRuntime.mockReset();
   repositoryMocks.disconnectDiscoursePublishSettingsFromRuntime.mockReset();
   repositoryMocks.loadDiscoursePublishCatalogFromRuntime.mockReset();
@@ -116,6 +119,20 @@ beforeEach(() => {
     },
     status: 'connected'
   });
+});
+
+it('renders the complete Demo publishing preview without loading a host runtime', async () => {
+  renderWithLocalization(<SettingsPublishingSection previewDesktopSettings />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Publish to the site' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'View local' }));
+
+  expect(folioleRepositoryMocks.loadFoliolePublishSettingsFromRuntime).not.toHaveBeenCalled();
+  expect(folioleRepositoryMocks.loadFoliolePublishThemeFromRuntime).not.toHaveBeenCalled();
+  expect(wordpressRepositoryMocks.loadWordPressPublishSettingsFromRuntime).not.toHaveBeenCalled();
+  expect(repositoryMocks.loadDiscoursePublishSettingsFromRuntime).not.toHaveBeenCalled();
+  expect(folioleRepositoryMocks.viewFoliolePublishSiteFromRuntime).not.toHaveBeenCalled();
+  expect(demoNoticeMocks.showDemoOperationNotice).toHaveBeenCalledOnce();
 });
 
 it('starts collapsed and restores independent disclosure state after remounting', () => {

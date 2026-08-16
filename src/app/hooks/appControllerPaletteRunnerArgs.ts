@@ -1,6 +1,7 @@
 import { requestNodeRename } from '../../features/nodes/components/NodeTreeRowRename';
 import type { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import type { CommandPaletteItem } from '../../shared/commands/types';
+import type { Translate } from '../../shared/localization/LocalizationProvider';
 import { exportCurrentArticleMirror } from '../../shared/platform/articleMirrorExport';
 import { devReimportSelectedTopic } from '../../shared/platform/devReimportSelectedTopic';
 import { selectLocalFileToOpen } from '../../shared/platform/localFileRuntimeRepository';
@@ -159,6 +160,7 @@ async function openLocalFile() {
 
 export function createPaletteRunnerArgs(args: {
   appearance: ReturnType<typeof useAppearanceSettings>;
+  demoOperationTranslate: Translate;
   formalImport: ReturnType<typeof useFormalImport>;
   isStudyMode: boolean;
   layoutProps: WorkspaceLayoutProps;
@@ -175,6 +177,7 @@ export function createPaletteRunnerArgs(args: {
   return {
     clearSettingsRequest: () => clearSettingsRequest(args.runtime),
     closeTrashView: args.trash.closeTrashView,
+    demoOperationTranslate: args.demoOperationTranslate,
     ...createPaletteCreationActions(args),
     ...createSelectionAnnotationPaletteActions(args),
     ...createPaletteReviewActions(args),

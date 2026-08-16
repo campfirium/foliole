@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-export type AppRuntimeNoticeTone = 'success' | 'error';
+export type AppRuntimeNoticeTone = 'success' | 'error' | 'info';
 
 export interface AppRuntimeNoticeAction {
   label: string;

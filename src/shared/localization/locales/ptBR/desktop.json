@@ -73,6 +73,7 @@
   "desktop.palette.command.search": "Comandos de pesquisa",
   "desktop.palette.command.placeholder": "Digite um comando...",
   "desktop.palette.command.empty": "Nenhum comando correspondente",
+  "desktop.demo.operationNotDemonstrable": "Esta ação não pode ser demonstrada na Demo.",
   "desktop.palette.command.configureShortcut": "Configurar atalho para {title}",
   "desktop.palette.node.dialog": "Vá para",
   "desktop.palette.node.empty": "Pesquise pastas, tópicos e itens",

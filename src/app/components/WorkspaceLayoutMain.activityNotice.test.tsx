@@ -50,6 +50,7 @@ vi.mock('./useImmersiveReadingMode', () => ({
   })
 }));
 
+import { installDemoRuntimeController } from '../../shared/platform/runtime/demoRuntime';
 import { clearAppRuntimeNotice, showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 
 import {
@@ -68,6 +69,21 @@ function createDeferred<T>() {
     resolve = nextResolve;
   });
   return { promise, resolve };
+}
+
+function installDemoRuntime(isDemo: boolean) {
+  const state = {
+    clearError: null, importError: null, importedTopicCount: 0,
+    isDemo, manualAdvanceDays: 0, previewDay: 0, startedAt: null
+  };
+  installDemoRuntimeController({
+    clearLocalData: () => Promise.resolve(false),
+    continueToNextPreviewDay: () => undefined,
+    getNowIso: (date) => date.toISOString(),
+    getState: () => state,
+    importMarkdown: () => Promise.resolve({ ignoredCount: 0, importedTopicCount: 0 }),
+    subscribe: () => () => undefined
+  });
 }
 
 function createProps(overrides: Partial<WorkspaceLayoutFlatProps>) {
@@ -104,6 +120,7 @@ function createProps(overrides: Partial<WorkspaceLayoutFlatProps>) {
 }
 
 beforeEach(() => {
+  installDemoRuntime(false);
   getFormalImportFailureMessage.mockClear();
   getFormalImportFailureMessage.mockReturnValue(null);
   getFormalImportLatestResult.mockClear();
@@ -111,6 +128,20 @@ beforeEach(() => {
   for (let noticeId = 1; noticeId <= 100; noticeId += 1) {
     clearAppRuntimeNotice(noticeId);
   }
+});
+
+it('leaves Demo import requests for the browser import adapter', async () => {
+  installDemoRuntime(true);
+  const onRunImportFile = vi.fn(async () => true);
+  const onStartClipboardImport = vi.fn(async () => true);
+
+  renderWithLocalization(<WorkspaceLayoutMain {...createProps({ onRunImportFile, onStartClipboardImport })} />);
+  requestFileImport();
+  requestClipboardImport();
+  await Promise.resolve();
+
+  expect(onRunImportFile).not.toHaveBeenCalled();
+  expect(onStartClipboardImport).not.toHaveBeenCalled();
 });
 
 it('opens the imported clipboard topic after the import resolves', async () => {
