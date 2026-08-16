@@ -9,7 +9,7 @@
 - 正式发布只使用唯一、短期存在的精确分支 `release`：从已推送的 `dev` 切出，首个 release 提交写入已确定版本，首次 push 自动进入唯一 T7；此后不接收 dev，所有发布修复只落 release，并用普通 Git merge 按 first-parent 顺序回灌 dev。完成公开后元数据与 Pages 核对且最终 tip 已是 dev 祖先后才删除分支；禁止版本化 release 分支、cherry-pick、rebase、force-push 和人类 SHA 编排。
 - 每个 release 只由一个 pinned 发布主任务从切分持有到删分支；T7 及其内层失败回到该任务，不由 monitor 创建 repair 任务。发布文案可在仓库外工作稿和未公开 Draft body 中与技术流程并行，公开必须由用户确认，最终正文归档、notes 与 manifest 只在公开后提交。
 - 人工创建或交接 Foliole Codex 任务走 Codex Desktop 正常任务入口：`list_projects` 定位 saved project，`create_thread` 显式使用 `environment.type = local` 并发送完整首条提示，`wait_threads` 等待就绪，`set_thread_title` 命名，`read_thread` 确认正文可读，最后才可 `navigate_to_codex_page`；不得采用 Git 仓库默认 worktree。
-- 关联已编号正式实施方案的 Codex 任务标题必须从方案读取不可变编号：方案级任务使用 `T<n>-0`，执行任务使用方案唯一的 `Current closure: T<n>-<k>`；只有 `/2` 可分配或重开闭环、推进 `Next closure`、确认 `Review gate` 与 `final-ready`，执行任务不得自行改号或写这些决策。
+- 关联已编号正式实施方案的 Codex 任务标题必须同时保留编号和方案内的可读名称：方案级任务使用 `T<n>-0 <方案短标题>`，执行任务使用 `T<n>-<k> <当前闭环结果标题>`，最终验收使用 `T<n>-0 验收 <方案短标题>`；编号与名称都从方案读取，禁止只写编号。只有 `/2` 可分配或重开闭环、推进 `Next closure`、确认 `Review gate` 与 `final-ready`，执行任务不得自行改号或写这些决策。
 - `rolling-v1` 必须同时保存完整系统主方案、从综合验收反推的系统覆盖图和唯一当前闭环；`/3` 只执行 `Review gate: confirmed` 的当前闭环。失败、诊断、重试、提交和被放弃的施工方法留在持有任务或证据载体，不进入方案。
 - 同一验收句未成立时，不因缺口、提交、文件、平台、重试或耗时数量更换 Codex 任务；正式合同失效时在原任务执行 `/2`，会审确认后仍由原任务继续。只有闭环完成后的新验收责任、`final-ready` 进入 `/4`，或用户确认且无 live side effect / 未记录现场 / 外部等待的 continuation 才开新任务。
 - monitor 触发的任务交接只能走 `codex-desktop-handoff` daemon：事件级 App Server 创建持久任务，确认 `item/completed(userMessage)` 与完整 prompt 一致后立即 `turn/interrupt`，确认最终状态为 `interrupted`，关闭外部 App Server，再请求 Desktop 打开；该任务必须等待用户在 Desktop 继续，不得在 daemon 内持续执行、直接修改数据库 / session 或启用其他后台执行分支；仅有 thread id、标题或成功跳转不算交付成功，正文未确认或主动中断未完成时必须归档并重试。
