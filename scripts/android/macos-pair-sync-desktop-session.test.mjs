@@ -49,12 +49,17 @@ describe('macOS pair sync desktop session', () => {
   it('launches multi-device desktop work through the prepared background runtime', async () => {
     const cleanup = vi.fn();
     const close = vi.fn().mockResolvedValue(undefined);
+    const timeline = [];
     const page = { waitForFunction: vi.fn().mockResolvedValue(undefined) };
-    const launch = vi.fn().mockResolvedValue({ close, firstWindow: vi.fn().mockResolvedValue(page) });
+    const launch = vi.fn().mockResolvedValue({
+      close, firstWindow: vi.fn().mockResolvedValue(page), process: () => ({ pid: 42 })
+    });
 
     const session = await openMacosPairSyncDesktopSession({
       electronLauncher: { launch },
       libraryHome: '/tmp/library',
+      logEvent: (event) => timeline.push(event),
+      operationId: 'pair-sync-1',
       prepareHiddenRuntime: vi.fn(() => ({
         cleanup,
         executablePath: '/tmp/BackgroundElectron.app/Contents/MacOS/Electron'
@@ -69,5 +74,11 @@ describe('macOS pair sync desktop session', () => {
     await session.close();
     expect(close).toHaveBeenCalledOnce();
     expect(cleanup).toHaveBeenCalledOnce();
+    expect(timeline).toEqual([
+      expect.objectContaining({ event: 'session_started', operationId: 'pair-sync-1' }),
+      expect.objectContaining({ event: 'electron_started', payload: { pid: 42 } }),
+      expect.objectContaining({ event: 'session_ready' }),
+      expect.objectContaining({ event: 'session_closed' })
+    ]);
   });
 });

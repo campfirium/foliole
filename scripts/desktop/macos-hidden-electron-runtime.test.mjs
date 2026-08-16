@@ -25,7 +25,7 @@ it('clones and marks an isolated Electron app as an LSUIElement runtime', () => 
     rmSync
   };
   const runtime = prepareMacosHiddenElectronRuntime({
-    appRoot: '/repo/foliole', env: {}, fileSystem, run
+    appRoot: '/repo/foliole', env: {}, fileSystem, run, runtimeId: 'runtime-one'
   });
 
   expect(run.mock.calls[0]).toEqual([
@@ -34,6 +34,11 @@ it('clones and marks an isolated Electron app as an LSUIElement runtime', () => 
   ]);
   expect(run.mock.calls[1]).toEqual([
     '/usr/bin/plutil', ['-replace', 'LSUIElement', '-bool', 'YES',
+      '/repo/foliole/.tmp/native-hidden-electron/run-one/Electron.app/Contents/Info.plist']
+  ]);
+  expect(run.mock.calls[2]).toEqual([
+    '/usr/bin/plutil', ['-replace', 'CFBundleIdentifier', '-string',
+      'com.foliole.hidden-native.runtime-one',
       '/repo/foliole/.tmp/native-hidden-electron/run-one/Electron.app/Contents/Info.plist']
   ]);
   expect(runtime.executablePath).toBe(

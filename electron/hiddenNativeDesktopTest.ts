@@ -1,9 +1,5 @@
 import type { BrowserWindowConstructorOptions } from 'electron';
 
-interface HiddenNativeDesktopApp {
-  setActivationPolicy?(policy: 'accessory' | 'prohibited' | 'regular'): void;
-}
-
 export const HIDDEN_NATIVE_DESKTOP_TEST_BOUNDS = {
   height: 1000,
   width: 1600,
@@ -13,16 +9,6 @@ export const HIDDEN_NATIVE_DESKTOP_TEST_BOUNDS = {
 
 export function isHiddenNativeDesktopTest(env: NodeJS.ProcessEnv = process.env) {
   return env.FOLIOLE_ELECTRON_NATIVE_HIDDEN?.trim() === '1';
-}
-
-export function prepareHiddenNativeDesktopWindowCreation(
-  app: HiddenNativeDesktopApp,
-  env: NodeJS.ProcessEnv = process.env,
-  platform = process.platform
-) {
-  if (platform !== 'darwin' || !isHiddenNativeDesktopTest(env)) return false;
-  app.setActivationPolicy?.('accessory');
-  return true;
 }
 
 export function applyHiddenNativeDesktopWindowOptions(

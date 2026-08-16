@@ -1,9 +1,10 @@
 /* global process */
 
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
+import { appendDesktopHostTimelineEvent } from '../diagnostics/desktop-host-timeline.mjs';
 import { MACOS_DAILY_LIBRARY_HOME } from '../macos/macos-electron-dev-paths.mjs';
 import { prepareMacosHiddenElectronRuntime } from '../desktop/macos-hidden-electron-runtime.mjs';
 
@@ -57,20 +58,31 @@ function launchOptions(repoRoot, env, userDataPath, libraryHome, executablePath)
 
 export async function openMacosPairSyncDesktopSession({
   env = process.env, electronLauncher, libraryHome = MACOS_DAILY_LIBRARY_HOME,
+  logEvent = appendDesktopHostTimelineEvent, operationId = randomUUID(),
   prepareHiddenRuntime = prepareMacosHiddenElectronRuntime,
   repoRoot, timeoutMs = 20_000, userDataPath
 }) {
+  const record = (event, payload = {}) => {
+    try {
+      logEvent({ event, operationId, payload, source: 'macos_pair_sync' });
+    } catch {
+      // Diagnostics must not change the pairing lifecycle.
+    }
+  };
   const launcher = electronLauncher ?? (await import('playwright'))._electron;
+  record('session_started');
   const runtime = prepareHiddenRuntime({ appRoot: repoRoot, env });
   let app;
   try {
     app = await launcher.launch(launchOptions(
       repoRoot, env, userDataPath, libraryHome, runtime.executablePath
     ));
+    record('electron_started', { pid: app.process?.()?.pid ?? null });
     const page = await app.firstWindow({ timeout: timeoutMs });
     await page.waitForFunction(() => globalThis.__FOLIOLE_APP_READY_REPORTED__ === true, null, {
       timeout: timeoutMs
     });
+    record('session_ready');
     const syncGroupActions = {
       create: () => invoke(page, 'create_sync_group'),
       enable: () => invoke(page, 'enable_companion_sync'),
@@ -89,6 +101,7 @@ export async function openMacosPairSyncDesktopSession({
           await app.close();
         } finally {
           runtime.cleanup();
+          record('session_closed');
         }
       },
       enable: () => ensureMacosSyncGroup(syncGroupActions),
@@ -99,6 +112,7 @@ export async function openMacosPairSyncDesktopSession({
       sanitize: sanitizeOverview
     };
   } catch (error) {
+    record('session_failed', { message: error instanceof Error ? error.message : String(error) });
     await app?.close().catch(() => undefined);
     runtime.cleanup();
     throw error;

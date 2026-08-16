@@ -4,7 +4,6 @@ interface MacosDockApp {
     setIcon(image: string): void;
   } | undefined;
   isPackaged?: boolean;
-  setActivationPolicy?(policy: 'accessory' | 'prohibited' | 'regular'): void;
 }
 
 export function applyMacosDockPresentation(
@@ -15,10 +14,8 @@ export function applyMacosDockPresentation(
 ) {
   if (platform !== 'darwin' || !app.dock) return false;
   if (env.FOLIOLE_ELECTRON_NATIVE_HIDDEN?.trim() === '1') {
-    // Keep the process unable to activate while AppKit finishes launching. The hidden
-    // window path switches to accessory immediately before creating its non-focusable window.
-    app.setActivationPolicy?.('prohibited');
-    app.dock.hide();
+    // The isolated clone owns its LSUIElement and bundle identity from process launch.
+    // Do not mutate AppKit presentation while another application is active.
     return true;
   }
   if (app.isPackaged !== false) return false;

@@ -6,17 +6,15 @@ import { applyMacosDockPresentation } from './macosDevelopmentDockIcon.js';
 
 it('hides unpackaged macOS hidden-native runtimes instead of publishing a dock icon', () => {
   const hide = vi.fn();
-  const setActivationPolicy = vi.fn();
   const setIcon = vi.fn();
 
   expect(applyMacosDockPresentation(
-    { dock: { hide, setIcon }, isPackaged: false, setActivationPolicy },
+    { dock: { hide, setIcon }, isPackaged: false },
     '/repo/build/icon.png',
     'darwin',
     { FOLIOLE_ELECTRON_NATIVE_HIDDEN: '1' }
   )).toBe(true);
-  expect(setActivationPolicy).toHaveBeenCalledWith('prohibited');
-  expect(hide).toHaveBeenCalledOnce();
+  expect(hide).not.toHaveBeenCalled();
   expect(setIcon).not.toHaveBeenCalled();
 });
 

@@ -2,6 +2,7 @@
 
 import fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 
 const macosPath = path.posix;
@@ -33,6 +34,7 @@ export function prepareMacosHiddenElectronRuntime({
   appRoot,
   env = process.env,
   fileSystem = fs,
+  runtimeId = randomUUID(),
   run = checkedSpawn
 }) {
   const source = resolveMacosHiddenElectronSource(appRoot, env);
@@ -45,8 +47,10 @@ export function prepareMacosHiddenElectronRuntime({
   const targetApp = macosPath.join(runtimeRoot, macosPath.basename(source.appBundlePath));
   try {
     run('/bin/cp', ['-cR', source.appBundlePath, targetApp]);
+    const infoPlist = macosPath.join(targetApp, 'Contents', 'Info.plist');
+    run('/usr/bin/plutil', ['-replace', 'LSUIElement', '-bool', 'YES', infoPlist]);
     run('/usr/bin/plutil', [
-      '-replace', 'LSUIElement', '-bool', 'YES', macosPath.join(targetApp, 'Contents', 'Info.plist')
+      '-replace', 'CFBundleIdentifier', '-string', `com.foliole.hidden-native.${runtimeId}`, infoPlist
     ]);
     return {
       cleanup: () => fileSystem.rmSync(runtimeRoot, { force: true, recursive: true }),
