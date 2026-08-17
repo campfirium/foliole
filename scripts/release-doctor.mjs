@@ -175,7 +175,8 @@ export async function collectReleaseDoctorChecks({
   commandRunner = runCommand,
   fetcher,
   marketingRoot,
-  rootDir = repoRoot
+  rootDir = repoRoot,
+  siteFetcher
 } = {}) {
   const args = parseArgs(argv);
   if (args.error) {
@@ -199,7 +200,7 @@ export async function collectReleaseDoctorChecks({
     ? await readTextFile(rootDir, `releases/github/v${version}.md`)
     : '';
   const siteChecks = phase === 'post'
-    ? await checkSiteSync(version, rootDir, commandRunner, fetcher ?? fetchJson)
+    ? await checkSiteSync(version, rootDir, commandRunner, fetcher ?? fetchJson, siteFetcher)
     : [];
   const checks = [
     ...checkPackage(packageJson),

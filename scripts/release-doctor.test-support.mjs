@@ -118,6 +118,10 @@ export function onlineReleaseFetcher(version, manifest = onlineManifest(version)
   return async (url) => url.endsWith('/downloads.json') ? downloads : manifest;
 }
 
+export function siteHome(downloads) {
+  return Object.values(downloads.platforms).map((platform) => `<a href="${platform.url}"></a>`).join('\n');
+}
+
 export function githubResponses(version, candidate = {}, latestVersion = version, siteDownloads = onlineDownloads(version)) {
   const publishedAt = candidate.isDraft === true ? null : '2026-07-31T00:00:00Z';
   return {
@@ -137,9 +141,14 @@ export function githubResponses(version, candidate = {}, latestVersion = version
       stdout: JSON.stringify({ isDraft: false, publishedAt, tagName: `v${latestVersion}`, url: 'https://example.test' }),
       stderr: ''
     },
-    'gh run list --repo campfirium/foliole-site --workflow deploy.yml --event repository_dispatch --limit 1 --json conclusion,url,createdAt': {
+    'gh run list --repo campfirium/foliole-site --workflow deploy.yml --event repository_dispatch --limit 1 --json databaseId,conclusion,url,createdAt': {
       status: 0,
-      stdout: JSON.stringify([{ conclusion: 'success', createdAt: publishedAt, url: 'https://example.test/site-run' }]),
+      stdout: JSON.stringify([{ databaseId: 123, conclusion: 'success', createdAt: publishedAt, url: 'https://example.test/site-run' }]),
+      stderr: ''
+    },
+    'gh run view 123 --repo campfirium/foliole-site --json jobs': {
+      status: 0,
+      stdout: JSON.stringify({ jobs: ['build', 'deploy', 'deploy-origin'].map((name) => ({ conclusion: 'success', name })) }),
       stderr: ''
     },
     'gh api repos/campfirium/foliole-site/contents/content/downloads.json?ref=main --jq .content': {

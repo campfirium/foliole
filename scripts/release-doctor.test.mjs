@@ -15,7 +15,9 @@ import {
   createFixture,
   findCheck,
   githubResponses,
-  onlineReleaseFetcher
+  onlineDownloads,
+  onlineReleaseFetcher,
+  siteHome
 } from './release-doctor.test-support.mjs';
 
 describe('release doctor', () => {
@@ -123,7 +125,8 @@ describe('release doctor', () => {
       commandRunner: commandRunner(githubResponses(fixture.version)),
       fetcher: onlineReleaseFetcher(fixture.version),
       marketingRoot: join(fixture.rootDir, 'missing-marketing'),
-      rootDir: fixture.rootDir
+      rootDir: fixture.rootDir,
+      siteFetcher: async () => siteHome(onlineDownloads(fixture.version))
     });
 
     expect(findCheck(result, 'GitHub release body').status).toBe('FAIL');
@@ -150,7 +153,8 @@ describe('release doctor', () => {
     const pre = await collectReleaseDoctorChecks({ commandRunner: commandRunner(responses), rootDir });
     const post = await collectReleaseDoctorChecks({
       argv: ['--phase=post'], commandRunner: commandRunner(responses),
-      fetcher: onlineReleaseFetcher(version), marketingRoot: join(rootDir, 'missing'), rootDir
+      fetcher: onlineReleaseFetcher(version), marketingRoot: join(rootDir, 'missing'), rootDir,
+      siteFetcher: async () => siteHome(onlineDownloads(version))
     });
 
     expect(findCheck(pre, 'GitHub release state').status).toBe('PASS');
@@ -167,12 +171,14 @@ describe('release doctor', () => {
       commandRunner: commandRunner(githubResponses(version)),
       fetcher: onlineReleaseFetcher(version),
       marketingRoot,
-      rootDir
+      rootDir,
+      siteFetcher: async () => siteHome(onlineDownloads(version))
     });
 
     for (const title of [
       'GitHub release body remote', 'GitHub release scoped assets',
-      'site release sync run', 'site download manifest', 'Pages manifest latest',
+      'site release sync run', 'site production deployment', 'site download manifest',
+      'site production downloads', 'Pages manifest latest',
       'Pages manifest release platforms', 'marketing posting file'
     ]) expect(findCheck(result, title).status, title).toBe('PASS');
     expect(hasFailures(result.checks)).toBe(false);
@@ -181,7 +187,7 @@ describe('release doctor', () => {
   it('rejects post-public closeout when the site did not sync the current release', async () => {
     const fixture = await createFixture();
     const responses = githubResponses(fixture.version);
-    responses['gh run list --repo campfirium/foliole-site --workflow deploy.yml --event repository_dispatch --limit 1 --json conclusion,url,createdAt'] = {
+    responses['gh run list --repo campfirium/foliole-site --workflow deploy.yml --event repository_dispatch --limit 1 --json databaseId,conclusion,url,createdAt'] = {
       status: 0,
       stdout: JSON.stringify([{ conclusion: 'failure', url: 'https://example.test/failed-site-run' }]),
       stderr: ''
@@ -189,7 +195,8 @@ describe('release doctor', () => {
     const result = await collectReleaseDoctorChecks({
       argv: ['--phase=post'], commandRunner: commandRunner(responses),
       fetcher: onlineReleaseFetcher(fixture.version),
-      marketingRoot: join(fixture.rootDir, 'missing'), rootDir: fixture.rootDir
+      marketingRoot: join(fixture.rootDir, 'missing'), rootDir: fixture.rootDir,
+      siteFetcher: async () => siteHome(onlineDownloads(fixture.version))
     });
 
     expect(findCheck(result, 'site release sync run').status).toBe('FAIL');
@@ -209,7 +216,8 @@ describe('release doctor', () => {
       commandRunner: commandRunner(githubResponses(version)),
       fetcher: onlineReleaseFetcher(version),
       marketingRoot: join(fixture.rootDir, 'missing'),
-      rootDir: fixture.rootDir
+      rootDir: fixture.rootDir,
+      siteFetcher: async () => siteHome(onlineDownloads(version))
     });
 
     expect(findCheck(result, 'GitHub latest release').status).toBe('PASS');

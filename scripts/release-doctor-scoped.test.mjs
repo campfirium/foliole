@@ -6,7 +6,7 @@ import { expect, it } from 'vitest';
 import { collectReleaseDoctorChecks } from './release-doctor.mjs';
 import {
   commandRunner, createFixture, findCheck, githubResponses,
-  onlineDownloads, onlineReleaseFetcher
+  onlineDownloads, onlineReleaseFetcher, siteHome
 } from './release-doctor.test-support.mjs';
 
 it('accepts a scoped Release while unselected platform downloads remain on the bridge', async () => {
@@ -39,7 +39,8 @@ it('accepts a scoped Release while unselected platform downloads remain on the b
   const result = await collectReleaseDoctorChecks({
     argv: ['--phase=post'], commandRunner: commandRunner(githubResponses(version, {}, version, downloads)),
     fetcher: onlineReleaseFetcher(version, manifest, downloads),
-    marketingRoot: join(fixture.rootDir, 'missing'), rootDir: fixture.rootDir
+    marketingRoot: join(fixture.rootDir, 'missing'), rootDir: fixture.rootDir,
+    siteFetcher: async () => siteHome(downloads)
   });
   expect(findCheck(result, 'GitHub latest release').status).toBe('PASS');
   expect(findCheck(result, 'Pages selected downloads').status).toBe('PASS');
