@@ -30,6 +30,9 @@ const primaryDeviceTakeoverMock = vi.hoisted(() => ({
 const syncPushMock = vi.hoisted(() => ({
   handleCompanionSyncPush: vi.fn()
 }));
+const syncPackAckMock = vi.hoisted(() => ({
+  acknowledgeDesktopSyncPack: vi.fn(() => ({ applied_state_seq: 17, status: 'ok' }))
+}));
 const workgroupHttpMock = vi.hoisted(() => ({
   decryptWorkgroupRequestBody: vi.fn((_request, body: string) => Buffer.from(body)),
   writeWorkgroupBinary: vi.fn()
@@ -50,6 +53,10 @@ vi.mock('./companionLanSyncObjects.js', () => ({
 vi.mock('./companionLanSyncPush.js', () => ({
   SYNC_PUSH_PATH: '/companion/sync-push',
   handleCompanionSyncPush: syncPushMock.handleCompanionSyncPush
+}));
+vi.mock('./desktopSyncPackAck.js', () => ({
+  SYNC_PACK_ACK_PATH: '/companion/sync-pack/ack',
+  acknowledgeDesktopSyncPack: syncPackAckMock.acknowledgeDesktopSyncPack
 }));
 vi.mock('./companionLanPrimaryDeviceTakeover.js', () => ({
   PRIMARY_DEVICE_TAKEOVER_PATH: '/companion/primary-device/takeover',
@@ -126,6 +133,22 @@ it('binds sync push provenance to the authenticated device id', async () => {
 
   expect(syncPushMock.handleCompanionSyncPush).toHaveBeenCalledWith(requestBody, 'device-android');
   expect(writeJson).toHaveBeenCalledWith(request, response, 200, { acks: [] }, 'POST, OPTIONS');
+});
+
+it('binds sync pack acknowledgements to the authenticated desktop peer', async () => {
+  authMock.authenticateCompanionRequest.mockReturnValue({ device_id: 'desktop-b', ok: true } as never);
+  const response = createResponse();
+  const writeJson = createWriteJson();
+  const requestBody = JSON.stringify({ applied_state_seq: 17 });
+  const request = Readable.from([requestBody]) as http.IncomingMessage;
+  request.headers = {};
+  request.method = 'POST';
+  request.url = '/companion/sync-pack/ack';
+
+  await handleAuthenticatedPost(request, response, new URL(request.url, 'http://127.0.0.1'), writeJson);
+
+  expect(syncPackAckMock.acknowledgeDesktopSyncPack).toHaveBeenCalledWith(requestBody, 'desktop-b');
+  expect(writeJson).toHaveBeenCalledWith(request, response, 200, { applied_state_seq: 17, status: 'ok' }, 'POST, OPTIONS');
 });
 
 function createResponse() {

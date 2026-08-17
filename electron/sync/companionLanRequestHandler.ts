@@ -34,6 +34,7 @@ import {
 import { SYNC_PACK_PATH } from './companionLanSyncPack.js';
 import { handleSyncPackGet } from './companionLanSyncPackGet.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
+import { SYNC_PACK_ACK_PATH } from './desktopSyncPackAck.js';
 
 export const DISCOVERY_ENDPOINT_PATH = '/companion/discovery';
 export const PAIR_ENDPOINT_PATH = '/companion/pair';
@@ -48,6 +49,7 @@ export {
   SYNC_INDEX_PATH,
   SYNC_NODE_VERSIONS_PATH,
   SYNC_OBJECTS_PATH,
+  SYNC_PACK_ACK_PATH,
   SYNC_PACK_PATH,
   SYNC_REVIEW_LOG_PATH,
   SYNC_STATE_PATH

@@ -9,6 +9,11 @@ import { openDatabaseConnection } from '../database/connection.js';
 import { loadOrCreateDesktopDeviceId } from '../database/deviceIdentity.js';
 import { loadOrCreateDesktopInstallationIdentity } from '../desktopInstallationIdentity.js';
 
+import {
+  ensureWatchedFolderClaimReceipts,
+  isWatchedFolderClaimConfirmed
+} from './watchedFolderClaimDelivery.js';
+
 interface BindingRow {
   [key: string]: null | number | string;
   action_mode: ImportManagerSourceDraft['actionMode']; archive_path: string; availability: string;
@@ -52,12 +57,7 @@ function recordSync(driver: DatabaseDriver, binding: WatchedFolderBinding, updat
 function promoteConfirmedClaims(driver: DatabaseDriver, now: string, deviceId: string) {
   const proposed = loadBindings(driver).filter((binding) => binding.claimState === 'proposed');
   for (const binding of proposed) {
-    const pending = driver.queryOne<{ count: number } & Record<string, number>>(
-      `SELECT COUNT(*) count FROM sync_delivery_receipts
-       WHERE object_type = 'watched_folder' AND object_id = ? AND status <> 'confirmed'`,
-      [binding.bindingId]
-    )?.count ?? 0;
-    if (pending > 0) continue;
+    if (!isWatchedFolderClaimConfirmed(driver, binding.bindingId)) continue;
     driver.execute(
       `UPDATE watched_folder_bindings SET claim_state = 'claimed', updated_at = ?
        WHERE binding_id = ? AND claim_state = 'proposed'`,
@@ -123,6 +123,9 @@ export function saveLocalWatchedSources(sources: ImportManagerSourceDraft[], upd
       };
       upsertBinding(tx, binding, existing ? null : updatedAt);
       recordSync(tx, binding, updatedAt, deviceId);
+      if (binding.claimState === 'proposed') {
+        ensureWatchedFolderClaimReceipts(tx, binding.bindingId);
+      }
       current.delete(source.id);
     }
     for (const binding of current.values()) {
