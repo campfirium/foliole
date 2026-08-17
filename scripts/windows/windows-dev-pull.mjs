@@ -38,15 +38,16 @@ export async function runWindowsDevPull({
     }
     const branch = (await checked(execute, paths, ['branch', '--show-current'], 'repo')).stdout.trim();
     if (branch !== 'dev') throw failure('Windows DEV repository must stay on dev', 64, 'repo');
-    const status = await checked(
-      execute, paths, ['status', '--porcelain', '--untracked-files=all'], 'repo'
-    );
-    if (status.stdout.trim()) {
-      throw failure('Windows DEV repository must be clean before mirror alignment', 64, 'repo');
-    }
     await checked(execute, paths, ['fetch', '--no-tags', 'lan', 'dev'], 'fetch');
     const aligned = await checked(execute, paths, ['reset', '--hard', 'FETCH_HEAD'], 'align');
-    return { exitCode: 0, output: aligned.output };
+    const cleaned = await checked(execute, paths, ['clean', '-fd'], 'align');
+    const status = await checked(
+      execute, paths, ['status', '--porcelain', '--untracked-files=all'], 'align'
+    );
+    if (status.stdout.trim()) {
+      throw failure('Windows DEV repository did not converge to the LAN mirror', 64, 'align');
+    }
+    return { exitCode: 0, output: `${aligned.output}${cleaned.output}` };
   } catch (error) {
     return { exitCode: error.exitCode || 125, message: error.message, stage: error.stage || 'entry' };
   }

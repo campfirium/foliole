@@ -58,6 +58,7 @@ describe('Windows Android DEV helper boundary', () => {
     const controller = source('scripts/windows/windows-dev-control.mjs');
     const adapter = source('scripts/windows/windows-dev-device-action.mjs');
     expect(WINDOWS_DEV_ACTIONS).toEqual(expect.arrayContaining([
+      'desktop-preview',
       'multi-device-sync-candidate',
       ...Object.values(WINDOWS_SYNC_GROUP_PROVIDER_RELEASE_ACTIONS),
       'verify'

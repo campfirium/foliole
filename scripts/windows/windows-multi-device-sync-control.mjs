@@ -1,11 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { WINDOWS_DEV_EVIDENCE_PREFIX } from './windows-dev-paths.mjs';
+
 function parseEvidence(output, action, receiptName) {
   const escaped = action.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
   const match = new RegExp(`^\\[windows-dev-action\\] ${escaped} identity=([A-Za-z0-9.-]{1,96}) manifest=([^\\r\\n]+)$`, 'mu').exec(output);
   if (!match) throw new Error(`Windows ${action} did not report fixed evidence.`);
-  const remoteRoot = `C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/${match[1]}`;
+  const remoteRoot = `${WINDOWS_DEV_EVIDENCE_PREFIX}${match[1]}`;
   if (match[2].replaceAll('\\', '/') !== `${remoteRoot}/${receiptName}`) {
     throw new Error(`Windows ${action} evidence escaped its fixed root.`);
   }

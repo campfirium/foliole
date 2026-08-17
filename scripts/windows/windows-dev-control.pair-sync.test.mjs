@@ -23,7 +23,7 @@ function fixture(label) {
 
 it('copies the fixed minimal pair recovery receipt set', async () => {
   const { executeScp, repoRoot } = fixture('pair-control-');
-  const remoteRoot = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/pair-1';
+  const remoteRoot = 'D:/C/foliole/.tmp/artifacts/windows-dev-action/pair-1';
   const result = await runWindowsDevControl({
     argv: ['pair-sync-recover'], env: {},
     executeGit: vi.fn(async () => ''), executeScp,
@@ -38,7 +38,7 @@ it('copies the fixed minimal pair recovery receipt set', async () => {
 
 it('copies only a scrubbed summary when pair recovery stops', async () => {
   const { executeScp, repoRoot } = fixture('pair-control-failure-');
-  const remoteRoot = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/pair-2';
+  const remoteRoot = 'D:/C/foliole/.tmp/artifacts/windows-dev-action/pair-2';
   const output = `[windows-dev-action] status: FAILED exit=77 evidence=${remoteRoot}/summary.json\n`;
   const remoteError = Object.assign(new Error('remote failed'), { output });
   await expect(runWindowsDevControl({
@@ -51,7 +51,7 @@ it('copies only a scrubbed summary when pair recovery stops', async () => {
 
 it('copies the A5 screenshot and Windows request state reported by a failed recovery', async () => {
   const { executeScp: baseScp, repoRoot } = fixture('pair-control-failure-screen-');
-  const remoteRoot = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/pair-3';
+  const remoteRoot = 'D:/C/foliole/.tmp/artifacts/windows-dev-action/pair-3';
   const output = `[windows-dev-action] status: FAILED exit=74 evidence=${remoteRoot}/summary.json\n`;
   const remoteError = Object.assign(new Error('remote failed'), { output });
   const executeScp = vi.fn(async (args) => {

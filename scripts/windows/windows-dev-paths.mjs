@@ -2,7 +2,10 @@
 
 import path from 'node:path';
 
-export const WINDOWS_DEV_REPO_ROOT = 'C:\\dev\\foliole-android-lab-preview';
+export const WINDOWS_DEV_REPO_ROOT = 'D:\\C\\foliole';
+export const WINDOWS_DEV_REPO_ROOT_POSIX = 'D:/C/foliole';
+export const WINDOWS_DEV_EVIDENCE_PREFIX =
+  `${WINDOWS_DEV_REPO_ROOT_POSIX}/.tmp/artifacts/windows-dev-action/`;
 export const WINDOWS_DEV_SYSTEM_NODE = 'C:\\Program Files\\nodejs\\node.exe';
 export const WINDOWS_DEV_SYSTEM_NPM_CLI = 'C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js';
 

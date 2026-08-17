@@ -8,7 +8,7 @@ import { runWindowsSyncGroupRecoveryControl } from './windows-sync-group-recover
 
 it('runs fixed Windows C recovery against the stable discovered group provider', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sync-group-control-'));
-  const remoteRoot = 'C:\\dev\\foliole-android-lab-preview\\.tmp\\artifacts\\windows-dev-action\\run-1';
+  const remoteRoot = 'D:\\C\\foliole\\.tmp\\artifacts\\windows-dev-action\\run-1';
   const output = `[windows-dev-action] sync-group-recover identity=run-1 manifest=${remoteRoot}\\sync-group-recovery-receipt.json\n`;
   const executeGit = vi.fn(async () => 'pushed');
   const executeSsh = vi.fn(async () => output);

@@ -8,7 +8,7 @@ it('pushes dev and copies only the fixed C receipt', async () => {
   const executeGit = vi.fn(async () => 'pushed');
   const executeScp = vi.fn(async () => 'copied');
   const executeSsh = vi.fn(async () => '[windows-dev-action] multi-device-sync-c '
-    + 'identity=run-1 manifest=C:\\dev\\foliole-android-lab-preview\\.tmp\\artifacts\\'
+    + 'identity=run-1 manifest=D:\\C\\foliole\\.tmp\\artifacts\\'
     + 'windows-dev-action\\run-1\\sync-group-recovery-receipt.json\n');
   const result = await runWindowsMultiDeviceSyncControl({
     buildPushSpec: () => ({ args: ['push'], env: { GIT: 'fixed' } }),
@@ -25,7 +25,7 @@ it('pushes dev and copies only the fixed C receipt', async () => {
 it('copies only the fixed A-rejoin receipt', async () => {
   const executeScp = vi.fn(async () => 'copied');
   const executeSsh = vi.fn(async () => '[windows-dev-action] multi-device-sync-a-rejoin '
-    + 'identity=run-2 manifest=C:\\dev\\foliole-android-lab-preview\\.tmp\\artifacts\\'
+    + 'identity=run-2 manifest=D:\\C\\foliole\\.tmp\\artifacts\\'
     + 'windows-dev-action\\run-2\\multi-device-sync-a-rejoin-receipt.json\n');
   const result = await runWindowsMultiDeviceSyncControl({ action: 'multi-device-sync-a-rejoin',
     buildPushSpec: () => ({ args: ['push'], env: {} }), buildScpSpec: (_host, remote, local) => [remote, local],
@@ -41,7 +41,7 @@ it('copies only the fixed A-leave receipt', async () => {
     + 'nonce=12345678-1234-1234-1234-123456789abc milestone=c-fact-created '
     + 'fact=multi-device-sync-c-20260813080000000\n';
   const receipt = '[windows-dev-action] multi-device-sync-a-leave '
-    + 'identity=run-3 manifest=C:\\dev\\foliole-android-lab-preview\\.tmp\\artifacts\\'
+    + 'identity=run-3 manifest=D:\\C\\foliole\\.tmp\\artifacts\\'
     + 'windows-dev-action\\run-3\\multi-device-sync-a-leave-receipt.json\n';
   const executeSsh = vi.fn(async (_args, options) => {
     options.onOutput(progress); options.onOutput(receipt); return `${progress}${receipt}`;
@@ -60,7 +60,7 @@ it('copies only the fixed A-leave receipt', async () => {
 
 it('copies only the fixed participation receipt', async () => {
   const receipt = '[windows-dev-action] multi-device-sync-participation '
-    + 'identity=run-4 manifest=C:\\dev\\foliole-android-lab-preview\\.tmp\\artifacts\\'
+    + 'identity=run-4 manifest=D:\\C\\foliole\\.tmp\\artifacts\\'
     + 'windows-dev-action\\run-4\\multi-device-sync-participation-receipt.json\n';
   const result = await runWindowsMultiDeviceSyncControl({ action: 'multi-device-sync-participation',
     buildPushSpec: () => ({ args: ['push'], env: {} }),
@@ -77,7 +77,7 @@ it('streams progress and copies only the fixed sync-from-zero receipt', async ()
     + 'nonce=12345678-1234-1234-1234-123456789abc milestone=c-first-cursor-committed '
     + 'fact=sync-from-zero\n';
   const receipt = '[windows-dev-action] multi-device-sync-from-zero '
-    + 'identity=run-5 manifest=C:\\dev\\foliole-android-lab-preview\\.tmp\\artifacts\\'
+    + 'identity=run-5 manifest=D:\\C\\foliole\\.tmp\\artifacts\\'
     + 'windows-dev-action\\run-5\\multi-device-sync-from-zero-receipt.json\n';
   const stdout = { write: vi.fn() };
   const result = await runWindowsMultiDeviceSyncControl({ action: 'multi-device-sync-from-zero',

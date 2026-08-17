@@ -1,7 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const REMOTE_PREFIX = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/';
+import { WINDOWS_DEV_EVIDENCE_PREFIX } from './windows-dev-paths.mjs';
+
+const REMOTE_PREFIX = WINDOWS_DEV_EVIDENCE_PREFIX;
 
 function parseRemoteEvidence(output) {
   const match = /^\[windows-dev-action\] sync-group-recover identity=([A-Za-z0-9.-]{1,96}) manifest=([^\r\n]+)$/mu.exec(output);

@@ -40,15 +40,15 @@
 
 ## Windows Native Shell Policy
 
-- Windows 开发机使用普通局域网 SSH 进入 PowerShell；Mac 通过 `node scripts/windows/windows-dev-control.mjs --host <host> <appearance|build|capture-annotation|deploy|live|pair-sync-recover|secondary|verify>` 将当前工作区 `dev` 精确覆盖到 LAN Git 的同名传输镜像，Windows 单仓只在工作区干净时精确跟随该镜像并执行固定前台动作。入口不解析或比对 SHA。
+- Windows 开发机使用普通局域网 SSH 进入 PowerShell；Mac 通过 `node scripts/windows/windows-dev-control.mjs --host <host> <appearance|build|capture-annotation|deploy|desktop-preview|live|pair-sync-recover|secondary|verify>` 将当前工作区 `dev` 精确覆盖到 LAN Git 的同名传输镜像，再覆盖固定 `D:\C\foliole` 单仓并执行固定前台动作。入口不解析或比对 SHA。
 - Windows DEV receiver 与 build 只允许使用 `C:\Program Files\nodejs\node.exe`，不得回退到 PATH 自动发现、portable Node、第二 checkout 或其他 source/build 控制面。
 - A5 设备自动化必须由 Mac DEV controller 的具名 action 调用固定 device adapter，消费 Windows 单仓 pull 后的 `dev` 和固定 A5 identity。清数据、re-pair、既定数据根外读取、提权、防火墙或系统级修改必须在执行前返回 `approval_required`，不得提供 direct device CLI 或远程 approval bypass。
 - Windows 原生 Codex 会话可以使用 PowerShell 作为默认交互 shell，但 PowerShell 只用于短命令、文件读取、状态检查和运行已存在脚本；不得把 PowerShell 当成通用脚本语言来内联复杂流程。
 - 涉及环境变量、后台进程、重定向、路径拼接、Electron 启动或多步 Windows 命令时，必须优先写成 Node `.mjs` runner；确实需要 Windows 宿主能力时，使用已提交的 `.ps1` / `.cmd` 文件入口，并通过简单 `-File` 或脚本路径调用。
 - Windows 原生 Codex 检查或控制 Windows Electron dev runtime 时，优先使用 `npm run windows:client:native -- <status|start|stop|restart|full-restart>`；该入口参照既有 ready marker / bridge marker 信任语义，但用 Node 原生进程控制直接启动 `electron-dev-native.mjs`，避免旧 PowerShell client wrapper 和 inline command 转义。
 - Windows 原生 Codex 会话直接站在 Windows checkout 内诊断时，使用 `npm run windows:preview:native`；该入口复用既有 client control、restart intent、renderer reload intent、ready marker 与 native ABI preflight 语义。
-- Windows 使用一个普通 `dev` Git 仓库作为 Windows 桌面与 A5 Android 的开发现场；每次动作前只在工作区干净时精确跟随 Mac 权威 LAN 镜像，Windows desktop dev 负责 native client runtime，A5 actions 由固定 Android device adapter 负责。
-- Windows 本地仓库不得 commit / push 回 `dev` 或任何源码上游；本地有改动时直接报告，不在自动化中 stash、合并、重建或 repair。
+- Windows 使用 `D:\C\foliole` 普通 `dev` Git 仓库作为 Windows 桌面与 A5 Android 的唯一开发现场；每次固定动作先成功 fetch Mac 权威 LAN 镜像，再 `reset --hard` 到该结果并用 `git clean -fd` 清除非忽略的 untracked 源码漂移，最后复核工作区干净。fetch 失败时不得先覆盖本地内容。
+- Windows 固定仓库不得 commit / push 回 `dev` 或任何源码上游；本地源码改动不保留、不 stash、不合并、不回传，也不交给用户处理。`git clean` 不使用 `-x`，不得清理 ignored runtime、library、证据或工具缓存。
 - Windows 原生 Codex 需要快速确认本机环境与脚本入口时，优先使用 `npm run windows:native:check`；该入口覆盖 native preflight 与核心路径测试，不替代本轮能力闭环所需的最小相关验证。
 - `electron-dev-native.mjs` 只负责设置 Windows 原生试点的独立 userData / session，然后复用已验证的 `scripts/electron-dev.mjs`；不得为原生试点另写一套 Electron/Vite 启动协议，除非先证明旧 dev runner 在 Windows 原生下不可用。
 - 禁止在仓库脚本中新增 `powershell.exe -Command ...`、复杂 `cmd.exe /c ... && ...`、内联 `set VAR=... && npm ...`、或跨 PowerShell / cmd 多层嵌套命令；这些模式必须沉到受测 runner 文件中。临时诊断需要复杂 PowerShell 参数时，使用 `powershell.exe -NoProfile -EncodedCommand` 并把 stdout、stderr、exit code 写入 `.tmp/` 后再读取。

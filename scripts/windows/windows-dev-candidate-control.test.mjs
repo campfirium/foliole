@@ -32,7 +32,7 @@ it('maps an explicit candidate source ref only to the Windows dev mirror', () =>
 });
 
 function output(identity) {
-  return `[windows-dev-action] multi-device-sync-candidate identity=${identity} manifest=C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/${identity}/multi-device-sync-candidate.json\n`;
+  return `[windows-dev-action] multi-device-sync-candidate identity=${identity} manifest=D:/C/foliole/.tmp/artifacts/windows-dev-action/${identity}/multi-device-sync-candidate.json\n`;
 }
 
 it('copies a parseable Windows receipt bound to local tree and controller digests', async () => {

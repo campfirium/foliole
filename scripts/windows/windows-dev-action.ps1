@@ -6,8 +6,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 $systemNode = "C:\Program Files\nodejs\node.exe"
+$systemNpmCli = "C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js"
 $puller = Join-Path $PSScriptRoot "windows-dev-pull.mjs"
 $runner = Join-Path $PSScriptRoot "windows-dev-build.mjs"
+$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $releaseRunner = Join-Path $PSScriptRoot "windows-sync-group-provider-release-control.mjs"
 $lockPath = Join-Path $env:LOCALAPPDATA "Foliole\windows-dev-control\build.lock"
 $lockDirectory = Split-Path -Parent $lockPath
@@ -44,8 +46,18 @@ try {
   & $systemNode $puller
   $runnerExit = $LASTEXITCODE
   if ($runnerExit -eq 0) {
-    & $systemNode $runner $Action
-    $runnerExit = $LASTEXITCODE
+    if ($Action -eq "desktop-preview") {
+      Push-Location $repoRoot
+      try {
+        & $systemNode $systemNpmCli run windows:preview:native
+        $runnerExit = $LASTEXITCODE
+      } finally {
+        Pop-Location
+      }
+    } else {
+      & $systemNode $runner $Action
+      $runnerExit = $LASTEXITCODE
+    }
   }
 } finally {
   $lock.Dispose()

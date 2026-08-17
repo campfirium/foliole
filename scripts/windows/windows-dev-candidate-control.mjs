@@ -5,6 +5,7 @@ import {
   DEFAULT_CANDIDATE_SOURCE_REF, normalizeCandidateSourceRef
 } from '../sync-group/multi-device-sync-source-ref.mjs';
 import { currentAcceptanceCandidate } from '../sync-group/multi-device-sync-candidate.mjs';
+import { WINDOWS_DEV_EVIDENCE_PREFIX } from './windows-dev-paths.mjs';
 
 export const WINDOWS_DEV_TARGET_REF = 'refs/heads/dev';
 
@@ -35,7 +36,7 @@ function remoteCandidateEvidence(output) {
   const match = /\[windows-dev-action\] multi-device-sync-candidate identity=([^\s]+) manifest=([^\r\n]+)/u
     .exec(output);
   if (!match) throw new Error('Windows candidate manifest was not reported');
-  const expected = `C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/${match[1]}/`;
+  const expected = `${WINDOWS_DEV_EVIDENCE_PREFIX}${match[1]}/`;
   const manifestPath = match[2].replaceAll('\\', '/');
   if (!manifestPath.startsWith(expected) || !manifestPath.endsWith('/multi-device-sync-candidate.json')) {
     throw new Error('Windows candidate manifest escaped its fixed evidence root');

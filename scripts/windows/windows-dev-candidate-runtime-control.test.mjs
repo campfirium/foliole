@@ -14,7 +14,7 @@ it('targets only the repository-owned native client stop action', () => {
   expect(spec).toContain(key);
   expect(spec).toContain('C:/Progra~1/nodejs/node.exe');
   expect(spec).toContain(
-    'C:/dev/foliole-android-lab-preview/scripts/windows/windows-client-native.mjs'
+    'D:/C/foliole/scripts/windows/windows-client-native.mjs'
   );
   expect(spec.at(-1)).toBe('stop');
 });

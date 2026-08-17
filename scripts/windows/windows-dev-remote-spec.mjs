@@ -2,11 +2,12 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { toWindowsDevWireAction } from './windows-dev-action-contract.mjs';
+import { WINDOWS_DEV_REPO_ROOT_POSIX } from './windows-dev-paths.mjs';
 
 /* global process */
 
 const REMOTE_ACTION =
-  'C:/dev/foliole-android-lab-preview/scripts/windows/windows-dev-action.ps1';
+  `${WINDOWS_DEV_REPO_ROOT_POSIX}/scripts/windows/windows-dev-action.ps1`;
 
 function sshKey(env, home) {
   return env.FOLIOLE_WINDOWS_DEV_SSH_KEY

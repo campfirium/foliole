@@ -22,7 +22,7 @@ function result(stdout, code = 0) {
   return { code, lines: stdout ? [stdout] : [], output: stdout, stderr: code ? stdout : '', stdout };
 }
 
-it('aligns a clean fixed dev checkout exactly to the Mac-owned lan/dev mirror', async () => {
+it('overwrites Windows source drift with the Mac-owned lan/dev mirror', async () => {
   const paths = fixture();
   const calls = [];
   const execute = vi.fn(async (_command, args) => {
@@ -30,33 +30,20 @@ it('aligns a clean fixed dev checkout exactly to the Mac-owned lan/dev mirror', 
     if (args.includes('--show-toplevel')) return result(paths.repoRoot);
     if (args.includes('--show-current')) return result('dev');
     if (args.includes('status')) return result('');
-    return result('Already up to date.');
+    if (args.includes('clean')) return result('Removing local-only.ts\n');
+    return result('Already up to date.\n');
   });
   await expect(runWindowsDevPull({ execute, paths, platform: 'win32' }))
     .resolves.toMatchObject({ exitCode: 0 });
-  expect(calls.slice(-3)).toEqual([
-    ['-C', paths.repoRoot, 'status', '--porcelain', '--untracked-files=all'],
+  expect(calls.slice(-4)).toEqual([
     ['-C', paths.repoRoot, 'fetch', '--no-tags', 'lan', 'dev'],
-    ['-C', paths.repoRoot, 'reset', '--hard', 'FETCH_HEAD']
+    ['-C', paths.repoRoot, 'reset', '--hard', 'FETCH_HEAD'],
+    ['-C', paths.repoRoot, 'clean', '-fd'],
+    ['-C', paths.repoRoot, 'status', '--porcelain', '--untracked-files=all']
   ]);
 });
 
-it('fails closed without fetching when the Windows checkout has local changes', async () => {
-  const paths = fixture();
-  const calls = [];
-  const execute = vi.fn(async (_command, args) => {
-    calls.push(args);
-    if (args.includes('--show-toplevel')) return result(paths.repoRoot);
-    if (args.includes('--show-current')) return result('dev');
-    if (args.includes('status')) return result(' M local-change.txt');
-    return result('unexpected');
-  });
-  await expect(runWindowsDevPull({ execute, paths, platform: 'win32' }))
-    .resolves.toMatchObject({ exitCode: 64, stage: 'repo' });
-  expect(calls.some((args) => args.includes('fetch'))).toBe(false);
-});
-
-it('fails closed without alignment when mirror fetch is blocked', async () => {
+it('does not overwrite Windows drift when mirror fetch fails', async () => {
   const paths = fixture();
   const calls = [];
   const execute = vi.fn(async (_command, args) => {
@@ -69,4 +56,21 @@ it('fails closed without alignment when mirror fetch is blocked', async () => {
   await expect(runWindowsDevPull({ execute, paths, platform: 'win32' }))
     .resolves.toMatchObject({ exitCode: 64, stage: 'fetch' });
   expect(calls.some((args) => args.includes('reset'))).toBe(false);
+  expect(calls.some((args) => args.includes('clean'))).toBe(false);
+});
+
+it('fails when reset and clean do not converge the fixed checkout', async () => {
+  const paths = fixture();
+  const calls = [];
+  const execute = vi.fn(async (_command, args) => {
+    calls.push(args);
+    if (args.includes('--show-toplevel')) return result(paths.repoRoot);
+    if (args.includes('--show-current')) return result('dev');
+    if (args.includes('status')) return result('?? nested-repository/');
+    return result('');
+  });
+  await expect(runWindowsDevPull({ execute, paths, platform: 'win32' }))
+    .resolves.toMatchObject({ exitCode: 64, stage: 'align' });
+  expect(calls.some((args) => args.includes('reset'))).toBe(true);
+  expect(calls.some((args) => args.includes('clean'))).toBe(true);
 });

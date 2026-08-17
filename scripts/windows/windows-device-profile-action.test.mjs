@@ -80,7 +80,7 @@ function profileBuildPaths(root) {
 }
 
 it('accepts only the fixed Windows action evidence root', () => {
-  const remoteRoot = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/run-1';
+  const remoteRoot = 'D:/C/foliole/.tmp/artifacts/windows-dev-action/run-1';
   expect(parseWindowsDevSuccessEvidence(
     `[windows-dev-action] status: OK exit=0 evidence=${remoteRoot}/summary.json\n`
   )).toEqual({ buildIdentity: 'run-1', remoteRoot });
@@ -92,7 +92,7 @@ it('accepts only the fixed Windows action evidence root', () => {
 it('copies only the bounded profile action log and summary', async () => {
   fs.mkdirSync(path.resolve('.tmp/artifacts'), { recursive: true });
   const repoRoot = fs.mkdtempSync(path.resolve('.tmp/artifacts/windows-device-profile-control-'));
-  const remoteRoot = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/run-2';
+  const remoteRoot = 'D:/C/foliole/.tmp/artifacts/windows-dev-action/run-2';
   const copyFile = vi.fn(async (_remote, local) => fs.writeFileSync(local, 'evidence'));
   try {
     const result = await copyWindowsDeviceProfileEvidence({

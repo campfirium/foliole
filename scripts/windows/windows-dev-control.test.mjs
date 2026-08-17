@@ -78,7 +78,7 @@ it('uses only the dedicated Git key and strict host checking', () => {
 it('uses only the ordinary SSH key and fixed remote action path', () => {
   const spec = windowsDevSshSpec(WINDOWS_DEV_DEFAULT_SSH, 'deploy', {}, TEST_HOME);
   expect(spec).toContain(TEST_WINDOWS_DEV_SSH_KEY);
-  expect(spec).toContain('C:/dev/foliole-android-lab-preview/scripts/windows/windows-dev-action.ps1');
+  expect(spec).toContain('D:/C/foliole/scripts/windows/windows-dev-action.ps1');
   expect(spec.at(-1)).toBe('deploy');
 });
 
@@ -96,7 +96,7 @@ it('uses an alphabetic wire action for pair sync recovery', () => {
 });
 
 it('copies only fixed live evidence with the ordinary SSH identity', () => {
-  const remotePath = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/dev-1/a5-live.png';
+  const remotePath = 'D:/C/foliole/.tmp/artifacts/windows-dev-action/dev-1/a5-live.png';
   const spec = windowsDevScpSpec(WINDOWS_DEV_DEFAULT_SSH, remotePath, '/repo/a5.png', {}, TEST_HOME);
   expect(spec).toContain(TEST_WINDOWS_DEV_SSH_KEY);
   expect(spec.at(-2)).toBe(`${WINDOWS_DEV_DEFAULT_SSH}:${remotePath}`);
@@ -110,7 +110,7 @@ it('copies only fixed live evidence with the ordinary SSH identity', () => {
 });
 
 it('accepts only the fixed capture annotation manifest root', () => {
-  const remoteRoot = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/run-1';
+  const remoteRoot = 'D:/C/foliole/.tmp/artifacts/windows-dev-action/run-1';
   expect(parseWindowsDevCaptureAnnotationEvidence(
     `[windows-dev-action] capture-annotation identity=run-1 manifest=${remoteRoot}/capture-annotation-manifest.json\n`
   )).toEqual({ buildIdentity: 'run-1', remoteRoot });
@@ -123,7 +123,7 @@ it('accepts only the fixed capture annotation manifest root', () => {
 });
 
 it('accepts only the fixed pair sync recovery manifest root', () => {
-  const remoteRoot = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/run-pair';
+  const remoteRoot = 'D:/C/foliole/.tmp/artifacts/windows-dev-action/run-pair';
   expect(parseWindowsDevPairSyncRecoveryEvidence(
     `[windows-dev-action] pair-sync-recover identity=run-pair manifest=${remoteRoot}/pair-sync-recovery-manifest.json\n`
   )).toEqual({ buildIdentity: 'run-pair', remoteRoot });
@@ -134,7 +134,7 @@ it('accepts only the fixed pair sync recovery manifest root', () => {
 
 it('copies live screenshot evidence after the fixed foreground action', async () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-dev-control-'));
-  const remotePath = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/dev-2/a5-live.png';
+  const remotePath = 'D:/C/foliole/.tmp/artifacts/windows-dev-action/dev-2/a5-live.png';
   const executeScp = vi.fn(async (args) => { fs.writeFileSync(args.at(-1), 'png'); return ''; });
   const result = await runWindowsDevControl({
     argv: ['live'], env: {}, executeGit: vi.fn(async () => ''),
@@ -149,7 +149,7 @@ it('copies live screenshot evidence after the fixed foreground action', async ()
 
 it('copies the complete fixed capture annotation evidence set after remote cleanup', async () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-dev-control-capture-'));
-  const remoteRoot = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/run-2';
+  const remoteRoot = 'D:/C/foliole/.tmp/artifacts/windows-dev-action/run-2';
   const executeScp = vi.fn(async (args) => { fs.writeFileSync(args.at(-1), '{}'); return ''; });
   const result = await runWindowsDevControl({
     argv: ['capture-annotation'], env: {},
@@ -174,7 +174,7 @@ it('copies the complete fixed capture annotation evidence set after remote clean
 
 it('copies only fixed capture failure diagnostics before preserving the remote error', async () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-dev-control-capture-failure-'));
-  const remoteRoot = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/run-3';
+  const remoteRoot = 'D:/C/foliole/.tmp/artifacts/windows-dev-action/run-3';
   const output = `[windows-dev-action] status: FAILED exit=74 evidence=${remoteRoot}/summary.json\n`;
   const remoteError = Object.assign(new Error('remote failed'), { output });
   const executeScp = vi.fn(async (args) => { fs.writeFileSync(args.at(-1), '{}'); return ''; });
@@ -200,7 +200,7 @@ it('surfaces remote output before rejecting missing live evidence', async () => 
 
 it('copies fixed screenshot evidence from a failed live lifecycle before rejecting', async () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-dev-control-failure-'));
-  const remotePath = 'C:/dev/foliole-android-lab-preview/.tmp/artifacts/windows-dev-action/dev-3/a5-live.png';
+  const remotePath = 'D:/C/foliole/.tmp/artifacts/windows-dev-action/dev-3/a5-live.png';
   const output = `[windows-dev-action] live identity=dev-3 screenshot=${remotePath}\n`;
   const executeScp = vi.fn(async (args) => { fs.writeFileSync(args.at(-1), 'png'); return ''; });
   const remoteError = Object.assign(new Error('remote failed'), { output });
