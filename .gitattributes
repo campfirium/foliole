@@ -12,3 +12,4 @@
 *.tsx text eol=lf
 *.yaml text eol=lf
 *.yml text eol=lf
+android/app/src/main/java/com/foliole/android/FolioleCompanionResourceQueryStringKeys.java text eol=lf

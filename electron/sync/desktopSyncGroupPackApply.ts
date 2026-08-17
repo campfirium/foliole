@@ -4,7 +4,6 @@ import path from 'node:path';
 
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
-import { hasSourceOwnershipSyncFeature, isKnownMobileSyncDeviceKind } from '../../lib/platform/syncAdvertisedFeatures.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { recordObservedSyncGroupFeatures } from '../database/syncGroupMemberFeatures.js';
@@ -24,12 +23,6 @@ type Peer = {
 };
 
 type ApplyResult = Awaited<ReturnType<typeof applySyncPackNodeSurfaceWithDbPort>>;
-
-export function assertSourceOwnershipPackCompatible(peerKind: unknown, advertisedFeatures: unknown) {
-  if (!isKnownMobileSyncDeviceKind(peerKind) && !hasSourceOwnershipSyncFeature(advertisedFeatures)) {
-    throw new Error('sync_pack_source_ownership_feature_missing');
-  }
-}
 
 export async function collectSyncPackAppliedEvent(port: DbPort, result: ApplyResult) {
   if (!result.applied) return { appliedNodeIds: [], appliedObjectIds: [], appliedReviewOpIds: [] };
@@ -80,7 +73,6 @@ async function applyDownloadedPack(
   });
   const driver = openDatabaseConnection().driver;
   recordObservedSyncGroupFeatures(driver, args.peer.peer_device_id, manifest.advertisedFeatures);
-  assertSourceOwnershipPackCompatible(args.peer.peer_device_kind, manifest.advertisedFeatures);
   if (manifest.toStateSeq < args.after) throw new Error('sync_pack_provider_frontier_rollback');
   const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'desktop-sync-group-pack-apply' });
   await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);

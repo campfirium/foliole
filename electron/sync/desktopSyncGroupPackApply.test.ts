@@ -1,17 +1,8 @@
 import { expect, it, vi } from 'vitest';
 
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
-import { SOURCE_OWNERSHIP_SYNC_FEATURE } from '../../lib/platform/syncAdvertisedFeatures.js';
 
-import { assertSourceOwnershipPackCompatible, collectSyncPackAppliedEvent } from './desktopSyncGroupPackApply.js';
-
-it('rejects desktop packs without source ownership support before apply', () => {
-  expect(() => assertSourceOwnershipPackCompatible('desktop', [])).toThrow(
-    'sync_pack_source_ownership_feature_missing'
-  );
-  expect(() => assertSourceOwnershipPackCompatible('desktop', [SOURCE_OWNERSHIP_SYNC_FEATURE])).not.toThrow();
-  expect(() => assertSourceOwnershipPackCompatible('android-capacitor', [])).not.toThrow();
-});
+import { collectSyncPackAppliedEvent } from './desktopSyncGroupPackApply.js';
 
 it('reports applied pack identities so the renderer reloads committed sync facts', async () => {
   const query = vi.fn()

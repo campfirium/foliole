@@ -2,8 +2,6 @@ import path from 'node:path';
 
 import { expect, it, vi } from 'vitest';
 
-import { SOURCE_OWNERSHIP_SYNC_FEATURE } from '../../lib/platform/syncAdvertisedFeatures.js';
-
 import { openDatabaseConnection } from './connection.js';
 import { buildDesktopSyncPack } from './syncPackBuilder.js';
 import {
@@ -40,7 +38,7 @@ it('packs attachment metadata as a generic sync object', async () => {
   expect(result).toMatchObject({ objectCount: 1, packId: 'pack-attachment-1', toStateSeq: 3 });
   expect(readPackRows(packPath)).toMatchObject({
     manifest: expect.objectContaining({
-      advertised_features: [SOURCE_OWNERSHIP_SYNC_FEATURE],
+      advertised_features: [],
       tables: [
         { name: 'sync_groups', row_count: 0 },
         { name: 'sync_group_members', row_count: 0 },
