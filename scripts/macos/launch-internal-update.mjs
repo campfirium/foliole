@@ -44,7 +44,11 @@ export function parseInternalLaunchArgs(argv) {
   if (argv.length === 2 && argv[0] === '--revision' && /^[0-9a-f]{40}$/u.test(argv[1])) {
     return { revision: argv[1] };
   }
-  throw new Error('usage: macos:internal:dispatch [--revision <full-sha>]');
+  if (argv.length === 3 && argv[0] === '--revision' && /^[0-9a-f]{40}$/u.test(argv[1])
+    && argv[2] === '--force') {
+    return { force: true, revision: argv[1] };
+  }
+  throw new Error('usage: macos:internal:dispatch [--revision <full-sha> [--force]]');
 }
 
 export function createInternalLaunchCommand(options) {
@@ -75,7 +79,7 @@ export async function launchInternalUpdate(options = {}) {
   (options.verifySigning ?? assertInternalSigningAvailable)(options.run);
   makeDirectory(stateRoot, { recursive: true });
   (options.enqueue ?? enqueueInternalRevision)(
-    stateRoot, revision, options.requestedAt, originThreadId
+    stateRoot, revision, options.requestedAt, originThreadId, options.force
   );
   const logPath = path.join(stateRoot, 'build.log');
   const descriptor = openFile(logPath, 'a');

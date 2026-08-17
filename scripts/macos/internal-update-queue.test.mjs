@@ -83,4 +83,13 @@ describe('Internal update queue', () => {
       requestedAt: 10, revision: REVISION_A
     }]);
   });
+
+  it('persists an explicit forced package request', () => {
+    const stateRoot = mkdtempSync(path.join(tmpdir(), 'foliole-internal-queue-'));
+    temporaryRoots.push(stateRoot);
+    enqueueInternalRevision(stateRoot, REVISION_A, 10, undefined, true);
+    expect(readInternalRequests(stateRoot)).toMatchObject([{
+      force: true, requestedAt: 10, revision: REVISION_A
+    }]);
+  });
 });

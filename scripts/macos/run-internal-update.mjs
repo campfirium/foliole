@@ -140,7 +140,8 @@ export async function runInternalUpdate(options) {
     console.log(`[internal-update] skipped stale revision=${revision}`);
     return { revision, status: 'skipped' };
   }
-  if (inspection.changedFiles && resolveInternalPackagingDecision(inspection.changedFiles) === 'skip') {
+  if (!options.force && inspection.changedFiles
+    && resolveInternalPackagingDecision(inspection.changedFiles) === 'skip') {
     await (options.writeBaseline ?? writeAccountedRevision)(stateRoot, revision);
     console.log(`[internal-update] skipped irrelevant revision=${revision}`);
     return { revision, status: 'skipped' };

@@ -11,6 +11,7 @@ describe('Internal update coordinator', () => {
     await expect(coordinateInternalUpdate({ repositoryRoot: '/repo', stateRoot: '/state' }, {
       clearRequests,
       resolveRequest: () => ({
+        force: true,
         originThreadId: '019f8432-790a-7b00-8708-7500d74a56b8',
         requestedAt: 42, revision: REVISION
       }),
@@ -18,6 +19,7 @@ describe('Internal update coordinator', () => {
       waitForRequests: async () => [{ requestedAt: 42, revision: REVISION }]
     })).resolves.toEqual({ status: 'installed' });
     expect(update).toHaveBeenCalledWith({
+      force: true,
       originThreadId: '019f8432-790a-7b00-8708-7500d74a56b8',
       repositoryRoot: '/repo', revision: REVISION, stateRoot: '/state'
     });

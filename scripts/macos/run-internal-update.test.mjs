@@ -45,6 +45,18 @@ describe('Internal update fixed-input worker', () => {
     expect(writeBaseline).toHaveBeenCalledWith('/state', REVISION);
   });
 
+  it('builds an explicitly forced revision despite irrelevant changes', async () => {
+    const run = vi.fn(() => ({ status: 0 }));
+    await expect(runInternalUpdate({
+      baseline: 'a'.repeat(40), force: true,
+      inspection: { changedFiles: ['docs/guide.md'], stale: false },
+      makeDirectory: vi.fn(), makeTempDirectory: vi.fn(() => '/tmp/job'),
+      pathExists: vi.fn(async () => false), remove: vi.fn(), repositoryRoot: '/repo',
+      revision: REVISION, run, stateRoot: '/state', writeBaseline: vi.fn()
+    })).resolves.toEqual({ revision: REVISION, status: 'installed' });
+    expect(run).toHaveBeenCalled();
+  });
+
   it('ignores an older queued revision without moving the baseline backward', async () => {
     const writeBaseline = vi.fn();
     await expect(runInternalUpdate({

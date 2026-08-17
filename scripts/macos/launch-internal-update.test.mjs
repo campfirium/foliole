@@ -15,6 +15,8 @@ const REVISION = 'a'.repeat(40);
 describe('Internal update launcher', () => {
   it('accepts an explicit archived revision for host parity', () => {
     expect(parseInternalLaunchArgs(['--revision', REVISION])).toEqual({ revision: REVISION });
+    expect(parseInternalLaunchArgs(['--revision', REVISION, '--force']))
+      .toEqual({ force: true, revision: REVISION });
     expect(parseInternalLaunchArgs([])).toEqual({});
     expect(() => parseInternalLaunchArgs(['--revision', 'short'])).toThrow('full-sha');
   });
@@ -82,7 +84,7 @@ describe('Internal update launcher', () => {
     });
     expect(start.mock.calls[0][2]).toMatchObject({ cwd: '/repo', detached: true, stdio: ['ignore', 9, 9] });
     expect(child.unref).toHaveBeenCalledOnce();
-    expect(enqueue).toHaveBeenCalledWith('/state', REVISION, undefined, undefined);
+    expect(enqueue).toHaveBeenCalledWith('/state', REVISION, undefined, undefined, undefined);
     expect(closeFile).toHaveBeenCalledWith(9);
   });
 
@@ -101,7 +103,7 @@ describe('Internal update launcher', () => {
       originThreadId: '019f8432-790a-7b00-8708-7500d74a56b8', status: 'dispatched'
     });
     expect(enqueue).toHaveBeenCalledWith(
-      '/state', REVISION, undefined, '019f8432-790a-7b00-8708-7500d74a56b8'
+      '/state', REVISION, undefined, '019f8432-790a-7b00-8708-7500d74a56b8', undefined
     );
   });
 });

@@ -32,7 +32,7 @@ function requestDirectory(stateRoot) {
 }
 
 export function enqueueInternalRevision(
-  stateRoot, revision, requestedAt = Date.now(), originThreadId
+  stateRoot, revision, requestedAt = Date.now(), originThreadId, force = false
 ) {
   const validatedRevision = assertRevision(revision);
   const validatedOriginThreadId = assertOriginThreadId(originThreadId);
@@ -42,6 +42,7 @@ export function enqueueInternalRevision(
   const temporaryPath = `${targetPath}.${process.pid}.${requestedAt}.tmp`;
   const request = { requestedAt, revision: validatedRevision };
   if (validatedOriginThreadId) request.originThreadId = validatedOriginThreadId;
+  if (force) request.force = true;
   writeFileSync(temporaryPath, `${JSON.stringify(request)}\n`);
   renameSync(temporaryPath, targetPath);
   return targetPath;
@@ -61,6 +62,9 @@ export function readInternalRequests(stateRoot) {
     const request = JSON.parse(readFileSync(requestPath, 'utf8'));
     assertRevision(request.revision);
     assertOriginThreadId(request.originThreadId);
+    if (request.force !== undefined && request.force !== true) {
+      throw new Error('Internal queue force flag is invalid');
+    }
     if (!Number.isFinite(request.requestedAt)) throw new Error('Internal queue request time is invalid');
     return { ...request, requestPath };
   });
