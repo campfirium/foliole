@@ -59,7 +59,7 @@ export function readSyncPackSnapshot(options) {
 export function verifySyncPackAcceptance(
   firstBridge, secondBridge, firstSnapshot, secondSnapshot, rejections = [], observations = {}
 ) {
-  const firstPassed = firstBridge.phase === 'applied' && firstBridge.apply?.to_state_seq === 2 &&
+  const firstPassed = firstBridge.phase === 'applied' && firstBridge.apply?.to_state_seq === 1 &&
     firstBridge.roundtrip?.push?.pushedObjectIds?.length === 2 && gatesClosed(firstBridge.roundtrip?.gates);
   const secondPassed = secondBridge.phase === 'reapplied' &&
     secondBridge.roundtrip?.push?.pushedObjectIds?.length === 0 && gatesClosed(secondBridge.roundtrip?.gates);

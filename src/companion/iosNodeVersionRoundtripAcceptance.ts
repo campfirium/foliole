@@ -73,10 +73,10 @@ function initialSnapshot(): WorkspaceSnapshot {
     nodeOrder: [INBOX_NODE_ID],
     nodesById: {
       [INBOX_NODE_ID]: node({
-        currentVersionId: 'acceptance-desktop#0', id: INBOX_NODE_ID, kind: 'folder', title: 'Inbox'
+        currentVersionId: null, id: INBOX_NODE_ID, kind: 'folder', title: 'Inbox'
       }),
       [RESTORE_NODE_ID]: node({
-        currentVersionId: 'acceptance-desktop#1',
+        currentVersionId: 'acceptance-desktop#0',
         deletedAt: '2026-07-21T00:00:20.000Z',
         id: RESTORE_NODE_ID,
         title: 'Trashed acceptance'
@@ -89,7 +89,7 @@ function initialSnapshot(): WorkspaceSnapshot {
 }
 
 function node(args: {
-  currentVersionId: string;
+  currentVersionId: string | null;
   deletedAt?: string;
   id: string;
   kind?: 'folder' | 'topic';
@@ -106,7 +106,7 @@ function node(args: {
     isTitleManual: false,
     kind: args.kind ?? 'topic',
     openingText: null,
-    parentNodeId: null,
+    parentNodeId: args.id === RESTORE_NODE_ID ? INBOX_NODE_ID : null,
     reading: null,
     reveal: null,
     review: null,
