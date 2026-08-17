@@ -75,6 +75,7 @@
     "test:sqlite:electron": "node scripts/electron-sqlite-runner.mjs scripts/test-files.mjs",
     "test:changed": "node scripts/quality/quality-command-contracts.mjs allow test:changed && node scripts/electron-sqlite-runner.mjs scripts/run-vitest-with-summary.mjs .tmp/vitest/changed.json -- --silent=passed-only --pool=threads --maxWorkers=2 --no-file-parallelism --changed HEAD",
     "check:android-boundary": "node scripts/electron-sqlite-runner.mjs scripts/run-vitest-with-summary.mjs .tmp/vitest/android-boundary.json -- --silent=passed-only --pool=threads --maxWorkers=2 --no-file-parallelism scripts/android/java-adapter-boundary.test.mjs scripts/android/java-sql-surface.test.mjs scripts/android/schema-inventory.test.mjs scripts/android/android-sync-*.test.mjs src/shared/platform/companionSqlBoundary.test.ts src/shared/platform/companionSyncWriterQueue.test.ts",
+    "check:release-candidate": "node scripts/quality/quality-command-contracts.mjs allow check:release-candidate && node scripts/check-release-candidate.mjs",
     "preview:diag": "node scripts/preview/preview-dedupe-diagnostics.mjs",
     "multi-device-sync": "node scripts/sync-group/multi-device-sync-cli.mjs",
     "windows:native:preflight": "node scripts/windows/windows-native-pilot-preflight.mjs",

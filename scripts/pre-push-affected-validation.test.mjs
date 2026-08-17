@@ -43,9 +43,15 @@ async function createRepo() {
   await writeFile(path.join(repoDir, 'package.json'), JSON.stringify({
     scripts: {
       'check:android-boundary': 'node scripts/mock-android-boundary.mjs',
+      'check:release-candidate': 'node scripts/mock-release-candidate.mjs',
       'test:sync-pack': 'node scripts/mock-sync-pack.mjs'
     }
   }), 'utf8');
+  await writeFile(
+    path.join(repoDir, 'scripts', 'mock-release-candidate.mjs'),
+    'import { appendFileSync } from "node:fs"; appendFileSync("calls.log", "release-candidate\\n");\n',
+    'utf8'
+  );
   await writeFile(
     path.join(repoDir, 'scripts', 'mock-android-boundary.mjs'),
     'import { appendFileSync } from "node:fs"; appendFileSync("calls.log", "android-boundary\\n");\n',
@@ -66,7 +72,7 @@ async function commitAll(repoDir, message) {
 }
 
 describe('pre-push affected validation', () => {
-  it('does not revalidate history when a new branch points to an already-pushed commit', async () => {
+  it('checks release identity without revalidating already-pushed history', async () => {
     const repoDir = await createRepo();
     try {
       await mkdir(path.join(repoDir, 'electron', 'database'), { recursive: true });
@@ -79,7 +85,7 @@ describe('pre-push affected validation', () => {
       });
 
       expect(result.code, result.stderr).toBe(0);
-      await expect(readFile(path.join(repoDir, 'calls.log'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+      expect(await readFile(path.join(repoDir, 'calls.log'), 'utf8')).toBe('release-candidate\n');
     } finally {
       await rm(repoDir, { recursive: true, force: true });
     }
@@ -100,7 +106,7 @@ describe('pre-push affected validation', () => {
       });
 
       expect(result.code, result.stderr).toBe(0);
-      await expect(readFile(path.join(repoDir, 'calls.log'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+      expect(await readFile(path.join(repoDir, 'calls.log'), 'utf8')).toBe('release-candidate\n');
     } finally {
       await rm(repoDir, { recursive: true, force: true });
     }
@@ -123,6 +129,25 @@ describe('pre-push affected validation', () => {
 
       expect(result.code).toBe(0);
       expect(await readFile(path.join(repoDir, 'calls.log'), 'utf8')).toContain('sync-pack');
+    } finally {
+      await rm(repoDir, { recursive: true, force: true });
+    }
+  }, AFFECTED_VALIDATION_TIMEOUT_MS);
+
+  it('does not run release candidate checks for ordinary dev pushes', async () => {
+    const repoDir = await createRepo();
+    try {
+      await writeFile(path.join(repoDir, 'README.md'), 'seed\n');
+      const remoteSha = await commitAll(repoDir, '000001 seed');
+      await writeFile(path.join(repoDir, 'README.md'), 'changed\n');
+      const localSha = await commitAll(repoDir, '000002 change');
+
+      const result = await runCommand('node', [AFFECTED_VALIDATION_SCRIPT], repoDir, {
+        input: `refs/heads/dev ${localSha} refs/heads/dev ${remoteSha}\n`
+      });
+
+      expect(result.code).toBe(0);
+      await expect(readFile(path.join(repoDir, 'calls.log'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
     } finally {
       await rm(repoDir, { recursive: true, force: true });
     }

@@ -55,6 +55,7 @@ const HOSTED_QUALITY_CONTRACTS = [
 
 const RELEASE_WORKFLOW_CONTRACTS = [
   'scripts/electron-builder-config.test.mjs',
+  'scripts/quality/hosted-npm-ci-workflow-contract.test.mjs',
   'scripts/release-candidate-quality-workflow-contract.test.mjs',
   'scripts/release-macos-workflow-contract.test.mjs',
   'scripts/release-windows-workflow-contract.test.mjs',

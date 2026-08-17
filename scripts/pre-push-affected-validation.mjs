@@ -67,6 +67,16 @@ function affectedFiles(input) {
   return [...new Set(files)];
 }
 
+function runReleaseCandidateCheckIfNeeded(updates) {
+  const releaseUpdate = updates.some((update) =>
+    update.remoteRef === 'refs/heads/release' && !ZERO_SHA.test(update.localSha));
+  if (!releaseUpdate) return;
+  console.log('[pre-push-affected-validation] release branch update detected; running check:release-candidate');
+  run(npmCommand(), ['run', 'check:release-candidate'], {
+    shell: process.platform === 'win32', stdio: 'inherit'
+  });
+}
+
 function runSyncPackCheckIfNeeded(files) {
   if (!files.some(isSyncPackPath)) {
     return;
@@ -85,6 +95,8 @@ function runAndroidSyncBoundaryCheckIfNeeded(files) {
 
 function main() {
   const input = process.stdin.isTTY ? '' : readFileSync(0, 'utf8');
+  const updates = parsePrePushInput(input);
+  runReleaseCandidateCheckIfNeeded(updates);
   const files = affectedFiles(input);
   runSyncPackCheckIfNeeded(files);
   runAndroidSyncBoundaryCheckIfNeeded(files);

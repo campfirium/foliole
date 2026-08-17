@@ -8,6 +8,7 @@ import {
   createTestPairingKeyPair,
   decryptTestPairingSecret
 } from '../../electron/sync/companionPairingProtocolTestSupport.js';
+import { createDesktopSyncGroupSignedHeaders } from '../../electron/sync/desktopSyncGroupHttp.js';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 import { closeDesktopApplication } from '../../scripts/desktop/playwright-desktop-close.mjs';
 import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
@@ -37,27 +38,19 @@ async function discoverFolioleService() {
   }
 }
 
-function signedHeaders(deviceId: string, groupId: string, secret: string, pathWithQuery: string) {
-  const timestamp = new Date().toISOString();
-  const nonce = crypto.randomUUID();
-  const bodyHash = crypto.createHash('sha256').update('').digest('hex');
-  const canonical = ['GET', pathWithQuery, timestamp, nonce, bodyHash].join('\n');
-  return {
-    'X-Device-Id': deviceId,
-    'X-Nonce': nonce,
-    'X-Signature': crypto.createHmac('sha256', secret).update(canonical).digest('hex'),
-    'X-Sync-Group-Id': groupId,
-    'X-Timestamp': timestamp
-  };
-}
-
 async function expectSignedWorkspaceVersion(
   endpoint: string,
   paired: { deviceId: string; groupId: string; secret: string }
 ) {
   const pathWithQuery = '/companion/workspace-version';
   const response = await fetch(`${endpoint}${pathWithQuery}`, {
-    headers: signedHeaders(paired.deviceId, paired.groupId, paired.secret, pathWithQuery)
+    headers: createDesktopSyncGroupSignedHeaders({
+      groupId: paired.groupId,
+      localDeviceId: paired.deviceId,
+      method: 'GET',
+      pathWithQuery,
+      secret: paired.secret
+    })
   });
   expect(response.status).toBe(200);
 }

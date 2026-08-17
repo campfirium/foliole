@@ -5,6 +5,7 @@ export const LOCAL_QUICK_PACKAGES = [
   ['windows:console:guard', 'fixed Windows console policy check'],
   ['check:layer-boundary', 'fixed layer boundary check'],
   ['check:affected', 'affected sync-pack or Android boundary pre-push checks'],
+  ['check:release-candidate', 'fixed repository-only release identity and host version checks'],
   ['check:settings-classification', 'fixed settings classification check'],
   ['check:reading-typography', 'fixed reading typography token check'],
   ['check:structure', 'fixed repository structure check'],
