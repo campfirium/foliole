@@ -2,9 +2,10 @@
 /* global console, process */
 
 import { spawnSync } from 'node:child_process';
-import { createRequire } from 'node:module';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+
+import { ensureElectronBinary } from './electron-runtime-binary.mjs';
 
 export function resolveElectronBinary(repoRoot = process.cwd(), platform = process.platform) {
   if (platform === 'darwin') {
@@ -12,15 +13,6 @@ export function resolveElectronBinary(repoRoot = process.cwd(), platform = proce
   }
   const executable = platform === 'win32' ? 'electron.exe' : 'electron';
   return path.join(repoRoot, 'node_modules', 'electron', 'dist', executable);
-}
-
-export function resolveAvailableElectronBinary(repoRoot = process.cwd(), loadElectron) {
-  const resolveElectron = loadElectron ?? createRequire(path.join(repoRoot, 'package.json'));
-  const electronPath = resolveElectron('electron');
-  if (typeof electronPath !== 'string' || electronPath.length === 0) {
-    throw new Error('Electron package did not resolve an executable path.');
-  }
-  return electronPath;
 }
 
 export function resolveElectronSqliteTempRoot(repoRoot = process.cwd()) {
@@ -140,7 +132,7 @@ function main() {
   const [scriptPath, ...scriptArgs] = dryRun ? rawArgs.slice(1) : rawArgs;
   const repoRoot = process.cwd();
   if (preflightOnly) {
-    assertElectronAbi(resolveAvailableElectronBinary(repoRoot), repoRoot);
+    assertElectronAbi(ensureElectronBinary(repoRoot), repoRoot);
     process.stdout.write('better-sqlite3 loaded in Electron ABI\n');
     return;
   }
@@ -155,7 +147,7 @@ function main() {
     process.stdout.write(`${JSON.stringify(invocation, null, 2)}\n`);
     return;
   }
-  const electronPath = resolveAvailableElectronBinary(repoRoot);
+  const electronPath = ensureElectronBinary(repoRoot);
   assertElectronAbi(electronPath, repoRoot);
   const result = runElectronNode(electronPath, invocation.args, repoRoot);
   if (result.error) {

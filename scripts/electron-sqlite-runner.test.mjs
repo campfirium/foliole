@@ -6,12 +6,13 @@ import { readFile } from 'node:fs/promises';
 
 import { describe, expect, it } from 'vitest';
 
+import { ensureElectronBinary } from './electron-runtime-binary.mjs';
+
 import {
   buildElectronNodeArgs,
   buildElectronNodeEnv,
   buildElectronNodeSpawnOptions,
   buildRunnerInvocation,
-  resolveAvailableElectronBinary,
   resolveElectronBinary,
   resolveElectronSqliteTempRoot
 } from './electron-sqlite-runner.mjs';
@@ -32,7 +33,7 @@ describe('electron sqlite runner', () => {
       return '/prepared/electron';
     };
 
-    expect(resolveAvailableElectronBinary('D:/C/foliole', loadElectron)).toBe('/prepared/electron');
+    expect(ensureElectronBinary('D:/C/foliole', loadElectron)).toBe('/prepared/electron');
   });
 
   it('runs TypeScript scripts through Electron-as-Node with strip-types enabled', () => {

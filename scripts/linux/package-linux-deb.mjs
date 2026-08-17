@@ -7,6 +7,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
+import { ensureElectronBinary } from '../electron-runtime-binary.mjs';
 import { linuxDebName, verifyLinuxDebDirectory } from './linux-deb-contract.mjs';
 
 const OUTPUT_DIRECTORY = path.resolve('artifacts/linux');
@@ -59,6 +60,7 @@ export async function packageLinuxDeb(version) {
   await writeBuilderConfig();
   run('npm', ['run', 'build']);
   run('npm', ['run', 'electron:compile']);
+  ensureElectronBinary(process.cwd());
   run('node', ['node_modules/electron-builder/cli.js', '--config', GENERATED_CONFIG, '--linux', 'deb', '--x64']);
   await keepFormalAssets(version);
   return verifyLinuxDebDirectory(OUTPUT_DIRECTORY, version);
