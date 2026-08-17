@@ -40,7 +40,7 @@
 
 ## Windows Native Shell Policy
 
-- Windows 开发机使用普通局域网 SSH 进入 PowerShell；Mac 通过 `node scripts/windows/windows-dev-control.mjs --host <host> <appearance|build|capture-annotation|deploy|desktop-preview|live|pair-sync-recover|secondary|verify>` 将当前工作区 `dev` 精确覆盖到 LAN Git 的同名传输镜像，再覆盖固定 `D:\C\foliole` 单仓并执行固定前台动作。Windows 不决定候选；验收控制面只可读取 trusted runtime 已报告的 revision，用于把 macOS Internal 对齐到 Windows 已验收版本，不得据此从 Windows 回传或合并源码。
+- Windows 开发机使用普通局域网 SSH 进入 PowerShell；Mac 通过 `node scripts/windows/windows-dev-control.mjs --host <host> <appearance|build|capture-annotation|deploy|desktop-preview|live|pair-sync-recover|secondary|verify>` 将当前工作区 `dev` 精确覆盖到 LAN Git 的同名传输镜像，再覆盖固定 `D:\C\foliole` 单仓并执行固定前台动作。Windows 不决定候选；验收控制面可读取 trusted runtime revision 证明产品 runtime 等价，但最终验收源码 revision 仍取 controller 已同步到固定 Windows 仓库的当前 Mac 完整提交，并让 macOS Internal 从该提交的 Git archive 构建。不得据此从 Windows 回传或合并源码。
 - Windows DEV receiver 与 build 只允许使用 `C:\Program Files\nodejs\node.exe`，不得回退到 PATH 自动发现、portable Node、第二 checkout 或其他 source/build 控制面。
 - A5 设备自动化必须由 Mac DEV controller 的具名 action 调用固定 device adapter，消费 Windows 单仓 pull 后的 `dev` 和固定 A5 identity。清数据、re-pair、既定数据根外读取、提权、防火墙或系统级修改必须在执行前返回 `approval_required`，不得提供 direct device CLI 或远程 approval bypass。
 - Windows 原生 Codex 会话可以使用 PowerShell 作为默认交互 shell，但 PowerShell 只用于短命令、文件读取、状态检查和运行已存在脚本；不得把 PowerShell 当成通用脚本语言来内联复杂流程。
