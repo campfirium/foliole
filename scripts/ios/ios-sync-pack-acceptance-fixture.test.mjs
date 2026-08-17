@@ -44,6 +44,7 @@ it('generates isolated producer packs for the paired iOS identity and failure ca
   expect(legal.nodeVersions).not.toContainEqual(expect.objectContaining({ object_id: 'special-inbox' }));
   expect(JSON.parse(legal.nodeVersions[0].snapshot_json).parent_id).toBe('special-inbox');
   expect(wrongTarget.manifest).toMatchObject({ to_peer_id: 'ios-runtime-device-wrong' });
+  expect(successor.manifest.from_state_seq).toBe(legal.manifest.to_state_seq);
   expect(cursorGap.nodes).toEqual([expect.objectContaining({ id: 'ios-acceptance-gap-node' })]);
   expect(cursorGap.manifest.to_peer_id).toBe('ios-runtime-device');
   expect(cursorGap.manifest.from_state_seq).toBeGreaterThan(successor.manifest.to_state_seq);
