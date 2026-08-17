@@ -1,5 +1,6 @@
 {
   "settings.companionSync.group.title": "동기화 그룹",
+  "settings.companionSync.group.named": "{name}의 동기화 그룹",
   "settings.companionSync.group.description": "그룹을 만들 때 이 이름이 저장됩니다.",
   "settings.companionSync.group.empty.description": "새 동기화 그룹을 만들거나 이 네트워크의 활성 기기에서 그룹에 참여하세요.",
   "settings.companionSync.group.join.title": "참여 요청",
@@ -8,6 +9,7 @@
   "settings.companionSync.group.join.reject": "거부",
   "settings.companionSync.group.create": "동기화 그룹 만들기",
   "settings.companionSync.group.find": "동기화 그룹 찾기",
+  "settings.companionSync.group.join": "참여",
   "settings.companionSync.group.join.complete": "참여 완료",
   "settings.companionSync.group.join.waiting": "승인을 기다리는 중입니다. 승인 후 동기화가 자동으로 시작됩니다.",
   "settings.companionSync.group.join.named": "{name} 참여",
@@ -15,6 +17,18 @@
   "settings.companionSync.group.devices.description": "다른 기기가 오프라인이어도 기기의 그룹 멤버십은 유지됩니다.",
   "settings.companionSync.group.devices.find": "기기 찾기",
   "settings.companionSync.group.devices.syncWith": "{name}와 동기화",
+  "settings.companionSync.group.sync.title": "동기화",
+  "settings.companionSync.group.sync.description": "동기화 그룹을 나가지 않고 네트워크 동기화를 켜거나 끕니다.",
+  "settings.companionSync.group.sync.turnOn": "켜기",
+  "settings.companionSync.group.sync.turnOff": "끄기",
+  "settings.companionSync.group.pause": "동기화 일시 중지",
+  "settings.companionSync.group.resume": "동기화 재개",
+  "settings.companionSync.group.leave": "동기화 그룹 나가기",
+  "settings.companionSync.group.remove": "동기화 그룹에서 제거",
+  "settings.companionSync.group.leave.confirm.title": "동기화 그룹에서 나갈까요?",
+  "settings.companionSync.group.leave.confirm.description": "이 기기는 {name}에서 나가며 그룹의 기기와 더 이상 동기화하지 않습니다.",
+  "settings.companionSync.group.remove.confirm.title": "기기를 제거할까요?",
+  "settings.companionSync.group.remove.confirm.description": "{name} 기기가 이 동기화 그룹에서 제거되며 다시 동기화하려면 그룹에 다시 참여해야 합니다.",
   "settings.companionSync.group.member.active": "참여함",
   "settings.companionSync.group.member.provisioning": "설정 중"
 }

@@ -1,5 +1,6 @@
 {
   "settings.companionSync.group.title": "Grupa synchronizacji",
+  "settings.companionSync.group.named": "Grupa synchronizacji: {name}",
   "settings.companionSync.group.description": "Ta nazwa jest zapisywana podczas tworzenia grupy.",
   "settings.companionSync.group.empty.description": "Utwórz grupę synchronizacji lub dołącz do niej z aktywnego urządzenia w tej sieci.",
   "settings.companionSync.group.join.title": "Prośby o dołączenie",
@@ -8,6 +9,7 @@
   "settings.companionSync.group.join.reject": "Odrzuć",
   "settings.companionSync.group.create": "Utwórz grupę synchronizacji",
   "settings.companionSync.group.find": "Znajdź grupę synchronizacji",
+  "settings.companionSync.group.join": "Dołącz",
   "settings.companionSync.group.join.complete": "Zakończ dołączanie",
   "settings.companionSync.group.join.waiting": "Oczekiwanie na zatwierdzenie. Synchronizacja rozpocznie się później automatycznie.",
   "settings.companionSync.group.join.named": "Dołącz do {name}",
@@ -15,6 +17,18 @@
   "settings.companionSync.group.devices.description": "Urządzenia zachowują członkostwo, gdy inne urządzenie jest offline.",
   "settings.companionSync.group.devices.find": "Znajdź urządzenia",
   "settings.companionSync.group.devices.syncWith": "Synchronizuj z {name}",
+  "settings.companionSync.group.sync.title": "Synchronizuj",
+  "settings.companionSync.group.sync.description": "Włącz lub wyłącz synchronizację sieciową bez opuszczania grupy synchronizacji.",
+  "settings.companionSync.group.sync.turnOn": "Włącz",
+  "settings.companionSync.group.sync.turnOff": "Wyłącz",
+  "settings.companionSync.group.pause": "Wstrzymaj synchronizację",
+  "settings.companionSync.group.resume": "Wznów synchronizację",
+  "settings.companionSync.group.leave": "Opuść grupę synchronizacji",
+  "settings.companionSync.group.remove": "Usuń z grupy synchronizacji",
+  "settings.companionSync.group.leave.confirm.title": "Opuścić grupę synchronizacji?",
+  "settings.companionSync.group.leave.confirm.description": "To urządzenie opuści grupę {name} i przestanie synchronizować się z jej urządzeniami.",
+  "settings.companionSync.group.remove.confirm.title": "Usunąć urządzenie?",
+  "settings.companionSync.group.remove.confirm.description": "{name} zostanie usunięte z tej grupy synchronizacji i musi dołączyć ponownie, aby się synchronizować.",
   "settings.companionSync.group.member.active": "Dołączono",
   "settings.companionSync.group.member.provisioning": "Konfigurowanie"
 }

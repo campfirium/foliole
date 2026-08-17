@@ -2,9 +2,18 @@
   "companion.sync.joinRequest.description": "Questo dispositivo vuole unirsi al tuo gruppo di sincronizzazione.",
   "companion.sync.joinRequest.approve": "Approva",
   "companion.sync.joinRequest.reject": "Rifiuta",
+  "companion.sync.group.current": "Gruppo di sincronizzazione attuale",
+  "companion.sync.group.details": "Dettagli",
+  "companion.sync.group.open": "Visualizza gruppo di sincronizzazione",
   "companion.sync.leave.button": "Lascia il gruppo di sincronizzazione",
   "companion.sync.leave.description": "Questo dispositivo interromperà la sincronizzazione con questo gruppo. Gli argomenti e gli allegati rimarranno sul dispositivo.",
   "companion.sync.leave.error": "Foliole non ha potuto confermare l’uscita con un altro dispositivo. Riprova quando è disponibile un altro dispositivo.",
   "companion.sync.leave.progress": "Uscita dal gruppo di sincronizzazione",
-  "companion.sync.provider.foregroundHint": "Foliole mantiene lo schermo attivo durante l’invio. Se cambi app o blocchi il dispositivo, la sincronizzazione si interrompe finché non torni."
+  "companion.sync.participation.sync": "Sincronizza",
+  "companion.sync.participation.turnOn": "Attiva",
+  "companion.sync.participation.turnOff": "Disattiva",
+  "companion.sync.participation.pause": "Metti in pausa la sincronizzazione",
+  "companion.sync.participation.resume": "Riprendi la sincronizzazione",
+  "companion.sync.participation.inactive": "Attiva e riprendi la sincronizzazione prima di connetterti o sincronizzare.",
+  "companion.sync.provider.foregroundHint": "Foliole mantiene lo schermo attivo durante l’invio. Torna a Foliole per continuare dai progressi più recenti."
 }

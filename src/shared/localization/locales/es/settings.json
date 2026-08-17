@@ -40,6 +40,7 @@
   "settings.companionSync.sectionAria": "Sección de sincronización",
   "settings.companionSync.title": "Sincronización",
   "settings.companionSync.description": "Active la sincronización del escritorio antes de emparejar otro dispositivo. Los teléfonos de su red local pueden detectar este escritorio y luego sincronizarse después de que usted los apruebe.",
+  "settings.companionSync.status.inDevelopment": "En desarrollo",
   "settings.companionSync.enableDesktop.title": "Habilitar en este escritorio",
   "settings.companionSync.enableDesktop.aria": "Habilitar sincronización de escritorio",
   "settings.companionSync.error.open": "No se pudo abrir la sincronización. {error}",

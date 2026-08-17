@@ -40,6 +40,7 @@
   "settings.companionSync.sectionAria": "Abschnitt „Synchronisierung“.",
   "settings.companionSync.title": "Synchronisierung",
   "settings.companionSync.description": "Aktivieren Sie die Desktop-Synchronisierung, bevor Sie ein anderes Gerät koppeln. Telefone in Ihrem lokalen Netzwerk können diesen Desktop erkennen und nach Ihrer Genehmigung synchronisieren.",
+  "settings.companionSync.status.inDevelopment": "In Entwicklung",
   "settings.companionSync.enableDesktop.title": "Auf diesem Desktop aktivieren",
   "settings.companionSync.enableDesktop.aria": "Desktop-Synchronisierung aktivieren",
   "settings.companionSync.error.open": "Die Synchronisierung konnte nicht geöffnet werden. {error}",

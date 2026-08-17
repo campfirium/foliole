@@ -1,5 +1,4 @@
 {
-  "desktop.command.createVirtualFolder": "Utwórz folder wirtualny",
   "desktop.command.section.create": "Utwórz",
   "desktop.command.section.workspace": "Obszar roboczy",
   "desktop.command.section.import": "Importuj",
@@ -15,6 +14,7 @@
   "desktop.command.createFolder": "Utwórz folder",
   "desktop.command.createTopic": "Utwórz temat",
   "desktop.command.createItem": "Utwórz przedmiot",
+  "desktop.command.createVirtualFolder": "Utwórz folder wirtualny",
   "desktop.command.undo": "Cofnij",
   "desktop.command.redo": "Powtórz",
   "desktop.command.undoOperation": "Cofnij {operation}",
@@ -67,6 +67,7 @@
   "desktop.command.openSettings": "Otwórz Ustawienia",
   "desktop.command.openReadwiseReaderSettings": "Otwórz ustawienia czytnika Readwise",
   "desktop.command.toggleBaseColorMode": "Przełącz tryb jasny/ciemny",
+  "desktop.command.cycleAppearanceMode": "Przełącz tryb wyglądu",
   "desktop.command.pdfDarkOriginal": "Użyj oryginału PDF w trybie ciemnym",
   "desktop.command.pdfDarkInverted": "Użyj odwróconego PDF w trybie ciemnym",
   "desktop.command.pdfDarkWarm": "Użyj Ciepła PDF w trybie ciemnym",

@@ -1,5 +1,4 @@
 {
-  "desktop.command.createVirtualFolder": "建立虛擬資料夾",
   "desktop.command.section.create": "創建",
   "desktop.command.section.workspace": "工作空間",
   "desktop.command.section.import": "進口",
@@ -15,6 +14,7 @@
   "desktop.command.createFolder": "建立資料夾",
   "desktop.command.createTopic": "創建主題",
   "desktop.command.createItem": "創建專案",
+  "desktop.command.createVirtualFolder": "建立虛擬資料夾",
   "desktop.command.undo": "撤銷",
   "desktop.command.redo": "重做",
   "desktop.command.undoOperation": "撤銷 {operation}",
@@ -67,6 +67,7 @@
   "desktop.command.openSettings": "開啟設定",
   "desktop.command.openReadwiseReaderSettings": "開啟 Readwise 讀卡機設置",
   "desktop.command.toggleBaseColorMode": "切換亮/暗模式",
+  "desktop.command.cycleAppearanceMode": "循環切換外觀模式",
   "desktop.command.pdfDarkOriginal": "在深色模式下使用原始PDF",
   "desktop.command.pdfDarkInverted": "在深色模式下使用反轉 PDF",
   "desktop.command.pdfDarkWarm": "在深色模式下使用暖色 PDF",

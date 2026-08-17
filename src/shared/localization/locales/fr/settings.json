@@ -40,6 +40,7 @@
   "settings.companionSync.sectionAria": "Section Synchronisation",
   "settings.companionSync.title": "Synchronisation",
   "settings.companionSync.description": "Activez la synchronisation du bureau avant de coupler un autre appareil. Les téléphones de votre réseau local peuvent découvrir ce bureau, puis se synchroniser après les avoir approuvés.",
+  "settings.companionSync.status.inDevelopment": "En cours de développement",
   "settings.companionSync.enableDesktop.title": "Activer sur ce bureau",
   "settings.companionSync.enableDesktop.aria": "Activer la synchronisation du bureau",
   "settings.companionSync.error.open": "Impossible d'ouvrir la synchronisation. {error}",

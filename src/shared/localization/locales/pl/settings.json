@@ -40,6 +40,7 @@
   "settings.companionSync.sectionAria": "Sekcja synchronizacji",
   "settings.companionSync.title": "Synchronizuj",
   "settings.companionSync.description": "Włącz synchronizację pulpitu przed sparowaniem innego urządzenia. Telefony w Twojej sieci lokalnej mogą wykryć ten pulpit, a następnie przeprowadzić synchronizację po ich zatwierdzeniu.",
+  "settings.companionSync.status.inDevelopment": "W fazie rozwoju",
   "settings.companionSync.enableDesktop.title": "Włącz na tym pulpicie",
   "settings.companionSync.enableDesktop.aria": "Włącz synchronizację pulpitu",
   "settings.companionSync.error.open": "Nie można otworzyć synchronizacji. {error}",

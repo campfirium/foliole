@@ -1,5 +1,4 @@
 {
-  "desktop.command.createVirtualFolder": "Создать виртуальную папку",
   "desktop.command.section.create": "Создать",
   "desktop.command.section.workspace": "Рабочая область",
   "desktop.command.section.import": "Импорт",
@@ -15,6 +14,7 @@
   "desktop.command.createFolder": "Создать папку",
   "desktop.command.createTopic": "Создать тему",
   "desktop.command.createItem": "Создать элемент",
+  "desktop.command.createVirtualFolder": "Создать виртуальную папку",
   "desktop.command.undo": "Отменить",
   "desktop.command.redo": "Повторить",
   "desktop.command.undoOperation": "Отменить {operation}",
@@ -67,6 +67,7 @@
   "desktop.command.openSettings": "Открыть настройки",
   "desktop.command.openReadwiseReaderSettings": "Откройте настройки чтения Readwise.",
   "desktop.command.toggleBaseColorMode": "Переключить светлый/темный режим",
+  "desktop.command.cycleAppearanceMode": "Переключить режим оформления",
   "desktop.command.pdfDarkOriginal": "Используйте оригинальный PDF в темном режиме.",
   "desktop.command.pdfDarkInverted": "Используйте перевернутый PDF в темном режиме.",
   "desktop.command.pdfDarkWarm": "Используйте теплый PDF в темном режиме.",

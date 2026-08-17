@@ -1,5 +1,4 @@
 {
-  "desktop.command.createVirtualFolder": "가상 폴더 만들기",
   "desktop.command.section.create": "만들기",
   "desktop.command.section.workspace": "작업공간",
   "desktop.command.section.import": "가져오기",
@@ -15,6 +14,7 @@
   "desktop.command.createFolder": "폴더 생성",
   "desktop.command.createTopic": "주제 만들기",
   "desktop.command.createItem": "아이템 생성",
+  "desktop.command.createVirtualFolder": "가상 폴더 만들기",
   "desktop.command.undo": "실행 취소",
   "desktop.command.redo": "다시 실행",
   "desktop.command.undoOperation": "실행 취소 {operation}",
@@ -67,6 +67,7 @@
   "desktop.command.openSettings": "설정 열기",
   "desktop.command.openReadwiseReaderSettings": "Readwise 리더 설정 열기",
   "desktop.command.toggleBaseColorMode": "밝은/어두운 모드 전환",
+  "desktop.command.cycleAppearanceMode": "모양 모드 전환",
   "desktop.command.pdfDarkOriginal": "다크 모드에서 원본 PDF 사용",
   "desktop.command.pdfDarkInverted": "다크 모드에서 반전된 PDF 사용",
   "desktop.command.pdfDarkWarm": "어두운 모드에서 따뜻한 PDF 사용",

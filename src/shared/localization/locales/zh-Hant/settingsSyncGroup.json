@@ -1,5 +1,6 @@
 {
   "settings.companionSync.group.title": "同步群組",
+  "settings.companionSync.group.named": "{name} 的同步群組",
   "settings.companionSync.group.description": "群組名稱會在建立時儲存。",
   "settings.companionSync.group.empty.description": "建立新的同步群組，或加入目前網路中活躍裝置提供的同步群組。",
   "settings.companionSync.group.join.title": "加入要求",
@@ -8,6 +9,7 @@
   "settings.companionSync.group.join.reject": "拒絕",
   "settings.companionSync.group.create": "建立同步群組",
   "settings.companionSync.group.find": "尋找同步群組",
+  "settings.companionSync.group.join": "加入",
   "settings.companionSync.group.join.complete": "完成加入",
   "settings.companionSync.group.join.waiting": "正在等待核准；核准後會自動開始同步。",
   "settings.companionSync.group.join.named": "加入 {name}",
@@ -15,6 +17,18 @@
   "settings.companionSync.group.devices.description": "其他裝置離線時，本裝置仍會保留成員身分。",
   "settings.companionSync.group.devices.find": "尋找裝置",
   "settings.companionSync.group.devices.syncWith": "與 {name} 同步",
+  "settings.companionSync.group.sync.title": "同步",
+  "settings.companionSync.group.sync.description": "開啟或關閉網路同步，不會離開同步群組。",
+  "settings.companionSync.group.sync.turnOn": "開啟",
+  "settings.companionSync.group.sync.turnOff": "關閉",
+  "settings.companionSync.group.pause": "暫停同步",
+  "settings.companionSync.group.resume": "恢復同步",
+  "settings.companionSync.group.leave": "離開同步群組",
+  "settings.companionSync.group.remove": "從同步群組移除",
+  "settings.companionSync.group.leave.confirm.title": "離開同步群組？",
+  "settings.companionSync.group.leave.confirm.description": "這台裝置將離開「{name}」，並停止與群組內的裝置同步。",
+  "settings.companionSync.group.remove.confirm.title": "移除裝置？",
+  "settings.companionSync.group.remove.confirm.description": "「{name}」將從目前的同步群組移除；如需再次同步，必須重新加入。",
   "settings.companionSync.group.member.active": "已加入",
   "settings.companionSync.group.member.provisioning": "正在設定"
 }

@@ -40,6 +40,7 @@
   "settings.companionSync.sectionAria": "同期セクション",
   "settings.companionSync.title": "同期",
   "settings.companionSync.description": "別のデバイスをペアリングする前にデスクトップ同期をオンにしてください。ローカル ネットワーク上の電話はこのデスクトップを検出し、承認後に同期できます。",
+  "settings.companionSync.status.inDevelopment": "開発中",
   "settings.companionSync.enableDesktop.title": "このデスクトップで有効にする",
   "settings.companionSync.enableDesktop.aria": "デスクトップ同期を有効にする",
   "settings.companionSync.error.open": "同期を開けませんでした。 {error}",
