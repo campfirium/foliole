@@ -106,11 +106,13 @@ function seedRoundtripNodes(driver: ReturnType<typeof createBetterSqlite3Driver>
     [INBOX_NODE_ID, '2026-07-21T00:00:00.000Z', '2026-07-21T00:00:00.000Z']
   );
   driver.execute(
-    `INSERT INTO nodes (id, kind, title, content, sync_dirty, created_at, updated_at, deleted_at)
-     VALUES (?, 'topic', 'Trashed acceptance', 'Restore body', 1, ?, ?, ?)`,
-    [RESTORE_NODE_ID, '2026-07-21T00:00:10.000Z', '2026-07-21T00:00:20.000Z', '2026-07-21T00:00:20.000Z']
+    `INSERT INTO nodes (id, parent_id, kind, title, content, sync_dirty, created_at, updated_at, deleted_at)
+     VALUES (?, ?, 'topic', 'Trashed acceptance', 'Restore body', 1, ?, ?, ?)`,
+    [
+      RESTORE_NODE_ID, INBOX_NODE_ID, '2026-07-21T00:00:10.000Z',
+      '2026-07-21T00:00:20.000Z', '2026-07-21T00:00:20.000Z'
+    ]
   );
-  flushNodeSyncVersionWithDriver(driver, INBOX_NODE_ID, DESKTOP_DEVICE_ID, '2026-07-21T00:00:00.000Z');
   flushNodeSyncVersionWithDriver(driver, RESTORE_NODE_ID, DESKTOP_DEVICE_ID, '2026-07-21T00:00:20.000Z');
 }
 
