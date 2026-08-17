@@ -1,7 +1,7 @@
 import { FolderOpen } from 'lucide-react';
 
 import { cn } from '../../shared/lib/utils';
-import { AppButton } from '../../shared/ui';
+import { AppButton, AppTooltip, AppTooltipContent, AppTooltipTrigger } from '../../shared/ui';
 
 function compactPathLabel(path: string, emptyLabel: string) {
   if (path.trim().length === 0) {
@@ -30,7 +30,7 @@ export function FolderButton({
   onClick: () => void;
   className?: string;
 }) {
-  return (
+  const button = (
     <AppButton
       aria-label={label}
       className={cn(
@@ -39,12 +39,22 @@ export function FolderButton({
       )}
       disabled={disabled}
       onClick={onClick}
-      title={disabled ? undefined : tooltip}
       variant="ghost"
     >
       <span className="min-w-0 truncate">{path}</span>
       <FolderOpen aria-hidden="true" className="shrink-0 text-settings-icon" size={13} strokeWidth={1.8} />
     </AppButton>
+  );
+
+  if (disabled || !tooltip) {
+    return button;
+  }
+
+  return (
+    <AppTooltip>
+      <AppTooltipTrigger asChild>{button}</AppTooltipTrigger>
+      <AppTooltipContent layer="dropdown">{tooltip}</AppTooltipContent>
+    </AppTooltip>
   );
 }
 

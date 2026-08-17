@@ -16,6 +16,7 @@ function AppTooltip(props: React.ComponentPropsWithoutRef<typeof TooltipPrimitiv
 
 type AppTooltipContentProps = React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content> & {
   arrow?: boolean;
+  layer?: 'dropdown' | 'floating';
   surface?: 'default' | 'truncated';
 };
 
@@ -60,7 +61,7 @@ function AppTooltipArrow() {
 const AppTooltipContent = React.forwardRef<
   React.ElementRef<typeof TooltipPrimitive.Content>,
   AppTooltipContentProps
->(({ arrow = false, children, className, sideOffset = 6, surface = 'default', ...props }, ref) => (
+>(({ arrow = false, children, className, layer = 'floating', sideOffset = 6, style, surface = 'default', ...props }, ref) => (
   <TooltipPrimitive.Portal>
     <TooltipPrimitive.Content
       ref={ref}
@@ -71,6 +72,7 @@ const AppTooltipContent = React.forwardRef<
         TOOLTIP_SURFACE_CLASS_NAMES[surface],
         className
       )}
+      style={{ zIndex: `var(--z-${layer})`, ...style }}
       {...props}
     >
       {children}
