@@ -37,36 +37,51 @@ async function discoverFolioleService() {
   }
 }
 
-function signedHeaders(secret: string, pathWithQuery: string) {
+function signedHeaders(deviceId: string, groupId: string, secret: string, pathWithQuery: string) {
   const timestamp = new Date().toISOString();
   const nonce = crypto.randomUUID();
   const bodyHash = crypto.createHash('sha256').update('').digest('hex');
   const canonical = ['GET', pathWithQuery, timestamp, nonce, bodyHash].join('\n');
   return {
-    'X-Device-Id': DEVICE_ID,
+    'X-Device-Id': deviceId,
     'X-Nonce': nonce,
     'X-Signature': crypto.createHmac('sha256', secret).update(canonical).digest('hex'),
+    'X-Sync-Group-Id': groupId,
     'X-Timestamp': timestamp
   };
 }
 
-async function expectSignedWorkspaceVersion(endpoint: string, secret: string) {
+async function expectSignedWorkspaceVersion(
+  endpoint: string,
+  paired: { deviceId: string; groupId: string; secret: string }
+) {
   const pathWithQuery = '/companion/workspace-version';
   const response = await fetch(`${endpoint}${pathWithQuery}`, {
-    headers: signedHeaders(secret, pathWithQuery)
+    headers: signedHeaders(paired.deviceId, paired.groupId, paired.secret, pathWithQuery)
   });
   expect(response.status).toBe(200);
 }
 
-async function pairCompanion(windowPage: DesktopSession['firstWindow'], endpoint: string) {
+async function pairCompanion(
+  windowPage: DesktopSession['firstWindow'],
+  endpoint: string,
+  group: { groupId: string; groupTag: string; timelineId: string }
+) {
   const keyPair = await createTestPairingKeyPair();
   const created = await fetch(`${endpoint}/companion/pair-requests`, {
     body: JSON.stringify({
       device_id: DEVICE_ID,
       device_kind: 'android',
       device_name: 'Linux DEB acceptance',
+      group_id: group.groupId,
+      group_tag: group.groupTag,
+      library_facts: {
+        attachment_count: 0, content_blob_count: 0, node_count: 0,
+        review_log_count: 0, timeline_id: null
+      },
       pairing_public_key: keyPair.publicKey,
-      protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
+      protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+      timeline_id: group.timelineId
     }),
     headers: jsonHeaders(),
     method: 'POST'
@@ -83,9 +98,22 @@ async function pairCompanion(windowPage: DesktopSession['firstWindow'], endpoint
   });
   expect(finalized.status).toBe(200);
   const payload = await finalized.json() as {
+    device_id: string;
     encrypted_device_secret: Parameters<typeof decryptTestPairingSecret>[0]['encrypted'];
   };
-  return decryptTestPairingSecret({ encrypted: payload.encrypted_device_secret, privateKey: keyPair.privateKey });
+  const secret = await decryptTestPairingSecret({
+    encrypted: payload.encrypted_device_secret, privateKey: keyPair.privateKey
+  });
+  return { deviceId: payload.device_id, groupId: group.groupId, secret };
+}
+
+async function pairDiscoveredGroup(windowPage: DesktopSession['firstWindow'], endpoint: string) {
+  const group = await fetch(`${endpoint}/companion/discovery`).then((response) => response.json()) as {
+    group_id: string; group_tag: string; timeline_id: string;
+  };
+  return pairCompanion(windowPage, endpoint, {
+    groupId: group.group_id, groupTag: group.group_tag, timelineId: group.timeline_id
+  });
 }
 
 async function expectExternalCapabilities(session: DesktopSession) {
@@ -179,11 +207,11 @@ test('installed Linux capabilities use external Codex, loopback control, LAN syn
     expect(service).toMatchObject({ port: overview.server_status.port });
     expect(service.txt.protocol_version).toBe('1');
     const endpoint = `http://127.0.0.1:${overview.server_status.port}`;
-    const secret = await pairCompanion(desktopWindow, endpoint);
-    await expectSignedWorkspaceVersion(endpoint, secret);
+    const paired = await pairDiscoveredGroup(desktopWindow, endpoint);
+    await expectSignedWorkspaceVersion(endpoint, paired);
 
     const pairingCiphertext = await readFile(path.join(stateRoot, 'user-data', 'companion-paired-devices.bin'));
-    expect(pairingCiphertext.toString('utf8')).not.toContain(secret);
+    expect(pairingCiphertext.toString('utf8')).not.toContain(paired.secret);
     const publishCiphertext = await readFile(path.join(stateRoot, 'user-data', 'foliole-publish-cloudflare-token.bin'));
     expect(publishCiphertext.toString('utf8')).not.toContain(API_TOKEN);
 
@@ -199,7 +227,7 @@ test('installed Linux capabilities use external Codex, loopback control, LAN syn
     ) as { server_status: { advertised_urls: string[] } };
     const restoredEndpoint = restoredOverview.server_status.advertised_urls.find((url) => url.includes('127.0.0.1'));
     expect(restoredEndpoint).toBeTruthy();
-    await expectSignedWorkspaceVersion(restoredEndpoint!, secret);
+    await expectSignedWorkspaceVersion(restoredEndpoint!, paired);
   } finally {
     await relaunched?.close();
   }

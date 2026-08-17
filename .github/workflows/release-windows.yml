@@ -90,6 +90,8 @@ jobs:
           if ($package.version -ne $env:TARGET_VERSION) { throw "Package version does not match target version" }
       - name: Install dependencies
         run: node scripts/quality/hosted-npm-ci.mjs
+      - name: Install Electron runtime
+        run: node node_modules/electron/install.js
       - name: Verify Artifact Signing configuration
         run: node scripts/windows/check-artifact-signing-config.mjs
       - name: Authenticate to Azure with OIDC
