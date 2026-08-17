@@ -33,7 +33,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-it('keeps legacy watched settings read only while an active desktop needs an upgrade', () => {
+it('keeps legacy watched settings disabled until a device copies them', () => {
   const driver = openDatabaseConnection().driver;
   driver.execute(
     `INSERT INTO sync_groups (group_id, display_name, timeline_id, created_by_device_id, created_at, updated_at)
@@ -61,11 +61,26 @@ it('keeps legacy watched settings read only while an active desktop needs an upg
   });
 
   const loaded = loadImportManagerSettings();
-  expect(loaded).toMatchObject({ watchedFoldersReady: false, watchedFoldersReason: 'member_upgrade_required' });
-  expect(loaded.sources[0]?.ownership).toMatchObject({ claimState: 'unassigned', editable: false });
+  expect(loaded.sources[0]?.ownership).toMatchObject({ editable: false, ownerInstallationId: null });
   saveImportManagerSettings({ ...loaded, sources: [] });
-  expect(loadJsonSetting('import_manager_settings')).toMatchObject({
-    sources: [expect.objectContaining({ id: 'legacy-watched' })]
-  });
-  expect(driver.queryOne('SELECT COUNT(*) count FROM watched_folder_bindings')).toEqual({ count: 0 });
+  expect(loadJsonSetting('import_manager_settings')).not.toHaveProperty('sources');
+  expect(driver.queryOne(
+    `SELECT binding_id, enabled, owner_installation_id FROM watched_folder_bindings`
+  )).toEqual({ binding_id: 'legacy-watched', enabled: 0, owner_installation_id: null });
+});
+
+it('removes a local watched binding when its paths are cleared', async () => {
+  const sourcePath = path.join(tempRoot, 'watch');
+  await fs.mkdir(sourcePath, { recursive: true });
+  const source = {
+    actionMode: 'keep', archivePath: '', highlightMode: 'merged', highlightPath: '',
+    id: 'watched-local', keepPreview: null, keepState: 'enabled', primaryPath: sourcePath
+  } as const;
+  saveImportManagerSettings({ sources: [source] });
+
+  saveImportManagerSettings({ sources: [{ ...source, keepState: 'draft', primaryPath: '' }] });
+
+  expect(openDatabaseConnection().driver.queryOne(
+    'SELECT enabled, deleted_at FROM watched_folder_bindings WHERE binding_id = ?', [source.id]
+  )).toEqual({ deleted_at: expect.any(String), enabled: 0 });
 });

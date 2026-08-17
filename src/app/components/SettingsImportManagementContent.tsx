@@ -54,7 +54,6 @@ export function SettingsImportManagementContent(props: {
   onPreviewKeepImport: (sourceId: string) => void;
   sources: DraftImportSource[];
   titleStrategy: ImportNodeTitleStrategy;
-  watchedFoldersReady?: boolean | undefined;
 }) {
   const lastSource = props.sources.at(-1);
   const t = useTranslation();
@@ -67,11 +66,6 @@ export function SettingsImportManagementContent(props: {
         description={t('settings.import.linkedFolders.description')}
         title={t('settings.import.linkedFolders.title')}
       >
-        {props.watchedFoldersReady === false ? (
-          <p className="mb-3 rounded-md bg-settings-subtle px-3 py-2 text-sm text-settings-muted" role="status">
-            {t('desktop.importSource.upgradeRequired')}
-          </p>
-        ) : null}
         <div className="min-w-0 overflow-hidden">
           <ImportSourceTable
             onAddSource={() => lastSource ? props.onCopySource(lastSource.id) : undefined}

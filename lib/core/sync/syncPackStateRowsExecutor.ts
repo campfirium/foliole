@@ -41,6 +41,9 @@ function normalizedObjectTypes(options: SyncPackStateRowsApplyOptions) {
     'node_reading',
     'node_review',
     'pdf_page_text',
+    'readwise_authority',
+    'readwise_binding',
+    'readwise_policy',
     'setting',
     'view_state',
     'watched_folder'
@@ -103,7 +106,9 @@ function insertCleanStateRows(
     `object_type, object_id, state_seq, current_version_id, content_hash, ` +
     `last_modified_by_device_id, updated_at, deleted_at, sync_dirty` +
     `) SELECT object_type, object_id, ? + state_seq_offset, current_version_id, content_hash, ` +
-    `?, updated_at, deleted_at, 0 FROM numbered`,
+    `?, updated_at, CASE WHEN object_type IN (` +
+    `'readwise_authority', 'readwise_binding', 'readwise_policy') ` +
+    `THEN COALESCE(deleted_at, updated_at) ELSE deleted_at END, 0 FROM numbered`,
     [...objectTypes, nextStateSeq, options.deviceId]
   );
 }

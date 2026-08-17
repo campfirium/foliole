@@ -27,6 +27,7 @@ vi.mock('./managedInboxEvents.js', () => ({
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { deleteNodesPermanently } from '../database/nodeMutations.js';
+import { loadOrCreateDesktopInstallationIdentity } from '../desktopInstallationIdentity.js';
 import { loadRemovedSources } from '../ipc/removedSourcesPayload.js';
 
 import { saveImportManagerSettings } from './importManagerSettings.js';
@@ -66,7 +67,10 @@ function saveGenericKeepSettings(sourceDir: string) {
 }
 
 function saveReadwiseSettings(paths: { fullDocumentDir: string; highlightDir: string; readwiseRoot: string }) {
+  const identity = loadOrCreateDesktopInstallationIdentity();
   saveImportManagerSettings({
+    readwiseActiveDeviceName: identity.deviceName,
+    readwiseActiveInstallationId: identity.installationId,
     readwiseReaderConfig: {
       enabled: true,
       highlightsHeading: '## Highlights',

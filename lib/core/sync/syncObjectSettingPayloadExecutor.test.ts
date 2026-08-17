@@ -1,13 +1,15 @@
 import { expect, it } from 'vitest';
 
-import { stripLegacyWatchedSources } from './syncObjectSettingPayloadExecutor.js';
+import { stripLegacyImportPaths } from './syncObjectSettingPayloadExecutor.js';
 
-it('permanently strips legacy watched sources from incoming import settings', () => {
-  expect(JSON.parse(stripLegacyWatchedSources(
-    'import_manager_settings', JSON.stringify({ readwiseRootPath: '/reader', sources: [{ id: 'late' }] })
-  ))).toEqual({ readwiseRootPath: '/reader' });
+it('permanently strips legacy device paths from incoming workspace import settings', () => {
+  expect(JSON.parse(stripLegacyImportPaths(
+    'import_manager_settings', JSON.stringify({
+      readwiseReaderConfig: { enabled: true }, readwiseRootPath: '/reader', readwiseSources: [], sources: [{ id: 'late' }]
+    })
+  ))).toEqual({});
 });
 
 it('does not rewrite unrelated setting payloads', () => {
-  expect(stripLegacyWatchedSources('app_settings', '{"sources":[1]}')).toBe('{"sources":[1]}');
+  expect(stripLegacyImportPaths('app_settings', '{"sources":[1]}')).toBe('{"sources":[1]}');
 });

@@ -1,19 +1,19 @@
-import { loadImportManagerSettings } from './importManagerSettings.js';
+import { loadExecutableImportManagerSettings } from './importManagerSettings.js';
 import { createKeepImportMonitor, type KeepImportMonitorDeps } from './keepImportMonitor.js';
 import { runKeepImportRule } from './keepImportService.js';
 import { watchKeepImportDirectory } from './keepImportWatch.js';
+import { assertReadwiseExecutionEnabled } from './readwiseDeviceSettings.js';
 import { assertLocalWatchedFolderExecution } from './watchedFolderExecutionGate.js';
 
 function createDefaultKeepImportMonitorDeps(): KeepImportMonitorDeps {
   return {
     debounceMs: 250,
     loadSettings() {
-      const settings = loadImportManagerSettings();
+      const settings = loadExecutableImportManagerSettings();
       return {
         ...settings,
-        sources: settings.watchedFoldersReady === false ? [] : settings.sources.filter((source) =>
-          source.ownership?.editable === true && source.ownership.claimState === 'claimed' &&
-          source.keepState === 'enabled'
+        sources: settings.sources.filter((source) =>
+          source.ownership?.editable === true && source.keepState === 'enabled'
         )
       };
     },
@@ -30,6 +30,8 @@ function createDefaultKeepImportMonitorDeps(): KeepImportMonitorDeps {
     async runCycle(config) {
       if (config.sourceType === 'generic') {
         assertLocalWatchedFolderExecution(config.sourceId, { requireEnabled: true });
+      } else {
+        assertReadwiseExecutionEnabled();
       }
       await runKeepImportRule({
         actionMode: config.actionMode,

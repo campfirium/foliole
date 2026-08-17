@@ -7,6 +7,7 @@ import {
   loadReadwiseBookEpub,
   openReadwiseBookDownload
 } from '../import/readwiseBookManualActions.js';
+import { assertReadwiseExecutionEnabled } from '../import/readwiseDeviceSettings.js';
 import {
   previewReadwiseImportCleanup,
   runReadwiseImportCleanup
@@ -136,6 +137,7 @@ async function handleReadwiseImportCommand(
     return previewReadwiseReaderImport(args.settings);
   }
   if (request.command === NATIVE_COMMANDS.runReadwiseReaderImport) {
+    assertReadwiseExecutionEnabled();
     const result = await runReadwiseReaderImport({ ...args, window: resolveTargetWindow(context) });
     notifyIfReadwiseReaderImportChanged(result);
     return result;
@@ -147,6 +149,7 @@ async function handleReadwiseImportCommand(
     return previewReadwiseImportCleanup();
   }
   if (request.command === NATIVE_COMMANDS.runReadwiseImportCleanup) {
+    assertReadwiseExecutionEnabled();
     const result = runReadwiseImportCleanup();
     if (result.deleted_count > 0) {
       notifyWorkspaceContentChanged();
@@ -157,6 +160,7 @@ async function handleReadwiseImportCommand(
     return openReadwiseBookDownload(asString(args.node_id, 'node_id'));
   }
   if (request.command === NATIVE_COMMANDS.loadReadwiseBookEpub) {
+    assertReadwiseExecutionEnabled();
     const result = await loadReadwiseBookEpub(asString(args.node_id, 'node_id'), resolveTargetWindow(context));
     if (result.status === 'selected') {
       notifyWorkspaceContentChanged();
@@ -164,6 +168,7 @@ async function handleReadwiseImportCommand(
     return result;
   }
   if (request.command === NATIVE_COMMANDS.resetReadwiseBookImport) {
+    assertReadwiseExecutionEnabled();
     const result = await resetReadwiseBookImport(asString(args.node_id, 'node_id'));
     if (result.status === 'reset') {
       notifyWorkspaceContentChanged();

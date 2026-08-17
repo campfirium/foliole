@@ -3,6 +3,7 @@ import { openDatabaseConnection } from '../database/connection.js';
 
 import { buildKeepImportSourceDescriptor, resolveKeepImportRuleConfig } from './keepImportManualSource.js';
 import { runSingleKeepImportSource } from './keepImportRunSource.js';
+import { assertReadwiseExecutionEnabled } from './readwiseDeviceSettings.js';
 
 function unblockRemovedSource(ruleId: string, sourcePath: string, restoredAt: string) {
   openDatabaseConnection().sqlite.prepare(
@@ -39,6 +40,7 @@ export async function restoreRemovedSource(ruleId: string, sourcePath: string): 
   if (!config) {
     return { detail: 'The watch folder for this source is no longer configured.', node_id: null, restored_at: restoredAt, status: 'failed' };
   }
+  if (config.sourceType === 'readwise') assertReadwiseExecutionEnabled();
   try {
     const source = await buildKeepImportSourceDescriptor(config, sourcePath);
     unblockRemovedSource(ruleId, source.sourceName, restoredAt);

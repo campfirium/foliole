@@ -39,7 +39,7 @@ function record(owner: string, revision: string, updatedAt: string): NativeSyncO
     content_hash: `${owner}-${revision}`, deleted_at: null, object_id: 'watched-1', object_type: 'watched_folder',
     payload_json: JSON.stringify({
       action_mode: 'keep', archive_path: '', availability: 'available', binding_id: 'watched-1',
-      claim_revision: revision, claim_state: 'claimed', created_at: '2026-08-17T00:00:00.000Z', enabled: 1,
+      created_at: '2026-08-17T00:00:00.000Z', enabled: 1,
       highlight_mode: 'merged', highlight_path: '', keep_preview_json: null,
       owner_device_name: owner, owner_installation_id: owner, owner_platform: 'darwin', primary_path: `/source/${owner}`
     }),
@@ -47,16 +47,15 @@ function record(owner: string, revision: string, updatedAt: string): NativeSyncO
   };
 }
 
-it('preserves the first owner and disables a competing owner revision', async () => {
+it('preserves the first owner when a competing payload reuses its binding id', async () => {
   const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'watched-folder-apply' });
   await applySyncObjectsWithDbPort(port, [record('desktop-a', 'revision-a', '2026-08-17T00:00:01.000Z')]);
   await applySyncObjectsWithDbPort(port, [record('desktop-b', 'revision-b', '2026-08-17T00:00:02.000Z')]);
 
   expect(openDatabaseConnection().driver.queryOne(
-    `SELECT owner_installation_id, claim_revision, claim_state, enabled, primary_path
+    `SELECT owner_installation_id, enabled, primary_path
      FROM watched_folder_bindings WHERE binding_id = 'watched-1'`
   )).toEqual({
-    claim_revision: 'revision-a', claim_state: 'conflict', enabled: 0,
-    owner_installation_id: 'desktop-a', primary_path: '/source/desktop-a'
+    enabled: 1, owner_installation_id: 'desktop-a', primary_path: '/source/desktop-a'
   });
 });

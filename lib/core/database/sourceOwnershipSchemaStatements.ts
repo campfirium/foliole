@@ -9,8 +9,6 @@ export const SOURCE_OWNERSHIP_SCHEMA_STATEMENTS = [
     owner_installation_id TEXT,
     owner_device_name TEXT,
     owner_platform TEXT,
-    claim_state TEXT NOT NULL CHECK (claim_state IN ('unassigned', 'proposed', 'claimed', 'conflict')),
-    claim_revision TEXT,
     action_mode TEXT NOT NULL,
     archive_path TEXT NOT NULL,
     highlight_mode TEXT NOT NULL,

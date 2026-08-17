@@ -14,13 +14,22 @@ export type { DraftImportSource };
 
 export const importSourceSelectClassName = appSurfaceControlClassName('h-10 w-full');
 
-export function cloneDraftImportSource(source: DraftImportSource, index: number): DraftImportSource {
+function createWatchedSourceId() {
+  return `watched-${crypto.randomUUID()}`;
+}
+
+export function cloneDraftImportSource(source: DraftImportSource): DraftImportSource {
   const copyable = { ...source };
   delete copyable.ownership;
   return {
     ...copyable,
-    id: createDraftImportSource(index).id
+    id: createWatchedSourceId()
   };
+}
+
+export function materializeWatchedSourceId(source: DraftImportSource) {
+  if (source.ownership || !source.id.startsWith('draft-import-source-')) return source;
+  return { ...source, id: createWatchedSourceId() };
 }
 
 export function updateDraftImportSource(

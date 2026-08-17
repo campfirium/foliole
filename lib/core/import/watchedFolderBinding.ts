@@ -3,15 +3,11 @@ import type {
   ImportManagerSourceDraft
 } from './importManagerSettings.js';
 
-export type WatchedFolderClaimState = 'unassigned' | 'proposed' | 'claimed' | 'conflict';
-
 export interface WatchedFolderBinding {
   actionMode: ImportManagerSourceDraft['actionMode'];
   archivePath: string;
   availability: string;
   bindingId: string;
-  claimRevision: string | null;
-  claimState: WatchedFolderClaimState;
   enabled: boolean;
   highlightMode: ImportHighlightMode;
   highlightPath: string;
@@ -37,8 +33,7 @@ export function watchedBindingToSource(
     keepState: binding.enabled ? 'enabled' : 'draft',
     primaryPath: binding.primaryPath,
     ownership: {
-      claimState: binding.claimState,
-      editable: binding.ownerInstallationId === localInstallationId && binding.claimState !== 'conflict',
+      editable: binding.ownerInstallationId === localInstallationId,
       ownerDeviceName: binding.ownerDeviceName,
       ownerInstallationId: binding.ownerInstallationId,
       ownerPlatform: binding.ownerPlatform

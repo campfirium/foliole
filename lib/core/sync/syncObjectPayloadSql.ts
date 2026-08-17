@@ -50,7 +50,6 @@ export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
   watched_folder: `SELECT json_object(
     'binding_id', binding_id, 'owner_installation_id', owner_installation_id,
     'owner_device_name', owner_device_name, 'owner_platform', owner_platform,
-    'claim_state', claim_state, 'claim_revision', claim_revision,
     'action_mode', action_mode, 'archive_path', archive_path,
     'highlight_mode', highlight_mode, 'highlight_path', highlight_path,
     'keep_preview_json', keep_preview_json, 'primary_path', primary_path,

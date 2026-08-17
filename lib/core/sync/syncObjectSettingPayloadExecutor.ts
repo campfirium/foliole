@@ -20,17 +20,20 @@ export async function applySettingObject(port: DbPort, record: SyncPackSyncObjec
     `value_json = excluded.value_json, content_hash = excluded.content_hash, updated_at = excluded.updated_at, deleted_at = excluded.deleted_at`,
     [text(payload.scope) ?? parts[0] ?? 'device', text(payload.platform) ?? parts[1] ?? '*',
       text(payload.form_factor) ?? parts[2] ?? '*', text(payload.device_id) ?? parts[3] ?? '*', key,
-      stripLegacyWatchedSources(key, text(payload.value_json) ?? 'null'), record.content_hash, record.updated_at, null]
+      stripLegacyImportPaths(key, text(payload.value_json) ?? 'null'), record.content_hash, record.updated_at, null]
   );
 }
 
-export function stripLegacyWatchedSources(key: string, valueJson: string) {
+export function stripLegacyImportPaths(key: string, valueJson: string) {
   if (key !== 'import_manager_settings') return valueJson;
   try {
     const parsed = JSON.parse(valueJson) as unknown;
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return valueJson;
     const sanitized = { ...parsed as Record<string, unknown> };
     delete sanitized.sources;
+    delete sanitized.readwiseReaderConfig;
+    delete sanitized.readwiseRootPath;
+    delete sanitized.readwiseSources;
     return JSON.stringify(sanitized);
   } catch {
     return valueJson;

@@ -9,8 +9,6 @@ import { openDatabaseConnection } from '../database/connection.js';
 import { loadOrCreateDesktopDeviceId } from '../database/deviceIdentity.js';
 import { loadJsonSetting, saveJsonSettingWithDriver } from '../database/settingsStore.js';
 
-import { loadSourceOwnershipReadiness } from './sourceOwnershipReadiness.js';
-
 const SETTINGS_KEY = 'import_manager_settings';
 
 function record(value: unknown): Record<string, unknown> {
@@ -20,7 +18,7 @@ function record(value: unknown): Record<string, unknown> {
 function sourcePayload(source: ImportManagerSourceDraft, updatedAt: string): WatchedFolderBinding {
   return {
     actionMode: source.actionMode, archivePath: source.archivePath, availability: 'unknown',
-    bindingId: source.id, claimRevision: null, claimState: 'unassigned', enabled: false,
+    bindingId: source.id, enabled: false,
     highlightMode: source.highlightMode, highlightPath: source.highlightPath, keepPreview: source.keepPreview,
     ownerDeviceName: null, ownerInstallationId: null, ownerPlatform: null,
     primaryPath: source.primaryPath, updatedAt
@@ -37,10 +35,10 @@ function insertLegacyBinding(
   const binding = sourcePayload(source, updatedAt);
   const result = driver.execute(
     `INSERT OR IGNORE INTO watched_folder_bindings (
-      binding_id, owner_installation_id, owner_device_name, owner_platform, claim_state, claim_revision,
+      binding_id, owner_installation_id, owner_device_name, owner_platform,
       action_mode, archive_path, highlight_mode, highlight_path, keep_preview_json, primary_path,
       enabled, availability, created_at, updated_at, deleted_at
-    ) VALUES (?, NULL, NULL, NULL, 'unassigned', NULL, ?, ?, ?, ?, ?, ?, 0, 'unknown', ?, ?, NULL)`,
+    ) VALUES (?, NULL, NULL, NULL, ?, ?, ?, ?, ?, ?, 0, 'unknown', ?, ?, NULL)`,
     [binding.bindingId, binding.actionMode, binding.archivePath, binding.highlightMode, binding.highlightPath,
       JSON.stringify(binding.keepPreview), binding.primaryPath, updatedAt, updatedAt]
   );
@@ -59,9 +57,7 @@ export function isSourceOwnershipCutoverComplete() {
 }
 
 export function ensureSourceOwnershipCutover() {
-  if (isSourceOwnershipCutoverComplete()) return { cutover: true, readiness: loadSourceOwnershipReadiness() };
-  const readiness = loadSourceOwnershipReadiness();
-  if (!readiness.ready) return { cutover: false, readiness };
+  if (isSourceOwnershipCutoverComplete()) return { cutover: true };
   const raw = loadJsonSetting(SETTINGS_KEY);
   const normalized = normalizeImportManagerSettings(raw);
   const now = new Date().toISOString();
@@ -85,5 +81,5 @@ export function ensureSourceOwnershipCutover() {
       [now]
     );
   });
-  return { cutover: true, readiness: loadSourceOwnershipReadiness() };
+  return { cutover: true };
 }

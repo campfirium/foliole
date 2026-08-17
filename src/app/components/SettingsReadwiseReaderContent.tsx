@@ -17,6 +17,7 @@ import {
 
 import type { DraftImportSource } from './importSourceWorkspaceModel';
 import { ReadwiseCleanupDialog } from './ReadwiseCleanupDialog';
+import { ReadwiseDeviceSelectionRow } from './ReadwiseDeviceSelectionRow';
 import { ReadwiseReaderImportBehavior } from './ReadwiseReaderImportBehavior';
 import {
   ReadwiseIntegrationSwitch,
@@ -39,20 +40,9 @@ import {
 
 type ReadwiseSetupDraft = ReturnType<typeof useReadwiseSetupDraft>;
 
-function ReadwiseSetupActions(props: {
-  integrationEnabled: boolean;
-  onChangeIntegration: () => void;
-}) {
-  return (
-    <ReadwiseIntegrationSwitch
-      disabled={false}
-      enabled={props.integrationEnabled}
-      onToggle={props.onChangeIntegration}
-    />
-  );
-}
-
-function ReadwiseSetupSection(props: {
+interface ReadwiseSetupSectionProps {
+  activeDeviceName: string | null;
+  activeInstallationId: string | null;
   canChangeIntegration: boolean;
   canPreview: boolean;
   draft: ReadwiseSetupDraft;
@@ -65,17 +55,37 @@ function ReadwiseSetupSection(props: {
   cleanupDisabled: boolean;
   syncDisabled: boolean;
   syncIsRunning: boolean;
-}) {
+  currentDeviceName: string | null;
+  currentInstallationId: string | null;
+  onTurnOff?: (() => void) | undefined;
+  onUseThisDevice?: (() => void) | undefined;
+}
+
+function ReadwiseSetupSection(props: ReadwiseSetupSectionProps) {
   const t = useTranslation();
 
   return (
     <div className="space-y-6">
       <SettingsSection
-        actions={<ReadwiseSetupActions {...props} />}
+        actions={<ReadwiseIntegrationSwitch
+          disabled={false}
+          enabled={props.integrationEnabled}
+          onToggle={props.onChangeIntegration}
+        />}
         ariaLabel={t('desktop.readwise.import.title')}
         description={t('desktop.readwise.import.description')}
         title={t('desktop.readwise.import.title')}
       >
+        {props.currentInstallationId || props.activeInstallationId ? (
+          <ReadwiseDeviceSelectionRow
+            activeDeviceName={props.activeDeviceName}
+            activeInstallationId={props.activeInstallationId}
+            currentDeviceName={props.currentDeviceName}
+            currentInstallationId={props.currentInstallationId}
+            onTurnOff={props.onTurnOff}
+            onUseThisDevice={props.onUseThisDevice}
+          />
+        ) : null}
         <ReadwiseReaderSetupCheckPanel
           canCheck={props.canPreview}
           hasDraftChanges={props.draft.hasDraftChanges}
@@ -143,49 +153,66 @@ function ReadwiseCleanupRow(props: { disabled: boolean; onCleanup: () => void })
 }
 
 interface SettingsReadwiseReaderContentProps {
+  activeDeviceName?: string | null | undefined;
+  activeInstallationId?: string | null | undefined;
   config: ReadwiseReaderConfig;
+  currentDeviceName?: string | null | undefined;
+  currentInstallationId?: string | null | undefined;
   onPreviewCleanup?: () => Promise<NativeReadwiseCleanupPreviewResult | null>;
   onPreviewSync?: (input: ReadwiseSetupPayload) => Promise<NativeReadwiseSyncPreviewResult | null>;
   onCancelSync?: () => Promise<unknown>;
   onRunCleanup?: () => Promise<NativeReadwiseCleanupRunResult | null>;
   onRunSync?: (input: ReadwiseSetupPayload) => Promise<NativeReadwiseImportRunResult | null>;
   onSave: (input: ReadwiseSetupPayload) => void;
+  onTurnOff?: (() => void) | undefined;
+  onUseThisDevice?: (() => void) | undefined;
   readwiseRootPath: string;
   readwiseSources: DraftImportSource[];
 }
 
-export function SettingsReadwiseReaderContent(props: SettingsReadwiseReaderContentProps) {
-  const setup = useReadwiseSetupController(props);
-  const cleanup = useReadwiseCleanup({
-    onCleanupComplete: () => {
-      props.onSave(
-        createReadwiseSetupPayload(
-          setup.draft,
-          { ...setup.draft.draftConfig, enabled: false },
-          disableReadwiseImportSource(setup.draft.draftSources)
-        )
-      );
-    },
+function useCleanupController(
+  props: SettingsReadwiseReaderContentProps,
+  setup: ReturnType<typeof useReadwiseSetupController>
+) {
+  return useReadwiseCleanup({
+    onCleanupComplete: () => props.onSave(createReadwiseSetupPayload(
+      setup.draft,
+      { ...setup.draft.draftConfig, enabled: false },
+      disableReadwiseImportSource(setup.draft.draftSources)
+    )),
     ...definedProps({
       onPreviewCleanup: props.onPreviewCleanup,
       onRunCleanup: props.onRunCleanup
     })
   });
+}
+
+export function SettingsReadwiseReaderContent(props: SettingsReadwiseReaderContentProps) {
+  const setup = useReadwiseSetupController(props);
+  const cleanup = useCleanupController(props, setup);
+  const activeHere = Boolean(props.currentInstallationId) &&
+    props.activeInstallationId === props.currentInstallationId;
 
   return (
     <>
       <ReadwiseSetupSection
+        activeDeviceName={props.activeDeviceName ?? null}
+        activeInstallationId={props.activeInstallationId ?? null}
         canChangeIntegration={setup.canChangeIntegration}
         canPreview={setup.canPreview}
         draft={setup.draft}
         integrationEnabled={setup.integrationEnabled}
-        cleanupDisabled={cleanup.cleanupDisabled}
+        currentDeviceName={props.currentDeviceName ?? null}
+        currentInstallationId={props.currentInstallationId ?? null}
+        cleanupDisabled={cleanup.cleanupDisabled || !activeHere}
         onCleanup={() => void cleanup.openCleanupDialog()}
         onChangeIntegration={setup.handleChangeIntegration}
         onCheck={setup.handleCheck}
         onSync={() => void setup.handleRunSync()}
+        onTurnOff={props.onTurnOff}
+        onUseThisDevice={props.onUseThisDevice}
         syncStatus={setup.manualSyncStatus}
-        syncDisabled={setup.syncDisabled}
+        syncDisabled={setup.syncDisabled || !activeHere}
         syncIsRunning={setup.syncIsRunning}
       />
       <ReadwiseSyncPreviewDialog

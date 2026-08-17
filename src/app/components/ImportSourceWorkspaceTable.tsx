@@ -31,7 +31,7 @@ function TableHeader() {
 function SourceGroupHeader({ source }: { source: DraftImportSource }) {
   const t = useTranslation();
   const label = source.ownership?.ownerDeviceName ??
-    (source.ownership?.claimState === 'unassigned'
+    (source.ownership?.ownerInstallationId === null
       ? t('desktop.importSource.unassignedGroup')
       : t('desktop.importSource.thisDevice'));
   return <div className="border-t border-settings-border px-3 py-1.5 text-xs font-medium text-settings-muted" role="row">
@@ -39,10 +39,15 @@ function SourceGroupHeader({ source }: { source: DraftImportSource }) {
   </div>;
 }
 
+function sourceGroupKey(source: DraftImportSource) {
+  return source.ownership?.ownerInstallationId ??
+    (source.ownership ? 'unassigned' : 'local-draft');
+}
+
 function renderSourceRows(sources: DraftImportSource[], actions: ImportSourceTableRowActions) {
   let previousGroup = '';
   return sources.flatMap((source) => {
-    const group = source.ownership?.ownerInstallationId ?? source.ownership?.claimState ?? 'local-draft';
+    const group = sourceGroupKey(source);
     const header = group === previousGroup ? [] : [<SourceGroupHeader key={`group-${group}`} source={source} />];
     previousGroup = group;
     return [...header, <SourceRow key={source.id} source={source} {...actions} />];
@@ -61,10 +66,16 @@ function ImportSourceVirtualRows({
   return (
     <div className="app-scrollbar max-h-96 overflow-y-auto" ref={scrollContainerRef}>
       <VirtualListSurface
-        estimateSize={() => IMPORT_SOURCE_ROW_VIRTUAL_SIZE}
+        estimateSize={(index) => IMPORT_SOURCE_ROW_VIRTUAL_SIZE +
+          (index === 0 || sourceGroupKey(sources[index]!) !== sourceGroupKey(sources[index - 1]!) ? 28 : 0)}
         getItemKey={(source) => source.id}
         items={sources}
-        renderItem={(source) => <SourceRow source={source} {...actions} />}
+        renderItem={(source, meta) => <>
+          {meta.index === 0 || sourceGroupKey(source) !== sourceGroupKey(sources[meta.index - 1]!)
+            ? <SourceGroupHeader source={source} />
+            : null}
+          <SourceRow source={source} {...actions} />
+        </>}
         scrollElementRef={scrollContainerRef}
       />
     </div>

@@ -71,10 +71,10 @@ it('packs watched folder ownership as a generic sync object', async () => {
   const driver = openDatabaseConnection().driver;
   driver.execute(
     `INSERT INTO watched_folder_bindings (
-      binding_id, owner_installation_id, owner_device_name, owner_platform, claim_state, claim_revision,
+      binding_id, owner_installation_id, owner_device_name, owner_platform,
       action_mode, archive_path, highlight_mode, highlight_path, keep_preview_json, primary_path,
       enabled, availability, created_at, updated_at
-    ) VALUES ('watched-1', 'desktop-installation-a', 'Mac A', 'darwin', 'claimed', 'revision-a',
+    ) VALUES ('watched-1', 'desktop-installation-a', 'Mac A', 'darwin',
       'keep', '', 'merged', '', NULL, '/Users/a/Inbox', 1, 'available',
       '2026-08-17T00:00:00.000Z', '2026-08-17T00:00:00.000Z')`
   );

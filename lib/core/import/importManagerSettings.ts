@@ -6,6 +6,10 @@ import {
   type KeepImportPreviewSummary
 } from './keepImportPreviewSettings.js';
 import {
+  createDefaultReadwiseDeviceRuntimeState,
+  type ReadwiseDeviceRuntimeState
+} from './readwiseDeviceSelection.js';
+import {
   createDefaultReadwiseReaderConfig,
   normalizeReadwiseReaderConfig,
   type ReadwiseReaderConfig
@@ -28,7 +32,7 @@ export interface ImportManagerSourceDraft {
   ownership?: ImportSourceOwnership;
 }
 
-export interface ImportManagerSettings {
+export interface ImportManagerSettings extends ReadwiseDeviceRuntimeState {
   detailsOpen: boolean;
   readwiseReaderConfig: ReadwiseReaderConfig;
   readwiseRootPath: string;
@@ -37,8 +41,6 @@ export interface ImportManagerSettings {
   titleStrategy: ImportNodeTitleStrategy;
   updatedAt: string;
   version: number;
-  watchedFoldersReady?: boolean;
-  watchedFoldersReason?: 'member_upgrade_required' | 'ready' | 'sync_group_provisioning';
 }
 
 const IMPORT_MANAGER_SETTINGS_VERSION = 4;
@@ -183,6 +185,7 @@ export function applyReadwiseRootPath(sources: ImportManagerSourceDraft[], rootP
 export function createDefaultImportManagerSettings(): ImportManagerSettings {
   return {
     detailsOpen: true,
+    ...createDefaultReadwiseDeviceRuntimeState(),
     readwiseReaderConfig: createDefaultReadwiseReaderConfig(),
     readwiseRootPath: '',
     readwiseSources: createReadwiseImportSources(),
@@ -222,6 +225,11 @@ export function normalizeImportManagerSettings(value: unknown): ImportManagerSet
 
   return {
     detailsOpen: typeof value.detailsOpen === 'boolean' ? value.detailsOpen : defaults.detailsOpen,
+    readwiseActiveDeviceName: normalizeString(value.readwiseActiveDeviceName) || null,
+    readwiseActiveInstallationId: normalizeString(value.readwiseActiveInstallationId) || null,
+    readwiseCurrentDeviceName: normalizeString(value.readwiseCurrentDeviceName) || null,
+    readwiseCurrentInstallationId: normalizeString(value.readwiseCurrentInstallationId) || null,
+    readwiseSettingsConfirmed: value.readwiseSettingsConfirmed === true,
     readwiseReaderConfig: normalizeReadwiseReaderConfig(value.readwiseReaderConfig, { enabledFallback: legacyReadwiseImportEnabled }),
     readwiseRootPath,
     readwiseSources: defaultReadwiseSources.map((source) =>
@@ -230,12 +238,7 @@ export function normalizeImportManagerSettings(value: unknown): ImportManagerSet
     sources: sources.length > 0 ? sources : defaults.sources,
     titleStrategy: normalizeImportNodeTitleStrategy(value.titleStrategy, defaults.titleStrategy),
     updatedAt: normalizeString(value.updatedAt, DEFAULT_UPDATED_AT),
-    version: IMPORT_MANAGER_SETTINGS_VERSION,
-    ...(typeof value.watchedFoldersReady === 'boolean' ? { watchedFoldersReady: value.watchedFoldersReady } : {}),
-    ...(value.watchedFoldersReason === 'member_upgrade_required' || value.watchedFoldersReason === 'ready' ||
-      value.watchedFoldersReason === 'sync_group_provisioning'
-      ? { watchedFoldersReason: value.watchedFoldersReason }
-      : {})
+    version: IMPORT_MANAGER_SETTINGS_VERSION
   };
 }
 

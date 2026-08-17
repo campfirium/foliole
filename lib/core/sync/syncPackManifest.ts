@@ -54,12 +54,19 @@ export const SYNC_PACK_PAYLOAD_OBJECT_TYPES = new Set([
   'watched_folder'
 ]);
 
+export const RETIRED_SYNC_PACK_OBJECT_TYPES = new Set([
+  'readwise_authority',
+  'readwise_binding',
+  'readwise_policy'
+]);
+
 export function isSyncPackObjectType(value: string): value is SyncPackObjectType {
   return SYNC_PACK_OBJECT_TYPES.has(value as SyncPackObjectType);
 }
 
 export function isSyncPackStateObjectType(value: string) {
-  return isSyncPackObjectType(value) || SYNC_PACK_PAYLOAD_OBJECT_TYPES.has(value);
+  return isSyncPackObjectType(value) || SYNC_PACK_PAYLOAD_OBJECT_TYPES.has(value) ||
+    RETIRED_SYNC_PACK_OBJECT_TYPES.has(value);
 }
 
 export function isSyncPackPayloadObjectType(value: string) {

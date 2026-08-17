@@ -3,18 +3,10 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const runtime = vi.hoisted(() => ({
-  acknowledge: vi.fn(() => 2),
-  driver: { name: 'driver' },
-  post: vi.fn(async () => ({ applied_state_seq: 17, confirmed_claim_count: 2, status: 'ok' })),
+  post: vi.fn(async () => ({ applied_state_seq: 17, status: 'ok' })),
   workgroupKey: 'a'.repeat(43)
 }));
 
-vi.mock('../database/connection.js', () => ({
-  openDatabaseConnection: () => ({ driver: runtime.driver })
-}));
-vi.mock('../import/watchedFolderClaimDelivery.js', () => ({
-  acknowledgeWatchedFolderDesktopDeliveries: runtime.acknowledge
-}));
 vi.mock('./desktopSyncGroupHttp.js', () => ({ postDesktopWorkgroupJson: runtime.post }));
 vi.mock('./workgroupKeyStore.js', () => ({
   loadDesktopWorkgroupKey: () => ({ group_id: 'group-1', group_key: runtime.workgroupKey })
@@ -28,13 +20,11 @@ import {
 
 beforeEach(() => { vi.clearAllMocks(); });
 
-it('confirms only the authenticated peer frontier from a valid payload', () => {
+it('confirms the authenticated peer frontier from a valid payload', () => {
   expect(acknowledgeDesktopSyncPack('{"applied_state_seq":17}', 'desktop-b')).toEqual({
     applied_state_seq: 17,
-    confirmed_claim_count: 2,
     status: 'ok'
   });
-  expect(runtime.acknowledge).toHaveBeenCalledWith(runtime.driver, 'desktop-b', 17);
   expect(() => acknowledgeDesktopSyncPack('{"applied_state_seq":-1}', 'desktop-b'))
     .toThrow('sync_pack_ack_payload_invalid');
 });

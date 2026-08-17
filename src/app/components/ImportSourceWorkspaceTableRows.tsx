@@ -125,7 +125,7 @@ function SourceActions(props: {
   onDeleteSource: (sourceId: string) => void;
 }) {
   const t = useTranslation();
-  if (props.source.ownership?.claimState === 'unassigned') {
+  if (props.source.ownership?.ownerInstallationId === null) {
     return (
       <AppButton className="h-9 px-2 text-xs" onClick={() => props.onClaimSource(props.source.id)} variant="default">
         {t('desktop.importSource.claim')}

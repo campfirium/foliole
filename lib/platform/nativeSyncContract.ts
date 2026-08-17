@@ -10,6 +10,9 @@ export type NativeSyncObjectType =
   | 'node_review'
   | 'node_text_alternative'
   | 'pdf_page_text'
+  | 'readwise_authority'
+  | 'readwise_binding'
+  | 'readwise_policy'
   | 'setting'
   | 'view_state'
   | 'watched_folder';

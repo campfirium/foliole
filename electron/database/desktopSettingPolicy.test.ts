@@ -13,12 +13,14 @@ describe('desktop setting policy', () => {
     ['backup_settings', 'user_space', true],
     ['import_manager_settings', 'user_space', true],
     ['library_path_settings', 'user_space', true],
+    ['readwise_active_installation', 'user_space', true],
     ['review_scheduler_settings', 'user_space', true],
     ['window_state', 'session_resume', true],
     ['readwise_book_epub_picker_state', 'session_resume', true],
     ['discourse_publish_settings', 'device', true],
     ['wordpress_publish_settings', 'device', true],
     ['foliole_publish_settings', 'device', true],
+    ['readwise_device_settings', 'device', true],
     ['device_id', 'local_only', false],
     ['watch_import_cursor_state', 'local_only', false]
   ])('classifies %s as %s', (key, scope, canonical) => {

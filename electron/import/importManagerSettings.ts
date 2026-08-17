@@ -10,6 +10,13 @@ import { loadOrCreateDesktopInstallationIdentity } from '../desktopInstallationI
 import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 import { assertNoUnsafePathOverlap, type SafetyPathCandidate } from '../libraryPathSafety.js';
 
+import {
+  isReadwiseExecutionEnabled,
+  loadReadwiseDeviceSettings,
+  loadReadwiseRuntimeState,
+  saveReadwiseActiveSelection,
+  saveReadwiseDeviceSettings
+} from './readwiseDeviceSettings.js';
 import { ensureSourceOwnershipCutover } from './sourceOwnershipCutover.js';
 import {
   loadLocalExecutableWatchedBindings,
@@ -44,31 +51,19 @@ function assertSafeImportManagerPaths(settings: ImportManagerSettings) {
 
 export function loadImportManagerSettings(): ImportManagerSettings {
   try {
-    const ownership = ensureSourceOwnershipCutover();
-    const normalized = normalizeImportManagerSettings(loadJsonSetting(IMPORT_MANAGER_SETTINGS_KEY));
-    if (!ownership.cutover) {
-      return {
-        ...normalized,
-        sources: normalized.sources.map((source) => ({
-          ...source,
-          ownership: {
-            claimState: 'unassigned', editable: false, ownerDeviceName: null,
-            ownerInstallationId: null, ownerPlatform: null
-          }
-        })),
-        watchedFoldersReady: false,
-        watchedFoldersReason: ownership.readiness.reason
-      };
-    }
+    ensureSourceOwnershipCutover();
+    const normalized = normalizeImportManagerSettings({
+      ...toRecord(loadJsonSetting(IMPORT_MANAGER_SETTINGS_KEY)),
+      ...loadReadwiseDeviceSettings(),
+      ...loadReadwiseRuntimeState()
+    });
     const identity = loadOrCreateDesktopInstallationIdentity();
     const bindings = loadWatchedFolderBindings();
     return {
       ...normalized,
       sources: bindings.length > 0
         ? bindings.map((binding) => watchedBindingToSource(binding, identity.installationId))
-        : createDefaultImportManagerSettings().sources,
-      watchedFoldersReady: ownership.readiness.ready,
-      watchedFoldersReason: ownership.readiness.reason
+        : createDefaultImportManagerSettings().sources
     };
   } catch {
     return createDefaultImportManagerSettings();
@@ -89,36 +84,32 @@ export function saveImportManagerSettings(settings: unknown): ImportManagerSetti
     updatedAt: new Date().toISOString()
   });
   assertSafeImportManagerPaths(normalized);
-  const ownership = ensureSourceOwnershipCutover();
-  if (!ownership.cutover) {
-    const rawSources = toRecord(loadJsonSetting(IMPORT_MANAGER_SETTINGS_KEY)).sources;
-    const preserved = {
-      ...normalized,
-      sources: Array.isArray(rawSources)
-        ? rawSources
-        : current.sources.map((source) => {
-            const copy = { ...source };
-            delete copy.ownership;
-            return copy;
-          })
-    };
-    saveJsonSetting(IMPORT_MANAGER_SETTINGS_KEY, preserved, normalized.updatedAt);
-    return loadImportManagerSettings();
-  }
-  if (ownership.readiness.ready) saveLocalWatchedSources(normalized.sources, normalized.updatedAt);
+  ensureSourceOwnershipCutover();
+  saveLocalWatchedSources(normalized.sources, normalized.updatedAt);
+  saveReadwiseDeviceSettings(normalized, normalized.updatedAt);
+  saveReadwiseActiveSelection(normalized, normalized.updatedAt);
   const canonical = { ...normalized } as Partial<ImportManagerSettings>;
   delete canonical.sources;
-  delete canonical.watchedFoldersReady;
-  delete canonical.watchedFoldersReason;
+  delete canonical.readwiseActiveDeviceName;
+  delete canonical.readwiseActiveInstallationId;
+  delete canonical.readwiseCurrentDeviceName;
+  delete canonical.readwiseCurrentInstallationId;
+  delete canonical.readwiseReaderConfig;
+  delete canonical.readwiseRootPath;
+  delete canonical.readwiseSettingsConfirmed;
+  delete canonical.readwiseSources;
   saveJsonSetting(IMPORT_MANAGER_SETTINGS_KEY, canonical, normalized.updatedAt);
   return loadImportManagerSettings();
 }
 
 export function loadExecutableImportManagerSettings(): ImportManagerSettings {
   const settings = loadImportManagerSettings();
-  if (!settings.watchedFoldersReady) return { ...settings, sources: [] };
   return {
     ...settings,
+    ...(!isReadwiseExecutionEnabled(settings) ? {
+      readwiseReaderConfig: { ...settings.readwiseReaderConfig, enabled: false },
+      readwiseSources: []
+    } : {}),
     sources: loadLocalExecutableWatchedBindings().map((binding) => watchedBindingToSource(binding))
   };
 }

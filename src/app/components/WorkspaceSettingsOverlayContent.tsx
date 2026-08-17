@@ -110,7 +110,6 @@ function ImportCategoryContent(props: {
       }
       sources={importSettings.sources}
       titleStrategy={importSettings.titleStrategy}
-      watchedFoldersReady={importSettings.watchedFoldersReady}
     />
   );
 }
@@ -119,13 +118,19 @@ function ReadwiseReaderCategoryContent(props: { importSettings: ImportSettingsSt
   const { importSettings } = props;
   return (
     <SettingsReadwiseReaderContent
+      activeDeviceName={importSettings.readwiseActiveDeviceName}
+      activeInstallationId={importSettings.readwiseActiveInstallationId}
       config={importSettings.readwiseReaderConfig}
+      currentDeviceName={importSettings.readwiseCurrentDeviceName}
+      currentInstallationId={importSettings.readwiseCurrentInstallationId}
       onSave={importSettings.handleSaveReadwiseReaderSetup}
       onCancelSync={importSettings.cancelReadwiseReaderImport}
       onPreviewSync={importSettings.previewReadwiseReaderImport}
       onPreviewCleanup={importSettings.previewReadwiseImportCleanup}
       onRunCleanup={importSettings.runReadwiseImportCleanup}
       onRunSync={importSettings.runReadwiseReaderImport}
+      onTurnOff={importSettings.handleTurnOffReadwise}
+      onUseThisDevice={importSettings.handleUseThisDeviceForReadwise}
       readwiseRootPath={importSettings.readwiseRootPath}
       readwiseSources={importSettings.readwiseSources}
     />

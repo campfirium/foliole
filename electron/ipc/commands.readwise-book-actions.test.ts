@@ -5,6 +5,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { handleInvokeRequest } from './commands.js';
 
 const {
+  assertReadwiseExecutionEnabled,
   loadReadwiseBookEpub,
   cancelReadwiseReaderImport,
   mockWindow,
@@ -15,6 +16,7 @@ const {
   runReadwiseImportCleanup,
   runReadwiseReaderImport
 } = vi.hoisted(() => ({
+  assertReadwiseExecutionEnabled: vi.fn(),
   loadReadwiseBookEpub: vi.fn(),
   cancelReadwiseReaderImport: vi.fn(),
   mockWindow: {
@@ -52,6 +54,7 @@ vi.mock('../import/readwiseBookManualActions.js', () => ({
 vi.mock('../import/readwiseBookImportReset.js', () => ({
   resetReadwiseBookImport
 }));
+vi.mock('../import/readwiseDeviceSettings.js', () => ({ assertReadwiseExecutionEnabled }));
 vi.mock('../import/readwiseReaderImportRun.js', () => ({
   cancelReadwiseReaderImport,
   runReadwiseReaderImport
@@ -98,6 +101,7 @@ vi.mock('./readwiseReaderSetup.js', () => ({ inspectReadwiseReaderSetup: vi.fn()
 
 beforeEach(() => {
   vi.clearAllMocks();
+  assertReadwiseExecutionEnabled.mockReset();
   openReadwiseBookDownload.mockResolvedValue({
     book_key: 'book-1',
     status: 'opened',
@@ -242,4 +246,17 @@ it('routes Readwise cleanup and notifies workspace content changes only after cl
   expect(mockWindow.webContents.send).toHaveBeenCalledWith('foliole:workspace-content-changed', {
     scope: 'workspace'
   });
+});
+
+it('blocks Readwise mutations before invoking runtime work when this device is not active', async () => {
+  assertReadwiseExecutionEnabled.mockImplementation(() => {
+    throw new Error('readwise_not_active_on_this_device');
+  });
+  await expect(handleInvokeRequest({
+    command: 'run_readwise_reader_import', args: { settings: { readwiseRootPath: '/Readwise' } }
+  })).rejects.toThrow('readwise_not_active_on_this_device');
+  await expect(handleInvokeRequest({ command: 'run_readwise_import_cleanup', args: {} }))
+    .rejects.toThrow('readwise_not_active_on_this_device');
+  expect(runReadwiseReaderImport).not.toHaveBeenCalled();
+  expect(runReadwiseImportCleanup).not.toHaveBeenCalled();
 });

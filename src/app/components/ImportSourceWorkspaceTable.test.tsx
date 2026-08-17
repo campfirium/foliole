@@ -62,6 +62,7 @@ it('virtualizes large import source lists', () => {
   renderTable(200);
 
   expect(document.querySelector('[data-virtual-list="true"]')).toBeInTheDocument();
+  expect(screen.getByText('This device')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Original folder draft-import-source-0' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Original folder draft-import-source-199' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Add source' })).toBeEnabled();
@@ -96,7 +97,7 @@ it('shows remote watched folders but keeps their controls read only', () => {
     keepState: 'enabled' as const,
     primaryPath: '/remote/inbox',
     ownership: {
-      claimState: 'claimed' as const, editable: false, ownerDeviceName: 'Windows PC',
+      editable: false, ownerDeviceName: 'Windows PC',
       ownerInstallationId: 'desktop-windows', ownerPlatform: 'win32'
     }
   };

@@ -15,6 +15,9 @@ export type SyncObjectType =
   | 'node_reading'
   | 'node_review'
   | 'pdf_page_text'
+  | 'readwise_authority'
+  | 'readwise_binding'
+  | 'readwise_policy'
   | 'setting'
   | 'view_state'
   | 'watched_folder';

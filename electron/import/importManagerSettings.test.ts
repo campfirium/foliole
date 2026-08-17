@@ -88,7 +88,7 @@ function expectNormalizedSavedSettings() {
         id: 'draft-import-source-105',
         highlightMode: 'merged',
         highlightPath: '',
-        keepState: 'draft'
+        keepState: 'enabled'
       }
     ]
   });
@@ -159,10 +159,11 @@ it('persists import manager settings into sqlite and reloads them after restart'
 
 it('falls back to the default import manager settings when the payload is missing', () => {
   expect(loadImportManagerSettings()).toMatchObject({
-    ...createDefaultImportManagerSettings(),
-    updatedAt: expect.any(String),
-    watchedFoldersReady: true,
-    watchedFoldersReason: 'ready'
+    detailsOpen: createDefaultImportManagerSettings().detailsOpen,
+    readwiseActiveInstallationId: null,
+    readwiseSettingsConfirmed: false,
+    sources: createDefaultImportManagerSettings().sources,
+    updatedAt: expect.any(String)
   });
 });
 

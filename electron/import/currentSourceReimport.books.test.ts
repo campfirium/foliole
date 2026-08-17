@@ -30,7 +30,7 @@ import { initializeDatabase } from '../database/migrate.js';
 import { saveJsonSetting } from '../database/settingsStore.js';
 
 import { reimportCurrentTopicSource } from './currentSourceReimport.js';
-import { saveImportManagerSettings } from './importManagerSettings.js';
+import { loadImportManagerSettings, saveImportManagerSettings } from './importManagerSettings.js';
 import { buildReadwiseBookPlaceholderNodeId } from './readwiseBookNodes.js';
 import { runReadwiseReaderImport } from './readwiseReaderImportRun.js';
 
@@ -131,7 +131,11 @@ async function prepareBooksSource() {
     'utf8'
   );
   await fs.writeFile(path.join(bookHighlightPath, 'Book Placeholder.md'), '# Book Placeholder\n\n## Highlights\nbook quote\n', 'utf8');
+  const current = loadImportManagerSettings();
   saveImportManagerSettings({
+    ...current,
+    readwiseActiveDeviceName: current.readwiseCurrentDeviceName,
+    readwiseActiveInstallationId: current.readwiseCurrentInstallationId,
     readwiseReaderConfig: {
       enabled: true,
       highlightsHeading: '## Highlights',

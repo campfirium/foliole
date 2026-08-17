@@ -1,6 +1,3 @@
-import { openDatabaseConnection } from '../database/connection.js';
-import { acknowledgeWatchedFolderDesktopDeliveries } from '../import/watchedFolderClaimDelivery.js';
-
 import type { PairedSyncGroupPeer } from './companionPairingStore.js';
 import { postDesktopWorkgroupJson } from './desktopSyncGroupHttp.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
@@ -9,14 +6,9 @@ export const SYNC_PACK_ACK_PATH = '/companion/sync-pack/ack';
 
 export function acknowledgeDesktopSyncPack(bodyText: string, authenticatedPeerId: string) {
   const appliedStateSeq = parseAppliedStateSeq(bodyText);
-  const confirmedClaimCount = acknowledgeWatchedFolderDesktopDeliveries(
-    openDatabaseConnection().driver,
-    authenticatedPeerId,
-    appliedStateSeq
-  );
+  void authenticatedPeerId;
   return {
     applied_state_seq: appliedStateSeq,
-    confirmed_claim_count: confirmedClaimCount,
     status: 'ok'
   } as const;
 }

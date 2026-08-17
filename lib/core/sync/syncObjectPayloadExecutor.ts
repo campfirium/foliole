@@ -35,6 +35,10 @@ export async function applySyncObjectPayloadWithDbPort(
       return applyNodeTextAlternativeObject(port, record);
     case 'pdf_page_text':
       return applyPdfPageTextObject(port, record);
+    case 'readwise_authority':
+    case 'readwise_binding':
+    case 'readwise_policy':
+      return true;
     case 'setting':
       return applySettingObject(port, record);
     case 'view_state':
