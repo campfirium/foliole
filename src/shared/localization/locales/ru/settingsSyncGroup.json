@@ -1,5 +1,6 @@
 {
   "settings.companionSync.group.title": "Группа синхронизации",
+  "settings.companionSync.group.named": "Группа синхронизации {name}",
   "settings.companionSync.group.description": "Это имя сохраняется при создании группы.",
   "settings.companionSync.group.empty.description": "Создайте группу синхронизации или присоединитесь к ней с активного устройства в этой сети.",
   "settings.companionSync.group.join.title": "Запросы на присоединение",
@@ -8,6 +9,7 @@
   "settings.companionSync.group.join.reject": "Отклонить",
   "settings.companionSync.group.create": "Создать группу синхронизации",
   "settings.companionSync.group.find": "Найти группу синхронизации",
+  "settings.companionSync.group.join": "Присоединиться",
   "settings.companionSync.group.join.complete": "Завершить присоединение",
   "settings.companionSync.group.join.waiting": "Ожидание одобрения. После этого синхронизация начнется автоматически.",
   "settings.companionSync.group.join.named": "Присоединиться к {name}",
@@ -15,6 +17,18 @@
   "settings.companionSync.group.devices.description": "Устройства сохраняют членство, когда другое устройство не в сети.",
   "settings.companionSync.group.devices.find": "Найти устройства",
   "settings.companionSync.group.devices.syncWith": "Синхронизировать с {name}",
+  "settings.companionSync.group.sync.title": "Синхронизировать",
+  "settings.companionSync.group.sync.description": "Включайте и выключайте сетевую синхронизацию, не покидая группу синхронизации.",
+  "settings.companionSync.group.sync.turnOn": "Включить",
+  "settings.companionSync.group.sync.turnOff": "Выключить",
+  "settings.companionSync.group.pause": "Приостановить синхронизацию",
+  "settings.companionSync.group.resume": "Возобновить синхронизацию",
+  "settings.companionSync.group.leave": "Покинуть группу синхронизации",
+  "settings.companionSync.group.remove": "Удалить из группы синхронизации",
+  "settings.companionSync.group.leave.confirm.title": "Покинуть группу синхронизации?",
+  "settings.companionSync.group.leave.confirm.description": "Это устройство покинет группу {name} и перестанет синхронизироваться с устройствами в ней.",
+  "settings.companionSync.group.remove.confirm.title": "Удалить устройство?",
+  "settings.companionSync.group.remove.confirm.description": "Устройство {name} будет удалено из этой группы синхронизации. Для синхронизации ему потребуется присоединиться снова.",
   "settings.companionSync.group.member.active": "Присоединено",
   "settings.companionSync.group.member.provisioning": "Настройка"
 }

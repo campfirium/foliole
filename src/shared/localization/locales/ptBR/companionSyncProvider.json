@@ -2,9 +2,18 @@
   "companion.sync.joinRequest.description": "Este dispositivo quer entrar no seu grupo de sincronização.",
   "companion.sync.joinRequest.approve": "Aprovar",
   "companion.sync.joinRequest.reject": "Recusar",
+  "companion.sync.group.current": "Grupo de sincronização atual",
+  "companion.sync.group.details": "Detalhes",
+  "companion.sync.group.open": "Ver grupo de sincronização",
   "companion.sync.leave.button": "Sair do grupo de sincronização",
   "companion.sync.leave.description": "Este dispositivo deixará de sincronizar com este grupo. Os tópicos e anexos permanecerão neste dispositivo.",
   "companion.sync.leave.error": "O Foliole não conseguiu confirmar a saída com outro dispositivo. Tente novamente quando houver outro dispositivo disponível.",
   "companion.sync.leave.progress": "Saindo do grupo de sincronização",
-  "companion.sync.provider.foregroundHint": "O Foliole mantém a tela ligada durante o envio. Trocar de aplicativo ou bloquear o dispositivo pausa a sincronização até você voltar."
+  "companion.sync.participation.sync": "Sincronizar",
+  "companion.sync.participation.turnOn": "Ativar",
+  "companion.sync.participation.turnOff": "Desativar",
+  "companion.sync.participation.pause": "Pausar sincronização",
+  "companion.sync.participation.resume": "Retomar sincronização",
+  "companion.sync.participation.inactive": "Ative e retome a sincronização antes de conectar ou sincronizar.",
+  "companion.sync.provider.foregroundHint": "O Foliole mantém a tela ligada durante o envio. Volte ao Foliole para continuar a partir do progresso mais recente."
 }

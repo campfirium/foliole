@@ -2,9 +2,18 @@
   "companion.sync.joinRequest.description": "このデバイスが同期グループへの参加をリクエストしています。",
   "companion.sync.joinRequest.approve": "承認",
   "companion.sync.joinRequest.reject": "拒否",
+  "companion.sync.group.current": "現在の同期グループ",
+  "companion.sync.group.details": "詳細",
+  "companion.sync.group.open": "同期グループを表示",
   "companion.sync.leave.button": "同期グループから退出",
   "companion.sync.leave.description": "このデバイスはこの同期グループとの同期を停止します。トピックと添付ファイルはこのデバイスに残ります。",
   "companion.sync.leave.error": "Foliole は別のデバイスに退出を確認できませんでした。別のデバイスが利用可能なときにもう一度お試しください。",
   "companion.sync.leave.progress": "同期グループから退出中",
-  "companion.sync.provider.foregroundHint": "送信中は Foliole が画面をオンのままにします。別のアプリに切り替えるか画面をロックすると、戻るまで同期が一時停止します。"
+  "companion.sync.participation.sync": "同期",
+  "companion.sync.participation.turnOn": "オンにする",
+  "companion.sync.participation.turnOff": "オフにする",
+  "companion.sync.participation.pause": "同期を一時停止",
+  "companion.sync.participation.resume": "同期を再開",
+  "companion.sync.participation.inactive": "接続または同期する前に、同期をオンにして再開してください。",
+  "companion.sync.provider.foregroundHint": "送信中は Foliole が画面をオンのままにします。Foliole に戻ると、最新の進捗から続行できます。"
 }

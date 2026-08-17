@@ -1,5 +1,4 @@
 {
-  "desktop.command.createVirtualFolder": "仮想フォルダーを作成",
   "desktop.command.section.create": "作成",
   "desktop.command.section.workspace": "ワークスペース",
   "desktop.command.section.import": "インポート",
@@ -15,6 +14,7 @@
   "desktop.command.createFolder": "フォルダーの作成",
   "desktop.command.createTopic": "トピックの作成",
   "desktop.command.createItem": "アイテムの作成",
+  "desktop.command.createVirtualFolder": "仮想フォルダーを作成",
   "desktop.command.undo": "元に戻す",
   "desktop.command.redo": "やり直し",
   "desktop.command.undoOperation": "{operation} を元に戻す",
@@ -67,6 +67,7 @@
   "desktop.command.openSettings": "設定を開く",
   "desktop.command.openReadwiseReaderSettings": "Readwise リーダー設定を開く",
   "desktop.command.toggleBaseColorMode": "ライト/ダーク モードの切り替え",
+  "desktop.command.cycleAppearanceMode": "外観モードを切り替え",
   "desktop.command.pdfDarkOriginal": "ダーク モードでオリジナルの PDF を使用する",
   "desktop.command.pdfDarkInverted": "ダーク モードで反転 PDF を使用する",
   "desktop.command.pdfDarkWarm": "ダーク モードでウォーム PDF を使用する",

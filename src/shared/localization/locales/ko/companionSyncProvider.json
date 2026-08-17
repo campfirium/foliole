@@ -2,9 +2,18 @@
   "companion.sync.joinRequest.description": "이 기기가 동기화 그룹에 참여하려고 합니다.",
   "companion.sync.joinRequest.approve": "승인",
   "companion.sync.joinRequest.reject": "거부",
+  "companion.sync.group.current": "현재 동기화 그룹",
+  "companion.sync.group.details": "세부 정보",
+  "companion.sync.group.open": "동기화 그룹 보기",
   "companion.sync.leave.button": "동기화 그룹 나가기",
   "companion.sync.leave.description": "이 기기는 이 동기화 그룹과의 동기화를 중지합니다. 주제와 첨부 파일은 이 기기에 남아 있습니다.",
   "companion.sync.leave.error": "Foliole이 다른 기기에 그룹 나가기를 확인하지 못했습니다. 다른 기기를 사용할 수 있을 때 다시 시도하세요.",
   "companion.sync.leave.progress": "동기화 그룹에서 나가는 중",
-  "companion.sync.provider.foregroundHint": "Foliole은 전송하는 동안 화면을 켜 둡니다. 앱을 전환하거나 기기를 잠그면 돌아올 때까지 동기화가 일시 중지됩니다."
+  "companion.sync.participation.sync": "동기화",
+  "companion.sync.participation.turnOn": "켜기",
+  "companion.sync.participation.turnOff": "끄기",
+  "companion.sync.participation.pause": "동기화 일시 중지",
+  "companion.sync.participation.resume": "동기화 재개",
+  "companion.sync.participation.inactive": "연결하거나 동기화하기 전에 동기화를 켜고 재개하세요.",
+  "companion.sync.provider.foregroundHint": "Foliole은 전송하는 동안 화면을 켜 둡니다. Foliole로 돌아가면 최근 진행 상황부터 계속할 수 있습니다."
 }

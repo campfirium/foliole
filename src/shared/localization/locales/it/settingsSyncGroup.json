@@ -1,5 +1,6 @@
 {
   "settings.companionSync.group.title": "Gruppo di sincronizzazione",
+  "settings.companionSync.group.named": "Gruppo di sincronizzazione di {name}",
   "settings.companionSync.group.description": "Questo nome viene salvato quando viene creato il gruppo.",
   "settings.companionSync.group.empty.description": "Crea un gruppo di sincronizzazione o unisciti a uno da un dispositivo attivo su questa rete.",
   "settings.companionSync.group.join.title": "Richieste di accesso",
@@ -8,6 +9,7 @@
   "settings.companionSync.group.join.reject": "Rifiuta",
   "settings.companionSync.group.create": "Crea gruppo di sincronizzazione",
   "settings.companionSync.group.find": "Trova gruppo di sincronizzazione",
+  "settings.companionSync.group.join": "Unisciti",
   "settings.companionSync.group.join.complete": "Completa l’accesso",
   "settings.companionSync.group.join.waiting": "In attesa di approvazione. La sincronizzazione si avvierà automaticamente subito dopo.",
   "settings.companionSync.group.join.named": "Unisciti a {name}",
@@ -15,6 +17,18 @@
   "settings.companionSync.group.devices.description": "I dispositivi mantengono l’appartenenza quando un altro dispositivo è offline.",
   "settings.companionSync.group.devices.find": "Trova dispositivi",
   "settings.companionSync.group.devices.syncWith": "Sincronizza con {name}",
+  "settings.companionSync.group.sync.title": "Sincronizza",
+  "settings.companionSync.group.sync.description": "Attiva o disattiva la sincronizzazione di rete senza lasciare il gruppo di sincronizzazione.",
+  "settings.companionSync.group.sync.turnOn": "Attiva",
+  "settings.companionSync.group.sync.turnOff": "Disattiva",
+  "settings.companionSync.group.pause": "Metti in pausa la sincronizzazione",
+  "settings.companionSync.group.resume": "Riprendi la sincronizzazione",
+  "settings.companionSync.group.leave": "Lascia il gruppo di sincronizzazione",
+  "settings.companionSync.group.remove": "Rimuovi dal gruppo di sincronizzazione",
+  "settings.companionSync.group.leave.confirm.title": "Lasciare il gruppo di sincronizzazione?",
+  "settings.companionSync.group.leave.confirm.description": "Questo dispositivo lascerà {name} e interromperà la sincronizzazione con i dispositivi del gruppo.",
+  "settings.companionSync.group.remove.confirm.title": "Rimuovere il dispositivo?",
+  "settings.companionSync.group.remove.confirm.description": "{name} verrà rimosso da questo gruppo di sincronizzazione e dovrà unirsi di nuovo per sincronizzarsi.",
   "settings.companionSync.group.member.active": "Aggiunto",
   "settings.companionSync.group.member.provisioning": "Configurazione in corso"
 }

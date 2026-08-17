@@ -40,6 +40,7 @@
   "settings.companionSync.sectionAria": "Seção de sincronização",
   "settings.companionSync.title": "Sincronizar",
   "settings.companionSync.description": "Ative a sincronização da área de trabalho antes de emparelhar outro dispositivo. Os telefones na sua rede local podem descobrir esta área de trabalho e sincronizar depois de aprová-los.",
+  "settings.companionSync.status.inDevelopment": "Em desenvolvimento",
   "settings.companionSync.enableDesktop.title": "Ativar nesta área de trabalho",
   "settings.companionSync.enableDesktop.aria": "Ativar sincronização de desktop",
   "settings.companionSync.error.open": "Não foi possível abrir a sincronização. {error}",

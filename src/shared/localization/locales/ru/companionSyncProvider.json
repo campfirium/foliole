@@ -2,9 +2,18 @@
   "companion.sync.joinRequest.description": "Это устройство хочет присоединиться к вашей группе синхронизации.",
   "companion.sync.joinRequest.approve": "Одобрить",
   "companion.sync.joinRequest.reject": "Отклонить",
+  "companion.sync.group.current": "Текущая группа синхронизации",
+  "companion.sync.group.details": "Подробности",
+  "companion.sync.group.open": "Открыть группу синхронизации",
   "companion.sync.leave.button": "Покинуть группу синхронизации",
   "companion.sync.leave.description": "Это устройство перестанет синхронизироваться с этой группой. Темы и вложения останутся на устройстве.",
   "companion.sync.leave.error": "Foliole не удалось подтвердить выход на другом устройстве. Повторите попытку, когда другое устройство будет доступно.",
   "companion.sync.leave.progress": "Выход из группы синхронизации",
-  "companion.sync.provider.foregroundHint": "Foliole не выключает экран во время отправки. При переключении приложения или блокировке устройства синхронизация приостанавливается до вашего возвращения."
+  "companion.sync.participation.sync": "Синхронизировать",
+  "companion.sync.participation.turnOn": "Включить",
+  "companion.sync.participation.turnOff": "Выключить",
+  "companion.sync.participation.pause": "Приостановить синхронизацию",
+  "companion.sync.participation.resume": "Возобновить синхронизацию",
+  "companion.sync.participation.inactive": "Включите и возобновите синхронизацию перед подключением или синхронизацией.",
+  "companion.sync.provider.foregroundHint": "Foliole не выключает экран во время отправки. Вернитесь в Foliole, чтобы продолжить с последнего достигнутого этапа."
 }

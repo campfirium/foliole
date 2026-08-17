@@ -40,6 +40,7 @@
   "settings.companionSync.sectionAria": "동기화 섹션",
   "settings.companionSync.title": "동기화",
   "settings.companionSync.description": "다른 장치를 페어링하기 전에 데스크톱 동기화를 켜십시오. 로컬 네트워크의 휴대폰은 이 데스크톱을 검색한 다음 승인한 후 동기화할 수 있습니다.",
+  "settings.companionSync.status.inDevelopment": "개발 중",
   "settings.companionSync.enableDesktop.title": "이 데스크탑에서 활성화",
   "settings.companionSync.enableDesktop.aria": "데스크톱 동기화 활성화",
   "settings.companionSync.error.open": "동기화를 열 수 없습니다. {error}",

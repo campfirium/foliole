@@ -1,5 +1,4 @@
 {
-  "desktop.command.createVirtualFolder": "Crea cartella virtuale",
   "desktop.command.section.create": "Crea",
   "desktop.command.section.workspace": "Area di lavoro",
   "desktop.command.section.import": "Importa",
@@ -15,6 +14,7 @@
   "desktop.command.createFolder": "Crea cartella",
   "desktop.command.createTopic": "Crea argomento",
   "desktop.command.createItem": "Crea elemento",
+  "desktop.command.createVirtualFolder": "Crea cartella virtuale",
   "desktop.command.undo": "Annulla",
   "desktop.command.redo": "Ripeti",
   "desktop.command.undoOperation": "Annulla {operation}",
@@ -67,6 +67,7 @@
   "desktop.command.openSettings": "Apri Impostazioni",
   "desktop.command.openReadwiseReaderSettings": "Apri le impostazioni del lettore Readwise",
   "desktop.command.toggleBaseColorMode": "Attiva/disattiva la modalità Chiaro/Scuro",
+  "desktop.command.cycleAppearanceMode": "Cambia modalità aspetto",
   "desktop.command.pdfDarkOriginal": "Usa originale PDF in modalità scura",
   "desktop.command.pdfDarkInverted": "Usa PDF invertito in modalità scura",
   "desktop.command.pdfDarkWarm": "Usa Caldo PDF in modalità Scuro",

@@ -1,5 +1,4 @@
 {
-  "desktop.command.createVirtualFolder": "Virtuellen Ordner erstellen",
   "desktop.command.section.create": "Erstellen",
   "desktop.command.section.workspace": "Arbeitsbereich",
   "desktop.command.section.import": "Importieren",
@@ -15,6 +14,7 @@
   "desktop.command.createFolder": "Ordner erstellen",
   "desktop.command.createTopic": "Thema erstellen",
   "desktop.command.createItem": "Element erstellen",
+  "desktop.command.createVirtualFolder": "Virtuellen Ordner erstellen",
   "desktop.command.undo": "Rückgängig machen",
   "desktop.command.redo": "Wiederholen",
   "desktop.command.undoOperation": "Rückgängig machen {operation}",
@@ -67,6 +67,7 @@
   "desktop.command.openSettings": "Öffnen Sie die Einstellungen",
   "desktop.command.openReadwiseReaderSettings": "Öffnen Sie die Reader-Einstellungen Readwise",
   "desktop.command.toggleBaseColorMode": "Hell-/Dunkelmodus umschalten",
+  "desktop.command.cycleAppearanceMode": "Darstellungsmodus wechseln",
   "desktop.command.pdfDarkOriginal": "Original PDF im Dunkelmodus verwenden",
   "desktop.command.pdfDarkInverted": "Verwenden Sie invertiertes PDF im dunklen Modus",
   "desktop.command.pdfDarkWarm": "Verwenden Sie Warm PDF im dunklen Modus",

@@ -2,9 +2,18 @@
   "companion.sync.joinRequest.description": "To urządzenie chce dołączyć do Twojej grupy synchronizacji.",
   "companion.sync.joinRequest.approve": "Zatwierdź",
   "companion.sync.joinRequest.reject": "Odrzuć",
+  "companion.sync.group.current": "Bieżąca grupa synchronizacji",
+  "companion.sync.group.details": "Szczegóły",
+  "companion.sync.group.open": "Wyświetl grupę synchronizacji",
   "companion.sync.leave.button": "Opuść grupę synchronizacji",
   "companion.sync.leave.description": "To urządzenie przestanie synchronizować się z tą grupą. Tematy i załączniki pozostaną na tym urządzeniu.",
   "companion.sync.leave.error": "Foliole nie mogło potwierdzić opuszczenia grupy na innym urządzeniu. Spróbuj ponownie, gdy inne urządzenie będzie dostępne.",
   "companion.sync.leave.progress": "Opuszczanie grupy synchronizacji",
-  "companion.sync.provider.foregroundHint": "Foliole utrzymuje włączony ekran podczas wysyłania. Przełączenie aplikacji lub zablokowanie urządzenia wstrzymuje synchronizację do czasu powrotu."
+  "companion.sync.participation.sync": "Synchronizuj",
+  "companion.sync.participation.turnOn": "Włącz",
+  "companion.sync.participation.turnOff": "Wyłącz",
+  "companion.sync.participation.pause": "Wstrzymaj synchronizację",
+  "companion.sync.participation.resume": "Wznów synchronizację",
+  "companion.sync.participation.inactive": "Włącz i wznów synchronizację przed połączeniem lub synchronizowaniem.",
+  "companion.sync.provider.foregroundHint": "Foliole utrzymuje włączony ekran podczas wysyłania. Wróć do Foliole, aby kontynuować od ostatniego postępu."
 }
