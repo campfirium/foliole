@@ -7,12 +7,18 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   assertInternalSigningAvailable, createInternalLaunchCommand, launchInternalUpdate,
-  resolveInternalRevision
+  parseInternalLaunchArgs, resolveInternalRevision
 } from './launch-internal-update.mjs';
 
 const REVISION = 'a'.repeat(40);
 
 describe('Internal update launcher', () => {
+  it('accepts an explicit archived revision for host parity', () => {
+    expect(parseInternalLaunchArgs(['--revision', REVISION])).toEqual({ revision: REVISION });
+    expect(parseInternalLaunchArgs([])).toEqual({});
+    expect(() => parseInternalLaunchArgs(['--revision', 'short'])).toThrow('full-sha');
+  });
+
   it('pins the current full Git revision', () => {
     const run = vi.fn(() => ({ status: 0, stdout: `${REVISION}\n` }));
     expect(resolveInternalRevision('/repo', run)).toBe(REVISION);

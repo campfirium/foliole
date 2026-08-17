@@ -39,6 +39,14 @@ export function resolveInternalRevision(repositoryRoot = REPOSITORY_ROOT, run = 
   return revision;
 }
 
+export function parseInternalLaunchArgs(argv) {
+  if (argv.length === 0) return {};
+  if (argv.length === 2 && argv[0] === '--revision' && /^[0-9a-f]{40}$/u.test(argv[1])) {
+    return { revision: argv[1] };
+  }
+  throw new Error('usage: macos:internal:dispatch [--revision <full-sha>]');
+}
+
 export function createInternalLaunchCommand(options) {
   return {
     args: [
@@ -90,7 +98,7 @@ export async function launchInternalUpdate(options = {}) {
 }
 
 async function main() {
-  const result = await launchInternalUpdate();
+  const result = await launchInternalUpdate(parseInternalLaunchArgs(process.argv.slice(2)));
   const detail = result.status === 'skipped'
     ? `reason=${result.reason}`
     : [
