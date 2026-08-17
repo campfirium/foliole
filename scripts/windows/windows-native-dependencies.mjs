@@ -1,4 +1,7 @@
-/* global console */
+/* global console, process */
+
+import fs from 'node:fs';
+import path from 'node:path';
 
 import {
   createNpmCommand, runCapture, runChecked
@@ -14,7 +17,7 @@ async function inspect(repoRoot, capture) {
 }
 
 export async function ensureWindowsNativeDependencies({
-  capture = runCapture, checked = runChecked, log = console.log, repoRoot
+  capture = runCapture, checked = runChecked, fileSystem = fs, log = console.log, repoRoot
 }) {
   let result = await inspect(repoRoot, capture);
   if (result.code !== 0) {
@@ -26,6 +29,15 @@ export async function ensureWindowsNativeDependencies({
   if (result.code !== 0) {
     const detail = failureDetail(result);
     throw new Error(`node_modules check failed${detail ? `\n${detail}` : ''}`);
+  }
+  const electronExecutable = path.join(repoRoot, 'node_modules', 'electron', 'dist', 'electron.exe');
+  if (!fileSystem.existsSync(electronExecutable)) {
+    log('[windows-preview-native] install Electron runtime');
+    const installer = path.join(repoRoot, 'node_modules', 'electron', 'install.js');
+    await checked(process.execPath, [installer], 'install Windows Electron runtime', repoRoot);
+    if (!fileSystem.existsSync(electronExecutable)) {
+      throw new Error('Electron runtime installation did not produce electron.exe');
+    }
   }
   log('[windows-preview-native] node_modules check passed');
 }
