@@ -64,6 +64,7 @@ export interface WorkspaceState {
   shelveNode: (nodeId: string, now?: string) => boolean;
   unshelveNode: (nodeId: string, now?: string) => boolean;
   dismissNode: (nodeId: string, now?: string) => boolean;
+  dismissNodes: (nodeIds: string[], now?: string) => boolean;
   undoWorkspaceAction: (now?: string) => boolean;
   redoWorkspaceAction: (now?: string) => boolean;
   pushEditorOperationEntry: (entry: EditorOperationHistoryEntry) => void;

@@ -24,6 +24,33 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+function createAtomicDismissFixture() {
+  const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
+  const actions = createWorkspaceNodeActions(harness.setState, harness.getState);
+  const history = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
+  const state = harness.getState();
+  const parent = state.nodesById['node-1']!;
+  const reading = {
+    intervalDurationMs: 0,
+    intervalGrowthFactor: 1,
+    lastHandledAt: '2026-03-17T00:00:00.000Z',
+    nextAt: '2026-03-17T00:00:00.000Z',
+    priority: 0,
+    readingPosition: 0,
+    repetitionCount: 0,
+    state: 'active' as const
+  };
+  harness.setState({
+    nodeOrder: [...state.nodeOrder, 'child-topic'],
+    nodesById: {
+      ...state.nodesById,
+      'node-1': { ...parent, kind: 'topic', reading },
+      'child-topic': { ...parent, id: 'child-topic', parentNodeId: 'node-1', reading }
+    }
+  });
+  return { actions, harness, history };
+}
+
 describe('createWorkspaceNodeActions dismiss', () => {
   it('undoes and redoes a node-menu Dismiss action', async () => {
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
@@ -63,6 +90,24 @@ describe('createWorkspaceNodeActions dismiss', () => {
 });
 
 describe('createWorkspaceNodeActions dismiss descendants', () => {
+  it('records an entire-topic dismiss as one atomic history entry', async () => {
+    const { actions, harness, history } = createAtomicDismissFixture();
+
+    expect(actions.dismissNodes(['node-1', 'child-topic'], '2026-03-18T00:00:00.000Z')).toBe(true);
+    expect(harness.getState().nodesById['node-1']?.reading?.state).toBe('dismissed');
+    expect(harness.getState().nodesById['child-topic']?.reading?.state).toBe('dismissed');
+    await vi.waitFor(() => expect(harness.getState().appActionHistory.undoStack).toHaveLength(1));
+    expect(harness.getState().appActionHistory.undoStack[0]).toMatchObject({
+      nodeId: 'node-1',
+      relatedReadings: [expect.objectContaining({ nodeId: 'child-topic' })],
+      type: 'topic.dismiss'
+    });
+
+    expect(history.undoWorkspaceAction()).toBe(true);
+    await vi.waitFor(() => expect(harness.getState().nodesById['child-topic']?.reading?.state).toBe('active'));
+    expect(harness.getState().nodesById['node-1']?.reading?.state).toBe('active');
+  });
+
   it('does not dismiss descendant reading topics from the node menu', () => {
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);

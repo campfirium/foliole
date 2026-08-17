@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { saveNodeReadingStateToRuntime } from '../shared/platform/runtime/nodeReadingStateRuntimeRepository';
 
+import { installWorkspaceHistoryPersistence, resetWorkspaceHistoryPersistence } from './workspaceHistoryPersistence';
 import {
-  syncNodeContentToRuntime,
   syncRelearnNodeToRuntime,
   syncReviewGradeToRuntime
 } from './workspaceRuntimeSync';
@@ -32,6 +32,20 @@ vi.mock('./workspaceRuntimeSync', async (importOriginal) => {
   };
 });
 
+const persistReadingSnapshots = vi.fn(async () => true);
+const persistShelveSnapshots = vi.fn(async () => true);
+
+beforeEach(() => {
+  installWorkspaceHistoryPersistence({
+    persistNodeSnapshots: async () => true,
+    persistReadingSnapshots,
+    persistReviewSnapshot: async () => true,
+    persistShelveSnapshots
+  });
+});
+
+afterEach(() => resetWorkspaceHistoryPersistence());
+
 function createReadingHarness() {
   return createSetStateHarness(createWorkspaceFixture([createReadingNode('reading-1', '2026-03-03T00:00:00.000Z')]));
 }
@@ -51,8 +65,9 @@ describe('workspace durable node mutation guardrails', () => {
     const actions = createWorkspaceNodeActions(harness.setState);
 
     expect(actions.dismissNode('reading-1', '2026-03-18T00:00:00.000Z')).toBe(true);
-    expect(saveNodeReadingStateToRuntime).toHaveBeenCalledWith(
-      expect.objectContaining({ nodeId: 'reading-1', reading: expect.objectContaining({ state: 'dismissed' }) })
+    expect(persistReadingSnapshots).toHaveBeenCalledWith(
+      [expect.objectContaining({ id: 'reading-1', reading: expect.objectContaining({ state: 'dismissed' }) })],
+      '2026-03-18T00:00:00.000Z'
     );
   });
 
@@ -71,8 +86,9 @@ describe('workspace durable node mutation guardrails', () => {
     const actions = createWorkspaceNodeActions(harness.setState);
 
     expect(actions.shelveNode('reading-1', '2026-03-18T00:00:00.000Z')).toBe(true);
-    expect(syncNodeContentToRuntime).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'reading-1', shelvedAt: '2026-03-18T00:00:00.000Z' })
+    expect(persistShelveSnapshots).toHaveBeenCalledWith(
+      [expect.objectContaining({ id: 'reading-1', shelvedAt: '2026-03-18T00:00:00.000Z' })],
+      '2026-03-18T00:00:00.000Z'
     );
   });
 

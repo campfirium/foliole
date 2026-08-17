@@ -106,6 +106,7 @@ function TrashContextMenu(props: {
       deleteNodes={props.workspaceActions.deleteNodes}
       deleteNodesPermanently={props.workspaceActions.deleteNodesPermanently}
       dismissNode={props.workspaceActions.dismissNode}
+      dismissNodes={props.workspaceActions.dismissNodes}
       isVirtualViewOpen={false}
       nodesById={props.nodesById}
       onOpenMoveToNode={() => undefined}
@@ -215,6 +216,7 @@ function useTrashWorkspaceActions() {
     deleteNodes: useWorkspaceStore((state) => state.deleteNodes),
     deleteNodesPermanently: useWorkspaceStore((state) => state.deleteNodesPermanently),
     dismissNode: useWorkspaceStore((state) => state.dismissNode),
+    dismissNodes: useWorkspaceStore((state) => state.dismissNodes),
     restoreNode: useWorkspaceStore((state) => state.restoreNode),
     returnNode: useWorkspaceStore((state) => state.relearnNode),
     setNodeSequentialReading: useWorkspaceStore((state) => state.setNodeSequentialReading),

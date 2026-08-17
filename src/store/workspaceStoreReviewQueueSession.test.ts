@@ -48,6 +48,7 @@ function createWorkspaceActionStubs() {
     shelveNode: () => false,
     unshelveNode: () => false,
     dismissNode: () => false,
+    dismissNodes: () => false,
     ...createHistoryActionStubs(),
     relearnNode: () => false,
     startReviewSession: () => false,

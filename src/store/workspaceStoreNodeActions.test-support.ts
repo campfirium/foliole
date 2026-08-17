@@ -40,6 +40,7 @@ function createWorkspaceEditActionStubs() {
     shelveNode: () => false,
     unshelveNode: () => false,
     dismissNode: () => false,
+    dismissNodes: () => false,
     undoWorkspaceAction: () => false,
     redoWorkspaceAction: () => false,
     pushEditorOperationEntry: () => undefined,

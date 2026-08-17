@@ -37,20 +37,22 @@ function hasAvailableVirtualFolder(topicIds: string[]) {
   }).length > 0;
 }
 
+function createRemoveFromCurrentVirtualFolder(props: WorkspaceTopicTreeMenuProps) {
+  if (props.virtualFolderView !== 'manual') return undefined;
+  return (nodeIds: string[]) => {
+    const removedIds = new Set(nodeIds);
+    props.actions.setFolderManualChildOrder?.(
+      props.activeFolderId,
+      (props.nodesById[props.activeFolderId]?.manualChildOrder ?? []).filter((nodeId) => !removedIds.has(nodeId))
+    );
+  };
+}
+
 export function WorkspaceTopicTreeMenu(props: WorkspaceTopicTreeMenuProps) {
   const [reviewSchedulingNodeId, setReviewSchedulingNodeId] = useState<string | null>(null);
   const [addToVirtualFolderTopicIds, setAddToVirtualFolderTopicIds] = useState<string[] | null>(null);
-  const activeFolder = props.nodesById[props.activeFolderId];
   const canAddToVirtualFolder = hasAvailableVirtualFolder(props.contextMenu.getContextTargets());
-  const onRemoveFromCurrentVirtualFolder = props.virtualFolderView === 'manual'
-    ? (nodeIds: string[]) => {
-        const removedIds = new Set(nodeIds);
-        props.actions.setFolderManualChildOrder?.(
-          props.activeFolderId,
-          (activeFolder?.manualChildOrder ?? []).filter((nodeId) => !removedIds.has(nodeId))
-        );
-      }
-    : undefined;
+  const onRemoveFromCurrentVirtualFolder = createRemoveFromCurrentVirtualFolder(props);
   return (
     <>
       <NodeListTreeMenu
@@ -62,6 +64,7 @@ export function WorkspaceTopicTreeMenu(props: WorkspaceTopicTreeMenuProps) {
         deleteNodes={props.actions.deleteNodes}
         deleteNodesPermanently={props.actions.deleteNodesPermanently}
         dismissNode={props.actions.dismissNode}
+        dismissNodes={props.actions.dismissNodes}
         isVirtualViewOpen={false}
         nodesById={props.nodesById}
         onCreateTopicFromClipboard={(parentNodeId) =>

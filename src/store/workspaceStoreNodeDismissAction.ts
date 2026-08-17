@@ -99,11 +99,16 @@ function finishDismissPersistence(args: {
   });
 }
 
-function buildDismissNodeMutation(args: {
+interface DismissReadingChange {
+  afterReading: Node['reading'];
+  beforeReading: Node['reading'];
+  nodeId: string;
+}
+
+function buildSingleDismissMutation(args: {
   nodeId: string;
   now: string;
   state: WorkspaceState;
-  withHistory: boolean;
 }) {
   const node = args.state.nodesById[args.nodeId];
   if (!node || isProtectedRootNode(node) || !hasNodeContent(node) ||
@@ -126,31 +131,77 @@ function buildDismissNodeMutation(args: {
     now: args.now
   });
   const finalNodesById = sequentialPatch?.nodesById ?? nextNodesById;
-  const nodes = [nextNode, ...(sequentialPatch?.changes ?? [])
-    .map((change) => finalNodesById[change.nodeId])
-    .filter((changedNode): changedNode is Node => Boolean(changedNode))];
-  if (!args.withHistory) return { entry: null, nodes, nodesById: finalNodesById };
+  return {
+    changes: [{
+      afterReading,
+      beforeReading: node.reading,
+      nodeId: args.nodeId
+    }, ...(sequentialPatch?.changes ?? [])],
+    nodesById: finalNodesById
+  };
+}
+
+function collectDismissChanges(args: {
+  nodeIds: string[];
+  now: string;
+  state: WorkspaceState;
+}) {
+  const changesByNodeId = new Map<string, DismissReadingChange>();
+  let nodesById = args.state.nodesById;
+  for (const nodeId of new Set(args.nodeIds)) {
+    const mutation = buildSingleDismissMutation({
+      nodeId,
+      now: args.now,
+      state: { ...args.state, nodesById }
+    });
+    if (!mutation) continue;
+    nodesById = mutation.nodesById;
+    for (const change of mutation.changes) {
+      const existing = changesByNodeId.get(change.nodeId);
+      changesByNodeId.set(change.nodeId, {
+        afterReading: change.afterReading,
+        beforeReading: existing?.beforeReading ?? change.beforeReading,
+        nodeId: change.nodeId
+      });
+    }
+  }
+  return { changes: [...changesByNodeId.values()], nodesById };
+}
+
+function buildDismissNodesMutation(args: {
+  nodeIds: string[];
+  now: string;
+  state: WorkspaceState;
+  withHistory: boolean;
+}) {
+  const mutation = collectDismissChanges(args);
+  const [primaryChange, ...relatedReadings] = mutation.changes;
+  if (!primaryChange) return null;
+  const nodes = mutation.changes
+    .map((change) => mutation.nodesById[change.nodeId])
+    .filter((changedNode): changedNode is Node => Boolean(changedNode));
+  if (!args.withHistory) return { entry: null, nodes, nodesById: mutation.nodesById };
   const context = captureWorkspaceHistoryContext(args.state);
   const entry = createTopicDismissHistoryEntry({
     afterContext: context,
-    afterReading,
+    afterReading: primaryChange.afterReading,
     beforeContext: context,
-    beforeReading: node.reading,
+    beforeReading: primaryChange.beforeReading,
     id: createWorkspaceActionHistoryEntryId(),
     mutationTimestamp: args.now,
-    nodeId: args.nodeId,
-    ...(sequentialPatch?.changes.length ? { relatedReadings: sequentialPatch.changes } : {})
+    nodeId: primaryChange.nodeId,
+    ...(relatedReadings.length ? { relatedReadings } : {})
   });
-  return { entry, nodes, nodesById: finalNodesById };
+  return { entry, nodes, nodesById: mutation.nodesById };
 }
 
-export function createDismissNodeAction(set: WorkspaceSet, get?: WorkspaceGet): WorkspaceState['dismissNode'] {
-  return (nodeId, now = new Date().toISOString()) => {
-    let mutation: ReturnType<typeof buildDismissNodeMutation> = null;
+export function createDismissNodesAction(set: WorkspaceSet, get?: WorkspaceGet): WorkspaceState['dismissNodes'] {
+  return (nodeIds, now = new Date().toISOString()) => {
+    let mutation: ReturnType<typeof buildDismissNodesMutation> = null;
     set((state) => {
       if (get && (state.appActionHistory.applying || state.appActionHistory.pendingAction ||
           state.appActionHistory.pendingCreate)) return state;
-      mutation = buildDismissNodeMutation({ nodeId, now, state, withHistory: Boolean(get) });
+      mutation = buildDismissNodesMutation({ nodeIds, now, state, withHistory: Boolean(get) });
       if (!mutation) return state;
       return {
         ...(mutation.entry
@@ -159,9 +210,14 @@ export function createDismissNodeAction(set: WorkspaceSet, get?: WorkspaceGet): 
         nodesById: mutation.nodesById
       };
     });
-    const result = mutation as NonNullable<ReturnType<typeof buildDismissNodeMutation>> | null;
+    const result = mutation as NonNullable<ReturnType<typeof buildDismissNodesMutation>> | null;
     if (result?.entry && get) finishDismissPersistence({ entry: result.entry, get, nodes: result.nodes, now, set });
     else if (result) void persistDismissedReadingNodes(result.nodes, now);
     return Boolean(result);
   };
+}
+
+export function createDismissNodeAction(set: WorkspaceSet, get?: WorkspaceGet): WorkspaceState['dismissNode'] {
+  const dismissNodes = createDismissNodesAction(set, get);
+  return (nodeId, now) => dismissNodes([nodeId], now);
 }

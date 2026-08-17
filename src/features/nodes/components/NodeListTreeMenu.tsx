@@ -24,6 +24,7 @@ interface NodeListTreeMenuProps {
   deleteNodes: (nodeIds: string[]) => void;
   deleteNodesPermanently: (nodeIds: string[]) => void;
   dismissNode: (nodeId: string, now?: string) => boolean;
+  dismissNodes: (nodeIds: string[], now?: string) => boolean;
   isVirtualViewOpen: boolean;
   nodesById: WorkspaceListNodesById;
   onAddToVirtualFolder?: (nodeIds: string[]) => void;
@@ -119,7 +120,7 @@ function buildNodeListActionHandlers(
     onDismissEntireTopic: createDismissEntireTopicAction(
       menuState.primaryTargetId,
       props.nodesById,
-      props.dismissNode,
+      props.dismissNodes,
       props.contextMenu.closeContextMenu
     ),
     onDismissNode: createDismissNodeAction(menuState.primaryTargetId, props.dismissNode, props.contextMenu.closeContextMenu),

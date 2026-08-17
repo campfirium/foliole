@@ -7,6 +7,7 @@ export function useWorkspaceTopicTreeActions() {
     deleteNodes: useWorkspaceStore((state) => state.deleteNodes),
     deleteNodesPermanently: useWorkspaceStore((state) => state.deleteNodesPermanently),
     dismissNode: useWorkspaceStore((state) => state.dismissNode),
+    dismissNodes: useWorkspaceStore((state) => state.dismissNodes),
     moveNodes: useWorkspaceStore((state) => state.moveNodes),
     restoreNode: useWorkspaceStore((state) => state.restoreNode),
     returnNode: useWorkspaceStore((state) => state.relearnNode),

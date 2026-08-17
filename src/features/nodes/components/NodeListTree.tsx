@@ -69,6 +69,7 @@ function buildNodeListTreeContentProps(args: NodeListTreeContentPropsArgs) {
     deleteNodesPermanently: args.deleteFeedback.runDeleteNodesPermanently,
     deleteStatusLabel: args.deleteFeedback.deleteStatusLabel,
     dismissNode: args.model.dismissNode,
+    dismissNodes: args.model.dismissNodes,
     highlightedNodeId: args.highlightedNodeId ?? null,
     isTrashViewOpen: args.isTrashViewOpen,
     isVirtualViewOpen: args.isVirtualViewOpen,

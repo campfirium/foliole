@@ -78,8 +78,10 @@ it('supports multi-select permanent delete inside trash', async () => {
   render(<App />);
   openCurrentFolderItemContextMenu('Node 2');
   fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
+  await waitFor(() => expect(useWorkspaceStore.getState().trashedNodeIds).toContain('node-2'));
   openCurrentFolderItemContextMenu('Node 3');
   fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
+  await waitFor(() => expect(useWorkspaceStore.getState().trashedNodeIds).toContain('node-3'));
 
   await openTrashView();
   const trashedNode2 = await getTrashTreeItem('Node 2');

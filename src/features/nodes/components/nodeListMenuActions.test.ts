@@ -2,7 +2,7 @@ import { expect, it, vi } from 'vitest';
 
 import type { WorkspaceListNode, WorkspaceListNodesById } from '../model/workspaceListNode';
 
-import { createDismissNodeAction, createToggleSequentialReadingAction } from './nodeListMenuActions';
+import { createDismissEntireTopicAction, createDismissNodeAction, createToggleSequentialReadingAction } from './nodeListMenuActions';
 
 const NOW = '2026-05-24T00:00:00.000Z';
 
@@ -49,5 +49,29 @@ it('dismisses only the current menu target', () => {
   createDismissNodeAction('current-topic', dismissNode, closeContextMenu)();
 
   expect(dismissNode).toHaveBeenCalledExactlyOnceWith('current-topic');
+  expect(closeContextMenu).toHaveBeenCalledOnce();
+});
+
+it('dismisses an entire topic through one batch action', () => {
+  const closeContextMenu = vi.fn();
+  const dismissNodes = vi.fn().mockReturnValue(true);
+  const reading = {
+    intervalDurationMs: 0,
+    intervalGrowthFactor: 1,
+    lastHandledAt: NOW,
+    nextAt: NOW,
+    priority: 0,
+    readingPosition: 0,
+    repetitionCount: 0,
+    state: 'active' as const
+  };
+  const nodesById: WorkspaceListNodesById = {
+    child: listNode({ hasContent: true, id: 'child', parentNodeId: 'parent', reading }),
+    parent: listNode({ hasContent: true, id: 'parent', reading })
+  };
+
+  createDismissEntireTopicAction('parent', nodesById, dismissNodes, closeContextMenu)();
+
+  expect(dismissNodes).toHaveBeenCalledWith(['parent', 'child'], expect.any(String));
   expect(closeContextMenu).toHaveBeenCalledOnce();
 });

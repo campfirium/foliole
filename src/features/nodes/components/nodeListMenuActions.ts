@@ -34,7 +34,7 @@ export function createReturnNodeAction(
 export function createDismissEntireTopicAction(
   rootNodeId: string | null,
   nodesById: WorkspaceListNodesById,
-  dismissNode: (nodeId: string, now?: string) => boolean,
+  dismissNodes: (nodeIds: string[], now?: string) => boolean,
   closeContextMenu: () => void
 ) {
   return () => {
@@ -43,9 +43,7 @@ export function createDismissEntireTopicAction(
       return;
     }
     const now = new Date().toISOString();
-    for (const nodeId of collectDismissEntireTopicTargets(rootNodeId, nodesById)) {
-      dismissNode(nodeId, now);
-    }
+    dismissNodes(collectDismissEntireTopicTargets(rootNodeId, nodesById), now);
     closeContextMenu();
   };
 }

@@ -1,11 +1,18 @@
-import { beforeEach, expect, it, vi } from 'vitest';
-
-const runtimeInvoke = vi.hoisted(() => vi.fn());
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('../shared/platform/runtimeInvoke', () => ({
-  getRuntimeInvoke: vi.fn(() => runtimeInvoke)
+  getRuntimeInvoke: vi.fn(() => null)
 }));
 
+import {
+  installWorkspaceHistoryPersistence,
+  resetWorkspaceHistoryPersistence
+} from './workspaceHistoryPersistence';
+import {
+  createBrowserLocalWorkspaceMutationRepository,
+  installWorkspaceMutationRepository,
+  resetWorkspaceMutationRepository
+} from './workspaceMutationRepository';
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
 
 function resetWorkspaceStore() {
@@ -19,6 +26,8 @@ function createReadingNode(id: string) {
     id,
     title: id,
     content: `${id}-content`,
+    kind: 'topic' as const,
+    parentNodeId: null,
     reveal: null,
     review: null
   };
@@ -31,6 +40,8 @@ function createFsrsNode(id: string) {
     id,
     title: id,
     content: `${id}-prompt`,
+    kind: 'topic' as const,
+    parentNodeId: null,
     reveal: `${id}-answer`,
     review: {
       due: '2026-02-25T00:00:00.000Z',
@@ -48,11 +59,19 @@ function createFsrsNode(id: string) {
 
 beforeEach(() => {
   localStorage.clear();
-  runtimeInvoke.mockReset();
-  runtimeInvoke.mockImplementation(async (command: string, payload?: { nodeIds?: string[] }) =>
-    command === 'soft_delete_nodes' ? { deletedNodeIds: payload?.nodeIds ?? [] } : null
-  );
+  installWorkspaceHistoryPersistence({
+    persistNodeSnapshots: async () => true,
+    persistReadingSnapshots: async () => true,
+    persistReviewSnapshot: async () => true,
+    persistShelveSnapshots: async () => true
+  });
+  installWorkspaceMutationRepository(createBrowserLocalWorkspaceMutationRepository());
   resetWorkspaceStore();
+});
+
+afterEach(() => {
+  resetWorkspaceHistoryPersistence();
+  resetWorkspaceMutationRepository();
 });
 
 it('keeps the current review item when setActiveNode selects another queued topic', () => {

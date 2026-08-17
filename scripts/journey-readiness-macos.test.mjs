@@ -32,7 +32,7 @@ describe('local journey readiness adapters', () => {
     expect(args).toContain('platform=iOS Simulator,id=SIM-1');
     expect(args).toContain('PRODUCT_BUNDLE_IDENTIFIER=com.foliole.ios');
     expect(args).not.toContain('CODE_SIGNING_ALLOWED=NO');
-    expect(args).toContain('/evidence/DerivedData');
+    expect(args).toContain(path.join('/evidence', 'DerivedData'));
   });
 
   it('proves exact owned Simulator deletion from the post-cleanup inventory', () => {

@@ -15,7 +15,7 @@ import { createUpdateHighlightAnchorRangeAction } from './workspaceStoreHighligh
 import { createImageClozeNodesAction } from './workspaceStoreImageClozeActions';
 import { createSetFolderManualChildOrderAction } from './workspaceStoreManualChildOrderActions';
 import { createMoveNodeAction } from './workspaceStoreMoveNodeAction';
-import { createDismissNodeAction } from './workspaceStoreNodeDismissAction';
+import { createDismissNodeAction, createDismissNodesAction } from './workspaceStoreNodeDismissAction';
 import {
   createUpdateNodeDerivedTitleAction,
   createUpdateNodeRevealAction,
@@ -54,6 +54,7 @@ type WorkspaceNodeActions = Pick<
   | 'deleteNodePermanently'
   | 'deleteNodesPermanently'
   | 'dismissNode'
+  | 'dismissNodes'
   | 'moveNode'
   | 'moveNodes'
   | 'restoreNode'
@@ -109,6 +110,7 @@ export function createWorkspaceNodeActions(set: WorkspaceSet, get?: () => Worksp
     updateVirtualNodeFilter: createUpdateVirtualNodeFilterAction(set),
     updateNodeReveal: createUpdateNodeRevealAction(set),
     dismissNode: createDismissNodeAction(set, get),
+    dismissNodes: createDismissNodesAction(set, get),
     shelveNode: createShelveNodeAction(set, get),
     unshelveNode: createUnshelveNodeAction(set, get),
     relearnNode: createRelearnNodeAction(set),

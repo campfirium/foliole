@@ -29,6 +29,7 @@ interface NodeListTreeContentProps {
   deleteNodesPermanently: (nodeIds: string[]) => void;
   deleteStatusLabel: string | null;
   dismissNode: (nodeId: string, now?: string) => boolean;
+  dismissNodes: (nodeIds: string[], now?: string) => boolean;
   highlightedNodeId: string | null;
   isTrashViewOpen: boolean;
   isVirtualViewOpen: boolean;
