@@ -99,6 +99,8 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: node scripts/quality/hosted-npm-ci.mjs
+      - name: Install Electron runtime for Simulator desktop pairing
+        run: node node_modules/electron/install.js
       - name: Rebuild Electron native ABI for Simulator desktop pairing
         run: npm run electron:rebuild:native
       - name: Run iOS Simulator scenario

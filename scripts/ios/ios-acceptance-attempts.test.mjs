@@ -161,4 +161,13 @@ describe('iOS acceptance attempt orchestration', () => {
     ]) expect(workflow).toContain(name);
     expect(workflow).not.toMatch(/^\s+.*DerivedData.*$/mu);
   });
+
+  it('installs the Electron runtime before Simulator desktop pairing starts', () => {
+    const workflow = fs.readFileSync('.github/workflows/hosted-quality-ios.yml', 'utf8');
+    const simulator = workflow.slice(workflow.indexOf('  simulator:'));
+    const install = simulator.indexOf('node node_modules/electron/install.js');
+    const rebuild = simulator.indexOf('npm run electron:rebuild:native');
+    expect(install).toBeGreaterThan(-1);
+    expect(install).toBeLessThan(rebuild);
+  });
 });
