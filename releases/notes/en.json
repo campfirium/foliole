@@ -1,4 +1,12 @@
 {
+  "0.7.8": {
+    "notes": [
+      "Improved",
+      "The undo action after deletion now appears as an icon beside Trash.",
+      "Fixed",
+      "Imported EPUBs now display their chapters and content correctly."
+    ]
+  },
   "0.7.7": {
     "notes": [
       "Improved",
