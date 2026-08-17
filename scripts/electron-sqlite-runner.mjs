@@ -2,6 +2,7 @@
 /* global console, process */
 
 import { spawnSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
@@ -11,6 +12,15 @@ export function resolveElectronBinary(repoRoot = process.cwd(), platform = proce
   }
   const executable = platform === 'win32' ? 'electron.exe' : 'electron';
   return path.join(repoRoot, 'node_modules', 'electron', 'dist', executable);
+}
+
+export function resolveAvailableElectronBinary(repoRoot = process.cwd(), loadElectron) {
+  const resolveElectron = loadElectron ?? createRequire(path.join(repoRoot, 'package.json'));
+  const electronPath = resolveElectron('electron');
+  if (typeof electronPath !== 'string' || electronPath.length === 0) {
+    throw new Error('Electron package did not resolve an executable path.');
+  }
+  return electronPath;
 }
 
 export function resolveElectronSqliteTempRoot(repoRoot = process.cwd()) {
@@ -109,7 +119,10 @@ function assertElectronAbi(electronPath, repoRoot) {
     if (result.status === 0) {
       return;
     }
-    const detail = `${result.stdout ?? ''}${result.stderr ?? ''}`.trim();
+    const detail = [result.error?.message, result.signal, result.stdout, result.stderr]
+      .filter(Boolean)
+      .join('\n')
+      .trim();
     throw new Error([
       'better-sqlite3 is not loadable in the Electron ABI.',
       'Run `npm run electron:rebuild:native` before using real sqlite scripts.',
@@ -127,7 +140,7 @@ function main() {
   const [scriptPath, ...scriptArgs] = dryRun ? rawArgs.slice(1) : rawArgs;
   const repoRoot = process.cwd();
   if (preflightOnly) {
-    assertElectronAbi(resolveElectronBinary(repoRoot), repoRoot);
+    assertElectronAbi(resolveAvailableElectronBinary(repoRoot), repoRoot);
     process.stdout.write('better-sqlite3 loaded in Electron ABI\n');
     return;
   }
@@ -142,7 +155,7 @@ function main() {
     process.stdout.write(`${JSON.stringify(invocation, null, 2)}\n`);
     return;
   }
-  const electronPath = invocation.electronPath;
+  const electronPath = resolveAvailableElectronBinary(repoRoot);
   assertElectronAbi(electronPath, repoRoot);
   const result = runElectronNode(electronPath, invocation.args, repoRoot);
   if (result.error) {

@@ -11,6 +11,7 @@ import {
   buildElectronNodeEnv,
   buildElectronNodeSpawnOptions,
   buildRunnerInvocation,
+  resolveAvailableElectronBinary,
   resolveElectronBinary,
   resolveElectronSqliteTempRoot
 } from './electron-sqlite-runner.mjs';
@@ -23,6 +24,15 @@ describe('electron sqlite runner', () => {
       : [process.platform === 'win32' ? 'electron.exe' : 'electron'];
 
     expect(binary).toBe(path.join('D:/C/foliole', 'node_modules', 'electron', 'dist', ...expectedTail));
+  });
+
+  it('uses the Electron package entry to provision the executable before real runs', () => {
+    const loadElectron = (specifier) => {
+      expect(specifier).toBe('electron');
+      return '/prepared/electron';
+    };
+
+    expect(resolveAvailableElectronBinary('D:/C/foliole', loadElectron)).toBe('/prepared/electron');
   });
 
   it('runs TypeScript scripts through Electron-as-Node with strip-types enabled', () => {
