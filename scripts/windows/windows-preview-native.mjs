@@ -6,11 +6,11 @@ import { fileURLToPath } from 'node:url';
 
 import { TARGET_PATHS } from '../preview/preview-dedupe-targets.mjs';
 import { inspectElectronDistFreshness } from './check-electron-dist-fresh.mjs';
+import { ensureWindowsNativeDependencies } from './windows-native-dependencies.mjs';
 import { writeRendererReloadIntent } from './write-renderer-reload-intent.mjs';
 import { writeRestartIntent } from './write-restart-intent.mjs';
 import { ensureElectronNativeAbi } from './windows-native-abi-repair.mjs';
 import {
-  createNpmCommand,
   npmRunCommand,
   resolveChangedFiles,
   resolveCommittedFilesSince,
@@ -37,17 +37,6 @@ async function ensureFreshElectronDist() {
   }
   const compile = npmRunCommand('electron:compile');
   await runChecked(compile.command, compile.args, 'compile stale electron runtime output', repoRoot);
-}
-
-async function verifyNodeModules() {
-  const args = ['ls', '--depth=0', '--json', '--silent'];
-  const command = createNpmCommand(args);
-  const result = await runCapture(command.command, command.args, { cwd: repoRoot });
-  if (result.code !== 0) {
-    const detail = `${result.stdout}${result.stderr}`.split(/\r?\n/u).slice(-80).join('\n');
-    throw new Error(`node_modules check failed${detail ? `\n${detail}` : ''}`);
-  }
-  console.log('[windows-preview-native] node_modules check passed');
 }
 
 async function verifyNativeAbi() {
@@ -202,7 +191,7 @@ async function main() {
   console.log('[windows-preview-native] step 1/4: verify electron runtime output freshness');
   await ensureFreshElectronDist();
   console.log('[windows-preview-native] step 2/4: verify Windows-native dependencies');
-  await verifyNodeModules();
+  await ensureWindowsNativeDependencies({ repoRoot });
   await verifyNativeAbi();
   console.log('[windows-preview-native] step 3/4: select update action');
   const [currentHead, changedFiles, statusResult] = await Promise.all([
