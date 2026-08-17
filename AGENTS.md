@@ -57,7 +57,7 @@
 
 ## Windows Command Boundary
 
-- Windows 开发以当前 Mac 工作区的 `dev` 为唯一源码真相：Mac controller 将它精确覆盖到只作传输镜像的 LAN Git `dev`，再精确覆盖固定 Windows `dev` 仓库；Windows 源码漂移不构成独立工作现场，由固定 controller 丢弃后跟随权威镜像。LAN Git 与 Windows 不向 Mac 提供或合并源码，不解析、传递、保存、回传或比对 SHA，Git 失败直接报告。
+- Windows 开发以当前 Mac 工作区的 `dev` 为唯一源码真相：Mac controller 将它精确覆盖到只作传输镜像的 LAN Git `dev`，再精确覆盖固定 Windows `dev` 仓库；Windows 源码漂移不构成独立工作现场，由固定 controller 丢弃后跟随权威镜像。LAN Git 与 Windows 不向 Mac 提供或合并源码，也不决定候选；Mac 验收控制面可以消费 Windows trusted runtime 已报告的 revision，使 macOS 安装与 Windows 已验收版本对齐。Git 失败直接报告。
 - Windows 固定仓库服务 Windows 桌面、Windows 专属 A5 联动与最终跨宿主验收；Android 日常开发、固定 A5 调试和 Mac desktop DEV library 同步留在 Mac 当前工作区。Windows 不提交或推送源码上游，不建立 candidate、scratch 或第二份源码现场，也不 stash、合并或修复 Windows 源码；ignored runtime、library 与工具缓存不属于源码覆盖范围。
 - 普通 Windows 终端诊断走局域网 SSH；Windows 侧 A5 设备动作只允许由 `scripts/windows/windows-dev-control.mjs` 的固定动作触发同一 Windows `dev` 仓库内的 adapter。Mac 日常 A5 调试按 `android/AGENTS.md` 使用固定本地入口；不得建立其他设备控制面。
 - Windows 原生命令默认用已存在的 `npm` / `node` / 项目脚本入口执行；不得把多步验证长期写成内联 PowerShell / cmd 片段。
