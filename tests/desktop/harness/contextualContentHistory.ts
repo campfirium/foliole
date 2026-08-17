@@ -64,6 +64,15 @@ export async function openNode(page: Page, nodeId: string) {
   )).toBe(nodeId);
 }
 
+export async function openPdfNode(page: Page, nodeId: string) {
+  const pageInput = page.getByRole('textbox', { name: /PDF page|PDF 页码/ });
+  await expect(async () => {
+    await openNode(page, nodeId);
+    await expect(pageInput).toBeVisible({ timeout: 1_000 });
+  }).toPass({ timeout: 30_000 });
+  return pageInput;
+}
+
 export async function insertEditorText(page: Page, text: string) {
   const position = await page.evaluate(() => window.__folioleDebug?.getEditorContent?.('prompt-editor')?.length ?? -1);
   await expect.poll(() => page.evaluate(

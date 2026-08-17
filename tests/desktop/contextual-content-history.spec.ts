@@ -14,6 +14,7 @@ import {
   importPdfThroughRuntime,
   insertEditorText,
   openNode,
+  openPdfNode,
   PDF_HIGHLIGHT_TEXT,
   redoShortcut,
   seedContextualHistoryWorkspace,
@@ -127,8 +128,7 @@ test('routes immediate text and annotation history by topic without workspace fa
 test('undoes and redoes a PDF highlight through the current content owner', async ({ desktopApp, desktopWindow }) => {
   await expectWorkspaceShell(desktopWindow);
   const pdfNodeId = await importPdfThroughRuntime(desktopApp, desktopWindow);
-  await openNode(desktopWindow, pdfNodeId);
-  const pageInput = desktopWindow.getByRole('textbox', { name: /PDF page|PDF 页码/ });
+  const pageInput = await openPdfNode(desktopWindow, pdfNodeId);
   await pageInput.fill('3');
   await pageInput.press('Enter');
   await expect(desktopWindow.getByRole('region', { name: /PDF reader panel|PDF 阅读器面板/ }))
