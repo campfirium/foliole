@@ -25,7 +25,7 @@ import { closeDatabaseConnection, openDatabaseConnection } from '../database/con
 import { initializeDatabase } from '../database/migrate.js';
 
 import { reimportCurrentTopicSource } from './currentSourceReimport.js';
-import { loadImportManagerSettings, saveImportManagerSettings } from './importManagerSettings.js';
+import { saveImportManagerSettings } from './importManagerSettings.js';
 import { runKeepImportRule } from './keepImportService.js';
 
 let tempRoot = '';
@@ -42,11 +42,7 @@ afterEach(async () => {
 });
 
 function saveReadwiseKeepSettings(primaryDir: string, highlightDir: string) {
-  const current = loadImportManagerSettings();
   saveImportManagerSettings({
-    ...current,
-    readwiseActiveDeviceName: current.readwiseCurrentDeviceName,
-    readwiseActiveInstallationId: current.readwiseCurrentInstallationId,
     readwiseReaderConfig: {
       enabled: true,
       highlightsHeading: '## Highlights',
@@ -55,7 +51,6 @@ function saveReadwiseKeepSettings(primaryDir: string, highlightDir: string) {
       withHighlightsDestination: 'inbox',
       withoutHighlightsDestination: 'off'
     },
-    readwiseRootPath: path.dirname(path.dirname(primaryDir)),
     readwiseSources: [
       {
         highlightMode: 'split',

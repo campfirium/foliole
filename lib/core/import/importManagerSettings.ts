@@ -1,14 +1,9 @@
 import type { ImportNodeTitleStrategy } from './importedNodeTitle.js';
 import { normalizeImportSourceAction, type ImportSourceAction } from './importSourceActions.js';
-import { normalizeImportSourceOwnership, type ImportSourceOwnership } from './importSourceOwnership.js';
 import {
   normalizeKeepImportPreview,
   type KeepImportPreviewSummary
 } from './keepImportPreviewSettings.js';
-import {
-  createDefaultReadwiseDeviceRuntimeState,
-  type ReadwiseDeviceRuntimeState
-} from './readwiseDeviceSelection.js';
 import {
   createDefaultReadwiseReaderConfig,
   normalizeReadwiseReaderConfig,
@@ -29,10 +24,9 @@ export interface ImportManagerSourceDraft {
   keepPreview: KeepImportPreviewSummary | null;
   keepState: KeepImportRuleState;
   primaryPath: string;
-  ownership?: ImportSourceOwnership;
 }
 
-export interface ImportManagerSettings extends ReadwiseDeviceRuntimeState {
+export interface ImportManagerSettings {
   detailsOpen: boolean;
   readwiseReaderConfig: ReadwiseReaderConfig;
   readwiseRootPath: string;
@@ -113,7 +107,6 @@ function normalizeSource(
   const highlightMode = normalizeHighlightMode(payload.highlightMode, fallback.highlightMode);
   const actionMode = normalizeImportSourceAction(payload.actionMode, fallback.actionMode);
 
-  const ownership = normalizeImportSourceOwnership(payload.ownership);
   return {
     actionMode,
     archivePath: actionMode === 'keep' ? '' : normalizeString(payload.archivePath, fallback.archivePath),
@@ -123,8 +116,7 @@ function normalizeSource(
     ...(kind === undefined ? {} : { kind }),
     keepPreview: normalizeKeepImportPreview(payload.keepPreview),
     keepState: normalizeKeepImportRuleState(payload.keepState, fallback.keepState),
-    primaryPath: normalizeString(payload.primaryPath, fallback.primaryPath),
-    ...(ownership ? { ownership } : {})
+    primaryPath: normalizeString(payload.primaryPath, fallback.primaryPath)
   };
 }
 
@@ -185,7 +177,6 @@ export function applyReadwiseRootPath(sources: ImportManagerSourceDraft[], rootP
 export function createDefaultImportManagerSettings(): ImportManagerSettings {
   return {
     detailsOpen: true,
-    ...createDefaultReadwiseDeviceRuntimeState(),
     readwiseReaderConfig: createDefaultReadwiseReaderConfig(),
     readwiseRootPath: '',
     readwiseSources: createReadwiseImportSources(),
@@ -225,11 +216,6 @@ export function normalizeImportManagerSettings(value: unknown): ImportManagerSet
 
   return {
     detailsOpen: typeof value.detailsOpen === 'boolean' ? value.detailsOpen : defaults.detailsOpen,
-    readwiseActiveDeviceName: normalizeString(value.readwiseActiveDeviceName) || null,
-    readwiseActiveInstallationId: normalizeString(value.readwiseActiveInstallationId) || null,
-    readwiseCurrentDeviceName: normalizeString(value.readwiseCurrentDeviceName) || null,
-    readwiseCurrentInstallationId: normalizeString(value.readwiseCurrentInstallationId) || null,
-    readwiseSettingsConfirmed: value.readwiseSettingsConfirmed === true,
     readwiseReaderConfig: normalizeReadwiseReaderConfig(value.readwiseReaderConfig, { enabledFallback: legacyReadwiseImportEnabled }),
     readwiseRootPath,
     readwiseSources: defaultReadwiseSources.map((source) =>
@@ -242,7 +228,15 @@ export function normalizeImportManagerSettings(value: unknown): ImportManagerSet
   };
 }
 
-export { createNextImportSourceIndex } from './importSourceIndex.js';
+export function createNextImportSourceIndex(sources: ImportManagerSourceDraft[], fallback = 101) {
+  return sources.reduce((maxIndex, source) => {
+    const match = source.id.match(/(\d+)$/);
+    if (!match) {
+      return maxIndex;
+    }
+    return Math.max(maxIndex, Number(match[1]));
+  }, fallback - 1) + 1;
+}
 export function formatReadwiseSourceLabel(kind: ReadwiseSourceKind) {
   return READWISE_FOLDER_NAMES[kind];
 }

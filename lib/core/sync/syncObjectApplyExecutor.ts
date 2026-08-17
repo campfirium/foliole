@@ -16,12 +16,8 @@ const STATE_OBJECT_TYPES = new Set<NativeSyncObjectRecord['object_type']>([
   'node_reading',
   'node_review',
   'pdf_page_text',
-  'readwise_authority',
-  'readwise_binding',
-  'readwise_policy',
   'setting',
-  'view_state',
-  'watched_folder'
+  'view_state'
 ]);
 
 interface ExistingSyncObjectState extends DbRow {
@@ -110,7 +106,6 @@ async function applySingleSyncObjectInTransaction(
   record: SyncPackSyncObjectRecord,
   options: ApplySyncObjectsWithDbPortOptions
 ) {
-  record = retireReadwiseObject(record);
   const status = await getSyncObjectApplyStatus(port, record);
   if (status === 'already_applied') {
     return options.includeAlreadyApplied ? `${record.object_type}:${record.object_id}` : null;
@@ -125,11 +120,6 @@ async function applySingleSyncObjectInTransaction(
   await options.onPayloadAppliedInTransaction?.(port, record);
   await upsertAppliedSyncObjectState(port, record);
   return `${record.object_type}:${record.object_id}`;
-}
-
-function retireReadwiseObject(record: SyncPackSyncObjectRecord): SyncPackSyncObjectRecord {
-  if (!['readwise_authority', 'readwise_binding', 'readwise_policy'].includes(record.object_type)) return record;
-  return { ...record, deleted_at: record.deleted_at ?? record.updated_at, payload_json: null };
 }
 
 async function upsertAppliedSyncObjectState(port: DbPort, record: SyncPackSyncObjectRecord) {

@@ -79,7 +79,7 @@
       "content_blobs",
       "review_log"
     ],
-    "maximumSchemaVersion": 69,
+    "maximumSchemaVersion": 66,
     "minimumSchemaVersion": 46,
     "sqliteTableRequirements": {
       "pack_manifest": [
@@ -491,18 +491,6 @@
         "userVisible": true
       },
       {
-        "category": "settings",
-        "conflict": "review_merge",
-        "deviceScope": "workspace",
-        "key": "watched_folder",
-        "objectType": "watched_folder",
-        "pushIssue": "review_required",
-        "storage": [
-          "watched_folder_bindings"
-        ],
-        "userVisible": true
-      },
-      {
         "category": "resource",
         "conflict": "lww",
         "deviceScope": "workspace",
@@ -707,8 +695,7 @@
       "node_review",
       "node_text_alternative",
       "pdf_page_text",
-      "setting",
-      "watched_folder"
+      "setting"
     ]
   }
 }

@@ -228,9 +228,5 @@ const SYNC_PACK_SURFACE_OBJECT_TYPES = [
   'node_text_alternative',
   'attachment',
   'pdf_page_text',
-  'readwise_authority',
-  'readwise_binding',
-  'readwise_policy',
-  'view_state',
-  'watched_folder'
+  'view_state'
 ] as const;

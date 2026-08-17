@@ -18,7 +18,6 @@ it('shows watched folders directly in settings', () => {
       onChooseHighlightFolder={() => undefined}
       onChoosePrimaryFolder={() => undefined}
       onCopySource={() => undefined}
-      onClaimSource={() => undefined}
       onDeleteSource={() => undefined}
       onDisableKeepImport={() => undefined}
       onPreviewKeepImport={() => undefined}

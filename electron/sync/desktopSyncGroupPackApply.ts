@@ -6,7 +6,6 @@ import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection } from '../database/connection.js';
-import { recordObservedSyncGroupFeatures } from '../database/syncGroupMemberFeatures.js';
 
 import type { createDesktopSyncGroupSignedHeaders } from './desktopSyncGroupHttp.js';
 import { readDesktopWorkgroupResponse } from './desktopSyncGroupHttp.js';
@@ -19,7 +18,6 @@ type Peer = {
   group_id: string;
   local_device_id: string;
   peer_device_id: string;
-  peer_device_kind?: string;
 };
 
 type ApplyResult = Awaited<ReturnType<typeof applySyncPackNodeSurfaceWithDbPort>>;
@@ -71,8 +69,6 @@ async function applyDownloadedPack(
     body, expectedPeerId: args.peer.local_device_id,
     expectedSourcePeerId: args.peer.peer_device_id, outputPath: incomingPath
   });
-  const driver = openDatabaseConnection().driver;
-  recordObservedSyncGroupFeatures(driver, args.peer.peer_device_id, manifest.advertisedFeatures);
   if (manifest.toStateSeq < args.after) throw new Error('sync_pack_provider_frontier_rollback');
   const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'desktop-sync-group-pack-apply' });
   await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);

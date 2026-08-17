@@ -49,7 +49,6 @@ export function SettingsImportManagementContent(props: {
   onChoosePrimaryFolder: (sourceId: string) => void;
   onDisableKeepImport: (sourceId: string) => void;
   onCopySource: (sourceId: string) => void;
-  onClaimSource: (sourceId: string) => void;
   onDeleteSource: (sourceId: string) => void;
   onPreviewKeepImport: (sourceId: string) => void;
   sources: DraftImportSource[];
@@ -73,7 +72,6 @@ export function SettingsImportManagementContent(props: {
             onChangeAction={props.onChangeAction}
             onChooseHighlightFolder={props.onChooseHighlightFolder}
             onChoosePrimaryFolder={props.onChoosePrimaryFolder}
-            onClaimSource={props.onClaimSource}
             onDisableKeepImport={props.onDisableKeepImport}
             onDeleteSource={props.onDeleteSource}
             onPreviewKeepImport={props.onPreviewKeepImport}

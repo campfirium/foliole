@@ -14,7 +14,6 @@ import {
 } from '../import/incomingUpdateActions.js';
 import { notifyManagedInboxUpdated } from '../import/managedInboxEvents.js';
 import { loadNodeSourceUpdatePreview } from '../import/nodeSourceUpdatePreview.js';
-import { assertReadwiseExecutionEnabled } from '../import/readwiseDeviceSettings.js';
 import { mergeReadwiseTopicHighlights } from '../import/readwiseTopicMerge.js';
 import { restoreRemovedSource } from '../import/removedSourceRestore.js';
 
@@ -115,7 +114,6 @@ async function handleImportMutationCommand(
   window: Parameters<typeof handleStorageAttachmentCommand>[2]
 ) {
   if (command === NATIVE_COMMANDS.mergeReadwiseTopicHighlights) {
-    assertReadwiseExecutionEnabled();
     const result = await mergeReadwiseTopicHighlights(asString(args.node_id, 'node_id'), window);
     if (result.status === 'merged') {
       notifyWorkspaceContentChanged();

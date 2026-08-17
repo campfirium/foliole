@@ -17,8 +17,6 @@ export const SYNC_DELIVERY_TRIGGER_STATEMENTS = [
      FROM sync_group_members member
      JOIN sync_group_local_state local ON local.group_id = member.group_id AND local.singleton_id = 1
      WHERE member.state = 'active' AND member.device_id <> local.local_device_id
-       AND (NEW.object_type <> 'watched_folder' OR member.device_kind NOT IN
-         ('android', 'android-capacitor', 'ios', 'ios-capacitor'))
        AND NEW.updated_at >= member.joined_at;
    END`,
   `CREATE TRIGGER IF NOT EXISTS trg_sync_delivery_state_update
@@ -39,8 +37,6 @@ export const SYNC_DELIVERY_TRIGGER_STATEMENTS = [
      FROM sync_group_members member
      JOIN sync_group_local_state local ON local.group_id = member.group_id AND local.singleton_id = 1
      WHERE member.state = 'active' AND member.device_id <> local.local_device_id
-       AND (NEW.object_type <> 'watched_folder' OR member.device_kind NOT IN
-         ('android', 'android-capacitor', 'ios', 'ios-capacitor'))
        AND NEW.updated_at >= member.joined_at;
    END`,
   `CREATE TRIGGER IF NOT EXISTS trg_sync_delivery_member_leave

@@ -21,7 +21,6 @@ import {
   assertDesktopSyncGroupResourcesComplete,
   downloadDesktopSyncGroupResources
 } from './desktopSyncGroupResources.js';
-import { postDesktopSyncPackAck } from './desktopSyncPackAck.js';
 import { saveDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
 const JOIN_APPROVAL_POLL_MS = 1_500;
@@ -124,7 +123,6 @@ async function continuePeerSync(target: ReturnType<typeof savePairedSyncGroupPee
   const cursor = loadReceiveCursor(target.peer_device_id);
   const nextCursor = await runPeerSyncStage('sync_pack', () => downloadAndApply(target, cursor));
   saveReceiveCursor(target.peer_device_id, nextCursor);
-  await runPeerSyncStage('sync_pack', () => postDesktopSyncPackAck({ appliedStateSeq: nextCursor, peer: target }));
   await reportDesktopSyncGroupCursorCommitted({
     cursor: nextCursor, peerDeviceId: target.peer_device_id
   });

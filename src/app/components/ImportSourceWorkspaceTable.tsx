@@ -28,30 +28,8 @@ function TableHeader() {
   );
 }
 
-function SourceGroupHeader({ source }: { source: DraftImportSource }) {
-  const t = useTranslation();
-  const label = source.ownership?.ownerDeviceName ??
-    (source.ownership?.ownerInstallationId === null
-      ? t('desktop.importSource.unassignedGroup')
-      : t('desktop.importSource.thisDevice'));
-  return <div className="border-t border-settings-border px-3 py-1.5 text-xs font-medium text-settings-muted" role="row">
-    {label}
-  </div>;
-}
-
-function sourceGroupKey(source: DraftImportSource) {
-  return source.ownership?.ownerInstallationId ??
-    (source.ownership ? 'unassigned' : 'local-draft');
-}
-
 function renderSourceRows(sources: DraftImportSource[], actions: ImportSourceTableRowActions) {
-  let previousGroup = '';
-  return sources.flatMap((source) => {
-    const group = sourceGroupKey(source);
-    const header = group === previousGroup ? [] : [<SourceGroupHeader key={`group-${group}`} source={source} />];
-    previousGroup = group;
-    return [...header, <SourceRow key={source.id} source={source} {...actions} />];
-  });
+  return sources.map((source) => <SourceRow key={source.id} source={source} {...actions} />);
 }
 
 function ImportSourceVirtualRows({
@@ -66,16 +44,10 @@ function ImportSourceVirtualRows({
   return (
     <div className="app-scrollbar max-h-96 overflow-y-auto" ref={scrollContainerRef}>
       <VirtualListSurface
-        estimateSize={(index) => IMPORT_SOURCE_ROW_VIRTUAL_SIZE +
-          (index === 0 || sourceGroupKey(sources[index]!) !== sourceGroupKey(sources[index - 1]!) ? 28 : 0)}
+        estimateSize={() => IMPORT_SOURCE_ROW_VIRTUAL_SIZE}
         getItemKey={(source) => source.id}
         items={sources}
-        renderItem={(source, meta) => <>
-          {meta.index === 0 || sourceGroupKey(source) !== sourceGroupKey(sources[meta.index - 1]!)
-            ? <SourceGroupHeader source={source} />
-            : null}
-          <SourceRow source={source} {...actions} />
-        </>}
+        renderItem={(source) => <SourceRow source={source} {...actions} />}
         scrollElementRef={scrollContainerRef}
       />
     </div>
@@ -100,7 +72,6 @@ export function ImportSourceTable({
   sources,
   onAddSource,
   onChange,
-  onClaimSource,
   onChoosePrimaryFolder,
   onChooseHighlightFolder,
   onChangeAction,
@@ -111,7 +82,6 @@ export function ImportSourceTable({
   sources: DraftImportSource[];
   onAddSource: () => void;
   onChange: (sourceId: string, field: DraftImportSourceField, value: string) => void;
-  onClaimSource: (sourceId: string) => void;
   onChoosePrimaryFolder: (sourceId: string) => void;
   onChooseHighlightFolder: (sourceId: string) => void;
   onChangeAction: (sourceId: string, value: string) => void;
@@ -122,7 +92,6 @@ export function ImportSourceTable({
   const t = useTranslation();
   const actions = {
     onChange,
-    onClaimSource,
     onChangeAction,
     onChooseHighlightFolder,
     onChoosePrimaryFolder,

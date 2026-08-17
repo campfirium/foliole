@@ -12,7 +12,6 @@ import { resetReadwiseBookImportFromInventory } from './readwiseBookImportReset.
 import { refreshReadwiseBookPlaceholderNode } from './readwiseBookPlaceholderRefresh.js';
 import { loadReadwiseBooksInventoryForPaths } from './readwiseBooksInventoryLoad.js';
 import { findPersistedReadwiseBookByNodeId } from './readwiseBooksInventoryState.js';
-import { assertReadwiseExecutionEnabled } from './readwiseDeviceSettings.js';
 import type { EnabledReadwiseBooksSource } from './readwiseReaderBooksRun.js';
 
 function isActiveReadwiseBooksSource(source: unknown): source is EnabledReadwiseBooksSource {
@@ -32,7 +31,6 @@ async function reimportReadwiseBookSource(nodeId: string, reimportedAt: string) 
   if (!target) {
     return null;
   }
-  assertReadwiseExecutionEnabled();
   const settings = loadImportManagerSettings();
   const source = settings.readwiseSources.find((candidate): candidate is EnabledReadwiseBooksSource => (
     isActiveReadwiseBooksSource(candidate) &&
@@ -100,7 +98,6 @@ async function reimportKeepImportTopicSource(nodeId: string, reimportedAt: strin
       status: 'failed'
     };
   }
-  if (config.sourceType === 'readwise') assertReadwiseExecutionEnabled();
   try {
     const source = await buildKeepImportSourceDescriptor(config, item.source_path);
     const sourceSignature = await resolveKeepImportSourceSignature(config, source);

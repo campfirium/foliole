@@ -7,8 +7,6 @@ import {
 } from './syncObjectLearningPayloadExecutor.js';
 import { applyNodeOpenStateObject } from './syncObjectOpenStatePayloadExecutor.js';
 import { asObject, integer, numberOrNull, text } from './syncObjectPayloadValues.js';
-import { applySettingObject } from './syncObjectSettingPayloadExecutor.js';
-import { applyWatchedFolderObject } from './syncObjectWatchedFolderPayloadExecutor.js';
 import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
 
 export async function applySyncObjectPayloadWithDbPort(
@@ -35,16 +33,10 @@ export async function applySyncObjectPayloadWithDbPort(
       return applyNodeTextAlternativeObject(port, record);
     case 'pdf_page_text':
       return applyPdfPageTextObject(port, record);
-    case 'readwise_authority':
-    case 'readwise_binding':
-    case 'readwise_policy':
-      return true;
     case 'setting':
       return applySettingObject(port, record);
     case 'view_state':
       return applyViewStateObject(port, record, options);
-    case 'watched_folder':
-      return applyWatchedFolderObject(port, record);
     default:
       throw new Error(`Unsupported sync object type: ${String(record.object_type)}`);
   }
@@ -95,6 +87,28 @@ async function applyExternalDocumentObject(port: DbPort, record: SyncPackSyncObj
       text(payload.opening_text), text(payload.body_blob_hash), text(payload.content) ?? '',
       text(payload.indexed_at) ?? record.updated_at, integer(payload.is_present) === 0 ? 0 : 1, text(payload.missing_at),
       text(payload.created_at) ?? record.updated_at, record.updated_at]
+  );
+}
+
+async function applySettingObject(port: DbPort, record: SyncPackSyncObjectRecord) {
+  const parts = record.object_id.split(':', 5);
+  if (record.deleted_at) {
+    await port.run(
+      `DELETE FROM setting_records WHERE scope = ? AND platform = ? AND form_factor = ? AND device_id = ? AND key = ?`,
+      [parts[0] ?? 'device', parts[1] ?? '*', parts[2] ?? '*', parts[3] ?? '*', parts[4] ?? record.object_id]
+    );
+    return;
+  }
+  const payload = asObject(record);
+  await port.run(
+    `INSERT INTO setting_records (scope, platform, form_factor, device_id, key, value_json, content_hash, updated_at, deleted_at) ` +
+    `VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ` +
+    `ON CONFLICT(key, scope, platform, form_factor, device_id) DO UPDATE SET ` +
+    `value_json = excluded.value_json, content_hash = excluded.content_hash, updated_at = excluded.updated_at, deleted_at = excluded.deleted_at`,
+    [text(payload.scope) ?? parts[0] ?? 'device', text(payload.platform) ?? parts[1] ?? '*',
+      text(payload.form_factor) ?? parts[2] ?? '*', text(payload.device_id) ?? parts[3] ?? '*',
+      text(payload.key) ?? parts[4] ?? record.object_id, text(payload.value_json) ?? 'null',
+      record.content_hash, record.updated_at, null]
   );
 }
 

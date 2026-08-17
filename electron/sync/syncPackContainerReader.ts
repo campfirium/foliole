@@ -3,7 +3,6 @@ import { promises as fs } from 'node:fs';
 import { inflateSync } from 'node:zlib';
 
 import { SYNC_PACK_DATABASE_ENTRY, SYNC_PACK_FORMAT, SYNC_PACK_FORMAT_VERSION } from '../../lib/core/sync/syncPackEnvelopeContract.js';
-import { normalizeSyncAdvertisedFeatures } from '../../lib/platform/syncAdvertisedFeatures.js';
 
 export async function extractSyncPackDatabase(args: {
   body: Buffer;
@@ -25,7 +24,6 @@ export async function extractSyncPackDatabase(args: {
   if (sha(database) !== manifest.database_uncompressed_sha256) throw new Error('invalid_sync_pack_database_checksum');
   await fs.writeFile(args.outputPath, database);
   return {
-    advertisedFeatures: normalizeSyncAdvertisedFeatures(manifest.advertised_features),
     fromStateSeq: Number(manifest.from_state_seq),
     toStateSeq: Number(manifest.to_state_seq)
   };

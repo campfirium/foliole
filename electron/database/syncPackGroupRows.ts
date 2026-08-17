@@ -9,7 +9,6 @@ export interface SyncPackGroupRow extends DatabaseRow {
 }
 
 export interface SyncPackGroupMemberRow extends DatabaseRow {
-  advertised_features_json: string | null;
   approved_by_device_id: string;
   authorization_id: string;
   device_id: string;
@@ -40,7 +39,7 @@ export function loadSyncPackGroupRows(driver: DatabaseDriver) {
   const groupId = groups[0]?.group_id;
   const members = groups.length === 0 ? [] : driver.queryAll<SyncPackGroupMemberRow>(
     `SELECT group_id, device_id, device_kind, device_name, state, approved_by_device_id,
-            authorization_id, joined_at, left_at, advertised_features_json, updated_at
+            authorization_id, joined_at, left_at, updated_at
      FROM sync_group_members
      WHERE group_id = ? AND state IN ('active', 'left') ORDER BY joined_at, device_id`,
     [groupId!]

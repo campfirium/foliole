@@ -22,7 +22,6 @@ export const PACK_SCHEMA = [
     authorization_id TEXT NOT NULL,
     joined_at TEXT NOT NULL,
     left_at TEXT,
-    advertised_features_json TEXT,
     updated_at TEXT NOT NULL,
     PRIMARY KEY (group_id, device_id),
     UNIQUE (authorization_id)

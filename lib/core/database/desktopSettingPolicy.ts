@@ -8,7 +8,6 @@ const USER_SPACE_KEYS = new Set([
   'backup_settings',
   'import_manager_settings',
   'library_path_settings',
-  'readwise_active_installation',
   'review_scheduler_settings'
 ]);
 const SESSION_RESUME_KEYS = new Set(['readwise_book_epub_picker_state', 'window_state']);
@@ -19,12 +18,7 @@ const LOCAL_ONLY_KEYS = new Set([
   'readwise_books_inventory_state',
   'watch_import_cursor_state'
 ]);
-const DEVICE_KEYS = new Set([
-  'discourse_publish_settings',
-  'foliole_publish_settings',
-  'readwise_device_settings',
-  'wordpress_publish_settings'
-]);
+const DEVICE_KEYS = new Set(['discourse_publish_settings', 'foliole_publish_settings', 'wordpress_publish_settings']);
 
 export const DESKTOP_DECLARED_SETTING_KEYS = [
   ...USER_SPACE_KEYS,

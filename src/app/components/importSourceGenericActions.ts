@@ -2,7 +2,7 @@ import type { ImportManagerSettings } from '../../../lib/core/import/importManag
 
 import {
   cloneDraftImportSource,
-  materializeWatchedSourceId,
+  createNextImportSourceIndex,
   type DraftImportSource,
   type DraftImportSourceField,
   updateDraftImportSource
@@ -26,11 +26,7 @@ export function createGenericSourceActions(
     setSettings((current) => ({
       ...current,
       sources: replaceSource(current.sources, sourceId, (source) =>
-        updateDraftImportSource(
-          field === 'primaryPath' || field === 'highlightPath' ? materializeWatchedSourceId(source) : source,
-          field,
-          value
-        )
+        updateDraftImportSource(source, field, value)
       )
     }));
   };
@@ -55,7 +51,7 @@ export function createGenericSourceActions(
           ...current,
           sources: [
             ...current.sources,
-            cloneDraftImportSource(source)
+            cloneDraftImportSource(source, createNextImportSourceIndex(current.sources))
           ]
         };
       });

@@ -22,26 +22,76 @@ import { closeDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 
 import { loadImportManagerSettings, saveImportManagerSettings } from './importManagerSettings.js';
-import { createImportManagerSettingsTestInput } from './importManagerSettings.testSupport.js';
 
 let tempRoot = '';
-const testSourceRoot = path.resolve('.tmp/artifacts/import-manager-settings-test-folders');
-const IMPORT_MANAGER_SETTINGS_INPUT = createImportManagerSettingsTestInput(testSourceRoot);
 
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-import-manager-settings-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
-  await Promise.all(['source-a', 'source-b', 'highlight-a'].map((name) =>
-    fs.mkdir(path.join(testSourceRoot, name), { recursive: true })
-  ));
   initializeDatabase();
 });
 
 afterEach(async () => {
   closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true });
-  await fs.rm(testSourceRoot, { recursive: true, force: true });
 });
+
+const IMPORT_MANAGER_SETTINGS_INPUT = {
+  detailsOpen: false,
+  readwiseReaderConfig: {
+    highlightsHeading: '## Highlights',
+    highlightSeparator: '\\n\\n',
+    importScope: 'highlights_only',
+    newHighlightsHeading: '## New highlights added',
+    noteKeyword: 'Note:',
+    tagKeyword: 'Tags:',
+    validatedAt: '2026-03-25T00:02:00.000Z'
+  },
+  readwiseRootPath: '/tmp/readwise-root',
+  readwiseSources: [
+    {
+      id: 'draft-import-source-1',
+      kind: 'articles',
+      primaryPath: '/tmp/readwise-root/Full Document Contents/Articles',
+      highlightPath: '/tmp/readwise-root/Articles',
+      highlightMode: 'split',
+      keepPreview: {
+        blockedCount: 0,
+        discoveredCount: 2,
+        failedCount: 0,
+        newCount: 1,
+        previewedAt: '2026-03-25T00:03:00.000Z',
+        samples: [{ detail: 'New file will be imported when enabled.', sourcePath: 'one.md', status: 'new' }],
+        unchangedCount: 1,
+        updatedCount: 0
+      },
+      keepState: 'previewed'
+    }
+  ],
+  titleStrategy: 'heading',
+  sources: [
+    {
+      actionMode: 'keep',
+      archivePath: '',
+      id: 'draft-import-source-101',
+      primaryPath: '/tmp/source-a',
+      highlightPath: '/tmp/highlight-a',
+      highlightMode: 'split',
+      keepPreview: null,
+      keepState: 'draft'
+    },
+    {
+      actionMode: 'delete',
+      archivePath: '',
+      id: 'draft-import-source-105',
+      primaryPath: '/tmp/source-b',
+      highlightPath: '',
+      highlightMode: 'merged',
+      keepPreview: null,
+      keepState: 'enabled'
+    }
+  ]
+};
 
 function expectNormalizedSavedSettings() {
   const saved = saveImportManagerSettings(IMPORT_MANAGER_SETTINGS_INPUT);
@@ -93,12 +143,6 @@ function expectNormalizedSavedSettings() {
     ]
   });
   expect(saved.updatedAt).toMatch(/T/);
-  saveImportManagerSettings({
-    ...saved,
-    sources: saved.sources.map((source) => source.id === 'draft-import-source-105'
-      ? { ...source, keepState: 'enabled' }
-      : source)
-  });
 }
 
 function expectReloadedSettingsAfterRestart() {
@@ -141,7 +185,7 @@ function expectReloadedSettingsAfterRestart() {
         actionMode: 'keep',
         archivePath: '',
         id: 'draft-import-source-101',
-        primaryPath: path.join(testSourceRoot, 'source-a')
+        primaryPath: '/tmp/source-a'
       },
       {
         actionMode: 'delete',
@@ -158,13 +202,7 @@ it('persists import manager settings into sqlite and reloads them after restart'
 });
 
 it('falls back to the default import manager settings when the payload is missing', () => {
-  expect(loadImportManagerSettings()).toMatchObject({
-    detailsOpen: createDefaultImportManagerSettings().detailsOpen,
-    readwiseActiveInstallationId: null,
-    readwiseSettingsConfirmed: false,
-    sources: createDefaultImportManagerSettings().sources,
-    updatedAt: expect.any(String)
-  });
+  expect(loadImportManagerSettings()).toEqual(createDefaultImportManagerSettings());
 });
 
 it('normalizes legacy move handling payloads to keep when loading', () => {

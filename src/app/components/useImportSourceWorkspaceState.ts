@@ -12,7 +12,6 @@ import { createGenericSourceActions, replaceSource } from './importSourceGeneric
 import { createKeepImportActions } from './importSourceKeepActions';
 import { createReadwiseReaderImportActions } from './importSourceReadwiseRuntimeActions';
 import {
-  cloneDraftImportSource,
   applyReadwiseRootPath,
   type DraftImportSource,
   type DraftImportSourceField,
@@ -140,39 +139,11 @@ export function useImportSourceWorkspaceState() {
   const [settings, setSettings] = usePersistedImportSourceWorkspaceSettings();
   return {
     detailsOpen: settings.detailsOpen,
-    handleClaimSource(sourceId: string) {
-      setSettings((current) => {
-        const source = current.sources.find((entry) => entry.id === sourceId);
-        if (!source || source.ownership?.ownerInstallationId !== null) return current;
-        return {
-          ...current,
-          sources: [...current.sources, cloneDraftImportSource(source)]
-        };
-      });
-    },
     ...createGenericSourceActions(setSettings, selectFolderPath),
     ...createKeepImportActions(settings, setSettings),
     ...createReadwiseReaderImportActions(settings, setSettings),
     ...createReadwiseSourceActions(setSettings),
     ...createWorkspaceMetaActions(setSettings),
-    handleTurnOffReadwise() {
-      setSettings((current) => ({
-        ...current,
-        readwiseActiveDeviceName: null,
-        readwiseActiveInstallationId: null
-      }));
-    },
-    handleUseThisDeviceForReadwise() {
-      setSettings((current) => ({
-        ...current,
-        readwiseActiveDeviceName: current.readwiseCurrentDeviceName,
-        readwiseActiveInstallationId: current.readwiseCurrentInstallationId
-      }));
-    },
-    readwiseActiveDeviceName: settings.readwiseActiveDeviceName,
-    readwiseActiveInstallationId: settings.readwiseActiveInstallationId,
-    readwiseCurrentDeviceName: settings.readwiseCurrentDeviceName,
-    readwiseCurrentInstallationId: settings.readwiseCurrentInstallationId,
     readwiseReaderConfig: settings.readwiseReaderConfig,
     readwiseRootPath: settings.readwiseRootPath,
     readwiseSources: settings.readwiseSources,

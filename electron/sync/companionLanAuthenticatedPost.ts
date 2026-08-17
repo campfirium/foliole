@@ -12,7 +12,6 @@ import { writeWorkgroupBinary } from './companionLanResponses.js';
 import { isRetiredSyncJsonEndpoint } from './companionLanSyncObjects.js';
 import { handleCompanionSyncPush, SYNC_PUSH_PATH } from './companionLanSyncPush.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
-import { acknowledgeDesktopSyncPack, SYNC_PACK_ACK_PATH } from './desktopSyncPackAck.js';
 import { acceptSyncGroupDeparture, SYNC_GROUP_DEPARTURE_PATH } from './syncGroupDeparture.js';
 import { decryptWorkgroupRequestBody } from './workgroupHttpCrypto.js';
 
@@ -30,7 +29,6 @@ function resolveAuthenticatedPostRoute(parsedRequestUrl: URL) {
   if (parsedRequestUrl.pathname === SYNC_PUSH_PATH) return 'sync-push';
   if (parsedRequestUrl.pathname === PRIMARY_DEVICE_TAKEOVER_PATH) return 'primary-device-takeover';
   if (parsedRequestUrl.pathname === SYNC_GROUP_DEPARTURE_PATH) return 'sync-group-departure';
-  if (parsedRequestUrl.pathname === SYNC_PACK_ACK_PATH) return 'sync-pack-ack';
   if (isRetiredSyncJsonEndpoint(parsedRequestUrl)) return 'retired-sync-json';
   return null;
 }
@@ -83,14 +81,6 @@ async function handleAuthenticatedRoute(args: {
     } catch (error) {
       writeJson(request, response, 400, {
         error: error instanceof Error ? error.message : 'sync_group_departure_payload_invalid'
-      }, 'POST, OPTIONS');
-    }
-  } else if (route === 'sync-pack-ack') {
-    try {
-      writeJson(request, response, 200, acknowledgeDesktopSyncPack(bodyText, auth.device_id), 'POST, OPTIONS');
-    } catch (error) {
-      writeJson(request, response, 400, {
-        error: error instanceof Error ? error.message : 'sync_pack_ack_payload_invalid'
       }, 'POST, OPTIONS');
     }
   }

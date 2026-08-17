@@ -45,14 +45,7 @@ function mockSuccessfulSetupInspection() {
   });
 }
 
-function renderReadwiseSettingsHarness(input: {
-  activeDeviceName?: string | null;
-  activeInstallationId?: string | null;
-  config?: ReadwiseReaderConfig;
-  currentInstallationId?: string | null;
-  onTurnOff?: () => void;
-  onUseThisDevice?: () => void;
-} = {}) {
+function renderReadwiseSettingsHarness(input: { config?: ReadwiseReaderConfig } = {}) {
   const onSave = vi.fn();
   const onPreviewSync = vi.fn().mockResolvedValue(createReadwiseImportPreview());
   const onRunSync = vi.fn().mockResolvedValue(createReadwiseImportRunResult());
@@ -62,15 +55,10 @@ function renderReadwiseSettingsHarness(input: {
   render(
     <LocalizationProvider>
       <SettingsReadwiseReaderContent
-        activeDeviceName={input.activeDeviceName ?? 'This device'}
-        activeInstallationId={input.activeInstallationId ?? 'test-installation'}
         config={config}
-        currentInstallationId={input.currentInstallationId ?? 'test-installation'}
         onPreviewSync={onPreviewSync}
         onRunSync={onRunSync}
         onSave={onSave}
-        onTurnOff={input.onTurnOff}
-        onUseThisDevice={input.onUseThisDevice}
         readwiseRootPath="/Readwise"
         readwiseSources={readwiseSources}
       />
@@ -78,24 +66,6 @@ function renderReadwiseSettingsHarness(input: {
   );
   return { onPreviewSync, onRunSync, onSave };
 }
-
-it('shows one explicit Readwise device selection and never displays remote path details', () => {
-  const onTurnOff = vi.fn();
-  const onUseThisDevice = vi.fn();
-  renderReadwiseSettingsHarness({
-    activeDeviceName: 'Windows PC',
-    activeInstallationId: 'windows-installation',
-    currentInstallationId: 'mac-installation',
-    onTurnOff,
-    onUseThisDevice
-  });
-  expect(screen.getByText('Readwise is running on Windows PC.')).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Use this device' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Turn off Readwise' }));
-  expect(onUseThisDevice).toHaveBeenCalledTimes(1);
-  expect(onTurnOff).toHaveBeenCalledTimes(1);
-  expect(screen.queryByText(/Windows.*[\\/]/)).not.toBeInTheDocument();
-});
 
 async function checkSetupPreview() {
   fireEvent.click(screen.getByRole('button', { name: 'Preview' }));

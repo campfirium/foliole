@@ -43,7 +43,6 @@ vi.mock('../database/nodeVersionedMutations.js', () => ({
 vi.mock('../database/workspaceSearch.js', () => ({ searchWorkspace: vi.fn() }));
 vi.mock('../import/currentSourceReimport.js', () => ({ reimportCurrentTopicSource }));
 vi.mock('../import/readwiseTopicMerge.js', () => ({ mergeReadwiseTopicHighlights }));
-vi.mock('../import/readwiseDeviceSettings.js', () => ({ assertReadwiseExecutionEnabled: vi.fn() }));
 vi.mock('../mirror/mirrorSyncScheduler.js', () => ({ scheduleMirrorSync: vi.fn() }));
 vi.mock('./workspaceContentChangedEvents.js', () => ({ notifyWorkspaceContentChanged }));
 

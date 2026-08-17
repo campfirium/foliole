@@ -50,14 +50,7 @@ export const SYNC_PACK_PAYLOAD_OBJECT_TYPES = new Set([
   'node_text_alternative',
   'pdf_page_text',
   'setting',
-  'view_state',
-  'watched_folder'
-]);
-
-export const RETIRED_SYNC_PACK_OBJECT_TYPES = new Set([
-  'readwise_authority',
-  'readwise_binding',
-  'readwise_policy'
+  'view_state'
 ]);
 
 export function isSyncPackObjectType(value: string): value is SyncPackObjectType {
@@ -65,8 +58,7 @@ export function isSyncPackObjectType(value: string): value is SyncPackObjectType
 }
 
 export function isSyncPackStateObjectType(value: string) {
-  return isSyncPackObjectType(value) || SYNC_PACK_PAYLOAD_OBJECT_TYPES.has(value) ||
-    RETIRED_SYNC_PACK_OBJECT_TYPES.has(value);
+  return isSyncPackObjectType(value) || SYNC_PACK_PAYLOAD_OBJECT_TYPES.has(value);
 }
 
 export function isSyncPackPayloadObjectType(value: string) {
