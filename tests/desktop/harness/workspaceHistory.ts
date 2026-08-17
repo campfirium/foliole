@@ -188,23 +188,6 @@ export async function roundTripStructureCreate(page: Page, run: () => Promise<st
   return nodeId;
 }
 
-export async function enterWorkspaceHistoryFlow(page: Page) {
-  const currentNodeId = await page.evaluate(() =>
-    window.__folioleWorkspaceDebug?.getReviewSession?.().currentNodeId ?? null);
-  if (currentNodeId === HISTORY_NODE_IDS.review) return;
-  const resumeReview = page.getByRole('button', { name: /^(Resume review|继续复习|繼續複習)$/ });
-  if (await resumeReview.isVisible().catch(() => false)) {
-    await resumeReview.click();
-  } else {
-    const exitFlow = page.getByRole('button', { name: /^(Exit Flow|退出 Flow)$/ });
-    if (await exitFlow.isVisible().catch(() => false)) await exitFlow.click();
-    await page.getByRole('button', { name: /^(Enter Flow|进入 Flow)$/ }).click();
-  }
-  await expect.poll(() => page.evaluate(() =>
-    window.__folioleWorkspaceDebug?.getReviewSession?.().currentNodeId ?? null
-  )).toBe(HISTORY_NODE_IDS.review);
-}
-
 export async function runSpecifiedPostpone(page: Page) {
   await focusWorkspace(page);
   await page.keyboard.press(process.platform === 'darwin' ? 'Meta+J' : 'Control+J');

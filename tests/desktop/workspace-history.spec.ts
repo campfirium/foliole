@@ -6,7 +6,6 @@ import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 import {
   capturePermanentHistoryState,
-  enterWorkspaceHistoryFlow,
   HISTORY_NODE_IDS,
   roundTripStructureCreate,
   roundTripWorkspaceAction,
@@ -48,6 +47,30 @@ async function continueWorkspaceReading(page: import('@playwright/test').Page) {
     }).click();
   }
   await expect(soon).toBeVisible();
+}
+
+async function enterWorkspaceHistoryFlow(page: import('@playwright/test').Page) {
+  const currentNodeId = () => page.evaluate(() =>
+    window.__folioleWorkspaceDebug?.getReviewSession?.().currentNodeId ?? null);
+  const resumeReview = page.getByRole('button', { name: /^(Resume review|继续复习|繼續複習)$/ });
+  const exitFlow = page.getByRole('button', { name: /^(Exit Flow|退出 Flow)$/ });
+  const enterFlow = page.getByRole('button', { name: /^(Enter Flow|进入 Flow)$/ });
+  await expect.poll(async () => (await currentNodeId()) === HISTORY_NODE_IDS.review ||
+    await resumeReview.isVisible().catch(() => false) ||
+    await exitFlow.isVisible().catch(() => false) ||
+    await enterFlow.isVisible().catch(() => false)).toBe(true);
+  if ((await currentNodeId()) === HISTORY_NODE_IDS.review) return;
+  if (await resumeReview.isVisible().catch(() => false)) await resumeReview.click();
+  else if (await enterFlow.isVisible().catch(() => false)) await enterFlow.click();
+  else if (await page.getByRole('button', { name: REVIEW_ACTION_LABELS['Show Answer'] }).isVisible() &&
+    await page.evaluate(() => window.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null) === HISTORY_NODE_IDS.review) {
+    await expect.poll(currentNodeId).toBe(HISTORY_NODE_IDS.review);
+    return;
+  } else {
+    await exitFlow.click();
+    await enterFlow.click();
+  }
+  await expect.poll(currentNodeId).toBe(HISTORY_NODE_IDS.review);
 }
 
 test('keeps every workspace domain in one durable native history', async ({ desktopWindow }, testInfo) => {
