@@ -161,7 +161,7 @@ it('persists runtime sync and advances review state in one grading action', asyn
   expectReviewQueueAdvanced(harness.getState(), due, SCHEDULED_DUE);
 });
 
-it('does not add fsrs grading to workspace structure history', async () => {
+it('undoes and redoes grading without replaying the forward grade mutation', async () => {
   const due = REVIEWED_AT;
   const harness = createSetStateHarness(
     createWorkspaceFixture([createQaNode('qa-1', due), createQaNode('qa-2', due)])
@@ -174,11 +174,18 @@ it('does not add fsrs grading to workspace structure history', async () => {
 
   actions.startReviewSession(due);
   actions.revealReviewAnswer();
+  const before = harness.getState();
   await expect(actions.gradeReviewCard(3, due)).resolves.toBe(true);
 
-  expect(harness.getState().appActionHistory.undoStack).toEqual([]);
-  expect(historyActions.undoWorkspaceAction()).toBe(false);
+  const entry = harness.getState().appActionHistory.undoStack.at(-1)!;
+  expect(entry).toMatchObject({ nodeId: 'qa-1', title: 'Grade Review', type: 'review.grade' });
   expect(harness.getState().nodesById['qa-1']?.review).toMatchObject({ lastReviewAt: due, reps: 1, state: 1 });
+  expect(historyActions.undoWorkspaceAction()).toBe(true);
+  await vi.waitFor(() => expect(harness.getState().appActionHistory.redoStack).toHaveLength(1));
+  expect(harness.getState().nodesById['qa-1']?.review).toEqual(before.nodesById['qa-1']?.review);
+  expect(harness.getState().reviewSession).toEqual(before.reviewSession);
+  expect(historyActions.redoWorkspaceAction()).toBe(true);
+  await vi.waitFor(() => expect(harness.getState().appActionHistory.undoStack.at(-1)?.id).toBe(entry.id));
   expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
 });
 

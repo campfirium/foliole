@@ -136,8 +136,8 @@ function prepareRootNodeCreation(args: {
     reviewSession: reconcileReviewSession({ ...args.state, activeNodeId: args.nodeId, nodeOrder, nodesById }, args.nodeId)
   };
   const pending = beginStructureCreateHistory({
-    afterActiveNodeId: args.nodeId,
-    beforeActiveNodeId: args.state.activeNodeId,
+    afterState: { ...args.state, ...patch },
+    beforeState: args.state,
     history: args.state.appActionHistory,
     node: created.node
   });

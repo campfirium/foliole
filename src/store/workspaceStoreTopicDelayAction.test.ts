@@ -2,6 +2,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import { saveNodeReadingStateToRuntime } from '../shared/platform/runtime/nodeReadingStateRuntimeRepository';
 
+import { createWorkspaceActionHistoryActions } from './workspaceActionHistory';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
 import {
   createReadingNode,
@@ -50,6 +51,7 @@ it('postpones a topic by changing only next due time in week steps', async () =>
   actions.startReviewSession(now);
   const firstNodeId = harness.getState().reviewSession.currentNodeId!;
   const beforeReading = harness.getState().nodesById[firstNodeId]?.reading;
+  const history = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
 
   await expect(actions.setReviewTopicDelay(firstNodeId, 4, now)).resolves.toBe(true);
 
@@ -62,7 +64,12 @@ it('postpones a topic by changing only next due time in week steps', async () =>
     nextAt: '2026-03-31T00:00:00.000Z',
     repetitionCount: beforeReading?.repetitionCount
   });
-  expect(harness.getState().appActionHistory.undoStack).toEqual([]);
+  expect(harness.getState().appActionHistory.undoStack.at(-1)).toMatchObject({
+    nodeId: firstNodeId,
+    title: 'Postpone Topic'
+  });
+  expect(history.undoWorkspaceAction()).toBe(true);
+  await vi.waitFor(() => expect(harness.getState().nodesById[firstNodeId]?.reading).toEqual(beforeReading));
 });
 
 it('resets topic postpone level zero to the current natural due time without moving into the past', async () => {

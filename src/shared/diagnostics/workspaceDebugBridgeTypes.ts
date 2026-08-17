@@ -1,4 +1,9 @@
-import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import type {
+  NodeAnchorLink,
+  NodeReadingProfile,
+  NodeReviewProfile
+} from '../../features/nodes/model/nodeTypes';
+import type { ReviewSessionState } from '../../store/workspaceStore';
 
 import type { WorkspaceDebugOperationHistory } from './workspaceDebugHistory';
 import type { SeedNodeDebugApi } from './workspaceDebugSeedApi';
@@ -29,19 +34,15 @@ export interface WorkspaceDebugApi {
     id: string;
     kind: string;
     parentNodeId: string | null;
-    reading: { nextAt: string; state: string } | null;
+    reading: NodeReadingProfile | null;
     reveal: string | null;
-    review: { due: string; state: number } | null;
+    review: NodeReviewProfile | null;
     shelvedAt: string | null;
     title: string;
     trashed: boolean;
   } | null;
   getNodeViewState: (nodeId: string) => { scrollTop: number; selection: { from: number; to: number } | null } | null;
-  getReviewSession: () => {
-    currentNodeId: string | null;
-    queueNodeIds: string[];
-    soonNodeIds?: string[];
-  };
+  getReviewSession: () => ReviewSessionState;
   getWorkspaceStructureHistory: () => {
     pendingCreate: { id: string; type: string } | null;
     redoStack: Array<{ id: string; type: string }>;
@@ -62,6 +63,7 @@ export interface WorkspaceDebugApi {
   seedNodes: SeedNodeDebugApi['seedNodes'];
   setNodeViewState: (args: { from: number; nodeId: string; scrollTop?: number; to: number }) => boolean;
   shelveNode: (nodeId: string, now?: string) => boolean;
+  unshelveNode: (nodeId: string, now?: string) => boolean;
   moveNodes: (
     nodeIds: string[],
     targetNodeId: string | null,

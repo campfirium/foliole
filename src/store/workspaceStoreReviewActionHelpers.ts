@@ -1,7 +1,10 @@
 import type { ReviewGrade, SchedulerCard } from '../features/review/model/reviewTypes';
 import type { SharedReviewGradeResult } from '../features/review/model/sharedReviewGradeService';
 
+import { createWorkspaceActionHistoryEntryId } from './workspaceActionHistoryEntry';
+import { captureWorkspaceHistoryContext } from './workspaceHistoryContext';
 import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
+import { createReviewGradeHistoryEntry } from './workspaceReviewGradeActionHistory';
 import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue';
 import {
   runtimeWorkspaceReviewPersistence,
@@ -11,11 +14,11 @@ import { advanceReviewSession, completeReviewSession } from './workspaceReviewRe
 import { calculateReviewStepElapsedMs } from './workspaceReviewSessionProgress';
 import type { SequentialReadingChange } from './workspaceSequentialReading';
 import type { WorkspaceState } from './workspaceStore';
-import type { WorkspaceTopicReadingActionTitle } from './workspaceTopicDismissActionHistory';
+import {
+  createTopicDismissHistoryEntry,
+  type WorkspaceTopicReadingActionTitle
+} from './workspaceTopicDismissActionHistory';
 
-type WorkspaceSet = (
-  partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)
-) => void;
 type ReviewSession = WorkspaceState['reviewSession'];
 
 export async function persistReviewGradeMutation(args: {
@@ -58,60 +61,90 @@ function buildReviewSessionAfterGrade(args: {
   });
 }
 
-export function applyGradedReviewState(args: {
-  set: WorkspaceSet;
+export function buildGradedReviewState(args: {
   snapshot: WorkspaceState;
   currentNodeId: string;
   nodePatch: SharedReviewGradeResult['nodePatch'];
-  reviewedAt: string;
   now: string;
 }) {
-  args.set((state) => {
-    const node = state.nodesById[args.currentNodeId];
-    if (!node) return state;
-    const nextNodesById = {
-      ...state.nodesById,
-      [args.currentNodeId]: {
-        ...node,
-        ...args.nodePatch
-      }
-    };
-    const nextQueue = buildCurrentReviewSessionQueueOutput(state, args.now, {
-      nodesById: nextNodesById,
-      releaseCurrentPin: true
-    });
-    const nextNodeId = nextQueue.currentNodeId;
-    const reviewElapsedMsDelta = calculateReviewStepElapsedMs(args.snapshot.reviewSession, args.now);
-    const reviewedItemDelta = nextQueue.taskNodeIds.includes(args.currentNodeId) ? 0 : 1;
-    const continueNodeId = nextQueue.extensionNodeIds[0] ?? null;
-    const nextReviewSession = buildReviewSessionAfterGrade({
-      continueNodeId,
-      nextDueAt: args.nodePatch.review.due,
-      nextNodeId,
-      now: args.now,
-      queueNodeIds: nextQueue.taskNodeIds,
-      reviewElapsedMsDelta,
-      reviewSession: args.snapshot.reviewSession,
-      reviewedItemDelta
-    });
-    return {
-      ...buildReviewActiveNodeContext(state, nextNodeId ?? continueNodeId),
+  const state = args.snapshot;
+  const node = state.nodesById[args.currentNodeId];
+  if (!node?.review) return null;
+  const nextNodesById = {
+    ...state.nodesById,
+    [args.currentNodeId]: {
+      ...node,
+      ...args.nodePatch
+    }
+  };
+  const nextQueue = buildCurrentReviewSessionQueueOutput(state, args.now, {
+    nodesById: nextNodesById,
+    releaseCurrentPin: true
+  });
+  const nextNodeId = nextQueue.currentNodeId;
+  const reviewElapsedMsDelta = calculateReviewStepElapsedMs(args.snapshot.reviewSession, args.now);
+  const reviewedItemDelta = nextQueue.taskNodeIds.includes(args.currentNodeId) ? 0 : 1;
+  const continueNodeId = nextQueue.extensionNodeIds[0] ?? null;
+  const nextReviewSession = buildReviewSessionAfterGrade({
+    continueNodeId,
+    nextDueAt: args.nodePatch.review.due,
+    nextNodeId,
+    now: args.now,
+    queueNodeIds: nextQueue.taskNodeIds,
+    reviewElapsedMsDelta,
+    reviewSession: args.snapshot.reviewSession,
+    reviewedItemDelta
+  });
+  const activeContext = buildReviewActiveNodeContext(state, nextNodeId ?? continueNodeId);
+  return {
+    historyEntry: createReviewGradeHistoryEntry({
+      afterContext: captureWorkspaceHistoryContext(state, {
+        ...activeContext,
+        reviewSession: nextReviewSession
+      }),
+      afterReview: args.nodePatch.review,
+      beforeContext: captureWorkspaceHistoryContext(state),
+      beforeReview: node.review,
+      id: createWorkspaceActionHistoryEntryId(),
+      mutationTimestamp: args.now,
+      nodeId: args.currentNodeId
+    }),
+    patch: {
+      ...activeContext,
       nodesById: nextNodesById,
       reviewSession: nextReviewSession
-    };
-  });
+    }
+  };
 }
 
-export function createReadingReviewHistoryPatch(_args: {
+export function createReadingReviewHistoryEntry(args: {
+  afterActiveNodeId: string | null;
+  afterBrowseRootNodeId?: string;
   afterReading: WorkspaceState['nodesById'][string]['reading'] | null | undefined;
   afterReviewSession: WorkspaceState['reviewSession'];
   beforeReading: WorkspaceState['nodesById'][string]['reading'] | null | undefined;
   beforeReviewSession: WorkspaceState['reviewSession'];
+  mutationTimestamp: string;
   nodeId: string;
   relatedReadings?: SequentialReadingChange[];
   state: WorkspaceState;
   title: WorkspaceTopicReadingActionTitle;
 }) {
-  void _args;
-  return {};
+  return createTopicDismissHistoryEntry({
+    afterContext: captureWorkspaceHistoryContext(args.state, {
+      activeNodeId: args.afterActiveNodeId,
+      ...(args.afterBrowseRootNodeId ? { browseRootNodeId: args.afterBrowseRootNodeId } : {}),
+      reviewSession: args.afterReviewSession
+    }),
+    afterReading: args.afterReading,
+    beforeContext: captureWorkspaceHistoryContext(args.state, {
+      reviewSession: args.beforeReviewSession
+    }),
+    beforeReading: args.beforeReading,
+    id: createWorkspaceActionHistoryEntryId(),
+    mutationTimestamp: args.mutationTimestamp,
+    nodeId: args.nodeId,
+    ...(args.relatedReadings ? { relatedReadings: args.relatedReadings } : {}),
+    title: args.title
+  });
 }

@@ -40,6 +40,29 @@ it('undoes and redoes canonical topic creation with the same entity id', async (
   expect(harness.getState().nodesById[nodeId]).toBeDefined();
 });
 
+it('restores the exact review context around a canonical topic creation', async () => {
+  const { actions, harness, history } = createHarness();
+  const beforeReviewSession = {
+    ...harness.getState().reviewSession,
+    currentNodeId: 'node-1',
+    queueNodeIds: ['node-1'],
+    totalNodeCount: 1
+  };
+  harness.setState({ reviewSession: beforeReviewSession });
+  const nodeId = (await actions.createRootNode('', 'topic'))!;
+  const afterReviewSession = harness.getState().reviewSession;
+
+  expect(history.undoWorkspaceAction()).toBe(true);
+  await vi.waitFor(() => expect(harness.getState().trashedNodeIds).toContain(nodeId));
+  expect(harness.getState().activeNodeId).toBe('node-1');
+  expect(harness.getState().reviewSession).toEqual(beforeReviewSession);
+
+  expect(history.redoWorkspaceAction()).toBe(true);
+  await vi.waitFor(() => expect(harness.getState().trashedNodeIds).not.toContain(nodeId));
+  expect(harness.getState().activeNodeId).toBe(nodeId);
+  expect(harness.getState().reviewSession).toEqual(afterReviewSession);
+});
+
 it('undoes and redoes a canonical rename without replacing another topic body', async () => {
   const { actions, harness, history } = createHarness();
   const otherBody = harness.getState().nodesById['node-1']!.content;

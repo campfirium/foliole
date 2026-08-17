@@ -4,6 +4,7 @@ import { resolveWorkspaceSnapshotActiveNodeId } from '../../lib/core/database/wo
 import { ensureInboxNodeInSnapshot } from '../features/nodes/model/specialNodes';
 import { hasWorkspaceRuntimeRepository } from '../shared/platform/workspaceRuntimeRepository';
 
+import { createEmptyWorkspaceActionHistory } from './workspaceActionHistory';
 import { resolveWorkspaceBrowseRootNodeId } from './workspaceBrowseRoot';
 import { mergeHydratedWorkspaceMembership, mergeNodeOpenStateById } from './workspaceHydrateObjectMerge';
 import { parsePersistedWorkspaceState } from './workspacePersistedStateParser';
@@ -87,6 +88,7 @@ export function createWorkspaceStorePersistConfig(
       const nextState = {
         ...current,
         ...persisted,
+        appActionHistory: createEmptyWorkspaceActionHistory(),
         ...mergeHydratedWorkspaceMembership(current, persisted),
         isHydrated: current.isHydrated,
         layout: {

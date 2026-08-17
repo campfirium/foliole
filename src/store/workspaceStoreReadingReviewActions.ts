@@ -1,7 +1,12 @@
-import type { Node } from '../features/nodes/model/nodeTypes';
 import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 
+import { pushWorkspaceUndoEntry } from './workspaceActionHistory';
 import { buildReadingReviewDomainPatch } from './workspaceReadingReviewDomain';
+import {
+  persistAndApplyReadingReviewPatch,
+  type ReadingReviewPatchResult,
+  type ReadingReviewPendingNodeIds
+} from './workspaceReadingReviewHistoryCommit';
 import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
 import {
   runtimeWorkspaceReviewPersistence,
@@ -15,17 +20,10 @@ import {
   advanceOrCompleteAfterReadingAction,
   isExistingQueueTopic
 } from './workspaceStoreReadingReviewSessionFlow';
-import { createReadingReviewHistoryPatch } from './workspaceStoreReviewActionHelpers';
+import { createReadingReviewHistoryEntry } from './workspaceStoreReviewActionHelpers';
 
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
 type WorkspaceGet = () => WorkspaceState;
-export type ReadingReviewPendingNodeIds = Set<string>;
-
-interface ReadingReviewPatchResult {
-  nextNodesForSync: Node[];
-  patch: Partial<WorkspaceState>;
-}
-
 export function createPostponeReviewTopicAction(set: WorkspaceSet, get: WorkspaceGet): WorkspaceState['postponeReviewTopic'] {
   return createPostponeReviewTopicActionWithPending(set, get, new Set());
 }
@@ -38,12 +36,14 @@ export function createPostponeReviewTopicActionWithPending(
 ): WorkspaceState['postponeReviewTopic'] {
   return async (now = new Date().toISOString()) => {
     const snapshot = get();
+    if (snapshot.appActionHistory.applying || snapshot.appActionHistory.pendingAction ||
+        snapshot.appActionHistory.pendingCreate) return false;
     const currentNodeId = snapshot.reviewSession.currentNodeId;
     if (!currentNodeId || snapshot.activeNodeId !== currentNodeId) return false;
     const currentNode = snapshot.nodesById[currentNodeId];
     if (!currentNode || !isReadingReviewItemNode(currentNode)) return false;
     if (pendingNodeIds.has(currentNodeId)) return false;
-    return persistAndApplyReadingReviewPatch({
+    const committed = await persistAndApplyReadingReviewPatch({
       currentNodeId,
       get,
       pendingNodeIds,
@@ -52,6 +52,10 @@ export function createPostponeReviewTopicActionWithPending(
         buildReadOrPostponeReadingReviewPatch({ action: 'later', currentNodeId, now, snapshot, state, title: 'Later Topic' }),
       persistence
     });
+    if (committed && committed.nextActiveNodeId) {
+      void persistNodeOpened(set, committed.nextActiveNodeId, new Date().toISOString());
+    }
+    return Boolean(committed);
   };
 }
 
@@ -67,12 +71,14 @@ export function createReadReviewTopicActionWithPending(
 ): WorkspaceState['readReviewTopic'] {
   return async (now = new Date().toISOString(), options = {}) => {
     const snapshot = get();
+    if (snapshot.appActionHistory.applying || snapshot.appActionHistory.pendingAction ||
+        snapshot.appActionHistory.pendingCreate) return false;
     const currentNodeId = snapshot.reviewSession.currentNodeId;
     if (!currentNodeId || snapshot.activeNodeId !== currentNodeId) return false;
     const currentNode = snapshot.nodesById[currentNodeId];
     if (!currentNode || !isReadingReviewItemNode(currentNode)) return false;
     if (pendingNodeIds.has(currentNodeId)) return false;
-    return persistAndApplyReadingReviewPatch({
+    const committed = await persistAndApplyReadingReviewPatch({
       currentNodeId,
       get,
       pendingNodeIds,
@@ -89,12 +95,18 @@ export function createReadReviewTopicActionWithPending(
         }),
       persistence
     });
+    if (committed && committed.nextActiveNodeId) {
+      void persistNodeOpened(set, committed.nextActiveNodeId, new Date().toISOString());
+    }
+    return Boolean(committed);
   };
 }
 
 export function createRevisitReviewTopicSoonAction(set: WorkspaceSet, get: WorkspaceGet): WorkspaceState['revisitReviewTopicSoon'] {
   return async (now = new Date().toISOString()) => {
     const snapshot = get();
+    if (snapshot.appActionHistory.applying || snapshot.appActionHistory.pendingAction ||
+        snapshot.appActionHistory.pendingCreate) return false;
     const currentNodeId = snapshot.reviewSession.currentNodeId;
     if (!currentNodeId || snapshot.activeNodeId !== currentNodeId) return false;
     const currentNode = snapshot.nodesById[currentNodeId];
@@ -112,17 +124,27 @@ export function createRevisitReviewTopicSoonAction(set: WorkspaceSet, get: Works
         snapshot,
         state
       });
+      const activeContext = buildReviewActiveNodeContext(
+        state,
+        reviewSession.currentNodeId ?? reviewSession.continueNodeId ?? null
+      );
+      const historyEntry = createReadingReviewHistoryEntry({
+        afterActiveNodeId: activeContext.activeNodeId,
+        ...('browseRootNodeId' in activeContext
+          ? { afterBrowseRootNodeId: activeContext.browseRootNodeId }
+          : {}),
+        afterReading: node.reading,
+        afterReviewSession: reviewSession,
+        beforeReading: node.reading,
+        beforeReviewSession: snapshot.reviewSession,
+        mutationTimestamp: now,
+        nodeId: currentNodeId,
+        state,
+        title: 'Soon Topic'
+      });
       return {
-        ...buildReviewActiveNodeContext(state, reviewSession.currentNodeId ?? reviewSession.continueNodeId ?? null),
-        ...createReadingReviewHistoryPatch({
-          afterReading: node.reading,
-          afterReviewSession: reviewSession,
-          beforeReading: node.reading,
-          beforeReviewSession: snapshot.reviewSession,
-          nodeId: currentNodeId,
-          state,
-          title: 'Soon Topic'
-        }),
+        ...activeContext,
+        appActionHistory: pushWorkspaceUndoEntry(state.appActionHistory, historyEntry),
         reviewSession
       };
     });
@@ -150,58 +172,31 @@ function buildReadOrPostponeReadingReviewPatch(args: {
     snapshot: args.snapshot,
     state: args.state
   });
+  const activeContext = buildReviewActiveNodeContext(
+    args.state,
+    reviewSession.currentNodeId ?? reviewSession.continueNodeId ?? null
+  );
   return {
+    historyEntry: createReadingReviewHistoryEntry({
+      afterActiveNodeId: activeContext.activeNodeId,
+      ...('browseRootNodeId' in activeContext
+        ? { afterBrowseRootNodeId: activeContext.browseRootNodeId }
+        : {}),
+      afterReading: result.afterReading,
+      afterReviewSession: reviewSession,
+      beforeReading: result.beforeReading,
+      beforeReviewSession: args.snapshot.reviewSession,
+      mutationTimestamp: args.now,
+      nodeId: args.currentNodeId,
+      ...(result.sequentialChanges.length ? { relatedReadings: result.sequentialChanges } : {}),
+      state: args.state,
+      title: args.title
+    }),
     nextNodesForSync: result.nextNodesForSync,
     patch: {
-      ...buildReviewActiveNodeContext(args.state, reviewSession.currentNodeId ?? reviewSession.continueNodeId ?? null),
-      ...createReadingReviewHistoryPatch({
-        afterReading: result.afterReading,
-        afterReviewSession: reviewSession,
-        beforeReading: result.beforeReading,
-        beforeReviewSession: args.snapshot.reviewSession,
-        nodeId: args.currentNodeId,
-        ...(result.sequentialChanges.length ? { relatedReadings: result.sequentialChanges } : {}),
-        state: args.state,
-        title: args.title
-      }),
+      ...activeContext,
       nodesById: result.nextNodesById,
       reviewSession
     }
   };
-}
-
-export async function persistReadingReviewNodes(
-  nodes: Node[],
-  persistence: WorkspaceReviewPersistenceAdapter = runtimeWorkspaceReviewPersistence
-) {
-  return persistence.persistReadingNodes(nodes);
-}
-
-async function persistAndApplyReadingReviewPatch(args: {
-  buildPatch: (state: WorkspaceState) => ReadingReviewPatchResult | null;
-  currentNodeId: string;
-  get: WorkspaceGet;
-  pendingNodeIds: ReadingReviewPendingNodeIds;
-  persistence: WorkspaceReviewPersistenceAdapter;
-  set: WorkspaceSet;
-}) {
-  args.pendingNodeIds.add(args.currentNodeId);
-  try {
-    const result = args.buildPatch(args.get());
-    if (!result || !(await persistReadingReviewNodes(result.nextNodesForSync, args.persistence))) {
-      return false;
-    }
-    args.set((state) => {
-      const currentNode = state.nodesById[args.currentNodeId];
-      if (!currentNode || state.reviewSession.currentNodeId !== args.currentNodeId || state.activeNodeId !== args.currentNodeId) {
-        return state;
-      }
-      return result?.patch ?? state;
-    });
-    const nextActiveNodeId = result.patch.reviewSession?.currentNodeId ?? result.patch.reviewSession?.continueNodeId;
-    if (nextActiveNodeId) void persistNodeOpened(args.set, nextActiveNodeId, new Date().toISOString());
-    return true;
-  } finally {
-    args.pendingNodeIds.delete(args.currentNodeId);
-  }
 }

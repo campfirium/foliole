@@ -222,14 +222,6 @@ test('keeps create, rename, move, and delete in one exact workspace history', as
   await expect.poll(() => collectNode(desktopWindow, createdId)).toMatchObject({ trashed: false });
   await expect(undoMoveToTrash).toBeHidden();
 
-  const historyBeforeControl = await readStructureHistory(desktopWindow);
-  expect(await desktopWindow.evaluate(() =>
-    window.__folioleWorkspaceDebug?.shelveNode?.('playwright-review-control', '2026-08-13T01:00:00.000Z') ?? false
-  )).toBe(true);
-  expect(await readStructureHistory(desktopWindow)).toEqual(historyBeforeControl);
-  await pressWorkspaceHistory(desktopWindow, 'redo');
-  await expect.poll(() => collectNode(desktopWindow, createdId)).toMatchObject({ trashed: true });
-
   await desktopWindow.screenshot({
     path: path.join(EVIDENCE_ROOT, `${process.platform}-workspace-structure-history-hidden-native.png`)
   });

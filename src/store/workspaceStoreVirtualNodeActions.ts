@@ -119,8 +119,8 @@ function prepareVirtualNodeCreation(args: {
     updatedNodesById: nodesById
   });
   const pendingHistory = beginStructureCreateHistory({
-    afterActiveNodeId: args.nodeId,
-    beforeActiveNodeId: args.state.activeNodeId,
+    afterState: { ...args.state, ...patch },
+    beforeState: args.state,
     history: args.state.appActionHistory,
     node
   });

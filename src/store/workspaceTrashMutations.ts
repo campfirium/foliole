@@ -157,7 +157,11 @@ export function computeDeleteNodesMutation(
 
   const nextNodesById = { ...state.nodesById };
   const parentNodesToSync = new Map<string, Node>();
-  const deletedNodeIds = collectDeletedNodeIds(targetNodeIds, state.nodesById);
+  const alreadyTrashed = new Set(state.trashedNodeIds);
+  const deletedNodeIds = new Set(
+    [...collectDeletedNodeIds(targetNodeIds, state.nodesById)]
+      .filter((nodeId) => !alreadyTrashed.has(nodeId))
+  );
 
   syncDeletedAnchorParents({
     deletedAt,

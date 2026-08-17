@@ -1,7 +1,5 @@
-import { replaceUniqueArticleTitleHeading } from '../features/nodes/model/articleTitleHeading';
-
+import { applyWorkspaceHistoryContext } from './workspaceHistoryContext';
 import { getWorkspaceMutationRepository } from './workspaceMutationRepository';
-import { createWorkspaceNodeMutationPatch } from './workspaceNodeMutationPatch';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStore';
 import { applySequentialReadingMovedNodes } from './workspaceStoreTreeSequentialReading';
@@ -11,9 +9,9 @@ import type {
   WorkspaceStructureDeleteEntry,
   WorkspaceStructureHistoryEntry,
   WorkspaceStructureMoveEntry,
-  WorkspaceStructurePlacement,
-  WorkspaceStructureRenameEntry
+  WorkspaceStructurePlacement
 } from './workspaceStructureHistoryTypes';
+import { applyWorkspaceStructureRenameHistory } from './workspaceStructureRenameHistoryApply';
 import { computeDeleteNodesMutation } from './workspaceTrashMutations';
 
 function isExactIdSet(actual: string[], expected: string[]) {
@@ -68,7 +66,10 @@ async function applyTrashTransition(args: {
         !isTrashSourceApplicable(latest, args.entry.nodeIds, true)) return null;
     const expectedActive = args.entry.type === 'structure.create'
       ? args.entry.beforeActiveNodeId : args.entry.afterActiveNodeId;
-    return buildRestorePatch(latest, args.entry, expectedActive);
+    const patch = buildRestorePatch(latest, args.entry, expectedActive);
+    return args.entry.type === 'structure.create'
+      ? { ...patch, ...applyWorkspaceHistoryContext(args.entry.afterContext) }
+      : patch;
   }
   const deletedAt = new Date().toISOString();
   const mutation = computeDeleteNodesMutation(before, args.entry.nodeIds, deletedAt);
@@ -81,43 +82,10 @@ async function applyTrashTransition(args: {
   if (!result || !isExactIdSet(result.deletedNodeIds, args.entry.nodeIds) ||
       !isTrashSourceApplicable(latest, args.entry.nodeIds, false)) return null;
   const currentMutation = computeDeleteNodesMutation(latest, args.entry.nodeIds, deletedAt);
-  return currentMutation && isExactIdSet(currentMutation.nodeIds, args.entry.nodeIds)
-    ? currentMutation.patch
-    : null;
-}
-
-async function applyRename(
-  get: () => WorkspaceState,
-  entry: WorkspaceStructureRenameEntry,
-  mode: 'redo' | 'undo'
-) {
-  const sourceTitle = mode === 'undo' ? entry.afterTitle : entry.beforeTitle;
-  const targetTitle = mode === 'undo' ? entry.beforeTitle : entry.afterTitle;
-  const current = get().nodesById[entry.nodeId];
-  if (!current || current.title !== sourceTitle || current.kind !== entry.kind) return null;
-  const content = current.kind === 'topic'
-    ? replaceUniqueArticleTitleHeading(current.content, targetTitle) ?? current.content
-    : current.content;
-  const requested = {
-    ...current,
-    content,
-    hasContent: content.trim().length > 0,
-    hideTitleHeading: false,
-    isTitleManual: true,
-    title: targetTitle,
-    updatedAt: new Date().toISOString()
-  };
-  const result = await getWorkspaceMutationRepository().syncNodeMutation(requested);
-  const latest = get();
-  if (!result?.updatedNodeIds?.includes(entry.nodeId) || latest.nodesById[entry.nodeId]?.title !== sourceTitle) {
-    return null;
-  }
-  const targetResult = { ...result };
-  delete targetResult.activeNodeId;
-  delete targetResult.nodeOrder;
-  const patch = createWorkspaceNodeMutationPatch(latest, targetResult);
-  if (!patch.nodesById) return null;
-  return { nodesById: patch.nodesById };
+  if (!currentMutation || !isExactIdSet(currentMutation.nodeIds, args.entry.nodeIds)) return null;
+  return args.entry.type === 'structure.create'
+    ? { ...currentMutation.patch, ...applyWorkspaceHistoryContext(args.entry.beforeContext) }
+    : currentMutation.patch;
 }
 
 function areMoveParentsApplicable(
@@ -199,10 +167,34 @@ export function applyWorkspaceStructureHistory(args: {
   get: () => WorkspaceState;
   mode: 'redo' | 'undo';
 }): Promise<Partial<WorkspaceState> | null> {
-  if (args.entry.type === 'structure.rename') return applyRename(args.get, args.entry, args.mode);
+  if (args.entry.type === 'structure.rename') {
+    return applyWorkspaceStructureRenameHistory(args.get, args.entry, args.mode);
+  }
   if (args.entry.type === 'structure.move') return applyMove(args.get, args.entry, args.mode);
   if (args.entry.type === 'structure.create' || args.entry.type === 'structure.delete') {
     return applyTrashTransition({ entry: args.entry, get: args.get, mode: args.mode });
   }
   return Promise.resolve(null);
+}
+
+export function isWorkspaceStructureHistoryApplicable(
+  state: WorkspaceState,
+  entry: WorkspaceStructureHistoryEntry,
+  mode: 'redo' | 'undo'
+) {
+  if (entry.type === 'structure.rename') {
+    const node = state.nodesById[entry.nodeId];
+    const title = mode === 'undo' ? entry.afterTitle : entry.beforeTitle;
+    return Boolean(node && node.kind === entry.kind && node.title === title);
+  }
+  if (entry.type === 'structure.move') {
+    return areMoveParentsApplicable(
+      state,
+      entry,
+      mode === 'undo' ? entry.afterParentNodeIdByRoot : entry.beforeParentNodeIdByRoot,
+      mode === 'undo' ? entry.afterPlacement : entry.beforePlacement
+    );
+  }
+  const restoring = (entry.type === 'structure.create') === (mode === 'redo');
+  return isTrashSourceApplicable(state, entry.nodeIds, restoring);
 }

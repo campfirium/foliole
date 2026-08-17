@@ -95,8 +95,8 @@ export function createChildNodeAction(
       nextNodeOrder = nextChildState.nextNodeOrder;
       localPatch = nextChildState.patch;
       const pendingHistory = beginStructureCreateHistory({
-        afterActiveNodeId: nodeId,
-        beforeActiveNodeId: state.activeNodeId,
+        afterState: { ...state, ...localPatch },
+        beforeState: state,
         history: state.appActionHistory,
         node: nextChildState.nextNode
       });

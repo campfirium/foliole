@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { saveNodeReadingStateToRuntime } from '../shared/platform/runtime/nodeReadingStateRuntimeRepository';
-
+import { createWorkspaceActionHistoryActions } from './workspaceActionHistory';
 import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
 import {
@@ -21,18 +20,15 @@ vi.mock('./workspaceRuntimeSync', () => ({
   syncRestoreNodesToRuntime: vi.fn(),
   syncSoftDeleteNodesToRuntime: vi.fn()
 }));
-vi.mock('../shared/platform/runtime/nodeReadingStateRuntimeRepository', () => ({
-  saveNodeReadingStateToRuntime: vi.fn(async () => true)
-}));
-
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
 describe('createWorkspaceNodeActions dismiss', () => {
-  it('marks pending reading nodes as dismissed from the node menu', () => {
+  it('undoes and redoes a node-menu Dismiss action', async () => {
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
-    const actions = createWorkspaceNodeActions(harness.setState);
+    const actions = createWorkspaceNodeActions(harness.setState, harness.getState);
+    const history = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
     const state = harness.getState();
     const node = state.nodesById['node-1']!;
     if (!node) {
@@ -56,11 +52,11 @@ describe('createWorkspaceNodeActions dismiss', () => {
       state: 'dismissed',
       repetitionCount: 0
     });
-    expect(harness.getState().appActionHistory.undoStack).toEqual([]);
-    expect(saveNodeReadingStateToRuntime).toHaveBeenCalledWith(expect.objectContaining({
-      nodeId: 'node-1',
-      reading: expect.objectContaining({ state: 'dismissed' })
-    }));
+    await vi.waitFor(() => expect(harness.getState().appActionHistory.undoStack).toHaveLength(1));
+    expect(history.undoWorkspaceAction()).toBe(true);
+    await vi.waitFor(() => expect(harness.getState().nodesById['node-1']?.reading).toBeNull());
+    expect(history.redoWorkspaceAction()).toBe(true);
+    await vi.waitFor(() => expect(harness.getState().nodesById['node-1']?.reading?.state).toBe('dismissed'));
     expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
   });
 

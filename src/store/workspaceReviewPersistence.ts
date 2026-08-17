@@ -2,6 +2,7 @@ import type { Node } from '../features/nodes/model/nodeTypes';
 import type { ReviewGrade, SchedulerCard } from '../features/review/model/reviewTypes';
 import { saveNodeReadingStateToRuntime } from '../shared/platform/runtime/nodeReadingStateRuntimeRepository';
 
+import { WorkspacePartialPersistenceError } from './workspacePersistenceFailure';
 import { syncReviewGradeToRuntime } from './workspaceRuntimeSync';
 
 export interface WorkspaceReviewGradePersistencePayload {
@@ -14,18 +15,28 @@ export interface WorkspaceReviewGradePersistencePayload {
 }
 
 export interface WorkspaceReviewPersistenceAdapter {
-  persistReadingNodes: (nodes: Node[]) => Promise<boolean>;
+  persistReadingNodes: (nodes: Node[], updatedAt?: string) => Promise<boolean>;
   persistReviewGrade: (payload: WorkspaceReviewGradePersistencePayload) => Promise<boolean>;
 }
 
-async function persistRuntimeReadingNodes(nodes: Node[]) {
-  for (const node of nodes) {
-    const persisted = await saveNodeReadingStateToRuntime({
-      nodeId: node.id,
-      reading: node.reading ?? null,
-      updatedAt: node.reading?.lastHandledAt ?? new Date().toISOString()
-    });
-    if (!persisted) return false;
+async function persistRuntimeReadingNodes(nodes: Node[], updatedAt?: string) {
+  for (const [index, node] of nodes.entries()) {
+    try {
+      const persisted = await saveNodeReadingStateToRuntime({
+        nodeId: node.id,
+        reading: node.reading ?? null,
+        updatedAt: updatedAt ?? node.reading?.lastHandledAt ?? new Date().toISOString()
+      });
+      if (!persisted) {
+        if (index > 0) throw new WorkspacePartialPersistenceError();
+        return false;
+      }
+    } catch (error) {
+      if (index > 0 && !(error instanceof WorkspacePartialPersistenceError)) {
+        throw new WorkspacePartialPersistenceError();
+      }
+      throw error;
+    }
   }
   return true;
 }

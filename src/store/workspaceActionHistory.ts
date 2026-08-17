@@ -1,7 +1,7 @@
+import type { WorkspaceActionHistoryEntry } from './workspaceActionHistoryEntry';
+import { applyWorkspaceHistoryEntry } from './workspaceHistoryEntryApply';
 import type { WorkspaceState } from './workspaceStore';
-import { applyWorkspaceStructureHistory } from './workspaceStructureHistoryApply';
 import type {
-  WorkspaceStructureHistoryEntry,
   WorkspaceStructurePendingCreate
 } from './workspaceStructureHistoryTypes';
 
@@ -12,17 +12,16 @@ type WorkspaceSet = (
 ) => void;
 type WorkspaceGet = () => WorkspaceState;
 
-export type WorkspaceActionHistoryEntry = WorkspaceStructureHistoryEntry;
-
 export interface WorkspaceActionHistoryState {
   applying?: { entryId: string; mode: 'redo' | 'undo' } | null;
+  pendingAction?: { entry: WorkspaceActionHistoryEntry; undoRequested: boolean } | null;
   pendingCreate?: WorkspaceStructurePendingCreate | null;
   redoStack: WorkspaceActionHistoryEntry[];
   undoStack: WorkspaceActionHistoryEntry[];
 }
 
 export function createEmptyWorkspaceActionHistory(): WorkspaceActionHistoryState {
-  return { applying: null, pendingCreate: null, redoStack: [], undoStack: [] };
+  return { applying: null, pendingAction: null, pendingCreate: null, redoStack: [], undoStack: [] };
 }
 
 function trimHistoryStack(stack: WorkspaceActionHistoryEntry[]) {
@@ -37,6 +36,26 @@ export function pushWorkspaceUndoEntry(
     ...history,
     redoStack: [],
     undoStack: trimHistoryStack([...history.undoStack, entry])
+  };
+}
+
+export function beginWorkspaceAction(
+  history: WorkspaceActionHistoryState,
+  entry: WorkspaceActionHistoryEntry
+): WorkspaceActionHistoryState {
+  return { ...history, pendingAction: { entry, undoRequested: false } };
+}
+
+export function failWorkspaceAction(history: WorkspaceActionHistoryState, entryId: string) {
+  return history.pendingAction?.entry.id === entryId ? { ...history, pendingAction: null } : history;
+}
+
+export function settleWorkspaceAction(history: WorkspaceActionHistoryState, entryId: string) {
+  const pending = history.pendingAction;
+  if (!pending || pending.entry.id !== entryId) return { history, undoRequested: false };
+  return {
+    history: pushWorkspaceUndoEntry({ ...history, pendingAction: null }, pending.entry),
+    undoRequested: pending.undoRequested
   };
 }
 
@@ -92,16 +111,25 @@ function moveHistoryCursor(
   };
 }
 
-function requestPendingCreateUndo(set: WorkspaceSet, expectedEntryId?: string) {
+function requestPendingUndo(set: WorkspaceSet, expectedEntryId?: string) {
   let requested = false;
   set((state) => {
-    const pending = state.appActionHistory.pendingCreate;
+    const history = state.appActionHistory;
+    const pending = history.pendingAction ?? history.pendingCreate;
     if (!pending || (expectedEntryId && pending.entry.id !== expectedEntryId)) return state;
     requested = true;
+    if (history.pendingAction) {
+      return {
+        appActionHistory: {
+          ...history,
+          pendingAction: { ...history.pendingAction, undoRequested: true }
+        }
+      };
+    }
     return {
       appActionHistory: {
-        ...state.appActionHistory,
-        pendingCreate: { ...pending, undoRequested: true }
+        ...history,
+        pendingCreate: { ...history.pendingCreate!, undoRequested: true }
       }
     };
   });
@@ -112,24 +140,28 @@ function createApplyWorkspaceHistoryAction(set: WorkspaceSet, get: WorkspaceGet,
   return (expectedEntryId?: string) => {
     const snapshot = get();
     if (snapshot.appActionHistory.applying) return false;
-    if (mode === 'undo' && snapshot.appActionHistory.pendingCreate) {
-      return requestPendingCreateUndo(set, expectedEntryId);
+    if (snapshot.appActionHistory.pendingAction || snapshot.appActionHistory.pendingCreate) {
+      return mode === 'undo' && requestPendingUndo(set, expectedEntryId);
     }
     const entry = getTopEntry(snapshot.appActionHistory, mode);
     if (!entry || (expectedEntryId && entry.id !== expectedEntryId)) return false;
     set((state) => ({
       appActionHistory: { ...state.appActionHistory, applying: { entryId: entry.id, mode } }
     }));
-    void applyWorkspaceStructureHistory({ entry, get, mode }).then((patch) => {
+    void applyWorkspaceHistoryEntry({ entry, get, mode }).then((result) => {
       set((state) => {
         const applying = state.appActionHistory.applying;
         const top = getTopEntry(state.appActionHistory, mode);
-        if (applying?.entryId !== entry.id || applying.mode !== mode || top?.id !== entry.id) return state;
+        if (applying?.entryId !== entry.id || applying.mode !== mode) return state;
+        if (top?.id !== entry.id || result.status === 'invalid') {
+          return { appActionHistory: createEmptyWorkspaceActionHistory() };
+        }
+        if (result.status === 'failed') {
+          return { appActionHistory: { ...state.appActionHistory, applying: null } };
+        }
         return {
-          ...(patch ?? {}),
-          appActionHistory: patch
-            ? moveHistoryCursor(state.appActionHistory, entry, mode)
-            : { ...state.appActionHistory, applying: null }
+          ...result.patch,
+          appActionHistory: moveHistoryCursor(state.appActionHistory, result.entry, mode)
         };
       });
     });
@@ -138,7 +170,8 @@ function createApplyWorkspaceHistoryAction(set: WorkspaceSet, get: WorkspaceGet,
 }
 
 export function getWorkspaceUndoTitle(history: WorkspaceActionHistoryState) {
-  const entry = history.pendingCreate?.entry ?? history.undoStack[history.undoStack.length - 1] ?? null;
+  const entry = history.pendingAction?.entry ?? history.pendingCreate?.entry ??
+    history.undoStack[history.undoStack.length - 1] ?? null;
   return entry ? `Undo ${entry.title}` : 'Undo';
 }
 

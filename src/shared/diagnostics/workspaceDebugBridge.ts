@@ -36,6 +36,19 @@ function getExistingNodeState(nodeId: string) {
   return state;
 }
 
+function createLifecycleMutationDebugApi(): Pick<WorkspaceDebugApi, 'shelveNode' | 'unshelveNode'> {
+  return {
+    shelveNode: (nodeId, now) => {
+      const state = getExistingNodeState(nodeId);
+      return state ? state.shelveNode(nodeId, now) : false;
+    },
+    unshelveNode: (nodeId, now) => {
+      const state = getExistingNodeState(nodeId);
+      return state ? state.unshelveNode(nodeId, now) : false;
+    }
+  };
+}
+
 const upsertTopicForDebug: WorkspaceDebugApi['upsertTopicForDebug'] = ({ content, id, title }) => {
   const state = useWorkspaceStore.getState();
   const baseNode = Object.values(state.nodesById).find((node) => !node.specialKind) ??
@@ -73,7 +86,6 @@ function createNodeMutationDebugApi(): Pick<
   | 'deleteNode'
   | 'deleteNodePermanently'
   | 'restoreNode'
-  | 'shelveNode'
   | 'moveNodes'
   | 'updateNodeContent'
   | 'updateNodeTitle'
@@ -106,10 +118,6 @@ function createNodeMutationDebugApi(): Pick<
     },
     moveNodes: (nodeIds, targetNodeId, intent) =>
       useWorkspaceStore.getState().moveNodes(nodeIds, targetNodeId, intent),
-    shelveNode: (nodeId, now) => {
-      const state = getExistingNodeState(nodeId);
-      return state ? state.shelveNode(nodeId, now) : false;
-    },
     updateNodeContent: async (nodeId, content) => {
       const state = getExistingNodeState(nodeId);
       if (!state) return false;
@@ -182,6 +190,7 @@ function createNodeReadDebugApi(): Pick<
 function createWorkspaceDebugApi(): WorkspaceDebugApi {
   return {
     ...createNodeMutationDebugApi(),
+    ...createLifecycleMutationDebugApi(),
     ...createNodeReadDebugApi(),
     importClipboardImageAttachment: createClipboardImportHandler(),
     ...createSeedNodeDebugApi(canPersistWorkspaceDebugSeeds),

@@ -1,3 +1,4 @@
+import type { WorkspaceHistoryContext } from './workspaceHistoryContext';
 import type { WorkspaceState } from './workspaceStore';
 import type {
   WorkspaceStructureCreateEntry,
@@ -23,7 +24,9 @@ export function isWorkspaceStructureKind(kind: string): kind is WorkspaceStructu
 
 export function createStructureCreateEntry(args: {
   afterActiveNodeId: string | null;
+  afterContext: WorkspaceHistoryContext;
   beforeActiveNodeId: string | null;
+  beforeContext: WorkspaceHistoryContext;
   kind: WorkspaceStructureKind;
   nodeIds: string[];
   rootNodeId: string;

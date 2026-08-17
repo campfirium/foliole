@@ -1,34 +1,23 @@
-import type { Node, NodeReadingProfile } from '../features/nodes/model/nodeTypes';
-import { saveNodeReadingStateToRuntime } from '../shared/platform/runtime/nodeReadingStateRuntimeRepository';
+import type { NodeReadingProfile } from '../features/nodes/model/nodeTypes';
 
 import {
-  applyReadingSnapshot,
-  applyRelatedReadingSnapshots,
-  areRelatedReadingsValid,
   cloneReadingProfile,
-  cloneRelatedReadings,
-  isSameReadingProfile
+  cloneRelatedReadings
 } from './workspaceActionHistoryReading';
-import { cloneReviewSession } from './workspaceDeleteActionHistory';
-import type { WorkspaceState } from './workspaceStore';
-import { persistNodeOpened } from './workspaceStoreNodeOpenState';
+import type { WorkspaceHistoryContext } from './workspaceHistoryContext';
+import { cloneWorkspaceReviewSession } from './workspaceHistoryContext';
 
 const DISMISS_TOPIC_ACTION_TITLE = 'Dismiss Topic';
 export type WorkspaceTopicReadingActionTitle =
   'Read Topic' | 'Later Topic' | 'Soon Topic' | 'Postpone Topic' | typeof DISMISS_TOPIC_ACTION_TITLE;
 
-type WorkspaceSet = (
-  partial:
-    | WorkspaceState
-    | Partial<WorkspaceState>
-    | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)
-) => void;
-
 export interface WorkspaceTopicDismissHistoryEntry {
+  afterContext: WorkspaceHistoryContext;
   afterReading: NodeReadingProfile | null;
-  afterReviewSession?: WorkspaceState['reviewSession'] | null;
+  beforeContext: WorkspaceHistoryContext;
   beforeReading: NodeReadingProfile | null;
-  beforeReviewSession?: WorkspaceState['reviewSession'] | null;
+  id: string;
+  mutationTimestamp: string;
   nodeId: string;
   relatedReadings?: Array<{
     afterReading: NodeReadingProfile | null;
@@ -40,10 +29,12 @@ export interface WorkspaceTopicDismissHistoryEntry {
 }
 
 export function createTopicDismissHistoryEntry(args: {
+  afterContext: WorkspaceHistoryContext;
   afterReading: NodeReadingProfile | null | undefined;
-  afterReviewSession?: WorkspaceState['reviewSession'] | null;
+  beforeContext: WorkspaceHistoryContext;
   beforeReading: NodeReadingProfile | null | undefined;
-  beforeReviewSession?: WorkspaceState['reviewSession'] | null;
+  id: string;
+  mutationTimestamp: string;
   nodeId: string;
   relatedReadings?: Array<{
     afterReading: NodeReadingProfile | null | undefined;
@@ -53,10 +44,12 @@ export function createTopicDismissHistoryEntry(args: {
   title?: WorkspaceTopicReadingActionTitle;
 }): WorkspaceTopicDismissHistoryEntry {
   const entry: WorkspaceTopicDismissHistoryEntry = {
+    afterContext: { ...args.afterContext, reviewSession: cloneWorkspaceReviewSession(args.afterContext.reviewSession) },
     afterReading: cloneReadingProfile(args.afterReading),
-    afterReviewSession: cloneReviewSession(args.afterReviewSession),
+    beforeContext: { ...args.beforeContext, reviewSession: cloneWorkspaceReviewSession(args.beforeContext.reviewSession) },
     beforeReading: cloneReadingProfile(args.beforeReading),
-    beforeReviewSession: cloneReviewSession(args.beforeReviewSession),
+    id: args.id,
+    mutationTimestamp: args.mutationTimestamp,
     nodeId: args.nodeId,
     title: args.title ?? DISMISS_TOPIC_ACTION_TITLE,
     type: 'topic.dismiss'
@@ -65,7 +58,7 @@ export function createTopicDismissHistoryEntry(args: {
   return entry;
 }
 
-function resolveHistoryApply(entry: WorkspaceTopicDismissHistoryEntry, mode: 'redo' | 'undo') {
+export function resolveTopicReadingHistoryApply(entry: WorkspaceTopicDismissHistoryEntry, mode: 'redo' | 'undo') {
   const expectedReading = mode === 'undo' ? entry.afterReading : entry.beforeReading;
   const nextReading = mode === 'undo' ? entry.beforeReading : entry.afterReading;
   const relatedReadings = (entry.relatedReadings ?? []).map((reading) => ({
@@ -74,79 +67,4 @@ function resolveHistoryApply(entry: WorkspaceTopicDismissHistoryEntry, mode: 're
     nodeId: reading.nodeId
   }));
   return { expectedReading, nextReading, relatedReadings };
-}
-
-function getNavigationPatchAfterApply(
-  state: WorkspaceState,
-  entry: WorkspaceTopicDismissHistoryEntry,
-  mode: 'redo' | 'undo'
-) {
-  const reviewSession = mode === 'undo' ? entry.beforeReviewSession : entry.afterReviewSession;
-  if (reviewSession) {
-    const activeNodeId = reviewSession.currentNodeId ?? entry.nodeId;
-    return {
-      activeNodeId,
-      reviewSession: cloneReviewSession(reviewSession) ?? state.reviewSession
-    };
-  }
-  if (mode === 'undo') {
-    return {
-      activeNodeId: entry.nodeId
-    };
-  }
-  return {};
-}
-
-export function applyTopicDismissWorkspaceHistory(args: {
-  entry: WorkspaceTopicDismissHistoryEntry;
-  mode: 'redo' | 'undo';
-  now: string;
-  popInvalidTopEntry: (history: WorkspaceState['appActionHistory'], mode: 'redo' | 'undo') => WorkspaceState['appActionHistory'];
-  set: WorkspaceSet;
-  updateHistoryAfterApply: (
-    history: WorkspaceState['appActionHistory'],
-    entry: WorkspaceTopicDismissHistoryEntry,
-    mode: 'redo' | 'undo'
-  ) => WorkspaceState['appActionHistory'];
-}) {
-  const apply = resolveHistoryApply(args.entry, args.mode);
-  let nextNodesForSync: Node[] = [];
-  args.set((state) => {
-    const node = state.nodesById[args.entry.nodeId];
-    const isInvalid =
-      !node ||
-      state.trashedNodeIds.includes(args.entry.nodeId) ||
-      !isSameReadingProfile(node.reading, apply.expectedReading) ||
-      !areRelatedReadingsValid(apply.relatedReadings, state.nodesById);
-    if (isInvalid) {
-      return { appActionHistory: args.popInvalidTopEntry(state.appActionHistory, args.mode) };
-    }
-    const nextNode = applyReadingSnapshot(node, apply.nextReading);
-    const nextNodesById = {
-      ...state.nodesById,
-      [args.entry.nodeId]: nextNode
-    };
-    applyRelatedReadingSnapshots({ nextNodesById, readings: apply.relatedReadings });
-    nextNodesForSync = [
-      nextNode,
-      ...apply.relatedReadings
-        .map((related) => nextNodesById[related.nodeId])
-        .filter((relatedNode): relatedNode is Node => Boolean(relatedNode))
-    ];
-    return {
-      ...getNavigationPatchAfterApply(state, args.entry, args.mode),
-      appActionHistory: args.updateHistoryAfterApply(state.appActionHistory, args.entry, args.mode),
-      nodesById: nextNodesById
-    };
-  });
-  if (nextNodesForSync.length === 0) return false;
-  nextNodesForSync.forEach((node) => void saveNodeReadingStateToRuntime({
-    nodeId: node.id,
-    reading: node.reading ?? null,
-    updatedAt: args.now
-  }));
-  const reviewSession = args.mode === 'undo' ? args.entry.beforeReviewSession : args.entry.afterReviewSession;
-  const activeNodeId = reviewSession?.currentNodeId ?? (args.mode === 'undo' ? args.entry.nodeId : null);
-  if (activeNodeId) void persistNodeOpened(args.set, activeNodeId, args.now);
-  return true;
 }

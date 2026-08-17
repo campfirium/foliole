@@ -3,6 +3,7 @@ import {
   failWorkspaceStructureCreate,
   settleWorkspaceStructureCreate
 } from './workspaceActionHistory';
+import { captureWorkspaceHistoryContext } from './workspaceHistoryContext';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStore';
 import { createStructureCreateEntry, isWorkspaceStructureKind } from './workspaceStructureHistoryEntries';
@@ -12,15 +13,17 @@ type WorkspaceSet = (
 ) => void;
 
 export function beginStructureCreateHistory(args: {
-  afterActiveNodeId: string | null;
-  beforeActiveNodeId: string | null;
+  afterState: WorkspaceState;
+  beforeState: WorkspaceState;
   history: WorkspaceState['appActionHistory'];
   node: WorkspaceState['nodesById'][string];
 }) {
   if (!isWorkspaceStructureKind(args.node.kind)) return null;
   const entry = createStructureCreateEntry({
-    afterActiveNodeId: args.afterActiveNodeId,
-    beforeActiveNodeId: args.beforeActiveNodeId,
+    afterActiveNodeId: args.afterState.activeNodeId,
+    afterContext: captureWorkspaceHistoryContext(args.afterState),
+    beforeActiveNodeId: args.beforeState.activeNodeId,
+    beforeContext: captureWorkspaceHistoryContext(args.beforeState),
     kind: args.node.kind,
     nodeIds: [args.node.id],
     rootNodeId: args.node.id

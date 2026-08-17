@@ -4,20 +4,30 @@ import { buildReadingScheduleCoreFields } from '../features/review/model/unified
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
 import {
+  beginWorkspaceAction,
+  createEmptyWorkspaceActionHistory,
+  failWorkspaceAction,
+  settleWorkspaceAction
+} from './workspaceActionHistory';
+import { isSameReadingProfile } from './workspaceActionHistoryReading';
+import { isSameWorkspaceReviewSession } from './workspaceHistoryContext';
+import type { ReadingReviewPendingNodeIds } from './workspaceReadingReviewHistoryCommit';
+import {
   runtimeWorkspaceReviewPersistence,
   type WorkspaceReviewPersistenceAdapter
 } from './workspaceReviewPersistence';
 import { resolveReadingPriorityChain } from './workspaceReviewReading';
 import type { WorkspaceState } from './workspaceStore';
 import { persistNodeOpened } from './workspaceStoreNodeOpenState';
-import type { ReadingReviewPendingNodeIds } from './workspaceStoreReadingReviewActions';
 import { advanceOrCompleteAfterReadingAction } from './workspaceStoreReadingReviewSessionFlow';
-import { createReadingReviewHistoryPatch } from './workspaceStoreReviewActionHelpers';
+import { createReadingReviewHistoryEntry } from './workspaceStoreReviewActionHelpers';
+import type { WorkspaceTopicDismissHistoryEntry } from './workspaceTopicDismissActionHistory';
 
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
 type WorkspaceGet = () => WorkspaceState;
 
 interface TopicDelayPatchResult {
+  historyEntry: WorkspaceTopicDismissHistoryEntry;
   nextNode: Node;
   patch: Partial<WorkspaceState>;
 }
@@ -90,19 +100,22 @@ function buildTopicDelayPatch(args: {
   const nextNode = { ...node, reading: nextReading };
   const nextNodesById = { ...args.state.nodesById, [args.nodeId]: nextNode };
   const reviewSession = buildReviewSessionAfterDelay({ ...args, nextNodesById });
+  const afterActiveNodeId = reviewSession.currentNodeId ?? reviewSession.continueNodeId ?? args.state.activeNodeId;
   return {
+    historyEntry: createReadingReviewHistoryEntry({
+      afterActiveNodeId,
+      afterReading: nextReading,
+      afterReviewSession: reviewSession,
+      beforeReading: node.reading,
+      beforeReviewSession: args.snapshot.reviewSession,
+      mutationTimestamp: args.now,
+      nodeId: args.nodeId,
+      state: args.state,
+      title: 'Postpone Topic'
+    }),
     nextNode,
     patch: {
-      activeNodeId: reviewSession.currentNodeId ?? reviewSession.continueNodeId ?? args.state.activeNodeId,
-      ...createReadingReviewHistoryPatch({
-        afterReading: nextReading,
-        afterReviewSession: reviewSession,
-        beforeReading: node.reading,
-        beforeReviewSession: args.snapshot.reviewSession,
-        nodeId: args.nodeId,
-        state: args.state,
-        title: 'Postpone Topic'
-      }),
+      activeNodeId: afterActiveNodeId,
       nodesById: nextNodesById,
       reviewSession
     }
@@ -122,12 +135,43 @@ export function createSetReviewTopicDelayActionWithPending(
     pendingNodeIds.add(nodeId);
     try {
       const result = buildTopicDelayPatch({ level, nodeId, now, snapshot, state: get() });
-      if (!result || !(await persistence.persistReadingNodes([result.nextNode]))) return false;
+      if (!result) return false;
+      let began = false;
+      set((state) => {
+        if (state.appActionHistory.applying || state.appActionHistory.pendingAction ||
+            state.appActionHistory.pendingCreate) return state;
+        began = true;
+        return { appActionHistory: beginWorkspaceAction(state.appActionHistory, result.historyEntry) };
+      });
+      if (!began) return false;
+      let persisted = false;
+      try {
+        persisted = await persistence.persistReadingNodes([result.nextNode], now);
+      } catch {
+        persisted = false;
+      }
+      if (!persisted) {
+        set((state) => ({
+          appActionHistory: failWorkspaceAction(state.appActionHistory, result.historyEntry.id)
+        }));
+        return false;
+      }
+      let applied = false;
+      let undoRequested = false;
       set((state) => {
         const currentNode = state.nodesById[nodeId];
-        if (!canDelayTopic(currentNode)) return state;
-        return result.patch;
+        const applicable = canDelayTopic(currentNode) &&
+          state.appActionHistory.pendingAction?.entry.id === result.historyEntry.id &&
+          isSameReadingProfile(currentNode.reading, result.historyEntry.beforeReading) &&
+          isSameWorkspaceReviewSession(state.reviewSession, result.historyEntry.beforeContext.reviewSession);
+        if (!applicable) return { appActionHistory: createEmptyWorkspaceActionHistory() };
+        const settled = settleWorkspaceAction(state.appActionHistory, result.historyEntry.id);
+        applied = true;
+        undoRequested = settled.undoRequested;
+        return { ...result.patch, appActionHistory: settled.history };
       });
+      if (!applied) return false;
+      if (undoRequested) get().undoWorkspaceAction(result.historyEntry.id);
       const nextActiveNodeId = result.patch.reviewSession?.currentNodeId ?? result.patch.reviewSession?.continueNodeId;
       if (nextActiveNodeId) void persistNodeOpened(set, nextActiveNodeId, now);
       return true;

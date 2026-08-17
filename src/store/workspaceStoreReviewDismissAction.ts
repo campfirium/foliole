@@ -1,6 +1,11 @@
 import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 
 import { buildReadingReviewDomainPatch } from './workspaceReadingReviewDomain';
+import {
+  persistAndApplyReadingReviewPatch,
+  persistReadingReviewNodes,
+  type ReadingReviewPendingNodeIds
+} from './workspaceReadingReviewHistoryCommit';
 import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
 import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue';
 import {
@@ -13,10 +18,8 @@ import {
 } from './workspaceReviewReading';
 import { calculateReviewStepElapsedMs } from './workspaceReviewSessionProgress';
 import type { WorkspaceState } from './workspaceStore';
-import {
-  persistReadingReviewNodes,
-  type ReadingReviewPendingNodeIds
-} from './workspaceStoreReadingReviewActions';
+import { createReadingReviewHistoryEntry } from './workspaceStoreReviewActionHelpers';
+import type { WorkspaceTopicDismissHistoryEntry } from './workspaceTopicDismissActionHistory';
 
 type WorkspaceSet = (
   partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)
@@ -24,6 +27,7 @@ type WorkspaceSet = (
 type WorkspaceGet = () => WorkspaceState;
 
 interface DismissReviewPatchResult {
+  historyEntry: WorkspaceTopicDismissHistoryEntry;
   nextNodesForSync: WorkspaceState['nodesById'][string][];
   patch: Partial<WorkspaceState>;
 }
@@ -87,10 +91,29 @@ function buildDismissReviewPatch(args: {
   });
   if (!result) return null;
   const { nextNodeId, nextReviewSession } = buildNextDismissReviewSession({ ...args, nextNodesById: result.nextNodesById });
+  const activeContext = buildReviewActiveNodeContext(
+    args.state,
+    nextNodeId ?? nextReviewSession.continueNodeId ?? null
+  );
   return {
+    historyEntry: createReadingReviewHistoryEntry({
+      afterActiveNodeId: activeContext.activeNodeId,
+      ...('browseRootNodeId' in activeContext
+        ? { afterBrowseRootNodeId: activeContext.browseRootNodeId }
+        : {}),
+      afterReading: result.afterReading,
+      afterReviewSession: nextReviewSession,
+      beforeReading: result.beforeReading,
+      beforeReviewSession: args.snapshot.reviewSession,
+      mutationTimestamp: args.now,
+      nodeId: args.currentNodeId,
+      ...(result.sequentialChanges.length ? { relatedReadings: result.sequentialChanges } : {}),
+      state: args.state,
+      title: 'Dismiss Topic'
+    }),
     nextNodesForSync: result.nextNodesForSync,
     patch: {
-      ...buildReviewActiveNodeContext(args.state, nextNodeId ?? nextReviewSession.continueNodeId ?? null),
+      ...activeContext,
       nodesById: result.nextNodesById,
       reviewSession: nextReviewSession
     }
@@ -120,22 +143,16 @@ export function createDismissReviewTopicActionWithPending(
       snapshot,
       state: get()
     });
-    pendingNodeIds.add(currentNodeId);
-    try {
-      if (!result || !(await persistReadingReviewNodes(result.nextNodesForSync, persistence))) {
-        return false;
-      }
-      set((state) => {
-        const node = state.nodesById[currentNodeId];
-        if (!node || state.reviewSession.currentNodeId !== currentNodeId || state.activeNodeId !== currentNodeId) {
-          return state;
-        }
-        return result?.patch ?? state;
-      });
-      return true;
-    } finally {
-      pendingNodeIds.delete(currentNodeId);
-    }
+    if (!result) return false;
+    const committed = await persistAndApplyReadingReviewPatch({
+      buildPatch: () => result,
+      currentNodeId,
+      get,
+      pendingNodeIds,
+      persistence,
+      set
+    });
+    return Boolean(committed);
   };
 }
 

@@ -1,5 +1,7 @@
 import type { NodeKind } from '../../lib/core/nodes/nodeKind';
 
+import type { WorkspaceHistoryContext } from './workspaceHistoryContext';
+
 export type WorkspaceStructureKind = Extract<NodeKind, 'folder' | 'topic'>;
 
 interface WorkspaceStructureHistoryBase {
@@ -10,7 +12,9 @@ interface WorkspaceStructureHistoryBase {
 
 export interface WorkspaceStructureCreateEntry extends WorkspaceStructureHistoryBase {
   afterActiveNodeId: string | null;
+  afterContext: WorkspaceHistoryContext;
   beforeActiveNodeId: string | null;
+  beforeContext: WorkspaceHistoryContext;
   nodeIds: string[];
   rootNodeId: string;
   type: 'structure.create';

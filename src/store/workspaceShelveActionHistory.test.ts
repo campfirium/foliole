@@ -4,7 +4,6 @@ import type { Node, NodeReadingProfile } from '../features/nodes/model/nodeTypes
 
 import { createWorkspaceActionHistoryActions } from './workspaceActionHistory';
 import { createStartedReviewSession } from './workspaceReviewReading';
-import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
 import {
   createWorkspaceNodeActionsFixture,
@@ -141,35 +140,49 @@ describe('workspace application shelve action history', () => {
     vi.clearAllMocks();
   });
 
-  it('does not add Shelve Topic to workspace structure history', () => {
+  it('undoes and redoes Shelve Topic from the workspace timeline', async () => {
     const harness = createShelveHarness();
-    const nodeActions = createWorkspaceNodeActions(harness.setState);
+    const nodeActions = createWorkspaceNodeActions(harness.setState, harness.getState);
     const historyActions = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
     expect(nodeActions.shelveNode('node-1', '2026-05-01T00:00:00.000Z')).toBe(true);
-    expect(harness.getState().appActionHistory.undoStack).toEqual([]);
-    expect(historyActions.undoWorkspaceAction()).toBe(false);
+    await vi.waitFor(() => expect(harness.getState().appActionHistory.undoStack).toHaveLength(1));
     expect(harness.getState().nodesById['node-1']?.shelvedAt).toBe('2026-05-01T00:00:00.000Z');
-    expect(syncNodeContentToRuntime).toHaveBeenCalled();
+    expect(historyActions.undoWorkspaceAction()).toBe(true);
+    await vi.waitFor(() => expect(harness.getState().nodesById['node-1']?.shelvedAt).toBeNull());
+    expect(historyActions.redoWorkspaceAction()).toBe(true);
+    await vi.waitFor(() => expect(harness.getState().nodesById['node-1']?.shelvedAt).not.toBeNull());
+
+    expect(nodeActions.unshelveNode('node-1', '2026-05-02T00:00:00.000Z')).toBe(true);
+    await vi.waitFor(() => expect(harness.getState().appActionHistory.undoStack.at(-1))
+      .toMatchObject({ title: 'Unshelve Topic' }));
+    expect(harness.getState().nodesById['node-1']?.shelvedAt).toBeNull();
+    expect(historyActions.undoWorkspaceAction()).toBe(true);
+    await vi.waitFor(() => expect(harness.getState().nodesById['node-1']?.shelvedAt).not.toBeNull());
+    expect(harness.getState().appActionHistory.redoStack).toHaveLength(1);
+
+    expect(nodeActions.unshelveNode('node-1', '2026-05-03T00:00:00.000Z')).toBe(true);
+    await vi.waitFor(() => expect(harness.getState().nodesById['node-1']?.shelvedAt).toBeNull());
+    expect(harness.getState().appActionHistory.redoStack).toEqual([]);
   });
 
-  it('keeps sequential reading changes outside workspace structure history', () => {
+  it('restores sequential reading changes with Shelve Topic', async () => {
     const harness = createSequentialHarness();
-    const nodeActions = createWorkspaceNodeActions(harness.setState);
+    const nodeActions = createWorkspaceNodeActions(harness.setState, harness.getState);
     const historyActions = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
 
     expect(nodeActions.shelveNode('node-1', '2026-05-01T00:00:00.000Z')).toBe(true);
     expect(harness.getState().nodesById['node-1']?.reading?.state).toBe('active');
     expect(harness.getState().nodesById['node-2']?.reading?.state).toBe('active');
 
-    expect(historyActions.undoWorkspaceAction()).toBe(false);
-    expect(harness.getState().appActionHistory.undoStack).toEqual([]);
-    expect(harness.getState().nodesById['node-1']?.shelvedAt).toBe('2026-05-01T00:00:00.000Z');
-    expect(harness.getState().nodesById['node-2']?.reading?.state).toBe('active');
+    await vi.waitFor(() => expect(harness.getState().appActionHistory.undoStack).toHaveLength(1));
+    expect(historyActions.undoWorkspaceAction()).toBe(true);
+    await vi.waitFor(() => expect(harness.getState().nodesById['node-1']?.shelvedAt).toBeNull());
+    expect(harness.getState().nodesById['node-2']?.reading?.state).toBe('locked');
   });
 
-  it('removes children of a shelved topic from the active review session without counting them as read', () => {
+  it('restores the active review session when a shelved topic is undone', async () => {
     const harness = createActiveReviewShelveHarness();
-    const nodeActions = createWorkspaceNodeActions(harness.setState);
+    const nodeActions = createWorkspaceNodeActions(harness.setState, harness.getState);
     const historyActions = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
 
     expect(nodeActions.shelveNode('source', '2026-05-01T00:05:00.000Z')).toBe(true);
@@ -178,8 +191,9 @@ describe('workspace application shelve action history', () => {
     expect(harness.getState().reviewSession.queueNodeIds).toEqual(['other']);
     expect(harness.getState().reviewSession.readTopicCount).toBe(0);
 
-    expect(historyActions.undoWorkspaceAction()).toBe(false);
-    expect(harness.getState().appActionHistory.undoStack).toEqual([]);
-    expect(harness.getState().reviewSession.currentNodeId).toBe('other');
+    await vi.waitFor(() => expect(harness.getState().appActionHistory.undoStack).toHaveLength(1));
+    expect(historyActions.undoWorkspaceAction()).toBe(true);
+    await vi.waitFor(() => expect(harness.getState().reviewSession.currentNodeId).toBe('child'));
+    expect(harness.getState().reviewSession.queueNodeIds).toEqual(['child', 'other']);
   });
 });

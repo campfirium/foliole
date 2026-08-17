@@ -1,13 +1,23 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
+import {
+  beginWorkspaceAction
+} from './workspaceActionHistory';
+import { createWorkspaceActionHistoryEntryId } from './workspaceActionHistoryEntry';
+import {
+  captureWorkspaceHistoryContext
+} from './workspaceHistoryContext';
+import { getWorkspaceHistoryPersistence } from './workspaceHistoryPersistence';
+import { finishNodeShelveHistoryPersistence } from './workspaceNodeShelveHistoryCommit';
 import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue';
 import { completeReviewSession } from './workspaceReviewReading';
-import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
 import { buildSequentialReadingMaintenancePatch } from './workspaceSequentialReadingMaintenance';
+import { createTopicShelveHistoryEntry, type WorkspaceTopicShelveHistoryEntry } from './workspaceShelveActionHistory';
 import type { WorkspaceState } from './workspaceStore';
 
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
+type WorkspaceGet = () => WorkspaceState;
 
 function isShelvableTopic(node: Node | undefined, state: WorkspaceState): node is Node {
   return Boolean(
@@ -116,6 +126,7 @@ function buildNodeShelveMutation(args: {
     state: args.state
   });
   return {
+    changes: sequentialPatch?.changes ?? [],
     nextNodesForSync,
     patch: {
       ...(reviewSessionPatch ?? {}),
@@ -126,29 +137,60 @@ function buildNodeShelveMutation(args: {
 
 function createSetNodeShelvedAtAction(
   set: WorkspaceSet,
-  mode: 'shelve' | 'unshelve'
+  mode: 'shelve' | 'unshelve',
+  get?: WorkspaceGet
 ): WorkspaceState['shelveNode'] | WorkspaceState['unshelveNode'] {
   return (nodeId, now = new Date().toISOString()) => {
     let changed = false;
     let nextNodesForSync: Node[] = [];
+    let historyEntry: WorkspaceTopicShelveHistoryEntry | null = null;
+    let beforeNodesById: WorkspaceState['nodesById'] = {};
     set((state) => {
+      if (get && (state.appActionHistory.applying || state.appActionHistory.pendingAction ||
+          state.appActionHistory.pendingCreate)) return state;
       const mutation = buildNodeShelveMutation({ mode, nodeId, now, state });
       if (!mutation) return state;
       changed = true;
       nextNodesForSync = mutation.nextNodesForSync;
-      return mutation.patch;
+      if (get) {
+        const affectedNodeIds = [nodeId, ...mutation.changes.map(({ nodeId: changedNodeId }) => changedNodeId)];
+        beforeNodesById = Object.fromEntries(affectedNodeIds.flatMap((affectedNodeId) => {
+          const beforeNode = state.nodesById[affectedNodeId];
+          return beforeNode ? [[affectedNodeId, beforeNode]] : [];
+        }));
+        historyEntry = createTopicShelveHistoryEntry({
+          afterContext: captureWorkspaceHistoryContext(state, mutation.patch),
+          afterShelvedAt: mutation.patch.nodesById[nodeId]?.shelvedAt ?? null,
+          beforeContext: captureWorkspaceHistoryContext(state),
+          beforeShelvedAt: state.nodesById[nodeId]?.shelvedAt ?? null,
+          id: createWorkspaceActionHistoryEntryId(),
+          mutationTimestamp: now,
+          nodeId,
+          ...(mutation.changes.length ? { relatedReadings: mutation.changes } : {})
+        });
+      }
+      return {
+        ...mutation.patch,
+        ...(historyEntry
+          ? { appActionHistory: beginWorkspaceAction(state.appActionHistory, historyEntry) }
+          : {})
+      };
     });
-    if (nextNodesForSync.length > 0) {
-      nextNodesForSync.forEach((node) => syncNodeContentToRuntime(node));
+    const entry = historyEntry as WorkspaceTopicShelveHistoryEntry | null;
+    if (entry && get) {
+      finishNodeShelveHistoryPersistence({ beforeNodesById, entry, get, nodes: nextNodesForSync, now, set });
+    }
+    else if (nextNodesForSync.length > 0) {
+      void getWorkspaceHistoryPersistence().persistShelveSnapshots(nextNodesForSync, now);
     }
     return changed;
   };
 }
 
-export function createShelveNodeAction(set: WorkspaceSet): WorkspaceState['shelveNode'] {
-  return createSetNodeShelvedAtAction(set, 'shelve');
+export function createShelveNodeAction(set: WorkspaceSet, get?: WorkspaceGet): WorkspaceState['shelveNode'] {
+  return createSetNodeShelvedAtAction(set, 'shelve', get);
 }
 
-export function createUnshelveNodeAction(set: WorkspaceSet): WorkspaceState['unshelveNode'] {
-  return createSetNodeShelvedAtAction(set, 'unshelve');
+export function createUnshelveNodeAction(set: WorkspaceSet, get?: WorkspaceGet): WorkspaceState['unshelveNode'] {
+  return createSetNodeShelvedAtAction(set, 'unshelve', get);
 }

@@ -9,7 +9,9 @@ import {
 
 import { resolveReviewQueueReadingAvailableAt } from './reviewQueuePlannerReadingPaths';
 import { isReviewProfileDue } from './reviewQueuePlannerTime';
+import type { ReadingReviewPendingNodeIds } from './workspaceReadingReviewHistoryCommit';
 import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
+import { commitWorkspaceReviewGrade } from './workspaceReviewGradeHistoryCommit';
 import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue';
 import {
   runtimeWorkspaceReviewPersistence,
@@ -21,10 +23,8 @@ import { persistNodeOpened } from './workspaceStoreNodeOpenState';
 import {
   createReadReviewTopicActionWithPending,
   createPostponeReviewTopicActionWithPending,
-  createRevisitReviewTopicSoonAction,
-  type ReadingReviewPendingNodeIds
+  createRevisitReviewTopicSoonAction
 } from './workspaceStoreReadingReviewActions';
-import { applyGradedReviewState, persistReviewGradeMutation } from './workspaceStoreReviewActionHelpers';
 import { createDismissReviewTopicActionWithPending } from './workspaceStoreReviewDismissAction';
 import {
   createContinueReviewSessionReadingAction,
@@ -112,27 +112,17 @@ function createGradeReviewCardAction(
       scheduler
     });
     if (!result) return false;
-    try {
-      const persisted = await persistReviewGradeMutation({
-        currentNodeId,
-        grade,
-        reviewedAt: result.reviewedAt,
-        schedulerVersion: result.schedulerVersion,
-        cardBefore: result.cardBefore,
-        cardAfter: result.cardAfter
-      }, persistence);
-      if (!persisted) return false;
-    } catch {
-      return false;
-    }
-    applyGradedReviewState({
-      set,
-      snapshot,
+    const committed = await commitWorkspaceReviewGrade({
       currentNodeId,
-      nodePatch: result.nodePatch,
-      reviewedAt: result.reviewedAt,
-      now
+      get,
+      grade,
+      now,
+      persistence,
+      result,
+      set,
+      snapshot
     });
+    if (!committed) return false;
     const nextActiveNodeId = get().activeNodeId;
     if (nextActiveNodeId) void persistNodeOpened(set, nextActiveNodeId, now);
 
