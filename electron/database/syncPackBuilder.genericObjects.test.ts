@@ -2,6 +2,8 @@ import path from 'node:path';
 
 import { expect, it, vi } from 'vitest';
 
+import { SOURCE_OWNERSHIP_SYNC_FEATURE } from '../../lib/platform/syncAdvertisedFeatures.js';
+
 import { openDatabaseConnection } from './connection.js';
 import { buildDesktopSyncPack } from './syncPackBuilder.js';
 import {
@@ -38,6 +40,7 @@ it('packs attachment metadata as a generic sync object', async () => {
   expect(result).toMatchObject({ objectCount: 1, packId: 'pack-attachment-1', toStateSeq: 3 });
   expect(readPackRows(packPath)).toMatchObject({
     manifest: expect.objectContaining({
+      advertised_features: [SOURCE_OWNERSHIP_SYNC_FEATURE],
       tables: [
         { name: 'sync_groups', row_count: 0 },
         { name: 'sync_group_members', row_count: 0 },
@@ -61,6 +64,53 @@ it('packs attachment metadata as a generic sync object', async () => {
       payload_json: expect.stringContaining('cover.png')
     })]
   });
+
+});
+
+it('packs watched folder ownership as a generic sync object', async () => {
+  const driver = openDatabaseConnection().driver;
+  driver.execute(
+    `INSERT INTO watched_folder_bindings (
+      binding_id, owner_installation_id, owner_device_name, owner_platform, claim_state, claim_revision,
+      action_mode, archive_path, highlight_mode, highlight_path, keep_preview_json, primary_path,
+      enabled, availability, created_at, updated_at
+    ) VALUES ('watched-1', 'desktop-installation-a', 'Mac A', 'darwin', 'claimed', 'revision-a',
+      'keep', '', 'merged', '', NULL, '/Users/a/Inbox', 1, 'available',
+      '2026-08-17T00:00:00.000Z', '2026-08-17T00:00:00.000Z')`
+  );
+  driver.execute(
+    `INSERT INTO sync_object_state (
+      object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+    ) VALUES ('watched_folder', 'watched-1', 8, 'watched-hash', 'desktop-a',
+      '2026-08-17T00:00:00.000Z', 1)`
+  );
+  const packPath = resolveSyncPackPath('incoming-watched-folder.db');
+
+  await buildDesktopSyncPack({ outputPath: packPath, packId: 'pack-watched-folder-1', fromStateSeq: 0 });
+
+  expect(readPackRows(packPath)).toMatchObject({
+    stateRows: [{ object_id: 'watched-1', object_type: 'watched_folder', state_seq: 8 }],
+    syncObjects: [expect.objectContaining({
+      object_id: 'watched-1', object_type: 'watched_folder', payload_json: expect.stringContaining('desktop-installation-a')
+    })]
+  });
+  driver.execute(
+    `INSERT INTO sync_groups (group_id, display_name, timeline_id, created_by_device_id, created_at, updated_at)
+     VALUES ('group-mobile', 'Devices', 'timeline-mobile', 'desktop-a',
+       '2026-08-17T00:00:00.000Z', '2026-08-17T00:00:00.000Z')`
+  );
+  driver.execute(
+    `INSERT INTO sync_group_members (
+      group_id, device_id, device_kind, device_name, state, approved_by_device_id,
+      authorization_id, joined_at, updated_at
+    ) VALUES ('group-mobile', 'android-a', 'android-capacitor', 'Phone', 'active', 'desktop-a',
+      'auth-android-a', '2026-08-17T00:00:00.000Z', '2026-08-17T00:00:00.000Z')`
+  );
+  const mobilePackPath = resolveSyncPackPath('incoming-watched-folder-mobile.db');
+  await buildDesktopSyncPack({
+    outputPath: mobilePackPath, packId: 'pack-watched-folder-mobile', fromStateSeq: 0, toPeerId: 'android-a'
+  });
+  expect(readPackRows(mobilePackPath)).toMatchObject({ stateRows: [], syncObjects: [] });
 });
 
 it('packs external folder metadata as a generic sync object', async () => {

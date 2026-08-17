@@ -228,5 +228,6 @@ const SYNC_PACK_SURFACE_OBJECT_TYPES = [
   'node_text_alternative',
   'attachment',
   'pdf_page_text',
-  'view_state'
+  'view_state',
+  'watched_folder'
 ] as const;

@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { deflateSync } from 'node:zlib';
 
-import type { DatabaseDriver } from '../../lib/core/database/driver.js';
+import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
 import { DATABASE_SCHEMA_VERSION } from '../../lib/core/database/migrations.js';
 import {
   SYNC_PACK_COMPRESSION,
@@ -14,9 +14,14 @@ import {
 } from '../../lib/core/sync/syncPackEnvelopeContract.js';
 import { buildSyncPackManifest } from '../../lib/core/sync/syncPackManifest.js';
 import { PACK_SCHEMA } from '../../lib/core/sync/syncPackSchema.js';
+import {
+  CURRENT_SYNC_ADVERTISED_FEATURES,
+  isKnownMobileSyncDeviceKind
+} from '../../lib/platform/syncAdvertisedFeatures.js';
 import { writeStoredZip } from '../diagnostics/zipStore.js';
 
 import { backfillMissingNodeSyncState } from './nodeSyncStateRows.js';
+import { recordLocalSyncGroupFeatures } from './syncGroupMemberFeatures.js';
 import { writePackManifest, writePackRows } from './syncPackBuilderRows.js';
 import { loadSyncPackGroupRows } from './syncPackGroupRows.js';
 import type { LoadedDesktopSyncPackRows } from './syncPackLoadedRows.js';
@@ -78,6 +83,7 @@ function buildContainerManifest(args: {
     toStateSeq: args.toStateSeq
   });
   return {
+    advertised_features: CURRENT_SYNC_ADVERTISED_FEATURES,
     format: SYNC_PACK_FORMAT,
     format_version: SYNC_PACK_FORMAT_VERSION,
     pack_id: args.input.packId,
@@ -102,6 +108,7 @@ export async function buildDesktopSyncPackFromDriver(
   const fromStateSeq = normalizeSeq(input.fromStateSeq);
   const createdAt = input.createdAt ?? new Date().toISOString();
   backfillMissingNodeSyncState(sourceDriver);
+  recordLocalSyncGroupFeatures(sourceDriver, input.fromDeviceId);
   const toStateSeq = normalizeSeq(input.toStateSeq ?? loadMaxStateSeq(sourceDriver));
   await fs.mkdir(path.dirname(input.outputPath), { recursive: true });
   await fs.rm(input.outputPath, { force: true });
@@ -110,7 +117,7 @@ export async function buildDesktopSyncPackFromDriver(
   const packDb = new BetterSqlite3(incomingPath);
   try {
     for (const statement of PACK_SCHEMA) packDb.exec(statement);
-    const baseRows = loadPackRows(fromStateSeq, toStateSeq, sourceDriver);
+    const baseRows = filterTargetRows(loadPackRows(fromStateSeq, toStateSeq, sourceDriver), sourceDriver, input.toPeerId);
     const groupRows = loadSyncPackGroupRows(sourceDriver);
     const nodeVersions = loadSyncPackNodeVersionRows(sourceDriver, baseRows.nodes);
     const rows: LoadedDesktopSyncPackRows = {
@@ -153,4 +160,22 @@ export async function buildDesktopSyncPackFromDriver(
     packDb.close();
     await fs.rm(incomingPath, { force: true });
   }
+}
+
+function filterTargetRows(
+  rows: ReturnType<typeof loadPackRows>,
+  driver: DatabaseDriver,
+  toPeerId?: string
+): ReturnType<typeof loadPackRows> {
+  if (!toPeerId) return rows;
+  const peer = driver.queryOne<{ device_kind: string } & DatabaseRow>(
+    `SELECT device_kind FROM sync_group_members WHERE device_id = ? AND state = 'active' LIMIT 1`,
+    [toPeerId]
+  );
+  if (!isKnownMobileSyncDeviceKind(peer?.device_kind)) return rows;
+  return {
+    ...rows,
+    stateRows: rows.stateRows.filter((row) => row.object_type !== 'watched_folder'),
+    syncObjects: rows.syncObjects.filter((row) => row.object_type !== 'watched_folder')
+  };
 }

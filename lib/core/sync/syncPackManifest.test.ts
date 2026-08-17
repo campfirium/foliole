@@ -80,7 +80,8 @@ it('declares the stage one payload object inventory explicitly', () => {
     'node_text_alternative',
     'pdf_page_text',
     'setting',
-    'view_state'
+    'view_state',
+    'watched_folder'
   ]);
   expect(isSyncPackPayloadObjectType('node_review')).toBe(true);
   expect(isSyncPackPayloadObjectType('node_attachments')).toBe(false);

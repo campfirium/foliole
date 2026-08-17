@@ -139,6 +139,15 @@ export function useImportSourceWorkspaceState() {
   const [settings, setSettings] = usePersistedImportSourceWorkspaceSettings();
   return {
     detailsOpen: settings.detailsOpen,
+    handleClaimSource(sourceId: string) {
+      setSettings((current) => ({
+        ...current,
+        sources: replaceSource(current.sources, sourceId, (source) => source.ownership ? ({
+          ...source,
+          ownership: { ...source.ownership, claimState: 'proposed' }
+        }) : source)
+      }));
+    },
     ...createGenericSourceActions(setSettings, selectFolderPath),
     ...createKeepImportActions(settings, setSettings),
     ...createReadwiseReaderImportActions(settings, setSettings),
@@ -148,6 +157,7 @@ export function useImportSourceWorkspaceState() {
     readwiseRootPath: settings.readwiseRootPath,
     readwiseSources: settings.readwiseSources,
     sources: settings.sources,
-    titleStrategy: settings.titleStrategy
+    titleStrategy: settings.titleStrategy,
+    watchedFoldersReady: settings.watchedFoldersReady
   };
 }

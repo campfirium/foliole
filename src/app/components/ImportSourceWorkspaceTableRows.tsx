@@ -30,6 +30,7 @@ function formatKeepStateLabel(state: DraftImportSource['keepState'], t: ReturnTy
 
 export interface ImportSourceTableRowActions {
   onChange: (sourceId: string, field: DraftImportSourceField, value: string) => void;
+  onClaimSource: (sourceId: string) => void;
   onChangeAction: (sourceId: string, value: string) => void;
   onChooseHighlightFolder: (sourceId: string) => void;
   onChoosePrimaryFolder: (sourceId: string) => void;
@@ -43,11 +44,13 @@ function SourceSelect(props: {
   children: ReactNode;
   onChange: (value: string) => void;
   value: string;
+  disabled?: boolean;
 }) {
   return (
     <select
       aria-label={props.ariaLabel}
       className={cn(importSourceSelectClassName, 'h-9 min-w-0 rounded-md px-2.5 text-sm')}
+      disabled={props.disabled}
       onChange={(event) => props.onChange(event.target.value)}
       value={props.value}
     >
@@ -63,12 +66,14 @@ function PreviewCell(props: {
 }) {
   const t = useTranslation();
   const unsupportedSplit = isGenericSplitImportSourceUnsupported(props.source);
+  const readOnly = props.source.ownership?.editable === false;
   const missingPath = !props.source.primaryPath.trim() || (props.source.highlightMode === 'split' && !props.source.highlightPath.trim());
   if (props.source.keepState === 'enabled') {
     return (
       <AppButton
         aria-label={t('desktop.importSource.disableKeep', { id: props.source.id })}
         className="h-9 w-full min-w-0 px-2.5 text-sm"
+        disabled={readOnly}
         onClick={() => props.onDisableKeepImport(props.source.id)}
         variant="default"
       >
@@ -81,7 +86,7 @@ function PreviewCell(props: {
     <AppButton
       aria-label={`${t('desktop.importSource.preview')} ${props.source.id}`}
       className="h-9 w-full min-w-0 px-2.5 text-sm"
-      disabled={missingPath || unsupportedSplit}
+      disabled={readOnly || missingPath || unsupportedSplit}
       onClick={() => props.onPreviewKeepImport(props.source.id)}
       title={unsupportedSplit ? t('desktop.importSource.unsupportedSplit') : formatKeepStateLabel(props.source.keepState, t)}
       variant="default"
@@ -101,6 +106,7 @@ function HandlingCell(props: {
       <SourceSelect
         ariaLabel={`${t('desktop.importSource.table.handling')} ${props.source.id}`}
         onChange={(value) => props.onChangeAction(props.source.id, value)}
+        disabled={props.source.ownership?.editable === false}
         value={props.source.actionMode}
       >
         {importActionOptions.map((option) => (
@@ -115,9 +121,22 @@ function HandlingCell(props: {
 
 function SourceActions(props: {
   source: DraftImportSource;
+  onClaimSource: (sourceId: string) => void;
   onDeleteSource: (sourceId: string) => void;
 }) {
   const t = useTranslation();
+  if (props.source.ownership?.claimState === 'unassigned') {
+    return (
+      <AppButton className="h-9 px-2 text-xs" onClick={() => props.onClaimSource(props.source.id)} variant="default">
+        {t('desktop.importSource.claim')}
+      </AppButton>
+    );
+  }
+  if (props.source.ownership?.editable === false) {
+    return <span className="truncate text-xs text-settings-muted" title={props.source.ownership.ownerDeviceName ?? ''}>
+      {props.source.ownership.ownerDeviceName ?? t('desktop.importSource.remoteDevice')}
+    </span>;
+  }
   return (
     <div className="flex items-center justify-end gap-1">
       <AppButton aria-label={t('desktop.importSource.delete', { id: props.source.id })} className="size-9 px-0 text-settings-icon hover:text-settings-icon-hover" onClick={() => props.onDeleteSource(props.source.id)} variant="ghost">
@@ -138,13 +157,14 @@ function SourceFolderCells(props: {
       <FolderButton
         label={t('desktop.importSource.folder.original', { id: props.source.id })}
         onClick={() => props.onChoosePrimaryFolder(props.source.id)}
+        disabled={props.source.ownership?.editable === false}
         path={resolveFolderPathLabel(props.source.primaryPath, t('desktop.importSource.folder.choose'))}
         {...definedProps({ tooltip: resolveFolderPathHint(props.source.primaryPath) })}
         className="h-9 px-2.5 text-sm"
       />
       <FolderButton
         label={t('desktop.importSource.folder.highlight', { id: props.source.id })}
-        disabled={props.source.highlightMode !== 'split'}
+        disabled={props.source.highlightMode !== 'split' || props.source.ownership?.editable === false}
         onClick={() => props.onChooseHighlightFolder(props.source.id)}
         path={resolveFolderPathLabel(
           props.source.highlightPath,
@@ -160,6 +180,7 @@ function SourceFolderCells(props: {
 export function SourceRow({
   source,
   onChange,
+  onClaimSource,
   onChoosePrimaryFolder,
   onChooseHighlightFolder,
   onChangeAction,
@@ -180,6 +201,7 @@ export function SourceRow({
       <SourceSelect
         ariaLabel={`${t('desktop.importSource.table.mode')} ${source.id}`}
         onChange={(value) => onChange(source.id, 'highlightMode', value)}
+        disabled={source.ownership?.editable === false}
         value={source.highlightMode}
       >
         <option value="merged">{formatHighlightModeLabel('merged', t)}</option>
@@ -187,7 +209,7 @@ export function SourceRow({
         </SourceSelect>
       <HandlingCell onChangeAction={onChangeAction} source={source} />
       <PreviewCell onDisableKeepImport={onDisableKeepImport} onPreviewKeepImport={onPreviewKeepImport} source={source} />
-      <SourceActions onDeleteSource={onDeleteSource} source={source} />
+      <SourceActions onClaimSource={onClaimSource} onDeleteSource={onDeleteSource} source={source} />
     </div>
   );
 }

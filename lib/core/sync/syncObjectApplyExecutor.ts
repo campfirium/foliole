@@ -17,7 +17,8 @@ const STATE_OBJECT_TYPES = new Set<NativeSyncObjectRecord['object_type']>([
   'node_review',
   'pdf_page_text',
   'setting',
-  'view_state'
+  'view_state',
+  'watched_folder'
 ]);
 
 interface ExistingSyncObjectState extends DbRow {

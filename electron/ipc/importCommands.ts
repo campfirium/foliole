@@ -13,6 +13,7 @@ import {
 } from '../import/readwiseImportCleanup.js';
 import { cancelReadwiseReaderImport, runReadwiseReaderImport } from '../import/readwiseReaderImportRun.js';
 import { previewReadwiseReaderImport } from '../import/readwiseSyncPreview.js';
+import { assertLocalWatchedFolderExecution } from '../import/watchedFolderExecutionGate.js';
 import {
   persistSecurityScopedBookmark,
   shouldRequestSecurityScopedBookmarks
@@ -105,6 +106,9 @@ export async function handleImportCommand(request: InvokeRequest, context?: Invo
     return textImportResult;
   }
   if (request.command === NATIVE_COMMANDS.previewKeepImportRule) {
+    if (resolveKeepImportSourceType(args.source_type) === 'generic') {
+      assertLocalWatchedFolderExecution(asString(args.rule_id, 'rule_id'));
+    }
     return previewKeepImportRule({
       directoryPath: asString(args.directory_path, 'directory_path'),
       highlightMode: resolveNativeHighlightMode(args.highlight_mode),

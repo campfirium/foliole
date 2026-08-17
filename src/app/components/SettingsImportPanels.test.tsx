@@ -18,6 +18,7 @@ it('shows watched folders directly in settings', () => {
       onChooseHighlightFolder={() => undefined}
       onChoosePrimaryFolder={() => undefined}
       onCopySource={() => undefined}
+      onClaimSource={() => undefined}
       onDeleteSource={() => undefined}
       onDisableKeepImport={() => undefined}
       onPreviewKeepImport={() => undefined}
@@ -33,6 +34,20 @@ it('shows watched folders directly in settings', () => {
   expect(screen.getByText('Handling')).toBeInTheDocument();
   expect(screen.getAllByRole('button', { name: /Original folder/ }).length).toBeGreaterThan(0);
   expect(screen.getAllByRole('button', { name: /Preview/ }).length).toBeGreaterThan(0);
+});
+
+it('shows an upgrade requirement before watched folders can be assigned', () => {
+  const settings = createDefaultImportManagerSettings();
+  renderWithLocalization(
+    <SettingsImportManagementContent
+      onChange={() => undefined} onChangeAction={() => undefined} onChangeTitleStrategy={() => undefined}
+      onChooseHighlightFolder={() => undefined} onChoosePrimaryFolder={() => undefined}
+      onCopySource={() => undefined} onClaimSource={() => undefined} onDeleteSource={() => undefined}
+      onDisableKeepImport={() => undefined} onPreviewKeepImport={() => undefined}
+      sources={settings.sources} titleStrategy={settings.titleStrategy} watchedFoldersReady={false}
+    />
+  );
+  expect(screen.getByRole('status')).toHaveTextContent('Upgrade the other active desktop');
 });
 
 it('shows the restored Readwise Reader setup directly in settings', () => {

@@ -46,5 +46,15 @@ export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
     'device_id', device_id, 'value_json', value_json, 'content_hash', content_hash,
     'updated_at', updated_at, 'deleted_at', deleted_at
   ) AS payload_json FROM setting_records
-    WHERE scope || ':' || platform || ':' || form_factor || ':' || device_id || ':' || key = ?`
+    WHERE scope || ':' || platform || ':' || form_factor || ':' || device_id || ':' || key = ?`,
+  watched_folder: `SELECT json_object(
+    'binding_id', binding_id, 'owner_installation_id', owner_installation_id,
+    'owner_device_name', owner_device_name, 'owner_platform', owner_platform,
+    'claim_state', claim_state, 'claim_revision', claim_revision,
+    'action_mode', action_mode, 'archive_path', archive_path,
+    'highlight_mode', highlight_mode, 'highlight_path', highlight_path,
+    'keep_preview_json', keep_preview_json, 'primary_path', primary_path,
+    'enabled', enabled, 'availability', availability,
+    'created_at', created_at, 'updated_at', updated_at
+  ) AS payload_json FROM watched_folder_bindings WHERE binding_id = ?`
 } as const;

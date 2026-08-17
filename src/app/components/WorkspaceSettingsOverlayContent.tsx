@@ -100,6 +100,7 @@ function ImportCategoryContent(props: {
         void importSettings.handleChooseFolder(sourceId, 'primaryPath')
       }
       onCopySource={importSettings.handleCopySource}
+      onClaimSource={importSettings.handleClaimSource}
       onDeleteSource={importSettings.handleDeleteSource}
       onDisableKeepImport={(sourceId) =>
         importSettings.handleDisableKeepImport(sourceId, 'sources')
@@ -109,6 +110,7 @@ function ImportCategoryContent(props: {
       }
       sources={importSettings.sources}
       titleStrategy={importSettings.titleStrategy}
+      watchedFoldersReady={importSettings.watchedFoldersReady}
     />
   );
 }

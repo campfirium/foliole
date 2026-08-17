@@ -160,7 +160,7 @@ function seedGroup(db: Database.Database, schema: 'inc' | 'main', devices: strin
         .run(device, device.toUpperCase(), approver, `join-${device}`, joined, joined);
     } else {
       db.prepare(`INSERT INTO inc.sync_group_members VALUES
-        ('group-1', ?, 'desktop', ?, 'active', ?, ?, ?, NULL, ?)`)
+        ('group-1', ?, 'desktop', ?, 'active', ?, ?, ?, NULL, NULL, ?)`)
         .run(device, device.toUpperCase(), approver, `join-${device}`, joined, joined);
     }
   }

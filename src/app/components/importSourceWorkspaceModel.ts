@@ -15,8 +15,10 @@ export type { DraftImportSource };
 export const importSourceSelectClassName = appSurfaceControlClassName('h-10 w-full');
 
 export function cloneDraftImportSource(source: DraftImportSource, index: number): DraftImportSource {
+  const copyable = { ...source };
+  delete copyable.ownership;
   return {
-    ...source,
+    ...copyable,
     id: createDraftImportSource(index).id
   };
 }

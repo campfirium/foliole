@@ -11,7 +11,8 @@ export type NativeSyncObjectType =
   | 'node_text_alternative'
   | 'pdf_page_text'
   | 'setting'
-  | 'view_state';
+  | 'view_state'
+  | 'watched_folder';
 
 export interface NativeSyncPeer {
   last_seen_version_cursor: string | null;

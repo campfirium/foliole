@@ -28,8 +28,25 @@ function TableHeader() {
   );
 }
 
+function SourceGroupHeader({ source }: { source: DraftImportSource }) {
+  const t = useTranslation();
+  const label = source.ownership?.ownerDeviceName ??
+    (source.ownership?.claimState === 'unassigned'
+      ? t('desktop.importSource.unassignedGroup')
+      : t('desktop.importSource.thisDevice'));
+  return <div className="border-t border-settings-border px-3 py-1.5 text-xs font-medium text-settings-muted" role="row">
+    {label}
+  </div>;
+}
+
 function renderSourceRows(sources: DraftImportSource[], actions: ImportSourceTableRowActions) {
-  return sources.map((source) => <SourceRow key={source.id} source={source} {...actions} />);
+  let previousGroup = '';
+  return sources.flatMap((source) => {
+    const group = source.ownership?.ownerInstallationId ?? source.ownership?.claimState ?? 'local-draft';
+    const header = group === previousGroup ? [] : [<SourceGroupHeader key={`group-${group}`} source={source} />];
+    previousGroup = group;
+    return [...header, <SourceRow key={source.id} source={source} {...actions} />];
+  });
 }
 
 function ImportSourceVirtualRows({
@@ -72,6 +89,7 @@ export function ImportSourceTable({
   sources,
   onAddSource,
   onChange,
+  onClaimSource,
   onChoosePrimaryFolder,
   onChooseHighlightFolder,
   onChangeAction,
@@ -82,6 +100,7 @@ export function ImportSourceTable({
   sources: DraftImportSource[];
   onAddSource: () => void;
   onChange: (sourceId: string, field: DraftImportSourceField, value: string) => void;
+  onClaimSource: (sourceId: string) => void;
   onChoosePrimaryFolder: (sourceId: string) => void;
   onChooseHighlightFolder: (sourceId: string) => void;
   onChangeAction: (sourceId: string, value: string) => void;
@@ -92,6 +111,7 @@ export function ImportSourceTable({
   const t = useTranslation();
   const actions = {
     onChange,
+    onClaimSource,
     onChangeAction,
     onChooseHighlightFolder,
     onChoosePrimaryFolder,

@@ -28,6 +28,7 @@ function renderTable(sourceCount: number, onAddSource = vi.fn()) {
       onAddSource={onAddSource}
       onChange={vi.fn()}
       onChangeAction={vi.fn()}
+      onClaimSource={vi.fn()}
       onChooseHighlightFolder={vi.fn()}
       onChoosePrimaryFolder={vi.fn()}
       onDeleteSource={vi.fn()}
@@ -72,6 +73,7 @@ it('allows preview for generic split sources when both folders are selected', ()
       onAddSource={vi.fn()}
       onChange={vi.fn()}
       onChangeAction={vi.fn()}
+      onClaimSource={vi.fn()}
       onChooseHighlightFolder={vi.fn()}
       onChoosePrimaryFolder={vi.fn()}
       onDeleteSource={vi.fn()}
@@ -86,4 +88,27 @@ it('allows preview for generic split sources when both folders are selected', ()
   expect(previewButton).toBeEnabled();
   expect(previewButton).toHaveTextContent('Preview');
   expect(previewButton).toHaveAttribute('title', 'Needs preview');
+});
+
+it('shows remote watched folders but keeps their controls read only', () => {
+  const source = {
+    ...createDraftImportSource(109),
+    keepState: 'enabled' as const,
+    primaryPath: '/remote/inbox',
+    ownership: {
+      claimState: 'claimed' as const, editable: false, ownerDeviceName: 'Windows PC',
+      ownerInstallationId: 'desktop-windows', ownerPlatform: 'win32'
+    }
+  };
+  renderWithLocalization(
+    <ImportSourceTable
+      onAddSource={vi.fn()} onChange={vi.fn()} onChangeAction={vi.fn()} onClaimSource={vi.fn()}
+      onChooseHighlightFolder={vi.fn()} onChoosePrimaryFolder={vi.fn()} onDeleteSource={vi.fn()}
+      onDisableKeepImport={vi.fn()} onPreviewKeepImport={vi.fn()} sources={[source]}
+    />
+  );
+
+  expect(screen.getByRole('button', { name: 'Original folder draft-import-source-109' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Disable keep import draft-import-source-109' })).toBeDisabled();
+  expect(screen.getAllByText('Windows PC')).toHaveLength(2);
 });

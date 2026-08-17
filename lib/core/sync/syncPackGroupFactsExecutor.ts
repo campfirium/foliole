@@ -9,6 +9,7 @@ interface GroupRow extends DbRow {
 }
 
 interface MemberRow extends DbRow {
+  advertised_features_json?: string | null;
   approved_by_device_id: string;
   authorization_id: string;
   device_id: string;
@@ -129,8 +130,9 @@ async function mergeMember(
   await port.run(
     `INSERT INTO main.sync_group_members (
       group_id, device_id, device_kind, device_name, state, approved_by_device_id,
-      authorization_id, provisioning_cursor, joined_at, activated_at, left_at, updated_at
-    ) VALUES (?, ?, ?, ?, 'active', ?, ?, NULL, ?, NULL, NULL, ?)
+      authorization_id, provisioning_cursor, joined_at, activated_at, left_at,
+      advertised_features_json, updated_at
+    ) VALUES (?, ?, ?, ?, 'active', ?, ?, NULL, ?, NULL, NULL, ?, ?)
     ON CONFLICT(group_id, device_id) DO UPDATE SET
       device_kind = CASE WHEN excluded.joined_at > joined_at OR
         (excluded.joined_at = joined_at AND excluded.authorization_id < authorization_id)
@@ -150,9 +152,17 @@ async function mergeMember(
         ELSE authorization_id END,
       joined_at = MAX(joined_at, excluded.joined_at),
       left_at = CASE WHEN excluded.joined_at > joined_at THEN NULL ELSE left_at END,
+      advertised_features_json = CASE WHEN excluded.joined_at > joined_at OR
+        (excluded.joined_at = joined_at AND excluded.authorization_id < authorization_id)
+        THEN excluded.advertised_features_json
+        WHEN excluded.joined_at = joined_at AND excluded.authorization_id = authorization_id
+          AND excluded.updated_at > updated_at
+        THEN excluded.advertised_features_json ELSE advertised_features_json END,
       updated_at = MAX(updated_at, excluded.updated_at)`,
     [groupId, member.device_id, member.device_kind, member.device_name, member.approved_by_device_id,
-      member.authorization_id, member.joined_at, member.updated_at, sourcePeerId]
+      member.authorization_id, member.joined_at,
+      typeof member.advertised_features_json === 'string' ? member.advertised_features_json : null,
+      member.updated_at, sourcePeerId]
   );
   await port.run(
     `DELETE FROM main.sync_group_member_departures

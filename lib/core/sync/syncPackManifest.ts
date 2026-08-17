@@ -50,7 +50,8 @@ export const SYNC_PACK_PAYLOAD_OBJECT_TYPES = new Set([
   'node_text_alternative',
   'pdf_page_text',
   'setting',
-  'view_state'
+  'view_state',
+  'watched_folder'
 ]);
 
 export function isSyncPackObjectType(value: string): value is SyncPackObjectType {

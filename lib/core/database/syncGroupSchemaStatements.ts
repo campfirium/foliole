@@ -20,6 +20,7 @@ export const SYNC_GROUP_SCHEMA_STATEMENTS = [
     joined_at TEXT NOT NULL,
     activated_at TEXT,
     left_at TEXT,
+    advertised_features_json TEXT,
     updated_at TEXT NOT NULL,
     PRIMARY KEY (group_id, device_id),
     UNIQUE (authorization_id)

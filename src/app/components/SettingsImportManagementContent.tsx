@@ -49,10 +49,12 @@ export function SettingsImportManagementContent(props: {
   onChoosePrimaryFolder: (sourceId: string) => void;
   onDisableKeepImport: (sourceId: string) => void;
   onCopySource: (sourceId: string) => void;
+  onClaimSource: (sourceId: string) => void;
   onDeleteSource: (sourceId: string) => void;
   onPreviewKeepImport: (sourceId: string) => void;
   sources: DraftImportSource[];
   titleStrategy: ImportNodeTitleStrategy;
+  watchedFoldersReady?: boolean | undefined;
 }) {
   const lastSource = props.sources.at(-1);
   const t = useTranslation();
@@ -65,6 +67,11 @@ export function SettingsImportManagementContent(props: {
         description={t('settings.import.linkedFolders.description')}
         title={t('settings.import.linkedFolders.title')}
       >
+        {props.watchedFoldersReady === false ? (
+          <p className="mb-3 rounded-md bg-settings-subtle px-3 py-2 text-sm text-settings-muted" role="status">
+            {t('desktop.importSource.upgradeRequired')}
+          </p>
+        ) : null}
         <div className="min-w-0 overflow-hidden">
           <ImportSourceTable
             onAddSource={() => lastSource ? props.onCopySource(lastSource.id) : undefined}
@@ -72,6 +79,7 @@ export function SettingsImportManagementContent(props: {
             onChangeAction={props.onChangeAction}
             onChooseHighlightFolder={props.onChooseHighlightFolder}
             onChoosePrimaryFolder={props.onChoosePrimaryFolder}
+            onClaimSource={props.onClaimSource}
             onDisableKeepImport={props.onDisableKeepImport}
             onDeleteSource={props.onDeleteSource}
             onPreviewKeepImport={props.onPreviewKeepImport}

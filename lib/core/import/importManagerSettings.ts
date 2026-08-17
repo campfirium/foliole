@@ -1,5 +1,6 @@
 import type { ImportNodeTitleStrategy } from './importedNodeTitle.js';
 import { normalizeImportSourceAction, type ImportSourceAction } from './importSourceActions.js';
+import { normalizeImportSourceOwnership, type ImportSourceOwnership } from './importSourceOwnership.js';
 import {
   normalizeKeepImportPreview,
   type KeepImportPreviewSummary
@@ -24,6 +25,7 @@ export interface ImportManagerSourceDraft {
   keepPreview: KeepImportPreviewSummary | null;
   keepState: KeepImportRuleState;
   primaryPath: string;
+  ownership?: ImportSourceOwnership;
 }
 
 export interface ImportManagerSettings {
@@ -35,6 +37,8 @@ export interface ImportManagerSettings {
   titleStrategy: ImportNodeTitleStrategy;
   updatedAt: string;
   version: number;
+  watchedFoldersReady?: boolean;
+  watchedFoldersReason?: 'member_upgrade_required' | 'ready' | 'sync_group_provisioning';
 }
 
 const IMPORT_MANAGER_SETTINGS_VERSION = 4;
@@ -107,6 +111,7 @@ function normalizeSource(
   const highlightMode = normalizeHighlightMode(payload.highlightMode, fallback.highlightMode);
   const actionMode = normalizeImportSourceAction(payload.actionMode, fallback.actionMode);
 
+  const ownership = normalizeImportSourceOwnership(payload.ownership);
   return {
     actionMode,
     archivePath: actionMode === 'keep' ? '' : normalizeString(payload.archivePath, fallback.archivePath),
@@ -116,7 +121,8 @@ function normalizeSource(
     ...(kind === undefined ? {} : { kind }),
     keepPreview: normalizeKeepImportPreview(payload.keepPreview),
     keepState: normalizeKeepImportRuleState(payload.keepState, fallback.keepState),
-    primaryPath: normalizeString(payload.primaryPath, fallback.primaryPath)
+    primaryPath: normalizeString(payload.primaryPath, fallback.primaryPath),
+    ...(ownership ? { ownership } : {})
   };
 }
 
@@ -224,19 +230,16 @@ export function normalizeImportManagerSettings(value: unknown): ImportManagerSet
     sources: sources.length > 0 ? sources : defaults.sources,
     titleStrategy: normalizeImportNodeTitleStrategy(value.titleStrategy, defaults.titleStrategy),
     updatedAt: normalizeString(value.updatedAt, DEFAULT_UPDATED_AT),
-    version: IMPORT_MANAGER_SETTINGS_VERSION
+    version: IMPORT_MANAGER_SETTINGS_VERSION,
+    ...(typeof value.watchedFoldersReady === 'boolean' ? { watchedFoldersReady: value.watchedFoldersReady } : {}),
+    ...(value.watchedFoldersReason === 'member_upgrade_required' || value.watchedFoldersReason === 'ready' ||
+      value.watchedFoldersReason === 'sync_group_provisioning'
+      ? { watchedFoldersReason: value.watchedFoldersReason }
+      : {})
   };
 }
 
-export function createNextImportSourceIndex(sources: ImportManagerSourceDraft[], fallback = 101) {
-  return sources.reduce((maxIndex, source) => {
-    const match = source.id.match(/(\d+)$/);
-    if (!match) {
-      return maxIndex;
-    }
-    return Math.max(maxIndex, Number(match[1]));
-  }, fallback - 1) + 1;
-}
+export { createNextImportSourceIndex } from './importSourceIndex.js';
 export function formatReadwiseSourceLabel(kind: ReadwiseSourceKind) {
   return READWISE_FOLDER_NAMES[kind];
 }

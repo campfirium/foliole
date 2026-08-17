@@ -79,7 +79,7 @@ function writeGroupPackRows(db: import('better-sqlite3').Database, rows: LoadedD
   copyRows({
     db, table: 'sync_group_members',
     columns: ['group_id', 'device_id', 'device_kind', 'device_name', 'state', 'approved_by_device_id',
-      'authorization_id', 'joined_at', 'left_at', 'updated_at'],
+      'authorization_id', 'joined_at', 'left_at', 'advertised_features_json', 'updated_at'],
     rows: rows.groupMembers
   });
   copyRows({

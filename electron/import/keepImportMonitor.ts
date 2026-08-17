@@ -2,7 +2,7 @@ import type { ImportManagerSettings } from '../../lib/core/import/importManagerS
 import { loadManagedPathCandidates } from '../managedPathSafety.js';
 
 import { submitImportMonitorTask } from './importMonitorTaskScheduler.js';
-import { type KeepImportConfig, type KeepImportSourceConfig, resolveKeepImportConfigs } from './keepImportMonitorConfig.js';
+import { type KeepImportSourceConfig, resolveKeepImportConfigs } from './keepImportMonitorConfig.js';
 import {
   closeKeepImportWatchers,
   ensureKeepImportWatchers,
@@ -15,7 +15,7 @@ export interface KeepImportMonitorDeps {
   loadSettings(): ImportManagerSettings;
   logError(message: string, error: unknown): void;
   logMissingDirectory?(config: KeepImportSourceConfig, missingPaths: string[]): void;
-  runCycle(config: KeepImportConfig): Promise<void>;
+  runCycle(config: KeepImportSourceConfig): Promise<void>;
   watch(rootPath: string, listener: () => void): KeepImportWatchHandle;
 }
 

@@ -11,6 +11,7 @@ import { migrateNodeProvenance } from './numberedMigrationNodeProvenance.js';
 import { createNodeSyncTombstoneTable } from './numberedMigrationNodeSyncTombstones.js';
 import type { NumberedSchemaMigration } from './numberedMigrations.js';
 import { migrateSettingSingleTruth } from './numberedMigrationSettingSingleTruth.js';
+import { migrateSourceOwnershipSchema } from './numberedMigrationSourceOwnership.js';
 import { migrateSyncConflictConvergence } from './numberedMigrationSyncConvergence.js';
 import { migrateSyncDeliveryReceipts } from './numberedMigrationSyncDelivery.js';
 import { migrateSyncGroupDepartures } from './numberedMigrationSyncGroupDepartures.js';
@@ -150,5 +151,9 @@ export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
       addColumnIfMissing(sqlite, 'sync_groups', 'workgroup_key', 'TEXT');
       for (const statement of SYNC_GROUP_SCHEMA_STATEMENTS) sqlite.exec(statement);
     }
+  },
+  {
+    version: 67,
+    migrate: migrateSourceOwnershipSchema
   }
 ];

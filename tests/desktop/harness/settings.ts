@@ -7,6 +7,7 @@ const CATEGORY_NAMES = {
   ExternalFolder: /^(External folders|外部文件夹)$/,
   General: /^(General|通用)$/,
   Hotkeys: /^(Hotkeys|快捷键)$/,
+  Import: /^(Watched folders|监听文件夹)$/,
   Sync: /^(Sync|同步)$/,
   EditorMenu: /^(Editor menu|编辑器菜单)$/,
   Typography: /^(Typography|字体与排版)$/
