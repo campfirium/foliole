@@ -94,6 +94,8 @@ jobs:
           fi
       - name: Install dependencies
         run: node scripts/quality/hosted-npm-ci.mjs
+      - name: Install Electron runtime
+        run: node node_modules/electron/install.js
       - name: Install Apple signing and notarization credentials
         shell: bash
         env:

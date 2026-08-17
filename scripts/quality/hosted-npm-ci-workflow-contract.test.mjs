@@ -32,11 +32,33 @@ describe('hosted npm ci workflow contract', () => {
   });
 
   it('keeps baseline installs script-free before the explicit Electron installer', () => {
-    for (const name of ['release-macos.yml', 'release-windows.yml']) {
-      const source = fs.readFileSync(path.join(WORKFLOW_ROOT, name), 'utf8');
-      const runner = source.indexOf(`${RUNNER}" --ignore-scripts`);
+    for (const [name, jobName] of [
+      ['release-macos.yml', 'release-macos'],
+      ['release-windows.yml', 'release-windows']
+    ]) {
+      const workflow = parse(fs.readFileSync(path.join(WORKFLOW_ROOT, name), 'utf8'));
+      const command = workflow.jobs[jobName].steps.find(
+        (step) => step.name === 'Install verified baseline updater dependencies'
+      ).run;
+      const runner = command.indexOf(`${RUNNER}" --ignore-scripts`);
       expect(runner).toBeGreaterThan(-1);
-      expect(runner).toBeLessThan(source.indexOf('node node_modules/electron/install.js'));
+      expect(runner).toBeLessThan(command.indexOf('node node_modules/electron/install.js'));
+    }
+  });
+
+  it('installs the Electron runtime in each current release package job', () => {
+    for (const [name, jobName] of [
+      ['release-macos.yml', 'release-macos'],
+      ['release-windows.yml', 'release-windows']
+    ]) {
+      const workflow = parse(fs.readFileSync(path.join(WORKFLOW_ROOT, name), 'utf8'));
+      const steps = workflow.jobs[jobName].steps;
+      const dependencies = steps.findIndex((step) => step.name === 'Install dependencies');
+      const runtime = steps.findIndex((step) => step.name === 'Install Electron runtime');
+      const build = steps.findIndex((step) => step.name.startsWith('Build'));
+      expect(steps[runtime].run).toBe('node node_modules/electron/install.js');
+      expect(dependencies).toBeLessThan(runtime);
+      expect(runtime).toBeLessThan(build);
     }
   });
 });
