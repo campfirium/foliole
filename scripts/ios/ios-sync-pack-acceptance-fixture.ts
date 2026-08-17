@@ -29,6 +29,7 @@ export async function createIosSyncPackAcceptanceFixture(args: {
   const driver = createBetterSqlite3Driver(sqlite);
   initializeDatabaseConnection({ driver, sqlite });
   seedRoundtripNodes(driver);
+  const initialPackToStateSeq = currentMaxStateSeq(driver);
   const paths = fixturePaths(args.outputDirectory);
   await buildPack(driver, paths.legalPath, args.toPeerId, 0, 'ios-acceptance-legal');
   await buildPack(driver, paths.wrongTargetPath, `${args.toPeerId}-wrong`, 0, 'ios-acceptance-wrong-target');
@@ -47,7 +48,7 @@ export async function createIosSyncPackAcceptanceFixture(args: {
         throw new Error('ios_node_version_roundtrip_push_incomplete');
       }
       createDesktopSuccessor(driver, captureNodeId);
-      await buildPack(driver, paths.successorPath, args.toPeerId, 2, 'ios-acceptance-successor');
+      await buildPack(driver, paths.successorPath, args.toPeerId, initialPackToStateSeq, 'ios-acceptance-successor');
       await buildIllegalDagRejectionPack(driver, paths.illegalDagPath, args.toPeerId);
       await buildCursorGapPack(driver, paths.cursorGapPath, args.toPeerId);
       return { captureNodeId, desktop: readDesktopRoundtripSnapshot(sqlite, captureNodeId) };
