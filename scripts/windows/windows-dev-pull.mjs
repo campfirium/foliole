@@ -38,7 +38,7 @@ export async function runWindowsDevPull({
     }
     const branch = (await checked(execute, paths, ['branch', '--show-current'], 'repo')).stdout.trim();
     if (branch !== 'dev') throw failure('Windows DEV repository must stay on dev', 64, 'repo');
-    await checked(execute, paths, ['fetch', '--no-tags', 'lan', 'dev'], 'fetch');
+    await checked(execute, paths, ['fetch', '--no-tags', paths.bareRepository, 'dev'], 'fetch');
     const aligned = await checked(execute, paths, ['reset', '--hard', 'FETCH_HEAD'], 'align');
     const cleaned = await checked(execute, paths, ['clean', '-fd'], 'align');
     const status = await checked(

@@ -14,8 +14,9 @@ function fixture() {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-dev-pull-'));
   roots.push(repoRoot);
   const gitPath = path.join(repoRoot, 'git.exe');
+  const bareRepository = path.join(repoRoot, 'repository.git');
   fs.writeFileSync(gitPath, 'tool');
-  return { gitPath, repoRoot };
+  return { bareRepository, gitPath, repoRoot };
 }
 
 function result(stdout, code = 0) {
@@ -36,7 +37,7 @@ it('overwrites Windows source drift with the Mac-owned lan/dev mirror', async ()
   await expect(runWindowsDevPull({ execute, paths, platform: 'win32' }))
     .resolves.toMatchObject({ exitCode: 0 });
   expect(calls.slice(-4)).toEqual([
-    ['-C', paths.repoRoot, 'fetch', '--no-tags', 'lan', 'dev'],
+    ['-C', paths.repoRoot, 'fetch', '--no-tags', paths.bareRepository, 'dev'],
     ['-C', paths.repoRoot, 'reset', '--hard', 'FETCH_HEAD'],
     ['-C', paths.repoRoot, 'clean', '-fd'],
     ['-C', paths.repoRoot, 'status', '--porcelain', '--untracked-files=all']
