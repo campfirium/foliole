@@ -17,7 +17,8 @@ const payloadPlans = [
     status, document_count, indexed_at, last_error, owner_installation_id, owner_device_name, owner_platform, created_at, updated_at
     FROM source.external_search_folders` },
   { objectType: 'import_source', sql: `SELECT source_fingerprint __object_id, source_fingerprint, provider, source_kind, source_name, source_locator,
-    first_imported_at, last_imported_at, last_content_fingerprint, latest_node_id
+    first_imported_at, last_imported_at, last_content_fingerprint, latest_node_id,
+    NULL watched_binding_id, NULL watched_relative_path
     FROM source.import_sources` },
   { objectType: 'node_open_state', sql: `SELECT node_id __object_id, node_id, last_opened_at FROM source.node_open_state` },
   { objectType: 'node_reading', sql: `SELECT node_id __object_id, node_id, interval_duration_ms, interval_growth_factor,

@@ -15,6 +15,7 @@ import { persistKeepImportState } from './keepImportServiceState.js';
 import { isBlockedByDeletedNode } from './keepImportSourceClassifier.js';
 import { hasPrimarySourceChanged } from './keepImportSourceSignature.js';
 import { resolvePersistedSourceUpdateFlag } from './keepImportSourceUpdateState.js';
+import { applyWatchedPreparedImportIdentity } from './watchedPreparedImportIdentity.js';
 
 function recordFailedKeepImportAttempt(input: {
   config: KeepImportRuleConfig;
@@ -27,15 +28,14 @@ function recordFailedKeepImportAttempt(input: {
     primary: { mtimeMs: number; sizeBytes: number };
   };
 }) {
-  const record = recordPreparedImportFailure(
+  const prepared = applyWatchedPreparedImportIdentity(input.config, input.source,
     buildPreparedImportRecord(input.source, {
       content: '',
       highlightPolicy: input.config.highlightPolicy,
       importedAt: input.importedAt,
       titleStrategy: loadImportManagerSettings().titleStrategy
-    }),
-    input.failureReason
-  );
+    }));
+  const record = recordPreparedImportFailure(prepared, input.failureReason);
   persistKeepImportState(input.config, input.source, input.sourceSignature, record, 'failed', input.hasSourceUpdate);
   return {
     detail: input.failureReason,
@@ -64,7 +64,8 @@ export async function runKeepImportSourceImportAttempt(
     hasPrimarySourceChanged(blockedState.existingItem, sourceSignature)
   );
   try {
-    const prepared = await loadPreparedKeepImportRecord(config, source, importedAt);
+    const loaded = await loadPreparedKeepImportRecord(config, source, importedAt);
+    const prepared = applyWatchedPreparedImportIdentity(config, source, loaded);
     throwIfKeepImportAborted(config.signal);
     return await runLoadedPreparedImportAttempt({
       automaticDuplicateNoop: options.automaticDuplicateNoop,

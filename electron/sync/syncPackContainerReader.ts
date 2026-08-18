@@ -2,7 +2,12 @@ import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import { inflateSync } from 'node:zlib';
 
-import { SYNC_PACK_DATABASE_ENTRY, SYNC_PACK_FORMAT, SYNC_PACK_FORMAT_VERSION } from '../../lib/core/sync/syncPackEnvelopeContract.js';
+import {
+  assertSyncPackSchemaVersion,
+  SYNC_PACK_DATABASE_ENTRY,
+  SYNC_PACK_FORMAT,
+  SYNC_PACK_FORMAT_VERSION
+} from '../../lib/core/sync/syncPackEnvelopeContract.js';
 
 export async function extractSyncPackDatabase(args: {
   body: Buffer;
@@ -18,6 +23,7 @@ export async function extractSyncPackDatabase(args: {
       manifest.database_file !== SYNC_PACK_DATABASE_ENTRY) {
     throw new Error('invalid_sync_pack_manifest');
   }
+  assertSyncPackSchemaVersion(manifest.schema_version);
   const compressed = required(entries, SYNC_PACK_DATABASE_ENTRY);
   if (sha(compressed) !== manifest.database_compressed_sha256) throw new Error('invalid_sync_pack_compressed_checksum');
   const database = inflateSync(compressed);

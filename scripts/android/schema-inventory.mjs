@@ -27,6 +27,7 @@ const DESKTOP_SCHEMA_FILES = {
   DESKTOP_CORE_SCHEMA_STATEMENTS: 'lib/core/database/desktopCoreSchemaStatements.ts',
   DESKTOP_FRESH_SCHEMA_STATEMENTS: 'lib/core/database/desktopFreshSchemaStatements.ts',
   DESKTOP_RESOURCE_SCHEMA_STATEMENTS: 'lib/core/database/desktopResourceSchemaStatements.ts',
+  WATCHED_FOLDER_BINDING_SCHEMA_STATEMENTS: 'lib/core/database/desktopSourceConnectionSchemaStatements.ts',
   EXTERNAL_DOCUMENT_SCHEMA_STATEMENTS: 'lib/core/database/externalDocumentSchemaStatements.ts',
   KEEP_IMPORT_SCHEMA_STATEMENTS: 'lib/core/database/keepImportSchemaStatements.ts',
   SYNC_DELIVERY_SCHEMA_STATEMENTS: 'lib/core/database/syncDeliverySchemaStatements.ts',

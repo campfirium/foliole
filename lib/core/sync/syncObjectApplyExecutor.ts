@@ -17,6 +17,7 @@ const STATE_OBJECT_TYPES = new Set<NativeSyncObjectRecord['object_type']>([
   'node_review',
   'pdf_page_text',
   'setting',
+  'watched_folder',
   'view_state'
 ]);
 

@@ -1,3 +1,6 @@
+import { canCurrentDeviceRunReadwise } from '../database/readwiseDeviceAssignment.js';
+import { resolveExecutableWatchedBinding } from '../database/watchedFolderBindings.js';
+
 import { loadImportManagerSettings } from './importManagerSettings.js';
 import { createKeepImportMonitor, type KeepImportMonitorDeps } from './keepImportMonitor.js';
 import { runKeepImportRule } from './keepImportService.js';
@@ -5,6 +8,11 @@ import { watchKeepImportDirectory } from './keepImportWatch.js';
 
 function createDefaultKeepImportMonitorDeps(): KeepImportMonitorDeps {
   return {
+    canRunConfig(config) {
+      return config.sourceType === 'readwise'
+        ? canCurrentDeviceRunReadwise()
+        : resolveExecutableWatchedBinding(config.sourceId, config.directoryPath).executable;
+    },
     debounceMs: 250,
     loadSettings: loadImportManagerSettings,
     logError(message, error) {

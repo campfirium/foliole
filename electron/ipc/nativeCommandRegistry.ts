@@ -2,6 +2,7 @@ import { NATIVE_COMMANDS, type NativeCommandName } from '../../lib/platform/nati
 
 import type { CommandRouteFamily } from './commandRoutes.js';
 import type { CommandSecurityCapability } from './commandSecurityCapabilities.js';
+import { NATIVE_SOURCE_CONNECTION_COMMAND_REGISTRY } from './nativeSourceConnectionCommandRegistry.js';
 
 export interface NativeCommandRegistryEntry {
   command: NativeCommandName;
@@ -10,6 +11,7 @@ export interface NativeCommandRegistryEntry {
 }
 
 export const NATIVE_COMMAND_REGISTRY = [
+  ...NATIVE_SOURCE_CONNECTION_COMMAND_REGISTRY,
   { command: NATIVE_COMMANDS.appGetVersion, route: 'windowAndUtility', capability: 'diagnostic' },
   { command: NATIVE_COMMANDS.folioleCliInstall, route: 'windowAndUtility', capability: 'filesystemWrite' },
   { command: NATIVE_COMMANDS.appendReadingPositionTraceLog, route: 'windowAndUtility', capability: 'diagnostic' },
@@ -49,7 +51,6 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.resetReadwiseBookImport, route: 'import', capability: 'importMutation' },
   { command: NATIVE_COMMANDS.loadExternalSearchFolders, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.saveExternalSearchFolders, route: 'storage', capability: 'settingsMutation' },
-  { command: NATIVE_COMMANDS.setExternalSearchFolderEnabled, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.rebuildExternalSearchIndex, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.loadExternalSearchBrowseEntries, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.loadExternalSearchPreview, route: 'storage', capability: 'read' },

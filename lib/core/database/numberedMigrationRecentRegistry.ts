@@ -2,6 +2,7 @@ import {
   ASSISTANT_THREAD_INDEX_SCHEMA_STATEMENTS,
   ASSISTANT_THREAD_MESSAGE_SCHEMA_STATEMENTS
 } from './assistantThreadIndexSchemaStatements.js';
+import { migrateDesktopSourceConnections } from './numberedMigrationDesktopSourceConnections.js';
 import { migrateExternalFolderOwnership } from './numberedMigrationExternalFolderOwnership.js';
 import { addColumnIfMissing } from './numberedMigrationHelpers.js';
 import { createIncomingUpdatesTable } from './numberedMigrationIncomingUpdates.js';
@@ -150,5 +151,9 @@ export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
       addColumnIfMissing(sqlite, 'sync_groups', 'workgroup_key', 'TEXT');
       for (const statement of SYNC_GROUP_SCHEMA_STATEMENTS) sqlite.exec(statement);
     }
+  },
+  {
+    version: 67,
+    migrate: migrateDesktopSourceConnections
   }
 ];

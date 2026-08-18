@@ -4,10 +4,10 @@ import { expect, it, vi } from 'vitest';
 
 import { openDatabaseConnection } from './connection.js';
 import { buildDesktopSyncPack } from './syncPackBuilder.js';
+import { insertImportSourceSyncState } from './syncPackBuilderImportSourceTestSupport.js';
 import {
   insertAttachmentSyncState,
   insertExternalFolderSyncState,
-  insertImportSourceSyncState,
   insertNodeReadingSyncState,
   insertNodeReviewSyncState,
   insertPdfPageTextSyncState,
@@ -92,7 +92,7 @@ it('packs import source metadata as a generic sync object', async () => {
     syncObjects: [expect.objectContaining({
       object_id: 'source-1',
       object_type: 'import_source',
-      payload_json: expect.stringContaining('notes.md')
+      payload_json: expect.stringContaining('watched-source-1')
     })]
   });
 });

@@ -50,6 +50,7 @@ export const SYNC_PACK_PAYLOAD_OBJECT_TYPES = new Set([
   'node_text_alternative',
   'pdf_page_text',
   'setting',
+  'watched_folder',
   'view_state'
 ]);
 

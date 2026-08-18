@@ -42,6 +42,7 @@ function normalizedObjectTypes(options: SyncPackStateRowsApplyOptions) {
     'node_review',
     'pdf_page_text',
     'setting',
+    'watched_folder',
     'view_state'
   ];
 }

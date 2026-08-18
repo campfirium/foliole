@@ -23,10 +23,11 @@ interface SettingsExternalSearchSectionProps {
   onAddFolder: () => void;
   onChooseAttachmentRoot: (folderId: string) => void;
   onChooseFolder: (folderId: string) => void;
+  onDisconnectFolder: (folderId: string) => void;
+  onReconnectFolder: (folderId: string) => void;
   onRebuildIndex: (folderId?: string) => void;
   onRemoveFolder: (folderId: string) => void;
   onRetryLoad: () => void;
-  onSetFolderEnabled?: (folderId: string | string[], enabled: boolean) => void;
   onUpdateFolder: (folderId: string, patch: ExternalSourceSettingsFolderPatch) => void;
   previewDesktopSettings?: boolean;
 }
@@ -56,6 +57,7 @@ function LocalExternalFolders(props: {
               key={folder.id}
               onChooseAttachmentRoot={props.settings.onChooseAttachmentRoot}
               onChooseFolder={props.settings.onChooseFolder}
+              onDisconnectFolder={props.settings.onDisconnectFolder}
               onRebuildIndex={props.settings.onRebuildIndex}
               onRemoveFolder={props.settings.onRemoveFolder}
               onUpdateFolder={props.settings.onUpdateFolder}
@@ -76,8 +78,8 @@ function LocalExternalFolders(props: {
 
 export function SettingsExternalSearchSection(props: SettingsExternalSearchSectionProps) {
   const t = useTranslation();
-  const remoteFolders = props.folders.filter((folder) => folder.accessMode === 'remote_mirror');
-  const localFolders = props.folders.filter((folder) => folder.accessMode !== 'remote_mirror');
+  const remoteFolders = props.folders.filter((folder) => folder.accessMode !== 'local');
+  const localFolders = props.folders.filter((folder) => folder.accessMode === 'local');
 
   if (props.isLoading) {
     return (
@@ -96,8 +98,8 @@ export function SettingsExternalSearchSection(props: SettingsExternalSearchSecti
       {remoteFolders.length > 0 ? (
         <SettingsRemoteExternalFolderRows
           folders={remoteFolders}
-          isSaving={props.isSaving}
-          onSetEnabled={props.onSetFolderEnabled ?? (() => undefined)}
+          onReconnectFolder={props.onReconnectFolder}
+          onRemoveFolder={props.onRemoveFolder}
         />
       ) : null}
       <LocalExternalFolders folders={localFolders} settings={props} />

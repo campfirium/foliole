@@ -18,7 +18,8 @@ export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
     'source_fingerprint', source_fingerprint, 'provider', provider, 'source_kind', source_kind,
     'source_name', source_name, 'source_locator', source_locator, 'first_imported_at', first_imported_at,
     'last_imported_at', last_imported_at, 'last_content_fingerprint', last_content_fingerprint,
-    'latest_node_id', latest_node_id
+    'latest_node_id', latest_node_id, 'watched_binding_id', watched_binding_id,
+    'watched_relative_path', watched_relative_path
   ) AS payload_json FROM import_sources WHERE source_fingerprint = ?`,
   node_open_state: `SELECT json_object('node_id', node_id, 'last_opened_at', last_opened_at) AS payload_json
     FROM node_open_state WHERE node_id = ?`,
@@ -46,5 +47,12 @@ export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
     'device_id', device_id, 'value_json', value_json, 'content_hash', content_hash,
     'updated_at', updated_at, 'deleted_at', deleted_at
   ) AS payload_json FROM setting_records
-    WHERE scope || ':' || platform || ':' || form_factor || ':' || device_id || ':' || key = ?`
+    WHERE scope || ':' || platform || ':' || form_factor || ':' || device_id || ':' || key = ?`,
+  watched_folder: `SELECT json_object(
+    'binding_id', binding_id, 'connected_device_id', connected_device_id,
+    'connected_device_name', connected_device_name, 'connected_platform', connected_platform,
+    'connection_status', connection_status, 'action_mode', action_mode, 'archive_path', archive_path,
+    'highlight_mode', highlight_mode, 'highlight_path', highlight_path, 'primary_path', primary_path,
+    'created_at', created_at, 'updated_at', updated_at
+  ) AS payload_json FROM watched_folder_bindings WHERE binding_id = ?`
 } as const;

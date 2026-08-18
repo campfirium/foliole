@@ -31,7 +31,7 @@
     },
     {
       "objectType": "import_source",
-      "sql": "SELECT source_fingerprint __object_id, source_fingerprint, provider, source_kind, source_name, source_locator,\n    first_imported_at, last_imported_at, last_content_fingerprint, latest_node_id\n    FROM source.import_sources"
+      "sql": "SELECT source_fingerprint __object_id, source_fingerprint, provider, source_kind, source_name, source_locator,\n    first_imported_at, last_imported_at, last_content_fingerprint, latest_node_id,\n    NULL watched_binding_id, NULL watched_relative_path\n    FROM source.import_sources"
     },
     {
       "objectType": "node_open_state",
@@ -92,7 +92,7 @@
     "min_supported_version": 1,
     "version": 1
   },
-  "schemaVersion": 66,
+  "schemaVersion": 67,
   "stateCopyIndex": 3,
   "tableNames": [
     "sync_groups",

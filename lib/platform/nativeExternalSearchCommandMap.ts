@@ -2,7 +2,8 @@ import { NATIVE_COMMANDS } from './nativeCommands.js';
 import type {
   NativeExternalSearchBrowseEntry,
   NativeExternalSearchFolder,
-  NativeExternalSearchPreview
+  NativeExternalSearchPreview,
+  NativeExternalSearchReconnectPreview
 } from './nativeExternalSearchContract.js';
 import type { NativeTextImportResult } from './nativeImportContract.js';
 
@@ -20,8 +21,20 @@ export type NativeExternalSearchCommandMap = {
     };
     result: NativeExternalSearchFolder[];
   };
-  [NATIVE_COMMANDS.setExternalSearchFolderEnabled]: {
-    args: { enabled: boolean; folder_id: string };
+  [NATIVE_COMMANDS.removeExternalSearchFolder]: {
+    args: { folder_id: string };
+    result: NativeExternalSearchFolder[];
+  };
+  [NATIVE_COMMANDS.disconnectExternalSearchFolder]: {
+    args: { folder_id: string };
+    result: NativeExternalSearchFolder[];
+  };
+  [NATIVE_COMMANDS.previewExternalSearchFolderReconnect]: {
+    args: { folder_id: string; folder_path: string };
+    result: NativeExternalSearchReconnectPreview;
+  };
+  [NATIVE_COMMANDS.reconnectExternalSearchFolder]: {
+    args: { folder_id: string; folder_path: string };
     result: NativeExternalSearchFolder[];
   };
   [NATIVE_COMMANDS.rebuildExternalSearchIndex]: {

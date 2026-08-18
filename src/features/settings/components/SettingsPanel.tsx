@@ -107,10 +107,11 @@ type SettingsPanelBodyProps = {
   onAddExternalSearchFolder: () => void;
   onChooseExternalAttachmentRoot: (folderId: string) => void;
   onChooseExternalSearchFolder: (folderId: string) => void;
+  onDisconnectExternalSearchFolder: (folderId: string) => void;
+  onReconnectExternalSearchFolder: (folderId: string) => void;
   onRebuildExternalSearchIndex: (folderId?: string) => void;
   onRemoveExternalSearchFolder: (folderId: string) => void;
   onRetryLoadExternalSearchFolders: () => void;
-  onSetExternalSearchFolderEnabled: ReturnType<typeof useExternalSearchFolders>['onSetExternalSearchFolderEnabled'];
   onRunSupportCommand?: ((commandId: string) => void) | undefined;
   onRebuildMirrorLinks: () => void;
   onRebuildMirrorOutput: () => void;
@@ -153,10 +154,11 @@ function createSettingsCategoryProps(
     onAddExternalSearchFolder: props.onAddExternalSearchFolder,
     onChooseExternalAttachmentRoot: props.onChooseExternalAttachmentRoot,
     onChooseExternalSearchFolder: props.onChooseExternalSearchFolder,
+    onDisconnectExternalSearchFolder: props.onDisconnectExternalSearchFolder,
+    onReconnectExternalSearchFolder: props.onReconnectExternalSearchFolder,
     onRebuildExternalSearchIndex: props.onRebuildExternalSearchIndex,
     onRemoveExternalSearchFolder: props.onRemoveExternalSearchFolder,
     onRetryLoadExternalSearchFolders: props.onRetryLoadExternalSearchFolders,
-    onSetExternalSearchFolderEnabled: props.onSetExternalSearchFolderEnabled,
     ...definedProps({ onRunSupportCommand: props.onRunSupportCommand }),
     onRebuildMirrorLinks: props.onRebuildMirrorLinks,
     onRebuildMirrorOutput: props.onRebuildMirrorOutput,

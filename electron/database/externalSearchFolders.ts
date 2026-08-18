@@ -87,7 +87,6 @@ export function saveExternalSearchFolders(folders: SaveFolderInput[]) {
   const driver = openDatabaseConnection().driver;
   const now = new Date().toISOString();
   const deviceId = loadOrCreateDesktopDeviceId(now);
-  const identity = loadOrCreateDesktopInstallationIdentity();
   const inputs = normalizedInput(folders);
   driver.transaction(() => {
     const rows = readExternalSearchFolderRows();
@@ -95,14 +94,6 @@ export function saveExternalSearchFolders(folders: SaveFolderInput[]) {
     for (const input of inputs) {
       const id = resolveLocalId(input, rows);
       if (id) resolved.push({ id, input });
-    }
-    const keptIds = new Set(resolved.map((item) => item.id));
-    for (const row of rows) {
-      if (row.owner_installation_id !== identity.installationId || keptIds.has(row.id)) continue;
-      const deleted = { attachmentMode: 'document_relative_first_then_fixed_root' as const, attachmentRootPath: null,
-        claimUnowned: false, excludedDirs: [], folderPath: row.folder_path, id: row.id };
-      recordSync(deleted, now, deviceId, now);
-      driver.execute('DELETE FROM external_search_folders WHERE id = ?', [row.id]);
     }
     for (const item of resolved) {
       const input = { ...item.input, id: item.id };

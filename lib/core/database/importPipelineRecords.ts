@@ -21,6 +21,8 @@ interface ImportSourceRow {
   source_kind?: string;
   source_locator?: string;
   source_name?: string;
+  watched_binding_id?: string | null;
+  watched_relative_path?: string | null;
 }
 
 interface ExistingNodeRow {
@@ -112,7 +114,9 @@ function toImportSourcePayload(row: ImportSourceRow) {
     source_fingerprint: row.source_fingerprint ?? '',
     source_kind: row.source_kind ?? '',
     source_locator: row.source_locator ?? '',
-    source_name: row.source_name ?? ''
+    source_name: row.source_name ?? '',
+    watched_binding_id: row.watched_binding_id ?? null,
+    watched_relative_path: row.watched_relative_path ?? null
   };
 }
 
@@ -127,7 +131,9 @@ export function recordImportSourceSync(driver: DatabaseDriver, sourceFingerprint
        first_imported_at,
        last_imported_at,
        last_content_fingerprint,
-       latest_node_id
+       latest_node_id,
+       watched_binding_id,
+       watched_relative_path
      FROM import_sources
      WHERE source_fingerprint = ?`,
     [sourceFingerprint]

@@ -6,11 +6,14 @@ import type { ElectronAPI } from './electronApi';
 import { resetExternalFolderRuntimeProviderForTest } from './externalFolderRuntime';
 import {
   createDraftExternalSourceFolder,
+  disconnectExternalSourceSettingsFolder,
   loadExternalSourceSettingsFolders,
+  previewExternalSourceSettingsReconnect,
+  reconnectExternalSourceSettingsFolder,
+  removeExternalSourceSettingsFolder,
   rebuildExternalSourceSettingsIndex,
   resetExternalSourceSettingsFoldersCacheForTest,
   saveExternalSourceSettingsFolders,
-  setExternalSourceSettingsFoldersEnabled,
   selectExternalSourceSettingsFolderPath,
   type ExternalSourceSettingsFolder
 } from './externalSourceSettingsRepository';
@@ -59,17 +62,6 @@ function createManagedNativeFolders() {
   ];
 }
 
-function createRemoteNativeFolder(id: string, enabled = true) {
-  return {
-    ...createNativeFolder(id, `D:\\${id}`),
-    access_mode: 'remote_mirror' as const,
-    mirror_enabled: enabled,
-    owner_device_name: 'Windows PC',
-    owner_installation_id: 'windows-1',
-    owner_platform: 'win32'
-  };
-}
-
 beforeEach(() => {
   vi.restoreAllMocks();
   resetExternalFolderRuntimeProviderForTest();
@@ -115,6 +107,40 @@ it('saves external source settings through the native external search command', 
   expect(result).toEqual([createExternalSourceFolder()]);
 });
 
+it('removes one external source through its explicit native command', async () => {
+  const invoke = vi.fn(async (command: string) => (command === NATIVE_COMMANDS.removeExternalSearchFolder ? [] : null));
+  window.electronAPI = { invoke } as unknown as ElectronAPI;
+
+  await expect(removeExternalSourceSettingsFolder('folder-ext')).resolves.toEqual([]);
+
+  expect(invoke).toHaveBeenCalledWith(NATIVE_COMMANDS.removeExternalSearchFolder, { folder_id: 'folder-ext' });
+});
+
+it('disconnects, previews, and reconnects one external source through explicit native commands', async () => {
+  const preview = {
+    checked_at: '2026-08-18T00:00:00.000Z', folder_id: 'folder-ext', folder_path: '/next',
+    matched_count: 1, missing_count: 2, new_count: 3
+  };
+  const invoke = vi.fn(async (command: string) => {
+    if (command === NATIVE_COMMANDS.previewExternalSearchFolderReconnect) return preview;
+    if (command === NATIVE_COMMANDS.disconnectExternalSearchFolder ||
+      command === NATIVE_COMMANDS.reconnectExternalSearchFolder) return [createNativeFolder()];
+    return null;
+  });
+  window.electronAPI = { invoke } as unknown as ElectronAPI;
+
+  await expect(disconnectExternalSourceSettingsFolder('folder-ext')).resolves.toEqual([createExternalSourceFolder()]);
+  await expect(previewExternalSourceSettingsReconnect('folder-ext', '/next')).resolves.toEqual(preview);
+  await expect(reconnectExternalSourceSettingsFolder('folder-ext', '/next')).resolves.toEqual([createExternalSourceFolder()]);
+  expect(invoke).toHaveBeenNthCalledWith(1, NATIVE_COMMANDS.disconnectExternalSearchFolder, { folder_id: 'folder-ext' });
+  expect(invoke).toHaveBeenNthCalledWith(2, NATIVE_COMMANDS.previewExternalSearchFolderReconnect, {
+    folder_id: 'folder-ext', folder_path: '/next'
+  });
+  expect(invoke).toHaveBeenNthCalledWith(3, NATIVE_COMMANDS.reconnectExternalSearchFolder, {
+    folder_id: 'folder-ext', folder_path: '/next'
+  });
+});
+
 it('reuses the first external source settings load for prewarm and open', async () => {
   const invoke = vi.fn(async (command: string) => (command === NATIVE_COMMANDS.loadExternalSearchFolders ? [createNativeFolder()] : null));
   window.electronAPI = { invoke } as unknown as ElectronAPI;
@@ -152,41 +178,6 @@ it('keeps managed folders out after saving and rebuilding settings', async () =>
     .resolves.toEqual([createExternalSourceFolder()]);
   await expect(rebuildExternalSourceSettingsIndex())
     .resolves.toEqual([createExternalSourceFolder()]);
-});
-
-it('updates a device folder group serially and returns the final authoritative snapshot', async () => {
-  const state = [createRemoteNativeFolder('one'), createRemoteNativeFolder('two')];
-  const invoke = vi.fn(async (command: string, args?: { enabled: boolean; folder_id: string }) => {
-    if (command !== NATIVE_COMMANDS.setExternalSearchFolderEnabled || !args) return null;
-    const folder = state.find((item) => item.id === args.folder_id);
-    if (folder) folder.mirror_enabled = args.enabled;
-    return state;
-  });
-  window.electronAPI = { invoke } as unknown as ElectronAPI;
-
-  const result = await setExternalSourceSettingsFoldersEnabled(['one', 'two'], false);
-
-  expect(result.error).toBeNull();
-  expect(result.folders?.map((folder) => folder.mirrorEnabled)).toEqual([false, false]);
-  expect(invoke.mock.calls.map((call) => call[1]?.folder_id)).toEqual(['one', 'two']);
-});
-
-it('returns the last authoritative snapshot when a later group update fails', async () => {
-  const state = [createRemoteNativeFolder('one'), createRemoteNativeFolder('two')];
-  const invoke = vi.fn(async (command: string, args?: { enabled: boolean; folder_id: string }) => {
-    if (command !== NATIVE_COMMANDS.setExternalSearchFolderEnabled || !args) return null;
-    if (args.folder_id === 'two') throw new Error('second update failed');
-    const firstFolder = state[0];
-    if (!firstFolder) throw new Error('missing first folder');
-    firstFolder.mirror_enabled = args.enabled;
-    return state;
-  });
-  window.electronAPI = { invoke } as unknown as ElectronAPI;
-
-  const result = await setExternalSourceSettingsFoldersEnabled(['one', 'two'], false);
-
-  expect(result.error).toEqual(new Error('second update failed'));
-  expect(result.folders?.map((folder) => folder.mirrorEnabled)).toEqual([false, true]);
 });
 
 it('rebuilds external source indexes without changing the command payload shape', async () => {

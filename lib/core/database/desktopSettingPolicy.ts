@@ -8,6 +8,7 @@ const USER_SPACE_KEYS = new Set([
   'backup_settings',
   'import_manager_settings',
   'library_path_settings',
+  'readwise_active_device',
   'review_scheduler_settings'
 ]);
 const SESSION_RESUME_KEYS = new Set(['readwise_book_epub_picker_state', 'window_state']);

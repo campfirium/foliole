@@ -3,6 +3,7 @@ import type { BrowserWindow } from 'electron';
 import { LIBRARY_PATH_LOCATIONS } from '../../lib/platform/libraryPaths.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { loadBackupSettings, saveBackupSettings } from '../database/backupSettings.js';
+import { activateReadwiseOnThisDevice, loadReadwiseDeviceAssignment } from '../database/readwiseDeviceAssignment.js';
 import { restoreSourceDispositions } from '../database/sourceDispositionRestore.js';
 import {
   resetSourceDispositions,
@@ -35,6 +36,7 @@ import { loadAppSettingsState, saveAppSettingsState } from './storage.js';
 import { readSettingsObject } from './storageCommandSupport.js';
 import { handleExternalSearchStorageCommand } from './storageExternalSearchCommands.js';
 import { handlePublishingStorageCommand } from './storagePublishingCommands.js';
+import { handleWatchedFolderSettingsCommand } from './storageWatchedFolderCommands.js';
 import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
 
 function handleSourceDispositionCommand(command: string, window: BrowserWindow | null) {
@@ -107,6 +109,10 @@ export async function handleSettingsStorageCommand(
     return saveSyncPeers(Array.isArray(args.peers) ? (args.peers as Parameters<typeof saveSyncPeers>[0]) : []);
   }
   if (command === NATIVE_COMMANDS.loadLibraryPathSettings) return loadLibraryPathSettings();
+  if (command === NATIVE_COMMANDS.loadReadwiseDeviceAssignment) return loadReadwiseDeviceAssignment();
+  if (command === NATIVE_COMMANDS.activateReadwiseOnThisDevice) return activateReadwiseOnThisDevice();
+  const watchedFolderResult = handleWatchedFolderSettingsCommand(command, args);
+  if (watchedFolderResult !== undefined) return watchedFolderResult;
   if (command === NATIVE_COMMANDS.openImportRoot) return openImportRoot();
   if (command === NATIVE_COMMANDS.loadDatabaseMaintenanceStatus) return loadDatabaseMaintenanceStatus();
   if (command === NATIVE_COMMANDS.loadBackupSettings) return loadBackupSettings();

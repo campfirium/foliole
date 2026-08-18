@@ -1,5 +1,6 @@
 import { DESKTOP_CORE_SCHEMA_STATEMENTS } from './desktopCoreSchemaStatements.js';
 import { DESKTOP_RESOURCE_SCHEMA_STATEMENTS } from './desktopResourceSchemaStatements.js';
+import { WATCHED_FOLDER_BINDING_SCHEMA_STATEMENTS } from './desktopSourceConnectionSchemaStatements.js';
 import { EXTERNAL_DOCUMENT_SCHEMA_STATEMENTS } from './externalDocumentSchemaStatements.js';
 import { KEEP_IMPORT_SCHEMA_STATEMENTS } from './keepImportSchemaStatements.js';
 import { LOCAL_FILE_SCHEMA_STATEMENTS } from './localFileSchemaStatements.js';
@@ -14,6 +15,7 @@ export const DESKTOP_FRESH_SCHEMA_STATEMENTS = [
   ...DESKTOP_RESOURCE_SCHEMA_STATEMENTS.slice(0, 6),
   ...KEEP_IMPORT_SCHEMA_STATEMENTS,
   ...DESKTOP_RESOURCE_SCHEMA_STATEMENTS.slice(6),
+  ...WATCHED_FOLDER_BINDING_SCHEMA_STATEMENTS,
   ...SYNC_SCHEMA_STATEMENTS,
   ...SYNC_GROUP_SCHEMA_STATEMENTS,
   ...SYNC_DELIVERY_TRIGGER_STATEMENTS,

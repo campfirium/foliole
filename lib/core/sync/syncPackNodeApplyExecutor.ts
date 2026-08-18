@@ -223,6 +223,7 @@ const SYNC_PACK_SURFACE_OBJECT_TYPES = [
   'setting',
   'import_source',
   'external_folder',
+  'watched_folder',
   'node_reading',
   'node_review',
   'node_text_alternative',

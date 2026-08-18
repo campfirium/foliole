@@ -5,6 +5,7 @@ import type {
 } from '../../lib/platform/nativeImportContract.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { deleteNodesPermanently } from '../database/nodeMutations.js';
+import { canCurrentDeviceRunReadwise } from '../database/readwiseDeviceAssignment.js';
 import { isReadwiseExternalFolderId } from '../database/readwiseManagedExternalDocuments.js';
 
 import { clearPersistedReadwiseBookGeneratedNodes } from './readwiseBooksInventoryState.js';
@@ -177,10 +178,12 @@ function clearReadwiseExternalDocuments(rows: ReadwiseExternalCleanupRow[]) {
 }
 
 export function previewReadwiseImportCleanup(): NativeReadwiseCleanupPreviewResult {
+  if (!canCurrentDeviceRunReadwise()) throw new Error('readwise_not_active_device');
   return buildCleanupPreview(new Date().toISOString());
 }
 
 export function runReadwiseImportCleanup(): NativeReadwiseCleanupRunResult {
+  if (!canCurrentDeviceRunReadwise()) throw new Error('readwise_not_active_device');
   const cleanedAt = new Date().toISOString();
   const preview = buildCleanupPreview(cleanedAt);
   const externalRows = readReadwiseExternalRows();

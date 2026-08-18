@@ -51,11 +51,15 @@ function hashFingerprint(...parts: string[]) {
   return createHash('sha256').update(parts.join('\u001F'), 'utf8').digest('hex');
 }
 
+export function createTrackedDesktopSourceFingerprint(sourceIdentity: string) {
+  return hashFingerprint('source', IMPORT_PROVIDER_DESKTOP_TEXT_FILE, sourceIdentity);
+}
+
 function resolveSourceFingerprint(input: Pick<CreatePreparedDesktopTextImportInput, 'filePath' | 'importedAt' | 'sourceIdentity' | 'sourceTrackingMode'>) {
   if (input.sourceTrackingMode === 'untracked') {
     return hashFingerprint('source', IMPORT_PROVIDER_DESKTOP_TEXT_FILE, 'untracked', input.sourceIdentity ?? input.filePath, input.importedAt);
   }
-  return hashFingerprint('source', IMPORT_PROVIDER_DESKTOP_TEXT_FILE, input.sourceIdentity ?? input.filePath);
+  return createTrackedDesktopSourceFingerprint(input.sourceIdentity ?? input.filePath);
 }
 
 function normalizeImportedContent(content: string) {

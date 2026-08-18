@@ -8,6 +8,7 @@ import type {
   NativeReadwiseImportRunResult
 } from '../../lib/platform/nativeImportContract.js';
 import { countPresentKeepImportItems } from '../database/keepImportItems.js';
+import { canCurrentDeviceRunReadwise } from '../database/readwiseDeviceAssignment.js';
 
 import { loadImportManagerSettings, saveImportManagerSettings } from './importManagerSettings.js';
 import { isKeepImportMonitorSnapshotFresh } from './keepImportMonitorRuntime.js';
@@ -185,7 +186,7 @@ async function runReadwiseReaderImportNow(input?: {
   window?: ReadwiseImportProgressWindow | null;
 }, signal?: AbortSignal): Promise<NativeReadwiseImportRunResult> {
   const settings = resolveRunSettings(input);
-  if (!settings.readwiseReaderConfig.enabled) {
+  if (!settings.readwiseReaderConfig.enabled || !canCurrentDeviceRunReadwise()) {
     return {
       completed_at: new Date().toISOString(),
       entry_count: 0,

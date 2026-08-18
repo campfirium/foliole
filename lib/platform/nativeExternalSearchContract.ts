@@ -22,6 +22,15 @@ export interface NativeExternalSearchFolder {
   updated_at: string;
 }
 
+export interface NativeExternalSearchReconnectPreview {
+  checked_at: string;
+  folder_id: string;
+  folder_path: string;
+  matched_count: number;
+  missing_count: number;
+  new_count: number;
+}
+
 export type NativeExternalDocumentReference =
   | { absolute_path: string; kind: 'local_path' }
   | { document_id: string; kind: 'mirror_document' };

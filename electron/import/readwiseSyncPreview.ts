@@ -11,6 +11,7 @@ import type {
   NativeReadwiseSyncPreviewResult,
 } from '../../lib/platform/nativeImportContract.js';
 import { readKeepImportItem, readKeepImportNodeState } from '../database/keepImportItems.js';
+import { canCurrentDeviceRunReadwise } from '../database/readwiseDeviceAssignment.js';
 import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
@@ -160,7 +161,7 @@ export async function previewReadwiseReaderImport(
   const settings = settingsInput
     ? normalizeImportManagerSettings(settingsInput)
     : loadImportManagerSettings();
-  if (!settings.readwiseReaderConfig.enabled) {
+  if (!settings.readwiseReaderConfig.enabled || !canCurrentDeviceRunReadwise()) {
     return {
       active_count: 0,
       blocked_count: 0,

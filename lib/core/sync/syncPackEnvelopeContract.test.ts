@@ -5,6 +5,7 @@ import { expect, it } from 'vitest';
 import { DATABASE_SCHEMA_VERSION } from '../database/databaseSchemaVersion.js';
 
 import {
+  assertSyncPackSchemaVersion,
   SYNC_PACK_ENVELOPE_CONTRACT,
   SYNC_PACK_SQLITE_TABLE_REQUIREMENTS
 } from './syncPackEnvelopeContract.js';
@@ -19,12 +20,20 @@ it('defines the shared sync pack envelope and actual sqlite requirements', () =>
     formatVersion: 4,
     manifestTableNames: SYNC_PACK_TABLE_NAMES,
     maximumSchemaVersion: DATABASE_SCHEMA_VERSION,
-    minimumSchemaVersion: 46
+    minimumSchemaVersion: DATABASE_SCHEMA_VERSION
   });
   expect(Object.keys(SYNC_PACK_SQLITE_TABLE_REQUIREMENTS)).toEqual([
     'pack_manifest',
     ...SYNC_PACK_TABLE_NAMES
   ]);
+});
+
+it('only accepts sync packs from the exact local database schema', () => {
+  expect(() => assertSyncPackSchemaVersion(DATABASE_SCHEMA_VERSION)).not.toThrow();
+  expect(() => assertSyncPackSchemaVersion(DATABASE_SCHEMA_VERSION - 1))
+    .toThrow('unsupported_sync_pack_schema_version');
+  expect(() => assertSyncPackSchemaVersion(DATABASE_SCHEMA_VERSION + 1))
+    .toThrow('unsupported_sync_pack_schema_version');
 });
 
 it('keeps required sqlite columns present in the producer schema', () => {

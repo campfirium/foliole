@@ -17,6 +17,7 @@ import {
 
 import type { DraftImportSource } from './importSourceWorkspaceModel';
 import { ReadwiseCleanupDialog } from './ReadwiseCleanupDialog';
+import { ReadwiseDeviceAssignmentRow, useReadwiseDeviceAssignment } from './ReadwiseDeviceAssignmentRow';
 import { ReadwiseReaderImportBehavior } from './ReadwiseReaderImportBehavior';
 import {
   ReadwiseIntegrationSwitch,
@@ -154,18 +155,19 @@ interface SettingsReadwiseReaderContentProps {
   readwiseSources: DraftImportSource[];
 }
 
+function saveDisabledReadwiseSetup(props: SettingsReadwiseReaderContentProps, draft: ReadwiseSetupDraft) {
+  props.onSave(createReadwiseSetupPayload(
+    draft,
+    { ...draft.draftConfig, enabled: false },
+    disableReadwiseImportSource(draft.draftSources)
+  ));
+}
+
 export function SettingsReadwiseReaderContent(props: SettingsReadwiseReaderContentProps) {
+  const device = useReadwiseDeviceAssignment();
   const setup = useReadwiseSetupController(props);
   const cleanup = useReadwiseCleanup({
-    onCleanupComplete: () => {
-      props.onSave(
-        createReadwiseSetupPayload(
-          setup.draft,
-          { ...setup.draft.draftConfig, enabled: false },
-          disableReadwiseImportSource(setup.draft.draftSources)
-        )
-      );
-    },
+    onCleanupComplete: () => saveDisabledReadwiseSetup(props, setup.draft),
     ...definedProps({
       onPreviewCleanup: props.onPreviewCleanup,
       onRunCleanup: props.onRunCleanup
@@ -174,20 +176,25 @@ export function SettingsReadwiseReaderContent(props: SettingsReadwiseReaderConte
 
   return (
     <>
-      <ReadwiseSetupSection
-        canChangeIntegration={setup.canChangeIntegration}
-        canPreview={setup.canPreview}
-        draft={setup.draft}
-        integrationEnabled={setup.integrationEnabled}
-        cleanupDisabled={cleanup.cleanupDisabled}
-        onCleanup={() => void cleanup.openCleanupDialog()}
-        onChangeIntegration={setup.handleChangeIntegration}
-        onCheck={setup.handleCheck}
-        onSync={() => void setup.handleRunSync()}
-        syncStatus={setup.manualSyncStatus}
-        syncDisabled={setup.syncDisabled}
-        syncIsRunning={setup.syncIsRunning}
-      />
+      <ReadwiseDeviceAssignmentRow assignment={device.assignment} onActivate={() => void device.activate()} />
+      <fieldset disabled={device.assignment?.is_active === false}>
+        <div className={device.assignment?.is_active === false ? 'pointer-events-none opacity-50' : undefined}>
+          <ReadwiseSetupSection
+            canChangeIntegration={setup.canChangeIntegration}
+            canPreview={setup.canPreview}
+            draft={setup.draft}
+            integrationEnabled={setup.integrationEnabled}
+            cleanupDisabled={cleanup.cleanupDisabled}
+            onCleanup={() => void cleanup.openCleanupDialog()}
+            onChangeIntegration={setup.handleChangeIntegration}
+            onCheck={setup.handleCheck}
+            onSync={() => void setup.handleRunSync()}
+            syncStatus={setup.manualSyncStatus}
+            syncDisabled={setup.syncDisabled}
+            syncIsRunning={setup.syncIsRunning}
+          />
+        </div>
+      </fieldset>
       <ReadwiseSyncPreviewDialog
         error={setup.syncError}
         isCancelling={setup.isCancellingSync}

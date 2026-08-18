@@ -5,6 +5,7 @@ import {
   type ImportManagerSettings
 } from '../../lib/core/import/importManagerSettings.js';
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
+import { upsertChangedWatchedFolderSource } from '../database/watchedFolderBindings.js';
 import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 import { assertNoUnsafePathOverlap, type SafetyPathCandidate } from '../libraryPathSafety.js';
 
@@ -33,6 +34,15 @@ function assertSafeImportManagerPaths(settings: ImportManagerSettings) {
   ]);
 }
 
+function watchedSourceChanged(
+  previous: ImportManagerSettings['sources'][number] | undefined,
+  next: ImportManagerSettings['sources'][number]
+) {
+  if (!previous) return true;
+  return ['actionMode', 'archivePath', 'highlightMode', 'highlightPath', 'primaryPath']
+    .some((key) => previous[key as keyof typeof previous] !== next[key as keyof typeof next]);
+}
+
 export function loadImportManagerSettings(): ImportManagerSettings {
   try {
     return normalizeImportManagerSettings(loadJsonSetting(IMPORT_MANAGER_SETTINGS_KEY));
@@ -56,5 +66,10 @@ export function saveImportManagerSettings(settings: unknown): ImportManagerSetti
   });
   assertSafeImportManagerPaths(normalized);
   saveJsonSetting(IMPORT_MANAGER_SETTINGS_KEY, normalized, normalized.updatedAt);
+  normalized.sources.forEach((source) => {
+    if (watchedSourceChanged(current.sources.find((item) => item.id === source.id), source)) {
+      upsertChangedWatchedFolderSource(source, normalized.updatedAt);
+    }
+  });
   return normalized;
 }

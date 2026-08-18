@@ -17,10 +17,11 @@ const baseProps = {
   onAddFolder: vi.fn(),
   onChooseAttachmentRoot: vi.fn(),
   onChooseFolder: vi.fn(),
+  onDisconnectFolder: vi.fn(),
+  onReconnectFolder: vi.fn(),
   onRebuildIndex: vi.fn(),
   onRemoveFolder: vi.fn(),
   onRetryLoad: vi.fn(),
-  onSetFolderEnabled: vi.fn(),
   onUpdateFolder: vi.fn()
 };
 
@@ -54,38 +55,35 @@ beforeEach(() => {
 it('shows remote mirrors only when a remote desktop folder exists', () => {
   renderWithLocalization(<SettingsExternalSearchSection {...baseProps} folders={[remoteFolder()]} />);
 
-  expect(screen.getByText('From other devices')).toBeInTheDocument();
-  expect(screen.getByText('Browse and search these folders on this device. They’re read-only here.')).toBeInTheDocument();
+  expect(screen.getByText('Workgroup sources')).toBeInTheDocument();
+  expect(screen.getByText('Sources connected to another device are read-only here. Sources waiting for a folder can be reconnected.')).toBeInTheDocument();
   expect(screen.getByText('Windows PC')).toBeInTheDocument();
   expect(screen.getByText('Windows')).toBeInTheDocument();
   expect(screen.getByText('Docs')).toBeInTheDocument();
   expect(screen.queryByText('Read-only mirror')).not.toBeInTheDocument();
-  const remoteHeading = screen.getByRole('heading', { level: 3, name: 'From other devices' });
+  const remoteHeading = screen.getByRole('heading', { level: 3, name: 'Workgroup sources' });
   const localHeading = screen.getByRole('heading', { level: 3, name: 'External folders' });
   expect(remoteHeading.compareDocumentPosition(localHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  fireEvent.click(screen.getByRole('switch', { name: 'Use Docs from Windows PC on this device' }));
-  expect(baseProps.onSetFolderEnabled).toHaveBeenCalledWith('remote-1', false);
+  expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+  expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Update folder' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Reconnect' })).not.toBeInTheDocument();
 });
 
-it('groups by installation and exposes a mixed device control without guessing missing ownership', () => {
+it('groups by installation without exposing receiver controls or guessing missing ownership', () => {
   renderWithLocalization(<SettingsExternalSearchSection {...baseProps} folders={[
     remoteFolder(),
     remoteFolder({ folderPath: 'D:\\Projects', id: 'remote-2', mirrorEnabled: false }),
     remoteFolder({ folderPath: '/Users/foliole/Research', id: 'remote-3', ownerInstallationId: 'mac-1', ownerPlatform: 'darwin' }),
-    remoteFolder({ folderPath: '/unknown', id: 'remote-4', ownerDeviceName: null, ownerInstallationId: null, ownerPlatform: 'mystery' })
+    remoteFolder({ accessMode: 'unowned', folderPath: '/unknown', id: 'remote-4', ownerDeviceName: null, ownerInstallationId: null, ownerPlatform: 'mystery' })
   ]} />);
 
-  const sameNameGroupControls = screen.getAllByRole('checkbox', { name: 'Use all folders from Windows PC on this device' });
-  const firstGroupControl = sameNameGroupControls[0];
-  expect(sameNameGroupControls).toHaveLength(2);
-  if (!firstGroupControl) throw new Error('missing first Windows PC group control');
-  expect(firstGroupControl).toHaveAttribute('aria-checked', 'mixed');
-  expect(screen.getByRole('checkbox', { name: 'Use all folders from Other device on this device' })).toBeInTheDocument();
+  expect(screen.getAllByText('Windows PC')).toHaveLength(2);
+  expect(screen.getByText('Other device')).toBeInTheDocument();
   expect(screen.queryByText('mystery')).not.toBeInTheDocument();
-
-  fireEvent.click(firstGroupControl);
-  expect(baseProps.onSetFolderEnabled).toHaveBeenCalledWith(['remote-1', 'remote-2'], true);
+  expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+  expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Reconnect' })).toBeInTheDocument();
 });
 
 it('does not show link panel browsing data controls in external sources', () => {
@@ -105,6 +103,7 @@ it('shows a progress row while external sources load', () => {
 
 it('describes External folders without mirror terminology', () => {
   renderWithLocalization(<SettingsExternalSearchSection {...baseProps} folders={[{
+    accessMode: 'local',
     attachmentMode: 'document_relative_first_then_fixed_root',
     attachmentRootPath: null,
     createdAt: '2026-05-26T00:00:00.000Z',
@@ -121,6 +120,7 @@ it('describes External folders without mirror terminology', () => {
   expect(screen.getByText('Choose folders to browse, search, and import from outside Foliole. Original files stay outside Foliole.')).toBeInTheDocument();
   expect(screen.getByTitle('3 files indexed')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Update folder' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Disconnect' })).toBeInTheDocument();
 });
 
 it('does not show global search enhancement controls in external sources', () => {
@@ -146,6 +146,7 @@ it('keeps external folder controls available when the legacy enabled flag is fal
   const onUpdateFolder = vi.fn();
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.externalFoldersEnabled, 'false');
   renderWithLocalization(<SettingsExternalSearchSection {...baseProps} folders={[{
+    accessMode: 'local',
     attachmentMode: 'document_relative_first_then_fixed_root',
     attachmentRootPath: null,
     createdAt: '2026-05-26T00:00:00.000Z',

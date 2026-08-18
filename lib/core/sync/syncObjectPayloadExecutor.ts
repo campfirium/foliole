@@ -1,5 +1,6 @@
 import type { DbPort } from './dbPort.js';
 import { applyAttachmentObject } from './syncObjectAttachmentPayloadExecutor.js';
+import { applyImportSourceObject } from './syncObjectImportSourcePayloadExecutor.js';
 import {
   applyNodeReadingObject,
   applyNodeReviewObject,
@@ -7,6 +8,7 @@ import {
 } from './syncObjectLearningPayloadExecutor.js';
 import { applyNodeOpenStateObject } from './syncObjectOpenStatePayloadExecutor.js';
 import { asObject, integer, numberOrNull, text } from './syncObjectPayloadValues.js';
+import { applyWatchedFolderObject } from './syncObjectWatchedFolderPayloadExecutor.js';
 import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
 
 export async function applySyncObjectPayloadWithDbPort(
@@ -35,6 +37,8 @@ export async function applySyncObjectPayloadWithDbPort(
       return applyPdfPageTextObject(port, record);
     case 'setting':
       return applySettingObject(port, record);
+    case 'watched_folder':
+      return applyWatchedFolderObject(port, record);
     case 'view_state':
       return applyViewStateObject(port, record, options);
     default:
@@ -114,6 +118,7 @@ async function applySettingObject(port: DbPort, record: SyncPackSyncObjectRecord
 
 async function applyExternalFolderObject(port: DbPort, record: SyncPackSyncObjectRecord) {
   if (record.deleted_at) {
+    await port.run('DELETE FROM external_documents WHERE folder_id = ?', [record.object_id]);
     await port.run('DELETE FROM external_search_folders WHERE id = ?', [record.object_id]);
     return;
   }
@@ -132,25 +137,6 @@ async function applyExternalFolderObject(port: DbPort, record: SyncPackSyncObjec
       integer(payload.document_count), text(payload.indexed_at), text(payload.last_error),
       text(payload.owner_installation_id), text(payload.owner_device_name), text(payload.owner_platform),
       text(payload.created_at) ?? record.updated_at, record.updated_at]
-  );
-}
-
-async function applyImportSourceObject(port: DbPort, record: SyncPackSyncObjectRecord) {
-  if (record.deleted_at) {
-    await port.run('DELETE FROM import_sources WHERE source_fingerprint = ?', [record.object_id]);
-    return;
-  }
-  const payload = asObject(record);
-  await port.run(
-    `INSERT INTO import_sources (source_fingerprint, provider, source_kind, source_name, source_locator, ` +
-    `first_imported_at, last_imported_at, last_content_fingerprint, latest_node_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ` +
-    `ON CONFLICT(source_fingerprint) DO UPDATE SET provider = excluded.provider, source_kind = excluded.source_kind, ` +
-    `source_name = excluded.source_name, source_locator = excluded.source_locator, last_imported_at = excluded.last_imported_at, ` +
-    `last_content_fingerprint = excluded.last_content_fingerprint, latest_node_id = excluded.latest_node_id`,
-    [record.object_id, text(payload.provider) ?? 'unknown', text(payload.source_kind) ?? 'unknown',
-      text(payload.source_name) ?? record.object_id, text(payload.source_locator) ?? record.object_id,
-      text(payload.first_imported_at) ?? record.updated_at, text(payload.last_imported_at) ?? record.updated_at,
-      text(payload.last_content_fingerprint) ?? record.content_hash, text(payload.latest_node_id)]
   );
 }
 

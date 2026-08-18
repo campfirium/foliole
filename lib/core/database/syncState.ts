@@ -16,6 +16,7 @@ export type SyncObjectType =
   | 'node_review'
   | 'pdf_page_text'
   | 'setting'
+  | 'watched_folder'
   | 'view_state';
 
 export type StateSyncObjectType = Exclude<SyncObjectType, 'import_run'>;

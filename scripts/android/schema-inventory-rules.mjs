@@ -35,7 +35,8 @@ export const DESKTOP_ONLY_TABLES = new Set([
   'keep_import_items',
   'mirror_articles',
   'settings',
-  'sync_peers'
+  'sync_peers',
+  'watched_folder_bindings'
 ]);
 
 export const ANDROID_ONLY_TABLES = new Set(['companion_meta']);
@@ -53,6 +54,9 @@ const FIELD_CLASSIFICATIONS = new Map([
   ['content_blob_data.createSql', 'android-missing-constraint'],
   ['external_documents.columns.title', 'android-missing-not-null'],
   ['external_documents.createSql', 'android-missing-not-null'],
+  ['import_sources.columns.watched_binding_id', 'desktop-only-column'],
+  ['import_sources.columns.watched_relative_path', 'desktop-only-column'],
+  ['import_sources.createSql', 'desktop-only-column'],
   ['node_view_state.createSql', 'android-missing-constraint'],
   ['pdf_page_text.createSql', 'android-missing-constraint'],
   ['setting_records.columns.device_id', 'android-missing-default'],
@@ -67,6 +71,7 @@ const MISSING_ANDROID_INDEX_FIELDS = [
   'external_documents.indexes.idx_external_documents_folder_relative',
   'external_documents.indexes.idx_external_documents_hash',
   'external_documents.indexes.idx_external_documents_present_updated',
+  'import_sources.indexes.idx_import_sources_watched_relative',
   'node_sync_versions.indexes.idx_node_sync_versions_object_created',
   'setting_records.indexes.idx_setting_records_device',
   'setting_records.indexes.idx_setting_records_lookup',

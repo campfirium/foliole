@@ -56,10 +56,11 @@ export interface SettingsCategoryContentProps {
   onAddExternalSearchFolder: () => void;
   onChooseExternalAttachmentRoot: (folderId: string) => void;
   onChooseExternalSearchFolder: (folderId: string) => void;
+  onDisconnectExternalSearchFolder: (folderId: string) => void;
+  onReconnectExternalSearchFolder: (folderId: string) => void;
   onRebuildExternalSearchIndex: (folderId?: string) => void;
   onRemoveExternalSearchFolder: (folderId: string) => void;
   onRetryLoadExternalSearchFolders: () => void;
-  onSetExternalSearchFolderEnabled: (folderId: string | string[], enabled: boolean) => void;
   onRebuildMirrorLinks: () => void;
   onRebuildMirrorOutput: () => void;
   onRestoreDefault: (location: 'assets_dir' | 'inbox' | 'library_home' | 'mirror') => void;
@@ -119,10 +120,11 @@ function renderExternalSearchCategory(props: SettingsCategoryContentProps) {
       onAddFolder={props.onAddExternalSearchFolder}
       onChooseAttachmentRoot={props.onChooseExternalAttachmentRoot}
       onChooseFolder={props.onChooseExternalSearchFolder}
+      onDisconnectFolder={props.onDisconnectExternalSearchFolder}
+      onReconnectFolder={props.onReconnectExternalSearchFolder}
       onRebuildIndex={props.onRebuildExternalSearchIndex}
       onRemoveFolder={props.onRemoveExternalSearchFolder}
       onRetryLoad={props.onRetryLoadExternalSearchFolders}
-      onSetFolderEnabled={props.onSetExternalSearchFolderEnabled}
       onUpdateFolder={props.onUpdateExternalSearchFolder}
     />
   );

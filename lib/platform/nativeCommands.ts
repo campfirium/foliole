@@ -1,4 +1,7 @@
+import { NATIVE_SOURCE_CONNECTION_COMMANDS } from './nativeSourceConnectionCommands.js';
+
 export const NATIVE_COMMANDS = {
+  ...NATIVE_SOURCE_CONNECTION_COMMANDS,
   appGetVersion: 'app_get_version',
   folioleCliInstall: 'foliole_cli_install',
   appendReadingPositionTraceLog: 'append_reading_position_trace_log',
@@ -38,7 +41,6 @@ export const NATIVE_COMMANDS = {
   resetReadwiseBookImport: 'reset_readwise_book_import',
   loadExternalSearchFolders: 'load_external_search_folders',
   saveExternalSearchFolders: 'save_external_search_folders',
-  setExternalSearchFolderEnabled: 'set_external_search_folder_enabled',
   rebuildExternalSearchIndex: 'rebuild_external_search_index',
   loadExternalSearchBrowseEntries: 'load_external_search_browse_entries',
   loadExternalSearchPreview: 'load_external_search_preview',

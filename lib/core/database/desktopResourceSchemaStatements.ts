@@ -43,7 +43,9 @@ export const DESKTOP_RESOURCE_SCHEMA_STATEMENTS = [
     first_imported_at TEXT NOT NULL,
     last_imported_at TEXT NOT NULL,
     last_content_fingerprint TEXT NOT NULL,
-    latest_node_id TEXT
+    latest_node_id TEXT,
+    watched_binding_id TEXT,
+    watched_relative_path TEXT
   )`,
   `CREATE TABLE IF NOT EXISTS import_runs (
     id TEXT PRIMARY KEY,
@@ -122,5 +124,7 @@ export const DESKTOP_RESOURCE_SCHEMA_STATEMENTS = [
     enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0, 1)),
     updated_at TEXT NOT NULL,
     PRIMARY KEY (installation_id, folder_id)
-  )`
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_import_sources_watched_relative
+    ON import_sources (watched_binding_id, watched_relative_path)`
 ];

@@ -1,0 +1,26 @@
+import type { TranslationKey } from '../translations';
+
+export const ZH_HANS_DESKTOP_SOURCE_CONNECTION_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'desktop.watchedFolder.connections.title': '工作组中的监听文件夹',
+  'desktop.watchedFolder.connections.description': '文件夹断开后，来源仍会保留；已有主题不会被删除。',
+  'desktop.watchedFolder.source': '监听文件夹',
+  'desktop.watchedFolder.connected': '已连接到 {device}',
+  'desktop.watchedFolder.needsFolder': '选择文件夹后继续更新。',
+  'desktop.watchedFolder.disconnect': '断开',
+  'desktop.watchedFolder.reconnect.action': '重新连接',
+  'desktop.watchedFolder.reconnect.title': '重新连接监听文件夹',
+  'desktop.watchedFolder.reconnect.summary': '匹配 {matched} 个，新增 {added} 个，缺少 {missing} 个。缺少的文件不会删除已有主题。',
+  'desktop.watchedFolder.reconnect.cancel': '取消',
+  'desktop.watchedFolder.reconnect.confirm': '重新连接',
+  'desktop.watchedFolder.remove.action': '移除',
+  'desktop.watchedFolder.remove.title': '移除监听文件夹',
+  'desktop.watchedFolder.remove.description': 'Foliole 将停止管理此来源。已有主题和原文件都会保留。',
+  'desktop.watchedFolder.remove.cancel': '取消',
+  'desktop.watchedFolder.remove.confirm': '移除',
+  'desktop.readwise.device.title': 'Readwise 设备',
+  'desktop.readwise.device.current': 'Readwise Reader 当前在此设备运行。',
+  'desktop.readwise.device.remote': 'Readwise Reader 当前在 {name} 运行。切换到此设备后才能编辑这些设置并执行导入。',
+  'desktop.readwise.device.unassigned': '尚未选择设备。在你明确选择前，现有设置仍可在此设备继续使用。',
+  'desktop.readwise.device.useThis': '使用此设备',
+  'desktop.readwise.device.switch': '切换到此设备'
+};

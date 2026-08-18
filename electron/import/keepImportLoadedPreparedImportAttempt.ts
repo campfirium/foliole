@@ -1,5 +1,6 @@
 import type { PreparedImportRecord } from '../../lib/core/import/contract.js';
 import { runPreparedImport } from '../database/importPipeline.js';
+import { recordWatchedImportSourceMapping } from '../database/watchedFolderBindings.js';
 import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
 import { persistAutomaticDuplicateNoop } from './keepImportDuplicateNoop.js';
@@ -94,6 +95,20 @@ async function runPreparedImportWithIndexProgress(input: {
   });
 }
 
+function recordWatchedMapping(
+  input: Parameters<typeof runLoadedPreparedImportAttempt>[0],
+  record: Awaited<ReturnType<typeof runPreparedImportWithIndexProgress>>
+) {
+  if (input.config.sourceType === 'readwise') return;
+  recordWatchedImportSourceMapping({
+    directoryPath: input.config.directoryPath,
+    relativePath: input.source.sourceName,
+    ruleId: input.config.ruleId,
+    sourceFingerprint: record.sourceFingerprint,
+    updatedAt: record.importedAt
+  });
+}
+
 export async function runLoadedPreparedImportAttempt(input: {
   automaticDuplicateNoop: boolean;
   config: KeepImportRuleConfig;
@@ -142,6 +157,7 @@ export async function runLoadedPreparedImportAttempt(input: {
   });
   const importStatus = resolveKeepImportResultStatus(indexedRecord);
   persistKeepImportState(input.config, input.source, input.sourceSignature, indexedRecord, importStatus, input.hasSourceUpdate);
+  recordWatchedMapping(input, indexedRecord);
   const cleanupDetail = await applySuccessfulSourceHandling(input.config, input.source);
   return {
     detail: cleanupDetail ?? resolveKeepImportResultDetail(indexedRecord, importStatus),

@@ -2,9 +2,12 @@ import { getExternalFolderRuntimeProvider } from './externalFolderRuntime';
 import { isManagedExternalLibraryFolder } from './externalLibraryBrowseModel';
 import {
   loadRuntimeExternalSearchFolders,
+  disconnectRuntimeExternalSearchFolder,
+  previewRuntimeExternalSearchFolderReconnect,
+  reconnectRuntimeExternalSearchFolder,
+  removeRuntimeExternalSearchFolder,
   rebuildRuntimeExternalSearchIndex,
   saveRuntimeExternalSearchFolders,
-  setRuntimeExternalSearchFolderEnabled,
   type RuntimeExternalSearchFolder
 } from './externalSearchRuntimeRepository';
 import { selectRuntimeFolder } from './folderSelectionRuntimeRepository';
@@ -73,25 +76,32 @@ export function saveExternalSourceSettingsFolders(folders: ExternalSourceSetting
   });
 }
 
-export function setExternalSourceSettingsFolderEnabled(folderId: string, enabled: boolean) {
-  return setRuntimeExternalSearchFolderEnabled(folderId, enabled).then((folders) => {
+export function removeExternalSourceSettingsFolder(folderId: string) {
+  return removeRuntimeExternalSearchFolder(folderId).then((folders) => {
     const configuredFolders = configuredExternalFolders(folders);
     externalSourceSettingsFoldersCache = configuredFolders;
     return configuredFolders;
   });
 }
 
-export async function setExternalSourceSettingsFoldersEnabled(folderIds: string[], enabled: boolean) {
-  let folders = externalSourceSettingsFoldersCache ?? null;
-  for (const folderId of folderIds) {
-    try {
-      const next = await setExternalSourceSettingsFolderEnabled(folderId, enabled);
-      if (next) folders = next;
-    } catch (error) {
-      return { error, folders };
-    }
-  }
-  return { error: null, folders };
+export function disconnectExternalSourceSettingsFolder(folderId: string) {
+  return disconnectRuntimeExternalSearchFolder(folderId).then((folders) => {
+    const configuredFolders = configuredExternalFolders(folders);
+    externalSourceSettingsFoldersCache = configuredFolders;
+    return configuredFolders;
+  });
+}
+
+export function previewExternalSourceSettingsReconnect(folderId: string, folderPath: string) {
+  return previewRuntimeExternalSearchFolderReconnect(folderId, folderPath);
+}
+
+export function reconnectExternalSourceSettingsFolder(folderId: string, folderPath: string) {
+  return reconnectRuntimeExternalSearchFolder(folderId, folderPath).then((folders) => {
+    const configuredFolders = configuredExternalFolders(folders);
+    externalSourceSettingsFoldersCache = configuredFolders;
+    return configuredFolders;
+  });
 }
 
 export function rebuildExternalSourceSettingsIndex(folderId?: string) {

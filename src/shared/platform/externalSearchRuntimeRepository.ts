@@ -74,11 +74,36 @@ export async function saveRuntimeExternalSearchFolders(folders: RuntimeExternalS
   return nextFolders;
 }
 
-export async function setRuntimeExternalSearchFolderEnabled(folderId: string, enabled: boolean) {
+export async function removeRuntimeExternalSearchFolder(folderId: string) {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) return null;
-  const result = await runtimeInvoke(NATIVE_COMMANDS.setExternalSearchFolderEnabled, {
-    enabled, folder_id: folderId
+  const result = await runtimeInvoke(NATIVE_COMMANDS.removeExternalSearchFolder, { folder_id: folderId });
+  const folders = Array.isArray(result) ? (result as NativeExternalSearchFolder[]).map(toFolder) : [];
+  notifyRuntimeExternalSearchFolders(folders);
+  return folders;
+}
+
+export async function disconnectRuntimeExternalSearchFolder(folderId: string) {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) return null;
+  const result = await invoke(NATIVE_COMMANDS.disconnectExternalSearchFolder, { folder_id: folderId });
+  const folders = Array.isArray(result) ? (result as NativeExternalSearchFolder[]).map(toFolder) : [];
+  notifyRuntimeExternalSearchFolders(folders);
+  return folders;
+}
+
+export function previewRuntimeExternalSearchFolderReconnect(folderId: string, folderPath: string) {
+  const invoke = getRuntimeInvoke();
+  return invoke ? invoke(NATIVE_COMMANDS.previewExternalSearchFolderReconnect, {
+    folder_id: folderId, folder_path: folderPath
+  }) : null;
+}
+
+export async function reconnectRuntimeExternalSearchFolder(folderId: string, folderPath: string) {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) return null;
+  const result = await invoke(NATIVE_COMMANDS.reconnectExternalSearchFolder, {
+    folder_id: folderId, folder_path: folderPath
   });
   const folders = Array.isArray(result) ? (result as NativeExternalSearchFolder[]).map(toFolder) : [];
   notifyRuntimeExternalSearchFolders(folders);

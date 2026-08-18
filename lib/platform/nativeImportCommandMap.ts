@@ -15,6 +15,11 @@ import type {
 import type { NativeKeepImportPreviewArgs, NativeKeepImportPreviewResult } from './nativeKeepImportContract.js';
 import type { NativeRestoreRemovedSourceArgs, NativeRestoreRemovedSourceResult, NativeRemovedSourcesResult } from './nativeRemovedSourcesContract.js';
 import type { NativeMergeReadwiseTopicHighlightsResult } from './nativeStorageContract.js';
+import type {
+  NativeWatchedFolderBinding,
+  NativeWatchedFolderBindingsState,
+  NativeWatchedFolderMatchPreview
+} from './nativeWatchedFolderContract.js';
 
 export type NativeImportCommandMap = {
   [NATIVE_COMMANDS.runTextFileImport]: {
@@ -105,6 +110,26 @@ export type NativeImportCommandMap = {
   [NATIVE_COMMANDS.loadImportManagerSettings]: {
     args: undefined;
     result: ImportManagerSettings;
+  };
+  [NATIVE_COMMANDS.loadWatchedFolderBindings]: {
+    args: undefined;
+    result: NativeWatchedFolderBindingsState;
+  };
+  [NATIVE_COMMANDS.previewWatchedFolderReconnect]: {
+    args: { binding_id: string; folder_path: string };
+    result: NativeWatchedFolderMatchPreview;
+  };
+  [NATIVE_COMMANDS.confirmWatchedFolderReconnect]: {
+    args: { binding_id: string; folder_path: string; highlight_path?: string };
+    result: NativeWatchedFolderMatchPreview;
+  };
+  [NATIVE_COMMANDS.disconnectWatchedFolder]: {
+    args: { binding_id: string };
+    result: NativeWatchedFolderBinding;
+  };
+  [NATIVE_COMMANDS.removeWatchedFolder]: {
+    args: { binding_id: string };
+    result: NativeWatchedFolderBinding[];
   };
   [NATIVE_COMMANDS.selectImportTextFile]: {
     args: NativeTextImportArgs;

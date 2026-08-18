@@ -3,16 +3,17 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import {
   createDraftExternalSourceFolder,
+  disconnectExternalSourceSettingsFolder,
   loadExternalSourceSettingsFolders,
+  removeExternalSourceSettingsFolder,
   rebuildExternalSourceSettingsIndex,
   saveExternalSourceSettingsFolders,
-  setExternalSourceSettingsFolderEnabled,
-  setExternalSourceSettingsFoldersEnabled,
   selectExternalSourceSettingsFolderPath,
   type ExternalSourceSettingsFolder,
   type ExternalSourceSettingsFolderPatch
 } from '../../../shared/platform/externalSourceSettingsRepository';
 
+import { reconnectExternalSearchFolder } from './externalSearchFolderReconnect';
 import { serializeEditableExternalFolders } from './externalSearchFolderSerialization';
 
 export function useExternalSearchFolders() {
@@ -43,31 +44,15 @@ export function useExternalSearchFolders() {
     onAddExternalSearchFolder: () => void addExternalSearchFolder(setError, setFeedback, setFolders),
     onChooseExternalAttachmentRoot: (folderId: string) => void chooseExternalAttachmentRoot(folderId, updateFolder),
     onChooseExternalSearchFolder: (folderId: string) => void chooseExternalSearchFolder(folderId, updateFolder),
+    onDisconnectExternalSearchFolder: (folderId: string) => void disconnectExternalSourceSettingsFolder(folderId)
+      .then((next) => { if (next) setFolders(next); }),
+    onReconnectExternalSearchFolder: (folderId: string) => void reconnectExternalSearchFolder(folderId, setFolders, t),
     onRebuildExternalSearchIndex: (folderId?: string) =>
       void rebuildExternalSearchFolders(folderId, setError, setFeedback, setFolders, setIsSaving, t),
-    onRemoveExternalSearchFolder: (folderId: string) => setFolders((current) => current.filter((folder) => folder.id !== folderId)),
+    onRemoveExternalSearchFolder: (folderId: string) => void removeExternalSourceSettingsFolder(folderId)
+      .then((next) => { if (next) setFolders(next); })
+      .catch((nextError) => setError(nextError instanceof Error ? nextError.message : t('settings.externalSources.error.save'))),
     onRetryLoadExternalSearchFolders: () => setLoadKey((value) => value + 1),
-    onSetExternalSearchFolderEnabled: (folderId: string | string[], enabled: boolean) => {
-      if (Array.isArray(folderId)) {
-        setIsSaving(true);
-        setError(null);
-        void setExternalSourceSettingsFoldersEnabled(folderId, enabled).then((result) => {
-          if (result.folders) setFolders(result.folders);
-          if (result.error) {
-            setError(result.error instanceof Error ? result.error.message : t('settings.externalSources.error.save'));
-          }
-        }).finally(() => setIsSaving(false));
-        return;
-      }
-      setFolders((current) => current.map((folder) =>
-        folder.id === folderId ? { ...folder, mirrorEnabled: enabled } : folder
-      ));
-      void setExternalSourceSettingsFolderEnabled(folderId, enabled).then((next) => {
-        if (next) setFolders(next);
-      }).catch((nextError) => {
-        setError(nextError instanceof Error ? nextError.message : t('settings.externalSources.error.save'));
-      });
-    },
     onUpdateExternalSearchFolder: (folderId: string, patch: ExternalSourceSettingsFolderPatch) =>
       updateFolder(folderId, (current) => ({
         ...current,

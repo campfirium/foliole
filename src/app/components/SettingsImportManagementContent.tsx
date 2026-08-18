@@ -6,6 +6,7 @@ import { SettingsControlSlot, SettingsRow, SettingsSection } from '../../shared/
 import type { DraftImportSource, DraftImportSourceField } from './importSourceWorkspaceModel';
 import { importSourceSelectClassName } from './importSourceWorkspaceModel';
 import { ImportSourceTable } from './ImportSourceWorkspaceTable';
+import { WatchedFolderConnections } from './WatchedFolderConnections';
 
 const IMPORT_NODE_TITLE_STRATEGIES = ['file_name', 'heading'] as const;
 
@@ -59,6 +60,7 @@ export function SettingsImportManagementContent(props: {
 
   return (
     <div className="space-y-6">
+      <WatchedFolderConnections />
       <TitleStrategySection onChange={props.onChangeTitleStrategy} titleStrategy={props.titleStrategy} />
       <SettingsSection
         ariaLabel={t('settings.import.linkedFolders.aria')}

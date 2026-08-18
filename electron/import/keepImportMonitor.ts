@@ -11,6 +11,7 @@ import {
 import type { KeepImportWatchHandle } from './keepImportWatch.js';
 
 export interface KeepImportMonitorDeps {
+  canRunConfig?(config: KeepImportSourceConfig): boolean;
   debounceMs: number;
   loadSettings(): ImportManagerSettings;
   logError(message: string, error: unknown): void;
@@ -160,7 +161,9 @@ export function createKeepImportMonitor(deps: KeepImportMonitorDeps): KeepImport
       return;
     }
 
-    const nextConfigs = resolveKeepImportConfigs(deps.loadSettings(), { unsafePathCandidates: loadManagedPathCandidates() });
+    const nextConfigs = resolveKeepImportConfigs(
+      deps.loadSettings(), { unsafePathCandidates: loadManagedPathCandidates() }
+    ).filter((config) => deps.canRunConfig?.(config) ?? true);
     const nextConfigIds = new Set(nextConfigs.map((config) => config.adapterConfigId));
 
     for (const [configId, state] of sourceStateById) {
