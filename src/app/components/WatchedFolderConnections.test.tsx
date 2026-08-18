@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
@@ -46,7 +46,20 @@ it('shows disconnect only for the local connected source and reconnect for a sou
   renderWithLocalization(<WatchedFolderConnections />);
 
   expect(await screen.findByRole('heading', { name: 'Watched folders in this workgroup' })).toBeInTheDocument();
+  const localGroup = screen.getByRole('group', { name: 'This Mac' });
+  const remoteGroup = screen.getByRole('group', { name: 'Office PC' });
+  expect(within(localGroup).getByRole('button', { name: 'Disconnect' })).toBeInTheDocument();
+  expect(within(remoteGroup).queryByRole('button')).not.toBeInTheDocument();
   expect(screen.getAllByRole('button', { name: 'Disconnect' })).toHaveLength(1);
   expect(screen.getAllByRole('button', { name: 'Reconnect' })).toHaveLength(1);
-  expect(screen.getAllByRole('button', { name: 'Remove' })).toHaveLength(3);
+  expect(screen.getAllByRole('button', { name: 'Remove' })).toHaveLength(2);
+});
+
+it('keeps the workgroup section visible before any watched folders are added', async () => {
+  load.mockResolvedValue({ bindings: [], current_device_id: 'current-device' });
+
+  renderWithLocalization(<WatchedFolderConnections />);
+
+  expect(await screen.findByRole('heading', { name: 'Watched folders in this workgroup' })).toBeInTheDocument();
+  expect(screen.getByText('No watched folders have been added to this workgroup yet.')).toBeInTheDocument();
 });

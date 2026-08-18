@@ -29,22 +29,35 @@ export function ReadwiseDeviceAssignmentRow(props: {
 }) {
   const t = useTranslation();
   const assignment = props.assignment;
-  const description = assignment?.legacy_unassigned
-    ? t('desktop.readwise.device.unassigned')
-    : assignment?.is_active
-      ? t('desktop.readwise.device.current')
-      : t('desktop.readwise.device.remote', { name: assignment?.active_device_name ?? '' });
+  const devices = assignment?.devices ?? [];
   return (
-    <SettingsSection ariaLabel={t('desktop.readwise.device.title')} title={t('desktop.readwise.device.title')}>
-      <SettingsRow description={description} title={assignment?.active_device_name ?? assignment?.current_device_name ?? '—'}>
-        {!assignment?.is_active || assignment?.legacy_unassigned ? (
-          <SettingsControlSlot>
-            <AppButton onClick={props.onActivate} size="sm">
-              {t(assignment?.legacy_unassigned ? 'desktop.readwise.device.useThis' : 'desktop.readwise.device.switch')}
-            </AppButton>
-          </SettingsControlSlot>
-        ) : null}
-      </SettingsRow>
+    <SettingsSection
+      ariaLabel={t('desktop.readwise.device.title')}
+      description={t('desktop.readwise.device.description')}
+      title={t('desktop.readwise.device.title')}
+    >
+      {devices.map((device) => {
+        const current = device.device_id === assignment?.current_device_id;
+        const active = device.device_id === assignment?.active_device_id;
+        const description = active
+          ? t('desktop.readwise.device.current')
+          : current && assignment?.legacy_unassigned
+            ? t('desktop.readwise.device.unassigned')
+            : current
+              ? t('desktop.readwise.device.thisDevice')
+              : t('desktop.readwise.device.available');
+        return (
+          <SettingsRow description={description} key={device.device_id} readonly={!current} title={device.device_name}>
+            {current && (!assignment?.is_active || assignment?.legacy_unassigned) ? (
+              <SettingsControlSlot>
+                <AppButton onClick={props.onActivate} size="sm">
+                  {t(assignment?.legacy_unassigned ? 'desktop.readwise.device.useThis' : 'desktop.readwise.device.switch')}
+                </AppButton>
+              </SettingsControlSlot>
+            ) : null}
+          </SettingsRow>
+        );
+      })}
     </SettingsSection>
   );
 }

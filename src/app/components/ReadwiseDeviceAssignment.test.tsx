@@ -23,6 +23,10 @@ function assignment(overrides: Partial<NativeReadwiseDeviceAssignment> = {}): Na
     active_device_name: 'Office PC',
     current_device_id: 'current-device',
     current_device_name: 'This Mac',
+    devices: [
+      { device_id: 'remote-device', device_name: 'Office PC' },
+      { device_id: 'current-device', device_name: 'This Mac' }
+    ],
     is_active: false,
     legacy_unassigned: false,
     ...overrides
@@ -44,7 +48,9 @@ it('disables all Readwise settings on a non-active device and enables them after
     />
   );
 
-  await screen.findByText('Readwise Reader runs on Office PC. Switch it here to edit these settings and run imports.');
+  await screen.findByText('Office PC');
+  expect(screen.getByText('This Mac')).toBeInTheDocument();
+  expect(screen.getByText('Current Readwise device.')).toBeInTheDocument();
   const setupFieldset = screen.getByText('Readwise Reader Import').closest('fieldset');
   expect(setupFieldset).toBeDisabled();
   const switchButton = screen.getByRole('button', { name: 'Switch to this device' });

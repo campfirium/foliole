@@ -42,7 +42,31 @@ afterEach(async () => {
 
 it('keeps legacy Readwise active until a device is explicitly selected, then runs only on that device', () => {
   const currentDeviceId = loadOrCreateDesktopDeviceId();
-  expect(loadReadwiseDeviceAssignment()).toMatchObject({ is_active: true, legacy_unassigned: true });
+  const driver = openDatabaseConnection().driver;
+  driver.execute(
+    `INSERT INTO sync_groups (group_id, display_name, timeline_id, created_by_device_id, created_at, updated_at)
+     VALUES ('group', 'Workgroup', 'timeline', ?, 'now', 'now')`, [currentDeviceId]
+  );
+  driver.execute(
+    `INSERT INTO sync_group_local_state (singleton_id, group_id, local_device_id, member_state, updated_at)
+     VALUES (1, 'group', ?, 'active', 'now')`, [currentDeviceId]
+  );
+  for (const [deviceId, name] of [[currentDeviceId, 'This Mac'], ['remote-device', 'Office PC']] as const) {
+    driver.execute(
+      `INSERT INTO sync_group_members (group_id, device_id, device_kind, device_name, state,
+         approved_by_device_id, authorization_id, joined_at, updated_at)
+       VALUES ('group', ?, 'darwin', ?, 'active', ?, ?, 'now', 'now')`,
+      [deviceId, name, currentDeviceId, `authorization-${deviceId}`]
+    );
+  }
+  expect(loadReadwiseDeviceAssignment()).toMatchObject({
+    devices: [
+      { device_id: 'remote-device', device_name: 'Office PC' },
+      { device_id: currentDeviceId, device_name: 'This Mac' }
+    ],
+    is_active: true,
+    legacy_unassigned: true
+  });
   saveJsonSetting('readwise_active_device', { device_id: 'remote-device' });
 
   expect(loadReadwiseDeviceAssignment()).toMatchObject({
