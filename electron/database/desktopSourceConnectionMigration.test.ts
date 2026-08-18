@@ -28,6 +28,20 @@ it('upgrades v66 without changing existing desktop source data or state', () => 
   sqlite.close();
 });
 
+it('upgrades a v66 database without optional import source tables', () => {
+  const sqlite = new BetterSqlite3(':memory:');
+  sqlite.pragma('user_version = 66');
+
+  initializeDatabaseSchema(sqlite);
+
+  expect(sqlite.prepare(`SELECT name FROM sqlite_master
+    WHERE type = 'table' AND name = 'watched_folder_bindings'`).get()).toEqual({
+    name: 'watched_folder_bindings'
+  });
+  expect(sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  sqlite.close();
+});
+
 function createV66SourceTables(sqlite: import('better-sqlite3').Database) {
   sqlite.exec(`CREATE TABLE external_search_folders (
     id TEXT PRIMARY KEY, folder_path TEXT NOT NULL, attachment_mode TEXT NOT NULL,

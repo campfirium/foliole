@@ -18,6 +18,10 @@ vi.mock('./importManagerSettings.js', () => ({
   saveImportManagerSettings: vi.fn((settings) => settings)
 }));
 
+vi.mock('../database/readwiseDeviceAssignment.js', () => ({
+  canCurrentDeviceRunReadwise: vi.fn(() => true)
+}));
+
 import { runReadwiseReaderImport } from './readwiseReaderImportRun.js';
 
 function createMissingDirectoryError(code: 'ENOENT' | 'ENOTDIR') {

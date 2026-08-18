@@ -31,6 +31,9 @@ vi.mock('../ipc/paths.js', () => ({
 vi.mock('../sync/primaryDeviceState.js', () => ({
   canDesktopRunExternalSources: vi.fn(() => primaryDeviceMock.canRunExternalSources)
 }));
+vi.mock('../database/readwiseDeviceAssignment.js', () => ({
+  canCurrentDeviceRunReadwise: vi.fn(() => true)
+}));
 
 vi.mock('../ipc/epubImport.js', () => ({
   runEpubImport
