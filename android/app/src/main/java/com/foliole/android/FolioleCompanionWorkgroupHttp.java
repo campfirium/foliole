@@ -121,7 +121,7 @@ final class FolioleCompanionWorkgroupHttp {
         String timestamp = Instant.now().toString();
         String nonce = UUID.randomUUID().toString();
         String canonical = method.toUpperCase() + "\n" + path + "\n" + timestamp + "\n" + nonce + "\n" + sha256(body);
-        if (trim(headers.optString("X-Device-Id", null)) == null) {
+        if (trim(headers.optString("X-Authorization-Id", null)) == null) {
             throw new SecurityException("sync_group_local_member_missing");
         }
         headers.put("X-Nonce", nonce).put("X-Timestamp", timestamp)

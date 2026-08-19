@@ -17,6 +17,7 @@ import { notifyWorkspaceSyncApplied } from './workspaceSyncAppliedEvents.js';
 type Peer = {
   endpoint_url: string;
   group_id: string;
+  local_authorization_id: string;
   local_device_id: string;
   peer_device_id: string;
   peer_host_name?: string;
@@ -46,7 +47,8 @@ export async function downloadAndApplyDesktopSyncGroupPack(args: {
   const key = loadDesktopWorkgroupKey(args.peer.group_id);
   if (!key) throw new Error('sync_group_workgroup_key_missing');
   const response = await fetch(`${args.peer.endpoint_url}${pathWithQuery}`, {
-    headers: args.createHeaders({ groupId: args.peer.group_id, localDeviceId: args.peer.local_device_id,
+    headers: args.createHeaders({ groupId: args.peer.group_id,
+      localAuthorizationId: args.peer.local_authorization_id,
       method: 'GET', pathWithQuery, secret: key.group_key })
   });
   const body = await readDesktopWorkgroupResponse({

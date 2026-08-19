@@ -67,8 +67,13 @@ vi.mock('./companionDesktopSyncSummary', () => ({
   }))
 }));
 vi.mock('./companionWorkspacePairing', () => ({
-  createSignedRequestHeaders: vi.fn(async () => ({ 'X-Device-Id': 'android-test-device' })),
-  loadCompanionPairingState: vi.fn(async () => ({ device_kind: 'android', remote_peer_id: 'desktop-peer' }))
+  createSignedRequestHeaders: vi.fn(async () => ({ 'X-Authorization-Id': 'android-test-device' })),
+  loadCompanionPairingState: vi.fn(async () => ({
+    authorization_id: 'authorization-android-test',
+    device_kind: 'android',
+    remote_peer_id: 'authorization-desktop-test',
+    remote_peer_name: 'Desktop Test Host'
+  }))
 }));
 
 function createStateObject(index: number): NativeSyncStateObjectRecord {
@@ -125,7 +130,7 @@ describe('companion desktop sync object paging', () => {
     expect(result.appliedPackObjectCount).toBe(501);
     expect(result.appliedPackBlobCount).toBe(3);
     expect(syncBridgeMock.applyCompanionSyncObjects).not.toHaveBeenCalled();
-    expect(syncBridgeMock.saveCompanionSyncPackCursor).toHaveBeenLastCalledWith(501, 'desktop-peer');
+    expect(syncBridgeMock.saveCompanionSyncPackCursor).toHaveBeenLastCalledWith(501, 'authorization-desktop-test');
   });
 
   it('does not page legacy local state changes while pack sync is active', async () => {
@@ -149,7 +154,7 @@ describe('companion desktop sync object paging', () => {
 
     expect(result.pushedObjectIds).toEqual([]);
     expect(syncBridgeMock.loadCompanionSyncStateChanges).toHaveBeenCalledTimes(1);
-    expect(syncBridgeMock.loadCompanionSyncStateChanges).toHaveBeenCalledWith('desktop-peer', null, 100);
+    expect(syncBridgeMock.loadCompanionSyncStateChanges).toHaveBeenCalledWith('authorization-desktop-test', null, 100);
     expect(syncBridgeMock.saveCompanionSyncStatePushCursor).not.toHaveBeenCalled();
   });
 

@@ -74,6 +74,8 @@ function pairRequestBody(pairingPublicKey: string) {
     device_id: 'android-test-device',
     device_kind: 'android-capacitor',
     device_name: 'Android companion android-test-device',
+    host_name: 'Android companion android-test-device',
+    host_platform: 'android-capacitor',
     group_id: 'group-test',
     group_tag: workgroupKeyMock.group_tag,
     library_facts: {

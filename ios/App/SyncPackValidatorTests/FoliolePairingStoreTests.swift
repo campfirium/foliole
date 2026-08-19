@@ -6,10 +6,13 @@ final class FoliolePairingStoreTests: XCTestCase {
     func testPersistsMetadataSignsNativelyAndKeepsSecretOutOfDefaults() throws {
         let fixture = try makeFixture()
         let saved = try fixture.store.save(
+            authorizationId: "authorization-ios",
+            credentialSecret: "pair-secret",
             deviceId: "ios-device",
             deviceKind: "ios-capacitor",
             deviceName: "iPhone",
-            deviceSecret: "pair-secret",
+            hostName: "iPhone",
+            hostPlatform: "ios-capacitor",
             negotiatedProtocolVersion: 1,
             pairedAt: "2026-07-19T10:00:00.000Z",
             primaryDeviceId: "desktop-device",
@@ -32,7 +35,7 @@ final class FoliolePairingStoreTests: XCTestCase {
             bodyHash: "body-hash"
         )
         let headers = try XCTUnwrap(signature[fixture.contract.signatureResponseKeys["headers"]!] as? [String: String])
-        XCTAssertEqual(headers[fixture.contract.signatureHeaderKeys["deviceId"]!], "ios-device")
+        XCTAssertEqual(headers[fixture.contract.signatureHeaderKeys["authorizationId"]!], "authorization-ios")
         XCTAssertEqual(
             headers[fixture.contract.signatureHeaderKeys["signature"]!],
             "03d1ca1f98ef9f6b9641ae5da032eb8477e9741ffb383d387e8b3aabb665a2a5"
@@ -42,10 +45,13 @@ final class FoliolePairingStoreTests: XCTestCase {
     func testClearRemovesSecretAndPermanentPairingMetadata() throws {
         let fixture = try makeFixture()
         _ = try fixture.store.save(
+            authorizationId: "authorization-ios",
+            credentialSecret: "pair-secret",
             deviceId: "ios-device",
             deviceKind: "ios-capacitor",
             deviceName: "iPhone",
-            deviceSecret: "pair-secret",
+            hostName: "iPhone",
+            hostPlatform: "ios-capacitor",
             negotiatedProtocolVersion: 1,
             pairedAt: "2026-07-19T10:00:00.000Z",
             primaryDeviceId: "desktop-device",
@@ -66,10 +72,13 @@ final class FoliolePairingStoreTests: XCTestCase {
     func testRejectsIncompatibleProtocolBeforePersistingCredentials() throws {
         let fixture = try makeFixture()
         XCTAssertThrowsError(try fixture.store.save(
+            authorizationId: "authorization-ios",
+            credentialSecret: "pair-secret",
             deviceId: "ios-device",
             deviceKind: "ios-capacitor",
             deviceName: "iPhone",
-            deviceSecret: "pair-secret",
+            hostName: "iPhone",
+            hostPlatform: "ios-capacitor",
             negotiatedProtocolVersion: 2,
             pairedAt: "2026-07-19T10:00:00.000Z",
             primaryDeviceId: "desktop-device",
@@ -84,10 +93,13 @@ final class FoliolePairingStoreTests: XCTestCase {
     func testPrimaryDeviceUpdatePersistsAcrossStoreReloadWithoutChangingSecret() throws {
         let fixture = try makeFixture()
         _ = try fixture.store.save(
+            authorizationId: "authorization-ios",
+            credentialSecret: "pair-secret",
             deviceId: "ios-device",
             deviceKind: "ios-capacitor",
             deviceName: "iPhone",
-            deviceSecret: "pair-secret",
+            hostName: "iPhone",
+            hostPlatform: "ios-capacitor",
             negotiatedProtocolVersion: 1,
             pairedAt: "2026-07-19T10:00:00.000Z",
             primaryDeviceId: "desktop-old",
@@ -113,6 +125,24 @@ final class FoliolePairingStoreTests: XCTestCase {
             try reloadedStore.loadState()[fixture.contract.stateKeys["primaryDeviceId"]!] as? String,
             "desktop-new"
         )
+    }
+
+    func testLegacyCredentialCutsOverOnceAndHostRenameKeepsAuthorizationAndSecret() throws {
+        let fixture = try makeFixture()
+        fixture.defaults.set("legacy-ios-device", forKey: fixture.contract.preferenceKeys["deviceId"]!)
+        fixture.defaults.set("Old iPhone", forKey: fixture.contract.preferenceKeys["deviceName"]!)
+        fixture.defaults.set("ios-capacitor", forKey: fixture.contract.preferenceKeys["deviceKind"]!)
+        try fixture.secrets.save("legacy-secret")
+
+        let migrated = try fixture.store.loadState()
+        XCTAssertEqual(migrated[fixture.contract.stateKeys["authorizationId"]!] as? String, "legacy-ios-device")
+        XCTAssertEqual(migrated[fixture.contract.stateKeys["hostName"]!] as? String, "Old iPhone")
+
+        fixture.defaults.set("Renamed iPhone", forKey: fixture.contract.preferenceKeys["hostName"]!)
+        let renamed = try fixture.store.loadState()
+        XCTAssertEqual(renamed[fixture.contract.stateKeys["authorizationId"]!] as? String, "legacy-ios-device")
+        XCTAssertEqual(renamed[fixture.contract.stateKeys["hostName"]!] as? String, "Renamed iPhone")
+        XCTAssertEqual(try fixture.secrets.load(), "legacy-secret")
     }
 
     private func makeFixture() throws -> PairingFixture {

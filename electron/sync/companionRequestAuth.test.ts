@@ -6,11 +6,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 
 const pairingStoreMock = vi.hoisted(() => ({
-  loadPairedCompanionDevice: vi.fn()
+  loadPairedCompanionAuthorization: vi.fn()
 }));
 const syncGroupStoreMock = vi.hoisted(() => ({
   loadDesktopSyncGroup: vi.fn(() => ({ group_id: 'group-1' })),
-  loadSyncGroupMemberAuthorization: vi.fn((): { state: 'active' } | null => ({ state: 'active' }))
+  loadSyncGroupMemberByAuthorization: vi.fn((): { host_name: string; state: 'active' } | null => ({ host_name: 'A5', state: 'active' }))
 }));
 const workgroupKeyStoreMock = vi.hoisted(() => ({
   consumeDesktopWorkgroupNonce: vi.fn(() => true),
@@ -36,7 +36,7 @@ afterEach(() => {
   clearCompanionRequestNonceCache();
   vi.clearAllMocks();
   syncGroupStoreMock.loadDesktopSyncGroup.mockReturnValue({ group_id: 'group-1' });
-  syncGroupStoreMock.loadSyncGroupMemberAuthorization.mockReturnValue({ state: 'active' });
+  syncGroupStoreMock.loadSyncGroupMemberByAuthorization.mockReturnValue({ host_name: 'A5', state: 'active' });
   workgroupKeyStoreMock.loadDesktopWorkgroupKey.mockReturnValue({ group_key: DEVICE_SECRET });
   workgroupKeyStoreMock.consumeDesktopWorkgroupNonce.mockReturnValue(true);
 });
@@ -66,7 +66,7 @@ function signedHeaders(args: {
 }) {
   const timestamp = args.timestamp ?? TIMESTAMP;
   return {
-    'x-device-id': args.deviceId ?? DEVICE_ID,
+    'x-authorization-id': args.deviceId ?? DEVICE_ID,
     'x-nonce': args.nonce,
     'x-signature': args.signature ?? sign({
       nonce: args.nonce,
@@ -83,7 +83,7 @@ function mockPairedDevice() {
     negotiated_protocol_version: 1,
     remote_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
   };
-  pairingStoreMock.loadPairedCompanionDevice.mockImplementation((deviceId: string) => {
+  pairingStoreMock.loadPairedCompanionAuthorization.mockImplementation((deviceId: string) => {
     if (deviceId === SECOND_DEVICE_ID) {
       return { ...protocolMetadata, device_id: SECOND_DEVICE_ID, device_secret: SECOND_DEVICE_SECRET };
     }
@@ -178,9 +178,20 @@ function assertCrossDeviceNonceFloodDoesNotAllowReplay() {
 }
 
 describe('companion request auth', () => {
+  it('rejects the legacy Device ID header before authentication', () => {
+    mockPairedDevice();
+    const { 'x-authorization-id': authorizationId, ...headers } = signedHeaders({ nonce: 'legacy-device-header' });
+
+    expect(authenticateCompanionRequest({
+      nowMs: NOW_MS,
+      request: createRequest({ ...headers, 'x-device-id': authorizationId })
+    })).toEqual({ error: 'missing_headers', ok: false, status_code: 401 });
+    expect(syncGroupStoreMock.loadSyncGroupMemberByAuthorization).not.toHaveBeenCalled();
+  });
+
   it('rejects a valid old credential after its Device is no longer active', () => {
     mockPairedDevice();
-    syncGroupStoreMock.loadSyncGroupMemberAuthorization.mockReturnValue(null);
+    syncGroupStoreMock.loadSyncGroupMemberByAuthorization.mockReturnValue(null);
     expect(authenticateCompanionRequest({ nowMs: NOW_MS, request: createRequest({
       ...signedHeaders({ nonce: 'departed-device' }), 'x-sync-group-id': 'group-1'
     }) })).toEqual({

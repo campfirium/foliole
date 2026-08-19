@@ -80,7 +80,7 @@ it('downloads desktop packs before applying them through the shared database own
   const api = await import('./companionSyncPackApply');
 
   await expect(api.applyCompanionDesktopSyncPack({
-    headers: { 'X-Device-Id': 'android' },
+    headers: { 'X-Authorization-Id': 'android' },
     sourceHostName: 'Desktop Test Host',
     sourcePeerId: 'desktop-test-device',
     url: 'http://desktop/companion/sync-pack'
@@ -93,7 +93,7 @@ it('downloads desktop packs before applying them through the shared database own
   expect(capacitorMock.plugin.downloadDesktopSyncPack).toHaveBeenCalledWith({
     expected_peer_id: 'android-test-device',
     expected_source_peer_id: 'desktop-test-device',
-    headers: { 'X-Device-Id': 'android' },
+    headers: { 'X-Authorization-Id': 'android' },
     url: 'http://desktop/companion/sync-pack'
   });
   expect(iosSyncPackApplyMock.apply).toHaveBeenCalledWith({
@@ -133,7 +133,7 @@ it('downloads validated packs before routing iOS through its shared-core adapter
   const api = await import('./companionSyncPackApply');
 
   await expect(api.applyCompanionDesktopSyncPack({
-    headers: { 'X-Device-Id': 'ios-test-device' },
+    headers: { 'X-Authorization-Id': 'ios-test-device' },
     sourceHostName: 'Desktop Test Host',
     sourcePeerId: 'desktop-test-device',
     url: 'http://desktop/companion/sync-pack'
@@ -156,7 +156,7 @@ it('deletes downloaded desktop packs when shared core apply fails', async () => 
   const api = await import('./companionSyncPackApply');
 
   await expect(api.applyCompanionDesktopSyncPack({
-    headers: { 'X-Device-Id': 'android' },
+    headers: { 'X-Authorization-Id': 'android' },
     sourceHostName: 'Desktop Test Host',
     sourcePeerId: 'desktop-test-device',
     url: 'http://desktop/companion/sync-pack'

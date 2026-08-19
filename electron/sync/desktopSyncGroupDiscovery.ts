@@ -53,6 +53,7 @@ async function probeCandidate(
       group_display_name: text(payload.group_display_name) ?? text(service.txt.group_display_name) ?? service.name,
       group_id: String(payload.group_id),
       group_tag: String(payload.group_tag),
+      provider_authorization_id: text(payload.peer_id) ?? String(service.txt.peer_id),
       provider_device_id: text(payload.provider_device_id) ?? text(payload.peer_id) ?? String(service.txt.peer_id),
       provider_device_kind: text(payload.provider_device_kind) ?? desktopKind(platform),
       provider_device_name: text(payload.provider_device_name) ?? text(payload.desktop_device_name) ?? service.name,

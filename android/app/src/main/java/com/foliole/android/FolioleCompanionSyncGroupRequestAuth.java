@@ -16,11 +16,11 @@ final class FolioleCompanionSyncGroupRequestAuth {
         String groupId,
         FolioleCompanionSyncGroupDataBridge bridge
     ) throws Exception {
-        String deviceId = request.header("x-device-id");
+        String authorizationId = request.header("x-authorization-id");
         String nonce = request.header("x-nonce");
         String signature = request.header("x-signature");
         String timestamp = request.header("x-timestamp");
-        if (deviceId == null || nonce == null || signature == null || timestamp == null ||
+        if (authorizationId == null || nonce == null || signature == null || timestamp == null ||
             !groupId.equals(request.header("x-sync-group-id"))) throw new SecurityException("missing_headers");
         long drift = Math.abs(System.currentTimeMillis() - Instant.parse(timestamp).toEpochMilli());
         if (drift > 60_000) throw new SecurityException("expired_timestamp");
@@ -31,9 +31,9 @@ final class FolioleCompanionSyncGroupRequestAuth {
             throw new SecurityException("invalid_signature");
         }
         long now = System.currentTimeMillis();
-        consumeNonce(context, groupId + ":" + timestamp + ":" + nonce, now);
-        FolioleCompanionSyncGroupProvider.promoteApprovedJoin(groupId, deviceId);
-        return deviceId;
+        consumeNonce(context, groupId + ":" + authorizationId + ":" + timestamp + ":" + nonce, now);
+        FolioleCompanionSyncGroupProvider.promoteApprovedJoin(groupId, authorizationId);
+        return authorizationId;
     }
 
     private static void consumeNonce(Context context, String identity, long now) {

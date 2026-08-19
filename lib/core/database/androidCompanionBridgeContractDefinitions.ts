@@ -129,14 +129,18 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
   pairingPlugin: {
     routeBindingRequestKeys: {
       endpointUrl: 'endpoint_url',
+      localAuthorizationId: 'local_authorization_id',
       localDeviceId: 'local_device_id',
       localHostName: 'local_host_name',
+      peerAuthorizationId: 'peer_authorization_id',
       peerDeviceId: 'peer_device_id',
       peerHostName: 'peer_host_name',
       peerHostPlatform: 'peer_host_platform',
       syncGroupId: 'sync_group_id'
     },
     credentialRequestKeys: {
+      authorizationId: 'authorization_id',
+      credentialSecret: 'credential_secret',
       deviceId: 'device_id',
       deviceKind: 'device_kind',
       deviceName: 'device_name',
@@ -153,11 +157,16 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
       remoteProtocol: 'remote_protocol'
     },
     preferenceKeys: {
+      authorizationId: 'authorization_id',
+      credentialSecret: 'credential_secret',
+      credentialSecretIv: 'credential_secret_iv',
       deviceId: 'device_id',
       deviceKind: 'device_kind',
       deviceName: 'device_name',
       deviceSecret: 'device_secret',
       deviceSecretIv: 'device_secret_iv',
+      hostName: 'host_name',
+      hostPlatform: 'host_platform',
       negotiatedProtocolVersion: 'negotiated_protocol_version',
       pairedAt: 'paired_at',
       primaryDeviceId: 'primary_device_id',
@@ -172,7 +181,7 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
     },
     signature: {
       headerKeys: {
-        deviceId: 'X-Device-Id',
+        authorizationId: 'X-Authorization-Id',
         nonce: 'X-Nonce',
         signature: 'X-Signature',
         timestamp: 'X-Timestamp'
@@ -191,9 +200,12 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
       }
     },
     stateKeys: {
+      authorizationId: 'authorization_id',
       deviceId: 'device_id',
       deviceKind: 'device_kind',
       deviceName: 'device_name',
+      hostName: 'host_name',
+      hostPlatform: 'host_platform',
       isPaired: 'is_paired',
       negotiatedProtocolVersion: 'negotiated_protocol_version',
       pairedAt: 'paired_at',

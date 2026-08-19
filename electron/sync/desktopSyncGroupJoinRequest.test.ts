@@ -28,7 +28,10 @@ vi.mock('../database/deviceIdentity.js', () => ({ loadOrCreateDesktopDeviceId: (
 vi.mock('../database/syncGroupStore.js', () => ({
   joinDesktopSyncGroup: vi.fn(), loadDesktopSyncGroup: () => mocks.existingGroup
 }));
-vi.mock('./companionLanPayloads.js', () => ({ resolveDesktopDeviceName: () => 'Desktop B' }));
+vi.mock('./companionLanPayloads.js', () => ({
+  resolveDesktopDeviceName: () => 'Desktop B',
+  resolveDesktopHostName: () => 'Desktop B'
+}));
 vi.mock('./desktopSyncGroupHttp.js', () => ({
   createDesktopSyncGroupSignedHeaders: vi.fn(), requestJson: mocks.requestJson
 }));

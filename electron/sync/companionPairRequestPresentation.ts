@@ -21,8 +21,10 @@ export interface PendingCompanionPairRequest {
 }
 
 export interface CompletedCompanionPairRequest {
+  authorization_id: string;
   device_id: string;
-  device_secret: string;
+  host_name: string;
+  credential_secret: string;
   paired_at: string;
 }
 

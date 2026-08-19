@@ -7,239 +7,203 @@ import { app, safeStorage } from 'electron';
 import type { SyncProtocolDescriptor } from '../../lib/platform/syncProtocolContract.js';
 import { ensureSecureStorageBackend } from '../security/secureStorageBackend.js';
 
+import { createMigratedPairingStorePayload } from './companionPairingStoreMigration.js';
 import {
   isClientPeerRecord,
-  isPairedDeviceRecord,
-  type PairedCompanionDevice,
+  isPairedAuthorizationRecord,
+  type PairedCompanionAuthorization,
   type PairedSyncGroupPeer
 } from './companionPairingStoreRecords.js';
+import { PairingStoreDecryptionError, readEncryptedPairingStorePayload } from './pairingStoreEncryption.js';
 import {
-  PairingStoreDecryptionError,
-  readEncryptedPairingStorePayload
-} from './pairingStoreEncryption.js';
+  restorePairingStoreFile,
+  snapshotPairingStoreFile,
+  writePairingStoreFile,
+  type PairingStoreFileSnapshot
+} from './pairingStoreFileTransaction.js';
 
 export type { PairedSyncGroupPeer } from './companionPairingStoreRecords.js';
 
-const PAIRED_DEVICE_STORE_FILE = 'companion-paired-devices.bin';
+const STORE_FILE = 'companion-paired-devices.bin';
+const STORE_FORMAT_VERSION = 2;
 const CORRUPT_STORE_SUFFIX = '.corrupt-';
 
-interface PairedDeviceStorePayload {
+interface StorePayload {
+  authorizations: PairedCompanionAuthorization[];
   client_peers: PairedSyncGroupPeer[];
-  devices: PairedCompanionDevice[];
+  format_version: 2;
 }
 
-let cachedStore: PairedDeviceStorePayload | null = null;
+let cachedStore: StorePayload | null = null;
 let cachedStorePath: string | null = null;
 
 function resolveStorePath() {
-  return path.join(app.getPath('userData'), PAIRED_DEVICE_STORE_FILE);
+  return path.join(app.getPath('userData'), STORE_FILE);
 }
 
-function readStoreStrict(): PairedDeviceStorePayload {
+function readRaw(): Record<string, unknown> {
   const storePath = resolveStorePath();
-  if (cachedStore && cachedStorePath === storePath) {
-    return cachedStore;
-  }
-  if (!fs.existsSync(storePath)) {
-    cachedStorePath = storePath;
-    cachedStore = { client_peers: [], devices: [] };
-    return cachedStore;
-  }
+  if (!fs.existsSync(storePath)) return { authorizations: [], client_peers: [], format_version: STORE_FORMAT_VERSION };
   ensureSecureStorageBackend('companion pairing secrets');
-  const encrypted = fs.readFileSync(storePath);
-  const parsed = readEncryptedPairingStorePayload(encrypted, storePath) as Partial<PairedDeviceStorePayload>;
-  cachedStore = {
-    client_peers: Array.isArray(parsed.client_peers) ? parsed.client_peers.filter(isClientPeerRecord) : [],
-    devices: Array.isArray(parsed.devices) ? parsed.devices.filter(isPairedDeviceRecord) : []
-  };
+  return readEncryptedPairingStorePayload(fs.readFileSync(storePath), storePath) as Record<string, unknown>;
+}
+
+function readStoreStrict(): StorePayload {
+  const storePath = resolveStorePath();
+  if (cachedStore && cachedStorePath === storePath) return cachedStore;
+  const parsed = readRaw();
+  if (parsed.format_version !== STORE_FORMAT_VERSION) throw new Error('pairing_store_authorization_cutover_required');
+  const authorizations = Array.isArray(parsed.authorizations)
+    ? parsed.authorizations.filter(isPairedAuthorizationRecord) : [];
+  const peers = Array.isArray(parsed.client_peers) ? parsed.client_peers.filter(isClientPeerRecord) : [];
+  if (authorizations.length !== (parsed.authorizations as unknown[]).length ||
+      peers.length !== (parsed.client_peers as unknown[]).length) {
+    throw new Error('pairing_store_authorization_records_invalid');
+  }
+  cachedStore = { authorizations, client_peers: peers, format_version: STORE_FORMAT_VERSION };
   cachedStorePath = storePath;
   return cachedStore;
 }
 
-function readStoreForQuery(): PairedDeviceStorePayload {
+function readStoreForQuery(): StorePayload {
   try {
     return readStoreStrict();
   } catch (error) {
-    if (!(error instanceof PairingStoreDecryptionError)) {
-      throw error;
-    }
+    if (!(error instanceof PairingStoreDecryptionError)) throw error;
     if (error.preserveStore) throw error;
-    quarantineUnreadableStore(error.storePath, error.cause);
-    return { client_peers: [], devices: [] };
+    const storePath = error.storePath;
+    fs.renameSync(storePath, `${storePath}${CORRUPT_STORE_SUFFIX}${Date.now()}`);
+    return { authorizations: [], client_peers: [], format_version: STORE_FORMAT_VERSION };
   }
 }
 
-function quarantineUnreadableStore(storePath: string, cause: unknown) {
-  const quarantinedPath = `${storePath}${CORRUPT_STORE_SUFFIX}${new Date().toISOString().replace(/[:.]/g, '-')}`;
-  try {
-    fs.renameSync(storePath, quarantinedPath);
-    console.warn('[companion-sync] paired companion device cache is unreadable; quarantined stored pairings', {
-      cause,
-      quarantinedPath
-    });
-  } catch (error) {
-    console.warn('[companion-sync] paired companion device cache is unreadable and could not be quarantined', {
-      cause,
-      error,
-      storePath
-    });
-  }
-}
-
-function writeStore(payload: PairedDeviceStorePayload) {
+function writeStore(payload: StorePayload) {
   ensureSecureStorageBackend('companion pairing secrets');
-  fs.mkdirSync(path.dirname(resolveStorePath()), { recursive: true });
-  const encrypted = safeStorage.encryptString(JSON.stringify({
-    client_peers: payload.client_peers,
-    devices: dedupePairedDevices(payload.devices)
-  }));
-  fs.writeFileSync(resolveStorePath(), encrypted);
-  cachedStore = {
-    client_peers: payload.client_peers,
-    devices: dedupePairedDevices(payload.devices)
+  const normalized = {
+    authorizations: dedupeAuthorizations(payload.authorizations),
+    client_peers: dedupePeers(payload.client_peers),
+    format_version: 2 as const
   };
+  writePairingStoreFile(resolveStorePath(), safeStorage.encryptString(JSON.stringify(normalized)));
+  cachedStore = normalized;
   cachedStorePath = resolveStorePath();
 }
 
+export function migratePairedCompanionStore(
+  resolveAuthorization: (hostName: string) => string | null
+) {
+  const snapshot = snapshotPairedCompanionStore();
+  try {
+    const raw = readRaw();
+    if (raw.format_version === STORE_FORMAT_VERSION) return false;
+    writeStore(createMigratedPairingStorePayload(raw, resolveAuthorization));
+    return true;
+  } catch (error) {
+    restorePairedCompanionStore(snapshot);
+    throw error;
+  }
+}
+
 export function countPairedCompanionDevices() {
-  return dedupePairedDevices(readStoreForQuery().devices).length;
+  return readStoreForQuery().authorizations.length;
 }
 
 export function loadPairedCompanionDevices() {
-  return dedupePairedDevices(readStoreForQuery().devices).map((device) => ({
-    client_address: device.client_address ?? null,
-    device_id: device.device_id,
-    device_kind: device.device_kind,
-    device_name: device.device_name,
-    paired_at: device.paired_at
-  }));
+  return readStoreForQuery().authorizations.map(redactCredentialSecret);
+}
+
+function redactCredentialSecret({ credential_secret: credentialSecret, ...item }: PairedCompanionAuthorization) {
+  void credentialSecret;
+  return item;
+}
+
+export function loadPairedCompanionAuthorization(authorizationId: string) {
+  return readStoreForQuery().authorizations.find((item) => item.authorization_id === authorizationId.trim()) ?? null;
 }
 
 export function loadPairedCompanionDevice(deviceId: string) {
-  const normalizedDeviceId = deviceId.trim();
-  if (!normalizedDeviceId) {
-    return null;
-  }
-  return readStoreForQuery().devices.find((device) => device.device_id === normalizedDeviceId) ?? null;
+  return readStoreForQuery().authorizations.find((item) => item.device_id === deviceId.trim()) ?? null;
 }
 
 export function removePairedCompanionDevice(deviceId: string) {
-  const normalizedDeviceId = deviceId.trim();
-  if (!normalizedDeviceId) {
-    return false;
-  }
   const store = readStoreStrict();
-  const nextDevices = store.devices.filter((device) => device.device_id !== normalizedDeviceId);
-  if (nextDevices.length === store.devices.length) {
-    return false;
-  }
-  writeStore({ client_peers: store.client_peers, devices: nextDevices });
+  const next = store.authorizations.filter((item) => item.device_id !== deviceId.trim());
+  if (next.length === store.authorizations.length) return false;
+  writeStore({ ...store, authorizations: next });
   return true;
 }
 
 export function registerPairedCompanionDevice(args: {
-  clientAddress?: string | null;
-  deviceId: string;
-  deviceKind: string;
-  deviceName: string;
-  negotiatedProtocolVersion: number;
-  pairedAt?: string;
-  remoteProtocol: SyncProtocolDescriptor;
+  authorizationId: string; clientAddress?: string | null; deviceId: string; deviceKind: string;
+  deviceName: string; hostName: string; hostPlatform: string;
+  negotiatedProtocolVersion: number; pairedAt?: string; remoteProtocol: SyncProtocolDescriptor;
 }) {
-  return registerPairedCompanionDeviceWithSecret({ ...args, deviceSecret: randomBytes(32).toString('base64url') });
+  return registerPairedCompanionDeviceWithSecret({
+    ...args, credentialSecret: randomBytes(32).toString('base64url')
+  });
 }
 
 export function registerPairedCompanionDeviceWithSecret(args: {
-  clientAddress?: string | null;
-  deviceId: string;
-  deviceKind: string;
-  deviceName: string;
-  deviceSecret: string;
+  authorizationId: string; clientAddress?: string | null; credentialSecret: string;
+  deviceId: string; deviceKind: string; deviceName: string; hostName: string; hostPlatform: string;
   negotiatedProtocolVersion: number;
-  pairedAt?: string;
-  remoteProtocol: SyncProtocolDescriptor;
+  pairedAt?: string; remoteProtocol: SyncProtocolDescriptor;
 }) {
-  const now = args.pairedAt ?? new Date().toISOString();
-  const next: PairedCompanionDevice = {
-    client_address: args.clientAddress?.trim() || null,
-    device_id: args.deviceId.trim(),
-    device_kind: args.deviceKind.trim(),
-    device_name: args.deviceName.trim(),
-    device_secret: args.deviceSecret,
-    negotiated_protocol_version: args.negotiatedProtocolVersion,
-    paired_at: now,
-    remote_protocol: args.remoteProtocol
+  const next: PairedCompanionAuthorization = {
+    authorization_id: args.authorizationId.trim(), client_address: args.clientAddress?.trim() || null,
+    credential_secret: args.credentialSecret, host_name: args.hostName.trim(),
+    device_id: args.deviceId.trim(), device_kind: args.deviceKind.trim(), device_name: args.deviceName.trim(),
+    host_platform: args.hostPlatform.trim(), negotiated_protocol_version: args.negotiatedProtocolVersion,
+    paired_at: args.pairedAt ?? new Date().toISOString(), remote_protocol: args.remoteProtocol
   };
   const store = readStoreStrict();
-  if (store.devices.some((device) => isSameLanLabel(device, next))) {
-    console.warn('[companion-sync] paired companion device has matching LAN label with a different device id', {
-      clientAddress: next.client_address,
-      deviceKind: next.device_kind,
-      deviceName: next.device_name
-    });
-  }
-  store.devices = store.devices.filter((device) => !isSamePairedDevice(device, next));
-  store.devices.push(next);
-  writeStore(store);
+  writeStore({ ...store, authorizations: [...store.authorizations, next] });
   return next;
 }
 
 export function savePairedSyncGroupPeer(peer: PairedSyncGroupPeer) {
   const store = readStoreStrict();
-  store.client_peers = store.client_peers.filter((candidate) =>
-    candidate.group_id !== peer.group_id || candidate.peer_device_id !== peer.peer_device_id);
-  store.client_peers.push(peer);
-  writeStore(store);
+  writeStore({ ...store, client_peers: [...store.client_peers, peer] });
   return peer;
 }
 
-export function loadPairedSyncGroupPeer(groupId: string, peerDeviceId: string) {
+export function loadPairedSyncGroupPeer(groupId: string, peerAuthorizationId: string) {
   return readStoreForQuery().client_peers.find((peer) =>
-    peer.group_id === groupId && peer.peer_device_id === peerDeviceId) ?? null;
+    peer.group_id === groupId && peer.peer_authorization_id === peerAuthorizationId) ?? null;
 }
 
 export function loadPairedSyncGroupPeers(groupId: string) {
   return readStoreForQuery().client_peers.filter((peer) => peer.group_id === groupId);
 }
 
-export function removeSyncGroupPeerCredentials(groupId: string, deviceId: string) {
+export function removeSyncGroupPeerCredentials(groupId: string, authorizationId: string) {
   const store = readStoreStrict();
-  store.client_peers = store.client_peers.filter((peer) =>
-    peer.group_id !== groupId || peer.peer_device_id !== deviceId);
-  store.devices = store.devices.filter((device) => device.device_id !== deviceId);
-  writeStore(store);
+  writeStore({ ...store,
+    authorizations: store.authorizations.filter((item) => item.authorization_id !== authorizationId),
+    client_peers: store.client_peers.filter((peer) =>
+      peer.group_id !== groupId || peer.peer_authorization_id !== authorizationId) });
+}
+
+export function snapshotPairedCompanionStore(): PairingStoreFileSnapshot {
+  return snapshotPairingStoreFile(resolveStorePath());
+}
+
+export function restorePairedCompanionStore(snapshot: PairingStoreFileSnapshot) {
+  restorePairingStoreFile(resolveStorePath(), snapshot);
+  cachedStore = null;
+  cachedStorePath = null;
 }
 
 export function clearPairedCompanionDevices() {
-  const storePath = resolveStorePath();
-  fs.rmSync(storePath, { force: true });
-  cachedStorePath = storePath;
-  cachedStore = { client_peers: [], devices: [] };
+  fs.rmSync(resolveStorePath(), { force: true });
+  cachedStore = null;
+  cachedStorePath = null;
 }
 
-function isSamePairedDevice(left: PairedCompanionDevice, right: PairedCompanionDevice) {
-  return left.device_id === right.device_id;
+function dedupeAuthorizations(items: PairedCompanionAuthorization[]) {
+  return [...new Map(items.map((item) => [item.authorization_id, item])).values()];
 }
 
-function isSameLanLabel(left: PairedCompanionDevice, right: PairedCompanionDevice) {
-  return Boolean(
-    left.device_id !== right.device_id &&
-    left.client_address &&
-    right.client_address &&
-    left.client_address === right.client_address &&
-    left.device_kind === right.device_kind &&
-    left.device_name === right.device_name
-  );
-}
-
-function dedupePairedDevices(devices: PairedCompanionDevice[]) {
-  const deduped: PairedCompanionDevice[] = [];
-  for (const device of devices) {
-    const existingIndex = deduped.findIndex((existing) => isSamePairedDevice(existing, device));
-    if (existingIndex >= 0) {
-      deduped.splice(existingIndex, 1);
-    }
-    deduped.push({ ...device, client_address: device.client_address ?? null });
-  }
-  return deduped;
+function dedupePeers(items: PairedSyncGroupPeer[]) {
+  return [...new Map(items.map((item) => [`${item.group_id}\0${item.peer_authorization_id}`, item])).values()];
 }

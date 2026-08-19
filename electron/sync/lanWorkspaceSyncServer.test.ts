@@ -75,7 +75,7 @@ vi.mock('../database/syncGroupStore.js', () => ({
     }],
     timeline_id: 'timeline-test'
   })),
-  loadSyncGroupMemberAuthorization: vi.fn(() => ({ state: 'active' })),
+  loadSyncGroupMemberByAuthorization: vi.fn(() => ({ host_name: 'Pixel Test', state: 'active' })),
   registerSyncGroupMember: vi.fn((args: { authorizationId: string; hostName: string; hostPlatform: string }) => ({
     created_at: '2026-08-08T00:00:00.000Z', created_by_host_name: 'Maci',
     display_name: 'Foliole Desktop', group_id: 'group-test', local_host_name: 'Maci',
@@ -126,7 +126,7 @@ function registerSnapshotProtectionTest() {
       desktop_name: 'Foliole Desktop',
       group_display_name: 'Maci',
       pairing_mode: 'desktop-confirm',
-      peer_id: 'desktop-local'
+      peer_id: 'founder-local'
     });
     const unauthorizedResponse = await requestWorkspaceSyncServer(server, { path: '/companion/workspace-snapshot' });
     expect(unauthorizedResponse.status).toBe(401);
@@ -135,7 +135,7 @@ function registerSnapshotProtectionTest() {
     expect(getLanWorkspaceSyncServerStatus().pending_pair_request_count).toBe(0);
     const response = await requestWorkspaceSyncServer(server, {
       headers: signWorkspaceSyncRequest({
-        deviceId: paired.device_id,
+        authorizationId: paired.authorization_id,
         groupId: WORKGROUP.groupId,
         method: 'GET',
         pathWithQuery: '/companion/workspace-snapshot',
@@ -164,7 +164,7 @@ function registerWorkspaceVersionProtectionTest() {
     const paired = await pairTestDevice(server, WORKGROUP);
     const response = await requestWorkspaceSyncServer(server, {
       headers: signWorkspaceSyncRequest({
-        deviceId: paired.device_id,
+        authorizationId: paired.authorization_id,
         groupId: WORKGROUP.groupId,
         method: 'GET',
         pathWithQuery: '/companion/workspace-version',
@@ -190,7 +190,7 @@ function registerReplayProtectionTest() {
     });
     const paired = await pairTestDevice(server, WORKGROUP);
     const headers = signWorkspaceSyncRequest({
-      deviceId: paired.device_id,
+      authorizationId: paired.authorization_id,
       groupId: WORKGROUP.groupId,
       method: 'GET',
       pathWithQuery: '/companion/workspace-version',

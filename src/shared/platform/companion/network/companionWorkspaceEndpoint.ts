@@ -20,6 +20,7 @@ function activeRemoteHostNames(group: SyncGroupPayload) {
 }
 
 export interface CompanionWorkspaceSyncTarget {
+  authorizationId?: string;
   deviceId?: string;
   hostName?: string;
   endpointUrl: string;
@@ -27,17 +28,19 @@ export interface CompanionWorkspaceSyncTarget {
 }
 
 export async function bindCompanionWorkspaceSyncTarget(target: CompanionWorkspaceSyncTarget) {
-  if (!target.deviceId || !target.hostName || !target.groupId || !isNativeCompanionPairingRuntime()) return;
+  if (!target.authorizationId || !target.deviceId || !target.hostName || !target.groupId || !isNativeCompanionPairingRuntime()) return;
   const group = await loadCompanionSyncGroup();
   if (!group || group.group_id !== target.groupId) throw new Error('sync_group_identity_mismatch');
   const pairing = await loadCompanionPairingState();
-  if (!pairing.device_id) throw new Error('sync_group_local_authorization_missing');
+  if (!pairing.authorization_id || !pairing.device_id) throw new Error('sync_group_local_authorization_missing');
   const peerMember = group.members.find((member) => member.host_name === target.hostName);
   if (!peerMember) throw new Error('sync_group_peer_host_unavailable');
   await FolioleCompanionSync.bindSyncGroupPeerRoute({
     endpoint_url: target.endpointUrl,
+    local_authorization_id: pairing.authorization_id,
     local_device_id: pairing.device_id,
     local_host_name: group.local_host_name,
+    peer_authorization_id: target.authorizationId,
     peer_device_id: target.deviceId,
     peer_host_name: target.hostName,
     peer_host_platform: peerMember.host_platform,
@@ -60,7 +63,8 @@ export async function resolveReachableCompanionWorkspaceSyncEndpoints(
     const match = discovered.find((candidate) => candidate.compatibility.status === 'compatible'
       && candidate.discovery.group_id === group.group_id
       && candidate.discovery.desktop_host_name === hostName);
-    return match ? [{ deviceId: match.discovery.peer_id, endpointUrl: match.endpointUrl,
+    return match ? [{ authorizationId: match.discovery.peer_id,
+      deviceId: match.discovery.provider_device_id, endpointUrl: match.endpointUrl,
       groupId: group.group_id, hostName }] : [];
   });
 }

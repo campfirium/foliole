@@ -16,7 +16,7 @@ export async function requestJson(url: string, init: RequestInit) {
 export function createDesktopSyncGroupSignedHeaders(args: {
   body?: string;
   groupId: string;
-  localDeviceId: string;
+  localAuthorizationId: string;
   method: string;
   pathWithQuery: string;
   secret: string;
@@ -26,7 +26,7 @@ export function createDesktopSyncGroupSignedHeaders(args: {
   const bodyHash = createHash('sha256').update(args.body ?? '').digest('hex');
   const canonical = [args.method.toUpperCase(), args.pathWithQuery, timestamp, nonce, bodyHash].join('\n');
   return {
-    'X-Device-Id': args.localDeviceId,
+    'X-Authorization-Id': args.localAuthorizationId,
     'X-Nonce': nonce,
     'X-Signature': createHmac('sha256', args.secret).update(canonical).digest('hex'),
     'X-Sync-Group-Id': args.groupId,
@@ -37,7 +37,7 @@ export function createDesktopSyncGroupSignedHeaders(args: {
 export function createDesktopWorkgroupPost(args: {
   body: string;
   groupId: string;
-  localDeviceId: string;
+  localAuthorizationId: string;
   pathWithQuery: string;
   secret: string;
 }) {
@@ -75,7 +75,7 @@ export async function postDesktopWorkgroupJson(args: {
   body: string;
   endpointUrl: string;
   groupId: string;
-  localDeviceId: string;
+  localAuthorizationId: string;
   pathWithQuery: string;
   secret: string;
 }) {

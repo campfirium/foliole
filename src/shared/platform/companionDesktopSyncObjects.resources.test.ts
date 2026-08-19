@@ -24,7 +24,7 @@ async function testPullsContentBlobs() {
   expect(syncBridgeMock.syncCompanionContentBlobs).toHaveBeenCalledWith({
     body: JSON.stringify({ hashes: [bodyHash] }),
     headers: {
-      'X-Device-Id': 'android-test-device',
+      'X-Authorization-Id': 'android-test-device',
       'X-Signature': 'signed:/companion/content-blobs'
     },
     url: 'http://10.0.2.2:38641/companion/content-blobs'

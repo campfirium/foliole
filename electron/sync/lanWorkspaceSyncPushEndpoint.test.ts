@@ -45,14 +45,18 @@ vi.mock('./workspaceSyncAppliedEvents.js', () => ({
 }));
 vi.mock('../database/syncGroupStore.js', () => ({
   loadDesktopSyncGroup: vi.fn(() => ({
-    group_id: WORKGROUP.groupId, local_member_state: 'active', timeline_id: 'timeline-test', members: []
+    group_id: WORKGROUP.groupId, local_host_name: 'Desktop A', local_member_state: 'active',
+    timeline_id: 'timeline-test', members: [{ authorization_id: 'authorization-desktop-a',
+      host_name: 'Desktop A', host_platform: 'darwin', state: 'active' }]
   })),
-  loadSyncGroupMemberAuthorization: vi.fn(() => ({ state: 'active' })),
-  registerSyncGroupMember: vi.fn((args: { authorizationId: string; deviceName: string }) => ({
-    group_id: WORKGROUP.groupId, local_member_state: 'active', timeline_id: 'timeline-test', members: [{
-      authorization_id: args.authorizationId, device_id: args.deviceName,
-      device_kind: 'android', device_name: args.deviceName, state: 'active'
-    }]
+  loadSyncGroupMemberByAuthorization: vi.fn(() => ({ host_name: 'Pixel Test', state: 'active' })),
+  registerSyncGroupMember: vi.fn((args: { authorizationId: string; hostName: string; hostPlatform: string }) => ({
+    group_id: WORKGROUP.groupId, local_host_name: 'Desktop A', local_member_state: 'active',
+    timeline_id: 'timeline-test', members: [
+      { authorization_id: 'authorization-desktop-a', host_name: 'Desktop A', host_platform: 'darwin', state: 'active' },
+      { authorization_id: args.authorizationId, host_name: args.hostName,
+        host_platform: args.hostPlatform, state: 'active' }
+    ]
   }))
 }));
 vi.mock('./workgroupKeyStore.js', () => ({

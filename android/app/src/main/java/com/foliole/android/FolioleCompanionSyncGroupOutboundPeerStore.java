@@ -24,23 +24,28 @@ final class FolioleCompanionSyncGroupOutboundPeerStore {
 
     private FolioleCompanionSyncGroupOutboundPeerStore() {}
 
-    static void save(Context context, String groupId, String localDeviceId, String peerDeviceId,
+    static void save(Context context, String groupId, String localAuthorizationId, String localDeviceId,
+                     String peerAuthorizationId, String peerDeviceId,
                      String endpointUrl) throws Exception {
-        save(context, groupId, localDeviceId, null, peerDeviceId, null, null, endpointUrl);
+        save(context, groupId, localAuthorizationId, localDeviceId, null,
+            peerAuthorizationId, peerDeviceId, null, null, endpointUrl);
     }
 
-    static void save(Context context, String groupId, String localDeviceId, String localHostName,
+    static void save(Context context, String groupId, String localAuthorizationId,
+                     String localDeviceId, String localHostName, String peerAuthorizationId,
                      String peerDeviceId, String peerHostName, String peerHostPlatform,
                      String endpointUrl) throws Exception {
         JSONObject record = new JSONObject()
             .put("endpoint_url", normalizeEndpoint(endpointUrl))
             .put("group_id", groupId.trim())
+            .put("local_authorization_id", localAuthorizationId.trim())
             .put("local_device_id", localDeviceId.trim())
+            .put("peer_authorization_id", peerAuthorizationId.trim())
             .put("peer_device_id", peerDeviceId.trim());
         if (localHostName != null) record.put("local_host_name", localHostName.trim());
         if (peerHostName != null) record.put("peer_host_name", peerHostName.trim());
         if (peerHostPlatform != null) record.put("peer_host_platform", peerHostPlatform.trim());
-        if (!prefs(context).edit().putString(peerDeviceId.trim(), encrypt(record.toString())).commit()) {
+        if (!prefs(context).edit().putString(peerAuthorizationId.trim(), encrypt(record.toString())).commit()) {
             throw new IllegalStateException("Failed to persist Sync Group outbound peer.");
         }
     }
@@ -58,7 +63,7 @@ final class FolioleCompanionSyncGroupOutboundPeerStore {
         JSONObject peer = find(context, groupId.trim(), normalizeEndpoint(endpointUrl));
         String canonical = method.toUpperCase() + "\n" + pathWithQuery + "\n" + timestamp + "\n" + nonce + "\n" + bodyHash;
         JSObject headers = new JSObject();
-        headers.put("X-Device-Id", peer.getString("local_device_id"));
+        headers.put("X-Authorization-Id", peer.getString("local_authorization_id"));
         headers.put("X-Timestamp", timestamp);
         headers.put("X-Nonce", nonce);
         headers.put("X-Signature", FolioleCompanionPairingCrypto.signCanonicalRequest(
@@ -66,13 +71,13 @@ final class FolioleCompanionSyncGroupOutboundPeerStore {
         return new JSObject().put("headers", headers);
     }
 
-    static void bindRoute(Context context, String groupId, String peerDeviceId, String endpointUrl) throws Exception {
-        String normalizedPeerId = peerDeviceId.trim();
+    static void bindRoute(Context context, String groupId, String peerAuthorizationId, String endpointUrl) throws Exception {
+        String normalizedPeerId = peerAuthorizationId.trim();
         String encoded = prefs(context).getString(normalizedPeerId, null);
         if (encoded == null) throw new SecurityException("sync_group_peer_not_found");
         JSONObject peer = new JSONObject(decrypt(encoded));
         if (!groupId.trim().equals(peer.optString("group_id")) ||
-            !normalizedPeerId.equals(peer.optString("peer_device_id"))) {
+            !normalizedPeerId.equals(peer.optString("peer_authorization_id"))) {
             throw new SecurityException("sync_group_peer_mismatch");
         }
         peer.put("endpoint_url", normalizeEndpoint(endpointUrl));
@@ -81,17 +86,17 @@ final class FolioleCompanionSyncGroupOutboundPeerStore {
         }
     }
 
-    static boolean contains(Context context, String groupId, String peerDeviceId) throws Exception {
-        String normalizedPeerId = peerDeviceId.trim();
+    static boolean contains(Context context, String groupId, String peerAuthorizationId) throws Exception {
+        String normalizedPeerId = peerAuthorizationId.trim();
         String encoded = prefs(context).getString(normalizedPeerId, null);
         if (encoded == null) return false;
         JSONObject peer = new JSONObject(decrypt(encoded));
         return groupId.trim().equals(peer.optString("group_id"))
-            && normalizedPeerId.equals(peer.optString("peer_device_id"));
+            && normalizedPeerId.equals(peer.optString("peer_authorization_id"));
     }
 
-    static String hostName(Context context, String groupId, String peerDeviceId) throws Exception {
-        String encoded = prefs(context).getString(peerDeviceId.trim(), null);
+    static String hostName(Context context, String groupId, String peerAuthorizationId) throws Exception {
+        String encoded = prefs(context).getString(peerAuthorizationId.trim(), null);
         if (encoded == null) return null;
         JSONObject peer = new JSONObject(decrypt(encoded));
         if (!groupId.trim().equals(peer.optString("group_id"))) return null;
@@ -115,8 +120,8 @@ final class FolioleCompanionSyncGroupOutboundPeerStore {
         }
     }
 
-    static void remove(Context context, String peerDeviceId) {
-        if (!prefs(context).edit().remove(peerDeviceId.trim()).commit()) {
+    static void remove(Context context, String peerAuthorizationId) {
+        if (!prefs(context).edit().remove(peerAuthorizationId.trim()).commit()) {
             throw new IllegalStateException("Failed to remove Sync Group outbound peer.");
         }
     }

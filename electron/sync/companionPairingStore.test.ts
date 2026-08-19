@@ -40,6 +40,9 @@ import {
 
 let tempRoot = '';
 const protocolArgs = {
+  authorizationId: 'authorization-1',
+  hostName: 'Android Emulator',
+  hostPlatform: 'android-capacitor',
   negotiatedProtocolVersion: 1,
   remoteProtocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
 };
@@ -56,9 +59,10 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-it('replaces an existing paired device with the same device id', () => {
+it('replaces an existing paired credential with the same authorization id', () => {
   registerPairedCompanionDevice({
     ...protocolArgs,
+    authorizationId: 'authorization-1',
     clientAddress: '127.0.0.1',
     deviceId: 'device-1',
     deviceKind: 'android-capacitor',
@@ -68,6 +72,7 @@ it('replaces an existing paired device with the same device id', () => {
 
   registerPairedCompanionDevice({
     ...protocolArgs,
+    authorizationId: 'authorization-1',
     clientAddress: '127.0.0.1',
     deviceId: 'device-1',
     deviceKind: 'android-capacitor',
@@ -84,10 +89,10 @@ it('replaces an existing paired device with the same device id', () => {
   ]);
 });
 
-it('keeps paired devices with different ids even when their LAN labels match', () => {
-  const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+it('keeps paired credentials with different authorization ids when their LAN labels match', () => {
   registerPairedCompanionDevice({
     ...protocolArgs,
+    authorizationId: 'authorization-before-reset',
     clientAddress: '127.0.0.1',
     deviceId: 'device-before-reset',
     deviceKind: 'android-capacitor',
@@ -97,6 +102,7 @@ it('keeps paired devices with different ids even when their LAN labels match', (
 
   registerPairedCompanionDevice({
     ...protocolArgs,
+    authorizationId: 'authorization-after-reset',
     clientAddress: '127.0.0.1',
     deviceId: 'device-after-reset',
     deviceKind: 'android-capacitor',
@@ -119,11 +125,6 @@ it('keeps paired devices with different ids even when their LAN labels match', (
       device_name: 'Android Emulator'
     })
   ]);
-  expect(warnSpy).toHaveBeenCalledWith(
-    '[companion-sync] paired companion device has matching LAN label with a different device id',
-    expect.objectContaining({ deviceKind: 'android-capacitor' })
-  );
-  warnSpy.mockRestore();
 });
 
 it('quarantines an unreadable encrypted paired-device cache and continues unpaired', async () => {

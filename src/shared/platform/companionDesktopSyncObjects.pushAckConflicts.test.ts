@@ -66,8 +66,13 @@ vi.mock('./companionDesktopAttachmentResources', () => ({
   syncCompanionAttachmentResourcesFromDesktop: vi.fn(async () => [] as string[])
 }));
 vi.mock('./companionWorkspacePairing', () => ({
-  createSignedRequestHeaders: vi.fn(async () => ({ 'X-Device-Id': 'android-test-device' })),
-  loadCompanionPairingState: vi.fn(async () => ({ device_kind: 'android', remote_peer_id: 'desktop-peer' }))
+  createSignedRequestHeaders: vi.fn(async () => ({ 'X-Authorization-Id': 'android-test-device' })),
+  loadCompanionPairingState: vi.fn(async () => ({
+    authorization_id: 'authorization-android-test',
+    device_kind: 'android',
+    remote_peer_id: 'authorization-desktop-test',
+    remote_peer_name: 'Desktop Test Host'
+  }))
 }));
 
 function setupPushAckMocks() {
@@ -111,7 +116,7 @@ describe('companion desktop sync push acknowledgement conflicts', () => {
     expect(result.pushConflictCount).toBe(1);
     expect(result.pushRejectedCount).toBe(1);
     expect(result.pushedObjectIds).toEqual([]);
-    expect(syncBridgeMock.saveCompanionSyncPushAcks).toHaveBeenCalledWith('desktop-peer', [
+    expect(syncBridgeMock.saveCompanionSyncPushAcks).toHaveBeenCalledWith('authorization-desktop-test', [
       expect.objectContaining({ clientOpId: 'node_reading:node-1:9', status: 'conflict' }),
       expect.objectContaining({ clientOpId: 'node_review:node-1:10', status: 'rejected' })
     ]);
@@ -135,7 +140,7 @@ describe('companion desktop sync push acknowledgement conflicts', () => {
 
     expect(result.pushedObjectIds).toEqual([]);
     expect(result.pushRejectedCount).toBe(1);
-    expect(syncBridgeMock.saveCompanionSyncPushAcks).toHaveBeenCalledWith('desktop-peer', [
+    expect(syncBridgeMock.saveCompanionSyncPushAcks).toHaveBeenCalledWith('authorization-desktop-test', [
       expect.objectContaining({ clientOpId: 'node_review:node-1:10', conflictReason: 'missing_state_seq' })
     ]);
   });

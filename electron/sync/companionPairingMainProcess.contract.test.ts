@@ -112,6 +112,8 @@ async function postPairRequest(server: ReturnType<typeof import('./lanWorkspaceS
       device_id: 'fixed-android-device',
       device_kind: 'android-capacitor',
       device_name: 'Fixed Android companion',
+      host_name: 'Fixed Android companion',
+      host_platform: 'android-capacitor',
       group_id: 'group-test',
       group_tag: workgroupKeyMock.group_tag,
       library_facts: {

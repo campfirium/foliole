@@ -11,7 +11,8 @@ const privateKey = null as unknown as CryptoKey;
 beforeEach(() => saveDesktopSyncGroupPendingJoin({
   candidate: {
     endpoint_url: 'http://192.168.1.12:41000', group_display_name: 'Office',
-    group_id: 'group-1', group_tag: 'tag-1', provider_device_id: 'android-b', provider_device_kind: 'android-capacitor',
+    group_id: 'group-1', group_tag: 'tag-1', provider_authorization_id: 'authorization-android-b',
+    provider_device_id: 'android-b', provider_device_kind: 'android-capacitor',
     provider_device_name: 'A5', provider_host_name: 'A5', provider_host_platform: 'android-capacitor',
     timeline_id: 'timeline-1'
   },
@@ -25,7 +26,7 @@ beforeEach(() => saveDesktopSyncGroupPendingJoin({
 it('refreshes only the transport endpoint for the same pending provider identity', () => {
   expect(refreshDesktopSyncGroupPendingJoinEndpoint({
     endpointUrl: 'http://192.168.1.12:42000', groupId: 'group-1',
-    providerDeviceId: 'android-b', timelineId: 'timeline-1'
+    providerAuthorizationId: 'authorization-android-b', timelineId: 'timeline-1'
   })).toBe(true);
   const pending = loadDesktopSyncGroupJoinState().pending;
   expect(pending?.candidate.endpoint_url).toBe('http://192.168.1.12:42000');
@@ -35,8 +36,8 @@ it('refreshes only the transport endpoint for the same pending provider identity
 });
 
 it.each([
-  { groupId: 'other-group', providerDeviceId: 'android-b', timelineId: 'timeline-1' },
-  { groupId: 'group-1', providerDeviceId: 'stranger', timelineId: 'timeline-1' }
+  { groupId: 'other-group', providerAuthorizationId: 'authorization-android-b', timelineId: 'timeline-1' },
+  { groupId: 'group-1', providerAuthorizationId: 'authorization-stranger', timelineId: 'timeline-1' }
 ])('rejects an advertisement outside the approved handshake identity', (identity) => {
   expect(refreshDesktopSyncGroupPendingJoinEndpoint({
     endpointUrl: 'http://192.168.1.99:42000', ...identity
@@ -48,6 +49,6 @@ it.each([
 it('refreshes a pending provider route when only legacy timeline metadata changes', () => {
   expect(refreshDesktopSyncGroupPendingJoinEndpoint({
     endpointUrl: 'http://192.168.1.99:42000', groupId: 'group-1',
-    providerDeviceId: 'android-b', timelineId: 'other-timeline'
+    providerAuthorizationId: 'authorization-android-b', timelineId: 'other-timeline'
   })).toBe(true);
 });

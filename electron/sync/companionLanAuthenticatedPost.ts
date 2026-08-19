@@ -66,7 +66,7 @@ async function handleAuthenticatedRoute(args: {
     else writeJson(request, response, batch.statusCode, { error: batch.error }, 'POST, OPTIONS');
   } else if (route === 'sync-push') {
     try {
-      writeJson(request, response, 200, await handleCompanionSyncPush(bodyText, auth.device_id), 'POST, OPTIONS');
+      writeJson(request, response, 200, await handleCompanionSyncPush(bodyText, auth.host_name), 'POST, OPTIONS');
     } catch (error) {
       writeJson(request, response, 400, {
         error: error instanceof Error ? error.message : 'invalid_sync_push_payload'
@@ -77,7 +77,7 @@ async function handleAuthenticatedRoute(args: {
     writeJson(request, response, result.statusCode, result.value, 'POST, OPTIONS');
   } else if (route === 'sync-group-departure') {
     try {
-      writeJson(request, response, 200, acceptSyncGroupDeparture(bodyText, auth.device_id), 'POST, OPTIONS');
+      writeJson(request, response, 200, acceptSyncGroupDeparture(bodyText, auth.host_name), 'POST, OPTIONS');
     } catch (error) {
       writeJson(request, response, 400, {
         error: error instanceof Error ? error.message : 'sync_group_departure_payload_invalid'

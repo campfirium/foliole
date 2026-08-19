@@ -74,10 +74,13 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
         resolvePairing(call) { store in
             let contract = try self.contract()
             return try store.save(
+                authorizationId: try self.requiredString(call, contract.credentialRequestKeys, "authorizationId"),
+                credentialSecret: try self.requiredString(call, contract.credentialRequestKeys, "credentialSecret"),
                 deviceId: try self.requiredString(call, contract.credentialRequestKeys, "deviceId"),
                 deviceKind: try self.requiredString(call, contract.credentialRequestKeys, "deviceKind"),
                 deviceName: try self.requiredString(call, contract.credentialRequestKeys, "deviceName"),
-                deviceSecret: try self.requiredString(call, contract.credentialRequestKeys, "deviceSecret"),
+                hostName: try self.requiredString(call, contract.credentialRequestKeys, "hostName"),
+                hostPlatform: try self.requiredString(call, contract.credentialRequestKeys, "hostPlatform"),
                 negotiatedProtocolVersion: try self.requiredInt(call, contract.credentialRequestKeys, "negotiatedProtocolVersion"),
                 pairedAt: try self.requiredString(call, contract.credentialRequestKeys, "pairedAt"),
                 primaryDeviceId: try self.requiredString(call, contract.credentialRequestKeys, "primaryDeviceId"),

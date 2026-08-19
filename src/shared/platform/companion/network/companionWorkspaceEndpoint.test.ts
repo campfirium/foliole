@@ -77,10 +77,12 @@ it('routes one foreground pass to every discovered active group member', async (
   });
   mocks.discover.mockResolvedValue([
     { compatibility: { status: 'compatible' }, discovery: {
-      desktop_host_name: 'Desktop C', group_id: 'group-1', peer_id: 'desktop-c', timeline_id: 'timeline-1'
+      desktop_host_name: 'Desktop C', group_id: 'group-1', peer_id: 'authorization-desktop-c',
+      provider_device_id: 'desktop-c', timeline_id: 'timeline-1'
     }, endpointUrl: 'http://192.168.1.30:38641' },
     { compatibility: { status: 'compatible' }, discovery: {
-      desktop_host_name: 'Desktop A', group_id: 'group-1', peer_id: 'desktop-a', timeline_id: 'timeline-1'
+      desktop_host_name: 'Desktop A', group_id: 'group-1', peer_id: 'authorization-desktop-a',
+      provider_device_id: 'desktop-a', timeline_id: 'timeline-1'
     }, endpointUrl: 'http://192.168.1.20:38641' },
     { compatibility: { status: 'compatible' }, discovery: {
       desktop_host_name: 'Desktop Left', group_id: 'group-1', peer_id: 'desktop-left', timeline_id: 'timeline-1'
@@ -88,8 +90,8 @@ it('routes one foreground pass to every discovered active group member', async (
   ]);
 
   await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://old:38641')).resolves.toEqual([
-    { deviceId: 'desktop-a', endpointUrl: 'http://192.168.1.20:38641', groupId: 'group-1', hostName: 'Desktop A' },
-    { deviceId: 'desktop-c', endpointUrl: 'http://192.168.1.30:38641', groupId: 'group-1', hostName: 'Desktop C' }
+    { authorizationId: 'authorization-desktop-a', deviceId: 'desktop-a', endpointUrl: 'http://192.168.1.20:38641', groupId: 'group-1', hostName: 'Desktop A' },
+    { authorizationId: 'authorization-desktop-c', deviceId: 'desktop-c', endpointUrl: 'http://192.168.1.30:38641', groupId: 'group-1', hostName: 'Desktop C' }
   ]);
 });
 
@@ -100,31 +102,35 @@ it('keeps routing reachable members when another active peer is unavailable', as
   });
   mocks.discover.mockResolvedValue([{
     compatibility: { status: 'compatible' },
-    discovery: { desktop_host_name: 'Desktop C', group_id: 'group-1', peer_id: 'desktop-c', timeline_id: 'timeline-1' },
+    discovery: { desktop_host_name: 'Desktop C', group_id: 'group-1', peer_id: 'authorization-desktop-c',
+      provider_device_id: 'desktop-c', timeline_id: 'timeline-1' },
     endpointUrl: 'http://192.168.1.30:38641'
   }]);
 
   await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://old:38641'))
-    .resolves.toEqual([{ deviceId: 'desktop-c', endpointUrl: 'http://192.168.1.30:38641',
+    .resolves.toEqual([{ authorizationId: 'authorization-desktop-c', deviceId: 'desktop-c', endpointUrl: 'http://192.168.1.30:38641',
       groupId: 'group-1', hostName: 'Desktop C' }]);
 });
 
 it('binds a discovered route to the stored peer identity through the native bridge', async () => {
-  mocks.loadPairing.mockResolvedValue({ device_id: 'android-b', remote_peer_id: 'desktop-a' });
+  mocks.loadPairing.mockResolvedValue({ authorization_id: 'authorization-android-b',
+    device_id: 'android-b', remote_peer_id: 'authorization-desktop-a' });
   mocks.loadGroup.mockResolvedValue({
     group_id: 'group-1', local_host_name: 'Android B', members: [
       { host_name: 'Desktop A', host_platform: 'darwin', state: 'active' }
     ], timeline_id: 'timeline-1'
   });
   await bindCompanionWorkspaceSyncTarget({
-    deviceId: 'desktop-a', endpointUrl: 'http://192.168.1.20:38641',
+    authorizationId: 'authorization-desktop-a', deviceId: 'desktop-a', endpointUrl: 'http://192.168.1.20:38641',
     groupId: 'group-1', hostName: 'Desktop A'
   });
 
   expect(mocks.bindRoute).toHaveBeenCalledWith({
     endpoint_url: 'http://192.168.1.20:38641',
+    local_authorization_id: 'authorization-android-b',
     local_device_id: 'android-b',
     local_host_name: 'Android B',
+    peer_authorization_id: 'authorization-desktop-a',
     peer_device_id: 'desktop-a',
     peer_host_name: 'Desktop A',
     peer_host_platform: 'darwin',

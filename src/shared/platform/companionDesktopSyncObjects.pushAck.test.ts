@@ -68,8 +68,13 @@ vi.mock('./companionDesktopAttachmentResources', () => ({
   syncCompanionAttachmentResourcesFromDesktop: vi.fn(async () => [] as string[])
 }));
 vi.mock('./companionWorkspacePairing', () => ({
-  createSignedRequestHeaders: vi.fn(async () => ({ 'X-Device-Id': 'android-test-device' })),
-  loadCompanionPairingState: vi.fn(async () => ({ device_kind: 'android', remote_peer_id: 'desktop-peer' }))
+  createSignedRequestHeaders: vi.fn(async () => ({ 'X-Authorization-Id': 'android-test-device' })),
+  loadCompanionPairingState: vi.fn(async () => ({
+    authorization_id: 'authorization-android-test',
+    device_kind: 'android',
+    remote_peer_id: 'authorization-desktop-test',
+    remote_peer_name: 'Desktop Test Host'
+  }))
 }));
 
 function setupPushAckMocks() {
@@ -162,7 +167,7 @@ describe('companion desktop sync accepted push acknowledgements', () => {
       'view_state:session_resume:android:phone:android-test-device:active_node'
     ]);
     expect(result.pushedReviewOpIds).toEqual(['op-1']);
-    expect(syncBridgeMock.saveCompanionSyncPushAcks).toHaveBeenCalledWith('desktop-peer', [
+    expect(syncBridgeMock.saveCompanionSyncPushAcks).toHaveBeenCalledWith('authorization-desktop-test', [
       expect.objectContaining({ clientOpId: 'node_reading:node-1:9', status: 'accepted' }),
       expect.objectContaining({ clientOpId: 'node_review:node-1:10', status: 'accepted' }),
       expect.objectContaining({ clientOpId: 'setting:device:android:phone:*:app_settings:11', status: 'accepted' }),

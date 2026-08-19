@@ -46,7 +46,7 @@ public final class FolioleCompanionSyncGroupCryptoTest {
     public void keepsAuthenticatedGetBodylessWhileEncryptingPostBodies() throws Exception {
         String key = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8";
         JSONObject headers = new JSONObject().put("X-Sync-Group-Id", "group-1")
-            .put("X-Device-Id", "Android");
+            .put("X-Authorization-Id", "Android");
         FolioleCompanionWorkgroupSession.open(key);
         try {
             FolioleCompanionWorkgroupHttp.PreparedRequest get = FolioleCompanionWorkgroupHttp.prepare(

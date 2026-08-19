@@ -72,6 +72,7 @@ vi.mock('../sync/companionPairingRequests.js', () => ({
 vi.mock('../sync/companionPairingStore.js', () => ({
   clearPairedCompanionDevices: vi.fn(),
   loadPairedCompanionDevices: vi.fn(() => []),
+  migratePairedCompanionStore: vi.fn(() => ({ migrated: false })),
   removePairedCompanionDevice: vi.fn()
 }));
 vi.mock('../sync/desktopCompanionSyncPreference.js', () => ({

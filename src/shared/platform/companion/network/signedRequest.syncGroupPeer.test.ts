@@ -23,7 +23,7 @@ beforeEach(() => {
   groupMock.load.mockResolvedValue({ group_id: 'group-1' });
   nativeMock.signCompanionSyncRequest.mockResolvedValue({
     headers: {
-      'X-Device-Id': 'mobile-b', 'X-Nonce': 'nonce-1', 'X-Signature': 'signed',
+      'X-Authorization-Id': 'mobile-b', 'X-Nonce': 'nonce-1', 'X-Signature': 'signed',
       'X-Timestamp': '2026-08-09T00:00:00.000Z'
     }
   });

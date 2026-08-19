@@ -21,6 +21,7 @@ import {
 } from './companionMdnsAdvertisement.js';
 import { countPendingCompanionPairRequests } from './companionPairingRequests.js';
 import { countPairedCompanionDevices } from './companionPairingStore.js';
+import { ensureCompanionPairingStoreAuthorizationCutover } from './companionPairingStoreCutover.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import { startDesktopSyncGroupAutoSync, stopDesktopSyncGroupAutoSync } from './desktopSyncGroupAutoSync.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
@@ -160,8 +161,11 @@ function advertiseActiveSyncGroup(args: { appVersion: string; peerId: string; po
   if (!group || group.local_member_state !== 'active') return;
   const workgroup = loadDesktopWorkgroupKey(group.group_id);
   if (!workgroup) throw new Error('sync_group_workgroup_key_missing');
+  const local = group.members.find((member) => member.host_name === group.local_host_name);
+  if (!local) throw new Error('sync_group_local_authorization_missing');
   startCompanionMdnsAdvertisement({
     ...args,
+    peerId: local.authorization_id,
     groupDisplayName: resolveSyncGroupDisplayHostName(group),
     groupId: group.group_id,
     groupTag: workgroup.group_tag,
@@ -172,6 +176,7 @@ function advertiseActiveSyncGroup(args: { appVersion: string; peerId: string; po
 
 export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; peerId: string }) {
   if (!isDesktopCompanionSyncParticipating()) return activeStatus;
+  ensureCompanionPairingStoreAuthorizationCutover();
   const group = loadDesktopSyncGroup();
   if (!group || !loadDesktopWorkgroupKey(group.group_id)) throw new Error('sync_group_workgroup_key_missing');
   startDesktopSyncGroupAutoSync();

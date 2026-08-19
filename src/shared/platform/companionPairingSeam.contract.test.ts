@@ -134,7 +134,7 @@ function configureNativePairingStore() {
   });
   nativePlugin.signCompanionSyncRequest.mockResolvedValue({
     headers: {
-      'X-Device-Id': 'android-seam',
+      'X-Authorization-Id': 'android-seam',
       'X-Nonce': 'nonce',
       'X-Signature': 'signature',
       'X-Timestamp': '2026-08-05T00:00:00.000Z'

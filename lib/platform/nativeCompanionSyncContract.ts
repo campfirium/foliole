@@ -6,6 +6,8 @@ import type {
   SyncProtocolDescriptor
 } from './syncProtocolContract.js';
 
+export type { NativeCompanionSignedRequestHeaders } from './nativeCompanionSignedRequestContract.js';
+
 export interface NativeCompanionSyncEvent {
   endpoint_url: string | null;
   id: string;
@@ -37,9 +39,12 @@ export interface NativeCompanionWorkspaceSyncState {
 }
 
 export interface NativeCompanionPairingState {
+  authorization_id?: string | null;
   device_id: string | null;
   device_kind: string | null;
   device_name: string | null;
+  host_name?: string | null;
+  host_platform?: string | null;
   is_paired: boolean;
   negotiated_protocol_version?: number | null;
   paired_at: string | null;
@@ -51,15 +56,6 @@ export interface NativeCompanionPairingState {
   remote_protocol?: SyncProtocolDescriptor | null;
   repair_required?: boolean;
   sync_usable?: boolean;
-}
-
-export interface NativeCompanionSignedRequestHeaders {
-  headers: {
-    'X-Device-Id': string;
-    'X-Nonce': string;
-    'X-Signature': string;
-    'X-Timestamp': string;
-  };
 }
 
 export interface NativeCompanionReadableArticlePayload {
@@ -89,6 +85,7 @@ export interface CompanionWorkspaceDiscoveryPayload {
   desktop_platform: string;
   pairing_mode: 'desktop-confirm';
   peer_id: string;
+  provider_device_id: string;
   runtime_instance_id: string;
   protocol: SyncProtocolDescriptor;
   group_display_name: string;
@@ -114,21 +111,23 @@ export interface CompanionPairingSecretPayload {
 }
 
 export interface CompanionWorkspacePairPayload {
+  authorization_id: string;
   compatibility: SyncProtocolCompatibilityResult;
   device_id: string;
   host_name?: string;
   host_platform?: string;
-  encrypted_device_secret: CompanionPairingSecretPayload;
+  encrypted_credential_secret: CompanionPairingSecretPayload;
   paired_at: string;
   peer_id: string;
   desktop_protocol: SyncProtocolDescriptor;
   sync_group?: import('./syncGroupContract.js').SyncGroupPayload;
+  provider_authorization_id?: string;
   provider_device_id?: string;
   provider_device_kind?: string;
   provider_device_name?: string;
   provider_host_name?: string;
   provider_host_platform?: string;
-  provider_encrypted_device_secret?: CompanionPairingSecretPayload;
+  provider_encrypted_credential_secret?: CompanionPairingSecretPayload;
 }
 
 export interface DesktopCompanionPairRequestPayload {
@@ -166,6 +165,7 @@ export interface DesktopSyncGroupJoinCandidatePayload {
   group_display_name: string;
   group_id: string;
   group_tag: string;
+  provider_authorization_id: string;
   provider_device_id: string;
   provider_device_kind: string;
   provider_device_name: string;

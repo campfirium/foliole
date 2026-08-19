@@ -108,6 +108,7 @@ describe('companion pairing request rate limiting', () => {
         deviceId: `android-${index}`,
         deviceKind: 'android-capacitor',
         deviceName: `Android companion ${index}`,
+        hostName: `A5 ${index}`,
         nowMs: nowMs + index,
         pairingPublicKey: TEST_PAIRING_PUBLIC_KEY
       })).toMatchObject({ created: true, rate_limited: false });
@@ -119,6 +120,7 @@ describe('companion pairing request rate limiting', () => {
       deviceId: 'android-6',
       deviceKind: 'android-capacitor',
       deviceName: 'Android companion 6',
+      hostName: 'A5 6',
       nowMs: nowMs + 5,
       pairingPublicKey: TEST_PAIRING_PUBLIC_KEY
     })).toMatchObject({

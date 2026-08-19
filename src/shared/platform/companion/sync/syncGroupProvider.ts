@@ -54,6 +54,7 @@ export async function reconcileCompanionSyncGroupProvider(
   await ensureCompanionSyncGroupDataOwner();
   return FolioleCompanionSync.startSyncGroupProvider({
     app_version: await loadAppVersion(),
+    authorization_id: localMember.authorization_id,
     device_id: bootstrap.device_id,
     device_name: localMember.host_name,
     host_name: localMember.host_name,

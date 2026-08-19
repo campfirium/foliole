@@ -31,6 +31,7 @@ final class FolioleCompanionSyncGroupProvider {
     ) throws Exception {
         JSONObject next = new JSONObject()
             .put("app_version", value(context, call, "appVersion"))
+            .put("authorization_id", value(context, call, "authorizationId"))
             .put("device_id", value(context, call, "deviceId"))
             .put("device_name", value(context, call, "deviceName"))
             .put("host_name", value(context, call, "hostName"))
@@ -159,12 +160,12 @@ final class FolioleCompanionSyncGroupProvider {
         return state();
     }
 
-    static void promoteApprovedJoin(String groupId, String deviceId) throws Exception {
+    static void promoteApprovedJoin(String groupId, String authorizationId) throws Exception {
         FolioleCompanionSyncGroupJoinRequest request = joinRequests.values().stream()
-            .filter(item -> deviceId.equals(item.deviceId) && "approved".equals(item.status) && !item.expired())
+            .filter(item -> authorizationId.equals(item.pairRequestId) && "approved".equals(item.status) && !item.expired())
             .findFirst().orElse(null);
         String hostName = request == null
-            ? FolioleCompanionSyncGroupOutboundPeerStore.hostName(activeContext, groupId, deviceId)
+            ? FolioleCompanionSyncGroupOutboundPeerStore.hostName(activeContext, groupId, authorizationId)
             : request.hostName;
         if (hostName != null && FolioleCompanionSyncGroupDatabase.isAuthorizedMember(
             requireDataBridge(), groupId, hostName)) {

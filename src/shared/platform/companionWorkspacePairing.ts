@@ -1,6 +1,11 @@
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../lib/platform/syncProtocolContract';
 
-import { createSignedRequestHeaders, verifyNativePairingCanSignRequest } from './companion/network/signedRequest';
+import {
+  loadCompanionDiscoveryEndpoint,
+  requestCompanionPairingEndpoint
+} from './companion/network/companionPairingHttpRequest';
+import { saveStandaloneNativePairing } from './companion/network/nativePairingCredentialStore';
+import { createSignedRequestHeaders } from './companion/network/signedRequest';
 import { projectCompanionSyncGroupPairingState } from './companion/sync/companionSyncGroupPairingState';
 import {
   joinCompanionSyncGroup,
@@ -25,10 +30,8 @@ import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import { createCompanionUuid } from './companionUuid';
 import { discoverCompanionDesktop, discoverCompanionDesktops } from './companionWorkspaceDiscovery';
 import {
-  DISCOVERY_ENDPOINT_PATH,
   FolioleCompanionSync,
   isNativeCompanionPairingRuntime,
-  type LoadCompanionDiscoveryResponse,
   normalizeEndpointUrl,
   PAIR_ENDPOINT_PATH,
   PAIR_REQUESTS_ENDPOINT_PATH,
@@ -39,8 +42,8 @@ import {
 } from './companionWorkspaceRuntimeRepository';
 
 const pairingKeyIdsByRequestId = new Map<string, string>();
-
 export { discoverCompanionDesktop, discoverCompanionDesktops };
+export { loadCompanionDiscoveryEndpoint as loadCompanionDiscovery };
 
 
 export async function loadCompanionPairingState() {
@@ -63,15 +66,6 @@ export async function clearCompanionPairingCredentials() {
 
 export { createSignedRequestHeaders };
 
-export async function loadCompanionDiscovery(endpointUrl: string) {
-  const normalizedEndpointUrl = normalizeEndpointUrl(endpointUrl);
-  const response = await requestDesktop(`${normalizedEndpointUrl}${DISCOVERY_ENDPOINT_PATH}`, { method: 'GET' });
-  if (!response.ok) {
-    throw new Error(`Desktop discovery failed with ${response.status}.`);
-  }
-  return (await response.json()) as LoadCompanionDiscoveryResponse;
-}
-
 export async function requestCompanionPairing(args: RequestCompanionPairingArgs) {
   const normalizedEndpointUrl = normalizeEndpointUrl(args.endpointUrl);
   const usesSyncGroup = Boolean(args.groupId && args.groupTag);
@@ -85,7 +79,7 @@ export async function requestCompanionPairing(args: RequestCompanionPairingArgs)
   const existingMember = existingGroup?.group_id === args.groupId
     ? existingGroup?.members.find((member) => member.host_name === existingGroup.local_host_name)
     : null;
-  const response = await requestDesktop(`${normalizedEndpointUrl}${PAIR_REQUESTS_ENDPOINT_PATH}`, {
+  const response = await requestCompanionPairingEndpoint(`${normalizedEndpointUrl}${PAIR_REQUESTS_ENDPOINT_PATH}`, {
     body: JSON.stringify({
       device_id: args.deviceId,
       device_kind: args.deviceKind,
@@ -120,7 +114,7 @@ export async function requestCompanionPairing(args: RequestCompanionPairingArgs)
 export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArgs) {
   const usesSyncGroup = Boolean(args.groupId && args.groupTag);
   const normalizedEndpointUrl = normalizeEndpointUrl(args.endpointUrl);
-  const response = await requestDesktop(`${normalizedEndpointUrl}${PAIR_ENDPOINT_PATH}`, {
+  const response = await requestCompanionPairingEndpoint(`${normalizedEndpointUrl}${PAIR_ENDPOINT_PATH}`, {
     body: JSON.stringify({
       pair_request_id: args.pairRequestId
     }),
@@ -135,17 +129,21 @@ export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArg
   if (!pairingKeyId) {
     throw new Error('Companion pairing key is no longer available.');
   }
-  const deviceSecret = await decryptCompanionPairingSecret(pairingKeyId, payload.encrypted_device_secret);
-  const providerSecret = usesSyncGroup && payload.provider_encrypted_device_secret
-    ? await decryptCompanionPairingSecret(pairingKeyId, payload.provider_encrypted_device_secret)
+  const credentialSecret = await decryptCompanionPairingSecret(pairingKeyId, payload.encrypted_credential_secret);
+  const providerSecret = usesSyncGroup && payload.provider_encrypted_credential_secret
+    ? await decryptCompanionPairingSecret(pairingKeyId, payload.provider_encrypted_credential_secret)
     : null;
   pairingKeyIdsByRequestId.delete(args.pairRequestId);
   if (!isNativeCompanionPairingRuntime()) {
     return writeWebPairingState({
+      authorization_id: payload.authorization_id,
+      credential_secret: credentialSecret,
       device_id: payload.device_id,
       device_kind: args.deviceKind,
       device_name: payload.device_id,
-      device_secret: deviceSecret,
+      device_secret: credentialSecret,
+      host_name: payload.host_name ?? args.deviceName,
+      host_platform: payload.host_platform ?? args.deviceKind,
       is_paired: true,
       negotiated_protocol_version: payload.compatibility.negotiated_version,
       paired_at: payload.paired_at,
@@ -157,20 +155,20 @@ export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArg
     });
   }
   if (usesSyncGroup && !providerSecret) throw new Error('Sync Group provider pairing credentials are missing.');
-  if (usesSyncGroup && providerSecret !== deviceSecret) throw new Error('sync_group_workgroup_key_mismatch');
-  return saveNativePairing(args, payload, deviceSecret, providerSecret, usesSyncGroup);
+  if (usesSyncGroup && providerSecret !== credentialSecret) throw new Error('sync_group_workgroup_key_mismatch');
+  return saveNativePairing(args, payload, credentialSecret, providerSecret, usesSyncGroup);
 }
 
 async function saveNativePairing(
   args: PairCompanionWithDesktopArgs,
   payload: PairCompanionWithDesktopResponse,
-  deviceSecret: string,
+  credentialSecret: string,
   _providerSecret: string | null,
   usesSyncGroup: boolean
 ) {
   return runCompanionSyncWriterTask(async () => {
     if (usesSyncGroup) {
-      if (!payload.sync_group || !payload.provider_device_id || !payload.host_name
+      if (!payload.sync_group || !payload.provider_authorization_id || !payload.provider_device_id || !payload.host_name
         || !payload.provider_host_name || !payload.provider_host_platform) {
         throw new Error('Desktop did not return Sync Group membership.');
       }
@@ -181,17 +179,19 @@ async function saveNativePairing(
         && existingGroup.local_member_state === 'active';
       if (isActiveReauthorization) {
         await refreshActiveCompanionSyncGroupMembership({
-          hostName: payload.host_name, group: payload.sync_group, workgroupKey: deviceSecret
+          hostName: payload.host_name, group: payload.sync_group, workgroupKey: credentialSecret
         });
       } else {
         await joinCompanionSyncGroup({
-          hostName: payload.host_name, group: payload.sync_group, workgroupKey: deviceSecret
+          hostName: payload.host_name, group: payload.sync_group, workgroupKey: credentialSecret
         });
       }
       await FolioleCompanionSync.bindSyncGroupPeerRoute({
         endpoint_url: normalizeEndpointUrl(args.endpointUrl),
+        local_authorization_id: payload.authorization_id,
         local_device_id: payload.device_id,
         local_host_name: payload.host_name,
+        peer_authorization_id: payload.provider_authorization_id,
         peer_device_id: payload.provider_device_id,
         peer_host_name: payload.provider_host_name,
         peer_host_platform: payload.provider_host_platform,
@@ -199,38 +199,6 @@ async function saveNativePairing(
       });
       return loadCompanionPairingState();
     }
-    await FolioleCompanionSync.savePairingCredentials({
-      device_id: payload.device_id,
-      device_kind: args.deviceKind,
-      device_name: payload.device_id,
-      device_secret: deviceSecret,
-      negotiated_protocol_version: payload.compatibility.negotiated_version ?? CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
-      paired_at: payload.paired_at,
-      primary_device_id: payload.peer_id,
-      remote_peer_id: payload.peer_id,
-      remote_peer_name: args.remotePeerName ?? null,
-      remote_peer_platform: args.remotePeerPlatform ?? null,
-      remote_protocol: payload.desktop_protocol
-    });
-    const storedPairingState = normalizePairingState(await FolioleCompanionSync.loadPairingState());
-    if (!storedPairingState.is_paired) throw new Error('Native pairing credentials were not saved.');
-    await verifyNativePairingCanSignRequest(normalizeEndpointUrl(args.endpointUrl));
-    return storedPairingState;
+    return saveStandaloneNativePairing(args, payload, credentialSecret);
   });
-}
-
-async function requestDesktop(
-  url: string,
-  init: { body?: string; headers?: Record<string, string>; method: string }
-) {
-  if (!isNativeCompanionPairingRuntime()) {
-    return await fetch(url, init);
-  }
-  const payload = await FolioleCompanionSync.desktopHttpRequest({
-    ...(init.body !== undefined ? { body: init.body } : {}),
-    ...(init.headers !== undefined ? { headers: init.headers } : {}),
-    method: init.method,
-    url
-  });
-  return new Response(payload.body, { status: payload.status });
 }

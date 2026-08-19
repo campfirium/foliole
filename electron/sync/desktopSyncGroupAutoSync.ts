@@ -20,7 +20,7 @@ type DiscoveredService = Parameters<NonNullable<Parameters<InstanceType<typeof B
 
 let runtimes: AutoSyncRuntime[] = [];
 const inFlight = new Map<string, Promise<unknown>>();
-const retryAfterFlight = new Map<string, { endpoint: string; groupId: string; peerDeviceId: string }>();
+const retryAfterFlight = new Map<string, { endpoint: string; groupId: string; peerAuthorizationId: string }>();
 
 export function startDesktopSyncGroupAutoSync() {
   if (!isDesktopCompanionSyncParticipating() || runtimes.length > 0) return;
@@ -29,19 +29,19 @@ export function startDesktopSyncGroupAutoSync() {
     const endpoint = endpointForService(service);
     const txt = service.txt as Record<string, unknown>;
     const groupId = typeof txt.group_id === 'string' ? txt.group_id : null;
-    const peerDeviceId = typeof txt.peer_id === 'string' ? txt.peer_id : null;
+    const peerAuthorizationId = typeof txt.peer_id === 'string' ? txt.peer_id : null;
     const timelineId = typeof txt.timeline_id === 'string' ? txt.timeline_id : null;
-    if (!endpoint || !groupId || !peerDeviceId) return null;
+    if (!endpoint || !groupId || !peerAuthorizationId) return null;
     if (timelineId && refreshDesktopSyncGroupPendingJoinEndpoint({
-      endpointUrl: endpoint, groupId, providerDeviceId: peerDeviceId, timelineId
+      endpointUrl: endpoint, groupId, providerAuthorizationId: peerAuthorizationId, timelineId
     })) {
       return completeDesktopSyncGroupJoin().catch((error) => {
         console.info('[sync-group] approved join waiting for provider', {
-          error: error instanceof Error ? error.message : String(error), peerDeviceId
+          error: error instanceof Error ? error.message : String(error), peerAuthorizationId
         });
       });
     }
-    return syncAvailablePeer({ endpoint, groupId, peerDeviceId });
+    return syncAvailablePeer({ endpoint, groupId, peerAuthorizationId });
   };
   const consumeService = (service: DiscoveredService) => { void handleService(service); };
   const addresses = resolveCompanionMdnsIpv4Addresses();
@@ -73,30 +73,30 @@ export function stopDesktopSyncGroupAutoSync() {
   retryAfterFlight.clear();
 }
 
-async function syncAvailablePeer(args: { endpoint: string; groupId: string; peerDeviceId: string }) {
+async function syncAvailablePeer(args: { endpoint: string; groupId: string; peerAuthorizationId: string }) {
   if (!isDesktopCompanionSyncParticipating()) return;
   const group = loadDesktopSyncGroup();
   if (!group || group.group_id !== args.groupId) return;
   const stored = loadPairedSyncGroupPeers(args.groupId)
-    .find((peer) => peer.peer_device_id === args.peerDeviceId);
+    .find((peer) => peer.peer_authorization_id === args.peerAuthorizationId);
   if (!stored) return;
-  if (inFlight.has(args.peerDeviceId)) {
-    retryAfterFlight.set(args.peerDeviceId, args);
+  if (inFlight.has(args.peerAuthorizationId)) {
+    retryAfterFlight.set(args.peerAuthorizationId, args);
     return;
   }
   const peer = savePairedSyncGroupPeer({ ...stored, endpoint_url: args.endpoint });
   const work = continueDesktopSyncGroupSync(peer).catch((error) => {
     console.info('[sync-group] sync paused until provider is available', {
-      error: error instanceof Error ? error.message : String(error), peerDeviceId: args.peerDeviceId
+      error: error instanceof Error ? error.message : String(error), peerAuthorizationId: args.peerAuthorizationId
     });
   }).finally(() => {
-    inFlight.delete(args.peerDeviceId);
-    const retry = retryAfterFlight.get(args.peerDeviceId);
+    inFlight.delete(args.peerAuthorizationId);
+    const retry = retryAfterFlight.get(args.peerAuthorizationId);
     if (!retry) return;
-    retryAfterFlight.delete(args.peerDeviceId);
+    retryAfterFlight.delete(args.peerAuthorizationId);
     void syncAvailablePeer(retry);
   });
-  inFlight.set(args.peerDeviceId, work);
+  inFlight.set(args.peerAuthorizationId, work);
   await work;
 }
 

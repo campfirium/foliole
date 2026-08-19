@@ -67,13 +67,13 @@ describe('companion content blob sync split bridge', () => {
     const api = await import('./companionContentBlobSync');
     await expect(api.syncCompanionContentBlob({
       hash: 'a'.repeat(64),
-      headers: { 'X-Device-Id': 'android' },
+      headers: { 'X-Authorization-Id': 'android' },
       url: 'http://desktop/companion/content-blobs'
     })).resolves.toEqual({ availability: 'cached', hash: 'a'.repeat(64) });
 
     expect(capacitorMock.plugin.downloadContentBlobBatch).toHaveBeenCalledWith({
       body: JSON.stringify({ hashes: ['a'.repeat(64)] }),
-      headers: { 'X-Device-Id': 'android' },
+      headers: { 'X-Authorization-Id': 'android' },
       url: 'http://desktop/companion/content-blobs'
     });
     expect(iosDatabaseMock.commit).toHaveBeenCalledWith(
@@ -97,7 +97,7 @@ describe('companion content blob sync split bridge', () => {
     const api = await import('./companionContentBlobSync');
     await expect(api.syncCompanionContentBlobs({
       body: JSON.stringify({ hashes: ['b'.repeat(64)] }),
-      headers: { 'X-Device-Id': 'android' },
+      headers: { 'X-Authorization-Id': 'android' },
       url: 'http://desktop/companion/content-blobs'
     })).resolves.toEqual(expect.objectContaining({ synced_hashes: [] }));
 
@@ -129,7 +129,7 @@ describe('iOS companion content blob sync bridge', () => {
 
     await expect(api.syncCompanionContentBlobs({
       body,
-      headers: { 'X-Device-Id': 'ios-test-device' },
+      headers: { 'X-Authorization-Id': 'ios-test-device' },
       url: 'http://desktop/companion/content-blobs'
     })).resolves.toEqual({
       db_elapsed_ms: 0,
@@ -141,7 +141,7 @@ describe('iOS companion content blob sync bridge', () => {
 
     expect(capacitorMock.plugin.downloadContentBlobBatch).toHaveBeenCalledWith({
       body,
-      headers: { 'X-Device-Id': 'ios-test-device' },
+      headers: { 'X-Authorization-Id': 'ios-test-device' },
       url: 'http://desktop/companion/content-blobs'
     });
     expect(iosDatabaseMock.commit).toHaveBeenCalledWith(
@@ -158,7 +158,7 @@ describe('iOS companion content blob sync bridge', () => {
 
     await expect(api.syncCompanionContentBlobs({
       body: JSON.stringify({ hashes: ['a'.repeat(64)] }),
-      headers: { 'X-Device-Id': 'ios-test-device' },
+      headers: { 'X-Authorization-Id': 'ios-test-device' },
       url: 'http://desktop/companion/content-blobs'
     })).rejects.toThrow('Desktop request failed.');
 

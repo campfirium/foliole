@@ -79,13 +79,16 @@ async function completeDesktopSyncGroupJoinOnce() {
     headers: { 'Content-Type': 'application/json' }, method: 'POST'
   }) as unknown as CompanionWorkspacePairPayload;
   if (!payload.sync_group) throw new Error('sync_group_membership_invalid');
-  const secret = await decryptDesktopSyncGroupPairingSecret(pending.key.privateKey, payload.encrypted_device_secret);
-  if (!payload.provider_encrypted_device_secret || !payload.provider_device_id ||
+  const secret = await decryptDesktopSyncGroupPairingSecret(
+    pending.key.privateKey, payload.encrypted_credential_secret
+  );
+  if (!payload.provider_encrypted_credential_secret || !payload.provider_authorization_id ||
+      !payload.provider_device_id ||
       !payload.provider_device_kind || !payload.provider_device_name) {
     throw new Error('sync_group_provider_pairing_invalid');
   }
   const providerSecret = await decryptDesktopSyncGroupPairingSecret(
-    pending.key.privateKey, payload.provider_encrypted_device_secret
+    pending.key.privateKey, payload.provider_encrypted_credential_secret
   );
   if (providerSecret !== secret) throw new Error('sync_group_workgroup_key_mismatch');
   const localHostName = payload.host_name?.trim();
@@ -97,7 +100,9 @@ async function completeDesktopSyncGroupJoinOnce() {
   else saveDesktopWorkgroupKey({ groupId: pending.candidate.group_id, groupKey: secret });
   const peer = savePairedSyncGroupPeer({
     endpoint_url: pending.candidate.endpoint_url, group_id: pending.candidate.group_id,
+    local_authorization_id: payload.authorization_id,
     local_device_id: payload.device_id, local_host_name: localHostName,
+    peer_authorization_id: payload.provider_authorization_id,
     peer_device_id: pending.candidate.provider_device_id,
     peer_device_kind: pending.candidate.provider_device_kind, peer_device_name: pending.candidate.provider_device_name,
     peer_host_name: payload.provider_host_name ?? pending.candidate.provider_device_name,
@@ -119,7 +124,7 @@ export async function continueDesktopSyncGroupSync(peer?: ReturnType<typeof save
   if (!group) return null;
   const target = peer ?? loadPairedSyncGroupPeers(group.group_id)[0];
   if (!target) return null;
-  return runDesktopSyncGroupPeerSingleFlight(target.peer_device_id, () => continuePeerSync(target));
+  return runDesktopSyncGroupPeerSingleFlight(target.peer_authorization_id, () => continuePeerSync(target));
 }
 
 async function continuePeerSync(target: ReturnType<typeof savePairedSyncGroupPeer>) {

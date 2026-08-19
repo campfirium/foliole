@@ -26,10 +26,13 @@ vi.mock('electron', () => ({
 
 it.runIf(process.platform === 'linux')('does not create pairing ciphertext with basic_text', () => {
   expect(() => registerPairedCompanionDevice({
+    authorizationId: 'authorization-linux-device',
     clientAddress: '127.0.0.1',
     deviceId: 'linux-device',
     deviceKind: 'android',
     deviceName: 'Linux security test',
+    hostName: 'Linux security test',
+    hostPlatform: 'android',
     negotiatedProtocolVersion: 1,
     remoteProtocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
   })).toThrow('Secure system storage is unavailable');

@@ -21,11 +21,11 @@ export function saveDesktopSyncGroupPendingJoin(next: DesktopSyncGroupPendingJoi
 export function refreshDesktopSyncGroupPendingJoinEndpoint(args: {
   endpointUrl: string;
   groupId: string;
-  providerDeviceId: string;
+  providerAuthorizationId: string;
   timelineId: string;
 }) {
   if (!pending || pending.candidate.group_id !== args.groupId ||
-      pending.candidate.provider_device_id !== args.providerDeviceId) return false;
+      pending.candidate.provider_authorization_id !== args.providerAuthorizationId) return false;
   pending = {
     ...pending,
     candidate: { ...pending.candidate, endpoint_url: args.endpointUrl },

@@ -52,16 +52,21 @@ export const attachmentResolutionMock = {
 
 const pairingMock = {
   createSignedRequestHeaders: vi.fn(async ({ pathWithQuery }: { pathWithQuery: string }) => ({
-    'X-Device-Id': 'android-test-device',
+    'X-Authorization-Id': 'android-test-device',
     'X-Signature': `signed:${pathWithQuery}`
   })),
   loadCompanionPairingState: vi.fn(async () => ({
+    authorization_id: 'authorization-android-test',
     device_id: 'android-test-device',
     device_kind: 'android',
     device_name: 'Android test device',
+    host_name: 'Android test device',
+    host_platform: 'android',
     is_paired: true,
     paired_at: '2026-05-10T00:00:00.000Z',
-    primary_device_id: 'android-test-device'
+    primary_device_id: 'android-test-device',
+    remote_peer_id: 'authorization-desktop-test',
+    remote_peer_name: 'Desktop Test Host'
   }))
 };
 
@@ -70,6 +75,8 @@ export const primaryDeviceIdentityMock = {
     device_id: 'android-test-device',
     device_kind: 'android',
     device_name: 'Android test device',
+    host_name: 'Android test device',
+    host_platform: 'android',
     is_paired: true,
     paired_at: '2026-05-10T00:00:00.000Z',
     primary_device_id: primaryDeviceId
@@ -88,6 +95,26 @@ export const diagnosticsMock = {
   loadDesktopSyncDiagnostics: vi.fn(async (): Promise<unknown> => null),
   loadLocalSyncDiagnostics: vi.fn(async (): Promise<unknown> => null)
 };
+
+function resetPairingMocks() {
+  pairingMock.createSignedRequestHeaders.mockImplementation(async ({ pathWithQuery }: { pathWithQuery: string }) => ({
+    'X-Authorization-Id': 'android-test-device',
+    'X-Signature': `signed:${pathWithQuery}`
+  }));
+  pairingMock.loadCompanionPairingState.mockResolvedValue({
+    authorization_id: 'authorization-android-test',
+    device_id: 'android-test-device',
+    device_kind: 'android',
+    device_name: 'Android test device',
+    host_name: 'Android test device',
+    host_platform: 'android',
+    is_paired: true,
+    paired_at: '2026-05-10T00:00:00.000Z',
+    primary_device_id: 'android-test-device',
+    remote_peer_id: 'authorization-desktop-test',
+    remote_peer_name: 'Desktop Test Host'
+  });
+}
 
 vi.mock('./companionSyncObjects', () => syncBridgeMock);
 vi.mock('./companionDesktopAttachmentResources', () => attachmentResourceMock);
@@ -146,22 +173,13 @@ export function resetCompanionDesktopSyncMocks() {
     return syncedIds;
   });
   attachmentResolutionMock.invalidateAttachmentResourceResolution.mockReset();
-  pairingMock.createSignedRequestHeaders.mockImplementation(async ({ pathWithQuery }: { pathWithQuery: string }) => ({
-    'X-Device-Id': 'android-test-device',
-    'X-Signature': `signed:${pathWithQuery}`
-  }));
-  pairingMock.loadCompanionPairingState.mockResolvedValue({
-    device_id: 'android-test-device',
-    device_kind: 'android',
-    device_name: 'Android test device',
-    is_paired: true,
-    paired_at: '2026-05-10T00:00:00.000Z',
-    primary_device_id: 'android-test-device'
-  });
+  resetPairingMocks();
   primaryDeviceIdentityMock.saveLocalPrimaryDeviceId.mockImplementation(async (primaryDeviceId: string) => ({
     device_id: 'android-test-device',
     device_kind: 'android',
     device_name: 'Android test device',
+    host_name: 'Android test device',
+    host_platform: 'android',
     is_paired: true,
     paired_at: '2026-05-10T00:00:00.000Z',
     primary_device_id: primaryDeviceId

@@ -70,7 +70,7 @@ function handleWorkspaceMetadataGet(
   parsedRequestUrl: URL,
   args: {
     appVersion: string;
-    authenticatedDeviceId: string;
+    authenticatedHostName: string;
     getSyncStatus: () => Parameters<typeof buildCompanionSyncDiagnostics>[0]['serverStatus'];
     peerId: string;
   }
@@ -118,7 +118,7 @@ async function handleAuthenticatedGet(
   parsedRequestUrl: URL,
   args: {
     appVersion: string;
-    authenticatedDeviceId: string;
+    authenticatedHostName: string;
     getSyncStatus: () => Parameters<typeof buildCompanionSyncDiagnostics>[0]['serverStatus'];
     peerId: string;
   }
@@ -152,7 +152,7 @@ async function handleAuthenticatedGet(
     request,
     response,
     parsedRequestUrl,
-    args.authenticatedDeviceId,
+    args.authenticatedHostName,
     writeJson
   )) return;
   if (handleWorkspaceMetadataGet(request, response, parsedRequestUrl, args)) return;
@@ -202,7 +202,7 @@ export function createLanWorkspaceSyncRequestHandler(args: {
     }
     await handleAuthenticatedGet(request, response, parsedRequestUrl, {
       ...args,
-      authenticatedDeviceId: auth.device_id,
+      authenticatedHostName: auth.host_name,
       getSyncStatus: args.getSyncStatus ?? (() => null)
     });
     } catch (error) {

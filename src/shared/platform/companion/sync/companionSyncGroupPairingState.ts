@@ -12,6 +12,9 @@ export function projectCompanionSyncGroupPairingState(
   if (!local) return fallback;
   return normalizePairingState({
     ...fallback,
+    authorization_id: local.authorization_id,
+    host_name: local.host_name,
+    host_platform: local.host_platform,
     is_paired: true,
     negotiated_protocol_version: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
     paired_at: local.joined_at,

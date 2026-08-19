@@ -13,7 +13,6 @@ import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
 
 final class FolioleCompanionPairingStore {
     private static final String ANDROID_KEYSTORE = "AndroidKeyStore";
@@ -22,9 +21,12 @@ final class FolioleCompanionPairingStore {
 
     static JSObject loadPairingState(Context context) throws Exception {
         SharedPreferences prefs = prefs(context);
+        FolioleCompanionPairingAuthorizationCutover.ensure(context, null, null, null);
         JSObject result = new JSObject();
+        String authorizationId = prefs.getString(FolioleCompanionBridgeContractDefinitions.pairingAuthorizationIdPreferenceKey(context), null);
         String deviceId = prefs.getString(FolioleCompanionBridgeContractDefinitions.pairingDeviceIdPreferenceKey(context), null);
-        boolean hasCredentials = canReadPairingSecret(context, deviceId);
+        boolean hasCredentials = canReadPairingSecret(context, authorizationId);
+        result.put(FolioleCompanionBridgeContractDefinitions.pairingAuthorizationIdStateKey(context), trimToNull(authorizationId));
         result.put(FolioleCompanionBridgeContractDefinitions.pairingDeviceIdStateKey(context), trimToNull(deviceId));
         result.put(
             FolioleCompanionBridgeContractDefinitions.pairingDeviceKindStateKey(context),
@@ -34,6 +36,10 @@ final class FolioleCompanionPairingStore {
             FolioleCompanionBridgeContractDefinitions.pairingDeviceNameStateKey(context),
             trimToNull(prefs.getString(FolioleCompanionBridgeContractDefinitions.pairingDeviceNamePreferenceKey(context), null))
         );
+        result.put(FolioleCompanionBridgeContractDefinitions.pairingHostNameStateKey(context), trimToNull(
+            prefs.getString(FolioleCompanionBridgeContractDefinitions.pairingHostNamePreferenceKey(context), null)));
+        result.put(FolioleCompanionBridgeContractDefinitions.pairingHostPlatformStateKey(context), trimToNull(
+            prefs.getString(FolioleCompanionBridgeContractDefinitions.pairingHostPlatformPreferenceKey(context), null)));
         result.put(FolioleCompanionBridgeContractDefinitions.pairingIsPairedStateKey(context), hasCredentials);
         result.put(
             FolioleCompanionBridgeContractDefinitions.pairingPairedAtStateKey(context),
@@ -60,15 +66,20 @@ final class FolioleCompanionPairingStore {
 
     static String loadAuthorizedDeviceId(Context context) throws Exception {
         String deviceId = loadStoredDeviceId(context);
-        return canReadPairingSecret(context, deviceId) ? deviceId : null;
+        String authorizationId = prefs(context).getString(
+            FolioleCompanionBridgeContractDefinitions.pairingAuthorizationIdPreferenceKey(context), null);
+        return canReadPairingSecret(context, authorizationId) ? deviceId : null;
     }
 
     static JSObject savePairingCredentials(
         Context context,
+        String authorizationId,
+        String credentialSecret,
         String deviceId,
         String deviceKind,
         String deviceName,
-        String deviceSecret,
+        String hostName,
+        String hostPlatform,
         int negotiatedProtocolVersion,
         String pairedAt,
         String primaryDeviceId,
@@ -83,13 +94,16 @@ final class FolioleCompanionPairingStore {
         if (iv == null || iv.length == 0) {
             throw new IllegalStateException("Android Keystore did not provide an encryption IV.");
         }
-        byte[] encrypted = cipher.doFinal(deviceSecret.getBytes(StandardCharsets.UTF_8));
+        byte[] encrypted = cipher.doFinal(credentialSecret.getBytes(StandardCharsets.UTF_8));
         SharedPreferences.Editor editor = prefs(context).edit()
+            .putString(FolioleCompanionBridgeContractDefinitions.pairingAuthorizationIdPreferenceKey(context), authorizationId.trim())
+            .putString(FolioleCompanionBridgeContractDefinitions.pairingCredentialSecretPreferenceKey(context), Base64.encodeToString(encrypted, Base64.NO_WRAP))
+            .putString(FolioleCompanionBridgeContractDefinitions.pairingCredentialSecretIvPreferenceKey(context), Base64.encodeToString(iv, Base64.NO_WRAP))
             .putString(FolioleCompanionBridgeContractDefinitions.pairingDeviceIdPreferenceKey(context), deviceId.trim())
             .putString(FolioleCompanionBridgeContractDefinitions.pairingDeviceKindPreferenceKey(context), deviceKind.trim())
             .putString(FolioleCompanionBridgeContractDefinitions.pairingDeviceNamePreferenceKey(context), deviceName.trim())
-            .putString(FolioleCompanionBridgeContractDefinitions.pairingDeviceSecretPreferenceKey(context), Base64.encodeToString(encrypted, Base64.NO_WRAP))
-            .putString(FolioleCompanionBridgeContractDefinitions.pairingDeviceSecretIvPreferenceKey(context), Base64.encodeToString(iv, Base64.NO_WRAP))
+            .putString(FolioleCompanionBridgeContractDefinitions.pairingHostNamePreferenceKey(context), hostName.trim())
+            .putString(FolioleCompanionBridgeContractDefinitions.pairingHostPlatformPreferenceKey(context), hostPlatform.trim())
             .putString(FolioleCompanionBridgeContractDefinitions.pairingPairedAtPreferenceKey(context), pairedAt.trim())
             .putString(FolioleCompanionBridgeContractDefinitions.pairingPrimaryDeviceIdPreferenceKey(context), primaryDeviceId.trim());
         FolioleCompanionPairingMetadata.saveRemotePeer(context, editor, remotePeerId, remotePeerName, remotePeerPlatform);
@@ -109,17 +123,17 @@ final class FolioleCompanionPairingStore {
         String nonce,
         String bodyHash
     ) throws Exception {
-        String deviceId = requireMeta(context, FolioleCompanionBridgeContractDefinitions.pairingDeviceIdPreferenceKey(context));
+        String authorizationId = requireMeta(context, FolioleCompanionBridgeContractDefinitions.pairingAuthorizationIdPreferenceKey(context));
         FolioleCompanionPairingProtocolStore.assertUsable(context, prefs(context));
         String secret = decryptSecret(context);
         String canonical = method.toUpperCase() + "\n" + pathWithQuery + "\n" + timestamp + "\n" + nonce + "\n" + bodyHash;
         JSObject headers = new JSObject();
-        headers.put(FolioleCompanionBridgeContractDefinitions.pairingDeviceIdSignatureHeaderKey(context), deviceId);
-        headers.put(FolioleCompanionBridgeContractDefinitions.pairingTimestampSignatureHeaderKey(context), timestamp);
-        headers.put(FolioleCompanionBridgeContractDefinitions.pairingNonceSignatureHeaderKey(context), nonce);
-        headers.put(FolioleCompanionBridgeContractDefinitions.pairingSignatureSignatureHeaderKey(context), FolioleCompanionPairingCrypto.signCanonicalRequest(secret, canonical));
+        headers.put(FolioleCompanionPairingSignatureContractDefinitions.authorizationIdHeader(context), authorizationId);
+        headers.put(FolioleCompanionPairingSignatureContractDefinitions.timestampHeader(context), timestamp);
+        headers.put(FolioleCompanionPairingSignatureContractDefinitions.nonceHeader(context), nonce);
+        headers.put(FolioleCompanionPairingSignatureContractDefinitions.signatureHeader(context), FolioleCompanionPairingCrypto.signCanonicalRequest(secret, canonical));
         JSObject result = new JSObject();
-        result.put(FolioleCompanionBridgeContractDefinitions.pairingHeadersSignatureResponseKey(context), headers);
+        result.put(FolioleCompanionPairingSignatureContractDefinitions.headersResponse(context), headers);
         return result;
     }
 
@@ -134,18 +148,16 @@ final class FolioleCompanionPairingStore {
     }
 
     static String decryptCredentialBag(Context context, String service, String salt, String iv, String ciphertext) throws Exception {
-        byte[] key = FolioleCompanionPairingCrypto.deriveCredentialBagKey(decryptSecret(context), service, decodeBase64Url(salt));
-        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-        cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"), new GCMParameterSpec(128, decodeBase64Url(iv)));
-        return new String(cipher.doFinal(decodeBase64Url(ciphertext)), StandardCharsets.UTF_8);
+        return FolioleCompanionCredentialBagCipher.decrypt(
+            decryptSecret(context), service, salt, iv, ciphertext);
     }
 
     private static SharedPreferences prefs(Context context) throws Exception {
         return context.getSharedPreferences(FolioleCompanionBridgeContractDefinitions.pairingPreferencesNameStorageKey(context), Context.MODE_PRIVATE);
     }
 
-    private static boolean canReadPairingSecret(Context context, String deviceId) {
-        if (trimToNull(deviceId) == null || trimToNull(readDeviceSecretPreference(context)) == null) {
+    private static boolean canReadPairingSecret(Context context, String authorizationId) {
+        if (trimToNull(authorizationId) == null || trimToNull(readCredentialSecretPreference(context)) == null) {
             return false;
         }
         try {
@@ -160,16 +172,8 @@ final class FolioleCompanionPairingStore {
 
     static void clearPairingCredentials(Context context) {
         try {
-            SharedPreferences.Editor editor = prefs(context).edit()
-                .remove(FolioleCompanionBridgeContractDefinitions.pairingDeviceIdPreferenceKey(context))
-                .remove(FolioleCompanionBridgeContractDefinitions.pairingDeviceKindPreferenceKey(context))
-                .remove(FolioleCompanionBridgeContractDefinitions.pairingDeviceNamePreferenceKey(context))
-                .remove(FolioleCompanionBridgeContractDefinitions.pairingDeviceSecretPreferenceKey(context))
-                .remove(FolioleCompanionBridgeContractDefinitions.pairingDeviceSecretIvPreferenceKey(context))
-                .remove(FolioleCompanionBridgeContractDefinitions.pairingPairedAtPreferenceKey(context))
-                .remove(FolioleCompanionBridgeContractDefinitions.pairingPrimaryDeviceIdPreferenceKey(context));
-            FolioleCompanionPairingMetadata.clear(context, editor);
-            FolioleCompanionPairingProtocolStore.clear(context, editor);
+            SharedPreferences.Editor editor = prefs(context).edit();
+            FolioleCompanionPairingPreferenceCleaner.clear(context, editor);
             editor.apply();
         } catch (Exception exception) {
             throw new IllegalStateException("Companion bridge contract asset is missing pairing preference key.", exception);
@@ -196,8 +200,8 @@ final class FolioleCompanionPairingStore {
     }
 
     private static String decryptSecret(Context context) throws Exception {
-        String encryptedSecret = requireMeta(context, FolioleCompanionBridgeContractDefinitions.pairingDeviceSecretPreferenceKey(context));
-        String iv = requireMeta(context, FolioleCompanionBridgeContractDefinitions.pairingDeviceSecretIvPreferenceKey(context));
+        String encryptedSecret = requireMeta(context, FolioleCompanionBridgeContractDefinitions.pairingCredentialSecretPreferenceKey(context));
+        String iv = requireMeta(context, FolioleCompanionBridgeContractDefinitions.pairingCredentialSecretIvPreferenceKey(context));
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
         cipher.init(
             Cipher.DECRYPT_MODE,
@@ -218,9 +222,9 @@ final class FolioleCompanionPairingStore {
         return value;
     }
 
-    private static String readDeviceSecretPreference(Context context) {
+    private static String readCredentialSecretPreference(Context context) {
         try {
-            return prefs(context).getString(FolioleCompanionBridgeContractDefinitions.pairingDeviceSecretPreferenceKey(context), null);
+            return prefs(context).getString(FolioleCompanionBridgeContractDefinitions.pairingCredentialSecretPreferenceKey(context), null);
         } catch (Exception exception) {
             throw new IllegalStateException("Companion bridge contract asset is missing pairing preference key.", exception);
         }
@@ -230,7 +234,4 @@ final class FolioleCompanionPairingStore {
         return value == null || value.trim().isEmpty() ? null : value.trim();
     }
 
-    private static byte[] decodeBase64Url(String value) {
-        return Base64.decode(value, Base64.URL_SAFE | Base64.NO_WRAP);
-    }
 }

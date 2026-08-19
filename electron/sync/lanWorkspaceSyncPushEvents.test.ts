@@ -35,7 +35,10 @@ async function resetTestState() {
   electronMock.userDataPath = fs.mkdtempSync(path.join(process.cwd(), '.tmp', 'foliole-sync-push-events-'));
 }
 
-async function expectRetiredNodeAndReviewPushes(server: http.Server, paired: { device_id: string; device_secret: string }) {
+async function expectRetiredNodeAndReviewPushes(
+  server: http.Server,
+  paired: { authorization_id: string; credential_secret: string; device_id: string; device_secret: string }
+) {
   const nodeResponse = await postSigned(
     server,
     '/companion/sync-node-versions',

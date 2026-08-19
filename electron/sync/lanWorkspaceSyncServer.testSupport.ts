@@ -24,6 +24,8 @@ export interface TestHttpResponse {
 }
 
 export interface TestPairedDevice {
+  authorization_id: string;
+  credential_secret: string;
   device_id: string;
   device_secret: string;
   group_id?: string;
@@ -80,7 +82,7 @@ export async function requestWorkspaceSyncServer(server: http.Server, args: Test
 }
 
 export function signWorkspaceSyncRequest(args: {
-  deviceId: string;
+  authorizationId: string;
   groupId?: string;
   method: string;
   pathWithQuery: string;
@@ -91,7 +93,7 @@ export function signWorkspaceSyncRequest(args: {
   const bodyHash = crypto.createHash('sha256').update('').digest('hex');
   const canonical = [args.method, args.pathWithQuery, timestamp, nonce, bodyHash].join('\n');
   return {
-    'X-Device-Id': args.deviceId,
+    'X-Authorization-Id': args.authorizationId,
     'X-Nonce': nonce,
     'X-Signature': crypto.createHmac('sha256', args.secret).update(canonical).digest('hex'),
     ...(args.groupId ? { 'X-Sync-Group-Id': args.groupId } : {}),
@@ -138,13 +140,19 @@ export async function pairTestDevice(server: http.Server, workgroup?: {
   });
   expect(finalized.status).toBe(200);
   const payload = finalized.json<{
+    authorization_id: string;
     device_id: string;
-    encrypted_device_secret: Parameters<typeof decryptTestPairingSecret>[0]['encrypted'];
+    encrypted_credential_secret: Parameters<typeof decryptTestPairingSecret>[0]['encrypted'];
   }>();
   return {
+    authorization_id: payload.authorization_id,
+    credential_secret: await decryptTestPairingSecret({
+      encrypted: payload.encrypted_credential_secret,
+      privateKey: clientKeyPair.privateKey
+    }),
     device_id: payload.device_id,
     device_secret: await decryptTestPairingSecret({
-      encrypted: payload.encrypted_device_secret,
+      encrypted: payload.encrypted_credential_secret,
       privateKey: clientKeyPair.privateKey
     }),
     ...(workgroup ? { group_id: workgroup.groupId, group_tag: workgroup.groupTag } : {})

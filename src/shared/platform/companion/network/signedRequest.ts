@@ -46,13 +46,13 @@ export async function createSignedRequestHeaders(args: {
     return group ? { ...result.headers, 'X-Sync-Group-Id': group.group_id } : result.headers;
   }
   const stored = readStoredWebPairingState();
-  if (!stored?.device_id || !stored.device_secret || normalizePairingState(stored).sync_usable !== true) {
+  if (!stored?.authorization_id || !stored.credential_secret || normalizePairingState(stored).sync_usable !== true) {
     throw new Error('Companion is not paired with a compatible desktop sync source.');
   }
   return {
-    'X-Device-Id': stored.device_id,
+    'X-Authorization-Id': stored.authorization_id,
     'X-Nonce': nonce,
-    'X-Signature': await hmacSha256Hex(stored.device_secret, canonical({
+    'X-Signature': await hmacSha256Hex(stored.credential_secret, canonical({
       bodyHash, method: args.method, nonce, pathWithQuery: args.pathWithQuery, timestamp
     })),
     'X-Sync-Group-Id': 'web-preview',
@@ -65,7 +65,9 @@ export async function verifyNativePairingCanSignRequest(endpointUrl?: string) {
     const headers = await createSignedRequestHeaders({
       ...(endpointUrl ? { endpointUrl } : {}), method: 'GET', pathWithQuery: PAIRING_SIGNATURE_CHECK_PATH
     });
-    if (!headers['X-Device-Id'] || !headers['X-Signature']) throw new Error('Missing signed request headers.');
+    if (!headers['X-Authorization-Id'] || !headers['X-Signature']) {
+      throw new Error('Missing signed request headers.');
+    }
   } catch (error) {
     const reason = error instanceof Error ? error.message : 'unknown error';
     throw new Error(`Native pairing credentials cannot sign sync requests: ${reason}`);

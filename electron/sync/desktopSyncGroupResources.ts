@@ -23,7 +23,7 @@ const RESOURCE_TIMEOUT_MS = 30_000;
 interface ResourcePeer {
   endpoint_url: string;
   group_id: string;
-  local_device_id: string;
+  local_authorization_id: string;
 }
 
 interface BlobRow {
@@ -83,7 +83,7 @@ async function downloadBlobBatch(peer: ResourcePeer, blobs: BlobRow[]) {
   const pathWithQuery = '/companion/content-blobs';
   const requestBody = JSON.stringify({ hashes: blobs.map((blob) => blob.hash) });
   const encrypted = createDesktopWorkgroupPost({ body: requestBody, groupId: peer.group_id,
-    localDeviceId: peer.local_device_id, pathWithQuery, secret: requireGroupKey(peer.group_id) });
+    localAuthorizationId: peer.local_authorization_id, pathWithQuery, secret: requireGroupKey(peer.group_id) });
   const response = await fetch(`${peer.endpoint_url}${pathWithQuery}`, {
     body: encrypted.body,
     headers: encrypted.headers,
@@ -135,7 +135,8 @@ async function persistAttachmentRow(port: DbPort, input: Awaited<ReturnType<type
 
 async function downloadResource(peer: ResourcePeer, pathWithQuery: string) {
   const response = await fetch(`${peer.endpoint_url}${pathWithQuery}`, {
-    headers: createDesktopSyncGroupSignedHeaders({ groupId: peer.group_id, localDeviceId: peer.local_device_id,
+    headers: createDesktopSyncGroupSignedHeaders({ groupId: peer.group_id,
+      localAuthorizationId: peer.local_authorization_id,
       method: 'GET', pathWithQuery, secret: requireGroupKey(peer.group_id) }),
     signal: AbortSignal.timeout(RESOURCE_TIMEOUT_MS)
   });

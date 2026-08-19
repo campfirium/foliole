@@ -1,18 +1,20 @@
 import type http from 'node:http';
 
-import { loadDesktopSyncGroup, loadSyncGroupMemberAuthorization } from '../database/syncGroupStore.js';
+import { loadDesktopSyncGroup, loadSyncGroupMemberByAuthorization } from '../database/syncGroupStore.js';
 
+import { loadPairedCompanionAuthorization } from './companionPairingStore.js';
 import { verifyCompanionRequestSignature } from './companionRequestSignature.js';
 import { consumeDesktopWorkgroupNonce, loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
 const AUTH_WINDOW_MS = 60 * 1000;
 const NONCE_TTL_MS = 2 * 60 * 1000;
-const NONCE_CACHE_LIMIT_PER_DEVICE = 2_048;
+const NONCE_CACHE_LIMIT_PER_AUTHORIZATION = 2_048;
 
-const usedNonceExpiryByDeviceId = new Map<string, Map<string, number>>();
+const usedNonceExpiryByAuthorization = new Map<string, Map<string, number>>();
 
 interface CompanionRequestAuthSuccess {
   device_id: string;
+  host_name: string;
   member_state?: 'active';
   ok: true;
 }
@@ -36,33 +38,33 @@ function parsePathWithQuery(request: http.IncomingMessage) {
   return `${parsed.pathname}${parsed.search}`;
 }
 
-function pruneDeviceUsedNonces(deviceCache: Map<string, number>, nowMs: number) {
-  for (const [key, expiresAtMs] of deviceCache.entries()) {
+function pruneAuthorizationNonces(authorizationCache: Map<string, number>, nowMs: number) {
+  for (const [key, expiresAtMs] of authorizationCache.entries()) {
     if (expiresAtMs <= nowMs) {
-      deviceCache.delete(key);
+      authorizationCache.delete(key);
     }
   }
-  while (deviceCache.size > NONCE_CACHE_LIMIT_PER_DEVICE) {
-    const oldest = deviceCache.keys().next();
+  while (authorizationCache.size > NONCE_CACHE_LIMIT_PER_AUTHORIZATION) {
+    const oldest = authorizationCache.keys().next();
     if (oldest.done) {
       return;
     }
-    deviceCache.delete(oldest.value);
+    authorizationCache.delete(oldest.value);
   }
 }
 
-function consumeNonce(deviceId: string, nonce: string, nowMs: number) {
-  const deviceCache = usedNonceExpiryByDeviceId.get(deviceId) ?? new Map<string, number>();
-  pruneDeviceUsedNonces(deviceCache, nowMs);
-  if (deviceCache.has(nonce)) {
+function consumeNonce(authorizationId: string, nonce: string, nowMs: number) {
+  const authorizationCache = usedNonceExpiryByAuthorization.get(authorizationId) ?? new Map<string, number>();
+  pruneAuthorizationNonces(authorizationCache, nowMs);
+  if (authorizationCache.has(nonce)) {
     return false;
   }
-  deviceCache.set(nonce, nowMs + NONCE_TTL_MS);
-  pruneDeviceUsedNonces(deviceCache, nowMs);
-  if (deviceCache.size === 0) {
-    usedNonceExpiryByDeviceId.delete(deviceId);
+  authorizationCache.set(nonce, nowMs + NONCE_TTL_MS);
+  pruneAuthorizationNonces(authorizationCache, nowMs);
+  if (authorizationCache.size === 0) {
+    usedNonceExpiryByAuthorization.delete(authorizationId);
   } else {
-    usedNonceExpiryByDeviceId.set(deviceId, deviceCache);
+    usedNonceExpiryByAuthorization.set(authorizationId, authorizationCache);
   }
   return true;
 }
@@ -73,7 +75,7 @@ function readHeader(headers: http.IncomingHttpHeaders, key: string) {
 }
 
 export function clearCompanionRequestNonceCache() {
-  usedNonceExpiryByDeviceId.clear();
+  usedNonceExpiryByAuthorization.clear();
 }
 
 function isFreshTimestamp(timestamp: string, nowMs: number) {
@@ -86,19 +88,19 @@ export function authenticateCompanionRequest(args: {
   nowMs?: number;
   request: http.IncomingMessage;
 }): CompanionRequestAuthResult {
-  const deviceId = readHeader(args.request.headers, 'x-device-id');
+  const authorizationId = readHeader(args.request.headers, 'x-authorization-id');
   const nonce = readHeader(args.request.headers, 'x-nonce');
   const signature = readHeader(args.request.headers, 'x-signature');
   const timestamp = readHeader(args.request.headers, 'x-timestamp');
   const groupId = readHeader(args.request.headers, 'x-sync-group-id');
-  if (!deviceId || !nonce || !signature || !timestamp) {
+  if (!authorizationId || !nonce || !signature || !timestamp) {
     return {
       error: 'missing_headers',
       ok: false,
       status_code: 401
     };
   }
-  const groupMembership = validateSyncGroupMembership(groupId, deviceId);
+  const groupMembership = validateSyncGroupMembership(groupId, authorizationId);
   if (!groupMembership.ok) return groupMembership;
   const workgroupKey = groupId ? loadDesktopWorkgroupKey(groupId) : null;
   if (!workgroupKey) return { error: 'sync_group_workgroup_key_missing', ok: false, status_code: 401 };
@@ -126,7 +128,7 @@ export function authenticateCompanionRequest(args: {
       status_code: 401
     };
   }
-  if (!consumeNonce(deviceId, nonce, nowMs)
+  if (!consumeNonce(authorizationId, nonce, nowMs)
     || !consumeDesktopWorkgroupNonce(groupId!, `${timestamp}:${nonce}`, nowMs)) {
     return {
       error: 'replayed_nonce',
@@ -135,19 +137,20 @@ export function authenticateCompanionRequest(args: {
     };
   }
   return {
-    device_id: deviceId,
+    device_id: loadPairedCompanionAuthorization(authorizationId)?.device_id ?? authorizationId,
+    host_name: groupMembership.host_name,
     ...(groupMembership.member_state ? { member_state: groupMembership.member_state } : {}),
     ok: true
   };
 }
 
-function validateSyncGroupMembership(groupId: string | null, deviceId: string) {
+function validateSyncGroupMembership(groupId: string | null, authorizationId: string) {
   const group = loadDesktopSyncGroup();
   const membership = groupId && group?.group_id === groupId
-    ? loadSyncGroupMemberAuthorization(groupId, deviceId)
+    ? loadSyncGroupMemberByAuthorization(groupId, authorizationId)
     : null;
   if (!membership) {
     return { error: 'sync_group_member_not_authorized' as const, ok: false as const, status_code: 401 as const };
   }
-  return { member_state: membership.state, ok: true as const };
+  return { host_name: membership.host_name, member_state: membership.state, ok: true as const };
 }

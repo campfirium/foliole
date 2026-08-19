@@ -42,37 +42,36 @@ export async function handlePairRequest(
   if (!completion || writeRateLimit(request, response, writeJson)) return;
   const approved = completion.request;
   const compatibility = evaluateSyncProtocolCompatibility(approved.protocol);
-  if (compatibility.status === 'incompatible') {
-    return writeJson(request, response, 409, {
-      compatibility, desktop_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR, error: 'protocol_incompatible'
-    });
-  }
+  if (rejectIncompatiblePairing(compatibility, request, response, writeJson)) return;
   const { assignedMember, syncGroup } = resolveApprovedSyncGroup(
     approved, completion, pairRequestId
   );
   const workgroupKey = syncGroup ? loadDesktopWorkgroupKey(syncGroup.group_id) : null;
   if (syncGroup && !workgroupKey) throw new Error('sync_group_workgroup_key_missing');
   const pairedArgs = {
+    authorizationId: assignedMember?.authorization_id ?? pairRequestId,
     clientAddress: approved.client_address, deviceId: approved.device_id,
-    deviceKind: approved.device_kind, deviceName: assignedMember?.host_name ?? approved.host_name,
+    deviceKind: approved.device_kind, deviceName: approved.device_name,
+    hostName: assignedMember?.host_name ?? approved.host_name, hostPlatform: approved.host_platform,
     negotiatedProtocolVersion: compatibility.negotiated_version ?? CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
     remoteProtocol: approved.protocol
   };
   const paired = completion.completion ?? (workgroupKey
-    ? { device_id: pairedArgs.deviceId, device_secret: workgroupKey.group_key,
+    ? { authorization_id: pairedArgs.authorizationId, device_id: pairedArgs.deviceId,
+      host_name: pairedArgs.hostName, credential_secret: workgroupKey.group_key,
       paired_at: new Date().toISOString() }
     : registerPairedCompanionDevice(pairedArgs));
   if (!completion.completion) completeCompanionPairRequest(pairRequestId, paired);
   const providerSecret = workgroupKey && assignedMember
     ? saveProviderRoute(approved, assignedMember, peerId, workgroupKey.group_key) : null;
   const { encryptedSecret, providerEncryptedSecret } = await encryptApprovedSecrets(
-    approved, paired.device_secret, providerSecret
+    approved, paired.credential_secret, providerSecret
   );
   updateStatus(updatePairingStatus);
-  writeJson(request, response, 200, {
+  writeJson(request, response, 200, createPairCompletionPayload({
     app_version: appVersion, compatibility, desktop_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
-    device_id: paired.device_id, encrypted_device_secret: encryptedSecret,
-    host_name: assignedMember?.host_name ?? approved.host_name,
+    authorization_id: paired.authorization_id, device_id: paired.device_id,
+    encrypted_credential_secret: encryptedSecret, host_name: paired.host_name,
     host_platform: assignedMember?.host_platform ?? approved.host_platform,
     paired_at: paired.paired_at, peer_id: peerId,
     ...(syncGroup ? {
@@ -81,10 +80,36 @@ export async function handlePairRequest(
       provider_device_name: resolveDesktopDeviceName(),
       provider_host_name: resolveDesktopHostName(),
       provider_host_platform: process.platform,
-      provider_encrypted_device_secret: providerEncryptedSecret,
+      provider_encrypted_credential_secret: providerEncryptedSecret,
       sync_group: syncGroup
     } : {})
+  }));
+}
+
+function rejectIncompatiblePairing(
+  compatibility: ReturnType<typeof evaluateSyncProtocolCompatibility>,
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  writeJson: JsonResponder
+) {
+  if (compatibility.status !== 'incompatible') return false;
+  writeJson(request, response, 409, {
+    compatibility, desktop_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR, error: 'protocol_incompatible'
   });
+  return true;
+}
+
+function createPairCompletionPayload(payload: Record<string, unknown> & {
+  sync_group?: { local_host_name: string; members: Array<{ authorization_id: string; host_name: string }> }
+}) {
+  const syncGroup = payload.sync_group;
+  if (!syncGroup) return payload;
+  return {
+    ...payload,
+    provider_authorization_id: syncGroup.members.find(
+      (member) => member.host_name === syncGroup.local_host_name
+    )?.authorization_id
+  };
 }
 
 function resolveApprovedSyncGroup(
@@ -108,11 +133,11 @@ function resolveApprovedSyncGroup(
 
 async function encryptApprovedSecrets(
   approved: PendingCompanionPairRequest,
-  deviceSecret: string,
+  credentialSecret: string,
   providerSecret: string | null
 ) {
   const encryptedSecret = await encryptCompanionPairingSecret({
-    clientPublicKey: approved.pairing_public_key, deviceSecret
+    clientPublicKey: approved.pairing_public_key, deviceSecret: credentialSecret
   });
   const providerEncryptedSecret = providerSecret ? await encryptCompanionPairingSecret({
     clientPublicKey: approved.pairing_public_key, deviceSecret: providerSecret
@@ -129,21 +154,26 @@ function updateStatus(updatePairingStatus: StatusUpdater) {
 
 function saveProviderRoute(
   approved: PendingCompanionPairRequest,
-  assigned: { host_name: string; host_platform: string },
+  assigned: { authorization_id: string; host_name: string; host_platform: string },
   peerId: string,
   groupKey: string
 ) {
   if (!approved.group_id || !approved.timeline_id || !approved.client_address) {
     throw new Error('sync_group_provider_pairing_invalid');
   }
+  const group = loadDesktopSyncGroup();
+  const local = group?.members.find((member) => member.host_name === group.local_host_name);
+  if (!local) throw new Error('sync_group_local_authorization_missing');
   savePairedSyncGroupPeer({
     endpoint_url: `http://${approved.client_address}:38641`,
     group_id: approved.group_id,
+    local_authorization_id: local.authorization_id,
     local_device_id: peerId,
     local_host_name: resolveDesktopHostName(),
     peer_device_id: approved.device_id,
     peer_device_kind: approved.device_kind,
     peer_device_name: assigned.host_name,
+    peer_authorization_id: assigned.authorization_id,
     peer_host_name: assigned.host_name,
     peer_host_platform: assigned.host_platform,
     timeline_id: approved.timeline_id

@@ -54,8 +54,13 @@ vi.mock('./companionDesktopAttachmentResources', () => ({
   syncCompanionAttachmentResourcesFromDesktop: vi.fn(async () => [] as string[])
 }));
 vi.mock('./companionWorkspacePairing', () => ({
-  createSignedRequestHeaders: vi.fn(async () => ({ 'X-Device-Id': 'android-test-device' })),
-  loadCompanionPairingState: vi.fn(async () => ({ device_kind: 'android', remote_peer_id: 'desktop-peer' }))
+  createSignedRequestHeaders: vi.fn(async () => ({ 'X-Authorization-Id': 'android-test-device' })),
+  loadCompanionPairingState: vi.fn(async () => ({
+    authorization_id: 'authorization-android-test',
+    device_kind: 'android',
+    remote_peer_id: 'authorization-desktop-test',
+    remote_peer_name: 'Desktop Test Host'
+  }))
 }));
 
 function parseBody(init: RequestInit | undefined) {

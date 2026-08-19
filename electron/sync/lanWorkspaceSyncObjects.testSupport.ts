@@ -10,7 +10,7 @@ const ENVELOPE_CONTENT_TYPE = 'application/vnd.foliole.workgroup-aead+json';
 
 export function signRequest(args: {
   bodyText?: string;
-  deviceId: string;
+  authorizationId: string;
   groupId?: string;
   method: string;
   pathWithQuery: string;
@@ -21,7 +21,7 @@ export function signRequest(args: {
   const bodyHash = crypto.createHash('sha256').update(args.bodyText ?? '').digest('hex');
   const canonical = [args.method, args.pathWithQuery, timestamp, nonce, bodyHash].join('\n');
   return {
-    'X-Device-Id': args.deviceId,
+    'X-Authorization-Id': args.authorizationId,
     'X-Nonce': nonce,
     'X-Signature': crypto.createHmac('sha256', args.secret).update(canonical).digest('hex'),
     ...(args.groupId ? { 'X-Sync-Group-Id': args.groupId } : {}),
@@ -44,7 +44,7 @@ export async function postSigned(
     bodyText: encryptedBody,
     headers: {
       'Content-Type': paired.group_id ? ENVELOPE_CONTENT_TYPE : 'application/json',
-      ...signRequest({ bodyText: encryptedBody, deviceId: paired.device_id,
+      ...signRequest({ authorizationId: paired.authorization_id, bodyText: encryptedBody,
         ...(paired.group_id ? { groupId: paired.group_id } : {}),
         method: 'POST', pathWithQuery, secret: paired.device_secret })
     },

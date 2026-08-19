@@ -93,10 +93,14 @@ export function storeWebPairingState() {
   window.localStorage.setItem(
     'foliole-companion-pairing-state',
     JSON.stringify({
+      authorization_id: 'web-preview-authorization',
+      credential_secret: 'test-secret',
       device_id: 'web-preview-device',
       device_kind: 'web-preview',
       device_name: 'Preview',
       device_secret: 'test-secret',
+      host_name: 'Preview',
+      host_platform: 'web-preview',
       is_paired: true,
       negotiated_protocol_version: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
       paired_at: '2026-04-22T12:00:00.000Z',

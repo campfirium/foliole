@@ -168,7 +168,7 @@ function registerWorkspaceVersionTest() {
     });
     expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
       headers: expect.objectContaining({
-        'X-Device-Id': 'web-preview-device',
+        'X-Authorization-Id': 'web-preview-authorization',
         'X-Nonce': expect.any(String),
         'X-Signature': expect.any(String),
         'X-Timestamp': expect.any(String)

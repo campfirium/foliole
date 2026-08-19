@@ -17,7 +17,7 @@ async function testPullsStructurePack() {
   });
   expect(syncBridgeMock.applyCompanionDesktopSyncPack).toHaveBeenCalledWith({
     headers: {
-      'X-Device-Id': 'android-test-device',
+      'X-Authorization-Id': 'android-test-device',
       'X-Signature': 'signed:/companion/sync-pack?after_state_seq=0'
     },
     sourceHostName: 'Desktop Test Host',

@@ -66,6 +66,7 @@ describe('desktop Sync Group discovery', () => {
       group_display_name: 'Daily Group',
       group_id: 'group-1',
       group_tag: 'tag-1',
+      provider_authorization_id: 'device-a',
       provider_device_id: 'device-a',
       provider_device_kind: 'android-capacitor',
       provider_device_name: 'Android B',

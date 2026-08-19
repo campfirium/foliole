@@ -18,7 +18,12 @@ const syncBridgeMock = vi.hoisted(() => ({
 
 const pairingMock = vi.hoisted(() => ({
   createSignedRequestHeaders: vi.fn(async () => ({ 'X-Signature': 'signed' })),
-  loadCompanionPairingState: vi.fn(async () => ({ device_kind: 'android', remote_peer_id: 'desktop-peer' }))
+  loadCompanionPairingState: vi.fn(async () => ({
+    authorization_id: 'authorization-android-test',
+    device_kind: 'android',
+    remote_peer_id: 'authorization-desktop-test',
+    remote_peer_name: 'Desktop Test Host'
+  }))
 }));
 
 vi.mock('./companionSyncObjects', () => syncBridgeMock);

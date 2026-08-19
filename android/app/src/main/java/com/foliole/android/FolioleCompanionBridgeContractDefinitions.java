@@ -8,26 +8,6 @@ import org.json.JSONObject;
 final class FolioleCompanionBridgeContractDefinitions {
     private FolioleCompanionBridgeContractDefinitions() {}
 
-    static int resourceDefault(Context context, String key) throws Exception {
-        return FolioleCompanionBridgeContractAsset.intValue(context, "resourcePlugin", "defaults", key);
-    }
-
-    static int resourceExternalDocumentSearchLimitDefault(Context context) throws Exception {
-        return resourceDefault(context, "externalDocumentSearchLimit");
-    }
-
-    static int resourceMissingResourceLimitDefault(Context context) throws Exception {
-        return resourceDefault(context, "missingResourceLimit");
-    }
-
-    static int resourcePdfPageTextSearchLimitDefault(Context context) throws Exception {
-        return resourceDefault(context, "pdfPageTextSearchLimit");
-    }
-
-    static int resourceTopicSearchLimitDefault(Context context) throws Exception {
-        return resourceDefault(context, "topicSearchLimit");
-    }
-
     static String pairingCredentialRequestKey(Context context, String key) throws Exception {
         return FolioleCompanionBridgeContractAsset.string(context, "pairingPlugin", "credentialRequestKeys", key);
     }
@@ -36,12 +16,28 @@ final class FolioleCompanionBridgeContractDefinitions {
         return pairingCredentialRequestKey(context, "deviceId");
     }
 
+    static String pairingAuthorizationIdCredentialRequestKey(Context context) throws Exception {
+        return pairingCredentialRequestKey(context, "authorizationId");
+    }
+
+    static String pairingCredentialSecretCredentialRequestKey(Context context) throws Exception {
+        return pairingCredentialRequestKey(context, "credentialSecret");
+    }
+
     static String pairingDeviceKindCredentialRequestKey(Context context) throws Exception {
         return pairingCredentialRequestKey(context, "deviceKind");
     }
 
     static String pairingDeviceNameCredentialRequestKey(Context context) throws Exception {
         return pairingCredentialRequestKey(context, "deviceName");
+    }
+
+    static String pairingHostNameCredentialRequestKey(Context context) throws Exception {
+        return pairingCredentialRequestKey(context, "hostName");
+    }
+
+    static String pairingHostPlatformCredentialRequestKey(Context context) throws Exception {
+        return pairingCredentialRequestKey(context, "hostPlatform");
     }
 
     static String pairingDeviceSecretCredentialRequestKey(Context context) throws Exception {
@@ -80,12 +76,32 @@ final class FolioleCompanionBridgeContractDefinitions {
         return pairingPreferenceKey(context, "deviceId");
     }
 
+    static String pairingAuthorizationIdPreferenceKey(Context context) throws Exception {
+        return pairingPreferenceKey(context, "authorizationId");
+    }
+
+    static String pairingCredentialSecretPreferenceKey(Context context) throws Exception {
+        return pairingPreferenceKey(context, "credentialSecret");
+    }
+
+    static String pairingCredentialSecretIvPreferenceKey(Context context) throws Exception {
+        return pairingPreferenceKey(context, "credentialSecretIv");
+    }
+
     static String pairingDeviceKindPreferenceKey(Context context) throws Exception {
         return pairingPreferenceKey(context, "deviceKind");
     }
 
     static String pairingDeviceNamePreferenceKey(Context context) throws Exception {
         return pairingPreferenceKey(context, "deviceName");
+    }
+
+    static String pairingHostNamePreferenceKey(Context context) throws Exception {
+        return pairingPreferenceKey(context, "hostName");
+    }
+
+    static String pairingHostPlatformPreferenceKey(Context context) throws Exception {
+        return pairingPreferenceKey(context, "hostPlatform");
     }
 
     static String pairingDeviceSecretPreferenceKey(Context context) throws Exception {
@@ -124,66 +140,6 @@ final class FolioleCompanionBridgeContractDefinitions {
         return pairingStorageKey(context, "preferencesName");
     }
 
-    static String pairingSignatureHeaderKey(Context context, String key) throws Exception {
-        return FolioleCompanionBridgeContractAsset.pairingSignatureString(context, "headerKeys", key);
-    }
-
-    static String pairingDeviceIdSignatureHeaderKey(Context context) throws Exception {
-        return pairingSignatureHeaderKey(context, "deviceId");
-    }
-
-    static String pairingNonceSignatureHeaderKey(Context context) throws Exception {
-        return pairingSignatureHeaderKey(context, "nonce");
-    }
-
-    static String pairingSignatureSignatureHeaderKey(Context context) throws Exception {
-        return pairingSignatureHeaderKey(context, "signature");
-    }
-
-    static String pairingTimestampSignatureHeaderKey(Context context) throws Exception {
-        return pairingSignatureHeaderKey(context, "timestamp");
-    }
-
-    static String pairingSignatureRequestKey(Context context, String key) throws Exception {
-        return FolioleCompanionBridgeContractAsset.pairingSignatureString(context, "requestKeys", key);
-    }
-
-    static String pairingBodyHashSignatureRequestKey(Context context) throws Exception {
-        return pairingSignatureRequestKey(context, "bodyHash");
-    }
-
-    static String pairingEndpointUrlSignatureRequestKey(Context context) throws Exception {
-        return pairingSignatureRequestKey(context, "endpointUrl");
-    }
-
-    static String pairingMethodSignatureRequestKey(Context context) throws Exception {
-        return pairingSignatureRequestKey(context, "method");
-    }
-
-    static String pairingNonceSignatureRequestKey(Context context) throws Exception {
-        return pairingSignatureRequestKey(context, "nonce");
-    }
-
-    static String pairingPathWithQuerySignatureRequestKey(Context context) throws Exception {
-        return pairingSignatureRequestKey(context, "pathWithQuery");
-    }
-
-    static String pairingSyncGroupIdSignatureRequestKey(Context context) throws Exception {
-        return pairingSignatureRequestKey(context, "syncGroupId");
-    }
-
-    static String pairingTimestampSignatureRequestKey(Context context) throws Exception {
-        return pairingSignatureRequestKey(context, "timestamp");
-    }
-
-    static String pairingSignatureResponseKey(Context context, String key) throws Exception {
-        return FolioleCompanionBridgeContractAsset.pairingSignatureString(context, "responseKeys", key);
-    }
-
-    static String pairingHeadersSignatureResponseKey(Context context) throws Exception {
-        return pairingSignatureResponseKey(context, "headers");
-    }
-
     static String pairingStateKey(Context context, String key) throws Exception {
         return FolioleCompanionBridgeContractAsset.string(context, "pairingPlugin", "stateKeys", key);
     }
@@ -192,12 +148,24 @@ final class FolioleCompanionBridgeContractDefinitions {
         return pairingStateKey(context, "deviceId");
     }
 
+    static String pairingAuthorizationIdStateKey(Context context) throws Exception {
+        return pairingStateKey(context, "authorizationId");
+    }
+
     static String pairingDeviceKindStateKey(Context context) throws Exception {
         return pairingStateKey(context, "deviceKind");
     }
 
     static String pairingDeviceNameStateKey(Context context) throws Exception {
         return pairingStateKey(context, "deviceName");
+    }
+
+    static String pairingHostNameStateKey(Context context) throws Exception {
+        return pairingStateKey(context, "hostName");
+    }
+
+    static String pairingHostPlatformStateKey(Context context) throws Exception {
+        return pairingStateKey(context, "hostPlatform");
     }
 
     static String pairingIsPairedStateKey(Context context) throws Exception {

@@ -8,7 +8,7 @@ const runtime = vi.hoisted(() => ({
   continueSync: vi.fn(),
   destroy: vi.fn(),
   group: { group_id: 'group-1' },
-  peers: [{ endpoint_url: 'http://old', group_id: 'group-1', peer_device_id: 'android-b' }],
+  peers: [{ endpoint_url: 'http://old', group_id: 'group-1', peer_authorization_id: 'android-b' }],
   savePeer: vi.fn((peer) => peer),
   stop: vi.fn(),
   update: vi.fn(),
@@ -80,7 +80,7 @@ it('continues the saved member sync when its provider advertises again', async (
     undefined, { interface: '192.168.1.10' }, { interface: '10.0.0.10' }
   ]);
   expect(runtime.savePeer).toHaveBeenCalledWith(expect.objectContaining({
-    endpoint_url: 'http://192.168.1.12:43121', peer_device_id: 'android-b'
+    endpoint_url: 'http://192.168.1.12:43121', peer_authorization_id: 'android-b'
   }));
 });
 
@@ -94,7 +94,7 @@ it('continues an approved join at the same provider new endpoint', async () => {
   await vi.waitFor(() => expect(runtime.completeJoin).toHaveBeenCalledOnce());
   expect(runtime.refreshPending).toHaveBeenCalledWith({
     endpointUrl: 'http://192.168.1.12:43122', groupId: 'group-1',
-    providerDeviceId: 'android-b', timelineId: 'timeline-1'
+    providerAuthorizationId: 'android-b', timelineId: 'timeline-1'
   });
   expect(runtime.continueSync).not.toHaveBeenCalled();
 });

@@ -37,7 +37,7 @@ export function writeJson(
   const encrypted = request.headers['x-sync-group-id']
     ? encryptWorkgroupResponse(request, plain, 'application/json; charset=utf-8') : null;
   response.writeHead(statusCode, {
-    'Access-Control-Allow-Headers': 'Content-Type, X-Device-Id, X-Nonce, X-Signature, X-Sync-Group-Id, X-Timestamp',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Authorization-Id, X-Nonce, X-Signature, X-Sync-Group-Id, X-Timestamp',
     'Access-Control-Allow-Methods': methods,
     ...(allowedOrigin ? { 'Access-Control-Allow-Origin': allowedOrigin, Vary: 'Origin' } : {}),
     'Content-Type': encrypted ? WORKGROUP_ENVELOPE_CONTENT_TYPE : 'application/json; charset=utf-8',
@@ -49,7 +49,7 @@ export function writeJson(
 export function writeOptions(request: http.IncomingMessage, response: http.ServerResponse) {
   const allowedOrigin = resolveCorsOrigin(request);
   response.writeHead(204, {
-    'Access-Control-Allow-Headers': 'Content-Type, X-Device-Id, X-Nonce, X-Signature, X-Sync-Group-Id, X-Timestamp',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Authorization-Id, X-Nonce, X-Signature, X-Sync-Group-Id, X-Timestamp',
     'Access-Control-Allow-Methods': 'GET, OPTIONS, POST',
     ...(allowedOrigin ? { 'Access-Control-Allow-Origin': allowedOrigin, Vary: 'Origin' } : {})
   });

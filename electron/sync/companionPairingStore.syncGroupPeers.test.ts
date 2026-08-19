@@ -40,29 +40,29 @@ afterEach(async () => {
 });
 
 it('keeps one persistent transfer channel for each peer in the same Sync Group', () => {
-  savePairedSyncGroupPeer(peer('desktop-a', 'secret-a', 'http://a.local'));
-  savePairedSyncGroupPeer(peer('desktop-c', 'secret-c', 'http://c.local'));
+  savePairedSyncGroupPeer(peer('desktop-a', 'http://a.local'));
+  savePairedSyncGroupPeer(peer('desktop-c', 'http://c.local'));
 
   expect(loadPairedSyncGroupPeers('group-1')).toEqual([
-    expect.objectContaining({ peer_device_id: 'desktop-a', secret: 'secret-a' }),
-    expect.objectContaining({ peer_device_id: 'desktop-c', secret: 'secret-c' })
+    expect.objectContaining({ peer_authorization_id: 'authorization-desktop-a' }),
+    expect.objectContaining({ peer_authorization_id: 'authorization-desktop-c' })
   ]);
 });
 
 it('replaces only the same peer channel and requires an exact peer lookup', () => {
-  savePairedSyncGroupPeer(peer('desktop-a', 'secret-old', 'http://old.local'));
-  savePairedSyncGroupPeer(peer('desktop-c', 'secret-c', 'http://c.local'));
-  savePairedSyncGroupPeer(peer('desktop-a', 'secret-new', 'http://new.local'));
+  savePairedSyncGroupPeer(peer('desktop-a', 'http://old.local'));
+  savePairedSyncGroupPeer(peer('desktop-c', 'http://c.local'));
+  savePairedSyncGroupPeer(peer('desktop-a', 'http://new.local'));
 
   expect(loadPairedSyncGroupPeers('group-1')).toHaveLength(2);
-  expect(loadPairedSyncGroupPeer('group-1', 'desktop-a')).toEqual(
-    expect.objectContaining({ endpoint_url: 'http://new.local', secret: 'secret-new' })
+  expect(loadPairedSyncGroupPeer('group-1', 'authorization-desktop-a')).toEqual(
+    expect.objectContaining({ endpoint_url: 'http://new.local' })
   );
   expect(loadPairedSyncGroupPeer('group-1', 'missing')).toBeNull();
 });
 
 it('clears credentials by deleting the store without encrypting an empty replacement', async () => {
-  savePairedSyncGroupPeer(peer('desktop-a', 'secret-a', 'http://a.local'));
+  savePairedSyncGroupPeer(peer('desktop-a', 'http://a.local'));
   const storePath = path.join(userDataDir, 'companion-paired-devices.bin');
   expect((await fs.stat(storePath)).isFile()).toBe(true);
   encryptString.mockClear();
@@ -72,15 +72,19 @@ it('clears credentials by deleting the store without encrypting an empty replace
   expect(loadPairedSyncGroupPeers('group-1')).toEqual([]);
 });
 
-function peer(peerDeviceId: string, secret: string, endpointUrl: string) {
+function peer(peerDeviceId: string, endpointUrl: string) {
   return {
     endpoint_url: endpointUrl,
     group_id: 'group-1',
+    local_authorization_id: 'authorization-local',
     local_device_id: 'local-device',
+    local_host_name: 'Local',
+    peer_authorization_id: `authorization-${peerDeviceId}`,
     peer_device_id: peerDeviceId,
     peer_device_kind: 'desktop',
     peer_device_name: peerDeviceId,
-    secret,
+    peer_host_name: peerDeviceId,
+    peer_host_platform: 'desktop',
     timeline_id: 'timeline-1'
   };
 }

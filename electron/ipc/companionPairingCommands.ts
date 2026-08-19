@@ -19,6 +19,7 @@ import {
   rejectCompanionPairRequest
 } from '../sync/companionPairingRequests.js';
 import { clearPairedCompanionDevices, loadPairedCompanionDevices, removePairedCompanionDevice } from '../sync/companionPairingStore.js';
+import { ensureCompanionPairingStoreAuthorizationCutover } from '../sync/companionPairingStoreCutover.js';
 import {
   activateDesktopCompanionSync,
   assertDesktopCompanionSyncParticipating,
@@ -64,7 +65,9 @@ const COMPANION_PAIRING_COMMANDS = new Set<string>([
   NATIVE_COMMANDS.rejectCompanionPairRequest
 ]);
 
-function buildDesktopCompanionPairingOverview(serverStatus = refreshLanWorkspaceSyncServerPairingStatus()) {
+function buildDesktopCompanionPairingOverview(serverStatus?: ReturnType<typeof refreshLanWorkspaceSyncServerPairingStatus>) {
+  ensureCompanionPairingStoreAuthorizationCutover();
+  const resolvedServerStatus = serverStatus ?? refreshLanWorkspaceSyncServerPairingStatus();
   const join = loadDesktopSyncGroupJoinState();
   const syncGroup = loadDesktopSyncGroup();
   const localMember = syncGroup?.members.find((member) =>
@@ -80,7 +83,7 @@ function buildDesktopCompanionPairingOverview(serverStatus = refreshLanWorkspace
     paired_devices: loadPairedCompanionDevices(),
     pending_requests: loadPendingCompanionPairRequests(),
     primary_device_state: loadDesktopPrimaryDeviceStatePayload(),
-    server_status: serverStatus,
+    server_status: resolvedServerStatus,
     sync_group: syncGroup,
     ...loadDesktopCompanionSyncParticipation()
   };

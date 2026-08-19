@@ -56,6 +56,8 @@ export function buildDiscoveryPayload(appVersion: string, peerId: string) {
   if (!group || group.local_member_state !== 'active') return null;
   const workgroup = loadDesktopWorkgroupKey(group.group_id);
   if (!workgroup) return null;
+  const local = group.members.find((member) => member.host_name === group.local_host_name);
+  if (!local) throw new Error('sync_group_local_authorization_missing');
   return {
     app_version: appVersion,
     desktop_device_name: resolveDesktopDeviceName(),
@@ -63,7 +65,8 @@ export function buildDiscoveryPayload(appVersion: string, peerId: string) {
     desktop_name: 'Foliole Desktop',
     desktop_platform: resolveDesktopPlatformLabel(),
     pairing_mode: 'desktop-confirm' as const,
-    peer_id: peerId,
+    peer_id: local.authorization_id,
+    provider_device_id: peerId,
     runtime_instance_id: loadSyncGroupRuntimeInstanceId(),
     group_display_name: resolveSyncGroupDisplayHostName(group),
     group_id: group.group_id,

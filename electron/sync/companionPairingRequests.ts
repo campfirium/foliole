@@ -29,11 +29,11 @@ function pruneExpiredRequests(nowMs: number) {
   }
 }
 
-function resolveRateLimitKey(args: { clientAddress?: string | null; deviceId: string }) {
-  return args.clientAddress?.trim() || `device:${args.deviceId.trim() || 'unknown'}`;
+function resolveRateLimitKey(args: { clientAddress?: string | null; hostName: string }) {
+  return args.clientAddress?.trim() || `device:${args.hostName.trim() || 'unknown'}`;
 }
 
-function reserveRateLimitSlot(args: { clientAddress?: string | null; deviceId: string; nowMs: number }) {
+function reserveRateLimitSlot(args: { clientAddress?: string | null; hostName: string; nowMs: number }) {
   const key = resolveRateLimitKey(args);
   const windowStartMs = args.nowMs - PAIR_REQUEST_RATE_LIMIT_WINDOW_MS;
   const recentTimestamps = (requestTimestampsByClient.get(key) ?? []).filter((timestamp) => timestamp > windowStartMs);
@@ -55,26 +55,35 @@ function refreshPendingRequest(
   request.pairing_public_key = args.pairingPublicKey.trim();
   request.compatibility = args.compatibility;
   request.protocol = args.protocol;
-  request.host_name = args.hostName.trim();
-  request.host_platform = args.hostPlatform.trim();
   if (args.groupId) request.group_id = args.groupId;
   if (args.timelineId) request.timeline_id = args.timelineId;
   return { created: false, rate_limited: false, request: toPublicPairRequest(request) } as const;
 }
 
-function buildStoredRequest(args: Parameters<typeof createCompanionPairRequest>[0], nowMs: number) {
-  const expiresAtMs = nowMs + PAIR_REQUEST_TTL_MS;
+function createStoredPairRequest(
+  args: Parameters<typeof createCompanionPairRequest>[0],
+  nowMs: number,
+  expiresAtMs: number
+): StoredCompanionPairRequest {
   return {
     client_address: args.clientAddress?.trim() || null,
     compatibility: args.compatibility,
-    device_id: args.deviceId.trim(), device_kind: args.deviceKind.trim(), device_name: args.deviceName.trim(),
-    host_name: args.hostName.trim(), host_platform: args.hostPlatform.trim(),
-    expires_at: new Date(expiresAtMs).toISOString(), expires_at_ms: expiresAtMs, completion: null,
-    pairing_public_key: args.pairingPublicKey.trim(), protocol: args.protocol,
-    pair_request_id: randomUUID(), requested_at: new Date(nowMs).toISOString(), status: 'pending' as const,
+    device_id: args.deviceId.trim(),
+    device_kind: args.deviceKind.trim(),
+    device_name: args.deviceName.trim(),
+    host_name: args.hostName.trim(),
+    host_platform: args.hostPlatform.trim(),
+    expires_at: new Date(expiresAtMs).toISOString(),
+    expires_at_ms: expiresAtMs,
+    completion: null,
+    pairing_public_key: args.pairingPublicKey.trim(),
+    protocol: args.protocol,
+    pair_request_id: randomUUID(),
+    requested_at: new Date(nowMs).toISOString(),
+    status: 'pending',
     ...(args.groupId ? { group_id: args.groupId } : {}),
     ...(args.timelineId ? { timeline_id: args.timelineId } : {})
-  } satisfies StoredCompanionPairRequest;
+  };
 }
 
 export function createCompanionPairRequest(args: {
@@ -95,7 +104,7 @@ export function createCompanionPairRequest(args: {
   pruneExpiredRequests(nowMs);
   const existingPendingRequest = [...requestsById.values()].find((request) => {
     return request.client_address === (args.clientAddress?.trim() || null)
-      && request.device_id === args.deviceId.trim()
+      && request.host_name === args.hostName.trim()
       && request.status === 'pending';
   });
   if (existingPendingRequest) {
@@ -103,7 +112,7 @@ export function createCompanionPairRequest(args: {
   }
   const rateLimit = reserveRateLimitSlot({
     ...(args.clientAddress === undefined ? {} : { clientAddress: args.clientAddress }),
-    deviceId: args.deviceId,
+    hostName: args.hostName,
     nowMs
   });
   if (!rateLimit.allowed) {
@@ -113,7 +122,8 @@ export function createCompanionPairRequest(args: {
       retry_after_ms: rateLimit.retry_after_ms
     } as const;
   }
-  const request = buildStoredRequest(args, nowMs);
+  const expiresAtMs = nowMs + PAIR_REQUEST_TTL_MS;
+  const request = createStoredPairRequest(args, nowMs, expiresAtMs);
   requestsById.set(request.pair_request_id, request);
   return {
     created: true,

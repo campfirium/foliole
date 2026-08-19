@@ -96,8 +96,11 @@ function mockNativePairingHttp(deviceId = 'android-test-device') {
       body: JSON.stringify({
         compatibility,
         desktop_protocol: protocol,
+        authorization_id: `authorization-${deviceId}`,
         device_id: deviceId,
-        encrypted_device_secret: createEncryptedSecretFixture(),
+        encrypted_credential_secret: createEncryptedSecretFixture(),
+        host_name: deviceId,
+        host_platform: 'android-capacitor',
         paired_at: '2026-04-22T12:00:00.000Z',
         peer_id: 'device-desktop'
       }),
@@ -118,9 +121,12 @@ function mockVerifiedNativePairing(args: { deviceId: string; deviceKind: string;
   mockNativePairingHttp(args.deviceId);
   const pairing = {
     ...nativeProtocolState,
+    authorization_id: `authorization-${args.deviceId}`,
     device_id: args.deviceId,
     device_kind: args.deviceKind,
     device_name: args.deviceName,
+    host_name: args.deviceName,
+    host_platform: args.deviceKind,
     is_paired: true,
     paired_at: '2026-04-22T12:00:00.000Z',
     primary_device_id: 'device-desktop'
@@ -130,7 +136,7 @@ function mockVerifiedNativePairing(args: { deviceId: string; deviceKind: string;
   capacitorMock.plugin.signCompanionSyncRequest.mockImplementation(async () => {
     queueEvents.push('sign');
     return { headers: {
-      'X-Device-Id': args.deviceId,
+      'X-Authorization-Id': `authorization-${args.deviceId}`,
       'X-Nonce': 'nonce',
       'X-Signature': 'signed',
       'X-Timestamp': '2026-04-22T12:00:00.000Z'

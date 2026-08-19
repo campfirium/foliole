@@ -37,8 +37,10 @@ export interface CompanionWorkspaceSyncPlugin
   loadDiscoveryCandidates(): Promise<CompanionDiscoveryCandidatesPayload>;
   bindSyncGroupPeerRoute(args: {
     endpoint_url: string;
+    local_authorization_id: string;
     local_device_id: string;
     local_host_name: string;
+    peer_authorization_id: string;
     peer_device_id: string;
     peer_host_name: string;
     peer_host_platform: string;
@@ -58,6 +60,7 @@ export interface CompanionWorkspaceSyncPlugin
   }): Promise<void>;
   startSyncGroupProvider(args: {
     app_version: string;
+    authorization_id: string;
     device_id: string;
     device_name: string;
     facts_revision: string;

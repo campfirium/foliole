@@ -7,11 +7,15 @@ export interface CompanionPairingSyncPlugin {
   clearPairingCredentials(): Promise<NativeCompanionPairingState>;
   loadPairingState(): Promise<NativeCompanionPairingState>;
   savePairingCredentials(args: {
+    authorization_id: string;
+    credential_secret: string;
     device_id: string;
     device_kind: string;
     device_name: string;
     device_secret: string;
     endpoint_url?: string;
+    host_name: string;
+    host_platform: string;
     negotiated_protocol_version: number;
     paired_at: string;
     primary_device_id: string;

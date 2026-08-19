@@ -124,8 +124,9 @@ it('rechecks protocol compatibility at pair completion', async () => {
 
 it('rate limits approved pair completion attempts by client address before re-registering devices', async () => {
   pairingStoreMock.registerPairedCompanionDevice.mockReturnValue({
+    authorization_id: 'authorization-android-rate-limited',
+    credential_secret: 'device-secret-rate-limited',
     device_id: 'android-rate-limited',
-    device_secret: 'device-secret-rate-limited',
     paired_at: '2026-05-10T01:00:00.000Z'
   });
   const created = createApprovedPairRequest('android-rate-limited');
@@ -158,8 +159,9 @@ it('rate limits approved pair completion attempts by client address before re-re
 
 it('retries half-committed pair completion without re-registering the device', async () => {
   pairingStoreMock.registerPairedCompanionDevice.mockReturnValue({
+    authorization_id: 'authorization-android-1',
+    credential_secret: 'device-secret-1',
     device_id: 'android-1',
-    device_secret: 'device-secret-1',
     paired_at: '2026-05-10T01:00:00.000Z'
   });
   pairingEncryptionMock.encryptCompanionPairingSecret
@@ -191,20 +193,22 @@ it('retries half-committed pair completion without re-registering the device', a
     deviceSecret: 'device-secret-1'
   });
   expect(writeJson).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), 200, expect.objectContaining({
-    encrypted_device_secret: 'encrypted-device-secret-1'
+    encrypted_credential_secret: 'encrypted-device-secret-1'
   }));
 });
 
 it('rotates the device secret for a new approved pair request with the same device id', async () => {
   pairingStoreMock.registerPairedCompanionDevice
     .mockReturnValueOnce({
+      authorization_id: 'authorization-android-1',
+      credential_secret: 'device-secret-1',
       device_id: 'android-1',
-      device_secret: 'device-secret-1',
       paired_at: '2026-05-10T01:00:00.000Z'
     })
     .mockReturnValueOnce({
+      authorization_id: 'authorization-android-2',
+      credential_secret: 'device-secret-2',
       device_id: 'android-1',
-      device_secret: 'device-secret-2',
       paired_at: '2026-05-10T02:00:00.000Z'
     });
   const first = createApprovedPairRequest('android-1');

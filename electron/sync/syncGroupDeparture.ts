@@ -96,7 +96,7 @@ async function broadcastDeparture(departure: ReturnType<typeof createDeparture>,
     try {
       await postDesktopWorkgroupJson({
         body, endpointUrl: peer.endpoint_url, groupId: departure.group_id,
-        localDeviceId: peer.local_device_id,
+        localAuthorizationId: peer.local_authorization_id,
         pathWithQuery: SYNC_GROUP_DEPARTURE_PATH, secret: key.group_key
       });
       delivered = true;

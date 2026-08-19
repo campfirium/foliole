@@ -92,13 +92,32 @@ vi.mock('../database/nodeSyncVersions.js', () => ({
 }));
 vi.mock('../database/syncGroupStore.js', () => ({
   loadDesktopSyncGroup: vi.fn(() => ({
-    group_id: WORKGROUP.groupId, local_member_state: 'active', timeline_id: 'timeline-test', members: []
+    group_id: WORKGROUP.groupId,
+    local_host_name: 'Desktop Test Host',
+    local_member_state: 'active',
+    timeline_id: 'timeline-test',
+    members: [{
+      authorization_id: 'authorization-desktop-test',
+      host_name: 'Desktop Test Host',
+      host_platform: 'macos-electron',
+      state: 'active'
+    }]
   })),
+  loadSyncGroupMemberByAuthorization: vi.fn(() => ({ host_name: 'Pixel Test', state: 'active' })),
   loadSyncGroupMemberAuthorization: vi.fn(() => ({ state: 'active' })),
   registerSyncGroupMember: vi.fn((args: { authorizationId: string; deviceName: string }) => ({
-    group_id: WORKGROUP.groupId, local_member_state: 'active', timeline_id: 'timeline-test', members: [{
+    group_id: WORKGROUP.groupId,
+    local_host_name: 'Desktop Test Host',
+    local_member_state: 'active',
+    timeline_id: 'timeline-test',
+    members: [{
+      authorization_id: 'authorization-desktop-test',
+      host_name: 'Desktop Test Host',
+      host_platform: 'macos-electron',
+      state: 'active'
+    }, {
       authorization_id: args.authorizationId, device_id: args.deviceName, device_kind: 'android',
-      device_name: args.deviceName, state: 'active'
+      device_name: args.deviceName, host_name: args.deviceName, host_platform: 'android-capacitor', state: 'active'
     }]
   }))
 }));
@@ -119,7 +138,7 @@ async function resetTestState() {
 
 async function fetchSignedGet(server: http.Server, pathWithQuery: string, paired: TestPairedDevice) {
   const response = await requestWorkspaceSyncServer(server, {
-    headers: signRequest({ deviceId: paired.device_id,
+    headers: signRequest({ authorizationId: paired.authorization_id,
       ...(paired.group_id ? { groupId: paired.group_id } : {}),
       method: 'GET', pathWithQuery, secret: paired.device_secret }),
     path: pathWithQuery
