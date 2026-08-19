@@ -1,4 +1,5 @@
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
+import { useActiveSyncGroupMembership } from '../../../../shared/platform/external/useActiveSyncGroupMembership';
 import type {
   ExternalSourceSettingsFolder,
   ExternalSourceSettingsFolderPatch
@@ -38,11 +39,7 @@ function LocalExternalFolders(props: {
 }) {
   const t = useTranslation();
   return (
-    <SettingsSection
-      ariaLabel={t('settings.externalSources.sectionAria')}
-      description={t('settings.externalSources.description')}
-      title={t('settings.externalSources.title')}
-    >
+    <>
       <div className="min-w-0 overflow-hidden">
         <ExternalLibraryTable
           folders={props.folders}
@@ -72,12 +69,13 @@ function LocalExternalFolders(props: {
           title={t('settings.externalSources.unavailable')}
         />
       ) : null}
-    </SettingsSection>
+    </>
   );
 }
 
 export function SettingsExternalSearchSection(props: SettingsExternalSearchSectionProps) {
   const t = useTranslation();
+  const hasActiveSyncGroup = useActiveSyncGroupMembership();
   const remoteFolders = props.folders.filter((folder) => folder.accessMode !== 'local');
   const localFolders = props.folders.filter((folder) => folder.accessMode === 'local');
 
@@ -85,8 +83,6 @@ export function SettingsExternalSearchSection(props: SettingsExternalSearchSecti
     return (
       <SettingsSection
         ariaLabel={t('settings.externalSources.sectionAria')}
-        description={t('settings.externalSources.description')}
-        title={t('settings.externalSources.title')}
       >
         <SettingsLoadingState />
       </SettingsSection>
@@ -94,8 +90,11 @@ export function SettingsExternalSearchSection(props: SettingsExternalSearchSecti
   }
 
   return (
-    <>
-      {remoteFolders.length > 0 ? (
+    <SettingsSection
+      ariaLabel={t('settings.externalSources.sectionAria')}
+      className={hasActiveSyncGroup && remoteFolders.length > 0 ? 'before:hidden' : ''}
+    >
+      {hasActiveSyncGroup && remoteFolders.length > 0 ? (
         <SettingsRemoteExternalFolderRows
           folders={remoteFolders}
           onReconnectFolder={props.onReconnectFolder}
@@ -103,6 +102,6 @@ export function SettingsExternalSearchSection(props: SettingsExternalSearchSecti
         />
       ) : null}
       <LocalExternalFolders folders={localFolders} settings={props} />
-    </>
+    </SettingsSection>
   );
 }

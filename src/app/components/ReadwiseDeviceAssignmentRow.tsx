@@ -1,12 +1,22 @@
 import { useEffect, useState } from 'react';
 
-import type { NativeReadwiseDeviceAssignment } from '../../../lib/platform/nativeReadwiseDeviceContract';
+import type {
+  NativeReadwiseDeviceAssignment,
+  NativeReadwiseWorkgroupDevice
+} from '../../../lib/platform/nativeReadwiseDeviceContract';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   activateReadwiseOnThisDeviceInRuntime,
   loadReadwiseDeviceAssignmentFromRuntime
 } from '../../shared/platform/import/readwiseDeviceAssignmentRuntimeRepository';
-import { AppButton, SettingsControlSlot, SettingsRow, SettingsSection } from '../../shared/ui';
+import {
+  AppButton,
+  settingsActionTableHeaderClassName,
+  settingsActionTableRowClassName
+} from '../../shared/ui';
+
+const REMOTE_READWISE_COLUMNS = '[grid-template-columns:16.25rem_minmax(0,1fr)]';
+const PLATFORM_NAMES: Record<string, string> = { darwin: 'macOS', linux: 'Linux', win32: 'Windows' };
 
 export function useReadwiseDeviceAssignment() {
   const [assignment, setAssignment] = useState<NativeReadwiseDeviceAssignment | null>(null);
@@ -23,41 +33,55 @@ export function useReadwiseDeviceAssignment() {
   };
 }
 
+function activeDevice(assignment: NativeReadwiseDeviceAssignment): NativeReadwiseWorkgroupDevice | null {
+  if (!assignment.active_device_id) return null;
+  return assignment.devices.find((device) => device.device_id === assignment.active_device_id) ?? {
+    device_id: assignment.active_device_id,
+    device_name: assignment.active_device_name ?? assignment.active_device_id,
+    platform: null
+  };
+}
+
 export function ReadwiseDeviceAssignmentRow(props: {
   assignment: NativeReadwiseDeviceAssignment | null;
   onActivate: () => void;
+  readwiseRootPath: string;
 }) {
   const t = useTranslation();
-  const assignment = props.assignment;
-  const devices = assignment?.devices ?? [];
+  if (!props.assignment || props.assignment.is_active) return null;
+
+  const device = activeDevice(props.assignment);
+  const unavailable = !device || (
+    device.device_name === props.assignment.active_device_id && device.platform === null
+  );
   return (
-    <SettingsSection
-      ariaLabel={t('desktop.readwise.device.title')}
-      description={t('desktop.readwise.device.description')}
-      title={t('desktop.readwise.device.title')}
-    >
-      {devices.map((device) => {
-        const current = device.device_id === assignment?.current_device_id;
-        const active = device.device_id === assignment?.active_device_id;
-        const description = active
-          ? t('desktop.readwise.device.current')
-          : current && assignment?.legacy_unassigned
-            ? t('desktop.readwise.device.unassigned')
-            : current
-              ? t('desktop.readwise.device.thisDevice')
-              : t('desktop.readwise.device.available');
-        return (
-          <SettingsRow description={description} key={device.device_id} readonly={!current} title={device.device_name}>
-            {current && (!assignment?.is_active || assignment?.legacy_unassigned) ? (
-              <SettingsControlSlot>
-                <AppButton onClick={props.onActivate} size="sm">
-                  {t(assignment?.legacy_unassigned ? 'desktop.readwise.device.useThis' : 'desktop.readwise.device.switch')}
-                </AppButton>
-              </SettingsControlSlot>
+    <section aria-label={t('desktop.readwise.device.title')} className="mb-6 min-w-0">
+      <div className={settingsActionTableHeaderClassName(REMOTE_READWISE_COLUMNS)}>
+        <span>{t('desktop.readwise.device.title')}</span>
+        <span>{t('desktop.readwise.device.path')}</span>
+      </div>
+      <div className={settingsActionTableRowClassName(REMOTE_READWISE_COLUMNS)}>
+        {!unavailable && device ? (
+          <div className="flex min-w-0 items-baseline gap-2">
+            <span className="truncate text-sm font-semibold">{device.device_name}</span>
+            {device.platform ? (
+              <span className="shrink-0 text-xs text-foreground/48">
+                {PLATFORM_NAMES[device.platform] ?? device.platform}
+              </span>
             ) : null}
-          </SettingsRow>
-        );
-      })}
-    </SettingsSection>
+          </div>
+        ) : (
+          <span className="text-sm text-foreground/55">{t('desktop.readwise.device.unavailable')}</span>
+        )}
+        <div className="grid min-h-10 min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
+          <span className="min-w-0 truncate font-mono text-xs text-foreground/68">
+            {props.readwiseRootPath.trim() || t('desktop.readwise.device.pathUnavailable')}
+          </span>
+          <AppButton onClick={props.onActivate} size="sm">
+            {t('desktop.readwise.device.switch')}
+          </AppButton>
+        </div>
+      </div>
+    </section>
   );
 }

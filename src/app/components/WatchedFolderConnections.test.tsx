@@ -1,11 +1,11 @@
 import { screen, within } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { WatchedFolderConnections } from './WatchedFolderConnections';
 
-const { load } = vi.hoisted(() => ({ load: vi.fn() }));
+const { activeGroup, load } = vi.hoisted(() => ({ activeGroup: vi.fn(), load: vi.fn() }));
 
 vi.mock('../../shared/platform/import/watchedFolderRuntimeRepository', () => ({
   confirmWatchedFolderReconnectInRuntime: vi.fn(),
@@ -14,6 +14,12 @@ vi.mock('../../shared/platform/import/watchedFolderRuntimeRepository', () => ({
   previewWatchedFolderReconnectInRuntime: vi.fn(),
   removeWatchedFolderInRuntime: vi.fn()
 }));
+
+vi.mock('../../shared/platform/external/useActiveSyncGroupMembership', () => ({
+  useActiveSyncGroupMembership: activeGroup
+}));
+
+beforeEach(() => activeGroup.mockReturnValue(true));
 
 function binding(id: string, overrides: Record<string, unknown> = {}) {
   return {
@@ -33,33 +39,37 @@ function binding(id: string, overrides: Record<string, unknown> = {}) {
   };
 }
 
-it('shows disconnect only for the local connected source and reconnect for a source waiting for a folder', async () => {
+it('shows remote and waiting sources above the unchanged local settings', async () => {
   load.mockResolvedValue({
     bindings: [
       binding('local'),
-      binding('remote', { connected_device_id: 'remote-device', connected_device_name: 'Office PC' }),
-      binding('waiting', { connection_status: 'needs-folder' })
+      binding('remote', {
+        connected_device_id: 'remote-device', connected_device_name: 'Office PC', connected_platform: 'win32'
+      }),
+      binding('waiting', {
+        connected_device_id: null, connected_device_name: null, connected_platform: null, connection_status: 'needs-folder'
+      })
     ],
     current_device_id: 'current-device'
   });
 
   renderWithLocalization(<WatchedFolderConnections />);
 
-  expect(await screen.findByRole('heading', { name: 'Watched folders in this workgroup' })).toBeInTheDocument();
-  const localGroup = screen.getByRole('group', { name: 'This Mac' });
+  const region = await screen.findByRole('region', { name: 'Other devices' });
   const remoteGroup = screen.getByRole('group', { name: 'Office PC' });
-  expect(within(localGroup).getByRole('button', { name: 'Disconnect' })).toBeInTheDocument();
-  expect(within(remoteGroup).queryByRole('button')).not.toBeInTheDocument();
-  expect(screen.getAllByRole('button', { name: 'Disconnect' })).toHaveLength(1);
-  expect(screen.getAllByRole('button', { name: 'Reconnect' })).toHaveLength(1);
-  expect(screen.getAllByRole('button', { name: 'Remove' })).toHaveLength(2);
+  const waitingGroup = screen.getByRole('group', { name: 'Waiting for a folder' });
+  expect(within(region).getByText('Path')).toBeInTheDocument();
+  expect(within(remoteGroup).getByText('Windows')).toBeInTheDocument();
+  expect(within(remoteGroup).getByRole('button', { name: 'More actions for Office PC' })).toBeInTheDocument();
+  expect(within(remoteGroup).getByRole('button', { name: 'More actions for /source/remote' })).toBeInTheDocument();
+  expect(within(waitingGroup).getByRole('button', { name: 'More actions for /source/waiting' })).toBeInTheDocument();
+  expect(screen.queryByRole('group', { name: 'This Mac' })).not.toBeInTheDocument();
 });
 
-it('keeps the workgroup section visible before any watched folders are added', async () => {
+it('does not add an empty workgroup block before local watched-folder settings', async () => {
   load.mockResolvedValue({ bindings: [], current_device_id: 'current-device' });
 
   renderWithLocalization(<WatchedFolderConnections />);
 
-  expect(await screen.findByRole('heading', { name: 'Watched folders in this workgroup' })).toBeInTheDocument();
-  expect(screen.getByText('No watched folders have been added to this workgroup yet.')).toBeInTheDocument();
+  expect(await screen.findByRole('region', { name: 'Other devices' }).catch(() => null)).toBeNull();
 });

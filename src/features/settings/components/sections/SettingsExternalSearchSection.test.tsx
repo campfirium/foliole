@@ -3,9 +3,16 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../../shared/config/appSettings';
 import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
+import { useActiveSyncGroupMembership } from '../../../../shared/platform/external/useActiveSyncGroupMembership';
 import type { ExternalSourceSettingsFolder } from '../../../../shared/platform/externalSourceSettingsRepository';
 
 import { SettingsExternalSearchSection } from './SettingsExternalSearchSection';
+
+vi.mock('../../../../shared/platform/external/useActiveSyncGroupMembership', () => ({
+  useActiveSyncGroupMembership: vi.fn()
+}));
+
+const activeSyncGroupMock = vi.mocked(useActiveSyncGroupMembership);
 
 const baseProps = {
   error: null,
@@ -38,7 +45,7 @@ function remoteFolder(overrides: Partial<ExternalSourceSettingsFolder> = {}): Ex
     indexedAt: '2026-07-24T00:00:00.000Z',
     lastError: null,
     mirrorEnabled: true,
-    ownerDeviceName: 'Windows PC',
+    ownerDeviceName: '0cap',
     ownerInstallationId: 'windows-1',
     ownerPlatform: 'win32',
     status: 'ready',
@@ -50,40 +57,54 @@ function remoteFolder(overrides: Partial<ExternalSourceSettingsFolder> = {}): Ex
 beforeEach(() => {
   window.localStorage.clear();
   vi.clearAllMocks();
+  activeSyncGroupMock.mockReturnValue(true);
 });
 
 it('shows remote mirrors only when a remote desktop folder exists', () => {
   renderWithLocalization(<SettingsExternalSearchSection {...baseProps} folders={[remoteFolder()]} />);
 
-  expect(screen.getByText('Workgroup sources')).toBeInTheDocument();
-  expect(screen.getByText('Sources connected to another device are read-only here. Sources waiting for a folder can be reconnected.')).toBeInTheDocument();
-  expect(screen.getByText('Windows PC')).toBeInTheDocument();
+  expect(screen.getByText('Other devices')).toBeInTheDocument();
+  expect(screen.getByText('Path')).toBeInTheDocument();
+  expect(screen.getByText('0cap')).toBeInTheDocument();
   expect(screen.getByText('Windows')).toBeInTheDocument();
-  expect(screen.getByText('Docs')).toBeInTheDocument();
+  expect(screen.getByText('D:\\Docs')).toBeInTheDocument();
   expect(screen.queryByText('Read-only mirror')).not.toBeInTheDocument();
-  const remoteHeading = screen.getByRole('heading', { level: 3, name: 'Workgroup sources' });
-  const localHeading = screen.getByRole('heading', { level: 3, name: 'External folders' });
-  expect(remoteHeading.compareDocumentPosition(localHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(screen.queryByRole('heading', { level: 3, name: 'Other devices' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('heading', { level: 3, name: 'External folders' })).not.toBeInTheDocument();
   expect(screen.queryByRole('switch')).not.toBeInTheDocument();
   expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Update folder' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Reconnect' })).not.toBeInTheDocument();
 });
 
+it('hides remote mirrors outside an active workgroup while keeping local controls', () => {
+  activeSyncGroupMock.mockReturnValue(false);
+  renderWithLocalization(<SettingsExternalSearchSection {...baseProps} folders={[remoteFolder()]} />);
+
+  expect(screen.queryByText('Other devices')).not.toBeInTheDocument();
+  expect(screen.queryByText('0cap')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Add folder' })).toBeInTheDocument();
+});
+
 it('groups by installation without exposing receiver controls or guessing missing ownership', () => {
   renderWithLocalization(<SettingsExternalSearchSection {...baseProps} folders={[
     remoteFolder(),
     remoteFolder({ folderPath: 'D:\\Projects', id: 'remote-2', mirrorEnabled: false }),
-    remoteFolder({ folderPath: '/Users/foliole/Research', id: 'remote-3', ownerInstallationId: 'mac-1', ownerPlatform: 'darwin' }),
+    remoteFolder({ folderPath: '/Users/foliole/Research', id: 'remote-3', ownerDeviceName: 'Studio Mac', ownerInstallationId: 'mac-1', ownerPlatform: 'darwin' }),
     remoteFolder({ accessMode: 'unowned', folderPath: '/unknown', id: 'remote-4', ownerDeviceName: null, ownerInstallationId: null, ownerPlatform: 'mystery' })
   ]} />);
 
-  expect(screen.getAllByText('Windows PC')).toHaveLength(2);
-  expect(screen.getByText('Other device')).toBeInTheDocument();
+  expect(screen.getByText('0cap')).toBeInTheDocument();
+  expect(screen.getByText('Studio Mac')).toBeInTheDocument();
+  expect(screen.getByText('macOS')).toBeInTheDocument();
+  expect(screen.getByText('Waiting to reconnect')).toBeInTheDocument();
   expect(screen.queryByText('mystery')).not.toBeInTheDocument();
   expect(screen.queryByRole('switch')).not.toBeInTheDocument();
   expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Reconnect' })).toBeInTheDocument();
+  const folderActions = screen.getByRole('button', { name: 'More actions for /unknown' });
+  expect(folderActions).toHaveAttribute('aria-haspopup', 'menu');
+  expect(screen.getByRole('button', { name: 'More actions for 0cap' })).toHaveAttribute('aria-haspopup', 'menu');
+  expect(screen.getByRole('button', { name: 'More actions for D:\\Docs' })).toHaveAttribute('aria-haspopup', 'menu');
 });
 
 it('does not show link panel browsing data controls in external sources', () => {
@@ -101,7 +122,7 @@ it('shows a progress row while external sources load', () => {
   expect(status).toHaveTextContent('');
 });
 
-it('describes External folders without mirror terminology', () => {
+it('keeps local External folders controls without repeating the page description', () => {
   renderWithLocalization(<SettingsExternalSearchSection {...baseProps} folders={[{
     accessMode: 'local',
     attachmentMode: 'document_relative_first_then_fixed_root',
@@ -117,7 +138,7 @@ it('describes External folders without mirror terminology', () => {
     updatedAt: '2026-05-26T00:00:00.000Z'
   }]} />);
 
-  expect(screen.getByText('Choose folders to browse, search, and import from outside Foliole. Original files stay outside Foliole.')).toBeInTheDocument();
+  expect(screen.queryByText('Choose folders to browse, search, and import from outside Foliole. Original files stay outside Foliole.')).not.toBeInTheDocument();
   expect(screen.getByTitle('3 files indexed')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Update folder' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Disconnect' })).toBeInTheDocument();

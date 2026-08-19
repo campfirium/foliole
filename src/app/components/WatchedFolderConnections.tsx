@@ -1,3 +1,4 @@
+import { MoreHorizontal } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import type {
@@ -5,25 +6,32 @@ import type {
   NativeWatchedFolderBindingsState
 } from '../../../lib/platform/nativeWatchedFolderContract';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { useActiveSyncGroupMembership } from '../../shared/platform/external/useActiveSyncGroupMembership';
 import { selectRuntimeFolder } from '../../shared/platform/folderSelectionRuntimeRepository';
 import {
   confirmWatchedFolderReconnectInRuntime,
-  disconnectWatchedFolderInRuntime,
   loadWatchedFolderBindingsFromRuntime,
   previewWatchedFolderReconnectInRuntime,
   removeWatchedFolderInRuntime
 } from '../../shared/platform/import/watchedFolderRuntimeRepository';
-import { AppButton, SettingsControlSlot, SettingsRow, SettingsSection, requestAppConfirmation } from '../../shared/ui';
+import {
+  AppDropdownMenu,
+  AppDropdownMenuContent,
+  AppDropdownMenuItem,
+  AppDropdownMenuSeparator,
+  AppDropdownMenuTrigger,
+  requestAppConfirmation,
+  settingsActionTableHeaderClassName,
+  settingsActionTableRowClassName
+} from '../../shared/ui';
 
-const PLATFORM_NAMES: Record<string, string> = {
-  darwin: 'macOS',
-  linux: 'Linux',
-  win32: 'Windows'
-};
+const PLATFORM_NAMES: Record<string, string> = { darwin: 'macOS', linux: 'Linux', win32: 'Windows' };
+const REMOTE_SOURCE_COLUMNS = '[grid-template-columns:16.25rem_minmax(0,1fr)]';
 
 function groupBindings(bindings: NativeWatchedFolderBinding[], waitingLabel: string) {
   const groups = new Map<string, {
     bindings: NativeWatchedFolderBinding[];
+    deviceId: string | null;
     deviceName: string;
     platformName: string | null;
   }>();
@@ -31,6 +39,7 @@ function groupBindings(bindings: NativeWatchedFolderBinding[], waitingLabel: str
     const key = binding.connected_device_id ?? `waiting:${binding.binding_id}`;
     const group = groups.get(key) ?? {
       bindings: [],
+      deviceId: binding.connected_device_id,
       deviceName: binding.connected_device_name?.trim() || waitingLabel,
       platformName: binding.connected_platform ? PLATFORM_NAMES[binding.connected_platform] ?? null : null
     };
@@ -40,69 +49,121 @@ function groupBindings(bindings: NativeWatchedFolderBinding[], waitingLabel: str
   return [...groups.entries()].map(([key, group]) => ({ key, ...group }));
 }
 
-function WatchedFolderConnectionRow(props: {
+function MenuButton(props: { label: string }) {
+  return (
+    <button
+      aria-label={props.label}
+      className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-foreground/55 transition-colors hover:bg-settings-control-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong"
+      type="button"
+    >
+      <MoreHorizontal aria-hidden="true" size={18} strokeWidth={1.8} />
+    </button>
+  );
+}
+
+function DeviceActions(props: { deviceName: string }) {
+  const t = useTranslation();
+  return (
+    <AppDropdownMenu>
+      <AppDropdownMenuTrigger asChild>
+        <MenuButton label={t('desktop.watchedFolder.connections.deviceActions', { device: props.deviceName })} />
+      </AppDropdownMenuTrigger>
+      <AppDropdownMenuContent align="end" sideOffset={4}>
+        <AppDropdownMenuItem disabled>{t('desktop.watchedFolder.changeSource')}</AppDropdownMenuItem>
+        <AppDropdownMenuSeparator />
+        <AppDropdownMenuItem disabled>{t('desktop.watchedFolder.removeSource')}</AppDropdownMenuItem>
+      </AppDropdownMenuContent>
+    </AppDropdownMenu>
+  );
+}
+
+function SourceActions(props: {
   binding: NativeWatchedFolderBinding;
-  currentDeviceId: string;
-  onDisconnect: () => void;
   onReconnect: () => void;
   onRemove: () => void;
 }) {
   const t = useTranslation();
-  const local = props.binding.connected_device_id === props.currentDeviceId;
   const waiting = props.binding.connection_status === 'needs-folder';
   return (
-    <SettingsRow
-      description={!waiting
-        ? t('desktop.watchedFolder.connected', { device: props.binding.connected_device_name ?? '' })
-        : t('desktop.watchedFolder.needsFolder')}
-      readonly={!local && !waiting}
-      title={props.binding.primary_path || t('desktop.watchedFolder.source')}
-    >
-      <SettingsControlSlot className="flex gap-2">
-        {waiting ? (
-          <AppButton onClick={props.onReconnect} size="sm">{t('desktop.watchedFolder.reconnect.action')}</AppButton>
-        ) : local ? (
-          <AppButton onClick={props.onDisconnect} size="sm">{t('desktop.watchedFolder.disconnect')}</AppButton>
-        ) : null}
-        {local || waiting ? (
-          <AppButton onClick={props.onRemove} size="sm" variant="danger">{t('desktop.watchedFolder.remove.action')}</AppButton>
-        ) : null}
-      </SettingsControlSlot>
-    </SettingsRow>
+    <AppDropdownMenu>
+      <AppDropdownMenuTrigger asChild>
+        <MenuButton label={t('desktop.watchedFolder.connections.folderActions', { path: props.binding.primary_path })} />
+      </AppDropdownMenuTrigger>
+      <AppDropdownMenuContent align="end" sideOffset={4}>
+        <AppDropdownMenuItem disabled={!waiting} onSelect={props.onReconnect}>
+          {t('desktop.watchedFolder.changeSource')}
+        </AppDropdownMenuItem>
+        <AppDropdownMenuSeparator />
+        <AppDropdownMenuItem
+          className="text-destructive focus:text-destructive data-[highlighted]:text-destructive"
+          disabled={!waiting}
+          onSelect={props.onRemove}
+        >
+          {t('desktop.watchedFolder.removeSource')}
+        </AppDropdownMenuItem>
+      </AppDropdownMenuContent>
+    </AppDropdownMenu>
+  );
+}
+
+function RemoteSourceRow(props: {
+  binding: NativeWatchedFolderBinding;
+  onReconnect: () => void;
+  onRemove: () => void;
+}) {
+  const t = useTranslation();
+  return (
+    <div className="grid min-h-10 grid-cols-[minmax(0,1fr)_2rem] items-center gap-3 rounded-md transition-colors hover:bg-settings-control-hover">
+      <span className="min-w-0 truncate font-mono text-xs text-foreground/68">
+        {props.binding.primary_path || t('desktop.watchedFolder.source')}
+      </span>
+      <SourceActions {...props} />
+    </div>
   );
 }
 
 function WatchedFolderGroupList(props: {
-  onDisconnect: (bindingId: string) => void;
+  bindings: NativeWatchedFolderBinding[];
   onReconnect: (bindingId: string) => void;
   onRemove: (bindingId: string) => void;
-  state: NativeWatchedFolderBindingsState;
 }) {
   const t = useTranslation();
-  const groups = groupBindings(props.state.bindings, t('desktop.watchedFolder.connections.waiting'));
-  if (!groups.length) return <SettingsRow readonly title={t('desktop.watchedFolder.connections.empty')} />;
-  return groups.map((group) => (
-    <section aria-label={group.deviceName} key={group.key} role="group">
-      <div className="flex min-h-10 items-center gap-2 px-settings-panel-x">
-        <span className="truncate text-ui-md font-semibold">{group.deviceName}</span>
-        {group.platformName ? <span className="text-ui-sm text-foreground/50">{group.platformName}</span> : null}
-      </div>
-      {group.bindings.map((binding) => (
-        <WatchedFolderConnectionRow
-          binding={binding}
-          currentDeviceId={props.state.current_device_id}
-          key={binding.binding_id}
-          onDisconnect={() => props.onDisconnect(binding.binding_id)}
-          onReconnect={() => props.onReconnect(binding.binding_id)}
-          onRemove={() => props.onRemove(binding.binding_id)}
-        />
+  const groups = groupBindings(props.bindings, t('desktop.watchedFolder.connections.waiting'));
+  return (
+    <div className="grid gap-1">
+      {groups.map((group) => (
+        <section
+          aria-label={group.deviceName}
+          className={settingsActionTableRowClassName(REMOTE_SOURCE_COLUMNS, 'items-start')}
+          key={group.key}
+          role="group"
+        >
+          <div className="flex min-h-10 min-w-0 items-center rounded-md transition-colors hover:bg-settings-control-hover">
+            <div className="flex min-w-0 items-center gap-1">
+              <span className="truncate text-sm font-semibold">{group.deviceName}</span>
+              {group.platformName ? <span className="shrink-0 text-xs text-foreground/48">{group.platformName}</span> : null}
+              {group.deviceId ? <DeviceActions deviceName={group.deviceName} /> : null}
+            </div>
+          </div>
+          <div className="grid min-w-0 gap-0.5">
+            {group.bindings.map((binding) => (
+              <RemoteSourceRow
+                binding={binding}
+                key={binding.binding_id}
+                onReconnect={() => props.onReconnect(binding.binding_id)}
+                onRemove={() => props.onRemove(binding.binding_id)}
+              />
+            ))}
+          </div>
+        </section>
       ))}
-    </section>
-  ));
+    </div>
+  );
 }
 
 export function WatchedFolderConnections() {
   const t = useTranslation();
+  const hasActiveSyncGroup = useActiveSyncGroupMembership();
   const [state, setState] = useState<NativeWatchedFolderBindingsState | null>(null);
   const refresh = () => void loadWatchedFolderBindingsFromRuntime().then(setState).catch(() => undefined);
   useEffect(refresh, []);
@@ -136,19 +197,19 @@ export function WatchedFolderConnections() {
     refresh();
   }
 
-  if (!state) return null;
+  const remoteBindings = state?.bindings.filter((binding) => binding.connected_device_id !== state.current_device_id) ?? [];
+  if (!hasActiveSyncGroup || !remoteBindings.length) return null;
   return (
-    <SettingsSection
-      ariaLabel={t('desktop.watchedFolder.connections.title')}
-      description={t('desktop.watchedFolder.connections.description')}
-      title={t('desktop.watchedFolder.connections.title')}
-    >
+    <section aria-label={t('desktop.watchedFolder.connections.otherDevices')} className="mb-6 min-w-0">
+      <div className={settingsActionTableHeaderClassName(REMOTE_SOURCE_COLUMNS)}>
+        <span>{t('desktop.watchedFolder.connections.otherDevices')}</span>
+        <span>{t('desktop.watchedFolder.connections.path')}</span>
+      </div>
       <WatchedFolderGroupList
-        onDisconnect={(bindingId) => void disconnectWatchedFolderInRuntime(bindingId).then(refresh)}
+        bindings={remoteBindings}
         onReconnect={(bindingId) => void reconnect(bindingId)}
         onRemove={(bindingId) => void remove(bindingId)}
-        state={state}
       />
-    </SettingsSection>
+    </section>
   );
 }

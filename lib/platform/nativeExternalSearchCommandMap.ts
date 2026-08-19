@@ -9,6 +9,10 @@ import type { NativeTextImportResult } from './nativeImportContract.js';
 
 
 export type NativeExternalSearchCommandMap = {
+  [NATIVE_COMMANDS.loadActiveSyncGroupMembership]: {
+    args: undefined;
+    result: boolean;
+  };
   [NATIVE_COMMANDS.loadExternalSearchFolders]: {
     args: undefined;
     result: NativeExternalSearchFolder[];

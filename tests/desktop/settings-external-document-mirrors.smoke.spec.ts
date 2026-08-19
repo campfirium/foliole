@@ -7,9 +7,51 @@ import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
 
 const EXTERNAL_FOLDER_HEADING = /^(External folders|外部文件夹)$/;
-const REMOTE_GROUP = /^(Workgroup sources|工作组来源)$/;
+const REMOTE_GROUP = /^(Other devices|其他设备)$/;
 
-async function seedRemoteMirror(desktopApp: ElectronApplication) {
+async function seedWorkgroup(desktopApp: ElectronApplication, activeWorkgroup: boolean) {
+  await desktopApp.evaluate(({ app }, { activeWorkgroup, cwd }) => {
+    const moduleApi = process.getBuiltinModule('module');
+    const pathApi = process.getBuiltinModule('path');
+    if (!moduleApi || !pathApi) throw new Error('Node built-ins unavailable.');
+    const require = moduleApi.createRequire(pathApi.join(cwd, 'package.json'));
+    const Database = require('better-sqlite3') as typeof import('better-sqlite3');
+    const libraryHome = process.env.FOLIOLE_LIBRARY_HOME;
+    if (!libraryHome) throw new Error('missing isolated library home');
+    const db = new Database(pathApi.join(libraryHome, 'Data', 'foliole.db'));
+    db.pragma('busy_timeout = 5000');
+    const deviceRow = db.prepare("SELECT value FROM settings WHERE key = 'device_id'").get() as { value: string };
+    const currentDeviceId = JSON.parse(deviceRow.value) as string;
+    db.prepare(`INSERT OR REPLACE INTO sync_groups
+      (group_id, display_name, timeline_id, created_by_device_id, created_at, updated_at)
+      VALUES ('external-folders-group', 'Workgroup', 'external-folders-timeline', ?, 'now', 'now')`)
+      .run(currentDeviceId);
+    const insertMember = db.prepare(`INSERT OR REPLACE INTO sync_group_members
+      (group_id, device_id, device_kind, device_name, state, approved_by_device_id,
+       authorization_id, joined_at, updated_at)
+      VALUES ('external-folders-group', ?, ?, ?, ?, ?, ?, 'now', 'now')`);
+    const localMemberState = activeWorkgroup ? 'active' : 'left';
+    insertMember.run(currentDeviceId, 'darwin', 'This Mac', localMemberState,
+      currentDeviceId, 'external-local-auth');
+    insertMember.run('other-desktop', 'win32', 'Windows PC', 'active',
+      currentDeviceId, 'external-windows-auth');
+    insertMember.run('other-mac', 'darwin', 'MacBook Pro', 'active',
+      currentDeviceId, 'external-mac-auth');
+    if (activeWorkgroup) {
+      db.prepare(`INSERT OR REPLACE INTO sync_group_local_state
+        (singleton_id, group_id, local_device_id, member_state, updated_at)
+        VALUES (1, 'external-folders-group', ?, 'active', 'now')`).run(currentDeviceId);
+    } else {
+      db.prepare(`UPDATE sync_group_members SET left_at = 'now'
+        WHERE group_id = 'external-folders-group' AND device_id = ?`).run(currentDeviceId);
+    }
+    db.close();
+    return app.getPath('userData');
+  }, { activeWorkgroup, cwd: process.cwd() });
+}
+
+async function seedRemoteMirror(desktopApp: ElectronApplication, activeWorkgroup = true) {
+  await seedWorkgroup(desktopApp, activeWorkgroup);
   await desktopApp.evaluate(({ app }, cwd) => {
     const fsApi = process.getBuiltinModule('fs');
     const moduleApi = process.getBuiltinModule('module');
@@ -20,6 +62,7 @@ async function seedRemoteMirror(desktopApp: ElectronApplication) {
     const libraryHome = process.env.FOLIOLE_LIBRARY_HOME;
     if (!libraryHome) throw new Error('missing isolated library home');
     const db = new Database(pathApi.join(libraryHome, 'Data', 'foliole.db'));
+    db.pragma('busy_timeout = 5000');
     const insertRemoteFolder = db.prepare(`INSERT OR REPLACE INTO external_search_folders (
       id, folder_path, attachment_mode, owner_installation_id, owner_device_name, owner_platform,
       status, document_count, created_at, updated_at
@@ -56,6 +99,17 @@ test.describe('desktop settings External folders', () => {
     await expect(settingsDialog.getByRole('heading', { level: 2, name: EXTERNAL_FOLDER_HEADING })).toBeVisible();
   });
 
+  test('keeps remote folders hidden after leaving the workgroup', async ({ desktopApp, desktopWindow }) => {
+    await seedRemoteMirror(desktopApp, false);
+    await desktopWindow.reload();
+    await expectWorkspaceShell(desktopWindow);
+    const settingsDialog = await openSettingsCategory(desktopWindow, 'ExternalFolder');
+
+    await expect(settingsDialog.getByRole('region', { name: REMOTE_GROUP })).toHaveCount(0);
+    await expect(settingsDialog.getByText('Windows PC', { exact: true })).toHaveCount(0);
+    await expect(settingsDialog.getByRole('button', { name: /^(Add folder|添加文件夹)$/ })).toBeVisible();
+  });
+
   test('shows a remote desktop mirror above editable local folders', async ({ desktopApp, desktopWindow }, testInfo) => {
     await expectWorkspaceShell(desktopWindow);
     await seedRemoteMirror(desktopApp);
@@ -64,29 +118,34 @@ test.describe('desktop settings External folders', () => {
     const settingsDialog = await openSettingsCategory(desktopWindow, 'ExternalFolder');
 
     const remoteRegion = settingsDialog.getByRole('region', { name: REMOTE_GROUP });
-    const localSectionHeading = settingsDialog.getByRole('heading', { level: 3, name: EXTERNAL_FOLDER_HEADING });
+    const pageHeading = settingsDialog.getByRole('heading', { level: 2, name: EXTERNAL_FOLDER_HEADING });
     await expect(remoteRegion).toBeVisible();
-    await expect(localSectionHeading).toBeVisible();
+    await expect(pageHeading).toBeVisible();
     const remoteBounds = await remoteRegion.boundingBox();
-    const localHeadingBounds = await localSectionHeading.boundingBox();
+    const pageHeadingBounds = await pageHeading.boundingBox();
     expect(remoteBounds).not.toBeNull();
-    expect(localHeadingBounds).not.toBeNull();
-    expect(remoteBounds?.y).toBeLessThan(localHeadingBounds?.y ?? 0);
-    await expect(settingsDialog.getByText(/Sources connected to another device|连接到其他设备的来源/)).toBeVisible();
+    expect(pageHeadingBounds).not.toBeNull();
+    expect(pageHeadingBounds?.y).toBeLessThan(remoteBounds?.y ?? 0);
+    await expect(remoteRegion.getByText(/^(Path|路径)$/)).toBeVisible();
     await expect(settingsDialog.getByText('Windows PC', { exact: true })).toBeVisible();
-    await expect(settingsDialog.getByText('Windows', { exact: true })).toBeVisible();
-    await expect(settingsDialog.getByText('0cap', { exact: true })).toBeVisible();
     await expect(settingsDialog.getByText('D:\\X\\Dropbox\\obs\\1act\\0cap')).toBeVisible();
-    await expect(settingsDialog.getByText('Projects', { exact: true })).toBeVisible();
+    await expect(settingsDialog.getByText('D:\\Projects', { exact: true })).toBeVisible();
     await expect(settingsDialog.getByText('MacBook Pro', { exact: true })).toBeVisible();
-    await expect(settingsDialog.getByText('macOS', { exact: true })).toHaveCount(2);
-    await expect(settingsDialog.getByText('Waiting', { exact: true })).toBeVisible();
+    await expect(settingsDialog.getByText('/Users/foliole/Documents/Waiting', { exact: true })).toBeVisible();
+    await expect(settingsDialog.getByText(/^(Waiting to reconnect|待连接)$/)).toBeVisible();
+    await expect(settingsDialog.getByText('This Mac', { exact: true })).toHaveCount(0);
     await expect(settingsDialog.getByText(/^(Read-only mirror|只读镜像)$/)).toHaveCount(0);
     await expect(settingsDialog.getByText('Local', { exact: true })).toHaveCount(0);
     await expect(settingsDialog.getByRole('button', { name: /^(Add folder|添加文件夹)$/ })).toBeVisible();
     await expect(settingsDialog.getByRole('checkbox')).toHaveCount(0);
     await expect(settingsDialog.getByRole('switch')).toHaveCount(0);
-    await expect(settingsDialog.getByRole('button', { name: /^(Reconnect|重新连接)$/ })).toHaveCount(1);
+    const waitingActions = settingsDialog.getByRole('button', {
+      name: /^(More actions for \/Users\/foliole\/Documents\/Waiting|\/Users\/foliole\/Documents\/Waiting 的更多操作)$/
+    });
+    await expect(waitingActions).toBeVisible();
+    await waitingActions.click();
+    await expect(desktopWindow.getByRole('menuitem', { name: /^(Change source…|更换源…)$/ })).toBeVisible();
+    await expect(desktopWindow.getByRole('menuitem', { name: /^(Remove source|移除源)$/ })).toBeVisible();
 
     const screenshotPath = path.join(process.cwd(), '.tmp', 'artifacts', 'desktop-acceptance',
       'external-folder-remote-mirrors-hidden-native.png');

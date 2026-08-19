@@ -1,6 +1,7 @@
 export interface NativeReadwiseWorkgroupDevice {
   device_id: string;
   device_name: string;
+  platform: string | null;
 }
 
 export interface NativeReadwiseDeviceAssignment {

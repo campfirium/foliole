@@ -6,7 +6,8 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-const { loadReadwiseExternalSearchFolders } = vi.hoisted(() => ({
+const { loadDesktopSyncGroup, loadReadwiseExternalSearchFolders } = vi.hoisted(() => ({
+  loadDesktopSyncGroup: vi.fn(),
   loadReadwiseExternalSearchFolders: vi.fn()
 }));
 
@@ -14,6 +15,7 @@ const SAVE_EXTERNAL_SEARCH_FOLDERS = 'save_external_search_folders';
 const LOAD_EXTERNAL_SEARCH_BROWSE_ENTRIES = 'load_external_search_browse_entries';
 const LOAD_EXTERNAL_SEARCH_FOLDERS = 'load_external_search_folders';
 const LOAD_EXTERNAL_SEARCH_PREVIEW = 'load_external_search_preview';
+const LOAD_ACTIVE_SYNC_GROUP_MEMBERSHIP = 'load_active_sync_group_membership';
 const REBUILD_EXTERNAL_SEARCH_INDEX = 'rebuild_external_search_index';
 let mockedAppDataDir = '/tmp/foliole-storage-external-search-commands';
 
@@ -32,6 +34,8 @@ vi.mock('../database/readwiseManagedExternalDocuments.js', () => ({
   loadReadwiseExternalSearchFolders,
   loadReadwiseExternalSearchPreview: () => null
 }));
+
+vi.mock('../database/syncGroupStore.js', () => ({ loadDesktopSyncGroup }));
 
 vi.mock('../externalSearchBackgroundRefreshRuntime.js', () => ({
   notifyExternalSearchFoldersChanged: vi.fn()
@@ -52,6 +56,14 @@ beforeEach(async () => {
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabase();
   loadReadwiseExternalSearchFolders.mockReturnValue([createReadwiseFolder()]);
+  loadDesktopSyncGroup.mockReturnValue(null);
+});
+
+it('reads active workgroup membership without loading pairing secrets', () => {
+  expect(handleExternalSearchStorageCommand(LOAD_ACTIVE_SYNC_GROUP_MEMBERSHIP, {})).toBe(false);
+  loadDesktopSyncGroup.mockReturnValue({ local_member_state: 'active' });
+
+  expect(handleExternalSearchStorageCommand(LOAD_ACTIVE_SYNC_GROUP_MEMBERSHIP, {})).toBe(true);
 });
 
 afterEach(async () => {

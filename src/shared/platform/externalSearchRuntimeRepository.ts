@@ -46,6 +46,13 @@ export async function loadRuntimeExternalSearchFolders() {
   return Array.isArray(result) ? (result as NativeExternalSearchFolder[]).map((item) => toFolder(item)) : [];
 }
 
+export async function loadRuntimeActiveSyncGroupMembership() {
+  const runtimeInvoke = getRuntimeInvoke();
+  return runtimeInvoke
+    ? (await runtimeInvoke(NATIVE_COMMANDS.loadActiveSyncGroupMembership)) === true
+    : false;
+}
+
 export async function refreshRuntimeExternalSearchFolders() {
   const folders = await loadRuntimeExternalSearchFolders();
   if (folders) {

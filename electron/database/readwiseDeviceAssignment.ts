@@ -17,23 +17,26 @@ function readActiveDeviceId() {
   return typeof deviceId === 'string' && deviceId.trim() ? deviceId.trim() : null;
 }
 
-function deviceName(deviceId: string) {
-  return openDatabaseConnection().driver.queryOne<{ device_name: string }>(
-    `SELECT device_name FROM sync_group_members WHERE device_id = ? ORDER BY updated_at DESC LIMIT 1`, [deviceId]
-  )?.device_name ?? deviceId;
+function deviceDetails(deviceId: string): NativeReadwiseWorkgroupDevice {
+  return openDatabaseConnection().driver.queryOne<NativeReadwiseWorkgroupDevice & DatabaseRow>(
+    `SELECT device_id, device_name, device_kind AS platform
+     FROM sync_group_members WHERE device_id = ? ORDER BY updated_at DESC LIMIT 1`, [deviceId]
+  ) ?? { device_id: deviceId, device_name: deviceId, platform: null };
 }
 
 function readWorkgroupDesktopDevices(currentDeviceId: string, activeDeviceId: string | null) {
   const devices = openDatabaseConnection().driver.queryAll<NativeReadwiseWorkgroupDevice & DatabaseRow>(
-    `SELECT m.device_id, m.device_name FROM sync_group_local_state l
+    `SELECT m.device_id, m.device_name, m.device_kind AS platform FROM sync_group_local_state l
      JOIN sync_group_members m ON m.group_id = l.group_id
      WHERE l.singleton_id = 1 AND m.state = 'active' AND m.device_kind IN ('darwin', 'win32')
      ORDER BY m.device_name, m.device_id`
   );
-  const byId = new Map(devices.map((device) => [device.device_id, device]));
+  const byId = new Map<string, NativeReadwiseWorkgroupDevice>(
+    devices.map((device) => [device.device_id, device])
+  );
   for (const deviceId of [currentDeviceId, activeDeviceId]) {
     if (deviceId && !byId.has(deviceId)) {
-      byId.set(deviceId, { device_id: deviceId, device_name: deviceName(deviceId) });
+      byId.set(deviceId, deviceDetails(deviceId));
     }
   }
   return [...byId.values()];
@@ -44,9 +47,9 @@ export function loadReadwiseDeviceAssignment(): NativeReadwiseDeviceAssignment {
   const activeDeviceId = readActiveDeviceId();
   return {
     active_device_id: activeDeviceId,
-    active_device_name: activeDeviceId ? deviceName(activeDeviceId) : null,
+    active_device_name: activeDeviceId ? deviceDetails(activeDeviceId).device_name : null,
     current_device_id: currentDeviceId,
-    current_device_name: deviceName(currentDeviceId),
+    current_device_name: deviceDetails(currentDeviceId).device_name,
     devices: readWorkgroupDesktopDevices(currentDeviceId, activeDeviceId),
     is_active: activeDeviceId === null || activeDeviceId === currentDeviceId,
     legacy_unassigned: activeDeviceId === null

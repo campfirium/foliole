@@ -40,6 +40,7 @@ async function seedWorkgroupSourceFacts(desktopApp: ElectronApplication) {
         VALUES ('t135-group', ?, ?, ?, 'active', ?, ?, 'now', 'now')`);
       insertMember.run(currentDeviceId, 'darwin', 'This Mac', currentDeviceId, 't135-local-authorization');
       insertMember.run('t135-office-pc', 'win32', 'Office PC', currentDeviceId, 't135-remote-authorization');
+      insertMember.run('t135-macbook', 'darwin', 'MacBook Pro', currentDeviceId, 't135-macbook-authorization');
       db.prepare(`INSERT OR REPLACE INTO sync_group_local_state
         (singleton_id, group_id, local_device_id, member_state, updated_at)
         VALUES (1, 't135-group', ?, 'active', 'now')`).run(currentDeviceId);
@@ -48,6 +49,16 @@ async function seedWorkgroupSourceFacts(desktopApp: ElectronApplication) {
          action_mode, archive_path, highlight_mode, highlight_path, primary_path, created_at, updated_at)
         VALUES ('t135-remote-source', 't135-office-pc', 'Office PC', 'win32', 'connected',
           'keep', '', 'merged', '', 'D:\\Research', 'now', 'now')`).run();
+      db.prepare(`INSERT INTO watched_folder_bindings
+        (binding_id, connected_device_id, connected_device_name, connected_platform, connection_status,
+         action_mode, archive_path, highlight_mode, highlight_path, primary_path, created_at, updated_at)
+        VALUES ('t135-remote-projects', 't135-office-pc', 'Office PC', 'win32', 'connected',
+          'keep', '', 'merged', '', 'D:\\Projects', 'now', 'now')`).run();
+      db.prepare(`INSERT INTO watched_folder_bindings
+        (binding_id, connected_device_id, connected_device_name, connected_platform, connection_status,
+         action_mode, archive_path, highlight_mode, highlight_path, primary_path, created_at, updated_at)
+        VALUES ('t135-remote-mac', 't135-macbook', 'MacBook Pro', 'darwin', 'connected',
+          'keep', '', 'merged', '', '/Users/foliole/Documents/Research', 'now', 'now')`).run();
       db.prepare(`INSERT INTO settings (key, value, updated_at) VALUES
         ('readwise_active_device', '{"device_id":"t135-office-pc"}', 'now')`).run();
     });
@@ -63,6 +74,7 @@ test('keeps watched and Readwise source connections explicit in desktop settings
   await seedWorkgroupSourceFacts(desktopApp);
   await mkdir(WATCHED_PATH, { recursive: true });
   const settings = createDefaultImportManagerSettings();
+  settings.readwiseRootPath = 'D:\\Readwise Reader';
   settings.sources[0] = {
     ...settings.sources[0]!,
     id: 't135-watched-source',
@@ -77,35 +89,37 @@ test('keeps watched and Readwise source connections explicit in desktop settings
 
   const importDialog = await openSettingsCategory(desktopWindow, 'Import');
   const watchedRegion = importDialog.getByRole('region', {
-    name: /^(Watched folders in this workgroup|工作组中的监听文件夹)$/
+    name: /^(Other devices|其他设备)$/
   });
   await expect(watchedRegion).toBeVisible();
   const remoteDevice = watchedRegion.getByRole('group', { name: 'Office PC' });
-  const localDevice = watchedRegion.getByRole('group', { name: 'This Mac' });
   await expect(remoteDevice.getByText('Windows', { exact: true })).toBeVisible();
   await expect(remoteDevice.getByText('D:\\Research', { exact: true })).toBeVisible();
-  await expect(remoteDevice.getByRole('button')).toHaveCount(0);
-  await expect(localDevice.getByRole('button', { name: /^(Disconnect|断开)$/ })).toBeVisible();
-  await localDevice.getByRole('button', { name: /^(Disconnect|断开)$/ }).click();
-  await expect(localDevice.getByRole('button', { name: /^(Reconnect|重新连接)$/ })).toBeVisible();
+  await expect(remoteDevice.getByText('D:\\Projects', { exact: true })).toBeVisible();
+  await expect(remoteDevice.getByRole('button', { name: /^(More actions for Office PC|Office PC 的更多操作)$/ })).toBeVisible();
+  const macDevice = watchedRegion.getByRole('group', { name: 'MacBook Pro' });
+  await expect(macDevice.getByText('macOS', { exact: true })).toBeVisible();
+  await expect(macDevice.getByText('/Users/foliole/Documents/Research', { exact: true })).toBeVisible();
+  await expect(watchedRegion.getByRole('group', { name: 'This Mac' })).toHaveCount(0);
   await mkdir(ARTIFACT_DIR, { recursive: true });
   const watchedScreenshot = path.join(ARTIFACT_DIR, 't135-watched-source-connections.png');
   await importDialog.screenshot({ path: watchedScreenshot });
   await testInfo.attach('t135-watched-source-connections', { path: watchedScreenshot, contentType: 'image/png' });
 
   const readwiseDialog = await openSettingsCategory(desktopWindow, 'ReadwiseReader');
-  const deviceRegion = readwiseDialog.getByRole('region', { name: /^(Readwise device|Readwise 设备)$/ });
+  const deviceRegion = readwiseDialog.getByRole('region', { name: /^(Current active device|当前生效设备)$/ });
   await expect(deviceRegion).toBeVisible();
   await expect(deviceRegion.getByText('Office PC', { exact: true })).toBeVisible();
-  await expect(deviceRegion.getByText('This Mac', { exact: true })).toBeVisible();
-  const readwiseSettings = readwiseDialog.locator('fieldset');
-  await expect(readwiseSettings).toHaveAttribute('disabled', '');
+  await expect(deviceRegion.getByText('Windows', { exact: true })).toBeVisible();
+  await expect(deviceRegion.getByText('D:\\Readwise Reader', { exact: true })).toBeVisible();
+  await expect(deviceRegion.getByText('This Mac', { exact: true })).toHaveCount(0);
+  await expect(readwiseDialog.getByText(/^(Readwise Reader Import|Readwise Reader 导入)$/)).toHaveCount(0);
   const readwiseScreenshot = path.join(ARTIFACT_DIR, 't135-readwise-device-assignment.png');
   await readwiseDialog.screenshot({ path: readwiseScreenshot });
   await testInfo.attach('t135-readwise-device-assignment', { path: readwiseScreenshot, contentType: 'image/png' });
-  const switchToThisDevice = deviceRegion.getByRole('button', { name: /^(Switch to this device|切换到此设备)$/ });
+  const switchToThisDevice = deviceRegion.getByRole('button', { name: /^(Switch to this device|切换到本设备)$/ });
   await expect(switchToThisDevice).toBeVisible();
   await switchToThisDevice.click();
   await expect(switchToThisDevice).toHaveCount(0);
-  await expect(readwiseSettings).not.toHaveAttribute('disabled', '');
+  await expect(readwiseDialog.getByText(/^(Readwise Reader Import|Readwise Reader 导入)$/)).toBeVisible();
 });

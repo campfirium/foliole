@@ -39,6 +39,7 @@ export const NATIVE_COMMANDS = {
   openReadwiseBookDownload: 'open_readwise_book_download',
   loadReadwiseBookEpub: 'load_readwise_book_epub',
   resetReadwiseBookImport: 'reset_readwise_book_import',
+  loadActiveSyncGroupMembership: 'load_active_sync_group_membership',
   loadExternalSearchFolders: 'load_external_search_folders',
   saveExternalSearchFolders: 'save_external_search_folders',
   rebuildExternalSearchIndex: 'rebuild_external_search_index',

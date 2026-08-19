@@ -61,8 +61,8 @@ it('keeps legacy Readwise active until a device is explicitly selected, then run
   }
   expect(loadReadwiseDeviceAssignment()).toMatchObject({
     devices: [
-      { device_id: 'remote-device', device_name: 'Office PC' },
-      { device_id: currentDeviceId, device_name: 'This Mac' }
+      { device_id: 'remote-device', device_name: 'Office PC', platform: 'darwin' },
+      { device_id: currentDeviceId, device_name: 'This Mac', platform: 'darwin' }
     ],
     is_active: true,
     legacy_unassigned: true
