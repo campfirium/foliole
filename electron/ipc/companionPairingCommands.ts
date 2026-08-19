@@ -4,11 +4,14 @@ import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { resolveFolioleAppVersion } from '../appVersion.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadOrCreateDesktopDeviceId } from '../database/deviceIdentity.js';
+import { loadOrCreateDesktopHostName } from '../database/hostProfile.js';
 import { commitPrimaryDeviceToPeer } from '../database/primaryDeviceCommit.js';
 import { createDesktopSyncGroup, loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import { resolveDesktopDeviceName } from '../sync/companionLanPayloads.js';
 import {
-  resolveCompanionMembershipApproval, resolveCompanionMembershipDeviceId
+  resolveCompanionMembershipApproval,
+  resolveCompanionMembershipAuthorizationId,
+  resolveCompanionMembershipHostName
 } from '../sync/companionMembershipApproval.js';
 import {
   approveCompanionPairRequest,
@@ -65,12 +68,12 @@ function buildDesktopCompanionPairingOverview(serverStatus = refreshLanWorkspace
   const join = loadDesktopSyncGroupJoinState();
   const syncGroup = loadDesktopSyncGroup();
   const localMember = syncGroup?.members.find((member) =>
-    member.device_id === syncGroup.local_device_id && member.state === 'active'
+    member.host_name === syncGroup.local_host_name && member.state === 'active'
   );
   return {
     current_host: {
-      host_name: localMember?.device_name ?? resolveDesktopDeviceName(),
-      host_platform: localMember?.device_kind ?? process.platform
+      host_name: localMember?.host_name ?? resolveDesktopDeviceName(),
+      host_platform: localMember?.host_platform ?? process.platform
     },
     join_candidates: join.candidates,
     join_request: join.pending?.request ?? null,
@@ -105,9 +108,10 @@ function handleCompanionPairRequestMutation(
     if (!request) throw new Error(`unknown companion pair request: ${pairRequestId}`);
     const group = loadDesktopSyncGroup();
     const action = resolveCompanionMembershipApproval(request, group);
-    const deviceId = resolveCompanionMembershipDeviceId(request, group);
+    const hostName = resolveCompanionMembershipHostName(request);
+    const authorizationId = resolveCompanionMembershipAuthorizationId(request, group);
     requireCompanionPairRequestMutationResult(
-      approveCompanionPairRequest(pairRequestId, Date.now(), action, deviceId),
+      approveCompanionPairRequest(pairRequestId, Date.now(), action, hostName, authorizationId ?? undefined),
       pairRequestId
     );
   } else {
@@ -135,7 +139,7 @@ async function finishDesktopSyncGroupJoin() {
 function handleSyncGroupJoinCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.createSyncGroup) {
     const deviceId = loadOrCreateDesktopDeviceId();
-    createDesktopSyncGroup({ deviceId, deviceKind: process.platform, deviceName: resolveDesktopDeviceName() });
+    createDesktopSyncGroup({ hostName: loadOrCreateDesktopHostName(), hostPlatform: process.platform });
     return activateDesktopCompanionSync({ appVersion: resolveFolioleAppVersion(app), peerId: deviceId })
       .then(() => buildDesktopCompanionPairingOverview());
   }

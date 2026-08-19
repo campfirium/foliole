@@ -38,7 +38,7 @@ describe('syncProtocolContract', () => {
   it('reports missing required capabilities', () => {
     expect(evaluateSyncProtocolCompatibility(descriptor({ capabilities: [] }))).toEqual({
       missing_capabilities: [
-        'author-host-snapshots-v1', 'lan-sync-v1', 'opaque-sync-refs-v1',
+        'author-host-snapshots-v1', 'host-workgroup-members-v1', 'lan-sync-v1', 'opaque-sync-refs-v1',
         'sync-group-facts-v1', 'workgroup-aead-v1'
       ],
       negotiated_version: null,

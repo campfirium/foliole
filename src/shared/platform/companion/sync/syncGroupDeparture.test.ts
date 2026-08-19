@@ -30,8 +30,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.endpoint.mockResolvedValue('http://192.168.1.2:38641');
   mocks.group.mockResolvedValue({
-    group_id: 'group-1', local_device_id: 'android-1', local_member_state: 'active',
-    members: [{ device_id: 'android-1', state: 'active' }, { device_id: 'desktop-1', state: 'active' }]
+    group_id: 'group-1', local_host_name: 'android-1', local_member_state: 'active',
+    members: [{ host_name: 'android-1', state: 'active' }, { host_name: 'desktop-1', state: 'active' }]
   });
   mocks.headers.mockResolvedValue({ 'X-Signature': 'signed' });
   mocks.resolveTargets.mockResolvedValue([{ endpointUrl: 'http://192.168.1.2:38641' }]);
@@ -49,7 +49,7 @@ it('records a local departure only after another Device accepts it', async () =>
   }));
   expect(mocks.bind).toHaveBeenCalledWith({ endpointUrl: 'http://192.168.1.2:38641' });
   expect(mocks.record).toHaveBeenCalledWith(expect.objectContaining({
-    authorizationId: 'leave-departure-1', deviceId: 'android-1', groupId: 'group-1'
+    authorizationId: 'leave-departure-1', hostName: 'android-1', groupId: 'group-1'
   }));
   const requestOrder = mocks.request.mock.invocationCallOrder[0];
   const recordOrder = mocks.record.mock.invocationCallOrder[0];
@@ -70,7 +70,7 @@ it('keeps local membership and credentials when no Device accepts the departure'
 
 it('routes Leave to an active identity-bound peer when the stored endpoint has departed', async () => {
   mocks.resolveTargets.mockResolvedValue([{
-    deviceId: 'desktop-2', endpointUrl: 'http://192.168.1.3:38641', groupId: 'group-1'
+    hostName: 'desktop-2', endpointUrl: 'http://192.168.1.3:38641', groupId: 'group-1'
   }]);
 
   await leaveCompanionSyncGroup();
@@ -79,7 +79,7 @@ it('routes Leave to an active identity-bound peer when the stored endpoint has d
     allowWhileNotParticipating: true
   });
   expect(mocks.bind).toHaveBeenCalledWith({
-    deviceId: 'desktop-2', endpointUrl: 'http://192.168.1.3:38641', groupId: 'group-1'
+    hostName: 'desktop-2', endpointUrl: 'http://192.168.1.3:38641', groupId: 'group-1'
   });
   expect(mocks.headers).toHaveBeenCalledWith(expect.objectContaining({
     endpointUrl: 'http://192.168.1.3:38641'
@@ -103,8 +103,8 @@ it('keeps local membership when no active identity-bound peer is reachable', asy
 
 it('clears the final local membership without requiring a reachable Device', async () => {
   mocks.group.mockResolvedValue({
-    group_id: 'group-1', local_device_id: 'android-1', local_member_state: 'active',
-    members: [{ device_id: 'android-1', state: 'active' }, { device_id: 'desktop-1', state: 'left' }]
+    group_id: 'group-1', local_host_name: 'android-1', local_member_state: 'active',
+    members: [{ host_name: 'android-1', state: 'active' }, { host_name: 'desktop-1', state: 'left' }]
   });
   mocks.endpoint.mockResolvedValue(null);
 

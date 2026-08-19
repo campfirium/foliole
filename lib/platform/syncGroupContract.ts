@@ -1,21 +1,20 @@
 export type SyncGroupMemberState = 'active' | 'left';
 
 export interface SyncGroupMemberPayload {
-  approved_by_device_id: string;
+  approved_by_host_name: string;
   authorization_id: string;
-  device_id: string;
-  device_kind: string;
-  device_name: string;
+  host_name: string;
+  host_platform: string;
   joined_at: string;
   state: SyncGroupMemberState;
 }
 
 export interface SyncGroupPayload {
   created_at: string;
-  created_by_device_id: string;
+  created_by_host_name: string;
   display_name: string;
   group_id: string;
-  local_device_id: string;
+  local_host_name: string;
   local_member_state: SyncGroupMemberState;
   members: SyncGroupMemberPayload[];
   timeline_id: string;
@@ -26,9 +25,8 @@ export interface SyncGroupDiscoveryPayload {
   group_display_name: string;
   group_id: string;
   protocol: import('./syncProtocolContract.js').SyncProtocolDescriptor;
-  provider_device_id: string;
-  provider_device_kind: string;
-  provider_device_name: string;
+  provider_host_name: string;
+  provider_host_platform: string;
   timeline_id: string;
 }
 
@@ -40,7 +38,7 @@ export interface SyncGroupLibraryFacts {
   timeline_id: string | null;
 }
 
-export function resolveSyncGroupDisplayDeviceName(group: SyncGroupPayload) {
-  return group.members.find((member) => member.device_id === group.created_by_device_id)?.device_name
+export function resolveSyncGroupDisplayHostName(group: SyncGroupPayload) {
+  return group.members.find((member) => member.host_name === group.created_by_host_name)?.host_name
     ?? group.display_name;
 }

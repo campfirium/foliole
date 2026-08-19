@@ -60,7 +60,8 @@ export function activateDesktopCompanionSync(identity: DesktopSyncRuntimeIdentit
 
 function enableCurrentWorkgroupSecurity() {
   const group = loadDesktopSyncGroup();
-  if (!group || group.local_member_state !== 'active') throw new Error('sync_group_not_available');
+  if (!group) return;
+  if (group.local_member_state !== 'active') throw new Error('sync_group_not_available');
   enableDesktopWorkgroupKey(group.group_id);
 }
 

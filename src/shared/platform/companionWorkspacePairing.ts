@@ -83,13 +83,15 @@ export async function requestCompanionPairing(args: RequestCompanionPairingArgs)
   const pairingPublicKey = await createCompanionPairingPublicKey(pairingKeyId);
   const libraryFacts = usesSyncGroup ? await loadCompanionSyncGroupLibraryFacts() : null;
   const existingMember = existingGroup?.group_id === args.groupId
-    ? existingGroup?.members.find((member) => member.device_id === existingGroup.local_device_id)
+    ? existingGroup?.members.find((member) => member.host_name === existingGroup.local_host_name)
     : null;
   const response = await requestDesktop(`${normalizedEndpointUrl}${PAIR_REQUESTS_ENDPOINT_PATH}`, {
     body: JSON.stringify({
-      device_id: existingMember?.device_id ?? args.deviceId,
+      device_id: args.deviceId,
       device_kind: args.deviceKind,
       device_name: args.deviceName,
+      host_name: existingMember?.host_name ?? args.deviceName,
+      host_platform: existingMember?.host_platform ?? args.deviceKind,
       ...(usesSyncGroup ? {
         group_id: args.groupId,
         group_tag: args.groupTag,
@@ -168,27 +170,31 @@ async function saveNativePairing(
 ) {
   return runCompanionSyncWriterTask(async () => {
     if (usesSyncGroup) {
-      if (!payload.sync_group || !payload.provider_device_id) {
+      if (!payload.sync_group || !payload.provider_device_id || !payload.host_name
+        || !payload.provider_host_name || !payload.provider_host_platform) {
         throw new Error('Desktop did not return Sync Group membership.');
       }
       const existingGroup = await loadCompanionSyncGroup();
       const isActiveReauthorization = existingGroup?.group_id === payload.sync_group.group_id
         && existingGroup.timeline_id === payload.sync_group.timeline_id
-        && existingGroup.local_device_id === payload.device_id
+        && existingGroup.local_host_name === payload.host_name
         && existingGroup.local_member_state === 'active';
       if (isActiveReauthorization) {
         await refreshActiveCompanionSyncGroupMembership({
-          deviceId: payload.device_id, group: payload.sync_group, workgroupKey: deviceSecret
+          hostName: payload.host_name, group: payload.sync_group, workgroupKey: deviceSecret
         });
       } else {
         await joinCompanionSyncGroup({
-          deviceId: payload.device_id, group: payload.sync_group, workgroupKey: deviceSecret
+          hostName: payload.host_name, group: payload.sync_group, workgroupKey: deviceSecret
         });
       }
       await FolioleCompanionSync.bindSyncGroupPeerRoute({
         endpoint_url: normalizeEndpointUrl(args.endpointUrl),
         local_device_id: payload.device_id,
+        local_host_name: payload.host_name,
         peer_device_id: payload.provider_device_id,
+        peer_host_name: payload.provider_host_name,
+        peer_host_platform: payload.provider_host_platform,
         sync_group_id: payload.sync_group.group_id
       });
       return loadCompanionPairingState();

@@ -6,6 +6,8 @@ export interface PendingCompanionPairRequest {
   device_id: string;
   device_kind: string;
   device_name: string;
+  host_name: string;
+  host_platform: string;
   expires_at: string;
   pairing_public_key: string;
   protocol: SyncProtocolDescriptor;
@@ -13,6 +15,7 @@ export interface PendingCompanionPairRequest {
   requested_at: string;
   status: 'approved' | 'pending' | 'rejected';
   membership_action?: 'join_as_new_member' | 'recover_existing_member';
+  member_authorization_id?: string;
   group_id?: string;
   timeline_id?: string;
 }
@@ -35,6 +38,8 @@ export function toPublicPairRequest(request: StoredCompanionPairRequest): Pendin
     device_id: request.device_id,
     device_kind: request.device_kind,
     device_name: request.device_name,
+    host_name: request.host_name,
+    host_platform: request.host_platform,
     expires_at: request.expires_at,
     pairing_public_key: request.pairing_public_key,
     protocol: request.protocol,
@@ -42,6 +47,7 @@ export function toPublicPairRequest(request: StoredCompanionPairRequest): Pendin
     requested_at: request.requested_at,
     status: request.status,
     ...(request.membership_action ? { membership_action: request.membership_action } : {}),
+    ...(request.member_authorization_id ? { member_authorization_id: request.member_authorization_id } : {}),
     ...(request.group_id ? { group_id: request.group_id } : {}),
     ...(request.timeline_id ? { timeline_id: request.timeline_id } : {})
   };

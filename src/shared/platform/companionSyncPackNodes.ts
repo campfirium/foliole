@@ -22,6 +22,7 @@ export async function applyCompanionSyncPackPathWithSharedCore(
     packPath: string;
     primaryDeviceId?: string | null | undefined;
     sourcePeerId: string;
+    sourceHostName?: string;
   },
   cursorStore: CompanionSyncPackCursorStore,
   manager: CompanionSqliteConnectionManager = new SQLiteConnection(CapacitorSQLite)
@@ -33,6 +34,7 @@ export async function applyCompanionSyncPackPathWithSharedCore(
     hostName: args.hostName,
     packPath: args.packPath,
     primaryDeviceId: args.primaryDeviceId,
+    ...(args.sourceHostName === undefined ? {} : { sourceHostName: args.sourceHostName }),
     sourcePeerId: args.sourcePeerId
   }, manager);
   assertSyncPackCursorAdvance({
@@ -54,6 +56,7 @@ export async function applyCompanionSyncPackNodesWithSharedCore(
     hostName: string;
     packPath: string;
     primaryDeviceId?: string | null | undefined;
+    sourceHostName?: string;
     sourcePeerId: string;
   },
   manager: CompanionSqliteConnectionManager = new SQLiteConnection(CapacitorSQLite)
@@ -74,6 +77,7 @@ export async function applyCompanionSyncPackNodesWithDbPort(
     hostName: string;
     packPath: string;
     primaryDeviceId?: string | null | undefined;
+    sourceHostName?: string;
     sourcePeerId: string;
   },
   port: DbPort
@@ -84,6 +88,7 @@ export async function applyCompanionSyncPackNodesWithDbPort(
       currentCursor: args.currentCursor,
       hostName: args.hostName,
       incomingAlias: INCOMING_PACK_ALIAS,
+      ...(args.sourceHostName === undefined ? {} : { sourceHostName: args.sourceHostName }),
       sourcePeerId: args.sourcePeerId
     }).then((result) => ({
       ...result,

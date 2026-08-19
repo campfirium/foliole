@@ -85,11 +85,11 @@ describe('CompanionSyncPanel', () => {
   it('uses the ordinary connection entry when a group key is unavailable', () => {
     const props = createProps();
     renderWithLocalization(<CompanionSyncPanel {...props} syncGroup={{
-      created_at: '2026-08-08T00:00:00.000Z', created_by_device_id: 'Maci', display_name: 'Maci',
-      group_id: 'group-1', local_device_id: 'Xiaomi 23049RAD8C', local_member_state: 'active',
-      members: [{ approved_by_device_id: 'Maci', authorization_id: 'join-a5',
-        device_id: 'Xiaomi 23049RAD8C', device_kind: 'android-capacitor',
-        device_name: 'Xiaomi 23049RAD8C', joined_at: '2026-08-08T00:00:00.000Z', state: 'active' }],
+      created_at: '2026-08-08T00:00:00.000Z', created_by_host_name: 'Maci', display_name: 'Maci',
+      group_id: 'group-1', local_host_name: 'Xiaomi 23049RAD8C', local_member_state: 'active',
+      members: [{ approved_by_host_name: 'Maci', authorization_id: 'join-a5',
+        host_name: 'Xiaomi 23049RAD8C', host_platform: 'android-capacitor',
+        joined_at: '2026-08-08T00:00:00.000Z', state: 'active' }],
       timeline_id: 'timeline-1'
     }} />);
 

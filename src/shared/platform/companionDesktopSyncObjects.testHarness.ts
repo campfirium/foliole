@@ -94,6 +94,7 @@ vi.mock('./companionDesktopAttachmentResources', () => attachmentResourceMock);
 vi.mock('./attachmentResources', () => attachmentResolutionMock);
 vi.mock('./companion/sync/diagnostics/companionSyncDiagnostics', () => diagnosticsMock);
 vi.mock('./companion/network/syncGroupPeerIdentity', () => ({
+  resolveCompanionSyncPeerHostName: vi.fn(async () => 'Desktop Test Host'),
   resolveCompanionSyncPeerId: vi.fn(async () => 'desktop-test-device')
 }));
 vi.mock('./companionWorkspacePairing', () => pairingMock);

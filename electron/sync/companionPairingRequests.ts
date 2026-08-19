@@ -55,9 +55,26 @@ function refreshPendingRequest(
   request.pairing_public_key = args.pairingPublicKey.trim();
   request.compatibility = args.compatibility;
   request.protocol = args.protocol;
+  request.host_name = args.hostName.trim();
+  request.host_platform = args.hostPlatform.trim();
   if (args.groupId) request.group_id = args.groupId;
   if (args.timelineId) request.timeline_id = args.timelineId;
   return { created: false, rate_limited: false, request: toPublicPairRequest(request) } as const;
+}
+
+function buildStoredRequest(args: Parameters<typeof createCompanionPairRequest>[0], nowMs: number) {
+  const expiresAtMs = nowMs + PAIR_REQUEST_TTL_MS;
+  return {
+    client_address: args.clientAddress?.trim() || null,
+    compatibility: args.compatibility,
+    device_id: args.deviceId.trim(), device_kind: args.deviceKind.trim(), device_name: args.deviceName.trim(),
+    host_name: args.hostName.trim(), host_platform: args.hostPlatform.trim(),
+    expires_at: new Date(expiresAtMs).toISOString(), expires_at_ms: expiresAtMs, completion: null,
+    pairing_public_key: args.pairingPublicKey.trim(), protocol: args.protocol,
+    pair_request_id: randomUUID(), requested_at: new Date(nowMs).toISOString(), status: 'pending' as const,
+    ...(args.groupId ? { group_id: args.groupId } : {}),
+    ...(args.timelineId ? { timeline_id: args.timelineId } : {})
+  } satisfies StoredCompanionPairRequest;
 }
 
 export function createCompanionPairRequest(args: {
@@ -66,6 +83,8 @@ export function createCompanionPairRequest(args: {
   deviceId: string;
   deviceKind: string;
   deviceName: string;
+  hostName: string;
+  hostPlatform: string;
   nowMs?: number;
   pairingPublicKey: string;
   protocol: SyncProtocolDescriptor;
@@ -94,24 +113,7 @@ export function createCompanionPairRequest(args: {
       retry_after_ms: rateLimit.retry_after_ms
     } as const;
   }
-  const expiresAtMs = nowMs + PAIR_REQUEST_TTL_MS;
-  const request: StoredCompanionPairRequest = {
-    client_address: args.clientAddress?.trim() || null,
-    compatibility: args.compatibility,
-    device_id: args.deviceId.trim(),
-    device_kind: args.deviceKind.trim(),
-    device_name: args.deviceName.trim(),
-    expires_at: new Date(expiresAtMs).toISOString(),
-    expires_at_ms: expiresAtMs,
-    completion: null,
-    pairing_public_key: args.pairingPublicKey.trim(),
-    protocol: args.protocol,
-    pair_request_id: randomUUID(),
-    requested_at: new Date(nowMs).toISOString(),
-    status: 'pending',
-    ...(args.groupId ? { group_id: args.groupId } : {}),
-    ...(args.timelineId ? { timeline_id: args.timelineId } : {})
-  };
+  const request = buildStoredRequest(args, nowMs);
   requestsById.set(request.pair_request_id, request);
   return {
     created: true,
@@ -149,12 +151,14 @@ export function approveCompanionPairRequest(
   pairRequestId: string,
   nowMs = Date.now(),
   membershipAction?: PendingCompanionPairRequest['membership_action'],
-  approvedDeviceId?: string
+  approvedHostName?: string,
+  memberAuthorizationId?: string
 ) {
   const result = updateRequestStatus(pairRequestId, 'approved', nowMs);
   const request = requestsById.get(pairRequestId);
   if (request && membershipAction) request.membership_action = membershipAction;
-  if (request && approvedDeviceId?.trim()) request.device_id = approvedDeviceId.trim();
+  if (request && approvedHostName?.trim()) request.host_name = approvedHostName.trim();
+  if (request && memberAuthorizationId?.trim()) request.member_authorization_id = memberAuthorizationId.trim();
   return result && request ? toPublicPairRequest(request) : result;
 }
 

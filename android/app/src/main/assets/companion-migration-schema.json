@@ -23,6 +23,7 @@
     "replaceSyncPushAck": "replaceSyncPushAck",
     "migrateHostPermanentState": "migrateHostPermanentState",
     "migrateAuthorHostSnapshots": "migrateAuthorHostSnapshots",
+    "migrateSyncGroupHosts": "migrateSyncGroupHosts",
     "migrateOpaqueSyncRefs": "migrateOpaqueSyncRefs",
     "migrateSyncObjectStateSequence": "migrateSyncObjectStateSequence"
   },
@@ -308,6 +309,15 @@
         }
       ],
       "beforeVersion": 29
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to cut over companion Sync Group Hosts.",
+          "type": "migrateSyncGroupHosts"
+        }
+      ],
+      "beforeVersion": 30
     }
   ],
   "planKeys": {

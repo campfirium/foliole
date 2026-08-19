@@ -11,13 +11,13 @@ const mocks = vi.hoisted(() => ({
   setLanWorkspaceSyncPairRequestHandler: vi.fn((handler: () => void) => {
     mocks.pairingHandler = handler;
   }),
-  updateLocalSyncGroupDeviceName: vi.fn()
+  updateLocalSyncGroupHostName: vi.fn()
 }));
 
 vi.mock('./database/syncGroupIdentityStore.js', () => ({
-  updateLocalSyncGroupDeviceName: mocks.updateLocalSyncGroupDeviceName
+  updateLocalSyncGroupHostName: mocks.updateLocalSyncGroupHostName
 }));
-vi.mock('./sync/companionLanPayloads.js', () => ({ resolveDesktopDeviceName: () => 'Maci' }));
+vi.mock('./sync/companionLanPayloads.js', () => ({ resolveDesktopHostName: () => 'Maci' }));
 vi.mock('./sync/desktopCompanionSyncParticipation.js', () => ({
   reconcileDesktopCompanionSyncRuntime: mocks.reconcileDesktopCompanionSyncRuntime
 }));
@@ -101,12 +101,12 @@ it('routes pairing requests through the main window opener', async () => {
   expect(window.webContents.send).toHaveBeenCalledWith('foliole:companion-pairing-requests-changed');
 });
 
-it('refreshes the persisted local Device name even while Sync is paused', async () => {
+it('refreshes the persisted local Host name even while Sync is paused', async () => {
   const { startCompanionSyncIfEnabled } = await import('./mainWindowLifecycle.js');
 
   await startCompanionSyncIfEnabled({ appVersion: '0.7.5', isEnabled: () => false, peerId: 'desktop-a' });
 
-  expect(mocks.updateLocalSyncGroupDeviceName).toHaveBeenCalledWith('Maci');
+  expect(mocks.updateLocalSyncGroupHostName).toHaveBeenCalledWith('Maci');
 });
 
 it('reconciles enabled Sync through the workgroup security boundary', async () => {

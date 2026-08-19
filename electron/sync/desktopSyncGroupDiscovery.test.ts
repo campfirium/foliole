@@ -69,6 +69,8 @@ describe('desktop Sync Group discovery', () => {
       provider_device_id: 'device-a',
       provider_device_kind: 'android-capacitor',
       provider_device_name: 'Android B',
+      provider_host_name: 'Android B',
+      provider_host_platform: 'desktop',
       timeline_id: 'timeline-1'
     }]);
     expect(runtime.stop).toHaveBeenCalledTimes(1);

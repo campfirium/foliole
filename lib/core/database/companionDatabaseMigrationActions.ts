@@ -26,7 +26,13 @@ interface AttachmentSnapshotRow extends DbRow {
 }
 
 export async function installCompanionSchema(db: DbPort) {
-  for (const statement of COMPANION_SCHEMA_STATEMENTS) await db.run(statement);
+  const legacyMembers = await companionColumnExists(db, 'sync_group_members', 'device_id');
+  for (const statement of COMPANION_SCHEMA_STATEMENTS) {
+    const compatible = legacyMembers && statement.trimStart().startsWith('CREATE TRIGGER')
+      ? statement.replaceAll('host_name', 'device_id')
+      : statement;
+    await db.run(compatible);
+  }
 }
 
 export async function replaceLegacySyncPushAck(db: DbPort) {

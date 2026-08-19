@@ -84,6 +84,7 @@ export interface CompanionWorkspaceVersionPayload {
 export interface CompanionWorkspaceDiscoveryPayload {
   app_version: string;
   desktop_device_name: string;
+  desktop_host_name: string;
   desktop_name: string;
   desktop_platform: string;
   pairing_mode: 'desktop-confirm';
@@ -115,6 +116,8 @@ export interface CompanionPairingSecretPayload {
 export interface CompanionWorkspacePairPayload {
   compatibility: SyncProtocolCompatibilityResult;
   device_id: string;
+  host_name?: string;
+  host_platform?: string;
   encrypted_device_secret: CompanionPairingSecretPayload;
   paired_at: string;
   peer_id: string;
@@ -123,6 +126,8 @@ export interface CompanionWorkspacePairPayload {
   provider_device_id?: string;
   provider_device_kind?: string;
   provider_device_name?: string;
+  provider_host_name?: string;
+  provider_host_platform?: string;
   provider_encrypted_device_secret?: CompanionPairingSecretPayload;
 }
 
@@ -131,6 +136,8 @@ export interface DesktopCompanionPairRequestPayload {
   device_id: string;
   device_kind: string;
   device_name: string;
+  host_name: string;
+  host_platform: string;
   expires_at: string;
   pair_request_id: string;
   requested_at: string;
@@ -162,6 +169,8 @@ export interface DesktopSyncGroupJoinCandidatePayload {
   provider_device_id: string;
   provider_device_kind: string;
   provider_device_name: string;
+  provider_host_name: string;
+  provider_host_platform: string;
   timeline_id: string;
 }
 

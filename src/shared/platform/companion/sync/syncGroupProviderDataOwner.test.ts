@@ -77,13 +77,13 @@ it('creates provider read snapshots through the Capacitor database owner', async
 it('allocates the smallest unused member profile inside the writer transaction', async () => {
   mocks.query
     .mockResolvedValueOnce([])
-    .mockResolvedValueOnce([{ device_name: 'Maci' }, { device_name: 'Maci 2' }]);
+    .mockResolvedValueOnce([{ host_name: 'Maci' }, { host_name: 'Maci 2' }]);
   mocks.listener?.({
     operation: 'authorize_member',
     payload: {
-      approved_by_device_id: 'Maci', device_id: 'Maci', group_id: 'group-1',
+      approved_by_host_name: 'Maci', group_id: 'group-1',
       member: {
-        authorization_id: 'request-3', device_kind: 'darwin', device_name: 'Maci',
+        authorization_id: 'request-3', host_platform: 'darwin', host_name: 'Maci',
         joined_at: '2026-08-12T00:00:00.000Z'
       }
     },
@@ -93,10 +93,10 @@ it('allocates the smallest unused member profile inside the writer transaction',
   expect(mocks.controlWriter).toHaveBeenCalledOnce();
   expect(mocks.writer).not.toHaveBeenCalled();
   expect(mocks.run).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO sync_group_members'), [
-    'group-1', 'Maci 3', 'darwin', 'Maci 3', 'Maci', 'request-3',
+    'group-1', 'Maci 3', 'darwin', 'Maci', 'request-3',
     '2026-08-12T00:00:00.000Z', expect.any(String)
   ]);
   expect(mocks.resolve).toHaveBeenCalledWith({
-    request_id: 'request-3', result: { authorized: true, device_id: 'Maci 3', device_name: 'Maci 3' }
+    request_id: 'request-3', result: { authorized: true, host_name: 'Maci 3' }
   });
 });

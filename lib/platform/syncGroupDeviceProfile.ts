@@ -1,25 +1,24 @@
-export interface SyncGroupDeviceProfile {
-  device_id: string;
-  device_name: string;
+export interface SyncGroupHostProfile {
+  host_name: string;
 }
 
-export function allocateSyncGroupDeviceProfile(
+export function allocateSyncGroupHostName(
   baseName: string,
   occupiedNames: Iterable<string>
-): SyncGroupDeviceProfile {
+): SyncGroupHostProfile {
   const normalizedBase = baseName.trim();
-  if (!normalizedBase) throw new Error('sync_group_device_name_invalid');
+  if (!normalizedBase) throw new Error('sync_group_host_name_invalid');
   const occupied = new Set([...occupiedNames].map((name) => name.trim()).filter(Boolean));
-  let deviceName = normalizedBase;
+  let hostName = normalizedBase;
   let suffix = 2;
-  while (occupied.has(deviceName)) {
-    deviceName = `${normalizedBase} ${suffix}`;
+  while (occupied.has(hostName)) {
+    hostName = `${normalizedBase} ${suffix}`;
     suffix += 1;
   }
-  return { device_id: deviceName, device_name: deviceName };
+  return { host_name: hostName };
 }
 
-export function isAssignedSyncGroupDeviceName(name: string, baseName: string) {
+export function isAssignedSyncGroupHostName(name: string, baseName: string) {
   const normalizedName = name.trim();
   const normalizedBase = baseName.trim();
   if (!normalizedName || !normalizedBase) return false;

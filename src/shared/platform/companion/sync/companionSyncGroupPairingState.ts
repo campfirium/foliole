@@ -7,20 +7,17 @@ export function projectCompanionSyncGroupPairingState(
   group: SyncGroupPayload,
   fallback: NativeCompanionPairingState
 ) {
-  const local = group.members.find((member) => member.device_id === group.local_device_id);
-  const remote = group.members.find((member) => member.device_id !== group.local_device_id);
+  const local = group.members.find((member) => member.host_name === group.local_host_name);
+  const remote = group.members.find((member) => member.host_name !== group.local_host_name);
   if (!local) return fallback;
   return normalizePairingState({
-    device_id: local.device_id,
-    device_kind: local.device_kind,
-    device_name: local.device_name,
+    ...fallback,
     is_paired: true,
     negotiated_protocol_version: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
     paired_at: local.joined_at,
-    primary_device_id: remote?.device_id ?? local.device_id,
-    remote_peer_id: remote?.device_id ?? null,
-    remote_peer_name: remote?.device_name ?? null,
-    remote_peer_platform: remote?.device_kind ?? null,
+    remote_peer_id: fallback.remote_peer_id ?? null,
+    remote_peer_name: remote?.host_name ?? null,
+    remote_peer_platform: remote?.host_platform ?? null,
     remote_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
   });
 }

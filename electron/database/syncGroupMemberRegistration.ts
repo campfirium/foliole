@@ -1,41 +1,44 @@
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
-import { allocateSyncGroupDeviceProfile } from '../../lib/platform/syncGroupDeviceProfile.js';
+import { allocateSyncGroupHostName } from '../../lib/platform/syncGroupDeviceProfile.js';
 
 export function saveApprovedSyncGroupMember(args: {
-  approvedByDeviceId: string;
+  approvedByHostName: string;
   authorizationId: string;
-  deviceId: string;
-  deviceKind: string;
-  deviceName: string;
+  hostName: string;
+  hostPlatform: string;
   groupId: string;
   now: string;
 }, driver: DatabaseDriver) {
-  const active = driver.queryOne<{ device_kind: string; device_name: string }>(
-    `SELECT device_kind, device_name FROM sync_group_members
-     WHERE group_id = ? AND device_id = ? AND state = 'active' LIMIT 1`,
-    [args.groupId, args.deviceId]
+  const active = driver.queryOne<{ authorization_id: string; host_platform: string }>(
+    `SELECT authorization_id, host_platform FROM sync_group_members
+     WHERE group_id = ? AND host_name = ? AND state = 'active' LIMIT 1`,
+    [args.groupId, args.hostName]
   );
-  if (active?.device_name === args.deviceName && active.device_kind === args.deviceKind) return;
-  const existing = driver.queryOne(
-    `SELECT 1 FROM sync_group_members WHERE group_id = ? AND authorization_id = ? LIMIT 1`,
+  if (active?.authorization_id === args.authorizationId && active.host_platform === args.hostPlatform) return;
+  const existing = driver.queryOne<{ host_name: string; updated_at: string }>(
+    `SELECT host_name, updated_at FROM sync_group_members
+     WHERE group_id = ? AND authorization_id = ? LIMIT 1`,
     [args.groupId, args.authorizationId]
   );
-  if (existing) return;
-  const occupiedNames = driver.queryAll<{ device_name: string }>(
-    `SELECT device_name FROM sync_group_members
+  if (existing) {
+    if (existing.host_name !== args.hostName && existing.updated_at >= args.now) return;
+    renameAuthorizedHost(driver, args.groupId, existing.host_name, args.hostName, args.hostPlatform, args.now);
+    return;
+  }
+  const occupiedNames = driver.queryAll<{ host_name: string }>(
+    `SELECT host_name FROM sync_group_members
      WHERE group_id = ? AND state = 'active'`, [args.groupId]
-  ).map((member) => member.device_name);
-  const assigned = allocateSyncGroupDeviceProfile(args.deviceName, occupiedNames);
+  ).map((member) => member.host_name);
+  const assigned = allocateSyncGroupHostName(args.hostName, occupiedNames);
   driver.execute(
     `INSERT INTO sync_group_members (
-      group_id, device_id, device_kind, device_name, state, approved_by_device_id,
+      group_id, host_name, host_platform, state, approved_by_host_name,
       authorization_id, provisioning_cursor, joined_at, activated_at, left_at, updated_at
-    ) VALUES (?, ?, ?, ?, 'active', ?, ?, NULL, ?, NULL, NULL, ?)
-    ON CONFLICT(group_id, device_id) DO UPDATE SET
-      device_kind = excluded.device_kind,
-      device_name = excluded.device_name,
+    ) VALUES (?, ?, ?, 'active', ?, ?, NULL, ?, NULL, NULL, ?)
+    ON CONFLICT(group_id, host_name) DO UPDATE SET
+      host_platform = excluded.host_platform,
       state = 'active',
-      approved_by_device_id = excluded.approved_by_device_id,
+      approved_by_host_name = excluded.approved_by_host_name,
       authorization_id = excluded.authorization_id,
       provisioning_cursor = NULL,
       joined_at = excluded.joined_at,
@@ -44,12 +47,53 @@ export function saveApprovedSyncGroupMember(args: {
       updated_at = excluded.updated_at
     WHERE sync_group_members.state = 'left'
       AND excluded.joined_at > sync_group_members.joined_at`,
-    [args.groupId, assigned.device_id, args.deviceKind, assigned.device_name, args.approvedByDeviceId,
+    [args.groupId, assigned.host_name, args.hostPlatform, args.approvedByHostName,
       args.authorizationId, args.now, args.now]
   );
   driver.execute(
     `DELETE FROM sync_group_member_departures
-     WHERE group_id = ? AND device_id = ? AND left_at < ?`,
-    [args.groupId, assigned.device_id, args.now]
+     WHERE group_id = ? AND host_name = ? AND left_at < ?`,
+    [args.groupId, assigned.host_name, args.now]
+  );
+}
+
+function renameAuthorizedHost(
+  driver: DatabaseDriver,
+  groupId: string,
+  previousHostName: string,
+  requestedHostName: string,
+  hostPlatform: string,
+  now: string
+) {
+  if (previousHostName === requestedHostName) return;
+  const occupied = driver.queryAll<{ host_name: string }>(
+    `SELECT host_name FROM sync_group_members
+     WHERE group_id = ? AND state = 'active' AND host_name <> ?`, [groupId, previousHostName]
+  ).map((row) => row.host_name);
+  const nextHostName = allocateSyncGroupHostName(requestedHostName, occupied).host_name;
+  driver.execute(`DELETE FROM sync_group_member_departures
+    WHERE group_id = ? AND host_name = ? AND left_at < ?`, [groupId, nextHostName, now]);
+  driver.execute(`DELETE FROM sync_group_members
+    WHERE group_id = ? AND host_name = ? AND state = 'left' AND updated_at < ?`,
+  [groupId, nextHostName, now]);
+  driver.execute(`INSERT INTO sync_group_member_departures (
+    group_id, host_name, authorized_by_host_name, authorization_id, left_at
+  ) VALUES (?, ?, ?, ?, ?)
+  ON CONFLICT(authorization_id) DO UPDATE SET host_name = excluded.host_name,
+    authorized_by_host_name = excluded.authorized_by_host_name, left_at = excluded.left_at`,
+  [groupId, previousHostName, nextHostName,
+    driver.queryOne<{ authorization_id: string }>(`SELECT authorization_id FROM sync_group_members
+      WHERE group_id = ? AND host_name = ? LIMIT 1`, [groupId, previousHostName])!.authorization_id, now]);
+  driver.execute('UPDATE sync_groups SET created_by_host_name = ? WHERE group_id = ? AND created_by_host_name = ?',
+    [nextHostName, groupId, previousHostName]);
+  driver.execute('UPDATE sync_group_members SET approved_by_host_name = ? WHERE group_id = ? AND approved_by_host_name = ?',
+    [nextHostName, groupId, previousHostName]);
+  driver.execute('UPDATE sync_group_local_state SET local_host_name = ? WHERE group_id = ? AND local_host_name = ?',
+    [nextHostName, groupId, previousHostName]);
+  driver.execute(
+    `UPDATE sync_group_members SET host_name = ?, host_platform = ?, state = 'active',
+       left_at = NULL, updated_at = ?
+     WHERE group_id = ? AND host_name = ?`,
+    [nextHostName, hostPlatform, now, groupId, previousHostName]
   );
 }

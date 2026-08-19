@@ -6,7 +6,7 @@ import { openDatabaseConnection } from '../database/connection.js';
 import { loadOrCreateDesktopDeviceId } from '../database/deviceIdentity.js';
 import { joinDesktopSyncGroup, loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
-import { resolveDesktopDeviceName } from './companionLanPayloads.js';
+import { resolveDesktopDeviceName, resolveDesktopHostName } from './companionLanPayloads.js';
 import { refreshCompanionMdnsAdvertisement } from './companionMdnsAdvertisement.js';
 import { loadPairedSyncGroupPeers, savePairedSyncGroupPeer } from './companionPairingStore.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
@@ -46,6 +46,7 @@ export async function requestDesktopSyncGroupJoin(endpointUrl: string) {
   const payload = await requestJson(`${endpointUrl}/companion/pair-requests`, {
     body: JSON.stringify({
       device_id: deviceId, device_kind: process.platform, device_name: resolveDesktopDeviceName(),
+      host_name: resolveDesktopHostName(), host_platform: process.platform,
       group_id: candidate.group_id, group_tag: candidate.group_tag, library_facts: facts,
       pairing_public_key: key.publicKey,
       protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR, timeline_id: candidate.timeline_id
@@ -73,7 +74,6 @@ export async function completeDesktopSyncGroupJoin() {
 async function completeDesktopSyncGroupJoinOnce() {
   const pending = loadDesktopSyncGroupJoinState().pending;
   if (!pending) throw new Error('sync_group_join_not_pending');
-  const previousDeviceId = loadOrCreateDesktopDeviceId();
   const payload = await requestJson(`${pending.candidate.endpoint_url}/companion/pair`, {
     body: JSON.stringify({ pair_request_id: pending.request.pair_request_id }),
     headers: { 'Content-Type': 'application/json' }, method: 'POST'
@@ -88,17 +88,20 @@ async function completeDesktopSyncGroupJoinOnce() {
     pending.key.privateKey, payload.provider_encrypted_device_secret
   );
   if (providerSecret !== secret) throw new Error('sync_group_workgroup_key_mismatch');
-  const localDeviceId = payload.device_id.trim();
-  if (!localDeviceId) throw new Error('sync_group_membership_invalid');
+  const localHostName = payload.host_name?.trim();
+  if (!localHostName) throw new Error('sync_group_membership_invalid');
   const existingGroup = loadDesktopSyncGroup();
   if (!existingGroup) joinDesktopSyncGroup({
-    deviceId: localDeviceId, group: payload.sync_group, previousDeviceId, workgroupKey: secret
+    hostName: localHostName, group: payload.sync_group, workgroupKey: secret
   });
   else saveDesktopWorkgroupKey({ groupId: pending.candidate.group_id, groupKey: secret });
   const peer = savePairedSyncGroupPeer({
     endpoint_url: pending.candidate.endpoint_url, group_id: pending.candidate.group_id,
-    local_device_id: localDeviceId, peer_device_id: pending.candidate.provider_device_id,
+    local_device_id: payload.device_id, local_host_name: localHostName,
+    peer_device_id: pending.candidate.provider_device_id,
     peer_device_kind: pending.candidate.provider_device_kind, peer_device_name: pending.candidate.provider_device_name,
+    peer_host_name: payload.provider_host_name ?? pending.candidate.provider_device_name,
+    peer_host_platform: payload.provider_host_platform ?? pending.candidate.provider_device_kind,
     timeline_id: pending.candidate.timeline_id
   });
   saveDesktopSyncGroupPendingJoin(null);

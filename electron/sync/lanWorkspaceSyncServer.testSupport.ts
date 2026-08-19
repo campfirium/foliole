@@ -109,6 +109,8 @@ export async function pairTestDevice(server: http.Server, workgroup?: {
       device_id: 'android-test-device',
       device_kind: 'android',
       device_name: 'Pixel Test',
+      host_name: 'Pixel Test',
+      host_platform: 'android-capacitor',
       ...(workgroup ? {
         group_id: workgroup.groupId,
         group_tag: workgroup.groupTag,

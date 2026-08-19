@@ -2,9 +2,12 @@ export interface PairedSyncGroupPeer {
   endpoint_url: string;
   group_id: string;
   local_device_id: string;
+  local_host_name?: string;
   peer_device_id: string;
   peer_device_kind: string;
   peer_device_name: string;
+  peer_host_name?: string;
+  peer_host_platform?: string;
   timeline_id: string;
 }
 
@@ -12,7 +15,9 @@ export function isClientPeerRecord(value: unknown): value is PairedSyncGroupPeer
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const record = value as Record<string, unknown>;
   return ['endpoint_url', 'group_id', 'local_device_id', 'peer_device_id', 'peer_device_kind',
-    'peer_device_name', 'timeline_id'].every((key) => typeof record[key] === 'string');
+    'peer_device_name', 'timeline_id'].every((key) => typeof record[key] === 'string') &&
+    ['local_host_name', 'peer_host_name', 'peer_host_platform']
+      .every((key) => record[key] === undefined || typeof record[key] === 'string');
 }
 
 export function isPairedDeviceRecord(value: unknown): value is PairedCompanionDevice {

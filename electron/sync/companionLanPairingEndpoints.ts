@@ -112,9 +112,12 @@ export async function handlePairRequestCreate(
   const deviceId = typeof payload.device_id === 'string' ? payload.device_id.trim() : '';
   const deviceKind = typeof payload.device_kind === 'string' ? payload.device_kind.trim() : '';
   const deviceName = typeof payload.device_name === 'string' ? payload.device_name.trim() : '';
+  const hostName = typeof payload.host_name === 'string' ? payload.host_name.trim() : '';
+  const hostPlatform = typeof payload.host_platform === 'string' ? payload.host_platform.trim() : '';
   const pairingPublicKey = typeof payload.pairing_public_key === 'string' ? payload.pairing_public_key.trim() : '';
   const protocol = parseSyncProtocolDescriptor(payload.protocol);
-  if (!deviceId || !deviceKind || !deviceName || !isSupportedPairingPublicKey(pairingPublicKey)) {
+  if (!deviceId || !deviceKind || !deviceName || !hostName || !hostPlatform ||
+      !isSupportedPairingPublicKey(pairingPublicKey)) {
     writeJson(request, response, 400, { error: 'invalid_pair_request' });
     return;
   }
@@ -138,6 +141,8 @@ export async function handlePairRequestCreate(
     deviceId,
     deviceKind,
     deviceName,
+    hostName,
+    hostPlatform,
     pairingPublicKey,
     protocol,
     ...(groupJoin.syncGroup

@@ -19,6 +19,7 @@ type Peer = {
   group_id: string;
   local_device_id: string;
   peer_device_id: string;
+  peer_host_name?: string;
 };
 
 type ApplyResult = Awaited<ReturnType<typeof applySyncPackNodeSurfaceWithDbPort>>;
@@ -66,6 +67,8 @@ async function applyDownloadedPack(
   tempRoot: string
 ) {
   const incomingPath = path.join(tempRoot, 'incoming.db');
+  const sourceHostName = args.peer.peer_host_name?.trim();
+  if (!sourceHostName) throw new Error('sync_group_source_host_unavailable');
   const manifest = await extractSyncPackDatabase({
     body, expectedPeerId: args.peer.local_device_id,
     expectedSourcePeerId: args.peer.peer_device_id, outputPath: incomingPath
@@ -77,7 +80,8 @@ async function applyDownloadedPack(
   try {
     const result = await applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor: args.after, hostName: loadOrCreateDesktopHostName(),
-      incomingAlias: 'inc', sourcePeerId: args.peer.peer_device_id
+      incomingAlias: 'inc', sourceHostName,
+      sourcePeerId: args.peer.peer_device_id
     });
     event = await collectSyncPackAppliedEvent(port, result);
   } finally {

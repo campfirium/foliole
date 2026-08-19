@@ -13,26 +13,34 @@ import {
 } from '../../companionWorkspaceRuntimeRepository';
 import { loadCompanionSyncGroup } from '../sync/syncGroupStore';
 
-function activeRemoteDeviceIds(group: SyncGroupPayload) {
+function activeRemoteHostNames(group: SyncGroupPayload) {
   return group.members
-    .filter((member) => member.state === 'active' && member.device_id !== group.local_device_id)
-    .map((member) => member.device_id);
+    .filter((member) => member.state === 'active' && member.host_name !== group.local_host_name)
+    .map((member) => member.host_name);
 }
 
 export interface CompanionWorkspaceSyncTarget {
   deviceId?: string;
+  hostName?: string;
   endpointUrl: string;
   groupId?: string;
 }
 
 export async function bindCompanionWorkspaceSyncTarget(target: CompanionWorkspaceSyncTarget) {
-  if (!target.deviceId || !target.groupId || !isNativeCompanionPairingRuntime()) return;
+  if (!target.deviceId || !target.hostName || !target.groupId || !isNativeCompanionPairingRuntime()) return;
   const group = await loadCompanionSyncGroup();
   if (!group || group.group_id !== target.groupId) throw new Error('sync_group_identity_mismatch');
+  const pairing = await loadCompanionPairingState();
+  if (!pairing.device_id) throw new Error('sync_group_local_authorization_missing');
+  const peerMember = group.members.find((member) => member.host_name === target.hostName);
+  if (!peerMember) throw new Error('sync_group_peer_host_unavailable');
   await FolioleCompanionSync.bindSyncGroupPeerRoute({
     endpoint_url: target.endpointUrl,
-    local_device_id: group.local_device_id,
+    local_device_id: pairing.device_id,
+    local_host_name: group.local_host_name,
     peer_device_id: target.deviceId,
+    peer_host_name: target.hostName,
+    peer_host_platform: peerMember.host_platform,
     sync_group_id: target.groupId
   });
 }
@@ -48,11 +56,12 @@ export async function resolveReachableCompanionWorkspaceSyncEndpoints(
     return [{ endpointUrl: await resolveReachableCompanionWorkspaceSyncEndpoint(normalizedEndpointUrl, options) }];
   }
   const discovered = await discoverCompanionDesktops(normalizedEndpointUrl, options).catch(() => []);
-  return activeRemoteDeviceIds(group).flatMap((deviceId) => {
+  return activeRemoteHostNames(group).flatMap((hostName) => {
     const match = discovered.find((candidate) => candidate.compatibility.status === 'compatible'
       && candidate.discovery.group_id === group.group_id
-      && candidate.discovery.peer_id === deviceId);
-    return match ? [{ deviceId, endpointUrl: match.endpointUrl, groupId: group.group_id }] : [];
+      && candidate.discovery.desktop_host_name === hostName);
+    return match ? [{ deviceId: match.discovery.peer_id, endpointUrl: match.endpointUrl,
+      groupId: group.group_id, hostName }] : [];
   });
 }
 

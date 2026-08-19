@@ -1,6 +1,9 @@
 import { assertSyncPackCursorAdvance } from '../../../lib/core/sync/syncPackCursorGuard';
 
-import { resolveCompanionSyncPeerId } from './companion/network/syncGroupPeerIdentity';
+import {
+  resolveCompanionSyncPeerHostName,
+  resolveCompanionSyncPeerId
+} from './companion/network/syncGroupPeerIdentity';
 import { pushLocalDirtyObjects } from './companionDesktopSyncPush';
 import {
   createEmptyResourceStages,
@@ -44,10 +47,12 @@ function normalizeEndpointUrl(endpointUrl: string) {
 async function pullRemoteStructurePack(endpointUrl: string) {
   const startedAt = Date.now();
   const sourcePeerId = await resolveCompanionSyncPeerId(endpointUrl);
+  const sourceHostName = await resolveCompanionSyncPeerHostName(endpointUrl);
   const cursor = await loadCompanionSyncPackCursor(sourcePeerId);
   const pathWithQuery = buildPackPath(cursor);
   const result = await applyCompanionDesktopSyncPack({
     headers: await createSignedRequestHeaders({ endpointUrl, method: 'GET', pathWithQuery }),
+    sourceHostName,
     sourcePeerId,
     url: `${normalizeEndpointUrl(endpointUrl)}${pathWithQuery}`
   });

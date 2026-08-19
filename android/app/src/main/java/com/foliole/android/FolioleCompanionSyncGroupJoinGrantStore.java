@@ -26,7 +26,7 @@ final class FolioleCompanionSyncGroupJoinGrantStore {
         JSONObject group = config.getJSONObject("sync_group");
         JSONObject record = new JSONObject().put("group_id", group.getString("group_id"))
             .put("timeline_id", group.getString("timeline_id"))
-            .put("approved_by_device_id", config.getString("device_id"))
+            .put("approved_by_host_name", config.getString("host_name"))
             .put("request", request.grantJson());
         if (!prefs(context).edit().putString(request.pairRequestId, encrypt(record.toString())).commit()) {
             throw new IllegalStateException("Failed to persist approved Sync Group join.");
@@ -51,10 +51,10 @@ final class FolioleCompanionSyncGroupJoinGrantStore {
         return result;
     }
 
-    static String approvedByDeviceId(Context context, String pairRequestId) throws Exception {
+    static String approvedByHostName(Context context, String pairRequestId) throws Exception {
         String encoded = prefs(context).getString(pairRequestId, null);
         if (encoded == null) throw new SecurityException("sync_group_join_grant_not_found");
-        return new JSONObject(decrypt(encoded)).getString("approved_by_device_id");
+        return new JSONObject(decrypt(encoded)).getString("approved_by_host_name");
     }
 
     static void remove(Context context, String pairRequestId) {

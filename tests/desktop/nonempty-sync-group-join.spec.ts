@@ -11,9 +11,12 @@ type Candidate = {
   endpoint_url: string;
   group_display_name: string;
   group_id: string;
+  group_tag: string;
   provider_device_id: string;
   provider_device_kind: string;
   provider_device_name: string;
+  provider_host_name: string;
+  provider_host_platform: string;
   timeline_id: string;
 };
 
@@ -118,14 +121,18 @@ async function createProvider(session: DesktopSession, windowPage: WindowPage) {
   }).not.toBeNull();
   const endpoint = `http://127.0.0.1:${port}`;
   const discovery = await fetch(`${endpoint}/companion/discovery`).then((response) => response.json()) as {
-    desktop_device_name: string; desktop_platform: string;
-    group_display_name: string; peer_id: string;
+    desktop_device_name: string; desktop_host_name: string; desktop_platform: string;
+    group_display_name: string; group_tag: string; peer_id: string;
   };
+  const platform = discovery.desktop_platform === 'macOS' ? 'darwin' : discovery.desktop_platform.toLowerCase();
   return { candidate: {
     endpoint_url: endpoint, group_display_name: discovery.group_display_name,
-    group_id: overview.sync_group.group_id, provider_device_id: discovery.peer_id,
-    provider_device_kind: `desktop-${discovery.desktop_platform.toLowerCase()}`,
+    group_id: overview.sync_group.group_id, group_tag: discovery.group_tag,
+    provider_device_id: discovery.peer_id,
+    provider_device_kind: platform,
     provider_device_name: discovery.desktop_device_name,
+    provider_host_name: discovery.desktop_host_name,
+    provider_host_platform: platform,
     timeline_id: overview.sync_group.timeline_id
   } satisfies Candidate, topicId };
 }

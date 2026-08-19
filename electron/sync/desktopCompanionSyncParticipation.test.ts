@@ -5,6 +5,7 @@ const runtime = vi.hoisted(() => ({
   enableKey: vi.fn(),
   enabled: true,
   ensure: vi.fn(),
+  group: { group_id: 'group-test', local_member_state: 'active' } as object | null,
   paused: false,
   stop: vi.fn(),
   workgroupKey: { group_id: 'group-test', group_key: 'secret' } as object | null
@@ -20,7 +21,7 @@ vi.mock('./lanWorkspaceSyncServer.js', () => ({
   stopLanWorkspaceSyncServer: runtime.stop
 }));
 vi.mock('../database/syncGroupStore.js', () => ({
-  loadDesktopSyncGroup: () => ({ group_id: 'group-test', local_member_state: 'active' })
+  loadDesktopSyncGroup: () => runtime.group
 }));
 vi.mock('./workgroupKeyStore.js', () => ({
   enableDesktopWorkgroupKey: runtime.enableKey,
@@ -40,6 +41,7 @@ const identity = { appVersion: '1.0.0', peerId: 'desktop-a' };
 beforeEach(() => {
   vi.clearAllMocks();
   runtime.enabled = true;
+  runtime.group = { group_id: 'group-test', local_member_state: 'active' };
   runtime.paused = false;
   runtime.workgroupKey = { group_id: 'group-test', group_key: 'secret' };
   runtime.enableKey.mockImplementation(() => {
@@ -80,4 +82,16 @@ it('keeps an inherited active group offline until formal Enable creates its key'
   await enableDesktopCompanionSync(identity);
   expect(runtime.enableKey).toHaveBeenCalledWith('group-test');
   expect(runtime.ensure).toHaveBeenCalledWith(identity);
+});
+
+it('allows an ungrouped Host to enable discovery without opening the LAN server', async () => {
+  runtime.enabled = false;
+  runtime.group = null;
+
+  await enableDesktopCompanionSync(identity);
+
+  expect(runtime.enabled).toBe(true);
+  expect(runtime.enableKey).not.toHaveBeenCalled();
+  expect(runtime.ensure).not.toHaveBeenCalled();
+  expect(runtime.stop).toHaveBeenCalledOnce();
 });

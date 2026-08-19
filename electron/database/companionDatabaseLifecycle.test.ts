@@ -12,6 +12,7 @@ import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSc
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { installLegacySyncGroupSchema } from './companionSyncGroupLegacyTestSchema.js';
 
 const roots: string[] = [];
 
@@ -27,6 +28,7 @@ function fixture(version = COMPANION_DATABASE_VERSION) {
   const databasePath = path.join(root, 'fixture.db');
   const sqlite = new Database(databasePath);
   sqlite.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
+  if (version < 30) installLegacySyncGroupSchema(sqlite);
   sqlite.prepare('INSERT INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)')
     .run('device_id', 'fixture-device', '2026-08-06T00:00:00Z');
   sqlite.pragma(`user_version = ${version}`);
@@ -163,15 +165,15 @@ describe('shared companion database lifecycle guardrails', () => {
 });
 
 describe('shared companion Host handling', () => {
-  it('changes Host scope without rewriting the frozen member and author axes', async () => {
+  it('renames the local member Host without rewriting frozen author facts or credentials', async () => {
     const identity = fixture();
     identity.sqlite.exec(`
-      INSERT INTO sync_groups (group_id, display_name, timeline_id, created_by_device_id, created_at, updated_at)
+      INSERT INTO sync_groups (group_id, display_name, timeline_id, created_by_host_name, created_at, updated_at)
       VALUES ('group','Group','timeline','fixture-device','2026-08-01','2026-08-01');
       UPDATE sync_groups SET workgroup_key = 'copied-workgroup-key' WHERE group_id = 'group';
       INSERT INTO sync_group_local_state VALUES (1,'group','fixture-device','active',NULL,NULL,'2026-08-01');
       INSERT INTO sync_group_members VALUES
-        ('group','fixture-device','ios','Legacy','active','fixture-device','auth',NULL,'2026-08-01',NULL,NULL,'2026-08-01');
+        ('group','fixture-device','ios','active','fixture-device','auth',NULL,'2026-08-01',NULL,NULL,'2026-08-01');
       INSERT INTO nodes (id,title,content,created_at,updated_at) VALUES
         ('node-1','Preserved','content','2026-08-01','2026-08-01');
       INSERT INTO review_log (
@@ -186,8 +188,8 @@ describe('shared companion Host handling', () => {
 
     expect(result).toMatchObject({ deviceId: 'fixture-device', hostName: 'iPhone' });
     expect(identity.sqlite.prepare('SELECT COUNT(*) FROM sync_group_local_state').pluck().get()).toBe(1);
-    expect(identity.sqlite.prepare('SELECT device_id, state FROM sync_group_members').get())
-      .toEqual({ device_id: 'fixture-device', state: 'active' });
+    expect(identity.sqlite.prepare('SELECT host_name, authorization_id, state FROM sync_group_members').get())
+      .toEqual({ authorization_id: 'auth', host_name: 'iPhone', state: 'active' });
     expect(identity.sqlite.prepare('SELECT content FROM nodes').pluck().get()).toBe('content');
     expect(identity.sqlite.prepare('SELECT host_name FROM review_log').pluck().get()).toBe('fixture-device');
     expect(identity.sqlite.prepare('SELECT workgroup_key FROM sync_groups').pluck().get())
@@ -203,9 +205,11 @@ describe('shared companion Host handling', () => {
     const identity = fixture();
     identity.sqlite.prepare("UPDATE companion_meta SET value = 'iPhone 2' WHERE key = 'device_id'").run();
     identity.sqlite.exec(`
-      INSERT INTO sync_groups (group_id, display_name, timeline_id, created_by_device_id, created_at, updated_at)
+      INSERT INTO sync_groups (group_id, display_name, timeline_id, created_by_host_name, created_at, updated_at)
       VALUES ('group','Group','timeline','iPhone 2','2026-08-01','2026-08-01');
       INSERT INTO sync_group_local_state VALUES (1,'group','iPhone 2','active',NULL,NULL,'2026-08-01');
+      INSERT INTO sync_group_members VALUES
+        ('group','iPhone 2','ios','active','iPhone 2','auth',NULL,'2026-08-01',NULL,NULL,'2026-08-01');
     `);
     await expect(bootstrapCompanionDatabase(identity.port, {
       allowCreate: false, expectedHostName: 'iPhone', now: '2026-08-11T00:00:00Z'

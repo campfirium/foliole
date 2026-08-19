@@ -44,13 +44,13 @@ const payloadPlans = [
 export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
   compression: 'zlib',
   copyStatements: [
-    `INSERT INTO sync_groups SELECT group_id, display_name, timeline_id, created_by_device_id, created_at
+    `INSERT INTO sync_groups SELECT group_id, display_name, timeline_id, created_by_host_name, created_at
      FROM source.sync_groups WHERE group_id IN (SELECT group_id FROM source.sync_group_local_state WHERE singleton_id = 1)`,
-    `INSERT INTO sync_group_members SELECT group_id, device_id, device_kind, device_name, state,
-       approved_by_device_id, authorization_id, joined_at, left_at, updated_at
+    `INSERT INTO sync_group_members SELECT group_id, host_name, host_platform, state,
+       approved_by_host_name, authorization_id, joined_at, left_at, updated_at
      FROM source.sync_group_members
      WHERE group_id IN (SELECT group_id FROM sync_groups) AND state IN ('active', 'left')`,
-    `INSERT INTO sync_group_member_departures SELECT group_id, device_id, authorized_by_device_id,
+    `INSERT INTO sync_group_member_departures SELECT group_id, host_name, authorized_by_host_name,
        authorization_id, left_at FROM source.sync_group_member_departures
      WHERE group_id IN (SELECT group_id FROM sync_groups)`,
     `INSERT INTO sync_object_state SELECT state.object_type, state.object_id, state.state_seq,

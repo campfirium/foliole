@@ -1,11 +1,11 @@
 import type { BrowserWindow } from 'electron';
 
-import { updateLocalSyncGroupDeviceName } from './database/syncGroupIdentityStore.js';
+import { updateLocalSyncGroupHostName } from './database/syncGroupIdentityStore.js';
 import { IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL } from './ipc/contracts.js';
 import { getMainWindow, setMainWindow } from './mainWindowRegistry.js';
 import type { StartupRendererView } from './rendererLoader.js';
 import { focusWindow } from './runtimeMainSupport.js';
-import { resolveDesktopDeviceName } from './sync/companionLanPayloads.js';
+import { resolveDesktopHostName } from './sync/companionLanPayloads.js';
 import { reconcileDesktopCompanionSyncRuntime } from './sync/desktopCompanionSyncParticipation.js';
 import { setLanWorkspaceSyncPairRequestHandler } from './sync/lanWorkspaceSyncServer.js';
 import { applyStartupWindowPresentation, presentInitialRendererWindow } from './windowRuntimeDiagnostics.js';
@@ -52,7 +52,7 @@ export async function startCompanionSyncIfEnabled(args: {
   isEnabled: () => boolean;
   peerId: string;
 }) {
-  updateLocalSyncGroupDeviceName(resolveDesktopDeviceName());
+  updateLocalSyncGroupHostName(resolveDesktopHostName());
   if (!args.isEnabled()) {
     return;
   }

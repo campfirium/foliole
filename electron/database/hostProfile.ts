@@ -3,6 +3,7 @@ import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { withoutNodeViewStateHashSource } from '../../lib/platform/persistedNodeViewState.js';
 
 import { openDatabaseConnection, type DatabaseConnection } from './connection.js';
+import { saveApprovedSyncGroupMember } from './syncGroupMemberRegistration.js';
 
 const HOST_NAME_KEY = 'host_name';
 const LEGACY_DEVICE_KEYS = ['device_id', 'desktop_device_id'] as const;
@@ -27,6 +28,7 @@ export function migrateDesktopHostProfile(
   if (!current) throw new Error('Desktop system Host is unavailable.');
   const previous = readSetting(connection.driver, HOST_NAME_KEY) ?? readLegacyName(connection.driver) ?? current;
   ensureLegacyIdentity(connection.driver, previous, now);
+  if (previous !== current) transferSyncGroupHost(connection.driver, current, now);
   if (previous !== current) transferHostState(connection.driver, previous, current);
   rewritePrivateObjectIds(connection.driver, previous, current);
   rehashPrivateObjects(connection.driver, current);
@@ -35,6 +37,29 @@ export function migrateDesktopHostProfile(
   writeSetting(connection.driver, HOST_NAME_KEY, current, now);
   connection.driver.execute("DELETE FROM settings WHERE key = 'device_identity_reset_pending'");
   return { changed: previous !== current, currentHostName: current, previousHostName: previous };
+}
+
+function transferSyncGroupHost(driver: DatabaseDriver, current: string, now: string) {
+  const local = driver.queryOne<{
+    approved_by_host_name: string;
+    authorization_id: string;
+    group_id: string;
+    host_name: string;
+    host_platform: string;
+  }>(`SELECT m.approved_by_host_name, m.authorization_id, m.group_id,
+             m.host_name, m.host_platform
+      FROM sync_group_local_state l
+      JOIN sync_group_members m ON m.group_id = l.group_id AND m.host_name = l.local_host_name
+      WHERE l.singleton_id = 1 AND m.state = 'active' LIMIT 1`);
+  if (!local) return;
+  saveApprovedSyncGroupMember({
+    approvedByHostName: local.approved_by_host_name,
+    authorizationId: local.authorization_id,
+    groupId: local.group_id,
+    hostName: current,
+    hostPlatform: local.host_platform,
+    now
+  }, driver);
 }
 
 function transferHostState(driver: DatabaseDriver, previous: string, current: string) {

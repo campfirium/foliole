@@ -61,6 +61,8 @@ it('does not revoke an existing paired device before desktop approval', async ()
       device_id: 'android-1',
       device_kind: 'android',
       device_name: 'Pixel 9',
+      host_name: 'Pixel 9',
+      host_platform: 'android-capacitor',
       pairing_public_key: TEST_PAIRING_PUBLIC_KEY,
       protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
     }),
@@ -84,6 +86,8 @@ it('rejects a pair request without compatible protocol metadata before creating 
       device_id: 'android-old',
       device_kind: 'android',
       device_name: 'Old Android',
+      host_name: 'Old Android',
+      host_platform: 'android-capacitor',
       pairing_public_key: TEST_PAIRING_PUBLIC_KEY
     }),
     createResponse(),
@@ -100,7 +104,7 @@ it('rejects a pair request without compatible protocol metadata before creating 
 
 it('rechecks protocol compatibility at pair completion', async () => {
   const created = createApprovedPairRequest('android-drift');
-  created.protocol.version = 2;
+  created.protocol.version = 1;
   const writeJson = vi.fn();
 
   await handlePairRequest(
@@ -228,6 +232,8 @@ function createApprovedPairRequest(deviceId: string) {
     deviceId,
     deviceKind: 'android',
     deviceName: 'Pixel 9',
+    hostName: 'Pixel 9',
+    hostPlatform: 'android-capacitor',
     pairingPublicKey: TEST_PAIRING_PUBLIC_KEY,
     protocol
   });

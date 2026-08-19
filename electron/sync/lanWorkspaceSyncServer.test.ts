@@ -63,25 +63,25 @@ vi.mock('../database/connection.js', () => ({
 vi.mock('../database/syncGroupStore.js', () => ({
   loadDesktopSyncGroup: vi.fn(() => ({
     created_at: '2026-08-08T00:00:00.000Z',
-    created_by_device_id: 'desktop-local',
+    created_by_host_name: 'Maci',
     display_name: 'Foliole Desktop',
     group_id: 'group-test',
-    local_device_id: 'desktop-local',
+    local_host_name: 'Maci',
     local_member_state: 'active',
     members: [{
-      approved_by_device_id: 'desktop-local', authorization_id: 'founder-local',
-      device_id: 'desktop-local', device_kind: 'darwin', device_name: 'Maci',
+      approved_by_host_name: 'Maci', authorization_id: 'founder-local',
+      host_name: 'Maci', host_platform: 'darwin',
       joined_at: '2026-08-08T00:00:00.000Z', state: 'active'
     }],
     timeline_id: 'timeline-test'
   })),
   loadSyncGroupMemberAuthorization: vi.fn(() => ({ state: 'active' })),
-  registerSyncGroupMember: vi.fn((args: { authorizationId: string; deviceName: string }) => ({
-    created_at: '2026-08-08T00:00:00.000Z', created_by_device_id: 'desktop-local',
-    display_name: 'Foliole Desktop', group_id: 'group-test', local_device_id: 'desktop-local',
+  registerSyncGroupMember: vi.fn((args: { authorizationId: string; hostName: string; hostPlatform: string }) => ({
+    created_at: '2026-08-08T00:00:00.000Z', created_by_host_name: 'Maci',
+    display_name: 'Foliole Desktop', group_id: 'group-test', local_host_name: 'Maci',
     local_member_state: 'active', timeline_id: 'timeline-test', members: [{
-      approved_by_device_id: 'desktop-local', authorization_id: args.authorizationId,
-      device_id: args.deviceName, device_kind: 'android', device_name: args.deviceName,
+      approved_by_host_name: 'Maci', authorization_id: args.authorizationId,
+      host_name: args.hostName, host_platform: args.hostPlatform,
       joined_at: '2026-08-08T00:00:01.000Z', state: 'active'
     }]
   }))

@@ -1,7 +1,7 @@
 import http from 'node:http';
 import os from 'node:os';
 
-import { resolveSyncGroupDisplayDeviceName } from '../../lib/platform/syncGroupContract.js';
+import { resolveSyncGroupDisplayHostName } from '../../lib/platform/syncGroupContract.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import {
@@ -162,7 +162,7 @@ function advertiseActiveSyncGroup(args: { appVersion: string; peerId: string; po
   if (!workgroup) throw new Error('sync_group_workgroup_key_missing');
   startCompanionMdnsAdvertisement({
     ...args,
-    groupDisplayName: resolveSyncGroupDisplayDeviceName(group),
+    groupDisplayName: resolveSyncGroupDisplayHostName(group),
     groupId: group.group_id,
     groupTag: workgroup.group_tag,
     onWarning: recordMdnsWarning,

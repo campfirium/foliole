@@ -51,13 +51,13 @@ export async function leaveCompanionSyncGroup() {
   const endpoint = await loadCompanionSyncGroupEndpoint();
   if (!group || group.local_member_state !== 'active') throw new Error('sync_group_not_available');
   const hasOtherActiveMember = group.members.some((member) =>
-    member.device_id !== group.local_device_id && member.state === 'active'
+    member.host_name !== group.local_host_name && member.state === 'active'
   );
   if (hasOtherActiveMember && !endpoint) throw new Error('sync_group_departure_peer_unavailable');
   const departure = {
     authorization_id: `leave-${createCompanionUuid()}`,
-    authorized_by_device_id: group.local_device_id,
-    device_id: group.local_device_id,
+    authorized_by_host_name: group.local_host_name,
+    host_name: group.local_host_name,
     group_id: group.group_id,
     left_at: new Date().toISOString()
   };
@@ -68,7 +68,7 @@ export async function leaveCompanionSyncGroup() {
   await FolioleCompanionSync.clearSyncGroupCredentials();
   await recordLocalCompanionSyncGroupDeparture({
     authorizationId: departure.authorization_id,
-    deviceId: departure.device_id,
+    hostName: departure.host_name,
     groupId: departure.group_id,
     leftAt: departure.left_at
   });

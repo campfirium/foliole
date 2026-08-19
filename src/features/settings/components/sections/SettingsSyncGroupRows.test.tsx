@@ -6,15 +6,15 @@ import { renderWithLocalization } from '../../../../shared/localization/testLoca
 import { SettingsSyncGroupRows } from './SettingsSyncGroupRows';
 
 const GROUP = {
-  created_at: '2026-08-08T00:00:00.000Z', created_by_device_id: 'device-a', display_name: 'Studio',
-  group_id: 'group-1', local_device_id: 'device-a', local_member_state: 'active' as const,
+  created_at: '2026-08-08T00:00:00.000Z', created_by_host_name: 'Studio Mac', display_name: 'Studio',
+  group_id: 'group-1', local_host_name: 'Studio Mac', local_member_state: 'active' as const,
   members: [{
-    approved_by_device_id: 'device-a', authorization_id: 'founder-a', device_id: 'device-a',
-    device_kind: 'darwin', device_name: 'Studio Mac', joined_at: '2026-08-08T00:00:00.000Z',
+    approved_by_host_name: 'Studio Mac', authorization_id: 'founder-a', host_name: 'Studio Mac',
+    host_platform: 'darwin', joined_at: '2026-08-08T00:00:00.000Z',
     state: 'active' as const
   }, {
-    approved_by_device_id: 'device-a', authorization_id: 'member-b', device_id: 'device-b',
-    device_kind: 'android-capacitor', device_name: 'A5', joined_at: '2026-08-08T01:00:00.000Z',
+    approved_by_host_name: 'Studio Mac', authorization_id: 'member-b', host_name: 'A5',
+    host_platform: 'android-capacitor', joined_at: '2026-08-08T01:00:00.000Z',
     state: 'active' as const
   }],
   timeline_id: 'timeline-1'
@@ -46,7 +46,7 @@ it('offers only the actions that are valid for local and remote members', () => 
   fireEvent.click(screen.getByRole('button', { name: 'Leave Sync Group' }));
 
   expect(props.onTogglePause).toHaveBeenCalledTimes(1);
-  expect(props.onRemove).toHaveBeenCalledWith('device-b');
+  expect(props.onRemove).toHaveBeenCalledWith('A5');
   expect(props.onLeave).toHaveBeenCalledTimes(1);
   expect(screen.getByText("Studio Mac's Sync Group")).toBeVisible();
   expect(screen.queryByText("Studio's Sync Group")).not.toBeInTheDocument();
@@ -64,11 +64,10 @@ it('keeps same-base members visible and targets the suffixed member independentl
   const props = renderRows({
     group: {
       ...GROUP,
-      local_device_id: 'Maci',
+      local_host_name: 'Maci',
       members: GROUP.members.map((member, index) => ({
         ...member,
-        device_id: index === 0 ? 'Maci' : 'Maci 2',
-        device_name: index === 0 ? 'Maci' : 'Maci 2'
+        host_name: index === 0 ? 'Maci' : 'Maci 2'
       }))
     }
   });

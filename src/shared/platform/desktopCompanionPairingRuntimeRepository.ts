@@ -44,6 +44,8 @@ function normalizePendingRequest(value: unknown): DesktopCompanionPairRequestPay
     typeof raw.device_id !== 'string' ||
     typeof raw.device_kind !== 'string' ||
     typeof raw.device_name !== 'string' ||
+    typeof raw.host_name !== 'string' ||
+    typeof raw.host_platform !== 'string' ||
     typeof raw.expires_at !== 'string' ||
     typeof raw.pair_request_id !== 'string' ||
     typeof raw.requested_at !== 'string'
@@ -58,6 +60,8 @@ function normalizePendingRequest(value: unknown): DesktopCompanionPairRequestPay
     device_id: raw.device_id,
     device_kind: raw.device_kind,
     device_name: raw.device_name,
+    host_name: raw.host_name,
+    host_platform: raw.host_platform,
     expires_at: raw.expires_at,
     pair_request_id: raw.pair_request_id,
     requested_at: raw.requested_at,

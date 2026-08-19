@@ -1,6 +1,6 @@
 import os from 'node:os';
 
-import { resolveSyncGroupDisplayDeviceName } from '../../lib/platform/syncGroupContract.js';
+import { resolveSyncGroupDisplayHostName } from '../../lib/platform/syncGroupContract.js';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import type { WorkspaceSnapshot, WorkspaceVersionMetadata } from '../database/workspaceSnapshot.js';
@@ -59,12 +59,13 @@ export function buildDiscoveryPayload(appVersion: string, peerId: string) {
   return {
     app_version: appVersion,
     desktop_device_name: resolveDesktopDeviceName(),
+    desktop_host_name: resolveDesktopHostName(),
     desktop_name: 'Foliole Desktop',
     desktop_platform: resolveDesktopPlatformLabel(),
     pairing_mode: 'desktop-confirm' as const,
     peer_id: peerId,
     runtime_instance_id: loadSyncGroupRuntimeInstanceId(),
-    group_display_name: resolveSyncGroupDisplayDeviceName(group),
+    group_display_name: resolveSyncGroupDisplayHostName(group),
     group_id: group.group_id,
     group_tag: workgroup.group_tag,
     timeline_id: group.timeline_id,

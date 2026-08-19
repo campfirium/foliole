@@ -166,22 +166,22 @@ it('projects an alternative under a deleted node as a tombstone', () => {
 it('keeps local provisioning rows out of shared group facts', () => {
   const now = '2026-08-08T00:00:00.000Z';
   source.exec(`
-    INSERT INTO sync_groups (group_id, display_name, timeline_id, created_by_device_id, created_at, updated_at)
+    INSERT INTO sync_groups (group_id, display_name, timeline_id, created_by_host_name, created_at, updated_at)
     VALUES ('group-1', 'Daily Group', 'timeline-1', 'android-b', '${now}', '${now}');
     INSERT INTO sync_group_local_state
-      (singleton_id, group_id, local_device_id, member_state, updated_at)
-      VALUES (1, 'group-1', 'android-b', 'active', '${now}');
+      (singleton_id, group_id, local_host_name, member_state, updated_at)
+      VALUES (1, 'group-1', 'Android B', 'active', '${now}');
     INSERT INTO sync_group_members
-      (group_id, device_id, device_kind, device_name, state, approved_by_device_id,
+      (group_id, host_name, host_platform, state, approved_by_host_name,
        authorization_id, joined_at, updated_at)
       VALUES
-      ('group-1', 'android-b', 'android-capacitor', 'Android B', 'active', 'android-b',
+      ('group-1', 'Android B', 'android', 'active', 'Android B',
        'authorization-b', '${now}', '${now}'),
-      ('group-1', 'desktop-c', 'win32', 'Desktop C', 'provisioning', 'android-b',
+      ('group-1', 'Desktop C', 'windows', 'provisioning', 'Android B',
        'authorization-c', '${now}', '${now}');
   `);
   const pack = buildPack(0);
-  expect(pack.prepare('SELECT device_id FROM sync_group_members').all()).toEqual([{ device_id: 'android-b' }]);
+  expect(pack.prepare('SELECT host_name FROM sync_group_members').all()).toEqual([{ host_name: 'Android B' }]);
   pack.close();
 });
 

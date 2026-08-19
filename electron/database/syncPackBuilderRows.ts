@@ -73,18 +73,18 @@ export function writePackRows(db: import('better-sqlite3').Database, rows: Loade
 function writeGroupPackRows(db: import('better-sqlite3').Database, rows: LoadedDesktopSyncPackRows) {
   copyRows({
     db, table: 'sync_groups',
-    columns: ['group_id', 'display_name', 'timeline_id', 'created_by_device_id', 'created_at'],
+    columns: ['group_id', 'display_name', 'timeline_id', 'created_by_host_name', 'created_at'],
     rows: rows.groups
   });
   copyRows({
     db, table: 'sync_group_members',
-    columns: ['group_id', 'device_id', 'device_kind', 'device_name', 'state', 'approved_by_device_id',
+    columns: ['group_id', 'host_name', 'host_platform', 'state', 'approved_by_host_name',
       'authorization_id', 'joined_at', 'left_at', 'updated_at'],
     rows: rows.groupMembers
   });
   copyRows({
     db, table: 'sync_group_member_departures',
-    columns: ['group_id', 'device_id', 'authorized_by_device_id', 'authorization_id', 'left_at'],
+    columns: ['group_id', 'host_name', 'authorized_by_host_name', 'authorization_id', 'left_at'],
     rows: rows.groupDepartures
   });
 }

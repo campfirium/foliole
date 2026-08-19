@@ -24,33 +24,62 @@ it('merges a third member approved by B when A rejoins the same timeline', async
   const port = createBetterSqliteDbPort(sqlite, { name: 'group-facts-test' });
 
   await port.transaction((tx) => applySyncPackGroupFactsWithDbPort(tx, {
-    incomingAlias: 'inc', sourcePeerId: 'b'
+    incomingAlias: 'inc', sourceHostName: 'b'
   }));
 
-  expect(sqlite.prepare("SELECT approved_by_device_id FROM sync_group_members WHERE device_id = 'c'").get())
-    .toEqual({ approved_by_device_id: 'b' });
+  expect(sqlite.prepare("SELECT approved_by_host_name FROM sync_group_members WHERE host_name = 'c'").get())
+    .toEqual({ approved_by_host_name: 'b' });
 });
 
-it('accepts a current membership name update only from that Device', async () => {
+it('converges a newer Host rename while preserving its authorization', async () => {
   seedGroup(sqlite, 'inc', ['a', 'b']);
-  sqlite.exec(`UPDATE inc.sync_group_members SET device_name = 'B renamed',
-    updated_at = '2026-08-11T00:00:00Z' WHERE device_id = 'b'`);
+  sqlite.exec(`UPDATE inc.sync_group_members SET host_name = 'b-renamed',
+    updated_at = '2026-08-11T00:00:00Z' WHERE authorization_id = 'join-b'`);
   const port = createBetterSqliteDbPort(sqlite, { name: 'group-facts-test' });
 
   await port.transaction((tx) => applySyncPackGroupFactsWithDbPort(tx, {
-    incomingAlias: 'inc', sourcePeerId: 'b'
+    incomingAlias: 'inc', sourceHostName: 'b'
   }));
 
-  expect(sqlite.prepare("SELECT device_name FROM sync_group_members WHERE device_id = 'b'").get())
-    .toEqual({ device_name: 'B renamed' });
+  expect(sqlite.prepare("SELECT host_name, authorization_id FROM sync_group_members WHERE authorization_id = 'join-b'").all())
+    .toEqual([{ authorization_id: 'join-b', host_name: 'b-renamed' }]);
+});
 
-  sqlite.exec(`UPDATE inc.sync_group_members SET device_name = 'A forged',
-    updated_at = '2026-08-12T00:00:00Z' WHERE device_id = 'a'`);
+it('reuses a released Host name for a newer authorized rename', async () => {
+  seedGroup(sqlite, 'inc', ['a', 'b']);
+  sqlite.exec(`INSERT INTO sync_group_members
+    (group_id, host_name, host_platform, state, approved_by_host_name, authorization_id,
+     provisioning_cursor, joined_at, activated_at, left_at, updated_at)
+    VALUES ('group-1', 'released', 'desktop', 'left', 'a', 'old-release', NULL,
+      '2026-08-09T00:00:00Z', NULL, '2026-08-10T00:00:00Z', '2026-08-10T00:00:00Z');
+    INSERT INTO sync_group_member_departures VALUES
+      ('group-1', 'released', 'a', 'old-release', '2026-08-10T00:00:00Z');
+    UPDATE inc.sync_group_members SET host_name = 'released', updated_at = '2026-08-11T00:00:00Z'
+      WHERE authorization_id = 'join-b'`);
+  const port = createBetterSqliteDbPort(sqlite, { name: 'group-facts-test' });
+
   await port.transaction((tx) => applySyncPackGroupFactsWithDbPort(tx, {
-    incomingAlias: 'inc', sourcePeerId: 'b'
+    incomingAlias: 'inc', sourceHostName: 'b'
   }));
-  expect(sqlite.prepare("SELECT device_name FROM sync_group_members WHERE device_id = 'a'").get())
-    .toEqual({ device_name: 'A' });
+
+  expect(sqlite.prepare("SELECT host_name, authorization_id, state FROM sync_group_members WHERE host_name = 'released'").all())
+    .toEqual([{ authorization_id: 'join-b', host_name: 'released', state: 'active' }]);
+});
+
+it('rejects a Host rename that competes with another active authorization', async () => {
+  seedGroup(sqlite, 'inc', ['a', 'b']);
+  sqlite.exec(`INSERT INTO sync_group_members
+    (group_id, host_name, host_platform, state, approved_by_host_name, authorization_id,
+     provisioning_cursor, joined_at, activated_at, left_at, updated_at)
+    VALUES ('group-1', 'c', 'desktop', 'active', 'a', 'join-c', NULL,
+      '2026-08-09T02:00:00Z', NULL, NULL, '2026-08-09T02:00:00Z');
+    UPDATE inc.sync_group_members SET host_name = 'c', updated_at = '2026-08-11T00:00:00Z'
+      WHERE authorization_id = 'join-b'`);
+  const port = createBetterSqliteDbPort(sqlite, { name: 'group-facts-test' });
+
+  await expect(port.transaction((tx) => applySyncPackGroupFactsWithDbPort(tx, {
+    incomingAlias: 'inc', sourceHostName: 'b'
+  }))).rejects.toThrow('sync_group_host_name_conflict');
 });
 
 it('rejects a same-id pack from a different library timeline without writes', async () => {
@@ -58,93 +87,93 @@ it('rejects a same-id pack from a different library timeline without writes', as
   const port = createBetterSqliteDbPort(sqlite, { name: 'group-facts-test' });
 
   await expect(port.transaction((tx) => applySyncPackGroupFactsWithDbPort(tx, {
-    incomingAlias: 'inc', sourcePeerId: 'b'
+    incomingAlias: 'inc', sourceHostName: 'b'
   }))).rejects.toThrow('sync_group_identity_mismatch');
-  expect(sqlite.prepare("SELECT COUNT(*) AS value FROM sync_group_members WHERE device_id = 'c'").get())
+  expect(sqlite.prepare("SELECT COUNT(*) AS value FROM sync_group_members WHERE host_name = 'c'").get())
     .toEqual({ value: 0 });
 });
 
 it('accepts a relayed self-departure but refuses a remote departure for the local Device', async () => {
   seedGroup(sqlite, 'inc', ['a', 'b', 'c']);
-  sqlite.exec("UPDATE inc.sync_group_members SET state = 'left' WHERE device_id = 'c'");
+  sqlite.exec("UPDATE inc.sync_group_members SET state = 'left' WHERE host_name = 'c'");
   sqlite.exec(`INSERT INTO inc.sync_group_member_departures VALUES
     ('group-1', 'c', 'c', 'leave-c', '2026-08-09T03:00:00Z')`);
   const port = createBetterSqliteDbPort(sqlite, { name: 'group-facts-test' });
   await port.transaction((tx) => applySyncPackGroupFactsWithDbPort(tx, {
-    incomingAlias: 'inc', sourcePeerId: 'b'
+    incomingAlias: 'inc', sourceHostName: 'b'
   }));
-  expect(sqlite.prepare("SELECT state FROM sync_group_members WHERE device_id = 'c'").get()).toEqual({ state: 'left' });
+  expect(sqlite.prepare("SELECT state FROM sync_group_members WHERE host_name = 'c'").get()).toEqual({ state: 'left' });
 
   sqlite.exec("DELETE FROM inc.sync_group_member_departures; UPDATE inc.sync_group_members SET state = 'active'");
-  sqlite.exec("UPDATE inc.sync_group_members SET state = 'left' WHERE device_id = 'a'");
+  sqlite.exec("UPDATE inc.sync_group_members SET state = 'left' WHERE host_name = 'a'");
   sqlite.exec(`INSERT INTO inc.sync_group_member_departures VALUES
     ('group-1', 'a', 'a', 'leave-a', '2026-08-09T04:00:00Z')`);
   await expect(port.transaction((tx) => applySyncPackGroupFactsWithDbPort(tx, {
-    incomingAlias: 'inc', sourcePeerId: 'b'
+    incomingAlias: 'inc', sourceHostName: 'b'
   }))).rejects.toThrow('sync_group_local_departure_requires_local_action');
 });
 
 it('accepts a relayed removal authorized by an active member', async () => {
   seedGroup(sqlite, 'inc', ['a', 'b', 'c']);
-  sqlite.exec("UPDATE inc.sync_group_members SET state = 'left' WHERE device_id = 'c'");
+  sqlite.exec("UPDATE inc.sync_group_members SET state = 'left' WHERE host_name = 'c'");
   sqlite.exec(`INSERT INTO inc.sync_group_member_departures VALUES
     ('group-1', 'c', 'b', 'remove-c', '2026-08-09T03:00:00Z')`);
   const port = createBetterSqliteDbPort(sqlite, { name: 'group-facts-test' });
 
   await port.transaction((tx) => applySyncPackGroupFactsWithDbPort(tx, {
-    incomingAlias: 'inc', sourcePeerId: 'b'
+    incomingAlias: 'inc', sourceHostName: 'b'
   }));
 
-  expect(sqlite.prepare("SELECT state FROM sync_group_members WHERE device_id = 'c'").get())
+  expect(sqlite.prepare("SELECT state FROM sync_group_members WHERE host_name = 'c'").get())
     .toEqual({ state: 'left' });
-  expect(sqlite.prepare("SELECT authorized_by_device_id FROM sync_group_member_departures WHERE device_id = 'c'").get())
-    .toEqual({ authorized_by_device_id: 'b' });
+  expect(sqlite.prepare("SELECT authorized_by_host_name FROM sync_group_member_departures WHERE host_name = 'c'").get())
+    .toEqual({ authorized_by_host_name: 'b' });
 });
 
 it('treats a departure before a newer join as superseded history', async () => {
   seedGroup(sqlite, 'inc', ['a', 'b']);
   sqlite.exec(`UPDATE inc.sync_group_members SET authorization_id = 'join-b-new',
-    joined_at = '2026-08-09T04:00:00Z' WHERE device_id = 'b'`);
+    joined_at = '2026-08-09T04:00:00Z' WHERE host_name = 'b'`);
   sqlite.exec(`INSERT INTO inc.sync_group_member_departures VALUES
     ('group-1', 'b', 'b', 'leave-b-old', '2026-08-09T03:00:00Z')`);
   sqlite.exec(`UPDATE sync_group_members SET state = 'left', left_at = '2026-08-09T03:00:00Z'
-    WHERE device_id = 'b'`);
+    WHERE host_name = 'b'`);
   sqlite.exec(`INSERT INTO sync_group_member_departures VALUES
     ('group-1', 'b', 'b', 'leave-b-old', '2026-08-09T03:00:00Z')`);
   const port = createBetterSqliteDbPort(sqlite, { name: 'group-facts-test' });
 
   await port.transaction((tx) => applySyncPackGroupFactsWithDbPort(tx, {
-    incomingAlias: 'inc', sourcePeerId: 'a'
+    incomingAlias: 'inc', sourceHostName: 'a'
   }));
 
   expect(sqlite.prepare(`SELECT state, authorization_id, joined_at, left_at
-    FROM sync_group_members WHERE device_id = 'b'`).get()).toEqual({
+    FROM sync_group_members WHERE host_name = 'b'`).get()).toEqual({
     authorization_id: 'join-b-new', joined_at: '2026-08-09T04:00:00Z', left_at: null, state: 'active'
   });
-  expect(sqlite.prepare("SELECT COUNT(*) AS value FROM sync_group_member_departures WHERE device_id = 'b'").get())
+  expect(sqlite.prepare("SELECT COUNT(*) AS value FROM sync_group_member_departures WHERE host_name = 'b'").get())
     .toEqual({ value: 0 });
 });
 
 it('ignores a local departure that predates the local Device current join generation', async () => {
   seedGroup(sqlite, 'inc', ['a', 'b']);
-  sqlite.exec("UPDATE sync_group_members SET joined_at = '2026-08-09T04:00:00Z' WHERE device_id = 'a'");
-  sqlite.exec("UPDATE inc.sync_group_members SET state = 'left' WHERE device_id = 'a'");
+  sqlite.exec("UPDATE sync_group_members SET joined_at = '2026-08-09T04:00:00Z' WHERE host_name = 'a'");
+  sqlite.exec("UPDATE inc.sync_group_members SET state = 'left' WHERE host_name = 'a'");
   sqlite.exec(`INSERT INTO inc.sync_group_member_departures VALUES
     ('group-1', 'a', 'a', 'leave-a-old', '2026-08-09T03:00:00Z')`);
   const port = createBetterSqliteDbPort(sqlite, { name: 'group-facts-test' });
 
   await port.transaction((tx) => applySyncPackGroupFactsWithDbPort(tx, {
-    incomingAlias: 'inc', sourcePeerId: 'b'
+    incomingAlias: 'inc', sourceHostName: 'b'
   }));
 
-  expect(sqlite.prepare("SELECT state, joined_at FROM sync_group_members WHERE device_id = 'a'").get())
+  expect(sqlite.prepare("SELECT state, joined_at FROM sync_group_members WHERE host_name = 'a'").get())
     .toEqual({ joined_at: '2026-08-09T04:00:00Z', state: 'active' });
 });
 
 function seedGroup(db: Database.Database, schema: 'inc' | 'main', devices: string[], timeline = 'timeline-1') {
   const prefix = schema === 'main' ? '' : 'inc.';
   db.prepare(`INSERT INTO ${prefix}sync_groups
-    (group_id, display_name, timeline_id, created_by_device_id, created_at${schema === 'main' ? ', updated_at' : ''})
+    (group_id, display_name, timeline_id, created_by_host_name, created_at${schema === 'main' ? ', updated_at' : ''})
     VALUES (?, ?, ?, ?, ?${schema === 'main' ? ', ?' : ''})`).run(
     'group-1', 'Studio', timeline, 'a', '2026-08-09T00:00:00Z',
     ...(schema === 'main' ? ['2026-08-09T00:00:00Z'] : [])
@@ -154,14 +183,14 @@ function seedGroup(db: Database.Database, schema: 'inc' | 'main', devices: strin
     const joined = `2026-08-09T0${index}:00:00Z`;
     if (schema === 'main') {
       db.prepare(`INSERT INTO sync_group_members
-        (group_id, device_id, device_kind, device_name, state, approved_by_device_id,
+        (group_id, host_name, host_platform, state, approved_by_host_name,
          authorization_id, provisioning_cursor, joined_at, activated_at, left_at, updated_at)
-        VALUES ('group-1', ?, 'desktop', ?, 'active', ?, ?, NULL, ?, NULL, NULL, ?)`)
-        .run(device, device.toUpperCase(), approver, `join-${device}`, joined, joined);
+        VALUES ('group-1', ?, 'desktop', 'active', ?, ?, NULL, ?, NULL, NULL, ?)`)
+        .run(device, approver, `join-${device}`, joined, joined);
     } else {
       db.prepare(`INSERT INTO inc.sync_group_members VALUES
-        ('group-1', ?, 'desktop', ?, 'active', ?, ?, ?, NULL, ?)`)
-        .run(device, device.toUpperCase(), approver, `join-${device}`, joined, joined);
+        ('group-1', ?, 'desktop', 'active', ?, ?, ?, NULL, ?)`)
+        .run(device, approver, `join-${device}`, joined, joined);
     }
   }
 }

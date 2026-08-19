@@ -35,6 +35,7 @@ import { applySyncPackViewStateObjectsWithDbPort } from './syncPackViewStateObje
 export interface SyncPackNodeSurfaceApplyOptions extends SyncPackNodeApplyOptions {
   currentCursor: number;
   hostName: string;
+  sourceHostName?: string;
   sourcePeerId?: string;
 }
 
@@ -154,7 +155,7 @@ async function applySyncPackSurfaceInTransaction(
   const applyOptions = options;
   await applySyncPackGroupFactsWithDbPort(port, {
     ...(options.incomingAlias === undefined ? {} : { incomingAlias: options.incomingAlias }),
-    sourcePeerId: options.sourcePeerId!
+    sourceHostName: options.sourceHostName ?? options.sourcePeerId!
   });
   const appliedBlobCount = await applySyncPackContentBlobsWithDbPort(port, applyOptions);
   const nodeConvergence = await applyVersionedNodeStage(port, options);

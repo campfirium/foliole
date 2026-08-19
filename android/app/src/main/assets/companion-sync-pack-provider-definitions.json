@@ -1,9 +1,9 @@
 {
   "compression": "zlib",
   "copyStatements": [
-    "INSERT INTO sync_groups SELECT group_id, display_name, timeline_id, created_by_device_id, created_at\n     FROM source.sync_groups WHERE group_id IN (SELECT group_id FROM source.sync_group_local_state WHERE singleton_id = 1)",
-    "INSERT INTO sync_group_members SELECT group_id, device_id, device_kind, device_name, state,\n       approved_by_device_id, authorization_id, joined_at, left_at, updated_at\n     FROM source.sync_group_members\n     WHERE group_id IN (SELECT group_id FROM sync_groups) AND state IN ('active', 'left')",
-    "INSERT INTO sync_group_member_departures SELECT group_id, device_id, authorized_by_device_id,\n       authorization_id, left_at FROM source.sync_group_member_departures\n     WHERE group_id IN (SELECT group_id FROM sync_groups)",
+    "INSERT INTO sync_groups SELECT group_id, display_name, timeline_id, created_by_host_name, created_at\n     FROM source.sync_groups WHERE group_id IN (SELECT group_id FROM source.sync_group_local_state WHERE singleton_id = 1)",
+    "INSERT INTO sync_group_members SELECT group_id, host_name, host_platform, state,\n       approved_by_host_name, authorization_id, joined_at, left_at, updated_at\n     FROM source.sync_group_members\n     WHERE group_id IN (SELECT group_id FROM sync_groups) AND state IN ('active', 'left')",
+    "INSERT INTO sync_group_member_departures SELECT group_id, host_name, authorized_by_host_name,\n       authorization_id, left_at FROM source.sync_group_member_departures\n     WHERE group_id IN (SELECT group_id FROM sync_groups)",
     "INSERT INTO sync_object_state SELECT state.object_type, state.object_id, state.state_seq,\n       state.content_hash, state.last_modified_by_host_name, state.updated_at,\n       CASE WHEN state.object_type = 'node_text_alternative' THEN COALESCE(state.deleted_at,\n         (SELECT node.deleted_at FROM source.node_text_alternatives alternative\n          JOIN source.nodes node ON node.id = alternative.node_id\n          WHERE alternative.alternative_id = state.object_id)) ELSE state.deleted_at END\n     FROM source.sync_object_state state WHERE state.state_seq > ? AND state.state_seq <= ? AND state.object_type IN\n       ('attachment','external_document','external_folder','import_source','node','node_open_state','node_reading',\n        'node_review','node_text_alternative','pdf_page_text','setting','view_state')\n       AND (state.object_type != 'node' OR state.deleted_at IS NOT NULL OR EXISTS\n         (SELECT 1 FROM source.nodes WHERE id = state.object_id))\n       AND (state.object_type NOT IN ('node_reading','node_review') OR EXISTS\n         (SELECT 1 FROM source.nodes WHERE id = state.object_id))\n       ",
     "INSERT OR IGNORE INTO sync_object_state SELECT s.object_type, s.object_id, s.state_seq, s.content_hash,\n       s.last_modified_by_host_name, s.updated_at, s.deleted_at\n     FROM source.sync_object_state s WHERE s.object_type = 'node' AND s.object_id IN\n       (SELECT object_id FROM sync_object_state WHERE object_type IN ('node_reading','node_review')\n        UNION SELECT alternative.node_id FROM source.node_text_alternatives alternative\n          JOIN sync_object_state selected ON selected.object_type = 'node_text_alternative'\n            AND selected.object_id = alternative.alternative_id)",
     "DELETE FROM sync_object_state WHERE object_type NOT IN ('external_document','node') AND NOT EXISTS\n      (SELECT 1 FROM sync_objects o WHERE o.object_type = sync_object_state.object_type AND o.object_id = sync_object_state.object_id)",
@@ -18,7 +18,7 @@
   ],
   "databaseEntry": "incoming.db.deflate",
   "format": "foliole.sync-pack",
-  "formatVersion": 7,
+  "formatVersion": 8,
   "payloadCopyIndex": 5,
   "payloadPlans": [
     {
@@ -68,9 +68,9 @@
   ],
   "packSchema": [
     "CREATE TABLE pack_manifest (\n    key TEXT PRIMARY KEY,\n    value TEXT NOT NULL\n  )",
-    "CREATE TABLE sync_groups (\n    group_id TEXT PRIMARY KEY,\n    display_name TEXT NOT NULL,\n    timeline_id TEXT NOT NULL,\n    created_by_device_id TEXT NOT NULL,\n    created_at TEXT NOT NULL\n  )",
-    "CREATE TABLE sync_group_members (\n    group_id TEXT NOT NULL,\n    device_id TEXT NOT NULL,\n    device_kind TEXT NOT NULL,\n    device_name TEXT NOT NULL,\n    state TEXT NOT NULL,\n    approved_by_device_id TEXT NOT NULL,\n    authorization_id TEXT NOT NULL,\n    joined_at TEXT NOT NULL,\n    left_at TEXT,\n    updated_at TEXT NOT NULL,\n    PRIMARY KEY (group_id, device_id),\n    UNIQUE (authorization_id)\n  )",
-    "CREATE TABLE sync_group_member_departures (\n    group_id TEXT NOT NULL,\n    device_id TEXT NOT NULL,\n    authorized_by_device_id TEXT NOT NULL,\n    authorization_id TEXT NOT NULL UNIQUE,\n    left_at TEXT NOT NULL,\n    PRIMARY KEY (group_id, device_id)\n  )",
+    "CREATE TABLE sync_groups (\n    group_id TEXT PRIMARY KEY,\n    display_name TEXT NOT NULL,\n    timeline_id TEXT NOT NULL,\n    created_by_host_name TEXT NOT NULL,\n    created_at TEXT NOT NULL\n  )",
+    "CREATE TABLE sync_group_members (\n    group_id TEXT NOT NULL,\n    host_name TEXT NOT NULL,\n    host_platform TEXT NOT NULL,\n    state TEXT NOT NULL,\n    approved_by_host_name TEXT NOT NULL,\n    authorization_id TEXT NOT NULL,\n    joined_at TEXT NOT NULL,\n    left_at TEXT,\n    updated_at TEXT NOT NULL,\n    PRIMARY KEY (group_id, host_name),\n    UNIQUE (authorization_id)\n  )",
+    "CREATE TABLE sync_group_member_departures (\n    group_id TEXT NOT NULL,\n    host_name TEXT NOT NULL,\n    authorized_by_host_name TEXT NOT NULL,\n    authorization_id TEXT NOT NULL UNIQUE,\n    left_at TEXT NOT NULL,\n    PRIMARY KEY (group_id, host_name)\n  )",
     "CREATE TABLE sync_object_state (\n    object_type TEXT NOT NULL,\n    object_id TEXT NOT NULL,\n    state_seq INTEGER NOT NULL,\n    content_hash TEXT NOT NULL,\n    last_modified_by_host_name TEXT NOT NULL,\n    updated_at TEXT NOT NULL,\n    deleted_at TEXT,\n    PRIMARY KEY (object_type, object_id)\n  )",
     "CREATE TABLE sync_objects (\n    object_type TEXT NOT NULL,\n    object_id TEXT NOT NULL,\n    content_hash TEXT NOT NULL,\n    payload_json TEXT,\n    updated_at TEXT NOT NULL,\n    deleted_at TEXT,\n    PRIMARY KEY (object_type, object_id)\n  )",
     "CREATE TABLE nodes (\n    id TEXT PRIMARY KEY,\n    parent_id TEXT,\n    kind TEXT NOT NULL,\n    priority INTEGER,\n    desired_retention REAL,\n    enable_short_term INTEGER,\n    sequential_reading_enabled INTEGER,\n    shelved_at TEXT,\n    manual_child_order TEXT,\n    title TEXT NOT NULL,\n    is_title_manual INTEGER NOT NULL DEFAULT 0,\n    hide_title_heading INTEGER NOT NULL DEFAULT 0,\n    body_blob_hash TEXT,\n    opening_text TEXT,\n    virtual_filter TEXT,\n    reveal TEXT,\n    anchor_link TEXT,\n    anchor_resolution_status TEXT,\n    anchor_source_version_id TEXT,\n    image_regions TEXT,\n    import_source_fingerprint TEXT,\n    import_content_fingerprint TEXT,\n    content TEXT NOT NULL DEFAULT '',\n    current_version_id TEXT,\n    created_at TEXT NOT NULL,\n    updated_at TEXT NOT NULL,\n    deleted_at TEXT\n  )",
@@ -85,6 +85,7 @@
   "protocol": {
     "capabilities": [
       "author-host-snapshots-v1",
+      "host-workgroup-members-v1",
       "lan-sync-v1",
       "opaque-sync-refs-v1",
       "sync-group-facts-v1",
@@ -94,7 +95,7 @@
     "min_supported_version": 2,
     "version": 2
   },
-  "schemaVersion": 72,
+  "schemaVersion": 73,
   "stateCopyIndex": 3,
   "tableNames": [
     "sync_groups",

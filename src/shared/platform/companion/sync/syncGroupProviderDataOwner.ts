@@ -5,7 +5,7 @@ import {
   COMPANION_SYNC_GROUP_DATA_CONTRACT as CONTRACT,
   type CompanionSyncGroupDataRequest
 } from '../../../../../lib/platform/companionSyncGroupDataContract';
-import { allocateSyncGroupDeviceProfile } from '../../../../../lib/platform/syncGroupDeviceProfile';
+import { allocateSyncGroupHostName } from '../../../../../lib/platform/syncGroupDeviceProfile';
 import {
   runCompanionSyncControlWriterTask,
   runCompanionSyncWriterTask
@@ -52,56 +52,57 @@ async function dispatch(operation: string, payload: Record<string, unknown>) {
 
 async function authorizeMember(payload: Record<string, unknown>) {
   const groupId = text(payload.group_id);
-  const deviceId = text(payload.device_id);
   const owner = getIosCompanionDatabaseOwner();
   const member = record(payload.member);
   if (!member) {
-    const active = await owner.read((db) => hasActiveMember(db, groupId, deviceId));
-    return { authorized: active, ...(active ? { device_id: deviceId, device_name: deviceId } : {}) };
+    const authorizationId = optionalText(payload.authorization_id);
+    if (authorizationId) {
+      const row = await owner.read(async (db) => (await db.query<DbRow>(
+        `SELECT host_name FROM sync_group_members
+         WHERE group_id = ? AND authorization_id = ? AND state = 'active' LIMIT 1`,
+        [groupId, authorizationId]
+      ))[0]);
+      return { authorized: Boolean(row), ...(row ? { host_name: text(row.host_name) } : {}) };
+    }
+    const hostName = text(payload.host_name);
+    const active = await owner.read((db) => hasActiveMember(db, groupId, hostName));
+    return { authorized: active, ...(active ? { host_name: hostName } : {}) };
   }
   return runCompanionSyncControlWriterTask(() => owner.runWriter((db) => db.transaction(async (tx) => {
-    const authorizationId = text(member.authorization_id);
-    const existing = (await tx.query<DbRow>(
-      `SELECT device_id, device_name FROM sync_group_members
-       WHERE group_id = ? AND authorization_id = ? LIMIT 1`, [groupId, authorizationId]
-    ))[0];
-    if (existing) return { authorized: true, device_id: text(existing.device_id), device_name: text(existing.device_name) };
-    const occupied = await tx.query<DbRow>(
-      `SELECT device_name FROM sync_group_members
-       WHERE group_id = ? AND state = 'active'`, [groupId]
-    );
-    const assigned = allocateSyncGroupDeviceProfile(
-      text(member.device_name), occupied.map((row) => text(row.device_name))
-    );
-    const now = new Date().toISOString();
-    await tx.run(
-      `INSERT INTO sync_group_members (
-        group_id, device_id, device_kind, device_name, state, approved_by_device_id,
-        authorization_id, provisioning_cursor, joined_at, activated_at, left_at, updated_at
-      ) VALUES (?, ?, ?, ?, 'active', ?, ?, NULL, ?, NULL, NULL, ?)
-      ON CONFLICT(group_id, device_id) DO UPDATE SET
-        device_kind = excluded.device_kind,
-        device_name = excluded.device_name,
-        state = 'active',
-        approved_by_device_id = excluded.approved_by_device_id,
-        authorization_id = excluded.authorization_id,
-        provisioning_cursor = NULL,
-        joined_at = excluded.joined_at,
-        activated_at = NULL,
-        left_at = NULL,
-        updated_at = excluded.updated_at
-      WHERE sync_group_members.state = 'left'
-        AND excluded.joined_at > sync_group_members.joined_at`,
-      [groupId, assigned.device_id, text(member.device_kind), assigned.device_name,
-        text(payload.approved_by_device_id), authorizationId, text(member.joined_at), now]
-    );
-    await tx.run(
-      `DELETE FROM sync_group_member_departures
-       WHERE group_id = ? AND device_id = ? AND left_at < ?`,
-      [groupId, assigned.device_id, text(member.joined_at)]
-    );
-    return { authorized: true, ...assigned };
+    return authorizeNewMember(tx, groupId, member, payload);
   })));
+}
+
+async function authorizeNewMember(
+  tx: DbPort, groupId: string, member: Record<string, unknown>, payload: Record<string, unknown>
+) {
+  const authorizationId = text(member.authorization_id);
+  const existing = (await tx.query<DbRow>(`SELECT host_name FROM sync_group_members
+    WHERE group_id = ? AND authorization_id = ? LIMIT 1`, [groupId, authorizationId]))[0];
+  if (existing) return { authorized: true, host_name: text(existing.host_name) };
+  const occupied = await tx.query<DbRow>(`SELECT host_name FROM sync_group_members
+    WHERE group_id = ? AND state = 'active'`, [groupId]);
+  const assigned = allocateSyncGroupHostName(text(member.host_name), occupied.map((row) => text(row.host_name)));
+  const joinedAt = text(member.joined_at);
+  const now = new Date().toISOString();
+  await tx.run(`INSERT INTO sync_group_members (
+    group_id, host_name, host_platform, state, approved_by_host_name,
+    authorization_id, provisioning_cursor, joined_at, activated_at, left_at, updated_at
+  ) VALUES (?, ?, ?, 'active', ?, ?, NULL, ?, NULL, NULL, ?)
+  ON CONFLICT(group_id, host_name) DO UPDATE SET host_platform = excluded.host_platform,
+    state = 'active', approved_by_host_name = excluded.approved_by_host_name,
+    authorization_id = excluded.authorization_id, provisioning_cursor = NULL,
+    joined_at = excluded.joined_at, activated_at = NULL, left_at = NULL, updated_at = excluded.updated_at
+  WHERE sync_group_members.state = 'left' AND excluded.joined_at > sync_group_members.joined_at`,
+  [groupId, assigned.host_name, text(member.host_platform), text(payload.approved_by_host_name),
+    authorizationId, joinedAt, now]);
+  await tx.run(`DELETE FROM sync_group_member_departures
+    WHERE group_id = ? AND host_name = ? AND left_at < ?`, [groupId, assigned.host_name, joinedAt]);
+  return { authorized: true, ...assigned };
+}
+
+function optionalText(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
 async function createSnapshot(payload: Record<string, unknown>) {
@@ -117,13 +118,13 @@ async function createSnapshot(payload: Record<string, unknown>) {
 async function loadGroupPayload() {
   return getIosCompanionDatabaseOwner().read(async (db) => {
     const group = (await db.query<DbRow>(
-      'SELECT group_id, display_name, timeline_id, created_by_device_id, created_at FROM sync_groups LIMIT 1'
+      'SELECT group_id, display_name, timeline_id, created_by_host_name, created_at FROM sync_groups LIMIT 1'
     ))[0];
     if (!group) throw new Error('sync_group_not_available');
     const members = await db.query<DbRow>(
-      `SELECT device_id, device_kind, device_name, state, approved_by_device_id,
+      `SELECT host_name, host_platform, state, approved_by_host_name,
               authorization_id, joined_at FROM sync_group_members
-       WHERE state = 'active' ORDER BY joined_at, device_id`
+       WHERE state = 'active' ORDER BY joined_at, host_name`
     );
     return { group, members };
   });
@@ -133,14 +134,14 @@ async function recordDeparture(payload: Record<string, unknown>) {
   const value = record(payload.value);
   if (!value) throw new Error('sync_group_departure_authorization_invalid');
   const groupId = text(payload.group_id);
-  const deviceId = text(value.device_id);
-  if (groupId !== text(value.group_id) || deviceId !== text(value.authorized_by_device_id)) {
+  const hostName = text(value.host_name);
+  if (groupId !== text(value.group_id) || hostName !== text(value.authorized_by_host_name)) {
     throw new Error('sync_group_departure_authorization_invalid');
   }
   return writer(async (db) => {
     const row = (await db.query<DbRow>(
       `SELECT joined_at FROM sync_group_members
-       WHERE group_id = ? AND device_id = ? AND state = 'active' LIMIT 1`, [groupId, deviceId]
+       WHERE group_id = ? AND host_name = ? AND state = 'active' LIMIT 1`, [groupId, hostName]
     ))[0];
     const leftAt = text(value.left_at);
     if (!row || !validDepartureTime(leftAt, text(row.joined_at))) {
@@ -149,17 +150,17 @@ async function recordDeparture(payload: Record<string, unknown>) {
     await db.transaction(async (tx) => {
       await tx.run(
         `INSERT INTO sync_group_member_departures
-         (group_id, device_id, authorized_by_device_id, authorization_id, left_at) VALUES (?, ?, ?, ?, ?)
-         ON CONFLICT(group_id, device_id) DO UPDATE SET
-           authorized_by_device_id = excluded.authorized_by_device_id,
+         (group_id, host_name, authorized_by_host_name, authorization_id, left_at) VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(group_id, host_name) DO UPDATE SET
+           authorized_by_host_name = excluded.authorized_by_host_name,
            authorization_id = excluded.authorization_id,
            left_at = excluded.left_at
          WHERE excluded.left_at > sync_group_member_departures.left_at`,
-        [groupId, deviceId, deviceId, text(value.authorization_id), leftAt]
+        [groupId, hostName, hostName, text(value.authorization_id), leftAt]
       );
       await tx.run(
         `UPDATE sync_group_members SET state = 'left', left_at = ?, updated_at = ?
-         WHERE group_id = ? AND device_id = ?`, [leftAt, leftAt, groupId, deviceId]
+         WHERE group_id = ? AND host_name = ?`, [leftAt, leftAt, groupId, hostName]
       );
     });
     return { recorded: true };
@@ -191,10 +192,10 @@ function writer<T>(task: (db: DbPort) => Promise<T>) {
   return runCompanionSyncWriterTask(() => getIosCompanionDatabaseOwner().runWriter(task));
 }
 
-async function hasActiveMember(db: DbPort, groupId: string, deviceId: string) {
+async function hasActiveMember(db: DbPort, groupId: string, hostName: string) {
   const rows = await db.query(
-    `SELECT 1 FROM sync_group_members WHERE group_id = ? AND device_id = ? AND state = 'active' LIMIT 1`,
-    [groupId, deviceId]
+    `SELECT 1 FROM sync_group_members WHERE group_id = ? AND host_name = ? AND state = 'active' LIMIT 1`,
+    [groupId, hostName]
   );
   return rows.length > 0;
 }

@@ -179,7 +179,7 @@ function SyncOverview(props: SyncStatusDetailsProps) {
           group={props.syncGroup}
           isSyncing={props.status === 'syncing'}
           onOpen={() => props.onOpenPage('syncGroup')}
-          sourceDeviceId={props.pairingState.remote_peer_id ?? null}
+          sourceHostName={props.pairingState.remote_peer_name ?? null}
         />
       ) : null}
       {props.syncGroup ? null : (

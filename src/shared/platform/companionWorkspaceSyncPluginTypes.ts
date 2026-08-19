@@ -38,7 +38,10 @@ export interface CompanionWorkspaceSyncPlugin
   bindSyncGroupPeerRoute(args: {
     endpoint_url: string;
     local_device_id: string;
+    local_host_name: string;
     peer_device_id: string;
+    peer_host_name: string;
+    peer_host_platform: string;
     sync_group_id: string;
   }): Promise<void>;
   clearSyncGroupCredentials(): Promise<void>;
@@ -58,6 +61,8 @@ export interface CompanionWorkspaceSyncPlugin
     device_id: string;
     device_name: string;
     facts_revision: string;
+    host_name: string;
+    host_platform: string;
     sync_group: import('../../../lib/platform/syncGroupContract').SyncGroupPayload;
     workgroup_key: string;
   }): Promise<CompanionSyncGroupProviderState>;

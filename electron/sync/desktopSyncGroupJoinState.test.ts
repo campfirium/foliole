@@ -12,7 +12,8 @@ beforeEach(() => saveDesktopSyncGroupPendingJoin({
   candidate: {
     endpoint_url: 'http://192.168.1.12:41000', group_display_name: 'Office',
     group_id: 'group-1', group_tag: 'tag-1', provider_device_id: 'android-b', provider_device_kind: 'android-capacitor',
-    provider_device_name: 'A5', timeline_id: 'timeline-1'
+    provider_device_name: 'A5', provider_host_name: 'A5', provider_host_platform: 'android-capacitor',
+    timeline_id: 'timeline-1'
   },
   key: { privateKey, publicKey: 'public' },
   request: {

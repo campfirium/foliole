@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { loadOrCreateDesktopDeviceId } from '../database/deviceIdentity.js';
+import { loadOrCreateDesktopHostName } from '../database/hostProfile.js';
 import { loadDesktopSyncGroup, recordSyncGroupDeparture } from '../database/syncGroupStore.js';
 
 import {
@@ -15,67 +15,73 @@ export const SYNC_GROUP_DEPARTURE_PATH = '/companion/sync-group/departure';
 export function acceptSyncGroupDeparture(bodyText: string, authenticatedDeviceId: string) {
   const payload = JSON.parse(bodyText) as Record<string, unknown>;
   const group = loadDesktopSyncGroup();
-  const deviceId = string(payload.device_id);
+  const hostName = string(payload.host_name);
   const groupId = string(payload.group_id);
-  const authorizedByDeviceId = string(payload.authorized_by_device_id);
-  if (!group || group.group_id !== groupId || authorizedByDeviceId !== authenticatedDeviceId) {
+  const authorizedByHostName = string(payload.authorized_by_host_name);
+  const authenticatedHostName = loadPairedSyncGroupPeers(groupId)
+    .find((peer) => peer.peer_device_id === authenticatedDeviceId)?.peer_host_name;
+  if (!group || group.group_id !== groupId || authorizedByHostName !== authenticatedHostName) {
     throw new Error('sync_group_departure_authorization_invalid');
   }
-  const local = deviceId === group.local_device_id;
+  const local = hostName === group.local_host_name;
   recordSyncGroupDeparture({
     authorizationId: string(payload.authorization_id),
-    authorizedByDeviceId,
-    deviceId,
+    authorizedByHostName,
+    hostName,
     groupId,
     leftAt: string(payload.left_at),
     local
   });
-  const revokedIds = local ? loadPairedSyncGroupPeers(groupId).map((peer) => peer.peer_device_id) : [deviceId];
+  const revokedIds = local ? loadPairedSyncGroupPeers(groupId).map((peer) => peer.peer_device_id)
+    : loadPairedSyncGroupPeers(groupId)
+      .filter((peer) => peer.peer_host_name === hostName).map((peer) => peer.peer_device_id);
   for (const revokedId of revokedIds) removeSyncGroupPeerCredentials(groupId, revokedId);
   return { status: 'accepted' };
 }
 
-export async function removeDesktopSyncGroupMember(deviceId: string) {
+export async function removeDesktopSyncGroupMember(hostName: string) {
   const group = loadDesktopSyncGroup();
-  const localDeviceId = loadOrCreateDesktopDeviceId();
-  if (!group || group.local_member_state !== 'active' || deviceId === localDeviceId
-    || !group.members.some((member) => member.device_id === deviceId && member.state === 'active')) {
+  const localHostName = loadOrCreateDesktopHostName();
+  if (!group || group.local_member_state !== 'active' || hostName === localHostName
+    || !group.members.some((member) => member.host_name === hostName && member.state === 'active')) {
     throw new Error('sync_group_member_removal_invalid');
   }
-  const departure = createDeparture(group.group_id, deviceId, localDeviceId, 'remove');
+  const departure = createDeparture(group.group_id, hostName, localHostName, 'remove');
   await broadcastDeparture(departure, loadPairedSyncGroupPeers(group.group_id));
   recordSyncGroupDeparture({
-    authorizationId: departure.authorization_id, authorizedByDeviceId: localDeviceId,
-    deviceId, groupId: group.group_id, leftAt: departure.left_at
+    authorizationId: departure.authorization_id, authorizedByHostName: localHostName,
+    hostName, groupId: group.group_id, leftAt: departure.left_at
   });
-  removeSyncGroupPeerCredentials(group.group_id, deviceId);
+  for (const peer of loadPairedSyncGroupPeers(group.group_id)) {
+    if (peer.peer_host_name === hostName) removeSyncGroupPeerCredentials(group.group_id, peer.peer_device_id);
+  }
 }
 
 export async function leaveDesktopSyncGroup() {
   const group = loadDesktopSyncGroup();
   if (!group || group.local_member_state !== 'active') throw new Error('sync_group_not_available');
-  const deviceId = loadOrCreateDesktopDeviceId();
-  const departure = createDeparture(group.group_id, deviceId, deviceId, 'leave');
+  const hostName = loadOrCreateDesktopHostName();
+  const departure = createDeparture(group.group_id, hostName, hostName, 'leave');
   const peers = loadPairedSyncGroupPeers(group.group_id);
   const hasOtherActiveMember = group.members.some((member) =>
-    member.device_id !== deviceId && member.state === 'active');
+    member.host_name !== hostName && member.state === 'active');
   if (hasOtherActiveMember && peers.length === 0) {
     throw new Error('sync_group_departure_peer_unavailable');
   }
   const delivered = await broadcastDeparture(departure, peers);
   if (peers.length > 0 && !delivered) throw new Error('sync_group_departure_peer_unavailable');
   recordSyncGroupDeparture({
-    authorizationId: departure.authorization_id, authorizedByDeviceId: deviceId,
-    deviceId, groupId: group.group_id, leftAt: departure.left_at, local: true
+    authorizationId: departure.authorization_id, authorizedByHostName: hostName,
+    hostName, groupId: group.group_id, leftAt: departure.left_at, local: true
   });
   for (const peer of peers) removeSyncGroupPeerCredentials(group.group_id, peer.peer_device_id);
 }
 
-function createDeparture(groupId: string, deviceId: string, authorizerId: string, action: 'leave' | 'remove') {
+function createDeparture(groupId: string, hostName: string, authorizerHostName: string, action: 'leave' | 'remove') {
   return {
     authorization_id: `${action}-${randomUUID()}`,
-    authorized_by_device_id: authorizerId,
-    device_id: deviceId,
+    authorized_by_host_name: authorizerHostName,
+    host_name: hostName,
     group_id: groupId,
     left_at: new Date().toISOString()
   };
@@ -90,7 +96,7 @@ async function broadcastDeparture(departure: ReturnType<typeof createDeparture>,
     try {
       await postDesktopWorkgroupJson({
         body, endpointUrl: peer.endpoint_url, groupId: departure.group_id,
-        localDeviceId: departure.authorized_by_device_id,
+        localDeviceId: peer.local_device_id,
         pathWithQuery: SYNC_GROUP_DEPARTURE_PATH, secret: key.group_key
       });
       delivered = true;

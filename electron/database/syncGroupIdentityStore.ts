@@ -1,17 +1,21 @@
-import { isAssignedSyncGroupDeviceName } from '../../lib/platform/syncGroupDeviceProfile.js';
+import { isAssignedSyncGroupHostName } from '../../lib/platform/syncGroupDeviceProfile.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { saveApprovedSyncGroupMember } from './syncGroupMemberRegistration.js';
 import { loadDesktopSyncGroup } from './syncGroupStore.js';
 
-export function updateLocalSyncGroupDeviceName(deviceName: string, now = new Date().toISOString()) {
+export function updateLocalSyncGroupHostName(hostName: string, now = new Date().toISOString()) {
   const group = loadDesktopSyncGroup();
   if (!group) return null;
-  const local = group.members.find((member) => member.device_id === group.local_device_id);
-  if (!local || isAssignedSyncGroupDeviceName(local.device_name, deviceName)) return group;
-  openDatabaseConnection().driver.execute(
-    `UPDATE sync_group_members SET device_name = ?, updated_at = ?
-     WHERE group_id = ? AND device_id = ? AND state = 'active'`,
-    [deviceName, now, group.group_id, group.local_device_id]
-  );
+  const local = group.members.find((member) => member.host_name === group.local_host_name);
+  if (!local || isAssignedSyncGroupHostName(local.host_name, hostName)) return group;
+  openDatabaseConnection().driver.transaction((driver) => saveApprovedSyncGroupMember({
+    approvedByHostName: local.approved_by_host_name,
+    authorizationId: local.authorization_id,
+    groupId: group.group_id,
+    hostName,
+    hostPlatform: local.host_platform,
+    now
+  }, driver));
   return loadDesktopSyncGroup();
 }

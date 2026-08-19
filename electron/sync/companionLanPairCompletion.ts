@@ -6,7 +6,7 @@ import {
   registerSyncGroupMember
 } from '../database/syncGroupStore.js';
 
-import { resolveDesktopDeviceName } from './companionLanPayloads.js';
+import { resolveDesktopDeviceName, resolveDesktopHostName } from './companionLanPayloads.js';
 import { readCompanionRequestBody } from './companionLanRequestBody.js';
 import { encryptCompanionPairingSecret } from './companionPairingEncryption.js';
 import {
@@ -48,13 +48,13 @@ export async function handlePairRequest(
     });
   }
   const { assignedMember, syncGroup } = resolveApprovedSyncGroup(
-    approved, completion, pairRequestId, peerId
+    approved, completion, pairRequestId
   );
   const workgroupKey = syncGroup ? loadDesktopWorkgroupKey(syncGroup.group_id) : null;
   if (syncGroup && !workgroupKey) throw new Error('sync_group_workgroup_key_missing');
   const pairedArgs = {
-    clientAddress: approved.client_address, deviceId: assignedMember?.device_id ?? approved.device_id,
-    deviceKind: approved.device_kind, deviceName: assignedMember?.device_name ?? approved.device_name,
+    clientAddress: approved.client_address, deviceId: approved.device_id,
+    deviceKind: approved.device_kind, deviceName: assignedMember?.host_name ?? approved.host_name,
     negotiatedProtocolVersion: compatibility.negotiated_version ?? CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
     remoteProtocol: approved.protocol
   };
@@ -71,11 +71,16 @@ export async function handlePairRequest(
   updateStatus(updatePairingStatus);
   writeJson(request, response, 200, {
     app_version: appVersion, compatibility, desktop_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
-    device_id: paired.device_id, encrypted_device_secret: encryptedSecret, paired_at: paired.paired_at, peer_id: peerId,
+    device_id: paired.device_id, encrypted_device_secret: encryptedSecret,
+    host_name: assignedMember?.host_name ?? approved.host_name,
+    host_platform: assignedMember?.host_platform ?? approved.host_platform,
+    paired_at: paired.paired_at, peer_id: peerId,
     ...(syncGroup ? {
       provider_device_id: peerId,
       provider_device_kind: process.platform,
       provider_device_name: resolveDesktopDeviceName(),
+      provider_host_name: resolveDesktopHostName(),
+      provider_host_platform: process.platform,
       provider_encrypted_device_secret: providerEncryptedSecret,
       sync_group: syncGroup
     } : {})
@@ -85,20 +90,18 @@ export async function handlePairRequest(
 function resolveApprovedSyncGroup(
   approved: PendingCompanionPairRequest,
   completion: NonNullable<ReturnType<typeof loadCompanionPairRequestForCompletion>>,
-  pairRequestId: string,
-  peerId: string
+  pairRequestId: string
 ) {
-  const syncGroup = approved.group_id && approved.timeline_id
-    ? completion.completion || approved.membership_action === 'recover_existing_member'
-      ? loadDesktopSyncGroup() : registerSyncGroupMember({
-      approvedByDeviceId: peerId, authorizationId: pairRequestId, deviceId: approved.device_id,
-      deviceKind: approved.device_kind, deviceName: approved.device_name
-    }) : null;
-  const assignedMember = syncGroup?.members.find((member) => member.authorization_id === pairRequestId)
-    ?? syncGroup?.members.find((member) => member.device_id === completion.completion?.device_id)
-    ?? syncGroup?.members.find((member) => member.device_id === approved.device_id
-      && (approved.membership_action === 'recover_existing_member'
-        || (member.device_name === approved.device_name && member.device_kind === approved.device_kind)));
+  const current = approved.group_id && approved.timeline_id ? loadDesktopSyncGroup() : null;
+  const authorizationId = approved.member_authorization_id ?? pairRequestId;
+  const syncGroup = current && !completion.completion ? registerSyncGroupMember({
+    approvedByHostName: current.local_host_name,
+    authorizationId,
+    hostName: approved.host_name,
+    hostPlatform: approved.host_platform
+  }) : current;
+  const assignedMember = syncGroup?.members.find((member) => member.authorization_id === authorizationId)
+    ?? syncGroup?.members.find((member) => member.host_name === approved.host_name);
   if (syncGroup && !assignedMember) throw new Error('sync_group_member_not_authorized');
   return { assignedMember, syncGroup };
 }
@@ -126,7 +129,7 @@ function updateStatus(updatePairingStatus: StatusUpdater) {
 
 function saveProviderRoute(
   approved: PendingCompanionPairRequest,
-  assigned: { device_id: string; device_kind: string; device_name: string },
+  assigned: { host_name: string; host_platform: string },
   peerId: string,
   groupKey: string
 ) {
@@ -137,9 +140,12 @@ function saveProviderRoute(
     endpoint_url: `http://${approved.client_address}:38641`,
     group_id: approved.group_id,
     local_device_id: peerId,
-    peer_device_id: assigned.device_id,
-    peer_device_kind: assigned.device_kind,
-    peer_device_name: assigned.device_name,
+    local_host_name: resolveDesktopHostName(),
+    peer_device_id: approved.device_id,
+    peer_device_kind: approved.device_kind,
+    peer_device_name: assigned.host_name,
+    peer_host_name: assigned.host_name,
+    peer_host_platform: assigned.host_platform,
     timeline_id: approved.timeline_id
   });
   return groupKey;

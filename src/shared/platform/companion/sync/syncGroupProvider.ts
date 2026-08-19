@@ -47,15 +47,17 @@ export async function reconcileCompanionSyncGroupProvider(
   if (!group || group.local_member_state !== 'active' || !bootstrap.database_path) {
     return FolioleCompanionSync.stopSyncGroupProvider();
   }
-  const localMember = group.members.find((member) => member.device_id === group.local_device_id);
+  const localMember = group.members.find((member) => member.host_name === group.local_host_name);
   if (!localMember) throw new Error('sync_group_member_not_authorized');
   const workgroupKey = await loadCompanionSyncGroupWorkgroupKey();
   if (!workgroupKey) throw new Error('sync_group_workgroup_key_missing');
   await ensureCompanionSyncGroupDataOwner();
   return FolioleCompanionSync.startSyncGroupProvider({
     app_version: await loadAppVersion(),
-    device_id: localMember.device_id,
-    device_name: localMember.device_name,
+    device_id: bootstrap.device_id,
+    device_name: localMember.host_name,
+    host_name: localMember.host_name,
+    host_platform: localMember.host_platform,
     facts_revision: factsRevision,
     sync_group: group,
     workgroup_key: workgroupKey

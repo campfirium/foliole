@@ -16,6 +16,8 @@ import {
 const TEST_PAIRING_PUBLIC_KEY = Buffer.concat([Buffer.from([4]), Buffer.alloc(64)]).toString('base64url');
 const protocolArgs = {
   compatibility: evaluateSyncProtocolCompatibility(CURRENT_SYNC_PROTOCOL_DESCRIPTOR),
+  hostName: 'A5',
+  hostPlatform: 'android-capacitor',
   protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
 };
 
@@ -92,7 +94,7 @@ it('binds an ordinary approval to the selected assigned member name', () => {
   );
   expect(loadCompanionPairRequestForCompletion(created.request.pair_request_id, nowMs + 2))
     .toMatchObject({ request: {
-      device_id: 'A5 2', membership_action: 'recover_existing_member', status: 'approved'
+      device_id: 'A5', host_name: 'A5 2', membership_action: 'recover_existing_member', status: 'approved'
     } });
 });
 

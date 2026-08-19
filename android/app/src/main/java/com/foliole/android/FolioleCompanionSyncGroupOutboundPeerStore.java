@@ -26,11 +26,20 @@ final class FolioleCompanionSyncGroupOutboundPeerStore {
 
     static void save(Context context, String groupId, String localDeviceId, String peerDeviceId,
                      String endpointUrl) throws Exception {
+        save(context, groupId, localDeviceId, null, peerDeviceId, null, null, endpointUrl);
+    }
+
+    static void save(Context context, String groupId, String localDeviceId, String localHostName,
+                     String peerDeviceId, String peerHostName, String peerHostPlatform,
+                     String endpointUrl) throws Exception {
         JSONObject record = new JSONObject()
             .put("endpoint_url", normalizeEndpoint(endpointUrl))
             .put("group_id", groupId.trim())
             .put("local_device_id", localDeviceId.trim())
             .put("peer_device_id", peerDeviceId.trim());
+        if (localHostName != null) record.put("local_host_name", localHostName.trim());
+        if (peerHostName != null) record.put("peer_host_name", peerHostName.trim());
+        if (peerHostPlatform != null) record.put("peer_host_platform", peerHostPlatform.trim());
         if (!prefs(context).edit().putString(peerDeviceId.trim(), encrypt(record.toString())).commit()) {
             throw new IllegalStateException("Failed to persist Sync Group outbound peer.");
         }
@@ -79,6 +88,15 @@ final class FolioleCompanionSyncGroupOutboundPeerStore {
         JSONObject peer = new JSONObject(decrypt(encoded));
         return groupId.trim().equals(peer.optString("group_id"))
             && normalizedPeerId.equals(peer.optString("peer_device_id"));
+    }
+
+    static String hostName(Context context, String groupId, String peerDeviceId) throws Exception {
+        String encoded = prefs(context).getString(peerDeviceId.trim(), null);
+        if (encoded == null) return null;
+        JSONObject peer = new JSONObject(decrypt(encoded));
+        if (!groupId.trim().equals(peer.optString("group_id"))) return null;
+        String hostName = peer.optString("peer_host_name").trim();
+        return hostName.isEmpty() ? null : hostName;
     }
 
     static List<String> discoveryEndpointUrls(Context context) throws Exception {

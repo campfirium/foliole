@@ -20,6 +20,7 @@ async function testPullsStructurePack() {
       'X-Device-Id': 'android-test-device',
       'X-Signature': 'signed:/companion/sync-pack?after_state_seq=0'
     },
+    sourceHostName: 'Desktop Test Host',
     sourcePeerId: 'desktop-test-device',
     url: 'http://10.0.2.2:38641/companion/sync-pack?after_state_seq=0'
   });

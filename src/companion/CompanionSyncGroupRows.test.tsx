@@ -16,7 +16,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   const state = {
     lifecycle_active: true, participating: true,
-    pending_requests: [{ device_name: 'Waiting phone', pair_request_id: 'request-2' }], port: 38641,
+    pending_requests: [{ host_label: 'Waiting phone', pair_request_id: 'request-2' }], port: 38641,
     state: 'running', sync_enabled: true, sync_paused: false
   };
   providerMocks.load.mockResolvedValue(state);
@@ -25,12 +25,12 @@ beforeEach(() => {
 
 it('shows persistent membership and keeps Leave independent from participation controls', async () => {
   renderWithLocalization(<CompanionSyncGroupRows group={{
-    created_at: '2026-08-08T00:00:00.000Z', created_by_device_id: 'desktop-1', display_name: 'Studio',
-    group_id: 'group-1', local_device_id: 'android-1', local_member_state: 'active',
+    created_at: '2026-08-08T00:00:00.000Z', created_by_host_name: 'desktop-1', display_name: 'Studio',
+    group_id: 'group-1', local_host_name: 'Pixel', local_member_state: 'active',
     members: [{
-      approved_by_device_id: 'desktop-1',
-      authorization_id: 'request-1', device_id: 'android-1', device_kind: 'android-capacitor',
-      device_name: 'Pixel', joined_at: '2026-08-08T00:00:00.000Z', state: 'active'
+      approved_by_host_name: 'desktop-1',
+      authorization_id: 'request-1', host_name: 'Pixel', host_platform: 'android-capacitor',
+      joined_at: '2026-08-08T00:00:00.000Z', state: 'active'
     }],
     timeline_id: 'timeline-1'
   }} />);

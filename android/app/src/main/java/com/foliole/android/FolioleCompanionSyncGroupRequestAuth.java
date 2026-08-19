@@ -33,7 +33,6 @@ final class FolioleCompanionSyncGroupRequestAuth {
         long now = System.currentTimeMillis();
         consumeNonce(context, groupId + ":" + timestamp + ":" + nonce, now);
         FolioleCompanionSyncGroupProvider.promoteApprovedJoin(groupId, deviceId);
-        FolioleCompanionSyncGroupDatabase.requireAuthorizedMember(bridge, groupId, deviceId);
         return deviceId;
     }
 

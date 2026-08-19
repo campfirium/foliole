@@ -17,7 +17,8 @@ final class FolioleCompanionSyncGroupOutboundPairing {
         String endpointUrl = "http://" + pending.remoteAddress + ":38641";
         FolioleCompanionSyncGroupOutboundPeerStore.save(
             context, config.getJSONObject("sync_group").getString("group_id"),
-            config.getString("device_id"), pending.deviceId, endpointUrl
+            config.getString("device_id"), config.getString("host_name"),
+            pending.deviceId, pending.hostName, pending.hostPlatform, endpointUrl
         );
         FolioleCompanionSyncGroupDatabase.saveSyncEndpoint(dataBridge, endpointUrl, now);
     }

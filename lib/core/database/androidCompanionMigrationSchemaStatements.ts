@@ -84,6 +84,7 @@ export const ANDROID_COMPANION_MIGRATION_ACTION_TYPES = {
   replaceSyncPushAck: 'replaceSyncPushAck',
   migrateHostPermanentState: 'migrateHostPermanentState',
   migrateAuthorHostSnapshots: 'migrateAuthorHostSnapshots',
+  migrateSyncGroupHosts: 'migrateSyncGroupHosts',
   migrateOpaqueSyncRefs: 'migrateOpaqueSyncRefs',
   migrateSyncObjectStateSequence: 'migrateSyncObjectStateSequence'
 } as const;
@@ -208,6 +209,10 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
   {
     actions: [{ errorMessage: 'Failed to cut over companion author Host snapshots.', type: 'migrateAuthorHostSnapshots' }],
     beforeVersion: 29
+  },
+  {
+    actions: [{ errorMessage: 'Failed to cut over companion Sync Group Hosts.', type: 'migrateSyncGroupHosts' }],
+    beforeVersion: 30
   }
 ] as const;
 

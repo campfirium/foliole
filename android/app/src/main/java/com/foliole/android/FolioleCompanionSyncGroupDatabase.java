@@ -9,27 +9,27 @@ final class FolioleCompanionSyncGroupDatabase {
     static JSONObject registerMember(
         FolioleCompanionSyncGroupDataBridge bridge,
         String groupId,
-        String approvedByDeviceId,
+        String approvedByHostName,
         FolioleCompanionSyncGroupJoinRequest request
     ) throws Exception {
         JSONObject member = new JSONObject()
             .put("authorization_id", request.pairRequestId)
-            .put("device_kind", request.deviceKind)
-            .put("device_name", request.deviceName)
+            .put("host_platform", request.hostPlatform)
+            .put("host_name", request.hostName)
             .put("joined_at", request.requestedAt);
         JSONObject result = bridge.request("authorize_member", new JSONObject()
-            .put("approved_by_device_id", approvedByDeviceId)
-            .put("device_id", request.deviceId)
+            .put("approved_by_host_name", approvedByHostName)
+            .put("host_name", request.hostName)
             .put("group_id", groupId)
             .put("member", member));
         if (!result.optBoolean("authorized")) throw new SecurityException("sync_group_member_not_authorized");
         return result;
     }
 
-    static boolean isAuthorizedMember(FolioleCompanionSyncGroupDataBridge bridge, String groupId, String deviceId) {
+    static boolean isAuthorizedMember(FolioleCompanionSyncGroupDataBridge bridge, String groupId, String hostName) {
         try {
             return bridge.request("authorize_member", new JSONObject()
-                .put("device_id", deviceId).put("group_id", groupId)).optBoolean("authorized");
+                .put("host_name", hostName).put("group_id", groupId)).optBoolean("authorized");
         } catch (Exception error) {
             return false;
         }
@@ -37,7 +37,7 @@ final class FolioleCompanionSyncGroupDatabase {
 
     static JSONObject groupForApprovedRequest(
         FolioleCompanionSyncGroupDataBridge bridge,
-        String approvedByDeviceId,
+        String approvedByHostName,
         FolioleCompanionSyncGroupJoinRequest request
     ) throws Exception {
         JSONObject loaded = bridge.request("load_group", new JSONObject());
@@ -46,17 +46,17 @@ final class FolioleCompanionSyncGroupDatabase {
             .put("group_id", row.getString("group_id"))
             .put("display_name", row.getString("display_name"))
             .put("timeline_id", row.getString("timeline_id"))
-            .put("created_by_device_id", row.getString("created_by_device_id"))
+            .put("created_by_host_name", row.getString("created_by_host_name"))
             .put("created_at", row.getString("created_at"))
-            .put("local_device_id", request.deviceId);
+            .put("local_host_name", request.hostName);
         JSONArray members = loaded.getJSONArray("members");
         boolean found = false;
         for (int index = 0; index < members.length(); index++) {
-            found |= request.deviceId.equals(members.getJSONObject(index).getString("device_id"));
+            found |= request.hostName.equals(members.getJSONObject(index).getString("host_name"));
         }
-        if (!found) members.put(new JSONObject().put("device_id", request.deviceId)
-            .put("device_kind", request.deviceKind).put("device_name", request.deviceName).put("state", "active")
-            .put("approved_by_device_id", approvedByDeviceId).put("authorization_id", request.pairRequestId)
+        if (!found) members.put(new JSONObject().put("host_name", request.hostName)
+            .put("host_platform", request.hostPlatform).put("state", "active")
+            .put("approved_by_host_name", approvedByHostName).put("authorization_id", request.pairRequestId)
             .put("joined_at", request.requestedAt));
         return group.put("local_member_state", "active").put("members", members);
     }
@@ -75,9 +75,9 @@ final class FolioleCompanionSyncGroupDatabase {
     }
 
     static void requireAuthorizedMember(
-        FolioleCompanionSyncGroupDataBridge bridge, String groupId, String deviceId
+        FolioleCompanionSyncGroupDataBridge bridge, String groupId, String hostName
     ) throws Exception {
-        if (!isAuthorizedMember(bridge, groupId, deviceId)) {
+        if (!isAuthorizedMember(bridge, groupId, hostName)) {
             throw new SecurityException("sync_group_member_not_authorized");
         }
     }

@@ -9,6 +9,8 @@ final class FolioleCompanionSyncGroupJoinRequest {
     String deviceId;
     final String deviceKind;
     String deviceName;
+    String hostName;
+    final String hostPlatform;
     final String expiresAt;
     final String pairingPublicKey;
     final String pairRequestId;
@@ -18,22 +20,26 @@ final class FolioleCompanionSyncGroupJoinRequest {
 
     FolioleCompanionSyncGroupJoinRequest(JSONObject payload, String remoteAddress) throws Exception {
         this(required(payload, "device_id"), required(payload, "device_kind"), required(payload, "device_name"),
+            required(payload, "host_name"), required(payload, "host_platform"),
             Instant.now().plusSeconds(120).toString(), required(payload, "pairing_public_key"),
             "pair-" + UUID.randomUUID(), Instant.now().toString(), remoteAddress);
     }
 
     private FolioleCompanionSyncGroupJoinRequest(
-        String deviceId, String deviceKind, String deviceName, String expiresAt, String pairingPublicKey,
+        String deviceId, String deviceKind, String deviceName, String hostName, String hostPlatform,
+        String expiresAt, String pairingPublicKey,
         String pairRequestId, String requestedAt, String remoteAddress
     ) {
         this.deviceId = deviceId; this.deviceKind = deviceKind; this.deviceName = deviceName;
+        this.hostName = hostName; this.hostPlatform = hostPlatform;
         this.expiresAt = expiresAt; this.pairingPublicKey = pairingPublicKey; this.pairRequestId = pairRequestId;
         this.requestedAt = requestedAt; this.remoteAddress = remoteAddress;
     }
 
     JSONObject publicJson() throws Exception {
         return new JSONObject().put("device_id", deviceId).put("device_kind", deviceKind)
-            .put("device_name", deviceName).put("pair_request_id", pairRequestId)
+            .put("device_name", deviceName).put("host_name", hostName).put("host_platform", hostPlatform)
+            .put("pair_request_id", pairRequestId)
             .put("requested_at", requestedAt).put("expires_at", expiresAt).put("status", status);
     }
 
@@ -44,6 +50,7 @@ final class FolioleCompanionSyncGroupJoinRequest {
     static FolioleCompanionSyncGroupJoinRequest fromGrantJson(JSONObject value) {
         FolioleCompanionSyncGroupJoinRequest request = new FolioleCompanionSyncGroupJoinRequest(
             required(value, "device_id"), required(value, "device_kind"), required(value, "device_name"),
+            required(value, "host_name"), required(value, "host_platform"),
             required(value, "expires_at"), required(value, "pairing_public_key"),
             required(value, "pair_request_id"), required(value, "requested_at"), required(value, "remote_address")
         );
@@ -54,12 +61,12 @@ final class FolioleCompanionSyncGroupJoinRequest {
     boolean expired() { return Instant.now().isAfter(Instant.parse(expiresAt)); }
 
     boolean matches(JSONObject payload) {
-        return deviceId.equals(payload.optString("device_id")) && pairingPublicKey.equals(payload.optString("pairing_public_key"));
+        return deviceId.equals(payload.optString("device_id")) && hostName.equals(payload.optString("host_name"))
+            && pairingPublicKey.equals(payload.optString("pairing_public_key"));
     }
 
     void assign(JSONObject profile) {
-        deviceId = required(profile, "device_id");
-        deviceName = required(profile, "device_name");
+        hostName = required(profile, "host_name");
     }
 
     private static String required(JSONObject payload, String key) {

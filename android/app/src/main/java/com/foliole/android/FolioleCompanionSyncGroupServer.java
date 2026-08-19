@@ -89,9 +89,12 @@ final class FolioleCompanionSyncGroupServer {
             .put("group_tag", config.getString("group_tag"))
             .put("timeline_id", group.getString("timeline_id")).put("provider_device_id", config.getString("device_id"))
             .put("provider_device_kind", "android-capacitor").put("provider_device_name", config.getString("device_name"))
+            .put("provider_host_name", config.getString("host_name"))
+            .put("provider_host_platform", config.getString("host_platform"))
             .put("protocol", protocol()).put("peer_id", config.getString("device_id"))
             .put("runtime_instance_id", config.getString("runtime_instance_id"))
-            .put("desktop_name", config.getString("device_name")).put("desktop_device_name", config.getString("device_name"))
+            .put("desktop_name", config.getString("host_name")).put("desktop_device_name", config.getString("device_name"))
+            .put("desktop_host_name", config.getString("host_name"))
             .put("desktop_platform", "android-capacitor").put("pairing_mode", "desktop-confirm"));
     }
 
@@ -129,7 +132,7 @@ final class FolioleCompanionSyncGroupServer {
         if (!pending.status.equals("approved")) { FolioleCompanionHttpResponse.json(output, 409, new JSONObject().put("error", "pair_request_pending")); return; }
         FolioleCompanionSyncGroupProvider.assignApprovedProfile(context, dataBridge, config, pending);
         JSONObject group = FolioleCompanionSyncGroupDatabase.groupForApprovedRequest(
-            dataBridge, config.getString("device_id"), pending
+            dataBridge, config.getString("host_name"), pending
         );
         FolioleCompanionSyncGroupOutboundPairing.save(
             context, config, pending, dataBridge
@@ -141,6 +144,9 @@ final class FolioleCompanionSyncGroupServer {
             .put("provider_encrypted_device_secret", FolioleCompanionSyncGroupPairCrypto.encrypt(pending.pairingPublicKey, workgroupKey))
             .put("provider_device_id", config.getString("device_id")).put("provider_device_kind", "android-capacitor")
             .put("provider_device_name", config.getString("device_name"))
+            .put("host_name", pending.hostName).put("host_platform", pending.hostPlatform)
+            .put("provider_host_name", config.getString("host_name"))
+            .put("provider_host_platform", config.getString("host_platform"))
             .put("paired_at", java.time.Instant.now().toString()).put("peer_id", config.getString("device_id"))
             .put("sync_group", group));
     }
@@ -158,8 +164,10 @@ final class FolioleCompanionSyncGroupServer {
 
     private void departure(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {
         String authenticatedDeviceId = authenticate(request);
+        String authenticatedHostName = FolioleCompanionSyncGroupOutboundPeerStore.hostName(
+            context, config.getJSONObject("sync_group").getString("group_id"), authenticatedDeviceId);
         JSONObject body = new JSONObject(decryptRequest(request));
-        if (!authenticatedDeviceId.equals(body.optString("device_id"))) {
+        if (authenticatedHostName == null || !authenticatedHostName.equals(body.optString("host_name"))) {
             throw new SecurityException("sync_group_departure_authorization_invalid");
         }
         FolioleCompanionSyncGroupDatabase.recordDeparture(

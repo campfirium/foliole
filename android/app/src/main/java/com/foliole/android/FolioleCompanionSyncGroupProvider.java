@@ -33,6 +33,8 @@ final class FolioleCompanionSyncGroupProvider {
             .put("app_version", value(context, call, "appVersion"))
             .put("device_id", value(context, call, "deviceId"))
             .put("device_name", value(context, call, "deviceName"))
+            .put("host_name", value(context, call, "hostName"))
+            .put("host_platform", value(context, call, "hostPlatform"))
             .put("facts_revision", value(context, call, "factsRevision"))
             .put("workgroup_key", value(context, call, "workgroupKey"))
             .put("protocol", FolioleCompanionSyncPackProviderDefinitions.load(context).protocol())
@@ -130,6 +132,7 @@ final class FolioleCompanionSyncGroupProvider {
         JSONObject currentGroup = activeConfig.optJSONObject("sync_group");
         JSONObject nextGroup = next.optJSONObject("sync_group");
         return activeConfig.optString("device_id").equals(next.optString("device_id"))
+            && activeConfig.optString("host_name").equals(next.optString("host_name"))
             && currentGroup != null && nextGroup != null
             && currentGroup.optString("group_id").equals(nextGroup.optString("group_id"))
             && currentGroup.optString("timeline_id").equals(nextGroup.optString("timeline_id"));
@@ -160,12 +163,16 @@ final class FolioleCompanionSyncGroupProvider {
         FolioleCompanionSyncGroupJoinRequest request = joinRequests.values().stream()
             .filter(item -> deviceId.equals(item.deviceId) && "approved".equals(item.status) && !item.expired())
             .findFirst().orElse(null);
-        if (FolioleCompanionSyncGroupDatabase.isAuthorizedMember(requireDataBridge(), groupId, deviceId)) {
+        String hostName = request == null
+            ? FolioleCompanionSyncGroupOutboundPeerStore.hostName(activeContext, groupId, deviceId)
+            : request.hostName;
+        if (hostName != null && FolioleCompanionSyncGroupDatabase.isAuthorizedMember(
+            requireDataBridge(), groupId, hostName)) {
             if (request != null) consumeApprovedJoin(request);
             return;
         }
         if (request == null) throw new SecurityException("sync_group_member_not_authorized");
-        String approvedBy = FolioleCompanionSyncGroupJoinGrantStore.approvedByDeviceId(activeContext, request.pairRequestId);
+        String approvedBy = FolioleCompanionSyncGroupJoinGrantStore.approvedByHostName(activeContext, request.pairRequestId);
         request.assign(FolioleCompanionSyncGroupDatabase.registerMember(
             requireDataBridge(), groupId, approvedBy, request
         ));
@@ -178,7 +185,7 @@ final class FolioleCompanionSyncGroupProvider {
         JSONObject config,
         FolioleCompanionSyncGroupJoinRequest request
     ) throws Exception {
-        String approvedBy = FolioleCompanionSyncGroupJoinGrantStore.approvedByDeviceId(context, request.pairRequestId);
+        String approvedBy = FolioleCompanionSyncGroupJoinGrantStore.approvedByHostName(context, request.pairRequestId);
         request.assign(FolioleCompanionSyncGroupDatabase.registerMember(
             bridge, config.getJSONObject("sync_group").getString("group_id"), approvedBy, request
         ));

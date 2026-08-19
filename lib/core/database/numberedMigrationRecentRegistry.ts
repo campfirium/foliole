@@ -20,6 +20,7 @@ import { migrateSettingSingleTruth } from './numberedMigrationSettingSingleTruth
 import { migrateSyncConflictConvergence } from './numberedMigrationSyncConvergence.js';
 import { migrateSyncDeliveryReceipts } from './numberedMigrationSyncDelivery.js';
 import { migrateSyncGroupDepartures } from './numberedMigrationSyncGroupDepartures.js';
+import { migrateSyncGroupHosts } from './numberedMigrationSyncGroupHosts.js';
 import { createVirtualFolderTables } from './numberedMigrationVirtualFolders.js';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from './syncGroupSchemaStatements.js';
 
@@ -180,5 +181,9 @@ export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   {
     version: 72,
     migrate: migrateAuthorHostSnapshots
+  },
+  {
+    version: 73,
+    migrate: migrateSyncGroupHosts
   }
 ];

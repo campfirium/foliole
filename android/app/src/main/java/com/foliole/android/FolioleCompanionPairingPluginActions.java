@@ -154,17 +154,26 @@ final class FolioleCompanionPairingPluginActions {
         try {
             String groupKey = routeBindingKey(context, "syncGroupId");
             String localKey = routeBindingKey(context, "localDeviceId");
+            String localHostKey = routeBindingKey(context, "localHostName");
             String peerKey = routeBindingKey(context, "peerDeviceId");
+            String peerHostKey = routeBindingKey(context, "peerHostName");
+            String peerPlatformKey = routeBindingKey(context, "peerHostPlatform");
             String endpointKey = routeBindingKey(context, "endpointUrl");
             String groupId = call.getString(groupKey);
             String localDeviceId = call.getString(localKey);
+            String localHostName = call.getString(localHostKey);
             String peerDeviceId = call.getString(peerKey);
+            String peerHostName = call.getString(peerHostKey);
+            String peerHostPlatform = call.getString(peerPlatformKey);
             String endpointUrl = call.getString(endpointKey);
             if (rejectIfBlank(call, groupKey, groupId) || rejectIfBlank(call, localKey, localDeviceId) ||
                 rejectIfBlank(call, peerKey, peerDeviceId) ||
+                rejectIfBlank(call, localHostKey, localHostName) || rejectIfBlank(call, peerHostKey, peerHostName) ||
+                rejectIfBlank(call, peerPlatformKey, peerHostPlatform) ||
                 rejectIfBlank(call, endpointKey, endpointUrl)) return;
             FolioleCompanionSyncGroupOutboundPeerStore.save(
-                context, groupId, localDeviceId, peerDeviceId, endpointUrl);
+                context, groupId, localDeviceId, localHostName,
+                peerDeviceId, peerHostName, peerHostPlatform, endpointUrl);
             call.resolve();
         } catch (Exception exception) {
             call.reject("Failed to bind Sync Group peer route.", exception);

@@ -98,19 +98,19 @@ it('confirms before leaving the group or removing another member', async () => {
   companionPairingMock.useDesktopCompanionPairingRequests.mockReturnValue(createState({
     leaveSyncGroup, removeSyncGroupMember,
     overview: { ...overview, sync_group: {
-      created_at: '2026-08-08T00:00:00Z', created_by_device_id: 'desktop-1', display_name: 'Studio',
-      group_id: 'group-1', local_device_id: 'desktop-1', local_member_state: 'active', timeline_id: 'timeline-1',
-      members: [{ approved_by_device_id: 'desktop-1', authorization_id: 'founder', device_id: 'desktop-1',
-        device_kind: 'darwin', device_name: 'Studio Mac', joined_at: '2026-08-08T00:00:00Z', state: 'active' },
-      { approved_by_device_id: 'desktop-1', authorization_id: 'member', device_id: 'android-1',
-        device_kind: 'android-capacitor', device_name: 'A5', joined_at: '2026-08-08T01:00:00Z', state: 'active' }]
+      created_at: '2026-08-08T00:00:00Z', created_by_host_name: 'Studio Mac', display_name: 'Studio',
+      group_id: 'group-1', local_host_name: 'Studio Mac', local_member_state: 'active', timeline_id: 'timeline-1',
+      members: [{ approved_by_host_name: 'Studio Mac', authorization_id: 'founder', host_name: 'Studio Mac',
+        host_platform: 'darwin', joined_at: '2026-08-08T00:00:00Z', state: 'active' },
+      { approved_by_host_name: 'Studio Mac', authorization_id: 'member', host_name: 'A5',
+        host_platform: 'android-capacitor', joined_at: '2026-08-08T01:00:00Z', state: 'active' }]
     } }
   }));
   confirmationMock.mockResolvedValue(true);
   renderWithLocalization(<SettingsCompanionSyncSection />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Remove from Sync Group' }));
-  await vi.waitFor(() => expect(removeSyncGroupMember).toHaveBeenCalledWith('android-1'));
+  fireEvent.click(screen.getAllByRole('button', { name: 'Remove from Sync Group' })[0]!);
+  await vi.waitFor(() => expect(removeSyncGroupMember).toHaveBeenCalledWith('A5'));
   fireEvent.click(screen.getByRole('button', { name: 'Leave Sync Group' }));
   await vi.waitFor(() => expect(leaveSyncGroup).toHaveBeenCalledTimes(1));
   expect(confirmationMock).toHaveBeenCalledTimes(2);
@@ -126,7 +126,8 @@ it('requests a discovered Sync Group from its active mobile Device', () => {
         endpoint_url: 'http://192.168.1.8:43123', group_display_name: 'Studio', group_id: 'group-1',
         group_tag: 'tag-1',
         provider_device_id: 'android-b', provider_device_kind: 'android-capacitor',
-        provider_device_name: 'A5', timeline_id: 'timeline-1'
+        provider_device_name: 'A5', provider_host_name: 'A5',
+        provider_host_platform: 'android-capacitor', timeline_id: 'timeline-1'
       }]
     }
   }));
@@ -160,15 +161,16 @@ it('approves a recognized device asking to join the Sync Group', () => {
       ...overview,
       pending_requests: [{
         client_address: '192.168.1.8', device_id: 'android-1', device_kind: 'android-capacitor',
-        device_name: 'Pixel', expires_at: '2026-08-08T01:00:00.000Z', pair_request_id: 'request-1',
+        device_name: 'Pixel', host_name: 'Pixel', host_platform: 'android-capacitor',
+        expires_at: '2026-08-08T01:00:00.000Z', pair_request_id: 'request-1',
         requested_at: '2026-08-08T00:58:00.000Z', status: 'pending'
       }],
       sync_group: {
-        created_at: '2026-08-08T00:00:00.000Z', created_by_device_id: 'desktop-1', display_name: 'Studio',
-        group_id: 'group-1', local_device_id: 'desktop-1', local_member_state: 'active',
+        created_at: '2026-08-08T00:00:00.000Z', created_by_host_name: 'Studio', display_name: 'Studio',
+        group_id: 'group-1', local_host_name: 'Studio', local_member_state: 'active',
         members: [{
-          approved_by_device_id: 'desktop-1',
-          authorization_id: 'founder-1', device_id: 'desktop-1', device_kind: 'darwin', device_name: 'Studio',
+          approved_by_host_name: 'Studio',
+          authorization_id: 'founder-1', host_name: 'Studio', host_platform: 'darwin',
           joined_at: '2026-08-08T00:00:00.000Z', state: 'active'
         }],
         timeline_id: 'timeline-1'

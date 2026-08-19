@@ -46,14 +46,14 @@ export function SettingsCompanionSyncSection() {
     })) return;
     await state.leaveSyncGroup();
   };
-  const confirmRemove = async (deviceId: string) => {
-    const member = group?.members.find((candidate) => candidate.device_id === deviceId);
+  const confirmRemove = async (hostName: string) => {
+    const member = group?.members.find((candidate) => candidate.host_name === hostName);
     if (!member || !await requestAppConfirmation({
       confirmLabel: t('settings.companionSync.group.remove'),
-      description: t('settings.companionSync.group.remove.confirm.description', { name: member.device_name }),
+      description: t('settings.companionSync.group.remove.confirm.description', { name: member.host_name }),
       title: t('settings.companionSync.group.remove.confirm.title')
     })) return;
-    await state.removeSyncGroupMember(deviceId);
+    await state.removeSyncGroupMember(hostName);
   };
   return (
     <SettingsSection ariaLabel={t('settings.companionSync.sectionAria')}>
