@@ -5,6 +5,7 @@ import type { ImportManagerSourceDraft } from '../../lib/core/import/importManag
 import type { NativeWatchedFolderBinding } from '../../lib/platform/nativeWatchedFolderContract.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { loadDesktopSourceByConfig, upsertDesktopSource } from './desktopSources.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
 
 interface WatchedFolderBindingRow extends DatabaseRow {
@@ -105,18 +106,27 @@ export function upsertChangedWatchedFolderSource(source: ImportManagerSourceDraf
     [source.id, `${profile.deviceId}:${source.id}`, source.id]
   );
   const bindingId = existing?.binding_id ?? `${profile.deviceId}:${source.id}`;
+  const desktopSource = upsertDesktopSource({
+    configRef: source.id,
+    rootPath: source.primaryPath,
+    sourceType: 'watched',
+    typeSettings: { archivePath: source.archivePath, highlightPath: source.highlightPath },
+    updatedAt: now
+  });
   driver.execute(
     `INSERT INTO watched_folder_bindings (
        binding_id, connected_device_id, connected_device_name, connected_platform, connection_status,
-       action_mode, archive_path, highlight_mode, highlight_path, primary_path, created_at, updated_at, deleted_at
-     ) VALUES (?, ?, ?, ?, 'connected', ?, ?, ?, ?, ?, ?, ?, NULL)
+       action_mode, archive_path, highlight_mode, highlight_path, primary_path, created_at, updated_at, deleted_at, source_ref
+     ) VALUES (?, ?, ?, ?, 'connected', ?, ?, ?, ?, ?, ?, ?, NULL, ?)
      ON CONFLICT(binding_id) DO UPDATE SET connected_device_id = excluded.connected_device_id,
        connected_device_name = excluded.connected_device_name, connected_platform = excluded.connected_platform,
        connection_status = 'connected', action_mode = excluded.action_mode, archive_path = excluded.archive_path,
        highlight_mode = excluded.highlight_mode, highlight_path = excluded.highlight_path,
-       primary_path = excluded.primary_path, updated_at = excluded.updated_at, deleted_at = NULL`,
+       primary_path = excluded.primary_path, updated_at = excluded.updated_at, deleted_at = NULL,
+       source_ref = excluded.source_ref`,
     [bindingId, profile.deviceId, profile.deviceName, profile.platform, source.actionMode, source.archivePath,
-      source.highlightMode, source.highlightPath.trim(), source.primaryPath.trim(), existing?.created_at ?? now, now]
+      source.highlightMode, source.highlightPath.trim(), source.primaryPath.trim(), existing?.created_at ?? now, now,
+      desktopSource.source_ref]
   );
   const binding = loadWatchedFolderBindings().find((item) => item.binding_id === bindingId) ?? null;
   if (binding) recordBindingSync(binding, profile.deviceId);
@@ -133,10 +143,11 @@ export function resolveExecutableWatchedBinding(ruleId: string, primaryPath: str
     [ruleId, `${deviceId}:${ruleId}`, ruleId]
   );
   if (!binding) return { bindingId: null, executable: true };
+  const source = loadDesktopSourceByConfig('watched', ruleId);
   return {
     bindingId: binding.binding_id,
     executable: binding.connected_device_id === deviceId && binding.connection_status === 'connected' &&
-      binding.primary_path === primaryPath.trim()
+      source?.root_path === primaryPath.trim()
   };
 }
 
@@ -152,9 +163,25 @@ export function recordWatchedImportSourceMapping(args: {
   const relativePath = args.relativePath.replaceAll('\\', '/').replace(/^\.\//, '');
   if (!relativePath || relativePath === '..' || relativePath.startsWith('../')) return;
   const driver = openDatabaseConnection().driver;
+  const source = loadDesktopSourceByConfig('watched', args.ruleId);
   driver.execute(
-    `UPDATE import_sources SET watched_binding_id = ?, watched_relative_path = ? WHERE source_fingerprint = ?`,
-    [binding.bindingId, relativePath, args.sourceFingerprint]
+    `UPDATE import_sources SET watched_binding_id = ?, watched_relative_path = ?, source_ref = ?, source_location = ?
+     WHERE source_fingerprint = ?`,
+    [binding.bindingId, relativePath, source?.source_ref ?? null, relativePath, args.sourceFingerprint]
+  );
+  recordImportSourceSync(driver, args.sourceFingerprint, args.updatedAt);
+}
+
+export function recordReadwiseImportSourceMapping(args: {
+  relativePath: string; ruleId: string; sourceFingerprint: string; updatedAt: string;
+}) {
+  const source = loadDesktopSourceByConfig('readwise', args.ruleId);
+  const relativePath = args.relativePath.replaceAll('\\', '/').replace(/^\.\//u, '');
+  if (!source || !relativePath || relativePath === '..' || relativePath.startsWith('../')) return;
+  const driver = openDatabaseConnection().driver;
+  driver.execute(
+    'UPDATE import_sources SET source_ref = ?, source_location = ? WHERE source_fingerprint = ?',
+    [source.source_ref, relativePath, args.sourceFingerprint]
   );
   recordImportSourceSync(driver, args.sourceFingerprint, args.updatedAt);
 }

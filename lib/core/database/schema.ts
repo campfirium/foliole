@@ -157,18 +157,6 @@ export const nodeAttachments = sqliteTable(
   (table) => [primaryKey({ columns: [table.nodeId, table.attachmentId, table.role] })]
 );
 
-export const importSources = sqliteTable('import_sources', {
-  sourceFingerprint: text('source_fingerprint').primaryKey(),
-  provider: text('provider').notNull(),
-  sourceKind: text('source_kind').notNull(),
-  sourceName: text('source_name').notNull(),
-  sourceLocator: text('source_locator').notNull(),
-  firstImportedAt: text('first_imported_at').notNull(),
-  lastImportedAt: text('last_imported_at').notNull(),
-  lastContentFingerprint: text('last_content_fingerprint').notNull(),
-  latestNodeId: text('latest_node_id')
-});
-
 export const importRuns = sqliteTable('import_runs', {
   id: text('id').primaryKey(),
   sourceFingerprint: text('source_fingerprint').notNull(),
@@ -244,3 +232,5 @@ export {
   syncObjectState,
   syncPeerCursors
 } from './schemaSyncExtras.js';
+
+export { desktopSources, importSources } from './schemaSources.js';

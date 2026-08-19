@@ -18,6 +18,7 @@ export interface ExternalSearchFolderRow extends DatabaseRow {
   owner_installation_id: string | null;
   owner_platform: string | null;
   status: string;
+  source_ref: string | null;
   updated_at: string;
 }
 
@@ -28,10 +29,12 @@ export function normalizeExcludedDirs(value: unknown) {
 
 export function readExternalSearchFolderRows() {
   return openDatabaseConnection().driver.queryAll<ExternalSearchFolderRow>(
-    `SELECT id, folder_path, attachment_mode, attachment_root_path, excluded_dirs_json, status,
-      document_count, indexed_at, last_error, owner_installation_id, owner_device_name, owner_platform,
-      created_at, updated_at
-     FROM external_search_folders ORDER BY created_at ASC`
+    `SELECT f.id, COALESCE(s.root_path, f.folder_path) AS folder_path, f.attachment_mode,
+      f.attachment_root_path, f.excluded_dirs_json, f.status, f.document_count, f.indexed_at,
+      f.last_error, f.owner_installation_id, COALESCE(s.host_name, f.owner_device_name) AS owner_device_name,
+      COALESCE(s.host_platform, f.owner_platform) AS owner_platform, f.created_at, f.updated_at, f.source_ref
+     FROM external_search_folders f LEFT JOIN desktop_sources s ON s.source_ref = f.source_ref
+     ORDER BY f.created_at ASC`
   );
 }
 

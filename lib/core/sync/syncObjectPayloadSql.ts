@@ -12,14 +12,15 @@ export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
     'status', status, 'document_count', document_count, 'indexed_at', indexed_at,
     'last_error', last_error, 'owner_installation_id', owner_installation_id,
     'owner_device_name', owner_device_name, 'owner_platform', owner_platform,
-    'created_at', created_at, 'updated_at', updated_at
+    'created_at', created_at, 'updated_at', updated_at, 'source_ref', source_ref
   ) AS payload_json FROM external_search_folders WHERE id = ?`,
   import_source: `SELECT json_object(
     'source_fingerprint', source_fingerprint, 'provider', provider, 'source_kind', source_kind,
     'source_name', source_name, 'source_locator', source_locator, 'first_imported_at', first_imported_at,
     'last_imported_at', last_imported_at, 'last_content_fingerprint', last_content_fingerprint,
     'latest_node_id', latest_node_id, 'watched_binding_id', watched_binding_id,
-    'watched_relative_path', watched_relative_path
+    'watched_relative_path', watched_relative_path, 'source_ref', source_ref,
+    'source_location', source_location
   ) AS payload_json FROM import_sources WHERE source_fingerprint = ?`,
   node_open_state: `SELECT json_object('node_id', node_id, 'last_opened_at', last_opened_at) AS payload_json
     FROM node_open_state WHERE node_id = ?`,
@@ -53,6 +54,6 @@ export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
     'connected_device_name', connected_device_name, 'connected_platform', connected_platform,
     'connection_status', connection_status, 'action_mode', action_mode, 'archive_path', archive_path,
     'highlight_mode', highlight_mode, 'highlight_path', highlight_path, 'primary_path', primary_path,
-    'created_at', created_at, 'updated_at', updated_at
+    'created_at', created_at, 'updated_at', updated_at, 'source_ref', source_ref
   ) AS payload_json FROM watched_folder_bindings WHERE binding_id = ?`
 } as const;

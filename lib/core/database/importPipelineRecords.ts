@@ -19,8 +19,10 @@ interface ImportSourceRow {
   provider?: string;
   source_fingerprint?: string;
   source_kind?: string;
+  source_location?: string | null;
   source_locator?: string;
   source_name?: string;
+  source_ref?: string | null;
   watched_binding_id?: string | null;
   watched_relative_path?: string | null;
 }
@@ -113,8 +115,10 @@ function toImportSourcePayload(row: ImportSourceRow) {
     provider: row.provider ?? '',
     source_fingerprint: row.source_fingerprint ?? '',
     source_kind: row.source_kind ?? '',
+    source_location: row.source_location ?? null,
     source_locator: row.source_locator ?? '',
     source_name: row.source_name ?? '',
+    source_ref: row.source_ref ?? null,
     watched_binding_id: row.watched_binding_id ?? null,
     watched_relative_path: row.watched_relative_path ?? null
   };
@@ -133,7 +137,9 @@ export function recordImportSourceSync(driver: DatabaseDriver, sourceFingerprint
        last_content_fingerprint,
        latest_node_id,
        watched_binding_id,
-       watched_relative_path
+       watched_relative_path,
+       source_ref,
+       source_location
      FROM import_sources
      WHERE source_fingerprint = ?`,
     [sourceFingerprint]

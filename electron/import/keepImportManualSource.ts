@@ -1,6 +1,11 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import {
+  loadDesktopSourceByConfig,
+  resolveDesktopSourceAddress,
+  upsertDesktopSource
+} from '../database/desktopSources.js';
 import { resolveImportKind, type DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
@@ -39,7 +44,17 @@ export async function buildKeepImportSourceDescriptor(
   config: KeepImportRuleConfig,
   sourcePath: string
 ): Promise<DirectoryImportSourceDescriptor> {
-  const filePath = path.isAbsolute(sourcePath) ? sourcePath : path.join(config.directoryPath, sourcePath);
+  const sourceType = config.sourceType === 'readwise' ? 'readwise' : 'watched';
+  const persisted = loadDesktopSourceByConfig(sourceType, config.ruleId) ?? upsertDesktopSource({
+    configRef: config.ruleId,
+    rootPath: config.directoryPath,
+    sourceType,
+    typeSettings: { highlightDirectoryPath: config.highlightDirectoryPath ?? '' },
+    updatedAt: new Date().toISOString()
+  });
+  const location = path.isAbsolute(sourcePath) ? path.relative(config.directoryPath, sourcePath) : sourcePath;
+  const filePath = resolveDesktopSourceAddress(persisted.source_ref, location);
+  if (!filePath) throw new Error('source_location_unavailable');
   const stats = await fs.stat(filePath);
   const kind = resolveImportKind(filePath);
   return {
@@ -48,6 +63,6 @@ export async function buildKeepImportSourceDescriptor(
     kind,
     mtimeMs: stats.mtimeMs,
     sizeBytes: stats.size,
-    sourceName: path.isAbsolute(sourcePath) ? path.basename(sourcePath) : sourcePath
+    sourceName: location.replaceAll('\\', '/')
   };
 }

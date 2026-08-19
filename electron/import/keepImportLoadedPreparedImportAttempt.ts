@@ -1,6 +1,9 @@
 import type { PreparedImportRecord } from '../../lib/core/import/contract.js';
 import { runPreparedImport } from '../database/importPipeline.js';
-import { recordWatchedImportSourceMapping } from '../database/watchedFolderBindings.js';
+import {
+  recordReadwiseImportSourceMapping,
+  recordWatchedImportSourceMapping
+} from '../database/watchedFolderBindings.js';
 import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
 import { persistAutomaticDuplicateNoop } from './keepImportDuplicateNoop.js';
@@ -99,7 +102,15 @@ function recordWatchedMapping(
   input: Parameters<typeof runLoadedPreparedImportAttempt>[0],
   record: Awaited<ReturnType<typeof runPreparedImportWithIndexProgress>>
 ) {
-  if (input.config.sourceType === 'readwise') return;
+  if (input.config.sourceType === 'readwise') {
+    recordReadwiseImportSourceMapping({
+      relativePath: input.source.sourceName,
+      ruleId: input.config.ruleId,
+      sourceFingerprint: record.sourceFingerprint,
+      updatedAt: record.importedAt
+    });
+    return;
+  }
   recordWatchedImportSourceMapping({
     directoryPath: input.config.directoryPath,
     relativePath: input.source.sourceName,

@@ -24,6 +24,17 @@ it('upgrades v66 without changing existing desktop source data or state', () => 
     watched_relative_path: null
   });
   expect(sqlite.prepare('SELECT COUNT(*) AS count FROM watched_folder_bindings').get()).toEqual({ count: 0 });
+  expect(sqlite.prepare(`SELECT source_type, config_ref, root_path FROM desktop_sources
+    ORDER BY source_type, config_ref`).all()).toEqual([
+    { config_ref: 'external-1', root_path: '/Library/External', source_type: 'external' },
+    { config_ref: 'draft-import-source-1', root_path: '/Library/Drafts', source_type: 'watched' }
+  ]);
+  expect(sqlite.prepare(`SELECT source_locator, source_ref, source_location FROM import_sources
+    WHERE source_fingerprint = 'watched-fingerprint'`).get()).toEqual({
+    source_location: 'draft.md',
+    source_locator: '/Library/Drafts/draft.md',
+    source_ref: 'watched:draft-import-source-1'
+  });
   expect(sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
   sqlite.close();
 });
@@ -93,7 +104,9 @@ function seedV66SourceData(sqlite: import('better-sqlite3').Database) {
 
 function readExistingSourceData(sqlite: import('better-sqlite3').Database) {
   return {
-    external: sqlite.prepare('SELECT * FROM external_search_folders').all(),
+    external: sqlite.prepare(`SELECT id, folder_path, attachment_mode, attachment_root_path,
+      excluded_dirs_json, status, document_count, indexed_at, last_error, owner_installation_id,
+      owner_device_name, owner_platform, created_at, updated_at FROM external_search_folders`).all(),
     importManager: sqlite.prepare("SELECT * FROM settings WHERE key = 'import_manager_settings'").all(),
     importSources: sqlite.prepare(`SELECT source_fingerprint, provider, source_kind, source_name,
       source_locator, first_imported_at, last_imported_at, last_content_fingerprint, latest_node_id

@@ -13,7 +13,8 @@ export const WATCHED_FOLDER_BINDING_SCHEMA_STATEMENTS = [
     primary_path TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
-    deleted_at TEXT
+    deleted_at TEXT,
+    source_ref TEXT
   )`,
   `CREATE INDEX IF NOT EXISTS idx_watched_folder_bindings_device
     ON watched_folder_bindings (connected_device_id, updated_at)`,

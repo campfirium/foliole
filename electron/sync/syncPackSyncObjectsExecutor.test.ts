@@ -115,8 +115,10 @@ it('applies import source and external folder payload records', async () => {
   })).resolves.toBe(2);
   expect(runs[0]?.sql).toContain('INSERT INTO import_sources');
   expect(runs[0]?.params.slice(0, 4)).toEqual(['source-1', 'readwise', 'unknown', 'Library']);
-  expect(runs[1]?.sql).toContain('INSERT INTO external_search_folders');
-  expect(runs[1]?.params.slice(0, 3)).toEqual(['folder-1', '/library', 'document_relative_first_then_fixed_root']);
+  expect(runs[1]?.sql).toContain('INSERT INTO desktop_sources');
+  expect(runs[1]?.params.slice(0, 2)).toEqual(['external:folder-1', 'folder-1']);
+  expect(runs[2]?.sql).toContain('INSERT INTO external_search_folders');
+  expect(runs[2]?.params.slice(0, 3)).toEqual(['folder-1', '/library', 'document_relative_first_then_fixed_root']);
 });
 
 function syncObjectRow(objectType: string, objectId: string) {

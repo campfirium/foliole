@@ -3,6 +3,9 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('../sync/companionLanPayloads.js', () => ({ resolveDesktopDeviceName: () => 'Maci' }));
 vi.mock('../sync/companionPairingStore.js', () => ({ clearPairedCompanionDevices: vi.fn() }));
+vi.mock('../desktopInstallationIdentity.js', () => ({
+  loadOrCreateDesktopInstallationIdentity: () => ({ installationId: 'installation-fixture' })
+}));
 vi.mock('./managedSafetySnapshots.js', () => ({
   createManagedSafetySnapshotForMigration: vi.fn(() => ({
     protection: { release: vi.fn() }, snapshot: {}

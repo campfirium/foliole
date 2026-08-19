@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import type { ImportManagerSourceDraft } from '../../lib/core/import/importManagerSettings.js';
+import { resolveDesktopSourceAddress } from '../database/desktopSources.js';
 import { loadNodeSourceDetails } from '../database/nodeSourceDetails.js';
 import { resolveImportKind, type DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
@@ -13,21 +14,7 @@ interface ReadwiseTopicMergeSource {
   sourceNodeId: string;
 }
 
-function normalizePath(value: string) {
-  return path.normalize(value.trim());
-}
-
-function isPathWithinDirectory(filePath: string, directoryPath: string) {
-  const normalizedFilePath = normalizePath(filePath);
-  const normalizedDirectoryPath = normalizePath(directoryPath);
-  if (!normalizedFilePath || !normalizedDirectoryPath) {
-    return false;
-  }
-  const relativePath = path.relative(normalizedDirectoryPath, normalizedFilePath);
-  return relativePath.length > 0 && !relativePath.startsWith('..') && !path.isAbsolute(relativePath);
-}
-
-function resolveReadwiseSourceByLocator(sourceLocator: string) {
+function resolveReadwiseSourceByRef(sourceRef: string) {
   const settings = loadImportManagerSettings();
   return (
     settings.readwiseSources.find(
@@ -36,7 +23,7 @@ function resolveReadwiseSourceByLocator(sourceLocator: string) {
         entry.highlightMode === 'split' &&
         Boolean(entry.highlightPath.trim()) &&
         Boolean(entry.primaryPath.trim()) &&
-        isPathWithinDirectory(sourceLocator, entry.primaryPath)
+        sourceRef === `readwise:${entry.id}`
     ) ?? null
   );
 }
@@ -68,19 +55,24 @@ async function buildSourceDescriptor(
 
 export async function resolveReadwiseTopicMergeSource(nodeId: string): Promise<ReadwiseTopicMergeSource | null> {
   const details = loadNodeSourceDetails(nodeId);
-  if (!details || !details.importSource?.source_locator.trim()) {
+  const sourceRef = details?.importSource?.source_ref?.trim();
+  const location = details?.importSource?.source_location?.trim();
+  const sourceName = details?.importSource?.source_name;
+  if (!details || !sourceRef || !location || !sourceName) {
     return null;
   }
 
-  const readwiseSource = resolveReadwiseSourceByLocator(details.importSource.source_locator);
+  const readwiseSource = resolveReadwiseSourceByRef(sourceRef);
   if (!readwiseSource) {
     return null;
   }
+  const currentAddress = resolveDesktopSourceAddress(sourceRef, location);
+  if (!currentAddress) return null;
 
   const descriptor = await buildSourceDescriptor(
-    details.importSource.source_locator,
+    currentAddress,
     readwiseSource,
-    details.importSource.source_name
+    sourceName
   );
   if (!descriptor) {
     return null;

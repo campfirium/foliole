@@ -5,6 +5,7 @@ import { assertNoUnsafePathOverlap } from '../libraryPathSafety.js';
 import { loadManagedPathCandidates } from '../managedPathSafety.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { upsertDesktopSource } from './desktopSources.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
 import { scanFolderEntries, type ScannedDocumentEntry } from './externalSearchCacheSupport.js';
 import { readExternalSearchFolderRows } from './externalSearchFolderRows.js';
@@ -86,6 +87,14 @@ export async function reconnectExternalSearchFolder(folderId: string, folderPath
        owner_platform = ?, status = 'idle', updated_at = ? WHERE id = ?`,
     [preview.folder_path, identity.installationId, identity.deviceName, identity.platform, now, folderId]
   );
+  const row = requireFolder(folderId);
+  upsertDesktopSource({
+    configRef: folderId,
+    rootPath: preview.folder_path,
+    sourceType: 'external',
+    typeSettings: { attachmentMode: row.attachment_mode, attachmentRootPath: row.attachment_root_path },
+    updatedAt: now
+  });
   recordConnectionSync(folderId, now);
   return loadExternalSearchFolders();
 }

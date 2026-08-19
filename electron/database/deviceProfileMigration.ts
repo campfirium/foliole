@@ -1,8 +1,10 @@
 import { isAssignedSyncGroupDeviceName } from '../../lib/platform/syncGroupDeviceProfile.js';
+import { loadOrCreateDesktopInstallationIdentity } from '../desktopInstallationIdentity.js';
 import { resolveDesktopDeviceName } from '../sync/companionLanPayloads.js';
 import { clearPairedCompanionDevices } from '../sync/companionPairingStore.js';
 
 import type { DatabaseConnection } from './connection.js';
+import { updateLocalDesktopSourceHosts } from './desktopSources.js';
 import { refreshDesktopDeviceProfile } from './deviceIdentity.js';
 import type { InternalDatabaseSnapshotResult } from './internalSnapshots.js';
 import {
@@ -24,7 +26,7 @@ export function refreshHostOwnedDeviceProfile(
   const publicDeviceName = resolveDesktopDeviceName();
   const activeGroupDeviceId = loadActiveGroupDeviceId(connection);
   try {
-    refreshDesktopDeviceProfile({
+    const profile = refreshDesktopDeviceProfile({
       clearCredentials: clearPairedCompanionDevices,
       connection,
       currentDeviceId: activeGroupDeviceId
@@ -37,6 +39,13 @@ export function refreshHostOwnedDeviceProfile(
         });
       }
     });
+    updateLocalDesktopSourceHosts({
+      currentHostName: loadCurrentHostName(connection, profile.currentDeviceId),
+      driver: connection.driver,
+      installationRef: loadOrCreateDesktopInstallationIdentity().installationId,
+      previousHostName: profile.previousDeviceId,
+      updatedAt: new Date().toISOString()
+    });
   } catch (error) {
     pendingSnapshot.value?.protection.release();
     throw error;
@@ -44,6 +53,14 @@ export function refreshHostOwnedDeviceProfile(
   if (pendingSnapshot.value) {
     settleManagedMigrationSnapshot(pendingSnapshot.value.snapshot, pendingSnapshot.value.protection);
   }
+}
+
+function loadCurrentHostName(connection: DatabaseConnection, fallback: string) {
+  return connection.driver.queryOne<{ device_name: string }>(
+    `SELECT m.device_name FROM sync_group_local_state l
+     JOIN sync_group_members m ON m.group_id = l.group_id AND m.device_id = l.local_device_id
+     WHERE l.singleton_id = 1 AND l.member_state = 'active' AND m.state = 'active' LIMIT 1`
+  )?.device_name ?? fallback;
 }
 
 function loadActiveGroupDeviceId(connection: DatabaseConnection) {

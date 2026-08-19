@@ -5,6 +5,7 @@ import { assertNoUnsafePathOverlap } from '../libraryPathSafety.js';
 import { loadManagedPathCandidates } from '../managedPathSafety.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { upsertDesktopSource } from './desktopSources.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
 import { loadExternalFolderEnabled } from './externalFolderDevicePreferences.js';
 import {
@@ -68,18 +69,31 @@ function upsertLocalFolder(input: ReturnType<typeof normalizedInput>[number], id
   const driver = openDatabaseConnection().driver;
   const identity = loadOrCreateDesktopInstallationIdentity();
   const existing = rows.find((row) => row.id === id);
+  const source = upsertDesktopSource({
+    configRef: id,
+    rootPath: input.folderPath,
+    sourceType: 'external',
+    typeSettings: {
+      attachmentMode: input.attachmentMode,
+      attachmentRootPath: input.attachmentRootPath,
+      excludedDirs: input.excludedDirs
+    },
+    updatedAt: now
+  });
   driver.execute(
     `INSERT INTO external_search_folders (id, folder_path, attachment_mode, attachment_root_path, excluded_dirs_json,
-      status, document_count, indexed_at, last_error, owner_installation_id, owner_device_name, owner_platform, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      status, document_count, indexed_at, last_error, owner_installation_id, owner_device_name, owner_platform,
+      created_at, updated_at, source_ref)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET folder_path = excluded.folder_path, attachment_mode = excluded.attachment_mode,
       attachment_root_path = excluded.attachment_root_path, excluded_dirs_json = excluded.excluded_dirs_json,
       owner_installation_id = excluded.owner_installation_id, owner_device_name = excluded.owner_device_name,
-      owner_platform = excluded.owner_platform, status = 'idle', updated_at = excluded.updated_at`,
+      owner_platform = excluded.owner_platform, status = 'idle', updated_at = excluded.updated_at,
+      source_ref = excluded.source_ref`,
     [id, input.folderPath, input.attachmentMode, input.attachmentRootPath, JSON.stringify(input.excludedDirs),
       existing?.status ?? 'idle', existing?.document_count ?? 0, existing?.indexed_at ?? null,
       existing?.last_error ?? null, identity.installationId, identity.deviceName, identity.platform,
-      existing?.created_at ?? now, now]
+      existing?.created_at ?? now, now, source.source_ref]
   );
 }
 

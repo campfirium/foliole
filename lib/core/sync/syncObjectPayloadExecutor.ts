@@ -123,20 +123,34 @@ async function applyExternalFolderObject(port: DbPort, record: SyncPackSyncObjec
     return;
   }
   const payload = asObject(record);
+  const sourceRef = text(payload.source_ref) ?? `external:${record.object_id}`;
+  const rootPath = text(payload.folder_path) ?? '';
+  await port.run(
+    `INSERT INTO desktop_sources (source_ref, source_type, config_ref, host_name, host_platform, root_path,
+       path_flavor, type_settings_json, created_at, updated_at) VALUES (?, 'external', ?, ?, ?, ?, ?, '{}', ?, ?)
+     ON CONFLICT(source_type, config_ref) DO UPDATE SET host_name = excluded.host_name,
+       host_platform = excluded.host_platform, root_path = excluded.root_path,
+       path_flavor = excluded.path_flavor, updated_at = excluded.updated_at`,
+    [sourceRef, record.object_id, text(payload.owner_device_name) ?? 'unknown-host',
+      text(payload.owner_platform) ?? 'unknown', rootPath,
+      /^[A-Za-z]:[\\/]/u.test(rootPath) || rootPath.includes('\\') ? 'windows' : 'posix',
+      text(payload.created_at) ?? record.updated_at, record.updated_at]
+  );
   await port.run(
     `INSERT INTO external_search_folders (id, folder_path, attachment_mode, attachment_root_path, excluded_dirs_json, status, ` +
-    `document_count, indexed_at, last_error, owner_installation_id, owner_device_name, owner_platform, created_at, updated_at) ` +
-    `VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ` +
+    `document_count, indexed_at, last_error, owner_installation_id, owner_device_name, owner_platform, created_at, updated_at, source_ref) ` +
+    `VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ` +
     `ON CONFLICT(id) DO UPDATE SET folder_path = excluded.folder_path, attachment_mode = excluded.attachment_mode, ` +
     `attachment_root_path = excluded.attachment_root_path, excluded_dirs_json = excluded.excluded_dirs_json, ` +
     `status = excluded.status, document_count = excluded.document_count, indexed_at = excluded.indexed_at, ` +
     `last_error = excluded.last_error, owner_installation_id = excluded.owner_installation_id, ` +
-    `owner_device_name = excluded.owner_device_name, owner_platform = excluded.owner_platform, updated_at = excluded.updated_at`,
+    `owner_device_name = excluded.owner_device_name, owner_platform = excluded.owner_platform,
+     updated_at = excluded.updated_at, source_ref = excluded.source_ref`,
     [record.object_id, text(payload.folder_path) ?? '', text(payload.attachment_mode) ?? 'document_relative_first_then_fixed_root',
       text(payload.attachment_root_path), text(payload.excluded_dirs_json) ?? '[]', text(payload.status) ?? 'idle',
       integer(payload.document_count), text(payload.indexed_at), text(payload.last_error),
       text(payload.owner_installation_id), text(payload.owner_device_name), text(payload.owner_platform),
-      text(payload.created_at) ?? record.updated_at, record.updated_at]
+      text(payload.created_at) ?? record.updated_at, record.updated_at, sourceRef]
   );
 }
 

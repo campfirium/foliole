@@ -1,4 +1,8 @@
+import { WATCHED_FOLDER_BINDING_SCHEMA_STATEMENTS } from './desktopSourceConnectionSchemaStatements.js';
+import { DESKTOP_SOURCE_SCHEMA_STATEMENTS } from './desktopSourceSchemaStatements.js';
+
 export const ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS = [
+  ...DESKTOP_SOURCE_SCHEMA_STATEMENTS,
   `CREATE TABLE IF NOT EXISTS attachment_blobs (
     attachment_id TEXT PRIMARY KEY,
     content_hash TEXT,
@@ -52,7 +56,11 @@ export const ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS = [
     first_imported_at TEXT NOT NULL,
     last_imported_at TEXT NOT NULL,
     last_content_fingerprint TEXT NOT NULL,
-    latest_node_id TEXT
+    latest_node_id TEXT,
+    watched_binding_id TEXT,
+    watched_relative_path TEXT,
+    source_ref TEXT,
+    source_location TEXT
   )`,
   `CREATE TABLE IF NOT EXISTS external_search_folders (
     id TEXT PRIMARY KEY,
@@ -68,11 +76,13 @@ export const ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS = [
     owner_device_name TEXT,
     owner_platform TEXT,
     created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    source_ref TEXT
   )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS idx_external_search_folders_owner_path
     ON external_search_folders (owner_installation_id, folder_path)
     WHERE owner_installation_id IS NOT NULL`,
+  ...WATCHED_FOLDER_BINDING_SCHEMA_STATEMENTS,
   `CREATE TABLE IF NOT EXISTS external_documents (
     document_id TEXT PRIMARY KEY,
     folder_id TEXT NOT NULL,

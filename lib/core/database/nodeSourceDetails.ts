@@ -10,8 +10,10 @@ interface ImportSourceRow extends DatabaseRow {
   provider: string;
   source_fingerprint: string;
   source_kind: string;
+  source_location: string | null;
   source_locator: string;
   source_name: string;
+  source_ref: string | null;
 }
 
 interface ImportRunRow extends DatabaseRow {
@@ -112,6 +114,8 @@ function readImportSource(driver: DatabaseDriver, nodeId: string) {
          source_kind,
          source_name,
          source_locator,
+         source_ref,
+         source_location,
          first_imported_at,
          last_imported_at,
          last_content_fingerprint,

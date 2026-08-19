@@ -45,7 +45,9 @@ export const DESKTOP_RESOURCE_SCHEMA_STATEMENTS = [
     last_content_fingerprint TEXT NOT NULL,
     latest_node_id TEXT,
     watched_binding_id TEXT,
-    watched_relative_path TEXT
+    watched_relative_path TEXT,
+    source_ref TEXT,
+    source_location TEXT
   )`,
   `CREATE TABLE IF NOT EXISTS import_runs (
     id TEXT PRIMARY KEY,
@@ -113,7 +115,8 @@ export const DESKTOP_RESOURCE_SCHEMA_STATEMENTS = [
     owner_device_name TEXT,
     owner_platform TEXT,
     created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    source_ref TEXT
   )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS idx_external_search_folders_owner_path
     ON external_search_folders (owner_installation_id, folder_path)
@@ -126,5 +129,7 @@ export const DESKTOP_RESOURCE_SCHEMA_STATEMENTS = [
     PRIMARY KEY (installation_id, folder_id)
   )`,
   `CREATE INDEX IF NOT EXISTS idx_import_sources_watched_relative
-    ON import_sources (watched_binding_id, watched_relative_path)`
+    ON import_sources (watched_binding_id, watched_relative_path)`,
+  `CREATE INDEX IF NOT EXISTS idx_import_sources_location
+    ON import_sources (source_ref, source_location)`
 ];

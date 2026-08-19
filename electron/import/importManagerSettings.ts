@@ -4,6 +4,7 @@ import {
   normalizeImportManagerSettings,
   type ImportManagerSettings
 } from '../../lib/core/import/importManagerSettings.js';
+import { hydrateImportManagerSources, upsertImportManagerSources } from '../database/desktopSources.js';
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
 import { upsertChangedWatchedFolderSource } from '../database/watchedFolderBindings.js';
 import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
@@ -45,7 +46,7 @@ function watchedSourceChanged(
 
 export function loadImportManagerSettings(): ImportManagerSettings {
   try {
-    return normalizeImportManagerSettings(loadJsonSetting(IMPORT_MANAGER_SETTINGS_KEY));
+    return hydrateImportManagerSources(normalizeImportManagerSettings(loadJsonSetting(IMPORT_MANAGER_SETTINGS_KEY)));
   } catch {
     return createDefaultImportManagerSettings();
   }
@@ -65,6 +66,7 @@ export function saveImportManagerSettings(settings: unknown): ImportManagerSetti
     updatedAt: new Date().toISOString()
   });
   assertSafeImportManagerPaths(normalized);
+  upsertImportManagerSources(normalized);
   saveJsonSetting(IMPORT_MANAGER_SETTINGS_KEY, normalized, normalized.updatedAt);
   normalized.sources.forEach((source) => {
     if (watchedSourceChanged(current.sources.find((item) => item.id === source.id), source)) {

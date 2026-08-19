@@ -1,6 +1,8 @@
 import { BrowserWindow, dialog } from 'electron';
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
+import { recordDesktopImportLocation } from '../database/desktopSources.js';
+import { resolveExternalSourceLocationByAddress } from '../database/externalSearchCacheRead.js';
 import { assertKeepImportSourceCanRun } from '../import/keepImportExecutionGuard.js';
 import { previewKeepImportRule, type KeepImportRuleConfig } from '../import/keepImportService.js';
 import { resetReadwiseBookImport } from '../import/readwiseBookImportReset.js';
@@ -209,7 +211,17 @@ async function handleTextImportCommand(
       return result;
     }
     const filePath = await assertExternalSearchImportPath(asString(args.absolute_path, 'absolute_path'));
+    const sourceLocation = resolveExternalSourceLocationByAddress(filePath);
     const result = await runImportForFilePath(filePath, args);
+    if (sourceLocation) {
+      recordDesktopImportLocation({
+        configRef: sourceLocation.folder_id,
+        location: sourceLocation.relative_path,
+        sourceFingerprint: result.source_fingerprint,
+        sourceType: 'external',
+        updatedAt: result.imported_at
+      });
+    }
     notifyIfTextImportChanged(result, resolveTargetWindow(context));
     return result;
   }

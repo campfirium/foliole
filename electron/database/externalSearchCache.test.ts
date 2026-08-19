@@ -21,6 +21,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { closeDatabaseConnection, openDatabaseConnection, resolveDatabasePath } from './connection.js';
+import { upsertDesktopSource } from './desktopSources.js';
 import {
   rebuildExternalSearchIndexes,
   refreshExternalSearchIndexes,
@@ -77,11 +78,13 @@ function readDocumentRow(absolutePath: string) {
 
 function seedExternalSearchFolder(folderPath: string, id: string) {
   const identity = loadOrCreateDesktopInstallationIdentity();
+  const updatedAt = '2026-04-21T05:00:00.000Z';
+  const source = upsertDesktopSource({ configRef: id, rootPath: folderPath, sourceType: 'external', updatedAt });
   openDatabaseConnection().driver.execute(
     `INSERT INTO external_search_folders (
       id, folder_path, attachment_mode, attachment_root_path, excluded_dirs_json, status, document_count, indexed_at, last_error,
-      owner_installation_id, owner_device_name, owner_platform, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      owner_installation_id, owner_device_name, owner_platform, created_at, updated_at, source_ref
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       folderPath,
@@ -95,8 +98,9 @@ function seedExternalSearchFolder(folderPath: string, id: string) {
       identity.installationId,
       identity.deviceName,
       identity.platform,
-      '2026-04-21T05:00:00.000Z',
-      '2026-04-21T05:00:00.000Z'
+      updatedAt,
+      updatedAt,
+      source.source_ref
     ]
   );
 }
