@@ -49,7 +49,7 @@
     "compression": "zlib",
     "databaseEntry": "incoming.db.deflate",
     "format": "foliole.sync-pack",
-    "formatVersion": 5,
+    "formatVersion": 6,
     "legacyOptionalNodeColumns": [
       "priority",
       "desired_retention",
@@ -79,8 +79,8 @@
       "content_blobs",
       "review_log"
     ],
-    "maximumSchemaVersion": 70,
-    "minimumSchemaVersion": 70,
+    "maximumSchemaVersion": 71,
+    "minimumSchemaVersion": 71,
     "sqliteTableRequirements": {
       "pack_manifest": [
         "key",

@@ -1,4 +1,5 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
+import { createOpaqueVersionRef } from '../sync/opaqueSyncRefs.js';
 
 import { buildCanonicalNodeSyncPayload } from './nodeSyncPayload.js';
 import type { WorkspaceNodeSnapshot } from './workspaceSnapshotHelpers.js';
@@ -65,6 +66,6 @@ export async function toWorkspaceNativeNodeVersion(
     snapshot,
     updated_at: node.updatedAt,
     version_created_at: node.updatedAt,
-    version_id: `${deviceId}#${crypto.randomUUID()}`
+    version_id: createOpaqueVersionRef(crypto.randomUUID())
   };
 }

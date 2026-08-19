@@ -138,7 +138,7 @@ it('restores review history, node lifecycle state, and backup truth after later 
   expect(selectReviewLogCount('node-qa')).toBe(2);
 });
 
-it('stamps a restore incarnation before minting post-restore node sync versions', async () => {
+it('mints opaque node sync versions without restore-specific identity state', async () => {
   seedNode('node-1', '# original');
   const preBackupVersionId = flushNodeSyncVersion('node-1', '2026-03-14T10:00:30.000Z');
   const backup = await createApplicationDatabaseBackup();
@@ -154,12 +154,11 @@ it('stamps a restore incarnation before minting post-restore node sync versions'
   if (!preBackupVersionId || !distributedAfterBackupVersionId || !restoredVersionId) {
     throw new Error('Expected restore version identities to be minted.');
   }
-  expect(preBackupVersionId).toMatch(/^[^#]+#0$/);
-  const deviceProfile = preBackupVersionId.slice(0, -2);
-  expect(distributedAfterBackupVersionId).toBe(`${deviceProfile}#1`);
-  expect(restoredVersionId.startsWith(`${deviceProfile}#zrestore-`)).toBe(true);
-  expect(restoredVersionId).toMatch(/#zrestore-[0-9a-f-]+#1$/);
+  expect(preBackupVersionId).toMatch(/^ver_[0-9a-f-]{36}$/);
+  expect(distributedAfterBackupVersionId).toMatch(/^ver_[0-9a-f-]{36}$/);
+  expect(restoredVersionId).toMatch(/^ver_[0-9a-f-]{36}$/);
   expect(restoredVersionId).not.toBe(distributedAfterBackupVersionId);
+  expect(restoredVersionId).not.toBe(preBackupVersionId);
   expect(selectSettingSyncRecordCount('desktop_node_sync_restore_incarnation')).toBe(0);
 });
 

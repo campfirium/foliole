@@ -169,7 +169,8 @@ it('absorbs multiple same-request branches into one stable resolution', async ()
   ]);
 
   await applyCompanionSyncPushAsync(pushes, 'android-device');
-  expect(openDatabaseConnection().driver.queryOne<{ count: number }>(
-    `SELECT COUNT(*) AS count FROM node_sync_versions WHERE version_id LIKE 'resolution#%'`
-  )).toEqual({ count: 1 });
+  expect(node?.current_version_id).toMatch(/^ver_[a-f0-9]{24}$/);
+  expect(openDatabaseConnection().driver.queryOne<{ current_version_id: string }>(
+    `SELECT current_version_id FROM nodes WHERE id = 'topic-1'`
+  )).toEqual({ current_version_id: node?.current_version_id });
 });

@@ -76,7 +76,7 @@ it('promotes the alternate body through a new formal child version', async () =>
     status: 'promoted',
     sync_dirty: 1
   });
-  expect(row?.current_version_id).toMatch(/^promotion#/);
+  expect(row?.current_version_id).toMatch(/^ver_[0-9a-f-]{36}$/);
 });
 
 function seedAlternative() {

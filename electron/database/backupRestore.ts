@@ -27,7 +27,6 @@ import {
   waitForManagedSafetySnapshotSettlements
 } from './managedSafetySnapshots.js';
 import { initializeDatabase } from './migrate.js';
-import { markNodeSyncRestoreIncarnation } from './nodeSyncVersions.js';
 import {
   backupSqliteDatabase,
   restoreSqliteDatabase,
@@ -169,7 +168,6 @@ export async function restoreApplicationDatabaseBackup(
     closeDatabaseConnection();
     const result = await restoreSqliteDatabase({ sourcePath: materialized.databasePath, targetPath });
     initializeDatabase();
-    markNodeSyncRestoreIncarnation();
     restored = true;
     return { ...result, sourcePath: path.resolve(options.sourcePath) };
   } finally {

@@ -13,6 +13,7 @@ import { migrateLocalFilesRegistry, resetOpenedLocalFileHistory } from './number
 import { migrateLegacyVirtualFoldersToManualNodes } from './numberedMigrationManualVirtualFolders.js';
 import { migrateNodeProvenance } from './numberedMigrationNodeProvenance.js';
 import { createNodeSyncTombstoneTable } from './numberedMigrationNodeSyncTombstones.js';
+import { migrateOpaqueSyncRefs } from './numberedMigrationOpaqueSyncRefs.js';
 import type { NumberedSchemaMigration } from './numberedMigrations.js';
 import { migrateSettingSingleTruth } from './numberedMigrationSettingSingleTruth.js';
 import { migrateSyncConflictConvergence } from './numberedMigrationSyncConvergence.js';
@@ -170,5 +171,9 @@ export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   {
     version: 70,
     migrate: migrateHostPermanentState
+  },
+  {
+    version: 71,
+    migrate: migrateOpaqueSyncRefs
   }
 ];

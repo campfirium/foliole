@@ -83,6 +83,7 @@ export const ANDROID_COMPANION_MIGRATION_ACTION_TYPES = {
   installSchema: 'installSchema',
   replaceSyncPushAck: 'replaceSyncPushAck',
   migrateHostPermanentState: 'migrateHostPermanentState',
+  migrateOpaqueSyncRefs: 'migrateOpaqueSyncRefs',
   migrateSyncObjectStateSequence: 'migrateSyncObjectStateSequence'
 } as const;
 
@@ -198,6 +199,10 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
   {
     actions: [{ errorMessage: 'Failed to cut over companion Host permanent state.', type: 'migrateHostPermanentState' }],
     beforeVersion: 27
+  },
+  {
+    actions: [{ errorMessage: 'Failed to cut over companion opaque sync references.', type: 'migrateOpaqueSyncRefs' }],
+    beforeVersion: 28
   }
 ] as const;
 

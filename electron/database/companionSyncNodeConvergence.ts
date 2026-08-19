@@ -1,4 +1,5 @@
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
+import { createOpaqueVersionRef } from '../../lib/core/sync/opaqueSyncRefs.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 import { resolveTopicConflict } from '../../lib/core/sync/syncNodeConvergence.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
@@ -100,7 +101,7 @@ async function resolveAdditiveObject(
     parent_version_id: null,
     parent_version_ids: [],
     snapshot: { ...entry.record.snapshot, id: canonicalId },
-    version_id: `derived#${suffix}`
+    version_id: createOpaqueVersionRef(suffix)
   };
   const applied = await applySyncNodesWithDbPort(port, [derived], {
     enqueueSearchInvalidations: false,

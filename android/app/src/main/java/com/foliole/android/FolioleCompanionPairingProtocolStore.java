@@ -8,7 +8,7 @@ import com.getcapacitor.JSObject;
 import org.json.JSONObject;
 
 final class FolioleCompanionPairingProtocolStore {
-    private static final int CURRENT_PROTOCOL_VERSION = 1;
+    private static final int CURRENT_PROTOCOL_VERSION = 2;
 
     private FolioleCompanionPairingProtocolStore() {}
 

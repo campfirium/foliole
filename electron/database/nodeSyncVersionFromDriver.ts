@@ -1,4 +1,7 @@
-import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
+import { randomUUID } from 'node:crypto';
+
+import type { DatabaseDriver } from '../../lib/core/database/driver.js';
+import { createOpaqueVersionRef } from '../../lib/core/sync/opaqueSyncRefs.js';
 
 import { upsertNodeSyncState } from './nodeSyncStateRows.js';
 import {
@@ -6,10 +9,6 @@ import {
   computeNodeSyncVersionHashFromDriver,
   loadNodeSyncVersionSourceFromDriver
 } from './nodeSyncVersionSourceFromDriver.js';
-
-interface SettingsRow extends DatabaseRow { value: string }
-const COUNTER_KEY = 'desktop_node_sync_version_counter';
-const RESTORE_INCARNATION_KEY = 'desktop_node_sync_restore_incarnation';
 
 export function flushNodeSyncVersionWithDriver(
   driver: DatabaseDriver,
@@ -21,7 +20,7 @@ export function flushNodeSyncVersionWithDriver(
   driver.transaction(() => {
     const row = loadNodeSyncVersionSourceFromDriver(driver, nodeId);
     if (!row || (row.sync_dirty !== 1 && row.current_version_id)) return;
-    const versionId = nextVersionId(driver, deviceId, now);
+    const versionId = createOpaqueVersionRef(randomUUID());
     const contentHash = computeNodeSyncVersionHashFromDriver(driver, row, nodeId);
     driver.execute(
       `INSERT INTO node_sync_versions (
@@ -51,18 +50,4 @@ export function flushNodeSyncVersionWithDriver(
     createdVersionId = versionId;
   });
   return createdVersionId;
-}
-
-function nextVersionId(driver: DatabaseDriver, deviceId: string, now: string) {
-  const current = driver.queryOne<SettingsRow>('SELECT value FROM settings WHERE key = ?', [COUNTER_KEY]);
-  const counter = Number.parseInt(current?.value ?? '0', 10);
-  driver.execute(
-    `INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)
-     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
-    [COUNTER_KEY, String(counter + 1), now]
-  );
-  const incarnation = driver.queryOne<SettingsRow>('SELECT value FROM settings WHERE key = ?', [
-    RESTORE_INCARNATION_KEY
-  ])?.value;
-  return incarnation ? `${deviceId}#zrestore-${incarnation}#${counter}` : `${deviceId}#${counter}`;
 }

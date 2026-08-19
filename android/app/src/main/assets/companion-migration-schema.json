@@ -22,6 +22,7 @@
     "installSchema": "installSchema",
     "replaceSyncPushAck": "replaceSyncPushAck",
     "migrateHostPermanentState": "migrateHostPermanentState",
+    "migrateOpaqueSyncRefs": "migrateOpaqueSyncRefs",
     "migrateSyncObjectStateSequence": "migrateSyncObjectStateSequence"
   },
   "assetKeys": {
@@ -288,6 +289,15 @@
         }
       ],
       "beforeVersion": 27
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to cut over companion opaque sync references.",
+          "type": "migrateOpaqueSyncRefs"
+        }
+      ],
+      "beforeVersion": 28
     }
   ],
   "planKeys": {

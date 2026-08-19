@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import type { DbRow } from '../../lib/core/sync/dbPort.js';
+import { createOpaqueVersionRef } from '../../lib/core/sync/opaqueSyncRefs.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
@@ -92,7 +93,7 @@ function promotedRecord(current: NativeSyncNodeRecord, body: string, now: string
     snapshot,
     updated_at: now,
     version_created_at: now,
-    version_id: `promotion#${randomUUID()}`
+    version_id: createOpaqueVersionRef(randomUUID())
   };
 }
 

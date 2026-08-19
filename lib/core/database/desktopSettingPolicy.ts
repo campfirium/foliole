@@ -30,8 +30,6 @@ export const DESKTOP_DECLARED_SETTING_KEYS = [
 ].sort();
 
 export const DESKTOP_INTERNAL_SETTINGS_KEYS = [
-  'desktop_node_sync_restore_incarnation',
-  'desktop_node_sync_version_counter',
   'workspace_search_queued_revision',
   'workspace_search_source_identity',
   'workspace_search_source_revision'

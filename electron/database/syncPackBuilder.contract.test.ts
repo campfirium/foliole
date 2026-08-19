@@ -55,7 +55,7 @@ function insertNodeSyncState() {
        manual_child_order, title, is_title_manual, hide_title_heading, opening_text, content,
        body_blob_hash, virtual_filter, reveal, anchor_link, image_regions,
        import_source_fingerprint, import_content_fingerprint, current_version_id, created_at, updated_at
-     ) VALUES (?, 'folder', 4, 0.92, 0, 1, ?, ?, 1, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'desktop#contract-v1', ?, ?)`,
+     ) VALUES (?, 'folder', 4, 0.92, 0, 1, ?, ?, 1, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ver_contract-v1', ?, ?)`,
     ['node-1', '["child-2","child-1"]', 'Node 1', 'Node opening preview',
       'node body must stay out of pack', bodyHash, '{"kind":"manual"}', 'Contract answer',
       '{"id":"anchor-1","kind":"highlight"}', '[{"source":"contract"}]',
@@ -70,7 +70,7 @@ function insertNodeSyncState() {
   driver.execute(
     `INSERT INTO node_sync_versions (
        version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
-     ) VALUES ('desktop#contract-v1', 'node-1', NULL, 'desktop',
+     ) VALUES ('ver_contract-v1', 'node-1', NULL, 'desktop',
        '2026-04-27T00:00:00.000Z', 'node-hash', '{"id":"node-1","title":"Node 1"}')`
   );
   driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', ['node-1', 3]);
@@ -213,7 +213,7 @@ it('keeps the Android sync pack contract fixture deterministic', async () => {
     nodeVersions: [expect.objectContaining({
       object_id: 'node-1',
       parent_version_id: null,
-      version_id: 'desktop#contract-v1'
+      version_id: 'ver_contract-v1'
     })],
     nodeOrder: [{ node_id: 'node-1', position: 3 }],
     nodes: [expect.objectContaining({

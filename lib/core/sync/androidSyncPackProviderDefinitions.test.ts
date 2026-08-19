@@ -10,7 +10,7 @@ it('uses the desktop sync-pack envelope, table, and protocol contracts', () => {
   expect(definitions.tableNames).toEqual(SYNC_PACK_TABLE_NAMES);
   expect(definitions.compression).toBe('zlib');
   expect(definitions.protocol).toMatchObject({
-    capabilities: ['lan-sync-v1', 'sync-group-facts-v1', 'workgroup-aead-v1'],
+    capabilities: ['lan-sync-v1', 'opaque-sync-refs-v1', 'sync-group-facts-v1', 'workgroup-aead-v1'],
     version: 2
   });
 });

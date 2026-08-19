@@ -18,7 +18,7 @@
   ],
   "databaseEntry": "incoming.db.deflate",
   "format": "foliole.sync-pack",
-  "formatVersion": 5,
+  "formatVersion": 6,
   "payloadCopyIndex": 5,
   "payloadPlans": [
     {
@@ -85,6 +85,7 @@
   "protocol": {
     "capabilities": [
       "lan-sync-v1",
+      "opaque-sync-refs-v1",
       "sync-group-facts-v1",
       "workgroup-aead-v1"
     ],
@@ -92,7 +93,7 @@
     "min_supported_version": 2,
     "version": 2
   },
-  "schemaVersion": 70,
+  "schemaVersion": 71,
   "stateCopyIndex": 3,
   "tableNames": [
     "sync_groups",

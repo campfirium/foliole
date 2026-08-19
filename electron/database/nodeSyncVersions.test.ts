@@ -93,7 +93,7 @@ it('creates a sync version from a dirty node and clears the dirty flag', () => {
 
   const versionId = flushNodeSyncVersion('node-1', '2026-04-21T10:01:00.000Z');
 
-  expect(versionId).toMatch(/^.+#0$/);
+  expect(versionId).toMatch(/^ver_[0-9a-f-]{36}$/);
   expect(
     connection.driver.queryOne<{ sync_dirty: number; current_version_id: string | null; last_modified_by_device_id: string | null }>(
       'SELECT sync_dirty, current_version_id, last_modified_by_device_id FROM nodes WHERE id = ?',
@@ -138,7 +138,7 @@ it('creates an initial sync version for an unversioned clean node', () => {
       ['node-1']
     )
   ).toEqual({
-    current_version_id: expect.stringMatching(/^.+#0$/),
+    current_version_id: expect.stringMatching(/^ver_[0-9a-f-]{36}$/),
     sync_dirty: 0
   });
   expect(
@@ -205,7 +205,7 @@ it('creates a tombstone sync version when soft deleting a versioned node', () =>
     ['node-1']
   );
   expect(node).toEqual({
-    current_version_id: expect.stringMatching(/^.+#1$/),
+    current_version_id: expect.stringMatching(/^ver_[0-9a-f-]{36}$/),
     deleted_at: '2026-04-21T10:02:00.000Z',
     sync_dirty: 0
   });
@@ -240,7 +240,8 @@ it('creates an active head before tombstone when soft deleting an unversioned no
     snapshot_json: string;
     version_id: string;
   }>(
-    'SELECT version_id, parent_version_id, snapshot_json FROM node_sync_versions WHERE object_id = ? ORDER BY version_id ASC',
+    `SELECT version_id, parent_version_id, snapshot_json FROM node_sync_versions WHERE object_id = ?
+     ORDER BY parent_version_id IS NOT NULL ASC`,
     ['node-1']
   );
   expect(versions).toHaveLength(2);

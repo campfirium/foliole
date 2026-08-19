@@ -4,6 +4,7 @@ import { bytesToHex } from '@noble/hashes/utils.js';
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 
 import type { DbPort, DbRow } from './dbPort.js';
+import { createOpaqueVersionRef } from './opaqueSyncRefs.js';
 
 interface AlternativeState extends DbRow {
   alternative_id: string;
@@ -70,7 +71,7 @@ export function buildResolutionRecord(
     snapshot,
     updated_at: createdAt,
     version_created_at: createdAt,
-    version_id: `resolution#${identity.slice(0, 24)}`
+    version_id: createOpaqueVersionRef(identity.slice(0, 24))
   };
 }
 
