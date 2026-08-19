@@ -75,6 +75,7 @@ function createStateObject(index: number): NativeSyncStateObjectRecord {
   return {
     content_hash: `hash-${index}`,
     deleted_at: null,
+    last_modified_by_host_name: 'android-test-device',
     object_id: `setting-${index}`,
     object_type: 'setting',
     payload_json: '{}',

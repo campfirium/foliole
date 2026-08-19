@@ -8,6 +8,7 @@ export function createLocalNodeReadingChange(overrides: Partial<NativeSyncStateO
     base_content_hash: 'desktop-reading-base',
     content_hash: 'local-hash',
     deleted_at: null,
+    last_modified_by_host_name: 'android-test-device',
     object_id: 'node-1',
     object_type: 'node_reading',
     payload_json: '{"reading_position":42}',
@@ -22,6 +23,7 @@ export function createLocalNodeReviewChange(): NativeSyncStateObjectRecord {
     base_content_hash: 'desktop-base',
     content_hash: 'local-review-hash',
     deleted_at: null,
+    last_modified_by_host_name: 'android-test-device',
     object_id: 'node-1',
     object_type: 'node_review',
     payload_json: '{"reps":2}',
@@ -35,6 +37,7 @@ export function createLocalSettingChange(): NativeSyncStateObjectRecord {
     base_content_hash: 'desktop-setting-base',
     content_hash: 'local-setting-hash',
     deleted_at: null,
+    last_modified_by_host_name: 'android-test-device',
     object_id: 'device:android:phone:*:app_settings',
     object_type: 'setting',
     payload_json: '{"key":"app_settings","scope":"device","platform":"android","form_factor":"phone","device_id":"*","value_json":"{}"}',
@@ -48,6 +51,7 @@ export function createLocalViewStateChange(): NativeSyncStateObjectRecord {
     base_content_hash: 'desktop-view-base',
     content_hash: 'local-view-hash',
     deleted_at: null,
+    last_modified_by_host_name: 'android-test-device',
     object_id: 'session_resume:android:phone:android-test-device:active_node',
     object_type: 'view_state',
     payload_json: '{"active_node_id":"node-1"}',
@@ -58,7 +62,7 @@ export function createLocalViewStateChange(): NativeSyncStateObjectRecord {
 
 export function createLocalReviewLog(overrides: Partial<NativeSyncReviewLogRecord> = {}): NativeSyncReviewLogRecord {
   return {
-    device_id: 'android-test-device',
+    host_name: 'android-test-device',
     difficulty_after: 3,
     difficulty_before: 2,
     due_after: '2026-04-26T00:00:00.000Z',

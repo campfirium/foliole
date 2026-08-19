@@ -3,7 +3,6 @@ import { writeNodeReadingSnapshotWithSync } from '../../lib/core/database/nodeRe
 import { enqueueWorkspaceSearchDeleteInvalidationForSubtreeRootIds } from '../../lib/core/database/searchIndexInvalidations.js';
 
 import { openDatabaseConnection } from './connection.js';
-import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
 import type { SourceDisposition, SourceDispositionKey, SourceDispositionRestoreResult, SourceKeyRow } from './sourceDispositionStates.js';
 import {
@@ -63,7 +62,6 @@ function applyDismissedState(
   driver: DatabaseDriver,
   nodeIds: string[],
   updatedAt: string,
-  deviceId: string,
   hostName: string
 ) {
   if (nodeIds.length === 0) return;
@@ -92,7 +90,6 @@ function applyDismissedState(
   const deleteDeviceState = driver.prepare('DELETE FROM node_reading_host_state WHERE node_id = ?');
   for (const nodeId of nodeIds) {
     writeNodeReadingSnapshotWithSync(driver, {
-      deviceId,
       hostName,
       nodeId,
       reading: {
@@ -115,22 +112,22 @@ function applyDismissedState(
   }
 }
 
-function applyTrashState(driver: DatabaseDriver, nodeIds: string[], updatedAt: string, deviceId: string) {
+function applyTrashState(driver: DatabaseDriver, nodeIds: string[], updatedAt: string, hostName: string) {
   if (nodeIds.length === 0) return;
   const setDeletedAt = driver.prepare(
     `UPDATE nodes
-     SET deleted_at = ?, updated_at = ?, last_modified_by_device_id = ?, sync_dirty = 1
+     SET deleted_at = ?, updated_at = ?, last_modified_by_host_name = ?, sync_dirty = 1
      WHERE id = ?`
   );
   for (const nodeId of nodeIds) {
-    setDeletedAt.run([updatedAt, updatedAt, deviceId, nodeId]);
+    setDeletedAt.run([updatedAt, updatedAt, hostName, nodeId]);
   }
 }
 
 export function restoreSourceDispositions(): SourceDispositionRestoreResult {
   const connection = openDatabaseConnection();
   const updatedAt = new Date().toISOString();
-  const deviceId = loadOrCreateDesktopDeviceId(updatedAt);
+  const hostName = loadOrCreateDesktopHostName(updatedAt);
   return withTransaction(connection.driver, () => {
     const dispositionsByKey = new Map(readDispositionRows(connection.driver).map((row) => [sourceDispositionKeyId(row), row.disposition]));
     const dismissedNodeIds: string[] = [];
@@ -145,10 +142,9 @@ export function restoreSourceDispositions(): SourceDispositionRestoreResult {
       connection.driver,
       dismissedNodeIds,
       updatedAt,
-      deviceId,
-      loadOrCreateDesktopHostName(updatedAt)
+      hostName
     );
-    applyTrashState(connection.driver, trashNodeIds, updatedAt, deviceId);
+    applyTrashState(connection.driver, trashNodeIds, updatedAt, hostName);
     enqueueWorkspaceSearchDeleteInvalidationForSubtreeRootIds(connection.driver, trashNodeIds);
     return {
       dismissedCount: dismissedNodeIds.length,

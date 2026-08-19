@@ -58,7 +58,7 @@ function insertNodeRecord(connection: ReturnType<typeof openDatabaseConnection>,
 function insertVersionRecord(connection: ReturnType<typeof openDatabaseConnection>) {
   connection.driver.execute(
     `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, device_id, created_at, content_hash
+       version_id, object_id, parent_version_id, host_name, created_at, content_hash
      ) VALUES (?, ?, ?, ?, ?, ?)`,
     ['desktop#2', 'node-1', 'desktop#1', 'desktop', '2026-04-21T11:00:00.000Z', 'hash-2']
   );
@@ -67,7 +67,7 @@ function insertVersionRecord(connection: ReturnType<typeof openDatabaseConnectio
 function insertSyncObjectState(connection: ReturnType<typeof openDatabaseConnection>) {
   connection.driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES (?, ?, (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state), ?, ?, ?, ?)`,
     ['external_document', 'folder-1:alpha.md', 'hash-external-alpha', 'desktop', '2026-04-21T12:00:00.000Z', 1]
   );

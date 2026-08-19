@@ -76,8 +76,8 @@ async function applyDownloadedPack(
   let event;
   try {
     const result = await applySyncPackNodeSurfaceWithDbPort(port, {
-      currentCursor: args.after, deviceId: args.peer.local_device_id,
-      hostName: loadOrCreateDesktopHostName(), incomingAlias: 'inc', sourcePeerId: args.peer.peer_device_id
+      currentCursor: args.after, hostName: loadOrCreateDesktopHostName(),
+      incomingAlias: 'inc', sourcePeerId: args.peer.peer_device_id
     });
     event = await collectSyncPackAppliedEvent(port, result);
   } finally {

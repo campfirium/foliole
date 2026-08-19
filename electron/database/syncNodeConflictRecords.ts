@@ -10,7 +10,7 @@ export function recordRemoteNodeConflict(driver: DatabaseDriver, record: NativeS
        conflict_version_id,
        object_id,
        parent_version_id,
-       device_id,
+       host_name,
        content_hash,
        snapshot_json,
        detected_at
@@ -18,7 +18,7 @@ export function recordRemoteNodeConflict(driver: DatabaseDriver, record: NativeS
      ON CONFLICT(conflict_version_id) DO UPDATE SET
        object_id = excluded.object_id,
        parent_version_id = excluded.parent_version_id,
-       device_id = excluded.device_id,
+       host_name = excluded.host_name,
        content_hash = excluded.content_hash,
        snapshot_json = excluded.snapshot_json,
        detected_at = excluded.detected_at`,
@@ -26,7 +26,7 @@ export function recordRemoteNodeConflict(driver: DatabaseDriver, record: NativeS
       record.version_id,
       record.object_id,
       record.parent_version_id,
-      record.device_id,
+      record.host_name,
       record.content_hash,
       JSON.stringify(record.snapshot),
       timestamp

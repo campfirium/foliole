@@ -6,7 +6,7 @@ export interface StoredSyncNodeVersionRow extends DbRow {
   body_text: string | null;
   content_hash: string;
   created_at: string;
-  device_id: string;
+  host_name: string;
   object_id: string;
   snapshot_json: string;
   version_id: string;
@@ -77,7 +77,7 @@ async function storedVersionToRecord(
     ancestor_version_ids: await loadAncestors(port, row.version_id),
     body_text: row.body_text ?? snapshot.content ?? '',
     content_hash: row.content_hash,
-    device_id: row.device_id,
+    host_name: row.host_name,
     object_id: row.object_id,
     object_type: 'node',
     parent_version_id: parents[0] ?? null,

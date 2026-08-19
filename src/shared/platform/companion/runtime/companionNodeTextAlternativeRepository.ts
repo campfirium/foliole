@@ -4,14 +4,14 @@ import type { DbRow } from '../../../../../lib/core/sync/dbPort';
 import { isAvailableNativeCompanionRuntime } from '../../companionWorkspaceRuntimeRepository';
 
 import { readIosCompanionDatabase, writeIosCompanionDatabase } from './iosCompanionActiveDatabase';
-import { iosCompanionContentHash, iosCompanionDeviceId, markIosCompanionMutation } from './iosCompanionMutationState';
+import { iosCompanionContentHash, iosCompanionHostName, markIosCompanionMutation } from './iosCompanionMutationState';
 
 export interface CompanionNodeTextAlternative {
   alternative_id: string;
   body_text: string;
   created_at: string;
   node_id: string;
-  source_device_id: string;
+  source_host_name: string;
   source_version_id: string;
   status: 'available' | 'dismissed' | 'promoted' | 'superseded';
   updated_at: string;
@@ -42,11 +42,11 @@ export async function updateCompanionNodeTextAlternativeStatus(
       [alternativeId]
     ))[0];
     if (!alternative) throw new Error('Alternative not found.');
-    const deviceId = await iosCompanionDeviceId(tx);
+    const hostName = await iosCompanionHostName(tx);
     await markIosCompanionMutation({
       contentHash: await iosCompanionContentHash(alternative),
       db: tx,
-      deviceId,
+      hostName,
       objectId: alternativeId,
       objectType: 'node_text_alternative',
       updatedAt

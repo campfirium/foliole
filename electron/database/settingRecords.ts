@@ -1,6 +1,5 @@
 import { resolveDesktopSettingIdentity, resolveDesktopSettingPolicy } from '../../lib/core/database/desktopSettingPolicy.js';
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
-import { loadOrCreateDatabaseDeviceId } from '../../lib/core/database/syncDeviceIdentity.js';
 import { loadOrCreateDatabaseHostName } from '../../lib/core/database/syncHostIdentity.js';
 import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 
@@ -12,7 +11,6 @@ export interface SettingRecordInput {
 
 export function writeSettingRecord(driver: DatabaseDriver, input: SettingRecordInput) {
   if (!resolveDesktopSettingPolicy(input.key).canonical) return;
-  const deviceId = loadOrCreateDatabaseDeviceId(driver, input.updatedAt);
   const hostName = loadOrCreateDatabaseHostName(driver, input.updatedAt);
   const identity = resolveDesktopSettingIdentity(input.key, hostName);
   if (!identity) return;
@@ -48,7 +46,7 @@ export function writeSettingRecord(driver: DatabaseDriver, input: SettingRecordI
     objectType: 'setting',
     objectId: identity.objectId,
     contentHash,
-    lastModifiedByDeviceId: deviceId,
+    lastModifiedByHostName: hostName,
     updatedAt: input.updatedAt,
     syncDirty: true
   });

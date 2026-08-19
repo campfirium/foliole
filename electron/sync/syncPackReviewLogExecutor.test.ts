@@ -9,7 +9,7 @@ it('applies incoming review log rows for existing nodes', async () => {
 
   await expect(applySyncPackReviewLogWithDbPort(port, { incomingAlias: 'incoming' })).resolves.toEqual(['op-1']);
   expect(inserted).toHaveLength(1);
-  expect(inserted[0]?.slice(0, 4)).toEqual(['review-1', 'op-1', 'desktop', 'node-1']);
+  expect(inserted[0]?.slice(0, 4)).toEqual(['review-1', 'op-1', 'Desktop host', 'node-1']);
 });
 
 it('confirms already existing review log rows', async () => {
@@ -54,7 +54,7 @@ function createReviewLogPort(options: {
 
 function reviewLogRow() {
   return {
-    device_id: 'desktop',
+    host_name: 'Desktop host',
     difficulty_after: 4,
     difficulty_before: 3,
     due_after: '2026-05-06T00:00:00.000Z',

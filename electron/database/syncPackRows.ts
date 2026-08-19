@@ -18,6 +18,7 @@ import { learningNodeIds, loadNodePreludeStateRows, mergeStateRows } from './syn
 interface RawSyncStatePackRow extends DatabaseRow {
   content_hash: string;
   deleted_at: string | null;
+  last_modified_by_host_name: string;
   object_id: string;
   object_type: string;
   state_seq: number;
@@ -75,7 +76,7 @@ export interface ContentBlobPackRow extends DatabaseRow {
   mime_type: string | null;
   original_sha256: string;
   original_size_bytes: number;
-  source_device_id: string | null;
+  source_host_name: string | null;
   storage_key: string;
   stored_sha256: string;
   stored_size_bytes: number;
@@ -89,7 +90,7 @@ function placeholders(values: unknown[]) {
 
 function listChangedStateRows(driver: DatabaseDriver, fromStateSeq: number, toStateSeq: number) {
   return driver.queryAll<RawSyncStatePackRow>(
-    `SELECT object_type, object_id, state_seq, content_hash, updated_at, deleted_at
+    `SELECT object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, deleted_at
      FROM sync_object_state
      WHERE state_seq > ? AND state_seq <= ?
      AND (object_type <> 'node' OR object_id NOT IN ('special-inbox', 'special-virtual-root'))
@@ -169,7 +170,7 @@ function loadReviewLogRows(driver: DatabaseDriver, rows: SyncStatePackRow[]): Re
     .map((row) => row.object_id);
   return queryRowsByIds<ReviewLogPackRow>(driver,
     `SELECT
-       id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at,
+       id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at,
        due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after
      FROM review_log WHERE node_id IN (__IDS__)
      ORDER BY reviewed_at ASC, op_id ASC`,
@@ -225,7 +226,7 @@ export function loadPackRows(
     consumedStateSeq: candidateStateRows.at(-1)?.state_seq ?? fromStateSeq,
     contentBlobs: queryRowsByIds<ContentBlobPackRow>(driver,
       `SELECT hash, storage_key, kind, mime_type, compression, original_size_bytes, stored_size_bytes,
-         original_sha256, stored_sha256, availability, source_device_id, created_at, cached_at, last_verified_at
+         original_sha256, stored_sha256, availability, source_host_name, created_at, cached_at, last_verified_at
        FROM content_blobs WHERE hash IN (__IDS__)`,
       collectBodyBlobHashes(nodes, externalDocuments)
     ),

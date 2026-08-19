@@ -18,7 +18,7 @@ const INCOMING_PACK_ALIAS = 'inc';
 export async function applyCompanionSyncPackPathWithSharedCore(
   args: {
     deviceId: string;
-    hostName?: string;
+    hostName: string;
     packPath: string;
     primaryDeviceId?: string | null | undefined;
     sourcePeerId: string;
@@ -30,7 +30,7 @@ export async function applyCompanionSyncPackPathWithSharedCore(
   const result = await applyCompanionSyncPackNodesWithSharedCore({
     currentCursor: currentCursor ?? 0,
     deviceId: args.deviceId,
-    ...(args.hostName ? { hostName: args.hostName } : {}),
+    hostName: args.hostName,
     packPath: args.packPath,
     primaryDeviceId: args.primaryDeviceId,
     sourcePeerId: args.sourcePeerId
@@ -51,7 +51,7 @@ export async function applyCompanionSyncPackNodesWithSharedCore(
   args: {
     currentCursor: number;
     deviceId: string;
-    hostName?: string;
+    hostName: string;
     packPath: string;
     primaryDeviceId?: string | null | undefined;
     sourcePeerId: string;
@@ -71,7 +71,7 @@ export async function applyCompanionSyncPackNodesWithDbPort(
   args: {
     currentCursor: number;
     deviceId: string;
-    hostName?: string;
+    hostName: string;
     packPath: string;
     primaryDeviceId?: string | null | undefined;
     sourcePeerId: string;
@@ -82,8 +82,7 @@ export async function applyCompanionSyncPackNodesWithDbPort(
   try {
     return await applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor: args.currentCursor,
-      deviceId: args.deviceId,
-      ...(args.hostName ? { hostName: args.hostName } : {}),
+      hostName: args.hostName,
       incomingAlias: INCOMING_PACK_ALIAS,
       sourcePeerId: args.sourcePeerId
     }).then((result) => ({

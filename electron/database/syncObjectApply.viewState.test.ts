@@ -69,15 +69,15 @@ it('applies legacy mobile view state payloads as user scroll source', async () =
     object_type: 'view_state',
     payload_json: JSON.stringify({ node_id: 'node-1', scroll_top: 128 }),
     updated_at: '2026-04-22T08:11:00.000Z'
-  }], { deviceId: 'android-test' });
+  }], { hostName: 'android-test' });
 
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne<{ value: string }>("SELECT value FROM workspace_meta WHERE key = 'active_node_id'"))
     .toEqual({ value: 'node-1' });
-  expect(driver.queryOne<{ device_id: string; scroll_top: number; source: string }>(
-    'SELECT device_id, scroll_top, source FROM node_view_state WHERE node_id = ?',
+  expect(driver.queryOne<{ host_name: string; scroll_top: number; source: string }>(
+    'SELECT host_name, scroll_top, source FROM node_view_state WHERE node_id = ?',
     ['node-1']
-  )).toEqual({ device_id: 'android-test', scroll_top: 128, source: 'user-scroll' });
+  )).toEqual({ host_name: 'android-test', scroll_top: 128, source: 'user-scroll' });
 });
 
 it('marks sourced view state sync payloads as sync apply writes', async () => {
@@ -96,11 +96,11 @@ it('marks sourced view state sync payloads as sync apply writes', async () => {
       source: 'user-scroll'
     }),
     updated_at: '2026-04-22T08:11:00.000Z'
-  }], { deviceId: 'android-test' });
+  }], { hostName: 'android-test' });
 
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne<{ source: string }>(
-    'SELECT source FROM node_view_state WHERE node_id = ? AND device_id = ?',
+    'SELECT source FROM node_view_state WHERE node_id = ? AND host_name = ?',
     ['node-1', 'android-test']
   )).toEqual({ source: 'sync-apply' });
 });
@@ -116,7 +116,7 @@ it('ignores active node view state for deleted or missing nodes', async () => {
     object_type: 'view_state',
     payload_json: JSON.stringify({ active_node_id: 'node-1' }),
     updated_at: '2026-04-22T08:10:00.000Z'
-  }], { deviceId: 'android-test' });
+  }], { hostName: 'android-test' });
 
   await applySyncObjectsAsync([{
     content_hash: 'hash-deleted-active-view',
@@ -132,7 +132,7 @@ it('ignores active node view state for deleted or missing nodes', async () => {
     object_type: 'view_state',
     payload_json: JSON.stringify({ active_node_id: 'node-missing' }),
     updated_at: '2026-04-22T08:12:00.000Z'
-  }], { deviceId: 'android-test' });
+  }], { hostName: 'android-test' });
 
   expect(openDatabaseConnection().driver.queryOne<{ value: string }>(
     "SELECT value FROM workspace_meta WHERE key = 'active_node_id'"
@@ -149,7 +149,7 @@ it('does not apply view state without the matching local Android device id', asy
     object_type: 'view_state',
     payload_json: JSON.stringify({ active_node_id: 'node-1' }),
     updated_at: '2026-04-22T08:10:00.000Z'
-  }], { deviceId: 'android-test' })).resolves.toEqual([]);
+  }], { hostName: 'android-test' })).resolves.toEqual([]);
 
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne<{ value: string }>("SELECT value FROM workspace_meta WHERE key = 'active_node_id'"))

@@ -80,7 +80,7 @@ describe('shared companion database migration executor', () => {
       "('a','a.png','image/png',1,'2026-01-01');" +
       "INSERT INTO nodes (id,title,current_version_id,created_at,updated_at) VALUES " +
       "('n','N','v','2026-01-01','2026-01-01');" +
-      "INSERT INTO node_sync_versions (version_id,object_id,device_id,created_at,content_hash,snapshot_json) VALUES " +
+      "INSERT INTO node_sync_versions (version_id,object_id,host_name,created_at,content_hash,snapshot_json) VALUES " +
       "('v','n','d','2026-01-01','h','{\"attachments\":[{\"attachment_id\":\"a\",\"role\":\"inline\"}]}');");
     await bootstrap(first.port);
     expect(first.sqlite.prepare('SELECT attachment_id, role FROM node_attachments').get())
@@ -175,7 +175,7 @@ describe('shared companion Host handling', () => {
       INSERT INTO nodes (id,title,content,created_at,updated_at) VALUES
         ('node-1','Preserved','content','2026-08-01','2026-08-01');
       INSERT INTO review_log (
-        id,op_id,device_id,node_id,grade,scheduler_version,reviewed_at,due_before,
+        id,op_id,host_name,node_id,grade,scheduler_version,reviewed_at,due_before,
         stability_before,difficulty_before,due_after,stability_after,difficulty_after
       ) VALUES ('r','op','fixture-device','node-1',3,'v1','2026-08-01','2026-08-01',1,1,'2026-08-02',2,2);
     `);
@@ -189,7 +189,7 @@ describe('shared companion Host handling', () => {
     expect(identity.sqlite.prepare('SELECT device_id, state FROM sync_group_members').get())
       .toEqual({ device_id: 'fixture-device', state: 'active' });
     expect(identity.sqlite.prepare('SELECT content FROM nodes').pluck().get()).toBe('content');
-    expect(identity.sqlite.prepare('SELECT device_id FROM review_log').pluck().get()).toBe('fixture-device');
+    expect(identity.sqlite.prepare('SELECT host_name FROM review_log').pluck().get()).toBe('fixture-device');
     expect(identity.sqlite.prepare('SELECT workgroup_key FROM sync_groups').pluck().get())
       .toBe('copied-workgroup-key');
 

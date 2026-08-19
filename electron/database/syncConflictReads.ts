@@ -7,7 +7,7 @@ interface SyncConflictRow extends DatabaseRow {
   conflict_version_id: string;
   content_hash: string | null;
   detected_at: string;
-  device_id: string | null;
+  host_name: string | null;
   object_id: string;
   parent_version_id: string | null;
   snapshot_json: string;
@@ -23,7 +23,7 @@ function toNativeSyncNodeConflictRecord(row: SyncConflictRow): NativeSyncNodeCon
     conflict_version_id: row.conflict_version_id,
     content_hash: row.content_hash,
     detected_at: row.detected_at,
-    device_id: row.device_id,
+    host_name: row.host_name,
     object_id: row.object_id,
     parent_version_id: row.parent_version_id,
     snapshot,
@@ -40,7 +40,7 @@ export function loadSyncNodeConflicts(objectIds?: string[]) {
        conflict_version_id,
        object_id,
        parent_version_id,
-       device_id,
+       host_name,
        content_hash,
        snapshot_json,
        detected_at

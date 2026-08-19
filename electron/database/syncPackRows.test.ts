@@ -40,12 +40,12 @@ it('loads backed reading and review state as sync pack metadata', () => {
   insertLearningStateRows();
   openDatabaseConnection().driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('node_review', 'node-1', 3, 'review-hash', 'desktop', '2026-04-27T00:03:00.000Z', 0)`
   );
   openDatabaseConnection().driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('node_reading', 'node-1', 4, 'reading-hash', 'desktop', '2026-04-27T00:04:00.000Z', 0)`
   );
   openDatabaseConnection().driver.execute(
@@ -56,7 +56,7 @@ it('loads backed reading and review state as sync pack metadata', () => {
   );
   openDatabaseConnection().driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('setting', 'user_space:windows:desktop:*:app_settings', 5, 'setting-hash',
        'desktop', '2026-04-27T00:05:00.000Z', 0)`
   );
@@ -66,7 +66,7 @@ it('loads backed reading and review state as sync pack metadata', () => {
   );
   openDatabaseConnection().driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('view_state', 'session_resume:windows:desktop:desktop-test:active_node', 6, 'view-hash',
        'desktop-test', '2026-04-27T00:06:00.000Z', 0)`
   );
@@ -101,7 +101,7 @@ it('includes node ancestors when packing a changed child node', () => {
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES
        ('node', 'parent-1', 1, 'parent-hash', 'desktop', '2026-04-27T00:00:00.000Z', 0),
        ('node', 'child-1', 2, 'child-hash', 'desktop', '2026-04-27T00:01:00.000Z', 0)`
@@ -126,7 +126,7 @@ function insertNodeSyncState() {
   );
   openDatabaseConnection().driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('node', 'node-1', 1, 'node-hash', 'desktop', '2026-04-27T00:00:00.000Z', 0)`
   );
 }
@@ -160,7 +160,7 @@ it('loads only payload objects that match changed state row pairs', () => {
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES
        ('attachment', 'att-1', 1, 'attachment-hash', 'desktop', '2026-04-27T00:01:00.000Z', 0),
        ('import_source', 'source-1', 2, 'source-hash', 'desktop', '2026-04-27T00:02:00.000Z', 0),
@@ -177,7 +177,7 @@ it('does not pack learning state rows when the node entity is gone', () => {
   const driver = openDatabaseConnection().driver;
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES
        ('node_reading', 'deleted-node', 7, 'reading-hash', 'desktop', '2026-04-27T00:07:00.000Z', 0),
        ('node_review', 'deleted-node', 8, 'review-hash', 'desktop', '2026-04-27T00:08:00.000Z', 0)`
@@ -194,7 +194,7 @@ it('does not pack live node state rows when the node payload is gone', () => {
   const driver = openDatabaseConnection().driver;
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, deleted_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, deleted_at, sync_dirty
      ) VALUES
        ('node', 'missing-live-node', 9, 'live-hash', 'desktop', '2026-04-27T00:09:00.000Z', NULL, 0),
        ('node', 'missing-deleted-node', 10, 'deleted-hash', 'desktop', '2026-04-27T00:10:00.000Z',
@@ -216,7 +216,7 @@ it('does not resend an unchanged node after the pack cursor has crossed its stat
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('setting', 'user_space:*:*:*:cursor-test', 2, 'setting-hash',
        'desktop', '2026-04-27T00:02:00.000Z', 0)`
   );

@@ -71,7 +71,7 @@ function toConflictRecords(actions: PlannedSyncNodeAction[]): NativeSyncNodeConf
   return actions.map((action) => ({
     conflict_version_id: action.remote.version_id,
     content_hash: action.remote.content_hash,
-    device_id: action.remote.device_id,
+    host_name: action.remote.host_name,
     object_id: action.remote.object_id,
     parent_version_id: action.remote.parent_version_id,
     snapshot: action.remote.snapshot,

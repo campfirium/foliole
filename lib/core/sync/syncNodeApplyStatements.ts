@@ -12,7 +12,7 @@ export const UPSERT_REMOTE_NODE_SQL = `INSERT INTO nodes (
   id, parent_id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled, shelved_at, manual_child_order, title, is_title_manual, hide_title_heading,
   content, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions,
   import_source_fingerprint, import_content_fingerprint, position,
-  current_version_id, last_modified_by_device_id, sync_dirty, created_at, updated_at, deleted_at
+  current_version_id, last_modified_by_host_name, sync_dirty, created_at, updated_at, deleted_at
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
   parent_id = excluded.parent_id,
@@ -39,7 +39,7 @@ ON CONFLICT(id) DO UPDATE SET
   import_content_fingerprint = excluded.import_content_fingerprint,
   position = excluded.position,
   current_version_id = excluded.current_version_id,
-  last_modified_by_device_id = excluded.last_modified_by_device_id,
+  last_modified_by_host_name = excluded.last_modified_by_host_name,
   sync_dirty = 0,
   created_at = excluded.created_at,
   updated_at = excluded.updated_at,
@@ -52,12 +52,12 @@ export const UPDATE_REMOTE_NODE_SQL = `UPDATE nodes SET
   opening_text = ?, virtual_filter = ?, reveal = ?, anchor_link = ?,
   anchor_resolution_status = ?, anchor_source_version_id = ?, image_regions = ?,
   import_source_fingerprint = ?, import_content_fingerprint = ?, position = ?,
-  current_version_id = ?, last_modified_by_device_id = ?, sync_dirty = 0,
+  current_version_id = ?, last_modified_by_host_name = ?, sync_dirty = 0,
   created_at = ?, updated_at = ?, deleted_at = ?
 WHERE id = ?`;
 
 export const UPSERT_REMOTE_NODE_VERSION_SQL = `INSERT INTO node_sync_versions (
-  version_id, object_id, parent_version_id, device_id, created_at, content_hash, body_text, snapshot_json
+  version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(version_id) DO NOTHING`;
 
@@ -122,7 +122,7 @@ function buildRemoteNodeParams(record: NativeSyncNodeRecord, bodyBlobHash: strin
       provenance.importContentFingerprint,
       snapshot.position ?? null,
       record.version_id,
-      record.device_id,
+      record.host_name,
       snapshot.created_at,
       snapshot.updated_at,
       snapshot.deleted_at
@@ -130,7 +130,7 @@ function buildRemoteNodeParams(record: NativeSyncNodeRecord, bodyBlobHash: strin
 }
 
 export function buildRemoteNodeVersionUpsert(record: NativeSyncNodeRecord): SyncNodeStatement | null {
-  if (!record.version_id || !record.device_id || !record.version_created_at) {
+  if (!record.version_id || !record.host_name || !record.version_created_at) {
     return null;
   }
   return {
@@ -138,7 +138,7 @@ export function buildRemoteNodeVersionUpsert(record: NativeSyncNodeRecord): Sync
       record.version_id,
       record.object_id,
       record.parent_version_id,
-      record.device_id,
+      record.host_name,
       record.version_created_at,
       record.content_hash ?? '',
       record.body_text ?? record.snapshot.content ?? '',

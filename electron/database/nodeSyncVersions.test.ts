@@ -95,13 +95,13 @@ it('creates a sync version from a dirty node and clears the dirty flag', () => {
 
   expect(versionId).toMatch(/^ver_[0-9a-f-]{36}$/);
   expect(
-    connection.driver.queryOne<{ sync_dirty: number; current_version_id: string | null; last_modified_by_device_id: string | null }>(
-      'SELECT sync_dirty, current_version_id, last_modified_by_device_id FROM nodes WHERE id = ?',
+    connection.driver.queryOne<{ sync_dirty: number; current_version_id: string | null; last_modified_by_host_name: string | null }>(
+      'SELECT sync_dirty, current_version_id, last_modified_by_host_name FROM nodes WHERE id = ?',
       ['node-1']
     )
   ).toEqual({
     current_version_id: versionId,
-    last_modified_by_device_id: expect.any(String),
+    last_modified_by_host_name: expect.any(String),
     sync_dirty: 0
   });
   const versionRow = connection.driver.queryOne<{

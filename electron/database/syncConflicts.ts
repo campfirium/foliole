@@ -26,7 +26,7 @@ export function recordSyncNodeConflicts(
            conflict_version_id,
            object_id,
            parent_version_id,
-           device_id,
+           host_name,
            content_hash,
            snapshot_json,
            detected_at
@@ -34,7 +34,7 @@ export function recordSyncNodeConflicts(
          ON CONFLICT(conflict_version_id) DO UPDATE SET
            object_id = excluded.object_id,
            parent_version_id = excluded.parent_version_id,
-           device_id = excluded.device_id,
+           host_name = excluded.host_name,
            content_hash = excluded.content_hash,
            snapshot_json = excluded.snapshot_json,
            detected_at = excluded.detected_at`,
@@ -42,7 +42,7 @@ export function recordSyncNodeConflicts(
           conflict.conflict_version_id,
           conflict.object_id,
           conflict.parent_version_id,
-          conflict.device_id,
+          conflict.host_name,
           conflict.content_hash,
           toSnapshotJson(conflict),
           detectedAt

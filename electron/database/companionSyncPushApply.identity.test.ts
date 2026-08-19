@@ -40,7 +40,7 @@ afterEach(async () => {
 function insertBaseState(objectType: 'setting' | 'view_state', objectId: string, contentHash: string) {
   openDatabaseConnection().driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES (?, ?, 1, ?, 'desktop', '2026-04-30T00:00:00.000Z', 0)`,
     [objectType, objectId, contentHash]
   );
@@ -60,6 +60,7 @@ function readState(objectType: string, objectId: string) {
 
 function createSettingPush(overrides: Partial<SyncPushPayload> = {}): SyncPushPayload {
   return {
+    authorHostName: 'android-device',
     base: { baseContentHash: 'desktop-setting-base', kind: 'content_hash' },
     clientOpId: 'setting:device:13',
     contentHash: 'android-setting-next',
@@ -73,6 +74,7 @@ function createSettingPush(overrides: Partial<SyncPushPayload> = {}): SyncPushPa
 
 function createViewStatePush(overrides: Partial<SyncPushPayload> = {}): SyncPushPayload {
   return {
+    authorHostName: 'android-device',
     base: { baseContentHash: 'desktop-view-base', kind: 'content_hash' },
     clientOpId: 'view_state:session_resume:android:phone:device-1:node:node-1:14',
     contentHash: 'android-view-next',

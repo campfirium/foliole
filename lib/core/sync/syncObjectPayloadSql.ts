@@ -3,7 +3,7 @@ export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
     'attachment_id', a.id, 'original_name', a.original_name, 'mime_type', a.mime_type,
     'size_bytes', a.size_bytes, 'created_at', a.created_at, 'blob', json_object(
       'content_hash', b.content_hash, 'storage_key', b.storage_key, 'size_bytes', b.size_bytes,
-      'mime_type', b.mime_type, 'availability', b.availability, 'source_device_id', b.source_device_id,
+      'mime_type', b.mime_type, 'availability', b.availability, 'source_host_name', b.source_host_name,
       'created_at', b.created_at, 'cached_at', b.cached_at, 'last_verified_at', b.last_verified_at
     )) AS payload_json FROM attachments a LEFT JOIN attachment_blobs b ON b.attachment_id = a.id WHERE a.id = ?`,
   external_folder: `SELECT json_object(
@@ -36,7 +36,7 @@ export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
   ) AS payload_json FROM node_review WHERE node_id = ?`,
   node_text_alternative: `SELECT json_object(
     'alternative_id', alternative_id, 'node_id', node_id, 'source_version_id', source_version_id,
-    'body_text', body_text, 'source_device_id', source_device_id, 'created_at', created_at,
+    'body_text', body_text, 'source_host_name', source_host_name, 'created_at', created_at,
     'status', status, 'updated_at', updated_at
   ) AS payload_json FROM node_text_alternatives WHERE alternative_id = ?`,
   pdf_page_text: `SELECT json_object(

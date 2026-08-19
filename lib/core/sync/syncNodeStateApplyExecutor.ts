@@ -10,7 +10,7 @@ export async function upsertAppliedNodeSyncState(port: DbPort, record: NativeSyn
        state_seq,
        current_version_id,
        content_hash,
-       last_modified_by_device_id,
+       last_modified_by_host_name,
        updated_at,
        deleted_at,
        sync_dirty
@@ -29,13 +29,13 @@ export async function upsertAppliedNodeSyncState(port: DbPort, record: NativeSyn
        state_seq = excluded.state_seq,
        current_version_id = excluded.current_version_id,
        content_hash = excluded.content_hash,
-       last_modified_by_device_id = excluded.last_modified_by_device_id,
+       last_modified_by_host_name = excluded.last_modified_by_host_name,
        updated_at = excluded.updated_at,
        deleted_at = excluded.deleted_at,
        sync_dirty = excluded.sync_dirty
      WHERE sync_object_state.current_version_id IS NOT excluded.current_version_id
        OR sync_object_state.content_hash IS NOT excluded.content_hash
-       OR sync_object_state.last_modified_by_device_id IS NOT excluded.last_modified_by_device_id
+       OR sync_object_state.last_modified_by_host_name IS NOT excluded.last_modified_by_host_name
        OR sync_object_state.updated_at IS NOT excluded.updated_at
        OR sync_object_state.deleted_at IS NOT excluded.deleted_at
        OR sync_object_state.sync_dirty IS NOT excluded.sync_dirty`,
@@ -43,7 +43,7 @@ export async function upsertAppliedNodeSyncState(port: DbPort, record: NativeSyn
       record.object_id,
       record.version_id,
       record.content_hash ?? '',
-      record.device_id,
+      record.host_name,
       record.updated_at,
       record.snapshot.deleted_at
     ]

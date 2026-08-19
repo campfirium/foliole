@@ -7,7 +7,6 @@ import { materializeDesktopSettingRecord } from './desktopSettingMaterializer.js
 import { loadDesktopHostName } from './hostProfile.js';
 
 interface ApplySyncObjectsOptions {
-  deviceId?: string;
   hostName?: string;
   includeAlreadyApplied?: boolean;
 }

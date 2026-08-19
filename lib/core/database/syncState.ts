@@ -27,7 +27,7 @@ export interface SyncObjectStateInput {
   objectId: string;
   currentVersionId?: string | null;
   contentHash: string;
-  lastModifiedByDeviceId: string;
+  lastModifiedByHostName: string;
   updatedAt: string;
   deletedAt?: string | null;
   syncDirty?: boolean;
@@ -46,7 +46,7 @@ interface SyncObjectStateRow extends DatabaseRow {
   state_seq: number;
   current_version_id: string | null;
   content_hash: string;
-  last_modified_by_device_id: string;
+  last_modified_by_host_name: string;
   updated_at: string;
   deleted_at: string | null;
   sync_dirty: number;
@@ -86,7 +86,7 @@ export function upsertSyncObjectState(driver: DatabaseDriver, input: SyncObjectS
        state_seq,
        current_version_id,
        content_hash,
-       last_modified_by_device_id,
+       last_modified_by_host_name,
        updated_at,
        deleted_at,
        sync_dirty
@@ -95,7 +95,7 @@ export function upsertSyncObjectState(driver: DatabaseDriver, input: SyncObjectS
        state_seq = excluded.state_seq,
        current_version_id = excluded.current_version_id,
        content_hash = excluded.content_hash,
-       last_modified_by_device_id = excluded.last_modified_by_device_id,
+       last_modified_by_host_name = excluded.last_modified_by_host_name,
        updated_at = excluded.updated_at,
        deleted_at = excluded.deleted_at,
        sync_dirty = excluded.sync_dirty`,
@@ -104,7 +104,7 @@ export function upsertSyncObjectState(driver: DatabaseDriver, input: SyncObjectS
       input.objectId,
       input.currentVersionId ?? null,
       input.contentHash,
-      input.lastModifiedByDeviceId,
+      input.lastModifiedByHostName,
       input.updatedAt,
       input.deletedAt ?? null,
       input.syncDirty ? 1 : 0
@@ -119,7 +119,7 @@ function toSyncObjectStateRecord(row: SyncObjectStateRow): SyncObjectStateRecord
     stateSeq: row.state_seq,
     currentVersionId: row.current_version_id,
     contentHash: row.content_hash,
-    lastModifiedByDeviceId: row.last_modified_by_device_id,
+    lastModifiedByHostName: row.last_modified_by_host_name,
     updatedAt: row.updated_at,
     deletedAt: row.deleted_at,
     syncDirty: row.sync_dirty === 1
@@ -134,7 +134,7 @@ export function selectSyncStateChangesSince(driver: DatabaseDriver, cursor: numb
        state_seq,
        current_version_id,
        content_hash,
-       last_modified_by_device_id,
+       last_modified_by_host_name,
        updated_at,
        deleted_at,
        sync_dirty

@@ -7,7 +7,7 @@ export const SYNC_SCHEMA_STATEMENTS = [
     state_seq INTEGER NOT NULL,
     current_version_id TEXT,
     content_hash TEXT NOT NULL,
-    last_modified_by_device_id TEXT NOT NULL,
+    last_modified_by_host_name TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     deleted_at TEXT,
     sync_dirty INTEGER NOT NULL DEFAULT 0,
@@ -28,7 +28,7 @@ export const SYNC_SCHEMA_STATEMENTS = [
     object_type TEXT NOT NULL,
     object_id TEXT NOT NULL,
     change_type TEXT NOT NULL,
-    device_id TEXT NOT NULL,
+    host_name TEXT NOT NULL,
     base_version_id TEXT,
     result_version_id TEXT,
     content_hash TEXT NOT NULL,
@@ -38,8 +38,8 @@ export const SYNC_SCHEMA_STATEMENTS = [
   )`,
   `CREATE INDEX IF NOT EXISTS idx_sync_change_log_object
     ON sync_change_log (object_type, object_id, created_at)`,
-  `CREATE INDEX IF NOT EXISTS idx_sync_change_log_device_created
-    ON sync_change_log (device_id, created_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_sync_change_log_host_created
+    ON sync_change_log (host_name, created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_sync_change_log_created
     ON sync_change_log (created_at, change_id)`,
   `CREATE INDEX IF NOT EXISTS idx_sync_change_log_result_version
@@ -59,7 +59,7 @@ export const SYNC_SCHEMA_STATEMENTS = [
     size_bytes INTEGER,
     mime_type TEXT,
     availability TEXT NOT NULL DEFAULT 'missing',
-    source_device_id TEXT,
+    source_host_name TEXT,
     created_at TEXT NOT NULL,
     cached_at TEXT,
     last_verified_at TEXT

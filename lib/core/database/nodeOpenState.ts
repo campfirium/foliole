@@ -29,7 +29,7 @@ export function loadNodeOpenStateById(driver: DatabaseDriver) {
 }
 
 export function writeNodeOpenStateWithSync(driver: DatabaseDriver, input: {
-  deviceId: string;
+  hostName: string;
   lastOpenedAt: string;
   nodeId: string;
 }) {
@@ -37,7 +37,7 @@ export function writeNodeOpenStateWithSync(driver: DatabaseDriver, input: {
 }
 
 function writeNodeOpenStateInTransaction(driver: DatabaseDriver, input: {
-  deviceId: string;
+  hostName: string;
   lastOpenedAt: string;
   nodeId: string;
 }) {
@@ -60,7 +60,7 @@ function writeNodeOpenStateInTransaction(driver: DatabaseDriver, input: {
   const payload = { last_opened_at: lastOpenedAt, node_id: nodeId };
   upsertSyncObjectState(driver, {
     contentHash: computeSyncContentHash('node_open_state', payload),
-    lastModifiedByDeviceId: input.deviceId,
+    lastModifiedByHostName: input.hostName,
     objectId: nodeId,
     objectType: 'node_open_state',
     syncDirty: true,

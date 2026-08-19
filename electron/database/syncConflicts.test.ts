@@ -29,7 +29,7 @@ function createConflict(): NativeSyncNodeConflictRecord {
   return {
     conflict_version_id: 'phone#7',
     content_hash: 'hash-conflict',
-    device_id: 'phone',
+    host_name: 'phone',
     object_id: 'node-1',
     parent_version_id: 'desktop#3',
     snapshot: {
@@ -77,7 +77,7 @@ it('stores sync node conflicts as durable records', () => {
   expect(recordSyncNodeConflicts([createConflict()], '2026-04-21T12:00:00.000Z')).toEqual(['phone#7']);
 
   const row = openDatabaseConnection().sqlite.prepare(
-    `SELECT conflict_version_id, object_id, parent_version_id, device_id, content_hash, detected_at
+    `SELECT conflict_version_id, object_id, parent_version_id, host_name, content_hash, detected_at
      FROM node_sync_conflicts
      WHERE conflict_version_id = ?`
   ).get('phone#7');
@@ -86,7 +86,7 @@ it('stores sync node conflicts as durable records', () => {
     conflict_version_id: 'phone#7',
     object_id: 'node-1',
     parent_version_id: 'desktop#3',
-    device_id: 'phone',
+    host_name: 'phone',
     content_hash: 'hash-conflict',
     detected_at: '2026-04-21T12:00:00.000Z'
   });

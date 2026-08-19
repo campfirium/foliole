@@ -41,6 +41,7 @@ export interface NativeSyncObjectRecord {
 
 export interface NativeSyncStateObjectRecord extends NativeSyncObjectRecord {
   base_content_hash?: string | null;
+  last_modified_by_host_name: string;
   state_seq: number;
 }
 
@@ -71,7 +72,7 @@ export interface NativeSyncReviewLogRecord {
   scheduler_version: string;
   stability_after: number;
   stability_before: number;
-  device_id: string;
+  host_name: string;
 }
 
 export interface NativeSyncReviewLogDraft {
@@ -99,7 +100,7 @@ export interface NativeSyncNodeRecord {
   ancestor_version_ids: string[];
   body_text?: string | null;
   content_hash: string | null;
-  device_id: string | null;
+  host_name: string | null;
   is_tombstone?: boolean;
   object_id: string;
   object_type: 'node';
@@ -144,7 +145,7 @@ export interface NativeSyncNodeConflictRecord {
   conflict_version_id: string | null;
   content_hash: string | null;
   detected_at?: string;
-  device_id: string | null;
+  host_name: string | null;
   object_id: string;
   parent_version_id: string | null;
   snapshot: NativeSyncNodeRecord['snapshot'];

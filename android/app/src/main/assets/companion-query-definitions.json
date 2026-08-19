@@ -2,7 +2,7 @@
   "queries": {
     "nodeTextAlternativeAvailable": {
       "resultKey": "rows",
-      "sql": "SELECT alternative_id, node_id, source_version_id, body_text, source_device_id, created_at, status, updated_at FROM node_text_alternatives WHERE node_id = ? AND status = 'available' ORDER BY updated_at DESC, alternative_id ASC LIMIT 1",
+      "sql": "SELECT alternative_id, node_id, source_version_id, body_text, source_host_name, created_at, status, updated_at FROM node_text_alternatives WHERE node_id = ? AND status = 'available' ORDER BY updated_at DESC, alternative_id ASC LIMIT 1",
       "columns": [
         {
           "key": "alternative_id",
@@ -25,8 +25,8 @@
           "type": "string"
         },
         {
-          "key": "source_device_id",
-          "source": "source_device_id",
+          "key": "source_host_name",
+          "source": "source_host_name",
           "type": "string"
         },
         {
@@ -48,7 +48,7 @@
     },
     "nodeTextAlternativeById": {
       "resultKey": "rows",
-      "sql": "SELECT alternative_id, node_id, source_version_id, body_text, source_device_id, created_at, status, updated_at FROM node_text_alternatives WHERE alternative_id = ? LIMIT 1",
+      "sql": "SELECT alternative_id, node_id, source_version_id, body_text, source_host_name, created_at, status, updated_at FROM node_text_alternatives WHERE alternative_id = ? LIMIT 1",
       "columns": [
         {
           "key": "alternative_id",
@@ -71,8 +71,8 @@
           "type": "string"
         },
         {
-          "key": "source_device_id",
-          "source": "source_device_id",
+          "key": "source_host_name",
+          "source": "source_host_name",
           "type": "string"
         },
         {
@@ -105,7 +105,7 @@
     },
     "nodeByIdForRekey": {
       "resultKey": "rows",
-      "sql": "SELECT parent_id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled, shelved_at, manual_child_order, title, is_title_manual, hide_title_heading, content, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, import_source_fingerprint, import_content_fingerprint, position, current_version_id, last_modified_by_device_id, sync_dirty, created_at, updated_at, deleted_at FROM nodes WHERE id = ? LIMIT 1",
+      "sql": "SELECT parent_id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled, shelved_at, manual_child_order, title, is_title_manual, hide_title_heading, content, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, import_source_fingerprint, import_content_fingerprint, position, current_version_id, last_modified_by_host_name, sync_dirty, created_at, updated_at, deleted_at FROM nodes WHERE id = ? LIMIT 1",
       "columns": [
         {
           "key": "parent_id",
@@ -228,8 +228,8 @@
           "type": "nullableString"
         },
         {
-          "key": "last_modified_by_device_id",
-          "source": "last_modified_by_device_id",
+          "key": "last_modified_by_host_name",
+          "source": "last_modified_by_host_name",
           "type": "nullableString"
         },
         {
@@ -303,7 +303,7 @@
     },
     "syncStateChanges": {
       "resultKey": "objects",
-      "sql": "SELECT object_type, object_id, state_seq, content_hash, updated_at, deleted_at, base_content_hash FROM sync_object_state WHERE object_type NOT IN ('node', 'view_state') AND sync_dirty = 1 AND state_seq > ? AND NOT EXISTS (SELECT 1 FROM sync_delivery_receipts receipt WHERE receipt.peer_id = ? AND receipt.stream_name = 'state' AND receipt.operation_id = sync_object_state.object_type || ':' || sync_object_state.object_id || ':' || sync_object_state.state_seq AND (receipt.status IN ('accepted', 'confirmed') OR (receipt.status IN ('conflict', 'rejected') AND receipt.object_type IN ('attachment', 'external_document', 'external_folder', 'import_source', 'node', 'node_reading', 'node_review', 'node_text_alternative', 'pdf_page_text', 'setting', 'watched_folder')))) ORDER BY state_seq ASC LIMIT ?",
+      "sql": "SELECT object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, deleted_at, base_content_hash FROM sync_object_state WHERE object_type NOT IN ('node', 'view_state') AND sync_dirty = 1 AND state_seq > ? AND NOT EXISTS (SELECT 1 FROM sync_delivery_receipts receipt WHERE receipt.peer_id = ? AND receipt.stream_name = 'state' AND receipt.operation_id = sync_object_state.object_type || ':' || sync_object_state.object_id || ':' || sync_object_state.state_seq AND (receipt.status IN ('accepted', 'confirmed') OR (receipt.status IN ('conflict', 'rejected') AND receipt.object_type IN ('attachment', 'external_document', 'external_folder', 'import_source', 'node', 'node_reading', 'node_review', 'node_text_alternative', 'pdf_page_text', 'setting', 'watched_folder')))) ORDER BY state_seq ASC LIMIT ?",
       "columns": [
         {
           "key": "object_type",
@@ -323,6 +323,11 @@
         {
           "key": "content_hash",
           "source": "content_hash",
+          "type": "string"
+        },
+        {
+          "key": "last_modified_by_host_name",
+          "source": "last_modified_by_host_name",
           "type": "string"
         },
         {
@@ -416,7 +421,7 @@
     },
     "syncReviewLog": {
       "resultKey": "reviews",
-      "sql": "SELECT id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at, due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after FROM review_log WHERE device_id = ? AND (? = '' OR ? = '' OR reviewed_at > ? OR (reviewed_at = ? AND op_id > ?)) AND NOT EXISTS (SELECT 1 FROM sync_delivery_receipts receipt WHERE receipt.peer_id = ? AND receipt.stream_name = 'review_log' AND receipt.operation_id = 'review_log:' || review_log.op_id AND receipt.status <> 'pending') ORDER BY reviewed_at ASC, op_id ASC LIMIT ?",
+      "sql": "SELECT id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at, due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after FROM review_log WHERE host_name = ? AND (? = '' OR ? = '' OR reviewed_at > ? OR (reviewed_at = ? AND op_id > ?)) AND NOT EXISTS (SELECT 1 FROM sync_delivery_receipts receipt WHERE receipt.peer_id = ? AND receipt.stream_name = 'review_log' AND receipt.operation_id = 'review_log:' || review_log.op_id AND receipt.status <> 'pending') ORDER BY reviewed_at ASC, op_id ASC LIMIT ?",
       "columns": [
         {
           "key": "id",
@@ -429,8 +434,8 @@
           "type": "string"
         },
         {
-          "key": "device_id",
-          "source": "device_id",
+          "key": "host_name",
+          "source": "host_name",
           "type": "string"
         },
         {
@@ -487,7 +492,7 @@
     },
     "syncNodeVersions": {
       "resultKey": "nodes",
-      "sql": "SELECT * FROM (SELECT v.version_id, v.object_id, 'node' AS object_type, v.parent_version_id, v.device_id, 0 AS is_tombstone, v.created_at AS version_created_at, n.updated_at AS updated_at, v.content_hash, v.body_text, v.snapshot_json AS snapshot FROM node_sync_versions v INNER JOIN nodes n ON n.id = v.object_id WHERE v.device_id = ?1 AND (?3 = '' OR ?4 = '' OR v.created_at > ?5 OR (v.created_at = ?6 AND v.version_id > ?7)) AND NOT EXISTS (SELECT 1 FROM sync_delivery_receipts receipt WHERE receipt.peer_id = ?2 AND receipt.stream_name = 'node_version' AND receipt.operation_id = 'node:' || v.version_id AND receipt.status <> 'pending') AND n.current_version_id = v.version_id AND n.deleted_at IS NULL UNION ALL SELECT t.version_id, t.node_id AS object_id, 'node' AS object_type, t.parent_version_id, t.device_id, 1 AS is_tombstone, t.created_at AS version_created_at, t.deleted_at AS updated_at, t.content_hash, NULL AS body_text, t.snapshot_json AS snapshot FROM node_sync_tombstones t WHERE t.device_id = ?1 AND (?3 = '' OR ?4 = '' OR t.created_at > ?5 OR (t.created_at = ?6 AND t.version_id > ?7)) AND NOT EXISTS (SELECT 1 FROM sync_delivery_receipts receipt WHERE receipt.peer_id = ?2 AND receipt.stream_name = 'node_version' AND receipt.operation_id = 'node:' || t.version_id AND receipt.status <> 'pending') ) ORDER BY version_created_at ASC, version_id ASC LIMIT ?8",
+      "sql": "SELECT * FROM (SELECT v.version_id, v.object_id, 'node' AS object_type, v.parent_version_id, v.host_name, 0 AS is_tombstone, v.created_at AS version_created_at, n.updated_at AS updated_at, v.content_hash, v.body_text, v.snapshot_json AS snapshot FROM node_sync_versions v INNER JOIN nodes n ON n.id = v.object_id WHERE v.host_name = ?1 AND (?3 = '' OR ?4 = '' OR v.created_at > ?5 OR (v.created_at = ?6 AND v.version_id > ?7)) AND NOT EXISTS (SELECT 1 FROM sync_delivery_receipts receipt WHERE receipt.peer_id = ?2 AND receipt.stream_name = 'node_version' AND receipt.operation_id = 'node:' || v.version_id AND receipt.status <> 'pending') AND n.current_version_id = v.version_id AND n.deleted_at IS NULL UNION ALL SELECT t.version_id, t.node_id AS object_id, 'node' AS object_type, t.parent_version_id, t.host_name, 1 AS is_tombstone, t.created_at AS version_created_at, t.deleted_at AS updated_at, t.content_hash, NULL AS body_text, t.snapshot_json AS snapshot FROM node_sync_tombstones t WHERE t.host_name = ?1 AND (?3 = '' OR ?4 = '' OR t.created_at > ?5 OR (t.created_at = ?6 AND t.version_id > ?7)) AND NOT EXISTS (SELECT 1 FROM sync_delivery_receipts receipt WHERE receipt.peer_id = ?2 AND receipt.stream_name = 'node_version' AND receipt.operation_id = 'node:' || t.version_id AND receipt.status <> 'pending') ) ORDER BY version_created_at ASC, version_id ASC LIMIT ?8",
       "columns": [
         {
           "key": "version_id",
@@ -1569,7 +1574,7 @@
         "argMode": "object_id",
         "objectType": "attachment"
       },
-      "sql": "SELECT json_object('attachment_id', a.id, 'original_name', a.original_name, 'mime_type', a.mime_type, 'size_bytes', a.size_bytes, 'created_at', a.created_at, 'blob', json_object('content_hash', b.content_hash, 'storage_key', b.storage_key, 'size_bytes', b.size_bytes, 'mime_type', b.mime_type, 'availability', b.availability, 'source_device_id', b.source_device_id, 'created_at', b.created_at, 'cached_at', b.cached_at, 'last_verified_at', b.last_verified_at)) AS payload_json FROM attachments a LEFT JOIN attachment_blobs b ON b.attachment_id = a.id WHERE a.id = ? LIMIT 1"
+      "sql": "SELECT json_object('attachment_id', a.id, 'original_name', a.original_name, 'mime_type', a.mime_type, 'size_bytes', a.size_bytes, 'created_at', a.created_at, 'blob', json_object('content_hash', b.content_hash, 'storage_key', b.storage_key, 'size_bytes', b.size_bytes, 'mime_type', b.mime_type, 'availability', b.availability, 'source_host_name', b.source_host_name, 'created_at', b.created_at, 'cached_at', b.cached_at, 'last_verified_at', b.last_verified_at)) AS payload_json FROM attachments a LEFT JOIN attachment_blobs b ON b.attachment_id = a.id WHERE a.id = ? LIMIT 1"
     },
     "syncPayloadExternalDocument": {
       "syncPayload": {
@@ -1809,8 +1814,8 @@
           "type": "string"
         },
         {
-          "key": "source_device_id",
-          "source": "source_device_id",
+          "key": "source_host_name",
+          "source": "source_host_name",
           "type": "string"
         },
         {
@@ -1834,7 +1839,7 @@
         "argMode": "object_id",
         "objectType": "node_text_alternative"
       },
-      "sql": "SELECT alternative_id, node_id, source_version_id, body_text, source_device_id, created_at, status, updated_at FROM node_text_alternatives WHERE alternative_id = ? LIMIT 1"
+      "sql": "SELECT alternative_id, node_id, source_version_id, body_text, source_host_name, created_at, status, updated_at FROM node_text_alternatives WHERE alternative_id = ? LIMIT 1"
     },
     "syncPayloadPdfPageText": {
       "syncPayload": {

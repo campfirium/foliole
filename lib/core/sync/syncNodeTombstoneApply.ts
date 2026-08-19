@@ -31,7 +31,7 @@ async function deleteLocalNodeRows(port: DbPort, nodeId: string) {
 }
 
 export async function applyRemoteNodeTombstone(port: DbPort, record: NativeSyncNodeRecord) {
-  if (!record.version_id || !record.device_id || !record.content_hash || !record.snapshot.deleted_at) {
+  if (!record.version_id || !record.host_name || !record.content_hash || !record.snapshot.deleted_at) {
     return false;
   }
   const createdAt = record.version_created_at ?? record.snapshot.deleted_at;
@@ -40,7 +40,7 @@ export async function applyRemoteNodeTombstone(port: DbPort, record: NativeSyncN
        node_id,
        version_id,
        parent_version_id,
-       device_id,
+       host_name,
        content_hash,
        snapshot_json,
        deleted_at,
@@ -49,7 +49,7 @@ export async function applyRemoteNodeTombstone(port: DbPort, record: NativeSyncN
      ON CONFLICT(node_id) DO UPDATE SET
        version_id = excluded.version_id,
        parent_version_id = excluded.parent_version_id,
-       device_id = excluded.device_id,
+       host_name = excluded.host_name,
        content_hash = excluded.content_hash,
        snapshot_json = excluded.snapshot_json,
        deleted_at = excluded.deleted_at,
@@ -58,7 +58,7 @@ export async function applyRemoteNodeTombstone(port: DbPort, record: NativeSyncN
       record.object_id,
       record.version_id,
       record.parent_version_id,
-      record.device_id,
+      record.host_name,
       record.content_hash,
       JSON.stringify(record.snapshot),
       record.snapshot.deleted_at,

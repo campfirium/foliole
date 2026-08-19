@@ -49,7 +49,7 @@
     "compression": "zlib",
     "databaseEntry": "incoming.db.deflate",
     "format": "foliole.sync-pack",
-    "formatVersion": 6,
+    "formatVersion": 7,
     "legacyOptionalNodeColumns": [
       "priority",
       "desired_retention",
@@ -79,8 +79,8 @@
       "content_blobs",
       "review_log"
     ],
-    "maximumSchemaVersion": 71,
-    "minimumSchemaVersion": 71,
+    "maximumSchemaVersion": 72,
+    "minimumSchemaVersion": 72,
     "sqliteTableRequirements": {
       "pack_manifest": [
         "key",
@@ -117,6 +117,7 @@
         "object_id",
         "state_seq",
         "content_hash",
+        "last_modified_by_host_name",
         "updated_at",
         "deleted_at"
       ],
@@ -149,7 +150,7 @@
         "version_id",
         "object_id",
         "parent_version_id",
-        "device_id",
+        "host_name",
         "created_at",
         "content_hash",
         "body_text",
@@ -200,7 +201,7 @@
         "original_sha256",
         "stored_sha256",
         "availability",
-        "source_device_id",
+        "source_host_name",
         "created_at",
         "cached_at",
         "last_verified_at"
@@ -208,7 +209,7 @@
       "review_log": [
         "id",
         "op_id",
-        "device_id",
+        "host_name",
         "node_id",
         "grade",
         "scheduler_version",

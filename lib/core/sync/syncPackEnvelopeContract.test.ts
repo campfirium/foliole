@@ -17,7 +17,7 @@ it('defines the shared sync pack envelope and actual sqlite requirements', () =>
     compression: 'zlib',
     databaseEntry: 'incoming.db.deflate',
     format: 'foliole.sync-pack',
-    formatVersion: 6,
+    formatVersion: 7,
     manifestTableNames: SYNC_PACK_TABLE_NAMES,
     maximumSchemaVersion: DATABASE_SCHEMA_VERSION,
     minimumSchemaVersion: DATABASE_SCHEMA_VERSION

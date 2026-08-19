@@ -23,7 +23,7 @@ export interface ApplyReviewGradeInput {
 }
 
 export interface ReviewMutationContext {
-  deviceId: string;
+  hostName: string;
   createId: () => string;
 }
 
@@ -53,7 +53,7 @@ ON CONFLICT(node_id) DO UPDATE SET
 const INSERT_REVIEW_LOG_SQL = `INSERT INTO review_log (
   id,
   op_id,
-  device_id,
+  host_name,
   node_id,
   grade,
   scheduler_version,
@@ -85,7 +85,7 @@ function toReviewLogParams(input: ApplyReviewGradeInput, context: ReviewMutation
   return [
     logId,
     opId,
-    context.deviceId,
+    context.hostName,
     input.nodeId,
     input.grade,
     input.schedulerVersion,
@@ -127,7 +127,7 @@ export function applyReviewGrade(
     upsertNodeReviewStatement.run(toNodeReviewParams(input));
     insertReviewLogStatement.run(toReviewLogParams(input, context, opId, logId));
     recordNodeReviewSyncState(driver, input.nodeId, toNodeReviewSyncPayload(input), {
-      deviceId: context.deviceId,
+      hostName: context.hostName,
       logId,
       opId,
       reviewedAt: input.reviewedAt
@@ -138,7 +138,7 @@ export function applyReviewGrade(
 export function resetNodeReviewState(
   driver: DatabaseDriver,
   nodeId: string,
-  context?: { deletedAt: string; deviceId: string }
+  context?: { deletedAt: string; hostName: string }
 ): void {
   driver.prepare('DELETE FROM node_review WHERE node_id = ?').run([nodeId]);
   if (context) {

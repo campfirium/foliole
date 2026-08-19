@@ -34,6 +34,7 @@ beforeEach(async () => {
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabaseConnection(openDatabaseConnection());
   saveJsonSetting('device_id', 'desktop-test', '2026-08-12T00:00:00.000Z');
+  saveJsonSetting('host_name', 'Desktop test host', '2026-08-12T00:00:00.000Z');
 });
 
 afterEach(async () => {
@@ -45,13 +46,13 @@ function insertSettingRecord() {
   const driver = openDatabaseConnection().driver;
   driver.execute(
     `INSERT INTO setting_records (
-       key, scope, platform, form_factor, device_id, value_json, content_hash, updated_at
+       key, scope, platform, form_factor, host_name, value_json, content_hash, updated_at
      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     ['app_settings', 'user_space', 'windows', 'desktop', '*', '{"theme":"dark"}', 'hash-setting', '2026-04-21T16:20:00.000Z']
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES (?, ?, (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state), ?, ?, ?, ?)`,
     ['setting', 'user_space:windows:desktop:*:app_settings', 'hash-setting', 'desktop', '2026-04-21T16:20:00.000Z', 1]
   );
@@ -69,7 +70,7 @@ function insertImportSourceRecord() {
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES (?, ?, (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state), ?, ?, ?, ?)`,
     ['import_source', 'source-1', 'hash-import-source', 'desktop', '2026-04-21T16:00:00.000Z', 1]
   );
@@ -87,7 +88,7 @@ function insertExternalFolderRecord() {
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES (?, ?, (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state), ?, ?, ?, ?)`,
     ['external_folder', 'folder-1', 'hash-external-folder', 'desktop', '2026-04-21T16:00:00.000Z', 1]
   );
@@ -107,7 +108,7 @@ function insertExternalDocumentRecord() {
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES (?, ?, (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state), ?, ?, ?, ?)`,
     ['external_document', 'doc-1', 'hash-external-document', 'desktop', '2026-04-21T16:00:00.000Z', 1]
   );
@@ -123,14 +124,14 @@ function insertAttachmentRecord() {
   driver.execute(
     `INSERT INTO attachment_blobs (
        attachment_id, content_hash, storage_key, size_bytes, mime_type,
-       availability, source_device_id, created_at, cached_at, last_verified_at
+       availability, source_host_name, created_at, cached_at, last_verified_at
      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ['att-1', 'sha256:att-1', 'sha256-att-1.png', 12, 'image/png',
       'local', 'desktop-1', '2026-04-21T10:00:00.000Z', '2026-04-21T10:00:00.000Z', '2026-04-21T10:00:00.000Z']
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES (?, ?, (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state), ?, ?, ?, ?)`,
     ['attachment', 'att-1', 'hash-attachment', 'desktop', '2026-04-21T16:00:00.000Z', 1]
   );
@@ -140,13 +141,13 @@ function insertViewStateRecord() {
   const driver = openDatabaseConnection().driver;
   driver.execute(
     `INSERT INTO node_view_state (
-       node_id, device_id, scroll_top, selection_from, selection_to, source, updated_at
+       node_id, host_name, scroll_top, selection_from, selection_to, source, updated_at
      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
     ['node-1', 'desktop-test', 128, null, null, 'close-flush', '2026-04-21T16:20:00.000Z']
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES (?, ?, (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state), ?, ?, ?, ?)`,
     ['view_state', 'session_resume:windows:desktop:desktop-test:node:node-1',
       'hash-view-state', 'desktop-test', '2026-04-21T16:20:00.000Z', 1]
@@ -238,7 +239,7 @@ it('exports view state source but excludes it from canonical content hash', () =
     source: 'close-flush'
   });
   expect(computeSyncContentHash('view_state', withoutNodeViewStateHashSource({
-    device_id: 'android-test',
+    host_name: 'Android test host',
     form_factor: 'phone',
     key: 'node:node-1',
     node_id: 'node-1',
@@ -248,7 +249,7 @@ it('exports view state source but excludes it from canonical content hash', () =
     selection_from: null,
     selection_to: null,
     source: 'user-scroll'
-  }))).toBe('6fb29bb8de16468ec732071d8ed30ca9d673f862b19fca933d01362c9c33ae46');
+  }))).toBe('d6cb842e751d098aa5a5fed7334b31f876008bf79742e5b0fb441fd008e708fb');
 });
 
 it('records import sources as sync objects when written', () => {

@@ -48,7 +48,7 @@ it('applies learning state after the pack applies its node row', async () => {
   try {
     await expect(applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor: 0,
-      deviceId: 'android-device'
+      hostName: 'android-device'
     })).resolves.toMatchObject({
       applied: true,
       appliedObjectCount: 2,
@@ -94,7 +94,7 @@ it('removes learning state when the pack deletes its node row', async () => {
   try {
     await expect(applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor: 0,
-      deviceId: 'android-device'
+      hostName: 'android-device'
     })).resolves.toMatchObject({
       applied: true,
       appliedObjectCount: 1,
@@ -121,12 +121,14 @@ function createIncomingLearningDependencyPack(filePath: string) {
       JSON.stringify({ from_state_seq: 0, to_state_seq: 2 })
     );
     db.prepare(
-      `INSERT INTO sync_object_state (object_type, object_id, state_seq, content_hash, updated_at, deleted_at)
-       VALUES ('node', 'node-reading-1', 1, 'node-reading-hash-1', '2026-05-04T01:59:00.000Z', NULL)`
+      `INSERT INTO sync_object_state (
+         object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, deleted_at
+       ) VALUES ('node', 'node-reading-1', 1, 'node-reading-hash-1', 'desktop-host', '2026-05-04T01:59:00.000Z', NULL)`
     ).run();
     db.prepare(
-      `INSERT INTO sync_object_state (object_type, object_id, state_seq, content_hash, updated_at, deleted_at)
-       VALUES ('node_reading', 'node-reading-1', 2, 'reading-hash-1', '2026-05-04T02:00:00.000Z', NULL)`
+      `INSERT INTO sync_object_state (
+         object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, deleted_at
+       ) VALUES ('node_reading', 'node-reading-1', 2, 'reading-hash-1', 'desktop-host', '2026-05-04T02:00:00.000Z', NULL)`
     ).run();
     db.prepare(
       `INSERT INTO sync_objects (object_type, object_id, content_hash, payload_json, updated_at, deleted_at)
@@ -155,7 +157,7 @@ function createIncomingLearningDependencyPack(filePath: string) {
     );
     db.prepare(
       `INSERT INTO node_sync_versions (
-         version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+         version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
        ) VALUES (?, ?, NULL, ?, ?, ?, ?)`
     ).run(
       'desktop#reading-1',
@@ -179,8 +181,10 @@ function createIncomingDeletedNodePack(filePath: string) {
       JSON.stringify({ from_state_seq: 0, to_state_seq: 1 })
     );
     db.prepare(
-      `INSERT INTO sync_object_state (object_type, object_id, state_seq, content_hash, updated_at, deleted_at)
-       VALUES ('node', 'node-deleted-1', 1, 'node-deleted-hash-1', '2026-05-04T02:00:00.000Z', '2026-05-04T02:00:00.000Z')`
+      `INSERT INTO sync_object_state (
+         object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, deleted_at
+       ) VALUES ('node', 'node-deleted-1', 1, 'node-deleted-hash-1', 'desktop-host',
+         '2026-05-04T02:00:00.000Z', '2026-05-04T02:00:00.000Z')`
     ).run();
     db.prepare(
       `INSERT INTO nodes (
@@ -197,7 +201,7 @@ function createIncomingDeletedNodePack(filePath: string) {
     );
     db.prepare(
       `INSERT INTO node_sync_versions (
-         version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+         version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
        ) VALUES (?, ?, NULL, ?, ?, ?, ?)`
     ).run(
       'desktop#deleted-1',

@@ -14,20 +14,20 @@ export interface NodeReviewSyncPayload {
 }
 
 export interface NodeReviewSyncContext {
-  deviceId: string;
+  hostName: string;
   logId: string;
   opId: string;
   reviewedAt: string;
 }
 
 export interface NodeReviewResetContext {
-  deviceId: string;
+  hostName: string;
   deletedAt: string;
 }
 
 export interface WriteNodeReviewSyncInput {
   nodeId: string;
-  deviceId?: string;
+  hostName?: string;
   review?: NodeReviewSyncPayload | null;
   updatedAt: string;
 }
@@ -66,7 +66,7 @@ export function recordNodeReviewSyncState(
     objectType: 'node_review',
     objectId: nodeId,
     contentHash,
-    lastModifiedByDeviceId: context.deviceId,
+    lastModifiedByHostName: context.hostName,
     updatedAt: context.reviewedAt,
     syncDirty: true
   });
@@ -83,7 +83,7 @@ export function recordNodeReviewTombstone(
     objectId: nodeId,
     contentHash,
     deletedAt: context.deletedAt,
-    lastModifiedByDeviceId: context.deviceId,
+    lastModifiedByHostName: context.hostName,
     updatedAt: context.deletedAt,
     syncDirty: true
   });
@@ -109,9 +109,9 @@ export function writeNodeReviewSnapshotWithSync(
     input.review.reps,
     input.review.lapses
   ]);
-  if (input.deviceId) {
+  if (input.hostName) {
     recordNodeReviewSyncState(driver, input.nodeId, input.review, {
-      deviceId: input.deviceId,
+      hostName: input.hostName,
       logId: '',
       opId: '',
       reviewedAt: input.updatedAt

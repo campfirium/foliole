@@ -16,7 +16,7 @@ it('selects only supported local state through the shared macOS payload contract
     device_id: '*', form_factor: 'phone', key: 'handoff_reminder_settings',
     platform: 'ios', scope: 'device', value_json: '{"enabled":true}'
   });
-  fake.meta.set('device_id', 'ios-device');
+  fake.meta.set('host_name', 'iPhone');
   fake.stateRows = [
     stateRow('node_open_state', 'open-hash', 3),
     stateRow('node_reading', 'reading-hash', 4),
@@ -39,7 +39,7 @@ it('selects only supported local state through the shared macOS payload contract
     scheduled_days: 2, stability: 4.1, state: 2
   }];
   fake.settingPayloadRows = [{ payload_json: settingPayloadJson }];
-  fake.reviewRows = [reviewRow('ios-device', 'op-1'), reviewRow('other-device', 'op-2')];
+  fake.reviewRows = [reviewRow('iPhone', 'op-1'), reviewRow('other-host', 'op-2')];
   const store = createCompanionSyncbackDbStore(fake);
 
   await expect(store.loadStateChanges('desktop-peer', null, 20)).resolves.toEqual([
@@ -50,7 +50,7 @@ it('selects only supported local state through the shared macOS payload contract
     expect.objectContaining({ object_type: 'node_review', payload_json: JSON.stringify(fake.reviewPayloadRows[0]) }),
     expect.objectContaining({ object_type: 'setting', payload_json: settingPayloadJson })
   ]);
-  await expect(store.loadReviewLog('desktop-peer', null, 20)).resolves.toEqual([reviewRow('ios-device', 'op-1')]);
+  await expect(store.loadReviewLog('desktop-peer', null, 20)).resolves.toEqual([reviewRow('iPhone', 'op-1')]);
   expect(fake.queries).toContainEqual([CONTRACT.sql.state, [0, 'desktop-peer', 20]]);
   expect(fake.queries).toContainEqual([CONTRACT.sql.readingPayload, ['node-1']]);
   expect(fake.queries).toContainEqual([CONTRACT.sql.reviewPayload, ['node-1']]);
@@ -78,9 +78,9 @@ it('pushes an alternative under a deleted node as a tombstone', async () => {
 });
 
 it('loads local node versions with shared ordering and ancestor semantics', async () => {
-  fake.meta.set('device_id', 'ios-device');
+  fake.meta.set('host_name', 'iPhone');
   fake.nodeRows = [{
-    content_hash: 'node-hash', device_id: 'ios-device', is_tombstone: 0,
+    content_hash: 'node-hash', host_name: 'iPhone', is_tombstone: 0,
     object_id: 'node-1', object_type: 'node', parent_version_id: 'desktop#1',
     snapshot: JSON.stringify({ id: 'node-1', title: 'iPhone note' }),
     updated_at: '2026-07-21T00:00:00.000Z', version_created_at: '2026-07-21T00:00:00.000Z',
@@ -97,12 +97,12 @@ it('loads local node versions with shared ordering and ancestor semantics', asyn
   })]);
   expect(fake.queries).toContainEqual([
     CONTRACT.sql.nodeVersions,
-    ['ios-device', 'desktop-peer', '', '', '', '', '', 20]
+    ['iPhone', 'desktop-peer', '', '', '', '', '', 20]
   ]);
 });
 
 it('rejects malformed local node snapshots before they reach the Mac push protocol', async () => {
-  fake.meta.set('device_id', 'ios-device');
+  fake.meta.set('host_name', 'iPhone');
   fake.nodeRows = [{
     is_tombstone: 0,
     snapshot: 'not-json',
@@ -151,9 +151,9 @@ function stateRow(
   };
 }
 
-function reviewRow(deviceId: string, opId: string) {
+function reviewRow(hostName: string, opId: string) {
   return {
-    device_id: deviceId, difficulty_after: 3.2, difficulty_before: 3.1,
+    host_name: hostName, difficulty_after: 3.2, difficulty_before: 3.1,
     due_after: '2026-07-22T00:00:00.000Z', due_before: '2026-07-20T00:00:00.000Z',
     grade: 3, id: `id-${opId}`, node_id: 'node-1', op_id: opId,
     reviewed_at: '2026-07-20T00:00:00.000Z', scheduler_version: 'ts-fsrs@4',
@@ -209,7 +209,7 @@ class FakeDbPort implements DbPort {
     if (sql === CONTRACT.sql.reviewPayload) return this.reviewPayloadRows as T[];
     if (sql === CONTRACT.sql.settingPayload) return this.settingPayloadRows as T[];
     if (sql === CONTRACT.sql.reviewLog) {
-      return this.reviewRows.filter((row) => row.device_id === params[0]) as T[];
+      return this.reviewRows.filter((row) => row.host_name === params[0]) as T[];
     }
     return [];
   }

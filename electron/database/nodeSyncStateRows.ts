@@ -6,9 +6,9 @@ interface MissingNodeSyncStateRow extends DatabaseRow {
   content_hash: string;
   current_version_id: string;
   deleted_at: string | null;
-  device_id: string;
+  host_name: string;
   id: string;
-  last_modified_by_device_id: string | null;
+  last_modified_by_host_name: string | null;
   updated_at: string;
 }
 
@@ -16,7 +16,7 @@ export function upsertNodeSyncState(args: {
   contentHash: string;
   currentVersionId: string;
   deletedAt: string | null;
-  deviceId: string;
+  hostName: string;
   nodeId: string;
   updatedAt: string;
 }, driver: DatabaseDriver) {
@@ -25,7 +25,7 @@ export function upsertNodeSyncState(args: {
     objectId: args.nodeId,
     currentVersionId: args.currentVersionId,
     contentHash: args.contentHash,
-    lastModifiedByDeviceId: args.deviceId,
+    lastModifiedByHostName: args.hostName,
     updatedAt: args.updatedAt,
     deletedAt: args.deletedAt,
     syncDirty: false
@@ -39,10 +39,10 @@ export function backfillMissingNodeSyncState(
     `SELECT
        n.id,
        n.current_version_id,
-       n.last_modified_by_device_id,
+       n.last_modified_by_host_name,
        n.updated_at,
        n.deleted_at,
-       v.device_id,
+       v.host_name,
        v.content_hash
      FROM nodes n
      INNER JOIN node_sync_versions v ON v.version_id = n.current_version_id
@@ -56,7 +56,7 @@ export function backfillMissingNodeSyncState(
       contentHash: row.content_hash,
       currentVersionId: row.current_version_id,
       deletedAt: row.deleted_at,
-      deviceId: row.last_modified_by_device_id ?? row.device_id,
+      hostName: row.last_modified_by_host_name ?? row.host_name,
       nodeId: row.id,
       updatedAt: row.updated_at
     }, driver);

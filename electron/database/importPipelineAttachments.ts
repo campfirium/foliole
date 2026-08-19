@@ -111,7 +111,7 @@ function recordAttachmentBlobManifest(input: {
     sizeBytes: input.sizeBytes,
     mimeType: input.mimeType,
     availability: 'local',
-    sourceDeviceId: null,
+    sourceHostName: null,
     createdAt: input.attachment.createdAt,
     cachedAt: input.attachment.createdAt,
     lastVerifiedAt: input.attachment.createdAt

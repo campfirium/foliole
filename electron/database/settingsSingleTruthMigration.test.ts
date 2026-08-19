@@ -27,6 +27,11 @@ beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-setting-migration-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabaseConnection(openDatabaseConnection());
+  openDatabaseConnection().sqlite.exec(
+    'ALTER TABLE setting_records RENAME COLUMN host_name TO device_id;' +
+    'ALTER TABLE sync_object_state RENAME COLUMN last_modified_by_host_name TO last_modified_by_device_id;' +
+    "DELETE FROM settings WHERE key = 'host_name'"
+  );
   writeProjection('device_id', '"desktop-device"', '2026-07-10T00:00:00.000Z');
 });
 
@@ -58,15 +63,19 @@ function writeRecord(args: {
   );
 }
 
-function settingRecord(key: string, scope = 'user_space', deviceId = '*') {
-  return openDatabaseConnection().driver.queryOne<{
+function settingRecord(key: string, scope = 'user_space', hostName = '*') {
+  const connection = openDatabaseConnection();
+  const columns = connection.sqlite.prepare("SELECT name FROM pragma_table_info('setting_records')")
+    .pluck().all() as string[];
+  const hostColumn = columns.includes('host_name') ? 'host_name' : 'device_id';
+  return connection.driver.queryOne<{
     content_hash: string;
     updated_at: string;
     value_json: string;
   }>(
     `SELECT value_json, content_hash, updated_at FROM setting_records
-     WHERE key = ? AND scope = ? AND platform = 'windows' AND form_factor = 'desktop' AND device_id = ?`,
-    [key, scope, deviceId]
+     WHERE key = ? AND scope = ? AND platform = 'windows' AND form_factor = 'desktop' AND ${hostColumn} = ?`,
+    [key, scope, hostName]
   );
 }
 
@@ -136,7 +145,7 @@ it('applies local tombstones without materializing foreign device records', () =
 
   expect(projection('discourse_publish_settings')).toBeUndefined();
   expect(projection('window_state')?.value).toBe('{"width":900}');
-  expect(settingRecord('window_state', 'session_resume', 'foreign-device')?.value_json).toBe('{"width":1200}');
+  expect(settingRecord('window_state', 'session_resume', 'foreign-device')).toBeUndefined();
   expect(settingRecord('window_state', 'session_resume', 'desktop-device')?.value_json).toBe('{"width":900}');
 });
 

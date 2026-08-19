@@ -76,6 +76,7 @@ async function resetTestState() {
 function buildPushBody() {
   return JSON.stringify({
     items: [{
+      authorHostName: 'Pixel Test',
       base: { baseContentHash: 'desktop-base', kind: 'content_hash' },
       clientOpId: 'node_review:node-1:12',
       contentHash: 'android-next',

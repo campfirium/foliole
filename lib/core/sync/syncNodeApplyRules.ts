@@ -18,7 +18,7 @@ export type IncomingNodeApplyDecision =
 export type SyncNodeApplyOperation = 'local_restore' | 'remote_sync';
 
 function branchRecordKey(record: NativeSyncNodeRecord) {
-  return `${record.object_id}\n${record.device_id?.trim() || 'remote'}`;
+  return `${record.object_id}\n${record.host_name?.trim() || 'remote'}`;
 }
 
 function compareRecordHead(left: NativeSyncNodeRecord, right: NativeSyncNodeRecord) {

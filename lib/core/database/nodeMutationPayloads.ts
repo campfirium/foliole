@@ -57,7 +57,6 @@ export interface NodeImageRegionGroupPayload {
 
 export interface UpsertNodeSnapshotInput {
   nodeId: string;
-  deviceId?: string;
   hostName?: string;
   parentNodeId: string | null;
   kind: NodeKind;

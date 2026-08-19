@@ -163,7 +163,7 @@ export function updateLocalDesktopSourceHosts(input: {
 function recordHostProjectionSync(
   driver: DatabaseDriver,
   source: { object_id: string; source_type: DesktopSourceType },
-  input: { currentDeviceId: string; updatedAt: string }
+  input: { currentHostName: string; updatedAt: string }
 ) {
   if (source.source_type === 'readwise') return;
   const objectType = source.source_type === 'external' ? 'external_folder' : 'watched_folder';
@@ -171,7 +171,7 @@ function recordHostProjectionSync(
   if (!row) return;
   upsertSyncObjectState(driver, {
     contentHash: computeSyncContentHash(objectType, JSON.parse(row.payload_json)),
-    lastModifiedByDeviceId: input.currentDeviceId,
+    lastModifiedByHostName: input.currentHostName,
     objectId: source.object_id,
     objectType,
     syncDirty: true,

@@ -22,7 +22,7 @@ export interface ReviewLogRecordInput {
   scheduler_version: string;
   stability_after: number;
   stability_before: number;
-  device_id: string;
+  host_name: string;
 }
 
 export interface SyncPackReviewLogRecord extends DbRow, ReviewLogRecordInput {}
@@ -45,7 +45,7 @@ async function incomingReviewLogTableExists(port: DbPort, options: SyncPackRevie
 function loadIncomingReviewLog(port: DbPort, options: SyncPackReviewLogOptions) {
   const alias = options.incomingAlias ?? 'inc';
   return port.query<SyncPackReviewLogRecord>(
-    `SELECT id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at, ` +
+    `SELECT id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at, ` +
     `due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after ` +
     `FROM ${alias}.review_log ORDER BY reviewed_at ASC, op_id ASC`
   );
@@ -59,14 +59,14 @@ async function nodeExists(port: DbPort, nodeId: string) {
 function insertReviewLog(port: DbPort, record: ReviewLogRecordInput) {
   return port.run(
     `INSERT INTO review_log (` +
-    `id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at, ` +
+    `id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at, ` +
     `due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after` +
     `) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ` +
     `ON CONFLICT(op_id) DO NOTHING`,
     [
       record.id,
       record.op_id,
-      record.device_id,
+      record.host_name,
       record.node_id,
       record.grade,
       record.scheduler_version,
@@ -83,7 +83,7 @@ function insertReviewLog(port: DbPort, record: ReviewLogRecordInput) {
 
 async function existingReviewLog(port: DbPort, opId: string) {
   const [record] = await port.query<SyncPackReviewLogRecord>(
-    `SELECT id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at,
+    `SELECT id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at,
        due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after
      FROM review_log WHERE op_id = ? LIMIT 1`,
     [opId]
@@ -94,7 +94,7 @@ async function existingReviewLog(port: DbPort, opId: string) {
 function sameReviewLog(left: ReviewLogRecordInput, right: ReviewLogRecordInput) {
   return left.id === right.id
     && left.op_id === right.op_id
-    && left.device_id === right.device_id
+    && left.host_name === right.host_name
     && left.node_id === right.node_id
     && left.grade === right.grade
     && left.scheduler_version === right.scheduler_version

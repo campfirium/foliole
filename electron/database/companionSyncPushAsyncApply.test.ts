@@ -38,8 +38,9 @@ beforeEach(async () => {
   saveJsonSetting('device_id', 'desktop-device', '2026-04-30T00:00:00.000Z');
   openDatabaseConnection().driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
-     ) VALUES ('setting', 'device:android:phone:*:app_settings', 1, 'desktop-base', 'desktop', '2026-04-30T00:00:00.000Z', 0)`
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
+     ) VALUES ('setting', 'device:android:phone:android-device:app_settings', 1,
+       'desktop-base', 'desktop', '2026-04-30T00:00:00.000Z', 0)`
   );
 });
 
@@ -50,13 +51,16 @@ afterEach(async () => {
 
 function createSettingPush(overrides: Partial<SyncPushPayload> = {}): SyncPushPayload {
   return {
+    authorHostName: 'android-device',
     base: { baseContentHash: 'desktop-base', kind: 'content_hash' },
-    clientOpId: 'setting:device:android:phone:*:app_settings:13',
+    clientOpId: 'setting:device:android:phone:android-device:app_settings:13',
     contentHash: 'android-next',
     deletedAt: null,
-    identity: { objectId: 'device:android:phone:*:app_settings', objectType: 'setting', scope: 'device' },
+    identity: {
+      objectId: 'device:android:phone:android-device:app_settings', objectType: 'setting', scope: 'device'
+    },
     payloadJson: JSON.stringify({
-      device_id: '*',
+      host_name: 'android-device',
       form_factor: 'phone',
       key: 'app_settings',
       platform: 'android',
@@ -70,11 +74,12 @@ function createSettingPush(overrides: Partial<SyncPushPayload> = {}): SyncPushPa
 
 function createReviewLogPush(opId = 'op-1'): SyncPushPayload {
   return {
+    authorHostName: 'android-device',
     base: { kind: 'op_id', opId },
     clientOpId: `review_log:${opId}`,
     identity: { objectId: opId, objectType: 'review_log', scope: 'workspace' },
     payloadJson: JSON.stringify({
-      device_id: 'android-device',
+      host_name: 'android-device',
       difficulty_after: 3,
       difficulty_before: 2,
       due_after: '2026-05-01T00:00:00.000Z',
@@ -98,7 +103,7 @@ async function verifyDesktopWorkspaceSettingPush() {
     contentHash: 'desktop-next',
     identity: { objectId: 'user_space:windows:desktop:*:app_settings', objectType: 'setting', scope: 'user_space' },
     payloadJson: JSON.stringify({
-      device_id: '*', form_factor: 'desktop', key: 'app_settings', platform: 'windows',
+      host_name: '*', form_factor: 'desktop', key: 'app_settings', platform: 'windows',
       scope: 'user_space', value_json: '{"theme":"dark"}'
     })
   })], 'android-device');
@@ -111,7 +116,7 @@ describe('companion sync push async apply', () => {
   it('accepts state object pushes through the shared async executor', async () => {
     const result = await applyCompanionSyncPushAsync([createSettingPush()], 'android-device');
 
-    expect(result.appliedObjectIds).toEqual(['setting:device:android:phone:*:app_settings']);
+    expect(result.appliedObjectIds).toEqual(['setting:device:android:phone:android-device:app_settings']);
     expect(result.acks).toMatchObject([{ stateSeq: 2, status: 'accepted' }]);
     expect(openDatabaseConnection().driver.queryOne<{ value_json: string }>(
       `SELECT value_json FROM setting_records WHERE key = 'app_settings'`
@@ -152,6 +157,7 @@ describe('companion sync push async apply', () => {
 
   it('rejects unsupported push object types without falling back to legacy sync apply', async () => {
     await expect(applyCompanionSyncPushAsync([{
+      authorHostName: 'android-device',
       base: { baseContentHash: null, kind: 'content_hash' },
       clientOpId: 'attachment:att-1:1',
       contentHash: 'hash-att-1',

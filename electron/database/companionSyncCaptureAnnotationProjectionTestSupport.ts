@@ -15,9 +15,9 @@ export const CAPTURE_NODE_ID = 'node-capture';
 export const CLOZE_NODE_ID = 'node-cloze';
 export const NOTE_NODE_ID = 'node-note';
 export const EXPECTED_VERSION_IDS = [
-  'android-device#00000000-0000-4000-8000-000000000101',
-  'android-device#00000000-0000-4000-8000-000000000102',
-  'android-device#00000000-0000-4000-8000-000000000103'
+  'ver_00000000-0000-4000-8000-000000000101',
+  'ver_00000000-0000-4000-8000-000000000102',
+  'ver_00000000-0000-4000-8000-000000000103'
 ] as const;
 
 const CREATED_AT = '2026-05-21T08:00:00.000Z';
@@ -108,6 +108,7 @@ function reviewPayload() {
 
 function nodePushPayload(record: NativeSyncNodeRecord): CompanionSyncPushPayload {
   return {
+    authorHostName: record.host_name ?? '',
     base: {
       ancestorVersionIds: record.ancestor_version_ids,
       kind: 'node_version',
@@ -128,6 +129,7 @@ function reviewRecord(): NativeSyncStateObjectRecord & { base_content_hash: null
     base_content_hash: null,
     content_hash: computeSyncContentHash('node_review', payload),
     deleted_at: null,
+    last_modified_by_host_name: ANDROID_SOURCE_DEVICE_ID,
     object_id: CLOZE_NODE_ID,
     object_type: 'node_review',
     payload_json: JSON.stringify(payload),
@@ -138,6 +140,7 @@ function reviewRecord(): NativeSyncStateObjectRecord & { base_content_hash: null
 
 function reviewPushPayload(record: ReturnType<typeof reviewRecord>): CompanionSyncPushPayload {
   return {
+    authorHostName: record.last_modified_by_host_name,
     base: { baseContentHash: record.base_content_hash, kind: 'content_hash' },
     clientOpId: `${record.object_type}:${record.object_id}:${record.state_seq}`,
     contentHash: record.content_hash,

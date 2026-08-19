@@ -6,7 +6,7 @@ import { upsertSyncObjectState } from './syncState.js';
 
 interface TombstoneSourceRow extends DatabaseRow {
   content_hash: string;
-  device_id: string;
+  host_name: string;
   parent_version_id: string | null;
   snapshot_json: string;
   version_id: string;
@@ -59,7 +59,7 @@ function prepareTombstoneSource(driver: DatabaseDriver) {
     `SELECT
        v.version_id,
        v.parent_version_id,
-       v.device_id,
+       v.host_name,
        v.content_hash,
        v.snapshot_json
      FROM nodes n
@@ -75,7 +75,7 @@ function prepareTombstoneUpsert(driver: DatabaseDriver) {
        node_id,
        version_id,
        parent_version_id,
-       device_id,
+       host_name,
        content_hash,
        snapshot_json,
        deleted_at,
@@ -84,7 +84,7 @@ function prepareTombstoneUpsert(driver: DatabaseDriver) {
      ON CONFLICT(node_id) DO UPDATE SET
        version_id = excluded.version_id,
        parent_version_id = excluded.parent_version_id,
-       device_id = excluded.device_id,
+       host_name = excluded.host_name,
        content_hash = excluded.content_hash,
        snapshot_json = excluded.snapshot_json,
        deleted_at = excluded.deleted_at,
@@ -105,7 +105,7 @@ function writeNodeSyncTombstoneRow(
     nodeId,
     row.version_id,
     row.parent_version_id,
-    row.device_id,
+    row.host_name,
     contentHash,
     JSON.stringify(snapshot),
     deletedAt,
@@ -115,7 +115,7 @@ function writeNodeSyncTombstoneRow(
     contentHash,
     currentVersionId: row.version_id,
     deletedAt,
-    lastModifiedByDeviceId: row.device_id,
+    lastModifiedByHostName: row.host_name,
     objectId: nodeId,
     objectType: 'node',
     syncDirty: false,

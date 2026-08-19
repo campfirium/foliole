@@ -2,7 +2,7 @@ import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { enqueuePdfSearchInvalidationForNodeIds } from '../../lib/core/database/searchIndexInvalidations.js';
 
 import { openDatabaseConnection } from './connection.js';
-import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
+import { loadOrCreateDesktopHostName } from './hostProfile.js';
 import { flushNodeSyncVersion } from './nodeSyncVersions.js';
 
 export interface AttachmentRecordInput {
@@ -60,12 +60,12 @@ function toAttachmentRecord(row: AttachmentRecordRow): AttachmentRecord {
 }
 
 function markNodeAttachmentLinksDirty(nodeId: string, now = new Date().toISOString()) {
-  const deviceId = loadOrCreateDesktopDeviceId(now);
+  const hostName = loadOrCreateDesktopHostName(now);
   openDatabaseConnection().driver.execute(
     `UPDATE nodes
-     SET updated_at = ?, last_modified_by_device_id = ?, sync_dirty = 1
+     SET updated_at = ?, last_modified_by_host_name = ?, sync_dirty = 1
      WHERE id = ?`,
-    [now, deviceId, nodeId]
+    [now, hostName, nodeId]
   );
   flushNodeSyncVersion(nodeId, now);
 }

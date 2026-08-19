@@ -10,10 +10,11 @@ export type { CompanionSyncPushPayload } from './companionSyncPushTypes.js';
 
 export async function applyCompanionSyncPushAsync(
   items: CompanionSyncPushPayload[],
-  sourceDeviceId: string
+  authenticatedDeviceId: string
 ): Promise<CompanionSyncPushResult> {
+  void authenticatedDeviceId;
   const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'desktop-sync-push-batch' });
-  return applyCompanionStateSyncPushWithDbPort(port, items, sourceDeviceId);
+  return applyCompanionStateSyncPushWithDbPort(port, items);
 }
 
 export { applyCompanionStateSyncPushWithDbPort } from './companionSyncPushWithDbPort.js';

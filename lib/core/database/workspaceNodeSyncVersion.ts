@@ -50,7 +50,7 @@ async function sha256Hex(value: string) {
 
 export async function toWorkspaceNativeNodeVersion(
   node: WorkspaceNodeSnapshot,
-  deviceId: string
+  hostName: string
 ): Promise<NativeSyncNodeRecord> {
   const snapshot = canonicalWorkspaceNodePayload(node);
   const contentHash = await sha256Hex(JSON.stringify(snapshot));
@@ -58,7 +58,7 @@ export async function toWorkspaceNativeNodeVersion(
     ancestor_version_ids: [],
     body_text: node.content,
     content_hash: contentHash,
-    device_id: deviceId,
+    host_name: hostName,
     object_id: node.id,
     object_type: 'node',
     parent_version_id: node.currentVersionId ?? null,

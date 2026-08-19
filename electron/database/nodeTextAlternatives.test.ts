@@ -94,7 +94,7 @@ function seedAlternative() {
   );
   driver.execute(
     `INSERT INTO node_sync_versions
-       (version_id, object_id, device_id, created_at, content_hash, body_text, snapshot_json)
+       (version_id, object_id, host_name, created_at, content_hash, body_text, snapshot_json)
      VALUES ('desktop#1', 'topic-1', 'desktop', '2026-07-25T00:00:00.000Z', 'current-hash', 'Current body', ?)`,
     [snapshot]
   );
@@ -104,7 +104,7 @@ function seedAlternative() {
   );
   driver.execute(
     `INSERT INTO sync_object_state
-       (object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty)
+       (object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty)
      VALUES ('node_text_alternative', 'alternative-1', 1, 'alternative-hash', 'desktop',
        '2026-07-25T00:30:00.000Z', 0)`
   );

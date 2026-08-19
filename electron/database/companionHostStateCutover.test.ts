@@ -38,7 +38,7 @@ function legacyFixture() {
       ('window_state','device','ios','phone','Old Phone','{"page":"article"}','old-hash','old',NULL);
     INSERT INTO workspace_meta VALUES ('active_node_id', 'n', 'old');
     INSERT INTO sync_object_state
-      (object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty)
+      (object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty)
     VALUES
       ('setting','device:ios:phone:Old Phone:window_state',1,'old-hash','Old Phone','old',0),
       ('view_state','session_resume:ios:phone:Old Phone:node:n',2,'old-view','Old Phone','old',0),

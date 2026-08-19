@@ -1,7 +1,7 @@
 import { SPECIAL_ROOT_NODE_IDS } from '../../lib/core/database/nodeMutationSpecialRoots.js';
 
 import { openDatabaseConnection } from './connection.js';
-import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
+import { loadOrCreateDesktopHostName } from './hostProfile.js';
 import { backfillMissingNodeSyncState } from './nodeSyncStateRows.js';
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
 
@@ -12,7 +12,7 @@ export function flushNodeSyncVersion(nodeId: string, now = new Date().toISOStrin
   return flushNodeSyncVersionWithDriver(
     connection.driver,
     nodeId,
-    loadOrCreateDesktopDeviceId(now),
+    loadOrCreateDesktopHostName(now),
     now
   );
 }

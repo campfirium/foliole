@@ -38,7 +38,6 @@ it('applies node reading and review payload records', async () => {
   } as unknown as DbPort;
 
   await expect(applySyncPackLearningObjectsWithDbPort(port, {
-    deviceId: 'device-1',
     hostName: 'phone-1',
     incomingAlias: 'incoming'
   })).resolves.toBe(2);
@@ -68,7 +67,6 @@ it('does not apply another Host reading position from node reading payload', asy
   } as unknown as DbPort;
 
   await expect(applySyncPackLearningObjectsWithDbPort(port, {
-    deviceId: 'device-1',
     hostName: 'phone-1',
     incomingAlias: 'incoming'
   })).resolves.toBe(1);
@@ -94,7 +92,6 @@ it('does not apply legacy reading position payloads without an explicit local de
   } as unknown as DbPort;
 
   await expect(applySyncPackLearningObjectsWithDbPort(port, {
-    deviceId: 'device-1',
     incomingAlias: 'incoming'
   })).resolves.toBe(1);
   expect(runs).toHaveLength(1);
@@ -115,7 +112,6 @@ it('deletes learning payload rows for tombstones', async () => {
   } as unknown as DbPort;
 
   await expect(applySyncPackLearningObjectsWithDbPort(port, {
-    deviceId: 'device-1',
     incomingAlias: 'incoming'
   })).resolves.toBe(2);
   expect(runs).toEqual([

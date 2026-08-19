@@ -18,7 +18,7 @@ export const ANDROID_COMPANION_SYNC_STATE_MIGRATION_REPAIR_RULES = {
       contentHash: 'content_hash',
       currentVersionId: 'current_version_id',
       deletedAt: 'deleted_at',
-      lastModifiedByDeviceId: 'last_modified_by_device_id',
+      lastModifiedByHostName: 'last_modified_by_host_name',
       objectId: 'object_id',
       objectType: 'object_type',
       syncDirty: 'sync_dirty',

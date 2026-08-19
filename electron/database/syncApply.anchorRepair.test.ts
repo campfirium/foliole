@@ -70,7 +70,7 @@ function insertLocalNode(args: {
   openDatabaseConnection().sqlite.prepare(
     `INSERT INTO nodes (
        id, parent_id, kind, title, content, anchor_link, current_version_id,
-       last_modified_by_device_id, sync_dirty, created_at, updated_at
+       last_modified_by_host_name, sync_dirty, created_at, updated_at
      ) VALUES (?, ?, 'topic', ?, ?, ?, ?, 'desktop', 0, ?, ?)`
   ).run(
     args.id,
@@ -88,7 +88,7 @@ function parentRecord(content: string): NativeSyncNodeRecord {
   return {
     ancestor_version_ids: ['desktop#parent-v1'],
     content_hash: 'phone#parent-v2-hash',
-    device_id: 'phone',
+    host_name: 'phone',
     object_id: 'parent-1',
     object_type: 'node',
     parent_version_id: 'desktop#parent-v1',

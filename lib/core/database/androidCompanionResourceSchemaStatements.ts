@@ -10,7 +10,7 @@ export const ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS = [
     size_bytes INTEGER,
     mime_type TEXT,
     availability TEXT NOT NULL DEFAULT 'missing',
-    source_device_id TEXT,
+    source_host_name TEXT,
     created_at TEXT NOT NULL,
     cached_at TEXT,
     last_verified_at TEXT
@@ -26,7 +26,7 @@ export const ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS = [
     original_sha256 TEXT NOT NULL,
     stored_sha256 TEXT NOT NULL,
     availability TEXT NOT NULL DEFAULT 'missing',
-    source_device_id TEXT,
+    source_host_name TEXT,
     created_at TEXT NOT NULL,
     cached_at TEXT,
     last_verified_at TEXT

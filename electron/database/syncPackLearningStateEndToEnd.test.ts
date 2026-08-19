@@ -47,7 +47,7 @@ it('builds and applies a desktop learning-state pack after its node row', async 
   try {
     await expect(applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor: 0,
-      deviceId: 'android-target'
+      hostName: 'android-target'
     })).resolves.toMatchObject({
       applied: true,
       appliedObjectCount: 2,
@@ -80,7 +80,7 @@ it('prunes packed learning rows for live children hidden under deleted parents',
   try {
     await expect(applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor: 0,
-      deviceId: 'android-target'
+      hostName: 'android-target'
     })).resolves.toMatchObject({
       applied: true,
       fromStateSeq: 0,
@@ -155,7 +155,7 @@ function insertSourceLearningState() {
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('node', 'node-reading-1', 1, 'node-hash',
        'desktop-source', '2026-05-06T09:00:00.000Z', 1)`
   );
@@ -169,7 +169,7 @@ function insertSourceLearningState() {
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('node_reading', 'node-reading-1', 2, 'reading-hash',
        'desktop-source', '2026-05-06T09:05:00.000Z', 1)`
   );
@@ -189,7 +189,7 @@ function insertHiddenChildLearningState() {
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, deleted_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, deleted_at, sync_dirty
      ) VALUES
        ('node', 'deleted-parent', 1, 'deleted-parent-hash', 'desktop-source',
          '2026-05-06T10:10:00.000Z', '2026-05-06T10:10:00.000Z', 1),
@@ -205,7 +205,7 @@ function insertHiddenChildLearningState() {
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('node_reading', 'hidden-child', 3, 'hidden-child-reading-hash',
        'desktop-source', '2026-05-06T10:16:00.000Z', 1)`
   );

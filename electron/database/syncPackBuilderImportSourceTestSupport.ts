@@ -14,7 +14,7 @@ export function insertImportSourceSyncState() {
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('import_source', 'source-1', 5, 'import-source-hash',
        'desktop', '2026-04-27T00:04:00.000Z', 1)`
   );

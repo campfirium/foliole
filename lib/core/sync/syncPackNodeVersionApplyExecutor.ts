@@ -51,7 +51,7 @@ function normalizeVersionRow(row: DbRow): SyncPackNodeVersionRow {
     version_id: versionId,
     object_id: requireString(row.object_id, 'object_id'),
     parent_version_id: requireNullableString(row.parent_version_id, 'parent_version_id'),
-    device_id: requireString(row.device_id, 'device_id'),
+    host_name: requireString(row.host_name, 'host_name'),
     created_at: requireString(row.created_at, 'created_at'),
     content_hash: requireString(row.content_hash, 'content_hash'),
     body_text: requireNullableText(row.body_text, 'body_text'),

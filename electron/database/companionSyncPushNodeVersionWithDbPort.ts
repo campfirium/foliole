@@ -29,7 +29,7 @@ export function parseNodeVersionPush(item: CompanionSyncPushPayload): NativeSync
   if (!item.payloadJson) return null;
   const record = JSON.parse(item.payloadJson) as NativeSyncNodeRecord;
   if (record.object_type !== 'node' || record.object_id !== item.identity.objectId || !record.version_id ||
-      !record.device_id || !record.version_created_at || record.parent_version_id !== item.base.parentVersionId) {
+      !record.host_name || !record.version_created_at || record.parent_version_id !== item.base.parentVersionId) {
     return null;
   }
   return {

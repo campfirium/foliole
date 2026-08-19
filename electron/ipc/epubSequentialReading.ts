@@ -5,7 +5,6 @@ import {
   type SequentialReadingReleaseCandidate,
   type SequentialReadingReleaseMode
 } from '../../lib/core/review/sequentialReadingRelease.js';
-import { loadOrCreateDesktopDeviceId } from '../database/deviceIdentity.js';
 import { loadOrCreateDesktopHostName } from '../database/hostProfile.js';
 
 interface NodeReadingRow extends DatabaseRow {
@@ -64,7 +63,7 @@ function prepareSequentialReadingStatements(driver: DatabaseDriver) {
     deleteReading: driver.prepare('DELETE FROM node_reading WHERE node_id = ?'),
     updateSource: driver.prepare(
       `UPDATE nodes
-       SET sequential_reading_enabled = ?, updated_at = ?, last_modified_by_device_id = ?, sync_dirty = 1
+       SET sequential_reading_enabled = ?, updated_at = ?, last_modified_by_host_name = ?, sync_dirty = 1
        WHERE id = ? AND deleted_at IS NULL`
     ),
     upsertHostState: driver.prepare(
@@ -98,7 +97,6 @@ export function applyEpubSequentialReadingMode(args: {
   nodeIds: string[];
   sourceNodeId: string;
 }) {
-  const deviceId = loadOrCreateDesktopDeviceId(args.importedAt);
   const hostName = loadOrCreateDesktopHostName(args.importedAt);
   const statements = prepareSequentialReadingStatements(args.driver);
   const candidates = readSequentialReadingCandidates(args.driver, args.nodeIds, hostName);
@@ -110,10 +108,9 @@ export function applyEpubSequentialReadingMode(args: {
   });
 
   args.driver.transaction(() => {
-    statements.updateSource.run([args.mode === 'sequential' ? 1 : 0, args.importedAt, deviceId, args.sourceNodeId]);
+    statements.updateSource.run([args.mode === 'sequential' ? 1 : 0, args.importedAt, hostName, args.sourceNodeId]);
     for (const update of updates) {
       writeNodeReadingSnapshotWithSync(args.driver, {
-        deviceId,
         hostName,
         nodeId: update.nodeId,
         reading: update.reading,

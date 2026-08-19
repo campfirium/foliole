@@ -95,7 +95,6 @@ it('applies pack nodes only when the attached pack cursor is contiguous', async 
   try {
     await expect(applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor: 0,
-      deviceId: 'android-device',
       hostName: 'Android test host'
     })).resolves.toMatchObject({
       applied: true,
@@ -105,7 +104,6 @@ it('applies pack nodes only when the attached pack cursor is contiguous', async 
     });
     await expect(applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor: 1,
-      deviceId: 'android-device',
       hostName: 'Android test host'
     })).resolves.toMatchObject({
       appliedObjectCount: 0,
@@ -117,11 +115,11 @@ it('applies pack nodes only when the attached pack cursor is contiguous', async 
   }
 
   expect(connection.sqlite.prepare(
-    `SELECT current_version_id, last_modified_by_device_id, sync_dirty
+    `SELECT current_version_id, last_modified_by_host_name, sync_dirty
      FROM sync_object_state WHERE object_type = 'node' AND object_id = 'node-1'`
   ).get()).toEqual({
     current_version_id: 'desktop#1',
-    last_modified_by_device_id: 'android-device',
+    last_modified_by_host_name: 'Android test host',
     sync_dirty: 0
   });
   expect(connection.sqlite.prepare(
@@ -153,7 +151,6 @@ it('does not apply live node state rows when the pack has no node payload', asyn
   try {
     await applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor: 0,
-      deviceId: 'android-device',
       hostName: 'Android test host'
     });
   } finally {
@@ -187,7 +184,7 @@ it.each([
   try {
     await expect(applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor: 0,
-      deviceId: 'android-device'
+      hostName: 'android-device'
     })).rejects.toThrow(/sync_pack_node_/);
   } finally {
     await port.run('DETACH DATABASE inc');
@@ -203,7 +200,7 @@ it('rejects cross-object ancestry and immutable duplicate mismatches', async () 
   try {
     incoming.exec(`
       INSERT INTO node_sync_versions (
-        version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+        version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
       ) VALUES ('desktop#other', 'other-node', NULL, 'desktop',
         '2026-05-04T00:00:00.000Z', 'other-hash', '{"id":"other-node"}');
       INSERT INTO node_sync_version_parents (version_id, parent_version_id, ordinal)
@@ -217,7 +214,7 @@ it('rejects cross-object ancestry and immutable duplicate mismatches', async () 
   try {
     await expect(applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor: 0,
-      deviceId: 'android-device'
+      hostName: 'android-device'
     })).rejects.toThrow('sync_pack_node_version_cross_object');
   } finally {
     await port.run('DETACH DATABASE inc');
@@ -230,7 +227,7 @@ it('rejects cross-object ancestry and immutable duplicate mismatches', async () 
   ).run();
   connection.sqlite.prepare(
     `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+       version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
      ) VALUES ('desktop#1', 'node-1', NULL, 'desktop',
        '2026-05-04T01:00:00.000Z', 'different-hash', '{"id":"node-1"}')`
   ).run();
@@ -240,7 +237,7 @@ it('rejects cross-object ancestry and immutable duplicate mismatches', async () 
   try {
     await expect(applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor: 0,
-      deviceId: 'android-device'
+      hostName: 'android-device'
     })).rejects.toThrow('sync_pack_node_version_immutable_mismatch');
   } finally {
     await port.run('DETACH DATABASE inc');

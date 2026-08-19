@@ -3,7 +3,7 @@ export const NODE_SYNC_TOMBSTONE_SCHEMA_STATEMENTS = [
     node_id TEXT PRIMARY KEY,
     version_id TEXT NOT NULL,
     parent_version_id TEXT,
-    device_id TEXT NOT NULL,
+    host_name TEXT NOT NULL,
     content_hash TEXT NOT NULL,
     snapshot_json TEXT NOT NULL,
     deleted_at TEXT NOT NULL,

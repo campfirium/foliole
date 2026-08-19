@@ -55,7 +55,7 @@ const reviewMutationInput = {
 };
 
 const reviewMutationContext = {
-  deviceId: 'desktop-local',
+  hostName: 'desktop-local',
   createId: vi.fn().mockReturnValueOnce('op-1').mockReturnValueOnce('log-1')
 };
 

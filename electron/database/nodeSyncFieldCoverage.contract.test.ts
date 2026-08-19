@@ -13,11 +13,11 @@ import { SYNC_PACK_NODE_COLUMNS } from '../../lib/core/sync/syncPackNodeFields.j
 import { PACK_SCHEMA } from '../../lib/core/sync/syncPackSchema.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
-const NODE_SYNC_METADATA_COLUMNS = ['current_version_id', 'last_modified_by_device_id', 'sync_dirty'];
+const NODE_SYNC_METADATA_COLUMNS = ['current_version_id', 'last_modified_by_host_name', 'sync_dirty'];
 const NODE_HASH_SIDE_PAYLOAD_FIELDS = ['attachments'];
 const NODE_DERIVED_BODY_RESOURCE_IDENTITY_COLUMNS = ['body_blob_hash'];
 const SYNC_PACK_NODE_UPSERT_PENDING_COLUMNS = [
-  'last_modified_by_device_id',
+  'last_modified_by_host_name',
   'position',
   'sync_dirty'
 ];

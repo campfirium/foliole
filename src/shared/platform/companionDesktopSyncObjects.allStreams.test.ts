@@ -92,6 +92,7 @@ function createLocalStateChange(): NativeSyncStateObjectRecord {
   return {
     content_hash: 'reading-hash',
     deleted_at: null,
+    last_modified_by_host_name: 'android-test-device',
     object_id: 'node-1',
     object_type: 'node_reading',
     payload_json: '{"reading_position":42}',

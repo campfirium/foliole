@@ -14,7 +14,7 @@ function restoredVersion(parentVersionId: string | null): NativeSyncNodeRecord {
   return {
     ancestor_version_ids: [],
     content_hash: 'restored-hash',
-    device_id: 'ios-device',
+    host_name: 'ios-device',
     object_id: 'topic-trash',
     object_type: 'node',
     parent_version_id: parentVersionId,

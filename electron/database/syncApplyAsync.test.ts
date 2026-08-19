@@ -30,7 +30,7 @@ function createRemoteNodeRecord(): NativeSyncNodeRecord {
   return {
     ancestor_version_ids: ['desktop#0'],
     content_hash: 'hash-1',
-    device_id: 'phone',
+    host_name: 'phone',
     object_id: 'node-1',
     object_type: 'node',
     parent_version_id: 'desktop#0',
@@ -130,27 +130,27 @@ it('applies remote sync nodes through the async desktop DbPort entry', async () 
   const connection = openDatabaseConnection();
   expect(
     connection.sqlite.prepare(
-      `SELECT current_version_id, last_modified_by_device_id, sync_dirty, title, content, body_blob_hash, position
+      `SELECT current_version_id, last_modified_by_host_name, sync_dirty, title, content, body_blob_hash, position
        FROM nodes WHERE id = ?`
     ).get('node-1')
   ).toEqual({
     body_blob_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
     content: 'remote body',
     current_version_id: 'phone#1',
-    last_modified_by_device_id: 'phone',
+    last_modified_by_host_name: 'phone',
     position: 4,
     sync_dirty: 0,
     title: 'Remote Node'
   });
   expect(
     connection.sqlite.prepare(
-      `SELECT current_version_id, content_hash, last_modified_by_device_id, sync_dirty
+      `SELECT current_version_id, content_hash, last_modified_by_host_name, sync_dirty
        FROM sync_object_state WHERE object_type = 'node' AND object_id = ?`
     ).get('node-1')
   ).toEqual({
     content_hash: 'hash-1',
     current_version_id: 'phone#1',
-    last_modified_by_device_id: 'phone',
+    last_modified_by_host_name: 'phone',
     sync_dirty: 0
   });
 });

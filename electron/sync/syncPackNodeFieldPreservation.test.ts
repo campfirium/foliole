@@ -103,8 +103,9 @@ function createIncomingPack(filePath: string) {
   try {
     for (const statement of legacyPackSchema()) db.exec(statement);
     db.prepare(
-      `INSERT INTO sync_object_state (object_type, object_id, state_seq, content_hash, updated_at, deleted_at)
-       VALUES ('node', 'node-1', 1, 'hash-node-1', '2026-05-04T01:00:00.000Z', NULL)`
+      `INSERT INTO sync_object_state (
+         object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, deleted_at
+       ) VALUES ('node', 'node-1', 1, 'hash-node-1', 'desktop-host', '2026-05-04T01:00:00.000Z', NULL)`
     ).run();
     db.prepare(
       `INSERT INTO nodes (
@@ -114,7 +115,7 @@ function createIncomingPack(filePath: string) {
     ).run('node-1', 'desktop#1', '2026-05-04T01:00:00.000Z', '2026-05-04T01:00:00.000Z');
     db.prepare(
       `INSERT INTO node_sync_versions (
-         version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+         version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
        ) VALUES ('desktop#1', 'node-1', NULL, 'desktop',
          '2026-05-04T01:00:00.000Z', 'hash-node-1', '{"id":"node-1","title":"Packed Node"}')`
     ).run();
@@ -156,7 +157,7 @@ function insertRestoredNode() {
     );
     INSERT INTO sync_object_state (
       object_type, object_id, state_seq, current_version_id, content_hash,
-      last_modified_by_device_id, updated_at, deleted_at, sync_dirty
+      last_modified_by_host_name, updated_at, deleted_at, sync_dirty
     ) VALUES ('node', 'node-1', 1, 'android#local', 'hash-node-1', 'android-device',
       '2026-05-04T00:30:00.000Z', NULL, 0);
   `);

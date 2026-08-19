@@ -64,12 +64,12 @@ function insertNodeSyncState() {
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
     ) VALUES ('node', 'node-1', 1, 'node-hash', 'desktop', '2026-04-27T00:00:00.000Z', 1)`
   );
   driver.execute(
     `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+       version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
      ) VALUES ('ver_contract-v1', 'node-1', NULL, 'desktop',
        '2026-04-27T00:00:00.000Z', 'node-hash', '{"id":"node-1","title":"Node 1"}')`
   );
@@ -82,7 +82,7 @@ function insertNodeSyncState() {
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('setting', 'user_space:windows:desktop:*:app_settings', 2, 'setting-hash',
        'desktop', '2026-04-27T00:01:00.000Z', 1)`
   );
@@ -153,7 +153,7 @@ function readPackRows(packPath: string) {
       manifest,
       nodeAttachments: db.prepare('SELECT node_id, attachment_id, role FROM node_attachments').all(),
       nodeVersions: db.prepare(
-        'SELECT version_id, object_id, parent_version_id, device_id, content_hash, snapshot_json FROM node_sync_versions'
+        'SELECT version_id, object_id, parent_version_id, host_name, content_hash, snapshot_json FROM node_sync_versions'
       ).all(),
       nodeOrder: db.prepare('SELECT node_id, position FROM node_order').all(),
       nodes: db.prepare(

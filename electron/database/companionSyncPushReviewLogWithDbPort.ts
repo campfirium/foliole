@@ -37,7 +37,7 @@ function parseReviewLog(item: CompanionSyncPushPayload): NativeSyncReviewLogReco
 function reviewLogMatches(existing: ReviewLogDbRow, next: NativeSyncReviewLogRecord) {
   return existing.id === next.id
     && existing.op_id === next.op_id
-    && existing.device_id === next.device_id
+    && existing.host_name === next.host_name
     && existing.node_id === next.node_id
     && existing.grade === next.grade
     && existing.scheduler_version === next.scheduler_version
@@ -53,7 +53,7 @@ function reviewLogMatches(existing: ReviewLogDbRow, next: NativeSyncReviewLogRec
 async function selectReviewLogWithDbPort(port: DbPort, opId: string) {
   return (await port.query<ReviewLogDbRow>(
     `SELECT
-       id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at,
+       id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at,
        due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after
      FROM review_log
      WHERE op_id = ?`,
@@ -64,13 +64,13 @@ async function selectReviewLogWithDbPort(port: DbPort, opId: string) {
 function insertReviewLogWithDbPort(port: DbPort, record: NativeSyncReviewLogRecord) {
   return port.run(
     `INSERT INTO review_log (
-       id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at,
+       id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at,
        due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after
      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       record.id,
       record.op_id,
-      record.device_id,
+      record.host_name,
       record.node_id,
       record.grade,
       record.scheduler_version,
@@ -87,12 +87,11 @@ function insertReviewLogWithDbPort(port: DbPort, record: NativeSyncReviewLogReco
 
 export async function applyReviewLogPushWithDbPort(
   port: DbPort,
-  item: CompanionSyncPushPayload,
-  sourceDeviceId: string
+  item: CompanionSyncPushPayload
 ): Promise<CompanionSyncPushResult> {
   return await port.transaction(async (tx) => {
     const record = parseReviewLog(item);
-    if (!record || record.device_id !== sourceDeviceId) {
+    if (!record || record.host_name !== item.authorHostName) {
       return {
         acks: [rejectAck(item, 'invalid_review_log_source')],
         appliedNodeIds: [],

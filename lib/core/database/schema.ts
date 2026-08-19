@@ -26,7 +26,7 @@ export const nodes = sqliteTable('nodes', {
   importContentFingerprint: text('import_content_fingerprint'),
   position: integer('position'),
   currentVersionId: text('current_version_id'),
-  lastModifiedByDeviceId: text('last_modified_by_device_id'),
+  lastModifiedByHostName: text('last_modified_by_host_name'),
   syncDirty: integer('sync_dirty', { mode: 'boolean' }).notNull().default(false),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
@@ -83,7 +83,7 @@ export const nodeReadingHostState = sqliteTable('node_reading_host_state', {
 export const reviewLog = sqliteTable('review_log', {
   id: text('id').primaryKey(),
   opId: text('op_id').notNull().unique(),
-  deviceId: text('device_id').notNull(),
+  hostName: text('host_name').notNull(),
   nodeId: text('node_id').notNull(),
   grade: integer('grade').notNull(),
   schedulerVersion: text('scheduler_version').notNull(),

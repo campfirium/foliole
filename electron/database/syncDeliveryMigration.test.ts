@@ -94,7 +94,7 @@ function installDeliveryPrerequisites(sqlite: Database.Database) {
   sqlite.exec(`
     CREATE TABLE sync_object_state (
       object_type TEXT NOT NULL, object_id TEXT NOT NULL, state_seq INTEGER NOT NULL,
-      current_version_id TEXT, content_hash TEXT NOT NULL, last_modified_by_device_id TEXT NOT NULL,
+      current_version_id TEXT, content_hash TEXT NOT NULL, last_modified_by_host_name TEXT NOT NULL,
       updated_at TEXT NOT NULL, deleted_at TEXT, sync_dirty INTEGER NOT NULL, base_content_hash TEXT,
       PRIMARY KEY (object_type, object_id));
     CREATE TABLE sync_peer_cursors (

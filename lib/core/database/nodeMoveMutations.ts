@@ -20,7 +20,6 @@ export interface MoveNodesResult {
 
 export interface MoveNodePatchInput {
   nodeId: string;
-  deviceId?: string;
   hostName?: string;
   parentNodeId: string | null;
   reading?: UpsertNodeSnapshotInput['reading'];
@@ -39,7 +38,7 @@ export function moveNodes(driver: DatabaseDriver, input: MoveNodesInput): MoveNo
      SET parent_id = ?,
          sequential_reading_enabled = ?,
          updated_at = ?,
-         last_modified_by_device_id = COALESCE(?, last_modified_by_device_id),
+         last_modified_by_host_name = COALESCE(?, last_modified_by_host_name),
          sync_dirty = 1
      WHERE id = ?`
   );
@@ -55,7 +54,7 @@ export function moveNodes(driver: DatabaseDriver, input: MoveNodesInput): MoveNo
         node.parentNodeId,
         node.sequentialReadingEnabled == null ? null : node.sequentialReadingEnabled ? 1 : 0,
         node.updatedAt,
-        node.deviceId ?? null,
+        node.hostName ?? null,
         node.nodeId
       ]);
       if ('reading' in node) {
@@ -93,9 +92,6 @@ function toReadingSyncInput(node: MoveNodePatchInput): WriteNodeReadingSyncInput
     reading: node.reading ?? null,
     updatedAt: node.updatedAt
   };
-  if (node.deviceId) {
-    input.deviceId = node.deviceId;
-  }
   if (node.hostName) input.hostName = node.hostName;
   return input;
 }

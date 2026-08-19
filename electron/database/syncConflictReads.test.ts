@@ -30,7 +30,7 @@ function createConflict(objectId: string, versionId: string): NativeSyncNodeConf
   return {
     conflict_version_id: versionId,
     content_hash: `hash-${versionId}`,
-    device_id: 'phone',
+    host_name: 'phone',
     object_id: objectId,
     parent_version_id: 'desktop#1',
     snapshot: {

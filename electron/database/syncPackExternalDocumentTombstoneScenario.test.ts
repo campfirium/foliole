@@ -146,7 +146,7 @@ async function applyPack(
   try {
     await expect(applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor,
-      deviceId: 'android-target'
+      hostName: 'android-target'
     })).resolves.toMatchObject({ applied: true, appliedObjectCount: 1, toStateSeq });
   } finally {
     await port.run('DETACH DATABASE inc');

@@ -92,7 +92,7 @@ function insertVersionFixtures(connection: ReturnType<typeof openDatabaseConnect
   for (const [versionId, parentVersionId, contentHash, createdAt] of versions) {
     connection.driver.execute(
       `INSERT INTO node_sync_versions (
-         version_id, object_id, parent_version_id, device_id, created_at, content_hash
+         version_id, object_id, parent_version_id, host_name, created_at, content_hash
        ) VALUES (?, ?, ?, ?, ?, ?)`,
       [versionId, 'node-1', parentVersionId, 'desktop', createdAt, contentHash]
     );
@@ -133,7 +133,7 @@ function expectedSyncNodeRecord() {
       ancestor_version_ids: ['desktop#1', 'desktop#0'],
       body_text: 'hello',
       content_hash: 'hash-2',
-      device_id: 'desktop',
+      host_name: 'desktop',
       object_id: 'node-1',
       object_type: 'node',
       parent_version_id: 'desktop#1',

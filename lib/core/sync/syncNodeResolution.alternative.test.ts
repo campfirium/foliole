@@ -10,7 +10,7 @@ function alternative(): NativeSyncNodeRecord {
     ancestor_version_ids: [],
     body_text: 'Losing body',
     content_hash: 'hash-1',
-    device_id: 'Maci',
+    host_name: 'Maci',
     object_id: 'node-1',
     object_type: 'node',
     parent_version_id: null,

@@ -25,22 +25,21 @@ function appendPushResult(target: CompanionSyncPushResult, item: CompanionSyncPu
 
 export async function applyCompanionStateSyncPushWithDbPort(
   port: DbPort,
-  items: CompanionSyncPushPayload[],
-  sourceDeviceId: string
+  items: CompanionSyncPushPayload[]
 ): Promise<CompanionSyncPushResult> {
   return port.transaction(async (tx) => {
     const result = emptyPushResult();
     const nodeItems = items.filter((item) => item.identity.objectType === 'node');
     if (nodeItems.length > 0) {
-      appendPushResult(result, await applyNodePushBatchWithDbPort(tx, nodeItems, sourceDeviceId));
+      appendPushResult(result, await applyNodePushBatchWithDbPort(tx, nodeItems));
     }
     for (const item of items.filter((candidate) => candidate.identity.objectType !== 'node')) {
       const itemResult = isStateObjectPush(item)
         ? await applyStateObjectPushWithDbPort(
-          tx, item, item.identity.objectType as StatePushObjectType, sourceDeviceId
+          tx, item, item.identity.objectType as StatePushObjectType
         )
         : item.identity.objectType === 'review_log'
-          ? await applyReviewLogPushWithDbPort(tx, item, sourceDeviceId)
+          ? await applyReviewLogPushWithDbPort(tx, item)
           : unsupportedPushResult(item);
       appendPushResult(result, itemResult);
     }

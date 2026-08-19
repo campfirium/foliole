@@ -10,6 +10,7 @@ function createViewStateRow(overrides: Partial<SyncableStateObjectRow> = {}): Sy
     base_content_hash: 'desktop-view-base',
     content_hash: 'android-view-next',
     deleted_at: null,
+    last_modified_by_host_name: 'android-device',
     object_id: 'session_resume:android:phone:android-test:active_node',
     object_type: 'view_state',
     payload_json: '{"active_node_id":"node-1"}',

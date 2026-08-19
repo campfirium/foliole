@@ -210,7 +210,7 @@ it('creates new nodes columns required by sync-aware schema', () => {
       'body_blob_hash',
       'position',
       'current_version_id',
-      'last_modified_by_device_id',
+      'last_modified_by_host_name',
       'sync_dirty'
     ])
   );

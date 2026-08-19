@@ -70,7 +70,7 @@ function listNodeAttachmentRefs(nodeId: string) {
   );
 }
 
-function upsertNodePackState(node: PdfReferenceNodeRow, bodyContent: string, openingText: string | null, deviceId: string, now: string) {
+function upsertNodePackState(node: PdfReferenceNodeRow, bodyContent: string, openingText: string | null, hostName: string, now: string) {
   const connection = openDatabaseConnection();
   const contentHash = computeNodeSyncHash({
     anchorLink: node.anchor_link,
@@ -107,23 +107,23 @@ function upsertNodePackState(node: PdfReferenceNodeRow, bodyContent: string, ope
   )?.value ?? 1;
   connection.driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('node', ?, ?, ?, ?, ?, 1)
      ON CONFLICT(object_type, object_id) DO UPDATE SET
        state_seq = excluded.state_seq,
        content_hash = excluded.content_hash,
-       last_modified_by_device_id = excluded.last_modified_by_device_id,
+       last_modified_by_host_name = excluded.last_modified_by_host_name,
        updated_at = excluded.updated_at,
        deleted_at = NULL,
        sync_dirty = 1`,
-    [node.id, nextSeq, contentHash, deviceId, now]
+    [node.id, nextSeq, contentHash, hostName, now]
   );
 }
 
 export function syncPdfBodyBlobsForReferenceNodes(
   attachmentId: string,
   pages: PdfPageTextInput[],
-  deviceId: string,
+  hostName: string,
   now: string
 ) {
   const nodes = listPdfReferenceNodes(attachmentId);
@@ -138,11 +138,11 @@ export function syncPdfBodyBlobsForReferenceNodes(
     openDatabaseConnection().driver.execute(
       `UPDATE nodes
        SET body_blob_hash = ?, opening_text = ?, updated_at = ?,
-           last_modified_by_device_id = ?, sync_dirty = 1
+           last_modified_by_host_name = ?, sync_dirty = 1
        WHERE id = ?`,
-      [bodyBlobHash, openingText, now, deviceId, node.id]
+      [bodyBlobHash, openingText, now, hostName, node.id]
     );
-    upsertNodePackState(node, bodyContent, openingText, deviceId, now);
+    upsertNodePackState(node, bodyContent, openingText, hostName, now);
     updatedNodeIds.push(node.id);
   }
   return updatedNodeIds;

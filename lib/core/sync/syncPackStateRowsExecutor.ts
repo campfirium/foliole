@@ -2,7 +2,6 @@ import type { DbPort, DbRow } from './dbPort.js';
 import { buildSyncPackApplyableRowsSql, type SyncPackApplyableRowsOptions } from './syncPackApplyStatements.js';
 
 export interface SyncPackStateRowsApplyOptions extends SyncPackApplyableRowsOptions {
-  deviceId: string;
   objectTypes?: readonly string[];
 }
 
@@ -49,7 +48,7 @@ function normalizedObjectTypes(options: SyncPackStateRowsApplyOptions) {
 
 function applyableStateRowsSql(options: SyncPackStateRowsApplyOptions, objectTypes: readonly string[]) {
   const alias = options.incomingAlias ?? 'inc';
-  return `SELECT object_type, object_id, state_seq, content_hash, updated_at, deleted_at ` +
+  return `SELECT object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, deleted_at ` +
     `FROM ${buildSyncPackApplyableRowsSql(options)} applyable_state ` +
     `WHERE object_type IN (${objectTypes.map(() => '?').join(', ')}) ` +
     `AND (object_type <> 'node_review' OR NOT EXISTS (` +
@@ -101,9 +100,9 @@ function insertCleanStateRows(
     `) ELSE NULL END AS current_version_id FROM applyable) ` +
     `INSERT OR REPLACE INTO sync_object_state (` +
     `object_type, object_id, state_seq, current_version_id, content_hash, ` +
-    `last_modified_by_device_id, updated_at, deleted_at, sync_dirty` +
+    `last_modified_by_host_name, updated_at, deleted_at, sync_dirty` +
     `) SELECT object_type, object_id, ? + state_seq_offset, current_version_id, content_hash, ` +
-    `?, updated_at, deleted_at, 0 FROM numbered`,
-    [...objectTypes, nextStateSeq, options.deviceId]
+    `last_modified_by_host_name, updated_at, deleted_at, 0 FROM numbered`,
+    [...objectTypes, nextStateSeq]
   );
 }

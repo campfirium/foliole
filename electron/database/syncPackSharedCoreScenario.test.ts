@@ -120,7 +120,7 @@ async function applyIncomingPackToTarget(
   try {
     await expect(applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor,
-      deviceId: 'android-target'
+      hostName: 'android-target'
     })).resolves.toMatchObject({
       applied: expected.applied ?? true,
       appliedObjectCount: expected.appliedObjectCount,
@@ -176,13 +176,13 @@ function insertSourceNode() {
   driver.execute(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, current_version_id, content_hash,
-       last_modified_by_device_id, updated_at, sync_dirty
+       last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('node', 'node-1', 1, 'desktop#1', 'node-hash-1',
        'desktop-source', '2026-05-04T05:00:00.000Z', 1)`
   );
   driver.execute(
     `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+       version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
      ) VALUES ('desktop#1', 'node-1', NULL, 'desktop-source',
        '2026-05-04T05:00:00.000Z', 'node-hash-1', '{"id":"node-1","title":"Packed Article"}')`
   );
@@ -206,7 +206,7 @@ function updateSourceNode() {
   );
   driver.execute(
     `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+       version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
      ) VALUES ('desktop#2', 'node-1', 'desktop#1', 'desktop-source',
        '2026-05-04T05:05:00.000Z', 'node-hash-2', '{"id":"node-1","title":"Packed Article Updated"}')`
   );

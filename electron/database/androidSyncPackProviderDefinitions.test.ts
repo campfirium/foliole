@@ -30,14 +30,14 @@ beforeEach(() => {
     [bodyHash, now, now]
   );
   upsertSyncObjectState(driver, {
-    contentHash: 'node-hash', lastModifiedByDeviceId: 'android-b', objectId: 'node-1', objectType: 'node', updatedAt: now
+    contentHash: 'node-hash', lastModifiedByHostName: 'android-b', objectId: 'node-1', objectType: 'node', updatedAt: now
   });
   driver.execute(
     `INSERT INTO setting_records (key, scope, platform, form_factor, host_name, value_json, content_hash, updated_at)
      VALUES ('sample', 'host', 'android', 'phone', 'Android test host', 'true', 'setting-hash', ?)`, [now]
   );
   upsertSyncObjectState(driver, {
-    contentHash: 'setting-hash', lastModifiedByDeviceId: 'android-b',
+    contentHash: 'setting-hash', lastModifiedByHostName: 'android-b',
     objectId: 'host:android:phone:Android test host:sample', objectType: 'setting', updatedAt: now
   });
   driver.execute(
@@ -46,12 +46,12 @@ beforeEach(() => {
   );
   driver.execute(
     `INSERT INTO attachment_blobs
-       (attachment_id, content_hash, storage_key, size_bytes, mime_type, availability, source_device_id, created_at)
+       (attachment_id, content_hash, storage_key, size_bytes, mime_type, availability, source_host_name, created_at)
      VALUES ('attachment-1', 'attachment-hash', 'sample.pdf', 12, 'application/pdf', 'available', 'android-b', ?)`,
     [now]
   );
   upsertSyncObjectState(driver, {
-    contentHash: 'attachment-state-hash', lastModifiedByDeviceId: 'android-b',
+    contentHash: 'attachment-state-hash', lastModifiedByHostName: 'android-b',
     objectId: 'attachment-1', objectType: 'attachment', updatedAt: now
   });
 });
@@ -85,7 +85,7 @@ it('keeps the Android provider independent of optional SQLite JSON functions', (
 it('packs current node heads without dangling historical parent edges', () => {
   source.exec(`
     INSERT INTO node_sync_versions (
-      version_id, object_id, parent_version_id, device_id, created_at,
+      version_id, object_id, parent_version_id, host_name, created_at,
       content_hash, body_text, snapshot_json
     ) VALUES (
       'android-b#2', 'node-1', 'android-b#1', 'android-b', '2026-08-08T00:00:00.000Z',
@@ -127,7 +127,7 @@ it('packs the base node required by a delta text alternative', () => {
     );
   `);
   source.prepare(`INSERT INTO sync_object_state (
-    object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+    object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
   ) VALUES ('node_text_alternative', 'alternative-1', 4, 'alternative-hash', 'android-b', ?, 1)`
   ).run(now);
 
@@ -149,7 +149,7 @@ it('projects an alternative under a deleted node as a tombstone', () => {
       'android-b', '${now}', 'available', '${now}'
     );
     INSERT INTO sync_object_state (
-      object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+      object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
     ) VALUES ('node_text_alternative', 'alternative-1', 4, 'alternative-hash', 'android-b', '${now}', 1);
   `);
 

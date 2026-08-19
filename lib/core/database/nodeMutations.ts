@@ -99,7 +99,7 @@ function runNodeTableUpsert(
     toAnchorLinkValue(input.anchorLink),
     toImageRegionsValue(input.imageRegions),
     null,
-    input.deviceId ?? null,
+    input.hostName ?? null,
     input.createdAt,
     input.updatedAt
   ]);

@@ -29,7 +29,7 @@ function tombstoneRecord(): NativeSyncNodeRecord {
   return {
     ancestor_version_ids: ['desktop#2', 'desktop#1'],
     content_hash: 'hash-delete',
-    device_id: 'desktop',
+    host_name: 'desktop',
     is_tombstone: true,
     object_id: 'node-1',
     object_type: 'node',
@@ -76,7 +76,7 @@ it('applies remote tombstone over a dirty active local node', async () => {
   const connection = openDatabaseConnection();
   connection.driver.execute(
     `INSERT INTO nodes (
-       id, kind, title, content, current_version_id, last_modified_by_device_id, sync_dirty,
+       id, kind, title, content, current_version_id, last_modified_by_host_name, sync_dirty,
        created_at, updated_at, deleted_at
      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
     [
@@ -124,7 +124,7 @@ it('does not let an old active remote version revive a permanent-delete tombston
   const connection = openDatabaseConnection();
   connection.driver.execute(
     `INSERT INTO node_sync_tombstones (
-       node_id, version_id, parent_version_id, device_id, content_hash, snapshot_json, deleted_at, created_at
+       node_id, version_id, parent_version_id, host_name, content_hash, snapshot_json, deleted_at, created_at
      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       'node-1',

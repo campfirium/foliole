@@ -61,7 +61,7 @@ function iosNodeVersion(): NativeSyncNodeRecord {
   return {
     ancestor_version_ids: [],
     content_hash: 'ios-node-hash',
-    device_id: 'ios-device',
+    host_name: 'ios-device',
     object_id: 'ios-node-1',
     object_type: 'node',
     parent_version_id: null,

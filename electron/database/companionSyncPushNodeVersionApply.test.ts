@@ -46,7 +46,7 @@ function createNodeVersionPush(): SyncPushPayload {
   const record = {
     ancestor_version_ids: [],
     content_hash: 'android-node-hash',
-    device_id: 'android-device',
+    host_name: 'android-device',
     object_id: 'node-highlight',
     object_type: 'node' as const,
     parent_version_id: null,
@@ -73,11 +73,12 @@ function createNodeVersionPush(): SyncPushPayload {
     },
     updated_at: '2026-05-03T01:00:00.000Z',
     version_created_at: '2026-05-03T01:00:00.000Z',
-    version_id: 'android#1'
+    version_id: 'ver_android'
   };
   return {
+    authorHostName: record.host_name,
     base: { ancestorVersionIds: [], kind: 'node_version', parentVersionId: null },
-    clientOpId: 'node:android#1',
+    clientOpId: 'node:ver_android',
     contentHash: 'android-node-hash',
     identity: { objectId: 'node-highlight', objectType: 'node', scope: 'workspace' },
     payloadJson: JSON.stringify(record),
@@ -85,7 +86,7 @@ function createNodeVersionPush(): SyncPushPayload {
   };
 }
 
-function createRestoreNodeVersionPush(parentVersionId = 'desktop#deleted'): SyncPushPayload {
+function createRestoreNodeVersionPush(parentVersionId = 'ver_deleted'): SyncPushPayload {
   const payload = createNodeVersionPush();
   const record = JSON.parse(payload.payloadJson!) as SyncNodeRecord;
   const restoredAt = '2026-05-03T02:00:00.000Z';
@@ -95,7 +96,7 @@ function createRestoreNodeVersionPush(parentVersionId = 'desktop#deleted'): Sync
     parent_version_id: parentVersionId,
     updated_at: restoredAt,
     version_created_at: restoredAt,
-    version_id: 'ios#restore'
+    version_id: 'ver_restore'
   });
   Object.assign(record.snapshot, {
     deleted_at: null,
@@ -106,7 +107,7 @@ function createRestoreNodeVersionPush(parentVersionId = 'desktop#deleted'): Sync
   return {
     ...payload,
     base: { ancestorVersionIds: [parentVersionId], kind: 'node_version', parentVersionId },
-    clientOpId: 'node:ios#restore',
+    clientOpId: 'node:ver_restore',
     identity: { objectId: 'node-restored', objectType: 'node', scope: 'workspace' },
     payloadJson: JSON.stringify(record),
     updatedAt: restoredAt
@@ -122,18 +123,18 @@ function seedDeletedNode() {
   );
   driver.execute(
     `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
-     ) VALUES ('desktop#stale', 'node-restored', NULL, 'desktop',
+       version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
+     ) VALUES ('ver_stale', 'node-restored', NULL, 'desktop',
        '2026-05-03T00:30:00.000Z', 'desktop-stale-hash', '{}')`
   );
   driver.execute(
     `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
-     ) VALUES ('desktop#deleted', 'node-restored', 'desktop#stale', 'desktop',
+       version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
+     ) VALUES ('ver_deleted', 'node-restored', 'ver_stale', 'desktop',
        '2026-05-03T01:00:00.000Z', 'desktop-deleted-hash', '{}')`
   );
   driver.execute(
-    `UPDATE nodes SET current_version_id = 'desktop#deleted' WHERE id = 'node-restored'`
+    `UPDATE nodes SET current_version_id = 'ver_deleted' WHERE id = 'node-restored'`
   );
 }
 
@@ -145,18 +146,18 @@ describe('companion sync node version push apply', () => {
     expect(result.acks).toMatchObject([{
       identity: { objectId: 'node-highlight', objectType: 'node', scope: 'workspace' },
       status: 'accepted',
-      versionId: 'android#1'
+      versionId: 'ver_android'
     }]);
     expect(openDatabaseConnection().driver.queryOne<{ anchor_link: string; current_version_id: string; title: string }>(
       `SELECT anchor_link, current_version_id, title FROM nodes WHERE id = 'node-highlight'`
     )).toEqual({
       anchor_link: '{"id":"anchor-1","kind":"highlight"}',
-      current_version_id: 'android#1',
+      current_version_id: 'ver_android',
       title: 'Selected text'
     });
-    expect(openDatabaseConnection().driver.queryOne<{ content_hash: string; device_id: string }>(
-      `SELECT content_hash, device_id FROM node_sync_versions WHERE version_id = 'android#1'`
-    )).toEqual({ content_hash: 'android-node-hash', device_id: 'android-device' });
+    expect(openDatabaseConnection().driver.queryOne<{ content_hash: string; host_name: string }>(
+      `SELECT content_hash, host_name FROM node_sync_versions WHERE version_id = 'ver_android'`
+    )).toEqual({ content_hash: 'android-node-hash', host_name: 'android-device' });
   });
 
   it('accepts node versions through the async companion push entry', async () => {
@@ -165,11 +166,11 @@ describe('companion sync node version push apply', () => {
     expect(result.appliedNodeIds).toEqual(['node-highlight']);
     expect(result.acks).toMatchObject([{
       status: 'accepted',
-      versionId: 'android#1'
+      versionId: 'ver_android'
     }]);
     expect(openDatabaseConnection().driver.queryOne<{ current_version_id: string }>(
       `SELECT current_version_id FROM nodes WHERE id = 'node-highlight'`
-    )).toEqual({ current_version_id: 'android#1' });
+    )).toEqual({ current_version_id: 'ver_android' });
   });
 
   it('accepts only a direct child version as an intentional companion restore', async () => {
@@ -177,22 +178,22 @@ describe('companion sync node version push apply', () => {
 
     const result = await applyCompanionSyncPushAsync([createRestoreNodeVersionPush()], 'android-device');
 
-    expect(result.acks).toMatchObject([{ status: 'accepted', versionId: 'ios#restore' }]);
+    expect(result.acks).toMatchObject([{ status: 'accepted', versionId: 'ver_restore' }]);
     expect(openDatabaseConnection().driver.queryOne<{ current_version_id: string; deleted_at: null }>(
       `SELECT current_version_id, deleted_at FROM nodes WHERE id = 'node-restored'`
-    )).toEqual({ current_version_id: 'ios#restore', deleted_at: null });
+    )).toEqual({ current_version_id: 'ver_restore', deleted_at: null });
   });
 
   it('keeps stale companion restore ancestry on the conflict path', async () => {
     seedDeletedNode();
 
     const result = await applyCompanionSyncPushAsync(
-      [createRestoreNodeVersionPush('desktop#stale')], 'android-device'
+      [createRestoreNodeVersionPush('ver_stale')], 'android-device'
     );
 
     expect(result.acks).toMatchObject([{ status: 'conflict' }]);
     expect(openDatabaseConnection().driver.queryOne<{ current_version_id: string; deleted_at: string }>(
       `SELECT current_version_id, deleted_at FROM nodes WHERE id = 'node-restored'`
-    )).toEqual({ current_version_id: 'desktop#deleted', deleted_at: '2026-05-03T01:00:00.000Z' });
+    )).toEqual({ current_version_id: 'ver_deleted', deleted_at: '2026-05-03T01:00:00.000Z' });
   });
 });

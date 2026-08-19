@@ -21,7 +21,6 @@ import type { UpsertNodeSnapshotOptions } from '../../lib/core/database/nodeMuta
 import { assertFoliolePublishedDeleteAllowed } from '../foliolePublish/foliolePublishManagement.js';
 
 import { openDatabaseConnection } from './connection.js';
-import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
 import { markKeepImportItemsLocallyDeletedByNodeDeletedAt } from './keepImportItems.js';
 import { flushDirtyNodeSyncVersions, flushNodeSyncVersion } from './nodeSyncVersions.js';
@@ -50,7 +49,6 @@ export type {
 export function upsertNodeSnapshot(input: UpsertNodeSnapshotInput, options: UpsertNodeSnapshotOptions = {}): void {
   upsertNodeSnapshotViaDriver(openDatabaseConnection().driver, {
     ...input,
-    deviceId: loadOrCreateDesktopDeviceId(input.updatedAt),
     hostName: loadOrCreateDesktopHostName(input.updatedAt)
   }, options);
   if ('reading' in input) {
@@ -67,7 +65,6 @@ export function upsertNodeSnapshotWithOrder(input: UpsertNodeSnapshotInput, node
   withTransaction(connection.driver, () => {
     upsertNodeSnapshotViaDriver(connection.driver, {
       ...input,
-      deviceId: loadOrCreateDesktopDeviceId(input.updatedAt),
       hostName: loadOrCreateDesktopHostName(input.updatedAt)
     });
     replaceNodeOrderViaDriver(connection.driver, nodeOrder);
@@ -84,7 +81,7 @@ export function upsertNodeSnapshotWithOrder(input: UpsertNodeSnapshotInput, node
 export function replaceNodeOrder(nodeIds: string[]): void {
   const connection = openDatabaseConnection();
   const now = new Date().toISOString();
-  const deviceId = loadOrCreateDesktopDeviceId(now);
+  const hostName = loadOrCreateDesktopHostName(now);
   withTransaction(connection.driver, () => {
     replaceNodeOrderViaDriver(connection.driver, nodeIds);
     const folderOrderRows = connection.driver.queryAll<{ node_id: string }>(
@@ -93,9 +90,9 @@ export function replaceNodeOrder(nodeIds: string[]): void {
     for (const row of folderOrderRows) {
       connection.driver.execute(
         `UPDATE nodes
-         SET last_modified_by_device_id = ?, sync_dirty = 1
+         SET last_modified_by_host_name = ?, sync_dirty = 1
          WHERE id = ?`,
-        [deviceId, row.node_id]
+        [hostName, row.node_id]
       );
     }
   });
@@ -104,19 +101,18 @@ export function replaceNodeOrder(nodeIds: string[]): void {
 export function moveNodes(input: MoveNodesInput): MoveNodesResult {
   const connection = openDatabaseConnection();
   const now = new Date().toISOString();
-  const deviceId = loadOrCreateDesktopDeviceId(now);
   const hostName = loadOrCreateDesktopHostName(now);
   return withTransaction(connection.driver, () => {
     const result = moveNodesViaDriver(connection.driver, {
       nodeOrder: input.nodeOrder,
-      nodes: input.nodes.map((node) => ({ ...node, deviceId, hostName }))
+      nodes: input.nodes.map((node) => ({ ...node, hostName }))
     });
     for (const node of input.nodes) {
       connection.driver.execute(
         `UPDATE nodes
-         SET last_modified_by_device_id = ?, sync_dirty = 1
+         SET last_modified_by_host_name = ?, sync_dirty = 1
          WHERE id = ?`,
-        [deviceId, node.nodeId]
+        [hostName, node.nodeId]
       );
     }
     return result;
@@ -130,7 +126,7 @@ export function updateNodeAnchorLinks(inputs: UpdateNodeAnchorLinkInput[]): void
 export function softDeleteNodes(input: SoftDeleteNodesInput): void {
   assertFoliolePublishedDeleteAllowed(input.nodeIds);
   const connection = openDatabaseConnection();
-  const deviceId = loadOrCreateDesktopDeviceId(input.deletedAt);
+  const hostName = loadOrCreateDesktopHostName(input.deletedAt);
   for (const nodeId of input.nodeIds) {
     flushNodeSyncVersion(nodeId, input.deletedAt);
   }
@@ -140,9 +136,9 @@ export function softDeleteNodes(input: SoftDeleteNodesInput): void {
       recordNodeSourceDisposition(nodeId, 'soft_deleted', input.deletedAt);
       connection.driver.execute(
         `UPDATE nodes
-         SET last_modified_by_device_id = ?, sync_dirty = 1
+         SET last_modified_by_host_name = ?, sync_dirty = 1
          WHERE id = ?`,
-        [deviceId, nodeId]
+        [hostName, nodeId]
       );
     }
   });
@@ -154,16 +150,16 @@ export function softDeleteNodes(input: SoftDeleteNodesInput): void {
 export function restoreNodes(input: RestoreNodesInput): RestoreNodesResult {
   const connection = openDatabaseConnection();
   const now = new Date().toISOString();
-  const deviceId = loadOrCreateDesktopDeviceId(now);
+  const hostName = loadOrCreateDesktopHostName(now);
   return withTransaction(connection.driver, () => {
     const result = restoreNodesViaDriver(connection.driver, input);
     for (const nodeId of result.restoredNodeIds) {
       clearNodeSourceDisposition(nodeId);
       connection.driver.execute(
         `UPDATE nodes
-         SET last_modified_by_device_id = ?, sync_dirty = 1
+         SET last_modified_by_host_name = ?, sync_dirty = 1
          WHERE id = ?`,
-        [deviceId, nodeId]
+        [hostName, nodeId]
       );
     }
     return result;
@@ -174,7 +170,7 @@ export function deleteNodesPermanently(input: DeleteNodesPermanentlyInput): stri
   assertFoliolePublishedDeleteAllowed(input.nodeIds);
   const connection = openDatabaseConnection();
   const deletedAt = new Date().toISOString();
-  const deviceId = loadOrCreateDesktopDeviceId(deletedAt);
+  const hostName = loadOrCreateDesktopHostName(deletedAt);
   const attachmentCleanupPlan = createAttachmentCleanupPlan(input.nodeIds);
   const nodeDeletedAt = readNodeDeletedAtForPermanentDelete(input.nodeIds, deletedAt);
   for (const row of nodeDeletedAt) {
@@ -185,9 +181,9 @@ export function deleteNodesPermanently(input: DeleteNodesPermanentlyInput): stri
     for (const nodeId of input.nodeIds) {
       connection.driver.execute(
         `UPDATE nodes
-         SET deleted_at = ?, updated_at = ?, last_modified_by_device_id = ?, sync_dirty = 1
+         SET deleted_at = ?, updated_at = ?, last_modified_by_host_name = ?, sync_dirty = 1
          WHERE id = ?`,
-        [deletedAt, deletedAt, deviceId, nodeId]
+        [deletedAt, deletedAt, hostName, nodeId]
       );
     }
   });

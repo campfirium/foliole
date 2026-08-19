@@ -7,11 +7,10 @@ import type {
 import { openDatabaseConnection } from './connection.js';
 
 export async function applyReviewLogPushAsync(
-  item: CompanionSyncPushPayload,
-  sourceDeviceId: string
+  item: CompanionSyncPushPayload
 ): Promise<CompanionSyncPushResult> {
   const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'desktop-sync-review-log-push' });
-  return await applyReviewLogPushWithDbPort(port, item, sourceDeviceId);
+  return await applyReviewLogPushWithDbPort(port, item);
 }
 
 export { applyReviewLogPushWithDbPort } from './companionSyncPushReviewLogWithDbPort.js';

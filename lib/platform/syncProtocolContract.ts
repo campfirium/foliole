@@ -6,7 +6,13 @@ export const SYNC_PROTOCOL_TXT_KEYS = {
 } as const;
 
 export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
-  capabilities: Object.freeze(['lan-sync-v1', 'opaque-sync-refs-v1', 'sync-group-facts-v1', 'workgroup-aead-v1']),
+  capabilities: Object.freeze([
+    'author-host-snapshots-v1',
+    'lan-sync-v1',
+    'opaque-sync-refs-v1',
+    'sync-group-facts-v1',
+    'workgroup-aead-v1'
+  ]),
   max_supported_version: 2,
   min_supported_version: 2,
   version: 2

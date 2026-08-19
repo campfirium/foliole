@@ -11,6 +11,7 @@ const capacitorMock = vi.hoisted(() => ({
       database_path: '/tmp/foliole.db',
       database_ready: true,
       device_id: 'android-test-device',
+      host_name: 'Android test host',
       runtime_kind: 'android-capacitor'
     })),
     loadSyncPackCursor: vi.fn(async () => ({ cursor: 4 })),
@@ -37,6 +38,7 @@ const bootstrapMock = vi.hoisted(() => ({
     database_path: '/tmp/foliole.db',
     database_ready: true,
     device_id: 'android-test-device',
+    host_name: 'Android test host',
     runtime_kind: 'android-capacitor' as 'android-capacitor' | 'ios-capacitor'
   }))
 }));
@@ -69,6 +71,7 @@ beforeEach(() => {
     database_path: '/tmp/foliole.db',
     database_ready: true,
     device_id: 'android-test-device',
+    host_name: 'Android test host',
     runtime_kind: 'android-capacitor'
   });
 });
@@ -94,6 +97,7 @@ it('downloads desktop packs before applying them through the shared database own
   });
   expect(iosSyncPackApplyMock.apply).toHaveBeenCalledWith({
     deviceId: 'android-test-device',
+    hostName: 'Android test host',
     packPath: '/tmp/downloaded-pack.db',
     sourcePeerId: 'desktop-test-device'
   });
@@ -121,6 +125,7 @@ it('downloads validated packs before routing iOS through its shared-core adapter
     database_path: '/tmp/foliole.db',
     database_ready: true,
     device_id: 'ios-test-device',
+    host_name: 'iOS test host',
     runtime_kind: 'ios-capacitor'
   });
   const api = await import('./companionSyncPackApply');
@@ -133,6 +138,7 @@ it('downloads validated packs before routing iOS through its shared-core adapter
 
   expect(iosSyncPackApplyMock.apply).toHaveBeenCalledWith({
     deviceId: 'ios-test-device',
+    hostName: 'iOS test host',
     packPath: '/tmp/downloaded-pack.db',
     sourcePeerId: 'desktop-test-device'
   });

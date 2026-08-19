@@ -6,7 +6,6 @@ import { loadManagedPathCandidates } from '../managedPathSafety.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { upsertDesktopSource } from './desktopSources.js';
-import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
 import { loadExternalFolderEnabled } from './externalFolderDevicePreferences.js';
 import {
   type ExternalSearchFolderRow,
@@ -14,6 +13,7 @@ import {
   readExternalSearchFolderRows,
   toExternalSearchFolder
 } from './externalSearchFolderRows.js';
+import { loadOrCreateDesktopHostName } from './hostProfile.js';
 
 type SaveFolderInput = Pick<NativeExternalSearchFolder,
   'attachment_mode' | 'attachment_root_path' | 'excluded_dirs' | 'folder_path' | 'id'> & { claim_unowned?: boolean };
@@ -39,7 +39,7 @@ export function loadExternalSearchFolders() {
   ));
 }
 
-function recordSync(folder: ReturnType<typeof normalizedInput>[number], now: string, deviceId: string, deletedAt?: string) {
+function recordSync(folder: ReturnType<typeof normalizedInput>[number], now: string, hostName: string, deletedAt?: string) {
   const driver = openDatabaseConnection().driver;
   const identity = loadOrCreateDesktopInstallationIdentity();
   upsertSyncObjectState(driver, {
@@ -50,7 +50,7 @@ function recordSync(folder: ReturnType<typeof normalizedInput>[number], now: str
       owner_device_name: identity.deviceName, owner_installation_id: identity.installationId,
       owner_platform: identity.platform
     }),
-    deletedAt: deletedAt ?? null, lastModifiedByDeviceId: deviceId, updatedAt: now, syncDirty: true
+    deletedAt: deletedAt ?? null, lastModifiedByHostName: hostName, updatedAt: now, syncDirty: true
   });
 }
 
@@ -100,7 +100,7 @@ function upsertLocalFolder(input: ReturnType<typeof normalizedInput>[number], id
 export function saveExternalSearchFolders(folders: SaveFolderInput[]) {
   const driver = openDatabaseConnection().driver;
   const now = new Date().toISOString();
-  const deviceId = loadOrCreateDesktopDeviceId(now);
+  const hostName = loadOrCreateDesktopHostName(now);
   const inputs = normalizedInput(folders);
   driver.transaction(() => {
     const rows = readExternalSearchFolderRows();
@@ -112,7 +112,7 @@ export function saveExternalSearchFolders(folders: SaveFolderInput[]) {
     for (const item of resolved) {
       const input = { ...item.input, id: item.id };
       upsertLocalFolder(input, item.id, rows, now);
-      recordSync(input, now, deviceId);
+      recordSync(input, now, hostName);
     }
   });
   return loadExternalSearchFolders();

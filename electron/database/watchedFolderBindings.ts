@@ -8,6 +8,7 @@ import { loadOrCreateDesktopInstallationIdentity } from '../desktopInstallationI
 import { openDatabaseConnection } from './connection.js';
 import { loadDesktopSourceByConfig, upsertDesktopSource } from './desktopSources.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
+import { loadOrCreateDesktopHostName } from './hostProfile.js';
 
 interface WatchedFolderBindingRow extends DatabaseRow {
   action_mode: string;
@@ -69,13 +70,13 @@ function bindingPayload(binding: NativeWatchedFolderBinding) {
   };
 }
 
-function recordBindingSync(binding: NativeWatchedFolderBinding, deviceId: string, deletedAt?: string) {
+function recordBindingSync(binding: NativeWatchedFolderBinding, deletedAt?: string) {
   upsertSyncObjectState(openDatabaseConnection().driver, {
     contentHash: computeSyncContentHash('watched_folder', deletedAt
       ? { binding_id: binding.binding_id, deleted_at: deletedAt }
       : bindingPayload(binding)),
     deletedAt: deletedAt ?? null,
-    lastModifiedByDeviceId: deviceId,
+    lastModifiedByHostName: loadOrCreateDesktopHostName(deletedAt ?? binding.updated_at),
     objectId: binding.binding_id,
     objectType: 'watched_folder',
     syncDirty: true,
@@ -132,7 +133,7 @@ export function upsertChangedWatchedFolderSource(source: ImportManagerSourceDraf
       desktopSource.source_ref]
   );
   const binding = loadWatchedFolderBindings().find((item) => item.binding_id === bindingId) ?? null;
-  if (binding) recordBindingSync(binding, profile.deviceId);
+  if (binding) recordBindingSync(binding);
   return binding;
 }
 
@@ -200,13 +201,12 @@ export function disconnectWatchedFolderBinding(bindingId: string) {
   const current = loadWatchedFolderBindings().find((item) => item.binding_id === bindingId);
   if (!current) throw new Error('watched_folder_not_found');
   const now = new Date().toISOString();
-  const deviceId = loadOrCreateDesktopDeviceId(now);
   driver.execute(
     `UPDATE watched_folder_bindings SET connection_status = 'needs-folder', updated_at = ?
      WHERE binding_id = ?`, [now, bindingId]
   );
   const updated = loadWatchedFolderBindings().find((item) => item.binding_id === bindingId)!;
-  recordBindingSync(updated, deviceId);
+  recordBindingSync(updated);
   return updated;
 }
 
@@ -215,9 +215,8 @@ export function removeWatchedFolderBinding(bindingId: string) {
   const current = loadWatchedFolderBindings().find((item) => item.binding_id === bindingId);
   if (!current) throw new Error('watched_folder_not_found');
   const now = new Date().toISOString();
-  const deviceId = loadOrCreateDesktopDeviceId(now);
   driver.transaction((tx) => {
     tx.execute('DELETE FROM watched_folder_bindings WHERE binding_id = ?', [bindingId]);
-    recordBindingSync(current, deviceId, now);
+    recordBindingSync(current, now);
   });
 }

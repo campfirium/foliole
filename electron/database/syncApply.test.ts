@@ -30,7 +30,7 @@ function createRemoteNodeRecord(): NativeSyncNodeRecord {
   return {
     ancestor_version_ids: ['desktop#0'],
     content_hash: 'hash-1',
-    device_id: 'phone',
+    host_name: 'phone',
     object_id: 'node-1',
     object_type: 'node',
     parent_version_id: 'desktop#0',
@@ -68,7 +68,7 @@ function insertLocalNodeVersion(versionId: string) {
   const connection = openDatabaseConnection();
   connection.driver.execute(
     `INSERT INTO nodes (
-       id, kind, title, content, current_version_id, last_modified_by_device_id, sync_dirty, created_at, updated_at
+       id, kind, title, content, current_version_id, last_modified_by_host_name, sync_dirty, created_at, updated_at
      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       'node-1',
@@ -88,14 +88,14 @@ function insertDeletedParentWithLiveChildLearning() {
   const connection = openDatabaseConnection();
   connection.driver.execute(
     `INSERT INTO nodes (
-       id, kind, title, content, current_version_id, last_modified_by_device_id, sync_dirty,
+       id, kind, title, content, current_version_id, last_modified_by_host_name, sync_dirty,
        created_at, updated_at, deleted_at
      ) VALUES ('deleted-parent', 'folder', 'Deleted Parent', '', 'desktop-parent#delete', 'desktop', 0,
        '2026-04-21T08:00:00.000Z', '2026-04-21T12:00:00.000Z', '2026-04-21T12:00:00.000Z')`
   );
   connection.driver.execute(
     `INSERT INTO nodes (
-       id, parent_id, kind, title, content, current_version_id, last_modified_by_device_id, sync_dirty,
+       id, parent_id, kind, title, content, current_version_id, last_modified_by_host_name, sync_dirty,
        created_at, updated_at
      ) VALUES ('node-1', 'deleted-parent', 'item', 'Hidden Child', '', 'desktop-child#1', 'desktop', 0,
        '2026-04-21T09:00:00.000Z', '2026-04-21T09:30:00.000Z')`
@@ -134,14 +134,14 @@ it('applies remote sync nodes into state, version table, and attachment links', 
   const connection = openDatabaseConnection();
   expect(
     connection.sqlite.prepare(
-      `SELECT current_version_id, last_modified_by_device_id, sync_dirty, title, content, body_blob_hash, position
+      `SELECT current_version_id, last_modified_by_host_name, sync_dirty, title, content, body_blob_hash, position
        FROM nodes WHERE id = ?`
     ).get('node-1')
   ).toEqual({
     body_blob_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
     content: 'remote body',
     current_version_id: 'phone#1',
-    last_modified_by_device_id: 'phone',
+    last_modified_by_host_name: 'phone',
     position: 4,
     sync_dirty: 0,
     title: 'Remote Node'
@@ -158,13 +158,13 @@ it('applies remote sync nodes into state, version table, and attachment links', 
   ).toBe('remote body');
   expect(
     connection.sqlite.prepare(
-      `SELECT version_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+      `SELECT version_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
        FROM node_sync_versions WHERE version_id = ?`
     ).get('phone#1')
   ).toEqual({
     content_hash: 'hash-1',
     created_at: '2026-04-21T11:00:00.000Z',
-    device_id: 'phone',
+    host_name: 'phone',
     parent_version_id: 'desktop#0',
     snapshot_json: expect.stringContaining('"title":"Remote Node"'),
     version_id: 'phone#1'
@@ -229,9 +229,9 @@ it('stores divergent remote node versions without reviving the legacy conflict q
     title: 'Local Node'
   });
   expect(connection.sqlite.prepare(
-    'SELECT version_id, object_id, parent_version_id, device_id FROM node_sync_versions WHERE version_id = ?'
+    'SELECT version_id, object_id, parent_version_id, host_name FROM node_sync_versions WHERE version_id = ?'
   ).get('phone#1')).toEqual({
-    device_id: 'phone', object_id: 'node-1', parent_version_id: 'desktop#0', version_id: 'phone#1'
+    host_name: 'phone', object_id: 'node-1', parent_version_id: 'desktop#0', version_id: 'phone#1'
   });
   expect(connection.sqlite.prepare('SELECT conflict_version_id FROM node_sync_conflicts').all()).toEqual([]);
 });

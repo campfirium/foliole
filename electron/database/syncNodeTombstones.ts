@@ -7,7 +7,7 @@ interface SyncNodeTombstoneRow extends DatabaseRow {
   content_hash: string;
   created_at: string;
   deleted_at: string;
-  device_id: string;
+  host_name: string;
   node_id: string;
   parent_version_id: string | null;
   snapshot_json: string;
@@ -19,7 +19,7 @@ function toNativeSyncNodeTombstone(row: SyncNodeTombstoneRow): NativeSyncNodeRec
   return {
     ancestor_version_ids: row.parent_version_id ? [row.parent_version_id] : [],
     content_hash: row.content_hash,
-    device_id: row.device_id,
+    host_name: row.host_name,
     is_tombstone: true,
     object_id: row.node_id,
     object_type: 'node',
@@ -40,7 +40,7 @@ export function loadSyncNodeTombstoneVersionsSince(
        node_id,
        version_id,
        parent_version_id,
-       device_id,
+       host_name,
        content_hash,
        snapshot_json,
        deleted_at,

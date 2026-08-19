@@ -37,7 +37,7 @@ export const COMPANION_SYNCBACK_HOST_CONTRACT = {
     reviewLogPush: protocol.syncMetaCursors.reviewLogPush,
     statePush: protocol.syncMetaCursors.statePush
   },
-  deviceIdMetaKey: 'device_id',
+  hostNameMetaKey: 'host_name',
   limits: {
     default: ANDROID_COMPANION_SYNC_STREAM_READ_RULES.reviewLog.defaultLimit,
     max: ANDROID_COMPANION_SYNC_STREAM_READ_RULES.reviewLog.maxLimit,

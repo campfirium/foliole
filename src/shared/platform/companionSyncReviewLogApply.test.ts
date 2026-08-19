@@ -55,7 +55,7 @@ function reviewLogRecord(): NativeSyncReviewLogRecord {
   return {
     difficulty_after: 3.6,
     difficulty_before: 3.2,
-    device_id: 'desktop',
+    host_name: 'desktop',
     due_after: '2026-05-08T01:00:00.000Z',
     due_before: '2026-05-05T01:00:00.000Z',
     grade: 3,
@@ -105,7 +105,7 @@ function installReviewLogSchema(database: Database.Database) {
     CREATE TABLE review_log (
       id TEXT PRIMARY KEY,
       op_id TEXT NOT NULL UNIQUE,
-      device_id TEXT NOT NULL DEFAULT '',
+      host_name TEXT NOT NULL DEFAULT '',
       node_id TEXT NOT NULL,
       grade INTEGER NOT NULL,
       scheduler_version TEXT NOT NULL,

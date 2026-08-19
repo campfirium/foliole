@@ -49,7 +49,7 @@ function insertNode(nodeId: string) {
 function insertBaseState(objectType: 'node_open_state' | 'node_reading' | 'node_review' | 'setting' | 'view_state', objectId: string, contentHash: string) {
   openDatabaseConnection().driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES (?, ?, 1, ?, 'desktop', '2026-04-30T00:00:00.000Z', 0)`,
     [objectType, objectId, contentHash]
   );
@@ -57,6 +57,7 @@ function insertBaseState(objectType: 'node_open_state' | 'node_reading' | 'node_
 
 function createNodeOpenStatePush(lastOpenedAt: string, overrides: Partial<SyncPushPayload> = {}): SyncPushPayload {
   return {
+    authorHostName: 'android-device',
     base: { baseContentHash: 'stale-companion-base', kind: 'content_hash' },
     clientOpId: `node_open_state:node-1:${lastOpenedAt}`,
     contentHash: `hash-${lastOpenedAt}`,
@@ -78,6 +79,7 @@ function insertBaseReadingState(contentHash = 'desktop-reading-base') {
 
 function createNodeReadingPush(overrides: Partial<SyncPushPayload> = {}): SyncPushPayload {
   return {
+    authorHostName: 'android-device',
     base: { baseContentHash: 'desktop-reading-base', kind: 'content_hash' },
     clientOpId: 'node_reading:node-1:11',
     contentHash: 'android-reading-next',
@@ -100,6 +102,7 @@ function createNodeReadingPush(overrides: Partial<SyncPushPayload> = {}): SyncPu
 
 function createNodeReviewPush(overrides: Partial<SyncPushPayload> = {}): SyncPushPayload {
   return {
+    authorHostName: 'android-device',
     base: { baseContentHash: 'desktop-base', kind: 'content_hash' },
     clientOpId: 'node_review:node-1:12',
     contentHash: 'android-next',

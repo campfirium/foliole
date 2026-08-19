@@ -6,7 +6,7 @@ import type { NativeSplitTopicMutationArgs } from '../../lib/platform/nativeNode
 import { assertFoliolePublishedDeleteAllowed } from '../foliolePublish/foliolePublishManagement.js';
 
 import { openDatabaseConnection } from './connection.js';
-import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
+import { loadOrCreateDesktopHostName } from './hostProfile.js';
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersions.js';
 import { recordNodeSourceDispositionWithDriver } from './sourceDispositionStates.js';
 import { withTransaction } from './transaction.js';
@@ -31,23 +31,23 @@ export function splitTopic(input: NativeSplitTopicMutationArgs) {
   }
   const connection = openDatabaseConnection();
   const mutationAt = input.disposition === 'replace' ? input.deletedAt : input.generatedNodes[0]!.updatedAt;
-  const deviceId = loadOrCreateDesktopDeviceId(mutationAt);
+  const hostName = loadOrCreateDesktopHostName(mutationAt);
   const generatedNodeIds = input.generatedNodes.map((node) => node.nodeId);
   withTransaction(connection.driver, () => {
     for (const node of input.generatedNodes) {
-      upsertNodeSnapshotViaDriver(connection.driver, { ...node, deviceId });
-      flushNodeSyncVersionWithDriver(connection.driver, node.nodeId, deviceId, node.updatedAt);
+      upsertNodeSnapshotViaDriver(connection.driver, { ...node, hostName });
+      flushNodeSyncVersionWithDriver(connection.driver, node.nodeId, hostName, node.updatedAt);
     }
     replaceNodeOrderViaDriver(connection.driver, input.nodeOrder);
     if (input.disposition === 'replace') {
       connection.driver.execute(
         `UPDATE nodes
-         SET deleted_at = ?, updated_at = ?, last_modified_by_device_id = ?, sync_dirty = 1
+         SET deleted_at = ?, updated_at = ?, last_modified_by_host_name = ?, sync_dirty = 1
          WHERE id = ?`,
-        [input.deletedAt, input.deletedAt, deviceId, input.sourceNodeId]
+        [input.deletedAt, input.deletedAt, hostName, input.sourceNodeId]
       );
       recordNodeSourceDispositionWithDriver(connection.driver, input.sourceNodeId, 'soft_deleted', input.deletedAt);
-      flushNodeSyncVersionWithDriver(connection.driver, input.sourceNodeId, deviceId, input.deletedAt);
+      flushNodeSyncVersionWithDriver(connection.driver, input.sourceNodeId, hostName, input.deletedAt);
     }
   });
   return {

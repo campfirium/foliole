@@ -7,7 +7,7 @@ import {
 } from './syncPackNodeFields.js';
 
 export const SYNC_PACK_FORMAT = 'foliole.sync-pack';
-export const SYNC_PACK_FORMAT_VERSION = 6;
+export const SYNC_PACK_FORMAT_VERSION = 7;
 export const SYNC_PACK_COMPRESSION = 'zlib';
 export const SYNC_PACK_DATABASE_ENTRY = 'incoming.db.deflate';
 export const SYNC_PACK_MINIMUM_SCHEMA_VERSION = DATABASE_SCHEMA_VERSION;
@@ -32,11 +32,13 @@ export const SYNC_PACK_SQLITE_TABLE_REQUIREMENTS = {
   sync_group_member_departures: [
     'group_id', 'device_id', 'authorized_by_device_id', 'authorization_id', 'left_at'
   ],
-  sync_object_state: ['object_type', 'object_id', 'state_seq', 'content_hash', 'updated_at', 'deleted_at'],
+  sync_object_state: [
+    'object_type', 'object_id', 'state_seq', 'content_hash', 'last_modified_by_host_name', 'updated_at', 'deleted_at'
+  ],
   sync_objects: ['object_type', 'object_id', 'content_hash', 'payload_json', 'updated_at', 'deleted_at'],
   nodes: requiredNodeColumns,
   node_sync_versions: [
-    'version_id', 'object_id', 'parent_version_id', 'device_id',
+    'version_id', 'object_id', 'parent_version_id', 'host_name',
     'created_at', 'content_hash', 'body_text', 'snapshot_json'
   ],
   node_sync_version_parents: ['version_id', 'parent_version_id', 'ordinal'],
@@ -49,11 +51,11 @@ export const SYNC_PACK_SQLITE_TABLE_REQUIREMENTS = {
   ],
   content_blobs: [
     'hash', 'storage_key', 'kind', 'mime_type', 'compression', 'original_size_bytes',
-    'stored_size_bytes', 'original_sha256', 'stored_sha256', 'availability', 'source_device_id',
+    'stored_size_bytes', 'original_sha256', 'stored_sha256', 'availability', 'source_host_name',
     'created_at', 'cached_at', 'last_verified_at'
   ],
   review_log: [
-    'id', 'op_id', 'device_id', 'node_id', 'grade', 'scheduler_version', 'reviewed_at',
+    'id', 'op_id', 'host_name', 'node_id', 'grade', 'scheduler_version', 'reviewed_at',
     'due_before', 'stability_before', 'difficulty_before', 'due_after', 'stability_after', 'difficulty_after'
   ]
 } as const;

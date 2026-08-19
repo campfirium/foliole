@@ -15,7 +15,7 @@ interface AlternativeRow extends DbRow, DatabaseRow {
   body_text: string;
   created_at: string;
   node_id: string;
-  source_device_id: string;
+  source_host_name: string;
   source_version_id: string;
   status: string;
   updated_at: string;
@@ -85,7 +85,7 @@ function promotedRecord(current: NativeSyncNodeRecord, body: string, now: string
     ancestor_version_ids: [current.version_id!, ...current.ancestor_version_ids],
     body_text: body,
     content_hash: hash(JSON.stringify({ body, snapshot })),
-    device_id: 'desktop-alternative-promotion',
+    host_name: 'desktop-alternative-promotion',
     object_id: current.object_id,
     object_type: 'node',
     parent_version_id: current.version_id,
@@ -110,7 +110,7 @@ async function writeAlternativeStatus(
   const contentHash = hash(JSON.stringify({ ...alternative, status, updated_at: now }));
   await port.run(
     `UPDATE sync_object_state SET state_seq = (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state),
-       content_hash = ?, last_modified_by_device_id = 'desktop-alternative-action', updated_at = ?, sync_dirty = 1
+       content_hash = ?, last_modified_by_host_name = 'desktop-alternative-action', updated_at = ?, sync_dirty = 1
      WHERE object_type = 'node_text_alternative' AND object_id = ?`,
     [contentHash, now, alternative.alternative_id]
   );

@@ -18,7 +18,6 @@ it('loads applyable sync object records from the attached pack', async () => {
   } as unknown as DbPort;
 
   await expect(loadSyncPackSyncObjectsWithDbPort(port, {
-    deviceId: 'device-1',
     hostName: 'Android test host',
     incomingAlias: 'incoming'
   })).resolves.toEqual([
@@ -64,7 +63,6 @@ it('applies setting payload records from sync objects', async () => {
   } as unknown as DbPort;
 
   await expect(applySyncPackSettingObjectsWithDbPort(port, {
-    deviceId: 'device-1',
     hostName: 'Android test host',
     incomingAlias: 'incoming'
   })).resolves.toBe(1);
@@ -112,7 +110,6 @@ it('applies import source and external folder payload records', async () => {
   } as unknown as DbPort;
 
   await expect(applySyncPackMetadataObjectsWithDbPort(port, {
-    deviceId: 'device-1',
     incomingAlias: 'incoming'
   })).resolves.toBe(2);
   expect(runs[0]?.sql).toContain('INSERT INTO import_sources');

@@ -10,7 +10,7 @@ import {
 } from '../../lib/core/database/syncState.js';
 
 import { openDatabaseConnection } from './connection.js';
-import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
+import { loadOrCreateDesktopHostName } from './hostProfile.js';
 import { syncPdfBodyBlobsForReferenceNodes } from './pdfBodyBlobs.js';
 
 export interface PdfPageTextInput {
@@ -52,14 +52,14 @@ function computePdfPageTextTombstoneHash(attachmentId: string, page: number, del
   });
 }
 
-function recordPdfPageTextDeleted(attachmentId: string, page: number, deviceId: string, deletedAt: string) {
+function recordPdfPageTextDeleted(attachmentId: string, page: number, hostName: string, deletedAt: string) {
   const contentHash = computePdfPageTextTombstoneHash(attachmentId, page, deletedAt);
   upsertSyncObjectState(openDatabaseConnection().driver, {
     objectType: PDF_PAGE_TEXT_OBJECT_TYPE,
     objectId: toPdfPageTextObjectId(attachmentId, page),
     contentHash,
     deletedAt,
-    lastModifiedByDeviceId: deviceId,
+    lastModifiedByHostName: hostName,
     updatedAt: deletedAt,
     syncDirty: true
   });
@@ -71,7 +71,7 @@ export function savePdfPageTextRows(
   now = new Date().toISOString()
 ) {
   const connection = openDatabaseConnection();
-  const deviceId = loadOrCreateDesktopDeviceId(now);
+  const hostName = loadOrCreateDesktopHostName(now);
   const existingPages = connection.driver.queryAll<ExistingPdfPageRow>(
     'SELECT page FROM pdf_page_text WHERE attachment_id = ? ORDER BY page ASC',
     [attachmentId]
@@ -95,7 +95,7 @@ export function savePdfPageTextRows(
         objectType: PDF_PAGE_TEXT_OBJECT_TYPE,
         objectId: toPdfPageTextObjectId(attachmentId, page.page),
         contentHash,
-        lastModifiedByDeviceId: deviceId,
+        lastModifiedByHostName: hostName,
         updatedAt: now,
         syncDirty: true
       });
@@ -104,9 +104,9 @@ export function savePdfPageTextRows(
       if (nextPages.has(row.page)) {
         continue;
       }
-      recordPdfPageTextDeleted(attachmentId, row.page, deviceId, now);
+      recordPdfPageTextDeleted(attachmentId, row.page, hostName, now);
     }
-    const updatedBodyNodeIds = syncPdfBodyBlobsForReferenceNodes(attachmentId, pages, deviceId, now);
+    const updatedBodyNodeIds = syncPdfBodyBlobsForReferenceNodes(attachmentId, pages, hostName, now);
     enqueuePdfSearchInvalidationForAttachmentIds(connection.driver, [attachmentId]);
     enqueueWorkspaceSearchInvalidationForNodeIds(connection.driver, updatedBodyNodeIds);
   });
@@ -116,13 +116,13 @@ export function savePdfPageTextRows(
 
 export function deletePdfPageTextRowsForAttachment(attachmentId: string, deletedAt = new Date().toISOString()) {
   const connection = openDatabaseConnection();
-  const deviceId = loadOrCreateDesktopDeviceId(deletedAt);
+  const hostName = loadOrCreateDesktopHostName(deletedAt);
   const existingPages = connection.driver.queryAll<ExistingPdfPageRow>(
     'SELECT page FROM pdf_page_text WHERE attachment_id = ? ORDER BY page ASC',
     [attachmentId]
   );
   for (const row of existingPages) {
-    recordPdfPageTextDeleted(attachmentId, row.page, deviceId, deletedAt);
+    recordPdfPageTextDeleted(attachmentId, row.page, hostName, deletedAt);
   }
   connection.driver.execute('DELETE FROM pdf_page_text WHERE attachment_id = ?', [attachmentId]);
 }

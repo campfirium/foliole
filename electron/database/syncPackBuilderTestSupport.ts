@@ -47,12 +47,12 @@ export function insertNodeSyncState() {
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
     ) VALUES ('node', 'node-1', 1, 'node-hash', 'desktop', '2026-04-27T00:00:00.000Z', 1)`
   );
   driver.execute(
     `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+       version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
      ) VALUES ('desktop#node-1-v1', 'node-1', NULL, 'desktop',
        '2026-04-27T00:00:00.000Z', 'node-hash',
        '{"id":"node-1","title":"Node 1","content":"node body must stay out of pack"}')`
@@ -66,7 +66,7 @@ export function insertNodeSyncState() {
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('setting', 'user_space:windows:desktop:*:app_settings', 2, 'setting-hash',
        'desktop', '2026-04-27T00:01:00.000Z', 1)`
   );
@@ -82,7 +82,7 @@ export function insertAttachmentSyncState() {
   driver.execute(
     `INSERT INTO attachment_blobs (
        attachment_id, content_hash, storage_key, size_bytes, mime_type,
-       availability, source_device_id, created_at, cached_at, last_verified_at
+       availability, source_host_name, created_at, cached_at, last_verified_at
      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ['att-1', 'sha256:att-1', 'attachments/sha256-att-1.png', 12, 'image/png',
       'local', 'desktop-fixture', '2026-04-27T00:02:00.000Z',
@@ -90,7 +90,7 @@ export function insertAttachmentSyncState() {
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('attachment', 'att-1', 3, 'attachment-hash', 'desktop', '2026-04-27T00:02:00.000Z', 1)`
   );
 }
@@ -103,7 +103,7 @@ export function insertNodeReviewSyncState() {
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('node', 'node-review-1', 1, 'node-review-node-hash',
        'desktop', '2026-04-27T00:00:00.000Z', 0)`
   );
@@ -116,7 +116,7 @@ export function insertNodeReviewSyncState() {
   );
   driver.execute(
     `INSERT INTO review_log (
-       id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at,
+       id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at,
        due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after
      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ['log-1', 'op-1', 'android-test', 'node-review-1', 3, 'ts-fsrs@4',
@@ -125,7 +125,7 @@ export function insertNodeReviewSyncState() {
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('node_review', 'node-review-1', 6, 'review-hash',
        'android-test', '2026-04-27T00:05:00.000Z', 0)`
   );
@@ -139,7 +139,7 @@ export function insertNodeReadingSyncState() {
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('node', 'node-reading-1', 1, 'node-reading-node-hash',
        'desktop', '2026-04-27T00:00:00.000Z', 0)`
   );
@@ -153,7 +153,7 @@ export function insertNodeReadingSyncState() {
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('node_reading', 'node-reading-1', 8, 'reading-hash',
        'desktop', '2026-04-27T00:05:00.000Z', 0)`
   );
@@ -167,7 +167,7 @@ export function insertViewStateSyncState() {
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('view_state', 'session_resume:windows:desktop:desktop-test:active_node', 9, 'view-hash',
        'desktop-test', '2026-04-27T00:06:00.000Z', 0)`
   );
@@ -196,7 +196,7 @@ export function insertExternalFolderSyncState() {
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('external_folder', 'folder-1', 4, 'external-folder-hash',
        'desktop', '2026-04-27T00:03:00.000Z', 1)`
   );
@@ -216,7 +216,7 @@ export function insertPdfPageTextSyncState() {
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('pdf_page_text', 'pdf-1:1', 7, 'pdf-page-text-hash',
        'desktop', '2026-04-27T00:05:00.000Z', 1)`
   );

@@ -16,7 +16,7 @@ export function loadSyncReviewLogSince(cursor: { opId: string; reviewedAt: strin
     `SELECT
        id,
        op_id,
-       device_id,
+       host_name,
        node_id,
        grade,
        scheduler_version,

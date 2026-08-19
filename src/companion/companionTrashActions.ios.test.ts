@@ -74,7 +74,7 @@ it('persists and pushes an iOS trash restore while keeping its interaction hidde
   expect(database.prepare(
     'SELECT current_version_id, deleted_at, sync_dirty FROM nodes WHERE id = ?'
   ).get('topic-trash')).toEqual({
-    current_version_id: 'ios-device#00000000-0000-4000-8000-000000000031',
+    current_version_id: 'ver_00000000-0000-4000-8000-000000000031',
     deleted_at: null,
     sync_dirty: 0
   });
@@ -137,10 +137,10 @@ function installRuntimeManager(db: Database.Database) {
 function configureAcceptedNodeAck() {
   runtimeState.postDesktopJson.mockResolvedValue({
     acks: [{
-      client_op_id: 'node:ios-device#00000000-0000-4000-8000-000000000031',
+      client_op_id: 'node:ver_00000000-0000-4000-8000-000000000031',
       identity: { objectId: 'topic-trash', objectType: 'node', scope: 'workspace' },
       status: 'accepted',
-      version_id: 'ios-device#00000000-0000-4000-8000-000000000031'
+      version_id: 'ver_00000000-0000-4000-8000-000000000031'
     }]
   });
 }
@@ -151,7 +151,7 @@ function expectNodePushCursor(db: Database.Database) {
     FROM sync_delivery_receipts WHERE object_id = 'topic-trash'
   `).get()).toEqual({
     object_id: 'topic-trash',
-    operation_id: 'node:ios-device#00000000-0000-4000-8000-000000000031',
+    operation_id: 'node:ver_00000000-0000-4000-8000-000000000031',
     peer_id: 'desktop-peer',
     status: 'confirmed',
     stream_name: 'node_version'
@@ -161,7 +161,7 @@ function expectNodePushCursor(db: Database.Database) {
 function seedTrashedNode(db: Database.Database) {
   db.prepare(`
     INSERT INTO nodes (
-      id, kind, title, content, current_version_id, last_modified_by_device_id,
+      id, kind, title, content, current_version_id, last_modified_by_host_name,
       sync_dirty, created_at, updated_at, deleted_at
     ) VALUES (?, 'topic', 'Trashed topic', 'Body', 'desktop#base', 'desktop', 0, ?, ?, ?)
   `).run(
@@ -171,8 +171,9 @@ function seedTrashedNode(db: Database.Database) {
     '2026-07-21T00:00:00.000Z'
   );
   db.prepare(`
-    INSERT INTO companion_meta (key, value, updated_at)
-    VALUES ('device_id', 'ios-device', '2026-07-21T00:00:00.000Z')
+    INSERT INTO companion_meta (key, value, updated_at) VALUES
+      ('device_id', 'ios-device', '2026-07-21T00:00:00.000Z'),
+      ('host_name', 'ios-device', '2026-07-21T00:00:00.000Z')
   `).run();
 }
 

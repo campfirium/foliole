@@ -93,7 +93,10 @@ function writeCorePackRows(db: import('better-sqlite3').Database, rows: LoadedDe
   copyRows({
     db,
     table: 'sync_object_state',
-    columns: ['object_type', 'object_id', 'state_seq', 'content_hash', 'updated_at', 'deleted_at'],
+    columns: [
+      'object_type', 'object_id', 'state_seq', 'content_hash',
+      'last_modified_by_host_name', 'updated_at', 'deleted_at'
+    ],
     rows: rows.stateRows
   });
   copyRows({
@@ -155,7 +158,7 @@ function writeDocumentPackRows(db: import('better-sqlite3').Database, rows: Load
     db,
     table: 'content_blobs',
     columns: ['hash', 'storage_key', 'kind', 'mime_type', 'compression', 'original_size_bytes',
-      'stored_size_bytes', 'original_sha256', 'stored_sha256', 'availability', 'source_device_id',
+      'stored_size_bytes', 'original_sha256', 'stored_sha256', 'availability', 'source_host_name',
          'created_at', 'cached_at', 'last_verified_at'],
     rows: rows.contentBlobs
   });
@@ -166,7 +169,7 @@ function writeReviewPackRows(db: import('better-sqlite3').Database, rows: Loaded
     db,
     table: 'review_log',
     columns: [
-      'id', 'op_id', 'device_id', 'node_id', 'grade', 'scheduler_version', 'reviewed_at',
+      'id', 'op_id', 'host_name', 'node_id', 'grade', 'scheduler_version', 'reviewed_at',
       'due_before', 'stability_before', 'difficulty_before', 'due_after', 'stability_after', 'difficulty_after'
     ],
     rows: rows.reviewLog

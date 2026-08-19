@@ -60,7 +60,7 @@ it('atomically creates a formal sync version and state during a normal node crea
   const node = sqlite.prepare(
     'SELECT current_version_id, sync_dirty FROM nodes WHERE id = ?'
   ).get('node-1') as { current_version_id: string; sync_dirty: number };
-  expect(node.current_version_id).toMatch(/^.+#0$/);
+  expect(node.current_version_id).toMatch(/^ver_[0-9a-f-]{36}$/);
   expect(node.sync_dirty).toBe(0);
   expect(sqlite.prepare(
     'SELECT body_text FROM node_sync_versions WHERE version_id = ?'

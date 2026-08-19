@@ -7,7 +7,7 @@ export const CORE_INDEX_NAMES = [
   'idx_node_reading_state_next_at',
   'idx_review_log_node_id',
   'idx_review_log_reviewed_at_op',
-  'idx_review_log_device_id'
+  'idx_review_log_host_name'
 ] as const;
 
 export const CORE_INDEX_SCHEMA_STATEMENTS = [
@@ -23,5 +23,5 @@ export const CORE_INDEX_SCHEMA_STATEMENTS = [
   'CREATE INDEX IF NOT EXISTS idx_node_reading_state_next_at ON node_reading (state, next_at)',
   'CREATE INDEX IF NOT EXISTS idx_review_log_node_id ON review_log (node_id)',
   'CREATE INDEX IF NOT EXISTS idx_review_log_reviewed_at_op ON review_log (reviewed_at, op_id)',
-  'CREATE INDEX IF NOT EXISTS idx_review_log_device_id ON review_log (device_id)'
+  'CREATE INDEX IF NOT EXISTS idx_review_log_host_name ON review_log (host_name)'
 ] as const;

@@ -19,12 +19,12 @@ export async function applyAttachmentObject(port: DbPort, record: SyncPackSyncOb
   );
   await port.run(
     `INSERT INTO attachment_blobs (attachment_id, content_hash, storage_key, size_bytes, mime_type, availability, ` +
-    `source_device_id, created_at, cached_at, last_verified_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ` +
+    `source_host_name, created_at, cached_at, last_verified_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ` +
     `ON CONFLICT(attachment_id) DO UPDATE SET content_hash = excluded.content_hash, storage_key = excluded.storage_key, ` +
     `size_bytes = excluded.size_bytes, mime_type = excluded.mime_type, availability = excluded.availability, ` +
-    `source_device_id = excluded.source_device_id, cached_at = excluded.cached_at, last_verified_at = excluded.last_verified_at`,
+    `source_host_name = excluded.source_host_name, cached_at = excluded.cached_at, last_verified_at = excluded.last_verified_at`,
     [record.object_id, text(blob.content_hash), text(blob.storage_key), numberOrNull(blob.size_bytes), text(blob.mime_type),
-      normalizeAttachmentAvailability(blob), text(blob.source_device_id), text(blob.created_at) ?? record.updated_at,
+      normalizeAttachmentAvailability(blob), text(blob.source_host_name), text(blob.created_at) ?? record.updated_at,
       text(blob.cached_at), text(blob.last_verified_at)]
   );
 }

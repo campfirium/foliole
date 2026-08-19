@@ -42,11 +42,12 @@ afterEach(async () => {
 
 function createReviewLogPush(opId = 'op-1'): CompanionSyncPushPayload {
   return {
+    authorHostName: 'android-device',
     base: { kind: 'op_id', opId },
     clientOpId: `review_log:${opId}`,
     identity: { objectId: opId, objectType: 'review_log', scope: 'workspace' },
     payloadJson: JSON.stringify({
-      device_id: 'android-device', difficulty_after: 3, difficulty_before: 2,
+      host_name: 'android-device', difficulty_after: 3, difficulty_before: 2,
       due_after: '2026-05-01T00:00:00.000Z', due_before: '2026-04-30T00:00:00.000Z', grade: 3,
       id: `review-${opId}`, node_id: 'node-1', op_id: opId, reviewed_at: '2026-04-30T01:00:00.000Z',
       scheduler_version: 'ts-fsrs@4', stability_after: 4, stability_before: 3
@@ -56,6 +57,7 @@ function createReviewLogPush(opId = 'op-1'): CompanionSyncPushPayload {
 
 function createNodeReadingPush(): CompanionSyncPushPayload {
   return {
+    authorHostName: 'android-device',
     base: { baseContentHash: 'desktop-reading-base', kind: 'content_hash' },
     clientOpId: 'node_reading:node-1:11',
     contentHash: 'android-reading-next',
@@ -71,6 +73,7 @@ function createNodeReadingPush(): CompanionSyncPushPayload {
 
 function createAlternativeTombstonePush(): CompanionSyncPushPayload {
   return {
+    authorHostName: 'android-device',
     base: { baseContentHash: null, kind: 'content_hash' },
     clientOpId: 'node_text_alternative:alternative-1:11',
     contentHash: 'android-tombstone', deletedAt: '2026-04-30T01:00:00.000Z',
@@ -82,7 +85,7 @@ function createAlternativeTombstonePush(): CompanionSyncPushPayload {
 it('treats a repeated node_reading push as already applied', async () => {
   openDatabaseConnection().driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('node_reading', 'node-1', 1, 'desktop-reading-base', 'desktop', '2026-04-30T00:00:00.000Z', 0)`
   );
   await applyCompanionSyncPushAsync([createNodeReadingPush()], 'android-device');
@@ -96,7 +99,7 @@ it('treats a repeated node_reading push as already applied', async () => {
 it('confirms an alternative tombstone when the desktop already deleted that alternative', async () => {
   openDatabaseConnection().driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id,
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name,
        updated_at, deleted_at, sync_dirty
      ) VALUES ('node_text_alternative', 'alternative-1', 1, 'desktop-tombstone', 'desktop',
        '2026-04-30T00:00:00.001Z', '2026-04-30T00:00:00.000Z', 0)`

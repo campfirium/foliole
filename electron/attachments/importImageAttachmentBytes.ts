@@ -203,7 +203,7 @@ export async function importImageAttachmentBytes(
     sizeBytes: input.bytes.byteLength,
     mimeType: normalizedMimeType,
     availability: 'local',
-    sourceDeviceId: null,
+    sourceHostName: null,
     createdAt: attachment.createdAt,
     cachedAt: attachment.createdAt,
     lastVerifiedAt: attachment.createdAt

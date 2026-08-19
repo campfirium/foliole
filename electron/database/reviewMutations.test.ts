@@ -105,7 +105,7 @@ function selectSyncObjectState() {
   const connection = openDatabaseConnection();
   return connection.sqlite
     .prepare(
-      `SELECT object_type, object_id, last_modified_by_device_id, updated_at, deleted_at, sync_dirty
+      `SELECT object_type, object_id, last_modified_by_host_name, updated_at, deleted_at, sync_dirty
        FROM sync_object_state WHERE object_type = 'node_review' AND object_id = ?`
     )
     .get(NODE_ID) as Record<string, unknown> | undefined;
@@ -164,7 +164,7 @@ it('writes sync state for review grading without generic change log rows', () =>
     deleted_at: null,
     sync_dirty: 1
   });
-  expect(String(state?.last_modified_by_device_id)).not.toBe('');
+  expect(String(state?.last_modified_by_host_name)).not.toBe('');
   expect(change.count).toBe(0);
 });
 

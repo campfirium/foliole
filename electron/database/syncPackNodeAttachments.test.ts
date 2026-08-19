@@ -38,6 +38,7 @@ beforeEach(async () => {
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabaseConnection(openDatabaseConnection());
   saveJsonSetting('device_id', 'desktop-test', '2026-08-12T00:00:00.000Z');
+  saveJsonSetting('host_name', 'Desktop test host', '2026-08-12T00:00:00.000Z');
 });
 
 afterEach(async () => {
@@ -58,7 +59,7 @@ function seedSyncedNode() {
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('node', 'node-1', 1, 'node-hash', 'desktop', '2026-04-27T00:00:00.000Z', 0)`
   );
 }

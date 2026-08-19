@@ -15,7 +15,7 @@ interface SyncNodeRow extends DatabaseRow {
   deleted_at: string | null;
   desired_retention: number | null;
   enable_short_term: number | null;
-  device_id: string | null;
+  host_name: string | null;
   shelved_at: string | null;
   manual_child_order: string | null;
   hide_title_heading: number;
@@ -137,7 +137,7 @@ function toNativeSyncNodeRecord(row: SyncNodeRow): NativeSyncNodeRecord {
     ancestor_version_ids: listAncestorVersionIds(row.version_id, row.parent_version_id),
     body_text: row.body_text ?? snapshot.content ?? '',
     content_hash: row.content_hash,
-    device_id: row.device_id,
+    host_name: row.host_name,
     object_id: snapshot.id,
     object_type: 'node',
     parent_version_id: row.parent_version_id,
@@ -175,7 +175,7 @@ const SYNC_NODE_SELECT_COLUMNS = `
   n.updated_at,
   n.deleted_at,
   v.version_id,
-  v.device_id,
+  v.host_name,
   v.created_at AS version_created_at,
   v.parent_version_id,
   v.content_hash,

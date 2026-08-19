@@ -138,7 +138,7 @@ it('imports a local png into the app attachment directory and links it to the no
     sizeBytes: imageBytes.byteLength,
     mimeType: 'image/png',
     availability: 'local',
-    sourceDeviceId: null,
+    sourceHostName: null,
     createdAt: expect.any(String),
     cachedAt: expect.any(String),
     lastVerifiedAt: expect.any(String)

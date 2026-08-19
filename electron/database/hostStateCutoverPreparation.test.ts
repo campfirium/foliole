@@ -15,10 +15,10 @@ import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { migrateDesktopHostProfile } from './hostProfile.js';
 
 const BASELINE = {
-  companionSchema: 28,
-  desktopSchema: 71,
+  companionSchema: 29,
+  desktopSchema: 72,
   protocol: 2,
-  syncPack: 6
+  syncPack: 7
 } as const;
 
 it('freezes the Host-state cutover versions and generated protocol assets', () => {
@@ -90,7 +90,7 @@ it('transfers the unique desktop Host scope while preserving permanent state', (
       ('window_state','session_resume','windows','desktop','Old Mac','{"maximized":true}','old-hash','old',NULL);
     INSERT INTO workspace_meta VALUES ('active_node_id', 'n', 'old');
     INSERT INTO sync_object_state
-      (object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty)
+      (object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty)
     VALUES
       ('setting','session_resume:windows:desktop:Old Mac:window_state',1,'old-hash','frozen-author','old',0),
       ('view_state','session_resume:windows:desktop:Old Mac:node:n',2,'old-view','frozen-author','old',0),

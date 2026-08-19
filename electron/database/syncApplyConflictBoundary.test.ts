@@ -39,7 +39,7 @@ afterEach(async () => {
 function insertDirtyLocalNode() {
   openDatabaseConnection().driver.execute(
     `INSERT INTO nodes (
-       id, kind, title, content, current_version_id, last_modified_by_device_id, sync_dirty, created_at, updated_at
+       id, kind, title, content, current_version_id, last_modified_by_host_name, sync_dirty, created_at, updated_at
      ) VALUES (?, 'item', 'Local Dirty Node', 'local dirty body', ?, 'desktop', 1, ?, ?)`,
     ['node-1', 'desktop#2', '2026-04-21T09:00:00.000Z', '2026-04-21T12:00:00.000Z']
   );
@@ -49,7 +49,7 @@ function remoteRecord(overrides: Partial<NativeSyncNodeRecord> = {}): NativeSync
   return {
     ancestor_version_ids: ['desktop#1'],
     content_hash: 'hash-phone-3',
-    device_id: 'phone',
+    host_name: 'phone',
     object_id: 'node-1',
     object_type: 'node',
     parent_version_id: 'desktop#1',

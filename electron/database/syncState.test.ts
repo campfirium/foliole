@@ -73,7 +73,7 @@ it('writes sync object state for attachment pdf text setting and view state', ()
     upsertSyncObjectState(driver, {
       ...row,
       contentHash: computeSyncContentHash(row.objectType, { object_id: row.objectId }),
-      lastModifiedByDeviceId: 'desktop-1',
+      lastModifiedByHostName: 'desktop-1',
       updatedAt,
       syncDirty: true
     });
@@ -101,7 +101,7 @@ it('advances state sequence monotonically and queries by cursor', () => {
         objectType: 'setting',
         objectId: `setting-${index}`,
         contentHash: computeSyncContentHash('setting', { index }),
-        lastModifiedByDeviceId: 'desktop-1',
+        lastModifiedByHostName: 'desktop-1',
         updatedAt: `2026-04-24T00:00:${String(index % 60).padStart(2, '0')}.000Z`
       });
     }
@@ -109,14 +109,14 @@ it('advances state sequence monotonically and queries by cursor', () => {
       objectType: 'attachment',
       objectId: 'att-1',
       contentHash: computeSyncContentHash('attachment', { attachment_id: 'att-1' }),
-      lastModifiedByDeviceId: 'desktop-1',
+      lastModifiedByHostName: 'desktop-1',
       updatedAt: '2026-04-24T00:10:00.000Z'
     });
     upsertSyncObjectState(transactionDriver, {
       objectType: 'attachment',
       objectId: 'att-1',
       contentHash: computeSyncContentHash('attachment', { attachment_id: 'att-1', updated: true }),
-      lastModifiedByDeviceId: 'desktop-1',
+      lastModifiedByHostName: 'desktop-1',
       updatedAt: '2026-04-24T00:11:00.000Z'
     });
   });
@@ -164,7 +164,7 @@ it('creates attachment blob and setting record tables in fresh databases', () =>
        size_bytes,
        mime_type,
        availability,
-       source_device_id,
+       source_host_name,
        created_at
      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     ['att-1', 'sha256:abc', 'attachments/sha256/abc', 42, 'application/pdf', 'local', 'desktop-1', '2026-04-24T00:00:00.000Z']
@@ -175,7 +175,7 @@ it('creates attachment blob and setting record tables in fresh databases', () =>
        scope,
        platform,
        form_factor,
-       device_id,
+       host_name,
        value_json,
        content_hash,
        updated_at

@@ -8,7 +8,7 @@ import type { SyncPackNodeRow } from './syncPackNodeFields.js';
 
 export async function applySyncPackVersionedNodesWithDbPort(
   port: DbPort,
-  deviceId: string,
+  hostName: string,
   incomingAlias = 'inc'
 ) {
   const alias = quoteIdentifier(incomingAlias);
@@ -43,9 +43,9 @@ export async function applySyncPackVersionedNodesWithDbPort(
   const result = await applyConvergentSyncNodesWithDbPort(port, records);
   for (const record of records) {
     await port.run(
-      `UPDATE sync_object_state SET last_modified_by_device_id = ?
+      `UPDATE sync_object_state SET last_modified_by_host_name = ?
        WHERE object_type = 'node' AND object_id = ? AND current_version_id = ?`,
-      [deviceId, record.object_id, record.version_id]
+      [hostName, record.object_id, record.version_id]
     );
   }
   return { ...result, processedNodeIds: [...new Set([...result.processedNodeIds, ...SPECIAL_ROOT_NODE_IDS])] };

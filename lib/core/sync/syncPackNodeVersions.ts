@@ -4,7 +4,7 @@ export const SYNC_PACK_NODE_VERSION_COLUMNS = [
   'version_id',
   'object_id',
   'parent_version_id',
-  'device_id',
+  'host_name',
   'created_at',
   'content_hash',
   'body_text',
@@ -15,7 +15,7 @@ export interface SyncPackNodeVersionRow extends DbRow {
   content_hash: string;
   body_text: string | null;
   created_at: string;
-  device_id: string;
+  host_name: string;
   object_id: string;
   parent_version_id: string | null;
   snapshot_json: string;

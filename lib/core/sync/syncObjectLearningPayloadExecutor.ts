@@ -5,7 +5,6 @@ import { asObject, integer, numberOrNull, text } from './syncObjectPayloadValues
 import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
 
 export interface SyncObjectPayloadApplyOptions {
-  deviceId?: string;
   hostName?: string;
 }
 

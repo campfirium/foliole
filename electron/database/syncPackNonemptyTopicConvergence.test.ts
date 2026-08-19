@@ -44,7 +44,7 @@ it('keeps both bodies when a pack joins a nonempty topic branch', async () => {
   const reverseIncomingPath = await buildCurrentPack('branch-a-pack', 'target-device', 'source-device');
   closeDatabaseConnection();
   const target = await applyConflictPack('target', incomingPath, 'target-device', true);
-  expect(target.current_version_id).toMatch(/^resolution#/);
+  expect(target.current_version_id).toMatch(/^ver_[a-f0-9]{24}$/);
   expect(target.parents).toEqual(['branch-a', 'branch-b']);
   const alternative = target.alternative;
   expect(new Set([alternative.body_text, target.projection.content])).toEqual(
@@ -67,7 +67,7 @@ it('keeps both bodies when a pack joins a nonempty topic branch', async () => {
 async function applyConflictPack(
   library: string,
   incomingPath: string,
-  deviceId: string,
+  hostName: string,
   replay: boolean
 ) {
   const connection = openLibrary(library);
@@ -76,12 +76,12 @@ async function applyConflictPack(
   try {
     await expect(applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor: 0,
-      deviceId
+      hostName
     })).resolves.toMatchObject({ handledConflictCount: 1, toStateSeq: 1 });
     if (replay) {
       await expect(applySyncPackNodeSurfaceWithDbPort(port, {
         currentCursor: 1,
-        deviceId
+        hostName
       })).resolves.toMatchObject({ applied: false, handledConflictCount: 0 });
     }
   } finally {
@@ -169,20 +169,20 @@ function insertBranch(device: string, versionId: string, body: string, updatedAt
   const branchSnapshot = snapshot(body, updatedAt);
   db.prepare(
     `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, device_id, created_at,
+       version_id, object_id, parent_version_id, host_name, created_at,
        content_hash, body_text, snapshot_json
      ) VALUES (?, 'shared-topic', ?, ?, ?, ?, ?, ?)`
   ).run('base', null, 'origin', '2026-08-14T01:00:00.000Z', 'base-hash', 'Base body', JSON.stringify(baseSnapshot));
   db.prepare(
     `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, device_id, created_at,
+       version_id, object_id, parent_version_id, host_name, created_at,
        content_hash, body_text, snapshot_json
      ) VALUES (?, 'shared-topic', 'base', ?, ?, ?, ?, ?)`
   ).run(versionId, device, updatedAt, `${versionId}-hash`, body, JSON.stringify(branchSnapshot));
   db.prepare(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, current_version_id, content_hash,
-       last_modified_by_device_id, updated_at, sync_dirty
+       last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('node', 'shared-topic', 1, ?, ?, ?, ?, 1)`
   ).run(versionId, `${versionId}-hash`, device, updatedAt);
 }

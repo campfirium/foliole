@@ -11,7 +11,7 @@ function createNodeVersion(overrides: Partial<NativeSyncNodeRecord> = {}): Nativ
   return {
     ancestor_version_ids: ['desktop#1'],
     content_hash: 'android-node-hash',
-    device_id: 'android-device',
+    host_name: 'android-device',
     object_id: 'node-child',
     object_type: 'node',
     parent_version_id: 'desktop#1',

@@ -7,7 +7,7 @@ export function toSyncNodeConflictRecord(record: NativeSyncNodeRecord): NativeSy
   return {
     conflict_version_id: record.version_id,
     content_hash: record.content_hash,
-    device_id: record.device_id,
+    host_name: record.host_name,
     object_id: record.object_id,
     parent_version_id: record.parent_version_id,
     snapshot: record.snapshot,

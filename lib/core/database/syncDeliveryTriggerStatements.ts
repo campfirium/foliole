@@ -58,6 +58,6 @@ export const SYNC_DELIVERY_TRIGGER_STATEMENTS = [
      FROM sync_group_members member
      JOIN sync_group_local_state local ON local.group_id = member.group_id AND local.singleton_id = 1
      WHERE member.state = 'active' AND member.device_id <> local.local_device_id
-       AND NEW.device_id = local.local_device_id AND NEW.reviewed_at >= member.joined_at;
+       AND NEW.reviewed_at >= member.joined_at;
    END`
 ] as const;

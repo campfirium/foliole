@@ -58,7 +58,7 @@ function seedDivergedTopic(localBody: string) {
   );
   driver.execute(
     `INSERT INTO node_sync_versions
-       (version_id, object_id, parent_version_id, device_id, created_at, content_hash, body_text, snapshot_json)
+       (version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json)
      VALUES ('root#0', 'topic-1', NULL, 'desktop', '2026-05-02T00:00:00.000Z', 'root', 'Earlier body', ?),
        ('base#1', 'topic-1', 'root#0', 'desktop', '2026-05-03T00:00:00.000Z', 'base', 'A\nB\nC\n', ?),
        ('desktop#local', 'topic-1', 'base#1', 'desktop', '2026-05-03T01:00:00.000Z', 'local', ?, ?)`,
@@ -79,11 +79,12 @@ function createDivergedTopicPush(body: string, versionId = 'android#branch'): Co
     title: 'Topic', updated_at: updatedAt, virtual_filter: null
   };
   const record: NativeSyncNodeRecord = {
-    ancestor_version_ids: ['base#1'], body_text: body, content_hash: `incoming:${body}`, device_id: 'android-device',
+    ancestor_version_ids: ['base#1'], body_text: body, content_hash: `incoming:${body}`, host_name: 'android-device',
     object_id: 'topic-1', object_type: 'node', parent_version_id: 'base#1', parent_version_ids: ['base#1'],
     snapshot, updated_at: updatedAt, version_created_at: updatedAt, version_id: versionId
   };
   return {
+    authorHostName: record.host_name!,
     base: { ancestorVersionIds: ['base#1'], kind: 'node_version', parentVersionId: 'base#1', parentVersionIds: ['base#1'] },
     clientOpId: `node:${versionId}`, contentHash: record.content_hash!,
     identity: { objectId: 'topic-1', objectType: 'node', scope: 'workspace' },
@@ -128,7 +129,7 @@ it('publishes the superseded alternative before its same-device replacement', as
   );
   driver.execute(
     `INSERT INTO sync_object_state
-      (object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty)
+      (object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty)
      VALUES ('node_text_alternative', 'alternative#old', 1, 'old-hash', 'desktop',
        '2026-05-02T03:00:00.000Z', 0)`
   );

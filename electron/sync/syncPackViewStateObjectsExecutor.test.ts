@@ -17,7 +17,6 @@ it('applies active node and node view state payload records', async () => {
   } as unknown as DbPort;
 
   await expect(applySyncPackViewStateObjectsWithDbPort(port, {
-    deviceId: 'device-1',
     hostName: 'Android test host',
     incomingAlias: 'incoming'
   })).resolves.toBe(2);
@@ -42,7 +41,6 @@ it('deletes view state payload rows for tombstones', async () => {
   } as unknown as DbPort;
 
   await expect(applySyncPackViewStateObjectsWithDbPort(port, {
-    deviceId: 'device-1',
     hostName: 'Android test host',
     incomingAlias: 'incoming'
   })).resolves.toBe(1);

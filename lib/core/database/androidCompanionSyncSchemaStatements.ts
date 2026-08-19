@@ -19,7 +19,7 @@ export const ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS = [
     state_seq INTEGER NOT NULL,
     current_version_id TEXT,
     content_hash TEXT NOT NULL,
-    last_modified_by_device_id TEXT NOT NULL,
+    last_modified_by_host_name TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     deleted_at TEXT,
     sync_dirty INTEGER NOT NULL DEFAULT 0,

@@ -22,7 +22,7 @@ it('attaches a sync pack before applying pack nodes through the shared core', as
 
   await expect(applyCompanionSyncPackNodesWithSharedCore({
     currentCursor: 0,
-    deviceId: 'android-device',
+    deviceId: 'android-device', hostName: 'android-device',
     packPath: '/tmp/incoming pack.db',
     sourcePeerId: 'desktop-device'
   }, manager as never)).resolves.toEqual({
@@ -81,7 +81,7 @@ it('reuses an already open companion database connection', async () => {
 
   await applyCompanionSyncPackNodesWithSharedCore({
     currentCursor: 0,
-    deviceId: 'ios-device',
+    deviceId: 'ios-device', hostName: 'ios-device',
     packPath: '/tmp/pack.db',
     sourcePeerId: 'desktop-device'
   }, manager as never);
@@ -105,7 +105,7 @@ it('loads and advances the pack cursor around the shared core apply', async () =
   mockPackApplyQueries(connection, { appliedCount: 2, fromStateSeq: 2, toStateSeq: 5 });
 
   await expect(applyCompanionSyncPackPathWithSharedCore({
-    deviceId: 'android-device',
+    deviceId: 'android-device', hostName: 'android-device',
     packPath: '/tmp/pack.db',
     sourcePeerId: 'desktop-device'
   }, cursorStore, manager as never)).resolves.toMatchObject({
@@ -133,7 +133,7 @@ it('does not advance the pack cursor when no objects were applied', async () => 
   mockPackApplyQueries(connection, { appliedCount: 0, fromStateSeq: 2, toStateSeq: 5 });
 
   await expect(applyCompanionSyncPackPathWithSharedCore({
-    deviceId: 'android-device',
+    deviceId: 'android-device', hostName: 'android-device',
     packPath: '/tmp/empty-apply-pack.db',
     sourcePeerId: 'desktop-device'
   }, cursorStore, manager as never)).rejects.toThrow('sync_pack_applied_no_objects');
@@ -158,7 +158,7 @@ it('retrieves an existing Android companion database connection before attaching
 
   await expect(applyCompanionSyncPackNodesWithSharedCore({
     currentCursor: 0,
-    deviceId: 'android-device',
+    deviceId: 'android-device', hostName: 'android-device',
     packPath: '/tmp/downloaded-pack.db',
     sourcePeerId: 'desktop-device'
   }, manager as never)).resolves.toMatchObject({
@@ -188,7 +188,7 @@ it('detaches the incoming pack when shared core apply fails', async () => {
 
   await expect(applyCompanionSyncPackNodesWithSharedCore({
     currentCursor: 0,
-    deviceId: 'android-device',
+    deviceId: 'android-device', hostName: 'android-device',
     packPath: '/tmp/bad-pack.db',
     sourcePeerId: 'desktop-device'
   }, manager as never)).rejects.toThrow('bad pack manifest');

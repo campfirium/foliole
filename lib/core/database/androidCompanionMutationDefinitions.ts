@@ -9,7 +9,7 @@ export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
   ...ANDROID_COMPANION_CONVERGENCE_MUTATION_DEFINITIONS,
   syncReviewLogInsert:
     'INSERT OR IGNORE INTO review_log (' +
-    'id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at, due_before, stability_before, ' +
+    'id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at, due_before, stability_before, ' +
     'difficulty_before, due_after, stability_after, difficulty_after' +
     ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
   syncNodeOpenStateDelete: 'DELETE FROM node_open_state WHERE node_id = ?',
@@ -114,7 +114,7 @@ export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
   syncStateUpsert:
     'INSERT OR REPLACE INTO sync_object_state (' +
     'object_type, object_id, state_seq, current_version_id, content_hash, base_content_hash, ' +
-    'last_modified_by_device_id, updated_at, deleted_at, sync_dirty' +
+    'last_modified_by_host_name, updated_at, deleted_at, sync_dirty' +
     ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
 };
 

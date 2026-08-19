@@ -15,7 +15,7 @@ function createNodeRecord(overrides: Partial<NativeSyncNodeRecord> = {}): Native
   return {
     ancestor_version_ids: ['desktop#0'],
     content_hash: 'hash-1',
-    device_id: 'phone',
+    host_name: 'phone',
     object_id: 'node-1',
     object_type: 'node',
     parent_version_id: 'desktop#0',

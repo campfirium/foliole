@@ -17,7 +17,7 @@ interface CompanionSyncPushResponse {
 
 type ApplyCompanionSyncPush = (
   items: CompanionSyncPushPayload[],
-  sourceDeviceId: string
+  authenticatedDeviceId: string
 ) => Promise<CompanionSyncPushResult>;
 type NotifyWorkspaceSyncApplied = (event: {
   appliedNodeIds: string[];
@@ -31,7 +31,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isPushItem(value: unknown): value is CompanionSyncPushPayload {
   if (!isRecord(value) || !isRecord(value.identity) || !isRecord(value.base)) return false;
-  return typeof value.clientOpId === 'string'
+  return typeof value.authorHostName === 'string' && value.authorHostName.trim().length > 0
+    && typeof value.clientOpId === 'string'
     && typeof value.identity.objectId === 'string'
     && typeof value.identity.objectType === 'string'
     && typeof value.identity.scope === 'string'

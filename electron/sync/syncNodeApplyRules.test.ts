@@ -14,7 +14,7 @@ function createNodeRecord(overrides: Partial<NativeSyncNodeRecord> & Pick<Native
   return {
     ancestor_version_ids: [],
     content_hash: null,
-    device_id: 'phone',
+    host_name: 'phone',
     object_id,
     object_type: 'node',
     parent_version_id: null,
@@ -60,7 +60,7 @@ it('keeps only the latest head per remote branch', () => {
         version_id: 'phone#2'
       }),
       createNodeRecord({
-        device_id: 'tablet',
+        host_name: 'tablet',
         object_id: 'node-1',
         version_created_at: '2026-04-21T11:30:00.000Z',
         version_id: 'tablet#1'

@@ -56,14 +56,14 @@ function insertLocalNodeVersion(versionId: string) {
   const driver = openDatabaseConnection().driver;
   driver.execute(
     `INSERT INTO nodes (
-       id, kind, title, content, current_version_id, last_modified_by_device_id, sync_dirty, created_at, updated_at
+       id, kind, title, content, current_version_id, last_modified_by_host_name, sync_dirty, created_at, updated_at
      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ['node-1', 'item', 'Local Node', 'local body', versionId, 'desktop', 0, '2026-04-21T09:00:00.000Z', '2026-04-21T09:30:00.000Z']
   );
   driver.execute(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, current_version_id, content_hash,
-       last_modified_by_device_id, updated_at, deleted_at, sync_dirty
+       last_modified_by_host_name, updated_at, deleted_at, sync_dirty
      ) VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?)`,
     ['node', 'node-1', versionId, 'hash-1', 'desktop', '2026-04-21T09:30:00.000Z', null, 0]
   );
@@ -73,7 +73,7 @@ function createRemoteNodeRecord(): NativeSyncNodeRecord {
   return {
     ancestor_version_ids: ['desktop#0'],
     content_hash: 'hash-1',
-    device_id: 'phone',
+    host_name: 'phone',
     object_id: 'node-1',
     object_type: 'node',
     parent_version_id: 'desktop#0',

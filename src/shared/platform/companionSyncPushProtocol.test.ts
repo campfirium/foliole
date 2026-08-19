@@ -15,6 +15,7 @@ function createNodeReviewRow(overrides: Partial<SyncableStateObjectRow> = {}): S
     base_content_hash: 'desktop-base',
     content_hash: 'android-next',
     deleted_at: null,
+    last_modified_by_host_name: 'android-device',
     object_id: 'node-1',
     object_type: 'node_review',
     payload_json: '{"reps":2}',
@@ -29,6 +30,7 @@ function createNodeReadingRow(overrides: Partial<SyncableStateObjectRow> = {}): 
     base_content_hash: 'desktop-reading-base',
     content_hash: 'android-reading-next',
     deleted_at: null,
+    last_modified_by_host_name: 'android-device',
     object_id: 'node-1',
     object_type: 'node_reading',
     payload_json: '{"state":"active","reading_position":42}',
@@ -40,7 +42,7 @@ function createNodeReadingRow(overrides: Partial<SyncableStateObjectRow> = {}): 
 
 function createReviewLogRow(overrides: Partial<SyncableReviewLogRow> = {}): SyncableReviewLogRow {
   return {
-    device_id: 'android-device',
+    host_name: 'android-device',
     difficulty_after: 2,
     difficulty_before: 1,
     due_after: '2026-05-01T00:00:00.000Z',
@@ -62,6 +64,7 @@ function createSettingRow(overrides: Partial<SyncableStateObjectRow> = {}): Sync
     base_content_hash: 'desktop-setting-base',
     content_hash: 'android-setting-next',
     deleted_at: null,
+    last_modified_by_host_name: 'android-device',
     object_id: 'device:android:phone:*:app_settings',
     object_type: 'setting',
     payload_json: '{"key":"app_settings","scope":"device","platform":"android","form_factor":"phone","device_id":"*","value_json":"{}"}',
@@ -85,6 +88,7 @@ function testBuildsNodeReviewPayload() {
   const row = createNodeReviewRow();
 
   expect(nodeReviewSyncAdapter.buildPushPayload(row)).toEqual({
+    authorHostName: 'android-device',
     base: { baseContentHash: 'desktop-base', kind: 'content_hash' },
     clientOpId: 'node_review:node-1:12',
     contentHash: 'android-next',
@@ -99,6 +103,7 @@ function testBuildsNodeReadingPayload() {
   const row = createNodeReadingRow();
 
   expect(nodeReadingSyncAdapter.buildPushPayload(row)).toEqual({
+    authorHostName: 'android-device',
     base: { baseContentHash: 'desktop-reading-base', kind: 'content_hash' },
     clientOpId: 'node_reading:node-1:13',
     contentHash: 'android-reading-next',

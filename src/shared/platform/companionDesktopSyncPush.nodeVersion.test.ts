@@ -34,7 +34,7 @@ function createNodeVersion(versionId: string): NativeSyncNodeRecord {
   return {
     ancestor_version_ids: [],
     content_hash: `${versionId}-hash`,
-    device_id: 'android-device',
+    host_name: 'android-device',
     object_id: `node-${versionId}`,
     object_type: 'node',
     parent_version_id: null,

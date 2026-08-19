@@ -39,6 +39,7 @@ export const PACK_SCHEMA = [
     object_id TEXT NOT NULL,
     state_seq INTEGER NOT NULL,
     content_hash TEXT NOT NULL,
+    last_modified_by_host_name TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     deleted_at TEXT,
     PRIMARY KEY (object_type, object_id)
@@ -57,7 +58,7 @@ export const PACK_SCHEMA = [
     version_id TEXT PRIMARY KEY,
     object_id TEXT NOT NULL,
     parent_version_id TEXT,
-    device_id TEXT NOT NULL,
+    host_name TEXT NOT NULL,
     created_at TEXT NOT NULL,
     content_hash TEXT NOT NULL,
     body_text TEXT,
@@ -111,7 +112,7 @@ export const PACK_SCHEMA = [
     original_sha256 TEXT NOT NULL,
     stored_sha256 TEXT NOT NULL,
     availability TEXT NOT NULL DEFAULT 'missing',
-    source_device_id TEXT,
+    source_host_name TEXT,
     created_at TEXT NOT NULL,
     cached_at TEXT,
     last_verified_at TEXT
@@ -119,7 +120,7 @@ export const PACK_SCHEMA = [
   `CREATE TABLE review_log (
     id TEXT PRIMARY KEY,
     op_id TEXT NOT NULL UNIQUE,
-    device_id TEXT NOT NULL,
+    host_name TEXT NOT NULL,
     node_id TEXT NOT NULL,
     grade INTEGER NOT NULL,
     scheduler_version TEXT NOT NULL,

@@ -94,7 +94,7 @@ function nodeRecord(args: {
   return {
     ancestor_version_ids: ['desktop#0'],
     content_hash: `${args.id}-hash`,
-    device_id: 'phone',
+    host_name: 'phone',
     object_id: args.id,
     object_type: 'node',
     parent_version_id: 'desktop#0',
@@ -128,7 +128,7 @@ function nodeRecord(args: {
 function insertDivergentLocalNode() {
   openDatabaseConnection().driver.execute(
     `INSERT INTO nodes (
-       id, kind, title, content, current_version_id, last_modified_by_device_id, sync_dirty, created_at, updated_at
+       id, kind, title, content, current_version_id, last_modified_by_host_name, sync_dirty, created_at, updated_at
      ) VALUES ('conflict-node', 'topic', 'Local conflict branch', 'local body',
        'desktop#2', 'desktop', 0, '2026-05-04T06:00:00.000Z', '2026-05-04T06:00:00.000Z')`
   );

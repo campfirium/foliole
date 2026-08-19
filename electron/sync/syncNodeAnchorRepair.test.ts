@@ -162,7 +162,7 @@ function insertLocalNode(args: {
   openDatabaseConnection().sqlite.prepare(
     `INSERT INTO nodes (
        id, parent_id, kind, title, content, anchor_link, current_version_id,
-       last_modified_by_device_id, sync_dirty, created_at, updated_at, deleted_at
+       last_modified_by_host_name, sync_dirty, created_at, updated_at, deleted_at
      ) VALUES (?, ?, 'topic', ?, ?, ?, ?, 'desktop', 0, ?, ?, ?)`
   ).run(
     args.id,
@@ -203,7 +203,7 @@ function nodeRecord(args: {
   return {
     ancestor_version_ids: [args.parentVersionId],
     content_hash: `${args.versionId}-hash`,
-    device_id: 'phone',
+    host_name: 'phone',
     object_id: args.id,
     object_type: 'node',
     parent_version_id: args.parentVersionId,

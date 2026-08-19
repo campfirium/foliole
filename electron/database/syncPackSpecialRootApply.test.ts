@@ -61,7 +61,7 @@ it('reconstructs a missing special parent before applying an incremental child v
   await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
   try {
     await expect(applySyncPackNodeSurfaceWithDbPort(port, {
-      currentCursor: 0, deviceId: 'android-b', sourcePeerId: 'desktop-a'
+      currentCursor: 0, hostName: 'android-b', sourcePeerId: 'desktop-a'
     })).resolves.toMatchObject({ applied: true, appliedObjectCount: 1 });
   } finally {
     await port.run('DETACH DATABASE inc');
@@ -89,13 +89,13 @@ function insertInboxChild() {
     '2026-08-11T02:00:00.000Z', '2026-08-11T02:00:00.000Z'
   ]);
   driver.execute(`INSERT INTO node_sync_versions (
-    version_id, object_id, device_id, created_at, content_hash, snapshot_json
+    version_id, object_id, host_name, created_at, content_hash, snapshot_json
   ) VALUES ('desktop-a#1', 'child-1', 'desktop-a', ?, 'child-hash', ?)`, [
     '2026-08-11T02:00:00.000Z', '{"id":"child-1","parent_id":"special-inbox","title":"Child"}'
   ]);
   driver.execute(`INSERT INTO sync_object_state (
     object_type, object_id, state_seq, current_version_id, content_hash,
-    last_modified_by_device_id, updated_at, sync_dirty
+    last_modified_by_host_name, updated_at, sync_dirty
   ) VALUES ('node', 'child-1', 1, 'desktop-a#1', 'child-hash', 'desktop-a', ?, 1)`, [
     '2026-08-11T02:00:00.000Z'
   ]);

@@ -6,6 +6,7 @@ import {
   ANDROID_COMPANION_MIGRATION_REPAIR_RULES as REPAIRS,
   ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS as STATEMENTS
 } from './androidCompanionMigrationSchemaStatements.js';
+import { migrateCompanionAuthorHostSnapshots } from './companionAuthorHostSnapshotsMigration.js';
 import {
   addColumnIfMissing,
   backfillNodeAttachments,
@@ -78,6 +79,7 @@ async function runMigrationAction(db: DbPort, action: MigrationAction) {
   if (action.type === ACTIONS.installSchema) return installCompanionSchema(db);
   if (action.type === ACTIONS.migrateSyncObjectStateSequence) return migrateSyncObjectStateSequence(db);
   if (action.type === ACTIONS.migrateHostPermanentState) return migrateCompanionHostPermanentState(db);
+  if (action.type === ACTIONS.migrateAuthorHostSnapshots) return migrateCompanionAuthorHostSnapshots(db);
   if (action.type === ACTIONS.migrateOpaqueSyncRefs) return migrateCompanionOpaqueSyncRefs(db);
   if (action.type === ACTIONS.backfillNodeAttachmentsFromVersions) return backfillNodeAttachments(db);
   if (action.type === ACTIONS.migrateExternalFolderOwnership) return migrateExternalFolderOwnership(db);

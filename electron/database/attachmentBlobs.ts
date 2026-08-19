@@ -3,7 +3,7 @@ import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 
 import { openDatabaseConnection } from './connection.js';
-import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
+import { loadOrCreateDesktopHostName } from './hostProfile.js';
 
 export interface AttachmentBlobManifestInput {
   attachmentId: string;
@@ -12,7 +12,7 @@ export interface AttachmentBlobManifestInput {
   sizeBytes: number | null;
   mimeType: string | null;
   availability: string;
-  sourceDeviceId: string | null;
+  sourceHostName: string | null;
   createdAt: string;
   cachedAt?: string | null;
   lastVerifiedAt?: string | null;
@@ -27,7 +27,7 @@ interface AttachmentBlobManifestRow extends DatabaseRow {
   size_bytes: number | null;
   mime_type: string | null;
   availability: string;
-  source_device_id: string | null;
+  source_host_name: string | null;
   created_at: string;
   cached_at: string | null;
   last_verified_at: string | null;
@@ -48,7 +48,7 @@ function toAttachmentBlobManifest(row: AttachmentBlobManifestRow): AttachmentBlo
     sizeBytes: row.size_bytes,
     mimeType: row.mime_type,
     availability: row.availability,
-    sourceDeviceId: row.source_device_id,
+    sourceHostName: row.source_host_name,
     createdAt: row.created_at,
     cachedAt: row.cached_at,
     lastVerifiedAt: row.last_verified_at
@@ -74,7 +74,7 @@ export function upsertAttachmentBlobManifest(input: AttachmentBlobManifestInput)
        size_bytes,
        mime_type,
        availability,
-       source_device_id,
+       source_host_name,
        created_at,
        cached_at,
        last_verified_at
@@ -85,7 +85,7 @@ export function upsertAttachmentBlobManifest(input: AttachmentBlobManifestInput)
        size_bytes = excluded.size_bytes,
        mime_type = excluded.mime_type,
        availability = excluded.availability,
-       source_device_id = excluded.source_device_id,
+       source_host_name = excluded.source_host_name,
        cached_at = excluded.cached_at,
        last_verified_at = excluded.last_verified_at`,
     [
@@ -95,7 +95,7 @@ export function upsertAttachmentBlobManifest(input: AttachmentBlobManifestInput)
       input.sizeBytes,
       input.mimeType,
       input.availability,
-      input.sourceDeviceId,
+      input.sourceHostName,
       input.createdAt,
       input.cachedAt ?? null,
       input.lastVerifiedAt ?? null
@@ -114,7 +114,7 @@ export function findAttachmentBlobManifestById(attachmentId: string): Attachment
        size_bytes,
        mime_type,
        availability,
-       source_device_id,
+       source_host_name,
        created_at,
        cached_at,
        last_verified_at
@@ -141,34 +141,34 @@ function toSyncPayload(input: AttachmentBlobManifestInput, attachment: Attachmen
       last_verified_at: input.lastVerifiedAt ?? null,
       mime_type: input.mimeType,
       size_bytes: input.sizeBytes,
-      source_device_id: input.sourceDeviceId,
+      source_host_name: input.sourceHostName,
       storage_key: input.storageKey
     }
   };
 }
 
 function recordAttachmentSyncState(driver: DatabaseDriver, payload: ReturnType<typeof toSyncPayload>, updatedAt: string) {
-  const deviceId = loadOrCreateDesktopDeviceId(updatedAt);
+  const hostName = loadOrCreateDesktopHostName(updatedAt);
   const contentHash = computeSyncContentHash('attachment', payload);
   upsertSyncObjectState(driver, {
     objectType: 'attachment',
     objectId: payload.attachment_id,
     contentHash,
-    lastModifiedByDeviceId: deviceId,
+    lastModifiedByHostName: hostName,
     updatedAt,
     syncDirty: true
   });
 }
 
 export function recordAttachmentDeleted(driver: DatabaseDriver, attachmentId: string, deletedAt: string) {
-  const deviceId = loadOrCreateDesktopDeviceId(deletedAt);
+  const hostName = loadOrCreateDesktopHostName(deletedAt);
   const payload = { attachment_id: attachmentId };
   const contentHash = computeSyncContentHash('attachment', { ...payload, deleted_at: deletedAt });
   upsertSyncObjectState(driver, {
     objectType: 'attachment',
     objectId: attachmentId,
     contentHash,
-    lastModifiedByDeviceId: deviceId,
+    lastModifiedByHostName: hostName,
     updatedAt: deletedAt,
     deletedAt,
     syncDirty: true

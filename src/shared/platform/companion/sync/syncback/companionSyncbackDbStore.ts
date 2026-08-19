@@ -58,11 +58,11 @@ async function loadNodeVersions(
   cursor: NativeSyncChangeCursor | null,
   limit = CONTRACT.nodeVersions.defaultLimit
 ) {
-  const deviceId = await loadRequiredMeta(port, CONTRACT.deviceIdMetaKey);
+  const hostName = await loadRequiredMeta(port, CONTRACT.hostNameMetaKey);
   const createdAt = cursor?.created_at ?? '';
   const changeId = cursor?.change_id ?? '';
   const rows = await port.query(CONTRACT.sql.nodeVersions, [
-    deviceId, peerId, createdAt, changeId, createdAt, createdAt, changeId, normalizeNodeVersionLimit(limit)
+    hostName, peerId, createdAt, changeId, createdAt, createdAt, changeId, normalizeNodeVersionLimit(limit)
   ]);
   return Promise.all(rows.map(async (row) => {
     const snapshot = parseNodeSnapshot(row.snapshot) as NativeSyncNodeRecord['snapshot'];
@@ -148,11 +148,11 @@ async function loadReviewLog(
   cursor: NativeSyncChangeCursor | null,
   limit = CONTRACT.limits.default
 ) {
-  const deviceId = await loadRequiredMeta(port, CONTRACT.deviceIdMetaKey);
+  const hostName = await loadRequiredMeta(port, CONTRACT.hostNameMetaKey);
   const createdAt = cursor?.created_at ?? '';
   const changeId = cursor?.change_id ?? '';
   return port.query(CONTRACT.sql.reviewLog, [
-    deviceId, createdAt, changeId, createdAt, createdAt, changeId, peerId, normalizeLimit(limit)
+    hostName, createdAt, changeId, createdAt, createdAt, changeId, peerId, normalizeLimit(limit)
   ]) as unknown as Promise<NativeSyncReviewLogRecord[]>;
 }
 

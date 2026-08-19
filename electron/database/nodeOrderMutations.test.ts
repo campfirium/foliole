@@ -56,7 +56,7 @@ it('rewrites node order without changing node updated_at or nodes.position', () 
   seedFolderNode('node-b', 1);
   const connection = openDatabaseConnection();
   connection.sqlite
-    .prepare('UPDATE nodes SET sync_dirty = 0, last_modified_by_device_id = NULL WHERE id IN (?, ?)')
+    .prepare('UPDATE nodes SET sync_dirty = 0, last_modified_by_host_name = NULL WHERE id IN (?, ?)')
     .run('node-a', 'node-b');
 
   replaceNodeOrder(['node-b', 'node-a']);
@@ -68,7 +68,7 @@ it('rewrites node order without changing node updated_at or nodes.position', () 
   expect(
     connection.sqlite
       .prepare(
-        `SELECT id, position, updated_at, sync_dirty, last_modified_by_device_id
+        `SELECT id, position, updated_at, sync_dirty, last_modified_by_host_name
          FROM nodes
          WHERE id IN (?, ?)
          ORDER BY id ASC`
@@ -77,14 +77,14 @@ it('rewrites node order without changing node updated_at or nodes.position', () 
   ).toEqual([
     {
       id: 'node-a',
-      last_modified_by_device_id: expect.any(String),
+      last_modified_by_host_name: expect.any(String),
       position: null,
       sync_dirty: 1,
       updated_at: '2026-03-06T00:00:00.000Z'
     },
     {
       id: 'node-b',
-      last_modified_by_device_id: expect.any(String),
+      last_modified_by_host_name: expect.any(String),
       position: null,
       sync_dirty: 1,
       updated_at: '2026-03-06T00:00:00.000Z'

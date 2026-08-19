@@ -83,7 +83,7 @@ function expectProjectedNodes() {
       current_version_id: EXPECTED_VERSION_IDS[0],
       id: CAPTURE_NODE_ID,
       kind: 'topic',
-      last_modified_by_device_id: ANDROID_SOURCE_DEVICE_ID,
+      last_modified_by_host_name: ANDROID_SOURCE_DEVICE_ID,
       parent_id: 'special-inbox',
       reveal: null
     },
@@ -93,7 +93,7 @@ function expectProjectedNodes() {
       current_version_id: EXPECTED_VERSION_IDS[1],
       id: CLOZE_NODE_ID,
       kind: 'item',
-      last_modified_by_device_id: ANDROID_SOURCE_DEVICE_ID,
+      last_modified_by_host_name: ANDROID_SOURCE_DEVICE_ID,
       parent_id: ARTICLE_PARENT_ID,
       reveal: 'Beta'
     },
@@ -103,7 +103,7 @@ function expectProjectedNodes() {
       current_version_id: EXPECTED_VERSION_IDS[2],
       id: NOTE_NODE_ID,
       kind: 'topic',
-      last_modified_by_device_id: ANDROID_SOURCE_DEVICE_ID,
+      last_modified_by_host_name: ANDROID_SOURCE_DEVICE_ID,
       parent_id: ARTICLE_PARENT_ID,
       reveal: null
     }
@@ -112,7 +112,7 @@ function expectProjectedNodes() {
 
 function expectProjectedSyncMetadata() {
   expect(readProjectedVersions()).toEqual(EXPECTED_VERSION_IDS.map((version_id) => ({
-    device_id: ANDROID_SOURCE_DEVICE_ID,
+    host_name: ANDROID_SOURCE_DEVICE_ID,
     version_id
   })));
 }
@@ -173,7 +173,7 @@ function seedProjectionParents() {
 
 function readProjectedNodes() {
   return openDatabaseConnection().driver.queryAll(
-    `SELECT id, parent_id, kind, content, reveal, anchor_link, current_version_id, last_modified_by_device_id
+    `SELECT id, parent_id, kind, content, reveal, anchor_link, current_version_id, last_modified_by_host_name
      FROM nodes WHERE id IN (?, ?, ?) ORDER BY id`,
     [CAPTURE_NODE_ID, CLOZE_NODE_ID, NOTE_NODE_ID]
   );
@@ -181,7 +181,7 @@ function readProjectedNodes() {
 
 function readProjectedVersions() {
   return openDatabaseConnection().driver.queryAll(
-    `SELECT version_id, device_id FROM node_sync_versions
+    `SELECT version_id, host_name FROM node_sync_versions
      WHERE object_id IN (?, ?, ?) ORDER BY object_id`,
     [CAPTURE_NODE_ID, CLOZE_NODE_ID, NOTE_NODE_ID]
   );

@@ -13,6 +13,7 @@ export interface SyncObjectIdentity {
 }
 
 export interface CompanionSyncPushPayload {
+  authorHostName: string;
   base: SyncBaseReference;
   clientOpId: string;
   contentHash?: string;

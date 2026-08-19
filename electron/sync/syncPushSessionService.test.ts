@@ -25,7 +25,7 @@ function createNodeRecord(): NativeSyncNodeRecord {
   return {
     ancestor_version_ids: [],
     content_hash: 'hash-local-node',
-    device_id: 'desktop',
+    host_name: 'desktop',
     object_id: 'local-node-1',
     object_type: 'node',
     parent_version_id: null,

@@ -10,7 +10,7 @@ const nodeColumns = SYNC_PACK_NODE_COLUMNS.join(', ');
 const payloadPlans = [
   { objectType: 'attachment', sql: `SELECT a.id __object_id, a.id attachment_id, a.original_name, a.mime_type, a.size_bytes, a.created_at,
     b.content_hash blob__content_hash, b.storage_key blob__storage_key, b.size_bytes blob__size_bytes,
-    b.mime_type blob__mime_type, b.availability blob__availability, b.source_device_id blob__source_device_id,
+    b.mime_type blob__mime_type, b.availability blob__availability, b.source_host_name blob__source_host_name,
     b.created_at blob__created_at, b.cached_at blob__cached_at, b.last_verified_at blob__last_verified_at
     FROM source.attachments a LEFT JOIN source.attachment_blobs b ON b.attachment_id = a.id` },
   { objectType: 'external_folder', sql: `SELECT id __object_id, id, folder_path, attachment_mode, attachment_root_path, excluded_dirs_json,
@@ -26,7 +26,7 @@ const payloadPlans = [
   { objectType: 'node_review', sql: `SELECT node_id __object_id, node_id, due, last_review_at, state, stability, difficulty,
     elapsed_days, scheduled_days, reps, lapses FROM source.node_review` },
   { objectType: 'node_text_alternative', sql: `SELECT alternative_id __object_id, alternative_id, node_id, source_version_id,
-    body_text, source_device_id, created_at, status, updated_at FROM source.node_text_alternatives` },
+    body_text, source_host_name, created_at, status, updated_at FROM source.node_text_alternatives` },
   { objectType: 'pdf_page_text', sql: `SELECT attachment_id || ':' || page __object_id,
     attachment_id, page, text, page_width, page_height FROM source.pdf_page_text` },
   { objectType: 'setting', sql: `SELECT scope || ':' || platform || ':' || form_factor || ':' || host_name || ':' || key __object_id,
@@ -54,7 +54,7 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
        authorization_id, left_at FROM source.sync_group_member_departures
      WHERE group_id IN (SELECT group_id FROM sync_groups)`,
     `INSERT INTO sync_object_state SELECT state.object_type, state.object_id, state.state_seq,
-       state.content_hash, state.updated_at,
+       state.content_hash, state.last_modified_by_host_name, state.updated_at,
        CASE WHEN state.object_type = 'node_text_alternative' THEN COALESCE(state.deleted_at,
          (SELECT node.deleted_at FROM source.node_text_alternatives alternative
           JOIN source.nodes node ON node.id = alternative.node_id
@@ -67,7 +67,8 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
        AND (state.object_type NOT IN ('node_reading','node_review') OR EXISTS
          (SELECT 1 FROM source.nodes WHERE id = state.object_id))
        `,
-    `INSERT OR IGNORE INTO sync_object_state SELECT s.object_type, s.object_id, s.state_seq, s.content_hash, s.updated_at, s.deleted_at
+    `INSERT OR IGNORE INTO sync_object_state SELECT s.object_type, s.object_id, s.state_seq, s.content_hash,
+       s.last_modified_by_host_name, s.updated_at, s.deleted_at
      FROM source.sync_object_state s WHERE s.object_type = 'node' AND s.object_id IN
        (SELECT object_id FROM sync_object_state WHERE object_type IN ('node_reading','node_review')
         UNION SELECT alternative.node_id FROM source.node_text_alternatives alternative
@@ -77,7 +78,7 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
       (SELECT 1 FROM sync_objects o WHERE o.object_type = sync_object_state.object_type AND o.object_id = sync_object_state.object_id)`,
     `INSERT INTO nodes (${nodeColumns}) SELECT ${nodeColumns} FROM source.nodes
      WHERE id IN (SELECT object_id FROM sync_object_state WHERE object_type = 'node')`,
-    `INSERT INTO node_sync_versions SELECT v.version_id, v.object_id, v.parent_version_id, v.device_id,
+    `INSERT INTO node_sync_versions SELECT v.version_id, v.object_id, v.parent_version_id, v.host_name,
        v.created_at, v.content_hash, v.body_text, v.snapshot_json
      FROM source.node_sync_versions v JOIN nodes n
        ON n.id = v.object_id AND n.current_version_id = v.version_id`,
@@ -95,10 +96,10 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
        (SELECT object_id FROM sync_object_state WHERE object_type = 'external_document')`,
     `INSERT INTO content_blobs SELECT b.hash, b.storage_key, b.kind, b.mime_type, b.compression,
        b.original_size_bytes, b.stored_size_bytes, b.original_sha256, b.stored_sha256, b.availability,
-       b.source_device_id, b.created_at, b.cached_at, b.last_verified_at FROM source.content_blobs b
+       b.source_host_name, b.created_at, b.cached_at, b.last_verified_at FROM source.content_blobs b
      WHERE b.hash IN (SELECT body_blob_hash FROM nodes WHERE body_blob_hash IS NOT NULL
        UNION SELECT body_blob_hash FROM external_documents WHERE body_blob_hash IS NOT NULL)`,
-    `INSERT INTO review_log SELECT r.id, r.op_id, r.device_id, r.node_id, r.grade, r.scheduler_version,
+    `INSERT INTO review_log SELECT r.id, r.op_id, r.host_name, r.node_id, r.grade, r.scheduler_version,
        r.reviewed_at, r.due_before, r.stability_before, r.difficulty_before, r.due_after,
        r.stability_after, r.difficulty_after FROM source.review_log r
      WHERE r.node_id IN (SELECT object_id FROM sync_object_state WHERE object_type = 'node_review')`

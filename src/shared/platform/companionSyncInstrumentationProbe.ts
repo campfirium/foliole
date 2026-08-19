@@ -40,12 +40,13 @@ async function applyPackPathThroughSharedCore(args: { packPath: string }) {
   }
   return runCompanionSyncWriterTask(async () => {
     const bootstrap = await loadCompanionBootstrapState();
+    if (!bootstrap.host_name) throw new Error('companion_host_name_missing');
     const pairing = await loadCompanionPairingState();
     const sourcePeerId = pairing.remote_peer_id?.trim();
     if (!sourcePeerId) throw new Error('sync_pack_source_identity_unavailable');
     return applyCompanionSyncPackPathWithSharedCore({
       deviceId: bootstrap.device_id,
-      ...(bootstrap.host_name ? { hostName: bootstrap.host_name } : {}),
+      hostName: bootstrap.host_name,
       packPath: args.packPath,
       sourcePeerId
     }, {

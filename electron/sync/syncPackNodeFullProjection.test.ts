@@ -122,8 +122,9 @@ function createIncomingPack(filePath: string) {
   try {
     for (const statement of PACK_SCHEMA) db.exec(statement);
     db.prepare(
-      `INSERT INTO sync_object_state (object_type, object_id, state_seq, content_hash, updated_at, deleted_at)
-       VALUES ('node', 'node-1', 1, 'node-hash', '2026-07-10T01:00:00.000Z', NULL)`
+      `INSERT INTO sync_object_state (
+         object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, deleted_at
+       ) VALUES ('node', 'node-1', 1, 'node-hash', 'desktop-host', '2026-07-10T01:00:00.000Z', NULL)`
     ).run();
     db.prepare(
       `INSERT INTO nodes (

@@ -49,7 +49,7 @@ function insertReviewLog(opId: string, reviewedAt: string) {
   );
   openDatabaseConnection().driver.execute(
     `INSERT INTO review_log (
-       id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at,
+       id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at,
        due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after
      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [`log-${opId}`, opId, 'desktop', 'node-1', 3, 'test', reviewedAt,
@@ -96,7 +96,7 @@ function createMobileLearningStateRecords(): NativeSyncObjectRecord[] {
 
 function createMobileReviewLog(opId: string): NativeSyncReviewLogRecord {
   return {
-    device_id: 'android-test',
+    host_name: 'android-test',
     difficulty_after: 3.4,
     difficulty_before: 4.2,
     due_after: '2026-04-26T00:00:00.000Z',
@@ -147,7 +147,7 @@ it('applies mobile review state and review log without duplicating op ids', asyn
   }]);
 
   const mobileReview = {
-    device_id: 'android-test',
+    host_name: 'android-test',
     difficulty_after: 3.4,
     difficulty_before: 4.2,
     due_after: '2026-04-26T00:00:00.000Z',
@@ -216,8 +216,8 @@ it('applies mobile learning state and review event as clean desktop facts', asyn
     { object_type: 'node_reading', sync_dirty: 0 },
     { object_type: 'node_review', sync_dirty: 0 }
   ]);
-  expect(driver.queryOne<{ device_id: string }>(
-    'SELECT device_id FROM review_log WHERE op_id = ?',
+  expect(driver.queryOne<{ host_name: string }>(
+    'SELECT host_name FROM review_log WHERE op_id = ?',
     ['mobile-op-2']
-  )).toEqual({ device_id: 'android-test' });
+  )).toEqual({ host_name: 'android-test' });
 });

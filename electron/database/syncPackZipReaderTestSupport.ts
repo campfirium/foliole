@@ -24,7 +24,7 @@ export function readPackRowsFromZip(packPath: string, tempRoot: string) {
         'SELECT version_id, parent_version_id, ordinal FROM node_sync_version_parents ORDER BY version_id, ordinal'
       ).all(),
       nodeVersions: db.prepare(
-        `SELECT version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+        `SELECT version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
          FROM node_sync_versions ORDER BY created_at, version_id`
       ).all(),
       nodes: db.prepare('SELECT id, content, body_blob_hash, opening_text, reveal, current_version_id FROM nodes').all(),

@@ -65,7 +65,7 @@ function upsertReadingNode(reading: boolean) {
 function getSyncObjectState() {
   return openDatabaseConnection().sqlite
     .prepare(
-      `SELECT object_type, object_id, last_modified_by_device_id, deleted_at, sync_dirty
+      `SELECT object_type, object_id, last_modified_by_host_name, deleted_at, sync_dirty
        FROM sync_object_state WHERE object_type = 'node_reading' AND object_id = 'node-reading'`
     )
     .get() as Record<string, unknown> | undefined;
@@ -93,7 +93,7 @@ it('writes sync object state for node reading snapshots and tombstones', () => {
   const activeState = getSyncObjectState();
 
   expect(activeState).toMatchObject({ deleted_at: null, object_id: 'node-reading', sync_dirty: 1 });
-  expect(String(activeState?.last_modified_by_device_id)).not.toBe('');
+  expect(String(activeState?.last_modified_by_host_name)).not.toBe('');
   expect(countNodeReadingChanges().count).toBe(0);
 
   upsertReadingNode(false);

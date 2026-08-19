@@ -95,14 +95,14 @@ function installRuntimeManager(db: Database.Database) {
 function configureAcceptedNodeAck() {
   runtimeState.postDesktopJson.mockResolvedValue({
     acks: [{
-      client_op_id: 'node:ios-device#00000000-0000-4000-8000-000000000021',
+      client_op_id: 'node:ver_00000000-0000-4000-8000-000000000021',
       identity: {
         objectId: 'node-00000000-0000-4000-8000-000000000020',
         objectType: 'node',
         scope: 'workspace'
       },
       status: 'accepted',
-      version_id: 'ios-device#00000000-0000-4000-8000-000000000021'
+      version_id: 'ver_00000000-0000-4000-8000-000000000021'
     }]
   });
 }
@@ -114,15 +114,15 @@ function expectPersistedCapture(db: Database.Database, result: Awaited<ReturnTyp
     title: 'iPhone note'
   });
   expect(db.prepare(`
-    SELECT content, last_modified_by_device_id, parent_id, title FROM nodes WHERE id = ?
+    SELECT content, last_modified_by_host_name, parent_id, title FROM nodes WHERE id = ?
   `).get(result.nodeId)).toEqual({
     content: 'iPhone note\nsecond line',
-    last_modified_by_device_id: 'ios-device',
+    last_modified_by_host_name: 'ios-device',
     parent_id: INBOX_NODE_ID,
     title: 'iPhone note'
   });
   expect(db.prepare('SELECT version_id FROM node_sync_versions WHERE object_id = ?').get(result.nodeId)).toEqual({
-    version_id: 'ios-device#00000000-0000-4000-8000-000000000021'
+    version_id: 'ver_00000000-0000-4000-8000-000000000021'
   });
 }
 
@@ -131,7 +131,7 @@ function expectPushedCapture(db: Database.Database, nodeId: string) {
     'http://desktop.local',
     '/companion/sync-push',
     { items: [expect.objectContaining({
-      clientOpId: 'node:ios-device#00000000-0000-4000-8000-000000000021',
+      clientOpId: 'node:ver_00000000-0000-4000-8000-000000000021',
       identity: { objectId: nodeId, objectType: 'node', scope: 'workspace' }
     })] }
   );
@@ -140,7 +140,7 @@ function expectPushedCapture(db: Database.Database, nodeId: string) {
     FROM sync_delivery_receipts WHERE object_id = ?
   `).get(nodeId)).toEqual({
     object_id: nodeId,
-    operation_id: 'node:ios-device#00000000-0000-4000-8000-000000000021',
+    operation_id: 'node:ver_00000000-0000-4000-8000-000000000021',
     peer_id: 'desktop-peer',
     status: 'confirmed',
     stream_name: 'node_version'
@@ -153,8 +153,9 @@ function seedInboxNode(db: Database.Database) {
     VALUES (?, 'folder', 'Inbox', ?, ?)
   `).run(INBOX_NODE_ID, '2026-07-21T00:00:00.000Z', '2026-07-21T00:00:00.000Z');
   db.prepare(`
-    INSERT INTO companion_meta (key, value, updated_at)
-    VALUES ('device_id', 'ios-device', '2026-07-21T00:00:00.000Z')
+    INSERT INTO companion_meta (key, value, updated_at) VALUES
+      ('device_id', 'ios-device', '2026-07-21T00:00:00.000Z'),
+      ('host_name', 'ios-device', '2026-07-21T00:00:00.000Z')
   `).run();
 }
 

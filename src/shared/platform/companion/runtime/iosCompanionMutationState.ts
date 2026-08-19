@@ -15,7 +15,7 @@ export async function iosCompanionHostName(db: DbPort) {
 export async function markIosCompanionMutation(args: {
   contentHash: string;
   db: DbPort;
-  deviceId: string;
+  hostName: string;
   objectId: string;
   objectType: string;
   updatedAt: string;
@@ -30,9 +30,9 @@ export async function markIosCompanionMutation(args: {
   await args.db.run(
     `INSERT OR REPLACE INTO sync_object_state (
        object_type, object_id, state_seq, current_version_id, content_hash, base_content_hash,
-       last_modified_by_device_id, updated_at, deleted_at, sync_dirty
+       last_modified_by_host_name, updated_at, deleted_at, sync_dirty
      ) VALUES (?, ?, COALESCE((SELECT MAX(state_seq) + 1 FROM sync_object_state), 1), NULL, ?, ?, ?, ?, NULL, 1)`,
-    [args.objectType, args.objectId, args.contentHash, base, args.deviceId, args.updatedAt]
+    [args.objectType, args.objectId, args.contentHash, base, args.hostName, args.updatedAt]
   );
 }
 

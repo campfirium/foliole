@@ -5,7 +5,6 @@ import {
 } from '../../lib/platform/persistedNodeViewState.js';
 
 import type { DatabaseConnection } from './connection.js';
-import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
 
 const VIEW_STATE_SCOPE = 'session_resume';
@@ -31,7 +30,6 @@ function toViewStateObjectId(hostName: string, key: string) {
 }
 
 function writeViewStateObject(connection: DatabaseConnection, key: string, payload: Record<string, unknown>, updatedAt: string) {
-  const deviceId = loadOrCreateDesktopDeviceId(updatedAt);
   const hostName = loadOrCreateDesktopHostName(updatedAt);
   const objectId = toViewStateObjectId(hostName, key);
   const syncPayload = {
@@ -47,7 +45,7 @@ function writeViewStateObject(connection: DatabaseConnection, key: string, paylo
     objectType: 'view_state',
     objectId,
     contentHash,
-    lastModifiedByDeviceId: deviceId,
+    lastModifiedByHostName: hostName,
     updatedAt,
     syncDirty: true
   });

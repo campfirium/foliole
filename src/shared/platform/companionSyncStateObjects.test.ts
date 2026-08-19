@@ -72,7 +72,7 @@ function settingObject(): NativeSyncObjectRecord {
     object_id: 'user_space:android:mobile:*:app_settings',
     object_type: 'setting',
     payload_json: JSON.stringify({
-      device_id: '*',
+      host_name: '*',
       form_factor: 'mobile',
       key: 'app_settings',
       platform: 'android',
@@ -130,12 +130,12 @@ function installStateObjectSchema(database: Database.Database) {
       scope TEXT NOT NULL,
       platform TEXT NOT NULL,
       form_factor TEXT NOT NULL,
-      device_id TEXT NOT NULL,
+      host_name TEXT NOT NULL,
       value_json TEXT NOT NULL,
       content_hash TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       deleted_at TEXT,
-      PRIMARY KEY (key, scope, platform, form_factor, device_id)
+      PRIMARY KEY (key, scope, platform, form_factor, host_name)
     );
     CREATE TABLE sync_object_state (
       object_type TEXT NOT NULL,
@@ -143,7 +143,7 @@ function installStateObjectSchema(database: Database.Database) {
       state_seq INTEGER NOT NULL,
       current_version_id TEXT,
       content_hash TEXT NOT NULL,
-      last_modified_by_device_id TEXT NOT NULL,
+      last_modified_by_host_name TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       sync_dirty INTEGER NOT NULL DEFAULT 0,
       deleted_at TEXT,

@@ -206,7 +206,7 @@ it('writes sync object state for active node and node view states', () => {
 
   const rows = openDatabaseConnection().sqlite
     .prepare(
-      `SELECT object_id, last_modified_by_device_id, sync_dirty
+      `SELECT object_id, last_modified_by_host_name, sync_dirty
        FROM sync_object_state WHERE object_type = 'view_state' ORDER BY object_id ASC`
     )
     .all() as Array<Record<string, unknown>>;
@@ -216,7 +216,7 @@ it('writes sync object state for active node and node view states', () => {
     `session_resume:windows:desktop:${hostName}:node:node-1`,
     `session_resume:windows:desktop:${hostName}:node:node-2`
   ]);
-  expect(rows.every((row) => row.last_modified_by_device_id === deviceId)).toBe(true);
+  expect(rows.every((row) => row.last_modified_by_host_name === deviceId)).toBe(true);
   expect(rows.every((row) => row.sync_dirty === 1)).toBe(true);
   const changeCount = openDatabaseConnection().sqlite
     .prepare(

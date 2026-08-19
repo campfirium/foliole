@@ -2,7 +2,7 @@ export const ANDROID_COMPANION_CONVERGENCE_QUERY_DEFINITIONS = {
   nodeTextAlternativeAvailable: {
     resultKey: 'rows',
     sql:
-      'SELECT alternative_id, node_id, source_version_id, body_text, source_device_id, created_at, status, updated_at ' +
+      'SELECT alternative_id, node_id, source_version_id, body_text, source_host_name, created_at, status, updated_at ' +
       "FROM node_text_alternatives WHERE node_id = ? AND status = 'available' " +
       'ORDER BY updated_at DESC, alternative_id ASC LIMIT 1',
     columns: alternativeColumns()
@@ -10,7 +10,7 @@ export const ANDROID_COMPANION_CONVERGENCE_QUERY_DEFINITIONS = {
   nodeTextAlternativeById: {
     resultKey: 'rows',
     sql:
-      'SELECT alternative_id, node_id, source_version_id, body_text, source_device_id, created_at, status, updated_at ' +
+      'SELECT alternative_id, node_id, source_version_id, body_text, source_host_name, created_at, status, updated_at ' +
       'FROM node_text_alternatives WHERE alternative_id = ? LIMIT 1',
     columns: alternativeColumns()
   },
@@ -25,7 +25,7 @@ export const ANDROID_COMPANION_CONVERGENCE_QUERY_DEFINITIONS = {
       'SELECT parent_id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled, shelved_at, ' +
       'manual_child_order, title, is_title_manual, hide_title_heading, content, body_blob_hash, opening_text, virtual_filter, ' +
       'reveal, anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, import_source_fingerprint, ' +
-      'import_content_fingerprint, position, current_version_id, last_modified_by_device_id, sync_dirty, created_at, updated_at, deleted_at ' +
+      'import_content_fingerprint, position, current_version_id, last_modified_by_host_name, sync_dirty, created_at, updated_at, deleted_at ' +
       'FROM nodes WHERE id = ? LIMIT 1',
     columns: nodeRekeyColumns()
   },
@@ -45,7 +45,7 @@ function alternativeColumns() {
     { key: 'node_id', source: 'node_id', type: 'string' },
     { key: 'source_version_id', source: 'source_version_id', type: 'string' },
     { key: 'body_text', source: 'body_text', type: 'string' },
-    { key: 'source_device_id', source: 'source_device_id', type: 'string' },
+    { key: 'source_host_name', source: 'source_host_name', type: 'string' },
     { key: 'created_at', source: 'created_at', type: 'string' },
     { key: 'status', source: 'status', type: 'string' },
     { key: 'updated_at', source: 'updated_at', type: 'string' }
@@ -63,6 +63,6 @@ function nodeRekeyColumns() {
     'manual_child_order', 'title', 'is_title_manual', 'hide_title_heading', 'content', 'body_blob_hash', 'opening_text',
     'virtual_filter', 'reveal', 'anchor_link', 'anchor_resolution_status', 'anchor_source_version_id', 'image_regions',
     'import_source_fingerprint', 'import_content_fingerprint', 'position', 'current_version_id',
-    'last_modified_by_device_id', 'sync_dirty', 'created_at', 'updated_at', 'deleted_at'
+    'last_modified_by_host_name', 'sync_dirty', 'created_at', 'updated_at', 'deleted_at'
   ].map((key) => ({ key, source: key, type: longs.has(key) ? 'long' : doubles.has(key) ? 'double' : 'nullableString' }));
 }

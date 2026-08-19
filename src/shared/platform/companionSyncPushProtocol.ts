@@ -24,6 +24,7 @@ export type SyncBaseReference =
   | { ancestorVersionIds: string[]; kind: 'node_version'; parentVersionId: string | null; parentVersionIds?: string[] };
 
 export interface SyncPushPayload {
+  authorHostName: string;
   base: SyncBaseReference;
   clientOpId: string;
   contentHash?: string;
@@ -98,6 +99,7 @@ function createStateObjectSyncAdapter(
     },
     buildPushPayload(row) {
       return {
+        authorHostName: row.last_modified_by_host_name,
         base: this.baseReference(row),
         clientOpId: stateClientOpId(row),
         contentHash: row.content_hash,
@@ -165,6 +167,7 @@ export const reviewLogSyncAdapter: SyncableObjectAdapter<SyncableReviewLogRow, S
   },
   buildPushPayload(row) {
     return {
+      authorHostName: row.host_name,
       base: this.baseReference(row),
       clientOpId: `review_log:${row.op_id}`,
       identity: this.identity(row),
@@ -196,7 +199,7 @@ export const nodeVersionSyncAdapter: SyncableObjectAdapter<SyncableNodeVersionRo
     };
   },
   baseReference(row) {
-    if (!row.version_id || !row.device_id || !row.version_created_at) {
+    if (!row.version_id || !row.host_name || !row.version_created_at) {
       return { kind: 'blocked', reason: 'missing_base_reference' };
     }
     return {
@@ -208,6 +211,7 @@ export const nodeVersionSyncAdapter: SyncableObjectAdapter<SyncableNodeVersionRo
   },
   buildPushPayload(row) {
     return {
+      authorHostName: row.host_name ?? '',
       base: this.baseReference(row),
       clientOpId: `node:${row.version_id ?? row.object_id}`,
       ...(row.content_hash ? { contentHash: row.content_hash } : {}),

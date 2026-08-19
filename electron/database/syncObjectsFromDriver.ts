@@ -11,6 +11,7 @@ type JsonSyncObjectType = Exclude<NativeSyncObjectType, 'external_document' | 'i
 interface SyncObjectStateRow extends DatabaseRow {
   content_hash: string;
   deleted_at: string | null;
+  last_modified_by_host_name: string;
   object_id: string;
   object_type: JsonSyncObjectType;
   state_seq?: number;
@@ -61,7 +62,11 @@ function toRecord(driver: DatabaseDriver, row: SyncObjectStateRow): NativeSyncOb
 }
 
 function toStateRecord(driver: DatabaseDriver, row: SyncObjectStateRow): NativeSyncStateObjectRecord {
-  return { ...toRecord(driver, row), state_seq: row.state_seq ?? 0 };
+  return {
+    ...toRecord(driver, row),
+    last_modified_by_host_name: row.last_modified_by_host_name,
+    state_seq: row.state_seq ?? 0
+  };
 }
 
 export function loadSyncObjectsFromDriver(
@@ -89,7 +94,7 @@ export function loadSyncObjectsFromDriver(
 
 export function loadSyncStateObjectsSinceFromDriver(driver: DatabaseDriver, cursor: number, limit = 500) {
   const rows = driver.queryAll<Required<SyncObjectStateRow>>(
-    `SELECT object_type, object_id, state_seq, content_hash, updated_at, deleted_at
+    `SELECT object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, deleted_at
      FROM sync_object_state
      WHERE object_type NOT IN ('external_document', 'node') AND state_seq > ?
      ORDER BY state_seq ASC LIMIT ?`,

@@ -82,7 +82,7 @@ it('builds from an explicit isolated driver without reading the desktop connecti
   );
   driver.execute(
     `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+       version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
      ) VALUES
        ('desktop#isolated-v1', 'isolated-node', NULL, 'desktop',
         '2026-07-20T00:00:00.000Z', 'isolated-v1-hash', '{"id":"isolated-node","title":"First"}'),
@@ -91,7 +91,7 @@ it('builds from an explicit isolated driver without reading the desktop connecti
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('node', 'isolated-node', 1, 'isolated-hash', 'acceptance-desktop',
        '2026-07-21T00:00:00.000Z', 1)`
   );
@@ -124,7 +124,7 @@ function expectNodePackRows(packPath: string) {
       database_compressed_sha256: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
       database_uncompressed_sha256: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
       format: 'foliole.sync-pack',
-      format_version: 6,
+      format_version: 7,
       created_at: '2026-04-27T02:00:00.000Z',
       from_device_id: 'desktop-fixture',
       pack_id: 'pack-1',
@@ -231,13 +231,13 @@ it('backfills missing node sync state before building a pack', async () => {
   const driver = openDatabaseConnection().driver;
   driver.execute(
     `INSERT INTO nodes (
-       id, kind, title, content, current_version_id, last_modified_by_device_id, sync_dirty, created_at, updated_at
+       id, kind, title, content, current_version_id, last_modified_by_host_name, sync_dirty, created_at, updated_at
      ) VALUES ('node-backfill', 'topic', 'Backfilled node', '', 'android#node-v1', 'android', 0,
        '2026-04-27T03:00:00.000Z', '2026-04-27T03:00:00.000Z')`
   );
   driver.execute(
     `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+       version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
      ) VALUES ('android#node-v1', 'node-backfill', NULL, 'android', '2026-04-27T03:00:00.000Z',
        'backfill-node-hash', '{"id":"node-backfill","title":"Backfilled node"}')`
   );

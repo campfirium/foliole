@@ -103,11 +103,11 @@ function insertExternalDocument(documentId: string, folderId: string, relativePa
 function insertSyncRows(objectId: string, objectType: string) {
   openDatabaseConnection().sqlite.prepare(`INSERT INTO sync_object_state (
     object_type, object_id, state_seq, current_version_id, content_hash,
-    last_modified_by_device_id, updated_at, deleted_at, sync_dirty
+    last_modified_by_host_name, updated_at, deleted_at, sync_dirty
   ) VALUES (?, ?, (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state), NULL, ?, 'desktop', ?, NULL, 0)`)
     .run(objectType, objectId, `hash-${objectId}`, '2026-06-11T00:00:00.000Z');
   openDatabaseConnection().sqlite.prepare(`INSERT INTO sync_change_log (
-    change_id, object_type, object_id, change_type, device_id, base_version_id,
+    change_id, object_type, object_id, change_type, host_name, base_version_id,
     result_version_id, content_hash, payload_json, created_at, applied_at
   ) VALUES (?, ?, ?, 'upsert', 'desktop', NULL, NULL, ?, '{}', ?, ?)`)
     .run(`change-${objectId}`, objectType, objectId, `hash-${objectId}`, '2026-06-11T00:00:00.000Z', '2026-06-11T00:00:00.000Z');

@@ -97,7 +97,7 @@ vi.mock('./useCompanionWorkspacePairing', () => ({
     desktopDiscoveries: [],
     desktopDiscovery: null,
     pairingState: {
-      device_id: 'android-test-device',
+      host_name: 'android-test-device',
       device_kind: 'android-capacitor',
       device_name: 'Android companion',
       is_paired: true,
@@ -143,6 +143,7 @@ function renderCompanionWorkspaceSyncHook(useCompanionWorkspaceSync: typeof impo
     database_path: 'foliole-companionSQLite.db',
     database_ready: true,
     device_id: 'android-test-device',
+    host_name: 'android-test-device',
     runtime_kind: 'android-capacitor'
   }));
 }
@@ -174,7 +175,7 @@ async function testManualSyncRefreshesConflictCount() {
       {
         conflict_version_id: 'phone#1',
         content_hash: null,
-        device_id: 'android-test-device',
+        host_name: 'android-test-device',
         object_id: 'topic-1',
         parent_version_id: null,
         snapshot: createConflictSnapshot('Topic 1'),
@@ -183,7 +184,7 @@ async function testManualSyncRefreshesConflictCount() {
       {
         conflict_version_id: 'phone#2',
         content_hash: null,
-        device_id: 'android-test-device',
+        host_name: 'android-test-device',
         object_id: 'topic-2',
         parent_version_id: null,
         snapshot: createConflictSnapshot('Topic 2'),

@@ -28,7 +28,7 @@ export const ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS = [
     import_content_fingerprint TEXT,
     position INTEGER,
     current_version_id TEXT,
-    last_modified_by_device_id TEXT,
+    last_modified_by_host_name TEXT,
     sync_dirty INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
@@ -70,7 +70,7 @@ export const ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS review_log (
     id TEXT PRIMARY KEY,
     op_id TEXT NOT NULL UNIQUE,
-    device_id TEXT NOT NULL,
+    host_name TEXT NOT NULL,
     node_id TEXT NOT NULL REFERENCES nodes(id),
     grade INTEGER NOT NULL,
     scheduler_version TEXT NOT NULL,
@@ -86,7 +86,7 @@ export const ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS = [
     version_id TEXT PRIMARY KEY,
     object_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
     parent_version_id TEXT,
-    device_id TEXT NOT NULL,
+    host_name TEXT NOT NULL,
     created_at TEXT NOT NULL,
     content_hash TEXT NOT NULL,
     body_text TEXT,
@@ -104,7 +104,7 @@ export const ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS = [
     conflict_version_id TEXT PRIMARY KEY,
     object_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
     parent_version_id TEXT,
-    device_id TEXT,
+    host_name TEXT,
     content_hash TEXT,
     snapshot_json TEXT NOT NULL,
     detected_at TEXT NOT NULL
@@ -116,7 +116,7 @@ export const ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS = [
     node_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
     source_version_id TEXT NOT NULL,
     body_text TEXT NOT NULL,
-    source_device_id TEXT NOT NULL,
+    source_host_name TEXT NOT NULL,
     created_at TEXT NOT NULL,
     status TEXT NOT NULL,
     updated_at TEXT NOT NULL
@@ -124,7 +124,7 @@ export const ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS = [
   `CREATE UNIQUE INDEX IF NOT EXISTS idx_node_text_alternatives_source_version
     ON node_text_alternatives (node_id, source_version_id)`,
   `CREATE UNIQUE INDEX IF NOT EXISTS idx_node_text_alternatives_available_source
-    ON node_text_alternatives (node_id, source_device_id) WHERE status = 'available'`,
+    ON node_text_alternatives (node_id, source_host_name) WHERE status = 'available'`,
   `CREATE TABLE IF NOT EXISTS node_order (
     node_id TEXT PRIMARY KEY REFERENCES nodes(id),
     position INTEGER NOT NULL

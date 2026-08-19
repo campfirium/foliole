@@ -37,7 +37,7 @@ function createFixture() {
     hash TEXT PRIMARY KEY, storage_key TEXT NOT NULL, kind TEXT NOT NULL, mime_type TEXT,
     compression TEXT NOT NULL, original_size_bytes INTEGER NOT NULL, stored_size_bytes INTEGER NOT NULL,
     original_sha256 TEXT NOT NULL, stored_sha256 TEXT NOT NULL, availability TEXT NOT NULL,
-    source_device_id TEXT, created_at TEXT NOT NULL, cached_at TEXT, last_verified_at TEXT
+    source_host_name TEXT, created_at TEXT NOT NULL, cached_at TEXT, last_verified_at TEXT
   ); CREATE TABLE content_blob_data (
     hash TEXT PRIMARY KEY REFERENCES content_blobs(hash) ON DELETE CASCADE, data BLOB NOT NULL
   ); CREATE TABLE sync_object_state (
@@ -59,7 +59,7 @@ function seedLocalBody(sqlite: Database.Database, hash: string) {
 
 function seedIncomingManifest(sqlite: Database.Database, hash: string) {
   sqlite.prepare(`INSERT INTO incoming.sync_object_state VALUES
-    ('node', 'fact-c', 1, 'node-hash', '2026-08-13T05:25:12.731Z', NULL)`).run();
+    ('node', 'fact-c', 1, 'node-hash', 'desktop-host', '2026-08-13T05:25:12.731Z', NULL)`).run();
   sqlite.prepare(`INSERT INTO incoming.nodes
     (id, kind, title, body_blob_hash, created_at, updated_at) VALUES
     ('fact-c', 'topic', 'C fact', ?, '2026-08-13T05:25:12.731Z', '2026-08-13T05:25:12.731Z')`)

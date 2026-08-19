@@ -8,7 +8,7 @@ const alternative = {
   body_text: 'Other body',
   created_at: '2026-07-25T00:00:00.000Z',
   node_id: 'topic-1',
-  source_device_id: 'android-device',
+  source_host_name: 'android-device',
   source_version_id: 'android#1',
   status: 'available' as const,
   updated_at: '2026-07-25T00:00:00.000Z'

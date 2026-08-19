@@ -30,8 +30,7 @@ export function isStateObjectPush(item: CompanionSyncPushPayload) {
 export async function applyStateObjectPushWithDbPort(
   port: DbPort,
   item: CompanionSyncPushPayload,
-  objectType: StatePushObjectType,
-  sourceDeviceId: string
+  objectType: StatePushObjectType
 ) {
   return await port.transaction(async (tx) => {
     const current = await currentState(tx, item.identity);
@@ -57,12 +56,14 @@ export async function applyStateObjectPushWithDbPort(
         status: 'conflict'
       });
     }
-    const materialized = await applySyncObjectPayloadWithDbPort(tx, record);
+    const materialized = await applySyncObjectPayloadWithDbPort(tx, record, {
+      hostName: item.authorHostName
+    });
     if (objectType === 'node_review' && materialized === false) {
       return emptyResult(stateAck(item, current, 'already_applied'));
     }
     await materializeDesktopSettingRecord(tx, record);
-    await upsertState(tx, record, sourceDeviceId);
+    await upsertState(tx, record, item.authorHostName);
     const updated = await currentState(tx, item.identity);
     return {
       acks: [stateAck(item, updated, 'accepted')],
@@ -117,15 +118,15 @@ async function currentState(port: DbPort, identity: SyncObjectIdentity) {
   ))[0];
 }
 
-function upsertState(port: DbPort, record: NativeSyncObjectRecord, sourceDeviceId: string) {
+function upsertState(port: DbPort, record: NativeSyncObjectRecord, sourceHostName: string) {
   return port.run(
     `INSERT INTO sync_object_state (` +
-    `object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty, deleted_at` +
+    `object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty, deleted_at` +
     `) VALUES (?, ?, COALESCE((SELECT MAX(state_seq) + 1 FROM sync_object_state), 1), ?, ?, ?, 0, ?) ` +
     `ON CONFLICT(object_type, object_id) DO UPDATE SET state_seq = excluded.state_seq, content_hash = excluded.content_hash, ` +
-    `last_modified_by_device_id = excluded.last_modified_by_device_id, updated_at = excluded.updated_at, ` +
+    `last_modified_by_host_name = excluded.last_modified_by_host_name, updated_at = excluded.updated_at, ` +
     `sync_dirty = excluded.sync_dirty, deleted_at = excluded.deleted_at`,
-    [record.object_type, record.object_id, record.content_hash, sourceDeviceId, record.updated_at, record.deleted_at]
+    [record.object_type, record.object_id, record.content_hash, sourceHostName, record.updated_at, record.deleted_at]
   );
 }
 

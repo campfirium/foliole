@@ -49,7 +49,7 @@ it('downloads hidden body bytes after visible resources so an active member can 
   database.prepare("UPDATE nodes SET body_blob_hash = ? WHERE id = 'hidden-child'").run(hiddenHash);
   database.prepare(
     `INSERT INTO content_blobs (hash, storage_key, kind, mime_type, compression, original_size_bytes,
-      stored_size_bytes, original_sha256, stored_sha256, availability, source_device_id, created_at)
+      stored_size_bytes, original_sha256, stored_sha256, availability, source_host_name, created_at)
      VALUES (?, ?, 'text_body', 'text/markdown', 'none', 1, 1, ?, ?, 'missing', 'desktop-a', ?)`
   ).run(hiddenHash, hiddenHash, hiddenHash, hiddenHash, '2026-04-21T08:00:00.000Z');
 

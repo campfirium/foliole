@@ -11,7 +11,7 @@ interface AlternativeState extends DbRow {
   body_text: string;
   created_at: string;
   node_id: string;
-  source_device_id: string;
+  source_host_name: string;
   source_version_id: string;
   status: 'available' | 'dismissed' | 'promoted' | 'superseded';
 }
@@ -63,7 +63,7 @@ export function buildResolutionRecord(
     ancestor_version_ids: [...new Set([...parents, ...records.flatMap((record) => record.ancestor_version_ids)])],
     body_text: body,
     content_hash: hashText(JSON.stringify({ body, snapshot })),
-    device_id: 'desktop-resolution',
+    host_name: 'desktop-resolution',
     object_id: winner.object_id,
     object_type: 'node',
     parent_version_id: parents[0]!,
@@ -85,25 +85,25 @@ function nextResolutionTimestamp(records: NativeSyncNodeRecord[]) {
 
 export async function storeAlternative(port: DbPort, loser: NativeSyncNodeRecord, updatedAt: string) {
   const sourceVersionId = loser.version_id!;
-  const sourceDeviceId = loser.device_id ?? 'unknown';
+  const sourceHostName = loser.host_name ?? 'unknown';
   const alternativeId = `alternative#${hashText(`${loser.object_id}\n${sourceVersionId}`).slice(0, 24)}`;
-  await supersedePreviousAlternative(port, loser.object_id, sourceDeviceId, sourceVersionId, updatedAt);
+  await supersedePreviousAlternative(port, loser.object_id, sourceHostName, sourceVersionId, updatedAt);
   const alternative: AlternativeState = {
     alternative_id: alternativeId,
     body_text: loser.body_text ?? loser.snapshot.content ?? '',
     created_at: loser.version_created_at ?? updatedAt,
     node_id: loser.object_id,
-    source_device_id: sourceDeviceId,
+    source_host_name: sourceHostName,
     source_version_id: sourceVersionId,
     status: 'available'
   };
   const inserted = await port.run(
     `INSERT INTO node_text_alternatives (
-       alternative_id, node_id, source_version_id, body_text, source_device_id, created_at, status, updated_at
+       alternative_id, node_id, source_version_id, body_text, source_host_name, created_at, status, updated_at
      ) VALUES (?, ?, ?, ?, ?, ?, 'available', ?)
      ON CONFLICT(alternative_id) DO NOTHING`,
     [alternativeId, alternative.node_id, sourceVersionId, alternative.body_text,
-      sourceDeviceId, alternative.created_at, updatedAt]
+      sourceHostName, alternative.created_at, updatedAt]
   );
   if (inserted.changes > 0) await markAlternativeDirty(port, alternative, updatedAt);
 }
@@ -134,12 +134,12 @@ async function tombstoneNodeAlternatives(port: DbPort, nodeId: string, updatedAt
 async function markAlternativeTombstoneDirty(port: DbPort, alternativeId: string, updatedAt: string) {
   await port.run(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, deleted_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, deleted_at, sync_dirty
      ) VALUES ('node_text_alternative', ?, (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state), ?,
        'desktop-resolution', ?, ?, 1)
      ON CONFLICT(object_type, object_id) DO UPDATE SET
        state_seq = excluded.state_seq, content_hash = excluded.content_hash,
-       last_modified_by_device_id = excluded.last_modified_by_device_id,
+       last_modified_by_host_name = excluded.last_modified_by_host_name,
        updated_at = excluded.updated_at, deleted_at = excluded.deleted_at, sync_dirty = 1`,
     [alternativeId, hashText(`deleted\n${alternativeId}\n${updatedAt}`), updatedAt, updatedAt]
   );
@@ -148,20 +148,20 @@ async function markAlternativeTombstoneDirty(port: DbPort, alternativeId: string
 async function supersedePreviousAlternative(
   port: DbPort,
   nodeId: string,
-  sourceDeviceId: string,
+  sourceHostName: string,
   sourceVersionId: string,
   updatedAt: string
 ) {
   const previous = await port.query<AlternativeState>(
-    `SELECT alternative_id, body_text, created_at, node_id, source_device_id, source_version_id, status
+    `SELECT alternative_id, body_text, created_at, node_id, source_host_name, source_version_id, status
      FROM node_text_alternatives
-     WHERE node_id = ? AND source_device_id = ? AND status = 'available' AND source_version_id <> ?`,
-    [nodeId, sourceDeviceId, sourceVersionId]
+     WHERE node_id = ? AND source_host_name = ? AND status = 'available' AND source_version_id <> ?`,
+    [nodeId, sourceHostName, sourceVersionId]
   );
   await port.run(
     `UPDATE node_text_alternatives SET status = 'superseded', updated_at = ?
-     WHERE node_id = ? AND source_device_id = ? AND status = 'available' AND source_version_id <> ?`,
-    [updatedAt, nodeId, sourceDeviceId, sourceVersionId]
+     WHERE node_id = ? AND source_host_name = ? AND status = 'available' AND source_version_id <> ?`,
+    [updatedAt, nodeId, sourceHostName, sourceVersionId]
   );
   for (const alternative of previous) {
     await markAlternativeDirty(port, { ...alternative, status: 'superseded' }, updatedAt);
@@ -176,12 +176,12 @@ async function markAlternativeDirty(
   const payload = JSON.stringify({ ...alternative, updated_at: updatedAt });
   await port.run(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, deleted_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, deleted_at, sync_dirty
      ) VALUES ('node_text_alternative', ?, (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state), ?,
        'desktop-resolution', ?, NULL, 1)
      ON CONFLICT(object_type, object_id) DO UPDATE SET
        state_seq = excluded.state_seq, content_hash = excluded.content_hash,
-       last_modified_by_device_id = excluded.last_modified_by_device_id,
+       last_modified_by_host_name = excluded.last_modified_by_host_name,
        updated_at = excluded.updated_at, sync_dirty = 1`,
     [alternative.alternative_id, hashText(payload), updatedAt]
   );

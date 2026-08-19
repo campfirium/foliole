@@ -26,6 +26,7 @@ export function loadNodePreludeStateRows<T extends DatabaseRow & {
        INNER JOIN node_prelude child ON child.parent_id = parent.id
      )
      SELECT state.object_type, state.object_id, state.state_seq, state.content_hash,
+       state.last_modified_by_host_name,
        state.updated_at, state.deleted_at
      FROM sync_object_state state
      INNER JOIN node_prelude prelude ON prelude.id = state.object_id

@@ -56,7 +56,7 @@ describe('sync node tombstone streams', () => {
 function insertTombstoneFixture() {
   openDatabaseConnection().driver.execute(
     `INSERT INTO node_sync_tombstones (
-       node_id, version_id, parent_version_id, device_id, content_hash, snapshot_json, deleted_at, created_at
+       node_id, version_id, parent_version_id, host_name, content_hash, snapshot_json, deleted_at, created_at
      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       'node-deleted',

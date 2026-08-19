@@ -6,10 +6,10 @@ import { loadManagedPathCandidates } from '../managedPathSafety.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { upsertDesktopSource } from './desktopSources.js';
-import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
 import { scanFolderEntries, type ScannedDocumentEntry } from './externalSearchCacheSupport.js';
 import { readExternalSearchFolderRows } from './externalSearchFolderRows.js';
 import { loadExternalSearchFolders } from './externalSearchFolders.js';
+import { loadOrCreateDesktopHostName } from './hostProfile.js';
 
 function requireFolder(folderId: string) {
   const row = readExternalSearchFolderRows().find((item) => item.id === folderId);
@@ -30,7 +30,7 @@ function recordConnectionSync(folderId: string, now: string) {
       owner_installation_id: row.owner_installation_id,
       owner_platform: row.owner_platform
     }),
-    lastModifiedByDeviceId: loadOrCreateDesktopDeviceId(now),
+    lastModifiedByHostName: loadOrCreateDesktopHostName(now),
     objectId: folderId,
     objectType: 'external_folder',
     syncDirty: true,

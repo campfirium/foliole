@@ -46,6 +46,7 @@ function createOrderedReviewPush(
   contentHash: string
 ): CompanionSyncPushPayload {
   return {
+    authorHostName: 'android-device',
     base: { baseContentHash: null, kind: 'content_hash' },
     clientOpId: `node_review:node-1:${contentHash}`,
     contentHash,

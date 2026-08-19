@@ -2,6 +2,7 @@ import {
   ASSISTANT_THREAD_INDEX_SCHEMA_STATEMENTS,
   ASSISTANT_THREAD_MESSAGE_SCHEMA_STATEMENTS
 } from './assistantThreadIndexSchemaStatements.js';
+import { migrateAuthorHostSnapshots } from './numberedMigrationAuthorHostSnapshots.js';
 import { migrateDesktopSourceConnections } from './numberedMigrationDesktopSourceConnections.js';
 import { migrateDesktopSourceOwnership } from './numberedMigrationDesktopSourceOwnership.js';
 import { migrateDesktopSources } from './numberedMigrationDesktopSources.js';
@@ -175,5 +176,9 @@ export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   {
     version: 71,
     migrate: migrateOpaqueSyncRefs
+  },
+  {
+    version: 72,
+    migrate: migrateAuthorHostSnapshots
   }
 ];

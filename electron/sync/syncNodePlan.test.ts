@@ -30,7 +30,7 @@ function createRemoteNodeRecord(
   return {
     ancestor_version_ids: [],
     content_hash: null,
-    device_id: null,
+    host_name: null,
     object_id,
     object_type: 'node',
     parent_version_id: null,

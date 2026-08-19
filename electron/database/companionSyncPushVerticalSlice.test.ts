@@ -51,30 +51,31 @@ function insertDesktopBaseReview() {
   const driver = openDatabaseConnection().driver;
   driver.execute(
     `INSERT INTO nodes (
-       id, kind, title, content, current_version_id, last_modified_by_device_id, sync_dirty, created_at, updated_at
+       id, kind, title, content, current_version_id, last_modified_by_host_name, sync_dirty, created_at, updated_at
      ) VALUES ('node-1', 'topic', 'Review Topic', '', 'desktop#node-1', 'desktop', 0,
        '2026-04-30T00:00:00.000Z', '2026-04-30T00:00:00.000Z')`
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('node', 'node-1', 1, 'desktop-node-base', 'desktop', '2026-04-30T00:00:00.000Z', 0)`
   );
   driver.execute(
     `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+       version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
      ) VALUES ('desktop#node-1', 'node-1', NULL, 'desktop',
        '2026-04-30T00:00:00.000Z', 'desktop-node-base', '{"id":"node-1","title":"Review Topic"}')`
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('node_review', 'node-1', 2, 'desktop-base', 'desktop', '2026-04-30T00:00:00.000Z', 0)`
   );
 }
 
 function nodeReviewPush(): SyncPushPayload {
   return {
+    authorHostName: 'android-device',
     base: { baseContentHash: 'desktop-base', kind: 'content_hash' },
     clientOpId: 'node_review:node-1:12',
     contentHash: 'android-review-next',
@@ -97,11 +98,12 @@ function nodeReviewPush(): SyncPushPayload {
 
 function reviewLogPush(): SyncPushPayload {
   return {
+    authorHostName: 'android-device',
     base: { kind: 'op_id', opId: 'op-android-1' },
     clientOpId: 'review_log:op-android-1',
     identity: { objectId: 'op-android-1', objectType: 'review_log', scope: 'workspace' },
     payloadJson: JSON.stringify({
-      device_id: 'android-device',
+      host_name: 'android-device',
       difficulty_after: 3,
       difficulty_before: 2,
       due_after: '2026-05-01T00:00:00.000Z',
@@ -121,6 +123,7 @@ function reviewLogPush(): SyncPushPayload {
 function nodeVersionPush(): SyncPushPayload {
   const updatedAt = '2026-04-30T02:00:00.000Z';
   return {
+    authorHostName: 'android-device',
     base: { ancestorVersionIds: [], kind: 'node_version', parentVersionId: null },
     clientOpId: 'node:android#1',
     contentHash: 'android-node-hash',
@@ -128,7 +131,7 @@ function nodeVersionPush(): SyncPushPayload {
     payloadJson: JSON.stringify({
       ancestor_version_ids: [],
       content_hash: 'android-node-hash',
-      device_id: 'android-device',
+      host_name: 'android-device',
       object_id: 'node-android',
       object_type: 'node',
       parent_version_id: null,
@@ -172,7 +175,9 @@ function readPackRows(packPath: string) {
       manifest: JSON.parse(entries.get('manifest.json')?.toString('utf8') ?? '{}'),
       nodes: db.prepare('SELECT id, current_version_id, title FROM nodes').all(),
       reviewLog: db.prepare('SELECT op_id, node_id, grade FROM review_log').all(),
-      stateRows: db.prepare('SELECT object_type, object_id, state_seq FROM sync_object_state').all(),
+      stateRows: db.prepare(
+        'SELECT object_type, object_id, state_seq, last_modified_by_host_name FROM sync_object_state'
+      ).all(),
       syncObjects: db.prepare('SELECT object_type, object_id, payload_json FROM sync_objects').all()
     };
   } finally {
@@ -199,7 +204,10 @@ function readStoredZipEntries(filePath: string) {
 
 describe('companion sync push vertical slice', () => {
   it('packs accepted node_review and review_log changes for Android pull confirmation', async () => {
-    const push = await applyCompanionSyncPushAsync([nodeReviewPush(), reviewLogPush()], 'android-device');
+    const push = await applyCompanionSyncPushAsync(
+      [nodeReviewPush(), reviewLogPush()],
+      'authenticated-member-id'
+    );
     const packPath = path.join(tempRoot, 'vertical-pack.syncpack');
 
     const pack = await buildDesktopSyncPack({
@@ -217,8 +225,13 @@ describe('companion sync push vertical slice', () => {
       manifest: expect.objectContaining({ from_state_seq: 2, to_state_seq: 3 }),
       reviewLog: [{ grade: 3, node_id: 'node-1', op_id: 'op-android-1' }],
       stateRows: [
-        { object_id: 'node-1', object_type: 'node', state_seq: 1 },
-        { object_id: 'node-1', object_type: 'node_review', state_seq: 3 }
+        expect.objectContaining({ object_id: 'node-1', object_type: 'node', state_seq: 1 }),
+        {
+          last_modified_by_host_name: 'android-device',
+          object_id: 'node-1',
+          object_type: 'node_review',
+          state_seq: 3
+        }
       ],
       syncObjects: [expect.objectContaining({
         object_id: 'node-1',
@@ -229,7 +242,7 @@ describe('companion sync push vertical slice', () => {
   });
 
   it('packs accepted node version pushes for Android pull confirmation', async () => {
-    const push = await applyCompanionSyncPushAsync([nodeVersionPush()], 'android-device');
+    const push = await applyCompanionSyncPushAsync([nodeVersionPush()], 'authenticated-member-id');
     const packPath = path.join(tempRoot, 'node-version-pack.syncpack');
 
     const pack = await buildDesktopSyncPack({
@@ -245,7 +258,7 @@ describe('companion sync push vertical slice', () => {
     expect(readPackRows(packPath)).toMatchObject({
       manifest: expect.objectContaining({ from_state_seq: 2, to_state_seq: 3 }),
       nodes: [{ current_version_id: 'android-device#1', id: 'node-android', title: 'Android topic' }],
-      stateRows: [{ object_id: 'node-android', object_type: 'node', state_seq: 3 }]
+      stateRows: [expect.objectContaining({ object_id: 'node-android', object_type: 'node', state_seq: 3 })]
     });
   });
 });

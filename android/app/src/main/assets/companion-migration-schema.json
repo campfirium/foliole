@@ -22,6 +22,7 @@
     "installSchema": "installSchema",
     "replaceSyncPushAck": "replaceSyncPushAck",
     "migrateHostPermanentState": "migrateHostPermanentState",
+    "migrateAuthorHostSnapshots": "migrateAuthorHostSnapshots",
     "migrateOpaqueSyncRefs": "migrateOpaqueSyncRefs",
     "migrateSyncObjectStateSequence": "migrateSyncObjectStateSequence"
   },
@@ -298,6 +299,15 @@
         }
       ],
       "beforeVersion": 28
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to cut over companion author Host snapshots.",
+          "type": "migrateAuthorHostSnapshots"
+        }
+      ],
+      "beforeVersion": 29
     }
   ],
   "planKeys": {
@@ -356,7 +366,7 @@
         "contentHash": "content_hash",
         "currentVersionId": "current_version_id",
         "deletedAt": "deleted_at",
-        "lastModifiedByDeviceId": "last_modified_by_device_id",
+        "lastModifiedByHostName": "last_modified_by_host_name",
         "objectId": "object_id",
         "objectType": "object_type",
         "syncDirty": "sync_dirty",

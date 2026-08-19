@@ -29,7 +29,6 @@ interface ExistingSyncObjectState extends DbRow {
 
 export interface ApplySyncObjectsWithDbPortOptions {
   includeAlreadyApplied?: boolean;
-  deviceId?: string;
   hostName?: string;
   onSkippedRecord?: (record: unknown, reason: unknown) => void;
   onPayloadAppliedInTransaction?: (port: DbPort, record: SyncPackSyncObjectRecord) => Promise<void>;
@@ -116,10 +115,7 @@ async function applySingleSyncObjectInTransaction(
   const appliedPayload = await applySyncObjectPayloadWithDbPort(
     port,
     record,
-    {
-      ...(options.deviceId === undefined ? {} : { deviceId: options.deviceId }),
-      ...(options.hostName === undefined ? {} : { hostName: options.hostName })
-    }
+    options.hostName === undefined ? {} : { hostName: options.hostName }
   );
   if (appliedPayload === false) return null;
   await options.onPayloadAppliedInTransaction?.(port, record);
@@ -130,11 +126,11 @@ async function applySingleSyncObjectInTransaction(
 async function upsertAppliedSyncObjectState(port: DbPort, record: SyncPackSyncObjectRecord) {
   await port.run(
     `INSERT INTO sync_object_state (` +
-    `object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty, deleted_at` +
+    `object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty, deleted_at` +
     `) VALUES (?, ?, COALESCE((SELECT MAX(state_seq) + 1 FROM sync_object_state), 1), ?, ?, ?, 0, ?) ` +
     `ON CONFLICT(object_type, object_id) DO UPDATE SET ` +
     `state_seq = excluded.state_seq, content_hash = excluded.content_hash, ` +
-    `last_modified_by_device_id = excluded.last_modified_by_device_id, updated_at = excluded.updated_at, ` +
+    `last_modified_by_host_name = excluded.last_modified_by_host_name, updated_at = excluded.updated_at, ` +
     `sync_dirty = excluded.sync_dirty, deleted_at = excluded.deleted_at`,
     [record.object_type, record.object_id, record.content_hash, REMOTE_DEVICE_ID, record.updated_at, record.deleted_at]
   );

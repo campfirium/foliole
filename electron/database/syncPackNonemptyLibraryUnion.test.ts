@@ -73,18 +73,18 @@ async function buildLibraryPack(suffix: 'a' | 'b', peerId: string) {
   return extractIncoming(packPath, path.join(tempRoot, `${suffix}.db`));
 }
 
-async function applyPeerPack(library: 'a' | 'b', incomingPath: string, deviceId: string) {
+async function applyPeerPack(library: 'a' | 'b', incomingPath: string, hostName: string) {
   openLibrary(library);
   const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: `union-${library}` });
   await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
   try {
     await expect(applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor: 0,
-      deviceId
+      hostName
     })).resolves.toMatchObject({ applied: true, toStateSeq: 4 });
     await expect(applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor: 4,
-      deviceId
+      hostName
     })).resolves.toMatchObject({ applied: false });
   } finally {
     await port.run('DETACH DATABASE inc');
@@ -119,7 +119,7 @@ function insertLibraryFacts(suffix: 'a' | 'b') {
   ).run(nodeId, `Topic ${suffix.toUpperCase()}`, `Body ${suffix}`, versionId, createdAt, createdAt);
   db.prepare(
     `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, device_id, created_at,
+       version_id, object_id, parent_version_id, host_name, created_at,
        content_hash, body_text, snapshot_json
      ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?)`
   ).run(versionId, nodeId, `${suffix}-device`, createdAt, `node-${suffix}`, `Body ${suffix}`,
@@ -131,7 +131,7 @@ function insertLibraryFacts(suffix: 'a' | 'b') {
   db.prepare(
     `INSERT INTO attachment_blobs (
        attachment_id, content_hash, storage_key, size_bytes, mime_type,
-       availability, source_device_id, created_at
+       availability, source_host_name, created_at
      ) VALUES (?, ?, ?, 1, 'application/octet-stream', 'local', ?, ?)`
   ).run(hash, hash, hash, `${suffix}-device`, createdAt);
   db.prepare('INSERT INTO node_attachments VALUES (?, ?, ?)').run(nodeId, hash, 'reference');
@@ -149,7 +149,7 @@ function insertLibraryFacts(suffix: 'a' | 'b') {
   ).run(nodeId, createdAt, createdAt);
   db.prepare(
     `INSERT INTO review_log (
-       id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at,
+       id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at,
        due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after
      ) VALUES (?, ?, ?, ?, 3, 'ts-fsrs@4', ?, ?, 1, 2, ?, 2, 3)`
   ).run(`log-${suffix}`, `op-${suffix}`, `${suffix}-device`, nodeId,
@@ -161,7 +161,7 @@ function insertStates(suffix: string, nodeId: string, versionId: string, hash: s
   const statement = openDatabaseConnection().sqlite.prepare(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, current_version_id, content_hash,
-       last_modified_by_device_id, updated_at, sync_dirty
+       last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES (?, ?, ?, ?, ?, ?, ?, 1)`
   );
   statement.run('node', nodeId, 1, versionId, `node-${suffix}`, `${suffix}-device`, at);

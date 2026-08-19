@@ -49,7 +49,7 @@ function createHighlightPush(anchorId: string, versionId: string): CompanionSync
   const record: NativeSyncNodeRecord = {
     ancestor_version_ids: [],
     content_hash: `hash:${versionId}`,
-    device_id: versionId.slice(0, versionId.indexOf('#')),
+    host_name: versionId.slice(0, versionId.indexOf('#')),
     object_id: 'highlight-1',
     object_type: 'node',
     parent_version_id: null,
@@ -80,6 +80,7 @@ function createHighlightPush(anchorId: string, versionId: string): CompanionSync
     version_id: versionId
   };
   return {
+    authorHostName: record.host_name!,
     base: { ancestorVersionIds: [], kind: 'node_version', parentVersionId: null, parentVersionIds: [] },
     clientOpId: `node:${versionId}`,
     contentHash: record.content_hash!,

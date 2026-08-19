@@ -36,7 +36,6 @@ it('applies attachment and pdf page text payload records', async () => {
   } as unknown as DbPort;
 
   await expect(applySyncPackAttachmentObjectsWithDbPort(port, {
-    deviceId: 'device-1',
     incomingAlias: 'incoming'
   })).resolves.toBe(2);
   expect(runs[0]?.sql).toContain('INSERT INTO attachments');
@@ -65,7 +64,6 @@ it('deletes attachment payload rows for tombstones', async () => {
   } as unknown as DbPort;
 
   await expect(applySyncPackAttachmentObjectsWithDbPort(port, {
-    deviceId: 'device-1',
     incomingAlias: 'incoming'
   })).resolves.toBe(1);
   expect(runs).toEqual([

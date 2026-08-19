@@ -26,7 +26,7 @@ function buildRemoteNodeRecord(): NativeSyncNodeRecord {
   return {
     ancestor_version_ids: ['remote-device#2'],
     content_hash: 'hash-1',
-    device_id: 'remote-device',
+    host_name: 'remote-device',
     object_id: 'remote-node-1',
     object_type: 'node',
     parent_version_id: 'remote-device#2',
@@ -73,7 +73,7 @@ it('runs a node sync pull session and reads sync conflict state through the debu
     {
       conflict_version_id: 'remote-device#3',
       content_hash: 'hash-1',
-      device_id: 'remote-device',
+      host_name: 'remote-device',
       object_id: 'remote-node-1',
       parent_version_id: 'remote-device#2',
       snapshot: remoteNodes[0]!.snapshot,

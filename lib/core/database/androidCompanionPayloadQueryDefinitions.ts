@@ -7,7 +7,7 @@ const NODE_TEXT_ALTERNATIVE_COLUMNS = [
   'node_id',
   'source_version_id',
   'body_text',
-  'source_device_id',
+  'source_host_name',
   'created_at',
   'status',
   'updated_at'
@@ -20,7 +20,7 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
       "SELECT json_object('attachment_id', a.id, 'original_name', a.original_name, 'mime_type', a.mime_type, " +
       "'size_bytes', a.size_bytes, 'created_at', a.created_at, 'blob', json_object(" +
       "'content_hash', b.content_hash, 'storage_key', b.storage_key, 'size_bytes', b.size_bytes, " +
-      "'mime_type', b.mime_type, 'availability', b.availability, 'source_device_id', b.source_device_id, " +
+      "'mime_type', b.mime_type, 'availability', b.availability, 'source_host_name', b.source_host_name, " +
       "'created_at', b.created_at, 'cached_at', b.cached_at, 'last_verified_at', b.last_verified_at)) AS payload_json " +
       'FROM attachments a LEFT JOIN attachment_blobs b ON b.attachment_id = a.id WHERE a.id = ? LIMIT 1'
   },
@@ -91,7 +91,7 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
     resultKey: 'payloads',
     syncPayload: { argMode: 'object_id', objectType: 'node_text_alternative' },
     sql:
-      'SELECT alternative_id, node_id, source_version_id, body_text, source_device_id, created_at, status, updated_at ' +
+      'SELECT alternative_id, node_id, source_version_id, body_text, source_host_name, created_at, status, updated_at ' +
       'FROM node_text_alternatives WHERE alternative_id = ? LIMIT 1'
   },
   syncPayloadPdfPageText: {

@@ -7,7 +7,7 @@ import type {
 } from '../import/contract.js';
 
 import type { DatabaseDriver } from './driver.js';
-import { loadOrCreateDatabaseDeviceId } from './syncDeviceIdentity.js';
+import { loadOrCreateDatabaseHostName } from './syncHostIdentity.js';
 import { computeSyncContentHash, upsertSyncObjectState } from './syncState.js';
 
 interface ImportSourceRow {
@@ -149,12 +149,12 @@ export function recordImportSourceSync(driver: DatabaseDriver, sourceFingerprint
   }
   const payload = toImportSourcePayload(row);
   const contentHash = computeSyncContentHash('import_source', payload);
-  const deviceId = loadOrCreateDatabaseDeviceId(driver, updatedAt);
+  const hostName = loadOrCreateDatabaseHostName(driver, updatedAt);
   upsertSyncObjectState(driver, {
     objectType: 'import_source',
     objectId: sourceFingerprint,
     contentHash,
-    lastModifiedByDeviceId: deviceId,
+    lastModifiedByHostName: hostName,
     updatedAt,
     syncDirty: true
   });

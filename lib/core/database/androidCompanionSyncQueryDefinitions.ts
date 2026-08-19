@@ -29,6 +29,7 @@ export const ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS = {
       { key: 'object_id', source: 'object_id', type: 'string' },
       { key: 'state_seq', source: 'state_seq', type: 'long' },
       { key: 'content_hash', source: 'content_hash', type: 'string' },
+      { key: 'last_modified_by_host_name', source: 'last_modified_by_host_name', type: 'string' },
       { key: 'updated_at', source: 'updated_at', type: 'string' },
       { key: 'deleted_at', source: 'deleted_at', type: 'nullableString' },
       { key: 'base_content_hash', source: 'base_content_hash', type: 'nullableString' }
@@ -71,7 +72,7 @@ export const ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS = {
     columns: [
       { key: 'id', source: 'id', type: 'string' },
       { key: 'op_id', source: 'op_id', type: 'string' },
-      { key: 'device_id', source: 'device_id', type: 'string' },
+      { key: 'host_name', source: 'host_name', type: 'string' },
       { key: 'node_id', source: 'node_id', type: 'string' },
       { key: 'grade', source: 'grade', type: 'long' },
       { key: 'scheduler_version', source: 'scheduler_version', type: 'string' },

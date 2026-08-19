@@ -117,7 +117,7 @@ async function applyPack(
   try {
     await expect(applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor,
-      deviceId: 'android-target'
+      hostName: 'android-target'
     })).resolves.toMatchObject({
       applied: true,
       appliedObjectCount: 1,
@@ -138,13 +138,13 @@ function insertSourceNode() {
   openDatabaseConnection().driver.execute(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, current_version_id, content_hash,
-       last_modified_by_device_id, updated_at, sync_dirty
+       last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('node', 'node-delete', 1, 'desktop#1', 'node-delete-hash-1',
        'desktop-source', '2026-05-04T08:00:00.000Z', 1)`
   );
   openDatabaseConnection().driver.execute(
     `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+       version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
      ) VALUES ('desktop#1', 'node-delete', NULL, 'desktop-source',
        '2026-05-04T08:00:00.000Z', 'node-delete-hash-1', '{"id":"node-delete","title":"Article To Delete"}')`
   );
@@ -165,7 +165,7 @@ function markSourceNodeDeleted() {
   );
   openDatabaseConnection().driver.execute(
     `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+       version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
      ) VALUES ('desktop#delete', 'node-delete', 'desktop#1', 'desktop-source',
        '2026-05-04T08:05:00.000Z', 'node-delete-hash-2', '{"id":"node-delete","title":"Deleted Article"}')`
   );

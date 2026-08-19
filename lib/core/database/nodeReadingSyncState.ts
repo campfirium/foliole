@@ -15,9 +15,8 @@ export interface NodeReadingSyncPayload {
 }
 
 export interface WriteNodeReadingSyncInput {
-  hostName?: string;
   nodeId: string;
-  deviceId?: string;
+  hostName?: string;
   reading?: NodeReadingSyncPayload | null;
   updatedAt: string;
 }
@@ -57,14 +56,14 @@ function toNodeReadingTombstoneHash(nodeId: string, deletedAt: string) {
   });
 }
 
-function recordNodeReadingTombstone(driver: DatabaseDriver, input: WriteNodeReadingSyncInput & { deviceId: string }) {
+function recordNodeReadingTombstone(driver: DatabaseDriver, input: WriteNodeReadingSyncInput & { hostName: string }) {
   const contentHash = toNodeReadingTombstoneHash(input.nodeId, input.updatedAt);
   upsertSyncObjectState(driver, {
     objectType: 'node_reading',
     objectId: input.nodeId,
     contentHash,
     deletedAt: input.updatedAt,
-    lastModifiedByDeviceId: input.deviceId,
+    lastModifiedByHostName: input.hostName,
     updatedAt: input.updatedAt,
     syncDirty: true
   });
@@ -72,14 +71,14 @@ function recordNodeReadingTombstone(driver: DatabaseDriver, input: WriteNodeRead
 
 function recordNodeReadingUpsert(
   driver: DatabaseDriver,
-  input: WriteNodeReadingSyncInput & { deviceId: string; reading: NodeReadingSyncPayload }
+  input: WriteNodeReadingSyncInput & { hostName: string; reading: NodeReadingSyncPayload }
 ) {
   const contentHash = toNodeReadingHash(input.nodeId, input.reading);
   upsertSyncObjectState(driver, {
     objectType: 'node_reading',
     objectId: input.nodeId,
     contentHash,
-    lastModifiedByDeviceId: input.deviceId,
+    lastModifiedByHostName: input.hostName,
     updatedAt: input.updatedAt,
     syncDirty: true
   });
@@ -99,8 +98,8 @@ export function writeNodeReadingSnapshotWithSync(
   if (!input.reading) {
     statements.deleteReading([input.nodeId]);
     statements.deleteDeviceState([input.nodeId]);
-    if (existed && input.deviceId) {
-      recordNodeReadingTombstone(driver, { ...input, deviceId: input.deviceId });
+    if (existed && input.hostName) {
+      recordNodeReadingTombstone(driver, { ...input, hostName: input.hostName });
     }
     return;
   }
@@ -122,9 +121,7 @@ export function writeNodeReadingSnapshotWithSync(
       input.reading.readingPosition,
       input.updatedAt
     ]);
-  }
-  if (input.deviceId) {
-    recordNodeReadingUpsert(driver, { ...input, deviceId: input.deviceId, reading: input.reading });
+    recordNodeReadingUpsert(driver, { ...input, hostName: input.hostName, reading: input.reading });
   }
 }
 

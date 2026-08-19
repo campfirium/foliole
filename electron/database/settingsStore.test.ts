@@ -77,13 +77,13 @@ it('mirrors syncable settings into setting records and sync object state', () =>
   const connection = openDatabaseConnection();
   const settingRecord = connection.sqlite
     .prepare(
-      `SELECT key, scope, platform, form_factor, device_id, value_json
+      `SELECT key, scope, platform, form_factor, host_name, value_json
        FROM setting_records WHERE key = ?`
     )
     .get('app_settings') as Record<string, unknown>;
   const syncState = connection.sqlite
     .prepare(
-      `SELECT object_type, object_id, last_modified_by_device_id, sync_dirty
+      `SELECT object_type, object_id, last_modified_by_host_name, sync_dirty
        FROM sync_object_state WHERE object_type = 'setting' AND object_id = ?`
     )
     .get('user_space:windows:desktop:*:app_settings') as Record<string, unknown>;
@@ -102,7 +102,7 @@ it('mirrors syncable settings into setting records and sync object state', () =>
     .get('user_space:windows:desktop:*:app_settings') as { count: number };
 
   expect(settingRecord).toMatchObject({
-    device_id: '*',
+    host_name: '*',
     form_factor: 'desktop',
     key: 'app_settings',
     platform: 'windows',
@@ -110,7 +110,7 @@ it('mirrors syncable settings into setting records and sync object state', () =>
     value_json: '{"theme":"dark"}'
   });
   expect(syncState).toMatchObject({
-    last_modified_by_device_id: 'device-test',
+    last_modified_by_host_name: 'Maci',
     object_id: 'user_space:windows:desktop:*:app_settings',
     object_type: 'setting',
     sync_dirty: 1
@@ -131,7 +131,7 @@ it('stores full-text search index strategy inside the user-space app settings re
   const connection = openDatabaseConnection();
   const settingRecord = connection.sqlite
     .prepare(
-      `SELECT scope, platform, form_factor, device_id, value_json
+      `SELECT scope, platform, form_factor, host_name, value_json
        FROM setting_records
        WHERE key = ?`
     )
@@ -146,7 +146,7 @@ it('stores full-text search index strategy inside the user-space app settings re
   const parsedValue = JSON.parse(String(settingRecord.value_json)) as Record<string, unknown>;
 
   expect(settingRecord).toMatchObject({
-    device_id: '*',
+    host_name: '*',
     form_factor: 'desktop',
     platform: 'windows',
     scope: 'user_space'
@@ -167,7 +167,7 @@ it('mirrors backup and library path settings as user-space setting records', () 
   const connection = openDatabaseConnection();
   const rows = connection.sqlite
     .prepare(
-      `SELECT key, scope, device_id
+      `SELECT key, scope, host_name
        FROM setting_records
        WHERE key IN ('backup_settings', 'library_path_settings')
        ORDER BY key`
@@ -175,7 +175,7 @@ it('mirrors backup and library path settings as user-space setting records', () 
     .all() as Array<Record<string, unknown>>;
 
   expect(rows).toEqual([
-    { device_id: '*', key: 'backup_settings', scope: 'user_space' },
-    { device_id: '*', key: 'library_path_settings', scope: 'user_space' }
+    { host_name: '*', key: 'backup_settings', scope: 'user_space' },
+    { host_name: '*', key: 'library_path_settings', scope: 'user_space' }
   ]);
 });

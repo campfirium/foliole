@@ -3,7 +3,6 @@ import { applySyncObjectPayloadWithDbPort } from './syncObjectPayloadExecutor.js
 import { buildSyncPackApplyableRowsSql, type SyncPackApplyableRowsOptions } from './syncPackApplyStatements.js';
 
 export interface SyncPackSyncObjectsOptions extends SyncPackApplyableRowsOptions {
-  deviceId: string;
   hostName?: string;
 }
 

@@ -19,7 +19,7 @@ export interface SyncPackNodeApplyOptions extends SyncPackApplyableRowsOptions {
 const SYNC_PACK_NODE_UPDATE_COLUMNS = SYNC_PACK_NODE_COLUMNS.filter((column) => column !== 'id');
 const SYNC_PACK_CONTENT_BLOB_UPDATE_COLUMNS = [
   'storage_key', 'kind', 'mime_type', 'compression', 'original_size_bytes', 'stored_size_bytes',
-  'original_sha256', 'stored_sha256', 'availability', 'source_device_id', 'created_at',
+  'original_sha256', 'stored_sha256', 'availability', 'source_host_name', 'created_at',
   'cached_at', 'last_verified_at'
 ] as const;
 const NODE_PROVENANCE_COLUMNS = [
@@ -58,7 +58,8 @@ function acceptedDeliveryFilter(options: SyncPackApplyableRowsOptions) {
 export function buildSyncPackApplyableRowsSql(options: SyncPackApplyableRowsOptions = {}) {
   const alias = incomingAlias(options);
   return `(SELECT incoming.object_type, incoming.object_id, incoming.state_seq, incoming.content_hash, ` +
-    `incoming.updated_at, incoming.deleted_at FROM ${alias}.sync_object_state incoming ` +
+    `incoming.last_modified_by_host_name, incoming.updated_at, incoming.deleted_at ` +
+    `FROM ${alias}.sync_object_state incoming ` +
     `LEFT JOIN main.sync_object_state current ON current.object_type = incoming.object_type ` +
     `AND current.object_id = incoming.object_id WHERE ` +
     `(current.object_id IS NULL OR incoming.object_type IN ('node', 'node_reading', 'node_review', 'view_state') OR (` +
@@ -160,11 +161,11 @@ export function buildSyncPackContentBlobUpsertSql(options: SyncPackApplyableRows
   const alias = incomingAlias(options);
   return `INSERT INTO main.content_blobs (` +
     `hash, storage_key, kind, mime_type, compression, original_size_bytes, stored_size_bytes, ` +
-    `original_sha256, stored_sha256, availability, source_device_id, created_at, cached_at, last_verified_at) ` +
+    `original_sha256, stored_sha256, availability, source_host_name, created_at, cached_at, last_verified_at) ` +
     `SELECT incoming.hash, incoming.storage_key, incoming.kind, incoming.mime_type, incoming.compression, ` +
     `incoming.original_size_bytes, incoming.stored_size_bytes, incoming.original_sha256, incoming.stored_sha256, ` +
     `CASE WHEN data.hash IS NOT NULL THEN 'cached' ELSE 'missing' END, ` +
-    `incoming.source_device_id, incoming.created_at, ` +
+    `incoming.source_host_name, incoming.created_at, ` +
     `CASE WHEN data.hash IS NOT NULL THEN incoming.cached_at ELSE NULL END, ` +
     `CASE WHEN data.hash IS NOT NULL THEN incoming.last_verified_at ELSE NULL END ` +
     `FROM ${alias}.content_blobs incoming ` +

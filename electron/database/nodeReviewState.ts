@@ -2,12 +2,12 @@ import { saveNodeReviewStateWithSync } from '../../lib/core/database/nodeReviewS
 import type { NativeSaveNodeReviewStateArgs } from '../../lib/platform/nativeNodeReviewStateContract.js';
 
 import { openDatabaseConnection } from './connection.js';
-import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
+import { loadOrCreateDesktopHostName } from './hostProfile.js';
 
 export function saveNodeReviewState(input: NativeSaveNodeReviewStateArgs) {
   saveNodeReviewStateWithSync(openDatabaseConnection().driver, {
     ...input,
-    deviceId: loadOrCreateDesktopDeviceId(input.updatedAt)
+    hostName: loadOrCreateDesktopHostName(input.updatedAt)
   });
   return null;
 }

@@ -34,8 +34,7 @@ import { applySyncPackViewStateObjectsWithDbPort } from './syncPackViewStateObje
 
 export interface SyncPackNodeSurfaceApplyOptions extends SyncPackNodeApplyOptions {
   currentCursor: number;
-  deviceId: string;
-  hostName?: string;
+  hostName: string;
   sourcePeerId?: string;
 }
 
@@ -201,7 +200,7 @@ async function applyVersionedNodeStage(
   await applySyncPackNodeVersionsWithDbPort(port, options);
   return applySyncPackVersionedNodesWithDbPort(
     port,
-    options.deviceId,
+    options.hostName,
     options.incomingAlias
   );
 }

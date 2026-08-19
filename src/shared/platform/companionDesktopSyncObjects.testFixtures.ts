@@ -7,7 +7,7 @@ export function createNodeRecord(): NativeSyncNodeRecord {
   return {
     ancestor_version_ids: [],
     content_hash: 'node-hash',
-    device_id: 'desktop',
+    host_name: 'desktop',
     object_id: 'node-1',
     object_type: 'node',
     parent_version_id: null,
@@ -40,7 +40,7 @@ export function createNodeRecord(): NativeSyncNodeRecord {
 
 export function createReviewRecord(): NativeSyncReviewLogRecord {
   return {
-    device_id: 'desktop',
+    host_name: 'desktop',
     difficulty_after: 3,
     difficulty_before: 2,
     due_after: '2026-04-26T00:00:00.000Z',

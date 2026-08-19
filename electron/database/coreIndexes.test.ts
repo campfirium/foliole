@@ -63,8 +63,8 @@ it('uses core indexes for high-risk review and sync queries', () => {
     .toContain('idx_review_log_reviewed_at_op');
   expect(queryPlan(connection.sqlite, `SELECT op_id FROM review_log WHERE node_id IN (?, ?)`, ['node-1', 'node-2']))
     .toContain('idx_review_log_node_id');
-  expect(queryPlan(connection.sqlite, `SELECT op_id FROM review_log WHERE device_id = ?`, ['desktop']))
-    .toContain('idx_review_log_device_id');
+  expect(queryPlan(connection.sqlite, `SELECT op_id FROM review_log WHERE host_name = ?`, ['Desktop host']))
+    .toContain('idx_review_log_host_name');
   expect(queryPlan(
     connection.sqlite,
     `SELECT id FROM nodes
@@ -135,7 +135,7 @@ function seedQueryPlanRows(sqlite: ReturnType<typeof openDatabaseConnection>['sq
   );
   const insertLog = sqlite.prepare(
     `INSERT INTO review_log (
-      id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at,
+      id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at,
       due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after
     ) VALUES (?, ?, ?, ?, 3, 'ts-fsrs@5.4.0 using FSRS-6.0', ?, ?, 1, 1, ?, 2, 2)`
   );

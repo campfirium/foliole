@@ -16,7 +16,7 @@ function createVersion(overrides: Partial<SyncPackNodeVersionRow> = {}): SyncPac
     body_text: null,
     content_hash: 'node-hash',
     created_at: '2026-07-27T00:00:00.000Z',
-    device_id: 'desktop',
+    host_name: 'desktop',
     object_id: 'node-1',
     parent_version_id: null,
     snapshot_json: '{"id":"node-1"}',

@@ -18,6 +18,7 @@ export async function applyCompanionDesktopSyncPack(args: {
     return { applied_blob_count: 0, applied_object_count: 0, to_state_seq: 0 };
   }
   const bootstrap = await loadCompanionBootstrapState();
+  if (!bootstrap.host_name) throw new Error('companion_host_name_missing');
   const packPath = await downloadCompanionDesktopSyncPack({
     ...args,
     expectedPeerId: bootstrap.device_id,
@@ -28,7 +29,7 @@ export async function applyCompanionDesktopSyncPack(args: {
   }
   try {
     return await applyIosCompanionSyncPackPath({
-      deviceId: bootstrap.device_id, ...(bootstrap.host_name ? { hostName: bootstrap.host_name } : {}),
+      deviceId: bootstrap.device_id, hostName: bootstrap.host_name,
       packPath, sourcePeerId: args.sourcePeerId
     });
   } finally {

@@ -7,8 +7,8 @@ import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
 
 import { openDatabaseConnection } from './connection.js';
-import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
 import type { ScannedDocument } from './externalSearchCacheSupport.js';
+import { loadOrCreateDesktopHostName } from './hostProfile.js';
 
 export interface MissingExternalDocument {
   relativePath: string;
@@ -46,7 +46,7 @@ function toExternalDocumentPayload(folder: NativeExternalSearchFolder, document:
 
 function recordExternalDocumentSync(args: {
   contentHash: string;
-  deviceId: string;
+  hostName: string;
   documentId: string;
   updatedAt: string;
 }) {
@@ -55,13 +55,13 @@ function recordExternalDocumentSync(args: {
     objectType: 'external_document',
     objectId: args.documentId,
     contentHash: args.contentHash,
-    lastModifiedByDeviceId: args.deviceId,
+    lastModifiedByHostName: args.hostName,
     updatedAt: args.updatedAt,
     syncDirty: true
   });
 }
 
-function tombstoneExternalDocument(documentId: string, deviceId: string, deletedAt: string) {
+function tombstoneExternalDocument(documentId: string, hostName: string, deletedAt: string) {
   const connection = openDatabaseConnection();
   const contentHash = computeSyncContentHash('external_document', { deleted_at: deletedAt, document_id: documentId });
   connection.driver.execute(
@@ -75,7 +75,7 @@ function tombstoneExternalDocument(documentId: string, deviceId: string, deleted
     objectId: documentId,
     contentHash,
     deletedAt,
-    lastModifiedByDeviceId: deviceId,
+    lastModifiedByHostName: hostName,
     updatedAt: deletedAt,
     syncDirty: true
   });
@@ -83,7 +83,7 @@ function tombstoneExternalDocument(documentId: string, deviceId: string, deleted
 
 export function upsertExternalDocuments(folder: NativeExternalSearchFolder, documents: ScannedDocument[], indexedAt: string) {
   const connection = openDatabaseConnection();
-  const deviceId = loadOrCreateDesktopDeviceId(indexedAt);
+  const hostName = loadOrCreateDesktopHostName(indexedAt);
   for (const document of documents) {
     const payload = toExternalDocumentPayload(folder, document, indexedAt);
     const documentId = toDocumentId(folder.id, document.relativePath);
@@ -132,7 +132,7 @@ export function upsertExternalDocuments(folder: NativeExternalSearchFolder, docu
     );
     recordExternalDocumentSync({
       contentHash: syncContentHash,
-      deviceId,
+      hostName,
       documentId,
       updatedAt: indexedAt
     });
@@ -150,17 +150,17 @@ export function replaceExternalDocumentsForFolder(
   );
   const nextRelativePaths = new Set(documents.map((document) => document.relativePath));
   upsertExternalDocuments(folder, documents, indexedAt);
-  const deviceId = loadOrCreateDesktopDeviceId(indexedAt);
+  const hostName = loadOrCreateDesktopHostName(indexedAt);
   for (const row of existing) {
     if (!nextRelativePaths.has(row.relative_path)) {
-      tombstoneExternalDocument(row.document_id, deviceId, indexedAt);
+      tombstoneExternalDocument(row.document_id, hostName, indexedAt);
     }
   }
 }
 
 export function markExternalDocumentsMissing(missing: MissingExternalDocument[], folderId: string, missingAt: string) {
-  const deviceId = loadOrCreateDesktopDeviceId(missingAt);
+  const hostName = loadOrCreateDesktopHostName(missingAt);
   for (const document of missing) {
-    tombstoneExternalDocument(toDocumentId(folderId, document.relativePath), deviceId, missingAt);
+    tombstoneExternalDocument(toDocumentId(folderId, document.relativePath), hostName, missingAt);
   }
 }
