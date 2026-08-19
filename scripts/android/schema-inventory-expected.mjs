@@ -1,7 +1,7 @@
 export const EXPECTED_SCHEMA_SOURCES = {
-  androidAssetStatements: 60,
+  androidAssetStatements: 66,
   androidJavaMigrationStatements: 0,
-  desktopStatements: 85
+  desktopStatements: 89
 };
 
 export const EXPECTED_SHARED_SCHEMA_DRIFT = {
@@ -27,10 +27,8 @@ export const EXPECTED_SHARED_SCHEMA_DRIFT = {
     'createSql'
   ],
   import_sources: [
-    'columns.watched_binding_id',
-    'columns.watched_relative_path',
-    'indexes.idx_import_sources_watched_relative',
-    'createSql'
+    'indexes.idx_import_sources_location',
+    'indexes.idx_import_sources_watched_relative'
   ],
   node_sync_versions: ['indexes.idx_node_sync_versions_object_created'],
   node_view_state: ['createSql'],

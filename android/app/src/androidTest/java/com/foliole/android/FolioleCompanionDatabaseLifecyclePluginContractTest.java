@@ -24,7 +24,7 @@ import java.util.Hashtable;
 public class FolioleCompanionDatabaseLifecyclePluginContractTest {
     private static final String DATABASE_NAME = "foliole-lifecycle-contract";
     private static final String DATABASE_FILE = DATABASE_NAME + "SQLite.db";
-    private static final int CURRENT_VERSION = 22;
+    private static final int CURRENT_VERSION = 26;
 
     private Context context;
     private CapacitorSQLite sqlite;

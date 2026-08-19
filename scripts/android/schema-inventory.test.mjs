@@ -107,8 +107,7 @@ describe('schema inventory drift gate', () => {
       { classification: 'known-platform-only', table: 'keep_import_items' },
       { classification: 'known-platform-only', table: 'mirror_articles' },
       { classification: 'known-platform-only', table: 'settings' },
-      { classification: 'known-platform-only', table: 'sync_peers' },
-      { classification: 'known-platform-only', table: 'watched_folder_bindings' }
+      { classification: 'known-platform-only', table: 'sync_peers' }
     ]);
     expect(report.androidOnly).toEqual([
       { classification: 'known-platform-only', table: 'companion_meta' }

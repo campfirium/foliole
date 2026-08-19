@@ -35,8 +35,7 @@ export const DESKTOP_ONLY_TABLES = new Set([
   'keep_import_items',
   'mirror_articles',
   'settings',
-  'sync_peers',
-  'watched_folder_bindings'
+  'sync_peers'
 ]);
 
 export const ANDROID_ONLY_TABLES = new Set(['companion_meta']);
@@ -71,6 +70,7 @@ const MISSING_ANDROID_INDEX_FIELDS = [
   'external_documents.indexes.idx_external_documents_folder_relative',
   'external_documents.indexes.idx_external_documents_hash',
   'external_documents.indexes.idx_external_documents_present_updated',
+  'import_sources.indexes.idx_import_sources_location',
   'import_sources.indexes.idx_import_sources_watched_relative',
   'node_sync_versions.indexes.idx_node_sync_versions_object_created',
   'setting_records.indexes.idx_setting_records_device',

@@ -387,6 +387,36 @@
       "statementName": "syncGroupsWorkgroupKeyColumn",
       "tableName": "sync_groups"
     },
+    "externalFoldersSourceRef": {
+      "columnName": "source_ref",
+      "errorMessage": "Failed to add external folder source reference.",
+      "statementName": "externalFoldersSourceRefColumn",
+      "tableName": "external_search_folders"
+    },
+    "importSourcesSourceLocation": {
+      "columnName": "source_location",
+      "errorMessage": "Failed to add import source location.",
+      "statementName": "importSourcesSourceLocationColumn",
+      "tableName": "import_sources"
+    },
+    "importSourcesSourceRef": {
+      "columnName": "source_ref",
+      "errorMessage": "Failed to add import source reference.",
+      "statementName": "importSourcesSourceRefColumn",
+      "tableName": "import_sources"
+    },
+    "importSourcesWatchedBindingId": {
+      "columnName": "watched_binding_id",
+      "errorMessage": "Failed to add watched binding reference.",
+      "statementName": "importSourcesWatchedBindingIdColumn",
+      "tableName": "import_sources"
+    },
+    "importSourcesWatchedRelativePath": {
+      "columnName": "watched_relative_path",
+      "errorMessage": "Failed to add watched source location.",
+      "statementName": "importSourcesWatchedRelativePathColumn",
+      "tableName": "import_sources"
+    },
     "nodeViewStateSource": {
       "columnName": "source",
       "errorMessage": "Failed to add node view state source column.",
@@ -418,6 +448,11 @@
     "nodesSequentialReadingEnabledColumn": "ALTER TABLE nodes ADD COLUMN sequential_reading_enabled INTEGER",
     "nodesShelvedAtColumn": "ALTER TABLE nodes ADD COLUMN shelved_at TEXT",
     "syncGroupsWorkgroupKeyColumn": "ALTER TABLE sync_groups ADD COLUMN workgroup_key TEXT",
+    "externalFoldersSourceRefColumn": "ALTER TABLE external_search_folders ADD COLUMN source_ref TEXT",
+    "importSourcesSourceLocationColumn": "ALTER TABLE import_sources ADD COLUMN source_location TEXT",
+    "importSourcesSourceRefColumn": "ALTER TABLE import_sources ADD COLUMN source_ref TEXT",
+    "importSourcesWatchedBindingIdColumn": "ALTER TABLE import_sources ADD COLUMN watched_binding_id TEXT",
+    "importSourcesWatchedRelativePathColumn": "ALTER TABLE import_sources ADD COLUMN watched_relative_path TEXT",
     "nodeViewStateSourceColumn": "ALTER TABLE node_view_state ADD COLUMN source TEXT NOT NULL DEFAULT 'user-scroll'",
     "syncPushAckDropLegacyTable": "DROP TABLE IF EXISTS sync_push_ack",
     "syncObjectStateDropLegacyTable": "DROP TABLE sync_object_state",
