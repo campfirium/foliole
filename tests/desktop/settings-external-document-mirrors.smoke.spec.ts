@@ -10,83 +10,80 @@ const EXTERNAL_FOLDER_HEADING = /^(External folders|外部文件夹)$/;
 const REMOTE_GROUP = /^(Other devices|其他设备)$/;
 
 async function seedWorkgroup(desktopApp: ElectronApplication, activeWorkgroup: boolean) {
-  await desktopApp.evaluate(({ app }, { activeWorkgroup, cwd }) => {
+  await desktopApp.evaluate(async ({ app }, { activeWorkgroup, cwd }) => {
     const moduleApi = process.getBuiltinModule('module');
     const pathApi = process.getBuiltinModule('path');
     if (!moduleApi || !pathApi) throw new Error('Node built-ins unavailable.');
     const require = moduleApi.createRequire(pathApi.join(cwd, 'package.json'));
-    const Database = require('better-sqlite3') as typeof import('better-sqlite3');
-    const libraryHome = process.env.FOLIOLE_LIBRARY_HOME;
-    if (!libraryHome) throw new Error('missing isolated library home');
-    const db = new Database(pathApi.join(libraryHome, 'Data', 'foliole.db'));
-    db.pragma('busy_timeout = 5000');
-    const deviceRow = db.prepare("SELECT value FROM settings WHERE key = 'device_id'").get() as { value: string };
-    const currentDeviceId = JSON.parse(deviceRow.value) as string;
-    db.prepare(`INSERT OR REPLACE INTO sync_groups
-      (group_id, display_name, timeline_id, created_by_device_id, created_at, updated_at)
-      VALUES ('external-folders-group', 'Workgroup', 'external-folders-timeline', ?, 'now', 'now')`)
-      .run(currentDeviceId);
-    const insertMember = db.prepare(`INSERT OR REPLACE INTO sync_group_members
-      (group_id, device_id, device_kind, device_name, state, approved_by_device_id,
-       authorization_id, joined_at, updated_at)
-      VALUES ('external-folders-group', ?, ?, ?, ?, ?, ?, 'now', 'now')`);
-    const localMemberState = activeWorkgroup ? 'active' : 'left';
-    insertMember.run(currentDeviceId, 'darwin', 'This Mac', localMemberState,
-      currentDeviceId, 'external-local-auth');
-    insertMember.run('other-desktop', 'win32', 'Windows PC', 'active',
-      currentDeviceId, 'external-windows-auth');
-    insertMember.run('other-mac', 'darwin', 'MacBook Pro', 'active',
-      currentDeviceId, 'external-mac-auth');
-    if (activeWorkgroup) {
-      db.prepare(`INSERT OR REPLACE INTO sync_group_local_state
-        (singleton_id, group_id, local_device_id, member_state, updated_at)
-        VALUES (1, 'external-folders-group', ?, 'active', 'now')`).run(currentDeviceId);
-    } else {
-      db.prepare(`UPDATE sync_group_members SET left_at = 'now'
-        WHERE group_id = 'external-folders-group' AND device_id = ?`).run(currentDeviceId);
-    }
-    db.close();
+    const connection = require(pathApi.join(cwd, 'dist/electron/database/connection.js'));
+    await connection.runWithDatabaseConnectionOwner(() => {
+      const driver = connection.openDatabaseConnection().driver;
+      const deviceRow = driver.queryOne("SELECT value FROM settings WHERE key = 'device_id'") as { value: string };
+      const currentDeviceId = JSON.parse(deviceRow.value) as string;
+      driver.execute(`INSERT OR REPLACE INTO sync_groups
+        (group_id, display_name, timeline_id, created_by_device_id, created_at, updated_at)
+        VALUES ('external-folders-group', 'Workgroup', 'external-folders-timeline', ?, 'now', 'now')`,
+      [currentDeviceId]);
+      const insertMember = (values: string[]) => driver.execute(`INSERT OR REPLACE INTO sync_group_members
+        (group_id, device_id, device_kind, device_name, state, approved_by_device_id,
+         authorization_id, joined_at, updated_at)
+        VALUES ('external-folders-group', ?, ?, ?, ?, ?, ?, 'now', 'now')`, values);
+      insertMember([currentDeviceId, 'darwin', 'This Mac', activeWorkgroup ? 'active' : 'left',
+        currentDeviceId, 'external-local-auth']);
+      insertMember(['other-desktop', 'win32', 'Windows PC', 'active', currentDeviceId, 'external-windows-auth']);
+      insertMember(['other-mac', 'darwin', 'MacBook Pro', 'active', currentDeviceId, 'external-mac-auth']);
+      if (activeWorkgroup) {
+        driver.execute(`INSERT OR REPLACE INTO sync_group_local_state
+          (singleton_id, group_id, local_device_id, member_state, updated_at)
+          VALUES (1, 'external-folders-group', ?, 'active', 'now')`, [currentDeviceId]);
+      } else {
+        driver.execute(`UPDATE sync_group_members SET left_at = 'now'
+          WHERE group_id = 'external-folders-group' AND device_id = ?`, [currentDeviceId]);
+      }
+    });
     return app.getPath('userData');
   }, { activeWorkgroup, cwd: process.cwd() });
 }
 
 async function seedRemoteMirror(desktopApp: ElectronApplication, activeWorkgroup = true) {
   await seedWorkgroup(desktopApp, activeWorkgroup);
-  await desktopApp.evaluate(({ app }, cwd) => {
+  await desktopApp.evaluate(async ({ app }, cwd) => {
     const fsApi = process.getBuiltinModule('fs');
     const moduleApi = process.getBuiltinModule('module');
     const pathApi = process.getBuiltinModule('path');
     if (!fsApi || !moduleApi || !pathApi) throw new Error('Node built-ins unavailable.');
-    const require = moduleApi.createRequire(pathApi.join(cwd, 'package.json'));
-    const Database = require('better-sqlite3') as typeof import('better-sqlite3');
     const libraryHome = process.env.FOLIOLE_LIBRARY_HOME;
     if (!libraryHome) throw new Error('missing isolated library home');
-    const db = new Database(pathApi.join(libraryHome, 'Data', 'foliole.db'));
-    db.pragma('busy_timeout = 5000');
-    const insertRemoteFolder = db.prepare(`INSERT OR REPLACE INTO external_search_folders (
-      id, folder_path, attachment_mode, owner_installation_id, owner_device_name, owner_platform,
-      status, document_count, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-    insertRemoteFolder
-      .run('playwright-remote-folder', 'D:\\X\\Dropbox\\obs\\1act\\0cap', 'document_relative',
+    const require = moduleApi.createRequire(pathApi.join(cwd, 'package.json'));
+    const connection = require(pathApi.join(cwd, 'dist/electron/database/connection.js'));
+    await connection.runWithDatabaseConnectionOwner(() => {
+      const driver = connection.openDatabaseConnection().driver;
+      const insertRemoteFolder = (values: Array<number | string | null>) => driver.execute(
+        `INSERT OR REPLACE INTO external_search_folders (
+          id, folder_path, attachment_mode, owner_installation_id, owner_device_name, owner_platform,
+          status, document_count, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, values
+      );
+      insertRemoteFolder(['playwright-remote-folder', 'D:\\X\\Dropbox\\obs\\1act\\0cap', 'document_relative',
         'other-desktop', 'Windows PC', 'win32', 'ready', 21,
-        '2026-07-24T00:00:00.000Z', '2026-07-24T00:00:00.000Z');
-    insertRemoteFolder.run('playwright-remote-projects', 'D:\\Projects', 'document_relative',
+        '2026-07-24T00:00:00.000Z', '2026-07-24T00:00:00.000Z']);
+      insertRemoteFolder(['playwright-remote-projects', 'D:\\Projects', 'document_relative',
       'other-desktop', 'Windows PC', 'win32', 'ready', 8,
-      '2026-07-24T00:00:00.000Z', '2026-07-24T00:00:00.000Z');
-    insertRemoteFolder.run('playwright-remote-research', '/Users/foliole/Documents/Research', 'document_relative',
+      '2026-07-24T00:00:00.000Z', '2026-07-24T00:00:00.000Z']);
+      insertRemoteFolder(['playwright-remote-research', '/Users/foliole/Documents/Research', 'document_relative',
       'other-mac', 'MacBook Pro', 'darwin', 'ready', 5,
-      '2026-07-24T00:00:00.000Z', '2026-07-24T00:00:00.000Z');
-    insertRemoteFolder.run('playwright-waiting-folder', '/Users/foliole/Documents/Waiting', 'document_relative',
+      '2026-07-24T00:00:00.000Z', '2026-07-24T00:00:00.000Z']);
+      insertRemoteFolder(['playwright-waiting-folder', '/Users/foliole/Documents/Waiting', 'document_relative',
       null, 'This Mac', 'darwin', 'idle', 3,
-      '2026-07-24T00:00:00.000Z', '2026-07-24T00:00:00.000Z');
-    const openedPath = pathApi.join(libraryHome, 'opened-test.md');
-    fsApi.writeFileSync(openedPath, '# Opened test\n', 'utf8');
-    db.prepare('INSERT OR REPLACE INTO local_files (id, absolute_path, title, file_size, modified_at, last_opened_at, missing_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?)')
-      .run('playwright-opened-file', openedPath, 'opened-test.md', 14,
+      '2026-07-24T00:00:00.000Z', '2026-07-24T00:00:00.000Z']);
+      const openedPath = pathApi.join(libraryHome, 'opened-test.md');
+      fsApi.writeFileSync(openedPath, '# Opened test\n', 'utf8');
+      driver.execute(`INSERT OR REPLACE INTO local_files
+        (id, absolute_path, title, file_size, modified_at, last_opened_at, missing_at, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?)`, ['playwright-opened-file', openedPath, 'opened-test.md', 14,
         '2026-07-24T00:00:00.000Z', '2026-07-24T00:00:00.000Z',
-        '2026-07-24T00:00:00.000Z', '2026-07-24T00:00:00.000Z');
-    db.close();
+        '2026-07-24T00:00:00.000Z', '2026-07-24T00:00:00.000Z']);
+    });
     return app.getPath('userData');
   }, process.cwd());
 }

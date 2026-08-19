@@ -11,10 +11,11 @@ export async function applyWatchedFolderObject(port: DbPort, record: SyncPackSyn
   const sourceRef = text(payload.source_ref) ?? `watched:${record.object_id}`;
   const rootPath = text(payload.primary_path) ?? '';
   await port.run(
-    `INSERT INTO desktop_sources (source_ref, source_type, config_ref, host_name, host_platform, root_path,
-       path_flavor, type_settings_json, created_at, updated_at) VALUES (?, 'watched', ?, ?, ?, ?, ?, '{}', ?, ?)
+    `INSERT INTO desktop_sources (source_ref, source_type, config_ref, host_name, host_platform,
+       owner_installation_id, root_path, path_flavor, type_settings_json, created_at, updated_at)
+     VALUES (?, 'watched', ?, ?, ?, NULL, ?, ?, '{}', ?, ?)
      ON CONFLICT(source_type, config_ref) DO UPDATE SET host_name = excluded.host_name,
-       host_platform = excluded.host_platform, root_path = excluded.root_path,
+       host_platform = excluded.host_platform, owner_installation_id = NULL, root_path = excluded.root_path,
        path_flavor = excluded.path_flavor, updated_at = excluded.updated_at`,
     [sourceRef, record.object_id, text(payload.connected_device_name) ?? 'unknown-host',
       text(payload.connected_platform) ?? 'unknown', rootPath,

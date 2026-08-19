@@ -3,6 +3,7 @@ import {
   ASSISTANT_THREAD_MESSAGE_SCHEMA_STATEMENTS
 } from './assistantThreadIndexSchemaStatements.js';
 import { migrateDesktopSourceConnections } from './numberedMigrationDesktopSourceConnections.js';
+import { migrateDesktopSourceOwnership } from './numberedMigrationDesktopSourceOwnership.js';
 import { migrateDesktopSources } from './numberedMigrationDesktopSources.js';
 import { migrateExternalFolderOwnership } from './numberedMigrationExternalFolderOwnership.js';
 import { addColumnIfMissing } from './numberedMigrationHelpers.js';
@@ -160,5 +161,9 @@ export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   {
     version: 68,
     migrate: migrateDesktopSources
+  },
+  {
+    version: 69,
+    migrate: migrateDesktopSourceOwnership
   }
 ];

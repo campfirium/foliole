@@ -64,6 +64,13 @@ it('disconnects and reconnects one watched source while preserving its imported 
     primaryPath: firstPath
   };
   const binding = upsertChangedWatchedFolderSource(source, '2026-08-18T00:00:00.000Z')!;
+  openDatabaseConnection().driver.execute(
+    "UPDATE desktop_sources SET owner_installation_id = NULL WHERE source_type = 'watched' AND config_ref = ?",
+    [source.id]
+  );
+  openDatabaseConnection().driver.execute('DELETE FROM watched_folder_bindings WHERE binding_id = ?', [binding.binding_id]);
+  expect(resolveExecutableWatchedBinding(source.id, firstPath).executable).toBe(false);
+  upsertChangedWatchedFolderSource(source, '2026-08-18T00:00:30.000Z');
   openDatabaseConnection().driver.execute(`INSERT INTO import_sources (
     source_fingerprint, provider, source_kind, source_name, source_locator, first_imported_at,
     last_imported_at, last_content_fingerprint, latest_node_id

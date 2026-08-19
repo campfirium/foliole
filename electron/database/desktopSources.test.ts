@@ -16,6 +16,8 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { loadOrCreateDesktopInstallationIdentity } from '../desktopInstallationIdentity.js';
+
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import {
   resolveDesktopSourceAddress,
@@ -23,6 +25,7 @@ import {
   upsertDesktopSource
 } from './desktopSources.js';
 import { initializeDesktopDeviceProfileFixture } from './deviceIdentityTestSupport.js';
+import { saveExternalSearchFolders } from './externalSearchFolders.js';
 import { initializeDatabase } from './migrate.js';
 
 let tempRoot = '';
@@ -59,14 +62,69 @@ it('resolves current addresses without rewriting locations when Host or Source c
     "UPDATE settings SET value = '\"Host B\"' WHERE key = 'device_id'"
   );
   updateLocalDesktopSourceHosts({
+    currentDeviceId: 'Host B',
     currentHostName: 'Host B',
+    currentHostPlatform: process.platform,
     driver: openDatabaseConnection().driver,
-    installationRef: 'installation-a',
-    previousHostName: 'Host A',
+    installationRef: loadOrCreateDesktopInstallationIdentity().installationId,
     updatedAt: '2026-08-19T02:00:00.000Z'
   });
   expect(resolveDesktopSourceAddress(source.source_ref, location)).toBe(path.join(secondRoot, location));
+  expect(openDatabaseConnection().driver.queryOne(
+    'SELECT host_name, root_path FROM desktop_sources WHERE source_ref = ?', [source.source_ref]
+  )).toEqual({ host_name: 'Host B', root_path: secondRoot });
   expect(location).toBe('nested/topic.md');
+});
+
+it('does not grant a copied database or a same-name remote Source local file execution', async () => {
+  const rootPath = path.join(tempRoot, 'owned');
+  await fs.promises.mkdir(rootPath, { recursive: true });
+  const source = upsertDesktopSource({
+    configRef: 'external-a', rootPath, sourceType: 'external', updatedAt: '2026-08-19T00:00:00.000Z'
+  });
+  const driver = openDatabaseConnection().driver;
+  const before = driver.queryOne(`SELECT root_path, host_name, host_platform, type_settings_json,
+    owner_installation_id FROM desktop_sources WHERE source_ref = ?`, [source.source_ref]);
+  driver.execute(`INSERT INTO desktop_sources (source_ref, source_type, config_ref, host_name, host_platform,
+    owner_installation_id, root_path, path_flavor, type_settings_json, created_at, updated_at)
+    VALUES ('watched:remote', 'watched', 'remote', 'Host A', ?, NULL, ?, 'posix', '{}', 'now', 'now')`,
+  [process.platform, rootPath]);
+
+  expect(resolveDesktopSourceAddress('watched:remote', 'topic.md')).toBeNull();
+  mockedAppDataDir = path.join(tempRoot, 'other-installation');
+  expect(resolveDesktopSourceAddress(source.source_ref, 'topic.md')).toBeNull();
+  expect(driver.queryOne(`SELECT root_path, host_name, host_platform, type_settings_json,
+    owner_installation_id FROM desktop_sources WHERE source_ref = ?`, [source.source_ref])).toEqual(before);
+});
+
+it('updates an owned External Host projection and its sync fact together', async () => {
+  const rootPath = path.join(tempRoot, 'external');
+  await fs.promises.mkdir(rootPath, { recursive: true });
+  saveExternalSearchFolders([{
+    attachment_mode: 'document_relative_first_then_fixed_root', attachment_root_path: null,
+    excluded_dirs: [], folder_path: rootPath, id: 'external-a'
+  }]);
+  const driver = openDatabaseConnection().driver;
+  const beforeHash = driver.queryOne<{ content_hash: string }>(
+    "SELECT content_hash FROM sync_object_state WHERE object_type = 'external_folder' AND object_id = 'external-a'"
+  )?.content_hash;
+
+  updateLocalDesktopSourceHosts({
+    currentDeviceId: 'Host B', currentHostName: 'Host B', currentHostPlatform: 'darwin', driver,
+    installationRef: loadOrCreateDesktopInstallationIdentity().installationId,
+    updatedAt: '2026-08-19T03:00:00.000Z'
+  });
+
+  expect(driver.queryOne(`SELECT s.host_name, s.host_platform, s.root_path, f.owner_device_name, f.owner_platform
+    FROM desktop_sources s JOIN external_search_folders f ON f.source_ref = s.source_ref
+    WHERE s.config_ref = 'external-a'`)).toEqual({
+    host_name: 'Host B', host_platform: 'darwin', owner_device_name: 'Host B', owner_platform: 'darwin', root_path: rootPath
+  });
+  const afterState = driver.queryOne<{ content_hash: string; sync_dirty: number }>(
+    "SELECT content_hash, sync_dirty FROM sync_object_state WHERE object_type = 'external_folder' AND object_id = 'external-a'"
+  );
+  expect(afterState?.sync_dirty).toBe(1);
+  expect(afterState?.content_hash).not.toBe(beforeHash);
 });
 
 it('returns unavailable without deleting topics or historical source fields', async () => {

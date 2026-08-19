@@ -3,6 +3,7 @@ import type {
   NativeReadwiseDeviceAssignment,
   NativeReadwiseWorkgroupDevice
 } from '../../lib/platform/nativeReadwiseDeviceContract.js';
+import { loadOrCreateDesktopInstallationIdentity } from '../desktopInstallationIdentity.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
@@ -63,5 +64,10 @@ export function activateReadwiseOnThisDevice() {
 }
 
 export function canCurrentDeviceRunReadwise() {
-  return loadReadwiseDeviceAssignment().is_active;
+  if (!loadReadwiseDeviceAssignment().is_active) return false;
+  const installationId = loadOrCreateDesktopInstallationIdentity().installationId;
+  const sources = openDatabaseConnection().driver.queryAll<{ owner_installation_id: string | null }>(
+    "SELECT owner_installation_id FROM desktop_sources WHERE source_type = 'readwise'"
+  );
+  return sources.length > 0 && sources.every((source) => source.owner_installation_id === installationId);
 }

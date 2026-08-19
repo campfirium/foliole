@@ -12,57 +12,40 @@ const ARTIFACT_DIR = path.join(process.cwd(), '.tmp/artifacts/desktop-acceptance
 const WATCHED_PATH = path.join(process.cwd(), '.tmp/artifacts/t135-watched-source');
 
 async function seedWorkgroupSourceFacts(desktopApp: ElectronApplication) {
-  await desktopApp.evaluate(({ app }, cwd) => {
+  await desktopApp.evaluate(async ({ app }, cwd) => {
     const moduleApi = process.getBuiltinModule('module');
     const pathApi = process.getBuiltinModule('path');
     if (!moduleApi || !pathApi) throw new Error('Node built-ins unavailable.');
     const require = moduleApi.createRequire(pathApi.join(cwd, 'package.json'));
-    const Database = require('better-sqlite3') as typeof import('better-sqlite3');
-    const libraryHome = process.env.FOLIOLE_LIBRARY_HOME;
-    if (!libraryHome) throw new Error('missing isolated library home');
-    const db = new Database(pathApi.join(libraryHome, 'Data', 'foliole.db'));
-    const deviceRow = db.prepare("SELECT value FROM settings WHERE key = 'device_id'").get() as { value: string };
-    const currentDeviceId = JSON.parse(deviceRow.value) as string;
-    const run = (label: string, action: () => void) => {
-      try {
-        action();
-      } catch (error) {
-        throw new Error(`${label}: ${error instanceof Error ? error.message : String(error)}`);
-      }
-    };
-    run('seed workgroup source facts', () => {
-      db.prepare(`INSERT OR REPLACE INTO sync_groups
+    const connection = require(pathApi.join(cwd, 'dist/electron/database/connection.js'));
+    await connection.runWithDatabaseConnectionOwner(() => {
+      const driver = connection.openDatabaseConnection().driver;
+      const deviceRow = driver.queryOne("SELECT value FROM settings WHERE key = 'device_id'") as { value: string };
+      const currentDeviceId = JSON.parse(deviceRow.value) as string;
+      driver.execute(`INSERT OR REPLACE INTO sync_groups
         (group_id, display_name, timeline_id, created_by_device_id, created_at, updated_at)
-        VALUES ('t135-group', 'Workgroup', 't135-timeline', ?, 'now', 'now')`).run(currentDeviceId);
-      const insertMember = db.prepare(`INSERT INTO sync_group_members
+        VALUES ('t135-group', 'Workgroup', 't135-timeline', ?, 'now', 'now')`, [currentDeviceId]);
+      const insertMember = (values: string[]) => driver.execute(`INSERT INTO sync_group_members
         (group_id, device_id, device_kind, device_name, state, approved_by_device_id,
          authorization_id, joined_at, updated_at)
-        VALUES ('t135-group', ?, ?, ?, 'active', ?, ?, 'now', 'now')`);
-      insertMember.run(currentDeviceId, 'darwin', 'This Mac', currentDeviceId, 't135-local-authorization');
-      insertMember.run('t135-office-pc', 'win32', 'Office PC', currentDeviceId, 't135-remote-authorization');
-      insertMember.run('t135-macbook', 'darwin', 'MacBook Pro', currentDeviceId, 't135-macbook-authorization');
-      db.prepare(`INSERT OR REPLACE INTO sync_group_local_state
+        VALUES ('t135-group', ?, ?, ?, 'active', ?, ?, 'now', 'now')`, values);
+      insertMember([currentDeviceId, 'darwin', 'This Mac', currentDeviceId, 't135-local-authorization']);
+      insertMember(['t135-office-pc', 'win32', 'Office PC', currentDeviceId, 't135-remote-authorization']);
+      insertMember(['t135-macbook', 'darwin', 'MacBook Pro', currentDeviceId, 't135-macbook-authorization']);
+      driver.execute(`INSERT OR REPLACE INTO sync_group_local_state
         (singleton_id, group_id, local_device_id, member_state, updated_at)
-        VALUES (1, 't135-group', ?, 'active', 'now')`).run(currentDeviceId);
-      db.prepare(`INSERT INTO watched_folder_bindings
+        VALUES (1, 't135-group', ?, 'active', 'now')`, [currentDeviceId]);
+      const insertBinding = (values: string[]) => driver.execute(`INSERT INTO watched_folder_bindings
         (binding_id, connected_device_id, connected_device_name, connected_platform, connection_status,
          action_mode, archive_path, highlight_mode, highlight_path, primary_path, created_at, updated_at)
-        VALUES ('t135-remote-source', 't135-office-pc', 'Office PC', 'win32', 'connected',
-          'keep', '', 'merged', '', 'D:\\Research', 'now', 'now')`).run();
-      db.prepare(`INSERT INTO watched_folder_bindings
-        (binding_id, connected_device_id, connected_device_name, connected_platform, connection_status,
-         action_mode, archive_path, highlight_mode, highlight_path, primary_path, created_at, updated_at)
-        VALUES ('t135-remote-projects', 't135-office-pc', 'Office PC', 'win32', 'connected',
-          'keep', '', 'merged', '', 'D:\\Projects', 'now', 'now')`).run();
-      db.prepare(`INSERT INTO watched_folder_bindings
-        (binding_id, connected_device_id, connected_device_name, connected_platform, connection_status,
-         action_mode, archive_path, highlight_mode, highlight_path, primary_path, created_at, updated_at)
-        VALUES ('t135-remote-mac', 't135-macbook', 'MacBook Pro', 'darwin', 'connected',
-          'keep', '', 'merged', '', '/Users/foliole/Documents/Research', 'now', 'now')`).run();
-      db.prepare(`INSERT INTO settings (key, value, updated_at) VALUES
-        ('readwise_active_device', '{"device_id":"t135-office-pc"}', 'now')`).run();
+        VALUES (?, ?, ?, ?, 'connected', 'keep', '', 'merged', '', ?, 'now', 'now')`, values);
+      insertBinding(['t135-remote-source', 't135-office-pc', 'Office PC', 'win32', 'D:\\Research']);
+      insertBinding(['t135-remote-projects', 't135-office-pc', 'Office PC', 'win32', 'D:\\Projects']);
+      insertBinding(['t135-remote-mac', 't135-macbook', 'MacBook Pro', 'darwin',
+        '/Users/foliole/Documents/Research']);
+      driver.execute(`INSERT INTO settings (key, value, updated_at) VALUES
+        ('readwise_active_device', '{"device_id":"t135-office-pc"}', 'now')`);
     });
-    db.close();
     return app.getPath('userData');
   }, process.cwd());
 }

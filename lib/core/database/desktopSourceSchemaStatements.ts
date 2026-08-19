@@ -5,6 +5,7 @@ export const DESKTOP_SOURCE_SCHEMA_STATEMENTS = [
     config_ref TEXT NOT NULL,
     host_name TEXT NOT NULL,
     host_platform TEXT NOT NULL,
+    owner_installation_id TEXT,
     root_path TEXT NOT NULL,
     path_flavor TEXT NOT NULL CHECK (path_flavor IN ('posix', 'windows')),
     type_settings_json TEXT NOT NULL DEFAULT '{}',
@@ -13,5 +14,7 @@ export const DESKTOP_SOURCE_SCHEMA_STATEMENTS = [
     UNIQUE (source_type, config_ref)
   )`,
   `CREATE INDEX IF NOT EXISTS idx_desktop_sources_host
-    ON desktop_sources (host_name, source_type, updated_at)`
+    ON desktop_sources (host_name, source_type, updated_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_desktop_sources_owner
+    ON desktop_sources (owner_installation_id, source_type, updated_at)`
 ];

@@ -213,6 +213,7 @@ export interface NativePrimaryDeviceTakeoverResponse {
 }
 
 export interface DesktopCompanionPairingOverviewPayload {
+  current_host?: { host_name: string; host_platform: string } | null;
   join_candidates?: DesktopSyncGroupJoinCandidatePayload[];
   join_request?: DesktopSyncGroupJoinRequestPayload | null;
   paired_devices: DesktopCompanionPairedDevicePayload[];

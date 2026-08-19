@@ -6,6 +6,7 @@ import type {
   NativePrimaryDeviceStatePayload
 } from '../../../lib/platform/nativeCompanionSyncContract';
 
+import { normalizePairingHost } from './desktop/pairingHostNormalization';
 import { normalizeJoinCandidates, normalizeJoinRequest } from './desktop/pairingJoinNormalization';
 import { normalizeServerStatus } from './desktop/pairingServerNormalization';
 import { normalizeSyncGroup } from './desktop/syncGroupNormalization';
@@ -111,6 +112,7 @@ function normalizeTakeoverBlockedReasons(value: unknown): NativePrimaryDeviceSta
 function normalizePairingOverview(value: unknown): DesktopCompanionPairingOverviewPayload {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return {
+      current_host: null,
       join_candidates: [],
       join_request: null,
       paired_devices: [],
@@ -125,6 +127,7 @@ function normalizePairingOverview(value: unknown): DesktopCompanionPairingOvervi
   }
   const raw = value as Record<string, unknown>;
   return {
+    current_host: normalizePairingHost(raw.current_host),
     join_candidates: normalizeJoinCandidates(raw.join_candidates),
     join_request: normalizeJoinRequest(raw.join_request),
     paired_devices: Array.isArray(raw.paired_devices)

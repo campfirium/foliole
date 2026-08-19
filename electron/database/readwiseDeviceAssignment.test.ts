@@ -18,6 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { upsertDesktopSource } from './desktopSources.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
 import { initializeDatabase } from './migrate.js';
 import {
@@ -82,4 +83,15 @@ it('keeps legacy Readwise active until a device is explicitly selected, then run
      JOIN setting_records r ON s.object_id = r.scope || ':' || r.platform || ':' || r.form_factor || ':' || r.device_id || ':' || r.key
      WHERE s.object_type = 'setting' AND r.key = 'readwise_active_device'`
   )).toEqual({ sync_dirty: 1 });
+});
+
+it('runs Readwise only when every configured Source belongs to this installation', () => {
+  upsertDesktopSource({
+    configRef: 'readwise-a', rootPath: '/Readwise', sourceType: 'readwise', updatedAt: 'now'
+  });
+  expect(canCurrentDeviceRunReadwise()).toBe(true);
+  openDatabaseConnection().driver.execute(
+    "UPDATE desktop_sources SET owner_installation_id = NULL WHERE source_type = 'readwise'"
+  );
+  expect(canCurrentDeviceRunReadwise()).toBe(false);
 });

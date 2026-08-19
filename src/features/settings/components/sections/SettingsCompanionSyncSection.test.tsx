@@ -33,6 +33,7 @@ function createState(overrides: Partial<PairingState> = {}): PairingState {
     isLoading: false,
     leaveSyncGroup: vi.fn(),
     overview: {
+      current_host: { host_name: 'Studio Mac', host_platform: 'darwin' },
       paired_devices: [],
       pending_requests: [],
       primary_device_state: {

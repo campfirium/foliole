@@ -126,10 +126,11 @@ async function applyExternalFolderObject(port: DbPort, record: SyncPackSyncObjec
   const sourceRef = text(payload.source_ref) ?? `external:${record.object_id}`;
   const rootPath = text(payload.folder_path) ?? '';
   await port.run(
-    `INSERT INTO desktop_sources (source_ref, source_type, config_ref, host_name, host_platform, root_path,
-       path_flavor, type_settings_json, created_at, updated_at) VALUES (?, 'external', ?, ?, ?, ?, ?, '{}', ?, ?)
+    `INSERT INTO desktop_sources (source_ref, source_type, config_ref, host_name, host_platform,
+       owner_installation_id, root_path, path_flavor, type_settings_json, created_at, updated_at)
+     VALUES (?, 'external', ?, ?, ?, NULL, ?, ?, '{}', ?, ?)
      ON CONFLICT(source_type, config_ref) DO UPDATE SET host_name = excluded.host_name,
-       host_platform = excluded.host_platform, root_path = excluded.root_path,
+       host_platform = excluded.host_platform, owner_installation_id = NULL, root_path = excluded.root_path,
        path_flavor = excluded.path_flavor, updated_at = excluded.updated_at`,
     [sourceRef, record.object_id, text(payload.owner_device_name) ?? 'unknown-host',
       text(payload.owner_platform) ?? 'unknown', rootPath,

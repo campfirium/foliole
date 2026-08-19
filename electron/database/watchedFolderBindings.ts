@@ -3,6 +3,7 @@ import { recordImportSourceSync } from '../../lib/core/database/importPipelineRe
 import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 import type { ImportManagerSourceDraft } from '../../lib/core/import/importManagerSettings.js';
 import type { NativeWatchedFolderBinding } from '../../lib/platform/nativeWatchedFolderContract.js';
+import { loadOrCreateDesktopInstallationIdentity } from '../desktopInstallationIdentity.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { loadDesktopSourceByConfig, upsertDesktopSource } from './desktopSources.js';
@@ -84,9 +85,11 @@ function recordBindingSync(binding: NativeWatchedFolderBinding, deviceId: string
 
 export function loadWatchedFolderBindings() {
   return openDatabaseConnection().driver.queryAll<WatchedFolderBindingRow>(
-    `SELECT binding_id, connected_device_id, connected_device_name, connected_platform, connection_status,
-       action_mode, archive_path, highlight_mode, highlight_path, primary_path, created_at, updated_at
-     FROM watched_folder_bindings WHERE deleted_at IS NULL ORDER BY created_at, binding_id`
+    `SELECT b.binding_id, b.connected_device_id, COALESCE(s.host_name, b.connected_device_name) connected_device_name,
+       COALESCE(s.host_platform, b.connected_platform) connected_platform, b.connection_status,
+       b.action_mode, b.archive_path, b.highlight_mode, b.highlight_path, b.primary_path, b.created_at, b.updated_at
+     FROM watched_folder_bindings b LEFT JOIN desktop_sources s ON s.source_ref = b.source_ref
+     WHERE b.deleted_at IS NULL ORDER BY b.created_at, b.binding_id`
   ).map(toBinding);
 }
 
@@ -136,18 +139,24 @@ export function upsertChangedWatchedFolderSource(source: ImportManagerSourceDraf
 export function resolveExecutableWatchedBinding(ruleId: string, primaryPath: string) {
   const driver = openDatabaseConnection().driver;
   const deviceId = loadOrCreateDesktopDeviceId();
+  const installationId = loadOrCreateDesktopInstallationIdentity().installationId;
+  const source = loadDesktopSourceByConfig('watched', ruleId);
   const binding = driver.queryOne<WatchedFolderBindingRow>(
     `SELECT * FROM watched_folder_bindings
      WHERE deleted_at IS NULL AND binding_id IN (?, ?)
      ORDER BY binding_id = ? DESC LIMIT 1`,
     [ruleId, `${deviceId}:${ruleId}`, ruleId]
   );
-  if (!binding) return { bindingId: null, executable: true };
-  const source = loadDesktopSourceByConfig('watched', ruleId);
+  if (!binding) return {
+    bindingId: null,
+    executable: !source || (
+      source.owner_installation_id === installationId && source.root_path === primaryPath.trim()
+    )
+  };
   return {
     bindingId: binding.binding_id,
     executable: binding.connected_device_id === deviceId && binding.connection_status === 'connected' &&
-      source?.root_path === primaryPath.trim()
+      source?.owner_installation_id === installationId && source.root_path === primaryPath.trim()
   };
 }
 

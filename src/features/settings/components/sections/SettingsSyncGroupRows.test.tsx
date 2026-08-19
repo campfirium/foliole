@@ -22,7 +22,8 @@ const GROUP = {
 
 function renderRows(overrides: Partial<Parameters<typeof SettingsSyncGroupRows>[0]> = {}) {
   const props = {
-    candidates: [], group: GROUP, isBusy: false, isCreating: false, joinRequest: null,
+    candidates: [], currentHost: { host_name: 'Studio Mac', host_platform: 'darwin' },
+    group: GROUP, isBusy: false, isCreating: false, joinRequest: null,
     onApprove: vi.fn(), onCreate: vi.fn(), onDiscover: vi.fn(), onLeave: vi.fn(), onReject: vi.fn(),
     onRemove: vi.fn(), onRequestJoin: vi.fn(), onTogglePause: vi.fn(), pendingRequests: [], syncPaused: false,
     ...overrides
@@ -30,6 +31,12 @@ function renderRows(overrides: Partial<Parameters<typeof SettingsSyncGroupRows>[
   renderWithLocalization(<SettingsSyncGroupRows {...props} />);
   return props;
 }
+
+it('shows the current Host and platform in the device area before joining a Sync Group', () => {
+  renderRows({ group: null });
+  expect(screen.getByText('Studio Mac')).toBeVisible();
+  expect(screen.getByText('macOS')).toBeVisible();
+});
 
 it('offers only the actions that are valid for local and remote members', () => {
   const props = renderRows();

@@ -64,7 +64,14 @@ const COMPANION_PAIRING_COMMANDS = new Set<string>([
 function buildDesktopCompanionPairingOverview(serverStatus = refreshLanWorkspaceSyncServerPairingStatus()) {
   const join = loadDesktopSyncGroupJoinState();
   const syncGroup = loadDesktopSyncGroup();
+  const localMember = syncGroup?.members.find((member) =>
+    member.device_id === syncGroup.local_device_id && member.state === 'active'
+  );
   return {
+    current_host: {
+      host_name: localMember?.device_name ?? resolveDesktopDeviceName(),
+      host_platform: localMember?.device_kind ?? process.platform
+    },
     join_candidates: join.candidates,
     join_request: join.pending?.request ?? null,
     paired_devices: loadPairedCompanionDevices(),

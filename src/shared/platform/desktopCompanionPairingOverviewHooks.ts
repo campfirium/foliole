@@ -6,6 +6,7 @@ import { loadDesktopCompanionPairingOverview, onDesktopCompanionPairingRequestsC
 import { isDesktopRuntime } from './runtime';
 
 export const EMPTY_DESKTOP_COMPANION_PAIRING_OVERVIEW: DesktopCompanionPairingOverviewPayload = {
+  current_host: null,
   paired_devices: [],
   pending_requests: [],
   primary_device_state: {

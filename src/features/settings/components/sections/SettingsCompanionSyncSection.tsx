@@ -56,9 +56,7 @@ export function SettingsCompanionSyncSection() {
     await state.removeSyncGroupMember(deviceId);
   };
   return (
-    <SettingsSection
-      ariaLabel={t('settings.companionSync.sectionAria')}
-    >
+    <SettingsSection ariaLabel={t('settings.companionSync.sectionAria')}>
       {syncError ? (
         <SettingsErrorState description={syncError} title={t('settings.companionSync.error.desktopUnavailable')} />
       ) : null}
@@ -69,6 +67,7 @@ export function SettingsCompanionSyncSection() {
       />
       <SettingsSyncGroupRows
         candidates={state.overview.join_candidates ?? []}
+        currentHost={state.overview.current_host ?? null}
         group={state.overview.sync_group ?? null}
         isBusy={!state.isDesktopRuntime || state.pendingActionId !== null || state.isLoading}
         isCreating={state.pendingActionId === 'create-sync-group'}

@@ -69,6 +69,19 @@ function EmptySyncGroupRow(props: Parameters<typeof SettingsSyncGroupRows>[0]) {
         </SettingsButton>
       </div>
       <div className="border-b border-settings-divider/65">
+        {props.currentHost ? (
+          <div aria-label={t('settings.companionSync.group.devices.title')}
+            className="border-t border-settings-divider/65" role="list">
+            <div className="flex min-h-14 items-baseline gap-2 py-2.5" role="listitem">
+              <span className="truncate text-ui-md font-normal text-foreground">
+                {props.currentHost.host_name}
+              </span>
+              <span className="shrink-0 text-ui-sm text-muted-foreground">
+                {platformFor(props.currentHost.host_platform)}
+              </span>
+            </div>
+          </div>
+        ) : null}
         {groups.map((candidate) => (
           <div className="flex min-h-14 items-center justify-between gap-5 border-t border-settings-divider/65 py-2.5"
             key={candidate.group_id}>
@@ -101,6 +114,7 @@ function EmptySyncGroupRow(props: Parameters<typeof SettingsSyncGroupRows>[0]) {
 
 export function SettingsSyncGroupRows(props: {
   candidates: DesktopSyncGroupJoinCandidatePayload[];
+  currentHost: { host_name: string; host_platform: string } | null;
   group: SyncGroupPayload | null;
   isBusy: boolean;
   isCreating: boolean;

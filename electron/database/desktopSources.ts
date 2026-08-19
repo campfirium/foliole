@@ -3,7 +3,10 @@ import path from 'node:path';
 
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
 import { recordImportSourceSync } from '../../lib/core/database/importPipelineRecords.js';
+import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 import type { ImportManagerSourceDraft } from '../../lib/core/import/importManagerSettings.js';
+import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../../lib/core/sync/syncObjectPayloadSql.js';
+import { loadOrCreateDesktopInstallationIdentity } from '../desktopInstallationIdentity.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
@@ -14,6 +17,7 @@ export interface DesktopSourceRecord extends DatabaseRow {
   config_ref: string;
   host_name: string;
   host_platform: string;
+  owner_installation_id: string | null;
   path_flavor: 'posix' | 'windows';
   root_path: string;
   source_ref: string;
@@ -39,7 +43,7 @@ function pathFlavor(rootPath: string): DesktopSourceRecord['path_flavor'] {
 
 export function loadDesktopSource(sourceRef: string) {
   return openDatabaseConnection().driver.queryOne<DesktopSourceRecord>(
-    `SELECT source_ref, source_type, config_ref, host_name, host_platform, root_path,
+    `SELECT source_ref, source_type, config_ref, host_name, host_platform, owner_installation_id, root_path,
        path_flavor, type_settings_json, updated_at FROM desktop_sources WHERE source_ref = ?`,
     [sourceRef]
   ) ?? null;
@@ -47,7 +51,7 @@ export function loadDesktopSource(sourceRef: string) {
 
 export function loadDesktopSourceByConfig(sourceType: DesktopSourceType, configRef: string) {
   return openDatabaseConnection().driver.queryOne<DesktopSourceRecord>(
-    `SELECT source_ref, source_type, config_ref, host_name, host_platform, root_path,
+    `SELECT source_ref, source_type, config_ref, host_name, host_platform, owner_installation_id, root_path,
        path_flavor, type_settings_json, updated_at FROM desktop_sources
      WHERE source_type = ? AND config_ref = ?`, [sourceType, configRef]
   ) ?? null;
@@ -58,17 +62,19 @@ export function upsertDesktopSource(input: {
   sourceRef?: string; sourceType: DesktopSourceType; typeSettings?: unknown; updatedAt: string;
 }) {
   const host = currentHost();
+  const ownerInstallationId = loadOrCreateDesktopInstallationIdentity().installationId;
   const sourceRef = input.sourceRef ?? `${input.sourceType}:${input.configRef}`;
   openDatabaseConnection().driver.execute(
     `INSERT INTO desktop_sources (source_ref, source_type, config_ref, host_name, host_platform,
-       root_path, path_flavor, type_settings_json, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       owner_installation_id, root_path, path_flavor, type_settings_json, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(source_type, config_ref) DO UPDATE SET host_name = excluded.host_name,
-       host_platform = excluded.host_platform, root_path = excluded.root_path,
+       host_platform = excluded.host_platform, owner_installation_id = excluded.owner_installation_id,
+       root_path = excluded.root_path,
        path_flavor = excluded.path_flavor, type_settings_json = excluded.type_settings_json,
        updated_at = excluded.updated_at`,
     [sourceRef, input.sourceType, input.configRef, input.hostName ?? host.name,
-      input.hostPlatform ?? host.platform, input.rootPath.trim(), pathFlavor(input.rootPath),
+      input.hostPlatform ?? host.platform, ownerInstallationId, input.rootPath.trim(), pathFlavor(input.rootPath),
       JSON.stringify(input.typeSettings ?? {}), input.updatedAt, input.updatedAt]
   );
   return loadDesktopSourceByConfig(input.sourceType, input.configRef)!;
@@ -114,7 +120,8 @@ export function hydrateImportManagerSources<T extends {
 
 export function resolveDesktopSourceAddress(sourceRef: string, location: string) {
   const source = loadDesktopSource(sourceRef);
-  if (!source || source.host_name !== currentHost().name || !fs.existsSync(source.root_path)) return null;
+  const installationId = loadOrCreateDesktopInstallationIdentity().installationId;
+  if (!source || source.owner_installation_id !== installationId || !fs.existsSync(source.root_path)) return null;
   const pathApi = source.path_flavor === 'windows' ? path.win32 : path.posix;
   const normalized = location.replaceAll('\\', '/').replace(/^\.\//u, '');
   if (!normalized || normalized === '..' || normalized.startsWith('../') || pathApi.isAbsolute(normalized)) return null;
@@ -124,21 +131,52 @@ export function resolveDesktopSourceAddress(sourceRef: string, location: string)
 }
 
 export function updateLocalDesktopSourceHosts(input: {
-  currentHostName: string; driver: DatabaseDriver;
-  installationRef: string; previousHostName: string | null; updatedAt: string;
+  currentHostName: string; currentHostPlatform: string; currentDeviceId: string; driver: DatabaseDriver;
+  installationRef: string; updatedAt: string;
 }) {
   const { driver } = input;
   if (!driver.queryOne("SELECT 1 AS present FROM sqlite_master WHERE type = 'table' AND name = 'desktop_sources'")) return;
-  driver.execute(
-    `UPDATE desktop_sources SET host_name = ?, updated_at = ? WHERE
-       (source_type = 'external' AND source_ref IN (
-         SELECT source_ref FROM external_search_folders WHERE owner_installation_id = ?
-       )) OR (source_type = 'watched' AND source_ref IN (
-         SELECT source_ref FROM watched_folder_bindings WHERE connected_device_id IN (?, ?)
-       )) OR source_type = 'readwise'`,
-    [input.currentHostName, input.updatedAt, input.installationRef, input.currentHostName,
-      input.previousHostName]
-  );
+  driver.transaction((tx) => {
+    const changed = tx.queryAll<{ object_id: string; source_type: DesktopSourceType }>(
+      `SELECT source_type, CASE source_type
+         WHEN 'external' THEN COALESCE((SELECT id FROM external_search_folders WHERE source_ref = source.source_ref), config_ref)
+         WHEN 'watched' THEN COALESCE((SELECT binding_id FROM watched_folder_bindings WHERE source_ref = source.source_ref), config_ref)
+         ELSE config_ref END object_id
+       FROM desktop_sources source WHERE owner_installation_id = ?
+         AND (host_name IS NOT ? OR host_platform IS NOT ?)`,
+      [input.installationRef, input.currentHostName, input.currentHostPlatform]
+    );
+    if (!changed.length) return;
+    tx.execute(`UPDATE desktop_sources SET host_name = ?, host_platform = ?, updated_at = ?
+      WHERE owner_installation_id = ?`, [input.currentHostName, input.currentHostPlatform,
+      input.updatedAt, input.installationRef]);
+    tx.execute(`UPDATE external_search_folders SET owner_device_name = ?, owner_platform = ?, updated_at = ?
+      WHERE source_ref IN (SELECT source_ref FROM desktop_sources WHERE owner_installation_id = ?)`,
+    [input.currentHostName, input.currentHostPlatform, input.updatedAt, input.installationRef]);
+    tx.execute(`UPDATE watched_folder_bindings SET connected_device_name = ?, connected_platform = ?, updated_at = ?
+      WHERE source_ref IN (SELECT source_ref FROM desktop_sources WHERE owner_installation_id = ?)`,
+    [input.currentHostName, input.currentHostPlatform, input.updatedAt, input.installationRef]);
+    for (const source of changed) recordHostProjectionSync(tx, source, input);
+  });
+}
+
+function recordHostProjectionSync(
+  driver: DatabaseDriver,
+  source: { object_id: string; source_type: DesktopSourceType },
+  input: { currentDeviceId: string; updatedAt: string }
+) {
+  if (source.source_type === 'readwise') return;
+  const objectType = source.source_type === 'external' ? 'external_folder' : 'watched_folder';
+  const row = driver.queryOne<{ payload_json: string }>(SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE[objectType], [source.object_id]);
+  if (!row) return;
+  upsertSyncObjectState(driver, {
+    contentHash: computeSyncContentHash(objectType, JSON.parse(row.payload_json)),
+    lastModifiedByDeviceId: input.currentDeviceId,
+    objectId: source.object_id,
+    objectType,
+    syncDirty: true,
+    updatedAt: input.updatedAt
+  });
 }
 
 export function recordDesktopImportLocation(input: {
