@@ -30,6 +30,7 @@ beforeEach(() => {
   installCompanionNodeSchema(database);
   database.exec(`
     INSERT INTO companion_meta (key, value, updated_at) VALUES ('device_id', 'ios-device', '2026-08-06T00:00:00Z');
+    INSERT INTO companion_meta (key, value, updated_at) VALUES ('host_name', 'iPhone', '2026-08-06T00:00:00Z');
     INSERT INTO nodes (id, title, created_at, updated_at)
     VALUES ('node-1', 'Node 1', '2026-08-06T00:00:00Z', '2026-08-06T00:00:00Z');
   `);

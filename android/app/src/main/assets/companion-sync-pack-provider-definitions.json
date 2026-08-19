@@ -18,7 +18,7 @@
   ],
   "databaseEntry": "incoming.db.deflate",
   "format": "foliole.sync-pack",
-  "formatVersion": 4,
+  "formatVersion": 5,
   "payloadCopyIndex": 5,
   "payloadPlans": [
     {
@@ -55,7 +55,7 @@
     },
     {
       "objectType": "setting",
-      "sql": "SELECT scope || ':' || platform || ':' || form_factor || ':' || device_id || ':' || key __object_id,\n    key, scope, platform, form_factor, device_id, value_json, content_hash, updated_at, deleted_at FROM source.setting_records"
+      "sql": "SELECT scope || ':' || platform || ':' || form_factor || ':' || host_name || ':' || key __object_id,\n    key, scope, platform, form_factor, host_name, value_json, content_hash, updated_at, deleted_at FROM source.setting_records"
     },
     {
       "objectType": "view_state",
@@ -63,7 +63,7 @@
     },
     {
       "objectType": "view_state",
-      "sql": "SELECT s.object_id __object_id,\n    v.node_id, v.scroll_top, v.selection_from, v.selection_to, v.source, v.updated_at\n    FROM source.sync_object_state s JOIN source.node_view_state v\n      ON s.object_id LIKE '%:' || v.device_id || ':node:' || v.node_id\n    WHERE s.object_type = 'view_state' AND s.object_id NOT LIKE '%:active_node'"
+      "sql": "SELECT s.object_id __object_id,\n    v.node_id, v.scroll_top, v.selection_from, v.selection_to, v.source, v.updated_at\n    FROM source.sync_object_state s JOIN source.node_view_state v\n      ON s.object_id LIKE '%:' || v.host_name || ':node:' || v.node_id\n    WHERE s.object_type = 'view_state' AND s.object_id NOT LIKE '%:active_node'"
     }
   ],
   "packSchema": [
@@ -88,11 +88,11 @@
       "sync-group-facts-v1",
       "workgroup-aead-v1"
     ],
-    "max_supported_version": 1,
-    "min_supported_version": 1,
-    "version": 1
+    "max_supported_version": 2,
+    "min_supported_version": 2,
+    "version": 2
   },
-  "schemaVersion": 69,
+  "schemaVersion": 70,
   "stateCopyIndex": 3,
   "tableNames": [
     "sync_groups",

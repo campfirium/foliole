@@ -6,6 +6,7 @@ import {
 } from '../../lib/core/database/migrations.js';
 import { NUMBERED_MIGRATION_BASE_VERSION } from '../../lib/core/database/numberedMigrations.js';
 import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
+import { resolveDesktopHostName } from '../sync/companionLanPayloads.js';
 
 import {
   closeDatabaseConnection,
@@ -14,9 +15,8 @@ import {
   resolveDatabasePath
 } from './connection.js';
 import type { DatabaseFileNameMigrationResult } from './databaseFileNameMigration.js';
-import { loadStoredDesktopDeviceId } from './deviceIdentity.js';
-import { refreshHostOwnedDeviceProfile } from './deviceProfileMigration.js';
 import { clearOpenedExternalSearchCache } from './externalSearchCacheMaintenance.js';
+import { migrateDesktopHostProfile } from './hostProfile.js';
 import {
   isDatabaseCorruptionError,
   moveDatabaseToPreRebuildSnapshot,
@@ -80,7 +80,6 @@ function enableStartupWriteAheadLog(connection: ReturnType<typeof openDatabaseCo
 function initializeOpenedDatabase(connection: ReturnType<typeof openDatabaseConnection>, reportStage?: DatabaseInitStageReporter) {
   verifyStartupDatabaseIntegrity(connection, reportStage);
   enableStartupWriteAheadLog(connection, reportStage);
-  const previousDeviceId = loadStoredDesktopDeviceId(connection);
   if (shouldSkipStartupSchemaInit()) {
     reportStage?.('database_schema_init_skipped', {
       reason: 'startup-schema-init-disabled'
@@ -91,7 +90,7 @@ function initializeOpenedDatabase(connection: ReturnType<typeof openDatabaseConn
   const pendingSnapshot = createPreMigrationSnapshotIfNeeded(connection);
   let initializedConnection: ReturnType<typeof initializeSchemaWorkspaceAndSearch>;
   try {
-    initializedConnection = initializeSchemaWorkspaceAndSearch(connection);
+    initializedConnection = initializeSchemaWorkspaceAndSearch(connection, resolveDesktopHostName());
   } catch (error) {
     pendingSnapshot?.protection.release();
     throw error;
@@ -99,14 +98,18 @@ function initializeOpenedDatabase(connection: ReturnType<typeof openDatabaseConn
   if (pendingSnapshot) {
     settleManagedMigrationSnapshot(pendingSnapshot.snapshot, pendingSnapshot.protection);
   }
-  refreshHostOwnedDeviceProfile(initializedConnection, previousDeviceId);
   clearOpenedExternalSearchCache();
   reportStage?.('database_schema_init_complete');
   return initializedConnection;
 }
 
-function initializeSchemaWorkspaceAndSearch(connection: ReturnType<typeof openDatabaseConnection>) {
-  const initializedConnection = initializeDatabaseConnection(connection);
+function initializeSchemaWorkspaceAndSearch(
+  connection: ReturnType<typeof openDatabaseConnection>,
+  currentHostName: string
+) {
+  const initializedConnection = initializeDatabaseConnection(connection, {
+    beforeVersionCommit: () => migrateDesktopHostProfile(connection, currentHostName)
+  });
   seedInitialWorkspace(initializedConnection);
   return initializeWorkspaceSearchSidecar(initializedConnection);
 }
@@ -163,9 +166,7 @@ export function initializeDatabase(reportStage?: DatabaseInitStageReporter) {
     reportStage?.('database_recovery_integrity_check_complete');
     enableDatabaseWriteAheadLog(connection);
     reportStage?.('database_recovery_schema_init_start');
-    const previousDeviceId = loadStoredDesktopDeviceId(connection);
-    const initializedConnection = initializeSchemaWorkspaceAndSearch(connection);
-    refreshHostOwnedDeviceProfile(initializedConnection, previousDeviceId);
+    const initializedConnection = initializeSchemaWorkspaceAndSearch(connection, resolveDesktopHostName());
     clearOpenedExternalSearchCache();
     reportStage?.('database_recovery_schema_init_complete');
     return initializedConnection;
@@ -193,8 +194,7 @@ function rebuildLegacyDevelopmentDatabase(databasePath: string, reportStage?: Da
     reportFileNameMigration: (result) => reportDatabaseFileNameMigration(reportStage, result)
   });
   reportStage?.('database_legacy_rebuild_open_connection_complete', { dbPath: connection.dbPath });
-  const initializedConnection = initializeSchemaWorkspaceAndSearch(connection);
-  refreshHostOwnedDeviceProfile(initializedConnection, null);
+  const initializedConnection = initializeSchemaWorkspaceAndSearch(connection, resolveDesktopHostName());
   clearOpenedExternalSearchCache();
   reportStage?.('database_legacy_rebuild_schema_init_complete');
   return initializedConnection;

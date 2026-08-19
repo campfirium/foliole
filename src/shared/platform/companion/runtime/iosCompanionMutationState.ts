@@ -6,6 +6,12 @@ export async function iosCompanionDeviceId(db: DbPort) {
   return row.value.trim();
 }
 
+export async function iosCompanionHostName(db: DbPort) {
+  const row = (await db.query<DbRow>("SELECT value FROM companion_meta WHERE key = 'host_name' LIMIT 1"))[0];
+  if (typeof row?.value !== 'string' || !row.value.trim()) throw new Error('Companion Host is unavailable.');
+  return row.value.trim();
+}
+
 export async function markIosCompanionMutation(args: {
   contentHash: string;
   db: DbPort;

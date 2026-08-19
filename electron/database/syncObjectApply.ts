@@ -4,9 +4,11 @@ import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContra
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { openDatabaseConnection } from './connection.js';
 import { materializeDesktopSettingRecord } from './desktopSettingMaterializer.js';
+import { loadDesktopHostName } from './hostProfile.js';
 
 interface ApplySyncObjectsOptions {
   deviceId?: string;
+  hostName?: string;
   includeAlreadyApplied?: boolean;
 }
 
@@ -27,8 +29,10 @@ export async function applySyncObjectsAsync(records: NativeSyncObjectRecord[], o
   if (records.length === 0) return [];
   const connection = openDatabaseConnection();
   const port = createBetterSqliteDbPort(connection.sqlite, { name: 'desktop-sync-object-apply' });
+  const hostName = options.hostName ?? loadDesktopHostName();
   return applySyncObjectsWithDbPort(port, records, {
     ...options,
+    ...(hostName ? { hostName } : {}),
     onPayloadAppliedInTransaction: materializeDesktopSettingRecord,
     onSkippedRecord: warnSkippedSyncObject
   });

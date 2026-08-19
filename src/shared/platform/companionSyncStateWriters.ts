@@ -32,7 +32,7 @@ export interface CompanionSyncSettingRecordArgs {
   scope?: string;
   platform?: string;
   formFactor?: string;
-  deviceId?: string;
+  hostName?: string;
 }
 
 export function resolveCompanionSyncSettingRecord(
@@ -42,27 +42,26 @@ export function resolveCompanionSyncSettingRecord(
   if (!nativePlatform) {
     return null;
   }
-  const deviceId = args.deviceId ?? '*';
   const formFactor = args.formFactor ?? 'phone';
   const platform = args.platform ?? nativePlatform;
-  const scope = args.scope ?? 'device';
+  const scope = args.scope ?? 'host';
+  const hostName = scope === 'user_space' ? '*' : args.hostName?.trim();
+  if (!hostName) return null;
   return {
-    deviceId,
+    hostName,
     formFactor,
-    objectId: [scope, platform, formFactor, deviceId, args.key].join(':'),
+    objectId: [scope, platform, formFactor, hostName, args.key].join(':'),
     platform,
     scope
   };
 }
 
 export async function saveCompanionSyncSettingRecord(args: CompanionSyncSettingRecordArgs) {
-  const record = resolveCompanionSyncSettingRecord(args);
-  if (!record) {
-    return null;
-  }
+  const platform = args.platform ?? getNativeCompanionSettingWritePlatform();
+  if (!platform) return null;
   return runCompanionSyncMutationTask(() => saveIosSetting({
-    device_id: record.deviceId, form_factor: record.formFactor, key: args.key,
-    platform: record.platform, scope: record.scope, value_json: args.valueJson
+    form_factor: args.formFactor ?? 'phone', key: args.key,
+    platform, scope: args.scope ?? 'host', value_json: args.valueJson
   }));
 }
 

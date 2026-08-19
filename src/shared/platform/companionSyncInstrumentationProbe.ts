@@ -45,6 +45,7 @@ async function applyPackPathThroughSharedCore(args: { packPath: string }) {
     if (!sourcePeerId) throw new Error('sync_pack_source_identity_unavailable');
     return applyCompanionSyncPackPathWithSharedCore({
       deviceId: bootstrap.device_id,
+      ...(bootstrap.host_name ? { hostName: bootstrap.host_name } : {}),
       packPath: args.packPath,
       sourcePeerId
     }, {

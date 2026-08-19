@@ -1,26 +1,28 @@
 import { registerPlugin } from '@capacitor/core';
 
-import type { NativeCompanionBootstrapState } from '../../../lib/platform/nativeCompanionContract';
+import type {
+  NativeCompanionBootstrapPayload,
+  NativeCompanionBootstrapState
+} from '../../../lib/platform/nativeCompanionContract';
 
 import { getCompanionRuntimeCapability, requireAvailableCompanionRuntime } from './companionRuntimeCapabilities';
 
-const WEB_DEVICE_ID_KEY = 'foliole-companion-web-device-id';
 const WEB_PREVIEW_DATABASE_NAME = 'foliole-companion-preview.db';
 
 interface CompanionBootstrapPlugin {
-  loadBootstrap(): Promise<NativeCompanionBootstrapState>;
+  loadBootstrap(): Promise<NativeCompanionBootstrapPayload>;
 }
 
 const FolioleCompanionBootstrap = registerPlugin<CompanionBootstrapPlugin>('FolioleCompanionBootstrap');
 let nativeBootstrapPromise: Promise<NativeCompanionBootstrapState> | null = null;
 
-function normalizeCompanionBootstrapState(value: unknown): NativeCompanionBootstrapState | null {
+function normalizeCompanionBootstrapState(value: unknown): NativeCompanionBootstrapPayload | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return null;
   }
 
   const rawState = value as Record<string, unknown>;
-  const { booted_at, database_path, database_ready, device_id, device_name, runtime_kind } = rawState;
+  const { booted_at, database_path, database_ready, host_name, runtime_kind } = rawState;
   if (typeof booted_at !== 'string' || !booted_at.trim()) {
     return null;
   }
@@ -30,7 +32,7 @@ function normalizeCompanionBootstrapState(value: unknown): NativeCompanionBootst
   if (typeof database_ready !== 'boolean') {
     return null;
   }
-  if (typeof device_id !== 'string' || !device_id.trim()) {
+  if (typeof host_name !== 'string' || !host_name.trim()) {
     return null;
   }
   if (runtime_kind !== 'android-capacitor' && runtime_kind !== 'ios-capacitor' && runtime_kind !== 'web-preview') {
@@ -41,39 +43,9 @@ function normalizeCompanionBootstrapState(value: unknown): NativeCompanionBootst
     booted_at,
     database_path: typeof database_path === 'string' ? database_path : null,
     database_ready,
-    device_id,
-    device_name: typeof device_name === 'string' && device_name.trim() ? device_name.trim() : null,
+    host_name: host_name.trim(),
     runtime_kind
   };
-}
-
-function readStoredWebPreviewDeviceId() {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-  try {
-    const stored = window.localStorage.getItem(WEB_DEVICE_ID_KEY);
-    return stored && stored.trim() ? stored : null;
-  } catch {
-    return null;
-  }
-}
-
-function createWebPreviewDeviceId() {
-  const existing = readStoredWebPreviewDeviceId();
-  if (existing) {
-    return existing;
-  }
-
-  const nextDeviceId = `web-preview-${crypto.randomUUID()}`;
-  if (typeof window !== 'undefined') {
-    try {
-      window.localStorage.setItem(WEB_DEVICE_ID_KEY, nextDeviceId);
-    } catch {
-      return nextDeviceId;
-    }
-  }
-  return nextDeviceId;
 }
 
 function createWebPreviewBootstrapState(): NativeCompanionBootstrapState {
@@ -81,8 +53,9 @@ function createWebPreviewBootstrapState(): NativeCompanionBootstrapState {
     booted_at: new Date().toISOString(),
     database_path: WEB_PREVIEW_DATABASE_NAME,
     database_ready: false,
-    device_id: createWebPreviewDeviceId(),
+    device_id: 'web-preview',
     device_name: 'Web preview',
+    host_name: 'Web preview',
     runtime_kind: 'web-preview'
   };
 }

@@ -22,7 +22,9 @@ describe('companionBootstrap ios boundary', () => {
     initializeIosCompanionDatabase.mockImplementation(async (state) => ({
       ...state,
       database_path: '/Library/CapacitorDatabase/foliole-companionSQLite.db',
-      database_ready: true
+      database_ready: true,
+      device_id: 'ios-frozen-execution-id',
+      device_name: state.host_name
     }));
   });
 
@@ -32,8 +34,7 @@ describe('companionBootstrap ios boundary', () => {
       booted_at: '2026-07-19T08:00:00Z',
       database_path: null,
       database_ready: false,
-      device_id: 'ios-test-device',
-      device_name: 'iPhone',
+      host_name: 'iPhone',
       runtime_kind: 'ios-capacitor'
     });
     const { loadCompanionBootstrapState } = await import('./companionBootstrap');
@@ -42,8 +43,9 @@ describe('companionBootstrap ios boundary', () => {
       booted_at: '2026-07-19T08:00:00Z',
       database_path: '/Library/CapacitorDatabase/foliole-companionSQLite.db',
       database_ready: true,
-      device_id: 'ios-test-device',
+      device_id: 'ios-frozen-execution-id',
       device_name: 'iPhone',
+      host_name: 'iPhone',
       runtime_kind: 'ios-capacitor'
     });
     expect(loadBootstrap).toHaveBeenCalledTimes(1);
@@ -59,8 +61,7 @@ describe('companionBootstrap ios boundary', () => {
       booted_at: '2026-07-19T08:00:00Z',
       database_path: null,
       database_ready: false,
-      device_id: 'ios-test-device',
-      device_name: 'iPhone',
+      host_name: 'iPhone',
       runtime_kind: 'ios-capacitor'
     });
     const { loadCompanionBootstrapState } = await import('./companionBootstrap');

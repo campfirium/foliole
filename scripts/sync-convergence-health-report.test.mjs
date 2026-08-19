@@ -44,8 +44,8 @@ function android(overrides = {}) {
       missingReferencedContentBlobs: 0
     },
     statePolicy: {
-      devicePrivate: {
-        nonLocalNodeReadingDeviceStateRows: 0,
+      hostPrivate: {
+        nonLocalNodeReadingHostStateRows: 0,
         nonLocalNodeViewStateRows: 0
       }
     },
@@ -119,18 +119,18 @@ describe('sync convergence health report', () => {
     }, 'structure');
   });
 
-  it('classifies device-private state leaks as warnings', () => {
+  it('classifies Host-private state leaks as warnings', () => {
     expectLayer({
       androidAudit: android({
         statePolicy: {
-          devicePrivate: {
-            nonLocalNodeReadingDeviceStateRows: 1,
+          hostPrivate: {
+            nonLocalNodeReadingHostStateRows: 1,
             nonLocalNodeViewStateRows: 0
           }
         }
       }),
       desktopDiagnostics: desktop()
-    }, 'device_private_state', 'warning');
+    }, 'host_private_state', 'warning');
   });
 
   it('classifies missing content metadata before resource bytes', () => {

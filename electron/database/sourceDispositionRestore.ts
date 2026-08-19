@@ -4,6 +4,7 @@ import { enqueueWorkspaceSearchDeleteInvalidationForSubtreeRootIds } from '../..
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
+import { loadOrCreateDesktopHostName } from './hostProfile.js';
 import type { SourceDisposition, SourceDispositionKey, SourceDispositionRestoreResult, SourceKeyRow } from './sourceDispositionStates.js';
 import {
   readReadwiseRuleIds,
@@ -58,7 +59,13 @@ function isCurrentActiveCandidate(candidate: { deletedAt: string | null; reading
   return candidate.deletedAt === null && (candidate.readingState === null || candidate.readingState === 'active');
 }
 
-function applyDismissedState(driver: DatabaseDriver, nodeIds: string[], updatedAt: string, deviceId: string) {
+function applyDismissedState(
+  driver: DatabaseDriver,
+  nodeIds: string[],
+  updatedAt: string,
+  deviceId: string,
+  hostName: string
+) {
   if (nodeIds.length === 0) return;
   const upsertReading = driver.prepare(
     `INSERT INTO node_reading (
@@ -75,17 +82,18 @@ function applyDismissedState(driver: DatabaseDriver, nodeIds: string[], updatedA
        state = excluded.state`
   );
   const upsertDeviceState = driver.prepare(
-    `INSERT INTO node_reading_device_state (node_id, device_id, reading_position, updated_at)
+    `INSERT INTO node_reading_host_state (node_id, host_name, reading_position, updated_at)
      VALUES (?, ?, ?, ?)
-     ON CONFLICT(node_id, device_id) DO UPDATE SET
+     ON CONFLICT(node_id, host_name) DO UPDATE SET
        reading_position = excluded.reading_position,
        updated_at = excluded.updated_at`
   );
   const deleteReading = driver.prepare('DELETE FROM node_reading WHERE node_id = ?');
-  const deleteDeviceState = driver.prepare('DELETE FROM node_reading_device_state WHERE node_id = ?');
+  const deleteDeviceState = driver.prepare('DELETE FROM node_reading_host_state WHERE node_id = ?');
   for (const nodeId of nodeIds) {
     writeNodeReadingSnapshotWithSync(driver, {
       deviceId,
+      hostName,
       nodeId,
       reading: {
         intervalDurationMs: 0,
@@ -133,7 +141,13 @@ export function restoreSourceDispositions(): SourceDispositionRestoreResult {
       if (disposition === 'dismissed') dismissedNodeIds.push(candidate.nodeId);
       if (disposition === 'hard_deleted' || disposition === 'soft_deleted') trashNodeIds.push(candidate.nodeId);
     }
-    applyDismissedState(connection.driver, dismissedNodeIds, updatedAt, deviceId);
+    applyDismissedState(
+      connection.driver,
+      dismissedNodeIds,
+      updatedAt,
+      deviceId,
+      loadOrCreateDesktopHostName(updatedAt)
+    );
     applyTrashState(connection.driver, trashNodeIds, updatedAt, deviceId);
     enqueueWorkspaceSearchDeleteInvalidationForSubtreeRootIds(connection.driver, trashNodeIds);
     return {

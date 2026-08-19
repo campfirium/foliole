@@ -104,12 +104,12 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
   syncPayloadSetting: {
     syncPayload: {
       argMode: 'object_id',
-      defaultDeviceId: '*',
+      defaultHostName: '*',
       defaultFormFactor: 'phone',
       defaultPlatform: 'android',
-      defaultScope: 'device',
+      defaultScope: 'host',
       defaultValueJson: 'null',
-      deviceIdPayloadKey: 'device_id',
+      hostNamePayloadKey: 'host_name',
       formFactorPayloadKey: 'form_factor',
       keyPayloadKey: 'key',
       objectType: 'setting',
@@ -119,9 +119,9 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
     },
     sql:
       "SELECT json_object('key', key, 'scope', scope, 'platform', platform, 'form_factor', form_factor, " +
-      "'device_id', device_id, 'value_json', value_json, 'content_hash', content_hash, 'updated_at', updated_at, " +
+      "'host_name', host_name, 'value_json', value_json, 'content_hash', content_hash, 'updated_at', updated_at, " +
       "'deleted_at', deleted_at) AS payload_json FROM setting_records " +
-      "WHERE scope || ':' || platform || ':' || form_factor || ':' || device_id || ':' || key = ? LIMIT 1"
+      "WHERE scope || ':' || platform || ':' || form_factor || ':' || host_name || ':' || key = ? LIMIT 1"
   },
   syncPayloadViewActiveNode: {
     syncPayload: {
@@ -161,7 +161,7 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
     sql:
       "SELECT json_object('node_id', node_id, 'scroll_top', scroll_top, 'selection_from', NULL, " +
       "'selection_to', NULL, 'source', source) AS payload_json FROM node_view_state " +
-      'WHERE node_id = ? AND device_id = ? LIMIT 1'
+      'WHERE node_id = ? AND host_name = ? LIMIT 1'
   }
 };
 

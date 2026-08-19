@@ -7,6 +7,7 @@ import { migrateDesktopSourceOwnership } from './numberedMigrationDesktopSourceO
 import { migrateDesktopSources } from './numberedMigrationDesktopSources.js';
 import { migrateExternalFolderOwnership } from './numberedMigrationExternalFolderOwnership.js';
 import { addColumnIfMissing } from './numberedMigrationHelpers.js';
+import { migrateHostPermanentState } from './numberedMigrationHostPermanentState.js';
 import { createIncomingUpdatesTable } from './numberedMigrationIncomingUpdates.js';
 import { migrateLocalFilesRegistry, resetOpenedLocalFileHistory } from './numberedMigrationLocalFiles.js';
 import { migrateLegacyVirtualFoldersToManualNodes } from './numberedMigrationManualVirtualFolders.js';
@@ -165,5 +166,9 @@ export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   {
     version: 69,
     migrate: migrateDesktopSourceOwnership
+  },
+  {
+    version: 70,
+    migrate: migrateHostPermanentState
   }
 ];

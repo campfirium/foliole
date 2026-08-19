@@ -74,15 +74,15 @@ export const SYNC_SCHEMA_STATEMENTS = [
     scope TEXT NOT NULL,
     platform TEXT NOT NULL DEFAULT '*',
     form_factor TEXT NOT NULL DEFAULT '*',
-    device_id TEXT NOT NULL DEFAULT '*',
+    host_name TEXT NOT NULL DEFAULT '*',
     value_json TEXT NOT NULL,
     content_hash TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     deleted_at TEXT,
-    PRIMARY KEY (key, scope, platform, form_factor, device_id)
+    PRIMARY KEY (key, scope, platform, form_factor, host_name)
   )`,
   `CREATE INDEX IF NOT EXISTS idx_setting_records_lookup
     ON setting_records (key, scope, platform, form_factor, updated_at)`,
-  `CREATE INDEX IF NOT EXISTS idx_setting_records_device
-    ON setting_records (device_id, updated_at)`
+  `CREATE INDEX IF NOT EXISTS idx_setting_records_host
+    ON setting_records (host_name, updated_at)`
 ];

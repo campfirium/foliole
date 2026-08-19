@@ -21,8 +21,8 @@ const JSON_SYNC_EXCLUDED_TYPES = new Set(['external_document', 'node']);
 
 function readViewStatePayloadJson(driver: DatabaseDriver, objectId: string) {
   const parts = objectId.split(':');
-  const deviceId = parts[3];
-  if (!deviceId) return null;
+  const hostName = parts[3];
+  if (!hostName) return null;
   const key = parts.slice(4).join(':');
   if (key === 'active_node') {
     return driver.queryOne<{ payload_json: string | null }>(
@@ -35,8 +35,8 @@ function readViewStatePayloadJson(driver: DatabaseDriver, objectId: string) {
       `SELECT json_object(
          'node_id', node_id, 'scroll_top', scroll_top, 'selection_from', selection_from,
          'selection_to', selection_to, 'source', source, 'updated_at', updated_at
-       ) AS payload_json FROM node_view_state WHERE node_id = ? AND device_id = ?`,
-      [key.slice(5), deviceId]
+       ) AS payload_json FROM node_view_state WHERE node_id = ? AND host_name = ?`,
+      [key.slice(5), hostName]
     )?.payload_json ?? null;
   }
   return null;

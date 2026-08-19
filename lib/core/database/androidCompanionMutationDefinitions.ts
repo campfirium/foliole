@@ -18,13 +18,13 @@ export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
     'ON CONFLICT(node_id) DO UPDATE SET last_opened_at = excluded.last_opened_at ' +
     'WHERE excluded.last_opened_at > node_open_state.last_opened_at',
   syncNodeReadingDelete: 'DELETE FROM node_reading WHERE node_id = ?',
-  syncNodeReadingDeviceStateDelete: 'DELETE FROM node_reading_device_state WHERE node_id = ?',
+  syncNodeReadingHostStateDelete: 'DELETE FROM node_reading_host_state WHERE node_id = ?',
   syncNodeReadingUpsert:
     'INSERT OR REPLACE INTO node_reading (' +
     'node_id, interval_duration_ms, interval_growth_factor, last_handled_at, next_at, priority, repetition_count, state' +
     ') VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-  syncNodeReadingDeviceStateUpsert:
-    'INSERT OR REPLACE INTO node_reading_device_state (node_id, device_id, reading_position, updated_at) VALUES (?, ?, ?, ?)',
+  syncNodeReadingHostStateUpsert:
+    'INSERT OR REPLACE INTO node_reading_host_state (node_id, host_name, reading_position, updated_at) VALUES (?, ?, ?, ?)',
   syncNodeReviewDelete: 'DELETE FROM node_review WHERE node_id = ?',
   syncNodeReviewUpsert:
     'INSERT OR REPLACE INTO node_review (' +
@@ -32,15 +32,15 @@ export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
     ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
   syncSettingRecordUpsert:
     'INSERT OR REPLACE INTO setting_records (' +
-    'key, scope, platform, form_factor, device_id, value_json, content_hash, updated_at' +
+    'key, scope, platform, form_factor, host_name, value_json, content_hash, updated_at' +
     ') VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
   syncViewActiveNodeDelete: "DELETE FROM workspace_meta WHERE key = 'active_node_id'",
   syncViewActiveNodeUpsert:
     'INSERT OR REPLACE INTO workspace_meta (key, value, updated_at) VALUES (?, ?, ?)',
-  syncViewNodeStateDelete: 'DELETE FROM node_view_state WHERE node_id = ? AND device_id = ?',
+  syncViewNodeStateDelete: 'DELETE FROM node_view_state WHERE node_id = ? AND host_name = ?',
   syncViewNodeStateUpsert:
     'INSERT OR REPLACE INTO node_view_state (' +
-    'node_id, device_id, scroll_top, selection_from, selection_to, source, updated_at' +
+    'node_id, host_name, scroll_top, selection_from, selection_to, source, updated_at' +
     ') VALUES (?, ?, ?, ?, ?, ?, ?)',
   syncExternalDocumentMarkMissing:
     'UPDATE external_documents SET is_present = 0, missing_at = ?, updated_at = ? WHERE document_id = ?',
@@ -93,7 +93,7 @@ export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
   appDataClearNodeSyncTombstones: 'DELETE FROM node_sync_tombstones',
   appDataClearNodeSyncVersions: 'DELETE FROM node_sync_versions',
   appDataClearNodeViewState: 'DELETE FROM node_view_state',
-  appDataClearNodeReadingDeviceState: 'DELETE FROM node_reading_device_state',
+  appDataClearNodeReadingHostState: 'DELETE FROM node_reading_host_state',
   appDataClearNodeOrder: 'DELETE FROM node_order',
   appDataClearNodeOpenState: 'DELETE FROM node_open_state',
   appDataClearNodeAttachments: 'DELETE FROM node_attachments',
@@ -183,8 +183,8 @@ export const ANDROID_COMPANION_SYNC_APPLY_MUTATION_RULES = {
   },
   learning: {
     readingDeleteMutationName: 'syncNodeReadingDelete',
-    readingDeviceStateDeleteMutationName: 'syncNodeReadingDeviceStateDelete',
-    readingDeviceStateUpsertMutationName: 'syncNodeReadingDeviceStateUpsert',
+    readingDeviceStateDeleteMutationName: 'syncNodeReadingHostStateDelete',
+    readingDeviceStateUpsertMutationName: 'syncNodeReadingHostStateUpsert',
     readingUpsertMutationName: 'syncNodeReadingUpsert',
     reviewDeleteMutationName: 'syncNodeReviewDelete',
     reviewUpsertMutationName: 'syncNodeReviewUpsert'

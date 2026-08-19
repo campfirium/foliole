@@ -114,10 +114,10 @@ function createStatementRuns() {
 function resolveNodeSnapshotRunSpy(sql: string, runs: ReturnType<typeof createStatementRuns>) {
   if (sql.includes('INSERT INTO nodes')) return runs.upsertNodeRun;
   if (sql.includes('INSERT INTO node_order')) return runs.upsertOrderRun;
-  if (sql.includes('INSERT INTO node_reading_device_state')) return runs.upsertReadingDeviceRun;
+  if (sql.includes('INSERT INTO node_reading_host_state')) return runs.upsertReadingDeviceRun;
   if (sql.includes('INSERT INTO node_reading')) return runs.upsertReadingRun;
   if (sql === 'DELETE FROM node_reading WHERE node_id = ?') return runs.deleteReadingRun;
-  if (sql === 'DELETE FROM node_reading_device_state WHERE node_id = ?') return runs.deleteReadingRun;
+  if (sql === 'DELETE FROM node_reading_host_state WHERE node_id = ?') return runs.deleteReadingRun;
   if (sql === 'INSERT OR IGNORE INTO temp_workspace_search_seed_ids (id) VALUES (?)') return runs.insertSearchSeedRun;
   return vi.fn();
 }
@@ -182,11 +182,11 @@ function expectNodeSnapshotSearchSync() {
       expect.stringContaining('INSERT INTO nodes'),
       expect.stringContaining('INSERT INTO node_order'),
       expect.stringContaining('INSERT INTO node_reading'),
-      expect.stringContaining('INSERT INTO node_reading_device_state'),
+      expect.stringContaining('INSERT INTO node_reading_host_state'),
       expect.stringContaining('UPDATE search_index_invalidations'),
       expect.stringContaining('INSERT INTO search_index_invalidations'),
       'DELETE FROM node_reading WHERE node_id = ?',
-      'DELETE FROM node_reading_device_state WHERE node_id = ?',
+      'DELETE FROM node_reading_host_state WHERE node_id = ?',
     ])
   );
 }

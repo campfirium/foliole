@@ -78,7 +78,7 @@ it('accepts Android-exported numeric strings without importing device-private re
   }>('SELECT interval_duration_ms, interval_growth_factor FROM node_reading WHERE node_id = ?', ['node-1']))
     .toEqual({ interval_duration_ms: 2500, interval_growth_factor: 1.75 });
   expect(openDatabaseConnection().driver.queryOne<{ count: number }>(
-    'SELECT COUNT(*) AS count FROM node_reading_device_state WHERE node_id = ?',
+    'SELECT COUNT(*) AS count FROM node_reading_host_state WHERE node_id = ?',
     ['node-1']
   )).toEqual({ count: 0 });
 });

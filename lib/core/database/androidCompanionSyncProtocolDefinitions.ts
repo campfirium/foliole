@@ -198,8 +198,8 @@ export const ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS = {
       opId: 'op_id'
     },
     viewCanonicalKeys: {
-      deviceId: 'device_id',
       formFactor: 'form_factor',
+      hostName: 'host_name',
       key: 'key',
       platform: 'platform',
       scope: 'scope'

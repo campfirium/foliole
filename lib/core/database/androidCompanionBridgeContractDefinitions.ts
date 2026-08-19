@@ -46,17 +46,16 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
   hostApi: {
     attachmentResourceSync: COMPANION_ATTACHMENT_RESOURCE_HOST_CONTRACT_DEFINITIONS,
     bootstrap: {
-      deviceNameDefaults: {
-        defaultDeviceName: 'Android device',
-        emulatorDeviceName: 'Android Emulator',
+      hostNameDefaults: {
+        defaultHostName: 'Android device',
+        emulatorHostName: 'Android Emulator',
         emulatorModelTokens: ['sdk', 'gphone', 'emulator']
       },
       outputKeys: {
         bootedAt: 'booted_at',
         databasePath: 'database_path',
         databaseReady: 'database_ready',
-        deviceId: 'device_id',
-        deviceName: 'device_name',
+        hostName: 'host_name',
         runtimeKind: 'runtime_kind'
       },
       runtimeKind: 'android-capacitor'

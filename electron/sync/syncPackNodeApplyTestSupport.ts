@@ -17,13 +17,14 @@ export function createIncomingPack(filePath: string) {
     ).run();
     db.prepare(
       `INSERT INTO sync_object_state (object_type, object_id, state_seq, content_hash, updated_at, deleted_at)
-       VALUES ('setting', 'setting-1', 2, 'hash-setting-1', '2026-05-04T01:01:00.000Z', NULL)`
+       VALUES ('setting', 'host:android:phone:Android test host:theme', 2, 'hash-setting-1', '2026-05-04T01:01:00.000Z', NULL)`
     ).run();
     db.prepare(
       `INSERT INTO sync_objects (object_type, object_id, content_hash, payload_json, updated_at, deleted_at)
-       VALUES ('setting', 'setting-1', 'hash-setting-1', ?, '2026-05-04T01:01:00.000Z', NULL)`
+       VALUES ('setting', 'host:android:phone:Android test host:theme', 'hash-setting-1', ?, '2026-05-04T01:01:00.000Z', NULL)`
     ).run(JSON.stringify({
-      form_factor: 'phone', key: 'theme', platform: 'android', scope: 'device', value_json: '{"mode":"dark"}'
+      form_factor: 'phone', host_name: 'Android test host', key: 'theme', platform: 'android',
+      scope: 'host', value_json: '{"mode":"dark"}'
     }));
     db.prepare(
       `INSERT INTO nodes (

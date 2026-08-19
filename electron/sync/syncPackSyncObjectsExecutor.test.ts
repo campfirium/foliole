@@ -11,36 +11,37 @@ import {
 it('loads applyable sync object records from the attached pack', async () => {
   const port = {
     query: vi.fn(async () => [
-      syncObjectRow('setting', 'device:android:phone:*:theme'),
-      syncObjectRow('view_state', 'session_resume:android:phone:device-1:node:node-1'),
-      syncObjectRow('view_state', 'session_resume:android:phone:other-device:node:node-2')
+      syncObjectRow('setting', 'host:android:phone:Android test host:theme'),
+      syncObjectRow('view_state', 'session_resume:android:phone:Android test host:node:node-1'),
+      syncObjectRow('view_state', 'session_resume:android:phone:Other host:node:node-2')
     ])
   } as unknown as DbPort;
 
   await expect(loadSyncPackSyncObjectsWithDbPort(port, {
     deviceId: 'device-1',
+    hostName: 'Android test host',
     incomingAlias: 'incoming'
   })).resolves.toEqual([
-    syncObjectRow('setting', 'device:android:phone:*:theme'),
-    syncObjectRow('view_state', 'session_resume:android:phone:device-1:node:node-1')
+    syncObjectRow('setting', 'host:android:phone:Android test host:theme'),
+    syncObjectRow('view_state', 'session_resume:android:phone:Android test host:node:node-1')
   ]);
   expect(port.query).toHaveBeenCalledWith(expect.stringContaining('FROM incoming.sync_objects incoming'));
   expect(port.query).toHaveBeenCalledWith(expect.stringContaining('ORDER BY updated_at ASC, object_type ASC, object_id ASC'));
 });
 
-it('filters view state records to the current mobile device', () => {
+it('filters view state records to the current Host', () => {
   expect(isConsumableSyncPackSyncObject({
-    object_id: 'session_resume:android:phone:device-1:node:node-1',
+    object_id: 'session_resume:android:phone:Android test host:node:node-1',
     object_type: 'view_state'
-  }, 'device-1')).toBe(true);
+  }, 'Android test host')).toBe(true);
   expect(isConsumableSyncPackSyncObject({
-    object_id: 'session_resume:android:phone:device-2:node:node-1',
+    object_id: 'session_resume:android:phone:Other host:node:node-1',
     object_type: 'view_state'
-  }, 'device-1')).toBe(false);
+  }, 'Android test host')).toBe(false);
   expect(isConsumableSyncPackSyncObject({
-    object_id: 'device:android:phone:*:theme',
+    object_id: 'host:android:phone:Android test host:theme',
     object_type: 'setting'
-  }, 'device-1')).toBe(true);
+  }, 'Android test host')).toBe(true);
 });
 
 it('applies setting payload records from sync objects', async () => {
@@ -50,9 +51,9 @@ it('applies setting payload records from sync objects', async () => {
       {
         content_hash: 'hash-setting',
         deleted_at: null,
-        object_id: 'device:android:phone:*:theme',
+        object_id: 'host:android:phone:Android test host:theme',
         object_type: 'setting',
-        payload_json: JSON.stringify({ key: 'theme', scope: 'device', value_json: '{"mode":"dark"}' }),
+        payload_json: JSON.stringify({ host_name: 'Android test host', key: 'theme', scope: 'host', value_json: '{"mode":"dark"}' }),
         updated_at: '2026-05-04T02:00:00.000Z'
       }
     ]),
@@ -64,14 +65,15 @@ it('applies setting payload records from sync objects', async () => {
 
   await expect(applySyncPackSettingObjectsWithDbPort(port, {
     deviceId: 'device-1',
+    hostName: 'Android test host',
     incomingAlias: 'incoming'
   })).resolves.toBe(1);
   expect(runs).toEqual([{
     params: [
-      'device',
+      'host',
       'android',
       'phone',
-      '*',
+      'Android test host',
       'theme',
       '{"mode":"dark"}',
       'hash-setting',

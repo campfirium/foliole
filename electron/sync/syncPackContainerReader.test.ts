@@ -48,3 +48,29 @@ it('rejects a different schema version before writing an incoming database', asy
   })).rejects.toThrow('unsupported_sync_pack_schema_version');
   await expect(fs.stat(outputPath)).rejects.toMatchObject({ code: 'ENOENT' });
 });
+
+it('rejects a v4 pack before writing an incoming database', async () => {
+  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-sync-pack-format-'));
+  const zipPath = path.join(tempRoot, 'incoming.syncpack');
+  const outputPath = path.join(tempRoot, 'incoming.db');
+  const manifest = {
+    database_file: SYNC_PACK_DATABASE_ENTRY,
+    format: SYNC_PACK_FORMAT,
+    format_version: 4,
+    from_device_id: 'source-device',
+    schema_version: DATABASE_SCHEMA_VERSION,
+    to_peer_id: 'target-device'
+  };
+  await writeStoredZip(zipPath, [
+    { content: Buffer.from(JSON.stringify(manifest)), name: 'manifest.json' },
+    { content: Buffer.from('not-read'), name: SYNC_PACK_DATABASE_ENTRY }
+  ]);
+
+  await expect(extractSyncPackDatabase({
+    body: await fs.readFile(zipPath),
+    expectedPeerId: 'target-device',
+    expectedSourcePeerId: 'source-device',
+    outputPath
+  })).rejects.toThrow('invalid_sync_pack_manifest');
+  await expect(fs.stat(outputPath)).rejects.toMatchObject({ code: 'ENOENT' });
+});

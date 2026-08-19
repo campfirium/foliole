@@ -142,11 +142,10 @@ beforeEach(() => {
     await expect(api.saveCompanionSyncSettingRecord({ key: 'one', valueJson: '{}' }))
       .resolves.toEqual({ content_hash: 'hash-setting', object_id: 'setting' });
     expect(databaseWrites.setting).toHaveBeenCalledWith({
-      device_id: '*',
       form_factor: 'phone',
       key: 'one',
       platform: 'ios',
-      scope: 'device',
+      scope: 'host',
       value_json: '{}'
     });
     expect(runtimeMock.writer).toHaveBeenCalledOnce();

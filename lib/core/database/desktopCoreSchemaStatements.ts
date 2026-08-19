@@ -115,12 +115,12 @@ export const DESKTOP_CORE_SCHEMA_STATEMENTS = [
     node_id TEXT PRIMARY KEY REFERENCES nodes(id) ON DELETE CASCADE,
     last_opened_at TEXT NOT NULL
   )`,
-  `CREATE TABLE IF NOT EXISTS node_reading_device_state (
+  `CREATE TABLE IF NOT EXISTS node_reading_host_state (
     node_id TEXT NOT NULL REFERENCES nodes(id),
-    device_id TEXT NOT NULL,
+    host_name TEXT NOT NULL,
     reading_position INTEGER NOT NULL DEFAULT 0,
     updated_at TEXT NOT NULL,
-    PRIMARY KEY (node_id, device_id)
+    PRIMARY KEY (node_id, host_name)
   )`,
   `CREATE TABLE IF NOT EXISTS review_log (
     id TEXT PRIMARY KEY,
@@ -148,13 +148,13 @@ export const DESKTOP_CORE_SCHEMA_STATEMENTS = [
   )`,
   `CREATE TABLE IF NOT EXISTS node_view_state (
     node_id TEXT NOT NULL,
-    device_id TEXT NOT NULL,
+    host_name TEXT NOT NULL,
     scroll_top INTEGER NOT NULL DEFAULT 0,
     selection_from INTEGER,
     selection_to INTEGER,
     source TEXT NOT NULL DEFAULT 'user-scroll',
     updated_at TEXT NOT NULL,
-    PRIMARY KEY (node_id, device_id)
+    PRIMARY KEY (node_id, host_name)
   )`,
   ...CORE_INDEX_SCHEMA_STATEMENTS
 ];

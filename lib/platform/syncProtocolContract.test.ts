@@ -15,10 +15,10 @@ function descriptor(overrides: Partial<SyncProtocolDescriptor> = {}) {
 }
 
 describe('syncProtocolContract', () => {
-  it('accepts the exact v1 descriptor and returns a negotiated version', () => {
+  it('accepts the exact v2 descriptor and returns a negotiated version', () => {
     expect(evaluateSyncProtocolCompatibility(descriptor())).toEqual({
       missing_capabilities: [],
-      negotiated_version: 1,
+      negotiated_version: 2,
       reason: null,
       status: 'compatible'
     });
@@ -27,9 +27,10 @@ describe('syncProtocolContract', () => {
   it.each([
     [undefined, 'protocol_metadata_missing'],
     [{}, 'protocol_metadata_invalid'],
-    [descriptor({ version: 2 }), 'protocol_version_unsupported'],
-    [descriptor({ min_supported_version: 2 }), 'protocol_metadata_invalid'],
-    [descriptor({ max_supported_version: 2, min_supported_version: 2, version: 2 }), 'protocol_version_unsupported']
+    [descriptor({ max_supported_version: 1, min_supported_version: 1, version: 1 }), 'protocol_version_unsupported'],
+    [descriptor({ version: 1 }), 'protocol_version_unsupported'],
+    [descriptor({ min_supported_version: 3 }), 'protocol_metadata_invalid'],
+    [descriptor({ max_supported_version: 3, min_supported_version: 3, version: 3 }), 'protocol_version_unsupported']
   ])('rejects %j as %s', (remote, reason) => {
     expect(evaluateSyncProtocolCompatibility(remote)).toMatchObject({ reason, status: 'incompatible' });
   });
@@ -52,9 +53,9 @@ describe('syncProtocolContract', () => {
   it('rejects malformed descriptors rather than repairing them', () => {
     expect(parseSyncProtocolDescriptor({
       capabilities: [''],
-      max_supported_version: 1,
-      min_supported_version: 1,
-      version: 1
+      max_supported_version: 2,
+      min_supported_version: 2,
+      version: 2
     })).toBeNull();
   });
 });

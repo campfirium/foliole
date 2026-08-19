@@ -29,8 +29,8 @@ function createDatabase(name) {
       peer_id TEXT, stream_name TEXT, operation_id TEXT, object_type TEXT, object_id TEXT,
       payload_identity TEXT, local_position TEXT, status TEXT, remote_position TEXT,
       issue_reason TEXT, created_at TEXT, updated_at TEXT);
-    CREATE TABLE node_view_state (node_id TEXT, device_id TEXT, scroll_top INTEGER);
-    CREATE TABLE node_reading_device_state (node_id TEXT, device_id TEXT, reading_position INTEGER, updated_at TEXT);
+    CREATE TABLE node_view_state (node_id TEXT, host_name TEXT, scroll_top INTEGER);
+    CREATE TABLE node_reading_host_state (node_id TEXT, host_name TEXT, reading_position INTEGER, updated_at TEXT);
     CREATE TABLE review_log (id TEXT PRIMARY KEY, op_id TEXT UNIQUE);
   `);
   return { db, dbPath };
@@ -66,10 +66,10 @@ function seedAndroid(db) {
   db.prepare('INSERT INTO content_blobs VALUES (?, ?)').run('available-without-data', 'cached');
   db.prepare('INSERT INTO content_blobs VALUES (?, ?)').run('stale-unreferenced', 'missing');
   db.prepare('INSERT INTO attachment_blobs VALUES (?, ?, ?)').run('att-1', 'att-hash-1', 'missing');
-  db.prepare('INSERT INTO companion_meta VALUES (?, ?)').run('device_id', 'android-test-device');
+  db.prepare('INSERT INTO companion_meta VALUES (?, ?)').run('host_name', 'android-test-device');
   db.prepare('INSERT INTO node_view_state VALUES (?, ?, ?)').run('node-1', 'android-test-device', 24);
   db.prepare('INSERT INTO node_view_state VALUES (?, ?, ?)').run('node-2', 'other-device', 36);
-  db.prepare('INSERT INTO node_reading_device_state VALUES (?, ?, ?, ?)').run('node-1', 'other-device', 128, 'now');
+  db.prepare('INSERT INTO node_reading_host_state VALUES (?, ?, ?, ?)').run('node-1', 'other-device', 128, 'now');
 }
 
 function seedCachedContent(db) {
@@ -112,10 +112,10 @@ describe('android sync audit core', () => {
     expect(output).toContain('local_dirty_changes');
     expect(output).toContain('=== State Policy ===');
     expect(output).toContain('node_view_state rows: 2 non_local=1');
-    expect(output).toContain('node_reading_device_state rows: 1 non_local=1');
-    expect(report.statePolicy.devicePrivate).toMatchObject({
-      localDeviceId: 'android-test-device',
-      nonLocalNodeReadingDeviceStateRows: 1,
+    expect(output).toContain('node_reading_host_state rows: 1 non_local=1');
+    expect(report.statePolicy.hostPrivate).toMatchObject({
+      currentHostName: 'android-test-device',
+      nonLocalNodeReadingHostStateRows: 1,
       nonLocalNodeViewStateRows: 1
     });
     expect(output).toContain('=== Suspected Broken Layer ===');

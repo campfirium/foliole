@@ -45,10 +45,10 @@ export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
   ) AS payload_json FROM pdf_page_text WHERE attachment_id || ':' || page = ?`,
   setting: `SELECT json_object(
     'key', key, 'scope', scope, 'platform', platform, 'form_factor', form_factor,
-    'device_id', device_id, 'value_json', value_json, 'content_hash', content_hash,
+    'host_name', host_name, 'value_json', value_json, 'content_hash', content_hash,
     'updated_at', updated_at, 'deleted_at', deleted_at
   ) AS payload_json FROM setting_records
-    WHERE scope || ':' || platform || ':' || form_factor || ':' || device_id || ':' || key = ?`,
+    WHERE scope || ':' || platform || ':' || form_factor || ':' || host_name || ':' || key = ?`,
   watched_folder: `SELECT json_object(
     'binding_id', binding_id, 'connected_device_id', connected_device_id,
     'connected_device_name', connected_device_name, 'connected_platform', connected_platform,

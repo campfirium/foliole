@@ -3,18 +3,17 @@ import { describe, expect, it, vi } from 'vitest';
 import { ANDROID_COMPANION_MIGRATION_PLAN } from '../../../../../lib/core/database/androidCompanionMigrationSchemaStatements';
 import {
   COMPANION_DATABASE_VERSION,
-  type NativeCompanionBootstrapState
+  type NativeCompanionBootstrapPayload
 } from '../../../../../lib/platform/nativeCompanionContract';
 
 import { initializeIosCompanionDatabase, type IosCompanionDatabaseManager } from './iosCompanionDatabaseBootstrap';
 
-function nativeState(): NativeCompanionBootstrapState {
+function nativeState(): NativeCompanionBootstrapPayload {
   return {
     booted_at: '2026-07-19T08:00:00Z',
     database_path: null,
     database_ready: false,
-    device_id: 'ios-device',
-    device_name: 'iPhone',
+    host_name: 'iPhone',
     runtime_kind: 'ios-capacitor'
   };
 }
@@ -97,7 +96,8 @@ describe('iosCompanionDatabaseBootstrap', () => {
     expect(result).toMatchObject({
       database_path: '/Library/CapacitorDatabase/foliole-companionSQLite.db',
       database_ready: true,
-      device_id: 'ios-device'
+      device_id: 'iPhone',
+      host_name: 'iPhone'
     });
     expect(manager.createConnection).toHaveBeenCalledWith(
       'foliole-companion', false, 'no-encryption', COMPANION_DATABASE_VERSION, false
@@ -106,8 +106,8 @@ describe('iosCompanionDatabaseBootstrap', () => {
     expect(connection.beginTransaction).toHaveBeenCalledTimes(1);
     expect(connection.commitTransaction).toHaveBeenCalledTimes(1);
     expect(connection.run).toHaveBeenCalledWith(
-      expect.stringContaining('INSERT INTO companion_meta'),
-      ['device_id', 'ios-device', '2026-07-19T08:00:00Z'],
+      expect.stringContaining('INSERT OR REPLACE INTO companion_meta'),
+      ['device_id', 'iPhone', '2026-07-19T08:00:00Z'],
       false
     );
   });
@@ -123,19 +123,14 @@ describe('iosCompanionDatabaseBootstrap', () => {
 });
 
 describe('iosCompanionDatabaseBootstrap host profile migration', () => {
-  it('adopts the current host profile and clears legacy credentials once', async () => {
+  it('transfers permanent state without changing the frozen execution identity', async () => {
     const { connection, manager } = harness({ existed: true, storedId: 'different-device', version: 21 });
-    const resetCredentials = vi.fn(async () => undefined);
 
-    await expect(initializeIosCompanionDatabase(nativeState(), manager, { resetCredentials }))
-      .resolves.toMatchObject({ device_id: 'ios-device' });
+    await expect(initializeIosCompanionDatabase(nativeState(), manager))
+      .resolves.toMatchObject({ device_id: 'different-device', host_name: 'iPhone' });
     expect(connection.beginTransaction).toHaveBeenCalledOnce();
-    expect(connection.run).toHaveBeenCalledWith(
-      expect.stringContaining('DELETE FROM sync_group_local_state'), ['different-device'], false
-    );
-    expect(resetCredentials).toHaveBeenCalledWith('ios-capacitor');
-    expect(connection.run).toHaveBeenCalledWith(
-      expect.stringContaining('device_identity_reset_pending'), ['ios-device'], false
+    expect(connection.run).not.toHaveBeenCalledWith(
+      expect.stringContaining('DELETE FROM sync_group_local_state'), expect.anything(), false
     );
   });
 });

@@ -1,11 +1,11 @@
 export const ANDROID_COMPANION_SYNC_PAYLOAD_ROUTING = {
   argModeKey: 'argMode',
-  defaultDeviceId: '*',
+  defaultHostName: '*',
   deletedAtKey: 'deleted_at',
   noneArgMode: 'none',
   objectIdArgMode: 'object_id',
   objectIdDelimiter: ':',
-  objectIdDeviceIdPartIndex: 3,
+  objectIdHostNamePartIndex: 3,
   objectIdKey: 'object_id',
   objectIdKeyPartIndex: 4,
   objectIdPartLimit: 5,

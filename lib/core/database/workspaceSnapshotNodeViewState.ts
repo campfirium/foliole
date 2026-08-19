@@ -2,7 +2,7 @@ import type { PersistedNodeViewState } from '../../platform/persistedNodeViewSta
 import { normalizeNodeViewStateWriteSource } from '../../platform/persistedNodeViewState.js';
 
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
-import { loadDatabaseDeviceId } from './syncDeviceIdentity.js';
+import { loadDatabaseHostName } from './syncHostIdentity.js';
 
 interface NodeViewStateSnapshotRow extends DatabaseRow {
   node_id: string;
@@ -14,8 +14,8 @@ interface NodeViewStateSnapshotRow extends DatabaseRow {
 }
 
 function queryPersistedNodeViewRows(driver: DatabaseDriver): NodeViewStateSnapshotRow[] {
-  const deviceId = loadDatabaseDeviceId(driver);
-  if (!deviceId) {
+  const hostName = loadDatabaseHostName(driver);
+  if (!hostName) {
     return [];
   }
   return driver.queryAll<NodeViewStateSnapshotRow>(
@@ -27,8 +27,8 @@ function queryPersistedNodeViewRows(driver: DatabaseDriver): NodeViewStateSnapsh
        source,
        updated_at
      FROM node_view_state
-     WHERE device_id = ?`,
-    [deviceId]
+     WHERE host_name = ?`,
+    [hostName]
   );
 }
 

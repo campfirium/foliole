@@ -139,13 +139,13 @@ export const settingRecords = sqliteTable(
     scope: text('scope').notNull(),
     platform: text('platform').notNull().default('*'),
     formFactor: text('form_factor').notNull().default('*'),
-    deviceId: text('device_id').notNull().default('*'),
+    hostName: text('host_name').notNull().default('*'),
     valueJson: text('value_json').notNull(),
     contentHash: text('content_hash').notNull(),
     updatedAt: text('updated_at').notNull(),
     deletedAt: text('deleted_at')
   },
-  (table) => [primaryKey({ columns: [table.key, table.scope, table.platform, table.formFactor, table.deviceId] })]
+  (table) => [primaryKey({ columns: [table.key, table.scope, table.platform, table.formFactor, table.hostName] })]
 );
 
 export const pdfPageText = sqliteTable(

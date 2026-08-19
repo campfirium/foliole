@@ -16,17 +16,22 @@ function createFreshSchema(sqlite: DatabaseMigrationTarget) {
   setUserVersion(sqlite, DATABASE_SCHEMA_VERSION);
 }
 
-export function initializeDatabaseSchema(sqlite: DatabaseMigrationTarget) {
+export function initializeDatabaseSchema(
+  sqlite: DatabaseMigrationTarget,
+  options: { beforeVersionCommit?: () => void } = {}
+) {
   const currentVersion = readUserVersion(sqlite);
-  if (currentVersion === DATABASE_SCHEMA_VERSION) {
+  if (currentVersion === DATABASE_SCHEMA_VERSION && !options.beforeVersionCommit) {
     return;
   }
   const applyInTransaction = sqlite.transaction(() => {
     if (currentVersion === 0) {
       createFreshSchema(sqlite);
+      options.beforeVersionCommit?.();
       return;
     }
     if (currentVersion === DATABASE_SCHEMA_VERSION) {
+      options.beforeVersionCommit?.();
       return;
     }
     if (currentVersion > DATABASE_SCHEMA_VERSION) {
@@ -39,12 +44,16 @@ export function initializeDatabaseSchema(sqlite: DatabaseMigrationTarget) {
       sqlite,
       targetVersion: DATABASE_SCHEMA_VERSION
     });
+    options.beforeVersionCommit?.();
   });
   applyInTransaction();
 }
 
-export function initializeDatabaseConnection<T extends DatabaseConnectionLike>(connection: T): T {
-  initializeDatabaseSchema(connection.sqlite);
+export function initializeDatabaseConnection<T extends DatabaseConnectionLike>(
+  connection: T,
+  options: { beforeVersionCommit?: () => void } = {}
+): T {
+  initializeDatabaseSchema(connection.sqlite, options);
   return connection;
 }
 

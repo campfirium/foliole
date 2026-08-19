@@ -20,6 +20,7 @@ vi.mock('../ipc/paths.js', () => ({
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { resetSeededWorkspace } from './databaseTestWorkspace.js';
 import { loadDesktopDeviceId } from './deviceIdentity.js';
+import { loadOrCreateDesktopHostName } from './hostProfile.js';
 import { initializeDatabase } from './migrate.js';
 import { loadReadingProgress, saveReadingProgress } from './readingProgress.js';
 
@@ -46,7 +47,7 @@ it('returns empty reading progress shape when sqlite has no rows', () => {
 });
 
 it('persists and loads active node and per-node view state from sqlite', () => {
-  const deviceId = loadDesktopDeviceId();
+  const hostName = loadOrCreateDesktopHostName('2026-03-06T10:00:00.000Z');
   saveReadingProgress({
     activeNodeId: 'node-2',
     browseRootNodeId: 'special-home',
@@ -88,8 +89,8 @@ it('persists and loads active node and per-node view state from sqlite', () => {
     }
   });
   expect(openDatabaseConnection().sqlite
-    .prepare('SELECT device_id FROM node_view_state WHERE node_id = ?')
-    .get('node-1')).toEqual({ device_id: deviceId });
+    .prepare('SELECT host_name FROM node_view_state WHERE node_id = ?')
+    .get('node-1')).toEqual({ host_name: hostName });
 });
 
 it('persists close flush source and keeps newer user scroll rows', () => {
@@ -182,6 +183,7 @@ it('does not let restore overwrite saved user reading positions', () => {
 
 it('writes sync object state for active node and node view states', () => {
   const deviceId = loadDesktopDeviceId();
+  const hostName = loadOrCreateDesktopHostName('2026-03-06T10:00:00.000Z');
   saveReadingProgress({
     activeNodeId: 'node-2',
     browseRootNodeId: 'special-home',
@@ -210,9 +212,9 @@ it('writes sync object state for active node and node view states', () => {
     .all() as Array<Record<string, unknown>>;
 
   expect(rows.map((row) => row.object_id)).toEqual([
-    `session_resume:windows:desktop:${deviceId}:active_node`,
-    `session_resume:windows:desktop:${deviceId}:node:node-1`,
-    `session_resume:windows:desktop:${deviceId}:node:node-2`
+    `session_resume:windows:desktop:${hostName}:active_node`,
+    `session_resume:windows:desktop:${hostName}:node:node-1`,
+    `session_resume:windows:desktop:${hostName}:node:node-2`
   ]);
   expect(rows.every((row) => row.last_modified_by_device_id === deviceId)).toBe(true);
   expect(rows.every((row) => row.sync_dirty === 1)).toBe(true);

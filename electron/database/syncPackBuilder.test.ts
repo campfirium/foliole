@@ -124,7 +124,7 @@ function expectNodePackRows(packPath: string) {
       database_compressed_sha256: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
       database_uncompressed_sha256: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
       format: 'foliole.sync-pack',
-      format_version: 4,
+      format_version: 5,
       created_at: '2026-04-27T02:00:00.000Z',
       from_device_id: 'desktop-fixture',
       pack_id: 'pack-1',

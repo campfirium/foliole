@@ -11,6 +11,6 @@ it('uses the desktop sync-pack envelope, table, and protocol contracts', () => {
   expect(definitions.compression).toBe('zlib');
   expect(definitions.protocol).toMatchObject({
     capabilities: ['lan-sync-v1', 'sync-group-facts-v1', 'workgroup-aead-v1'],
-    version: 1
+    version: 2
   });
 });

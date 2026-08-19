@@ -4,6 +4,7 @@ import { buildSyncPackApplyableRowsSql, type SyncPackApplyableRowsOptions } from
 
 export interface SyncPackSyncObjectsOptions extends SyncPackApplyableRowsOptions {
   deviceId: string;
+  hostName?: string;
 }
 
 export interface SyncPackSyncObjectRecord {
@@ -17,15 +18,15 @@ export interface SyncPackSyncObjectRecord {
 
 interface SyncPackSyncObjectRow extends DbRow, SyncPackSyncObjectRecord {}
 
-export function isConsumableSyncPackSyncObject(record: Pick<SyncPackSyncObjectRecord, 'object_id' | 'object_type'>, deviceId: string) {
+export function isConsumableSyncPackSyncObject(record: Pick<SyncPackSyncObjectRecord, 'object_id' | 'object_type'>, hostName?: string) {
   if (record.object_type !== 'view_state') return true;
-  return isLocalAndroidViewStateObject(record.object_id, deviceId);
+  return isLocalAndroidViewStateObject(record.object_id, hostName);
 }
 
-export function isLocalAndroidViewStateObject(objectId: string, deviceId?: string) {
-  if (!deviceId) return false;
-  const parts = objectId.split(':', 5);
-  return parts.length === 5 && parts[1] === 'android' && parts[3] === deviceId;
+export function isLocalAndroidViewStateObject(objectId: string, hostName?: string) {
+  if (!hostName) return false;
+  const parts = objectId.split(':');
+  return parts.length >= 5 && parts[1] === 'android' && parts[3] === hostName;
 }
 
 export async function loadSyncPackSyncObjectsWithDbPort(
@@ -33,7 +34,7 @@ export async function loadSyncPackSyncObjectsWithDbPort(
   options: SyncPackSyncObjectsOptions
 ) {
   const rows = await port.query<SyncPackSyncObjectRow>(buildSyncPackSyncObjectsQuery(options));
-  return rows.filter((row) => isConsumableSyncPackSyncObject(row, options.deviceId));
+  return rows.filter((row) => isConsumableSyncPackSyncObject(row, options.hostName));
 }
 
 export async function applySyncPackSettingObjectsWithDbPort(
@@ -43,7 +44,7 @@ export async function applySyncPackSettingObjectsWithDbPort(
   const records = (await loadSyncPackSyncObjectsWithDbPort(port, options))
     .filter((record) => record.object_type === 'setting');
   for (const record of records) {
-    await applySyncObjectPayloadWithDbPort(port, record);
+    await applySyncObjectPayloadWithDbPort(port, record, options.hostName ? { hostName: options.hostName } : {});
   }
   return records.length;
 }

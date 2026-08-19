@@ -138,7 +138,7 @@ it('projects collection names without retaining long-lived content bodies', () =
   expect(workspaceListSql).toContain('n.content AS collection_source_content');
   expect(workspaceListSql).not.toContain('content_blob_data');
   expect(workspaceListSql).toContain('LEFT JOIN content_blobs cb');
-  expect(workspaceListSql).toContain('node_reading_device_state');
+  expect(workspaceListSql).toContain('node_reading_host_state');
   expect(workspaceListSql).not.toContain('CAST(cbd.data AS TEXT)');
   expect(workspaceListSql).not.toContain('n.reveal,');
   expect(workspaceListSql).not.toContain('n.content,');

@@ -76,9 +76,9 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
     sql: `SELECT (${androidReadableArticleReferencePdfAttachmentSql('?')}) AS attachment_id`,
     columns: [{ key: 'attachment_id', source: 'attachment_id', type: 'string' }]
   },
-  nodeViewStatesByDevice: {
+  nodeViewStatesByHost: {
     resultKey: 'states',
-    sql: 'SELECT node_id, scroll_top, selection_from, selection_to, updated_at, source FROM node_view_state WHERE device_id = ?',
+    sql: 'SELECT node_id, scroll_top, selection_from, selection_to, updated_at, source FROM node_view_state WHERE host_name = ?',
     columns: [
       { key: 'node_id', source: 'node_id', type: 'string' },
       { key: 'scroll_top', source: 'scroll_top', type: 'long' },
@@ -129,7 +129,7 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
       'nr.stability, nr.difficulty, nr.elapsed_days, nr.scheduled_days, nr.reps, nr.lapses, n.body_blob_hash ' +
       'FROM nodes n LEFT JOIN visible_nodes visible ON visible.id = n.id __CONTENT_BLOB_JOIN__ ' +
       'LEFT JOIN node_reading rd ON rd.node_id = n.id AND visible.id IS NOT NULL ' +
-      'LEFT JOIN node_reading_device_state rds ON rds.node_id = n.id AND rds.device_id = ? AND visible.id IS NOT NULL ' +
+      'LEFT JOIN node_reading_host_state rds ON rds.node_id = n.id AND rds.host_name = ? AND visible.id IS NOT NULL ' +
       'LEFT JOIN node_review nr ON nr.node_id = n.id AND visible.id IS NOT NULL ' +
       'ORDER BY COALESCE((SELECT no.position FROM node_order no WHERE no.node_id = n.id), 2147483647), ' +
       'n.updated_at DESC, n.created_at DESC, n.id ASC',

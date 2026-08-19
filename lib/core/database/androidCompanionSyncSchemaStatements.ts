@@ -6,12 +6,12 @@ export const ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS = [
     scope TEXT NOT NULL,
     platform TEXT NOT NULL,
     form_factor TEXT NOT NULL,
-    device_id TEXT NOT NULL,
+    host_name TEXT NOT NULL,
     value_json TEXT NOT NULL,
     content_hash TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     deleted_at TEXT,
-    PRIMARY KEY (key, scope, platform, form_factor, device_id)
+    PRIMARY KEY (key, scope, platform, form_factor, host_name)
   )`,
   `CREATE TABLE IF NOT EXISTS sync_object_state (
     object_type TEXT NOT NULL,

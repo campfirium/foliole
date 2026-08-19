@@ -12,7 +12,7 @@ export const ANDROID_COMPANION_CONVERGENCE_MUTATION_DEFINITIONS = {
   nodeRekeyReview: 'UPDATE node_review SET node_id = ? WHERE node_id = ?',
   nodeRekeyReading: 'UPDATE node_reading SET node_id = ? WHERE node_id = ?',
   nodeRekeyOpenState: 'UPDATE node_open_state SET node_id = ? WHERE node_id = ?',
-  nodeRekeyReadingDeviceState: 'UPDATE node_reading_device_state SET node_id = ? WHERE node_id = ?',
+  nodeRekeyReadingHostState: 'UPDATE node_reading_host_state SET node_id = ? WHERE node_id = ?',
   nodeRekeyReviewLog: 'UPDATE review_log SET node_id = ? WHERE node_id = ?',
   nodeRekeyVersion:
     'UPDATE node_sync_versions SET object_id = ?, snapshot_json = ? WHERE version_id = ?',

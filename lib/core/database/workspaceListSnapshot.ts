@@ -1,5 +1,5 @@
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
-import { loadDatabaseDeviceId } from './syncDeviceIdentity.js';
+import { requireDatabaseHostName } from './syncHostIdentity.js';
 import { WORKSPACE_BODY_STATUS_SQL } from './workspaceBodyStatus.js';
 import {
   buildWorkspaceListNodesById,
@@ -29,7 +29,7 @@ interface WorkspaceMetaRow extends DatabaseRow {
 const ACTIVE_NODE_META_KEY = 'active_node_id';
 
 function queryWorkspaceRows(driver: DatabaseDriver) {
-  const deviceId = loadDatabaseDeviceId(driver) ?? '*';
+  const hostName = requireDatabaseHostName(driver);
   return driver.queryAll<WorkspaceNodeRow>(
     `SELECT
        n.id,
@@ -78,9 +78,9 @@ function queryWorkspaceRows(driver: DatabaseDriver) {
      FROM nodes n
      LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash
      LEFT JOIN node_reading rd ON rd.node_id = n.id
-     LEFT JOIN node_reading_device_state rds ON rds.node_id = n.id AND rds.device_id = ?
+     LEFT JOIN node_reading_host_state rds ON rds.node_id = n.id AND rds.host_name = ?
      LEFT JOIN node_review nr ON nr.node_id = n.id`
-    , [deviceId]
+    , [hostName]
   );
 }
 

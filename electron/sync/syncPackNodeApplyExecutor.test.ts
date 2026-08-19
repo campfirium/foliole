@@ -95,7 +95,8 @@ it('applies pack nodes only when the attached pack cursor is contiguous', async 
   try {
     await expect(applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor: 0,
-      deviceId: 'android-device'
+      deviceId: 'android-device',
+      hostName: 'Android test host'
     })).resolves.toMatchObject({
       applied: true,
       appliedObjectCount: 2,
@@ -104,7 +105,8 @@ it('applies pack nodes only when the attached pack cursor is contiguous', async 
     });
     await expect(applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor: 1,
-      deviceId: 'android-device'
+      deviceId: 'android-device',
+      hostName: 'Android test host'
     })).resolves.toMatchObject({
       appliedObjectCount: 0,
       applied: false,
@@ -123,14 +125,16 @@ it('applies pack nodes only when the attached pack cursor is contiguous', async 
     sync_dirty: 0
   });
   expect(connection.sqlite.prepare(
-    `SELECT object_id FROM sync_object_state WHERE object_type = 'setting' AND object_id = 'setting-1'`
-  ).get()).toEqual({ object_id: 'setting-1' });
+    `SELECT object_id FROM sync_object_state
+     WHERE object_type = 'setting' AND object_id = 'host:android:phone:Android test host:theme'`
+  ).get()).toEqual({ object_id: 'host:android:phone:Android test host:theme' });
   expect(connection.sqlite.prepare(
     "SELECT snapshot_json FROM node_sync_versions WHERE version_id = 'desktop#1'"
   ).get()).toEqual({ snapshot_json: '{"id":"node-1","title":"Packed Node"}' });
   expect(connection.sqlite.prepare(
     `SELECT value_json FROM setting_records
-     WHERE scope = 'device' AND platform = 'android' AND form_factor = 'phone' AND device_id = '*' AND key = 'theme'`
+     WHERE scope = 'host' AND platform = 'android' AND form_factor = 'phone'
+       AND host_name = 'Android test host' AND key = 'theme'`
   ).get()).toEqual({ value_json: '{"mode":"dark"}' });
   expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM sync_delivery_receipts').get()).toEqual({ count: 0 });
 });
@@ -149,7 +153,8 @@ it('does not apply live node state rows when the pack has no node payload', asyn
   try {
     await applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor: 0,
-      deviceId: 'android-device'
+      deviceId: 'android-device',
+      hostName: 'Android test host'
     });
   } finally {
     await port.run('DETACH DATABASE inc');

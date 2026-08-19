@@ -88,7 +88,7 @@ it('applies generic sync object payloads and marks them clean', async () => {
   expect(driver.queryOne<{ value_json: string }>('SELECT value_json FROM setting_records WHERE key = ?', ['app_settings']))
     .toEqual({ value_json: '{"theme":"dark"}' });
   expect(driver.queryOne<{ count: number }>(
-    'SELECT COUNT(*) AS count FROM node_reading_device_state WHERE node_id = ?',
+    'SELECT COUNT(*) AS count FROM node_reading_host_state WHERE node_id = ?',
     ['node-1']
   )).toEqual({ count: 0 });
   expect(driver.queryOne<{ sync_dirty: number }>(

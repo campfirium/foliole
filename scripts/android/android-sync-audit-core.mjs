@@ -128,7 +128,7 @@ function auditDatabases(desktopPath, androidPath, metadata = {}) {
       },
       localPush: localPushBlockers(android),
       objectTypes: mergeObjectTypeStats(objectTypeStats(desktop, androidCursor), objectTypeStats(android)),
-      statePolicy: policyBreakdown(android, metaValue(android, 'device_id')),
+      statePolicy: policyBreakdown(android, metaValue(android, 'host_name')),
       resources: resourceBacklog(android),
       syncEvents: syncEventSummary(android),
       structural: compareStructures(desktop, android)
@@ -176,10 +176,10 @@ function formatAuditReport(report) {
   lines.push(
     '',
     '=== State Policy ===',
-    `device private view_state rows: ${report.statePolicy.devicePrivate.viewStateSyncRows}`,
-    `node_view_state rows: ${formatDevicePrivateRows(report.statePolicy.devicePrivate.nodeViewStateRows, report.statePolicy.devicePrivate.nonLocalNodeViewStateRows)}`,
-    `node_reading_device_state rows: ${formatDevicePrivateRows(report.statePolicy.devicePrivate.nodeReadingDeviceStateRows, report.statePolicy.devicePrivate.nonLocalNodeReadingDeviceStateRows)}`,
-    `device-private cleanup: node scripts/electron-sqlite-runner.mjs scripts/android/android-sync-cleanup-device-private.mjs --db <android.db>`,
+    `Host-private view_state rows: ${report.statePolicy.hostPrivate.viewStateSyncRows}`,
+    `node_view_state rows: ${formatHostPrivateRows(report.statePolicy.hostPrivate.nodeViewStateRows, report.statePolicy.hostPrivate.nonLocalNodeViewStateRows)}`,
+    `node_reading_host_state rows: ${formatHostPrivateRows(report.statePolicy.hostPrivate.nodeReadingHostStateRows, report.statePolicy.hostPrivate.nonLocalNodeReadingHostStateRows)}`,
+    `Host-private cleanup: node scripts/electron-sqlite-runner.mjs scripts/android/android-sync-cleanup-host-private.mjs --db <android.db>`,
     '',
     '=== Resource Backlog ===',
     `content_blob metadata missing from android: ${report.content.missingMetadata.length}`,
@@ -212,7 +212,7 @@ function formatLatestRun(run) {
   return `${run.result ?? 'unknown'} ${run.message}`.trim();
 }
 
-function formatDevicePrivateRows(total, nonLocal) {
+function formatHostPrivateRows(total, nonLocal) {
   return nonLocal === null ? `${total} non_local=unknown` : `${total} non_local=${nonLocal}`;
 }
 

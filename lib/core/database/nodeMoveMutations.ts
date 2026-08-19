@@ -1,7 +1,7 @@
 import type { DatabaseDriver } from './driver.js';
 import type { UpsertNodeSnapshotInput } from './nodeMutationPayloads.js';
 import {
-  createUpsertNodeReadingDeviceStateStatement,
+  createUpsertNodeReadingHostStateStatement,
   createUpsertNodeReadingStatement
 } from './nodeMutationStatements.js';
 import { rewriteExistingNodeOrder } from './nodeOrderMutations.js';
@@ -21,6 +21,7 @@ export interface MoveNodesResult {
 export interface MoveNodePatchInput {
   nodeId: string;
   deviceId?: string;
+  hostName?: string;
   parentNodeId: string | null;
   reading?: UpsertNodeSnapshotInput['reading'];
   sequentialReadingEnabled?: boolean | null;
@@ -43,9 +44,9 @@ export function moveNodes(driver: DatabaseDriver, input: MoveNodesInput): MoveNo
      WHERE id = ?`
   );
   const upsertNodeReadingStatement = createUpsertNodeReadingStatement(driver);
-  const upsertNodeReadingDeviceStateStatement = createUpsertNodeReadingDeviceStateStatement(driver);
+  const upsertNodeReadingHostStateStatement = createUpsertNodeReadingHostStateStatement(driver);
   const deleteNodeReadingStatement = driver.prepare('DELETE FROM node_reading WHERE node_id = ?');
-  const deleteNodeReadingDeviceStateStatement = driver.prepare('DELETE FROM node_reading_device_state WHERE node_id = ?');
+  const deleteNodeReadingHostStateStatement = driver.prepare('DELETE FROM node_reading_host_state WHERE node_id = ?');
 
   driver.transaction(() => {
     const pathInvalidationNodeIds = readPathInvalidationNodeIds(driver, input.nodes);
@@ -59,9 +60,9 @@ export function moveNodes(driver: DatabaseDriver, input: MoveNodesInput): MoveNo
       ]);
       if ('reading' in node) {
         writeNodeReadingSnapshotWithSync(driver, toReadingSyncInput(node), {
-          deleteDeviceState: deleteNodeReadingDeviceStateStatement.run,
+          deleteDeviceState: deleteNodeReadingHostStateStatement.run,
           deleteReading: deleteNodeReadingStatement.run,
-          upsertDeviceState: upsertNodeReadingDeviceStateStatement.run,
+          upsertDeviceState: upsertNodeReadingHostStateStatement.run,
           upsertReading: upsertNodeReadingStatement.run
         });
       }
@@ -95,5 +96,6 @@ function toReadingSyncInput(node: MoveNodePatchInput): WriteNodeReadingSyncInput
   if (node.deviceId) {
     input.deviceId = node.deviceId;
   }
+  if (node.hostName) input.hostName = node.hostName;
   return input;
 }

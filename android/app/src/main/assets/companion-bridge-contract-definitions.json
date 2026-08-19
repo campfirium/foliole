@@ -77,9 +77,9 @@
       }
     },
     "bootstrap": {
-      "deviceNameDefaults": {
-        "defaultDeviceName": "Android device",
-        "emulatorDeviceName": "Android Emulator",
+      "hostNameDefaults": {
+        "defaultHostName": "Android device",
+        "emulatorHostName": "Android Emulator",
         "emulatorModelTokens": [
           "sdk",
           "gphone",
@@ -90,8 +90,7 @@
         "bootedAt": "booted_at",
         "databasePath": "database_path",
         "databaseReady": "database_ready",
-        "deviceId": "device_id",
-        "deviceName": "device_name",
+        "hostName": "host_name",
         "runtimeKind": "runtime_kind"
       },
       "runtimeKind": "android-capacitor"

@@ -15,6 +15,7 @@ export interface NodeReadingSyncPayload {
 }
 
 export interface WriteNodeReadingSyncInput {
+  hostName?: string;
   nodeId: string;
   deviceId?: string;
   reading?: NodeReadingSyncPayload | null;
@@ -114,22 +115,24 @@ export function writeNodeReadingSnapshotWithSync(
     input.reading.repetitionCount,
     input.reading.state
   ]);
-  if (input.deviceId) {
+  if (input.hostName) {
     statements.upsertDeviceState([
       input.nodeId,
-      input.deviceId,
+      input.hostName,
       input.reading.readingPosition,
       input.updatedAt
     ]);
+  }
+  if (input.deviceId) {
     recordNodeReadingUpsert(driver, { ...input, deviceId: input.deviceId, reading: input.reading });
   }
 }
 
 export function saveNodeReadingStateWithSync(driver: DatabaseDriver, input: WriteNodeReadingSyncInput) {
-  const deleteDeviceState = driver.prepare('DELETE FROM node_reading_device_state WHERE node_id = ?');
+  const deleteDeviceState = driver.prepare('DELETE FROM node_reading_host_state WHERE node_id = ?');
   const deleteReading = driver.prepare('DELETE FROM node_reading WHERE node_id = ?');
   const upsertDeviceState = driver.prepare(
-    'INSERT OR REPLACE INTO node_reading_device_state (node_id, device_id, reading_position, updated_at) VALUES (?, ?, ?, ?)'
+    'INSERT OR REPLACE INTO node_reading_host_state (node_id, host_name, reading_position, updated_at) VALUES (?, ?, ?, ?)'
   );
   const upsertReading = driver.prepare(
     `INSERT OR REPLACE INTO node_reading (

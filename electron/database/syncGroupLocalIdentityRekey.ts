@@ -122,7 +122,7 @@ function rekeyDeviceAttribution(driver: DatabaseDriver, from: string, to: string
     ['nodes', 'last_modified_by_device_id'], ['sync_object_state', 'last_modified_by_device_id'],
     ['sync_change_log', 'device_id'], ['node_sync_tombstones', 'device_id'],
     ['node_sync_conflicts', 'device_id'], ['node_text_alternatives', 'source_device_id'],
-    ['review_log', 'device_id'], ['node_reading_device_state', 'device_id'],
+    ['review_log', 'device_id'],
     ['attachment_blobs', 'source_device_id'], ['content_blobs', 'source_device_id']
   ] as const;
   for (const [table, column] of columns) driver.execute(`UPDATE ${table} SET ${column} = ? WHERE ${column} = ?`, [to, from]);

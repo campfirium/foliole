@@ -60,11 +60,11 @@ export function createUpsertNodeReadingStatement(driver: DatabaseDriver) {
   );
 }
 
-export function createUpsertNodeReadingDeviceStateStatement(driver: DatabaseDriver) {
+export function createUpsertNodeReadingHostStateStatement(driver: DatabaseDriver) {
   return driver.prepare(
-    `INSERT INTO node_reading_device_state (node_id, device_id, reading_position, updated_at)
+    `INSERT INTO node_reading_host_state (node_id, host_name, reading_position, updated_at)
      VALUES (?, ?, ?, ?)
-     ON CONFLICT(node_id, device_id) DO UPDATE SET
+     ON CONFLICT(node_id, host_name) DO UPDATE SET
        reading_position = excluded.reading_position,
        updated_at = excluded.updated_at`
   );

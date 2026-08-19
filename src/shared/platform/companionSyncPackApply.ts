@@ -28,7 +28,8 @@ export async function applyCompanionDesktopSyncPack(args: {
   }
   try {
     return await applyIosCompanionSyncPackPath({
-      deviceId: bootstrap.device_id, packPath, sourcePeerId: args.sourcePeerId
+      deviceId: bootstrap.device_id, ...(bootstrap.host_name ? { hostName: bootstrap.host_name } : {}),
+      packPath, sourcePeerId: args.sourcePeerId
     });
   } finally {
     await deleteCompanionDownloadedSyncPack(packPath);

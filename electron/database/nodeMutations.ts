@@ -22,6 +22,7 @@ import { assertFoliolePublishedDeleteAllowed } from '../foliolePublish/foliolePu
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
+import { loadOrCreateDesktopHostName } from './hostProfile.js';
 import { markKeepImportItemsLocallyDeletedByNodeDeletedAt } from './keepImportItems.js';
 import { flushDirtyNodeSyncVersions, flushNodeSyncVersion } from './nodeSyncVersions.js';
 import {
@@ -49,7 +50,8 @@ export type {
 export function upsertNodeSnapshot(input: UpsertNodeSnapshotInput, options: UpsertNodeSnapshotOptions = {}): void {
   upsertNodeSnapshotViaDriver(openDatabaseConnection().driver, {
     ...input,
-    deviceId: loadOrCreateDesktopDeviceId(input.updatedAt)
+    deviceId: loadOrCreateDesktopDeviceId(input.updatedAt),
+    hostName: loadOrCreateDesktopHostName(input.updatedAt)
   }, options);
   if ('reading' in input) {
     if (input.reading?.state === 'dismissed') {
@@ -65,7 +67,8 @@ export function upsertNodeSnapshotWithOrder(input: UpsertNodeSnapshotInput, node
   withTransaction(connection.driver, () => {
     upsertNodeSnapshotViaDriver(connection.driver, {
       ...input,
-      deviceId: loadOrCreateDesktopDeviceId(input.updatedAt)
+      deviceId: loadOrCreateDesktopDeviceId(input.updatedAt),
+      hostName: loadOrCreateDesktopHostName(input.updatedAt)
     });
     replaceNodeOrderViaDriver(connection.driver, nodeOrder);
   });
@@ -102,10 +105,11 @@ export function moveNodes(input: MoveNodesInput): MoveNodesResult {
   const connection = openDatabaseConnection();
   const now = new Date().toISOString();
   const deviceId = loadOrCreateDesktopDeviceId(now);
+  const hostName = loadOrCreateDesktopHostName(now);
   return withTransaction(connection.driver, () => {
     const result = moveNodesViaDriver(connection.driver, {
       nodeOrder: input.nodeOrder,
-      nodes: input.nodes.map((node) => ({ ...node, deviceId }))
+      nodes: input.nodes.map((node) => ({ ...node, deviceId, hostName }))
     });
     for (const node of input.nodes) {
       connection.driver.execute(

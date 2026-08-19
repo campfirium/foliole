@@ -35,6 +35,7 @@ import { applySyncPackViewStateObjectsWithDbPort } from './syncPackViewStateObje
 export interface SyncPackNodeSurfaceApplyOptions extends SyncPackNodeApplyOptions {
   currentCursor: number;
   deviceId: string;
+  hostName?: string;
   sourcePeerId?: string;
 }
 

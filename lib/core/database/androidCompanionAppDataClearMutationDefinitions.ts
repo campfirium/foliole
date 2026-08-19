@@ -12,7 +12,7 @@ export const ANDROID_COMPANION_APP_DATA_CLEAR_MUTATIONS = [
   { table: 'node_sync_tombstones', statementName: 'appDataClearNodeSyncTombstones' },
   { table: 'node_sync_versions', statementName: 'appDataClearNodeSyncVersions' },
   { table: 'node_view_state', statementName: 'appDataClearNodeViewState' },
-  { table: 'node_reading_device_state', statementName: 'appDataClearNodeReadingDeviceState' },
+  { table: 'node_reading_host_state', statementName: 'appDataClearNodeReadingHostState' },
   { table: 'node_order', statementName: 'appDataClearNodeOrder' },
   { table: 'node_attachments', statementName: 'appDataClearNodeAttachments' },
   { table: 'attachment_blobs', statementName: 'appDataClearAttachmentBlobs' },

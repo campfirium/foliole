@@ -53,8 +53,8 @@
       "statementName": "appDataClearNodeViewState"
     },
     {
-      "table": "node_reading_device_state",
-      "statementName": "appDataClearNodeReadingDeviceState"
+      "table": "node_reading_host_state",
+      "statementName": "appDataClearNodeReadingHostState"
     },
     {
       "table": "node_order",
@@ -194,7 +194,7 @@
     "nodeRekeyReview": "UPDATE node_review SET node_id = ? WHERE node_id = ?",
     "nodeRekeyReading": "UPDATE node_reading SET node_id = ? WHERE node_id = ?",
     "nodeRekeyOpenState": "UPDATE node_open_state SET node_id = ? WHERE node_id = ?",
-    "nodeRekeyReadingDeviceState": "UPDATE node_reading_device_state SET node_id = ? WHERE node_id = ?",
+    "nodeRekeyReadingHostState": "UPDATE node_reading_host_state SET node_id = ? WHERE node_id = ?",
     "nodeRekeyReviewLog": "UPDATE review_log SET node_id = ? WHERE node_id = ?",
     "nodeRekeyVersion": "UPDATE node_sync_versions SET object_id = ?, snapshot_json = ? WHERE version_id = ?",
     "nodeRekeyTombstones": "UPDATE node_sync_tombstones SET node_id = ? WHERE node_id = ?",
@@ -210,16 +210,16 @@
     "syncNodeOpenStateDelete": "DELETE FROM node_open_state WHERE node_id = ?",
     "syncNodeOpenStateUpsert": "INSERT INTO node_open_state (node_id, last_opened_at) VALUES (?, ?) ON CONFLICT(node_id) DO UPDATE SET last_opened_at = excluded.last_opened_at WHERE excluded.last_opened_at > node_open_state.last_opened_at",
     "syncNodeReadingDelete": "DELETE FROM node_reading WHERE node_id = ?",
-    "syncNodeReadingDeviceStateDelete": "DELETE FROM node_reading_device_state WHERE node_id = ?",
+    "syncNodeReadingHostStateDelete": "DELETE FROM node_reading_host_state WHERE node_id = ?",
     "syncNodeReadingUpsert": "INSERT OR REPLACE INTO node_reading (node_id, interval_duration_ms, interval_growth_factor, last_handled_at, next_at, priority, repetition_count, state) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-    "syncNodeReadingDeviceStateUpsert": "INSERT OR REPLACE INTO node_reading_device_state (node_id, device_id, reading_position, updated_at) VALUES (?, ?, ?, ?)",
+    "syncNodeReadingHostStateUpsert": "INSERT OR REPLACE INTO node_reading_host_state (node_id, host_name, reading_position, updated_at) VALUES (?, ?, ?, ?)",
     "syncNodeReviewDelete": "DELETE FROM node_review WHERE node_id = ?",
     "syncNodeReviewUpsert": "INSERT OR REPLACE INTO node_review (node_id, due, last_review_at, state, stability, difficulty, elapsed_days, scheduled_days, reps, lapses) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    "syncSettingRecordUpsert": "INSERT OR REPLACE INTO setting_records (key, scope, platform, form_factor, device_id, value_json, content_hash, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    "syncSettingRecordUpsert": "INSERT OR REPLACE INTO setting_records (key, scope, platform, form_factor, host_name, value_json, content_hash, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     "syncViewActiveNodeDelete": "DELETE FROM workspace_meta WHERE key = 'active_node_id'",
     "syncViewActiveNodeUpsert": "INSERT OR REPLACE INTO workspace_meta (key, value, updated_at) VALUES (?, ?, ?)",
-    "syncViewNodeStateDelete": "DELETE FROM node_view_state WHERE node_id = ? AND device_id = ?",
-    "syncViewNodeStateUpsert": "INSERT OR REPLACE INTO node_view_state (node_id, device_id, scroll_top, selection_from, selection_to, source, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    "syncViewNodeStateDelete": "DELETE FROM node_view_state WHERE node_id = ? AND host_name = ?",
+    "syncViewNodeStateUpsert": "INSERT OR REPLACE INTO node_view_state (node_id, host_name, scroll_top, selection_from, selection_to, source, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
     "syncExternalDocumentMarkMissing": "UPDATE external_documents SET is_present = 0, missing_at = ?, updated_at = ? WHERE document_id = ?",
     "syncExternalDocumentUpsert": "INSERT OR REPLACE INTO external_documents (document_id, folder_id, relative_path, file_name, extension, source_size_bytes, source_modified_at, source_modified_ms, content_hash, title, opening_text, body_blob_hash, content, indexed_at, is_present, missing_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     "textBodyBlobManifestInsert": "INSERT OR IGNORE INTO content_blobs (hash, storage_key, kind, mime_type, compression, original_size_bytes, stored_size_bytes, original_sha256, stored_sha256, availability, created_at, cached_at, last_verified_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -249,7 +249,7 @@
     "appDataClearNodeSyncTombstones": "DELETE FROM node_sync_tombstones",
     "appDataClearNodeSyncVersions": "DELETE FROM node_sync_versions",
     "appDataClearNodeViewState": "DELETE FROM node_view_state",
-    "appDataClearNodeReadingDeviceState": "DELETE FROM node_reading_device_state",
+    "appDataClearNodeReadingHostState": "DELETE FROM node_reading_host_state",
     "appDataClearNodeOrder": "DELETE FROM node_order",
     "appDataClearNodeOpenState": "DELETE FROM node_open_state",
     "appDataClearNodeAttachments": "DELETE FROM node_attachments",
@@ -284,8 +284,8 @@
     },
     "learning": {
       "readingDeleteMutationName": "syncNodeReadingDelete",
-      "readingDeviceStateDeleteMutationName": "syncNodeReadingDeviceStateDelete",
-      "readingDeviceStateUpsertMutationName": "syncNodeReadingDeviceStateUpsert",
+      "readingDeviceStateDeleteMutationName": "syncNodeReadingHostStateDelete",
+      "readingDeviceStateUpsertMutationName": "syncNodeReadingHostStateUpsert",
       "readingUpsertMutationName": "syncNodeReadingUpsert",
       "reviewDeleteMutationName": "syncNodeReviewDelete",
       "reviewUpsertMutationName": "syncNodeReviewUpsert"

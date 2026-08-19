@@ -6,6 +6,7 @@ import {
 
 import type { DatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
+import { loadOrCreateDesktopHostName } from './hostProfile.js';
 
 const VIEW_STATE_SCOPE = 'session_resume';
 const PLATFORM = 'windows';
@@ -25,15 +26,16 @@ export interface NodeViewStateSyncInput {
   updatedAt: string;
 }
 
-function toViewStateObjectId(deviceId: string, key: string) {
-  return `${VIEW_STATE_SCOPE}:${PLATFORM}:${FORM_FACTOR}:${deviceId}:${key}`;
+function toViewStateObjectId(hostName: string, key: string) {
+  return `${VIEW_STATE_SCOPE}:${PLATFORM}:${FORM_FACTOR}:${hostName}:${key}`;
 }
 
 function writeViewStateObject(connection: DatabaseConnection, key: string, payload: Record<string, unknown>, updatedAt: string) {
   const deviceId = loadOrCreateDesktopDeviceId(updatedAt);
-  const objectId = toViewStateObjectId(deviceId, key);
+  const hostName = loadOrCreateDesktopHostName(updatedAt);
+  const objectId = toViewStateObjectId(hostName, key);
   const syncPayload = {
-    device_id: deviceId,
+    host_name: hostName,
     form_factor: FORM_FACTOR,
     key,
     platform: PLATFORM,

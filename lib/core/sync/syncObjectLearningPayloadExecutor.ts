@@ -6,6 +6,7 @@ import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js'
 
 export interface SyncObjectPayloadApplyOptions {
   deviceId?: string;
+  hostName?: string;
 }
 
 export async function applyNodeReadingObject(
@@ -15,7 +16,7 @@ export async function applyNodeReadingObject(
 ) {
   if (record.deleted_at) {
     await port.run('DELETE FROM node_reading WHERE node_id = ?', [record.object_id]);
-    await port.run('DELETE FROM node_reading_device_state WHERE node_id = ?', [record.object_id]);
+    await port.run('DELETE FROM node_reading_host_state WHERE node_id = ?', [record.object_id]);
     return;
   }
   const payload = asObject(record);
@@ -42,7 +43,7 @@ export async function applyNodeReadingObject(
       incomingLastHandledAt, text(payload.next_at) ?? record.updated_at,
       numberOrNull(payload.priority) ?? 0, incomingRepetitionCount, state]
   );
-  await applyReadingPosition(port, record, payload, options.deviceId);
+  await applyReadingPosition(port, record, payload, options.hostName);
 }
 
 async function shouldApplyNodeReading(
@@ -122,14 +123,14 @@ async function applyReadingPosition(
   port: DbPort,
   record: SyncPackSyncObjectRecord,
   payload: Record<string, unknown>,
-  localDeviceId?: string
+  localHostName?: string
 ) {
   if (!('reading_position' in payload)) return;
-  const payloadDeviceId = text(payload.device_id);
-  if (!payloadDeviceId || payloadDeviceId !== localDeviceId) return;
+  const payloadHostName = text(payload.host_name);
+  if (!payloadHostName || payloadHostName !== localHostName) return;
   await port.run(
-    `INSERT INTO node_reading_device_state (node_id, device_id, reading_position, updated_at) VALUES (?, ?, ?, ?) ` +
-    `ON CONFLICT(node_id, device_id) DO UPDATE SET reading_position = excluded.reading_position, updated_at = excluded.updated_at`,
-    [record.object_id, localDeviceId, integer(payload.reading_position), record.updated_at]
+    `INSERT INTO node_reading_host_state (node_id, host_name, reading_position, updated_at) VALUES (?, ?, ?, ?) ` +
+    `ON CONFLICT(node_id, host_name) DO UPDATE SET reading_position = excluded.reading_position, updated_at = excluded.updated_at`,
+    [record.object_id, localHostName, integer(payload.reading_position), record.updated_at]
   );
 }

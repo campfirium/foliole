@@ -101,7 +101,7 @@ final class FolioleCompanionResourceQueryStringKeys {
             case "workspaceRead.snapshot.untitledSequenceMetaKey": return "untitled_sequence_by_parent";
             case "workspaceRead.viewState.defaultSource": return "user-scroll";
             case "workspaceRead.viewState.nodeIdRowKey": return "node_id";
-            case "workspaceRead.viewState.queryName": return "nodeViewStatesByDevice";
+            case "workspaceRead.viewState.queryName": return "nodeViewStatesByHost";
             case "workspaceRead.viewState.resultKey": return "states";
             default: throw new IllegalStateException("Companion resource query descriptor is missing string key: " + section + "." + group + "." + key);
         }

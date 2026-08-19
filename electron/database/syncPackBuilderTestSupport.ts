@@ -59,7 +59,7 @@ export function insertNodeSyncState() {
   );
   driver.execute(
     `INSERT INTO setting_records (
-       key, scope, platform, form_factor, device_id, value_json, content_hash, updated_at
+       key, scope, platform, form_factor, host_name, value_json, content_hash, updated_at
      ) VALUES ('app_settings', 'user_space', 'windows', 'desktop', '*',
        '{"theme":"dark","fullTextSearch.indexStrategy":"unicode61"}',
        'setting-hash', '2026-04-27T00:01:00.000Z')`

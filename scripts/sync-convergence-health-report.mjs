@@ -10,7 +10,7 @@ const LAYERS = {
   content: 'content_metadata',
   cursor: 'cursor',
   desktop: 'desktop_diagnostics',
-  devicePrivate: 'device_private_state',
+  hostPrivate: 'host_private_state',
   localPush: 'local_push_blocker',
   resource: 'resource_bytes',
   structure: 'structure',
@@ -60,9 +60,9 @@ function hasStructuralGap(android) {
   );
 }
 
-function hasDevicePrivateLeak(android) {
-  const policy = android?.statePolicy?.devicePrivate ?? {};
-  return (policy.nonLocalNodeViewStateRows ?? 0) > 0 || (policy.nonLocalNodeReadingDeviceStateRows ?? 0) > 0;
+function hasHostPrivateLeak(android) {
+  const policy = android?.statePolicy?.hostPrivate ?? {};
+  return (policy.nonLocalNodeViewStateRows ?? 0) > 0 || (policy.nonLocalNodeReadingHostStateRows ?? 0) > 0;
 }
 
 function hasResourceBytesGap(android) {
@@ -99,9 +99,9 @@ function collectEvidence(input) {
       structural: android.structural
     });
   }
-  if (hasDevicePrivateLeak(android)) {
-    addEvidence(evidence, LAYERS.devicePrivate, 'warning', 'Android contains non-local device-private state rows', {
-      devicePrivate: android.statePolicy.devicePrivate
+  if (hasHostPrivateLeak(android)) {
+    addEvidence(evidence, LAYERS.hostPrivate, 'warning', 'Android contains non-current Host state rows', {
+      hostPrivate: android.statePolicy.hostPrivate
     });
   }
   if ((android?.content?.missingMetadata?.length ?? 0) > 0) {
@@ -123,7 +123,7 @@ function selectPrimaryLayer(evidence, hasBothInputs) {
     LAYERS.localPush,
     LAYERS.cursor,
     LAYERS.structure,
-    LAYERS.devicePrivate,
+    LAYERS.hostPrivate,
     LAYERS.content,
     LAYERS.resource,
     LAYERS.activity

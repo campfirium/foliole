@@ -43,7 +43,7 @@ function deleteGeneratedImportedChildNodes(driver: DatabaseDriver, nodeIds: stri
   const deleteReviewLog = driver.prepare('DELETE FROM review_log WHERE node_id = ?');
   const deleteNodeReview = driver.prepare('DELETE FROM node_review WHERE node_id = ?');
   const deleteNodeReading = driver.prepare('DELETE FROM node_reading WHERE node_id = ?');
-  const deleteNodeReadingDeviceState = driver.prepare('DELETE FROM node_reading_device_state WHERE node_id = ?');
+  const deleteNodeReadingHostState = driver.prepare('DELETE FROM node_reading_host_state WHERE node_id = ?');
   const deleteNodeViewState = driver.prepare('DELETE FROM node_view_state WHERE node_id = ?');
   const deleteNodeOrder = driver.prepare('DELETE FROM node_order WHERE node_id = ?');
   const deleteNode = driver.prepare('DELETE FROM nodes WHERE id = ?');
@@ -51,7 +51,7 @@ function deleteGeneratedImportedChildNodes(driver: DatabaseDriver, nodeIds: stri
     deleteReviewLog.run([nodeId]);
     deleteNodeReview.run([nodeId]);
     deleteNodeReading.run([nodeId]);
-    deleteNodeReadingDeviceState.run([nodeId]);
+    deleteNodeReadingHostState.run([nodeId]);
     deleteNodeViewState.run([nodeId]);
     deleteNodeOrder.run([nodeId]);
   });

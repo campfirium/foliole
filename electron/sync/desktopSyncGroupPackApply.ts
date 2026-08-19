@@ -6,6 +6,7 @@ import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection } from '../database/connection.js';
+import { loadOrCreateDesktopHostName } from '../database/hostProfile.js';
 
 import type { createDesktopSyncGroupSignedHeaders } from './desktopSyncGroupHttp.js';
 import { readDesktopWorkgroupResponse } from './desktopSyncGroupHttp.js';
@@ -76,7 +77,7 @@ async function applyDownloadedPack(
   try {
     const result = await applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor: args.after, deviceId: args.peer.local_device_id,
-      incomingAlias: 'inc', sourcePeerId: args.peer.peer_device_id
+      hostName: loadOrCreateDesktopHostName(), incomingAlias: 'inc', sourcePeerId: args.peer.peer_device_id
     });
     event = await collectSyncPackAppliedEvent(port, result);
   } finally {

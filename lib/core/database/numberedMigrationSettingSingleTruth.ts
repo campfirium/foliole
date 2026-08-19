@@ -1,6 +1,5 @@
 import {
   DESKTOP_DECLARED_SETTING_KEYS,
-  resolveDesktopSettingIdentity,
   resolveDesktopSettingPolicy
 } from './desktopSettingPolicy.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
@@ -30,14 +29,14 @@ export function migrateSettingSingleTruth(sqlite: DatabaseMigrationTarget) {
   if (!currentDeviceId) return;
   for (const key of DESKTOP_DECLARED_SETTING_KEYS) {
     if (!resolveDesktopSettingPolicy(key).canonical) continue;
-    const identity = resolveDesktopSettingIdentity(key, currentDeviceId);
+    const identity = resolveLegacySettingIdentity(key, currentDeviceId);
     if (identity) reconcileSetting(sqlite, identity, currentDeviceId);
   }
 }
 
 function reconcileSetting(
   sqlite: DatabaseMigrationTarget,
-  identity: NonNullable<ReturnType<typeof resolveDesktopSettingIdentity>>,
+  identity: LegacySettingIdentity,
   currentDeviceId: string
 ) {
   const projection = readProjection(sqlite, identity.key);
@@ -63,7 +62,7 @@ function reconcileSetting(
 
 function ensureCanonicalState(
   sqlite: DatabaseMigrationTarget,
-  identity: NonNullable<ReturnType<typeof resolveDesktopSettingIdentity>>,
+  identity: LegacySettingIdentity,
   record: RecordRow,
   state: StateRow | undefined,
   currentDeviceId: string
@@ -79,7 +78,7 @@ function ensureCanonicalState(
 
 function writeCanonical(
   sqlite: DatabaseMigrationTarget,
-  identity: NonNullable<ReturnType<typeof resolveDesktopSettingIdentity>>,
+  identity: LegacySettingIdentity,
   valueJson: string,
   updatedAt: string,
   currentDeviceId: string
@@ -92,7 +91,7 @@ function writeCanonical(
 
 function upsertRecord(
   sqlite: DatabaseMigrationTarget,
-  identity: NonNullable<ReturnType<typeof resolveDesktopSettingIdentity>>,
+  identity: LegacySettingIdentity,
   valueJson: string,
   contentHash: string,
   updatedAt: string
@@ -134,7 +133,7 @@ function writeProjection(sqlite: DatabaseMigrationTarget, key: string, value: st
 
 function deleteProjectionAndRecord(
   sqlite: DatabaseMigrationTarget,
-  identity: NonNullable<ReturnType<typeof resolveDesktopSettingIdentity>>
+  identity: LegacySettingIdentity
 ) {
   sqlite.prepare('DELETE FROM settings WHERE key = ?').run(identity.key);
   sqlite.prepare(
@@ -149,7 +148,7 @@ function readProjection(sqlite: DatabaseMigrationTarget, key: string) {
 
 function readRecord(
   sqlite: DatabaseMigrationTarget,
-  identity: NonNullable<ReturnType<typeof resolveDesktopSettingIdentity>>
+  identity: LegacySettingIdentity
 ) {
   return sqlite.prepare(
     `SELECT value_json, content_hash, updated_at FROM setting_records
@@ -179,7 +178,7 @@ function readDeviceId(sqlite: DatabaseMigrationTarget) {
 }
 
 function settingContentHash(
-  identity: NonNullable<ReturnType<typeof resolveDesktopSettingIdentity>>,
+  identity: LegacySettingIdentity,
   valueJson: string
 ) {
   return computeSyncContentHash('setting', {
@@ -190,6 +189,30 @@ function settingContentHash(
     scope: identity.scope,
     value_json: valueJson
   });
+}
+
+interface LegacySettingIdentity {
+  deviceId: string;
+  formFactor: string;
+  key: string;
+  objectId: string;
+  platform: string;
+  scope: 'device' | 'session_resume' | 'user_space';
+}
+
+function resolveLegacySettingIdentity(key: string, currentDeviceId: string): LegacySettingIdentity | null {
+  const policy = resolveDesktopSettingPolicy(key);
+  if (!policy.canonical || policy.scope === 'local_only') return null;
+  const scope = policy.scope === 'host' ? 'device' : policy.scope;
+  const deviceId = scope === 'user_space' ? '*' : currentDeviceId;
+  return {
+    deviceId,
+    formFactor: 'desktop',
+    key,
+    objectId: `${scope}:windows:desktop:${deviceId}:${key}`,
+    platform: 'windows',
+    scope
+  };
 }
 
 function maxTimestamp(left?: string, right?: string) {

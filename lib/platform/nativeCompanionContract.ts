@@ -1,13 +1,23 @@
 export type NativeCompanionRuntimeKind = 'android-capacitor' | 'ios-capacitor' | 'web-preview';
 
 export const COMPANION_DATABASE_NAME = 'foliole-companion';
-export const COMPANION_DATABASE_VERSION = 26;
+export const COMPANION_DATABASE_VERSION = 27;
+
+export interface NativeCompanionBootstrapPayload {
+  booted_at: string;
+  database_path: string | null;
+  database_ready: boolean;
+  host_name: string;
+  runtime_kind: NativeCompanionRuntimeKind;
+}
 
 export interface NativeCompanionBootstrapState {
   booted_at: string;
   database_path: string | null;
   database_ready: boolean;
+  /** Frozen execution identity for the not-yet-cut-over authorization and author axes. */
   device_id: string;
   device_name?: string | null;
+  host_name?: string;
   runtime_kind: NativeCompanionRuntimeKind;
 }

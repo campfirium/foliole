@@ -14,8 +14,7 @@ public class FolioleCompanionBootstrapPlugin extends Plugin {
     public void loadBootstrap(PluginCall call) {
         try {
             FolioleCompanionBootstrapState state = new FolioleCompanionBootstrapState(
-                getContext(), Instant.now().toString(), null, false,
-                FolioleCompanionBootstrapState.loadDeviceId(getContext())
+                getContext(), Instant.now().toString(), null, false
             );
             call.resolve(state.toJsObject());
         } catch (Exception exception) {

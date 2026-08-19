@@ -9,7 +9,7 @@ export const CORE_TABLES = [
   'node_attachments',
   'node_order',
   'node_reading',
-  'node_reading_device_state',
+  'node_reading_host_state',
   'node_review',
   'node_sync_conflicts',
   'node_sync_version_parents',
@@ -58,7 +58,7 @@ const FIELD_CLASSIFICATIONS = new Map([
   ['import_sources.createSql', 'desktop-only-column'],
   ['node_view_state.createSql', 'android-missing-constraint'],
   ['pdf_page_text.createSql', 'android-missing-constraint'],
-  ['setting_records.columns.device_id', 'android-missing-default'],
+  ['setting_records.columns.host_name', 'android-missing-default'],
   ['setting_records.columns.form_factor', 'android-missing-default'],
   ['setting_records.columns.platform', 'android-missing-default'],
   ['setting_records.createSql', 'android-missing-default']

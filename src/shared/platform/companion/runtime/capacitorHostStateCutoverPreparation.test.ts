@@ -15,7 +15,7 @@ it.each<Platform>(['android', 'ios'])('rolls back the %s owner before version co
 
   await expect(owner.open({
     beforeVersionCommit: () => { throw new Error('injected cutover failure'); },
-    expectedDeviceId: 'device',
+    expectedHostName: 'device',
     now: '2026-08-19T00:00:00Z'
   })).rejects.toThrow('injected cutover failure');
 
@@ -30,7 +30,7 @@ it.each<Platform>(['android', 'ios'])('blocks a newer %s database before writes'
   const { connection, manager } = harness(COMPANION_DATABASE_VERSION + 1);
   const owner = new CapacitorCompanionDatabaseOwner(manager, platform);
 
-  await expect(owner.open({ expectedDeviceId: 'device', now: '2026-08-19T00:00:00Z' }))
+  await expect(owner.open({ expectedHostName: 'device', now: '2026-08-19T00:00:00Z' }))
     .rejects.toThrow('newer-version');
 
   expect(connection.beginTransaction).not.toHaveBeenCalled();

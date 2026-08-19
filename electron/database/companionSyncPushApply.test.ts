@@ -160,7 +160,7 @@ describe('companion sync push apply', () => {
        WHERE object_type = 'node_reading' AND object_id = 'node-1'`
     )).toEqual({ content_hash: 'android-reading-next', sync_dirty: 0 });
     expect(openDatabaseConnection().driver.queryOne<{ reading_position: number }>(
-      `SELECT reading_position FROM node_reading_device_state
+      `SELECT reading_position FROM node_reading_host_state
        WHERE node_id = 'node-1'`
     )).toBeUndefined();
   });

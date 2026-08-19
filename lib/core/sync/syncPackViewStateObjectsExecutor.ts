@@ -12,7 +12,7 @@ export async function applySyncPackViewStateObjectsWithDbPort(
   const records = (await loadSyncPackSyncObjectsWithDbPort(port, options))
     .filter((record) => record.object_type === 'view_state');
   for (const record of records) {
-    await applySyncObjectPayloadWithDbPort(port, record, { deviceId: options.deviceId });
+    await applySyncObjectPayloadWithDbPort(port, record, options.hostName ? { hostName: options.hostName } : {});
   }
   return records.length;
 }

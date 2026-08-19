@@ -7,9 +7,9 @@ export const SYNC_PROTOCOL_TXT_KEYS = {
 
 export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
   capabilities: Object.freeze(['lan-sync-v1', 'sync-group-facts-v1', 'workgroup-aead-v1']),
-  max_supported_version: 1,
-  min_supported_version: 1,
-  version: 1
+  max_supported_version: 2,
+  min_supported_version: 2,
+  version: 2
 } as const satisfies SyncProtocolDescriptor);
 
 export type SyncProtocolDescriptor = {

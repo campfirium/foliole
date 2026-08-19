@@ -50,7 +50,7 @@ it('loads backed reading and review state as sync pack metadata', () => {
   );
   openDatabaseConnection().driver.execute(
     `INSERT INTO setting_records (
-       key, scope, platform, form_factor, device_id, value_json, content_hash, updated_at
+       key, scope, platform, form_factor, host_name, value_json, content_hash, updated_at
      ) VALUES ('app_settings', 'user_space', 'windows', 'desktop', '*', '{"theme":"dark"}',
        'setting-hash', '2026-04-27T00:05:00.000Z')`
   );
@@ -211,7 +211,7 @@ it('does not resend an unchanged node after the pack cursor has crossed its stat
   const driver = openDatabaseConnection().driver;
   driver.execute(
     `INSERT INTO setting_records (
-       key, scope, platform, form_factor, device_id, value_json, content_hash, updated_at
+       key, scope, platform, form_factor, host_name, value_json, content_hash, updated_at
      ) VALUES ('cursor-test', 'user_space', '*', '*', '*', '{}', 'setting-hash', '2026-04-27T00:02:00.000Z')`
   );
   driver.execute(

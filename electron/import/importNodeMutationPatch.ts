@@ -1,6 +1,6 @@
 import { decodeTextBodyBlobData } from '../../lib/core/database/contentBodyBlobs.js';
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
-import { loadDatabaseDeviceId } from '../../lib/core/database/syncDeviceIdentity.js';
+import { requireDatabaseHostName } from '../../lib/core/database/syncHostIdentity.js';
 import { WORKSPACE_BODY_STATUS_SQL } from '../../lib/core/database/workspaceBodyStatus.js';
 import { buildWorkspaceSnapshotNode } from '../../lib/core/database/workspaceSnapshotHelpers.js';
 import type {
@@ -75,7 +75,7 @@ function readImportedNodeRows(driver: DatabaseDriver, nodeIds: string[]) {
     return [];
   }
   const placeholders = nodeIds.map(() => '?').join(', ');
-  const deviceId = loadDatabaseDeviceId(driver) ?? '*';
+  const hostName = requireDatabaseHostName(driver);
   return driver.queryAll<ImportedNodeRow>(
     `SELECT
        n.id,
@@ -123,10 +123,10 @@ function readImportedNodeRows(driver: DatabaseDriver, nodeIds: string[]) {
      LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash
      LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
      LEFT JOIN node_reading rd ON rd.node_id = n.id
-     LEFT JOIN node_reading_device_state rds ON rds.node_id = n.id AND rds.device_id = ?
+     LEFT JOIN node_reading_host_state rds ON rds.node_id = n.id AND rds.host_name = ?
      LEFT JOIN node_review nr ON nr.node_id = n.id
      WHERE n.id IN (${placeholders})`,
-    [deviceId, ...nodeIds]
+    [hostName, ...nodeIds]
   );
 }
 

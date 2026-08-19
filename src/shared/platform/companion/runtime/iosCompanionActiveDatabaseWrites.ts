@@ -4,23 +4,28 @@ import { applyNodeOpenStateObject } from '../../../../../lib/core/sync/syncObjec
 
 import { writeIosCompanionDatabase } from './iosCompanionActiveDatabase';
 import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
-import { iosCompanionContentHash, iosCompanionDeviceId, markIosCompanionMutation } from './iosCompanionMutationState';
+import {
+  iosCompanionContentHash,
+  iosCompanionDeviceId,
+  iosCompanionHostName,
+  markIosCompanionMutation
+} from './iosCompanionMutationState';
 
 export function saveIosSetting(args: {
-  device_id?: string; form_factor?: string; key: string; platform?: string; scope?: string; value_json: string;
+  form_factor?: string; key: string; platform?: string; scope?: string; value_json: string;
 }) {
   return writeIosCompanionDatabase((db) => db.transaction(async (tx) => {
-    const deviceId = args.device_id ?? '*';
+    const hostName = args.scope === 'user_space' ? '*' : await iosCompanionHostName(tx);
     const formFactor = args.form_factor ?? 'phone';
     const platform = args.platform ?? getIosCompanionDatabaseOwner().platform ?? 'ios';
-    const scope = args.scope ?? 'device';
-    const objectId = [scope, platform, formFactor, deviceId, args.key].join(':');
-    const payload = { device_id: deviceId, form_factor: formFactor, key: args.key, platform, scope, value_json: args.value_json };
+    const scope = args.scope ?? 'host';
+    const objectId = [scope, platform, formFactor, hostName, args.key].join(':');
+    const payload = { host_name: hostName, form_factor: formFactor, key: args.key, platform, scope, value_json: args.value_json };
     const contentHash = await iosCompanionContentHash(payload);
     const now = new Date().toISOString();
     await tx.run(
-      'INSERT OR REPLACE INTO setting_records (key, scope, platform, form_factor, device_id, value_json, content_hash, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [args.key, scope, platform, formFactor, deviceId, args.value_json, contentHash, now]
+      'INSERT OR REPLACE INTO setting_records (key, scope, platform, form_factor, host_name, value_json, content_hash, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [args.key, scope, platform, formFactor, hostName, args.value_json, contentHash, now]
     );
     await mark(tx, 'setting', objectId, contentHash, now);
     return { content_hash: contentHash, object_id: objectId };
@@ -36,11 +41,12 @@ export function saveIosReading(args: { node_id: string; reading_json: string }) 
   return writeIosCompanionDatabase((db) => db.transaction(async (tx) => {
     const input = parseObject(args.reading_json);
     const deviceId = await iosCompanionDeviceId(tx);
-    const payload: Record<string, unknown> = { ...input, device_id: deviceId, node_id: args.node_id };
-    const { device_id: ignoredDevice, reading_position: ignoredPosition, ...hashPayload } = payload;
-    void ignoredDevice; void ignoredPosition;
+    const hostName = await iosCompanionHostName(tx);
+    const payload: Record<string, unknown> = { ...input, host_name: hostName, node_id: args.node_id };
+    const { host_name: ignoredHost, reading_position: ignoredPosition, ...hashPayload } = payload;
+    void ignoredHost; void ignoredPosition;
     return applyLocalObject(tx, 'node_reading', args.node_id, payload, (record) => (
-      applyNodeReadingObject(tx, record, { deviceId })
+      applyNodeReadingObject(tx, record, { deviceId, hostName })
     ), hashPayload);
   }));
 }
@@ -57,7 +63,7 @@ export function saveIosReview(args: { node_id: string; review_json: string; revi
 }
 
 export function saveIosActiveViewState(args: { node_id: string | null }) {
-  return writeViewState('active_node', { active_node_id: args.node_id }, async (db, deviceId, now) => {
+  return writeViewState('active_node', { active_node_id: args.node_id }, async (db, _hostName, now) => {
     if (args.node_id) await db.run("INSERT OR REPLACE INTO workspace_meta (key, value, updated_at) VALUES ('active_node_id', ?, ?)", [args.node_id, now]);
     else await db.run("DELETE FROM workspace_meta WHERE key = 'active_node_id'");
   });
@@ -65,9 +71,9 @@ export function saveIosActiveViewState(args: { node_id: string | null }) {
 
 export function saveIosNodeViewState(args: { node_id: string; scroll_top: number; source?: string }) {
   const payload = { node_id: args.node_id, scroll_top: Math.max(0, Math.trunc(args.scroll_top)), selection_from: null, selection_to: null, source: 'user-scroll' };
-  return writeViewState(`node:${args.node_id}`, payload, (db, deviceId, now) => db.run(
-    'INSERT OR REPLACE INTO node_view_state (node_id, device_id, scroll_top, selection_from, selection_to, source, updated_at) VALUES (?, ?, ?, NULL, NULL, ?, ?)',
-    [args.node_id, deviceId, payload.scroll_top, payload.source, now]
+  return writeViewState(`node:${args.node_id}`, payload, (db, hostName, now) => db.run(
+    'INSERT OR REPLACE INTO node_view_state (node_id, host_name, scroll_top, selection_from, selection_to, source, updated_at) VALUES (?, ?, ?, NULL, NULL, ?, ?)',
+    [args.node_id, hostName, payload.scroll_top, payload.source, now]
   ));
 }
 
@@ -94,17 +100,18 @@ async function applyLocalObject(
 }
 
 async function writeViewState(
-  key: string, payload: Record<string, unknown>, apply: (db: DbPort, deviceId: string, now: string) => Promise<unknown>
+  key: string, payload: Record<string, unknown>, apply: (db: DbPort, hostName: string, now: string) => Promise<unknown>
 ) {
   return writeIosCompanionDatabase((db) => db.transaction(async (tx) => {
     const deviceId = await iosCompanionDeviceId(tx);
+    const hostName = await iosCompanionHostName(tx);
     const platform = getIosCompanionDatabaseOwner().platform;
-    const objectId = ['session_resume', platform, 'phone', deviceId, key].join(':');
-    const canonical: Record<string, unknown> = { device_id: deviceId, form_factor: 'phone', key, platform, scope: 'session_resume', ...payload };
+    const objectId = ['session_resume', platform, 'phone', hostName, key].join(':');
+    const canonical: Record<string, unknown> = { host_name: hostName, form_factor: 'phone', key, platform, scope: 'session_resume', ...payload };
     const { source: ignored, ...hashPayload } = canonical; void ignored;
     const contentHash = await iosCompanionContentHash(hashPayload);
     const now = new Date().toISOString();
-    await apply(tx, deviceId, now);
+    await apply(tx, hostName, now);
     await markIosCompanionMutation({ contentHash, db: tx, deviceId, objectId, objectType: 'view_state', updatedAt: now });
     return { content_hash: contentHash, object_id: objectId };
   }));

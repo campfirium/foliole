@@ -82,6 +82,7 @@ export const ANDROID_COMPANION_MIGRATION_ACTION_TYPES = {
   backfillNodeAttachmentsFromVersions: 'backfillNodeAttachmentsFromVersions',
   installSchema: 'installSchema',
   replaceSyncPushAck: 'replaceSyncPushAck',
+  migrateHostPermanentState: 'migrateHostPermanentState',
   migrateSyncObjectStateSequence: 'migrateSyncObjectStateSequence'
 } as const;
 
@@ -193,7 +194,11 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
     actions: [{ errorMessage: 'Failed to install Sync Group departure facts.', type: 'installSchema' }],
     beforeVersion: 25
   },
-  ANDROID_COMPANION_WORKGROUP_KEY_MIGRATION_PLAN_STEP
+  ANDROID_COMPANION_WORKGROUP_KEY_MIGRATION_PLAN_STEP,
+  {
+    actions: [{ errorMessage: 'Failed to cut over companion Host permanent state.', type: 'migrateHostPermanentState' }],
+    beforeVersion: 27
+  }
 ] as const;
 
 export const ANDROID_COMPANION_MIGRATION_REPAIR_RULES = {

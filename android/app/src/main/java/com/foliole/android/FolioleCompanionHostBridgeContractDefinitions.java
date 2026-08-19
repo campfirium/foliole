@@ -19,12 +19,8 @@ final class FolioleCompanionHostBridgeContractDefinitions {
         return bootstrapOutputKey(context, "databaseReady");
     }
 
-    static String bootstrapDeviceIdOutputKey(Context context) throws Exception {
-        return bootstrapOutputKey(context, "deviceId");
-    }
-
-    static String bootstrapDeviceNameOutputKey(Context context) throws Exception {
-        return bootstrapOutputKey(context, "deviceName");
+    static String bootstrapHostNameOutputKey(Context context) throws Exception {
+        return bootstrapOutputKey(context, "hostName");
     }
 
     static String bootstrapRuntimeKindOutputKey(Context context) throws Exception {
@@ -35,16 +31,16 @@ final class FolioleCompanionHostBridgeContractDefinitions {
         return FolioleCompanionBridgeContractDefinitions.hostApiString(context, "bootstrap", "runtimeKind");
     }
 
-    static String bootstrapDefaultDeviceName(Context context) throws Exception {
-        return bootstrapDeviceNameDefault(context, "defaultDeviceName");
+    static String bootstrapDefaultHostName(Context context) throws Exception {
+        return bootstrapHostNameDefault(context, "defaultHostName");
     }
 
-    static String bootstrapEmulatorDeviceName(Context context) throws Exception {
-        return bootstrapDeviceNameDefault(context, "emulatorDeviceName");
+    static String bootstrapEmulatorHostName(Context context) throws Exception {
+        return bootstrapHostNameDefault(context, "emulatorHostName");
     }
 
     static JSONArray bootstrapEmulatorModelTokens(Context context) throws Exception {
-        return FolioleCompanionBridgeContractDefinitions.hostApiArray(context, "bootstrap", "deviceNameDefaults", "emulatorModelTokens");
+        return FolioleCompanionBridgeContractDefinitions.hostApiArray(context, "bootstrap", "hostNameDefaults", "emulatorModelTokens");
     }
 
     static String contentBlobBatchBlobHashResponseHeaderKey(Context context) throws Exception {
@@ -197,8 +193,8 @@ final class FolioleCompanionHostBridgeContractDefinitions {
         return hostApiString(context, "bootstrap", "outputKeys", key);
     }
 
-    private static String bootstrapDeviceNameDefault(Context context, String key) throws Exception {
-        return hostApiString(context, "bootstrap", "deviceNameDefaults", key);
+    private static String bootstrapHostNameDefault(Context context, String key) throws Exception {
+        return hostApiString(context, "bootstrap", "hostNameDefaults", key);
     }
 
     private static String contentBlobBatchResponseHeaderKey(Context context, String key) throws Exception {

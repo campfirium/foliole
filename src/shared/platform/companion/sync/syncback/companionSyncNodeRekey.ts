@@ -5,7 +5,7 @@ const NODE_REFERENCES: Array<readonly [string, string]> = [
   ['node_review', 'node_id'],
   ['node_reading', 'node_id'],
   ['node_open_state', 'node_id'],
-  ['node_reading_device_state', 'node_id'],
+  ['node_reading_host_state', 'node_id'],
   ['review_log', 'node_id'],
   ['node_sync_versions', 'object_id'],
   ['node_sync_tombstones', 'node_id'],

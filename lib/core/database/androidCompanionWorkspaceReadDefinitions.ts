@@ -134,7 +134,7 @@ export const ANDROID_COMPANION_WORKSPACE_READ_RULES = {
   viewState: {
     defaultSource: 'user-scroll',
     nodeIdRowKey: 'node_id',
-    queryName: 'nodeViewStatesByDevice',
+    queryName: 'nodeViewStatesByHost',
     resultKey: 'states',
     fields: [
       { outputKey: 'nodeId', rowKey: 'node_id', type: 'string' },

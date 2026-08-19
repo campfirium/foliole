@@ -33,12 +33,12 @@ beforeEach(() => {
     contentHash: 'node-hash', lastModifiedByDeviceId: 'android-b', objectId: 'node-1', objectType: 'node', updatedAt: now
   });
   driver.execute(
-    `INSERT INTO setting_records (key, scope, platform, form_factor, device_id, value_json, content_hash, updated_at)
-     VALUES ('sample', 'device', 'android', 'phone', '*', 'true', 'setting-hash', ?)`, [now]
+    `INSERT INTO setting_records (key, scope, platform, form_factor, host_name, value_json, content_hash, updated_at)
+     VALUES ('sample', 'host', 'android', 'phone', 'Android test host', 'true', 'setting-hash', ?)`, [now]
   );
   upsertSyncObjectState(driver, {
     contentHash: 'setting-hash', lastModifiedByDeviceId: 'android-b',
-    objectId: 'device:android:phone:*:sample', objectType: 'setting', updatedAt: now
+    objectId: 'host:android:phone:Android test host:sample', objectType: 'setting', updatedAt: now
   });
   driver.execute(
     `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
@@ -68,7 +68,7 @@ it('builds a baseline payload with structure, body manifest, and payload objects
   });
   expect(pack.prepare('SELECT hash FROM content_blobs').get()).toBeTruthy();
   expect(pack.prepare("SELECT object_id FROM sync_objects WHERE object_type = 'setting'").get())
-    .toEqual({ object_id: 'device:android:phone:*:sample' });
+    .toEqual({ object_id: 'host:android:phone:Android test host:sample' });
   expect(JSON.parse((pack.prepare(
     "SELECT payload_json FROM sync_objects WHERE object_type = 'attachment'"
   ).get() as { payload_json: string }).payload_json)).toMatchObject({

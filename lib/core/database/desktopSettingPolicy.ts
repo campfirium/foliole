@@ -1,4 +1,4 @@
-export type DesktopSettingScope = 'device' | 'local_only' | 'session_resume' | 'user_space';
+export type DesktopSettingScope = 'host' | 'local_only' | 'session_resume' | 'user_space';
 
 export const DESKTOP_SETTING_PLATFORM = 'windows';
 export const DESKTOP_SETTING_FORM_FACTOR = 'desktop';
@@ -13,19 +13,20 @@ const USER_SPACE_KEYS = new Set([
 ]);
 const SESSION_RESUME_KEYS = new Set(['readwise_book_epub_picker_state', 'window_state']);
 const LOCAL_ONLY_KEYS = new Set([
+  'host_name',
   'device_id',
   'desktop_device_id',
   'remote-image-learned-sources-v1',
   'readwise_books_inventory_state',
   'watch_import_cursor_state'
 ]);
-const DEVICE_KEYS = new Set(['discourse_publish_settings', 'foliole_publish_settings', 'wordpress_publish_settings']);
+const HOST_KEYS = new Set(['discourse_publish_settings', 'foliole_publish_settings', 'wordpress_publish_settings']);
 
 export const DESKTOP_DECLARED_SETTING_KEYS = [
   ...USER_SPACE_KEYS,
   ...SESSION_RESUME_KEYS,
   ...LOCAL_ONLY_KEYS,
-  ...DEVICE_KEYS
+  ...HOST_KEYS
 ].sort();
 
 export const DESKTOP_INTERNAL_SETTINGS_KEYS = [
@@ -43,7 +44,7 @@ export interface DesktopSettingPolicy {
 }
 
 export interface DesktopSettingIdentity {
-  deviceId: string;
+  hostName: string;
   formFactor: string;
   key: string;
   objectId: string;
@@ -55,20 +56,20 @@ export function resolveDesktopSettingPolicy(key: string): DesktopSettingPolicy {
   if (LOCAL_ONLY_KEYS.has(key)) return { canonical: false, declared: true, scope: 'local_only' };
   if (USER_SPACE_KEYS.has(key)) return { canonical: true, declared: true, scope: 'user_space' };
   if (SESSION_RESUME_KEYS.has(key)) return { canonical: true, declared: true, scope: 'session_resume' };
-  if (DEVICE_KEYS.has(key)) return { canonical: true, declared: true, scope: 'device' };
-  return { canonical: true, declared: false, scope: 'device' };
+  if (HOST_KEYS.has(key)) return { canonical: true, declared: true, scope: 'host' };
+  return { canonical: true, declared: false, scope: 'host' };
 }
 
-export function resolveDesktopSettingIdentity(key: string, currentDeviceId: string | null): DesktopSettingIdentity | null {
+export function resolveDesktopSettingIdentity(key: string, currentHostName: string | null): DesktopSettingIdentity | null {
   const policy = resolveDesktopSettingPolicy(key);
   if (!policy.canonical || policy.scope === 'local_only') return null;
-  const deviceId = policy.scope === 'user_space' ? '*' : currentDeviceId?.trim();
-  if (!deviceId) return null;
+  const hostName = policy.scope === 'user_space' ? '*' : currentHostName?.trim();
+  if (!hostName) return null;
   return {
-    deviceId,
+    hostName,
     formFactor: DESKTOP_SETTING_FORM_FACTOR,
     key,
-    objectId: `${policy.scope}:${DESKTOP_SETTING_PLATFORM}:${DESKTOP_SETTING_FORM_FACTOR}:${deviceId}:${key}`,
+    objectId: `${policy.scope}:${DESKTOP_SETTING_PLATFORM}:${DESKTOP_SETTING_FORM_FACTOR}:${hostName}:${key}`,
     platform: DESKTOP_SETTING_PLATFORM,
     scope: policy.scope
   };
@@ -76,11 +77,11 @@ export function resolveDesktopSettingIdentity(key: string, currentDeviceId: stri
 
 export function canMaterializeDesktopSetting(
   identity: Omit<DesktopSettingIdentity, 'objectId'>,
-  currentDeviceId: string | null
+  currentHostName: string | null
 ) {
   const policy = resolveDesktopSettingPolicy(identity.key);
   if (!policy.declared || !policy.canonical || policy.scope !== identity.scope) return false;
   if (identity.platform !== DESKTOP_SETTING_PLATFORM || identity.formFactor !== DESKTOP_SETTING_FORM_FACTOR) return false;
-  const expectedDeviceId = policy.scope === 'user_space' ? '*' : currentDeviceId?.trim();
-  return Boolean(expectedDeviceId) && identity.deviceId === expectedDeviceId;
+  const expectedHostName = policy.scope === 'user_space' ? '*' : currentHostName?.trim();
+  return Boolean(expectedHostName) && identity.hostName === expectedHostName;
 }

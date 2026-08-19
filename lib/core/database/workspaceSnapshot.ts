@@ -2,7 +2,7 @@ import type { PersistedNodeViewState } from '../../platform/persistedNodeViewSta
 
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 import { loadNodeOpenStateById, type NodeOpenState } from './nodeOpenState.js';
-import { loadDatabaseDeviceId } from './syncDeviceIdentity.js';
+import { requireDatabaseHostName } from './syncHostIdentity.js';
 import { attachWorkspaceNodeAttachments } from './workspaceSnapshotAttachments.js';
 import { normalizeWorkspaceSnapshot, resolveWorkspaceSnapshotActiveNodeId } from './workspaceSnapshotContract.js';
 import {
@@ -108,7 +108,7 @@ function buildBodySelection(options: WorkspaceSnapshotLoadOptions) {
 }
 
 function queryWorkspaceRows(driver: DatabaseDriver, options: WorkspaceSnapshotLoadOptions = {}): WorkspaceNodeRow[] {
-  const deviceId = loadDatabaseDeviceId(driver) ?? '*';
+  const hostName = requireDatabaseHostName(driver);
   const { bodyJoin, bodyStatusExpression, contentExpression } = buildBodySelection(options);
   return driver.queryAll<WorkspaceNodeRow>(
     `${VISIBLE_NODES_CTE_SQL}
@@ -161,9 +161,9 @@ function queryWorkspaceRows(driver: DatabaseDriver, options: WorkspaceSnapshotLo
      LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash
      ${bodyJoin}
      LEFT JOIN node_reading rd ON rd.node_id = n.id AND visible.id IS NOT NULL
-     LEFT JOIN node_reading_device_state rds ON rds.node_id = n.id AND rds.device_id = ? AND visible.id IS NOT NULL
+     LEFT JOIN node_reading_host_state rds ON rds.node_id = n.id AND rds.host_name = ? AND visible.id IS NOT NULL
      LEFT JOIN node_review nr ON nr.node_id = n.id AND visible.id IS NOT NULL`
-    , [deviceId]
+    , [hostName]
   );
 }
 

@@ -73,12 +73,12 @@ export const nodeOpenState = sqliteTable('node_open_state', {
   lastOpenedAt: text('last_opened_at').notNull()
 });
 
-export const nodeReadingDeviceState = sqliteTable('node_reading_device_state', {
+export const nodeReadingHostState = sqliteTable('node_reading_host_state', {
   nodeId: text('node_id').notNull(),
-  deviceId: text('device_id').notNull(),
+  hostName: text('host_name').notNull(),
   readingPosition: integer('reading_position').notNull().default(0),
   updatedAt: text('updated_at').notNull()
-}, (table) => [primaryKey({ columns: [table.nodeId, table.deviceId] })]);
+}, (table) => [primaryKey({ columns: [table.nodeId, table.hostName] })]);
 
 export const reviewLog = sqliteTable('review_log', {
   id: text('id').primaryKey(),
@@ -109,13 +109,13 @@ export const workspaceMeta = sqliteTable('workspace_meta', {
 
 export const nodeViewState = sqliteTable('node_view_state', {
   nodeId: text('node_id').notNull(),
-  deviceId: text('device_id').notNull(),
+  hostName: text('host_name').notNull(),
   scrollTop: integer('scroll_top').notNull().default(0),
   selectionFrom: integer('selection_from'),
   selectionTo: integer('selection_to'),
   source: text('source').notNull().default('user-scroll'),
   updatedAt: text('updated_at').notNull()
-}, (table) => [primaryKey({ columns: [table.nodeId, table.deviceId] })]);
+}, (table) => [primaryKey({ columns: [table.nodeId, table.hostName] })]);
 
 export const mirrorArticles = sqliteTable('mirror_articles', {
   articleId: text('article_id').primaryKey(),

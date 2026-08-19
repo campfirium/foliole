@@ -30,6 +30,7 @@ interface ExistingSyncObjectState extends DbRow {
 export interface ApplySyncObjectsWithDbPortOptions {
   includeAlreadyApplied?: boolean;
   deviceId?: string;
+  hostName?: string;
   onSkippedRecord?: (record: unknown, reason: unknown) => void;
   onPayloadAppliedInTransaction?: (port: DbPort, record: SyncPackSyncObjectRecord) => Promise<void>;
 }
@@ -115,7 +116,10 @@ async function applySingleSyncObjectInTransaction(
   const appliedPayload = await applySyncObjectPayloadWithDbPort(
     port,
     record,
-    options.deviceId === undefined ? {} : { deviceId: options.deviceId }
+    {
+      ...(options.deviceId === undefined ? {} : { deviceId: options.deviceId }),
+      ...(options.hostName === undefined ? {} : { hostName: options.hostName })
+    }
   );
   if (appliedPayload === false) return null;
   await options.onPayloadAppliedInTransaction?.(port, record);

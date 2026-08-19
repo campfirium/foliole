@@ -1,6 +1,7 @@
 import { resolveDesktopSettingIdentity, resolveDesktopSettingPolicy } from '../../lib/core/database/desktopSettingPolicy.js';
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { loadOrCreateDatabaseDeviceId } from '../../lib/core/database/syncDeviceIdentity.js';
+import { loadOrCreateDatabaseHostName } from '../../lib/core/database/syncHostIdentity.js';
 import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 
 export interface SettingRecordInput {
@@ -12,10 +13,11 @@ export interface SettingRecordInput {
 export function writeSettingRecord(driver: DatabaseDriver, input: SettingRecordInput) {
   if (!resolveDesktopSettingPolicy(input.key).canonical) return;
   const deviceId = loadOrCreateDatabaseDeviceId(driver, input.updatedAt);
-  const identity = resolveDesktopSettingIdentity(input.key, deviceId);
+  const hostName = loadOrCreateDatabaseHostName(driver, input.updatedAt);
+  const identity = resolveDesktopSettingIdentity(input.key, hostName);
   if (!identity) return;
   const contentHash = computeSyncContentHash('setting', {
-    device_id: identity.deviceId,
+    host_name: identity.hostName,
     form_factor: identity.formFactor,
     key: input.key,
     platform: identity.platform,
@@ -29,17 +31,17 @@ export function writeSettingRecord(driver: DatabaseDriver, input: SettingRecordI
        scope,
        platform,
        form_factor,
-       device_id,
+       host_name,
        value_json,
        content_hash,
        updated_at
      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(key, scope, platform, form_factor, device_id) DO UPDATE SET
+     ON CONFLICT(key, scope, platform, form_factor, host_name) DO UPDATE SET
        value_json = excluded.value_json,
        content_hash = excluded.content_hash,
        updated_at = excluded.updated_at,
        deleted_at = NULL`,
-    [input.key, identity.scope, identity.platform, identity.formFactor, identity.deviceId,
+    [input.key, identity.scope, identity.platform, identity.formFactor, identity.hostName,
       input.valueJson, contentHash, input.updatedAt]
   );
   upsertSyncObjectState(driver, {

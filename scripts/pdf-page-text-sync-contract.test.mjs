@@ -42,7 +42,7 @@ it('keeps PDF page text classified as workspace sync content', () => {
   expect(SYNC_OBJECT_POLICIES).toContainEqual({
     category: 'content',
     conflict: 'lww',
-    deviceScope: 'workspace',
+    scope: 'workspace',
     key: 'pdf_page_text',
     objectType: 'pdf_page_text',
     pushIssue: 'review_required',

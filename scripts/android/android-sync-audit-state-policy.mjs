@@ -18,17 +18,17 @@ function policyRowCount(db, policy) {
   return policy.storage.reduce((sum, table) => sum + countRows(db, table), 0);
 }
 
-function policyBreakdown(db, deviceId = null) {
+function policyBreakdown(db, hostName = null) {
   const rows = SYNC_OBJECT_POLICIES.map((policy) => ({
     category: policy.category,
     count: policyRowCount(db, policy),
-    deviceScope: policy.deviceScope,
+    scope: policy.scope,
     key: policy.key,
     pushIssue: policy.pushIssue
   }));
   return {
     categories: categoryCounts(rows),
-    devicePrivate: devicePrivateSummary(db, deviceId),
+    hostPrivate: hostPrivateSummary(db, hostName),
     rows
   };
 }
@@ -36,22 +36,22 @@ function policyBreakdown(db, deviceId = null) {
 function categoryCounts(rows) {
   const counts = new Map();
   for (const row of rows) {
-    const key = `${row.category}:${row.deviceScope}`;
+    const key = `${row.category}:${row.scope}`;
     counts.set(key, (counts.get(key) ?? 0) + row.count);
   }
   return [...counts.entries()].map(([key, count]) => {
-    const [category, deviceScope] = key.split(':');
-    return { category, count, deviceScope };
+    const [category, scope] = key.split(':');
+    return { category, count, scope };
   });
 }
 
-function devicePrivateSummary(db, deviceId) {
+function hostPrivateSummary(db, hostName) {
   return {
-    localDeviceId: deviceId,
-    nodeReadingDeviceStateRows: countRows(db, 'node_reading_device_state'),
+    currentHostName: hostName,
+    nodeReadingHostStateRows: countRows(db, 'node_reading_host_state'),
     nodeViewStateRows: countRows(db, 'node_view_state'),
-    nonLocalNodeReadingDeviceStateRows: deviceId ? countRows(db, 'node_reading_device_state', 'device_id <> ?', [deviceId]) : null,
-    nonLocalNodeViewStateRows: deviceId ? countRows(db, 'node_view_state', 'device_id <> ?', [deviceId]) : null,
+    nonLocalNodeReadingHostStateRows: hostName ? countRows(db, 'node_reading_host_state', 'host_name <> ?', [hostName]) : null,
+    nonLocalNodeViewStateRows: hostName ? countRows(db, 'node_view_state', 'host_name <> ?', [hostName]) : null,
     viewStateSyncRows: syncStateCount(db, 'view_state')
   };
 }

@@ -8,7 +8,7 @@ import {
 import { appendReadingPositionTraceRecord } from '../readingPositionTraceLog.js';
 
 import { openDatabaseConnection, type DatabaseConnection } from './connection.js';
-import { loadDesktopDeviceId, loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
+import { loadDesktopHostName, loadOrCreateDesktopHostName } from './hostProfile.js';
 import { withTransaction } from './transaction.js';
 import { writeActiveNodeViewStateSync, writeNodeViewStateSync } from './viewStateSync.js';
 
@@ -59,7 +59,7 @@ const ACTIVE_NODE_META_KEY = 'active_node_id';
 const BROWSE_ROOT_NODE_META_KEY = 'browse_root_node_id';
 
 export function saveReadingProgress(input: SaveReadingProgressInput): void {
-  const deviceId = loadOrCreateDesktopDeviceId(input.updatedAt);
+  const hostName = loadOrCreateDesktopHostName(input.updatedAt);
   const source = normalizeNodeViewStateWriteSource(input.source);
   traceReadingProgressSave(input);
   const connection = openDatabaseConnection();
@@ -73,14 +73,14 @@ export function saveReadingProgress(input: SaveReadingProgressInput): void {
   const upsertNodeViewStateStatement = connection.driver.prepare(
     `INSERT INTO node_view_state (
        node_id,
-       device_id,
+       host_name,
        scroll_top,
        selection_from,
        selection_to,
        source,
        updated_at
      ) VALUES (?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(node_id, device_id) DO UPDATE SET
+     ON CONFLICT(node_id, host_name) DO UPDATE SET
        scroll_top = excluded.scroll_top,
        selection_from = excluded.selection_from,
        selection_to = excluded.selection_to,
@@ -102,7 +102,7 @@ export function saveReadingProgress(input: SaveReadingProgressInput): void {
     ) {
       upsertMetaStatement.run([BROWSE_ROOT_NODE_META_KEY, input.browseRootNodeId, input.updatedAt]);
     }
-    saveNodeViewStates(connection, upsertNodeViewStateStatement, input, deviceId, source);
+    saveNodeViewStates(connection, upsertNodeViewStateStatement, input, hostName, source);
   });
 }
 
@@ -140,11 +140,11 @@ function saveNodeViewStates(
   connection: DatabaseConnection,
   statement: DatabaseStatement,
   input: SaveReadingProgressInput,
-  deviceId: string,
+  hostName: string,
   source: NodeViewStateWriteSource
 ) {
   for (const state of input.nodeViewStates) {
-    const existing = loadExistingNodeViewState(connection, deviceId, state.nodeId);
+    const existing = loadExistingNodeViewState(connection, hostName, state.nodeId);
     const updatedAt = state.updatedAt?.trim() || existing?.updatedAt || input.updatedAt;
     if (!updatedAt) {
       continue;
@@ -155,7 +155,7 @@ function saveNodeViewStates(
     }
     statement.run([
       state.nodeId,
-      deviceId,
+      hostName,
       state.scrollTop,
       state.selectionFrom,
       state.selectionTo,
@@ -168,7 +168,7 @@ function saveNodeViewStates(
 
 export function loadReadingProgress(): ReadingProgressSnapshot {
   const connection = openDatabaseConnection();
-  const deviceId = loadDesktopDeviceId();
+  const hostName = loadDesktopHostName();
   const activeNodeRow = connection.driver.queryOne<MetaRow>(
     'SELECT value FROM workspace_meta WHERE key = ?',
     [ACTIVE_NODE_META_KEY]
@@ -177,7 +177,7 @@ export function loadReadingProgress(): ReadingProgressSnapshot {
     'SELECT value FROM workspace_meta WHERE key = ?',
     [BROWSE_ROOT_NODE_META_KEY]
   );
-  const nodeRows = deviceId ? connection.driver.queryAll<NodeViewStateRow>(
+  const nodeRows = hostName ? connection.driver.queryAll<NodeViewStateRow>(
     `SELECT
        node_id,
        scroll_top,
@@ -186,8 +186,8 @@ export function loadReadingProgress(): ReadingProgressSnapshot {
        source,
        updated_at
      FROM node_view_state
-     WHERE device_id = ?`,
-    [deviceId]
+     WHERE host_name = ?`,
+    [hostName]
   ) : [];
 
   const nodeViewStateById: Record<string, NodeViewStateSnapshot> = {};
@@ -220,7 +220,7 @@ export function loadReadingProgress(): ReadingProgressSnapshot {
 
 function loadExistingNodeViewState(
   connection: DatabaseConnection,
-  deviceId: string,
+  hostName: string,
   nodeId: string
 ): PersistedNodeViewState | null {
   const row = connection.driver.queryOne<NodeViewStateRow>(
@@ -232,8 +232,8 @@ function loadExistingNodeViewState(
        source,
        updated_at
      FROM node_view_state
-     WHERE device_id = ? AND node_id = ?`,
-    [deviceId, nodeId]
+     WHERE host_name = ? AND node_id = ?`,
+    [hostName, nodeId]
   );
   if (!row) {
     return null;

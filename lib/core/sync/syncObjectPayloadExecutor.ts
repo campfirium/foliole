@@ -36,7 +36,7 @@ export async function applySyncObjectPayloadWithDbPort(
     case 'pdf_page_text':
       return applyPdfPageTextObject(port, record);
     case 'setting':
-      return applySettingObject(port, record);
+      return applySettingObject(port, record, options);
     case 'watched_folder':
       return applyWatchedFolderObject(port, record);
     case 'view_state':
@@ -94,26 +94,34 @@ async function applyExternalDocumentObject(port: DbPort, record: SyncPackSyncObj
   );
 }
 
-async function applySettingObject(port: DbPort, record: SyncPackSyncObjectRecord) {
+async function applySettingObject(
+  port: DbPort,
+  record: SyncPackSyncObjectRecord,
+  options: SyncObjectPayloadApplyOptions
+) {
   const parts = record.object_id.split(':', 5);
+  if (parts.length !== 5 || parts.some((part) => !part)) throw new Error('invalid_setting_host_scope');
+  const [scope, platform, formFactor, hostName, key] = parts as [string, string, string, string, string];
+  if (scope !== 'user_space' && (!options.hostName || hostName !== options.hostName)) return false;
   if (record.deleted_at) {
     await port.run(
-      `DELETE FROM setting_records WHERE scope = ? AND platform = ? AND form_factor = ? AND device_id = ? AND key = ?`,
-      [parts[0] ?? 'device', parts[1] ?? '*', parts[2] ?? '*', parts[3] ?? '*', parts[4] ?? record.object_id]
+      `DELETE FROM setting_records WHERE scope = ? AND platform = ? AND form_factor = ? AND host_name = ? AND key = ?`,
+      [scope, platform, formFactor, hostName, key]
     );
-    return;
+    return true;
   }
   const payload = asObject(record);
   await port.run(
-    `INSERT INTO setting_records (scope, platform, form_factor, device_id, key, value_json, content_hash, updated_at, deleted_at) ` +
+    `INSERT INTO setting_records (scope, platform, form_factor, host_name, key, value_json, content_hash, updated_at, deleted_at) ` +
     `VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ` +
-    `ON CONFLICT(key, scope, platform, form_factor, device_id) DO UPDATE SET ` +
+    `ON CONFLICT(key, scope, platform, form_factor, host_name) DO UPDATE SET ` +
     `value_json = excluded.value_json, content_hash = excluded.content_hash, updated_at = excluded.updated_at, deleted_at = excluded.deleted_at`,
-    [text(payload.scope) ?? parts[0] ?? 'device', text(payload.platform) ?? parts[1] ?? '*',
-      text(payload.form_factor) ?? parts[2] ?? '*', text(payload.device_id) ?? parts[3] ?? '*',
-      text(payload.key) ?? parts[4] ?? record.object_id, text(payload.value_json) ?? 'null',
+    [text(payload.scope) ?? scope, text(payload.platform) ?? platform,
+      text(payload.form_factor) ?? formFactor, text(payload.host_name) ?? hostName,
+      text(payload.key) ?? key, text(payload.value_json) ?? 'null',
       record.content_hash, record.updated_at, null]
   );
+  return true;
 }
 
 async function applyExternalFolderObject(port: DbPort, record: SyncPackSyncObjectRecord) {
@@ -175,13 +183,14 @@ async function applyViewStateObject(
   record: SyncPackSyncObjectRecord,
   options: SyncObjectPayloadApplyOptions
 ) {
-  if (!isLocalAndroidViewStateObject(record.object_id, options.deviceId)) return false;
+  if (!isLocalAndroidViewStateObject(record.object_id, options.hostName)) return false;
   const parts = record.object_id.split(':');
-  const deviceId = parts.length >= 5 ? parts[3] ?? '*' : '*';
-  const key = parts.length >= 5 ? parts.slice(4).join(':') : record.object_id;
+  if (parts.length < 5 || !parts[3]) throw new Error('invalid_view_state_host_scope');
+  const hostName = parts[3];
+  const key = parts.slice(4).join(':');
   if (record.deleted_at) {
     if (key === 'active_node') await port.run("DELETE FROM workspace_meta WHERE key = 'active_node_id'");
-    if (key.startsWith('node:')) await port.run('DELETE FROM node_view_state WHERE node_id = ? AND device_id = ?', [key.slice(5), deviceId]);
+    if (key.startsWith('node:')) await port.run('DELETE FROM node_view_state WHERE node_id = ? AND host_name = ?', [key.slice(5), hostName]);
     return true;
   }
   const payload = asObject(record);
@@ -189,10 +198,10 @@ async function applyViewStateObject(
     await applyActiveNodeViewStateObject(port, record, text(payload.active_node_id));
   } else if (key.startsWith('node:')) {
     await port.run(
-      `INSERT INTO node_view_state (node_id, device_id, scroll_top, selection_from, selection_to, source, updated_at) ` +
-      `VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(node_id, device_id) DO UPDATE SET scroll_top = excluded.scroll_top, ` +
+      `INSERT INTO node_view_state (node_id, host_name, scroll_top, selection_from, selection_to, source, updated_at) ` +
+      `VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(node_id, host_name) DO UPDATE SET scroll_top = excluded.scroll_top, ` +
       `selection_from = excluded.selection_from, selection_to = excluded.selection_to, source = excluded.source, updated_at = excluded.updated_at`,
-      [key.slice(5), deviceId, Math.max(0, integer(payload.scroll_top)),
+      [key.slice(5), hostName, Math.max(0, integer(payload.scroll_top)),
         numberOrNull(payload.selection_from), numberOrNull(payload.selection_to),
         Object.hasOwn(payload, 'source') ? 'sync-apply' : 'user-scroll', record.updated_at]
     );
@@ -221,8 +230,8 @@ async function applyActiveNodeViewStateObject(
   );
 }
 
-function isLocalAndroidViewStateObject(objectId: string, deviceId?: string) {
-  if (!deviceId) return false;
-  const parts = objectId.split(':', 5);
-  return parts.length === 5 && parts[1] === 'android' && parts[3] === deviceId;
+function isLocalAndroidViewStateObject(objectId: string, hostName?: string) {
+  if (!hostName) return false;
+  const parts = objectId.split(':');
+  return parts.length >= 5 && parts[1] === 'android' && parts[3] === hostName;
 }

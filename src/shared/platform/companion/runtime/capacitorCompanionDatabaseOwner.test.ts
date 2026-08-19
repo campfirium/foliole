@@ -42,7 +42,7 @@ function harness(journalMode = 'delete') {
 
 it('reuses one connection and serializes every shared writer task', async () => {
   const { connection, manager, owner } = harness();
-  await owner.open({ expectedDeviceId: 'device', now: '2026-08-06T00:00:00Z' });
+  await owner.open({ expectedHostName: 'device', now: '2026-08-06T00:00:00Z' });
   const events: string[] = [];
   let release: () => void = () => undefined;
   const gate = new Promise<void>((resolve) => { release = resolve; });
@@ -64,7 +64,7 @@ it('reuses one connection and serializes every shared writer task', async () => 
 
 it('lets shared reads observe only committed writer state', async () => {
   const { owner } = harness();
-  await owner.open({ expectedDeviceId: 'device', now: '2026-08-06T00:00:00Z' });
+  await owner.open({ expectedHostName: 'device', now: '2026-08-06T00:00:00Z' });
   const events: string[] = [];
   let release: () => void = () => undefined;
   const gate = new Promise<void>((resolve) => { release = resolve; });
@@ -83,7 +83,7 @@ it('lets shared reads observe only committed writer state', async () => {
 
 it('waits for writers, checkpoints WAL, and closes the unique owner connection', async () => {
   const { connection, manager, owner } = harness('wal');
-  await owner.open({ expectedDeviceId: 'device', now: '2026-08-06T00:00:00Z' });
+  await owner.open({ expectedHostName: 'device', now: '2026-08-06T00:00:00Z' });
   await owner.runWriter(async (db) => db.run("INSERT INTO companion_meta VALUES ('k','v','now')"));
   await owner.close();
 

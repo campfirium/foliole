@@ -820,9 +820,9 @@
         }
       ]
     },
-    "nodeViewStatesByDevice": {
+    "nodeViewStatesByHost": {
       "resultKey": "states",
-      "sql": "SELECT node_id, scroll_top, selection_from, selection_to, updated_at, source FROM node_view_state WHERE device_id = ?",
+      "sql": "SELECT node_id, scroll_top, selection_from, selection_to, updated_at, source FROM node_view_state WHERE host_name = ?",
       "columns": [
         {
           "key": "node_id",
@@ -896,7 +896,7 @@
     },
     "workspaceSnapshotNodes": {
       "resultKey": "nodes",
-      "sql": "WITH RECURSIVE visible_nodes(id) AS (\n  SELECT id\n  FROM nodes\n  WHERE parent_id IS NULL\n    AND deleted_at IS NULL\n  UNION ALL\n  SELECT child.id\n  FROM nodes child\n  INNER JOIN visible_nodes parent\n    ON parent.id = child.parent_id\n  WHERE child.deleted_at IS NULL\n) SELECT n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.enable_short_term, n.sequential_reading_enabled, n.shelved_at, n.manual_child_order, n.title, n.is_title_manual, n.hide_title_heading, __CONTENT_EXPRESSION__ AS content, n.opening_text, __BODY_STATUS_EXPRESSION__ AS body_status, n.virtual_filter, n.reveal, n.anchor_link, n.image_regions, n.import_source_fingerprint, n.import_content_fingerprint, n.created_at, n.updated_at, n.deleted_at, n.current_version_id, (SELECT no.position FROM node_order no WHERE no.node_id = n.id) AS position, rd.interval_duration_ms, rd.interval_growth_factor, rd.last_handled_at, rd.next_at, rd.priority AS reading_priority, rds.reading_position, rd.repetition_count, rd.state AS reading_state, nr.due, nr.last_review_at, nr.state AS review_state, nr.stability, nr.difficulty, nr.elapsed_days, nr.scheduled_days, nr.reps, nr.lapses, n.body_blob_hash FROM nodes n LEFT JOIN visible_nodes visible ON visible.id = n.id __CONTENT_BLOB_JOIN__ LEFT JOIN node_reading rd ON rd.node_id = n.id AND visible.id IS NOT NULL LEFT JOIN node_reading_device_state rds ON rds.node_id = n.id AND rds.device_id = ? AND visible.id IS NOT NULL LEFT JOIN node_review nr ON nr.node_id = n.id AND visible.id IS NOT NULL ORDER BY COALESCE((SELECT no.position FROM node_order no WHERE no.node_id = n.id), 2147483647), n.updated_at DESC, n.created_at DESC, n.id ASC",
+      "sql": "WITH RECURSIVE visible_nodes(id) AS (\n  SELECT id\n  FROM nodes\n  WHERE parent_id IS NULL\n    AND deleted_at IS NULL\n  UNION ALL\n  SELECT child.id\n  FROM nodes child\n  INNER JOIN visible_nodes parent\n    ON parent.id = child.parent_id\n  WHERE child.deleted_at IS NULL\n) SELECT n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.enable_short_term, n.sequential_reading_enabled, n.shelved_at, n.manual_child_order, n.title, n.is_title_manual, n.hide_title_heading, __CONTENT_EXPRESSION__ AS content, n.opening_text, __BODY_STATUS_EXPRESSION__ AS body_status, n.virtual_filter, n.reveal, n.anchor_link, n.image_regions, n.import_source_fingerprint, n.import_content_fingerprint, n.created_at, n.updated_at, n.deleted_at, n.current_version_id, (SELECT no.position FROM node_order no WHERE no.node_id = n.id) AS position, rd.interval_duration_ms, rd.interval_growth_factor, rd.last_handled_at, rd.next_at, rd.priority AS reading_priority, rds.reading_position, rd.repetition_count, rd.state AS reading_state, nr.due, nr.last_review_at, nr.state AS review_state, nr.stability, nr.difficulty, nr.elapsed_days, nr.scheduled_days, nr.reps, nr.lapses, n.body_blob_hash FROM nodes n LEFT JOIN visible_nodes visible ON visible.id = n.id __CONTENT_BLOB_JOIN__ LEFT JOIN node_reading rd ON rd.node_id = n.id AND visible.id IS NOT NULL LEFT JOIN node_reading_host_state rds ON rds.node_id = n.id AND rds.host_name = ? AND visible.id IS NOT NULL LEFT JOIN node_review nr ON nr.node_id = n.id AND visible.id IS NOT NULL ORDER BY COALESCE((SELECT no.position FROM node_order no WHERE no.node_id = n.id), 2147483647), n.updated_at DESC, n.created_at DESC, n.id ASC",
       "columns": [
         {
           "key": "id",
@@ -1662,16 +1662,16 @@
       "resultKey": "payloads",
       "syncPayload": {
         "argMode": "object_id",
-        "defaultDeviceId": "*",
+        "defaultHostName": "*",
         "defaultIntervalDurationMs": 0,
         "defaultIntervalGrowthFactor": 1,
         "defaultPriority": 0,
         "defaultReadingPosition": 0,
         "defaultRepetitionCount": 0,
         "defaultState": "active",
-        "deviceIdPayloadKey": "device_id",
+        "hostNamePayloadKey": "host_name",
         "hashIgnoredPayloadKeys": [
-          "device_id",
+          "host_name",
           "reading_position"
         ],
         "inputPayloadKey": "reading_json",
@@ -1846,12 +1846,12 @@
     "syncPayloadSetting": {
       "syncPayload": {
         "argMode": "object_id",
-        "defaultDeviceId": "*",
+        "defaultHostName": "*",
         "defaultFormFactor": "phone",
         "defaultPlatform": "ios",
-        "defaultScope": "device",
+        "defaultScope": "host",
         "defaultValueJson": "null",
-        "deviceIdPayloadKey": "device_id",
+        "hostNamePayloadKey": "host_name",
         "formFactorPayloadKey": "form_factor",
         "keyPayloadKey": "key",
         "objectType": "setting",
@@ -1859,7 +1859,7 @@
         "scopePayloadKey": "scope",
         "valueJsonPayloadKey": "value_json"
       },
-      "sql": "SELECT json_object('key', key, 'scope', scope, 'platform', platform, 'form_factor', form_factor, 'device_id', device_id, 'value_json', value_json, 'content_hash', content_hash, 'updated_at', updated_at, 'deleted_at', deleted_at) AS payload_json FROM setting_records WHERE scope || ':' || platform || ':' || form_factor || ':' || device_id || ':' || key = ? LIMIT 1"
+      "sql": "SELECT json_object('key', key, 'scope', scope, 'platform', platform, 'form_factor', form_factor, 'host_name', host_name, 'value_json', value_json, 'content_hash', content_hash, 'updated_at', updated_at, 'deleted_at', deleted_at) AS payload_json FROM setting_records WHERE scope || ':' || platform || ':' || form_factor || ':' || host_name || ':' || key = ? LIMIT 1"
     },
     "syncPayloadViewActiveNode": {
       "syncPayload": {
@@ -1896,7 +1896,7 @@
         "selectionToPayloadKey": "selection_to",
         "sourcePayloadKey": "source"
       },
-      "sql": "SELECT json_object('node_id', node_id, 'scroll_top', scroll_top, 'selection_from', NULL, 'selection_to', NULL, 'source', source) AS payload_json FROM node_view_state WHERE node_id = ? AND device_id = ? LIMIT 1"
+      "sql": "SELECT json_object('node_id', node_id, 'scroll_top', scroll_top, 'selection_from', NULL, 'selection_to', NULL, 'source', source) AS payload_json FROM node_view_state WHERE node_id = ? AND host_name = ? LIMIT 1"
     },
     "diagnosticStorageMetrics": {
       "resultKey": "metrics",
@@ -3004,12 +3004,12 @@
   },
   "syncPayloadRouting": {
     "argModeKey": "argMode",
-    "defaultDeviceId": "*",
+    "defaultHostName": "*",
     "deletedAtKey": "deleted_at",
     "noneArgMode": "none",
     "objectIdArgMode": "object_id",
     "objectIdDelimiter": ":",
-    "objectIdDeviceIdPartIndex": 3,
+    "objectIdHostNamePartIndex": 3,
     "objectIdKey": "object_id",
     "objectIdKeyPartIndex": 4,
     "objectIdPartLimit": 5,
@@ -3410,7 +3410,7 @@
     "viewState": {
       "defaultSource": "user-scroll",
       "nodeIdRowKey": "node_id",
-      "queryName": "nodeViewStatesByDevice",
+      "queryName": "nodeViewStatesByHost",
       "resultKey": "states",
       "fields": [
         {

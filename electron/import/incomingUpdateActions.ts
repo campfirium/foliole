@@ -90,7 +90,7 @@ function readIncomingUpdateReading(nodeId: string) {
             reading.repetition_count, reading.state,
             device_state.reading_position
      FROM node_reading reading
-     LEFT JOIN node_reading_device_state device_state
+     LEFT JOIN node_reading_host_state device_state
        ON device_state.node_id = reading.node_id
      WHERE reading.node_id = ?
      ORDER BY device_state.updated_at DESC

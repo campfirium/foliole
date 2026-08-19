@@ -29,15 +29,15 @@ const payloadPlans = [
     body_text, source_device_id, created_at, status, updated_at FROM source.node_text_alternatives` },
   { objectType: 'pdf_page_text', sql: `SELECT attachment_id || ':' || page __object_id,
     attachment_id, page, text, page_width, page_height FROM source.pdf_page_text` },
-  { objectType: 'setting', sql: `SELECT scope || ':' || platform || ':' || form_factor || ':' || device_id || ':' || key __object_id,
-    key, scope, platform, form_factor, device_id, value_json, content_hash, updated_at, deleted_at FROM source.setting_records` },
+  { objectType: 'setting', sql: `SELECT scope || ':' || platform || ':' || form_factor || ':' || host_name || ':' || key __object_id,
+    key, scope, platform, form_factor, host_name, value_json, content_hash, updated_at, deleted_at FROM source.setting_records` },
   { objectType: 'view_state', sql: `SELECT s.object_id __object_id, NULLIF(m.value, '') active_node_id, m.updated_at
     FROM source.sync_object_state s JOIN source.workspace_meta m ON m.key = 'active_node_id'
     WHERE s.object_type = 'view_state' AND s.object_id LIKE '%:active_node'` },
   { objectType: 'view_state', sql: `SELECT s.object_id __object_id,
     v.node_id, v.scroll_top, v.selection_from, v.selection_to, v.source, v.updated_at
     FROM source.sync_object_state s JOIN source.node_view_state v
-      ON s.object_id LIKE '%:' || v.device_id || ':node:' || v.node_id
+      ON s.object_id LIKE '%:' || v.host_name || ':node:' || v.node_id
     WHERE s.object_type = 'view_state' AND s.object_id NOT LIKE '%:active_node'` }
 ] as const;
 

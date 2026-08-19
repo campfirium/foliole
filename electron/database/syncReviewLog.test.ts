@@ -199,7 +199,7 @@ it('applies mobile learning state and review event as clean desktop facts', asyn
 
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne<{ count: number }>(
-    'SELECT COUNT(*) AS count FROM node_reading_device_state WHERE node_id = ?',
+    'SELECT COUNT(*) AS count FROM node_reading_host_state WHERE node_id = ?',
     ['node-1']
   )).toEqual({ count: 0 });
   expect(driver.queryOne<{ last_review_at: string; reps: number }>(

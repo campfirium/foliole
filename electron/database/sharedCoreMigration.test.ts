@@ -46,7 +46,7 @@ it('initializes a fresh database with the current schema', () => {
        `SELECT name
        FROM sqlite_master
        WHERE type = 'table' AND name IN (
-         'attachment_blobs', 'content_blob_data', 'content_blobs', 'external_documents', 'node_reading_device_state', 'node_sync_conflicts', 'node_sync_versions', 'node_view_state', 'nodes', 'node_reading', 'node_review', 'review_log', 'search_index_invalidations', 'setting_records', 'settings', 'source_disposition_states', 'sync_change_log', 'sync_object_state', 'sync_peer_cursors', 'sync_peers', 'workspace_meta'
+         'attachment_blobs', 'content_blob_data', 'content_blobs', 'external_documents', 'node_reading_host_state', 'node_sync_conflicts', 'node_sync_versions', 'node_view_state', 'nodes', 'node_reading', 'node_review', 'review_log', 'search_index_invalidations', 'setting_records', 'settings', 'source_disposition_states', 'sync_change_log', 'sync_object_state', 'sync_peer_cursors', 'sync_peers', 'workspace_meta'
        )
        ORDER BY name ASC`
     )
@@ -58,7 +58,7 @@ it('initializes a fresh database with the current schema', () => {
     { name: 'content_blobs' },
     { name: 'external_documents' },
     { name: 'node_reading' },
-    { name: 'node_reading_device_state' },
+    { name: 'node_reading_host_state' },
     { name: 'node_review' },
     { name: 'node_sync_conflicts' },
     { name: 'node_sync_versions' },
@@ -134,7 +134,7 @@ it('adds search index invalidation queue to existing v39 databases', () => {
   expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
 });
 
-it('migrates reading position to device-scoped rows', () => {
+it('migrates reading position through the frozen device step into Host scope', () => {
   const connection = openDatabaseConnection();
   connection.sqlite.exec(`
     CREATE TABLE settings (
@@ -179,8 +179,8 @@ it('migrates reading position to device-scoped rows', () => {
 
   expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
   expect(connection.sqlite
-    .prepare('SELECT node_id, device_id, reading_position FROM node_reading_device_state')
-    .get()).toEqual({ device_id: 'desktop-test', node_id: 'node-reading', reading_position: 77 });
+    .prepare('SELECT node_id, host_name, reading_position FROM node_reading_host_state')
+    .get()).toEqual({ host_name: 'desktop-test', node_id: 'node-reading', reading_position: 77 });
   const readingColumns = connection.sqlite.prepare('PRAGMA table_info(node_reading)').all() as Array<{ name: string }>;
   expect(readingColumns.map((column) => column.name)).not.toContain('reading_position');
 });

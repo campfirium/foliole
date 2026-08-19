@@ -13,7 +13,7 @@ import { ensureSpecialRootNodesForInput } from './nodeMutationSpecialRoots.js';
 import {
   createUpdateNodeAnchorLinkStatement,
   createUpsertNodeOrderStatement,
-  createUpsertNodeReadingDeviceStateStatement,
+  createUpsertNodeReadingHostStateStatement,
   createUpsertNodeReadingStatement,
   createUpsertNodeStatement
 } from './nodeMutationStatements.js';
@@ -112,11 +112,11 @@ export interface UpsertNodeSnapshotOptions {
 function createUpsertNodeSnapshotStatements(driver: DatabaseDriver) {
   return {
     deleteNodeReading: driver.prepare('DELETE FROM node_reading WHERE node_id = ?'),
-    deleteNodeReadingDeviceState: driver.prepare('DELETE FROM node_reading_device_state WHERE node_id = ?'),
+    deleteNodeReadingHostState: driver.prepare('DELETE FROM node_reading_host_state WHERE node_id = ?'),
     upsertNode: createUpsertNodeStatement(driver),
     upsertNodeOrder: createUpsertNodeOrderStatement(driver),
     upsertNodeReading: createUpsertNodeReadingStatement(driver),
-    upsertNodeReadingDeviceState: createUpsertNodeReadingDeviceStateStatement(driver),
+    upsertNodeReadingHostState: createUpsertNodeReadingHostStateStatement(driver),
     upsertNodeReview: createUpsertNodeReviewStatement(driver)
   };
 }
@@ -155,9 +155,9 @@ export function upsertNodeSnapshot(
       statements.upsertNodeOrder.run([input.nodeId, input.position]);
     }
     writeNodeReadingSnapshotWithSync(driver, input, {
-      deleteDeviceState: statements.deleteNodeReadingDeviceState.run,
+      deleteDeviceState: statements.deleteNodeReadingHostState.run,
       deleteReading: statements.deleteNodeReading.run,
-      upsertDeviceState: statements.upsertNodeReadingDeviceState.run,
+      upsertDeviceState: statements.upsertNodeReadingHostState.run,
       upsertReading: statements.upsertNodeReading.run
     });
     writeNodeReviewSnapshotWithSync(driver, input, statements.upsertNodeReview.run);

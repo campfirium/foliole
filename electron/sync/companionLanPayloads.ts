@@ -42,6 +42,10 @@ export function resolveDesktopDeviceName() {
   return normalizeDesktopHostName(os.hostname());
 }
 
+export function resolveDesktopHostName() {
+  return resolveDesktopDeviceName();
+}
+
 export function normalizeDesktopHostName(value: string) {
   const hostName = value.trim().replace(/\.local$/iu, '');
   return hostName || 'Foliole Desktop';
