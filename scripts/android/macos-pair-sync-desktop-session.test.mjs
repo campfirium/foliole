@@ -71,7 +71,8 @@ describe('macOS pair sync desktop session', () => {
       operationId: 'pair-sync-1',
       prepareHiddenRuntime: vi.fn(() => ({
         cleanup,
-        executablePath: '/tmp/BackgroundElectron.app/Contents/MacOS/Electron'
+        executablePath: '/tmp/BackgroundElectron.app/Contents/MacOS/Electron',
+        keychainAccess: 'verified'
       })),
       rendererExists: () => true,
       repoRoot: '/repo/foliole',
@@ -104,5 +105,26 @@ describe('macOS pair sync desktop session', () => {
     expect(() => resolveFrozenRendererUrl('/repo/foliole', () => false)).toThrow(
       'Frozen desktop renderer is missing: /repo/foliole/dist/desktop/index.html'
     );
+  });
+
+  it('does not launch Electron when Keychain access is not mechanically verified', async () => {
+    const cleanup = vi.fn();
+    const launch = vi.fn();
+
+    await expect(openMacosPairSyncDesktopSession({
+      electronLauncher: { launch },
+      logEvent: vi.fn(),
+      prepareHiddenRuntime: vi.fn(() => ({
+        cleanup,
+        executablePath: '/tmp/BackgroundElectron.app/Contents/MacOS/Electron',
+        keychainAccess: 'unverified'
+      })),
+      rendererExists: () => true,
+      repoRoot: '/repo/foliole',
+      userDataPath: '/tmp/user-data'
+    })).rejects.toThrow('macos_hidden_electron_keychain_identity_unverified');
+
+    expect(launch).not.toHaveBeenCalled();
+    expect(cleanup).toHaveBeenCalledOnce();
   });
 });

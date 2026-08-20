@@ -2,7 +2,7 @@
 
 import fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 
 const macosPath = path.posix;
@@ -12,6 +12,19 @@ function checkedSpawn(command, args) {
   if (result.status === 0) return;
   const detail = result.stderr?.trim() || result.error?.message || `exit ${result.status}`;
   throw new Error(`hidden Electron runtime preparation failed: ${detail}`);
+}
+
+function fingerprintExecutable(executablePath, fileSystem) {
+  return createHash('sha256').update(fileSystem.readFileSync(executablePath)).digest('hex');
+}
+
+function publishRuntime(stageRoot, runtimeRoot, fileSystem) {
+  try {
+    fileSystem.renameSync(stageRoot, runtimeRoot);
+  } catch (error) {
+    if (!['EEXIST', 'ENOTEMPTY'].includes(error?.code)) throw error;
+    fileSystem.rmSync(stageRoot, { force: true, recursive: true });
+  }
 }
 
 export function resolveMacosHiddenElectronSource(appRoot, env = process.env) {
@@ -34,7 +47,6 @@ export function prepareMacosHiddenElectronRuntime({
   appRoot,
   env = process.env,
   fileSystem = fs,
-  runtimeId = randomUUID(),
   run = checkedSpawn
 }) {
   const source = resolveMacosHiddenElectronSource(appRoot, env);
@@ -43,21 +55,29 @@ export function prepareMacosHiddenElectronRuntime({
   }
   const parent = macosPath.join(appRoot, '.tmp', 'native-hidden-electron');
   fileSystem.mkdirSync(parent, { recursive: true });
-  const runtimeRoot = fileSystem.mkdtempSync(macosPath.join(parent, 'run-'));
+  const sourceFingerprint = fingerprintExecutable(source.executablePath, fileSystem);
+  const runtimeRoot = macosPath.join(parent, `runtime-${sourceFingerprint.slice(0, 20)}`);
   const targetApp = macosPath.join(runtimeRoot, macosPath.basename(source.appBundlePath));
+  const executablePath = macosPath.join(targetApp, source.executableRelativePath);
+  if (fileSystem.existsSync(executablePath)) {
+    return { cleanup: () => undefined, executablePath, keychainAccess: 'unverified' };
+  }
+  if (fileSystem.existsSync(runtimeRoot)) {
+    throw new Error(`hidden Electron runtime cache is incomplete: ${runtimeRoot}`);
+  }
+  const stageRoot = fileSystem.mkdtempSync(macosPath.join(parent, 'stage-'));
+  const stageApp = macosPath.join(stageRoot, macosPath.basename(source.appBundlePath));
   try {
-    run('/bin/cp', ['-cR', source.appBundlePath, targetApp]);
-    const infoPlist = macosPath.join(targetApp, 'Contents', 'Info.plist');
+    run('/bin/cp', ['-cR', source.appBundlePath, stageApp]);
+    const infoPlist = macosPath.join(stageApp, 'Contents', 'Info.plist');
     run('/usr/bin/plutil', ['-replace', 'LSUIElement', '-bool', 'YES', infoPlist]);
     run('/usr/bin/plutil', [
-      '-replace', 'CFBundleIdentifier', '-string', `com.foliole.hidden-native.${runtimeId}`, infoPlist
+      '-replace', 'CFBundleIdentifier', '-string', 'com.foliole.hidden-native', infoPlist
     ]);
-    return {
-      cleanup: () => fileSystem.rmSync(runtimeRoot, { force: true, recursive: true }),
-      executablePath: macosPath.join(targetApp, source.executableRelativePath)
-    };
+    publishRuntime(stageRoot, runtimeRoot, fileSystem);
+    return { cleanup: () => undefined, executablePath, keychainAccess: 'unverified' };
   } catch (error) {
-    fileSystem.rmSync(runtimeRoot, { force: true, recursive: true });
+    fileSystem.rmSync(stageRoot, { force: true, recursive: true });
     throw error;
   }
 }
