@@ -36,7 +36,7 @@ async function reconcileHostRosterPairing(
     (device) => macosPairSyncIdentityFingerprint(device.device_id) === deviceFingerprint
   );
   if (safe.pairedDeviceFingerprints.length === 0) {
-    return { ...safe, rePairRequired: existingPairing === false || credentialRepairRequired };
+    return { ...safe, rePairRequired: true };
   }
   const exactTarget = target && safe.pairedDeviceFingerprints.length === 1;
   if (!exactTarget) throw new Error('Current Sync Group pairing state requires user review.');

@@ -26,5 +26,9 @@ it('re-pairs an empty isolated store against the real host-only Sync Group roste
     overview, session, 'bd1d679fbb55b53e', null, false, false,
     undefined, { groupId: 'group-1', timelineId: 'timeline-1' }
   )).resolves.toMatchObject({ pairedDeviceFingerprints: [], rePairRequired: true });
+  await expect(reconcileAuthorizedMacosDailyPairing(
+    overview, session, 'bd1d679fbb55b53e', null, true, false,
+    undefined, { groupId: 'group-1', timelineId: 'timeline-1' }
+  )).resolves.toMatchObject({ pairedDeviceFingerprints: [], rePairRequired: true });
   expect(session.remove).not.toHaveBeenCalled();
 });
