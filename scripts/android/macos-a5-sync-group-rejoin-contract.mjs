@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 
 import { assertPairSyncRuntimeOwnership } from '../windows/windows-a5-pair-sync-recovery-transport.mjs';
 import { macosPairSyncIdentityFingerprint } from './macos-pair-sync-desktop-session.mjs';
+import { hasCompleteDirtyStateEvidence } from './macos-a5-pending-sync-state.mjs';
 
 export const T132_A5_IDENTITY = '2fdd44bb500a5934';
 export const T132_A5_LEGACY_MEMBER_IDENTITY = 'bff1f41963a42739';
@@ -20,17 +21,13 @@ function activeMemberFingerprints(overview) {
 export function assertT132ProtectedBaseline(readiness, requireSettledDelivery = true) {
   const protectedIdentity = readiness.deviceIdentityFingerprint === T132_A5_IDENTITY
     || readiness.deviceIdentityFingerprint === T132_A5_LEGACY_MEMBER_IDENTITY;
-  const dirtyStateProtected = readiness.dirtyRecordCount === 0
-    ? Object.keys(readiness.dirtyObjectCounts ?? {}).length === 0
-    : readiness.dirtyRecordCount === 1
-      && readiness.dirtyObjectCounts?.node_text_alternative === 1;
   if (!protectedIdentity
       || readiness.syncGroupId !== T132_GROUP_ID
       || readiness.syncGroupTimelineId !== T132_TIMELINE_ID
       || readiness.activeSyncGroupMemberCount !== 3
       || readiness.nodeCount < 1399
       || readiness.syncGroupCredentialsPresent !== true
-      || !dirtyStateProtected
+      || !hasCompleteDirtyStateEvidence(readiness)
       || readiness.syncGroupRemotePeerFingerprint !== T132_MAC_IDENTITY
       || readiness.syncGroupPeerConflict === true
       || (requireSettledDelivery && readiness.syncGroupRemotePeerPendingDeliveryCount !== 0)) {
@@ -47,8 +44,7 @@ export function assertT132CredentialRecoveryBaseline(readiness) {
       || readiness.activeSyncGroupMemberCount !== 3
       || readiness.nodeCount < 1399
       || readiness.syncGroupCredentialsPresent === true
-      || readiness.dirtyRecordCount !== 1
-      || readiness.dirtyObjectCounts?.node_text_alternative !== 1
+      || !hasCompleteDirtyStateEvidence(readiness)
       || readiness.syncGroupRemotePeerFingerprint !== null
       || readiness.syncGroupPeerConflict === true
       || (peerCounts[T132_MAC_IDENTITY]?.accepted ?? 0) < 1) {

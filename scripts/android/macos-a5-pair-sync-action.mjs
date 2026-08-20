@@ -25,8 +25,13 @@ function activeSyncGroupDeviceIds(overview) {
 
 async function reconcileCurrentSyncGroupPairings(
   overview, session, deviceFingerprint, remotePeerFingerprint, existingPairing,
-  credentialRepairRequired
+  credentialRepairRequired, protectedSyncGroup
 ) {
+  if (protectedSyncGroup
+      && (overview.sync_group?.group_id !== protectedSyncGroup.groupId
+        || overview.sync_group?.timeline_id !== protectedSyncGroup.timelineId)) {
+    throw new Error('Current Sync Group identity requires user review.');
+  }
   const activeDeviceIds = activeSyncGroupDeviceIds(overview);
   const target = overview.sync_group?.members?.find(
     (member) => macosPairSyncIdentityFingerprint(member.device_id) === deviceFingerprint
@@ -60,11 +65,12 @@ async function reconcileCurrentSyncGroupPairings(
 export async function reconcileAuthorizedMacosDailyPairing(
   overview, session, deviceFingerprint, remotePeerFingerprint, existingPairing,
   credentialRepairRequired = false,
-  authorizedStaleDeviceFingerprint = AUTHORIZED_STALE_DEVICE_FINGERPRINT
+  authorizedStaleDeviceFingerprint = AUTHORIZED_STALE_DEVICE_FINGERPRINT,
+  protectedSyncGroup = null
 ) {
   const currentGroup = await reconcileCurrentSyncGroupPairings(
     overview, session, deviceFingerprint, remotePeerFingerprint, existingPairing,
-    credentialRepairRequired
+    credentialRepairRequired, protectedSyncGroup
   );
   if (currentGroup) return currentGroup;
   const safe = session.sanitize(overview);
@@ -158,11 +164,16 @@ export async function runMacosA5PairSync({
   deviceFingerprint, existingPairing, env, evidenceRoot, execute,
   libraryHome, paths, protectData, remotePeerFingerprint, openTransport, closeTransport,
   instrumentationModeArgs, pairedDeviceFingerprint, pairRequestFingerprint,
-  recoveryEvidenceGoal, runPairSyncRecovery = runWindowsA5PairSyncRecovery, serial,
+  protectedSyncGroup, recoveryEvidenceGoal,
+  runPairSyncRecovery = runWindowsA5PairSyncRecovery, serial,
   userDataPath = path.join(paths.repoRoot, MACOS_DAILY_DEBUG_ROOT, 'user-data'),
-  validateDesktop = reconcileAuthorizedMacosDailyPairing
+  validateDesktop
 }) {
   fs.mkdirSync(evidenceRoot, { recursive: true });
+  const validateMacosDesktop = validateDesktop ?? ((...args) =>
+    reconcileAuthorizedMacosDailyPairing(
+      ...args, AUTHORIZED_STALE_DEVICE_FINGERPRINT, protectedSyncGroup
+    ));
   return runPairSyncRecovery({
     adbPort: '5037', buildIdentity, deviceFingerprint, env, evidenceRoot, execute,
     existingPairing,
@@ -175,7 +186,7 @@ export async function runMacosA5PairSync({
     ...(pairedDeviceFingerprint !== undefined ? { pairedDeviceFingerprint } : {}),
     ...(pairRequestFingerprint ? { pairRequestFingerprint } : {}),
     ...(recoveryEvidenceGoal ? { recoveryEvidenceGoal } : {}),
-    desktopControl, validateDesktop,
+    desktopControl, validateDesktop: validateMacosDesktop,
     paths: {
       adbPath: paths.adb,
       repoRoot: paths.repoRoot,

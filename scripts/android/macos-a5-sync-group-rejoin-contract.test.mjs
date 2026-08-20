@@ -80,6 +80,12 @@ it('protects the current Mac edge and the third offline member before Leave', ()
   expect(assertT132ProtectedBaseline({
     ...baseline, dirtyObjectCounts: {}, dirtyRecordCount: 0, nodeCount: 1405
   })).toBeTruthy();
+  expect(assertT132ProtectedBaseline({
+    ...baseline, dirtyObjectCounts: { setting: 3 }, dirtyRecordCount: 3
+  })).toBeTruthy();
+  expect(() => assertT132ProtectedBaseline({
+    ...baseline, dirtyObjectCounts: { setting: 2 }, dirtyRecordCount: 3
+  })).toThrow('protected T132-2 terminal baseline');
   expect(() => assertT132ProtectedBaseline({ ...baseline,
     syncGroupRemotePeerPendingDeliveryCount: 1
   })).toThrow('protected T132-2 terminal baseline');
@@ -95,6 +101,9 @@ it('protects the same data and roster while requiring explicit credential recove
   const recovery = { ...baseline, syncGroupCredentialsPresent: false,
     syncGroupRemotePeerFingerprint: null };
   expect(assertT132CredentialRecoveryBaseline(recovery)).toBe(recovery);
+  expect(assertT132CredentialRecoveryBaseline({
+    ...recovery, dirtyObjectCounts: { setting: 3 }, dirtyRecordCount: 3
+  })).toBeTruthy();
   expect(() => assertT132CredentialRecoveryBaseline({ ...recovery,
     activeSyncGroupMemberCount: 4
   })).toThrow('protected credential recovery baseline');

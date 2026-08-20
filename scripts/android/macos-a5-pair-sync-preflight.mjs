@@ -3,6 +3,8 @@
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
+import { hasProtectedPendingSyncState } from './macos-a5-pending-sync-state.mjs';
+
 const A5_SERIAL = '87a33a4b';
 const APP_ID = 'com.foliole.android';
 
@@ -128,6 +130,8 @@ export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
     && (emptyStalePairing || joinedEmptyWorkspace || syncedProfileSwitch);
   const existingPairingRecovery = pairState.dirtyRecordCount > 0
     && authorizedPairing && syncedProfileSwitch;
+  const protectedGroupPendingSync = syncedProfileSwitch
+    && hasProtectedPendingSyncState(pairState);
   const cleanPairSwitch = pairing.status === 0 && pairState.dirtyRecordCount === 0
     && authorizedPairing && authorizedWorkspace
     && pairState.pairingCredentialsRejected !== true;
@@ -154,7 +158,8 @@ export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
     && workspaceState.counts?.node_order === 0
     && workspaceState.pairingWorkspace?.localDeviceIdentityPresent === true
     && workspaceState.pairingWorkspace?.syncEndpointPresent === false;
-  if (!existingPairingRecovery && !cleanPairSwitch && !rejectedCleanPairing
+  if (!existingPairingRecovery && !protectedGroupPendingSync
+      && !cleanPairSwitch && !rejectedCleanPairing
       && !rejectedEmptyPairing && !freshEmptyPairing && !missingDatabaseBootstrap) {
     throw new Error('Fixed A5 no longer matches the authorized pair-switch state.');
   }
@@ -162,8 +167,9 @@ export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
     ...pairState,
     credentialRepairRequired: rejectedCleanPairing || rejectedEmptyPairing || (existingPairingRecovery
       && pairState.pairingCredentialsRejected === true),
-    existingPairing: existingPairingRecovery || cleanPairSwitch
+    existingPairing: existingPairingRecovery || protectedGroupPendingSync || cleanPairSwitch
       || rejectedEmptyPairing || missingDatabaseBootstrap,
+    protectedPendingSync: protectedGroupPendingSync,
     requiresProductBootstrap: missingDatabaseBootstrap
   };
 }

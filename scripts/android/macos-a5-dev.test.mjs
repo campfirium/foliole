@@ -46,6 +46,19 @@ describe('macOS fixed A5 development entry', () => {
     expect(source).not.toContain("process.argv[3]");
   });
 
+  it('starts and verifies the fixed ADB server before pair-sync readiness fans out', () => {
+    const extended = fs.readFileSync('scripts/android/macos-a5-extended-actions.mjs', 'utf8');
+    const block = extended.slice(
+      extended.indexOf('export async function runMacosA5PairSyncEntry'),
+      extended.indexOf('export async function runMacosA5ExistingSyncEntry')
+    );
+
+    expect(block.indexOf('args.assertFixed();')).toBeGreaterThan(-1);
+    expect(block.indexOf('args.assertFixed();')).toBeLessThan(
+      block.indexOf('resolveMacosA5PairSyncReadiness(args.paths)')
+    );
+  });
+
   it('exposes existing Sync Group sync without accepting an endpoint', () => {
     const source = fs.readFileSync('scripts/android/macos-a5-dev.mjs', 'utf8');
     const extended = fs.readFileSync('scripts/android/macos-a5-extended-actions.mjs', 'utf8');

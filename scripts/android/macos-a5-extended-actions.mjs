@@ -90,6 +90,7 @@ export async function runMacosA5DesktopLeaveEntry(args) {
 }
 
 export async function runMacosA5PairSyncEntry(args) {
+  args.assertFixed();
   const { resolveMacosA5PairSyncReadiness } = await import('./macos-a5-product-bootstrap.mjs');
   const readiness = resolveMacosA5PairSyncReadiness(args.paths);
   args.build(); buildMacosA5Desktop(args.checked, args.paths);
@@ -100,6 +101,9 @@ export async function runMacosA5PairSyncEntry(args) {
     deviceFingerprint: readiness.deviceIdentityFingerprint, env: args.env,
     evidenceRoot: path.join(args.paths.repoRoot, '.tmp/artifacts/a5-pair-sync', buildIdentity),
     execute: args.execute, existingPairing: readiness.existingPairing, paths: args.paths,
+    protectedSyncGroup: readiness.protectedPendingSync ? {
+      groupId: readiness.syncGroupId, timelineId: readiness.syncGroupTimelineId
+    } : null,
     remotePeerFingerprint: readiness.remotePeerFingerprint,
     serial: args.serial
   });
