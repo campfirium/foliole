@@ -118,7 +118,9 @@ it('observes Leave through durable host state after the visible confirmation', (
   );
   expect(scenario).toContain('click(instrumentation, webView, "companion-sync-group-open")');
   expect(scenario).toContain('"companion-sync-group-leave-confirm"');
-  expect(scenario).toContain('waitUntilMissing(instrumentation, webView, "companion-sync-group-leave-confirm"');
+  expect(scenario).toContain('"companion-sync-group-leave-error".equals(testId)');
+  expect(scenario).toContain('"data-error-code"');
+  expect(scenario).toContain('"Product Leave failed: "');
   expect(scenario).not.toContain('departureState(Context context)');
   expect(scenario).toContain('put("workgroupKeyRemoved", true)');
   expect(test).toContain('sendDepartureEvidence(instrumentation, receipt)');

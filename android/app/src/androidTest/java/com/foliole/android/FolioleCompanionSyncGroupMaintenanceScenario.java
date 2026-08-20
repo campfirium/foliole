@@ -117,7 +117,26 @@ final class FolioleCompanionSyncGroupMaintenanceScenario {
     private static void waitForDeparture(
         Instrumentation instrumentation, WebView webView
     ) throws Exception {
-        waitUntilMissing(instrumentation, webView, "companion-sync-group-leave-confirm", 30_000);
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
+        while (System.nanoTime() < deadline) {
+            JSONObject snapshot = FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView);
+            boolean confirmationVisible = false;
+            for (int index = 0; index < snapshot.getJSONArray("elements").length(); index += 1) {
+                JSONObject item = snapshot.getJSONArray("elements").getJSONObject(index);
+                if (!item.optBoolean("visible")) continue;
+                String testId = item.optString("testId");
+                confirmationVisible |= "companion-sync-group-leave-confirm".equals(testId);
+                if ("companion-sync-group-leave-error".equals(testId)) {
+                    JSONObject error = FolioleCompanionWebViewSemanticAdapter.readAttribute(
+                        instrumentation, webView, testId, "data-error-code"
+                    );
+                    throw new IllegalStateException("Product Leave failed: " + error.optString("value"));
+                }
+            }
+            if (!confirmationVisible) return;
+            Thread.sleep(100);
+        }
+        throw new IllegalStateException("Timed out waiting for product Leave completion.");
     }
 
     private static void waitUntilVisible(
