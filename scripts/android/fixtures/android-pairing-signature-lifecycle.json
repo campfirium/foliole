@@ -1,0 +1,25 @@
+{
+  "activeGroup": {
+    "endpointUrl": "http://10.0.0.25:38641",
+    "groupId": "group-fresh-join",
+    "localAuthorizationId": "authorization-a5",
+    "localDeviceId": "device-a5",
+    "peerAuthorizationId": "authorization-provider",
+    "peerDeviceId": "device-provider"
+  },
+  "expectedSignature": "ebe5ab4f26b24d8dd4903fe155fcab0341940ab19b136683d07ab86523db1a1c",
+  "negativeCases": [
+    "missing_workgroup_key",
+    "sync_group_peer_not_found",
+    "sync_group_peer_ambiguous",
+    "sync_group_peer_mismatch"
+  ],
+  "request": {
+    "bodyHash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "method": "GET",
+    "nonce": "fresh-join-signature-probe",
+    "pathWithQuery": "/companion/sync-pack?after_state_seq=0",
+    "timestamp": "2026-08-20T08:00:00.000Z"
+  },
+  "workgroupKey": "fixture-workgroup-key"
+}
