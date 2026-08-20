@@ -1,4 +1,6 @@
 import { setTimeout as delay } from 'node:timers/promises';
+import fs from 'node:fs';
+import path from 'node:path';
 
 import { MACOS_DAILY_LIBRARY_HOME } from '../macos/macos-electron-dev-paths.mjs';
 import { assertPairSyncRuntimeOwnership } from '../windows/windows-a5-pair-sync-recovery-transport.mjs';
@@ -24,6 +26,51 @@ function activeMemberAuthorizationFingerprints(overview) {
     throw new Error('Desktop active member authorization is missing.');
   }
   return fingerprints.sort();
+}
+
+function localMemberAuthorizationFingerprint(overview) {
+  const group = overview.sync_group;
+  const matches = (group?.members ?? []).filter(({ host_name: hostName, state }) =>
+    state === 'active' && hostName === group.local_host_name
+  );
+  if (matches.length !== 1) return null;
+  return authorizationFingerprint(matches[0].authorization_id);
+}
+
+export function inspectProtectedDesktopBoundary(overview, session, baseline, expectedMembers) {
+  const members = activeMemberAuthorizationFingerprints(overview);
+  const safe = session.sanitize(overview);
+  const actual = {
+    activeMemberAuthorizationFingerprints: members,
+    desktopPeerFingerprint: safe.desktopPeerFingerprint,
+    groupId: overview.sync_group?.group_id ?? null,
+    localMemberAuthorizationFingerprint: localMemberAuthorizationFingerprint(overview),
+    pendingDeviceFingerprints: safe.pendingDeviceFingerprints,
+    timelineId: overview.sync_group?.timeline_id ?? null
+  };
+  const expected = {
+    activeMemberAuthorizationFingerprints: expectedMembers,
+    groupId: baseline.groupId,
+    localMemberAuthorizationFingerprint: baseline.remotePeerFingerprint,
+    pendingDeviceFingerprints: [],
+    timelineId: baseline.timelineId
+  };
+  return { actual, expected };
+}
+
+function protectedDesktopBoundaryMatches({ actual, expected }) {
+  return actual.groupId === expected.groupId
+    && actual.timelineId === expected.timelineId
+    && actual.localMemberAuthorizationFingerprint === expected.localMemberAuthorizationFingerprint
+    && actual.pendingDeviceFingerprints.length === 0
+    && JSON.stringify(actual.activeMemberAuthorizationFingerprints)
+      === JSON.stringify(expected.activeMemberAuthorizationFingerprints);
+}
+
+function writeProtectedDesktopBoundaryEvidence(evidenceRoot, evidence) {
+  fs.mkdirSync(evidenceRoot, { recursive: true });
+  fs.writeFileSync(path.join(evidenceRoot, 'pair-credentials-protected-boundary.json'),
+    `${JSON.stringify({ ...evidence, schemaVersion: 1 }, null, 2)}\n`, 'utf8');
 }
 
 export async function collectCredentialProtectedReadiness(
@@ -109,16 +156,11 @@ export function assertFreshCredentialRejoinBaseline(readiness, baseline) {
 
 function assertProtectedDesktop(overview, session, baseline, expectedMembers) {
   assertPairSyncRuntimeOwnership(overview, session);
-  const members = activeMemberAuthorizationFingerprints(overview);
-  const safe = session.sanitize(overview);
-  if (overview.sync_group?.group_id !== baseline.groupId
-      || overview.sync_group?.timeline_id !== baseline.timelineId
-      || safe.desktopPeerFingerprint !== baseline.remotePeerFingerprint
-      || safe.pendingDeviceFingerprints.length !== 0
-      || JSON.stringify(members) !== JSON.stringify(expectedMembers)) {
+  const evidence = inspectProtectedDesktopBoundary(overview, session, baseline, expectedMembers);
+  if (!protectedDesktopBoundaryMatches(evidence)) {
     throw new Error('Desktop no longer protects the joined-empty Sync Group boundary.');
   }
-  return members;
+  return evidence.actual.activeMemberAuthorizationFingerprints;
 }
 
 async function waitForProtectedDeparture(session, baseline, beforeMembers, wait) {
@@ -142,6 +184,8 @@ export async function leaveJoinedEmptyCredentialSession(args, dependencies = {})
   const openSession = dependencies.openSession ?? openMacosPairSyncDesktopSession;
   const maintenance = dependencies.maintenance ?? runMacosA5SyncGroupMaintenance;
   const wait = dependencies.wait ?? delay;
+  const writeBoundaryEvidence = dependencies.writeBoundaryEvidence
+    ?? writeProtectedDesktopBoundaryEvidence;
   const session = await openSession({
     env: args.env, libraryHome: MACOS_DAILY_LIBRARY_HOME, repoRoot: args.paths.repoRoot
   });
@@ -151,6 +195,8 @@ export async function leaveJoinedEmptyCredentialSession(args, dependencies = {})
     if (!beforeMembers.includes(args.baseline.localMemberAuthorizationFingerprint)) {
       throw new Error('Desktop does not contain the active A5 member selected for credential rejoin.');
     }
+    writeBoundaryEvidence(args.evidenceRoot,
+      inspectProtectedDesktopBoundary(overview, session, args.baseline, beforeMembers));
     assertProtectedDesktop(overview, session, args.baseline, beforeMembers);
     const result = await maintenance({
       action: 'leave-sync-group', buildIdentity: args.buildIdentity, env: args.env,

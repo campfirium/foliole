@@ -67,7 +67,8 @@ const joinedEmpty = {
   pairingCredentialsPresent: false, protectedContentDigest: digest,
   storedSyncGroupId: 'group-1', storedSyncGroupTimelineId: 'timeline-1',
   syncGroupCredentialsPresent: true, syncGroupId: 'group-1',
-  syncGroupRemotePeerFingerprint: 'a8ef578b118115cf', syncGroupRoutePresent: true,
+  syncGroupRemotePeerFingerprint: authorizationFingerprint('authorization-desktop'),
+  syncGroupRoutePresent: true,
   syncGroupTimelineId: 'timeline-1', workgroupKeyPresent: true
 };
 
@@ -115,7 +116,8 @@ it('routes exact joined-empty credentials through product Leave and a fresh boun
     credentialRepairRequired: false, existingPairing: false, pairedDeviceFingerprint: null,
     pairRequestFingerprint: '2fdd44bb500a5934',
     protectedSyncGroup: { groupId: 'group-1', timelineId: 'timeline-1' },
-    remotePeerFingerprint: 'a8ef578b118115cf', recoveryEvidenceGoal: 'credentials-signable'
+    remotePeerFingerprint: joinedEmpty.syncGroupRemotePeerFingerprint,
+    recoveryEvidenceGoal: 'credentials-signable'
   }));
   expect(collectProtectedReadiness).toHaveBeenCalledTimes(2);
 });
@@ -186,7 +188,8 @@ it('proves the desktop roster and group identity around formal product Leave', a
   const baseline = assertJoinedEmptyCredentialReauthorization(joinedEmpty);
   const overview = (members) => ({ paired_devices: [], pending_requests: [], sync_enabled: true,
     server_status: { port: 38641, state: 'running' }, sync_group: {
-      group_id: 'group-1', timeline_id: 'timeline-1', members: members.map((authorization_id) => ({
+      group_id: 'group-1', local_host_name: 'host-authorization-desktop',
+      timeline_id: 'timeline-1', members: members.map((authorization_id) => ({
         authorization_id, host_name: `host-${authorization_id}`, state: 'active'
       }))
     } });
@@ -196,19 +199,28 @@ it('proves the desktop roster and group identity around formal product Leave', a
       a5Authorization, desktopAuthorization, offlineAuthorization
     ])),
     load: vi.fn().mockResolvedValue(overview([desktopAuthorization, offlineAuthorization])),
-    sanitize: vi.fn(() => ({ desktopPeerFingerprint: baseline.remotePeerFingerprint,
+    sanitize: vi.fn(() => ({ desktopPeerFingerprint: 'different-device-identity',
       pendingDeviceFingerprints: [] }))
   };
   const maintenance = vi.fn().mockResolvedValue({ manifestPath: '/tmp/leave.json' });
+  const writeBoundaryEvidence = vi.fn();
   await leaveJoinedEmptyCredentialSession({ baseline, buildIdentity: 'build-3', env: {},
     evidenceRoot: '/tmp/evidence', execute: vi.fn(), paths: { repoRoot: '/repo' },
-    serial: '87a33a4b' }, { maintenance, openSession: async () => session, wait: vi.fn() });
+    serial: '87a33a4b' }, {
+    maintenance, openSession: async () => session, wait: vi.fn(), writeBoundaryEvidence
+  });
 
   expect(maintenance).toHaveBeenCalledWith(expect.objectContaining({
     action: 'leave-sync-group', installMain: false
   }));
   expect(session.assertActive).toHaveBeenCalledTimes(2);
   expect(session.close).toHaveBeenCalledOnce();
+  expect(writeBoundaryEvidence).toHaveBeenCalledWith('/tmp/evidence', expect.objectContaining({
+    actual: expect.objectContaining({
+      desktopPeerFingerprint: 'different-device-identity',
+      localMemberAuthorizationFingerprint: baseline.remotePeerFingerprint
+    })
+  }));
 
   const hostOnlyOverview = overview([
     a5Authorization, desktopAuthorization, offlineAuthorization
@@ -217,7 +229,9 @@ it('proves the desktop roster and group identity around formal product Leave', a
   session.enable.mockResolvedValueOnce(hostOnlyOverview);
   await expect(leaveJoinedEmptyCredentialSession({ baseline, buildIdentity: 'build-3', env: {},
     evidenceRoot: '/tmp/evidence', execute: vi.fn(), paths: { repoRoot: '/repo' },
-    serial: '87a33a4b' }, { maintenance, openSession: async () => session, wait: vi.fn() }))
+    serial: '87a33a4b' }, {
+    maintenance, openSession: async () => session, wait: vi.fn(), writeBoundaryEvidence
+  }))
     .rejects.toThrow('active member authorization is missing');
   expect(maintenance).toHaveBeenCalledTimes(1);
 });
