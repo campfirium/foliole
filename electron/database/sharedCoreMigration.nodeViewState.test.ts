@@ -17,12 +17,8 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import {
-  DATABASE_SCHEMA_VERSION,
-  initializeDatabaseConnection
-} from '../../lib/core/database/index.js';
-
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
 
 let tempRoot = '';
 
@@ -54,9 +50,9 @@ it('migrates node view state to device-scoped rows', () => {
   `);
   connection.sqlite.pragma('user_version = 30');
 
-  initializeDatabaseConnection(connection);
+  migrateNumberedFixtureTo(connection.sqlite, 31);
 
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(31);
   expect(connection.sqlite.prepare('SELECT node_id, device_id, scroll_top FROM node_view_state').get()).toEqual({
     device_id: 'desktop-test',
     node_id: 'node-1',
@@ -81,7 +77,7 @@ it('adds source to device-scoped node view state rows', () => {
   `);
   connection.sqlite.pragma('user_version = 32');
 
-  initializeDatabaseConnection(connection);
+  migrateNumberedFixtureTo(connection.sqlite, 33);
 
   expect(connection.sqlite
     .prepare('SELECT source FROM node_view_state WHERE node_id = ? AND device_id = ?')

@@ -16,24 +16,22 @@ describe('desktop setting policy', () => {
     ['review_scheduler_settings', 'user_space', true],
     ['window_state', 'session_resume', true],
     ['readwise_book_epub_picker_state', 'session_resume', true],
-    ['discourse_publish_settings', 'device', true],
-    ['wordpress_publish_settings', 'device', true],
-    ['foliole_publish_settings', 'device', true],
+    ['discourse_publish_settings', 'host', true],
+    ['wordpress_publish_settings', 'host', true],
+    ['foliole_publish_settings', 'host', true],
     ['device_id', 'local_only', false],
     ['watch_import_cursor_state', 'local_only', false]
   ])('classifies %s as %s', (key, scope, canonical) => {
     expect(resolveDesktopSettingPolicy(key)).toMatchObject({ canonical, declared: true, scope });
   });
 
-  it('preserves the existing device scope for undeclared keys without migration eligibility', () => {
+  it('preserves the existing Host scope for undeclared keys without migration eligibility', () => {
     expect(resolveDesktopSettingPolicy('future_setting')).toEqual({
       canonical: true,
       declared: false,
-      scope: 'device'
+      scope: 'host'
     });
     expect(DESKTOP_INTERNAL_SETTINGS_KEYS).toEqual([
-      'desktop_node_sync_restore_incarnation',
-      'desktop_node_sync_version_counter',
       'workspace_search_queued_revision',
       'workspace_search_source_identity',
       'workspace_search_source_revision'

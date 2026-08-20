@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { serializeSyncProtocolTxt } from '../../lib/platform/syncProtocolContract.js';
+
 const bonjourMock = vi.hoisted(() => ({
   constructorOptions: [] as unknown[],
   constructorCallback: null as ((error: unknown) => void) | null,
@@ -105,12 +107,9 @@ describe('companion mDNS advertisement', () => {
         group_tag: 'tag-1',
         ipv4_addresses: '192.168.0.11',
         peer_id: 'desktop-local',
-        protocol_capabilities: 'lan-sync-v1,sync-group-facts-v1,workgroup-aead-v1',
-        protocol_max_version: '1',
-        protocol_min_version: '1',
-        protocol_version: '1',
         runtime_instance_id: expect.any(String),
-        timeline_id: 'timeline-1'
+        timeline_id: 'timeline-1',
+        ...serializeSyncProtocolTxt()
       },
       type: 'foliole-sync'
     });

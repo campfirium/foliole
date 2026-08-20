@@ -21,6 +21,7 @@ import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { initializeDesktopDeviceProfileFixture } from './deviceIdentityTestSupport.js';
 import { applySyncObjectsAsync } from './syncObjectApply.js';
 
 let tempRoot = '';
@@ -29,6 +30,7 @@ beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-sync-object-apply-isolation-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabaseConnection(openDatabaseConnection());
+  initializeDesktopDeviceProfileFixture('desktop-test');
 });
 
 afterEach(async () => {
@@ -55,20 +57,22 @@ it('skips malformed records without blocking later valid records', async () => {
   }, {
     content_hash: 'good-hash',
     deleted_at: null,
-    object_id: 'device:android:phone:*:sync_reminder',
+    object_id: 'user_space:android:phone:*:sync_reminder',
     object_type: 'setting',
     payload_json: JSON.stringify({
       key: 'sync_reminder',
-      scope: 'device',
+      scope: 'user_space',
       platform: 'android',
       form_factor: 'phone',
-      device_id: '*',
+      host_name: '*',
       value_json: '{"enabled":true}'
     }),
     updated_at: '2026-04-21T16:01:00.000Z'
   }] as unknown as NativeSyncObjectRecord[];
 
-  await expect(applySyncObjectsAsync(records)).resolves.toEqual(['setting:device:android:phone:*:sync_reminder']);
+  await expect(applySyncObjectsAsync(records)).resolves.toEqual([
+    'setting:user_space:android:phone:*:sync_reminder'
+  ]);
   expect(warn).toHaveBeenCalled();
 
   const driver = openDatabaseConnection().driver;

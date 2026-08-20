@@ -20,6 +20,8 @@ vi.mock('../ipc/paths.js', () => ({
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { upsertDesktopSource } from './desktopSources.js';
+import { initializeDesktopDeviceProfileFixture } from './deviceIdentityTestSupport.js';
 import { applySyncObjectsAsync } from './syncObjectApply.js';
 
 let tempRoot = '';
@@ -28,6 +30,7 @@ beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-external-folder-removal-sync-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabaseConnection(openDatabaseConnection());
+  initializeDesktopDeviceProfileFixture('desktop-test');
   seedExternalFolderMirror();
 });
 
@@ -53,10 +56,14 @@ it('deletes a folder mirror when its source tombstone is applied', async () => {
 
 function seedExternalFolderMirror() {
   const driver = openDatabaseConnection().driver;
+  const source = upsertDesktopSource({
+    configRef: 'folder-1', rootPath: '/remote', sourceType: 'external', updatedAt: 'now'
+  });
   driver.execute(
     `INSERT INTO external_search_folders (
-       id, folder_path, attachment_mode, excluded_dirs_json, status, document_count, created_at, updated_at
-     ) VALUES ('folder-1', '/remote', 'document_relative', '[]', 'ready', 1, 'now', 'now')`
+       id, folder_path, attachment_mode, excluded_dirs_json, status, document_count, created_at, updated_at, source_ref
+     ) VALUES ('folder-1', '/remote', 'document_relative', '[]', 'ready', 1, 'now', 'now', ?)`,
+    [source.source_ref]
   );
   driver.execute(
     `INSERT INTO external_documents (

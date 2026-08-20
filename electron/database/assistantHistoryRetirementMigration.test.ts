@@ -22,8 +22,15 @@ vi.mock('../ipc/paths.js', () => ({
 import { ASSISTANT_THREAD_SCHEMA_STATEMENTS } from '../../lib/core/database/assistantThreadIndexSchemaStatements.js';
 
 import { resolveManagedBackupDirectory } from './backupSettings.js';
+import { materializeCompressedSqliteBackup } from './compressedSqliteBackup.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { DATABASE_SCHEMA_VERSION, initializeDatabase } from './migrate.js';
+import {
+  createManagedSafetySnapshotForMigration,
+  settleManagedMigrationSnapshot,
+  waitForManagedSafetySnapshotSettlements
+} from './managedSafetySnapshots.js';
+import { initializeDatabase } from './migrate.js';
+import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
@@ -75,22 +82,28 @@ function expectLegacyAssistantTablesRemoved() {
       'assistant_image_attachments', 'assistant_thread_message_images'
     ) ORDER BY name`
   ).all()).toEqual([]);
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(59);
   expect(connection.sqlite.pragma('foreign_key_check')).toEqual([]);
 }
 
 it('snapshots v57 Aide rows before v59 removes them from the main library', async () => {
   const legacy = seedLegacyAssistantHistory();
   legacy.sqlite.pragma('user_version = 57');
-  closeDatabaseConnection();
-
-  initializeDatabase();
+  const pendingSnapshot = createManagedSafetySnapshotForMigration({
+    reason: 'pre-migration', sourceDatabase: legacy.sqlite, sourcePath: legacy.dbPath
+  });
+  migrateNumberedFixtureTo(legacy.sqlite, 59);
+  settleManagedMigrationSnapshot(pendingSnapshot.snapshot, pendingSnapshot.protection);
+  await waitForManagedSafetySnapshotSettlements();
   expectLegacyAssistantTablesRemoved();
 
   const backupDirectory = resolveManagedBackupDirectory();
   const snapshotName = (await fs.readdir(backupDirectory)).find((name) => name.startsWith('pre-migration-'));
   expect(snapshotName).toBeDefined();
-  const snapshot = new BetterSqlite3(path.join(backupDirectory, snapshotName ?? ''), { readonly: true });
+  const materialized = await materializeCompressedSqliteBackup(
+    path.join(backupDirectory, snapshotName ?? ''), tempRoot
+  );
+  const snapshot = new BetterSqlite3(materialized.databasePath, { readonly: true });
   try {
     expect(snapshot.prepare(
       'SELECT provider_thread_id FROM assistant_thread_index'
@@ -103,6 +116,7 @@ it('snapshots v57 Aide rows before v59 removes them from the main library', asyn
       .toEqual({ attachment_id: 'image-old' });
   } finally {
     snapshot.close();
+    await materialized.cleanup();
   }
 });
 
@@ -111,11 +125,9 @@ it('cleans image tables left by v58 and stays clean after reopening', () => {
   legacy.sqlite.exec('DROP TABLE assistant_thread_messages');
   legacy.sqlite.exec('DROP TABLE assistant_thread_index');
   legacy.sqlite.pragma('user_version = 58');
-  closeDatabaseConnection();
-
-  initializeDatabase();
+  migrateNumberedFixtureTo(legacy.sqlite, 59);
   expectLegacyAssistantTablesRemoved();
   closeDatabaseConnection();
-  initializeDatabase();
+  openDatabaseConnection();
   expectLegacyAssistantTablesRemoved();
 });

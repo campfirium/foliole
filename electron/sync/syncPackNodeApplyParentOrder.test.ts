@@ -64,10 +64,12 @@ function createIncomingPack(filePath: string) {
   try {
     for (const statement of PACK_SCHEMA) db.exec(statement);
     db.prepare(
-      `INSERT INTO sync_object_state (object_type, object_id, state_seq, content_hash, updated_at, deleted_at)
+      `INSERT INTO sync_object_state (
+         object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, deleted_at
+       )
        VALUES
-         ('node', 'child-1', 1, 'child-hash', '2026-05-29T07:48:00.000Z', NULL),
-         ('node', 'parent-1', 2, 'parent-hash', '2026-05-29T07:47:00.000Z', NULL)`
+         ('node', 'child-1', 1, 'child-hash', 'Desktop', '2026-05-29T07:48:00.000Z', NULL),
+         ('node', 'parent-1', 2, 'parent-hash', 'Desktop', '2026-05-29T07:47:00.000Z', NULL)`
     ).run();
     db.prepare(
       `INSERT INTO nodes (
@@ -81,7 +83,7 @@ function createIncomingPack(filePath: string) {
     ).run();
     db.prepare(
       `INSERT INTO node_sync_versions (
-         version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+         version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
        ) VALUES
          ('desktop#child', 'child-1', NULL, 'desktop', '2026-05-29T07:48:00.000Z', 'child-hash', '{"id":"child-1"}'),
          ('desktop#parent', 'parent-1', NULL, 'desktop', '2026-05-29T07:47:00.000Z', 'parent-hash', '{"id":"parent-1"}')`

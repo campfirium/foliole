@@ -84,7 +84,7 @@ function insertVersion(
 ) {
   openDatabaseConnection().driver.execute(
     `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, device_id, created_at, content_hash
+       version_id, object_id, parent_version_id, host_name, created_at, content_hash
      ) VALUES (?, ?, ?, ?, ?, ?)`,
     [versionId, 'node-1', parentVersionId, 'desktop', createdAt, contentHash]
   );

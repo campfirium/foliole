@@ -13,7 +13,7 @@ const fixturePath = path.join(
   root, 'scripts/android/fixtures/android-pairing-signature-lifecycle.json'
 );
 
-const readJava = (name) => readFile(path.join(javaRoot, name), 'utf8');
+const readJava = async (name) => (await readFile(path.join(javaRoot, name), 'utf8')).replace(/\r\n?/gu, '\n');
 
 async function loadFixture() {
   return JSON.parse(await readFile(fixturePath, 'utf8'));

@@ -62,7 +62,7 @@ it('creates a managed safety snapshot before numbered schema migrations', async 
   closeDatabaseConnection();
 
   const sqlite = new BetterSqlite3(databasePath);
-  sqlite.pragma('user_version = 31');
+  sqlite.pragma(`user_version = ${DATABASE_SCHEMA_VERSION - 1}`);
   sqlite.close();
 
   initializeDatabase();

@@ -116,9 +116,9 @@ describe('companion new selection annotation actions', () => {
     });
     expect(syncObjectsMock.applyCompanionSyncNodeVersions).toHaveBeenCalledWith([
       expect.objectContaining({
-        device_id: 'android-device',
+        host_name: 'android-device',
         object_id: 'node-00000000-0000-4000-8000-000000000001',
-        version_id: 'android-device#00000000-0000-4000-8000-000000000002'
+        version_id: 'ver_00000000-0000-4000-8000-000000000002'
       })
     ]);
     expect(syncObjectsMock.saveCompanionSyncNodeReviewRecord).not.toHaveBeenCalled();
@@ -173,13 +173,13 @@ describe('companion existing highlight annotation actions', () => {
 
     expect(result?.snapshot.nodesById['highlight-1']).toMatchObject({
       content: 'Beta\n※ Remember this',
-      currentVersionId: 'android-device#00000000-0000-4000-8000-000000000003'
+      currentVersionId: 'ver_00000000-0000-4000-8000-000000000003'
     });
     expect(syncObjectsMock.applyCompanionSyncNodeVersions).toHaveBeenCalledWith([
       expect.objectContaining({
         object_id: 'highlight-1',
         parent_version_id: 'desktop#highlight-v1',
-        version_id: 'android-device#00000000-0000-4000-8000-000000000003'
+        version_id: 'ver_00000000-0000-4000-8000-000000000003'
       })
     ]);
   });
@@ -200,7 +200,7 @@ describe('companion existing highlight annotation actions', () => {
         object_id: 'highlight-1',
         parent_version_id: 'desktop#highlight-v1',
         snapshot: expect.objectContaining({ deleted_at: expect.any(String) }),
-        version_id: 'android-device#00000000-0000-4000-8000-000000000003'
+        version_id: 'ver_00000000-0000-4000-8000-000000000003'
       })
     ]);
   });

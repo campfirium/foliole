@@ -21,6 +21,7 @@ import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { initializeDesktopDeviceProfileFixture } from './deviceIdentityTestSupport.js';
 import { loadReadingProgress } from './readingProgress.js';
 import { applySyncObjectsAsync } from './syncObjectApply.js';
 import { loadWorkspaceListSnapshot } from './workspaceListSnapshot.js';
@@ -32,6 +33,7 @@ beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-sync-object-apply-visibility-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabaseConnection(openDatabaseConnection());
+  initializeDesktopDeviceProfileFixture('desktop-test');
 });
 
 afterEach(async () => {

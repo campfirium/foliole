@@ -22,15 +22,15 @@ it('persists reciprocal credentials for authenticated requests in both Android r
     source('android/app/src/main/assets/companion-bridge-contract-definitions.json')
   ]);
 
-  expect(pairing).toContain('payload.provider_encrypted_device_secret');
-  expect(pairing).toContain('providerSecret !== deviceSecret');
-  expect(pairing).toContain('workgroupKey: deviceSecret');
+  expect(pairing).toContain('payload.provider_encrypted_credential_secret');
+  expect(pairing).toContain('providerSecret !== credentialSecret');
+  expect(pairing).toContain('workgroupKey: credentialSecret');
   expect(encryption.slice(encryption.indexOf('export async function decryptCompanionPairingSecret')))
     .not.toContain('pairingPrivateKeys.delete(pairRequestClientId)');
   expect(actions).toContain('FolioleCompanionSyncGroupOutboundPeerStore.save(');
   expect(server).toContain('FolioleCompanionSyncGroupOutboundPairing.save(');
   expect(server).toContain('FolioleCompanionWorkgroupSession.requireKey()');
-  expect(server).toContain('provider_encrypted_device_secret", FolioleCompanionSyncGroupPairCrypto.encrypt(pending.pairingPublicKey, workgroupKey)');
+  expect(server).toContain('provider_encrypted_credential_secret", FolioleCompanionSyncGroupPairCrypto.encrypt(pending.pairingPublicKey, workgroupKey)');
   expect(outbound).not.toContain('FolioleCompanionPairingStore.savePairingCredentials(');
   expect(outbound).toContain('FolioleCompanionSyncGroupOutboundPeerStore.save(');
   expect(outbound).toContain('FolioleCompanionSyncGroupDatabase.saveSyncEndpoint(dataBridge, endpointUrl, now)');

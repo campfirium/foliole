@@ -5,7 +5,7 @@ import { assertNoUnsafePathOverlap } from '../libraryPathSafety.js';
 import { loadManagedPathCandidates } from '../managedPathSafety.js';
 
 import { openDatabaseConnection } from './connection.js';
-import { upsertDesktopSource } from './desktopSources.js';
+import { isDesktopSourceConnected, type DesktopSourceRecord, upsertDesktopSource } from './desktopSources.js';
 import { loadExternalFolderEnabled } from './externalFolderHostPreferences.js';
 import {
   type ExternalSearchFolderRow,
@@ -33,6 +33,12 @@ function normalizedInput(folders: SaveFolderInput[]) {
 
 export function loadExternalSearchFolders() {
   return readExternalSearchFolderRows().map((row) => toExternalSearchFolder(row, loadExternalFolderEnabled(row.id)));
+}
+
+export function loadRefreshableExternalSearchFolders() {
+  return readExternalSearchFolderRows()
+    .filter((row) => isDesktopSourceConnected(row as unknown as DesktopSourceRecord))
+    .map((row) => toExternalSearchFolder(row, loadExternalFolderEnabled(row.id)));
 }
 
 function recordSync(folder: ReturnType<typeof normalizedInput>[number], now: string, hostName: string, deletedAt?: string) {

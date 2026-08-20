@@ -17,9 +17,8 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
-
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
 
 let tempRoot = '';
 
@@ -40,8 +39,8 @@ function countRows(table: string, where = '1 = 1') {
 }
 
 it('resets opened-file history while preserving regular external libraries', async () => {
-  const connection = initializeDatabaseConnection(openDatabaseConnection());
-  connection.sqlite.pragma('user_version = 47');
+  const connection = openDatabaseConnection();
+  createV47Fixture();
   connection.sqlite.exec(`
     INSERT INTO local_files (
       id, absolute_path, title, file_size, modified_at, last_opened_at, missing_at,
@@ -60,7 +59,7 @@ it('resets opened-file history while preserving regular external libraries', asy
   insertSyncRows('opened-doc', 'external_document');
   insertSyncRows('regular-doc', 'external_document');
 
-  initializeDatabaseConnection(connection);
+  migrateNumberedFixtureTo(connection.sqlite, 48);
 
   expect(countRows('local_files')).toBe(0);
   expect(countRows('external_search_folders', "id = 'opened-external-documents'")).toBe(0);
@@ -77,7 +76,8 @@ function insertExternalFolder(id: string, folderPath: string) {
     id, folder_path, attachment_mode, attachment_root_path, excluded_dirs_json,
     status, document_count, indexed_at, last_error, created_at, updated_at
   ) VALUES (?, ?, 'document_relative_first_then_fixed_root', NULL, '[]', 'ready', 1, ?, NULL, ?, ?)`)
-    .run(id, folderPath, '2026-06-11T00:00:00.000Z', '2026-06-11T00:00:00.000Z', '2026-06-11T00:00:00.000Z');
+    .run(id, folderPath, '2026-06-11T00:00:00.000Z', '2026-06-11T00:00:00.000Z',
+      '2026-06-11T00:00:00.000Z');
 }
 
 function insertExternalDocument(documentId: string, folderId: string, relativePath: string) {
@@ -103,12 +103,49 @@ function insertExternalDocument(documentId: string, folderId: string, relativePa
 function insertSyncRows(objectId: string, objectType: string) {
   openDatabaseConnection().sqlite.prepare(`INSERT INTO sync_object_state (
     object_type, object_id, state_seq, current_version_id, content_hash,
-    last_modified_by_host_name, updated_at, deleted_at, sync_dirty
+    last_modified_by_device_id, updated_at, deleted_at, sync_dirty
   ) VALUES (?, ?, (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state), NULL, ?, 'desktop', ?, NULL, 0)`)
     .run(objectType, objectId, `hash-${objectId}`, '2026-06-11T00:00:00.000Z');
   openDatabaseConnection().sqlite.prepare(`INSERT INTO sync_change_log (
-    change_id, object_type, object_id, change_type, host_name, base_version_id,
+    change_id, object_type, object_id, change_type, device_id, base_version_id,
     result_version_id, content_hash, payload_json, created_at, applied_at
   ) VALUES (?, ?, ?, 'upsert', 'desktop', NULL, NULL, ?, '{}', ?, ?)`)
     .run(`change-${objectId}`, objectType, objectId, `hash-${objectId}`, '2026-06-11T00:00:00.000Z', '2026-06-11T00:00:00.000Z');
+}
+
+function createV47Fixture() {
+  openDatabaseConnection().sqlite.exec(`
+    CREATE TABLE local_files (
+      id TEXT PRIMARY KEY, absolute_path TEXT NOT NULL UNIQUE, title TEXT NOT NULL,
+      file_size INTEGER, modified_at TEXT, last_opened_at TEXT NOT NULL, missing_at TEXT,
+      cursor_from INTEGER, cursor_to INTEGER, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+    );
+    CREATE TABLE external_search_folders (
+      id TEXT PRIMARY KEY, folder_path TEXT NOT NULL UNIQUE, attachment_mode TEXT NOT NULL,
+      attachment_root_path TEXT, excluded_dirs_json TEXT NOT NULL DEFAULT '[]',
+      status TEXT NOT NULL DEFAULT 'idle', document_count INTEGER NOT NULL DEFAULT 0,
+      indexed_at TEXT, last_error TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+    );
+    CREATE TABLE external_documents (
+      document_id TEXT PRIMARY KEY, folder_id TEXT NOT NULL, relative_path TEXT NOT NULL,
+      file_name TEXT NOT NULL, extension TEXT NOT NULL, source_size_bytes INTEGER NOT NULL,
+      source_modified_at TEXT NOT NULL, source_modified_ms INTEGER NOT NULL,
+      content_hash TEXT NOT NULL, title TEXT NOT NULL, opening_text TEXT, body_blob_hash TEXT,
+      content TEXT NOT NULL, indexed_at TEXT NOT NULL, is_present INTEGER NOT NULL DEFAULT 1,
+      missing_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+    );
+    CREATE TABLE sync_object_state (
+      object_type TEXT NOT NULL, object_id TEXT NOT NULL, state_seq INTEGER NOT NULL,
+      current_version_id TEXT, content_hash TEXT NOT NULL, last_modified_by_device_id TEXT NOT NULL,
+      updated_at TEXT NOT NULL, deleted_at TEXT, sync_dirty INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (object_type, object_id), UNIQUE (state_seq)
+    );
+    CREATE TABLE sync_change_log (
+      change_id TEXT PRIMARY KEY, object_type TEXT NOT NULL, object_id TEXT NOT NULL,
+      change_type TEXT NOT NULL, device_id TEXT NOT NULL, base_version_id TEXT,
+      result_version_id TEXT, content_hash TEXT NOT NULL, payload_json TEXT NOT NULL,
+      created_at TEXT NOT NULL, applied_at TEXT
+    );
+    PRAGMA user_version = 47;
+  `);
 }

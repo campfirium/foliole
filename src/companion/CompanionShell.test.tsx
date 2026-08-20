@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract';
 
 import './CompanionShell.testSupport';
 
@@ -109,14 +110,10 @@ function mockWorkspaceSync(args: {
       device_kind: 'android-capacitor',
       device_name: 'Android companion',
       is_paired: args.isPaired ?? true,
-      negotiated_protocol_version: args.isPaired === false ? undefined : 1,
+      negotiated_protocol_version: args.isPaired === false
+        ? undefined : CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
       paired_at: args.isPaired === false ? null : '2026-04-22T09:00:00.000Z',
-      remote_protocol: args.isPaired === false ? undefined : {
-        capabilities: ['lan-sync-v1', 'sync-group-facts-v1', 'workgroup-aead-v1'],
-        max_supported_version: 1,
-        min_supported_version: 1,
-        version: 1
-      },
+      remote_protocol: args.isPaired === false ? undefined : CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
       sync_usable: args.isPaired !== false
     },
     pairingStatus: 'idle',

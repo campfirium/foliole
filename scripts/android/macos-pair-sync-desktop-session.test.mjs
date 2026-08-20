@@ -1,3 +1,8 @@
+/* global process */
+
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -5,6 +10,10 @@ import {
   openMacosPairSyncDesktopSession,
   resolveFrozenRendererUrl
 } from './macos-pair-sync-desktop-session.mjs';
+
+const repoRoot = path.join(path.parse(process.cwd()).root, 'repo', 'foliole');
+const rendererPath = path.join(repoRoot, 'dist', 'desktop', 'index.html');
+const rendererUrl = pathToFileURL(rendererPath).toString();
 
 describe('macOS pair sync desktop session', () => {
   it('creates the Sync Group before fresh-device discovery', async () => {
@@ -53,7 +62,7 @@ describe('macOS pair sync desktop session', () => {
     const releaseCredentialSession = vi.fn();
     const timeline = [];
     const page = {
-      url: vi.fn(() => 'file:///repo/foliole/dist/desktop/index.html'),
+      url: vi.fn(() => rendererUrl),
       waitForFunction: vi.fn().mockResolvedValue(undefined),
       waitForURL: vi.fn().mockResolvedValue(undefined)
     };
@@ -68,30 +77,40 @@ describe('macOS pair sync desktop session', () => {
         ELECTRON_RENDERER_URL: 'http://127.0.0.1:24600/',
         FOLIOLE_VITE_HMR: '0'
       },
-      libraryHome: '/tmp/library',
+      libraryHome: path.join(path.parse(process.cwd()).root, 'tmp', 'library'),
       logEvent: (event) => timeline.push(event),
       operationId: 'pair-sync-1',
       prepareHiddenRuntime: vi.fn(() => ({
         cleanup,
-        executablePath: '/tmp/BackgroundElectron.app/Contents/MacOS/Electron',
+        executablePath: path.join(
+          path.parse(process.cwd()).root, 'tmp', 'BackgroundElectron.app', 'Contents', 'MacOS',
+          'Electron'
+        ),
         runtimeFingerprint: 'a'.repeat(64),
         runtimeIdentity: 'stable-source-bound'
       })),
       rendererExists: () => true,
-      repoRoot: '/repo/foliole'
+      repoRoot
     });
 
     expect(launch).toHaveBeenCalledWith(expect.objectContaining({
       env: expect.objectContaining({
-        ELECTRON_RENDERER_URL: 'file:///repo/foliole/dist/desktop/index.html',
+        ELECTRON_RENDERER_URL: rendererUrl,
         FOLIOLE_HIDDEN_CREDENTIAL_APP_NAME: `Foliole Hidden Native ${'a'.repeat(20)}`,
-        FOLIOLE_HIDDEN_CREDENTIAL_MAIN_PATH: '/repo/foliole/dist/electron/main.js',
-        FOLIOLE_USER_DATA_PATH:
-          `/repo/foliole/.tmp/native-hidden-electron/credential-sessions/runtime-${'a'.repeat(20)}/user-data`,
+        FOLIOLE_HIDDEN_CREDENTIAL_MAIN_PATH: path.join(repoRoot, 'dist', 'electron', 'main.js'),
+        FOLIOLE_USER_DATA_PATH: path.join(
+          repoRoot, '.tmp', 'native-hidden-electron', 'credential-sessions',
+          `runtime-${'a'.repeat(20)}`, 'user-data'
+        ),
         FOLIOLE_VITE_HMR: '1'
       }),
-      args: ['/repo/foliole/scripts/desktop/macos-hidden-electron-credential-bootstrap.mjs'],
-      executablePath: '/tmp/BackgroundElectron.app/Contents/MacOS/Electron'
+      args: [path.join(
+        repoRoot, 'scripts', 'desktop', 'macos-hidden-electron-credential-bootstrap.mjs'
+      )],
+      executablePath: path.join(
+        path.parse(process.cwd()).root, 'tmp', 'BackgroundElectron.app', 'Contents', 'MacOS',
+        'Electron'
+      )
     }));
     await session.close();
     expect(close).toHaveBeenCalledOnce();
@@ -102,7 +121,7 @@ describe('macOS pair sync desktop session', () => {
       expect.objectContaining({ event: 'electron_started', payload: { pid: 42 } }),
       expect.objectContaining({
         event: 'renderer_loaded',
-        payload: { url: 'file:///repo/foliole/dist/desktop/index.html' }
+        payload: { url: rendererUrl }
       }),
       expect.objectContaining({ event: 'session_ready' }),
       expect.objectContaining({ event: 'session_closed' })
@@ -110,8 +129,8 @@ describe('macOS pair sync desktop session', () => {
   });
 
   it('fails closed when the frozen renderer is unavailable', () => {
-    expect(() => resolveFrozenRendererUrl('/repo/foliole', () => false)).toThrow(
-      'Frozen desktop renderer is missing: /repo/foliole/dist/desktop/index.html'
+    expect(() => resolveFrozenRendererUrl(repoRoot, () => false)).toThrow(
+      `Frozen desktop renderer is missing: ${rendererPath}`
     );
   });
 
@@ -128,7 +147,7 @@ describe('macOS pair sync desktop session', () => {
         runtimeIdentity: 'ephemeral'
       })),
       rendererExists: () => true,
-      repoRoot: '/repo/foliole'
+      repoRoot
     })).rejects.toThrow('macos_hidden_electron_keychain_identity_unverified');
 
     expect(launch).not.toHaveBeenCalled();
@@ -141,7 +160,7 @@ describe('macOS pair sync desktop session', () => {
     await expect(openMacosPairSyncDesktopSession({
       prepareHiddenRuntime,
       rendererExists: () => true,
-      repoRoot: '/repo/foliole',
+      repoRoot,
       userDataPath: '/Users/example/Library/Application Support/Foliole'
     })).rejects.toThrow('macos_hidden_electron_user_data_override_forbidden');
     expect(prepareHiddenRuntime).not.toHaveBeenCalled();

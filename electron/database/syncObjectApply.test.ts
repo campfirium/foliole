@@ -144,7 +144,11 @@ it('applies import source and external folder payloads', async () => {
     payload_json: JSON.stringify({
       attachment_mode: 'document_relative_first_then_fixed_root',
       excluded_dirs_json: '[".git"]',
-      folder_path: '/docs'
+      folder_path: '/docs',
+      host_name: 'Desktop test host',
+      host_platform: 'darwin',
+      source_ref: 'external:folder-1',
+      type_settings_json: '{}'
     }),
     updated_at: '2026-04-21T16:00:00.000Z'
   }];

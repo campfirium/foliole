@@ -9,7 +9,7 @@ import type {
 
 import { iosSearchParams, queryIosCompanionDatabase, readIosCompanionDatabase } from './iosCompanionActiveDatabase';
 import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
-import { iosCompanionDeviceId } from './iosCompanionMutationState';
+import { iosCompanionDeviceId, iosCompanionHostName } from './iosCompanionMutationState';
 
 function payloads() {
   return buildCompanionPayloadQueryDefinitions(getIosCompanionDatabaseOwner().platform);
@@ -76,6 +76,10 @@ export function loadIosSyncIndex() {
 
 export function loadIosSyncNodeConflicts() {
   return queryIosCompanionDatabase<NativeSyncNodeConflictRecord & DbRow>('nodeConflicts');
+}
+
+export function loadIosCompanionHostName() {
+  return readIosCompanionDatabase((db) => iosCompanionHostName(db));
 }
 
 export async function loadIosSyncObjects(objectIds: string[], objectTypes?: string[]) {

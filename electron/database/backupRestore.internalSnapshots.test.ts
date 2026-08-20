@@ -138,7 +138,7 @@ it('keeps distinct compressed pre-restore and pre-migration states restorable', 
   const oldBackupPath = path.join(tempRoot, 'old-schema.db');
   await createApplicationDatabaseBackup({ destinationPath: oldBackupPath });
   const oldSqlite = new BetterSqlite3(oldBackupPath);
-  oldSqlite.pragma('user_version = 31');
+  oldSqlite.pragma(`user_version = ${DATABASE_SCHEMA_VERSION - 1}`);
   oldSqlite.close();
   seedNode('node-1', '# current state');
 
@@ -153,7 +153,7 @@ it('keeps distinct compressed pre-restore and pre-migration states restorable', 
     content: '# current state', userVersion: DATABASE_SCHEMA_VERSION
   });
   await expect(readSnapshotState(preMigration?.filePath)).resolves.toEqual({
-    content: '# restored old state', userVersion: 31
+    content: '# restored old state', userVersion: DATABASE_SCHEMA_VERSION - 1
   });
 
   await restoreApplicationDatabaseBackup({ sourcePath: preRestore?.filePath ?? '' });

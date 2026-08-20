@@ -63,9 +63,9 @@ describe('companion capture text actions', () => {
     expect(result.snapshot.nodeOrder).toEqual([INBOX_NODE_ID, result.nodeId]);
     expect(syncObjectsMock.applyCompanionSyncNodeVersions).toHaveBeenCalledWith([
       expect.objectContaining({
-        device_id: 'android-device',
+        host_name: 'android-device',
         object_id: result.nodeId,
-        version_id: 'android-device#00000000-0000-4000-8000-000000000011'
+        version_id: 'ver_00000000-0000-4000-8000-000000000011'
       })
     ]);
   });

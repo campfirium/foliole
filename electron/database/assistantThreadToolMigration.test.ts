@@ -16,10 +16,8 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
-import { DATABASE_SCHEMA_VERSION } from '../../lib/core/database/migrations.js';
-
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
 
 let tempRoot = '';
 
@@ -46,12 +44,12 @@ it('applies the legacy metadata migration before retiring main-library assistant
   `);
   connection.sqlite.pragma('user_version = 56');
 
-  initializeDatabaseConnection(connection);
+  migrateNumberedFixtureTo(connection.sqlite, 58);
 
   expect(connection.sqlite.prepare(
     "SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'assistant_thread_%'"
   ).all()).toEqual([]);
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(58);
 });
 
 function legacyThreadIndexSchema() {

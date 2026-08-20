@@ -17,12 +17,8 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import {
-  DATABASE_SCHEMA_VERSION,
-  initializeDatabaseConnection
-} from '../../lib/core/database/index.js';
-
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
 
 let tempRoot = '';
 
@@ -57,11 +53,11 @@ it('adds sequential reading column to existing v43 node tables', () => {
   `);
   connection.sqlite.pragma('user_version = 43');
 
-  initializeDatabaseConnection(connection);
+  migrateNumberedFixtureTo(connection.sqlite, 44);
 
   const columns = connection.sqlite.prepare('PRAGMA table_info(nodes)').all() as Array<{ name: string }>;
   expect(columns.map((column) => column.name)).toContain('sequential_reading_enabled');
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(44);
 });
 
 it('adds manual child order column to existing v44 node tables', () => {
@@ -86,11 +82,11 @@ it('adds manual child order column to existing v44 node tables', () => {
   `);
   connection.sqlite.pragma('user_version = 44');
 
-  initializeDatabaseConnection(connection);
+  migrateNumberedFixtureTo(connection.sqlite, 45);
 
   const columns = connection.sqlite.prepare('PRAGMA table_info(nodes)').all() as Array<{ name: string }>;
   expect(columns.map((column) => column.name)).toContain('manual_child_order');
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(45);
 });
 
 it('adds shelved topic column to existing v45 node tables', () => {
@@ -116,9 +112,9 @@ it('adds shelved topic column to existing v45 node tables', () => {
   `);
   connection.sqlite.pragma('user_version = 45');
 
-  initializeDatabaseConnection(connection);
+  migrateNumberedFixtureTo(connection.sqlite, 46);
 
   const columns = connection.sqlite.prepare('PRAGMA table_info(nodes)').all() as Array<{ name: string }>;
   expect(columns.map((column) => column.name)).toContain('shelved_at');
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(46);
 });

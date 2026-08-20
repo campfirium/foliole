@@ -17,9 +17,11 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { DATABASE_SCHEMA_VERSION, initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { migrateHostPermanentState } from '../../lib/core/database/numberedMigrationHostPermanentState.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
 
 let tempRoot = '';
 
@@ -89,7 +91,7 @@ function projection(key: string) {
 function migrateFromV53() {
   const connection = openDatabaseConnection();
   connection.sqlite.pragma('user_version = 53');
-  initializeDatabaseConnection(connection);
+  migrateNumberedFixtureTo(connection.sqlite, 54);
 }
 
 it('reconciles missing, newer, equal-timestamp, and local-only settings deterministically', () => {
@@ -113,7 +115,7 @@ it('reconciles missing, newer, equal-timestamp, and local-only settings determin
   expect(projection('review_scheduler_settings')?.value).toBe('{"source":"record-tie"}');
   expect(settingRecord('watch_import_cursor_state')).toBeUndefined();
   expect(settingRecord('desktop_node_sync_version_counter')).toBeUndefined();
-  expect(openDatabaseConnection().sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  expect(openDatabaseConnection().sqlite.pragma('user_version', { simple: true })).toBe(54);
   expect(openDatabaseConnection().driver.queryOne<{ sync_dirty: number }>(
     `SELECT sync_dirty FROM sync_object_state
      WHERE object_type = 'setting' AND object_id = 'user_space:windows:desktop:*:backup_settings'`
@@ -142,6 +144,7 @@ it('applies local tombstones without materializing foreign device records', () =
   );
 
   migrateFromV53();
+  migrateHostPermanentState(openDatabaseConnection().sqlite);
 
   expect(projection('discourse_publish_settings')).toBeUndefined();
   expect(projection('window_state')?.value).toBe('{"width":900}');
@@ -157,7 +160,7 @@ it('rolls back DML and user_version when migration fails', () => {
     BEGIN SELECT RAISE(ABORT, 'migration failed'); END`);
   connection.sqlite.pragma('user_version = 53');
 
-  expect(() => initializeDatabaseConnection(connection)).toThrow(/migration failed/i);
+  expect(() => migrateNumberedFixtureTo(connection.sqlite, 54)).toThrow(/migration failed/i);
 
   expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(53);
   expect(settingRecord('app_settings')).toBeUndefined();

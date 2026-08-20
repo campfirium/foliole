@@ -17,9 +17,8 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { DATABASE_SCHEMA_VERSION, initializeDatabaseConnection } from '../../lib/core/database/index.js';
-
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
 
 let tempRoot = '';
 
@@ -55,9 +54,9 @@ it('applies content blob migrations to existing v28 databases', () => {
   `);
   connection.sqlite.pragma('user_version = 28');
 
-  initializeDatabaseConnection(connection);
+  migrateNumberedFixtureTo(connection.sqlite, 30);
 
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(30);
   const contentBlobTable = connection.sqlite
     .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'content_blobs'")
     .get() as { name: string } | undefined;

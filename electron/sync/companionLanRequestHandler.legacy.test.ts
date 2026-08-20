@@ -48,7 +48,7 @@ vi.mock('../database/workspaceSnapshot.js', () => ({
   loadWorkspaceVersionMetadata: workspaceSnapshotMock.loadWorkspaceVersionMetadata
 }));
 vi.mock('./companionRequestAuth.js', () => ({
-  authenticateCompanionRequest: vi.fn(() => ({ device_id: 'android-fixture', ok: true }))
+  authenticateCompanionRequest: vi.fn(() => ({ host_name: 'android-fixture', ok: true }))
 }));
 vi.mock('./companionLanContentBlobs.js', () => ({
   CONTENT_BLOB_ACK_PATH: '/companion/content-blob/ack',

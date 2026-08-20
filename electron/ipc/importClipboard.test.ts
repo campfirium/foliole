@@ -119,6 +119,7 @@ beforeEach(() => {
   clipboardImage.toPNG.mockReturnValue(Buffer.from('png-bytes'));
   runPreparedImport.mockReturnValue(createImportRecord());
   databaseDriver.queryAll.mockReturnValue([]);
+  databaseDriver.queryOne.mockReturnValue({ value: JSON.stringify('Test Host') });
   runImportForFilePath.mockResolvedValue(createNativeImportResult({ source_kind: 'pdf', source_name: 'document.pdf' }));
   importImageAttachmentBytes.mockResolvedValue({
     attachment_id: 'attachment-1',

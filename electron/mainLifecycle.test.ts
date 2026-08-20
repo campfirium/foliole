@@ -40,7 +40,7 @@ vi.mock('./database/deviceIdentity.js', () => ({ loadOrCreateDesktopDeviceId: vi
 vi.mock('./database/migrate.js', () => ({ initializeDatabase: mocks.initializeDatabase }));
 vi.mock('./database/nodeMutations.js', () => ({ flushAllDirtyNodeSyncVersions: vi.fn() }));
 vi.mock('./database/pdfIndexing.js', () => ({ resumePendingPdfAttachmentIndexing: vi.fn() }));
-vi.mock('./database/syncGroupIdentityStore.js', () => ({ updateLocalSyncGroupDeviceName: vi.fn() }));
+vi.mock('./database/syncGroupIdentityStore.js', () => ({ updateLocalSyncGroupHostName: vi.fn() }));
 vi.mock('./devRendererReloadIntent.js', () => ({ installDevRendererReloadIntentWatcher: vi.fn(() => null) }));
 vi.mock('./devRestartIntent.js', () => ({ installDevRestartIntentWatcher: vi.fn(() => null) }));
 vi.mock('./diagnostics/mainProcessDiagnostics.js', () => ({

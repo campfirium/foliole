@@ -69,7 +69,7 @@ describe('companion topic content persistence', () => {
     expect(result?.snapshot.nodesById['topic-1']).toMatchObject({
       bodyBlobHash: null,
       content: 'Edited body',
-      currentVersionId: 'android-device#00000000-0000-4000-8000-000000000001',
+      currentVersionId: 'ver_00000000-0000-4000-8000-000000000001',
       updatedAt: expect.any(String)
     });
     expect(syncObjectsMock.applyCompanionSyncNodeVersions).toHaveBeenCalledWith([
@@ -80,7 +80,7 @@ describe('companion topic content persistence', () => {
           content: 'Edited body',
           updated_at: expect.any(String)
         }),
-        version_id: 'android-device#00000000-0000-4000-8000-000000000001'
+        version_id: 'ver_00000000-0000-4000-8000-000000000001'
       })
     ]);
   });
@@ -150,7 +150,7 @@ describe('companion topic child anchor remap persistence', () => {
     expect(childAnchor.locator).toEqual({ from: 12, originalText: 'Beta', to: 16 });
     expect(result?.snapshot.nodesById['child-1']).toMatchObject({
       anchorLink: expect.objectContaining({ locator: { from: 12, originalText: 'Beta', to: 16 } }),
-      currentVersionId: 'android-device#00000000-0000-4000-8000-000000000002'
+      currentVersionId: 'ver_00000000-0000-4000-8000-000000000002'
     });
   });
 });

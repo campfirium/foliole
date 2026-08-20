@@ -124,7 +124,7 @@ it('disconnects and reconnects the same external source without removing its sav
   ['doc-kept', 'folder-stable', 'kept.md', 'kept.md', 'md', 6, 'now', 1, 'hash', 'Kept', '# Kept', 'now', 'now', 'now']);
 
   expect(disconnectExternalSearchFolder('folder-stable')[0]).toMatchObject({
-    access_mode: 'unowned', id: 'folder-stable'
+    access_mode: 'local', id: 'folder-stable', source_executable: false
   });
   expect(openDatabaseConnection().driver.queryOne(
     "SELECT document_id FROM external_documents WHERE folder_id = 'folder-stable'"
@@ -134,7 +134,9 @@ it('disconnects and reconnects the same external source without removing its sav
     matched_count: 1, missing_count: 0, new_count: 1
   });
   const reconnected = await reconnectExternalSearchFolder('folder-stable', nextPath);
-  expect(reconnected[0]).toMatchObject({ access_mode: 'local', folder_path: nextPath, id: 'folder-stable' });
+  expect(reconnected[0]).toMatchObject({
+    access_mode: 'local', folder_path: nextPath, id: 'folder-stable', source_executable: true
+  });
   expect(openDatabaseConnection().driver.queryOne(
     "SELECT document_id FROM external_documents WHERE folder_id = 'folder-stable'"
   )).toEqual({ document_id: 'doc-kept' });

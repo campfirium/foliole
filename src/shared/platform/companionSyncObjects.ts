@@ -5,6 +5,7 @@ import type {
 
 import {
   loadIosPdfPageText,
+  loadIosCompanionHostName,
   loadIosSyncIndex,
   loadIosSyncNodeConflicts,
   loadIosSyncObjects,
@@ -70,7 +71,10 @@ export async function loadCompanionSyncObjects(
 }
 
 export async function loadCompanionSyncSettingValueJson(key: string) {
-  const record = resolveCompanionSyncSettingRecord({ key });
+  if (!isNativeCompanionSyncObjectReadRuntime()) return null;
+  const record = resolveCompanionSyncSettingRecord({
+    hostName: await loadIosCompanionHostName(), key
+  });
   if (!record) return null;
   const [object] = await loadCompanionSyncObjects([record.objectId], ['setting']);
   if (!object?.payload_json) return null;

@@ -29,6 +29,7 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-cleanup-order-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
+  await fs.mkdir(path.join(tempRoot, 'readwise', 'Full Document Contents', 'Articles'), { recursive: true });
   initializeDatabase();
   saveImportManagerSettings({
     readwiseReaderConfig: {

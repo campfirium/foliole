@@ -108,7 +108,9 @@ it('versions every device-specific Android DNS-SD fact hint', async () => {
 it('authorizes every Android provider data request with both the channel secret and member fact', async () => {
   const auth = await readJava('FolioleCompanionSyncGroupRequestAuth.java');
   const database = await readJava('FolioleCompanionSyncGroupDatabase.java');
-  expect(auth).toContain('FolioleCompanionSyncGroupDatabase.requireAuthorizedMember');
+  const provider = await readJava('FolioleCompanionSyncGroupProvider.java');
+  expect(auth).toContain('FolioleCompanionWorkgroupSession.requireKey()');
+  expect(provider).toContain('FolioleCompanionSyncGroupDatabase.isAuthorizedMember(');
   expect(database).toContain('bridge.request("authorize_member"');
 });
 
@@ -168,7 +170,7 @@ it('promotes an approved join only after the new member proves key possession', 
   expect(approve).not.toContain('FolioleCompanionSyncGroupPeerStore.remove');
   expect(approve).not.toContain('registerMember');
   expect(auth.indexOf('MessageDigest.isEqual')).toBeLessThan(auth.indexOf('promoteApprovedJoin'));
-  expect(auth.indexOf('promoteApprovedJoin')).toBeLessThan(auth.indexOf('requireAuthorizedMember'));
+  expect(auth).not.toContain('requireAuthorizedMember');
   expect(grantStore).toContain('AES/GCM/NoPadding');
   expect(grantStore).toContain('AndroidKeyStore');
   expect(grantStore).not.toContain('device_secret');

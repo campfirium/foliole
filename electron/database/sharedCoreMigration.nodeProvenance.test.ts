@@ -17,9 +17,8 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { DATABASE_SCHEMA_VERSION, initializeDatabaseConnection } from '../../lib/core/database/migrations.js';
-
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
 
 let tempRoot = '';
 
@@ -58,9 +57,9 @@ it('backfills only the latest provable landed import while upgrading schema 54',
   `);
   connection.sqlite.pragma('user_version = 54');
 
-  initializeDatabaseConnection(connection);
+  migrateNumberedFixtureTo(connection.sqlite, 55);
 
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(55);
   expect(connection.sqlite.prepare(
     `SELECT id, import_source_fingerprint, import_content_fingerprint, sync_dirty
      FROM nodes ORDER BY id`

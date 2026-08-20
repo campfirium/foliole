@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 
 import { expect, it } from 'vitest';
 
-import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
@@ -26,13 +26,13 @@ it('adds Source execution ownership without guessing ambiguous Watched ownership
   INSERT INTO external_search_folders VALUES ('a', 'external:a', 'installation-a');
   PRAGMA user_version = 68;`);
 
-  initializeDatabaseSchema(sqlite);
+  migrateNumberedFixtureTo(sqlite, 69);
 
   expect(sqlite.prepare(`SELECT source_ref, owner_installation_id, root_path FROM desktop_sources
     ORDER BY source_ref`).all()).toEqual([
     { owner_installation_id: 'installation-a', root_path: '/External', source_ref: 'external:a' },
     { owner_installation_id: null, root_path: '/Watched', source_ref: 'watched:b' }
   ]);
-  expect(sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  expect(sqlite.pragma('user_version', { simple: true })).toBe(69);
   sqlite.close();
 });

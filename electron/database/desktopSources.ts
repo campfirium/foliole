@@ -131,7 +131,11 @@ export function resolveDesktopSourceAddress(sourceRef: string, location: string)
 }
 
 export function isDesktopSourceExecutable(source: DesktopSourceRecord) {
-  if (source.host_name !== currentHost().name || !source.root_path.trim() || !fs.existsSync(source.root_path)) return false;
+  return isDesktopSourceConnected(source) && fs.existsSync(source.root_path);
+}
+
+export function isDesktopSourceConnected(source: DesktopSourceRecord) {
+  if (source.host_name !== currentHost().name || !source.root_path.trim()) return false;
   try {
     const settings = JSON.parse(source.type_settings_json) as Record<string, unknown>;
     return settings.connectionStatus !== 'needs-folder';

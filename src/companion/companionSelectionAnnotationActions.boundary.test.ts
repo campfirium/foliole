@@ -75,7 +75,7 @@ describe('companion selection annotation write boundaries', () => {
     expect(result?.snapshot.nodesById.parent?.content).toBe('Alpha Beta Gamma');
     expect(syncObjectsMock.applyCompanionSyncNodeVersions).toHaveBeenCalledWith([
       expect.objectContaining({
-        device_id: 'android-device',
+        host_name: 'android-device',
         object_id: result?.nodeId
       })
     ]);

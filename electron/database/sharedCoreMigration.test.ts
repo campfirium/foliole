@@ -23,6 +23,7 @@ import {
 } from '../../lib/core/database/index.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
 
 let tempRoot = '';
 
@@ -90,9 +91,9 @@ it('migrates the legacy desktop device id setting to the shared device id key', 
   `);
   connection.sqlite.pragma('user_version = 33');
 
-  initializeDatabaseConnection(connection);
+  migrateNumberedFixtureTo(connection.sqlite, 34);
 
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(34);
   expect(connection.sqlite
     .prepare('SELECT value FROM settings WHERE key = ?')
     .get('device_id')).toEqual({ value: '"desktop-test"' });
@@ -114,7 +115,7 @@ it('retires legacy primary device columns without losing sync peers', () => {
     peer_id, status, last_synced_at, last_seen_version_cursor, updated_at
   ) VALUES ('peer-1', 'paired', '2026-08-20T00:00:00.000Z', 'cursor-1', '2026-08-20T00:00:00.000Z')`);
 
-  initializeDatabaseConnection(connection);
+  migrateNumberedFixtureTo(connection.sqlite, 75);
 
   const columns = connection.sqlite.prepare('PRAGMA table_info(sync_peers)').all() as Array<{ name: string }>;
   expect(columns.map((column) => column.name)).toEqual([
@@ -123,19 +124,19 @@ it('retires legacy primary device columns without losing sync peers', () => {
   expect(connection.sqlite.prepare('SELECT * FROM sync_peers').get()).toMatchObject({
     peer_id: 'peer-1', last_seen_version_cursor: 'cursor-1', status: 'paired'
   });
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(75);
 });
 
 it('adds search index invalidation queue to existing v39 databases', () => {
   const connection = openDatabaseConnection();
   connection.sqlite.pragma('user_version = 39');
 
-  initializeDatabaseConnection(connection);
+  migrateNumberedFixtureTo(connection.sqlite, 40);
 
   expect(connection.sqlite
     .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'search_index_invalidations'")
     .get()).toEqual({ name: 'search_index_invalidations' });
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(40);
 });
 
 it('migrates reading position through the frozen device step into Host scope', () => {
@@ -179,9 +180,9 @@ it('migrates reading position through the frozen device step into Host scope', (
   `);
   connection.sqlite.pragma('user_version = 31');
 
-  initializeDatabaseConnection(connection);
+  migrateNumberedFixtureTo(connection.sqlite, 70);
 
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(70);
   expect(connection.sqlite
     .prepare('SELECT node_id, host_name, reading_position FROM node_reading_host_state')
     .get()).toEqual({ host_name: 'desktop-test', node_id: 'node-reading', reading_position: 77 });
@@ -224,34 +225,34 @@ it('adds incoming updates table to existing v48 desktop databases', () => {
   const connection = openDatabaseConnection();
   connection.sqlite.pragma('user_version = 48');
 
-  initializeDatabaseConnection(connection);
+  migrateNumberedFixtureTo(connection.sqlite, 49);
 
   expect(connection.sqlite
     .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'incoming_updates'")
     .get()).toEqual({ name: 'incoming_updates' });
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(49);
 });
 
 it('retires assistant thread tables after upgrading existing v50 desktop databases', () => {
   const connection = openDatabaseConnection();
   connection.sqlite.pragma('user_version = 50');
 
-  initializeDatabaseConnection(connection);
+  migrateNumberedFixtureTo(connection.sqlite, 58);
 
   expect(connection.sqlite
     .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'assistant_thread_%'")
     .all()).toEqual([]);
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(58);
 });
 
 it('retires assistant thread tables after upgrading existing v52 desktop databases', () => {
   const connection = openDatabaseConnection();
   connection.sqlite.pragma('user_version = 52');
 
-  initializeDatabaseConnection(connection);
+  migrateNumberedFixtureTo(connection.sqlite, 58);
 
   expect(connection.sqlite
     .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'assistant_thread_%'")
     .all()).toEqual([]);
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(58);
 });

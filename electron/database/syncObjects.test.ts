@@ -24,6 +24,7 @@ import type { PersistedImportRecord } from '../../lib/core/import/contract.js';
 import { withoutNodeViewStateHashSource } from '../../lib/platform/persistedNodeViewState.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { upsertDesktopSource } from './desktopSources.js';
 import { saveJsonSetting } from './settingsStore.js';
 import { loadSyncObjects, loadSyncStateObjectsSince } from './syncObjects.js';
 
@@ -78,13 +79,16 @@ function insertImportSourceRecord() {
 
 function insertExternalFolderRecord() {
   const driver = openDatabaseConnection().driver;
+  const source = upsertDesktopSource({
+    configRef: 'folder-1', rootPath: '/docs', sourceType: 'external', updatedAt: '2026-04-21T16:00:00.000Z'
+  });
   driver.execute(
     `INSERT INTO external_search_folders (
        id, folder_path, attachment_mode, attachment_root_path, excluded_dirs_json,
-       status, document_count, created_at, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       status, document_count, created_at, updated_at, source_ref
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ['folder-1', '/docs', 'document_relative_first_then_fixed_root', null, '[".git"]', 'ready', 2,
-      '2026-04-21T10:00:00.000Z', '2026-04-21T16:00:00.000Z']
+      '2026-04-21T10:00:00.000Z', '2026-04-21T16:00:00.000Z', source.source_ref]
   );
   driver.execute(
     `INSERT INTO sync_object_state (

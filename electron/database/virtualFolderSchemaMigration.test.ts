@@ -17,13 +17,14 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { DATABASE_SCHEMA_VERSION, initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { migrateLegacyVirtualFoldersToManualNodes } from '../../lib/core/database/numberedMigrationManualVirtualFolders.js';
 import { parseManualChildOrder } from '../../lib/core/nodes/manualChildOrder.js';
 import { isManualVirtualNodeFilter, parseVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter.js';
 import { SYNC_OBJECT_POLICIES } from '../../lib/core/sync/syncObjectPolicy.js';
 
 import { closeDatabaseConnection, openDatabaseConnection, type SqliteDatabase } from './connection.js';
+import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
 
 let tempRoot = '';
 
@@ -52,7 +53,7 @@ it('advances existing v49 databases without creating legacy virtual folder table
   const connection = openDatabaseConnection();
   connection.sqlite.pragma('user_version = 49');
 
-  initializeDatabaseConnection(connection);
+  migrateNumberedFixtureTo(connection.sqlite, 50);
 
   const tables = connection.sqlite
     .prepare(
@@ -62,7 +63,7 @@ it('advances existing v49 databases without creating legacy virtual folder table
     )
     .all() as Array<{ name: string }>;
   expect(tables).toEqual([]);
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(50);
 });
 
 it('does not delete legacy development tables that already exist', () => {
@@ -71,7 +72,7 @@ it('does not delete legacy development tables that already exist', () => {
   connection.sqlite.exec('CREATE TABLE virtual_folder_items (id TEXT PRIMARY KEY)');
   connection.sqlite.pragma('user_version = 49');
 
-  initializeDatabaseConnection(connection);
+  migrateNumberedFixtureTo(connection.sqlite, 50);
 
   const tables = connection.sqlite.prepare(
     `SELECT name FROM sqlite_master
@@ -155,14 +156,14 @@ it('migrates legacy virtual folders into manual Virtual Folder nodes without Top
   seedLegacyVirtualFolders(connection.sqlite);
   connection.sqlite.pragma('user_version = 55');
 
-  initializeDatabaseConnection(connection);
+  migrateNumberedFixtureTo(connection.sqlite, 56);
 
   expectMigratedLegacyVirtualFolders(connection.sqlite);
   migrateLegacyVirtualFoldersToManualNodes(connection.sqlite);
   expect(connection.sqlite.prepare(
     `SELECT COUNT(*) AS count FROM nodes WHERE id IN ('legacy-folder', 'deleted-folder')`
   ).get()).toEqual({ count: 2 });
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(56);
 });
 
 it('keeps virtual folder tables out of sync object policies', () => {

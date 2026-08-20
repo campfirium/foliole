@@ -1,4 +1,7 @@
 // @vitest-environment node
+/* global process */
+
+import path from 'node:path';
 
 import { expect, it, vi } from 'vitest';
 
@@ -11,8 +14,10 @@ import {
   credentialsSignableReadinessFixture, credentialsSignableReceiptFixture
 } from './macos-a5-credential-handoff-fixture.mjs';
 
-const repoRoot = '/repo/foliole';
-const evidenceRoot = '/repo/foliole/.tmp/artifacts/a5-pair-credentials/build-credentials';
+const repoRoot = path.join(path.parse(process.cwd()).root, 'repo', 'foliole');
+const evidenceRoot = path.join(
+  repoRoot, '.tmp', 'artifacts', 'a5-pair-credentials', 'build-credentials'
+);
 
 function memoryFs(receipt = credentialsSignableReceiptFixture,
   manifest = credentialsSignableManifestFixture) {

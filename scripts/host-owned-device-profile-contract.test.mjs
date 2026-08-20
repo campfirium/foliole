@@ -18,13 +18,14 @@ describe('host-owned device profile sources', () => {
     expect(identity).toContain('Desktop device profile is unavailable before database initialization.');
   });
 
-  it('uses Android manufacturer/model and retires SharedPreferences UUID identity', async () => {
+  it('uses Android manufacturer/model without legacy SharedPreferences device identity', async () => {
     const bootstrap = await source(
       'android/app/src/main/java/com/foliole/android/FolioleCompanionBootstrapState.java'
     );
     expect(bootstrap).toContain('Build.MANUFACTURER');
     expect(bootstrap).toContain('Build.MODEL');
-    expect(bootstrap).toContain('.remove(DEVICE_ID_KEY)');
+    expect(bootstrap).not.toContain('DEVICE_ID_KEY');
+    expect(bootstrap).not.toContain('SharedPreferences');
     expect(bootstrap).not.toContain('UUID.randomUUID');
   });
 
@@ -34,7 +35,8 @@ describe('host-owned device profile sources', () => {
       source('ios/App/App.xcodeproj/project.pbxproj')
     ]);
     expect(bootstrap).toContain('UIDevice.current.name');
-    expect(bootstrap).toContain('removeObject(forKey: Self.legacyDeviceIdKey)');
+    expect(bootstrap).not.toContain('legacyDeviceIdKey');
+    expect(bootstrap).not.toContain('UserDefaults');
     expect(bootstrap).not.toContain('UUID().uuidString');
     expect(project).not.toContain('com.apple.developer.device-information.user-assigned-device-name');
   });

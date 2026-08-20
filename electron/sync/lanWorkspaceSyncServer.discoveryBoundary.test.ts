@@ -42,12 +42,19 @@ vi.mock('../database/connection.js', () => ({
 vi.mock('../database/syncGroupStore.js', () => ({
   loadDesktopSyncGroup: vi.fn(() => ({
     created_at: '2026-08-08T00:00:00.000Z',
-    created_by_device_id: 'desktop-local',
+    created_by_host_name: 'Foliole Desktop',
     display_name: 'Foliole Desktop',
     group_id: 'group-test',
-    local_device_id: 'desktop-local',
+    local_host_name: 'Foliole Desktop',
     local_member_state: 'active',
-    members: [],
+    members: [{
+      approved_by_host_name: 'Foliole Desktop',
+      authorization_id: 'desktop-local',
+      host_name: 'Foliole Desktop',
+      host_platform: 'macOS',
+      joined_at: '2026-08-08T00:00:00.000Z',
+      state: 'active'
+    }],
     timeline_id: 'timeline-test'
   }))
 }));

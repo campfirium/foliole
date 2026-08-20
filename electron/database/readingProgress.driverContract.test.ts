@@ -35,9 +35,9 @@ vi.mock('./connection.js', () => ({
   })
 }));
 
-vi.mock('./deviceIdentity.js', () => ({
-  loadDesktopDeviceId: () => 'desktop-test',
-  loadOrCreateDesktopDeviceId: () => 'desktop-test'
+vi.mock('./hostProfile.js', () => ({
+  loadDesktopHostName: () => 'desktop-test',
+  loadOrCreateDesktopHostName: () => 'desktop-test'
 }));
 
 import { loadReadingProgress, saveReadingProgress } from './readingProgress.js';
@@ -132,7 +132,7 @@ it('loads reading progress through query helpers only', () => {
        source,
        updated_at
      FROM node_view_state
-     WHERE device_id = ?`,
+     WHERE host_name = ?`,
     ['desktop-test']
   );
 });

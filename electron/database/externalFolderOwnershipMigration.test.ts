@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 
 import { expect, it } from 'vitest';
 
-import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
@@ -18,7 +18,7 @@ it('preserves legacy folder ids while allowing equal paths for different owners'
   ); INSERT INTO external_search_folders VALUES ('legacy', '/same', 'document_relative', NULL, '[]', 'ready', 3, NULL, NULL, 'now', 'now');
   PRAGMA user_version = 60;`);
 
-  initializeDatabaseSchema(sqlite);
+  migrateNumberedFixtureTo(sqlite, 61);
   expect(sqlite.prepare('SELECT id, owner_installation_id FROM external_search_folders').get()).toEqual({
     id: 'legacy', owner_installation_id: null
   });

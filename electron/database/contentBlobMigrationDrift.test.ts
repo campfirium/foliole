@@ -17,9 +17,8 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { DATABASE_SCHEMA_VERSION, initializeDatabaseConnection } from '../../lib/core/database/index.js';
-
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
 
 let tempRoot = '';
 
@@ -72,9 +71,9 @@ it('repairs v29 databases that have content_blobs but no body blob owner columns
   `);
   connection.sqlite.pragma('user_version = 29');
 
-  initializeDatabaseConnection(connection);
+  migrateNumberedFixtureTo(connection.sqlite, 30);
 
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(30);
   const node = connection.sqlite
     .prepare('SELECT body_blob_hash FROM nodes WHERE id = ?')
     .get('node-1') as { body_blob_hash: string } | undefined;

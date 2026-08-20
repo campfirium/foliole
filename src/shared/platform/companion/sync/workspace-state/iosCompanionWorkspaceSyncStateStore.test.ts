@@ -12,8 +12,9 @@ function createHarness(metaRows: Array<{ key: string; value: string }> = []) {
     commitTransaction: vi.fn(async () => ({ changes: { changes: 0 } })),
     isDBOpen: vi.fn(async () => ({ result: true })),
     open: vi.fn(async () => undefined),
-    query: vi.fn(async (sql: string) => {
+    query: vi.fn(async (sql: string, values: unknown[] = []) => {
       if (sql.includes('key IN')) return { values: metaRows };
+      if (sql.includes('companion_meta') && values[0] === 'host_name') return { values: [{ value: 'iPhone' }] };
       return { values: [] };
     }),
     rollbackTransaction: vi.fn(async () => ({ changes: { changes: 0 } })),

@@ -48,7 +48,7 @@ it('applies full-text search index strategy settings through the shared setting 
     object_id: 'user_space:windows:desktop:*:app_settings',
     object_type: 'setting',
     payload_json: JSON.stringify({
-      device_id: '*',
+      host_name: '*',
       form_factor: 'desktop',
       key: 'app_settings',
       platform: 'windows',
@@ -62,11 +62,11 @@ it('applies full-text search index strategy settings through the shared setting 
     'setting:user_space:windows:desktop:*:app_settings'
   ]);
 
-  const row = openDatabaseConnection().driver.queryOne<{ device_id: string; scope: string; value_json: string }>(
-    'SELECT scope, device_id, value_json FROM setting_records WHERE key = ?',
+  const row = openDatabaseConnection().driver.queryOne<{ host_name: string; scope: string; value_json: string }>(
+    'SELECT scope, host_name, value_json FROM setting_records WHERE key = ?',
     ['app_settings']
   );
   const parsedValue = JSON.parse(row?.value_json ?? '{}') as Record<string, unknown>;
-  expect(row).toMatchObject({ device_id: '*', scope: 'user_space' });
+  expect(row).toMatchObject({ host_name: '*', scope: 'user_space' });
   expect(parsedValue[FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY]).toBe('cjk-trigram');
 });

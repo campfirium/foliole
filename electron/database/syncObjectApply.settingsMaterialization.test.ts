@@ -26,6 +26,7 @@ import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContra
 import { loadReviewSchedulerSettings } from '../reviewSchedulerSettings.js';
 
 import { closeDatabaseConnection } from './connection.js';
+import { initializeDesktopDeviceProfileFixture } from './deviceIdentityTestSupport.js';
 import { initializeDatabase } from './migrate.js';
 import { loadJsonSetting, saveJsonSetting } from './settingsStore.js';
 import { applySyncObjectsAsync } from './syncObjectApply.js';
@@ -36,7 +37,7 @@ beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-setting-materialization-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabase();
-  saveJsonSetting('device_id', 'desktop-device', '2026-07-10T00:00:00.000Z');
+  initializeDesktopDeviceProfileFixture('desktop-host');
 });
 
 afterEach(async () => {
@@ -47,8 +48,8 @@ afterEach(async () => {
 function settingRecord(args: {
   contentHash: string;
   deletedAt?: string | null;
-  deviceId: string;
   formFactor: string;
+  hostName: string;
   key: string;
   platform: string;
   scope: string;
@@ -58,11 +59,11 @@ function settingRecord(args: {
   return {
     content_hash: args.contentHash,
     deleted_at: args.deletedAt ?? null,
-    object_id: `${args.scope}:${args.platform}:${args.formFactor}:${args.deviceId}:${args.key}`,
+    object_id: `${args.scope}:${args.platform}:${args.formFactor}:${args.hostName}:${args.key}`,
     object_type: 'setting',
     payload_json: args.deletedAt ? null : JSON.stringify({
-      device_id: args.deviceId,
       form_factor: args.formFactor,
+      host_name: args.hostName,
       key: args.key,
       platform: args.platform,
       scope: args.scope,
@@ -75,8 +76,8 @@ function settingRecord(args: {
 it('materializes an accepted workspace setting and preserves it after database restart', async () => {
   const record = settingRecord({
     contentHash: 'remote-app-settings',
-    deviceId: '*',
     formFactor: 'desktop',
+    hostName: '*',
     key: 'app_settings',
     platform: 'windows',
     scope: 'user_space',
@@ -99,8 +100,8 @@ it('materializes a tombstone as projection deletion and consumers recover defaul
   const tombstone = settingRecord({
     contentHash: 'remote-review-delete',
     deletedAt: '2026-07-10T00:02:00.000Z',
-    deviceId: '*',
     formFactor: 'desktop',
+    hostName: '*',
     key: 'review_scheduler_settings',
     platform: 'windows',
     scope: 'user_space',
@@ -112,19 +113,19 @@ it('materializes a tombstone as projection deletion and consumers recover defaul
   expect(() => loadReviewSchedulerSettings()).not.toThrow();
 });
 
-it('does not materialize Android or foreign-device settings into the desktop projection', async () => {
+it('does not materialize foreign Android Host settings into the desktop projection', async () => {
   saveJsonSetting('app_settings', { theme: 'light' }, '2026-07-10T00:01:00.000Z');
   const androidRecord = settingRecord({
     contentHash: 'android-app-settings',
-    deviceId: 'android-device',
     formFactor: 'phone',
+    hostName: 'android-host',
     key: 'app_settings',
     platform: 'android',
-    scope: 'device',
+    scope: 'host',
     updatedAt: '2026-07-10T00:02:00.000Z',
     valueJson: '{"theme":"dark"}'
   });
 
-  await expect(applySyncObjectsAsync([androidRecord])).resolves.toHaveLength(1);
+  await expect(applySyncObjectsAsync([androidRecord])).resolves.toEqual([]);
   expect(loadJsonSetting('app_settings')).toEqual({ theme: 'light' });
 });

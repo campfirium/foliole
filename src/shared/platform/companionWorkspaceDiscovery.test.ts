@@ -176,7 +176,8 @@ describe('companionWorkspaceDiscovery compatibility', () => {
     capacitorMock.plugin.desktopHttpRequest.mockImplementation(async ({ url }: { url: string }) => {
       if (!url.startsWith('http://192.168.1.44:38641')) throw new TypeError('Failed to fetch');
       const body = JSON.parse(discoveryBody({ hostName: 'Old', peerId: 'desktop-old', platform: 'Windows' }));
-      body.protocol = { ...protocol, version: 2, min_supported_version: 2, max_supported_version: 2 };
+      const unsupportedVersion = protocol.version + 1;
+      body.protocol = { ...protocol, version: unsupportedVersion, min_supported_version: unsupportedVersion, max_supported_version: unsupportedVersion };
       return { body: JSON.stringify(body), status: 200 };
     });
 

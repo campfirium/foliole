@@ -17,7 +17,11 @@ import {
   type ScannedDocumentEntry
 } from './externalSearchCacheSupport.js';
 import { applyFolderDocumentChanges } from './externalSearchDocumentChanges.js';
-import { loadExternalSearchFolders, updateExternalSearchFolderIndexState } from './externalSearchFolders.js';
+import {
+  loadExternalSearchFolders,
+  loadRefreshableExternalSearchFolders,
+  updateExternalSearchFolderIndexState
+} from './externalSearchFolders.js';
 import { loadReadwiseExternalSearchFolders } from './readwiseManagedExternalDocuments.js';
 
 export { searchExternalDocuments } from './externalSearchDocumentSearch.js';
@@ -104,8 +108,8 @@ async function syncExternalSearchFolder(
 export async function rebuildExternalSearchIndexes(folderId?: string) {
   const defaultExcludedNames = new Set(['.git', '.obsidian', '.trash', 'node_modules']);
   const autoExcludedPaths = resolveAutoExcludedPaths();
-  const folders = loadExternalSearchFolders().filter((folder) =>
-    folder.access_mode === 'local' && folder.source_executable && (!folderId || folder.id === folderId)
+  const folders = loadRefreshableExternalSearchFolders().filter((folder) =>
+    !folderId || folder.id === folderId
   );
   for (const folder of folders) {
     updateExternalSearchFolderIndexState({
@@ -141,8 +145,8 @@ export async function rebuildExternalSearchIndexes(folderId?: string) {
 }
 
 export async function refreshExternalSearchIndexes(folderId?: string, options: ExternalSearchRefreshOptions = {}) {
-  const folders = loadExternalSearchFolders().filter((folder) =>
-    folder.access_mode === 'local' && folder.source_executable && (!folderId || folder.id === folderId)
+  const folders = loadRefreshableExternalSearchFolders().filter((folder) =>
+    !folderId || folder.id === folderId
   );
   const db = openExternalSearchCacheDatabase();
   for (const folder of folders) {

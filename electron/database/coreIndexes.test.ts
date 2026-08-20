@@ -118,6 +118,19 @@ function createV38CoreTables(sqlite: ReturnType<typeof openDatabaseConnection>['
       node_id TEXT NOT NULL,
       reviewed_at TEXT NOT NULL
     );
+    CREATE TABLE external_search_folders (
+      id TEXT PRIMARY KEY,
+      folder_path TEXT NOT NULL UNIQUE,
+      attachment_mode TEXT NOT NULL,
+      attachment_root_path TEXT,
+      excluded_dirs_json TEXT NOT NULL DEFAULT '[]',
+      status TEXT NOT NULL DEFAULT 'idle',
+      document_count INTEGER NOT NULL DEFAULT 0,
+      indexed_at TEXT,
+      last_error TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
   `);
 }
 

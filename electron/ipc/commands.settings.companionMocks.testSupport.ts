@@ -52,6 +52,13 @@ const companionPairingMocks = vi.hoisted(() => ({
       paired_at: '2026-04-24T10:03:00.000Z'
     }
   ]),
+  loadPairedCompanionDevice: vi.fn().mockReturnValue({
+    client_address: '192.168.1.22',
+    device_id: 'android-1',
+    device_kind: 'android',
+    device_name: 'Pixel 9',
+    paired_at: '2026-04-24T10:03:00.000Z'
+  }),
   clearPairedCompanionDevices: vi.fn(),
   removePairedCompanionDevice: vi.fn(),
   rejectCompanionPairRequest: vi.fn().mockImplementation((pairRequestId: string) =>
@@ -78,7 +85,9 @@ vi.mock('../database/syncPeers.js', () => ({ loadSyncPeers, saveSyncPeers }));
 vi.mock('../sync/companionPairingRequests.js', () => companionPairingMocks);
 vi.mock('../sync/companionPairingStore.js', () => ({
   clearPairedCompanionDevices: companionPairingMocks.clearPairedCompanionDevices,
+  loadPairedCompanionDevice: companionPairingMocks.loadPairedCompanionDevice,
   loadPairedCompanionDevices: companionPairingMocks.loadPairedCompanionDevices,
+  migratePairedCompanionStore: vi.fn(),
   removePairedCompanionDevice: companionPairingMocks.removePairedCompanionDevice
 }));
 vi.mock('../sync/desktopCompanionSyncPreference.js', () => ({

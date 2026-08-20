@@ -22,7 +22,7 @@ import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import type { PersistedImportRecord } from '../../lib/core/import/contract.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { saveJsonSetting } from './settingsStore.js';
+import { initializeDesktopDeviceProfileFixture } from './deviceIdentityTestSupport.js';
 
 let tempRoot = '';
 
@@ -30,7 +30,7 @@ beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-import-source-sync-hash-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabaseConnection(openDatabaseConnection());
-  saveJsonSetting('device_id', 'desktop-test', '2026-08-12T00:00:00.000Z');
+  initializeDesktopDeviceProfileFixture('desktop-test');
 });
 
 afterEach(async () => {

@@ -1,4 +1,5 @@
 // @vitest-environment node
+/* global process */
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -10,22 +11,23 @@ import {
 } from './macos-hidden-electron-credential-session.mjs';
 
 const fingerprint = 'b'.repeat(64);
+const repoRoot = path.join(path.parse(process.cwd()).root, 'repo', 'foliole');
 
 it('binds the app name and pairing store to an isolated source runtime session', () => {
-  const session = resolveMacosHiddenCredentialSession('/repo/foliole', fingerprint);
+  const session = resolveMacosHiddenCredentialSession(repoRoot, fingerprint);
 
   expect(session.appName).toBe(`Foliole Hidden Native ${'b'.repeat(20)}`);
   expect(session.bootstrapPath).toBe(
-    '/repo/foliole/scripts/desktop/macos-hidden-electron-credential-bootstrap.mjs'
+    path.join(repoRoot, 'scripts', 'desktop', 'macos-hidden-electron-credential-bootstrap.mjs')
   );
   expect(session.pairingStorePath).toBe(
-    `/repo/foliole/.tmp/native-hidden-electron/credential-sessions/runtime-${'b'.repeat(20)}`
-      + '/user-data/companion-paired-devices.bin'
+    path.join(repoRoot, '.tmp', 'native-hidden-electron', 'credential-sessions',
+      `runtime-${'b'.repeat(20)}`, 'user-data', 'companion-paired-devices.bin')
   );
   expect(session.pairingStorePath).not.toBe(
-    path.join('/repo/foliole', '.tmp/macos-desktop-daily-debug/user-data/companion-paired-devices.bin')
+    path.join(repoRoot, '.tmp/macos-desktop-daily-debug/user-data/companion-paired-devices.bin')
   );
-  expect(() => resolveMacosHiddenCredentialSession('/repo/foliole', 'not-a-fingerprint'))
+  expect(() => resolveMacosHiddenCredentialSession(repoRoot, 'not-a-fingerprint'))
     .toThrow('macos_hidden_electron_runtime_fingerprint_invalid');
 });
 
@@ -61,7 +63,7 @@ function memoryFileSystem(initialLock = null) {
 }
 
 it('serializes a credential session and releases only its own lock', () => {
-  const session = resolveMacosHiddenCredentialSession('/repo/foliole', fingerprint);
+  const session = resolveMacosHiddenCredentialSession(repoRoot, fingerprint);
   const fileSystem = memoryFileSystem();
   const release = acquireMacosHiddenCredentialSessionLock(session, {
     fileSystem, pid: 41, signalProcess: vi.fn()
@@ -75,7 +77,7 @@ it('serializes a credential session and releases only its own lock', () => {
 });
 
 it('reclaims a credential session lock only after its owner has exited', () => {
-  const session = resolveMacosHiddenCredentialSession('/repo/foliole', fingerprint);
+  const session = resolveMacosHiddenCredentialSession(repoRoot, fingerprint);
   const fileSystem = memoryFileSystem(`${JSON.stringify({ pid: 40 })}\n`);
   const signalProcess = vi.fn(() => { throw Object.assign(new Error('gone'), { code: 'ESRCH' }); });
 

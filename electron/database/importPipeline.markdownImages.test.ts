@@ -23,6 +23,7 @@ import { resolveAttachmentResource, resolveAttachmentStoragePath } from '../atta
 
 import { listNodeAttachments } from './attachments.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { upsertDesktopSource } from './desktopSources.js';
 import { runPreparedImport } from './importPipeline.js';
 import { initializeDatabase } from './migrate.js';
 
@@ -200,10 +201,14 @@ it('resolves obsidian image embeds from the configured external attachment folde
   await fs.writeFile(path.join(attachmentDir, 'Pasted image 20260421082325.png'), Buffer.from('external-attachment-image'));
   await fs.writeFile(sourceMarkdownPath, '# Imported\n\n![[Pasted image 20260421082325.png]]');
 
+  const source = upsertDesktopSource({
+    configRef: 'folder-1', rootPath: vaultRoot, sourceType: 'external', updatedAt: '2026-04-21T00:00:00.000Z'
+  });
+
   openDatabaseConnection().sqlite.prepare(
     `INSERT INTO external_search_folders (
-      id, folder_path, attachment_mode, attachment_root_path, excluded_dirs_json, status, document_count, indexed_at, last_error, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      id, folder_path, attachment_mode, attachment_root_path, excluded_dirs_json, status, document_count, indexed_at, last_error, created_at, updated_at, source_ref
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     'folder-1',
     vaultRoot,
@@ -215,7 +220,8 @@ it('resolves obsidian image embeds from the configured external attachment folde
     null,
     null,
     '2026-04-21T00:00:00.000Z',
-    '2026-04-21T00:00:00.000Z'
+    '2026-04-21T00:00:00.000Z',
+    source.source_ref
   );
 
   const imported = runPreparedImport(

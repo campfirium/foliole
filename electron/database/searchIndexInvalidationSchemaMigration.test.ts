@@ -17,9 +17,8 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { DATABASE_SCHEMA_VERSION, initializeDatabaseConnection } from '../../lib/core/database/index.js';
-
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
 
 let tempRoot = '';
 
@@ -56,9 +55,9 @@ it('migrates v40 invalidation queues to accept subtree task types', () => {
   `);
   connection.sqlite.pragma('user_version = 40');
 
-  initializeDatabaseConnection(connection);
+  migrateNumberedFixtureTo(connection.sqlite, 41);
 
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(41);
   expect(connection.sqlite.prepare('SELECT invalidation_type, target_id FROM search_index_invalidations').get()).toEqual({
     invalidation_type: 'node_workspace',
     target_id: 'node-old'
