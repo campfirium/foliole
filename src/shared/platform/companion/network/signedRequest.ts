@@ -2,6 +2,7 @@ import { normalizePairingState, readStoredWebPairingState } from '../../companio
 import { createCompanionUuid } from '../../companionUuid';
 import {
   FolioleCompanionSync,
+  isNativeAndroidCompanionRuntime,
   isNativeCompanionPairingRuntime
 } from '../../companionWorkspaceRuntimeRepository';
 import {
@@ -10,6 +11,7 @@ import {
 } from '../sync/syncGroupStore';
 
 const PAIRING_SIGNATURE_CHECK_PATH = '/companion/sync-pack?after_state_seq=0';
+export const WORKGROUP_ENVELOPE_CONTENT_TYPE = 'application/vnd.foliole.workgroup-aead+json';
 
 function toHex(buffer: ArrayBuffer) {
   return [...new Uint8Array(buffer)].map((value) => value.toString(16).padStart(2, '0')).join('');
@@ -43,13 +45,15 @@ export async function createSignedRequestHeaders(args: {
     const group = await loadCompanionSyncGroup();
     if (group) {
       if (!args.endpointUrl) throw new Error('Sync Group request target is required.');
-      const workgroupKey = await loadCompanionSyncGroupWorkgroupKey();
-      if (!workgroupKey) throw new Error('sync_group_workgroup_key_missing');
-      const result = await FolioleCompanionSync.signCompanionSyncRequest({
-        body_hash: bodyHash, endpoint_url: args.endpointUrl, method: args.method, nonce,
-        path_with_query: args.pathWithQuery, sync_group_id: group.group_id, timestamp,
-        workgroup_key: workgroupKey
-      });
+      const result = await signNativeWorkgroupRequest({
+        ...(args.bodyText === undefined ? {} : { bodyText: args.bodyText }),
+        bodyHash,
+        endpointUrl: args.endpointUrl,
+        method: args.method,
+        nonce,
+        pathWithQuery: args.pathWithQuery,
+        timestamp
+      }, group.group_id);
       return { ...result.headers, 'X-Sync-Group-Id': group.group_id };
     }
     return (await FolioleCompanionSync.signCompanionSyncRequest({
@@ -69,6 +73,38 @@ export async function createSignedRequestHeaders(args: {
     'X-Sync-Group-Id': 'web-preview',
     'X-Timestamp': timestamp
   };
+}
+
+export async function prepareNativeCompanionWorkgroupRequest(args: {
+  bodyText: string; endpointUrl: string; method: string; pathWithQuery: string;
+}) {
+  if (!isNativeAndroidCompanionRuntime()) throw new Error('android_workgroup_request_required');
+  const group = await loadCompanionSyncGroup();
+  if (!group) throw new Error('sync_group_not_available');
+  const nonce = createCompanionUuid();
+  const timestamp = new Date().toISOString();
+  const bodyHash = await sha256Hex(args.bodyText);
+  const result = await signNativeWorkgroupRequest({ ...args, bodyHash, nonce, timestamp }, group.group_id);
+  if (!result.body) throw new Error('sync_group_prepared_body_missing');
+  return {
+    body: result.body,
+    headers: { ...result.headers, 'Content-Type': WORKGROUP_ENVELOPE_CONTENT_TYPE,
+      'X-Sync-Group-Id': group.group_id }
+  };
+}
+
+async function signNativeWorkgroupRequest(args: {
+  bodyHash: string; bodyText?: string; endpointUrl: string; method: string;
+  nonce: string; pathWithQuery: string; timestamp: string;
+}, groupId: string) {
+  const workgroupKey = await loadCompanionSyncGroupWorkgroupKey();
+  if (!workgroupKey) throw new Error('sync_group_workgroup_key_missing');
+  return FolioleCompanionSync.signCompanionSyncRequest({
+    ...(args.bodyText === undefined ? {} : { body: args.bodyText }),
+    body_hash: args.bodyHash, endpoint_url: args.endpointUrl, method: args.method,
+    nonce: args.nonce, path_with_query: args.pathWithQuery, sync_group_id: groupId,
+    timestamp: args.timestamp, workgroup_key: workgroupKey
+  });
 }
 
 export async function verifyNativePairingCanSignRequest(endpointUrl?: string) {

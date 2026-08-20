@@ -9,6 +9,7 @@ const groupMock = vi.hoisted(() => ({ load: vi.fn(), loadKey: vi.fn() }));
 vi.mock('../../companionUuid', () => ({ createCompanionUuid: () => 'nonce-1' }));
 vi.mock('../../companionWorkspaceRuntimeRepository', () => ({
   FolioleCompanionSync: nativeMock,
+  isNativeAndroidCompanionRuntime: () => true,
   isNativeCompanionPairingRuntime: () => true
 }));
 vi.mock('../sync/syncGroupStore', () => ({
@@ -16,7 +17,10 @@ vi.mock('../sync/syncGroupStore', () => ({
   loadCompanionSyncGroupWorkgroupKey: groupMock.loadKey
 }));
 
-import { createSignedRequestHeaders } from './signedRequest';
+import {
+  createSignedRequestHeaders,
+  prepareNativeCompanionWorkgroupRequest
+} from './signedRequest';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -41,6 +45,28 @@ it('routes a Sync Group request to the exact native peer endpoint', async () => 
   expect(nativeMock.signCompanionSyncRequest).toHaveBeenCalledWith(expect.objectContaining({
     endpoint_url: 'http://192.168.0.11:38641', sync_group_id: 'group-1',
     workgroup_key: 'persistent-workgroup-key'
+  }));
+});
+
+it('returns an opaque prepared envelope without exposing the persistent key', async () => {
+  nativeMock.signCompanionSyncRequest.mockResolvedValueOnce({
+    body: 'encrypted-departure',
+    headers: {
+      'X-Authorization-Id': 'mobile-b', 'X-Nonce': 'nonce-1', 'X-Signature': 'signed',
+      'X-Timestamp': '2026-08-09T00:00:00.000Z'
+    }
+  });
+
+  const prepared = await prepareNativeCompanionWorkgroupRequest({
+    bodyText: '{"group_id":"group-1"}', endpointUrl: 'http://192.168.0.11:38641',
+    method: 'POST', pathWithQuery: '/companion/sync-group/departure'
+  });
+
+  expect(prepared.body).toBe('encrypted-departure');
+  expect(prepared.headers['Content-Type']).toBe('application/vnd.foliole.workgroup-aead+json');
+  expect(JSON.stringify(prepared)).not.toContain('persistent-workgroup-key');
+  expect(nativeMock.signCompanionSyncRequest).toHaveBeenCalledWith(expect.objectContaining({
+    body: '{"group_id":"group-1"}', workgroup_key: 'persistent-workgroup-key'
   }));
 });
 

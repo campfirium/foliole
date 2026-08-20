@@ -59,6 +59,28 @@ it('keeps explicit-key signing independent from WorkgroupSession', async () => {
   expect(explicitSigner).not.toContain('FolioleCompanionWorkgroupSession');
 });
 
+it('prepares and sends an outbound envelope without a provider session', async () => {
+  const [client, outbound, workgroup] = await Promise.all([
+    readJava('FolioleCompanionDesktopHttpClient.java'),
+    readJava('FolioleCompanionSyncGroupOutboundPeerStore.java'),
+    readJava('FolioleCompanionWorkgroupHttp.java')
+  ]);
+  const explicitPreparation = outbound.slice(
+    outbound.indexOf('static JSObject prepareWithWorkgroupKey('),
+    outbound.indexOf('static void bindRoute(')
+  );
+  const keyPreparation = workgroup.slice(
+    workgroup.indexOf('static PreparedRequest prepareWithKey('),
+    workgroup.indexOf('static boolean isPrepared(')
+  );
+
+  expect(explicitPreparation).toContain('FolioleCompanionWorkgroupHttp.prepareWithKey(');
+  expect(explicitPreparation).not.toContain('FolioleCompanionWorkgroupSession');
+  expect(keyPreparation).not.toContain('FolioleCompanionWorkgroupSession');
+  expect(client).toContain('? FolioleCompanionWorkgroupHttp.acceptPrepared');
+  expect(client).toContain('&& !preparedWorkgroup');
+});
+
 it('cuts production group signing over to the required bridge key without changing standalone signing', async () => {
   const [actions, contract, definitions, outbound] = await Promise.all([
     readJava('FolioleCompanionPairingPluginActions.java'),
@@ -72,8 +94,10 @@ it('cuts production group signing over to the required bridge key without changi
   );
 
   expect(JSON.parse(contract).pairingPlugin.signature.requestKeys.workgroupKey).toBe('workgroup_key');
+  expect(JSON.parse(contract).pairingPlugin.signature.requestKeys.body).toBe('body');
   expect(definitions).toContain('workgroupKeyRequest(Context context)');
   expect(signAction).toContain('rejectIfBlank(call, workgroupKeyKey, workgroupKey)');
+  expect(signAction).toContain('prepareWithWorkgroupKey');
   expect(signAction).toContain('FolioleCompanionSyncGroupOutboundPeerStore.signWithWorkgroupKey(');
   expect(signAction).toContain('FolioleCompanionPairingStore.signRequest(');
   expect(outbound).not.toContain('FolioleCompanionWorkgroupSession');

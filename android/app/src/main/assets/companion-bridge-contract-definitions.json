@@ -375,6 +375,7 @@
         "timestamp": "X-Timestamp"
       },
       "requestKeys": {
+        "body": "body",
         "bodyHash": "body_hash",
         "endpointUrl": "endpoint_url",
         "method": "method",

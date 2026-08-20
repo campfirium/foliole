@@ -56,10 +56,21 @@ final class FolioleCompanionWorkgroupHttp {
         Context context, String url, String method, JSONObject inputHeaders, String body
     ) throws Exception {
         JSONObject headers = inputHeaders == null ? new JSONObject() : new JSONObject(inputHeaders.toString());
+        if (trim(headers.optString("X-Sync-Group-Id", null)) == null) {
+            return new PreparedRequest(body, headers, path(new URL(url)));
+        }
+        return prepareWithKey(context, url, method, inputHeaders, body,
+            FolioleCompanionWorkgroupSession.requireKey());
+    }
+
+    static PreparedRequest prepareWithKey(
+        Context context, String url, String method, JSONObject inputHeaders, String body,
+        String groupKey
+    ) throws Exception {
+        JSONObject headers = inputHeaders == null ? new JSONObject() : new JSONObject(inputHeaders.toString());
         String groupId = trim(headers.optString("X-Sync-Group-Id", null));
         String path = path(new URL(url));
         if (groupId == null) return new PreparedRequest(body, headers, path);
-        String groupKey = FolioleCompanionWorkgroupSession.requireKey();
         if (body == null) {
             sign(context, headers, method, path, "", groupKey);
             return new PreparedRequest(null, headers, path);
@@ -74,6 +85,22 @@ final class FolioleCompanionWorkgroupHttp {
         headers.put("Content-Type", ENVELOPE_CONTENT_TYPE);
         sign(context, headers, method, path, encrypted, groupKey);
         return new PreparedRequest(encrypted, headers, path);
+    }
+
+    static boolean isPrepared(JSONObject headers) {
+        return headers != null && ENVELOPE_CONTENT_TYPE.equals(headers.optString("Content-Type"));
+    }
+
+    static PreparedRequest acceptPrepared(String url, JSONObject inputHeaders, String body) throws Exception {
+        JSONObject headers = new JSONObject(inputHeaders.toString());
+        if (!isPrepared(headers) || trim(headers.optString("X-Sync-Group-Id", null)) == null
+            || trim(headers.optString("X-Authorization-Id", null)) == null
+            || trim(headers.optString("X-Nonce", null)) == null
+            || trim(headers.optString("X-Signature", null)) == null
+            || trim(headers.optString("X-Timestamp", null)) == null || body == null) {
+            throw new SecurityException("workgroup_prepared_request_invalid");
+        }
+        return new PreparedRequest(body, headers, path(new URL(url)));
     }
 
     static byte[] decryptResponse(

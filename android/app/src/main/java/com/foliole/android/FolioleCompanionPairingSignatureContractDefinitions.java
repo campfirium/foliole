@@ -29,6 +29,10 @@ final class FolioleCompanionPairingSignatureContractDefinitions {
         return value(context, "requestKeys", "bodyHash");
     }
 
+    static String bodyRequest(Context context) throws Exception {
+        return value(context, "requestKeys", "body");
+    }
+
     static String endpointUrlRequest(Context context) throws Exception {
         return value(context, "requestKeys", "endpointUrl");
     }

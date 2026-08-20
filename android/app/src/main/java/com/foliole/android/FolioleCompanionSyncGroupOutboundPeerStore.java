@@ -63,6 +63,24 @@ final class FolioleCompanionSyncGroupOutboundPeerStore {
         return new JSObject().put("headers", headers);
     }
 
+    static JSObject prepareWithWorkgroupKey(
+        Context context, String groupId, String endpointUrl, String method, String pathWithQuery,
+        String body, String workgroupKey
+    ) throws Exception {
+        JSONObject peer = find(context, groupId.trim(), normalizeEndpoint(endpointUrl));
+        JSONObject headers = new JSONObject()
+            .put("Content-Type", "application/json; charset=utf-8")
+            .put("X-Authorization-Id", peer.getString("local_authorization_id"))
+            .put("X-Sync-Group-Id", groupId.trim());
+        FolioleCompanionWorkgroupHttp.PreparedRequest prepared =
+            FolioleCompanionWorkgroupHttp.prepareWithKey(
+                context, normalizeEndpoint(endpointUrl) + pathWithQuery,
+                method, headers, body, workgroupKey);
+        return new JSObject()
+            .put(FolioleCompanionHostBridgeContractDefinitions.networkBodyRequestKey(context), prepared.body)
+            .put("headers", prepared.headers);
+    }
+
     static void bindRoute(Context context, String groupId, String peerAuthorizationId, String endpointUrl) throws Exception {
         String normalizedPeerId = peerAuthorizationId.trim();
         String encoded = prefs(context).getString(normalizedPeerId, null);

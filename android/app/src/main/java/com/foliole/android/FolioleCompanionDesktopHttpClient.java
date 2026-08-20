@@ -37,8 +37,10 @@ final class FolioleCompanionDesktopHttpClient {
     }
 
     static JSObject request(Context context, String url, String method, JSONObject headers, String body) throws Exception {
-        FolioleCompanionWorkgroupHttp.PreparedRequest prepared =
-            FolioleCompanionWorkgroupHttp.prepare(context, url, method, headers, body);
+        boolean preparedWorkgroup = FolioleCompanionWorkgroupHttp.isPrepared(headers);
+        FolioleCompanionWorkgroupHttp.PreparedRequest prepared = preparedWorkgroup
+            ? FolioleCompanionWorkgroupHttp.acceptPrepared(url, headers, body)
+            : FolioleCompanionWorkgroupHttp.prepare(context, url, method, headers, body);
         HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
         connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
         connection.setReadTimeout(READ_TIMEOUT_MS);
@@ -54,7 +56,7 @@ final class FolioleCompanionDesktopHttpClient {
         JSObject result = new JSObject();
         result.put(FolioleCompanionHostBridgeContractDefinitions.networkStatusResponseKey(context), status);
         byte[] responseBody = readBytes(status >= 400 ? connection.getErrorStream() : connection.getInputStream());
-        if (prepared.headers.has("X-Sync-Group-Id")) {
+        if (prepared.headers.has("X-Sync-Group-Id") && !preparedWorkgroup) {
             responseBody = FolioleCompanionWorkgroupHttp.decryptResponse(
                 context, connection, method, prepared.path, responseBody);
         }

@@ -132,6 +132,7 @@ final class FolioleCompanionPairingPluginActions {
             String timestampKey = FolioleCompanionPairingSignatureContractDefinitions.timestampRequest(context);
             String nonceKey = FolioleCompanionPairingSignatureContractDefinitions.nonceRequest(context);
             String bodyHashKey = FolioleCompanionPairingSignatureContractDefinitions.bodyHashRequest(context);
+            String bodyKey = FolioleCompanionPairingSignatureContractDefinitions.bodyRequest(context);
             String endpointUrlKey = FolioleCompanionPairingSignatureContractDefinitions.endpointUrlRequest(context);
             String syncGroupIdKey = FolioleCompanionPairingSignatureContractDefinitions.syncGroupIdRequest(context);
             String workgroupKeyKey = FolioleCompanionPairingSignatureContractDefinitions.workgroupKeyRequest(context);
@@ -140,6 +141,7 @@ final class FolioleCompanionPairingPluginActions {
             String timestamp = call.getString(timestampKey);
             String nonce = call.getString(nonceKey);
             String bodyHash = call.getString(bodyHashKey);
+            String body = call.getString(bodyKey);
             String endpointUrl = call.getString(endpointUrlKey);
             String syncGroupId = call.getString(syncGroupIdKey);
             String workgroupKey = call.getString(workgroupKeyKey);
@@ -156,9 +158,12 @@ final class FolioleCompanionPairingPluginActions {
                 if (rejectIfBlank(call, syncGroupIdKey, syncGroupId) ||
                     rejectIfBlank(call, endpointUrlKey, endpointUrl) ||
                     rejectIfBlank(call, workgroupKeyKey, workgroupKey)) return;
-                call.resolve(FolioleCompanionSyncGroupOutboundPeerStore.signWithWorkgroupKey(
-                    context, syncGroupId, endpointUrl, method, pathWithQuery,
-                    timestamp, nonce, bodyHash, workgroupKey));
+                call.resolve(body == null
+                    ? FolioleCompanionSyncGroupOutboundPeerStore.signWithWorkgroupKey(
+                        context, syncGroupId, endpointUrl, method, pathWithQuery,
+                        timestamp, nonce, bodyHash, workgroupKey)
+                    : FolioleCompanionSyncGroupOutboundPeerStore.prepareWithWorkgroupKey(
+                        context, syncGroupId, endpointUrl, method, pathWithQuery, body, workgroupKey));
             } else {
                 call.resolve(FolioleCompanionPairingStore.signRequest(
                     context, method, pathWithQuery, timestamp, nonce, bodyHash));

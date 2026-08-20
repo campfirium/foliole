@@ -2,7 +2,8 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   bind: vi.fn(), clear: vi.fn(), endpoint: vi.fn(), group: vi.fn(), headers: vi.fn(),
-  record: vi.fn(), request: vi.fn(), resolveTargets: vi.fn(), stop: vi.fn(), uuid: vi.fn(() => 'departure-1')
+  prepare: vi.fn(), record: vi.fn(), request: vi.fn(), resolveTargets: vi.fn(),
+  stop: vi.fn(), uuid: vi.fn(() => 'departure-1')
 }));
 
 vi.mock('../../companionWorkspacePairing', () => ({ createSignedRequestHeaders: mocks.headers }));
@@ -11,12 +12,16 @@ vi.mock('../../companionWorkspaceRuntimeRepository', () => ({
     clearSyncGroupCredentials: mocks.clear,
     desktopHttpRequest: mocks.request,
     stopSyncGroupProvider: mocks.stop
-  }
+  },
+  isNativeAndroidCompanionRuntime: () => true
 }));
 vi.mock('../../companionUuid', () => ({ createCompanionUuid: mocks.uuid }));
 vi.mock('../network/companionWorkspaceEndpoint', () => ({
   bindCompanionWorkspaceSyncTarget: mocks.bind,
   resolveReachableCompanionWorkspaceSyncEndpoints: mocks.resolveTargets
+}));
+vi.mock('../network/signedRequest', () => ({
+  prepareNativeCompanionWorkgroupRequest: mocks.prepare
 }));
 vi.mock('./syncGroupStore', () => ({
   loadCompanionSyncGroup: mocks.group,
@@ -34,6 +39,13 @@ beforeEach(() => {
     members: [{ host_name: 'android-1', state: 'active' }, { host_name: 'desktop-1', state: 'active' }]
   });
   mocks.headers.mockResolvedValue({ 'X-Signature': 'signed' });
+  mocks.prepare.mockResolvedValue({
+    body: 'encrypted-departure', headers: {
+      'Content-Type': 'application/vnd.foliole.workgroup-aead+json',
+      'X-Authorization-Id': 'authorization-android', 'X-Signature': 'signed',
+      'X-Sync-Group-Id': 'group-1'
+    }
+  });
   mocks.resolveTargets.mockResolvedValue([{ endpointUrl: 'http://192.168.1.2:38641' }]);
   mocks.bind.mockResolvedValue(undefined);
   mocks.request.mockResolvedValue({ body: '{"status":"accepted"}', status: 200 });
@@ -45,8 +57,10 @@ beforeEach(() => {
 it('records a local departure only after another Device accepts it', async () => {
   await leaveCompanionSyncGroup();
   expect(mocks.request).toHaveBeenCalledWith(expect.objectContaining({
-    method: 'POST', url: 'http://192.168.1.2:38641/companion/sync-group/departure'
+    body: 'encrypted-departure', method: 'POST',
+    url: 'http://192.168.1.2:38641/companion/sync-group/departure'
   }));
+  expect(JSON.stringify(mocks.request.mock.calls)).not.toContain('persistent-workgroup-key');
   expect(mocks.bind).toHaveBeenCalledWith({ endpointUrl: 'http://192.168.1.2:38641' });
   expect(mocks.record).toHaveBeenCalledWith(expect.objectContaining({
     authorizationId: 'leave-departure-1', hostName: 'android-1', groupId: 'group-1'
@@ -59,6 +73,17 @@ it('records a local departure only after another Device accepts it', async () =>
   expect(requestOrder).toBeLessThan(recordOrder);
   expect(mocks.stop).toHaveBeenCalledOnce();
   expect(mocks.clear).toHaveBeenCalledOnce();
+});
+
+it('prepares Leave without starting a missing or paused provider session', async () => {
+  await leaveCompanionSyncGroup();
+
+  expect(mocks.prepare).toHaveBeenCalledWith(expect.objectContaining({
+    bodyText: expect.stringContaining('"group_id":"group-1"'),
+    endpointUrl: 'http://192.168.1.2:38641', method: 'POST'
+  }));
+  expect(mocks.stop).toHaveBeenCalledTimes(1);
+  expect(mocks.stop.mock.invocationCallOrder[0]).toBeGreaterThan(mocks.request.mock.invocationCallOrder[0]!);
 });
 
 it('keeps local membership and credentials when no Device accepts the departure', async () => {
@@ -81,7 +106,7 @@ it('routes Leave to an active identity-bound peer when the stored endpoint has d
   expect(mocks.bind).toHaveBeenCalledWith({
     hostName: 'desktop-2', endpointUrl: 'http://192.168.1.3:38641', groupId: 'group-1'
   });
-  expect(mocks.headers).toHaveBeenCalledWith(expect.objectContaining({
+  expect(mocks.prepare).toHaveBeenCalledWith(expect.objectContaining({
     endpointUrl: 'http://192.168.1.3:38641'
   }));
   expect(mocks.request).toHaveBeenCalledWith(expect.objectContaining({

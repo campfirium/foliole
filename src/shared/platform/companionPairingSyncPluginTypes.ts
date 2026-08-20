@@ -26,6 +26,7 @@ export interface CompanionPairingSyncPlugin {
     sync_group_id?: string;
   }): Promise<NativeCompanionPairingState>;
   signCompanionSyncRequest(args: {
+    body?: string;
     body_hash: string;
     endpoint_url?: string;
     method: string;

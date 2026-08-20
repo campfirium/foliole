@@ -1,11 +1,15 @@
 import { createCompanionUuid } from '../../companionUuid';
 import { createSignedRequestHeaders } from '../../companionWorkspacePairing';
-import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
+import {
+  FolioleCompanionSync,
+  isNativeAndroidCompanionRuntime
+} from '../../companionWorkspaceRuntimeRepository';
 import {
   bindCompanionWorkspaceSyncTarget,
   resolveReachableCompanionWorkspaceSyncEndpoints,
   type CompanionWorkspaceSyncTarget
 } from '../network/companionWorkspaceEndpoint';
+import { prepareNativeCompanionWorkgroupRequest } from '../network/signedRequest';
 
 import {
   loadCompanionSyncGroup,
@@ -17,6 +21,17 @@ export const COMPANION_SYNC_GROUP_DEPARTURE_PATH = '/companion/sync-group/depart
 
 async function sendDepartureToTarget(target: CompanionWorkspaceSyncTarget, body: string) {
   await bindCompanionWorkspaceSyncTarget(target);
+  if (isNativeAndroidCompanionRuntime()) {
+    const prepared = await prepareNativeCompanionWorkgroupRequest({
+      bodyText: body, endpointUrl: target.endpointUrl, method: 'POST',
+      pathWithQuery: COMPANION_SYNC_GROUP_DEPARTURE_PATH
+    });
+    await requireAccepted(await FolioleCompanionSync.desktopHttpRequest({
+      body: prepared.body, headers: prepared.headers, method: 'POST',
+      url: `${target.endpointUrl}${COMPANION_SYNC_GROUP_DEPARTURE_PATH}`
+    }));
+    return;
+  }
   const headers = await createSignedRequestHeaders({
     bodyText: body, endpointUrl: target.endpointUrl, method: 'POST', pathWithQuery: COMPANION_SYNC_GROUP_DEPARTURE_PATH
   });
@@ -24,6 +39,10 @@ async function sendDepartureToTarget(target: CompanionWorkspaceSyncTarget, body:
     body, headers: { 'Content-Type': 'application/json', ...headers }, method: 'POST',
     url: `${target.endpointUrl}${COMPANION_SYNC_GROUP_DEPARTURE_PATH}`
   });
+  await requireAccepted(response);
+}
+
+function requireAccepted(response: { status: number }) {
   if (response.status < 200 || response.status >= 300) {
     throw new Error(`sync_group_departure_http_${response.status}`);
   }
