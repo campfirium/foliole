@@ -5,6 +5,12 @@ import path from 'node:path';
 import { expect, it, vi } from 'vitest';
 
 import {
+  departedCredentialFixture, joinedEmptyCredentialFixture
+} from './android-departed-credential-fixture.mjs';
+import {
+  authorizationFingerprint
+} from './android-sync-group-authorization-inspection.mjs';
+import {
   assertFreshCredentialReceipt,
   credentialEvidenceExecute,
   macosA5CredentialsOnlyModeArgs,
@@ -14,9 +20,6 @@ import {
   assertFreshCredentialRejoinBaseline, assertJoinedEmptyCredentialReauthorization,
   collectCredentialProtectedReadiness, leaveJoinedEmptyCredentialSession
 } from './macos-a5-pair-credentials-rejoin.mjs';
-import {
-  authorizationFingerprint
-} from './android-sync-group-authorization-inspection.mjs';
 
 it('stops fresh A5 pairing after native credentials can sign the first request', async () => {
   const runPairSync = vi.fn().mockResolvedValue({
@@ -59,26 +62,8 @@ it('bounds only the credential instrumentation wait instead of inheriting full s
 });
 
 const digest = 'a'.repeat(64);
-const joinedEmpty = {
-  activeSyncGroupMemberCount: 3, credentialRepairRequired: false,
-  deviceIdentityFingerprint: '2fdd44bb500a5934', dirtyObjectCounts: {}, dirtyRecordCount: 0,
-  existingPairing: false, joinedEmptyReauthorization: true, nodeCount: 0,
-  localMemberAuthorizationFingerprint: authorizationFingerprint('authorization-a5'),
-  pairingCredentialsPresent: false, protectedContentDigest: digest,
-  storedSyncGroupId: 'group-1', storedSyncGroupTimelineId: 'timeline-1',
-  syncGroupCredentialsPresent: true, syncGroupId: 'group-1',
-  syncGroupRemotePeerFingerprint: authorizationFingerprint('authorization-desktop'),
-  syncGroupRoutePresent: true,
-  syncGroupTimelineId: 'timeline-1', workgroupKeyPresent: true
-};
-
-const departed = {
-  ...joinedEmpty, activeSyncGroupMemberCount: 2, existingPairing: false,
-  joinedEmptyReauthorization: false, storedSyncGroupId: null, storedSyncGroupTimelineId: null,
-  localMemberAuthorizationFingerprint: null,
-  syncGroupCredentialsPresent: false, syncGroupId: null, syncGroupRoutePresent: false,
-  syncGroupTimelineId: null, workgroupKeyPresent: false
-};
+const joinedEmpty = joinedEmptyCredentialFixture;
+const departed = departedCredentialFixture;
 
 function withoutProtectedSnapshot(readiness) {
   const preflight = { ...readiness };
@@ -103,7 +88,10 @@ it('routes exact joined-empty credentials through product Leave and a fresh boun
     env: {}, execute: vi.fn(), paths: { repoRoot: '/repo/foliole' }, serial: '87a33a4b'
   };
   await runMacosA5PairCredentialsEntry(args, {
-    buildDesktop: vi.fn(), collectProtectedReadiness, leaveJoinedEmpty, readReceipt: () => ({
+    buildDesktop: vi.fn(), collectProtectedReadiness,
+    inspectDesktopDeparture: () => ({ groupId: 'group-1',
+      remotePeerFingerprint: joinedEmpty.syncGroupRemotePeerFingerprint, timelineId: 'timeline-1' }),
+    leaveJoinedEmpty, readReceipt: () => ({
       credentials: 'saved_signable', initialSync: 'not_started', pairingPath: 'new'
     }), resolveReadiness, runPairSync
   });
@@ -129,8 +117,13 @@ it('merges the same read-only database snapshot fields before and after Leave', 
     activeSyncGroupMemberCount: 3, deviceIdentityFingerprint: '2fdd44bb500a5934',
     dirtyObjectCounts: {}, dirtyRecordCount: 0, nodeCount: 0,
     localMemberAuthorizationFingerprint: authorizationFingerprint('authorization-a5'),
-    protectedContentDigest: digest, syncGroupId: 'group-1',
-    syncGroupTimelineId: 'timeline-1', workgroupKeyPresent: true
+    protectedContentDigest: digest, storedLocalDepartureAuthorizationFingerprint: null,
+    storedLocalDepartureMatchCount: 0, storedLocalMemberAuthorizationFingerprint: null,
+    storedSyncGroupCount: 1, storedSyncGroupDepartureCount: 0,
+    storedSyncGroupId: 'group-1', storedSyncGroupMemberCount: 3,
+    storedSyncGroupTimelineId: 'timeline-1', syncGroupId: 'group-1',
+    syncGroupTimelineId: 'timeline-1', workgroupKeyPresent: true,
+    workspaceSyncEndpointPresent: true
   } } });
   const readiness = withoutProtectedSnapshot(joinedEmpty);
   await expect(collectCredentialProtectedReadiness(

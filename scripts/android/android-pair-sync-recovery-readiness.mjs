@@ -1,18 +1,19 @@
 import { createHash } from 'node:crypto';
 
 import {
+  departedHistoryReadinessEvidence, inspectDepartedHistory
+} from './android-departed-history-inspection.mjs';
+import {
   currentDeliveryStatusCountsByPeerFingerprint,
   pendingDeliveryCountsByPeerFingerprint
 } from './android-pair-sync-peer-delivery-readiness.mjs';
 import {
-  inspectStoredSyncGroup, inspectSyncGroupBinding, inspectWorkgroupKeyPresent
-} from './android-sync-group-readiness-inspection.mjs';
+  classifySyncFailure, classifySyncFailureRoute, classifySyncFailureStage
+} from './android-sync-failure-classification.mjs';
 import {
   authorizationFingerprint, inspectLocalActiveMemberAuthorizationFingerprint
 } from './android-sync-group-authorization-inspection.mjs';
-import {
-  classifySyncFailure, classifySyncFailureRoute, classifySyncFailureStage
-} from './android-sync-failure-classification.mjs';
+import { inspectWorkgroupKeyPresent } from './android-sync-group-readiness-inspection.mjs';
 
 function tableExists(database, table) {
   return database.prepare(
@@ -111,10 +112,8 @@ export function inspectPairSyncRecoveryWorkspace(database) {
   const deviceId = meta(database, 'device_id');
   const latestSyncRun = latestFinishedSyncEvent(database);
   const rejection = pairingCredentialRejection(latestSyncRun);
-  const group = inspectSyncGroupBinding(database, deviceId);
-  const storedGroup = inspectStoredSyncGroup(database);
   return {
-    activeSyncGroupMemberCount: count(database, 'sync_group_members', " WHERE state = 'active'"),
+    ...inspectDepartedHistory(database),
     deviceIdentityFingerprint: identityFingerprint(deviceId),
     deviceProfile: deviceId,
     dirtyRecordCount: count(
@@ -151,10 +150,6 @@ export function inspectPairSyncRecoveryWorkspace(database) {
       currentDeliveryStatusCountsByPeerFingerprint(database),
     pendingDeliveryCountsByPeerFingerprint: pendingDeliveryCountsByPeerFingerprint(database),
     protectedContentDigest: protectedContentDigest(database),
-    storedSyncGroupId: storedGroup?.group_id ?? null,
-    storedSyncGroupTimelineId: storedGroup?.timeline_id ?? null,
-    syncGroupId: group?.group_id ?? null,
-    syncGroupTimelineId: group?.timeline_id ?? null,
     workgroupKeyPresent: inspectWorkgroupKeyPresent(database),
     userNodeCount: count(database, 'nodes',
       " WHERE id NOT IN ('special-inbox', 'special-virtual-root')")
@@ -195,7 +190,7 @@ export function pairSyncRecoveryReadiness(
     missingPrerequisites.push('existing_pairing_peer_unproven');
   }
   return {
-    activeSyncGroupMemberCount: inspection?.activeSyncGroupMemberCount ?? null,
+    ...departedHistoryReadinessEvidence(inspection),
     currentDeliveryStatusCountsByPeerFingerprint:
       inspection?.currentDeliveryStatusCountsByPeerFingerprint ?? {},
     databaseAvailabilityDetail: inspection ? null : snapshot.database?.error ?? null,
@@ -219,10 +214,6 @@ export function pairSyncRecoveryReadiness(
     pairingPeerConflict,
     remotePeerFingerprint,
     storedDeviceFingerprint,
-    storedSyncGroupId: inspection?.storedSyncGroupId ?? null,
-    storedSyncGroupTimelineId: inspection?.storedSyncGroupTimelineId ?? null,
-    syncGroupId: inspection?.syncGroupId ?? null,
-    syncGroupTimelineId: inspection?.syncGroupTimelineId ?? null,
     workgroupKeyPresent: databaseWorkgroupKeyPresent,
     resultStatus: missingPrerequisites.length === 0 ? 'ready' : 'approval_required',
     schemaVersion: 1

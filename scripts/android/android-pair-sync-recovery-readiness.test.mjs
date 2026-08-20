@@ -76,28 +76,6 @@ it('reports pending delivery counts only by hashed group member identity', () =>
   expect(JSON.stringify(inspection)).not.toContain(peerId);
 });
 
-it('reports the persisted Sync Group identity without deriving it from pairing metadata', () => {
-  const tables = new Set([
-    'companion_meta', 'nodes', 'sync_group_local_state', 'sync_group_members',
-    'sync_groups', 'sync_object_state'
-  ]);
-  const database = { prepare: (sql) => ({ get: (value) => {
-    if (sql.includes('sqlite_master')) return tables.has(value) ? { present: 1 } : undefined;
-    if (sql.includes('JOIN sync_groups')) {
-      return { group_id: 'group-1', timeline_id: 'timeline-1' };
-    }
-    if (sql.includes('companion_meta')) return value === 'device_id' ? { value: 'android-1' } : undefined;
-    if (sql.includes('sync_group_members')) return { count: 3 };
-    return { count: 0 };
-  } }) };
-
-  expect(inspectPairSyncRecoveryWorkspace(database)).toMatchObject({
-    activeSyncGroupMemberCount: 3,
-    syncGroupId: 'group-1',
-    syncGroupTimelineId: 'timeline-1'
-  });
-});
-
 it('recognizes generic multi-device acceptance facts without a track-specific prefix', () => {
   const tables = new Set(['companion_meta', 'nodes', 'sync_object_state']);
   const database = { prepare: (sql) => ({

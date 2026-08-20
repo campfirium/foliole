@@ -3,13 +3,18 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { runMacosA5PairSync } from './macos-a5-pair-sync-action.mjs';
+import { MACOS_DAILY_LIBRARY_HOME } from '../macos/macos-electron-dev-paths.mjs';
+import {
+  DEPARTED_PRESERVED_HISTORY
+} from './macos-a5-departed-credential-state.mjs';
+import { inspectDesktopDepartureBoundary } from './macos-a5-desktop-departure-inspection.mjs';
+import { buildMacosA5Desktop } from './macos-a5-extended-actions.mjs';
 import {
   assertFreshCredentialRejoinBaseline, assertJoinedEmptyCredentialReauthorization,
   collectCredentialProtectedReadiness, leaveJoinedEmptyCredentialSession
 } from './macos-a5-pair-credentials-rejoin.mjs';
+import { runMacosA5PairSync } from './macos-a5-pair-sync-action.mjs';
 import { resolveMacosA5PairSyncReadiness } from './macos-a5-product-bootstrap.mjs';
-import { buildMacosA5Desktop } from './macos-a5-extended-actions.mjs';
 
 const CREDENTIAL_EVIDENCE_TIMEOUT_MS = 90_000;
 
@@ -38,6 +43,30 @@ export function assertFreshCredentialReceipt(receipt) {
   return receipt;
 }
 
+async function prepareFreshCredentialJoin(readiness, context) {
+  let pairReadiness = readiness;
+  let baseline;
+  if (readiness.joinedEmptyReauthorization === true) {
+    const protectedReadiness = await context.collect(readiness, context.snapshotArgs);
+    baseline = assertJoinedEmptyCredentialReauthorization(protectedReadiness);
+    await context.leave({ baseline, ...context.leaveArgs });
+    pairReadiness = assertFreshCredentialRejoinBaseline(
+      await context.collect(context.resolve(), context.snapshotArgs), baseline
+    );
+  } else if (readiness.departedCredentialState === DEPARTED_PRESERVED_HISTORY) {
+    pairReadiness = await context.collect(readiness, context.snapshotArgs);
+    assertFreshCredentialRejoinBaseline(pairReadiness, pairReadiness);
+  } else return { pairReadiness };
+  const desktop = context.inspectDesktop(pairReadiness);
+  pairReadiness.pairTargetPeerFingerprint = desktop.remotePeerFingerprint;
+  return {
+    pairReadiness,
+    pairRequestFingerprint: baseline?.deviceIdentityFingerprint
+      ?? pairReadiness.deviceIdentityFingerprint,
+    protectedSyncGroup: { groupId: desktop.groupId, timelineId: desktop.timelineId }
+  };
+}
+
 export async function runMacosA5PairCredentialsEntry(args, dependencies = {}) {
   const resolveReadiness = dependencies.resolveReadiness ?? resolveMacosA5PairSyncReadiness;
   const runPairSync = dependencies.runPairSync ?? runMacosA5PairSync;
@@ -46,6 +75,8 @@ export async function runMacosA5PairCredentialsEntry(args, dependencies = {}) {
     ?? collectCredentialProtectedReadiness;
   const leaveJoinedEmpty = dependencies.leaveJoinedEmpty ?? leaveJoinedEmptyCredentialSession;
   const readReceipt = dependencies.readReceipt ?? readCredentialReceipt;
+  const inspectDesktopDeparture = dependencies.inspectDesktopDeparture
+    ?? ((departed) => inspectDesktopDepartureBoundary(MACOS_DAILY_LIBRARY_HOME, departed));
   args.assertFixed();
   const readiness = resolveReadiness(args.paths);
   args.build();
@@ -54,27 +85,16 @@ export async function runMacosA5PairCredentialsEntry(args, dependencies = {}) {
   const evidenceRoot = path.join(
     args.paths.repoRoot, '.tmp/artifacts/a5-pair-credentials', buildIdentity
   );
-  let pairReadiness = readiness;
-  let protectedSyncGroup;
-  let pairRequestFingerprint;
-  if (readiness.joinedEmptyReauthorization === true) {
-    const protectedReadiness = await collectProtectedReadiness(
-      readiness, { env: args.env, execute: args.execute, paths: args.paths, serial: args.serial }
-    );
-    const baseline = assertJoinedEmptyCredentialReauthorization(protectedReadiness);
-    await leaveJoinedEmpty({ baseline, buildIdentity, env: args.env,
-      evidenceRoot: path.join(evidenceRoot, 'leave'), execute: args.execute,
-      paths: args.paths, serial: args.serial });
-    const departedReadiness = await collectProtectedReadiness(
-      resolveReadiness(args.paths), {
-        env: args.env, execute: args.execute, paths: args.paths, serial: args.serial
-      }
-    );
-    pairReadiness = assertFreshCredentialRejoinBaseline(departedReadiness, baseline);
-    protectedSyncGroup = { groupId: baseline.groupId, timelineId: baseline.timelineId };
-    pairRequestFingerprint = baseline.deviceIdentityFingerprint;
-    pairReadiness.pairTargetPeerFingerprint = baseline.remotePeerFingerprint;
-  }
+  const { pairReadiness, pairRequestFingerprint, protectedSyncGroup }
+    = await prepareFreshCredentialJoin(readiness, {
+      collect: collectProtectedReadiness, inspectDesktop: inspectDesktopDeparture,
+      leave: leaveJoinedEmpty,
+      leaveArgs: { buildIdentity, env: args.env, evidenceRoot: path.join(evidenceRoot, 'leave'),
+        execute: args.execute, paths: args.paths, serial: args.serial },
+      resolve: () => resolveReadiness(args.paths),
+      snapshotArgs: { env: args.env, execute: args.execute, paths: args.paths,
+        serial: args.serial }
+    });
   const result = await runPairSync({
     buildIdentity, credentialRepairRequired: pairReadiness.credentialRepairRequired,
     deviceFingerprint: pairReadiness.deviceIdentityFingerprint, env: args.env,

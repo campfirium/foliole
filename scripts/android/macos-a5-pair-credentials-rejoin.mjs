@@ -4,11 +4,15 @@ import path from 'node:path';
 
 import { MACOS_DAILY_LIBRARY_HOME } from '../macos/macos-electron-dev-paths.mjs';
 import { assertPairSyncRuntimeOwnership } from '../windows/windows-a5-pair-sync-recovery-transport.mjs';
+import {
+  departedHistoryReadinessEvidence
+} from './android-departed-history-inspection.mjs';
 import { collectAndroidDeviceSnapshot } from './android-device-snapshot.mjs';
 import { inspectPairSyncRecoveryWorkspace } from './android-pair-sync-recovery-readiness.mjs';
 import {
   authorizationFingerprint
 } from './android-sync-group-authorization-inspection.mjs';
+import { assertDepartedCredentialBaseline } from './macos-a5-departed-credential-state.mjs';
 import { runMacosA5SyncGroupMaintenance } from './macos-a5-sync-group-maintenance-action.mjs';
 import { openMacosPairSyncDesktopSession } from './macos-pair-sync-desktop-session.mjs';
 
@@ -100,11 +104,14 @@ export async function collectCredentialProtectedReadiness(
     && inspection.nodeCount === readiness.nodeCount
     && inspection.syncGroupId === readiness.syncGroupId
     && inspection.syncGroupTimelineId === readiness.syncGroupTimelineId
+    && JSON.stringify(departedHistoryReadinessEvidence(inspection))
+      === JSON.stringify(departedHistoryReadinessEvidence(readiness))
     && inspection.workgroupKeyPresent === readiness.workgroupKeyPresent;
   if (!sameWorkspace) {
     throw new Error('A5 credential preflight changed before its protected snapshot.');
   }
-  return { ...readiness, dirtyObjectCounts: inspection.dirtyObjectCounts,
+  return { ...readiness, ...departedHistoryReadinessEvidence(inspection),
+    dirtyObjectCounts: inspection.dirtyObjectCounts,
     localMemberAuthorizationFingerprint: inspection.localMemberAuthorizationFingerprint,
     protectedContentDigest: inspection.protectedContentDigest };
 }
@@ -137,21 +144,7 @@ export function assertJoinedEmptyCredentialReauthorization(readiness) {
 }
 
 export function assertFreshCredentialRejoinBaseline(readiness, baseline) {
-  const preserved = readiness.deviceIdentityFingerprint === baseline.deviceIdentityFingerprint
-    && readiness.nodeCount === baseline.nodeCount
-    && readiness.protectedContentDigest === baseline.protectedContentDigest
-    && readiness.dirtyRecordCount === baseline.dirtyRecordCount
-    && JSON.stringify(readiness.dirtyObjectCounts ?? {})
-      === JSON.stringify(baseline.dirtyObjectCounts)
-    && readiness.pairingCredentialsPresent === false
-    && readiness.syncGroupCredentialsPresent === false
-    && readiness.localMemberAuthorizationFingerprint === null
-    && readiness.workgroupKeyPresent === false && readiness.syncGroupRoutePresent === false
-    && readiness.syncGroupId === null && readiness.syncGroupTimelineId === null
-    && readiness.storedSyncGroupId === null && readiness.storedSyncGroupTimelineId === null
-    && readiness.existingPairing === false;
-  if (!preserved) throw new Error('Product Leave did not preserve the exact fresh credential rejoin baseline.');
-  return readiness;
+  return assertDepartedCredentialBaseline(readiness, baseline);
 }
 
 function assertProtectedDesktop(overview, session, baseline, expectedMembers) {

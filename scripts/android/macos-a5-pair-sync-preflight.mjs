@@ -3,6 +3,9 @@
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
+import {
+  classifyDepartedCredentialState, DEPARTED_PRESERVED_HISTORY
+} from './macos-a5-departed-credential-state.mjs';
 import { hasProtectedPendingSyncState } from './macos-a5-pending-sync-state.mjs';
 
 const A5_SERIAL = '87a33a4b';
@@ -167,10 +170,12 @@ export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
     && workspaceState.counts?.node_order === 0
     && workspaceState.pairingWorkspace?.localDeviceIdentityPresent === true
     && workspaceState.pairingWorkspace?.syncEndpointPresent === false;
+  const departedCredentialState = pairing.status === 0
+    ? classifyDepartedCredentialState(pairState, workspaceState) : null;
   if (!existingPairingRecovery && !protectedGroupPendingSync
       && !cleanPairSwitch && !rejectedCleanPairing
       && !rejectedEmptyPairing && !freshEmptyPairing && !joinedEmptyReauthorization
-      && !missingDatabaseBootstrap) {
+      && departedCredentialState !== DEPARTED_PRESERVED_HISTORY && !missingDatabaseBootstrap) {
     throw new Error('Fixed A5 no longer matches the authorized pair-switch state.');
   }
   return {
@@ -180,6 +185,7 @@ export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
     existingPairing: existingPairingRecovery || protectedGroupPendingSync || cleanPairSwitch
       || rejectedEmptyPairing || missingDatabaseBootstrap,
     pairTargetPeerFingerprint: pairState.remotePeerFingerprint,
+    departedCredentialState,
     joinedEmptyReauthorization,
     protectedPendingSync: protectedGroupPendingSync,
     requiresProductBootstrap: missingDatabaseBootstrap
