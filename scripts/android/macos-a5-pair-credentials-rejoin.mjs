@@ -2,10 +2,14 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 import { MACOS_DAILY_LIBRARY_HOME } from '../macos/macos-electron-dev-paths.mjs';
 import { assertPairSyncRuntimeOwnership } from '../windows/windows-a5-pair-sync-recovery-transport.mjs';
+import { collectAndroidDeviceSnapshot } from './android-device-snapshot.mjs';
+import { inspectPairSyncRecoveryWorkspace } from './android-pair-sync-recovery-readiness.mjs';
 import { runMacosA5SyncGroupMaintenance } from './macos-a5-sync-group-maintenance-action.mjs';
 import {
   macosPairSyncIdentityFingerprint, openMacosPairSyncDesktopSession
 } from './macos-pair-sync-desktop-session.mjs';
+
+const APP_ID = 'com.foliole.android';
 
 function isFingerprint(value) {
   return /^[0-9a-f]{16}$/u.test(value ?? '');
@@ -14,6 +18,33 @@ function isFingerprint(value) {
 function activeMemberFingerprints(overview) {
   return (overview.sync_group?.members ?? []).filter(({ state }) => state === 'active')
     .map(({ device_id: id }) => macosPairSyncIdentityFingerprint(id)).sort();
+}
+
+export async function collectCredentialProtectedReadiness(
+  readiness, { paths, serial }, dependencies = {}
+) {
+  const collectSnapshot = dependencies.collectSnapshot ?? collectAndroidDeviceSnapshot;
+  const snapshot = await collectSnapshot({
+    adb: paths.adb, appId: APP_ID, databaseInspector: inspectPairSyncRecoveryWorkspace,
+    includeAttachments: false, includeEvents: false, serial, tables: ['nodes']
+  });
+  const inspection = snapshot.database?.inspection;
+  if (snapshot.database?.integrity !== 'ok' || !inspection) {
+    throw new Error('A5 credential protection snapshot is unavailable.');
+  }
+  const sameWorkspace = inspection.activeSyncGroupMemberCount
+      === readiness.activeSyncGroupMemberCount
+    && inspection.deviceIdentityFingerprint === readiness.deviceIdentityFingerprint
+    && inspection.dirtyRecordCount === readiness.dirtyRecordCount
+    && inspection.nodeCount === readiness.nodeCount
+    && inspection.syncGroupId === readiness.syncGroupId
+    && inspection.syncGroupTimelineId === readiness.syncGroupTimelineId
+    && inspection.workgroupKeyPresent === readiness.workgroupKeyPresent;
+  if (!sameWorkspace) {
+    throw new Error('A5 credential preflight changed before its protected snapshot.');
+  }
+  return { ...readiness, dirtyObjectCounts: inspection.dirtyObjectCounts,
+    protectedContentDigest: inspection.protectedContentDigest };
 }
 
 export function assertJoinedEmptyCredentialReauthorization(readiness) {

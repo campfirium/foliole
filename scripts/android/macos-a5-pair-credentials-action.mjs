@@ -6,7 +6,7 @@ import path from 'node:path';
 import { runMacosA5PairSync } from './macos-a5-pair-sync-action.mjs';
 import {
   assertFreshCredentialRejoinBaseline, assertJoinedEmptyCredentialReauthorization,
-  leaveJoinedEmptyCredentialSession
+  collectCredentialProtectedReadiness, leaveJoinedEmptyCredentialSession
 } from './macos-a5-pair-credentials-rejoin.mjs';
 import { resolveMacosA5PairSyncReadiness } from './macos-a5-product-bootstrap.mjs';
 import { buildMacosA5Desktop } from './macos-a5-extended-actions.mjs';
@@ -42,6 +42,8 @@ export async function runMacosA5PairCredentialsEntry(args, dependencies = {}) {
   const resolveReadiness = dependencies.resolveReadiness ?? resolveMacosA5PairSyncReadiness;
   const runPairSync = dependencies.runPairSync ?? runMacosA5PairSync;
   const buildDesktop = dependencies.buildDesktop ?? buildMacosA5Desktop;
+  const collectProtectedReadiness = dependencies.collectProtectedReadiness
+    ?? collectCredentialProtectedReadiness;
   const leaveJoinedEmpty = dependencies.leaveJoinedEmpty ?? leaveJoinedEmptyCredentialSession;
   const readReceipt = dependencies.readReceipt ?? readCredentialReceipt;
   args.assertFixed();
@@ -56,13 +58,17 @@ export async function runMacosA5PairCredentialsEntry(args, dependencies = {}) {
   let protectedSyncGroup;
   let pairRequestFingerprint;
   if (readiness.joinedEmptyReauthorization === true) {
-    const baseline = assertJoinedEmptyCredentialReauthorization(readiness);
+    const protectedReadiness = await collectProtectedReadiness(
+      readiness, { paths: args.paths, serial: args.serial }
+    );
+    const baseline = assertJoinedEmptyCredentialReauthorization(protectedReadiness);
     await leaveJoinedEmpty({ baseline, buildIdentity, env: args.env,
       evidenceRoot: path.join(evidenceRoot, 'leave'), execute: args.execute,
       paths: args.paths, serial: args.serial });
-    pairReadiness = assertFreshCredentialRejoinBaseline(
-      resolveReadiness(args.paths), baseline
+    const departedReadiness = await collectProtectedReadiness(
+      resolveReadiness(args.paths), { paths: args.paths, serial: args.serial }
     );
+    pairReadiness = assertFreshCredentialRejoinBaseline(departedReadiness, baseline);
     protectedSyncGroup = { groupId: baseline.groupId, timelineId: baseline.timelineId };
     pairRequestFingerprint = baseline.deviceIdentityFingerprint;
     pairReadiness.pairTargetPeerFingerprint = baseline.remotePeerFingerprint;

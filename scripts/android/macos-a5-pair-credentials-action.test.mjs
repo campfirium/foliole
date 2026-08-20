@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import path from 'node:path';
 
 import { expect, it, vi } from 'vitest';
@@ -10,7 +12,7 @@ import {
 } from './macos-a5-pair-credentials-action.mjs';
 import {
   assertFreshCredentialRejoinBaseline, assertJoinedEmptyCredentialReauthorization,
-  leaveJoinedEmptyCredentialSession
+  collectCredentialProtectedReadiness, leaveJoinedEmptyCredentialSession
 } from './macos-a5-pair-credentials-rejoin.mjs';
 import { macosPairSyncIdentityFingerprint } from './macos-pair-sync-desktop-session.mjs';
 
@@ -73,18 +75,30 @@ const departed = {
   syncGroupTimelineId: null, workgroupKeyPresent: false
 };
 
+function withoutProtectedSnapshot(readiness) {
+  const preflight = { ...readiness };
+  delete preflight.dirtyObjectCounts;
+  delete preflight.protectedContentDigest;
+  return preflight;
+}
+
 it('routes exact joined-empty credentials through product Leave and a fresh bounded join', async () => {
   const runPairSync = vi.fn().mockResolvedValue({
     output: '', pairSyncRecovery: { manifestPath: '/tmp/credentials.json' }
   });
   const leaveJoinedEmpty = vi.fn().mockResolvedValue({ manifestPath: '/tmp/leave.json' });
-  const resolveReadiness = vi.fn().mockReturnValueOnce(joinedEmpty).mockReturnValueOnce(departed);
+  const resolveReadiness = vi.fn()
+    .mockReturnValueOnce(withoutProtectedSnapshot(joinedEmpty))
+    .mockReturnValueOnce(withoutProtectedSnapshot(departed));
+  const collectProtectedReadiness = vi.fn(async (readiness) => ({
+    ...readiness, dirtyObjectCounts: {}, protectedContentDigest: digest
+  }));
   const args = {
     assertFixed: vi.fn(), build: vi.fn(), buildIdentity: () => 'build-2', checked: vi.fn(),
     env: {}, execute: vi.fn(), paths: { repoRoot: '/repo/foliole' }, serial: '87a33a4b'
   };
   await runMacosA5PairCredentialsEntry(args, {
-    buildDesktop: vi.fn(), leaveJoinedEmpty, readReceipt: () => ({
+    buildDesktop: vi.fn(), collectProtectedReadiness, leaveJoinedEmpty, readReceipt: () => ({
       credentials: 'saved_signable', initialSync: 'not_started', pairingPath: 'new'
     }), resolveReadiness, runPairSync
   });
@@ -99,6 +113,34 @@ it('routes exact joined-empty credentials through product Leave and a fresh boun
     protectedSyncGroup: { groupId: 'group-1', timelineId: 'timeline-1' },
     remotePeerFingerprint: 'a8ef578b118115cf', recoveryEvidenceGoal: 'credentials-signable'
   }));
+  expect(collectProtectedReadiness).toHaveBeenCalledTimes(2);
+});
+
+it('merges the same read-only database snapshot fields before and after Leave', async () => {
+  const collectSnapshot = vi.fn().mockResolvedValue({ database: { integrity: 'ok', inspection: {
+    activeSyncGroupMemberCount: 3, deviceIdentityFingerprint: '2fdd44bb500a5934',
+    dirtyObjectCounts: {}, dirtyRecordCount: 0, nodeCount: 0,
+    protectedContentDigest: digest, syncGroupId: 'group-1',
+    syncGroupTimelineId: 'timeline-1', workgroupKeyPresent: true
+  } } });
+  const readiness = withoutProtectedSnapshot(joinedEmpty);
+  await expect(collectCredentialProtectedReadiness(
+    readiness, { paths: { adb: '/adb' }, serial: '87a33a4b' }, { collectSnapshot }
+  )).resolves.toMatchObject({ dirtyObjectCounts: {}, protectedContentDigest: digest });
+  expect(collectSnapshot).toHaveBeenCalledWith(expect.objectContaining({
+    adb: '/adb', appId: 'com.foliole.android', includeAttachments: false,
+    includeEvents: false, serial: '87a33a4b', tables: ['nodes']
+  }));
+  expect(collectSnapshot.mock.calls[0][0].databaseInspector).toBeTypeOf('function');
+  collectSnapshot.mockResolvedValueOnce({ database: { integrity: 'ok', inspection: {
+    activeSyncGroupMemberCount: 3, deviceIdentityFingerprint: 'different-device',
+    dirtyObjectCounts: {}, dirtyRecordCount: 0, nodeCount: 0,
+    protectedContentDigest: digest, syncGroupId: 'group-1',
+    syncGroupTimelineId: 'timeline-1', workgroupKeyPresent: true
+  } } });
+  await expect(collectCredentialProtectedReadiness(
+    readiness, { paths: { adb: '/adb' }, serial: '87a33a4b' }, { collectSnapshot }
+  )).rejects.toThrow('changed before');
 });
 
 it('rejects any Leave drift or credential receipt that advances initial sync', () => {
