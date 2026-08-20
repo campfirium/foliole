@@ -14,7 +14,9 @@ import {
   assertFreshCredentialRejoinBaseline, assertJoinedEmptyCredentialReauthorization,
   collectCredentialProtectedReadiness, leaveJoinedEmptyCredentialSession
 } from './macos-a5-pair-credentials-rejoin.mjs';
-import { macosPairSyncIdentityFingerprint } from './macos-pair-sync-desktop-session.mjs';
+import {
+  authorizationFingerprint
+} from './android-sync-group-authorization-inspection.mjs';
 
 it('stops fresh A5 pairing after native credentials can sign the first request', async () => {
   const runPairSync = vi.fn().mockResolvedValue({
@@ -61,6 +63,7 @@ const joinedEmpty = {
   activeSyncGroupMemberCount: 3, credentialRepairRequired: false,
   deviceIdentityFingerprint: '2fdd44bb500a5934', dirtyObjectCounts: {}, dirtyRecordCount: 0,
   existingPairing: false, joinedEmptyReauthorization: true, nodeCount: 0,
+  localMemberAuthorizationFingerprint: authorizationFingerprint('authorization-a5'),
   pairingCredentialsPresent: false, protectedContentDigest: digest,
   storedSyncGroupId: 'group-1', storedSyncGroupTimelineId: 'timeline-1',
   syncGroupCredentialsPresent: true, syncGroupId: 'group-1',
@@ -71,6 +74,7 @@ const joinedEmpty = {
 const departed = {
   ...joinedEmpty, activeSyncGroupMemberCount: 2, existingPairing: false,
   joinedEmptyReauthorization: false, storedSyncGroupId: null, storedSyncGroupTimelineId: null,
+  localMemberAuthorizationFingerprint: null,
   syncGroupCredentialsPresent: false, syncGroupId: null, syncGroupRoutePresent: false,
   syncGroupTimelineId: null, workgroupKeyPresent: false
 };
@@ -122,6 +126,7 @@ it('merges the same read-only database snapshot fields before and after Leave', 
   const collectSnapshot = vi.fn().mockResolvedValue({ database: { integrity: 'ok', inspection: {
     activeSyncGroupMemberCount: 3, deviceIdentityFingerprint: '2fdd44bb500a5934',
     dirtyObjectCounts: {}, dirtyRecordCount: 0, nodeCount: 0,
+    localMemberAuthorizationFingerprint: authorizationFingerprint('authorization-a5'),
     protectedContentDigest: digest, syncGroupId: 'group-1',
     syncGroupTimelineId: 'timeline-1', workgroupKeyPresent: true
   } } });
@@ -175,22 +180,22 @@ it('rejects any Leave drift or credential receipt that advances initial sync', (
 });
 
 it('proves the desktop roster and group identity around formal product Leave', async () => {
-  const localDeviceId = 'android-a5';
-  const remoteDeviceId = 'desktop-mac';
-  const offlineDeviceId = 'offline-peer';
-  const baseline = { ...assertJoinedEmptyCredentialReauthorization(joinedEmpty),
-    deviceIdentityFingerprint: macosPairSyncIdentityFingerprint(localDeviceId),
-    remotePeerFingerprint: macosPairSyncIdentityFingerprint(remoteDeviceId) };
+  const a5Authorization = 'authorization-a5';
+  const desktopAuthorization = 'authorization-desktop';
+  const offlineAuthorization = 'authorization-offline';
+  const baseline = assertJoinedEmptyCredentialReauthorization(joinedEmpty);
   const overview = (members) => ({ paired_devices: [], pending_requests: [], sync_enabled: true,
     server_status: { port: 38641, state: 'running' }, sync_group: {
-      group_id: 'group-1', timeline_id: 'timeline-1', members: members.map((device_id) => ({
-        device_id, state: 'active'
+      group_id: 'group-1', timeline_id: 'timeline-1', members: members.map((authorization_id) => ({
+        authorization_id, host_name: `host-${authorization_id}`, state: 'active'
       }))
     } });
   const session = {
     assertActive: vi.fn(), close: vi.fn().mockResolvedValue(),
-    enable: vi.fn().mockResolvedValue(overview([localDeviceId, remoteDeviceId, offlineDeviceId])),
-    load: vi.fn().mockResolvedValue(overview([remoteDeviceId, offlineDeviceId])),
+    enable: vi.fn().mockResolvedValue(overview([
+      a5Authorization, desktopAuthorization, offlineAuthorization
+    ])),
+    load: vi.fn().mockResolvedValue(overview([desktopAuthorization, offlineAuthorization])),
     sanitize: vi.fn(() => ({ desktopPeerFingerprint: baseline.remotePeerFingerprint,
       pendingDeviceFingerprints: [] }))
   };
@@ -204,4 +209,15 @@ it('proves the desktop roster and group identity around formal product Leave', a
   }));
   expect(session.assertActive).toHaveBeenCalledTimes(2);
   expect(session.close).toHaveBeenCalledOnce();
+
+  const hostOnlyOverview = overview([
+    a5Authorization, desktopAuthorization, offlineAuthorization
+  ]);
+  delete hostOnlyOverview.sync_group.members[0].authorization_id;
+  session.enable.mockResolvedValueOnce(hostOnlyOverview);
+  await expect(leaveJoinedEmptyCredentialSession({ baseline, buildIdentity: 'build-3', env: {},
+    evidenceRoot: '/tmp/evidence', execute: vi.fn(), paths: { repoRoot: '/repo' },
+    serial: '87a33a4b' }, { maintenance, openSession: async () => session, wait: vi.fn() }))
+    .rejects.toThrow('active member authorization is missing');
+  expect(maintenance).toHaveBeenCalledTimes(1);
 });

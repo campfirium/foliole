@@ -4,10 +4,11 @@ import { MACOS_DAILY_LIBRARY_HOME } from '../macos/macos-electron-dev-paths.mjs'
 import { assertPairSyncRuntimeOwnership } from '../windows/windows-a5-pair-sync-recovery-transport.mjs';
 import { collectAndroidDeviceSnapshot } from './android-device-snapshot.mjs';
 import { inspectPairSyncRecoveryWorkspace } from './android-pair-sync-recovery-readiness.mjs';
-import { runMacosA5SyncGroupMaintenance } from './macos-a5-sync-group-maintenance-action.mjs';
 import {
-  macosPairSyncIdentityFingerprint, openMacosPairSyncDesktopSession
-} from './macos-pair-sync-desktop-session.mjs';
+  authorizationFingerprint
+} from './android-sync-group-authorization-inspection.mjs';
+import { runMacosA5SyncGroupMaintenance } from './macos-a5-sync-group-maintenance-action.mjs';
+import { openMacosPairSyncDesktopSession } from './macos-pair-sync-desktop-session.mjs';
 
 const APP_ID = 'com.foliole.android';
 
@@ -15,9 +16,14 @@ function isFingerprint(value) {
   return /^[0-9a-f]{16}$/u.test(value ?? '');
 }
 
-function activeMemberFingerprints(overview) {
-  return (overview.sync_group?.members ?? []).filter(({ state }) => state === 'active')
-    .map(({ device_id: id }) => macosPairSyncIdentityFingerprint(id)).sort();
+function activeMemberAuthorizationFingerprints(overview) {
+  const fingerprints = (overview.sync_group?.members ?? [])
+    .filter(({ state }) => state === 'active')
+    .map(({ authorization_id: id }) => authorizationFingerprint(id));
+  if (fingerprints.some((fingerprint) => !isFingerprint(fingerprint))) {
+    throw new Error('Desktop active member authorization is missing.');
+  }
+  return fingerprints.sort();
 }
 
 export async function collectCredentialProtectedReadiness(
@@ -52,6 +58,7 @@ export async function collectCredentialProtectedReadiness(
     throw new Error('A5 credential preflight changed before its protected snapshot.');
   }
   return { ...readiness, dirtyObjectCounts: inspection.dirtyObjectCounts,
+    localMemberAuthorizationFingerprint: inspection.localMemberAuthorizationFingerprint,
     protectedContentDigest: inspection.protectedContentDigest };
 }
 
@@ -63,6 +70,7 @@ export function assertJoinedEmptyCredentialReauthorization(readiness) {
     && readiness.workgroupKeyPresent === true && readiness.syncGroupRoutePresent === true
     && readiness.activeSyncGroupMemberCount > 1
     && isFingerprint(readiness.deviceIdentityFingerprint)
+    && isFingerprint(readiness.localMemberAuthorizationFingerprint)
     && isFingerprint(readiness.syncGroupRemotePeerFingerprint)
     && typeof readiness.syncGroupId === 'string'
     && typeof readiness.syncGroupTimelineId === 'string'
@@ -73,6 +81,7 @@ export function assertJoinedEmptyCredentialReauthorization(readiness) {
     dirtyObjectCounts: readiness.dirtyObjectCounts ?? {},
     dirtyRecordCount: readiness.dirtyRecordCount,
     groupId: readiness.syncGroupId,
+    localMemberAuthorizationFingerprint: readiness.localMemberAuthorizationFingerprint,
     nodeCount: readiness.nodeCount,
     protectedContentDigest: readiness.protectedContentDigest,
     remotePeerFingerprint: readiness.syncGroupRemotePeerFingerprint,
@@ -89,6 +98,7 @@ export function assertFreshCredentialRejoinBaseline(readiness, baseline) {
       === JSON.stringify(baseline.dirtyObjectCounts)
     && readiness.pairingCredentialsPresent === false
     && readiness.syncGroupCredentialsPresent === false
+    && readiness.localMemberAuthorizationFingerprint === null
     && readiness.workgroupKeyPresent === false && readiness.syncGroupRoutePresent === false
     && readiness.syncGroupId === null && readiness.syncGroupTimelineId === null
     && readiness.storedSyncGroupId === null && readiness.storedSyncGroupTimelineId === null
@@ -99,7 +109,7 @@ export function assertFreshCredentialRejoinBaseline(readiness, baseline) {
 
 function assertProtectedDesktop(overview, session, baseline, expectedMembers) {
   assertPairSyncRuntimeOwnership(overview, session);
-  const members = activeMemberFingerprints(overview);
+  const members = activeMemberAuthorizationFingerprints(overview);
   const safe = session.sanitize(overview);
   if (overview.sync_group?.group_id !== baseline.groupId
       || overview.sync_group?.timeline_id !== baseline.timelineId
@@ -112,13 +122,16 @@ function assertProtectedDesktop(overview, session, baseline, expectedMembers) {
 }
 
 async function waitForProtectedDeparture(session, baseline, beforeMembers, wait) {
-  const expected = beforeMembers.filter((member) => member !== baseline.deviceIdentityFingerprint);
+  const expected = beforeMembers.filter(
+    (member) => member !== baseline.localMemberAuthorizationFingerprint
+  );
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
     const overview = await session.load();
     try { return assertProtectedDesktop(overview, session, baseline, expected); }
     catch (error) {
-      if (!activeMemberFingerprints(overview).includes(baseline.deviceIdentityFingerprint)) throw error;
+      if (!activeMemberAuthorizationFingerprints(overview)
+        .includes(baseline.localMemberAuthorizationFingerprint)) throw error;
     }
     await wait(250);
   }
@@ -134,8 +147,8 @@ export async function leaveJoinedEmptyCredentialSession(args, dependencies = {})
   });
   try {
     const overview = await session.enable();
-    const beforeMembers = activeMemberFingerprints(overview);
-    if (!beforeMembers.includes(args.baseline.deviceIdentityFingerprint)) {
+    const beforeMembers = activeMemberAuthorizationFingerprints(overview);
+    if (!beforeMembers.includes(args.baseline.localMemberAuthorizationFingerprint)) {
       throw new Error('Desktop does not contain the active A5 member selected for credential rejoin.');
     }
     assertProtectedDesktop(overview, session, args.baseline, beforeMembers);

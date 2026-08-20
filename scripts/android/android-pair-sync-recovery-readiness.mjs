@@ -8,6 +8,9 @@ import {
   inspectStoredSyncGroup, inspectSyncGroupBinding, inspectWorkgroupKeyPresent
 } from './android-sync-group-readiness-inspection.mjs';
 import {
+  authorizationFingerprint, inspectLocalActiveMemberAuthorizationFingerprint
+} from './android-sync-group-authorization-inspection.mjs';
+import {
   classifySyncFailure, classifySyncFailureRoute, classifySyncFailureStage
 } from './android-sync-failure-classification.mjs';
 
@@ -101,7 +104,7 @@ function journeyFacts(database) {
 }
 
 export function identityFingerprint(value) {
-  return value ? createHash('sha256').update(value).digest('hex').slice(0, 16) : null;
+  return authorizationFingerprint(value);
 }
 
 export function inspectPairSyncRecoveryWorkspace(database) {
@@ -133,6 +136,8 @@ export function inspectPairSyncRecoveryWorkspace(database) {
     ),
     latestSyncWaitingSendCount: waitingCount(latestSyncRun, 'waiting_send_count'),
     journeyFacts: journeyFacts(database),
+    localMemberAuthorizationFingerprint:
+      inspectLocalActiveMemberAuthorizationFingerprint(database),
     missingAttachmentCount: tableExists(database, 'attachment_blobs')
       ? scalar(database, `SELECT COUNT(*) AS count FROM attachment_blobs
         WHERE availability NOT IN ('cached', 'local')`) : null,
