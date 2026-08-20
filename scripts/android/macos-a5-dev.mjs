@@ -8,6 +8,7 @@ import { clearTimeout, setTimeout } from 'node:timers';
 import { pathToFileURL } from 'node:url';
 
 import { assertRegisteredMacosA5Action } from './macos-a5-action-registry.mjs';
+import { runMacosA5Cli } from './macos-a5-cli.mjs';
 import {
   macosA5ErrorEvidence,
   recoverMacosA5SyncGroupRejoinEntry,
@@ -23,6 +24,9 @@ import {
   runMacosA5CaptureReadiness,
   runMacosA5PairingReadiness
 } from './macos-a5-readiness.mjs';
+import {
+  beginFormalA5Candidate, finishFormalA5Candidate
+} from './macos-a5-formal-candidate.mjs';
 
 export const A5_SERIAL = '87a33a4b';
 const APP_ID = 'com.foliole.android';
@@ -177,9 +181,10 @@ async function captureAnnotation(paths) {
   console.log(`[macos-a5-dev] capture-annotation evidence=${result.captureAnnotation.manifestPath}`);
 }
 
-export async function runMacosA5Action(action, repoRoot = process.cwd()) {
+export async function runMacosA5Action(action, repoRoot = process.cwd(), { formal = false } = {}) {
   assertRegisteredMacosA5Action(action);
   const paths = macosA5Paths(repoRoot);
+  const formalCandidate = formal ? beginFormalA5Candidate(repoRoot) : null;
   assertSafeMacosA5Environment(paths);
   try {
     if (action === 'build') build(paths);
@@ -224,15 +229,11 @@ export async function runMacosA5Action(action, repoRoot = process.cwd()) {
   } finally {
     spawnSync(paths.adb, ['kill-server']);
   }
+  const acceptedTip = finishFormalA5Candidate(formalCandidate, repoRoot);
+  if (acceptedTip) console.log(`[macos-a5-dev] accepted-tip=${acceptedTip}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  try {
-    await runMacosA5Action(process.argv[2]);
-  } catch (error) {
-    const evidence = macosA5ErrorEvidence(error);
-    if (evidence) process.stderr.write(evidence.endsWith('\n') ? evidence : `${evidence}\n`);
-    console.error(`[macos-a5-dev] ${error instanceof Error ? error.message : String(error)}`);
-    process.exitCode = 1;
-  }
+  await runMacosA5Cli({ argv: process.argv.slice(2), errorEvidence: macosA5ErrorEvidence,
+    repoRoot: process.cwd(), run: runMacosA5Action });
 }
