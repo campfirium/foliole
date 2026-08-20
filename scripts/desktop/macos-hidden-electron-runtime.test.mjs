@@ -46,10 +46,19 @@ it('publishes a reusable LSUIElement runtime with stable controller identity', (
       'com.foliole.hidden-native',
       '/repo/foliole/.tmp/native-hidden-electron/stage-one/Electron.app/Contents/Info.plist']
   ]);
+  expect(run.mock.calls[3]).toEqual([
+    '/usr/bin/codesign', ['--force', '--sign', '-',
+      '/repo/foliole/.tmp/native-hidden-electron/stage-one/Electron.app']
+  ]);
+  expect(run.mock.calls[4]).toEqual([
+    '/usr/bin/codesign', ['--verify', '--strict',
+      '/repo/foliole/.tmp/native-hidden-electron/stage-one/Electron.app']
+  ]);
   expect(runtime.executablePath).toMatch(
     /^\/repo\/foliole\/\.tmp\/native-hidden-electron\/runtime-[a-f0-9]{20}\/Electron\.app\/Contents\/MacOS\/Electron$/
   );
   expect(runtime.runtimeIdentity).toBe('stable-source-bound');
+  expect(runtime.runtimeFingerprint).toMatch(/^[a-f0-9]{64}$/u);
   expect(renameSync).toHaveBeenCalledWith(
     '/repo/foliole/.tmp/native-hidden-electron/stage-one',
     runtime.executablePath.slice(0, runtime.executablePath.indexOf('/Electron.app'))

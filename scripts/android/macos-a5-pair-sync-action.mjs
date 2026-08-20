@@ -1,13 +1,9 @@
 /* global process */
 
 import fs from 'node:fs';
-import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
 import { runWindowsA5PairSyncRecovery } from '../windows/windows-a5-pair-sync-recovery-action.mjs';
-import {
-  MACOS_DAILY_DEBUG_ROOT
-} from '../macos/macos-electron-dev-paths.mjs';
 import {
   validateOwnedDesktopPreflight, validateOwnedDesktopRePairPreflight
 } from '../windows/windows-pair-sync-desktop-readiness.mjs';
@@ -166,7 +162,6 @@ export async function runMacosA5PairSync({
   instrumentationModeArgs, pairedDeviceFingerprint, pairRequestFingerprint,
   protectedSyncGroup, recoveryEvidenceGoal,
   runPairSyncRecovery = runWindowsA5PairSyncRecovery, serial,
-  userDataPath = path.join(paths.repoRoot, MACOS_DAILY_DEBUG_ROOT, 'user-data'),
   validateDesktop
 }) {
   fs.mkdirSync(evidenceRoot, { recursive: true });
@@ -179,7 +174,7 @@ export async function runMacosA5PairSync({
     existingPairing,
     ...(closeTransport ? { closeTransport } : {}),
     openDesktopSession: (options) => openMacosPairSyncDesktopSession({
-      ...options, libraryHome, userDataPath
+      ...options, libraryHome
     }),
     ...(openTransport ? { openTransport } : {}),
     ...(instrumentationModeArgs ? { instrumentationModeArgs } : {}),

@@ -22,12 +22,11 @@ export function macosA5ParallelDesktopEnv(env) {
 export async function runMacosA5SettledStoppedStatus(args) {
   args.assertFixed();
   const { openMacosPairSyncDesktopSession } = await import('./macos-pair-sync-desktop-session.mjs');
-  const { MACOS_DAILY_DEBUG_ROOT, MACOS_DAILY_LIBRARY_HOME } = await import(
+  const { MACOS_DAILY_LIBRARY_HOME } = await import(
     '../macos/macos-electron-dev-paths.mjs'
   );
   const session = await openMacosPairSyncDesktopSession({ env: args.env,
-    libraryHome: MACOS_DAILY_LIBRARY_HOME, repoRoot: args.paths.repoRoot,
-    userDataPath: path.join(args.paths.repoRoot, MACOS_DAILY_DEBUG_ROOT, 'user-data') });
+    libraryHome: MACOS_DAILY_LIBRARY_HOME, repoRoot: args.paths.repoRoot });
   try {
     await session.enable();
     args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', 'com.foliole.android']);

@@ -6,7 +6,6 @@ import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { pathToFileURL } from 'node:url';
 
-import { MACOS_DAILY_DEBUG_ROOT } from '../macos/macos-electron-dev-paths.mjs';
 import { collectAndroidDeviceSnapshot } from './android-device-snapshot.mjs';
 import { inspectPairSyncRecoveryWorkspace } from './android-pair-sync-recovery-readiness.mjs';
 import { A5_SERIAL, macosA5Paths } from './macos-a5-dev.mjs';
@@ -45,8 +44,7 @@ export async function inspectMacosA5SyncGroupBaseline({ collectSnapshot = collec
   await executeAdb(['-s', A5_SERIAL, 'shell', 'am', 'start', '-n', `${APP_ID}/.MainActivity`]);
   await wait(2_000);
   await executeAdb(['-s', A5_SERIAL, 'shell', 'am', 'force-stop', APP_ID]);
-  const session = await openSession({ repoRoot,
-    userDataPath: path.join(repoRoot, MACOS_DAILY_DEBUG_ROOT, 'user-data') });
+  const session = await openSession({ repoRoot });
   let macos;
   try { macos = await session.load(); } finally { await session.close(); }
   const android = await collectSnapshot({ adb: paths.adb, appId: APP_ID,

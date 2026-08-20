@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
-import { MACOS_DAILY_DEBUG_ROOT, MACOS_DAILY_LIBRARY_HOME } from '../macos/macos-electron-dev-paths.mjs';
+import { MACOS_DAILY_LIBRARY_HOME } from '../macos/macos-electron-dev-paths.mjs';
 import { parsePairSyncRecoveryReadiness } from '../windows/windows-a5-pair-sync-recovery-contract.mjs';
 import { collectAndroidDeviceSnapshot } from './android-device-snapshot.mjs';
 import { inspectPairSyncRecoveryWorkspace } from './android-pair-sync-recovery-readiness.mjs';
@@ -71,8 +71,7 @@ async function androidSnapshot(paths, serial) {
 
 async function withDesktopSession(paths, env, action) {
   const session = await openMacosPairSyncDesktopSession({ env, libraryHome: MACOS_DAILY_LIBRARY_HOME,
-    repoRoot: paths.repoRoot,
-    userDataPath: path.join(paths.repoRoot, MACOS_DAILY_DEBUG_ROOT, 'user-data') });
+    repoRoot: paths.repoRoot });
   try { return await action(session); }
   finally { await session.close().catch(() => undefined); }
 }

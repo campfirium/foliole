@@ -8,6 +8,10 @@ import { pathToFileURL } from 'node:url';
 
 import { appendDesktopHostTimelineEvent } from '../diagnostics/desktop-host-timeline.mjs';
 import { MACOS_DAILY_LIBRARY_HOME } from '../macos/macos-electron-dev-paths.mjs';
+import {
+  acquireMacosHiddenCredentialSessionLock,
+  resolveMacosHiddenCredentialSession
+} from '../desktop/macos-hidden-electron-credential-session.mjs';
 import { prepareMacosHiddenElectronRuntime } from '../desktop/macos-hidden-electron-runtime.mjs';
 
 function fingerprint(value) {
@@ -46,18 +50,20 @@ export function resolveFrozenRendererUrl(repoRoot, existsSync = fs.existsSync) {
   return pathToFileURL(indexPath).toString();
 }
 
-function launchOptions(repoRoot, env, userDataPath, libraryHome, executablePath, rendererUrl) {
+function launchOptions(repoRoot, env, session, libraryHome, executablePath, rendererUrl) {
   return {
-    args: [path.join(repoRoot, 'dist/electron/main.js')],
+    args: [session.bootstrapPath],
     cwd: repoRoot,
     env: {
       ...env,
       FOLIOLE_DISABLE_HARDWARE_ACCELERATION: '1',
       FOLIOLE_DISABLE_IN_APP_RELAUNCH: '1',
       FOLIOLE_ELECTRON_NATIVE_HIDDEN: '1',
+      FOLIOLE_HIDDEN_CREDENTIAL_APP_NAME: session.appName,
+      FOLIOLE_HIDDEN_CREDENTIAL_MAIN_PATH: path.join(repoRoot, 'dist/electron/main.js'),
       FOLIOLE_LIBRARY_HOME: libraryHome,
-      FOLIOLE_SESSION_DATA_PATH: userDataPath,
-      FOLIOLE_USER_DATA_PATH: userDataPath,
+      FOLIOLE_SESSION_DATA_PATH: session.userDataPath,
+      FOLIOLE_USER_DATA_PATH: session.userDataPath,
       ELECTRON_RENDERER_URL: rendererUrl,
       FOLIOLE_VITE_HMR: '1',
       FOLIOLE_WORKDIR: repoRoot
@@ -68,11 +74,17 @@ function launchOptions(repoRoot, env, userDataPath, libraryHome, executablePath,
 }
 
 export async function openMacosPairSyncDesktopSession({
+  acquireCredentialSession = acquireMacosHiddenCredentialSessionLock,
   env = process.env, electronLauncher, libraryHome = MACOS_DAILY_LIBRARY_HOME,
   logEvent = appendDesktopHostTimelineEvent, operationId = randomUUID(),
   prepareHiddenRuntime = prepareMacosHiddenElectronRuntime,
-  rendererExists = fs.existsSync, repoRoot, timeoutMs = 20_000, userDataPath
+  rendererExists = fs.existsSync, repoRoot,
+  resolveCredentialSession = resolveMacosHiddenCredentialSession, timeoutMs = 20_000,
+  userDataPath: forbiddenUserDataPath
 }) {
+  if (forbiddenUserDataPath !== undefined) {
+    throw new Error('macos_hidden_electron_user_data_override_forbidden');
+  }
   const record = (event, payload = {}) => {
     try {
       logEvent({ event, operationId, payload, source: 'macos_pair_sync' });
@@ -84,16 +96,18 @@ export async function openMacosPairSyncDesktopSession({
   const rendererUrl = resolveFrozenRendererUrl(repoRoot, rendererExists);
   record('session_started');
   const runtime = prepareHiddenRuntime({ appRoot: repoRoot, env });
-  if (runtime.runtimeIdentity !== 'stable-source-bound') {
+  if (runtime.runtimeIdentity !== 'stable-source-bound' || !runtime.runtimeFingerprint) {
     runtime.cleanup();
     const error = new Error('macos_hidden_electron_keychain_identity_unverified');
     record('session_failed', { message: error.message });
     throw error;
   }
+  const credentialSession = resolveCredentialSession(repoRoot, runtime.runtimeFingerprint);
+  const releaseCredentialSession = acquireCredentialSession(credentialSession);
   let app;
   try {
     app = await launcher.launch(launchOptions(
-      repoRoot, env, userDataPath, libraryHome, runtime.executablePath, rendererUrl
+      repoRoot, env, credentialSession, libraryHome, runtime.executablePath, rendererUrl
     ));
     record('electron_started', { pid: app.process?.()?.pid ?? null });
     const page = await app.firstWindow({ timeout: timeoutMs });
@@ -121,6 +135,7 @@ export async function openMacosPairSyncDesktopSession({
           await app.close();
         } finally {
           runtime.cleanup();
+          releaseCredentialSession();
           record('session_closed');
         }
       },
@@ -135,6 +150,7 @@ export async function openMacosPairSyncDesktopSession({
     record('session_failed', { message: error instanceof Error ? error.message : String(error) });
     await app?.close().catch(() => undefined);
     runtime.cleanup();
+    releaseCredentialSession();
     throw error;
   }
 }

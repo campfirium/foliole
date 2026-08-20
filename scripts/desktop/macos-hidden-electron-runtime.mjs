@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 
 const macosPath = path.posix;
+const RUNTIME_FORMAT = 'hidden-native-credential-session-v2';
 
 function checkedSpawn(command, args) {
   const result = spawnSync(command, args, { encoding: 'utf8', stdio: 'pipe' });
@@ -17,9 +18,14 @@ function checkedSpawn(command, args) {
 function fingerprintRuntimeSource(executablePath, fileSystem) {
   const contentsPath = macosPath.dirname(macosPath.dirname(executablePath));
   return createHash('sha256')
+    .update(RUNTIME_FORMAT)
     .update(fileSystem.readFileSync(executablePath))
     .update(fileSystem.readFileSync(macosPath.join(contentsPath, 'Info.plist')))
     .digest('hex');
+}
+
+function fingerprintPreparedRuntime(executablePath, fileSystem) {
+  return createHash('sha256').update(fileSystem.readFileSync(executablePath)).digest('hex');
 }
 
 function publishRuntime(stageRoot, runtimeRoot, fileSystem) {
@@ -64,7 +70,12 @@ export function prepareMacosHiddenElectronRuntime({
   const targetApp = macosPath.join(runtimeRoot, macosPath.basename(source.appBundlePath));
   const executablePath = macosPath.join(targetApp, source.executableRelativePath);
   if (fileSystem.existsSync(executablePath)) {
-    return { cleanup: () => undefined, executablePath, runtimeIdentity: 'stable-source-bound' };
+    return {
+      cleanup: () => undefined,
+      executablePath,
+      runtimeFingerprint: fingerprintPreparedRuntime(executablePath, fileSystem),
+      runtimeIdentity: 'stable-source-bound'
+    };
   }
   if (fileSystem.existsSync(runtimeRoot)) {
     throw new Error(`hidden Electron runtime cache is incomplete: ${runtimeRoot}`);
@@ -78,8 +89,15 @@ export function prepareMacosHiddenElectronRuntime({
     run('/usr/bin/plutil', [
       '-replace', 'CFBundleIdentifier', '-string', 'com.foliole.hidden-native', infoPlist
     ]);
+    run('/usr/bin/codesign', ['--force', '--sign', '-', stageApp]);
+    run('/usr/bin/codesign', ['--verify', '--strict', stageApp]);
     publishRuntime(stageRoot, runtimeRoot, fileSystem);
-    return { cleanup: () => undefined, executablePath, runtimeIdentity: 'stable-source-bound' };
+    return {
+      cleanup: () => undefined,
+      executablePath,
+      runtimeFingerprint: fingerprintPreparedRuntime(executablePath, fileSystem),
+      runtimeIdentity: 'stable-source-bound'
+    };
   } catch (error) {
     fileSystem.rmSync(stageRoot, { force: true, recursive: true });
     throw error;

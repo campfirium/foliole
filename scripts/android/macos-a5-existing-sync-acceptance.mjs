@@ -7,7 +7,7 @@ import { inspectPairSyncRecoveryWorkspace } from './android-pair-sync-recovery-r
 import { runMacosA5SyncGroupMaintenance } from './macos-a5-sync-group-maintenance-action.mjs';
 import { openMacosPairSyncDesktopSession } from './macos-pair-sync-desktop-session.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
-import { MACOS_DAILY_DEBUG_ROOT, MACOS_DAILY_LIBRARY_HOME } from '../macos/macos-electron-dev-paths.mjs';
+import { MACOS_DAILY_LIBRARY_HOME } from '../macos/macos-electron-dev-paths.mjs';
 
 const APP_ID = 'com.foliole.android';
 const COMPONENT = `${APP_ID}/.MainActivity`;
@@ -154,8 +154,7 @@ export async function proveMacosA5ExistingSyncContinuation({
 }) {
   const context = { env, execute, paths, readiness, serial };
   const sessionOptions = {
-    env, libraryHome: MACOS_DAILY_LIBRARY_HOME, repoRoot: paths.repoRoot,
-    userDataPath: path.join(paths.repoRoot, MACOS_DAILY_DEBUG_ROOT, 'user-data')
+    env, libraryHome: MACOS_DAILY_LIBRARY_HOME, repoRoot: paths.repoRoot
   };
   const result = await runExistingSyncRestartJourney({
     assertBaseline: (overview) => assertBaseline(overview, readiness),
