@@ -30,6 +30,13 @@ vi.mock('../shared/platform/companionSyncObjects', () => ({
 }));
 vi.mock('../shared/platform/companionWorkspaceSync', () => workspaceSyncMock);
 
+const activeGroupTarget: CompanionWorkspaceSyncTarget = {
+  authorizationId: 'authorization-maci',
+  endpointUrl: 'http://192.168.1.20:38641',
+  groupId: 'group-1',
+  hostName: 'Maci'
+};
+
 function snapshot(nodeId = 'topic-1'): WorkspaceSnapshot {
   return {
     activeNodeId: nodeId,
@@ -169,9 +176,7 @@ describe('companion sync run owner', () => {
 
   it('runs immediate sync through the discovered active group member instead of the remembered target', async () => {
     const { createWorkspaceSnapshotActions } = await import('./companionWorkspaceSyncActions');
-    workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoints.mockResolvedValueOnce([{
-      deviceId: 'Maci', endpointUrl: 'http://192.168.1.20:38641', groupId: 'group-1'
-    }]);
+    workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoints.mockResolvedValueOnce([activeGroupTarget]);
     syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValueOnce(syncResult());
     const actions = createWorkspaceSnapshotActions({
       setError: vi.fn(), setReadableArticle: vi.fn(), setState: vi.fn(),
@@ -181,9 +186,7 @@ describe('companion sync run owner', () => {
 
     await actions.pullFromDesktop('http://remembered:38641');
 
-    expect(workspaceSyncMock.bindCompanionWorkspaceSyncTarget).toHaveBeenCalledWith({
-      deviceId: 'Maci', endpointUrl: 'http://192.168.1.20:38641', groupId: 'group-1'
-    });
+    expect(workspaceSyncMock.bindCompanionWorkspaceSyncTarget).toHaveBeenCalledWith(activeGroupTarget);
     expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledWith(
       'http://192.168.1.20:38641', expect.any(Object)
     );
