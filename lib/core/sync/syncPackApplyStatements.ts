@@ -48,7 +48,7 @@ function acceptedDeliveryFilter(options: SyncPackApplyableRowsOptions) {
   if (!options.sourcePeerId) return '0';
   const peerId = options.sourcePeerId.replaceAll("'", "''");
   return `EXISTS (SELECT 1 FROM main.sync_delivery_receipts receipt ` +
-    `WHERE receipt.peer_id = '${peerId}' AND receipt.stream_name = 'state' ` +
+    `WHERE receipt.authorization_id = '${peerId}' AND receipt.stream_name = 'state' ` +
     `AND receipt.object_type = incoming.object_type AND receipt.object_id = incoming.object_id ` +
     `AND receipt.payload_identity = current.content_hash AND receipt.status = 'accepted' ` +
     `AND receipt.remote_position IS NOT NULL ` +

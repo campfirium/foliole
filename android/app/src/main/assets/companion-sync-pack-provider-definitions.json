@@ -18,7 +18,7 @@
   ],
   "databaseEntry": "incoming.db.deflate",
   "format": "foliole.sync-pack",
-  "formatVersion": 8,
+  "formatVersion": 9,
   "payloadCopyIndex": 5,
   "payloadPlans": [
     {
@@ -86,6 +86,7 @@
     "capabilities": [
       "author-host-snapshots-v1",
       "authorization-credential-routing-v1",
+      "authorization-delivery-receipts-v1",
       "host-workgroup-members-v1",
       "lan-sync-v1",
       "opaque-sync-refs-v1",
@@ -96,7 +97,7 @@
     "min_supported_version": 2,
     "version": 2
   },
-  "schemaVersion": 73,
+  "schemaVersion": 74,
   "stateCopyIndex": 3,
   "tableNames": [
     "sync_groups",

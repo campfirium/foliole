@@ -1,23 +1,23 @@
 import type { DbPort, DbRow } from '../../../../../../lib/core/sync/dbPort';
 import type { SyncPushAck, SyncPushPayload } from '../../../companionSyncPushProtocol';
 
-export async function stagePushDeliveries(port: DbPort, peerId: string, items: SyncPushPayload[]) {
+export async function stagePushDeliveries(port: DbPort, authorizationId: string, items: SyncPushPayload[]) {
   const now = new Date().toISOString();
   await port.transaction(async (tx) => {
     for (const item of items) {
       const delivery = deliveryIdentity(item);
       await tx.run(
         `INSERT OR IGNORE INTO sync_delivery_receipts (
-          peer_id, stream_name, operation_id, object_type, object_id, payload_identity,
+          authorization_id, stream_name, operation_id, object_type, object_id, payload_identity,
           local_position, status, remote_position, issue_reason, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', NULL, NULL, ?, ?)`,
-        [peerId, delivery.stream, item.clientOpId, item.identity.objectType, item.identity.objectId,
+        [authorizationId, delivery.stream, item.clientOpId, item.identity.objectType, item.identity.objectId,
           delivery.payloadIdentity, delivery.localPosition, now, now]
       );
       const stored = (await tx.query<DbRow>(
         `SELECT payload_identity FROM sync_delivery_receipts
-         WHERE peer_id = ? AND stream_name = ? AND operation_id = ?`,
-        [peerId, delivery.stream, item.clientOpId]
+         WHERE authorization_id = ? AND stream_name = ? AND operation_id = ?`,
+        [authorizationId, delivery.stream, item.clientOpId]
       ))[0];
       if (stored?.payload_identity !== delivery.payloadIdentity) {
         throw new Error('sync_delivery_operation_identity_mismatch');
@@ -26,16 +26,16 @@ export async function stagePushDeliveries(port: DbPort, peerId: string, items: S
   });
 }
 
-export async function savePeerPushAcksWithinTransaction(port: DbPort, peerId: string, acks: SyncPushAck[]) {
+export async function savePeerPushAcksWithinTransaction(port: DbPort, authorizationId: string, acks: SyncPushAck[]) {
   const saved: string[] = [];
   for (const ack of acks) {
     const delivery = ackDelivery(ack);
     if (!delivery) continue;
     const result = await port.run(
       `UPDATE sync_delivery_receipts SET status = ?, remote_position = ?, issue_reason = ?, updated_at = ?
-       WHERE peer_id = ? AND stream_name = ? AND operation_id = ?`,
+       WHERE authorization_id = ? AND stream_name = ? AND operation_id = ?`,
       [delivery.status, delivery.remotePosition, ack.conflictReason ?? null, new Date().toISOString(),
-        peerId, delivery.stream, ack.clientOpId]
+        authorizationId, delivery.stream, ack.clientOpId]
     );
     if (result.changes > 0) saved.push(ack.clientOpId);
   }

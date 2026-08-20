@@ -17,8 +17,8 @@ it('confirms only the authenticated peer whose committed stream passed the accep
 
     expect(readState(fixture.sqlite)).toEqual({ sync_dirty: 1 });
     expect(readReceipts(fixture.sqlite)).toEqual([
-      { peer_id: 'desktop-b', status: 'accepted' },
-      { peer_id: 'desktop-c', status: 'pending' }
+      { authorization_id: 'desktop-b', status: 'accepted' },
+      { authorization_id: 'desktop-c', status: 'pending' }
     ]);
   } finally {
     await fixture.close();
@@ -34,8 +34,8 @@ it('keeps global dirty while another peer still has an unterminated obligation',
 
     expect(readState(fixture.sqlite)).toEqual({ sync_dirty: 1 });
     expect(readReceipts(fixture.sqlite)).toEqual([
-      { peer_id: 'desktop-b', status: 'confirmed' },
-      { peer_id: 'desktop-c', status: 'pending' }
+      { authorization_id: 'desktop-b', status: 'confirmed' },
+      { authorization_id: 'desktop-c', status: 'pending' }
     ]);
   } finally {
     await fixture.close();
@@ -51,8 +51,8 @@ it('does not confirm an accepted receipt from a different authenticated peer', a
 
     expect(readState(fixture.sqlite)).toEqual({ sync_dirty: 1 });
     expect(readReceipts(fixture.sqlite)).toEqual([
-      { peer_id: 'desktop-b', status: 'accepted' },
-      { peer_id: 'desktop-c', status: 'pending' }
+      { authorization_id: 'desktop-b', status: 'accepted' },
+      { authorization_id: 'desktop-c', status: 'pending' }
     ]);
   } finally {
     await fixture.close();
@@ -83,11 +83,11 @@ async function createFixture(incomingStateSeq: number, peerCStatus = 'pending') 
       object_type TEXT NOT NULL, object_id TEXT NOT NULL, content_hash TEXT NOT NULL, sync_dirty INTEGER NOT NULL
     );
     CREATE TABLE sync_delivery_receipts (
-      peer_id TEXT NOT NULL, stream_name TEXT NOT NULL, operation_id TEXT NOT NULL,
+      authorization_id TEXT NOT NULL, stream_name TEXT NOT NULL, operation_id TEXT NOT NULL,
       object_type TEXT NOT NULL, object_id TEXT NOT NULL, payload_identity TEXT NOT NULL,
       local_position TEXT, status TEXT NOT NULL, remote_position TEXT, issue_reason TEXT,
       created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
-      PRIMARY KEY (peer_id, stream_name, operation_id)
+      PRIMARY KEY (authorization_id, stream_name, operation_id)
     );
     INSERT INTO sync_object_state VALUES ('node_review', 'node-1', 'android-review-hash', 1);
     INSERT INTO sync_delivery_receipts VALUES
@@ -119,6 +119,6 @@ function readState(sqlite: Database.Database) {
 
 function readReceipts(sqlite: Database.Database) {
   return sqlite.prepare(
-    'SELECT peer_id, status FROM sync_delivery_receipts ORDER BY peer_id'
-  ).all() as Array<{ peer_id: string; status: string }>;
+    'SELECT authorization_id, status FROM sync_delivery_receipts ORDER BY authorization_id'
+  ).all() as Array<{ authorization_id: string; status: string }>;
 }

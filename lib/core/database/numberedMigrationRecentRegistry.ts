@@ -3,6 +3,7 @@ import {
   ASSISTANT_THREAD_MESSAGE_SCHEMA_STATEMENTS
 } from './assistantThreadIndexSchemaStatements.js';
 import { migrateAuthorHostSnapshots } from './numberedMigrationAuthorHostSnapshots.js';
+import { migrateDeliveryAuthorizations } from './numberedMigrationDeliveryAuthorizations.js';
 import { migrateDesktopSourceConnections } from './numberedMigrationDesktopSourceConnections.js';
 import { migrateDesktopSourceOwnership } from './numberedMigrationDesktopSourceOwnership.js';
 import { migrateDesktopSources } from './numberedMigrationDesktopSources.js';
@@ -185,5 +186,9 @@ export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   {
     version: 73,
     migrate: migrateSyncGroupHosts
+  },
+  {
+    version: 74,
+    migrate: migrateDeliveryAuthorizations
   }
 ];

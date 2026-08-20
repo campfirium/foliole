@@ -147,12 +147,12 @@ function configureAcceptedNodeAck() {
 
 function expectNodePushCursor(db: Database.Database) {
   expect(db.prepare(`
-    SELECT peer_id, stream_name, operation_id, object_id, status
+    SELECT authorization_id, stream_name, operation_id, object_id, status
     FROM sync_delivery_receipts WHERE object_id = 'topic-trash'
   `).get()).toEqual({
     object_id: 'topic-trash',
     operation_id: 'node:ver_00000000-0000-4000-8000-000000000031',
-    peer_id: 'desktop-peer',
+    authorization_id: 'desktop-peer',
     status: 'confirmed',
     stream_name: 'node_version'
   });

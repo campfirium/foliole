@@ -1,5 +1,5 @@
 export const EXPECTED_SCHEMA_SOURCES = {
-  androidAssetStatements: 66,
+  androidAssetStatements: 72,
   androidJavaMigrationStatements: 0,
   desktopStatements: 89
 };
@@ -34,18 +34,10 @@ export const EXPECTED_SHARED_SCHEMA_DRIFT = {
   node_view_state: ['createSql'],
   pdf_page_text: ['createSql'],
   setting_records: [
-    'columns.device_id',
     'columns.form_factor',
+    'columns.host_name',
     'columns.platform',
-    'indexes.idx_setting_records_device',
-    'indexes.idx_setting_records_lookup',
     'createSql'
-  ],
-  sync_change_log: [
-    'indexes.idx_sync_change_log_created',
-    'indexes.idx_sync_change_log_device_created',
-    'indexes.idx_sync_change_log_object',
-    'indexes.idx_sync_change_log_result_version'
   ],
   sync_object_state: [
     'indexes.idx_sync_object_state_dirty',

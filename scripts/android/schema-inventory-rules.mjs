@@ -73,12 +73,6 @@ const MISSING_ANDROID_INDEX_FIELDS = [
   'import_sources.indexes.idx_import_sources_location',
   'import_sources.indexes.idx_import_sources_watched_relative',
   'node_sync_versions.indexes.idx_node_sync_versions_object_created',
-  'setting_records.indexes.idx_setting_records_device',
-  'setting_records.indexes.idx_setting_records_lookup',
-  'sync_change_log.indexes.idx_sync_change_log_created',
-  'sync_change_log.indexes.idx_sync_change_log_device_created',
-  'sync_change_log.indexes.idx_sync_change_log_object',
-  'sync_change_log.indexes.idx_sync_change_log_result_version',
   'sync_object_state.indexes.idx_sync_object_state_dirty',
   'sync_object_state.indexes.idx_sync_object_state_type_updated'
 ];

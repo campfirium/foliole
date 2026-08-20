@@ -3,10 +3,10 @@ export const SYNC_DELIVERY_TRIGGER_STATEMENTS = [
    AFTER INSERT ON sync_object_state WHEN NEW.sync_dirty = 1
    BEGIN
      INSERT OR IGNORE INTO sync_delivery_receipts (
-       peer_id, stream_name, operation_id, object_type, object_id, payload_identity,
+       authorization_id, stream_name, operation_id, object_type, object_id, payload_identity,
        local_position, status, remote_position, issue_reason, created_at, updated_at
      )
-     SELECT member.host_name,
+     SELECT member.authorization_id,
        CASE WHEN NEW.object_type = 'node' THEN 'node_version' ELSE 'state' END,
        CASE WHEN NEW.object_type = 'node' THEN 'node:' || COALESCE(NEW.current_version_id, NEW.object_id)
             ELSE NEW.object_type || ':' || NEW.object_id || ':' || NEW.state_seq END,
@@ -23,10 +23,10 @@ export const SYNC_DELIVERY_TRIGGER_STATEMENTS = [
    AFTER UPDATE OF state_seq, sync_dirty ON sync_object_state WHEN NEW.sync_dirty = 1
    BEGIN
      INSERT OR IGNORE INTO sync_delivery_receipts (
-       peer_id, stream_name, operation_id, object_type, object_id, payload_identity,
+       authorization_id, stream_name, operation_id, object_type, object_id, payload_identity,
        local_position, status, remote_position, issue_reason, created_at, updated_at
      )
-     SELECT member.host_name,
+     SELECT member.authorization_id,
        CASE WHEN NEW.object_type = 'node' THEN 'node_version' ELSE 'state' END,
        CASE WHEN NEW.object_type = 'node' THEN 'node:' || COALESCE(NEW.current_version_id, NEW.object_id)
             ELSE NEW.object_type || ':' || NEW.object_id || ':' || NEW.state_seq END,
@@ -42,17 +42,17 @@ export const SYNC_DELIVERY_TRIGGER_STATEMENTS = [
   `CREATE TRIGGER IF NOT EXISTS trg_sync_delivery_member_leave
    AFTER UPDATE OF state ON sync_group_members WHEN NEW.state = 'left'
    BEGIN
-     DELETE FROM sync_delivery_receipts WHERE peer_id = NEW.host_name;
-     DELETE FROM sync_peer_cursors WHERE peer_id = NEW.host_name;
+     DELETE FROM sync_delivery_receipts WHERE authorization_id = NEW.authorization_id;
+     DELETE FROM sync_peer_cursors WHERE authorization_id = NEW.authorization_id;
    END`,
   `CREATE TRIGGER IF NOT EXISTS trg_sync_delivery_review_insert
    AFTER INSERT ON review_log
    BEGIN
      INSERT OR IGNORE INTO sync_delivery_receipts (
-       peer_id, stream_name, operation_id, object_type, object_id, payload_identity,
+       authorization_id, stream_name, operation_id, object_type, object_id, payload_identity,
        local_position, status, remote_position, issue_reason, created_at, updated_at
      )
-     SELECT member.host_name, 'review_log', 'review_log:' || NEW.op_id,
+     SELECT member.authorization_id, 'review_log', 'review_log:' || NEW.op_id,
        'review_log', NEW.op_id, NEW.op_id, NEW.reviewed_at, 'pending', NULL, NULL,
        NEW.reviewed_at, NEW.reviewed_at
      FROM sync_group_members member

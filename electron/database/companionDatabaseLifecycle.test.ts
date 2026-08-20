@@ -125,8 +125,8 @@ describe('shared companion delivery migration', () => {
     await bootstrap(port);
 
     expect(sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'sync_push_ack'").get()).toBeUndefined();
-    expect(sqlite.prepare('SELECT peer_id, object_id, status FROM sync_delivery_receipts').get())
-      .toEqual({ object_id: 'user_space:*:*:*:setting-a', peer_id: 'peer', status: 'pending' });
+    expect(sqlite.prepare('SELECT authorization_id, object_id, status FROM sync_delivery_receipts').get())
+      .toEqual({ authorization_id: 'auth-peer', object_id: 'user_space:*:*:*:setting-a', status: 'pending' });
     expect(sqlite.prepare("SELECT content_hash FROM sync_object_state WHERE object_id = 'user_space:*:*:*:setting-a'").pluck().get())
       .toBe('hash-a');
     sqlite.close();

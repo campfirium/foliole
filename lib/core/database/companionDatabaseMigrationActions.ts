@@ -38,7 +38,30 @@ export async function installCompanionSchema(db: DbPort) {
 export async function replaceLegacySyncPushAck(db: DbPort) {
   await installCompanionSchema(db);
   await db.run(STATEMENTS.syncPushAckDropLegacyTable);
-  await db.run(SYNC_DELIVERY_LEGACY_BACKFILL_SQL);
+  if (await companionColumnExists(db, 'sync_delivery_receipts', 'peer_id')) {
+    await db.run(SYNC_DELIVERY_LEGACY_BACKFILL_SQL);
+    return;
+  }
+  const memberHostColumn = await companionColumnExists(db, 'sync_group_members', 'host_name')
+    ? 'host_name' : 'device_id';
+  const localHostColumn = await companionColumnExists(db, 'sync_group_local_state', 'local_host_name')
+    ? 'local_host_name' : 'local_device_id';
+  await db.run(`INSERT OR IGNORE INTO sync_delivery_receipts (
+    authorization_id, stream_name, operation_id, object_type, object_id, payload_identity,
+    local_position, status, remote_position, issue_reason, created_at, updated_at
+  ) SELECT member.authorization_id,
+    CASE WHEN state.object_type = 'node' THEN 'node_version' ELSE 'state' END,
+    CASE WHEN state.object_type = 'node' THEN 'node:' || COALESCE(state.current_version_id, state.object_id)
+         ELSE state.object_type || ':' || state.object_id || ':' || state.state_seq END,
+    state.object_type, state.object_id,
+    CASE WHEN state.object_type = 'node' THEN COALESCE(state.current_version_id, state.content_hash)
+         ELSE state.content_hash END,
+    CAST(state.state_seq AS TEXT), 'pending', NULL, NULL, state.updated_at, state.updated_at
+  FROM sync_object_state state
+  JOIN sync_group_local_state local ON local.singleton_id = 1
+  JOIN sync_group_members member ON member.group_id = local.group_id
+  WHERE state.sync_dirty = 1 AND member.state = 'active'
+    AND member.${memberHostColumn} <> local.${localHostColumn}`);
 }
 
 export async function addColumnIfMissing(

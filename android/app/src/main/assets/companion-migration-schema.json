@@ -12,6 +12,7 @@
     "addNodesImportContentFingerprintIfMissing": "addNodesImportContentFingerprintIfMissing",
     "migrateExternalFolderOwnership": "migrateExternalFolderOwnership",
     "addSyncGroupsWorkgroupKeyIfMissing": "addSyncGroupsWorkgroupKeyIfMissing",
+    "migrateDeliveryAuthorizations": "migrateDeliveryAuthorizations",
     "addNodesEnableShortTermIfMissing": "addNodesEnableShortTermIfMissing",
     "addNodesSequentialReadingEnabledIfMissing": "addNodesSequentialReadingEnabledIfMissing",
     "addNodesShelvedAtIfMissing": "addNodesShelvedAtIfMissing",
@@ -318,6 +319,15 @@
         }
       ],
       "beforeVersion": 30
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to cut over delivery receipt authorizations.",
+          "type": "migrateDeliveryAuthorizations"
+        }
+      ],
+      "beforeVersion": 31
     }
   ],
   "planKeys": {

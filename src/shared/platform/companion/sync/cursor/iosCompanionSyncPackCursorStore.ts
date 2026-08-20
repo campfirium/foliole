@@ -26,7 +26,7 @@ export function createIosCompanionSyncPackCursorStore(
 
 async function loadCursor(connection: DbPort, peerId: string) {
   const rows = await connection.query(
-    'SELECT cursor_value AS value FROM sync_peer_cursors WHERE peer_id = ? AND stream_name = ? LIMIT 1',
+    'SELECT cursor_value AS value FROM sync_peer_cursors WHERE authorization_id = ? AND stream_name = ? LIMIT 1',
     [peerId, SYNC_PACK_CURSOR_STREAM]
   );
   const value = rows[0]?.value;
@@ -42,14 +42,14 @@ async function saveCursor(
   cursor: number | null
 ) {
   if (cursor === null) {
-    await connection.run('DELETE FROM sync_peer_cursors WHERE peer_id = ? AND stream_name = ?',
+    await connection.run('DELETE FROM sync_peer_cursors WHERE authorization_id = ? AND stream_name = ?',
       [peerId, SYNC_PACK_CURSOR_STREAM]);
     return null;
   }
   if (!Number.isSafeInteger(cursor) || cursor < 0) throw new Error('invalid_ios_sync_pack_cursor');
   await connection.run(
-    `INSERT INTO sync_peer_cursors (peer_id, stream_name, cursor_value, updated_at) VALUES (?, ?, ?, ?)
-     ON CONFLICT(peer_id, stream_name) DO UPDATE SET
+    `INSERT INTO sync_peer_cursors (authorization_id, stream_name, cursor_value, updated_at) VALUES (?, ?, ?, ?)
+     ON CONFLICT(authorization_id, stream_name) DO UPDATE SET
        cursor_value = excluded.cursor_value, updated_at = excluded.updated_at`,
     [peerId, SYNC_PACK_CURSOR_STREAM, String(cursor), new Date().toISOString()]
   );

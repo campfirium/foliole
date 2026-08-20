@@ -4,10 +4,11 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
+import {
+  LEGACY_SYNC_DELIVERY_SCHEMA_STATEMENTS as SYNC_DELIVERY_SCHEMA_STATEMENTS,
+  LEGACY_SYNC_DELIVERY_TRIGGER_STATEMENTS as SYNC_DELIVERY_TRIGGER_STATEMENTS
+} from '../../lib/core/database/legacySyncDeliverySchemaStatements.js';
 import { migrateSyncDeliveryReceipts } from '../../lib/core/database/numberedMigrationSyncDelivery.js';
-import { SYNC_DELIVERY_SCHEMA_STATEMENTS } from '../../lib/core/database/syncDeliverySchemaStatements.js';
-import { SYNC_DELIVERY_TRIGGER_STATEMENTS } from '../../lib/core/database/syncDeliveryTriggerStatements.js';
-import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../../lib/core/database/syncGroupSchemaStatements.js';
 
 const files: string[] = [];
 
@@ -90,8 +91,21 @@ function installDeliverySchema(sqlite: Database.Database) {
 }
 
 function installDeliveryPrerequisites(sqlite: Database.Database) {
-  for (const statement of SYNC_GROUP_SCHEMA_STATEMENTS) sqlite.exec(statement);
   sqlite.exec(`
+    CREATE TABLE sync_groups (
+      group_id TEXT PRIMARY KEY, display_name TEXT NOT NULL, timeline_id TEXT NOT NULL,
+      created_by_device_id TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+      workgroup_key TEXT);
+    CREATE TABLE sync_group_members (
+      group_id TEXT NOT NULL, device_id TEXT NOT NULL, device_kind TEXT NOT NULL,
+      device_name TEXT NOT NULL, state TEXT NOT NULL, approved_by_device_id TEXT NOT NULL,
+      authorization_id TEXT NOT NULL, provisioning_cursor INTEGER, joined_at TEXT NOT NULL,
+      activated_at TEXT, left_at TEXT, updated_at TEXT NOT NULL,
+      PRIMARY KEY (group_id, device_id));
+    CREATE TABLE sync_group_local_state (
+      singleton_id INTEGER PRIMARY KEY, group_id TEXT, local_device_id TEXT NOT NULL,
+      member_state TEXT NOT NULL, provisioning_cursor INTEGER,
+      created_empty_proof_json TEXT, updated_at TEXT NOT NULL);
     CREATE TABLE sync_object_state (
       object_type TEXT NOT NULL, object_id TEXT NOT NULL, state_seq INTEGER NOT NULL,
       current_version_id TEXT, content_hash TEXT NOT NULL, last_modified_by_host_name TEXT NOT NULL,

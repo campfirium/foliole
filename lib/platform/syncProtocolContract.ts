@@ -9,6 +9,7 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
   capabilities: Object.freeze([
     'author-host-snapshots-v1',
     'authorization-credential-routing-v1',
+    'authorization-delivery-receipts-v1',
     'host-workgroup-members-v1',
     'lan-sync-v1',
     'opaque-sync-refs-v1',
