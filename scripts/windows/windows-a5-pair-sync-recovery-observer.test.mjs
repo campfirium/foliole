@@ -34,6 +34,8 @@ it('observes request submission without global errors or click-return evidence',
   expect(recoveryEvidence).toContain('foliole-pair-sync-evidence-observer.js');
   expect(waiter).toContain('awaitAfterStructureApplied');
   expect(waiter).toContain('credentialsOnly && "saved_signable"');
+  expect(waiter).not.toContain('verifyCredentials');
+  expect(recoveryEvidence).not.toContain('verifyCredentials');
   for (const method of ['desktopHttpRequest', 'savePairingCredentials', 'signCompanionSyncRequest',
     'bindSyncGroupPeerRoute', 'downloadDesktopSyncPack', 'deleteDownloadedSyncPack']) {
     expect(observer).toContain(method);
@@ -47,9 +49,11 @@ it('observes request submission without global errors or click-return evidence',
   expect(observer).not.toContain("methodName === 'recordWorkspaceSyncEvent'");
   expect(observer).toContain("algorithm.name === 'ECDH'");
   expect(observer).not.toContain('pair_request_id');
+  expect(observer).not.toContain('__folioleVerifyPairSyncCredentials');
+  expect(observer).not.toContain('workgroup_key');
 });
 
-it('observes workgroup membership persistence before its first signed request', async () => {
+it('only observes the product signing request after workgroup membership persistence', async () => {
   const source = read(observerPath);
   const window = { Capacitor: { nativePromise: async () => ({ ok: true }) },
     crypto: { subtle: Object.create({ generateKey: async () => ({}) }) } };
@@ -60,8 +64,10 @@ it('observes workgroup membership persistence before its first signed request', 
     endpoint_url: 'http://127.0.0.1:38641', sync_group_id: 'group-1'
   });
   expect(state.credentials).toBe('saved_not_signable');
-  expect(JSON.parse(window.__folioleVerifyPairSyncCredentials())).toEqual({ ok: true });
-  await Promise.resolve();
+  await window.Capacitor.nativePromise('FolioleCompanionSync', 'signCompanionSyncRequest', {
+    endpoint_url: 'http://127.0.0.1:38641', sync_group_id: 'group-1',
+    workgroup_key: 'product-owned-key'
+  });
   expect(state.credentials).toBe('saved_signable');
 });
 

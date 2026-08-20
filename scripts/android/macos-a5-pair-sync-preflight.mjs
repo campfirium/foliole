@@ -180,6 +180,7 @@ export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
     existingPairing: existingPairingRecovery || protectedGroupPendingSync || cleanPairSwitch
       || rejectedEmptyPairing || missingDatabaseBootstrap,
     pairTargetPeerFingerprint: pairState.remotePeerFingerprint,
+    joinedEmptyReauthorization,
     protectedPendingSync: protectedGroupPendingSync,
     requiresProductBootstrap: missingDatabaseBootstrap
   };
