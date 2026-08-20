@@ -185,14 +185,18 @@ export function insertNodeAttachmentRows() {
 
 export function insertExternalFolderSyncState() {
   const driver = openDatabaseConnection().driver;
+  driver.execute(`INSERT INTO desktop_sources (source_ref, source_type, config_ref, host_name,
+    host_platform, root_path, path_flavor, type_settings_json, created_at, updated_at)
+    VALUES ('external:folder-1', 'external', 'folder-1', 'desktop', 'darwin',
+      '/library', 'posix', '{}', '2026-04-27T00:03:00.000Z', '2026-04-27T00:03:00.000Z')`);
   driver.execute(
     `INSERT INTO external_search_folders (
        id, folder_path, attachment_mode, attachment_root_path, excluded_dirs_json,
-       status, document_count, indexed_at, last_error, created_at, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       status, document_count, indexed_at, last_error, created_at, updated_at, source_ref
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ['folder-1', '/library', 'document_relative_first_then_fixed_root', null, '[".git"]',
       'ready', 3, '2026-04-27T00:03:00.000Z', null,
-      '2026-04-27T00:03:00.000Z', '2026-04-27T00:03:00.000Z']
+      '2026-04-27T00:03:00.000Z', '2026-04-27T00:03:00.000Z', 'external:folder-1']
   );
   driver.execute(
     `INSERT INTO sync_object_state (

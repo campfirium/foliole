@@ -64,7 +64,9 @@ it('allows external search imports only when the file resolves inside a configur
   await fs.mkdir(libraryRoot, { recursive: true });
   await fs.writeFile(filePath, '# Library', 'utf8');
   await fs.writeFile(outsidePath, '# Outside', 'utf8');
-  loadExternalSearchFolders.mockReturnValue([{ access_mode: 'local', folder_path: libraryRoot }]);
+  loadExternalSearchFolders.mockReturnValue([{
+    access_mode: 'local', folder_path: libraryRoot, source_executable: true
+  }]);
 
   await expect(assertExternalSearchImportPath(filePath)).resolves.toBe(await fs.realpath(filePath));
   await expect(assertExternalSearchImportPath(outsidePath)).rejects.toThrow('External search import path is not authorized.');

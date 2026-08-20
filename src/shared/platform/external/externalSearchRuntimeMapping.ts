@@ -6,11 +6,10 @@ import type {
 } from '../../../../lib/platform/nativeStorageContract';
 
 export interface RuntimeExternalSearchFolder {
-  accessMode?: 'local' | 'remote_mirror' | 'unowned';
+  accessMode?: 'local' | 'remote_mirror';
   attachmentMode: NativeExternalSearchAttachmentMode;
   attachmentRootPath: string | null;
   createdAt: string;
-  claimUnowned?: boolean;
   documentCount: number;
   excludedDirs: string[];
   folderPath: string;
@@ -18,9 +17,9 @@ export interface RuntimeExternalSearchFolder {
   indexedAt: string | null;
   lastError: string | null;
   mirrorEnabled?: boolean;
-  ownerDeviceName?: string | null;
-  ownerInstallationId?: string | null;
-  ownerPlatform?: string | null;
+  sourceExecutable?: boolean;
+  sourceHostName?: string;
+  sourceHostPlatform?: string;
   status: 'error' | 'idle' | 'indexing' | 'ready';
   updatedAt: string;
 }
@@ -88,8 +87,9 @@ export function toRuntimeExternalSearchFolder(value: NativeExternalSearchFolder)
     attachmentRootPath: value.attachment_root_path, createdAt: value.created_at,
     documentCount: value.document_count, excludedDirs: value.excluded_dirs, folderPath: value.folder_path,
     id: value.id, indexedAt: value.indexed_at, lastError: value.last_error,
-    mirrorEnabled: value.mirror_enabled !== false, ownerDeviceName: value.owner_device_name ?? null,
-    ownerInstallationId: value.owner_installation_id ?? null, ownerPlatform: value.owner_platform ?? null,
+    mirrorEnabled: value.mirror_enabled !== false, sourceExecutable: value.source_executable === true,
+    ...(value.source_host_name === undefined ? {} : { sourceHostName: value.source_host_name }),
+    ...(value.source_host_platform === undefined ? {} : { sourceHostPlatform: value.source_host_platform }),
     status: value.status, updatedAt: value.updated_at
   };
 }

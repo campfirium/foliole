@@ -21,8 +21,8 @@ vi.mock('./managedInboxEvents.js', () => ({
   notifyManagedInboxUpdated: vi.fn()
 }));
 
-vi.mock('../database/readwiseDeviceAssignment.js', () => ({
-  canCurrentDeviceRunReadwise: vi.fn(() => true)
+vi.mock('../database/readwiseHostAssignment.js', () => ({
+  canCurrentHostRunReadwise: vi.fn(() => true)
 }));
 
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';

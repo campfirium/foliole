@@ -27,8 +27,8 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-vi.mock('../database/readwiseDeviceAssignment.js', () => ({
-  canCurrentDeviceRunReadwise: vi.fn(() => true)
+vi.mock('../database/readwiseHostAssignment.js', () => ({
+  canCurrentHostRunReadwise: vi.fn(() => true)
 }));
 
 vi.mock('../database/pdfIndexing.js', async () => ({

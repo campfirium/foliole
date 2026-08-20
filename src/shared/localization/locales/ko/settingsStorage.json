@@ -99,7 +99,7 @@
   "settings.externalSources.removeFolder": "폴더 제거",
   "settings.externalSources.remote.title": "다른 장치에서",
   "settings.externalSources.remote.description": "이 장치에서 해당 폴더를 탐색하고 검색하세요. 여기서는 읽기 전용입니다.",
-  "settings.externalSources.remote.unknownDevice": "기타 장치",
+  "settings.externalSources.remote.unknownHost": "다른 호스트",
   "settings.externalSources.remote.groupEnabledAria": "이 기기에서 {device}의 모든 폴더를 사용합니다.",
   "settings.externalSources.remote.enabledAria": "이 기기에서 {device}의 {folder}을(를) 사용하세요",
   "settings.externalSources.status.errorFallback": "인덱스 빌드에 실패했습니다.",

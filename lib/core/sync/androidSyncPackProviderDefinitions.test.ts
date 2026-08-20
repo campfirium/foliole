@@ -14,8 +14,11 @@ it('uses the desktop sync-pack envelope, table, and protocol contracts', () => {
       'author-host-snapshots-v1', 'authorization-credential-routing-v1',
       'authorization-delivery-receipts-v1',
       'host-workgroup-members-v1', 'lan-sync-v1', 'opaque-sync-refs-v1',
-      'source-owner-gate-v1', 'sync-group-facts-v1', 'workgroup-aead-v1'
+      'source-host-ownership-v1', 'sync-group-facts-v1', 'workgroup-aead-v1'
     ],
     version: 2
   });
+  expect(definitions.payloadPlans).toContainEqual(expect.objectContaining({
+    objectType: 'watched_folder', sql: expect.stringContaining('s.host_name')
+  }));
 });

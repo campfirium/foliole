@@ -13,12 +13,13 @@ const payloadPlans = [
     b.mime_type blob__mime_type, b.availability blob__availability, b.source_host_name blob__source_host_name,
     b.created_at blob__created_at, b.cached_at blob__cached_at, b.last_verified_at blob__last_verified_at
     FROM source.attachments a LEFT JOIN source.attachment_blobs b ON b.attachment_id = a.id` },
-  { objectType: 'external_folder', sql: `SELECT id __object_id, id, folder_path, attachment_mode, attachment_root_path, excluded_dirs_json,
-    status, document_count, indexed_at, last_error, owner_installation_id, owner_device_name, owner_platform, created_at, updated_at
-    FROM source.external_search_folders` },
+  { objectType: 'external_folder', sql: `SELECT f.id __object_id, f.id, f.folder_path, f.attachment_mode,
+    f.attachment_root_path, f.excluded_dirs_json, f.status, f.document_count, f.indexed_at, f.last_error,
+    s.host_name, s.host_platform, s.type_settings_json, f.created_at, f.updated_at, f.source_ref
+    FROM source.external_search_folders f JOIN source.desktop_sources s ON s.source_ref = f.source_ref` },
   { objectType: 'import_source', sql: `SELECT source_fingerprint __object_id, source_fingerprint, provider, source_kind, source_name, source_locator,
     first_imported_at, last_imported_at, last_content_fingerprint, latest_node_id,
-    NULL watched_binding_id, NULL watched_relative_path
+    watched_binding_id, watched_relative_path, source_ref, source_location
     FROM source.import_sources` },
   { objectType: 'node_open_state', sql: `SELECT node_id __object_id, node_id, last_opened_at FROM source.node_open_state` },
   { objectType: 'node_reading', sql: `SELECT node_id __object_id, node_id, interval_duration_ms, interval_growth_factor,
@@ -38,7 +39,11 @@ const payloadPlans = [
     v.node_id, v.scroll_top, v.selection_from, v.selection_to, v.source, v.updated_at
     FROM source.sync_object_state s JOIN source.node_view_state v
       ON s.object_id LIKE '%:' || v.host_name || ':node:' || v.node_id
-    WHERE s.object_type = 'view_state' AND s.object_id NOT LIKE '%:active_node'` }
+    WHERE s.object_type = 'view_state' AND s.object_id NOT LIKE '%:active_node'` },
+  { objectType: 'watched_folder', sql: `SELECT b.binding_id __object_id, b.binding_id,
+    s.host_name, s.host_platform, s.type_settings_json, b.connection_status, b.action_mode,
+    b.archive_path, b.highlight_mode, b.highlight_path, b.primary_path, b.created_at, b.updated_at, b.source_ref
+    FROM source.watched_folder_bindings b JOIN source.desktop_sources s ON s.source_ref = b.source_ref` }
 ] as const;
 
 export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
@@ -61,7 +66,7 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
           WHERE alternative.alternative_id = state.object_id)) ELSE state.deleted_at END
      FROM source.sync_object_state state WHERE state.state_seq > ? AND state.state_seq <= ? AND state.object_type IN
        ('attachment','external_document','external_folder','import_source','node','node_open_state','node_reading',
-        'node_review','node_text_alternative','pdf_page_text','setting','view_state')
+        'node_review','node_text_alternative','pdf_page_text','setting','view_state','watched_folder')
        AND (state.object_type != 'node' OR state.deleted_at IS NOT NULL OR EXISTS
          (SELECT 1 FROM source.nodes WHERE id = state.object_id))
        AND (state.object_type NOT IN ('node_reading','node_review') OR EXISTS

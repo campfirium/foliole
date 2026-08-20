@@ -97,7 +97,6 @@ export function SettingsExternalSearchSection(props: SettingsExternalSearchSecti
       {hasActiveSyncGroup && remoteFolders.length > 0 ? (
         <SettingsRemoteExternalFolderRows
           folders={remoteFolders}
-          onReconnectFolder={props.onReconnectFolder}
           onRemoveFolder={props.onRemoveFolder}
         />
       ) : null}

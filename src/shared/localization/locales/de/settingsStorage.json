@@ -99,7 +99,7 @@
   "settings.externalSources.removeFolder": "Ordner entfernen",
   "settings.externalSources.remote.title": "Von anderen Geräten",
   "settings.externalSources.remote.description": "Durchsuchen und durchsuchen Sie diese Ordner auf diesem Gerät. Sie sind hier schreibgeschützt.",
-  "settings.externalSources.remote.unknownDevice": "Anderes Gerät",
+  "settings.externalSources.remote.unknownHost": "Anderer Host",
   "settings.externalSources.remote.groupEnabledAria": "Alle Ordner von {device} auf diesem Gerät verwenden",
   "settings.externalSources.remote.enabledAria": "Verwenden Sie {folder} von {device} auf diesem Gerät",
   "settings.externalSources.status.errorFallback": "Indexerstellung fehlgeschlagen.",

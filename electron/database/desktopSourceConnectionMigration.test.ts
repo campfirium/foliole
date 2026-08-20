@@ -24,11 +24,25 @@ it('upgrades v66 without changing existing desktop source data or state', () => 
     watched_relative_path: null
   });
   expect(sqlite.prepare('SELECT COUNT(*) AS count FROM watched_folder_bindings').get()).toEqual({ count: 0 });
-  expect(sqlite.prepare(`SELECT source_type, config_ref, root_path FROM desktop_sources
+  expect(sqlite.prepare(`SELECT source_type, config_ref, host_name, root_path FROM desktop_sources
     ORDER BY source_type, config_ref`).all()).toEqual([
-    { config_ref: 'external-1', root_path: '/Library/External', source_type: 'external' },
-    { config_ref: 'draft-import-source-1', root_path: '/Library/Drafts', source_type: 'watched' }
+    { config_ref: 'external-1', host_name: 'Windows PC', root_path: '/Library/External', source_type: 'external' },
+    { config_ref: 'readwise-articles', host_name: 'Mac A', root_path: '/Library/Readwise/Articles', source_type: 'readwise' },
+    { config_ref: 'draft-import-source-1', host_name: 'Mac A', root_path: '/Library/Drafts', source_type: 'watched' }
   ]);
+  expect(sqlite.prepare(`SELECT type_settings_json FROM desktop_sources
+    WHERE source_type = 'readwise' AND config_ref = 'readwise-articles'`).get()).toEqual({
+    type_settings_json: JSON.stringify({
+      archivePath: '', highlightPath: '', keepState: 'enabled', kind: 'articles'
+    })
+  });
+  expect(sqlite.prepare(`SELECT host_name, folder_id, enabled FROM external_folder_host_preferences`).get())
+    .toEqual({ enabled: 0, folder_id: 'external-1', host_name: 'Mac A' });
+  expect(sqlite.prepare("SELECT value FROM settings WHERE key = 'readwise_active_host'").get())
+    .toEqual({ value: '{"host_name":"Office PC"}' });
+  expect(sqlite.prepare("SELECT value FROM settings WHERE key = 'readwise_active_device'").get()).toBeUndefined();
+  expect(sqlite.prepare("SELECT name FROM pragma_table_info('external_search_folders')").pluck().all())
+    .not.toContain('owner_installation_id');
   expect(sqlite.prepare(`SELECT source_locator, source_ref, source_location FROM import_sources
     WHERE source_fingerprint = 'watched-fingerprint'`).get()).toEqual({
     source_location: 'draft.md',
@@ -48,6 +62,45 @@ it('upgrades a v66 database without optional import source tables', () => {
   expect(sqlite.prepare(`SELECT name FROM sqlite_master
     WHERE type = 'table' AND name = 'watched_folder_bindings'`).get()).toEqual({
     name: 'watched_folder_bindings'
+  });
+  expect(sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  sqlite.close();
+});
+
+it('rejects legacy external preferences when the local Host cannot be recovered', () => {
+  const sqlite = new BetterSqlite3(':memory:');
+  createV66SourceTables(sqlite);
+  seedV66SourceData(sqlite);
+  sqlite.prepare("DELETE FROM settings WHERE key = 'device_id'").run();
+
+  expect(() => initializeDatabaseSchema(sqlite)).toThrow('external_source_host_preference_host_missing');
+  expect(sqlite.pragma('user_version', { simple: true })).toBe(66);
+  sqlite.close();
+});
+
+it('repairs a deployed v67 import source schema before migrating desktop sources', () => {
+  const sqlite = new BetterSqlite3(':memory:');
+  createV66SourceTables(sqlite);
+  sqlite.exec(`CREATE TABLE watched_folder_bindings (
+    binding_id TEXT PRIMARY KEY, connected_device_id TEXT, connected_device_name TEXT,
+    connected_platform TEXT, connection_status TEXT NOT NULL DEFAULT 'needs-folder',
+    action_mode TEXT NOT NULL, archive_path TEXT NOT NULL DEFAULT '',
+    highlight_mode TEXT NOT NULL, highlight_path TEXT NOT NULL DEFAULT '',
+    primary_path TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL, deleted_at TEXT
+  );
+  PRAGMA user_version = 67;`);
+  seedV66SourceData(sqlite);
+
+  initializeDatabaseSchema(sqlite);
+
+  expect(sqlite.prepare("SELECT name FROM pragma_table_info('import_sources')").pluck().all())
+    .toEqual(expect.arrayContaining([
+      'watched_binding_id', 'watched_relative_path', 'source_ref', 'source_location'
+    ]));
+  expect(sqlite.prepare(`SELECT name FROM sqlite_master
+    WHERE type = 'index' AND name = 'idx_import_sources_watched_relative'`).get()).toEqual({
+    name: 'idx_import_sources_watched_relative'
   });
   expect(sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
   sqlite.close();
@@ -82,11 +135,11 @@ function createV66SourceTables(sqlite: import('better-sqlite3').Database) {
 function seedV66SourceData(sqlite: import('better-sqlite3').Database) {
   sqlite.exec(`INSERT INTO external_search_folders VALUES (
     'external-1', '/Library/External', 'document_relative', '/Library', '[".git"]',
-    'ready', 7, '2026-08-01T00:00:00.000Z', NULL, 'installation-a',
-    'Mac A', 'darwin', '2026-07-01T00:00:00.000Z', '2026-08-01T00:00:00.000Z'
+    'ready', 7, '2026-08-01T00:00:00.000Z', NULL, 'installation-windows',
+    'Windows PC', 'win32', '2026-07-01T00:00:00.000Z', '2026-08-01T00:00:00.000Z'
   );
   INSERT INTO external_folder_device_preferences VALUES (
-    'installation-a', 'external-1', 0, '2026-08-02T00:00:00.000Z'
+    'installation-mac', 'external-1', 0, '2026-08-02T00:00:00.000Z'
   );
   INSERT INTO import_sources VALUES (
     'watched-fingerprint', 'markdown', 'file', 'Draft', '/Library/Drafts/draft.md',
@@ -97,21 +150,29 @@ function seedV66SourceData(sqlite: import('better-sqlite3').Database) {
     '2026-08-01T00:00:00.000Z', 'node-1'
   );
   INSERT INTO settings VALUES (
-    'import_manager_settings', '{"sources":[{"id":"draft-import-source-1","primaryPath":"/Library/Drafts"}],"readwiseRootPath":"/Library/Readwise"}',
+    'import_manager_settings', '{"sources":[{"id":"draft-import-source-1","primaryPath":"/Library/Drafts","keepState":"enabled"}],"readwiseSources":[{"id":"readwise-articles","primaryPath":"/Library/Readwise/Articles","kind":"articles","keepState":"enabled"}],"readwiseRootPath":"/Library/Readwise"}',
     '2026-08-01T00:00:00.000Z'
-  );`);
+  );
+  INSERT INTO settings VALUES (
+    'readwise_active_device', '{"device_id":"Office PC"}', '2026-08-02T00:00:00.000Z'
+  );
+  INSERT INTO settings VALUES ('device_id', '"Mac A"', '2026-08-02T00:00:00.000Z');`);
 }
 
 function readExistingSourceData(sqlite: import('better-sqlite3').Database) {
+  const hasHostPreferences = sqlite.prepare(`SELECT 1 FROM sqlite_master
+    WHERE type = 'table' AND name = 'external_folder_host_preferences'`).get();
   return {
     external: sqlite.prepare(`SELECT id, folder_path, attachment_mode, attachment_root_path,
-      excluded_dirs_json, status, document_count, indexed_at, last_error, owner_installation_id,
-      owner_device_name, owner_platform, created_at, updated_at FROM external_search_folders`).all(),
+      excluded_dirs_json, status, document_count, indexed_at, last_error,
+      created_at, updated_at FROM external_search_folders`).all(),
     importManager: sqlite.prepare("SELECT * FROM settings WHERE key = 'import_manager_settings'").all(),
     importSources: sqlite.prepare(`SELECT source_fingerprint, provider, source_kind, source_name,
       source_locator, first_imported_at, last_imported_at, last_content_fingerprint, latest_node_id
       FROM import_sources`).all(),
     keepItems: sqlite.prepare('SELECT * FROM keep_import_items').all(),
-    preferences: sqlite.prepare('SELECT * FROM external_folder_device_preferences').all()
+    preferences: hasHostPreferences
+      ? sqlite.prepare('SELECT folder_id, enabled, updated_at FROM external_folder_host_preferences').all()
+      : sqlite.prepare('SELECT folder_id, enabled, updated_at FROM external_folder_device_preferences').all()
   };
 }

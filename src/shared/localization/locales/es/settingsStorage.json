@@ -99,7 +99,7 @@
   "settings.externalSources.removeFolder": "Quitar carpeta",
   "settings.externalSources.remote.title": "Desde otros dispositivos",
   "settings.externalSources.remote.description": "Explore y busque estas carpetas en este dispositivo. Son de solo lectura aquí.",
-  "settings.externalSources.remote.unknownDevice": "Otro dispositivo",
+  "settings.externalSources.remote.unknownHost": "Otro host",
   "settings.externalSources.remote.groupEnabledAria": "Utilice todas las carpetas de {device} en este dispositivo",
   "settings.externalSources.remote.enabledAria": "Utilice {folder} de {device} en este dispositivo",
   "settings.externalSources.status.errorFallback": "Falló la creación del índice.",

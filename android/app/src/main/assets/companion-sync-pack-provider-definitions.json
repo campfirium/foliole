@@ -4,7 +4,7 @@
     "INSERT INTO sync_groups SELECT group_id, display_name, timeline_id, created_by_host_name, created_at\n     FROM source.sync_groups WHERE group_id IN (SELECT group_id FROM source.sync_group_local_state WHERE singleton_id = 1)",
     "INSERT INTO sync_group_members SELECT group_id, host_name, host_platform, state,\n       approved_by_host_name, authorization_id, joined_at, left_at, updated_at\n     FROM source.sync_group_members\n     WHERE group_id IN (SELECT group_id FROM sync_groups) AND state IN ('active', 'left')",
     "INSERT INTO sync_group_member_departures SELECT group_id, host_name, authorized_by_host_name,\n       authorization_id, left_at FROM source.sync_group_member_departures\n     WHERE group_id IN (SELECT group_id FROM sync_groups)",
-    "INSERT INTO sync_object_state SELECT state.object_type, state.object_id, state.state_seq,\n       state.content_hash, state.last_modified_by_host_name, state.updated_at,\n       CASE WHEN state.object_type = 'node_text_alternative' THEN COALESCE(state.deleted_at,\n         (SELECT node.deleted_at FROM source.node_text_alternatives alternative\n          JOIN source.nodes node ON node.id = alternative.node_id\n          WHERE alternative.alternative_id = state.object_id)) ELSE state.deleted_at END\n     FROM source.sync_object_state state WHERE state.state_seq > ? AND state.state_seq <= ? AND state.object_type IN\n       ('attachment','external_document','external_folder','import_source','node','node_open_state','node_reading',\n        'node_review','node_text_alternative','pdf_page_text','setting','view_state')\n       AND (state.object_type != 'node' OR state.deleted_at IS NOT NULL OR EXISTS\n         (SELECT 1 FROM source.nodes WHERE id = state.object_id))\n       AND (state.object_type NOT IN ('node_reading','node_review') OR EXISTS\n         (SELECT 1 FROM source.nodes WHERE id = state.object_id))\n       ",
+    "INSERT INTO sync_object_state SELECT state.object_type, state.object_id, state.state_seq,\n       state.content_hash, state.last_modified_by_host_name, state.updated_at,\n       CASE WHEN state.object_type = 'node_text_alternative' THEN COALESCE(state.deleted_at,\n         (SELECT node.deleted_at FROM source.node_text_alternatives alternative\n          JOIN source.nodes node ON node.id = alternative.node_id\n          WHERE alternative.alternative_id = state.object_id)) ELSE state.deleted_at END\n     FROM source.sync_object_state state WHERE state.state_seq > ? AND state.state_seq <= ? AND state.object_type IN\n       ('attachment','external_document','external_folder','import_source','node','node_open_state','node_reading',\n        'node_review','node_text_alternative','pdf_page_text','setting','view_state','watched_folder')\n       AND (state.object_type != 'node' OR state.deleted_at IS NOT NULL OR EXISTS\n         (SELECT 1 FROM source.nodes WHERE id = state.object_id))\n       AND (state.object_type NOT IN ('node_reading','node_review') OR EXISTS\n         (SELECT 1 FROM source.nodes WHERE id = state.object_id))\n       ",
     "INSERT OR IGNORE INTO sync_object_state SELECT s.object_type, s.object_id, s.state_seq, s.content_hash,\n       s.last_modified_by_host_name, s.updated_at, s.deleted_at\n     FROM source.sync_object_state s WHERE s.object_type = 'node' AND s.object_id IN\n       (SELECT object_id FROM sync_object_state WHERE object_type IN ('node_reading','node_review')\n        UNION SELECT alternative.node_id FROM source.node_text_alternatives alternative\n          JOIN sync_object_state selected ON selected.object_type = 'node_text_alternative'\n            AND selected.object_id = alternative.alternative_id)",
     "DELETE FROM sync_object_state WHERE object_type NOT IN ('external_document','node') AND NOT EXISTS\n      (SELECT 1 FROM sync_objects o WHERE o.object_type = sync_object_state.object_type AND o.object_id = sync_object_state.object_id)",
     "INSERT INTO nodes (id, parent_id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled, shelved_at, manual_child_order, title, is_title_manual, hide_title_heading, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, import_source_fingerprint, import_content_fingerprint, content, current_version_id, created_at, updated_at, deleted_at) SELECT id, parent_id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled, shelved_at, manual_child_order, title, is_title_manual, hide_title_heading, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, import_source_fingerprint, import_content_fingerprint, content, current_version_id, created_at, updated_at, deleted_at FROM source.nodes\n     WHERE id IN (SELECT object_id FROM sync_object_state WHERE object_type = 'node')",
@@ -18,7 +18,7 @@
   ],
   "databaseEntry": "incoming.db.deflate",
   "format": "foliole.sync-pack",
-  "formatVersion": 10,
+  "formatVersion": 11,
   "payloadCopyIndex": 5,
   "payloadPlans": [
     {
@@ -27,11 +27,11 @@
     },
     {
       "objectType": "external_folder",
-      "sql": "SELECT id __object_id, id, folder_path, attachment_mode, attachment_root_path, excluded_dirs_json,\n    status, document_count, indexed_at, last_error, owner_installation_id, owner_device_name, owner_platform, created_at, updated_at\n    FROM source.external_search_folders"
+      "sql": "SELECT f.id __object_id, f.id, f.folder_path, f.attachment_mode,\n    f.attachment_root_path, f.excluded_dirs_json, f.status, f.document_count, f.indexed_at, f.last_error,\n    s.host_name, s.host_platform, s.type_settings_json, f.created_at, f.updated_at, f.source_ref\n    FROM source.external_search_folders f JOIN source.desktop_sources s ON s.source_ref = f.source_ref"
     },
     {
       "objectType": "import_source",
-      "sql": "SELECT source_fingerprint __object_id, source_fingerprint, provider, source_kind, source_name, source_locator,\n    first_imported_at, last_imported_at, last_content_fingerprint, latest_node_id,\n    NULL watched_binding_id, NULL watched_relative_path\n    FROM source.import_sources"
+      "sql": "SELECT source_fingerprint __object_id, source_fingerprint, provider, source_kind, source_name, source_locator,\n    first_imported_at, last_imported_at, last_content_fingerprint, latest_node_id,\n    watched_binding_id, watched_relative_path, source_ref, source_location\n    FROM source.import_sources"
     },
     {
       "objectType": "node_open_state",
@@ -64,6 +64,10 @@
     {
       "objectType": "view_state",
       "sql": "SELECT s.object_id __object_id,\n    v.node_id, v.scroll_top, v.selection_from, v.selection_to, v.source, v.updated_at\n    FROM source.sync_object_state s JOIN source.node_view_state v\n      ON s.object_id LIKE '%:' || v.host_name || ':node:' || v.node_id\n    WHERE s.object_type = 'view_state' AND s.object_id NOT LIKE '%:active_node'"
+    },
+    {
+      "objectType": "watched_folder",
+      "sql": "SELECT b.binding_id __object_id, b.binding_id,\n    s.host_name, s.host_platform, s.type_settings_json, b.connection_status, b.action_mode,\n    b.archive_path, b.highlight_mode, b.highlight_path, b.primary_path, b.created_at, b.updated_at, b.source_ref\n    FROM source.watched_folder_bindings b JOIN source.desktop_sources s ON s.source_ref = b.source_ref"
     }
   ],
   "packSchema": [
@@ -90,7 +94,7 @@
       "host-workgroup-members-v1",
       "lan-sync-v1",
       "opaque-sync-refs-v1",
-      "source-owner-gate-v1",
+      "source-host-ownership-v1",
       "sync-group-facts-v1",
       "workgroup-aead-v1"
     ],
@@ -98,7 +102,7 @@
     "min_supported_version": 2,
     "version": 2
   },
-  "schemaVersion": 75,
+  "schemaVersion": 76,
   "stateCopyIndex": 3,
   "tableNames": [
     "sync_groups",

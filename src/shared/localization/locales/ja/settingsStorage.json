@@ -99,7 +99,7 @@
   "settings.externalSources.removeFolder": "フォルダーを削除します",
   "settings.externalSources.remote.title": "他のデバイスから",
   "settings.externalSources.remote.description": "このデバイス上のこれらのフォルダーを参照して検索します。ここでは読み取り専用です。",
-  "settings.externalSources.remote.unknownDevice": "他のデバイス",
+  "settings.externalSources.remote.unknownHost": "他のホスト",
   "settings.externalSources.remote.groupEnabledAria": "このデバイス上の {device} のすべてのフォルダーを使用します",
   "settings.externalSources.remote.enabledAria": "このデバイスで {device} から {folder} を使用します",
   "settings.externalSources.status.errorFallback": "インデックスの構築に失敗しました。",

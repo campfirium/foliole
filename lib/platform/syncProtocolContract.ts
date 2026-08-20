@@ -13,7 +13,7 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
     'host-workgroup-members-v1',
     'lan-sync-v1',
     'opaque-sync-refs-v1',
-    'source-owner-gate-v1',
+    'source-host-ownership-v1',
     'sync-group-facts-v1',
     'workgroup-aead-v1'
   ]),

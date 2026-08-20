@@ -26,14 +26,14 @@ function binding(id: string, overrides: Record<string, unknown> = {}) {
     action_mode: 'keep',
     archive_path: '',
     binding_id: id,
-    connected_device_id: 'current-device',
-    connected_device_name: 'This Mac',
-    connected_platform: 'darwin',
+    host_name: 'This Mac',
+    host_platform: 'darwin',
     connection_status: 'connected',
     created_at: '2026-08-18T00:00:00.000Z',
     highlight_mode: 'merged',
     highlight_path: '',
     primary_path: `/source/${id}`,
+    source_ref: `watched:${id}`,
     updated_at: '2026-08-18T00:00:00.000Z',
     ...overrides
   };
@@ -44,18 +44,18 @@ it('shows remote and waiting sources above the unchanged local settings', async 
     bindings: [
       binding('local'),
       binding('remote', {
-        connected_device_id: 'remote-device', connected_device_name: 'Office PC', connected_platform: 'win32'
+        host_name: 'Office PC', host_platform: 'win32'
       }),
       binding('waiting', {
-        connected_device_id: null, connected_device_name: null, connected_platform: null, connection_status: 'needs-folder'
+        host_name: '', host_platform: '', connection_status: 'needs-folder'
       })
     ],
-    current_device_id: 'current-device'
+    current_host_name: 'This Mac'
   });
 
   renderWithLocalization(<WatchedFolderConnections />);
 
-  const region = await screen.findByRole('region', { name: 'Other devices' });
+  const region = await screen.findByRole('region', { name: 'Other hosts' });
   const remoteGroup = screen.getByRole('group', { name: 'Office PC' });
   const waitingGroup = screen.getByRole('group', { name: 'Waiting for a folder' });
   expect(within(region).getByText('Path')).toBeInTheDocument();
@@ -67,9 +67,9 @@ it('shows remote and waiting sources above the unchanged local settings', async 
 });
 
 it('does not add an empty workgroup block before local watched-folder settings', async () => {
-  load.mockResolvedValue({ bindings: [], current_device_id: 'current-device' });
+  load.mockResolvedValue({ bindings: [], current_host_name: 'This Mac' });
 
   renderWithLocalization(<WatchedFolderConnections />);
 
-  expect(await screen.findByRole('region', { name: 'Other devices' }).catch(() => null)).toBeNull();
+  expect(await screen.findByRole('region', { name: 'Other hosts' }).catch(() => null)).toBeNull();
 });

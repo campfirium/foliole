@@ -99,7 +99,7 @@
   "settings.externalSources.removeFolder": "Удалить папку",
   "settings.externalSources.remote.title": "С других устройств",
   "settings.externalSources.remote.description": "Просмотрите и выполните поиск этих папок на этом устройстве. Здесь они доступны только для чтения.",
-  "settings.externalSources.remote.unknownDevice": "Другое устройство",
+  "settings.externalSources.remote.unknownHost": "Другой хост",
   "settings.externalSources.remote.groupEnabledAria": "Использовать все папки из {device} на этом устройстве.",
   "settings.externalSources.remote.enabledAria": "Используйте {folder} из {device} на этом устройстве.",
   "settings.externalSources.status.errorFallback": "Не удалось построить индекс.",

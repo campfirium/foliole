@@ -64,12 +64,12 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
   syncPayloadExternalFolder: {
     syncPayload: { argMode: 'object_id', objectType: 'external_folder' },
     sql:
-      "SELECT json_object('id', id, 'folder_path', folder_path, 'attachment_mode', attachment_mode, " +
-      "'attachment_root_path', attachment_root_path, 'excluded_dirs_json', excluded_dirs_json, 'status', status, " +
-      "'document_count', document_count, 'indexed_at', indexed_at, 'last_error', last_error, " +
-      "'owner_installation_id', owner_installation_id, 'owner_device_name', owner_device_name, " +
-      "'owner_platform', owner_platform, 'created_at', created_at, " +
-      "'updated_at', updated_at) AS payload_json FROM external_search_folders WHERE id = ? LIMIT 1"
+      "SELECT json_object('id', f.id, 'folder_path', f.folder_path, 'attachment_mode', f.attachment_mode, " +
+      "'attachment_root_path', f.attachment_root_path, 'excluded_dirs_json', f.excluded_dirs_json, 'status', f.status, " +
+      "'document_count', f.document_count, 'indexed_at', f.indexed_at, 'last_error', f.last_error, " +
+      "'host_name', s.host_name, 'host_platform', s.host_platform, 'type_settings_json', s.type_settings_json, " +
+      "'created_at', f.created_at, 'updated_at', f.updated_at, 'source_ref', f.source_ref) AS payload_json " +
+      "FROM external_search_folders f JOIN desktop_sources s ON s.source_ref = f.source_ref WHERE f.id = ? LIMIT 1"
   },
   syncPayloadImportSource: {
     syncPayload: { argMode: 'object_id', objectType: 'import_source' },
@@ -77,7 +77,9 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
       "SELECT json_object('source_fingerprint', source_fingerprint, 'provider', provider, 'source_kind', source_kind, " +
       "'source_name', source_name, 'source_locator', source_locator, 'first_imported_at', first_imported_at, " +
       "'last_imported_at', last_imported_at, 'last_content_fingerprint', last_content_fingerprint, " +
-      "'latest_node_id', latest_node_id) AS payload_json FROM import_sources WHERE source_fingerprint = ? LIMIT 1"
+      "'latest_node_id', latest_node_id, 'watched_binding_id', watched_binding_id, " +
+      "'watched_relative_path', watched_relative_path, 'source_ref', source_ref, " +
+      "'source_location', source_location) AS payload_json FROM import_sources WHERE source_fingerprint = ? LIMIT 1"
   },
   ...ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS,
   syncPayloadNodeOpenState: {
@@ -122,6 +124,18 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
       "'host_name', host_name, 'value_json', value_json, 'content_hash', content_hash, 'updated_at', updated_at, " +
       "'deleted_at', deleted_at) AS payload_json FROM setting_records " +
       "WHERE scope || ':' || platform || ':' || form_factor || ':' || host_name || ':' || key = ? LIMIT 1"
+  },
+  syncPayloadWatchedFolder: {
+    syncPayload: { argMode: 'object_id', objectType: 'watched_folder' },
+    sql:
+      "SELECT json_object('binding_id', b.binding_id, 'host_name', s.host_name, " +
+      "'host_platform', s.host_platform, 'type_settings_json', s.type_settings_json, " +
+      "'connection_status', b.connection_status, 'action_mode', b.action_mode, " +
+      "'archive_path', b.archive_path, 'highlight_mode', b.highlight_mode, " +
+      "'highlight_path', b.highlight_path, 'primary_path', b.primary_path, " +
+      "'created_at', b.created_at, 'updated_at', b.updated_at, 'source_ref', b.source_ref) AS payload_json " +
+      "FROM watched_folder_bindings b JOIN desktop_sources s ON s.source_ref = b.source_ref " +
+      "WHERE b.binding_id = ? LIMIT 1"
   },
   syncPayloadViewActiveNode: {
     syncPayload: {

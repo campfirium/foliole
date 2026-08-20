@@ -18,6 +18,7 @@ import {
   loadActiveImportedSourceLocators,
   resolveImportedNodeIdForExternalDocument
 } from './externalDocumentImportVisibility.js';
+import { loadOrCreateDesktopHostName } from './hostProfile.js';
 
 const READWISE_EXTERNAL_FOLDER_PREFIX = 'readwise-reader-import';
 
@@ -135,6 +136,9 @@ export function loadReadwiseExternalSearchFolders(): NativeExternalSearchFolder[
       id: row.folder_id,
       indexed_at: row.indexed_at,
       last_error: null,
+      source_executable: true,
+      source_host_name: loadOrCreateDesktopHostName(),
+      source_host_platform: process.platform,
       status: 'ready',
       updated_at: indexedAt
     };

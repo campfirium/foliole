@@ -20,7 +20,7 @@ function isWithinFolder(filePath: string, folderPath: string) {
 function resolveExternalPreviewFolder(documentAbsolutePath: string) {
   return (
     loadExternalSearchFolders()
-      .filter((folder) => folder.access_mode === 'local')
+      .filter((folder) => folder.access_mode === 'local' && folder.source_executable)
       .filter((folder) => isWithinFolder(documentAbsolutePath, folder.folder_path))
       .sort((left, right) => right.folder_path.length - left.folder_path.length)[0] ?? null
   );

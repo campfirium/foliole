@@ -4,7 +4,7 @@ export type NativeExternalSearchAttachmentMode =
   | 'fixed_root';
 
 export interface NativeExternalSearchFolder {
-  access_mode?: 'local' | 'remote_mirror' | 'unowned';
+  access_mode?: 'local' | 'remote_mirror';
   attachment_mode: NativeExternalSearchAttachmentMode;
   attachment_root_path: string | null;
   created_at: string;
@@ -15,9 +15,9 @@ export interface NativeExternalSearchFolder {
   indexed_at: string | null;
   last_error: string | null;
   mirror_enabled?: boolean;
-  owner_device_name?: string | null;
-  owner_installation_id?: string | null;
-  owner_platform?: string | null;
+  source_executable?: boolean;
+  source_host_name?: string;
+  source_host_platform?: string;
   status: 'error' | 'idle' | 'indexing' | 'ready';
   updated_at: string;
 }

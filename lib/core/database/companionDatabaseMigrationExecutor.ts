@@ -18,6 +18,7 @@ import {
 import { migrateCompanionDeliveryAuthorizations } from './companionDeliveryAuthorizationMigration.js';
 import { migrateCompanionHostPermanentState } from './companionHostPermanentStateMigration.js';
 import { migrateCompanionOpaqueSyncRefs } from './companionOpaqueSyncRefsMigration.js';
+import { migrateCompanionSourceHostOwnership } from './companionSourceHostOwnershipMigration.js';
 import { migrateCompanionSyncGroupHosts } from './companionSyncGroupHostsMigration.js';
 
 type MigrationAction = (typeof ANDROID_COMPANION_MIGRATION_PLAN)[number]['actions'][number];
@@ -87,6 +88,7 @@ async function runMigrationAction(db: DbPort, action: MigrationAction) {
   }
   if (action.type === ACTIONS.migrateOpaqueSyncRefs) return migrateCompanionOpaqueSyncRefs(db);
   if (action.type === ACTIONS.migrateSyncGroupHosts) return migrateCompanionSyncGroupHosts(db);
+  if (action.type === ACTIONS.migrateSourceHostOwnership) return migrateCompanionSourceHostOwnership(db);
   if (action.type === ACTIONS.backfillNodeAttachmentsFromVersions) return backfillNodeAttachments(db);
   if (action.type === ACTIONS.migrateExternalFolderOwnership) return migrateExternalFolderOwnership(db);
   if (action.type === ACTIONS.replaceSyncPushAck) return replaceLegacySyncPushAck(db);

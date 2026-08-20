@@ -15,6 +15,10 @@ import {
   ANDROID_COMPANION_WORKGROUP_KEY_MIGRATION_ACTION_TYPES,
   ANDROID_COMPANION_WORKGROUP_KEY_MIGRATION_PLAN_STEP
 } from './androidCompanionWorkgroupKeyMigration.js';
+import {
+  COMPANION_SOURCE_HOST_OWNERSHIP_ACTION_TYPES,
+  COMPANION_SOURCE_HOST_OWNERSHIP_PLAN_STEP
+} from './companionSourceHostOwnershipMigration.js';
 
 export const ANDROID_COMPANION_MIGRATION_ACTION_TYPES = {
   ...ANDROID_COMPANION_CONVERGENCE_MIGRATION_ACTION_TYPES,
@@ -22,6 +26,7 @@ export const ANDROID_COMPANION_MIGRATION_ACTION_TYPES = {
   ...ANDROID_COMPANION_EXTERNAL_FOLDER_OWNERSHIP_ACTION_TYPES,
   ...ANDROID_COMPANION_WORKGROUP_KEY_MIGRATION_ACTION_TYPES,
   ...ANDROID_COMPANION_DELIVERY_AUTHORIZATION_ACTION_TYPES,
+  ...COMPANION_SOURCE_HOST_OWNERSHIP_ACTION_TYPES,
   addNodesEnableShortTermIfMissing: 'addNodesEnableShortTermIfMissing',
   addNodesSequentialReadingEnabledIfMissing: 'addNodesSequentialReadingEnabledIfMissing',
   addNodesShelvedAtIfMissing: 'addNodesShelvedAtIfMissing',
@@ -112,7 +117,8 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
   step(28, 'migrateOpaqueSyncRefs', 'Failed to cut over companion opaque sync references.'),
   step(29, 'migrateAuthorHostSnapshots', 'Failed to cut over companion author Host snapshots.'),
   step(30, 'migrateSyncGroupHosts', 'Failed to cut over companion Sync Group Hosts.'),
-  ANDROID_COMPANION_DELIVERY_AUTHORIZATION_PLAN_STEP
+  ANDROID_COMPANION_DELIVERY_AUTHORIZATION_PLAN_STEP,
+  COMPANION_SOURCE_HOST_OWNERSHIP_PLAN_STEP
 ] as const;
 
 function step(beforeVersion: number, type: string, errorMessage: string) {

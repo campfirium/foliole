@@ -99,7 +99,7 @@
   "settings.externalSources.removeFolder": "Supprimer le dossier",
   "settings.externalSources.remote.title": "Depuis d'autres appareils",
   "settings.externalSources.remote.description": "Parcourez et recherchez ces dossiers sur cet appareil. Ils sont en lecture seule ici.",
-  "settings.externalSources.remote.unknownDevice": "Autre appareil",
+  "settings.externalSources.remote.unknownHost": "Autre hôte",
   "settings.externalSources.remote.groupEnabledAria": "Utiliser tous les dossiers de {device} sur cet appareil",
   "settings.externalSources.remote.enabledAria": "Utiliser {folder} de {device} sur cet appareil",
   "settings.externalSources.status.errorFallback": "La création de l'index a échoué.",

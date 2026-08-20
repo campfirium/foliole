@@ -41,7 +41,7 @@ describe('syncProtocolContract', () => {
         'author-host-snapshots-v1', 'authorization-credential-routing-v1',
         'authorization-delivery-receipts-v1',
         'host-workgroup-members-v1', 'lan-sync-v1', 'opaque-sync-refs-v1',
-        'source-owner-gate-v1', 'sync-group-facts-v1', 'workgroup-aead-v1'
+        'source-host-ownership-v1', 'sync-group-facts-v1', 'workgroup-aead-v1'
       ],
       negotiated_version: null,
       reason: 'required_capability_missing',

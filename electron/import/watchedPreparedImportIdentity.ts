@@ -18,7 +18,7 @@ export function applyWatchedPreparedImportIdentity(
   if (config.sourceType === 'readwise') return prepared;
   const binding = resolveExecutableWatchedBinding(config.ruleId, config.directoryPath);
   if (!binding.bindingId) return prepared;
-  if (!binding.executable) throw new Error('source_not_connected_to_this_device');
+  if (!binding.executable) throw new Error('source_not_owned_by_current_host');
   const relativePath = normalizedRelativePath(source.sourceName);
   const existing = openDatabaseConnection().driver.queryOne<{ source_fingerprint: string }>(
     `SELECT source_fingerprint FROM import_sources

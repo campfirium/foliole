@@ -99,7 +99,7 @@
   "settings.externalSources.removeFolder": "Usuń folder",
   "settings.externalSources.remote.title": "Z innych urządzeń",
   "settings.externalSources.remote.description": "Przeglądaj i przeszukuj te foldery na tym urządzeniu. Tutaj są tylko do odczytu.",
-  "settings.externalSources.remote.unknownDevice": "Inne urządzenie",
+  "settings.externalSources.remote.unknownHost": "Inny host",
   "settings.externalSources.remote.groupEnabledAria": "Użyj wszystkich folderów z {device} na tym urządzeniu",
   "settings.externalSources.remote.enabledAria": "Użyj {folder} z {device} na tym urządzeniu",
   "settings.externalSources.status.errorFallback": "Kompilacja indeksu nie powiodła się.",

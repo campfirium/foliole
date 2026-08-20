@@ -31,17 +31,15 @@ const REMOTE_SOURCE_COLUMNS = '[grid-template-columns:16.25rem_minmax(0,1fr)]';
 function groupBindings(bindings: NativeWatchedFolderBinding[], waitingLabel: string) {
   const groups = new Map<string, {
     bindings: NativeWatchedFolderBinding[];
-    deviceId: string | null;
-    deviceName: string;
+    hostName: string;
     platformName: string | null;
   }>();
   bindings.forEach((binding) => {
-    const key = binding.connected_device_id ?? `waiting:${binding.binding_id}`;
+    const key = binding.host_name;
     const group = groups.get(key) ?? {
       bindings: [],
-      deviceId: binding.connected_device_id,
-      deviceName: binding.connected_device_name?.trim() || waitingLabel,
-      platformName: binding.connected_platform ? PLATFORM_NAMES[binding.connected_platform] ?? null : null
+      hostName: binding.host_name.trim() || waitingLabel,
+      platformName: binding.host_platform ? PLATFORM_NAMES[binding.host_platform] ?? null : null
     };
     group.bindings.push(binding);
     groups.set(key, group);
@@ -61,12 +59,12 @@ function MenuButton(props: { label: string }) {
   );
 }
 
-function DeviceActions(props: { deviceName: string }) {
+function HostActions(props: { hostName: string }) {
   const t = useTranslation();
   return (
     <AppDropdownMenu>
       <AppDropdownMenuTrigger asChild>
-        <MenuButton label={t('desktop.watchedFolder.connections.deviceActions', { device: props.deviceName })} />
+        <MenuButton label={t('desktop.watchedFolder.connections.hostActions', { host: props.hostName })} />
       </AppDropdownMenuTrigger>
       <AppDropdownMenuContent align="end" sideOffset={4}>
         <AppDropdownMenuItem disabled>{t('desktop.watchedFolder.changeSource')}</AppDropdownMenuItem>
@@ -83,20 +81,19 @@ function SourceActions(props: {
   onRemove: () => void;
 }) {
   const t = useTranslation();
-  const waiting = props.binding.connection_status === 'needs-folder';
   return (
     <AppDropdownMenu>
       <AppDropdownMenuTrigger asChild>
         <MenuButton label={t('desktop.watchedFolder.connections.folderActions', { path: props.binding.primary_path })} />
       </AppDropdownMenuTrigger>
       <AppDropdownMenuContent align="end" sideOffset={4}>
-        <AppDropdownMenuItem disabled={!waiting} onSelect={props.onReconnect}>
+        <AppDropdownMenuItem disabled onSelect={props.onReconnect}>
           {t('desktop.watchedFolder.changeSource')}
         </AppDropdownMenuItem>
         <AppDropdownMenuSeparator />
         <AppDropdownMenuItem
           className="text-destructive focus:text-destructive data-[highlighted]:text-destructive"
-          disabled={!waiting}
+          disabled
           onSelect={props.onRemove}
         >
           {t('desktop.watchedFolder.removeSource')}
@@ -133,16 +130,16 @@ function WatchedFolderGroupList(props: {
     <div className="grid gap-1">
       {groups.map((group) => (
         <section
-          aria-label={group.deviceName}
+          aria-label={group.hostName}
           className={settingsActionTableRowClassName(REMOTE_SOURCE_COLUMNS, 'items-start')}
           key={group.key}
           role="group"
         >
           <div className="flex min-h-10 min-w-0 items-center rounded-md transition-colors hover:bg-settings-control-hover">
             <div className="flex min-w-0 items-center gap-1">
-              <span className="truncate text-sm font-semibold">{group.deviceName}</span>
+              <span className="truncate text-sm font-semibold">{group.hostName}</span>
               {group.platformName ? <span className="shrink-0 text-xs text-foreground/48">{group.platformName}</span> : null}
-              {group.deviceId ? <DeviceActions deviceName={group.deviceName} /> : null}
+              <HostActions hostName={group.hostName} />
             </div>
           </div>
           <div className="grid min-w-0 gap-0.5">
@@ -197,12 +194,12 @@ export function WatchedFolderConnections() {
     refresh();
   }
 
-  const remoteBindings = state?.bindings.filter((binding) => binding.connected_device_id !== state.current_device_id) ?? [];
+  const remoteBindings = state?.bindings.filter((binding) => binding.host_name !== state.current_host_name) ?? [];
   if (!hasActiveSyncGroup || !remoteBindings.length) return null;
   return (
-    <section aria-label={t('desktop.watchedFolder.connections.otherDevices')} className="mb-6 min-w-0">
+    <section aria-label={t('desktop.watchedFolder.connections.otherHosts')} className="mb-6 min-w-0">
       <div className={settingsActionTableHeaderClassName(REMOTE_SOURCE_COLUMNS)}>
-        <span>{t('desktop.watchedFolder.connections.otherDevices')}</span>
+        <span>{t('desktop.watchedFolder.connections.otherHosts')}</span>
         <span>{t('desktop.watchedFolder.connections.path')}</span>
       </div>
       <WatchedFolderGroupList

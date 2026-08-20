@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { createDefaultImportManagerSettings } from '../../../lib/core/import/importManagerSettings';
-import type { NativeReadwiseDeviceAssignment } from '../../../lib/platform/nativeReadwiseDeviceContract';
+import type { NativeReadwiseHostAssignment } from '../../../lib/platform/nativeReadwiseHostContract';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { SettingsReadwiseReaderContent } from './SettingsReadwiseReaderContent';
@@ -13,9 +13,9 @@ const { activate, activeGroup, load } = vi.hoisted(() => ({
   load: vi.fn()
 }));
 
-vi.mock('../../shared/platform/import/readwiseDeviceAssignmentRuntimeRepository', () => ({
-  activateReadwiseOnThisDeviceInRuntime: activate,
-  loadReadwiseDeviceAssignmentFromRuntime: load
+vi.mock('../../shared/platform/import/readwiseHostAssignmentRuntimeRepository', () => ({
+  activateReadwiseOnThisHostInRuntime: activate,
+  loadReadwiseHostAssignmentFromRuntime: load
 }));
 
 vi.mock('../../shared/platform/external/useActiveSyncGroupMembership', () => ({
@@ -28,15 +28,13 @@ beforeEach(() => {
   load.mockReset();
 });
 
-function assignment(overrides: Partial<NativeReadwiseDeviceAssignment> = {}): NativeReadwiseDeviceAssignment {
+function assignment(overrides: Partial<NativeReadwiseHostAssignment> = {}): NativeReadwiseHostAssignment {
   return {
-    active_device_id: 'remote-device',
-    active_device_name: 'Office PC',
-    current_device_id: 'current-device',
-    current_device_name: 'This Mac',
-    devices: [
-      { device_id: 'remote-device', device_name: 'Office PC', platform: 'win32' },
-      { device_id: 'current-device', device_name: 'This Mac', platform: 'darwin' }
+    active_host_name: 'Office PC',
+    current_host_name: 'This Mac',
+    hosts: [
+      { host_name: 'Office PC', platform: 'win32' },
+      { host_name: 'This Mac', platform: 'darwin' }
     ],
     is_active: false,
     legacy_unassigned: false,
@@ -44,10 +42,10 @@ function assignment(overrides: Partial<NativeReadwiseDeviceAssignment> = {}): Na
   };
 }
 
-it('replaces local Readwise settings with the active remote device and restores them after switching', async () => {
+it('replaces local Readwise settings with the active remote host and restores them after switching', async () => {
   load.mockResolvedValue(assignment());
   activate.mockResolvedValue(assignment({
-    active_device_id: 'current-device', active_device_name: 'This Mac', is_active: true
+    active_host_name: 'This Mac', is_active: true
   }));
   const settings = { ...createDefaultImportManagerSettings(), readwiseRootPath: 'D:\\Readwise Reader' };
   renderWithLocalization(
@@ -61,16 +59,16 @@ it('replaces local Readwise settings with the active remote device and restores 
 
   await screen.findByText('Office PC');
   expect(screen.getByText('Windows')).toBeInTheDocument();
-  expect(screen.getByText('Current active device')).toBeInTheDocument();
+  expect(screen.getByText('Current active host')).toBeInTheDocument();
   expect(screen.getByText('D:\\Readwise Reader')).toBeInTheDocument();
   expect(screen.queryByText('This Mac')).not.toBeInTheDocument();
   expect(screen.queryByText('Readwise Reader Import')).not.toBeInTheDocument();
-  const switchButton = screen.getByRole('button', { name: 'Switch to this device' });
+  const switchButton = screen.getByRole('button', { name: 'Switch to this host' });
   expect(switchButton).not.toBeDisabled();
 
   fireEvent.click(switchButton);
   await waitFor(() => expect(screen.getByText('Readwise Reader Import')).toBeInTheDocument());
-  expect(screen.queryByText('Current active device')).not.toBeInTheDocument();
+  expect(screen.queryByText('Current active host')).not.toBeInTheDocument();
   expect(screen.queryByText('Office PC')).not.toBeInTheDocument();
   expect(activate).toHaveBeenCalledTimes(1);
 });
@@ -89,5 +87,5 @@ it('keeps the original settings page when this library is not in an active workg
   );
 
   expect(await screen.findByText('Readwise Reader Import')).toBeInTheDocument();
-  expect(screen.queryByText('Current active device')).not.toBeInTheDocument();
+  expect(screen.queryByText('Current active host')).not.toBeInTheDocument();
 });

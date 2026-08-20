@@ -20,7 +20,6 @@ export type NativeExternalSearchCommandMap = {
   [NATIVE_COMMANDS.saveExternalSearchFolders]: {
     args: {
       folders: Array<Pick<NativeExternalSearchFolder, 'attachment_mode' | 'attachment_root_path' | 'excluded_dirs' | 'folder_path' | 'id'> & {
-        claim_unowned?: boolean;
       }>;
     };
     result: NativeExternalSearchFolder[];

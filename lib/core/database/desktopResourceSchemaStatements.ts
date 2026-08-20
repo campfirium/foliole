@@ -111,22 +111,16 @@ export const DESKTOP_RESOURCE_SCHEMA_STATEMENTS = [
     document_count INTEGER NOT NULL DEFAULT 0,
     indexed_at TEXT,
     last_error TEXT,
-    owner_installation_id TEXT,
-    owner_device_name TEXT,
-    owner_platform TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
-    source_ref TEXT
+    source_ref TEXT NOT NULL
   )`,
-  `CREATE UNIQUE INDEX IF NOT EXISTS idx_external_search_folders_owner_path
-    ON external_search_folders (owner_installation_id, folder_path)
-    WHERE owner_installation_id IS NOT NULL`,
-  `CREATE TABLE IF NOT EXISTS external_folder_device_preferences (
-    installation_id TEXT NOT NULL,
+  `CREATE TABLE IF NOT EXISTS external_folder_host_preferences (
+    host_name TEXT NOT NULL,
     folder_id TEXT NOT NULL,
     enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0, 1)),
     updated_at TEXT NOT NULL,
-    PRIMARY KEY (installation_id, folder_id)
+    PRIMARY KEY (host_name, folder_id)
   )`,
   `CREATE INDEX IF NOT EXISTS idx_import_sources_watched_relative
     ON import_sources (watched_binding_id, watched_relative_path)`,

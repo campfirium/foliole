@@ -3,7 +3,7 @@ import type { BrowserWindow } from 'electron';
 import { LIBRARY_PATH_LOCATIONS } from '../../lib/platform/libraryPaths.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { loadBackupSettings, saveBackupSettings } from '../database/backupSettings.js';
-import { activateReadwiseOnThisDevice, loadReadwiseDeviceAssignment } from '../database/readwiseDeviceAssignment.js';
+import { activateReadwiseOnThisHost, loadReadwiseHostAssignment } from '../database/readwiseHostAssignment.js';
 import { restoreSourceDispositions } from '../database/sourceDispositionRestore.js';
 import {
   resetSourceDispositions,
@@ -109,8 +109,8 @@ export async function handleSettingsStorageCommand(
     return saveSyncPeers(Array.isArray(args.peers) ? (args.peers as Parameters<typeof saveSyncPeers>[0]) : []);
   }
   if (command === NATIVE_COMMANDS.loadLibraryPathSettings) return loadLibraryPathSettings();
-  if (command === NATIVE_COMMANDS.loadReadwiseDeviceAssignment) return loadReadwiseDeviceAssignment();
-  if (command === NATIVE_COMMANDS.activateReadwiseOnThisDevice) return activateReadwiseOnThisDevice();
+  if (command === NATIVE_COMMANDS.loadReadwiseHostAssignment) return loadReadwiseHostAssignment();
+  if (command === NATIVE_COMMANDS.activateReadwiseOnThisHost) return activateReadwiseOnThisHost();
   const watchedFolderResult = handleWatchedFolderSettingsCommand(command, args);
   if (watchedFolderResult !== undefined) return watchedFolderResult;
   if (command === NATIVE_COMMANDS.openImportRoot) return openImportRoot();

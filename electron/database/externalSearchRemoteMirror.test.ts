@@ -15,12 +15,17 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 vi.mock('../import/managedInboxEvents.js', () => ({ notifyManagedInboxUpdated: vi.fn() }));
 
-import { loadOrCreateDesktopInstallationIdentity } from '../desktopInstallationIdentity.js';
 import { runImportForMirrorDocument } from '../ipc/importTextFile.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { setExternalFolderEnabled } from './externalFolderDevicePreferences.js';
+import { setExternalFolderEnabled } from './externalFolderHostPreferences.js';
 import { searchExternalDocuments } from './externalSearchDocumentSearch.js';
+import {
+  disconnectExternalSearchFolder,
+  previewExternalSearchFolderReconnect,
+  reconnectExternalSearchFolder
+} from './externalSearchFolderConnection.js';
+import { removeExternalSearchFolder } from './externalSearchFolderRemoval.js';
 import { loadExternalSearchFolders, saveExternalSearchFolders } from './externalSearchFolders.js';
 import { loadExternalSearchMirrorBrowseEntries, loadExternalSearchMirrorPreview } from './externalSearchMirrorRead.js';
 import { initializeDatabase } from './migrate.js';
@@ -32,10 +37,14 @@ beforeEach(async () => {
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabase();
   const driver = openDatabaseConnection().driver;
+  driver.execute(`INSERT INTO desktop_sources (source_ref, source_type, config_ref, host_name,
+    host_platform, root_path, path_flavor, type_settings_json, created_at, updated_at)
+    VALUES ('external:remote-folder', 'external', 'remote-folder', 'Windows PC', 'win32',
+      'D:\\Docs', 'windows', '{}', 'now', 'now')`);
   driver.execute(`INSERT INTO external_search_folders (
-    id, folder_path, attachment_mode, owner_installation_id, owner_device_name, owner_platform, created_at, updated_at
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-  ['remote-folder', 'D:\\Docs', 'document_relative', 'other-installation', 'Windows PC', 'win32', 'now', 'now']);
+    id, folder_path, attachment_mode, created_at, updated_at, source_ref
+  ) VALUES (?, ?, ?, ?, ?, ?)`,
+  ['remote-folder', 'D:\\Docs', 'document_relative', 'now', 'now', 'external:remote-folder']);
   driver.execute(`INSERT INTO external_documents (
     document_id, folder_id, relative_path, file_name, extension, source_size_bytes, source_modified_at,
     source_modified_ms, content_hash, title, opening_text, content, indexed_at, created_at, updated_at
@@ -67,33 +76,37 @@ it('searches enabled mirror content and removes it from results when disabled', 
   expect(searchExternalDocuments('body')).toEqual([
     expect.objectContaining({ externalMatch: expect.objectContaining({ absolutePath: 'mirror-document:remote-doc' }) })
   ]);
-  setExternalFolderEnabled(loadOrCreateDesktopInstallationIdentity(), 'remote-folder', false);
+  setExternalFolderEnabled('remote-folder', false);
   expect(searchExternalDocuments('body')).toEqual([]);
 });
 
-it('keeps remote rows when local folder settings are saved and disables only this installation', () => {
+it('keeps remote rows when local folder settings are saved and disables only this Host', () => {
   saveExternalSearchFolders([]);
   expect(loadExternalSearchFolders()).toEqual([expect.objectContaining({ access_mode: 'remote_mirror', id: 'remote-folder' })]);
-  setExternalFolderEnabled(loadOrCreateDesktopInstallationIdentity(), 'remote-folder', false);
+  setExternalFolderEnabled('remote-folder', false);
   expect(loadExternalSearchMirrorBrowseEntries('remote-folder')).toBeNull();
   expect(loadExternalSearchFolders()[0]).toMatchObject({ mirror_enabled: false });
 });
 
-it('claims a legacy ownerless row only after an exact-path user selection', () => {
+it('does not claim a remote Source when a local folder uses its id and path', () => {
   const driver = openDatabaseConnection().driver;
-  driver.execute(`INSERT INTO external_search_folders (
-    id, folder_path, attachment_mode, created_at, updated_at
-  ) VALUES (?, ?, ?, ?, ?)`, ['legacy-folder', '/legacy', 'document_relative', 'now', 'now']);
   const input = {
-    attachment_mode: 'document_relative_first_then_fixed_root' as const,
-    attachment_root_path: null, excluded_dirs: [], folder_path: '/legacy', id: 'legacy-folder'
+    attachment_mode: 'document_relative_first_then_fixed_root' as const, attachment_root_path: null,
+    excluded_dirs: [], folder_path: 'D:\\Docs', id: 'remote-folder'
   };
   saveExternalSearchFolders([input]);
-  expect(driver.queryOne<{ owner_installation_id: string | null }>(
-    'SELECT owner_installation_id FROM external_search_folders WHERE id = ?', ['legacy-folder']
-  )).toEqual({ owner_installation_id: null });
-  saveExternalSearchFolders([{ ...input, claim_unowned: true }]);
-  expect(driver.queryOne<{ id: string; owner_installation_id: string | null }>(
-    'SELECT id, owner_installation_id FROM external_search_folders WHERE id = ?', ['legacy-folder']
-  )).toEqual({ id: 'legacy-folder', owner_installation_id: loadOrCreateDesktopInstallationIdentity().installationId });
+  expect(driver.queryOne('SELECT host_name, root_path FROM desktop_sources WHERE source_ref = ?',
+    ['external:remote-folder'])).toEqual({ host_name: 'Windows PC', root_path: 'D:\\Docs' });
+});
+
+it('rejects reconnect, disconnect, and removal for another Host Source', async () => {
+  await expect(previewExternalSearchFolderReconnect('remote-folder', tempRoot))
+    .rejects.toThrow('external_folder_not_local');
+  await expect(reconnectExternalSearchFolder('remote-folder', tempRoot))
+    .rejects.toThrow('external_folder_not_local');
+  expect(() => disconnectExternalSearchFolder('remote-folder')).toThrow('external_folder_not_local');
+  expect(() => removeExternalSearchFolder('remote-folder')).toThrow('external_folder_not_local');
+  expect(openDatabaseConnection().driver.queryOne(
+    'SELECT host_name FROM desktop_sources WHERE source_ref = ?', ['external:remote-folder']
+  )).toEqual({ host_name: 'Windows PC' });
 });

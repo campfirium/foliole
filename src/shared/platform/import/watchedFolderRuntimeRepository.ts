@@ -16,7 +16,7 @@ export function loadWatchedFolderBindingsFromRuntime(): Promise<NativeWatchedFol
   const invoke = getRuntimeInvoke();
   return invoke
     ? invoke(NATIVE_COMMANDS.loadWatchedFolderBindings)
-    : Promise.resolve({ bindings: [], current_device_id: '' });
+    : Promise.resolve({ bindings: [], current_host_name: '' });
 }
 
 export function disconnectWatchedFolderInRuntime(bindingId: string): Promise<NativeWatchedFolderBinding> {

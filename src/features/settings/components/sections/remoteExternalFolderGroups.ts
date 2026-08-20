@@ -1,8 +1,8 @@
 import type { ExternalSourceSettingsFolder } from '../../../../shared/platform/externalSourceSettingsRepository';
 
 export interface RemoteExternalFolderGroup {
-  deviceName: string;
   folders: ExternalSourceSettingsFolder[];
+  hostName: string;
   key: string;
   platformName: string | null;
 }
@@ -15,20 +15,18 @@ const PLATFORM_NAMES: Record<string, string> = {
 
 export function groupRemoteExternalFolders(
   folders: ExternalSourceSettingsFolder[],
-  unknownDeviceName: string,
-  unownedDeviceName: string
+  unknownHostName: string
 ) {
   const groups = new Map<string, RemoteExternalFolderGroup>();
   folders.forEach((folder) => {
-    const isUnowned = folder.accessMode === 'unowned';
-    const key = isUnowned ? 'unowned' : folder.ownerInstallationId ? `device:${folder.ownerInstallationId}` : `folder:${folder.id}`;
+    const key = folder.sourceHostName?.trim() || `folder:${folder.id}`;
     const group = groups.get(key) ?? {
-      deviceName: isUnowned ? unownedDeviceName : folder.ownerDeviceName?.trim() || unknownDeviceName,
       folders: [],
+      hostName: folder.sourceHostName?.trim() || unknownHostName,
       key,
-      platformName: isUnowned || !folder.ownerPlatform
+      platformName: !folder.sourceHostPlatform
         ? null
-        : PLATFORM_NAMES[folder.ownerPlatform] ?? null
+        : PLATFORM_NAMES[folder.sourceHostPlatform] ?? null
     };
     group.folders.push(folder);
     groups.set(key, group);

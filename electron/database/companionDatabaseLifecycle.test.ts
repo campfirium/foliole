@@ -95,11 +95,13 @@ describe('shared companion database migration executor', () => {
       "excluded_dirs_json TEXT NOT NULL DEFAULT '[]', status TEXT NOT NULL DEFAULT 'idle', document_count INTEGER NOT NULL DEFAULT 0, " +
       'indexed_at TEXT, last_error TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);' +
       "INSERT INTO external_search_folders VALUES ('f','/legacy','copy',NULL,'[]','idle',1,NULL,NULL,'c','u');");
-    await bootstrap(second.port);
-    expect(second.sqlite.prepare("SELECT folder_path, owner_installation_id FROM external_search_folders WHERE id = 'f'").get())
-      .toEqual({ folder_path: '/legacy', owner_installation_id: null });
+    await expect(bootstrap(second.port)).rejects.toThrow('external_source_host_missing');
+    expect(second.sqlite.pragma('user_version', { simple: true })).toBe(20);
+    expect(second.sqlite.prepare("SELECT folder_path FROM external_search_folders WHERE id = 'f'").get())
+      .toEqual({ folder_path: '/legacy' });
     second.sqlite.close();
   });
+
 });
 
 describe('shared companion delivery migration', () => {

@@ -1,9 +1,9 @@
 export const NATIVE_SOURCE_CONNECTION_COMMANDS = {
-  activateReadwiseOnThisDevice: 'activate_readwise_on_this_device',
+  activateReadwiseOnThisHost: 'activate_readwise_on_this_host',
   confirmWatchedFolderReconnect: 'confirm_watched_folder_reconnect',
   disconnectWatchedFolder: 'disconnect_watched_folder',
   disconnectExternalSearchFolder: 'disconnect_external_search_folder',
-  loadReadwiseDeviceAssignment: 'load_readwise_device_assignment',
+  loadReadwiseHostAssignment: 'load_readwise_host_assignment',
   loadWatchedFolderBindings: 'load_watched_folder_bindings',
   previewWatchedFolderReconnect: 'preview_watched_folder_reconnect',
   previewExternalSearchFolderReconnect: 'preview_external_search_folder_reconnect',

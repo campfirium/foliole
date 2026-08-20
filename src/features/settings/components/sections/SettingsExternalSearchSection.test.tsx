@@ -45,9 +45,9 @@ function remoteFolder(overrides: Partial<ExternalSourceSettingsFolder> = {}): Ex
     indexedAt: '2026-07-24T00:00:00.000Z',
     lastError: null,
     mirrorEnabled: true,
-    ownerDeviceName: '0cap',
-    ownerInstallationId: 'windows-1',
-    ownerPlatform: 'win32',
+    sourceExecutable: false,
+    sourceHostName: '0cap',
+    sourceHostPlatform: 'win32',
     status: 'ready',
     updatedAt: '2026-07-24T00:00:00.000Z',
     ...overrides
@@ -63,13 +63,13 @@ beforeEach(() => {
 it('shows remote mirrors only when a remote desktop folder exists', () => {
   renderWithLocalization(<SettingsExternalSearchSection {...baseProps} folders={[remoteFolder()]} />);
 
-  expect(screen.getByText('Other devices')).toBeInTheDocument();
+  expect(screen.getByText('Other hosts')).toBeInTheDocument();
   expect(screen.getByText('Path')).toBeInTheDocument();
   expect(screen.getByText('0cap')).toBeInTheDocument();
   expect(screen.getByText('Windows')).toBeInTheDocument();
   expect(screen.getByText('D:\\Docs')).toBeInTheDocument();
   expect(screen.queryByText('Read-only mirror')).not.toBeInTheDocument();
-  expect(screen.queryByRole('heading', { level: 3, name: 'Other devices' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('heading', { level: 3, name: 'Other hosts' })).not.toBeInTheDocument();
   expect(screen.queryByRole('heading', { level: 3, name: 'External folders' })).not.toBeInTheDocument();
   expect(screen.queryByRole('switch')).not.toBeInTheDocument();
   expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
@@ -81,23 +81,23 @@ it('hides remote mirrors outside an active workgroup while keeping local control
   activeSyncGroupMock.mockReturnValue(false);
   renderWithLocalization(<SettingsExternalSearchSection {...baseProps} folders={[remoteFolder()]} />);
 
-  expect(screen.queryByText('Other devices')).not.toBeInTheDocument();
+  expect(screen.queryByText('Other hosts')).not.toBeInTheDocument();
   expect(screen.queryByText('0cap')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Add folder' })).toBeInTheDocument();
 });
 
-it('groups by installation without exposing receiver controls or guessing missing ownership', () => {
+it('groups by Source Host without exposing receiver controls or guessing missing ownership', () => {
   renderWithLocalization(<SettingsExternalSearchSection {...baseProps} folders={[
     remoteFolder(),
     remoteFolder({ folderPath: 'D:\\Projects', id: 'remote-2', mirrorEnabled: false }),
-    remoteFolder({ folderPath: '/Users/foliole/Research', id: 'remote-3', ownerDeviceName: 'Studio Mac', ownerInstallationId: 'mac-1', ownerPlatform: 'darwin' }),
-    remoteFolder({ accessMode: 'unowned', folderPath: '/unknown', id: 'remote-4', ownerDeviceName: null, ownerInstallationId: null, ownerPlatform: 'mystery' })
+    remoteFolder({ folderPath: '/Users/foliole/Research', id: 'remote-3', sourceHostName: 'Studio Mac', sourceHostPlatform: 'darwin' }),
+    remoteFolder({ folderPath: '/unknown', id: 'remote-4', sourceHostName: '', sourceHostPlatform: 'mystery' })
   ]} />);
 
   expect(screen.getByText('0cap')).toBeInTheDocument();
   expect(screen.getByText('Studio Mac')).toBeInTheDocument();
   expect(screen.getByText('macOS')).toBeInTheDocument();
-  expect(screen.getByText('Waiting to reconnect')).toBeInTheDocument();
+  expect(screen.getByText('Other host')).toBeInTheDocument();
   expect(screen.queryByText('mystery')).not.toBeInTheDocument();
   expect(screen.queryByRole('switch')).not.toBeInTheDocument();
   expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();

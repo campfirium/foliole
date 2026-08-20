@@ -16,16 +16,16 @@ import type {
   NativeReadwiseDetectionSource,
   NativeReadwiseDetectionResult
 } from './nativeReadwiseContract.js';
-import type { NativeReadwiseDeviceAssignment } from './nativeReadwiseDeviceContract.js';
+import type { NativeReadwiseHostAssignment } from './nativeReadwiseHostContract.js';
 
 export type NativeReadwiseCommandMap = {
-  [NATIVE_COMMANDS.loadReadwiseDeviceAssignment]: {
+  [NATIVE_COMMANDS.loadReadwiseHostAssignment]: {
     args: undefined;
-    result: NativeReadwiseDeviceAssignment;
+    result: NativeReadwiseHostAssignment;
   };
-  [NATIVE_COMMANDS.activateReadwiseOnThisDevice]: {
+  [NATIVE_COMMANDS.activateReadwiseOnThisHost]: {
     args: undefined;
-    result: NativeReadwiseDeviceAssignment;
+    result: NativeReadwiseHostAssignment;
   };
   [NATIVE_COMMANDS.inspectReadwiseReaderSetup]: {
     args: {

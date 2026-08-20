@@ -20,7 +20,6 @@ export const desktopSources = sqliteTable('desktop_sources', {
   configRef: text('config_ref').notNull(),
   hostName: text('host_name').notNull(),
   hostPlatform: text('host_platform').notNull(),
-  ownerInstallationId: text('owner_installation_id'),
   rootPath: text('root_path').notNull(),
   pathFlavor: text('path_flavor').notNull(),
   typeSettingsJson: text('type_settings_json').notNull().default('{}'),

@@ -99,7 +99,7 @@
   "settings.externalSources.removeFolder": "刪除資料夾",
   "settings.externalSources.remote.title": "從其他設備",
   "settings.externalSources.remote.description": "瀏覽並蒐索該裝置上的這些資料夾。它們在這裡是唯讀的。",
-  "settings.externalSources.remote.unknownDevice": "其他設備",
+  "settings.externalSources.remote.unknownHost": "其他主機",
   "settings.externalSources.remote.groupEnabledAria": "使用此裝置上 {device} 中的所有資料夾",
   "settings.externalSources.remote.enabledAria": "在此裝置上使用 {device} 中的 {folder}",
   "settings.externalSources.status.errorFallback": "索引建置失敗。",

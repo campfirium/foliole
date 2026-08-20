@@ -1,8 +1,9 @@
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
-import type { DesktopInstallationIdentity } from '../desktopInstallationIdentity.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { isDesktopSourceExecutable, type DesktopSourceRecord } from './desktopSources.js';
+import { loadOrCreateDesktopHostName } from './hostProfile.js';
 
 export interface ExternalSearchFolderRow extends DatabaseRow {
   attachment_mode: string;
@@ -14,11 +15,14 @@ export interface ExternalSearchFolderRow extends DatabaseRow {
   id: string;
   indexed_at: string | null;
   last_error: string | null;
-  owner_device_name: string | null;
-  owner_installation_id: string | null;
-  owner_platform: string | null;
+  host_name: string;
+  host_platform: string;
+  path_flavor: 'posix' | 'windows';
+  root_path: string;
   status: string;
-  source_ref: string | null;
+  source_ref: string;
+  source_type: 'external';
+  type_settings_json: string;
   updated_at: string;
 }
 
@@ -31,25 +35,20 @@ export function readExternalSearchFolderRows() {
   return openDatabaseConnection().driver.queryAll<ExternalSearchFolderRow>(
     `SELECT f.id, COALESCE(s.root_path, f.folder_path) AS folder_path, f.attachment_mode,
       f.attachment_root_path, f.excluded_dirs_json, f.status, f.document_count, f.indexed_at,
-      f.last_error, f.owner_installation_id, COALESCE(s.host_name, f.owner_device_name) AS owner_device_name,
-      COALESCE(s.host_platform, f.owner_platform) AS owner_platform, f.created_at, f.updated_at, f.source_ref
-     FROM external_search_folders f LEFT JOIN desktop_sources s ON s.source_ref = f.source_ref
+      f.last_error, s.host_name, s.host_platform, s.root_path, s.path_flavor, s.source_type,
+      s.type_settings_json, f.created_at, f.updated_at, f.source_ref
+     FROM external_search_folders f JOIN desktop_sources s ON s.source_ref = f.source_ref
      ORDER BY f.created_at ASC`
   );
 }
 
-function accessMode(row: ExternalSearchFolderRow, identity: DesktopInstallationIdentity) {
-  if (!row.owner_installation_id) return 'unowned' as const;
-  return row.owner_installation_id === identity.installationId ? 'local' as const : 'remote_mirror' as const;
-}
-
 export function toExternalSearchFolder(
   row: ExternalSearchFolderRow,
-  identity: DesktopInstallationIdentity,
   enabled: boolean
 ): NativeExternalSearchFolder {
+  const source = row as unknown as DesktopSourceRecord;
   return {
-    access_mode: accessMode(row, identity),
+    access_mode: row.host_name === loadOrCreateDesktopHostName() ? 'local' : 'remote_mirror',
     attachment_mode: row.attachment_mode === 'fixed_root' || row.attachment_mode === 'document_relative_first_then_fixed_root'
       ? row.attachment_mode : 'document_relative',
     attachment_root_path: row.attachment_root_path?.trim() || null,
@@ -61,9 +60,9 @@ export function toExternalSearchFolder(
     indexed_at: row.indexed_at,
     last_error: row.last_error,
     mirror_enabled: enabled,
-    owner_device_name: row.owner_device_name,
-    owner_installation_id: row.owner_installation_id,
-    owner_platform: row.owner_platform,
+    source_executable: isDesktopSourceExecutable(source),
+    source_host_name: row.host_name,
+    source_host_platform: row.host_platform,
     status: row.status === 'ready' || row.status === 'indexing' || row.status === 'error' ? row.status : 'idle',
     updated_at: row.updated_at
   };

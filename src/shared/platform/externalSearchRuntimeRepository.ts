@@ -70,7 +70,6 @@ export async function saveRuntimeExternalSearchFolders(folders: RuntimeExternalS
     folders: folders.map((folder) => ({
       attachment_mode: 'document_relative_first_then_fixed_root',
       attachment_root_path: folder.attachmentRootPath,
-      claim_unowned: folder.claimUnowned === true,
       excluded_dirs: folder.excludedDirs,
       folder_path: folder.folderPath,
       id: folder.id

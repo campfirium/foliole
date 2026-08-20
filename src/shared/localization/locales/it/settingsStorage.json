@@ -99,7 +99,7 @@
   "settings.externalSources.removeFolder": "Rimuovi cartella",
   "settings.externalSources.remote.title": "Da altri dispositivi",
   "settings.externalSources.remote.description": "Sfoglia e cerca queste cartelle su questo dispositivo. Sono di sola lettura qui.",
-  "settings.externalSources.remote.unknownDevice": "Altro dispositivo",
+  "settings.externalSources.remote.unknownHost": "Altro host",
   "settings.externalSources.remote.groupEnabledAria": "Utilizza tutte le cartelle da {device} su questo dispositivo",
   "settings.externalSources.remote.enabledAria": "Utilizza {folder} da {device} su questo dispositivo",
   "settings.externalSources.status.errorFallback": "Creazione dell'indice non riuscita.",

@@ -7,13 +7,14 @@ export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
       'created_at', b.created_at, 'cached_at', b.cached_at, 'last_verified_at', b.last_verified_at
     )) AS payload_json FROM attachments a LEFT JOIN attachment_blobs b ON b.attachment_id = a.id WHERE a.id = ?`,
   external_folder: `SELECT json_object(
-    'id', id, 'folder_path', folder_path, 'attachment_mode', attachment_mode,
-    'attachment_root_path', attachment_root_path, 'excluded_dirs_json', excluded_dirs_json,
-    'status', status, 'document_count', document_count, 'indexed_at', indexed_at,
-    'last_error', last_error, 'owner_installation_id', owner_installation_id,
-    'owner_device_name', owner_device_name, 'owner_platform', owner_platform,
-    'created_at', created_at, 'updated_at', updated_at, 'source_ref', source_ref
-  ) AS payload_json FROM external_search_folders WHERE id = ?`,
+    'id', f.id, 'folder_path', f.folder_path, 'attachment_mode', f.attachment_mode,
+    'attachment_root_path', f.attachment_root_path, 'excluded_dirs_json', f.excluded_dirs_json,
+    'status', f.status, 'document_count', f.document_count, 'indexed_at', f.indexed_at,
+    'last_error', f.last_error, 'host_name', s.host_name, 'host_platform', s.host_platform,
+    'type_settings_json', s.type_settings_json, 'created_at', f.created_at,
+    'updated_at', f.updated_at, 'source_ref', f.source_ref
+  ) AS payload_json FROM external_search_folders f
+    JOIN desktop_sources s ON s.source_ref = f.source_ref WHERE f.id = ?`,
   import_source: `SELECT json_object(
     'source_fingerprint', source_fingerprint, 'provider', provider, 'source_kind', source_kind,
     'source_name', source_name, 'source_locator', source_locator, 'first_imported_at', first_imported_at,
@@ -50,10 +51,11 @@ export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
   ) AS payload_json FROM setting_records
     WHERE scope || ':' || platform || ':' || form_factor || ':' || host_name || ':' || key = ?`,
   watched_folder: `SELECT json_object(
-    'binding_id', binding_id, 'connected_device_id', connected_device_id,
-    'connected_device_name', connected_device_name, 'connected_platform', connected_platform,
-    'connection_status', connection_status, 'action_mode', action_mode, 'archive_path', archive_path,
-    'highlight_mode', highlight_mode, 'highlight_path', highlight_path, 'primary_path', primary_path,
-    'created_at', created_at, 'updated_at', updated_at, 'source_ref', source_ref
-  ) AS payload_json FROM watched_folder_bindings WHERE binding_id = ?`
+    'binding_id', b.binding_id, 'host_name', s.host_name, 'host_platform', s.host_platform,
+    'type_settings_json', s.type_settings_json, 'connection_status', b.connection_status,
+    'action_mode', b.action_mode, 'archive_path', b.archive_path,
+    'highlight_mode', b.highlight_mode, 'highlight_path', b.highlight_path, 'primary_path', b.primary_path,
+    'created_at', b.created_at, 'updated_at', b.updated_at, 'source_ref', b.source_ref
+  ) AS payload_json FROM watched_folder_bindings b
+    JOIN desktop_sources s ON s.source_ref = b.source_ref WHERE b.binding_id = ?`
 } as const;

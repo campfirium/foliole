@@ -13,6 +13,7 @@
     "migrateExternalFolderOwnership": "migrateExternalFolderOwnership",
     "addSyncGroupsWorkgroupKeyIfMissing": "addSyncGroupsWorkgroupKeyIfMissing",
     "migrateDeliveryAuthorizations": "migrateDeliveryAuthorizations",
+    "migrateSourceHostOwnership": "migrateSourceHostOwnership",
     "addNodesEnableShortTermIfMissing": "addNodesEnableShortTermIfMissing",
     "addNodesSequentialReadingEnabledIfMissing": "addNodesSequentialReadingEnabledIfMissing",
     "addNodesShelvedAtIfMissing": "addNodesShelvedAtIfMissing",
@@ -328,6 +329,14 @@
         }
       ],
       "beforeVersion": 31
+    },
+    {
+      "actions": [
+        {
+          "type": "migrateSourceHostOwnership"
+        }
+      ],
+      "beforeVersion": 32
     }
   ],
   "planKeys": {

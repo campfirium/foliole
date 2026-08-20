@@ -82,7 +82,7 @@ it('applies setting payload records from sync objects', async () => {
   }]);
 });
 
-it('applies import source and external folder payload records', async () => {
+it('applies import source and Source Host payload records', async () => {
   const runs: Array<{ params: unknown[]; sql: string }> = [];
   const port = {
     query: vi.fn(async () => [
@@ -99,8 +99,20 @@ it('applies import source and external folder payload records', async () => {
         deleted_at: null,
         object_id: 'folder-1',
         object_type: 'external_folder',
-        payload_json: JSON.stringify({ folder_path: '/library', document_count: 3 }),
+        payload_json: JSON.stringify({ folder_path: '/library', document_count: 3,
+          host_name: 'Desktop Host', host_platform: 'darwin', source_ref: 'external:folder-1',
+          type_settings_json: '{"connectionStatus":"connected"}' }),
         updated_at: '2026-05-04T02:01:00.000Z'
+      },
+      {
+        content_hash: 'hash-watched',
+        deleted_at: null,
+        object_id: 'watched-1',
+        object_type: 'watched_folder',
+        payload_json: JSON.stringify({ action_mode: 'keep', binding_id: 'watched-1',
+          connection_status: 'connected', host_name: 'Desktop Host', host_platform: 'darwin',
+          primary_path: '/inbox', source_ref: 'watched:watched-1', type_settings_json: '{}' }),
+        updated_at: '2026-05-04T02:02:00.000Z'
       }
     ]),
     run: vi.fn(async (sql: string, params: unknown[] = []) => {
@@ -111,14 +123,61 @@ it('applies import source and external folder payload records', async () => {
 
   await expect(applySyncPackMetadataObjectsWithDbPort(port, {
     incomingAlias: 'incoming'
-  })).resolves.toBe(2);
+  })).resolves.toBe(3);
   expect(runs[0]?.sql).toContain('INSERT INTO import_sources');
   expect(runs[0]?.params.slice(0, 4)).toEqual(['source-1', 'readwise', 'unknown', 'Library']);
   expect(runs[1]?.sql).toContain('INSERT INTO desktop_sources');
-  expect(runs[1]?.sql).toContain('owner_installation_id = NULL');
-  expect(runs[1]?.params.slice(0, 2)).toEqual(['external:folder-1', 'folder-1']);
+  expect(runs[1]?.sql).toContain('type_settings_json = excluded.type_settings_json');
+  expect(runs[1]?.params.slice(0, 5)).toEqual([
+    'external:folder-1', 'external', 'folder-1', 'Desktop Host', 'darwin'
+  ]);
   expect(runs[2]?.sql).toContain('INSERT INTO external_search_folders');
   expect(runs[2]?.params.slice(0, 3)).toEqual(['folder-1', '/library', 'document_relative_first_then_fixed_root']);
+  expect(runs[3]?.sql).toContain('INSERT INTO desktop_sources');
+  expect(runs[3]?.params.slice(0, 5)).toEqual([
+    'watched:watched-1', 'watched', 'watched-1', 'Desktop Host', 'darwin'
+  ]);
+  expect(runs[4]?.sql).toContain('INSERT INTO watched_folder_bindings');
+});
+
+it('rejects a Source payload without its Host projection', async () => {
+  const run = vi.fn();
+  const port = {
+    query: vi.fn(async () => [{
+      content_hash: 'hash-folder', deleted_at: null, object_id: 'folder-1',
+      object_type: 'external_folder', payload_json: JSON.stringify({
+        folder_path: '/library', host_platform: 'darwin', source_ref: 'external:folder-1',
+        type_settings_json: '{}'
+      }), updated_at: '2026-05-04T02:01:00.000Z'
+    }]),
+    run
+  } as unknown as DbPort;
+
+  await expect(applySyncPackMetadataObjectsWithDbPort(port, { incomingAlias: 'incoming' }))
+    .rejects.toThrow('invalid_source_host_payload');
+  expect(run).not.toHaveBeenCalled();
+});
+
+it('rejects a conflicting Source identity before applying its folder row', async () => {
+  const runs: string[] = [];
+  const port = {
+    query: vi.fn(async () => [{
+      content_hash: 'hash-folder', deleted_at: null, object_id: 'folder-1',
+      object_type: 'external_folder', payload_json: JSON.stringify({
+        folder_path: '/library', host_name: 'Desktop Host', host_platform: 'darwin',
+        source_ref: 'external:folder-1', type_settings_json: '{}'
+      }), updated_at: '2026-05-04T02:01:00.000Z'
+    }]),
+    run: vi.fn(async (sql: string) => {
+      runs.push(sql);
+      return { changes: 0, lastInsertRowId: null };
+    })
+  } as unknown as DbPort;
+
+  await expect(applySyncPackMetadataObjectsWithDbPort(port, { incomingAlias: 'incoming' }))
+    .rejects.toThrow('source_identity_conflict');
+  expect(runs).toHaveLength(1);
+  expect(runs[0]).toContain('INSERT INTO desktop_sources');
 });
 
 function syncObjectRow(objectType: string, objectId: string) {

@@ -1,6 +1,6 @@
 import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
+import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../../lib/core/sync/syncObjectPayloadSql.js';
 import type { NativeExternalSearchReconnectPreview } from '../../lib/platform/nativeExternalSearchContract.js';
-import { loadOrCreateDesktopInstallationIdentity } from '../desktopInstallationIdentity.js';
 import { assertNoUnsafePathOverlap } from '../libraryPathSafety.js';
 import { loadManagedPathCandidates } from '../managedPathSafety.js';
 
@@ -18,18 +18,11 @@ function requireFolder(folderId: string) {
 }
 
 function recordConnectionSync(folderId: string, now: string) {
-  const row = requireFolder(folderId);
+  const driver = openDatabaseConnection().driver;
+  const row = driver.queryOne<{ payload_json: string }>(SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE.external_folder, [folderId]);
+  if (!row) throw new Error('external_folder_not_found');
   upsertSyncObjectState(openDatabaseConnection().driver, {
-    contentHash: computeSyncContentHash('external_folder', {
-      attachment_mode: row.attachment_mode,
-      attachment_root_path: row.attachment_root_path,
-      excluded_dirs: JSON.parse(row.excluded_dirs_json) as string[],
-      folder_path: row.folder_path,
-      id: row.id,
-      owner_device_name: row.owner_device_name,
-      owner_installation_id: row.owner_installation_id,
-      owner_platform: row.owner_platform
-    }),
+    contentHash: computeSyncContentHash('external_folder', JSON.parse(row.payload_json)),
     lastModifiedByHostName: loadOrCreateDesktopHostName(now),
     objectId: folderId,
     objectType: 'external_folder',
@@ -40,12 +33,11 @@ function recordConnectionSync(folderId: string, now: string) {
 
 export function disconnectExternalSearchFolder(folderId: string) {
   const row = requireFolder(folderId);
-  const identity = loadOrCreateDesktopInstallationIdentity();
-  if (row.owner_installation_id !== identity.installationId) throw new Error('external_folder_not_local');
+  if (row.host_name !== loadOrCreateDesktopHostName()) throw new Error('external_folder_not_local');
   const now = new Date().toISOString();
   openDatabaseConnection().driver.execute(
-    `UPDATE external_search_folders SET owner_installation_id = NULL, status = 'idle', updated_at = ? WHERE id = ?`,
-    [now, folderId]
+    `UPDATE desktop_sources SET type_settings_json = json_set(type_settings_json, '$.connectionStatus', 'needs-folder'),
+       updated_at = ? WHERE source_ref = ?`, [now, row.source_ref]
   );
   recordConnectionSync(folderId, now);
   return loadExternalSearchFolders();
@@ -56,6 +48,7 @@ export async function previewExternalSearchFolderReconnect(
   folderPath: string
 ): Promise<NativeExternalSearchReconnectPreview> {
   const row = requireFolder(folderId);
+  if (row.host_name !== loadOrCreateDesktopHostName()) throw new Error('external_folder_not_local');
   const normalizedPath = folderPath.trim();
   assertNoUnsafePathOverlap([...loadManagedPathCandidates(), { label: 'External source', path: normalizedPath }]);
   const entries: ScannedDocumentEntry[] = [];
@@ -80,21 +73,20 @@ export async function previewExternalSearchFolderReconnect(
 
 export async function reconnectExternalSearchFolder(folderId: string, folderPath: string) {
   const preview = await previewExternalSearchFolderReconnect(folderId, folderPath);
-  const identity = loadOrCreateDesktopInstallationIdentity();
   const now = new Date().toISOString();
-  openDatabaseConnection().driver.execute(
-    `UPDATE external_search_folders SET folder_path = ?, owner_installation_id = ?, owner_device_name = ?,
-       owner_platform = ?, status = 'idle', updated_at = ? WHERE id = ?`,
-    [preview.folder_path, identity.installationId, identity.deviceName, identity.platform, now, folderId]
-  );
   const row = requireFolder(folderId);
   upsertDesktopSource({
     configRef: folderId,
     rootPath: preview.folder_path,
     sourceType: 'external',
-    typeSettings: { attachmentMode: row.attachment_mode, attachmentRootPath: row.attachment_root_path },
+    typeSettings: { attachmentMode: row.attachment_mode, attachmentRootPath: row.attachment_root_path,
+      connectionStatus: 'connected' },
     updatedAt: now
   });
+  openDatabaseConnection().driver.execute(
+    `UPDATE external_search_folders SET folder_path = ?, status = 'idle', updated_at = ? WHERE id = ?`,
+    [preview.folder_path, now, folderId]
+  );
   recordConnectionSync(folderId, now);
   return loadExternalSearchFolders();
 }

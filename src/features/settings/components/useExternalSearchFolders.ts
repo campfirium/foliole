@@ -157,11 +157,7 @@ async function chooseExternalSearchFolder(
 ) {
   const selectedPath = await selectExternalSourceSettingsFolderPath();
   if (!selectedPath) return;
-  updateFolder(folderId, (current) => current.accessMode !== 'unowned'
-    ? { ...current, folderPath: selectedPath }
-    : selectedPath === current.folderPath
-      ? { ...current, claimUnowned: true }
-      : { ...current, accessMode: 'local', folderPath: selectedPath, id: crypto.randomUUID() });
+  updateFolder(folderId, (current) => ({ ...current, folderPath: selectedPath }));
 }
 
 async function persistExternalSearchFolders(

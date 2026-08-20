@@ -3,6 +3,7 @@ import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { withoutNodeViewStateHashSource } from '../../lib/platform/persistedNodeViewState.js';
 
 import { openDatabaseConnection, type DatabaseConnection } from './connection.js';
+import { updateLocalDesktopSourceHosts } from './desktopSources.js';
 import { saveApprovedSyncGroupMember } from './syncGroupMemberRegistration.js';
 
 const HOST_NAME_KEY = 'host_name';
@@ -30,6 +31,13 @@ export function migrateDesktopHostProfile(
   ensureLegacyIdentity(connection.driver, previous, now);
   if (previous !== current) transferSyncGroupHost(connection.driver, current, now);
   if (previous !== current) transferHostState(connection.driver, previous, current);
+  if (previous !== current) updateLocalDesktopSourceHosts({
+    currentHostName: current,
+    currentHostPlatform: process.platform,
+    driver: connection.driver,
+    previousHostName: previous,
+    updatedAt: now
+  });
   rewritePrivateObjectIds(connection.driver, previous, current);
   rehashPrivateObjects(connection.driver, current);
   pruneOtherHosts(connection.driver, current);

@@ -19,8 +19,8 @@ vi.mock('../ipc/paths.js', () => ({
     app_log_dir: path.join(mockedAppDataDir, 'logs')
   })
 }));
-vi.mock('../database/readwiseDeviceAssignment.js', () => ({
-  canCurrentDeviceRunReadwise: vi.fn(() => sourceOwnerMock.canRunExternalSources)
+vi.mock('../database/readwiseHostAssignment.js', () => ({
+  canCurrentHostRunReadwise: vi.fn(() => sourceOwnerMock.canRunExternalSources)
 }));
 
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';

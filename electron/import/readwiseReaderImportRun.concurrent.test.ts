@@ -54,8 +54,8 @@ vi.mock('./importManagerSettings.js', () => ({
   saveImportManagerSettings: vi.fn((settings) => settings)
 }));
 
-vi.mock('../database/readwiseDeviceAssignment.js', () => ({
-  canCurrentDeviceRunReadwise: vi.fn(() => true)
+vi.mock('../database/readwiseHostAssignment.js', () => ({
+  canCurrentHostRunReadwise: vi.fn(() => true)
 }));
 
 import { cancelReadwiseReaderImport, runReadwiseReaderImport } from './readwiseReaderImportRun.js';

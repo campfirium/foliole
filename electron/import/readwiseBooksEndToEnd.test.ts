@@ -26,8 +26,8 @@ vi.mock('../ipc/paths.js', () => ({
     app_log_dir: path.join(mockedAppDataDir, 'logs')
   })
 }));
-vi.mock('../database/readwiseDeviceAssignment.js', () => ({
-  canCurrentDeviceRunReadwise: vi.fn(() => sourceOwnerMock.canRunExternalSources)
+vi.mock('../database/readwiseHostAssignment.js', () => ({
+  canCurrentHostRunReadwise: vi.fn(() => sourceOwnerMock.canRunExternalSources)
 }));
 
 import { createReadwiseImportSources } from '../../lib/core/import/importManagerSettings.js';

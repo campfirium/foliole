@@ -1,12 +1,12 @@
 import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
+import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../../lib/core/sync/syncObjectPayloadSql.js';
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
-import { loadOrCreateDesktopInstallationIdentity } from '../desktopInstallationIdentity.js';
 import { assertNoUnsafePathOverlap } from '../libraryPathSafety.js';
 import { loadManagedPathCandidates } from '../managedPathSafety.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { upsertDesktopSource } from './desktopSources.js';
-import { loadExternalFolderEnabled } from './externalFolderDevicePreferences.js';
+import { loadExternalFolderEnabled } from './externalFolderHostPreferences.js';
 import {
   type ExternalSearchFolderRow,
   normalizeExcludedDirs,
@@ -16,13 +16,12 @@ import {
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
 
 type SaveFolderInput = Pick<NativeExternalSearchFolder,
-  'attachment_mode' | 'attachment_root_path' | 'excluded_dirs' | 'folder_path' | 'id'> & { claim_unowned?: boolean };
+  'attachment_mode' | 'attachment_root_path' | 'excluded_dirs' | 'folder_path' | 'id'>;
 
 function normalizedInput(folders: SaveFolderInput[]) {
   const result = folders.map((folder) => ({
     attachmentMode: 'document_relative_first_then_fixed_root' as const,
     attachmentRootPath: folder.attachment_root_path?.trim() || null,
-    claimUnowned: folder.claim_unowned === true,
     excludedDirs: normalizeExcludedDirs(folder.excluded_dirs),
     folderPath: folder.folder_path.trim(), id: folder.id.trim()
   })).filter((folder) => folder.id && folder.folderPath);
@@ -33,41 +32,30 @@ function normalizedInput(folders: SaveFolderInput[]) {
 }
 
 export function loadExternalSearchFolders() {
-  const identity = loadOrCreateDesktopInstallationIdentity();
-  return readExternalSearchFolderRows().map((row) => toExternalSearchFolder(
-    row, identity, loadExternalFolderEnabled(identity, row.id)
-  ));
+  return readExternalSearchFolderRows().map((row) => toExternalSearchFolder(row, loadExternalFolderEnabled(row.id)));
 }
 
 function recordSync(folder: ReturnType<typeof normalizedInput>[number], now: string, hostName: string, deletedAt?: string) {
   const driver = openDatabaseConnection().driver;
-  const identity = loadOrCreateDesktopInstallationIdentity();
+  const row = driver.queryOne<{ payload_json: string }>(SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE.external_folder, [folder.id]);
   upsertSyncObjectState(driver, {
     objectType: 'external_folder', objectId: folder.id,
-    contentHash: computeSyncContentHash('external_folder', deletedAt ? { deleted_at: deletedAt, folder_id: folder.id } : {
-      attachment_mode: folder.attachmentMode, attachment_root_path: folder.attachmentRootPath,
-      excluded_dirs: folder.excludedDirs, folder_path: folder.folderPath, id: folder.id,
-      owner_device_name: identity.deviceName, owner_installation_id: identity.installationId,
-      owner_platform: identity.platform
-    }),
+    contentHash: computeSyncContentHash('external_folder', deletedAt
+      ? { deleted_at: deletedAt, folder_id: folder.id }
+      : JSON.parse(row?.payload_json ?? '{}')),
     deletedAt: deletedAt ?? null, lastModifiedByHostName: hostName, updatedAt: now, syncDirty: true
   });
 }
 
 function resolveLocalId(input: ReturnType<typeof normalizedInput>[number], rows: ExternalSearchFolderRow[]) {
-  const identity = loadOrCreateDesktopInstallationIdentity();
+  const currentHostName = loadOrCreateDesktopHostName();
   const byId = rows.find((row) => row.id === input.id);
-  if (byId?.owner_installation_id && byId.owner_installation_id !== identity.installationId) return null;
-  if (byId && !byId.owner_installation_id && !input.claimUnowned) return null;
-  const claim = input.claimUnowned
-    ? rows.find((row) => !row.owner_installation_id && row.folder_path === input.folderPath)
-    : null;
-  return claim?.id ?? input.id;
+  if (byId && byId.host_name !== currentHostName) return null;
+  return input.id;
 }
 
 function upsertLocalFolder(input: ReturnType<typeof normalizedInput>[number], id: string, rows: ExternalSearchFolderRow[], now: string) {
   const driver = openDatabaseConnection().driver;
-  const identity = loadOrCreateDesktopInstallationIdentity();
   const existing = rows.find((row) => row.id === id);
   const source = upsertDesktopSource({
     configRef: id,
@@ -76,24 +64,21 @@ function upsertLocalFolder(input: ReturnType<typeof normalizedInput>[number], id
     typeSettings: {
       attachmentMode: input.attachmentMode,
       attachmentRootPath: input.attachmentRootPath,
-      excludedDirs: input.excludedDirs
+      connectionStatus: 'connected', excludedDirs: input.excludedDirs
     },
     updatedAt: now
   });
   driver.execute(
     `INSERT INTO external_search_folders (id, folder_path, attachment_mode, attachment_root_path, excluded_dirs_json,
-      status, document_count, indexed_at, last_error, owner_installation_id, owner_device_name, owner_platform,
-      created_at, updated_at, source_ref)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      status, document_count, indexed_at, last_error, created_at, updated_at, source_ref)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET folder_path = excluded.folder_path, attachment_mode = excluded.attachment_mode,
       attachment_root_path = excluded.attachment_root_path, excluded_dirs_json = excluded.excluded_dirs_json,
-      owner_installation_id = excluded.owner_installation_id, owner_device_name = excluded.owner_device_name,
-      owner_platform = excluded.owner_platform, status = 'idle', updated_at = excluded.updated_at,
+      status = 'idle', updated_at = excluded.updated_at,
       source_ref = excluded.source_ref`,
     [id, input.folderPath, input.attachmentMode, input.attachmentRootPath, JSON.stringify(input.excludedDirs),
       existing?.status ?? 'idle', existing?.document_count ?? 0, existing?.indexed_at ?? null,
-      existing?.last_error ?? null, identity.installationId, identity.deviceName, identity.platform,
-      existing?.created_at ?? now, now, source.source_ref]
+      existing?.last_error ?? null, existing?.created_at ?? now, now, source.source_ref]
   );
 }
 
@@ -122,11 +107,11 @@ export function updateExternalSearchFolderIndexState(args: {
   documentCount: number; folderId: string; indexedAt: string | null; lastError: string | null;
   status: NativeExternalSearchFolder['status'];
 }) {
-  const identity = loadOrCreateDesktopInstallationIdentity();
+  const hostName = loadOrCreateDesktopHostName();
   openDatabaseConnection().driver.execute(
     `UPDATE external_search_folders SET status = ?, document_count = ?, indexed_at = ?, last_error = ?, updated_at = ?
-     WHERE id = ? AND owner_installation_id = ?`,
+     WHERE id = ? AND source_ref IN (SELECT source_ref FROM desktop_sources WHERE host_name = ?)`,
     [args.status, args.documentCount, args.indexedAt, args.lastError, new Date().toISOString(),
-      args.folderId, identity.installationId]
+      args.folderId, hostName]
   );
 }

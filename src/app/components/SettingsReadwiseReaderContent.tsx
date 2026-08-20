@@ -18,7 +18,7 @@ import {
 
 import type { DraftImportSource } from './importSourceWorkspaceModel';
 import { ReadwiseCleanupDialog } from './ReadwiseCleanupDialog';
-import { ReadwiseDeviceAssignmentRow, useReadwiseDeviceAssignment } from './ReadwiseDeviceAssignmentRow';
+import { ReadwiseHostAssignmentRow, useReadwiseHostAssignment } from './ReadwiseHostAssignmentRow';
 import { ReadwiseReaderImportBehavior } from './ReadwiseReaderImportBehavior';
 import {
   ReadwiseIntegrationSwitch,
@@ -215,13 +215,13 @@ function ReadwiseLocalSettingsContent(props: SettingsReadwiseReaderContentProps)
 }
 
 export function SettingsReadwiseReaderContent(props: SettingsReadwiseReaderContentProps) {
-  const device = useReadwiseDeviceAssignment();
+  const hostAssignment = useReadwiseHostAssignment();
   const hasActiveSyncGroup = useActiveSyncGroupMembership();
-  if (hasActiveSyncGroup && device.assignment?.is_active === false) {
+  if (hasActiveSyncGroup && hostAssignment.assignment?.is_active === false) {
     return (
-      <ReadwiseDeviceAssignmentRow
-        assignment={device.assignment}
-        onActivate={() => void device.activate()}
+      <ReadwiseHostAssignmentRow
+        assignment={hostAssignment.assignment}
+        onActivate={() => void hostAssignment.activate()}
         readwiseRootPath={props.readwiseRootPath}
       />
     );

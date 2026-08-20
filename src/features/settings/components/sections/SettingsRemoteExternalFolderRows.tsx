@@ -18,7 +18,6 @@ const REMOTE_SOURCE_COLUMNS = '[grid-template-columns:16.25rem_minmax(0,1fr)]';
 
 function FolderActions(props: {
   folder: ExternalSourceSettingsFolder;
-  onReconnectFolder: (folderId: string) => void;
   onRemoveFolder: (folderId: string) => void;
 }) {
   const t = useTranslation();
@@ -35,8 +34,7 @@ function FolderActions(props: {
       </AppDropdownMenuTrigger>
       <AppDropdownMenuContent align="end" sideOffset={4}>
         <AppDropdownMenuItem
-          disabled={props.folder.accessMode !== 'unowned'}
-          onSelect={() => props.onReconnectFolder(props.folder.id)}
+          disabled
         >
           {t('settings.externalSources.remote.changeSource')}
         </AppDropdownMenuItem>
@@ -52,13 +50,13 @@ function FolderActions(props: {
   );
 }
 
-function DeviceActions(props: { deviceName: string }) {
+function HostActions(props: { hostName: string }) {
   const t = useTranslation();
   return (
     <AppDropdownMenu>
       <AppDropdownMenuTrigger asChild>
         <button
-          aria-label={t('settings.externalSources.remote.deviceActions', { device: props.deviceName })}
+          aria-label={t('settings.externalSources.remote.hostActions', { host: props.hostName })}
           className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-foreground/55 transition-colors hover:bg-settings-control-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong"
           type="button"
         >
@@ -80,7 +78,6 @@ function DeviceActions(props: { deviceName: string }) {
 
 function RemoteFolderRow(props: {
   folder: ExternalSourceSettingsFolder;
-  onReconnectFolder: (folderId: string) => void;
   onRemoveFolder: (folderId: string) => void;
 }) {
   return (
@@ -93,14 +90,12 @@ function RemoteFolderRow(props: {
 
 export function SettingsRemoteExternalFolderRows(props: {
   folders: ExternalSourceSettingsFolder[];
-  onReconnectFolder: (folderId: string) => void;
   onRemoveFolder: (folderId: string) => void;
 }) {
   const t = useTranslation();
   const groups = groupRemoteExternalFolders(
     props.folders,
-    t('settings.externalSources.remote.unknownDevice'),
-    t('settings.externalSources.remote.unowned')
+    t('settings.externalSources.remote.unknownHost')
   );
   return (
     <section aria-label={t('settings.externalSources.remote.title')} className="mb-8 min-w-0">
@@ -111,18 +106,18 @@ export function SettingsRemoteExternalFolderRows(props: {
       <div className="grid gap-1">
         {groups.map((group) => (
           <section
-            aria-label={group.deviceName}
+            aria-label={group.hostName}
             className={settingsActionTableRowClassName(REMOTE_SOURCE_COLUMNS, 'items-start')}
             key={group.key}
             role="group"
           >
             <div className="flex min-h-10 min-w-0 items-center rounded-md transition-colors hover:bg-settings-control-hover">
               <div className="flex min-w-0 items-center gap-1">
-                <span className="truncate text-sm font-semibold">{group.deviceName}</span>
+                <span className="truncate text-sm font-semibold">{group.hostName}</span>
                 {group.platformName ? (
                   <span className="shrink-0 text-xs font-normal text-foreground/48">{group.platformName}</span>
                 ) : null}
-                <DeviceActions deviceName={group.deviceName} />
+                <HostActions hostName={group.hostName} />
               </div>
             </div>
             <div className="grid min-w-0 gap-0.5">
@@ -130,7 +125,6 @@ export function SettingsRemoteExternalFolderRows(props: {
                 <RemoteFolderRow
                   folder={folder}
                   key={folder.id}
-                  onReconnectFolder={props.onReconnectFolder}
                   onRemoveFolder={props.onRemoveFolder}
                 />
               ))}

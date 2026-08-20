@@ -2,14 +2,14 @@ export interface NativeWatchedFolderBinding {
   action_mode: 'delete' | 'keep';
   archive_path: string;
   binding_id: string;
-  connected_device_id: string | null;
-  connected_device_name: string | null;
-  connected_platform: string | null;
+  host_name: string;
+  host_platform: string;
   connection_status: 'connected' | 'needs-folder';
   created_at: string;
   highlight_mode: 'merged' | 'split';
   highlight_path: string;
   primary_path: string;
+  source_ref: string;
   updated_at: string;
 }
 
@@ -24,5 +24,5 @@ export interface NativeWatchedFolderMatchPreview {
 
 export interface NativeWatchedFolderBindingsState {
   bindings: NativeWatchedFolderBinding[];
-  current_device_id: string;
+  current_host_name: string;
 }

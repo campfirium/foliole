@@ -8,7 +8,7 @@ export async function rehashCompanionHostState(db: DbPort, hostName: string) {
     'SELECT key, scope, platform, form_factor, host_name, value_json FROM setting_records'
   );
   for (const row of settings) {
-    const hash = hashJson(row);
+    const hash = computeCompanionContentHash(row);
     const objectId = `${row.scope}:${row.platform}:${row.form_factor}:${row.host_name}:${row.key}`;
     await db.run('UPDATE setting_records SET content_hash = ? WHERE key = ? AND scope = ? AND platform = ? AND form_factor = ? AND host_name = ?',
       [hash, row.key, row.scope, row.platform, row.form_factor, row.host_name]);
@@ -28,7 +28,8 @@ async function rehashViewState(db: DbPort, objectId: string, hostName: string) {
   const base = { form_factor: formFactor, host_name: hostName, key, platform, scope };
   if (key === 'active_node') {
     const [row] = await db.query<{ value: string }>("SELECT value FROM workspace_meta WHERE key = 'active_node_id'");
-    await updateStateHash(db, 'view_state', objectId, hashJson({ ...base, active_node_id: row?.value ?? null }));
+    await updateStateHash(db, 'view_state', objectId,
+      computeCompanionContentHash({ ...base, active_node_id: row?.value ?? null }));
     return;
   }
   if (!key.startsWith('node:')) return;
@@ -36,7 +37,7 @@ async function rehashViewState(db: DbPort, objectId: string, hostName: string) {
     'SELECT node_id, scroll_top, selection_from, selection_to FROM node_view_state WHERE node_id = ? AND host_name = ?',
     [key.slice(5), hostName]
   );
-  if (row) await updateStateHash(db, 'view_state', objectId, hashJson({ ...base, ...row }));
+  if (row) await updateStateHash(db, 'view_state', objectId, computeCompanionContentHash({ ...base, ...row }));
 }
 
 async function updateStateHash(db: DbPort, type: string, objectId: string, hash: string) {
@@ -44,7 +45,7 @@ async function updateStateHash(db: DbPort, type: string, objectId: string, hash:
     [hash, type, objectId]);
 }
 
-function hashJson(value: unknown) {
+export function computeCompanionContentHash(value: unknown) {
   return bytesToHex(sha256(new TextEncoder().encode(stableJson(value))));
 }
 

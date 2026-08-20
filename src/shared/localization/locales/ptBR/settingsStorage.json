@@ -99,7 +99,7 @@
   "settings.externalSources.removeFolder": "Remover pasta",
   "settings.externalSources.remote.title": "De outros dispositivos",
   "settings.externalSources.remote.description": "Navegue e pesquise essas pastas neste dispositivo. Eles são somente leitura aqui.",
-  "settings.externalSources.remote.unknownDevice": "Outro dispositivo",
+  "settings.externalSources.remote.unknownHost": "Outro host",
   "settings.externalSources.remote.groupEnabledAria": "Use todas as pastas de {device} neste dispositivo",
   "settings.externalSources.remote.enabledAria": "Use {folder} de {device} neste dispositivo",
   "settings.externalSources.status.errorFallback": "Falha na criação do índice.",

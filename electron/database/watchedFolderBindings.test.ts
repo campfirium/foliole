@@ -28,6 +28,7 @@ import { closeDatabaseConnection, openDatabaseConnection } from './connection.js
 import { initializeDatabase } from './migrate.js';
 import {
   disconnectWatchedFolderBinding,
+  loadWatchedFolderBindingState,
   recordWatchedImportSourceMapping,
   removeWatchedFolderBinding,
   resolveExecutableWatchedBinding,
@@ -47,6 +48,22 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
+it('uses the active sync-group Host when separating local and remote sources', () => {
+  const driver = openDatabaseConnection().driver;
+  driver.execute(`INSERT INTO sync_groups
+    (group_id, display_name, timeline_id, created_by_host_name, created_at, updated_at)
+    VALUES ('group-a', 'Workgroup', 'timeline-a', 'This Mac', 'now', 'now')`);
+  driver.execute(`INSERT INTO sync_group_members
+    (group_id, host_name, host_platform, state, approved_by_host_name,
+     authorization_id, joined_at, updated_at)
+    VALUES ('group-a', 'This Mac', 'darwin', 'active', 'This Mac', 'authorization-a', 'now', 'now')`);
+  driver.execute(`INSERT INTO sync_group_local_state
+    (singleton_id, group_id, local_host_name, member_state, updated_at)
+    VALUES (1, 'group-a', 'This Mac', 'active', 'now')`);
+
+  expect(loadWatchedFolderBindingState().current_host_name).toBe('This Mac');
+});
+
 it('disconnects and reconnects one watched source while preserving its imported source mapping', async () => {
   const firstPath = path.join(tempRoot, 'watched-a');
   const nextPath = path.join(tempRoot, 'watched-b');
@@ -64,13 +81,6 @@ it('disconnects and reconnects one watched source while preserving its imported 
     primaryPath: firstPath
   };
   const binding = upsertChangedWatchedFolderSource(source, '2026-08-18T00:00:00.000Z')!;
-  openDatabaseConnection().driver.execute(
-    "UPDATE desktop_sources SET owner_installation_id = NULL WHERE source_type = 'watched' AND config_ref = ?",
-    [source.id]
-  );
-  openDatabaseConnection().driver.execute('DELETE FROM watched_folder_bindings WHERE binding_id = ?', [binding.binding_id]);
-  expect(resolveExecutableWatchedBinding(source.id, firstPath).executable).toBe(false);
-  upsertChangedWatchedFolderSource(source, '2026-08-18T00:00:30.000Z');
   openDatabaseConnection().driver.execute(`INSERT INTO import_sources (
     source_fingerprint, provider, source_kind, source_name, source_locator, first_imported_at,
     last_imported_at, last_content_fingerprint, latest_node_id
@@ -97,6 +107,26 @@ it('disconnects and reconnects one watched source while preserving its imported 
   expect(resolveExecutableWatchedBinding(binding.binding_id, nextPath).executable).toBe(true);
 });
 
+it('does not claim or mutate a watched Source owned by another Host', async () => {
+  const folderPath = path.join(tempRoot, 'remote-watched');
+  await fs.mkdir(folderPath, { recursive: true });
+  const source = {
+    actionMode: 'keep' as const, archivePath: '', highlightMode: 'merged' as const, highlightPath: '',
+    id: 'remote-rule', keepPreview: null, keepState: 'enabled' as const, primaryPath: folderPath
+  };
+  const binding = upsertChangedWatchedFolderSource(source, '2026-08-18T00:00:00.000Z')!;
+  const driver = openDatabaseConnection().driver;
+  driver.execute("UPDATE desktop_sources SET host_name = 'Other Mac' WHERE source_ref = ?", [binding.source_ref]);
+
+  expect(upsertChangedWatchedFolderSource(source, '2026-08-18T00:01:00.000Z')).toBeNull();
+  await expect(previewWatchedFolderReconnect(binding.binding_id, folderPath))
+    .rejects.toThrow('watched_folder_not_local');
+  expect(() => disconnectWatchedFolderBinding(binding.binding_id)).toThrow('watched_folder_not_local');
+  expect(() => removeWatchedFolderBinding(binding.binding_id)).toThrow('watched_folder_not_local');
+  expect(driver.queryOne('SELECT host_name FROM desktop_sources WHERE source_ref = ?', [binding.source_ref]))
+    .toEqual({ host_name: 'Other Mac' });
+});
+
 it('removes only the watched connection record and keeps imported data', async () => {
   const folderPath = path.join(tempRoot, 'watched');
   await fs.mkdir(folderPath, { recursive: true });
@@ -116,17 +146,22 @@ it('removes only the watched connection record and keeps imported data', async (
     'SELECT binding_id FROM watched_folder_bindings WHERE binding_id = ?', [binding.binding_id]
   )).toBeUndefined();
   expect(openDatabaseConnection().driver.queryOne(
+    'SELECT source_ref FROM desktop_sources WHERE source_ref = ?', [binding.source_ref]
+  )).toBeUndefined();
+  expect(openDatabaseConnection().driver.queryOne(
     "SELECT latest_node_id FROM import_sources WHERE source_fingerprint = 'fingerprint'"
   )).toEqual({ latest_node_id: 'node-1' });
 });
 
-it('updates the original topic after reconnecting the same watched source at a new path', async () => {
+it('preserves the original topic identity and surfaces its update after reconnecting at a new path', async () => {
   const firstPath = path.join(tempRoot, 'watched-original');
   const nextPath = path.join(tempRoot, 'watched-reconnected');
   await fs.mkdir(firstPath, { recursive: true });
   await fs.mkdir(nextPath, { recursive: true });
   await fs.writeFile(path.join(firstPath, 'note.md'), '# Original\nFirst body');
   await fs.writeFile(path.join(nextPath, 'note.md'), '# Original\nUpdated body');
+  await fs.utimes(path.join(firstPath, 'note.md'), new Date('2026-08-18T00:00:00Z'), new Date('2026-08-18T00:00:00Z'));
+  await fs.utimes(path.join(nextPath, 'note.md'), new Date('2026-08-18T00:01:00Z'), new Date('2026-08-18T00:01:00Z'));
   const source = {
     actionMode: 'keep' as const, archivePath: '', highlightMode: 'merged' as const, highlightPath: '',
     id: 'continuity-rule', keepPreview: null, keepState: 'enabled' as const, primaryPath: firstPath
@@ -143,9 +178,12 @@ it('updates the original topic after reconnecting the same watched source at a n
 
   disconnectWatchedFolderBinding(binding.binding_id);
   await confirmWatchedFolderReconnect({ bindingId: binding.binding_id, folderPath: nextPath });
-  await runKeepImportRule({
+  const reconnectRun = await runKeepImportRule({
     directoryPath: nextPath, highlightPolicy: 'reference_only', ruleId: binding.binding_id, sourceType: 'generic'
   });
+  expect(reconnectRun).toEqual([expect.objectContaining({
+    action: 'skipped', previewStatus: 'updated', sourcePath: 'note.md'
+  })]);
 
   expect(openDatabaseConnection().driver.queryAll(
     `SELECT source_fingerprint FROM import_sources
@@ -153,5 +191,5 @@ it('updates the original topic after reconnecting the same watched source at a n
   )).toEqual([{ source_fingerprint: first.source_fingerprint }]);
   expect(openDatabaseConnection().driver.queryOne(
     'SELECT id, content FROM nodes WHERE id = ?', [first.latest_node_id]
-  )).toEqual({ content: '# Original\nUpdated body', id: first.latest_node_id });
+  )).toEqual({ content: '# Original\nFirst body', id: first.latest_node_id });
 });

@@ -55,6 +55,9 @@ function createFolderConfig(root: string) {
     id: 'folder-1',
     indexed_at: null,
     last_error: null,
+    source_executable: true,
+    source_host_name: 'This Mac',
+    source_host_platform: 'darwin',
     status: 'idle' as const,
     updated_at: ''
   };

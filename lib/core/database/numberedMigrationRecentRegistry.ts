@@ -19,6 +19,7 @@ import { migrateOpaqueSyncRefs } from './numberedMigrationOpaqueSyncRefs.js';
 import { retirePrimaryDeviceState } from './numberedMigrationPrimaryDeviceRetirement.js';
 import type { NumberedSchemaMigration } from './numberedMigrations.js';
 import { migrateSettingSingleTruth } from './numberedMigrationSettingSingleTruth.js';
+import { migrateSourceHostOwnership } from './numberedMigrationSourceHostOwnership.js';
 import { migrateSyncConflictConvergence } from './numberedMigrationSyncConvergence.js';
 import { migrateSyncDeliveryReceipts } from './numberedMigrationSyncDelivery.js';
 import { migrateSyncGroupDepartures } from './numberedMigrationSyncGroupDepartures.js';
@@ -195,5 +196,9 @@ export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   {
     version: 75,
     migrate: retirePrimaryDeviceState
+  },
+  {
+    version: 76,
+    migrate: migrateSourceHostOwnership
   }
 ];

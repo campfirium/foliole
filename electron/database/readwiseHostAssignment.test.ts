@@ -6,7 +6,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-let mockedAppDataDir = '/tmp/foliole-readwise-device-tests';
+let mockedAppDataDir = '/tmp/foliole-readwise-host-tests';
 
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
@@ -21,16 +21,16 @@ import { closeDatabaseConnection, openDatabaseConnection } from './connection.js
 import { upsertDesktopSource } from './desktopSources.js';
 import { initializeDatabase } from './migrate.js';
 import {
-  activateReadwiseOnThisDevice,
-  canCurrentDeviceRunReadwise,
-  loadReadwiseDeviceAssignment
-} from './readwiseDeviceAssignment.js';
+  activateReadwiseOnThisHost,
+  canCurrentHostRunReadwise,
+  loadReadwiseHostAssignment
+} from './readwiseHostAssignment.js';
 import { saveJsonSetting } from './settingsStore.js';
 
 let tempRoot = '';
 
 beforeEach(async () => {
-  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-device-'));
+  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-host-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabase();
 });
@@ -40,7 +40,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-it('keeps legacy Readwise active until a Host is explicitly selected, then runs only on that Host', () => {
+it('keeps Readwise active until a Host is explicitly selected, then runs only on that Host', () => {
   const currentHost = 'This Mac';
   const driver = openDatabaseConnection().driver;
   driver.execute(
@@ -59,38 +59,40 @@ it('keeps legacy Readwise active until a Host is explicitly selected, then runs 
       [hostName, currentHost, `authorization-${hostName}`]
     );
   }
-  expect(loadReadwiseDeviceAssignment()).toMatchObject({
-    devices: [
-      { device_id: 'Office PC', device_name: 'Office PC', platform: 'darwin' },
-      { device_id: currentHost, device_name: currentHost, platform: 'darwin' }
+  expect(loadReadwiseHostAssignment()).toMatchObject({
+    hosts: [
+      { host_name: 'Office PC', platform: 'darwin' },
+      { host_name: currentHost, platform: 'darwin' }
     ],
     is_active: true,
     legacy_unassigned: true
   });
-  saveJsonSetting('readwise_active_device', { device_id: 'Office PC' });
+  saveJsonSetting('readwise_active_host', { host_name: 'Office PC' });
 
-  expect(loadReadwiseDeviceAssignment()).toMatchObject({
-    active_device_id: 'Office PC', current_device_id: currentHost, is_active: false, legacy_unassigned: false
+  expect(loadReadwiseHostAssignment()).toMatchObject({
+    active_host_name: 'Office PC', current_host_name: currentHost, is_active: false, legacy_unassigned: false
   });
-  expect(canCurrentDeviceRunReadwise()).toBe(false);
+  expect(canCurrentHostRunReadwise()).toBe(false);
 
-  expect(activateReadwiseOnThisDevice()).toMatchObject({
-    active_device_id: currentHost, current_device_id: currentHost, is_active: true, legacy_unassigned: false
+  expect(activateReadwiseOnThisHost()).toMatchObject({
+    active_host_name: currentHost, current_host_name: currentHost, is_active: true, legacy_unassigned: false
   });
   expect(openDatabaseConnection().driver.queryOne<{ sync_dirty: number }>(
     `SELECT s.sync_dirty FROM sync_object_state s
      JOIN setting_records r ON s.object_id = r.scope || ':' || r.platform || ':' || r.form_factor || ':' || r.host_name || ':' || r.key
-     WHERE s.object_type = 'setting' AND r.key = 'readwise_active_device'`
+     WHERE s.object_type = 'setting' AND r.key = 'readwise_active_host'`
   )).toEqual({ sync_dirty: 1 });
 });
 
-it('runs Readwise only when every configured Source belongs to this installation', () => {
+it('runs Readwise only when every configured Source belongs to the current Host and root is available', async () => {
+  const rootPath = path.join(tempRoot, 'Readwise');
+  await fs.mkdir(rootPath, { recursive: true });
   upsertDesktopSource({
-    configRef: 'readwise-a', rootPath: '/Readwise', sourceType: 'readwise', updatedAt: 'now'
+    configRef: 'readwise-a', rootPath, sourceType: 'readwise', typeSettings: { keepState: 'enabled' }, updatedAt: 'now'
   });
-  expect(canCurrentDeviceRunReadwise()).toBe(true);
+  expect(canCurrentHostRunReadwise()).toBe(true);
   openDatabaseConnection().driver.execute(
-    "UPDATE desktop_sources SET owner_installation_id = NULL WHERE source_type = 'readwise'"
+    "UPDATE desktop_sources SET host_name = 'Other Mac' WHERE source_type = 'readwise'"
   );
-  expect(canCurrentDeviceRunReadwise()).toBe(false);
+  expect(canCurrentHostRunReadwise()).toBe(false);
 });

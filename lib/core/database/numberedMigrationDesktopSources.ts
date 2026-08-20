@@ -2,7 +2,12 @@ import path from 'node:path';
 
 import { DESKTOP_SOURCE_SCHEMA_STATEMENTS } from './desktopSourceSchemaStatements.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
-import { addColumnIfMissing, columnExists, tableExists } from './numberedMigrationHelpers.js';
+import {
+  addColumnIfMissing,
+  columnExists,
+  execOptionalIndex,
+  tableExists
+} from './numberedMigrationHelpers.js';
 
 interface StoredSetting { value: string }
 
@@ -96,6 +101,7 @@ function migrateConfiguredSources(sqlite: DatabaseMigrationTarget) {
 function migrateWatchedBindings(sqlite: DatabaseMigrationTarget) {
   if (!tableExists(sqlite, 'watched_folder_bindings')) return;
   addColumnIfMissing(sqlite, 'watched_folder_bindings', 'source_ref', 'TEXT');
+  if (!columnExists(sqlite, 'watched_folder_bindings', 'connected_device_name')) return;
   const rows = sqlite.prepare(`SELECT binding_id, connected_device_name, connected_platform,
     primary_path, created_at, updated_at FROM watched_folder_bindings`).all() as Array<Record<string, unknown>>;
   for (const row of rows) {
@@ -112,8 +118,12 @@ function migrateWatchedBindings(sqlite: DatabaseMigrationTarget) {
 
 function migrateLocations(sqlite: DatabaseMigrationTarget) {
   if (!tableExists(sqlite, 'import_sources')) return;
+  addColumnIfMissing(sqlite, 'import_sources', 'watched_binding_id', 'TEXT');
+  addColumnIfMissing(sqlite, 'import_sources', 'watched_relative_path', 'TEXT');
   addColumnIfMissing(sqlite, 'import_sources', 'source_ref', 'TEXT');
   addColumnIfMissing(sqlite, 'import_sources', 'source_location', 'TEXT');
+  execOptionalIndex(sqlite, `CREATE INDEX IF NOT EXISTS idx_import_sources_watched_relative
+    ON import_sources (watched_binding_id, watched_relative_path)`);
   if (!tableExists(sqlite, 'keep_import_items')) return;
   const rows = sqlite.prepare(`SELECT p.source_fingerprint, i.source_path, s.source_ref, s.root_path, s.path_flavor
     FROM import_sources p JOIN keep_import_items i ON i.last_node_id = p.latest_node_id

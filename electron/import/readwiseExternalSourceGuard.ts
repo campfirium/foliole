@@ -1,5 +1,5 @@
-import { canCurrentDeviceRunReadwise } from '../database/readwiseDeviceAssignment.js';
+import { canCurrentHostRunReadwise } from '../database/readwiseHostAssignment.js';
 
 export function canRunReadwiseExternalSource(input: { readwiseReaderEnabled?: boolean } = {}) {
-  return canCurrentDeviceRunReadwise() && input.readwiseReaderEnabled !== false;
+  return canCurrentHostRunReadwise() && input.readwiseReaderEnabled !== false;
 }

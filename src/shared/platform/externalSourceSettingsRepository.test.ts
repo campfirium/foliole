@@ -31,9 +31,9 @@ function createExternalSourceFolder(): ExternalSourceSettingsFolder {
     indexedAt: '2026-04-21T00:00:00.000Z',
     lastError: null,
     mirrorEnabled: true,
-    ownerDeviceName: null,
-    ownerInstallationId: null,
-    ownerPlatform: null,
+    sourceExecutable: true,
+    sourceHostName: 'This Mac',
+    sourceHostPlatform: 'darwin',
     status: 'ready',
     updatedAt: '2026-04-21T00:00:00.000Z'
   };
@@ -50,6 +50,9 @@ function createNativeFolder(id = 'folder-ext', folderPath = '/library') {
     id,
     indexed_at: '2026-04-21T00:00:00.000Z',
     last_error: null,
+    source_executable: true,
+    source_host_name: 'This Mac',
+    source_host_platform: 'darwin',
     status: 'ready',
     updated_at: '2026-04-21T00:00:00.000Z'
   };
@@ -97,7 +100,6 @@ it('saves external source settings through the native external search command', 
       {
         attachment_mode: 'document_relative_first_then_fixed_root',
         attachment_root_path: '/attachments',
-        claim_unowned: false,
         excluded_dirs: ['tmp'],
         folder_path: '/library',
         id: 'folder-ext'

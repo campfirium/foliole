@@ -1,6 +1,7 @@
 import type { NativeWatchedFolderMatchPreview } from '../../lib/platform/nativeWatchedFolderContract.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import {
+  loadWatchedFolderBindingState,
   loadWatchedFolderBindings,
   upsertChangedWatchedFolderSource
 } from '../database/watchedFolderBindings.js';
@@ -21,6 +22,9 @@ export async function previewWatchedFolderReconnect(
   folderPath: string
 ): Promise<NativeWatchedFolderMatchPreview> {
   const binding = requireBinding(bindingId);
+  if (binding.host_name !== loadWatchedFolderBindingState().current_host_name) {
+    throw new Error('watched_folder_not_local');
+  }
   const normalizedPath = folderPath.trim();
   if (!normalizedPath) throw new Error('watched_folder_path_required');
   assertNoUnsafePathOverlap([
