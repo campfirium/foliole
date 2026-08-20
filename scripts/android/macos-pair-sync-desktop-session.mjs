@@ -1,8 +1,10 @@
 /* global process */
 
 import { createHash, randomUUID } from 'node:crypto';
+import fs from 'node:fs';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
+import { pathToFileURL } from 'node:url';
 
 import { appendDesktopHostTimelineEvent } from '../diagnostics/desktop-host-timeline.mjs';
 import { MACOS_DAILY_LIBRARY_HOME } from '../macos/macos-electron-dev-paths.mjs';
@@ -36,7 +38,15 @@ export async function ensureMacosSyncGroup(actions) {
   return overview.sync_paused === true ? actions.resume() : actions.enable();
 }
 
-function launchOptions(repoRoot, env, userDataPath, libraryHome, executablePath) {
+export function resolveFrozenRendererUrl(repoRoot, existsSync = fs.existsSync) {
+  const indexPath = path.join(repoRoot, 'dist/desktop/index.html');
+  if (!existsSync(indexPath)) {
+    throw new Error(`Frozen desktop renderer is missing: ${indexPath}`);
+  }
+  return pathToFileURL(indexPath).toString();
+}
+
+function launchOptions(repoRoot, env, userDataPath, libraryHome, executablePath, rendererUrl) {
   return {
     args: [path.join(repoRoot, 'dist/electron/main.js')],
     cwd: repoRoot,
@@ -48,6 +58,8 @@ function launchOptions(repoRoot, env, userDataPath, libraryHome, executablePath)
       FOLIOLE_LIBRARY_HOME: libraryHome,
       FOLIOLE_SESSION_DATA_PATH: userDataPath,
       FOLIOLE_USER_DATA_PATH: userDataPath,
+      ELECTRON_RENDERER_URL: rendererUrl,
+      FOLIOLE_VITE_HMR: '1',
       FOLIOLE_WORKDIR: repoRoot
     },
     executablePath,
@@ -59,7 +71,7 @@ export async function openMacosPairSyncDesktopSession({
   env = process.env, electronLauncher, libraryHome = MACOS_DAILY_LIBRARY_HOME,
   logEvent = appendDesktopHostTimelineEvent, operationId = randomUUID(),
   prepareHiddenRuntime = prepareMacosHiddenElectronRuntime,
-  repoRoot, timeoutMs = 20_000, userDataPath
+  rendererExists = fs.existsSync, repoRoot, timeoutMs = 20_000, userDataPath
 }) {
   const record = (event, payload = {}) => {
     try {
@@ -69,15 +81,18 @@ export async function openMacosPairSyncDesktopSession({
     }
   };
   const launcher = electronLauncher ?? (await import('playwright'))._electron;
+  const rendererUrl = resolveFrozenRendererUrl(repoRoot, rendererExists);
   record('session_started');
   const runtime = prepareHiddenRuntime({ appRoot: repoRoot, env });
   let app;
   try {
     app = await launcher.launch(launchOptions(
-      repoRoot, env, userDataPath, libraryHome, runtime.executablePath
+      repoRoot, env, userDataPath, libraryHome, runtime.executablePath, rendererUrl
     ));
     record('electron_started', { pid: app.process?.()?.pid ?? null });
     const page = await app.firstWindow({ timeout: timeoutMs });
+    await page.waitForURL(rendererUrl, { timeout: timeoutMs });
+    record('renderer_loaded', { url: page.url() });
     await page.waitForFunction(() => globalThis.__FOLIOLE_APP_READY_REPORTED__ === true, null, {
       timeout: timeoutMs
     });
