@@ -24,24 +24,22 @@ final class FolioleCompanionSyncGroupOutboundPeerStore {
 
     private FolioleCompanionSyncGroupOutboundPeerStore() {}
 
-    static void save(Context context, String groupId, String localAuthorizationId, String localDeviceId,
-                     String peerAuthorizationId, String peerDeviceId,
+    static void save(Context context, String groupId, String localAuthorizationId,
+                     String peerAuthorizationId,
                      String endpointUrl) throws Exception {
-        save(context, groupId, localAuthorizationId, localDeviceId, null,
-            peerAuthorizationId, peerDeviceId, null, null, endpointUrl);
+        save(context, groupId, localAuthorizationId, null,
+            peerAuthorizationId, null, null, endpointUrl);
     }
 
     static void save(Context context, String groupId, String localAuthorizationId,
-                     String localDeviceId, String localHostName, String peerAuthorizationId,
-                     String peerDeviceId, String peerHostName, String peerHostPlatform,
+                     String localHostName, String peerAuthorizationId,
+                     String peerHostName, String peerHostPlatform,
                      String endpointUrl) throws Exception {
         JSONObject record = new JSONObject()
             .put("endpoint_url", normalizeEndpoint(endpointUrl))
             .put("group_id", groupId.trim())
             .put("local_authorization_id", localAuthorizationId.trim())
-            .put("local_device_id", localDeviceId.trim())
-            .put("peer_authorization_id", peerAuthorizationId.trim())
-            .put("peer_device_id", peerDeviceId.trim());
+            .put("peer_authorization_id", peerAuthorizationId.trim());
         if (localHostName != null) record.put("local_host_name", localHostName.trim());
         if (peerHostName != null) record.put("peer_host_name", peerHostName.trim());
         if (peerHostPlatform != null) record.put("peer_host_platform", peerHostPlatform.trim());

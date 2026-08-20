@@ -38,10 +38,8 @@ export interface CompanionWorkspaceSyncPlugin
   bindSyncGroupPeerRoute(args: {
     endpoint_url: string;
     local_authorization_id: string;
-    local_device_id: string;
     local_host_name: string;
     peer_authorization_id: string;
-    peer_device_id: string;
     peer_host_name: string;
     peer_host_platform: string;
     sync_group_id: string;

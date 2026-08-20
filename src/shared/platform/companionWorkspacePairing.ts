@@ -170,7 +170,7 @@ async function saveNativePairing(
 ) {
   return runCompanionSyncWriterTask(async () => {
     if (usesSyncGroup) {
-      if (!payload.sync_group || !payload.provider_authorization_id || !payload.provider_device_id || !payload.host_name
+      if (!payload.sync_group || !payload.provider_authorization_id || !payload.host_name
         || !payload.provider_host_name || !payload.provider_host_platform) {
         throw new Error('Desktop did not return Sync Group membership.');
       }
@@ -191,10 +191,8 @@ async function saveNativePairing(
       await FolioleCompanionSync.bindSyncGroupPeerRoute({
         endpoint_url: normalizeEndpointUrl(args.endpointUrl),
         local_authorization_id: payload.authorization_id,
-        local_device_id: payload.device_id,
         local_host_name: payload.host_name,
         peer_authorization_id: payload.provider_authorization_id,
-        peer_device_id: payload.provider_device_id,
         peer_host_name: payload.provider_host_name,
         peer_host_platform: payload.provider_host_platform,
         sync_group_id: payload.sync_group.group_id

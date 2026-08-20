@@ -117,7 +117,7 @@ final class FolioleCompanionPairingPluginActions {
             );
             if (syncGroupId != null || endpointUrl != null) {
                 FolioleCompanionSyncGroupOutboundPeerStore.save(
-                    context, syncGroupId, authorizationId, deviceId, remotePeerId, remotePeerId, endpointUrl);
+                    context, syncGroupId, authorizationId, remotePeerId, endpointUrl);
             }
             call.resolve(saved);
         } catch (Exception exception) {
@@ -172,35 +172,29 @@ final class FolioleCompanionPairingPluginActions {
         try {
             String groupKey = routeBindingKey(context, "syncGroupId");
             String localAuthorizationKey = routeBindingKey(context, "localAuthorizationId");
-            String localKey = routeBindingKey(context, "localDeviceId");
             String localHostKey = routeBindingKey(context, "localHostName");
             String peerAuthorizationKey = routeBindingKey(context, "peerAuthorizationId");
-            String peerKey = routeBindingKey(context, "peerDeviceId");
             String peerHostKey = routeBindingKey(context, "peerHostName");
             String peerPlatformKey = routeBindingKey(context, "peerHostPlatform");
             String endpointKey = routeBindingKey(context, "endpointUrl");
             String groupId = call.getString(groupKey);
             String localAuthorizationId = call.getString(localAuthorizationKey);
-            String localDeviceId = call.getString(localKey);
             String localHostName = call.getString(localHostKey);
             String peerAuthorizationId = call.getString(peerAuthorizationKey);
-            String peerDeviceId = call.getString(peerKey);
             String peerHostName = call.getString(peerHostKey);
             String peerHostPlatform = call.getString(peerPlatformKey);
             String endpointUrl = call.getString(endpointKey);
             if (rejectIfBlank(call, groupKey, groupId) ||
                 rejectIfBlank(call, localAuthorizationKey, localAuthorizationId) ||
-                rejectIfBlank(call, localKey, localDeviceId) ||
                 rejectIfBlank(call, peerAuthorizationKey, peerAuthorizationId) ||
-                rejectIfBlank(call, peerKey, peerDeviceId) ||
                 rejectIfBlank(call, localHostKey, localHostName) || rejectIfBlank(call, peerHostKey, peerHostName) ||
                 rejectIfBlank(call, peerPlatformKey, peerHostPlatform) ||
                 rejectIfBlank(call, endpointKey, endpointUrl)) return;
             FolioleCompanionPairingAuthorizationCutover.ensure(
                 context, localAuthorizationId, localHostName, null);
             FolioleCompanionSyncGroupOutboundPeerStore.save(
-                context, groupId, localAuthorizationId, localDeviceId, localHostName,
-                peerAuthorizationId, peerDeviceId, peerHostName, peerHostPlatform, endpointUrl);
+                context, groupId, localAuthorizationId, localHostName,
+                peerAuthorizationId, peerHostName, peerHostPlatform, endpointUrl);
             call.resolve();
         } catch (Exception exception) {
             call.reject("Failed to bind Sync Group peer route.", exception);

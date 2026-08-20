@@ -42,9 +42,10 @@ beforeEach(() => {
     review_log_count: 0, timeline_id: 'timeline-1'
   });
   syncGroupMock.load.mockResolvedValue({
-    group_id: 'group-1', local_device_id: 'Xiaomi 23049RAD8C', local_member_state: 'active',
-    members: [{ device_id: 'Xiaomi 23049RAD8C', device_kind: 'android-capacitor',
-      device_name: 'Xiaomi 23049RAD8C', state: 'active' }], timeline_id: 'timeline-1'
+    group_id: 'group-1', local_host_name: 'Xiaomi 23049RAD8C', local_member_state: 'active',
+    members: [{ authorization_id: 'authorization-a5', host_name: 'Xiaomi 23049RAD8C',
+      host_platform: 'android-capacitor', joined_at: '2026-04-22T12:00:00.000Z', state: 'active' }],
+    timeline_id: 'timeline-1'
   });
   syncGroupMock.loadKey.mockResolvedValue(null);
   capacitorMock.plugin.desktopHttpRequest.mockResolvedValue({
@@ -63,40 +64,50 @@ async function requestAs(deviceName: string) {
   return JSON.parse(request.body);
 }
 
-it('keeps the active member id while sending the current public device name', async () => {
+it('keeps the active member Host independent from the bootstrap request token', async () => {
   await expect(requestAs('Xiaomi 23049RAD8C')).resolves.toMatchObject({
-    device_id: 'Xiaomi 23049RAD8C', device_name: 'Xiaomi 23049RAD8C'
+    device_name: 'Xiaomi 23049RAD8C', host_name: 'Xiaomi 23049RAD8C'
   });
 });
 
-it('keeps the active member id when the public device name changes', async () => {
+it('keeps the active member Host when the current device label changes', async () => {
   await expect(requestAs('Different host')).resolves.toMatchObject({
-    device_id: 'Xiaomi 23049RAD8C', device_name: 'Different host'
+    device_name: 'Different host', host_name: 'Xiaomi 23049RAD8C'
   });
 });
 
 it('stores an approved Sync Group key only in the group database', async () => {
   const group = {
-    created_at: '2026-04-22T12:00:00.000Z', created_by_device_id: 'device-desktop',
-    display_name: 'Daily', group_id: 'group-1', local_device_id: 'android-test-device',
-    local_member_state: 'active', members: [{ approved_by_device_id: 'device-desktop',
-      authorization_id: 'join-1', device_id: 'android-test-device', device_kind: 'android',
-      device_name: 'Pixel 9', joined_at: '2026-04-22T12:00:00.000Z', state: 'active' }],
+    created_at: '2026-04-22T12:00:00.000Z', created_by_host_name: 'Desktop',
+    display_name: 'Daily', group_id: 'group-1', local_host_name: 'Pixel 9',
+    local_member_state: 'active', members: [{ approved_by_host_name: 'Desktop',
+      authorization_id: 'authorization-a5', host_name: 'Pixel 9', host_platform: 'android-capacitor',
+      joined_at: '2026-04-22T12:00:00.000Z', state: 'active' },
+    { approved_by_host_name: 'Desktop', authorization_id: 'authorization-desktop',
+      host_name: 'Desktop', host_platform: 'darwin',
+      joined_at: '2026-04-22T12:00:00.000Z', state: 'active' }],
     timeline_id: 'timeline-1'
   };
   capacitorMock.plugin.desktopHttpRequest
     .mockResolvedValueOnce({ body: JSON.stringify({ compatibility, desktop_protocol: protocol,
       expires_at: '2026-04-22T12:02:00.000Z', pair_request_id: 'pair-request-1', status: 'pending' }), status: 202 })
     .mockResolvedValueOnce({ body: JSON.stringify({ compatibility, desktop_protocol: protocol,
-      device_id: 'android-test-device', encrypted_device_secret: encryptedSecret,
-      paired_at: '2026-04-22T12:00:00.000Z', peer_id: 'device-desktop',
-      provider_device_id: 'device-desktop', provider_encrypted_device_secret: encryptedSecret,
+      authorization_id: 'authorization-a5', device_id: 'android-test-device',
+      encrypted_credential_secret: encryptedSecret, host_name: 'Pixel 9',
+      host_platform: 'android-capacitor', paired_at: '2026-04-22T12:00:00.000Z',
+      peer_id: 'authorization-desktop', provider_authorization_id: 'authorization-desktop',
+      provider_encrypted_credential_secret: encryptedSecret,
+      provider_host_name: 'Desktop', provider_host_platform: 'darwin',
       sync_group: group }), status: 200 });
   syncGroupMock.join.mockImplementation(async () => {
     syncGroupMock.load.mockResolvedValue(group);
     syncGroupMock.loadKey.mockResolvedValue('test-secret');
   });
   capacitorMock.plugin.loadPairingState.mockResolvedValue({ is_paired: false });
+  capacitorMock.plugin.signCompanionSyncRequest.mockResolvedValue({ headers: {
+    'X-Authorization-Id': 'authorization-a5', 'X-Nonce': 'nonce',
+    'X-Signature': 'signature', 'X-Timestamp': '2026-04-22T12:00:00.000Z'
+  } });
 
   await requestCompanionPairing({ deviceId: 'Pixel 9', deviceKind: 'android', deviceName: 'Pixel 9',
     endpointUrl: 'http://10.0.2.2:38641', groupId: 'group-1', groupTag: 'tag-1' });
@@ -105,10 +116,14 @@ it('stores an approved Sync Group key only in the group database', async () => {
     pairRequestId: 'pair-request-1' });
 
   expect(syncGroupMock.join).toHaveBeenCalledWith(expect.objectContaining({
-    deviceId: 'android-test-device', workgroupKey: 'test-secret'
+    hostName: 'Pixel 9', workgroupKey: 'test-secret'
   }));
   expect(capacitorMock.plugin.bindSyncGroupPeerRoute).toHaveBeenCalledWith(expect.objectContaining({
-    local_device_id: 'android-test-device', sync_group_id: 'group-1'
+    local_authorization_id: 'authorization-a5', local_host_name: 'Pixel 9',
+    peer_authorization_id: 'authorization-desktop', sync_group_id: 'group-1'
+  }));
+  expect(capacitorMock.plugin.bindSyncGroupPeerRoute).not.toHaveBeenCalledWith(expect.objectContaining({
+    local_device_id: expect.anything()
   }));
   expect(capacitorMock.plugin.savePairingCredentials).not.toHaveBeenCalled();
 });

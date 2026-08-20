@@ -129,10 +129,8 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
     routeBindingRequestKeys: {
       endpointUrl: 'endpoint_url',
       localAuthorizationId: 'local_authorization_id',
-      localDeviceId: 'local_device_id',
       localHostName: 'local_host_name',
       peerAuthorizationId: 'peer_authorization_id',
-      peerDeviceId: 'peer_device_id',
       peerHostName: 'peer_host_name',
       peerHostPlatform: 'peer_host_platform',
       syncGroupId: 'sync_group_id'

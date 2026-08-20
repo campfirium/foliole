@@ -69,11 +69,21 @@ describe('FolioleCompanionSyncGroupPeerStore', () => {
     const action = source.slice(source.indexOf('static void bindSyncGroupPeerRoute'));
 
     expect(action).toContain('routeBindingKey(context, "syncGroupId")');
-    expect(action).toContain('routeBindingKey(context, "peerDeviceId")');
+    expect(action).toContain('routeBindingKey(context, "peerAuthorizationId")');
     expect(action).toContain('routeBindingKey(context, "endpointUrl")');
     expect(action).toContain('FolioleCompanionSyncGroupOutboundPeerStore.save(');
-    expect(action).toContain('context, groupId, localAuthorizationId, localDeviceId, localHostName,');
-    expect(action).toContain('peerAuthorizationId, peerDeviceId, peerHostName, peerHostPlatform, endpointUrl');
+    expect(action).toContain('context, groupId, localAuthorizationId, localHostName,');
+    expect(action).toContain('peerAuthorizationId, peerHostName, peerHostPlatform, endpointUrl');
+    expect(action).not.toContain('routeBindingKey(context, "localDeviceId")');
+    expect(action).not.toContain('routeBindingKey(context, "peerDeviceId")');
+  });
+
+  it('stores outbound authorization routes without retired Device identity fields', async () => {
+    const source = await readFile(OUTBOUND_STORE, 'utf8');
+    expect(source).toContain('.put("local_authorization_id", localAuthorizationId.trim())');
+    expect(source).toContain('.put("peer_authorization_id", peerAuthorizationId.trim())');
+    expect(source).not.toContain('local_device_id');
+    expect(source).not.toContain('peer_device_id');
   });
 
   it('offers persisted peer routes as identity-verified discovery candidates', async () => {

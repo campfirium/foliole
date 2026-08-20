@@ -90,8 +90,8 @@ it('routes one foreground pass to every discovered active group member', async (
   ]);
 
   await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://old:38641')).resolves.toEqual([
-    { authorizationId: 'authorization-desktop-a', deviceId: 'desktop-a', endpointUrl: 'http://192.168.1.20:38641', groupId: 'group-1', hostName: 'Desktop A' },
-    { authorizationId: 'authorization-desktop-c', deviceId: 'desktop-c', endpointUrl: 'http://192.168.1.30:38641', groupId: 'group-1', hostName: 'Desktop C' }
+    { authorizationId: 'authorization-desktop-a', endpointUrl: 'http://192.168.1.20:38641', groupId: 'group-1', hostName: 'Desktop A' },
+    { authorizationId: 'authorization-desktop-c', endpointUrl: 'http://192.168.1.30:38641', groupId: 'group-1', hostName: 'Desktop C' }
   ]);
 });
 
@@ -108,30 +108,30 @@ it('keeps routing reachable members when another active peer is unavailable', as
   }]);
 
   await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://old:38641'))
-    .resolves.toEqual([{ authorizationId: 'authorization-desktop-c', deviceId: 'desktop-c', endpointUrl: 'http://192.168.1.30:38641',
+    .resolves.toEqual([{ authorizationId: 'authorization-desktop-c', endpointUrl: 'http://192.168.1.30:38641',
       groupId: 'group-1', hostName: 'Desktop C' }]);
 });
 
-it('binds a discovered route to the stored peer identity through the native bridge', async () => {
-  mocks.loadPairing.mockResolvedValue({ authorization_id: 'authorization-android-b',
-    device_id: 'android-b', remote_peer_id: 'authorization-desktop-a' });
+it('binds a joined-empty route from active member authorization without pairing Device identity', async () => {
+  mocks.loadPairing.mockResolvedValue({ is_paired: false });
   mocks.loadGroup.mockResolvedValue({
     group_id: 'group-1', local_host_name: 'Android B', members: [
+      { authorization_id: 'authorization-android-b', host_name: 'Android B',
+        host_platform: 'android-capacitor', state: 'active' },
       { host_name: 'Desktop A', host_platform: 'darwin', state: 'active' }
     ], timeline_id: 'timeline-1'
   });
   await bindCompanionWorkspaceSyncTarget({
-    authorizationId: 'authorization-desktop-a', deviceId: 'desktop-a', endpointUrl: 'http://192.168.1.20:38641',
+    authorizationId: 'authorization-desktop-a', endpointUrl: 'http://192.168.1.20:38641',
     groupId: 'group-1', hostName: 'Desktop A'
   });
 
+  expect(mocks.loadPairing).not.toHaveBeenCalled();
   expect(mocks.bindRoute).toHaveBeenCalledWith({
     endpoint_url: 'http://192.168.1.20:38641',
     local_authorization_id: 'authorization-android-b',
-    local_device_id: 'android-b',
     local_host_name: 'Android B',
     peer_authorization_id: 'authorization-desktop-a',
-    peer_device_id: 'desktop-a',
     peer_host_name: 'Desktop A',
     peer_host_platform: 'darwin',
     sync_group_id: 'group-1'
