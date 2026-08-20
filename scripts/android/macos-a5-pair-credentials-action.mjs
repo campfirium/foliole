@@ -59,14 +59,16 @@ export async function runMacosA5PairCredentialsEntry(args, dependencies = {}) {
   let pairRequestFingerprint;
   if (readiness.joinedEmptyReauthorization === true) {
     const protectedReadiness = await collectProtectedReadiness(
-      readiness, { paths: args.paths, serial: args.serial }
+      readiness, { env: args.env, execute: args.execute, paths: args.paths, serial: args.serial }
     );
     const baseline = assertJoinedEmptyCredentialReauthorization(protectedReadiness);
     await leaveJoinedEmpty({ baseline, buildIdentity, env: args.env,
       evidenceRoot: path.join(evidenceRoot, 'leave'), execute: args.execute,
       paths: args.paths, serial: args.serial });
     const departedReadiness = await collectProtectedReadiness(
-      resolveReadiness(args.paths), { paths: args.paths, serial: args.serial }
+      resolveReadiness(args.paths), {
+        env: args.env, execute: args.execute, paths: args.paths, serial: args.serial
+      }
     );
     pairReadiness = assertFreshCredentialRejoinBaseline(departedReadiness, baseline);
     protectedSyncGroup = { groupId: baseline.groupId, timelineId: baseline.timelineId };

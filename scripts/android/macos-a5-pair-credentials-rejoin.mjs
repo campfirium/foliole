@@ -21,9 +21,17 @@ function activeMemberFingerprints(overview) {
 }
 
 export async function collectCredentialProtectedReadiness(
-  readiness, { paths, serial }, dependencies = {}
+  readiness, { env, execute, paths, serial }, dependencies = {}
 ) {
   const collectSnapshot = dependencies.collectSnapshot ?? collectAndroidDeviceSnapshot;
+  const stopped = await execute(paths.adb, [
+    '-s', serial, 'shell', 'am', 'force-stop', APP_ID
+  ], { env, timeoutCode: 'credential_snapshot_stop_timeout', timeoutMs: 30_000 });
+  if (stopped.code !== 0) {
+    throw Object.assign(new Error('Failed to stop A5 before credential protection snapshot.'), {
+      result: stopped
+    });
+  }
   const snapshot = await collectSnapshot({
     adb: paths.adb, appId: APP_ID, databaseInspector: inspectPairSyncRecoveryWorkspace,
     includeAttachments: false, includeEvents: false, serial, tables: ['nodes']

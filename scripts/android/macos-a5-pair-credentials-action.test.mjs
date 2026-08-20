@@ -117,6 +117,8 @@ it('routes exact joined-empty credentials through product Leave and a fresh boun
 });
 
 it('merges the same read-only database snapshot fields before and after Leave', async () => {
+  const events = [];
+  const execute = vi.fn(async () => { events.push('stop'); return { code: 0 }; });
   const collectSnapshot = vi.fn().mockResolvedValue({ database: { integrity: 'ok', inspection: {
     activeSyncGroupMemberCount: 3, deviceIdentityFingerprint: '2fdd44bb500a5934',
     dirtyObjectCounts: {}, dirtyRecordCount: 0, nodeCount: 0,
@@ -125,8 +127,14 @@ it('merges the same read-only database snapshot fields before and after Leave', 
   } } });
   const readiness = withoutProtectedSnapshot(joinedEmpty);
   await expect(collectCredentialProtectedReadiness(
-    readiness, { paths: { adb: '/adb' }, serial: '87a33a4b' }, { collectSnapshot }
+    readiness, { env: {}, execute, paths: { adb: '/adb' }, serial: '87a33a4b' }, {
+      collectSnapshot: async (options) => { events.push('snapshot'); return collectSnapshot(options); }
+    }
   )).resolves.toMatchObject({ dirtyObjectCounts: {}, protectedContentDigest: digest });
+  expect(events).toEqual(['stop', 'snapshot']);
+  expect(execute).toHaveBeenCalledWith('/adb', [
+    '-s', '87a33a4b', 'shell', 'am', 'force-stop', 'com.foliole.android'
+  ], expect.objectContaining({ timeoutCode: 'credential_snapshot_stop_timeout' }));
   expect(collectSnapshot).toHaveBeenCalledWith(expect.objectContaining({
     adb: '/adb', appId: 'com.foliole.android', includeAttachments: false,
     includeEvents: false, serial: '87a33a4b', tables: ['nodes']
@@ -139,8 +147,21 @@ it('merges the same read-only database snapshot fields before and after Leave', 
     syncGroupTimelineId: 'timeline-1', workgroupKeyPresent: true
   } } });
   await expect(collectCredentialProtectedReadiness(
-    readiness, { paths: { adb: '/adb' }, serial: '87a33a4b' }, { collectSnapshot }
+    readiness, { env: {}, execute, paths: { adb: '/adb' }, serial: '87a33a4b' }, {
+      collectSnapshot
+    }
   )).rejects.toThrow('changed before');
+});
+
+it('fails before snapshot when the fixed A5 writer cannot be stopped', async () => {
+  const collectSnapshot = vi.fn();
+  await expect(collectCredentialProtectedReadiness(
+    withoutProtectedSnapshot(joinedEmpty), {
+      env: {}, execute: vi.fn().mockResolvedValue({ code: 1, stderr: 'stop failed' }),
+      paths: { adb: '/adb' }, serial: '87a33a4b'
+    }, { collectSnapshot }
+  )).rejects.toThrow('Failed to stop A5');
+  expect(collectSnapshot).not.toHaveBeenCalled();
 });
 
 it('rejects any Leave drift or credential receipt that advances initial sync', () => {
