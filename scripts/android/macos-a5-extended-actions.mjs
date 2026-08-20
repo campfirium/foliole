@@ -1,5 +1,6 @@
 /* global console, process */
 
+import fs from 'node:fs';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
@@ -9,6 +10,13 @@ import {
 } from './macos-a5-sync-group-rejoin-contract.mjs';
 import { inspectMacosA5SyncGroupFacts } from './macos-a5-pair-sync-preflight.mjs';
 import { PAIR_SYNC_PORT } from '../windows/windows-a5-pair-sync-recovery-transport.mjs';
+
+const APP_ID = 'com.foliole.android';
+
+export function macosA5ErrorEvidence(error) {
+  const output = error?.result?.output;
+  return typeof output === 'string' && output ? output : '';
+}
 
 export function buildMacosA5Desktop(checked, paths) {
   checked('npm', ['run', 'build'], { cwd: paths.repoRoot });
@@ -57,6 +65,43 @@ export async function runMacosA5SyncGroupMaintenanceEntry(args) {
   });
   process.stdout.write(result.output);
   console.log(`[macos-a5-dev] ${args.action} evidence=${result.manifestPath}`);
+}
+
+export async function runMacosA5ClearAppDataEntry(args) {
+  const buildIdentity = args.buildIdentity();
+  args.assertFixed(); args.build();
+  args.checked(args.paths.adb, ['-s', args.serial, 'install', '-r', args.paths.apk]);
+  const cleared = await args.execute(args.paths.adb,
+    ['-s', args.serial, 'shell', 'pm', 'clear', APP_ID],
+    { env: args.env, timeoutCode: 'clear_app_data_timeout', timeoutMs: 60_000 });
+  if (cleared.code !== 0 || !/^Success\s*$/mu.test(cleared.stdout)) {
+    throw Object.assign(new Error('Fixed A5 app data clear failed'), { result: cleared });
+  }
+  args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'start', '-n', `${APP_ID}/.MainActivity`]);
+  args.checked(process.execPath, [path.join(args.paths.repoRoot, 'scripts/android/verify-android-launch.mjs'),
+    '--adb', args.paths.adb, '--serial', args.serial, '--app-id', APP_ID,
+    '--component', `${APP_ID}/.MainActivity`, '--timeout-seconds', '30', '--stability-seconds', '3']);
+  const activation = await runMacosA5SyncGroupMaintenance({
+    action: 'activate-participation', buildIdentity, env: args.env,
+    evidenceRoot: path.join(args.paths.repoRoot, '.tmp/artifacts/a5-clear-app-data',
+      buildIdentity, 'activate-participation'), execute: args.execute, installMain: false,
+    paths: args.paths, serial: args.serial
+  });
+  process.stdout.write(activation.output);
+  const { runMacosA5PairSyncPreflight } = await import('./macos-a5-pair-sync-preflight.mjs');
+  const readiness = runMacosA5PairSyncPreflight(args.paths);
+  if (readiness.nodeCount !== 0 || readiness.dirtyRecordCount !== 0
+    || readiness.pairingCredentialsPresent !== false) {
+    throw new Error('Fixed A5 did not establish an empty unpaired workspace after clear.');
+  }
+  const evidenceRoot = path.join(args.paths.repoRoot, '.tmp/artifacts/a5-clear-app-data');
+  fs.mkdirSync(evidenceRoot, { recursive: true });
+  const evidencePath = path.join(evidenceRoot, `${buildIdentity}.json`);
+  fs.writeFileSync(evidencePath, `${JSON.stringify({ completedAt: new Date().toISOString(),
+    nodeCount: 0, pairingCredentialsPresent: false, participationActivated: true,
+    resultStatus: 'success', serial: args.serial
+  }, null, 2)}\n`, 'utf8');
+  console.log(`[macos-a5-dev] clear-app-data evidence=${evidencePath}`);
 }
 
 export async function runMacosA5WindowsJoinEntry(args) {

@@ -18,7 +18,8 @@ export function inspectSyncGroupBinding(database, deviceId) {
       WHERE local.singleton_id = 1 LIMIT 1`).get();
     if (local) return local;
   }
-  if (!deviceId || !tableExists(database, 'sync_group_members')) return null;
+  if (!deviceId || !tableExists(database, 'sync_group_members')
+    || !columnExists(database, 'sync_group_members', 'device_id')) return null;
   const statement = database.prepare(`SELECT groups.group_id, groups.timeline_id
     FROM sync_group_members member JOIN sync_groups groups ON groups.group_id = member.group_id
     WHERE member.device_id = ? AND member.state = 'active' LIMIT 2`);

@@ -4,12 +4,13 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
-  macosA5ErrorEvidence,
   macosA5GradleEnv,
   macosA5Paths,
   runMacosA5Action
 } from './macos-a5-dev.mjs';
-import { macosA5ParallelDesktopEnv } from './macos-a5-extended-actions.mjs';
+import {
+  macosA5ErrorEvidence, macosA5ParallelDesktopEnv
+} from './macos-a5-extended-actions.mjs';
 import { runMacosA5ProductBootstrap } from './macos-a5-product-bootstrap.mjs';
 
 describe('macOS fixed A5 development entry', () => {
@@ -74,12 +75,17 @@ describe('macOS fixed A5 development entry', () => {
     expect(source).not.toContain('process.argv[3]');
   });
 
-  it('retires public T121 maintenance routes while the generic system owns its fixed action', () => {
+  it('exposes only the explicitly authorized fixed clear-data maintenance route', () => {
     const source = fs.readFileSync('scripts/android/macos-a5-dev.mjs', 'utf8');
+    const extended = fs.readFileSync('scripts/android/macos-a5-extended-actions.mjs', 'utf8');
     const generic = fs.readFileSync('scripts/sync-group/multi-device-sync-stage-actions.mjs', 'utf8');
     expect(source).not.toContain("'leave-sync-group'");
-    expect(source).not.toContain("'clear-app-data'");
-    expect(source).not.toContain('runMacosA5SyncGroupMaintenanceEntry');
+    expect(source).toContain("'clear-app-data'");
+    expect(source).toContain('runMacosA5ClearAppDataEntry');
+    expect(extended).toContain("['-s', args.serial, 'shell', 'pm', 'clear', APP_ID]");
+    expect(extended).toContain("action: 'activate-participation'");
+    expect(extended).toContain('installMain: false');
+    expect(extended).toContain('readiness.nodeCount !== 0');
     expect(generic).toContain("action: 'clear-app-data'");
     expect(source).not.toContain('process.argv[3]');
   });

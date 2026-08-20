@@ -67,8 +67,10 @@ describe('pair sync database availability', () => {
 
   it('recovers a unique legacy binding from the active member fact', () => {
     const database = { prepare: (sql) => ({
-      all: (deviceId) => sql.includes('FROM sync_group_members')
-        ? [{ group_id: `group-for-${deviceId}`, timeline_id: 'timeline-1' }] : [],
+      all: (deviceId) => sql.includes('PRAGMA table_info')
+        ? [{ name: 'device_id' }]
+        : sql.includes('FROM sync_group_members')
+          ? [{ group_id: `group-for-${deviceId}`, timeline_id: 'timeline-1' }] : [],
       get: (value) => sql.includes('sqlite_master')
         ? ['sync_groups', 'sync_group_members'].includes(value) ? { present: 1 } : undefined
         : undefined

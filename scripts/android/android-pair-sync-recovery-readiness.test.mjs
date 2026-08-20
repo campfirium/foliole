@@ -61,7 +61,7 @@ it('reports only bounded dirty object type counts', () => {
 it('reports pending delivery counts only by hashed group member identity', () => {
   const peerId = 'desktop-device-1';
   const database = { prepare: (sql) => ({
-    all: () => sql.includes('GROUP BY member.device_id')
+    all: () => sql.includes('GROUP BY member.authorization_id')
       ? [{ count: 2, peer_id: peerId }] : [],
     get: (value) => {
       if (sql.includes('sqlite_master')) return { present: 1 };

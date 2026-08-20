@@ -34,10 +34,13 @@ it('overrides the product app name after main setup but before Electron becomes 
     'scripts/desktop/macos-hidden-electron-credential-bootstrap.mjs', 'utf8'
   );
   const importIndex = source.indexOf('await import(');
+  const focusGuardIndex = source.indexOf('installMacosHiddenElectronFocusGuard(');
   const readyGuardIndex = source.indexOf('app.isReady()');
   const setNameIndex = source.indexOf('app.setName(appName)');
 
   expect(importIndex).toBeGreaterThan(-1);
+  expect(focusGuardIndex).toBeGreaterThan(-1);
+  expect(focusGuardIndex).toBeLessThan(importIndex);
   expect(readyGuardIndex).toBeGreaterThan(importIndex);
   expect(setNameIndex).toBeGreaterThan(readyGuardIndex);
   expect(source).not.toContain('safeStorage');
