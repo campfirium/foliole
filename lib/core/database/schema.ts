@@ -38,9 +38,6 @@ export const syncPeers = sqliteTable('sync_peers', {
   status: text('status').notNull().default('paired'),
   lastSyncedAt: text('last_synced_at'),
   lastSeenVersionCursor: text('last_seen_version_cursor'),
-  primaryCommittedAt: text('primary_committed_at'),
-  primaryDeviceEpoch: integer('primary_device_epoch'),
-  primaryUpdatedByDeviceId: text('primary_updated_by_device_id'),
   updatedAt: text('updated_at').notNull()
 });
 

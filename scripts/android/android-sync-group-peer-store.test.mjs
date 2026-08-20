@@ -66,16 +66,14 @@ describe('FolioleCompanionSyncGroupPeerStore', () => {
 
   it('lands the Web route-binding payload in the Android peer store', async () => {
     const source = await readFile(PAIRING_ACTIONS, 'utf8');
-    const action = source.slice(
-      source.indexOf('static void bindSyncGroupPeerRoute'),
-      source.indexOf('static void savePrimaryDeviceId')
-    );
+    const action = source.slice(source.indexOf('static void bindSyncGroupPeerRoute'));
 
     expect(action).toContain('routeBindingKey(context, "syncGroupId")');
     expect(action).toContain('routeBindingKey(context, "peerDeviceId")');
     expect(action).toContain('routeBindingKey(context, "endpointUrl")');
     expect(action).toContain('FolioleCompanionSyncGroupOutboundPeerStore.save(');
-    expect(action).toContain('context, groupId, localDeviceId, peerDeviceId, endpointUrl');
+    expect(action).toContain('context, groupId, localAuthorizationId, localDeviceId, localHostName,');
+    expect(action).toContain('peerAuthorizationId, peerDeviceId, peerHostName, peerHostPlatform, endpointUrl');
   });
 
   it('offers persisted peer routes as identity-verified discovery candidates', async () => {

@@ -9,13 +9,6 @@ export const EMPTY_DESKTOP_COMPANION_PAIRING_OVERVIEW: DesktopCompanionPairingOv
   current_host: null,
   paired_devices: [],
   pending_requests: [],
-  primary_device_state: {
-    can_initiate_takeover: false,
-    local_role: 'unknown',
-    primary_device_id: null,
-    source: 'paired-primary-missing',
-    takeover_blocked_reasons: ['no-current-primary-device']
-  },
   server_status: {
     advertised_urls: [],
     last_error: null,

@@ -1,16 +1,12 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract';
 import { renderWithLocalization } from '../shared/localization/testLocalization';
 
 import { CompanionSyncPanel } from './CompanionSyncPanel';
 
-const protocol = {
-  capabilities: ['lan-sync-v1', 'sync-group-facts-v1', 'workgroup-aead-v1'],
-  max_supported_version: 1,
-  min_supported_version: 1,
-  version: 1
-};
+const protocol = CURRENT_SYNC_PROTOCOL_DESCRIPTOR;
 
 function createProps() {
   return {
@@ -39,7 +35,6 @@ function createProps() {
     onDisconnectPairing: vi.fn(async () => undefined),
     onPull: vi.fn(async () => undefined),
     onRemoveRememberedTarget: vi.fn(async () => undefined),
-    onRequestPrimaryDeviceTakeover: vi.fn(async () => undefined),
     onRequestPairing: vi.fn(async () => undefined),
     onSaveEndpoint: vi.fn(async () => undefined),
     onOpenSettingsPage: vi.fn(),
@@ -51,7 +46,6 @@ function createProps() {
       device_name: null,
       is_paired: false,
       paired_at: null,
-      primary_device_id: null
     },
     pairingStatus: 'idle' as const,
     status: 'idle' as const
@@ -84,7 +78,7 @@ describe('CompanionSyncPanel protocol compatibility', () => {
       pairingState: {
         ...createProps().pairingState,
         is_paired: true,
-        negotiated_protocol_version: 1,
+        negotiated_protocol_version: 2,
         remote_protocol: protocol,
         sync_usable: true
       }

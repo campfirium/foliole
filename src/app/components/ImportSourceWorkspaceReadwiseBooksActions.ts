@@ -11,8 +11,8 @@ type ReadwiseBooksTranslate = ReturnType<typeof useTranslation>;
 
 async function runReadwiseBookReset(input: { nodeId: string; t: ReadwiseBooksTranslate; title: string }) {
   const result = await resetRuntimeReadwiseBookImport(input.nodeId);
-  if (result?.status === 'blocked_secondary') {
-    throw new Error(input.t('desktop.importInventory.readwise.primaryDeviceOnly'));
+  if (result?.status === 'source_inactive') {
+    throw new Error(input.t('desktop.importInventory.readwise.inactiveSource'));
   }
   if (!result || result.status !== 'reset' || !result.node_id || result.content === null || !result.updated_at) {
     throw new Error(input.t('desktop.importInventory.readwise.importFailed', { title: input.title }));

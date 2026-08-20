@@ -10,7 +10,6 @@ const nativePlugin = vi.hoisted(() => ({
     device_name: null,
     is_paired: false,
     paired_at: null,
-    primary_device_id: null
   }))
 }));
 

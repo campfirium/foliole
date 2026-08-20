@@ -44,7 +44,6 @@ const bootstrapMock = vi.hoisted(() => ({
 }));
 const pairingMock = vi.hoisted(() => ({
   load: vi.fn(async () => ({
-    primary_device_id: 'desktop-test-device', remote_peer_id: 'desktop-test-device'
   }))
 }));
 

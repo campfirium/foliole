@@ -8,7 +8,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let mockedAppDataDir = '/tmp/foliole-readwise-book-import-reset-order-tests';
 
-const primaryDeviceMock = vi.hoisted(() => ({
+const sourceOwnerMock = vi.hoisted(() => ({
   canRunExternalSources: true
 }));
 
@@ -25,8 +25,8 @@ vi.mock('../ipc/paths.js', () => ({
     app_log_dir: path.join(mockedAppDataDir, 'logs')
   })
 }));
-vi.mock('../sync/primaryDeviceState.js', () => ({
-  canDesktopRunExternalSources: vi.fn(() => primaryDeviceMock.canRunExternalSources)
+vi.mock('../database/readwiseDeviceAssignment.js', () => ({
+  canCurrentDeviceRunReadwise: vi.fn(() => sourceOwnerMock.canRunExternalSources)
 }));
 
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';

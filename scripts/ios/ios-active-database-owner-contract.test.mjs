@@ -35,7 +35,7 @@ describe('iOS active database ownership', () => {
       'clearPairingCredentials', 'desktopHttpRequest', 'downloadAttachmentResourceBatch',
       'downloadContentBlobBatch', 'finishAttachmentResourceBatch', 'finishContentBlobBatch',
       'loadDiscoveryCandidates', 'loadPairingState', 'loadSyncParticipationState',
-      'resolveAttachmentResource', 'savePairingCredentials', 'savePrimaryDeviceId',
+      'resolveAttachmentResource', 'savePairingCredentials',
       'setSyncEnabled', 'setSyncPaused', 'signCompanionSyncRequest',
       'stageAttachmentResourceBatch'
     ].sort());

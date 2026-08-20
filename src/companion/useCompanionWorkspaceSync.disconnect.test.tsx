@@ -42,7 +42,6 @@ vi.mock('./useCompanionWorkspacePairing', () => ({
       device_name: 'iPhone',
       is_paired: true,
       paired_at: '2026-04-25T09:00:00.000Z',
-      primary_device_id: 'device-desktop'
     },
     pairingStatus: 'idle',
     pendingPairRequest: null,
@@ -71,8 +70,7 @@ beforeEach(() => {
     device_kind: null,
     device_name: null,
     is_paired: false,
-    paired_at: null,
-    primary_device_id: null
+    paired_at: null
   });
 });
 

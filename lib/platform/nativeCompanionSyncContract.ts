@@ -48,7 +48,6 @@ export interface NativeCompanionPairingState {
   is_paired: boolean;
   negotiated_protocol_version?: number | null;
   paired_at: string | null;
-  primary_device_id: string | null;
   remote_peer_id?: string | null;
   remote_peer_name?: string | null;
   remote_peer_platform?: string | null;
@@ -183,51 +182,12 @@ export interface DesktopSyncGroupJoinRequestPayload {
   timeline_id: string;
 }
 
-export type NativePrimaryDeviceRole = 'primary' | 'secondary' | 'unknown';
-export type NativePrimaryDeviceSource =
-  | 'committed-primary-device'
-  | 'companion-paired-primary'
-  | 'desktop-paired-default'
-  | 'paired-primary-missing'
-  | 'self-unpaired';
-export type NativePrimaryDeviceTakeoverBlockedReason =
-  | 'control-message-carrier-missing'
-  | 'no-current-primary-device'
-  | 'release-ack-missing'
-  | 'sync-latest-confirmation-missing';
-
-export interface NativePrimaryDeviceStatePayload {
-  can_initiate_takeover: boolean;
-  local_role: NativePrimaryDeviceRole;
-  primary_device_id: string | null;
-  source: NativePrimaryDeviceSource;
-  takeover_blocked_reasons: NativePrimaryDeviceTakeoverBlockedReason[];
-}
-
-export interface NativePrimaryDeviceTakeoverPayload {
-  android_pack_cursor: number;
-  candidate_device_id: string;
-  desktop_max_state_seq: number;
-  local_dirty_count: number;
-  pending_ack_count: number;
-  push_issue_count: number;
-}
-
-export interface NativePrimaryDeviceTakeoverResponse {
-  committed_at: string;
-  primary_device_epoch: number;
-  primary_device_id: string;
-  release_ack: true;
-  updated_by_device_id: string;
-}
-
 export interface DesktopCompanionPairingOverviewPayload {
-  current_host?: { host_name: string; host_platform: string } | null;
+  current_host?: { device_id: string; host_name: string; host_platform: string } | null;
   join_candidates?: DesktopSyncGroupJoinCandidatePayload[];
   join_request?: DesktopSyncGroupJoinRequestPayload | null;
   paired_devices: DesktopCompanionPairedDevicePayload[];
   pending_requests: DesktopCompanionPairRequestPayload[];
-  primary_device_state: NativePrimaryDeviceStatePayload;
   server_status: DesktopCompanionSyncServerStatusPayload;
   sync_group?: SyncGroupPayload | null;
   sync_enabled: boolean;

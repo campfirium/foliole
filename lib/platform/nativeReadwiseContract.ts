@@ -27,7 +27,7 @@ export interface NativeReadwiseDetectionSource {
 
 export interface NativeReadwiseBookDownloadResult {
   book_key: string | null;
-  status: 'book_not_found' | 'missing_link' | 'opened' | 'blocked_secondary';
+  status: 'book_not_found' | 'missing_link' | 'opened' | 'source_inactive';
   title: string | null;
   url: string | null;
 }
@@ -43,7 +43,7 @@ export interface NativeReadwiseBookEpubLoadResult {
   book_key: string | null;
   error_message?: string | null;
   epub_path: string | null;
-  status: 'book_not_found' | 'cancelled' | 'selected' | 'failed' | 'blocked_secondary';
+  status: 'book_not_found' | 'cancelled' | 'selected' | 'failed' | 'source_inactive';
   title: string | null;
 }
 
@@ -52,7 +52,7 @@ export interface NativeReadwiseBookImportResetResult {
   content: string | null;
   node_id: string | null;
   removed_node_ids: string[];
-  status: 'book_not_found' | 'reset' | 'blocked_secondary';
+  status: 'book_not_found' | 'reset' | 'source_inactive';
   title: string | null;
   updated_at: string | null;
 }

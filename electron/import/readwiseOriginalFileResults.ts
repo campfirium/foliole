@@ -6,12 +6,12 @@ import {
   type ReadwiseOriginalFileTarget
 } from './readwiseOriginalFileTarget.js';
 
-export function createBlockedOriginalFileLoadResult(target: ReadwiseOriginalFileTarget): NativeReadwiseBookEpubLoadResult {
+export function createInactiveSourceOriginalFileLoadResult(target: ReadwiseOriginalFileTarget): NativeReadwiseBookEpubLoadResult {
   return {
     book_key: getReadwiseOriginalFileTargetKey(target),
-    error_message: 'Readwise actions run on the current primary device.',
+    error_message: 'Readwise actions are available where this source is active.',
     epub_path: null,
-    status: 'blocked_secondary',
+    status: 'source_inactive',
     title: getReadwiseOriginalFileTargetTitle(target)
   };
 }

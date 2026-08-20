@@ -11,7 +11,7 @@ const { openExternal, runEpubImport, showOpenDialog } = vi.hoisted(() => ({
   runEpubImport: vi.fn(),
   showOpenDialog: vi.fn()
 }));
-const primaryDeviceMock = vi.hoisted(() => ({
+const sourceOwnerMock = vi.hoisted(() => ({
   canRunExternalSources: true
 }));
 
@@ -28,11 +28,8 @@ vi.mock('../ipc/paths.js', () => ({
     app_log_dir: path.join(mockedAppDataDir, 'logs')
   })
 }));
-vi.mock('../sync/primaryDeviceState.js', () => ({
-  canDesktopRunExternalSources: vi.fn(() => primaryDeviceMock.canRunExternalSources)
-}));
 vi.mock('../database/readwiseDeviceAssignment.js', () => ({
-  canCurrentDeviceRunReadwise: vi.fn(() => true)
+  canCurrentDeviceRunReadwise: vi.fn(() => sourceOwnerMock.canRunExternalSources)
 }));
 
 vi.mock('../ipc/epubImport.js', () => ({
@@ -104,7 +101,7 @@ import { loadReadwiseBookEpub, openReadwiseBookDownload } from './readwiseBookMa
 beforeEach(() => {
   mockedAppDataDir = '/tmp/foliole-readwise-book-manual-action-failure-tests';
   vi.clearAllMocks();
-  primaryDeviceMock.canRunExternalSources = true;
+  sourceOwnerMock.canRunExternalSources = true;
   showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/broken.epub'] });
   runEpubImport.mockRejectedValue(new Error('broken epub'));
 });
@@ -120,18 +117,18 @@ it('returns a failed result instead of throwing when epub import fails', async (
 });
 
 it('blocks manual readwise download and original file import when this desktop is secondary', async () => {
-  primaryDeviceMock.canRunExternalSources = false;
+  sourceOwnerMock.canRunExternalSources = false;
 
   await expect(openReadwiseBookDownload('node-book-1')).resolves.toEqual({
     book_key: 'book-1',
-    status: 'blocked_secondary',
+    status: 'source_inactive',
     title: 'Book One',
     url: null
   });
   await expect(loadReadwiseBookEpub('node-book-1')).resolves.toMatchObject({
     book_key: 'book-1',
     epub_path: null,
-    status: 'blocked_secondary',
+    status: 'source_inactive',
     title: 'Book One'
   });
   expect(openExternal).not.toHaveBeenCalled();

@@ -13,7 +13,6 @@ import {
   createCancelPairingAction,
   createCompletePairingOnceAction
 } from './companionWorkspacePairingSessionActions';
-import { createPrimaryDeviceTakeoverAction } from './companionWorkspacePrimaryDeviceTakeoverAction';
 export type { CompanionDesktopDiscovery } from './companionWorkspacePairingModel';
 
 export type CompanionPairingStatus =
@@ -33,8 +32,7 @@ const EMPTY_PAIRING_STATE: NativeCompanionPairingState = {
   device_kind: null,
   device_name: null,
   is_paired: false,
-  paired_at: null,
-  primary_device_id: null
+  paired_at: null
 };
 
 function useStoredPairingStateLoader(args: {
@@ -98,11 +96,6 @@ export function useCompanionWorkspacePairing(args: PairingHookArgs) {
     setPairingStatus,
     setPendingPairRequest
   });
-  const requestPrimaryTakeover = createPrimaryDeviceTakeoverAction({
-    commitPairingState,
-    onError: args.onError
-  });
-
   return {
     desktopDiscovery: desktopDiscoveries.length > 0 ? desktopDiscoveries[0] : null,
     desktopDiscoveries,
@@ -116,7 +109,6 @@ export function useCompanionWorkspacePairing(args: PairingHookArgs) {
       inFlightRef: completePairingInFlightRef,
       pendingPairRequest
     }),
-    requestPrimaryDeviceTakeover: requestPrimaryTakeover,
     requestPairing: actions.requestPairing,
     refreshPairingState
   };

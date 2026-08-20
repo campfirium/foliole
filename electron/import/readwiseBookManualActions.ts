@@ -21,7 +21,7 @@ import {
   importSelectedReadwiseTopicFile
 } from './readwiseOriginalFileImport.js';
 import {
-  createBlockedOriginalFileLoadResult,
+  createInactiveSourceOriginalFileLoadResult,
   createCancelledOriginalFileLoadResult,
   createFailedOriginalFileLoadResult
 } from './readwiseOriginalFileResults.js';
@@ -44,7 +44,7 @@ export async function openReadwiseBookDownload(nodeId: string): Promise<NativeRe
   if (!canRunReadwiseExternalSource({ readwiseReaderEnabled: loadImportManagerSettings().readwiseReaderConfig.enabled })) {
     return {
       book_key: getReadwiseOriginalFileTargetKey(target),
-      status: 'blocked_secondary',
+      status: 'source_inactive',
       title: getReadwiseOriginalFileTargetTitle(target),
       url: null
     };
@@ -165,7 +165,7 @@ export async function loadReadwiseBookEpub(
     return { book_key: null, epub_path: null, status: 'book_not_found', title: null };
   }
   if (!canRunReadwiseExternalSource({ readwiseReaderEnabled: loadImportManagerSettings().readwiseReaderConfig.enabled })) {
-    return createBlockedOriginalFileLoadResult(target);
+    return createInactiveSourceOriginalFileLoadResult(target);
   }
 
   const selectedPath = await selectReadwiseBookEpubPath(target.kind === 'book' ? target.book : null, window);

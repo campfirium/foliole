@@ -27,8 +27,8 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-vi.mock('../sync/primaryDeviceState.js', () => ({
-  canDesktopRunExternalSources: vi.fn(() => true)
+vi.mock('../database/readwiseDeviceAssignment.js', () => ({
+  canCurrentDeviceRunReadwise: vi.fn(() => true)
 }));
 
 vi.mock('../database/pdfIndexing.js', async () => ({
@@ -39,6 +39,7 @@ vi.mock('../database/pdfIndexing.js', async () => ({
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import { listNodeAttachments } from '../database/attachments.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
+import { recordDesktopImportLocation } from '../database/desktopSources.js';
 import { runPreparedImport } from '../database/importPipeline.js';
 import { initializeDatabase } from '../database/migrate.js';
 
@@ -91,7 +92,7 @@ async function seedReadwisePdfTopic() {
       primaryPath: fullDocumentDir
     }]
   });
-  return runPreparedImport(createPreparedDesktopTextImport({
+  const prepared = createPreparedDesktopTextImport({
     content: '# PDF Topic\n\nFull text of this document omitted because this document is a PDF\n\n[Download original file →](https://readwise.io/reader/document_raw_content/1)',
     fileName: 'PDF Topic.md',
     filePath: sourcePath,
@@ -99,7 +100,16 @@ async function seedReadwisePdfTopic() {
     kind: 'markdown',
     sourceIdentity: 'readwise/articles/PDF Topic.md',
     sourceLocator: sourcePath
-  })).nodeId as string;
+  });
+  const imported = runPreparedImport(prepared);
+  recordDesktopImportLocation({
+    configRef: 'draft-import-source-1',
+    location: 'PDF Topic.md',
+    sourceFingerprint: prepared.sourceFingerprint,
+    sourceType: 'readwise',
+    updatedAt: '2026-05-19T00:00:00.000Z'
+  });
+  return imported.nodeId as string;
 }
 
 it('uses the shared original-file actions for a Readwise PDF topic', async () => {

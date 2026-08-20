@@ -74,7 +74,7 @@
   "desktop.importInventory.readwise.notImported": "{annotation} このブックはまだノードにインポートされていません。",
   "desktop.importInventory.readwise.import": "インポート",
   "desktop.importInventory.readwise.importing": "インポート中...",
-  "desktop.importInventory.readwise.primaryDeviceOnly": "Readwise アクションは、現在のプライマリ デバイスで実行されます。",
+  "desktop.importInventory.readwise.inactiveSource": "Readwise の操作は、このソースが有効なホストで利用できます。",
   "desktop.importInventory.readwise.importFailed": "{title} をインポートできませんでした。",
   "desktop.importInventory.readwise.catalogName": "Readwise 書籍",
   "desktop.importInventory.pdf.empty.title": "PDF は空です",

@@ -2,8 +2,7 @@ import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type {
   DesktopCompanionPairedDevicePayload,
   DesktopCompanionPairingOverviewPayload,
-  DesktopCompanionPairRequestPayload,
-  NativePrimaryDeviceStatePayload
+  DesktopCompanionPairRequestPayload
 } from '../../../lib/platform/nativeCompanionSyncContract';
 
 import { normalizePairingHost } from './desktop/pairingHostNormalization';
@@ -69,50 +68,6 @@ function normalizePendingRequest(value: unknown): DesktopCompanionPairRequestPay
   };
 }
 
-function normalizePrimaryDeviceState(value: unknown): NativePrimaryDeviceStatePayload {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return {
-      can_initiate_takeover: false,
-      local_role: 'unknown',
-      primary_device_id: null,
-      source: 'paired-primary-missing',
-      takeover_blocked_reasons: ['no-current-primary-device']
-    };
-  }
-  const raw = value as Record<string, unknown>;
-  return {
-    can_initiate_takeover: raw.can_initiate_takeover === true,
-    local_role: raw.local_role === 'primary' || raw.local_role === 'secondary' ? raw.local_role : 'unknown',
-    primary_device_id: typeof raw.primary_device_id === 'string' && raw.primary_device_id.trim() ? raw.primary_device_id : null,
-    source: normalizePrimaryDeviceSource(raw.source),
-    takeover_blocked_reasons: normalizeTakeoverBlockedReasons(raw.takeover_blocked_reasons)
-  };
-}
-
-function normalizePrimaryDeviceSource(value: unknown): NativePrimaryDeviceStatePayload['source'] {
-  if (
-    value === 'committed-primary-device' ||
-    value === 'companion-paired-primary' ||
-    value === 'desktop-paired-default' ||
-    value === 'self-unpaired'
-  ) {
-    return value;
-  }
-  return 'paired-primary-missing';
-}
-
-function normalizeTakeoverBlockedReasons(value: unknown): NativePrimaryDeviceStatePayload['takeover_blocked_reasons'] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value.filter((entry): entry is NativePrimaryDeviceStatePayload['takeover_blocked_reasons'][number] =>
-    entry === 'control-message-carrier-missing' ||
-    entry === 'no-current-primary-device' ||
-    entry === 'release-ack-missing' ||
-    entry === 'sync-latest-confirmation-missing'
-  );
-}
-
 function normalizePairingOverview(value: unknown): DesktopCompanionPairingOverviewPayload {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return {
@@ -121,7 +76,6 @@ function normalizePairingOverview(value: unknown): DesktopCompanionPairingOvervi
       join_request: null,
       paired_devices: [],
       pending_requests: [],
-      primary_device_state: normalizePrimaryDeviceState(null),
       server_status: normalizeServerStatus(null),
       sync_group: null,
       sync_enabled: false,
@@ -144,7 +98,6 @@ function normalizePairingOverview(value: unknown): DesktopCompanionPairingOvervi
           .map((entry) => normalizePendingRequest(entry))
           .filter((entry): entry is DesktopCompanionPairRequestPayload => entry !== null)
       : [],
-    primary_device_state: normalizePrimaryDeviceState(raw.primary_device_state),
     server_status: normalizeServerStatus(raw.server_status),
     sync_group: normalizeSyncGroup(raw.sync_group),
     sync_enabled: raw.sync_enabled === true,
@@ -168,7 +121,6 @@ export async function invokeDesktopCompanionPairingCommand<
     | typeof NATIVE_COMMANDS.resumeCompanionSync
     | typeof NATIVE_COMMANDS.clearCompanionPairedDevices
     | typeof NATIVE_COMMANDS.removeCompanionPairedDevice
-    | typeof NATIVE_COMMANDS.setDesktopAsPrimaryDevice
     | typeof NATIVE_COMMANDS.approveCompanionPairRequest
     | typeof NATIVE_COMMANDS.rejectCompanionPairRequest
 >(
@@ -218,10 +170,6 @@ export function removeDesktopCompanionPairedDevice(deviceId: string) {
   return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.removeCompanionPairedDevice, {
     device_id: deviceId
   });
-}
-
-export function setDesktopAsPrimaryDevice() {
-  return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.setDesktopAsPrimaryDevice);
 }
 
 export function approveDesktopCompanionPairRequest(pairRequestId: string) {

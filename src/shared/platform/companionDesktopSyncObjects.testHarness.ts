@@ -64,22 +64,8 @@ const pairingMock = {
     host_platform: 'android',
     is_paired: true,
     paired_at: '2026-05-10T00:00:00.000Z',
-    primary_device_id: 'android-test-device',
     remote_peer_id: 'authorization-desktop-test',
     remote_peer_name: 'Desktop Test Host'
-  }))
-};
-
-export const primaryDeviceIdentityMock = {
-  saveLocalPrimaryDeviceId: vi.fn(async (primaryDeviceId: string) => ({
-    device_id: 'android-test-device',
-    device_kind: 'android',
-    device_name: 'Android test device',
-    host_name: 'Android test device',
-    host_platform: 'android',
-    is_paired: true,
-    paired_at: '2026-05-10T00:00:00.000Z',
-    primary_device_id: primaryDeviceId
   }))
 };
 
@@ -110,7 +96,6 @@ function resetPairingMocks() {
     host_platform: 'android',
     is_paired: true,
     paired_at: '2026-05-10T00:00:00.000Z',
-    primary_device_id: 'android-test-device',
     remote_peer_id: 'authorization-desktop-test',
     remote_peer_name: 'Desktop Test Host'
   });
@@ -125,7 +110,6 @@ vi.mock('./companion/network/syncGroupPeerIdentity', () => ({
   resolveCompanionSyncPeerId: vi.fn(async () => 'desktop-test-device')
 }));
 vi.mock('./companionWorkspacePairing', () => pairingMock);
-vi.mock('./companionPrimaryDeviceIdentity', () => primaryDeviceIdentityMock);
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
     getPlatform: capacitorMock.getPlatform,
@@ -174,14 +158,4 @@ export function resetCompanionDesktopSyncMocks() {
   });
   attachmentResolutionMock.invalidateAttachmentResourceResolution.mockReset();
   resetPairingMocks();
-  primaryDeviceIdentityMock.saveLocalPrimaryDeviceId.mockImplementation(async (primaryDeviceId: string) => ({
-    device_id: 'android-test-device',
-    device_kind: 'android',
-    device_name: 'Android test device',
-    host_name: 'Android test device',
-    host_platform: 'android',
-    is_paired: true,
-    paired_at: '2026-05-10T00:00:00.000Z',
-    primary_device_id: primaryDeviceId
-  }));
 }

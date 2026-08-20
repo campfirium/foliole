@@ -21,8 +21,7 @@ function renderActivity(
         device_kind: 'android-capacitor',
         device_name: 'Android companion',
         is_paired: true,
-        paired_at: '2026-04-22T09:00:00.000Z',
-        primary_device_id: 'android-test-device'
+        paired_at: '2026-04-22T09:00:00.000Z'
       }}
       status={overrides.status ?? 'idle'}
       syncConflictCount={0}

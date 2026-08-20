@@ -7,7 +7,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let mockedAppDataDir = '/tmp/foliole-readwise-books-inventory-secondary-tests';
-const primaryDeviceMock = vi.hoisted(() => ({
+const sourceOwnerMock = vi.hoisted(() => ({
   canRunExternalSources: true
 }));
 
@@ -19,8 +19,8 @@ vi.mock('../ipc/paths.js', () => ({
     app_log_dir: path.join(mockedAppDataDir, 'logs')
   })
 }));
-vi.mock('../sync/primaryDeviceState.js', () => ({
-  canDesktopRunExternalSources: vi.fn(() => primaryDeviceMock.canRunExternalSources)
+vi.mock('../database/readwiseDeviceAssignment.js', () => ({
+  canCurrentDeviceRunReadwise: vi.fn(() => sourceOwnerMock.canRunExternalSources)
 }));
 
 import { closeDatabaseConnection } from '../database/connection.js';
@@ -34,7 +34,7 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-books-secondary-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
-  primaryDeviceMock.canRunExternalSources = true;
+  sourceOwnerMock.canRunExternalSources = true;
   initializeDatabase();
 });
 
@@ -70,7 +70,7 @@ it('returns an empty books inventory without scanning when this desktop is secon
   });
 
   const primaryInventory = await loadReadwiseBooksInventory();
-  primaryDeviceMock.canRunExternalSources = false;
+  sourceOwnerMock.canRunExternalSources = false;
   await fs.writeFile(path.join(highlightDir, 'Secondary Only Book.md'), '# Secondary Only Book\n', 'utf8');
 
   const secondaryInventory = await loadReadwiseBooksInventory();

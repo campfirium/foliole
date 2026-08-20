@@ -18,7 +18,6 @@ export interface CompanionPairingSyncPlugin {
     host_platform: string;
     negotiated_protocol_version: number;
     paired_at: string;
-    primary_device_id: string;
     provider_device_secret?: string;
     remote_peer_id?: string | null;
     remote_peer_name?: string | null;
@@ -26,7 +25,6 @@ export interface CompanionPairingSyncPlugin {
     remote_protocol: NonNullable<NativeCompanionPairingState['remote_protocol']>;
     sync_group_id?: string;
   }): Promise<NativeCompanionPairingState>;
-  savePrimaryDeviceId(args: { primary_device_id: string }): Promise<NativeCompanionPairingState>;
   signCompanionSyncRequest(args: {
     body_hash: string;
     endpoint_url?: string;

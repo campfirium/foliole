@@ -40,13 +40,11 @@ function createWorkspaceSync() {
       device_name: null,
       is_paired: false,
       paired_at: null,
-      primary_device_id: null
     },
     pairingStatus: 'idle',
     pendingPairRequest: null,
     pullFromDesktop: vi.fn(async () => undefined),
     removeRememberedTarget: vi.fn(async () => undefined),
-    requestPrimaryDeviceTakeover: vi.fn(async () => undefined),
     requestPairing: vi.fn(async () => undefined),
     saveEndpoint: vi.fn(async () => undefined),
     state: {
@@ -97,8 +95,7 @@ describe('CompanionSyncContent', () => {
       device_kind: 'android-capacitor',
       device_name: 'Android Emulator',
       is_paired: true,
-      paired_at: '2026-04-24T10:03:00.000Z',
-      primary_device_id: 'device-desktop'
+      paired_at: '2026-04-24T10:03:00.000Z'
     };
 
     render(<TestSyncContent page="syncHandoff" workspaceSync={workspaceSync} />);
@@ -140,7 +137,6 @@ function pairedWorkspaceSync() {
     device_name: 'Android Emulator',
     is_paired: true,
     paired_at: '2026-04-24T10:03:00.000Z',
-    primary_device_id: 'device-desktop',
     remote_peer_id: 'device-desktop',
     remote_peer_name: 'MacBook Pro',
     remote_peer_platform: 'macOS'
@@ -173,19 +169,6 @@ function testShowsSyncGroupStatusDetails() {
   expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
 }
 
-function testHidesLegacyPrimaryTakeover() {
-  const workspaceSync = pairedWorkspaceSync();
-  workspaceSync.state = {
-    ...workspaceSync.state,
-    endpoint_url: 'http://10.0.2.2:38641'
-  };
-
-  render(<TestSyncContent workspaceSync={workspaceSync} />);
-
-  expect(screen.queryByRole('button', { name: 'Set as primary device' })).not.toBeInTheDocument();
-  expect(workspaceSync.requestPrimaryDeviceTakeover).not.toHaveBeenCalled();
-}
-
 async function testCompletesApprovedPairing() {
   vi.useFakeTimers();
   const workspaceSync = createWorkspaceSync();
@@ -195,8 +178,7 @@ async function testCompletesApprovedPairing() {
       device_name: 'Android companion',
       is_paired: true,
       ...usablePairingMetadata,
-      paired_at: '2026-04-24T10:03:00.000Z',
-      primary_device_id: 'device-desktop'
+      paired_at: '2026-04-24T10:03:00.000Z'
   }));
   workspaceSync.pendingPairRequest = {
     endpointUrl: 'http://192.168.1.8:38641',
@@ -239,7 +221,6 @@ async function testKeepsApprovalPollingBelowDesktopRateLimit() {
 
 describe('CompanionSyncContent paired flow', () => {
   it('shows sync status with the paired-device connection entry', testShowsSyncGroupStatusDetails);
-  it('hides legacy primary takeover for an Android Sync Group member', testHidesLegacyPrimaryTakeover);
   it('automatically completes pairing after desktop approval', testCompletesApprovedPairing);
   it('keeps approval polling below the desktop completion rate limit', testKeepsApprovalPollingBelowDesktopRateLimit);
 });

@@ -100,7 +100,6 @@ describe('companionWorkspaceSync negotiated pairing', () => {
     await expect(loadCompanionPairingState()).resolves.toMatchObject({
       is_paired: true,
       negotiated_protocol_version: 1,
-      primary_device_id: 'device-desktop'
     });
   });
 
@@ -148,8 +147,7 @@ describe('companionWorkspaceSync pairing repair', () => {
       device_name: 'Preview',
       device_secret: 'old-secret',
       is_paired: true,
-      paired_at: '2026-04-22T12:00:00.000Z',
-      primary_device_id: 'device-desktop'
+      paired_at: '2026-04-22T12:00:00.000Z'
     });
 
     await expect(createSignedRequestHeaders({

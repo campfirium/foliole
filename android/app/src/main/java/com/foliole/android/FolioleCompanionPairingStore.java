@@ -20,6 +20,7 @@ final class FolioleCompanionPairingStore {
     private FolioleCompanionPairingStore() {}
 
     static JSObject loadPairingState(Context context) throws Exception {
+        FolioleCompanionPrimaryDeviceRetirement.apply(context);
         SharedPreferences prefs = prefs(context);
         FolioleCompanionPairingAuthorizationCutover.ensure(context, null, null, null);
         JSObject result = new JSObject();
@@ -44,10 +45,6 @@ final class FolioleCompanionPairingStore {
         result.put(
             FolioleCompanionBridgeContractDefinitions.pairingPairedAtStateKey(context),
             trimToNull(prefs.getString(FolioleCompanionBridgeContractDefinitions.pairingPairedAtPreferenceKey(context), null))
-        );
-        result.put(
-            FolioleCompanionBridgeContractDefinitions.pairingPrimaryDeviceIdStateKey(context),
-            trimToNull(prefs.getString(FolioleCompanionBridgeContractDefinitions.pairingPrimaryDeviceIdPreferenceKey(context), null))
         );
         FolioleCompanionPairingMetadata.addState(context, prefs, result);
         FolioleCompanionPairingProtocolStore.addState(context, prefs, result, hasCredentials);
@@ -82,7 +79,6 @@ final class FolioleCompanionPairingStore {
         String hostPlatform,
         int negotiatedProtocolVersion,
         String pairedAt,
-        String primaryDeviceId,
         String remotePeerId,
         String remotePeerName,
         String remotePeerPlatform,
@@ -104,8 +100,7 @@ final class FolioleCompanionPairingStore {
             .putString(FolioleCompanionBridgeContractDefinitions.pairingDeviceNamePreferenceKey(context), deviceName.trim())
             .putString(FolioleCompanionBridgeContractDefinitions.pairingHostNamePreferenceKey(context), hostName.trim())
             .putString(FolioleCompanionBridgeContractDefinitions.pairingHostPlatformPreferenceKey(context), hostPlatform.trim())
-            .putString(FolioleCompanionBridgeContractDefinitions.pairingPairedAtPreferenceKey(context), pairedAt.trim())
-            .putString(FolioleCompanionBridgeContractDefinitions.pairingPrimaryDeviceIdPreferenceKey(context), primaryDeviceId.trim());
+            .putString(FolioleCompanionBridgeContractDefinitions.pairingPairedAtPreferenceKey(context), pairedAt.trim());
         FolioleCompanionPairingMetadata.saveRemotePeer(context, editor, remotePeerId, remotePeerName, remotePeerPlatform);
         FolioleCompanionPairingProtocolStore.save(context, editor, negotiatedProtocolVersion, remoteProtocol);
         boolean saved = editor.commit();
@@ -135,16 +130,6 @@ final class FolioleCompanionPairingStore {
         JSObject result = new JSObject();
         result.put(FolioleCompanionPairingSignatureContractDefinitions.headersResponse(context), headers);
         return result;
-    }
-
-    static JSObject savePrimaryDeviceId(Context context, String primaryDeviceId) throws Exception {
-        boolean saved = prefs(context).edit()
-            .putString(FolioleCompanionBridgeContractDefinitions.pairingPrimaryDeviceIdPreferenceKey(context), primaryDeviceId.trim())
-            .commit();
-        if (!saved) {
-            throw new IllegalStateException("Failed to persist companion primary device id.");
-        }
-        return loadPairingState(context);
     }
 
     static String decryptCredentialBag(Context context, String service, String salt, String iv, String ciphertext) throws Exception {

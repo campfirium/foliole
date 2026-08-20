@@ -11,7 +11,7 @@ let mockedAppDataDir = '/tmp/foliole-readwise-book-import-reset-tests';
 const { showOpenDialog } = vi.hoisted(() => ({
   showOpenDialog: vi.fn().mockResolvedValue({ canceled: false, filePaths: ['/tmp/selected-book.epub'] })
 }));
-const primaryDeviceMock = vi.hoisted(() => ({
+const sourceOwnerMock = vi.hoisted(() => ({
   canRunExternalSources: true
 }));
 
@@ -28,8 +28,8 @@ vi.mock('../ipc/paths.js', () => ({
     app_log_dir: path.join(mockedAppDataDir, 'logs')
   })
 }));
-vi.mock('../sync/primaryDeviceState.js', () => ({
-  canDesktopRunExternalSources: vi.fn(() => primaryDeviceMock.canRunExternalSources)
+vi.mock('../database/readwiseDeviceAssignment.js', () => ({
+  canCurrentDeviceRunReadwise: vi.fn(() => sourceOwnerMock.canRunExternalSources)
 }));
 
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
@@ -50,7 +50,7 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-book-import-reset-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
-  primaryDeviceMock.canRunExternalSources = true;
+  sourceOwnerMock.canRunExternalSources = true;
   initializeDatabase();
   showOpenDialog.mockReset();
 });
@@ -203,11 +203,11 @@ it('blocks readwise book import reset when this desktop is secondary', async () 
   const nodeId = seedManualBookPlaceholder();
   await expect(loadReadwiseBookEpub(nodeId)).resolves.toMatchObject({ status: 'selected' });
 
-  primaryDeviceMock.canRunExternalSources = false;
+  sourceOwnerMock.canRunExternalSources = false;
   await expect(resetReadwiseBookImport(nodeId)).resolves.toMatchObject({
     book_key: 'manual book',
     node_id: nodeId,
-    status: 'blocked_secondary',
+    status: 'source_inactive',
     title: 'Manual Book'
   });
 

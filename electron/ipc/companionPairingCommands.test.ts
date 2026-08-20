@@ -8,19 +8,6 @@ const commandMocks = vi.hoisted(() => ({
     commandMocks.joined = true;
     return { group_id: 'group-1' };
   }),
-  commitPrimaryDeviceToPeer: vi.fn().mockReturnValue({
-    committedAt: '2026-04-24T10:05:00.000Z',
-    primaryDeviceEpoch: 2,
-    primaryDeviceId: 'device-desktop',
-    updatedByDeviceId: 'device-desktop'
-  }),
-  loadDesktopPrimaryDeviceStatePayload: vi.fn().mockReturnValue({
-    can_initiate_takeover: false,
-    local_role: 'primary',
-    primary_device_id: 'device-desktop',
-    source: 'committed-primary-device',
-    takeover_blocked_reasons: []
-  }),
   loadDesktopSyncGroupJoinState: vi.fn(() => ({
     candidates: [{
       endpoint_url: 'http://192.168.0.107:39339',
@@ -54,9 +41,6 @@ vi.mock('../database/deviceIdentity.js', () => ({
 }));
 vi.mock('../database/connection.js', () => ({
   runWithDatabaseConnectionOwner: commandMocks.runWithDatabaseConnectionOwner
-}));
-vi.mock('../database/primaryDeviceCommit.js', () => ({
-  commitPrimaryDeviceToPeer: commandMocks.commitPrimaryDeviceToPeer
 }));
 vi.mock('../database/syncGroupStore.js', () => ({
   createDesktopSyncGroup: vi.fn(),
@@ -114,9 +98,6 @@ vi.mock('../sync/lanWorkspaceSyncServer.js', () => ({
   })),
   stopLanWorkspaceSyncServer: commandMocks.stopLanWorkspaceSyncServer
 }));
-vi.mock('../sync/primaryDeviceState.js', () => ({
-  loadDesktopPrimaryDeviceStatePayload: commandMocks.loadDesktopPrimaryDeviceStatePayload
-}));
 vi.mock('../sync/workgroupKeyStore.js', () => ({
   enableDesktopWorkgroupKey: commandMocks.enableDesktopWorkgroupKey,
   loadDesktopWorkgroupKey: vi.fn(() => ({ group_id: 'group-1' }))
@@ -152,20 +133,6 @@ it('rejects discovery while local participation is inactive', async () => {
   commandMocks.enabled = false;
   await expect(handleCompanionPairingCommand('discover_sync_groups', {}))
     .rejects.toThrow('sync_participation_inactive');
-});
-
-it('commits the desktop device as primary through the coordinated database owner', async () => {
-  await expect(handleCompanionPairingCommand('set_desktop_as_primary_device', {})).resolves.toMatchObject({
-    primary_device_state: {
-      local_role: 'primary',
-      primary_device_id: 'device-desktop'
-    }
-  });
-  expect(commandMocks.commitPrimaryDeviceToPeer).toHaveBeenCalledWith({
-    primaryDeviceId: 'device-desktop',
-    updatedByDeviceId: 'device-desktop'
-  });
-  expect(commandMocks.runWithDatabaseConnectionOwner).toHaveBeenCalledOnce();
 });
 
 it('keeps discovered Sync Group candidates in the polling overview', async () => {

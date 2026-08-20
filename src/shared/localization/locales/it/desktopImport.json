@@ -74,7 +74,7 @@
   "desktop.importInventory.readwise.notImported": "{annotation} Questo libro non è stato ancora importato in un nodo.",
   "desktop.importInventory.readwise.import": "Importa",
   "desktop.importInventory.readwise.importing": "Importazione...",
-  "desktop.importInventory.readwise.primaryDeviceOnly": "Le azioni Readwise vengono eseguite sul dispositivo primario corrente.",
+  "desktop.importInventory.readwise.inactiveSource": "Le azioni Readwise sono disponibili dove questa fonte è attiva.",
   "desktop.importInventory.readwise.importFailed": "Impossibile importare {title}.",
   "desktop.importInventory.readwise.catalogName": "Readwise Libri",
   "desktop.importInventory.pdf.empty.title": "PDF è vuoto",

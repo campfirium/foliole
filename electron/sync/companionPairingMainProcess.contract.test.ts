@@ -41,10 +41,6 @@ vi.mock('../database/deviceIdentity.js', () => ({
   loadOrCreateDesktopDeviceId: vi.fn(() => 'desktop-local')
 }));
 
-vi.mock('../database/primaryDeviceCommit.js', () => ({
-  commitPrimaryDeviceToPeer: vi.fn()
-}));
-
 vi.mock('../database/connection.js', () => ({
   runWithDatabaseConnectionOwner: vi.fn(async (execute: () => unknown) => execute())
 }));
@@ -73,16 +69,6 @@ vi.mock('./desktopCompanionSyncPreference.js', () => ({
     sync_paused: false
   })),
   setDesktopCompanionSyncEnabled: vi.fn()
-}));
-
-vi.mock('./primaryDeviceState.js', () => ({
-  loadDesktopPrimaryDeviceStatePayload: vi.fn(() => ({
-    can_initiate_takeover: false,
-    local_role: 'primary',
-    primary_device_id: 'desktop-local',
-    source: 'committed-primary-device',
-    takeover_blocked_reasons: []
-  }))
 }));
 
 vi.mock('../database/workspaceSnapshot.js', () => ({

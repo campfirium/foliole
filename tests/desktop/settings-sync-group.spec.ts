@@ -18,6 +18,8 @@ test('creates a persistent Sync Group from desktop settings', async ({ desktopWi
   const ungroupedDevices = section.getByRole('list', { name: /^(Devices|设备)$/ });
 
   await expect(create).toBeEnabled();
+  await expect(section.getByRole('button', { name: /(primary device|主设备)/i })).toHaveCount(0);
+  await expect(section.getByText(/(primary device|主设备)/i)).toHaveCount(0);
   await expect(ungroupedDevices).toBeVisible();
   await expect(ungroupedDevices.getByRole('listitem')).toHaveCount(1);
   await expect(ungroupedDevices.getByText(/^(macOS|Windows|Linux)$/)).toBeVisible();

@@ -5,7 +5,6 @@ import { resolveFolioleAppVersion } from '../appVersion.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadOrCreateDesktopDeviceId } from '../database/deviceIdentity.js';
 import { loadOrCreateDesktopHostName } from '../database/hostProfile.js';
-import { commitPrimaryDeviceToPeer } from '../database/primaryDeviceCommit.js';
 import { createDesktopSyncGroup, loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import { resolveDesktopDeviceName } from '../sync/companionLanPayloads.js';
 import {
@@ -41,7 +40,6 @@ import {
   refreshLanWorkspaceSyncServerPairingStatus,
   stopLanWorkspaceSyncServer
 } from '../sync/lanWorkspaceSyncServer.js';
-import { loadDesktopPrimaryDeviceStatePayload } from '../sync/primaryDeviceState.js';
 import { leaveDesktopSyncGroup, removeDesktopSyncGroupMember } from '../sync/syncGroupDeparture.js';
 
 import { asString } from './commandParsers.js';
@@ -60,7 +58,6 @@ const COMPANION_PAIRING_COMMANDS = new Set<string>([
   NATIVE_COMMANDS.resumeCompanionSync,
   NATIVE_COMMANDS.clearCompanionPairedDevices,
   NATIVE_COMMANDS.removeCompanionPairedDevice,
-  NATIVE_COMMANDS.setDesktopAsPrimaryDevice,
   NATIVE_COMMANDS.approveCompanionPairRequest,
   NATIVE_COMMANDS.rejectCompanionPairRequest
 ]);
@@ -75,6 +72,7 @@ function buildDesktopCompanionPairingOverview(serverStatus?: ReturnType<typeof r
   );
   return {
     current_host: {
+      device_id: loadOrCreateDesktopDeviceId(),
       host_name: localMember?.host_name ?? resolveDesktopDeviceName(),
       host_platform: localMember?.host_platform ?? process.platform
     },
@@ -82,7 +80,6 @@ function buildDesktopCompanionPairingOverview(serverStatus?: ReturnType<typeof r
     join_request: join.pending?.request ?? null,
     paired_devices: loadPairedCompanionDevices(),
     pending_requests: loadPendingCompanionPairRequests(),
-    primary_device_state: loadDesktopPrimaryDeviceStatePayload(),
     server_status: resolvedServerStatus,
     sync_group: syncGroup,
     ...loadDesktopCompanionSyncParticipation()
@@ -120,15 +117,6 @@ function handleCompanionPairRequestMutation(
   } else {
     requireCompanionPairRequestMutationResult(mutate(pairRequestId), pairRequestId);
   }
-  return buildDesktopCompanionPairingOverview();
-}
-
-function setDesktopAsPrimaryDevice() {
-  const desktopDeviceId = loadOrCreateDesktopDeviceId();
-  commitPrimaryDeviceToPeer({
-    primaryDeviceId: desktopDeviceId,
-    updatedByDeviceId: desktopDeviceId
-  });
   return buildDesktopCompanionPairingOverview();
 }
 
@@ -208,9 +196,6 @@ function handleOwnedCompanionPairingCommand(command: string, args: Record<string
     const deviceId = asString(args.device_id, 'device_id');
     removePairedCompanionDevice(deviceId);
     return buildDesktopCompanionPairingOverview();
-  }
-  if (command === NATIVE_COMMANDS.setDesktopAsPrimaryDevice) {
-    return setDesktopAsPrimaryDevice();
   }
   return undefined;
 }

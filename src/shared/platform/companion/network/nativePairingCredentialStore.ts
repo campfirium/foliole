@@ -26,7 +26,6 @@ export async function saveStandaloneNativePairing(
     negotiated_protocol_version: payload.compatibility.negotiated_version
       ?? CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
     paired_at: payload.paired_at,
-    primary_device_id: payload.peer_id,
     remote_peer_id: payload.peer_id,
     remote_peer_name: args.remotePeerName ?? null,
     remote_peer_platform: args.remotePeerPlatform ?? null,

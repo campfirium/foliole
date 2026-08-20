@@ -29,12 +29,12 @@ export interface DesktopSourceRecord extends DatabaseRow {
 function currentHost() {
   const driver = openDatabaseConnection().driver;
   const deviceId = loadOrCreateDesktopDeviceId();
-  const member = driver.queryOne<{ device_kind: string; device_name: string }>(
-    `SELECT m.device_kind, m.device_name FROM sync_group_local_state l
-     JOIN sync_group_members m ON m.group_id = l.group_id AND m.device_id = l.local_device_id
+  const member = driver.queryOne<{ host_name: string; host_platform: string }>(
+    `SELECT m.host_name, m.host_platform FROM sync_group_local_state l
+     JOIN sync_group_members m ON m.group_id = l.group_id AND m.host_name = l.local_host_name
      WHERE l.singleton_id = 1 AND l.member_state = 'active' AND m.state = 'active' LIMIT 1`
   );
-  return { name: member?.device_name ?? deviceId, platform: member?.device_kind ?? process.platform };
+  return { name: member?.host_name ?? deviceId, platform: member?.host_platform ?? process.platform };
 }
 
 function pathFlavor(rootPath: string): DesktopSourceRecord['path_flavor'] {

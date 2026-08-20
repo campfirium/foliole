@@ -23,7 +23,9 @@ export function migrateDeliveryAuthorizations(sqlite: DatabaseMigrationTarget) {
   });
   rebuildReceipts(sqlite, result.receipts);
   rebuildCursors(sqlite, result.cursors);
-  for (const statement of SYNC_DELIVERY_TRIGGER_STATEMENTS) sqlite.exec(statement);
+  if (tableExists(sqlite, 'sync_object_state')) {
+    for (const statement of SYNC_DELIVERY_TRIGGER_STATEMENTS) sqlite.exec(statement);
+  }
 }
 
 function rebuildReceipts(sqlite: DatabaseMigrationTarget, receipts: DeliveryMigrationRow[]) {

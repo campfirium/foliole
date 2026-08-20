@@ -73,15 +73,6 @@ vi.mock('../sync/lanWorkspaceSyncServer.js', () => ({
     state: 'stopped'
   })
 }));
-vi.mock('../sync/primaryDeviceState.js', () => ({
-  loadDesktopPrimaryDeviceStatePayload: vi.fn().mockReturnValue({
-    can_initiate_takeover: false,
-    local_role: 'primary',
-    primary_device_id: 'device-desktop',
-    source: 'desktop-paired-default',
-    takeover_blocked_reasons: []
-  })
-}));
 vi.mock('./storage.js', () => ({
   loadAppSettingsState: vi.fn().mockResolvedValue({ 'foliole-ui-font-preset': 'inter' }),
   saveAppSettingsState: vi.fn().mockResolvedValue(undefined)

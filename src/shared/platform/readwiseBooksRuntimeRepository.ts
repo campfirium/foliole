@@ -35,7 +35,7 @@ function isReadwiseBookDownloadResult(value: unknown): value is NativeReadwiseBo
     (payload.status === 'book_not_found' ||
       payload.status === 'missing_link' ||
       payload.status === 'opened' ||
-      payload.status === 'blocked_secondary')
+      payload.status === 'source_inactive')
   );
 }
 
@@ -53,7 +53,7 @@ function isReadwiseBookEpubLoadResult(value: unknown): value is NativeReadwiseBo
       payload.status === 'cancelled' ||
       payload.status === 'selected' ||
       payload.status === 'failed' ||
-      payload.status === 'blocked_secondary')
+      payload.status === 'source_inactive')
   );
 }
 
@@ -68,7 +68,7 @@ function isReadwiseBookImportResetResult(value: unknown): value is NativeReadwis
     (payload.node_id === null || typeof payload.node_id === 'string') &&
     Array.isArray(payload.removed_node_ids) &&
     payload.removed_node_ids.every((item) => typeof item === 'string') &&
-    (payload.status === 'book_not_found' || payload.status === 'reset' || payload.status === 'blocked_secondary') &&
+    (payload.status === 'book_not_found' || payload.status === 'reset' || payload.status === 'source_inactive') &&
     (payload.title === null || typeof payload.title === 'string') &&
     (payload.updated_at === null || typeof payload.updated_at === 'string')
   );

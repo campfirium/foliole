@@ -12,16 +12,6 @@ vi.mock('../shared/platform/companionSyncObjects', () => ({
   saveCompanionSyncNodeViewState: vi.fn()
 }));
 
-function createTakeoverResponse() {
-  return {
-    committed_at: '2026-04-25T09:01:00.000Z',
-    primary_device_epoch: 1,
-    primary_device_id: 'android-test-device',
-    release_ack: true as const,
-    updated_by_device_id: 'android-test-device'
-  };
-}
-
 function createPairingState() {
   return {
     device_id: 'android-test-device',
@@ -29,7 +19,6 @@ function createPairingState() {
     device_name: 'Android companion',
     is_paired: true,
     paired_at: '2026-04-25T09:00:00.000Z',
-    primary_device_id: 'android-test-device'
   };
 }
 
@@ -93,7 +82,6 @@ function createWorkspaceSync(snapshot: WorkspaceSnapshot) {
     pullFromDesktop: vi.fn(),
     readableArticle: null,
     replaceSnapshot: vi.fn(),
-    requestPrimaryDeviceTakeover: vi.fn(async () => createTakeoverResponse()),
     refreshFromDevice: vi.fn(),
     refreshPairingState: vi.fn(async () => createPairingState()),
     removeRememberedTarget: vi.fn(),

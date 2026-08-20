@@ -159,7 +159,6 @@ export const NATIVE_COMMANDS = {
   resumeCompanionSync: 'resume_companion_sync',
   clearCompanionPairedDevices: 'clear_companion_paired_devices',
   removeCompanionPairedDevice: 'remove_companion_paired_device',
-  setDesktopAsPrimaryDevice: 'set_desktop_as_primary_device',
   approveCompanionPairRequest: 'approve_companion_pair_request',
   rejectCompanionPairRequest: 'reject_companion_pair_request',
   loadSyncIndex: 'load_sync_index',

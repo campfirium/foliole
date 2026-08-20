@@ -17,8 +17,7 @@ final class FolioleCompanionPairingPreferenceCleaner {
             .remove(FolioleCompanionBridgeContractDefinitions.pairingDeviceSecretIvPreferenceKey(context))
             .remove(FolioleCompanionBridgeContractDefinitions.pairingHostNamePreferenceKey(context))
             .remove(FolioleCompanionBridgeContractDefinitions.pairingHostPlatformPreferenceKey(context))
-            .remove(FolioleCompanionBridgeContractDefinitions.pairingPairedAtPreferenceKey(context))
-            .remove(FolioleCompanionBridgeContractDefinitions.pairingPrimaryDeviceIdPreferenceKey(context));
+            .remove(FolioleCompanionBridgeContractDefinitions.pairingPairedAtPreferenceKey(context));
         FolioleCompanionPairingMetadata.clear(context, editor);
         FolioleCompanionPairingProtocolStore.clear(context, editor);
     }

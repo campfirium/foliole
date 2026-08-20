@@ -39,7 +39,6 @@ const protocol = { capabilities: ['lan-sync-v1'], max_supported_version: 1,
 const pairing = {
   device_id: 'android-test-device', device_kind: 'android', device_name: 'Pixel 9',
   is_paired: true, negotiated_protocol_version: 1, paired_at: '2026-04-22T12:00:00.000Z',
-  primary_device_id: 'device-desktop', remote_protocol: protocol, sync_usable: true
 };
 
 beforeEach(() => {

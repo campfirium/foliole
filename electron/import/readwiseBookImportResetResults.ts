@@ -14,7 +14,7 @@ export function createReadwiseBookNotFoundResetResult(): NativeReadwiseBookImpor
   };
 }
 
-export function createBlockedReadwiseBookResetResult(
+export function createInactiveSourceReadwiseBookResetResult(
   book: ReadwiseBookInventoryItem
 ): NativeReadwiseBookImportResetResult {
   return {
@@ -22,7 +22,7 @@ export function createBlockedReadwiseBookResetResult(
     content: null,
     node_id: book.generatedNodeId ?? null,
     removed_node_ids: [],
-    status: 'blocked_secondary',
+    status: 'source_inactive',
     title: book.title,
     updated_at: null
   };

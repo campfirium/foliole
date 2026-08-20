@@ -43,8 +43,6 @@ export const LEGACY_FLAT_PLATFORM_BASENAMES = new Set([
   'companionPairingHttpError.ts',
   'companionPairingState.ts',
   'companionPairingSyncPluginTypes.ts',
-  'companionPrimaryDeviceIdentity.ts',
-  'companionPrimaryDeviceTakeover.ts',
   'companionReadableArticle.ts',
   'companionReadableArticleTitleSlot.ts',
   'companionRuntimeCapabilities.ts',

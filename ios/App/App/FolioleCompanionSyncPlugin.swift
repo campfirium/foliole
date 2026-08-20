@@ -17,7 +17,6 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "loadSyncParticipationState", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "resolveAttachmentResource", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "savePairingCredentials", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "savePrimaryDeviceId", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setSyncEnabled", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setSyncPaused", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "signCompanionSyncRequest", returnType: CAPPluginReturnPromise),
@@ -83,20 +82,10 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
                 hostPlatform: try self.requiredString(call, contract.credentialRequestKeys, "hostPlatform"),
                 negotiatedProtocolVersion: try self.requiredInt(call, contract.credentialRequestKeys, "negotiatedProtocolVersion"),
                 pairedAt: try self.requiredString(call, contract.credentialRequestKeys, "pairedAt"),
-                primaryDeviceId: try self.requiredString(call, contract.credentialRequestKeys, "primaryDeviceId"),
                 remotePeerId: call.getString(try self.key("remotePeerId", contract.credentialRequestKeys)),
                 remotePeerName: call.getString(try self.key("remotePeerName", contract.credentialRequestKeys)),
                 remotePeerPlatform: call.getString(try self.key("remotePeerPlatform", contract.credentialRequestKeys)),
                 remoteProtocol: try self.requiredObject(call, contract.credentialRequestKeys, "remoteProtocol")
-            )
-        }
-    }
-
-    @objc func savePrimaryDeviceId(_ call: CAPPluginCall) {
-        resolvePairing(call) { store in
-            let contract = try self.contract()
-            return try store.savePrimaryDeviceId(
-                try self.requiredString(call, contract.credentialRequestKeys, "primaryDeviceId")
             )
         }
     }

@@ -39,7 +39,6 @@ beforeEach(() => {
     device_name: null,
     is_paired: false,
     paired_at: null,
-    primary_device_id: null
   });
   syncMocks.discoverCompanionDesktop.mockResolvedValue({
     compatibility: {
@@ -74,7 +73,6 @@ beforeEach(() => {
     is_paired: true,
     negotiated_protocol_version: 1,
     paired_at: '2026-07-21T08:03:00.000Z',
-    primary_device_id: 'desktop-mac',
     remote_protocol: protocol,
     sync_usable: true
   });

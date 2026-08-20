@@ -56,7 +56,6 @@ final class FolioleCompanionPairingPluginActions {
             String endpointUrlKey = FolioleCompanionBridgeContractDefinitions.pairingEndpointUrlCredentialRequestKey(context);
             String syncGroupIdKey = FolioleCompanionBridgeContractDefinitions.pairingSyncGroupIdCredentialRequestKey(context);
             String pairedAtKey = FolioleCompanionBridgeContractDefinitions.pairingPairedAtCredentialRequestKey(context);
-            String primaryDeviceIdKey = FolioleCompanionBridgeContractDefinitions.pairingPrimaryDeviceIdCredentialRequestKey(context);
             String negotiatedVersionKey = FolioleCompanionBridgeContractDefinitions.pairingNegotiatedProtocolVersionCredentialRequestKey(context);
             String remoteProtocolKey = FolioleCompanionBridgeContractDefinitions.pairingRemoteProtocolCredentialRequestKey(context);
             String remotePeerIdKey = FolioleCompanionPairingPeerContractDefinitions.remotePeerIdCredentialRequestKey(context);
@@ -74,7 +73,6 @@ final class FolioleCompanionPairingPluginActions {
             String endpointUrl = call.getString(endpointUrlKey);
             String syncGroupId = call.getString(syncGroupIdKey);
             String pairedAt = call.getString(pairedAtKey);
-            String primaryDeviceId = call.getString(primaryDeviceIdKey);
             Integer negotiatedVersion = call.getInt(negotiatedVersionKey);
             JSObject remoteProtocol = call.getObject(remoteProtocolKey);
             String remotePeerId = call.getString(remotePeerIdKey);
@@ -89,8 +87,7 @@ final class FolioleCompanionPairingPluginActions {
                 rejectIfBlank(call, deviceSecretKey, deviceSecret) ||
                 rejectIfBlank(call, hostNameKey, hostName) ||
                 rejectIfBlank(call, hostPlatformKey, hostPlatform) ||
-                rejectIfBlank(call, pairedAtKey, pairedAt) ||
-                rejectIfBlank(call, primaryDeviceIdKey, primaryDeviceId)
+                rejectIfBlank(call, pairedAtKey, pairedAt)
             ) {
                 return;
             }
@@ -113,7 +110,6 @@ final class FolioleCompanionPairingPluginActions {
                 hostPlatform,
                 negotiatedVersion,
                 pairedAt,
-                primaryDeviceId,
                 remotePeerId,
                 remotePeerName,
                 remotePeerPlatform,
@@ -203,19 +199,6 @@ final class FolioleCompanionPairingPluginActions {
             call.resolve();
         } catch (Exception exception) {
             call.reject("Failed to bind Sync Group peer route.", exception);
-        }
-    }
-
-    static void savePrimaryDeviceId(Context context, PluginCall call) {
-        try {
-            String primaryDeviceIdKey = FolioleCompanionBridgeContractDefinitions.pairingPrimaryDeviceIdCredentialRequestKey(context);
-            String primaryDeviceId = call.getString(primaryDeviceIdKey);
-            if (rejectIfBlank(call, primaryDeviceIdKey, primaryDeviceId)) {
-                return;
-            }
-            call.resolve(FolioleCompanionPairingStore.savePrimaryDeviceId(context, primaryDeviceId));
-        } catch (Exception exception) {
-            call.reject("Failed to save companion primary device id.", exception);
         }
     }
 

@@ -16,6 +16,7 @@ import { migrateLegacyVirtualFoldersToManualNodes } from './numberedMigrationMan
 import { migrateNodeProvenance } from './numberedMigrationNodeProvenance.js';
 import { createNodeSyncTombstoneTable } from './numberedMigrationNodeSyncTombstones.js';
 import { migrateOpaqueSyncRefs } from './numberedMigrationOpaqueSyncRefs.js';
+import { retirePrimaryDeviceState } from './numberedMigrationPrimaryDeviceRetirement.js';
 import type { NumberedSchemaMigration } from './numberedMigrations.js';
 import { migrateSettingSingleTruth } from './numberedMigrationSettingSingleTruth.js';
 import { migrateSyncConflictConvergence } from './numberedMigrationSyncConvergence.js';
@@ -190,5 +191,9 @@ export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   {
     version: 74,
     migrate: migrateDeliveryAuthorizations
+  },
+  {
+    version: 75,
+    migrate: retirePrimaryDeviceState
   }
 ];

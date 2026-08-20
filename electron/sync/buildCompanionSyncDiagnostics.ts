@@ -9,7 +9,6 @@ import { loadOrCreateDesktopDeviceId } from '../database/deviceIdentity.js';
 import { loadMaxStateSeq } from '../database/syncPackRows.js';
 
 import type { LanWorkspaceSyncServerStatus } from './lanWorkspaceSyncServer.js';
-import { loadDesktopPrimaryDeviceState } from './primaryDeviceState.js';
 
 interface CountRow extends Record<string, unknown> {
   count: number;
@@ -139,7 +138,6 @@ export function buildCompanionSyncDiagnostics(args: {
   const storage = loadStorage();
   const maxStateSeq = loadMaxStateSeq(openDatabaseConnection().driver);
   const connection = buildConnection(args.serverStatus);
-  const primaryDeviceState = loadDesktopPrimaryDeviceState(collectedAt);
   return {
     collected_at: collectedAt,
     connection,
@@ -154,8 +152,7 @@ export function buildCompanionSyncDiagnostics(args: {
     identity: {
       app_version: args.appVersion,
       database_path: openDatabaseConnection().dbPath,
-      device_id: loadOrCreateDesktopDeviceId(collectedAt),
-      primary_device_id: primaryDeviceState.primaryDeviceId
+      device_id: loadOrCreateDesktopDeviceId(collectedAt)
     },
     storage,
     sync_state: {

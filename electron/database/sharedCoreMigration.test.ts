@@ -98,7 +98,7 @@ it('migrates the legacy desktop device id setting to the shared device id key', 
     .get('device_id')).toEqual({ value: '"desktop-test"' });
 });
 
-it('adds primary device commit columns to existing sync peers', () => {
+it('retires legacy primary device columns without losing sync peers', () => {
   const connection = openDatabaseConnection();
   connection.sqlite.exec(`
     CREATE TABLE sync_peers (
@@ -110,15 +110,19 @@ it('adds primary device commit columns to existing sync peers', () => {
     );
   `);
   connection.sqlite.pragma('user_version = 34');
+  connection.sqlite.exec(`INSERT INTO sync_peers (
+    peer_id, status, last_synced_at, last_seen_version_cursor, updated_at
+  ) VALUES ('peer-1', 'paired', '2026-08-20T00:00:00.000Z', 'cursor-1', '2026-08-20T00:00:00.000Z')`);
 
   initializeDatabaseConnection(connection);
 
   const columns = connection.sqlite.prepare('PRAGMA table_info(sync_peers)').all() as Array<{ name: string }>;
-  expect(columns.map((column) => column.name)).toEqual(expect.arrayContaining([
-    'primary_committed_at',
-    'primary_device_epoch',
-    'primary_updated_by_device_id'
-  ]));
+  expect(columns.map((column) => column.name)).toEqual([
+    'peer_id', 'status', 'last_synced_at', 'last_seen_version_cursor', 'updated_at'
+  ]);
+  expect(connection.sqlite.prepare('SELECT * FROM sync_peers').get()).toMatchObject({
+    peer_id: 'peer-1', last_seen_version_cursor: 'cursor-1', status: 'paired'
+  });
   expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
 });
 

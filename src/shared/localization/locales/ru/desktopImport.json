@@ -74,7 +74,7 @@
   "desktop.importInventory.readwise.notImported": "{annotation} Эта книга еще не импортирована на узел.",
   "desktop.importInventory.readwise.import": "Импорт",
   "desktop.importInventory.readwise.importing": "Импорт...",
-  "desktop.importInventory.readwise.primaryDeviceOnly": "Действия Readwise выполняются на текущем основном устройстве.",
+  "desktop.importInventory.readwise.inactiveSource": "Действия Readwise доступны на хосте, где активен этот источник.",
   "desktop.importInventory.readwise.importFailed": "Не удалось импортировать {title}.",
   "desktop.importInventory.readwise.catalogName": "Readwise Книги",
   "desktop.importInventory.pdf.empty.title": "PDF пуст.",

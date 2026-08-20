@@ -10,7 +10,7 @@ function overview(deviceId) {
   return {
     paired_devices: deviceId ? [{ device_id: deviceId }] : [],
     pending_requests: [],
-    primary_device_state: { local_role: 'primary', primary_device_id: 'desktop-current' },
+    current_host: { device_id: 'desktop-current' },
     server_status: { port: 38641, state: 'running' },
     sync_enabled: true
   };

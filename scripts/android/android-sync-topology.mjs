@@ -33,7 +33,7 @@ export function diagnoseAndroidSyncTopology(input) {
   const sync = input.syncState || {};
   const windows = input.windowsClient || {};
   const endpoint = trimText(sync.endpoint_url);
-  const remotePeerId = trimText(pairing.remote_peer_id) || trimText(pairing.primary_device_id);
+  const remotePeerId = trimText(pairing.remote_peer_id);
   const windowsPeerId = trimText(windows.peer_id) || trimText(windows.device_id);
   const kind = endpointKind(endpoint);
   const executorDeviceId = trimText(input.executorDeviceId);

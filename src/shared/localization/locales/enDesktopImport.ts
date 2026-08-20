@@ -74,7 +74,7 @@ export const EN_DESKTOP_IMPORT_TRANSLATIONS = {
   'desktop.importInventory.readwise.notImported': '{annotation} This book has not been imported into a node yet.',
   'desktop.importInventory.readwise.import': 'Import',
   'desktop.importInventory.readwise.importing': 'Importing...',
-  'desktop.importInventory.readwise.primaryDeviceOnly': 'Readwise actions run on the current primary device.',
+  'desktop.importInventory.readwise.inactiveSource': 'Readwise actions are available where this source is active.',
   'desktop.importInventory.readwise.importFailed': 'Could not import {title}.',
   'desktop.importInventory.readwise.catalogName': 'Readwise Books',
   'desktop.importInventory.pdf.empty.title': 'PDF is empty',

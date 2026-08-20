@@ -20,7 +20,6 @@ export async function applyCompanionSyncPackPathWithSharedCore(
     deviceId: string;
     hostName: string;
     packPath: string;
-    primaryDeviceId?: string | null | undefined;
     sourcePeerId: string;
     sourceHostName?: string;
   },
@@ -33,7 +32,6 @@ export async function applyCompanionSyncPackPathWithSharedCore(
     deviceId: args.deviceId,
     hostName: args.hostName,
     packPath: args.packPath,
-    primaryDeviceId: args.primaryDeviceId,
     ...(args.sourceHostName === undefined ? {} : { sourceHostName: args.sourceHostName }),
     sourcePeerId: args.sourcePeerId
   }, manager);
@@ -55,7 +53,6 @@ export async function applyCompanionSyncPackNodesWithSharedCore(
     deviceId: string;
     hostName: string;
     packPath: string;
-    primaryDeviceId?: string | null | undefined;
     sourceHostName?: string;
     sourcePeerId: string;
   },
@@ -76,7 +73,6 @@ export async function applyCompanionSyncPackNodesWithDbPort(
     deviceId: string;
     hostName: string;
     packPath: string;
-    primaryDeviceId?: string | null | undefined;
     sourceHostName?: string;
     sourcePeerId: string;
   },

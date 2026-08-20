@@ -7,7 +7,6 @@ import { diagnoseAndroidSyncTopology } from './android-sync-topology.mjs';
 const pairingState = {
   device_id: 'a5-device',
   device_name: 'A5',
-  primary_device_id: 'windows-peer',
   remote_peer_id: 'windows-peer',
   remote_peer_name: 'Foliole Desktop on Windows',
   remote_peer_platform: 'Windows'

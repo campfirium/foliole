@@ -7,7 +7,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let mockedAppDataDir = '/tmp/foliole-readwise-books-inventory-tests';
-const primaryDeviceMock = vi.hoisted(() => ({
+const sourceOwnerMock = vi.hoisted(() => ({
   canRunExternalSources: true
 }));
 
@@ -19,8 +19,8 @@ vi.mock('../ipc/paths.js', () => ({
     app_log_dir: path.join(mockedAppDataDir, 'logs')
   })
 }));
-vi.mock('../sync/primaryDeviceState.js', () => ({
-  canDesktopRunExternalSources: vi.fn(() => primaryDeviceMock.canRunExternalSources)
+vi.mock('../database/readwiseDeviceAssignment.js', () => ({
+  canCurrentDeviceRunReadwise: vi.fn(() => sourceOwnerMock.canRunExternalSources)
 }));
 
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
@@ -41,7 +41,7 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-books-inventory-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
-  primaryDeviceMock.canRunExternalSources = true;
+  sourceOwnerMock.canRunExternalSources = true;
   initializeDatabase();
 });
 

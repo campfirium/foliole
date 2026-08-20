@@ -14,19 +14,6 @@ const contentBlobMock = vi.hoisted(() => ({
     status: 'ready'
   }))
 }));
-const primaryDeviceTakeoverMock = vi.hoisted(() => ({
-  handlePrimaryDeviceTakeover: vi.fn(() => ({
-    ok: true,
-    statusCode: 200,
-    value: {
-      committed_at: '2026-05-10T00:00:00.000Z',
-      primary_device_epoch: 1,
-      primary_device_id: 'device-android',
-      release_ack: true,
-      updated_by_device_id: 'device-android'
-    }
-  }))
-}));
 const syncPushMock = vi.hoisted(() => ({
   handleCompanionSyncPush: vi.fn()
 }));
@@ -51,10 +38,6 @@ vi.mock('./companionLanSyncPush.js', () => ({
   SYNC_PUSH_PATH: '/companion/sync-push',
   handleCompanionSyncPush: syncPushMock.handleCompanionSyncPush
 }));
-vi.mock('./companionLanPrimaryDeviceTakeover.js', () => ({
-  PRIMARY_DEVICE_TAKEOVER_PATH: '/companion/primary-device/takeover',
-  handlePrimaryDeviceTakeover: primaryDeviceTakeoverMock.handlePrimaryDeviceTakeover
-}));
 vi.mock('./companionLanResponses.js', () => ({
   writeWorkgroupBinary: workgroupHttpMock.writeWorkgroupBinary
 }));
@@ -67,17 +50,6 @@ import { handleAuthenticatedPost } from './companionLanAuthenticatedPost.js';
 beforeEach(() => {
   vi.resetAllMocks();
   authMock.authenticateCompanionRequest.mockReturnValue({ ok: true });
-  primaryDeviceTakeoverMock.handlePrimaryDeviceTakeover.mockReturnValue({
-    ok: true,
-    statusCode: 200,
-    value: {
-      committed_at: '2026-05-10T00:00:00.000Z',
-      primary_device_epoch: 1,
-      primary_device_id: 'device-android',
-      release_ack: true,
-      updated_by_device_id: 'device-android'
-    }
-  });
   contentBlobMock.loadCompanionContentBlobBatch.mockReturnValue({
     body: Buffer.from('multipart-body'),
     mimeType: 'multipart/mixed; boundary=foliole-test',
@@ -87,28 +59,6 @@ beforeEach(() => {
   workgroupHttpMock.decryptWorkgroupRequestBody.mockImplementation(
     (_request, body: string) => Buffer.from(body)
   );
-});
-
-it('routes signed primary device takeover requests with the authenticated device id', async () => {
-  authMock.authenticateCompanionRequest.mockReturnValue({ device_id: 'device-android', ok: true } as never);
-  const response = createResponse();
-  const writeJson = vi.fn((_request, targetResponse, statusCode, payload) => {
-    targetResponse.writeHead(statusCode, { 'Content-Type': 'application/json; charset=utf-8' });
-    targetResponse.end(JSON.stringify(payload));
-  });
-  const requestBody = JSON.stringify({ candidate_device_id: 'device-android' });
-  const request = Readable.from([requestBody]) as http.IncomingMessage;
-  request.headers = {};
-  request.method = 'POST';
-  request.url = '/companion/primary-device/takeover';
-
-  await handleAuthenticatedPost(request, response, new URL(request.url, 'http://127.0.0.1'), writeJson);
-
-  expect(primaryDeviceTakeoverMock.handlePrimaryDeviceTakeover).toHaveBeenCalledWith(requestBody, 'device-android');
-  expect(writeJson).toHaveBeenCalledWith(request, response, 200, expect.objectContaining({
-    primary_device_id: 'device-android',
-    release_ack: true
-  }), 'POST, OPTIONS');
 });
 
 it('binds sync push provenance to the authenticated Host', async () => {
@@ -163,7 +113,6 @@ it('returns unknown post paths before reading oversized bodies', async () => {
   expect(writeJson).toHaveBeenCalledWith(request, response, 404, { error: 'not_found' }, 'POST, OPTIONS');
   expect(authMock.authenticateCompanionRequest).not.toHaveBeenCalled();
   expect(contentBlobMock.loadCompanionContentBlobBatch).not.toHaveBeenCalled();
-  expect(primaryDeviceTakeoverMock.handlePrimaryDeviceTakeover).not.toHaveBeenCalled();
   expect(syncPushMock.handleCompanionSyncPush).not.toHaveBeenCalled();
 });
 

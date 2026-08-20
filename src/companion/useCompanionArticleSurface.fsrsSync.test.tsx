@@ -25,16 +25,6 @@ const hydratedReviewSchedulerSettings = {
   updatedAt: '2026-04-22T08:05:00.000Z'
 };
 
-function createTakeoverResponse() {
-  return {
-    committed_at: '2026-04-22T08:04:00.000Z',
-    primary_device_epoch: 1,
-    primary_device_id: 'android-test-device',
-    release_ack: true as const,
-    updated_by_device_id: 'android-test-device'
-  };
-}
-
 function createPairingState() {
   return {
     device_id: 'android-test-device',
@@ -42,7 +32,6 @@ function createPairingState() {
     device_name: 'Android companion',
     is_paired: true,
     paired_at: '2026-04-22T08:03:00.000Z',
-    primary_device_id: 'android-test-device'
   };
 }
 
@@ -120,7 +109,6 @@ function createWorkspaceSync(snapshot = createSnapshot()) {
     pullFromDesktop: vi.fn(),
     readableArticle: null,
     replaceSnapshot: vi.fn(async () => state),
-    requestPrimaryDeviceTakeover: vi.fn(async () => createTakeoverResponse()),
     refreshFromDevice: vi.fn(async () => state),
     refreshPairingState: vi.fn(async () => createPairingState()),
     removeRememberedTarget: vi.fn(),

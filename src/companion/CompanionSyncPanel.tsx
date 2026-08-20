@@ -38,7 +38,6 @@ type CompanionSyncPanelProps = {
   onDisconnectPairing?: (() => Promise<unknown>) | undefined;
   onPull(endpointUrl: string): Promise<unknown>;
   onRemoveRememberedTarget(endpointUrl: string): Promise<unknown>;
-  onRequestPrimaryDeviceTakeover(endpointUrl: string): Promise<unknown>;
   onRequestPairing(endpointUrl: string): Promise<unknown>;
   onSaveEndpoint(endpointUrl: string): Promise<unknown>;
   onOpenSettingsPage(page: CompanionSettingsPage): void;
@@ -88,10 +87,6 @@ function formatSyncPanelError(message: string, t: Translate) {
   }
   if (message.includes('Failed to load pairing state')) return t('companion.sync.discovery.error.loadPairingFailed');
   if (message.includes('Failed to request desktop pairing')) return t('companion.sync.discovery.error.requestFailed');
-  if (message.includes('Failed to set this device as primary')) return t('companion.sync.discovery.error.primaryFailed');
-  if (message.includes('must sync to the latest desktop state')) return t('companion.sync.discovery.error.primaryNeedsSync');
-  if (message.includes('diagnostics are required')) return t('companion.sync.discovery.error.primaryNeedsDiagnostics');
-  if (message.includes('must be paired before becoming primary')) return t('companion.sync.discovery.error.primaryNeedsPairing');
   return message;
 }
 

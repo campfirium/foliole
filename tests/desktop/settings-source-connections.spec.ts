@@ -16,25 +16,24 @@ async function seedWorkgroupSourceFacts(desktopApp: ElectronApplication) {
     const moduleApi = process.getBuiltinModule('module');
     const pathApi = process.getBuiltinModule('path');
     if (!moduleApi || !pathApi) throw new Error('Node built-ins unavailable.');
-    const require = moduleApi.createRequire(pathApi.join(cwd, 'package.json'));
-    const connection = require(pathApi.join(cwd, 'dist/electron/database/connection.js'));
-    await connection.runWithDatabaseConnectionOwner(() => {
+      const require = moduleApi.createRequire(pathApi.join(cwd, 'package.json'));
+      const connection = require(pathApi.join(cwd, 'dist/electron/database/connection.js'));
+      await connection.runWithDatabaseConnectionOwner(() => {
       const driver = connection.openDatabaseConnection().driver;
-      const deviceRow = driver.queryOne("SELECT value FROM settings WHERE key = 'device_id'") as { value: string };
-      const currentDeviceId = JSON.parse(deviceRow.value) as string;
+      const currentHost = 'This Mac';
       driver.execute(`INSERT OR REPLACE INTO sync_groups
-        (group_id, display_name, timeline_id, created_by_device_id, created_at, updated_at)
-        VALUES ('t135-group', 'Workgroup', 't135-timeline', ?, 'now', 'now')`, [currentDeviceId]);
+        (group_id, display_name, timeline_id, created_by_host_name, created_at, updated_at)
+        VALUES ('t135-group', 'Workgroup', 't135-timeline', ?, 'now', 'now')`, [currentHost]);
       const insertMember = (values: string[]) => driver.execute(`INSERT INTO sync_group_members
-        (group_id, device_id, device_kind, device_name, state, approved_by_device_id,
+        (group_id, host_name, host_platform, state, approved_by_host_name,
          authorization_id, joined_at, updated_at)
-        VALUES ('t135-group', ?, ?, ?, 'active', ?, ?, 'now', 'now')`, values);
-      insertMember([currentDeviceId, 'darwin', 'This Mac', currentDeviceId, 't135-local-authorization']);
-      insertMember(['t135-office-pc', 'win32', 'Office PC', currentDeviceId, 't135-remote-authorization']);
-      insertMember(['t135-macbook', 'darwin', 'MacBook Pro', currentDeviceId, 't135-macbook-authorization']);
+        VALUES ('t135-group', ?, ?, 'active', ?, ?, 'now', 'now')`, values);
+      insertMember([currentHost, 'darwin', currentHost, 't135-local-authorization']);
+      insertMember(['Office PC', 'win32', currentHost, 't135-remote-authorization']);
+      insertMember(['MacBook Pro', 'darwin', currentHost, 't135-macbook-authorization']);
       driver.execute(`INSERT OR REPLACE INTO sync_group_local_state
-        (singleton_id, group_id, local_device_id, member_state, updated_at)
-        VALUES (1, 't135-group', ?, 'active', 'now')`, [currentDeviceId]);
+        (singleton_id, group_id, local_host_name, member_state, updated_at)
+        VALUES (1, 't135-group', ?, 'active', 'now')`, [currentHost]);
       const insertBinding = (values: string[]) => driver.execute(`INSERT INTO watched_folder_bindings
         (binding_id, connected_device_id, connected_device_name, connected_platform, connection_status,
          action_mode, archive_path, highlight_mode, highlight_path, primary_path, created_at, updated_at)
@@ -44,7 +43,7 @@ async function seedWorkgroupSourceFacts(desktopApp: ElectronApplication) {
       insertBinding(['t135-remote-mac', 't135-macbook', 'MacBook Pro', 'darwin',
         '/Users/foliole/Documents/Research']);
       driver.execute(`INSERT INTO settings (key, value, updated_at) VALUES
-        ('readwise_active_device', '{"device_id":"t135-office-pc"}', 'now')`);
+        ('readwise_active_device', '{"device_id":"Office PC"}', 'now')`);
     });
     return app.getPath('userData');
   }, process.cwd());

@@ -48,6 +48,7 @@ public class FolioleCompanionPairingStoreTest {
 
     @Test
     public void savedPairingCredentialsCanSignSyncRequests() throws Exception {
+        prefs().edit().putString("primary_device_id", "legacy-desktop").commit();
         FolioleCompanionPairingStore.savePairingCredentials(
             context,
             "authorization-android-test",
@@ -59,7 +60,6 @@ public class FolioleCompanionPairingStoreTest {
             "android-capacitor",
             1,
             "2026-04-27T06:00:00.000Z",
-            "primary-device-1",
             "desktop-device-1",
             "Foliole Desktop on Windows",
             "Windows",
@@ -82,6 +82,7 @@ public class FolioleCompanionPairingStoreTest {
         assertEquals("desktop-device-1", state.getString("remote_peer_id"));
         assertEquals("Foliole Desktop on Windows", state.getString("remote_peer_name"));
         assertEquals("Windows", state.getString("remote_peer_platform"));
+        assertFalse(prefs().contains("primary_device_id"));
         assertNotNull(headers);
         assertEquals("authorization-android-test", headers.getString("X-Authorization-Id"));
         assertNotNull(headers.getString("X-Signature"));
@@ -100,7 +101,6 @@ public class FolioleCompanionPairingStoreTest {
             "android-capacitor",
             1,
             "2026-04-27T06:00:00.000Z",
-            "primary-device-1",
             null,
             null,
             null,

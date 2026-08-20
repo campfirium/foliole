@@ -104,7 +104,6 @@ export function storeWebPairingState() {
       is_paired: true,
       negotiated_protocol_version: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
       paired_at: '2026-04-22T12:00:00.000Z',
-      primary_device_id: 'device-desktop',
       remote_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
     })
   );

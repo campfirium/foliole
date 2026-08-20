@@ -106,10 +106,6 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         FolioleCompanionPairingPluginActions.savePairingCredentials(getContext(), call);
     }
 
-    @PluginMethod public void savePrimaryDeviceId(PluginCall call) {
-        FolioleCompanionPairingPluginActions.savePrimaryDeviceId(getContext(), call);
-    }
-
     @PluginMethod public void signCompanionSyncRequest(PluginCall call) {
         FolioleCompanionPairingPluginActions.signCompanionSyncRequest(getContext(), call);
     }

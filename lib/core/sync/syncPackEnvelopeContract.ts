@@ -7,7 +7,7 @@ import {
 } from './syncPackNodeFields.js';
 
 export const SYNC_PACK_FORMAT = 'foliole.sync-pack';
-export const SYNC_PACK_FORMAT_VERSION = 9;
+export const SYNC_PACK_FORMAT_VERSION = 10;
 export const SYNC_PACK_COMPRESSION = 'zlib';
 export const SYNC_PACK_DATABASE_ENTRY = 'incoming.db.deflate';
 export const SYNC_PACK_MINIMUM_SCHEMA_VERSION = DATABASE_SCHEMA_VERSION;

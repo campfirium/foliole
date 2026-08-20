@@ -2,7 +2,7 @@ import path from 'node:path';
 
 import { DESKTOP_SOURCE_SCHEMA_STATEMENTS } from './desktopSourceSchemaStatements.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
-import { addColumnIfMissing, tableExists } from './numberedMigrationHelpers.js';
+import { addColumnIfMissing, columnExists, tableExists } from './numberedMigrationHelpers.js';
 
 interface StoredSetting { value: string }
 
@@ -26,16 +26,22 @@ function hostName(value: unknown) {
 }
 
 function localHost(sqlite: DatabaseMigrationTarget) {
-  const active = tableExists(sqlite, 'sync_group_local_state') && tableExists(sqlite, 'sync_group_members')
-    ? sqlite.prepare(
-    `SELECT m.device_name, m.device_kind FROM sync_group_local_state l
-     JOIN sync_group_members m ON m.group_id = l.group_id AND m.device_id = l.local_device_id
-     WHERE l.singleton_id = 1 AND l.member_state = 'active' AND m.state = 'active' LIMIT 1`
-    ).all()[0] as { device_kind: string; device_name: string } | undefined
+  const hasGroups = tableExists(sqlite, 'sync_group_local_state')
+    && tableExists(sqlite, 'sync_group_members');
+  const hostSchema = hasGroups && columnExists(sqlite, 'sync_group_members', 'host_name');
+  const query = hostSchema
+    ? `SELECT m.host_name AS name, m.host_platform AS platform FROM sync_group_local_state l
+       JOIN sync_group_members m ON m.group_id = l.group_id AND m.host_name = l.local_host_name
+       WHERE l.singleton_id = 1 AND l.member_state = 'active' AND m.state = 'active' LIMIT 1`
+    : `SELECT m.device_name AS name, m.device_kind AS platform FROM sync_group_local_state l
+       JOIN sync_group_members m ON m.group_id = l.group_id AND m.device_id = l.local_device_id
+       WHERE l.singleton_id = 1 AND l.member_state = 'active' AND m.state = 'active' LIMIT 1`;
+  const active = hasGroups
+    ? sqlite.prepare(query).all()[0] as { name: string; platform: string } | undefined
     : undefined;
   const stored = readSetting(sqlite, 'device_id');
   const fallback = typeof stored === 'string' && stored.trim() ? stored.trim() : 'unknown-host';
-  return { name: active?.device_name ?? fallback, platform: active?.device_kind ?? process.platform };
+  return { name: active?.name ?? fallback, platform: active?.platform ?? process.platform };
 }
 
 function upsertSource(sqlite: DatabaseMigrationTarget, input: {

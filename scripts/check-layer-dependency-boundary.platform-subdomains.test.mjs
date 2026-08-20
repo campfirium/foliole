@@ -83,9 +83,6 @@ describe('check-layer-dependency-boundary platform subdomains', () => {
     expect(resolvePlatformSubdomain('src/shared/platform/companionSyncNodeVersionsTestSupport.ts')).toBe(
       'companion-sync-reader'
     );
-    expect(resolvePlatformSubdomain('src/shared/platform/companionPrimaryDeviceIdentity.ts')).toBe(
-      'companion-runtime-plugin'
-    );
     expect(resolvePlatformSubdomain('src/shared/platform/companionRuntimeCapabilities.ts')).toBe(
       'companion-runtime-plugin'
     );

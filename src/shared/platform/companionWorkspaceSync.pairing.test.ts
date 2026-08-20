@@ -129,7 +129,6 @@ function mockVerifiedNativePairing(args: { deviceId: string; deviceKind: string;
     host_platform: args.deviceKind,
     is_paired: true,
     paired_at: '2026-04-22T12:00:00.000Z',
-    primary_device_id: 'device-desktop'
   };
   capacitorMock.plugin.savePairingCredentials.mockResolvedValue(pairing);
   capacitorMock.plugin.loadPairingState.mockResolvedValue(pairing);
@@ -184,7 +183,6 @@ it.each([
   });
   expect(capacitorMock.plugin.savePairingCredentials).toHaveBeenCalledWith(expect.objectContaining({
     device_name: deviceId,
-    primary_device_id: 'device-desktop',
     remote_peer_id: 'device-desktop'
   }));
   expect(capacitorMock.plugin.loadPairingState).toHaveBeenCalledOnce();

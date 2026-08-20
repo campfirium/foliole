@@ -61,7 +61,7 @@ function macSession(pairedDeviceFingerprints = ['bff1f41963a42739']) {
 
 function macOverview(memberFingerprints, pairedDevices = [{}]) {
   return { paired_devices: pairedDevices, pending_requests: [],
-    primary_device_state: { local_role: 'primary' }, server_status: { port: 38641, state: 'running' },
+    current_host: { device_id: 'mac-current' }, server_status: { port: 38641, state: 'running' },
     sync_enabled: true, sync_group: {
       group_id: 'group-59a8fdf1-a4e6-48aa-ad50-b68a8a0dcddf',
       timeline_id: 'timeline-73042308-acdf-49d7-8ccd-2c5e4656aee9',
@@ -136,7 +136,7 @@ it('requires restart to clear group, credential, route, and progress without cha
 it('admits only a fresh departed-member join and never requests disconnect repair', () => {
   const session = macSession([]);
   const overview = { paired_devices: [], pending_requests: [],
-    primary_device_state: { local_role: 'primary' }, server_status: { port: 38641, state: 'running' },
+    current_host: { device_id: 'mac-current' }, server_status: { port: 38641, state: 'running' },
     sync_enabled: true, sync_group: {
       group_id: 'group-59a8fdf1-a4e6-48aa-ad50-b68a8a0dcddf',
       timeline_id: 'timeline-73042308-acdf-49d7-8ccd-2c5e4656aee9',

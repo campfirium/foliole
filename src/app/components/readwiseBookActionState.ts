@@ -42,7 +42,7 @@ function formatDownloadMessage(
   const label = getBookLabel(book, result?.title ?? null);
   if (!result || result.status === 'book_not_found') return 'This topic is not available for original file actions right now.';
   if (result.status === 'missing_link') return `No original file download link was found for ${label}.`;
-  if (result.status === 'blocked_secondary') return 'Readwise actions run on the current primary device.';
+  if (result.status === 'source_inactive') return 'Readwise actions are available where this source is active.';
   return `Opened the original file download for ${label}.`;
 }
 
@@ -51,8 +51,8 @@ function formatLoadMessage(result: NativeReadwiseBookEpubLoadResult | null, book
   if (!result || result.status === 'book_not_found') return 'This topic is not available for original file actions right now.';
   if (result.status === 'cancelled') return 'Load original file was cancelled.';
   if (result.status === 'failed') return result.error_message?.trim() || `Could not load an original file for ${label}.`;
-  if (result.status === 'blocked_secondary') {
-    return result.error_message?.trim() || 'Readwise actions run on the current primary device.';
+  if (result.status === 'source_inactive') {
+    return result.error_message?.trim() || 'Readwise actions are available where this source is active.';
   }
   return `Loaded an original file for ${label}.`;
 }

@@ -21,25 +21,6 @@ function testShowsPendingSyncConflicts() {
   expect(screen.getByText('2')).toBeInTheDocument();
 }
 
-function testHidesRetiredPrimaryDeviceControls() {
-  render(
-    <CompanionSyncPanel
-      {...createConnectedProps()}
-      pairingState={{
-        ...createConnectedProps().pairingState,
-        primary_device_id: 'device-33ea4460-7c28-44c1-82f6-35ea045d260e'
-      }}
-      status="syncing"
-    />
-  );
-
-  expect(screen.queryByText('Device role')).not.toBeInTheDocument();
-  expect(screen.queryByText('device-33ea...260e')).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Set as primary device' })).not.toBeInTheDocument();
-  expect(screen.getByTestId('companion-sync-connection'))
-    .toHaveTextContent('Foliole Desktop on Windows (Windows)');
-}
-
 function testSeparatesConnectionFromActivity() {
   const props = createConnectedProps();
   render(
@@ -230,7 +211,6 @@ function testShowsTransferProgressInLastSyncRow() {
 describe('CompanionSyncPanel connected state', () => {
   it('shows a paired state without setup controls', testShowsPairedState);
   it('shows pending sync conflicts when the local database has them', testShowsPendingSyncConflicts);
-  it('hides retired primary-device controls while keeping the paired device readable', testHidesRetiredPrimaryDeviceControls);
   it('separates the current connection state from older sync activity', testSeparatesConnectionFromActivity);
   it('does not call manual sync completion automatic', testManualPassIsNotAutomatic);
   it('shows older failures as neutral history after a later completed sync', testOlderFailuresAreNeutralAfterCompletedPass);

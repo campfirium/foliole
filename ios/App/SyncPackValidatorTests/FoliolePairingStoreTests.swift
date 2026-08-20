@@ -3,6 +3,15 @@ import XCTest
 @testable import FolioleSyncPackValidator
 
 final class FoliolePairingStoreTests: XCTestCase {
+    func testLoadingStateRetiresLegacyGlobalRolePreference() throws {
+        let fixture = try makeFixture()
+        fixture.defaults.set("legacy-desktop", forKey: "primary_device_id")
+
+        _ = try fixture.store.loadState()
+
+        XCTAssertNil(fixture.defaults.object(forKey: "primary_device_id"))
+    }
+
     func testPersistsMetadataSignsNativelyAndKeepsSecretOutOfDefaults() throws {
         let fixture = try makeFixture()
         let saved = try fixture.store.save(
@@ -15,7 +24,6 @@ final class FoliolePairingStoreTests: XCTestCase {
             hostPlatform: "ios-capacitor",
             negotiatedProtocolVersion: 1,
             pairedAt: "2026-07-19T10:00:00.000Z",
-            primaryDeviceId: "desktop-device",
             remotePeerId: "desktop-device",
             remotePeerName: "Foliole Desktop on Mac",
             remotePeerPlatform: "macOS",
@@ -54,7 +62,6 @@ final class FoliolePairingStoreTests: XCTestCase {
             hostPlatform: "ios-capacitor",
             negotiatedProtocolVersion: 1,
             pairedAt: "2026-07-19T10:00:00.000Z",
-            primaryDeviceId: "desktop-device",
             remotePeerId: "desktop-device",
             remotePeerName: "Foliole Desktop on Mac",
             remotePeerPlatform: "macOS",
@@ -81,50 +88,12 @@ final class FoliolePairingStoreTests: XCTestCase {
             hostPlatform: "ios-capacitor",
             negotiatedProtocolVersion: 2,
             pairedAt: "2026-07-19T10:00:00.000Z",
-            primaryDeviceId: "desktop-device",
             remotePeerId: nil,
             remotePeerName: nil,
             remotePeerPlatform: nil,
             remoteProtocol: ["version": 2]
         ))
         XCTAssertNil(try fixture.secrets.load())
-    }
-
-    func testPrimaryDeviceUpdatePersistsAcrossStoreReloadWithoutChangingSecret() throws {
-        let fixture = try makeFixture()
-        _ = try fixture.store.save(
-            authorizationId: "authorization-ios",
-            credentialSecret: "pair-secret",
-            deviceId: "ios-device",
-            deviceKind: "ios-capacitor",
-            deviceName: "iPhone",
-            hostName: "iPhone",
-            hostPlatform: "ios-capacitor",
-            negotiatedProtocolVersion: 1,
-            pairedAt: "2026-07-19T10:00:00.000Z",
-            primaryDeviceId: "desktop-old",
-            remotePeerId: nil,
-            remotePeerName: nil,
-            remotePeerPlatform: nil,
-            remoteProtocol: ["version": 1]
-        )
-
-        _ = try fixture.store.savePrimaryDeviceId("desktop-new")
-        let reloadedDefaults = try XCTUnwrap(UserDefaults(suiteName: fixture.suite))
-        let reloadedStore = try FolioleCompanionPairingStore(
-            contract: fixture.contract,
-            defaults: reloadedDefaults,
-            secrets: fixture.secrets
-        )
-        let reloaded = try reloadedStore.loadState()
-
-        XCTAssertEqual(reloaded[fixture.contract.stateKeys["primaryDeviceId"]!] as? String, "desktop-new")
-        XCTAssertEqual(try fixture.secrets.load(), "pair-secret")
-        XCTAssertThrowsError(try reloadedStore.savePrimaryDeviceId("  "))
-        XCTAssertEqual(
-            try reloadedStore.loadState()[fixture.contract.stateKeys["primaryDeviceId"]!] as? String,
-            "desktop-new"
-        )
     }
 
     func testLegacyCredentialCutsOverOnceAndHostRenameKeepsAuthorizationAndSecret() throws {

@@ -211,9 +211,6 @@ it('hashes the existing remote peer on-device without returning its value', asyn
       return { stdout: `${createHash('sha256').update(device).digest('hex')}  -\n` };
     }
     if (String(script).includes('remote_peer_id')) {
-      return { stdout: `${createHash('sha256').update('').digest('hex')}  -\n` };
-    }
-    if (String(script).includes('primary_device_id')) {
       return { stdout: `${createHash('sha256').update(peer).digest('hex')}  -\n` };
     }
     return { stdout: '' };
@@ -226,8 +223,8 @@ it('hashes the existing remote peer on-device without returning its value', asyn
   });
   expect(run.mock.calls.some(([, args]) => args.at(-2) === '-c'
     && args.at(-1) === `"grep -q 'name=\\"device_id\\"' shared_prefs/foliole_companion_pairing.xml"`)).toBe(true);
-  expect(run.mock.calls.filter(([, args]) => String(args.at(-1)).includes('sha256sum'))).toHaveLength(3);
-  expect(run.mock.calls.filter(([, args]) => String(args.at(-1)).includes("tr -d '\\\\n'"))).toHaveLength(3);
+  expect(run.mock.calls.filter(([, args]) => String(args.at(-1)).includes('sha256sum'))).toHaveLength(2);
+  expect(run.mock.calls.filter(([, args]) => String(args.at(-1)).includes("tr -d '\\\\n'"))).toHaveLength(2);
   expect(JSON.stringify(result)).not.toContain(device);
   expect(JSON.stringify(result)).not.toContain(peer);
 });

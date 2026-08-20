@@ -3,6 +3,7 @@ import Foundation
 
 final class FolioleCompanionPairingStore {
     private static let currentProtocolVersion = 1
+    private static let legacyPrimaryDeviceKey = "primary_device_id"
     private let contract: FolioleCompanionPairingContract
     private let defaults: UserDefaults
     private let secrets: FolioleCompanionPairingSecretStore
@@ -29,6 +30,7 @@ final class FolioleCompanionPairingStore {
     var storedDeviceId: String? { metadata("deviceId") }
 
     func loadState() throws -> [String: Any] {
+        defaults.removeObject(forKey: Self.legacyPrimaryDeviceKey)
         try ensureAuthorizationCutover()
         let authorizationId = metadata("authorizationId")
         let deviceId = metadata("deviceId")
@@ -57,7 +59,6 @@ final class FolioleCompanionPairingStore {
         hostPlatform: String,
         negotiatedProtocolVersion: Int,
         pairedAt: String,
-        primaryDeviceId: String,
         remotePeerId: String?,
         remotePeerName: String?,
         remotePeerPlatform: String?,
@@ -67,7 +68,7 @@ final class FolioleCompanionPairingStore {
             throw Self.invalid("pairing protocol")
         }
         let required = [authorizationId, credentialSecret, deviceId, deviceKind, deviceName,
-                        hostName, hostPlatform, pairedAt, primaryDeviceId]
+                        hostName, hostPlatform, pairedAt]
         guard required.allSatisfy({ $0.trimmedNonempty != nil }) else { throw Self.invalid("pairing credentials") }
         let remoteProtocolData = try JSONSerialization.data(withJSONObject: remoteProtocol)
         try secrets.save(credentialSecret.trimmingCharacters(in: .whitespacesAndNewlines))
@@ -78,18 +79,11 @@ final class FolioleCompanionPairingStore {
         defaults.set(hostName.trimmedNonempty, forKey: preference("hostName"))
         defaults.set(hostPlatform.trimmedNonempty, forKey: preference("hostPlatform"))
         defaults.set(pairedAt.trimmedNonempty, forKey: preference("pairedAt"))
-        defaults.set(primaryDeviceId.trimmedNonempty, forKey: preference("primaryDeviceId"))
         setOptional(remotePeerId, forKey: preference("remotePeerId"))
         setOptional(remotePeerName, forKey: preference("remotePeerName"))
         setOptional(remotePeerPlatform, forKey: preference("remotePeerPlatform"))
         defaults.set(negotiatedProtocolVersion, forKey: preference("negotiatedProtocolVersion"))
         defaults.set(remoteProtocolData, forKey: preference("remoteProtocol"))
-        return try loadState()
-    }
-
-    func savePrimaryDeviceId(_ value: String) throws -> [String: Any] {
-        guard let value = value.trimmedNonempty else { throw Self.invalid("primary device id") }
-        defaults.set(value, forKey: preference("primaryDeviceId"))
         return try loadState()
     }
 
@@ -133,7 +127,6 @@ final class FolioleCompanionPairingStore {
             stateKey("isPaired"): hasCredentials,
             stateKey("negotiatedProtocolVersion"): negotiatedVersion > 0 ? negotiatedVersion : NSNull(),
             stateKey("pairedAt"): metadata("pairedAt") ?? NSNull(),
-            stateKey("primaryDeviceId"): metadata("primaryDeviceId") ?? NSNull(),
             stateKey("remotePeerId"): metadata("remotePeerId") ?? NSNull(),
             stateKey("remotePeerName"): metadata("remotePeerName") ?? NSNull(),
             stateKey("remotePeerPlatform"): metadata("remotePeerPlatform") ?? NSNull(),

@@ -15,7 +15,7 @@ function launcherFixture(libraryHome = 'D:\\X\\U\\Foliole') {
       if (input.commandName === 'load_library_path_settings') return { library_home: libraryHome };
       return {
         paired_devices: [], pending_requests: [],
-        primary_device_state: { local_role: 'primary', primary_device_id: 'desktop-device-1' },
+        current_host: { device_id: 'desktop-device-1' },
         server_status: { state: 'running' }, sync_enabled: true
       };
     }),

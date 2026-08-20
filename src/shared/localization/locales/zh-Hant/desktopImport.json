@@ -74,7 +74,7 @@
   "desktop.importInventory.readwise.notImported": "{annotation} 這本書尚未導入節點。",
   "desktop.importInventory.readwise.import": "進口",
   "desktop.importInventory.readwise.importing": "正在導入...",
-  "desktop.importInventory.readwise.primaryDeviceOnly": "Readwise 操作在目前主設備上運作。",
+  "desktop.importInventory.readwise.inactiveSource": "Readwise 操作僅在此來源生效的主機上可用。",
   "desktop.importInventory.readwise.importFailed": "無法導入 {title}。",
   "desktop.importInventory.readwise.catalogName": "Readwise 書籍",
   "desktop.importInventory.pdf.empty.title": "PDF 為空",

@@ -41,7 +41,6 @@ function createProps() {
     onDisconnectPairing: vi.fn(async () => undefined),
     onPull: vi.fn(async () => undefined),
     onRemoveRememberedTarget: vi.fn(async () => undefined),
-    onRequestPrimaryDeviceTakeover: vi.fn(async () => undefined),
     onRequestPairing: vi.fn(async () => undefined),
     onSaveEndpoint: vi.fn(async () => undefined),
     onOpenSettingsPage: vi.fn(),
@@ -53,7 +52,6 @@ function createProps() {
       device_name: null,
       is_paired: false,
       paired_at: null,
-      primary_device_id: null
     },
     pairingStatus: 'idle' as const,
     status: 'idle' as const

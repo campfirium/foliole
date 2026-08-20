@@ -50,7 +50,6 @@ describe('companionWorkspaceSync disconnect', () => {
       device_name: null,
       is_paired: false,
       paired_at: null,
-      primary_device_id: null
     });
 
     await expect(clearCompanionPairingCredentials()).resolves.toMatchObject({ is_paired: false });

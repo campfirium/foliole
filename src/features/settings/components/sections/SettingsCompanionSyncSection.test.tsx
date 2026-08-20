@@ -33,16 +33,9 @@ function createState(overrides: Partial<PairingState> = {}): PairingState {
     isLoading: false,
     leaveSyncGroup: vi.fn(),
     overview: {
-      current_host: { host_name: 'Studio Mac', host_platform: 'darwin' },
+      current_host: { device_id: 'desktop-device', host_name: 'Studio Mac', host_platform: 'darwin' },
       paired_devices: [],
       pending_requests: [],
-      primary_device_state: {
-        can_initiate_takeover: false,
-        local_role: 'primary',
-        primary_device_id: 'device-desktop',
-        source: 'desktop-paired-default',
-        takeover_blocked_reasons: []
-      },
       server_status: {
         advertised_urls: [],
         last_error: null,

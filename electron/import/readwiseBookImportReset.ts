@@ -5,7 +5,7 @@ import { deleteNodesPermanently, upsertNodeSnapshot } from '../database/nodeMuta
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
 import {
-  createBlockedReadwiseBookResetResult,
+  createInactiveSourceReadwiseBookResetResult,
   createReadwiseBookNotFoundResetResult
 } from './readwiseBookImportResetResults.js';
 import { buildReadwiseBookPlaceholderContent, buildReadwiseBookPlaceholderNodeId } from './readwiseBookNodes.js';
@@ -172,7 +172,7 @@ async function resetReadwiseBookImportTarget(
     return createReadwiseBookNotFoundResetResult();
   }
   if (!canRunReadwiseExternalSource({ readwiseReaderEnabled: loadImportManagerSettings().readwiseReaderConfig.enabled })) {
-    return createBlockedReadwiseBookResetResult(book);
+    return createInactiveSourceReadwiseBookResetResult(book);
   }
 
   const activeNode = readActiveNode(nodeId);

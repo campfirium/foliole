@@ -46,7 +46,7 @@ describe('Android Java SQL surface', () => {
       'loadDiscoveryCandidates', 'loadPairingState', 'loadSyncGroupProviderState', 'loadSyncParticipationState',
       'rejectSyncGroupJoinRequest',
       'resolveAttachmentResource', 'resolveSyncGroupDataRequest',
-      'savePairingCredentials', 'savePrimaryDeviceId', 'setSyncEnabled', 'setSyncPaused', 'signCompanionSyncRequest',
+      'savePairingCredentials', 'setSyncEnabled', 'setSyncPaused', 'signCompanionSyncRequest',
       'stageAttachmentResourceBatch', 'startSyncGroupProvider', 'stopSyncGroupProvider'
     ].sort());
   });

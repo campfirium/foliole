@@ -20,17 +20,26 @@ function readActiveDeviceId() {
 
 function deviceDetails(deviceId: string): NativeReadwiseWorkgroupDevice {
   return openDatabaseConnection().driver.queryOne<NativeReadwiseWorkgroupDevice & DatabaseRow>(
-    `SELECT device_id, device_name, device_kind AS platform
-     FROM sync_group_members WHERE device_id = ? ORDER BY updated_at DESC LIMIT 1`, [deviceId]
+    `SELECT host_name AS device_id, host_name AS device_name, host_platform AS platform
+     FROM sync_group_members WHERE host_name = ? ORDER BY updated_at DESC LIMIT 1`, [deviceId]
   ) ?? { device_id: deviceId, device_name: deviceId, platform: null };
+}
+
+function currentHostId() {
+  return openDatabaseConnection().driver.queryOne<{ host_name: string }>(
+    `SELECT l.local_host_name AS host_name FROM sync_group_local_state l
+     JOIN sync_group_members m ON m.group_id = l.group_id AND m.host_name = l.local_host_name
+     WHERE l.singleton_id = 1 AND l.member_state = 'active' AND m.state = 'active' LIMIT 1`
+  )?.host_name ?? loadOrCreateDesktopDeviceId();
 }
 
 function readWorkgroupDesktopDevices(currentDeviceId: string, activeDeviceId: string | null) {
   const devices = openDatabaseConnection().driver.queryAll<NativeReadwiseWorkgroupDevice & DatabaseRow>(
-    `SELECT m.device_id, m.device_name, m.device_kind AS platform FROM sync_group_local_state l
+    `SELECT m.host_name AS device_id, m.host_name AS device_name, m.host_platform AS platform
+     FROM sync_group_local_state l
      JOIN sync_group_members m ON m.group_id = l.group_id
-     WHERE l.singleton_id = 1 AND m.state = 'active' AND m.device_kind IN ('darwin', 'win32')
-     ORDER BY m.device_name, m.device_id`
+     WHERE l.singleton_id = 1 AND m.state = 'active' AND m.host_platform IN ('darwin', 'win32')
+     ORDER BY m.host_name`
   );
   const byId = new Map<string, NativeReadwiseWorkgroupDevice>(
     devices.map((device) => [device.device_id, device])
@@ -44,7 +53,7 @@ function readWorkgroupDesktopDevices(currentDeviceId: string, activeDeviceId: st
 }
 
 export function loadReadwiseDeviceAssignment(): NativeReadwiseDeviceAssignment {
-  const currentDeviceId = loadOrCreateDesktopDeviceId();
+  const currentDeviceId = currentHostId();
   const activeDeviceId = readActiveDeviceId();
   return {
     active_device_id: activeDeviceId,
@@ -58,7 +67,7 @@ export function loadReadwiseDeviceAssignment(): NativeReadwiseDeviceAssignment {
 }
 
 export function activateReadwiseOnThisDevice() {
-  const currentDeviceId = loadOrCreateDesktopDeviceId();
+  const currentDeviceId = currentHostId();
   saveJsonSetting(READWISE_ACTIVE_DEVICE_KEY, { device_id: currentDeviceId });
   return loadReadwiseDeviceAssignment();
 }

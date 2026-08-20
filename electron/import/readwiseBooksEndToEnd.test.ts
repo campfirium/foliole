@@ -12,7 +12,7 @@ const { openExternal, showOpenDialog } = vi.hoisted(() => ({
   openExternal: vi.fn().mockResolvedValue(undefined),
   showOpenDialog: vi.fn().mockResolvedValue({ canceled: false, filePaths: ['/tmp/selected-book.epub'] })
 }));
-const primaryDeviceMock = vi.hoisted(() => ({ canRunExternalSources: true }));
+const sourceOwnerMock = vi.hoisted(() => ({ canRunExternalSources: true }));
 
 vi.mock('electron', () => ({
   dialog: { showOpenDialog },
@@ -26,8 +26,8 @@ vi.mock('../ipc/paths.js', () => ({
     app_log_dir: path.join(mockedAppDataDir, 'logs')
   })
 }));
-vi.mock('../sync/primaryDeviceState.js', () => ({
-  canDesktopRunExternalSources: vi.fn(() => primaryDeviceMock.canRunExternalSources)
+vi.mock('../database/readwiseDeviceAssignment.js', () => ({
+  canCurrentDeviceRunReadwise: vi.fn(() => sourceOwnerMock.canRunExternalSources)
 }));
 
 import { createReadwiseImportSources } from '../../lib/core/import/importManagerSettings.js';
@@ -56,7 +56,7 @@ function saveEnabledReadwiseBooksSettings(readwiseRoot: string) {
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-books-end-to-end-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
-  primaryDeviceMock.canRunExternalSources = true;
+  sourceOwnerMock.canRunExternalSources = true;
   initializeDatabase();
   openExternal.mockReset();
   showOpenDialog.mockReset();

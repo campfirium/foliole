@@ -78,7 +78,7 @@ const FILE_SUBDOMAIN_RULES = [
   ['companion-sync-pack-apply', /^companionSync(?:PackApply|PackNodes|PackTransfer)\.tsx?$/],
   ['companion-sync-writer', /^companion(?:ContentBlobSync|AttachmentResourceSync)\.tsx?$|^companionSync(?:WriterQueue|StateWriters|ReviewLogApply)\.tsx?$/],
   ['companion-sync-reader', /^companionSync(?:Cursors|WebCursors|NodeVersions|StateObjects|StateObjectIdentity|PushProtocol|EventSemantics)\.tsx?$/],
-  ['companion-runtime-plugin', /^companion(?:AppData|Bootstrap|Browse|Readable|External|Handoff|Pairing|PrimaryDevice|Workspace)\w*\.tsx?$/],
+  ['companion-runtime-plugin', /^companion(?:AppData|Bootstrap|Browse|Readable|External|Handoff|Pairing|Workspace)\w*\.tsx?$/],
   ['import-runtime', /^(?:import|keepImport|pdfImports|readwiseBooks|readwiseReaderSetup|readwiseReaderImport|readwiseImportCleanup|removedSources|nodeBacklinks|nodeSource)\w*\.tsx?$/],
   ['external-runtime', /^(?:external|linkPanel|articleMirror|readwiseTopic|remoteImageLocalization)\w*\.tsx?$/],
   ['diagnostics', /^(?:diagnosticBundle|desktopDebugProbe|performance|rendererErrorDiagnostics|workspaceSyncDebug)\w*\.tsx?$/],

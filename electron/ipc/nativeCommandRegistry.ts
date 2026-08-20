@@ -169,7 +169,6 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.resumeCompanionSync, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.clearCompanionPairedDevices, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.removeCompanionPairedDevice, route: 'storage', capability: 'settingsMutation' },
-  { command: NATIVE_COMMANDS.setDesktopAsPrimaryDevice, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.approveCompanionPairRequest, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.rejectCompanionPairRequest, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.loadSyncIndex, route: 'storage', capability: 'read' },

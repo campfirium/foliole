@@ -24,7 +24,7 @@ it('accepts only a live isolated macOS acceptance listener', () => {
   const safe = { desktopPeerFingerprint: 'desktop-peer', pairedDeviceFingerprints: [],
     pendingDeviceFingerprints: [], ready: true };
   const session = { assertActive: vi.fn(), sanitize: vi.fn(() => safe) };
-  const overview = { paired_devices: [], pending_requests: [], primary_device_state: {},
+  const overview = { paired_devices: [], pending_requests: [], current_host: { device_id: 'desktop-peer' },
     server_status: { port: 38642, state: 'running' }, sync_enabled: true };
   expect(validateMacosAcceptanceDesktopPreflight(
     overview, session, 'device-peer'
