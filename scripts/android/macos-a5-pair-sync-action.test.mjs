@@ -157,6 +157,7 @@ it('keeps current group peers, removes orphan pairings, and re-pairs the missing
   expect(session.remove).toHaveBeenCalledWith(orphanId);
 });
 
+
 it('keeps active peers while a formally departed empty A5 requests a new join', async () => {
   const currentId = 'current-a5';
   const desktopC = 'desktop-c';

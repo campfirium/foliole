@@ -16,7 +16,33 @@ const AUTHORIZED_STALE_DEVICE_FINGERPRINT = 'bd1d679fbb55b53e';
 function activeSyncGroupDeviceIds(overview) {
   const members = overview.sync_group?.members;
   if (!Array.isArray(members)) return null;
-  return new Set(members.filter((member) => member.state === 'active').map((member) => member.device_id));
+  const deviceIds = members.filter((member) => member.state === 'active')
+    .map((member) => member.device_id).filter((value) => typeof value === 'string' && value);
+  return deviceIds.length === members.length ? new Set(deviceIds) : undefined;
+}
+
+async function reconcileHostRosterPairing(
+  overview, session, deviceFingerprint, remotePeerFingerprint, existingPairing,
+  credentialRepairRequired
+) {
+  assertPairSyncRuntimeOwnership(overview, session);
+  const safe = session.sanitize(overview);
+  const wrongRemotePeer = remotePeerFingerprint
+    && safe.desktopPeerFingerprint !== remotePeerFingerprint;
+  if (!safe.desktopPeerFingerprint || wrongRemotePeer || safe.pendingDeviceFingerprints.length > 0) {
+    throw new Error('Current Sync Group pairing state requires user review.');
+  }
+  const target = overview.paired_devices.find(
+    (device) => macosPairSyncIdentityFingerprint(device.device_id) === deviceFingerprint
+  );
+  if (safe.pairedDeviceFingerprints.length === 0) {
+    return { ...safe, rePairRequired: existingPairing === false || credentialRepairRequired };
+  }
+  const exactTarget = target && safe.pairedDeviceFingerprints.length === 1;
+  if (!exactTarget) throw new Error('Current Sync Group pairing state requires user review.');
+  if (existingPairing && !credentialRepairRequired) return { ...safe, rePairRequired: false };
+  const reconciled = await session.remove(target.device_id);
+  return { ...session.sanitize(reconciled), rePairRequired: true };
 }
 
 async function reconcileCurrentSyncGroupPairings(
@@ -29,6 +55,10 @@ async function reconcileCurrentSyncGroupPairings(
     throw new Error('Current Sync Group identity requires user review.');
   }
   const activeDeviceIds = activeSyncGroupDeviceIds(overview);
+  if (activeDeviceIds === undefined) return reconcileHostRosterPairing(
+    overview, session, deviceFingerprint, remotePeerFingerprint, existingPairing,
+    credentialRepairRequired
+  );
   const target = overview.sync_group?.members?.find(
     (member) => macosPairSyncIdentityFingerprint(member.device_id) === deviceFingerprint
   );
