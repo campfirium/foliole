@@ -93,7 +93,7 @@ it('routes exact joined-empty credentials through product Leave and a fresh boun
       remotePeerFingerprint: joinedEmpty.syncGroupRemotePeerFingerprint, timelineId: 'timeline-1' }),
     leaveJoinedEmpty, readReceipt: () => ({
       credentials: 'saved_signable', initialSync: 'not_started', pairingPath: 'new'
-    }), resolveReadiness, runPairSync
+    }), produceHandoff: vi.fn(), resolveReadiness, runPairSync
   });
 
   expect(leaveJoinedEmpty).toHaveBeenCalledWith(expect.objectContaining({
