@@ -84,7 +84,7 @@ export async function openMacosPairSyncDesktopSession({
   const rendererUrl = resolveFrozenRendererUrl(repoRoot, rendererExists);
   record('session_started');
   const runtime = prepareHiddenRuntime({ appRoot: repoRoot, env });
-  if (runtime.keychainAccess !== 'verified') {
+  if (runtime.runtimeIdentity !== 'stable-source-bound') {
     runtime.cleanup();
     const error = new Error('macos_hidden_electron_keychain_identity_unverified');
     record('session_failed', { message: error.message });

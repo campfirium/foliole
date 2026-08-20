@@ -72,7 +72,7 @@ describe('macOS pair sync desktop session', () => {
       prepareHiddenRuntime: vi.fn(() => ({
         cleanup,
         executablePath: '/tmp/BackgroundElectron.app/Contents/MacOS/Electron',
-        keychainAccess: 'verified'
+        runtimeIdentity: 'stable-source-bound'
       })),
       rendererExists: () => true,
       repoRoot: '/repo/foliole',
@@ -107,7 +107,7 @@ describe('macOS pair sync desktop session', () => {
     );
   });
 
-  it('does not launch Electron when Keychain access is not mechanically verified', async () => {
+  it('does not launch Electron from an ephemeral credential runtime', async () => {
     const cleanup = vi.fn();
     const launch = vi.fn();
 
@@ -117,7 +117,7 @@ describe('macOS pair sync desktop session', () => {
       prepareHiddenRuntime: vi.fn(() => ({
         cleanup,
         executablePath: '/tmp/BackgroundElectron.app/Contents/MacOS/Electron',
-        keychainAccess: 'unverified'
+        runtimeIdentity: 'ephemeral'
       })),
       rendererExists: () => true,
       repoRoot: '/repo/foliole',

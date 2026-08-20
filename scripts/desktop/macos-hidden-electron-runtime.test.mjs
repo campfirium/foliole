@@ -24,7 +24,8 @@ it('publishes a reusable LSUIElement runtime with stable controller identity', (
     existsSync: vi.fn((target) => target.endsWith('/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron')),
     mkdirSync: vi.fn(),
     mkdtempSync: vi.fn(() => '/repo/foliole/.tmp/native-hidden-electron/stage-one'),
-    readFileSync: vi.fn(() => Buffer.from('stable electron executable')),
+    readFileSync: vi.fn((target) => Buffer.from(target.endsWith('Info.plist')
+      ? 'stable electron bundle metadata' : 'stable electron executable')),
     renameSync,
     rmSync
   };
@@ -48,7 +49,7 @@ it('publishes a reusable LSUIElement runtime with stable controller identity', (
   expect(runtime.executablePath).toMatch(
     /^\/repo\/foliole\/\.tmp\/native-hidden-electron\/runtime-[a-f0-9]{20}\/Electron\.app\/Contents\/MacOS\/Electron$/
   );
-  expect(runtime.keychainAccess).toBe('unverified');
+  expect(runtime.runtimeIdentity).toBe('stable-source-bound');
   expect(renameSync).toHaveBeenCalledWith(
     '/repo/foliole/.tmp/native-hidden-electron/stage-one',
     runtime.executablePath.slice(0, runtime.executablePath.indexOf('/Electron.app'))
@@ -62,7 +63,8 @@ it('reuses the same prepared runtime without copying or mutating the bundle agai
   const fileSystem = {
     existsSync: vi.fn(() => true),
     mkdirSync: vi.fn(),
-    readFileSync: vi.fn(() => Buffer.from('stable electron executable'))
+    readFileSync: vi.fn((target) => Buffer.from(target.endsWith('Info.plist')
+      ? 'stable electron bundle metadata' : 'stable electron executable'))
   };
 
   const first = prepareMacosHiddenElectronRuntime({
@@ -76,6 +78,26 @@ it('reuses the same prepared runtime without copying or mutating the bundle agai
   expect(run).not.toHaveBeenCalled();
 });
 
+it('changes the cached identity when Electron bundle metadata changes', () => {
+  let bundleMetadata = 'electron bundle version one';
+  const fileSystem = {
+    existsSync: vi.fn(() => true),
+    mkdirSync: vi.fn(),
+    readFileSync: vi.fn((target) => Buffer.from(target.endsWith('Info.plist')
+      ? bundleMetadata : 'stable electron executable'))
+  };
+
+  const first = prepareMacosHiddenElectronRuntime({
+    appRoot: '/repo/foliole', env: {}, fileSystem, run: vi.fn()
+  });
+  bundleMetadata = 'electron bundle version two';
+  const second = prepareMacosHiddenElectronRuntime({
+    appRoot: '/repo/foliole', env: {}, fileSystem, run: vi.fn()
+  });
+
+  expect(first.executablePath).not.toBe(second.executablePath);
+});
+
 it('uses the atomically published winner when preparation races', () => {
   const conflict = Object.assign(new Error('destination exists'), { code: 'ENOTEMPTY' });
   const rmSync = vi.fn();
@@ -83,7 +105,8 @@ it('uses the atomically published winner when preparation races', () => {
     existsSync: vi.fn((target) => target.endsWith('/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron')),
     mkdirSync: vi.fn(),
     mkdtempSync: vi.fn(() => '/repo/foliole/.tmp/native-hidden-electron/stage-loser'),
-    readFileSync: vi.fn(() => Buffer.from('stable electron executable')),
+    readFileSync: vi.fn((target) => Buffer.from(target.endsWith('Info.plist')
+      ? 'stable electron bundle metadata' : 'stable electron executable')),
     renameSync: vi.fn(() => { throw conflict; }),
     rmSync
   };
