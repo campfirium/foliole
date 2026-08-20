@@ -80,11 +80,13 @@ describe('macOS fixed A5 development entry', () => {
   it('exposes only explicitly authorized fixed maintenance routes', () => {
     const source = fs.readFileSync('scripts/android/macos-a5-dev.mjs', 'utf8');
     const registry = fs.readFileSync('scripts/android/macos-a5-action-registry.mjs', 'utf8');
+    const leave = fs.readFileSync('scripts/android/macos-a5-leave-sync-group-entry.mjs', 'utf8');
     const extended = fs.readFileSync('scripts/android/macos-a5-extended-actions.mjs', 'utf8');
     const generic = fs.readFileSync('scripts/sync-group/multi-device-sync-stage-actions.mjs', 'utf8');
     expect(registry).toContain("'leave-sync-group'");
-    expect(source).toContain("action: 'leave-sync-group'");
-    expect(source).toContain('runMacosA5SyncGroupMaintenanceEntry');
+    expect(source).toContain('runMacosA5LeaveSyncGroupEntry');
+    expect(leave).toContain('collectCredentialProtectedReadiness');
+    expect(leave).toContain('leaveJoinedEmptyCredentialSession');
     expect(source).toContain("'clear-app-data'");
     expect(source).toContain('runMacosA5ClearAppDataEntry');
     expect(extended).toContain("['-s', args.serial, 'shell', 'pm', 'clear', APP_ID]");
@@ -99,9 +101,8 @@ describe('macOS fixed A5 development entry', () => {
     const source = fs.readFileSync('scripts/android/macos-a5-dev.mjs', 'utf8');
     const extended = fs.readFileSync('scripts/android/macos-a5-extended-actions.mjs', 'utf8');
     expect(source).toContain("'sync-group-rejoin'");
-    expect(source).toContain("action: 'leave-sync-group'");
+    expect(source).toContain('runMacosA5LeaveSyncGroupEntry');
     expect(source).not.toContain('process.argv[3]');
-    expect(extended).toContain('const buildIdentity = args.buildIdentity();');
     expect(extended).toContain('runMacosA5SyncGroupMaintenance({');
     expect(extended).toContain('assertT132CredentialRecoveryBaseline');
     expect(extended).toContain("'force-stop', 'com.foliole.android'");
