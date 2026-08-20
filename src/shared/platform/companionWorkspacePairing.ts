@@ -5,7 +5,10 @@ import {
   requestCompanionPairingEndpoint
 } from './companion/network/companionPairingHttpRequest';
 import { saveStandaloneNativePairing } from './companion/network/nativePairingCredentialStore';
-import { createSignedRequestHeaders } from './companion/network/signedRequest';
+import {
+  createSignedRequestHeaders,
+  verifyNativePairingCanSignRequest
+} from './companion/network/signedRequest';
 import { projectCompanionSyncGroupPairingState } from './companion/sync/companionSyncGroupPairingState';
 import {
   joinCompanionSyncGroup,
@@ -196,6 +199,7 @@ async function saveNativePairing(
         peer_host_platform: payload.provider_host_platform,
         sync_group_id: payload.sync_group.group_id
       });
+      await verifyNativePairingCanSignRequest(normalizeEndpointUrl(args.endpointUrl));
       return loadCompanionPairingState();
     }
     return saveStandaloneNativePairing(args, payload, credentialSecret);

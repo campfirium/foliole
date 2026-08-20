@@ -50,12 +50,6 @@ final class FolioleCompanionSyncGroupOutboundPeerStore {
         }
     }
 
-    static JSObject sign(Context context, String groupId, String endpointUrl, String method,
-                         String pathWithQuery, String timestamp, String nonce, String bodyHash) throws Exception {
-        return signWithWorkgroupKey(context, groupId, endpointUrl, method, pathWithQuery,
-            timestamp, nonce, bodyHash, FolioleCompanionWorkgroupSession.requireKey());
-    }
-
     static JSObject signWithWorkgroupKey(
         Context context, String groupId, String endpointUrl, String method, String pathWithQuery,
         String timestamp, String nonce, String bodyHash, String workgroupKey

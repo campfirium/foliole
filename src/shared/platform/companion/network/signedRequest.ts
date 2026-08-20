@@ -4,7 +4,10 @@ import {
   FolioleCompanionSync,
   isNativeCompanionPairingRuntime
 } from '../../companionWorkspaceRuntimeRepository';
-import { loadCompanionSyncGroup } from '../sync/syncGroupStore';
+import {
+  loadCompanionSyncGroup,
+  loadCompanionSyncGroupWorkgroupKey
+} from '../sync/syncGroupStore';
 
 const PAIRING_SIGNATURE_CHECK_PATH = '/companion/sync-pack?after_state_seq=0';
 
@@ -38,12 +41,20 @@ export async function createSignedRequestHeaders(args: {
   const bodyHash = await sha256Hex(args.bodyText ?? '');
   if (isNativeCompanionPairingRuntime()) {
     const group = await loadCompanionSyncGroup();
-    if (group && !args.endpointUrl) throw new Error('Sync Group request target is required.');
-    const result = await FolioleCompanionSync.signCompanionSyncRequest({
-      body_hash: bodyHash, method: args.method, nonce, path_with_query: args.pathWithQuery, timestamp,
-      ...(group ? { endpoint_url: args.endpointUrl, sync_group_id: group.group_id } : {})
-    });
-    return group ? { ...result.headers, 'X-Sync-Group-Id': group.group_id } : result.headers;
+    if (group) {
+      if (!args.endpointUrl) throw new Error('Sync Group request target is required.');
+      const workgroupKey = await loadCompanionSyncGroupWorkgroupKey();
+      if (!workgroupKey) throw new Error('sync_group_workgroup_key_missing');
+      const result = await FolioleCompanionSync.signCompanionSyncRequest({
+        body_hash: bodyHash, endpoint_url: args.endpointUrl, method: args.method, nonce,
+        path_with_query: args.pathWithQuery, sync_group_id: group.group_id, timestamp,
+        workgroup_key: workgroupKey
+      });
+      return { ...result.headers, 'X-Sync-Group-Id': group.group_id };
+    }
+    return (await FolioleCompanionSync.signCompanionSyncRequest({
+      body_hash: bodyHash, method: args.method, nonce, path_with_query: args.pathWithQuery, timestamp
+    })).headers;
   }
   const stored = readStoredWebPairingState();
   if (!stored?.authorization_id || !stored.credential_secret || normalizePairingState(stored).sync_usable !== true) {

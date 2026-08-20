@@ -4,14 +4,17 @@ const nativeMock = vi.hoisted(() => ({
   loadPairingState: vi.fn(),
   signCompanionSyncRequest: vi.fn()
 }));
-const groupMock = vi.hoisted(() => ({ load: vi.fn() }));
+const groupMock = vi.hoisted(() => ({ load: vi.fn(), loadKey: vi.fn() }));
 
 vi.mock('../../companionUuid', () => ({ createCompanionUuid: () => 'nonce-1' }));
 vi.mock('../../companionWorkspaceRuntimeRepository', () => ({
   FolioleCompanionSync: nativeMock,
   isNativeCompanionPairingRuntime: () => true
 }));
-vi.mock('../sync/syncGroupStore', () => ({ loadCompanionSyncGroup: groupMock.load }));
+vi.mock('../sync/syncGroupStore', () => ({
+  loadCompanionSyncGroup: groupMock.load,
+  loadCompanionSyncGroupWorkgroupKey: groupMock.loadKey
+}));
 
 import { createSignedRequestHeaders } from './signedRequest';
 
@@ -21,6 +24,7 @@ beforeEach(() => {
     device_id: 'mobile-b', device_kind: 'android-capacitor', is_paired: true
   });
   groupMock.load.mockResolvedValue({ group_id: 'group-1' });
+  groupMock.loadKey.mockResolvedValue('persistent-workgroup-key');
   nativeMock.signCompanionSyncRequest.mockResolvedValue({
     headers: {
       'X-Authorization-Id': 'mobile-b', 'X-Nonce': 'nonce-1', 'X-Signature': 'signed',
@@ -35,7 +39,8 @@ it('routes a Sync Group request to the exact native peer endpoint', async () => 
   })).resolves.toEqual(expect.objectContaining({ 'X-Sync-Group-Id': 'group-1' }));
 
   expect(nativeMock.signCompanionSyncRequest).toHaveBeenCalledWith(expect.objectContaining({
-    endpoint_url: 'http://192.168.0.11:38641', sync_group_id: 'group-1'
+    endpoint_url: 'http://192.168.0.11:38641', sync_group_id: 'group-1',
+    workgroup_key: 'persistent-workgroup-key'
   }));
 });
 
@@ -58,4 +63,28 @@ it('rejects an ambiguous target before asking the native peer store to sign', as
     method: 'GET', pathWithQuery: '/companion/workspace-version'
   })).rejects.toThrow('Sync Group request target is required.');
   expect(nativeMock.signCompanionSyncRequest).not.toHaveBeenCalled();
+});
+
+it('rejects a missing persistent workgroup key before asking native code to sign', async () => {
+  groupMock.loadKey.mockResolvedValue(null);
+
+  await expect(createSignedRequestHeaders({
+    endpointUrl: 'http://192.168.0.11:38641', method: 'GET',
+    pathWithQuery: '/companion/workspace-version'
+  })).rejects.toThrow('sync_group_workgroup_key_missing');
+  expect(nativeMock.signCompanionSyncRequest).not.toHaveBeenCalled();
+});
+
+it('keeps standalone native signing free of Sync Group credentials', async () => {
+  groupMock.load.mockResolvedValue(null);
+
+  await createSignedRequestHeaders({
+    endpointUrl: 'http://192.168.0.11:38641', method: 'GET',
+    pathWithQuery: '/companion/workspace-version'
+  });
+
+  expect(groupMock.loadKey).not.toHaveBeenCalled();
+  expect(nativeMock.signCompanionSyncRequest).toHaveBeenCalledWith(expect.not.objectContaining({
+    sync_group_id: expect.anything(), workgroup_key: expect.anything()
+  }));
 });

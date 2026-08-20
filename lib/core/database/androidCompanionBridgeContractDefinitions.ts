@@ -190,7 +190,8 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
         nonce: 'nonce',
         pathWithQuery: 'path_with_query',
         syncGroupId: 'sync_group_id',
-        timestamp: 'timestamp'
+        timestamp: 'timestamp',
+        workgroupKey: 'workgroup_key'
       },
       responseKeys: {
         headers: 'headers'

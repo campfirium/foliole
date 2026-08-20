@@ -59,6 +59,26 @@ it('keeps explicit-key signing independent from WorkgroupSession', async () => {
   expect(explicitSigner).not.toContain('FolioleCompanionWorkgroupSession');
 });
 
+it('cuts production group signing over to the required bridge key without changing standalone signing', async () => {
+  const [actions, contract, definitions, outbound] = await Promise.all([
+    readJava('FolioleCompanionPairingPluginActions.java'),
+    readFile(path.join(root, 'android/app/src/main/assets/companion-bridge-contract-definitions.json'), 'utf8'),
+    readJava('FolioleCompanionPairingSignatureContractDefinitions.java'),
+    readJava('FolioleCompanionSyncGroupOutboundPeerStore.java')
+  ]);
+  const signAction = actions.slice(
+    actions.indexOf('static void signCompanionSyncRequest('),
+    actions.indexOf('static void bindSyncGroupPeerRoute(')
+  );
+
+  expect(JSON.parse(contract).pairingPlugin.signature.requestKeys.workgroupKey).toBe('workgroup_key');
+  expect(definitions).toContain('workgroupKeyRequest(Context context)');
+  expect(signAction).toContain('rejectIfBlank(call, workgroupKeyKey, workgroupKey)');
+  expect(signAction).toContain('FolioleCompanionSyncGroupOutboundPeerStore.signWithWorkgroupKey(');
+  expect(signAction).toContain('FolioleCompanionPairingStore.signRequest(');
+  expect(outbound).not.toContain('FolioleCompanionWorkgroupSession');
+});
+
 it('freezes missing-key and route mismatch rejection ahead of signing', async () => {
   const [outbound, store] = await Promise.all([
     readJava('FolioleCompanionSyncGroupOutboundPeerStore.java'),

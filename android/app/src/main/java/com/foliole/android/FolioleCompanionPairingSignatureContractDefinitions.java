@@ -53,6 +53,10 @@ final class FolioleCompanionPairingSignatureContractDefinitions {
         return value(context, "requestKeys", "timestamp");
     }
 
+    static String workgroupKeyRequest(Context context) throws Exception {
+        return value(context, "requestKeys", "workgroupKey");
+    }
+
     static String headersResponse(Context context) throws Exception {
         return value(context, "responseKeys", "headers");
     }

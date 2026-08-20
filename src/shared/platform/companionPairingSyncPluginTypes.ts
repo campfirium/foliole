@@ -33,5 +33,6 @@ export interface CompanionPairingSyncPlugin {
     path_with_query: string;
     sync_group_id?: string;
     timestamp: string;
+    workgroup_key?: string;
   }): Promise<NativeCompanionSignedRequestHeaders>;
 }
