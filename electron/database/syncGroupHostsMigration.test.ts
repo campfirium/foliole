@@ -77,12 +77,16 @@ it('migrates desktop members to unique Host facts without changing authorization
   const db = fixture();
   db.transaction(() => migrateSyncGroupHosts(db))();
   expect(snapshot(db)).toEqual(expected);
+  expect(db.prepare(`SELECT authorization_id FROM delivery_authorization_migration_aliases
+    WHERE group_id = 'group' AND peer_key = 'device-b'`).get()).toEqual({ authorization_id: 'auth-b' });
 });
 
 it('migrates companion members through the shared DbPort contract', async () => {
   const db = fixture();
   await migrateCompanionSyncGroupHosts(createBetterSqliteDbPort(db));
   expect(snapshot(db)).toEqual(expected);
+  expect(db.prepare(`SELECT authorization_id FROM delivery_authorization_migration_aliases
+    WHERE group_id = 'group' AND peer_key = 'device-b'`).get()).toEqual({ authorization_id: 'auth-b' });
 });
 
 it('rolls the destructive table reconstruction back on a failed version commit', () => {

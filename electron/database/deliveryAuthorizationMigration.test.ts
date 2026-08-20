@@ -54,12 +54,51 @@ it('uses the same atomic authorization migration for companion databases', async
 it('rolls back without changing receipt keys when a reused Host alias is ambiguous', () => {
   const sqlite = fixture();
   sqlite.prepare("UPDATE sync_group_members SET host_name = 'Phone' WHERE authorization_id = 'auth-b'").run();
-  sqlite.prepare("UPDATE sync_group_member_departures SET authorization_id = 'auth-z' WHERE host_name = 'Phone'").run();
+  sqlite.prepare("UPDATE sync_group_member_departures SET authorization_id = 'auth-c' WHERE host_name = 'Phone'").run();
   const migrate = sqlite.transaction(() => migrateDeliveryAuthorizations(sqlite));
 
   expect(migrate).toThrow('delivery_authorization_ambiguous:Phone');
   expect(columns(sqlite, 'sync_delivery_receipts')).toContain('peer_id');
   expect(sqlite.prepare('SELECT COUNT(*) AS count FROM sync_delivery_receipts').get()).toEqual({ count: 4 });
+  sqlite.close();
+});
+
+it('ignores proven historical group rows without letting duplicate Host names pollute the active group', () => {
+  const sqlite = fixture();
+  sqlite.exec(`
+    INSERT INTO sync_groups VALUES ('history','History','old','Phone 2','2026-07-01','2026-07-02',NULL);
+    INSERT INTO sync_group_members VALUES
+      ('history','Phone 2','mobile','active','Phone 2','auth-history',NULL,
+       '2026-07-01','2026-07-01',NULL,'2026-07-02');
+    CREATE TABLE delivery_authorization_migration_aliases (
+      group_id TEXT NOT NULL, peer_key TEXT NOT NULL, authorization_id TEXT NOT NULL,
+      PRIMARY KEY (group_id, peer_key, authorization_id));
+    INSERT INTO delivery_authorization_migration_aliases VALUES
+      ('history','device-history','auth-history');
+    INSERT INTO sync_delivery_receipts VALUES
+      ('device-history','state','setting:old:1','setting','old','hash-old','1','accepted','2',NULL,
+       '2026-07-01','2026-07-02');
+    INSERT INTO sync_peer_cursors VALUES ('device-history','state','2','2026-07-02');
+  `);
+
+  sqlite.transaction(() => migrateDeliveryAuthorizations(sqlite))();
+
+  expect(sqlite.prepare("SELECT COUNT(*) FROM sync_delivery_receipts WHERE object_id = 'old'").pluck().get()).toBe(0);
+  expect(sqlite.prepare("SELECT COUNT(*) FROM sync_peer_cursors WHERE authorization_id = 'auth-history'").pluck().get())
+    .toBe(0);
+  expect(sqlite.prepare("SELECT COUNT(*) FROM sqlite_master WHERE name = 'delivery_authorization_migration_aliases'")
+    .pluck().get()).toBe(0);
+  sqlite.close();
+});
+
+it('fails closed for an unclassified peer key in the active migration scope', () => {
+  const sqlite = fixture();
+  sqlite.prepare(`INSERT INTO sync_peer_cursors VALUES
+    ('unknown-peer','state','9','2026-08-12')`).run();
+  const migrate = sqlite.transaction(() => migrateDeliveryAuthorizations(sqlite));
+
+  expect(migrate).toThrow('delivery_authorization_unmapped:unknown-peer');
+  expect(columns(sqlite, 'sync_peer_cursors')).toContain('peer_id');
   sqlite.close();
 });
 

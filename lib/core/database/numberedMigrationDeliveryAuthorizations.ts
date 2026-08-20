@@ -16,13 +16,16 @@ export function migrateDeliveryAuthorizations(sqlite: DatabaseMigrationTarget) {
   if (!tableExists(sqlite, 'sync_group_members')) return;
   dropTriggers(sqlite);
   const result = mapDeliveryRowsToAuthorizations({
+    aliases: rows(sqlite, 'delivery_authorization_migration_aliases'),
     cursors: rows(sqlite, 'sync_peer_cursors'),
     departures: rows(sqlite, 'sync_group_member_departures'),
+    locals: rows(sqlite, 'sync_group_local_state'),
     members: rows(sqlite, 'sync_group_members'),
     receipts: rows(sqlite, 'sync_delivery_receipts')
   });
   rebuildReceipts(sqlite, result.receipts);
   rebuildCursors(sqlite, result.cursors);
+  sqlite.exec('DROP TABLE IF EXISTS delivery_authorization_migration_aliases');
   if (tableExists(sqlite, 'sync_object_state')) {
     for (const statement of SYNC_DELIVERY_TRIGGER_STATEMENTS) sqlite.exec(statement);
   }

@@ -1,5 +1,6 @@
 import { allocateSyncGroupHostName } from '../../platform/syncGroupDeviceProfile.js';
 
+import { buildLegacyDeliveryAuthorizationAliases } from './deliveryAuthorizationMigrationModel.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
 import { columnExists, tableExists } from './numberedMigrationHelpers.js';
 import { SYNC_DELIVERY_TRIGGER_STATEMENTS } from './syncDeliveryTriggerStatements.js';
@@ -17,6 +18,7 @@ export function migrateSyncGroupHosts(sqlite: DatabaseMigrationTarget) {
   const departures = tableExists(sqlite, 'sync_group_member_departures')
     ? rows(sqlite, 'sync_group_member_departures') : [];
   const hostNames = allocateHostNames(members);
+  preserveDeliveryAliases(sqlite, members, hostNames);
   for (const table of ['sync_group_local_state', 'sync_group_member_departures',
     'sync_group_members', 'sync_groups']) sqlite.exec(`DROP TABLE IF EXISTS ${table}`);
   for (const statement of SYNC_GROUP_SCHEMA_STATEMENTS) sqlite.exec(statement);
@@ -25,6 +27,21 @@ export function migrateSyncGroupHosts(sqlite: DatabaseMigrationTarget) {
   insertLocals(sqlite, locals, hostNames);
   insertDepartures(sqlite, departures, hostNames);
   for (const statement of SYNC_DELIVERY_TRIGGER_STATEMENTS) sqlite.exec(statement);
+}
+
+function preserveDeliveryAliases(
+  sqlite: DatabaseMigrationTarget, members: Row[], names: Map<string, string>
+) {
+  sqlite.exec('DROP TABLE IF EXISTS delivery_authorization_migration_aliases');
+  sqlite.exec(`CREATE TABLE delivery_authorization_migration_aliases (
+    group_id TEXT NOT NULL, peer_key TEXT NOT NULL, authorization_id TEXT NOT NULL,
+    PRIMARY KEY (group_id, peer_key, authorization_id))`);
+  const insert = sqlite.prepare(`INSERT INTO delivery_authorization_migration_aliases
+    (group_id, peer_key, authorization_id) VALUES (?, ?, ?)`);
+  const aliases = buildLegacyDeliveryAuthorizationAliases(members.map((row) => ({
+    ...row, host_name: mapped(names, row.group_id, row.device_id)
+  })));
+  for (const row of aliases) insert.run(row.group_id, row.peer_key, row.authorization_id);
 }
 
 function allocateHostNames(members: Row[]) {

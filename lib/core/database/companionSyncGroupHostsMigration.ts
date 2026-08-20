@@ -1,6 +1,7 @@
 import { allocateSyncGroupHostName } from '../../platform/syncGroupDeviceProfile.js';
 import type { DbPort, DbRow, DbValue } from '../sync/dbPort.js';
 
+import { buildLegacyDeliveryAuthorizationAliases } from './deliveryAuthorizationMigrationModel.js';
 import { SYNC_DELIVERY_TRIGGER_STATEMENTS } from './syncDeliveryTriggerStatements.js';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from './syncGroupSchemaStatements.js';
 
@@ -12,6 +13,7 @@ export async function migrateCompanionSyncGroupHosts(db: DbPort) {
   const locals = await rows(db, 'sync_group_local_state');
   const departures = await rowsIfPresent(db, 'sync_group_member_departures');
   const hostNames = allocateHostNames(members);
+  await preserveDeliveryAliases(db, members, hostNames);
   for (const table of ['sync_group_local_state', 'sync_group_member_departures',
     'sync_group_members', 'sync_groups']) await db.run(`DROP TABLE IF EXISTS ${table}`);
   for (const statement of SYNC_GROUP_SCHEMA_STATEMENTS) await db.run(statement);
@@ -20,6 +22,19 @@ export async function migrateCompanionSyncGroupHosts(db: DbPort) {
   await insertLocals(db, locals, hostNames);
   await insertDepartures(db, departures, hostNames);
   for (const statement of SYNC_DELIVERY_TRIGGER_STATEMENTS) await db.run(statement);
+}
+
+async function preserveDeliveryAliases(db: DbPort, members: DbRow[], names: Map<string, string>) {
+  await db.run('DROP TABLE IF EXISTS delivery_authorization_migration_aliases');
+  await db.run(`CREATE TABLE delivery_authorization_migration_aliases (
+    group_id TEXT NOT NULL, peer_key TEXT NOT NULL, authorization_id TEXT NOT NULL,
+    PRIMARY KEY (group_id, peer_key, authorization_id))`);
+  const aliases = buildLegacyDeliveryAuthorizationAliases(members.map((row) => ({
+    ...row, host_name: mapped(names, row.group_id, row.device_id)
+  })));
+  for (const row of aliases) await db.run(`INSERT INTO delivery_authorization_migration_aliases
+    (group_id, peer_key, authorization_id) VALUES (?, ?, ?)`,
+  values(row.group_id, row.peer_key, row.authorization_id));
 }
 
 function allocateHostNames(members: DbRow[]) {

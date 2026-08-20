@@ -13,13 +13,16 @@ export async function migrateCompanionDeliveryAuthorizations(db: DbPort) {
   if (!(await tablePresent(db, 'sync_group_members'))) return;
   for (const trigger of TRIGGERS) await db.run(`DROP TRIGGER IF EXISTS ${trigger}`);
   const result = mapDeliveryRowsToAuthorizations({
+    aliases: await rows(db, 'delivery_authorization_migration_aliases'),
     cursors: await rows(db, 'sync_peer_cursors'),
     departures: await rows(db, 'sync_group_member_departures'),
+    locals: await rows(db, 'sync_group_local_state'),
     members: await rows(db, 'sync_group_members'),
     receipts: await rows(db, 'sync_delivery_receipts')
   });
   await rebuildReceipts(db, result.receipts);
   await rebuildCursors(db, result.cursors);
+  await db.run('DROP TABLE IF EXISTS delivery_authorization_migration_aliases');
   for (const statement of SYNC_DELIVERY_TRIGGER_STATEMENTS) await db.run(statement);
 }
 
