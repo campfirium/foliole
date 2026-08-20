@@ -7,6 +7,7 @@ import path from 'node:path';
 import { clearTimeout, setTimeout } from 'node:timers';
 import { pathToFileURL } from 'node:url';
 
+import { assertRegisteredMacosA5Action } from './macos-a5-action-registry.mjs';
 import {
   macosA5ErrorEvidence,
   recoverMacosA5SyncGroupRejoinEntry,
@@ -177,11 +178,7 @@ async function captureAnnotation(paths) {
 }
 
 export async function runMacosA5Action(action, repoRoot = process.cwd()) {
-  if (!['status', 'build', 'capture-annotation', 'database-performance', 'deploy',
-    'device-profile', 'pair-sync', 'clear-app-data', 'sync-existing', 'sync-group-rejoin',
-    'sync-group-rejoin-recover', 'sync-group-stopped-status'].includes(action)) {
-    throw new Error('Usage: node scripts/android/macos-a5-dev.mjs <registered-action>');
-  }
+  assertRegisteredMacosA5Action(action);
   const paths = macosA5Paths(repoRoot);
   assertSafeMacosA5Environment(paths);
   try {
@@ -216,6 +213,7 @@ export async function runMacosA5Action(action, repoRoot = process.cwd()) {
       ), serial: A5_SERIAL
     };
     if (action === 'pair-sync') await runMacosA5PairSyncEntry(productArgs);
+    if (action === 'pair-credentials') await (await import('./macos-a5-pair-credentials-action.mjs')).runMacosA5PairCredentialsEntry(productArgs);
     if (action === 'clear-app-data') await runMacosA5ClearAppDataEntry(productArgs);
     if (action === 'sync-existing') await runMacosA5ExistingSyncEntry(productArgs);
     if (action === 'sync-group-rejoin') await runMacosA5SyncGroupRejoinEntry(productArgs);

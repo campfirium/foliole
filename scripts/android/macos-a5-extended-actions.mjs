@@ -148,7 +148,7 @@ export async function runMacosA5PairSyncEntry(args) {
     protectedSyncGroup: readiness.protectedPendingSync ? {
       groupId: readiness.syncGroupId, timelineId: readiness.syncGroupTimelineId
     } : null,
-    remotePeerFingerprint: readiness.remotePeerFingerprint,
+    remotePeerFingerprint: readiness.pairTargetPeerFingerprint,
     serial: args.serial
   });
   process.stdout.write(result.output);

@@ -56,9 +56,12 @@ it('observes workgroup membership persistence before its first signed request', 
   expect(JSON.parse(vm.runInNewContext(source, { Promise, URL, window }))).toEqual({ ok: true });
   const state = window.__foliolePairSyncObserver;
   state.completion = 'http_200';
-  await window.Capacitor.nativePromise('FolioleCompanionSync', 'bindSyncGroupPeerRoute', {});
+  await window.Capacitor.nativePromise('FolioleCompanionSync', 'bindSyncGroupPeerRoute', {
+    endpoint_url: 'http://127.0.0.1:38641', sync_group_id: 'group-1'
+  });
   expect(state.credentials).toBe('saved_not_signable');
-  await window.Capacitor.nativePromise('FolioleCompanionSync', 'signCompanionSyncRequest', {});
+  expect(JSON.parse(window.__folioleVerifyPairSyncCredentials())).toEqual({ ok: true });
+  await Promise.resolve();
   expect(state.credentials).toBe('saved_signable');
 });
 

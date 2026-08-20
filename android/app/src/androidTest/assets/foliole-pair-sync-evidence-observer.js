@@ -8,6 +8,7 @@
   var state = {
     keyState: 'not-started', requestState: 'not-started', completion: 'not_started',
     credentials: 'not_saved', initialSync: 'not_started',
+    credentialTarget: null,
     syncPackApplied: false, syncPackDownloaded: false,
     syncFailure: null, syncPackUrl: null
   };
@@ -37,17 +38,44 @@
     if (pluginName !== 'FolioleCompanionSync') return call();
     if (methodName === 'desktopHttpRequest') return observeHttp(state, args, call);
     if (methodName === 'savePairingCredentials' && state.completion === 'http_200') {
-      return call().then(function (value) { state.credentials = 'saved_not_signable'; return value; },
+      return call().then(function (value) {
+        if (args && args.endpoint_url && args.sync_group_id) {
+          state.credentialTarget = {
+            endpointUrl: args.endpoint_url, syncGroupId: args.sync_group_id
+          };
+        }
+        state.credentials = 'saved_not_signable'; return value;
+      },
         function (error) { state.credentials = 'save_failed'; throw error; });
     }
     if (methodName === 'bindSyncGroupPeerRoute' && state.completion === 'http_200') {
-      return call().then(function (value) { state.credentials = 'saved_not_signable'; return value; },
+      return call().then(function (value) {
+        state.credentialTarget = {
+          endpointUrl: args && args.endpoint_url, syncGroupId: args && args.sync_group_id
+        };
+        state.credentials = 'saved_not_signable'; return value;
+      },
         function (error) { state.credentials = 'save_failed'; throw error; });
     }
     if (methodName === 'signCompanionSyncRequest' && state.credentials === 'saved_not_signable') {
       return call().then(function (value) { state.credentials = 'saved_signable'; return value; });
     }
     return call();
+  };
+  window.__folioleVerifyPairSyncCredentials = function () {
+    var target = state.credentialTarget;
+    if (!target || !target.endpointUrl || !target.syncGroupId) {
+      return JSON.stringify({ ok: false, code: 'credential_target_missing' });
+    }
+    cap.nativePromise('FolioleCompanionSync', 'signCompanionSyncRequest', {
+      body_hash: new Array(65).join('0'), endpoint_url: target.endpointUrl,
+      method: 'GET', nonce: 'credential-evidence-probe',
+      path_with_query: '/companion/sync-pack?after_state_seq=0',
+      sync_group_id: target.syncGroupId, timestamp: new Date().toISOString()
+    }).catch(function (error) {
+      state.credentials = 'save_failed'; state.syncFailure = String(error);
+    });
+    return JSON.stringify({ ok: true });
   };
   function isPairRequest(args) {
     if (!args || args.method !== 'POST' || typeof args.url !== 'string') return false;

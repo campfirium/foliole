@@ -57,6 +57,13 @@ final class FolioleCompanionPairSyncEvidence {
         return FolioleCompanionWebViewSemanticAdapter.evaluateJson(instrumentation, webView, script);
     }
 
+    static JSONObject verifyCredentials(Instrumentation instrumentation, WebView webView) throws Exception {
+        String script = "(function(){var verify=window.__folioleVerifyPairSyncCredentials;" +
+            "return typeof verify==='function'?verify():JSON.stringify({ok:false," +
+            "code:'credential_probe_missing'});})()";
+        return FolioleCompanionWebViewSemanticAdapter.evaluateJson(instrumentation, webView, script);
+    }
+
     static void emit(Instrumentation instrumentation, JSONObject state) {
         Bundle evidence = new Bundle();
         evidence.putString("foliolePairSyncEvidence", terminalEvidence(state).toString());

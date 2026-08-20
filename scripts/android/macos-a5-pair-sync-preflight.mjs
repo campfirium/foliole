@@ -128,6 +128,15 @@ export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
     && workspaceState.pairingWorkspace?.syncEndpointPresent === true;
   const authorizedWorkspace = workspaceState.pairingWorkspace?.localDeviceIdentityPresent === true
     && (emptyStalePairing || joinedEmptyWorkspace || syncedProfileSwitch);
+  const authorizedGroupRoute = pairState.syncGroupCredentialsPresent === true
+    && pairState.syncGroupRoutePresent === true
+    && pairState.syncGroupPeerConflict === false
+    && /^[0-9a-f]{16}$/u.test(pairState.syncGroupRemotePeerFingerprint ?? '');
+  const joinedEmptyReauthorization = pairing.status === 0 && pairState.dirtyRecordCount === 0
+    && pairState.pairingCredentialsPresent === false
+    && pairState.remotePeerFingerprint === null
+    && pairState.pairingPeerConflict === false
+    && joinedEmptyWorkspace && authorizedGroupRoute;
   const existingPairingRecovery = pairState.dirtyRecordCount > 0
     && authorizedPairing && syncedProfileSwitch;
   const protectedGroupPendingSync = syncedProfileSwitch
@@ -160,7 +169,8 @@ export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
     && workspaceState.pairingWorkspace?.syncEndpointPresent === false;
   if (!existingPairingRecovery && !protectedGroupPendingSync
       && !cleanPairSwitch && !rejectedCleanPairing
-      && !rejectedEmptyPairing && !freshEmptyPairing && !missingDatabaseBootstrap) {
+      && !rejectedEmptyPairing && !freshEmptyPairing && !joinedEmptyReauthorization
+      && !missingDatabaseBootstrap) {
     throw new Error('Fixed A5 no longer matches the authorized pair-switch state.');
   }
   return {
@@ -169,6 +179,7 @@ export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
       && pairState.pairingCredentialsRejected === true),
     existingPairing: existingPairingRecovery || protectedGroupPendingSync || cleanPairSwitch
       || rejectedEmptyPairing || missingDatabaseBootstrap,
+    pairTargetPeerFingerprint: pairState.remotePeerFingerprint,
     protectedPendingSync: protectedGroupPendingSync,
     requiresProductBootstrap: missingDatabaseBootstrap
   };

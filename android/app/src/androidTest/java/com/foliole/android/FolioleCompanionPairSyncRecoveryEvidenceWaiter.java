@@ -12,6 +12,7 @@ final class FolioleCompanionPairSyncRecoveryEvidenceWaiter {
         Instrumentation instrumentation, WebView webView, long deadline, boolean credentialsOnly
     ) throws Exception {
         String lastEvidence = "";
+        boolean credentialProbeStarted = false;
         while (System.nanoTime() < deadline) {
             JSONObject state = FolioleCompanionPairSyncEvidence.read(instrumentation, webView);
             JSONObject evidence = FolioleCompanionPairSyncEvidence.terminalEvidence(state);
@@ -21,6 +22,17 @@ final class FolioleCompanionPairSyncRecoveryEvidenceWaiter {
                 lastEvidence = state.toString();
             }
             validate(state, evidence);
+            if (credentialsOnly && !credentialProbeStarted
+                && "saved_not_signable".equals(evidence.optString("credentials"))) {
+                JSONObject probe = FolioleCompanionPairSyncEvidence.verifyCredentials(
+                    instrumentation, webView
+                );
+                if (!probe.optBoolean("ok")) {
+                    throw new IllegalStateException("Credential signing probe could not start: "
+                        + probe.optString("code"));
+                }
+                credentialProbeStarted = true;
+            }
             if (credentialsOnly && "saved_signable".equals(evidence.optString("credentials"))) {
                 return evidence;
             }
@@ -54,7 +66,8 @@ final class FolioleCompanionPairSyncRecoveryEvidenceWaiter {
             throw new IllegalStateException("Initial sync advanced before credentials were signable.");
         }
         if ("save_failed".equals(credentials) || "failed".equals(initialSync)) {
-            throw new IllegalStateException("Pair sync recovery persisted a terminal failure state.");
+            throw new IllegalStateException("Pair sync recovery persisted a terminal failure state: "
+                + state.optString("syncFailure", "unknown"));
         }
         if (state.optBoolean("pairFound")) {
             throw new IllegalStateException("Pairing completion returned to Pair target.");
