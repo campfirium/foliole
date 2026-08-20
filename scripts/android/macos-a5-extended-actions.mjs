@@ -58,9 +58,10 @@ export async function runMacosA5DatabasePerformanceEntry(args) {
 
 export async function runMacosA5SyncGroupMaintenanceEntry(args) {
   args.assertFixed(); args.build();
+  const buildIdentity = args.buildIdentity();
   const result = await runMacosA5SyncGroupMaintenance({
-    action: args.action, buildIdentity: args.buildIdentity, env: args.env,
-    evidenceRoot: path.join(args.paths.repoRoot, '.tmp/artifacts/a5-sync-group-maintenance', args.buildIdentity),
+    action: args.action, buildIdentity, env: args.env,
+    evidenceRoot: path.join(args.paths.repoRoot, '.tmp/artifacts/a5-sync-group-maintenance', buildIdentity),
     execute: args.execute, paths: args.paths, serial: args.serial
   });
   process.stdout.write(result.output);

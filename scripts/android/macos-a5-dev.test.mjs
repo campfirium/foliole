@@ -77,11 +77,14 @@ describe('macOS fixed A5 development entry', () => {
     expect(source).not.toContain('process.argv[3]');
   });
 
-  it('exposes only the explicitly authorized fixed clear-data maintenance route', () => {
+  it('exposes only explicitly authorized fixed maintenance routes', () => {
     const source = fs.readFileSync('scripts/android/macos-a5-dev.mjs', 'utf8');
+    const registry = fs.readFileSync('scripts/android/macos-a5-action-registry.mjs', 'utf8');
     const extended = fs.readFileSync('scripts/android/macos-a5-extended-actions.mjs', 'utf8');
     const generic = fs.readFileSync('scripts/sync-group/multi-device-sync-stage-actions.mjs', 'utf8');
-    expect(source).not.toContain("'leave-sync-group'");
+    expect(registry).toContain("'leave-sync-group'");
+    expect(source).toContain("action: 'leave-sync-group'");
+    expect(source).toContain('runMacosA5SyncGroupMaintenanceEntry');
     expect(source).toContain("'clear-app-data'");
     expect(source).toContain('runMacosA5ClearAppDataEntry');
     expect(extended).toContain("['-s', args.serial, 'shell', 'pm', 'clear', APP_ID]");
@@ -92,12 +95,14 @@ describe('macOS fixed A5 development entry', () => {
     expect(source).not.toContain('process.argv[3]');
   });
 
-  it('exposes one fixed T132 rejoin journey without exposing raw Leave', () => {
+  it('keeps fixed Leave independent from the T132 rejoin journey', () => {
     const source = fs.readFileSync('scripts/android/macos-a5-dev.mjs', 'utf8');
     const extended = fs.readFileSync('scripts/android/macos-a5-extended-actions.mjs', 'utf8');
     expect(source).toContain("'sync-group-rejoin'");
-    expect(source).not.toContain("'leave-sync-group'");
+    expect(source).toContain("action: 'leave-sync-group'");
     expect(source).not.toContain('process.argv[3]');
+    expect(extended).toContain('const buildIdentity = args.buildIdentity();');
+    expect(extended).toContain('runMacosA5SyncGroupMaintenance({');
     expect(extended).toContain('assertT132CredentialRecoveryBaseline');
     expect(extended).toContain("'force-stop', 'com.foliole.android'");
     expect(extended).toContain("args.protectData('backup'");

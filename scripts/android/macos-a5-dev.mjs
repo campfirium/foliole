@@ -214,6 +214,7 @@ export async function runMacosA5Action(action, repoRoot = process.cwd()) {
     };
     if (action === 'pair-sync') await runMacosA5PairSyncEntry(productArgs);
     if (action === 'pair-credentials') await (await import('./macos-a5-pair-credentials-action.mjs')).runMacosA5PairCredentialsEntry(productArgs);
+    if (action === 'leave-sync-group') await (await import('./macos-a5-extended-actions.mjs')).runMacosA5SyncGroupMaintenanceEntry({ ...productArgs, action: 'leave-sync-group' });
     if (action === 'clear-app-data') await runMacosA5ClearAppDataEntry(productArgs);
     if (action === 'sync-existing') await runMacosA5ExistingSyncEntry(productArgs);
     if (action === 'sync-group-rejoin') await runMacosA5SyncGroupRejoinEntry(productArgs);
