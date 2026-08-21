@@ -53,6 +53,7 @@ interface WorkspaceTopicTreeInteractionArgs {
   activeFolderId: string;
   activeNodeId: string | null;
   isManualSort: boolean;
+  manualOrderIds: string[];
   virtualFolderView?: 'manual' | 'readonly';
   nodesById: WorkspaceListNodesById;
   onCreateChildNode?: CreateTopicTreeNode;
@@ -93,6 +94,7 @@ export function useWorkspaceTopicTreeInteraction(args: WorkspaceTopicTreeInterac
     itemIds: args.rowIds,
     isManualSort: args.isManualSort,
     isVirtualFolderManualOrder: args.virtualFolderView === 'manual',
+    manualOrderIds: args.manualOrderIds,
     moveNodes: actions.moveNodes,
     nodesById: args.nodesById,
     selectedNodeIds: selection.selectedNodeIds,
@@ -183,12 +185,12 @@ export const WorkspaceTopicTree = memo(function WorkspaceTopicTree(props: Worksp
     nodesById: props.nodesById,
     rows: visibleRows
   });
-  const hasCollapsedNodes = collapsibleNodeIds.length > 0 && collapsibleNodeIds.some((nodeId) => collapsedNodeIds.has(nodeId));
   const { focusedRowIndex, reviewScroll } = resolveWorkspaceTopicTreeScrollState(props, focusedNodeId, visibleRows);
   const interaction = useWorkspaceTopicTreeInteraction({
     activeFolderId: props.creationParentNodeId ?? props.activeFolderId,
     activeNodeId: props.activeNodeId,
     isManualSort: contentSort.sort.key === 'manual',
+    manualOrderIds: lazyModel.sortedItemIds,
     ...definedProps({ virtualFolderView: props.virtualFolderView }),
     nodesById: props.nodesById,
     onOpenMoveToNode: props.onOpenMoveToNode,
@@ -197,7 +199,6 @@ export const WorkspaceTopicTree = memo(function WorkspaceTopicTree(props: Worksp
     onSelectNode: props.onSelectNode,
     rowIds: visibleRows.map((row) => row.node.id)
   });
-
   useWorkspaceTopicTreeAutoScroll({
     activeFolderId: props.activeFolderId,
     focusedNodeId,
@@ -215,7 +216,7 @@ export const WorkspaceTopicTree = memo(function WorkspaceTopicTree(props: Worksp
     contentSort,
     ...definedProps({ emptyState: props.emptyState }),
     focusedNodeId,
-    hasCollapsedNodes,
+    hasCollapsedNodes: collapsibleNodeIds.length > 0 && collapsibleNodeIds.some((nodeId) => collapsedNodeIds.has(nodeId)),
     ...definedProps({ headerDescription: props.headerDescription }),
     interaction,
     nodesById: props.nodesById,

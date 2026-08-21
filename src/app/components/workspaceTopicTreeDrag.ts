@@ -5,10 +5,8 @@ import { canNodeBeMoved } from '../../features/nodes/model/nodeMovementRules';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { definedProps } from '../../shared/lib/definedProps';
 
-import {
-  createWorkspaceTopicTreeManualMove,
-  type WorkspaceTopicTreeManualMoveIntent
-} from './workspaceTopicTreeManualDrag';
+import type { WorkspaceTopicTreeMoveIntent } from './workspaceTopicTreeDropOperation';
+import { createWorkspaceTopicTreeMove } from './workspaceTopicTreeManualDrag';
 
 export interface WorkspaceTopicTreeDragController extends ReturnType<typeof useNodeListDragController> {
   isStructuralDragActive: boolean;
@@ -19,7 +17,8 @@ interface WorkspaceTopicTreeDragArgs {
   itemIds: string[];
   isManualSort: boolean;
   isVirtualFolderManualOrder: boolean;
-  moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: WorkspaceTopicTreeManualMoveIntent) => Promise<boolean>;
+  manualOrderIds: string[];
+  moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: WorkspaceTopicTreeMoveIntent) => Promise<boolean>;
   nodesById: WorkspaceListNodesById;
   selectedNodeIds: string[];
   setFolderManualChildOrder?: (folderNodeId: string, manualChildOrder: string[]) => boolean;
@@ -36,7 +35,7 @@ export function useWorkspaceTopicTreeDrag(args: WorkspaceTopicTreeDragArgs) {
     () => filterMovableTopicTreeSelection(args.selectedNodeIds, args.nodesById),
     [args.nodesById, args.selectedNodeIds]
   );
-  const moveNodes = useWorkspaceTopicTreeMoveNodes(args, structuralDragRef);
+  const moveNodes = useWorkspaceTopicTreeMoveNodes(args);
   const drag = useNodeListDragController({
     disableRootDrop: true,
     isTrashViewOpen: false,
@@ -55,20 +54,17 @@ export function useWorkspaceTopicTreeDrag(args: WorkspaceTopicTreeDragArgs) {
 }
 
 function useWorkspaceTopicTreeMoveNodes(
-  args: WorkspaceTopicTreeDragArgs,
-  structuralDragRef: { current: boolean }
+  args: WorkspaceTopicTreeDragArgs
 ) {
-  return useMemo(() => createWorkspaceTopicTreeManualMove({
+  return useMemo(() => createWorkspaceTopicTreeMove({
     activeFolderId: args.activeFolderId,
-    currentOrder: args.itemIds,
-    derivedNodeIds: collectDerivedNodeIds(args.nodesById),
+    currentOrder: args.manualOrderIds,
     isManualSort: args.isManualSort,
     isVirtualFolderManualOrder: args.isVirtualFolderManualOrder,
     moveNodes: args.moveNodes,
-    parentNodeIdById: buildParentNodeIdById(args.nodesById),
-    shouldAllowStructuralMove: () => structuralDragRef.current,
+    nodesById: args.nodesById,
     ...definedProps({ setFolderManualChildOrder: args.setFolderManualChildOrder })
-  }), [args.activeFolderId, args.isManualSort, args.itemIds, args.moveNodes, args.nodesById, args.setFolderManualChildOrder, structuralDragRef]);
+  }), [args.activeFolderId, args.isManualSort, args.isVirtualFolderManualOrder, args.manualOrderIds, args.moveNodes, args.nodesById, args.setFolderManualChildOrder]);
 }
 
 function useStructuralTopicTreeDragController(args: {
@@ -112,17 +108,4 @@ export function filterMovableTopicTreeSelection(
   nodesById: WorkspaceListNodesById
 ) {
   return selectedNodeIds.filter((nodeId) => canNodeBeMoved(nodesById[nodeId]));
-}
-
-function buildParentNodeIdById(nodesById: WorkspaceListNodesById) {
-  return Object.fromEntries(
-    Object.values(nodesById).flatMap((node) => node ? [[node.id, node.parentNodeId ?? null]] : [])
-  );
-}
-
-function collectDerivedNodeIds(nodesById: WorkspaceListNodesById) {
-  return new Set(
-    Object.values(nodesById)
-      .flatMap((node) => node?.anchorLink ? [node.id] : [])
-  );
 }

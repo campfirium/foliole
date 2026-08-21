@@ -1,5 +1,5 @@
-import { createEvent, fireEvent, screen, waitFor, within } from '@testing-library/react';
-import { beforeEach, expect, it } from 'vitest';
+import { createEvent, fireEvent, screen, within } from '@testing-library/react';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import { HOME_NODE_ID, INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../../features/nodes/model/specialNodes';
 import { toWorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
@@ -141,8 +141,10 @@ beforeEach(() => {
   }));
 });
 
-it('does not apply topic-to-topic drops outside manual sorting', () => {
+it('routes topic child drops outside Manual without Alt', () => {
   seed(['folder-a', 'topic-a', 'topic-b'], ['topic-a', 'topic-b']);
+  const moveNodes = vi.fn(async () => true);
+  useWorkspaceStore.setState({ moveNodes });
   renderWithLocalization(<TopicTreeHarness />);
   const dataTransfer = transfer();
   const alphaFrame = rowFrame('Alpha');
@@ -153,14 +155,13 @@ it('does not apply topic-to-topic drops outside manual sorting', () => {
   dropAt(betaFrame, dataTransfer, 50);
 
   expect(alphaFrame).toHaveAttribute('draggable', 'true');
-  expect(betaFrame).not.toHaveClass('border');
-  expect(useWorkspaceStore.getState().nodeOrder).toEqual([...SPECIAL_NODE_ORDER, 'folder-a', 'topic-a', 'topic-b']);
-  expect(useWorkspaceStore.getState().nodesById['topic-a']?.parentNodeId).toBe('folder-a');
-  expect(useWorkspaceStore.getState().nodesById['topic-b']?.parentNodeId).toBe('folder-a');
+  expect(moveNodes).toHaveBeenCalledWith(['topic-a'], 'topic-b', 'child');
 });
 
-it('does not fall back to structural movement for manual child drops', () => {
+it('routes Manual child drops structurally without changing manual order', () => {
   seed(['folder-a', 'topic-a', 'topic-b'], ['topic-b', 'topic-a']);
+  const moveNodes = vi.fn(async () => true);
+  useWorkspaceStore.setState({ moveNodes });
   renderWithLocalization(<TopicTreeHarness />);
   chooseManualSort();
   const dataTransfer = transfer();
@@ -170,30 +171,8 @@ it('does not fall back to structural movement for manual child drops', () => {
   dragAt(betaFrame, dataTransfer, 50);
   dropAt(betaFrame, dataTransfer, 50);
 
-  expect(betaFrame).not.toHaveClass('border');
-  expect(useWorkspaceStore.getState().nodeOrder).toEqual([...SPECIAL_NODE_ORDER, 'folder-a', 'topic-a', 'topic-b']);
+  expect(moveNodes).toHaveBeenCalledWith(['topic-a'], 'topic-b', 'child');
   expect(useWorkspaceStore.getState().nodesById['folder-a']?.manualChildOrder).toEqual(['topic-b', 'topic-a']);
-  expect(useWorkspaceStore.getState().nodesById['topic-a']?.parentNodeId).toBe('folder-a');
-  expect(useWorkspaceStore.getState().nodesById['topic-b']?.parentNodeId).toBe('folder-a');
-});
-
-it('shows Alt structural drop feedback for movable items', async () => {
-  seed(['folder-a', 'topic-a', 'topic-b'], ['topic-a', 'topic-b']);
-  useWorkspaceStore.setState((state) => ({
-    ...state,
-    nodesById: {
-      ...state.nodesById,
-      'topic-a': topic('topic-a', 'Alpha', { kind: 'item' })
-    }
-  }));
-  renderWithLocalization(<TopicTreeHarness />);
-  const dataTransfer = transfer();
-  const betaFrame = rowFrame('Beta');
-
-  fireEvent.dragStart(screen.getByRole('treeitem', { name: 'Alpha' }), { dataTransfer });
-  dragAt(betaFrame, dataTransfer, 50, true);
-
-  await waitFor(() => expect(betaFrame).toHaveClass('border'));
 });
 
 it('keeps derived topics as manual sort anchors but not drag sources', () => {
@@ -218,6 +197,8 @@ it('keeps derived topics as manual sort anchors but not drag sources', () => {
 
 it('does not apply Alt child drops into derived topics', () => {
   seed(['folder-a', 'topic-a', 'topic-b', 'topic-derived'], ['topic-derived', 'topic-b', 'topic-a'], true);
+  const moveNodes = vi.fn(async () => true);
+  useWorkspaceStore.setState({ moveNodes });
   renderWithLocalization(<TopicTreeHarness />);
   const dataTransfer = transfer();
   const derivedFrame = rowFrame('Derived');
@@ -227,6 +208,7 @@ it('does not apply Alt child drops into derived topics', () => {
   dropAt(derivedFrame, dataTransfer, 50, true);
 
   expect(derivedFrame).not.toHaveClass('border');
+  expect(moveNodes).not.toHaveBeenCalled();
   expect(useWorkspaceStore.getState().nodesById['topic-a']?.parentNodeId).toBe('folder-a');
 });
 

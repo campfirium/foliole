@@ -1,44 +1,15 @@
-export type WorkspaceTopicTreeManualMoveIntent = 'before' | 'after' | 'child' | 'root';
+import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 
-function canApplyWorkspaceTopicTreeManualDrag(args: {
-  activeFolderId: string;
-  sourceNodeIds: readonly string[];
-  targetNodeId: string | null;
-  intent: WorkspaceTopicTreeManualMoveIntent;
-  parentNodeIdById: Record<string, string | null | undefined>;
-  currentOrder: readonly string[];
-  isVirtualFolderManualOrder: boolean;
-}) {
-  if ((args.intent !== 'before' && args.intent !== 'after') || !args.targetNodeId) {
-    return false;
-  }
-  if (args.isVirtualFolderManualOrder) {
-    const memberIds = new Set(args.currentOrder);
-    return memberIds.has(args.targetNodeId) && args.sourceNodeIds.every((nodeId) => memberIds.has(nodeId));
-  }
-  if (args.parentNodeIdById[args.targetNodeId] !== args.activeFolderId) {
-    return false;
-  }
-  return args.sourceNodeIds.every((nodeId) => args.parentNodeIdById[nodeId] === args.activeFolderId);
-}
-
-function canApplyWorkspaceTopicTreeStructuralDrag(args: {
-  derivedNodeIds: ReadonlySet<string>;
-  sourceNodeIds: readonly string[];
-  targetNodeId: string | null;
-  intent: WorkspaceTopicTreeManualMoveIntent;
-}) {
-  if (!args.targetNodeId || args.sourceNodeIds.some((nodeId) => args.derivedNodeIds.has(nodeId))) {
-    return false;
-  }
-  return args.intent !== 'child' || !args.derivedNodeIds.has(args.targetNodeId);
-}
+import {
+  resolveWorkspaceTopicTreeDropOperation,
+  type WorkspaceTopicTreeMoveIntent
+} from './workspaceTopicTreeDropOperation';
 
 export function moveWorkspaceTopicTreeManualNodeIds(args: {
   currentOrder: readonly string[];
   sourceNodeIds: readonly string[];
   targetNodeId: string;
-  intent: Extract<WorkspaceTopicTreeManualMoveIntent, 'before' | 'after'>;
+  intent: Extract<WorkspaceTopicTreeMoveIntent, 'before' | 'after'>;
 }) {
   const sourceSet = new Set(args.sourceNodeIds);
   if (sourceSet.has(args.targetNodeId)) {
@@ -58,40 +29,28 @@ export function moveWorkspaceTopicTreeManualNodeIds(args: {
   ];
 }
 
-export function createWorkspaceTopicTreeManualMove(args: {
+export function createWorkspaceTopicTreeMove(args: {
   activeFolderId: string;
   currentOrder: readonly string[];
   isManualSort: boolean;
   isVirtualFolderManualOrder?: boolean;
-  moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: WorkspaceTopicTreeManualMoveIntent) => Promise<boolean>;
-  parentNodeIdById: Record<string, string | null | undefined>;
+  moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: WorkspaceTopicTreeMoveIntent) => Promise<boolean>;
+  nodesById: WorkspaceListNodesById;
   setFolderManualChildOrder?: (folderNodeId: string, manualChildOrder: string[]) => boolean;
-  shouldAllowStructuralMove?: () => boolean;
-  derivedNodeIds?: ReadonlySet<string>;
 }) {
-  return async (nodeIds: string[], targetNodeId: string | null, intent: WorkspaceTopicTreeManualMoveIntent) => {
-    if (!args.isVirtualFolderManualOrder && args.shouldAllowStructuralMove?.() && canApplyWorkspaceTopicTreeStructuralDrag({
-      derivedNodeIds: args.derivedNodeIds ?? new Set<string>(),
-      intent,
-      sourceNodeIds: nodeIds,
-      targetNodeId
-    })) {
-      return args.moveNodes(nodeIds, targetNodeId, intent);
-    }
-    if (!args.isManualSort) {
-      return false;
-    }
-    if (!canApplyWorkspaceTopicTreeManualDrag({
+  return async (nodeIds: string[], targetNodeId: string | null, intent: WorkspaceTopicTreeMoveIntent) => {
+    const operation = resolveWorkspaceTopicTreeDropOperation({
       activeFolderId: args.activeFolderId,
       currentOrder: args.currentOrder,
       isVirtualFolderManualOrder: Boolean(args.isVirtualFolderManualOrder),
       sourceNodeIds: nodeIds,
       targetNodeId,
       intent,
-      parentNodeIdById: args.parentNodeIdById
-    }) || !targetNodeId) {
-      return false;
-    }
+      isManualSort: args.isManualSort,
+      nodesById: args.nodesById
+    });
+    if (operation === 'structural-move') return args.moveNodes(nodeIds, targetNodeId, intent);
+    if (operation === 'reject' || !targetNodeId) return false;
     return args.setFolderManualChildOrder?.(
       args.activeFolderId,
       moveWorkspaceTopicTreeManualNodeIds({
