@@ -19,6 +19,12 @@ it('accepts internal install as a fixed Windows DEV action', () => {
   ], {})).toMatchObject({ action: 'internal-install' });
 });
 
+it('accepts installed Internal launch as a fixed Windows DEV action', () => {
+  expect(parseWindowsDevControlArgs([
+    '--host', WINDOWS_DEV_DEFAULT_SSH, 'internal-open'
+  ], {})).toMatchObject({ action: 'internal-open' });
+});
+
 it('pushes the Mac dev mirror before invoking desktop preview', async () => {
   const calls = [];
   await runWindowsDevControl({
@@ -50,4 +56,10 @@ it('aligns the fixed checkout before installing the internal package', () => {
   expect(source).toContain('$Action -eq "internal-install"');
   expect(source).toContain(install);
   expect(source.indexOf(pull)).toBeLessThan(source.indexOf(install));
+});
+
+it('aligns the fixed checkout before opening the installed Internal app', () => {
+  const source = fs.readFileSync('scripts/windows/windows-dev-action.ps1', 'utf8');
+  expect(source).toContain('$Action -eq "internal-open"');
+  expect(source).toContain('& $systemNode $internalOpenRunner');
 });

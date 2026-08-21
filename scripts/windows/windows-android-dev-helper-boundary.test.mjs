@@ -60,6 +60,7 @@ describe('Windows Android DEV helper boundary', () => {
     expect(WINDOWS_DEV_ACTIONS).toEqual(expect.arrayContaining([
       'desktop-preview',
       'internal-install',
+      'internal-open',
       'multi-device-sync-candidate',
       ...Object.values(WINDOWS_SYNC_GROUP_PROVIDER_RELEASE_ACTIONS),
       'verify'

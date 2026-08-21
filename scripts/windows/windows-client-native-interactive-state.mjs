@@ -5,7 +5,7 @@ import path from 'node:path';
 
 export const WINDOWS_NATIVE_CLIENT_TASK = 'FolioleNativeClient';
 export const WINDOWS_NATIVE_CLIENT_WORKER_ENV = 'FOLIOLE_NATIVE_CLIENT_INTERACTIVE_WORKER';
-export const INTERACTIVE_ACTIONS = new Set(['status', 'start', 'restart', 'full-restart']);
+export const INTERACTIVE_ACTIONS = new Set(['status', 'start', 'restart', 'full-restart', 'internal-open']);
 const WINDOWS_RENAME_RETRY_CODES = new Set(['EACCES', 'EBUSY', 'EPERM']);
 const WINDOWS_RENAME_RETRY_LIMIT = 10;
 const renameWaitBuffer = new Int32Array(new SharedArrayBuffer(4));

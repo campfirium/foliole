@@ -9,6 +9,7 @@ $systemNode = "C:\Program Files\nodejs\node.exe"
 $systemNpmCli = "C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js"
 $puller = Join-Path $PSScriptRoot "windows-dev-pull.mjs"
 $runner = Join-Path $PSScriptRoot "windows-dev-build.mjs"
+$internalOpenRunner = Join-Path $PSScriptRoot "windows-internal-open.mjs"
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $releaseRunner = Join-Path $PSScriptRoot "windows-sync-group-provider-release-control.mjs"
 $lockPath = Join-Path $env:LOCALAPPDATA "Foliole\windows-dev-control\build.lock"
@@ -62,6 +63,9 @@ try {
       } finally {
         Pop-Location
       }
+    } elseif ($Action -eq "internal-open") {
+      & $systemNode $internalOpenRunner
+      $runnerExit = $LASTEXITCODE
     } else {
       & $systemNode $runner $Action
       $runnerExit = $LASTEXITCODE
