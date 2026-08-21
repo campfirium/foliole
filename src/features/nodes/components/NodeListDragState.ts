@@ -18,6 +18,12 @@ export function createInitialNodeListDragState(): NodeListDragState {
   };
 }
 
+export function clearNodeListDropTarget(state: NodeListDragState): NodeListDragState {
+  return state.dropIntent === null && state.dropTargetNodeId === null && !state.isRootDropActive
+    ? state
+    : { ...state, dropIntent: null, dropTargetNodeId: null, isRootDropActive: false };
+}
+
 function shouldKeepNodeListDropTarget(event: ReactDragEvent<HTMLElement>) {
   const nextTarget = event.relatedTarget;
   return nextTarget instanceof Node && event.currentTarget.contains(nextTarget);
@@ -31,7 +37,7 @@ export function createNodeListDragLeaveHandler(
       return;
     }
     setState((prev) => prev.dropTargetNodeId === targetNodeId
-      ? { ...prev, dropIntent: null, dropTargetNodeId: null }
+      ? clearNodeListDropTarget(prev)
       : prev);
   };
 }

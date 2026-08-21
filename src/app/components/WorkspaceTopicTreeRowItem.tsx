@@ -17,7 +17,6 @@ export function WorkspaceTopicTreeRowItem(props: {
   activeNodeId: string | null;
   collapsedNodeIds: ReadonlySet<string>;
   drag: WorkspaceTopicTreeDragController;
-  isManualSort: boolean;
   meta?: VirtualListRenderMeta;
   nodesById: WorkspaceListNodesById;
   onContextMenu: Parameters<typeof NodeTreeRowItem>[0]['onContextMenu'];
@@ -56,8 +55,6 @@ export function WorkspaceTopicTreeRowItem(props: {
       {...resolveWorkspaceTopicTreeRowDragProps(
         props.row.node.id,
         rowModel.isDragDisabled,
-        props.isManualSort,
-        props.row.node.kind === 'folder',
         props.drag
       )}
       onKeyDown={props.onRowKeyDown}

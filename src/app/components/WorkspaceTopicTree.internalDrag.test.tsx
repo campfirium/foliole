@@ -55,7 +55,7 @@ function folder(manualChildOrder: string[] | null) {
 function transfer() {
   const data = new Map<string, string>();
   return {
-    dropEffect: 'move',
+    dropEffect: 'none',
     effectAllowed: 'move',
     getData: (format: string) => data.get(format) ?? '',
     setData: (format: string, value: string) => data.set(format, value)
@@ -90,6 +90,7 @@ function dragAt(target: HTMLElement, dataTransfer: ReturnType<typeof transfer>, 
   Object.defineProperty(event, 'altKey', { value: altKey });
   Object.defineProperty(event, 'clientY', { value: clientY });
   fireEvent(target, event);
+  return event;
 }
 
 function dropAt(target: HTMLElement, dataTransfer: ReturnType<typeof transfer>, clientY: number, altKey = false) {
@@ -97,6 +98,7 @@ function dropAt(target: HTMLElement, dataTransfer: ReturnType<typeof transfer>, 
   Object.defineProperty(event, 'altKey', { value: altKey });
   Object.defineProperty(event, 'clientY', { value: clientY });
   fireEvent(target, event);
+  return event;
 }
 
 function TopicTreeHarness(props: { activeNodeId?: string | null }) {
@@ -142,7 +144,7 @@ beforeEach(() => {
 });
 
 it('routes topic child drops outside Manual without Alt', () => {
-  seed(['folder-a', 'topic-a', 'topic-b'], ['topic-a', 'topic-b']);
+  seed(['folder-a', 'topic-a', 'topic-b'], []);
   const moveNodes = vi.fn(async () => true);
   useWorkspaceStore.setState({ moveNodes });
   renderWithLocalization(<TopicTreeHarness />);
@@ -151,10 +153,20 @@ it('routes topic child drops outside Manual without Alt', () => {
   const betaFrame = rowFrame('Beta');
 
   fireEvent.dragStart(alphaFrame, { dataTransfer });
-  dragAt(betaFrame, dataTransfer, 50);
-  dropAt(betaFrame, dataTransfer, 50);
+  for (const altKey of [false, true]) {
+    const acceptedChild = dragAt(betaFrame, dataTransfer, 50, altKey);
+    expect(acceptedChild.defaultPrevented).toBe(true);
+    expect(dataTransfer.dropEffect).toBe('move');
+    expect(betaFrame).toHaveAttribute('data-drop-intent', 'child');
+  }
+  const rejectedEdge = dragAt(betaFrame, dataTransfer, -1);
+  expect(rejectedEdge.defaultPrevented).toBe(false);
+  expect(dataTransfer.dropEffect).toBe('none');
+  expect(betaFrame).not.toHaveAttribute('data-drop-intent');
+  expect(dragAt(betaFrame, dataTransfer, 50).defaultPrevented).toBe(true);
+  expect(betaFrame).toHaveAttribute('data-drop-intent', 'child');
+  expect(dropAt(betaFrame, dataTransfer, 50, true).defaultPrevented).toBe(true);
 
-  expect(alphaFrame).toHaveAttribute('draggable', 'true');
   expect(moveNodes).toHaveBeenCalledWith(['topic-a'], 'topic-b', 'child');
 });
 
@@ -168,7 +180,8 @@ it('routes Manual child drops structurally without changing manual order', () =>
   const betaFrame = rowFrame('Beta');
 
   fireEvent.dragStart(screen.getByRole('treeitem', { name: 'Alpha' }), { dataTransfer });
-  dragAt(betaFrame, dataTransfer, 50);
+  expect(dragAt(betaFrame, dataTransfer, 50).defaultPrevented).toBe(true);
+  expect(betaFrame).toHaveAttribute('data-drop-intent', 'child');
   dropAt(betaFrame, dataTransfer, 50);
 
   expect(moveNodes).toHaveBeenCalledWith(['topic-a'], 'topic-b', 'child');
@@ -186,28 +199,30 @@ it('keeps derived topics as manual sort anchors but not drag sources', () => {
 
   const derivedFrame = rowFrame('Derived');
   fireEvent.dragStart(screen.getByRole('treeitem', { name: 'Alpha' }), { dataTransfer });
-  dragAt(derivedFrame, dataTransfer, 50);
-  dropAt(derivedFrame, dataTransfer, 50);
+  expect(dragAt(derivedFrame, dataTransfer, -1).defaultPrevented).toBe(true);
+  expect(derivedFrame).toHaveAttribute('data-drop-intent', 'before');
+  expect(dropAt(derivedFrame, dataTransfer, -1).defaultPrevented).toBe(true);
 
-  expect(derivedFrame).not.toHaveClass('border');
   expect(useWorkspaceStore.getState().nodeOrder).toEqual([...SPECIAL_NODE_ORDER, 'folder-a', 'topic-a', 'topic-b', 'topic-derived']);
-  expect(useWorkspaceStore.getState().nodesById['folder-a']?.manualChildOrder).toEqual(['topic-derived', 'topic-b', 'topic-a']);
+  expect(useWorkspaceStore.getState().nodesById['folder-a']?.manualChildOrder).toEqual(['topic-a', 'topic-derived', 'topic-b']);
   expect(useWorkspaceStore.getState().nodesById['topic-derived']?.parentNodeId).toBe('folder-a');
 });
 
-it('does not apply Alt child drops into derived topics', () => {
+it('rejects anchored child feedback and drops with or without Alt', () => {
   seed(['folder-a', 'topic-a', 'topic-b', 'topic-derived'], ['topic-derived', 'topic-b', 'topic-a'], true);
   const moveNodes = vi.fn(async () => true);
   useWorkspaceStore.setState({ moveNodes });
   renderWithLocalization(<TopicTreeHarness />);
-  const dataTransfer = transfer();
   const derivedFrame = rowFrame('Derived');
 
-  fireEvent.dragStart(screen.getByRole('treeitem', { name: 'Alpha' }), { dataTransfer });
-  dragAt(derivedFrame, dataTransfer, 50, true);
-  dropAt(derivedFrame, dataTransfer, 50, true);
-
-  expect(derivedFrame).not.toHaveClass('border');
+  for (const altKey of [false, true]) {
+    const dataTransfer = transfer();
+    fireEvent.dragStart(screen.getByRole('treeitem', { name: 'Alpha' }), { dataTransfer });
+    expect(dragAt(derivedFrame, dataTransfer, 50, altKey).defaultPrevented).toBe(false);
+    expect(dataTransfer.dropEffect).toBe('none');
+    expect(derivedFrame).not.toHaveAttribute('data-drop-intent');
+    expect(dropAt(derivedFrame, dataTransfer, 50, altKey).defaultPrevented).toBe(false);
+  }
   expect(moveNodes).not.toHaveBeenCalled();
   expect(useWorkspaceStore.getState().nodesById['topic-a']?.parentNodeId).toBe('folder-a');
 });

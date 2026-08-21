@@ -22,7 +22,6 @@ interface WorkspaceTopicTreeRowsProps {
   activeNodeId: string | null;
   collapsedNodeIds: ReadonlySet<string>;
   drag: WorkspaceTopicTreeDragController;
-  isManualSort: boolean;
   nodesById: WorkspaceListNodesById;
   onContextMenu: Parameters<typeof NodeTreeRowItem>[0]['onContextMenu'];
   onRenameNode: (nodeId: string, title: string) => void;
@@ -80,7 +79,6 @@ function renderWorkspaceTopicTreeVirtualList(args: WorkspaceTopicTreeRowsProps &
           activeNodeId={args.activeNodeId}
           collapsedNodeIds={args.collapsedNodeIds}
           drag={args.drag}
-          isManualSort={args.isManualSort}
           meta={meta}
           nodesById={args.nodesById}
           onContextMenu={args.onContextMenu}
@@ -138,7 +136,6 @@ export function WorkspaceTopicTreeRows({
   activeNodeId,
   collapsedNodeIds,
   drag,
-  isManualSort,
   nodesById,
   onContextMenu,
   onRenameNode,
@@ -158,7 +155,7 @@ export function WorkspaceTopicTreeRows({
     scrollPlacement,
     scrollTargetNodeId
   });
-  const onRowKeyDown = useWorkspaceTopicTreeKeydown({ activeNodeId, collapsedNodeIds, drag, isManualSort, nodesById, onContextMenu, onRenameNode, onSelectNode, onToggleCollapse, rows, scrollContainerRef, selectedNodeIds, ...definedProps({ scrollPlacement, scrollTargetNodeId }) });
+  const onRowKeyDown = useWorkspaceTopicTreeKeydown({ activeNodeId, collapsedNodeIds, drag, nodesById, onContextMenu, onRenameNode, onSelectNode, onToggleCollapse, rows, scrollContainerRef, selectedNodeIds, ...definedProps({ scrollPlacement, scrollTargetNodeId }) });
 
   return renderWorkspaceTopicTreeRowsSection({
     ariaLabel: t('desktop.workspace.topicList'),
@@ -170,7 +167,6 @@ export function WorkspaceTopicTreeRows({
         activeNodeId,
         collapsedNodeIds,
         drag,
-        isManualSort,
         nodesById,
         onContextMenu,
         onRenameNode,

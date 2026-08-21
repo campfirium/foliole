@@ -29,7 +29,6 @@ function createDragMock(): WorkspaceTopicTreeDragController {
   return {
     dropIntent: null,
     dropTargetNodeId: null,
-    isStructuralDragActive: false,
     isRootDropActive: false,
     onDragEnd: vi.fn(),
     onDragEnterNode: vi.fn(),
@@ -64,7 +63,6 @@ function renderTopicRows(rows: NodeTreeRow[], nodesById: WorkspaceListNodesById)
       activeNodeId={null}
       collapsedNodeIds={new Set()}
       drag={createDragMock()}
-      isManualSort={false}
       nodesById={nodesById}
       onContextMenu={vi.fn()}
       onRenameNode={vi.fn()}
@@ -113,7 +111,6 @@ it('applies dismissed appearance to topic tree row text and icon', () => {
       activeNodeId={null}
       collapsedNodeIds={new Set()}
       drag={createDragMock()}
-      isManualSort={false}
       nodesById={nodesById}
       onContextMenu={vi.fn()}
       onRenameNode={vi.fn()}
@@ -150,7 +147,6 @@ it('renders markdown-looking topic titles as plain list text', () => {
       activeNodeId={null}
       collapsedNodeIds={new Set()}
       drag={createDragMock()}
-      isManualSort={false}
       nodesById={{ 'node-1': node }}
       onContextMenu={vi.fn()}
       onRenameNode={vi.fn()}
@@ -205,7 +201,6 @@ it('keeps virtual row sizing aligned with folder tree row spacing', () => {
       activeNodeId={null}
       collapsedNodeIds={new Set()}
       drag={createDragMock()}
-      isManualSort={false}
       nodesById={nodesById}
       onContextMenu={vi.fn()}
       onRenameNode={vi.fn()}

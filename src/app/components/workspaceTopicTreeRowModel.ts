@@ -52,16 +52,9 @@ export function resolveWorkspaceTopicTreeRowModel(
 export function resolveWorkspaceTopicTreeRowDragProps(
   nodeId: string,
   isDragDisabled: boolean,
-  isManualSort: boolean,
-  isFolderNode: boolean,
   drag: WorkspaceTopicTreeDragController
 ) {
-  const dropIntent = resolveWorkspaceTopicTreeRowDropIntent({
-    drag,
-    isFolderNode,
-    isManualSort,
-    nodeId
-  });
+  const dropIntent = drag.dropTargetNodeId === nodeId ? drag.dropIntent : null;
   return {
     dropIntent,
     isDragDisabled,
@@ -73,25 +66,4 @@ export function resolveWorkspaceTopicTreeRowDragProps(
     onDragStart: drag.onDragStartNode,
     onDrop: drag.onDropOnNode
   };
-}
-
-function resolveWorkspaceTopicTreeRowDropIntent(args: {
-  drag: WorkspaceTopicTreeDragController;
-  isFolderNode: boolean;
-  isManualSort: boolean;
-  nodeId: string;
-}) {
-  if (args.drag.dropTargetNodeId !== args.nodeId) {
-    return null;
-  }
-  if (args.isFolderNode) {
-    return args.drag.dropIntent;
-  }
-  if (args.drag.isStructuralDragActive) {
-    return args.drag.dropIntent;
-  }
-  if (!args.isManualSort || args.drag.dropIntent === 'child') {
-    return null;
-  }
-  return args.drag.dropIntent;
 }

@@ -5,12 +5,10 @@ import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import {
   canDropNodeListSourceOnRoot,
-  resolveNodeListDropIntent,
   type NodeListDropIntent
 } from './nodeListDragIntent';
 import {
   clearNodeListDragSource,
-  isInvalidNodeListDropTarget,
   readNodeListDragSource,
   resolveDragSourceNodeIds,
   writeNodeListDragSource
@@ -20,13 +18,18 @@ import {
   createNodeListDragLeaveHandler,
   type NodeListDragState
 } from './NodeListDragState';
-
-type MoveIntent = NodeListDropIntent | 'root';
+import {
+  createNodeDragOverHandler,
+  createNodeDropHandler,
+  type CanDropOnNode,
+  type NodeListMoveIntent
+} from './NodeListNodeDrop';
 
 interface UseNodeListDragControllerInput {
+  canDropOnNode?: CanDropOnNode;
   disableRootDrop: boolean;
   isTrashViewOpen: boolean;
-  moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: MoveIntent) => Promise<boolean>;
+  moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: NodeListMoveIntent) => Promise<boolean>;
   nodesById: WorkspaceListNodesById;
   noteRowIds: string[];
   selectedNodeIds: string[];
@@ -46,37 +49,11 @@ export interface NodeListDragController {
   onDropRoot: (event: ReactDragEvent<HTMLElement>) => void;
 }
 
-function createNodeDropHandler(
-  isTrashViewOpen: boolean,
-  nodesById: WorkspaceListNodesById,
-  state: NodeListDragState,
-  moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: MoveIntent) => Promise<boolean>,
-  setState: (next: NodeListDragState) => void
-) {
-  return (targetNodeId: string, event: ReactDragEvent<HTMLElement>) => {
-    event.preventDefault();
-    const sourceNodeIds = readNodeListDragSource(event, state.sourceNodeIds);
-    const dropIntent = sourceNodeIds.some((nodeId) => !nodesById[nodeId]) ? 'child' : resolveNodeListDropIntent(event);
-    if (
-      isTrashViewOpen ||
-      sourceNodeIds.length === 0 ||
-      sourceNodeIds.includes(targetNodeId)
-    ) {
-      setState(createInitialNodeListDragState());
-      return;
-    }
-
-    void moveNodes(sourceNodeIds, targetNodeId, dropIntent);
-    clearNodeListDragSource();
-    setState(createInitialNodeListDragState());
-  };
-}
-
 function createRootDropHandler(
   disableRootDrop: boolean,
   nodesById: WorkspaceListNodesById,
   sourceNodeIds: string[],
-  moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: MoveIntent) => Promise<boolean>,
+  moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: NodeListMoveIntent) => Promise<boolean>,
   setState: (next: NodeListDragState) => void
 ) {
   return (event: ReactDragEvent<HTMLElement>) => {
@@ -93,36 +70,6 @@ function createRootDropHandler(
     void moveNodes(effectiveSourceNodeIds, null, 'root');
     clearNodeListDragSource();
     setState(createInitialNodeListDragState());
-  };
-}
-
-function createNodeDragOverHandler(
-  isTrashViewOpen: boolean,
-  nodesById: WorkspaceListNodesById,
-  sourceNodeIds: string[],
-  setState: (updater: (prev: NodeListDragState) => NodeListDragState) => void
-) {
-  return (targetNodeId: string, event: ReactDragEvent<HTMLElement>) => {
-    const effectiveSourceNodeIds = readNodeListDragSource(event, sourceNodeIds);
-    if (
-      isTrashViewOpen ||
-      effectiveSourceNodeIds.length === 0 ||
-      !nodesById[targetNodeId] ||
-      isInvalidNodeListDropTarget(targetNodeId, effectiveSourceNodeIds, nodesById)
-    ) {
-      return;
-    }
-
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-    const isCrossTreeDrop = effectiveSourceNodeIds.some((nodeId) => !nodesById[nodeId]);
-    const dropIntent = isCrossTreeDrop ? 'child' : resolveNodeListDropIntent(event);
-    setState((prev) => ({
-      ...prev,
-      dropIntent,
-      dropTargetNodeId: targetNodeId,
-      isRootDropActive: false
-    }));
   };
 }
 
@@ -177,6 +124,7 @@ function createDragOverRootHandler(
 }
 
 export function useNodeListDragController({
+  canDropOnNode,
   disableRootDrop,
   isTrashViewOpen,
   moveNodes,
@@ -191,16 +139,16 @@ export function useNodeListDragController({
     [isTrashViewOpen, nodesById, noteRowIds, selectedNodeIds]
   );
   const onDragOverNode = useMemo(
-    () => createNodeDragOverHandler(isTrashViewOpen, nodesById, state.sourceNodeIds, setState),
-    [isTrashViewOpen, nodesById, state.sourceNodeIds]
+    () => createNodeDragOverHandler({ canDropOnNode, isTrashViewOpen, nodesById, setState, sourceNodeIds: state.sourceNodeIds }),
+    [canDropOnNode, isTrashViewOpen, nodesById, state.sourceNodeIds]
   );
   const onDragLeaveNode = useMemo(
     () => createNodeListDragLeaveHandler(setState),
     []
   );
   const onDropOnNode = useMemo(
-    () => createNodeDropHandler(isTrashViewOpen, nodesById, state, moveNodes, setState),
-    [isTrashViewOpen, moveNodes, nodesById, state]
+    () => createNodeDropHandler({ canDropOnNode, isTrashViewOpen, moveNodes, nodesById, setState, state }),
+    [canDropOnNode, isTrashViewOpen, moveNodes, nodesById, state]
   );
   const onDragOverRoot = useMemo(
     () => createDragOverRootHandler(disableRootDrop, nodesById, state.sourceNodeIds, setState),

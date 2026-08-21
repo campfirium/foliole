@@ -17,7 +17,6 @@ export function renderWorkspaceTopicTreeBody(args: {
   contextMenu: NodeListContextMenuController;
   drag: WorkspaceTopicTreeDragController;
   emptyState?: { description: string; title: string };
-  isManualSort: boolean;
   nodesById: WorkspaceListNodesById;
   onRenameNode: (nodeId: string, title: string) => void;
   onSelectNode: ReturnType<typeof useNodeSelectionHandler>;
@@ -49,7 +48,6 @@ export function renderWorkspaceTopicTreeBody(args: {
           activeNodeId={args.activeNodeId}
           collapsedNodeIds={args.collapsedNodeIds}
           drag={args.drag}
-          isManualSort={args.isManualSort}
           nodesById={args.nodesById}
           onContextMenu={args.contextMenu.openContextMenu}
           onRenameNode={args.onRenameNode}

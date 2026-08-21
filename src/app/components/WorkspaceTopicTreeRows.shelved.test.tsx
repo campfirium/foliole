@@ -29,7 +29,6 @@ function createDragMock(): WorkspaceTopicTreeDragController {
     dropIntent: null,
     dropTargetNodeId: null,
     isRootDropActive: false,
-    isStructuralDragActive: false,
     onDragEnd: vi.fn(),
     onDragEnterNode: vi.fn(),
     onDragLeaveNode: vi.fn(),
@@ -81,7 +80,6 @@ function renderTopicRows(rows: NodeTreeRow[], nodesById: WorkspaceListNodesById)
       activeNodeId={null}
       collapsedNodeIds={new Set()}
       drag={createDragMock()}
-      isManualSort={false}
       nodesById={nodesById}
       onContextMenu={vi.fn()}
       onRenameNode={vi.fn()}

@@ -30,6 +30,7 @@ export function NodeTreeRowFrame(props: NodeTreeRowFrameProps) {
   return (
     <div
       className={resolveNodeRowFrameClassName(props.isDropTarget, props.dropIntent)}
+      data-drop-intent={props.isDropTarget ? props.dropIntent : undefined}
       draggable={!props.isDragDisabled}
       onDragEnd={props.onDragEnd ? (event) => (event.preventDefault(), props.onDragEnd?.()) : undefined}
       onDragEnter={props.onDragEnter ? (event) => props.onDragEnter?.(props.nodeId, event) : undefined}
