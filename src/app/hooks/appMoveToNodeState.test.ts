@@ -97,6 +97,34 @@ it('moves a frozen current-view source snapshot through the move-to palette', as
   expect(closeMoveToNodePalette).toHaveBeenCalledTimes(1);
 });
 
+it('does not expose move targets for a generated EPUB chapter', () => {
+  const state = buildControllerMoveToNodeState({
+    runtime: {
+      isMoveToNodePaletteOpen: true,
+      moveToNodeSourceSnapshot: null,
+      recentNodeIds: [],
+      recordRecentNode: vi.fn(),
+      closeMoveToNodePalette: vi.fn()
+    } as never,
+    ws: {
+      activeNodeId: 'node-epub-0123456789abcdef01234567',
+      moveNodes: vi.fn(),
+      nodeOrder: ['folder-a', 'node-epub-0123456789abcdef01234567'],
+      nodesById: {
+        'folder-a': createTestNode('folder-a', 'folder', null),
+        'node-epub-0123456789abcdef01234567': createTestNode(
+          'node-epub-0123456789abcdef01234567',
+          'topic',
+          'epub-book-root'
+        )
+      },
+      trashedNodeIds: []
+    } as never
+  });
+
+  expect(state.nodeOrder).toEqual([]);
+});
+
 function createTestNode(id: string, kind: 'folder' | 'topic' | 'item', parentNodeId: string | null) {
   return {
     anchorLink: null,

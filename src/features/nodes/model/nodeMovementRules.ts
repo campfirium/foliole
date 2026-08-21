@@ -1,16 +1,17 @@
+import { isEpubGeneratedNodeId } from '../../../../lib/core/import/epubGeneratedNodeIdentity';
 import { canCreateChildNodeKind } from '../../../../lib/core/nodes/folderTopicItemCommands';
 import type { NodeKind } from '../../../../lib/core/nodes/nodeKind';
 
 import type { Node } from './nodeTypes';
 import { isHomeNode, isInboxNode, isVirtualRootNode, isVirtualNode } from './specialNodes';
 
-type MoveRuleNode = Pick<Node, 'anchorLink' | 'specialKind'> & { kind?: NodeKind };
+type MoveRuleNode = Pick<Node, 'anchorLink' | 'id' | 'specialKind'> & { kind?: NodeKind };
 
 export function canNodeBeMoved(node: MoveRuleNode | null | undefined) {
   if (!node || isHomeNode(node) || isInboxNode(node) || isVirtualRootNode(node)) {
     return false;
   }
-  if (node.anchorLink) {
+  if (node.anchorLink || isEpubGeneratedNodeId(node.id)) {
     return false;
   }
   return true;

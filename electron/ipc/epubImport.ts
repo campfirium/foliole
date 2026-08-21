@@ -4,6 +4,7 @@ import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js'
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from '../../lib/core/database/searchIndexInvalidations.js';
 import type { PreparedImportEmbeddedImage } from '../../lib/core/import/contract.js';
+import { createEpubGeneratedNodeId } from '../../lib/core/import/epubGeneratedNodeIdentity.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../lib/core/import/markdownImageReferences.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
@@ -42,10 +43,6 @@ interface EpubImportOptions {
   sourceIdentity?: string;
   sourceTrackingMode?: 'tracked' | 'untracked';
   targetNodeId?: string;
-}
-
-function createChapterNodeId(sourceFingerprint: string, chapterKey: string) {
-  return `node-epub-${createHash('sha256').update(`${sourceFingerprint}\u001f${chapterKey}`).digest('hex').slice(0, 24)}`;
 }
 
 function prepareBookNode(node: RawBookNode, index: number, importedAt: string) {
@@ -148,7 +145,9 @@ async function syncBookNodes(parentNodeId: string, sourceFingerprint: string, im
 
   connection.driver.transaction((driver) => {
     nodes.forEach((node) => {
-      const nodeId = createChapterNodeId(sourceFingerprint, node.key);
+      const nodeId = createEpubGeneratedNodeId(
+        createHash('sha256').update(`${sourceFingerprint}\u001f${node.key}`).digest('hex')
+      );
       nodeIdsByKey.set(node.key, nodeId);
       upsertNodeSnapshot(driver, {
         anchorLink: null,

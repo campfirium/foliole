@@ -7,7 +7,9 @@ export interface CurrentViewTopicSnapshot {
   parentNodeId: string | null;
 }
 
-export type CurrentViewTopicSnapshotNode = Pick<Node, 'parentNodeId'> & { kind?: Node['kind'] };
+export type CurrentViewTopicSnapshotNode = Pick<Node, 'anchorLink' | 'id' | 'parentNodeId' | 'specialKind'> & {
+  kind?: Node['kind'];
+};
 
 export function isCurrentViewTopicSnapshotStillCurrent(
   snapshot: CurrentViewTopicSnapshot,

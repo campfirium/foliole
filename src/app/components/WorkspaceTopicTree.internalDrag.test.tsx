@@ -233,8 +233,19 @@ it('does not apply Alt child drops into derived topics', () => {
 it('excludes derived topics from mixed manual drag selections', () => {
   seed(['folder-a', 'topic-derived', 'topic-b', 'topic-a'], ['topic-derived', 'topic-b', 'topic-a'], true);
 
+  useWorkspaceStore.setState((state) => ({
+    ...state,
+    nodesById: {
+      ...state.nodesById,
+      'node-epub-0123456789abcdef01234567': topic(
+        'node-epub-0123456789abcdef01234567',
+        'Imported chapter'
+      )
+    }
+  }));
+
   expect(filterMovableTopicTreeSelection(
-    ['topic-derived', 'topic-b'],
+    ['topic-derived', 'node-epub-0123456789abcdef01234567', 'topic-b'],
     toWorkspaceListNodesById(useWorkspaceStore.getState().nodesById)
   )).toEqual(['topic-b']);
 });

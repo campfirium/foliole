@@ -1,5 +1,6 @@
+import { isEpubGeneratedNodeId } from '../../lib/core/import/epubGeneratedNodeIdentity.js';
+
 const READWISE_BOOK_NODE_PREFIX = 'node-readwise-book-';
-const READWISE_EPUB_NODE_PREFIX = 'node-epub-';
 
 export interface ReadwiseCleanupCandidate {
   deleteReason?: string;
@@ -21,7 +22,7 @@ export function isReadwiseBookStructureNodeId(nodeId: string) {
 }
 
 export function isReadwiseImportedStructureNodeId(nodeId: string) {
-  return nodeId.startsWith(READWISE_EPUB_NODE_PREFIX) || isReadwiseBookStructureNodeId(nodeId);
+  return isEpubGeneratedNodeId(nodeId) || isReadwiseBookStructureNodeId(nodeId);
 }
 
 export function collectReadwiseCleanupSubtree<T extends ReadwiseCleanupNodeRow>(rootId: string, rows: T[]) {

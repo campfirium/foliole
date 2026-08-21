@@ -21,7 +21,7 @@ function createNode(partial: Partial<Node> & Pick<Node, 'id' | 'title' | 'conten
   };
 }
 
-it('blocks moving derived nodes while allowing regular topics and items', () => {
+it('blocks moving derived and generated EPUB nodes while allowing user-organized nodes', () => {
   expect(
     canNodeBeMoved(createNode({
       id: 'topic-derived',
@@ -40,8 +40,18 @@ it('blocks moving derived nodes while allowing regular topics and items', () => 
       anchorLink: { id: 'cloze-1', kind: 'cloze' }
     }))
   ).toBe(false);
+  expect(
+    canNodeBeMoved(createNode({
+      id: 'node-epub-0123456789abcdef01234567',
+      title: 'Imported chapter',
+      content: 'Chapter body',
+      kind: 'topic'
+    }))
+  ).toBe(false);
   expect(canNodeBeMoved(createNode({ id: 'topic-1', title: 'Topic', content: 'Body', kind: 'topic' }))).toBe(true);
   expect(canNodeBeMoved(createNode({ id: 'item-1', title: 'Card', content: 'Prompt', kind: 'item' }))).toBe(true);
+  expect(canNodeBeMoved(createNode({ id: 'epub-book-root', title: 'Book', content: 'Book', kind: 'topic' }))).toBe(true);
+  expect(canNodeBeMoved(createNode({ id: 'user-topic-under-book', title: 'Notes', content: '', kind: 'topic' }))).toBe(true);
 });
 
 it('allows folders to accept topics but not items to accept children', () => {

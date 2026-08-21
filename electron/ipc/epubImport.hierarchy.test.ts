@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { isEpubGeneratedNodeId } from '../../lib/core/import/epubGeneratedNodeIdentity.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 
@@ -107,6 +108,8 @@ it('keeps a self-linked toc page with readable body while preserving nested epub
   const chapterOneNode = nodes.find((node) => node.title === 'Chapter 1');
   const chapterTwoNode = nodes.find((node) => node.title === 'Chapter 2');
 
+  expect(isEpubGeneratedNodeId(imported.nodeId as string)).toBe(false);
+  expect(nodes.filter((node) => node.id !== imported.nodeId).every((node) => isEpubGeneratedNodeId(node.id))).toBe(true);
   expect(tocNode?.parent_id).toBe(imported.nodeId);
   expect(tocNode?.content).toContain('目录');
   expect(tocNode?.content?.trim().length).toBeGreaterThan(0);
