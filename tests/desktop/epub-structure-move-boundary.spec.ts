@@ -40,6 +40,7 @@ test('keeps the EPUB book movable without detaching generated chapters', async (
   const topicPanel = desktopWindow.getByRole('complementary', {
     name: /^(Current folder contents|当前文件夹内容)$/
   });
+  await topicPanel.getByRole('button', { name: /^(Expand all topics|展开全部主题)$/ }).click();
   const bookFrame = topicPanel.getByRole('treeitem', { name: 'EPUB Book Root' }).locator('..');
   const chapterFrame = topicPanel.getByRole('treeitem', { name: 'Imported EPUB Chapter' }).locator('..');
   const userNoteFrame = topicPanel.getByRole('treeitem', { name: 'User Note Under Book' }).locator('..');
