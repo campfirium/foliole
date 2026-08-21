@@ -13,6 +13,12 @@ it('accepts desktop preview as a fixed Windows DEV action', () => {
   ], {})).toMatchObject({ action: 'desktop-preview' });
 });
 
+it('accepts internal install as a fixed Windows DEV action', () => {
+  expect(parseWindowsDevControlArgs([
+    '--host', WINDOWS_DEV_DEFAULT_SSH, 'internal-install'
+  ], {})).toMatchObject({ action: 'internal-install' });
+});
+
 it('pushes the Mac dev mirror before invoking desktop preview', async () => {
   const calls = [];
   await runWindowsDevControl({
@@ -35,4 +41,13 @@ it('aligns the fixed checkout before launching native preview', () => {
   expect(source).toContain('$Action -eq "desktop-preview"');
   expect(source).toContain(preview);
   expect(source.indexOf(pull)).toBeLessThan(source.indexOf(preview));
+});
+
+it('aligns the fixed checkout before installing the internal package', () => {
+  const source = fs.readFileSync('scripts/windows/windows-dev-action.ps1', 'utf8');
+  const pull = '& $systemNode $puller';
+  const install = '& $systemNode $systemNpmCli run windows:package:internal:install';
+  expect(source).toContain('$Action -eq "internal-install"');
+  expect(source).toContain(install);
+  expect(source.indexOf(pull)).toBeLessThan(source.indexOf(install));
 });
