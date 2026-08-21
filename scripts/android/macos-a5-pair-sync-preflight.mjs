@@ -132,8 +132,9 @@ export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
     && pairState.syncGroupPeerConflict === false
     && /^[0-9a-f]{16}$/u.test(pairState.syncGroupRemotePeerFingerprint ?? '');
   const joinedEmptyReauthorization = pairing.status === 0 && pairState.dirtyRecordCount === 0
-    && pairState.pairingCredentialsPresent === false
-    && pairState.pairingPeerAuthorizationFingerprint === null
+    && pairState.pairingCredentialsPresent === true
+    && pairState.pairingPeerAuthorizationFingerprint === pairState.syncGroupRemotePeerFingerprint
+    && pairState.storedAuthorizationFingerprint === pairState.localMemberAuthorizationFingerprint
     && pairState.pairingPeerConflict === false
     && joinedEmptyWorkspace && authorizedGroupRoute;
   const existingPairingRecovery = pairState.dirtyRecordCount > 0

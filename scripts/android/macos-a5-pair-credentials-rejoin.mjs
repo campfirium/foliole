@@ -118,7 +118,11 @@ export async function collectCredentialProtectedReadiness(
 export function assertJoinedEmptyCredentialReauthorization(readiness) {
   const exact = readiness.joinedEmptyReauthorization === true
     && readiness.nodeCount === 0 && readiness.dirtyRecordCount === 0
-    && readiness.pairingCredentialsPresent === false
+    && readiness.pairingCredentialsPresent === true
+    && readiness.pairingPeerAuthorizationFingerprint
+      === readiness.syncGroupRemotePeerFingerprint
+    && readiness.storedAuthorizationFingerprint
+      === readiness.localMemberAuthorizationFingerprint
     && readiness.syncGroupCredentialsPresent === true
     && readiness.workgroupKeyPresent === true && readiness.syncGroupRoutePresent === true
     && readiness.activeSyncGroupMemberCount > 1
