@@ -19,7 +19,7 @@ import {
 import {
   countPairedCompanionAuthorizations,
   registerPairedCompanionAuthorization,
-  savePairedSyncGroupPeer
+  registerPairedCompanionAuthorizationWithPeer
 } from './companionPairingStore.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
@@ -55,14 +55,13 @@ export async function handlePairRequest(
     negotiatedProtocolVersion: compatibility.negotiated_version ?? CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
     remoteProtocol: approved.protocol
   };
-  const paired = completion.completion ?? (workgroupKey
-    ? { authorization_id: pairedArgs.authorizationId,
-      host_name: pairedArgs.hostName, credential_secret: workgroupKey.group_key,
-      paired_at: new Date().toISOString() }
+  const providerRoute = workgroupKey && assignedMember
+    ? createProviderRoute(approved, assignedMember) : null;
+  const paired = completion.completion ?? (providerRoute
+    ? registerPairedCompanionAuthorizationWithPeer({ ...pairedArgs, peer: providerRoute })
     : registerPairedCompanionAuthorization(pairedArgs));
   if (!completion.completion) completeCompanionPairRequest(pairRequestId, paired);
-  const providerSecret = workgroupKey && assignedMember
-    ? saveProviderRoute(approved, assignedMember, peerId, workgroupKey.group_key) : null;
+  const providerSecret = providerRoute && workgroupKey ? workgroupKey.group_key : null;
   const { encryptedSecret, providerEncryptedSecret } = await encryptApprovedSecrets(
     approved, paired.credential_secret, providerSecret
   );
@@ -150,11 +149,9 @@ function updateStatus(updatePairingStatus: StatusUpdater) {
   });
 }
 
-function saveProviderRoute(
+function createProviderRoute(
   approved: PendingCompanionPairRequest,
-  assigned: { authorization_id: string; host_name: string; host_platform: string },
-  peerId: string,
-  groupKey: string
+  assigned: { authorization_id: string; host_name: string; host_platform: string }
 ) {
   if (!approved.group_id || !approved.timeline_id || !approved.client_address) {
     throw new Error('sync_group_provider_pairing_invalid');
@@ -162,7 +159,7 @@ function saveProviderRoute(
   const group = loadDesktopSyncGroup();
   const local = group?.members.find((member) => member.host_name === group.local_host_name);
   if (!local) throw new Error('sync_group_local_authorization_missing');
-  savePairedSyncGroupPeer({
+  return {
     endpoint_url: `http://${approved.client_address}:38641`,
     group_id: approved.group_id,
     local_authorization_id: local.authorization_id,
@@ -171,8 +168,7 @@ function saveProviderRoute(
     peer_host_name: assigned.host_name,
     peer_host_platform: assigned.host_platform,
     timeline_id: approved.timeline_id
-  });
-  return groupKey;
+  };
 }
 
 function loadApproved(pairRequestId: string, request: http.IncomingMessage, response: http.ServerResponse, writeJson: JsonResponder) {

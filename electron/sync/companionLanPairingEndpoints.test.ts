@@ -12,6 +12,7 @@ const pairingStoreMock = vi.hoisted(() => ({
   countPairedCompanionAuthorizations: vi.fn(() => 1),
   loadPairedSyncGroupPeer: vi.fn(() => null),
   registerPairedCompanionAuthorization: vi.fn(),
+  registerPairedCompanionAuthorizationWithPeer: vi.fn(),
   savePairedSyncGroupPeer: vi.fn()
 }));
 const pairingEncryptionMock = vi.hoisted(() => ({

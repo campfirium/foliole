@@ -144,15 +144,40 @@ export function registerPairedCompanionAuthorizationWithSecret(args: {
   negotiatedProtocolVersion: number;
   pairedAt?: string; remoteProtocol: SyncProtocolDescriptor;
 }) {
-  const next: PairedCompanionAuthorization = {
+  const next = createPairedAuthorization(args);
+  const store = readStoreStrict();
+  writeStore({ ...store, authorizations: [...store.authorizations, next] });
+  return next;
+}
+
+export function registerPairedCompanionAuthorizationWithPeer(args: {
+  authorizationId: string; clientAddress?: string | null; hostName: string; hostPlatform: string;
+  negotiatedProtocolVersion: number; pairedAt?: string; peer: PairedSyncGroupPeer;
+  remoteProtocol: SyncProtocolDescriptor;
+}) {
+  const next = createPairedAuthorization({
+    ...args, credentialSecret: randomBytes(32).toString('base64url')
+  });
+  const store = readStoreStrict();
+  writeStore({
+    ...store,
+    authorizations: [...store.authorizations, next],
+    client_peers: [...store.client_peers, args.peer]
+  });
+  return next;
+}
+
+function createPairedAuthorization(args: {
+  authorizationId: string; clientAddress?: string | null; credentialSecret: string;
+  hostName: string; hostPlatform: string; negotiatedProtocolVersion: number;
+  pairedAt?: string; remoteProtocol: SyncProtocolDescriptor;
+}): PairedCompanionAuthorization {
+  return {
     authorization_id: args.authorizationId.trim(), client_address: args.clientAddress?.trim() || null,
     credential_secret: args.credentialSecret, host_name: args.hostName.trim(),
     host_platform: args.hostPlatform.trim(), negotiated_protocol_version: args.negotiatedProtocolVersion,
     paired_at: args.pairedAt ?? new Date().toISOString(), remote_protocol: args.remoteProtocol
   };
-  const store = readStoreStrict();
-  writeStore({ ...store, authorizations: [...store.authorizations, next] });
-  return next;
 }
 
 export function savePairedSyncGroupPeer(peer: PairedSyncGroupPeer) {

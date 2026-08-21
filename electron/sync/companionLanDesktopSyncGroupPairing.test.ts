@@ -7,11 +7,10 @@ import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtoco
 
 const pairingStoreMock = vi.hoisted(() => ({
   countPairedCompanionAuthorizations: vi.fn(() => 1),
-  registerPairedCompanionAuthorization: vi.fn((args: { authorizationId: string; hostName: string }) => ({
+  registerPairedCompanionAuthorizationWithPeer: vi.fn((args: { authorizationId: string; hostName: string }) => ({
     authorization_id: args.authorizationId, credential_secret: 'secret-c',
     host_name: args.hostName, paired_at: '2026-08-10T01:00:00.000Z'
-  })),
-  savePairedSyncGroupPeer: vi.fn()
+  }))
 }));
 const workgroupKeyStoreMock = vi.hoisted(() => ({
   loadDesktopWorkgroupKey: vi.fn(() => ({ group_id: 'group-1', group_key: 'group-key', group_tag: 'tag-1' }))
@@ -81,8 +80,10 @@ it('registers an approved nonempty Windows desktop and returns bidirectional pro
   expect(syncGroupStoreMock.registerSyncGroupMember).toHaveBeenCalledWith(expect.objectContaining({
     hostName: 'Desktop C', hostPlatform: 'win32'
   }));
-  expect(pairingStoreMock.savePairedSyncGroupPeer).toHaveBeenCalledWith(expect.objectContaining({
-    endpoint_url: 'http://192.168.1.22:38641', peer_host_name: 'Desktop C 2'
+  expect(pairingStoreMock.registerPairedCompanionAuthorizationWithPeer).toHaveBeenCalledWith(expect.objectContaining({
+    peer: expect.objectContaining({
+      endpoint_url: 'http://192.168.1.22:38641', peer_host_name: 'Desktop C 2'
+    })
   }));
   expect(writeJson).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), 200,
     expect.objectContaining({ authorization_id: expect.any(String), host_name: 'Desktop C 2',
@@ -103,10 +104,11 @@ it('reuses the one workgroup key when a released display name is approved again'
   await handlePairRequest(request({ pair_request_id: requestId }), response(),
     '0.1.0-test', 'desktop-a', vi.fn(), writeJson);
 
-  expect(pairingStoreMock.savePairedSyncGroupPeer).toHaveBeenCalledWith(expect.objectContaining({
-    peer_host_name: 'Desktop C 2'
+  expect(pairingStoreMock.registerPairedCompanionAuthorizationWithPeer).toHaveBeenCalledWith(expect.objectContaining({
+    peer: expect.objectContaining({ peer_host_name: 'Desktop C 2' })
   }));
-  expect(pairingStoreMock.savePairedSyncGroupPeer.mock.calls[0]?.[0]).not.toHaveProperty('secret');
+  expect(pairingStoreMock.registerPairedCompanionAuthorizationWithPeer.mock.calls[0]?.[0])
+    .not.toHaveProperty('credentialSecret');
 });
 
 it('reissues the workgroup key to an approved active member without creating another member', async () => {

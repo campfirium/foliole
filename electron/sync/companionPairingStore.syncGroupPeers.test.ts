@@ -6,6 +6,8 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
+
 let userDataDir = '';
 const encryptString = vi.hoisted(() => vi.fn((value: string) => Buffer.from(value, 'utf8')));
 
@@ -21,8 +23,10 @@ vi.mock('electron', () => ({
 
 import {
   clearPairedCompanionAuthorizations,
+  loadPairedCompanionAuthorization,
   loadPairedSyncGroupPeer,
   loadPairedSyncGroupPeers,
+  registerPairedCompanionAuthorizationWithPeer,
   savePairedSyncGroupPeer
 } from './companionPairingStore.js';
 
@@ -59,6 +63,26 @@ it('replaces only the same peer channel and requires an exact peer lookup', () =
     expect.objectContaining({ endpoint_url: 'http://new.local' })
   );
   expect(loadPairedSyncGroupPeer('group-1', 'missing')).toBeNull();
+});
+
+it('atomically commits a distinct authorization credential with its peer route', () => {
+  encryptString.mockClear();
+  const route = peer('android-a5', 'http://a5.local');
+  const authorization = registerPairedCompanionAuthorizationWithPeer({
+    authorizationId: route.peer_authorization_id,
+    clientAddress: '192.168.1.22',
+    hostName: 'A5',
+    hostPlatform: 'android-capacitor',
+    negotiatedProtocolVersion: 1,
+    peer: route,
+    remoteProtocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
+  });
+
+  expect(encryptString).toHaveBeenCalledOnce();
+  expect(authorization.credential_secret).toBeTruthy();
+  expect(authorization.credential_secret).not.toBe('group-key');
+  expect(loadPairedCompanionAuthorization(route.peer_authorization_id)).toEqual(authorization);
+  expect(loadPairedSyncGroupPeer('group-1', route.peer_authorization_id)).toEqual(route);
 });
 
 it('clears credentials by deleting the store without encrypting an empty replacement', async () => {
