@@ -7,7 +7,7 @@ import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
 
 const EXTERNAL_FOLDER_HEADING = /^(External folders|外部文件夹)$/;
-const REMOTE_GROUP = /^(Other devices|其他设备)$/;
+const REMOTE_GROUP = /^(Other hosts|其他主机)$/;
 
 async function seedWorkgroup(desktopApp: ElectronApplication, activeWorkgroup: boolean) {
   await desktopApp.evaluate(async ({ app }, { activeWorkgroup, cwd }) => {
@@ -18,27 +18,26 @@ async function seedWorkgroup(desktopApp: ElectronApplication, activeWorkgroup: b
     const connection = require(pathApi.join(cwd, 'dist/electron/database/connection.js'));
     await connection.runWithDatabaseConnectionOwner(() => {
       const driver = connection.openDatabaseConnection().driver;
-      const deviceRow = driver.queryOne("SELECT value FROM settings WHERE key = 'device_id'") as { value: string };
-      const currentDeviceId = JSON.parse(deviceRow.value) as string;
+      const currentHost = 'This Mac';
       driver.execute(`INSERT OR REPLACE INTO sync_groups
-        (group_id, display_name, timeline_id, created_by_device_id, created_at, updated_at)
+        (group_id, display_name, timeline_id, created_by_host_name, created_at, updated_at)
         VALUES ('external-folders-group', 'Workgroup', 'external-folders-timeline', ?, 'now', 'now')`,
-      [currentDeviceId]);
+      [currentHost]);
       const insertMember = (values: string[]) => driver.execute(`INSERT OR REPLACE INTO sync_group_members
-        (group_id, device_id, device_kind, device_name, state, approved_by_device_id,
+        (group_id, host_name, host_platform, state, approved_by_host_name,
          authorization_id, joined_at, updated_at)
-        VALUES ('external-folders-group', ?, ?, ?, ?, ?, ?, 'now', 'now')`, values);
-      insertMember([currentDeviceId, 'darwin', 'This Mac', activeWorkgroup ? 'active' : 'left',
-        currentDeviceId, 'external-local-auth']);
-      insertMember(['other-desktop', 'win32', 'Windows PC', 'active', currentDeviceId, 'external-windows-auth']);
-      insertMember(['other-mac', 'darwin', 'MacBook Pro', 'active', currentDeviceId, 'external-mac-auth']);
+        VALUES ('external-folders-group', ?, ?, ?, ?, ?, 'now', 'now')`, values);
+      insertMember([currentHost, 'darwin', activeWorkgroup ? 'active' : 'left',
+        currentHost, 'external-local-auth']);
+      insertMember(['Windows PC', 'win32', 'active', currentHost, 'external-windows-auth']);
+      insertMember(['MacBook Pro', 'darwin', 'active', currentHost, 'external-mac-auth']);
       if (activeWorkgroup) {
         driver.execute(`INSERT OR REPLACE INTO sync_group_local_state
-          (singleton_id, group_id, local_device_id, member_state, updated_at)
-          VALUES (1, 'external-folders-group', ?, 'active', 'now')`, [currentDeviceId]);
+          (singleton_id, group_id, local_host_name, member_state, updated_at)
+          VALUES (1, 'external-folders-group', ?, 'active', 'now')`, [currentHost]);
       } else {
         driver.execute(`UPDATE sync_group_members SET left_at = 'now'
-          WHERE group_id = 'external-folders-group' AND device_id = ?`, [currentDeviceId]);
+          WHERE group_id = 'external-folders-group' AND host_name = ?`, [currentHost]);
       }
     });
     return app.getPath('userData');
@@ -58,24 +57,31 @@ async function seedRemoteMirror(desktopApp: ElectronApplication, activeWorkgroup
     const connection = require(pathApi.join(cwd, 'dist/electron/database/connection.js'));
     await connection.runWithDatabaseConnectionOwner(() => {
       const driver = connection.openDatabaseConnection().driver;
-      const insertRemoteFolder = (values: Array<number | string | null>) => driver.execute(
+      const at = '2026-07-24T00:00:00.000Z';
+      const insertRemoteFolder = (source: {
+        count: number; host: string; id: string; path: string; platform: string; status: string;
+      }) => {
+        const sourceRef = `external:${source.id}`;
+        const pathFlavor = source.platform === 'win32' ? 'windows' : 'posix';
+        driver.execute(`INSERT OR REPLACE INTO desktop_sources
+          (source_ref, source_type, config_ref, host_name, host_platform, root_path,
+           path_flavor, type_settings_json, created_at, updated_at)
+          VALUES (?, 'external', ?, ?, ?, ?, ?, '{}', ?, ?)`,
+        [sourceRef, source.id, source.host, source.platform, source.path, pathFlavor, at, at]);
+        driver.execute(
         `INSERT OR REPLACE INTO external_search_folders (
-          id, folder_path, attachment_mode, owner_installation_id, owner_device_name, owner_platform,
-          status, document_count, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, values
-      );
-      insertRemoteFolder(['playwright-remote-folder', 'D:\\X\\Dropbox\\obs\\1act\\0cap', 'document_relative',
-        'other-desktop', 'Windows PC', 'win32', 'ready', 21,
-        '2026-07-24T00:00:00.000Z', '2026-07-24T00:00:00.000Z']);
-      insertRemoteFolder(['playwright-remote-projects', 'D:\\Projects', 'document_relative',
-      'other-desktop', 'Windows PC', 'win32', 'ready', 8,
-      '2026-07-24T00:00:00.000Z', '2026-07-24T00:00:00.000Z']);
-      insertRemoteFolder(['playwright-remote-research', '/Users/foliole/Documents/Research', 'document_relative',
-      'other-mac', 'MacBook Pro', 'darwin', 'ready', 5,
-      '2026-07-24T00:00:00.000Z', '2026-07-24T00:00:00.000Z']);
-      insertRemoteFolder(['playwright-waiting-folder', '/Users/foliole/Documents/Waiting', 'document_relative',
-      null, 'This Mac', 'darwin', 'idle', 3,
-      '2026-07-24T00:00:00.000Z', '2026-07-24T00:00:00.000Z']);
+          id, folder_path, attachment_mode, status, document_count, created_at, updated_at, source_ref)
+        VALUES (?, ?, 'document_relative', ?, ?, ?, ?, ?)`,
+        [source.id, source.path, source.status, source.count, at, at, sourceRef]);
+      };
+      insertRemoteFolder({ count: 21, host: 'Windows PC', id: 'playwright-remote-folder',
+        path: 'D:\\X\\Dropbox\\obs\\1act\\0cap', platform: 'win32', status: 'ready' });
+      insertRemoteFolder({ count: 8, host: 'Windows PC', id: 'playwright-remote-projects',
+        path: 'D:\\Projects', platform: 'win32', status: 'ready' });
+      insertRemoteFolder({ count: 5, host: 'MacBook Pro', id: 'playwright-remote-research',
+        path: '/Users/foliole/Documents/Research', platform: 'darwin', status: 'ready' });
+      insertRemoteFolder({ count: 3, host: 'This Mac', id: 'playwright-waiting-folder',
+        path: '/Users/foliole/Documents/Waiting', platform: 'darwin', status: 'idle' });
       const openedPath = pathApi.join(libraryHome, 'opened-test.md');
       fsApi.writeFileSync(openedPath, '# Opened test\n', 'utf8');
       driver.execute(`INSERT OR REPLACE INTO local_files
@@ -129,8 +135,7 @@ test.describe('desktop settings External folders', () => {
     await expect(settingsDialog.getByText('D:\\Projects', { exact: true })).toBeVisible();
     await expect(settingsDialog.getByText('MacBook Pro', { exact: true })).toBeVisible();
     await expect(settingsDialog.getByText('/Users/foliole/Documents/Waiting', { exact: true })).toBeVisible();
-    await expect(settingsDialog.getByText(/^(Waiting to reconnect|待连接)$/)).toBeVisible();
-    await expect(settingsDialog.getByText('This Mac', { exact: true })).toHaveCount(0);
+    await expect(remoteRegion.getByRole('group', { name: 'This Mac' })).toBeVisible();
     await expect(settingsDialog.getByText(/^(Read-only mirror|只读镜像)$/)).toHaveCount(0);
     await expect(settingsDialog.getByText('Local', { exact: true })).toHaveCount(0);
     await expect(settingsDialog.getByRole('button', { name: /^(Add folder|添加文件夹)$/ })).toBeVisible();
