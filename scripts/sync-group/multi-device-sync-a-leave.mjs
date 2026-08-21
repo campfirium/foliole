@@ -2,9 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
-import {
-  identityFingerprint, inspectPairSyncRecoveryWorkspace
-} from '../android/android-pair-sync-recovery-readiness.mjs';
+import { inspectPairSyncRecoveryWorkspace } from '../android/android-pair-sync-recovery-readiness.mjs';
 import { collectAndroidDeviceSnapshot } from '../android/android-device-snapshot.mjs';
 import { macosA5GradleEnv, macosA5Paths, A5_SERIAL } from '../android/macos-a5-dev.mjs';
 import { runMacosA5SyncGroupMaintenance } from '../android/macos-a5-sync-group-maintenance-action.mjs';
@@ -21,18 +19,18 @@ import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
 /* global AbortController, process */
 
-function memberIdentities(database, state) {
-  return database.prepare(`SELECT device_id FROM sync_group_members
-    WHERE state = ? ORDER BY device_id`).all(state)
-    .map(({ device_id }) => identityFingerprint(device_id));
+function memberHosts(database, state) {
+  return database.prepare(`SELECT host_name FROM sync_group_members
+    WHERE state = ? ORDER BY host_name`).all(state)
+    .map(({ host_name }) => host_name);
 }
 
 function androidSnapshot(paths) {
   return collectAndroidDeviceSnapshot({ adb: paths.adb, appId: 'com.foliole.android',
     includeEvents: false, serial: A5_SERIAL, tables: ['attachments', 'content_blobs', 'nodes'],
     databaseInspector: (database) => ({ ...inspectPairSyncRecoveryWorkspace(database),
-      activeMemberIdentities: memberIdentities(database, 'active'),
-      departedMemberIdentities: memberIdentities(database, 'left') }) });
+      activeMemberHosts: memberHosts(database, 'active'),
+      departedMemberHosts: memberHosts(database, 'left') }) });
 }
 
 async function waitUntil(label, inspect, accept, progress, signal, reportActivity = () => {}) {
@@ -121,7 +119,7 @@ async function leaveAndRestartA(context) {
 async function runWindowsContinuity(context, before) {
   const { env, evidenceRoot, execute, paths, rejoin, reportActivity,
     reportProgress, repoRoot, runId } = context;
-  const expected = { formerDeviceIdentity: before.deviceIdentity,
+  const expected = { formerHostName: before.localHostName,
     groupId: rejoin.proof.groupId, timelineId: rejoin.proof.timelineId };
   await waitUntil('Android B departure convergence', () => androidSnapshot(paths),
     (value) => matchesAndroidSurvivorState(value, expected),
@@ -168,7 +166,7 @@ async function runWindowsContinuity(context, before) {
 function matchesFullProof(value, context, before, remote) {
   try {
     assertSurvivorProof({ android: value, baseline: context.rejoin.proof,
-      factIds: remote.receipt.factIds, formerDeviceIdentity: before.deviceIdentity,
+      factIds: remote.receipt.factIds, formerHostName: before.localHostName,
       windows: remote.receipt });
     return true;
   } catch { return false; }
@@ -186,7 +184,7 @@ async function verifyRestartedSurvivors(context, before, remote) {
     (value) => [value.database?.inspection, value.database?.counts]);
   reportProgress('survivors-restarted');
   const proof = assertSurvivorProof({ android: restarted, baseline: context.rejoin.proof,
-    factIds: remote.receipt.factIds, formerDeviceIdentity: before.deviceIdentity,
+    factIds: remote.receipt.factIds, formerHostName: before.localHostName,
     windows: remote.receipt });
   reportProgress('former-a-revoked');
   return proof;

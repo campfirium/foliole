@@ -32,8 +32,8 @@ it('keeps stable desktop A and Windows C on a real LAN Sync Group path', () => {
     .toBeLessThan(remote.indexOf('finally { await closeWindowsSyncGroupSession(session); }'));
   expect(inspector).toContain("missingContentBlobCount");
   expect(inspector).toContain('localMemberState');
-  expect(inspector).toContain('departedDeviceIdentities');
-  expect(inspector).toContain('activeDeviceIdentities');
+  expect(inspector).toContain('departedHosts');
+  expect(inspector).toContain('activeHosts');
   expect(inspector).toContain("key IN ('device_id', 'desktop_device_id')");
   expect(inspector).toContain('storedDesktopDeviceIdentity(db) ?? identity.deviceIdentityFingerprint');
   expect(inspector).toContain('userNodeCount');

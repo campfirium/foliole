@@ -10,34 +10,34 @@ import {
 } from '../android/android-pair-sync-recovery-readiness.mjs';
 import { inspectSyncFromZeroDatasetFacts } from '../sync-group/sync-from-zero-dataset-inspect.mjs';
 
-function identitiesByKind(rows) {
+function hostsByPlatform(rows) {
   return rows.reduce((result, row) => {
-    result[row.device_kind] ??= [];
-    result[row.device_kind].push(identityFingerprint(row.device_id));
+    result[row.host_platform] ??= [];
+    result[row.host_platform].push(row.host_name);
     return result;
   }, {});
 }
 
-function departedDeviceIdentities(database) {
-  return identitiesByKind(database.prepare(`SELECT DISTINCT members.device_kind, members.device_id
+function departedHosts(database) {
+  return hostsByPlatform(database.prepare(`SELECT DISTINCT members.host_platform, members.host_name
     FROM sync_group_member_departures departures
     JOIN sync_group_members members
-      ON members.group_id = departures.group_id AND members.device_id = departures.device_id
-    WHERE members.state = 'left' ORDER BY members.device_kind, members.device_id`).all());
+      ON members.group_id = departures.group_id AND members.host_name = departures.host_name
+    WHERE members.state = 'left' ORDER BY members.host_platform, members.host_name`).all());
 }
 
-function activeDeviceIdentities(database) {
-  return identitiesByKind(database.prepare(`SELECT DISTINCT device_kind, device_id
-    FROM sync_group_members WHERE state = 'active' ORDER BY device_kind, device_id`).all());
+function activeHosts(database) {
+  return hostsByPlatform(database.prepare(`SELECT DISTINCT host_platform, host_name
+    FROM sync_group_members WHERE state = 'active' ORDER BY host_platform, host_name`).all());
 }
 
-function departedAtByDeviceIdentity(database) {
-  const rows = database.prepare(`SELECT members.device_id, departures.left_at
+function departedAtByHost(database) {
+  const rows = database.prepare(`SELECT members.host_name, departures.left_at
     FROM sync_group_member_departures departures
     JOIN sync_group_members members
-      ON members.group_id = departures.group_id AND members.device_id = departures.device_id
-    ORDER BY departures.left_at, members.device_id`).all();
-  return Object.fromEntries(rows.map(({ device_id, left_at }) => [identityFingerprint(device_id), left_at]));
+      ON members.group_id = departures.group_id AND members.host_name = departures.host_name
+    ORDER BY departures.left_at, members.host_name`).all();
+  return Object.fromEntries(rows.map(({ host_name, left_at }) => [host_name, left_at]));
 }
 
 function journeyFactUpdates(database) {
@@ -77,7 +77,7 @@ export function inspectSyncGroupRecoveryDatabase(databasePath, factIds = []) {
   const db = new BetterSqlite3(databasePath, { fileMustExist: true, readonly: true });
   try {
     const count = (sql) => Number(db.prepare(sql).pluck().get() ?? 0);
-    const local = db.prepare(`SELECT local.group_id, local.member_state, groups.timeline_id
+    const local = db.prepare(`SELECT local.group_id, local.local_host_name, local.member_state, groups.timeline_id
       FROM sync_group_local_state local
       LEFT JOIN sync_groups groups ON groups.group_id = local.group_id
       WHERE local.singleton_id = 1 LIMIT 1`).get();
@@ -87,7 +87,7 @@ export function inspectSyncGroupRecoveryDatabase(databasePath, factIds = []) {
     return {
       ...inspectSyncFromZeroDatasetFacts(db),
       ...peerProgress(db),
-      activeDeviceIdentities: activeDeviceIdentities(db),
+      activeHosts: activeHosts(db),
       activeMemberCount: count("SELECT COUNT(*) FROM sync_group_members WHERE state = 'active'"),
       attachmentCount: count('SELECT COUNT(*) FROM attachments'),
       attachmentIds: db.prepare('SELECT id FROM attachments ORDER BY id').pluck().all(),
@@ -96,14 +96,15 @@ export function inspectSyncGroupRecoveryDatabase(databasePath, factIds = []) {
       cachedAttachmentIds: db.prepare(`SELECT attachment_id FROM attachment_blobs
         WHERE availability = 'cached' ORDER BY attachment_id`).pluck().all(),
       contentBlobCount: count('SELECT COUNT(*) FROM content_blobs'),
-      departedAtByDeviceIdentity: departedAtByDeviceIdentity(db),
-      departedDeviceIdentities: departedDeviceIdentities(db),
+      departedAtByHost: departedAtByHost(db),
+      departedHosts: departedHosts(db),
       deviceIdentity: storedDesktopDeviceIdentity(db) ?? identity.deviceIdentityFingerprint,
       integrity: db.prepare('PRAGMA integrity_check').pluck().get(),
       journeyFacts: identity.journeyFacts,
       journeyFactUpdates: journeyFactUpdates(db),
       facts,
       localGroupId: local?.group_id ?? null,
+      localHostName: local?.local_host_name ?? null,
       localMemberState: local?.member_state ?? null,
       localTimelineId: local?.timeline_id ?? null,
       missingAttachmentCount: count(`SELECT COUNT(*) FROM attachment_blobs

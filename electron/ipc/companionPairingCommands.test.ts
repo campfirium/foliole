@@ -21,6 +21,7 @@ const commandMocks = vi.hoisted(() => ({
     pending: null
   })),
   requestDesktopSyncGroupJoin: vi.fn().mockResolvedValue(undefined),
+  removeDesktopSyncGroupMember: vi.fn().mockResolvedValue(undefined),
   runWithDatabaseConnectionOwner: vi.fn(async (execute: () => unknown) => execute()),
   setDesktopCompanionSyncEnabled: vi.fn(),
   setDesktopCompanionSyncPaused: vi.fn(),
@@ -77,6 +78,10 @@ vi.mock('../sync/desktopSyncGroupJoin.js', () => ({
 vi.mock('../sync/desktopSyncGroupJoinState.js', () => ({
   loadDesktopSyncGroupJoinState: commandMocks.loadDesktopSyncGroupJoinState,
   saveDesktopSyncGroupCandidates: vi.fn()
+}));
+vi.mock('../sync/syncGroupDeparture.js', () => ({
+  leaveDesktopSyncGroup: vi.fn().mockResolvedValue(undefined),
+  removeDesktopSyncGroupMember: commandMocks.removeDesktopSyncGroupMember
 }));
 vi.mock('../sync/lanWorkspaceSyncServer.js', () => ({
   ensureLanWorkspaceSyncServer: commandMocks.ensureLanWorkspaceSyncServer,
@@ -143,6 +148,14 @@ it('keeps discovered Sync Group candidates in the polling overview', async () =>
     })],
     join_request: null
   });
+});
+
+it('removes a member through its Host name without a Device-shaped command field', async () => {
+  await handleCompanionPairingCommand('remove_sync_group_member', { host_name: 'Reading Phone' });
+  expect(commandMocks.removeDesktopSyncGroupMember).toHaveBeenCalledWith('Reading Phone');
+  await expect(handleCompanionPairingCommand(
+    'remove_sync_group_member', { device_id: 'Reading Phone' }
+  )).rejects.toThrow('host_name');
 });
 
 it('finishes an approved join inside the database owner and enables automatic continuation', async () => {

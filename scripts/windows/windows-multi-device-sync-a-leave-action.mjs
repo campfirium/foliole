@@ -28,19 +28,19 @@ function assertInitialState(facts) {
 }
 
 export function assertWindowsSurvivorState({ facts, initial, ids = [] }) {
-  const activeMembers = identities(facts.activeDeviceIdentities);
-  const departedMembers = identities(facts.departedDeviceIdentities);
+  const activeMembers = identities(facts.activeHosts);
+  const departedMembers = identities(facts.departedHosts);
   const formerMembers = departedMembers.filter((value) => !activeMembers.includes(value));
-  const formerLeftAt = facts.departedAtByDeviceIdentity?.[formerMembers[0]];
+  const formerLeftAt = facts.departedAtByHost?.[formerMembers[0]];
   if (facts.activeMemberCount !== 2 || facts.localMemberState !== 'active'
       || facts.localGroupId !== initial.localGroupId || facts.localTimelineId !== initial.localTimelineId
-      || activeMembers.length !== 2 || !activeMembers.includes(facts.deviceIdentity)
+      || activeMembers.length !== 2 || !activeMembers.includes(facts.localHostName)
       || formerMembers.length !== 1 || !formerLeftAt
       || facts.integrity !== 'ok' || facts.missingAttachmentCount !== 0
       || facts.missingContentBlobCount !== 0 || ids.some((id) => facts.facts?.[id] !== true)) {
     throw new Error(`Windows C did not preserve the two-member Sync Group: ${JSON.stringify(facts)}`);
   }
-  return { activeMembers, formerDeviceIdentity: formerMembers[0], formerLeftAt };
+  return { activeMembers, formerHostName: formerMembers[0], formerLeftAt };
 }
 
 async function inspectUntil({ accept, execute, inspect, label, paths, progress, timeoutMs = 12 * 60_000 }) {
@@ -69,7 +69,7 @@ async function runContinuousSession(options, initial) {
       accept: (facts) => {
         try { assertWindowsSurvivorState({ facts, initial }); return true; } catch { return false; }
       }, label: 'Windows C A-leave departure', paths,
-      progress: { value: (facts) => [facts.activeMemberCount, facts.departedDeviceIdentities] } });
+      progress: { value: (facts) => [facts.activeMemberCount, facts.departedHosts] } });
     const departure = assertWindowsSurvivorState({ facts: departed, initial });
     const created = await createFact({ device: 'C', evidenceRoot, session: {
       invoke: (command, args) => invoke(page, command, args)

@@ -7,7 +7,8 @@ import {
 } from './macos-a5-sync-group-rejoin-contract.mjs';
 
 export function recoverExistingT132Credential({
-  buildIdentity, env, evidenceRoot, execute, instrumentationModeArgs, paths, serial
+  buildIdentity, env, evidenceRoot, execute, instrumentationModeArgs,
+  memberAuthorizationFingerprint, paths, serial
 }) {
   return runMacosA5PairSync({ buildIdentity, credentialRepairRequired: true,
     desktopControl: async () => ({ code: 0, output: '' }),
@@ -17,5 +18,7 @@ export function recoverExistingT132Credential({
     pairedDeviceFingerprint: T132_A5_LEGACY_MEMBER_IDENTITY,
     pairRequestFingerprint: T132_A5_IDENTITY,
     remotePeerFingerprint: T132_MAC_IDENTITY, serial,
-    validateDesktop: validateT132CredentialRecoveryDesktop });
+    validateDesktop: (...args) => validateT132CredentialRecoveryDesktop(
+      ...args, memberAuthorizationFingerprint
+    ) });
 }

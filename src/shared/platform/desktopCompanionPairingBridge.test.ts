@@ -9,6 +9,7 @@ import {
   enableDesktopCompanionSync,
   loadDesktopCompanionPairingOverview,
   removeDesktopCompanionPairedDevice,
+  removeDesktopSyncGroupMember,
   pauseDesktopCompanionSync,
   rejectDesktopCompanionPairRequest,
   resumeDesktopCompanionSync
@@ -121,6 +122,17 @@ it('disconnects paired companion devices through the native bridge', async () =>
     device_id: 'android-1'
   });
   expect(invoke).toHaveBeenNthCalledWith(2, 'clear_companion_paired_devices');
+});
+
+it('removes Sync Group members through their Host name', async () => {
+  const invoke = vi.fn().mockResolvedValue({ paired_devices: [], pending_requests: [] });
+  window.electronAPI = createMockElectronApi(invoke);
+
+  await removeDesktopSyncGroupMember('Reading Phone');
+
+  expect(invoke).toHaveBeenCalledWith('remove_sync_group_member', {
+    host_name: 'Reading Phone'
+  });
 });
 
 it('toggles desktop companion sync through the native bridge', async () => {

@@ -4,18 +4,10 @@ import {
   resolveMacosProtectionIdentity, runMacosSyncGroupLibraryProtection
 } from './macos-sync-group-library-protection.mjs';
 
-it('uses one proven departed darwin identity when A has already left the old group', () => {
-  expect(resolveMacosProtectionIdentity({ departedDeviceIdentities: {
-    darwin: ['departed-a'], win32: ['other']
-  }, deviceIdentity: null })).toBe('departed-a');
-  expect(() => resolveMacosProtectionIdentity({ departedDeviceIdentities: {
-    darwin: ['a', 'conflict']
-  }, deviceIdentity: null })).toThrow('not uniquely recoverable');
-});
-
-it('prefers one active darwin identity after A creates the new group', () => {
-  expect(resolveMacosProtectionIdentity({ activeDeviceIdentities: { darwin: ['active-a'] },
-    departedDeviceIdentities: { darwin: ['departed-a'] }, deviceIdentity: null })).toBe('active-a');
+it('does not recover pairing Device identity from the Host member roster', () => {
+  expect(() => resolveMacosProtectionIdentity({ activeHosts: { darwin: ['Mac A'] },
+    departedHosts: { darwin: ['Mac Before Rename'] }, deviceIdentity: null }))
+    .toThrow('not independently available');
 });
 
 it('stops the registered owner and refuses protection while any database owner remains', async () => {

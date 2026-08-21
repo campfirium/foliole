@@ -116,7 +116,7 @@ it('passes an authorized existing pairing through without removing it', async ()
   expect(session.remove).not.toHaveBeenCalled();
 });
 
-it('keeps current group peers, removes orphan pairings, and re-pairs the missing A5', async () => {
+it('does not classify pairing Device records as Host members', async () => {
   const currentId = 'current-a5';
   const desktopC = 'desktop-c';
   const orphanId = 'orphan-device';
@@ -126,9 +126,9 @@ it('keeps current group peers, removes orphan pairings, and re-pairs the missing
     paired_devices: [{ device_id: orphanId }, { device_id: desktopC }],
     sync_group: {
       members: [
-        { device_id: 'desktop-current', state: 'active' },
-        { device_id: currentId, state: 'active' },
-        { device_id: desktopC, state: 'active' }
+        { authorization_id: 'auth-a', host_name: 'Mac', state: 'active' },
+        { authorization_id: 'auth-b', host_name: 'A5', state: 'active' },
+        { authorization_id: 'auth-c', host_name: 'Windows', state: 'active' }
       ]
     }
   };
@@ -149,12 +149,8 @@ it('keeps current group peers, removes orphan pairings, and re-pairs the missing
 
   await expect(reconcileAuthorizedMacosDailyPairing(
     groupOverview, session, currentFingerprint, '7f58d92331c8872b', true
-  )).resolves.toMatchObject({
-    pairedDeviceFingerprints: [macosPairSyncIdentityFingerprint(desktopC)],
-    rePairRequired: true
-  });
-  expect(session.remove).toHaveBeenCalledTimes(1);
-  expect(session.remove).toHaveBeenCalledWith(orphanId);
+  )).rejects.toThrow('pairing state requires user review');
+  expect(session.remove).not.toHaveBeenCalled();
 });
 
 
@@ -166,8 +162,8 @@ it('keeps active peers while a formally departed empty A5 requests a new join', 
     ...overview(desktopC),
     sync_group: {
       members: [
-        { device_id: 'desktop-current', state: 'active' },
-        { device_id: desktopC, state: 'active' }
+        { authorization_id: 'auth-a', host_name: 'Mac', state: 'active' },
+        { authorization_id: 'auth-c', host_name: 'Windows', state: 'active' }
       ]
     }
   };

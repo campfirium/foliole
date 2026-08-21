@@ -44,13 +44,7 @@ async function assertDatabaseOwnerStopped(databasePath, executeProcess) {
 
 export function resolveMacosProtectionIdentity(inspection) {
   if (inspection.deviceIdentity) return inspection.deviceIdentity;
-  const active = inspection.activeDeviceIdentities?.darwin;
-  if (Array.isArray(active) && active.length === 1 && active[0]) return active[0];
-  const departed = inspection.departedDeviceIdentities?.darwin;
-  if (!Array.isArray(departed) || departed.length !== 1 || !departed[0]) {
-    throw new Error('macOS departed device identity is not uniquely recoverable.');
-  }
-  return departed[0];
+  throw new Error('macOS pairing Device identity is not independently available.');
 }
 
 export async function runMacosSyncGroupLibraryProtection({ candidate, executeProcess = execute,

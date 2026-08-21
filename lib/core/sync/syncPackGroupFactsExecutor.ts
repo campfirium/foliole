@@ -81,14 +81,14 @@ function validateFacts(group: GroupRow, members: MemberRow[], departures: Depart
   if (members.some((member) => member.group_id !== group.group_id || !['active', 'left'].includes(member.state))) {
     throw new Error('sync_group_member_fact_invalid');
   }
-  const byDevice = new Map(members.map((member) => [member.host_name, member]));
+  const byHost = new Map(members.map((member) => [member.host_name, member]));
   const byAuthorization = new Map(members.map((member) => [member.authorization_id, member]));
   const effectiveDepartures = departures.filter((departure) => {
-    const member = byDevice.get(departure.host_name) ?? byAuthorization.get(departure.authorization_id);
+    const member = byHost.get(departure.host_name) ?? byAuthorization.get(departure.authorization_id);
     return member && departure.left_at >= member.joined_at;
   });
-  const departureByDevice = new Map(effectiveDepartures.map((item) => [item.host_name, item]));
-  const founder = byDevice.get(group.created_by_host_name);
+  const departureByHost = new Map(effectiveDepartures.map((item) => [item.host_name, item]));
+  const founder = byHost.get(group.created_by_host_name);
   if (!founder || founder.approved_by_host_name !== founder.host_name) {
     throw new Error('sync_group_founder_authorization_invalid');
   }
@@ -97,8 +97,8 @@ function validateFacts(group: GroupRow, members: MemberRow[], departures: Depart
     changed = false;
     for (const member of members) {
       if (resolved.has(member.host_name) || !resolved.has(member.approved_by_host_name)) continue;
-      const approver = byDevice.get(member.approved_by_host_name)!;
-      const departure = departureByDevice.get(approver.host_name);
+      const approver = byHost.get(member.approved_by_host_name)!;
+      const departure = departureByHost.get(approver.host_name);
       if (approver.joined_at <= member.joined_at && (!departure || departure.left_at >= member.joined_at)) {
         resolved.add(member.host_name); changed = true;
       }
@@ -106,10 +106,10 @@ function validateFacts(group: GroupRow, members: MemberRow[], departures: Depart
   }
   if (resolved.size !== members.length) throw new Error('sync_group_member_authorization_invalid');
   for (const departure of departures) {
-    const member = byDevice.get(departure.host_name) ?? byAuthorization.get(departure.authorization_id);
+    const member = byHost.get(departure.host_name) ?? byAuthorization.get(departure.authorization_id);
     if (member && departure.left_at < member.joined_at) continue;
-    const authorizer = byDevice.get(departure.authorized_by_host_name);
-    const authorizerDeparture = departureByDevice.get(departure.authorized_by_host_name);
+    const authorizer = byHost.get(departure.authorized_by_host_name);
+    const authorizerDeparture = departureByHost.get(departure.authorized_by_host_name);
     if (!member || !authorizer || departure.group_id !== group.group_id
       || authorizer.joined_at > departure.left_at
       || (authorizerDeparture && authorizerDeparture.left_at < departure.left_at)
@@ -118,7 +118,7 @@ function validateFacts(group: GroupRow, members: MemberRow[], departures: Depart
       throw new Error('sync_group_departure_authorization_invalid');
     }
   }
-  if (members.some((member) => member.state === 'left' && !departureByDevice.has(member.host_name))) {
+  if (members.some((member) => member.state === 'left' && !departureByHost.has(member.host_name))) {
     throw new Error('sync_group_departure_fact_missing');
   }
 }

@@ -16,7 +16,7 @@ export function assertAndroidResumeData(before, after, factId, fail) {
 
 export function assertDesktopDepartureData(before, after, overview, fail) {
   const counts = ['attachmentCount', 'contentBlobCount', 'userNodeCount'];
-  const localDeparture = after.departedAtByDeviceIdentity?.[before.deviceIdentity];
+  const localDeparture = after.departedAtByHost?.[before.localHostName];
   if (overview.sync_group !== null || overview.sync_enabled !== false
       || after.localGroupId !== null || after.localMemberState !== null
       || after.activeMemberCount !== before.activeMemberCount - 1 || !localDeparture

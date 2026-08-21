@@ -2,9 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { collectAndroidDeviceSnapshot } from '../android/android-device-snapshot.mjs';
-import {
-  identityFingerprint, inspectPairSyncRecoveryWorkspace
-} from '../android/android-pair-sync-recovery-readiness.mjs';
+import { inspectPairSyncRecoveryWorkspace } from '../android/android-pair-sync-recovery-readiness.mjs';
 import { macosA5GradleEnv, macosA5Paths, A5_SERIAL } from '../android/macos-a5-dev.mjs';
 import {
   startMacosA5SyncGroupApprovalProvider,
@@ -34,9 +32,8 @@ function androidSnapshot(paths) {
   return collectAndroidDeviceSnapshot({ adb: paths.adb, appId: APP_ID, includeEvents: false,
     serial: A5_SERIAL, tables: ['attachments', 'content_blobs', 'nodes'],
     databaseInspector: (database) => ({ ...inspectPairSyncRecoveryWorkspace(database),
-      activeMemberIdentities: database.prepare(`SELECT device_id FROM sync_group_members
-        WHERE state = 'active' ORDER BY device_id`).all().map(({ device_id }) =>
-        identityFingerprint(device_id)),
+      activeMemberHosts: database.prepare(`SELECT host_name FROM sync_group_members
+        WHERE state = 'active' ORDER BY host_name`).all().map(({ host_name }) => host_name),
       availableAttachmentIds: database.prepare(`SELECT attachment_id FROM attachment_blobs
         WHERE availability IN ('cached', 'local') ORDER BY attachment_id`).all()
         .map(({ attachment_id }) => attachment_id),

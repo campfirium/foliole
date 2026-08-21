@@ -23,8 +23,8 @@ export async function waitUntil(
   throw productFailure('all', missingFact, `${label} did not converge.`);
 }
 
-function desktopMemberIdentities(facts) {
-  return Object.values(facts.activeDeviceIdentities ?? {}).flat().sort();
+function desktopMemberHosts(facts) {
+  return Object.values(facts.activeHosts ?? {}).flat().sort();
 }
 
 export function assertThreeDeviceProof({ android, macos, windows, ids, requiredAttachmentId }) {
@@ -41,8 +41,8 @@ export function assertThreeDeviceProof({ android, macos, windows, ids, requiredA
     value.availableAttachmentIds?.includes(requiredAttachmentId));
   const androidHasAttachment = !requiredAttachmentId
     || androidFacts?.availableAttachmentIds?.includes(requiredAttachmentId);
-  const memberIdentities = [desktopMemberIdentities(macos), desktopMemberIdentities(windows),
-    [...(androidFacts?.activeMemberIdentities ?? [])].sort()];
+  const memberHosts = [desktopMemberHosts(macos), desktopMemberHosts(windows),
+    [...(androidFacts?.activeMemberHosts ?? [])].sort()];
   if (!groupIds[0] || !timelines[0] || new Set(groupIds).size !== 1 || new Set(timelines).size !== 1
       || points.some((value) => value.activeMemberCount !== 3 || value.localMemberState !== 'active'
         || value.integrity !== 'ok'
@@ -51,8 +51,8 @@ export function assertThreeDeviceProof({ android, macos, windows, ids, requiredA
           && !value.journeyFacts?.[id]))
       || android.database?.integrity !== 'ok' || androidFacts?.activeSyncGroupMemberCount !== 3
       || !androidHasFacts || !desktopHasAttachment || !androidHasAttachment
-      || memberIdentities.some((value) => value.length !== 3)
-      || new Set(memberIdentities.map((value) => JSON.stringify(value))).size !== 1
+      || memberHosts.some((value) => value.length !== 3)
+      || new Set(memberHosts.map((value) => JSON.stringify(value))).size !== 1
       || androidFacts.missingAttachmentCount !== 0 || androidFacts.missingContentBlobCount !== 0
       || new Set(counts.map((value) => JSON.stringify(value))).size !== 1 || counts[0][2] < 1) {
     throw productFailure('all', 'three_device_restart_convergence_missing',

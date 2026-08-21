@@ -8,14 +8,14 @@ import {
 } from './multi-device-sync-three-device-proof.mjs';
 
 const ids = { A: 'fact-a', B: 'fact-b', C: 'fact-c' };
-const identities = { desktop: ['a', 'c'], mobile: ['b'] };
-const facts = { activeDeviceIdentities: identities, activeMemberCount: 3, attachmentCount: 1,
+const hosts = { desktop: ['Mac A', 'Windows C'], mobile: ['Android B'] };
+const facts = { activeHosts: hosts, activeMemberCount: 3, attachmentCount: 1,
   contentBlobCount: 4, facts: { 'fact-a': true, 'fact-b': true, 'fact-c': true },
   integrity: 'ok', localGroupId: 'group-1', localMemberState: 'active',
   localTimelineId: 'timeline-1', missingAttachmentCount: 0, missingContentBlobCount: 0,
   nodeCount: 6, userNodeCount: 4 };
 const android = { database: { counts: { attachments: 1, content_blobs: 4, nodes: 5 },
-  inspection: { activeMemberIdentities: ['a', 'b', 'c'], activeSyncGroupMemberCount: 3,
+  inspection: { activeMemberHosts: ['Android B', 'Mac A', 'Windows C'], activeSyncGroupMemberCount: 3,
     journeyFacts: { 'fact-a': 'A', 'fact-b': 'B', 'fact-c': 'C' },
     missingAttachmentCount: 0, missingContentBlobCount: 0, syncGroupId: 'group-1',
     syncGroupTimelineId: 'timeline-1', userNodeCount: 4 }, integrity: 'ok' } };
@@ -26,8 +26,8 @@ it('requires one restarted identity, timeline, member set, fact set, and resourc
       nodeCount: 4, timelineId: 'timeline-1' });
 });
 
-it('rejects a same-count member set that does not converge by device identity', () => {
-  const divergent = { ...facts, activeDeviceIdentities: { desktop: ['a', 'x'], mobile: ['b'] } };
+it('rejects a same-count member set that does not converge by Host', () => {
+  const divergent = { ...facts, activeHosts: { desktop: ['Mac A', 'Other'], mobile: ['Android B'] } };
   expect(() => assertThreeDeviceProof({ android, ids, macos: facts, windows: divergent }))
     .toThrow('one complete three-member timeline');
 });

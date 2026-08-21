@@ -47,9 +47,9 @@ describe('Android resume evidence', () => {
 
 describe('desktop departure evidence', () => {
   const before = { activeMemberCount: 3, attachmentCount: 1, contentBlobCount: 4,
-    deviceIdentity: 'desktop-a', userNodeCount: 5 };
+    localHostName: 'Mac A', userNodeCount: 5 };
   const after = { ...before, activeMemberCount: 2,
-    departedAtByDeviceIdentity: { 'desktop-a': '2026-08-13T00:00:00Z' },
+    departedAtByHost: { 'Mac A': '2026-08-13T00:00:00Z' },
     localGroupId: null, localMemberState: null, syncDeliveryReceiptCount: 0, syncPeerCursorCount: 0 };
   const overview = { sync_enabled: false, sync_group: null };
 
@@ -59,7 +59,7 @@ describe('desktop departure evidence', () => {
 
   it('requires the local departure and cleared progress', () => {
     expect(() => assertDesktopDepartureData(before,
-      { ...after, departedAtByDeviceIdentity: {}, syncPeerCursorCount: 1 }, overview, fail
+      { ...after, departedAtByHost: {}, syncPeerCursorCount: 1 }, overview, fail
     )).toThrow(/macOS departed state is incomplete/u);
   });
 });

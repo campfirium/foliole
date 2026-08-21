@@ -10,7 +10,7 @@ function columnExists(database, table, column) {
     && statement.all().some((entry) => entry.name === column);
 }
 
-export function inspectSyncGroupBinding(database, deviceId) {
+export function inspectSyncGroupBinding(database) {
   if (!tableExists(database, 'sync_groups')) return null;
   if (tableExists(database, 'sync_group_local_state')) {
     const local = database.prepare(`SELECT groups.group_id, groups.timeline_id
@@ -18,14 +18,7 @@ export function inspectSyncGroupBinding(database, deviceId) {
       WHERE local.singleton_id = 1 LIMIT 1`).get();
     if (local) return local;
   }
-  if (!deviceId || !tableExists(database, 'sync_group_members')
-    || !columnExists(database, 'sync_group_members', 'device_id')) return null;
-  const statement = database.prepare(`SELECT groups.group_id, groups.timeline_id
-    FROM sync_group_members member JOIN sync_groups groups ON groups.group_id = member.group_id
-    WHERE member.device_id = ? AND member.state = 'active' LIMIT 2`);
-  if (typeof statement.all !== 'function') return null;
-  const memberships = statement.all(deviceId);
-  return memberships.length === 1 ? memberships[0] : null;
+  return null;
 }
 
 export function inspectStoredSyncGroup(database) {

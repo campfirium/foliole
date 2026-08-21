@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import { assertPairSyncRuntimeOwnership } from '../windows/windows-a5-pair-sync-recovery-transport.mjs';
-import { macosPairSyncIdentityFingerprint } from './macos-pair-sync-desktop-session.mjs';
+import { authorizationFingerprint } from './android-sync-group-authorization-inspection.mjs';
 import { hasCompleteDirtyStateEvidence } from './macos-a5-pending-sync-state.mjs';
 
 export const T132_A5_IDENTITY = '2fdd44bb500a5934';
@@ -11,11 +11,19 @@ export const T132_MAC_IDENTITY = 'a8ef578b118115cf';
 export const T132_OFFLINE_IDENTITY = '512bececd879ce0f';
 export const T132_TIMELINE_ID = 'timeline-73042308-acdf-49d7-8ccd-2c5e4656aee9';
 
-function activeMemberFingerprints(overview) {
-  return (overview.sync_group?.members ?? [])
-    .filter(({ state }) => state === 'active')
-    .map(({ device_id: id }) => macosPairSyncIdentityFingerprint(id))
-    .sort();
+function activeMemberFacts(overview) {
+  const active = (overview.sync_group?.members ?? []).filter(({ state }) => state === 'active');
+  const facts = active.map((member) => ({
+    authorizationFingerprint: authorizationFingerprint(member.authorization_id),
+    authorizationId: member.authorization_id,
+    hostName: member.host_name
+  }));
+  if (facts.some((member) => !member.authorizationFingerprint || !member.hostName)
+      || new Set(facts.map((member) => member.authorizationFingerprint)).size !== facts.length
+      || new Set(facts.map((member) => member.hostName)).size !== facts.length) {
+    throw new Error('Mac does not expose a unique Host member roster.');
+  }
+  return facts;
 }
 
 export function assertT132ProtectedBaseline(readiness, requireSettledDelivery = true) {
@@ -53,33 +61,31 @@ export function assertT132CredentialRecoveryBaseline(readiness) {
   return readiness;
 }
 
-export function assertT132MacBaseline(overview, session) {
+export function assertT132MacBaseline(overview, session, memberAuthorizationFingerprint) {
   assertPairSyncRuntimeOwnership(overview, session);
   const safe = session.sanitize(overview);
-  const members = activeMemberFingerprints(overview);
-  const a5Identity = members.includes(T132_A5_LEGACY_MEMBER_IDENTITY)
-    ? T132_A5_LEGACY_MEMBER_IDENTITY : T132_A5_IDENTITY;
-  const expected = [a5Identity, T132_MAC_IDENTITY, T132_OFFLINE_IDENTITY].sort();
-  const paired = a5Identity === T132_A5_LEGACY_MEMBER_IDENTITY ? [a5Identity] : [];
+  const members = activeMemberFacts(overview);
+  const target = members.filter(
+    (member) => member.authorizationFingerprint === memberAuthorizationFingerprint
+  );
+  const permittedRoutes = new Set([T132_A5_IDENTITY, T132_A5_LEGACY_MEMBER_IDENTITY]);
   if (overview.sync_group?.group_id !== T132_GROUP_ID
       || overview.sync_group.timeline_id !== T132_TIMELINE_ID
-      || JSON.stringify(members) !== JSON.stringify(expected)
+      || members.length !== 3 || target.length !== 1
       || safe.desktopPeerFingerprint !== T132_MAC_IDENTITY
-      || JSON.stringify(safe.pairedDeviceFingerprints) !== JSON.stringify(paired)
+      || safe.pairedDeviceFingerprints.length > 1
+      || safe.pairedDeviceFingerprints.some((route) => !permittedRoutes.has(route))
       || safe.pendingDeviceFingerprints.length !== 0) {
     throw new Error('Mac no longer matches the protected three-member Sync Group baseline.');
   }
-  const a5 = overview.sync_group.members.find(
-    ({ device_id: id }) => macosPairSyncIdentityFingerprint(id) === a5Identity
-  );
-  if (!a5?.authorization_id) throw new Error('Protected A5 member authorization is missing.');
-  return { oldAuthorizationId: a5.authorization_id, protectedMemberIdentity: a5Identity };
+  return { oldAuthorizationId: target[0].authorizationId, protectedHostName: target[0].hostName };
 }
 
 export function validateT132CredentialRecoveryDesktop(
-  overview, session, deviceFingerprint, remotePeerFingerprint, existingPairing
+  overview, session, deviceFingerprint, remotePeerFingerprint, existingPairing,
+  memberAuthorizationFingerprint
 ) {
-  const member = assertT132MacBaseline(overview, session);
+  const member = assertT132MacBaseline(overview, session, memberAuthorizationFingerprint);
   if (deviceFingerprint !== T132_A5_IDENTITY || remotePeerFingerprint !== T132_MAC_IDENTITY
       || existingPairing !== false) {
     throw new Error('Mac does not expose the fixed A5 credential recovery boundary.');
@@ -103,15 +109,17 @@ export function assertT132UnboundAfterRestart(readiness, baseline) {
 }
 
 export function validateT132DepartedMemberDesktop(
-  overview, session, deviceFingerprint, remotePeerFingerprint, existingPairing
+  overview, session, deviceFingerprint, remotePeerFingerprint, existingPairing,
+  departedAuthorizationFingerprint
 ) {
   assertPairSyncRuntimeOwnership(overview, session);
   const safe = session.sanitize(overview);
-  const expected = [T132_MAC_IDENTITY, T132_OFFLINE_IDENTITY].sort();
+  const members = activeMemberFacts(overview);
   if (deviceFingerprint !== T132_A5_IDENTITY || remotePeerFingerprint !== T132_MAC_IDENTITY
       || existingPairing !== false || overview.sync_group?.group_id !== T132_GROUP_ID
       || overview.sync_group.timeline_id !== T132_TIMELINE_ID
-      || JSON.stringify(activeMemberFingerprints(overview)) !== JSON.stringify(expected)
+      || members.length !== 2
+      || members.some((member) => member.authorizationFingerprint === departedAuthorizationFingerprint)
       || safe.desktopPeerFingerprint !== T132_MAC_IDENTITY
       || safe.pairedDeviceFingerprints.length !== 0
       || safe.pendingDeviceFingerprints.length !== 0) {
@@ -130,21 +138,20 @@ export function assertT132Rejoined(readiness, overview, session, oldAuthorizatio
   }
   assertPairSyncRuntimeOwnership(overview, session);
   const safe = session.sanitize(overview);
-  const expected = [T132_A5_IDENTITY, T132_MAC_IDENTITY, T132_OFFLINE_IDENTITY].sort();
+  const members = activeMemberFacts(overview);
+  const target = members.filter((member) =>
+    member.authorizationFingerprint === readiness.localMemberAuthorizationFingerprint);
   if (overview.sync_group?.group_id !== T132_GROUP_ID
-      || JSON.stringify(activeMemberFingerprints(overview)) !== JSON.stringify(expected)
+      || members.length !== 3 || target.length !== 1
       || safe.desktopPeerFingerprint !== T132_MAC_IDENTITY
       || safe.pairedDeviceFingerprints.length !== 0
       || safe.pendingDeviceFingerprints.length !== 0) {
     throw new Error('Mac did not establish the approved workgroup roster.');
   }
-  const member = overview.sync_group.members.find(
-    ({ device_id: id }) => macosPairSyncIdentityFingerprint(id) === T132_A5_IDENTITY
-  );
-  if (!member?.authorization_id || member.authorization_id === oldAuthorizationId) {
+  if (target[0].authorizationId === oldAuthorizationId) {
     throw new Error('Rejoined A5 reused its revoked member authorization.');
   }
-  return { newAuthorizationId: member.authorization_id };
+  return { newAuthorizationId: target[0].authorizationId, rejoinedHostName: target[0].hostName };
 }
 
 export function fingerprintSecretFreeCandidate(value) {

@@ -146,8 +146,8 @@ export function leaveDesktopSyncGroup() {
   return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.leaveSyncGroup);
 }
 
-export function removeDesktopSyncGroupMember(deviceId: string) {
-  return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.removeSyncGroupMember, { device_id: deviceId });
+export function removeDesktopSyncGroupMember(hostName: string) {
+  return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.removeSyncGroupMember, { host_name: hostName });
 }
 
 export function discoverDesktopSyncGroups() {

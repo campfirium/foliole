@@ -179,7 +179,7 @@ function handleOwnedCompanionPairingCommand(command: string, args: Record<string
       .then(() => buildDesktopCompanionPairingOverview());
   }
   if (command === NATIVE_COMMANDS.removeSyncGroupMember) {
-    return removeDesktopSyncGroupMember(asString(args.device_id, 'device_id'))
+    return removeDesktopSyncGroupMember(asString(args.host_name, 'host_name'))
       .then(() => buildDesktopCompanionPairingOverview());
   }
   if (command === NATIVE_COMMANDS.approveCompanionPairRequest) {

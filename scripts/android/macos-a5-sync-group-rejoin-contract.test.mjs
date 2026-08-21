@@ -13,6 +13,7 @@ import {
   assertT132Rejoined, assertT132UnboundAfterRestart,
   validateT132CredentialRecoveryDesktop, validateT132DepartedMemberDesktop
 } from './macos-a5-sync-group-rejoin-contract.mjs';
+import { authorizationFingerprint } from './android-sync-group-authorization-inspection.mjs';
 import { collectStoppedReadiness } from './macos-a5-sync-group-rejoin-action.mjs';
 import {
   assertT132A5ProviderAvailability
@@ -59,18 +60,20 @@ function macSession(pairedDeviceFingerprints = ['bff1f41963a42739']) {
   })) };
 }
 
-function macOverview(memberFingerprints, pairedDevices = [{}]) {
+function macOverview(memberHosts = ['A5', 'Mac', 'Offline'], pairedDevices = [{}]) {
   return { paired_devices: pairedDevices, pending_requests: [],
     current_host: { device_id: 'mac-current' }, server_status: { port: 38641, state: 'running' },
     sync_enabled: true, sync_group: {
       group_id: 'group-59a8fdf1-a4e6-48aa-ad50-b68a8a0dcddf',
       timeline_id: 'timeline-73042308-acdf-49d7-8ccd-2c5e4656aee9',
-      local_member_state: 'active', members: memberFingerprints.map((device_id, index) => ({
-        authorization_id: `authorization-${index}`, device_id, state: 'active'
+      local_member_state: 'active', members: memberHosts.map((host_name) => ({
+        authorization_id: `authorization-${host_name.toLowerCase()}`, host_name, state: 'active'
       }))
     }
   };
 }
+
+const a5AuthorizationFingerprint = authorizationFingerprint('authorization-a5');
 
 it('protects the current Mac edge and the third offline member before Leave', () => {
   expect(assertT132ProtectedBaseline(baseline)).toBe(baseline);
@@ -107,30 +110,24 @@ it('protects the same data and roster while requiring explicit credential recove
   expect(() => assertT132CredentialRecoveryBaseline({ ...recovery,
     activeSyncGroupMemberCount: 4
   })).toThrow('protected credential recovery baseline');
-  expect(validateT132CredentialRecoveryDesktop(macOverview([
-    'bff1f41963a42739', 'a8ef578b118115cf', '512bececd879ce0f'
-  ]), macSession(), '2fdd44bb500a5934', 'a8ef578b118115cf', false))
-    .toMatchObject({ oldAuthorizationId: 'authorization-0', rePairRequired: true });
+  expect(validateT132CredentialRecoveryDesktop(
+    macOverview(), macSession(), '2fdd44bb500a5934', 'a8ef578b118115cf', false,
+    a5AuthorizationFingerprint
+  )).toMatchObject({ oldAuthorizationId: 'authorization-a5', rePairRequired: true });
 });
 
 it('requires the isolated listener and exact inbound A5 credential before Leave', () => {
-  const overview = macOverview([
-    'bff1f41963a42739', 'a8ef578b118115cf', '512bececd879ce0f'
-  ]);
-  expect(assertT132MacBaseline(overview, macSession())).toMatchObject({
-    oldAuthorizationId: 'authorization-0'
+  const overview = macOverview();
+  expect(assertT132MacBaseline(overview, macSession(), a5AuthorizationFingerprint)).toMatchObject({
+    oldAuthorizationId: 'authorization-a5'
   });
-  expect(() => assertT132MacBaseline(overview, macSession([]))).toThrow(
-    'protected three-member Sync Group baseline'
-  );
+  expect(assertT132MacBaseline(overview, macSession([]), a5AuthorizationFingerprint))
+    .toMatchObject({ protectedHostName: 'A5' });
   expect(() => assertT132MacBaseline({ ...overview,
     server_status: { port: 38642, state: 'running' }
   }, macSession())).toThrow('fixed sync listener');
-  expect(assertT132MacBaseline(macOverview([
-    '2fdd44bb500a5934', 'a8ef578b118115cf', '512bececd879ce0f'
-  ], []), macSession([]))).toMatchObject({
-    oldAuthorizationId: 'authorization-0', protectedMemberIdentity: '2fdd44bb500a5934'
-  });
+  expect(() => assertT132MacBaseline(overview, macSession(), authorizationFingerprint('missing')))
+    .toThrow('protected three-member Sync Group baseline');
 });
 
 it('requires restart to clear group, credential, route, and progress without changing content', () => {
@@ -150,27 +147,28 @@ it('admits only a fresh departed-member join and never requests disconnect repai
       group_id: 'group-59a8fdf1-a4e6-48aa-ad50-b68a8a0dcddf',
       timeline_id: 'timeline-73042308-acdf-49d7-8ccd-2c5e4656aee9',
       local_member_state: 'active', members: [
-        { device_id: 'a8ef578b118115cf', state: 'active' },
-        { device_id: '512bececd879ce0f', state: 'active' }
+        { authorization_id: 'authorization-mac', host_name: 'Mac', state: 'active' },
+        { authorization_id: 'authorization-offline', host_name: 'Offline', state: 'active' }
       ]
     }
   };
   expect(validateT132DepartedMemberDesktop(
-    overview, session, '2fdd44bb500a5934', 'a8ef578b118115cf', false
+    overview, session, '2fdd44bb500a5934', 'a8ef578b118115cf', false,
+    a5AuthorizationFingerprint
   )).toMatchObject({ rePairRequired: false });
   expect(() => validateT132DepartedMemberDesktop(
-    overview, session, '2fdd44bb500a5934', 'a8ef578b118115cf', true
+    overview, session, '2fdd44bb500a5934', 'a8ef578b118115cf', true,
+    a5AuthorizationFingerprint
   )).toThrow('exact departed-member rejoin boundary');
 });
 
 it('treats the rejoined roster as sufficient without a per-peer paired device record', () => {
-  const overview = macOverview([
-    '2fdd44bb500a5934', 'a8ef578b118115cf', '512bececd879ce0f'
-  ], []);
+  const overview = macOverview(undefined, []);
   expect(assertT132Rejoined({
-    ...baseline, activeSyncGroupMemberCount: 3, syncGroupCredentialsPresent: true
+    ...baseline, activeSyncGroupMemberCount: 3, syncGroupCredentialsPresent: true,
+    localMemberAuthorizationFingerprint: a5AuthorizationFingerprint
   }, overview, macSession([]), 'revoked-authorization')).toMatchObject({
-    newAuthorizationId: 'authorization-0'
+    newAuthorizationId: 'authorization-a5'
   });
 });
 
@@ -195,7 +193,8 @@ it('freezes explicit success criteria and rejects every legacy repair path', () 
   expect(source).toContain("pairReceipt.pairingPath !== 'new'");
   expect(source).toContain('dirtyObjectCounts: {}');
   expect(source).toContain('dirtyRecordCount: 0');
-  expect(source).toContain('validateDesktop: validateT132DepartedMemberDesktop');
+  expect(source).toContain('validateDesktop: (...args) => validateT132DepartedMemberDesktop');
+  expect(source).toContain('authorizationFingerprint(oldAuthorizationId)');
   expect(source.match(/pairedDeviceFingerprint: null/gu)).toHaveLength(2);
   expect(recoverySource).toContain('pairRequestFingerprint: T132_A5_IDENTITY');
   expect(recoverySource).toContain('pairedDeviceFingerprint: T132_A5_LEGACY_MEMBER_IDENTITY');
@@ -203,7 +202,8 @@ it('freezes explicit success criteria and rejects every legacy repair path', () 
   expect(source).toContain('desktopControl: async () =>');
   expect(source).toContain('instrumentationModeArgs: CREDENTIALS_ONLY_DISCOVERY_TARGET');
   expect(source).toContain("recoveryEvidenceGoal: 'credentials-signable'");
-  expect(recoverySource).toContain('validateDesktop: validateT132CredentialRecoveryDesktop');
+  expect(recoverySource).toContain('validateDesktop: (...args) => validateT132CredentialRecoveryDesktop');
+  expect(recoverySource).toContain('memberAuthorizationFingerprint');
   expect(recoverySource).not.toContain('existing-pair-disconnect');
   expect(targetSelection).toContain('expectedEndpointUrl.isEmpty()');
   expect(targetSelection).toContain('clickVisible');

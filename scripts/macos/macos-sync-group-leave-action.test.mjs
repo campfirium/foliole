@@ -18,7 +18,9 @@ it('leaves only the fixed three-member group through the product command', async
   const load = vi.fn(async () => ({
     sync_group: {
       group_id: EXPECTED_SYNC_GROUP.groupId,
-      members: EXPECTED_SYNC_GROUP.memberIds.map((device_id) => ({ device_id })),
+      members: ['Mac', 'A5', 'Windows'].map((host_name, index) => ({
+        authorization_id: `authorization-${index}`, host_name, state: 'active'
+      })),
       timeline_id: EXPECTED_SYNC_GROUP.timelineId
     }
   }));

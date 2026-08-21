@@ -14,12 +14,12 @@ interface MembershipActionState {
 }
 
 export function useSyncGroupMembershipActions(state: MembershipActionState) {
-  const run = useCallback(async (action: 'leave' | 'remove', deviceId?: string) => {
-    state.setPendingActionId(action === 'leave' ? 'leave-sync-group' : `remove-sync-group-member:${deviceId}`);
+  const run = useCallback(async (action: 'leave' | 'remove', hostName?: string) => {
+    state.setPendingActionId(action === 'leave' ? 'leave-sync-group' : `remove-sync-group-member:${hostName}`);
     try {
       const overview = action === 'leave'
         ? await leaveDesktopSyncGroup()
-        : await removeDesktopSyncGroupMember(deviceId!);
+        : await removeDesktopSyncGroupMember(hostName!);
       state.setOverview(overview);
       state.setError(null);
       return overview;

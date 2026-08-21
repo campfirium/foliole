@@ -8,6 +8,7 @@ import { MACOS_DAILY_LIBRARY_HOME } from '../macos/macos-electron-dev-paths.mjs'
 import { parsePairSyncRecoveryReadiness } from '../windows/windows-a5-pair-sync-recovery-contract.mjs';
 import { collectAndroidDeviceSnapshot } from './android-device-snapshot.mjs';
 import { inspectPairSyncRecoveryWorkspace } from './android-pair-sync-recovery-readiness.mjs';
+import { authorizationFingerprint } from './android-sync-group-authorization-inspection.mjs';
 import { proveMacosA5ExistingSyncContinuation } from './macos-a5-existing-sync-acceptance.mjs';
 import { runMacosA5PairSync } from './macos-a5-pair-sync-action.mjs';
 import { recoverExistingT132Credential } from './macos-a5-sync-group-credential-recovery.mjs';
@@ -48,6 +49,9 @@ async function readiness(execute, paths, env, serial) {
       inspection.currentDeliveryStatusCountsByPeerFingerprint,
     dirtyObjectCounts: inspection.dirtyObjectCounts,
     journeyFacts: inspection.journeyFacts,
+    localMemberAuthorizationFingerprint: inspection.localMemberAuthorizationFingerprint,
+    storedLocalMemberAuthorizationFingerprint:
+      inspection.storedLocalMemberAuthorizationFingerprint,
     protectedContentDigest: inspection.protectedContentDigest };
 }
 
@@ -117,16 +121,21 @@ export async function runMacosA5SyncGroupRejoinJourney({
   }, null, 2)}\n`, 'utf8');
   await buildDesktop();
   const protectedMember = await withDesktopSession(paths, env, async (session) =>
-    assertT132MacBaseline(await session.enable(), session));
+    assertT132MacBaseline(
+      await session.enable(), session, baseline.localMemberAuthorizationFingerprint
+    ));
   if (credentialRecoveryRequired) await recoverExistingT132Credential({
     buildIdentity, env, evidenceRoot, execute,
-    instrumentationModeArgs: UNIQUE_DISCOVERY_TARGET, paths, serial
+    instrumentationModeArgs: UNIQUE_DISCOVERY_TARGET,
+    memberAuthorizationFingerprint: baseline.localMemberAuthorizationFingerprint, paths, serial
   });
   assertFrozenSyncGroupCandidate(candidate, paths.repoRoot);
   assertT132ProtectedBaseline(await readiness(execute, paths, env, serial));
   const { oldAuthorizationId } = await withDesktopSession(paths, env, async (session) => {
     const before = await session.enable();
-    const recoveredMember = assertT132MacBaseline(before, session);
+    const recoveredMember = assertT132MacBaseline(
+      before, session, baseline.localMemberAuthorizationFingerprint
+    );
     if (recoveredMember.oldAuthorizationId !== protectedMember.oldAuthorizationId) {
       throw new Error('Credential recovery rewrote the active member authorization.');
     }
@@ -149,7 +158,9 @@ export async function runMacosA5SyncGroupRejoinJourney({
     pairedDeviceFingerprint: null,
     recoveryEvidenceGoal: 'credentials-signable',
     remotePeerFingerprint: T132_MAC_IDENTITY, serial,
-    validateDesktop: validateT132DepartedMemberDesktop });
+    validateDesktop: (...args) => validateT132DepartedMemberDesktop(
+      ...args, authorizationFingerprint(oldAuthorizationId)
+    ) });
   const pairReceipt = JSON.parse(fs.readFileSync(path.join(
     evidenceRoot, 'rejoin', 'pair-sync-recovery-receipt.json'
   ), 'utf8'));
@@ -201,7 +212,9 @@ export async function recoverMacosA5DepartedCheckpoint({
     execute, instrumentationModeArgs: UNIQUE_DISCOVERY_TARGET,
     pairedDeviceFingerprint: null,
     paths, remotePeerFingerprint: T132_MAC_IDENTITY, serial,
-    validateDesktop: validateT132DepartedMemberDesktop });
+    validateDesktop: (...args) => validateT132DepartedMemberDesktop(
+      ...args, departed.storedLocalMemberAuthorizationFingerprint
+    ) });
   const receipt = JSON.parse(fs.readFileSync(path.join(
     evidenceRoot, 'pair-sync-recovery-receipt.json'
   ), 'utf8'));

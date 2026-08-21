@@ -65,7 +65,7 @@ describe('pair sync database availability', () => {
     expect(queries.some((sql) => sql.includes('WHERE workgroup_key'))).toBe(false);
   });
 
-  it('recovers a unique legacy binding from the active member fact', () => {
+  it('does not recover current membership from a legacy Device-shaped member fact', () => {
     const database = { prepare: (sql) => ({
       all: (deviceId) => sql.includes('PRAGMA table_info')
         ? [{ name: 'device_id' }]
@@ -75,9 +75,7 @@ describe('pair sync database availability', () => {
         ? ['sync_groups', 'sync_group_members'].includes(value) ? { present: 1 } : undefined
         : undefined
     }) };
-    expect(inspectSyncGroupBinding(database, 'Xiaomi 23049RAD8C')).toEqual({
-      group_id: 'group-for-Xiaomi 23049RAD8C', timeline_id: 'timeline-1'
-    });
+    expect(inspectSyncGroupBinding(database)).toBeNull();
   });
 
   it('reports one stored legacy group without treating it as a local binding', () => {

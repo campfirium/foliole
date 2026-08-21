@@ -2,8 +2,8 @@ function assertAndroidSurvivorState(snapshot, expected) {
   const facts = snapshot.database?.inspection;
   if (snapshot.database?.integrity !== 'ok' || facts?.activeSyncGroupMemberCount !== 2
       || facts.syncGroupId !== expected.groupId || facts.syncGroupTimelineId !== expected.timelineId
-      || facts.activeMemberIdentities?.length !== 2
-      || !facts.departedMemberIdentities?.includes(expected.formerDeviceIdentity)) {
+      || facts.activeMemberHosts?.length !== 2
+      || !facts.departedMemberHosts?.includes(expected.formerHostName)) {
     throw new Error('Android B did not preserve the two-member Sync Group.');
   }
   return facts;
@@ -22,8 +22,8 @@ function freshFactIds(journeyFacts, excluded) {
 export function projectAndroidConsumerProgress({ before, expected, snapshot }) {
   const facts = snapshot.database?.inspection ?? {};
   const excluded = new Set(Object.keys(before.database?.inspection?.journeyFacts ?? {}));
-  return { active: facts.activeSyncGroupMemberCount, activeIds: facts.activeMemberIdentities?.length,
-    departed: facts.departedMemberIdentities?.includes(expected.formerDeviceIdentity) ?? false,
+  return { active: facts.activeSyncGroupMemberCount, activeHosts: facts.activeMemberHosts?.length,
+    departed: facts.departedMemberHosts?.includes(expected.formerHostName) ?? false,
     factIds: freshFactIds(facts.journeyFacts, excluded),
     group: facts.syncGroupId === expected.groupId, integrity: snapshot.database?.integrity,
     inventory: { before: [before.database?.inspection?.userNodeCount,
@@ -52,13 +52,13 @@ export function assertAndroidConsumerComplete({ before, expected, snapshot }) {
   return ids;
 }
 
-export function assertSurvivorProof({ android, baseline, factIds, formerDeviceIdentity, windows }) {
+export function assertSurvivorProof({ android, baseline, factIds, formerHostName, windows }) {
   const androidFacts = assertAndroidSurvivorState(android, {
-    formerDeviceIdentity, groupId: baseline.groupId, timelineId: baseline.timelineId
+    formerHostName, groupId: baseline.groupId, timelineId: baseline.timelineId
   });
   const windowsFacts = windows.restarted;
-  const windowsActive = Object.values(windowsFacts.activeDeviceIdentities ?? {}).flat().sort();
-  const androidActive = [...androidFacts.activeMemberIdentities].sort();
+  const windowsActive = Object.values(windowsFacts.activeHosts ?? {}).flat().sort();
+  const androidActive = [...androidFacts.activeMemberHosts].sort();
   const inventories = [
     [androidFacts.userNodeCount, android.database.counts.content_blobs,
       android.database.counts.attachments],
@@ -66,7 +66,7 @@ export function assertSurvivorProof({ android, baseline, factIds, formerDeviceId
   ];
   if (windowsFacts.activeMemberCount !== 2 || windowsFacts.localMemberState !== 'active'
       || windowsFacts.localGroupId !== baseline.groupId || windowsFacts.localTimelineId !== baseline.timelineId
-      || windows.proof?.formerDeviceIdentity !== formerDeviceIdentity
+      || windows.proof?.formerHostName !== formerHostName
       || JSON.stringify(windowsActive) !== JSON.stringify(androidActive)
       || Object.values(factIds).some((id) => !androidFacts.journeyFacts?.[id]
         || windowsFacts.facts?.[id] !== true)
@@ -76,7 +76,7 @@ export function assertSurvivorProof({ android, baseline, factIds, formerDeviceId
       || inventories[0][2] < baseline.attachmentCount + 1) {
     throw new Error('B and C did not preserve complete bidirectional survivor convergence.');
   }
-  return { activeMemberIdentities: androidActive, attachmentCount: inventories[0][2],
+  return { activeMemberHosts: androidActive, attachmentCount: inventories[0][2],
     contentBlobCount: inventories[0][1], formerAccessState: 'credentials_revoked',
     groupId: baseline.groupId, nodeCount: inventories[0][0], timelineId: baseline.timelineId };
 }
