@@ -106,6 +106,43 @@ it('repairs a deployed v67 import source schema before migrating desktop sources
   sqlite.close();
 });
 
+it('repairs a deployed v67 unassigned watched source without enabling it', () => {
+  const sqlite = new BetterSqlite3(':memory:');
+  createV66SourceTables(sqlite);
+  sqlite.exec(`CREATE TABLE watched_folder_bindings (
+    binding_id TEXT PRIMARY KEY, owner_installation_id TEXT, owner_device_name TEXT,
+    owner_platform TEXT, claim_state TEXT NOT NULL, claim_revision TEXT,
+    action_mode TEXT NOT NULL, archive_path TEXT NOT NULL, highlight_mode TEXT NOT NULL,
+    highlight_path TEXT NOT NULL, keep_preview_json TEXT, primary_path TEXT NOT NULL,
+    enabled INTEGER NOT NULL DEFAULT 0, availability TEXT NOT NULL DEFAULT 'unknown',
+    created_at TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT
+  );
+  INSERT INTO watched_folder_bindings VALUES (
+    'draft-102', NULL, NULL, NULL, 'unassigned', NULL, 'delete', '', 'split',
+    'D:\\Highlights', '{"discoveredCount":3}', 'D:\\Articles', 0, 'unknown',
+    '2026-08-17T00:00:00.000Z', '2026-08-17T00:00:00.000Z', NULL
+  );
+  INSERT INTO settings VALUES ('device_id', '"Windows PC"', '2026-08-17T00:00:00.000Z');
+  PRAGMA user_version = 67;`);
+
+  initializeDatabaseSchema(sqlite);
+
+  expect(sqlite.prepare(`SELECT source_ref, host_name, host_platform, root_path
+    FROM desktop_sources WHERE config_ref = 'draft-102'`).get()).toEqual({
+    host_name: 'Windows PC', host_platform: process.platform, root_path: 'D:\\Articles',
+    source_ref: 'watched:draft-102'
+  });
+  expect(sqlite.prepare(`SELECT connection_status, action_mode, highlight_path, primary_path, source_ref
+    FROM watched_folder_bindings WHERE binding_id = 'draft-102'`).get()).toEqual({
+    action_mode: 'delete', connection_status: 'needs-folder', highlight_path: 'D:\\Highlights',
+    primary_path: 'D:\\Articles', source_ref: 'watched:draft-102'
+  });
+  expect(sqlite.prepare("SELECT name FROM pragma_table_info('watched_folder_bindings')").pluck().all())
+    .not.toContain('claim_state');
+  expect(sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  sqlite.close();
+});
+
 function createV66SourceTables(sqlite: import('better-sqlite3').Database) {
   sqlite.exec(`CREATE TABLE external_search_folders (
     id TEXT PRIMARY KEY, folder_path TEXT NOT NULL, attachment_mode TEXT NOT NULL,

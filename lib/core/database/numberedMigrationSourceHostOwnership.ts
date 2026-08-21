@@ -1,3 +1,4 @@
+import { repairDeployedWatchedSourceOwnership } from './deployedWatchedSourceOwnershipRepair.js';
 import { DESKTOP_RESOURCE_SCHEMA_STATEMENTS } from './desktopResourceSchemaStatements.js';
 import { WATCHED_FOLDER_BINDING_SCHEMA_STATEMENTS } from './desktopSourceConnectionSchemaStatements.js';
 import { DESKTOP_SOURCE_SCHEMA_STATEMENTS } from './desktopSourceSchemaStatements.js';
@@ -10,6 +11,7 @@ const LEGACY_READWISE_KEY = 'readwise_active_device';
 const READWISE_HOST_KEY = 'readwise_active_host';
 
 export function migrateSourceHostOwnership(sqlite: DatabaseMigrationTarget) {
+  repairDeployedWatchedSourceOwnership(sqlite, currentHostName(sqlite));
   rebuildDesktopSources(sqlite);
   migrateExternalHostPreferences(sqlite);
   rebuildExternalFolders(sqlite);
