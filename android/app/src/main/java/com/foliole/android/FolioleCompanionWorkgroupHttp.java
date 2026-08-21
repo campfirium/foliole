@@ -61,7 +61,7 @@ final class FolioleCompanionWorkgroupHttp {
         }
         return prepareWithKey(context, url, method, inputHeaders, body,
             FolioleCompanionCurrentGroupCredential.load(
-                context, headers.getString("X-Sync-Group-Id")
+                headers.getString("X-Sync-Group-Id")
             ).workgroupKey);
     }
 
@@ -114,7 +114,7 @@ final class FolioleCompanionWorkgroupHttp {
         String groupId = trim(connection.getRequestProperty("X-Sync-Group-Id"));
         if (groupId == null) throw new SecurityException("sync_group_id_missing");
         String groupKey = FolioleCompanionCurrentGroupCredential.load(
-            context, groupId
+            groupId
         ).workgroupKey;
         String contentType = trim(connection.getHeaderField("X-Foliole-Original-Content-Type"));
         if (contentType == null) contentType = "application/octet-stream";
@@ -140,7 +140,7 @@ final class FolioleCompanionWorkgroupHttp {
         OutputStream output, int status, String contentType, byte[] body
     ) throws Exception {
         String key = FolioleCompanionCurrentGroupCredential.load(
-            context, config.getJSONObject("sync_group").getString("group_id")
+            config.getJSONObject("sync_group").getString("group_id")
         ).workgroupKey;
         byte[] encrypted = FolioleCompanionSyncGroupCrypto.encrypt(
             key, config.getString("group_tag"), request.method, request.path, "response", contentType, body

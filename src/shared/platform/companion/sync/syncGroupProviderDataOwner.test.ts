@@ -74,6 +74,32 @@ it('creates provider read snapshots through the Capacitor database owner', async
   });
 });
 
+it('loads the active authorization credential through the Capacitor database owner', async () => {
+  mocks.query.mockResolvedValueOnce([{ authorization_id: 'auth-1', workgroup_key: 'group-key' }]);
+  mocks.listener?.({
+    operation: 'load_current_credential', payload: { group_id: 'group-1' }, request_id: 'request-key'
+  });
+  await vi.waitFor(() => expect(mocks.resolve).toHaveBeenCalled());
+  expect(mocks.query).toHaveBeenCalledWith(expect.stringContaining('groups.workgroup_key'), ['group-1']);
+  expect(mocks.resolve).toHaveBeenCalledWith({
+    request_id: 'request-key',
+    result: { authorization_id: 'auth-1', workgroup_key: 'group-key' }
+  });
+});
+
+it('rejects an ambiguous active authorization credential', async () => {
+  mocks.query.mockResolvedValueOnce([
+    { authorization_id: 'auth-1', workgroup_key: 'group-key' },
+    { authorization_id: 'auth-2', workgroup_key: 'group-key' }
+  ]);
+  mocks.listener?.({
+    operation: 'load_current_credential', payload: { group_id: 'group-1' }, request_id: 'request-key'
+  });
+  await vi.waitFor(() => expect(mocks.resolve).toHaveBeenCalledWith({
+    error: 'sync_group_current_credential_missing', request_id: 'request-key'
+  }));
+});
+
 it('allocates the smallest unused member profile inside the writer transaction', async () => {
   mocks.query
     .mockResolvedValueOnce([])

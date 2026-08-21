@@ -1,7 +1,9 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const nativeMock = vi.hoisted(() => ({
+  addListener: vi.fn().mockResolvedValue({ remove: vi.fn() }),
   loadPairingState: vi.fn(),
+  resolveSyncGroupDataRequest: vi.fn(),
   signCompanionSyncRequest: vi.fn()
 }));
 const groupMock = vi.hoisted(() => ({ load: vi.fn() }));

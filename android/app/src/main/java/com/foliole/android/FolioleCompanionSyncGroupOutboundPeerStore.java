@@ -160,7 +160,7 @@ final class FolioleCompanionSyncGroupOutboundPeerStore {
         JSONObject peer
     ) throws Exception {
         FolioleCompanionCurrentGroupCredential credential =
-            FolioleCompanionCurrentGroupCredential.load(context, groupId);
+            FolioleCompanionCurrentGroupCredential.load(groupId);
         if (!credential.authorizationId.equals(peer.optString("local_authorization_id"))) {
             throw new SecurityException("sync_group_authorization_route_mismatch");
         }

@@ -69,7 +69,7 @@ it('overwrites existing key with upsert and keeps a single row', () => {
 
 
 it('mirrors syncable settings into setting records and sync object state', () => {
-  saveJsonSetting('device_id', 'device-test', '2026-03-06T00:00:00.000Z');
+  saveJsonSetting('host_name', 'Maci', '2026-03-06T00:00:00.000Z');
   saveJsonSetting('app_settings', { theme: 'dark' }, '2026-03-06T00:01:00.000Z');
   saveJsonSetting('watch_import_cursor_state', { cursor: 'local' }, '2026-03-06T00:02:00.000Z');
   saveJsonSetting('remote-image-learned-sources-v1', { entries: {} }, '2026-03-06T00:03:00.000Z');

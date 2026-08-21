@@ -25,8 +25,8 @@ it('persists reciprocal authorization routes and reloads the current-group crede
   ]);
 
   expect(pairing).toContain('payload.provider_encrypted_credential_secret');
-  expect(pairing).toContain('providerSecret !== credentialSecret');
-  expect(pairing).toContain('workgroupKey: credentialSecret');
+  expect(pairing).toContain('workgroupKey: providerSecret!');
+  expect(pairing).toContain('persistNativePairingCredentials(args, payload, credentialSecret)');
   expect(encryption.slice(encryption.indexOf('export async function decryptCompanionPairingSecret')))
     .not.toContain('pairingPrivateKeys.delete(pairRequestClientId)');
   expect(actions).toContain('FolioleCompanionSyncGroupOutboundPeerStore.save(');
@@ -36,7 +36,9 @@ it('persists reciprocal authorization routes and reloads the current-group crede
   expect(outbound).not.toContain('FolioleCompanionPairingStore.savePairingCredentials(');
   expect(outbound).toContain('FolioleCompanionSyncGroupOutboundPeerStore.save(');
   expect(outbound).toContain('FolioleCompanionSyncGroupDatabase.saveSyncEndpoint(dataBridge, endpointUrl, now)');
-  expect(currentCredential).toContain('member.authorization_id, groups.workgroup_key');
+  expect(currentCredential).toContain('FolioleCompanionSyncGroupDataBridge.current().request(');
+  expect(currentCredential).toContain('"load_current_credential"');
+  expect(currentCredential).not.toContain('SQLiteDatabase');
   expect(actions).not.toContain('workgroupKeyRequest');
   expect(JSON.parse(contract).pairingPlugin.credentialRequestKeys)
     .not.toHaveProperty('providerDeviceSecret');

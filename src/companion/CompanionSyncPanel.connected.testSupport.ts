@@ -9,6 +9,7 @@ export function createConnectedProps() {
       database_path: 'foliole-companion-preview.db',
       database_ready: true,
       device_id: 'android-test-device',
+      host_name: 'Android companion',
       runtime_kind: 'android-capacitor' as const
     },
     desktopDiscoveries: [],
@@ -37,9 +38,9 @@ export function createConnectedProps() {
     page: 'sync' as const,
     pairingRequest: null,
     pairingState: {
-      device_id: 'android-test-device',
-      device_kind: 'android-capacitor',
-      device_name: 'Android companion',
+      authorization_id: 'android-authorization',
+      host_name: 'Android companion',
+      host_platform: 'android-capacitor',
       is_paired: true,
       negotiated_protocol_version: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
       paired_at: '2026-04-22T09:00:00.000Z',

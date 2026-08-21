@@ -101,6 +101,19 @@ export function signWorkspaceSyncRequest(args: {
   };
 }
 
+type EncryptedPairingSecret = Parameters<typeof decryptTestPairingSecret>[0]['encrypted'];
+
+async function decryptPairingSecrets(
+  payload: { encrypted_credential_secret: EncryptedPairingSecret; provider_encrypted_credential_secret?: EncryptedPairingSecret },
+  privateKey: Parameters<typeof decryptTestPairingSecret>[0]['privateKey']
+) {
+  const credential = await decryptTestPairingSecret({ encrypted: payload.encrypted_credential_secret, privateKey });
+  const device = payload.provider_encrypted_credential_secret
+    ? await decryptTestPairingSecret({ encrypted: payload.provider_encrypted_credential_secret, privateKey })
+    : credential;
+  return { credential, device };
+}
+
 export async function pairTestDevice(server: http.Server, workgroup?: {
   groupId: string;
   groupTag: string;
@@ -142,19 +155,15 @@ export async function pairTestDevice(server: http.Server, workgroup?: {
   const payload = finalized.json<{
     authorization_id: string;
     device_id: string;
-    encrypted_credential_secret: Parameters<typeof decryptTestPairingSecret>[0]['encrypted'];
+    encrypted_credential_secret: EncryptedPairingSecret;
+    provider_encrypted_credential_secret?: EncryptedPairingSecret;
   }>();
+  const secrets = await decryptPairingSecrets(payload, clientKeyPair.privateKey);
   return {
     authorization_id: payload.authorization_id,
-    credential_secret: await decryptTestPairingSecret({
-      encrypted: payload.encrypted_credential_secret,
-      privateKey: clientKeyPair.privateKey
-    }),
+    credential_secret: secrets.credential,
     device_id: payload.device_id,
-    device_secret: await decryptTestPairingSecret({
-      encrypted: payload.encrypted_credential_secret,
-      privateKey: clientKeyPair.privateKey
-    }),
+    device_secret: secrets.device,
     ...(workgroup ? { group_id: workgroup.groupId, group_tag: workgroup.groupTag } : {})
   } satisfies TestPairedDevice;
 }

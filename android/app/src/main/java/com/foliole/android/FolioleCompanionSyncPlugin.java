@@ -18,6 +18,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     @Override public void load() {
         super.load();
         try {
+            FolioleCompanionSyncGroupDataBridge.install(getContext(), this::dispatchDataRequest);
             serviceMonitor = new FolioleCompanionNsdMonitor(getContext(), this::dispatchServiceHint);
             reconcileServiceMonitor();
         } catch (Exception error) {
@@ -79,7 +80,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
     @PluginMethod public void resolveSyncGroupDataRequest(PluginCall call) {
         try {
-            FolioleCompanionSyncGroupProvider.resolveDataRequest(call.getData());
+            FolioleCompanionSyncGroupDataBridge.current().resolve(call.getData());
             call.resolve();
         } catch (Exception error) {
             call.reject(FolioleCompanionPluginErrors.withCause("Failed to resolve Sync Group data request.", error), error);
@@ -107,7 +108,8 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     }
 
     @PluginMethod public void signCompanionSyncRequest(PluginCall call) {
-        FolioleCompanionPairingPluginActions.signCompanionSyncRequest(getContext(), call);
+        fileExecutor.execute(() ->
+            FolioleCompanionPairingPluginActions.signCompanionSyncRequest(getContext(), call));
     }
 
     @PluginMethod public void downloadAttachmentResourceBatch(PluginCall call) {
@@ -203,6 +205,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         lifecycleActive = false;
         if (serviceMonitor != null) serviceMonitor.stop();
         FolioleCompanionSyncGroupProvider.pause(this);
+        FolioleCompanionSyncGroupDataBridge.uninstall();
         super.handleOnDestroy();
         fileExecutor.shutdownNow();
     }

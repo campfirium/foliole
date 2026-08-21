@@ -25,7 +25,7 @@ final class FolioleCompanionSyncGroupRequestAuth {
         long drift = Math.abs(System.currentTimeMillis() - Instant.parse(timestamp).toEpochMilli());
         if (drift > 60_000) throw new SecurityException("expired_timestamp");
         String encodedSecret = FolioleCompanionCurrentGroupCredential.load(
-            context, groupId
+            groupId
         ).workgroupKey;
         String canonical = request.method + "\n" + request.path + "\n" + timestamp + "\n" + nonce + "\n" + sha256(request.body);
         String expected = FolioleCompanionPairingCrypto.signCanonicalRequest(encodedSecret, canonical);

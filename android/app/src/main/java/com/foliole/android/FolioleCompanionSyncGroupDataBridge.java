@@ -15,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 
 final class FolioleCompanionSyncGroupDataBridge {
     private static final String LOG_TAG = "FolioleSyncProvider";
+    private static FolioleCompanionSyncGroupDataBridge active;
     private final Context context;
     private volatile Dispatcher dispatcher;
     private final Map<String, CompletableFuture<JSONObject>> pending = new ConcurrentHashMap<>();
@@ -22,6 +23,21 @@ final class FolioleCompanionSyncGroupDataBridge {
     FolioleCompanionSyncGroupDataBridge(Context context, Dispatcher dispatcher) {
         this.context = context.getApplicationContext();
         this.dispatcher = dispatcher;
+    }
+
+    static synchronized void install(Context context, Dispatcher dispatcher) {
+        if (active == null) active = new FolioleCompanionSyncGroupDataBridge(context, dispatcher);
+        else active.replaceDispatcher(dispatcher);
+    }
+
+    static synchronized FolioleCompanionSyncGroupDataBridge current() {
+        if (active == null) throw new IllegalStateException("sync_group_data_owner_unavailable");
+        return active;
+    }
+
+    static synchronized void uninstall() {
+        if (active != null) active.close();
+        active = null;
     }
 
     void replaceDispatcher(Dispatcher dispatcher) {

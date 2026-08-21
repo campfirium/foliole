@@ -28,6 +28,7 @@ const bootstrapState: NativeCompanionBootstrapState = {
   database_ready: true,
   device_id: 'ios-test-device',
   device_name: null,
+  host_name: 'iPhone',
   runtime_kind: 'ios-capacitor'
 };
 
@@ -49,7 +50,7 @@ beforeEach(() => {
     },
     discovery: {
       app_version: '0.6.5',
-      desktop_device_name: 'Roamer Mac',
+      desktop_host_name: 'Roamer Mac',
       desktop_name: 'Foliole Desktop',
       desktop_platform: 'macOS',
       group_display_name: 'Maci',
@@ -67,9 +68,8 @@ beforeEach(() => {
     status: 'pending'
   });
   syncMocks.pairCompanionWithDesktop.mockResolvedValue({
-    device_id: 'ios-test-device',
-    device_kind: 'ios-capacitor',
-    device_name: 'iPhone',
+    host_name: 'iPhone',
+    host_platform: 'ios-capacitor',
     is_paired: true,
     negotiated_protocol_version: 1,
     paired_at: '2026-07-21T08:03:00.000Z',
@@ -92,11 +92,11 @@ it('keeps the iOS identity through Mac pairing request and completion', async ()
   });
 
   expect(syncMocks.requestCompanionPairing).toHaveBeenCalledWith({
-    deviceId: 'ios-test-device',
-    deviceKind: 'ios-capacitor',
-    deviceName: 'iPhone',
     endpointUrl: 'http://192.168.1.8:38641',
     groupId: 'group-1',
+    groupTag: undefined,
+    hostName: 'iPhone',
+    hostPlatform: 'ios-capacitor',
     timelineId: 'timeline-1'
   });
 
@@ -105,20 +105,20 @@ it('keeps the iOS identity through Mac pairing request and completion', async ()
   });
 
   expect(syncMocks.pairCompanionWithDesktop).toHaveBeenCalledWith({
-    deviceKind: 'ios-capacitor',
-    deviceName: 'iPhone',
     endpointUrl: 'http://192.168.1.8:38641',
+    groupId: 'group-1',
+    groupTag: undefined,
+    hostName: 'iPhone',
+    hostPlatform: 'ios-capacitor',
     pairRequestId: 'pair-request-ios',
     remotePeerId: 'desktop-mac',
     remotePeerName: 'Roamer Mac',
     remotePeerPlatform: 'macOS',
-    groupId: 'group-1',
     timelineId: 'timeline-1'
   });
   expect(result.current.pairingState).toEqual(expect.objectContaining({
-    device_id: 'ios-test-device',
-    device_kind: 'ios-capacitor',
-    device_name: 'iPhone',
+    host_name: 'iPhone',
+    host_platform: 'ios-capacitor',
     is_paired: true
   }));
   expect(onSaveEndpoint).toHaveBeenCalledTimes(2);

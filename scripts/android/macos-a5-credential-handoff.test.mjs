@@ -22,8 +22,8 @@ const evidenceRoot = path.join(
 function memoryFs(receipt = credentialsSignableReceiptFixture,
   manifest = credentialsSignableManifestFixture) {
   const files = new Map([
-    [`${evidenceRoot}/pair-sync-recovery-receipt.json`, JSON.stringify(receipt)],
-    [`${evidenceRoot}/pair-sync-recovery-manifest.json`, JSON.stringify(manifest)]
+    [path.join(evidenceRoot, 'pair-sync-recovery-receipt.json'), JSON.stringify(receipt)],
+    [path.join(evidenceRoot, 'pair-sync-recovery-manifest.json'), JSON.stringify(manifest)]
   ]);
   return {
     files, mkdirSync: vi.fn(),

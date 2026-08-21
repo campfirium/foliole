@@ -143,7 +143,7 @@ describe('companion pairing main-process state ownership', () => {
     expect(send).toHaveBeenCalledWith(IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL);
     expect(serverRuntime.getLanWorkspaceSyncServerStatus().pending_pair_request_count).toBe(1);
     expect(overview).toMatchObject({
-      pending_requests: [{ device_id: 'fixed-android-device', status: 'pending' }],
+      pending_requests: [{ host_name: 'Fixed Android companion', status: 'pending' }],
       server_status: { pending_pair_request_count: 1 }
     });
   });
@@ -163,7 +163,7 @@ describe('companion pairing main-process state ownership', () => {
       NATIVE_COMMANDS.loadCompanionPairingOverview,
       {}
     )).resolves.toMatchObject({
-      pending_requests: [{ device_id: 'fixed-android-device' }],
+      pending_requests: [{ host_name: 'Fixed Android companion' }],
       server_status: { pending_pair_request_count: 1, state: 'stopped' }
     });
 

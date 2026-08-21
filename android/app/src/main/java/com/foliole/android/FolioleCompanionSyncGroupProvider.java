@@ -30,8 +30,11 @@ final class FolioleCompanionSyncGroupProvider {
         boolean participating
     ) throws Exception {
         JSONObject group = call.getData().getJSONObject(key(context, "group"));
+        FolioleCompanionSyncGroupDataBridge bridge = FolioleCompanionSyncGroupDataBridge.current();
+        bridge.replaceDispatcher(dispatcher);
+        dataBridge = bridge;
         FolioleCompanionCurrentGroupCredential credential =
-            FolioleCompanionCurrentGroupCredential.load(context, group.getString("group_id"));
+            FolioleCompanionCurrentGroupCredential.load(group.getString("group_id"));
         String authorizationId = value(context, call, "authorizationId");
         if (!credential.authorizationId.equals(authorizationId)) {
             throw new SecurityException("sync_group_local_authorization_mismatch");
@@ -62,7 +65,7 @@ final class FolioleCompanionSyncGroupProvider {
         if (activeConfig != null) stopActiveProvider();
         next.put("runtime_instance_id", UUID.randomUUID().toString());
         activeContext = context.getApplicationContext(); activeConfig = next; activeOwner = owner;
-        dataBridge = new FolioleCompanionSyncGroupDataBridge(activeContext, dispatcher);
+        dataBridge = bridge;
         restoreApprovedJoins();
         if (participating) {
             FolioleCompanionSyncScreenAwake.attach(activity);
@@ -84,7 +87,6 @@ final class FolioleCompanionSyncGroupProvider {
             FolioleCompanionSyncGroupJoinGrantStore.clear(activeContext);
         }
         activeContext = null; activeConfig = null; activeOwner = null;
-        if (dataBridge != null) dataBridge.close();
         dataBridge = null;
         joinRequests.clear();
         return state();
@@ -145,7 +147,7 @@ final class FolioleCompanionSyncGroupProvider {
         if (server == null) throw new IllegalStateException("sync_participation_inactive");
         FolioleCompanionSyncGroupJoinRequest request = require(call.getString(key(context, "pairRequestId")));
         FolioleCompanionCurrentGroupCredential.load(
-            activeContext, activeConfig.getJSONObject("sync_group").getString("group_id")
+            activeConfig.getJSONObject("sync_group").getString("group_id")
         );
         request.status = "approved";
         try {

@@ -51,6 +51,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionContentBlobBatchText.java',
       'FolioleCompanionContentBlobMultipartBatch.java',
       'FolioleCompanionCredentialBagCipher.java',
+      'FolioleCompanionCurrentGroupCredential.java',
       'FolioleCompanionDesktopHttpClient.java',
       'FolioleCompanionHttpRequest.java',
       'FolioleCompanionHttpResponse.java',
@@ -87,7 +88,6 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionSyncPackTransfer.java',
       'FolioleCompanionSyncParticipationStore.java',
       'FolioleCompanionWorkgroupHttp.java',
-      'FolioleCompanionWorkgroupSession.java',
       'FolioleCompanionWebView.java',
       'MainActivity.java'
     ]

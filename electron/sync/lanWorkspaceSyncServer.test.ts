@@ -131,7 +131,7 @@ function registerSnapshotProtectionTest() {
     const unauthorizedResponse = await requestWorkspaceSyncServer(server, { path: '/companion/workspace-snapshot' });
     expect(unauthorizedResponse.status).toBe(401);
     const paired = await pairTestDevice(server, WORKGROUP);
-    expect(getLanWorkspaceSyncServerStatus().paired_authorization_count).toBe(0);
+    expect(getLanWorkspaceSyncServerStatus().paired_authorization_count).toBe(1);
     expect(getLanWorkspaceSyncServerStatus().pending_pair_request_count).toBe(0);
     const response = await requestWorkspaceSyncServer(server, {
       headers: signWorkspaceSyncRequest({

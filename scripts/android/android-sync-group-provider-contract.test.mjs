@@ -109,7 +109,7 @@ it('authorizes every Android provider data request with both the channel secret 
   const auth = await readJava('FolioleCompanionSyncGroupRequestAuth.java');
   const database = await readJava('FolioleCompanionSyncGroupDatabase.java');
   const provider = await readJava('FolioleCompanionSyncGroupProvider.java');
-  expect(auth).toContain('FolioleCompanionWorkgroupSession.requireKey()');
+  expect(auth).toContain('FolioleCompanionCurrentGroupCredential.load(');
   expect(provider).toContain('FolioleCompanionSyncGroupDatabase.isAuthorizedMember(');
   expect(database).toContain('bridge.request("authorize_member"');
 });
@@ -118,8 +118,8 @@ it('revokes both directions of a departed peer credential before accepting depar
   const server = await readJava('FolioleCompanionSyncGroupServer.java');
   const departure = server.slice(server.indexOf('private void departure('),
     server.indexOf('private void contentBlob('));
-  expect(departure).toContain('FolioleCompanionSyncGroupPeerStore.remove(context, authenticatedDeviceId)');
-  expect(departure).toContain('FolioleCompanionSyncGroupOutboundPeerStore.remove(context, authenticatedDeviceId)');
+  expect(departure).toContain('FolioleCompanionSyncGroupPeerStore.remove(context, authenticatedAuthorizationId)');
+  expect(departure).toContain('FolioleCompanionSyncGroupOutboundPeerStore.remove(context, authenticatedAuthorizationId)');
   expect(departure.indexOf('recordDeparture')).toBeLessThan(departure.indexOf('SyncGroupPeerStore.remove'));
   expect(departure.indexOf('SyncGroupOutboundPeerStore.remove')).toBeLessThan(departure.indexOf('status", "accepted'));
 });
@@ -165,7 +165,7 @@ it('promotes an approved join only after the new member proves key possession', 
   const promote = provider.slice(provider.indexOf('static void promoteApprovedJoin'),
     provider.indexOf('static synchronized void pruneExpired'));
   expect(approve).toContain('FolioleCompanionSyncGroupJoinGrantStore.save');
-  expect(approve).toContain('FolioleCompanionWorkgroupSession.requireKey()');
+  expect(approve).toContain('FolioleCompanionCurrentGroupCredential.load(');
   expect(approve).not.toContain('FolioleCompanionSyncGroupPeerStore.createSecret');
   expect(approve).not.toContain('FolioleCompanionSyncGroupPeerStore.remove');
   expect(approve).not.toContain('registerMember');
@@ -176,7 +176,7 @@ it('promotes an approved join only after the new member proves key possession', 
   expect(grantStore).not.toContain('device_secret');
   expect(grantStore).not.toContain('provider_secret');
   expect(server).toContain('groupForApprovedRequest');
-  expect(server).toContain('FolioleCompanionWorkgroupSession.requireKey()');
+  expect(server).toContain('FolioleCompanionCurrentGroupCredential.load(');
   expect(server).not.toContain('/companion/sync-group/activate');
   expect(provider).not.toContain('static synchronized void promoteApprovedJoin');
   expect(promote).toMatch(/isAuthorizedMember[\s\S]*request != null[\s\S]*consumeApprovedJoin\(request\)/u);

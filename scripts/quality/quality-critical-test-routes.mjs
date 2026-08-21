@@ -135,9 +135,12 @@ export const CRITICAL_TEST_ROUTES = [
     tests: NATIVE_PAIRING_SIGNING_CONTRACT_TESTS
   },
   {
-    triggers: [/^android\/app\/src\/main\/java\/com\/foliole\/companion\/.+\.java$/u,
+    triggers: [/^android\/app\/src\/main\/java\/com\/foliole\/android\/.+\.java$/u,
       /^scripts\/android\/java-adapter-boundary-rules\.mjs$/u],
-    tests: ['scripts/android/java-adapter-boundary.test.mjs']
+    tests: [
+      'scripts/android/java-adapter-boundary.test.mjs',
+      'scripts/android/java-sql-surface.test.mjs'
+    ]
   },
   {
     triggers: [/^scripts\/windows\/windows-dev-control\.mjs$/u],

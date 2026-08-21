@@ -29,8 +29,11 @@ const HOSTED_QUALITY_GAP_ROUTES = [
     'src/shared/platform/companionWorkspaceSync.pairing.test.ts'
   ]],
   ['Android Java adapter inventory', [
-    'android/app/src/main/java/com/foliole/companion/FolioleCompanionNsdAddresses.java'
-  ], ['scripts/android/java-adapter-boundary.test.mjs']],
+    'android/app/src/main/java/com/foliole/android/FolioleCompanionNsdAddresses.java'
+  ], [
+    'scripts/android/java-adapter-boundary.test.mjs',
+    'scripts/android/java-sql-surface.test.mjs'
+  ]],
   ['Windows DEV action registry', [
     'scripts/windows/windows-dev-control.mjs'
   ], ['scripts/windows/windows-android-dev-helper-boundary.test.mjs']],

@@ -138,7 +138,7 @@ final class FolioleCompanionSyncGroupServer {
             context, config, pending, dataBridge
         );
         String workgroupKey = FolioleCompanionCurrentGroupCredential.load(
-            context, config.getJSONObject("sync_group").getString("group_id")
+            config.getJSONObject("sync_group").getString("group_id")
         ).workgroupKey;
         FolioleCompanionHttpResponse.json(output, 200, new JSONObject().put("app_version", config.getString("app_version"))
             .put("compatibility", FolioleCompanionWorkgroupHttp.compatible(protocol())).put("desktop_protocol", protocol())
@@ -218,7 +218,7 @@ final class FolioleCompanionSyncGroupServer {
     }
     private String decryptRequest(FolioleCompanionHttpRequest request) throws Exception {
         String key = FolioleCompanionCurrentGroupCredential.load(
-            context, config.getJSONObject("sync_group").getString("group_id")
+            config.getJSONObject("sync_group").getString("group_id")
         ).workgroupKey;
         return new String(FolioleCompanionSyncGroupCrypto.decrypt(
             key, config.getString("group_tag"), request.method, request.path, "request",

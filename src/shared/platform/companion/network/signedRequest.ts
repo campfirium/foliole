@@ -5,6 +5,7 @@ import {
   isNativeAndroidCompanionRuntime,
   isNativeCompanionPairingRuntime
 } from '../../companionWorkspaceRuntimeRepository';
+import { ensureCompanionSyncGroupDataOwner } from '../sync/syncGroupProviderDataOwner';
 import {
   loadCompanionSyncGroup
 } from '../sync/syncGroupStore';
@@ -96,6 +97,7 @@ async function signNativeWorkgroupRequest(args: {
   bodyHash: string; bodyText?: string; endpointUrl: string; method: string;
   nonce: string; pathWithQuery: string; timestamp: string;
 }, groupId: string) {
+  await ensureCompanionSyncGroupDataOwner();
   return FolioleCompanionSync.signCompanionSyncRequest({
     ...(args.bodyText === undefined ? {} : { body: args.bodyText }),
     body_hash: args.bodyHash, endpoint_url: args.endpointUrl, method: args.method,

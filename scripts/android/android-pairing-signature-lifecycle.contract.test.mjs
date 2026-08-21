@@ -46,17 +46,17 @@ it('freezes the fresh-join signature vector before the provider cutover', async 
   ]);
 });
 
-it('keeps explicit-key signing independent from WorkgroupSession', async () => {
+it('keeps current-group signing independent from a provider session', async () => {
   const outbound = await readJava('FolioleCompanionSyncGroupOutboundPeerStore.java');
-  const explicitSigner = outbound.slice(
-    outbound.indexOf('static JSObject signWithWorkgroupKey('),
+  const currentSigner = outbound.slice(
+    outbound.indexOf('static JSObject signCurrentGroupRequest('),
     outbound.indexOf('static void bindRoute(')
   );
 
-  expect(explicitSigner).toContain('JSONObject peer = find(context, groupId.trim(), normalizeEndpoint(endpointUrl))');
-  expect(explicitSigner).toContain('peer.getString("local_authorization_id")');
-  expect(explicitSigner).toContain('signCanonicalRequest(\n            workgroupKey, canonical)');
-  expect(explicitSigner).not.toContain('FolioleCompanionWorkgroupSession');
+  expect(currentSigner).toContain('JSONObject peer = find(context, groupId.trim(), normalizeEndpoint(endpointUrl))');
+  expect(currentSigner).toContain('currentCredential(context, groupId, peer)');
+  expect(currentSigner).toContain('peer.getString("local_authorization_id")');
+  expect(currentSigner).not.toContain('FolioleCompanionWorkgroupSession');
 });
 
 it('prepares and sends an outbound envelope without a provider session', async () => {
@@ -65,8 +65,8 @@ it('prepares and sends an outbound envelope without a provider session', async (
     readJava('FolioleCompanionSyncGroupOutboundPeerStore.java'),
     readJava('FolioleCompanionWorkgroupHttp.java')
   ]);
-  const explicitPreparation = outbound.slice(
-    outbound.indexOf('static JSObject prepareWithWorkgroupKey('),
+  const currentPreparation = outbound.slice(
+    outbound.indexOf('static JSObject prepareCurrentGroupRequest('),
     outbound.indexOf('static void bindRoute(')
   );
   const keyPreparation = workgroup.slice(
@@ -74,33 +74,38 @@ it('prepares and sends an outbound envelope without a provider session', async (
     workgroup.indexOf('static boolean isPrepared(')
   );
 
-  expect(explicitPreparation).toContain('FolioleCompanionWorkgroupHttp.prepareWithKey(');
-  expect(explicitPreparation).not.toContain('FolioleCompanionWorkgroupSession');
+  expect(currentPreparation).toContain('FolioleCompanionWorkgroupHttp.prepareWithKey(');
+  expect(currentPreparation).toContain('currentCredential(context, groupId, peer)');
+  expect(currentPreparation).not.toContain('FolioleCompanionWorkgroupSession');
   expect(keyPreparation).not.toContain('FolioleCompanionWorkgroupSession');
   expect(client).toContain('? FolioleCompanionWorkgroupHttp.acceptPrepared');
   expect(client).toContain('&& !preparedWorkgroup');
 });
 
-it('cuts production group signing over to the required bridge key without changing standalone signing', async () => {
-  const [actions, contract, definitions, outbound] = await Promise.all([
+it('loads production group signing material through the shared data-owner bridge', async () => {
+  const [actions, contract, currentCredential, outbound, plugin] = await Promise.all([
     readJava('FolioleCompanionPairingPluginActions.java'),
     readFile(path.join(root, 'android/app/src/main/assets/companion-bridge-contract-definitions.json'), 'utf8'),
-    readJava('FolioleCompanionPairingSignatureContractDefinitions.java'),
-    readJava('FolioleCompanionSyncGroupOutboundPeerStore.java')
+    readJava('FolioleCompanionCurrentGroupCredential.java'),
+    readJava('FolioleCompanionSyncGroupOutboundPeerStore.java'),
+    readJava('FolioleCompanionSyncPlugin.java')
   ]);
   const signAction = actions.slice(
     actions.indexOf('static void signCompanionSyncRequest('),
     actions.indexOf('static void bindSyncGroupPeerRoute(')
   );
 
-  expect(JSON.parse(contract).pairingPlugin.signature.requestKeys.workgroupKey).toBe('workgroup_key');
   expect(JSON.parse(contract).pairingPlugin.signature.requestKeys.body).toBe('body');
-  expect(definitions).toContain('workgroupKeyRequest(Context context)');
-  expect(signAction).toContain('rejectIfBlank(call, workgroupKeyKey, workgroupKey)');
-  expect(signAction).toContain('prepareWithWorkgroupKey');
-  expect(signAction).toContain('FolioleCompanionSyncGroupOutboundPeerStore.signWithWorkgroupKey(');
+  expect(JSON.parse(contract).pairingPlugin.signature.requestKeys).not.toHaveProperty('workgroupKey');
+  expect(signAction).toContain('prepareCurrentGroupRequest');
+  expect(signAction).toContain('FolioleCompanionSyncGroupOutboundPeerStore.signCurrentGroupRequest(');
   expect(signAction).toContain('FolioleCompanionPairingStore.signRequest(');
+  expect(currentCredential).toContain('FolioleCompanionSyncGroupDataBridge.current().request(');
+  expect(currentCredential).toContain('"load_current_credential"');
+  expect(currentCredential).not.toContain('SQLiteDatabase');
   expect(outbound).not.toContain('FolioleCompanionWorkgroupSession');
+  expect(plugin).toContain('FolioleCompanionSyncGroupDataBridge.install(');
+  expect(plugin).toMatch(/signCompanionSyncRequest[\s\S]*fileExecutor\.execute/u);
 });
 
 it('freezes missing-key and route mismatch rejection ahead of signing', async () => {

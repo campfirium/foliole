@@ -3,6 +3,7 @@ export const COMPANION_SYNC_GROUP_DATA_CONTRACT = Object.freeze({
   operations: Object.freeze({
     authorizeMember: 'authorize_member',
     createSnapshot: 'create_snapshot',
+    loadCurrentCredential: 'load_current_credential',
     loadGroup: 'load_group',
     recordDeparture: 'record_departure',
     recordSupplyCursor: 'record_supply_cursor',

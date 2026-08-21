@@ -10,8 +10,14 @@ import { runMacosA5SyncGroupMaintenance } from './macos-a5-sync-group-maintenanc
 const roots = [];
 afterEach(() => roots.splice(0).forEach((root) => fs.rmSync(root, { force: true, recursive: true })));
 
+function createTestRoot() {
+  const parent = path.join(process.cwd(), '.tmp', 'artifacts');
+  fs.mkdirSync(parent, { recursive: true });
+  return fs.mkdtempSync(path.join(parent, 'a5-maintenance-test-'));
+}
+
 it('uses the fixed product instrumentation method and records its receipt', async () => {
-  const root = fs.mkdtempSync(path.join(process.cwd(), '.tmp/artifacts/a5-maintenance-test-'));
+  const root = createTestRoot();
   roots.push(root);
   const execute = vi.fn(async (_command, args) => {
     if (args.includes('instrument')) return {
@@ -45,7 +51,7 @@ it('uses the fixed product instrumentation method and records its receipt', asyn
 });
 
 it('maps the fixed device port to an explicit isolated macOS listener', async () => {
-  const root = fs.mkdtempSync(path.join(process.cwd(), '.tmp/artifacts/a5-maintenance-test-'));
+  const root = createTestRoot();
   roots.push(root);
   const execute = vi.fn(async (_command, args) => args.includes('instrument') ? {
     code: 0,
@@ -128,7 +134,7 @@ it('observes Leave through durable host state after the visible confirmation', (
 });
 
 it('classifies an abnormal instrumentation exit as an Android product failure', async () => {
-  const root = fs.mkdtempSync(path.join(process.cwd(), '.tmp/artifacts/a5-maintenance-test-'));
+  const root = createTestRoot();
   roots.push(root);
   const execute = vi.fn(async (_command, args) => args.includes('instrument') ? {
     code: 0,
@@ -144,7 +150,7 @@ it('classifies an abnormal instrumentation exit as an Android product failure', 
 });
 
 it('preserves a lost Android window focus as an environment failure', async () => {
-  const root = fs.mkdtempSync(path.join(process.cwd(), '.tmp/artifacts/a5-maintenance-test-'));
+  const root = createTestRoot();
   roots.push(root);
   const execute = vi.fn(async (_command, args) => args.includes('instrument') ? {
     code: 0,

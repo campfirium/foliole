@@ -43,6 +43,7 @@ async function handleRequest(request: CompanionSyncGroupDataRequest) {
 async function dispatch(operation: string, payload: Record<string, unknown>) {
   if (operation === CONTRACT.operations.authorizeMember) return authorizeMember(payload);
   if (operation === CONTRACT.operations.createSnapshot) return createSnapshot(payload);
+  if (operation === CONTRACT.operations.loadCurrentCredential) return loadCurrentCredential(payload);
   if (operation === CONTRACT.operations.loadGroup) return loadGroupPayload();
   if (operation === CONTRACT.operations.recordDeparture) return recordDeparture(payload);
   if (operation === CONTRACT.operations.recordSupplyCursor) return recordSupplyCursor(payload);
@@ -127,6 +128,24 @@ async function loadGroupPayload() {
        WHERE state = 'active' ORDER BY joined_at, host_name`
     );
     return { group, members };
+  });
+}
+
+async function loadCurrentCredential(payload: Record<string, unknown>) {
+  const groupId = text(payload.group_id);
+  return getIosCompanionDatabaseOwner().read(async (db) => {
+    const rows = await db.query<DbRow>(
+      `SELECT member.authorization_id, groups.workgroup_key
+       FROM sync_group_local_state local
+       JOIN sync_groups groups ON groups.group_id = local.group_id
+       JOIN sync_group_members member ON member.group_id = local.group_id
+         AND member.host_name = local.local_host_name
+       WHERE local.singleton_id = 1 AND local.member_state = 'active'
+         AND member.state = 'active' AND local.group_id = ? LIMIT 2`, [groupId]
+    );
+    const row = rows[0];
+    if (rows.length !== 1 || !row) throw new Error('sync_group_current_credential_missing');
+    return { authorization_id: text(row.authorization_id), workgroup_key: text(row.workgroup_key) };
   });
 }
 
