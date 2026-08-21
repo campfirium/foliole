@@ -10,8 +10,14 @@ const nativeMock = vi.hoisted(() => ({
   desktopHttpRequest: vi.fn(),
   loadDiscoveryCandidates: vi.fn(),
   loadPairingState: vi.fn(),
+  savePairingCredentials: vi.fn(),
   signCompanionSyncRequest: vi.fn(),
   startSyncGroupProvider: vi.fn()
+}));
+const pairingEncryptionMock = vi.hoisted(() => ({
+  create: vi.fn(async () => 'client-public-key'),
+  decrypt: vi.fn(),
+  drop: vi.fn()
 }));
 
 vi.mock('@capacitor/core', () => ({
@@ -19,9 +25,9 @@ vi.mock('@capacitor/core', () => ({
   registerPlugin: () => nativeMock
 }));
 vi.mock('./companionPairingEncryption', () => ({
-  createCompanionPairingPublicKey: vi.fn(async () => 'client-public-key'),
-  decryptCompanionPairingSecret: vi.fn(async () => 'persistent-workgroup-key'),
-  dropCompanionPairingPrivateKey: vi.fn()
+  createCompanionPairingPublicKey: pairingEncryptionMock.create,
+  decryptCompanionPairingSecret: pairingEncryptionMock.decrypt,
+  dropCompanionPairingPrivateKey: pairingEncryptionMock.drop
 }));
 vi.mock('./companionSyncWriterQueue', () => ({
   runCompanionSyncWriterTask: vi.fn(async <T>(task: () => Promise<T>) => task())
@@ -64,6 +70,9 @@ const group = {
 beforeEach(() => {
   vi.clearAllMocks();
   events.length = 0;
+  pairingEncryptionMock.decrypt
+    .mockResolvedValueOnce('pairing-credential')
+    .mockResolvedValueOnce('persistent-workgroup-key');
   groupMock.load.mockResolvedValue(null);
   groupMock.loadKey.mockResolvedValue(null);
   groupMock.facts.mockResolvedValue({
@@ -91,6 +100,9 @@ beforeEach(() => {
   nativeMock.bindSyncGroupPeerRoute.mockImplementation(async () => {
     events.push('route-committed');
   });
+  nativeMock.savePairingCredentials.mockImplementation(async () => {
+    events.push('authorization-committed');
+  });
   nativeMock.signCompanionSyncRequest.mockImplementation(async () => {
     events.push('signature-probe');
     return { headers: {
@@ -98,13 +110,24 @@ beforeEach(() => {
       'X-Signature': 'signed', 'X-Timestamp': '2026-08-20T08:00:00.000Z'
     } };
   });
-  nativeMock.loadPairingState.mockResolvedValue({ is_paired: false });
+  nativeMock.loadPairingState.mockResolvedValue({
+    authorization_id: 'authorization-a5', host_name: 'A5', host_platform: 'android-capacitor',
+    is_paired: true, paired_at: '2026-08-20T08:00:00.000Z'
+  });
 });
 
 it('proves fresh Sync Group pairing can sign after persistence and route binding', async () => {
   await completeFreshPairing();
 
-  expect(events).toEqual(['group-committed', 'route-committed', 'signature-probe']);
+  expect(events).toEqual([
+    'group-committed', 'route-committed', 'authorization-committed', 'signature-probe'
+  ]);
+  expect(groupMock.join).toHaveBeenCalledWith(expect.objectContaining({
+    workgroupKey: 'persistent-workgroup-key'
+  }));
+  expect(nativeMock.savePairingCredentials).toHaveBeenCalledWith(expect.objectContaining({
+    credential_secret: 'pairing-credential'
+  }));
   expect(nativeMock.signCompanionSyncRequest).toHaveBeenCalledWith(expect.objectContaining({
     endpoint_url: endpointUrl, sync_group_id: group.group_id
   }));
@@ -126,7 +149,9 @@ it('keeps committed credentials when the local signature-only probe fails', asyn
     'Native pairing credentials cannot sign sync requests: signature rejected'
   );
 
-  expect(events).toEqual(['group-committed', 'route-committed', 'signature-probe']);
+  expect(events).toEqual([
+    'group-committed', 'route-committed', 'authorization-committed', 'signature-probe'
+  ]);
   expect(nativeMock.clearPairingCredentials).not.toHaveBeenCalled();
   expect(nativeMock.startSyncGroupProvider).not.toHaveBeenCalled();
 });

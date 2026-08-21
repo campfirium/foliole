@@ -9,7 +9,7 @@ import {
 
 import { verifyNativePairingCanSignRequest } from './signedRequest';
 
-export async function saveStandaloneNativePairing(
+export async function persistNativePairingCredentials(
   args: PairCompanionWithDesktopArgs,
   payload: PairCompanionWithDesktopResponse,
   credentialSecret: string
@@ -29,6 +29,15 @@ export async function saveStandaloneNativePairing(
   });
   const stored = normalizePairingState(await FolioleCompanionSync.loadPairingState());
   if (!stored.is_paired) throw new Error('Native pairing credentials were not saved.');
+  return stored;
+}
+
+export async function saveStandaloneNativePairing(
+  args: PairCompanionWithDesktopArgs,
+  payload: PairCompanionWithDesktopResponse,
+  credentialSecret: string
+) {
+  const stored = await persistNativePairingCredentials(args, payload, credentialSecret);
   await verifyNativePairingCanSignRequest(normalizeEndpointUrl(args.endpointUrl));
   return stored;
 }

@@ -4,7 +4,10 @@ import {
   loadCompanionDiscoveryEndpoint,
   requestCompanionPairingEndpoint
 } from './companion/network/companionPairingHttpRequest';
-import { saveStandaloneNativePairing } from './companion/network/nativePairingCredentialStore';
+import {
+  persistNativePairingCredentials,
+  saveStandaloneNativePairing
+} from './companion/network/nativePairingCredentialStore';
 import {
   createSignedRequestHeaders,
   verifyNativePairingCanSignRequest
@@ -150,7 +153,6 @@ export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArg
     });
   }
   if (usesSyncGroup && !providerSecret) throw new Error('Sync Group provider pairing credentials are missing.');
-  if (usesSyncGroup && providerSecret !== credentialSecret) throw new Error('sync_group_workgroup_key_mismatch');
   return saveNativePairing(args, payload, credentialSecret, providerSecret, usesSyncGroup);
 }
 
@@ -158,7 +160,7 @@ async function saveNativePairing(
   args: PairCompanionWithDesktopArgs,
   payload: PairCompanionWithDesktopResponse,
   credentialSecret: string,
-  _providerSecret: string | null,
+  providerSecret: string | null,
   usesSyncGroup: boolean
 ) {
   return runCompanionSyncWriterTask(async () => {
@@ -174,11 +176,11 @@ async function saveNativePairing(
         && existingGroup.local_member_state === 'active';
       if (isActiveReauthorization) {
         await refreshActiveCompanionSyncGroupMembership({
-          hostName: payload.host_name, group: payload.sync_group, workgroupKey: credentialSecret
+          hostName: payload.host_name, group: payload.sync_group, workgroupKey: providerSecret!
         });
       } else {
         await joinCompanionSyncGroup({
-          hostName: payload.host_name, group: payload.sync_group, workgroupKey: credentialSecret
+          hostName: payload.host_name, group: payload.sync_group, workgroupKey: providerSecret!
         });
       }
       await FolioleCompanionSync.bindSyncGroupPeerRoute({
@@ -190,6 +192,7 @@ async function saveNativePairing(
         peer_host_platform: payload.provider_host_platform,
         sync_group_id: payload.sync_group.group_id
       });
+      await persistNativePairingCredentials(args, payload, credentialSecret);
       await verifyNativePairingCanSignRequest(normalizeEndpointUrl(args.endpointUrl));
       return loadCompanionPairingState();
     }

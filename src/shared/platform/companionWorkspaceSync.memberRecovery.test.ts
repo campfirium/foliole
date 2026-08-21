@@ -16,7 +16,7 @@ vi.mock('@capacitor/core', () => ({
 }));
 vi.mock('./companionPairingEncryption', () => ({
   createCompanionPairingPublicKey: vi.fn(async () => 'client-public-key'),
-  decryptCompanionPairingSecret: vi.fn(async () => 'test-secret'), dropCompanionPairingPrivateKey: vi.fn()
+  decryptCompanionPairingSecret: vi.fn(), dropCompanionPairingPrivateKey: vi.fn()
 }));
 vi.mock('./companion/sync/syncGroupStore', async (importOriginal) => ({
   ...await importOriginal<typeof import('./companion/sync/syncGroupStore')>(),
@@ -26,6 +26,7 @@ vi.mock('./companion/sync/syncGroupStore', async (importOriginal) => ({
   loadCompanionSyncGroupWorkgroupKey: syncGroupMock.loadKey
 }));
 
+import { decryptCompanionPairingSecret } from './companionPairingEncryption';
 import { pairCompanionWithDesktop, requestCompanionPairing } from './companionWorkspaceSync';
 
 const protocol = { capabilities: ['lan-sync-v1'], max_supported_version: 1,
@@ -37,6 +38,9 @@ const encryptedSecret = { algorithm: 'ECDH-P256-HKDF-SHA256-AES-GCM', ciphertext
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(decryptCompanionPairingSecret)
+    .mockResolvedValueOnce('pairing-credential')
+    .mockResolvedValueOnce('test-secret');
   syncGroupMock.facts.mockResolvedValue({
     attachment_count: 0, content_blob_count: 0, node_count: 1399,
     review_log_count: 0, timeline_id: 'timeline-1'
@@ -76,7 +80,7 @@ it('keeps the active member Host when the current device label changes', async (
   });
 });
 
-it('stores an approved Sync Group key only in the group database', async () => {
+it('stores an approved Sync Group key separately from pairing authorization', async () => {
   const group = {
     created_at: '2026-04-22T12:00:00.000Z', created_by_host_name: 'Desktop',
     display_name: 'Daily', group_id: 'group-1', local_host_name: 'Pixel 9',
@@ -103,7 +107,10 @@ it('stores an approved Sync Group key only in the group database', async () => {
     syncGroupMock.load.mockResolvedValue(group);
     syncGroupMock.loadKey.mockResolvedValue('test-secret');
   });
-  capacitorMock.plugin.loadPairingState.mockResolvedValue({ is_paired: false });
+  capacitorMock.plugin.loadPairingState.mockResolvedValue({
+    authorization_id: 'authorization-a5', host_name: 'Pixel 9', host_platform: 'android-capacitor',
+    is_paired: true, paired_at: '2026-04-22T12:00:00.000Z'
+  });
   capacitorMock.plugin.signCompanionSyncRequest.mockResolvedValue({ headers: {
     'X-Authorization-Id': 'authorization-a5', 'X-Nonce': 'nonce',
     'X-Signature': 'signature', 'X-Timestamp': '2026-04-22T12:00:00.000Z'
@@ -125,5 +132,10 @@ it('stores an approved Sync Group key only in the group database', async () => {
   expect(capacitorMock.plugin.bindSyncGroupPeerRoute).not.toHaveBeenCalledWith(expect.objectContaining({
     local_device_id: expect.anything()
   }));
-  expect(capacitorMock.plugin.savePairingCredentials).not.toHaveBeenCalled();
+  expect(capacitorMock.plugin.savePairingCredentials).toHaveBeenCalledWith(expect.objectContaining({
+    authorization_id: 'authorization-a5', credential_secret: 'pairing-credential'
+  }));
+  expect(capacitorMock.plugin.savePairingCredentials).not.toHaveBeenCalledWith(expect.objectContaining({
+    credential_secret: 'test-secret'
+  }));
 });
