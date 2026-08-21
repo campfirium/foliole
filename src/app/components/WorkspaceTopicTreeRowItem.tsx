@@ -55,7 +55,7 @@ export function WorkspaceTopicTreeRowItem(props: {
       {...definedProps({ onContextMenu: props.onContextMenu })}
       {...resolveWorkspaceTopicTreeRowDragProps(
         props.row.node.id,
-        rowModel.isDerivedNode,
+        rowModel.isDragDisabled,
         props.isManualSort,
         props.row.node.kind === 'folder',
         props.drag

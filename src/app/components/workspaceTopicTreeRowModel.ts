@@ -3,6 +3,7 @@ import {
   shouldFadeDismissedRowText
 } from '../../features/nodes/components/nodeIconAppearanceSettings';
 import { resolveNodeTreeRowIconKind, resolveNodeTreeRowIconState } from '../../features/nodes/components/NodeTreeRowIconModel';
+import { canNodeBeMoved } from '../../features/nodes/model/nodeMovementRules';
 import type { NodeTreeRow } from '../../features/nodes/model/nodeTree';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { isFsrsWorkspaceListNode, isVisuallyInactiveWorkspaceListReadingTopic } from '../../features/nodes/model/workspaceListNode';
@@ -39,6 +40,7 @@ export function resolveWorkspaceTopicTreeRowModel(
 
   return {
     isDerivedNode,
+    isDragDisabled: !canNodeBeMoved(node),
     isSelected,
     mutedOpacity: shouldFadeRowText ? getDismissedFadeTextOpacity(leafIconKind) : 1,
     nodeIconKind,
@@ -49,7 +51,7 @@ export function resolveWorkspaceTopicTreeRowModel(
 
 export function resolveWorkspaceTopicTreeRowDragProps(
   nodeId: string,
-  isDerivedNode: boolean,
+  isDragDisabled: boolean,
   isManualSort: boolean,
   isFolderNode: boolean,
   drag: WorkspaceTopicTreeDragController
@@ -62,7 +64,7 @@ export function resolveWorkspaceTopicTreeRowDragProps(
   });
   return {
     dropIntent,
-    isDragDisabled: isDerivedNode,
+    isDragDisabled,
     isDropTarget: dropIntent !== null,
     onDragEnd: drag.onDragEnd,
     onDragEnter: drag.onDragEnterNode,

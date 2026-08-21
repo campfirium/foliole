@@ -2,6 +2,7 @@ import { useMemo, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as R
 
 import { VirtualListSurface, type VirtualListRenderMeta } from '../../../shared/ui';
 import type { ReviewSessionState } from '../../../store/workspaceStore';
+import { canNodeBeMoved } from '../model/nodeMovementRules';
 import type { NodeTreeRow } from '../model/nodeTree';
 import { isHomeNode, isInboxNode, isTrashNode, isVirtualRootNode } from '../model/specialNodes';
 import {
@@ -71,7 +72,7 @@ function renderNodeListRow(
       isCollapsed={props.isTrashViewOpen || rowModel.isHome ? false : props.collapsedNodeIds.has(row.node.id)}
       isDerived={rowModel.isDerivedNode}
       isHighlighted={!props.isTrashViewOpen && props.highlightedNodeId === row.node.id}
-      isDragDisabled={props.isTrashViewOpen || rowModel.isDerivedNode || rowModel.isHome || rowModel.isInbox || rowModel.isTrashRoot || rowModel.isVirtualRoot}
+      isDragDisabled={props.isTrashViewOpen || rowModel.isTrashRoot || !canNodeBeMoved(props.nodesById[row.node.id])}
       isDropTarget={props.drag.dropTargetNodeId === row.node.id}
       isMuted={rowModel.shouldFadeWholeRow}
       mutedOpacity={rowModel.shouldFadeWholeRow ? getDismissedFadeTextOpacity(rowModel.leafIconKind) : 1}
