@@ -1,14 +1,15 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  bind: vi.fn(), clear: vi.fn(), endpoint: vi.fn(), group: vi.fn(), headers: vi.fn(),
-  prepare: vi.fn(), record: vi.fn(), request: vi.fn(), resolveTargets: vi.fn(),
+  bind: vi.fn(), clear: vi.fn(), clearPairing: vi.fn(), endpoint: vi.fn(), group: vi.fn(),
+  headers: vi.fn(), prepare: vi.fn(), record: vi.fn(), request: vi.fn(), resolveTargets: vi.fn(),
   stop: vi.fn(), uuid: vi.fn(() => 'departure-1')
 }));
 
 vi.mock('../../companionWorkspacePairing', () => ({ createSignedRequestHeaders: mocks.headers }));
 vi.mock('../../companionWorkspaceRuntimeRepository', () => ({
   FolioleCompanionSync: {
+    clearPairingCredentials: mocks.clearPairing,
     clearSyncGroupCredentials: mocks.clear,
     desktopHttpRequest: mocks.request,
     stopSyncGroupProvider: mocks.stop
@@ -52,6 +53,7 @@ beforeEach(() => {
   mocks.record.mockResolvedValue(undefined);
   mocks.stop.mockResolvedValue(undefined);
   mocks.clear.mockResolvedValue(undefined);
+  mocks.clearPairing.mockResolvedValue(undefined);
 });
 
 it('records a local departure only after another Device accepts it', async () => {
@@ -73,6 +75,7 @@ it('records a local departure only after another Device accepts it', async () =>
   expect(requestOrder).toBeLessThan(recordOrder);
   expect(mocks.stop).toHaveBeenCalledOnce();
   expect(mocks.clear).toHaveBeenCalledOnce();
+  expect(mocks.clearPairing).toHaveBeenCalledOnce();
 });
 
 it('prepares Leave without starting a missing or paused provider session', async () => {
@@ -91,6 +94,7 @@ it('keeps local membership and credentials when no Device accepts the departure'
   await expect(leaveCompanionSyncGroup()).rejects.toThrow('sync_group_departure_http_503');
   expect(mocks.record).not.toHaveBeenCalled();
   expect(mocks.clear).not.toHaveBeenCalled();
+  expect(mocks.clearPairing).not.toHaveBeenCalled();
 });
 
 it('routes Leave to an active identity-bound peer when the stored endpoint has departed', async () => {
@@ -124,6 +128,7 @@ it('keeps local membership when no active identity-bound peer is reachable', asy
   expect(mocks.request).not.toHaveBeenCalled();
   expect(mocks.record).not.toHaveBeenCalled();
   expect(mocks.clear).not.toHaveBeenCalled();
+  expect(mocks.clearPairing).not.toHaveBeenCalled();
 });
 
 it('clears the final local membership without requiring a reachable Device', async () => {

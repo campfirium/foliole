@@ -85,6 +85,7 @@ export async function leaveCompanionSyncGroup() {
   }
   await FolioleCompanionSync.stopSyncGroupProvider();
   await FolioleCompanionSync.clearSyncGroupCredentials();
+  await FolioleCompanionSync.clearPairingCredentials();
   await recordLocalCompanionSyncGroupDeparture({
     authorizationId: departure.authorization_id,
     hostName: departure.host_name,
