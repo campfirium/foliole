@@ -16,7 +16,7 @@ import {
   openPairSyncDesktopSession, waitForUniquePairRequest
 } from './windows-pair-sync-desktop-session.mjs';
 import {
-  reconcileAuthorizedStalePairing, validateOwnedDesktopPreflight
+  inspectAuthorizedDesktopPreflight, validateOwnedDesktopPreflight
 } from './windows-pair-sync-desktop-readiness.mjs';
 import { cleanupPairSyncRecoveryTestPackage, closePairSyncRecoveryTransport, openPairSyncRecoveryTransport } from './windows-a5-pair-sync-recovery-transport.mjs';
 
@@ -78,8 +78,8 @@ async function desktopStep(stage, action) {
 }
 
 export async function inspectWindowsPairSyncRecoveryDesktop({
-  deviceFingerprint, env, execute, existingPairing = false, openDesktopSession = openPairSyncDesktopSession,
-  paths, remotePeerFingerprint
+  desktopAuthorizationFingerprint, env, execute, existingPairing = false,
+  hostName, openDesktopSession = openPairSyncDesktopSession, paths
 }) {
   const output = [];
   await clientControl(execute, paths, env, 'stop');
@@ -90,9 +90,9 @@ export async function inspectWindowsPairSyncRecoveryDesktop({
     session = await desktopStep('desktop-session-open', () => openDesktopSession({
       env, repoRoot: paths.repoRoot
     }));
-    overview = await reconcileAuthorizedStalePairing(
+    overview = await inspectAuthorizedDesktopPreflight(
       await desktopStep('desktop-pairing-load', () => session.load()),
-      session, deviceFingerprint, remotePeerFingerprint, existingPairing
+      session, hostName, desktopAuthorizationFingerprint, existingPairing
     );
   } catch (error) { primaryError = error; }
   try { await session?.close(); }
@@ -109,16 +109,17 @@ function pairSyncAdbRunner(execute, paths, env, adbPort, serial) {
 }
 
 export async function runWindowsA5PairSyncRecovery({
-  adbPort, buildIdentity, deviceFingerprint, env, evidenceRoot, execute, fsApi = fs,
+  adbPort, buildIdentity, env, evidenceRoot, execute, fsApi = fs, hostName,
   credentialRepairRequired = false, existingPairing = false, openDesktopSession = openPairSyncDesktopSession,
   desktopControl = clientControl, openTransport = openPairSyncRecoveryTransport,
   closeTransport = closePairSyncRecoveryTransport,
   approvalMembershipAction,
   recoveryEvidenceGoal = 'initial-sync-completed',
   instrumentationModeArgs = pairSyncRecoveryModeArgs,
-  pairedDeviceFingerprint = deviceFingerprint, pairRequestFingerprint = deviceFingerprint,
+  pairedAuthorizationFingerprint = null, pairRequestIdentity = hostName,
+  waitForPairRequest = waitForUniquePairRequest,
   validateDesktop = validateOwnedDesktopPreflight, paths,
-  remotePeerFingerprint, serial
+  desktopAuthorizationFingerprint, serial
 }) {
   const artifacts = pairSyncRecoveryArtifactPaths(evidenceRoot);
   const builtApks = { main: apk(fsApi, paths.repoRoot, MAIN_APK), test: apk(fsApi, paths.repoRoot, TEST_APK) };
@@ -141,7 +142,7 @@ export async function runWindowsA5PairSyncRecovery({
     }));
     const enabled = await desktopStep('desktop-sync-enable', () => session.enable());
     const desktopReadiness = await desktopStep('desktop-runtime-ownership', () => validateDesktop(
-      enabled, session, deviceFingerprint, remotePeerFingerprint, existingPairing,
+      enabled, session, hostName, desktopAuthorizationFingerprint, existingPairing,
       credentialRepairRequired
     ));
     const rePairRequired = desktopReadiness.rePairRequired === true;
@@ -156,7 +157,7 @@ export async function runWindowsA5PairSyncRecovery({
     ], options(env, 'pair_sync_instrumentation_timeout', recoveryWindow.instrumentationTimeoutMs), 'pair-sync-instrumentation');
     if (pairSyncRecoveryRequiresApproval(existingPairing, rePairRequired)) await desktopStep('desktop-pair-request', async () => {
       const pending = await recoveryWindow.waitForPairRequest(
-        waitForUniquePairRequest(session, pairRequestFingerprint, recoveryWindow), instrumentationPromise
+        waitForPairRequest(session, pairRequestIdentity, recoveryWindow), instrumentationPromise
       );
       await recoveryEvidence.approve(session, pending, approvalMembershipAction);
     });
@@ -170,15 +171,17 @@ export async function runWindowsA5PairSyncRecovery({
       ['-P', adbPort, '-s', serial, 'shell', 'am', 'start', '-W', '-n', PAIR_SYNC_RECOVERY_MAIN_COMPONENT],
       options(env, 'pair_sync_restart_timeout', 60_000), 'pair-sync-restart');
     const android = await postPairSyncRecoveryReadiness({
-      adbPort, deviceFingerprint, env, paths, quiesceProvider: true, serial,
+      adbPort, env, paths, quiesceProvider: true, serial,
       run: (command, args, commandOptions, stage) => checked(
         execute, command, args, commandOptions, stage
       )
     });
     output.push(android.output);
     const desktop = session.sanitize(await desktopStep('desktop-pairing-result', () => session.load()));
-    if (pairedDeviceFingerprint && !desktop.pairedDeviceFingerprints.includes(pairedDeviceFingerprint)) {
-      throw pairSyncRecoveryFailure('Windows pairing overview does not contain the fixed A5', 'desktop-pairing-result');
+    const expectedAuthorization = pairedAuthorizationFingerprint
+      ?? android.readiness.localMemberAuthorizationFingerprint;
+    if (!desktop.pairedAuthorizationFingerprints.includes(expectedAuthorization)) {
+      throw pairSyncRecoveryFailure('Desktop pairing overview does not contain the A5 authorization', 'desktop-pairing-result');
     }
     proof = { android: android.readiness, desktop, receipt };
   } catch (error) {
@@ -216,7 +219,8 @@ export async function runWindowsA5PairSyncRecovery({
     action: 'pair-sync-recover', artifacts: Object.fromEntries(
       PAIR_SYNC_RECOVERY_EVIDENCE_FILES.slice(1).map((name) => [name, name])
     ), buildIdentity, cleanup: { desktopRuntimeClosed: true, testPackageRemoved: true },
-    deviceIdentityFingerprint: deviceFingerprint, resultStatus: 'success', schemaVersion: 1,
+    hostName, localAuthorizationFingerprint: proof.android.localMemberAuthorizationFingerprint,
+    resultStatus: 'success', schemaVersion: 1,
     serialFingerprint: createHash('sha256').update(serial).digest('hex').slice(0, 16)
   };
   writeJson(fsApi, artifacts['pair-sync-recovery-manifest.json'], manifest);

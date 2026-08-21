@@ -3,10 +3,9 @@ import type { CompanionWorkspacePairPayload } from '../../lib/platform/nativeCom
 import type { SyncGroupLibraryFacts } from '../../lib/platform/syncGroupContract.js';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 import { openDatabaseConnection } from '../database/connection.js';
-import { loadOrCreateDesktopDeviceId } from '../database/deviceIdentity.js';
 import { joinDesktopSyncGroup, loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
-import { resolveDesktopDeviceName, resolveDesktopHostName } from './companionLanPayloads.js';
+import { resolveDesktopHostName } from './companionLanPayloads.js';
 import { refreshCompanionMdnsAdvertisement } from './companionMdnsAdvertisement.js';
 import { loadPairedSyncGroupPeers, savePairedSyncGroupPeer } from './companionPairingStore.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
@@ -42,10 +41,8 @@ export async function requestDesktopSyncGroupJoin(endpointUrl: string) {
     && existingGroup.group_id === candidate.group_id;
   if (existingGroup && !isActiveSameGroup) throw new Error('sync_group_identity_mismatch');
   const key = await createDesktopSyncGroupPairingKey();
-  const deviceId = loadOrCreateDesktopDeviceId();
   const payload = await requestJson(`${endpointUrl}/companion/pair-requests`, {
     body: JSON.stringify({
-      device_id: deviceId, device_kind: process.platform, device_name: resolveDesktopDeviceName(),
       host_name: resolveDesktopHostName(), host_platform: process.platform,
       group_id: candidate.group_id, group_tag: candidate.group_tag, library_facts: facts,
       pairing_public_key: key.publicKey,
@@ -83,8 +80,7 @@ async function completeDesktopSyncGroupJoinOnce() {
     pending.key.privateKey, payload.encrypted_credential_secret
   );
   if (!payload.provider_encrypted_credential_secret || !payload.provider_authorization_id ||
-      !payload.provider_device_id ||
-      !payload.provider_device_kind || !payload.provider_device_name) {
+      !payload.provider_host_name || !payload.provider_host_platform) {
     throw new Error('sync_group_provider_pairing_invalid');
   }
   const providerSecret = await decryptDesktopSyncGroupPairingSecret(
@@ -101,18 +97,17 @@ async function completeDesktopSyncGroupJoinOnce() {
   const peer = savePairedSyncGroupPeer({
     endpoint_url: pending.candidate.endpoint_url, group_id: pending.candidate.group_id,
     local_authorization_id: payload.authorization_id,
-    local_device_id: payload.device_id, local_host_name: localHostName,
+    local_host_name: localHostName,
     peer_authorization_id: payload.provider_authorization_id,
-    peer_device_id: pending.candidate.provider_device_id,
-    peer_device_kind: pending.candidate.provider_device_kind, peer_device_name: pending.candidate.provider_device_name,
-    peer_host_name: payload.provider_host_name ?? pending.candidate.provider_device_name,
-    peer_host_platform: payload.provider_host_platform ?? pending.candidate.provider_device_kind,
+    peer_host_name: payload.provider_host_name,
+    peer_host_platform: payload.provider_host_platform,
     timeline_id: pending.candidate.timeline_id
   });
   saveDesktopSyncGroupPendingJoin(null);
   await continueDesktopSyncGroupSync(peer).catch((error) => {
     console.info('[sync-group] initial sync waiting for provider', {
-      error: error instanceof Error ? error.message : String(error), peerDeviceId: peer.peer_device_id
+      error: error instanceof Error ? error.message : String(error),
+      peerAuthorizationId: peer.peer_authorization_id
     });
   });
   return loadDesktopSyncGroup();
@@ -128,11 +123,11 @@ export async function continueDesktopSyncGroupSync(peer?: ReturnType<typeof save
 }
 
 async function continuePeerSync(target: ReturnType<typeof savePairedSyncGroupPeer>) {
-  const cursor = loadReceiveCursor(target.peer_device_id);
+  const cursor = loadReceiveCursor(target.peer_authorization_id);
   const nextCursor = await runPeerSyncStage('sync_pack', () => downloadAndApply(target, cursor));
-  saveReceiveCursor(target.peer_device_id, nextCursor);
+  saveReceiveCursor(target.peer_authorization_id, nextCursor);
   await reportDesktopSyncGroupCursorCommitted({
-    cursor: nextCursor, peerDeviceId: target.peer_device_id
+    cursor: nextCursor, peerAuthorizationId: target.peer_authorization_id
   });
   await runPeerSyncStage('resources', () => downloadDesktopSyncGroupResources(target));
   const complete = resourcesComplete();
@@ -155,7 +150,7 @@ async function downloadAndApply(peer: ReturnType<typeof savePairedSyncGroupPeer>
     return await requestAndApply(peer, after);
   } catch (error) {
     if (after === 0 || !requiresCursorReenumeration(error)) throw error;
-    saveReceiveCursor(peer.peer_device_id, 0);
+    saveReceiveCursor(peer.peer_authorization_id, 0);
     return requestAndApply(peer, 0);
   }
 }
@@ -173,14 +168,14 @@ function requiresCursorReenumeration(error: unknown): boolean {
   return requiresCursorReenumeration(error.cause);
 }
 
-function loadReceiveCursor(peerDeviceId: string) {
-  const value = getPeerCursor(openDatabaseConnection().driver, peerDeviceId, 'state');
+function loadReceiveCursor(peerAuthorizationId: string) {
+  const value = getPeerCursor(openDatabaseConnection().driver, peerAuthorizationId, 'state');
   const cursor = Number.parseInt(value ?? '0', 10);
   return Number.isSafeInteger(cursor) && cursor >= 0 ? cursor : 0;
 }
 
-function saveReceiveCursor(peerDeviceId: string, cursor: number) {
-  setPeerCursor(openDatabaseConnection().driver, peerDeviceId, 'state', String(cursor), new Date().toISOString());
+function saveReceiveCursor(peerAuthorizationId: string, cursor: number) {
+  setPeerCursor(openDatabaseConnection().driver, peerAuthorizationId, 'state', String(cursor), new Date().toISOString());
 }
 
 function resourcesComplete() {

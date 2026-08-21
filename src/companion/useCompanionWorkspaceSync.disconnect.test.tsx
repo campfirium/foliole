@@ -66,9 +66,6 @@ beforeEach(() => {
   platformMock.loadCompanionWorkspaceSyncState.mockResolvedValue(syncState());
   platformMock.saveCompanionWorkspaceSyncEndpoint.mockResolvedValue({ ...syncState(), endpoint_url: null });
   pairingMock.refreshPairingState.mockResolvedValue({
-    device_id: null,
-    device_kind: null,
-    device_name: null,
     is_paired: false,
     paired_at: null
   });

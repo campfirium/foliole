@@ -28,9 +28,6 @@ type PairingHookArgs = {
 };
 
 const EMPTY_PAIRING_STATE: NativeCompanionPairingState = {
-  device_id: null,
-  device_kind: null,
-  device_name: null,
   is_paired: false,
   paired_at: null
 };

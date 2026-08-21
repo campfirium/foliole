@@ -98,7 +98,7 @@ async function handlePostRequest(
     appVersion: string;
     onPairRequestCreated: (() => void) | null;
     peerId: string;
-    updatePairingStatus: (pairing: { paired_device_count: number; pending_pair_request_count: number }) => void;
+    updatePairingStatus: (pairing: { paired_authorization_count: number; pending_pair_request_count: number }) => void;
   }
 ) {
   if (parsedRequestUrl.pathname === PAIR_REQUESTS_ENDPOINT_PATH) {
@@ -169,7 +169,7 @@ export function createLanWorkspaceSyncRequestHandler(args: {
   getSyncStatus?: () => Parameters<typeof buildCompanionSyncDiagnostics>[0]['serverStatus'];
   onPairRequestCreated: (() => void) | null;
   peerId: string;
-  updatePairingStatus: (pairing: { paired_device_count: number; pending_pair_request_count: number }) => void;
+  updatePairingStatus: (pairing: { paired_authorization_count: number; pending_pair_request_count: number }) => void;
 }) {
   return async (request: http.IncomingMessage, response: http.ServerResponse) => {
     try {
@@ -179,7 +179,7 @@ export function createLanWorkspaceSyncRequestHandler(args: {
       return;
     }
     if (request.method === 'GET' && parsedRequestUrl.pathname === DISCOVERY_ENDPOINT_PATH) {
-      const discovery = await loadCompanionLanDiscovery(args.appVersion, args.peerId);
+      const discovery = await loadCompanionLanDiscovery(args.appVersion);
       writeJson(request, response, discovery ? 200 : 404, discovery ?? { error: 'sync_group_not_available' });
       return;
     }

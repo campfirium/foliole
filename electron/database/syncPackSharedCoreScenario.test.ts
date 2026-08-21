@@ -76,7 +76,7 @@ async function buildSourceSyncPacks() {
   const initial = path.join(tempRoot, 'desktop-pack-initial.syncpack');
   await buildDesktopSyncPack({
     createdAt: '2026-05-04T06:00:00.000Z',
-    fromDeviceId: 'desktop-source',
+    fromPeerId: 'authorization-desktop-source',
     fromStateSeq: 0,
     outputPath: initial,
     packId: 'desktop-pack-1',
@@ -86,7 +86,7 @@ async function buildSourceSyncPacks() {
   const modified = path.join(tempRoot, 'desktop-pack-modified.syncpack');
   await buildDesktopSyncPack({
     createdAt: '2026-05-04T06:05:00.000Z',
-    fromDeviceId: 'desktop-source',
+    fromPeerId: 'authorization-desktop-source',
     fromStateSeq: 1,
     outputPath: modified,
     packId: 'desktop-pack-2',

@@ -127,7 +127,7 @@ describe('CompanionSyncPanel discovery list', () => {
         {
           appVersion: '37.10.3',
           compatibility,
-          desktopDeviceName: 'Foliole Desktop on ZEPHU-PC',
+          desktopHostName: 'Foliole Desktop on ZEPHU-PC',
           desktopName: 'Foliole Desktop',
           desktopPlatform: 'Windows',
           endpointUrl: 'http://192.168.1.8:38641',
@@ -162,7 +162,7 @@ describe('CompanionSyncPanel discovery list', () => {
         {
           appVersion: '37.10.3',
           compatibility,
-          desktopDeviceName: 'Foliole Desktop on V',
+          desktopHostName: 'Foliole Desktop on V',
           desktopName: 'Foliole Desktop',
           desktopPlatform: 'Windows',
           endpointUrl: 'http://192.168.1.8:38641',
@@ -188,7 +188,7 @@ describe('CompanionSyncPanel multiple discovery list', () => {
         {
           appVersion: '37.10.3',
           compatibility,
-          desktopDeviceName: 'Foliole Desktop on V',
+          desktopHostName: 'Foliole Desktop on V',
           desktopName: 'Foliole Desktop',
           desktopPlatform: 'Windows',
           endpointUrl: 'http://192.168.1.8:38641',
@@ -197,7 +197,7 @@ describe('CompanionSyncPanel multiple discovery list', () => {
         {
           appVersion: '37.10.3',
           compatibility,
-          desktopDeviceName: 'Foliole Desktop on Studio',
+          desktopHostName: 'Foliole Desktop on Studio',
           desktopName: 'Foliole Desktop',
           desktopPlatform: 'macOS',
           endpointUrl: 'http://192.168.1.12:38641',

@@ -16,7 +16,7 @@ const execFileAsync = promisify(execFile);
 const PAIRING_PREFS = 'shared_prefs/foliole_companion_pairing.xml';
 const SYNC_GROUP_OUTBOUND_PREFS = 'shared_prefs/foliole_sync_group_outbound_peers.xml';
 const EMPTY_SHA256 = createHash('sha256').update('').digest('hex');
-const PAIRING_REQUIRED_KEYS = ['device_id', 'device_secret', 'device_secret_iv'];
+const PAIRING_REQUIRED_KEYS = ['authorization_id', 'credential_secret', 'credential_secret_iv'];
 
 function quoteAdbShellScript(script) {
   return JSON.stringify(script);
@@ -42,7 +42,8 @@ export async function inspectPairingPreferences(options, run = execFileAsync) {
     ], { encoding: 'utf8', timeout: 30_000 });
   } catch (error) {
     if (error.code === 1) return {
-      pairingCredentialsPresent: false, remotePeerFingerprint: null, storedDeviceFingerprint: null
+      pairingCredentialsPresent: false, pairingPeerAuthorizationFingerprint: null,
+      storedAuthorizationFingerprint: null
     };
     throw error;
   }
@@ -60,15 +61,17 @@ export async function inspectPairingPreferences(options, run = execFileAsync) {
   }));
   if (requiredKeys.every((present) => !present)) {
     return {
-      pairingCredentialsPresent: false, remotePeerFingerprint: null, storedDeviceFingerprint: null
+      pairingCredentialsPresent: false, pairingPeerAuthorizationFingerprint: null,
+      storedAuthorizationFingerprint: null
     };
   }
   if (!requiredKeys.every(Boolean)) {
     return {
-      pairingCredentialsPresent: true, remotePeerFingerprint: null, storedDeviceFingerprint: null
+      pairingCredentialsPresent: true, pairingPeerAuthorizationFingerprint: null,
+      storedAuthorizationFingerprint: null
     };
   }
-  const hashes = await Promise.all(['device_id', 'remote_peer_id'].map(async (key) => {
+  const hashes = await Promise.all(['authorization_id', 'remote_peer_id'].map(async (key) => {
     const script = quoteAdbShellScript(
       `sed -n 's@.*<string name="${key}">\\([^<]*\\)</string>.*@\\1@p' ${PAIRING_PREFS} | tr -d '\\n' | sha256sum`
     );
@@ -78,12 +81,12 @@ export async function inspectPairingPreferences(options, run = execFileAsync) {
     const hash = /^([0-9a-f]{64})\b/mu.exec(result.stdout)?.[1] ?? null;
     return hash && hash !== EMPTY_SHA256 ? hash.slice(0, 16) : null;
   }));
-  const [storedDeviceFingerprint, remotePeerFingerprint] = hashes;
+  const [storedAuthorizationFingerprint, pairingPeerAuthorizationFingerprint] = hashes;
   return {
     pairingCredentialsPresent: true,
     pairingPeerConflict: false,
-    remotePeerFingerprint,
-    storedDeviceFingerprint
+    pairingPeerAuthorizationFingerprint,
+    storedAuthorizationFingerprint
   };
 }
 
@@ -126,8 +129,8 @@ export async function runPairSyncRecoveryReadiness(options) {
     ?.pendingDeliveryCountsByPeerFingerprint?.[syncGroup.syncGroupRemotePeerFingerprint] ?? 0;
   return {
     ...pairSyncRecoveryReadiness(
-      snapshot, pairing.pairingCredentialsPresent, pairing.remotePeerFingerprint,
-      pairing.pairingPeerConflict, pairing.storedDeviceFingerprint,
+      snapshot, pairing.pairingCredentialsPresent, pairing.pairingPeerAuthorizationFingerprint,
+      pairing.pairingPeerConflict, pairing.storedAuthorizationFingerprint,
       snapshot.database?.inspection?.workgroupKeyPresent === true
     ),
     ...syncGroup,

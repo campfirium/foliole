@@ -3,9 +3,6 @@ import type { SyncProtocolCompatibilityResult, SyncProtocolDescriptor } from '..
 export interface PendingCompanionPairRequest {
   compatibility: SyncProtocolCompatibilityResult;
   client_address: string | null;
-  device_id: string;
-  device_kind: string;
-  device_name: string;
   host_name: string;
   host_platform: string;
   expires_at: string;
@@ -22,7 +19,6 @@ export interface PendingCompanionPairRequest {
 
 export interface CompletedCompanionPairRequest {
   authorization_id: string;
-  device_id: string;
   host_name: string;
   credential_secret: string;
   paired_at: string;
@@ -37,9 +33,6 @@ export function toPublicPairRequest(request: StoredCompanionPairRequest): Pendin
   return {
     client_address: request.client_address,
     compatibility: request.compatibility,
-    device_id: request.device_id,
-    device_kind: request.device_kind,
-    device_name: request.device_name,
     host_name: request.host_name,
     host_platform: request.host_platform,
     expires_at: request.expires_at,

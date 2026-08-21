@@ -30,7 +30,7 @@ function pruneExpiredRequests(nowMs: number) {
 }
 
 function resolveRateLimitKey(args: { clientAddress?: string | null; hostName: string }) {
-  return args.clientAddress?.trim() || `device:${args.hostName.trim() || 'unknown'}`;
+  return args.clientAddress?.trim() || `host:${args.hostName.trim() || 'unknown'}`;
 }
 
 function reserveRateLimitSlot(args: { clientAddress?: string | null; hostName: string; nowMs: number }) {
@@ -68,9 +68,6 @@ function createStoredPairRequest(
   return {
     client_address: args.clientAddress?.trim() || null,
     compatibility: args.compatibility,
-    device_id: args.deviceId.trim(),
-    device_kind: args.deviceKind.trim(),
-    device_name: args.deviceName.trim(),
     host_name: args.hostName.trim(),
     host_platform: args.hostPlatform.trim(),
     expires_at: new Date(expiresAtMs).toISOString(),
@@ -89,9 +86,6 @@ function createStoredPairRequest(
 export function createCompanionPairRequest(args: {
   clientAddress?: string | null;
   compatibility: SyncProtocolCompatibilityResult;
-  deviceId: string;
-  deviceKind: string;
-  deviceName: string;
   hostName: string;
   hostPlatform: string;
   nowMs?: number;

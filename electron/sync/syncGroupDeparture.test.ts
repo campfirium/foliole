@@ -3,7 +3,6 @@ import { beforeEach, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   headers: vi.fn(() => ({ 'X-Signature': 'signed' })),
   loadHostName: vi.fn(() => 'Host A'),
-  loadDeviceId: vi.fn(() => 'device-a'),
   loadGroup: vi.fn(),
   loadPeers: vi.fn(),
   recordDeparture: vi.fn(),
@@ -11,7 +10,6 @@ const mocks = vi.hoisted(() => ({
   post: vi.fn()
 }));
 
-vi.mock('../database/deviceIdentity.js', () => ({ loadOrCreateDesktopDeviceId: mocks.loadDeviceId }));
 vi.mock('../database/hostProfile.js', () => ({ loadOrCreateDesktopHostName: mocks.loadHostName }));
 vi.mock('../database/syncGroupStore.js', () => ({
   loadDesktopSyncGroup: mocks.loadGroup,
@@ -41,39 +39,39 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.loadGroup.mockReturnValue(GROUP);
   mocks.loadPeers.mockReturnValue([{
-    endpoint_url: 'http://device-b', local_device_id: 'device-a',
-    peer_device_id: 'device-b', peer_host_name: 'Host B'
+    endpoint_url: 'http://host-b', local_authorization_id: 'authorization-a-to-b',
+    peer_authorization_id: 'authorization-b', peer_host_name: 'Host B'
   }, {
-    endpoint_url: 'http://device-c', local_device_id: 'device-a',
-    peer_device_id: 'device-c', peer_host_name: 'Host C'
+    endpoint_url: 'http://host-c', local_authorization_id: 'authorization-a-to-c',
+    peer_authorization_id: 'authorization-c', peer_host_name: 'Host C'
   }]);
   mocks.post.mockResolvedValue({ status: 'accepted' });
 });
 
-it('accepts only a self-authorized departure from the authenticated Device', () => {
+it('accepts only a departure attributed to the authenticated authorization Host', () => {
   const payload = JSON.stringify({
     authorization_id: 'leave-b', authorized_by_host_name: 'Host B', host_name: 'Host B',
     group_id: 'group-1', left_at: '2026-08-09T02:00:00Z'
   });
 
-  expect(acceptSyncGroupDeparture(payload, 'device-b')).toEqual({ status: 'accepted' });
+  expect(acceptSyncGroupDeparture(payload, 'authorization-b')).toEqual({ status: 'accepted' });
   expect(mocks.recordDeparture).toHaveBeenCalledWith(expect.objectContaining({
     authorizedByHostName: 'Host B', hostName: 'Host B', groupId: 'group-1'
   }));
-  expect(mocks.removeCredentials).toHaveBeenCalledWith('group-1', 'device-b');
+  expect(mocks.removeCredentials).toHaveBeenCalledWith('group-1', 'authorization-b');
 });
 
-it('accepts removal of another Device when attributed to the authenticated member', () => {
+it('accepts removal of another Host when attributed to the authenticated member', () => {
   const payload = JSON.stringify({
     authorization_id: 'leave-c', authorized_by_host_name: 'Host B', host_name: 'Host C',
     group_id: 'group-1', left_at: '2026-08-09T02:00:00Z'
   });
 
-  expect(acceptSyncGroupDeparture(payload, 'device-b')).toEqual({ status: 'accepted' });
+  expect(acceptSyncGroupDeparture(payload, 'authorization-b')).toEqual({ status: 'accepted' });
   expect(mocks.recordDeparture).toHaveBeenCalledWith(expect.objectContaining({
     authorizedByHostName: 'Host B', hostName: 'Host C'
   }));
-  expect(mocks.removeCredentials).toHaveBeenCalledWith('group-1', 'device-c');
+  expect(mocks.removeCredentials).toHaveBeenCalledWith('group-1', 'authorization-c');
 });
 
 it('records and revokes a remote member even when no peer is currently reachable', async () => {
@@ -82,10 +80,10 @@ it('records and revokes a remote member even when no peer is currently reachable
   expect(mocks.recordDeparture).toHaveBeenCalledWith(expect.objectContaining({
     authorizedByHostName: 'Host A', hostName: 'Host B'
   }));
-  expect(mocks.removeCredentials).toHaveBeenCalledWith('group-1', 'device-b');
+  expect(mocks.removeCredentials).toHaveBeenCalledWith('group-1', 'authorization-b');
 });
 
-it('delivers a self-authorized fact before locally unbinding the departing Device', async () => {
+it('delivers a self-authorized fact before locally unbinding the departing Host routes', async () => {
   await leaveDesktopSyncGroup();
 
   const sent = JSON.parse(mocks.post.mock.calls[0]?.[0]?.body as string) as Record<string, unknown>;
@@ -93,7 +91,7 @@ it('delivers a self-authorized fact before locally unbinding the departing Devic
   expect(mocks.post.mock.invocationCallOrder[0]!)
     .toBeLessThan(mocks.recordDeparture.mock.invocationCallOrder[0]!);
   expect(mocks.recordDeparture).toHaveBeenCalledWith(expect.objectContaining({ local: true }));
-  expect(mocks.removeCredentials).toHaveBeenCalledWith('group-1', 'device-b');
+  expect(mocks.removeCredentials).toHaveBeenCalledWith('group-1', 'authorization-b');
 });
 
 it('lets the last active member Leave without a reachable peer', async () => {

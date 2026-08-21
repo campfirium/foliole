@@ -1,5 +1,4 @@
 import { openDatabaseConnection } from './connection.js';
-import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
 import {
   buildDesktopSyncPackFromDriver,
   type BuildDesktopSyncPackInput
@@ -13,6 +12,6 @@ export async function buildDesktopSyncPack(input: BuildDesktopSyncPackInput) {
   return buildDesktopSyncPackFromDriver({
     ...input,
     createdAt,
-    fromDeviceId: input.fromDeviceId ?? loadOrCreateDesktopDeviceId(createdAt)
+    fromPeerId: input.fromPeerId
   }, openDatabaseConnection().driver);
 }

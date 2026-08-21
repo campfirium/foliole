@@ -41,16 +41,15 @@ function ForegroundSyncLifecycleShell({ bootstrap }: { bootstrap: NativeCompanio
 async function prepareAcceptancePairing(bootstrap: NativeCompanionBootstrapState, endpoint: string) {
   const pairing = await loadCompanionPairingState();
   if (!pairing.is_paired) {
-    const deviceName = bootstrap.device_name ?? 'Acceptance iPhone';
+    const hostName = bootstrap.host_name ?? 'Acceptance iPhone';
     const pending = await requestCompanionPairing({
-      deviceId: bootstrap.device_id,
-      deviceKind: 'ios-capacitor',
-      deviceName,
+      hostName,
+      hostPlatform: 'ios-capacitor',
       endpointUrl: endpoint
     });
     await pairCompanionWithDesktop({
-      deviceKind: 'ios-capacitor',
-      deviceName,
+      hostName,
+      hostPlatform: 'ios-capacitor',
       endpointUrl: endpoint,
       pairRequestId: pending.pair_request_id
     });

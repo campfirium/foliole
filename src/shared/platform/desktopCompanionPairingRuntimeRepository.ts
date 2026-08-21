@@ -1,6 +1,6 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type {
-  DesktopCompanionPairedDevicePayload,
+  DesktopCompanionAuthorizationPayload,
   DesktopCompanionPairingOverviewPayload,
   DesktopCompanionPairRequestPayload
 } from '../../../lib/platform/nativeCompanionSyncContract';
@@ -12,24 +12,24 @@ import { normalizeSyncGroup } from './desktop/syncGroupNormalization';
 import { getElectronAPI } from './electronApi';
 import { getRuntimeInvoke } from './runtimeInvoke';
 
-function normalizePairedDevice(value: unknown): DesktopCompanionPairedDevicePayload | null {
+function normalizePairedAuthorization(value: unknown): DesktopCompanionAuthorizationPayload | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return null;
   }
   const raw = value as Record<string, unknown>;
   if (
-    typeof raw.device_id !== 'string' ||
-    typeof raw.device_kind !== 'string' ||
-    typeof raw.device_name !== 'string' ||
+    typeof raw.authorization_id !== 'string' ||
+    typeof raw.host_name !== 'string' ||
+    typeof raw.host_platform !== 'string' ||
     typeof raw.paired_at !== 'string'
   ) {
     return null;
   }
   return {
     client_address: typeof raw.client_address === 'string' && raw.client_address.trim() ? raw.client_address : null,
-    device_id: raw.device_id,
-    device_kind: raw.device_kind,
-    device_name: raw.device_name,
+    authorization_id: raw.authorization_id,
+    host_name: raw.host_name,
+    host_platform: raw.host_platform,
     paired_at: raw.paired_at
   };
 }
@@ -40,9 +40,6 @@ function normalizePendingRequest(value: unknown): DesktopCompanionPairRequestPay
   }
   const raw = value as Record<string, unknown>;
   if (
-    typeof raw.device_id !== 'string' ||
-    typeof raw.device_kind !== 'string' ||
-    typeof raw.device_name !== 'string' ||
     typeof raw.host_name !== 'string' ||
     typeof raw.host_platform !== 'string' ||
     typeof raw.expires_at !== 'string' ||
@@ -56,9 +53,6 @@ function normalizePendingRequest(value: unknown): DesktopCompanionPairRequestPay
   }
   return {
     client_address: typeof raw.client_address === 'string' && raw.client_address.trim() ? raw.client_address : null,
-    device_id: raw.device_id,
-    device_kind: raw.device_kind,
-    device_name: raw.device_name,
     host_name: raw.host_name,
     host_platform: raw.host_platform,
     expires_at: raw.expires_at,
@@ -74,7 +68,7 @@ function normalizePairingOverview(value: unknown): DesktopCompanionPairingOvervi
       current_host: null,
       join_candidates: [],
       join_request: null,
-      paired_devices: [],
+      paired_authorizations: [],
       pending_requests: [],
       server_status: normalizeServerStatus(null),
       sync_group: null,
@@ -88,10 +82,10 @@ function normalizePairingOverview(value: unknown): DesktopCompanionPairingOvervi
     current_host: normalizePairingHost(raw.current_host),
     join_candidates: normalizeJoinCandidates(raw.join_candidates),
     join_request: normalizeJoinRequest(raw.join_request),
-    paired_devices: Array.isArray(raw.paired_devices)
-      ? raw.paired_devices
-          .map((entry) => normalizePairedDevice(entry))
-          .filter((entry): entry is DesktopCompanionPairedDevicePayload => entry !== null)
+    paired_authorizations: Array.isArray(raw.paired_authorizations)
+      ? raw.paired_authorizations
+          .map((entry) => normalizePairedAuthorization(entry))
+          .filter((entry): entry is DesktopCompanionAuthorizationPayload => entry !== null)
       : [],
     pending_requests: Array.isArray(raw.pending_requests)
       ? raw.pending_requests
@@ -119,8 +113,6 @@ export async function invokeDesktopCompanionPairingCommand<
     | typeof NATIVE_COMMANDS.disableCompanionSync
     | typeof NATIVE_COMMANDS.pauseCompanionSync
     | typeof NATIVE_COMMANDS.resumeCompanionSync
-    | typeof NATIVE_COMMANDS.clearCompanionPairedDevices
-    | typeof NATIVE_COMMANDS.removeCompanionPairedDevice
     | typeof NATIVE_COMMANDS.approveCompanionPairRequest
     | typeof NATIVE_COMMANDS.rejectCompanionPairRequest
 >(
@@ -160,16 +152,6 @@ export function requestDesktopSyncGroupJoin(endpointUrl: string) {
 
 export function completeDesktopSyncGroupJoin() {
   return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.completeSyncGroupJoin);
-}
-
-export function clearDesktopCompanionPairedDevices() {
-  return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.clearCompanionPairedDevices);
-}
-
-export function removeDesktopCompanionPairedDevice(deviceId: string) {
-  return invokeDesktopCompanionPairingCommand(NATIVE_COMMANDS.removeCompanionPairedDevice, {
-    device_id: deviceId
-  });
 }
 
 export function approveDesktopCompanionPairRequest(pairRequestId: string) {

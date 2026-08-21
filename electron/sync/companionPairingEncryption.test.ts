@@ -8,12 +8,12 @@ it('encrypts the pairing secret for the companion public key', async () => {
 
   const encrypted = await encryptCompanionPairingSecret({
     clientPublicKey: clientKeyPair.publicKey,
-    deviceSecret: 'paired-device-secret'
+    credentialSecret: 'paired-credential-secret'
   });
 
-  expect(JSON.stringify(encrypted)).not.toContain('paired-device-secret');
+  expect(JSON.stringify(encrypted)).not.toContain('paired-credential-secret');
   await expect(decryptTestPairingSecret({
     encrypted,
     privateKey: clientKeyPair.privateKey
-  })).resolves.toBe('paired-device-secret');
+  })).resolves.toBe('paired-credential-secret');
 });

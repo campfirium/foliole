@@ -80,7 +80,7 @@ function createEncryptedSecretFixture() {
   };
 }
 
-function mockNativePairingHttp(deviceId = 'android-test-device') {
+function mockNativePairingHttp(authorizationId = 'authorization-android', hostName = 'Pixel 9') {
   capacitorMock.plugin.desktopHttpRequest
     .mockResolvedValueOnce({
       body: JSON.stringify({
@@ -96,10 +96,9 @@ function mockNativePairingHttp(deviceId = 'android-test-device') {
       body: JSON.stringify({
         compatibility,
         desktop_protocol: protocol,
-        authorization_id: `authorization-${deviceId}`,
-        device_id: deviceId,
+        authorization_id: authorizationId,
         encrypted_credential_secret: createEncryptedSecretFixture(),
-        host_name: deviceId,
+        host_name: hostName,
         host_platform: 'android-capacitor',
         paired_at: '2026-04-22T12:00:00.000Z',
         peer_id: 'device-desktop'
@@ -108,7 +107,9 @@ function mockNativePairingHttp(deviceId = 'android-test-device') {
     });
 }
 
-function mockVerifiedNativePairing(args: { deviceId: string; deviceKind: string; deviceName: string; platform: string }) {
+function mockVerifiedNativePairing(args: {
+  authorizationId: string; hostName: string; hostPlatform: string; platform: string;
+}) {
   const queueEvents: string[] = [];
   capacitorMock.getPlatform.mockReturnValue(args.platform);
   capacitorMock.isNativePlatform.mockReturnValue(true);
@@ -118,15 +119,12 @@ function mockVerifiedNativePairing(args: { deviceId: string; deviceKind: string;
     queueEvents.push('end');
     return result;
   });
-  mockNativePairingHttp(args.deviceId);
+  mockNativePairingHttp(args.authorizationId, args.hostName);
   const pairing = {
     ...nativeProtocolState,
-    authorization_id: `authorization-${args.deviceId}`,
-    device_id: args.deviceId,
-    device_kind: args.deviceKind,
-    device_name: args.deviceName,
-    host_name: args.deviceName,
-    host_platform: args.deviceKind,
+    authorization_id: args.authorizationId,
+    host_name: args.hostName,
+    host_platform: args.hostPlatform,
     is_paired: true,
     paired_at: '2026-04-22T12:00:00.000Z',
   };
@@ -135,7 +133,7 @@ function mockVerifiedNativePairing(args: { deviceId: string; deviceKind: string;
   capacitorMock.plugin.signCompanionSyncRequest.mockImplementation(async () => {
     queueEvents.push('sign');
     return { headers: {
-      'X-Authorization-Id': `authorization-${args.deviceId}`,
+      'X-Authorization-Id': args.authorizationId,
       'X-Nonce': 'nonce',
       'X-Signature': 'signed',
       'X-Timestamp': '2026-04-22T12:00:00.000Z'
@@ -157,24 +155,23 @@ beforeEach(() => {
 });
 
 it.each([
-  { deviceId: 'android-test-device', deviceKind: 'android', deviceName: 'Pixel 9', platform: 'android' },
-  { deviceId: 'ios-test-device', deviceKind: 'ios-capacitor', deviceName: 'iPhone', platform: 'ios' }
-])('verifies $platform native pairing credentials after saving', async ({ deviceId, deviceKind, deviceName, platform }) => {
-  const queueEvents = mockVerifiedNativePairing({ deviceId, deviceKind, deviceName, platform });
+  { authorizationId: 'authorization-android', hostName: 'Pixel 9', hostPlatform: 'android', platform: 'android' },
+  { authorizationId: 'authorization-ios', hostName: 'iPhone', hostPlatform: 'ios-capacitor', platform: 'ios' }
+])('verifies $platform native pairing credentials after saving', async (fixture) => {
+  const queueEvents = mockVerifiedNativePairing(fixture);
 
   await requestCompanionPairing({
-    deviceId,
-    deviceKind,
-    deviceName,
+    hostName: fixture.hostName,
+    hostPlatform: fixture.hostPlatform,
     endpointUrl: 'http://10.0.2.2:38641'
   });
   await expect(pairCompanionWithDesktop({
-    deviceKind,
-    deviceName,
+    hostName: fixture.hostName,
+    hostPlatform: fixture.hostPlatform,
     endpointUrl: 'http://10.0.2.2:38641',
     pairRequestId: 'pair-request-1',
     remotePeerId: 'stale-discovery-peer'
-  })).resolves.toMatchObject({ device_id: deviceId, device_name: deviceName, is_paired: true });
+  })).resolves.toMatchObject({ authorization_id: fixture.authorizationId, host_name: fixture.hostName, is_paired: true });
   expect(capacitorMock.plugin.desktopHttpRequest).toHaveBeenLastCalledWith({
     body: JSON.stringify({ pair_request_id: 'pair-request-1' }),
     headers: { 'Content-Type': 'application/json' },
@@ -182,7 +179,8 @@ it.each([
     url: 'http://10.0.2.2:38641/companion/pair'
   });
   expect(capacitorMock.plugin.savePairingCredentials).toHaveBeenCalledWith(expect.objectContaining({
-    device_name: deviceId,
+    authorization_id: fixture.authorizationId,
+    host_name: fixture.hostName,
     remote_peer_id: 'device-desktop'
   }));
   expect(capacitorMock.plugin.loadPairingState).toHaveBeenCalledOnce();
@@ -202,14 +200,13 @@ it('fails native pairing when credentials cannot be read back locally', async ()
   capacitorMock.plugin.loadPairingState.mockResolvedValue({ is_paired: false });
 
   await requestCompanionPairing({
-    deviceId: 'android-test-device',
-    deviceKind: 'android',
-    deviceName: 'Pixel 9',
+    hostName: 'Pixel 9',
+    hostPlatform: 'android',
     endpointUrl: 'http://10.0.2.2:38641'
   });
   await expect(pairCompanionWithDesktop({
-    deviceKind: 'android',
-    deviceName: 'Pixel 9',
+    hostName: 'Pixel 9',
+    hostPlatform: 'android',
     endpointUrl: 'http://10.0.2.2:38641',
     pairRequestId: 'pair-request-1'
   })).rejects.toThrow('Native pairing credentials were not saved.');

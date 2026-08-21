@@ -104,7 +104,7 @@ async function buildLearningOnlyDesktopPack() {
   const packPath = path.join(tempRoot, 'desktop-learning-only.syncpack');
   await buildDesktopSyncPack({
     createdAt: '2026-05-06T10:00:00.000Z',
-    fromDeviceId: 'desktop-source',
+    fromPeerId: 'authorization-desktop-source',
     fromStateSeq: 0,
     outputPath: packPath,
     packId: 'desktop-learning-only',
@@ -121,7 +121,7 @@ async function buildHiddenChildLearningDesktopPack() {
   const packPath = path.join(tempRoot, 'desktop-hidden-child-learning.syncpack');
   await buildDesktopSyncPack({
     createdAt: '2026-05-06T11:00:00.000Z',
-    fromDeviceId: 'desktop-source',
+    fromPeerId: 'authorization-desktop-source',
     fromStateSeq: 0,
     outputPath: packPath,
     packId: 'desktop-hidden-child-learning',

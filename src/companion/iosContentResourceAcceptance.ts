@@ -38,14 +38,13 @@ async function pairForContent(endpoint: string) {
   await clearCompanionPairingCredentials();
   await saveCompanionWorkspaceSyncEndpoint('');
   const pending = await requestCompanionPairing({
-    deviceId: bootstrap.device_id,
-    deviceKind: 'ios-capacitor',
-    deviceName: bootstrap.device_name ?? 'Acceptance iPhone',
+    hostName: bootstrap.host_name ?? 'Acceptance iPhone',
+    hostPlatform: 'ios-capacitor',
     endpointUrl: endpoint
   });
   await pairCompanionWithDesktop({
-    deviceKind: 'ios-capacitor',
-    deviceName: bootstrap.device_name ?? 'Acceptance iPhone',
+    hostName: bootstrap.host_name ?? 'Acceptance iPhone',
+    hostPlatform: 'ios-capacitor',
     endpointUrl: endpoint,
     pairRequestId: pending.pair_request_id
   });

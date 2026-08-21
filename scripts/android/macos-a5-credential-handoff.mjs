@@ -8,9 +8,10 @@ export const CREDENTIALS_SIGNABLE_STATE = 'credentials_signable';
 const CONTRACT_FILE = 'credentials-signable.json';
 const CONTRACT_KEYS = [
   'actionIdentity', 'activeSyncGroupMemberCount', 'credentials',
-  'currentMembershipPresent', 'deviceIdentityFingerprint', 'groupId', 'initialSync',
+  'currentMembershipPresent', 'groupId', 'hostName', 'initialSync',
+  'localAuthorizationFingerprint',
   'pairingCredentialsPresent',
-  'pairingPath', 'peerFingerprint', 'revision', 'schemaVersion', 'state',
+  'pairingPath', 'peerAuthorizationFingerprint', 'revision', 'schemaVersion', 'state',
   'syncGroupRoutePresent', 'timelineId', 'workgroupKeyPresent',
   'workspaceSyncEndpointPresent'
 ];
@@ -54,7 +55,9 @@ export function assertCredentialsSignableContract(value) {
     && value.initialSync === 'not_started'
     && typeof value.groupId === 'string' && value.groupId.length > 0
     && typeof value.timelineId === 'string' && value.timelineId.length > 0
-    && fingerprint(value.deviceIdentityFingerprint) && fingerprint(value.peerFingerprint)
+    && typeof value.hostName === 'string' && value.hostName.trim().length > 0
+    && fingerprint(value.localAuthorizationFingerprint)
+    && fingerprint(value.peerAuthorizationFingerprint)
     && Number.isSafeInteger(value.activeSyncGroupMemberCount)
     && value.activeSyncGroupMemberCount >= 2 && value.activeSyncGroupMemberCount <= 10_000
     && value.currentMembershipPresent === true
@@ -68,7 +71,7 @@ export function assertCredentialsSignableContract(value) {
 function assertRecoveryManifest(manifest, readiness) {
   if (manifest?.schemaVersion !== 1 || manifest.action !== 'pair-sync-recover'
       || manifest.resultStatus !== 'success'
-      || manifest.deviceIdentityFingerprint !== readiness.deviceIdentityFingerprint
+      || manifest.localAuthorizationFingerprint !== readiness.localMemberAuthorizationFingerprint
       || typeof manifest.buildIdentity !== 'string' || manifest.buildIdentity.length === 0) {
     fail('Credential recovery manifest does not match the signable state.');
   }
@@ -77,8 +80,8 @@ function assertRecoveryManifest(manifest, readiness) {
 function assertSignableReadiness(readiness) {
   const peer = readiness.syncGroupRemotePeerFingerprint;
   if (readiness.existingPairing !== true || readiness.credentialRepairRequired !== false
-      || readiness.remotePeerFingerprint !== peer
-      || readiness.pairTargetPeerFingerprint !== peer
+      || readiness.pairingPeerAuthorizationFingerprint !== peer
+      || readiness.pairTargetAuthorizationFingerprint !== peer
       || readiness.pairingPeerConflict === true || readiness.syncGroupPeerConflict === true) {
     fail('Credential readiness does not match the signable state.');
   }
@@ -90,12 +93,13 @@ function createContract(receipt, readiness, currentRevision) {
     activeSyncGroupMemberCount: readiness.activeSyncGroupMemberCount,
     credentials: receipt.credentials,
     currentMembershipPresent: true,
-    deviceIdentityFingerprint: readiness.deviceIdentityFingerprint,
     groupId: readiness.syncGroupId,
+    hostName: readiness.hostName,
     initialSync: receipt.initialSync,
     pairingCredentialsPresent: readiness.pairingCredentialsPresent,
     pairingPath: receipt.pairingPath,
-    peerFingerprint: readiness.syncGroupRemotePeerFingerprint,
+    localAuthorizationFingerprint: readiness.localMemberAuthorizationFingerprint,
+    peerAuthorizationFingerprint: readiness.syncGroupRemotePeerFingerprint,
     revision: currentRevision,
     schemaVersion: CREDENTIALS_SIGNABLE_SCHEMA_VERSION,
     state: CREDENTIALS_SIGNABLE_STATE,
@@ -133,12 +137,13 @@ export function consumeCredentialsSignableHandoff({
     credentialsSignableEvidencePath(repoRoot), 'utf8'
   )));
   const matches = contract.revision === currentRevision
-    && contract.deviceIdentityFingerprint === readiness.deviceIdentityFingerprint
+    && contract.hostName === readiness.hostName
+    && contract.localAuthorizationFingerprint === readiness.localMemberAuthorizationFingerprint
     && contract.groupId === readiness.syncGroupId
     && contract.timelineId === readiness.syncGroupTimelineId
-    && contract.peerFingerprint === readiness.syncGroupRemotePeerFingerprint
+    && contract.peerAuthorizationFingerprint === readiness.syncGroupRemotePeerFingerprint
     && contract.activeSyncGroupMemberCount === readiness.activeSyncGroupMemberCount
-    && readiness.remotePeerFingerprint === contract.peerFingerprint
+    && readiness.pairingPeerAuthorizationFingerprint === contract.peerAuthorizationFingerprint
     && readiness.pairingCredentialsPresent === true
     && readiness.workspaceSyncEndpointPresent === true
     && readiness.workgroupKeyPresent === true && readiness.syncGroupRoutePresent === true

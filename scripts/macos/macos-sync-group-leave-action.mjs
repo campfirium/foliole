@@ -37,7 +37,7 @@ export async function runMacosSyncGroupLeave({
     const before = await session.load();
     const memberHosts = assertExpectedGroup(before, expected);
     const after = await session.leave();
-    if (after.sync_group !== null || after.paired_devices.length !== 0) {
+    if (after.sync_group !== null || after.paired_authorizations.length !== 0) {
       throw new Error('macOS did not fully leave the Sync Group.');
     }
     fs.mkdirSync(evidenceRoot, { recursive: true });

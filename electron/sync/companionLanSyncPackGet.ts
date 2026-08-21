@@ -7,7 +7,7 @@ export async function handleSyncPackGet(
   request: http.IncomingMessage,
   response: http.ServerResponse,
   parsedRequestUrl: URL,
-  authenticatedDeviceId: string,
+  authenticatedAuthorizationId: string,
   writeJson: (
     request: http.IncomingMessage,
     response: http.ServerResponse,
@@ -19,7 +19,7 @@ export async function handleSyncPackGet(
   if (parsedRequestUrl.pathname !== SYNC_PACK_PATH) {
     return false;
   }
-  const resource = await buildCompanionSyncPackResource(parsedRequestUrl, authenticatedDeviceId);
+  const resource = await buildCompanionSyncPackResource(parsedRequestUrl, authenticatedAuthorizationId);
   if (resource.status !== 'ready') {
     writeJson(request, response, resource.statusCode, { error: resource.error }, 'GET, OPTIONS');
     return true;

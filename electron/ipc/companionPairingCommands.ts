@@ -3,10 +3,9 @@ import { app } from 'electron';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { resolveFolioleAppVersion } from '../appVersion.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
-import { loadOrCreateDesktopDeviceId } from '../database/deviceIdentity.js';
 import { loadOrCreateDesktopHostName } from '../database/hostProfile.js';
 import { createDesktopSyncGroup, loadDesktopSyncGroup } from '../database/syncGroupStore.js';
-import { resolveDesktopDeviceName } from '../sync/companionLanPayloads.js';
+import { resolveDesktopHostName } from '../sync/companionLanPayloads.js';
 import {
   resolveCompanionMembershipApproval,
   resolveCompanionMembershipAuthorizationId,
@@ -17,7 +16,7 @@ import {
   loadPendingCompanionPairRequests,
   rejectCompanionPairRequest
 } from '../sync/companionPairingRequests.js';
-import { clearPairedCompanionDevices, loadPairedCompanionDevices, removePairedCompanionDevice } from '../sync/companionPairingStore.js';
+import { loadPairedCompanionAuthorizations } from '../sync/companionPairingStore.js';
 import { ensureCompanionPairingStoreAuthorizationCutover } from '../sync/companionPairingStoreCutover.js';
 import {
   activateDesktopCompanionSync,
@@ -41,6 +40,7 @@ import {
   stopLanWorkspaceSyncServer
 } from '../sync/lanWorkspaceSyncServer.js';
 import { leaveDesktopSyncGroup, removeDesktopSyncGroupMember } from '../sync/syncGroupDeparture.js';
+import { loadSyncGroupRuntimeInstanceId } from '../sync/syncGroupRuntimeInstance.js';
 
 import { asString } from './commandParsers.js';
 
@@ -56,8 +56,6 @@ const COMPANION_PAIRING_COMMANDS = new Set<string>([
   NATIVE_COMMANDS.disableCompanionSync,
   NATIVE_COMMANDS.pauseCompanionSync,
   NATIVE_COMMANDS.resumeCompanionSync,
-  NATIVE_COMMANDS.clearCompanionPairedDevices,
-  NATIVE_COMMANDS.removeCompanionPairedDevice,
   NATIVE_COMMANDS.approveCompanionPairRequest,
   NATIVE_COMMANDS.rejectCompanionPairRequest
 ]);
@@ -72,13 +70,12 @@ function buildDesktopCompanionPairingOverview(serverStatus?: ReturnType<typeof r
   );
   return {
     current_host: {
-      device_id: loadOrCreateDesktopDeviceId(),
-      host_name: localMember?.host_name ?? resolveDesktopDeviceName(),
+      host_name: localMember?.host_name ?? resolveDesktopHostName(),
       host_platform: localMember?.host_platform ?? process.platform
     },
     join_candidates: join.candidates,
     join_request: join.pending?.request ?? null,
-    paired_devices: loadPairedCompanionDevices(),
+    paired_authorizations: loadPairedCompanionAuthorizations(),
     pending_requests: loadPendingCompanionPairRequests(),
     server_status: resolvedServerStatus,
     sync_group: syncGroup,
@@ -87,7 +84,9 @@ function buildDesktopCompanionPairingOverview(serverStatus?: ReturnType<typeof r
 }
 
 function desktopSyncRuntimeIdentity() {
-  return { appVersion: resolveFolioleAppVersion(app), peerId: loadOrCreateDesktopDeviceId() };
+  const group = loadDesktopSyncGroup();
+  const local = group?.members.find((member) => member.host_name === group.local_host_name);
+  return { appVersion: resolveFolioleAppVersion(app), peerId: local?.authorization_id ?? loadSyncGroupRuntimeInstanceId() };
 }
 
 function requireCompanionPairRequestMutationResult<T>(result: T | null, pairRequestId: string) {
@@ -129,9 +128,8 @@ async function finishDesktopSyncGroupJoin() {
 
 function handleSyncGroupJoinCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.createSyncGroup) {
-    const deviceId = loadOrCreateDesktopDeviceId();
     createDesktopSyncGroup({ hostName: loadOrCreateDesktopHostName(), hostPlatform: process.platform });
-    return activateDesktopCompanionSync({ appVersion: resolveFolioleAppVersion(app), peerId: deviceId })
+    return activateDesktopCompanionSync(desktopSyncRuntimeIdentity())
       .then(() => buildDesktopCompanionPairingOverview());
   }
   if (command === NATIVE_COMMANDS.discoverSyncGroups) {
@@ -187,15 +185,6 @@ function handleOwnedCompanionPairingCommand(command: string, args: Record<string
   }
   if (command === NATIVE_COMMANDS.rejectCompanionPairRequest) {
     return handleCompanionPairRequestMutation(args, rejectCompanionPairRequest);
-  }
-  if (command === NATIVE_COMMANDS.clearCompanionPairedDevices) {
-    clearPairedCompanionDevices();
-    return buildDesktopCompanionPairingOverview();
-  }
-  if (command === NATIVE_COMMANDS.removeCompanionPairedDevice) {
-    const deviceId = asString(args.device_id, 'device_id');
-    removePairedCompanionDevice(deviceId);
-    return buildDesktopCompanionPairingOverview();
   }
   return undefined;
 }

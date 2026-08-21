@@ -8,7 +8,7 @@ import { afterAll, expect, it, vi } from 'vitest';
 
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 
-import { registerPairedCompanionDevice } from './companionPairingStore.js';
+import { registerPairedCompanionAuthorization } from './companionPairingStore.js';
 
 const testRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-pairing-security-'));
 
@@ -25,12 +25,9 @@ vi.mock('electron', () => ({
 }));
 
 it.runIf(process.platform === 'linux')('does not create pairing ciphertext with basic_text', () => {
-  expect(() => registerPairedCompanionDevice({
+  expect(() => registerPairedCompanionAuthorization({
     authorizationId: 'authorization-linux-device',
     clientAddress: '127.0.0.1',
-    deviceId: 'linux-device',
-    deviceKind: 'android',
-    deviceName: 'Linux security test',
     hostName: 'Linux security test',
     hostPlatform: 'android',
     negotiatedProtocolVersion: 1,

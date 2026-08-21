@@ -9,7 +9,7 @@ afterEach(() => { vi.restoreAllMocks(); });
 
 it('reports a committed cursor without changing the ordinary sync path', async () => {
   const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
-  const event = { cursor: 124, peerDeviceId: 'provider-b' };
+  const event = { cursor: 124, peerAuthorizationId: 'authorization-provider-b' };
 
   await reportDesktopSyncGroupCursorCommitted(event, {});
 
@@ -21,7 +21,7 @@ it('holds an acceptance session after reporting its committed cursor', async () 
   let settled = false;
 
   void reportDesktopSyncGroupCursorCommitted(
-    { cursor: 124, peerDeviceId: 'provider-b' },
+    { cursor: 124, peerAuthorizationId: 'authorization-provider-b' },
     { [ACCEPTANCE_HOLD_AFTER_SYNC_CURSOR_COMMIT]: '1' }
   ).then(() => { settled = true; });
   await Promise.resolve();

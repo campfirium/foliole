@@ -131,7 +131,7 @@ function registerSnapshotProtectionTest() {
     const unauthorizedResponse = await requestWorkspaceSyncServer(server, { path: '/companion/workspace-snapshot' });
     expect(unauthorizedResponse.status).toBe(401);
     const paired = await pairTestDevice(server, WORKGROUP);
-    expect(getLanWorkspaceSyncServerStatus().paired_device_count).toBe(0);
+    expect(getLanWorkspaceSyncServerStatus().paired_authorization_count).toBe(0);
     expect(getLanWorkspaceSyncServerStatus().pending_pair_request_count).toBe(0);
     const response = await requestWorkspaceSyncServer(server, {
       headers: signWorkspaceSyncRequest({
@@ -234,7 +234,7 @@ function registerMdnsWarningTest() {
     expect(applyLanSyncMdnsWarning({
       advertised_urls: ['http://127.0.0.1:38641'],
       last_error: null,
-      paired_device_count: 0,
+      paired_authorization_count: 0,
       pending_pair_request_count: 0,
       port: 38641,
       state: 'running'

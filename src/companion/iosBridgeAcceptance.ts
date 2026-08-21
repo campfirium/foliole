@@ -70,20 +70,19 @@ async function bestEffortClearAcceptanceState() {
   };
 }
 
-async function runInitialPairing(deviceId: string, deviceName: string, databasePath: string | null) {
+async function runInitialPairing(hostName: string, databasePath: string | null) {
   const endpoint = acceptanceEndpoint()!;
   await clearCompanionPairingCredentials();
   await saveCompanionWorkspaceSyncEndpoint('');
   if (!await expectSigningRejected()) throw new Error('Preflight pairing cleanup did not remove signing ability.');
   const pending = await requestCompanionPairing({
-    deviceId,
-    deviceKind: 'ios-capacitor',
-    deviceName,
+    hostName,
+    hostPlatform: 'ios-capacitor',
     endpointUrl: endpoint!
   });
   const pairing = await pairCompanionWithDesktop({
-    deviceKind: 'ios-capacitor',
-    deviceName,
+    hostName,
+    hostPlatform: 'ios-capacitor',
     endpointUrl: endpoint!,
     pairRequestId: pending.pair_request_id
   });
@@ -93,7 +92,7 @@ async function runInitialPairing(deviceId: string, deviceName: string, databaseP
     database_path: databasePath,
     endpoint_restored: workspace.endpoint_url === endpoint,
     error: null,
-    pairing_device_id: pairing.device_id,
+    pairing_authorization_id: pairing.authorization_id,
     phase: 'paired',
     scenario: 'pairing-signed-transport',
     signed_request_passed: signed.ok === true,
@@ -101,7 +100,7 @@ async function runInitialPairing(deviceId: string, deviceName: string, databaseP
   });
 }
 
-async function runRestartAndDisconnect(pairingDeviceId: string) {
+async function runRestartAndDisconnect(pairingAuthorizationId: string) {
   const endpoint = acceptanceEndpoint()!;
   const workspace = await loadCompanionWorkspaceSyncState();
   const signed = await fetchDesktopJson<{ ok: boolean }>(endpoint!, '/acceptance/signed');
@@ -114,8 +113,8 @@ async function runRestartAndDisconnect(pairingDeviceId: string) {
   postResult({
     error: null,
     http_error_propagated: httpErrorPropagated,
-    identity_restored: pairingDeviceId.length > 0,
-    pairing_device_id: pairingDeviceId,
+    identity_restored: pairingAuthorizationId.length > 0,
+    pairing_authorization_id: pairingAuthorizationId,
     endpoint_cleared: clearedWorkspace.endpoint_url === null,
     endpoint_restored: workspace.endpoint_url === endpoint,
     pairing_cleared: clearedPairing.is_paired === false,
@@ -134,9 +133,9 @@ export async function runIosBridgeAcceptance() {
     if (!endpoint) throw new Error('iOS pairing acceptance endpoint is unavailable.');
     const bootstrap = await loadCompanionBootstrapState();
     const pairing = await loadCompanionPairingState();
-    if (pairing.is_paired) await runRestartAndDisconnect(pairing.device_id ?? '');
+    if (pairing.is_paired) await runRestartAndDisconnect(pairing.authorization_id ?? '');
     else await runInitialPairing(
-      bootstrap.device_id, bootstrap.device_name ?? 'Acceptance iPhone', bootstrap.database_path
+      bootstrap.host_name ?? 'Acceptance iPhone', bootstrap.database_path
     );
   } catch (error) {
     const cleanup = await bestEffortClearAcceptanceState();

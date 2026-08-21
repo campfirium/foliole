@@ -105,7 +105,7 @@ describe('CompanionSyncPanel protocol rejection', () => {
           reason: 'protocol_version_unsupported' as const,
           status: 'incompatible' as const
         },
-        desktopDeviceName: 'Foliole Desktop on Future',
+        desktopHostName: 'Foliole Desktop on Future',
         desktopName: 'Foliole Desktop',
         desktopPlatform: 'Windows',
         endpointUrl: 'http://192.168.1.20:38641',

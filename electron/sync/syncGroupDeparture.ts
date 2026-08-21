@@ -12,14 +12,14 @@ import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
 export const SYNC_GROUP_DEPARTURE_PATH = '/companion/sync-group/departure';
 
-export function acceptSyncGroupDeparture(bodyText: string, authenticatedDeviceId: string) {
+export function acceptSyncGroupDeparture(bodyText: string, authenticatedAuthorizationId: string) {
   const payload = JSON.parse(bodyText) as Record<string, unknown>;
   const group = loadDesktopSyncGroup();
   const hostName = string(payload.host_name);
   const groupId = string(payload.group_id);
   const authorizedByHostName = string(payload.authorized_by_host_name);
   const authenticatedHostName = loadPairedSyncGroupPeers(groupId)
-    .find((peer) => peer.peer_device_id === authenticatedDeviceId)?.peer_host_name;
+    .find((peer) => peer.peer_authorization_id === authenticatedAuthorizationId)?.peer_host_name;
   if (!group || group.group_id !== groupId || authorizedByHostName !== authenticatedHostName) {
     throw new Error('sync_group_departure_authorization_invalid');
   }
@@ -32,9 +32,9 @@ export function acceptSyncGroupDeparture(bodyText: string, authenticatedDeviceId
     leftAt: string(payload.left_at),
     local
   });
-  const revokedIds = local ? loadPairedSyncGroupPeers(groupId).map((peer) => peer.peer_device_id)
+  const revokedIds = local ? loadPairedSyncGroupPeers(groupId).map((peer) => peer.peer_authorization_id)
     : loadPairedSyncGroupPeers(groupId)
-      .filter((peer) => peer.peer_host_name === hostName).map((peer) => peer.peer_device_id);
+      .filter((peer) => peer.peer_host_name === hostName).map((peer) => peer.peer_authorization_id);
   for (const revokedId of revokedIds) removeSyncGroupPeerCredentials(groupId, revokedId);
   return { status: 'accepted' };
 }
@@ -53,7 +53,9 @@ export async function removeDesktopSyncGroupMember(hostName: string) {
     hostName, groupId: group.group_id, leftAt: departure.left_at
   });
   for (const peer of loadPairedSyncGroupPeers(group.group_id)) {
-    if (peer.peer_host_name === hostName) removeSyncGroupPeerCredentials(group.group_id, peer.peer_device_id);
+    if (peer.peer_host_name === hostName) {
+      removeSyncGroupPeerCredentials(group.group_id, peer.peer_authorization_id);
+    }
   }
 }
 
@@ -74,7 +76,7 @@ export async function leaveDesktopSyncGroup() {
     authorizationId: departure.authorization_id, authorizedByHostName: hostName,
     hostName, groupId: group.group_id, leftAt: departure.left_at, local: true
   });
-  for (const peer of peers) removeSyncGroupPeerCredentials(group.group_id, peer.peer_device_id);
+  for (const peer of peers) removeSyncGroupPeerCredentials(group.group_id, peer.peer_authorization_id);
 }
 
 function createDeparture(groupId: string, hostName: string, authorizerHostName: string, action: 'leave' | 'remove') {

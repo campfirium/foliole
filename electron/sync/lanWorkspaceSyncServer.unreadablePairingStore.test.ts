@@ -50,5 +50,5 @@ it('keeps the sync server request boundary available when the paired-device cach
   const status = getLanWorkspaceSyncServerStatus();
 
   expect(server.listenerCount('request')).toBe(1);
-  expect(status.paired_device_count).toBe(0);
+  expect(status.paired_authorization_count).toBe(0);
 });

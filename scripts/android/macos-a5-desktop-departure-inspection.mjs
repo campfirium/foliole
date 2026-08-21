@@ -34,7 +34,8 @@ export function inspectDesktopDepartureBoundary(
       && local[0].timeline_id === departed.storedSyncGroupTimelineId;
     if (!exact) throw new Error('Desktop did not commit the matching protected A5 departure.');
     return { groupId: local[0].group_id,
-      remotePeerFingerprint: authorizationFingerprint(local[0].local_authorization_id),
+      remotePeerAuthorizationFingerprint:
+        authorizationFingerprint(local[0].local_authorization_id),
       timelineId: local[0].timeline_id };
   } finally { database.close(); }
 }

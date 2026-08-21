@@ -57,7 +57,7 @@ function pairingCredentialRejection(event) {
   const rejected = localSigningUnavailable || /\b401\b/u.test(failedMessage);
   const reason = rejected
     ? (localSigningUnavailable ? 'local_signing_unavailable'
-      : failedMessage.match(/\b(expired_timestamp|invalid_signature|missing_headers|unknown_device)\b/u)?.[1] ?? null)
+      : failedMessage.match(/\b(expired_timestamp|invalid_signature|missing_headers|unknown_authorization)\b/u)?.[1] ?? null)
     : null;
   return { rejected, reason };
 }
@@ -109,13 +109,11 @@ export function identityFingerprint(value) {
 }
 
 export function inspectPairSyncRecoveryWorkspace(database) {
-  const deviceId = meta(database, 'device_id');
   const latestSyncRun = latestFinishedSyncEvent(database);
   const rejection = pairingCredentialRejection(latestSyncRun);
   return {
     ...inspectDepartedHistory(database),
-    deviceIdentityFingerprint: identityFingerprint(deviceId),
-    deviceProfile: deviceId,
+    hostName: meta(database, 'host_name'),
     dirtyRecordCount: count(
       database,
       'sync_object_state',
@@ -157,8 +155,9 @@ export function inspectPairSyncRecoveryWorkspace(database) {
 }
 
 export function pairSyncRecoveryReadiness(
-  snapshot, pairingCredentialsPresent, remotePeerFingerprint = null, pairingPeerConflict = false,
-  storedDeviceFingerprint = null, databaseWorkgroupKeyPresent = false
+  snapshot, pairingCredentialsPresent, pairingPeerAuthorizationFingerprint = null,
+  pairingPeerConflict = false, storedAuthorizationFingerprint = null,
+  databaseWorkgroupKeyPresent = false
 ) {
   const inspection = snapshot.database?.inspection;
   const databaseAvailabilityReason = inspection ? null
@@ -174,8 +173,9 @@ export function pairSyncRecoveryReadiness(
   if (!snapshot.database?.exists || snapshot.database.unreadable || !inspection) {
     missingPrerequisites.push('database_unavailable');
   }
-  if (inspection && !inspection.deviceIdentityFingerprint) {
-    missingPrerequisites.push('device_identity_missing');
+  if (inspection && (inspection.activeSyncGroupMemberCount ?? 0) > 0
+      && !inspection.localMemberAuthorizationFingerprint) {
+    missingPrerequisites.push('local_authorization_missing');
   }
   const groupAuthorityPresent = databaseWorkgroupKeyPresent || pairingCredentialsPresent;
   if (inspection && (inspection.nodeCount ?? 0) > 1 && !groupAuthorityPresent) {
@@ -186,7 +186,7 @@ export function pairSyncRecoveryReadiness(
   }
   if (!databaseWorkgroupKeyPresent && pairingPeerConflict) {
     missingPrerequisites.push('existing_pairing_peer_conflict');
-  } else if (pairingCredentialsPresent && !remotePeerFingerprint) {
+  } else if (pairingCredentialsPresent && !pairingPeerAuthorizationFingerprint) {
     missingPrerequisites.push('existing_pairing_peer_unproven');
   }
   return {
@@ -195,7 +195,6 @@ export function pairSyncRecoveryReadiness(
       inspection?.currentDeliveryStatusCountsByPeerFingerprint ?? {},
     databaseAvailabilityDetail: inspection ? null : snapshot.database?.error ?? null,
     databaseAvailabilityReason,
-    deviceIdentityFingerprint: inspection?.deviceIdentityFingerprint ?? null,
     dirtyRecordCount: inspection?.dirtyRecordCount ?? null,
     dirtyObjectCounts: inspection?.dirtyObjectCounts ?? {},
     missingPrerequisites,
@@ -212,8 +211,11 @@ export function pairSyncRecoveryReadiness(
     pairingCredentialRejectionReason: inspection?.pairingCredentialRejectionReason ?? null,
     pairingCredentialsRejected: inspection?.pairingCredentialsRejected === true,
     pairingPeerConflict,
-    remotePeerFingerprint,
-    storedDeviceFingerprint,
+    localMemberAuthorizationFingerprint:
+      inspection?.localMemberAuthorizationFingerprint ?? null,
+    hostName: typeof inspection?.hostName === 'string' ? inspection.hostName : null,
+    pairingPeerAuthorizationFingerprint,
+    storedAuthorizationFingerprint,
     workgroupKeyPresent: databaseWorkgroupKeyPresent,
     resultStatus: missingPrerequisites.length === 0 ? 'ready' : 'approval_required',
     schemaVersion: 1

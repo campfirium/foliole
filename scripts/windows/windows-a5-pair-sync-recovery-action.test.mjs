@@ -13,7 +13,7 @@ import {
   waitForPairRequestWhileInstrumentationRuns
 } from './windows-a5-pair-sync-recovery-concurrency.mjs';
 import { assertPairSyncRuntimeOwnership } from './windows-a5-pair-sync-recovery-transport.mjs';
-import { pairSyncIdentityFingerprint } from './windows-pair-sync-desktop-session.mjs';
+import { pairSyncAuthorizationFingerprint } from './windows-pair-sync-desktop-session.mjs';
 
 const paths = { repoRoot: 'C:\\repo', systemNode: 'C:\\Program Files\\nodejs\\node.exe' };
 const execute = vi.fn(async () => ({ code: 0, output: '', stdout: '' }));
@@ -34,36 +34,42 @@ function unsafeSession(close = vi.fn(async () => undefined)) {
     close,
     load: vi.fn(async () => ({})),
     sanitize: vi.fn(() => ({
-      desktopPeerFingerprint: null, pairedDeviceFingerprints: [], pendingDeviceFingerprints: []
+      localAuthorizationFingerprint: null, pairedAuthorizationFingerprints: [],
+      pendingAuthorizationFingerprints: []
     }))
   };
 }
 
-function duplicateSession() {
-  const current = 'current-a5';
-  const stale = 'stale-a5';
-  let pairedDevices = [{ device_id: current }, { device_id: stale }];
+function authorizationSession({ includeTarget = true, includeRoute = true } = {}) {
+  const desktopAuthorization = 'authorization-desktop';
+  const targetAuthorization = 'authorization-a5';
+  const overview = {
+    paired_authorizations: includeRoute
+      ? [{ authorization_id: targetAuthorization, host_name: 'A5' }] : [],
+    pending_requests: [],
+    sync_group: { local_host_name: 'Desktop', members: [
+      { authorization_id: desktopAuthorization, host_name: 'Desktop', state: 'active' },
+      ...(includeTarget
+        ? [{ authorization_id: targetAuthorization, host_name: 'A5', state: 'active' }] : [])
+    ] }
+  };
   const session = {
     close: vi.fn(async () => undefined),
-    load: vi.fn(async () => ({ paired_devices: pairedDevices, pending_requests: [] })),
-    remove: vi.fn(async (deviceId) => {
-      pairedDevices = pairedDevices.filter((device) => device.device_id !== deviceId);
-      return { paired_devices: pairedDevices, pending_requests: [] };
-    }),
+    load: vi.fn(async () => overview),
     sanitize: vi.fn((value) => ({
-      desktopPeerFingerprint: 'desktop-peer',
-      pairedDeviceFingerprints: value.paired_devices.map((device) =>
-        pairSyncIdentityFingerprint(device.device_id)),
-      pendingDeviceFingerprints: []
+      localAuthorizationFingerprint: pairSyncAuthorizationFingerprint(desktopAuthorization),
+      pairedAuthorizationFingerprints: value.paired_authorizations.map((authorization) =>
+        pairSyncAuthorizationFingerprint(authorization.authorization_id)),
+      pendingAuthorizationFingerprints: []
     }))
   };
-  return { current, session, stale };
+  return { desktopAuthorization, session, targetAuthorization };
 }
 
 it('preserves pairing approval evidence when bounded session cleanup also fails', async () => {
   const session = unsafeSession(vi.fn(async () => { throw new Error('close failed'); }));
   await expect(inspectWindowsPairSyncRecoveryDesktop({
-    deviceFingerprint: '0123456789abcdef', env: {}, execute,
+    desktopAuthorizationFingerprint: '0123456789abcdef', env: {}, execute, hostName: 'A5',
     openDesktopSession: vi.fn(async () => session), paths
   })).rejects.toMatchObject({ exitCode: 77, stage: 'desktop-pairing-readiness' });
 });
@@ -71,10 +77,14 @@ it('preserves pairing approval evidence when bounded session cleanup also fails'
 it('classifies a standalone bounded session cleanup failure', async () => {
   const session = unsafeSession(vi.fn(async () => { throw new Error('close failed'); }));
   session.sanitize.mockReturnValue({
-    desktopPeerFingerprint: 'fedcba9876543210', pairedDeviceFingerprints: [], pendingDeviceFingerprints: []
+    localAuthorizationFingerprint: 'fedcba9876543210', pairedAuthorizationFingerprints: [],
+    pendingAuthorizationFingerprints: []
   });
+  session.load.mockResolvedValue({ paired_authorizations: [], pending_requests: [],
+    sync_group: { local_host_name: 'Desktop', members: [{ authorization_id: 'desktop',
+      host_name: 'Desktop', state: 'active' }] } });
   await expect(inspectWindowsPairSyncRecoveryDesktop({
-    deviceFingerprint: '0123456789abcdef', env: {}, execute,
+    desktopAuthorizationFingerprint: 'fedcba9876543210', env: {}, execute, hostName: 'A5',
     openDesktopSession: vi.fn(async () => session), paths
   })).rejects.toMatchObject({ exitCode: 74, stage: 'desktop-session-close' });
 });
@@ -83,47 +93,43 @@ it('classifies a product pairing overview read failure without exposing its payl
   const session = unsafeSession();
   session.load.mockRejectedValue(new Error('bridge read failed'));
   await expect(inspectWindowsPairSyncRecoveryDesktop({
-    deviceFingerprint: '0123456789abcdef', env: {}, execute,
+    desktopAuthorizationFingerprint: '0123456789abcdef', env: {}, execute, hostName: 'A5',
     openDesktopSession: vi.fn(async () => session), paths
   })).rejects.toMatchObject({ exitCode: 74, stage: 'desktop-pairing-load' });
 });
 
-it('removes only one authorized stale identity while preserving the fixed A5 pairing', async () => {
-  const fixture = duplicateSession();
+it('accepts an existing A5 credential route bound to its active authorization', async () => {
+  const fixture = authorizationSession();
   await expect(inspectWindowsPairSyncRecoveryDesktop({
-    deviceFingerprint: pairSyncIdentityFingerprint(fixture.current), env: {}, execute,
+    desktopAuthorizationFingerprint: pairSyncAuthorizationFingerprint(
+      fixture.desktopAuthorization
+    ), env: {}, execute, existingPairing: true, hostName: 'A5',
     openDesktopSession: vi.fn(async () => fixture.session), paths
   })).resolves.toMatchObject({
-    overview: { pairedDeviceFingerprints: [pairSyncIdentityFingerprint(fixture.current)] }
+    overview: { pairedAuthorizationFingerprints: [
+      pairSyncAuthorizationFingerprint(fixture.targetAuthorization)
+    ] }
   });
-  expect(fixture.session.remove).toHaveBeenCalledOnce();
-  expect(fixture.session.remove).toHaveBeenCalledWith(fixture.stale);
 });
 
-it('removes both authorized stale identities when the fixed A5 has no pairing', async () => {
-  const fixture = duplicateSession();
+it('accepts a fresh A5 Host only when membership and credential route are absent', async () => {
+  const fixture = authorizationSession({ includeRoute: false, includeTarget: false });
   await expect(inspectWindowsPairSyncRecoveryDesktop({
-    deviceFingerprint: pairSyncIdentityFingerprint('fresh-a5'), env: {}, execute,
-    existingPairing: false, openDesktopSession: vi.fn(async () => fixture.session), paths
-  })).resolves.toMatchObject({ overview: { pairedDeviceFingerprints: [] } });
-  expect(fixture.session.remove).toHaveBeenCalledTimes(2);
-  expect(fixture.session.remove).toHaveBeenNthCalledWith(1, fixture.current);
-  expect(fixture.session.remove).toHaveBeenNthCalledWith(2, fixture.stale);
+    desktopAuthorizationFingerprint: pairSyncAuthorizationFingerprint(
+      fixture.desktopAuthorization
+    ), env: {}, execute, existingPairing: false, hostName: 'A5',
+    openDesktopSession: vi.fn(async () => fixture.session), paths
+  })).resolves.toMatchObject({ overview: { pairedAuthorizationFingerprints: [] } });
 });
 
-it('keeps ambiguous pairing sets unchanged', async () => {
-  const fixture = duplicateSession();
-  fixture.session.load.mockResolvedValue({
-    paired_devices: [
-      { device_id: fixture.current }, { device_id: fixture.stale }, { device_id: 'another-stale-a5' }
-    ],
-    pending_requests: []
-  });
+it('rejects an orphan A5 credential route without deleting or repairing it', async () => {
+  const fixture = authorizationSession({ includeTarget: false });
   await expect(inspectWindowsPairSyncRecoveryDesktop({
-    deviceFingerprint: pairSyncIdentityFingerprint(fixture.current), env: {}, execute,
+    desktopAuthorizationFingerprint: pairSyncAuthorizationFingerprint(
+      fixture.desktopAuthorization
+    ), env: {}, execute, existingPairing: false, hostName: 'A5',
     openDesktopSession: vi.fn(async () => fixture.session), paths
   })).rejects.toMatchObject({ exitCode: 77, stage: 'desktop-pairing-readiness' });
-  expect(fixture.session.remove).not.toHaveBeenCalled();
 });
 
 it('preserves the product sync enable failure stage after APK preparation', async () => {
@@ -141,11 +147,14 @@ it('preserves the product sync enable failure stage after APK preparation', asyn
     assertActive: vi.fn(),
     close: vi.fn(async () => undefined),
     enable: vi.fn(async () => { throw new Error('enable failed'); }),
-    load: vi.fn(async () => ({ paired_devices: [], pending_requests: [] })),
-    sanitize: vi.fn(() => ({ pairedDeviceFingerprints: [], pendingDeviceFingerprints: [] }))
+    load: vi.fn(async () => ({ paired_authorizations: [], pending_requests: [] })),
+    sanitize: vi.fn(() => ({
+      localAuthorizationFingerprint: null, pairedAuthorizationFingerprints: [],
+      pendingAuthorizationFingerprints: []
+    }))
   };
   const failure = await runWindowsA5PairSyncRecovery({
-    adbPort: '5037', buildIdentity: 'pair-1', deviceFingerprint: '0123456789abcdef',
+    adbPort: '5037', buildIdentity: 'pair-1', hostName: 'A5',
     env: {}, evidenceRoot: 'C:\\evidence', execute: executeAction, fsApi,
     openDesktopSession: vi.fn(async () => session),
     paths: { adbPath: 'adb.exe', repoRoot: 'C:\\repo', systemNode: 'node.exe' },

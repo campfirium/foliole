@@ -52,7 +52,7 @@ async function derivePairingSecretKey(args: {
 
 export async function encryptCompanionPairingSecret(args: {
   clientPublicKey: string;
-  deviceSecret: string;
+  credentialSecret: string;
 }): Promise<EncryptedCompanionPairingSecret> {
   const clientPublicKey = await webcrypto.subtle.importKey(
     'raw',
@@ -76,7 +76,7 @@ export async function encryptCompanionPairingSecret(args: {
   const ciphertext = await webcrypto.subtle.encrypt(
     { iv, name: 'AES-GCM' },
     secretKey,
-    new TextEncoder().encode(args.deviceSecret)
+    new TextEncoder().encode(args.credentialSecret)
   );
   return {
     algorithm: PAIRING_SECRET_ENCRYPTION_ALGORITHM,

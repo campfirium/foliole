@@ -19,11 +19,19 @@ function fingerprint(value) {
 }
 
 function sanitizeOverview(overview) {
+  const group = overview.sync_group;
+  const local = (group?.members ?? []).find(
+    (member) => member.state === 'active' && member.host_name === group.local_host_name
+  );
   return {
-    desktopPeerFingerprint: overview.current_host?.device_id
-      ? fingerprint(overview.current_host.device_id) : null,
-    pairedDeviceFingerprints: overview.paired_devices.map((device) => fingerprint(device.device_id)),
-    pendingDeviceFingerprints: overview.pending_requests.map((request) => fingerprint(request.device_id)),
+    localAuthorizationFingerprint: local?.authorization_id
+      ? fingerprint(local.authorization_id) : null,
+    pairedAuthorizationFingerprints: overview.paired_authorizations.map(
+      (authorization) => fingerprint(authorization.authorization_id)
+    ),
+    pendingAuthorizationFingerprints: overview.pending_requests.map(
+      (request) => fingerprint(request.pair_request_id)
+    ),
     serverState: overview.server_status.state,
     syncEnabled: overview.sync_enabled === true
   };
@@ -143,7 +151,6 @@ export async function openMacosPairSyncDesktopSession({
       leave: () => invoke(page, 'leave_sync_group'),
       load: syncGroupActions.load,
       invoke: (command, args) => invoke(page, command, args),
-      remove: (deviceId) => invoke(page, 'remove_companion_paired_device', { device_id: deviceId }),
       sanitize: sanitizeOverview
     };
   } catch (error) {
@@ -155,15 +162,15 @@ export async function openMacosPairSyncDesktopSession({
   }
 }
 
-export async function waitForMacosPairRequest(session, deviceFingerprint, timeoutMs = 40_000) {
+export async function waitForMacosPairRequest(session, expectedHostName, timeoutMs = 40_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const overview = await session.load();
     if (overview.pending_requests.length > 1) throw new Error('Conflicting pair requests.');
     if (overview.pending_requests.length === 1) {
       const request = overview.pending_requests[0];
-      if (fingerprint(request.device_id) !== deviceFingerprint) {
-        throw new Error('Pair request belongs to another device.');
+      if (request.host_name !== expectedHostName) {
+        throw new Error('Pair request belongs to another Host.');
       }
       return request;
     }
@@ -172,4 +179,4 @@ export async function waitForMacosPairRequest(session, deviceFingerprint, timeou
   throw new Error('Timed out waiting for the fixed A5 pair request.');
 }
 
-export { fingerprint as macosPairSyncIdentityFingerprint, sanitizeOverview };
+export { fingerprint as macosPairSyncAuthorizationFingerprint, sanitizeOverview };

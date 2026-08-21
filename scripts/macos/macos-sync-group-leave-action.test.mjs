@@ -14,7 +14,7 @@ it('leaves only the fixed three-member group through the product command', async
   const root = fs.mkdtempSync(path.join(process.cwd(), '.tmp/artifacts/macos-leave-test-'));
   roots.push(root);
   const close = vi.fn();
-  const leave = vi.fn(async () => ({ paired_devices: [], sync_group: null }));
+  const leave = vi.fn(async () => ({ paired_authorizations: [], sync_group: null }));
   const load = vi.fn(async () => ({
     sync_group: {
       group_id: EXPECTED_SYNC_GROUP.groupId,

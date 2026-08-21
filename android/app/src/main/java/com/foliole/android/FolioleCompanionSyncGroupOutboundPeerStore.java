@@ -48,26 +48,30 @@ final class FolioleCompanionSyncGroupOutboundPeerStore {
         }
     }
 
-    static JSObject signWithWorkgroupKey(
+    static JSObject signCurrentGroupRequest(
         Context context, String groupId, String endpointUrl, String method, String pathWithQuery,
-        String timestamp, String nonce, String bodyHash, String workgroupKey
+        String timestamp, String nonce, String bodyHash
     ) throws Exception {
         JSONObject peer = find(context, groupId.trim(), normalizeEndpoint(endpointUrl));
+        FolioleCompanionCurrentGroupCredential credential =
+            currentCredential(context, groupId, peer);
         String canonical = method.toUpperCase() + "\n" + pathWithQuery + "\n" + timestamp + "\n" + nonce + "\n" + bodyHash;
         JSObject headers = new JSObject();
         headers.put("X-Authorization-Id", peer.getString("local_authorization_id"));
         headers.put("X-Timestamp", timestamp);
         headers.put("X-Nonce", nonce);
         headers.put("X-Signature", FolioleCompanionPairingCrypto.signCanonicalRequest(
-            workgroupKey, canonical));
+            credential.workgroupKey, canonical));
         return new JSObject().put("headers", headers);
     }
 
-    static JSObject prepareWithWorkgroupKey(
+    static JSObject prepareCurrentGroupRequest(
         Context context, String groupId, String endpointUrl, String method, String pathWithQuery,
-        String body, String workgroupKey
+        String body
     ) throws Exception {
         JSONObject peer = find(context, groupId.trim(), normalizeEndpoint(endpointUrl));
+        FolioleCompanionCurrentGroupCredential credential =
+            currentCredential(context, groupId, peer);
         JSONObject headers = new JSONObject()
             .put("Content-Type", "application/json; charset=utf-8")
             .put("X-Authorization-Id", peer.getString("local_authorization_id"))
@@ -75,7 +79,7 @@ final class FolioleCompanionSyncGroupOutboundPeerStore {
         FolioleCompanionWorkgroupHttp.PreparedRequest prepared =
             FolioleCompanionWorkgroupHttp.prepareWithKey(
                 context, normalizeEndpoint(endpointUrl) + pathWithQuery,
-                method, headers, body, workgroupKey);
+                method, headers, body, credential.workgroupKey);
         return new JSObject()
             .put(FolioleCompanionHostBridgeContractDefinitions.networkBodyRequestKey(context), prepared.body)
             .put("headers", prepared.headers);
@@ -148,6 +152,19 @@ final class FolioleCompanionSyncGroupOutboundPeerStore {
         }
         if (match == null) throw new SecurityException("sync_group_peer_not_found");
         return match;
+    }
+
+    private static FolioleCompanionCurrentGroupCredential currentCredential(
+        Context context,
+        String groupId,
+        JSONObject peer
+    ) throws Exception {
+        FolioleCompanionCurrentGroupCredential credential =
+            FolioleCompanionCurrentGroupCredential.load(context, groupId);
+        if (!credential.authorizationId.equals(peer.optString("local_authorization_id"))) {
+            throw new SecurityException("sync_group_authorization_route_mismatch");
+        }
+        return credential;
     }
 
     private static String encrypt(String value) throws Exception {

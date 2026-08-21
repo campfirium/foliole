@@ -22,17 +22,19 @@ it('compares the A5 outbound route with the desktop local authorization', () => 
   };
   const evidence = inspectProtectedDesktopBoundary(overview, {
     sanitize: () => ({
-      desktopPeerFingerprint: 'different-device-identity', pendingDeviceFingerprints: []
+      localAuthorizationFingerprint: localFingerprint,
+      pendingAuthorizationFingerprints: []
     })
   }, {
-    groupId: 'group-1', remotePeerFingerprint: localFingerprint, timelineId: 'timeline-1'
+    groupId: 'group-1', remotePeerAuthorizationFingerprint: localFingerprint,
+    timelineId: 'timeline-1'
   }, [authorizationFingerprint('authorization-a5'), localFingerprint].sort());
 
   expect(evidence.actual).toMatchObject({
-    desktopPeerFingerprint: 'different-device-identity',
+    localAuthorizationFingerprint: localFingerprint,
     groupId: 'group-1',
     localMemberAuthorizationFingerprint: localFingerprint,
-    pendingDeviceFingerprints: [],
+    pendingAuthorizationFingerprints: [],
     timelineId: 'timeline-1'
   });
   expect(evidence.expected.localMemberAuthorizationFingerprint).toBe(localFingerprint);

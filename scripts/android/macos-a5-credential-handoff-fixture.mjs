@@ -1,14 +1,17 @@
+import { authorizationFingerprint } from './android-sync-group-authorization-inspection.mjs';
+
 export const credentialHandoffRevision = 'a'.repeat(40);
 
 export const credentialsSignableReadinessFixture = Object.freeze({
   activeSyncGroupMemberCount: 3,
   credentialRepairRequired: false,
-  deviceIdentityFingerprint: '2fdd44bb500a5934',
   existingPairing: true,
+  hostName: 'A5',
+  localMemberAuthorizationFingerprint: authorizationFingerprint('authorization-a5'),
   pairingCredentialsPresent: true,
   pairingPeerConflict: false,
-  pairTargetPeerFingerprint: '82cc2dc5c98135c8',
-  remotePeerFingerprint: '82cc2dc5c98135c8',
+  pairingPeerAuthorizationFingerprint: '82cc2dc5c98135c8',
+  pairTargetAuthorizationFingerprint: '82cc2dc5c98135c8',
   syncGroupId: 'group-1',
   syncGroupRemotePeerFingerprint: '82cc2dc5c98135c8',
   syncGroupPeerConflict: false,
@@ -27,7 +30,8 @@ export const credentialsSignableReceiptFixture = Object.freeze({
 export const credentialsSignableManifestFixture = Object.freeze({
   action: 'pair-sync-recover',
   buildIdentity: 'build-credentials',
-  deviceIdentityFingerprint: credentialsSignableReadinessFixture.deviceIdentityFingerprint,
+  localAuthorizationFingerprint:
+    credentialsSignableReadinessFixture.localMemberAuthorizationFingerprint,
   resultStatus: 'success',
   schemaVersion: 1
 });

@@ -11,7 +11,6 @@ import { inspectPairSyncRecoveryWorkspace } from './android-pair-sync-recovery-r
 import { authorizationFingerprint } from './android-sync-group-authorization-inspection.mjs';
 import { proveMacosA5ExistingSyncContinuation } from './macos-a5-existing-sync-acceptance.mjs';
 import { runMacosA5PairSync } from './macos-a5-pair-sync-action.mjs';
-import { recoverExistingT132Credential } from './macos-a5-sync-group-credential-recovery.mjs';
 import { runMacosA5SyncGroupMaintenance } from './macos-a5-sync-group-maintenance-action.mjs';
 import { assertFrozenSyncGroupCandidate, captureSyncGroupCandidate } from './macos-a5-sync-group-candidate.mjs';
 import {
@@ -21,8 +20,8 @@ import { openMacosPairSyncDesktopSession } from './macos-pair-sync-desktop-sessi
 import { assertLegacyTransitionRuntime } from './macos-a5-sync-group-transition-runtime.mjs';
 import {
   assertT132CredentialRecoveryBaseline, assertT132MacBaseline, assertT132ProtectedBaseline, assertT132Rejoined,
-  assertT132UnboundAfterRestart, T132_A5_IDENTITY,
-  T132_GROUP_ID, T132_MAC_IDENTITY, T132_TIMELINE_ID,
+  assertT132UnboundAfterRestart, T132_A5_AUTHORIZATION, T132_A5_HOST,
+  T132_GROUP_ID, T132_MAC_AUTHORIZATION, T132_TIMELINE_ID,
   validateT132DepartedMemberDesktop
 } from './macos-a5-sync-group-rejoin-contract.mjs';
 
@@ -84,7 +83,8 @@ async function waitForMacDeparture(session) {
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
     const overview = await session.load();
-    if (overview.sync_group?.members?.length === 2 && overview.paired_devices.length === 0) return overview;
+    if (overview.sync_group?.members?.length === 2
+        && overview.paired_authorizations.length === 0) return overview;
     await delay(250);
   }
   throw new Error('Mac did not commit the fixed A5 departure.');
@@ -97,13 +97,16 @@ export async function runMacosA5SyncGroupRejoinJourney({
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const baselineSnapshot = await androidSnapshot(paths, serial);
   baseline.protectedContentDigest = baselineSnapshot.database?.inspection?.protectedContentDigest;
-  if (credentialRecoveryRequired) assertT132CredentialRecoveryBaseline(baseline);
-  else assertT132ProtectedBaseline(baseline);
+  if (credentialRecoveryRequired) {
+    assertT132CredentialRecoveryBaseline(baseline);
+    throw new Error('Credential repair is outside the authorization cutover contract.');
+  }
+  assertT132ProtectedBaseline(baseline);
   const legacyTransition = assertLegacyTransitionRuntime(paths.repoRoot);
   const candidate = captureSyncGroupCandidate(paths.repoRoot);
   fs.writeFileSync(path.join(evidenceRoot, 't132-3-candidate.json'), `${JSON.stringify({
     baseline: { activeMemberCount: baseline.activeSyncGroupMemberCount,
-      deviceIdentityFingerprint: baseline.deviceIdentityFingerprint,
+      localMemberAuthorizationFingerprint: baseline.localMemberAuthorizationFingerprint,
       groupId: baseline.syncGroupId, nodeCount: baseline.nodeCount,
       dirtyObjectCounts: baseline.dirtyObjectCounts, dirtyRecordCount: baseline.dirtyRecordCount,
       protectedContentDigest: baseline.protectedContentDigest,
@@ -124,11 +127,6 @@ export async function runMacosA5SyncGroupRejoinJourney({
     assertT132MacBaseline(
       await session.enable(), session, baseline.localMemberAuthorizationFingerprint
     ));
-  if (credentialRecoveryRequired) await recoverExistingT132Credential({
-    buildIdentity, env, evidenceRoot, execute,
-    instrumentationModeArgs: UNIQUE_DISCOVERY_TARGET,
-    memberAuthorizationFingerprint: baseline.localMemberAuthorizationFingerprint, paths, serial
-  });
   assertFrozenSyncGroupCandidate(candidate, paths.repoRoot);
   assertT132ProtectedBaseline(await readiness(execute, paths, env, serial));
   const { oldAuthorizationId } = await withDesktopSession(paths, env, async (session) => {
@@ -152,12 +150,12 @@ export async function runMacosA5SyncGroupRejoinJourney({
   assertFrozenSyncGroupCandidate(candidate, paths.repoRoot);
   const pair = await runMacosA5PairSync({ buildIdentity, credentialRepairRequired: false,
     desktopControl: async () => ({ code: 0, output: '' }),
-    deviceFingerprint: T132_A5_IDENTITY, existingPairing: false, env,
+    desktopAuthorizationFingerprint: T132_MAC_AUTHORIZATION,
+    existingPairing: false, env, hostName: T132_A5_HOST,
     evidenceRoot: path.join(evidenceRoot, 'rejoin'), execute, paths, protectData: undefined,
     instrumentationModeArgs: CREDENTIALS_ONLY_DISCOVERY_TARGET,
-    pairedDeviceFingerprint: null,
     recoveryEvidenceGoal: 'credentials-signable',
-    remotePeerFingerprint: T132_MAC_IDENTITY, serial,
+    serial,
     validateDesktop: (...args) => validateT132DepartedMemberDesktop(
       ...args, authorizationFingerprint(oldAuthorizationId)
     ) });
@@ -189,7 +187,8 @@ export async function runMacosA5SyncGroupRejoinJourney({
   const manifestPath = path.join(evidenceRoot, 't132-3-rejoin-manifest.json');
   fs.writeFileSync(manifestPath, `${JSON.stringify({ buildIdentity, candidate,
     completedAt: new Date().toISOString(), continuation: continuation.manifestPath,
-    groupId: T132_GROUP_ID, identity: T132_A5_IDENTITY, pair: pair.pairSyncRecovery.manifestPath,
+    groupId: T132_GROUP_ID, authorization: T132_A5_AUTHORIZATION,
+    pair: pair.pairSyncRecovery.manifestPath,
     provider: { foreground: foregroundProvider, stopped: stoppedProvider },
     resultStatus: 'success', schemaVersion: 1, timelineId: T132_TIMELINE_ID,
     ...rejoined }, null, 2)}\n`, 'utf8');
@@ -208,10 +207,10 @@ export async function recoverMacosA5DepartedCheckpoint({
   });
   const pair = await runMacosA5PairSync({ buildIdentity, credentialRepairRequired: false,
     desktopControl: async () => ({ code: 0, output: '' }),
-    deviceFingerprint: T132_A5_IDENTITY, existingPairing: false, env, evidenceRoot,
+    desktopAuthorizationFingerprint: T132_MAC_AUTHORIZATION,
+    existingPairing: false, env, evidenceRoot, hostName: T132_A5_HOST,
     execute, instrumentationModeArgs: UNIQUE_DISCOVERY_TARGET,
-    pairedDeviceFingerprint: null,
-    paths, remotePeerFingerprint: T132_MAC_IDENTITY, serial,
+    paths, serial,
     validateDesktop: (...args) => validateT132DepartedMemberDesktop(
       ...args, departed.storedLocalMemberAuthorizationFingerprint
     ) });

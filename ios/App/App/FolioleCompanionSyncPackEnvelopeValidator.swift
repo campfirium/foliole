@@ -86,7 +86,7 @@ enum FolioleCompanionSyncPackEnvelopeValidator {
         }
         guard try string(manifest, "to_peer_id") == expectedPeerId else { throw invalid("sync_pack_target_mismatch") }
         _ = try string(manifest, "pack_id")
-        guard try string(manifest, "from_device_id") == expectedSourcePeerId else {
+        guard try string(manifest, "from_peer_id") == expectedSourcePeerId else {
             throw invalid("sync_pack_source_mismatch")
         }
         _ = try string(manifest, "created_at")

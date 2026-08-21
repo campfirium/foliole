@@ -7,10 +7,10 @@ import { notifyWorkspaceSyncApplied } from './workspaceSyncAppliedEvents.js';
 
 export const SYNC_PUSH_PATH = '/companion/sync-push';
 
-export async function handleCompanionSyncPush(bodyText: string, authenticatedDeviceId: string) {
+export async function handleCompanionSyncPush(bodyText: string, authenticatedHostName: string) {
   return await handleCompanionSyncPushWithApply(
     bodyText,
-    authenticatedDeviceId,
+    authenticatedHostName,
     applyCompanionSyncPushAsync,
     notifyWorkspaceSyncApplied
   );

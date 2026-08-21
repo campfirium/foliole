@@ -30,9 +30,6 @@ describe('companion pairing request lifecycle', () => {
     createCompanionPairRequest({
       ...protocolArgs,
       clientAddress: '192.168.1.22',
-      deviceId: 'android-1',
-      deviceKind: 'android-capacitor',
-      deviceName: 'Android companion android-1',
       nowMs: Date.parse('2026-04-24T10:00:00.000Z'),
       pairingPublicKey: TEST_PAIRING_PUBLIC_KEY
     });
@@ -40,8 +37,8 @@ describe('companion pairing request lifecycle', () => {
     expect(loadPendingCompanionPairRequests(Date.parse('2026-04-24T10:00:01.000Z'))).toMatchObject([
       {
         client_address: '192.168.1.22',
-        device_id: 'android-1',
-        device_kind: 'android-capacitor'
+        host_name: 'A5',
+        host_platform: 'android-capacitor'
       }
     ]);
   });
@@ -51,9 +48,6 @@ describe('companion pairing request lifecycle', () => {
     createCompanionPairRequest({
       ...protocolArgs,
       clientAddress: '192.168.1.22',
-      deviceId: 'android-1',
-      deviceKind: 'android-capacitor',
-      deviceName: 'Android companion android-1',
       nowMs,
       pairingPublicKey: TEST_PAIRING_PUBLIC_KEY
     });
@@ -67,9 +61,6 @@ describe('companion pairing request lifecycle', () => {
     const created = createCompanionPairRequest({
       ...protocolArgs,
       clientAddress: '192.168.1.22',
-      deviceId: 'android-1',
-      deviceKind: 'android-capacitor',
-      deviceName: 'Android companion android-1',
       nowMs,
       pairingPublicKey: TEST_PAIRING_PUBLIC_KEY
     });
@@ -85,7 +76,7 @@ describe('companion pairing request lifecycle', () => {
 it('binds an ordinary approval to the selected assigned member name', () => {
   const nowMs = Date.parse('2026-04-24T10:00:00.000Z');
   const created = createCompanionPairRequest({
-    ...protocolArgs, deviceId: 'A5', deviceKind: 'android-capacitor', deviceName: 'A5',
+    ...protocolArgs,
     nowMs, pairingPublicKey: TEST_PAIRING_PUBLIC_KEY
   });
   if (created.rate_limited) throw new Error('unexpected_pair_request_rate_limit');
@@ -94,7 +85,7 @@ it('binds an ordinary approval to the selected assigned member name', () => {
   );
   expect(loadCompanionPairRequestForCompletion(created.request.pair_request_id, nowMs + 2))
     .toMatchObject({ request: {
-      device_id: 'A5', host_name: 'A5 2', membership_action: 'recover_existing_member', status: 'approved'
+      host_name: 'A5 2', membership_action: 'recover_existing_member', status: 'approved'
     } });
 });
 
@@ -105,9 +96,6 @@ describe('companion pairing request rate limiting', () => {
       expect(createCompanionPairRequest({
         ...protocolArgs,
         clientAddress: '192.168.1.22',
-        deviceId: `android-${index}`,
-        deviceKind: 'android-capacitor',
-        deviceName: `Android companion ${index}`,
         hostName: `A5 ${index}`,
         nowMs: nowMs + index,
         pairingPublicKey: TEST_PAIRING_PUBLIC_KEY
@@ -117,9 +105,6 @@ describe('companion pairing request rate limiting', () => {
     expect(createCompanionPairRequest({
       ...protocolArgs,
       clientAddress: '192.168.1.22',
-      deviceId: 'android-6',
-      deviceKind: 'android-capacitor',
-      deviceName: 'Android companion 6',
       hostName: 'A5 6',
       nowMs: nowMs + 5,
       pairingPublicKey: TEST_PAIRING_PUBLIC_KEY

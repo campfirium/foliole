@@ -58,7 +58,7 @@ export type NativeSyncCommandMap = {
     result: DesktopCompanionPairingOverviewPayload;
   };
   [NATIVE_COMMANDS.removeSyncGroupMember]: {
-    args: { device_id: string };
+    args: { host_name: string };
     result: DesktopCompanionPairingOverviewPayload;
   };
   [NATIVE_COMMANDS.discoverSyncGroups]: {
@@ -87,14 +87,6 @@ export type NativeSyncCommandMap = {
   };
   [NATIVE_COMMANDS.resumeCompanionSync]: {
     args: undefined;
-    result: DesktopCompanionPairingOverviewPayload;
-  };
-  [NATIVE_COMMANDS.clearCompanionPairedDevices]: {
-    args: undefined;
-    result: DesktopCompanionPairingOverviewPayload;
-  };
-  [NATIVE_COMMANDS.removeCompanionPairedDevice]: {
-    args: { device_id: string };
     result: DesktopCompanionPairingOverviewPayload;
   };
   [NATIVE_COMMANDS.approveCompanionPairRequest]: {

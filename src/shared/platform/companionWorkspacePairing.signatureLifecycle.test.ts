@@ -77,10 +77,10 @@ beforeEach(() => {
     }), status: 202 })
     .mockResolvedValueOnce({ body: JSON.stringify({
       authorization_id: 'authorization-a5', compatibility, desktop_protocol: protocol,
-      device_id: 'device-a5', encrypted_credential_secret: encryptedSecret,
+      encrypted_credential_secret: encryptedSecret,
       host_name: 'A5', host_platform: 'android-capacitor', paired_at: '2026-08-20T08:00:00.000Z',
-      peer_id: 'device-provider', provider_authorization_id: 'authorization-provider',
-      provider_device_id: 'device-provider', provider_encrypted_credential_secret: encryptedSecret,
+      peer_id: 'authorization-provider', provider_authorization_id: 'authorization-provider',
+      provider_encrypted_credential_secret: encryptedSecret,
       provider_host_name: 'Desktop', provider_host_platform: 'darwin', sync_group: group
     }), status: 200 });
   groupMock.join.mockImplementation(async () => {
@@ -106,9 +106,11 @@ it('proves fresh Sync Group pairing can sign after persistence and route binding
 
   expect(events).toEqual(['group-committed', 'route-committed', 'signature-probe']);
   expect(nativeMock.signCompanionSyncRequest).toHaveBeenCalledWith(expect.objectContaining({
-    endpoint_url: endpointUrl, sync_group_id: group.group_id,
-    workgroup_key: 'persistent-workgroup-key'
+    endpoint_url: endpointUrl, sync_group_id: group.group_id
   }));
+  expect(nativeMock.signCompanionSyncRequest).toHaveBeenCalledWith(
+    expect.not.objectContaining({ workgroup_key: expect.anything() })
+  );
   expect(nativeMock.desktopHttpRequest).toHaveBeenCalledTimes(2);
   expect(nativeMock.loadDiscoveryCandidates).not.toHaveBeenCalled();
   expect(nativeMock.startSyncGroupProvider).not.toHaveBeenCalled();
@@ -131,12 +133,12 @@ it('keeps committed credentials when the local signature-only probe fails', asyn
 
 async function completeFreshPairing() {
   await requestCompanionPairing({
-    deviceId: 'device-a5', deviceKind: 'android-capacitor', deviceName: 'A5', endpointUrl,
+    hostName: 'A5', hostPlatform: 'android-capacitor', endpointUrl,
     groupId: group.group_id, groupTag: 'group-tag', timelineId: group.timeline_id
   });
 
   return pairCompanionWithDesktop({
-    deviceKind: 'android-capacitor', deviceName: 'A5', endpointUrl,
+    hostName: 'A5', hostPlatform: 'android-capacitor', endpointUrl,
     groupId: group.group_id, groupTag: 'group-tag', pairRequestId: 'pair-request-1'
   });
 }

@@ -26,7 +26,7 @@ export function hasProtectedPendingSyncState(readiness) {
     && missing[0] === 'unsynced_device_data_requires_review'
     && readiness.dirtyRecordCount > 0
     && hasCompleteDirtyStateEvidence(readiness)
-    && FINGERPRINT.test(readiness.deviceIdentityFingerprint ?? '')
+    && FINGERPRINT.test(readiness.localMemberAuthorizationFingerprint ?? '')
     && readiness.syncGroupCredentialsPresent === true
     && readiness.workgroupKeyPresent === true
     && readiness.syncGroupRoutePresent === true

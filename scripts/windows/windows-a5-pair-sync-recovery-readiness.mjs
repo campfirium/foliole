@@ -15,16 +15,16 @@ async function runReadiness(run, command, args, commandOptions, stage) {
   }
 }
 
-function retryableConvergence(pairing, deviceFingerprint) {
-  const databaseStarting = pairing.deviceIdentityFingerprint === null
+function retryableConvergence(pairing) {
+  const databaseStarting = pairing.localMemberAuthorizationFingerprint === null
     && pairing.dirtyRecordCount === null
     && pairing.missingPrerequisites.length === 1
     && pairing.missingPrerequisites[0] === 'database_unavailable';
-  const dirtyConverging = pairing.deviceIdentityFingerprint === deviceFingerprint
+  const dirtyConverging = pairing.localMemberAuthorizationFingerprint
     && pairing.dirtyRecordCount > 0
     && pairing.missingPrerequisites.length === 1
     && pairing.missingPrerequisites[0] === 'unsynced_device_data_requires_review';
-  const peerDeliveryConverging = pairing.deviceIdentityFingerprint === deviceFingerprint
+  const peerDeliveryConverging = pairing.localMemberAuthorizationFingerprint
     && (pairing.syncGroupRemotePeerPendingDeliveryCount ?? 0) > 0;
   return (databaseStarting || dirtyConverging || peerDeliveryConverging)
     && pairing.syncGroupCredentialsPresent
@@ -32,7 +32,7 @@ function retryableConvergence(pairing, deviceFingerprint) {
 }
 
 export async function postPairSyncRecoveryReadiness({
-  adbPort, afterSnapshot, beforeSnapshot, deviceFingerprint, env, maxAttempts = 60,
+  adbPort, afterSnapshot, beforeSnapshot, env, maxAttempts = 60,
   paths, quiesceProvider = false, run, serial, wait = delay
 }) {
   beforeSnapshot ??= quiesceProvider ? () => run(paths.adbPath, [
@@ -57,12 +57,12 @@ export async function postPairSyncRecoveryReadiness({
       await afterSnapshot();
     }
     pairing = parsePairSyncRecoveryReadiness(pairingResult.stdout);
-    if (pairing.deviceIdentityFingerprint === deviceFingerprint
+    if (/^[0-9a-f]{16}$/u.test(pairing.localMemberAuthorizationFingerprint ?? '')
         && pairing.syncGroupRemotePeerPendingDeliveryCount === 0) break;
-    if (!retryableConvergence(pairing, deviceFingerprint) || attempt === maxAttempts) break;
+    if (!retryableConvergence(pairing) || attempt === maxAttempts) break;
     await wait(1_000);
   }
-  if (pairing.deviceIdentityFingerprint !== deviceFingerprint
+  if (!/^[0-9a-f]{16}$/u.test(pairing.localMemberAuthorizationFingerprint ?? '')
       || pairing.syncGroupRemotePeerPendingDeliveryCount !== 0
       || !pairing.syncGroupCredentialsPresent || pairing.syncGroupPeerConflict
       || !/^[0-9a-f]{16}$/u.test(pairing.syncGroupRemotePeerFingerprint ?? '')

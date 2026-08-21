@@ -14,9 +14,8 @@ interface CompanionDiscoveryCandidatesPayload {
 
 export interface CompanionSyncGroupProviderState extends SyncParticipationSnapshot {
   pending_requests: Array<{
-    device_id: string;
-    device_kind: string;
-    device_name: string;
+    host_name: string;
+    host_platform: string;
     pair_request_id: string;
     requested_at: string;
   }>;
@@ -59,13 +58,10 @@ export interface CompanionWorkspaceSyncPlugin
   startSyncGroupProvider(args: {
     app_version: string;
     authorization_id: string;
-    device_id: string;
-    device_name: string;
     facts_revision: string;
     host_name: string;
     host_platform: string;
     sync_group: import('../../../lib/platform/syncGroupContract').SyncGroupPayload;
-    workgroup_key: string;
   }): Promise<CompanionSyncGroupProviderState>;
   stopSyncGroupProvider(): Promise<CompanionSyncGroupProviderState>;
   resolveAttachmentResource(args: {

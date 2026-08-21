@@ -18,9 +18,9 @@ final class FolioleCompanionSyncGroupPeerStore {
 
     private FolioleCompanionSyncGroupPeerStore() {}
 
-    static String createSecret(Context context, String deviceId) throws Exception {
+    static String createSecret(Context context, String authorizationId) throws Exception {
         byte[] secret = randomSecretBytes();
-        save(context, deviceId, secret);
+        save(context, authorizationId, secret);
         return Base64.encodeToString(secret, Base64.NO_WRAP | Base64.URL_SAFE | Base64.NO_PADDING);
     }
 
@@ -28,8 +28,8 @@ final class FolioleCompanionSyncGroupPeerStore {
         return Base64.encodeToString(randomSecretBytes(), Base64.NO_WRAP | Base64.URL_SAFE | Base64.NO_PADDING);
     }
 
-    static void saveSecret(Context context, String deviceId, String encodedSecret) throws Exception {
-        save(context, deviceId, Base64.decode(encodedSecret, Base64.NO_WRAP | Base64.URL_SAFE));
+    static void saveSecret(Context context, String authorizationId, String encodedSecret) throws Exception {
+        save(context, authorizationId, Base64.decode(encodedSecret, Base64.NO_WRAP | Base64.URL_SAFE));
     }
 
     private static byte[] randomSecretBytes() {
@@ -38,8 +38,8 @@ final class FolioleCompanionSyncGroupPeerStore {
         return secret;
     }
 
-    static byte[] load(Context context, String deviceId) throws Exception {
-        String encoded = prefs(context).getString(deviceId, null);
+    static byte[] load(Context context, String authorizationId) throws Exception {
+        String encoded = prefs(context).getString(authorizationId, null);
         if (encoded == null) return null;
         byte[] payload = Base64.decode(encoded, Base64.NO_WRAP);
         byte[] iv = java.util.Arrays.copyOfRange(payload, 0, 12);
@@ -55,13 +55,13 @@ final class FolioleCompanionSyncGroupPeerStore {
         }
     }
 
-    static void remove(Context context, String deviceId) {
-        if (!prefs(context).edit().remove(deviceId).commit()) {
+    static void remove(Context context, String authorizationId) {
+        if (!prefs(context).edit().remove(authorizationId).commit()) {
             throw new IllegalStateException("Failed to remove Sync Group peer secret.");
         }
     }
 
-    private static void save(Context context, String deviceId, byte[] secret) throws Exception {
+    private static void save(Context context, String authorizationId, byte[] secret) throws Exception {
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
         cipher.init(Cipher.ENCRYPT_MODE, key());
         byte[] iv = cipher.getIV();
@@ -72,7 +72,7 @@ final class FolioleCompanionSyncGroupPeerStore {
         byte[] payload = new byte[iv.length + encrypted.length];
         System.arraycopy(iv, 0, payload, 0, iv.length);
         System.arraycopy(encrypted, 0, payload, iv.length, encrypted.length);
-        if (!prefs(context).edit().putString(deviceId, Base64.encodeToString(payload, Base64.NO_WRAP)).commit()) {
+        if (!prefs(context).edit().putString(authorizationId, Base64.encodeToString(payload, Base64.NO_WRAP)).commit()) {
             throw new IllegalStateException("Failed to persist Sync Group peer secret.");
         }
     }

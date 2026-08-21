@@ -19,7 +19,7 @@ export async function extractSyncPackDatabase(args: {
   const manifest = JSON.parse(required(entries, 'manifest.json').toString('utf8')) as Record<string, unknown>;
   if (manifest.format !== SYNC_PACK_FORMAT || manifest.format_version !== SYNC_PACK_FORMAT_VERSION ||
       manifest.to_peer_id !== args.expectedPeerId ||
-      manifest.from_device_id !== args.expectedSourcePeerId ||
+      manifest.from_peer_id !== args.expectedSourcePeerId ||
       manifest.database_file !== SYNC_PACK_DATABASE_ENTRY) {
     throw new Error('invalid_sync_pack_manifest');
   }

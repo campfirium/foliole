@@ -4,11 +4,9 @@ import type { NativeInvoke } from '../../../lib/platform/nativeContract';
 
 import {
   approveDesktopCompanionPairRequest,
-  clearDesktopCompanionPairedDevices,
   disableDesktopCompanionSync,
   enableDesktopCompanionSync,
   loadDesktopCompanionPairingOverview,
-  removeDesktopCompanionPairedDevice,
   removeDesktopSyncGroupMember,
   pauseDesktopCompanionSync,
   rejectDesktopCompanionPairRequest,
@@ -30,21 +28,18 @@ beforeEach(() => {
 
 it('loads desktop companion pairing overview through the native bridge', async () => {
   const invoke = vi.fn().mockResolvedValue({
-    paired_devices: [
+    paired_authorizations: [
       {
+        authorization_id: 'authorization-android',
         client_address: '192.168.1.22',
-        device_id: 'android-1',
-        device_kind: 'android-capacitor',
-        device_name: 'Android companion android-1',
+        host_name: 'A5',
+        host_platform: 'android-capacitor',
         paired_at: '2026-04-24T10:03:00.000Z'
       }
     ],
     pending_requests: [
       {
         client_address: '192.168.1.22',
-        device_id: 'android-1',
-        device_kind: 'android',
-        device_name: 'Pixel 9',
         host_name: 'Pixel 9',
         host_platform: 'android',
         expires_at: '2026-04-24T10:02:00.000Z',
@@ -56,7 +51,7 @@ it('loads desktop companion pairing overview through the native bridge', async (
     server_status: {
       advertised_urls: ['http://127.0.0.1:38641'],
       last_error: null,
-      paired_device_count: 1,
+      paired_authorization_count: 1,
       pending_pair_request_count: 1,
       port: 38641,
       state: 'running'
@@ -66,8 +61,8 @@ it('loads desktop companion pairing overview through the native bridge', async (
   window.electronAPI = createMockElectronApi(invoke);
 
   await expect(loadDesktopCompanionPairingOverview()).resolves.toMatchObject({
-    paired_devices: [{ client_address: '192.168.1.22', device_id: 'android-1', device_kind: 'android-capacitor' }],
-    pending_requests: [{ client_address: '192.168.1.22', device_name: 'Pixel 9', pair_request_id: 'pair-request-1' }],
+    paired_authorizations: [{ authorization_id: 'authorization-android', host_name: 'A5' }],
+    pending_requests: [{ client_address: '192.168.1.22', host_name: 'Pixel 9', pair_request_id: 'pair-request-1' }],
     server_status: { state: 'running' },
     sync_enabled: true
   });
@@ -80,7 +75,7 @@ it('approves and rejects companion pair requests through the native bridge', asy
     server_status: {
       advertised_urls: ['http://127.0.0.1:38641'],
       last_error: null,
-      paired_device_count: 2,
+      paired_authorization_count: 2,
       pending_pair_request_count: 0,
       port: 38641,
       state: 'running'
@@ -100,32 +95,8 @@ it('approves and rejects companion pair requests through the native bridge', asy
   });
 });
 
-it('disconnects paired companion devices through the native bridge', async () => {
-  const invoke = vi.fn().mockResolvedValue({
-    pending_requests: [],
-    server_status: {
-      advertised_urls: ['http://127.0.0.1:38641'],
-      last_error: null,
-      paired_device_count: 0,
-      pending_pair_request_count: 0,
-      port: 38641,
-      state: 'running'
-    },
-    sync_enabled: true
-  });
-  window.electronAPI = createMockElectronApi(invoke);
-
-  await removeDesktopCompanionPairedDevice('android-1');
-  await clearDesktopCompanionPairedDevices();
-
-  expect(invoke).toHaveBeenNthCalledWith(1, 'remove_companion_paired_device', {
-    device_id: 'android-1'
-  });
-  expect(invoke).toHaveBeenNthCalledWith(2, 'clear_companion_paired_devices');
-});
-
 it('removes Sync Group members through their Host name', async () => {
-  const invoke = vi.fn().mockResolvedValue({ paired_devices: [], pending_requests: [] });
+  const invoke = vi.fn().mockResolvedValue({ paired_authorizations: [], pending_requests: [] });
   window.electronAPI = createMockElectronApi(invoke);
 
   await removeDesktopSyncGroupMember('Reading Phone');
@@ -141,7 +112,7 @@ it('toggles desktop companion sync through the native bridge', async () => {
     server_status: {
       advertised_urls: ['http://127.0.0.1:38641'],
       last_error: null,
-      paired_device_count: 0,
+      paired_authorization_count: 0,
       pending_pair_request_count: 0,
       port: 38641,
       state: 'running'

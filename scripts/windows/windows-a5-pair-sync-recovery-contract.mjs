@@ -46,15 +46,17 @@ export function parsePairSyncRecoveryReadiness(output) {
   catch { throw pairSyncRecoveryFailure('Pair sync recovery readiness evidence is invalid', 'pair-sync-readiness'); }
   if (value?.schemaVersion !== 1 || !['ready', 'approval_required'].includes(value.resultStatus)
       || !Array.isArray(value.missingPrerequisites)
-      || (value.deviceIdentityFingerprint !== null
-        && !/^[0-9a-f]{16}$/u.test(value.deviceIdentityFingerprint))) {
+      || (value.localMemberAuthorizationFingerprint !== null
+        && !/^[0-9a-f]{16}$/u.test(value.localMemberAuthorizationFingerprint))) {
     throw pairSyncRecoveryFailure('Pair sync recovery readiness evidence is incomplete', 'pair-sync-readiness');
   }
   return {
     activeSyncGroupMemberCount: Number.isSafeInteger(value.activeSyncGroupMemberCount)
       ? value.activeSyncGroupMemberCount : null,
-    deviceIdentityFingerprint: value.deviceIdentityFingerprint,
+    localMemberAuthorizationFingerprint: value.localMemberAuthorizationFingerprint,
     dirtyRecordCount: value.dirtyRecordCount,
+    hostName: typeof value.hostName === 'string' && value.hostName.trim()
+      ? value.hostName.trim() : null,
     missingPrerequisites: [...value.missingPrerequisites],
     latestSyncRunResult: typeof value.latestSyncRunResult === 'string'
       ? value.latestSyncRunResult : null,
@@ -68,12 +70,13 @@ export function parsePairSyncRecoveryReadiness(output) {
     nodeCount: value.nodeCount,
     pairingCredentialsPresent: value.pairingCredentialsPresent === true,
     pairingCredentialRejectionReason: [
-      'expired_timestamp', 'invalid_signature', 'missing_headers', 'unknown_device'
+      'expired_timestamp', 'invalid_signature', 'missing_headers', 'unknown_authorization'
     ].includes(value.pairingCredentialRejectionReason) ? value.pairingCredentialRejectionReason : null,
     pairingCredentialsRejected: value.pairingCredentialsRejected === true,
     pairingPeerConflict: value.pairingPeerConflict === true,
-    remotePeerFingerprint: /^[0-9a-f]{16}$/u.test(value.remotePeerFingerprint)
-      ? value.remotePeerFingerprint : null,
+    pairingPeerAuthorizationFingerprint: /^[0-9a-f]{16}$/u.test(
+      value.pairingPeerAuthorizationFingerprint
+    ) ? value.pairingPeerAuthorizationFingerprint : null,
     resultStatus: value.resultStatus,
     schemaVersion: 1,
     syncGroupCredentialsPresent: value.syncGroupCredentialsPresent === true,
@@ -86,7 +89,9 @@ export function parsePairSyncRecoveryReadiness(output) {
       value.syncGroupRemotePeerFingerprint
     ) ? value.syncGroupRemotePeerFingerprint : null,
     syncGroupTimelineId: typeof value.syncGroupTimelineId === 'string'
-      ? value.syncGroupTimelineId : null
+      ? value.syncGroupTimelineId : null,
+    storedAuthorizationFingerprint: /^[0-9a-f]{16}$/u.test(value.storedAuthorizationFingerprint)
+      ? value.storedAuthorizationFingerprint : null
   };
 }
 

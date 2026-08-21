@@ -13,11 +13,19 @@ function fingerprint(value) {
 }
 
 function sanitizeOverview(overview) {
+  const group = overview.sync_group;
+  const local = (group?.members ?? []).find(
+    (member) => member.state === 'active' && member.host_name === group.local_host_name
+  );
   return {
-    desktopPeerFingerprint: overview.current_host?.device_id
-      ? fingerprint(overview.current_host.device_id) : null,
-    pairedDeviceFingerprints: overview.paired_devices.map((device) => fingerprint(device.device_id)),
-    pendingDeviceFingerprints: overview.pending_requests.map((request) => fingerprint(request.device_id)),
+    localAuthorizationFingerprint: local?.authorization_id
+      ? fingerprint(local.authorization_id) : null,
+    pairedAuthorizationFingerprints: overview.paired_authorizations.map(
+      (authorization) => fingerprint(authorization.authorization_id)
+    ),
+    pendingAuthorizationFingerprints: overview.pending_requests.map(
+      (request) => fingerprint(request.pair_request_id)
+    ),
     serverState: overview.server_status.state,
     syncEnabled: overview.sync_enabled === true
   };
@@ -116,12 +124,11 @@ export async function openPairSyncDesktopSession({
     close: () => app.close(),
     enable: () => invoke(page, 'enable_companion_sync'),
     load: () => invoke(page, 'load_companion_pairing_overview'),
-    remove: (deviceId) => invoke(page, 'remove_companion_paired_device', { device_id: deviceId }),
     sanitize: sanitizeOverview
   };
 }
 
-export async function waitForUniquePairRequest(session, deviceFingerprint, {
+export async function waitForUniquePairRequest(session, expectedHostName, {
   deadline, now = Date.now, signal, timeoutMs = 40_000,
   wait = (ms, options) => delay(ms, undefined, options)
 } = {}) {
@@ -132,8 +139,8 @@ export async function waitForUniquePairRequest(session, deviceFingerprint, {
     const pending = overview.pending_requests;
     if (pending.length > 1) throw new Error('Desktop has conflicting companion pair requests.');
     if (pending.length === 1) {
-      if (fingerprint(pending[0].device_id) !== deviceFingerprint) {
-        throw new Error('Desktop pair request belongs to another device.');
+      if (pending[0].host_name !== expectedHostName) {
+        throw new Error('Desktop pair request belongs to another Host.');
       }
       return pending[0];
     }
@@ -142,4 +149,4 @@ export async function waitForUniquePairRequest(session, deviceFingerprint, {
   throw new Error('Timed out waiting for the fixed A5 pair request.');
 }
 
-export { fingerprint as pairSyncIdentityFingerprint, sanitizeOverview };
+export { fingerprint as pairSyncAuthorizationFingerprint, sanitizeOverview };

@@ -6,7 +6,7 @@ import {
   registerSyncGroupMember
 } from '../database/syncGroupStore.js';
 
-import { resolveDesktopDeviceName, resolveDesktopHostName } from './companionLanPayloads.js';
+import { resolveDesktopHostName } from './companionLanPayloads.js';
 import { readCompanionRequestBody } from './companionLanRequestBody.js';
 import { encryptCompanionPairingSecret } from './companionPairingEncryption.js';
 import {
@@ -17,13 +17,13 @@ import {
   reservePairCompletionSlot
 } from './companionPairingRequests.js';
 import {
-  countPairedCompanionDevices,
-  registerPairedCompanionDevice,
+  countPairedCompanionAuthorizations,
+  registerPairedCompanionAuthorization,
   savePairedSyncGroupPeer
 } from './companionPairingStore.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
-type StatusUpdater = (pairing: { paired_device_count: number; pending_pair_request_count: number }) => void;
+type StatusUpdater = (pairing: { paired_authorization_count: number; pending_pair_request_count: number }) => void;
 type JsonResponder = (request: http.IncomingMessage, response: http.ServerResponse, statusCode: number, payload: unknown) => void;
 
 export async function handlePairRequest(
@@ -50,17 +50,16 @@ export async function handlePairRequest(
   if (syncGroup && !workgroupKey) throw new Error('sync_group_workgroup_key_missing');
   const pairedArgs = {
     authorizationId: assignedMember?.authorization_id ?? pairRequestId,
-    clientAddress: approved.client_address, deviceId: approved.device_id,
-    deviceKind: approved.device_kind, deviceName: approved.device_name,
+    clientAddress: approved.client_address,
     hostName: assignedMember?.host_name ?? approved.host_name, hostPlatform: approved.host_platform,
     negotiatedProtocolVersion: compatibility.negotiated_version ?? CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
     remoteProtocol: approved.protocol
   };
   const paired = completion.completion ?? (workgroupKey
-    ? { authorization_id: pairedArgs.authorizationId, device_id: pairedArgs.deviceId,
+    ? { authorization_id: pairedArgs.authorizationId,
       host_name: pairedArgs.hostName, credential_secret: workgroupKey.group_key,
       paired_at: new Date().toISOString() }
-    : registerPairedCompanionDevice(pairedArgs));
+    : registerPairedCompanionAuthorization(pairedArgs));
   if (!completion.completion) completeCompanionPairRequest(pairRequestId, paired);
   const providerSecret = workgroupKey && assignedMember
     ? saveProviderRoute(approved, assignedMember, peerId, workgroupKey.group_key) : null;
@@ -70,14 +69,11 @@ export async function handlePairRequest(
   updateStatus(updatePairingStatus);
   writeJson(request, response, 200, createPairCompletionPayload({
     app_version: appVersion, compatibility, desktop_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
-    authorization_id: paired.authorization_id, device_id: paired.device_id,
+    authorization_id: paired.authorization_id,
     encrypted_credential_secret: encryptedSecret, host_name: paired.host_name,
     host_platform: assignedMember?.host_platform ?? approved.host_platform,
     paired_at: paired.paired_at, peer_id: peerId,
     ...(syncGroup ? {
-      provider_device_id: peerId,
-      provider_device_kind: process.platform,
-      provider_device_name: resolveDesktopDeviceName(),
       provider_host_name: resolveDesktopHostName(),
       provider_host_platform: process.platform,
       provider_encrypted_credential_secret: providerEncryptedSecret,
@@ -104,11 +100,13 @@ function createPairCompletionPayload(payload: Record<string, unknown> & {
 }) {
   const syncGroup = payload.sync_group;
   if (!syncGroup) return payload;
+  const providerAuthorizationId = syncGroup.members.find(
+    (member) => member.host_name === syncGroup.local_host_name
+  )?.authorization_id;
   return {
     ...payload,
-    provider_authorization_id: syncGroup.members.find(
-      (member) => member.host_name === syncGroup.local_host_name
-    )?.authorization_id
+    peer_id: providerAuthorizationId,
+    provider_authorization_id: providerAuthorizationId
   };
 }
 
@@ -137,17 +135,17 @@ async function encryptApprovedSecrets(
   providerSecret: string | null
 ) {
   const encryptedSecret = await encryptCompanionPairingSecret({
-    clientPublicKey: approved.pairing_public_key, deviceSecret: credentialSecret
+    clientPublicKey: approved.pairing_public_key, credentialSecret
   });
   const providerEncryptedSecret = providerSecret ? await encryptCompanionPairingSecret({
-    clientPublicKey: approved.pairing_public_key, deviceSecret: providerSecret
+    clientPublicKey: approved.pairing_public_key, credentialSecret: providerSecret
   }) : null;
   return { encryptedSecret, providerEncryptedSecret };
 }
 
 function updateStatus(updatePairingStatus: StatusUpdater) {
   updatePairingStatus({
-    paired_device_count: countPairedCompanionDevices(),
+    paired_authorization_count: countPairedCompanionAuthorizations(),
     pending_pair_request_count: countPendingCompanionPairRequests()
   });
 }
@@ -168,11 +166,7 @@ function saveProviderRoute(
     endpoint_url: `http://${approved.client_address}:38641`,
     group_id: approved.group_id,
     local_authorization_id: local.authorization_id,
-    local_device_id: peerId,
     local_host_name: resolveDesktopHostName(),
-    peer_device_id: approved.device_id,
-    peer_device_kind: approved.device_kind,
-    peer_device_name: assigned.host_name,
     peer_authorization_id: assigned.authorization_id,
     peer_host_name: assigned.host_name,
     peer_host_platform: assigned.host_platform,

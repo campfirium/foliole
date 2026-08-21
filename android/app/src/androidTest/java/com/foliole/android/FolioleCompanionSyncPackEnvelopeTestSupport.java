@@ -39,7 +39,7 @@ final class FolioleCompanionSyncPackEnvelopeTestSupport {
             .put("database_uncompressed_sha256", sha256Uri(sqliteBytes))
             .put("format", "foliole.sync-pack")
             .put("format_version", 1)
-            .put("from_device_id", "desktop-fixture")
+            .put("from_peer_id", "authorization-desktop-fixture")
             .put("from_state_seq", 0)
             .put("pack_id", "pack-1")
             .put("schema_version", 46)

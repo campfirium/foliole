@@ -31,7 +31,7 @@ const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3
 
 export interface BuildDesktopSyncPackInput {
   createdAt?: string;
-  fromDeviceId?: string;
+  fromPeerId: string;
   outputPath: string;
   packId: string;
   fromStateSeq: number;
@@ -50,7 +50,7 @@ function sha256Uri(buffer: Buffer) {
 function buildContainerManifest(args: {
   compressedBytes: Buffer;
   createdAt: string;
-  fromDeviceId: string;
+  fromPeerId: string;
   fromStateSeq: number;
   input: BuildDesktopSyncPackInput;
   rows: LoadedDesktopSyncPackRows;
@@ -81,7 +81,7 @@ function buildContainerManifest(args: {
     format: SYNC_PACK_FORMAT,
     format_version: SYNC_PACK_FORMAT_VERSION,
     pack_id: args.input.packId,
-    from_device_id: args.fromDeviceId,
+    from_peer_id: args.fromPeerId,
     to_peer_id: args.input.toPeerId ?? '*',
     schema_version: DATABASE_SCHEMA_VERSION,
     from_state_seq: args.fromStateSeq,
@@ -96,7 +96,7 @@ function buildContainerManifest(args: {
 }
 
 export async function buildDesktopSyncPackFromDriver(
-  input: BuildDesktopSyncPackInput & { fromDeviceId: string },
+  input: BuildDesktopSyncPackInput,
   sourceDriver: DatabaseDriver
 ) {
   const fromStateSeq = normalizeSeq(input.fromStateSeq);
@@ -133,7 +133,7 @@ export async function buildDesktopSyncPackFromDriver(
     const uncompressedBytes = await fs.readFile(incomingPath);
     const compressedBytes = deflateSync(uncompressedBytes);
     const containerManifest = buildContainerManifest({
-      compressedBytes, createdAt, fromDeviceId: input.fromDeviceId, fromStateSeq,
+      compressedBytes, createdAt, fromPeerId: input.fromPeerId, fromStateSeq,
       input, rows, toStateSeq: packToStateSeq, uncompressedBytes
     });
     await writeStoredZip(input.outputPath, [

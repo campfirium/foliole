@@ -17,12 +17,8 @@ export async function saveStandaloneNativePairing(
   await FolioleCompanionSync.savePairingCredentials({
     authorization_id: payload.authorization_id,
     credential_secret: credentialSecret,
-    device_id: payload.device_id,
-    device_kind: args.deviceKind,
-    device_name: payload.device_id,
-    device_secret: credentialSecret,
-    host_name: payload.host_name ?? args.deviceName,
-    host_platform: payload.host_platform ?? args.deviceKind,
+    host_name: payload.host_name ?? args.hostName,
+    host_platform: payload.host_platform ?? args.hostPlatform,
     negotiated_protocol_version: payload.compatibility.negotiated_version
       ?? CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
     paired_at: payload.paired_at,

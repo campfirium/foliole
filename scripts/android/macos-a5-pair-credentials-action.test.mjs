@@ -32,8 +32,8 @@ it('stops fresh A5 pairing after native credentials can sign the first request',
   await runMacosA5PairCredentialsEntry(args, {
     buildDesktop: vi.fn(),
     resolveReadiness: () => ({
-      credentialRepairRequired: false, deviceIdentityFingerprint: 'device-1',
-      existingPairing: false, pairTargetPeerFingerprint: 'peer-1'
+      credentialRepairRequired: false, existingPairing: false, hostName: 'A5',
+      pairTargetAuthorizationFingerprint: 'peer-1'
     }),
     runPairSync
   });
@@ -41,7 +41,7 @@ it('stops fresh A5 pairing after native credentials can sign the first request',
   expect(runPairSync).toHaveBeenCalledWith(expect.objectContaining({
     evidenceRoot: path.join('/repo/foliole', '.tmp/artifacts/a5-pair-credentials/build-1'),
     instrumentationModeArgs: macosA5CredentialsOnlyModeArgs,
-    recoveryEvidenceGoal: 'credentials-signable', remotePeerFingerprint: 'peer-1'
+    desktopAuthorizationFingerprint: 'peer-1', recoveryEvidenceGoal: 'credentials-signable'
   }));
   expect(macosA5CredentialsOnlyModeArgs()).toEqual([
     '-e', 'foliolePairSyncEvidenceGoal', 'credentials-signable'
@@ -90,7 +90,8 @@ it('routes exact joined-empty credentials through product Leave and a fresh boun
   await runMacosA5PairCredentialsEntry(args, {
     buildDesktop: vi.fn(), collectProtectedReadiness,
     inspectDesktopDeparture: () => ({ groupId: 'group-1',
-      remotePeerFingerprint: joinedEmpty.syncGroupRemotePeerFingerprint, timelineId: 'timeline-1' }),
+      remotePeerAuthorizationFingerprint: joinedEmpty.syncGroupRemotePeerFingerprint,
+      timelineId: 'timeline-1' }),
     leaveJoinedEmpty, readReceipt: () => ({
       credentials: 'saved_signable', initialSync: 'not_started', pairingPath: 'new'
     }), produceHandoff: vi.fn(), resolveReadiness, runPairSync
@@ -101,10 +102,10 @@ it('routes exact joined-empty credentials through product Leave and a fresh boun
     evidenceRoot: path.join('/repo/foliole', '.tmp/artifacts/a5-pair-credentials/build-2/leave')
   }));
   expect(runPairSync).toHaveBeenCalledWith(expect.objectContaining({
-    credentialRepairRequired: false, existingPairing: false, pairedDeviceFingerprint: null,
-    pairRequestFingerprint: '2fdd44bb500a5934',
+    credentialRepairRequired: false, existingPairing: false, hostName: 'A5',
+    pairedAuthorizationFingerprint: null, pairRequestIdentity: 'A5',
     protectedSyncGroup: { groupId: 'group-1', timelineId: 'timeline-1' },
-    remotePeerFingerprint: joinedEmpty.syncGroupRemotePeerFingerprint,
+    desktopAuthorizationFingerprint: joinedEmpty.syncGroupRemotePeerFingerprint,
     recoveryEvidenceGoal: 'credentials-signable'
   }));
   expect(collectProtectedReadiness).toHaveBeenCalledTimes(2);
@@ -114,7 +115,7 @@ it('merges the same read-only database snapshot fields before and after Leave', 
   const events = [];
   const execute = vi.fn(async () => { events.push('stop'); return { code: 0 }; });
   const collectSnapshot = vi.fn().mockResolvedValue({ database: { integrity: 'ok', inspection: {
-    activeSyncGroupMemberCount: 3, deviceIdentityFingerprint: '2fdd44bb500a5934',
+    activeSyncGroupMemberCount: 3,
     dirtyObjectCounts: {}, dirtyRecordCount: 0, nodeCount: 0,
     localMemberAuthorizationFingerprint: authorizationFingerprint('authorization-a5'),
     protectedContentDigest: digest, storedLocalDepartureAuthorizationFingerprint: null,
@@ -141,7 +142,7 @@ it('merges the same read-only database snapshot fields before and after Leave', 
   }));
   expect(collectSnapshot.mock.calls[0][0].databaseInspector).toBeTypeOf('function');
   collectSnapshot.mockResolvedValueOnce({ database: { integrity: 'ok', inspection: {
-    activeSyncGroupMemberCount: 3, deviceIdentityFingerprint: 'different-device',
+    activeSyncGroupMemberCount: 3,
     dirtyObjectCounts: {}, dirtyRecordCount: 0, nodeCount: 0,
     protectedContentDigest: digest, syncGroupId: 'group-1',
     syncGroupTimelineId: 'timeline-1', workgroupKeyPresent: true
@@ -179,7 +180,7 @@ it('proves the desktop roster and group identity around formal product Leave', a
   const desktopAuthorization = 'authorization-desktop';
   const offlineAuthorization = 'authorization-offline';
   const baseline = assertJoinedEmptyCredentialReauthorization(joinedEmpty);
-  const overview = (members) => ({ paired_devices: [], pending_requests: [], sync_enabled: true,
+  const overview = (members) => ({ paired_authorizations: [], pending_requests: [], sync_enabled: true,
     server_status: { port: 38641, state: 'running' }, sync_group: {
       group_id: 'group-1', local_host_name: 'host-authorization-desktop',
       timeline_id: 'timeline-1', members: members.map((authorization_id) => ({
@@ -192,8 +193,10 @@ it('proves the desktop roster and group identity around formal product Leave', a
       a5Authorization, desktopAuthorization, offlineAuthorization
     ])),
     load: vi.fn().mockResolvedValue(overview([desktopAuthorization, offlineAuthorization])),
-    sanitize: vi.fn(() => ({ desktopPeerFingerprint: 'different-device-identity',
-      pendingDeviceFingerprints: [] }))
+    sanitize: vi.fn(() => ({
+      localAuthorizationFingerprint: authorizationFingerprint(desktopAuthorization),
+      pendingAuthorizationFingerprints: []
+    }))
   };
   const maintenance = vi.fn().mockResolvedValue({ manifestPath: '/tmp/leave.json' });
   const writeBoundaryEvidence = vi.fn();
@@ -210,8 +213,8 @@ it('proves the desktop roster and group identity around formal product Leave', a
   expect(session.close).toHaveBeenCalledOnce();
   expect(writeBoundaryEvidence).toHaveBeenCalledWith('/tmp/evidence', expect.objectContaining({
     actual: expect.objectContaining({
-      desktopPeerFingerprint: 'different-device-identity',
-      localMemberAuthorizationFingerprint: baseline.remotePeerFingerprint
+      localAuthorizationFingerprint: authorizationFingerprint(desktopAuthorization),
+      localMemberAuthorizationFingerprint: baseline.remotePeerAuthorizationFingerprint
     })
   }));
 

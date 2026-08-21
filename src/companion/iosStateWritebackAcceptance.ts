@@ -20,18 +20,17 @@ import { acceptanceEndpoint, postResult } from './iosBridgeAcceptance';
 const NODE_ID = 'ios-state-node';
 const REVIEWED_AT = '2026-07-21T00:01:00.000Z';
 
-async function pairForStateWriteback(endpoint: string, deviceId: string, deviceName: string) {
+async function pairForStateWriteback(endpoint: string, hostName: string) {
   await clearCompanionPairingCredentials();
   await saveCompanionWorkspaceSyncEndpoint('');
   const pending = await requestCompanionPairing({
-    deviceId,
-    deviceKind: 'ios-capacitor',
-    deviceName,
+    hostName,
+    hostPlatform: 'ios-capacitor',
     endpointUrl: endpoint
   });
   await pairCompanionWithDesktop({
-    deviceKind: 'ios-capacitor',
-    deviceName,
+    hostName,
+    hostPlatform: 'ios-capacitor',
     endpointUrl: endpoint,
     pairRequestId: pending.pair_request_id
   });
@@ -94,8 +93,7 @@ export async function runIosStateWritebackAcceptance() {
     if (!pairing.is_paired) {
       await pairForStateWriteback(
         endpoint,
-        bootstrap.device_id,
-        bootstrap.device_name ?? 'Acceptance iPhone'
+        bootstrap.host_name ?? 'Acceptance iPhone'
       );
       await syncWithoutResources(endpoint);
       await writeAcceptanceState();

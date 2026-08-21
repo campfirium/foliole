@@ -29,7 +29,6 @@ final class FolioleCompanionPairingPluginActions {
 
     static void clearSyncGroupCredentials(Context context, PluginCall call) {
         try {
-            FolioleCompanionWorkgroupSession.close();
             FolioleCompanionSyncGroupJoinGrantStore.clear(context);
             FolioleCompanionSyncGroupPeerStore.clear(context);
             FolioleCompanionSyncGroupOutboundPeerStore.clear(context);
@@ -45,14 +44,8 @@ final class FolioleCompanionPairingPluginActions {
         try {
             String authorizationIdKey = FolioleCompanionBridgeContractDefinitions.pairingAuthorizationIdCredentialRequestKey(context);
             String credentialSecretKey = FolioleCompanionBridgeContractDefinitions.pairingCredentialSecretCredentialRequestKey(context);
-            String deviceIdKey = FolioleCompanionBridgeContractDefinitions.pairingDeviceIdCredentialRequestKey(context);
-            String deviceKindKey = FolioleCompanionBridgeContractDefinitions.pairingDeviceKindCredentialRequestKey(context);
-            String deviceNameKey = FolioleCompanionBridgeContractDefinitions.pairingDeviceNameCredentialRequestKey(context);
-            String deviceSecretKey = FolioleCompanionBridgeContractDefinitions.pairingDeviceSecretCredentialRequestKey(context);
             String hostNameKey = FolioleCompanionBridgeContractDefinitions.pairingHostNameCredentialRequestKey(context);
             String hostPlatformKey = FolioleCompanionBridgeContractDefinitions.pairingHostPlatformCredentialRequestKey(context);
-            String providerDeviceSecretKey = FolioleCompanionBridgeContractDefinitions
-                .pairingCredentialRequestKey(context, "providerDeviceSecret");
             String endpointUrlKey = FolioleCompanionBridgeContractDefinitions.pairingEndpointUrlCredentialRequestKey(context);
             String syncGroupIdKey = FolioleCompanionBridgeContractDefinitions.pairingSyncGroupIdCredentialRequestKey(context);
             String pairedAtKey = FolioleCompanionBridgeContractDefinitions.pairingPairedAtCredentialRequestKey(context);
@@ -63,13 +56,8 @@ final class FolioleCompanionPairingPluginActions {
             String remotePeerPlatformKey = FolioleCompanionPairingPeerContractDefinitions.remotePeerPlatformCredentialRequestKey(context);
             String authorizationId = call.getString(authorizationIdKey);
             String credentialSecret = call.getString(credentialSecretKey);
-            String deviceId = call.getString(deviceIdKey);
-            String deviceKind = call.getString(deviceKindKey);
-            String deviceName = call.getString(deviceNameKey);
-            String deviceSecret = call.getString(deviceSecretKey);
             String hostName = call.getString(hostNameKey);
             String hostPlatform = call.getString(hostPlatformKey);
-            String providerDeviceSecret = call.getString(providerDeviceSecretKey);
             String endpointUrl = call.getString(endpointUrlKey);
             String syncGroupId = call.getString(syncGroupIdKey);
             String pairedAt = call.getString(pairedAtKey);
@@ -81,10 +69,6 @@ final class FolioleCompanionPairingPluginActions {
             if (
                 rejectIfBlank(call, authorizationIdKey, authorizationId) ||
                 rejectIfBlank(call, credentialSecretKey, credentialSecret) ||
-                rejectIfBlank(call, deviceIdKey, deviceId) ||
-                rejectIfBlank(call, deviceKindKey, deviceKind) ||
-                rejectIfBlank(call, deviceNameKey, deviceName) ||
-                rejectIfBlank(call, deviceSecretKey, deviceSecret) ||
                 rejectIfBlank(call, hostNameKey, hostName) ||
                 rejectIfBlank(call, hostPlatformKey, hostPlatform) ||
                 rejectIfBlank(call, pairedAtKey, pairedAt)
@@ -97,15 +81,11 @@ final class FolioleCompanionPairingPluginActions {
             }
             if ((syncGroupId != null || endpointUrl != null) &&
                 (rejectIfBlank(call, syncGroupIdKey, syncGroupId) || rejectIfBlank(call, endpointUrlKey, endpointUrl) ||
-                    rejectIfBlank(call, remotePeerIdKey, remotePeerId) ||
-                    rejectIfBlank(call, providerDeviceSecretKey, providerDeviceSecret))) return;
+                    rejectIfBlank(call, remotePeerIdKey, remotePeerId))) return;
             JSObject saved = FolioleCompanionPairingStore.savePairingCredentials(
                 context,
                 authorizationId,
                 credentialSecret,
-                deviceId,
-                deviceKind,
-                deviceName,
                 hostName,
                 hostPlatform,
                 negotiatedVersion,
@@ -135,7 +115,6 @@ final class FolioleCompanionPairingPluginActions {
             String bodyKey = FolioleCompanionPairingSignatureContractDefinitions.bodyRequest(context);
             String endpointUrlKey = FolioleCompanionPairingSignatureContractDefinitions.endpointUrlRequest(context);
             String syncGroupIdKey = FolioleCompanionPairingSignatureContractDefinitions.syncGroupIdRequest(context);
-            String workgroupKeyKey = FolioleCompanionPairingSignatureContractDefinitions.workgroupKeyRequest(context);
             String method = call.getString(methodKey);
             String pathWithQuery = call.getString(pathWithQueryKey);
             String timestamp = call.getString(timestampKey);
@@ -144,7 +123,6 @@ final class FolioleCompanionPairingPluginActions {
             String body = call.getString(bodyKey);
             String endpointUrl = call.getString(endpointUrlKey);
             String syncGroupId = call.getString(syncGroupIdKey);
-            String workgroupKey = call.getString(workgroupKeyKey);
             if (
                 rejectIfBlank(call, methodKey, method) ||
                 rejectIfBlank(call, pathWithQueryKey, pathWithQuery) ||
@@ -154,16 +132,15 @@ final class FolioleCompanionPairingPluginActions {
             ) {
                 return;
             }
-            if (syncGroupId != null || endpointUrl != null || workgroupKey != null) {
+            if (syncGroupId != null || endpointUrl != null) {
                 if (rejectIfBlank(call, syncGroupIdKey, syncGroupId) ||
-                    rejectIfBlank(call, endpointUrlKey, endpointUrl) ||
-                    rejectIfBlank(call, workgroupKeyKey, workgroupKey)) return;
+                    rejectIfBlank(call, endpointUrlKey, endpointUrl)) return;
                 call.resolve(body == null
-                    ? FolioleCompanionSyncGroupOutboundPeerStore.signWithWorkgroupKey(
+                    ? FolioleCompanionSyncGroupOutboundPeerStore.signCurrentGroupRequest(
                         context, syncGroupId, endpointUrl, method, pathWithQuery,
-                        timestamp, nonce, bodyHash, workgroupKey)
-                    : FolioleCompanionSyncGroupOutboundPeerStore.prepareWithWorkgroupKey(
-                        context, syncGroupId, endpointUrl, method, pathWithQuery, body, workgroupKey));
+                        timestamp, nonce, bodyHash)
+                    : FolioleCompanionSyncGroupOutboundPeerStore.prepareCurrentGroupRequest(
+                        context, syncGroupId, endpointUrl, method, pathWithQuery, body));
             } else {
                 call.resolve(FolioleCompanionPairingStore.signRequest(
                     context, method, pathWithQuery, timestamp, nonce, bodyHash));

@@ -35,9 +35,6 @@ function createWorkspaceSync() {
     desktopDiscovery: null,
     error: null,
     pairingState: {
-      device_id: null,
-      device_kind: null,
-      device_name: null,
       is_paired: false,
       paired_at: null,
     },
@@ -91,9 +88,9 @@ describe('CompanionSyncContent', () => {
     const workspaceSync = createWorkspaceSync();
     workspaceSync.pairingState = {
       ...usablePairingMetadata,
-      device_id: 'android-test-device',
-      device_kind: 'android-capacitor',
-      device_name: 'Android Emulator',
+      authorization_id: 'authorization-android',
+      host_name: 'Android Emulator',
+      host_platform: 'android-capacitor',
       is_paired: true,
       paired_at: '2026-04-24T10:03:00.000Z'
     };
@@ -132,9 +129,9 @@ function pairedWorkspaceSync() {
   const workspaceSync = createWorkspaceSync();
   workspaceSync.pairingState = {
     ...usablePairingMetadata,
-    device_id: 'android-test-device',
-    device_kind: 'android-capacitor',
-    device_name: 'Android Emulator',
+    authorization_id: 'authorization-android',
+    host_name: 'Android Emulator',
+    host_platform: 'android-capacitor',
     is_paired: true,
     paired_at: '2026-04-24T10:03:00.000Z',
     remote_peer_id: 'device-desktop',
@@ -173,9 +170,9 @@ async function testCompletesApprovedPairing() {
   vi.useFakeTimers();
   const workspaceSync = createWorkspaceSync();
   workspaceSync.completePairing = vi.fn(async () => ({
-      device_id: 'android-test-device',
-      device_kind: 'android-capacitor',
-      device_name: 'Android companion',
+      authorization_id: 'authorization-android',
+      host_name: 'Android companion',
+      host_platform: 'android-capacitor',
       is_paired: true,
       ...usablePairingMetadata,
       paired_at: '2026-04-24T10:03:00.000Z'

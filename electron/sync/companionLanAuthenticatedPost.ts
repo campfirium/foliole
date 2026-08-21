@@ -72,7 +72,7 @@ async function handleAuthenticatedRoute(args: {
     }
   } else if (route === 'sync-group-departure') {
     try {
-      writeJson(request, response, 200, acceptSyncGroupDeparture(bodyText, auth.host_name), 'POST, OPTIONS');
+      writeJson(request, response, 200, acceptSyncGroupDeparture(bodyText, auth.authorization_id), 'POST, OPTIONS');
     } catch (error) {
       writeJson(request, response, 400, {
         error: error instanceof Error ? error.message : 'sync_group_departure_payload_invalid'

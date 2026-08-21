@@ -20,7 +20,7 @@ import {
   stopCompanionMdnsAdvertisement
 } from './companionMdnsAdvertisement.js';
 import { countPendingCompanionPairRequests } from './companionPairingRequests.js';
-import { countPairedCompanionDevices } from './companionPairingStore.js';
+import { countPairedCompanionAuthorizations } from './companionPairingStore.js';
 import { ensureCompanionPairingStoreAuthorizationCutover } from './companionPairingStoreCutover.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import { startDesktopSyncGroupAutoSync, stopDesktopSyncGroupAutoSync } from './desktopSyncGroupAutoSync.js';
@@ -36,7 +36,7 @@ export const LAN_WORKSPACE_SYNC_HTTP_LIMITS = {
 export interface LanWorkspaceSyncServerStatus {
   advertised_urls: string[];
   last_error: string | null;
-  paired_device_count: number;
+  paired_authorization_count: number;
   pending_pair_request_count: number;
   port: number | null;
   state: 'failed' | 'running' | 'stopped';
@@ -47,7 +47,7 @@ let activeServer: http.Server | null = null;
 let activeStatus: LanWorkspaceSyncServerStatus = {
   advertised_urls: [],
   last_error: null,
-  paired_device_count: 0,
+  paired_authorization_count: 0,
   pending_pair_request_count: 0,
   port: null,
   state: 'stopped'
@@ -55,7 +55,7 @@ let activeStatus: LanWorkspaceSyncServerStatus = {
 
 function resolveLatestPairingStatus() {
   return {
-    paired_device_count: countPairedCompanionDevices(),
+    paired_authorization_count: countPairedCompanionAuthorizations(),
     pending_pair_request_count: countPendingCompanionPairRequests()
   };
 }
@@ -199,7 +199,7 @@ export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; p
     activeStatus = {
       advertised_urls: [],
       last_error: error instanceof Error ? error.message : 'Unknown sync server error.',
-      paired_device_count: 0,
+      paired_authorization_count: 0,
       pending_pair_request_count: 0,
       port: null,
       state: 'failed'
@@ -215,7 +215,7 @@ export async function stopLanWorkspaceSyncServer() {
     activeStatus = {
       advertised_urls: [],
       last_error: null,
-      paired_device_count: 0,
+      paired_authorization_count: 0,
       pending_pair_request_count: 0,
       port: null,
       state: 'stopped'
@@ -238,7 +238,7 @@ export async function stopLanWorkspaceSyncServer() {
   activeStatus = {
     advertised_urls: [],
     last_error: null,
-    paired_device_count: 0,
+    paired_authorization_count: 0,
     pending_pair_request_count: 0,
     port: null,
     state: 'stopped'

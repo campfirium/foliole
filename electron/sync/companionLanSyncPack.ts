@@ -3,6 +3,7 @@ import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import { buildDesktopSyncPack } from '../database/syncPackBuilder.js';
 
 export const SYNC_PACK_PATH = '/companion/sync-pack';
@@ -25,7 +26,7 @@ function parseStateSeq(value: string | null) {
 
 export async function buildCompanionSyncPackResource(
   parsedRequestUrl: URL,
-  authenticatedDeviceId: string
+  authenticatedAuthorizationId: string
 ): Promise<CompanionSyncPackResource> {
   const fromStateSeq = parseStateSeq(parsedRequestUrl.searchParams.get('after_state_seq'));
   if (fromStateSeq == null) {
@@ -35,7 +36,13 @@ export async function buildCompanionSyncPackResource(
   const packId = randomUUID();
   const outputPath = path.join(tempRoot, `${packId}.syncpack`);
   try {
-    await buildDesktopSyncPack({ fromStateSeq, outputPath, packId, toPeerId: authenticatedDeviceId });
+    const group = loadDesktopSyncGroup();
+    const local = group?.members.find((member) => member.host_name === group.local_host_name);
+    if (!local) throw new Error('sync_group_local_authorization_missing');
+    await buildDesktopSyncPack({
+      fromPeerId: local.authorization_id, fromStateSeq, outputPath, packId,
+      toPeerId: authenticatedAuthorizationId
+    });
     return {
       body: await fs.readFile(outputPath),
       fileName: `${packId}.syncpack`,

@@ -47,21 +47,20 @@ public final class FolioleCompanionSyncGroupCryptoTest {
         String key = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8";
         JSONObject headers = new JSONObject().put("X-Sync-Group-Id", "group-1")
             .put("X-Authorization-Id", "Android");
-        FolioleCompanionWorkgroupSession.open(key);
-        try {
-            FolioleCompanionWorkgroupHttp.PreparedRequest get = FolioleCompanionWorkgroupHttp.prepare(
-                null, "http://127.0.0.1:38641/companion/sync-pack?after_state_seq=0", "GET", headers, null
+        FolioleCompanionWorkgroupHttp.PreparedRequest get =
+            FolioleCompanionWorkgroupHttp.prepareWithKey(
+                null, "http://127.0.0.1:38641/companion/sync-pack?after_state_seq=0",
+                "GET", headers, null, key
             );
-            assertNull(get.body);
-            assertNotNull(get.headers.optString("X-Signature", null));
-            FolioleCompanionWorkgroupHttp.PreparedRequest post = FolioleCompanionWorkgroupHttp.prepare(
-                null, "http://127.0.0.1:38641/companion/sync-push", "POST", headers, "{}"
+        assertNull(get.body);
+        assertNotNull(get.headers.optString("X-Signature", null));
+        FolioleCompanionWorkgroupHttp.PreparedRequest post =
+            FolioleCompanionWorkgroupHttp.prepareWithKey(
+                null, "http://127.0.0.1:38641/companion/sync-push",
+                "POST", headers, "{}", key
             );
-            assertNotNull(post.body);
-            assertEquals(FolioleCompanionWorkgroupHttp.ENVELOPE_CONTENT_TYPE,
-                post.headers.getString("Content-Type"));
-        } finally {
-            FolioleCompanionWorkgroupSession.close();
-        }
+        assertNotNull(post.body);
+        assertEquals(FolioleCompanionWorkgroupHttp.ENVELOPE_CONTENT_TYPE,
+            post.headers.getString("Content-Type"));
     }
 }

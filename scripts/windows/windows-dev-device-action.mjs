@@ -74,9 +74,9 @@ async function runPairSyncRecoveryReadiness(execute, paths, env, inspectDesktop)
   }
   try {
     const desktop = await inspectDesktop({
-      deviceFingerprint: readiness.deviceIdentityFingerprint, env, execute, paths,
+      desktopAuthorizationFingerprint: readiness.syncGroupRemotePeerFingerprint,
+      env, execute, hostName: readiness.hostName, paths,
       existingPairing: readiness.pairingCredentialsPresent,
-      remotePeerFingerprint: readiness.remotePeerFingerprint
     });
     return {
       desktopPairingReadiness: desktop.overview,
@@ -203,13 +203,17 @@ export async function runWindowsDevDeviceAction({
     } else if (action === 'pair-sync-recover') {
       actionResult = await runPairSyncRecovery({
         adbPort: WINDOWS_DEV_ADB_PORT, buildIdentity,
-        deviceFingerprint: pairSyncRecoveryReadiness?.deviceIdentityFingerprint,
+        desktopAuthorizationFingerprint:
+          pairSyncRecoveryReadiness?.syncGroupRemotePeerFingerprint,
         env, evidenceRoot, execute,
         existingPairing: pairSyncRecoveryReadiness?.pairingCredentialsPresent,
+        hostName: pairSyncRecoveryReadiness?.hostName,
+        pairedAuthorizationFingerprint:
+          pairSyncRecoveryReadiness?.localMemberAuthorizationFingerprint,
         paths,
         protectData: (mode, manifest, backupRoot) => runDataProtection(
           execute, paths, mode, manifest, env, backupRoot
-        ), remotePeerFingerprint: pairSyncRecoveryReadiness?.remotePeerFingerprint,
+        ),
         serial: WINDOWS_DEV_A5_SERIAL
       });
     } else if (action === 'verify') {

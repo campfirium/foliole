@@ -62,10 +62,12 @@ async function establishAB(repoRoot, runId, { reportProgress, signal, stage }) {
     const result = await runMacosA5PairSync({ buildIdentity: runId,
       credentialRepairRequired: readiness.credentialRepairRequired,
       desktopControl: async () => ({ code: 0, output: '' }),
-      deviceFingerprint: readiness.deviceIdentityFingerprint, env, evidenceRoot, execute,
+      desktopAuthorizationFingerprint: readiness.syncGroupRemotePeerFingerprint,
+      env, evidenceRoot, execute, hostName: readiness.hostName,
       existingPairing: readiness.existingPairing, libraryHome: path.join(owned.root, 'library'),
       openTransport: openMacosAcceptanceTransport, closeTransport: closeMacosAcceptanceTransport,
-      paths, remotePeerFingerprint: readiness.remotePeerFingerprint, serial: A5_SERIAL,
+      pairedAuthorizationFingerprint: readiness.localMemberAuthorizationFingerprint,
+      paths, serial: A5_SERIAL,
       userDataPath: path.join(owned.root, 'user-data'),
       validateDesktop: validateMacosAcceptanceDesktopPreflight });
     reportProgress('macos-group-created'); reportProgress('a5-paired'); reportProgress('a-b-synced');

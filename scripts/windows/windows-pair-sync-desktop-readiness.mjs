@@ -1,82 +1,62 @@
-import { pairSyncIdentityFingerprint } from './windows-pair-sync-desktop-session.mjs';
+import {
+  pairSyncAuthorizationFingerprint
+} from './windows-pair-sync-desktop-session.mjs';
 import { pairSyncRecoveryFailure } from './windows-a5-pair-sync-recovery-contract.mjs';
 import { assertPairSyncRuntimeOwnership } from './windows-a5-pair-sync-recovery-transport.mjs';
 
 function rejectPairingState() {
   throw pairSyncRecoveryFailure(
-    'Windows current library pairing state requires user review',
+    'Windows current library authorization state requires user review',
     'desktop-pairing-readiness', null, 77
   );
 }
 
+function activeHostAuthorizationFingerprint(overview, hostName) {
+  const matches = (overview.sync_group?.members ?? []).filter(
+    (member) => member.state === 'active' && member.host_name === hostName
+  );
+  if (matches.length !== 1 || !matches[0].authorization_id) return null;
+  return pairSyncAuthorizationFingerprint(matches[0].authorization_id);
+}
+
+function pairedHostAuthorizationFingerprint(overview, hostName) {
+  const matches = (overview.paired_authorizations ?? []).filter(
+    (authorization) => authorization.host_name === hostName
+  );
+  if (matches.length !== 1 || !matches[0].authorization_id) return null;
+  return pairSyncAuthorizationFingerprint(matches[0].authorization_id);
+}
+
 export function validateDesktopPreflight(
-  overview, session, deviceFingerprint, remotePeerFingerprint = null, existingPairing = false
+  overview, session, hostName, desktopAuthorizationFingerprint = null,
+  existingPairing = false, credentialRepairRequired = false
 ) {
   const safe = session.sanitize(overview);
-  const wrongPairedDevice = safe.pairedDeviceFingerprints.some((value) => value !== deviceFingerprint);
-  const wrongRemotePeer = remotePeerFingerprint
-    && safe.desktopPeerFingerprint !== remotePeerFingerprint;
-  const missingExistingPeer = existingPairing
-    && !safe.pairedDeviceFingerprints.includes(deviceFingerprint);
-  if (!safe.desktopPeerFingerprint || safe.pendingDeviceFingerprints.length > 0
-      || wrongPairedDevice || wrongRemotePeer || missingExistingPeer
-      || safe.pairedDeviceFingerprints.length > 1) rejectPairingState();
-  return safe;
+  const targetAuthorization = activeHostAuthorizationFingerprint(overview, hostName);
+  const pairedAuthorization = pairedHostAuthorizationFingerprint(overview, hostName);
+  const trustedBase = typeof hostName === 'string' && Boolean(hostName.trim())
+    && safe.localAuthorizationFingerprint
+    && safe.pendingAuthorizationFingerprints.length === 0
+    && (!desktopAuthorizationFingerprint
+      || safe.localAuthorizationFingerprint === desktopAuthorizationFingerprint)
+    && credentialRepairRequired !== true;
+  const targetState = existingPairing
+    ? Boolean(targetAuthorization && pairedAuthorization === targetAuthorization)
+    : !targetAuthorization && !pairedAuthorization;
+  if (!trustedBase || !targetState) rejectPairingState();
+  return { ...safe, rePairRequired: !existingPairing };
 }
 
-export function validateOwnedDesktopPreflight(
-  overview, session, deviceFingerprint, remotePeerFingerprint = null, existingPairing = false
+export function validateOwnedDesktopPreflight(...args) {
+  assertPairSyncRuntimeOwnership(args[0], args[1]);
+  return validateDesktopPreflight(...args);
+}
+
+export async function inspectAuthorizedDesktopPreflight(
+  overview, session, hostName, desktopAuthorizationFingerprint = null,
+  existingPairing = false
 ) {
-  assertPairSyncRuntimeOwnership(overview, session);
   return validateDesktopPreflight(
-    overview, session, deviceFingerprint, remotePeerFingerprint, existingPairing
-  );
-}
-
-export function validateOwnedDesktopRePairPreflight(
-  overview, session, deviceFingerprint, remotePeerFingerprint
-) {
-  assertPairSyncRuntimeOwnership(overview, session);
-  const safe = session.sanitize(overview);
-  const exactPeerSwitch = remotePeerFingerprint
-    && safe.desktopPeerFingerprint
-    && safe.desktopPeerFingerprint !== remotePeerFingerprint
-    && safe.pendingDeviceFingerprints.length === 0
-    && safe.pairedDeviceFingerprints.length === 1
-    && safe.pairedDeviceFingerprints[0] === deviceFingerprint;
-  if (!exactPeerSwitch) rejectPairingState();
-  return { ...safe, rePairRequired: true };
-}
-
-export async function reconcileAuthorizedStalePairing(
-  overview, session, deviceFingerprint, remotePeerFingerprint = null, existingPairing = false
-) {
-  const safe = session.sanitize(overview);
-  if (!Array.isArray(overview.paired_devices)) {
-    return validateDesktopPreflight(
-      overview, session, deviceFingerprint, remotePeerFingerprint, existingPairing
-    );
-  }
-  const matches = overview.paired_devices.filter(
-    (device) => pairSyncIdentityFingerprint(device.device_id) === deviceFingerprint
-  );
-  const stale = overview.paired_devices.filter(
-    (device) => pairSyncIdentityFingerprint(device.device_id) !== deviceFingerprint
-  );
-  const trustedBase = safe.desktopPeerFingerprint
-    && safe.pendingDeviceFingerprints.length === 0
-    && (!remotePeerFingerprint || safe.desktopPeerFingerprint === remotePeerFingerprint);
-  const authorizedShape = overview.paired_devices.length === 2
-    && ((matches.length === 1 && stale.length === 1)
-      || (!existingPairing && matches.length === 0 && stale.length === 2));
-  if (trustedBase && authorizedShape) {
-    let reconciled = overview;
-    for (const device of stale) reconciled = await session.remove(device.device_id);
-    return validateDesktopPreflight(
-      reconciled, session, deviceFingerprint, remotePeerFingerprint, existingPairing
-    );
-  }
-  return validateDesktopPreflight(
-    overview, session, deviceFingerprint, remotePeerFingerprint, existingPairing
+    overview, session, hostName, desktopAuthorizationFingerprint, existingPairing
   );
 }

@@ -4,14 +4,16 @@ import { DEPARTED_PRESERVED_HISTORY } from './macos-a5-departed-credential-state
 export const joinedEmptyCredentialFixture = Object.freeze({
   activeSyncGroupMemberCount: 3,
   credentialRepairRequired: false,
-  deviceIdentityFingerprint: '2fdd44bb500a5934',
   dirtyObjectCounts: {},
   dirtyRecordCount: 0,
   existingPairing: false,
   joinedEmptyReauthorization: true,
+  hostName: 'A5',
   localMemberAuthorizationFingerprint: authorizationFingerprint('authorization-a5'),
   nodeCount: 0,
   pairingCredentialsPresent: false,
+  pairingPeerAuthorizationFingerprint: null,
+  pairingPeerConflict: false,
   protectedContentDigest: 'a'.repeat(64),
   storedLocalDepartureAuthorizationFingerprint: null,
   storedLocalDepartureMatchCount: 0,
@@ -27,6 +29,7 @@ export const joinedEmptyCredentialFixture = Object.freeze({
   syncGroupRemotePeerFingerprint: authorizationFingerprint('authorization-desktop'),
   syncGroupRoutePresent: true,
   syncGroupTimelineId: 'timeline-1',
+  storedAuthorizationFingerprint: null,
   workgroupKeyPresent: true,
   workspaceSyncEndpointPresent: true
 });
@@ -37,8 +40,6 @@ export const departedCredentialFixture = Object.freeze({
   departedCredentialState: DEPARTED_PRESERVED_HISTORY,
   joinedEmptyReauthorization: false,
   localMemberAuthorizationFingerprint: null,
-  pairingPeerConflict: false,
-  remotePeerFingerprint: null,
   storedLocalDepartureAuthorizationFingerprint: authorizationFingerprint('leave-a5'),
   storedLocalDepartureMatchCount: 1,
   storedLocalMemberAuthorizationFingerprint:

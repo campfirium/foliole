@@ -30,9 +30,9 @@ mkdirSync(artifactDir, { recursive: true });
 
 const observations = createIosPairingAcceptanceObservations();
 let clientPublicKey = '';
-let deviceId = '';
+let authorizationId = '';
 let requestId = '';
-const deviceSecret = randomBytes(32).toString('base64url');
+const credentialSecret = randomBytes(32).toString('base64url');
 let contentResourceFixture: IosContentResourceAcceptanceFixture | null = null;
 let pairingSyncScenarioService: Awaited<ReturnType<typeof createIosPairingSyncScenarioService>> | null = null;
 let syncPackService: IosSyncPackAcceptanceRoutes | null = null;
@@ -58,15 +58,16 @@ async function readText(request: IncomingMessage) {
 
 function signed(request: IncomingMessage, bodyText = '') {
   const read = (name: string) => typeof request.headers[name] === 'string' ? request.headers[name] : '';
-  const valid = read('x-device-id') === deviceId && verifyCompanionRequestSignature({
-    bodyText,
-    method: request.method ?? 'GET',
-    nonce: read('x-nonce'),
-    pathWithQuery: request.url ?? '/',
-    secret: deviceSecret,
-    signature: read('x-signature'),
-    timestamp: read('x-timestamp')
-  });
+  const valid = read('x-authorization-id') === authorizationId
+    && verifyCompanionRequestSignature({
+      bodyText,
+      method: request.method ?? 'GET',
+      nonce: read('x-nonce'),
+      pathWithQuery: request.url ?? '/',
+      secret: credentialSecret,
+      signature: read('x-signature'),
+      timestamp: read('x-timestamp')
+    });
   observations.signature_headers_valid ||= valid;
   if (valid) observations.signed_request_count += 1;
   writeObservations();
@@ -77,31 +78,34 @@ async function handlePairRequestCreate(request: IncomingMessage, response: Serve
   const payload = await readJson(request);
   const compatibility = evaluateSyncProtocolCompatibility(payload.protocol);
   clientPublicKey = typeof payload.pairing_public_key === 'string' ? payload.pairing_public_key : '';
-  deviceId = typeof payload.device_id === 'string' ? payload.device_id : '';
-  if (!deviceId || !isSupportedPairingPublicKey(clientPublicKey) || compatibility.status !== 'compatible') {
+  const hostName = typeof payload.host_name === 'string' ? payload.host_name.trim() : '';
+  const hostPlatform = typeof payload.host_platform === 'string' ? payload.host_platform.trim() : '';
+  if (!hostName || !hostPlatform || !isSupportedPairingPublicKey(clientPublicKey)
+      || compatibility.status !== 'compatible') {
     send(response, 400, { error: 'invalid_pair_request' });
     return;
   }
   requestId = randomUUID();
+  authorizationId = requestId;
   if (scenario === 'sync-pack-runtime') {
     const { createIosSyncPackAcceptanceRoutes } = await import('./ios-sync-pack-acceptance-routes.ts');
     syncPackService = await createIosSyncPackAcceptanceRoutes({
       observations: observations.sync_pack,
       outputDirectory: path.join(artifactDir, 'sync-packs'),
-      toPeerId: deviceId
+      toPeerId: authorizationId
     });
   } else if (scenario === 'content-resource-read') {
     const { createIosContentResourceAcceptanceFixture } = await import('./ios-content-resource-acceptance-fixture.ts');
     contentResourceFixture = await createIosContentResourceAcceptanceFixture({
       outputDirectory: path.join(artifactDir, 'content-resources'),
-      toPeerId: deviceId
+      toPeerId: authorizationId
     });
   } else if (scenario === 'state-writeback-runtime' || scenario === 'foreground-sync-lifecycle') {
     pairingSyncScenarioService = await createIosPairingSyncScenarioService({
       artifactDir,
       observations,
       scenario,
-      toPeerId: deviceId
+      toPeerId: authorizationId
     });
   }
   observations.pair_requested = true;
@@ -126,10 +130,14 @@ async function handlePairCompletion(request: IncomingMessage, response: ServerRe
   send(response, 200, {
     compatibility: evaluateSyncProtocolCompatibility(CURRENT_SYNC_PROTOCOL_DESCRIPTOR),
     desktop_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
-    device_id: deviceId,
-    encrypted_device_secret: await encryptCompanionPairingSecret({ clientPublicKey, deviceSecret }),
+    authorization_id: authorizationId,
+    encrypted_credential_secret: await encryptCompanionPairingSecret({
+      clientPublicKey, credentialSecret
+    }),
+    host_name: 'Acceptance iPhone',
+    host_platform: 'ios-capacitor',
     paired_at: new Date().toISOString(),
-    peer_id: 'acceptance-desktop'
+    peer_id: 'acceptance-desktop-authorization'
   });
 }
 

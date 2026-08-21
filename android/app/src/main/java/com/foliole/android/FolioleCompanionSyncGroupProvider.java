@@ -29,18 +29,22 @@ final class FolioleCompanionSyncGroupProvider {
         FolioleCompanionSyncGroupDataBridge.Dispatcher dispatcher,
         boolean participating
     ) throws Exception {
+        JSONObject group = call.getData().getJSONObject(key(context, "group"));
+        FolioleCompanionCurrentGroupCredential credential =
+            FolioleCompanionCurrentGroupCredential.load(context, group.getString("group_id"));
+        String authorizationId = value(context, call, "authorizationId");
+        if (!credential.authorizationId.equals(authorizationId)) {
+            throw new SecurityException("sync_group_local_authorization_mismatch");
+        }
         JSONObject next = new JSONObject()
             .put("app_version", value(context, call, "appVersion"))
-            .put("authorization_id", value(context, call, "authorizationId"))
-            .put("device_id", value(context, call, "deviceId"))
-            .put("device_name", value(context, call, "deviceName"))
+            .put("authorization_id", authorizationId)
             .put("host_name", value(context, call, "hostName"))
             .put("host_platform", value(context, call, "hostPlatform"))
             .put("facts_revision", value(context, call, "factsRevision"))
-            .put("workgroup_key", value(context, call, "workgroupKey"))
             .put("protocol", FolioleCompanionSyncPackProviderDefinitions.load(context).protocol())
-            .put("sync_group", call.getData().getJSONObject(key(context, "group")));
-        next.put("group_tag", FolioleCompanionSyncGroupCrypto.groupTag(next.getString("workgroup_key")));
+            .put("sync_group", group);
+        next.put("group_tag", FolioleCompanionSyncGroupCrypto.groupTag(credential.workgroupKey));
         if (sameProvider(next)) {
             next.put("runtime_instance_id", activeConfig.getString("runtime_instance_id"));
             boolean factsChanged = !next.optString("facts_revision").equals(activeConfig.optString("facts_revision"));
@@ -75,7 +79,7 @@ final class FolioleCompanionSyncGroupProvider {
         stopRuntime();
         if (activeContext != null) {
             for (FolioleCompanionSyncGroupJoinRequest request : joinRequests.values()) {
-                if ("approved".equals(request.status)) FolioleCompanionSyncGroupPeerStore.remove(activeContext, request.deviceId);
+                if ("approved".equals(request.status)) FolioleCompanionSyncGroupPeerStore.remove(activeContext, request.pairRequestId);
             }
             FolioleCompanionSyncGroupJoinGrantStore.clear(activeContext);
         }
@@ -102,7 +106,6 @@ final class FolioleCompanionSyncGroupProvider {
     }
 
     private static void stopRuntime() {
-        FolioleCompanionWorkgroupSession.close();
         FolioleCompanionSyncScreenAwake.clear();
         if (advertisement != null) advertisement.stop();
         if (server != null) server.stop();
@@ -110,7 +113,6 @@ final class FolioleCompanionSyncGroupProvider {
     }
 
     private static void startRuntime() throws Exception {
-        FolioleCompanionWorkgroupSession.open(activeConfig.getString("workgroup_key"));
         server = new FolioleCompanionSyncGroupServer(activeContext, activeConfig, joinRequests, requireDataBridge());
         advertisement = FolioleCompanionNsdAdvertisement.start(activeContext, server.port(), activeConfig);
     }
@@ -132,7 +134,7 @@ final class FolioleCompanionSyncGroupProvider {
         if (activeConfig == null) return false;
         JSONObject currentGroup = activeConfig.optJSONObject("sync_group");
         JSONObject nextGroup = next.optJSONObject("sync_group");
-        return activeConfig.optString("device_id").equals(next.optString("device_id"))
+        return activeConfig.optString("authorization_id").equals(next.optString("authorization_id"))
             && activeConfig.optString("host_name").equals(next.optString("host_name"))
             && currentGroup != null && nextGroup != null
             && currentGroup.optString("group_id").equals(nextGroup.optString("group_id"))
@@ -142,7 +144,9 @@ final class FolioleCompanionSyncGroupProvider {
     static synchronized JSObject approve(Context context, PluginCall call) throws Exception {
         if (server == null) throw new IllegalStateException("sync_participation_inactive");
         FolioleCompanionSyncGroupJoinRequest request = require(call.getString(key(context, "pairRequestId")));
-        FolioleCompanionWorkgroupSession.requireKey();
+        FolioleCompanionCurrentGroupCredential.load(
+            activeContext, activeConfig.getJSONObject("sync_group").getString("group_id")
+        );
         request.status = "approved";
         try {
             FolioleCompanionSyncGroupJoinGrantStore.save(activeContext, activeConfig, request);

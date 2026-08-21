@@ -6,8 +6,7 @@ import {
   isNativeCompanionPairingRuntime
 } from '../../companionWorkspaceRuntimeRepository';
 import {
-  loadCompanionSyncGroup,
-  loadCompanionSyncGroupWorkgroupKey
+  loadCompanionSyncGroup
 } from '../sync/syncGroupStore';
 
 const PAIRING_SIGNATURE_CHECK_PATH = '/companion/sync-pack?after_state_seq=0';
@@ -97,13 +96,11 @@ async function signNativeWorkgroupRequest(args: {
   bodyHash: string; bodyText?: string; endpointUrl: string; method: string;
   nonce: string; pathWithQuery: string; timestamp: string;
 }, groupId: string) {
-  const workgroupKey = await loadCompanionSyncGroupWorkgroupKey();
-  if (!workgroupKey) throw new Error('sync_group_workgroup_key_missing');
   return FolioleCompanionSync.signCompanionSyncRequest({
     ...(args.bodyText === undefined ? {} : { body: args.bodyText }),
     body_hash: args.bodyHash, endpoint_url: args.endpointUrl, method: args.method,
     nonce: args.nonce, path_with_query: args.pathWithQuery, sync_group_id: groupId,
-    timestamp: args.timestamp, workgroup_key: workgroupKey
+    timestamp: args.timestamp
   });
 }
 

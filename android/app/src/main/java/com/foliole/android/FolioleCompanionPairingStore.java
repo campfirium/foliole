@@ -25,18 +25,8 @@ final class FolioleCompanionPairingStore {
         FolioleCompanionPairingAuthorizationCutover.ensure(context, null, null, null);
         JSObject result = new JSObject();
         String authorizationId = prefs.getString(FolioleCompanionBridgeContractDefinitions.pairingAuthorizationIdPreferenceKey(context), null);
-        String deviceId = prefs.getString(FolioleCompanionBridgeContractDefinitions.pairingDeviceIdPreferenceKey(context), null);
         boolean hasCredentials = canReadPairingSecret(context, authorizationId);
         result.put(FolioleCompanionBridgeContractDefinitions.pairingAuthorizationIdStateKey(context), trimToNull(authorizationId));
-        result.put(FolioleCompanionBridgeContractDefinitions.pairingDeviceIdStateKey(context), trimToNull(deviceId));
-        result.put(
-            FolioleCompanionBridgeContractDefinitions.pairingDeviceKindStateKey(context),
-            trimToNull(prefs.getString(FolioleCompanionBridgeContractDefinitions.pairingDeviceKindPreferenceKey(context), null))
-        );
-        result.put(
-            FolioleCompanionBridgeContractDefinitions.pairingDeviceNameStateKey(context),
-            trimToNull(prefs.getString(FolioleCompanionBridgeContractDefinitions.pairingDeviceNamePreferenceKey(context), null))
-        );
         result.put(FolioleCompanionBridgeContractDefinitions.pairingHostNameStateKey(context), trimToNull(
             prefs.getString(FolioleCompanionBridgeContractDefinitions.pairingHostNamePreferenceKey(context), null)));
         result.put(FolioleCompanionBridgeContractDefinitions.pairingHostPlatformStateKey(context), trimToNull(
@@ -51,30 +41,10 @@ final class FolioleCompanionPairingStore {
         return result;
     }
 
-    static String loadPairedDeviceId(Context context) throws Exception {
-        return requireMeta(context, FolioleCompanionBridgeContractDefinitions.pairingDeviceIdPreferenceKey(context));
-    }
-
-    static String loadStoredDeviceId(Context context) throws Exception {
-        return trimToNull(prefs(context).getString(
-            FolioleCompanionBridgeContractDefinitions.pairingDeviceIdPreferenceKey(context), null
-        ));
-    }
-
-    static String loadAuthorizedDeviceId(Context context) throws Exception {
-        String deviceId = loadStoredDeviceId(context);
-        String authorizationId = prefs(context).getString(
-            FolioleCompanionBridgeContractDefinitions.pairingAuthorizationIdPreferenceKey(context), null);
-        return canReadPairingSecret(context, authorizationId) ? deviceId : null;
-    }
-
     static JSObject savePairingCredentials(
         Context context,
         String authorizationId,
         String credentialSecret,
-        String deviceId,
-        String deviceKind,
-        String deviceName,
         String hostName,
         String hostPlatform,
         int negotiatedProtocolVersion,
@@ -95,9 +65,6 @@ final class FolioleCompanionPairingStore {
             .putString(FolioleCompanionBridgeContractDefinitions.pairingAuthorizationIdPreferenceKey(context), authorizationId.trim())
             .putString(FolioleCompanionBridgeContractDefinitions.pairingCredentialSecretPreferenceKey(context), Base64.encodeToString(encrypted, Base64.NO_WRAP))
             .putString(FolioleCompanionBridgeContractDefinitions.pairingCredentialSecretIvPreferenceKey(context), Base64.encodeToString(iv, Base64.NO_WRAP))
-            .putString(FolioleCompanionBridgeContractDefinitions.pairingDeviceIdPreferenceKey(context), deviceId.trim())
-            .putString(FolioleCompanionBridgeContractDefinitions.pairingDeviceKindPreferenceKey(context), deviceKind.trim())
-            .putString(FolioleCompanionBridgeContractDefinitions.pairingDeviceNamePreferenceKey(context), deviceName.trim())
             .putString(FolioleCompanionBridgeContractDefinitions.pairingHostNamePreferenceKey(context), hostName.trim())
             .putString(FolioleCompanionBridgeContractDefinitions.pairingHostPlatformPreferenceKey(context), hostPlatform.trim())
             .putString(FolioleCompanionBridgeContractDefinitions.pairingPairedAtPreferenceKey(context), pairedAt.trim());

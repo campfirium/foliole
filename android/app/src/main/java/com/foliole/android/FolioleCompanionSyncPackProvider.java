@@ -22,7 +22,7 @@ import java.util.zip.ZipOutputStream;
 final class FolioleCompanionSyncPackProvider {
     private FolioleCompanionSyncPackProvider() {}
 
-    static BuildResult build(Context context, String snapshotPath, String fromDeviceId, String toPeerId, int fromSeq) throws Exception {
+    static BuildResult build(Context context, String snapshotPath, String fromPeerId, String toPeerId, int fromSeq) throws Exception {
         FolioleCompanionSyncPackProviderDefinitions definitions = FolioleCompanionSyncPackProviderDefinitions.load(context);
         File packDbFile = File.createTempFile("foliole-provider-", ".db", context.getCacheDir());
         String packId = UUID.randomUUID().toString();
@@ -37,7 +37,7 @@ final class FolioleCompanionSyncPackProvider {
         try {
             byte[] database = readAll(packDbFile);
             byte[] compressed = deflate(database);
-            JSONObject manifest = outerManifest(definitions, packId, fromDeviceId, toPeerId, fromSeq, toSeq,
+            JSONObject manifest = outerManifest(definitions, packId, fromPeerId, toPeerId, fromSeq, toSeq,
                 tableManifest(packDbFile, definitions.tableNames()).getJSONArray("tables"), database, compressed);
             return new BuildResult(zip(manifest, definitions.databaseEntry(), compressed), toSeq);
         } finally { if (!packDbFile.delete()) packDbFile.deleteOnExit(); }
@@ -97,9 +97,9 @@ final class FolioleCompanionSyncPackProvider {
     }
 
     private static JSONObject outerManifest(FolioleCompanionSyncPackProviderDefinitions definitions, String id,
-            String fromDevice, String toPeer, int from, int to, JSONArray tables, byte[] database, byte[] compressed) throws Exception {
+            String fromPeer, String toPeer, int from, int to, JSONArray tables, byte[] database, byte[] compressed) throws Exception {
         return innerManifest(id, from, to, tables).put("format", definitions.format())
-            .put("format_version", definitions.formatVersion()).put("from_device_id", fromDevice)
+            .put("format_version", definitions.formatVersion()).put("from_peer_id", fromPeer)
             .put("to_peer_id", toPeer).put("schema_version", definitions.schemaVersion())
             .put("compression", "zlib").put("database_file", definitions.databaseEntry())
             .put("database_uncompressed_sha256", sha(database)).put("database_compressed_sha256", sha(compressed))

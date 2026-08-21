@@ -12,7 +12,13 @@ final class FolioleCompanionPairingAuthorizationCutover {
             FolioleCompanionBridgeContractDefinitions.pairingPreferencesNameStorageKey(context),
             Context.MODE_PRIVATE);
         if (text(values, FolioleCompanionBridgeContractDefinitions
-            .pairingAuthorizationIdPreferenceKey(context)) != null) return;
+            .pairingAuthorizationIdPreferenceKey(context)) != null) {
+            SharedPreferences.Editor cleanup = values.edit();
+            removeLegacyCredentials(context, cleanup);
+            if (!cleanup.commit()) throw new IllegalStateException(
+                "Failed to remove legacy pairing credentials.");
+            return;
+        }
         String deviceId = text(values, FolioleCompanionBridgeContractDefinitions
             .pairingDeviceIdPreferenceKey(context));
         String encrypted = text(values, FolioleCompanionBridgeContractDefinitions
@@ -39,8 +45,17 @@ final class FolioleCompanionPairingAuthorizationCutover {
             .pairingHostNamePreferenceKey(context), host);
         if (platform != null) editor.putString(FolioleCompanionBridgeContractDefinitions
             .pairingHostPlatformPreferenceKey(context), platform);
+        removeLegacyCredentials(context, editor);
         if (!editor.commit()) throw new IllegalStateException(
             "Failed to cut over pairing authorization credentials.");
+    }
+
+    private static void removeLegacyCredentials(Context context, SharedPreferences.Editor editor) throws Exception {
+        editor.remove(FolioleCompanionBridgeContractDefinitions.pairingDeviceIdPreferenceKey(context))
+            .remove(FolioleCompanionBridgeContractDefinitions.pairingDeviceKindPreferenceKey(context))
+            .remove(FolioleCompanionBridgeContractDefinitions.pairingDeviceNamePreferenceKey(context))
+            .remove(FolioleCompanionBridgeContractDefinitions.pairingDeviceSecretPreferenceKey(context))
+            .remove(FolioleCompanionBridgeContractDefinitions.pairingDeviceSecretIvPreferenceKey(context));
     }
 
     private static String text(SharedPreferences values, String key) {

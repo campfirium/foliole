@@ -48,7 +48,9 @@ it('passes one sanitized credentials_signable object from producer to consumer u
 
   expect(consumed).toEqual(contract);
   expect([...fsApi.files.keys()]).toContain(credentialsSignableEvidencePath(repoRoot));
-  expect(JSON.stringify(contract)).not.toMatch(/serial|authorization|private|secret|keyValue/iu);
+  expect(JSON.stringify(contract)).not.toMatch(
+    /serial|private|secret|keyValue|authorizationId|authorization_id/iu
+  );
   expect(contract).toMatchObject({ actionIdentity: 'pair-credentials',
     credentials: 'saved_signable', initialSync: 'not_started', pairingPath: 'new',
     schemaVersion: 1, state: 'credentials_signable' });
@@ -62,7 +64,7 @@ it.each([
   ['manifest version', { manifest: { ...credentialsSignableManifestFixture,
     schemaVersion: 2 } }],
   ['manifest identity', { manifest: { ...credentialsSignableManifestFixture,
-    deviceIdentityFingerprint: 'ffffffffffffffff' } }],
+    localAuthorizationFingerprint: 'ffffffffffffffff' } }],
   ['missing group', { readiness: { ...credentialsSignableReadinessFixture,
     syncGroupId: null } }],
   ['missing endpoint', { readiness: { ...credentialsSignableReadinessFixture,
@@ -72,7 +74,7 @@ it.each([
   ['missing route', { readiness: { ...credentialsSignableReadinessFixture,
     syncGroupRoutePresent: false } }],
   ['pairing path drift', { readiness: { ...credentialsSignableReadinessFixture,
-    remotePeerFingerprint: 'ffffffffffffffff' } }],
+    pairingPeerAuthorizationFingerprint: 'ffffffffffffffff' } }],
   ['credential repair', { readiness: { ...credentialsSignableReadinessFixture,
     credentialRepairRequired: true } }]
 ])('rejects producer contradiction: %s', (_label, change) => {
@@ -85,10 +87,10 @@ it.each([
   ['contract version', (contract) => ({ ...contract, schemaVersion: 2 })],
   ['extra field', (contract) => ({ ...contract, diagnostic: true })],
   ['revision', (contract) => contract, 'b'.repeat(40)],
-  ['device identity', (contract) => contract, credentialHandoffRevision,
-    { deviceIdentityFingerprint: 'ffffffffffffffff' }],
-  ['peer identity', (contract) => contract, credentialHandoffRevision,
-    { remotePeerFingerprint: 'ffffffffffffffff' }],
+  ['local authorization', (contract) => contract, credentialHandoffRevision,
+    { localMemberAuthorizationFingerprint: 'ffffffffffffffff' }],
+  ['peer authorization', (contract) => contract, credentialHandoffRevision,
+    { syncGroupRemotePeerFingerprint: 'ffffffffffffffff' }],
   ['member count', (contract) => contract, credentialHandoffRevision,
     { activeSyncGroupMemberCount: 2 }],
   ['current pairing', (contract) => contract, credentialHandoffRevision,

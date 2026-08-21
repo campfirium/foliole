@@ -64,7 +64,8 @@ function compilePairingAcceptanceService(repoRoot, artifactDir) {
 export function verifyPairingAcceptance(first, second, observations) {
   const firstPassed = first.phase === 'paired' && first.signed_request_passed && first.endpoint_restored;
   const secondPassed = second.phase === 'disconnected' && second.identity_restored &&
-    second.pairing_device_id === first.pairing_device_id && second.endpoint_restored &&
+    second.pairing_authorization_id === first.pairing_authorization_id
+    && second.endpoint_restored &&
     second.signed_after_restart && second.redirect_rejected && second.http_error_propagated &&
     second.pairing_cleared && second.endpoint_cleared && second.signing_rejected_after_disconnect;
   const servicePassed = observations.pair_requested && observations.pair_completed &&

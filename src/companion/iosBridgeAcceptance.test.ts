@@ -44,7 +44,7 @@ beforeEach(() => {
   window.webkit = { messageHandlers: { folioleBridgeAcceptance: { postMessage: mocks.postMessage } } };
   mocks.loadBootstrap.mockResolvedValue({
     database_path: '/app/Library/CapacitorDatabase/foliole-companionSQLite.db',
-    device_id: 'ios-1', device_name: 'Acceptance iPhone'
+    host_name: 'Acceptance iPhone'
   });
   mocks.clearPairing.mockResolvedValue({ is_paired: false });
   mocks.saveEndpoint.mockResolvedValue({ endpoint_url: 'http://127.0.0.1:43123' });
@@ -54,12 +54,14 @@ it('pairs through existing APIs, persists the endpoint, and performs a signed re
   mocks.loadPairing.mockResolvedValue({ is_paired: false });
   mocks.sign.mockRejectedValue(new Error('not paired'));
   mocks.requestPairing.mockResolvedValue({ pair_request_id: 'pair-1' });
-  mocks.pair.mockResolvedValue({ device_id: 'ios-1', is_paired: true });
+  mocks.pair.mockResolvedValue({ authorization_id: 'authorization-ios-1', is_paired: true });
   mocks.fetchDesktopJson.mockResolvedValue({ ok: true });
 
   await runIosBridgeAcceptance();
 
-  expect(mocks.requestPairing).toHaveBeenCalledWith(expect.objectContaining({ deviceId: 'ios-1' }));
+  expect(mocks.requestPairing).toHaveBeenCalledWith(expect.objectContaining({
+    hostName: 'Acceptance iPhone', hostPlatform: 'ios-capacitor'
+  }));
   expect(mocks.pair).toHaveBeenCalledWith(expect.objectContaining({ pairRequestId: 'pair-1' }));
   expect(mocks.postMessage).toHaveBeenCalledWith(expect.objectContaining({
     database_path: '/app/Library/CapacitorDatabase/foliole-companionSQLite.db',
@@ -69,8 +71,8 @@ it('pairs through existing APIs, persists the endpoint, and performs a signed re
 
 it('restores pairing, propagates redirect/error status, and clears signing ability', async () => {
   mocks.loadPairing
-    .mockResolvedValueOnce({ device_id: 'ios-1', is_paired: true })
-    .mockResolvedValueOnce({ device_id: null, is_paired: false });
+    .mockResolvedValueOnce({ authorization_id: 'authorization-ios-1', is_paired: true })
+    .mockResolvedValueOnce({ authorization_id: null, is_paired: false });
   mocks.loadWorkspace
     .mockResolvedValueOnce({ endpoint_url: 'http://127.0.0.1:43123' })
     .mockResolvedValueOnce({ endpoint_url: null });

@@ -36,9 +36,9 @@ it('preserves legacy ciphertext when the intentional Keychain migration cannot c
   migrationMock.migrate.mockImplementation(() => {
     throw new LegacyPairingStoreMigrationError('legacy_key_unavailable');
   });
-  const { countPairedCompanionDevices } = await import('./companionPairingStore.js');
+  const { countPairedCompanionAuthorizations } = await import('./companionPairingStore.js');
 
-  expect(() => countPairedCompanionDevices()).toThrow('paired-device store is unreadable');
+  expect(() => countPairedCompanionAuthorizations()).toThrow('Pairing credential store is unreadable');
   await expect(fs.readFile(storePath, 'utf8')).resolves.toBe('legacy-ciphertext');
   expect((await fs.readdir(testRoot)).some((name) => name.includes('.corrupt-'))).toBe(false);
   await fs.rm(testRoot, { force: true, recursive: true });

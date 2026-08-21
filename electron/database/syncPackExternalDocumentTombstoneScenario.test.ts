@@ -81,7 +81,7 @@ async function buildPack(packId: string, fileName: string, fromStateSeq: number,
   const outputPath = path.join(tempRoot, fileName);
   await buildDesktopSyncPack({
     createdAt,
-    fromDeviceId: 'desktop-source',
+    fromPeerId: 'authorization-desktop-source',
     fromStateSeq,
     outputPath,
     packId,

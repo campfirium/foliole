@@ -6,7 +6,7 @@ export const UNKNOWN_DESKTOP_VERSION = '';
 
 export type CompanionDesktopDiscovery = {
   appVersion: string;
-  desktopDeviceName: string;
+  desktopHostName: string;
   desktopName: string;
   desktopPlatform: string;
   compatibility: SyncProtocolCompatibilityResult;
@@ -30,16 +30,13 @@ export type PendingPairRequest = {
   timelineId?: string | undefined;
 } | null;
 
-export function createCompanionDeviceName(bootstrapState: NativeCompanionBootstrapState) {
-  const normalizedName = bootstrapState.device_name?.trim();
-  if (normalizedName) return normalizedName;
-  if (bootstrapState.runtime_kind === 'android-capacitor') return 'Android device';
-  return bootstrapState.runtime_kind === 'ios-capacitor' ? 'iPhone' : 'Web preview';
+export function resolveCompanionHostName(bootstrapState: NativeCompanionBootstrapState) {
+  return bootstrapState.host_name?.trim() || (bootstrapState.runtime_kind === 'ios-capacitor' ? 'iPhone' : 'Android');
 }
 
 export function normalizeDiscovery(endpointUrl: string, discovery: {
   app_version?: string;
-  desktop_device_name?: string;
+  desktop_host_name?: string;
   desktop_name: string;
   desktop_platform?: string;
   peer_id: string;
@@ -50,7 +47,7 @@ export function normalizeDiscovery(endpointUrl: string, discovery: {
 }, compatibility: SyncProtocolCompatibilityResult) {
   return {
     appVersion: discovery.app_version?.trim() || UNKNOWN_DESKTOP_VERSION,
-    desktopDeviceName: discovery.desktop_device_name?.trim() || discovery.desktop_name,
+    desktopHostName: discovery.desktop_host_name?.trim() || discovery.desktop_name,
     desktopName: discovery.desktop_name,
     desktopPlatform: discovery.desktop_platform?.trim() || UNKNOWN_DESKTOP_PLATFORM,
     compatibility,

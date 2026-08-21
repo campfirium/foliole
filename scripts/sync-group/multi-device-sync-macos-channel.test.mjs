@@ -21,16 +21,19 @@ it('isolates multi-device macOS acceptance from the default product listener', a
 });
 
 it('accepts only a live isolated macOS acceptance listener', () => {
-  const safe = { desktopPeerFingerprint: 'desktop-peer', pairedDeviceFingerprints: [],
-    pendingDeviceFingerprints: [], ready: true };
+  const safe = { localAuthorizationFingerprint: 'desktop-authorization',
+    pairedAuthorizationFingerprints: [], pendingAuthorizationFingerprints: [], ready: true };
   const session = { assertActive: vi.fn(), sanitize: vi.fn(() => safe) };
-  const overview = { paired_devices: [], pending_requests: [], current_host: { device_id: 'desktop-peer' },
-    server_status: { port: 38642, state: 'running' }, sync_enabled: true };
+  const overview = { paired_authorizations: [], pending_requests: [],
+    server_status: { port: 38642, state: 'running' }, sync_enabled: true,
+    sync_group: { local_host_name: 'Mac', members: [{
+      authorization_id: 'desktop-authorization', host_name: 'Mac', state: 'active'
+    }] } };
   expect(validateMacosAcceptanceDesktopPreflight(
-    overview, session, 'device-peer'
-  )).toEqual(safe);
+    overview, session, 'A5'
+  )).toEqual({ ...safe, rePairRequired: true });
   expect(session.assertActive).toHaveBeenCalledOnce();
   expect(() => validateMacosAcceptanceDesktopPreflight({
     ...overview, server_status: { port: 38641, state: 'running' }
-  }, session, 'device-peer')).toThrow('fixed sync listener');
+  }, session, 'A5')).toThrow('fixed sync listener');
 });

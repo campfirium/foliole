@@ -12,10 +12,6 @@ final class FolioleCompanionBridgeContractDefinitions {
         return FolioleCompanionBridgeContractAsset.string(context, "pairingPlugin", "credentialRequestKeys", key);
     }
 
-    static String pairingDeviceIdCredentialRequestKey(Context context) throws Exception {
-        return pairingCredentialRequestKey(context, "deviceId");
-    }
-
     static String pairingAuthorizationIdCredentialRequestKey(Context context) throws Exception {
         return pairingCredentialRequestKey(context, "authorizationId");
     }
@@ -24,24 +20,12 @@ final class FolioleCompanionBridgeContractDefinitions {
         return pairingCredentialRequestKey(context, "credentialSecret");
     }
 
-    static String pairingDeviceKindCredentialRequestKey(Context context) throws Exception {
-        return pairingCredentialRequestKey(context, "deviceKind");
-    }
-
-    static String pairingDeviceNameCredentialRequestKey(Context context) throws Exception {
-        return pairingCredentialRequestKey(context, "deviceName");
-    }
-
     static String pairingHostNameCredentialRequestKey(Context context) throws Exception {
         return pairingCredentialRequestKey(context, "hostName");
     }
 
     static String pairingHostPlatformCredentialRequestKey(Context context) throws Exception {
         return pairingCredentialRequestKey(context, "hostPlatform");
-    }
-
-    static String pairingDeviceSecretCredentialRequestKey(Context context) throws Exception {
-        return pairingCredentialRequestKey(context, "deviceSecret");
     }
 
     static String pairingEndpointUrlCredentialRequestKey(Context context) throws Exception {
@@ -68,8 +52,12 @@ final class FolioleCompanionBridgeContractDefinitions {
         return FolioleCompanionBridgeContractAsset.string(context, "pairingPlugin", "preferenceKeys", key);
     }
 
+    static String pairingLegacyPreferenceKey(Context context, String key) throws Exception {
+        return FolioleCompanionBridgeContractAsset.string(context, "pairingPlugin", "legacyPreferenceKeys", key);
+    }
+
     static String pairingDeviceIdPreferenceKey(Context context) throws Exception {
-        return pairingPreferenceKey(context, "deviceId");
+        return pairingLegacyPreferenceKey(context, "deviceId");
     }
 
     static String pairingAuthorizationIdPreferenceKey(Context context) throws Exception {
@@ -85,11 +73,11 @@ final class FolioleCompanionBridgeContractDefinitions {
     }
 
     static String pairingDeviceKindPreferenceKey(Context context) throws Exception {
-        return pairingPreferenceKey(context, "deviceKind");
+        return pairingLegacyPreferenceKey(context, "deviceKind");
     }
 
     static String pairingDeviceNamePreferenceKey(Context context) throws Exception {
-        return pairingPreferenceKey(context, "deviceName");
+        return pairingLegacyPreferenceKey(context, "deviceName");
     }
 
     static String pairingHostNamePreferenceKey(Context context) throws Exception {
@@ -101,11 +89,11 @@ final class FolioleCompanionBridgeContractDefinitions {
     }
 
     static String pairingDeviceSecretPreferenceKey(Context context) throws Exception {
-        return pairingPreferenceKey(context, "deviceSecret");
+        return pairingLegacyPreferenceKey(context, "deviceSecret");
     }
 
     static String pairingDeviceSecretIvPreferenceKey(Context context) throws Exception {
-        return pairingPreferenceKey(context, "deviceSecretIv");
+        return pairingLegacyPreferenceKey(context, "deviceSecretIv");
     }
 
     static String pairingPairedAtPreferenceKey(Context context) throws Exception {
@@ -136,20 +124,8 @@ final class FolioleCompanionBridgeContractDefinitions {
         return FolioleCompanionBridgeContractAsset.string(context, "pairingPlugin", "stateKeys", key);
     }
 
-    static String pairingDeviceIdStateKey(Context context) throws Exception {
-        return pairingStateKey(context, "deviceId");
-    }
-
     static String pairingAuthorizationIdStateKey(Context context) throws Exception {
         return pairingStateKey(context, "authorizationId");
-    }
-
-    static String pairingDeviceKindStateKey(Context context) throws Exception {
-        return pairingStateKey(context, "deviceKind");
-    }
-
-    static String pairingDeviceNameStateKey(Context context) throws Exception {
-        return pairingStateKey(context, "deviceName");
     }
 
     static String pairingHostNameStateKey(Context context) throws Exception {

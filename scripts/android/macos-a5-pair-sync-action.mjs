@@ -4,14 +4,11 @@ import fs from 'node:fs';
 import { setTimeout as delay } from 'node:timers/promises';
 
 import { runWindowsA5PairSyncRecovery } from '../windows/windows-a5-pair-sync-recovery-action.mjs';
-import {
-  validateOwnedDesktopPreflight, validateOwnedDesktopRePairPreflight
-} from '../windows/windows-pair-sync-desktop-readiness.mjs';
 import { assertPairSyncRuntimeOwnership } from '../windows/windows-a5-pair-sync-recovery-transport.mjs';
-import { openMacosPairSyncDesktopSession } from './macos-pair-sync-desktop-session.mjs';
-import { macosPairSyncIdentityFingerprint } from './macos-pair-sync-desktop-session.mjs';
-
-const AUTHORIZED_STALE_DEVICE_FINGERPRINT = 'bd1d679fbb55b53e';
+import {
+  openMacosPairSyncDesktopSession, waitForMacosPairRequest
+} from './macos-pair-sync-desktop-session.mjs';
+import { macosPairSyncAuthorizationFingerprint } from './macos-pair-sync-desktop-session.mjs';
 
 function assertHostRoster(overview) {
   const members = overview.sync_group?.members;
@@ -31,128 +28,45 @@ function assertHostRoster(overview) {
   return true;
 }
 
-async function reconcileHostRosterPairing(
-  overview, session, deviceFingerprint, remotePeerFingerprint, existingPairing,
-  credentialRepairRequired
+export async function reconcileAuthorizedMacosDailyPairing(
+  overview, session, hostName, desktopAuthorizationFingerprint, existingPairing,
+  credentialRepairRequired = false, protectedSyncGroup = null
 ) {
   assertPairSyncRuntimeOwnership(overview, session);
-  const safe = session.sanitize(overview);
-  const wrongRemotePeer = remotePeerFingerprint
-    && safe.desktopPeerFingerprint !== remotePeerFingerprint;
-  if (!safe.desktopPeerFingerprint || wrongRemotePeer || safe.pendingDeviceFingerprints.length > 0) {
-    throw new Error('Current Sync Group pairing state requires user review.');
-  }
-  const targetRoute = overview.paired_devices.find(
-    (device) => macosPairSyncIdentityFingerprint(device.device_id) === deviceFingerprint
-  );
-  if (safe.pairedDeviceFingerprints.length === 0) {
-    return { ...safe, rePairRequired: true };
-  }
-  if (!targetRoute && existingPairing) {
-    throw new Error('Current Sync Group pairing state requires user review.');
-  }
-  if (!targetRoute) return { ...safe, rePairRequired: true };
-  if (existingPairing && !credentialRepairRequired) return { ...safe, rePairRequired: false };
-  const reconciled = await session.remove(targetRoute.device_id);
-  return { ...session.sanitize(reconciled), rePairRequired: true };
-}
-
-async function reconcileCurrentSyncGroupPairings(
-  overview, session, deviceFingerprint, remotePeerFingerprint, existingPairing,
-  credentialRepairRequired, protectedSyncGroup
-) {
+  assertHostRoster(overview);
   if (protectedSyncGroup
       && (overview.sync_group?.group_id !== protectedSyncGroup.groupId
         || overview.sync_group?.timeline_id !== protectedSyncGroup.timelineId)) {
     throw new Error('Current Sync Group identity requires user review.');
   }
-  if (assertHostRoster(overview)) return reconcileHostRosterPairing(
-    overview, session, deviceFingerprint, remotePeerFingerprint, existingPairing,
-    credentialRepairRequired
-  );
-  return null;
-}
-
-export async function reconcileAuthorizedMacosDailyPairing(
-  overview, session, deviceFingerprint, remotePeerFingerprint, existingPairing,
-  credentialRepairRequired = false,
-  authorizedStaleDeviceFingerprint = AUTHORIZED_STALE_DEVICE_FINGERPRINT,
-  protectedSyncGroup = null
-) {
-  const currentGroup = await reconcileCurrentSyncGroupPairings(
-    overview, session, deviceFingerprint, remotePeerFingerprint, existingPairing,
-    credentialRepairRequired, protectedSyncGroup
-  );
-  if (currentGroup) return currentGroup;
   const safe = session.sanitize(overview);
-  const exactStaleShape = existingPairing === false
-    && safe.pendingDeviceFingerprints.length === 0
-    && safe.pairedDeviceFingerprints.length === 1
-    && safe.pairedDeviceFingerprints[0] === authorizedStaleDeviceFingerprint
-    && safe.pairedDeviceFingerprints[0] !== deviceFingerprint;
-  const exactPeerSwitch = existingPairing === true
-    && remotePeerFingerprint
-    && safe.desktopPeerFingerprint !== remotePeerFingerprint
-    && safe.pairedDeviceFingerprints.length === 1
-    && safe.pairedDeviceFingerprints[0] === deviceFingerprint
-    && safe.pendingDeviceFingerprints.length === 0;
-  const exactCredentialRepair = existingPairing === true && credentialRepairRequired
-    && safe.desktopPeerFingerprint === remotePeerFingerprint
-    && safe.pairedDeviceFingerprints.length === 1
-    && safe.pairedDeviceFingerprints[0] === deviceFingerprint
-    && safe.pendingDeviceFingerprints.length === 0;
-  const exactClearedDevice = existingPairing === false
-    && safe.pairedDeviceFingerprints.length === 1
-    && safe.pairedDeviceFingerprints[0] === deviceFingerprint
-    && safe.pendingDeviceFingerprints.length === 0;
-  const exactMissingCredentialRepair = existingPairing === false
-    && credentialRepairRequired
-    && safe.pairedDeviceFingerprints.length === 0
-    && safe.pendingDeviceFingerprints.length === 0
-    && (!remotePeerFingerprint || safe.desktopPeerFingerprint === remotePeerFingerprint);
-  if (exactMissingCredentialRepair) {
-    const validated = validateOwnedDesktopPreflight(
-      overview, session, deviceFingerprint, remotePeerFingerprint, false
-    );
-    return { ...validated, rePairRequired: true };
+  if (!safe.localAuthorizationFingerprint
+      || safe.pendingAuthorizationFingerprints.length > 0
+      || (desktopAuthorizationFingerprint
+        && safe.localAuthorizationFingerprint !== desktopAuthorizationFingerprint)) {
+    throw new Error('Current Sync Group authorization route requires user review.');
   }
-  if (exactClearedDevice) {
-    const paired = overview.paired_devices.find(
-      (device) => macosPairSyncIdentityFingerprint(device.device_id) === deviceFingerprint
-    );
-    if (!paired) throw new Error('Authorized cleared A5 pairing record is missing.');
-    return validateOwnedDesktopPreflight(
-      await session.remove(paired.device_id), session, deviceFingerprint, remotePeerFingerprint, false
-    );
+  if (credentialRepairRequired) {
+    throw new Error('Credential repair is outside the authorization cutover contract.');
   }
-  if (exactCredentialRepair) {
-    const paired = overview.paired_devices.find(
-      (device) => macosPairSyncIdentityFingerprint(device.device_id) === deviceFingerprint
-    );
-    if (!paired) throw new Error('Authorized A5 credential repair record is missing.');
-    const reconciled = await session.remove(paired.device_id);
-    const validated = validateOwnedDesktopPreflight(
-      reconciled, session, deviceFingerprint, remotePeerFingerprint, false
-    );
-    return { ...validated, rePairRequired: true };
-  }
-  if (exactPeerSwitch) return validateOwnedDesktopRePairPreflight(
-    overview, session, deviceFingerprint, remotePeerFingerprint
+  const member = overview.sync_group.members.find(
+    (candidate) => candidate.state === 'active' && candidate.host_name === hostName
   );
-  if (!exactStaleShape) {
-    return validateOwnedDesktopPreflight(
-      overview, session, deviceFingerprint, remotePeerFingerprint, existingPairing
-    );
+  const memberAuthorizationFingerprint = member
+    ? macosPairSyncAuthorizationFingerprint(member.authorization_id) : null;
+  const routes = overview.paired_authorizations.filter(
+    (authorization) => authorization.host_name === hostName
+  );
+  const routeAuthorizationFingerprint = routes.length === 1
+    ? macosPairSyncAuthorizationFingerprint(routes[0].authorization_id) : null;
+  if (existingPairing && (!memberAuthorizationFingerprint
+      || routeAuthorizationFingerprint !== memberAuthorizationFingerprint)) {
+    throw new Error('Existing A5 authorization route is missing.');
   }
-  const stale = overview.paired_devices.find(
-    (device) => macosPairSyncIdentityFingerprint(device.device_id)
-      === authorizedStaleDeviceFingerprint
-  );
-  if (!stale) throw new Error('Authorized stale daily DEV pairing record is missing.');
-  const reconciled = await session.remove(stale.device_id);
-  return validateOwnedDesktopPreflight(
-    reconciled, session, deviceFingerprint, remotePeerFingerprint, existingPairing
-  );
+  if (!existingPairing && (memberAuthorizationFingerprint || routes.length > 0)) {
+    throw new Error('Fresh A5 authorization route is not empty.');
+  }
+  return { ...safe, rePairRequired: !existingPairing };
 }
 
 async function macosDesktopControl(execute, _paths, _env, action) {
@@ -172,9 +86,10 @@ async function macosDesktopControl(execute, _paths, _env, action) {
 
 export async function runMacosA5PairSync({
   buildIdentity, credentialRepairRequired, desktopControl = macosDesktopControl,
-  deviceFingerprint, existingPairing, env, evidenceRoot, execute,
-  libraryHome, paths, protectData, remotePeerFingerprint, openTransport, closeTransport,
-  instrumentationModeArgs, pairedDeviceFingerprint, pairRequestFingerprint,
+  existingPairing, env, evidenceRoot, execute, hostName,
+  libraryHome, paths, protectData, desktopAuthorizationFingerprint,
+  openTransport, closeTransport,
+  instrumentationModeArgs, pairedAuthorizationFingerprint, pairRequestIdentity,
   protectedSyncGroup, recoveryEvidenceGoal,
   runPairSyncRecovery = runWindowsA5PairSyncRecovery, serial,
   validateDesktop
@@ -182,10 +97,10 @@ export async function runMacosA5PairSync({
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const validateMacosDesktop = validateDesktop ?? ((...args) =>
     reconcileAuthorizedMacosDailyPairing(
-      ...args, AUTHORIZED_STALE_DEVICE_FINGERPRINT, protectedSyncGroup
+      ...args, protectedSyncGroup
     ));
   return runPairSyncRecovery({
-    adbPort: '5037', buildIdentity, deviceFingerprint, env, evidenceRoot, execute,
+    adbPort: '5037', buildIdentity, env, evidenceRoot, execute, hostName,
     existingPairing,
     ...(closeTransport ? { closeTransport } : {}),
     openDesktopSession: (options) => openMacosPairSyncDesktopSession({
@@ -193,8 +108,8 @@ export async function runMacosA5PairSync({
     }),
     ...(openTransport ? { openTransport } : {}),
     ...(instrumentationModeArgs ? { instrumentationModeArgs } : {}),
-    ...(pairedDeviceFingerprint !== undefined ? { pairedDeviceFingerprint } : {}),
-    ...(pairRequestFingerprint ? { pairRequestFingerprint } : {}),
+    ...(pairedAuthorizationFingerprint !== undefined ? { pairedAuthorizationFingerprint } : {}),
+    ...(pairRequestIdentity ? { pairRequestIdentity } : {}),
     ...(recoveryEvidenceGoal ? { recoveryEvidenceGoal } : {}),
     desktopControl, validateDesktop: validateMacosDesktop,
     paths: {
@@ -204,7 +119,8 @@ export async function runMacosA5PairSync({
     },
     protectData,
     credentialRepairRequired,
-    remotePeerFingerprint,
-    serial
+    desktopAuthorizationFingerprint,
+    serial,
+    waitForPairRequest: (session, identity) => waitForMacosPairRequest(session, identity)
   });
 }

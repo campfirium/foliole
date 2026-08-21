@@ -75,9 +75,6 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
             return try store.save(
                 authorizationId: try self.requiredString(call, contract.credentialRequestKeys, "authorizationId"),
                 credentialSecret: try self.requiredString(call, contract.credentialRequestKeys, "credentialSecret"),
-                deviceId: try self.requiredString(call, contract.credentialRequestKeys, "deviceId"),
-                deviceKind: try self.requiredString(call, contract.credentialRequestKeys, "deviceKind"),
-                deviceName: try self.requiredString(call, contract.credentialRequestKeys, "deviceName"),
                 hostName: try self.requiredString(call, contract.credentialRequestKeys, "hostName"),
                 hostPlatform: try self.requiredString(call, contract.credentialRequestKeys, "hostPlatform"),
                 negotiatedProtocolVersion: try self.requiredInt(call, contract.credentialRequestKeys, "negotiatedProtocolVersion"),

@@ -31,9 +31,9 @@ it('rejects a different schema version before writing an incoming database', asy
     database_file: SYNC_PACK_DATABASE_ENTRY,
     format: SYNC_PACK_FORMAT,
     format_version: SYNC_PACK_FORMAT_VERSION,
-    from_device_id: 'source-device',
+    from_peer_id: 'authorization-source',
     schema_version: DATABASE_SCHEMA_VERSION - 1,
-    to_peer_id: 'target-device'
+    to_peer_id: 'authorization-target'
   };
   await writeStoredZip(zipPath, [
     { content: Buffer.from(JSON.stringify(manifest)), name: 'manifest.json' },
@@ -42,8 +42,8 @@ it('rejects a different schema version before writing an incoming database', asy
 
   await expect(extractSyncPackDatabase({
     body: await fs.readFile(zipPath),
-    expectedPeerId: 'target-device',
-    expectedSourcePeerId: 'source-device',
+    expectedPeerId: 'authorization-target',
+    expectedSourcePeerId: 'authorization-source',
     outputPath
   })).rejects.toThrow('unsupported_sync_pack_schema_version');
   await expect(fs.stat(outputPath)).rejects.toMatchObject({ code: 'ENOENT' });
@@ -57,9 +57,9 @@ it('rejects a v4 pack before writing an incoming database', async () => {
     database_file: SYNC_PACK_DATABASE_ENTRY,
     format: SYNC_PACK_FORMAT,
     format_version: 4,
-    from_device_id: 'source-device',
+    from_peer_id: 'authorization-source',
     schema_version: DATABASE_SCHEMA_VERSION,
-    to_peer_id: 'target-device'
+    to_peer_id: 'authorization-target'
   };
   await writeStoredZip(zipPath, [
     { content: Buffer.from(JSON.stringify(manifest)), name: 'manifest.json' },
@@ -68,8 +68,8 @@ it('rejects a v4 pack before writing an incoming database', async () => {
 
   await expect(extractSyncPackDatabase({
     body: await fs.readFile(zipPath),
-    expectedPeerId: 'target-device',
-    expectedSourcePeerId: 'source-device',
+    expectedPeerId: 'authorization-target',
+    expectedSourcePeerId: 'authorization-source',
     outputPath
   })).rejects.toThrow('invalid_sync_pack_manifest');
   await expect(fs.stat(outputPath)).rejects.toMatchObject({ code: 'ENOENT' });

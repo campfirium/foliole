@@ -14,7 +14,8 @@ const DEFAULT_TABLES = [
   'sync_object_state', 'workspace_meta', 'companion_meta'
 ];
 const IDENTITY_FIELDS = [
-  'activeSyncGroupMemberCount', 'deviceIdentityFingerprint', 'syncGroupId', 'syncGroupTimelineId'
+  'activeSyncGroupMemberCount', 'localMemberAuthorizationFingerprint',
+  'syncGroupId', 'syncGroupTimelineId'
 ];
 
 function protectionFacts(snapshot) {

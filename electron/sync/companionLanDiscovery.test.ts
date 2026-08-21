@@ -23,7 +23,7 @@ it('queues discovery behind the active database owner', async () => {
   });
 
   let settled = false;
-  const discovery = loadCompanionLanDiscovery('0.1.0-test', 'desktop-local')
+  const discovery = loadCompanionLanDiscovery('0.1.0-test')
     .finally(() => { settled = true; });
   await Promise.resolve();
   expect(settled).toBe(false);
@@ -31,5 +31,5 @@ it('queues discovery behind the active database owner', async () => {
 
   release();
   await expect(discovery).resolves.toEqual({ group_id: 'group-test' });
-  expect(mocks.buildDiscoveryPayload).toHaveBeenCalledWith('0.1.0-test', 'desktop-local');
+  expect(mocks.buildDiscoveryPayload).toHaveBeenCalledWith('0.1.0-test');
 });

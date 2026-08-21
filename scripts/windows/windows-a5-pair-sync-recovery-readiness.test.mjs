@@ -8,14 +8,14 @@ function result(prefix, value, code = 0) {
 
 const pairing = {
   activeSyncGroupMemberCount: 2,
-  deviceIdentityFingerprint: 'c6b193a8d1f83849',
+  localMemberAuthorizationFingerprint: 'c6b193a8d1f83849',
   dirtyRecordCount: 0,
   missingPrerequisites: [],
   nodeCount: 1299,
   pairingCredentialsPresent: true,
   pairingCredentialsRejected: false,
   pairingPeerConflict: false,
-  remotePeerFingerprint: '82cc2dc5c98135c8',
+  pairingPeerAuthorizationFingerprint: '82cc2dc5c98135c8',
   resultStatus: 'ready',
   schemaVersion: 1,
   syncGroupCredentialsPresent: true,
@@ -32,7 +32,6 @@ it('accepts an empty paired workspace from Sync Group facts without Capture prer
   );
 
   await expect(postPairSyncRecoveryReadiness({
-    deviceFingerprint: pairing.deviceIdentityFingerprint,
     env: {},
     paths: { adbPath: '/adb', repoRoot: '/repo', systemNode: '/node' },
     run,
@@ -48,12 +47,11 @@ it('accepts an empty paired workspace from Sync Group facts without Capture prer
 it('accepts convergence from Sync Group credentials without legacy pairing credentials', async () => {
   const run = vi.fn().mockResolvedValueOnce(
     result('[android-data] pair-sync-recovery-readiness=', {
-      ...pairing, pairingCredentialsPresent: false, remotePeerFingerprint: null
+      ...pairing, pairingCredentialsPresent: false, pairingPeerAuthorizationFingerprint: null
     })
   );
 
   await expect(postPairSyncRecoveryReadiness({
-    deviceFingerprint: pairing.deviceIdentityFingerprint,
     env: {},
     paths: { adbPath: '/adb', repoRoot: '/repo', systemNode: '/node' },
     run,
@@ -70,7 +68,6 @@ it('rejects a UI-complete run whose dirty records did not receive acknowledgemen
     }, 77));
 
   await expect(postPairSyncRecoveryReadiness({
-    deviceFingerprint: pairing.deviceIdentityFingerprint,
     env: {},
     maxAttempts: 1,
     paths: { adbPath: '/adb', repoRoot: '/repo', systemNode: '/node' },
@@ -91,7 +88,6 @@ it('waits for restart-created dirty state to receive its foreground sync acknowl
   const wait = vi.fn();
 
   await expect(postPairSyncRecoveryReadiness({
-    deviceFingerprint: pairing.deviceIdentityFingerprint,
     env: {}, maxAttempts: 2,
     paths: { adbPath: '/adb', repoRoot: '/repo', systemNode: '/node' },
     run, serial: 'fixed-a5', wait
@@ -109,7 +105,6 @@ it('quiesces database writers only while each readiness snapshot is collected', 
   await postPairSyncRecoveryReadiness({
     afterSnapshot: async () => events.push('provider-resumed'),
     beforeSnapshot: async () => events.push('provider-stopped'),
-    deviceFingerprint: pairing.deviceIdentityFingerprint,
     env: {}, paths: { adbPath: '/adb', repoRoot: '/repo', systemNode: '/node' },
     run, serial: 'fixed-a5'
   });
@@ -128,7 +123,7 @@ it('gives the foreground provider a sync window before a managed stopped snapsho
     return result('', {});
   });
   await postPairSyncRecoveryReadiness({
-    adbPort: '5037', deviceFingerprint: pairing.deviceIdentityFingerprint, env: {},
+    adbPort: '5037', env: {},
     paths: { adbPath: '/adb', repoRoot: '/repo', systemNode: '/node' },
     quiesceProvider: true, run, serial: 'fixed-a5',
     wait: async (milliseconds) => events.push(`settled-${milliseconds}`)
@@ -145,7 +140,6 @@ it('accepts current Mac convergence while another active member remains pending'
   ));
 
   await expect(postPairSyncRecoveryReadiness({
-    deviceFingerprint: pairing.deviceIdentityFingerprint,
     env: {}, maxAttempts: 1,
     paths: { adbPath: '/adb', repoRoot: '/repo', systemNode: '/node' },
     run, serial: 'fixed-a5'
@@ -157,7 +151,7 @@ it('accepts current Mac convergence while another active member remains pending'
 it('waits for the preserved database to reopen after Android process restart', async () => {
   const starting = result('[android-data] pair-sync-recovery-readiness=', {
     ...pairing,
-    deviceIdentityFingerprint: null, dirtyRecordCount: null,
+    localMemberAuthorizationFingerprint: null, dirtyRecordCount: null,
     missingPrerequisites: ['database_unavailable'], nodeCount: null,
     resultStatus: 'approval_required'
   }, 77);
@@ -166,7 +160,6 @@ it('waits for the preserved database to reopen after Android process restart', a
     .mockResolvedValueOnce(result('[android-data] pair-sync-recovery-readiness=', pairing));
 
   await expect(postPairSyncRecoveryReadiness({
-    deviceFingerprint: pairing.deviceIdentityFingerprint,
     env: {}, maxAttempts: 2,
     paths: { adbPath: '/adb', repoRoot: '/repo', systemNode: '/node' },
     run, serial: 'fixed-a5', wait: vi.fn()
@@ -185,7 +178,6 @@ it.each([
   );
 
   await expect(postPairSyncRecoveryReadiness({
-    deviceFingerprint: pairing.deviceIdentityFingerprint,
     env: {}, maxAttempts: 1,
     paths: { adbPath: '/adb', repoRoot: '/repo', systemNode: '/node' },
     run, serial: 'fixed-a5'

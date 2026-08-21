@@ -18,9 +18,9 @@ it('captures the fixed A5 screen and current Windows pairing overview after reco
     return { code: 0, output: '', stdout: '' };
   });
   const session = {
-    load: vi.fn(async () => ({ paired_devices: [], pending_requests: [] })),
+    load: vi.fn(async () => ({ paired_authorizations: [], pending_requests: [] })),
     sanitize: vi.fn(() => ({
-      pairedDeviceFingerprints: [], pendingDeviceFingerprints: []
+      pairedAuthorizationFingerprints: [], pendingAuthorizationFingerprints: []
     }))
   };
   const evidence = await collectPairSyncRecoveryFailureEvidence({
@@ -41,7 +41,7 @@ it('captures the fixed A5 screen and current Windows pairing overview after reco
   expect(fs.existsSync(path.join(evidenceRoot, PAIR_SYNC_FAILURE_SCREENSHOT))).toBe(true);
   expect(JSON.parse(fs.readFileSync(
     path.join(evidenceRoot, PAIR_SYNC_FAILURE_DESKTOP_OVERVIEW), 'utf8'
-  ))).toEqual({ pairedDeviceFingerprints: [], pendingDeviceFingerprints: [] });
+  ))).toEqual({ pairedAuthorizationFingerprints: [], pendingAuthorizationFingerprints: [] });
   expect(JSON.parse(fs.readFileSync(path.join(evidenceRoot, PAIR_SYNC_FAILURE_SUMMARY), 'utf8')))
     .toEqual({
       android: { completion: 'http_200', credentials: 'saved_signable', initialSync: 'started' },
@@ -59,7 +59,10 @@ it('keeps available Windows state when screenshot capture fails', async () => {
     error: Object.assign(new Error('private path'), { stage: 'desktop-sync-enable' }),
     execute: vi.fn(async () => ({ code: 1, output: '', stderr: 'capture failed' })), fsApi: fs,
     paths: { adbPath: 'adb.exe' }, serial: '87a33a4b',
-    session: { load: vi.fn(async () => ({})), sanitize: vi.fn(() => ({ pairedDeviceFingerprints: [] })) }
+    session: {
+      load: vi.fn(async () => ({})),
+      sanitize: vi.fn(() => ({ pairedAuthorizationFingerprints: [] }))
+    }
   });
   expect(evidence).toEqual({
     desktopOverview: PAIR_SYNC_FAILURE_DESKTOP_OVERVIEW, summary: PAIR_SYNC_FAILURE_SUMMARY
@@ -72,10 +75,11 @@ it('keeps available Windows state when screenshot capture fails', async () => {
 it('persists a bounded post-sync dirty convergence reason', async () => {
   const evidenceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pair-sync-convergence-'));
   const readiness = {
-    deviceIdentityFingerprint: 'c6b193a8d1f83849', dirtyRecordCount: 1,
+    localMemberAuthorizationFingerprint: 'c6b193a8d1f83849', dirtyRecordCount: 1,
     missingPrerequisites: ['unsynced_device_data_requires_review'], nodeCount: 1302,
     pairingCredentialsPresent: true, pairingPeerConflict: false,
-    remotePeerFingerprint: '82cc2dc5c98135c8', resultStatus: 'approval_required', schemaVersion: 1
+    pairingPeerAuthorizationFingerprint: '82cc2dc5c98135c8',
+    resultStatus: 'approval_required', schemaVersion: 1
   };
   await collectPairSyncRecoveryFailureEvidence({
     adbPort: '5037', env: {}, evidenceRoot,

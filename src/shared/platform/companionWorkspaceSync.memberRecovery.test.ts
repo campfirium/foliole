@@ -54,9 +54,9 @@ beforeEach(() => {
   });
 });
 
-async function requestAs(deviceName: string) {
+async function requestAs(hostName: string) {
   await requestCompanionPairing({
-    deviceId: 'local-installation', deviceKind: 'android-capacitor', deviceName,
+    hostName, hostPlatform: 'android-capacitor',
     endpointUrl: 'http://10.0.2.2:38641', groupId: 'group-1',
     groupTag: 'tag-1', timelineId: 'timeline-1'
   });
@@ -66,13 +66,13 @@ async function requestAs(deviceName: string) {
 
 it('keeps the active member Host independent from the bootstrap request token', async () => {
   await expect(requestAs('Xiaomi 23049RAD8C')).resolves.toMatchObject({
-    device_name: 'Xiaomi 23049RAD8C', host_name: 'Xiaomi 23049RAD8C'
+    host_name: 'Xiaomi 23049RAD8C'
   });
 });
 
 it('keeps the active member Host when the current device label changes', async () => {
   await expect(requestAs('Different host')).resolves.toMatchObject({
-    device_name: 'Different host', host_name: 'Xiaomi 23049RAD8C'
+    host_name: 'Xiaomi 23049RAD8C'
   });
 });
 
@@ -92,7 +92,7 @@ it('stores an approved Sync Group key only in the group database', async () => {
     .mockResolvedValueOnce({ body: JSON.stringify({ compatibility, desktop_protocol: protocol,
       expires_at: '2026-04-22T12:02:00.000Z', pair_request_id: 'pair-request-1', status: 'pending' }), status: 202 })
     .mockResolvedValueOnce({ body: JSON.stringify({ compatibility, desktop_protocol: protocol,
-      authorization_id: 'authorization-a5', device_id: 'android-test-device',
+      authorization_id: 'authorization-a5',
       encrypted_credential_secret: encryptedSecret, host_name: 'Pixel 9',
       host_platform: 'android-capacitor', paired_at: '2026-04-22T12:00:00.000Z',
       peer_id: 'authorization-desktop', provider_authorization_id: 'authorization-desktop',
@@ -109,9 +109,9 @@ it('stores an approved Sync Group key only in the group database', async () => {
     'X-Signature': 'signature', 'X-Timestamp': '2026-04-22T12:00:00.000Z'
   } });
 
-  await requestCompanionPairing({ deviceId: 'Pixel 9', deviceKind: 'android', deviceName: 'Pixel 9',
+  await requestCompanionPairing({ hostName: 'Pixel 9', hostPlatform: 'android',
     endpointUrl: 'http://10.0.2.2:38641', groupId: 'group-1', groupTag: 'tag-1' });
-  await pairCompanionWithDesktop({ deviceKind: 'android', deviceName: 'Pixel 9',
+  await pairCompanionWithDesktop({ hostName: 'Pixel 9', hostPlatform: 'android',
     endpointUrl: 'http://10.0.2.2:38641', groupId: 'group-1', groupTag: 'tag-1',
     pairRequestId: 'pair-request-1' });
 

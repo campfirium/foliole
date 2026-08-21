@@ -16,7 +16,7 @@ function runFor(pairState, workspaceState) {
 
 const groupState = {
   activeSyncGroupMemberCount: 3,
-  deviceIdentityFingerprint: '2fdd44bb500a5934',
+  localMemberAuthorizationFingerprint: '2fdd44bb500a5934',
   dirtyRecordCount: 1,
   nodeCount: 1395,
   pairingCredentialsPresent: false,

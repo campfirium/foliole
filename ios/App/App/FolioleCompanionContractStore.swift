@@ -17,6 +17,7 @@ struct FolioleCompanionPairingContract {
     let discoveryResponseKeys: [String: String]
     let networkRequestKeys: [String: String]
     let networkResponseKeys: [String: String]
+    let legacyPreferenceKeys: [String: String]
     let preferenceKeys: [String: String]
     let signatureHeaderKeys: [String: String]
     let signatureRequestKeys: [String: String]
@@ -94,6 +95,7 @@ final class FolioleCompanionContractStore {
             discoveryResponseKeys: try stringMap(path: ["hostApi", "network", "discoveryResponseKeys"], root: bridge),
             networkRequestKeys: try stringMap(path: ["hostApi", "network", "requestKeys"], root: bridge),
             networkResponseKeys: try stringMap(path: ["hostApi", "network", "responseKeys"], root: bridge),
+            legacyPreferenceKeys: try stringMap(path: ["pairingPlugin", "legacyPreferenceKeys"], root: bridge),
             preferenceKeys: try stringMap(path: ["pairingPlugin", "preferenceKeys"], root: bridge),
             signatureHeaderKeys: try stringMap(path: ["pairingPlugin", "signature", "headerKeys"], root: bridge),
             signatureRequestKeys: try stringMap(path: ["pairingPlugin", "signature", "requestKeys"], root: bridge),

@@ -13,14 +13,14 @@ import {
   countPendingCompanionPairRequests,
   createCompanionPairRequest,
 } from './companionPairingRequests.js';
-import { countPairedCompanionDevices } from './companionPairingStore.js';
+import { countPairedCompanionAuthorizations } from './companionPairingStore.js';
 import { isEligibleSyncGroupJoin, parseSyncGroupLibraryFacts } from './companionSyncGroupPairRequest.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
 export { handlePairRequest } from './companionLanPairCompletion.js';
 
 type PairingStatusUpdater = (pairing: {
-  paired_device_count: number;
+  paired_authorization_count: number;
   pending_pair_request_count: number;
 }) => void;
 
@@ -33,7 +33,7 @@ type JsonResponder = (
 
 function writePairingStatus(updatePairingStatus: PairingStatusUpdater) {
   updatePairingStatus({
-    paired_device_count: countPairedCompanionDevices(),
+    paired_authorization_count: countPairedCompanionAuthorizations(),
     pending_pair_request_count: countPendingCompanionPairRequests()
   });
 }
@@ -109,14 +109,11 @@ export async function handlePairRequestCreate(
     writeJson(request, response, message === 'request_too_large' ? 413 : 400, { error: message });
     return;
   }
-  const deviceId = typeof payload.device_id === 'string' ? payload.device_id.trim() : '';
-  const deviceKind = typeof payload.device_kind === 'string' ? payload.device_kind.trim() : '';
-  const deviceName = typeof payload.device_name === 'string' ? payload.device_name.trim() : '';
   const hostName = typeof payload.host_name === 'string' ? payload.host_name.trim() : '';
   const hostPlatform = typeof payload.host_platform === 'string' ? payload.host_platform.trim() : '';
   const pairingPublicKey = typeof payload.pairing_public_key === 'string' ? payload.pairing_public_key.trim() : '';
   const protocol = parseSyncProtocolDescriptor(payload.protocol);
-  if (!deviceId || !deviceKind || !deviceName || !hostName || !hostPlatform ||
+  if (!hostName || !hostPlatform ||
       !isSupportedPairingPublicKey(pairingPublicKey)) {
     writeJson(request, response, 400, { error: 'invalid_pair_request' });
     return;
@@ -138,9 +135,6 @@ export async function handlePairRequestCreate(
   const created = createCompanionPairRequest({
     clientAddress: normalizeClientAddress(request.socket.remoteAddress),
     compatibility,
-    deviceId,
-    deviceKind,
-    deviceName,
     hostName,
     hostPlatform,
     pairingPublicKey,

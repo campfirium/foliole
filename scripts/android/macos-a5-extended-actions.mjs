@@ -133,11 +133,12 @@ export async function runMacosA5PairSyncEntry(args) {
   const { runMacosA5PairSync } = await import('./macos-a5-pair-sync-action.mjs');
   const result = await runMacosA5PairSync({
     buildIdentity, credentialRepairRequired: readiness.credentialRepairRequired,
-    deviceFingerprint: readiness.deviceIdentityFingerprint, env: args.env,
+    desktopAuthorizationFingerprint: handoff.peerFingerprint, env: args.env,
     evidenceRoot: path.join(args.paths.repoRoot, '.tmp/artifacts/a5-pair-sync', buildIdentity),
-    execute: args.execute, existingPairing: true, paths: args.paths,
+    execute: args.execute, existingPairing: true, hostName: readiness.hostName,
+    pairedAuthorizationFingerprint: readiness.localMemberAuthorizationFingerprint,
+    paths: args.paths,
     protectedSyncGroup: { groupId: handoff.groupId, timelineId: handoff.timelineId },
-    remotePeerFingerprint: handoff.peerFingerprint,
     serial: args.serial
   });
   process.stdout.write(result.output);
@@ -161,10 +162,12 @@ export async function runMacosA5ExistingSyncEntry(args) {
   const { runMacosA5PairSync } = await import('./macos-a5-pair-sync-action.mjs');
   const result = await runMacosA5PairSync({
     buildIdentity, credentialRepairRequired: false,
-    deviceFingerprint: readiness.deviceIdentityFingerprint, env: args.env,
+    desktopAuthorizationFingerprint: readiness.syncGroupRemotePeerFingerprint,
+    env: args.env,
     evidenceRoot,
-    execute: args.execute, existingPairing: true, paths: args.paths,
-    remotePeerFingerprint: readiness.syncGroupRemotePeerFingerprint, serial: args.serial
+    execute: args.execute, existingPairing: true, hostName: readiness.hostName,
+    pairedAuthorizationFingerprint: readiness.localMemberAuthorizationFingerprint,
+    paths: args.paths, serial: args.serial
   });
   process.stdout.write(result.output);
   console.log(`[macos-a5-dev] existing-sync evidence=${result.pairSyncRecovery.manifestPath}`);

@@ -84,11 +84,8 @@ export async function requestCompanionPairing(args: RequestCompanionPairingArgs)
     : null;
   const response = await requestCompanionPairingEndpoint(`${normalizedEndpointUrl}${PAIR_REQUESTS_ENDPOINT_PATH}`, {
     body: JSON.stringify({
-      device_id: args.deviceId,
-      device_kind: args.deviceKind,
-      device_name: args.deviceName,
-      host_name: existingMember?.host_name ?? args.deviceName,
-      host_platform: existingMember?.host_platform ?? args.deviceKind,
+      host_name: existingMember?.host_name ?? args.hostName,
+      host_platform: existingMember?.host_platform ?? args.hostPlatform,
       ...(usesSyncGroup ? {
         group_id: args.groupId,
         group_tag: args.groupTag,
@@ -141,12 +138,8 @@ export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArg
     return writeWebPairingState({
       authorization_id: payload.authorization_id,
       credential_secret: credentialSecret,
-      device_id: payload.device_id,
-      device_kind: args.deviceKind,
-      device_name: payload.device_id,
-      device_secret: credentialSecret,
-      host_name: payload.host_name ?? args.deviceName,
-      host_platform: payload.host_platform ?? args.deviceKind,
+      host_name: payload.host_name ?? args.hostName,
+      host_platform: payload.host_platform ?? args.hostPlatform,
       is_paired: true,
       negotiated_protocol_version: payload.compatibility.negotiated_version,
       paired_at: payload.paired_at,

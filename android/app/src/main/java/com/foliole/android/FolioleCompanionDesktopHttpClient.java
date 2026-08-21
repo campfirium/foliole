@@ -174,7 +174,7 @@ final class FolioleCompanionDesktopHttpClient {
             || "missing_headers".equals(value)
             || "protocol_pairing_repair_required".equals(value)
             || "replayed_nonce".equals(value)
-            || "unknown_device".equals(value);
+            || "unknown_authorization".equals(value);
     }
 
     private static byte[] readBytes(InputStream inputStream) throws Exception {

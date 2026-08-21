@@ -42,7 +42,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
   mocks.apply.mockResolvedValue({ applied_blob_count: 0, applied_object_count: 1, to_state_seq: 2 });
-  mocks.loadBootstrap.mockResolvedValue({ device_id: 'ios-1', device_name: 'Acceptance iPhone' });
+  mocks.loadBootstrap.mockResolvedValue({ device_id: 'ios-1', host_name: 'Acceptance iPhone' });
   mocks.requestPairing.mockResolvedValue({ pair_request_id: 'pair-1' });
   mocks.loadPairing.mockResolvedValue({ remote_peer_id: 'desktop-1' });
   mocks.runRoundtrip.mockResolvedValue({ push: { pushedObjectIds: ['node:capture', 'node:restore'] } });
@@ -55,7 +55,10 @@ it('pairs and applies the identity-bound legal pack on the first launch', async 
 
   await runIosSyncPackAcceptance();
 
-  expect(mocks.requestPairing).toHaveBeenCalledWith(expect.objectContaining({ deviceId: 'ios-1' }));
+  expect(mocks.requestPairing).toHaveBeenCalledWith(expect.objectContaining({
+    hostName: 'Acceptance iPhone',
+    hostPlatform: 'ios-capacitor'
+  }));
   expect(mocks.apply).toHaveBeenCalledWith({
     headers: { 'X-Signature': 'signed' },
     sourcePeerId: 'desktop-1',

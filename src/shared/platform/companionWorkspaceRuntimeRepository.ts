@@ -159,8 +159,8 @@ export function normalizeEndpointUrl(endpointUrl: string) {
 }
 
 export type PairCompanionWithDesktopArgs = {
-  deviceKind: string;
-  deviceName: string;
+  hostName: string;
+  hostPlatform: string;
   endpointUrl: string;
   pairRequestId: string;
   groupId?: string | undefined;
@@ -172,9 +172,8 @@ export type PairCompanionWithDesktopArgs = {
 };
 
 export type RequestCompanionPairingArgs = {
-  deviceId: string;
-  deviceKind: string;
-  deviceName: string;
+  hostName: string;
+  hostPlatform: string;
   endpointUrl: string;
   groupId?: string | undefined;
   groupTag?: string | undefined;

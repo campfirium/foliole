@@ -23,7 +23,6 @@ function createState(overrides: Partial<PairingState> = {}): PairingState {
   return {
     approveRequest: vi.fn(),
     createSyncGroup: vi.fn(),
-    clearPairedDevices: vi.fn(),
     completeSyncGroupJoin: vi.fn(),
     discoverSyncGroups: vi.fn(),
     disableSync: vi.fn(),
@@ -33,13 +32,13 @@ function createState(overrides: Partial<PairingState> = {}): PairingState {
     isLoading: false,
     leaveSyncGroup: vi.fn(),
     overview: {
-      current_host: { device_id: 'desktop-device', host_name: 'Studio Mac', host_platform: 'darwin' },
-      paired_devices: [],
+      current_host: { host_name: 'Studio Mac', host_platform: 'darwin' },
+      paired_authorizations: [],
       pending_requests: [],
       server_status: {
         advertised_urls: [],
         last_error: null,
-        paired_device_count: 0,
+        paired_authorization_count: 0,
         pending_pair_request_count: 0,
         port: null,
         state: 'stopped'
@@ -52,7 +51,6 @@ function createState(overrides: Partial<PairingState> = {}): PairingState {
     pauseSync: vi.fn(),
     refresh: vi.fn(),
     rejectRequest: vi.fn(),
-    removePairedDevice: vi.fn(),
     removeSyncGroupMember: vi.fn(),
     requestSyncGroupJoin: vi.fn(),
     resumeSync: vi.fn(),
@@ -119,8 +117,7 @@ it('requests a discovered Sync Group from its active mobile Device', () => {
         endpoint_url: 'http://192.168.1.8:43123', group_display_name: 'Studio', group_id: 'group-1',
         group_tag: 'tag-1',
         provider_authorization_id: 'authorization-android-b',
-        provider_device_id: 'android-b', provider_device_kind: 'android-capacitor',
-        provider_device_name: 'A5', provider_host_name: 'A5',
+        provider_host_name: 'A5',
         provider_host_platform: 'android-capacitor', timeline_id: 'timeline-1'
       }]
     }
@@ -154,8 +151,7 @@ it('approves a recognized device asking to join the Sync Group', () => {
     overview: {
       ...overview,
       pending_requests: [{
-        client_address: '192.168.1.8', device_id: 'android-1', device_kind: 'android-capacitor',
-        device_name: 'Pixel', host_name: 'Pixel', host_platform: 'android-capacitor',
+        client_address: '192.168.1.8', host_name: 'Pixel', host_platform: 'android-capacitor',
         expires_at: '2026-08-08T01:00:00.000Z', pair_request_id: 'request-1',
         requested_at: '2026-08-08T00:58:00.000Z', status: 'pending'
       }],
@@ -186,15 +182,15 @@ it('disables Sync Group creation while settings are loading', () => {
   expect(screen.getByRole('button', { name: 'Create Sync Group' })).toBeDisabled();
 });
 
-it('does not expose legacy paired-device transport rows', () => {
+it('does not expose authorization transport rows', () => {
   companionPairingMock.useDesktopCompanionPairingRequests.mockReturnValue(createState({
     overview: {
       ...createState().overview,
-      paired_devices: [{
+      paired_authorizations: [{
+        authorization_id: 'authorization-ios',
         client_address: '192.168.1.3',
-        device_id: 'ios-device',
-        device_kind: 'ios-capacitor',
-        device_name: 'iPhone 13 mini',
+        host_name: 'iPhone 13 mini',
+        host_platform: 'ios-capacitor',
         paired_at: '2026-07-21T00:00:00.000Z'
       }]
     }

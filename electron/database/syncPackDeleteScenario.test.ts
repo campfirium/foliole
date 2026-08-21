@@ -70,7 +70,7 @@ async function buildSourceCreateAndDeletePacks() {
   const created = path.join(tempRoot, 'create.syncpack');
   await buildDesktopSyncPack({
     createdAt: '2026-05-04T08:00:30.000Z',
-    fromDeviceId: 'desktop-source',
+    fromPeerId: 'authorization-desktop-source',
     fromStateSeq: 0,
     outputPath: created,
     packId: 'delete-scenario-create',
@@ -80,7 +80,7 @@ async function buildSourceCreateAndDeletePacks() {
   const deleted = path.join(tempRoot, 'delete.syncpack');
   await buildDesktopSyncPack({
     createdAt: '2026-05-04T08:05:30.000Z',
-    fromDeviceId: 'desktop-source',
+    fromPeerId: 'authorization-desktop-source',
     fromStateSeq: 1,
     outputPath: deleted,
     packId: 'delete-scenario-delete',

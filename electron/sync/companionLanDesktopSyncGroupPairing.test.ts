@@ -6,15 +6,10 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 
 const pairingStoreMock = vi.hoisted(() => ({
-  countPairedCompanionDevices: vi.fn(() => 1),
-  loadPairedSyncGroupPeer: vi.fn((): { secret: string } | null => null),
-  registerPairedCompanionDevice: vi.fn((args: { authorizationId: string; deviceId: string }) => ({
+  countPairedCompanionAuthorizations: vi.fn(() => 1),
+  registerPairedCompanionAuthorization: vi.fn((args: { authorizationId: string; hostName: string }) => ({
     authorization_id: args.authorizationId, credential_secret: 'secret-c',
-    device_id: args.deviceId, paired_at: '2026-08-10T01:00:00.000Z'
-  })),
-  registerPairedCompanionDeviceWithSecret: vi.fn((args: { authorizationId: string; credentialSecret: string; deviceId: string }) => ({
-    authorization_id: args.authorizationId, credential_secret: args.credentialSecret,
-    device_id: args.deviceId, paired_at: '2026-08-10T01:00:00.000Z'
+    host_name: args.hostName, paired_at: '2026-08-10T01:00:00.000Z'
   })),
   savePairedSyncGroupPeer: vi.fn()
 }));
@@ -59,7 +54,6 @@ const PAIRING_KEY = Buffer.concat([Buffer.from([4]), Buffer.alloc(64)]).toString
 afterEach(() => {
   clearCompanionPairRequests();
   vi.clearAllMocks();
-  pairingStoreMock.loadPairedSyncGroupPeer.mockReturnValue(null);
 });
 
 function request(payload: unknown) {
@@ -75,7 +69,6 @@ function response() {
 it('registers an approved nonempty Windows desktop and returns bidirectional provider credentials', async () => {
   const writeJson = vi.fn();
   await handlePairRequestCreate(request({
-    device_id: 'desktop-c', device_kind: 'win32', device_name: 'Desktop C',
     host_name: 'Desktop C', host_platform: 'win32', group_id: 'group-1', group_tag: 'tag-1',
     library_facts: { attachment_count: 2, content_blob_count: 2, node_count: 5, review_log_count: 8, timeline_id: null },
     pairing_public_key: PAIRING_KEY, protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR, timeline_id: 'timeline-1'
@@ -89,19 +82,18 @@ it('registers an approved nonempty Windows desktop and returns bidirectional pro
     hostName: 'Desktop C', hostPlatform: 'win32'
   }));
   expect(pairingStoreMock.savePairedSyncGroupPeer).toHaveBeenCalledWith(expect.objectContaining({
-    endpoint_url: 'http://192.168.1.22:38641', peer_device_id: 'desktop-c', peer_host_name: 'Desktop C 2'
+    endpoint_url: 'http://192.168.1.22:38641', peer_host_name: 'Desktop C 2'
   }));
   expect(writeJson).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), 200,
-    expect.objectContaining({ device_id: 'desktop-c', host_name: 'Desktop C 2', provider_device_id: 'desktop-a',
+    expect.objectContaining({ authorization_id: expect.any(String), host_name: 'Desktop C 2',
+      provider_authorization_id: 'authorization-desktop-a',
       provider_encrypted_credential_secret: 'encrypted-secret',
       sync_group: expect.objectContaining({ group_id: 'group-1', timeline_id: 'timeline-1' }) }));
 });
 
 it('reuses the one workgroup key when a released display name is approved again', async () => {
-  pairingStoreMock.loadPairedSyncGroupPeer.mockReturnValue({ secret: 'old-secret' });
   const writeJson = vi.fn();
   await handlePairRequestCreate(request({
-    device_id: 'desktop-c', device_kind: 'win32', device_name: 'Desktop C',
     host_name: 'Desktop C', host_platform: 'win32', group_id: 'group-1', group_tag: 'tag-1',
     library_facts: { attachment_count: 2, content_blob_count: 2, node_count: 5, review_log_count: 8, timeline_id: null },
     pairing_public_key: PAIRING_KEY, protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR, timeline_id: 'timeline-1'
@@ -111,7 +103,6 @@ it('reuses the one workgroup key when a released display name is approved again'
   await handlePairRequest(request({ pair_request_id: requestId }), response(),
     '0.1.0-test', 'desktop-a', vi.fn(), writeJson);
 
-  expect(pairingStoreMock.loadPairedSyncGroupPeer).not.toHaveBeenCalled();
   expect(pairingStoreMock.savePairedSyncGroupPeer).toHaveBeenCalledWith(expect.objectContaining({
     peer_host_name: 'Desktop C 2'
   }));
@@ -128,8 +119,7 @@ it('reissues the workgroup key to an approved active member without creating ano
   syncGroupStoreMock.registerSyncGroupMember.mockReturnValue(activeGroup);
   const writeJson = vi.fn();
   await handlePairRequestCreate(request({
-    device_id: 'Xiaomi 23049RAD8C', device_kind: 'android-capacitor',
-    device_name: 'Xiaomi 23049RAD8C', host_name: 'Xiaomi 23049RAD8C',
+    host_name: 'Xiaomi 23049RAD8C',
     host_platform: 'android-capacitor', group_id: 'group-1', group_tag: 'tag-1',
     library_facts: { attachment_count: 2, content_blob_count: 2, node_count: 1399, review_log_count: 8, timeline_id: null },
     pairing_public_key: PAIRING_KEY, protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR, timeline_id: 'timeline-1'
@@ -140,7 +130,7 @@ it('reissues the workgroup key to an approved active member without creating ano
     '0.1.0-test', 'desktop-a', vi.fn(), writeJson);
 
   expect(writeJson).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), 200,
-    expect.objectContaining({ device_id: 'Xiaomi 23049RAD8C',
+    expect.objectContaining({ authorization_id: 'join-a5', host_name: 'Xiaomi 23049RAD8C',
       sync_group: expect.objectContaining({
         members: expect.arrayContaining([expect.objectContaining({ authorization_id: 'join-a5' })])
       }) }));
@@ -155,8 +145,7 @@ it('restores an explicitly selected active member when its current public name d
   syncGroupStoreMock.loadDesktopSyncGroup.mockReturnValue(activeGroup);
   const writeJson = vi.fn();
   await handlePairRequestCreate(request({
-    device_id: 'Xiaomi 23049RAD8C 2', device_kind: 'android-capacitor',
-    device_name: 'Xiaomi 23049RAD8C', host_name: 'Xiaomi 23049RAD8C 2',
+    host_name: 'Xiaomi 23049RAD8C 2',
     host_platform: 'android-capacitor', group_id: 'group-1', group_tag: 'tag-1',
     library_facts: { attachment_count: 2, content_blob_count: 2, node_count: 1399,
       review_log_count: 8, timeline_id: null },
@@ -174,5 +163,5 @@ it('restores an explicitly selected active member when its current public name d
     authorizationId: 'join-a5', hostName: 'Xiaomi 23049RAD8C 2'
   }));
   expect(writeJson).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), 200,
-    expect.objectContaining({ device_id: 'Xiaomi 23049RAD8C 2' }));
+    expect.objectContaining({ authorization_id: 'join-a5', host_name: 'Xiaomi 23049RAD8C' }));
 });

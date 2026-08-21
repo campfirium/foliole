@@ -54,8 +54,6 @@ const HIGH_IMPACT_COMMANDS = [
   NATIVE_COMMANDS.saveBackupSettings,
   NATIVE_COMMANDS.saveExternalSearchFolders,
   NATIVE_COMMANDS.saveSyncPeers,
-  NATIVE_COMMANDS.clearCompanionPairedDevices,
-  NATIVE_COMMANDS.removeCompanionPairedDevice,
   NATIVE_COMMANDS.restoreSourceDispositions,
   NATIVE_COMMANDS.resetSourceDispositions,
   NATIVE_COMMANDS.runReadwiseImportCleanup,

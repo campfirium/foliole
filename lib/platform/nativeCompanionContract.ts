@@ -15,7 +15,7 @@ export interface NativeCompanionBootstrapState {
   booted_at: string;
   database_path: string | null;
   database_ready: boolean;
-  /** Frozen authorization identity for the not-yet-cut-over authorization axis. */
+  /** Frozen Source execution identity, separate from pairing authorization. */
   device_id: string;
   device_name?: string | null;
   host_name?: string;

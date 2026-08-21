@@ -9,7 +9,6 @@ export function classifyDepartedCredentialState(pairState, workspaceState) {
     && workspaceState.counts?.nodes === 0 && workspaceState.counts?.content_blobs === 0
     && workspaceState.counts?.node_order === 0;
   const exact = pairState.activeSyncGroupMemberCount === 0
-    && fingerprint(pairState.deviceIdentityFingerprint)
     && pairState.syncGroupId === null && pairState.syncGroupTimelineId === null
     && pairState.storedSyncGroupCount === 1
     && typeof pairState.storedSyncGroupId === 'string'
@@ -19,20 +18,19 @@ export function classifyDepartedCredentialState(pairState, workspaceState) {
     && pairState.storedLocalDepartureMatchCount === 1
     && fingerprint(pairState.storedLocalMemberAuthorizationFingerprint)
     && fingerprint(pairState.storedLocalDepartureAuthorizationFingerprint)
-    && pairState.pairingCredentialsPresent === false && pairState.remotePeerFingerprint === null
+    && pairState.pairingCredentialsPresent === false
+    && pairState.pairingPeerAuthorizationFingerprint === null
     && pairState.pairingPeerConflict === false && pairState.syncGroupCredentialsPresent === false
     && pairState.workgroupKeyPresent === false && pairState.syncGroupRoutePresent === false
     && pairState.syncGroupPeerConflict === false
     && pairState.syncGroupRemotePeerFingerprint === null
     && pairState.workspaceSyncEndpointPresent === true
-    && workspaceState.pairingWorkspace?.localDeviceIdentityPresent === true
     && workspaceState.pairingWorkspace?.syncEndpointPresent === true && emptyContent;
   return exact ? DEPARTED_PRESERVED_HISTORY : null;
 }
 
 export function assertDepartedCredentialBaseline(readiness, baseline = readiness) {
   const preserved = readiness.departedCredentialState === DEPARTED_PRESERVED_HISTORY
-    && readiness.deviceIdentityFingerprint === baseline.deviceIdentityFingerprint
     && readiness.nodeCount === baseline.nodeCount
     && readiness.dirtyRecordCount === baseline.dirtyRecordCount
     && readiness.protectedContentDigest === baseline.protectedContentDigest

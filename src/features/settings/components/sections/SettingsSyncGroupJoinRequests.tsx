@@ -14,7 +14,7 @@ export function SettingsSyncGroupJoinRequests(props: {
     <div className="flex flex-col gap-3" role="list">
       {props.requests.map((request) => (
         <div className="flex items-center justify-between gap-4" key={request.pair_request_id} role="listitem">
-          <span className="min-w-0 truncate text-sm text-foreground">{request.device_name}</span>
+          <span className="min-w-0 truncate text-sm text-foreground">{request.host_name}</span>
           <span className="flex shrink-0 gap-2">
             <SettingsButton disabled={props.disabled} onClick={() => props.onReject(request.pair_request_id)}>
               {t('settings.companionSync.group.join.reject')}

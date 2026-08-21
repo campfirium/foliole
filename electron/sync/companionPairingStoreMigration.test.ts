@@ -18,7 +18,7 @@ vi.mock('electron', () => ({
 }));
 
 import {
-  clearPairedCompanionDevices,
+  clearPairedCompanionAuthorizations,
   loadPairedCompanionAuthorization,
   migratePairedCompanionStore
 } from './companionPairingStore.js';
@@ -30,11 +30,11 @@ beforeEach(() => {
   userDataDir = path.join(tempRoot, 'user-data');
   fs.mkdirSync(userDataDir, { recursive: true });
   encryptString.mockImplementation((value: string) => Buffer.from(value, 'utf8'));
-  clearPairedCompanionDevices();
+  clearPairedCompanionAuthorizations();
 });
 
 afterEach(() => {
-  clearPairedCompanionDevices();
+  clearPairedCompanionAuthorizations();
   fs.rmSync(tempRoot, { force: true, recursive: true });
 });
 
@@ -42,8 +42,7 @@ it('cuts legacy Device credentials over to the Host authorization without changi
   writeLegacyStore();
   expect(migratePairedCompanionStore((host) => host === 'A5' ? 'authorization-a5' : null)).toBe(true);
   expect(loadPairedCompanionAuthorization('authorization-a5')).toEqual(expect.objectContaining({
-    authorization_id: 'authorization-a5', credential_secret: 'legacy-secret',
-    device_id: 'legacy-device', host_name: 'A5'
+    authorization_id: 'authorization-a5', credential_secret: 'legacy-secret', host_name: 'A5'
   }));
 });
 

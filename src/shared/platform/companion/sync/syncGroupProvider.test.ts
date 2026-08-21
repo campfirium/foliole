@@ -24,10 +24,6 @@ vi.mock('../../companionWorkspaceRuntimeRepository', () => ({
   isNativeCompanionSyncGroupRuntime: () => runtime.available,
   isNativeCompanionSyncParticipationRuntime: () => runtime.available
 }));
-vi.mock('./syncGroupStore', () => ({
-  loadCompanionSyncGroupWorkgroupKey: vi.fn(async () => 'workgroup-key')
-}));
-
 import { reconcileCompanionSyncGroupProvider } from './syncGroupProvider';
 
 const bootstrap = {
@@ -66,9 +62,11 @@ beforeEach(() => {
 it('lands an active Android member on the native provider bridge with its persistent group identity', async () => {
   await reconcileCompanionSyncGroupProvider(bootstrap, group, '4:2026-08-12T00:00:00.000Z');
   expect(runtime.start).toHaveBeenCalledWith(expect.objectContaining({
-    app_version: '0.7.5', host_name: 'A5 2',
-    workgroup_key: 'workgroup-key'
+    app_version: '0.7.5', host_name: 'A5 2'
   }));
+  expect(runtime.start).toHaveBeenCalledWith(
+    expect.not.objectContaining({ workgroup_key: expect.anything() })
+  );
   expect(runtime.listen).toHaveBeenCalledWith('syncGroupDataRequest', expect.any(Function));
 });
 

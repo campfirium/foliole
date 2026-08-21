@@ -49,7 +49,7 @@ function desktopDiscovery(hostName = 'V', endpointUrl = 'http://192.168.1.8:3864
     compatibility: compatible,
     discovery: {
       app_version: '0.1.0',
-      desktop_device_name: `Foliole Desktop on ${hostName}`,
+      desktop_host_name: `Foliole Desktop on ${hostName}`,
       desktop_name: 'Foliole Desktop',
       desktop_platform: hostName === 'Studio' ? 'macOS' : 'Windows',
       peer_id: `desktop-${hostName.toLowerCase()}`,
@@ -70,9 +70,6 @@ beforeEach(() => {
 
 it('can cancel a pending pair request and keep discovered devices available', async () => {
   syncMocks.loadCompanionPairingState.mockResolvedValue({
-    device_id: null,
-    device_kind: null,
-    device_name: null,
     is_paired: false,
     paired_at: null
   });
@@ -105,7 +102,7 @@ it('can cancel a pending pair request and keep discovered devices available', as
 
   expect(result.current.pendingPairRequest).toBeNull();
   expect(result.current.pairingStatus).toBe('idle');
-  expect(result.current.desktopDiscoveries.map((desktop) => desktop.desktopDeviceName)).toEqual([
+  expect(result.current.desktopDiscoveries.map((desktop) => desktop.desktopHostName)).toEqual([
     'Foliole Desktop on V',
     'Foliole Desktop on Studio'
   ]);

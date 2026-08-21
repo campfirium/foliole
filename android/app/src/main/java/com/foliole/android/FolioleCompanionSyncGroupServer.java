@@ -87,14 +87,13 @@ final class FolioleCompanionSyncGroupServer {
         FolioleCompanionHttpResponse.json(output, 200, new JSONObject().put("app_version", config.getString("app_version"))
             .put("group_display_name", group.getString("display_name")).put("group_id", group.getString("group_id"))
             .put("group_tag", config.getString("group_tag"))
-            .put("timeline_id", group.getString("timeline_id")).put("provider_device_id", config.getString("device_id"))
-            .put("provider_device_kind", "android-capacitor").put("provider_device_name", config.getString("device_name"))
+            .put("timeline_id", group.getString("timeline_id"))
             .put("provider_authorization_id", config.getString("authorization_id"))
             .put("provider_host_name", config.getString("host_name"))
             .put("provider_host_platform", config.getString("host_platform"))
             .put("protocol", protocol()).put("peer_id", config.getString("authorization_id"))
             .put("runtime_instance_id", config.getString("runtime_instance_id"))
-            .put("desktop_name", config.getString("host_name")).put("desktop_device_name", config.getString("device_name"))
+            .put("desktop_name", config.getString("host_name"))
             .put("desktop_host_name", config.getString("host_name"))
             .put("desktop_platform", "android-capacitor").put("pairing_mode", "desktop-confirm"));
     }
@@ -138,19 +137,19 @@ final class FolioleCompanionSyncGroupServer {
         FolioleCompanionSyncGroupOutboundPairing.save(
             context, config, pending, dataBridge
         );
-        String workgroupKey = FolioleCompanionWorkgroupSession.requireKey();
+        String workgroupKey = FolioleCompanionCurrentGroupCredential.load(
+            context, config.getJSONObject("sync_group").getString("group_id")
+        ).workgroupKey;
         FolioleCompanionHttpResponse.json(output, 200, new JSONObject().put("app_version", config.getString("app_version"))
             .put("compatibility", FolioleCompanionWorkgroupHttp.compatible(protocol())).put("desktop_protocol", protocol())
-            .put("authorization_id", pending.pairRequestId).put("device_id", pending.deviceId)
+            .put("authorization_id", pending.pairRequestId)
             .put("encrypted_credential_secret", FolioleCompanionSyncGroupPairCrypto.encrypt(pending.pairingPublicKey, workgroupKey))
             .put("provider_encrypted_credential_secret", FolioleCompanionSyncGroupPairCrypto.encrypt(pending.pairingPublicKey, workgroupKey))
             .put("provider_authorization_id", config.getString("authorization_id"))
-            .put("provider_device_id", config.getString("device_id")).put("provider_device_kind", "android-capacitor")
-            .put("provider_device_name", config.getString("device_name"))
             .put("host_name", pending.hostName).put("host_platform", pending.hostPlatform)
             .put("provider_host_name", config.getString("host_name"))
             .put("provider_host_platform", config.getString("host_platform"))
-            .put("paired_at", java.time.Instant.now().toString()).put("peer_id", config.getString("device_id"))
+            .put("paired_at", java.time.Instant.now().toString()).put("peer_id", config.getString("authorization_id"))
             .put("sync_group", group));
     }
 
@@ -160,15 +159,15 @@ final class FolioleCompanionSyncGroupServer {
         int after = integerQuery(request.path, "after_state_seq");
         FolioleCompanionSyncPackProvider.BuildResult pack = snapshots.refresh(
             peer, (snapshot) -> FolioleCompanionSyncPackProvider.build(
-                context, snapshot, config.getString("device_id"), peer, after));
+                context, snapshot, config.getString("authorization_id"), peer, after));
         FolioleCompanionSyncGroupDatabase.recordSupplyCursor(dataBridge, peer, after, pack.toSeq);
         workgroupBytes(request, output, "application/zip", pack.body);
     }
 
     private void departure(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {
-        String authenticatedDeviceId = authenticate(request);
+        String authenticatedAuthorizationId = authenticate(request);
         String authenticatedHostName = FolioleCompanionSyncGroupOutboundPeerStore.hostName(
-            context, config.getJSONObject("sync_group").getString("group_id"), authenticatedDeviceId);
+            context, config.getJSONObject("sync_group").getString("group_id"), authenticatedAuthorizationId);
         JSONObject body = new JSONObject(decryptRequest(request));
         if (authenticatedHostName == null || !authenticatedHostName.equals(body.optString("host_name"))) {
             throw new SecurityException("sync_group_departure_authorization_invalid");
@@ -176,8 +175,8 @@ final class FolioleCompanionSyncGroupServer {
         FolioleCompanionSyncGroupDatabase.recordDeparture(
             dataBridge, config.getJSONObject("sync_group").getString("group_id"), body
         );
-        FolioleCompanionSyncGroupPeerStore.remove(context, authenticatedDeviceId);
-        FolioleCompanionSyncGroupOutboundPeerStore.remove(context, authenticatedDeviceId);
+        FolioleCompanionSyncGroupPeerStore.remove(context, authenticatedAuthorizationId);
+        FolioleCompanionSyncGroupOutboundPeerStore.remove(context, authenticatedAuthorizationId);
         workgroupJson(request, output, new JSONObject().put("status", "accepted"));
     }
 
@@ -218,7 +217,9 @@ final class FolioleCompanionSyncGroupServer {
             config.getJSONObject("sync_group").getString("group_id"), dataBridge);
     }
     private String decryptRequest(FolioleCompanionHttpRequest request) throws Exception {
-        String key = FolioleCompanionWorkgroupSession.requireKey();
+        String key = FolioleCompanionCurrentGroupCredential.load(
+            context, config.getJSONObject("sync_group").getString("group_id")
+        ).workgroupKey;
         return new String(FolioleCompanionSyncGroupCrypto.decrypt(
             key, config.getString("group_tag"), request.method, request.path, "request",
             "application/json; charset=utf-8", new JSONObject(request.bodyText())

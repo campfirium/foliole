@@ -42,6 +42,7 @@ function createArgs() {
     database_ready: true,
     device_id: 'android-test-device',
     device_name: null,
+    host_name: 'Android',
     runtime_kind: 'android-capacitor'
   };
   return {
@@ -127,12 +128,12 @@ describe('useCompanionWorkspacePairing request flow', () => {
     expect(args.onError).toHaveBeenLastCalledWith('Pairing request expired. Tap Pair again.');
   });
 
-  it('uses the native device name when requesting pairing', async () => {
+  it('uses the native Host name when requesting pairing', async () => {
     mockStoredPairingState();
     syncMocks.discoverCompanionDesktop.mockResolvedValue(desktopDiscovery());
     mockPairRequest();
     const args = createArgs();
-    args.bootstrapState.device_name = 'Pixel 9';
+    args.bootstrapState.host_name = 'Pixel 9';
     const { result } = renderHook(() => useCompanionWorkspacePairing(args));
 
     await act(async () => {
@@ -140,7 +141,7 @@ describe('useCompanionWorkspacePairing request flow', () => {
     });
 
     expect(syncMocks.requestCompanionPairing).toHaveBeenCalledWith(expect.objectContaining({
-      deviceName: 'Pixel 9'
+      hostName: 'Pixel 9'
     }));
   });
 });

@@ -3,7 +3,7 @@ import type { DesktopCompanionSyncServerStatusPayload } from '../../../../lib/pl
 export function normalizeServerStatus(value: unknown): DesktopCompanionSyncServerStatusPayload {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return {
-      advertised_urls: [], last_error: null, paired_device_count: 0,
+      advertised_urls: [], last_error: null, paired_authorization_count: 0,
       pending_pair_request_count: 0, port: null, state: 'stopped'
     };
   }
@@ -13,7 +13,8 @@ export function normalizeServerStatus(value: unknown): DesktopCompanionSyncServe
       ? raw.advertised_urls.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
       : [],
     last_error: typeof raw.last_error === 'string' && raw.last_error.trim() ? raw.last_error : null,
-    paired_device_count: typeof raw.paired_device_count === 'number' ? raw.paired_device_count : 0,
+    paired_authorization_count: typeof raw.paired_authorization_count === 'number'
+      ? raw.paired_authorization_count : 0,
     pending_pair_request_count: typeof raw.pending_pair_request_count === 'number' ? raw.pending_pair_request_count : 0,
     port: typeof raw.port === 'number' ? raw.port : null,
     state: raw.state === 'failed' || raw.state === 'running' || raw.state === 'stopped' ? raw.state : 'stopped'

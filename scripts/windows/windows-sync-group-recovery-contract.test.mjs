@@ -34,8 +34,10 @@ it('keeps stable desktop A and Windows C on a real LAN Sync Group path', () => {
   expect(inspector).toContain('localMemberState');
   expect(inspector).toContain('departedHosts');
   expect(inspector).toContain('activeHosts');
-  expect(inspector).toContain("key IN ('device_id', 'desktop_device_id')");
-  expect(inspector).toContain('storedDesktopDeviceIdentity(db) ?? identity.deviceIdentityFingerprint');
+  expect(inspector).not.toContain("key IN ('device_id', 'desktop_device_id')");
+  expect(inspector).toContain(
+    'localAuthorizationFingerprint: identity.localMemberAuthorizationFingerprint'
+  );
   expect(inspector).toContain('userNodeCount');
   expect(inspector).toContain("members.state = 'left'");
   expect(remote).toContain('initial=${JSON.stringify(initialFacts)}');

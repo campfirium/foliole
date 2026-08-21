@@ -30,10 +30,18 @@ function fixture({ assertActive = vi.fn(), enableResult, reverseFails = false })
   const session = {
     approve: vi.fn(), assertActive, close: vi.fn(async () => undefined),
     enable: vi.fn(async () => enableResult),
-    load: vi.fn(async () => ({ paired_devices: [], pending_requests: [] })),
+    load: vi.fn(async () => ({
+      paired_authorizations: [], pending_requests: [],
+      sync_group: {
+        local_host_name: 'Windows',
+        members: [{
+          authorization_id: 'desktop-authorization', host_name: 'Windows', state: 'active'
+        }]
+      }
+    })),
     sanitize: vi.fn(() => ({
-      desktopPeerFingerprint: 'desktop-peer', pairedDeviceFingerprints: [],
-      pendingDeviceFingerprints: []
+      localAuthorizationFingerprint: '0123456789abcdef',
+      pairedAuthorizationFingerprints: [], pendingAuthorizationFingerprints: []
     }))
   };
   return { calls, execute, fsApi, session };
@@ -42,10 +50,10 @@ function fixture({ assertActive = vi.fn(), enableResult, reverseFails = false })
 async function runFailure(testFixture) {
   return runWindowsA5PairSyncRecovery({
     adbPort: '5037', buildIdentity: 'pair-ownership',
-    deviceFingerprint: '0123456789abcdef', env: {}, evidenceRoot: 'C:\\evidence',
+    desktopAuthorizationFingerprint: '0123456789abcdef', env: {}, evidenceRoot: 'C:\\evidence',
     execute: testFixture.execute, fsApi: testFixture.fsApi,
     openDesktopSession: vi.fn(async () => testFixture.session), paths: fixedPaths,
-    protectData: vi.fn(async () => ({ output: '' })), serial: '87a33a4b'
+    hostName: 'A5', protectData: vi.fn(async () => ({ output: '' })), serial: '87a33a4b'
   }).catch((error) => error);
 }
 

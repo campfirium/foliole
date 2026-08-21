@@ -48,7 +48,8 @@ it('consumes departed-preserved-history through the existing fresh join only', a
   await runMacosA5PairCredentialsEntry(args, {
     buildDesktop: vi.fn(), collectProtectedReadiness,
     inspectDesktopDeparture: () => ({
-      groupId: 'group-1', remotePeerFingerprint: '82cc2dc5c98135c8', timelineId: 'timeline-1'
+      groupId: 'group-1', remotePeerAuthorizationFingerprint: '82cc2dc5c98135c8',
+      timelineId: 'timeline-1'
     }), leaveJoinedEmpty, readReceipt: () => ({ credentials: 'saved_signable',
       initialSync: 'not_started', pairingPath: 'new' }),
     produceHandoff, resolveReadiness, runPairSync
@@ -62,9 +63,9 @@ it('consumes departed-preserved-history through the existing fresh join only', a
   expect(runPairSync).toHaveBeenCalledWith(expect.objectContaining({
     evidenceRoot: path.join('/repo/foliole', '.tmp/artifacts/a5-pair-credentials/build-departed'),
     existingPairing: false,
-    pairRequestFingerprint: departedCredentialFixture.deviceIdentityFingerprint,
+    hostName: 'A5', pairedAuthorizationFingerprint: null, pairRequestIdentity: 'A5',
     protectedSyncGroup: { groupId: 'group-1', timelineId: 'timeline-1' },
     recoveryEvidenceGoal: 'credentials-signable',
-    remotePeerFingerprint: '82cc2dc5c98135c8'
+    desktopAuthorizationFingerprint: '82cc2dc5c98135c8'
   }));
 });

@@ -54,9 +54,6 @@ async function probeCandidate(
       group_id: String(payload.group_id),
       group_tag: String(payload.group_tag),
       provider_authorization_id: text(payload.peer_id) ?? String(service.txt.peer_id),
-      provider_device_id: text(payload.provider_device_id) ?? text(payload.peer_id) ?? String(service.txt.peer_id),
-      provider_device_kind: text(payload.provider_device_kind) ?? desktopKind(platform),
-      provider_device_name: text(payload.provider_device_name) ?? text(payload.desktop_device_name) ?? service.name,
       provider_host_name: text(payload.provider_host_name) ?? text(payload.desktop_host_name) ?? service.name,
       provider_host_platform: text(payload.provider_host_platform) ?? desktopKind(platform),
       timeline_id: String(payload.timeline_id)
@@ -77,7 +74,7 @@ function selectStableGroupProviders(candidates: DesktopSyncGroupJoinCandidatePay
 }
 
 function providerRank(candidate: DesktopSyncGroupJoinCandidatePayload) {
-  return candidate.provider_device_kind === 'android-capacitor' ? 1 : 0;
+  return candidate.provider_host_platform === 'android-capacitor' ? 1 : 0;
 }
 
 function desktopKind(platform: string) {

@@ -8,8 +8,8 @@ import javax.crypto.spec.SecretKeySpec;
 final class FolioleCompanionPairingCrypto {
     private FolioleCompanionPairingCrypto() {}
 
-    static byte[] deriveCredentialBagKey(String deviceSecret, String service, byte[] salt) throws Exception {
-        byte[] pseudoRandomKey = hmacSha256(salt, deviceSecret.getBytes(StandardCharsets.UTF_8));
+    static byte[] deriveCredentialBagKey(String credentialSecret, String service, byte[] salt) throws Exception {
+        byte[] pseudoRandomKey = hmacSha256(salt, credentialSecret.getBytes(StandardCharsets.UTF_8));
         return hmacSha256(pseudoRandomKey, ("Foliole credential bag v1/" + service + "\u0001").getBytes(StandardCharsets.UTF_8));
     }
 

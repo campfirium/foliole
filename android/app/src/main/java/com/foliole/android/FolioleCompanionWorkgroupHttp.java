@@ -60,7 +60,9 @@ final class FolioleCompanionWorkgroupHttp {
             return new PreparedRequest(body, headers, path(new URL(url)));
         }
         return prepareWithKey(context, url, method, inputHeaders, body,
-            FolioleCompanionWorkgroupSession.requireKey());
+            FolioleCompanionCurrentGroupCredential.load(
+                context, headers.getString("X-Sync-Group-Id")
+            ).workgroupKey);
     }
 
     static PreparedRequest prepareWithKey(
@@ -109,7 +111,11 @@ final class FolioleCompanionWorkgroupHttp {
         if (!ENVELOPE_CONTENT_TYPE.equals(connection.getContentType())) {
             throw new SecurityException("workgroup_aead_response_required");
         }
-        String groupKey = FolioleCompanionWorkgroupSession.requireKey();
+        String groupId = trim(connection.getRequestProperty("X-Sync-Group-Id"));
+        if (groupId == null) throw new SecurityException("sync_group_id_missing");
+        String groupKey = FolioleCompanionCurrentGroupCredential.load(
+            context, groupId
+        ).workgroupKey;
         String contentType = trim(connection.getHeaderField("X-Foliole-Original-Content-Type"));
         if (contentType == null) contentType = "application/octet-stream";
         JSONObject envelope = new JSONObject(new String(body, StandardCharsets.UTF_8));
@@ -133,7 +139,9 @@ final class FolioleCompanionWorkgroupHttp {
         Context context, JSONObject config, FolioleCompanionHttpRequest request,
         OutputStream output, int status, String contentType, byte[] body
     ) throws Exception {
-        String key = FolioleCompanionWorkgroupSession.requireKey();
+        String key = FolioleCompanionCurrentGroupCredential.load(
+            context, config.getJSONObject("sync_group").getString("group_id")
+        ).workgroupKey;
         byte[] encrypted = FolioleCompanionSyncGroupCrypto.encrypt(
             key, config.getString("group_tag"), request.method, request.path, "response", contentType, body
         ).toString().getBytes(StandardCharsets.UTF_8);

@@ -38,12 +38,8 @@ function resolveDesktopPlatformLabel() {
   return platform;
 }
 
-export function resolveDesktopDeviceName() {
-  return normalizeDesktopHostName(os.hostname());
-}
-
 export function resolveDesktopHostName() {
-  return resolveDesktopDeviceName();
+  return normalizeDesktopHostName(os.hostname());
 }
 
 export function normalizeDesktopHostName(value: string) {
@@ -51,7 +47,7 @@ export function normalizeDesktopHostName(value: string) {
   return hostName || 'Foliole Desktop';
 }
 
-export function buildDiscoveryPayload(appVersion: string, peerId: string) {
+export function buildDiscoveryPayload(appVersion: string) {
   const group = loadDesktopSyncGroup();
   if (!group || group.local_member_state !== 'active') return null;
   const workgroup = loadDesktopWorkgroupKey(group.group_id);
@@ -60,13 +56,11 @@ export function buildDiscoveryPayload(appVersion: string, peerId: string) {
   if (!local) throw new Error('sync_group_local_authorization_missing');
   return {
     app_version: appVersion,
-    desktop_device_name: resolveDesktopDeviceName(),
     desktop_host_name: resolveDesktopHostName(),
     desktop_name: 'Foliole Desktop',
     desktop_platform: resolveDesktopPlatformLabel(),
     pairing_mode: 'desktop-confirm' as const,
     peer_id: local.authorization_id,
-    provider_device_id: peerId,
     runtime_instance_id: loadSyncGroupRuntimeInstanceId(),
     group_display_name: resolveSyncGroupDisplayHostName(group),
     group_id: group.group_id,

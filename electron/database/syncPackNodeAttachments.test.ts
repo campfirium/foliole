@@ -109,6 +109,7 @@ it('packs node attachment links through the changed node state', async () => {
 
   const packPath = path.join(tempRoot, 'incoming-node-attachments.db');
   const result = await buildDesktopSyncPack({
+    fromPeerId: 'authorization-desktop',
     fromStateSeq: 1,
     outputPath: packPath,
     packId: 'pack-node-attachment-link'

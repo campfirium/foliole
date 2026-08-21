@@ -63,7 +63,7 @@ async function buildLibraryPack(suffix: 'a' | 'b', peerId: string) {
   const packPath = path.join(tempRoot, `${suffix}.syncpack`);
   await buildDesktopSyncPack({
     createdAt: `2026-08-14T02:0${suffix === 'a' ? 1 : 2}:00.000Z`,
-    fromDeviceId: `${suffix}-device`,
+    fromPeerId: `authorization-${suffix}`,
     fromStateSeq: 0,
     outputPath: packPath,
     packId: `${suffix}-pack`,

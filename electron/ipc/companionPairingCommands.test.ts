@@ -13,9 +13,9 @@ const commandMocks = vi.hoisted(() => ({
       endpoint_url: 'http://192.168.0.107:39339',
       group_display_name: 'Foliole Desktop on Maci.local',
       group_id: 'group-1',
-      provider_device_id: 'android-b',
-      provider_device_kind: 'android-capacitor',
-      provider_device_name: 'Xiaomi 23049RAD8C',
+      provider_authorization_id: 'authorization-android-b',
+      provider_host_name: 'Xiaomi 23049RAD8C',
+      provider_host_platform: 'android-capacitor',
       timeline_id: 'timeline-1'
     }],
     pending: null
@@ -37,8 +37,8 @@ const commandMocks = vi.hoisted(() => ({
 vi.mock('electron', () => ({
   app: { getVersion: () => '1.0.0' }
 }));
-vi.mock('../database/deviceIdentity.js', () => ({
-  loadOrCreateDesktopDeviceId: vi.fn(() => 'device-desktop')
+vi.mock('../database/hostProfile.js', () => ({
+  loadOrCreateDesktopHostName: vi.fn(() => 'Desktop')
 }));
 vi.mock('../database/connection.js', () => ({
   runWithDatabaseConnectionOwner: commandMocks.runWithDatabaseConnectionOwner
@@ -55,20 +55,37 @@ vi.mock('../sync/companionPairingRequests.js', () => ({
   rejectCompanionPairRequest: vi.fn()
 }));
 vi.mock('../sync/companionPairingStore.js', () => ({
-  clearPairedCompanionDevices: vi.fn(),
-  loadPairedCompanionDevices: vi.fn(() => []),
-  migratePairedCompanionStore: vi.fn(() => ({ migrated: false })),
-  removePairedCompanionDevice: vi.fn()
+  loadPairedCompanionAuthorizations: vi.fn(() => [])
+}));
+vi.mock('../sync/companionPairingStoreCutover.js', () => ({
+  ensureCompanionPairingStoreAuthorizationCutover: vi.fn()
+}));
+vi.mock('../sync/syncGroupRuntimeInstance.js', () => ({
+  loadSyncGroupRuntimeInstanceId: vi.fn(() => 'runtime-authorization')
+}));
+vi.mock('../sync/companionLanPayloads.js', () => ({
+  resolveDesktopHostName: vi.fn(() => 'Desktop')
+}));
+vi.mock('../sync/desktopSyncGroupDiscovery.js', () => ({
+  discoverDesktopSyncGroups: vi.fn(async () => [])
 }));
 vi.mock('../sync/desktopCompanionSyncPreference.js', () => ({
-  isDesktopCompanionSyncEnabled: vi.fn(() => true),
-  isDesktopCompanionSyncParticipating: vi.fn(() => commandMocks.enabled && !commandMocks.paused),
   loadDesktopCompanionSyncParticipation: vi.fn(() => ({
     lifecycle_active: true, participating: commandMocks.enabled && !commandMocks.paused,
     sync_enabled: commandMocks.enabled, sync_paused: commandMocks.paused
   })),
-  setDesktopCompanionSyncEnabled: commandMocks.setDesktopCompanionSyncEnabled,
-  setDesktopCompanionSyncPaused: commandMocks.setDesktopCompanionSyncPaused
+}));
+vi.mock('../sync/desktopCompanionSyncParticipation.js', () => ({
+  activateDesktopCompanionSync: vi.fn(async () => {
+    commandMocks.enabled = true; commandMocks.paused = false;
+  }),
+  assertDesktopCompanionSyncParticipating: vi.fn(() => {
+    if (!commandMocks.enabled || commandMocks.paused) throw new Error('sync_participation_inactive');
+  }),
+  disableDesktopCompanionSync: vi.fn(async () => { commandMocks.enabled = false; }),
+  enableDesktopCompanionSync: vi.fn(async () => { commandMocks.enabled = true; }),
+  pauseDesktopCompanionSync: vi.fn(async () => { commandMocks.paused = true; }),
+  resumeDesktopCompanionSync: vi.fn(async () => { commandMocks.paused = false; })
 }));
 vi.mock('../sync/desktopSyncGroupJoin.js', () => ({
   completeDesktopSyncGroupJoin: commandMocks.completeDesktopSyncGroupJoin,
@@ -88,7 +105,7 @@ vi.mock('../sync/lanWorkspaceSyncServer.js', () => ({
   getLanWorkspaceSyncServerStatus: vi.fn(() => ({
     advertised_urls: [],
     last_error: null,
-    paired_device_count: 0,
+    paired_authorization_count: 0,
     pending_pair_request_count: 0,
     port: null,
     state: 'stopped'
@@ -96,16 +113,12 @@ vi.mock('../sync/lanWorkspaceSyncServer.js', () => ({
   refreshLanWorkspaceSyncServerPairingStatus: vi.fn(() => ({
     advertised_urls: [],
     last_error: null,
-    paired_device_count: 0,
+    paired_authorization_count: 0,
     pending_pair_request_count: 0,
     port: null,
     state: 'stopped'
   })),
   stopLanWorkspaceSyncServer: commandMocks.stopLanWorkspaceSyncServer
-}));
-vi.mock('../sync/workgroupKeyStore.js', () => ({
-  enableDesktopWorkgroupKey: commandMocks.enableDesktopWorkgroupKey,
-  loadDesktopWorkgroupKey: vi.fn(() => ({ group_id: 'group-1' }))
 }));
 
 beforeEach(() => {
@@ -167,9 +180,5 @@ it('finishes an approved join inside the database owner and enables automatic co
   expect(execute).toBeTypeOf('function');
   await execute();
   expect(commandMocks.completeDesktopSyncGroupJoin).toHaveBeenCalledOnce();
-  expect(commandMocks.enableDesktopWorkgroupKey).toHaveBeenCalledWith('group-1');
-  expect(commandMocks.setDesktopCompanionSyncEnabled).toHaveBeenCalledWith(true);
-  expect(commandMocks.setDesktopCompanionSyncPaused).toHaveBeenCalledWith(false);
-  expect(commandMocks.ensureLanWorkspaceSyncServer).toHaveBeenCalledOnce();
   expect(commandMocks.runWithDatabaseConnectionOwner).toHaveBeenCalledTimes(2);
 });

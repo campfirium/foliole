@@ -39,15 +39,15 @@ it('admits only the exact departed-preserved-history matrix', () => {
 });
 
 it('rejects protected identity, content, and dirty-state drift', () => {
-  const baseline = { deviceIdentityFingerprint: departedCredentialFixture.deviceIdentityFingerprint,
-    dirtyObjectCounts: {}, dirtyRecordCount: 0, groupId: 'group-1', nodeCount: 0,
+  const baseline = { dirtyObjectCounts: {}, dirtyRecordCount: 0,
+    groupId: 'group-1', nodeCount: 0,
     localMemberAuthorizationFingerprint:
       departedCredentialFixture.storedLocalMemberAuthorizationFingerprint,
     protectedContentDigest: 'a'.repeat(64), timelineId: 'timeline-1' };
   expect(assertDepartedCredentialBaseline(departedCredentialFixture, baseline))
     .toBe(departedCredentialFixture);
   for (const change of [
-    { deviceIdentityFingerprint: '0000000000000000' },
+    { storedLocalMemberAuthorizationFingerprint: '0000000000000000' },
     { protectedContentDigest: 'b'.repeat(64) },
     { dirtyRecordCount: 1 }
   ]) {
@@ -80,7 +80,7 @@ it('matches the same departed authorization on Desktop without exposing raw iden
     () => desktopDatabase());
   expect(result).toEqual({
     groupId: 'group-1',
-    remotePeerFingerprint: authorizationFingerprint('authorization-desktop'),
+    remotePeerAuthorizationFingerprint: authorizationFingerprint('authorization-desktop'),
     timelineId: 'timeline-1'
   });
   expect(JSON.stringify(result)).not.toContain('authorization-desktop');

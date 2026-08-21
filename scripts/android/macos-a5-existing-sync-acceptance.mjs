@@ -118,7 +118,8 @@ function validAndroidProof(snapshot, readiness, desktopFactId, androidFactId) {
     && value?.syncGroupId === readiness.syncGroupId
     && value?.syncGroupTimelineId === readiness.syncGroupTimelineId
     && value?.activeSyncGroupMemberCount === readiness.activeSyncGroupMemberCount
-    && value?.deviceIdentityFingerprint === readiness.deviceIdentityFingerprint
+    && value?.localMemberAuthorizationFingerprint
+      === readiness.localMemberAuthorizationFingerprint
     && (value?.nodeCount ?? 0) >= readiness.nodeCount
     && (value?.pendingDeliveryCountsByPeerFingerprint?.[
       readiness.syncGroupRemotePeerFingerprint

@@ -43,7 +43,7 @@ vi.mock('../sync/lanWorkspaceSyncServer.js', () => ({
   ensureLanWorkspaceSyncServer: vi.fn().mockResolvedValue({
     advertised_urls: ['http://127.0.0.1:38641'],
     last_error: null,
-    paired_device_count: 1,
+    paired_authorization_count: 1,
     pending_pair_request_count: 1,
     port: 38641,
     state: 'running'
@@ -51,7 +51,7 @@ vi.mock('../sync/lanWorkspaceSyncServer.js', () => ({
   getLanWorkspaceSyncServerStatus: vi.fn().mockReturnValue({
     advertised_urls: ['http://127.0.0.1:38641'],
     last_error: null,
-    paired_device_count: 1,
+    paired_authorization_count: 1,
     pending_pair_request_count: 1,
     port: 38641,
     state: 'running'
@@ -59,7 +59,7 @@ vi.mock('../sync/lanWorkspaceSyncServer.js', () => ({
   refreshLanWorkspaceSyncServerPairingStatus: vi.fn().mockReturnValue({
     advertised_urls: ['http://127.0.0.1:38641'],
     last_error: null,
-    paired_device_count: 1,
+    paired_authorization_count: 1,
     pending_pair_request_count: 0,
     port: 38641,
     state: 'running'
@@ -67,7 +67,7 @@ vi.mock('../sync/lanWorkspaceSyncServer.js', () => ({
   stopLanWorkspaceSyncServer: vi.fn().mockResolvedValue({
     advertised_urls: [],
     last_error: null,
-    paired_device_count: 0,
+    paired_authorization_count: 0,
     pending_pair_request_count: 0,
     port: null,
     state: 'stopped'

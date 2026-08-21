@@ -23,21 +23,21 @@ vi.mock('./workgroupKeyStore.js', () => workgroupKeyStoreMock);
 
 import { authenticateCompanionRequest, clearCompanionRequestNonceCache } from './companionRequestAuth.js';
 
-const DEVICE_ID = 'paired-device-1';
-const DEVICE_SECRET = 'paired-device-secret';
-const SECOND_DEVICE_ID = 'paired-device-2';
-const SECOND_DEVICE_SECRET = DEVICE_SECRET;
+const AUTHORIZATION_ID = 'authorization-1';
+const CREDENTIAL_SECRET = 'credential-secret';
+const SECOND_AUTHORIZATION_ID = 'authorization-2';
+const SECOND_CREDENTIAL_SECRET = CREDENTIAL_SECRET;
 const NOW_MS = Date.parse('2026-05-01T10:00:00.000Z');
 const TIMESTAMP = new Date(NOW_MS).toISOString();
 const NONCE_TTL_MS = 2 * 60 * 1000;
-const NONCE_CACHE_LIMIT_PER_DEVICE = 2_048;
+const NONCE_CACHE_LIMIT_PER_AUTHORIZATION = 2_048;
 
 afterEach(() => {
   clearCompanionRequestNonceCache();
   vi.clearAllMocks();
   syncGroupStoreMock.loadDesktopSyncGroup.mockReturnValue({ group_id: 'group-1' });
   syncGroupStoreMock.loadSyncGroupMemberByAuthorization.mockReturnValue({ host_name: 'A5', state: 'active' });
-  workgroupKeyStoreMock.loadDesktopWorkgroupKey.mockReturnValue({ group_key: DEVICE_SECRET });
+  workgroupKeyStoreMock.loadDesktopWorkgroupKey.mockReturnValue({ group_key: CREDENTIAL_SECRET });
   workgroupKeyStoreMock.consumeDesktopWorkgroupNonce.mockReturnValue(true);
 });
 
@@ -54,11 +54,11 @@ function sign(args: { nonce: string; pathWithQuery?: string; secret?: string; ti
   const timestamp = args.timestamp ?? TIMESTAMP;
   const bodyHash = crypto.createHash('sha256').update('').digest('hex');
   const canonical = ['GET', pathWithQuery, timestamp, args.nonce, bodyHash].join('\n');
-  return crypto.createHmac('sha256', args.secret ?? DEVICE_SECRET).update(canonical).digest('hex');
+  return crypto.createHmac('sha256', args.secret ?? CREDENTIAL_SECRET).update(canonical).digest('hex');
 }
 
 function signedHeaders(args: {
-  deviceId?: string;
+  authorizationId?: string;
   nonce: string;
   secret?: string;
   signature?: string;
@@ -66,7 +66,7 @@ function signedHeaders(args: {
 }) {
   const timestamp = args.timestamp ?? TIMESTAMP;
   return {
-    'x-authorization-id': args.deviceId ?? DEVICE_ID,
+    'x-authorization-id': args.authorizationId ?? AUTHORIZATION_ID,
     'x-nonce': args.nonce,
     'x-signature': args.signature ?? sign({
       nonce: args.nonce,
@@ -78,24 +78,24 @@ function signedHeaders(args: {
   };
 }
 
-function mockPairedDevice() {
+function mockPairedAuthorization() {
   const protocolMetadata = {
     negotiated_protocol_version: 1,
     remote_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
   };
-  pairingStoreMock.loadPairedCompanionAuthorization.mockImplementation((deviceId: string) => {
-    if (deviceId === SECOND_DEVICE_ID) {
-      return { ...protocolMetadata, device_id: SECOND_DEVICE_ID, device_secret: SECOND_DEVICE_SECRET };
+  pairingStoreMock.loadPairedCompanionAuthorization.mockImplementation((authorizationId: string) => {
+    if (authorizationId === SECOND_AUTHORIZATION_ID) {
+      return { ...protocolMetadata, authorization_id: SECOND_AUTHORIZATION_ID, credential_secret: SECOND_CREDENTIAL_SECRET };
     }
-    if (deviceId === DEVICE_ID) {
-      return { ...protocolMetadata, device_id: DEVICE_ID, device_secret: DEVICE_SECRET };
+    if (authorizationId === AUTHORIZATION_ID) {
+      return { ...protocolMetadata, authorization_id: AUTHORIZATION_ID, credential_secret: CREDENTIAL_SECRET };
     }
     return null;
   });
 }
 
 function assertInvalidSignatureDoesNotConsumeNonce() {
-  mockPairedDevice();
+  mockPairedAuthorization();
   const nonce = 'nonce-1';
 
   expect(authenticateCompanionRequest({
@@ -106,15 +106,15 @@ function assertInvalidSignatureDoesNotConsumeNonce() {
   expect(authenticateCompanionRequest({
     nowMs: NOW_MS,
     request: createRequest(signedHeaders({ nonce }))
-  })).toMatchObject({ device_id: DEVICE_ID, ok: true });
+  })).toMatchObject({ authorization_id: AUTHORIZATION_ID, ok: true });
 }
 
 function assertRejectsReplayedSignedRequests() {
-  mockPairedDevice();
+  mockPairedAuthorization();
   const nonce = 'nonce-2';
   const request = createRequest(signedHeaders({ nonce }));
 
-  expect(authenticateCompanionRequest({ nowMs: NOW_MS, request })).toMatchObject({ device_id: DEVICE_ID, ok: true });
+  expect(authenticateCompanionRequest({ nowMs: NOW_MS, request })).toMatchObject({ authorization_id: AUTHORIZATION_ID, ok: true });
   expect(authenticateCompanionRequest({ nowMs: NOW_MS, request })).toMatchObject({
     error: 'replayed_nonce',
     ok: false,
@@ -123,14 +123,14 @@ function assertRejectsReplayedSignedRequests() {
 }
 
 function assertPrunesExpiredNoncesBeforeCapacityEviction() {
-  mockPairedDevice();
+  mockPairedAuthorization();
   const expiredNonceTimestamp = new Date(NOW_MS).toISOString();
-  for (let index = 0; index < NONCE_CACHE_LIMIT_PER_DEVICE; index += 1) {
+  for (let index = 0; index < NONCE_CACHE_LIMIT_PER_AUTHORIZATION; index += 1) {
     const nonce = `expired-nonce-${index}`;
     expect(authenticateCompanionRequest({
       nowMs: NOW_MS,
       request: createRequest(signedHeaders({ nonce, timestamp: expiredNonceTimestamp }))
-    })).toMatchObject({ device_id: DEVICE_ID, ok: true });
+    })).toMatchObject({ authorization_id: AUTHORIZATION_ID, ok: true });
   }
 
   const replayNowMs = NOW_MS + NONCE_TTL_MS + 1;
@@ -140,7 +140,7 @@ function assertPrunesExpiredNoncesBeforeCapacityEviction() {
   expect(authenticateCompanionRequest({
     nowMs: replayNowMs,
     request: createRequest(signedHeaders({ nonce: sentinelNonce, timestamp: replayTimestamp }))
-  })).toMatchObject({ device_id: DEVICE_ID, ok: true });
+  })).toMatchObject({ authorization_id: AUTHORIZATION_ID, ok: true });
   expect(authenticateCompanionRequest({
     nowMs: replayNowMs,
     request: createRequest(signedHeaders({ nonce: sentinelNonce, timestamp: replayTimestamp }))
@@ -151,23 +151,23 @@ function assertPrunesExpiredNoncesBeforeCapacityEviction() {
   });
 }
 
-function assertCrossDeviceNonceFloodDoesNotAllowReplay() {
-  mockPairedDevice();
-  const sentinelNonce = 'device-a-live-nonce';
+function assertCrossAuthorizationNonceFloodDoesNotAllowReplay() {
+  mockPairedAuthorization();
+  const sentinelNonce = 'authorization-a-live-nonce';
   const sentinelRequest = createRequest(signedHeaders({ nonce: sentinelNonce }));
 
-  expect(authenticateCompanionRequest({ nowMs: NOW_MS, request: sentinelRequest })).toMatchObject({ device_id: DEVICE_ID, ok: true });
+  expect(authenticateCompanionRequest({ nowMs: NOW_MS, request: sentinelRequest })).toMatchObject({ authorization_id: AUTHORIZATION_ID, ok: true });
 
-  for (let index = 0; index < NONCE_CACHE_LIMIT_PER_DEVICE + 1; index += 1) {
-    const nonce = `device-b-nonce-${index}`;
+  for (let index = 0; index < NONCE_CACHE_LIMIT_PER_AUTHORIZATION + 1; index += 1) {
+    const nonce = `authorization-b-nonce-${index}`;
     expect(authenticateCompanionRequest({
       nowMs: NOW_MS,
       request: createRequest(signedHeaders({
-        deviceId: SECOND_DEVICE_ID,
+        authorizationId: SECOND_AUTHORIZATION_ID,
         nonce,
-        secret: SECOND_DEVICE_SECRET
+        secret: SECOND_CREDENTIAL_SECRET
       }))
-    })).toMatchObject({ device_id: SECOND_DEVICE_ID, ok: true });
+    })).toMatchObject({ authorization_id: SECOND_AUTHORIZATION_ID, ok: true });
   }
 
   expect(authenticateCompanionRequest({ nowMs: NOW_MS, request: sentinelRequest })).toMatchObject({
@@ -179,7 +179,7 @@ function assertCrossDeviceNonceFloodDoesNotAllowReplay() {
 
 describe('companion request auth', () => {
   it('rejects the legacy Device ID header before authentication', () => {
-    mockPairedDevice();
+    mockPairedAuthorization();
     const { 'x-authorization-id': authorizationId, ...headers } = signedHeaders({ nonce: 'legacy-device-header' });
 
     expect(authenticateCompanionRequest({
@@ -190,7 +190,7 @@ describe('companion request auth', () => {
   });
 
   it('rejects a valid old credential after its Device is no longer active', () => {
-    mockPairedDevice();
+    mockPairedAuthorization();
     syncGroupStoreMock.loadSyncGroupMemberByAuthorization.mockReturnValue(null);
     expect(authenticateCompanionRequest({ nowMs: NOW_MS, request: createRequest({
       ...signedHeaders({ nonce: 'departed-device' }), 'x-sync-group-id': 'group-1'
@@ -224,7 +224,7 @@ describe('companion request auth', () => {
     assertPrunesExpiredNoncesBeforeCapacityEviction();
   });
 
-  it('keeps each paired device nonce cache isolated under capacity pressure', () => {
-    assertCrossDeviceNonceFloodDoesNotAllowReplay();
+  it('keeps each authorization nonce cache isolated under capacity pressure', () => {
+    assertCrossAuthorizationNonceFloodDoesNotAllowReplay();
   });
 });

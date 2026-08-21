@@ -24,9 +24,8 @@ beforeEach(() => {
       pending_requests: [
         {
           client_address: '192.168.1.22',
-          device_id: 'android-1',
-          device_kind: 'android-capacitor',
-          device_name: 'Pixel 9',
+          host_name: 'Pixel 9',
+          host_platform: 'android-capacitor',
           expires_at: '2026-04-24T10:02:00.000Z',
           pair_request_id: 'pair-request-1',
           requested_at: '2026-04-24T10:00:00.000Z',
@@ -36,7 +35,7 @@ beforeEach(() => {
       server_status: {
         advertised_urls: ['http://127.0.0.1:38641'],
         last_error: null,
-        paired_device_count: 1,
+        paired_authorization_count: 1,
         pending_pair_request_count: 1,
         port: 38641,
         state: 'running'

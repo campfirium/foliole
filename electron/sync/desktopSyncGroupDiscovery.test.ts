@@ -67,9 +67,6 @@ describe('desktop Sync Group discovery', () => {
       group_id: 'group-1',
       group_tag: 'tag-1',
       provider_authorization_id: 'device-a',
-      provider_device_id: 'device-a',
-      provider_device_kind: 'android-capacitor',
-      provider_device_name: 'Android B',
       provider_host_name: 'Android B',
       provider_host_platform: 'desktop',
       timeline_id: 'timeline-1'
@@ -105,7 +102,8 @@ describe('desktop Sync Group provider selection', () => {
     await vi.advanceTimersByTimeAsync(1_800);
 
     await expect(discovery).resolves.toEqual([expect.objectContaining({
-      endpoint_url: 'http://192.168.0.12:38641', provider_device_id: 'device-a', provider_device_kind: 'darwin'
+      endpoint_url: 'http://192.168.0.12:38641',
+      provider_authorization_id: 'device-a', provider_host_platform: 'darwin'
     })]);
   });
 });

@@ -66,22 +66,21 @@ function PairingDialogHeader() {
   );
 }
 
-function formatDeviceKind(deviceKind: string) {
-  if (deviceKind === 'android-capacitor' || deviceKind === 'android') {
+function formatHostPlatform(hostPlatform: string) {
+  if (hostPlatform === 'android-capacitor' || hostPlatform === 'android') {
     return 'Android';
   }
-  return deviceKind || 'Client';
+  return hostPlatform || 'Client';
 }
 
-
-function resolveDeviceName(deviceName: string, deviceKind: string, clientAddress?: string | null) {
-  const normalizedName = deviceName.trim();
+function resolveHostName(hostName: string, hostPlatform: string, clientAddress?: string | null) {
+  const normalizedName = hostName.trim();
   const isGeneratedAndroidName = normalizedName.toLowerCase().startsWith('android companion');
   if (!normalizedName || isGeneratedAndroidName) {
-    if ((deviceKind === 'android-capacitor' || deviceKind === 'android') && clientAddress === '127.0.0.1') {
+    if ((hostPlatform === 'android-capacitor' || hostPlatform === 'android') && clientAddress === '127.0.0.1') {
       return 'Android Emulator';
     }
-    return deviceKind === 'android-capacitor' || deviceKind === 'android' ? 'Android device' : null;
+    return hostPlatform === 'android-capacitor' || hostPlatform === 'android' ? 'Android' : null;
   }
   return normalizedName;
 }
@@ -91,12 +90,12 @@ function PairingDeviceDetails({
 }: {
   request: ReturnType<typeof useDesktopCompanionPairingRequests>['overview']['pending_requests'][number];
 }) {
-  const deviceName = resolveDeviceName(request.device_name, request.device_kind, request.client_address) ?? 'Device';
-  const deviceKind = formatDeviceKind(request.device_kind);
+  const hostName = resolveHostName(request.host_name, request.host_platform, request.client_address) ?? 'Host';
+  const hostPlatform = formatHostPlatform(request.host_platform);
   return (
     <div className="rounded-xl border border-border bg-bg-subtle px-4 py-4 text-center">
       <p className="truncate text-sm font-semibold text-foreground">
-        {deviceName} <span className="font-medium text-foreground/60">({deviceKind})</span>
+        {hostName} <span className="font-medium text-foreground/60">({hostPlatform})</span>
       </p>
       {request.client_address ? (
         <p className="mt-1 truncate text-xs text-foreground/55">{request.client_address}</p>

@@ -112,15 +112,14 @@ async function expectCompanionPairingCommands() {
   await expect(handleInvokeRequest({ command: 'load_companion_pairing_overview' })).resolves.toMatchObject({
     pending_requests: [
       {
-        device_id: 'android-1',
-        device_kind: 'android',
-        device_name: 'Pixel 9',
+        host_name: 'Pixel 9',
+        host_platform: 'android',
         pair_request_id: 'pair-request-1',
         status: 'pending'
       }
     ],
     server_status: {
-      paired_device_count: 1,
+      paired_authorization_count: 1,
       pending_pair_request_count: 1,
       state: 'running'
     }
@@ -136,16 +135,8 @@ async function expectCompanionPairingCommands() {
       state: 'running'
     }
   });
-  await expect(
-    handleInvokeRequest({
-      command: 'clear_companion_paired_devices'
-    })
-  ).resolves.toMatchObject({
-    server_status: {
-      pending_pair_request_count: 0,
-      state: 'running'
-    }
-  });
+  await expect(handleInvokeRequest({ command: 'clear_companion_paired_devices' }))
+    .rejects.toThrow('unsupported native command');
   await expect(
     handleInvokeRequest({
       command: 'reject_companion_pair_request',

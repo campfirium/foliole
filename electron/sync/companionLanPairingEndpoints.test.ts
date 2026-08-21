@@ -9,10 +9,9 @@ import {
 } from '../../lib/platform/syncProtocolContract.js';
 
 const pairingStoreMock = vi.hoisted(() => ({
-  countPairedCompanionDevices: vi.fn(() => 1),
+  countPairedCompanionAuthorizations: vi.fn(() => 1),
   loadPairedSyncGroupPeer: vi.fn(() => null),
-  registerPairedCompanionDevice: vi.fn(),
-  removePairedCompanionDevice: vi.fn(),
+  registerPairedCompanionAuthorization: vi.fn(),
   savePairedSyncGroupPeer: vi.fn()
 }));
 const pairingEncryptionMock = vi.hoisted(() => ({
@@ -53,14 +52,11 @@ function createResponse() {
   } as unknown as http.ServerResponse;
 }
 
-it('does not revoke an existing paired device before desktop approval', async () => {
+it('does not alter existing authorizations before desktop approval', async () => {
   const writeJson = vi.fn();
 
   await handlePairRequestCreate(
     createRequest({
-      device_id: 'android-1',
-      device_kind: 'android',
-      device_name: 'Pixel 9',
       host_name: 'Pixel 9',
       host_platform: 'android-capacitor',
       pairing_public_key: TEST_PAIRING_PUBLIC_KEY,
@@ -72,7 +68,7 @@ it('does not revoke an existing paired device before desktop approval', async ()
     writeJson
   );
 
-  expect(pairingStoreMock.removePairedCompanionDevice).not.toHaveBeenCalled();
+  expect(pairingStoreMock.registerPairedCompanionAuthorization).not.toHaveBeenCalled();
   expect(writeJson).toHaveBeenCalledWith(expect.anything(), expect.anything(), 202, expect.objectContaining({
     status: 'pending'
   }));
@@ -83,9 +79,6 @@ it('rejects a pair request without compatible protocol metadata before creating 
 
   await handlePairRequestCreate(
     createRequest({
-      device_id: 'android-old',
-      device_kind: 'android',
-      device_name: 'Old Android',
       host_name: 'Old Android',
       host_platform: 'android-capacitor',
       pairing_public_key: TEST_PAIRING_PUBLIC_KEY
@@ -99,11 +92,11 @@ it('rejects a pair request without compatible protocol metadata before creating 
   expect(writeJson).toHaveBeenCalledWith(expect.anything(), expect.anything(), 409, expect.objectContaining({
     error: 'protocol_incompatible'
   }));
-  expect(pairingStoreMock.registerPairedCompanionDevice).not.toHaveBeenCalled();
+  expect(pairingStoreMock.registerPairedCompanionAuthorization).not.toHaveBeenCalled();
 });
 
 it('rechecks protocol compatibility at pair completion', async () => {
-  const created = createApprovedPairRequest('android-drift');
+  const created = createApprovedPairRequest();
   created.protocol.version = 1;
   const writeJson = vi.fn();
 
@@ -119,17 +112,17 @@ it('rechecks protocol compatibility at pair completion', async () => {
   expect(writeJson).toHaveBeenCalledWith(expect.anything(), expect.anything(), 409, expect.objectContaining({
     error: 'protocol_incompatible'
   }));
-  expect(pairingStoreMock.registerPairedCompanionDevice).not.toHaveBeenCalled();
+  expect(pairingStoreMock.registerPairedCompanionAuthorization).not.toHaveBeenCalled();
 });
 
-it('rate limits approved pair completion attempts by client address before re-registering devices', async () => {
-  pairingStoreMock.registerPairedCompanionDevice.mockReturnValue({
+it('rate limits approved pair completion attempts by client address before re-registering authorizations', async () => {
+  pairingStoreMock.registerPairedCompanionAuthorization.mockReturnValue({
     authorization_id: 'authorization-android-rate-limited',
-    credential_secret: 'device-secret-rate-limited',
-    device_id: 'android-rate-limited',
+    credential_secret: 'credential-secret-rate-limited',
+    host_name: 'Pixel 9', host_platform: 'android-capacitor',
     paired_at: '2026-05-10T01:00:00.000Z'
   });
-  const created = createApprovedPairRequest('android-rate-limited');
+  const created = createApprovedPairRequest();
   const writeJson = vi.fn();
   for (let index = 0; index < 10; index += 1) {
     await handlePairRequest(
@@ -154,20 +147,20 @@ it('rate limits approved pair completion attempts by client address before re-re
   expect(writeJson).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), 429, expect.objectContaining({
     error: 'pair_completion_rate_limited'
   }));
-  expect(pairingStoreMock.registerPairedCompanionDevice).toHaveBeenCalledTimes(1);
+  expect(pairingStoreMock.registerPairedCompanionAuthorization).toHaveBeenCalledTimes(1);
 });
 
-it('retries half-committed pair completion without re-registering the device', async () => {
-  pairingStoreMock.registerPairedCompanionDevice.mockReturnValue({
+it('retries half-committed pair completion without re-registering the authorization', async () => {
+  pairingStoreMock.registerPairedCompanionAuthorization.mockReturnValue({
     authorization_id: 'authorization-android-1',
-    credential_secret: 'device-secret-1',
-    device_id: 'android-1',
+    credential_secret: 'credential-secret-1',
+    host_name: 'Pixel 9', host_platform: 'android-capacitor',
     paired_at: '2026-05-10T01:00:00.000Z'
   });
   pairingEncryptionMock.encryptCompanionPairingSecret
     .mockRejectedValueOnce(new Error('encrypt failed'))
     .mockResolvedValueOnce('encrypted-device-secret-1');
-  const created = createApprovedPairRequest('android-1');
+  const created = createApprovedPairRequest();
   const writeJson = vi.fn();
 
   await expect(handlePairRequest(
@@ -187,45 +180,45 @@ it('retries half-committed pair completion without re-registering the device', a
     writeJson
   );
 
-  expect(pairingStoreMock.registerPairedCompanionDevice).toHaveBeenCalledTimes(1);
+  expect(pairingStoreMock.registerPairedCompanionAuthorization).toHaveBeenCalledTimes(1);
   expect(pairingEncryptionMock.encryptCompanionPairingSecret).toHaveBeenLastCalledWith({
     clientPublicKey: TEST_PAIRING_PUBLIC_KEY,
-    deviceSecret: 'device-secret-1'
+    credentialSecret: 'credential-secret-1'
   });
   expect(writeJson).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), 200, expect.objectContaining({
     encrypted_credential_secret: 'encrypted-device-secret-1'
   }));
 });
 
-it('rotates the device secret for a new approved pair request with the same device id', async () => {
-  pairingStoreMock.registerPairedCompanionDevice
+it('rotates the credential for a new approved pair request from the same Host', async () => {
+  pairingStoreMock.registerPairedCompanionAuthorization
     .mockReturnValueOnce({
       authorization_id: 'authorization-android-1',
-      credential_secret: 'device-secret-1',
-      device_id: 'android-1',
+      credential_secret: 'credential-secret-1',
+      host_name: 'Pixel 9', host_platform: 'android-capacitor',
       paired_at: '2026-05-10T01:00:00.000Z'
     })
     .mockReturnValueOnce({
       authorization_id: 'authorization-android-2',
-      credential_secret: 'device-secret-2',
-      device_id: 'android-1',
+      credential_secret: 'credential-secret-2',
+      host_name: 'Pixel 9', host_platform: 'android-capacitor',
       paired_at: '2026-05-10T02:00:00.000Z'
     });
-  const first = createApprovedPairRequest('android-1');
-  const second = createApprovedPairRequest('android-1');
+  const first = createApprovedPairRequest();
+  const second = createApprovedPairRequest();
   const writeJson = vi.fn();
 
   await handlePairRequest(createRequest({ pair_request_id: first.pair_request_id }), createResponse(), '0.1.0-test', 'desktop-local', vi.fn(), writeJson);
   await handlePairRequest(createRequest({ pair_request_id: second.pair_request_id }), createResponse(), '0.1.0-test', 'desktop-local', vi.fn(), writeJson);
 
-  expect(pairingStoreMock.registerPairedCompanionDevice).toHaveBeenCalledTimes(2);
+  expect(pairingStoreMock.registerPairedCompanionAuthorization).toHaveBeenCalledTimes(2);
   expect(pairingEncryptionMock.encryptCompanionPairingSecret).toHaveBeenLastCalledWith({
     clientPublicKey: TEST_PAIRING_PUBLIC_KEY,
-    deviceSecret: 'device-secret-2'
+    credentialSecret: 'credential-secret-2'
   });
 });
 
-function createApprovedPairRequest(deviceId: string) {
+function createApprovedPairRequest() {
   const protocol = {
     ...CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
     capabilities: [...CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities]
@@ -233,9 +226,6 @@ function createApprovedPairRequest(deviceId: string) {
   const created = createCompanionPairRequest({
     compatibility: evaluateSyncProtocolCompatibility(protocol),
     clientAddress: '192.168.1.22',
-    deviceId,
-    deviceKind: 'android',
-    deviceName: 'Pixel 9',
     hostName: 'Pixel 9',
     hostPlatform: 'android-capacitor',
     pairingPublicKey: TEST_PAIRING_PUBLIC_KEY,

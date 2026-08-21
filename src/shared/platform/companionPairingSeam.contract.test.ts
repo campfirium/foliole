@@ -45,9 +45,9 @@ import {
   clearCompanionPairRequests
 } from '../../../electron/sync/companionPairingRequests.js';
 import {
-  clearPairedCompanionDevices,
-  countPairedCompanionDevices,
-  loadPairedCompanionDevice
+  clearPairedCompanionAuthorizations,
+  countPairedCompanionAuthorizations,
+  loadPairedCompanionAuthorizations
 } from '../../../electron/sync/companionPairingStore.js';
 import type { NativeCompanionPairingState } from '../../../lib/platform/nativeCompanionSyncContract';
 
@@ -63,7 +63,7 @@ let pairingState: NativeCompanionPairingState | null = null;
 beforeEach(async () => {
   userDataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-pairing-seam-'));
   clearCompanionPairRequests();
-  clearPairedCompanionDevices();
+  clearPairedCompanionAuthorizations();
   pairingState = null;
   syncGroupMock.load.mockResolvedValue(null);
   configureNativePairingStore();
@@ -80,7 +80,7 @@ beforeEach(async () => {
 afterEach(async () => {
   vi.restoreAllMocks();
   clearCompanionPairRequests();
-  clearPairedCompanionDevices();
+  clearPairedCompanionAuthorizations();
   if (server) await close(server);
   await fs.rm(userDataDir, { recursive: true, force: true });
   server = null;
@@ -92,8 +92,10 @@ it('connects the native pairing client to the desktop LAN handler', async () => 
 
   const completed = await completePairing(pending.pair_request_id);
 
-  expect(countPairedCompanionDevices()).toBe(1);
-  expect(loadPairedCompanionDevice('android-seam')).toMatchObject({ device_id: 'android-seam' });
+  expect(countPairedCompanionAuthorizations()).toBe(1);
+  expect(loadPairedCompanionAuthorizations()).toEqual([
+    expect.objectContaining({ authorization_id: completed.authorization_id, host_name: 'A5' })
+  ]);
   expect(completed).toMatchObject({ is_paired: true, sync_usable: true });
 });
 
@@ -110,7 +112,7 @@ it('lets an approved request complete after pending polls fill a 60 second windo
   expect(approveCompanionPairRequest(pending.pair_request_id)).not.toBeNull();
 
   await expect(completePairing(pending.pair_request_id)).resolves.toMatchObject({ sync_usable: true });
-  expect(countPairedCompanionDevices()).toBe(1);
+  expect(countPairedCompanionAuthorizations()).toBe(1);
 });
 
 it('keeps an approved request completable across the original 120 second expiry', async () => {
@@ -123,7 +125,7 @@ it('keeps an approved request completable across the original 120 second expiry'
   now.mockReturnValue(startedAt + 121_000);
 
   await expect(completePairing(pending.pair_request_id)).resolves.toMatchObject({ sync_usable: true });
-  expect(countPairedCompanionDevices()).toBe(1);
+  expect(countPairedCompanionAuthorizations()).toBe(1);
 });
 
 function configureNativePairingStore() {
@@ -144,17 +146,16 @@ function configureNativePairingStore() {
 
 async function requestPairing() {
   return await requestCompanionPairing({
-    deviceId: 'android-seam',
-    deviceKind: 'android',
-    deviceName: 'A5',
+    hostName: 'A5',
+    hostPlatform: 'android',
     endpointUrl
   });
 }
 
 async function completePairing(pairRequestId: string) {
   return await pairCompanionWithDesktop({
-    deviceKind: 'android',
-    deviceName: 'A5',
+    hostName: 'A5',
+    hostPlatform: 'android',
     endpointUrl,
     pairRequestId
   });

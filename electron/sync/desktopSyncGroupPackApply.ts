@@ -18,8 +18,7 @@ type Peer = {
   endpoint_url: string;
   group_id: string;
   local_authorization_id: string;
-  local_device_id: string;
-  peer_device_id: string;
+  peer_authorization_id: string;
   peer_host_name?: string;
 };
 
@@ -72,8 +71,8 @@ async function applyDownloadedPack(
   const sourceHostName = args.peer.peer_host_name?.trim();
   if (!sourceHostName) throw new Error('sync_group_source_host_unavailable');
   const manifest = await extractSyncPackDatabase({
-    body, expectedPeerId: args.peer.local_device_id,
-    expectedSourcePeerId: args.peer.peer_device_id, outputPath: incomingPath
+    body, expectedPeerId: args.peer.local_authorization_id,
+    expectedSourcePeerId: args.peer.peer_authorization_id, outputPath: incomingPath
   });
   if (manifest.toStateSeq < args.after) throw new Error('sync_pack_provider_frontier_rollback');
   const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'desktop-sync-group-pack-apply' });
@@ -83,7 +82,7 @@ async function applyDownloadedPack(
     const result = await applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor: args.after, hostName: loadOrCreateDesktopHostName(),
       incomingAlias: 'inc', sourceHostName,
-      sourcePeerId: args.peer.peer_device_id
+      sourcePeerId: args.peer.peer_authorization_id
     });
     event = await collectSyncPackAppliedEvent(port, result);
   } finally {

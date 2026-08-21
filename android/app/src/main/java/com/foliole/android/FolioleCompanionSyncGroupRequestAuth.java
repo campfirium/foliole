@@ -24,7 +24,9 @@ final class FolioleCompanionSyncGroupRequestAuth {
             !groupId.equals(request.header("x-sync-group-id"))) throw new SecurityException("missing_headers");
         long drift = Math.abs(System.currentTimeMillis() - Instant.parse(timestamp).toEpochMilli());
         if (drift > 60_000) throw new SecurityException("expired_timestamp");
-        String encodedSecret = FolioleCompanionWorkgroupSession.requireKey();
+        String encodedSecret = FolioleCompanionCurrentGroupCredential.load(
+            context, groupId
+        ).workgroupKey;
         String canonical = request.method + "\n" + request.path + "\n" + timestamp + "\n" + nonce + "\n" + sha256(request.body);
         String expected = FolioleCompanionPairingCrypto.signCanonicalRequest(encodedSecret, canonical);
         if (!MessageDigest.isEqual(expected.getBytes(StandardCharsets.US_ASCII), signature.getBytes(StandardCharsets.US_ASCII))) {

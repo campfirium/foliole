@@ -5,7 +5,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { Bonjour } from 'bonjour-service';
 
 import {
-  fingerprintSecretFreeCandidate, T132_A5_IDENTITY, T132_GROUP_ID, T132_TIMELINE_ID
+  fingerprintSecretFreeCandidate, T132_A5_AUTHORIZATION, T132_GROUP_ID, T132_TIMELINE_ID
 } from './macos-a5-sync-group-rejoin-contract.mjs';
 
 const SERVICE_TYPE = 'foliole-sync';
@@ -19,7 +19,8 @@ function serviceHost(service) {
 function expectedA5Service(service) {
   const txt = service.txt ?? {};
   return txt.group_id === T132_GROUP_ID && txt.timeline_id === T132_TIMELINE_ID
-    && fingerprintSecretFreeCandidate(String(txt.peer_id ?? '')).slice(0, 16) === T132_A5_IDENTITY;
+    && fingerprintSecretFreeCandidate(String(txt.authorization_id ?? '')).slice(0, 16)
+      === T132_A5_AUTHORIZATION;
 }
 
 async function probeA5Provider(service, fetchProvider) {
@@ -31,10 +32,15 @@ async function probeA5Provider(service, fetchProvider) {
     });
     if (!response.ok) return null;
     const payload = await response.json();
-    const identity = fingerprintSecretFreeCandidate(String(payload.provider_device_id ?? '')).slice(0, 16);
+    const authorization = fingerprintSecretFreeCandidate(
+      String(payload.provider_authorization_id ?? '')
+    ).slice(0, 16);
     if (payload.group_id !== T132_GROUP_ID || payload.timeline_id !== T132_TIMELINE_ID
-      || identity !== T132_A5_IDENTITY) return null;
-    return { groupId: payload.group_id, identity, reachable: true, timelineId: payload.timeline_id };
+      || authorization !== T132_A5_AUTHORIZATION) return null;
+    return {
+      authorization, groupId: payload.group_id, reachable: true,
+      timelineId: payload.timeline_id
+    };
   } catch {
     return null;
   }
@@ -63,5 +69,5 @@ export async function observeT132A5Provider({
 export function assertT132A5ProviderAvailability(proof, expectedPresent) {
   if (Boolean(proof?.reachable) !== expectedPresent) throw new Error(expectedPresent
     ? 'Foreground A5 provider was not reachable.' : 'Stopped A5 provider remained reachable.');
-  return proof ?? { identity: T132_A5_IDENTITY, reachable: false };
+  return proof ?? { authorization: T132_A5_AUTHORIZATION, reachable: false };
 }

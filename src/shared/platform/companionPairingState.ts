@@ -17,9 +17,6 @@ export function normalizePairingState(value: unknown): NativeCompanionPairingSta
     const protocolCompatibility = evaluateSyncProtocolCompatibility(null);
     return {
       authorization_id: null,
-      device_id: null,
-      device_kind: null,
-      device_name: null,
       host_name: null,
       host_platform: null,
       is_paired: false,
@@ -45,9 +42,6 @@ export function normalizePairingState(value: unknown): NativeCompanionPairingSta
   return {
     authorization_id: typeof raw.authorization_id === 'string' && raw.authorization_id.trim()
       ? raw.authorization_id.trim() : null,
-    device_id: typeof raw.device_id === 'string' && raw.device_id.trim() ? raw.device_id.trim() : null,
-    device_kind: typeof raw.device_kind === 'string' && raw.device_kind.trim() ? raw.device_kind.trim() : null,
-    device_name: typeof raw.device_name === 'string' && raw.device_name.trim() ? raw.device_name.trim() : null,
     host_name: typeof raw.host_name === 'string' && raw.host_name.trim() ? raw.host_name.trim() : null,
     host_platform: typeof raw.host_platform === 'string' && raw.host_platform.trim() ? raw.host_platform.trim() : null,
     is_paired: isPaired,

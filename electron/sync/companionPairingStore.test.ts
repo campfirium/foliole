@@ -31,11 +31,10 @@ vi.mock('../database/syncGroupStore.js', () => ({
 }));
 
 import {
-  clearPairedCompanionDevices,
-  countPairedCompanionDevices,
-  loadPairedCompanionDevice,
-  loadPairedCompanionDevices,
-  registerPairedCompanionDevice
+  clearPairedCompanionAuthorizations,
+  countPairedCompanionAuthorizations,
+  loadPairedCompanionAuthorizations,
+  registerPairedCompanionAuthorization
 } from './companionPairingStore.js';
 
 let tempRoot = '';
@@ -51,78 +50,66 @@ beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-companion-pairing-store-'));
   mockedUserDataDir = path.join(tempRoot, 'user-data');
   safeStorageMock.decryptString.mockImplementation((value: Buffer) => value.toString('utf8'));
-  clearPairedCompanionDevices();
+  clearPairedCompanionAuthorizations();
 });
 
 afterEach(async () => {
-  clearPairedCompanionDevices();
+  clearPairedCompanionAuthorizations();
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
 it('replaces an existing paired credential with the same authorization id', () => {
-  registerPairedCompanionDevice({
+  registerPairedCompanionAuthorization({
     ...protocolArgs,
     authorizationId: 'authorization-1',
     clientAddress: '127.0.0.1',
-    deviceId: 'device-1',
-    deviceKind: 'android-capacitor',
-    deviceName: 'Android Emulator',
     pairedAt: '2026-05-10T01:00:00.000Z'
   });
 
-  registerPairedCompanionDevice({
+  registerPairedCompanionAuthorization({
     ...protocolArgs,
     authorizationId: 'authorization-1',
     clientAddress: '127.0.0.1',
-    deviceId: 'device-1',
-    deviceKind: 'android-capacitor',
-    deviceName: 'Android Emulator',
     pairedAt: '2026-05-10T02:00:00.000Z'
   });
 
-  expect(countPairedCompanionDevices()).toBe(1);
-  expect(loadPairedCompanionDevices()).toEqual([
+  expect(countPairedCompanionAuthorizations()).toBe(1);
+  expect(loadPairedCompanionAuthorizations()).toEqual([
     expect.objectContaining({
-      device_id: 'device-1',
+      authorization_id: 'authorization-1',
       paired_at: '2026-05-10T02:00:00.000Z'
     })
   ]);
 });
 
 it('keeps paired credentials with different authorization ids when their LAN labels match', () => {
-  registerPairedCompanionDevice({
+  registerPairedCompanionAuthorization({
     ...protocolArgs,
     authorizationId: 'authorization-before-reset',
     clientAddress: '127.0.0.1',
-    deviceId: 'device-before-reset',
-    deviceKind: 'android-capacitor',
-    deviceName: 'Android Emulator',
     pairedAt: '2026-05-10T01:00:00.000Z'
   });
 
-  registerPairedCompanionDevice({
+  registerPairedCompanionAuthorization({
     ...protocolArgs,
     authorizationId: 'authorization-after-reset',
     clientAddress: '127.0.0.1',
-    deviceId: 'device-after-reset',
-    deviceKind: 'android-capacitor',
-    deviceName: 'Android Emulator',
     pairedAt: '2026-05-10T02:00:00.000Z'
   });
 
-  expect(countPairedCompanionDevices()).toBe(2);
-  expect(loadPairedCompanionDevices()).toEqual([
+  expect(countPairedCompanionAuthorizations()).toBe(2);
+  expect(loadPairedCompanionAuthorizations()).toEqual([
     expect.objectContaining({
       client_address: '127.0.0.1',
-      device_id: 'device-before-reset',
-      device_kind: 'android-capacitor',
-      device_name: 'Android Emulator'
+      authorization_id: 'authorization-before-reset',
+      host_name: 'Android Emulator',
+      host_platform: 'android-capacitor'
     }),
     expect.objectContaining({
       client_address: '127.0.0.1',
-      device_id: 'device-after-reset',
-      device_kind: 'android-capacitor',
-      device_name: 'Android Emulator'
+      authorization_id: 'authorization-after-reset',
+      host_name: 'Android Emulator',
+      host_platform: 'android-capacitor'
     })
   ]);
 });
@@ -136,9 +123,8 @@ it('quarantines an unreadable encrypted paired-device cache and continues unpair
     throw new Error('Error while decrypting the ciphertext provided to safeStorage.decryptString.');
   });
 
-  expect(countPairedCompanionDevices()).toBe(0);
-  expect(loadPairedCompanionDevices()).toEqual([]);
-  expect(loadPairedCompanionDevice('android-test-device')).toBeNull();
+  expect(countPairedCompanionAuthorizations()).toBe(0);
+  expect(loadPairedCompanionAuthorizations()).toEqual([]);
 
   await expect(fs.stat(storePath)).rejects.toMatchObject({ code: 'ENOENT' });
   const files = await fs.readdir(mockedUserDataDir);
@@ -154,20 +140,17 @@ it('recovers with a fresh encrypted store after quarantining stale paired-device
     throw new Error('Error while decrypting the ciphertext provided to safeStorage.decryptString.');
   });
 
-  expect(countPairedCompanionDevices()).toBe(0);
-  const paired = registerPairedCompanionDevice({
+  expect(countPairedCompanionAuthorizations()).toBe(0);
+  const paired = registerPairedCompanionAuthorization({
     ...protocolArgs,
     clientAddress: '127.0.0.1',
-    deviceId: 'device-after-corrupt-cache',
-    deviceKind: 'android-capacitor',
-    deviceName: 'Android Emulator',
     pairedAt: '2026-05-10T03:00:00.000Z'
   });
 
-  expect(paired.device_id).toBe('device-after-corrupt-cache');
-  expect(loadPairedCompanionDevices()).toEqual([
+  expect(paired.authorization_id).toBe('authorization-1');
+  expect(loadPairedCompanionAuthorizations()).toEqual([
     expect.objectContaining({
-      device_id: 'device-after-corrupt-cache',
+      authorization_id: 'authorization-1',
       paired_at: '2026-05-10T03:00:00.000Z'
     })
   ]);

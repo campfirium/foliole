@@ -103,7 +103,7 @@ final class FolioleCompanionSyncPackEnvelopeValidator {
             throw invalid("sync_pack_target_mismatch");
         }
         requireString(manifest, "pack_id");
-        if (!expectedSourcePeerId.equals(requireString(manifest, "from_device_id"))) {
+        if (!expectedSourcePeerId.equals(requireString(manifest, "from_peer_id"))) {
             throw invalid("sync_pack_source_mismatch");
         }
         requireString(manifest, "created_at");

@@ -12,7 +12,7 @@ export class PairingStoreDecryptionError extends Error {
     readonly storePath: string,
     readonly preserveStore = false
   ) {
-    super('Companion paired-device store is unreadable.');
+    super('Pairing credential store is unreadable.');
     this.name = 'PairingStoreDecryptionError';
   }
 }
@@ -20,7 +20,7 @@ export class PairingStoreDecryptionError extends Error {
 function persistMigration(encrypted: Buffer, storePath: string, plaintext: string, replacement: Buffer) {
   const parsed = JSON.parse(plaintext) as unknown;
   const backupPath = persistMigratedPairingStore({ encrypted: replacement, original: encrypted, storePath });
-  console.info('[companion-sync] migrated legacy macOS paired-device encryption', { backupPath });
+  console.info('[companion-sync] migrated legacy macOS pairing credential encryption', { backupPath });
   return parsed;
 }
 

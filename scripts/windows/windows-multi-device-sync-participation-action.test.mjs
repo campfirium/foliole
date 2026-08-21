@@ -34,7 +34,7 @@ function facts(overrides = {}) {
 }
 
 function overview(enabled, paused, group = true) {
-  return { paired_devices: [], participating: enabled && !paused, sync_enabled: enabled,
+  return { paired_authorizations: [], participating: enabled && !paused, sync_enabled: enabled,
     sync_group: group ? { group_id: 'group-1', local_member_state: 'active' } : null,
     sync_paused: paused };
 }

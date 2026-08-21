@@ -53,7 +53,7 @@ it('maintains the member provider before any settings surface is mounted', async
 it('starts a copied group database without requiring separate host credentials', async () => {
   const group = { group_id: 'group-1', local_host_name: 'Android B', local_member_state: 'active' };
   const sync = workspaceSync();
-  sync.pairingState = { device_id: null, is_paired: false } as typeof sync.pairingState;
+  sync.pairingState = { is_paired: false, paired_at: null };
   runtime.load.mockResolvedValue(group);
   render(<CompanionSyncGroupRuntime bootstrapState={bootstrapState} workspaceSync={sync}>
     <main>Reader</main>

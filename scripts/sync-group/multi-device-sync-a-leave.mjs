@@ -98,14 +98,15 @@ async function leaveAndRestartA(context) {
     assertActiveThreeMemberInput(await session.load(), rejoin.proof);
     const before = await macosFacts(execute, repoRoot, databasePath, Object.values(rejoin.factIds));
     const afterLeave = await session.leave();
-    if (afterLeave.sync_group !== null || afterLeave.paired_devices.length !== 0) {
+    if (afterLeave.sync_group !== null || afterLeave.paired_authorizations.length !== 0) {
       throw new Error('macOS A did not leave through the product action.');
     }
     reportProgress('a-left');
     await session.close();
     session = await openMacosSession({ env, owned, repoRoot });
     const restartedOverview = await session.load();
-    if (restartedOverview.sync_group !== null || restartedOverview.paired_devices.length !== 0) {
+    if (restartedOverview.sync_group !== null
+        || restartedOverview.paired_authorizations.length !== 0) {
       throw new Error('macOS A restored obsolete membership after restart.');
     }
     assertMacosRetention(before, await macosFacts(

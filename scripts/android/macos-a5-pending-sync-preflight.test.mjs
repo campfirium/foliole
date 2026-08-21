@@ -8,7 +8,7 @@ function result(prefix, value, status = 0) {
 
 const pending = {
   activeSyncGroupMemberCount: 3,
-  deviceIdentityFingerprint: '2fdd44bb500a5934',
+  localMemberAuthorizationFingerprint: '2fdd44bb500a5934',
   dirtyObjectCounts: { setting: 3 },
   dirtyRecordCount: 3,
   missingPrerequisites: ['unsynced_device_data_requires_review'],
@@ -16,7 +16,7 @@ const pending = {
   pairingCredentialsPresent: false,
   pairingCredentialsRejected: false,
   pairingPeerConflict: false,
-  remotePeerFingerprint: null,
+  pairingPeerAuthorizationFingerprint: null,
   resultStatus: 'approval_required',
   schemaVersion: 1,
   storedSyncGroupId: 'group-1',

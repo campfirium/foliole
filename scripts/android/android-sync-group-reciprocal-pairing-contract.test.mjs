@@ -12,13 +12,15 @@ async function source(relativePath) {
   return readFile(path.join(ROOT, relativePath), 'utf8');
 }
 
-it('persists reciprocal credentials for authenticated requests in both Android roles', async () => {
-  const [pairing, encryption, actions, server, outbound, contract] = await Promise.all([
+it('persists reciprocal authorization routes and reloads the current-group credential', async () => {
+  const [pairing, encryption, actions, server, outbound, currentCredential, contract]
+    = await Promise.all([
     source('src/shared/platform/companionWorkspacePairing.ts'),
     source('src/shared/platform/companionPairingEncryption.ts'),
     source('android/app/src/main/java/com/foliole/android/FolioleCompanionPairingPluginActions.java'),
     source('android/app/src/main/java/com/foliole/android/FolioleCompanionSyncGroupServer.java'),
     source('android/app/src/main/java/com/foliole/android/FolioleCompanionSyncGroupOutboundPairing.java'),
+    source('android/app/src/main/java/com/foliole/android/FolioleCompanionCurrentGroupCredential.java'),
     source('android/app/src/main/assets/companion-bridge-contract-definitions.json')
   ]);
 
@@ -29,11 +31,15 @@ it('persists reciprocal credentials for authenticated requests in both Android r
     .not.toContain('pairingPrivateKeys.delete(pairRequestClientId)');
   expect(actions).toContain('FolioleCompanionSyncGroupOutboundPeerStore.save(');
   expect(server).toContain('FolioleCompanionSyncGroupOutboundPairing.save(');
-  expect(server).toContain('FolioleCompanionWorkgroupSession.requireKey()');
+  expect(server).toContain('FolioleCompanionCurrentGroupCredential.load(');
   expect(server).toContain('provider_encrypted_credential_secret", FolioleCompanionSyncGroupPairCrypto.encrypt(pending.pairingPublicKey, workgroupKey)');
   expect(outbound).not.toContain('FolioleCompanionPairingStore.savePairingCredentials(');
   expect(outbound).toContain('FolioleCompanionSyncGroupOutboundPeerStore.save(');
   expect(outbound).toContain('FolioleCompanionSyncGroupDatabase.saveSyncEndpoint(dataBridge, endpointUrl, now)');
-  expect(JSON.parse(contract).pairingPlugin.credentialRequestKeys.providerDeviceSecret)
-    .toBe('provider_device_secret');
+  expect(currentCredential).toContain('member.authorization_id, groups.workgroup_key');
+  expect(actions).not.toContain('workgroupKeyRequest');
+  expect(JSON.parse(contract).pairingPlugin.credentialRequestKeys)
+    .not.toHaveProperty('providerDeviceSecret');
+  expect(JSON.parse(contract).pairingPlugin.signature.requestKeys)
+    .not.toHaveProperty('workgroupKey');
 });

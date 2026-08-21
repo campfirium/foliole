@@ -33,8 +33,8 @@ function formatPairedDevice(pairingState: NativeCompanionPairingState, t: Transl
   return `${name} (${platform})`;
 }
 
-function formatDeviceName(pairingState: NativeCompanionPairingState, t: Translate) {
-  return pairingState.device_name?.trim() || t('companion.sync.thisDevice');
+function formatHostName(pairingState: NativeCompanionPairingState, t: Translate) {
+  return pairingState.host_name?.trim() || t('companion.sync.thisDevice');
 }
 
 function SettingsRow(props: {
@@ -132,7 +132,7 @@ function ConnectionPage(props: {
   return (
     <section className="border-t border-companion-divider">
       <SettingsRow label={t('companion.sync.pairedDevice')} value={formatPairedDevice(props.pairingState, t)} />
-      <SettingsRow label={t('companion.sync.thisDevice')} value={formatDeviceName(props.pairingState, t)} />
+      <SettingsRow label={t('companion.sync.thisDevice')} value={formatHostName(props.pairingState, t)} />
       <SettingsRow label={t('companion.sync.desktopAddress')} value={props.endpointUrl} />
       <div className="py-4">
         <p className="text-xs leading-5 text-companion-text-secondary">

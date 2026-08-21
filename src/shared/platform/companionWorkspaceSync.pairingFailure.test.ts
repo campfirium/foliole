@@ -37,7 +37,7 @@ import { resetCompanionWorkspaceSyncTestState } from './companionWorkspaceSync.t
 const protocol = { capabilities: ['lan-sync-v1'], max_supported_version: 1,
   min_supported_version: 1, version: 1 };
 const pairing = {
-  device_id: 'android-test-device', device_kind: 'android', device_name: 'Pixel 9',
+  authorization_id: 'authorization-android', host_name: 'Pixel 9', host_platform: 'android',
   is_paired: true, negotiated_protocol_version: 1, paired_at: '2026-04-22T12:00:00.000Z',
 };
 
@@ -52,7 +52,7 @@ beforeEach(() => {
     }), status: 202 })
     .mockResolvedValueOnce({ body: JSON.stringify({
       compatibility: { missing_capabilities: [], negotiated_version: 1, reason: null, status: 'compatible' },
-      desktop_protocol: protocol, device_id: 'android-test-device', encrypted_device_secret: {
+      authorization_id: 'authorization-android', desktop_protocol: protocol, encrypted_credential_secret: {
         algorithm: 'ECDH-P256-HKDF-SHA256-AES-GCM', ciphertext: 'ciphertext', iv: 'iv',
         salt: 'salt', server_public_key: 'server-public-key'
       }, paired_at: pairing.paired_at, peer_id: 'device-desktop'
@@ -65,9 +65,9 @@ beforeEach(() => {
 });
 
 it('fails native pairing when saved credentials cannot sign sync requests', async () => {
-  await requestCompanionPairing({ deviceId: 'android-test-device', deviceKind: 'android',
-    deviceName: 'Pixel 9', endpointUrl: 'http://10.0.2.2:38641' });
-  await expect(pairCompanionWithDesktop({ deviceKind: 'android', deviceName: 'Pixel 9',
+  await requestCompanionPairing({ hostName: 'Pixel 9', hostPlatform: 'android',
+    endpointUrl: 'http://10.0.2.2:38641' });
+  await expect(pairCompanionWithDesktop({ hostName: 'Pixel 9', hostPlatform: 'android',
     endpointUrl: 'http://10.0.2.2:38641', pairRequestId: 'pair-request-1' }))
     .rejects.toThrow(/Native pairing credentials cannot sign sync requests/u);
 });

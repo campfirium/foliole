@@ -17,7 +17,7 @@ interface CompanionSyncPushResponse {
 
 type ApplyCompanionSyncPush = (
   items: CompanionSyncPushPayload[],
-  authenticatedDeviceId: string
+  authenticatedHostName: string
 ) => Promise<CompanionSyncPushResult>;
 type NotifyWorkspaceSyncApplied = (event: {
   appliedNodeIds: string[];
@@ -49,11 +49,11 @@ function readPushItems(bodyText: string): CompanionSyncPushPayload[] {
 
 export async function handleCompanionSyncPushWithApply(
   bodyText: string,
-  authenticatedDeviceId: string,
+  authenticatedHostName: string,
   apply: ApplyCompanionSyncPush,
   notify: NotifyWorkspaceSyncApplied
 ) {
-  const result = await apply(readPushItems(bodyText), authenticatedDeviceId);
+  const result = await apply(readPushItems(bodyText), authenticatedHostName);
   notify({
     appliedNodeIds: result.appliedNodeIds,
     appliedObjectIds: result.appliedObjectIds,

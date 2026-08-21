@@ -14,7 +14,7 @@ it('preserves binary HTTP failure while exposing only fixed desktop auth reasons
   expect(source).toContain('"/companion/sync-pack".equals(route)');
   expect(source).toContain('"Desktop binary resource " + method + " " + safeResourcePath(path)');
   expect(source).toContain('new JSONObject(readBody(connection, status)).optString("error", "")');
-  expect(source).toContain('"unknown_device".equals(value)');
+  expect(source).toContain('"unknown_authorization".equals(value)');
   expect(source).toContain('"invalid_signature".equals(value)');
   expect(source).not.toContain('throw new IllegalStateException(readBody(connection, status))');
 });

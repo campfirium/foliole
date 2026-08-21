@@ -1,237 +1,111 @@
+// @vitest-environment node
+
 import { expect, it, vi } from 'vitest';
-import fs from 'node:fs';
 
 import {
-  reconcileAuthorizedMacosDailyPairing, runMacosA5PairSync
+  macosPairSyncAuthorizationFingerprint
+} from './macos-pair-sync-desktop-session.mjs';
+import {
+  reconcileAuthorizedMacosDailyPairing,
+  runMacosA5PairSync
 } from './macos-a5-pair-sync-action.mjs';
-import { macosPairSyncIdentityFingerprint } from './macos-pair-sync-desktop-session.mjs';
 
-function overview(deviceId) {
+const desktopAuthorization = 'authorization-desktop';
+const a5Authorization = 'authorization-a5';
+
+function overview({ includeA5 = true, includeRoute = true } = {}) {
   return {
-    paired_devices: deviceId ? [{ device_id: deviceId }] : [],
+    paired_authorizations: includeRoute ? [{
+      authorization_id: a5Authorization, host_name: 'A5', host_platform: 'android-capacitor'
+    }] : [],
     pending_requests: [],
-    current_host: { device_id: 'desktop-current' },
     server_status: { port: 38641, state: 'running' },
-    sync_enabled: true
+    sync_enabled: true,
+    sync_group: {
+      group_id: 'group-1', local_host_name: 'Desktop', timeline_id: 'timeline-1',
+      members: [
+        { authorization_id: desktopAuthorization, host_name: 'Desktop', state: 'active' },
+        ...(includeA5
+          ? [{ authorization_id: a5Authorization, host_name: 'A5', state: 'active' }]
+          : [])
+      ]
+    }
   };
 }
 
-it('removes only the explicitly authorized stale daily DEV pairing', async () => {
-  const staleId = 'stale-daily-device';
-  const staleFingerprint = macosPairSyncIdentityFingerprint(staleId);
-  const session = {
+function session(value) {
+  return {
     assertActive: vi.fn(),
-    remove: vi.fn(async () => overview(null)),
-    sanitize: vi.fn((value) => ({
-      desktopPeerFingerprint: '7f58d92331c8872b',
-      pairedDeviceFingerprints: value.paired_devices.map(() => staleFingerprint),
-      pendingDeviceFingerprints: [],
-      serverState: 'running',
-      syncEnabled: true
-    }))
-  };
-
-  await expect(reconcileAuthorizedMacosDailyPairing(
-    overview(staleId), session, 'bd1d679fbb55b53e', null, false, false, staleFingerprint
-  )).resolves.toMatchObject({ pairedDeviceFingerprints: [] });
-  expect(session.remove).toHaveBeenCalledWith(staleId);
-});
-
-it('removes only the fixed A5 record when current-peer credentials were rejected', async () => {
-  const currentId = 'current-a5';
-  const currentFingerprint = macosPairSyncIdentityFingerprint(currentId);
-  const session = {
-    assertActive: vi.fn(),
-    remove: vi.fn(async () => overview(null)),
-    sanitize: vi.fn((value) => ({
-      desktopPeerFingerprint: '7f58d92331c8872b',
-      pairedDeviceFingerprints: value.paired_devices.map(
-        (device) => macosPairSyncIdentityFingerprint(device.device_id)
+    sanitize: vi.fn(() => ({
+      localAuthorizationFingerprint:
+        macosPairSyncAuthorizationFingerprint(desktopAuthorization),
+      pairedAuthorizationFingerprints: value.paired_authorizations.map(
+        (authorization) => macosPairSyncAuthorizationFingerprint(
+          authorization.authorization_id
+        )
       ),
-      pendingDeviceFingerprints: [], serverState: 'running', syncEnabled: true
+      pendingAuthorizationFingerprints: [], serverState: 'running', syncEnabled: true
     }))
   };
+}
 
+it('accepts an existing A5 credential route only when it matches the Host authorization', async () => {
+  const value = overview();
   await expect(reconcileAuthorizedMacosDailyPairing(
-    overview(currentId), session, currentFingerprint, '7f58d92331c8872b', true, true
-  )).resolves.toMatchObject({ pairedDeviceFingerprints: [], rePairRequired: true });
-  expect(session.remove).toHaveBeenCalledWith(currentId);
+    value, session(value), 'A5',
+    macosPairSyncAuthorizationFingerprint(desktopAuthorization), true
+  )).resolves.toMatchObject({
+    pairedAuthorizationFingerprints: [
+      macosPairSyncAuthorizationFingerprint(a5Authorization)
+    ], rePairRequired: false
+  });
 });
 
-it('removes the fixed stale desktop record after A5 app data was cleared', async () => {
-  const currentId = 'current-a5';
-  const currentFingerprint = macosPairSyncIdentityFingerprint(currentId);
-  const session = {
-    assertActive: vi.fn(),
-    remove: vi.fn(async () => overview(null)),
-    sanitize: vi.fn((value) => ({
-      desktopPeerFingerprint: '7f58d92331c8872b',
-      pairedDeviceFingerprints: value.paired_devices.map(
-        (device) => macosPairSyncIdentityFingerprint(device.device_id)
-      ),
-      pendingDeviceFingerprints: [], serverState: 'running', syncEnabled: true
-    }))
-  };
-
+it('accepts a fresh A5 join only when membership and credential route are absent', async () => {
+  const value = overview({ includeA5: false, includeRoute: false });
   await expect(reconcileAuthorizedMacosDailyPairing(
-    overview(currentId), session, currentFingerprint, null, false
-  )).resolves.toMatchObject({ pairedDeviceFingerprints: [] });
-  expect(session.remove).toHaveBeenCalledWith(currentId);
+    value, session(value), 'A5',
+    macosPairSyncAuthorizationFingerprint(desktopAuthorization), false
+  )).resolves.toMatchObject({ pairedAuthorizationFingerprints: [], rePairRequired: true });
 });
 
-it('forces product re-pair when rejected A5 credentials outlive the desktop record', async () => {
-  const session = {
-    assertActive: vi.fn(), remove: vi.fn(),
-    sanitize: vi.fn(() => ({
-      desktopPeerFingerprint: '7f58d92331c8872b',
-      pairedDeviceFingerprints: [], pendingDeviceFingerprints: [],
-      serverState: 'running', syncEnabled: true
-    }))
-  };
-
+it('rejects route repair, Host ambiguity, and protected group drift', async () => {
+  const value = overview();
   await expect(reconcileAuthorizedMacosDailyPairing(
-    overview(null), session, 'bd1d679fbb55b53e', '7f58d92331c8872b', false, true
-  )).resolves.toMatchObject({ pairedDeviceFingerprints: [], rePairRequired: true });
-  expect(session.remove).not.toHaveBeenCalled();
+    value, session(value), 'A5',
+    macosPairSyncAuthorizationFingerprint(desktopAuthorization), true, true
+  )).rejects.toThrow('outside the authorization cutover contract');
+
+  value.sync_group.members.push({
+    authorization_id: 'authorization-a5-duplicate', host_name: 'A5', state: 'active'
+  });
+  await expect(reconcileAuthorizedMacosDailyPairing(
+    value, session(value), 'A5',
+    macosPairSyncAuthorizationFingerprint(desktopAuthorization), true
+  )).rejects.toThrow('Host roster');
+
+  value.sync_group.members.pop();
+  await expect(reconcileAuthorizedMacosDailyPairing(
+    value, session(value), 'A5',
+    macosPairSyncAuthorizationFingerprint(desktopAuthorization), true, false,
+    { groupId: 'different-group', timelineId: 'timeline-1' }
+  )).rejects.toThrow('Sync Group identity');
 });
 
-it('passes an authorized existing pairing through without removing it', async () => {
-  const currentId = 'current-a5';
-  const currentFingerprint = macosPairSyncIdentityFingerprint(currentId);
-  const session = {
-    assertActive: vi.fn(),
-    remove: vi.fn(),
-    sanitize: vi.fn(() => ({
-      desktopPeerFingerprint: '7f58d92331c8872b',
-      pairedDeviceFingerprints: [currentFingerprint],
-      pendingDeviceFingerprints: [],
-      serverState: 'running',
-      syncEnabled: true
-    }))
-  };
-
-  await expect(reconcileAuthorizedMacosDailyPairing(
-    overview(currentId), session, currentFingerprint, null, true
-  )).resolves.toMatchObject({ pairedDeviceFingerprints: [currentFingerprint] });
-  expect(session.remove).not.toHaveBeenCalled();
-});
-
-it('does not classify pairing Device records as Host members', async () => {
-  const currentId = 'current-a5';
-  const desktopC = 'desktop-c';
-  const orphanId = 'orphan-device';
-  const currentFingerprint = macosPairSyncIdentityFingerprint(currentId);
-  const groupOverview = {
-    ...overview(orphanId),
-    paired_devices: [{ device_id: orphanId }, { device_id: desktopC }],
-    sync_group: {
-      members: [
-        { authorization_id: 'auth-a', host_name: 'Mac', state: 'active' },
-        { authorization_id: 'auth-b', host_name: 'A5', state: 'active' },
-        { authorization_id: 'auth-c', host_name: 'Windows', state: 'active' }
-      ]
-    }
-  };
-  const session = {
-    assertActive: vi.fn(),
-    remove: vi.fn(async (deviceId) => ({
-      ...groupOverview,
-      paired_devices: groupOverview.paired_devices.filter((device) => device.device_id !== deviceId)
-    })),
-    sanitize: vi.fn((value) => ({
-      desktopPeerFingerprint: '7f58d92331c8872b',
-      pairedDeviceFingerprints: value.paired_devices.map(
-        (device) => macosPairSyncIdentityFingerprint(device.device_id)
-      ),
-      pendingDeviceFingerprints: [], serverState: 'running', syncEnabled: true
-    }))
-  };
-
-  await expect(reconcileAuthorizedMacosDailyPairing(
-    groupOverview, session, currentFingerprint, '7f58d92331c8872b', true
-  )).rejects.toThrow('pairing state requires user review');
-  expect(session.remove).not.toHaveBeenCalled();
-});
-
-
-it('keeps active peers while a formally departed empty A5 requests a new join', async () => {
-  const currentId = 'current-a5';
-  const desktopC = 'desktop-c';
-  const currentFingerprint = macosPairSyncIdentityFingerprint(currentId);
-  const groupOverview = {
-    ...overview(desktopC),
-    sync_group: {
-      members: [
-        { authorization_id: 'auth-a', host_name: 'Mac', state: 'active' },
-        { authorization_id: 'auth-c', host_name: 'Windows', state: 'active' }
-      ]
-    }
-  };
-  const session = {
-    assertActive: vi.fn(), remove: vi.fn(),
-    sanitize: vi.fn(() => ({
-      desktopPeerFingerprint: '7f58d92331c8872b',
-      pairedDeviceFingerprints: [macosPairSyncIdentityFingerprint(desktopC)],
-      pendingDeviceFingerprints: [], serverState: 'running', syncEnabled: true
-    }))
-  };
-
-  await expect(reconcileAuthorizedMacosDailyPairing(
-    groupOverview, session, currentFingerprint, '7f58d92331c8872b', false
-  )).resolves.toMatchObject({ rePairRequired: true });
-  expect(session.remove).not.toHaveBeenCalled();
-});
-
-it('authorizes exact A5 peer replacement only through the product re-pair path', async () => {
-  const currentId = 'current-a5';
-  const currentFingerprint = macosPairSyncIdentityFingerprint(currentId);
-  const session = {
-    assertActive: vi.fn(),
-    remove: vi.fn(),
-    sanitize: vi.fn(() => ({
-      desktopPeerFingerprint: '7f58d92331c8872b',
-      pairedDeviceFingerprints: [currentFingerprint],
-      pendingDeviceFingerprints: [], serverState: 'running', syncEnabled: true
-    }))
-  };
-
-  await expect(reconcileAuthorizedMacosDailyPairing(
-    overview(currentId), session, currentFingerprint, '82cc2dc5c98135c8', true
-  )).resolves.toMatchObject({ rePairRequired: true });
-  expect(session.remove).not.toHaveBeenCalled();
-});
-
-it('passes the A5 trusted remote peer into desktop readiness', async () => {
-  const runPairSyncRecovery = vi.fn(async (options) => options);
+it('forwards only Host and authorization routing to the shared recovery action', async () => {
+  const runPairSyncRecovery = vi.fn(async (args) => args);
   const result = await runMacosA5PairSync({
-    buildIdentity: 'pair-1', credentialRepairRequired: true,
-    deviceFingerprint: 'device-peer', existingPairing: true,
-    env: {}, evidenceRoot: '.tmp/artifacts/test-a5-pair-sync-options', execute: vi.fn(),
-    paths: { adb: '/adb', repoRoot: '/repo' }, protectData: vi.fn(),
-    remotePeerFingerprint: '82cc2dc5c98135c8', runPairSyncRecovery, serial: 'fixed-a5'
+    buildIdentity: 'build-1', credentialRepairRequired: false,
+    desktopAuthorizationFingerprint: '82cc2dc5c98135c8', env: {},
+    evidenceRoot: '.tmp/evidence', execute: vi.fn(), existingPairing: false,
+    hostName: 'A5', pairedAuthorizationFingerprint: null, pairRequestIdentity: 'A5',
+    paths: { adb: '/adb', repoRoot: '/repo' }, runPairSyncRecovery, serial: 'fixed-a5'
   });
 
   expect(result).toMatchObject({
-    credentialRepairRequired: true, remotePeerFingerprint: '82cc2dc5c98135c8'
+    desktopAuthorizationFingerprint: '82cc2dc5c98135c8', hostName: 'A5',
+    pairedAuthorizationFingerprint: null, pairRequestIdentity: 'A5'
   });
-  expect(result).not.toHaveProperty('openTransport');
-  expect(result).not.toHaveProperty('closeTransport');
-  expect(runPairSyncRecovery).toHaveBeenCalledOnce();
-});
-
-it('preserves an explicit absent legacy pairing requirement for workgroup joins', async () => {
-  const runPairSyncRecovery = vi.fn(async (options) => options);
-  const result = await runMacosA5PairSync({
-    buildIdentity: 'group-join', deviceFingerprint: 'device-peer', env: {}, evidenceRoot: '.tmp',
-    execute: vi.fn(), pairedDeviceFingerprint: null,
-    paths: { adb: '/adb', repoRoot: '/repo' }, runPairSyncRecovery, serial: 'fixed-a5'
-  });
-  expect(result).toHaveProperty('pairedDeviceFingerprint', null);
-});
-
-it('does not restore the default installed desktop after the DEV-owned session', () => {
-  const source = fs.readFileSync('scripts/android/macos-a5-pair-sync-action.mjs', 'utf8');
-  expect(source).toContain('registered DEV restart required');
-  expect(source).toContain("Foliole( |$)'");
-  expect(source).not.toContain("['-gj', '-a', 'Foliole']");
+  expect(result).not.toHaveProperty('deviceFingerprint');
+  expect(result).not.toHaveProperty('pairedDeviceFingerprint');
 });

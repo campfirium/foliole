@@ -118,10 +118,10 @@ it('reads missing resource counts through the Node SQLite row shape', () => {
   ));
 });
 
-it('allows only an empty unpaired workspace with a stable device identity', () => {
+it('allows an empty unpaired workspace without inventing a credential identity', () => {
   expect(pairSyncRecoveryReadiness(snapshot(), false)).toMatchObject({
-    deviceIdentityFingerprint: expect.stringMatching(/^[0-9a-f]{16}$/u),
-    missingPrerequisites: [], resultStatus: 'ready'
+    missingPrerequisites: [], pairingPeerAuthorizationFingerprint: null,
+    resultStatus: 'ready', storedAuthorizationFingerprint: null
   });
 });
 
@@ -135,9 +135,10 @@ it.each([
   });
 });
 
-it('allows existing credentials only with a non-sensitive remote peer fingerprint', () => {
+it('allows existing credentials only with a non-sensitive authorization peer fingerprint', () => {
   expect(pairSyncRecoveryReadiness(snapshot(), true, '0123456789abcdef')).toMatchObject({
-    missingPrerequisites: [], remotePeerFingerprint: '0123456789abcdef', resultStatus: 'ready'
+    missingPrerequisites: [], pairingPeerAuthorizationFingerprint: '0123456789abcdef',
+    resultStatus: 'ready'
   });
 });
 
@@ -156,9 +157,9 @@ it('reports only the fixed credential-rejection signal from sync history', () =>
 
 it('reports an allowlisted desktop credential-rejection reason without response details', () => {
   const input = snapshot({ credentialsRejected: true, dirty: 1 });
-  input.database.inspection.pairingCredentialRejectionReason = 'unknown_device';
+  input.database.inspection.pairingCredentialRejectionReason = 'unknown_authorization';
   expect(pairSyncRecoveryReadiness(input, true, '0123456789abcdef')).toMatchObject({
-    pairingCredentialRejectionReason: 'unknown_device', pairingCredentialsRejected: true
+    pairingCredentialRejectionReason: 'unknown_authorization', pairingCredentialsRejected: true
   });
 });
 
@@ -180,13 +181,13 @@ it('accepts a readable synced workspace after persisted pairing', () => {
   });
 });
 
-it('hashes the existing remote peer on-device without returning its value', async () => {
-  const device = 'android-device-1';
+it('hashes the local and peer authorizations on-device without returning their values', async () => {
+  const authorization = 'authorization-a5';
   const peer = 'desktop-device-1';
   const run = vi.fn(async (_command, args) => {
     const script = args.at(-1);
-    if (String(script).includes('name=\\"device_id\\"')) {
-      return { stdout: `${createHash('sha256').update(device).digest('hex')}  -\n` };
+    if (String(script).includes('name=\\"authorization_id\\"')) {
+      return { stdout: `${createHash('sha256').update(authorization).digest('hex')}  -\n` };
     }
     if (String(script).includes('remote_peer_id')) {
       return { stdout: `${createHash('sha256').update(peer).digest('hex')}  -\n` };
@@ -196,14 +197,16 @@ it('hashes the existing remote peer on-device without returning its value', asyn
   const result = await inspectPairingPreferences({ adb: 'adb', appId: 'app', serial: 'a5' }, run);
   expect(result).toMatchObject({
     pairingCredentialsPresent: true,
-    remotePeerFingerprint: createHash('sha256').update(peer).digest('hex').slice(0, 16),
-    storedDeviceFingerprint: createHash('sha256').update(device).digest('hex').slice(0, 16)
+    pairingPeerAuthorizationFingerprint:
+      createHash('sha256').update(peer).digest('hex').slice(0, 16),
+    storedAuthorizationFingerprint:
+      createHash('sha256').update(authorization).digest('hex').slice(0, 16)
   });
   expect(run.mock.calls.some(([, args]) => args.at(-2) === '-c'
-    && args.at(-1) === `"grep -q 'name=\\"device_id\\"' shared_prefs/foliole_companion_pairing.xml"`)).toBe(true);
+    && args.at(-1) === `"grep -q 'name=\\"authorization_id\\"' shared_prefs/foliole_companion_pairing.xml"`)).toBe(true);
   expect(run.mock.calls.filter(([, args]) => String(args.at(-1)).includes('sha256sum'))).toHaveLength(2);
   expect(run.mock.calls.filter(([, args]) => String(args.at(-1)).includes("tr -d '\\\\n'"))).toHaveLength(2);
-  expect(JSON.stringify(result)).not.toContain(device);
+  expect(JSON.stringify(result)).not.toContain(authorization);
   expect(JSON.stringify(result)).not.toContain(peer);
 });
 
@@ -215,7 +218,8 @@ it('treats an empty retained preferences file as unpaired', async () => {
   });
   await expect(inspectPairingPreferences({ adb: 'adb', appId: 'app', serial: 'a5' }, run))
     .resolves.toEqual({
-      pairingCredentialsPresent: false, remotePeerFingerprint: null, storedDeviceFingerprint: null
+      pairingCredentialsPresent: false, pairingPeerAuthorizationFingerprint: null,
+      storedAuthorizationFingerprint: null
     });
 });
 

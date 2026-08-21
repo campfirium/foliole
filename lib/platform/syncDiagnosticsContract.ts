@@ -41,7 +41,7 @@ export interface SyncDiagnosticIdentity {
 export interface SyncDiagnosticConnection {
   endpoint_url: string | null;
   last_error: string | null;
-  paired_device_count?: number;
+  paired_authorization_count?: number;
   pending_pair_request_count?: number;
   port?: number | null;
   state: 'failed' | 'missing' | 'ready' | 'running' | 'stopped';

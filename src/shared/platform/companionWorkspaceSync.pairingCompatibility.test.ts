@@ -71,17 +71,16 @@ describe('companionWorkspaceSync negotiated pairing', () => {
       status: 'pending'
     }, 202);
     await requestCompanionPairing({
-      deviceId: 'web-preview-device',
-      deviceKind: 'web-preview',
-      deviceName: 'Preview',
+      hostName: 'Preview',
+      hostPlatform: 'web-preview',
       endpointUrl: 'http://10.0.2.2:38641/'
     });
 
     mockFetchJson({
       compatibility,
       desktop_protocol: protocol,
-      device_id: 'web-preview-device',
-      encrypted_device_secret: {
+      authorization_id: 'authorization-preview',
+      encrypted_credential_secret: {
         algorithm: 'ECDH-P256-HKDF-SHA256-AES-GCM',
         ciphertext: 'ciphertext',
         iv: 'iv',
@@ -92,8 +91,8 @@ describe('companionWorkspaceSync negotiated pairing', () => {
       peer_id: 'device-desktop'
     });
     await pairCompanionWithDesktop({
-      deviceKind: 'web-preview',
-      deviceName: 'Preview',
+      hostName: 'Preview',
+      hostPlatform: 'web-preview',
       endpointUrl: 'http://10.0.2.2:38641/',
       pairRequestId: 'pair-request-1'
     });
@@ -111,7 +110,7 @@ describe('companionWorkspaceSync pairing rejection', () => {
     const fetchSpy = vi.spyOn(global, 'fetch');
 
     await expect(requestCompanionPairing({
-      deviceId: 'android-test-device', deviceKind: 'android', deviceName: 'Pixel 9',
+      hostName: 'Pixel 9', hostPlatform: 'android',
       endpointUrl: 'http://10.0.2.2:38641', groupId: 'group-new', groupTag: 'tag-new', timelineId: 'timeline-new'
     })).rejects.toThrow('sync_group_identity_mismatch');
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -130,9 +129,8 @@ describe('companionWorkspaceSync pairing rejection', () => {
     }, 409);
 
     await expect(requestCompanionPairing({
-      deviceId: 'web-preview-device',
-      deviceKind: 'web-preview',
-      deviceName: 'Preview',
+      hostName: 'Preview',
+      hostPlatform: 'web-preview',
       endpointUrl: 'http://10.0.2.2:38641'
     })).rejects.toMatchObject({ code: 'protocol_incompatible', status: 409 });
   });
@@ -142,10 +140,10 @@ describe('companionWorkspaceSync pairing rejection', () => {
 describe('companionWorkspaceSync pairing repair', () => {
   it('does not sign Web sync requests for old pairing records without protocol metadata', async () => {
     writeWebPairingState({
-      device_id: 'web-preview-device',
-      device_kind: 'web-preview',
-      device_name: 'Preview',
-      device_secret: 'old-secret',
+      authorization_id: 'authorization-preview',
+      credential_secret: 'old-secret',
+      host_name: 'Preview',
+      host_platform: 'web-preview',
       is_paired: true,
       paired_at: '2026-04-22T12:00:00.000Z'
     });

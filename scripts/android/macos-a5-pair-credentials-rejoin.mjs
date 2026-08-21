@@ -46,17 +46,17 @@ export function inspectProtectedDesktopBoundary(overview, session, baseline, exp
   const safe = session.sanitize(overview);
   const actual = {
     activeMemberAuthorizationFingerprints: members,
-    desktopPeerFingerprint: safe.desktopPeerFingerprint,
+    localAuthorizationFingerprint: safe.localAuthorizationFingerprint,
     groupId: overview.sync_group?.group_id ?? null,
     localMemberAuthorizationFingerprint: localMemberAuthorizationFingerprint(overview),
-    pendingDeviceFingerprints: safe.pendingDeviceFingerprints,
+    pendingAuthorizationFingerprints: safe.pendingAuthorizationFingerprints,
     timelineId: overview.sync_group?.timeline_id ?? null
   };
   const expected = {
     activeMemberAuthorizationFingerprints: expectedMembers,
     groupId: baseline.groupId,
-    localMemberAuthorizationFingerprint: baseline.remotePeerFingerprint,
-    pendingDeviceFingerprints: [],
+    localMemberAuthorizationFingerprint: baseline.remotePeerAuthorizationFingerprint,
+    pendingAuthorizationFingerprints: [],
     timelineId: baseline.timelineId
   };
   return { actual, expected };
@@ -66,7 +66,7 @@ function protectedDesktopBoundaryMatches({ actual, expected }) {
   return actual.groupId === expected.groupId
     && actual.timelineId === expected.timelineId
     && actual.localMemberAuthorizationFingerprint === expected.localMemberAuthorizationFingerprint
-    && actual.pendingDeviceFingerprints.length === 0
+    && actual.pendingAuthorizationFingerprints.length === 0
     && JSON.stringify(actual.activeMemberAuthorizationFingerprints)
       === JSON.stringify(expected.activeMemberAuthorizationFingerprints);
 }
@@ -99,7 +99,6 @@ export async function collectCredentialProtectedReadiness(
   }
   const sameWorkspace = inspection.activeSyncGroupMemberCount
       === readiness.activeSyncGroupMemberCount
-    && inspection.deviceIdentityFingerprint === readiness.deviceIdentityFingerprint
     && inspection.dirtyRecordCount === readiness.dirtyRecordCount
     && inspection.nodeCount === readiness.nodeCount
     && inspection.syncGroupId === readiness.syncGroupId
@@ -123,7 +122,6 @@ export function assertJoinedEmptyCredentialReauthorization(readiness) {
     && readiness.syncGroupCredentialsPresent === true
     && readiness.workgroupKeyPresent === true && readiness.syncGroupRoutePresent === true
     && readiness.activeSyncGroupMemberCount > 1
-    && isFingerprint(readiness.deviceIdentityFingerprint)
     && isFingerprint(readiness.localMemberAuthorizationFingerprint)
     && isFingerprint(readiness.syncGroupRemotePeerFingerprint)
     && typeof readiness.syncGroupId === 'string'
@@ -131,14 +129,14 @@ export function assertJoinedEmptyCredentialReauthorization(readiness) {
     && /^[0-9a-f]{64}$/u.test(readiness.protectedContentDigest ?? '');
   if (!exact) throw new Error('A5 does not match the exact joined-empty credential reauthorization boundary.');
   return {
-    deviceIdentityFingerprint: readiness.deviceIdentityFingerprint,
+    hostName: readiness.hostName,
     dirtyObjectCounts: readiness.dirtyObjectCounts ?? {},
     dirtyRecordCount: readiness.dirtyRecordCount,
     groupId: readiness.syncGroupId,
     localMemberAuthorizationFingerprint: readiness.localMemberAuthorizationFingerprint,
     nodeCount: readiness.nodeCount,
     protectedContentDigest: readiness.protectedContentDigest,
-    remotePeerFingerprint: readiness.syncGroupRemotePeerFingerprint,
+    remotePeerAuthorizationFingerprint: readiness.syncGroupRemotePeerFingerprint,
     timelineId: readiness.syncGroupTimelineId
   };
 }

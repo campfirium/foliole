@@ -29,7 +29,7 @@ public class FolioleCompanionSyncPackTransferTest {
     public void rejectsWrongTargetAndUnsupportedVersions() throws Exception {
         byte[] sqlite = FolioleCompanionSyncPackEnvelopeTestSupport.sqliteBytes();
         assertRejected("sync_pack_target_mismatch", manifest(sqlite).put("to_peer_id", "other"), sqlite);
-        assertRejected("sync_pack_source_mismatch", manifest(sqlite).put("from_device_id", "other"), sqlite);
+        assertRejected("sync_pack_source_mismatch", manifest(sqlite).put("from_peer_id", "other"), sqlite);
         assertRejected("unsupported_sync_pack_format", manifest(sqlite).put("format", "other"), sqlite);
         assertRejected("unsupported_sync_pack_format_version", manifest(sqlite).put("format_version", 2), sqlite);
         assertRejected("unsupported_sync_pack_schema_version", manifest(sqlite).put("schema_version", 45), sqlite);

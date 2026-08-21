@@ -29,18 +29,17 @@ const REJECTION_ERRORS: Partial<Record<AcceptancePhase, string>> = {
   'wrong-target': 'sync_pack_target_mismatch'
 };
 
-async function pairForSyncPack(endpoint: string, deviceId: string, deviceName: string) {
+async function pairForSyncPack(endpoint: string, hostName: string) {
   await clearCompanionPairingCredentials();
   await saveCompanionWorkspaceSyncEndpoint('');
   const pending = await requestCompanionPairing({
-    deviceId,
-    deviceKind: 'ios-capacitor',
-    deviceName,
+    hostName,
+    hostPlatform: 'ios-capacitor',
     endpointUrl: endpoint
   });
   await pairCompanionWithDesktop({
-    deviceKind: 'ios-capacitor',
-    deviceName,
+    hostName,
+    hostPlatform: 'ios-capacitor',
     endpointUrl: endpoint,
     pairRequestId: pending.pair_request_id
   });
@@ -100,7 +99,7 @@ export async function runIosSyncPackAcceptance() {
     const bootstrap = await loadCompanionBootstrapState();
     const pairing = await loadCompanionPairingState();
     if (!pairing.is_paired) {
-      await pairForSyncPack(endpoint, bootstrap.device_id, bootstrap.device_name ?? 'Acceptance iPhone');
+      await pairForSyncPack(endpoint, bootstrap.host_name ?? 'Acceptance iPhone');
     }
     const phase = loadPhase();
     const result = await runPhase(endpoint, phase, bootstrap.device_id);

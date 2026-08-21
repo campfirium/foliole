@@ -40,9 +40,6 @@ export interface NativeCompanionWorkspaceSyncState {
 
 export interface NativeCompanionPairingState {
   authorization_id?: string | null;
-  device_id: string | null;
-  device_kind: string | null;
-  device_name: string | null;
   host_name?: string | null;
   host_platform?: string | null;
   is_paired: boolean;
@@ -78,13 +75,11 @@ export interface CompanionWorkspaceVersionPayload {
 
 export interface CompanionWorkspaceDiscoveryPayload {
   app_version: string;
-  desktop_device_name: string;
   desktop_host_name: string;
   desktop_name: string;
   desktop_platform: string;
   pairing_mode: 'desktop-confirm';
   peer_id: string;
-  provider_device_id: string;
   runtime_instance_id: string;
   protocol: SyncProtocolDescriptor;
   group_display_name: string;
@@ -112,7 +107,6 @@ export interface CompanionPairingSecretPayload {
 export interface CompanionWorkspacePairPayload {
   authorization_id: string;
   compatibility: SyncProtocolCompatibilityResult;
-  device_id: string;
   host_name?: string;
   host_platform?: string;
   encrypted_credential_secret: CompanionPairingSecretPayload;
@@ -121,9 +115,6 @@ export interface CompanionWorkspacePairPayload {
   desktop_protocol: SyncProtocolDescriptor;
   sync_group?: import('./syncGroupContract.js').SyncGroupPayload;
   provider_authorization_id?: string;
-  provider_device_id?: string;
-  provider_device_kind?: string;
-  provider_device_name?: string;
   provider_host_name?: string;
   provider_host_platform?: string;
   provider_encrypted_credential_secret?: CompanionPairingSecretPayload;
@@ -131,9 +122,6 @@ export interface CompanionWorkspacePairPayload {
 
 export interface DesktopCompanionPairRequestPayload {
   client_address: string | null;
-  device_id: string;
-  device_kind: string;
-  device_name: string;
   host_name: string;
   host_platform: string;
   expires_at: string;
@@ -142,18 +130,18 @@ export interface DesktopCompanionPairRequestPayload {
   status: 'approved' | 'pending' | 'rejected';
 }
 
-export interface DesktopCompanionPairedDevicePayload {
+export interface DesktopCompanionAuthorizationPayload {
+  authorization_id: string;
   client_address: string | null;
-  device_id: string;
-  device_kind: string;
-  device_name: string;
+  host_name: string;
+  host_platform: string;
   paired_at: string;
 }
 
 export interface DesktopCompanionSyncServerStatusPayload {
   advertised_urls: string[];
   last_error: string | null;
-  paired_device_count: number;
+  paired_authorization_count: number;
   pending_pair_request_count: number;
   port: number | null;
   state: 'failed' | 'running' | 'stopped';
@@ -165,9 +153,6 @@ export interface DesktopSyncGroupJoinCandidatePayload {
   group_id: string;
   group_tag: string;
   provider_authorization_id: string;
-  provider_device_id: string;
-  provider_device_kind: string;
-  provider_device_name: string;
   provider_host_name: string;
   provider_host_platform: string;
   timeline_id: string;
@@ -183,10 +168,10 @@ export interface DesktopSyncGroupJoinRequestPayload {
 }
 
 export interface DesktopCompanionPairingOverviewPayload {
-  current_host?: { device_id: string; host_name: string; host_platform: string } | null;
+  current_host?: { host_name: string; host_platform: string } | null;
   join_candidates?: DesktopSyncGroupJoinCandidatePayload[];
   join_request?: DesktopSyncGroupJoinRequestPayload | null;
-  paired_devices: DesktopCompanionPairedDevicePayload[];
+  paired_authorizations: DesktopCompanionAuthorizationPayload[];
   pending_requests: DesktopCompanionPairRequestPayload[];
   server_status: DesktopCompanionSyncServerStatusPayload;
   sync_group?: SyncGroupPayload | null;

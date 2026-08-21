@@ -104,11 +104,11 @@ async function applyConflictPack(
   return { alternative, current_version_id: current.current_version_id, parents, projection };
 }
 
-async function buildCurrentPack(packId: string, fromDeviceId: string, toPeerId: string) {
+async function buildCurrentPack(packId: string, fromPeerId: string, toPeerId: string) {
   const packPath = path.join(tempRoot, `${packId}.syncpack`);
   await buildDesktopSyncPack({
     createdAt: '2026-08-14T01:04:00.000Z',
-    fromDeviceId,
+    fromPeerId,
     fromStateSeq: 0,
     outputPath: packPath,
     packId,
@@ -127,7 +127,7 @@ async function buildIncomingBranchPack() {
   const packPath = path.join(tempRoot, 'branch-b.syncpack');
   await buildDesktopSyncPack({
     createdAt: '2026-08-14T01:04:00.000Z',
-    fromDeviceId: 'source-device',
+    fromPeerId: 'authorization-source',
     fromStateSeq: 0,
     outputPath: packPath,
     packId: 'branch-b-pack',

@@ -20,7 +20,7 @@ vi.mock('electron', () => ({
 }));
 
 import {
-  clearPairedCompanionDevices,
+  clearPairedCompanionAuthorizations,
   loadPairedSyncGroupPeer,
   loadPairedSyncGroupPeers,
   savePairedSyncGroupPeer
@@ -31,11 +31,11 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-sync-group-peers-'));
   userDataDir = path.join(tempRoot, 'user-data');
-  clearPairedCompanionDevices();
+  clearPairedCompanionAuthorizations();
 });
 
 afterEach(async () => {
-  clearPairedCompanionDevices();
+  clearPairedCompanionAuthorizations();
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
@@ -66,24 +66,20 @@ it('clears credentials by deleting the store without encrypting an empty replace
   const storePath = path.join(userDataDir, 'companion-paired-devices.bin');
   expect((await fs.stat(storePath)).isFile()).toBe(true);
   encryptString.mockClear();
-  clearPairedCompanionDevices();
+  clearPairedCompanionAuthorizations();
   expect(encryptString).not.toHaveBeenCalled();
   await expect(fs.stat(storePath)).rejects.toMatchObject({ code: 'ENOENT' });
   expect(loadPairedSyncGroupPeers('group-1')).toEqual([]);
 });
 
-function peer(peerDeviceId: string, endpointUrl: string) {
+function peer(peerAuthorizationSuffix: string, endpointUrl: string) {
   return {
     endpoint_url: endpointUrl,
     group_id: 'group-1',
     local_authorization_id: 'authorization-local',
-    local_device_id: 'local-device',
     local_host_name: 'Local',
-    peer_authorization_id: `authorization-${peerDeviceId}`,
-    peer_device_id: peerDeviceId,
-    peer_device_kind: 'desktop',
-    peer_device_name: peerDeviceId,
-    peer_host_name: peerDeviceId,
+    peer_authorization_id: `authorization-${peerAuthorizationSuffix}`,
+    peer_host_name: peerAuthorizationSuffix,
     peer_host_platform: 'desktop',
     timeline_id: 'timeline-1'
   };

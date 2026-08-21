@@ -19,8 +19,6 @@ import {
 import {
   createDesktopSyncGroup,
   approveDesktopCompanionPairRequest,
-  clearDesktopCompanionPairedDevices,
-  removeDesktopCompanionPairedDevice,
   rejectDesktopCompanionPairRequest
 } from './desktopCompanionPairingRuntimeRepository';
 import { isDesktopRuntime } from './runtime';
@@ -56,53 +54,6 @@ function useCompanionPairingAction(
       return nextOverview;
     } catch (actionError) {
       setError(actionError instanceof Error ? actionError.message : 'Failed to update companion pairing request.');
-      throw actionError;
-    } finally {
-      setPendingActionId(null);
-      setIsLoading(false);
-    }
-  }, [setError, setIsLoading, setOverview, setPendingActionId]);
-}
-
-function useClearPairedDevicesAction(
-  setOverview: (value: DesktopCompanionPairingOverviewPayload) => void,
-  setError: (value: string | null) => void,
-  setIsLoading: (value: boolean) => void,
-  setPendingActionId: (value: string | null) => void
-) {
-  return useCallback(async () => {
-    setPendingActionId('clear-paired-devices');
-    try {
-      const nextOverview = await clearDesktopCompanionPairedDevices();
-      setOverview(nextOverview);
-      setError(null);
-      return nextOverview;
-    } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : 'Failed to clear paired companion devices.');
-      throw actionError;
-    } finally {
-      setPendingActionId(null);
-      setIsLoading(false);
-    }
-  }, [setError, setIsLoading, setOverview, setPendingActionId]);
-}
-
-function useRemovePairedDeviceAction(
-  setOverview: (value: DesktopCompanionPairingOverviewPayload) => void,
-  setError: (value: string | null) => void,
-  setIsLoading: (value: boolean) => void,
-  setPendingActionId: (value: string | null) => void
-) {
-  return useCallback(async (deviceId: string) => {
-    const actionId = `remove-paired-device:${deviceId}`;
-    setPendingActionId(actionId);
-    try {
-      const nextOverview = await removeDesktopCompanionPairedDevice(deviceId);
-      setOverview(nextOverview);
-      setError(null);
-      return nextOverview;
-    } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : 'Failed to disconnect companion device.');
       throw actionError;
     } finally {
       setPendingActionId(null);
@@ -183,10 +134,8 @@ function useCreateSyncGroupAction(
 function usePairingMutationActions(state: ReturnType<typeof useDesktopCompanionPairingOverviewState>) {
   const args = [state.setOverview, state.setError, state.setIsLoading, state.setPendingActionId] as const;
   return {
-    clearPairedDevices: useClearPairedDevicesAction(...args),
     createSyncGroup: useCreateSyncGroupAction(...args),
     membership: useSyncGroupMembershipActions(state),
-    removePairedDevice: useRemovePairedDeviceAction(...args),
     runAction: useCompanionPairingAction(...args),
     togglePause: useToggleCompanionPauseAction(...args),
     toggleSync: useToggleCompanionSyncAction(...args)
@@ -205,9 +154,7 @@ export function useDesktopCompanionPairingRequests(pollMs = 2_000) {
     () => ({
       approveRequest: (pairRequestId: string) => actions.runAction(pairRequestId, 'approve'),
       createSyncGroup: actions.createSyncGroup,
-      clearPairedDevices: actions.clearPairedDevices,
       completeSyncGroupJoin: join.completeJoin,
-      removePairedDevice: actions.removePairedDevice,
       discoverSyncGroups: join.discoverGroups,
       disableSync: () => actions.toggleSync(false),
       enableSync: () => actions.toggleSync(true),

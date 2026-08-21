@@ -17,7 +17,7 @@ it('attaches a sync pack before applying pack nodes through the shared core', as
   };
 
   connection.query.mockResolvedValueOnce({ values: [{ value: JSON.stringify({
-    from_device_id: 'desktop-device', from_state_seq: 0, to_peer_id: 'android-device', to_state_seq: 4
+    from_peer_id: 'authorization-desktop', from_state_seq: 0, to_peer_id: 'authorization-android', to_state_seq: 4
   }) }] });
 
   await expect(applyCompanionSyncPackNodesWithSharedCore({
@@ -70,7 +70,7 @@ it('reuses an already open companion database connection', async () => {
   const connection = createFakeConnection();
   connection.isDBOpen.mockResolvedValue({ result: true });
   connection.query.mockResolvedValueOnce({ values: [{ value: JSON.stringify({
-    from_device_id: 'desktop-device', from_state_seq: 0, to_peer_id: 'ios-device', to_state_seq: 1
+    from_peer_id: 'authorization-desktop', from_state_seq: 0, to_peer_id: 'authorization-ios', to_state_seq: 1
   }) }] });
   const manager = {
     closeConnection: vi.fn(async () => undefined),
@@ -153,7 +153,7 @@ it('retrieves an existing Android companion database connection before attaching
   };
 
   connection.query.mockResolvedValueOnce({ values: [{ value: JSON.stringify({
-    from_device_id: 'desktop-device', from_state_seq: 0, to_peer_id: 'android-device', to_state_seq: 1
+    from_peer_id: 'authorization-desktop', from_state_seq: 0, to_peer_id: 'authorization-android', to_state_seq: 1
   }) }] });
 
   await expect(applyCompanionSyncPackNodesWithSharedCore({
@@ -228,7 +228,7 @@ function mockPackApplyQueries(
   connection.query.mockImplementation(async (sql: string) => {
     if (sql.includes('pack_manifest')) {
       return { values: [{ value: JSON.stringify({
-        from_device_id: 'desktop-device', from_state_seq: args.fromStateSeq,
+        from_peer_id: 'authorization-desktop', from_state_seq: args.fromStateSeq,
         to_peer_id: 'android-device', to_state_seq: args.toStateSeq
       }) }] };
     }

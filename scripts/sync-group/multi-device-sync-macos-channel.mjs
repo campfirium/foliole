@@ -18,11 +18,12 @@ export function macosAcceptanceSessionOptions(options) {
 }
 
 export function validateMacosAcceptanceDesktopPreflight(
-  overview, session, deviceFingerprint, remotePeerFingerprint = null, existingPairing = false
+  overview, session, hostName, desktopAuthorizationFingerprint = null,
+  existingPairing = false
 ) {
   assertPairSyncRuntimeOwnership(overview, session, MACOS_ACCEPTANCE_SYNC_PORT);
   return validateDesktopPreflight(
-    overview, session, deviceFingerprint, remotePeerFingerprint, existingPairing
+    overview, session, hostName, desktopAuthorizationFingerprint, existingPairing
   );
 }
 

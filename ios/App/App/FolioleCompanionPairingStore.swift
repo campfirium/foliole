@@ -24,16 +24,14 @@ final class FolioleCompanionPairingStore {
     func clear() throws -> [String: Any] {
         try secrets.delete()
         for key in contract.preferenceKeys.values { defaults.removeObject(forKey: key) }
+        for key in contract.legacyPreferenceKeys.values { defaults.removeObject(forKey: key) }
         return try loadState()
     }
-
-    var storedDeviceId: String? { metadata("deviceId") }
 
     func loadState() throws -> [String: Any] {
         defaults.removeObject(forKey: Self.legacyPrimaryDeviceKey)
         try ensureAuthorizationCutover()
         let authorizationId = metadata("authorizationId")
-        let deviceId = metadata("deviceId")
         let secret = try secrets.load()?.trimmedNonempty
         let hasCredentials = authorizationId != nil && secret != nil
         let negotiatedVersion = defaults.integer(forKey: preference("negotiatedProtocolVersion"))
@@ -41,7 +39,6 @@ final class FolioleCompanionPairingStore {
         let syncUsable = hasCredentials && negotiatedVersion == Self.currentProtocolVersion && remoteProtocol != nil
         return try state(
             authorizationId: authorizationId,
-            deviceId: deviceId,
             hasCredentials: hasCredentials,
             negotiatedVersion: negotiatedVersion,
             remoteProtocol: remoteProtocol,
@@ -52,9 +49,6 @@ final class FolioleCompanionPairingStore {
     func save(
         authorizationId: String,
         credentialSecret: String,
-        deviceId: String,
-        deviceKind: String,
-        deviceName: String,
         hostName: String,
         hostPlatform: String,
         negotiatedProtocolVersion: Int,
@@ -67,15 +61,11 @@ final class FolioleCompanionPairingStore {
         guard negotiatedProtocolVersion == Self.currentProtocolVersion, JSONSerialization.isValidJSONObject(remoteProtocol) else {
             throw Self.invalid("pairing protocol")
         }
-        let required = [authorizationId, credentialSecret, deviceId, deviceKind, deviceName,
-                        hostName, hostPlatform, pairedAt]
+        let required = [authorizationId, credentialSecret, hostName, hostPlatform, pairedAt]
         guard required.allSatisfy({ $0.trimmedNonempty != nil }) else { throw Self.invalid("pairing credentials") }
         let remoteProtocolData = try JSONSerialization.data(withJSONObject: remoteProtocol)
         try secrets.save(credentialSecret.trimmingCharacters(in: .whitespacesAndNewlines))
         defaults.set(authorizationId.trimmedNonempty, forKey: preference("authorizationId"))
-        defaults.set(deviceId.trimmedNonempty, forKey: preference("deviceId"))
-        defaults.set(deviceKind.trimmedNonempty, forKey: preference("deviceKind"))
-        defaults.set(deviceName.trimmedNonempty, forKey: preference("deviceName"))
         defaults.set(hostName.trimmedNonempty, forKey: preference("hostName"))
         defaults.set(hostPlatform.trimmedNonempty, forKey: preference("hostPlatform"))
         defaults.set(pairedAt.trimmedNonempty, forKey: preference("pairedAt"))
@@ -111,7 +101,6 @@ final class FolioleCompanionPairingStore {
 
     private func state(
         authorizationId: String?,
-        deviceId: String?,
         hasCredentials: Bool,
         negotiatedVersion: Int,
         remoteProtocol: [String: Any]?,
@@ -119,9 +108,6 @@ final class FolioleCompanionPairingStore {
     ) throws -> [String: Any] {
         [
             stateKey("authorizationId"): authorizationId ?? NSNull(),
-            stateKey("deviceId"): deviceId ?? NSNull(),
-            stateKey("deviceKind"): metadata("deviceKind") ?? NSNull(),
-            stateKey("deviceName"): metadata("deviceName") ?? NSNull(),
             stateKey("hostName"): metadata("hostName") ?? NSNull(),
             stateKey("hostPlatform"): metadata("hostPlatform") ?? NSNull(),
             stateKey("isPaired"): hasCredentials,
@@ -137,12 +123,14 @@ final class FolioleCompanionPairingStore {
     }
 
     private func ensureAuthorizationCutover() throws {
-        guard metadata("authorizationId") == nil,
-              let deviceId = metadata("deviceId"),
-              try secrets.load()?.trimmedNonempty != nil else { return }
-        defaults.set(deviceId, forKey: preference("authorizationId"))
-        defaults.set(metadata("deviceName") ?? deviceId, forKey: preference("hostName"))
-        defaults.set(metadata("deviceKind") ?? "ios-capacitor", forKey: preference("hostPlatform"))
+        if metadata("authorizationId") == nil,
+           let deviceId = legacyMetadata("deviceId"),
+           try secrets.load()?.trimmedNonempty != nil {
+            defaults.set(deviceId, forKey: preference("authorizationId"))
+            defaults.set(legacyMetadata("deviceName") ?? deviceId, forKey: preference("hostName"))
+            defaults.set(legacyMetadata("deviceKind") ?? "ios-capacitor", forKey: preference("hostPlatform"))
+        }
+        for key in contract.legacyPreferenceKeys.values { defaults.removeObject(forKey: key) }
     }
 
     private func loadRemoteProtocol() -> [String: Any]? {
@@ -151,6 +139,10 @@ final class FolioleCompanionPairingStore {
     }
 
     private func metadata(_ name: String) -> String? { defaults.string(forKey: preference(name))?.trimmedNonempty }
+    private func legacyMetadata(_ name: String) -> String? {
+        guard let key = contract.legacyPreferenceKeys[name] else { return nil }
+        return defaults.string(forKey: key)?.trimmedNonempty
+    }
     private func setOptional(_ value: String?, forKey key: String) {
         if let value = value?.trimmedNonempty {
             defaults.set(value, forKey: key)

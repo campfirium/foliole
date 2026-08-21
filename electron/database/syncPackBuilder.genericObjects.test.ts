@@ -33,7 +33,7 @@ it('packs attachment metadata as a generic sync object', async () => {
   insertAttachmentSyncState();
   const packPath = resolveSyncPackPath('incoming-attachment.db');
 
-  const result = await buildDesktopSyncPack({ outputPath: packPath, packId: 'pack-attachment-1', fromStateSeq: 0 });
+  const result = await buildDesktopSyncPack({ fromPeerId: 'authorization-desktop', outputPath: packPath, packId: 'pack-attachment-1', fromStateSeq: 0 });
 
   expect(result).toMatchObject({ objectCount: 1, packId: 'pack-attachment-1', toStateSeq: 3 });
   expect(readPackRows(packPath)).toMatchObject({
@@ -67,7 +67,7 @@ it('packs external folder metadata as a generic sync object', async () => {
   insertExternalFolderSyncState();
   const packPath = resolveSyncPackPath('incoming-external-folder.db');
 
-  const result = await buildDesktopSyncPack({ outputPath: packPath, packId: 'pack-external-folder-1', fromStateSeq: 0 });
+  const result = await buildDesktopSyncPack({ fromPeerId: 'authorization-desktop', outputPath: packPath, packId: 'pack-external-folder-1', fromStateSeq: 0 });
 
   expect(result).toMatchObject({ objectCount: 1, packId: 'pack-external-folder-1', toStateSeq: 4 });
   expect(readPackRows(packPath)).toMatchObject({
@@ -84,7 +84,7 @@ it('packs import source metadata as a generic sync object', async () => {
   insertImportSourceSyncState();
   const packPath = resolveSyncPackPath('incoming-import-source.db');
 
-  const result = await buildDesktopSyncPack({ outputPath: packPath, packId: 'pack-import-source-1', fromStateSeq: 0 });
+  const result = await buildDesktopSyncPack({ fromPeerId: 'authorization-desktop', outputPath: packPath, packId: 'pack-import-source-1', fromStateSeq: 0 });
 
   expect(result).toMatchObject({ objectCount: 1, packId: 'pack-import-source-1', toStateSeq: 5 });
   expect(readPackRows(packPath)).toMatchObject({
@@ -101,7 +101,7 @@ it('packs pdf page text as a generic sync object', async () => {
   insertPdfPageTextSyncState();
   const packPath = resolveSyncPackPath('incoming-pdf-page-text.db');
 
-  const result = await buildDesktopSyncPack({ outputPath: packPath, packId: 'pack-pdf-page-text-1', fromStateSeq: 0 });
+  const result = await buildDesktopSyncPack({ fromPeerId: 'authorization-desktop', outputPath: packPath, packId: 'pack-pdf-page-text-1', fromStateSeq: 0 });
 
   expect(result).toMatchObject({ objectCount: 1, packId: 'pack-pdf-page-text-1', toStateSeq: 7 });
   expect(readPackRows(packPath)).toMatchObject({
@@ -118,7 +118,7 @@ it('packs review log rows with changed node review state', async () => {
   insertNodeReviewSyncState();
   const packPath = resolveSyncPackPath('incoming-review-log.db');
 
-  const result = await buildDesktopSyncPack({ outputPath: packPath, packId: 'pack-review-log-1', fromStateSeq: 0 });
+  const result = await buildDesktopSyncPack({ fromPeerId: 'authorization-desktop', outputPath: packPath, packId: 'pack-review-log-1', fromStateSeq: 0 });
 
   expect(result).toMatchObject({ objectCount: 2, packId: 'pack-review-log-1', toStateSeq: 6 });
   expect(readPackRows(packPath)).toMatchObject({
@@ -140,7 +140,7 @@ it('packs node reading state as a generic sync object', async () => {
   insertNodeReadingSyncState();
   const packPath = resolveSyncPackPath('incoming-node-reading.db');
 
-  const result = await buildDesktopSyncPack({ outputPath: packPath, packId: 'pack-node-reading-1', fromStateSeq: 0 });
+  const result = await buildDesktopSyncPack({ fromPeerId: 'authorization-desktop', outputPath: packPath, packId: 'pack-node-reading-1', fromStateSeq: 0 });
 
   expect(result).toMatchObject({ objectCount: 2, packId: 'pack-node-reading-1', toStateSeq: 8 });
   expect(readPackRows(packPath)).toMatchObject({
@@ -165,7 +165,7 @@ it('omits stale node reading state without a backing reading row', async () => {
   const packPath = resolveSyncPackPath('incoming-stale-node-reading.db');
 
   const result = await buildDesktopSyncPack({
-    outputPath: packPath, packId: 'pack-stale-node-reading-1', fromStateSeq: 0
+    fromPeerId: 'authorization-desktop', outputPath: packPath, packId: 'pack-stale-node-reading-1', fromStateSeq: 0
   });
 
   expect(result).toMatchObject({ objectCount: 1, toStateSeq: 8 });
@@ -179,7 +179,7 @@ it('packs view state as a carried sync object payload', async () => {
   insertViewStateSyncState();
   const packPath = resolveSyncPackPath('incoming-view-state.db');
 
-  const result = await buildDesktopSyncPack({ outputPath: packPath, packId: 'pack-view-state-1', fromStateSeq: 0 });
+  const result = await buildDesktopSyncPack({ fromPeerId: 'authorization-desktop', outputPath: packPath, packId: 'pack-view-state-1', fromStateSeq: 0 });
 
   expect(result).toMatchObject({ objectCount: 1, packId: 'pack-view-state-1', toStateSeq: 9 });
   expect(readPackRows(packPath)).toMatchObject({

@@ -25,13 +25,13 @@ import {
 export type { PairedSyncGroupPeer } from './companionPairingStoreRecords.js';
 
 const STORE_FILE = 'companion-paired-devices.bin';
-const STORE_FORMAT_VERSION = 2;
+const STORE_FORMAT_VERSION = 3;
 const CORRUPT_STORE_SUFFIX = '.corrupt-';
 
 interface StorePayload {
   authorizations: PairedCompanionAuthorization[];
   client_peers: PairedSyncGroupPeer[];
-  format_version: 2;
+  format_version: 3;
 }
 
 let cachedStore: StorePayload | null = null;
@@ -82,7 +82,7 @@ function writeStore(payload: StorePayload) {
   const normalized = {
     authorizations: dedupeAuthorizations(payload.authorizations),
     client_peers: dedupePeers(payload.client_peers),
-    format_version: 2 as const
+    format_version: 3 as const
   };
   writePairingStoreFile(resolveStorePath(), safeStorage.encryptString(JSON.stringify(normalized)));
   cachedStore = normalized;
@@ -104,11 +104,11 @@ export function migratePairedCompanionStore(
   }
 }
 
-export function countPairedCompanionDevices() {
+export function countPairedCompanionAuthorizations() {
   return readStoreForQuery().authorizations.length;
 }
 
-export function loadPairedCompanionDevices() {
+export function loadPairedCompanionAuthorizations() {
   return readStoreForQuery().authorizations.map(redactCredentialSecret);
 }
 
@@ -121,38 +121,32 @@ export function loadPairedCompanionAuthorization(authorizationId: string) {
   return readStoreForQuery().authorizations.find((item) => item.authorization_id === authorizationId.trim()) ?? null;
 }
 
-export function loadPairedCompanionDevice(deviceId: string) {
-  return readStoreForQuery().authorizations.find((item) => item.device_id === deviceId.trim()) ?? null;
-}
-
-export function removePairedCompanionDevice(deviceId: string) {
+export function removePairedCompanionAuthorization(authorizationId: string) {
   const store = readStoreStrict();
-  const next = store.authorizations.filter((item) => item.device_id !== deviceId.trim());
+  const next = store.authorizations.filter((item) => item.authorization_id !== authorizationId.trim());
   if (next.length === store.authorizations.length) return false;
   writeStore({ ...store, authorizations: next });
   return true;
 }
 
-export function registerPairedCompanionDevice(args: {
-  authorizationId: string; clientAddress?: string | null; deviceId: string; deviceKind: string;
-  deviceName: string; hostName: string; hostPlatform: string;
+export function registerPairedCompanionAuthorization(args: {
+  authorizationId: string; clientAddress?: string | null; hostName: string; hostPlatform: string;
   negotiatedProtocolVersion: number; pairedAt?: string; remoteProtocol: SyncProtocolDescriptor;
 }) {
-  return registerPairedCompanionDeviceWithSecret({
+  return registerPairedCompanionAuthorizationWithSecret({
     ...args, credentialSecret: randomBytes(32).toString('base64url')
   });
 }
 
-export function registerPairedCompanionDeviceWithSecret(args: {
+export function registerPairedCompanionAuthorizationWithSecret(args: {
   authorizationId: string; clientAddress?: string | null; credentialSecret: string;
-  deviceId: string; deviceKind: string; deviceName: string; hostName: string; hostPlatform: string;
+  hostName: string; hostPlatform: string;
   negotiatedProtocolVersion: number;
   pairedAt?: string; remoteProtocol: SyncProtocolDescriptor;
 }) {
   const next: PairedCompanionAuthorization = {
     authorization_id: args.authorizationId.trim(), client_address: args.clientAddress?.trim() || null,
     credential_secret: args.credentialSecret, host_name: args.hostName.trim(),
-    device_id: args.deviceId.trim(), device_kind: args.deviceKind.trim(), device_name: args.deviceName.trim(),
     host_platform: args.hostPlatform.trim(), negotiated_protocol_version: args.negotiatedProtocolVersion,
     paired_at: args.pairedAt ?? new Date().toISOString(), remote_protocol: args.remoteProtocol
   };
@@ -194,7 +188,7 @@ export function restorePairedCompanionStore(snapshot: PairingStoreFileSnapshot) 
   cachedStorePath = null;
 }
 
-export function clearPairedCompanionDevices() {
+export function clearPairedCompanionAuthorizations() {
   fs.rmSync(resolveStorePath(), { force: true });
   cachedStore = null;
   cachedStorePath = null;

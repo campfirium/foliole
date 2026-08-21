@@ -43,7 +43,7 @@ it('reconstructs a missing special parent before applying an incremental child v
   insertInboxChild();
   const packPath = path.join(root, 'incremental.syncpack');
   await buildDesktopSyncPack({
-    fromDeviceId: 'desktop-a', fromStateSeq: 0, outputPath: packPath,
+    fromPeerId: 'authorization-desktop-a', fromStateSeq: 0, outputPath: packPath,
     packId: 'special-root-pack', toPeerId: 'android-b'
   });
   expect(readPackRowsFromZip(packPath, root).nodes).toEqual([

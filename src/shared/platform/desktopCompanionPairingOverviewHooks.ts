@@ -7,12 +7,12 @@ import { isDesktopRuntime } from './runtime';
 
 export const EMPTY_DESKTOP_COMPANION_PAIRING_OVERVIEW: DesktopCompanionPairingOverviewPayload = {
   current_host: null,
-  paired_devices: [],
+  paired_authorizations: [],
   pending_requests: [],
   server_status: {
     advertised_urls: [],
     last_error: null,
-    paired_device_count: 0,
+    paired_authorization_count: 0,
     pending_pair_request_count: 0,
     port: null,
     state: 'stopped'

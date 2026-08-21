@@ -26,7 +26,7 @@ final class FolioleCompanionSyncPackTransfer {
         return storeDownloadedPack(
             context,
             body,
-            FolioleCompanionPairingStore.loadPairedDeviceId(context),
+            FolioleCompanionPairingStore.loadPairingState(context).getString("authorization_id"),
             FolioleCompanionPairingStore.loadPairingState(context).optString("remote_peer_id")
         );
     }

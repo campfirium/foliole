@@ -59,11 +59,11 @@ async function prepareFreshCredentialJoin(readiness, context) {
     assertFreshCredentialRejoinBaseline(pairReadiness, pairReadiness);
   } else return { pairReadiness };
   const desktop = context.inspectDesktop(pairReadiness);
-  pairReadiness.pairTargetPeerFingerprint = desktop.remotePeerFingerprint;
+  pairReadiness.pairTargetAuthorizationFingerprint
+    = desktop.remotePeerAuthorizationFingerprint;
   return {
     pairReadiness,
-    pairRequestFingerprint: baseline?.deviceIdentityFingerprint
-      ?? pairReadiness.deviceIdentityFingerprint,
+    pairRequestIdentity: pairReadiness.hostName,
     protectedSyncGroup: { groupId: desktop.groupId, timelineId: desktop.timelineId }
   };
 }
@@ -87,7 +87,7 @@ export async function runMacosA5PairCredentialsEntry(args, dependencies = {}) {
   const evidenceRoot = path.join(
     args.paths.repoRoot, '.tmp/artifacts/a5-pair-credentials', buildIdentity
   );
-  const { pairReadiness, pairRequestFingerprint, protectedSyncGroup }
+  const { pairReadiness, pairRequestIdentity, protectedSyncGroup }
     = await prepareFreshCredentialJoin(readiness, {
       collect: collectProtectedReadiness, inspectDesktop: inspectDesktopDeparture,
       leave: leaveJoinedEmpty,
@@ -99,16 +99,17 @@ export async function runMacosA5PairCredentialsEntry(args, dependencies = {}) {
     });
   const result = await runPairSync({
     buildIdentity, credentialRepairRequired: pairReadiness.credentialRepairRequired,
-    deviceFingerprint: pairReadiness.deviceIdentityFingerprint, env: args.env,
+    env: args.env, hostName: pairReadiness.hostName,
     evidenceRoot, execute: credentialEvidenceExecute(args.execute),
     existingPairing: pairReadiness.existingPairing,
     instrumentationModeArgs: macosA5CredentialsOnlyModeArgs,
-    ...(pairRequestFingerprint ? { pairedDeviceFingerprint: null, pairRequestFingerprint,
+    ...(pairRequestIdentity ? { pairedAuthorizationFingerprint: null, pairRequestIdentity,
       protectedSyncGroup } : {}),
     paths: args.paths, recoveryEvidenceGoal: 'credentials-signable',
-    remotePeerFingerprint: pairReadiness.pairTargetPeerFingerprint, serial: args.serial
+    desktopAuthorizationFingerprint: pairReadiness.pairTargetAuthorizationFingerprint,
+    serial: args.serial
   });
-  if (pairRequestFingerprint) {
+  if (pairRequestIdentity) {
     assertFreshCredentialReceipt(readReceipt(evidenceRoot));
     produceHandoff({ evidenceRoot, readiness: resolveReadiness(args.paths),
       repoRoot: args.paths.repoRoot });

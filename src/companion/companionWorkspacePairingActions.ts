@@ -10,7 +10,7 @@ import {
 } from '../shared/platform/companionWorkspaceSync';
 
 import {
-  createCompanionDeviceName,
+  resolveCompanionHostName,
   type CompanionDesktopDiscovery,
   mergeSelectedDiscovery,
   normalizeDiscovery,
@@ -82,9 +82,8 @@ function createRequestPairingAction(
         throw new Error('Update Foliole on both devices, then try pairing again.');
       }
       const nextRequest = await requestCompanionPairing({
-        deviceId: args.bootstrapState.device_id,
-        deviceKind: args.bootstrapState.runtime_kind,
-        deviceName: createCompanionDeviceName(args.bootstrapState),
+        hostName: resolveCompanionHostName(args.bootstrapState),
+        hostPlatform: args.bootstrapState.runtime_kind,
         endpointUrl: normalizedDiscovery.endpointUrl,
         groupId: normalizedDiscovery.groupId,
         groupTag: normalizedDiscovery.groupTag,
@@ -96,7 +95,7 @@ function createRequestPairingAction(
         expiresAt: nextRequest.expires_at,
         pairRequestId: nextRequest.pair_request_id,
         remotePeerId: normalizedDiscovery.peerId,
-        remotePeerName: normalizedDiscovery.desktopDeviceName,
+        remotePeerName: normalizedDiscovery.desktopHostName,
         remotePeerPlatform: normalizedDiscovery.desktopPlatform,
         groupId: normalizedDiscovery.groupId,
         groupTag: normalizedDiscovery.groupTag,
@@ -170,8 +169,8 @@ function createCompletePairingAction(args: CompletePairingActionArgs) {
     args.onError(null);
     try {
       const nextPairingState = await pairCompanionWithDesktop({
-        deviceKind: args.bootstrapState.runtime_kind,
-        deviceName: createCompanionDeviceName(args.bootstrapState),
+        hostName: resolveCompanionHostName(args.bootstrapState),
+        hostPlatform: args.bootstrapState.runtime_kind,
         endpointUrl: pendingPairRequest.endpointUrl,
         pairRequestId: pendingPairRequest.pairRequestId,
         remotePeerId: pendingPairRequest.remotePeerId,

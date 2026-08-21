@@ -17,9 +17,9 @@ function renderActivity(
       onOpenPage={vi.fn()}
       page="syncActivity"
       pairingState={{
-        device_id: 'android-test-device',
-        device_kind: 'android-capacitor',
-        device_name: 'Android companion',
+        authorization_id: 'authorization-android',
+        host_name: 'Android companion',
+        host_platform: 'android-capacitor',
         is_paired: true,
         paired_at: '2026-04-22T09:00:00.000Z'
       }}

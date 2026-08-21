@@ -2,7 +2,6 @@ import type http from 'node:http';
 
 import { loadDesktopSyncGroup, loadSyncGroupMemberByAuthorization } from '../database/syncGroupStore.js';
 
-import { loadPairedCompanionAuthorization } from './companionPairingStore.js';
 import { verifyCompanionRequestSignature } from './companionRequestSignature.js';
 import { consumeDesktopWorkgroupNonce, loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
@@ -13,7 +12,7 @@ const NONCE_CACHE_LIMIT_PER_AUTHORIZATION = 2_048;
 const usedNonceExpiryByAuthorization = new Map<string, Map<string, number>>();
 
 interface CompanionRequestAuthSuccess {
-  device_id: string;
+  authorization_id: string;
   host_name: string;
   member_state?: 'active';
   ok: true;
@@ -137,7 +136,7 @@ export function authenticateCompanionRequest(args: {
     };
   }
   return {
-    device_id: loadPairedCompanionAuthorization(authorizationId)?.device_id ?? authorizationId,
+    authorization_id: authorizationId,
     host_name: groupMembership.host_name,
     ...(groupMembership.member_state ? { member_state: groupMembership.member_state } : {}),
     ok: true

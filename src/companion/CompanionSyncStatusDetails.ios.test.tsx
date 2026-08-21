@@ -13,9 +13,9 @@ it.each(['ios-capacitor', 'ios'])('shows %s pairing records as iOS', (deviceKind
       onOpenPage={vi.fn()}
       page="syncConnection"
       pairingState={{
-        device_id: 'ios-device',
-        device_kind: deviceKind,
-        device_name: "Roamer's iPhone",
+        authorization_id: 'authorization-ios',
+        host_name: "Roamer's iPhone",
+        host_platform: deviceKind,
         is_paired: true,
         paired_at: '2026-07-20T00:00:00.000Z'
       }}

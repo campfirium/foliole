@@ -1,4 +1,4 @@
-import { expect, it, vi } from 'vitest';
+import { expect, it } from 'vitest';
 
 import {
   resolveCompanionMembershipApproval,
@@ -6,11 +6,8 @@ import {
   resolveCompanionMembershipHostName
 } from './companionMembershipApproval.js';
 
-vi.mock('./companionPairingStore.js', () => ({ loadPairedCompanionDevice: () => null }));
-
 const request = {
-  client_address: null, compatibility: {} as never, device_id: 'device-a5',
-  device_kind: 'android-capacitor', device_name: 'A5', host_name: 'A5',
+  client_address: null, compatibility: {} as never, host_name: 'A5',
   host_platform: 'android-capacitor', expires_at: 'later', pairing_public_key: 'public',
   pair_request_id: 'request-1', protocol: {} as never, requested_at: 'now', status: 'pending' as const
 };
@@ -32,7 +29,6 @@ it('registers a request without an active Host as a new member', () => {
   expect(resolveCompanionMembershipAuthorizationId(request, { ...group, members: [] })).toBeNull();
 });
 
-it('keeps the presented Host name separate from the credential Device identity', () => {
-  expect(resolveCompanionMembershipHostName({ ...request, device_name: 'credential-device' }))
-    .toBe('A5');
+it('keeps the presented Host name as the membership fact', () => {
+  expect(resolveCompanionMembershipHostName(request)).toBe('A5');
 });

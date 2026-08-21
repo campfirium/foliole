@@ -55,7 +55,7 @@ it('builds a sqlite pack with structure and blob manifests but no body bytes', a
 
   const result = await buildDesktopSyncPack({
     createdAt: '2026-04-27T02:00:00.000Z',
-    fromDeviceId: 'desktop-fixture',
+    fromPeerId: 'authorization-desktop-fixture',
     outputPath: packPath,
     packId: 'pack-1',
     fromStateSeq: 0,
@@ -98,7 +98,7 @@ it('builds from an explicit isolated driver without reading the desktop connecti
   const packPath = resolveSyncPackPath('isolated.syncpack');
   try {
     await buildDesktopSyncPackFromDriver({
-      fromDeviceId: 'acceptance-desktop', fromStateSeq: 0, outputPath: packPath,
+      fromPeerId: 'authorization-acceptance-desktop', fromStateSeq: 0, outputPath: packPath,
       packId: 'isolated-pack', toPeerId: 'ios-runtime-device'
     }, driver);
     expect(readPackRows(packPath)).toMatchObject({
@@ -126,7 +126,7 @@ function expectNodePackRows(packPath: string) {
       format: 'foliole.sync-pack',
       format_version: 11,
       created_at: '2026-04-27T02:00:00.000Z',
-      from_device_id: 'desktop-fixture',
+      from_peer_id: 'authorization-desktop-fixture',
       from_state_seq: 0,
       pack_id: 'pack-1',
       schema_version: expect.any(Number),
@@ -201,6 +201,7 @@ it('packs external document structure with body blob manifests but no body bytes
   const packPath = resolveSyncPackPath('incoming-external.db');
 
   const result = await buildDesktopSyncPack({
+    fromPeerId: 'authorization-desktop',
     outputPath: packPath,
     packId: 'pack-external-1',
     fromStateSeq: 0
@@ -247,6 +248,7 @@ it('backfills missing node sync state before building a pack', async () => {
 
   const result = await buildDesktopSyncPack({
     createdAt: '2026-04-27T03:01:00.000Z',
+    fromPeerId: 'authorization-desktop',
     outputPath: packPath,
     packId: 'pack-backfill',
     fromStateSeq: 0

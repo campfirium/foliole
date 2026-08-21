@@ -53,15 +53,19 @@ it('does not install or open Desktop when the joined-empty guard fails', async (
 
 it('closes the protected Desktop session when product Leave fails', async () => {
   const session = { assertActive: vi.fn(), close: vi.fn().mockResolvedValue(),
-    enable: vi.fn().mockResolvedValue({ paired_devices: [], pending_requests: [],
+    enable: vi.fn().mockResolvedValue({ paired_authorizations: [], pending_requests: [],
       server_status: { port: 38641, state: 'running' }, sync_enabled: true, sync_group: {
         group_id: 'group-1', local_host_name: 'desktop', timeline_id: 'timeline-1', members: [
           { authorization_id: 'desktop-auth', host_name: 'desktop', state: 'active' },
           { authorization_id: 'a5-auth', host_name: 'a5', state: 'active' }
-        ] } }), sanitize: () => ({ desktopPeerFingerprint: 'peer', pendingDeviceFingerprints: [] }) };
+        ] } }), sanitize: () => ({
+      localAuthorizationFingerprint: authorizationFingerprint('desktop-auth'),
+      pendingAuthorizationFingerprints: []
+    }) };
   await expect(leaveJoinedEmptyCredentialSession({ baseline: {
     groupId: 'group-1', localMemberAuthorizationFingerprint: authorizationFingerprint('a5-auth'),
-    remotePeerFingerprint: authorizationFingerprint('desktop-auth'), timelineId: 'timeline-1'
+    remotePeerAuthorizationFingerprint: authorizationFingerprint('desktop-auth'),
+    timelineId: 'timeline-1'
   }, buildIdentity: 'build-1', env: {}, evidenceRoot: '/evidence', execute: vi.fn(),
   paths: { repoRoot: '/repo' }, serial: '87a33a4b' }, {
     maintenance: async () => { throw new Error('leave failed'); }, openSession: async () => session,

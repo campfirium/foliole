@@ -21,9 +21,10 @@ function fixture() {
 it('routes pair recovery through read-only identity gates before fixed mutation', async () => {
   const { evidenceRoot, paths } = fixture();
   const readiness = {
-    deviceIdentityFingerprint: '0123456789abcdef', dirtyRecordCount: 0,
+    localMemberAuthorizationFingerprint: '0123456789abcdef', dirtyRecordCount: 0,
+    hostName: 'A5',
     missingPrerequisites: [], nodeCount: 0, pairingCredentialsPresent: false,
-    remotePeerFingerprint: null,
+    pairingPeerAuthorizationFingerprint: null,
     resultStatus: 'ready', schemaVersion: 1
   };
   const execute = vi.fn(async (_command, args) => {
@@ -40,8 +41,7 @@ it('routes pair recovery through read-only identity gates before fixed mutation'
     paths, phase: 'readiness'
   })).resolves.toMatchObject({ pairSyncRecoveryReadiness: readiness });
   expect(inspectPairSyncDesktop).toHaveBeenCalledWith(expect.objectContaining({
-    deviceFingerprint: readiness.deviceIdentityFingerprint, existingPairing: false,
-    remotePeerFingerprint: null
+    desktopAuthorizationFingerprint: null, existingPairing: false, hostName: 'A5'
   }));
   const runPairSyncRecovery = vi.fn(async () => ({ output: '', pairSyncRecovery: {} }));
   await runWindowsDevDeviceAction({
@@ -49,9 +49,10 @@ it('routes pair recovery through read-only identity gates before fixed mutation'
     pairSyncRecoveryReadiness: readiness, paths, runPairSyncRecovery
   });
   expect(runPairSyncRecovery).toHaveBeenCalledWith(expect.objectContaining({
-    adbPort: WINDOWS_DEV_ADB_PORT, deviceFingerprint: readiness.deviceIdentityFingerprint,
+    adbPort: WINDOWS_DEV_ADB_PORT,
+    pairedAuthorizationFingerprint: readiness.localMemberAuthorizationFingerprint,
     existingPairing: false,
-    remotePeerFingerprint: null,
+    hostName: 'A5',
     serial: WINDOWS_DEV_A5_SERIAL
   }));
 });

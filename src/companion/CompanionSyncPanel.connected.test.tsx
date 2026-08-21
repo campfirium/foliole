@@ -27,7 +27,7 @@ function testSeparatesConnectionFromActivity() {
     <CompanionSyncPanel
       {...props}
       lastSyncedAt="2026-04-29T02:24:44.000Z"
-      pairingState={{ ...props.pairingState, device_name: 'Android Emulator' }}
+      pairingState={{ ...props.pairingState, host_name: 'Android Emulator' }}
       syncEvents={[completedEvent(), failedEvent()]}
     />
   );

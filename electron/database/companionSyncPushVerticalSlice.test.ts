@@ -211,6 +211,7 @@ describe('companion sync push vertical slice', () => {
     const packPath = path.join(tempRoot, 'vertical-pack.syncpack');
 
     const pack = await buildDesktopSyncPack({
+      fromPeerId: 'authorization-desktop',
       outputPath: packPath,
       packId: 'pack-after-android-review-push',
       fromStateSeq: 2
@@ -246,6 +247,7 @@ describe('companion sync push vertical slice', () => {
     const packPath = path.join(tempRoot, 'node-version-pack.syncpack');
 
     const pack = await buildDesktopSyncPack({
+      fromPeerId: 'authorization-desktop',
       outputPath: packPath,
       packId: 'pack-after-android-node-push',
       fromStateSeq: 2

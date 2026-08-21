@@ -102,7 +102,7 @@ async function verifyRestartedDeparture(options, initial) {
   return withSession(paths, evidenceRoot, async (page) => {
     const overview = await invokeWindowsSyncGroupCommand(page, 'load_companion_pairing_overview');
     const after = await inspectWindowsSyncGroupDatabase(execute, paths);
-    if (overview.sync_group !== null || overview.paired_devices.length !== 0
+    if (overview.sync_group !== null || overview.paired_authorizations.length !== 0
         || after.localGroupId !== null || after.localMemberState !== null
         || after.activeMemberCount !== 0 || after.syncDeliveryReceiptCount !== 0
         || after.syncPeerCursorCount !== 0) {

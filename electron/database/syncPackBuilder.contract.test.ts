@@ -133,7 +133,7 @@ async function buildContractFixturePack(outputPath: string) {
   insertExternalDocumentSyncState();
   return buildDesktopSyncPack({
     createdAt: '2026-04-27T02:00:00.000Z',
-    fromDeviceId: 'desktop-fixture',
+    fromPeerId: 'authorization-desktop-fixture',
     fromStateSeq: 0,
     outputPath,
     packId: 'sync-pack-contract-v1',

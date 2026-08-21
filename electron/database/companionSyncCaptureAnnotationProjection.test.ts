@@ -133,6 +133,7 @@ function expectProjectedReview() {
 
 async function expectNextSyncPack() {
   const pack = await buildDesktopSyncPack({
+    fromPeerId: 'authorization-desktop',
     fromStateSeq: 0,
     outputPath: path.join(tempRoot, 'android-capture-annotation.syncpack'),
     packId: 'android-capture-annotation'

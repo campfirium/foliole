@@ -6,7 +6,7 @@ import {
 
 const pending = {
   activeSyncGroupMemberCount: 3,
-  deviceIdentityFingerprint: '2fdd44bb500a5934',
+  localMemberAuthorizationFingerprint: '2fdd44bb500a5934',
   dirtyObjectCounts: { setting: 3 },
   dirtyRecordCount: 3,
   missingPrerequisites: ['unsynced_device_data_requires_review'],
