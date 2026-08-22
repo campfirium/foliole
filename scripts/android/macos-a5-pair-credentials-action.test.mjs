@@ -22,6 +22,7 @@ import {
 } from './macos-a5-pair-credentials-rejoin.mjs';
 
 it('stops fresh A5 pairing after native credentials can sign the first request', async () => {
+  const produceHandoff = vi.fn();
   const runPairSync = vi.fn().mockResolvedValue({
     output: '', pairSyncRecovery: { manifestPath: '/tmp/credentials.json' }
   });
@@ -34,6 +35,10 @@ it('stops fresh A5 pairing after native credentials can sign the first request',
   };
   await runMacosA5PairCredentialsEntry(args, {
     buildDesktop: vi.fn(),
+    produceHandoff,
+    readReceipt: () => ({
+      credentials: 'saved_signable', initialSync: 'not_started', pairingPath: 'new'
+    }),
     resolveReadiness: () => ({
       credentialRepairRequired: false, existingPairing: false, hostName: 'A5',
       pairTargetAuthorizationFingerprint: 'peer-1'
@@ -52,6 +57,7 @@ it('stops fresh A5 pairing after native credentials can sign the first request',
     '-e', 'foliolePairSyncTimeoutMs', '120000'
   ]);
   expect(runPairSync.mock.calls[0][0].execute).not.toBe(args.execute);
+  expect(produceHandoff).toHaveBeenCalledOnce();
 });
 
 it('bounds only the credential instrumentation wait instead of inheriting full sync timeout', async () => {

@@ -112,12 +112,10 @@ export async function runMacosA5PairCredentialsEntry(args, dependencies = {}) {
     desktopAuthorizationFingerprint: pairReadiness.pairTargetAuthorizationFingerprint,
     serial: args.serial
   });
-  if (pairRequestIdentity) {
-    assertFreshCredentialReceipt(readReceipt(evidenceRoot));
-    produceHandoff({ artifactsRoot: args.paths.artifactsRoot, evidenceRoot,
-      currentRevision: args.paths.acceptedRevision ?? undefined,
-      readiness: resolveReadiness(args.paths), sourceRepoRoot: args.paths.sourceRepoRoot });
-  }
+  assertFreshCredentialReceipt(readReceipt(evidenceRoot));
+  produceHandoff({ artifactsRoot: args.paths.artifactsRoot, evidenceRoot,
+    currentRevision: args.paths.acceptedRevision ?? undefined,
+    readiness: resolveReadiness(args.paths), sourceRepoRoot: args.paths.sourceRepoRoot });
   process.stdout.write(result.output);
   console.log(`[macos-a5-dev] pair-credentials evidence=${result.pairSyncRecovery.manifestPath}`);
 }

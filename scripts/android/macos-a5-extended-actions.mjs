@@ -131,7 +131,7 @@ export async function runMacosA5PairSyncEntry(args) {
   const { runMacosA5PairSync } = await import('./macos-a5-pair-sync-action.mjs');
   const result = await runMacosA5PairSync({
     buildIdentity, credentialRepairRequired: readiness.credentialRepairRequired,
-    desktopAuthorizationFingerprint: handoff.peerFingerprint, env: args.env,
+    desktopAuthorizationFingerprint: handoff.peerAuthorizationFingerprint, env: args.env,
     evidenceRoot: path.join(args.paths.artifactsRoot, 'a5-pair-sync', buildIdentity),
     execute: args.execute, existingPairing: true, hostName: readiness.hostName,
     pairedAuthorizationFingerprint: readiness.localMemberAuthorizationFingerprint,

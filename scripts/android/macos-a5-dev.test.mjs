@@ -83,7 +83,9 @@ describe('macOS fixed A5 development entry', () => {
     expect(extended).toContain('consumeCredentialsSignableHandoff({');
     expect(extended).toContain('artifactsRoot: args.paths.artifactsRoot');
     expect(extended).toContain('sourceRepoRoot: args.paths.sourceRepoRoot');
-    expect(extended).toContain('desktopAuthorizationFingerprint: handoff.peerFingerprint');
+    expect(extended).toContain(
+      'desktopAuthorizationFingerprint: handoff.peerAuthorizationFingerprint'
+    );
     expect(extended).toContain('resolveMacosA5PairSyncReadiness');
     expect(preflight).toContain('Fixed A5 no longer matches the authorized pair-switch state.');
     expect(source).not.toContain("process.argv[3]");
