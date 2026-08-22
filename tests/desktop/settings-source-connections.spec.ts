@@ -123,7 +123,7 @@ test('keeps watched and Readwise source connections explicit in desktop settings
   await expect(hostRegion).toBeVisible();
   await expect(hostRegion.getByText('Office PC', { exact: true })).toBeVisible();
   await expect(hostRegion.getByText('Windows', { exact: true })).toBeVisible();
-  await expect(hostRegion.getByText('D:\\Readwise Reader', { exact: true })).toBeVisible();
+  await expect(hostRegion.getByText('D:\\Readwise Reader', { exact: true })).toHaveCount(0);
   await expect(hostRegion.getByText('This Mac', { exact: true })).toHaveCount(0);
   await expect(readwiseDialog.getByText(/^(Readwise Reader Import|Readwise Reader 导入)$/)).toHaveCount(0);
   const readwiseScreenshot = path.join(ARTIFACT_DIR, 't135-readwise-host-assignment.png');
@@ -134,4 +134,7 @@ test('keeps watched and Readwise source connections explicit in desktop settings
   await switchToThisHost.click();
   await expect(switchToThisHost).toHaveCount(0);
   await expect(readwiseDialog.getByText(/^(Readwise Reader Import|Readwise Reader 导入)$/)).toBeVisible();
+  await expect(readwiseDialog.getByRole('button', {
+    name: /^(Readwise root folder|Readwise 根文件夹)$/
+  })).toHaveAttribute('title', 'D:\\Readwise Reader');
 });
