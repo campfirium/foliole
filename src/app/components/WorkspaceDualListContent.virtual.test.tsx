@@ -219,9 +219,9 @@ it('collapses virtual descendants without removing the virtual section itself', 
   expect(screen.getByRole('treeitem', { name: 'Saved Search A' })).toBeInTheDocument();
   expect(screen.getByRole('treeitem', { name: 'Saved Search B' })).toBeInTheDocument();
 
-  fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Virtual' }), { key: 'ArrowLeft' });
+  fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Virtual folders' }), { key: 'ArrowLeft' });
 
   expect(screen.queryByRole('treeitem', { name: 'Saved Search A' })).toBeNull();
   expect(screen.queryByRole('treeitem', { name: 'Saved Search B' })).toBeNull();
-  expect(screen.getByRole('treeitem', { name: 'Virtual' })).toBeInTheDocument();
+  expect(screen.getByRole('treeitem', { name: 'Virtual folders' })).toBeInTheDocument();
 });

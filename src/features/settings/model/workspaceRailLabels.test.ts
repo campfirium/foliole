@@ -26,7 +26,7 @@ it('localizes default rail labels from command translations', () => {
     getWorkspaceRailItemLabel(item)
   );
 
-  expect(labels).toEqual(['导入', '导入剪贴板', '沉浸阅读', '搜索', '命令面板']);
+  expect(labels).toEqual(['导入', '从剪贴板导入', '阅读模式', '搜索', '命令面板']);
 });
 
 it('recovers old persisted command translation keys before showing rail labels', () => {

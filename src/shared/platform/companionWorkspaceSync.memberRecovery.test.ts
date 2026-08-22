@@ -5,8 +5,10 @@ const syncGroupMock = vi.hoisted(() => ({
 }));
 const capacitorMock = vi.hoisted(() => ({
   plugin: {
+    addListener: vi.fn().mockResolvedValue({ remove: vi.fn() }),
     bindSyncGroupPeerRoute: vi.fn(), desktopHttpRequest: vi.fn(),
-    loadPairingState: vi.fn(), savePairingCredentials: vi.fn(), signCompanionSyncRequest: vi.fn()
+    loadPairingState: vi.fn(), resolveSyncGroupDataRequest: vi.fn(),
+    savePairingCredentials: vi.fn(), signCompanionSyncRequest: vi.fn()
   }
 }));
 

@@ -36,6 +36,7 @@ const controlledElectronSqliteTests = [
   'electron/database/syncGroupStore.test.ts',
   'electron/database/syncGroupLocalIdentityRekey.test.ts',
   'electron/database/syncGroupHostsMigration.test.ts',
+  'electron/database/systemEntryDisplayNamesSyncContract.test.ts',
   'electron/database/workspaceSearchSidecar.test.ts',
   'electron/sync/syncPackNodeApplyParentOrder.test.ts',
   'electron/sync/syncPackContentBlobsExecutor.test.ts',

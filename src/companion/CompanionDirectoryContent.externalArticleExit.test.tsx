@@ -11,7 +11,8 @@ const mocks = vi.hoisted(() => ({
   useCompanionExternalDocument: vi.fn()
 }));
 
-vi.mock('../shared/localization/LocalizationProvider', () => ({
+vi.mock('../shared/localization/LocalizationProvider', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../shared/localization/LocalizationProvider')>(),
   useTranslation: () => (key: string) => key
 }));
 

@@ -42,12 +42,12 @@ it('shows Inbox in the node tree and opens the folder list surface', async () =>
   expect(screen.queryByLabelText('Prompt editor')).not.toBeInTheDocument();
 });
 
-it('keeps virtual folders out of the main tree and shows a separate lower Virtual section', async () => {
+it('keeps virtual folders out of the main tree and shows a separate lower Virtual folders section', async () => {
   render(<App />);
 
-  fireEvent.click(within(await getNodeListPanel()).getByRole('treeitem', { name: 'Virtual' }));
+  fireEvent.click(within(await getNodeListPanel()).getByRole('treeitem', { name: 'Virtual folders' }));
 
-  expect(within(await getNodeListPanel()).getByRole('treeitem', { name: 'Virtual' })).toBeInTheDocument();
+  expect(within(await getNodeListPanel()).getByRole('treeitem', { name: 'Virtual folders' })).toBeInTheDocument();
   expect(screen.getByRole('region', { name: 'Virtual search' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Create Folder' })).not.toBeInTheDocument();
 });

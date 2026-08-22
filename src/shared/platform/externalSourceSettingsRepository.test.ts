@@ -198,5 +198,5 @@ it('uses the shared desktop folder picker for external source paths', async () =
   window.electronAPI = { invoke } as unknown as ElectronAPI;
 
   await expect(selectExternalSourceSettingsFolderPath()).resolves.toBe('/library');
-  expect(invoke).toHaveBeenCalledWith(NATIVE_COMMANDS.selectImportDirectory);
+  expect(invoke).toHaveBeenCalledWith(NATIVE_COMMANDS.selectImportDirectory, {});
 });

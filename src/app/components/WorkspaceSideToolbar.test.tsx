@@ -94,7 +94,7 @@ it('runs the shared appearance mode command from the customizable rail action', 
     </AppearanceSettingsProvider>
   );
 
-  fireEvent.click(screen.getByRole('button', { name: 'Appearance mode: Light' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance Mode' }));
 
   expect(onRunRailAction).toHaveBeenCalledWith(APP_COMMAND_IDS.toggleBaseColorMode);
 });
@@ -120,7 +120,7 @@ it('runs immersive reading from the top rail', () => {
     </AppearanceSettingsProvider>
   );
 
-  fireEvent.click(screen.getByRole('button', { name: /Immersive Reading/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Reading Mode' }));
 
   expect(onRunRailAction).toHaveBeenCalledWith(APP_COMMAND_IDS.toggleImmersiveMode);
 });
@@ -212,7 +212,7 @@ it('shows localized Demo conversion actions in the bottom rail', () => {
     </AppearanceSettingsProvider>
   );
 
-  expect(screen.getByRole('button', { name: '主页' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '官网' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: '下载应用' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: '重置数据' })).toBeInTheDocument();
 });

@@ -34,7 +34,7 @@ function fixture() {
   return {
     evidenceRoot: path.join(repoRoot, '.tmp/artifacts/windows-dev-action/capture-run-1'),
     paths: { adbPath: path.join(repoRoot, 'adb.exe'),
-      protectionBackups: path.join(repoRoot, 'protection'), repoRoot }
+      buildRoot: repoRoot, protectionBackups: path.join(repoRoot, 'protection'), repoRoot }
   };
 }
 

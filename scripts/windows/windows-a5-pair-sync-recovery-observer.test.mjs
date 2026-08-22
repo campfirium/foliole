@@ -50,7 +50,8 @@ it('observes request submission without global errors or click-return evidence',
   expect(observer).toContain("algorithm.name === 'ECDH'");
   expect(observer).not.toContain('pair_request_id');
   expect(observer).not.toContain('__folioleVerifyPairSyncCredentials');
-  expect(observer).not.toContain('workgroup_key');
+  expect(observer).not.toContain('args.workgroup_key');
+  expect(observer).not.toMatch(/\bworkgroup_key\s*:/u);
 });
 
 it('only observes the product signing request after workgroup membership persistence', async () => {

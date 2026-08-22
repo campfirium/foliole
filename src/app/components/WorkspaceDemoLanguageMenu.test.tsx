@@ -15,7 +15,7 @@ it('offers System and every supported language and persists an explicit choice',
     </LocalizationProvider>
   );
 
-  fireEvent.click(screen.getByRole('button', { name: 'App language' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Language' }));
 
   expect(await screen.findByRole('menuitem', { name: 'System' })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: '简体中文' })).toBeInTheDocument();

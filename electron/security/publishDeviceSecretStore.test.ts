@@ -47,12 +47,14 @@ it('writes, replaces, reads, and deletes an encrypted device secret', () => {
   expect(readPublishDeviceSecret('secret.bin', 'test secret')).toBe('');
 });
 
-it('rejects storage when encryption is unavailable', () => {
-  electronMock.encryptionAvailable = false;
-  expect(() => writePublishDeviceSecret('secret.bin', 'test secret', 'value')).toThrow('safeStorage is unavailable');
-});
-
 it.runIf(process.platform === 'linux')('rejects the Linux basic_text backend', () => {
   electronMock.backend = 'basic_text';
-  expect(() => writePublishDeviceSecret('secret.bin', 'test secret', 'value')).toThrow('Secure system storage is unavailable');
+  expect(() => writePublishDeviceSecret('secret.bin', 'test secret', 'value'))
+    .toThrow('Secure system storage is unavailable for test secret.');
+});
+
+it('rejects storage when encryption is unavailable', () => {
+  electronMock.encryptionAvailable = false;
+  expect(() => writePublishDeviceSecret('secret.bin', 'test secret', 'value'))
+    .toThrow('Electron safeStorage is unavailable for test secret.');
 });

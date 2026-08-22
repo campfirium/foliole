@@ -5,11 +5,13 @@ const groupMock = vi.hoisted(() => ({
   facts: vi.fn(), join: vi.fn(), load: vi.fn(), loadKey: vi.fn(), refresh: vi.fn()
 }));
 const nativeMock = vi.hoisted(() => ({
+  addListener: vi.fn().mockResolvedValue({ remove: vi.fn() }),
   bindSyncGroupPeerRoute: vi.fn(),
   clearPairingCredentials: vi.fn(),
   desktopHttpRequest: vi.fn(),
   loadDiscoveryCandidates: vi.fn(),
   loadPairingState: vi.fn(),
+  resolveSyncGroupDataRequest: vi.fn(),
   savePairingCredentials: vi.fn(),
   signCompanionSyncRequest: vi.fn(),
   startSyncGroupProvider: vi.fn()

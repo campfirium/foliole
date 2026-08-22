@@ -6,6 +6,11 @@ import {
   syncBridgeMock
 } from './companionDesktopSyncObjects.testHarness';
 
+vi.mock('./companion/network/signedRequest', async (importOriginal) => ({
+  ...await importOriginal<typeof import('./companion/network/signedRequest')>(),
+  prepareNativeCompanionWorkgroupRequestIfPresent: vi.fn(async () => null)
+}));
+
 async function testRoutesAckThroughNativeHttp() {
   capacitorMock.getPlatform.mockReturnValue('android');
   capacitorMock.isNativePlatform.mockReturnValue(true);

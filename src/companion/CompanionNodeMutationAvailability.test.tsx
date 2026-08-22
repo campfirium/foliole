@@ -7,7 +7,8 @@ const testState = vi.hoisted(() => ({
   supportedSurfaces: new Set<string>()
 }));
 
-vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
+vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../shared/platform/companionWorkspaceRuntimeRepository')>(),
   supportsCompanionNodeMutationSurface: (surface: string) => testState.supportedSurfaces.has(surface)
 }));
 vi.mock('./CompanionReadableArticleDocument', () => ({

@@ -18,6 +18,7 @@ const WORKGROUP = vi.hoisted(() => ({
   groupKey: 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8',
   groupTag: '630dcd2966c4336691125448bbb25b4f'
 }));
+const syncGroupMock = vi.hoisted(() => ({ pairedMembers: [] as Array<Record<string, string>> }));
 
 vi.mock('electron', () => ({
   app: {
@@ -72,19 +73,21 @@ vi.mock('../database/syncGroupStore.js', () => ({
       approved_by_host_name: 'Maci', authorization_id: 'founder-local',
       host_name: 'Maci', host_platform: 'darwin',
       joined_at: '2026-08-08T00:00:00.000Z', state: 'active'
-    }],
+    }, ...syncGroupMock.pairedMembers],
     timeline_id: 'timeline-test'
   })),
   loadSyncGroupMemberByAuthorization: vi.fn(() => ({ host_name: 'Pixel Test', state: 'active' })),
-  registerSyncGroupMember: vi.fn((args: { authorizationId: string; hostName: string; hostPlatform: string }) => ({
-    created_at: '2026-08-08T00:00:00.000Z', created_by_host_name: 'Maci',
-    display_name: 'Foliole Desktop', group_id: 'group-test', local_host_name: 'Maci',
-    local_member_state: 'active', timeline_id: 'timeline-test', members: [{
+  registerSyncGroupMember: vi.fn((args: { authorizationId: string; hostName: string; hostPlatform: string }) => {
+    const member = {
       approved_by_host_name: 'Maci', authorization_id: args.authorizationId,
       host_name: args.hostName, host_platform: args.hostPlatform,
       joined_at: '2026-08-08T00:00:01.000Z', state: 'active'
-    }]
-  }))
+    };
+    syncGroupMock.pairedMembers = [member];
+    return { created_at: '2026-08-08T00:00:00.000Z', created_by_host_name: 'Maci',
+      display_name: 'Foliole Desktop', group_id: 'group-test', local_host_name: 'Maci',
+      local_member_state: 'active', timeline_id: 'timeline-test', members: [member] };
+  })
 }));
 vi.mock('./workgroupKeyStore.js', () => ({
   consumeDesktopWorkgroupNonce: vi.fn(() => true),
@@ -109,6 +112,7 @@ async function resetLanWorkspaceSyncServerTestState() {
   const { clearCompanionRequestNonceCache } = await import('./companionRequestAuth.js');
   clearCompanionPairRequests();
   clearCompanionRequestNonceCache();
+  syncGroupMock.pairedMembers = [];
   fs.rmSync(electronMock.userDataPath, { force: true, recursive: true });
   electronMock.userDataPath = fs.mkdtempSync(path.join(process.cwd(), '.tmp', 'foliole-companion-pairing-'));
 }
