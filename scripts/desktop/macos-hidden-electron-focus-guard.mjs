@@ -24,7 +24,6 @@ export function installMacosHiddenElectronFocusGuard({
     throw new Error('macos_hidden_electron_focus_guard_window_api_invalid');
   }
 
-  app.setActivationPolicy('accessory');
   replaceMethod(app, 'focus', () => undefined);
   replaceMethod(windowPrototype, 'focus', () => undefined);
   replaceMethod(windowPrototype, 'setFocusable', function keepWindowNonFocusable() {

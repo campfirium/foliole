@@ -33,8 +33,7 @@ function createElectronDoubles() {
     }
   }
   const app = Object.assign(new EventEmitter(), {
-    focus: vi.fn(),
-    setActivationPolicy: vi.fn()
+    focus: vi.fn()
   });
   return { app, BrowserWindow };
 }
@@ -49,11 +48,20 @@ it('keeps every controller window non-activating when product pairing requests a
   window.focus();
   app.focus();
 
-  expect(app.setActivationPolicy).toHaveBeenCalledWith('accessory');
   expect(window.focusableValues).toEqual([false, false]);
   expect(window.setSkipTaskbar).toHaveBeenCalledTimes(2);
   expect(window.setIgnoreMouseEvents).toHaveBeenCalledTimes(2);
   expect(window.showInactiveCalled).toBe(true);
+});
+
+it('does not transform AppKit activation policy after the LSUIElement process launches', () => {
+  const { app, BrowserWindow } = createElectronDoubles();
+  const setActivationPolicy = vi.fn();
+  Object.assign(app, { setActivationPolicy });
+
+  installMacosHiddenElectronFocusGuard({ app, BrowserWindow, platform: 'darwin' });
+
+  expect(setActivationPolicy).not.toHaveBeenCalled();
 });
 
 it('suppresses renderer focus requests for controller-created web contents', () => {
