@@ -53,14 +53,14 @@ export const ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS = {
   nodeConflicts: {
     resultKey: 'conflicts',
     sql:
-      'SELECT conflict_version_id, object_id, parent_version_id, device_id, ' +
+      'SELECT conflict_version_id, object_id, parent_version_id, host_name, ' +
       'content_hash, snapshot_json, detected_at FROM node_sync_conflicts ' +
       'ORDER BY detected_at DESC, conflict_version_id DESC',
     columns: [
       { key: 'conflict_version_id', source: 'conflict_version_id', type: 'string' },
       { key: 'object_id', source: 'object_id', type: 'string' },
       { key: 'parent_version_id', source: 'parent_version_id', type: 'nullableString' },
-      { key: 'device_id', source: 'device_id', type: 'nullableString' },
+      { key: 'host_name', source: 'host_name', type: 'nullableString' },
       { key: 'content_hash', source: 'content_hash', type: 'nullableString' },
       { key: 'snapshot', source: 'snapshot_json', type: 'json' },
       { key: 'detected_at', source: 'detected_at', type: 'string' }

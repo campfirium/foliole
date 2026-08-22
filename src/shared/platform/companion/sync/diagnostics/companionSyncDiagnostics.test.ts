@@ -214,7 +214,7 @@ function expectSafelySavedConflictVerdict() {
         recent_conflicts: [{
           conflict_version_id: 'desktop#2',
           detected_at: '2026-05-04T02:00:00.000Z',
-          device_id: 'desktop-device',
+          host_name: 'Desktop',
           object_id: 'node-1',
           parent_version_id: 'desktop#1'
         }],
@@ -228,7 +228,7 @@ function expectSafelySavedConflictVerdict() {
     code: 'sync_conflicts_safely_saved',
     evidence: {
       conflict_count: 2,
-      latest_conflict: expect.objectContaining({ device_id: 'desktop-device', object_id: 'node-1' })
+      latest_conflict: expect.objectContaining({ host_name: 'Desktop', object_id: 'node-1' })
     },
     message: 'Conflicting edits were safely saved as separate copies.',
     severity: 'info'

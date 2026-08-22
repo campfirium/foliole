@@ -380,7 +380,7 @@
     },
     "nodeConflicts": {
       "resultKey": "conflicts",
-      "sql": "SELECT conflict_version_id, object_id, parent_version_id, device_id, content_hash, snapshot_json, detected_at FROM node_sync_conflicts ORDER BY detected_at DESC, conflict_version_id DESC",
+      "sql": "SELECT conflict_version_id, object_id, parent_version_id, host_name, content_hash, snapshot_json, detected_at FROM node_sync_conflicts ORDER BY detected_at DESC, conflict_version_id DESC",
       "columns": [
         {
           "key": "conflict_version_id",
@@ -398,8 +398,8 @@
           "type": "nullableString"
         },
         {
-          "key": "device_id",
-          "source": "device_id",
+          "key": "host_name",
+          "source": "host_name",
           "type": "nullableString"
         },
         {

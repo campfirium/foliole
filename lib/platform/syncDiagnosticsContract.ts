@@ -69,7 +69,7 @@ export interface SyncDiagnosticState {
   recent_conflicts?: Array<{
     conflict_version_id: string;
     detected_at: string;
-    device_id: string | null;
+    host_name: string | null;
     object_id: string;
     parent_version_id: string | null;
   }>;
