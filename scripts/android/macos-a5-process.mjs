@@ -33,9 +33,19 @@ export function execute(command, args, {
     };
     child.stdout.on('data', collect('stdout'));
     child.stderr.on('data', collect('stderr'));
+    const result = (code = 1) => ({
+      code,
+      lines: output.split(/\r?\n/u).filter(Boolean),
+      output,
+      stderr,
+      stdout
+    });
     const timer = setTimeout(() => {
       child.kill('SIGKILL');
-      reject(Object.assign(new Error(`${path.basename(command)} timed out`), { code: timeoutCode }));
+      reject(Object.assign(new Error(`${path.basename(command)} timed out`), {
+        code: timeoutCode,
+        result: result()
+      }));
     }, timeoutMs);
     child.on('error', (error) => {
       clearTimeout(timer);
@@ -43,8 +53,7 @@ export function execute(command, args, {
     });
     child.on('close', (code) => {
       clearTimeout(timer);
-      resolve({ code: code ?? 1, lines: output.split(/\r?\n/u).filter(Boolean),
-        output, stderr, stdout });
+      resolve(result(code ?? 1));
     });
   });
 }
