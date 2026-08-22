@@ -82,7 +82,7 @@ async function macosDesktopControl(execute, _paths, _env, action) {
 }
 
 export async function runMacosA5PairSync({
-  buildIdentity, credentialRepairRequired, desktopControl = macosDesktopControl,
+  approvalRequired, buildIdentity, credentialRepairRequired, desktopControl = macosDesktopControl,
   existingPairing, env, evidenceRoot, execute, hostName,
   libraryHome, paths, protectData, desktopAuthorizationFingerprint,
   openTransport, closeTransport,
@@ -99,6 +99,7 @@ export async function runMacosA5PairSync({
   return runPairSyncRecovery({
     adbPort: '5037', buildIdentity, env, evidenceRoot, execute, hostName,
     existingPairing,
+    ...(approvalRequired !== undefined ? { approvalRequired } : {}),
     ...(closeTransport ? { closeTransport } : {}),
     openDesktopSession: (options) => openMacosPairSyncDesktopSession({
       ...options, libraryHome, runtimeRoot: paths.desktopRuntimeRoot

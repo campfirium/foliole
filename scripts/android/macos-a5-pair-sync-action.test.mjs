@@ -98,7 +98,7 @@ it('rejects Host ambiguity and protected group drift', async () => {
 it('forwards only Host and authorization routing to the shared recovery action', async () => {
   const runPairSyncRecovery = vi.fn(async (args) => args);
   const result = await runMacosA5PairSync({
-    buildIdentity: 'build-1', credentialRepairRequired: false,
+    approvalRequired: true, buildIdentity: 'build-1', credentialRepairRequired: false,
     desktopAuthorizationFingerprint: '82cc2dc5c98135c8', env: {},
     evidenceRoot: '.tmp/evidence', execute: vi.fn(), existingPairing: false,
     hostName: 'A5', pairedAuthorizationFingerprint: null, pairRequestIdentity: 'A5',
@@ -106,6 +106,7 @@ it('forwards only Host and authorization routing to the shared recovery action',
   });
 
   expect(result).toMatchObject({
+    approvalRequired: true,
     desktopAuthorizationFingerprint: '82cc2dc5c98135c8', hostName: 'A5',
     pairedAuthorizationFingerprint: null, pairRequestIdentity: 'A5'
   });

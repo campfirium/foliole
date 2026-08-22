@@ -20,6 +20,7 @@ const execute = vi.fn(async () => ({ code: 0, output: '', stdout: '' }));
 
 it('wires pending observation, approval invocation, and approval success in order', () => {
   const source = fs.readFileSync('scripts/windows/windows-a5-pair-sync-recovery-result.mjs', 'utf8');
+  const action = fs.readFileSync('scripts/windows/windows-a5-pair-sync-recovery-action.mjs', 'utf8');
   const observed = source.indexOf('approval.markPendingObserved()');
   const invoked = source.indexOf('approval.markApproveInvoked()');
   const approved = source.indexOf('approval.markApproveSucceeded()');
@@ -27,6 +28,7 @@ it('wires pending observation, approval invocation, and approval success in orde
   expect(observed).toBeLessThan(invoked);
   expect(invoked).toBeLessThan(source.indexOf('session.approve(', invoked));
   expect(source.indexOf('session.approve(', invoked)).toBeLessThan(approved);
+  expect(action).toContain('approvalRequired\n      ?? pairSyncRecoveryRequiresApproval');
 });
 
 function unsafeSession(close = vi.fn(async () => undefined)) {

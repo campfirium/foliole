@@ -100,6 +100,7 @@ export async function runMacosA5PairCredentialsEntry(args, dependencies = {}) {
         serial: args.serial }
     });
   const result = await runPairSync({
+    approvalRequired: pairReadiness.pairingCredentialsPresent !== true,
     buildIdentity, credentialRepairRequired: pairReadiness.credentialRepairRequired,
     env: args.env, hostName: pairReadiness.hostName,
     evidenceRoot, execute: credentialEvidenceExecute(args.execute),

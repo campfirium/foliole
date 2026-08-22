@@ -105,6 +105,7 @@ export async function runWindowsA5PairSyncRecovery({
   desktopControl = clientControl, openTransport = openPairSyncRecoveryTransport,
   closeTransport = closePairSyncRecoveryTransport,
   approvalMembershipAction,
+  approvalRequired,
   recoveryEvidenceGoal = 'initial-sync-completed',
   instrumentationModeArgs = pairSyncRecoveryModeArgs,
   pairedAuthorizationFingerprint = null, pairRequestIdentity = hostName,
@@ -147,7 +148,9 @@ export async function runWindowsA5PairSyncRecovery({
       '-e', 'foliolePairSyncRunId', buildIdentity,
       '-e', 'class', PAIR_SYNC_RECOVERY_TEST_CLASS, PAIR_SYNC_RECOVERY_TEST_RUNNER
     ], options(env, 'pair_sync_instrumentation_timeout', recoveryWindow.instrumentationTimeoutMs), 'pair-sync-instrumentation');
-    if (pairSyncRecoveryRequiresApproval(existingPairing, rePairRequired)) await desktopStep('desktop-pair-request', async () => {
+    const requiresApproval = approvalRequired
+      ?? pairSyncRecoveryRequiresApproval(existingPairing, rePairRequired);
+    if (requiresApproval) await desktopStep('desktop-pair-request', async () => {
       const pending = await recoveryWindow.waitForPairRequest(
         waitForPairRequest(session, pairRequestIdentity, recoveryWindow), instrumentationPromise
       );

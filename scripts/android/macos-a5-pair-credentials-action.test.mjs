@@ -42,6 +42,7 @@ it('stops fresh A5 pairing after native credentials can sign the first request',
   });
 
   expect(runPairSync).toHaveBeenCalledWith(expect.objectContaining({
+    approvalRequired: true,
     evidenceRoot: path.join('/evidence', 'a5-pair-credentials/build-1'),
     instrumentationModeArgs: macosA5CredentialsOnlyModeArgs,
     desktopAuthorizationFingerprint: 'peer-1', recoveryEvidenceGoal: 'credentials-signable'
