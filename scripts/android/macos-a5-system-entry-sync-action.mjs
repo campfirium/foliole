@@ -46,11 +46,16 @@ async function waitForA5Payload(context, expected, collectSnapshot = collectAndr
   throw Object.assign(new Error('A5 system entry display names did not converge.'), { latest });
 }
 
-async function startA5(context) {
+async function checkedA5Lifecycle(context, args) {
   const result = await context.execute(context.paths.adb, [
-    '-s', context.serial, 'shell', 'am', 'start', '-n', `${APP_ID}/.MainActivity`
+    '-s', context.serial, 'shell', 'am', ...args
   ], { env: context.env, timeoutMs: 60_000 });
   if (result.code !== 0) throw Object.assign(new Error('A5 restart failed.'), { result });
+}
+
+export async function restartA5(context) {
+  await checkedA5Lifecycle(context, ['force-stop', APP_ID]);
+  await checkedA5Lifecycle(context, ['start', '-W', '-n', `${APP_ID}/.MainActivity`]);
 }
 
 function sessionOptions(context) {
@@ -85,11 +90,11 @@ export async function proveA5SystemEntryDisplayNameConvergence(context) {
       ...baseline.customDisplayNameById, inbox: ALIAS
     }, version: 1 };
     await session.invoke('save_system_entry_display_names', { payload: renamed });
-    await startA5(context);
+    await restartA5(context);
     const renamedSnapshot = await waitForA5Payload(context, renamed);
     const renamedDisplay = await inspectDisplay(context, 'renamed-display', { expectedText: ALIAS });
 
-    await startA5(context);
+    await restartA5(context);
     await session.invoke('save_system_entry_display_names', { payload: baseline });
     const restoredSnapshot = await waitForA5Payload(context, baseline);
     const restoredDisplay = await inspectDisplay(context, 'restored-display', { forbiddenText: ALIAS });

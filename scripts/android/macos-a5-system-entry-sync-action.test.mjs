@@ -2,7 +2,24 @@
 
 import { expect, it } from 'vitest';
 
-import { proveA5SystemEntryDisplayNameConvergence } from './macos-a5-system-entry-sync-action.mjs';
+import {
+  proveA5SystemEntryDisplayNameConvergence,
+  restartA5
+} from './macos-a5-system-entry-sync-action.mjs';
+
+it('cold-restarts A5 so foreground sync consumes the new desktop setting', async () => {
+  const calls = [];
+  await restartA5({
+    env: {}, execute: async (_command, args) => {
+      calls.push(args);
+      return { code: 0 };
+    }, paths: { adb: 'adb' }, serial: 'fixed-a5'
+  });
+  expect(calls).toEqual([
+    ['-s', 'fixed-a5', 'shell', 'am', 'force-stop', 'com.foliole.android'],
+    ['-s', 'fixed-a5', 'shell', 'am', 'start', '-W', '-n', 'com.foliole.android/.MainActivity']
+  ]);
+});
 
 it('renames, restores, and reopens the desktop product session in one bounded journey', async () => {
   const source = await import('node:fs').then(({ readFileSync }) =>
