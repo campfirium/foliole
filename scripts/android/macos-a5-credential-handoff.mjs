@@ -32,12 +32,12 @@ function revision(value) {
   return /^[0-9a-f]{40}$/u.test(value ?? '');
 }
 
-export function credentialsSignableEvidencePath(repoRoot) {
-  return path.join(repoRoot, '.tmp/artifacts/a5-pair-credentials', CONTRACT_FILE);
+export function credentialsSignableEvidencePath(artifactsRoot) {
+  return path.join(artifactsRoot, 'a5-pair-credentials', CONTRACT_FILE);
 }
 
-export function resolveCredentialHandoffRevision(repoRoot, run = spawnSync) {
-  const result = run('git', ['rev-parse', 'HEAD'], { cwd: repoRoot, encoding: 'utf8' });
+export function resolveCredentialHandoffRevision(sourceRepoRoot, run = spawnSync) {
+  const result = run('git', ['rev-parse', 'HEAD'], { cwd: sourceRepoRoot, encoding: 'utf8' });
   if (result.error) throw result.error;
   const value = String(result.stdout).trim();
   if (result.status !== 0 || !revision(value)) fail('Credential handoff revision is unavailable.');
@@ -111,8 +111,8 @@ function createContract(receipt, readiness, currentRevision) {
 }
 
 export function produceCredentialsSignableHandoff({
-  evidenceRoot, fsApi = fs, readiness, repoRoot,
-  currentRevision = resolveCredentialHandoffRevision(repoRoot)
+  artifactsRoot, evidenceRoot, fsApi = fs, readiness, sourceRepoRoot,
+  currentRevision = resolveCredentialHandoffRevision(sourceRepoRoot)
 }) {
   const receipt = JSON.parse(fsApi.readFileSync(
     path.join(evidenceRoot, 'pair-sync-recovery-receipt.json'), 'utf8'
@@ -123,18 +123,18 @@ export function produceCredentialsSignableHandoff({
   assertSignableReadiness(readiness);
   assertRecoveryManifest(manifest, readiness);
   const contract = createContract(receipt, readiness, currentRevision);
-  const evidencePath = credentialsSignableEvidencePath(repoRoot);
+  const evidencePath = credentialsSignableEvidencePath(artifactsRoot);
   fsApi.mkdirSync(path.dirname(evidencePath), { recursive: true });
   fsApi.writeFileSync(evidencePath, `${JSON.stringify(contract, null, 2)}\n`, 'utf8');
   return contract;
 }
 
 export function consumeCredentialsSignableHandoff({
-  fsApi = fs, readiness, repoRoot,
-  currentRevision = resolveCredentialHandoffRevision(repoRoot)
+  artifactsRoot, fsApi = fs, readiness, sourceRepoRoot,
+  currentRevision = resolveCredentialHandoffRevision(sourceRepoRoot)
 }) {
   const contract = assertCredentialsSignableContract(JSON.parse(fsApi.readFileSync(
-    credentialsSignableEvidencePath(repoRoot), 'utf8'
+    credentialsSignableEvidencePath(artifactsRoot), 'utf8'
   )));
   const matches = contract.revision === currentRevision
     && contract.hostName === readiness.hostName

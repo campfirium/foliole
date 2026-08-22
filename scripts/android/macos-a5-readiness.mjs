@@ -9,14 +9,14 @@ export function createMacosA5CaptureIdentity() {
 
 export function runMacosA5CaptureReadiness(checked, paths, serial, appId) {
   checked(process.execPath, [
-    path.join(paths.repoRoot, 'scripts/android/android-capture-annotation-readiness-runner.mjs'),
+    path.join(paths.buildRoot, 'scripts/android/android-capture-annotation-readiness-runner.mjs'),
     '--adb', paths.adb, '--serial', serial, '--app-id', appId
-  ], { cwd: paths.repoRoot });
+  ], { cwd: paths.buildRoot });
 }
 
 export function runMacosA5PairingReadiness(checked, paths, serial, appId) {
   checked(process.execPath, [
-    path.join(paths.repoRoot, 'scripts/android/android-pair-sync-recovery-readiness-runner.mjs'),
+    path.join(paths.buildRoot, 'scripts/android/android-pair-sync-recovery-readiness-runner.mjs'),
     '--adb', paths.adb, '--serial', serial, '--app-id', appId
-  ], { cwd: paths.repoRoot });
+  ], { cwd: paths.buildRoot });
 }

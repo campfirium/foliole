@@ -42,7 +42,7 @@ function runFor(pairState) {
 
 it('admits protected migration dirtiness without requiring one legacy pair peer', () => {
   expect(runMacosA5PairSyncPreflight(
-    { adb: '/adb', repoRoot: '/repo' }, runFor(pending)
+    { adb: '/adb', buildRoot: '/repo' }, runFor(pending)
   )).toMatchObject({
     dirtyRecordCount: 3, existingPairing: true, protectedPendingSync: true
   });
@@ -50,7 +50,7 @@ it('admits protected migration dirtiness without requiring one legacy pair peer'
 
 it('fails closed when migration dirtiness is not completely classified', () => {
   expect(() => runMacosA5PairSyncPreflight(
-    { adb: '/adb', repoRoot: '/repo' }, runFor({
+    { adb: '/adb', buildRoot: '/repo' }, runFor({
       ...pending, dirtyObjectCounts: { setting: 2 }
     })
   )).toThrow('authorized pair-switch state');

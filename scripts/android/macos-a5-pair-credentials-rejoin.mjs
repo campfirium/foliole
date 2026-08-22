@@ -2,7 +2,6 @@ import { setTimeout as delay } from 'node:timers/promises';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { MACOS_DAILY_LIBRARY_HOME } from '../macos/macos-electron-dev-paths.mjs';
 import { assertPairSyncRuntimeOwnership } from '../windows/windows-a5-pair-sync-recovery-transport.mjs';
 import {
   departedHistoryReadinessEvidence
@@ -182,7 +181,8 @@ export async function leaveJoinedEmptyCredentialSession(args, dependencies = {})
   const writeBoundaryEvidence = dependencies.writeBoundaryEvidence
     ?? writeProtectedDesktopBoundaryEvidence;
   const session = await openSession({
-    env: args.env, libraryHome: MACOS_DAILY_LIBRARY_HOME, repoRoot: args.paths.repoRoot
+    env: args.env, libraryHome: args.paths.desktopDevLibrary,
+    repoRoot: args.paths.buildRoot
   });
   try {
     const overview = await session.enable();

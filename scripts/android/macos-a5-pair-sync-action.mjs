@@ -114,7 +114,7 @@ export async function runMacosA5PairSync({
     desktopControl, validateDesktop: validateMacosDesktop,
     paths: {
       adbPath: paths.adb,
-      repoRoot: paths.repoRoot,
+      repoRoot: paths.buildRoot,
       systemNode: process.execPath
     },
     protectData,

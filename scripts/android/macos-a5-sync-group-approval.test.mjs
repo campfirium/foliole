@@ -88,7 +88,7 @@ it('opens transport after provider stop and starts the peer only after the produ
   await startMacosA5SyncGroupApprovalProvider({
     env: {}, execute, onProviderStopped: async () => { order.push('transport'); },
     onReady: async () => { order.push('peer'); },
-    paths: { adb: 'adb', repoRoot: '/repo' }
+    paths: { adb: 'adb', buildRoot: '/repo' }
   });
   expect(order).toEqual(['transport', 'started', 'stable', 'peer']);
 });

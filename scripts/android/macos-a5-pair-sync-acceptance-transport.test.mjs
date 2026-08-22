@@ -9,7 +9,7 @@ it('forwards an explicit acceptance transport without changing the daily default
   const result = await runMacosA5PairSync({
     buildIdentity: 'pair-acceptance', closeTransport, deviceFingerprint: 'device-peer',
     env: {}, evidenceRoot: '.tmp/artifacts/test-a5-pair-sync-transport', execute: vi.fn(),
-    openTransport, paths: { adb: '/adb', repoRoot: '/repo' },
+    openTransport, paths: { adb: '/adb', buildRoot: '/repo' },
     runPairSyncRecovery, serial: 'fixed-a5'
   });
   expect(result).toMatchObject({ closeTransport, openTransport });

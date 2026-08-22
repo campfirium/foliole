@@ -20,6 +20,12 @@ describe('macOS fixed A5 development entry', () => {
     expect(paths.apk).toBe(path.join('/repo', 'android/app/build/outputs/apk/debug/app-debug.apk'));
     expect(paths.adb).toBe(path.join('/opt/homebrew/share/android-commandlinetools', 'platform-tools', 'adb'));
     expect(paths.gradle).toBe(path.join('/repo', 'android/gradlew'));
+    expect(paths).toMatchObject({
+      buildRoot: '/repo', sourceRepoRoot: '/repo',
+      controllerStateRoot: path.join('/repo', '.lab/internal/macos-a5-controller'),
+      deviceBackupRoot: path.join('/repo', '.lab/internal/android-device-backups'),
+      desktopDevLibrary: '/Users/roamer/Documents/Foliole'
+    });
   });
 
   it('binds Gradle to the lightweight Homebrew SDK and JDK', () => {
@@ -43,7 +49,9 @@ describe('macOS fixed A5 development entry', () => {
     expect(registry).toContain("'pair-sync'");
     expect(registry).toContain("'pair-credentials'");
     expect(extended).toContain('credentialRepairRequired: readiness.credentialRepairRequired');
-    expect(extended).toContain('consumeCredentialsSignableHandoff({ readiness');
+    expect(extended).toContain('consumeCredentialsSignableHandoff({');
+    expect(extended).toContain('artifactsRoot: args.paths.artifactsRoot');
+    expect(extended).toContain('sourceRepoRoot: args.paths.sourceRepoRoot');
     expect(extended).toContain('desktopAuthorizationFingerprint: handoff.peerFingerprint');
     expect(extended).toContain('resolveMacosA5PairSyncReadiness');
     expect(preflight).toContain('Fixed A5 no longer matches the authorized pair-switch state.');
@@ -119,7 +127,7 @@ describe('macOS fixed A5 development entry', () => {
 
   it('bootstraps only through the installed product before identity is rechecked', () => {
     const calls = [];
-    runMacosA5ProductBootstrap({ adb: '/adb', repoRoot: '/repo' }, (command, args) => {
+    runMacosA5ProductBootstrap({ adb: '/adb', buildRoot: '/repo' }, (command, args) => {
       calls.push([command, args]);
       return { status: 0 };
     });

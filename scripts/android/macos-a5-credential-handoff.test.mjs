@@ -14,9 +14,10 @@ import {
   credentialsSignableReadinessFixture, credentialsSignableReceiptFixture
 } from './macos-a5-credential-handoff-fixture.mjs';
 
-const repoRoot = path.join(path.parse(process.cwd()).root, 'repo', 'foliole');
+const sourceRepoRoot = path.join(path.parse(process.cwd()).root, 'repo', 'foliole');
+const artifactsRoot = path.join(sourceRepoRoot, '.tmp', 'artifacts');
 const evidenceRoot = path.join(
-  repoRoot, '.tmp', 'artifacts', 'a5-pair-credentials', 'build-credentials'
+  artifactsRoot, 'a5-pair-credentials', 'build-credentials'
 );
 
 function memoryFs(receipt = credentialsSignableReceiptFixture,
@@ -34,7 +35,8 @@ function memoryFs(receipt = credentialsSignableReceiptFixture,
 
 function produce(fsApi = memoryFs(), readiness = credentialsSignableReadinessFixture) {
   const contract = produceCredentialsSignableHandoff({
-    currentRevision: credentialHandoffRevision, evidenceRoot, fsApi, readiness, repoRoot
+    artifactsRoot, currentRevision: credentialHandoffRevision, evidenceRoot, fsApi, readiness,
+    sourceRepoRoot
   });
   return { contract, fsApi };
 }
@@ -43,11 +45,11 @@ it('passes one sanitized credentials_signable object from producer to consumer u
   const { contract, fsApi } = produce();
   const consumed = consumeCredentialsSignableHandoff({
     currentRevision: credentialHandoffRevision, fsApi,
-    readiness: credentialsSignableReadinessFixture, repoRoot
+    artifactsRoot, readiness: credentialsSignableReadinessFixture, sourceRepoRoot
   });
 
   expect(consumed).toEqual(contract);
-  expect([...fsApi.files.keys()]).toContain(credentialsSignableEvidencePath(repoRoot));
+  expect([...fsApi.files.keys()]).toContain(credentialsSignableEvidencePath(artifactsRoot));
   expect(JSON.stringify(contract)).not.toMatch(
     /serial|private|secret|keyValue|authorizationId|authorization_id/iu
   );
@@ -99,8 +101,9 @@ it.each([
   _label, mutate, currentRevision = credentialHandoffRevision, readinessChange = {}
 ) => {
   const { contract, fsApi } = produce();
-  fsApi.files.set(credentialsSignableEvidencePath(repoRoot), JSON.stringify(mutate(contract)));
-  expect(() => consumeCredentialsSignableHandoff({ currentRevision, fsApi, repoRoot,
+  fsApi.files.set(credentialsSignableEvidencePath(artifactsRoot), JSON.stringify(mutate(contract)));
+  expect(() => consumeCredentialsSignableHandoff({ artifactsRoot, currentRevision, fsApi,
+    sourceRepoRoot,
     readiness: { ...credentialsSignableReadinessFixture, ...readinessChange }
   })).toThrow(/incomplete|does not match/iu);
 });

@@ -23,7 +23,7 @@ export async function runMacosA5LeaveSyncGroupEntry(args, dependencies = {}) {
   buildDesktop(args.checked, args.paths);
   const buildIdentity = args.buildIdentity();
   const evidenceRoot = path.join(
-    args.paths.repoRoot, '.tmp/artifacts/a5-sync-group-maintenance', buildIdentity
+    args.paths.artifactsRoot, 'a5-sync-group-maintenance', buildIdentity
   );
   const protectedReadiness = await collectReadiness(readiness, {
     env: args.env, execute: args.execute, paths: args.paths, serial: args.serial

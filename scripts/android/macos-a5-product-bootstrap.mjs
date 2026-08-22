@@ -23,10 +23,10 @@ export function runMacosA5ProductBootstrap(paths, run = spawnSync) {
   checked(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'force-stop', APP_ID], {}, run);
   checked(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start', '-n', COMPONENT], {}, run);
   checked(process.execPath, [
-    path.join(paths.repoRoot, 'scripts/android/verify-android-launch.mjs'),
+    path.join(paths.buildRoot, 'scripts/android/verify-android-launch.mjs'),
     '--adb', paths.adb, '--serial', A5_SERIAL, '--app-id', APP_ID,
     '--component', COMPONENT, '--timeout-seconds', '30', '--stability-seconds', '3'
-  ], { cwd: paths.repoRoot }, run);
+  ], { cwd: paths.buildRoot }, run);
 }
 
 export function resolveMacosA5PairSyncReadiness(paths) {

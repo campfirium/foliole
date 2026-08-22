@@ -209,12 +209,15 @@ it('freezes the pre-candidate product runtime without reading credential plainte
     fs.writeFileSync(path.join(
       root, '.tmp/macos-desktop-daily-debug/user-data/companion-paired-devices.bin'
     ), new Uint8Array([1, 2, 3]));
-    expect(assertLegacyTransitionRuntime(root)).toMatchObject({
+    const paths = {
+      buildRoot: root, desktopRuntimeRoot: path.join(root, '.tmp/macos-desktop-daily-debug')
+    };
+    expect(assertLegacyTransitionRuntime(paths)).toMatchObject({
       desktopMainDigest: expect.stringMatching(/^[a-f0-9]{64}$/u),
       encryptedPairedStoreDigest: expect.stringMatching(/^[a-f0-9]{64}$/u)
     });
     fs.writeFileSync(path.join(root, 'dist/electron/main.js'), 'workgroup-aead-v1');
-    expect(() => assertLegacyTransitionRuntime(root)).toThrow('replaced by the candidate');
+    expect(() => assertLegacyTransitionRuntime(paths)).toThrow('replaced by the candidate');
   } finally {
     fs.rmSync(root, { recursive: true });
   }

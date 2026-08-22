@@ -19,8 +19,8 @@ export function macosA5ErrorEvidence(error) {
 }
 
 export function buildMacosA5Desktop(checked, paths) {
-  checked('npm', ['run', 'build'], { cwd: paths.repoRoot });
-  checked('npm', ['run', 'electron:compile'], { cwd: paths.repoRoot });
+  checked('npm', ['run', 'build'], { cwd: paths.buildRoot });
+  checked('npm', ['run', 'electron:compile'], { cwd: paths.buildRoot });
 }
 
 export function macosA5ParallelDesktopEnv(env) {
@@ -30,11 +30,8 @@ export function macosA5ParallelDesktopEnv(env) {
 export async function runMacosA5SettledStoppedStatus(args) {
   args.assertFixed();
   const { openMacosPairSyncDesktopSession } = await import('./macos-pair-sync-desktop-session.mjs');
-  const { MACOS_DAILY_LIBRARY_HOME } = await import(
-    '../macos/macos-electron-dev-paths.mjs'
-  );
   const session = await openMacosPairSyncDesktopSession({ env: args.env,
-    libraryHome: MACOS_DAILY_LIBRARY_HOME, repoRoot: args.paths.repoRoot });
+    libraryHome: args.paths.desktopDevLibrary, repoRoot: args.paths.buildRoot });
   try {
     await session.enable();
     args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', 'com.foliole.android']);
@@ -50,7 +47,7 @@ export async function runMacosA5DatabasePerformanceEntry(args) {
   args.assertFixed(); args.build();
   const { runA5DatabasePerformance } = await import('./android-a5-database-performance-action.mjs');
   const result = await runA5DatabasePerformance({ env: args.env,
-    evidenceRoot: path.join(args.paths.repoRoot, '.tmp/artifacts/companion-database-performance'),
+    evidenceRoot: path.join(args.paths.artifactsRoot, 'companion-database-performance'),
     execute: args.execute, paths: args.paths, serial: args.serial });
   process.stdout.write(result.output);
   console.log(`[macos-a5-dev] database-performance evidence=${result.evidencePath}`);
@@ -67,12 +64,12 @@ export async function runMacosA5ClearAppDataEntry(args) {
     throw Object.assign(new Error('Fixed A5 app data clear failed'), { result: cleared });
   }
   args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'start', '-n', `${APP_ID}/.MainActivity`]);
-  args.checked(process.execPath, [path.join(args.paths.repoRoot, 'scripts/android/verify-android-launch.mjs'),
+  args.checked(process.execPath, [path.join(args.paths.buildRoot, 'scripts/android/verify-android-launch.mjs'),
     '--adb', args.paths.adb, '--serial', args.serial, '--app-id', APP_ID,
     '--component', `${APP_ID}/.MainActivity`, '--timeout-seconds', '30', '--stability-seconds', '3']);
   const activation = await runMacosA5SyncGroupMaintenance({
     action: 'activate-participation', buildIdentity, env: args.env,
-    evidenceRoot: path.join(args.paths.repoRoot, '.tmp/artifacts/a5-clear-app-data',
+    evidenceRoot: path.join(args.paths.artifactsRoot, 'a5-clear-app-data',
       buildIdentity, 'activate-participation'), execute: args.execute, installMain: false,
     paths: args.paths, serial: args.serial
   });
@@ -83,7 +80,7 @@ export async function runMacosA5ClearAppDataEntry(args) {
     || readiness.pairingCredentialsPresent !== false) {
     throw new Error('Fixed A5 did not establish an empty unpaired workspace after clear.');
   }
-  const evidenceRoot = path.join(args.paths.repoRoot, '.tmp/artifacts/a5-clear-app-data');
+  const evidenceRoot = path.join(args.paths.artifactsRoot, 'a5-clear-app-data');
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const evidencePath = path.join(evidenceRoot, `${buildIdentity}.json`);
   fs.writeFileSync(evidencePath, `${JSON.stringify({ completedAt: new Date().toISOString(),
@@ -95,7 +92,7 @@ export async function runMacosA5ClearAppDataEntry(args) {
 
 export async function runMacosA5WindowsJoinEntry(args) {
   const result = await args.execute(process.execPath, [
-    path.join(args.paths.repoRoot, 'scripts/android/macos-a5-windows-join-action.mjs')
+    path.join(args.paths.buildRoot, 'scripts/android/macos-a5-windows-join-action.mjs')
   ], { env: args.env, timeoutCode: 'windows_sync_group_timeout', timeoutMs: 25 * 60_000 });
   if (result.code !== 0) throw Object.assign(new Error('Windows Sync Group recovery failed'), { result });
   process.stdout.write(result.output);
@@ -111,7 +108,7 @@ export async function runMacosA5DesktopLeaveEntry(args) {
   ], { env: args.env, timeoutMs: 30_000 });
   try {
     const result = await args.execute(process.execPath, [
-      path.join(args.paths.repoRoot, 'scripts/macos/macos-sync-group-leave-action.mjs')
+      path.join(args.paths.buildRoot, 'scripts/macos/macos-sync-group-leave-action.mjs')
     ], { env: args.env, timeoutMs: 120_000 });
     if (result.code !== 0) throw Object.assign(new Error('macOS Sync Group Leave failed'), { result });
     process.stdout.write(result.output);
@@ -127,14 +124,17 @@ export async function runMacosA5PairSyncEntry(args) {
   const { resolveMacosA5PairSyncReadiness } = await import('./macos-a5-product-bootstrap.mjs');
   const readiness = resolveMacosA5PairSyncReadiness(args.paths);
   const { consumeCredentialsSignableHandoff } = await import('./macos-a5-credential-handoff.mjs');
-  const handoff = consumeCredentialsSignableHandoff({ readiness, repoRoot: args.paths.repoRoot });
+  const handoff = consumeCredentialsSignableHandoff({
+    artifactsRoot: args.paths.artifactsRoot, readiness,
+    sourceRepoRoot: args.paths.sourceRepoRoot
+  });
   args.build(); buildMacosA5Desktop(args.checked, args.paths);
   const buildIdentity = args.buildIdentity();
   const { runMacosA5PairSync } = await import('./macos-a5-pair-sync-action.mjs');
   const result = await runMacosA5PairSync({
     buildIdentity, credentialRepairRequired: readiness.credentialRepairRequired,
     desktopAuthorizationFingerprint: handoff.peerFingerprint, env: args.env,
-    evidenceRoot: path.join(args.paths.repoRoot, '.tmp/artifacts/a5-pair-sync', buildIdentity),
+    evidenceRoot: path.join(args.paths.artifactsRoot, 'a5-pair-sync', buildIdentity),
     execute: args.execute, existingPairing: true, hostName: readiness.hostName,
     pairedAuthorizationFingerprint: readiness.localMemberAuthorizationFingerprint,
     paths: args.paths,
@@ -156,9 +156,9 @@ export async function runMacosA5ExistingSyncEntry(args) {
   }
   args.build(); buildMacosA5Desktop(args.checked, args.paths);
   const buildIdentity = args.buildIdentity();
-  const evidenceRoot = path.join(args.paths.repoRoot, '.tmp/artifacts/a5-existing-sync', buildIdentity);
+  const evidenceRoot = path.join(args.paths.artifactsRoot, 'a5-existing-sync', buildIdentity);
   await args.protectData('backup', path.join(evidenceRoot, 'baseline.json'),
-    path.join(args.paths.repoRoot, '.lab/internal/android-device-backups', buildIdentity));
+    path.join(args.paths.deviceBackupRoot, buildIdentity));
   const { runMacosA5PairSync } = await import('./macos-a5-pair-sync-action.mjs');
   const result = await runMacosA5PairSync({
     buildIdentity, credentialRepairRequired: false,
@@ -190,7 +190,7 @@ export async function runMacosA5SyncGroupRejoinEntry(args) {
     : assertT132ProtectedBaseline(inspected);
   args.build();
   const buildIdentity = args.buildIdentity();
-  const evidenceRoot = path.join(args.paths.repoRoot, '.tmp/artifacts/a5-sync-group-rejoin', buildIdentity);
+  const evidenceRoot = path.join(args.paths.artifactsRoot, 'a5-sync-group-rejoin', buildIdentity);
   const stopped = await args.execute(args.paths.adb, [
     '-s', args.serial, 'shell', 'am', 'force-stop', 'com.foliole.android'
   ], { env: args.env, timeoutMs: 30_000 });
@@ -198,7 +198,7 @@ export async function runMacosA5SyncGroupRejoinEntry(args) {
     result: stopped
   });
   await args.protectData('backup', path.join(evidenceRoot, 'baseline.json'),
-    path.join(args.paths.repoRoot, '.lab/internal/android-device-backups', buildIdentity));
+    path.join(args.paths.deviceBackupRoot, buildIdentity));
   const { runMacosA5SyncGroupRejoinJourney } = await import(
     './macos-a5-sync-group-rejoin-action.mjs'
   );
@@ -219,7 +219,7 @@ export async function recoverMacosA5SyncGroupRejoinEntry(args) {
   );
   const result = await recoverMacosA5DepartedCheckpoint({ buildIdentity,
     env: macosA5ParallelDesktopEnv(args.env),
-    evidenceRoot: path.join(args.paths.repoRoot, '.tmp/artifacts/a5-sync-group-rejoin-recovery', buildIdentity),
+    evidenceRoot: path.join(args.paths.artifactsRoot, 'a5-sync-group-rejoin-recovery', buildIdentity),
     execute: args.execute, paths: args.paths, serial: args.serial });
   console.log(`[macos-a5-dev] sync-group-rejoin recovery=${result.manifestPath}`);
 }

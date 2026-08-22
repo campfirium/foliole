@@ -59,7 +59,7 @@ export async function runMacosA5SyncGroupMaintenance({
     'pause-participation': 'pausesSyncParticipationThroughProduct',
     'resume-participation': 'resumesSyncParticipationThroughProduct' };
   const method = methods[action];
-  const testApk = path.join(paths.repoRoot, TEST_APK);
+  const testApk = path.join(paths.buildRoot, TEST_APK);
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const options = { env, timeoutCode: 'sync_group_maintenance_timeout', timeoutMs: 3 * 60_000 };
   const hostPort = pairSyncHostPort(env);

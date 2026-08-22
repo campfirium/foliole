@@ -3,7 +3,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { MACOS_DAILY_LIBRARY_HOME } from '../macos/macos-electron-dev-paths.mjs';
 import {
   DEPARTED_PRESERVED_HISTORY
 } from './macos-a5-departed-credential-state.mjs';
@@ -78,14 +77,14 @@ export async function runMacosA5PairCredentialsEntry(args, dependencies = {}) {
   const readReceipt = dependencies.readReceipt ?? readCredentialReceipt;
   const produceHandoff = dependencies.produceHandoff ?? produceCredentialsSignableHandoff;
   const inspectDesktopDeparture = dependencies.inspectDesktopDeparture
-    ?? ((departed) => inspectDesktopDepartureBoundary(MACOS_DAILY_LIBRARY_HOME, departed));
+    ?? ((departed) => inspectDesktopDepartureBoundary(args.paths.desktopDevLibrary, departed));
   args.assertFixed();
   const readiness = resolveReadiness(args.paths);
   args.build();
   buildDesktop(args.checked, args.paths);
   const buildIdentity = args.buildIdentity();
   const evidenceRoot = path.join(
-    args.paths.repoRoot, '.tmp/artifacts/a5-pair-credentials', buildIdentity
+    args.paths.artifactsRoot, 'a5-pair-credentials', buildIdentity
   );
   const { pairReadiness, pairRequestIdentity, protectedSyncGroup }
     = await prepareFreshCredentialJoin(readiness, {
@@ -111,8 +110,8 @@ export async function runMacosA5PairCredentialsEntry(args, dependencies = {}) {
   });
   if (pairRequestIdentity) {
     assertFreshCredentialReceipt(readReceipt(evidenceRoot));
-    produceHandoff({ evidenceRoot, readiness: resolveReadiness(args.paths),
-      repoRoot: args.paths.repoRoot });
+    produceHandoff({ artifactsRoot: args.paths.artifactsRoot, evidenceRoot,
+      readiness: resolveReadiness(args.paths), sourceRepoRoot: args.paths.sourceRepoRoot });
   }
   process.stdout.write(result.output);
   console.log(`[macos-a5-dev] pair-credentials evidence=${result.pairSyncRecovery.manifestPath}`);

@@ -17,8 +17,8 @@ const TABLES = [
 export async function runMacosA5DeviceProfileEntry(args) {
   args.assertFixed();
   const runId = args.buildIdentity();
-  const evidenceRoot = path.join(args.paths.repoRoot, '.tmp/artifacts/a5-device-profile', runId);
-  const snapshotRoot = path.join(args.paths.repoRoot, '.lab/internal/android-device-backups', runId);
+  const evidenceRoot = path.join(args.paths.artifactsRoot, 'a5-device-profile', runId);
+  const snapshotRoot = path.join(args.paths.deviceBackupRoot, runId);
   const baselineManifest = path.join(evidenceRoot, 'baseline.json');
   fs.mkdirSync(evidenceRoot, { recursive: true });
   args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', APP_ID]);
@@ -67,10 +67,10 @@ async function launchAndSnapshot(args) {
   args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', APP_ID]);
   args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'start', '-n', COMPONENT]);
   args.checked(process.execPath, [
-    path.join(args.paths.repoRoot, 'scripts/android/verify-android-launch.mjs'),
+    path.join(args.paths.buildRoot, 'scripts/android/verify-android-launch.mjs'),
     '--adb', args.paths.adb, '--serial', args.serial, '--app-id', APP_ID,
     '--component', COMPONENT, '--timeout-seconds', '30', '--stability-seconds', '3'
-  ], { cwd: args.paths.repoRoot });
+  ], { cwd: args.paths.buildRoot });
   args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', APP_ID]);
   return collectAndroidDeviceSnapshot({
     adb: args.paths.adb, appId: APP_ID, databaseInspector: inspectPairSyncRecoveryWorkspace,

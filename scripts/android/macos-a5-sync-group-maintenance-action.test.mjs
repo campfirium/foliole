@@ -33,7 +33,7 @@ it('uses the fixed product instrumentation method and records its receipt', asyn
   });
   const result = await runMacosA5SyncGroupMaintenance({
     action: 'leave-sync-group', buildIdentity: 'build-1', env: {}, evidenceRoot: root, execute,
-    paths: { adb: '/fixed/adb', apk: '/fixed/app.apk', repoRoot: process.cwd() }, serial: '87a33a4b'
+    paths: { adb: '/fixed/adb', apk: '/fixed/app.apk', buildRoot: process.cwd() }, serial: '87a33a4b'
   });
   expect(JSON.parse(fs.readFileSync(result.manifestPath, 'utf8'))).toMatchObject({
     action: 'leave-sync-group', receipt: { departurePersisted: true }, serial: '87a33a4b'
@@ -65,7 +65,7 @@ it('maps the fixed device port to an explicit isolated macOS listener', async ()
   await runMacosA5SyncGroupMaintenance({
     action: 'leave-sync-group', buildIdentity: 'isolated',
     env: { FOLIOLE_COMPANION_SYNC_PORT: '38642' }, evidenceRoot: root, execute,
-    paths: { adb: '/fixed/adb', apk: '/fixed/app.apk', repoRoot: process.cwd() }, serial: '87a33a4b'
+    paths: { adb: '/fixed/adb', apk: '/fixed/app.apk', buildRoot: process.cwd() }, serial: '87a33a4b'
   });
   expect(execute.mock.calls.some(([, args]) => args.join(' ') ===
     '-s 87a33a4b reverse tcp:38641 tcp:38642')).toBe(true);
@@ -143,7 +143,7 @@ it('classifies an abnormal instrumentation exit as an Android product failure', 
   } : { code: 0, output: 'Success\n', stdout: 'Success\n' });
   await expect(runMacosA5SyncGroupMaintenance({
     action: 'leave-sync-group', buildIdentity: 'build-crashed', env: {}, evidenceRoot: root, execute,
-    paths: { adb: '/fixed/adb', apk: '/fixed/app.apk', repoRoot: process.cwd() }, serial: '87a33a4b'
+    paths: { adb: '/fixed/adb', apk: '/fixed/app.apk', buildRoot: process.cwd() }, serial: '87a33a4b'
   })).rejects.toMatchObject({
     failureOwner: 'product', host: 'android-b', missingFact: 'product_instrumentation_failed'
   });
@@ -159,7 +159,7 @@ it('preserves a lost Android window focus as an environment failure', async () =
   } : { code: 0, output: 'Success\n', stdout: 'Success\n' });
   await expect(runMacosA5SyncGroupMaintenance({
     action: 'clear-app-data', buildIdentity: 'build-2', env: {}, evidenceRoot: root, execute,
-    paths: { adb: '/fixed/adb', apk: '/fixed/app.apk', repoRoot: process.cwd() }, serial: '87a33a4b'
+    paths: { adb: '/fixed/adb', apk: '/fixed/app.apk', buildRoot: process.cwd() }, serial: '87a33a4b'
   })).rejects.toMatchObject({
     failureOwner: 'environment', host: 'android-b',
     lastSuccessfulAction: 'android_activity_started',

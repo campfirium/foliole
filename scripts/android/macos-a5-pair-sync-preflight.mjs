@@ -53,16 +53,16 @@ export function assertMacosA5ProductBootstrap(before, after) {
 function inspectMacosA5SyncState(paths, run) {
   const common = ['--adb', paths.adb, '--serial', A5_SERIAL, '--app-id', APP_ID];
   const pairing = evidence(process.execPath, [
-    path.join(paths.repoRoot, 'scripts/android/android-pair-sync-recovery-readiness-runner.mjs'),
+    path.join(paths.buildRoot, 'scripts/android/android-pair-sync-recovery-readiness-runner.mjs'),
     ...common
-  ], { cwd: paths.repoRoot }, run);
+  ], { cwd: paths.buildRoot }, run);
   const pairState = parseEvidence(
     pairing.stdout, '[android-data] pair-sync-recovery-readiness='
   );
   const workspace = evidence(process.execPath, [
-    path.join(paths.repoRoot, 'scripts/android/android-capture-annotation-readiness-runner.mjs'),
+    path.join(paths.buildRoot, 'scripts/android/android-capture-annotation-readiness-runner.mjs'),
     ...common
-  ], { cwd: paths.repoRoot }, run);
+  ], { cwd: paths.buildRoot }, run);
   const workspaceState = parseEvidence(
     workspace.stdout, '[android-data] capture-annotation-readiness='
   );

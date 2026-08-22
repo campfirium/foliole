@@ -129,8 +129,8 @@ export async function runA5CaptureAnnotation({
   const snapshotManifest = path.join(evidenceRoot, 'capture-annotation-database-snapshot.json');
   const snapshotRoot = path.join(evidenceRoot, 'capture-annotation-database');
   const builtApks = {
-    main: builtApkIdentity(fsApi, paths.repoRoot, MAIN_APK),
-    test: builtApkIdentity(fsApi, paths.repoRoot, TEST_APK)
+    main: builtApkIdentity(fsApi, paths.buildRoot, MAIN_APK),
+    test: builtApkIdentity(fsApi, paths.buildRoot, TEST_APK)
   };
   const output = [];
   let testInstalled = false;

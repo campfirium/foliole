@@ -35,13 +35,13 @@ const workspace = {
 
 it('accepts existing Sync Group authority without legacy pairing credentials', () => {
   expect(runMacosA5ExistingSyncPreflight(
-    { adb: '/adb', repoRoot: '/repo' }, runFor(groupState, workspace)
+    { adb: '/adb', buildRoot: '/repo' }, runFor(groupState, workspace)
   )).toEqual(groupState);
 });
 
 it('rejects ambiguous Sync Group credentials even when legacy pairing exists', () => {
   expect(() => runMacosA5ExistingSyncPreflight(
-    { adb: '/adb', repoRoot: '/repo' }, runFor({
+    { adb: '/adb', buildRoot: '/repo' }, runFor({
       ...groupState, pairingCredentialsPresent: true, syncGroupPeerConflict: true
     }, workspace)
   )).toThrow('authorized existing Sync Group state');
@@ -52,13 +52,13 @@ it('reads protected Sync Group facts without treating a missing secure key as au
     ...groupState, syncGroupCredentialsPresent: false, syncGroupRemotePeerFingerprint: null
   };
   expect(inspectMacosA5SyncGroupFacts(
-    { adb: '/adb', repoRoot: '/repo' }, runFor(recovery, workspace)
+    { adb: '/adb', buildRoot: '/repo' }, runFor(recovery, workspace)
   )).toEqual(recovery);
 });
 
 it('rejects facts when the protected workspace no longer matches', () => {
   expect(() => inspectMacosA5SyncGroupFacts(
-    { adb: '/adb', repoRoot: '/repo' }, runFor(groupState, {
+    { adb: '/adb', buildRoot: '/repo' }, runFor(groupState, {
       ...workspace, counts: { nodes: 1394 }
     })
   )).toThrow('protected Sync Group workspace');

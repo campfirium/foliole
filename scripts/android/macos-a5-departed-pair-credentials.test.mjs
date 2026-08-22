@@ -25,7 +25,7 @@ it('classifies the retained endpoint Leave fixture before mutation', () => {
     .mockReturnValueOnce(result(
       '[android-data] capture-annotation-readiness=', departedWorkspaceFixture, 77
     ));
-  expect(runMacosA5PairSyncPreflight({ adb: '/adb', repoRoot: '/repo' }, run))
+  expect(runMacosA5PairSyncPreflight({ adb: '/adb', buildRoot: '/repo' }, run))
     .toMatchObject({ departedCredentialState: 'departed_preserved_history',
       existingPairing: false, joinedEmptyReauthorization: false });
 });
@@ -42,7 +42,9 @@ it('consumes departed-preserved-history through the existing fresh join only', a
     .mockReturnValueOnce({ ...credentialsSignableReadinessFixture });
   const args = {
     assertFixed: vi.fn(), build: vi.fn(), buildIdentity: () => 'build-departed',
-    checked: vi.fn(), env: {}, execute: vi.fn(), paths: { repoRoot: '/repo/foliole' },
+    checked: vi.fn(), env: {}, execute: vi.fn(), paths: {
+      artifactsRoot: '/evidence', sourceRepoRoot: '/repo/foliole'
+    },
     serial: '87a33a4b'
   };
   await runMacosA5PairCredentialsEntry(args, {
@@ -58,10 +60,11 @@ it('consumes departed-preserved-history through the existing fresh join only', a
   expect(leaveJoinedEmpty).not.toHaveBeenCalled();
   expect(collectProtectedReadiness).toHaveBeenCalledOnce();
   expect(produceHandoff).toHaveBeenCalledWith(expect.objectContaining({
-    readiness: credentialsSignableReadinessFixture, repoRoot: '/repo/foliole'
+    artifactsRoot: '/evidence', readiness: credentialsSignableReadinessFixture,
+    sourceRepoRoot: '/repo/foliole'
   }));
   expect(runPairSync).toHaveBeenCalledWith(expect.objectContaining({
-    evidenceRoot: path.join('/repo/foliole', '.tmp/artifacts/a5-pair-credentials/build-departed'),
+    evidenceRoot: path.join('/evidence', 'a5-pair-credentials/build-departed'),
     existingPairing: false,
     hostName: 'A5', pairedAuthorizationFingerprint: null, pairRequestIdentity: 'A5',
     protectedSyncGroup: { groupId: 'group-1', timelineId: 'timeline-1' },

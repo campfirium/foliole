@@ -99,7 +99,7 @@ it('forwards only Host and authorization routing to the shared recovery action',
     desktopAuthorizationFingerprint: '82cc2dc5c98135c8', env: {},
     evidenceRoot: '.tmp/evidence', execute: vi.fn(), existingPairing: false,
     hostName: 'A5', pairedAuthorizationFingerprint: null, pairRequestIdentity: 'A5',
-    paths: { adb: '/adb', repoRoot: '/repo' }, runPairSyncRecovery, serial: 'fixed-a5'
+    paths: { adb: '/adb', buildRoot: '/repo' }, runPairSyncRecovery, serial: 'fixed-a5'
   });
 
   expect(result).toMatchObject({

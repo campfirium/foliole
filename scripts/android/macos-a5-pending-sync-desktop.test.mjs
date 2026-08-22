@@ -33,7 +33,7 @@ it('requires the locked desktop library to expose the protected A5 group identit
   const action = await runMacosA5PairSync({
     buildIdentity: 'pending-sync', desktopAuthorizationFingerprint: 'a8ef578b118115cf',
     env: {}, evidenceRoot: '.tmp/artifacts/test-a5-pending-sync', execute: vi.fn(),
-    existingPairing: true, hostName: 'A5', paths: { adb: '/adb', repoRoot: '/repo' },
+    existingPairing: true, hostName: 'A5', paths: { adb: '/adb', buildRoot: '/repo' },
     protectedSyncGroup: { groupId: 'group-2', timelineId: 'timeline-1' },
     runPairSyncRecovery: vi.fn(async (options) => options), serial: 'fixed-a5'
   });

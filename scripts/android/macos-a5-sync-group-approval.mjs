@@ -73,7 +73,7 @@ export async function startMacosA5SyncGroupApprovalProvider({
   requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start',
     '-W', '-n', `${APP_ID}/.MainActivity`], { env, timeoutMs: 60_000 }), 'provider-ready');
   requireSuccess(await execute(process.execPath, [
-    path.join(paths.repoRoot, 'scripts/android/verify-android-launch.mjs'),
+    path.join(paths.buildRoot, 'scripts/android/verify-android-launch.mjs'),
     '--adb', paths.adb, '--serial', A5_SERIAL, '--app-id', APP_ID,
     '--component', `${APP_ID}/.MainActivity`, '--timeout-seconds', '30', '--stability-seconds', '3'
   ], { env, timeoutMs: 60_000 }), 'provider-stability');
@@ -96,7 +96,7 @@ export async function runMacosA5SyncGroupApproval({ execute, onProviderStopped =
   assertFixed(paths);
   prepare(paths);
   const reuseInstalledMain = await mainMatches({ execute, paths, env });
-  const evidenceRoot = path.join(repoRoot, '.tmp/artifacts/a5-sync-group-approval');
+  const evidenceRoot = path.join(paths.artifactsRoot, 'a5-sync-group-approval');
   fs.mkdirSync(evidenceRoot, { recursive: true });
   requireSuccess(await execute(paths.adb, [
     '-s', A5_SERIAL, 'shell', 'am', 'force-stop', APP_ID
@@ -108,7 +108,9 @@ export async function runMacosA5SyncGroupApproval({ execute, onProviderStopped =
         env, timeoutMs: 120_000
       }), 'main-install');
     }
-    const testApk = path.join(repoRoot, 'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk');
+    const testApk = path.join(
+      paths.buildRoot, 'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk'
+    );
     requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'install', '-r', '-t', testApk], {
       env, timeoutMs: 120_000
     }), 'test-install');

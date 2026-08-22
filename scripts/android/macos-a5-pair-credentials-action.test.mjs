@@ -27,7 +27,10 @@ it('stops fresh A5 pairing after native credentials can sign the first request',
   });
   const args = {
     assertFixed: vi.fn(), build: vi.fn(), buildIdentity: () => 'build-1', checked: vi.fn(),
-    env: {}, execute: vi.fn(), paths: { repoRoot: '/repo/foliole' }, serial: '87a33a4b'
+    env: {}, execute: vi.fn(), paths: {
+      artifactsRoot: '/evidence', desktopDevLibrary: '/library',
+      sourceRepoRoot: '/repo/foliole'
+    }, serial: '87a33a4b'
   };
   await runMacosA5PairCredentialsEntry(args, {
     buildDesktop: vi.fn(),
@@ -39,7 +42,7 @@ it('stops fresh A5 pairing after native credentials can sign the first request',
   });
 
   expect(runPairSync).toHaveBeenCalledWith(expect.objectContaining({
-    evidenceRoot: path.join('/repo/foliole', '.tmp/artifacts/a5-pair-credentials/build-1'),
+    evidenceRoot: path.join('/evidence', 'a5-pair-credentials/build-1'),
     instrumentationModeArgs: macosA5CredentialsOnlyModeArgs,
     desktopAuthorizationFingerprint: 'peer-1', recoveryEvidenceGoal: 'credentials-signable'
   }));
@@ -85,7 +88,10 @@ it('routes exact joined-empty credentials through product Leave and a fresh boun
   }));
   const args = {
     assertFixed: vi.fn(), build: vi.fn(), buildIdentity: () => 'build-2', checked: vi.fn(),
-    env: {}, execute: vi.fn(), paths: { repoRoot: '/repo/foliole' }, serial: '87a33a4b'
+    env: {}, execute: vi.fn(), paths: {
+      artifactsRoot: '/evidence', desktopDevLibrary: '/library',
+      sourceRepoRoot: '/repo/foliole'
+    }, serial: '87a33a4b'
   };
   await runMacosA5PairCredentialsEntry(args, {
     buildDesktop: vi.fn(), collectProtectedReadiness,
@@ -99,7 +105,7 @@ it('routes exact joined-empty credentials through product Leave and a fresh boun
 
   expect(leaveJoinedEmpty).toHaveBeenCalledWith(expect.objectContaining({
     baseline: expect.objectContaining({ groupId: 'group-1', protectedContentDigest: digest }),
-    evidenceRoot: path.join('/repo/foliole', '.tmp/artifacts/a5-pair-credentials/build-2/leave')
+    evidenceRoot: path.join('/evidence', 'a5-pair-credentials/build-2/leave')
   }));
   expect(runPairSync).toHaveBeenCalledWith(expect.objectContaining({
     credentialRepairRequired: false, existingPairing: false, hostName: 'A5',
@@ -201,7 +207,9 @@ it('proves the desktop roster and group identity around formal product Leave', a
   const maintenance = vi.fn().mockResolvedValue({ manifestPath: '/tmp/leave.json' });
   const writeBoundaryEvidence = vi.fn();
   await leaveJoinedEmptyCredentialSession({ baseline, buildIdentity: 'build-3', env: {},
-    evidenceRoot: '/tmp/evidence', execute: vi.fn(), paths: { repoRoot: '/repo' },
+    evidenceRoot: '/tmp/evidence', execute: vi.fn(), paths: {
+      buildRoot: '/repo', desktopDevLibrary: '/library'
+    },
     serial: '87a33a4b' }, {
     maintenance, openSession: async () => session, wait: vi.fn(), writeBoundaryEvidence
   });
@@ -224,7 +232,9 @@ it('proves the desktop roster and group identity around formal product Leave', a
   delete hostOnlyOverview.sync_group.members[0].authorization_id;
   session.enable.mockResolvedValueOnce(hostOnlyOverview);
   await expect(leaveJoinedEmptyCredentialSession({ baseline, buildIdentity: 'build-3', env: {},
-    evidenceRoot: '/tmp/evidence', execute: vi.fn(), paths: { repoRoot: '/repo' },
+    evidenceRoot: '/tmp/evidence', execute: vi.fn(), paths: {
+      buildRoot: '/repo', desktopDevLibrary: '/library'
+    },
     serial: '87a33a4b' }, {
     maintenance, openSession: async () => session, wait: vi.fn(), writeBoundaryEvidence
   }))

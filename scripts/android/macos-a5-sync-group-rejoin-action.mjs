@@ -4,7 +4,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
-import { MACOS_DAILY_LIBRARY_HOME } from '../macos/macos-electron-dev-paths.mjs';
 import { parsePairSyncRecoveryReadiness } from '../windows/windows-a5-pair-sync-recovery-contract.mjs';
 import { collectAndroidDeviceSnapshot } from './android-device-snapshot.mjs';
 import { inspectPairSyncRecoveryWorkspace } from './android-pair-sync-recovery-readiness.mjs';
@@ -33,7 +32,7 @@ const CREDENTIALS_ONLY_DISCOVERY_TARGET = () => [
 
 async function readiness(execute, paths, env, serial) {
   const result = await execute(process.execPath, [
-    path.join(paths.repoRoot, 'scripts/android/android-pair-sync-recovery-readiness-runner.mjs'),
+    path.join(paths.buildRoot, 'scripts/android/android-pair-sync-recovery-readiness-runner.mjs'),
     '--adb', paths.adb, '--serial', serial, '--app-id', APP_ID
   ], { env, timeoutMs: 60_000 });
   if (![0, 77].includes(result.code)) throw Object.assign(new Error('A5 readiness failed'), { result });
@@ -73,8 +72,9 @@ async function androidSnapshot(paths, serial) {
 }
 
 async function withDesktopSession(paths, env, action) {
-  const session = await openMacosPairSyncDesktopSession({ env, libraryHome: MACOS_DAILY_LIBRARY_HOME,
-    repoRoot: paths.repoRoot });
+  const session = await openMacosPairSyncDesktopSession({
+    env, libraryHome: paths.desktopDevLibrary, repoRoot: paths.buildRoot
+  });
   try { return await action(session); }
   finally { await session.close().catch(() => undefined); }
 }
@@ -102,8 +102,8 @@ export async function runMacosA5SyncGroupRejoinJourney({
     throw new Error('Credential repair is outside the authorization cutover contract.');
   }
   assertT132ProtectedBaseline(baseline);
-  const legacyTransition = assertLegacyTransitionRuntime(paths.repoRoot);
-  const candidate = captureSyncGroupCandidate(paths.repoRoot);
+  const legacyTransition = assertLegacyTransitionRuntime(paths);
+  const candidate = captureSyncGroupCandidate(paths.sourceRepoRoot);
   fs.writeFileSync(path.join(evidenceRoot, 't132-3-candidate.json'), `${JSON.stringify({
     baseline: { activeMemberCount: baseline.activeSyncGroupMemberCount,
       localMemberAuthorizationFingerprint: baseline.localMemberAuthorizationFingerprint,
@@ -127,7 +127,7 @@ export async function runMacosA5SyncGroupRejoinJourney({
     assertT132MacBaseline(
       await session.enable(), session, baseline.localMemberAuthorizationFingerprint
     ));
-  assertFrozenSyncGroupCandidate(candidate, paths.repoRoot);
+  assertFrozenSyncGroupCandidate(candidate, paths.sourceRepoRoot);
   assertT132ProtectedBaseline(await readiness(execute, paths, env, serial));
   const { oldAuthorizationId } = await withDesktopSession(paths, env, async (session) => {
     const before = await session.enable();
@@ -142,12 +142,12 @@ export async function runMacosA5SyncGroupRejoinJourney({
     await waitForMacDeparture(session);
     return recoveredMember;
   });
-  assertFrozenSyncGroupCandidate(candidate, paths.repoRoot);
+  assertFrozenSyncGroupCandidate(candidate, paths.sourceRepoRoot);
   await restartA5(execute, paths, env, serial);
   await restartA5(execute, paths, env, serial, true);
   const afterLeave = await readiness(execute, paths, env, serial);
   assertT132UnboundAfterRestart(afterLeave, baseline);
-  assertFrozenSyncGroupCandidate(candidate, paths.repoRoot);
+  assertFrozenSyncGroupCandidate(candidate, paths.sourceRepoRoot);
   const pair = await runMacosA5PairSync({ buildIdentity, credentialRepairRequired: false,
     desktopControl: async () => ({ code: 0, output: '' }),
     desktopAuthorizationFingerprint: T132_MAC_AUTHORIZATION,
@@ -163,7 +163,7 @@ export async function runMacosA5SyncGroupRejoinJourney({
     evidenceRoot, 'rejoin', 'pair-sync-recovery-receipt.json'
   ), 'utf8'));
   if (pairReceipt.pairingPath !== 'new') throw new Error('A5 rejoin did not use a fresh product join.');
-  assertFrozenSyncGroupCandidate(candidate, paths.repoRoot);
+  assertFrozenSyncGroupCandidate(candidate, paths.sourceRepoRoot);
   const rejoinedReadiness = await collectStoppedReadiness({
     inspect: () => readiness(execute, paths, env, serial),
     start: () => restartA5(execute, paths, env, serial),
@@ -174,7 +174,7 @@ export async function runMacosA5SyncGroupRejoinJourney({
   const continuation = await proveMacosA5ExistingSyncContinuation({ buildIdentity, env,
     evidenceRoot: path.join(evidenceRoot, 'bidirectional'), execute, paths,
     readiness: rejoinedReadiness, serial });
-  assertFrozenSyncGroupCandidate(candidate, paths.repoRoot);
+  assertFrozenSyncGroupCandidate(candidate, paths.sourceRepoRoot);
   await restartA5(execute, paths, env, serial);
   const foregroundProvider = assertT132A5ProviderAvailability(
     await observeT132A5Provider(), true
@@ -183,7 +183,7 @@ export async function runMacosA5SyncGroupRejoinJourney({
   const stoppedProvider = assertT132A5ProviderAvailability(
     await observeT132A5Provider(), false
   );
-  assertFrozenSyncGroupCandidate(candidate, paths.repoRoot);
+  assertFrozenSyncGroupCandidate(candidate, paths.sourceRepoRoot);
   const manifestPath = path.join(evidenceRoot, 't132-3-rejoin-manifest.json');
   fs.writeFileSync(manifestPath, `${JSON.stringify({ buildIdentity, candidate,
     completedAt: new Date().toISOString(), continuation: continuation.manifestPath,

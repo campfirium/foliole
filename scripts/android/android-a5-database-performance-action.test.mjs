@@ -28,7 +28,7 @@ describe('fixed A5 database performance action', () => {
     };
     const result = await runA5DatabasePerformance({
       env: {}, evidenceRoot, execute,
-      paths: { adb: '/fixed/adb', apk: '/repo/main.apk', repoRoot: '/repo' },
+      paths: { adb: '/fixed/adb', apk: '/repo/main.apk', buildRoot: '/repo' },
       serial: 'fixed-a5'
     });
     const evidence = JSON.parse(fs.readFileSync(result.evidencePath, 'utf8'));

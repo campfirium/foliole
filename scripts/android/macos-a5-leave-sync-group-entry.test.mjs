@@ -14,7 +14,10 @@ function entryArgs(events) {
     buildIdentity: () => 'build-1', checked: (_command, args) => {
       if (args.includes('install')) events.push('main-install');
     },
-    env: {}, execute: vi.fn(), paths: { adb: '/adb', apk: '/app.apk', repoRoot: '/repo' },
+    env: {}, execute: vi.fn(), paths: {
+      adb: '/adb', apk: '/app.apk', artifactsRoot: '/evidence',
+      buildRoot: '/repo', desktopDevLibrary: '/library'
+    },
     serial: '87a33a4b'
   };
 }
@@ -28,7 +31,7 @@ it('opens the protected Desktop peer before the fixed product Leave', async () =
     leaveJoinedEmpty: async (args) => {
       events.push('desktop-session-leave');
       expect(args).toMatchObject({ baseline: { groupId: 'group-1' }, buildIdentity: 'build-1',
-        evidenceRoot: path.join('/repo', '.tmp/artifacts/a5-sync-group-maintenance/build-1') });
+        evidenceRoot: path.join('/evidence', 'a5-sync-group-maintenance/build-1') });
       return { manifestPath: '/evidence/leave.json' };
     },
     resolveReadiness: () => { events.push('readiness'); return { joinedEmptyReauthorization: true }; }
@@ -67,7 +70,7 @@ it('closes the protected Desktop session when product Leave fails', async () => 
     remotePeerAuthorizationFingerprint: authorizationFingerprint('desktop-auth'),
     timelineId: 'timeline-1'
   }, buildIdentity: 'build-1', env: {}, evidenceRoot: '/evidence', execute: vi.fn(),
-  paths: { repoRoot: '/repo' }, serial: '87a33a4b' }, {
+  paths: { buildRoot: '/repo', desktopDevLibrary: '/library' }, serial: '87a33a4b' }, {
     maintenance: async () => { throw new Error('leave failed'); }, openSession: async () => session,
     writeBoundaryEvidence: vi.fn()
   })).rejects.toThrow('leave failed');

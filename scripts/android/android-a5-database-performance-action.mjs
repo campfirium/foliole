@@ -15,7 +15,9 @@ const BATCH_DATA_PLANE_TEST_CLASS = `${APP_ID}.FolioleCompanionBatchDataPlaneTes
 
 export async function runA5DatabasePerformance({ env, evidenceRoot, execute, paths, serial }) {
   fs.mkdirSync(evidenceRoot, { recursive: true });
-  const testApk = path.join(paths.repoRoot, 'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk');
+  const testApk = path.join(
+    paths.buildRoot, 'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk'
+  );
   const options = { env, timeoutCode: 'database_performance_timeout', timeoutMs: 15 * 60_000 };
   const output = [];
   let testInstalled = false;
