@@ -134,7 +134,14 @@ test('keeps watched and Readwise source connections explicit in desktop settings
   await switchToThisHost.click();
   await expect(switchToThisHost).toHaveCount(0);
   await expect(readwiseDialog.getByText(/^(Readwise Reader Import|Readwise Reader 导入)$/)).toBeVisible();
-  await expect(readwiseDialog.getByRole('button', {
+  const rootFolder = readwiseDialog.getByRole('button', {
     name: /^(Readwise root folder|Readwise 根文件夹)$/
-  })).toHaveAttribute('title', 'D:\\Readwise Reader');
+  });
+  await rootFolder.hover();
+  await expect(desktopWindow.getByRole('tooltip')).toHaveText('D:\\Readwise Reader');
+  const restoredScreenshot = path.join(ARTIFACT_DIR, 't135-readwise-local-settings-restored.png');
+  await readwiseDialog.screenshot({ path: restoredScreenshot });
+  await testInfo.attach('t135-readwise-local-settings-restored', {
+    contentType: 'image/png', path: restoredScreenshot
+  });
 });
