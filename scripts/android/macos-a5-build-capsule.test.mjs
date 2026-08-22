@@ -43,11 +43,12 @@ function context(root, candidate, runId = '66666666-6666-6666-6666-666666666666'
     repoRoot: root, requiresHiddenDesktopRuntime, runId });
 }
 
-function runner(events, failNpm = false, materializeElectron = true) {
+function runner(events, failNpm = false, materializeElectron = true, failScript = null) {
   return (command, args, options) => {
     events.push({ args, command, cwd: options.cwd });
     if (command === 'npm') {
-      if (failNpm) throw new Error('npm ci failed');
+      if (failNpm || args.includes(failScript)) throw new Error(`${failScript ?? 'npm ci'} failed`);
+      if (args[0] !== 'ci') return;
       fs.mkdirSync(path.join(options.cwd, 'node_modules'));
       fs.mkdirSync(path.join(options.cwd, 'node_modules/electron'));
       fs.writeFileSync(path.join(options.cwd, 'node_modules/electron/install.js'), 'installer\n');
@@ -77,11 +78,30 @@ it('materializes the locked Electron runtime only for hidden desktop actions', (
     '12121212-1212-1212-1212-121212121212', true), {
     onStage: (stage) => stages.push(stage), run: runner(events)
   });
-  expect(events.map(({ command }) => command)).toEqual(['git', 'tar', 'npm', process.execPath]);
-  expect(stages).toEqual(['archive', 'extract', 'dependencies', 'electron-runtime']);
-  expect(events.at(-1).args[0]).toBe(path.join(capsule.buildRoot,
+  expect(events.map(({ command }) => command)).toEqual([
+    'git', 'tar', 'npm', process.execPath, 'npm', 'npm'
+  ]);
+  expect(stages).toEqual(['archive', 'extract', 'dependencies', 'electron-runtime',
+    'electron-sqlite-rebuild', 'electron-security-bookmarks-rebuild']);
+  expect(events.at(3).args[0]).toBe(path.join(capsule.buildRoot,
     'node_modules/electron/install.js'));
+  expect(events.slice(-2).map(({ args }) => args)).toEqual([
+    ['run', 'electron:rebuild:native'], ['run', 'macos:security-bookmarks:build']
+  ]);
   closeMacosA5BuildCapsule(capsule);
+});
+
+it('preserves the exact native-module rebuild failure stage', () => {
+  const root = fixture();
+  const failed = context(root, beginFormalA5Candidate(root),
+    '14141414-1414-1414-1414-141414141414', true);
+  expect(() => openMacosA5BuildCapsule(failed, {
+    run: runner([], false, true, 'electron:rebuild:native')
+  })).toThrow('electron:rebuild:native failed');
+  expect(JSON.parse(fs.readFileSync(path.join(failed.artifactsRoot, 'macos-a5-formal',
+    failed.runId, 'capsule-failure.json'), 'utf8'))).toMatchObject({
+    resultStatus: 'failed', stage: 'electron-sqlite-rebuild'
+  });
 });
 
 it('preserves an electron-runtime failure before any device mutation', () => {

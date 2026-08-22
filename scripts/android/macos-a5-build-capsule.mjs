@@ -22,6 +22,17 @@ function materializeHiddenElectronRuntime(context, fsApi, run) {
   }
 }
 
+function rebuildHiddenElectronModules(context, onStage, run) {
+  if (!context.requiresHiddenDesktopRuntime) return;
+  for (const [stage, script] of [
+    ['electron-sqlite-rebuild', 'electron:rebuild:native'],
+    ['electron-security-bookmarks-rebuild', 'macos:security-bookmarks:build']
+  ]) {
+    onStage(stage);
+    run('npm', ['run', script], { cwd: context.buildRoot });
+  }
+}
+
 function capsuleOwner(context) {
   return { acceptedRevision: context.acceptedRevision, action: context.action,
     pid: process.pid, runId: context.runId, schemaVersion: 1 };
@@ -86,6 +97,10 @@ export function openMacosA5BuildCapsule(context, {
       stage = 'electron-runtime';
       onStage(stage);
       materializeHiddenElectronRuntime(capsule, fsApi, run);
+      rebuildHiddenElectronModules(capsule, (nextStage) => {
+        stage = nextStage;
+        onStage(stage);
+      }, run);
     }
     return capsule;
   } catch (error) {
