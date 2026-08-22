@@ -7,6 +7,7 @@ import {
 } from './macos-a5-formal-candidate.mjs';
 
 const REVISION = 'a'.repeat(40);
+const TREE = 'b'.repeat(40);
 
 function gitResults(values) {
   let index = 0;
@@ -21,23 +22,20 @@ it('keeps ordinary workspace actions separate from formal acceptance', () => {
   expect(() => parseMacosA5Invocation(['deploy', 'extra'])).toThrow('Usage');
 });
 
-it('freezes one clean committed dev revision for formal acceptance', () => {
-  const expected = beginFormalA5Candidate('/repo', gitResults(['dev', REVISION, '']));
-  expect(expected).toMatchObject({ branch: 'dev', revision: REVISION, status: '' });
-  expect(finishFormalA5Candidate(
-    expected, '/repo', gitResults(['dev', REVISION, ''])
-  )).toBe(REVISION);
+it('freezes the committed dev revision and tree without inspecting the worktree', () => {
+  const expected = beginFormalA5Candidate('/repo', gitResults([REVISION, TREE]));
+  expect(expected).toEqual({ revision: REVISION, tree: TREE });
+  expect(finishFormalA5Candidate(expected)).toBe(REVISION);
 });
 
-it('rejects dirty, non-dev, or moving formal candidates', () => {
-  expect(() => beginFormalA5Candidate(
-    '/repo', gitResults(['dev', REVISION, ' M src/app.ts'])
-  )).toThrow('clean committed worktree');
-  expect(() => beginFormalA5Candidate(
-    '/repo', gitResults(['release', REVISION, ''])
-  )).toThrow('dev branch');
-  expect(() => finishFormalA5Candidate(
-    { branch: 'dev', revision: REVISION, status: '' },
-    '/repo', gitResults(['dev', 'b'.repeat(40), ''])
-  )).toThrow('revision changed');
+it('keeps the frozen candidate valid when dev advances after the boundary', () => {
+  const expected = beginFormalA5Candidate('/repo', gitResults([REVISION, TREE]));
+  expect(finishFormalA5Candidate(expected)).toBe(REVISION);
+});
+
+it('rejects incomplete Git object identities', () => {
+  expect(() => beginFormalA5Candidate('/repo', gitResults(['short', TREE])))
+    .toThrow('full Git revision');
+  expect(() => finishFormalA5Candidate({ revision: REVISION, tree: 'short' }))
+    .toThrow('full Git tree');
 });

@@ -2,15 +2,24 @@
 
 import { expect, it } from 'vitest';
 
-import { assertRegisteredMacosA5Action } from './macos-a5-action-registry.mjs';
+import {
+  assertFormalMacosA5Action, assertRegisteredMacosA5Action
+} from './macos-a5-action-registry.mjs';
 
 it('keeps build and status outside the fixed A5 mutation lease', () => {
   expect(assertRegisteredMacosA5Action('build')).toMatchObject({
-    deviceLeaseMode: null, mutatesFixedA5: false
+    deviceLeaseMode: null, formalSourceClass: 'frozen-build', mutatesFixedA5: false
   });
   expect(assertRegisteredMacosA5Action('status')).toMatchObject({
-    deviceLeaseMode: 'readonly-lifecycle', mutatesFixedA5: false
+    deviceLeaseMode: 'readonly-lifecycle', formalSourceClass: 'source-free-readonly',
+    mutatesFixedA5: false
   });
+});
+
+it('fails formal preflight for an action without a frozen or source-free contract', () => {
+  expect(() => assertFormalMacosA5Action(
+    assertRegisteredMacosA5Action('sync-group-stopped-status')
+  )).toThrow('unavailable');
 });
 
 it.each([
@@ -20,6 +29,8 @@ it.each([
   'sync-group-stopped-status'
 ])('requires the fixed A5 mutation lease for %s', (action) => {
   expect(assertRegisteredMacosA5Action(action)).toMatchObject({
-    deviceLeaseMode: 'mutation', mutatesFixedA5: true
+    deviceLeaseMode: 'mutation',
+    formalSourceClass: action === 'sync-group-stopped-status' ? 'ordinary-only' : 'frozen-build',
+    mutatesFixedA5: true
   });
 });

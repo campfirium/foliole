@@ -32,7 +32,8 @@ function resolveSourceRepoRoot(repoRoot, fsApi) {
 }
 
 export function createMacosA5ExecutionContext({
-  action, fsApi = fs, repoRoot, runId = randomUUID()
+  acceptedRevision = null, acceptedTree = null, action, formalSourceClass = null,
+  fsApi = fs, repoRoot, runId = randomUUID()
 }) {
   if (!RUN_ID_PATTERN.test(runId)) throw new Error('Invalid macOS A5 run identity.');
   const sourceRepoRoot = resolveSourceRepoRoot(repoRoot, fsApi);
@@ -41,6 +42,8 @@ export function createMacosA5ExecutionContext({
   );
   return Object.freeze({
     action,
+    acceptedRevision,
+    acceptedTree,
     artifactsRoot: resolveArtifactsRoot(sourceRepoRoot, fsApi),
     buildRoot: sourceRepoRoot,
     controllerStateRoot,
@@ -50,8 +53,13 @@ export function createMacosA5ExecutionContext({
     leaseRoot: path.join(controllerStateRoot, 'leases'),
     runId,
     runRoot: path.join(controllerStateRoot, 'runs', runId),
+    formalSourceClass,
     sourceRepoRoot
   });
+}
+
+export function withMacosA5BuildRoot(context, buildRoot, capsuleRoot) {
+  return Object.freeze({ ...context, buildRoot, capsuleRoot });
 }
 
 function runOwner(context) {

@@ -31,7 +31,8 @@ export async function runMacosA5SettledStoppedStatus(args) {
   args.assertFixed();
   const { openMacosPairSyncDesktopSession } = await import('./macos-pair-sync-desktop-session.mjs');
   const session = await openMacosPairSyncDesktopSession({ env: args.env,
-    libraryHome: args.paths.desktopDevLibrary, repoRoot: args.paths.buildRoot });
+    libraryHome: args.paths.desktopDevLibrary, repoRoot: args.paths.buildRoot,
+    runtimeRoot: args.paths.desktopRuntimeRoot });
   try {
     await session.enable();
     args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', 'com.foliole.android']);
@@ -126,6 +127,7 @@ export async function runMacosA5PairSyncEntry(args) {
   const { consumeCredentialsSignableHandoff } = await import('./macos-a5-credential-handoff.mjs');
   const handoff = consumeCredentialsSignableHandoff({
     artifactsRoot: args.paths.artifactsRoot, readiness,
+    currentRevision: args.paths.acceptedRevision ?? undefined,
     sourceRepoRoot: args.paths.sourceRepoRoot
   });
   args.build(); buildMacosA5Desktop(args.checked, args.paths);

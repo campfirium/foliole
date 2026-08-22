@@ -31,6 +31,14 @@ it('binds the app name and pairing store to an isolated source runtime session',
     .toThrow('macos_hidden_electron_runtime_fingerprint_invalid');
 });
 
+it('keeps session state outside an ephemeral build source', () => {
+  const stateRoot = path.join(path.parse(process.cwd()).root, 'controller', 'runtime');
+  const session = resolveMacosHiddenCredentialSession(repoRoot, fingerprint, stateRoot);
+  expect(session.bootstrapPath.startsWith(repoRoot)).toBe(true);
+  expect(session.pairingStorePath).toBe(path.join(stateRoot, 'credential-sessions',
+    `runtime-${'b'.repeat(20)}`, 'user-data', 'companion-paired-devices.bin'));
+});
+
 it('overrides the product app name after main setup but before Electron becomes ready', () => {
   const source = fs.readFileSync(
     'scripts/desktop/macos-hidden-electron-credential-bootstrap.mjs', 'utf8'

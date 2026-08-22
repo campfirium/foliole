@@ -4,20 +4,13 @@ function git(repoRoot, args, execute = execFileSync) {
   return execute('git', args, { cwd: repoRoot, encoding: 'utf8' }).trim();
 }
 
-function inspectCandidate(repoRoot, execute) {
-  return {
-    branch: git(repoRoot, ['branch', '--show-current'], execute),
-    revision: git(repoRoot, ['rev-parse', 'HEAD'], execute),
-    status: git(repoRoot, ['status', '--porcelain', '--untracked-files=all'], execute)
-  };
-}
-
 function assertCommittedDev(candidate) {
-  if (candidate.branch !== 'dev') throw new Error('Formal A5 acceptance requires the dev branch.');
   if (!/^[0-9a-f]{40}$/u.test(candidate.revision)) {
     throw new Error('Formal A5 acceptance requires a full Git revision.');
   }
-  if (candidate.status) throw new Error('Formal A5 acceptance requires a clean committed worktree.');
+  if (!/^[0-9a-f]{40}$/u.test(candidate.tree)) {
+    throw new Error('Formal A5 acceptance requires a full Git tree identity.');
+  }
 }
 
 export function parseMacosA5Invocation(argv) {
@@ -32,17 +25,19 @@ export function parseMacosA5Invocation(argv) {
 }
 
 export function beginFormalA5Candidate(repoRoot, execute) {
-  const candidate = inspectCandidate(repoRoot, execute);
+  const revision = git(repoRoot, [
+    'rev-parse', '--verify', 'refs/heads/dev^{commit}'
+  ], execute);
+  const candidate = {
+    revision,
+    tree: git(repoRoot, ['rev-parse', '--verify', `${revision}^{tree}`], execute)
+  };
   assertCommittedDev(candidate);
   return candidate;
 }
 
-export function finishFormalA5Candidate(expected, repoRoot, execute) {
+export function finishFormalA5Candidate(expected) {
   if (!expected) return null;
-  const current = inspectCandidate(repoRoot, execute);
-  assertCommittedDev(current);
-  if (current.revision !== expected.revision) {
-    throw new Error('Formal A5 acceptance revision changed during the action.');
-  }
-  return current.revision;
+  assertCommittedDev(expected);
+  return expected.revision;
 }

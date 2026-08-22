@@ -59,6 +59,18 @@ it('resolves a symlinked artifact root without changing another ownership domain
   expect(context.controllerStateRoot.startsWith(canonicalRepoRoot)).toBe(true);
 });
 
+it('carries a frozen revision without changing stable state ownership', () => {
+  const repoRoot = temporaryRepo();
+  const context = createMacosA5ExecutionContext({
+    acceptedRevision: 'a'.repeat(40), acceptedTree: 'b'.repeat(40), action: 'build',
+    formalSourceClass: 'frozen-build', repoRoot,
+    runId: '55555555-5555-5555-5555-555555555555'
+  });
+  expect(context).toMatchObject({ acceptedRevision: 'a'.repeat(40),
+    acceptedTree: 'b'.repeat(40), buildRoot: fs.realpathSync(repoRoot),
+    formalSourceClass: 'frozen-build' });
+});
+
 it('cleans only an exactly owned empty run root', () => {
   const repoRoot = temporaryRepo();
   const context = createMacosA5ExecutionContext({

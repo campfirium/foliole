@@ -87,6 +87,7 @@ export async function openMacosPairSyncDesktopSession({
   logEvent = appendDesktopHostTimelineEvent, operationId = randomUUID(),
   prepareHiddenRuntime = prepareMacosHiddenElectronRuntime,
   rendererExists = fs.existsSync, repoRoot,
+  runtimeRoot,
   resolveCredentialSession = resolveMacosHiddenCredentialSession, timeoutMs = 20_000,
   userDataPath: forbiddenUserDataPath
 }) {
@@ -103,14 +104,16 @@ export async function openMacosPairSyncDesktopSession({
   const launcher = electronLauncher ?? (await import('playwright'))._electron;
   const rendererUrl = resolveFrozenRendererUrl(repoRoot, rendererExists);
   record('session_started');
-  const runtime = prepareHiddenRuntime({ appRoot: repoRoot, env });
+  const runtime = prepareHiddenRuntime({ appRoot: repoRoot, cacheRoot: runtimeRoot, env });
   if (runtime.runtimeIdentity !== 'stable-source-bound' || !runtime.runtimeFingerprint) {
     runtime.cleanup();
     const error = new Error('macos_hidden_electron_keychain_identity_unverified');
     record('session_failed', { message: error.message });
     throw error;
   }
-  const credentialSession = resolveCredentialSession(repoRoot, runtime.runtimeFingerprint);
+  const credentialSession = resolveCredentialSession(
+    repoRoot, runtime.runtimeFingerprint, runtimeRoot
+  );
   const releaseCredentialSession = acquireCredentialSession(credentialSession);
   let app;
   try {

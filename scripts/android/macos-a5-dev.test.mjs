@@ -1,9 +1,12 @@
+/* global process */
+
 import fs from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
 import {
+  build,
   macosA5GradleEnv,
   macosA5Paths,
   runMacosA5Action
@@ -14,6 +17,25 @@ import {
 import { runMacosA5ProductBootstrap } from './macos-a5-product-bootstrap.mjs';
 
 describe('macOS fixed A5 development entry', () => {
+  it('runs Web, Capacitor, and Gradle generation only from the selected build root', () => {
+    const root = fs.mkdtempSync(path.join(process.cwd(), '.tmp/artifacts/a5-build-order-'));
+    const paths = { apk: path.join(root, 'android/app/build/outputs/apk/debug/app-debug.apk'),
+      buildRoot: root, cap: path.join(root, 'node_modules/.bin/cap'),
+      gradle: path.join(root, 'android/gradlew') };
+    const calls = [];
+    try {
+      build(paths, (command, args, options) => {
+        calls.push({ args, command, cwd: options.cwd });
+        if (command === paths.gradle) {
+          fs.mkdirSync(path.dirname(paths.apk), { recursive: true });
+          fs.writeFileSync(paths.apk, 'apk');
+        }
+      });
+      expect(calls.map(({ command }) => command)).toEqual(['npm', paths.cap, paths.gradle]);
+      expect(calls.map(({ cwd }) => cwd)).toEqual([root, root, path.join(root, 'android')]);
+    } finally { fs.rmSync(root, { force: true, recursive: true }); }
+  });
+
   it('uses the repository APK and fixed CLI toolchain', () => {
     const paths = macosA5Paths('/repo');
 

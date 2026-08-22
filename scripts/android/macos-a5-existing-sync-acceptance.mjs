@@ -154,7 +154,8 @@ export async function proveMacosA5ExistingSyncContinuation({
 }) {
   const context = { env, execute, paths, readiness, serial };
   const sessionOptions = {
-    env, libraryHome: paths.desktopDevLibrary, repoRoot: paths.buildRoot
+    env, libraryHome: paths.desktopDevLibrary, repoRoot: paths.buildRoot,
+    runtimeRoot: paths.desktopRuntimeRoot
   };
   const result = await runExistingSyncRestartJourney({
     assertBaseline: (overview) => assertBaseline(overview, readiness),

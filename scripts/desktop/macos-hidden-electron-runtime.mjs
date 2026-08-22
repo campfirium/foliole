@@ -54,7 +54,7 @@ export function resolveMacosHiddenElectronSource(appRoot, env = process.env) {
 }
 
 export function prepareMacosHiddenElectronRuntime({
-  appRoot,
+  appRoot, cacheRoot,
   env = process.env,
   fileSystem = fs,
   run = checkedSpawn
@@ -63,7 +63,9 @@ export function prepareMacosHiddenElectronRuntime({
   if (!fileSystem.existsSync(source.executablePath)) {
     throw new Error(`hidden Electron executable is missing: ${source.executablePath}`);
   }
-  const parent = macosPath.join(appRoot, '.tmp', 'native-hidden-electron');
+  const parent = cacheRoot
+    ? macosPath.resolve(cacheRoot, 'native-hidden-electron')
+    : macosPath.join(appRoot, '.tmp', 'native-hidden-electron');
   fileSystem.mkdirSync(parent, { recursive: true });
   const sourceFingerprint = fingerprintRuntimeSource(source.executablePath, fileSystem);
   const runtimeRoot = macosPath.join(parent, `runtime-${sourceFingerprint.slice(0, 20)}`);

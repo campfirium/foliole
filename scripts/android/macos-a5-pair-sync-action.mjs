@@ -104,7 +104,7 @@ export async function runMacosA5PairSync({
     existingPairing,
     ...(closeTransport ? { closeTransport } : {}),
     openDesktopSession: (options) => openMacosPairSyncDesktopSession({
-      ...options, libraryHome
+      ...options, libraryHome, runtimeRoot: paths.desktopRuntimeRoot
     }),
     ...(openTransport ? { openTransport } : {}),
     ...(instrumentationModeArgs ? { instrumentationModeArgs } : {}),

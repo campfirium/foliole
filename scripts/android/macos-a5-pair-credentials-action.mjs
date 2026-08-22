@@ -111,6 +111,7 @@ export async function runMacosA5PairCredentialsEntry(args, dependencies = {}) {
   if (pairRequestIdentity) {
     assertFreshCredentialReceipt(readReceipt(evidenceRoot));
     produceHandoff({ artifactsRoot: args.paths.artifactsRoot, evidenceRoot,
+      currentRevision: args.paths.acceptedRevision ?? undefined,
       readiness: resolveReadiness(args.paths), sourceRepoRoot: args.paths.sourceRepoRoot });
   }
   process.stdout.write(result.output);

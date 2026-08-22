@@ -6,7 +6,12 @@ import { existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { assertRegisteredMacosA5Action } from './macos-a5-action-registry.mjs';
+import {
+  assertFormalMacosA5Action, assertRegisteredMacosA5Action
+} from './macos-a5-action-registry.mjs';
+import {
+  closeMacosA5BuildCapsule, openMacosA5BuildCapsule
+} from './macos-a5-build-capsule.mjs';
 import { runMacosA5Cli } from './macos-a5-cli.mjs';
 import {
   closeMacosA5Run, createMacosA5ExecutionContext, openMacosA5Run
@@ -83,10 +88,10 @@ function pairingReadiness(paths) {
   runMacosA5PairingReadiness(checked, paths, A5_SERIAL, APP_ID);
 }
 
-export function build(paths) {
-  checked('npm', ['run', 'android:web:build'], { cwd: paths.buildRoot });
-  checked(paths.cap, ['sync', 'android'], { cwd: paths.buildRoot });
-  checked(paths.gradle, ['--no-daemon', 'assembleDebug', 'assembleDebugAndroidTest'], {
+export function build(paths, run = checked) {
+  run('npm', ['run', 'android:web:build'], { cwd: paths.buildRoot });
+  run(paths.cap, ['sync', 'android'], { cwd: paths.buildRoot });
+  run(paths.gradle, ['--no-daemon', 'assembleDebug', 'assembleDebugAndroidTest'], {
     cwd: path.join(paths.buildRoot, 'android'), env: macosA5GradleEnv()
   });
   if (!existsSync(paths.apk)) throw new Error(`Debug APK was not produced: ${paths.apk}`);
@@ -151,12 +156,18 @@ async function captureAnnotation(paths) {
 
 export async function runMacosA5Action(action, repoRoot = process.cwd(), { formal = false } = {}) {
   const actionContract = assertRegisteredMacosA5Action(action);
-  const context = createMacosA5ExecutionContext({ action, repoRoot });
-  const paths = macosA5Paths(context);
-  const formalCandidate = formal ? beginFormalA5Candidate(context.sourceRepoRoot) : null;
+  if (formal) assertFormalMacosA5Action(actionContract);
+  const formalCandidate = formal && actionContract.formalSourceClass === 'frozen-build'
+    ? beginFormalA5Candidate(repoRoot) : null;
+  let context = createMacosA5ExecutionContext({
+    acceptedRevision: formalCandidate?.revision, acceptedTree: formalCandidate?.tree,
+    action, formalSourceClass: formal ? actionContract.formalSourceClass : null, repoRoot
+  });
   openMacosA5Run(context);
   let lease;
   try {
+    if (formalCandidate) context = openMacosA5BuildCapsule(context);
+    const paths = macosA5Paths(context);
     assertSafeMacosA5Environment(paths);
     if (actionContract.deviceLeaseMode) {
       lease = acquireMacosA5DeviceLease(context, actionContract.deviceLeaseMode);
@@ -201,14 +212,16 @@ export async function runMacosA5Action(action, repoRoot = process.cwd(), { forma
       await recoverMacosA5SyncGroupRejoinEntry(productArgs);
     }
   } finally {
+    const paths = macosA5Paths(context);
     if (actionContract.deviceLeaseMode) spawnSync(paths.adb, ['kill-server']);
     try {
       if (lease) releaseMacosA5DeviceLease(lease);
     } finally {
-      closeMacosA5Run(context);
+      try { closeMacosA5BuildCapsule(context); }
+      finally { closeMacosA5Run(context); }
     }
   }
-  const acceptedTip = finishFormalA5Candidate(formalCandidate, context.sourceRepoRoot);
+  const acceptedTip = finishFormalA5Candidate(formalCandidate);
   if (acceptedTip) console.log(`[macos-a5-dev] accepted-tip=${acceptedTip}`);
 }
 

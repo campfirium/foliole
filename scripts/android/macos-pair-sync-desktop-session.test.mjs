@@ -69,6 +69,16 @@ describe('macOS pair sync desktop session', () => {
     const launch = vi.fn().mockResolvedValue({
       close, firstWindow: vi.fn().mockResolvedValue(page), process: () => ({ pid: 42 })
     });
+    const runtimeRoot = path.join(path.parse(process.cwd()).root, 'controller', 'runtime');
+    const prepareHiddenRuntime = vi.fn(() => ({
+      cleanup,
+      executablePath: path.join(
+        path.parse(process.cwd()).root, 'tmp', 'BackgroundElectron.app', 'Contents', 'MacOS',
+        'Electron'
+      ),
+      runtimeFingerprint: 'a'.repeat(64),
+      runtimeIdentity: 'stable-source-bound'
+    }));
 
     const session = await openMacosPairSyncDesktopSession({
       acquireCredentialSession: vi.fn(() => releaseCredentialSession),
@@ -80,17 +90,14 @@ describe('macOS pair sync desktop session', () => {
       libraryHome: path.join(path.parse(process.cwd()).root, 'tmp', 'library'),
       logEvent: (event) => timeline.push(event),
       operationId: 'pair-sync-1',
-      prepareHiddenRuntime: vi.fn(() => ({
-        cleanup,
-        executablePath: path.join(
-          path.parse(process.cwd()).root, 'tmp', 'BackgroundElectron.app', 'Contents', 'MacOS',
-          'Electron'
-        ),
-        runtimeFingerprint: 'a'.repeat(64),
-        runtimeIdentity: 'stable-source-bound'
-      })),
+      prepareHiddenRuntime,
       rendererExists: () => true,
-      repoRoot
+      repoRoot, runtimeRoot
+    });
+
+    expect(prepareHiddenRuntime).toHaveBeenCalledWith({
+      appRoot: repoRoot, cacheRoot: runtimeRoot,
+      env: expect.objectContaining({ FOLIOLE_VITE_HMR: '0' })
     });
 
     expect(launch).toHaveBeenCalledWith(expect.objectContaining({
@@ -99,7 +106,7 @@ describe('macOS pair sync desktop session', () => {
         FOLIOLE_HIDDEN_CREDENTIAL_APP_NAME: `Foliole Hidden Native ${'a'.repeat(20)}`,
         FOLIOLE_HIDDEN_CREDENTIAL_MAIN_PATH: path.join(repoRoot, 'dist', 'electron', 'main.js'),
         FOLIOLE_USER_DATA_PATH: path.join(
-          repoRoot, '.tmp', 'native-hidden-electron', 'credential-sessions',
+          runtimeRoot, 'credential-sessions',
           `runtime-${'a'.repeat(20)}`, 'user-data'
         ),
         FOLIOLE_VITE_HMR: '1'

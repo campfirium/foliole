@@ -24,12 +24,14 @@ function processIsAlive(pid, signalProcess) {
   }
 }
 
-export function resolveMacosHiddenCredentialSession(repoRoot, runtimeFingerprint) {
+export function resolveMacosHiddenCredentialSession(repoRoot, runtimeFingerprint, sessionStateRoot) {
   if (!FINGERPRINT_PATTERN.test(runtimeFingerprint)) {
     throw new Error('macos_hidden_electron_runtime_fingerprint_invalid');
   }
   const identity = runtimeFingerprint.slice(0, 20);
-  const root = path.join(path.resolve(repoRoot), SESSION_ROOT, `runtime-${identity}`);
+  const root = sessionStateRoot
+    ? path.join(path.resolve(sessionStateRoot), 'credential-sessions', `runtime-${identity}`)
+    : path.join(path.resolve(repoRoot), SESSION_ROOT, `runtime-${identity}`);
   return {
     appName: `Foliole Hidden Native ${identity}`,
     bootstrapPath: path.join(path.resolve(repoRoot),
