@@ -45,9 +45,34 @@ it('captures the fixed A5 screen and current Windows pairing overview after reco
   expect(JSON.parse(fs.readFileSync(path.join(evidenceRoot, PAIR_SYNC_FAILURE_SUMMARY), 'utf8')))
     .toEqual({
       android: { completion: 'http_200', credentials: 'saved_signable', initialSync: 'started' },
+      approval: { approve_invoked: false, approve_succeeded: false, pending_observed: false },
       convergence: null,
       hostStage: 'credentials-signable', reason: 'initial_sync_timeout',
       resultStatus: 'failure', schemaVersion: 1, stage: 'pair-sync-instrumentation'
+    });
+  fs.rmSync(evidenceRoot, { force: true, recursive: true });
+});
+
+it('preserves bounded pair completion and approval failure evidence', async () => {
+  const evidenceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pair-completion-failure-'));
+  const output = 'INSTRUMENTATION_STATUS: foliolePairSyncEvidence=' + JSON.stringify({
+    completion: 'http_rejected', credentials: 'not_saved', initialSync: 'not_started',
+    failure: 'pair-completion-http-409-pair_request_pending'
+  });
+  await collectPairSyncRecoveryFailureEvidence({
+    adbPort: '5037', env: {}, evidenceRoot,
+    error: Object.assign(new Error('timed out'), {
+      pairSyncRecoveryEvidence: { approval: {
+        approve_invoked: true, approve_succeeded: true, pending_observed: true
+      } },
+      result: { output }, stage: 'pair-sync-instrumentation'
+    }), execute: vi.fn(async () => ({ code: 1, output: '' })), fsApi: fs,
+    paths: { adbPath: 'adb.exe' }, serial: '87a33a4b'
+  });
+  expect(JSON.parse(fs.readFileSync(path.join(evidenceRoot, PAIR_SYNC_FAILURE_SUMMARY), 'utf8')))
+    .toMatchObject({
+      android: { failure: 'pair-completion-http-409-pair_request_pending' },
+      approval: { approve_invoked: true, approve_succeeded: true, pending_observed: true }
     });
   fs.rmSync(evidenceRoot, { force: true, recursive: true });
 });

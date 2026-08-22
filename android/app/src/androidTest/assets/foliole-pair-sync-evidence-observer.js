@@ -68,8 +68,13 @@
     if (state.requestState === 'accepted' && state.completion !== 'http_200') {
       state.completion = 'dispatched';
       return call().then(function (value) {
-        state.completion = value && value.status === 200 ? 'http_200' : 'http_rejected'; return value;
-      }, function (error) { state.completion = 'transport_failed'; throw error; });
+        state.completion = value && value.status === 200 ? 'http_200' : 'http_rejected';
+        state.syncFailure = state.completion === 'http_200' ? null : pairCompletionFailure(value);
+        return value;
+      }, function (error) {
+        state.completion = 'transport_failed'; state.syncFailure = 'pair-completion-transport-failed';
+        throw error;
+      });
     }
     if (isSyncPush(args) && pairingCanSync(state)) {
       state.initialSync = 'started';
@@ -95,6 +100,12 @@
     var detail = null;
     try { detail = JSON.parse(value && value.body || '{}').error; } catch { /* bounded below */ }
     return 'sync-push-http-' + (value && value.status) + (allowed.test(detail) ? '-' + detail : '');
+  }
+  function pairCompletionFailure(value) {
+    var allowed = /^(invalid_pair_request|pair_request_not_found|pair_request_pending|pair_request_rejected|protocol_incompatible|pair_completion_rate_limited|sync_group_member_not_authorized|sync_group_workgroup_key_missing|sync_group_provider_pairing_invalid|sync_group_local_authorization_missing)$/;
+    var detail = null;
+    try { detail = JSON.parse(value && value.body || '{}').error; } catch { /* bounded below */ }
+    return 'pair-completion-http-' + (value && value.status) + (allowed.test(detail) ? '-' + detail : '');
   }
   function observeSyncPack(state, methodName, call, args) {
     if (!pairingCanSync(state)) return call();

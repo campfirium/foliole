@@ -5,6 +5,7 @@ const CREDENTIAL_STATES = new Set([
   'not_saved', 'save_failed', 'saved_not_signable', 'saved_signable'
 ]);
 const INITIAL_SYNC_STATES = new Set(['not_started', 'started', 'failed', 'completed']);
+const FAILURE_PATTERN = /^pair-completion-(?:transport-failed|http-[0-9]{3}(?:-[a-z_]+)?)$/u;
 
 function invalidEvidence() {
   throw new Error('Pair sync Android evidence is incomplete or contradictory.');
@@ -18,10 +19,12 @@ export function validatePairSyncAndroidEvidence(value) {
       && (value.credentials !== 'not_saved' || value.initialSync !== 'not_started')) invalidEvidence();
   if (value.credentials !== 'saved_signable' && value.initialSync !== 'not_started'
       && value.completion !== 'existing_pairing') invalidEvidence();
+  if (value.failure !== undefined && !FAILURE_PATTERN.test(value.failure)) invalidEvidence();
   return {
     completion: value.completion,
     credentials: value.credentials,
-    initialSync: value.initialSync
+    initialSync: value.initialSync,
+    ...(value.failure ? { failure: value.failure } : {})
   };
 }
 

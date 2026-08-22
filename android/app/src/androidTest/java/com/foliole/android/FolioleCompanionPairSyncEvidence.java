@@ -69,6 +69,10 @@ final class FolioleCompanionPairSyncEvidence {
             evidence.put("completion", state.optString("completion", "not_started"));
             evidence.put("credentials", state.optString("credentials", "not_saved"));
             evidence.put("initialSync", state.optString("initialSync", "not_started"));
+            String failure = state.optString("syncFailure", "");
+            if (failure.matches("^pair-completion-(?:transport-failed|http-[0-9]{3}(?:-[a-z_]+)?)$")) {
+                evidence.put("failure", failure);
+            }
         } catch (Exception error) {
             throw new IllegalStateException("Pair sync evidence could not be encoded.", error);
         }

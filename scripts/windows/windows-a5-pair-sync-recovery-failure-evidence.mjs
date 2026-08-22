@@ -8,6 +8,7 @@ import {
 import {
   parseLatestPairSyncAndroidEvidence, validatePairSyncAndroidEvidence
 } from './windows-a5-pair-sync-recovery-android-evidence.mjs';
+import { validatePairSyncApprovalEvidence } from './windows-a5-pair-sync-recovery-approval-evidence.mjs';
 
 export const PAIR_SYNC_FAILURE_SCREENSHOT = 'pair-sync-recovery-failure.png';
 export const PAIR_SYNC_FAILURE_DESKTOP_OVERVIEW =
@@ -72,6 +73,7 @@ export async function collectPairSyncRecoveryFailureEvidence({
   const reason = failureReason(error, output, convergence, hostStage);
   writeJson(fsApi, path.join(evidenceRoot, PAIR_SYNC_FAILURE_SUMMARY), {
     android: parseAndroidEvidence(error, output),
+    approval: validatePairSyncApprovalEvidence(error?.pairSyncRecoveryEvidence?.approval),
     convergence,
     hostStage,
     reason, resultStatus: 'failure', schemaVersion: 1, stage

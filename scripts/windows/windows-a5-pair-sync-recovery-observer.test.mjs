@@ -100,6 +100,22 @@ it('attributes request evidence only to the product pair-request operation', asy
   expect(calls).toHaveLength(4);
 });
 
+it('bounds pair completion HTTP failure evidence to status and known error code', async () => {
+  const source = read(observerPath);
+  const window = { Capacitor: { nativePromise: async () => ({
+    body: JSON.stringify({ error: 'pair_request_pending', private: 'hidden' }), status: 409
+  }) }, crypto: { subtle: Object.create({ generateKey: async () => ({}) }) } };
+  expect(JSON.parse(vm.runInNewContext(source, { Promise, URL, window }))).toEqual({ ok: true });
+  window.__foliolePairSyncObserver.requestState = 'accepted';
+  await window.Capacitor.nativePromise('FolioleCompanionSync', 'desktopHttpRequest', {
+    method: 'POST', url: 'http://127.0.0.1:38641/companion/pair'
+  });
+  expect(window.__foliolePairSyncObserver).toMatchObject({
+    completion: 'http_rejected', syncFailure: 'pair-completion-http-409-pair_request_pending'
+  });
+  expect(window.__foliolePairSyncObserver.syncFailure).not.toContain('hidden');
+});
+
 it('keeps the native sync pack as intermediate evidence until product UI settlement', async () => {
   const source = read(observerPath);
   const window = { Capacitor: { nativePromise: async (_plugin, method) => (
