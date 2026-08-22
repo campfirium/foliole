@@ -26,7 +26,7 @@
   "desktop.command.importFiles": "Importa file",
   "desktop.command.importFolder": "Cartella di importazione",
   "desktop.command.importClipboard": "Importa appunti",
-  "desktop.command.openTrash": "Apri il Cestino",
+  "desktop.command.openTrash": "Apri {trash}",
   "desktop.command.openGuidedSample": "Apri campione guidato",
   "desktop.command.rename": "Rinomina",
   "desktop.command.exportCurrentTopic": "Esporta argomento corrente",

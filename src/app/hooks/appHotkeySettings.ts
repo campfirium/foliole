@@ -3,6 +3,8 @@ import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { buildShortcutOverrideLabel, type CommandShortcutOverrides } from '../../shared/commands/keymap';
 import { formatShortcutSetDisplayEntries, formatShortcutSetSearchLabel } from '../../shared/commands/shortcutDisplay';
 import type { CommandPaletteItem } from '../../shared/commands/types';
+import { getStoredAppLocale } from '../../shared/localization/appLanguage';
+import { defaultSystemEntryDisplayName } from '../../shared/localization/systemEntryNames';
 
 import { mapPaletteItemsToHotkeyItems } from './reviewHotkeysState';
 
@@ -37,7 +39,7 @@ export function buildHotkeySettings(
     section: 'Capture',
     shortcutDisplayEntries: formatShortcutSetDisplayEntries(globalCaptureShortcuts),
     shortcutSummaryLabel: formatShortcutSetSearchLabel(globalCaptureShortcuts),
-    title: 'Capture to Inbox (global)'
+    title: `Capture to ${defaultSystemEntryDisplayName(getStoredAppLocale(), 'inbox')} (global)`
   };
   return {
     hotkeyItems: [globalCaptureItem, ...mapPaletteItemsToHotkeyItems(paletteItems, hotkeys.overrides)],

@@ -26,7 +26,7 @@ export const EN_DESKTOP_COMMAND_TRANSLATIONS = {
   'desktop.command.importFiles': 'Import Files',
   'desktop.command.importFolder': 'Import Folder',
   'desktop.command.importClipboard': 'Import Clipboard',
-  'desktop.command.openTrash': 'Open Trash',
+  'desktop.command.openTrash': 'Open {trash}',
   'desktop.command.openGuidedSample': 'Open Guided Sample',
   'desktop.command.rename': 'Rename',
   'desktop.command.exportCurrentTopic': 'Export Current Topic',

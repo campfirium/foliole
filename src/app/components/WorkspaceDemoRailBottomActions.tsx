@@ -70,7 +70,7 @@ export function WorkspaceDemoRailBottomActions({
       <DemoRailActionButton
         className={RAIL_BUTTON_CLASS_NAME}
         icon={<MessageSquareWarning aria-hidden="true" size={16} strokeWidth={1.75} />}
-        label={t('desktop.command.sendFeedback')}
+        label={t('settings.rail.item.feedback')}
         onClick={() => onRunRailAction?.(APP_COMMAND_IDS.sendFeedback)}
       />
       <DemoRailActionButton

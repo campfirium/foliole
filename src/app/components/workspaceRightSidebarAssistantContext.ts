@@ -2,6 +2,8 @@ import type { NativeAssistantWorkspaceContext } from '../../../lib/platform/nati
 import type { EditorAdapter, EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import { sortFolderListNodes } from '../../features/nodes/model/folderListOrdering';
 import { getTextAnchorLocators, isPdfAnchorLocator, type Node } from '../../features/nodes/model/nodeTypes';
+import { getStoredAppLocale } from '../../shared/localization/appLanguage';
+import { resolveNodeDisplayTitle } from '../../shared/localization/systemEntryNames';
 import { getNodeDocumentStatus, isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 
 const DOCUMENT_PREVIEW_LIMIT = 4000;
@@ -28,7 +30,7 @@ export function resolveAssistantWorkspaceContext(
     activeNodeId: activeNode.id,
     ...(activeNode.parentNodeId ? { activeParentNodeId: activeNode.parentNodeId } : {}),
     ...(activeNode.specialKind ? { activeSpecialKind: activeNode.specialKind } : {}),
-    activeTitle: activeNode.title,
+    activeTitle: displayTitle(activeNode),
     ...(activeNode.anchorLink ? { anchor: resolveAnchorContext(activeNode, nodesById) } : {}),
     path: resolveNodePath(activeNode, nodesById),
     schemaVersion: 1,
@@ -76,7 +78,7 @@ function resolveAnchorContext(
     id: node.anchorLink?.id ?? node.id,
     kind: node.anchorLink?.kind ?? 'highlight',
     ...(isPdfAnchorLocator(locator) ? { page: locator.page } : {}),
-    ...(parent ? { parentNodeId: parent.id, parentTitle: parent.title } : {}),
+    ...(parent ? { parentNodeId: parent.id, parentTitle: displayTitle(parent) } : {}),
     ...(text ? { text: truncateText(text, CHILD_PREVIEW_LIMIT).text } : {})
   };
 }
@@ -143,7 +145,7 @@ function toChildSummary(node: Node, activeNodeId?: string) {
     nodeId: node.id,
     ...(preview.text ? { preview: preview.text } : {}),
     ...(node.specialKind ? { specialKind: node.specialKind } : {}),
-    title: node.title,
+    title: displayTitle(node),
     updatedAt: node.updatedAt
   };
 }
@@ -154,10 +156,15 @@ function resolveNodePath(activeNode: Node, nodesById: Record<string, Node>) {
   const seen = new Set<string>();
   while (node && !seen.has(node.id)) {
     seen.add(node.id);
-    if (node.title.trim()) path.unshift(node.title.trim());
+    const title = displayTitle(node).trim();
+    if (title) path.unshift(title);
     node = node.parentNodeId ? nodesById[node.parentNodeId] : null;
   }
   return path;
+}
+
+function displayTitle(node: Pick<Node, 'id' | 'title'>) {
+  return resolveNodeDisplayTitle(getStoredAppLocale(), node.id, node.title);
 }
 
 function truncateText(value: string, limit: number) {

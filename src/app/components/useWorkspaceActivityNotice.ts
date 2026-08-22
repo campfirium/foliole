@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
+import { useLocalization, type Translate } from '../../shared/localization/LocalizationProvider';
+import { defaultSystemEntryDisplayName } from '../../shared/localization/systemEntryNames';
 import {
   getFormalImportFailureMessage,
   getFormalImportLatestResult
@@ -30,7 +31,13 @@ function formatFailureMessage(message: string | null, t: Translate) {
   return message === 'Unknown import failure' ? t('desktop.importOverview.unknownFailure') : message;
 }
 
-function resolveImportNotice(id: number, kind: ImportNoticeKind, imported: boolean, t: Translate): WorkspaceActivityNoticeState {
+function resolveImportNotice(
+  id: number,
+  kind: ImportNoticeKind,
+  imported: boolean,
+  inbox: string,
+  t: Translate
+): WorkspaceActivityNoticeState {
   const latestImport = imported ? getFormalImportLatestResult() : null;
   const didImport = imported && latestImport?.resultStatus !== 'failed';
   const nodeId = didImport ? latestImport?.nodeId ?? null : null;
@@ -38,9 +45,12 @@ function resolveImportNotice(id: number, kind: ImportNoticeKind, imported: boole
   const importedMessage = t(kind === 'clipboard'
     ? 'desktop.workspaceActivity.import.clipboard.imported'
     : 'desktop.workspaceActivity.import.file.imported');
-  const importedToInboxMessage = t(kind === 'clipboard'
-    ? 'desktop.workspaceActivity.import.clipboard.importedToInbox'
-    : 'desktop.workspaceActivity.import.file.importedToInbox');
+  const importedToInboxMessage = t(
+    kind === 'clipboard'
+      ? 'desktop.workspaceActivity.import.clipboard.importedToInbox'
+      : 'desktop.workspaceActivity.import.file.importedToInbox',
+    { inbox }
+  );
   const emptyMessage = t(kind === 'clipboard'
     ? 'desktop.workspaceActivity.import.clipboard.empty'
     : 'desktop.workspaceActivity.import.file.empty');
@@ -75,7 +85,8 @@ export function useWorkspaceActivityNotice(
   onStartFileImport: (options?: { onImportStarted?: () => void }) => boolean | Promise<boolean>,
   onOpenImportedTopic: (nodeId: string) => void
 ) {
-  const t = useTranslation();
+  const { locale, t } = useLocalization();
+  const inboxTitle = defaultSystemEntryDisplayName(locale, 'inbox');
   const [notice, setNotice] = useState<WorkspaceActivityNoticeState | null>(null);
 
   useEffect(() => {
@@ -90,10 +101,10 @@ export function useWorkspaceActivityNotice(
     const id = Date.now();
     setNotice({ id, message: formatLoadingMessage(kind, t), nodeId: null, tone: 'loading' });
     const imported = await runner();
-    const nextNotice = resolveImportNotice(id, kind, imported, t);
+    const nextNotice = resolveImportNotice(id, kind, imported, inboxTitle, t);
     applyWorkspaceImportNoticeResolution(nextNotice, onOpenImportedTopic, setNotice);
     return imported;
-  }, [onOpenImportedTopic, t]);
+  }, [inboxTitle, onOpenImportedTopic, t]);
 
   const startClipboardImport = useCallback(
     (detail?: ClipboardImportRequestDetail) => startImport('clipboard', () => onStartClipboardImport(detail)),
@@ -111,12 +122,12 @@ export function useWorkspaceActivityNotice(
         }
       });
       if (didStartImport || imported) {
-        const nextNotice = resolveImportNotice(id, 'file', imported, t);
+        const nextNotice = resolveImportNotice(id, 'file', imported, inboxTitle, t);
         applyWorkspaceImportNoticeResolution(nextNotice, onOpenImportedTopic, setNotice);
       }
       return imported;
     },
-    [onOpenImportedTopic, onStartFileImport, t]
+    [inboxTitle, onOpenImportedTopic, onStartFileImport, t]
   );
 
   const openImportedTopic = useCallback(() => {

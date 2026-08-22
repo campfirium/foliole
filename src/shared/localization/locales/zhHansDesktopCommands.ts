@@ -28,7 +28,7 @@ export const ZH_HANS_DESKTOP_COMMAND_TRANSLATIONS: Partial<Record<TranslationKey
   'desktop.command.importFiles': '导入文件',
   'desktop.command.importFolder': '导入文件夹',
   'desktop.command.importClipboard': '导入剪贴板',
-  'desktop.command.openTrash': '打开废纸篓',
+  'desktop.command.openTrash': '打开{trash}',
   'desktop.command.openGuidedSample': '打开引导样例',
   'desktop.command.rename': '重命名',
   'desktop.command.exportCurrentTopic': '导出当前主题',

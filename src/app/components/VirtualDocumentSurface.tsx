@@ -13,7 +13,8 @@ import {
   getOrderedVirtualNodeResultNodes,
   getVirtualNodePrimaryKeyword
 } from '../../features/nodes/model/virtualNodeDetail';
-import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { useLocalization, useTranslation } from '../../shared/localization/LocalizationProvider';
+import { defaultSystemEntryDisplayName } from '../../shared/localization/systemEntryNames';
 import { AppButton } from '../../shared/ui';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -35,7 +36,7 @@ function filterVisibleVirtualResults(nodes: Node[], trashedNodeIds: string[]) {
 }
 
 function VirtualRootDocumentSurface(props: Pick<VirtualDocumentSurfaceProps, 'nodeOrder' | 'nodesById' | 'onSelectNode' | 'onSelectNodePath' | 'trashedNodeIds'>) {
-  const t = useTranslation();
+  const { locale, t } = useLocalization();
   const [query, setQuery] = useState('');
   const createVirtualNode = useWorkspaceStore((state) => state.createVirtualNode);
   const updateNodeTitle = useWorkspaceStore((state) => state.updateNodeTitle);
@@ -57,7 +58,7 @@ function VirtualRootDocumentSurface(props: Pick<VirtualDocumentSurfaceProps, 'no
     <FolderListView
       emptyState={trimmedQuery ? { description: t('desktop.virtualSearch.empty.description'), title: t('desktop.virtualSearch.empty.title') } : undefined}
       filterSearchResults={false}
-      folderTitle={t('desktop.virtualSearch.title')}
+      folderTitle={defaultSystemEntryDisplayName(locale, 'virtual-root')}
       nodeOrder={resultNodes.map((node) => node.id)}
       nodes={resultNodes}
       nodesById={props.nodesById}
@@ -127,7 +128,7 @@ function VirtualSavedSearchDocumentSurface(props: Pick<VirtualDocumentSurfacePro
 export function VirtualBuiltInDocumentSurface(props: Pick<VirtualDocumentSurfaceProps, 'nodeOrder' | 'nodesById' | 'onSelectNode' | 'onSelectNodePath' | 'trashedNodeIds'> & {
   activeVirtualNodeId: string;
 }) {
-  const t = useTranslation();
+  const { locale, t } = useLocalization();
   const isShelved = props.activeVirtualNodeId === VIRTUAL_SHELVED_NODE_ID;
   const nodeIds = isShelved ? collectShelvedTopicIds(props) : collectRemovedTopicIds(props);
   const nodes = nodeIds.map((nodeId) => props.nodesById[nodeId]).filter((node): node is Node => Boolean(node));
@@ -139,7 +140,7 @@ export function VirtualBuiltInDocumentSurface(props: Pick<VirtualDocumentSurface
         title: isShelved ? t('desktop.virtualSearch.shelved.empty.title') : t('desktop.virtualSearch.removed.empty.title')
       }}
       filterSearchResults={false}
-      folderTitle={isShelved ? t('desktop.virtualSearch.shelved.title') : t('desktop.virtualSearch.removed.title')}
+      folderTitle={defaultSystemEntryDisplayName(locale, isShelved ? 'shelved' : 'removed')}
       nodes={nodes}
       nodesById={props.nodesById}
       onSelectNode={props.onSelectNode}

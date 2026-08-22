@@ -26,7 +26,7 @@
   "desktop.command.importFiles": "Dateien importieren",
   "desktop.command.importFolder": "Ordner importieren",
   "desktop.command.importClipboard": "Zwischenablage importieren",
-  "desktop.command.openTrash": "Papierkorb öffnen",
+  "desktop.command.openTrash": "{trash} öffnen",
   "desktop.command.openGuidedSample": "Geführtes Beispiel öffnen",
   "desktop.command.rename": "Umbenennen",
   "desktop.command.exportCurrentTopic": "Aktuelles Thema exportieren",

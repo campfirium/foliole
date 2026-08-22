@@ -26,7 +26,7 @@
   "desktop.command.importFiles": "Импортировать файлы",
   "desktop.command.importFolder": "Импортировать папку",
   "desktop.command.importClipboard": "Импортировать буфер обмена",
-  "desktop.command.openTrash": "Открыть корзину",
+  "desktop.command.openTrash": "Открыть {trash}",
   "desktop.command.openGuidedSample": "Открыть управляемый образец",
   "desktop.command.rename": "Переименовать",
   "desktop.command.exportCurrentTopic": "Экспортировать текущую тему",

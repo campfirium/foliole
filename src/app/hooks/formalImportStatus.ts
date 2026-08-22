@@ -1,3 +1,5 @@
+import { getStoredAppLocale } from '../../shared/localization/appLanguage';
+import { defaultSystemEntryDisplayName } from '../../shared/localization/systemEntryNames';
 import type { RuntimeTextImportResult } from '../../shared/platform/importExecutionRuntimeRepository';
 import type { RuntimeImportOverview } from '../../shared/platform/importOverviewRuntimeRepository';
 
@@ -7,11 +9,19 @@ export interface FormalImportStatus {
   lastRun: string;
 }
 
-export const DEFAULT_FORMAL_IMPORT_STATUS: FormalImportStatus = {
-  failures: 'Nothing recorded',
-  inboxLanding: 'Imported files land as child nodes under Inbox',
-  lastRun: 'No imports yet'
-};
+export function getDefaultFormalImportStatus(): FormalImportStatus {
+  return {
+    failures: 'Nothing recorded',
+    inboxLanding: `Imported files land as child nodes under ${inboxTitle()}`,
+    lastRun: 'No imports yet'
+  };
+}
+
+export const DEFAULT_FORMAL_IMPORT_STATUS = getDefaultFormalImportStatus();
+
+function inboxTitle() {
+  return defaultSystemEntryDisplayName(getStoredAppLocale(), 'inbox');
+}
 
 export function formatImportTimestamp(timestamp: string) {
   return timestamp.replace('T', ' ').slice(0, 16);
@@ -40,10 +50,10 @@ export function buildSuccessStatus(
     failures: 'Nothing recorded',
     inboxLanding:
       result.duplicateSemantic === 'duplicate'
-        ? `Existing Inbox import reused for ${result.sourceName}`
+        ? `Existing ${inboxTitle()} import reused for ${result.sourceName}`
         : result.duplicateSemantic === 'updated'
-          ? `Inbox import updated from ${result.sourceName}`
-          : `Inbox child created from ${result.sourceName}`,
+          ? `${inboxTitle()} import updated from ${result.sourceName}`
+          : `${inboxTitle()} child created from ${result.sourceName}`,
     lastRun:
       result.duplicateSemantic === 'duplicate'
         ? `Reused ${result.sourceName} · ${timestamp}`

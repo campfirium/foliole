@@ -26,7 +26,7 @@
   "desktop.command.importFiles": "파일 가져오기",
   "desktop.command.importFolder": "폴더 가져오기",
   "desktop.command.importClipboard": "클립보드 가져오기",
-  "desktop.command.openTrash": "휴지통 열기",
+  "desktop.command.openTrash": "{trash} 열기",
   "desktop.command.openGuidedSample": "안내 샘플 열기",
   "desktop.command.rename": "이름 바꾸기",
   "desktop.command.exportCurrentTopic": "현재 주제 내보내기",

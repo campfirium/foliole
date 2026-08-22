@@ -26,7 +26,7 @@
   "desktop.command.importFiles": "Importer des fichiers",
   "desktop.command.importFolder": "Dossier d'importation",
   "desktop.command.importClipboard": "Importer le Presse-papiers",
-  "desktop.command.openTrash": "Ouvrir la corbeille",
+  "desktop.command.openTrash": "Ouvrir {trash}",
   "desktop.command.openGuidedSample": "Ouvrir un échantillon guidé",
   "desktop.command.rename": "Renommer",
   "desktop.command.exportCurrentTopic": "Exporter le sujet actuel",

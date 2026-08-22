@@ -26,7 +26,7 @@
   "desktop.command.importFiles": "Importuj pliki",
   "desktop.command.importFolder": "Importuj folder",
   "desktop.command.importClipboard": "Importuj schowek",
-  "desktop.command.openTrash": "Otwórz Kosz",
+  "desktop.command.openTrash": "Otwórz {trash}",
   "desktop.command.openGuidedSample": "Otwórz próbkę z przewodnikiem",
   "desktop.command.rename": "Zmień nazwę",
   "desktop.command.exportCurrentTopic": "Eksportuj bieżący temat",

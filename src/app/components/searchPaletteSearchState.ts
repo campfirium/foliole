@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { useLocalization } from '../../shared/localization/LocalizationProvider';
+import { resolveNodeDisplayTitle } from '../../shared/localization/systemEntryNames';
 import {
   hasWorkspaceSearchRuntimeRepository,
   searchWorkspaceInRuntime
@@ -94,6 +96,7 @@ function useRemovedSearchResults(isOpen: boolean, query: string) {
 }
 
 export function useSearchResults(props: SearchSourceProps, query: string, isComposing = false) {
+  const { locale } = useLocalization();
   const hasRuntime = hasWorkspaceSearchRuntimeRepository();
   const executionQuery = useSearchExecutionQuery(props.isOpen, query, isComposing);
   const hasPendingQuery = query.trim() !== executionQuery.trim();
@@ -110,8 +113,10 @@ export function useSearchResults(props: SearchSourceProps, query: string, isComp
     () =>
       hasPendingQuery
         ? []
-        : (hasRuntime ? [...runtimeResults, ...removedResults] : [...localResults, ...removedResults]),
-    [hasPendingQuery, hasRuntime, localResults, removedResults, runtimeResults]
+        : (hasRuntime ? [...runtimeResults, ...removedResults] : [...localResults, ...removedResults]).map((result) =>
+          result.kind === 'node' ? { ...result, title: resolveNodeDisplayTitle(locale, result.id, result.title) } : result
+        ),
+    [hasPendingQuery, hasRuntime, localResults, locale, removedResults, runtimeResults]
   );
   return { error: hasRuntime ? runtimeError : false, results };
 }

@@ -2,7 +2,8 @@ import { ChevronRight, FileText, Folder, FolderOpen, Inbox, Sparkles, Trash2, ty
 import type { ReactNode } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
-import { useTranslation } from '../shared/localization/LocalizationProvider';
+import { useLocalization } from '../shared/localization/LocalizationProvider';
+import { defaultSystemEntryDisplayName, resolveNodeDisplayTitle } from '../shared/localization/systemEntryNames';
 import { AppEmptyState } from '../shared/ui';
 
 import { type DirectorySection, type DirectoryListItem, INBOX_NODE_ID } from './CompanionDirectoryModel';
@@ -40,8 +41,10 @@ function DirectoryRow(props: {
   onSelectItem(item: DirectoryListItem): void;
   snapshot: WorkspaceSnapshot | null;
 }) {
-  const t = useTranslation();
-  const title = props.item.source === 'trashRoot' ? t(props.item.titleKey) : props.item.title;
+  const { locale, t } = useLocalization();
+  const title = props.item.source === 'trashRoot'
+    ? resolveNodeDisplayTitle(locale, 'special-trash', t(props.item.titleKey))
+    : resolveNodeDisplayTitle(locale, props.item.nodeId, props.item.title);
   const { Icon, isAccent } = resolveDirectoryRowIcon(props.item);
   const subtitle = resolveDirectoryRowSubtitle(props.item, t);
   const meta = resolveDirectoryRowMeta({ directory: props.directory, item: props.item, snapshot: props.snapshot });
@@ -81,7 +84,7 @@ export function CompanionDirectoryList(props: {
   sections: DirectorySection[];
   snapshot: WorkspaceSnapshot | null;
 }) {
-  const t = useTranslation();
+  const { locale, t } = useLocalization();
   if (props.sections.length === 0) {
     return (
       <div className="px-1 py-6">
@@ -98,7 +101,14 @@ export function CompanionDirectoryList(props: {
   return (
     <div className="space-y-6">
       {props.sections.map((section) => (
-        <DirectorySectionGroup key={section.id} title={section.titleKey ? t(section.titleKey) : undefined}>
+        <DirectorySectionGroup
+          key={section.id}
+          title={section.id === 'virtual'
+            ? defaultSystemEntryDisplayName(locale, 'virtual-root')
+            : section.id === 'trash'
+              ? defaultSystemEntryDisplayName(locale, 'trash')
+              : section.titleKey ? t(section.titleKey) : undefined}
+        >
           {section.items.map((item) => (
             <DirectoryRow
               directory={props.directory}

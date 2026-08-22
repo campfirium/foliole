@@ -26,7 +26,7 @@
   "desktop.command.importFiles": "導入文件",
   "desktop.command.importFolder": "導入資料夾",
   "desktop.command.importClipboard": "導入剪貼簿",
-  "desktop.command.openTrash": "打開垃圾箱",
+  "desktop.command.openTrash": "打開{trash}",
   "desktop.command.openGuidedSample": "開放式指導樣本",
   "desktop.command.rename": "重新命名",
   "desktop.command.exportCurrentTopic": "匯出當前主題",

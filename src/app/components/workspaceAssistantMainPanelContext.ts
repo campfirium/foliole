@@ -1,5 +1,7 @@
 import type { NativeAssistantWorkspaceContext } from '../../../lib/platform/nativeAssistantContract';
 import { buildVirtualNodeResultIndex } from '../../features/nodes/model/virtualNodeDetail';
+import { getStoredAppLocale } from '../../shared/localization/appLanguage';
+import { resolveNodeDisplayTitle } from '../../shared/localization/systemEntryNames';
 
 import type { WorkspaceGridContentProjectionSource } from './workspaceGridContentProps';
 import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
@@ -33,5 +35,9 @@ function resolveVirtualPanelTitle(
   virtualNodeId: string,
   props: Pick<WorkspaceLayoutProps, 'nodeList' | 'virtualView'>
 ) {
-  return props.nodeList.nodesById[virtualNodeId]?.title || 'Virtual';
+  return resolveNodeDisplayTitle(
+    getStoredAppLocale(),
+    virtualNodeId,
+    props.nodeList.nodesById[virtualNodeId]?.title || 'Virtual'
+  );
 }

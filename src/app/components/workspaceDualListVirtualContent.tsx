@@ -8,7 +8,9 @@ import {
   isVirtualNode
 } from '../../features/nodes/model/specialNodes';
 import { buildVirtualNodeResultIndex, getVirtualNodePrimaryKeyword } from '../../features/nodes/model/virtualNodeDetail';
+import type { AppLocale } from '../../shared/localization/appLanguage';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
+import { defaultSystemEntryDisplayName } from '../../shared/localization/systemEntryNames';
 
 import { PublishedVirtualResultListPanel } from './PublishedVirtualResultListPanel';
 import { VirtualResultListPanel } from './VirtualResultListPanel';
@@ -20,6 +22,7 @@ function resolveVirtualHeader(args: {
   activeVirtualNodeId: string;
   isRemovedView: boolean;
   isShelvedView: boolean;
+  locale: AppLocale;
   t: Translate;
 }) {
   if (args.activeVirtualNodeId === VIRTUAL_ROOT_NODE_ID) {
@@ -37,7 +40,7 @@ function resolveVirtualHeader(args: {
     return {
       kind: 'description' as const,
       text: args.t('desktop.virtualSearch.removed.description'),
-      title: args.t('desktop.virtualSearch.removed.title')
+      title: defaultSystemEntryDisplayName(args.locale, 'removed')
     };
   }
   return {
@@ -45,7 +48,7 @@ function resolveVirtualHeader(args: {
     text: args.isShelvedView
       ? args.t('desktop.virtualSearch.shelved.description')
       : '',
-    title: args.isShelvedView ? args.t('desktop.virtualSearch.shelved.title') : args.t('desktop.virtualSearch.title')
+    title: defaultSystemEntryDisplayName(args.locale, args.isShelvedView ? 'shelved' : 'virtual-root')
   };
 }
 
@@ -64,7 +67,8 @@ function renderPublishedContentColumn(props: WorkspaceDualListContentProps) {
 export function renderVirtualContentColumn(
   props: WorkspaceDualListContentProps,
   virtualResultIndex: ReturnType<typeof buildVirtualNodeResultIndex>,
-  t: Translate
+  t: Translate,
+  locale: AppLocale
 ) {
   const activeVirtualNodeId = props.activeVirtualNodeId ?? VIRTUAL_ROOT_NODE_ID;
   if (activeVirtualNodeId === VIRTUAL_ROOT_NODE_ID) {
@@ -107,6 +111,7 @@ export function renderVirtualContentColumn(
         activeVirtualNodeId,
         isRemovedView,
         isShelvedView,
+        locale,
         t
       })}
       nodeOrder={props.nodeOrder}

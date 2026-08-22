@@ -72,8 +72,8 @@ it('moves from the virtual root through built-in virtual rows with arrow keys', 
     />
   );
 
-  fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Virtual' }), { key: 'ArrowRight' });
-  fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Virtual' }), { key: 'ArrowDown' });
+  fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Virtual folders' }), { key: 'ArrowRight' });
+  fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Virtual folders' }), { key: 'ArrowDown' });
 
   expect(screen.getByRole('treeitem', { name: 'Shelved' }).querySelector('[data-node-tree-chevron-placeholder="true"]')).toBeNull();
   expect(screen.getByRole('treeitem', { name: 'Removed' }).querySelector('[data-node-tree-chevron-placeholder="true"]')).toBeNull();
@@ -115,12 +115,12 @@ it('hides the Removed row when the virtual root is collapsed', () => {
   expect(screen.getByRole('treeitem', { name: 'Shelved' })).toBeInTheDocument();
   expect(screen.getByRole('treeitem', { name: 'Removed' })).toBeInTheDocument();
 
-  fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Virtual' }), { key: 'ArrowLeft' });
+  fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Virtual folders' }), { key: 'ArrowLeft' });
 
   expect(screen.queryByRole('treeitem', { name: 'Shelved' })).toBeNull();
   expect(screen.queryByRole('treeitem', { name: 'Removed' })).toBeNull();
   expect(screen.queryByRole('treeitem', { name: 'Custom virtual' })).toBeNull();
-  expect(screen.getByRole('treeitem', { name: 'Virtual' })).toHaveAttribute('aria-expanded', 'false');
+  expect(screen.getByRole('treeitem', { name: 'Virtual folders' })).toHaveAttribute('aria-expanded', 'false');
 });
 
 it('does not show a result count on the virtual root', () => {
@@ -155,9 +155,9 @@ it('does not show a result count on the virtual root', () => {
     />
   );
 
-  expect(screen.getByRole('treeitem', { name: 'Virtual' })).not.toHaveTextContent('3');
+  expect(screen.getByRole('treeitem', { name: 'Virtual folders' })).not.toHaveTextContent('3');
   expect(screen.queryByRole('button', { name: 'New saved search' })).toBeNull();
-  fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Virtual' }), { key: 'ArrowRight' });
+  fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Virtual folders' }), { key: 'ArrowRight' });
   expect(screen.getByRole('treeitem', { name: 'Custom virtual' })).toHaveTextContent('2');
 });
 
@@ -233,5 +233,5 @@ it('can be hidden by the Demo shell without changing non-demo virtual rows', () 
     />
   );
 
-  expect(screen.queryByRole('treeitem', { name: 'Virtual' })).toBeNull();
+  expect(screen.queryByRole('treeitem', { name: 'Virtual folders' })).toBeNull();
 });

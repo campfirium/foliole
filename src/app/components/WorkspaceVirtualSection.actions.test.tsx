@@ -71,7 +71,7 @@ beforeEach(() => {
 it('marks the virtual root with the layers icon', () => {
   renderSavedSearchTree();
 
-  expect(screen.getByRole('treeitem', { name: 'Virtual' }).querySelector('.lucide-layers-2')).toBeInTheDocument();
+  expect(screen.getByRole('treeitem', { name: 'Virtual folders' }).querySelector('.lucide-layers-2')).toBeInTheDocument();
 });
 
 it('creates a manual virtual folder from the Virtual root context menu', async () => {
@@ -80,7 +80,7 @@ it('creates a manual virtual folder from the Virtual root context menu', async (
   renderSavedSearchTree({ onOpenVirtualView, onSelectNodeInVirtualView });
 
   expect(screen.queryByRole('button', { name: 'Create Virtual Folder' })).toBeNull();
-  fireEvent.contextMenu(screen.getByRole('treeitem', { name: 'Virtual' }));
+  fireEvent.contextMenu(screen.getByRole('treeitem', { name: 'Virtual folders' }));
   fireEvent.click(await screen.findByRole('menuitem', { name: 'Create Virtual Folder' }));
 
   await waitFor(() => expect(useWorkspaceStore.getState().createVirtualNode).toHaveBeenCalledWith({ mode: 'manual' }));

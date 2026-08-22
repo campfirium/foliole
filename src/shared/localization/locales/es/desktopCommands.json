@@ -26,7 +26,7 @@
   "desktop.command.importFiles": "Importar archivos",
   "desktop.command.importFolder": "Carpeta de importación",
   "desktop.command.importClipboard": "Importar portapapeles",
-  "desktop.command.openTrash": "Abrir papelera",
+  "desktop.command.openTrash": "Abrir {trash}",
   "desktop.command.openGuidedSample": "Muestra guiada abierta",
   "desktop.command.rename": "Cambiar nombre",
   "desktop.command.exportCurrentTopic": "Exportar tema actual",

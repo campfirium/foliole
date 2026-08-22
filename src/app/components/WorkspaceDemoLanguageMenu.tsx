@@ -23,7 +23,7 @@ const BUTTON_CLASS_NAME =
 export function WorkspaceDemoLanguageMenu() {
   const t = useTranslation();
   const { languagePreference, setLanguagePreference } = useLocalization();
-  const label = t('settings.general.language.aria');
+  const label = t('desktop.workspace.demo.language');
   const [open, setOpen] = useState(false);
 
   return (

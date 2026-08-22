@@ -1,5 +1,7 @@
 import { useMemo, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type RefObject } from 'react';
 
+import { useLocalization } from '../../../shared/localization/LocalizationProvider';
+import { resolveNodeDisplayTitle } from '../../../shared/localization/systemEntryNames';
 import { VirtualListSurface, type VirtualListRenderMeta } from '../../../shared/ui';
 import type { ReviewSessionState } from '../../../store/workspaceStore';
 import { canNodeBeMoved } from '../model/nodeMovementRules';
@@ -51,6 +53,7 @@ function renderNodeListRow(
   props: NodeListRowsProps,
   row: NodeTreeRow,
   onRowKeyDown: (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void,
+  locale: ReturnType<typeof useLocalization>['locale'],
   meta?: VirtualListRenderMeta
 ) {
   const rowModel = resolveNodeListRowModel(props, row);
@@ -79,7 +82,7 @@ function renderNodeListRow(
       dropIntent={props.drag.dropTargetNodeId === row.node.id ? props.drag.dropIntent : null}
       isSelected={props.selectedNodeIds.includes(row.node.id)}
       key={row.node.id}
-      label={row.node.title}
+      label={resolveNodeDisplayTitle(locale, row.node.id, row.node.title)}
       nodeId={row.node.id}
       {...(meta ? { ariaPosInSet: meta.ariaPosInSet, ariaSetSize: meta.ariaSetSize } : {})}
       nodeIconKind={rowModel.nodeIconKind}
@@ -169,6 +172,7 @@ function resolveLeafIconKind(kind: NodeTreeRowIconKind) {
 }
 
 export function NodeListRows(props: NodeListRowsProps) {
+  const { locale } = useLocalization();
   const navigationTitleFontSize = getNavigationTitleFontSize();
   const rowGap = resolveNodeListRowGap(props.rowSpacing);
   const onRowKeyDown = useMemo(
@@ -224,7 +228,7 @@ export function NodeListRows(props: NodeListRowsProps) {
       estimateSize={(index) => resolveNodeTreeRowVirtualSize(props.rowSpacing, index === props.rows.length - 1 ? 0 : rowGap, navigationTitleFontSize)}
       getItemKey={(row) => row.node.id}
       items={props.rows}
-      renderItem={(row, meta) => renderNodeListRow(props, row, onRowKeyDown, meta)}
+      renderItem={(row, meta) => renderNodeListRow(props, row, onRowKeyDown, locale, meta)}
       scrollElementRef={props.scrollContainerRef}
       scrollToIndex={resolveActiveRowIndex(props.rows, props.scrollTargetNodeId ?? props.activeNodeId)}
     />

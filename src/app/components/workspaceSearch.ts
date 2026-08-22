@@ -1,6 +1,7 @@
 import { buildNodeBreadcrumbs } from '../../features/nodes/model/nodeBreadcrumbs';
 import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
 import { getStoredAppLocale } from '../../shared/localization/appLanguage';
+import { resolveNodeDisplayTitle } from '../../shared/localization/systemEntryNames';
 import { translate } from '../../shared/localization/translations';
 import type { RuntimeRemovedSourceEntry } from '../../shared/platform/removedSourcesRuntimeRepository';
 
@@ -64,11 +65,12 @@ function buildExcerpt(content: string, query: string) {
 }
 
 function buildPathLabel(node: WorkspaceListNode, nodesById: Record<string, WorkspaceListNode>) {
+  const locale = getStoredAppLocale();
   const breadcrumbItems = buildNodeBreadcrumbs(node.parentNodeId, nodesById);
   if (!breadcrumbItems.length) {
     return translate(getStoredAppLocale(), 'desktop.search.context.topLevel');
   }
-  return breadcrumbItems.map((item) => item.title.trim() || untitledLabel()).join(' / ');
+  return breadcrumbItems.map((item) => resolveNodeDisplayTitle(locale, item.id, item.title).trim() || untitledLabel()).join(' / ');
 }
 
 function buildRemovedExcerpt(entry: RuntimeRemovedSourceEntry, query: string) {
@@ -128,7 +130,7 @@ export function buildWorkspaceSearchResults(
     if (!node) {
       continue;
     }
-    const title = normalizeWhitespace(node.title) || untitledLabel();
+    const title = normalizeWhitespace(resolveNodeDisplayTitle(getStoredAppLocale(), node.id, node.title)) || untitledLabel();
     const path = buildPathLabel(node, availableNodesById);
     const haystack = `${title}\n${path}`.toLowerCase();
     if (!haystack.includes(normalizedQuery)) {

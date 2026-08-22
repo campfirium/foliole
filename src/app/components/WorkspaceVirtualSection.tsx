@@ -17,7 +17,8 @@ import {
   isVirtualRootNode
 } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
-import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
+import { useLocalization, type Translate } from '../../shared/localization/LocalizationProvider';
+import { resolveNodeDisplayTitle } from '../../shared/localization/systemEntryNames';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { useCreateVirtualFolder } from './useCreateVirtualFolder';
@@ -141,7 +142,7 @@ function useVirtualSectionTreeModel(
 }
 
 export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
-  const t = useTranslation();
+  const { locale, t } = useLocalization();
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
   const [contextMenu, setContextMenu] = useState<{ left: number; nodeId: string; top: number } | null>(null);
   const deleteNode = useWorkspaceStore((state) => state.deleteNode);
@@ -179,7 +180,8 @@ export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
             onDragOverVirtualFolder: drop.onDragOver,
             onDragStartVirtualFolder: drop.onDragStart,
             onDropOnVirtualFolder: drop.onDrop,
-            onRenameVirtualNode: actions.onRename
+            onRenameVirtualNode: actions.onRename,
+            resolveSystemTitle: (nodeId, storedTitle) => resolveNodeDisplayTitle(locale, nodeId, storedTitle)
           },
           dropTargetNodeId: drop.targetId,
           rowSpacing: getNodeListRowSpacing(),

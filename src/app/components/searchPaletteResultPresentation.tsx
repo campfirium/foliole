@@ -2,7 +2,9 @@ import type { ReactNode } from 'react';
 
 import { projectMarkdownDisplayText } from '../../features/nodes/model/nodeListLabelProjection';
 import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
+import { getStoredAppLocale } from '../../shared/localization/appLanguage';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
+import { resolveNodeDisplayTitle } from '../../shared/localization/systemEntryNames';
 import type { RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
 import { appFloatingMetaBadgeClassName } from '../../shared/ui';
 
@@ -67,7 +69,10 @@ function buildAncestorTitles(
     if (!parentNode) {
       break;
     }
-    titles.unshift(parentNode.title.trim() || t('desktop.search.context.untitled'));
+    titles.unshift(
+      resolveNodeDisplayTitle(getStoredAppLocale(), parentNode.id, parentNode.title).trim()
+      || t('desktop.search.context.untitled')
+    );
     currentNode = parentNode;
   }
   return titles;

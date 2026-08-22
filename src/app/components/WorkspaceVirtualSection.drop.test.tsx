@@ -75,6 +75,6 @@ it('moves virtual folders under another virtual folder and back to the Virtual r
   fireEvent.drop(screen.getByRole('treeitem', { name: 'Filtered' }), { dataTransfer: nestedDrag });
   expect(useWorkspaceStore.getState().moveNodes).toHaveBeenCalledWith(['manual'], 'filtered', 'child');
 
-  fireEvent.drop(screen.getByRole('treeitem', { name: 'Virtual' }), { dataTransfer: dragData('manual') });
+  fireEvent.drop(screen.getByRole('treeitem', { name: 'Virtual folders' }), { dataTransfer: dragData('manual') });
   expect(useWorkspaceStore.getState().moveNodes).toHaveBeenLastCalledWith(['manual'], VIRTUAL_ROOT_NODE_ID, 'child');
 });

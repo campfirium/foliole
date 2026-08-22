@@ -13,6 +13,7 @@ import {
 } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 interface WorkspaceVirtualRowsProps {
+  resolveSystemTitle: (nodeId: string, storedTitle: string) => string;
   activeVirtualNodeId?: string | null;
   isVirtualViewOpen: boolean;
   nodesById: WorkspaceListNodesById;
@@ -110,7 +111,7 @@ function renderMainVirtualRow(args: Parameters<typeof renderVirtualRow>[0] & {
       isDropTarget={args.dropTargetNodeId === args.row.node.id}
       isSelected={args.isSelected}
       key={undefined}
-      label={args.row.node.title}
+      label={args.props.resolveSystemTitle(args.row.node.id, args.row.node.title)}
       nodeId={args.row.node.id}
       descendantCount={args.isVirtualRoot ? 0 : (args.props.virtualResultCountById?.get(args.row.node.id) ?? 0)}
       rowSpacing={args.rowSpacing}
@@ -153,15 +154,15 @@ function VirtualRootMarker() {
 
 
 function renderShelvedRow(args: Parameters<typeof renderVirtualRows>[0]) {
-  return renderBuiltinVirtualRow({ ...args.props, label: 'Shelved', nodeId: VIRTUAL_SHELVED_NODE_ID, onRowKeyDown: args.onRowKeyDown, rowSpacing: args.rowSpacing });
+  return renderBuiltinVirtualRow({ ...args.props, label: args.props.resolveSystemTitle(VIRTUAL_SHELVED_NODE_ID, 'Shelved'), nodeId: VIRTUAL_SHELVED_NODE_ID, onRowKeyDown: args.onRowKeyDown, rowSpacing: args.rowSpacing });
 }
 
 function renderPublishedRow(args: Parameters<typeof renderVirtualRows>[0]) {
-  return renderBuiltinVirtualRow({ ...args.props, label: 'Published', nodeId: VIRTUAL_PUBLISHED_NODE_ID, onRowKeyDown: args.onRowKeyDown, rowSpacing: args.rowSpacing });
+  return renderBuiltinVirtualRow({ ...args.props, label: args.props.resolveSystemTitle(VIRTUAL_PUBLISHED_NODE_ID, 'Published'), nodeId: VIRTUAL_PUBLISHED_NODE_ID, onRowKeyDown: args.onRowKeyDown, rowSpacing: args.rowSpacing });
 }
 
 function renderRemovedRow(args: Parameters<typeof renderVirtualRows>[0]) {
-  return renderBuiltinVirtualRow({ ...args.props, label: 'Removed', nodeId: VIRTUAL_REMOVED_NODE_ID, onRowKeyDown: args.onRowKeyDown, rowSpacing: args.rowSpacing });
+  return renderBuiltinVirtualRow({ ...args.props, label: args.props.resolveSystemTitle(VIRTUAL_REMOVED_NODE_ID, 'Removed'), nodeId: VIRTUAL_REMOVED_NODE_ID, onRowKeyDown: args.onRowKeyDown, rowSpacing: args.rowSpacing });
 }
 
 export function getVirtualKeyboardRows(

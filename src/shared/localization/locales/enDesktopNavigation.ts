@@ -27,6 +27,7 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
   'desktop.workspace.moreRightPanels': 'More right sidebar panels',
   'desktop.workspace.pinnedPanel': 'Top',
   'desktop.workspace.demo.actions': 'Demo actions',
+  'desktop.workspace.demo.language': 'Language',
   'desktop.workspace.demo.home': 'Home',
   'desktop.workspace.demo.downloadApp': 'Download app',
   'desktop.workspace.demo.reset': 'Reset data',

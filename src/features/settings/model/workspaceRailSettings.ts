@@ -29,7 +29,7 @@ const RETIRED_IMPORT_MANAGEMENT_COMMAND_ID = 'import.openManagement';
 const WORKSPACE_RAIL_COMMAND_LABEL_KEYS: Partial<Record<string, TranslationKey>> = {
   [APP_COMMAND_IDS.importSingleFile]: 'settings.rail.item.import',
   [APP_COMMAND_IDS.clipboardImport]: 'settings.rail.item.importClipboard',
-  [APP_COMMAND_IDS.toggleImmersiveMode]: 'desktop.immersiveShortcuts.title',
+  [APP_COMMAND_IDS.toggleImmersiveMode]: 'settings.rail.item.readingMode',
   [APP_COMMAND_IDS.openWorkspaceSearch]: 'desktop.command.openWorkspaceSearch',
   [APP_COMMAND_IDS.openCommandPalette]: 'desktop.command.openCommandPalette',
   [APP_COMMAND_IDS.sendFeedback]: 'settings.rail.item.feedback',

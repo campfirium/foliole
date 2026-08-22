@@ -1,6 +1,8 @@
 import type { AppCommandId } from '../../shared/commands/ids';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
+import { getStoredAppLocale } from '../../shared/localization/appLanguage';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
+import { defaultSystemEntryDisplayName } from '../../shared/localization/systemEntryNames';
 import type { TranslationKey } from '../../shared/localization/translations';
 
 const COMMAND_TITLE_KEYS: Partial<Record<AppCommandId, TranslationKey>> = {
@@ -105,6 +107,9 @@ const SECTION_KEYS: Record<string, TranslationKey> = {
 
 export function localizePaletteCommandTitle(id: string, fallback: string, t: Translate) {
   const key = COMMAND_TITLE_KEYS[id as AppCommandId];
+  if (id === APP_COMMAND_IDS.openTrash && key) {
+    return t(key, { trash: defaultSystemEntryDisplayName(getStoredAppLocale(), 'trash') });
+  }
   return key ? t(key) : fallback;
 }
 

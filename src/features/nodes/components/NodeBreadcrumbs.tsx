@@ -1,5 +1,6 @@
 import { buildBreadcrumbDisplayPath } from '../../../shared/lib/breadcrumbDisplayPath';
-import { useTranslation } from '../../../shared/localization/LocalizationProvider';
+import { useLocalization } from '../../../shared/localization/LocalizationProvider';
+import { resolveNodeDisplayTitle } from '../../../shared/localization/systemEntryNames';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import { AppBreadcrumb } from '@/shared/ui';
@@ -11,13 +12,13 @@ interface NodeBreadcrumbsProps {
 }
 
 export function NodeBreadcrumbs({ activeNodeId, nodesById, onSelectNode }: NodeBreadcrumbsProps) {
-  const t = useTranslation();
+  const { locale, t } = useLocalization();
   const sourceItems = buildBreadcrumbDisplayPath(activeNodeId, nodesById, {
     untitledLabel: t('desktop.search.context.untitled')
   });
   const items = sourceItems.map((item) => ({
     id: item.id,
-    label: item.title
+    label: resolveNodeDisplayTitle(locale, item.id, item.title)
   }));
 
   if (items.length === 0) {

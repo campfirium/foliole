@@ -6,7 +6,7 @@ import { HOME_NODE_ID, INBOX_NODE_ID } from '../../features/nodes/model/specialN
 import { buildVirtualNodeResultIndex } from '../../features/nodes/model/virtualNodeDetail';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { definedProps } from '../../shared/lib/definedProps';
-import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { useLocalization } from '../../shared/localization/LocalizationProvider';
 import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
@@ -133,7 +133,7 @@ function useWorkspaceTopicTreeCallbacks(props: WorkspaceDualListContentProps) {
 }
 
 export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
-  const t = useTranslation();
+  const { locale, t } = useLocalization();
   useWorkspaceRenderDiagnostic('workspace-dual-list-content-render', {
     activeNodeId: props.activeNodeId,
     listNodesById: props.listNodesById,
@@ -170,7 +170,7 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
       }
       contentColumn={
         props.isVirtualViewOpen
-          ? renderVirtualContentColumn(props, virtualResultIndex, t)
+          ? renderVirtualContentColumn(props, virtualResultIndex, t, locale)
             : props.isExternalViewOpen
               ? renderExternalContentColumn(props)
               : topicRootId
