@@ -10,8 +10,10 @@ const CONTROLLER_FILES = [
   'scripts/android/macos-a5-dev.mjs',
   'scripts/android/macos-a5-action-registry.mjs',
   'scripts/android/macos-a5-build-capsule.mjs',
+  'scripts/android/macos-a5-extended-actions.mjs',
   'scripts/android/macos-a5-formal-candidate.mjs',
-  'scripts/android/macos-a5-formal-receipt.mjs'
+  'scripts/android/macos-a5-formal-receipt.mjs',
+  'scripts/android/macos-a5-runtime-paths.mjs'
 ];
 const FULL_SHA = /^[0-9a-f]{40}$/u;
 

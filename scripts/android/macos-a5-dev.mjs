@@ -15,6 +15,7 @@ import {
 import {
   dispatchMacosA5Action, macosA5ErrorEvidence
 } from './macos-a5-action-dispatch.mjs';
+import { macosA5ActionEnv } from './macos-a5-extended-actions.mjs';
 import { runMacosA5Cli } from './macos-a5-cli.mjs';
 import {
   closeMacosA5Run, createMacosA5ExecutionContext, openMacosA5Run
@@ -37,40 +38,15 @@ import {
 import { checked, captured, execute } from './macos-a5-process.mjs';
 import { cleanupMacosA5Run } from './macos-a5-run-cleanup.mjs';
 import { acquireMacosA5DeviceLease } from './macos-a5-run-lease.mjs';
+import {
+  assertSafeMacosA5Environment, macosA5GradleEnv, macosA5Paths
+} from './macos-a5-runtime-paths.mjs';
+
+export { macosA5GradleEnv, macosA5Paths } from './macos-a5-runtime-paths.mjs';
 
 export const A5_SERIAL = '87a33a4b';
 const APP_ID = 'com.foliole.android';
 const COMPONENT = `${APP_ID}/.MainActivity`;
-const SDK_ROOT = '/opt/homebrew/share/android-commandlinetools';
-const JAVA_HOME = '/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home';
-
-export function macosA5Paths(contextOrRepoRoot) {
-  const context = typeof contextOrRepoRoot === 'string'
-    ? createMacosA5ExecutionContext({ action: 'legacy-helper', repoRoot: contextOrRepoRoot })
-    : contextOrRepoRoot;
-  return {
-    adb: path.join(SDK_ROOT, 'platform-tools', 'adb'),
-    ...context,
-    apk: path.join(context.buildRoot, 'android/app/build/outputs/apk/debug/app-debug.apk'),
-    cap: path.join(context.buildRoot, 'node_modules/.bin/cap'),
-    electron: path.join(context.buildRoot,
-      'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'),
-    electronPackage: path.join(context.buildRoot, 'node_modules/electron/package.json'),
-    gradle: path.join(context.buildRoot, 'android/gradlew'),
-    java: path.join(JAVA_HOME, 'bin/java'),
-  };
-}
-
-export function macosA5GradleEnv(env = process.env) {
-  return { ...env, ANDROID_HOME: SDK_ROOT, ANDROID_SDK_ROOT: SDK_ROOT, JAVA_HOME };
-}
-
-export function assertSafeMacosA5Environment(paths) {
-  if (process.platform !== 'darwin') throw new Error('macos-a5-dev only runs on macOS');
-  for (const key of ['adb', 'cap', 'gradle', 'java']) {
-    if (!existsSync(paths[key])) throw new Error(`Missing required ${key}: ${paths[key]}`);
-  }
-}
 
 export function assertFixedA5(paths) {
   checked(paths.adb, ['start-server']);
@@ -188,9 +164,12 @@ export async function runMacosA5Action(action, repoRoot = process.cwd(), { forma
       onStage: (stage) => markFormalA5Stage(receipt, `capsule-${stage}`)
     });
     const paths = macosA5Paths(context);
+    const actionEnv = macosA5GradleEnv(macosA5ActionEnv(
+      process.env, formal, actionContract.requiresHiddenDesktopRuntime
+    ));
     assertSafeMacosA5Environment(paths);
     if (receipt) captureFormalA5Toolchain(receipt, paths, (command, args, options) =>
-      spawnSync(command, args, { ...options, env: macosA5GradleEnv() }));
+      spawnSync(command, args, { ...options, env: actionEnv }));
     if (actionContract.deviceLeaseMode) {
       lease = acquireMacosA5DeviceLease(context, actionContract.deviceLeaseMode);
     }
@@ -200,11 +179,11 @@ export async function runMacosA5Action(action, repoRoot = process.cwd(), { forma
     const runBuild = (actionPaths) => build(actionPaths, checked,
       (stage) => receipt && markFormalA5Stage(receipt, stage));
     await dispatchMacosA5Action({ action, assertFixed: assertFixedA5, build: runBuild, buildIdentity,
-      captureAnnotation, captured, checked, deploy, env: macosA5GradleEnv(), execute,
+      captureAnnotation, captured, checked, deploy, env: actionEnv, execute,
       markMutationBoundary: () => receipt && markFormalA5MutationBoundary(receipt),
       pairingReadiness, paths,
       protectData: (mode, manifest, backupRoot) => protectData(
-        paths, macosA5GradleEnv(), mode, manifest, backupRoot
+        paths, actionEnv, mode, manifest, backupRoot
       ), readiness, serial: A5_SERIAL });
     if (receipt) {
       markFormalA5Stage(receipt, 'action-evidence');

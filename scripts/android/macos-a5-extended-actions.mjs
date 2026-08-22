@@ -27,6 +27,10 @@ export function macosA5ParallelDesktopEnv(env) {
   return { ...env, FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1' };
 }
 
+export function macosA5ActionEnv(env, formal, requiresHiddenDesktopRuntime) {
+  return formal && requiresHiddenDesktopRuntime ? macosA5ParallelDesktopEnv(env) : env;
+}
+
 export async function runMacosA5SettledStoppedStatus(args) {
   args.assertFixed();
   const { openMacosPairSyncDesktopSession } = await import('./macos-pair-sync-desktop-session.mjs');

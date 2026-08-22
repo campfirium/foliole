@@ -12,7 +12,7 @@ import {
   runMacosA5Action
 } from './macos-a5-dev.mjs';
 import {
-  macosA5ErrorEvidence, macosA5ParallelDesktopEnv
+  macosA5ActionEnv, macosA5ErrorEvidence, macosA5ParallelDesktopEnv
 } from './macos-a5-extended-actions.mjs';
 import { runMacosA5ProductBootstrap } from './macos-a5-product-bootstrap.mjs';
 
@@ -59,6 +59,13 @@ describe('macOS fixed A5 development entry', () => {
       JAVA_HOME: '/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home',
       PATH: '/bin'
     });
+  });
+
+  it('lets only formal hidden desktop actions bypass the ordinary instance lock', () => {
+    expect(macosA5ActionEnv({ BASE: 'kept' }, true, true)).toEqual({
+      BASE: 'kept', FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1'
+    });
+    expect(macosA5ActionEnv({ BASE: 'kept' }, false, true)).toEqual({ BASE: 'kept' });
   });
 
   it('rejects arbitrary actions before touching ADB', async () => {
