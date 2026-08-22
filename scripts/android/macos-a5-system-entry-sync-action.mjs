@@ -91,13 +91,13 @@ export async function proveA5SystemEntryDisplayNameConvergence(context) {
     }, version: 1 };
     await session.invoke('save_system_entry_display_names', { payload: renamed });
     await restartA5(context);
-    const renamedSnapshot = await waitForA5Payload(context, renamed);
     const renamedDisplay = await inspectDisplay(context, 'renamed-display', { expectedText: ALIAS });
+    const renamedSnapshot = await waitForA5Payload(context, renamed);
 
     await restartA5(context);
     await session.invoke('save_system_entry_display_names', { payload: baseline });
-    const restoredSnapshot = await waitForA5Payload(context, baseline);
     const restoredDisplay = await inspectDisplay(context, 'restored-display', { forbiddenText: ALIAS });
+    const restoredSnapshot = await waitForA5Payload(context, baseline);
     await session.close();
     session = await openMacosPairSyncDesktopSession(sessionOptions(context));
     await session.enable();

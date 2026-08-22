@@ -35,6 +35,10 @@ it('renames, restores, and reopens the desktop product session in one bounded jo
   expect(source).toContain("inspectDisplay(context, 'renamed-display', { expectedText: ALIAS })");
   expect(source).toContain("inspectDisplay(context, 'restored-display', { forbiddenText: ALIAS })");
   expect(source.match(/openMacosPairSyncDesktopSession/gu)?.length).toBeGreaterThanOrEqual(3);
+  expect(source.indexOf("inspectDisplay(context, 'renamed-display'"))
+    .toBeLessThan(source.indexOf('waitForA5Payload(context, renamed)'));
+  expect(source.indexOf("inspectDisplay(context, 'restored-display'"))
+    .toBeLessThan(source.indexOf('waitForA5Payload(context, baseline)'));
   expect(instrumentation).toContain('FolioleCompanionPairSyncRecoveryScenario.run(');
   expect(instrumentation.indexOf('FolioleCompanionPairSyncRecoveryScenario.run('))
     .toBeLessThan(instrumentation.indexOf('openDirectorySurface('));
