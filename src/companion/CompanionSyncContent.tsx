@@ -27,6 +27,7 @@ function buildSyncPanelProps(args: {
     error: workspaceSync.error,
     handoffReminderSettings: handoffReminders.settings,
     lastSyncedAt: workspaceSync.state.last_synced_at,
+    manualSyncAction: workspaceSync.manualSyncAction,
     rememberedTargets: workspaceSync.state.remembered_targets,
     syncConflictCount: workspaceSync.syncConflictCount,
     syncEvents: workspaceSync.state.sync_events,

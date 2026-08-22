@@ -11,6 +11,7 @@ import {
   loadCompanionWorkspaceSyncState
 } from '../shared/platform/companionWorkspaceSync';
 
+import type { CompanionManualSyncAction } from './companionManualSyncAction';
 import { hydrateCompanionReviewSchedulerSettings } from './companionReviewSchedulerSettingsHydration';
 import { mergeCompanionSyncProgressSession } from './companionSyncProgressSession';
 import { hydrateCompanionSystemEntryDisplayNames } from './companionSystemEntryDisplayNamesHydration';
@@ -111,20 +112,41 @@ function useCompanionSyncViewState() {
   const [syncConflictCount, setSyncConflictCount] = useState(0);
   const [status, setStatus] = useState<CompanionWorkspaceSyncStatus>('loading');
   const [error, setError] = useState<string | null>(null);
+  const [manualSyncAction, setManualSyncAction] = useState<CompanionManualSyncAction | null>(null);
   return { error, isWorkspaceSyncStateReady, readableArticle, setError, setIsWorkspaceSyncStateReady,
-    setReadableArticle, setState, setStatus, setSyncConflictCount, state, status, syncConflictCount };
+    manualSyncAction, setManualSyncAction, setReadableArticle, setState, setStatus,
+    setSyncConflictCount, state, status, syncConflictCount };
+}
+
+function useCompanionAutoSync(
+  viewState: ReturnType<typeof useCompanionSyncViewState>,
+  setSyncProgress: ReturnType<typeof useMergedCompanionSyncProgress>[1],
+  enabled: boolean
+) {
+  useForegroundAutoSync(
+    viewState.setError,
+    viewState.setReadableArticle,
+    viewState.setState,
+    setSyncProgress,
+    viewState.setStatus,
+    enabled,
+    viewState.state,
+    tryForegroundAutoSync
+  );
 }
 
 export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstrapState) {
   const viewState = useCompanionSyncViewState();
   const { error, isWorkspaceSyncStateReady, readableArticle, setError, setIsWorkspaceSyncStateReady,
-    setReadableArticle, setState, setStatus, setSyncConflictCount, state, status, syncConflictCount } = viewState;
+    manualSyncAction, setManualSyncAction, setReadableArticle, setState, setStatus,
+    setSyncConflictCount, state, status, syncConflictCount } = viewState;
   const [syncProgress, setMergedSyncProgress] = useMergedCompanionSyncProgress();
   const snapshotActions = createWorkspaceSnapshotActions({
     setError,
     setReadableArticle,
     setSyncConflictCount,
     setState,
+    setManualSyncAction,
     setSyncProgress: setMergedSyncProgress,
     setStatus,
     state
@@ -140,15 +162,10 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
     saveEndpoint: snapshotActions.saveEndpoint
   }), [pairing.refreshPairingState, snapshotActions.saveEndpoint]);
   useWorkspaceSyncBootstrap(setIsWorkspaceSyncStateReady, setReadableArticle, setSyncConflictCount, setState, setStatus);
-  useForegroundAutoSync(
-    setError,
-    setReadableArticle,
-    setState,
+  useCompanionAutoSync(
+    viewState,
     setMergedSyncProgress,
-    setStatus,
-    isCompanionPairingSyncUsable(pairing.pairingState) && participationActions.participation.participating,
-    state,
-    tryForegroundAutoSync
+    isCompanionPairingSyncUsable(pairing.pairingState) && participationActions.participation.participating
   );
 
   return {
@@ -156,6 +173,7 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
     clearError: () => setError(null),
     error,
     isWorkspaceSyncStateReady,
+    manualSyncAction,
     readableArticle,
     syncParticipation: participationActions.participation,
     state,

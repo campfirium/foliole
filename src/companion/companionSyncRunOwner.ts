@@ -1,31 +1,48 @@
-const activeSyncRuns = new Map<string, Promise<void>>();
+type ActiveSyncRun = {
+  completion: Promise<unknown>;
+  runId: string;
+};
+
+export type CompanionSyncRunHandle<T> = {
+  completion: Promise<T>;
+  mode: 'owned';
+  runId: string;
+} | {
+  completion: Promise<unknown>;
+  mode: 'joined';
+  runId: string;
+};
+
+const activeSyncRuns = new Map<string, ActiveSyncRun>();
 
 function syncRunKey(endpointUrl: string) {
   return endpointUrl.trim();
 }
 
-export async function runCompanionSyncAsOwner<T>(
+export function runCompanionSyncAsOwner<T>(
   endpointUrl: string,
+  runId: string,
   work: () => Promise<T>
-): Promise<{ owned: true; result: T } | { owned: false }> {
+): CompanionSyncRunHandle<T> {
   const key = syncRunKey(endpointUrl);
   const activeRun = activeSyncRuns.get(key);
   if (activeRun) {
-    await activeRun;
-    return { owned: false };
+    return { completion: activeRun.completion, mode: 'joined', runId: activeRun.runId };
   }
-  let resolveDone = () => {};
-  const done = new Promise<void>((resolve) => {
-    resolveDone = resolve;
+  let resolveRun: (result: T) => void = () => undefined;
+  let rejectRun: (error: unknown) => void = () => undefined;
+  const completion = new Promise<T>((resolve, reject) => {
+    resolveRun = resolve;
+    rejectRun = reject;
   });
-  activeSyncRuns.set(key, done);
-  try {
-    const result = await work();
-    return { owned: true, result };
-  } finally {
-    if (activeSyncRuns.get(key) === done) {
+  const active: ActiveSyncRun = { completion, runId };
+  activeSyncRuns.set(key, active);
+  const release = () => {
+    if (activeSyncRuns.get(key) === active) {
       activeSyncRuns.delete(key);
     }
-    resolveDone();
-  }
+  };
+  void Promise.resolve().then(work).then(resolveRun, rejectRun);
+  void completion.then(release, release);
+  return { completion, mode: 'owned', runId };
 }

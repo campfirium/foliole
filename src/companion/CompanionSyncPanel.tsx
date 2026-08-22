@@ -8,6 +8,7 @@ import { isNativeCompanionSyncParticipationRuntime } from '../shared/platform/co
 
 import type { CompanionHandoffReminderSettings } from './companionHandoffReminderSettings';
 import { CompanionHandoffReminderSettingsPanel } from './CompanionHandoffReminderSettingsPanel';
+import type { CompanionManualSyncAction } from './companionManualSyncAction';
 import { CompanionSyncDiscoveryDialog } from './CompanionSyncDiscoveryDialog';
 import { CompanionSyncNowButton } from './CompanionSyncNowButton';
 import { CompanionSyncParticipationControls } from './CompanionSyncParticipationControls';
@@ -25,6 +26,7 @@ type CompanionSyncPanelProps = {
   error: string | null;
   handoffReminderSettings: CompanionHandoffReminderSettings;
   lastSyncedAt: string | null;
+  manualSyncAction?: CompanionManualSyncAction | null;
   rememberedTargets: string[];
   syncConflictCount: number;
   syncEvents: NativeCompanionSyncEvent[];
@@ -90,13 +92,17 @@ function formatSyncPanelError(message: string, t: Translate) {
   return message;
 }
 
-function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'onDisconnectPairing' | 'onOpenSettingsPage' | 'page' | 'pairingState' | 'status' | 'syncConflictCount' | 'syncEvents' | 'syncGroup' | 'syncProgress'> & {
+function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'manualSyncAction' | 'onDisconnectPairing' | 'onOpenSettingsPage' | 'page' | 'pairingState' | 'status' | 'syncConflictCount' | 'syncEvents' | 'syncGroup' | 'syncProgress'> & {
   endpointUrl: string;
   onSync(): void;
 }) {
   const showSyncActionFirst = props.page === 'sync' && Boolean(props.syncGroup);
   const syncAction = props.page === 'sync' ? (
-    <CompanionSyncNowButton isSyncing={props.status === 'syncing'} onSync={props.onSync} />
+    <CompanionSyncNowButton
+      isSyncing={props.status === 'syncing'}
+      manualSyncAction={props.manualSyncAction ?? null}
+      onSync={props.onSync}
+    />
   ) : null;
   const participationControl = props.page === 'sync' && props.syncGroup && isNativeCompanionSyncParticipationRuntime()
     ? <CompanionSyncParticipationControls />
@@ -123,7 +129,7 @@ function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'o
   );
 }
 
-function MainSyncContent(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'onCancelPairing' | 'onDisconnectPairing' | 'onOpenSettingsPage' | 'page' | 'pairingRequest' | 'pairingState' | 'status' | 'syncConflictCount' | 'syncEvents' | 'syncGroup' | 'syncProgress'> & {
+function MainSyncContent(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'manualSyncAction' | 'onCancelPairing' | 'onDisconnectPairing' | 'onOpenSettingsPage' | 'page' | 'pairingRequest' | 'pairingState' | 'status' | 'syncConflictCount' | 'syncEvents' | 'syncGroup' | 'syncProgress'> & {
   endpointUrl: string;
   isBusy: boolean;
   isDiscovering: boolean;
@@ -138,6 +144,7 @@ function MainSyncContent(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | '
       <ConnectedState
         endpointUrl={props.endpointUrl}
         lastSyncedAt={props.lastSyncedAt}
+        manualSyncAction={props.manualSyncAction ?? null}
         pairingState={props.pairingState}
         status={props.status}
         syncConflictCount={props.syncConflictCount}

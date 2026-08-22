@@ -47,13 +47,14 @@ async function recordTargetFailure(args: {
 }
 
 async function runOwnedTarget(args: {
+  runId: string;
   target: CompanionWorkspaceSyncTarget;
   runStreamSync: RunCompanionStreamSync;
   storedEndpointUrl: string;
   syncArgs: TryForegroundAutoSyncArgs;
 }): Promise<ForegroundAutoSyncOutcome> {
   const endpointUrl = args.target.endpointUrl;
-  const runId = createCompanionSyncRunId();
+  const runId = args.runId;
   const startedAt = new Date().toISOString();
   try {
     args.syncArgs.setStatus('syncing');
@@ -88,8 +89,13 @@ export async function tryForegroundAutoSyncTarget(
   storedEndpointUrl: string,
   runStreamSync: RunCompanionStreamSync
 ) {
-  const run = await runCompanionSyncAsOwner(target.endpointUrl, () => runOwnedTarget({
-    target, runStreamSync, storedEndpointUrl, syncArgs
+  const runId = createCompanionSyncRunId();
+  const run = runCompanionSyncAsOwner(target.endpointUrl, runId, () => runOwnedTarget({
+    runId, target, runStreamSync, storedEndpointUrl, syncArgs
   }));
-  return run.owned ? run.result : 'skipped';
+  if (run.mode === 'joined') {
+    await run.completion.catch(() => undefined);
+    return 'skipped';
+  }
+  return run.completion;
 }

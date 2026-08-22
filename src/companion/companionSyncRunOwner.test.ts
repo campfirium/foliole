@@ -5,6 +5,8 @@ import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativ
 import type { CompanionWorkspaceSyncTarget } from '../shared/platform/companion/network/companionWorkspaceEndpoint';
 import type { CompanionDesktopSyncResult } from '../shared/platform/companionDesktopSyncObjects';
 
+let persistedEvents: NativeCompanionWorkspaceSyncState['sync_events'] = [];
+
 const syncObjectsMock = vi.hoisted(() => ({
   loadCompanionSyncNodeConflicts: vi.fn(async () => []),
   syncCompanionObjectsFromDesktop: vi.fn()
@@ -68,7 +70,7 @@ function syncState(): NativeCompanionWorkspaceSyncState {
     endpoint_url: 'http://10.0.2.2:38641',
     last_synced_at: null,
     remembered_targets: ['http://10.0.2.2:38641'],
-    sync_events: [],
+    sync_events: persistedEvents,
     sync_onboarding_status: 'completed',
     workspace_snapshot: snapshot()
   };
@@ -131,28 +133,48 @@ async function startBlockedSync() {
   return { releaseSync: () => releaseSync(), syncStarted };
 }
 
-describe('companion sync run owner', () => {
-  beforeEach(() => {
-    vi.resetAllMocks();
-    workspaceSyncMock.recordCompanionWorkspaceSyncEvent.mockResolvedValue(syncState());
-    workspaceSyncMock.loadCompanionWorkspaceSyncState.mockResolvedValue(syncState());
-    workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoint.mockImplementation(async (endpointUrl: string) => endpointUrl);
-    workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoints.mockImplementation(
-      async (endpointUrl: string) => [{ endpointUrl }]
-    );
+function resetSyncRunOwnerMocks() {
+  vi.resetAllMocks();
+  persistedEvents = [];
+  workspaceSyncMock.recordCompanionWorkspaceSyncEvent.mockImplementation(async (event) => {
+    persistedEvents = [{
+      endpoint_url: event.endpointUrl,
+      id: `event-${persistedEvents.length + 1}`,
+      kind: event.kind,
+      message: event.message,
+      occurred_at: event.occurredAt ?? new Date().toISOString(),
+      result: event.result,
+      run_id: event.runId,
+      started_at: event.startedAt,
+      status: event.status,
+      summary: event.summary
+    }, ...persistedEvents];
+    return syncState();
   });
+  workspaceSyncMock.loadCompanionWorkspaceSyncState.mockImplementation(async () => syncState());
+  workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoint.mockImplementation(async (endpointUrl: string) => endpointUrl);
+  workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoints.mockImplementation(
+    async (endpointUrl: string) => [{ endpointUrl }]
+  );
+}
+
+describe('companion sync run owner', () => {
+  beforeEach(resetSyncRunOwnerMocks);
 
   it('lets manual sync wait for an active auto run without writing activity', async () => {
     const { createWorkspaceSnapshotActions } = await import('./companionWorkspaceSyncActions');
     const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
     const { releaseSync, syncStarted } = await startBlockedSync();
+    const setManualSyncAction = vi.fn();
+    const setStatus = vi.fn();
     const actions = createWorkspaceSnapshotActions({
       setError: vi.fn(),
       setReadableArticle: vi.fn(),
       setState: vi.fn(),
       setSyncConflictCount: vi.fn(),
       setSyncProgress: vi.fn(),
-      setStatus: vi.fn(),
+      setManualSyncAction,
+      setStatus,
       state: syncState()
     });
 
@@ -172,6 +194,11 @@ describe('companion sync run owner', () => {
     await Promise.all([autoSync, manualSync]);
     expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledTimes(1);
     expect(countRunEvents()).toBe(2);
+    const runId = persistedEvents.find((event) => event.kind === 'run_finished')?.run_id;
+    expect(setManualSyncAction).toHaveBeenCalledWith({ mode: 'joined', runId });
+    expect(setManualSyncAction).toHaveBeenLastCalledWith(null);
+    expect(setStatus).toHaveBeenCalledWith('syncing');
+    expect(setStatus).toHaveBeenLastCalledWith('idle');
   });
 
   it('runs immediate sync through the discovered active group member instead of the remembered target', async () => {

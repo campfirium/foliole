@@ -10,6 +10,7 @@
   "companion.sync.syncing": "Sincronizando",
   "companion.sync.action.sync": "Sincronizar",
   "companion.sync.action.syncNow": "Sincronizar agora",
+  "companion.sync.action.joiningCurrent": "Entrando na sincronização atual",
   "companion.sync.pullingChanges": "Extraindo alterações agora.",
   "companion.sync.failed": "Falha",
   "companion.sync.checked": "Verificado",

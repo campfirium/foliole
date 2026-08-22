@@ -10,6 +10,7 @@
   "companion.sync.syncing": "同期中",
   "companion.sync.action.sync": "同期",
   "companion.sync.action.syncNow": "今すぐ同期",
+  "companion.sync.action.joiningCurrent": "進行中の同期に参加しています",
   "companion.sync.pullingChanges": "現在、変更をプルしています。",
   "companion.sync.failed": "失敗しました",
   "companion.sync.checked": "チェック済み",

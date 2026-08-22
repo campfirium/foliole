@@ -10,6 +10,7 @@
   "companion.sync.syncing": "Синхронизация",
   "companion.sync.action.sync": "Синхронизировать",
   "companion.sync.action.syncNow": "Синхронизировать сейчас",
+  "companion.sync.action.joiningCurrent": "Подключение к текущей синхронизации",
   "companion.sync.pullingChanges": "Сейчас собираем изменения.",
   "companion.sync.failed": "Не удалось",
   "companion.sync.checked": "Проверено",

@@ -13,6 +13,7 @@ export const EN_COMPANION_SYNC_TRANSLATIONS = {
   'companion.sync.syncing': 'Syncing',
   'companion.sync.action.sync': 'Sync',
   'companion.sync.action.syncNow': 'Sync Now',
+  'companion.sync.action.joiningCurrent': 'Joining current sync',
   'companion.sync.pullingChanges': 'Pulling changes now.',
   'companion.sync.failed': 'Failed',
   'companion.sync.checked': 'Checked',

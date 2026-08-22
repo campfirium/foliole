@@ -10,6 +10,7 @@
   "companion.sync.syncing": "동기화 중",
   "companion.sync.action.sync": "동기화",
   "companion.sync.action.syncNow": "지금 동기화",
+  "companion.sync.action.joiningCurrent": "현재 동기화에 참여하는 중",
   "companion.sync.pullingChanges": "지금 변경사항을 가져오는 중입니다.",
   "companion.sync.failed": "실패",
   "companion.sync.checked": "체크됨",

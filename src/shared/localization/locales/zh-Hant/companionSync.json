@@ -10,6 +10,7 @@
   "companion.sync.syncing": "正在同步",
   "companion.sync.action.sync": "同步",
   "companion.sync.action.syncNow": "立即同步",
+  "companion.sync.action.joiningCurrent": "正在加入目前同步",
   "companion.sync.pullingChanges": "現在拉動更改。",
   "companion.sync.failed": "失敗",
   "companion.sync.checked": "已檢查",
