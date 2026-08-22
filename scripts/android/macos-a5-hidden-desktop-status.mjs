@@ -20,7 +20,7 @@ export async function runMacosA5HiddenDesktopStatusEntry(args, {
   buildDesktop = buildMacosA5Desktop, fsApi = fs,
   openSession = openMacosPairSyncDesktopSession
 } = {}) {
-  args.build(); buildDesktop(args.checked, args.paths);
+  args.build(args.paths); buildDesktop(args.checked, args.paths);
   const runId = args.buildIdentity();
   const session = await openSession({ env: args.env,
     libraryHome: args.paths.desktopDevLibrary, repoRoot: args.paths.buildRoot,

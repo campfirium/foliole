@@ -18,8 +18,9 @@ afterEach(() => {
 it('writes a redacted hidden desktop status without touching the fixed A5', async () => {
   root = fs.mkdtempSync(path.join(process.cwd(), '.tmp/artifacts/a5-hidden-status-'));
   const close = vi.fn(async () => undefined);
+  const build = vi.fn();
   const result = await runMacosA5HiddenDesktopStatusEntry({
-    build: vi.fn(), buildIdentity: () => 'run-1', checked: vi.fn(), env: { BASE: 'kept' },
+    build, buildIdentity: () => 'run-1', checked: vi.fn(), env: { BASE: 'kept' },
     paths: { artifactsRoot: root, buildRoot: '/capsule', desktopDevLibrary: '/library',
       desktopRuntimeRoot: '/runtime' }
   }, {
@@ -33,6 +34,7 @@ it('writes a redacted hidden desktop status without touching the fixed A5', asyn
     resultStatus: 'success', runId: 'run-1', schemaVersion: 1,
     serverState: 'running', syncEnabled: true });
   expect(fs.readFileSync(result.evidencePath, 'utf8')).not.toContain('private');
+  expect(build).toHaveBeenCalledWith(expect.objectContaining({ buildRoot: '/capsule' }));
   expect(close).toHaveBeenCalledOnce();
 });
 
