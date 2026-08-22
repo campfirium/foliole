@@ -9,7 +9,13 @@ const TEST_CLASS = `${APP_ID}.FolioleCompanionSystemEntryDisplayNameTest#display
 function receipt(output) {
   const prefix = 'INSTRUMENTATION_STATUS: folioleActionReceipt=';
   const line = String(output).split(/\r?\n/u).find((entry) => entry.startsWith(prefix));
-  if (!line) throw new Error('System entry display instrumentation did not emit a receipt.');
+  if (!line) {
+    const diagnostic = String(output).split(/\r?\n/u).filter((entry) =>
+      /INSTRUMENTATION_(?:RESULT: shortMsg|STATUS: stack|STATUS_CODE: -2)|FAILURES!!!|Tests run:/u
+        .test(entry)).slice(-6).join(' | ').slice(0, 1_200);
+    throw new Error(`System entry display instrumentation did not emit a receipt: ${
+      diagnostic || 'no bounded test diagnostic'}`);
+  }
   return JSON.parse(line.slice(prefix.length));
 }
 
