@@ -182,6 +182,7 @@ export function classifyPairSyncRecoveryInstrumentationFailure(output) {
   const stages = [...value.matchAll(/^INSTRUMENTATION_STATUS: foliolePairSyncStage=([a-z-]+)$/gmu)];
   const stage = stages.at(-1)?.[1];
   const interruptedStages = {
+    'test-started': 'activity_launch_interrupted',
     'activity-started': 'activity_start_interrupted',
     'window-focused': 'webview_lookup_interrupted',
     'webview-ready': 'webview_snapshot_interrupted',

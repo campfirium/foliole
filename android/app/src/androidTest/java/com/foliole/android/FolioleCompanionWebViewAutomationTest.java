@@ -126,6 +126,7 @@ public class FolioleCompanionWebViewAutomationTest {
     @Test
     public void recoversPairingAndInitialSync() throws Exception {
         Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
+        FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "test-started");
         boolean forceRePair = "re-pair".equals(
             InstrumentationRegistry.getArguments().getString("foliolePairSyncMode", "")
         );

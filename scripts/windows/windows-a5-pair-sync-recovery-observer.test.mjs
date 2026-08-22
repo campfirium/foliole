@@ -37,6 +37,9 @@ it('observes request submission without global errors or click-return evidence',
   expect(adapter).not.toContain('runOnMainSync(() -> webView.evaluateJavascript');
   expect(automation).toContain('activity.runOnUiThread(activity::finish);');
   expect(automation).toContain('FolioleCompanionActivityLauncher.start(instrumentation, 30_000)');
+  expect(automation.indexOf('"test-started"')).toBeLessThan(
+    automation.indexOf('FolioleCompanionActivityLauncher.start')
+  );
   expect(launcher).toContain('waitForMonitorWithTimeout(monitor, timeoutMs)');
   expect(launcher).not.toContain('startActivitySync');
   expect(recoveryEvidence).toContain('foliole-pair-sync-evidence-observer.js');
