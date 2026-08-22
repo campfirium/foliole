@@ -182,16 +182,14 @@ function SyncOverview(props: SyncStatusDetailsProps) {
           sourceHostName={props.pairingState.remote_peer_name ?? null}
         />
       ) : null}
-      {props.syncGroup ? null : (
-        <div className="border-y border-companion-divider">
-          <SettingsLinkRow
-            label={t('companion.sync.pairedDevice')}
-            onClick={() => props.onOpenPage('syncConnection')}
-            testId="companion-sync-connection"
-            value={formatPairedDevice(props.pairingState, t)}
-          />
-        </div>
-      )}
+      <div className="border-y border-companion-divider">
+        <SettingsLinkRow
+          label={t('companion.sync.pairedDevice')}
+          onClick={() => props.onOpenPage('syncConnection')}
+          testId="companion-sync-connection"
+          value={formatPairedDevice(props.pairingState, t)}
+        />
+      </div>
       <div className="border-y border-companion-divider">
         <SyncActivitySummary events={props.syncEvents} onOpen={() => props.onOpenPage('syncActivity')} />
       </div>

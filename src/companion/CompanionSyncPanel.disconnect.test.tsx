@@ -31,4 +31,25 @@ describe('CompanionSyncPanel disconnect', () => {
       expect(props.onDisconnectPairing).toHaveBeenCalledTimes(1);
     });
   });
+
+  it('keeps credential reauthorization reachable while Sync Group membership remains active', () => {
+    const props = {
+      ...createConnectedProps(),
+      syncGroup: {
+        created_at: '2026-08-08T00:00:00.000Z',
+        created_by_host_name: 'Foliole Desktop on Windows',
+        display_name: 'Studio',
+        group_id: 'group-1',
+        local_host_name: 'Android companion',
+        local_member_state: 'active' as const,
+        members: [],
+        timeline_id: 'timeline-1'
+      }
+    };
+
+    render(<CompanionSyncPanel {...props} />);
+    fireEvent.click(screen.getByTestId('companion-sync-connection'));
+
+    expect(props.onOpenSettingsPage).toHaveBeenCalledWith('syncConnection');
+  });
 });
