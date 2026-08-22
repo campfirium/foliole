@@ -1,9 +1,10 @@
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
-import type { Page } from '@playwright/test';
+import type { ElectronApplication, Page } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
+import type { DesktopSession } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
 const SCREENSHOT = path.resolve(
@@ -18,6 +19,36 @@ const ENTRIES = [
   ['special-virtual-shelved', 'Shelved', 'Later'],
   ['special-virtual-removed', 'Removed', 'Hidden']
 ] as const;
+
+function expectPathInsideStateRoot(candidate: string, stateRoot: string) {
+  const relative = path.relative(path.resolve(stateRoot), path.resolve(candidate));
+  expect(relative).not.toBe('..');
+  expect(relative.startsWith(`..${path.sep}`)).toBe(false);
+  expect(path.isAbsolute(relative)).toBe(false);
+}
+
+async function assertIsolatedLibrary(
+  desktopApp: ElectronApplication,
+  desktopSession: DesktopSession,
+  page: Page
+) {
+  const runtime = await desktopApp.evaluate(() => ({
+    libraryHome: process.env.FOLIOLE_LIBRARY_HOME ?? null,
+    stateRoot: process.env.FOLIOLE_ELECTRON_TEST_STATE_ROOT ?? null
+  }));
+  if (!runtime.libraryHome || !runtime.stateRoot) {
+    throw new Error('Refusing system entry rename acceptance without an isolated test library.');
+  }
+  expect(path.resolve(runtime.stateRoot)).toBe(path.resolve(desktopSession.target.runtimeStateRoot));
+  expectPathInsideStateRoot(runtime.libraryHome, runtime.stateRoot);
+  const libraryPaths = await page.evaluate(() =>
+    window.electronAPI?.invoke('load_library_path_settings', {})
+  );
+  if (!libraryPaths || typeof libraryPaths.database_path !== 'string') {
+    throw new Error('Refusing system entry rename acceptance without a resolved test database.');
+  }
+  expectPathInsideStateRoot(libraryPaths.database_path, runtime.stateRoot);
+}
 
 async function switchLanguage(page: Page, language: 'en' | 'zh-Hans') {
   await page.evaluate(async (language) => {
@@ -45,8 +76,11 @@ async function renameEntry(page: Page, nodeId: string, currentName: string, next
 }
 
 test('renames all system entries, restores them after renderer restart, and clears one override', async ({
+  desktopApp,
+  desktopSession,
   desktopWindow
 }, testInfo) => {
+  await assertIsolatedLibrary(desktopApp, desktopSession, desktopWindow);
   await switchLanguage(desktopWindow, 'en');
   const pathsBefore = await desktopWindow.evaluate(() =>
     window.electronAPI?.invoke('load_library_path_settings', {})
