@@ -48,6 +48,7 @@ it('stops fresh A5 pairing after native credentials can sign the first request',
 
   expect(runPairSync).toHaveBeenCalledWith(expect.objectContaining({
     approvalRequired: true,
+    credentialRepairRequired: true,
     evidenceRoot: path.join('/evidence', 'a5-pair-credentials/build-1'),
     instrumentationModeArgs: macosA5CredentialsOnlyModeArgs,
     desktopAuthorizationFingerprint: 'peer-1', recoveryEvidenceGoal: 'credentials-signable'
@@ -116,7 +117,7 @@ it('routes exact joined-empty credentials through product Leave and a fresh boun
     evidenceRoot: path.join('/evidence', 'a5-pair-credentials/build-2/leave')
   }));
   expect(runPairSync).toHaveBeenCalledWith(expect.objectContaining({
-    credentialRepairRequired: false, existingPairing: false, hostName: 'A5',
+    approvalRequired: true, credentialRepairRequired: true, existingPairing: false, hostName: 'A5',
     pairedAuthorizationFingerprint: null, pairRequestIdentity: 'A5',
     protectedSyncGroup: { groupId: 'group-1', timelineId: 'timeline-1' },
     desktopAuthorizationFingerprint: joinedEmpty.syncGroupRemotePeerFingerprint,
