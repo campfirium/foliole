@@ -131,6 +131,15 @@ export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
     && pairState.syncGroupRoutePresent === true
     && pairState.syncGroupPeerConflict === false
     && /^[0-9a-f]{16}$/u.test(pairState.syncGroupRemotePeerFingerprint ?? '');
+  const protectedGroupCredentialRepair = pairState.nodeCount > 0
+    && workspaceState.counts?.nodes === pairState.nodeCount
+    && workspaceState.canonicalInbox?.active === true
+    && workspaceState.pairingWorkspace?.localDeviceIdentityPresent === true
+    && workspaceState.pairingWorkspace?.syncEndpointPresent === false
+    && pairState.pairingCredentialsPresent === false
+    && pairState.pairingPeerAuthorizationFingerprint === null
+    && pairState.pairingPeerConflict === false
+    && authorizedGroupRoute && hasProtectedPendingSyncState(pairState);
   const joinedEmptyReauthorization = pairing.status === 0 && pairState.dirtyRecordCount === 0
     && pairState.pairingCredentialsPresent === true
     && pairState.pairingPeerAuthorizationFingerprint === pairState.syncGroupRemotePeerFingerprint
@@ -169,7 +178,7 @@ export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
     && workspaceState.pairingWorkspace?.syncEndpointPresent === false;
   const departedCredentialState = pairing.status === 0
     ? classifyDepartedCredentialState(pairState, workspaceState) : null;
-  if (!existingPairingRecovery && !protectedGroupPendingSync
+  if (!existingPairingRecovery && !protectedGroupPendingSync && !protectedGroupCredentialRepair
       && !cleanPairSwitch && !rejectedCleanPairing
       && !rejectedEmptyPairing && !freshEmptyPairing && !joinedEmptyReauthorization
       && departedCredentialState !== DEPARTED_PRESERVED_HISTORY && !missingDatabaseBootstrap) {
@@ -177,14 +186,17 @@ export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
   }
   return {
     ...pairState,
-    credentialRepairRequired: rejectedCleanPairing || rejectedEmptyPairing || (existingPairingRecovery
-      && pairState.pairingCredentialsRejected === true),
+    credentialRepairRequired: protectedGroupCredentialRepair
+      || rejectedCleanPairing || rejectedEmptyPairing || (existingPairingRecovery
+        && pairState.pairingCredentialsRejected === true),
     existingPairing: existingPairingRecovery || protectedGroupPendingSync || cleanPairSwitch
-      || rejectedEmptyPairing || missingDatabaseBootstrap,
-    pairTargetAuthorizationFingerprint: pairState.pairingPeerAuthorizationFingerprint,
+      || protectedGroupCredentialRepair || rejectedEmptyPairing || missingDatabaseBootstrap,
+    pairTargetAuthorizationFingerprint: protectedGroupCredentialRepair
+      ? pairState.syncGroupRemotePeerFingerprint
+      : pairState.pairingPeerAuthorizationFingerprint,
     departedCredentialState,
     joinedEmptyReauthorization,
-    protectedPendingSync: protectedGroupPendingSync,
+    protectedPendingSync: protectedGroupPendingSync || protectedGroupCredentialRepair,
     requiresProductBootstrap: missingDatabaseBootstrap
   };
 }

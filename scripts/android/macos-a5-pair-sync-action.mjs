@@ -46,9 +46,6 @@ export async function reconcileAuthorizedMacosDailyPairing(
         && safe.localAuthorizationFingerprint !== desktopAuthorizationFingerprint)) {
     throw new Error('Current Sync Group authorization route requires user review.');
   }
-  if (credentialRepairRequired) {
-    throw new Error('Credential repair is outside the authorization cutover contract.');
-  }
   const member = overview.sync_group.members.find(
     (candidate) => candidate.state === 'active' && candidate.host_name === hostName
   );
@@ -66,7 +63,7 @@ export async function reconcileAuthorizedMacosDailyPairing(
   if (!existingPairing && (memberAuthorizationFingerprint || routes.length > 0)) {
     throw new Error('Fresh A5 authorization route is not empty.');
   }
-  return { ...safe, rePairRequired: !existingPairing };
+  return { ...safe, rePairRequired: credentialRepairRequired || !existingPairing };
 }
 
 async function macosDesktopControl(execute, _paths, _env, action) {

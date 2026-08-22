@@ -34,10 +34,12 @@ const workspace = {
   pairingWorkspace: { localDeviceIdentityPresent: true, syncEndpointPresent: true }
 };
 
-function runFor(pairState) {
+function runFor(pairState, workspaceState = workspace) {
   return vi.fn()
     .mockReturnValueOnce(result('[android-data] pair-sync-recovery-readiness=', pairState, 77))
-    .mockReturnValueOnce(result('[android-data] capture-annotation-readiness=', workspace, 77));
+    .mockReturnValueOnce(result(
+      '[android-data] capture-annotation-readiness=', workspaceState, 77
+    ));
 }
 
 it('admits protected migration dirtiness without requiring one legacy pair peer', () => {
@@ -54,4 +56,29 @@ it('fails closed when migration dirtiness is not completely classified', () => {
       ...pending, dirtyObjectCounts: { setting: 2 }
     })
   )).toThrow('authorized pair-switch state');
+});
+
+it('routes a protected upgraded member without pairing credentials through repair', () => {
+  const pairState = {
+    ...pending,
+    pairingPeerConflict: false,
+    syncGroupPeerConflict: false,
+    syncGroupRemotePeerFingerprint: '5bcfa87e1e014fdc'
+  };
+  const workspaceState = {
+    ...workspace,
+    pairingWorkspace: {
+      ...workspace.pairingWorkspace,
+      syncEndpointPresent: false
+    }
+  };
+
+  expect(runMacosA5PairSyncPreflight(
+    { adb: '/adb', buildRoot: '/repo' }, runFor(pairState, workspaceState)
+  )).toMatchObject({
+    credentialRepairRequired: true,
+    existingPairing: true,
+    pairTargetAuthorizationFingerprint: '5bcfa87e1e014fdc',
+    protectedPendingSync: true
+  });
 });

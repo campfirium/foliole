@@ -69,13 +69,16 @@ it('accepts a fresh A5 join only when membership and credential route are absent
   )).resolves.toMatchObject({ pairedAuthorizationFingerprints: [], rePairRequired: true });
 });
 
-it('rejects route repair, Host ambiguity, and protected group drift', async () => {
+it('keeps the authorized member route while requesting credential repair', async () => {
   const value = overview();
   await expect(reconcileAuthorizedMacosDailyPairing(
     value, session(value), 'A5',
     macosPairSyncAuthorizationFingerprint(desktopAuthorization), true, true
-  )).rejects.toThrow('outside the authorization cutover contract');
+  )).resolves.toMatchObject({ rePairRequired: true });
+});
 
+it('rejects Host ambiguity and protected group drift', async () => {
+  const value = overview();
   value.sync_group.members.push({
     authorization_id: 'authorization-a5-duplicate', host_name: 'A5', state: 'active'
   });
