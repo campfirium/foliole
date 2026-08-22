@@ -17,6 +17,12 @@ vi.mock('electron', () => ({
   }
 }));
 
+vi.mock('../database/syncGroupStore.js', () => ({
+  loadDesktopSyncGroup: () => ({
+    members: [{ authorization_id: 'authorization-a5', host_name: 'A5' }]
+  })
+}));
+
 import {
   clearPairedCompanionAuthorizations,
   loadPairedCompanionAuthorization,
@@ -30,7 +36,6 @@ beforeEach(() => {
   userDataDir = path.join(tempRoot, 'user-data');
   fs.mkdirSync(userDataDir, { recursive: true });
   encryptString.mockImplementation((value: string) => Buffer.from(value, 'utf8'));
-  clearPairedCompanionAuthorizations();
 });
 
 afterEach(() => {
@@ -41,6 +46,14 @@ afterEach(() => {
 it('cuts legacy Device credentials over to the Host authorization without changing the secret', () => {
   writeLegacyStore();
   expect(migratePairedCompanionStore((host) => host === 'A5' ? 'authorization-a5' : null)).toBe(true);
+  expect(loadPairedCompanionAuthorization('authorization-a5')).toEqual(expect.objectContaining({
+    authorization_id: 'authorization-a5', credential_secret: 'legacy-secret', host_name: 'A5'
+  }));
+});
+
+it('performs the legacy cutover only when credentials are actually consumed', () => {
+  writeLegacyStore();
+
   expect(loadPairedCompanionAuthorization('authorization-a5')).toEqual(expect.objectContaining({
     authorization_id: 'authorization-a5', credential_secret: 'legacy-secret', host_name: 'A5'
   }));

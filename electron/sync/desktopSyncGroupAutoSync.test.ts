@@ -3,13 +3,18 @@ import { beforeEach, expect, it, vi } from 'vitest';
 const runtime = vi.hoisted(() => ({
   callback: null as null | ((service: unknown) => void),
   constructorOptions: [] as unknown[],
+  credentialAccess: vi.fn(() => { throw new Error('credential store should stay closed'); }),
   updateCallbacks: new Map<string, (service: unknown) => void>(),
   completeJoin: vi.fn(),
   continueSync: vi.fn(),
   destroy: vi.fn(),
-  group: { group_id: 'group-1' },
-  peers: [{ endpoint_url: 'http://old', group_id: 'group-1', peer_authorization_id: 'android-b' }],
-  savePeer: vi.fn((peer) => peer),
+  group: {
+    group_id: 'group-1', local_host_name: 'Desktop', timeline_id: 'timeline-1',
+    members: [
+      { authorization_id: 'desktop-a', host_name: 'Desktop', host_platform: 'darwin' },
+      { authorization_id: 'android-b', host_name: 'A5', host_platform: 'android-capacitor' }
+    ]
+  },
   stop: vi.fn(),
   update: vi.fn(),
   refreshPending: vi.fn(() => false)
@@ -45,8 +50,8 @@ vi.mock('./desktopCompanionSyncPreference.js', () => ({
 }));
 vi.mock('../database/syncGroupStore.js', () => ({ loadDesktopSyncGroup: () => runtime.group }));
 vi.mock('./companionPairingStore.js', () => ({
-  loadPairedSyncGroupPeers: () => runtime.peers,
-  savePairedSyncGroupPeer: runtime.savePeer
+  loadPairedSyncGroupPeers: runtime.credentialAccess,
+  savePairedSyncGroupPeer: runtime.credentialAccess
 }));
 vi.mock('./desktopSyncGroupJoin.js', () => ({
   completeDesktopSyncGroupJoin: runtime.completeJoin,
@@ -79,9 +84,11 @@ it('continues the saved member sync when its provider advertises again', async (
   expect(runtime.constructorOptions).toEqual([
     undefined, { interface: '192.168.1.10' }, { interface: '10.0.0.10' }
   ]);
-  expect(runtime.savePeer).toHaveBeenCalledWith(expect.objectContaining({
-    endpoint_url: 'http://192.168.1.12:43121', peer_authorization_id: 'android-b'
+  expect(runtime.continueSync).toHaveBeenCalledWith(expect.objectContaining({
+    endpoint_url: 'http://192.168.1.12:43121', local_authorization_id: 'desktop-a',
+    peer_authorization_id: 'android-b', peer_host_name: 'A5'
   }));
+  expect(runtime.credentialAccess).not.toHaveBeenCalled();
 });
 
 it('continues an approved join at the same provider new endpoint', async () => {
@@ -115,7 +122,7 @@ it('retries the latest advertisement after an interrupted peer sync settles', as
 
   first.resolve({ complete: false, cursor: 9 });
   await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledTimes(2));
-  expect(runtime.savePeer).toHaveBeenLastCalledWith(expect.objectContaining({
+  expect(runtime.continueSync).toHaveBeenLastCalledWith(expect.objectContaining({
     endpoint_url: 'http://192.168.1.12:43122'
   }));
 });

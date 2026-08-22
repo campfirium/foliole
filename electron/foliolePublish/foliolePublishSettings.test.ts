@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const state = vi.hoisted(() => ({
+  readSecret: vi.fn(() => state.secret),
   secret: '', setting: null as unknown, shouldFailSave: false, shouldFailSecretWrite: false
 }));
 
@@ -15,7 +16,7 @@ vi.mock('../database/settingsStore.js', () => ({
 vi.mock('../security/publishDeviceSecretStore.js', () => ({
   deletePublishDeviceSecret: () => { state.secret = ''; return true; },
   hasPublishDeviceSecret: () => Boolean(state.secret),
-  readPublishDeviceSecret: () => state.secret,
+  readPublishDeviceSecret: state.readSecret,
   writePublishDeviceSecret: (_file: string, _label: string, value: string) => {
     if (state.shouldFailSecretWrite) throw new Error('secret write failed');
     state.secret = value;
@@ -26,6 +27,18 @@ import { loadFoliolePublishSettings, loadStoredFoliolePublishSettings, recordFol
 
 beforeEach(() => {
   state.secret = ''; state.setting = null; state.shouldFailSave = false; state.shouldFailSecretWrite = false;
+  state.readSecret.mockClear();
+});
+
+it('loads saved credential status without opening the encrypted token', () => {
+  state.secret = VALID_TOKEN;
+  state.setting = {
+    account_id: 'account', pages_url: 'https://site.pages.dev', project_name: 'site',
+    site_address: 'https://site.pages.dev', updated_at: '2026-08-22T00:00:00.000Z'
+  };
+
+  expect(loadFoliolePublishSettings()).toMatchObject({ credentials_valid: true, has_credentials: true });
+  expect(state.readSecret).not.toHaveBeenCalled();
 });
 
 const VALID_TOKEN = 'Sn3lZJTBX6kkg7OdcBUAxOO963GEIyGQqnFTOFYY';

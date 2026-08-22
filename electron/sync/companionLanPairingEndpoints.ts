@@ -9,11 +9,11 @@ import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import { readCompanionRequestBody } from './companionLanRequestBody.js';
 import { isSupportedPairingPublicKey } from './companionPairingEncryption.js';
+import { resolveCompanionPairingMetadata } from './companionPairingMetadata.js';
 import {
   countPendingCompanionPairRequests,
   createCompanionPairRequest,
 } from './companionPairingRequests.js';
-import { countPairedCompanionAuthorizations } from './companionPairingStore.js';
 import { isEligibleSyncGroupJoin, parseSyncGroupLibraryFacts } from './companionSyncGroupPairRequest.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
@@ -31,9 +31,12 @@ type JsonResponder = (
   payload: unknown
 ) => void;
 
-function writePairingStatus(updatePairingStatus: PairingStatusUpdater) {
+function writePairingStatus(
+  updatePairingStatus: PairingStatusUpdater,
+  syncGroup: ReturnType<typeof loadDesktopSyncGroup>
+) {
   updatePairingStatus({
-    paired_authorization_count: countPairedCompanionAuthorizations(),
+    paired_authorization_count: resolveCompanionPairingMetadata(syncGroup).paired_authorization_count,
     pending_pair_request_count: countPendingCompanionPairRequests()
   });
 }
@@ -145,6 +148,6 @@ export async function handlePairRequestCreate(
   });
   const accepted = writePairRequestResult({ compatibility, created, request, response, writeJson });
   if (!accepted) return;
-  writePairingStatus(updatePairingStatus);
+  writePairingStatus(updatePairingStatus, groupJoin.syncGroup);
   onPairRequestCreated?.();
 }

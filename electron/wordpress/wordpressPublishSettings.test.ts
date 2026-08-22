@@ -1,6 +1,11 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
-const state = vi.hoisted(() => ({ failSave: false, secret: '', setting: null as unknown }));
+const state = vi.hoisted(() => ({
+  failSave: false,
+  readSecret: vi.fn(() => state.secret),
+  secret: '',
+  setting: null as unknown
+}));
 const verifyMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../database/settingsStore.js', () => ({
@@ -13,7 +18,7 @@ vi.mock('../database/settingsStore.js', () => ({
 vi.mock('../security/publishDeviceSecretStore.js', () => ({
   deletePublishDeviceSecret: () => { state.secret = ''; return true; },
   hasPublishDeviceSecret: () => Boolean(state.secret),
-  readPublishDeviceSecret: () => state.secret,
+  readPublishDeviceSecret: state.readSecret,
   writePublishDeviceSecret: (_file: string, _label: string, value: string) => { state.secret = value; }
 }));
 vi.mock('./wordpressClient.js', () => ({
@@ -35,6 +40,7 @@ beforeEach(() => {
   state.secret = '';
   state.setting = null;
   state.failSave = false;
+  state.readSecret.mockClear();
   verifyMock.mockReset();
   verifyMock.mockResolvedValue({
     adapter: 'wordpress_com_xmlrpc',
@@ -42,6 +48,19 @@ beforeEach(() => {
     endpoint: 'https://free-site.wordpress.com/xmlrpc.php',
     siteUrl: 'https://free-site.wordpress.com'
   });
+});
+
+it('loads saved credential status without opening the encrypted password', () => {
+  state.secret = JSON.stringify({ applicationPassword: 'secret' });
+  state.setting = {
+    adapter: 'core_rest', blog_id: null, endpoint: 'https://blog.example.com/wp-json/wp/v2',
+    site_url: 'https://blog.example.com', updated_at: '2026-08-22T00:00:00.000Z', username: 'writer'
+  };
+
+  expect(loadWordPressPublishSettings()).toMatchObject({
+    credentials_valid: true, has_credentials: true, username: 'writer'
+  });
+  expect(state.readSecret).not.toHaveBeenCalled();
 });
 
 it('stores credentials only in the encrypted secret and returns a redacted status', async () => {

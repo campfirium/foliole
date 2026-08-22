@@ -11,13 +11,12 @@ import {
   resolveCompanionMembershipAuthorizationId,
   resolveCompanionMembershipHostName
 } from '../sync/companionMembershipApproval.js';
+import { resolveCompanionPairingMetadata } from '../sync/companionPairingMetadata.js';
 import {
   approveCompanionPairRequest,
   loadPendingCompanionPairRequests,
   rejectCompanionPairRequest
 } from '../sync/companionPairingRequests.js';
-import { loadPairedCompanionAuthorizations } from '../sync/companionPairingStore.js';
-import { ensureCompanionPairingStoreAuthorizationCutover } from '../sync/companionPairingStoreCutover.js';
 import {
   activateDesktopCompanionSync,
   assertDesktopCompanionSyncParticipating,
@@ -61,10 +60,10 @@ const COMPANION_PAIRING_COMMANDS = new Set<string>([
 ]);
 
 function buildDesktopCompanionPairingOverview(serverStatus?: ReturnType<typeof refreshLanWorkspaceSyncServerPairingStatus>) {
-  ensureCompanionPairingStoreAuthorizationCutover();
   const resolvedServerStatus = serverStatus ?? refreshLanWorkspaceSyncServerPairingStatus();
   const join = loadDesktopSyncGroupJoinState();
   const syncGroup = loadDesktopSyncGroup();
+  const pairingMetadata = resolveCompanionPairingMetadata(syncGroup);
   const localMember = syncGroup?.members.find((member) =>
     member.host_name === syncGroup.local_host_name && member.state === 'active'
   );
@@ -75,7 +74,7 @@ function buildDesktopCompanionPairingOverview(serverStatus?: ReturnType<typeof r
     },
     join_candidates: join.candidates,
     join_request: join.pending?.request ?? null,
-    paired_authorizations: loadPairedCompanionAuthorizations(),
+    paired_authorizations: pairingMetadata.paired_authorizations,
     pending_requests: loadPendingCompanionPairRequests(),
     server_status: resolvedServerStatus,
     sync_group: syncGroup,

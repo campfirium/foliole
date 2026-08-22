@@ -74,9 +74,6 @@ vi.mock('../sync/companionPairingRequests.js', () => companionPairingMocks);
 vi.mock('../sync/companionPairingStore.js', () => ({
   loadPairedCompanionAuthorizations: companionPairingMocks.loadPairedCompanionAuthorizations
 }));
-vi.mock('../sync/companionPairingStoreCutover.js', () => ({
-  ensureCompanionPairingStoreAuthorizationCutover: vi.fn()
-}));
 vi.mock('../sync/companionLanPayloads.js', () => ({
   resolveDesktopHostName: vi.fn(() => 'Desktop')
 }));

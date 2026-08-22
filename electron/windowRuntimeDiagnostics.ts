@@ -137,6 +137,8 @@ export async function presentInitialRendererWindow(window: BrowserWindow, option
       window.setFocusable(false);
       window.setIgnoreMouseEvents(true);
       window.showInactive();
+    } else if (process.platform === 'darwin' && process.env.FOLIOLE_MACOS_DAILY_DEBUG === '1') {
+      window.showInactive();
     } else {
       window.show();
     }

@@ -1,5 +1,4 @@
 import http from 'node:http';
-import os from 'node:os';
 
 import { resolveSyncGroupDisplayHostName } from '../../lib/platform/syncGroupContract.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
@@ -19,11 +18,11 @@ import {
   startCompanionMdnsAdvertisement,
   stopCompanionMdnsAdvertisement
 } from './companionMdnsAdvertisement.js';
+import { resolveCompanionPairingMetadata } from './companionPairingMetadata.js';
 import { countPendingCompanionPairRequests } from './companionPairingRequests.js';
-import { countPairedCompanionAuthorizations } from './companionPairingStore.js';
-import { ensureCompanionPairingStoreAuthorizationCutover } from './companionPairingStoreCutover.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import { startDesktopSyncGroupAutoSync, stopDesktopSyncGroupAutoSync } from './desktopSyncGroupAutoSync.js';
+import { collectLanWorkspaceSyncUrls } from './lanWorkspaceSyncNetwork.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
 const DEFAULT_SYNC_PORT = 38641;
@@ -55,7 +54,7 @@ let activeStatus: LanWorkspaceSyncServerStatus = {
 
 function resolveLatestPairingStatus() {
   return {
-    paired_authorization_count: countPairedCompanionAuthorizations(),
+    paired_authorization_count: resolveCompanionPairingMetadata(loadDesktopSyncGroup()).paired_authorization_count,
     pending_pair_request_count: countPendingCompanionPairRequests()
   };
 }
@@ -75,16 +74,6 @@ function resolveSyncPort() {
   }
   const parsed = Number.parseInt(rawPort, 10);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : DEFAULT_SYNC_PORT;
-}
-
-function collectAdvertisedUrls(port: number) {
-  const interfaces = os.networkInterfaces();
-  const externalUrls = Object.values(interfaces)
-    .flatMap((entries) => entries ?? [])
-    .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
-    .filter((entry) => entry.family === 'IPv4' && !entry.internal)
-    .map((entry) => `http://${entry.address}:${port}`);
-  return [...new Set([`http://127.0.0.1:${port}`, ...externalUrls])];
 }
 
 export function setLanWorkspaceSyncPairRequestHandler(handler: (() => void) | null) {
@@ -118,7 +107,7 @@ async function listenOnSyncPort(server: http.Server, port: number) {
 
 function buildRunningStatus(port: number): LanWorkspaceSyncServerStatus {
   return {
-    advertised_urls: collectAdvertisedUrls(port),
+    advertised_urls: collectLanWorkspaceSyncUrls(port),
     last_error: null,
     ...resolveLatestPairingStatus(),
     port,
@@ -176,7 +165,6 @@ function advertiseActiveSyncGroup(args: { appVersion: string; peerId: string; po
 
 export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; peerId: string }) {
   if (!isDesktopCompanionSyncParticipating()) return activeStatus;
-  ensureCompanionPairingStoreAuthorizationCutover();
   const group = loadDesktopSyncGroup();
   if (!group || !loadDesktopWorkgroupKey(group.group_id)) throw new Error('sync_group_workgroup_key_missing');
   startDesktopSyncGroupAutoSync();

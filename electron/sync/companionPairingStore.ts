@@ -5,6 +5,7 @@ import path from 'node:path';
 import { app, safeStorage } from 'electron';
 
 import type { SyncProtocolDescriptor } from '../../lib/platform/syncProtocolContract.js';
+import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import { ensureSecureStorageBackend } from '../security/secureStorageBackend.js';
 
 import { createMigratedPairingStorePayload } from './companionPairingStoreMigration.js';
@@ -52,7 +53,10 @@ function readStoreStrict(): StorePayload {
   const storePath = resolveStorePath();
   if (cachedStore && cachedStorePath === storePath) return cachedStore;
   const parsed = readRaw();
-  if (parsed.format_version !== STORE_FORMAT_VERSION) throw new Error('pairing_store_authorization_cutover_required');
+  if (parsed.format_version !== STORE_FORMAT_VERSION) {
+    migratePairedCompanionStore(resolveCurrentAuthorization);
+    return readStoreStrict();
+  }
   const authorizations = Array.isArray(parsed.authorizations)
     ? parsed.authorizations.filter(isPairedAuthorizationRecord) : [];
   const peers = Array.isArray(parsed.client_peers) ? parsed.client_peers.filter(isClientPeerRecord) : [];
@@ -63,6 +67,10 @@ function readStoreStrict(): StorePayload {
   cachedStore = { authorizations, client_peers: peers, format_version: STORE_FORMAT_VERSION };
   cachedStorePath = storePath;
   return cachedStore;
+}
+
+function resolveCurrentAuthorization(hostName: string) {
+  return loadDesktopSyncGroup()?.members.find((member) => member.host_name === hostName)?.authorization_id ?? null;
 }
 
 function readStoreForQuery(): StorePayload {

@@ -1,4 +1,3 @@
-import { isCloudflareApiToken } from '../../lib/core/foliolePublish/cloudflareCredentials.js';
 import { normalizeCloudflareProjectName } from '../../lib/core/foliolePublish/cloudflarePagesProjectName.js';
 import type { NativeFoliolePublishConnectInput, NativeFoliolePublishDraftInput, NativeFoliolePublishField, NativeFoliolePublishFieldCatalogEntry, NativeFoliolePublishSettings } from '../../lib/platform/nativeFoliolePublishContract.js';
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
@@ -36,12 +35,12 @@ export function loadFoliolePublishToken() {
 
 export function loadFoliolePublishSettings(): NativeFoliolePublishSettings {
   const value = stored();
-  const token = loadFoliolePublishToken();
+  const hasCredentials = hasPublishDeviceSecret(SECRET_FILE);
   return value ? {
     ...value,
-    credentials_valid: isCloudflareApiToken(token),
+    credentials_valid: hasCredentials,
     field_catalog: normalizeCatalog(value.field_catalog),
-    has_credentials: Boolean(token)
+    has_credentials: hasCredentials
   } : empty();
 }
 

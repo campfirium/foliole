@@ -9,6 +9,7 @@ import {
 import { resolveDesktopHostName } from './companionLanPayloads.js';
 import { readCompanionRequestBody } from './companionLanRequestBody.js';
 import { encryptCompanionPairingSecret } from './companionPairingEncryption.js';
+import { resolveCompanionPairingMetadata } from './companionPairingMetadata.js';
 import {
   completeCompanionPairRequest,
   countPendingCompanionPairRequests,
@@ -17,7 +18,6 @@ import {
   reservePairCompletionSlot
 } from './companionPairingRequests.js';
 import {
-  countPairedCompanionAuthorizations,
   registerPairedCompanionAuthorization,
   registerPairedCompanionAuthorizationWithPeer
 } from './companionPairingStore.js';
@@ -65,7 +65,7 @@ export async function handlePairRequest(
   const { encryptedSecret, providerEncryptedSecret } = await encryptApprovedSecrets(
     approved, paired.credential_secret, providerSecret
   );
-  updateStatus(updatePairingStatus);
+  updateStatus(updatePairingStatus, syncGroup);
   writeJson(request, response, 200, createPairCompletionPayload({
     app_version: appVersion, compatibility, desktop_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
     authorization_id: paired.authorization_id,
@@ -142,9 +142,12 @@ async function encryptApprovedSecrets(
   return { encryptedSecret, providerEncryptedSecret };
 }
 
-function updateStatus(updatePairingStatus: StatusUpdater) {
+function updateStatus(
+  updatePairingStatus: StatusUpdater,
+  syncGroup: ReturnType<typeof loadDesktopSyncGroup>
+) {
   updatePairingStatus({
-    paired_authorization_count: countPairedCompanionAuthorizations(),
+    paired_authorization_count: resolveCompanionPairingMetadata(syncGroup).paired_authorization_count,
     pending_pair_request_count: countPendingCompanionPairRequests()
   });
 }

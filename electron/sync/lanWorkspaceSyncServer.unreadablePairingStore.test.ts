@@ -27,6 +27,8 @@ vi.mock('./companionMdnsAdvertisement.js', () => ({
   stopCompanionMdnsAdvertisement: vi.fn()
 }));
 
+vi.mock('../database/syncGroupStore.js', () => ({ loadDesktopSyncGroup: vi.fn(() => null) }));
+
 beforeEach(() => {
   electronMock.userDataPath = fs.mkdtempSync(path.join(process.cwd(), '.tmp', 'foliole-companion-pairing-'));
 });
@@ -48,7 +50,10 @@ it('keeps the sync server request boundary available when the paired-device cach
     peerId: 'desktop-local'
   });
   const status = getLanWorkspaceSyncServerStatus();
+  getLanWorkspaceSyncServerStatus();
+  getLanWorkspaceSyncServerStatus();
 
   expect(server.listenerCount('request')).toBe(1);
   expect(status.paired_authorization_count).toBe(0);
+  expect(safeStorageMock.decryptString).not.toHaveBeenCalled();
 });

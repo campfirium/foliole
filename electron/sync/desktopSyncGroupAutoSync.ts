@@ -3,7 +3,6 @@ import { Bonjour } from 'bonjour-service';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import { resolveCompanionMdnsIpv4Addresses } from './companionMdnsAdvertisement.js';
-import { loadPairedSyncGroupPeers, savePairedSyncGroupPeer } from './companionPairingStore.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import {
   completeDesktopSyncGroupJoin,
@@ -77,14 +76,12 @@ async function syncAvailablePeer(args: { endpoint: string; groupId: string; peer
   if (!isDesktopCompanionSyncParticipating()) return;
   const group = loadDesktopSyncGroup();
   if (!group || group.group_id !== args.groupId) return;
-  const stored = loadPairedSyncGroupPeers(args.groupId)
-    .find((peer) => peer.peer_authorization_id === args.peerAuthorizationId);
-  if (!stored) return;
+  const peer = resolveDiscoveredPeer(group, args);
+  if (!peer) return;
   if (inFlight.has(args.peerAuthorizationId)) {
     retryAfterFlight.set(args.peerAuthorizationId, args);
     return;
   }
-  const peer = savePairedSyncGroupPeer({ ...stored, endpoint_url: args.endpoint });
   const work = continueDesktopSyncGroupSync(peer).catch((error) => {
     console.info('[sync-group] sync paused until provider is available', {
       error: error instanceof Error ? error.message : String(error), peerAuthorizationId: args.peerAuthorizationId
@@ -98,6 +95,25 @@ async function syncAvailablePeer(args: { endpoint: string; groupId: string; peer
   });
   inFlight.set(args.peerAuthorizationId, work);
   await work;
+}
+
+function resolveDiscoveredPeer(
+  group: NonNullable<ReturnType<typeof loadDesktopSyncGroup>>,
+  args: { endpoint: string; groupId: string; peerAuthorizationId: string }
+) {
+  const local = group.members.find((member) => member.host_name === group.local_host_name);
+  const remote = group.members.find((member) => member.authorization_id === args.peerAuthorizationId);
+  if (!local || !remote || remote.host_name === group.local_host_name) return null;
+  return {
+    endpoint_url: args.endpoint,
+    group_id: group.group_id,
+    local_authorization_id: local.authorization_id,
+    local_host_name: local.host_name,
+    peer_authorization_id: remote.authorization_id,
+    peer_host_name: remote.host_name,
+    peer_host_platform: remote.host_platform,
+    timeline_id: group.timeline_id
+  };
 }
 
 function endpointForService(service: { addresses?: string[]; port?: number; referer?: { address?: string } }) {

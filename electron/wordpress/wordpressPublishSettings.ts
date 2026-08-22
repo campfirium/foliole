@@ -92,14 +92,14 @@ export function loadWordPressCredential(settings = loadStoredWordPressPublishSet
 export function loadWordPressPublishSettings(): NativeWordPressPublishSettings {
   const settings = loadStoredWordPressPublishSettings();
   if (!settings) return emptySettings();
-  const credential = loadWordPressCredential(settings);
+  const hasCredentials = hasPublishDeviceSecret(SECRET_FILE);
   return {
     adapter: settings.adapter,
-    credentials_valid: Boolean(settings.endpoint && credential),
-    has_credentials: Boolean(credential),
+    credentials_valid: Boolean(settings.endpoint && hasCredentials),
+    has_credentials: hasCredentials,
     site_url: settings.site_url,
     updated_at: settings.updated_at,
-    username: settings.username ?? credential?.username ?? ''
+    username: settings.username ?? ''
   };
 }
 

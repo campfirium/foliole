@@ -57,9 +57,6 @@ vi.mock('../sync/companionPairingRequests.js', () => ({
 vi.mock('../sync/companionPairingStore.js', () => ({
   loadPairedCompanionAuthorizations: vi.fn(() => [])
 }));
-vi.mock('../sync/companionPairingStoreCutover.js', () => ({
-  ensureCompanionPairingStoreAuthorizationCutover: vi.fn()
-}));
 vi.mock('../sync/syncGroupRuntimeInstance.js', () => ({
   loadSyncGroupRuntimeInstanceId: vi.fn(() => 'runtime-authorization')
 }));

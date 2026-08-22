@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 import { ensureSecureStorageBackend } from './secureStorageBackend.js';
 
@@ -21,6 +21,17 @@ it('rejects unavailable encryption on every platform', () => {
   expect(() => ensureSecureStorageBackend(
     'test secret', 'win32', storage(false, 'dpapi')
   )).toThrow('safeStorage is unavailable');
+});
+
+it('reports repeated refusal without re-entering the system credential provider', () => {
+  const isEncryptionAvailable = vi.fn(() => false);
+  const unavailable = { getSelectedStorageBackend: () => 'keychain', isEncryptionAvailable };
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    expect(() => ensureSecureStorageBackend('pairing secrets', 'darwin', unavailable))
+      .toThrow('safeStorage is unavailable');
+  }
+  expect(isEncryptionAvailable).toHaveBeenCalledTimes(1);
 });
 
 it('rejects the unprotected Linux basic_text backend', () => {

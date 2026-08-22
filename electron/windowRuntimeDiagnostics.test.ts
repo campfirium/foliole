@@ -168,6 +168,27 @@ describe('window runtime hidden native desktop presentation', () => {
   });
 });
 
+describe('macOS daily DEV startup presentation', () => {
+  it('shows the interactive preview without activating it', async () => {
+    const originalDailyFlag = process.env.FOLIOLE_MACOS_DAILY_DEBUG;
+    process.env.FOLIOLE_MACOS_DAILY_DEBUG = '1';
+    try {
+      const window = createWindowMock();
+      const { presentInitialRendererWindow } = await import('./windowRuntimeDiagnostics.js');
+
+      await presentInitialRendererWindow(window as never);
+
+      expect(window.showInactive).toHaveBeenCalledTimes(1);
+      expect(window.show).not.toHaveBeenCalled();
+      expect(window.setFocusable).not.toHaveBeenCalled();
+      expect(window.setIgnoreMouseEvents).not.toHaveBeenCalled();
+    } finally {
+      if (originalDailyFlag === undefined) delete process.env.FOLIOLE_MACOS_DAILY_DEBUG;
+      else process.env.FOLIOLE_MACOS_DAILY_DEBUG = originalDailyFlag;
+    }
+  });
+});
+
 describe('window runtime diagnostics redaction', () => {
   it('redacts renderer state snapshots before writing the diagnostic log', async () => {
     const window = createWindowMock();
