@@ -28,6 +28,9 @@ it('renames, restores, and reopens the desktop product session in one bounded jo
     'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSystemEntryDisplayNameTest.java',
     'utf8'
   ));
+  const inspection = await import('node:fs').then(({ readFileSync }) => readFileSync(
+    'scripts/android/macos-a5-system-entry-display-inspection.mjs', 'utf8'
+  ));
   expect(source).toContain("session.invoke('save_system_entry_display_names', { payload: renamed })");
   expect(source).toContain("session.invoke('save_system_entry_display_names', { payload: baseline })");
   expect(source).toContain('waitForA5Payload(context, renamed)');
@@ -40,6 +43,9 @@ it('renames, restores, and reopens the desktop product session in one bounded jo
   expect(source.indexOf("inspectDisplay(context, 'restored-display'"))
     .toBeLessThan(source.indexOf('waitForA5Payload(context, baseline)'));
   expect(instrumentation).toContain('FolioleCompanionPairSyncRecoveryScenario.run(');
+  expect(instrumentation).toContain('arguments.getString("expectedTextBase64", "")');
+  expect(inspection).toContain("'-e', 'expectedTextBase64'");
+  expect(inspection).not.toContain("'-e', 'expectedText', expectedText");
   expect(instrumentation.indexOf('FolioleCompanionPairSyncRecoveryScenario.run('))
     .toBeLessThan(instrumentation.indexOf('openDirectorySurface('));
 });

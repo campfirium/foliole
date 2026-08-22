@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { Buffer } from 'node:buffer';
 
 const APP_ID = 'com.foliole.android';
 const RUNNER = `${APP_ID}.test/androidx.test.runner.AndroidJUnitRunner`;
@@ -34,8 +35,8 @@ export async function inspectA5SystemEntryDisplayName({
     const result = await checked(execute, paths.adb, [
       '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',
       '-e', 'class', TEST_CLASS,
-      '-e', 'expectedText', expectedText,
-      '-e', 'forbiddenText', forbiddenText,
+      '-e', 'expectedTextBase64', Buffer.from(expectedText, 'utf8').toString('base64'),
+      '-e', 'forbiddenTextBase64', Buffer.from(forbiddenText, 'utf8').toString('base64'),
       RUNNER
     ], options, 'System entry display instrumentation');
     if (!/^INSTRUMENTATION_CODE: -1$/mu.test(result.stdout)) {
