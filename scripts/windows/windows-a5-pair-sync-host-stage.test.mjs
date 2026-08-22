@@ -18,3 +18,16 @@ it('accepts only the current formal run stage from the test package', async () =
     .resolves.toBeNull();
   expect(execute.mock.calls[0][1]).toContain('files/foliole-pair-sync-stage.txt');
 });
+
+it('falls back to the current-run log marker when test-package files are unavailable', async () => {
+  const execute = vi.fn()
+    .mockResolvedValueOnce({ code: 1, stdout: '' })
+    .mockResolvedValueOnce({
+      code: 0, stdout: '08-22 I/FoliolePairSync: run-2:sync-entry\n'
+    });
+  await expect(collectPairSyncHostStage({
+    adbPort: '5037', buildIdentity: 'run-2', env: {}, execute,
+    paths: { adbPath: 'adb.exe' }, serial: 'A5'
+  })).resolves.toBe('sync-entry');
+  expect(execute.mock.calls[1][1]).toContain('FoliolePairSync:I');
+});

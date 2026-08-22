@@ -3,6 +3,7 @@ package com.foliole.android;
 import android.app.Instrumentation;
 import android.content.Context;
 import android.os.Bundle;
+import android.util.Log;
 
 import androidx.test.platform.app.InstrumentationRegistry;
 
@@ -12,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 
 final class FolioleCompanionPairSyncHostEvidence {
     static final String STAGE_FILE = "foliole-pair-sync-stage.txt";
+    private static final String TAG = "FoliolePairSync";
 
     private FolioleCompanionPairSyncHostEvidence() {}
 
@@ -25,6 +27,7 @@ final class FolioleCompanionPairSyncHostEvidence {
     private static void persistStage(Instrumentation instrumentation, String stage) {
         String runId = InstrumentationRegistry.getArguments().getString("foliolePairSyncRunId", "");
         if (runId.isEmpty()) return;
+        Log.i(TAG, runId + ":" + stage);
         String value = runId + "\n" + stage + "\n";
         try (FileOutputStream output = instrumentation.getContext().openFileOutput(
             STAGE_FILE, Context.MODE_PRIVATE
