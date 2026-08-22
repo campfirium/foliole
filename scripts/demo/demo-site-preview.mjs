@@ -4,7 +4,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { runDemoSitePreview } from '../demo/demo-site-preview-runtime.mjs';
+import { runDemoSitePreview } from './demo-site-preview-runtime.mjs';
 
 export { runDemoSitePreview };
 

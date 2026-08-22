@@ -9,8 +9,8 @@ import { describe, expect, it } from 'vitest';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 describe('demo site preview', () => {
-  it('launches Astro preview through Node with hidden file-backed output', async () => {
-    const script = await readFile(path.join(REPO_ROOT, 'scripts/windows/demo-site-preview.mjs'), 'utf8');
+  it('launches the Mac-local Astro preview through Node with file-backed output', async () => {
+    const script = await readFile(path.join(REPO_ROOT, 'scripts/demo/demo-site-preview-runtime.mjs'), 'utf8');
 
     expect(script).toContain("path.join(SITE_ROOT, 'node_modules', 'astro', 'bin', 'astro.mjs')");
     expect(script).toContain('spawn(process.execPath');
@@ -26,5 +26,11 @@ describe('demo site preview', () => {
     expect(script).toContain('site preview port is occupied and could not be released');
     expect(script).not.toContain("'.bin', 'astro.cmd'");
     expect(script).not.toContain('127.0.0.1:4321');
+  });
+
+  it('keeps the old Windows entry as a thin compatibility adapter', async () => {
+    const script = await readFile(path.join(REPO_ROOT, 'scripts/windows/demo-site-preview.mjs'), 'utf8');
+    expect(script).toContain("from '../demo/demo-site-preview-runtime.mjs'");
+    expect(script).not.toContain("spawnSync('netstat.exe'");
   });
 });

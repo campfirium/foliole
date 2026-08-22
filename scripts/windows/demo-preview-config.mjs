@@ -1,4 +1,6 @@
-export const DEMO_PREVIEW_HOST = '127.0.0.1';
-export const DEMO_PREVIEW_PORT = 43210;
-export const DEMO_PREVIEW_PATH = '/en/demo/';
-export const DEMO_SITE_PREVIEW_URL = `http://${DEMO_PREVIEW_HOST}:${DEMO_PREVIEW_PORT}${DEMO_PREVIEW_PATH}`;
+export {
+  DEMO_PREVIEW_HOST,
+  DEMO_PREVIEW_PATH,
+  DEMO_SITE_PREVIEW_PORT,
+  DEMO_SITE_PREVIEW_URL
+} from '../demo/demo-preview-config.mjs';
