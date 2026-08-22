@@ -1,10 +1,16 @@
 import type { DbRow } from '../../../../../lib/core/sync/dbPort';
 import type { SyncDiagnosticSnapshot } from '../../../../../lib/platform/syncDiagnosticsContract';
+import { createIosCompanionSyncPackCursorStore } from '../sync/cursor/iosCompanionSyncPackCursorStore';
 
 import { queryIosCompanionDatabase } from './iosCompanionActiveDatabase';
 import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
 
-type PairingState = { device_id?: string | null; device_name?: string | null; is_paired?: boolean };
+type PairingState = {
+  device_id?: string | null;
+  device_name?: string | null;
+  is_paired?: boolean;
+  remote_peer_id?: string | null;
+};
 
 export async function diagnoseIosCompanionDatabase(pairing: PairingState): Promise<SyncDiagnosticSnapshot> {
   const [storage, stateMetrics, bodyMetrics, blobRows, attachmentRows, activeTopics, recentTopics, dirty,
@@ -15,7 +21,7 @@ export async function diagnoseIosCompanionDatabase(pairing: PairingState): Promi
     queryIosCompanionDatabase<DbRow>('diagnosticActiveTopic'), queryIosCompanionDatabase<DbRow>('diagnosticRecentTopics'),
     queryIosCompanionDatabase<DbRow>('diagnosticDirtyObjects'), queryIosCompanionDatabase<DbRow>('diagnosticPendingAcks'),
     queryIosCompanionDatabase<DbRow>('diagnosticPushIssues'), queryIosCompanionDatabase<DbRow>('diagnosticSyncStateCounts'),
-    queryIosCompanionDatabase<DbRow>('nodeConflicts'), meta('workspace_sync_endpoint_url'), meta('sync_pack_cursor'),
+    queryIosCompanionDatabase<DbRow>('nodeConflicts'), meta('workspace_sync_endpoint_url'), packCursor(pairing),
     meta('workspace_sync_events')
   ]);
   const attachment = attachmentSummary(attachmentRows);
@@ -45,6 +51,12 @@ async function metrics(name: 'diagnosticStorageMetrics' | 'diagnosticSyncStateMe
 async function meta(key: string) {
   const rows = await queryIosCompanionDatabase<{ value: string | null } & DbRow>('companionMetaValue', [key]);
   return rows[0]?.value ?? null;
+}
+
+async function packCursor(pairing: PairingState) {
+  const peerId = pairing.remote_peer_id?.trim();
+  if (!peerId) return null;
+  return createIosCompanionSyncPackCursorStore(undefined, peerId).loadCursor();
 }
 
 function blobSummary(rows: DbRow[]) {
