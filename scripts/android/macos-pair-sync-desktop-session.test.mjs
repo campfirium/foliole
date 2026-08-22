@@ -8,7 +8,8 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   ensureMacosSyncGroup,
   openMacosPairSyncDesktopSession,
-  resolveFrozenRendererUrl
+  resolveFrozenRendererUrl,
+  sanitizeMacosPairSyncOverview
 } from './macos-pair-sync-desktop-session.mjs';
 
 const repoRoot = path.join(path.parse(process.cwd()).root, 'repo', 'foliole');
@@ -16,6 +17,33 @@ const rendererPath = path.join(repoRoot, 'dist', 'desktop', 'index.html');
 const rendererUrl = pathToFileURL(rendererPath).toString();
 
 describe('macOS pair sync desktop session', () => {
+  it('preserves the bounded listener failure while redacting authorization ids', () => {
+    const overview = {
+      paired_authorizations: [{ authorization_id: 'peer-authorization' }],
+      pending_requests: [],
+      server_status: {
+        last_error: ` listen EADDRINUSE ${'x'.repeat(600)} `,
+        state: 'failed'
+      },
+      sync_enabled: true,
+      sync_group: {
+        local_host_name: 'Mac',
+        members: [{
+          authorization_id: 'local-authorization', host_name: 'Mac', state: 'active'
+        }]
+      }
+    };
+
+    expect(sanitizeMacosPairSyncOverview(overview)).toMatchObject({
+      pairedAuthorizationFingerprints: [expect.stringMatching(/^[a-f0-9]{16}$/u)],
+      serverLastError: expect.stringMatching(/^listen EADDRINUSE/u),
+      serverState: 'failed'
+    });
+    expect(sanitizeMacosPairSyncOverview(overview).serverLastError).toHaveLength(512);
+    expect(JSON.stringify(sanitizeMacosPairSyncOverview(overview)))
+      .not.toContain('local-authorization');
+  });
+
   it('creates the Sync Group before fresh-device discovery', async () => {
     const actions = {
       create: vi.fn().mockResolvedValue({ sync_group: { group_id: 'group-1' } }),

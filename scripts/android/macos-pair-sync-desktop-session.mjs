@@ -18,7 +18,7 @@ function fingerprint(value) {
   return createHash('sha256').update(value).digest('hex').slice(0, 16);
 }
 
-function sanitizeOverview(overview) {
+export function sanitizeMacosPairSyncOverview(overview) {
   const group = overview.sync_group;
   const local = (group?.members ?? []).find(
     (member) => member.state === 'active' && member.host_name === group.local_host_name
@@ -32,6 +32,9 @@ function sanitizeOverview(overview) {
     pendingAuthorizationFingerprints: overview.pending_requests.map(
       (request) => fingerprint(request.pair_request_id)
     ),
+    serverLastError: typeof overview.server_status.last_error === 'string'
+      ? overview.server_status.last_error.trim().slice(0, 512) || null
+      : null,
     serverState: overview.server_status.state,
     syncEnabled: overview.sync_enabled === true
   };
@@ -155,7 +158,7 @@ export async function openMacosPairSyncDesktopSession({
       leave: () => invoke(page, 'leave_sync_group'),
       load: syncGroupActions.load,
       invoke: (command, args) => invoke(page, command, args),
-      sanitize: sanitizeOverview
+      sanitize: sanitizeMacosPairSyncOverview
     };
   } catch (error) {
     record('session_failed', { message: error instanceof Error ? error.message : String(error) });
@@ -183,4 +186,4 @@ export async function waitForMacosPairRequest(session, expectedHostName, timeout
   throw new Error('Timed out waiting for the fixed A5 pair request.');
 }
 
-export { fingerprint as macosPairSyncAuthorizationFingerprint, sanitizeOverview };
+export { fingerprint as macosPairSyncAuthorizationFingerprint };
