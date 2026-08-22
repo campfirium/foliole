@@ -77,6 +77,7 @@ export function openFormalA5Receipt(context, actionContract, {
     actionEvidence: { locator: formalReceiptPath(context), runId: context.runId },
     apk: null,
     controllerDigests: controllerDigests(context, fsApi),
+    cleanup: { completedAt: null, resultStatus: 'pending' },
     failure: null,
     lockfileDigest: frozen ? sha256(gitFile(context, 'package-lock.json', executeGit)) : null,
     mutationBoundary: { crossed: false, crossedAt: null },
@@ -137,6 +138,15 @@ export function markFormalA5Stage(manager, stage) {
   return update(manager, { stage });
 }
 
+export function recordFormalA5Cleanup(manager, resultStatus) {
+  return update(manager, { cleanup: { completedAt: manager.now(), resultStatus } });
+}
+
+export function formalA5FailureStage(error, fallback) {
+  return typeof error?.stage === 'string' && /^[a-z][a-z0-9-]{0,63}$/u.test(error.stage)
+    ? error.stage : fallback;
+}
+
 export function formalA5ActionEvidenceLocator(context) {
   if (context.action === 'clear-app-data') {
     return path.join(context.artifactsRoot, 'a5-clear-app-data', `${context.runId}.json`);
@@ -171,14 +181,21 @@ export function prepareFormalA5ReceiptCompletion(manager, context, paths, fsApi 
   });
 }
 
-export function failFormalA5Receipt(manager, error) {
+export function failFormalA5Receipt(manager, error,
+  failedStage = formalA5FailureStage(error, manager.receipt.stage)) {
   const failure = { code: typeof error?.code === 'string' ? error.code : 'formal_action_failed',
     messageDigest: sha256(error instanceof Error ? error.message : String(error)) };
   return update(manager, { completedAt: manager.now(), failure,
-    failedStage: manager.receipt.stage, resultStatus: 'failed', stage: 'failed' });
+    failedStage, resultStatus: 'failed', stage: 'failed' });
 }
 
 export function completeFormalA5Receipt(manager) {
+  if (manager.receipt.resultStatus !== 'pending') {
+    throw new Error('A finalized formal receipt cannot be changed.');
+  }
+  if (manager.receipt.cleanup.resultStatus !== 'complete') {
+    throw new Error('Formal receipt cannot complete before controller cleanup.');
+  }
   return update(manager, { completedAt: manager.now(), resultStatus: 'complete',
     stage: 'complete' });
 }

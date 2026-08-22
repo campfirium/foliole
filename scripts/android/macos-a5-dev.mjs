@@ -10,7 +10,7 @@ import {
   assertFormalMacosA5Action, assertRegisteredMacosA5Action
 } from './macos-a5-action-registry.mjs';
 import {
-  closeMacosA5BuildCapsule, openMacosA5BuildCapsule
+  openMacosA5BuildCapsule
 } from './macos-a5-build-capsule.mjs';
 import {
   dispatchMacosA5Action, macosA5ErrorEvidence
@@ -29,14 +29,14 @@ import {
 } from './macos-a5-formal-candidate.mjs';
 import {
   captureFormalA5Toolchain, completeFormalA5Receipt, failFormalA5Receipt,
-  formalA5AcceptedTipLine, markFormalA5ActionRunning, markFormalA5MutationBoundary,
+  formalA5AcceptedTipLine, formalA5FailureStage, markFormalA5ActionRunning,
+  markFormalA5MutationBoundary,
   markFormalA5Stage, openFormalA5Receipt,
   prepareFormalA5ReceiptCompletion
 } from './macos-a5-formal-receipt.mjs';
 import { checked, captured, execute } from './macos-a5-process.mjs';
-import {
-  acquireMacosA5DeviceLease, releaseMacosA5DeviceLease
-} from './macos-a5-run-lease.mjs';
+import { cleanupMacosA5Run } from './macos-a5-run-cleanup.mjs';
+import { acquireMacosA5DeviceLease } from './macos-a5-run-lease.mjs';
 
 export const A5_SERIAL = '87a33a4b';
 const APP_ID = 'com.foliole.android';
@@ -178,6 +178,7 @@ export async function runMacosA5Action(action, repoRoot = process.cwd(), { forma
   catch (error) { closeMacosA5Run(context); throw error; }
   let lease;
   let failure;
+  let failedStage;
   try {
     if (formalCandidate) context = openMacosA5BuildCapsule(context, {
       onStage: (stage) => markFormalA5Stage(receipt, `capsule-${stage}`)
@@ -207,22 +208,14 @@ export async function runMacosA5Action(action, repoRoot = process.cwd(), { forma
     }
   } catch (error) {
     failure = error;
+    failedStage = formalA5FailureStage(error, receipt?.receipt.stage);
   }
-  try {
-    if (receipt) markFormalA5Stage(receipt, 'cleanup');
-    const paths = macosA5Paths(context);
-    if (actionContract.deviceLeaseMode) spawnSync(paths.adb, ['kill-server']);
-    try {
-      if (lease) releaseMacosA5DeviceLease(lease);
-    } finally {
-      try { closeMacosA5BuildCapsule(context); }
-      finally { closeMacosA5Run(context); }
-    }
-  } catch (error) {
-    failure ??= error;
-  }
+  const cleanupError = cleanupMacosA5Run({ actionFailed: Boolean(failure),
+    adb: macosA5Paths(context).adb, context, deviceLeaseMode: actionContract.deviceLeaseMode,
+    lease, receipt });
+  if (!failure && cleanupError) { failure = cleanupError; failedStage = 'cleanup'; }
   if (failure) {
-    if (receipt) failFormalA5Receipt(receipt, failure);
+    if (receipt) failFormalA5Receipt(receipt, failure, failedStage);
     throw failure;
   }
   const completedReceipt = receipt ? completeFormalA5Receipt(receipt) : null;

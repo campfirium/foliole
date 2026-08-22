@@ -10,9 +10,10 @@ import { afterEach, expect, it } from 'vitest';
 import { createMacosA5ExecutionContext } from './macos-a5-execution-context.mjs';
 import {
   assertAcceptedSourceIdentity, captureFormalA5Toolchain, completeFormalA5Receipt,
-  failFormalA5Receipt, formalA5AcceptedTipLine, markFormalA5ActionRunning,
+  failFormalA5Receipt, formalA5AcceptedTipLine, formalA5FailureStage,
+  markFormalA5ActionRunning,
   markFormalA5MutationBoundary, markFormalA5Stage,
-  openFormalA5Receipt, prepareFormalA5ReceiptCompletion
+  openFormalA5Receipt, prepareFormalA5ReceiptCompletion, recordFormalA5Cleanup
 } from './macos-a5-formal-receipt.mjs';
 
 const roots = [];
@@ -70,6 +71,7 @@ it('atomically completes a same-run provenance receipt before projecting accepte
   captureFormalA5Toolchain(manager, paths, toolResult);
   markFormalA5ActionRunning(manager);
   prepareFormalA5ReceiptCompletion(manager, context, paths);
+  recordFormalA5Cleanup(manager, 'complete');
   const completed = completeFormalA5Receipt(manager);
   expect(formalA5AcceptedTipLine(completed))
     .toBe(`[macos-a5-dev] accepted-tip=${context.acceptedRevision}\n`);
@@ -112,10 +114,31 @@ it('preserves the injected build stage in a failure receipt', () => {
   const context = fixture('build', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee').context;
   const manager = openFormalA5Receipt(context, contract('build'));
   markFormalA5Stage(manager, 'capsule-dependencies');
-  failFormalA5Receipt(manager, new Error('npm ci failed'));
+  recordFormalA5Cleanup(manager, 'complete');
+  failFormalA5Receipt(manager, new Error('npm ci failed'), 'capsule-dependencies');
   expect(JSON.parse(fs.readFileSync(manager.path, 'utf8'))).toMatchObject({
     failedStage: 'capsule-dependencies', resultStatus: 'failed'
   });
+});
+
+it('keeps an action failure stage after successful cleanup', () => {
+  const context = fixture('deploy', 'ffffffff-ffff-ffff-ffff-ffffffffffff').context;
+  const manager = openFormalA5Receipt(context, contract('deploy'));
+  markFormalA5Stage(manager, 'desktop-session-open');
+  const failedStage = manager.receipt.stage;
+  recordFormalA5Cleanup(manager, 'complete');
+  failFormalA5Receipt(manager, new Error('desktop failed'), failedStage);
+  expect(JSON.parse(fs.readFileSync(manager.path, 'utf8'))).toMatchObject({
+    cleanup: { resultStatus: 'complete' }, failedStage: 'desktop-session-open',
+    resultStatus: 'failed'
+  });
+});
+
+it('prefers a bounded action failure stage over the controller fallback', () => {
+  expect(formalA5FailureStage({ stage: 'desktop-session-open' }, 'action-running'))
+    .toBe('desktop-session-open');
+  expect(formalA5FailureStage({ stage: 'private/path' }, 'action-running'))
+    .toBe('action-running');
 });
 
 it('uses the same full commit and tree identity contract as the Windows fixture', () => {
@@ -138,6 +161,7 @@ it('completes source-free readonly receipts without claiming an accepted tip', (
   });
   markFormalA5ActionRunning(manager);
   prepareFormalA5ReceiptCompletion(manager, context, { apk: '/missing' });
+  recordFormalA5Cleanup(manager, 'complete');
   const completed = completeFormalA5Receipt(manager);
   expect(completed).toMatchObject({ resultStatus: 'complete', source: {
     acceptedRevision: null, acceptedTree: null, formalSourceClass: 'source-free-readonly'
