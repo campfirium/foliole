@@ -46,6 +46,8 @@ it('renames, restores, and reopens the desktop product session in one bounded jo
   expect(instrumentation).toContain('arguments.getString("expectedTextBase64", "")');
   expect(inspection).toContain("'-e', 'expectedTextBase64'");
   expect(inspection).not.toContain("'-e', 'expectedText', expectedText");
+  expect(inspection).toContain('if (expectedText) textExtras.push(');
+  expect(inspection).toContain('if (forbiddenText) textExtras.push(');
   expect(instrumentation.indexOf('FolioleCompanionPairSyncRecoveryScenario.run('))
     .toBeLessThan(instrumentation.indexOf('openDirectorySurface('));
 });

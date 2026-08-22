@@ -32,11 +32,17 @@ export async function inspectA5SystemEntryDisplayName({
     await checked(execute, paths.adb, ['-s', serial, 'install', '-r', '-t', testApk], options,
       'System entry test install');
     installed = true;
+    const textExtras = [];
+    if (expectedText) textExtras.push(
+      '-e', 'expectedTextBase64', Buffer.from(expectedText, 'utf8').toString('base64')
+    );
+    if (forbiddenText) textExtras.push(
+      '-e', 'forbiddenTextBase64', Buffer.from(forbiddenText, 'utf8').toString('base64')
+    );
     const result = await checked(execute, paths.adb, [
       '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',
       '-e', 'class', TEST_CLASS,
-      '-e', 'expectedTextBase64', Buffer.from(expectedText, 'utf8').toString('base64'),
-      '-e', 'forbiddenTextBase64', Buffer.from(forbiddenText, 'utf8').toString('base64'),
+      ...textExtras,
       RUNNER
     ], options, 'System entry display instrumentation');
     if (!/^INSTRUMENTATION_CODE: -1$/mu.test(result.stdout)) {
