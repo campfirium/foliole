@@ -52,14 +52,15 @@ export function ObjectConfigPathButton({
   return (
     <AppButton
       aria-label={label}
-      className={settingsButtonClassName(`${SETTINGS_PATH_BUTTON_WIDTH_CLASS_NAME} justify-between text-left ${className ?? ''}`)}
+      className={settingsButtonClassName(`${SETTINGS_PATH_BUTTON_WIDTH_CLASS_NAME} text-left ${className ?? ''}`)}
+      contentClassName="flex-1 justify-between"
       disabled={disabled}
       onClick={onClick}
       title={pathTooltip(resolvedTooltipPath)}
       variant="ghost"
     >
       <span className="min-w-0 truncate">{compactPathLabel(path, emptyLabel)}</span>
-      <FolderOpen aria-hidden="true" size={14} strokeWidth={1.8} />
+      <FolderOpen aria-hidden="true" className="shrink-0" size={14} strokeWidth={1.8} />
     </AppButton>
   );
 }

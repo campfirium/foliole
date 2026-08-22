@@ -11,6 +11,7 @@ type ButtonSize = 'sm' | 'md';
 
 interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'color'> {
   children: ReactNode;
+  contentClassName?: string;
   variant?: ButtonVariant;
   size?: ButtonSize;
   active?: boolean;
@@ -42,7 +43,7 @@ function resolveSizeClass(size: ButtonSize) {
 }
 
 export const AppButton = forwardRef<HTMLButtonElement, ButtonProps>(function AppButton(
-  { children, variant = 'default', size = 'sm', className, active = false, disabled = false, loading = false, loadingLabel, type = 'button', ...rest },
+  { children, contentClassName, variant = 'default', size = 'sm', className, active = false, disabled = false, loading = false, loadingLabel, type = 'button', ...rest },
   ref
 ) {
   const isList = variant === 'list';
@@ -66,7 +67,7 @@ export const AppButton = forwardRef<HTMLButtonElement, ButtonProps>(function App
       {...rest}
     >
       {loading ? <AppSpinner className="pointer-events-none shrink-0" decorative size="sm" /> : null}
-      <span className="inline-flex min-w-0 items-center justify-center gap-2">{loading ? loadingLabel ?? children : children}</span>
+      <span className={cn('inline-flex min-w-0 items-center justify-center gap-2', contentClassName)}>{loading ? loadingLabel ?? children : children}</span>
     </button>
   );
 });

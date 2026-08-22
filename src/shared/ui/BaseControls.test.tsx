@@ -86,6 +86,16 @@ it('lets loading button content define its active width', () => {
   expect(container.querySelector('.animate-spin.absolute')).toBeNull();
 });
 
+it('applies opt-in layout to button content without changing the button shell', () => {
+  render(<AppButton contentClassName="flex-1 justify-between">Path</AppButton>);
+  const button = screen.getByRole('button', { name: 'Path' });
+  const content = screen.getByText('Path');
+
+  expect(button.className).not.toContain('flex-1');
+  expect(content.className).toContain('flex-1');
+  expect(content.className).toContain('justify-between');
+});
+
 it('applies shared scrollbar styling to scrollable panel bodies', () => {
   const { container } = render(
     <AppPanel scrollBody title="Queue summary">
