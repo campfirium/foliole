@@ -70,13 +70,17 @@ export async function loadCompanionSyncObjects(
   return loadIosSyncObjects(objectIds, objectTypes);
 }
 
-export async function loadCompanionSyncSettingValueJson(key: string) {
+export async function loadCompanionSyncSettingValueJson(key: string, objectId?: string) {
   if (!isNativeCompanionSyncObjectReadRuntime()) return null;
-  const record = resolveCompanionSyncSettingRecord({
-    hostName: await loadIosCompanionHostName(), key
-  });
-  if (!record) return null;
-  const [object] = await loadCompanionSyncObjects([record.objectId], ['setting']);
+  const record = objectId
+    ? null
+    : resolveCompanionSyncSettingRecord({
+        hostName: await loadIosCompanionHostName(),
+        key
+      });
+  const resolvedObjectId = objectId ?? record?.objectId;
+  if (!resolvedObjectId) return null;
+  const [object] = await loadCompanionSyncObjects([resolvedObjectId], ['setting']);
   if (!object?.payload_json) return null;
   try {
     const payload = JSON.parse(object.payload_json) as { key?: string; value_json?: unknown };
@@ -100,9 +104,7 @@ export {
   loadCompanionMissingAttachmentResource,
   loadCompanionMissingAttachmentResources
 } from './companionAttachmentResourceSync';
-export {
-  applyCompanionDesktopSyncPack
-} from './companionSyncPackApply';
+export { applyCompanionDesktopSyncPack } from './companionSyncPackApply';
 export {
   loadCompanionPendingSyncSummary,
   loadCompanionSyncNodeVersionCursor,
@@ -145,7 +147,9 @@ export async function searchCompanionPdfPageText(query: string, limit?: number) 
 
 export async function saveCompanionSyncPushAcks(peerId: string, acks: SyncPushAck[]) {
   if (getNativeCompanionSyncbackPlatform() === null) return [] as string[];
-  return runCompanionSyncWriterTask(() => getIosCompanionSyncbackStore().savePushAcks(peerId, acks));
+  return runCompanionSyncWriterTask(() =>
+    getIosCompanionSyncbackStore().savePushAcks(peerId, acks)
+  );
 }
 
 export async function stageCompanionSyncPushItems(
@@ -153,5 +157,7 @@ export async function stageCompanionSyncPushItems(
   items: import('./companionSyncPushProtocol').SyncPushPayload[]
 ) {
   if (getNativeCompanionSyncbackPlatform() === null) return;
-  return runCompanionSyncWriterTask(() => getIosCompanionSyncbackStore().stagePushItems(peerId, items));
+  return runCompanionSyncWriterTask(() =>
+    getIosCompanionSyncbackStore().stagePushItems(peerId, items)
+  );
 }

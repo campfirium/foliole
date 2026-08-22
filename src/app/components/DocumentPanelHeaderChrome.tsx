@@ -4,7 +4,7 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
 import { getStoredAppLocale } from '../../shared/localization/appLanguage';
-import { defaultSystemEntryDisplayName } from '../../shared/localization/systemEntryNames';
+import { resolveSystemEntryDisplayName } from '../../shared/localization/systemEntryNames';
 
 import { DocumentPanelHeader } from './DocumentPanelHeader';
 import type { DocumentPanelSectionProps } from './DocumentPanelSection';
@@ -46,7 +46,7 @@ function resolveDocumentHeaderBreadcrumb(props: DocumentPanelSectionProps) {
       [TRASH_HEADER_NODE_ID]: createTrashHeaderNode(
         TRASH_HEADER_NODE_ID,
         null,
-        defaultSystemEntryDisplayName(getStoredAppLocale(), 'trash'),
+        resolveSystemEntryDisplayName(getStoredAppLocale(), 'trash'),
         'folder'
       ),
       [TRASH_HEADER_ACTIVE_NODE_ID]: createTrashHeaderNode(TRASH_HEADER_ACTIVE_NODE_ID, TRASH_HEADER_NODE_ID, '', 'topic')

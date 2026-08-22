@@ -10,5 +10,13 @@
   "settings.general.openAtLogin.aria": "자동으로 Foliole 시작",
   "settings.search.generalOpenAtLogin.title": "자동으로 Foliole 시작",
   "settings.search.generalOpenAtLogin.description": "지원되는 데스크톱 설치에서 자동으로 Foliole을 시작합니다.",
-  "settings.search.generalOpenAtLogin.terms": "시작|시작 시 시작|부팅|백그라운드"
+  "settings.search.generalOpenAtLogin.terms": "시작|시작 시 시작|부팅|백그라운드",
+  "settings.general.systemEntryNames.section": "시스템 항목 이름",
+  "settings.general.systemEntryNames.description": "사용자 지정 이름은 이 라이브러리와 공유됩니다. 이름을 비우면 다시 인터페이스 언어를 따릅니다.",
+  "settings.general.systemEntryNames.demoDescription": "이 이름은 현재 브라우저 Demo에만 저장됩니다. 이름을 비우면 다시 인터페이스 언어를 따릅니다.",
+  "settings.general.systemEntryNames.saveFailed": "이름을 저장하지 못했습니다. 마지막으로 저장된 이름을 계속 사용합니다.",
+  "settings.general.systemEntryNames.upgradeRequired": "이 이름을 변경하기 전에 이 Sync Group의 모든 기기를 업데이트하세요.",
+  "settings.general.systemEntryNames.custom": "이 라이브러리에 저장된 사용자 지정 이름을 사용합니다.",
+  "settings.general.systemEntryNames.followsLanguage": "인터페이스 언어를 따릅니다.",
+  "settings.general.systemEntryNames.inputAria": "{name}의 사용자 지정 이름"
 }

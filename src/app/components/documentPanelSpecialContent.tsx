@@ -5,7 +5,7 @@ import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes'
 import { VIRTUAL_PUBLISHED_NODE_ID, isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
 import { getStoredAppLocale } from '../../shared/localization/appLanguage';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
-import { defaultSystemEntryDisplayName, resolveNodeDisplayTitle } from '../../shared/localization/systemEntryNames';
+import { resolveNodeDisplayTitle, resolveSystemEntryDisplayName } from '../../shared/localization/systemEntryNames';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import type { NodeViewState } from '../../store/workspaceStore';
 
@@ -109,7 +109,7 @@ function resolveSpecialDocumentContent(args: Parameters<typeof resolveDocumentPa
         folderNodeId={args.activeNode?.id ?? null}
         folderTitle={args.activeNode
           ? resolveNodeDisplayTitle(getStoredAppLocale(), args.activeNode.id, args.activeNode.title)
-          : defaultSystemEntryDisplayName(getStoredAppLocale(), 'trash')}
+          : resolveSystemEntryDisplayName(getStoredAppLocale(), 'trash')}
         nodeOrder={args.nodeOrder}
         nodesById={args.nodesById}
         onChangeFolderListSortDirection={args.onChangeFolderListSortDirection}

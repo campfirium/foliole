@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 
+import { hydrateRuntimeSystemEntryDisplayNames } from '../../shared/platform/desktop/systemEntryDisplayNamesRuntimeRepository';
 import {
   onWorkspaceContentChanged,
   onWorkspaceSyncApplied
@@ -13,6 +14,7 @@ export function useWorkspaceSyncAppliedRefresh() {
     void onWorkspaceSyncApplied(() => {
       if (!disposed) {
         requestWorkspaceStateRefresh('sync-applied');
+        void hydrateRuntimeSystemEntryDisplayNames().catch(() => undefined);
       }
     }).then((nextUnlisten) => {
       if (disposed) {

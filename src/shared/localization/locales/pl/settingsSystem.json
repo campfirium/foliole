@@ -10,5 +10,13 @@
   "settings.general.openAtLogin.aria": "Uruchom automatycznie Foliole",
   "settings.search.generalOpenAtLogin.title": "Uruchom automatycznie Foliole",
   "settings.search.generalOpenAtLogin.description": "Uruchom Foliole automatycznie w obsługiwanych instalacjach na komputerach stacjonarnych.",
-  "settings.search.generalOpenAtLogin.terms": "uruchamianie|uruchamianie przy starcie|uruchamianie|w tle"
+  "settings.search.generalOpenAtLogin.terms": "uruchamianie|uruchamianie przy starcie|uruchamianie|w tle",
+  "settings.general.systemEntryNames.section": "Nazwy wpisów systemowych",
+  "settings.general.systemEntryNames.description": "Niestandardowe nazwy są udostępniane w tej bibliotece. Wyczyść nazwę, aby ponownie używać języka interfejsu.",
+  "settings.general.systemEntryNames.demoDescription": "Te nazwy są zapisywane tylko w tej wersji demonstracyjnej przeglądarki. Wyczyść nazwę, aby ponownie używać języka interfejsu.",
+  "settings.general.systemEntryNames.saveFailed": "Nie udało się zapisać nazwy. Nadal używane są ostatnio zapisane nazwy.",
+  "settings.general.systemEntryNames.upgradeRequired": "Zaktualizuj wszystkie urządzenia w tej Sync Group przed zmianą tych nazw.",
+  "settings.general.systemEntryNames.custom": "Używa niestandardowej nazwy zapisanej w tej bibliotece.",
+  "settings.general.systemEntryNames.followsLanguage": "Używa języka interfejsu.",
+  "settings.general.systemEntryNames.inputAria": "Niestandardowa nazwa dla {name}"
 }

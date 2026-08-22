@@ -36,11 +36,19 @@ function readPlatformSource(fileName: string) {
 }
 
 function collectNativeCommandReferences(fileName: string) {
-  const source = ts.createSourceFile(fileName, readPlatformSource(fileName), ts.ScriptTarget.Latest, true);
+  const source = ts.createSourceFile(
+    fileName,
+    readPlatformSource(fileName),
+    ts.ScriptTarget.Latest,
+    true
+  );
   const references = new Set<string>();
 
   function visit(node: ts.Node) {
-    if (ts.isPropertyAccessExpression(node) && node.expression.getText(source) === 'NATIVE_COMMANDS') {
+    if (
+      ts.isPropertyAccessExpression(node) &&
+      node.expression.getText(source) === 'NATIVE_COMMANDS'
+    ) {
       references.add(node.name.text);
     }
     ts.forEachChild(node, visit);
@@ -72,8 +80,9 @@ describe('native command contracts', () => {
     expect(referencedKeys).toEqual(commandKeys);
   });
 
-  it('keeps WordPress draft and connection credentials out of command traces', () => {
+  it('keeps credentials and user-authored setting values out of command traces', () => {
     expect(canRecordNativeCommandArgs(NATIVE_COMMANDS.saveWordPressPublishDraft)).toBe(false);
     expect(canRecordNativeCommandArgs(NATIVE_COMMANDS.connectWordPressPublishSettings)).toBe(false);
+    expect(canRecordNativeCommandArgs(NATIVE_COMMANDS.saveSystemEntryDisplayNames)).toBe(false);
   });
 });

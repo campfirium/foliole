@@ -10,7 +10,7 @@ import {
 import { buildVirtualNodeResultIndex, getVirtualNodePrimaryKeyword } from '../../features/nodes/model/virtualNodeDetail';
 import type { AppLocale } from '../../shared/localization/appLanguage';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
-import { defaultSystemEntryDisplayName } from '../../shared/localization/systemEntryNames';
+import { resolveSystemEntryDisplayName } from '../../shared/localization/systemEntryNames';
 
 import { PublishedVirtualResultListPanel } from './PublishedVirtualResultListPanel';
 import { VirtualResultListPanel } from './VirtualResultListPanel';
@@ -40,7 +40,7 @@ function resolveVirtualHeader(args: {
     return {
       kind: 'description' as const,
       text: args.t('desktop.virtualSearch.removed.description'),
-      title: defaultSystemEntryDisplayName(args.locale, 'removed')
+      title: resolveSystemEntryDisplayName(args.locale, 'removed')
     };
   }
   return {
@@ -48,7 +48,7 @@ function resolveVirtualHeader(args: {
     text: args.isShelvedView
       ? args.t('desktop.virtualSearch.shelved.description')
       : '',
-    title: defaultSystemEntryDisplayName(args.locale, args.isShelvedView ? 'shelved' : 'virtual-root')
+    title: resolveSystemEntryDisplayName(args.locale, args.isShelvedView ? 'shelved' : 'virtual-root')
   };
 }
 

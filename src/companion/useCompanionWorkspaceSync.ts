@@ -13,6 +13,7 @@ import {
 
 import { hydrateCompanionReviewSchedulerSettings } from './companionReviewSchedulerSettingsHydration';
 import { mergeCompanionSyncProgressSession } from './companionSyncProgressSession';
+import { hydrateCompanionSystemEntryDisplayNames } from './companionSystemEntryDisplayNamesHydration';
 import { createWorkspaceSnapshotActions } from './companionWorkspaceSyncActions';
 import {
   type CompanionWorkspaceSyncStatus,
@@ -48,6 +49,7 @@ async function initializeWorkspaceSyncState(args: {
   args.setReadableArticle(await syncReadableArticle(nextState.workspace_snapshot));
   args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
   await hydrateCompanionReviewSchedulerSettings().catch(() => null);
+  await hydrateCompanionSystemEntryDisplayNames().catch(() => null);
   args.setIsStateReady(true);
   args.setStatus('idle');
 }

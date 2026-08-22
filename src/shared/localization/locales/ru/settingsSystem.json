@@ -10,5 +10,13 @@
   "settings.general.openAtLogin.aria": "Запустить Foliole автоматически",
   "settings.search.generalOpenAtLogin.title": "Запустить Foliole автоматически",
   "settings.search.generalOpenAtLogin.description": "Запускайте Foliole автоматически на поддерживаемых настольных компьютерах.",
-  "settings.search.generalOpenAtLogin.terms": "запуск|запуск при запуске|загрузка|фон"
+  "settings.search.generalOpenAtLogin.terms": "запуск|запуск при запуске|загрузка|фон",
+  "settings.general.systemEntryNames.section": "Названия системных разделов",
+  "settings.general.systemEntryNames.description": "Пользовательские названия используются во всей этой библиотеке. Очистите название, чтобы снова использовать язык интерфейса.",
+  "settings.general.systemEntryNames.demoDescription": "Эти названия сохраняются только в браузерной демоверсии. Очистите название, чтобы снова использовать язык интерфейса.",
+  "settings.general.systemEntryNames.saveFailed": "Не удалось сохранить название. Продолжают использоваться последние сохранённые названия.",
+  "settings.general.systemEntryNames.upgradeRequired": "Обновите все устройства в этой Sync Group, прежде чем менять эти названия.",
+  "settings.general.systemEntryNames.custom": "Используется пользовательское название, сохранённое в этой библиотеке.",
+  "settings.general.systemEntryNames.followsLanguage": "Следует языку интерфейса.",
+  "settings.general.systemEntryNames.inputAria": "Пользовательское название для {name}"
 }

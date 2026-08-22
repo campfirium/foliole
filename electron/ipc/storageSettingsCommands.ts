@@ -3,15 +3,25 @@ import type { BrowserWindow } from 'electron';
 import { LIBRARY_PATH_LOCATIONS } from '../../lib/platform/libraryPaths.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { loadBackupSettings, saveBackupSettings } from '../database/backupSettings.js';
-import { activateReadwiseOnThisHost, loadReadwiseHostAssignment } from '../database/readwiseHostAssignment.js';
+import {
+  activateReadwiseOnThisHost,
+  loadReadwiseHostAssignment
+} from '../database/readwiseHostAssignment.js';
 import { restoreSourceDispositions } from '../database/sourceDispositionRestore.js';
 import {
   resetSourceDispositions,
   summarizeSourceDispositions
 } from '../database/sourceDispositionStates.js';
 import { loadSyncPeers, saveSyncPeers } from '../database/syncPeers.js';
+import {
+  loadSystemEntryDisplayNames,
+  saveSystemEntryDisplayNames
+} from '../database/systemEntryDisplayNames.js';
 import { refreshGlobalClipShortcutFromSettings } from '../globalClipShortcut.js';
-import { loadImportManagerSettings, saveImportManagerSettings } from '../import/importManagerSettings.js';
+import {
+  loadImportManagerSettings,
+  saveImportManagerSettings
+} from '../import/importManagerSettings.js';
 import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
 import { refreshManagedInboxMonitorFromSettings } from '../import/managedInboxMonitor.js';
 import { exportCurrentArticleMirror } from '../mirror/exportCurrentArticleMirror.js';
@@ -25,7 +35,11 @@ import {
 import { asBoolean, asLiteralUnion, asNullableString, asString } from './commandParsers.js';
 import { handleCompanionPairingCommand } from './companionPairingCommands.js';
 import { loadDatabaseMaintenanceStatus } from './databaseMaintenanceStatus.js';
-import { loadLibraryPathSettings, openImportRoot, updateLibraryPathSetting } from './libraryPaths.js';
+import {
+  loadLibraryPathSettings,
+  openImportRoot,
+  updateLibraryPathSetting
+} from './libraryPaths.js';
 import {
   asFullTextSearchIndexStrategy,
   loadSearchIndexRebuildStatus,
@@ -40,7 +54,8 @@ import { handleWatchedFolderSettingsCommand } from './storageWatchedFolderComman
 import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
 
 function handleSourceDispositionCommand(command: string, window: BrowserWindow | null) {
-  if (command === NATIVE_COMMANDS.loadSourceDispositionSummary) return summarizeSourceDispositions();
+  if (command === NATIVE_COMMANDS.loadSourceDispositionSummary)
+    return summarizeSourceDispositions();
   if (command === NATIVE_COMMANDS.exportSourceDispositions) return exportSourceDispositions(window);
   if (command === NATIVE_COMMANDS.importSourceDispositions) return importSourceDispositions(window);
   if (command === NATIVE_COMMANDS.restoreSourceDispositions) return restoreSourceDispositions();
@@ -78,6 +93,19 @@ async function handleLibraryPathUpdateCommand(args: Record<string, unknown>) {
   return result;
 }
 
+async function handleAppSettingsCommand(command: string, args: Record<string, unknown>) {
+  if (command === NATIVE_COMMANDS.loadImportManagerSettings) return loadImportManagerSettings();
+  if (command === NATIVE_COMMANDS.loadAppSettingsState) return loadAppSettingsState();
+  if (command === NATIVE_COMMANDS.loadSystemEntryDisplayNames) return loadSystemEntryDisplayNames();
+  if (command === NATIVE_COMMANDS.saveSystemEntryDisplayNames)
+    return saveSystemEntryDisplayNames(args.payload);
+  if (command !== NATIVE_COMMANDS.saveAppSettingsState) return undefined;
+  await saveAppSettingsState(readSettingsObject(args.settings));
+  refreshGlobalClipShortcutFromSettings();
+  await refreshManagedInboxMonitorFromSettings();
+  return null;
+}
+
 export async function handleSettingsStorageCommand(
   command: string,
   args: Record<string, unknown>,
@@ -89,24 +117,22 @@ export async function handleSettingsStorageCommand(
   if (companionPairingResult !== undefined) return companionPairingResult;
   const publishingResult = await handlePublishingStorageCommand(command, args);
   if (publishingResult !== undefined) {
-    if (command === NATIVE_COMMANDS.updateFoliolePublishSiteAddress) notifyWorkspaceContentChanged();
+    if (command === NATIVE_COMMANDS.updateFoliolePublishSiteAddress)
+      notifyWorkspaceContentChanged();
     return publishingResult;
   }
-  if (command === NATIVE_COMMANDS.loadImportManagerSettings) return loadImportManagerSettings();
-  if (command === NATIVE_COMMANDS.loadAppSettingsState) return loadAppSettingsState();
-  if (command === NATIVE_COMMANDS.saveAppSettingsState) {
-    await saveAppSettingsState(readSettingsObject(args.settings));
-    refreshGlobalClipShortcutFromSettings();
-    await refreshManagedInboxMonitorFromSettings();
-    return null;
-  }
-  if (command === NATIVE_COMMANDS.loadSearchIndexRebuildStatus) return loadSearchIndexRebuildStatus();
+  const appSettingsResult = await handleAppSettingsCommand(command, args);
+  if (appSettingsResult !== undefined) return appSettingsResult;
+  if (command === NATIVE_COMMANDS.loadSearchIndexRebuildStatus)
+    return loadSearchIndexRebuildStatus();
   if (command === NATIVE_COMMANDS.rebuildSearchIndex) {
     return requestSearchIndexRebuild(asFullTextSearchIndexStrategy(args.strategy));
   }
   if (command === NATIVE_COMMANDS.loadSyncPeers) return loadSyncPeers();
   if (command === NATIVE_COMMANDS.saveSyncPeers) {
-    return saveSyncPeers(Array.isArray(args.peers) ? (args.peers as Parameters<typeof saveSyncPeers>[0]) : []);
+    return saveSyncPeers(
+      Array.isArray(args.peers) ? (args.peers as Parameters<typeof saveSyncPeers>[0]) : []
+    );
   }
   if (command === NATIVE_COMMANDS.loadLibraryPathSettings) return loadLibraryPathSettings();
   if (command === NATIVE_COMMANDS.loadReadwiseHostAssignment) return loadReadwiseHostAssignment();
@@ -114,23 +140,28 @@ export async function handleSettingsStorageCommand(
   const watchedFolderResult = handleWatchedFolderSettingsCommand(command, args);
   if (watchedFolderResult !== undefined) return watchedFolderResult;
   if (command === NATIVE_COMMANDS.openImportRoot) return openImportRoot();
-  if (command === NATIVE_COMMANDS.loadDatabaseMaintenanceStatus) return loadDatabaseMaintenanceStatus();
+  if (command === NATIVE_COMMANDS.loadDatabaseMaintenanceStatus)
+    return loadDatabaseMaintenanceStatus();
   if (command === NATIVE_COMMANDS.loadBackupSettings) return loadBackupSettings();
   const sourceDispositionResult = handleSourceDispositionCommand(command, window);
   if (sourceDispositionResult !== undefined) return sourceDispositionResult;
   if (command === NATIVE_COMMANDS.rebuildMirrorOutput) return rebuildMirrorOutput();
-  if (command === NATIVE_COMMANDS.rebuildMirrorAttachmentLinks) return rebuildMirrorAttachmentLinks();
-  if (command === NATIVE_COMMANDS.exportCurrentArticleMirror) return exportCurrentArticleMirror(asString(args.node_id, 'node_id'), window);
+  if (command === NATIVE_COMMANDS.rebuildMirrorAttachmentLinks)
+    return rebuildMirrorAttachmentLinks();
+  if (command === NATIVE_COMMANDS.exportCurrentArticleMirror)
+    return exportCurrentArticleMirror(asString(args.node_id, 'node_id'), window);
   if (command === NATIVE_COMMANDS.updateLibraryPathSetting) {
     return handleLibraryPathUpdateCommand(args);
   }
-  if (command === NATIVE_COMMANDS.saveBackupSettings) return saveBackupSettings(readSettingsObject(args.settings));
+  if (command === NATIVE_COMMANDS.saveBackupSettings)
+    return saveBackupSettings(readSettingsObject(args.settings));
   if (command === NATIVE_COMMANDS.saveImportManagerSettings) {
     const result = saveImportManagerSettings(readSettingsObject(args.settings));
     await refreshKeepImportMonitorFromSettings();
     return result;
   }
   if (command === NATIVE_COMMANDS.loadReviewSchedulerSettings) return loadReviewSchedulerSettings();
-  if (command === NATIVE_COMMANDS.saveReviewSchedulerSettings) return saveReviewSchedulerSettings(readSettingsObject(args.settings));
+  if (command === NATIVE_COMMANDS.saveReviewSchedulerSettings)
+    return saveReviewSchedulerSettings(readSettingsObject(args.settings));
   return undefined;
 }

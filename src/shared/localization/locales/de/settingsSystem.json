@@ -10,5 +10,13 @@
   "settings.general.openAtLogin.aria": "Foliole automatisch starten",
   "settings.search.generalOpenAtLogin.title": "Foliole automatisch starten",
   "settings.search.generalOpenAtLogin.description": "Starten Sie Foliole automatisch auf unterstützten Desktop-Installationen.",
-  "settings.search.generalOpenAtLogin.terms": "Start|Start beim Start|Boot|Hintergrund"
+  "settings.search.generalOpenAtLogin.terms": "Start|Start beim Start|Boot|Hintergrund",
+  "settings.general.systemEntryNames.section": "Namen der Systembereiche",
+  "settings.general.systemEntryNames.description": "Benutzerdefinierte Namen werden mit dieser Bibliothek geteilt. Leeren Sie einen Namen, damit er wieder der Oberflächensprache folgt.",
+  "settings.general.systemEntryNames.demoDescription": "Diese Namen werden nur in dieser Browser-Demo gespeichert. Leeren Sie einen Namen, damit er wieder der Oberflächensprache folgt.",
+  "settings.general.systemEntryNames.saveFailed": "Der Name konnte nicht gespeichert werden. Die zuletzt gespeicherten Namen werden weiter verwendet.",
+  "settings.general.systemEntryNames.upgradeRequired": "Aktualisieren Sie alle Geräte in dieser Sync Group, bevor Sie diese Namen ändern.",
+  "settings.general.systemEntryNames.custom": "Verwendet den in dieser Bibliothek gespeicherten benutzerdefinierten Namen.",
+  "settings.general.systemEntryNames.followsLanguage": "Folgt der Oberflächensprache.",
+  "settings.general.systemEntryNames.inputAria": "Benutzerdefinierter Name für {name}"
 }

@@ -14,7 +14,7 @@ import {
   getVirtualNodePrimaryKeyword
 } from '../../features/nodes/model/virtualNodeDetail';
 import { useLocalization, useTranslation } from '../../shared/localization/LocalizationProvider';
-import { defaultSystemEntryDisplayName } from '../../shared/localization/systemEntryNames';
+import { resolveSystemEntryDisplayName } from '../../shared/localization/systemEntryNames';
 import { AppButton } from '../../shared/ui';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -58,7 +58,7 @@ function VirtualRootDocumentSurface(props: Pick<VirtualDocumentSurfaceProps, 'no
     <FolderListView
       emptyState={trimmedQuery ? { description: t('desktop.virtualSearch.empty.description'), title: t('desktop.virtualSearch.empty.title') } : undefined}
       filterSearchResults={false}
-      folderTitle={defaultSystemEntryDisplayName(locale, 'virtual-root')}
+      folderTitle={resolveSystemEntryDisplayName(locale, 'virtual-root')}
       nodeOrder={resultNodes.map((node) => node.id)}
       nodes={resultNodes}
       nodesById={props.nodesById}
@@ -140,7 +140,7 @@ export function VirtualBuiltInDocumentSurface(props: Pick<VirtualDocumentSurface
         title: isShelved ? t('desktop.virtualSearch.shelved.empty.title') : t('desktop.virtualSearch.removed.empty.title')
       }}
       filterSearchResults={false}
-      folderTitle={defaultSystemEntryDisplayName(locale, isShelved ? 'shelved' : 'removed')}
+      folderTitle={resolveSystemEntryDisplayName(locale, isShelved ? 'shelved' : 'removed')}
       nodes={nodes}
       nodesById={props.nodesById}
       onSelectNode={props.onSelectNode}

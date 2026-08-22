@@ -168,6 +168,8 @@ export const NATIVE_COMMANDS = {
   recordSyncNodeConflicts: 'record_sync_node_conflicts',
   loadAppSettingsState: 'load_app_settings_state',
   saveAppSettingsState: 'save_app_settings_state',
+  loadSystemEntryDisplayNames: 'load_system_entry_display_names',
+  saveSystemEntryDisplayNames: 'save_system_entry_display_names',
   loadSearchIndexRebuildStatus: 'load_search_index_rebuild_status',
   rebuildSearchIndex: 'rebuild_search_index',
   loadSyncPeers: 'load_sync_peers',

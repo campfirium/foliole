@@ -178,6 +178,8 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.recordSyncNodeConflicts, route: 'storage', capability: 'syncMutation' },
   { command: NATIVE_COMMANDS.loadAppSettingsState, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.saveAppSettingsState, route: 'storage', capability: 'settingsMutation' },
+  { command: NATIVE_COMMANDS.loadSystemEntryDisplayNames, route: 'storage', capability: 'read' },
+  { command: NATIVE_COMMANDS.saveSystemEntryDisplayNames, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.loadSearchIndexRebuildStatus, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.rebuildSearchIndex, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.loadSyncPeers, route: 'storage', capability: 'read' },

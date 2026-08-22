@@ -21,9 +21,11 @@ import { prewarmWorkspaceSettingsOverlay } from './components/WorkspaceSettingsO
 import { useAppController } from './hooks/useAppController';
 import { useReadwiseAutoSync } from './hooks/useReadwiseAutoSync';
 import { useReleaseUpdateCheck } from './hooks/useReleaseUpdateCheck';
+import { useSystemEntryDisplayNamesHydration } from './hooks/useSystemEntryDisplayNamesHydration';
 import { useWorkspaceContentChangedRefresh, useWorkspaceSyncAppliedRefresh } from './hooks/useWorkspaceSyncAppliedRefresh';
 
 function AppContent() {
+  useSystemEntryDisplayNamesHydration();
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isHelpSearchOpen, setIsHelpSearchOpen] = useState(false);
   const [searchPreviewResult, setSearchPreviewResult] = useState<WorkspaceSearchResult | null>(null);
@@ -80,7 +82,6 @@ function AppContent() {
     </HotkeySettingsProvider>
   );
 }
-
 function useReportAppReadyGate(
   isAppReady: boolean,
   gate: { isReviewSchedulerSettingsReady: boolean; isWorkspaceHydrated: boolean | undefined }

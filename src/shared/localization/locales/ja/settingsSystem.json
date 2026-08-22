@@ -10,5 +10,13 @@
   "settings.general.openAtLogin.aria": "Foliole を自動的に開始します",
   "settings.search.generalOpenAtLogin.title": "Foliole を自動的に開始します",
   "settings.search.generalOpenAtLogin.description": "サポートされているデスクトップ インストールで Foliole を自動的に起動します。",
-  "settings.search.generalOpenAtLogin.terms": "スタートアップ|スタートアップ時に起動|ブート|バックグラウンド"
+  "settings.search.generalOpenAtLogin.terms": "スタートアップ|スタートアップ時に起動|ブート|バックグラウンド",
+  "settings.general.systemEntryNames.section": "システム項目の名前",
+  "settings.general.systemEntryNames.description": "カスタム名はこのライブラリで共有されます。名前を空にすると、再びインターフェイスの言語に従います。",
+  "settings.general.systemEntryNames.demoDescription": "これらの名前は、このブラウザ Demo にのみ保存されます。名前を空にすると、再びインターフェイスの言語に従います。",
+  "settings.general.systemEntryNames.saveFailed": "名前を保存できませんでした。最後に保存した名前が引き続き使用されます。",
+  "settings.general.systemEntryNames.upgradeRequired": "これらの名前を変更する前に、この Sync Group のすべてのデバイスを更新してください。",
+  "settings.general.systemEntryNames.custom": "このライブラリに保存されたカスタム名を使用します。",
+  "settings.general.systemEntryNames.followsLanguage": "インターフェイスの言語に従います。",
+  "settings.general.systemEntryNames.inputAria": "{name} のカスタム名"
 }

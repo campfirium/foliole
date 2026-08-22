@@ -1,10 +1,19 @@
-import type { HotkeySettingItem, HotkeyUpdateResult } from '../../features/settings/model/hotkeySettings';
+import type {
+  HotkeySettingItem,
+  HotkeyUpdateResult
+} from '../../features/settings/model/hotkeySettings';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
-import { buildShortcutOverrideLabel, type CommandShortcutOverrides } from '../../shared/commands/keymap';
-import { formatShortcutSetDisplayEntries, formatShortcutSetSearchLabel } from '../../shared/commands/shortcutDisplay';
+import {
+  buildShortcutOverrideLabel,
+  type CommandShortcutOverrides
+} from '../../shared/commands/keymap';
+import {
+  formatShortcutSetDisplayEntries,
+  formatShortcutSetSearchLabel
+} from '../../shared/commands/shortcutDisplay';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 import { getStoredAppLocale } from '../../shared/localization/appLanguage';
-import { defaultSystemEntryDisplayName } from '../../shared/localization/systemEntryNames';
+import { resolveSystemEntryDisplayName } from '../../shared/localization/systemEntryNames';
 
 import { mapPaletteItemsToHotkeyItems } from './reviewHotkeysState';
 
@@ -12,7 +21,11 @@ export interface AppHotkeySettings {
   hotkeyItems: HotkeySettingItem[];
   onHotkeyReset: (commandId: string) => void;
   onHotkeyResetAll: () => void;
-  onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
+  onHotkeyUpdate: (
+    commandId: string,
+    slot: 'primary' | 'secondary',
+    nextLabel: string
+  ) => HotkeyUpdateResult;
   shortcutMap: Record<string, import('../../shared/commands/types').CommandShortcutSet | undefined>;
 }
 
@@ -20,10 +33,17 @@ export function buildHotkeySettings(
   paletteItems: CommandPaletteItem[],
   hotkeys: {
     overrides: CommandShortcutOverrides;
-    shortcutMap: Record<string, import('../../shared/commands/types').CommandShortcutSet | undefined>;
+    shortcutMap: Record<
+      string,
+      import('../../shared/commands/types').CommandShortcutSet | undefined
+    >;
     resetAllShortcuts: () => void;
     resetShortcut: (commandId: string) => void;
-    updateShortcut: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
+    updateShortcut: (
+      commandId: string,
+      slot: 'primary' | 'secondary',
+      nextLabel: string
+    ) => HotkeyUpdateResult;
   }
 ): AppHotkeySettings {
   const globalCaptureShortcuts = hotkeys.shortcutMap[APP_COMMAND_IDS.globalCaptureToInbox];
@@ -39,10 +59,13 @@ export function buildHotkeySettings(
     section: 'Capture',
     shortcutDisplayEntries: formatShortcutSetDisplayEntries(globalCaptureShortcuts),
     shortcutSummaryLabel: formatShortcutSetSearchLabel(globalCaptureShortcuts),
-    title: `Capture to ${defaultSystemEntryDisplayName(getStoredAppLocale(), 'inbox')} (global)`
+    title: `Capture to ${resolveSystemEntryDisplayName(getStoredAppLocale(), 'inbox')} (global)`
   };
   return {
-    hotkeyItems: [globalCaptureItem, ...mapPaletteItemsToHotkeyItems(paletteItems, hotkeys.overrides)],
+    hotkeyItems: [
+      globalCaptureItem,
+      ...mapPaletteItemsToHotkeyItems(paletteItems, hotkeys.overrides)
+    ],
     onHotkeyReset: hotkeys.resetShortcut,
     onHotkeyResetAll: hotkeys.resetAllShortcuts,
     onHotkeyUpdate: hotkeys.updateShortcut,

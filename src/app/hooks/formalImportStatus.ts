@@ -1,5 +1,5 @@
 import { getStoredAppLocale } from '../../shared/localization/appLanguage';
-import { defaultSystemEntryDisplayName } from '../../shared/localization/systemEntryNames';
+import { resolveSystemEntryDisplayName } from '../../shared/localization/systemEntryNames';
 import type { RuntimeTextImportResult } from '../../shared/platform/importExecutionRuntimeRepository';
 import type { RuntimeImportOverview } from '../../shared/platform/importOverviewRuntimeRepository';
 
@@ -20,7 +20,7 @@ export function getDefaultFormalImportStatus(): FormalImportStatus {
 export const DEFAULT_FORMAL_IMPORT_STATUS = getDefaultFormalImportStatus();
 
 function inboxTitle() {
-  return defaultSystemEntryDisplayName(getStoredAppLocale(), 'inbox');
+  return resolveSystemEntryDisplayName(getStoredAppLocale(), 'inbox');
 }
 
 export function formatImportTimestamp(timestamp: string) {
@@ -71,12 +71,18 @@ export function buildStatusFromOverview(overview: RuntimeImportOverview): Formal
       ? `${latestFailure.sourceName} · ${latestFailure.failureReason ?? 'Unknown import failure'}`
       : DEFAULT_FORMAL_IMPORT_STATUS.failures,
     inboxLanding: latestResult
-      ? buildSuccessStatus(latestResult, formatImportTimestamp(latestResult.importedAt), DEFAULT_FORMAL_IMPORT_STATUS)
-          .inboxLanding
+      ? buildSuccessStatus(
+          latestResult,
+          formatImportTimestamp(latestResult.importedAt),
+          DEFAULT_FORMAL_IMPORT_STATUS
+        ).inboxLanding
       : DEFAULT_FORMAL_IMPORT_STATUS.inboxLanding,
     lastRun: latestResult
-      ? buildSuccessStatus(latestResult, formatImportTimestamp(latestResult.importedAt), DEFAULT_FORMAL_IMPORT_STATUS)
-          .lastRun
+      ? buildSuccessStatus(
+          latestResult,
+          formatImportTimestamp(latestResult.importedAt),
+          DEFAULT_FORMAL_IMPORT_STATUS
+        ).lastRun
       : DEFAULT_FORMAL_IMPORT_STATUS.lastRun
   };
 }

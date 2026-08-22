@@ -7,8 +7,17 @@ import type {
   NativeSyncObjectRecord,
   NativeSyncPeer
 } from './nativeSyncContract.js';
+import type { SystemEntryDisplayNamesPayload } from './systemEntryDisplayNameContract.js';
 
 export type NativeSyncCommandMap = {
+  [NATIVE_COMMANDS.loadSystemEntryDisplayNames]: {
+    args: undefined;
+    result: SystemEntryDisplayNamesPayload;
+  };
+  [NATIVE_COMMANDS.saveSystemEntryDisplayNames]: {
+    args: { payload: SystemEntryDisplayNamesPayload };
+    result: SystemEntryDisplayNamesPayload;
+  };
   [NATIVE_COMMANDS.loadSyncIndex]: {
     args: undefined;
     result: NativeSyncIndexEntry[];

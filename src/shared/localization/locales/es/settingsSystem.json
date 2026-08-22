@@ -10,5 +10,13 @@
   "settings.general.openAtLogin.aria": "Inicia Foliole automáticamente",
   "settings.search.generalOpenAtLogin.title": "Inicia Foliole automáticamente",
   "settings.search.generalOpenAtLogin.description": "Inicie Foliole automáticamente en instalaciones de escritorio compatibles.",
-  "settings.search.generalOpenAtLogin.terms": "inicio|iniciar al inicio|arranque|fondo"
+  "settings.search.generalOpenAtLogin.terms": "inicio|iniciar al inicio|arranque|fondo",
+  "settings.general.systemEntryNames.section": "Nombres de las entradas del sistema",
+  "settings.general.systemEntryNames.description": "Los nombres personalizados se comparten con esta biblioteca. Borra un nombre para que vuelva a seguir el idioma de la interfaz.",
+  "settings.general.systemEntryNames.demoDescription": "Estos nombres solo se guardan en esta demo del navegador. Borra un nombre para que vuelva a seguir el idioma de la interfaz.",
+  "settings.general.systemEntryNames.saveFailed": "No se pudo guardar el nombre. Se siguen usando los últimos nombres guardados.",
+  "settings.general.systemEntryNames.upgradeRequired": "Actualiza todos los dispositivos de este Sync Group antes de cambiar estos nombres.",
+  "settings.general.systemEntryNames.custom": "Usa el nombre personalizado guardado con esta biblioteca.",
+  "settings.general.systemEntryNames.followsLanguage": "Sigue el idioma de la interfaz.",
+  "settings.general.systemEntryNames.inputAria": "Nombre personalizado para {name}"
 }

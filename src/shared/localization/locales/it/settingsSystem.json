@@ -10,5 +10,13 @@
   "settings.general.openAtLogin.aria": "Avvia Foliole automaticamente",
   "settings.search.generalOpenAtLogin.title": "Avvia Foliole automaticamente",
   "settings.search.generalOpenAtLogin.description": "Avvia Foliole automaticamente sulle installazioni desktop supportate.",
-  "settings.search.generalOpenAtLogin.terms": "startup|avvia all'avvio|boot|in background"
+  "settings.search.generalOpenAtLogin.terms": "startup|avvia all'avvio|boot|in background",
+  "settings.general.systemEntryNames.section": "Nomi delle voci di sistema",
+  "settings.general.systemEntryNames.description": "I nomi personalizzati sono condivisi con questa raccolta. Svuota un nome per tornare a seguire la lingua dell’interfaccia.",
+  "settings.general.systemEntryNames.demoDescription": "Questi nomi vengono salvati solo in questa demo del browser. Svuota un nome per tornare a seguire la lingua dell’interfaccia.",
+  "settings.general.systemEntryNames.saveFailed": "Impossibile salvare il nome. Restano in uso gli ultimi nomi salvati.",
+  "settings.general.systemEntryNames.upgradeRequired": "Aggiorna tutti i dispositivi di questo Sync Group prima di modificare questi nomi.",
+  "settings.general.systemEntryNames.custom": "Usa il nome personalizzato salvato con questa raccolta.",
+  "settings.general.systemEntryNames.followsLanguage": "Segue la lingua dell’interfaccia.",
+  "settings.general.systemEntryNames.inputAria": "Nome personalizzato per {name}"
 }

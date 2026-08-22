@@ -1,7 +1,7 @@
 import { useMemo, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type RefObject } from 'react';
 
 import { useLocalization } from '../../../shared/localization/LocalizationProvider';
-import { resolveNodeDisplayTitle } from '../../../shared/localization/systemEntryNames';
+import { resolveNodeDisplayTitle, resolveSystemEntryDisplayName } from '../../../shared/localization/systemEntryNames';
 import { VirtualListSurface, type VirtualListRenderMeta } from '../../../shared/ui';
 import type { ReviewSessionState } from '../../../store/workspaceStore';
 import { canNodeBeMoved } from '../model/nodeMovementRules';
@@ -48,7 +48,6 @@ interface NodeListRowsProps {
   selectedTrashNodeId: string | null;
   virtualizeRows: boolean;
 }
-
 function renderNodeListRow(
   props: NodeListRowsProps,
   row: NodeTreeRow,
@@ -171,8 +170,23 @@ function resolveLeafIconKind(kind: NodeTreeRowIconKind) {
   return kind === 'reading' || kind === 'review' ? kind : undefined;
 }
 
+function resolveNodeListEmptyState(
+  props: NodeListRowsProps,
+  locale: ReturnType<typeof useLocalization>['locale'],
+  t: ReturnType<typeof useLocalization>['t']
+) {
+  if (props.isTrashViewOpen)
+    return {
+      description: t('desktop.nodeList.trash.empty.description'),
+      title: `${resolveSystemEntryDisplayName(locale, 'trash')}: ${t('desktop.nodeList.empty')}`
+    };
+  return props.isVirtualViewOpen
+    ? { description: 'Create a virtual folder to save a reusable filtered view.', title: 'No virtual folders' }
+    : { description: 'Create or import a topic to start editing.', title: 'No topics' };
+}
+
 export function NodeListRows(props: NodeListRowsProps) {
-  const { locale } = useLocalization();
+  const { locale, t } = useLocalization();
   const navigationTitleFontSize = getNavigationTitleFontSize();
   const rowGap = resolveNodeListRowGap(props.rowSpacing);
   const onRowKeyDown = useMemo(
@@ -187,11 +201,7 @@ export function NodeListRows(props: NodeListRowsProps) {
   );
 
   if (props.rows.length === 0) {
-    const emptyState = props.isTrashViewOpen
-      ? { description: 'Deleted topics will appear here.', title: 'Trash is empty' }
-      : props.isVirtualViewOpen
-        ? { description: 'Create a virtual folder to save a reusable filtered view.', title: 'No virtual folders' }
-        : { description: 'Create or import a topic to start editing.', title: 'No topics' };
+    const emptyState = resolveNodeListEmptyState(props, locale, t);
     return (
       <NodeListStateSurface
         emptyState={emptyState}

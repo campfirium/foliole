@@ -28,6 +28,7 @@ import { SettingsAideStorageSection } from './SettingsAideStorageSection';
 import { SettingsCaptureSection } from './SettingsCaptureSection';
 import { SettingsGeneralSystemSection } from './SettingsGeneralSystemSection';
 import { SettingsLanguageSection } from './SettingsLanguageSection';
+import { SettingsSystemEntryNamesSection } from './SettingsSystemEntryNamesSection';
 
 type Translate = ReturnType<typeof useTranslation>;
 
@@ -149,6 +150,7 @@ export function SettingsGeneralSection({
   return (
     <>
       <SettingsLanguageSection />
+      <SettingsSystemEntryNamesSection demo={previewDesktopSettings} />
       <SettingsGeneralSystemSection previewDesktopSettings={previewDesktopSettings} />
       <InterfaceBehaviorSection />
       <SettingsSection ariaLabel={t('settings.general.search.aria')} title={t('settings.general.search.section')}>

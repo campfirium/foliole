@@ -9,6 +9,7 @@ import {
   type AppLanguagePreference,
   type AppLocale
 } from './appLanguage';
+import { useSystemEntryDisplayNamesSnapshot } from './systemEntryDisplayNamesStore';
 import {
   hasTranslationCatalog,
   preloadTranslationCatalog,
@@ -35,6 +36,7 @@ interface LocalizationProviderProps {
 }
 
 export function LocalizationProvider({ children, initialLanguagePreference }: LocalizationProviderProps) {
+  const systemEntryNames = useSystemEntryDisplayNamesSnapshot();
   const [languagePreference, setLanguagePreferenceState] = useState(
     () => initialLanguagePreference ?? getStoredAppLanguagePreference()
   );
@@ -59,7 +61,7 @@ export function LocalizationProvider({ children, initialLanguagePreference }: Lo
   );
   const value = useMemo(
     () => ({ languagePreference, locale, setLanguagePreference, setLocale, t }),
-    [languagePreference, locale, setLanguagePreference, setLocale, t]
+    [languagePreference, locale, setLanguagePreference, setLocale, systemEntryNames.revision, t]
   );
   useEffect(() => {
     if (catalogReady) {

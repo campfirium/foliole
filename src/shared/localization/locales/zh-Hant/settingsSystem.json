@@ -10,5 +10,13 @@
   "settings.general.openAtLogin.aria": "自動啟動Foliole",
   "settings.search.generalOpenAtLogin.title": "自動啟動Foliole",
   "settings.search.generalOpenAtLogin.description": "在支援的桌面安裝上自動啟動 Foliole。",
-  "settings.search.generalOpenAtLogin.terms": "啟動|啟動時啟動|啟動|後台"
+  "settings.search.generalOpenAtLogin.terms": "啟動|啟動時啟動|啟動|後台",
+  "settings.general.systemEntryNames.section": "系統入口名稱",
+  "settings.general.systemEntryNames.description": "自訂名稱會隨目前資料庫共享。清空名稱後會重新跟隨介面語言。",
+  "settings.general.systemEntryNames.demoDescription": "這些名稱只儲存在目前的瀏覽器 Demo 中。清空名稱後會重新跟隨介面語言。",
+  "settings.general.systemEntryNames.saveFailed": "名稱未能儲存，介面仍使用上次儲存的名稱。",
+  "settings.general.systemEntryNames.upgradeRequired": "請先更新此 Sync Group 內的所有裝置，再修改這些名稱。",
+  "settings.general.systemEntryNames.custom": "使用目前資料庫儲存的自訂名稱。",
+  "settings.general.systemEntryNames.followsLanguage": "跟隨介面語言。",
+  "settings.general.systemEntryNames.inputAria": "{name} 的自訂名稱"
 }

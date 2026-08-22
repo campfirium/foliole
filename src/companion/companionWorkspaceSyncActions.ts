@@ -20,6 +20,7 @@ import {
 import { hydrateCompanionReviewSchedulerSettings } from './companionReviewSchedulerSettingsHydration';
 import { formatCompanionSyncFailureMessage } from './companionSyncFailureMessage';
 import { runCompanionSyncAsOwner } from './companionSyncRunOwner';
+import { hydrateCompanionSystemEntryDisplayNames } from './companionSystemEntryDisplayNamesHydration';
 import {
   recordCompanionManualSyncFailure,
   syncCompanionDesktopStreams
@@ -52,6 +53,7 @@ async function refreshConflictAwareState(args: {
   args.setReadableArticle(await loadCompanionReadableArticle(nextState.workspace_snapshot));
   args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
   await hydrateCompanionReviewSchedulerSettings().catch(() => null);
+  await hydrateCompanionSystemEntryDisplayNames().catch(() => null);
   return nextState;
 }
 
@@ -84,6 +86,7 @@ async function runManualSyncTarget(args: WorkspaceSnapshotActionArgs, target: Co
         workspaceSnapshot: args.state.workspace_snapshot
       });
       await hydrateCompanionReviewSchedulerSettings().catch(() => null);
+      await hydrateCompanionSystemEntryDisplayNames().catch(() => null);
       args.setStatus('idle');
       return nextState;
     } catch (syncError) {

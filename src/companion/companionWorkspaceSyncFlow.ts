@@ -28,6 +28,7 @@ import {
 import { buildCompanionSyncRunSummary } from './companionSyncRunSummary';
 import { recordCompanionSyncStageEvents } from './companionSyncStageEvents';
 import { tryForegroundAutoSyncTarget } from './companionSyncTargetFlow';
+import { hydrateCompanionSystemEntryDisplayNames } from './companionSystemEntryDisplayNamesHydration';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 
 export type CompanionWorkspaceSyncStatus = 'idle' | 'loading' | 'syncing';
@@ -147,6 +148,7 @@ export async function runCompanionStreamSync(args: RunCompanionStreamSyncArgs) {
     workspaceSnapshot: latestWorkspaceSnapshot
   });
   await hydrateCompanionReviewSchedulerSettings().catch(() => null);
+  await hydrateCompanionSystemEntryDisplayNames().catch(() => null);
   applyRemainingProgress({ result, setSyncProgress: args.setSyncProgress });
   args.onContinuationModeChange?.(resolveCompanionSyncContinuationMode(result));
   if (passResult.outcome === 'skipped' && hasFastRetryWork(result)) {

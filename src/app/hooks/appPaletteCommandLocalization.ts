@@ -2,7 +2,7 @@ import type { AppCommandId } from '../../shared/commands/ids';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { getStoredAppLocale } from '../../shared/localization/appLanguage';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
-import { defaultSystemEntryDisplayName } from '../../shared/localization/systemEntryNames';
+import { resolveSystemEntryDisplayName } from '../../shared/localization/systemEntryNames';
 import type { TranslationKey } from '../../shared/localization/translations';
 
 const COMMAND_TITLE_KEYS: Partial<Record<AppCommandId, TranslationKey>> = {
@@ -48,7 +48,8 @@ const COMMAND_TITLE_KEYS: Partial<Record<AppCommandId, TranslationKey>> = {
   [APP_COMMAND_IDS.goParent]: 'desktop.command.goParent',
   [APP_COMMAND_IDS.findInTopic]: 'desktop.command.findInTopic',
   [APP_COMMAND_IDS.toggleComparisonView]: 'desktop.command.compareWithDraft',
-  [APP_COMMAND_IDS.toggleDismissedTopicsVisibility]: 'desktop.command.toggleDismissedTopicsVisibility',
+  [APP_COMMAND_IDS.toggleDismissedTopicsVisibility]:
+    'desktop.command.toggleDismissedTopicsVisibility',
   [APP_COMMAND_IDS.enterPriorityMode]: 'desktop.command.setPriority',
   [APP_COMMAND_IDS.toggleEditorDisplayMode]: 'desktop.command.toggleEditorDisplayMode',
   [APP_COMMAND_IDS.openSettings]: 'desktop.command.openSettings',
@@ -108,7 +109,7 @@ const SECTION_KEYS: Record<string, TranslationKey> = {
 export function localizePaletteCommandTitle(id: string, fallback: string, t: Translate) {
   const key = COMMAND_TITLE_KEYS[id as AppCommandId];
   if (id === APP_COMMAND_IDS.openTrash && key) {
-    return t(key, { trash: defaultSystemEntryDisplayName(getStoredAppLocale(), 'trash') });
+    return t(key, { trash: resolveSystemEntryDisplayName(getStoredAppLocale(), 'trash') });
   }
   return key ? t(key) : fallback;
 }
@@ -120,7 +121,9 @@ export function localizePaletteCommandSection(section: string, t: Translate) {
 
 export function resolveImmersiveModePaletteTitle(isImmersiveMode: boolean, t: Translate) {
   return t(
-    isImmersiveMode ? 'desktop.command.exitImmersiveReading' : 'desktop.command.enterImmersiveReading'
+    isImmersiveMode
+      ? 'desktop.command.exitImmersiveReading'
+      : 'desktop.command.enterImmersiveReading'
   );
 }
 

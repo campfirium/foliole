@@ -10,5 +10,13 @@
   "settings.general.openAtLogin.aria": "Démarrer Foliole automatiquement",
   "settings.search.generalOpenAtLogin.title": "Démarrer Foliole automatiquement",
   "settings.search.generalOpenAtLogin.description": "Démarrez automatiquement Foliole sur les installations de bureau prises en charge.",
-  "settings.search.generalOpenAtLogin.terms": "démarrage|lancement au démarrage|démarrage|arrière-plan"
+  "settings.search.generalOpenAtLogin.terms": "démarrage|lancement au démarrage|démarrage|arrière-plan",
+  "settings.general.systemEntryNames.section": "Noms des entrées système",
+  "settings.general.systemEntryNames.description": "Les noms personnalisés sont partagés avec cette bibliothèque. Effacez un nom pour qu’il suive de nouveau la langue de l’interface.",
+  "settings.general.systemEntryNames.demoDescription": "Ces noms sont enregistrés uniquement dans cette démo du navigateur. Effacez un nom pour qu’il suive de nouveau la langue de l’interface.",
+  "settings.general.systemEntryNames.saveFailed": "Le nom n’a pas pu être enregistré. Les derniers noms enregistrés restent utilisés.",
+  "settings.general.systemEntryNames.upgradeRequired": "Mettez à jour tous les appareils de ce Sync Group avant de modifier ces noms.",
+  "settings.general.systemEntryNames.custom": "Utilise le nom personnalisé enregistré avec cette bibliothèque.",
+  "settings.general.systemEntryNames.followsLanguage": "Suit la langue de l’interface.",
+  "settings.general.systemEntryNames.inputAria": "Nom personnalisé pour {name}"
 }
