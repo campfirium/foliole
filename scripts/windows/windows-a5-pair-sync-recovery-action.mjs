@@ -13,6 +13,7 @@ import { checkedPairSyncCommand } from './windows-a5-pair-sync-command.mjs';
 import { createPairSyncRecoveryWindow, resolvePairSyncConcurrentFailure } from './windows-a5-pair-sync-recovery-concurrency.mjs';
 import { collectPairSyncRecoveryFailureEvidence } from './windows-a5-pair-sync-recovery-failure-evidence.mjs';
 import { postPairSyncRecoveryReadiness } from './windows-a5-pair-sync-recovery-readiness.mjs';
+import { collectPairSyncHostStage } from './windows-a5-pair-sync-host-stage.mjs';
 import {
   openPairSyncDesktopSession, waitForUniquePairRequest
 } from './windows-pair-sync-desktop-session.mjs';
@@ -143,6 +144,7 @@ export async function runWindowsA5PairSyncRecovery({
     instrumentationPromise = checked(execute, paths.adbPath, [
       '-P', adbPort, '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',
       ...instrumentationModeArgs(rePairRequired),
+      '-e', 'foliolePairSyncRunId', buildIdentity,
       '-e', 'class', PAIR_SYNC_RECOVERY_TEST_CLASS, PAIR_SYNC_RECOVERY_TEST_RUNNER
     ], options(env, 'pair_sync_instrumentation_timeout', recoveryWindow.instrumentationTimeoutMs), 'pair-sync-instrumentation');
     if (pairSyncRecoveryRequiresApproval(existingPairing, rePairRequired)) await desktopStep('desktop-pair-request', async () => {
@@ -176,6 +178,9 @@ export async function runWindowsA5PairSyncRecovery({
     proof = { android: android.readiness, desktop, receipt };
   } catch (error) {
     primaryError = await resolvePairSyncConcurrentFailure(error, instrumentationPromise);
+    primaryError.pairSyncHostStage = await collectPairSyncHostStage({
+      adbPort, buildIdentity, env, execute, paths, serial
+    });
     primaryError.pairSyncAndroidEvidence ??= receipt ?? null;
     primaryError.pairSyncRecoveryEvidence = recoveryEvidence.failure(primaryError);
     primaryError.pairSyncFailureEvidence = await collectPairSyncRecoveryFailureEvidence({

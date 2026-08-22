@@ -72,6 +72,20 @@ it('keeps available Windows state when screenshot capture fails', async () => {
   fs.rmSync(evidenceRoot, { force: true, recursive: true });
 });
 
+it('classifies a persisted current-run Android stage when host stdout is lost', async () => {
+  const evidenceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pair-sync-stage-'));
+  await collectPairSyncRecoveryFailureEvidence({
+    adbPort: '5037', env: {}, evidenceRoot,
+    error: Object.assign(new Error('request timed out'), {
+      pairSyncHostStage: 'sync-entry', stage: 'desktop-pair-request'
+    }), execute: vi.fn(async () => ({ code: 1, output: '' })), fsApi: fs,
+    paths: { adbPath: 'adb.exe' }, serial: '87a33a4b'
+  });
+  expect(JSON.parse(fs.readFileSync(path.join(evidenceRoot, PAIR_SYNC_FAILURE_SUMMARY), 'utf8')))
+    .toMatchObject({ hostStage: 'sync-entry', reason: 'sync_entry_interrupted' });
+  fs.rmSync(evidenceRoot, { force: true, recursive: true });
+});
+
 it('persists a bounded post-sync dirty convergence reason', async () => {
   const evidenceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pair-sync-convergence-'));
   const readiness = {

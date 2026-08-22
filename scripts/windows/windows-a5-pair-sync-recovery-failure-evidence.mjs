@@ -46,7 +46,7 @@ function parseAndroidEvidence(error, output) {
   } catch { return parseLatestPairSyncAndroidEvidence(output); }
 }
 
-function failureReason(error, output, convergence) {
+function failureReason(error, output, convergence, hostStage) {
   if (error?.failureReason) return error.failureReason;
   if (error?.stage === 'pair-sync-instrumentation') {
     return classifyPairSyncRecoveryInstrumentationFailure(output);
@@ -54,6 +54,9 @@ function failureReason(error, output, convergence) {
   if (error?.stage === 'post-sync-convergence' && convergence?.dirtyRecordCount > 0) {
     return 'dirty_records_not_converged';
   }
+  if (hostStage) return classifyPairSyncRecoveryInstrumentationFailure(
+    `INSTRUMENTATION_STATUS: foliolePairSyncStage=${hostStage}`
+  );
   return 'unclassified_failure';
 }
 
@@ -64,11 +67,13 @@ export async function collectPairSyncRecoveryFailureEvidence({
   const output = error?.result?.output ?? '';
   const stage = /^[a-z][a-z0-9-]{0,63}$/u.test(error?.stage) ? error.stage : 'unknown';
   const convergence = parseConvergence(output);
-  const reason = failureReason(error, output, convergence);
+  const hostStage = parseLatestPairSyncRecoveryHostStage(output)
+    ?? (/^[a-z][a-z-]{0,63}$/u.test(error?.pairSyncHostStage) ? error.pairSyncHostStage : null);
+  const reason = failureReason(error, output, convergence, hostStage);
   writeJson(fsApi, path.join(evidenceRoot, PAIR_SYNC_FAILURE_SUMMARY), {
     android: parseAndroidEvidence(error, output),
     convergence,
-    hostStage: parseLatestPairSyncRecoveryHostStage(output),
+    hostStage,
     reason, resultStatus: 'failure', schemaVersion: 1, stage
   });
   evidence.summary = PAIR_SYNC_FAILURE_SUMMARY;
