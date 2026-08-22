@@ -93,7 +93,7 @@ async function testStructureTimeoutStaysBelowMinute() {
   expect(COMPANION_DESKTOP_SYNC_STRUCTURE_TIMEOUT_MS).toBeLessThan(60_000);
 }
 
-async function testReportsRemainingStructureLagFromFinalDiagnostics() {
+async function testConfirmsTheAppliedPackSnapshotDespiteLaterDesktopWrites() {
   diagnosticsMock.loadLocalSyncDiagnostics.mockResolvedValue({
     content: {
       missing_attachment_resource_bytes: 0,
@@ -118,7 +118,7 @@ async function testReportsRemainingStructureLagFromFinalDiagnostics() {
   const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
 
   expect(diagnosticsMock.loadDesktopSyncDiagnostics).toHaveBeenCalledWith('http://10.0.2.2:38641/');
-  expect(result.remainingStructureChangeCount).toBe(2);
+  expect(result.remainingStructureChangeCount).toBe(0);
 }
 
 async function testResourceContinuationSkipsStructurePack() {
@@ -138,6 +138,21 @@ async function testResourceContinuationSkipsStructurePack() {
   });
   expect(syncBridgeMock.applyCompanionDesktopSyncPack).not.toHaveBeenCalled();
   expect(syncBridgeMock.saveCompanionSyncPackCursor).not.toHaveBeenCalled();
+}
+
+async function testResourceContinuationDetectsLaterDesktopWrites() {
+  diagnosticsMock.loadLocalSyncDiagnostics.mockResolvedValue({
+    content: { missing_attachment_resource_count: 0, missing_content_blob_count: 0 },
+    sync_state: { local_dirty_count: 0, pack_cursor: 8, pending_ack_count: 0, push_issue_count: 0 }
+  });
+  diagnosticsMock.loadDesktopSyncDiagnostics.mockResolvedValue({ sync_state: { max_state_seq: 10 } });
+
+  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const result = await syncCompanionObjectsFromDesktop(
+    'http://10.0.2.2:38641/', { resourcesOnly: true }
+  );
+
+  expect(result.remainingStructureChangeCount).toBe(2);
 }
 
 async function testRejectedLegacyPackKeepsCursorForUpgradedRetry() {
@@ -175,9 +190,13 @@ describe('companion desktop sync objects', () => {
 
   it('keeps structure sync timeout below a minute', testStructureTimeoutStaysBelowMinute);
 
-  it('reports remaining structure lag from final diagnostics', testReportsRemainingStructureLagFromFinalDiagnostics);
+  it('confirms the applied pack snapshot despite later desktop writes',
+    testConfirmsTheAppliedPackSnapshotDespiteLaterDesktopWrites);
 
   it('skips structure pack work during resource-only continuation', testResourceContinuationSkipsStructurePack);
+
+  it('detects later desktop writes during resource-only continuation',
+    testResourceContinuationDetectsLaterDesktopWrites);
 
   it('keeps the original cursor when a legacy pack is rejected and converges after upgrade',
     testRejectedLegacyPackKeepsCursorForUpgradedRetry);

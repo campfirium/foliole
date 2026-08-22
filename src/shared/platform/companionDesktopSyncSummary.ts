@@ -11,11 +11,15 @@ function compactBreakdown<T extends Record<string, number | undefined>>(values: 
   return Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined));
 }
 
-export async function loadCompanionDesktopSyncSummary(endpointUrl: string) {
+export async function loadCompanionDesktopSyncSummary(
+  endpointUrl: string,
+  confirmedStructureStateSeq: number | null = null
+) {
   const diagnostics = await loadLocalSyncDiagnostics().catch(() => null);
   const desktopDiagnostics = await loadDesktopSyncDiagnostics(endpointUrl).catch(() => null);
   const desktopStateSeq = desktopDiagnostics?.sync_state?.max_state_seq;
   const androidCursor = diagnostics?.sync_state?.pack_cursor;
+  const structureTarget = confirmedStructureStateSeq ?? desktopStateSeq;
   return {
     localDirtyCount: diagnostics?.sync_state?.local_dirty_count ?? null,
     pendingAckCount: diagnostics?.sync_state?.pending_ack_count ?? null,
@@ -46,8 +50,8 @@ export async function loadCompanionDesktopSyncSummary(endpointUrl: string) {
     remainingContentBlobCount: diagnostics?.content?.missing_content_blob_count ?? null,
     remainingFailedContentBlobBytes: diagnostics?.content?.failed_content_blob_bytes ?? null,
     remainingFailedContentBlobCount: diagnostics?.content?.failed_content_blob_count ?? null,
-    remainingStructureChangeCount: typeof desktopStateSeq === 'number' && typeof androidCursor === 'number'
-      ? Math.max(0, desktopStateSeq - androidCursor)
+    remainingStructureChangeCount: typeof structureTarget === 'number' && typeof androidCursor === 'number'
+      ? Math.max(0, structureTarget - androidCursor)
       : null
   };
 }

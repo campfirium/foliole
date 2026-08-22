@@ -71,6 +71,7 @@ async function pullRemoteStructurePack(endpointUrl: string) {
     appliedPackBlobCount: result.applied_blob_count,
     appliedPackObjectCount: result.applied_object_count,
     appliedReviewOpIds,
+    confirmedStructureStateSeq: result.to_state_seq,
     syncedStructureElapsedMs: Date.now() - startedAt
   };
 }
@@ -119,6 +120,7 @@ function createSkippedStructurePack() {
     appliedPackBlobCount: 0,
     appliedPackObjectCount: 0,
     appliedReviewOpIds: [],
+    confirmedStructureStateSeq: null,
     syncedStructureElapsedMs: 0
   };
 }
@@ -135,7 +137,7 @@ function createSkippedPushResult() {
 
 function mergeCompanionObjectsSyncResult(args: {
   finalSummary: Awaited<ReturnType<typeof loadCompanionDesktopSyncSummary>> | ReturnType<typeof createSkippedResourceSummary>;
-  pack: Awaited<ReturnType<typeof pullRemoteStructurePack>>;
+  pack: Awaited<ReturnType<typeof pullRemoteStructurePack>> | ReturnType<typeof createSkippedStructurePack>;
   pushed: Awaited<ReturnType<typeof pushLocalDirtyObjects>> | {
     pushConflictCount: number;
     pushedObjectIds: string[];
@@ -191,7 +193,7 @@ async function runCompanionObjectsSync(
     : await pullResourceStages(endpointUrl, options.onProgress);
   const finalSummary = options.includeResources === false
     ? createSkippedResourceSummary()
-    : await loadCompanionDesktopSyncSummary(endpointUrl);
+    : await loadCompanionDesktopSyncSummary(endpointUrl, pack.confirmedStructureStateSeq);
   return mergeCompanionObjectsSyncResult({ finalSummary, pack, pushed, resources });
 }
 
