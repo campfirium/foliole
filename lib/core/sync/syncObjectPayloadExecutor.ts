@@ -1,3 +1,8 @@
+import {
+  assertSystemEntryDisplayNamesSettingIdentity,
+  assertSystemEntryDisplayNamesSettingPayload
+} from '../../platform/systemEntryDisplayNameContract.js';
+
 import type { DbPort } from './dbPort.js';
 import { applyAttachmentObject } from './syncObjectAttachmentPayloadExecutor.js';
 import { applyExternalFolderObject } from './syncObjectExternalFolderPayloadExecutor.js';
@@ -103,6 +108,7 @@ async function applySettingObject(
   const parts = record.object_id.split(':', 5);
   if (parts.length !== 5 || parts.some((part) => !part)) throw new Error('invalid_setting_host_scope');
   const [scope, platform, formFactor, hostName, key] = parts as [string, string, string, string, string];
+  const isDisplayNames = assertSystemEntryDisplayNamesSettingIdentity(record.object_id);
   if (scope !== 'user_space' && (!options.hostName || hostName !== options.hostName)) return false;
   if (record.deleted_at) {
     await port.run(
@@ -112,6 +118,7 @@ async function applySettingObject(
     return true;
   }
   const payload = asObject(record);
+  if (isDisplayNames) assertSystemEntryDisplayNamesSettingPayload(record.object_id, payload);
   await port.run(
     `INSERT INTO setting_records (scope, platform, form_factor, host_name, key, value_json, content_hash, updated_at, deleted_at) ` +
     `VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ` +

@@ -1,10 +1,11 @@
+import type { SystemEntryId } from '../../../lib/platform/systemEntryDisplayNameContract';
+
 import type { AppLocale } from './appLanguage';
 
-export const SYSTEM_ENTRY_IDS = [
-  'home', 'inbox', 'trash', 'virtual-root', 'published', 'shelved', 'removed'
-] as const;
-
-export type SystemEntryId = (typeof SYSTEM_ENTRY_IDS)[number];
+export {
+  SYSTEM_ENTRY_IDS,
+  type SystemEntryId
+} from '../../../lib/platform/systemEntryDisplayNameContract';
 
 const SYSTEM_ENTRY_NODE_IDS: Record<string, SystemEntryId> = {
   'special-home': 'home',

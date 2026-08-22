@@ -14,6 +14,7 @@ describe('desktop setting policy', () => {
     ['import_manager_settings', 'user_space', true],
     ['library_path_settings', 'user_space', true],
     ['review_scheduler_settings', 'user_space', true],
+    ['system_entry_display_names', 'user_space', true],
     ['window_state', 'session_resume', true],
     ['readwise_book_epub_picker_state', 'session_resume', true],
     ['discourse_publish_settings', 'host', true],

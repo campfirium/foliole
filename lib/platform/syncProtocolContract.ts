@@ -1,3 +1,5 @@
+import { SYSTEM_ENTRY_DISPLAY_NAMES_SYNC_CAPABILITY } from './systemEntryDisplayNameContract.js';
+
 export const SYNC_PROTOCOL_TXT_KEYS = {
   capabilities: 'protocol_capabilities',
   maxSupportedVersion: 'protocol_max_version',
@@ -15,12 +17,19 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
     'opaque-sync-refs-v1',
     'source-host-ownership-v1',
     'sync-group-facts-v1',
+    SYSTEM_ENTRY_DISPLAY_NAMES_SYNC_CAPABILITY,
     'workgroup-aead-v1'
   ]),
   max_supported_version: 2,
   min_supported_version: 2,
   version: 2
 } as const satisfies SyncProtocolDescriptor);
+
+export const REQUIRED_SYNC_PROTOCOL_CAPABILITIES = Object.freeze(
+  CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities.filter(
+    (capability) => capability !== SYSTEM_ENTRY_DISPLAY_NAMES_SYNC_CAPABILITY
+  )
+);
 
 export type SyncProtocolDescriptor = {
   capabilities: string[] | readonly string[];
@@ -89,7 +98,8 @@ export function parseSyncProtocolDescriptor(value: unknown): SyncProtocolDescrip
 
 export function evaluateSyncProtocolCompatibility(
   remoteValue: unknown,
-  localValue: SyncProtocolDescriptor = CURRENT_SYNC_PROTOCOL_DESCRIPTOR
+  localValue: SyncProtocolDescriptor = CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+  requiredCapabilities: readonly string[] = REQUIRED_SYNC_PROTOCOL_CAPABILITIES
 ): SyncProtocolCompatibilityResult {
   if (remoteValue === null || remoteValue === undefined) return incompatible('protocol_metadata_missing');
   const remote = parseSyncProtocolDescriptor(remoteValue);
@@ -102,7 +112,9 @@ export function evaluateSyncProtocolCompatibility(
     remote.version >= local.min_supported_version &&
     remote.version <= local.max_supported_version;
   if (!versionsMatch || !rangesAcceptCurrent) return incompatible('protocol_version_unsupported');
-  const missingCapabilities = local.capabilities.filter((capability) => !remote.capabilities.includes(capability));
+  const localMissingCapabilities = requiredCapabilities.filter((capability) => !local.capabilities.includes(capability));
+  if (localMissingCapabilities.length > 0) return incompatible('protocol_metadata_invalid');
+  const missingCapabilities = requiredCapabilities.filter((capability) => !remote.capabilities.includes(capability));
   if (missingCapabilities.length > 0) return incompatible('required_capability_missing', missingCapabilities);
   return {
     missing_capabilities: [],
@@ -110,6 +122,13 @@ export function evaluateSyncProtocolCompatibility(
     reason: null,
     status: 'compatible'
   };
+}
+
+export function evaluateSystemEntryDisplayNamesWriteCompatibility(remoteValue: unknown) {
+  return evaluateSyncProtocolCompatibility(remoteValue, CURRENT_SYNC_PROTOCOL_DESCRIPTOR, [
+    ...REQUIRED_SYNC_PROTOCOL_CAPABILITIES,
+    SYSTEM_ENTRY_DISPLAY_NAMES_SYNC_CAPABILITY
+  ]);
 }
 
 export function serializeSyncProtocolTxt(descriptor: SyncProtocolDescriptor = CURRENT_SYNC_PROTOCOL_DESCRIPTOR) {

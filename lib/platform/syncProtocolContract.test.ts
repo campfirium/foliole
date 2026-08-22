@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
   evaluateSyncProtocolCompatibility,
+  evaluateSystemEntryDisplayNamesWriteCompatibility,
   parseSyncProtocolDescriptor,
   parseSyncProtocolTxt,
   serializeSyncProtocolTxt,
@@ -63,4 +64,21 @@ describe('syncProtocolContract', () => {
       version: 2
     })).toBeNull();
   });
+});
+
+it('advertises the prepared display-name contract without stopping legacy v2 hosts', () => {
+  const legacyV2 = descriptor({
+    capabilities: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities.filter(
+      (capability) => capability !== 'system-entry-display-names-v1'
+    )
+  });
+  expect(evaluateSyncProtocolCompatibility(legacyV2)).toMatchObject({ status: 'compatible' });
+  expect(evaluateSystemEntryDisplayNamesWriteCompatibility(legacyV2)).toEqual({
+    missing_capabilities: ['system-entry-display-names-v1'],
+    negotiated_version: null,
+    reason: 'required_capability_missing',
+    status: 'incompatible'
+  });
+  expect(evaluateSystemEntryDisplayNamesWriteCompatibility(CURRENT_SYNC_PROTOCOL_DESCRIPTOR))
+    .toMatchObject({ status: 'compatible' });
 });
