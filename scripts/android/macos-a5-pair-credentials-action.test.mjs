@@ -57,6 +57,7 @@ it('stops fresh A5 pairing after native credentials can sign the first request',
     '-e', 'foliolePairSyncEvidenceGoal', 'credentials-signable',
     '-e', 'foliolePairSyncTimeoutMs', '120000'
   ]);
+  expect(macosA5CredentialsOnlyModeArgs(true)).toContain('re-pair');
   expect(runPairSync.mock.calls[0][0].execute).not.toBe(args.execute);
   expect(produceHandoff).toHaveBeenCalledOnce();
 });

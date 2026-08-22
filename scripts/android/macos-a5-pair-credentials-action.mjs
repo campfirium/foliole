@@ -19,9 +19,10 @@ import { resolveMacosA5PairSyncReadiness } from './macos-a5-product-bootstrap.mj
 const CREDENTIAL_EVIDENCE_TIMEOUT_MS = 180_000;
 const CREDENTIAL_SCENARIO_TIMEOUT_MS = 120_000;
 
-export const macosA5CredentialsOnlyModeArgs = () => [
+export const macosA5CredentialsOnlyModeArgs = (rePairRequired = false) => [
   '-e', 'foliolePairSyncEvidenceGoal', 'credentials-signable',
-  '-e', 'foliolePairSyncTimeoutMs', String(CREDENTIAL_SCENARIO_TIMEOUT_MS)
+  '-e', 'foliolePairSyncTimeoutMs', String(CREDENTIAL_SCENARIO_TIMEOUT_MS),
+  ...(rePairRequired ? ['-e', 'foliolePairSyncMode', 're-pair'] : [])
 ];
 
 export function credentialEvidenceExecute(execute, timeoutMs = CREDENTIAL_EVIDENCE_TIMEOUT_MS) {
