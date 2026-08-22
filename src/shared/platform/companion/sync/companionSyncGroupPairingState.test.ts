@@ -31,3 +31,17 @@ it('preserves an old remote protocol profile when projecting Sync Group identity
     sync_usable: false
   });
 });
+
+it('does not manufacture pairing from preserved Sync Group membership', () => {
+  const result = projectCompanionSyncGroupPairingState({
+    local_host_name: 'A5',
+    members: [
+      { authorization_id: 'a5-auth', host_name: 'A5', host_platform: 'android', joined_at: 'now' },
+      { authorization_id: 'mac-auth', host_name: 'Mac', host_platform: 'darwin', joined_at: 'now' }
+    ]
+  } as never, { is_paired: false, paired_at: null } as never);
+
+  expect(result).toMatchObject({
+    authorization_id: 'a5-auth', is_paired: false, repair_required: false, sync_usable: false
+  });
+});

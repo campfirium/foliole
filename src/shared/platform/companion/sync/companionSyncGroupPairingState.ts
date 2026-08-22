@@ -14,7 +14,6 @@ export function projectCompanionSyncGroupPairingState(
     authorization_id: local.authorization_id,
     host_name: local.host_name,
     host_platform: local.host_platform,
-    is_paired: true,
     paired_at: local.joined_at,
     remote_peer_id: fallback.remote_peer_id ?? null,
     remote_peer_name: remote?.host_name ?? null,
