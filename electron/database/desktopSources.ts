@@ -119,9 +119,15 @@ export function hydrateImportManagerSources<T extends {
   };
 }
 
-export function resolveDesktopSourceAddress(sourceRef: string, location: string) {
+export function resolveDesktopSourceAddress(
+  sourceRef: string,
+  location: string,
+  options: { requireAvailableRoot?: boolean } = {}
+) {
   const source = loadDesktopSource(sourceRef);
-  if (!source || !isDesktopSourceExecutable(source)) return null;
+  if (!source || (options.requireAvailableRoot === false
+    ? !isDesktopSourceConnected(source)
+    : !isDesktopSourceExecutable(source))) return null;
   const pathApi = source.path_flavor === 'windows' ? path.win32 : path.posix;
   const normalized = location.replaceAll('\\', '/').replace(/^\.\//u, '');
   if (!normalized || normalized === '..' || normalized.startsWith('../') || pathApi.isAbsolute(normalized)) return null;

@@ -1,12 +1,14 @@
 import { executeFtsSearchPlan } from '../../lib/core/database/ftsSearchExecution.js';
 import { buildFtsSearchQueryPlan, type FtsSearchQueryPlan } from '../../lib/core/database/ftsSearchQuery.js';
 
+import { loadDesktopSourceByConfig, resolveDesktopSourceAddress } from './desktopSources.js';
 import {
   isExternalDocumentVisible,
   loadActiveImportedSourceLocatorNodeIds,
   loadActiveImportedSourceLocators,
   resolveImportedNodeIdForExternalDocument
 } from './externalDocumentImportVisibility.js';
+import { OPENED_EXTERNAL_DOCUMENTS_FOLDER_ID } from './externalOpenedDocumentConstants.js';
 import { openExternalSearchCacheDatabase } from './externalSearchCacheDatabase.js';
 import { type ExternalSearchRow, toExternalResult } from './externalSearchCacheSupport.js';
 import { searchExternalMirrorDocuments } from './externalSearchMirrorSearch.js';
@@ -123,6 +125,18 @@ function readCombinedTermFallbackExternalSearchRows(db: import('better-sqlite3')
     .all(...terms) as ExternalSearchRow[];
 }
 
+function resolveCurrentExternalSearchRow(row: ExternalSearchRow) {
+  if (row.folder_id === OPENED_EXTERNAL_DOCUMENTS_FOLDER_ID) return row;
+  const source = loadDesktopSourceByConfig('external', row.folder_id);
+  if (!source) return null;
+  const absolutePath = resolveDesktopSourceAddress(
+    source.source_ref,
+    row.relative_path,
+    { requireAvailableRoot: false }
+  );
+  return absolutePath ? { ...row, absolute_path: absolutePath, folder_path: source.root_path } : null;
+}
+
 export function searchExternalDocuments(query: string) {
   const db = openExternalSearchCacheDatabase();
   const queryPlan = buildFtsSearchQueryPlan(query);
@@ -142,8 +156,12 @@ export function searchExternalDocuments(query: string) {
   }
   const activeImportedLocators = loadActiveImportedSourceLocators();
   const importedNodeIdsByLocator = loadActiveImportedSourceLocatorNodeIds();
+  const localRows = rows.flatMap((row) => {
+    const resolved = resolveCurrentExternalSearchRow(row);
+    return resolved ? [resolved] : [];
+  });
   return [
-    ...rows
+    ...localRows
       .filter((row) => isExternalDocumentVisible(row.absolute_path, activeImportedLocators))
       .map((row) =>
         toExternalResult(row, queryPlan.highlightQuery, resolveImportedNodeIdForExternalDocument(row.absolute_path, importedNodeIdsByLocator))

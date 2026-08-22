@@ -22,6 +22,12 @@ import {
   loadReadwiseExternalSearchPreview
 } from './readwiseManagedExternalDocuments.js';
 
+function resolveCachedExternalAddress(folderId: string, location: string) {
+  const source = loadDesktopSourceByConfig('external', folderId);
+  if (!source) return null;
+  return resolveDesktopSourceAddress(source.source_ref, location, { requireAvailableRoot: false });
+}
+
 export function loadExternalSearchBrowseEntries(folderId: string): NativeExternalSearchBrowseEntry[] {
   const mirrorEntries = loadExternalSearchMirrorBrowseEntries(folderId);
   if (mirrorEntries) return mirrorEntries;
@@ -56,7 +62,7 @@ export function loadExternalSearchBrowseEntries(folderId: string): NativeExterna
   ).flatMap((row) => {
     const source = loadDesktopSourceByConfig('external', row.folder_id);
     if (!source) return [];
-    const currentAddress = resolveDesktopSourceAddress(source.source_ref, row.relative_path);
+    const currentAddress = resolveCachedExternalAddress(row.folder_id, row.relative_path);
     if (!currentAddress) return [];
     const title = resolveImportedNodeTitle({
       content: row.content,
@@ -86,15 +92,13 @@ export function resolveExternalSourceLocationByAddress(absolutePath: string) {
     `SELECT absolute_path, folder_id, relative_path FROM external_search_documents WHERE is_present = 1`
   ).all() as Array<{ absolute_path: string; folder_id: string; relative_path: string }>;
   return rows.find((row) => {
-    const source = loadDesktopSourceByConfig('external', row.folder_id);
-    const current = source ? resolveDesktopSourceAddress(source.source_ref, row.relative_path) : null;
-    return current === absolutePath || (!source && row.absolute_path === absolutePath);
+    return resolveCachedExternalAddress(row.folder_id, row.relative_path) === absolutePath;
   }) ?? null;
 }
 
 export function loadExternalSearchPreview(absolutePath: string): NativeExternalSearchPreview | null {
   const resolvedLocation = resolveExternalSourceLocationByAddress(absolutePath);
-  const cacheAddress = resolvedLocation?.absolute_path ?? absolutePath;
+  if (!resolvedLocation) return loadReadwiseExternalSearchPreview(absolutePath);
   const row = openExternalSearchCacheDatabase()
     .prepare(
       `SELECT absolute_path, folder_id, folder_path, relative_path, file_name, extension, content,
@@ -102,7 +106,7 @@ export function loadExternalSearchPreview(absolutePath: string): NativeExternalS
        FROM external_search_documents
        WHERE absolute_path = ? AND (is_present = 1 OR folder_id = ?)`
     )
-    .get(cacheAddress, OPENED_EXTERNAL_DOCUMENTS_FOLDER_ID) as {
+    .get(resolvedLocation.absolute_path, OPENED_EXTERNAL_DOCUMENTS_FOLDER_ID) as {
     absolute_path: string;
     content: string;
     extension: 'md' | 'txt';
@@ -114,13 +118,12 @@ export function loadExternalSearchPreview(absolutePath: string): NativeExternalS
     modified_at: string | null;
     relative_path: string;
   } | undefined;
-  if (!row) return loadReadwiseExternalSearchPreview(absolutePath);
-  const source = loadDesktopSourceByConfig('external', row.folder_id);
-  const currentAddress = source ? resolveDesktopSourceAddress(source.source_ref, row.relative_path) : row.absolute_path;
+  if (!row) return null;
+  const currentAddress = resolveCachedExternalAddress(row.folder_id, row.relative_path);
   if (!currentAddress) return null;
   const importedNodeId = resolveImportedNodeIdForExternalDocument(currentAddress);
   const folder = loadExternalSearchFolders().find((item) => item.id === row.folder_id) ?? null;
-  const previewContent = resolveExternalPreviewSourceContent(row.content, row.absolute_path);
+  const previewContent = resolveExternalPreviewSourceContent(row.content, currentAddress);
   return {
     ...row,
     absolute_path: currentAddress,

@@ -19,6 +19,7 @@ import { runImportForMirrorDocument } from '../ipc/importTextFile.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { setExternalFolderEnabled } from './externalFolderHostPreferences.js';
+import { openExternalSearchCacheDatabase, closeExternalSearchCacheDatabase } from './externalSearchCacheDatabase.js';
 import { searchExternalDocuments } from './externalSearchDocumentSearch.js';
 import {
   disconnectExternalSearchFolder,
@@ -53,6 +54,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  closeExternalSearchCacheDatabase();
   closeDatabaseConnection();
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
@@ -73,6 +75,20 @@ it('imports remote mirror content without authorizing or reading the remote path
 });
 
 it('searches enabled mirror content and removes it from results when disabled', () => {
+  const cache = openExternalSearchCacheDatabase();
+  cache.prepare(`INSERT INTO external_search_documents (
+    absolute_path, folder_id, folder_path, relative_path, file_name, extension, size_bytes,
+    modified_at, modified_ms, indexed_at, is_present, content
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+    'D:\\Docs\\topic.md', 'remote-folder', 'D:\\Docs', 'topic.md', 'topic.md', 'md', 12,
+    'now', 1, 'now', 1, '# Topic\nBody'
+  );
+  cache.prepare(`INSERT INTO external_search_fts (
+    title, file_name, relative_path, content, absolute_path, folder_id, folder_path, modified_at
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(
+    'Topic', 'topic.md', 'topic.md', '# Topic\nBody', 'D:\\Docs\\topic.md',
+    'remote-folder', 'D:\\Docs', 'now'
+  );
   expect(searchExternalDocuments('body')).toEqual([
     expect.objectContaining({ externalMatch: expect.objectContaining({ absolutePath: 'mirror-document:remote-doc' }) })
   ]);

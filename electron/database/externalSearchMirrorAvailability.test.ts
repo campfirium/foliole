@@ -21,9 +21,12 @@ vi.mock('../ipc/paths.js', () => ({
 import { closeDatabaseConnection, openDatabaseConnection, resolveDatabasePath } from './connection.js';
 import {
   rebuildExternalSearchIndexes,
-  refreshExternalSearchIndexes
+  refreshExternalSearchIndexes,
+  searchExternalDocuments
 } from './externalSearchCache.js';
 import { closeExternalSearchCacheDatabase } from './externalSearchCacheDatabase.js';
+import { loadExternalSearchPreview } from './externalSearchCacheRead.js';
+import { reconnectExternalSearchFolder } from './externalSearchFolderConnection.js';
 import { saveExternalSearchFolders } from './externalSearchFolders.js';
 import { initializeDatabase } from './migrate.js';
 
@@ -100,6 +103,12 @@ it('keeps mirrored documents present when a source folder is temporarily unreach
   await rebuildExternalSearchIndexes();
 
   expect(readSidecarPresence(documentPath)).toEqual({ is_present: 1 });
+  expect(searchExternalDocuments('alpha')).toEqual([
+    expect.objectContaining({ id: documentPath })
+  ]);
+  expect(loadExternalSearchPreview(documentPath)).toMatchObject({
+    absolute_path: documentPath, content: 'alpha mirror body', relative_path: 'alpha.md'
+  });
   expect(readMainPresence('folder-unreachable:alpha.md')).toEqual({
     is_present: 1,
     missing_at: null
@@ -122,4 +131,25 @@ it('marks mirrored documents missing after a successful empty scan', async () =>
     is_present: 0,
     missing_at: expect.any(String)
   });
+});
+
+it('opens the same Location from the current root without rebuilding the cache identity', async () => {
+  const firstRoot = path.join(tempRoot, 'external-first');
+  const nextRoot = path.join(tempRoot, 'external-next');
+  const firstPath = path.join(firstRoot, 'topic.md');
+  const nextPath = path.join(nextRoot, 'topic.md');
+  saveFolder('folder-location', firstRoot);
+  await writeTextFile(firstPath, '# Topic\n\nStable location');
+  await writeTextFile(nextPath, '# Topic\n\nCurrent root content');
+  await refreshExternalSearchIndexes();
+
+  await reconnectExternalSearchFolder('folder-location', nextRoot);
+
+  expect(searchExternalDocuments('stable location')).toEqual([
+    expect.objectContaining({ id: nextPath })
+  ]);
+  expect(loadExternalSearchPreview(nextPath)).toMatchObject({
+    absolute_path: nextPath, content: '# Topic\n\nCurrent root content', relative_path: 'topic.md'
+  });
+  expect(loadExternalSearchPreview(firstPath)).toBeNull();
 });
