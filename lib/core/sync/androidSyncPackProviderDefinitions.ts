@@ -1,7 +1,11 @@
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../platform/syncProtocolContract.js';
-import { DATABASE_SCHEMA_VERSION } from '../database/databaseSchemaVersion.js';
 
-import { SYNC_PACK_DATABASE_ENTRY, SYNC_PACK_FORMAT, SYNC_PACK_FORMAT_VERSION } from './syncPackEnvelopeContract.js';
+import {
+  SYNC_PACK_DATABASE_ENTRY,
+  SYNC_PACK_FORMAT,
+  SYNC_PACK_FORMAT_VERSION,
+  SYNC_PACK_PAYLOAD_SCHEMA_VERSION
+} from './syncPackEnvelopeContract.js';
 import { SYNC_PACK_TABLE_NAMES } from './syncPackManifest.js';
 import { SYNC_PACK_NODE_COLUMNS } from './syncPackNodeFields.js';
 import { PACK_SCHEMA } from './syncPackSchema.js';
@@ -116,7 +120,7 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
   payloadPlans,
   packSchema: PACK_SCHEMA,
   protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
-  schemaVersion: DATABASE_SCHEMA_VERSION,
+  schemaVersion: SYNC_PACK_PAYLOAD_SCHEMA_VERSION,
   stateCopyIndex: 3,
   tableNames: SYNC_PACK_TABLE_NAMES
 } as const;

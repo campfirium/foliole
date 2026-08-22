@@ -1,12 +1,14 @@
 // @vitest-environment node
 
-import { expect, it } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
 
-import { DATABASE_SCHEMA_VERSION } from '../database/databaseSchemaVersion.js';
+import { expect, it } from 'vitest';
 
 import {
   assertSyncPackSchemaVersion,
   SYNC_PACK_ENVELOPE_CONTRACT,
+  SYNC_PACK_PAYLOAD_SCHEMA_VERSION,
   SYNC_PACK_SQLITE_TABLE_REQUIREMENTS
 } from './syncPackEnvelopeContract.js';
 import { SYNC_PACK_TABLE_NAMES } from './syncPackManifest.js';
@@ -19,8 +21,8 @@ it('defines the shared sync pack envelope and actual sqlite requirements', () =>
     format: 'foliole.sync-pack',
     formatVersion: 12,
     manifestTableNames: SYNC_PACK_TABLE_NAMES,
-    maximumSchemaVersion: DATABASE_SCHEMA_VERSION,
-    minimumSchemaVersion: DATABASE_SCHEMA_VERSION
+    maximumSchemaVersion: SYNC_PACK_PAYLOAD_SCHEMA_VERSION,
+    minimumSchemaVersion: SYNC_PACK_PAYLOAD_SCHEMA_VERSION
   });
   expect(Object.keys(SYNC_PACK_SQLITE_TABLE_REQUIREMENTS)).toEqual([
     'pack_manifest',
@@ -28,12 +30,19 @@ it('defines the shared sync pack envelope and actual sqlite requirements', () =>
   ]);
 });
 
-it('only accepts sync packs from the exact local database schema', () => {
-  expect(() => assertSyncPackSchemaVersion(DATABASE_SCHEMA_VERSION)).not.toThrow();
-  expect(() => assertSyncPackSchemaVersion(DATABASE_SCHEMA_VERSION - 1))
+it('only accepts the exact independent sync pack payload schema', () => {
+  expect(SYNC_PACK_PAYLOAD_SCHEMA_VERSION).toBe(77);
+  expect(() => assertSyncPackSchemaVersion(SYNC_PACK_PAYLOAD_SCHEMA_VERSION)).not.toThrow();
+  expect(() => assertSyncPackSchemaVersion(SYNC_PACK_PAYLOAD_SCHEMA_VERSION - 1))
     .toThrow('unsupported_sync_pack_schema_version');
-  expect(() => assertSyncPackSchemaVersion(DATABASE_SCHEMA_VERSION + 1))
+  expect(() => assertSyncPackSchemaVersion(SYNC_PACK_PAYLOAD_SCHEMA_VERSION + 1))
     .toThrow('unsupported_sync_pack_schema_version');
+});
+
+it('keeps the payload schema independent of host database versions', () => {
+  const source = fs.readFileSync(path.resolve('lib/core/sync/syncPackEnvelopeContract.ts'), 'utf8');
+  expect(source).not.toContain('DATABASE_SCHEMA_VERSION');
+  expect(source).not.toContain('COMPANION_DATABASE_VERSION');
 });
 
 it('keeps required sqlite columns present in the producer schema', () => {

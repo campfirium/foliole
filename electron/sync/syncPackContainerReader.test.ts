@@ -6,11 +6,11 @@ import path from 'node:path';
 
 import { afterEach, expect, it } from 'vitest';
 
-import { DATABASE_SCHEMA_VERSION } from '../../lib/core/database/databaseSchemaVersion.js';
 import {
   SYNC_PACK_DATABASE_ENTRY,
   SYNC_PACK_FORMAT,
-  SYNC_PACK_FORMAT_VERSION
+  SYNC_PACK_FORMAT_VERSION,
+  SYNC_PACK_PAYLOAD_SCHEMA_VERSION
 } from '../../lib/core/sync/syncPackEnvelopeContract.js';
 import { writeStoredZip } from '../diagnostics/zipStore.js';
 
@@ -32,7 +32,7 @@ it('rejects a different schema version before writing an incoming database', asy
     format: SYNC_PACK_FORMAT,
     format_version: SYNC_PACK_FORMAT_VERSION,
     from_peer_id: 'authorization-source',
-    schema_version: DATABASE_SCHEMA_VERSION - 1,
+    schema_version: SYNC_PACK_PAYLOAD_SCHEMA_VERSION - 1,
     to_peer_id: 'authorization-target'
   };
   await writeStoredZip(zipPath, [
@@ -58,7 +58,7 @@ it('rejects a v4 pack before writing an incoming database', async () => {
     format: SYNC_PACK_FORMAT,
     format_version: 4,
     from_peer_id: 'authorization-source',
-    schema_version: DATABASE_SCHEMA_VERSION,
+    schema_version: SYNC_PACK_PAYLOAD_SCHEMA_VERSION,
     to_peer_id: 'authorization-target'
   };
   await writeStoredZip(zipPath, [

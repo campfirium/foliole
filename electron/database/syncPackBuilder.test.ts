@@ -4,6 +4,7 @@ import path from 'node:path';
 import { expect, it, vi } from 'vitest';
 
 import { initializeDatabaseConnection } from '../../lib/core/database/migrations.js';
+import { SYNC_PACK_PAYLOAD_SCHEMA_VERSION } from '../../lib/core/sync/syncPackEnvelopeContract.js';
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
@@ -129,7 +130,7 @@ function expectNodePackRows(packPath: string) {
       from_peer_id: 'authorization-desktop-fixture',
       from_state_seq: 0,
       pack_id: 'pack-1',
-      schema_version: expect.any(Number),
+      schema_version: SYNC_PACK_PAYLOAD_SCHEMA_VERSION,
       to_peer_id: 'android-fixture',
       to_state_seq: 2,
       tables: [

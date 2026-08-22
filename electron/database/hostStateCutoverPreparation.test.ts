@@ -7,7 +7,10 @@ import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
-import { SYNC_PACK_FORMAT_VERSION } from '../../lib/core/sync/syncPackEnvelopeContract.js';
+import {
+  SYNC_PACK_FORMAT_VERSION,
+  SYNC_PACK_PAYLOAD_SCHEMA_VERSION
+} from '../../lib/core/sync/syncPackEnvelopeContract.js';
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 
@@ -18,7 +21,8 @@ const BASELINE = {
   companionSchema: 32,
   desktopSchema: 77,
   protocol: 3,
-  syncPack: 12
+  syncPack: 12,
+  syncPackPayloadSchema: 77
 } as const;
 
 it('freezes the Host-state cutover versions and generated protocol assets', () => {
@@ -26,15 +30,16 @@ it('freezes the Host-state cutover versions and generated protocol assets', () =
     companionSchema: COMPANION_DATABASE_VERSION,
     desktopSchema: DATABASE_SCHEMA_VERSION,
     protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
-    syncPack: SYNC_PACK_FORMAT_VERSION
+    syncPack: SYNC_PACK_FORMAT_VERSION,
+    syncPackPayloadSchema: SYNC_PACK_PAYLOAD_SCHEMA_VERSION
   }).toEqual(BASELINE);
 
   const android = readJson('android/app/src/main/assets/companion-sync-protocol-definitions.json');
   const ios = readJson('ios/App/App/companion-sync-protocol-definitions.json');
   expect(android).toEqual(ios);
   expect(readSchemaWindow(android)).toEqual({
-    maximumSchemaVersion: BASELINE.desktopSchema,
-    minimumSchemaVersion: BASELINE.desktopSchema
+    maximumSchemaVersion: BASELINE.syncPackPayloadSchema,
+    minimumSchemaVersion: BASELINE.syncPackPayloadSchema
   });
 });
 

@@ -1,5 +1,3 @@
-import { DATABASE_SCHEMA_VERSION } from '../database/databaseSchemaVersion.js';
-
 import { SYNC_PACK_TABLE_NAMES } from './syncPackManifest.js';
 import {
   SYNC_PACK_LEGACY_OPTIONAL_NODE_COLUMNS,
@@ -8,12 +6,13 @@ import {
 
 export const SYNC_PACK_FORMAT = 'foliole.sync-pack';
 export const SYNC_PACK_FORMAT_VERSION = 12;
+export const SYNC_PACK_PAYLOAD_SCHEMA_VERSION = 77;
 export const SYNC_PACK_COMPRESSION = 'zlib';
 export const SYNC_PACK_DATABASE_ENTRY = 'incoming.db.deflate';
-export const SYNC_PACK_MINIMUM_SCHEMA_VERSION = DATABASE_SCHEMA_VERSION;
+export const SYNC_PACK_MINIMUM_SCHEMA_VERSION = SYNC_PACK_PAYLOAD_SCHEMA_VERSION;
 
 export function assertSyncPackSchemaVersion(value: unknown) {
-  if (value !== DATABASE_SCHEMA_VERSION) {
+  if (value !== SYNC_PACK_PAYLOAD_SCHEMA_VERSION) {
     throw new Error('unsupported_sync_pack_schema_version');
   }
 }
@@ -67,7 +66,7 @@ export const SYNC_PACK_ENVELOPE_CONTRACT = {
   formatVersion: SYNC_PACK_FORMAT_VERSION,
   legacyOptionalNodeColumns: [...SYNC_PACK_LEGACY_OPTIONAL_NODE_COLUMNS],
   manifestTableNames: SYNC_PACK_TABLE_NAMES,
-  maximumSchemaVersion: DATABASE_SCHEMA_VERSION,
+  maximumSchemaVersion: SYNC_PACK_PAYLOAD_SCHEMA_VERSION,
   minimumSchemaVersion: SYNC_PACK_MINIMUM_SCHEMA_VERSION,
   sqliteTableRequirements: SYNC_PACK_SQLITE_TABLE_REQUIREMENTS
 } as const;
