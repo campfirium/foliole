@@ -70,6 +70,7 @@ function launchOptions(repoRoot, env, session, libraryHome, executablePath, rend
       FOLIOLE_HIDDEN_CREDENTIAL_APP_NAME: session.appName,
       FOLIOLE_HIDDEN_CREDENTIAL_MAIN_PATH: path.join(repoRoot, 'dist/electron/main.js'),
       FOLIOLE_LIBRARY_HOME: libraryHome,
+      FOLIOLE_SKIP_STARTUP_WINDOW_STATE: '1',
       FOLIOLE_SESSION_DATA_PATH: session.userDataPath,
       FOLIOLE_USER_DATA_PATH: session.userDataPath,
       ELECTRON_RENDERER_URL: rendererUrl,

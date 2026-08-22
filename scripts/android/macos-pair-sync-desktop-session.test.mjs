@@ -105,6 +105,7 @@ describe('macOS pair sync desktop session', () => {
         ELECTRON_RENDERER_URL: rendererUrl,
         FOLIOLE_HIDDEN_CREDENTIAL_APP_NAME: `Foliole Hidden Native ${'a'.repeat(20)}`,
         FOLIOLE_HIDDEN_CREDENTIAL_MAIN_PATH: path.join(repoRoot, 'dist', 'electron', 'main.js'),
+        FOLIOLE_SKIP_STARTUP_WINDOW_STATE: '1',
         FOLIOLE_USER_DATA_PATH: path.join(
           runtimeRoot, 'credential-sessions',
           `runtime-${'a'.repeat(20)}`, 'user-data'

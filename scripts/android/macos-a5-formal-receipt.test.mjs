@@ -33,7 +33,8 @@ function fixture(action = 'build', runId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
     'scripts/android/macos-a5-extended-actions.mjs',
     'scripts/android/macos-a5-formal-candidate.mjs',
     'scripts/android/macos-a5-formal-receipt.mjs',
-    'scripts/android/macos-a5-runtime-paths.mjs'
+    'scripts/android/macos-a5-runtime-paths.mjs',
+    'scripts/android/macos-pair-sync-desktop-session.mjs'
   ]) {
     fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
     fs.writeFileSync(path.join(root, file), `${file}\n`);

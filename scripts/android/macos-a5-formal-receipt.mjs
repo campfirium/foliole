@@ -13,7 +13,8 @@ const CONTROLLER_FILES = [
   'scripts/android/macos-a5-extended-actions.mjs',
   'scripts/android/macos-a5-formal-candidate.mjs',
   'scripts/android/macos-a5-formal-receipt.mjs',
-  'scripts/android/macos-a5-runtime-paths.mjs'
+  'scripts/android/macos-a5-runtime-paths.mjs',
+  'scripts/android/macos-pair-sync-desktop-session.mjs'
 ];
 const FULL_SHA = /^[0-9a-f]{40}$/u;
 
