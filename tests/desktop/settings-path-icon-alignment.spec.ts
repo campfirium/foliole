@@ -12,6 +12,7 @@ const ARTIFACT_DIR = path.join(
 );
 
 async function capturePathButtons(buttons: Locator, prefix: string, testInfo: TestInfo) {
+  await expect(buttons.first()).toBeVisible();
   const count = await buttons.count();
   expect(count).toBeGreaterThan(0);
 
