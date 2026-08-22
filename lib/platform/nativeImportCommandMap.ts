@@ -136,7 +136,7 @@ export type NativeImportCommandMap = {
     result: NativeImportedTextFile | null;
   };
   [NATIVE_COMMANDS.selectImportDirectory]: {
-    args: undefined;
+    args: { default_path?: string };
     result: string | null;
   };
   [NATIVE_COMMANDS.saveImportManagerSettings]: {

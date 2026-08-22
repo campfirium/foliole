@@ -161,8 +161,15 @@ it('selects Markdown metadata without preloading file content', async () => {
 it('selects a directory through the native utility command', async () => {
   showOpenDialog.mockResolvedValue({ canceled: false, filePaths: [fixturePath('imports')] });
 
-  await expect(handleInvokeRequest({ command: 'select_import_directory', args: {} })).resolves.toBe(fixturePath('imports'));
+  await expect(handleInvokeRequest({
+    command: 'select_import_directory',
+    args: { default_path: fixturePath('current') }
+  })).resolves.toBe(fixturePath('imports'));
   expect(showOpenDialog).toHaveBeenCalledTimes(1);
+  expect(showOpenDialog).toHaveBeenCalledWith(mockWindow, expect.objectContaining({
+    defaultPath: fixturePath('current'),
+    properties: ['openDirectory', 'createDirectory']
+  }));
 });
 
 it('runs the unified text import pipeline through the native import command', async () => {

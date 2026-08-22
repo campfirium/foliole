@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog } from 'electron';
+import { BrowserWindow, dialog, type OpenDialogOptions } from 'electron';
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { recordDesktopImportLocation } from '../database/desktopSources.js';
@@ -74,17 +74,16 @@ function notifyIfDirectoryImportChanged(result: Awaited<ReturnType<typeof runDir
   }
 }
 
-async function selectImportDirectory(context?: InvokeContext) {
+async function selectImportDirectory(args: Record<string, unknown>, context?: InvokeContext) {
   const window = resolveTargetWindow(context);
+  const options: OpenDialogOptions = {
+    ...(args.default_path === undefined ? {} : { defaultPath: asString(args.default_path, 'default_path') }),
+    properties: ['openDirectory', 'createDirectory'],
+    securityScopedBookmarks: shouldRequestSecurityScopedBookmarks()
+  };
   const selection = window
-    ? await dialog.showOpenDialog(window, {
-        properties: ['openDirectory'],
-        securityScopedBookmarks: shouldRequestSecurityScopedBookmarks()
-      })
-    : await dialog.showOpenDialog({
-        properties: ['openDirectory'],
-        securityScopedBookmarks: shouldRequestSecurityScopedBookmarks()
-      });
+    ? await dialog.showOpenDialog(window, options)
+    : await dialog.showOpenDialog(options);
   if (selection.canceled || selection.filePaths.length === 0) {
     return null;
   }
@@ -120,7 +119,7 @@ export async function handleImportCommand(request: InvokeRequest, context?: Invo
     return previewKeepImportRule(input);
   }
   if (request.command === NATIVE_COMMANDS.selectImportDirectory) {
-    return selectImportDirectory(context);
+    return selectImportDirectory(args, context);
   }
   return undefined;
 }

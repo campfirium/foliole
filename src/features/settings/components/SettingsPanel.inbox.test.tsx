@@ -138,6 +138,9 @@ it('shows the default inbox path and lets the user choose a custom location thro
   await waitFor(() => {
     expect(screen.getByTitle('D:\\Capture\\Inbox')).toBeInTheDocument();
   });
+  expect(mockedSelectRuntimeFolder).toHaveBeenCalledWith(
+    'C:\\Users\\Tester\\Documents\\Foliole\\Import\\Inbox'
+  );
   expect(mockedUpdateRuntimeLibraryPathSetting).toHaveBeenCalledWith('inbox', 'D:\\Capture\\Inbox');
   expect(window.localStorage.getItem('foliole-managed-inbox-path')).toBeNull();
 });

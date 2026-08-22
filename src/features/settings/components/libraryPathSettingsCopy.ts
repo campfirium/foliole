@@ -28,6 +28,13 @@ export function getLibraryPathRestoreErrorMessage(location: RuntimeLibraryPathLo
   return t(resolveLibraryPathRestoreErrorKey(location));
 }
 
+export function resolveRuntimeLibraryPath(paths: RuntimeLibraryPaths, location: RuntimeLibraryPathLocation) {
+  if (location === 'library_home') return paths.libraryHome;
+  if (location === 'assets_dir') return paths.assetsDir;
+  if (location === 'mirror') return paths.mirror;
+  return paths.inbox;
+}
+
 export function formatLibraryPathLocationError(fallbackMessage: string, error: unknown, t: LibraryPathTranslate) {
   if (error instanceof Error && error.message.trim().length > 0) {
     console.warn('[library-paths] settings update failed:', error);

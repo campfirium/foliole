@@ -16,6 +16,7 @@ import {
   formatLibraryPathLocationError,
   getLibraryPathChangeErrorMessage,
   getLibraryPathRestoreErrorMessage,
+  resolveRuntimeLibraryPath,
   type LibraryPathTranslate
 } from './libraryPathSettingsCopy';
 import { useMirrorRebuildState } from './useMirrorRebuildState';
@@ -182,7 +183,7 @@ export function useLibraryPathSettings() {
 
   async function handleChangeRequest(location: RuntimeLibraryPathLocation) {
     try {
-      const selectedPath = await selectRuntimeFolder();
+      const selectedPath = await selectRuntimeFolder(resolveRuntimeLibraryPath(paths, location));
       if (!selectedPath) {
         return;
       }

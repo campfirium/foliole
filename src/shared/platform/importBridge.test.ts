@@ -142,15 +142,15 @@ it('returns the selected folder path from the runtime bridge', async () => {
   const invoke = vi.fn().mockResolvedValue('/tmp/import-folder');
   window.electronAPI = createMockElectronApi(invoke);
 
-  await expect(selectRuntimeFolder()).resolves.toBe('/tmp/import-folder');
-  expect(invoke).toHaveBeenCalledWith('select_import_directory');
+  await expect(selectRuntimeFolder('/tmp/current-folder')).resolves.toBe('/tmp/import-folder');
+  expect(invoke).toHaveBeenCalledWith('select_import_directory', { default_path: '/tmp/current-folder' });
 });
 it('keeps the import directory wrapper on the shared import bridge', async () => {
   const invoke = vi.fn().mockResolvedValue('/tmp/import-folder');
   window.electronAPI = createMockElectronApi(invoke);
 
   await expect(selectRuntimeImportDirectory()).resolves.toBe('/tmp/import-folder');
-  expect(invoke).toHaveBeenCalledWith('select_import_directory');
+  expect(invoke).toHaveBeenCalledWith('select_import_directory', {});
 });
 it('normalizes the unified import result payload', async () => {
   const invoke = vi.fn().mockResolvedValue({
