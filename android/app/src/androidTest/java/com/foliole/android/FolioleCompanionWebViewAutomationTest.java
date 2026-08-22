@@ -138,7 +138,7 @@ public class FolioleCompanionWebViewAutomationTest {
         long scenarioTimeoutMs = boundedPairSyncTimeout(
             InstrumentationRegistry.getArguments().getString("foliolePairSyncTimeoutMs", "600000")
         );
-        Activity activity = startMainActivity(instrumentation);
+        Activity activity = FolioleCompanionActivityLauncher.start(instrumentation, 30_000);
         FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "activity-started");
         try {
             waitForWindowFocus(activity, 30_000);

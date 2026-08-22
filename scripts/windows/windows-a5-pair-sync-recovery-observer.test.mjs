@@ -12,6 +12,7 @@ const observerPath = 'android/app/src/androidTest/assets/foliole-pair-sync-evide
 it('observes request submission without global errors or click-return evidence', () => {
   const source = read('android/app/src/androidTest/java/com/foliole/android/FolioleCompanionPairSyncRecoveryScenario.java');
   const automation = read('android/app/src/androidTest/java/com/foliole/android/FolioleCompanionWebViewAutomationTest.java');
+  const launcher = read('android/app/src/androidTest/java/com/foliole/android/FolioleCompanionActivityLauncher.java');
   const waiter = read('android/app/src/androidTest/java/com/foliole/android/FolioleCompanionPairSyncRecoveryEvidenceWaiter.java');
   const evidence = read('android/app/src/androidTest/java/com/foliole/android/FolioleCompanionPairRequestEvidence.java');
   const adapter = read('android/app/src/androidTest/java/com/foliole/android/FolioleCompanionWebViewSemanticAdapter.java');
@@ -35,6 +36,9 @@ it('observes request submission without global errors or click-return evidence',
   expect(adapter).toContain('webView.post(() -> webView.evaluateJavascript');
   expect(adapter).not.toContain('runOnMainSync(() -> webView.evaluateJavascript');
   expect(automation).toContain('activity.runOnUiThread(activity::finish);');
+  expect(automation).toContain('FolioleCompanionActivityLauncher.start(instrumentation, 30_000)');
+  expect(launcher).toContain('waitForMonitorWithTimeout(monitor, timeoutMs)');
+  expect(launcher).not.toContain('startActivitySync');
   expect(recoveryEvidence).toContain('foliole-pair-sync-evidence-observer.js');
   expect(waiter).toContain('awaitAfterStructureApplied');
   expect(waiter).toContain('credentialsOnly && "saved_signable"');
