@@ -6,9 +6,10 @@ import {
   PAIR_SYNC_RECOVERY_APP_ID, PAIR_SYNC_RECOVERY_EVIDENCE_FILES, PAIR_SYNC_RECOVERY_MAIN_COMPONENT,
   PAIR_SYNC_RECOVERY_TEST_APP_ID, PAIR_SYNC_RECOVERY_TEST_CLASS,
   PAIR_SYNC_RECOVERY_TEST_RUNNER, pairSyncRecoveryArtifactPaths,
-  classifyPairSyncRecoveryActionFailure, createPairSyncRecoveryEvidenceTracker, pairSyncRecoveryFailure,
+  createPairSyncRecoveryEvidenceTracker, pairSyncRecoveryFailure,
   pairSyncRecoveryModeArgs, pairSyncRecoveryRequiresApproval, parsePairSyncRecoveryInstrumentationResult
 } from './windows-a5-pair-sync-recovery-contract.mjs';
+import { checkedPairSyncCommand } from './windows-a5-pair-sync-command.mjs';
 import { createPairSyncRecoveryWindow, resolvePairSyncConcurrentFailure } from './windows-a5-pair-sync-recovery-concurrency.mjs';
 import { collectPairSyncRecoveryFailureEvidence } from './windows-a5-pair-sync-recovery-failure-evidence.mjs';
 import { postPairSyncRecoveryReadiness } from './windows-a5-pair-sync-recovery-readiness.mjs';
@@ -26,18 +27,7 @@ function options(env, timeoutCode, timeoutMs) {
   return { env, timeoutCode, timeoutMs, windowsHide: true };
 }
 
-async function checked(execute, command, args, commandOptions, stage) {
-  let result;
-  try { result = await execute(command, args, commandOptions); }
-  catch (error) {
-    throw classifyPairSyncRecoveryActionFailure(
-      pairSyncRecoveryFailure(error.message, stage, error), stage, error.output
-    );
-  }
-  if (result.code === 0) return result;
-  const failure = pairSyncRecoveryFailure(result.lines?.at(-1) || `${command} exited ${result.code}`, stage, result);
-  throw classifyPairSyncRecoveryActionFailure(failure, stage, result.output);
-}
+const checked = checkedPairSyncCommand;
 
 function writeJson(fsApi, filePath, value) {
   fsApi.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
