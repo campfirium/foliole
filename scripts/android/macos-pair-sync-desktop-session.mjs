@@ -120,12 +120,13 @@ export async function openMacosPairSyncDesktopSession({
   );
   const releaseCredentialSession = acquireCredentialSession(credentialSession);
   let app;
+  let page;
   try {
     app = await launcher.launch(launchOptions(
       repoRoot, env, credentialSession, libraryHome, runtime.executablePath, rendererUrl
     ));
     record('electron_started', { pid: app.process?.()?.pid ?? null });
-    const page = await app.firstWindow({ timeout: timeoutMs });
+    page = await app.firstWindow({ timeout: timeoutMs });
     await page.waitForURL(rendererUrl, { timeout: timeoutMs });
     record('renderer_loaded', { url: page.url() });
     await page.waitForFunction(() => globalThis.__FOLIOLE_APP_READY_REPORTED__ === true, null, {
@@ -161,7 +162,14 @@ export async function openMacosPairSyncDesktopSession({
       sanitize: sanitizeMacosPairSyncOverview
     };
   } catch (error) {
-    record('session_failed', { message: error instanceof Error ? error.message : String(error) });
+    const pageText = await page?.locator('body').innerText().catch(() => null);
+    const pageTitle = await page?.title().catch(() => null);
+    record('session_failed', {
+      message: error instanceof Error ? error.message : String(error),
+      pageText: typeof pageText === 'string' ? pageText.trim().slice(0, 1_024) : null,
+      pageTitle,
+      pageUrl: page?.url() ?? null
+    });
     await app?.close().catch(() => undefined);
     runtime.cleanup();
     releaseCredentialSession();
