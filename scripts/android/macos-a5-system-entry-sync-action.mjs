@@ -86,6 +86,10 @@ export async function proveA5SystemEntryDisplayNameConvergence(context) {
     if (baseline?.customDisplayNameById?.inbox) {
       throw new Error('Isolated A5 controller library already has an Inbox display alias.');
     }
+    const baselineDisplay = await inspectDisplay(context, 'baseline-display', {
+      forbiddenText: ALIAS
+    });
+    const baselineSnapshot = await waitForA5Payload(context, baseline);
     const renamed = { customDisplayNameById: {
       ...baseline.customDisplayNameById, inbox: ALIAS
     }, version: 1 };
@@ -105,7 +109,8 @@ export async function proveA5SystemEntryDisplayNameConvergence(context) {
     if (!samePayload(desktopAfterRestart, baseline)) {
       throw new Error('Desktop system entry display names changed after restart.');
     }
-    return { baseline, desktopAfterRestart,
+    return { baseline, baselineDisplay: baselineDisplay.actionReceipt,
+      baselineSnapshot: conciseSnapshot(baselineSnapshot), desktopAfterRestart,
       renamed: conciseSnapshot(renamedSnapshot), renamedDisplay: renamedDisplay.actionReceipt,
       restored: conciseSnapshot(restoredSnapshot), restoredDisplay: restoredDisplay.actionReceipt };
   } finally {

@@ -35,7 +35,7 @@ public class FolioleCompanionSystemEntryDisplayNameTest {
             WebView webView = activity.findViewById(R.id.webview);
             assertNotNull(webView);
             JSONObject sync = FolioleCompanionPairSyncRecoveryScenario.run(
-                instrumentation, webView, false, false, "", 120_000
+                instrumentation, webView, false, false, "", 120_000, true
             );
             assertEquals(sync.toString(), "existing", sync.optString("pairingPath"));
             FolioleCompanionCaptureNavigation.openDirectorySurface(

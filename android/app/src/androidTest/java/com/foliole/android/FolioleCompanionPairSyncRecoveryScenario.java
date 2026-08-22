@@ -16,6 +16,15 @@ final class FolioleCompanionPairSyncRecoveryScenario {
         Instrumentation instrumentation, WebView webView,
         boolean forceRePair, boolean credentialsOnly, String expectedEndpointUrl, long timeoutMs
     ) throws Exception {
+        return run(instrumentation, webView, forceRePair, credentialsOnly,
+            expectedEndpointUrl, timeoutMs, false);
+    }
+
+    static JSONObject run(
+        Instrumentation instrumentation, WebView webView,
+        boolean forceRePair, boolean credentialsOnly, String expectedEndpointUrl, long timeoutMs,
+        boolean allowExistingAttention
+    ) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
         FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "settings-tab");
         FolioleCompanionSettingsNavigation.open(instrumentation, webView);
@@ -43,12 +52,12 @@ final class FolioleCompanionPairSyncRecoveryScenario {
             FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "existing-pair-push");
             clickVisible(instrumentation, webView, CONNECTED_TARGET, deadline);
             FolioleCompanionExistingPairSyncEvidence.await(
-                instrumentation, webView, deadline, CONNECTED_TARGET
+                instrumentation, webView, deadline, CONNECTED_TARGET, allowExistingAttention
             );
             FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "existing-pair-ack-pull");
             clickVisible(instrumentation, webView, CONNECTED_TARGET, deadline);
             return buildReceipt(FolioleCompanionExistingPairSyncEvidence.await(
-                instrumentation, webView, deadline, CONNECTED_TARGET
+                instrumentation, webView, deadline, CONNECTED_TARGET, allowExistingAttention
             ), "existing");
         }
         if ("companion-sync-repair".equals(entry)) {

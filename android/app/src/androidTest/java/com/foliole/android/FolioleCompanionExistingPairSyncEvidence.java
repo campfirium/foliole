@@ -15,6 +15,16 @@ final class FolioleCompanionExistingPairSyncEvidence {
         long deadline,
         String syncTarget
     ) throws Exception {
+        return await(instrumentation, webView, deadline, syncTarget, false);
+    }
+
+    static JSONObject await(
+        Instrumentation instrumentation,
+        WebView webView,
+        long deadline,
+        String syncTarget,
+        boolean allowExistingAttention
+    ) throws Exception {
         boolean syncStarted = false;
         while (System.nanoTime() < deadline) {
             JSONObject state = FolioleCompanionPairSyncEvidence.read(instrumentation, webView);
@@ -25,7 +35,8 @@ final class FolioleCompanionExistingPairSyncEvidence {
                     "Existing workspace sync failed: " + boundedSyncFailure(state) + "."
                 );
             }
-            if (isTargetVisible(instrumentation, webView, "companion-sync-inline-attention")) {
+            if (!allowExistingAttention
+                && isTargetVisible(instrumentation, webView, "companion-sync-inline-attention")) {
                 throw new IllegalStateException("Initial workspace sync settled with attention.");
             }
             boolean targetEnabled = isTargetEnabled(instrumentation, webView, syncTarget);

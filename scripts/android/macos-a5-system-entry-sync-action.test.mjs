@@ -36,6 +36,8 @@ it('renames, restores, and reopens the desktop product session in one bounded jo
     'utf8'
   ));
   expect(source).toContain("session.invoke('save_system_entry_display_names', { payload: renamed })");
+  expect(source).toContain("inspectDisplay(context, 'baseline-display', {");
+  expect(source).toContain('waitForA5Payload(context, baseline)');
   expect(source).toContain("session.invoke('save_system_entry_display_names', { payload: baseline })");
   expect(source).toContain('waitForA5Payload(context, renamed)');
   expect(source).toContain('waitForA5Payload(context, baseline)');
@@ -45,8 +47,9 @@ it('renames, restores, and reopens the desktop product session in one bounded jo
   expect(source.indexOf("inspectDisplay(context, 'renamed-display'"))
     .toBeLessThan(source.indexOf('waitForA5Payload(context, renamed)'));
   expect(source.indexOf("inspectDisplay(context, 'restored-display'"))
-    .toBeLessThan(source.indexOf('waitForA5Payload(context, baseline)'));
+    .toBeLessThan(source.lastIndexOf('waitForA5Payload(context, baseline)'));
   expect(instrumentation).toContain('FolioleCompanionPairSyncRecoveryScenario.run(');
+  expect(instrumentation).toContain('"", 120_000, true');
   expect(instrumentation).toContain('arguments.getString("expectedTextBase64", "")');
   expect(inspection).toContain("'-e', 'expectedTextBase64'");
   expect(inspection).not.toContain("'-e', 'expectedText', expectedText");
