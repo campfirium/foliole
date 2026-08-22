@@ -16,8 +16,8 @@ import { runMacosA5PairSync } from './macos-a5-pair-sync-action.mjs';
 import { produceCredentialsSignableHandoff } from './macos-a5-credential-handoff.mjs';
 import { resolveMacosA5PairSyncReadiness } from './macos-a5-product-bootstrap.mjs';
 
-const CREDENTIAL_EVIDENCE_TIMEOUT_MS = 90_000;
-const CREDENTIAL_SCENARIO_TIMEOUT_MS = 75_000;
+const CREDENTIAL_EVIDENCE_TIMEOUT_MS = 180_000;
+const CREDENTIAL_SCENARIO_TIMEOUT_MS = 120_000;
 
 export const macosA5CredentialsOnlyModeArgs = () => [
   '-e', 'foliolePairSyncEvidenceGoal', 'credentials-signable',
