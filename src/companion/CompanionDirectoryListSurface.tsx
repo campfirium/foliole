@@ -141,7 +141,9 @@ export function CompanionDirectoryList(props: {
         <DirectorySectionGroup
           key={section.id}
           title={
-            section.id === 'virtual'
+            section.id === 'home'
+              ? resolveSystemEntryDisplayName(locale, 'home')
+              : section.id === 'virtual'
               ? resolveSystemEntryDisplayName(locale, 'virtual-root')
               : section.id === 'trash'
                 ? resolveSystemEntryDisplayName(locale, 'trash')

@@ -29,7 +29,7 @@ export type CompanionDirectorySelection =
   | { documentId: string; kind: 'externalDocument' };
 
 export interface DirectorySection {
-  id: 'internal' | 'virtual' | 'external' | 'current' | 'trash';
+  id: 'home' | 'virtual' | 'external' | 'current' | 'trash';
   items: DirectoryListItem[];
   titleKey?: TranslationKey;
 }
@@ -191,7 +191,7 @@ export function resolveDirectorySections(args: {
   const externalFolders = [...args.directory.folders]
     .map(toExternalFolderItem);
   const sections: DirectorySection[] = [
-    { id: 'internal', items: [...inboxItems, ...internalItems], titleKey: 'companion.directory.section.workspace' },
+    { id: 'home', items: [...inboxItems, ...internalItems] },
     { id: 'external', items: externalFolders, titleKey: 'companion.directory.section.external' },
     { id: 'virtual', items: virtualItems, titleKey: 'companion.directory.section.virtual' },
     { id: 'trash', items: [toTrashRootItem()], titleKey: 'companion.directory.section.trash' }

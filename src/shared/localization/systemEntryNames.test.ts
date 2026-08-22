@@ -46,7 +46,6 @@ const FIXED_NAVIGATION_KEYS = {
     'companion.tabs.shortcut.syncHandoff'
   ],
   groups: [
-    'companion.directory.section.workspace',
     'companion.directory.section.external',
     'companion.directory.section.virtual',
     'companion.directory.section.trash'

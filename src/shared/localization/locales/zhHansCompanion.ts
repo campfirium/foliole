@@ -49,7 +49,6 @@ export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'companion.directory.row.topic': '主题',
   'companion.directory.row.trash': '已移除的主题和文件夹',
   'companion.directory.row.virtual': '智能视图',
-  'companion.directory.section.workspace': '工作区',
   'companion.directory.section.external': '外部',
   'companion.directory.section.virtual': '虚拟文件夹',
   'companion.directory.section.trash': '回收站',

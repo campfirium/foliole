@@ -47,7 +47,6 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.directory.row.topic': 'Topic',
   'companion.directory.row.trash': 'Removed topics and folders',
   'companion.directory.row.virtual': 'Smart view',
-  'companion.directory.section.workspace': 'Workspace',
   'companion.directory.section.external': 'External',
   'companion.directory.section.virtual': 'Virtual folders',
   'companion.directory.section.trash': 'Trash',
