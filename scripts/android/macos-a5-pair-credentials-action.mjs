@@ -10,7 +10,8 @@ import { inspectDesktopDepartureBoundary } from './macos-a5-desktop-departure-in
 import { buildMacosA5Desktop } from './macos-a5-extended-actions.mjs';
 import {
   assertFreshCredentialRejoinBaseline, assertJoinedEmptyCredentialReauthorization,
-  collectCredentialProtectedReadiness, leaveJoinedEmptyCredentialSession
+  collectCredentialProtectedReadiness, leaveJoinedEmptyCredentialSession,
+  stopA5ForCredentialSnapshot
 } from './macos-a5-pair-credentials-rejoin.mjs';
 import { runMacosA5PairSync } from './macos-a5-pair-sync-action.mjs';
 import { produceCredentialsSignableHandoff } from './macos-a5-credential-handoff.mjs';
@@ -114,6 +115,7 @@ export async function runMacosA5PairCredentialsEntry(args, dependencies = {}) {
     serial: args.serial
   });
   assertFreshCredentialReceipt(readReceipt(evidenceRoot));
+  await stopA5ForCredentialSnapshot(args);
   produceHandoff({ artifactsRoot: args.paths.artifactsRoot, evidenceRoot,
     currentRevision: args.paths.acceptedRevision ?? undefined,
     readiness: resolveReadiness(args.paths), sourceRepoRoot: args.paths.sourceRepoRoot });

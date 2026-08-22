@@ -17,6 +17,17 @@ import { openMacosPairSyncDesktopSession } from './macos-pair-sync-desktop-sessi
 
 const APP_ID = 'com.foliole.android';
 
+export async function stopA5ForCredentialSnapshot({ env, execute, paths, serial }) {
+  const stopped = await execute(paths.adb, [
+    '-s', serial, 'shell', 'am', 'force-stop', APP_ID
+  ], { env, timeoutCode: 'credential_snapshot_stop_timeout', timeoutMs: 30_000 });
+  if (stopped.code !== 0) {
+    throw Object.assign(new Error('Failed to stop A5 before credential protection snapshot.'), {
+      result: stopped
+    });
+  }
+}
+
 function isFingerprint(value) {
   return /^[0-9a-f]{16}$/u.test(value ?? '');
 }
@@ -80,14 +91,7 @@ export async function collectCredentialProtectedReadiness(
   readiness, { env, execute, paths, serial }, dependencies = {}
 ) {
   const collectSnapshot = dependencies.collectSnapshot ?? collectAndroidDeviceSnapshot;
-  const stopped = await execute(paths.adb, [
-    '-s', serial, 'shell', 'am', 'force-stop', APP_ID
-  ], { env, timeoutCode: 'credential_snapshot_stop_timeout', timeoutMs: 30_000 });
-  if (stopped.code !== 0) {
-    throw Object.assign(new Error('Failed to stop A5 before credential protection snapshot.'), {
-      result: stopped
-    });
-  }
+  await stopA5ForCredentialSnapshot({ env, execute, paths, serial });
   const snapshot = await collectSnapshot({
     adb: paths.adb, appId: APP_ID, databaseInspector: inspectPairSyncRecoveryWorkspace,
     includeAttachments: false, includeEvents: false, serial, tables: ['nodes']
