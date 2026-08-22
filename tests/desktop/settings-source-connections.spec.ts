@@ -1,7 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
-import type { ElectronApplication } from '@playwright/test';
+import type { ElectronApplication, Locator, Page, TestInfo } from '@playwright/test';
 
 import {
   applyReadwiseRootPath,
@@ -77,6 +77,23 @@ async function assignReadwiseSourcesToOfficeHost(desktopApp: ElectronApplication
   }, process.cwd());
 }
 
+async function expectRestoredReadwiseSettings(
+  desktopWindow: Page,
+  readwiseDialog: Locator,
+  testInfo: TestInfo
+) {
+  const rootFolder = readwiseDialog.getByRole('button', {
+    name: /^(Readwise root folder|Readwise 根文件夹)$/
+  });
+  await rootFolder.hover();
+  await expect(desktopWindow.getByRole('tooltip')).toHaveText('D:\\Readwise Reader');
+  const screenshot = path.join(ARTIFACT_DIR, 't135-readwise-local-settings-restored.png');
+  await readwiseDialog.screenshot({ path: screenshot });
+  await testInfo.attach('t135-readwise-local-settings-restored', {
+    contentType: 'image/png', path: screenshot
+  });
+}
+
 test('keeps watched and Readwise source connections explicit in desktop settings', async ({
   desktopApp,
   desktopWindow
@@ -134,14 +151,5 @@ test('keeps watched and Readwise source connections explicit in desktop settings
   await switchToThisHost.click();
   await expect(switchToThisHost).toHaveCount(0);
   await expect(readwiseDialog.getByText(/^(Readwise Reader Import|Readwise Reader 导入)$/)).toBeVisible();
-  const rootFolder = readwiseDialog.getByRole('button', {
-    name: /^(Readwise root folder|Readwise 根文件夹)$/
-  });
-  await rootFolder.hover();
-  await expect(desktopWindow.getByRole('tooltip')).toHaveText('D:\\Readwise Reader');
-  const restoredScreenshot = path.join(ARTIFACT_DIR, 't135-readwise-local-settings-restored.png');
-  await readwiseDialog.screenshot({ path: restoredScreenshot });
-  await testInfo.attach('t135-readwise-local-settings-restored', {
-    contentType: 'image/png', path: restoredScreenshot
-  });
+  await expectRestoredReadwiseSettings(desktopWindow, readwiseDialog, testInfo);
 });
