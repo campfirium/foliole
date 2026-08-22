@@ -48,7 +48,9 @@ describe('macOS fixed A5 development entry', () => {
       buildRoot: '/repo', sourceRepoRoot: '/repo',
       controllerStateRoot: path.join('/repo', '.lab/internal/macos-a5-controller'),
       deviceBackupRoot: path.join('/repo', '.lab/internal/android-device-backups'),
-      desktopDevLibrary: '/Users/roamer/Documents/Foliole'
+      desktopDevLibrary: path.join(
+        '/repo', '.lab/internal/macos-a5-controller/desktop-library'
+      )
     });
   });
 
@@ -118,6 +120,17 @@ describe('macOS fixed A5 development entry', () => {
     expect(extended).toContain('runMacosA5ExistingSyncPreflight');
     expect(extended).toContain('proveMacosA5ExistingSyncContinuation');
     expect(source).not.toContain('process.argv[3]');
+  });
+
+  it('exposes one bounded system entry convergence journey', () => {
+    const dispatcher = fs.readFileSync('scripts/android/macos-a5-action-dispatch.mjs', 'utf8');
+    const registry = fs.readFileSync('scripts/android/macos-a5-action-registry.mjs', 'utf8');
+    const action = fs.readFileSync('scripts/android/macos-a5-system-entry-sync-action.mjs', 'utf8');
+    expect(registry).toContain("'system-entry-sync'");
+    expect(dispatcher).toContain('runMacosA5SystemEntrySyncEntry');
+    expect(action).toContain("session.invoke('save_system_entry_display_names'");
+    expect(action).toContain('inspectA5SystemEntryDisplayName');
+    expect(action).toContain("session.invoke('save_system_entry_display_names', { payload: baseline })");
   });
 
   it('exposes a read-only frozen hidden desktop provenance action', () => {

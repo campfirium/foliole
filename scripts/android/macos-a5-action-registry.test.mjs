@@ -28,13 +28,14 @@ it('fails formal preflight for an action without a frozen or source-free contrac
 
 it('marks only desktop-session actions for capsule Electron materialization', () => {
   expect(assertRegisteredMacosA5Action('sync-existing').requiresHiddenDesktopRuntime).toBe(true);
+  expect(assertRegisteredMacosA5Action('system-entry-sync').requiresHiddenDesktopRuntime).toBe(true);
   expect(assertRegisteredMacosA5Action('deploy').requiresHiddenDesktopRuntime).toBe(false);
 });
 
 it.each([
   'capture-annotation', 'clear-app-data', 'database-performance', 'deploy',
   'device-profile', 'leave-sync-group', 'pair-credentials', 'pair-sync',
-  'sync-existing', 'sync-group-rejoin', 'sync-group-rejoin-recover',
+  'system-entry-sync', 'sync-existing', 'sync-group-rejoin', 'sync-group-rejoin-recover',
   'sync-group-stopped-status'
 ])('requires the fixed A5 mutation lease for %s', (action) => {
   expect(assertRegisteredMacosA5Action(action)).toMatchObject({

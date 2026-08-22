@@ -175,6 +175,7 @@ export function formalA5ActionEvidenceLocator(context) {
     'leave-sync-group': 'a5-sync-group-maintenance',
     'pair-credentials': 'a5-pair-credentials',
     'pair-sync': 'a5-pair-sync',
+    'system-entry-sync': 'a5-system-entry-sync',
     'sync-existing': 'a5-existing-sync',
     'sync-group-rejoin': 'a5-sync-group-rejoin',
     'sync-group-rejoin-recover': 'a5-sync-group-rejoin-recovery'

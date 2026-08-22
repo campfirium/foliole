@@ -8,6 +8,7 @@ const ACTION_OVERRIDES = Object.freeze({
   'leave-sync-group': { requiresHiddenDesktopRuntime: true },
   'pair-credentials': { requiresHiddenDesktopRuntime: true },
   'pair-sync': { requiresHiddenDesktopRuntime: true },
+  'system-entry-sync': { requiresHiddenDesktopRuntime: true },
   'sync-existing': { requiresHiddenDesktopRuntime: true },
   'sync-group-rejoin': { requiresHiddenDesktopRuntime: true },
   'sync-group-rejoin-recover': { requiresHiddenDesktopRuntime: true }
@@ -15,7 +16,7 @@ const ACTION_OVERRIDES = Object.freeze({
 const MACOS_A5_ACTIONS = new Set([
   ...Object.keys(ACTION_OVERRIDES),
   'capture-annotation', 'clear-app-data', 'database-performance', 'deploy',
-  'device-profile', 'leave-sync-group', 'pair-credentials', 'pair-sync', 'sync-existing',
+  'device-profile', 'leave-sync-group', 'pair-credentials', 'pair-sync', 'system-entry-sync', 'sync-existing',
   'sync-group-rejoin', 'sync-group-rejoin-recover', 'sync-group-stopped-status'
 ]);
 

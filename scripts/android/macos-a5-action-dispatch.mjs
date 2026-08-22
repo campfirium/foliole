@@ -55,6 +55,10 @@ export async function dispatchMacosA5Action({
       .runMacosA5LeaveSyncGroupEntry(productArgs);
   }
   if (action === 'clear-app-data') await runMacosA5ClearAppDataEntry(productArgs);
+  if (action === 'system-entry-sync') {
+    await (await import('./macos-a5-system-entry-sync-action.mjs'))
+      .runMacosA5SystemEntrySyncEntry(productArgs);
+  }
   if (action === 'sync-existing') await runMacosA5ExistingSyncEntry(productArgs);
   if (action === 'sync-group-rejoin') await runMacosA5SyncGroupRejoinEntry(productArgs);
   if (action === 'sync-group-rejoin-recover') {
