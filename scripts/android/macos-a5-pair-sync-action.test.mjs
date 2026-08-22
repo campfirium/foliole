@@ -1,4 +1,5 @@
 // @vitest-environment node
+/* global AbortController */
 
 import { expect, it, vi } from 'vitest';
 
@@ -112,4 +113,14 @@ it('forwards only Host and authorization routing to the shared recovery action',
   });
   expect(result).not.toHaveProperty('deviceFingerprint');
   expect(result).not.toHaveProperty('pairedDeviceFingerprint');
+
+  const recoveryWindow = {
+    deadline: Date.now() + 180_000,
+    signal: new AbortController().signal,
+  };
+  const load = vi.fn(async () => ({ pending_requests: [{
+    host_name: 'A5', pair_request_id: 'pair-1'
+  }] }));
+  await expect(result.waitForPairRequest({ load }, 'A5', recoveryWindow))
+    .resolves.toMatchObject({ pair_request_id: 'pair-1' });
 });

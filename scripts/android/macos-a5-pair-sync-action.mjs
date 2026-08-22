@@ -119,6 +119,7 @@ export async function runMacosA5PairSync({
     credentialRepairRequired,
     desktopAuthorizationFingerprint,
     serial,
-    waitForPairRequest: (session, identity) => waitForMacosPairRequest(session, identity)
+    waitForPairRequest: (session, identity, recoveryWindow) =>
+      waitForMacosPairRequest(session, identity, recoveryWindow)
   });
 }

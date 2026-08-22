@@ -169,9 +169,13 @@ export async function openMacosPairSyncDesktopSession({
   }
 }
 
-export async function waitForMacosPairRequest(session, expectedHostName, timeoutMs = 40_000) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
+export async function waitForMacosPairRequest(session, expectedHostName, {
+  deadline, now = Date.now, signal, timeoutMs = 40_000,
+  wait = (ms, options) => delay(ms, undefined, options)
+} = {}) {
+  const observationDeadline = deadline ?? now() + timeoutMs;
+  while (now() < observationDeadline) {
+    signal?.throwIfAborted();
     const overview = await session.load();
     if (overview.pending_requests.length > 1) throw new Error('Conflicting pair requests.');
     if (overview.pending_requests.length === 1) {
@@ -181,7 +185,7 @@ export async function waitForMacosPairRequest(session, expectedHostName, timeout
       }
       return request;
     }
-    await delay(250);
+    await wait(250, { signal });
   }
   throw new Error('Timed out waiting for the fixed A5 pair request.');
 }

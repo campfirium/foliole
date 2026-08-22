@@ -1,4 +1,4 @@
-/* global process */
+/* global AbortController, process */
 
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -9,7 +9,8 @@ import {
   ensureMacosSyncGroup,
   openMacosPairSyncDesktopSession,
   resolveFrozenRendererUrl,
-  sanitizeMacosPairSyncOverview
+  sanitizeMacosPairSyncOverview,
+  waitForMacosPairRequest
 } from './macos-pair-sync-desktop-session.mjs';
 
 const repoRoot = path.join(path.parse(process.cwd()).root, 'repo', 'foliole');
@@ -200,5 +201,31 @@ describe('macOS pair sync desktop session', () => {
       userDataPath: '/Users/example/Library/Application Support/Foliole'
     })).rejects.toThrow('macos_hidden_electron_user_data_override_forbidden');
     expect(prepareHiddenRuntime).not.toHaveBeenCalled();
+  });
+
+  it('observes a fixed request after the legacy window but before the shared deadline', async () => {
+    const request = { host_name: 'A5', pair_request_id: 'pair-1' };
+    let currentTime = 0;
+    const session = { load: vi.fn()
+      .mockResolvedValueOnce({ pending_requests: [] })
+      .mockResolvedValueOnce({ pending_requests: [] })
+      .mockResolvedValue({ pending_requests: [request] }) };
+    const wait = vi.fn(async () => { currentTime += 25_000; });
+
+    await expect(waitForMacosPairRequest(session, request.host_name, {
+      deadline: 90_000, now: () => currentTime, wait
+    })).resolves.toBe(request);
+    expect(currentTime).toBe(50_000);
+  });
+
+  it('stops request observation at the shared cancellation boundary', async () => {
+    const controller = new AbortController();
+    const session = { load: vi.fn(async () => ({ pending_requests: [] })) };
+    const wait = vi.fn(async () => { controller.abort(); });
+
+    await expect(waitForMacosPairRequest(session, 'A5', {
+      deadline: 180_000, now: () => 0, signal: controller.signal, wait
+    })).rejects.toMatchObject({ name: 'AbortError' });
+    expect(session.load).toHaveBeenCalledOnce();
   });
 });
