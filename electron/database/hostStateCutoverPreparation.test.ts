@@ -17,8 +17,8 @@ import { migrateDesktopHostProfile } from './hostProfile.js';
 const BASELINE = {
   companionSchema: 32,
   desktopSchema: 76,
-  protocol: 2,
-  syncPack: 11
+  protocol: 3,
+  syncPack: 12
 } as const;
 
 it('freezes the Host-state cutover versions and generated protocol assets', () => {

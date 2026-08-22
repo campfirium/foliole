@@ -1,5 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { serializeSyncProtocolTxt } from '../../lib/platform/syncProtocolContract.js';
+
 const runtime = vi.hoisted(() => ({
   callback: null as null | ((service: unknown) => void),
   constructorOptions: [] as unknown[],
@@ -24,6 +26,10 @@ function deferred<T>() {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((done) => { resolve = done; });
   return { promise, resolve };
+}
+
+function currentTxt(extra: Record<string, string> = {}) {
+  return { ...serializeSyncProtocolTxt(), ...extra };
 }
 
 vi.mock('bonjour-service', () => ({
@@ -78,7 +84,7 @@ it('continues the saved member sync when its provider advertises again', async (
   startDesktopSyncGroupAutoSync();
   runtime.callback?.({
     addresses: ['192.168.1.12'], port: 43121,
-    txt: { group_id: 'group-1', peer_id: 'android-b' }
+    txt: currentTxt({ group_id: 'group-1', peer_id: 'android-b' })
   });
   await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
   expect(runtime.constructorOptions).toEqual([
@@ -91,12 +97,26 @@ it('continues the saved member sync when its provider advertises again', async (
   expect(runtime.credentialAccess).not.toHaveBeenCalled();
 });
 
+it('does not start a session for an advertised v2 member', async () => {
+  startDesktopSyncGroupAutoSync();
+  runtime.callback?.({
+    addresses: ['192.168.1.12'], port: 43121,
+    txt: currentTxt({
+      group_id: 'group-1', peer_id: 'android-b', protocol_max_version: '2',
+      protocol_min_version: '2', protocol_version: '2'
+    })
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(runtime.continueSync).not.toHaveBeenCalled();
+  expect(runtime.completeJoin).not.toHaveBeenCalled();
+});
+
 it('continues an approved join at the same provider new endpoint', async () => {
   runtime.refreshPending.mockReturnValue(true);
   startDesktopSyncGroupAutoSync();
   runtime.callback?.({
     addresses: ['192.168.1.12'], port: 43122,
-    txt: { group_id: 'group-1', peer_id: 'android-b', timeline_id: 'timeline-1' }
+    txt: currentTxt({ group_id: 'group-1', peer_id: 'android-b', timeline_id: 'timeline-1' })
   });
   await vi.waitFor(() => expect(runtime.completeJoin).toHaveBeenCalledOnce());
   expect(runtime.refreshPending).toHaveBeenCalledWith({
@@ -112,12 +132,12 @@ it('retries the latest advertisement after an interrupted peer sync settles', as
   startDesktopSyncGroupAutoSync();
   runtime.callback?.({
     addresses: ['192.168.1.12'], port: 43121,
-    txt: { group_id: 'group-1', peer_id: 'android-b' }
+    txt: currentTxt({ group_id: 'group-1', peer_id: 'android-b' })
   });
   await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
   runtime.callback?.({
     addresses: ['192.168.1.12'], port: 43122,
-    txt: { group_id: 'group-1', peer_id: 'android-b' }
+    txt: currentTxt({ group_id: 'group-1', peer_id: 'android-b' })
   });
 
   first.resolve({ complete: false, cursor: 9 });
@@ -131,7 +151,7 @@ it('continues sync when an existing service publishes a newer facts revision', a
   startDesktopSyncGroupAutoSync();
   runtime.updateCallbacks.get('txt-update')?.({
     addresses: ['192.168.1.12'], port: 43121,
-    txt: { facts_revision: '2', group_id: 'group-1', peer_id: 'android-b' }
+    txt: currentTxt({ facts_revision: '2', group_id: 'group-1', peer_id: 'android-b' })
   });
 
   await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
@@ -143,7 +163,7 @@ it('requeries the replacement instance after withdrawal-triggered sync settles',
   startDesktopSyncGroupAutoSync();
   runtime.updateCallbacks.get('down')?.({
     addresses: ['192.168.1.12'], port: 43121,
-    txt: { group_id: 'group-1', peer_id: 'android-b' }
+    txt: currentTxt({ group_id: 'group-1', peer_id: 'android-b' })
   });
 
   await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
@@ -158,7 +178,7 @@ it('does not requery a replacement after automatic sync stops', async () => {
   startDesktopSyncGroupAutoSync();
   runtime.updateCallbacks.get('down')?.({
     addresses: ['192.168.1.12'], port: 43121,
-    txt: { group_id: 'group-1', peer_id: 'android-b' }
+    txt: currentTxt({ group_id: 'group-1', peer_id: 'android-b' })
   });
   await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
 

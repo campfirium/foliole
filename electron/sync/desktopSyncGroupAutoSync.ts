@@ -9,6 +9,7 @@ import {
   continueDesktopSyncGroupSync
 } from './desktopSyncGroupJoin.js';
 import { refreshDesktopSyncGroupPendingJoinEndpoint } from './desktopSyncGroupJoinState.js';
+import { evaluateDiscoveredSyncProtocol } from './desktopSyncProtocolGate.js';
 
 type BonjourOptions = NonNullable<ConstructorParameters<typeof Bonjour>[0]> & { interface: string };
 type AutoSyncRuntime = {
@@ -27,6 +28,14 @@ export function startDesktopSyncGroupAutoSync() {
     if (!isDesktopCompanionSyncParticipating()) return;
     const endpoint = endpointForService(service);
     const txt = service.txt as Record<string, unknown>;
+    const protocol = evaluateDiscoveredSyncProtocol(txt);
+    if (protocol.status === 'incompatible') {
+      console.info('[sync-group] sync stopped for incompatible discovered peer', {
+        reason: protocol.reason,
+        serviceName: service.name
+      });
+      return null;
+    }
     const groupId = typeof txt.group_id === 'string' ? txt.group_id : null;
     const peerAuthorizationId = typeof txt.peer_id === 'string' ? txt.peer_id : null;
     const timelineId = typeof txt.timeline_id === 'string' ? txt.timeline_id : null;

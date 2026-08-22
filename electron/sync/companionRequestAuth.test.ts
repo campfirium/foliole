@@ -80,7 +80,7 @@ function signedHeaders(args: {
 
 function mockPairedAuthorization() {
   const protocolMetadata = {
-    negotiated_protocol_version: 1,
+    negotiated_protocol_version: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
     remote_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
   };
   pairingStoreMock.loadPairedCompanionAuthorization.mockImplementation((authorizationId: string) => {
@@ -200,6 +200,7 @@ describe('companion request auth', () => {
   });
 
   it('fails closed when the database membership has no safe-storage workgroup key', () => {
+    mockPairedAuthorization();
     workgroupKeyStoreMock.loadDesktopWorkgroupKey.mockReturnValue(null);
 
     expect(authenticateCompanionRequest({
@@ -227,4 +228,5 @@ describe('companion request auth', () => {
   it('keeps each authorization nonce cache isolated under capacity pressure', () => {
     assertCrossAuthorizationNonceFloodDoesNotAllowReplay();
   });
+
 });

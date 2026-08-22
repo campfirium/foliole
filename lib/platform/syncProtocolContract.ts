@@ -20,16 +20,12 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
     SYSTEM_ENTRY_DISPLAY_NAMES_SYNC_CAPABILITY,
     'workgroup-aead-v1'
   ]),
-  max_supported_version: 2,
-  min_supported_version: 2,
-  version: 2
+  max_supported_version: 3,
+  min_supported_version: 3,
+  version: 3
 } as const satisfies SyncProtocolDescriptor);
 
-export const REQUIRED_SYNC_PROTOCOL_CAPABILITIES = Object.freeze(
-  CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities.filter(
-    (capability) => capability !== SYSTEM_ENTRY_DISPLAY_NAMES_SYNC_CAPABILITY
-  )
-);
+export const REQUIRED_SYNC_PROTOCOL_CAPABILITIES = CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities;
 
 export type SyncProtocolDescriptor = {
   capabilities: string[] | readonly string[];
@@ -122,13 +118,6 @@ export function evaluateSyncProtocolCompatibility(
     reason: null,
     status: 'compatible'
   };
-}
-
-export function evaluateSystemEntryDisplayNamesWriteCompatibility(remoteValue: unknown) {
-  return evaluateSyncProtocolCompatibility(remoteValue, CURRENT_SYNC_PROTOCOL_DESCRIPTOR, [
-    ...REQUIRED_SYNC_PROTOCOL_CAPABILITIES,
-    SYSTEM_ENTRY_DISPLAY_NAMES_SYNC_CAPABILITY
-  ]);
 }
 
 export function serializeSyncProtocolTxt(descriptor: SyncProtocolDescriptor = CURRENT_SYNC_PROTOCOL_DESCRIPTOR) {

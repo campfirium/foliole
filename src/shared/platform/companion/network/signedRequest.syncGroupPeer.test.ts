@@ -1,5 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../../../lib/platform/syncProtocolContract';
+
 const nativeMock = vi.hoisted(() => ({
   addListener: vi.fn().mockResolvedValue({ remove: vi.fn() }),
   loadPairingState: vi.fn(),
@@ -26,7 +28,9 @@ import {
 beforeEach(() => {
   vi.clearAllMocks();
   nativeMock.loadPairingState.mockResolvedValue({
-    device_id: 'mobile-b', device_kind: 'android-capacitor', is_paired: true
+    device_id: 'mobile-b', device_kind: 'android-capacitor', is_paired: true,
+    negotiated_protocol_version: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
+    remote_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
   });
   groupMock.load.mockResolvedValue({ group_id: 'group-1' });
   nativeMock.signCompanionSyncRequest.mockResolvedValue({
@@ -77,7 +81,9 @@ it('returns an opaque prepared envelope without exposing the persistent key', as
 
 it('uses the persistent Sync Group even when legacy pairing metadata names the latest remote host', async () => {
   nativeMock.loadPairingState.mockResolvedValue({
-    device_id: 'mobile-b', device_kind: 'win32', is_paired: true, remote_peer_id: 'desktop-c'
+    device_id: 'mobile-b', device_kind: 'win32', is_paired: true,
+    negotiated_protocol_version: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
+    remote_peer_id: 'desktop-c', remote_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
   });
 
   await createSignedRequestHeaders({
@@ -93,6 +99,25 @@ it('rejects an ambiguous target before asking the native peer store to sign', as
   await expect(createSignedRequestHeaders({
     method: 'GET', pathWithQuery: '/companion/workspace-version'
   })).rejects.toThrow('Sync Group request target is required.');
+  expect(nativeMock.signCompanionSyncRequest).not.toHaveBeenCalled();
+});
+
+it('rejects an old pairing profile before signing a Sync Group request', async () => {
+  nativeMock.loadPairingState.mockResolvedValue({
+    device_id: 'mobile-b', device_kind: 'android-capacitor', is_paired: true,
+    negotiated_protocol_version: 2,
+    remote_protocol: {
+      ...CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+      max_supported_version: 2,
+      min_supported_version: 2,
+      version: 2
+    }
+  });
+
+  await expect(createSignedRequestHeaders({
+    endpointUrl: 'http://192.168.0.11:38641', method: 'GET',
+    pathWithQuery: '/companion/sync-pack?after_state_seq=7'
+  })).rejects.toThrow('sync_protocol_incompatible');
   expect(nativeMock.signCompanionSyncRequest).not.toHaveBeenCalled();
 });
 

@@ -49,7 +49,7 @@
     "compression": "zlib",
     "databaseEntry": "incoming.db.deflate",
     "format": "foliole.sync-pack",
-    "formatVersion": 11,
+    "formatVersion": 12,
     "legacyOptionalNodeColumns": [
       "priority",
       "desired_retention",

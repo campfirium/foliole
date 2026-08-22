@@ -45,6 +45,8 @@ export async function createSignedRequestHeaders(args: {
     const group = await loadCompanionSyncGroup();
     if (group) {
       if (!args.endpointUrl) throw new Error('Sync Group request target is required.');
+      const pairing = normalizePairingState(await FolioleCompanionSync.loadPairingState());
+      if (pairing.sync_usable !== true) throw new Error('sync_protocol_incompatible');
       const result = await signNativeWorkgroupRequest({
         ...(args.bodyText === undefined ? {} : { bodyText: args.bodyText }),
         bodyHash,

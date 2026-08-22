@@ -78,7 +78,7 @@ describe('CompanionSyncPanel protocol compatibility', () => {
       pairingState: {
         ...createProps().pairingState,
         is_paired: true,
-        negotiated_protocol_version: 2,
+        negotiated_protocol_version: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
         remote_protocol: protocol,
         sync_usable: true
       }

@@ -140,6 +140,30 @@ async function testResourceContinuationSkipsStructurePack() {
   expect(syncBridgeMock.saveCompanionSyncPackCursor).not.toHaveBeenCalled();
 }
 
+async function testRejectedLegacyPackKeepsCursorForUpgradedRetry() {
+  syncBridgeMock.applyCompanionDesktopSyncPack
+    .mockRejectedValueOnce(new Error('unsupported_sync_pack_format_version'))
+    .mockResolvedValueOnce({
+      applied_blob_count: 2,
+      applied_object_count: 3,
+      to_state_seq: 8
+    });
+  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+
+  await expect(syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/'))
+    .rejects.toThrow('unsupported_sync_pack_format_version');
+  expect(syncBridgeMock.saveCompanionSyncPackCursor).not.toHaveBeenCalled();
+
+  await expect(syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/'))
+    .resolves.toMatchObject({ appliedPackObjectCount: 3 });
+  expect(syncBridgeMock.applyCompanionDesktopSyncPack).toHaveBeenNthCalledWith(2,
+    expect.objectContaining({
+      url: 'http://10.0.2.2:38641/companion/sync-pack?after_state_seq=0'
+    }));
+  expect(syncBridgeMock.saveCompanionSyncPackCursor).toHaveBeenCalledOnce();
+  expect(syncBridgeMock.saveCompanionSyncPackCursor).toHaveBeenCalledWith(8, 'desktop-test-device');
+}
+
 describe('companion desktop sync objects', () => {
   beforeEach(resetCompanionDesktopSyncMocks);
 
@@ -154,4 +178,7 @@ describe('companion desktop sync objects', () => {
   it('reports remaining structure lag from final diagnostics', testReportsRemainingStructureLagFromFinalDiagnostics);
 
   it('skips structure pack work during resource-only continuation', testResourceContinuationSkipsStructurePack);
+
+  it('keeps the original cursor when a legacy pack is rejected and converges after upgrade',
+    testRejectedLegacyPackKeepsCursorForUpgradedRetry);
 });

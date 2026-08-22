@@ -1,7 +1,12 @@
 import type http from 'node:http';
 
+import {
+  CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+  evaluateSyncProtocolCompatibility
+} from '../../lib/platform/syncProtocolContract.js';
 import { loadDesktopSyncGroup, loadSyncGroupMemberByAuthorization } from '../database/syncGroupStore.js';
 
+import { loadPairedCompanionAuthorization } from './companionPairingStore.js';
 import { verifyCompanionRequestSignature } from './companionRequestSignature.js';
 import { consumeDesktopWorkgroupNonce, loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
@@ -24,6 +29,7 @@ interface CompanionRequestAuthFailure {
     | 'invalid_signature'
     | 'missing_headers'
     | 'sync_group_member_not_authorized'
+    | 'sync_protocol_incompatible'
     | 'replayed_nonce'
     | 'sync_group_workgroup_key_missing';
   ok: false;
@@ -82,16 +88,23 @@ function isFreshTimestamp(timestamp: string, nowMs: number) {
   return Number.isFinite(timestampMs) && Math.abs(nowMs - timestampMs) <= AUTH_WINDOW_MS;
 }
 
+function readAuthenticationHeaders(request: http.IncomingMessage) {
+  return {
+    authorizationId: readHeader(request.headers, 'x-authorization-id'),
+    groupId: readHeader(request.headers, 'x-sync-group-id'),
+    nonce: readHeader(request.headers, 'x-nonce'),
+    signature: readHeader(request.headers, 'x-signature'),
+    timestamp: readHeader(request.headers, 'x-timestamp')
+  };
+}
+
 export function authenticateCompanionRequest(args: {
   bodyText?: string;
   nowMs?: number;
   request: http.IncomingMessage;
 }): CompanionRequestAuthResult {
-  const authorizationId = readHeader(args.request.headers, 'x-authorization-id');
-  const nonce = readHeader(args.request.headers, 'x-nonce');
-  const signature = readHeader(args.request.headers, 'x-signature');
-  const timestamp = readHeader(args.request.headers, 'x-timestamp');
-  const groupId = readHeader(args.request.headers, 'x-sync-group-id');
+  const { authorizationId, groupId, nonce, signature, timestamp } =
+    readAuthenticationHeaders(args.request);
   if (!authorizationId || !nonce || !signature || !timestamp) {
     return {
       error: 'missing_headers',
@@ -101,6 +114,9 @@ export function authenticateCompanionRequest(args: {
   }
   const groupMembership = validateSyncGroupMembership(groupId, authorizationId);
   if (!groupMembership.ok) return groupMembership;
+  if (!hasCurrentProtocolAuthorization(authorizationId)) {
+    return { error: 'sync_protocol_incompatible', ok: false, status_code: 409 };
+  }
   const workgroupKey = groupId ? loadDesktopWorkgroupKey(groupId) : null;
   if (!workgroupKey) return { error: 'sync_group_workgroup_key_missing', ok: false, status_code: 401 };
   const nowMs = args.nowMs ?? Date.now();
@@ -141,6 +157,12 @@ export function authenticateCompanionRequest(args: {
     ...(groupMembership.member_state ? { member_state: groupMembership.member_state } : {}),
     ok: true
   };
+}
+
+function hasCurrentProtocolAuthorization(authorizationId: string) {
+  const authorization = loadPairedCompanionAuthorization(authorizationId);
+  return authorization?.negotiated_protocol_version === CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version &&
+    evaluateSyncProtocolCompatibility(authorization.remote_protocol).status === 'compatible';
 }
 
 function validateSyncGroupMembership(groupId: string | null, authorizationId: string) {

@@ -18,7 +18,7 @@
   ],
   "databaseEntry": "incoming.db.deflate",
   "format": "foliole.sync-pack",
-  "formatVersion": 11,
+  "formatVersion": 12,
   "payloadCopyIndex": 5,
   "payloadPlans": [
     {
@@ -99,9 +99,9 @@
       "system-entry-display-names-v1",
       "workgroup-aead-v1"
     ],
-    "max_supported_version": 2,
-    "min_supported_version": 2,
-    "version": 2
+    "max_supported_version": 3,
+    "min_supported_version": 3,
+    "version": 3
   },
   "schemaVersion": 76,
   "stateCopyIndex": 3,

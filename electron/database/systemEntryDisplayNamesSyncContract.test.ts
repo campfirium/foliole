@@ -16,7 +16,7 @@ import {
 import { createCapacitorSqliteDbPort } from '../../src/shared/platform/capacitorSqliteDbPort.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
-import { saveJsonSetting } from './settingsStore.js';
+import { openDatabaseConnection } from './connection.js';
 import { buildDesktopSyncPack } from './syncPackBuilder.js';
 import {
   mockedSyncPackBuilderAppDataDir,
@@ -24,6 +24,10 @@ import {
   setupSyncPackBuilderTestLifecycle
 } from './syncPackBuilderTestSupport.js';
 import { readStoredZipEntries } from './syncPackZipReaderTestSupport.js';
+import {
+  loadSystemEntryDisplayNames,
+  saveSystemEntryDisplayNames
+} from './systemEntryDisplayNames.js';
 
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
@@ -84,7 +88,13 @@ it('rejects an invalid map before either sqlite target can materialize it', asyn
 });
 
 async function buildAndExtractPack() {
-  saveJsonSetting(SYSTEM_ENTRY_DISPLAY_NAMES_SETTING_KEY, payload, '2026-08-22T01:00:00.000Z');
+  expect(saveSystemEntryDisplayNames(payload)).toEqual(payload);
+  expect(loadSystemEntryDisplayNames()).toEqual(payload);
+  expect(openDatabaseConnection().driver.queryOne<{ sync_dirty: number }>(
+    `SELECT sync_dirty FROM sync_object_state
+     WHERE object_type = 'setting' AND object_id = ?`,
+    [SYSTEM_ENTRY_DISPLAY_NAMES_SETTING_IDENTITY.objectId]
+  )).toEqual({ sync_dirty: 1 });
   const packPath = resolveSyncPackPath('system-entry-display-names.syncpack');
   await buildDesktopSyncPack({
     createdAt: '2026-08-22T01:01:00.000Z', fromPeerId: 'desktop-authorization',
