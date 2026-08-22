@@ -20,10 +20,15 @@ export async function runMacosA5DeviceProfileEntry(args) {
   const evidenceRoot = path.join(args.paths.artifactsRoot, 'a5-device-profile', runId);
   const snapshotRoot = path.join(args.paths.deviceBackupRoot, runId);
   const baselineManifest = path.join(evidenceRoot, 'baseline.json');
+  const profileBaselineManifest = path.join(evidenceRoot, 'device-profile-baseline.json');
   fs.mkdirSync(evidenceRoot, { recursive: true });
   args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', APP_ID]);
   await args.protectData('backup', baselineManifest, snapshotRoot);
-  const baseline = JSON.parse(fs.readFileSync(baselineManifest, 'utf8')).snapshot;
+  const baseline = await collectProfileSnapshot(args);
+  fs.writeFileSync(profileBaselineManifest, `${JSON.stringify({
+    capturedAt: new Date().toISOString(), runId, schemaVersion: 1, serial: args.serial,
+    snapshot: baseline
+  }, null, 2)}\n`);
   const expectedProfile = resolveExpectedProfile(args);
   args.build();
   args.checked(args.paths.adb, ['-s', args.serial, 'install', '-r', args.paths.apk]);
@@ -34,7 +39,8 @@ export async function runMacosA5DeviceProfileEntry(args) {
   const manifestPath = path.join(evidenceRoot, 'device-profile-manifest.json');
   fs.writeFileSync(manifestPath, `${JSON.stringify({
     ...result, baselineBackupRoot: snapshotRoot, completedAt: new Date().toISOString(),
-    resultStatus: 'success', runId, schemaVersion: 1, serial: args.serial
+    profileBaselineManifest, resultStatus: 'success', runId, schemaVersion: 1,
+    serial: args.serial
   }, null, 2)}\n`);
   process.stdout.write(`[macos-a5-dev] device-profile evidence=${manifestPath}\n`);
   return { manifestPath, result };
@@ -72,6 +78,10 @@ async function launchAndSnapshot(args) {
     '--component', COMPONENT, '--timeout-seconds', '30', '--stability-seconds', '3'
   ], { cwd: args.paths.buildRoot });
   args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', APP_ID]);
+  return collectProfileSnapshot(args);
+}
+
+async function collectProfileSnapshot(args) {
   return collectAndroidDeviceSnapshot({
     adb: args.paths.adb, appId: APP_ID, databaseInspector: inspectPairSyncRecoveryWorkspace,
     includeEvents: false, serial: args.serial, tables: TABLES
