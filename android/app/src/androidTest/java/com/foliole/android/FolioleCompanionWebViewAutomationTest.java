@@ -154,7 +154,7 @@ public class FolioleCompanionWebViewAutomationTest {
             sendEvidence(instrumentation, before,
                 FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView), receipt);
         } finally {
-            instrumentation.runOnMainSync(activity::finish);
+            activity.runOnUiThread(activity::finish);
         }
     }
 
