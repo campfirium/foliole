@@ -43,7 +43,9 @@ it('separates source, build, evidence, backup, controller, and library ownership
   expect(context.controllerStateRoot).toBe(
     path.join(canonicalRepoRoot, '.lab/internal/macos-a5-controller')
   );
-  expect(context.desktopDevLibrary).toBe('/Users/roamer/Documents/Foliole');
+  expect(context.desktopDevLibrary).toBe(
+    path.join(canonicalRepoRoot, '.lab/internal/macos-a5-controller/desktop-library')
+  );
 });
 
 it('resolves a symlinked artifact root without changing another ownership domain', () => {

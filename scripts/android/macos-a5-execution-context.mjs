@@ -4,9 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 
-import {
-  MACOS_DAILY_DEBUG_ROOT, MACOS_DAILY_LIBRARY_HOME
-} from '../macos/macos-electron-dev-paths.mjs';
+import { MACOS_DAILY_DEBUG_ROOT } from '../macos/macos-electron-dev-paths.mjs';
 
 const RUN_ID_PATTERN = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/u;
 const RUN_OWNER_FILE = 'owner.json';
@@ -47,7 +45,7 @@ export function createMacosA5ExecutionContext({
     artifactsRoot: resolveArtifactsRoot(sourceRepoRoot, fsApi),
     buildRoot: sourceRepoRoot,
     controllerStateRoot,
-    desktopDevLibrary: MACOS_DAILY_LIBRARY_HOME,
+    desktopDevLibrary: path.join(controllerStateRoot, 'desktop-library'),
     desktopRuntimeRoot: path.join(sourceRepoRoot, MACOS_DAILY_DEBUG_ROOT),
     deviceBackupRoot: path.join(sourceRepoRoot, '.lab/internal/android-device-backups'),
     leaseRoot: path.join(controllerStateRoot, 'leases'),
