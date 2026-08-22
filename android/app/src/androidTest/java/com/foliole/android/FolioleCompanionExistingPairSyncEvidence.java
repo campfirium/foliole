@@ -40,7 +40,7 @@ final class FolioleCompanionExistingPairSyncEvidence {
                 throw new IllegalStateException("Initial workspace sync settled with attention.");
             }
             boolean targetEnabled = isTargetEnabled(instrumentation, webView, syncTarget);
-            if (!targetEnabled) syncStarted = true;
+            if (state.optBoolean("syncUiStarted") || !targetEnabled) syncStarted = true;
             if ("saved_signable".equals(evidence.optString("credentials"))
                 && syncStarted && targetEnabled) {
                 evidence.put("initialSync", "completed");

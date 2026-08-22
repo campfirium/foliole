@@ -9,9 +9,10 @@
     keyState: 'not-started', requestState: 'not-started', completion: 'not_started',
     credentials: 'not_saved', initialSync: 'not_started',
     syncPackApplied: false, syncPackDownloaded: false,
-    syncFailure: null, syncPackUrl: null
+    syncFailure: null, syncPackUrl: null, syncUiStarted: false
   };
   window.__foliolePairSyncObserver = state;
+  observeSyncButton(state);
   var originalGenerateKey = proto.generateKey;
   proto.generateKey = function () {
     var algorithm = arguments[0];
@@ -94,6 +95,17 @@
   }
   function pairingCanSync(state) {
     return state.credentials === 'saved_signable' || state.completion === 'existing_pairing';
+  }
+  function observeSyncButton(state) {
+    if (!window.document || !window.MutationObserver) return;
+    var record = function () {
+      var target = window.document.querySelector('[data-testid="companion-sync-now"]');
+      if (target && target.disabled) state.syncUiStarted = true;
+    };
+    new window.MutationObserver(record).observe(window.document.documentElement, {
+      attributes: true, attributeFilter: ['disabled'], childList: true, subtree: true
+    });
+    record();
   }
   function syncPushFailure(value) {
     var allowed = /^(expired_timestamp|invalid_signature|missing_headers|sync_group_member_not_authorized|sync_group_workgroup_key_missing|workgroup_aead_invalid)$/;

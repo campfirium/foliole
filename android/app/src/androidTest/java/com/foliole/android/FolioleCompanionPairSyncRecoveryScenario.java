@@ -50,11 +50,13 @@ final class FolioleCompanionPairSyncRecoveryScenario {
             existingPairing = false;
         } else if (existingPairing) {
             FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "existing-pair-push");
+            FolioleCompanionPairSyncEvidence.resetExistingSync(instrumentation, webView);
             clickVisible(instrumentation, webView, CONNECTED_TARGET, deadline);
             FolioleCompanionExistingPairSyncEvidence.await(
                 instrumentation, webView, deadline, CONNECTED_TARGET, allowExistingAttention
             );
             FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "existing-pair-ack-pull");
+            FolioleCompanionPairSyncEvidence.resetExistingSync(instrumentation, webView);
             clickVisible(instrumentation, webView, CONNECTED_TARGET, deadline);
             return buildReceipt(FolioleCompanionExistingPairSyncEvidence.await(
                 instrumentation, webView, deadline, CONNECTED_TARGET, allowExistingAttention

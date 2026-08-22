@@ -29,7 +29,7 @@ it('observes request submission without global errors or click-return evidence',
   const disconnect = source.indexOf('"companion-sync-disconnect"');
   expect(disconnect).toBeGreaterThan(rePairGuard);
   expect(disconnect).toBeLessThan(source.indexOf('else if (existingPairing)', rePairGuard));
-  expect(source).toContain('SETTINGS_TARGET, REVIEW_EXIT_TARGET');
+  expect(source).toContain('FolioleCompanionSettingsNavigation.open(instrumentation, webView)');
   expect(source).not.toContain('__actionAccepted');
   expect(evidence).toContain('"accepted".equals(state.optString("requestState"))');
   expect(adapter).not.toContain("document.querySelector('.text-error')");
@@ -56,7 +56,11 @@ it('observes request submission without global errors or click-return evidence',
   expect(observer).not.toContain("new URL(args.url).pathname === '/companion/sync-group/activate'");
   const settlement = read('android/app/src/androidTest/java/com/foliole/android/FolioleCompanionExistingPairSyncEvidence.java');
   expect(settlement).toContain('companion-sync-inline-progress');
+  expect(settlement).toContain('state.optBoolean("syncUiStarted")');
   expect(settlement).toContain('restoreSyncSurface');
+  expect(recoveryEvidence).toContain('resetExistingSync');
+  expect(observer).toContain('syncUiStarted: false');
+  expect(observer).toContain("attributeFilter: ['disabled']");
   expect(observer).not.toContain("methodName === 'recordWorkspaceSyncEvent'");
   expect(observer).toContain("algorithm.name === 'ECDH'");
   expect(observer).not.toContain('pair_request_id');
@@ -81,6 +85,25 @@ it('only observes the product signing request after workgroup membership persist
     workgroup_key: 'product-owned-key'
   });
   expect(state.credentials).toBe('saved_signable');
+});
+
+it('retains a fast sync button disabled transition for later settlement polling', () => {
+  const source = read(observerPath);
+  const button = { disabled: false };
+  const document = { documentElement: {}, querySelector: () => button };
+  let recordMutation = () => undefined;
+  class MutationObserver {
+    constructor(callback) { recordMutation = callback; }
+    observe() {}
+  }
+  const window = { Capacitor: { nativePromise: async () => ({ ok: true }) }, document,
+    MutationObserver, crypto: { subtle: Object.create({ generateKey: async () => ({}) }) } };
+  expect(JSON.parse(vm.runInNewContext(source, { Promise, URL, window }))).toEqual({ ok: true });
+  button.disabled = true;
+  recordMutation();
+  button.disabled = false;
+  recordMutation();
+  expect(window.__foliolePairSyncObserver.syncUiStarted).toBe(true);
 });
 
 it('attributes request evidence only to the product pair-request operation', async () => {

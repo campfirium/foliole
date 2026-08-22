@@ -51,10 +51,25 @@ final class FolioleCompanionPairSyncEvidence {
             "syncFailure:state?state.syncFailure:null,syncPackUrl:state?state.syncPackUrl:null," +
             "syncPackApplied:!!(state&&state.syncPackApplied)," +
             "syncPackDownloaded:!!(state&&state.syncPackDownloaded)," +
+            "syncUiStarted:!!(state&&state.syncUiStarted)," +
             "pairFound:!!document.querySelector('[data-testid=\"companion-sync-pair\"]')," +
             "discoverFound:!!document.querySelector('[data-testid=\"companion-sync-discover\"]')," +
             "connectedFound:!!document.querySelector('[data-testid=\"companion-sync-now\"]')});})()";
         return FolioleCompanionWebViewSemanticAdapter.evaluateJson(instrumentation, webView, script);
+    }
+
+    static void resetExistingSync(Instrumentation instrumentation, WebView webView) throws Exception {
+        String script = "(function(){var state=window.__foliolePairSyncObserver;" +
+            "if(!state)return JSON.stringify({ok:false});" +
+            "state.initialSync='not_started';state.syncFailure=null;" +
+            "state.syncPackApplied=false;state.syncPackDownloaded=false;" +
+            "state.syncUiStarted=false;return JSON.stringify({ok:true});})()";
+        JSONObject reset = FolioleCompanionWebViewSemanticAdapter.evaluateJson(
+            instrumentation, webView, script
+        );
+        if (!reset.optBoolean("ok")) {
+            throw new IllegalStateException("Pair sync observer could not reset existing sync evidence.");
+        }
     }
 
     static void emit(Instrumentation instrumentation, JSONObject state) {
