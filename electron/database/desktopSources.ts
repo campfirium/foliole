@@ -24,7 +24,7 @@ export interface DesktopSourceRecord extends DatabaseRow {
   updated_at: string;
 }
 
-function currentHost() {
+export function loadCurrentDesktopHost() {
   const driver = openDatabaseConnection().driver;
   const hostName = loadOrCreateDatabaseHostName(driver, new Date().toISOString());
   const member = driver.queryOne<{ host_name: string; host_platform: string }>(
@@ -59,7 +59,7 @@ export function upsertDesktopSource(input: {
   configRef: string; hostName?: string; hostPlatform?: string; rootPath: string;
   sourceRef?: string; sourceType: DesktopSourceType; typeSettings?: unknown; updatedAt: string;
 }) {
-  const host = currentHost();
+  const host = loadCurrentDesktopHost();
   const sourceRef = input.sourceRef ?? `${input.sourceType}:${input.configRef}`;
   openDatabaseConnection().driver.execute(
     `INSERT INTO desktop_sources (source_ref, source_type, config_ref, host_name, host_platform,
@@ -110,7 +110,7 @@ export function hydrateWatchedImportManagerSources<T extends { sources: ImportMa
 }
 
 export function loadCurrentHostDesktopSources(sourceType: DesktopSourceType) {
-  const host = currentHost();
+  const host = loadCurrentDesktopHost();
   return openDatabaseConnection().driver.queryAll<DesktopSourceRecord>(
     `SELECT source_ref, source_type, config_ref, host_name, host_platform, root_path,
        path_flavor, type_settings_json, updated_at FROM desktop_sources
@@ -141,7 +141,7 @@ export function isDesktopSourceExecutable(source: DesktopSourceRecord) {
 }
 
 export function isDesktopSourceConnected(source: DesktopSourceRecord) {
-  if (source.host_name !== currentHost().name || !source.root_path.trim()) return false;
+  if (source.host_name !== loadCurrentDesktopHost().name || !source.root_path.trim()) return false;
   try {
     const settings = JSON.parse(source.type_settings_json) as Record<string, unknown>;
     return settings.connectionStatus !== 'needs-folder';

@@ -4,8 +4,8 @@ import { useTranslation } from '../../../shared/localization/LocalizationProvide
 import {
   createDraftExternalSourceFolder,
   disconnectExternalSourceSettingsFolder,
+  invalidateExternalSourceSettingsFoldersCache,
   loadExternalSourceSettingsFolders,
-  removeExternalSourceSettingsFolder,
   rebuildExternalSourceSettingsIndex,
   saveExternalSourceSettingsFolders,
   selectExternalSourceSettingsFolderPath,
@@ -15,6 +15,7 @@ import {
 
 import { reconnectExternalSearchFolder } from './externalSearchFolderReconnect';
 import { serializeEditableExternalFolders } from './externalSearchFolderSerialization';
+import { removeExternalSource, replaceExternalSourceHost } from './externalSourceManagement';
 
 export function useExternalSearchFolders() {
   const t = useTranslation();
@@ -49,9 +50,22 @@ export function useExternalSearchFolders() {
     onReconnectExternalSearchFolder: (folderId: string) => void reconnectExternalSearchFolder(folderId, setFolders, t),
     onRebuildExternalSearchIndex: (folderId?: string) =>
       void rebuildExternalSearchFolders(folderId, setError, setFeedback, setFolders, setIsSaving, t),
-    onRemoveExternalSearchFolder: (folderId: string) => void removeExternalSourceSettingsFolder(folderId)
-      .then((next) => { if (next) setFolders(next); })
-      .catch((nextError) => setError(nextError instanceof Error ? nextError.message : t('settings.externalSources.error.save'))),
+    onRemoveExternalSearchFolder: (folderId: string) => {
+      const folder = folders.find((item) => item.id === folderId);
+      if (folder?.sourceRef) {
+        void removeExternalSource(folder.sourceRef, () => {
+          invalidateExternalSourceSettingsFoldersCache();
+          setLoadKey((value) => value + 1);
+        }, t)
+          .catch((nextError) => setError(nextError instanceof Error ? nextError.message : t('settings.externalSources.error.save')));
+      }
+    },
+    onReplaceExternalSourceHost: (hostName: string) => void replaceExternalSourceHost(
+      hostName, () => {
+        invalidateExternalSourceSettingsFoldersCache();
+        setLoadKey((value) => value + 1);
+      }, t
+    ).catch((nextError) => setError(nextError instanceof Error ? nextError.message : t('settings.externalSources.error.save'))),
     onRetryLoadExternalSearchFolders: () => setLoadKey((value) => value + 1),
     onUpdateExternalSearchFolder: (folderId: string, patch: ExternalSourceSettingsFolderPatch) =>
       updateFolder(folderId, (current) => ({

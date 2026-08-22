@@ -50,6 +50,7 @@ import { loadAppSettingsState, saveAppSettingsState } from './storage.js';
 import { readSettingsObject } from './storageCommandSupport.js';
 import { handleExternalSearchStorageCommand } from './storageExternalSearchCommands.js';
 import { handlePublishingStorageCommand } from './storagePublishingCommands.js';
+import { handleSourceManagementCommand } from './storageSourceManagementCommands.js';
 import { handleWatchedFolderSettingsCommand } from './storageWatchedFolderCommands.js';
 import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
 
@@ -106,12 +107,17 @@ async function handleAppSettingsCommand(command: string, args: Record<string, un
   return null;
 }
 
+function handleSourceSettingsCommand(command: string, args: Record<string, unknown>) {
+  const managementResult = handleSourceManagementCommand(command, args);
+  return managementResult === undefined ? handleExternalSearchStorageCommand(command, args) : managementResult;
+}
+
 export async function handleSettingsStorageCommand(
   command: string,
   args: Record<string, unknown>,
   window: BrowserWindow | null = null
 ) {
-  const externalSearchResult = handleExternalSearchStorageCommand(command, args);
+  const externalSearchResult = handleSourceSettingsCommand(command, args);
   if (externalSearchResult !== undefined) return externalSearchResult;
   const companionPairingResult = handleCompanionPairingCommand(command, args);
   if (companionPairingResult !== undefined) return companionPairingResult;

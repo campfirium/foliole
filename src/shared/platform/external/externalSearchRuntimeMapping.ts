@@ -20,6 +20,7 @@ export interface RuntimeExternalSearchFolder {
   sourceExecutable?: boolean;
   sourceHostName?: string;
   sourceHostPlatform?: string;
+  sourceRef?: string;
   status: 'error' | 'idle' | 'indexing' | 'ready';
   updatedAt: string;
 }
@@ -90,6 +91,7 @@ export function toRuntimeExternalSearchFolder(value: NativeExternalSearchFolder)
     mirrorEnabled: value.mirror_enabled !== false, sourceExecutable: value.source_executable === true,
     ...(value.source_host_name === undefined ? {} : { sourceHostName: value.source_host_name }),
     ...(value.source_host_platform === undefined ? {} : { sourceHostPlatform: value.source_host_platform }),
+    ...(value.source_ref === undefined ? {} : { sourceRef: value.source_ref }),
     status: value.status, updatedAt: value.updated_at
   };
 }

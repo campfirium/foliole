@@ -73,6 +73,16 @@ async function seedRemoteMirror(desktopApp: ElectronApplication, activeWorkgroup
           id, folder_path, attachment_mode, status, document_count, created_at, updated_at, source_ref)
         VALUES (?, ?, 'document_relative', ?, ?, ?, ?, ?)`,
         [source.id, source.path, source.status, source.count, at, at, sourceRef]);
+        const nodeId = `topic-${source.id}`;
+        driver.execute(`INSERT OR REPLACE INTO nodes
+          (id, parent_id, kind, title, content, created_at, updated_at)
+          VALUES (?, NULL, 'topic', ?, 'Body', ?, ?)`, [nodeId, source.id, at, at]);
+        driver.execute(`INSERT OR REPLACE INTO import_sources (
+          source_fingerprint, provider, source_kind, source_name, source_locator,
+          first_imported_at, last_imported_at, last_content_fingerprint, latest_node_id,
+          source_ref, source_location
+        ) VALUES (?, 'desktop_text_file', 'markdown', 'topic.md', ?, ?, ?, ?, ?, ?, 'topic.md')`,
+        [`fingerprint-${source.id}`, source.path, at, at, `hash-${source.id}`, nodeId, sourceRef]);
       };
       insertRemoteFolder({ count: 21, host: 'Windows PC', id: 'playwright-remote-folder',
         path: 'D:\\X\\Dropbox\\obs\\1act\\0cap', platform: 'win32', status: 'ready' });
@@ -154,5 +164,54 @@ test.describe('desktop settings External folders', () => {
     await fs.mkdir(path.dirname(screenshotPath), { recursive: true });
     await settingsDialog.screenshot({ path: screenshotPath });
     await testInfo.attach('external-folder-remote-mirrors', { path: screenshotPath, contentType: 'image/png' });
+  });
+});
+
+test.describe('desktop External Source management', () => {
+  test('previews, cancels, and confirms an atomic Host replacement with recovery controls', async ({
+    desktopApp, desktopWindow
+  }, testInfo) => {
+    await seedRemoteMirror(desktopApp);
+    await desktopWindow.reload();
+    await expectWorkspaceShell(desktopWindow);
+    const settingsDialog = await openSettingsCategory(desktopWindow, 'ExternalFolder');
+    const hostActions = settingsDialog.getByRole('button', {
+      name: /^(More actions for Windows PC|Windows PC 的更多操作)$/
+    });
+
+    await hostActions.click();
+    await desktopWindow.getByRole('menuitem', { name: /^(Replace host…|替换主机…)$/ }).click();
+    let dialog = desktopWindow.getByRole('dialog');
+    await expect(dialog).toContainText('D:\\X\\Dropbox\\obs\\1act\\0cap');
+    await expect(dialog).toContainText('D:\\Projects');
+    await expect(dialog).toContainText(/(2 sources and 2 existing topics|2 个来源和 2 个已有主题)/);
+    await dialog.getByRole('button', { name: /^(Cancel|取消)$/ }).click();
+
+    const canceled = await desktopWindow.evaluate(() => window.electronAPI?.invoke('preview_source_management', {
+      action: 'replace_host', host_name: 'Windows PC', source_type: 'external'
+    })) as { source_count: number };
+    expect(canceled.source_count).toBe(2);
+
+    await hostActions.click();
+    await desktopWindow.getByRole('menuitem', { name: /^(Replace host…|替换主机…)$/ }).click();
+    dialog = desktopWindow.getByRole('dialog');
+    await dialog.getByRole('button', { name: /^(Replace host|替换主机)$/ }).click();
+    await expect(settingsDialog.getByText('Windows PC', { exact: true })).toHaveCount(0);
+    await expect(settingsDialog.getByText('D:\\X\\Dropbox\\obs\\1act\\0cap')).toBeVisible();
+    await expect(settingsDialog.getByText('D:\\Projects', { exact: true })).toBeVisible();
+
+    const folders = await desktopWindow.evaluate(() => window.electronAPI?.invoke('load_external_search_folders')) as Array<{
+      access_mode: string; id: string; source_executable: boolean; source_host_name: string;
+    }>;
+    expect(folders.filter((folder) => folder.id.startsWith('playwright-remote-'))).toEqual([
+      expect.objectContaining({ access_mode: 'local', source_executable: false, source_host_name: 'This Mac' }),
+      expect.objectContaining({ access_mode: 'local', source_executable: false, source_host_name: 'This Mac' })
+    ]);
+
+    const screenshotPath = path.join(process.cwd(), '.tmp', 'artifacts', 'desktop-acceptance',
+      't135-20-source-host-replacement-hidden-native.png');
+    await fs.mkdir(path.dirname(screenshotPath), { recursive: true });
+    await settingsDialog.screenshot({ path: screenshotPath });
+    await testInfo.attach('source-host-replacement', { path: screenshotPath, contentType: 'image/png' });
   });
 });

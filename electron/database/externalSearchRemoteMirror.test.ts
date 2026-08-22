@@ -29,6 +29,7 @@ import {
 import { removeExternalSearchFolder } from './externalSearchFolderRemoval.js';
 import { loadExternalSearchFolders, saveExternalSearchFolders } from './externalSearchFolders.js';
 import { loadExternalSearchMirrorBrowseEntries, loadExternalSearchMirrorPreview } from './externalSearchMirrorRead.js';
+import { loadOrCreateDesktopHostName } from './hostProfile.js';
 import { initializeDatabase } from './migrate.js';
 
 let tempRoot = '';
@@ -115,14 +116,20 @@ it('does not claim a remote Source when a local folder uses its id and path', ()
     ['external:remote-folder'])).toEqual({ host_name: 'Windows PC', root_path: 'D:\\Docs' });
 });
 
-it('rejects reconnect, disconnect, and removal for another Host Source', async () => {
-  await expect(previewExternalSearchFolderReconnect('remote-folder', tempRoot))
-    .rejects.toThrow('external_folder_not_local');
-  await expect(reconnectExternalSearchFolder('remote-folder', tempRoot))
-    .rejects.toThrow('external_folder_not_local');
-  expect(() => disconnectExternalSearchFolder('remote-folder')).toThrow('external_folder_not_local');
-  expect(() => removeExternalSearchFolder('remote-folder')).toThrow('external_folder_not_local');
+it('claims a remote Source only after its replacement path is previewed and confirmed', async () => {
+  const replacementPath = path.join(tempRoot, 'replacement');
+  await fs.mkdir(replacementPath);
+  await fs.writeFile(path.join(replacementPath, 'topic.md'), '# Topic\nBody');
+  await expect(previewExternalSearchFolderReconnect('remote-folder', replacementPath)).resolves.toMatchObject({
+    matched_count: 1, missing_count: 0, new_count: 0
+  });
   expect(openDatabaseConnection().driver.queryOne(
     'SELECT host_name FROM desktop_sources WHERE source_ref = ?', ['external:remote-folder']
   )).toEqual({ host_name: 'Windows PC' });
+  expect(() => disconnectExternalSearchFolder('remote-folder')).toThrow('external_folder_not_local');
+  expect(() => removeExternalSearchFolder('remote-folder')).toThrow('external_folder_not_local');
+  await reconnectExternalSearchFolder('remote-folder', replacementPath);
+  expect(openDatabaseConnection().driver.queryOne(
+    'SELECT host_name, root_path FROM desktop_sources WHERE source_ref = ?', ['external:remote-folder']
+  )).toEqual({ host_name: loadOrCreateDesktopHostName(), root_path: replacementPath });
 });

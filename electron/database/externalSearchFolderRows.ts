@@ -2,8 +2,11 @@ import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
 
 import { openDatabaseConnection } from './connection.js';
-import { isDesktopSourceExecutable, type DesktopSourceRecord } from './desktopSources.js';
-import { loadOrCreateDesktopHostName } from './hostProfile.js';
+import {
+  isDesktopSourceExecutable,
+  loadCurrentDesktopHost,
+  type DesktopSourceRecord
+} from './desktopSources.js';
 
 export interface ExternalSearchFolderRow extends DatabaseRow {
   attachment_mode: string;
@@ -48,7 +51,7 @@ export function toExternalSearchFolder(
 ): NativeExternalSearchFolder {
   const source = row as unknown as DesktopSourceRecord;
   return {
-    access_mode: row.host_name === loadOrCreateDesktopHostName() ? 'local' : 'remote_mirror',
+    access_mode: row.host_name === loadCurrentDesktopHost().name ? 'local' : 'remote_mirror',
     attachment_mode: row.attachment_mode === 'fixed_root' || row.attachment_mode === 'document_relative_first_then_fixed_root'
       ? row.attachment_mode : 'document_relative',
     attachment_root_path: row.attachment_root_path?.trim() || null,
@@ -63,6 +66,7 @@ export function toExternalSearchFolder(
     source_executable: isDesktopSourceExecutable(source),
     source_host_name: row.host_name,
     source_host_platform: row.host_platform,
+    source_ref: row.source_ref,
     status: row.status === 'ready' || row.status === 'indexing' || row.status === 'error' ? row.status : 'idle',
     updated_at: row.updated_at
   };

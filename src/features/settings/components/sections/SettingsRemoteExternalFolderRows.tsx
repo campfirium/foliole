@@ -18,6 +18,7 @@ const REMOTE_SOURCE_COLUMNS = '[grid-template-columns:16.25rem_minmax(0,1fr)]';
 
 function FolderActions(props: {
   folder: ExternalSourceSettingsFolder;
+  onReconnectFolder: (folderId: string) => void;
   onRemoveFolder: (folderId: string) => void;
 }) {
   const t = useTranslation();
@@ -33,9 +34,7 @@ function FolderActions(props: {
         </button>
       </AppDropdownMenuTrigger>
       <AppDropdownMenuContent align="end" sideOffset={4}>
-        <AppDropdownMenuItem
-          disabled
-        >
+        <AppDropdownMenuItem onSelect={() => props.onReconnectFolder(props.folder.id)}>
           {t('settings.externalSources.remote.changeSource')}
         </AppDropdownMenuItem>
         <AppDropdownMenuSeparator />
@@ -50,7 +49,7 @@ function FolderActions(props: {
   );
 }
 
-function HostActions(props: { hostName: string }) {
+function HostActions(props: { hostName: string; onReplaceHost: (hostName: string) => void }) {
   const t = useTranslation();
   return (
     <AppDropdownMenu>
@@ -64,12 +63,8 @@ function HostActions(props: { hostName: string }) {
         </button>
       </AppDropdownMenuTrigger>
       <AppDropdownMenuContent align="end" sideOffset={4}>
-        <AppDropdownMenuItem disabled>
-          {t('settings.externalSources.remote.changeSource')}
-        </AppDropdownMenuItem>
-        <AppDropdownMenuSeparator />
-        <AppDropdownMenuItem disabled>
-          {t('settings.externalSources.remote.removeSource')}
+        <AppDropdownMenuItem onSelect={() => props.onReplaceHost(props.hostName)}>
+          {t('settings.externalSources.remote.replaceHost')}
         </AppDropdownMenuItem>
       </AppDropdownMenuContent>
     </AppDropdownMenu>
@@ -78,6 +73,7 @@ function HostActions(props: { hostName: string }) {
 
 function RemoteFolderRow(props: {
   folder: ExternalSourceSettingsFolder;
+  onReconnectFolder: (folderId: string) => void;
   onRemoveFolder: (folderId: string) => void;
 }) {
   return (
@@ -90,7 +86,9 @@ function RemoteFolderRow(props: {
 
 export function SettingsRemoteExternalFolderRows(props: {
   folders: ExternalSourceSettingsFolder[];
+  onReconnectFolder: (folderId: string) => void;
   onRemoveFolder: (folderId: string) => void;
+  onReplaceHost: (hostName: string) => void;
 }) {
   const t = useTranslation();
   const groups = groupRemoteExternalFolders(
@@ -117,7 +115,7 @@ export function SettingsRemoteExternalFolderRows(props: {
                 {group.platformName ? (
                   <span className="shrink-0 text-xs font-normal text-foreground/48">{group.platformName}</span>
                 ) : null}
-                <HostActions hostName={group.hostName} />
+                <HostActions hostName={group.hostName} onReplaceHost={props.onReplaceHost} />
               </div>
             </div>
             <div className="grid min-w-0 gap-0.5">
@@ -125,6 +123,7 @@ export function SettingsRemoteExternalFolderRows(props: {
                 <RemoteFolderRow
                   folder={folder}
                   key={folder.id}
+                  onReconnectFolder={props.onReconnectFolder}
                   onRemoveFolder={props.onRemoveFolder}
                 />
               ))}

@@ -108,7 +108,7 @@ it('disconnects and reconnects one watched source while preserving its imported 
   expect(resolveExecutableWatchedBinding(binding.binding_id, nextPath).executable).toBe(true);
 });
 
-it('does not claim or mutate a watched Source owned by another Host', async () => {
+it('only claims a watched Source owned by another Host after an explicit preview and confirm', async () => {
   const folderPath = path.join(tempRoot, 'remote-watched');
   await fs.mkdir(folderPath, { recursive: true });
   const source = {
@@ -120,12 +120,17 @@ it('does not claim or mutate a watched Source owned by another Host', async () =
   driver.execute("UPDATE desktop_sources SET host_name = 'Other Mac' WHERE source_ref = ?", [binding.source_ref]);
 
   expect(upsertChangedWatchedFolderSource(source, '2026-08-18T00:01:00.000Z')).toBeNull();
-  await expect(previewWatchedFolderReconnect(binding.binding_id, folderPath))
-    .rejects.toThrow('watched_folder_not_local');
-  expect(() => disconnectWatchedFolderBinding(binding.binding_id)).toThrow('watched_folder_not_local');
-  expect(() => removeWatchedFolderBinding(binding.binding_id)).toThrow('watched_folder_not_local');
+  await expect(previewWatchedFolderReconnect(binding.binding_id, folderPath)).resolves.toMatchObject({
+    binding: expect.objectContaining({ host_name: 'Other Mac' })
+  });
   expect(driver.queryOne('SELECT host_name FROM desktop_sources WHERE source_ref = ?', [binding.source_ref]))
     .toEqual({ host_name: 'Other Mac' });
+  expect(() => disconnectWatchedFolderBinding(binding.binding_id)).toThrow('watched_folder_not_local');
+  expect(() => removeWatchedFolderBinding(binding.binding_id)).toThrow('watched_folder_not_local');
+  await confirmWatchedFolderReconnect({ bindingId: binding.binding_id, folderPath });
+  expect(driver.queryOne('SELECT host_name FROM desktop_sources WHERE source_ref = ?', [binding.source_ref]))
+    .toEqual({ host_name: loadWatchedFolderBindingState().current_host_name });
+  expect(resolveExecutableWatchedBinding(binding.binding_id, folderPath).executable).toBe(true);
 });
 
 it('removes only the watched connection record and keeps imported data', async () => {

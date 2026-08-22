@@ -25,10 +25,12 @@ function configuredExternalFolders(folders: ExternalSourceSettingsFolder[] | nul
   return folders?.filter((folder) => !isManagedExternalLibraryFolder(folder)) ?? null;
 }
 
-export function resetExternalSourceSettingsFoldersCacheForTest() {
+export function invalidateExternalSourceSettingsFoldersCache() {
   externalSourceSettingsFoldersCache = undefined;
   externalSourceSettingsFoldersLoadPromise = null;
 }
+
+export const resetExternalSourceSettingsFoldersCacheForTest = invalidateExternalSourceSettingsFoldersCache;
 
 export function createDraftExternalSourceFolder(folderPath: string): ExternalSourceSettingsFolder {
   const now = new Date().toISOString();

@@ -48,6 +48,9 @@ it('shows remote and waiting sources above the unchanged local settings', async 
       }),
       binding('waiting', {
         host_name: '', host_platform: '', connection_status: 'needs-folder'
+      }),
+      binding('replaced', {
+        connection_status: 'needs-folder'
       })
     ],
     current_host_name: 'This Mac'
@@ -58,12 +61,13 @@ it('shows remote and waiting sources above the unchanged local settings', async 
   const region = await screen.findByRole('region', { name: 'Other hosts' });
   const remoteGroup = screen.getByRole('group', { name: 'Office PC' });
   const waitingGroup = screen.getByRole('group', { name: 'Waiting for a folder' });
+  const replacedGroup = screen.getByRole('group', { name: 'This Mac' });
   expect(within(region).getByText('Path')).toBeInTheDocument();
   expect(within(remoteGroup).getByText('Windows')).toBeInTheDocument();
   expect(within(remoteGroup).getByRole('button', { name: 'More actions for Office PC' })).toBeInTheDocument();
   expect(within(remoteGroup).getByRole('button', { name: 'More actions for /source/remote' })).toBeInTheDocument();
   expect(within(waitingGroup).getByRole('button', { name: 'More actions for /source/waiting' })).toBeInTheDocument();
-  expect(screen.queryByRole('group', { name: 'This Mac' })).not.toBeInTheDocument();
+  expect(within(replacedGroup).getByRole('button', { name: 'More actions for /source/replaced' })).toBeInTheDocument();
 });
 
 it('does not add an empty workgroup block before local watched-folder settings', async () => {

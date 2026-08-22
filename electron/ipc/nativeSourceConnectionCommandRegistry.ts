@@ -1,6 +1,8 @@
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 
 export const NATIVE_SOURCE_CONNECTION_COMMAND_REGISTRY = [
+  { command: NATIVE_COMMANDS.previewSourceManagement, route: 'storage', capability: 'read' },
+  { command: NATIVE_COMMANDS.confirmSourceManagement, route: 'storage', capability: 'destructiveMutation' },
   { command: NATIVE_COMMANDS.removeExternalSearchFolder, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.disconnectExternalSearchFolder, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.previewExternalSearchFolderReconnect, route: 'storage', capability: 'read' },

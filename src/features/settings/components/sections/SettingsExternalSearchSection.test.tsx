@@ -28,6 +28,7 @@ const baseProps = {
   onReconnectFolder: vi.fn(),
   onRebuildIndex: vi.fn(),
   onRemoveFolder: vi.fn(),
+  onReplaceHost: vi.fn(),
   onRetryLoad: vi.fn(),
   onUpdateFolder: vi.fn()
 };

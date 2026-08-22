@@ -48,7 +48,6 @@ export async function previewExternalSearchFolderReconnect(
   folderPath: string
 ): Promise<NativeExternalSearchReconnectPreview> {
   const row = requireFolder(folderId);
-  if (row.host_name !== loadOrCreateDesktopHostName()) throw new Error('external_folder_not_local');
   const normalizedPath = folderPath.trim();
   assertNoUnsafePathOverlap([...loadManagedPathCandidates(), { label: 'External source', path: normalizedPath }]);
   const entries: ScannedDocumentEntry[] = [];
@@ -75,18 +74,21 @@ export async function reconnectExternalSearchFolder(folderId: string, folderPath
   const preview = await previewExternalSearchFolderReconnect(folderId, folderPath);
   const now = new Date().toISOString();
   const row = requireFolder(folderId);
-  upsertDesktopSource({
-    configRef: folderId,
-    rootPath: preview.folder_path,
-    sourceType: 'external',
-    typeSettings: { attachmentMode: row.attachment_mode, attachmentRootPath: row.attachment_root_path,
-      connectionStatus: 'connected' },
-    updatedAt: now
+  openDatabaseConnection().driver.transaction(() => {
+    upsertDesktopSource({
+      configRef: folderId,
+      rootPath: preview.folder_path,
+      sourceRef: row.source_ref,
+      sourceType: 'external',
+      typeSettings: { attachmentMode: row.attachment_mode, attachmentRootPath: row.attachment_root_path,
+        connectionStatus: 'connected' },
+      updatedAt: now
+    });
+    openDatabaseConnection().driver.execute(
+      `UPDATE external_search_folders SET folder_path = ?, status = 'idle', updated_at = ? WHERE id = ?`,
+      [preview.folder_path, now, folderId]
+    );
+    recordConnectionSync(folderId, now);
   });
-  openDatabaseConnection().driver.execute(
-    `UPDATE external_search_folders SET folder_path = ?, status = 'idle', updated_at = ? WHERE id = ?`,
-    [preview.folder_path, now, folderId]
-  );
-  recordConnectionSync(folderId, now);
   return loadExternalSearchFolders();
 }

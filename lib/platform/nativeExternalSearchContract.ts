@@ -18,6 +18,7 @@ export interface NativeExternalSearchFolder {
   source_executable?: boolean;
   source_host_name?: string;
   source_host_platform?: string;
+  source_ref?: string;
   status: 'error' | 'idle' | 'indexing' | 'ready';
   updated_at: string;
 }
