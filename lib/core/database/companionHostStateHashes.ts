@@ -41,8 +41,9 @@ async function rehashViewState(db: DbPort, objectId: string, hostName: string) {
 }
 
 async function updateStateHash(db: DbPort, type: string, objectId: string, hash: string) {
-  await db.run('UPDATE sync_object_state SET content_hash = ?, sync_dirty = 1 WHERE object_type = ? AND object_id = ?',
-    [hash, type, objectId]);
+  await db.run(`UPDATE sync_object_state SET content_hash = ?,
+    sync_dirty = CASE WHEN content_hash = ? THEN sync_dirty ELSE 1 END
+    WHERE object_type = ? AND object_id = ?`, [hash, hash, type, objectId]);
 }
 
 export function computeCompanionContentHash(value: unknown) {

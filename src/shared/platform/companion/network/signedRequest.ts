@@ -78,9 +78,17 @@ export async function createSignedRequestHeaders(args: {
 export async function prepareNativeCompanionWorkgroupRequest(args: {
   bodyText: string; endpointUrl: string; method: string; pathWithQuery: string;
 }) {
-  if (!isNativeAndroidCompanionRuntime()) throw new Error('android_workgroup_request_required');
+  const prepared = await prepareNativeCompanionWorkgroupRequestIfPresent(args);
+  if (!prepared) throw new Error('android_workgroup_request_required');
+  return prepared;
+}
+
+export async function prepareNativeCompanionWorkgroupRequestIfPresent(args: {
+  bodyText: string; endpointUrl: string; method: string; pathWithQuery: string;
+}) {
+  if (!isNativeAndroidCompanionRuntime()) return null;
   const group = await loadCompanionSyncGroup();
-  if (!group) throw new Error('sync_group_not_available');
+  if (!group) return null;
   const nonce = createCompanionUuid();
   const timestamp = new Date().toISOString();
   const bodyHash = await sha256Hex(args.bodyText);

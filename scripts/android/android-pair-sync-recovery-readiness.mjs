@@ -1,5 +1,4 @@
 import { createHash } from 'node:crypto';
-
 import {
   departedHistoryReadinessEvidence, inspectDepartedHistory
 } from './android-departed-history-inspection.mjs';
@@ -7,8 +6,10 @@ import {
   currentDeliveryStatusCountsByPeerFingerprint,
   pendingDeliveryCountsByPeerFingerprint
 } from './android-pair-sync-peer-delivery-readiness.mjs';
+import { dirtyObjectCounts, dirtySettingStates } from './android-sync-dirty-inspection.mjs';
 import {
-  classifySyncFailure, classifySyncFailureRoute, classifySyncFailureStage
+  boundedSyncFailureDetail, boundedSyncRunDetail, classifySyncFailure,
+  classifySyncFailureRoute, classifySyncFailureStage
 } from './android-sync-failure-classification.mjs';
 import {
   authorizationFingerprint, inspectLocalActiveMemberAuthorizationFingerprint
@@ -24,15 +25,6 @@ function tableExists(database, table) {
 function count(database, table, where = '') {
   if (!tableExists(database, table)) return null;
   return database.prepare(`SELECT COUNT(*) AS count FROM ${table}${where}`).get().count;
-}
-
-function dirtyObjectCounts(database) {
-  if (!tableExists(database, 'sync_object_state')) return {};
-  const statement = database.prepare(`SELECT object_type, COUNT(*) AS count
-    FROM sync_object_state WHERE sync_dirty = 1 AND object_type <> 'view_state'
-    GROUP BY object_type ORDER BY object_type`);
-  if (typeof statement.all !== 'function') return {};
-  return Object.fromEntries(statement.all().map((row) => [row.object_type, Number(row.count)]));
 }
 
 function meta(database, key) {
@@ -120,10 +112,15 @@ export function inspectPairSyncRecoveryWorkspace(database) {
       " WHERE sync_dirty = 1 AND object_type <> 'view_state'"
     ),
     dirtyObjectCounts: dirtyObjectCounts(database),
+    dirtySettingStates: dirtySettingStates(database),
     nodeCount: count(database, 'nodes'),
     latestSyncRunResult: typeof latestSyncRun?.result === 'string'
       ? latestSyncRun.result : null,
+    latestSyncRunDetail: boundedSyncRunDetail(latestSyncRun),
     latestSyncFailureKind: classifySyncFailure(latestSyncRun),
+    latestSyncFailureDetail: boundedSyncFailureDetail(latestSyncRun),
+    latestSyncFailureOnStoredEndpoint: latestSyncRun?.status === 'failed'
+      ? latestSyncRun.endpoint_url === meta(database, 'workspace_sync_endpoint_url') : null,
     latestSyncFailureRoute: classifySyncFailureRoute(latestSyncRun),
     latestSyncFailureStage: classifySyncFailureStage(latestSyncRun),
     latestSyncRunStatus: typeof latestSyncRun?.status === 'string'
@@ -197,10 +194,14 @@ export function pairSyncRecoveryReadiness(
     databaseAvailabilityReason,
     dirtyRecordCount: inspection?.dirtyRecordCount ?? null,
     dirtyObjectCounts: inspection?.dirtyObjectCounts ?? {},
+    dirtySettingStates: inspection?.dirtySettingStates ?? [],
     missingPrerequisites,
     nodeCount: inspection?.nodeCount ?? null,
     latestSyncRunResult: inspection?.latestSyncRunResult ?? null,
+    latestSyncRunDetail: inspection?.latestSyncRunDetail ?? null,
     latestSyncFailureKind: inspection?.latestSyncFailureKind ?? null,
+    latestSyncFailureDetail: inspection?.latestSyncFailureDetail ?? null,
+    latestSyncFailureOnStoredEndpoint: inspection?.latestSyncFailureOnStoredEndpoint ?? null,
     latestSyncFailureRoute: inspection?.latestSyncFailureRoute ?? null,
     latestSyncFailureStage: inspection?.latestSyncFailureStage ?? null,
     latestSyncRunStatus: inspection?.latestSyncRunStatus ?? null,
@@ -211,8 +212,7 @@ export function pairSyncRecoveryReadiness(
     pairingCredentialRejectionReason: inspection?.pairingCredentialRejectionReason ?? null,
     pairingCredentialsRejected: inspection?.pairingCredentialsRejected === true,
     pairingPeerConflict,
-    localMemberAuthorizationFingerprint:
-      inspection?.localMemberAuthorizationFingerprint ?? null,
+    localMemberAuthorizationFingerprint: inspection?.localMemberAuthorizationFingerprint ?? null,
     hostName: typeof inspection?.hostName === 'string' ? inspection.hostName : null,
     pairingPeerAuthorizationFingerprint,
     storedAuthorizationFingerprint,

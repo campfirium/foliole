@@ -36,6 +36,7 @@ export async function applyCompanionSyncPackPathWithSharedCore(
     sourcePeerId: args.sourcePeerId
   }, manager);
   assertSyncPackCursorAdvance({
+    appliedFactCount: result.applied_group_fact_count,
     appliedObjectCount: result.applied_object_count,
     currentCursor: currentCursor ?? 0,
     handledConflictCount: result.handled_conflict_count ?? 0,
@@ -89,6 +90,7 @@ export async function applyCompanionSyncPackNodesWithDbPort(
     }).then((result) => ({
       ...result,
       applied_blob_count: result.appliedBlobCount,
+      applied_group_fact_count: result.appliedGroupFactCount,
       applied_object_count: result.appliedObjectCount,
       appliedPackBlobCount: result.appliedBlobCount,
       appliedPackObjectCount: result.appliedObjectCount,

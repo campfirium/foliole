@@ -21,7 +21,9 @@ final class FolioleCompanionExistingPairSyncEvidence {
             JSONObject evidence = FolioleCompanionPairSyncEvidence.terminalEvidence(state);
             FolioleCompanionPairSyncEvidence.emit(instrumentation, state);
             if ("failed".equals(evidence.optString("initialSync"))) {
-                throw new IllegalStateException("Existing workspace sync failed.");
+                throw new IllegalStateException(
+                    "Existing workspace sync failed: " + boundedSyncFailure(state) + "."
+                );
             }
             if (isTargetVisible(instrumentation, webView, "companion-sync-inline-attention")) {
                 throw new IllegalStateException("Initial workspace sync settled with attention.");
@@ -121,5 +123,10 @@ final class FolioleCompanionExistingPairSyncEvidence {
         Instrumentation instrumentation, WebView webView, String testId
     ) throws Exception {
         return !"missing".equals(targetState(instrumentation, webView, testId));
+    }
+
+    private static String boundedSyncFailure(JSONObject state) {
+        String failure = state.optString("syncFailure", "unknown");
+        return failure.matches("sync-push-http-[0-9]{3}(?:-[a-z_]+)?") ? failure : "unknown";
     }
 }

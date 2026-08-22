@@ -98,6 +98,8 @@ it('keeps an explicitly approved credential recovery on the existing active memb
   expect(recovered.members).toHaveLength(2);
   expect(recovered.members.find((member) => member.host_name === 'Xiaomi 23049RAD8C'))
     .toMatchObject({ authorization_id: 'join-a5', host_name: 'Xiaomi 23049RAD8C' });
+  expect(sqlite.prepare('SELECT COUNT(*) AS value FROM sync_group_member_departures').get())
+    .toEqual({ value: 0 });
 });
 
 it('persists the current host name for an existing local membership', () => {

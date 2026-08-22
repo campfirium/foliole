@@ -16,9 +16,11 @@ function snapshot({ credentialsRejected = false, dirty = 0, nodes = 0, syncFailu
       if (value === 'device_id') return { value: 'android-device-1' };
       if (value === 'workspace_sync_events' && (credentialsRejected || syncFailureMessage)) return {
         value: JSON.stringify([{
-          kind: 'run_finished', message: syncFailureMessage ?? 'Desktop returned 401.', status: 'failed'
+          endpoint_url: 'http://desktop:38641', kind: 'run_finished',
+          message: syncFailureMessage ?? 'Desktop returned 401.', status: 'failed'
         }])
       };
+      if (value === 'workspace_sync_endpoint_url') return { value: 'http://desktop:38641' };
       return undefined;
     }
     if (sql.includes('sync_object_state')) return { count: dirty };
@@ -165,9 +167,11 @@ it('reports an allowlisted desktop credential-rejection reason without response 
 
 it('classifies a local Sync Group signing failure as an exact credential repair signal', () => {
   const input = snapshot({
-    syncFailureMessage: 'Failed to sign companion sync request.', nodes: 1293
+    syncFailureMessage: 'Failed to sign companion sync request. http://192.168.0.8:38641', nodes: 1293
   });
   expect(pairSyncRecoveryReadiness(input, true, '0123456789abcdef')).toMatchObject({
+    latestSyncFailureDetail: 'Failed to sign companion sync request. <endpoint>',
+    latestSyncFailureOnStoredEndpoint: true,
     pairingCredentialRejectionReason: 'local_signing_unavailable',
     pairingCredentialsRejected: true
   });

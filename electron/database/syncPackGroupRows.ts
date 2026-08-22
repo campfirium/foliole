@@ -44,8 +44,14 @@ export function loadSyncPackGroupRows(driver: DatabaseDriver) {
     [groupId!]
   );
   const departures = groups.length === 0 ? [] : driver.queryAll<SyncPackGroupDepartureRow>(
-    `SELECT group_id, host_name, authorized_by_host_name, authorization_id, left_at
-     FROM sync_group_member_departures WHERE group_id = ? ORDER BY left_at, host_name`,
+    `SELECT departure.group_id, departure.host_name, departure.authorized_by_host_name,
+            departure.authorization_id, departure.left_at
+     FROM sync_group_member_departures departure
+     WHERE departure.group_id = ? AND EXISTS (
+       SELECT 1 FROM sync_group_members member WHERE member.group_id = departure.group_id
+         AND (member.host_name = departure.host_name
+           OR member.authorization_id = departure.authorization_id)
+     ) ORDER BY departure.left_at, departure.host_name`,
     [groupId!]
   );
   return { departures, groups, members };

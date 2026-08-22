@@ -30,6 +30,7 @@ export async function applyIosCompanionSyncPackPath(
       ...(args.sourceHostName === undefined ? {} : { sourceHostName: args.sourceHostName })
     }, db));
     assertSyncPackCursorAdvance({
+      appliedFactCount: result.applied_group_fact_count,
       appliedObjectCount: result.applied_object_count,
       currentCursor,
       handledConflictCount: result.handled_conflict_count ?? 0,

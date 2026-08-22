@@ -12,6 +12,7 @@ it.each([
     'workgroup_aead_response_required'],
   ['Desktop HTTP request failed. Cause: ConnectException: Failed to connect.', 'connection_failed'],
   ['Failed to apply companion desktop sync pack. constraint failed', 'sync_pack_apply_failed'],
+  ['sync_group_departure_authorization_invalid:member_missing', 'sync_group_departure_invalid'],
   ['Unexpected failure detail', 'unclassified']
 ])('reports a bounded sync failure kind without exposing its detail', (message, expected) => {
   expect(classifySyncFailure({ message, status: 'failed' })).toBe(expected);

@@ -3,6 +3,9 @@ import { beforeEach, expect, it, vi } from 'vitest';
 const pairingMock = vi.hoisted(() => ({
   createSignedRequestHeaders: vi.fn(async () => ({ 'X-Signature': 'signed' }))
 }));
+const workgroupMock = vi.hoisted(() => ({
+  prepare: vi.fn(async (): Promise<null | { body: string; headers: Record<string, string> }> => null)
+}));
 
 const capacitorMock = vi.hoisted(() => ({
   getPlatform: vi.fn(() => 'web'),
@@ -13,6 +16,9 @@ const capacitorMock = vi.hoisted(() => ({
 }));
 
 vi.mock('./companionWorkspacePairing', () => pairingMock);
+vi.mock('./companion/network/signedRequest', () => ({
+  prepareNativeCompanionWorkgroupRequestIfPresent: workgroupMock.prepare
+}));
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
     getPlatform: capacitorMock.getPlatform,
@@ -28,6 +34,23 @@ beforeEach(() => {
   vi.unstubAllGlobals();
   capacitorMock.getPlatform.mockReturnValue('web');
   capacitorMock.isNativePlatform.mockReturnValue(false);
+  workgroupMock.prepare.mockResolvedValue(null);
+});
+
+it('sends the opaque Android workgroup envelope that its signature covers', async () => {
+  capacitorMock.getPlatform.mockReturnValue('android');
+  capacitorMock.isNativePlatform.mockReturnValue(true);
+  capacitorMock.plugin.desktopHttpRequest.mockResolvedValue({ body: '{"ok":true}', status: 200 });
+  workgroupMock.prepare.mockResolvedValue({
+    body: 'encrypted-push', headers: { 'Content-Type': 'application/vnd.foliole.workgroup-aead+json' }
+  });
+
+  await postDesktopJson('http://desktop.local/', '/companion/sync-push', { items: [] });
+
+  expect(capacitorMock.plugin.desktopHttpRequest).toHaveBeenCalledWith(expect.objectContaining({
+    body: 'encrypted-push', headers: { 'Content-Type': 'application/vnd.foliole.workgroup-aead+json' }
+  }));
+  expect(pairingMock.createSignedRequestHeaders).not.toHaveBeenCalled();
 });
 
 it('throws fetch errors with path, status, and response body', async () => {

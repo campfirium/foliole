@@ -30,7 +30,11 @@ it('exports only stable Sync Group membership facts', () => {
       [hostName, state, `authorization-${hostName}`, now, now]
     );
   }
+  driver.execute(`INSERT INTO sync_group_member_departures
+    (group_id, host_name, authorized_by_host_name, authorization_id, left_at)
+    VALUES ('group-1', 'orphan-host', 'device-a', 'orphan-leave', ?)`, [now]);
 
   expect(loadSyncPackGroupRows(driver).members.map((member) => member.host_name)).toEqual(['device-a']);
+  expect(loadSyncPackGroupRows(driver).departures).toEqual([]);
   sqlite.close();
 });

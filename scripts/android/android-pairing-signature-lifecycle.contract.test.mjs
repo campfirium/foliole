@@ -79,7 +79,8 @@ it('prepares and sends an outbound envelope without a provider session', async (
   expect(currentPreparation).not.toContain('FolioleCompanionWorkgroupSession');
   expect(keyPreparation).not.toContain('FolioleCompanionWorkgroupSession');
   expect(client).toContain('? FolioleCompanionWorkgroupHttp.acceptPrepared');
-  expect(client).toContain('&& !preparedWorkgroup');
+  expect(client).toContain('if (prepared.headers.has("X-Sync-Group-Id"))');
+  expect(client).not.toContain('&& !preparedWorkgroup');
 });
 
 it('loads production group signing material through the shared data-owner bridge', async () => {

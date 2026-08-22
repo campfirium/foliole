@@ -1,4 +1,5 @@
 export function assertSyncPackCursorAdvance(args: {
+  appliedFactCount?: number;
   appliedObjectCount: number;
   currentCursor: number;
   handledConflictCount: number;
@@ -6,6 +7,7 @@ export function assertSyncPackCursorAdvance(args: {
 }) {
   if (
     args.toStateSeq > args.currentCursor &&
+    (args.appliedFactCount ?? 0) === 0 &&
     args.appliedObjectCount === 0 &&
     args.handledConflictCount === 0
   ) {

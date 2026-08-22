@@ -75,7 +75,7 @@
       state.initialSync = 'started';
       return call().then(function (value) {
         if (!value || value.status < 200 || value.status >= 300) {
-          state.initialSync = 'failed'; state.syncFailure = 'sync-push-http-' + (value && value.status);
+          state.initialSync = 'failed'; state.syncFailure = syncPushFailure(value);
         }
         return value;
       }, function (error) { state.initialSync = 'failed'; state.syncFailure = String(error); throw error; });
@@ -89,6 +89,12 @@
   }
   function pairingCanSync(state) {
     return state.credentials === 'saved_signable' || state.completion === 'existing_pairing';
+  }
+  function syncPushFailure(value) {
+    var allowed = /^(expired_timestamp|invalid_signature|missing_headers|sync_group_member_not_authorized|sync_group_workgroup_key_missing|workgroup_aead_invalid)$/;
+    var detail = null;
+    try { detail = JSON.parse(value && value.body || '{}').error; } catch { /* bounded below */ }
+    return 'sync-push-http-' + (value && value.status) + (allowed.test(detail) ? '-' + detail : '');
   }
   function observeSyncPack(state, methodName, call, args) {
     if (!pairingCanSync(state)) return call();

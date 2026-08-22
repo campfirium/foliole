@@ -1,3 +1,4 @@
+import { prepareNativeCompanionWorkgroupRequestIfPresent } from './companion/network/signedRequest';
 import { createSignedRequestHeaders } from './companionWorkspacePairing';
 import {
   FolioleCompanionSync,
@@ -31,9 +32,12 @@ export async function fetchDesktopJson<T>(endpointUrl: string, pathWithQuery: st
 export async function postDesktopJson<T>(endpointUrl: string, pathWithQuery: string, body: unknown): Promise<T> {
   const endpoint = normalizeEndpointUrl(endpointUrl);
   const bodyText = JSON.stringify(body);
+  const prepared = await prepareNativeCompanionWorkgroupRequestIfPresent({
+    bodyText, endpointUrl: endpoint, method: 'POST', pathWithQuery
+  });
   const response = await requestDesktop(`${endpoint}${pathWithQuery}`, {
-    body: bodyText,
-    headers: {
+    body: prepared?.body ?? bodyText,
+    headers: prepared?.headers ?? {
       'Content-Type': 'application/json',
       ...await createSignedRequestHeaders({ bodyText, endpointUrl: endpoint, method: 'POST', pathWithQuery })
     },

@@ -57,6 +57,7 @@ async function pullRemoteStructurePack(endpointUrl: string) {
     url: `${normalizeEndpointUrl(endpointUrl)}${pathWithQuery}`
   });
   assertSyncPackCursorAdvance({
+    appliedFactCount: result.applied_group_fact_count ?? 0,
     appliedObjectCount: result.applied_object_count,
     currentCursor: cursor ?? 0,
     handledConflictCount: result.handled_conflict_count ?? 0,

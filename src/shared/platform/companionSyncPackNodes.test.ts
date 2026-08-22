@@ -29,6 +29,8 @@ it('attaches a sync pack before applying pack nodes through the shared core', as
     applied: true,
     applied_blob_count: 0,
     appliedBlobCount: 0,
+    applied_group_fact_count: 0,
+    appliedGroupFactCount: 0,
     applied_object_count: 0,
     appliedPackBlobCount: 0,
     appliedPackObjectCount: 0,
@@ -57,14 +59,15 @@ it('attaches a sync pack before applying pack nodes through the shared core', as
   expect(connection.run).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO main.nodes'), [], false);
 });
 
-it('allows cursor advance when a pack only handled conflicts', () => {
-  expect(() => assertSyncPackCursorAdvance({
-    appliedObjectCount: 0,
-    currentCursor: 2,
-    handledConflictCount: 1,
-    toStateSeq: 5
-  })).not.toThrow();
-});
+it.each([{ appliedFactCount: 0, handledConflictCount: 1 }, { appliedFactCount: 3, handledConflictCount: 0 }])(
+  'allows cursor advance for consumed facts or handled conflicts', (counts) => {
+    expect(() => assertSyncPackCursorAdvance({
+      ...counts,
+      appliedObjectCount: 0,
+      currentCursor: 2,
+      toStateSeq: 5
+    })).not.toThrow();
+  });
 
 it('reuses an already open companion database connection', async () => {
   const connection = createFakeConnection();

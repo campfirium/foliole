@@ -76,14 +76,6 @@ function renameAuthorizedHost(
   driver.execute(`DELETE FROM sync_group_members
     WHERE group_id = ? AND host_name = ? AND state = 'left' AND updated_at < ?`,
   [groupId, nextHostName, now]);
-  driver.execute(`INSERT INTO sync_group_member_departures (
-    group_id, host_name, authorized_by_host_name, authorization_id, left_at
-  ) VALUES (?, ?, ?, ?, ?)
-  ON CONFLICT(authorization_id) DO UPDATE SET host_name = excluded.host_name,
-    authorized_by_host_name = excluded.authorized_by_host_name, left_at = excluded.left_at`,
-  [groupId, previousHostName, nextHostName,
-    driver.queryOne<{ authorization_id: string }>(`SELECT authorization_id FROM sync_group_members
-      WHERE group_id = ? AND host_name = ? LIMIT 1`, [groupId, previousHostName])!.authorization_id, now]);
   driver.execute('UPDATE sync_groups SET created_by_host_name = ? WHERE group_id = ? AND created_by_host_name = ?',
     [nextHostName, groupId, previousHostName]);
   driver.execute('UPDATE sync_group_members SET approved_by_host_name = ? WHERE group_id = ? AND approved_by_host_name = ?',

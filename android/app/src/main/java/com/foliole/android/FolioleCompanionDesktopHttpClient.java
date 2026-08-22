@@ -56,7 +56,7 @@ final class FolioleCompanionDesktopHttpClient {
         JSObject result = new JSObject();
         result.put(FolioleCompanionHostBridgeContractDefinitions.networkStatusResponseKey(context), status);
         byte[] responseBody = readBytes(status >= 400 ? connection.getErrorStream() : connection.getInputStream());
-        if (prepared.headers.has("X-Sync-Group-Id") && !preparedWorkgroup) {
+        if (prepared.headers.has("X-Sync-Group-Id")) {
             responseBody = FolioleCompanionWorkgroupHttp.decryptResponse(
                 context, connection, method, prepared.path, responseBody);
         }

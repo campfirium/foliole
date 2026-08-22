@@ -33,7 +33,7 @@ export async function applySyncPackGroupFactsWithDbPort(port: DbPort, args: {
 }) {
   const alias = identifier(args.incomingAlias ?? 'inc');
   const incomingGroups = await port.query<GroupRow>(`SELECT * FROM ${alias}.sync_groups`);
-  if (incomingGroups.length === 0) return { appliedMemberCount: 0 };
+  if (incomingGroups.length === 0) return { appliedFactCount: 0 };
   if (incomingGroups.length !== 1) throw new Error('sync_group_pack_identity_invalid');
   const incomingGroup = incomingGroups[0]!;
   const local = (await port.query<GroupRow & { local_host_name: string }>(
@@ -67,7 +67,7 @@ export async function applySyncPackGroupFactsWithDbPort(port: DbPort, args: {
   await port.run(`UPDATE main.sync_groups SET created_by_host_name = ?, updated_at = ?
     WHERE group_id = ?`, [incomingGroup.created_by_host_name, now, incomingGroup.group_id]);
   for (const departure of departures) await mergeDeparture(port, departure, now);
-  return { appliedMemberCount: members.length };
+  return { appliedFactCount: 1 + members.length + departures.length };
 }
 
 function assertSameGroup(local: GroupRow | undefined, incoming: GroupRow): asserts local is GroupRow {
@@ -110,13 +110,15 @@ function validateFacts(group: GroupRow, members: MemberRow[], departures: Depart
     if (member && departure.left_at < member.joined_at) continue;
     const authorizer = byHost.get(departure.authorized_by_host_name);
     const authorizerDeparture = departureByHost.get(departure.authorized_by_host_name);
-    if (!member || !authorizer || departure.group_id !== group.group_id
-      || authorizer.joined_at > departure.left_at
-      || (authorizerDeparture && authorizerDeparture.left_at < departure.left_at)
-      || (departure.host_name === member.host_name
-        && departure.left_at >= member.joined_at && member.state !== 'left')) {
-      throw new Error('sync_group_departure_authorization_invalid');
+    if (!member) throw new Error('sync_group_departure_authorization_invalid:member_missing');
+    if (!authorizer) throw new Error('sync_group_departure_authorization_invalid:authorizer_missing');
+    if (departure.group_id !== group.group_id) throw new Error('sync_group_departure_authorization_invalid:group_mismatch');
+    if (authorizer.joined_at > departure.left_at) throw new Error('sync_group_departure_authorization_invalid:authorizer_not_joined');
+    if (authorizerDeparture && authorizerDeparture.left_at < departure.left_at) {
+      throw new Error('sync_group_departure_authorization_invalid:authorizer_already_left');
     }
+    if (departure.host_name === member.host_name && departure.left_at >= member.joined_at
+      && member.state !== 'left') throw new Error('sync_group_departure_authorization_invalid:member_still_active');
   }
   if (members.some((member) => member.state === 'left' && !departureByHost.has(member.host_name))) {
     throw new Error('sync_group_departure_fact_missing');

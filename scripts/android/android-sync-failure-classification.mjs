@@ -17,9 +17,19 @@ export function classifySyncFailure(event) {
   if (message.includes('workgroup_aead_response_required')) return 'workgroup_aead_response_required';
   if (message.includes('workgroup_aead_replayed')) return 'workgroup_aead_replayed';
   if (message.includes('Failed to sign companion sync request.')) return 'local_signing_unavailable';
+  if (message.includes('sync_group_departure_authorization_invalid')) return 'sync_group_departure_invalid';
   if (message.includes('Failed to apply companion desktop sync pack.')) return 'sync_pack_apply_failed';
   if (/ConnectException|Failed to connect/iu.test(message)) return 'connection_failed';
   return 'unclassified';
+}
+
+export function boundedSyncFailureDetail(event) {
+  return event?.status === 'failed' ? boundedSyncRunDetail(event) : null;
+}
+
+export function boundedSyncRunDetail(event) {
+  return typeof event?.message === 'string'
+    ? event.message.replace(/https?:\/\/\S+/giu, '<endpoint>').slice(0, 240) : null;
 }
 
 export function classifySyncFailureRoute(event) {

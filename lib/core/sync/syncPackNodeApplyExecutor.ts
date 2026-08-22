@@ -12,10 +12,7 @@ import {
 } from './syncPackApplyStatements.js';
 import { applySyncPackAttachmentObjectsWithDbPort } from './syncPackAttachmentObjectsExecutor.js';
 import { applySyncPackContentBlobsWithDbPort } from './syncPackContentBlobsExecutor.js';
-import {
-  assertContiguousSyncPackCursor,
-  readSyncPackCursorWithDbPort
-} from './syncPackCursor.js';
+import { assertContiguousSyncPackCursor, readSyncPackCursorWithDbPort } from './syncPackCursor.js';
 import { applySyncPackExternalDocumentsWithDbPort } from './syncPackExternalDocumentsExecutor.js';
 import { applySyncPackGroupFactsWithDbPort } from './syncPackGroupFactsExecutor.js';
 import { applySyncPackLearningObjectsWithDbPort } from './syncPackLearningObjectsExecutor.js';
@@ -129,6 +126,7 @@ export async function applySyncPackNodeSurfaceWithDbPort(
   return {
     applied: shouldApply,
     appliedBlobCount: result.appliedBlobCount,
+    appliedGroupFactCount: result.appliedGroupFactCount,
     appliedObjectCount: result.appliedObjectCount,
     appliedReviewOpIds: result.appliedReviewOpIds,
     handledConflictCount: result.handledConflictCount,
@@ -147,13 +145,14 @@ async function applySyncPackSurfaceInTransaction(
     await clearConfirmedSyncPushAcks(port, options, toStateSeq);
     return {
       appliedBlobCount: 0,
+      appliedGroupFactCount: 0,
       appliedObjectCount: 0,
       appliedReviewOpIds: [] as string[],
       handledConflictCount: 0
     };
   }
   const applyOptions = options;
-  await applySyncPackGroupFactsWithDbPort(port, {
+  const groupFacts = await applySyncPackGroupFactsWithDbPort(port, {
     ...(options.incomingAlias === undefined ? {} : { incomingAlias: options.incomingAlias }),
     sourceHostName: options.sourceHostName ?? options.sourcePeerId!
   });
@@ -182,6 +181,7 @@ async function applySyncPackSurfaceInTransaction(
   await clearConfirmedSyncPushAcks(port, options, toStateSeq);
   return {
     appliedBlobCount,
+    appliedGroupFactCount: groupFacts.appliedFactCount,
     appliedObjectCount: appliedObjectCount + nodeConvergence.appliedNodeCount,
     appliedReviewOpIds,
     handledConflictCount: nodeConvergence.handledConflictCount

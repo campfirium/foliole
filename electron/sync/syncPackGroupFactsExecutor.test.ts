@@ -23,10 +23,11 @@ it('merges a third member approved by B when A rejoins the same timeline', async
   seedGroup(sqlite, 'inc', ['a', 'b', 'c']);
   const port = createBetterSqliteDbPort(sqlite, { name: 'group-facts-test' });
 
-  await port.transaction((tx) => applySyncPackGroupFactsWithDbPort(tx, {
+  const result = await port.transaction((tx) => applySyncPackGroupFactsWithDbPort(tx, {
     incomingAlias: 'inc', sourceHostName: 'b'
   }));
 
+  expect(result).toEqual({ appliedFactCount: 4 });
   expect(sqlite.prepare("SELECT approved_by_host_name FROM sync_group_members WHERE host_name = 'c'").get())
     .toEqual({ approved_by_host_name: 'b' });
 });
