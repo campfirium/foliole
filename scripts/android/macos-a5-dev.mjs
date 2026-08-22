@@ -12,28 +12,27 @@ import {
 import {
   closeMacosA5BuildCapsule, openMacosA5BuildCapsule
 } from './macos-a5-build-capsule.mjs';
+import {
+  dispatchMacosA5Action, macosA5ErrorEvidence
+} from './macos-a5-action-dispatch.mjs';
 import { runMacosA5Cli } from './macos-a5-cli.mjs';
 import {
   closeMacosA5Run, createMacosA5ExecutionContext, openMacosA5Run
 } from './macos-a5-execution-context.mjs';
-import {
-  macosA5ErrorEvidence,
-  recoverMacosA5SyncGroupRejoinEntry,
-  runMacosA5ClearAppDataEntry,
-  runMacosA5SettledStoppedStatus,
-  runMacosA5DatabasePerformanceEntry,
-  runMacosA5ExistingSyncEntry,
-  runMacosA5PairSyncEntry,
-  runMacosA5SyncGroupRejoinEntry
-} from './macos-a5-extended-actions.mjs';
 import {
   createMacosA5CaptureIdentity as captureIdentity,
   runMacosA5CaptureReadiness,
   runMacosA5PairingReadiness
 } from './macos-a5-readiness.mjs';
 import {
-  beginFormalA5Candidate, finishFormalA5Candidate
+  beginFormalA5Candidate
 } from './macos-a5-formal-candidate.mjs';
+import {
+  captureFormalA5Toolchain, completeFormalA5Receipt, failFormalA5Receipt,
+  formalA5AcceptedTipLine, markFormalA5ActionRunning, markFormalA5MutationBoundary,
+  markFormalA5Stage, openFormalA5Receipt,
+  prepareFormalA5ReceiptCompletion
+} from './macos-a5-formal-receipt.mjs';
 import { checked, captured, execute } from './macos-a5-process.mjs';
 import {
   acquireMacosA5DeviceLease, releaseMacosA5DeviceLease
@@ -88,12 +87,16 @@ function pairingReadiness(paths) {
   runMacosA5PairingReadiness(checked, paths, A5_SERIAL, APP_ID);
 }
 
-export function build(paths, run = checked) {
+export function build(paths, run = checked, onStage = () => {}) {
+  onStage('web-build');
   run('npm', ['run', 'android:web:build'], { cwd: paths.buildRoot });
+  onStage('capacitor-sync');
   run(paths.cap, ['sync', 'android'], { cwd: paths.buildRoot });
+  onStage('gradle-build');
   run(paths.gradle, ['--no-daemon', 'assembleDebug', 'assembleDebugAndroidTest'], {
     cwd: path.join(paths.buildRoot, 'android'), env: macosA5GradleEnv()
   });
+  onStage('apk-check');
   if (!existsSync(paths.apk)) throw new Error(`Debug APK was not produced: ${paths.apk}`);
 }
 
@@ -106,10 +109,13 @@ function launchAndVerify(paths) {
   ], { cwd: paths.buildRoot });
 }
 
-async function deploy(paths) {
+async function deploy(
+  paths, buildIdentity = captureIdentity, markMutationBoundary = () => {}, buildAction = build
+) {
   assertFixedA5(paths);
-  build(paths);
-  const runId = captureIdentity();
+  buildAction(paths);
+  markMutationBoundary();
+  const runId = buildIdentity();
   const evidenceRoot = path.join(paths.artifactsRoot, 'a5-deploy', runId);
   const snapshotRoot = path.join(paths.deviceBackupRoot, runId);
   const baselineManifest = path.join(evidenceRoot, 'baseline.json');
@@ -135,16 +141,19 @@ export async function protectData(paths, env, mode, manifest, backupRoot) {
   return result;
 }
 
-async function captureAnnotation(paths) {
+async function captureAnnotation(
+  paths, buildIdentity = captureIdentity, markMutationBoundary = () => {}, buildAction = build
+) {
   assertFixedA5(paths);
   readiness(paths);
-  build(paths);
-  const buildIdentity = captureIdentity();
-  const evidenceRoot = path.join(paths.artifactsRoot, 'a5-capture-annotation', buildIdentity);
+  buildAction(paths);
+  const runId = buildIdentity();
+  const evidenceRoot = path.join(paths.artifactsRoot, 'a5-capture-annotation', runId);
   const env = macosA5GradleEnv();
+  markMutationBoundary();
   const { runA5CaptureAnnotation } = await import('./android-a5-capture-annotation-action.mjs');
   const result = await runA5CaptureAnnotation({
-    adbPort: '5037', buildIdentity, env, evidenceRoot, execute, paths: {
+    adbPort: '5037', buildIdentity: runId, env, evidenceRoot, execute, paths: {
       adbPath: paths.adb, buildRoot: paths.buildRoot
     },
     protectData: (mode, manifest, backupRoot) => protectData(paths, env, mode, manifest, backupRoot),
@@ -164,54 +173,43 @@ export async function runMacosA5Action(action, repoRoot = process.cwd(), { forma
     action, formalSourceClass: formal ? actionContract.formalSourceClass : null, repoRoot
   });
   openMacosA5Run(context);
+  let receipt;
+  try { receipt = formal ? openFormalA5Receipt(context, actionContract) : null; }
+  catch (error) { closeMacosA5Run(context); throw error; }
   let lease;
+  let failure;
   try {
-    if (formalCandidate) context = openMacosA5BuildCapsule(context);
+    if (formalCandidate) context = openMacosA5BuildCapsule(context, {
+      onStage: (stage) => markFormalA5Stage(receipt, `capsule-${stage}`)
+    });
     const paths = macosA5Paths(context);
     assertSafeMacosA5Environment(paths);
+    if (receipt) captureFormalA5Toolchain(receipt, paths, (command, args, options) =>
+      spawnSync(command, args, { ...options, env: macosA5GradleEnv() }));
     if (actionContract.deviceLeaseMode) {
       lease = acquireMacosA5DeviceLease(context, actionContract.deviceLeaseMode);
     }
-    if (action === 'build') build(paths);
-    if (action === 'status') {
-      assertFixedA5(paths);
-      pairingReadiness(paths);
-      readiness(paths);
-    }
-    if (action === 'sync-group-stopped-status') {
-      await runMacosA5SettledStoppedStatus({ assertFixed: () => assertFixedA5(paths), checked,
-        env: macosA5GradleEnv(), pairingReadiness, paths, readiness, serial: A5_SERIAL });
-    }
-    if (action === 'deploy') await deploy(paths);
-    if (action === 'capture-annotation') await captureAnnotation(paths);
-    if (action === 'database-performance') await runMacosA5DatabasePerformanceEntry({
-      assertFixed: () => assertFixedA5(paths), build: () => build(paths), env: macosA5GradleEnv(), execute, paths, serial: A5_SERIAL });
-    if (action === 'device-profile') {
-      const { runMacosA5DeviceProfileEntry } = await import('./macos-a5-device-profile-action.mjs');
-      await runMacosA5DeviceProfileEntry({
-        assertFixed: () => assertFixedA5(paths), build: () => build(paths), buildIdentity: captureIdentity,
-        captured, checked, paths,
-        protectData: (mode, manifest, backupRoot) => protectData(paths, macosA5GradleEnv(), mode, manifest, backupRoot),
-        serial: A5_SERIAL
-      });
-    }
-    const productArgs = {
-      assertFixed: () => assertFixedA5(paths), build: () => build(paths), buildIdentity: captureIdentity,
-      checked, env: macosA5GradleEnv(), execute, paths,
+    if (receipt) (actionContract.mutatesFixedA5
+      ? markFormalA5Stage(receipt, 'action-preflight') : markFormalA5ActionRunning(receipt));
+    const buildIdentity = formal ? () => context.runId : captureIdentity;
+    const runBuild = (actionPaths) => build(actionPaths, checked,
+      (stage) => receipt && markFormalA5Stage(receipt, stage));
+    await dispatchMacosA5Action({ action, assertFixed: assertFixedA5, build: runBuild, buildIdentity,
+      captureAnnotation, captured, checked, deploy, env: macosA5GradleEnv(), execute,
+      markMutationBoundary: () => receipt && markFormalA5MutationBoundary(receipt),
+      pairingReadiness, paths,
       protectData: (mode, manifest, backupRoot) => protectData(
         paths, macosA5GradleEnv(), mode, manifest, backupRoot
-      ), serial: A5_SERIAL
-    };
-    if (action === 'pair-sync') await runMacosA5PairSyncEntry(productArgs);
-    if (action === 'pair-credentials') await (await import('./macos-a5-pair-credentials-action.mjs')).runMacosA5PairCredentialsEntry(productArgs);
-    if (action === 'leave-sync-group') await (await import('./macos-a5-leave-sync-group-entry.mjs')).runMacosA5LeaveSyncGroupEntry(productArgs);
-    if (action === 'clear-app-data') await runMacosA5ClearAppDataEntry(productArgs);
-    if (action === 'sync-existing') await runMacosA5ExistingSyncEntry(productArgs);
-    if (action === 'sync-group-rejoin') await runMacosA5SyncGroupRejoinEntry(productArgs);
-    if (action === 'sync-group-rejoin-recover') {
-      await recoverMacosA5SyncGroupRejoinEntry(productArgs);
+      ), readiness, serial: A5_SERIAL });
+    if (receipt) {
+      markFormalA5Stage(receipt, 'action-evidence');
+      prepareFormalA5ReceiptCompletion(receipt, context, paths);
     }
-  } finally {
+  } catch (error) {
+    failure = error;
+  }
+  try {
+    if (receipt) markFormalA5Stage(receipt, 'cleanup');
     const paths = macosA5Paths(context);
     if (actionContract.deviceLeaseMode) spawnSync(paths.adb, ['kill-server']);
     try {
@@ -220,9 +218,16 @@ export async function runMacosA5Action(action, repoRoot = process.cwd(), { forma
       try { closeMacosA5BuildCapsule(context); }
       finally { closeMacosA5Run(context); }
     }
+  } catch (error) {
+    failure ??= error;
   }
-  const acceptedTip = finishFormalA5Candidate(formalCandidate);
-  if (acceptedTip) console.log(`[macos-a5-dev] accepted-tip=${acceptedTip}`);
+  if (failure) {
+    if (receipt) failFormalA5Receipt(receipt, failure);
+    throw failure;
+  }
+  const completedReceipt = receipt ? completeFormalA5Receipt(receipt) : null;
+  const acceptedTip = completedReceipt ? formalA5AcceptedTipLine(completedReceipt) : null;
+  if (acceptedTip) process.stdout.write(acceptedTip);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

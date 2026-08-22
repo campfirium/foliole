@@ -41,7 +41,7 @@ function preserveCapsuleFailure(context, stage, error, fsApi) {
 }
 
 export function openMacosA5BuildCapsule(context, {
-  fsApi = fs, run = checked
+  fsApi = fs, onStage = () => {}, run = checked
 } = {}) {
   if (context.formalSourceClass !== 'frozen-build' || !context.acceptedRevision) {
     throw new Error('A frozen accepted revision is required for a build capsule.');
@@ -58,12 +58,15 @@ export function openMacosA5BuildCapsule(context, {
   const capsule = withMacosA5BuildRoot(context, buildRoot, capsuleRoot);
   let stage = 'archive';
   try {
+    onStage(stage);
     run('git', ['archive', '--format=tar', `--output=${archivePath}`,
       context.acceptedRevision], { cwd: context.sourceRepoRoot });
     stage = 'extract';
+    onStage(stage);
     run('tar', ['-xf', archivePath, '-C', buildRoot], { cwd: capsuleRoot });
     fsApi.unlinkSync(archivePath);
     stage = 'dependencies';
+    onStage(stage);
     run('npm', ['ci'], { cwd: buildRoot });
     return capsule;
   } catch (error) {

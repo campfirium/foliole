@@ -22,6 +22,7 @@ export async function runMacosA5DeviceProfileEntry(args) {
   const baselineManifest = path.join(evidenceRoot, 'baseline.json');
   const profileBaselineManifest = path.join(evidenceRoot, 'device-profile-baseline.json');
   fs.mkdirSync(evidenceRoot, { recursive: true });
+  args.markMutationBoundary?.();
   args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', APP_ID]);
   await args.protectData('backup', baselineManifest, snapshotRoot);
   const baseline = await collectProfileSnapshot(args);

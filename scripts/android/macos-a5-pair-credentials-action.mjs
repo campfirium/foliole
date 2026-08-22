@@ -86,6 +86,7 @@ export async function runMacosA5PairCredentialsEntry(args, dependencies = {}) {
   const evidenceRoot = path.join(
     args.paths.artifactsRoot, 'a5-pair-credentials', buildIdentity
   );
+  args.markMutationBoundary?.();
   const { pairReadiness, pairRequestIdentity, protectedSyncGroup }
     = await prepareFreshCredentialJoin(readiness, {
       collect: collectProtectedReadiness, inspectDesktop: inspectDesktopDeparture,

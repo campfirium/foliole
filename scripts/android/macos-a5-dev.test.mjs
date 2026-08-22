@@ -23,6 +23,7 @@ describe('macOS fixed A5 development entry', () => {
       buildRoot: root, cap: path.join(root, 'node_modules/.bin/cap'),
       gradle: path.join(root, 'android/gradlew') };
     const calls = [];
+    const stages = [];
     try {
       build(paths, (command, args, options) => {
         calls.push({ args, command, cwd: options.cwd });
@@ -30,9 +31,10 @@ describe('macOS fixed A5 development entry', () => {
           fs.mkdirSync(path.dirname(paths.apk), { recursive: true });
           fs.writeFileSync(paths.apk, 'apk');
         }
-      });
+      }, (stage) => stages.push(stage));
       expect(calls.map(({ command }) => command)).toEqual(['npm', paths.cap, paths.gradle]);
       expect(calls.map(({ cwd }) => cwd)).toEqual([root, root, path.join(root, 'android')]);
+      expect(stages).toEqual(['web-build', 'capacitor-sync', 'gradle-build', 'apk-check']);
     } finally { fs.rmSync(root, { force: true, recursive: true }); }
   });
 
@@ -95,8 +97,9 @@ describe('macOS fixed A5 development entry', () => {
 
   it('exposes existing Sync Group sync without accepting an endpoint', () => {
     const source = fs.readFileSync('scripts/android/macos-a5-dev.mjs', 'utf8');
+    const dispatcher = fs.readFileSync('scripts/android/macos-a5-action-dispatch.mjs', 'utf8');
     const extended = fs.readFileSync('scripts/android/macos-a5-extended-actions.mjs', 'utf8');
-    expect(source).toContain("'sync-existing'");
+    expect(dispatcher).toContain("'sync-existing'");
     expect(extended).toContain('args.assertFixed();');
     expect(extended).toContain('credentialRepairRequired: false');
     expect(extended).toContain('existingPairing: true');
@@ -110,16 +113,17 @@ describe('macOS fixed A5 development entry', () => {
 
   it('exposes only explicitly authorized fixed maintenance routes', () => {
     const source = fs.readFileSync('scripts/android/macos-a5-dev.mjs', 'utf8');
+    const dispatcher = fs.readFileSync('scripts/android/macos-a5-action-dispatch.mjs', 'utf8');
     const registry = fs.readFileSync('scripts/android/macos-a5-action-registry.mjs', 'utf8');
     const leave = fs.readFileSync('scripts/android/macos-a5-leave-sync-group-entry.mjs', 'utf8');
     const extended = fs.readFileSync('scripts/android/macos-a5-extended-actions.mjs', 'utf8');
     const generic = fs.readFileSync('scripts/sync-group/multi-device-sync-stage-actions.mjs', 'utf8');
     expect(registry).toContain("'leave-sync-group'");
-    expect(source).toContain('runMacosA5LeaveSyncGroupEntry');
+    expect(dispatcher).toContain('runMacosA5LeaveSyncGroupEntry');
     expect(leave).toContain('collectCredentialProtectedReadiness');
     expect(leave).toContain('leaveJoinedEmptyCredentialSession');
-    expect(source).toContain("'clear-app-data'");
-    expect(source).toContain('runMacosA5ClearAppDataEntry');
+    expect(dispatcher).toContain("'clear-app-data'");
+    expect(dispatcher).toContain('runMacosA5ClearAppDataEntry');
     expect(extended).toContain("['-s', args.serial, 'shell', 'pm', 'clear', APP_ID]");
     expect(extended).toContain("action: 'activate-participation'");
     expect(extended).toContain('installMain: false');
@@ -130,9 +134,10 @@ describe('macOS fixed A5 development entry', () => {
 
   it('keeps fixed Leave independent from the T132 rejoin journey', () => {
     const source = fs.readFileSync('scripts/android/macos-a5-dev.mjs', 'utf8');
+    const dispatcher = fs.readFileSync('scripts/android/macos-a5-action-dispatch.mjs', 'utf8');
     const extended = fs.readFileSync('scripts/android/macos-a5-extended-actions.mjs', 'utf8');
-    expect(source).toContain("'sync-group-rejoin'");
-    expect(source).toContain('runMacosA5LeaveSyncGroupEntry');
+    expect(dispatcher).toContain("'sync-group-rejoin'");
+    expect(dispatcher).toContain('runMacosA5LeaveSyncGroupEntry');
     expect(source).not.toContain('process.argv[3]');
     expect(extended).toContain('runMacosA5SyncGroupMaintenance({');
     expect(extended).toContain('assertT132CredentialRecoveryBaseline');
@@ -170,9 +175,10 @@ describe('macOS fixed A5 development entry', () => {
   });
 
   it('checks pairing credentials before workspace readiness in fixed status', () => {
-    const source = fs.readFileSync('scripts/android/macos-a5-dev.mjs', 'utf8');
-    const statusBlock = source.slice(
-      source.indexOf("if (action === 'status')"), source.indexOf("if (action === 'deploy')")
+    const dispatcher = fs.readFileSync('scripts/android/macos-a5-action-dispatch.mjs', 'utf8');
+    const statusBlock = dispatcher.slice(
+      dispatcher.indexOf("if (action === 'status')"),
+      dispatcher.indexOf("if (action === 'sync-group-stopped-status')")
     );
 
     expect(statusBlock.indexOf('pairingReadiness(paths)')).toBeGreaterThan(-1);
@@ -180,14 +186,14 @@ describe('macOS fixed A5 development entry', () => {
   });
 
   it('offers one fixed stopped status for a consistent T132 database snapshot', () => {
-    const source = fs.readFileSync('scripts/android/macos-a5-dev.mjs', 'utf8');
-    const block = source.slice(source.indexOf("if (action === 'sync-group-stopped-status')"),
-      source.indexOf("if (action === 'deploy')"));
+    const dispatcher = fs.readFileSync('scripts/android/macos-a5-action-dispatch.mjs', 'utf8');
+    const block = dispatcher.slice(dispatcher.indexOf("if (action === 'sync-group-stopped-status')"),
+      dispatcher.indexOf("if (action === 'deploy')"));
     expect(block).toContain('runMacosA5SettledStoppedStatus');
     expect(block).not.toContain("'install'");
     const extended = fs.readFileSync('scripts/android/macos-a5-extended-actions.mjs', 'utf8');
     const settled = extended.slice(extended.indexOf('runMacosA5SettledStoppedStatus'),
-      extended.indexOf('runMacosA5DatabasePerformanceEntry'));
+      extended.indexOf('runMacosA5ClearAppDataEntry'));
     expect(settled.match(/'force-stop'/gu)).toHaveLength(2);
     expect(settled).toContain('delay(90_000)');
     expect(settled).toContain('openMacosPairSyncDesktopSession');
@@ -197,7 +203,7 @@ describe('macOS fixed A5 development entry', () => {
   it('protects data without requiring the Capture acceptance workspace during deploy', () => {
     const source = fs.readFileSync('scripts/android/macos-a5-dev.mjs', 'utf8');
     const deployBlock = source.slice(
-      source.indexOf('async function deploy(paths)'), source.indexOf('export async function protectData')
+      source.indexOf('async function deploy('), source.indexOf('export async function protectData')
     );
 
     expect(deployBlock.indexOf("'backup'")).toBeLessThan(deployBlock.indexOf("'install', '-r'"));

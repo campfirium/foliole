@@ -35,9 +35,3 @@ export function beginFormalA5Candidate(repoRoot, execute) {
   assertCommittedDev(candidate);
   return candidate;
 }
-
-export function finishFormalA5Candidate(expected) {
-  if (!expected) return null;
-  assertCommittedDev(expected);
-  return expected.revision;
-}

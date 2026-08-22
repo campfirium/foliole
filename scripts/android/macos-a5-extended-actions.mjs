@@ -44,19 +44,10 @@ export async function runMacosA5SettledStoppedStatus(args) {
   } finally { await session.close().catch(() => undefined); }
 }
 
-export async function runMacosA5DatabasePerformanceEntry(args) {
-  args.assertFixed(); args.build();
-  const { runA5DatabasePerformance } = await import('./android-a5-database-performance-action.mjs');
-  const result = await runA5DatabasePerformance({ env: args.env,
-    evidenceRoot: path.join(args.paths.artifactsRoot, 'companion-database-performance'),
-    execute: args.execute, paths: args.paths, serial: args.serial });
-  process.stdout.write(result.output);
-  console.log(`[macos-a5-dev] database-performance evidence=${result.evidencePath}`);
-}
-
 export async function runMacosA5ClearAppDataEntry(args) {
   const buildIdentity = args.buildIdentity();
   args.assertFixed(); args.build();
+  args.markMutationBoundary?.();
   args.checked(args.paths.adb, ['-s', args.serial, 'install', '-r', args.paths.apk]);
   const cleared = await args.execute(args.paths.adb,
     ['-s', args.serial, 'shell', 'pm', 'clear', APP_ID],
@@ -132,6 +123,7 @@ export async function runMacosA5PairSyncEntry(args) {
   });
   args.build(); buildMacosA5Desktop(args.checked, args.paths);
   const buildIdentity = args.buildIdentity();
+  args.markMutationBoundary?.();
   const { runMacosA5PairSync } = await import('./macos-a5-pair-sync-action.mjs');
   const result = await runMacosA5PairSync({
     buildIdentity, credentialRepairRequired: readiness.credentialRepairRequired,
@@ -158,6 +150,7 @@ export async function runMacosA5ExistingSyncEntry(args) {
   }
   args.build(); buildMacosA5Desktop(args.checked, args.paths);
   const buildIdentity = args.buildIdentity();
+  args.markMutationBoundary?.();
   const evidenceRoot = path.join(args.paths.artifactsRoot, 'a5-existing-sync', buildIdentity);
   await args.protectData('backup', path.join(evidenceRoot, 'baseline.json'),
     path.join(args.paths.deviceBackupRoot, buildIdentity));
@@ -192,6 +185,7 @@ export async function runMacosA5SyncGroupRejoinEntry(args) {
     : assertT132ProtectedBaseline(inspected);
   args.build();
   const buildIdentity = args.buildIdentity();
+  args.markMutationBoundary?.();
   const evidenceRoot = path.join(args.paths.artifactsRoot, 'a5-sync-group-rejoin', buildIdentity);
   const stopped = await args.execute(args.paths.adb, [
     '-s', args.serial, 'shell', 'am', 'force-stop', 'com.foliole.android'
@@ -216,6 +210,7 @@ export async function recoverMacosA5SyncGroupRejoinEntry(args) {
   args.assertFixed();
   args.build(); buildMacosA5Desktop(args.checked, args.paths);
   const buildIdentity = args.buildIdentity();
+  args.markMutationBoundary?.();
   const { recoverMacosA5DepartedCheckpoint } = await import(
     './macos-a5-sync-group-rejoin-action.mjs'
   );

@@ -67,7 +67,10 @@ it('archives the frozen SHA and restores dependencies only inside the capsule', 
   fs.writeFileSync(path.join(root, 'untracked.txt'), 'untracked\n');
   fs.writeFileSync(path.join(root, 'ignored.txt'), 'ignored\n');
   const events = [];
-  const capsule = openMacosA5BuildCapsule(context(root, candidate), { run: runner(events) });
+  const stages = [];
+  const capsule = openMacosA5BuildCapsule(context(root, candidate), {
+    onStage: (stage) => stages.push(stage), run: runner(events)
+  });
 
   expect(fs.readFileSync(path.join(capsule.buildRoot, 'tracked.txt'), 'utf8')).toBe('committed\n');
   expect(fs.existsSync(path.join(capsule.buildRoot, 'untracked.txt'))).toBe(false);
@@ -75,6 +78,7 @@ it('archives the frozen SHA and restores dependencies only inside the capsule', 
   expect(fs.existsSync(path.join(capsule.buildRoot, 'node_modules'))).toBe(true);
   expect(fs.existsSync(path.join(capsule.buildRoot, 'dist/generated.txt'))).toBe(true);
   expect(events.map(({ command }) => command)).toEqual(['git', 'tar', 'npm']);
+  expect(stages).toEqual(['archive', 'extract', 'dependencies']);
   expect(events.at(-1).cwd).toBe(capsule.buildRoot);
   closeMacosA5BuildCapsule(capsule);
   expect(fs.existsSync(capsule.capsuleRoot)).toBe(false);
