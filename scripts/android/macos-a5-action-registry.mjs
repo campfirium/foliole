@@ -1,5 +1,7 @@
 const ACTION_OVERRIDES = Object.freeze({
   build: { deviceLeaseMode: null, mutatesFixedA5: false },
+  'hidden-desktop-status': { deviceLeaseMode: null, mutatesFixedA5: false,
+    requiresHiddenDesktopRuntime: true },
   status: { deviceLeaseMode: 'readonly-lifecycle', formalSourceClass: 'source-free-readonly',
     mutatesFixedA5: false },
   'sync-group-stopped-status': { formalSourceClass: 'ordinary-only' },

@@ -13,6 +13,7 @@ const CONTROLLER_FILES = [
   'scripts/android/macos-a5-extended-actions.mjs',
   'scripts/android/macos-a5-formal-candidate.mjs',
   'scripts/android/macos-a5-formal-receipt.mjs',
+  'scripts/android/macos-a5-hidden-desktop-status.mjs',
   'scripts/android/macos-a5-runtime-paths.mjs',
   'scripts/android/macos-pair-sync-desktop-session.mjs'
 ];
@@ -161,6 +162,9 @@ export function formalA5FailureStage(error, fallback) {
 export function formalA5ActionEvidenceLocator(context) {
   if (context.action === 'clear-app-data') {
     return path.join(context.artifactsRoot, 'a5-clear-app-data', `${context.runId}.json`);
+  }
+  if (context.action === 'hidden-desktop-status') {
+    return path.join(context.artifactsRoot, 'a5-hidden-desktop-status', `${context.runId}.json`);
   }
   const roots = {
     'capture-annotation': 'a5-capture-annotation',

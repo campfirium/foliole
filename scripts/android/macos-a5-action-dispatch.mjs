@@ -8,6 +8,7 @@ import {
   runMacosA5SyncGroupRejoinEntry
 } from './macos-a5-extended-actions.mjs';
 import { runMacosA5DatabasePerformanceEntry } from './macos-a5-database-performance-entry.mjs';
+import { runMacosA5HiddenDesktopStatusEntry } from './macos-a5-hidden-desktop-status.mjs';
 
 export { macosA5ErrorEvidence };
 
@@ -37,6 +38,9 @@ export async function dispatchMacosA5Action({
       captured, checked, markMutationBoundary, paths, protectData, serial
     });
   }
+  if (action === 'hidden-desktop-status') await runMacosA5HiddenDesktopStatusEntry({
+    build, buildIdentity, checked, env, paths
+  });
   const productArgs = {
     assertFixed: () => assertFixed(paths), build: () => build(paths), buildIdentity,
     checked, env, execute, markMutationBoundary, paths, protectData, serial

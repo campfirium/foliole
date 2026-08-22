@@ -118,6 +118,13 @@ describe('macOS fixed A5 development entry', () => {
     expect(source).not.toContain('process.argv[3]');
   });
 
+  it('exposes a read-only frozen hidden desktop provenance action', () => {
+    const dispatcher = fs.readFileSync('scripts/android/macos-a5-action-dispatch.mjs', 'utf8');
+    const registry = fs.readFileSync('scripts/android/macos-a5-action-registry.mjs', 'utf8');
+    expect(registry).toContain("'hidden-desktop-status'");
+    expect(dispatcher).toContain('runMacosA5HiddenDesktopStatusEntry');
+  });
+
   it('exposes only explicitly authorized fixed maintenance routes', () => {
     const source = fs.readFileSync('scripts/android/macos-a5-dev.mjs', 'utf8');
     const dispatcher = fs.readFileSync('scripts/android/macos-a5-action-dispatch.mjs', 'utf8');
