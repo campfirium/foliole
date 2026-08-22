@@ -8,6 +8,20 @@ import { withMacosA5BuildRoot } from './macos-a5-execution-context.mjs';
 
 const OWNER_FILE = 'owner.json';
 
+function materializeHiddenElectronRuntime(context, fsApi, run) {
+  if (!context.requiresHiddenDesktopRuntime) return;
+  const installScript = path.join(context.buildRoot, 'node_modules/electron/install.js');
+  const executable = path.join(context.buildRoot,
+    'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron');
+  if (!fsApi.existsSync(installScript)) {
+    throw new Error('Locked Electron on-demand installer is missing from the build capsule.');
+  }
+  run(process.execPath, [installScript, '--no'], { cwd: context.buildRoot });
+  if (!fsApi.existsSync(executable)) {
+    throw new Error('Locked Electron runtime was not materialized inside the build capsule.');
+  }
+}
+
 function capsuleOwner(context) {
   return { acceptedRevision: context.acceptedRevision, action: context.action,
     pid: process.pid, runId: context.runId, schemaVersion: 1 };
@@ -68,6 +82,11 @@ export function openMacosA5BuildCapsule(context, {
     stage = 'dependencies';
     onStage(stage);
     run('npm', ['ci'], { cwd: buildRoot });
+    if (context.requiresHiddenDesktopRuntime) {
+      stage = 'electron-runtime';
+      onStage(stage);
+      materializeHiddenElectronRuntime(capsule, fsApi, run);
+    }
     return capsule;
   } catch (error) {
     try { preserveCapsuleFailure(context, stage, error, fsApi); }

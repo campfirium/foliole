@@ -89,6 +89,24 @@ it('atomically completes a same-run provenance receipt before projecting accepte
   expect(() => failFormalA5Receipt(manager, new Error('late secret'))).toThrow('finalized');
 });
 
+it('records the capsule Electron identity for hidden desktop actions', () => {
+  const { context, root } = fixture('sync-existing',
+    'abababab-abab-abab-abab-abababababab');
+  const hiddenContext = Object.freeze({ ...context, requiresHiddenDesktopRuntime: true });
+  const manager = openFormalA5Receipt(hiddenContext, contract('sync-existing'));
+  const buildRoot = path.join(root, 'capsule');
+  const paths = { ...hiddenContext, adb: '/adb', buildRoot, cap: '/cap', gradle: '/gradle',
+    java: '/java', electron: path.join(buildRoot, 'Electron'),
+    electronPackage: path.join(buildRoot, 'package.json') };
+  fs.mkdirSync(buildRoot); fs.writeFileSync(paths.electron, 'electron binary');
+  fs.writeFileSync(paths.electronPackage, '{"version":"43.4.0"}\n');
+  captureFormalA5Toolchain(manager, paths, toolResult);
+  expect(manager.receipt.toolchain.electron).toEqual({
+    executableDigest: '4f57ce53f599ead3c3eca2d5154ac1429178f463b41ce351507f09a389e1f2d9',
+    version: '43.4.0'
+  });
+});
+
 it('records redacted failure stages on both sides of the mutation boundary', () => {
   const first = fixture('deploy', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb').context;
   const before = openFormalA5Receipt(first, contract('deploy'));

@@ -22,6 +22,11 @@ it('fails formal preflight for an action without a frozen or source-free contrac
   )).toThrow('unavailable');
 });
 
+it('marks only desktop-session actions for capsule Electron materialization', () => {
+  expect(assertRegisteredMacosA5Action('sync-existing').requiresHiddenDesktopRuntime).toBe(true);
+  expect(assertRegisteredMacosA5Action('deploy').requiresHiddenDesktopRuntime).toBe(false);
+});
+
 it.each([
   'capture-annotation', 'clear-app-data', 'database-performance', 'deploy',
   'device-profile', 'leave-sync-group', 'pair-credentials', 'pair-sync',

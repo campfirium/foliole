@@ -53,6 +53,9 @@ export function macosA5Paths(contextOrRepoRoot) {
     ...context,
     apk: path.join(context.buildRoot, 'android/app/build/outputs/apk/debug/app-debug.apk'),
     cap: path.join(context.buildRoot, 'node_modules/.bin/cap'),
+    electron: path.join(context.buildRoot,
+      'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'),
+    electronPackage: path.join(context.buildRoot, 'node_modules/electron/package.json'),
     gradle: path.join(context.buildRoot, 'android/gradlew'),
     java: path.join(JAVA_HOME, 'bin/java'),
   };
@@ -170,7 +173,8 @@ export async function runMacosA5Action(action, repoRoot = process.cwd(), { forma
     ? beginFormalA5Candidate(repoRoot) : null;
   let context = createMacosA5ExecutionContext({
     acceptedRevision: formalCandidate?.revision, acceptedTree: formalCandidate?.tree,
-    action, formalSourceClass: formal ? actionContract.formalSourceClass : null, repoRoot
+    action, formalSourceClass: formal ? actionContract.formalSourceClass : null, repoRoot,
+    requiresHiddenDesktopRuntime: formal && actionContract.requiresHiddenDesktopRuntime
   });
   openMacosA5Run(context);
   let receipt;

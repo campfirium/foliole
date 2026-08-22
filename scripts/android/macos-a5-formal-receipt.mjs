@@ -112,10 +112,18 @@ function version(command, args, options, run) {
   return lines.find((line) => /\d/u.test(line)) ?? lines[0] ?? '';
 }
 
-export function captureFormalA5Toolchain(manager, paths, run = spawnSync) {
+function hiddenElectronIdentity(paths, fsApi = fs) {
+  if (!paths.requiresHiddenDesktopRuntime) return null;
+  const metadata = JSON.parse(fsApi.readFileSync(paths.electronPackage, 'utf8'));
+  return { executableDigest: sha256(fsApi.readFileSync(paths.electron)),
+    version: metadata.version };
+}
+
+export function captureFormalA5Toolchain(manager, paths, run = spawnSync, fsApi = fs) {
   return update(manager, { stage: 'toolchain-captured', toolchain: {
     adb: version(paths.adb, ['version'], {}, run),
     capacitor: version(paths.cap, ['--version'], { cwd: paths.buildRoot }, run),
+    electron: hiddenElectronIdentity(paths, fsApi),
     gradle: version(paths.gradle, ['--version'], { cwd: path.join(paths.buildRoot, 'android') }, run),
     java: version(paths.java, ['-version'], {}, run),
     node: process.version,

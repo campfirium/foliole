@@ -33,7 +33,7 @@ function resolveSourceRepoRoot(repoRoot, fsApi) {
 
 export function createMacosA5ExecutionContext({
   acceptedRevision = null, acceptedTree = null, action, formalSourceClass = null,
-  fsApi = fs, repoRoot, runId = randomUUID()
+  fsApi = fs, repoRoot, requiresHiddenDesktopRuntime = false, runId = randomUUID()
 }) {
   if (!RUN_ID_PATTERN.test(runId)) throw new Error('Invalid macOS A5 run identity.');
   const sourceRepoRoot = resolveSourceRepoRoot(repoRoot, fsApi);
@@ -54,6 +54,7 @@ export function createMacosA5ExecutionContext({
     runId,
     runRoot: path.join(controllerStateRoot, 'runs', runId),
     formalSourceClass,
+    requiresHiddenDesktopRuntime,
     sourceRepoRoot
   });
 }

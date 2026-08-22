@@ -36,20 +36,30 @@ function fixture() {
   return root;
 }
 
-function context(root, candidate, runId = '66666666-6666-6666-6666-666666666666') {
+function context(root, candidate, runId = '66666666-6666-6666-6666-666666666666',
+  requiresHiddenDesktopRuntime = false) {
   return createMacosA5ExecutionContext({ acceptedRevision: candidate.revision,
     acceptedTree: candidate.tree, action: 'build', formalSourceClass: 'frozen-build',
-    repoRoot: root, runId });
+    repoRoot: root, requiresHiddenDesktopRuntime, runId });
 }
 
-function runner(events, failNpm = false) {
+function runner(events, failNpm = false, materializeElectron = true) {
   return (command, args, options) => {
     events.push({ args, command, cwd: options.cwd });
     if (command === 'npm') {
       if (failNpm) throw new Error('npm ci failed');
       fs.mkdirSync(path.join(options.cwd, 'node_modules'));
+      fs.mkdirSync(path.join(options.cwd, 'node_modules/electron'));
+      fs.writeFileSync(path.join(options.cwd, 'node_modules/electron/install.js'), 'installer\n');
       fs.mkdirSync(path.join(options.cwd, 'dist'));
       fs.writeFileSync(path.join(options.cwd, 'dist/generated.txt'), 'generated\n');
+      return;
+    }
+    if (command === process.execPath) {
+      if (!materializeElectron) return;
+      const electronRoot = path.join(options.cwd, 'node_modules/electron');
+      fs.mkdirSync(path.join(electronRoot, 'dist/Electron.app/Contents/MacOS'), { recursive: true });
+      fs.writeFileSync(path.join(electronRoot, 'dist/Electron.app/Contents/MacOS/Electron'), 'binary\n');
       return;
     }
     execFileSync(command, args, options);
@@ -58,6 +68,32 @@ function runner(events, failNpm = false) {
 
 afterEach(() => {
   for (const root of roots.splice(0)) fs.rmSync(root, { force: true, recursive: true });
+});
+
+it('materializes the locked Electron runtime only for hidden desktop actions', () => {
+  const root = fixture();
+  const events = []; const stages = [];
+  const capsule = openMacosA5BuildCapsule(context(root, beginFormalA5Candidate(root),
+    '12121212-1212-1212-1212-121212121212', true), {
+    onStage: (stage) => stages.push(stage), run: runner(events)
+  });
+  expect(events.map(({ command }) => command)).toEqual(['git', 'tar', 'npm', process.execPath]);
+  expect(stages).toEqual(['archive', 'extract', 'dependencies', 'electron-runtime']);
+  expect(events.at(-1).args[0]).toBe(path.join(capsule.buildRoot,
+    'node_modules/electron/install.js'));
+  closeMacosA5BuildCapsule(capsule);
+});
+
+it('preserves an electron-runtime failure before any device mutation', () => {
+  const root = fixture();
+  const failed = context(root, beginFormalA5Candidate(root),
+    '13131313-1313-1313-1313-131313131313', true);
+  expect(() => openMacosA5BuildCapsule(failed, { run: runner([], false, false) }))
+    .toThrow('not materialized');
+  expect(JSON.parse(fs.readFileSync(path.join(failed.artifactsRoot, 'macos-a5-formal',
+    failed.runId, 'capsule-failure.json'), 'utf8'))).toMatchObject({
+    resultStatus: 'failed', stage: 'electron-runtime'
+  });
 });
 
 it('archives the frozen SHA and restores dependencies only inside the capsule', () => {
