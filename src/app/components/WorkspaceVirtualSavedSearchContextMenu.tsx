@@ -1,6 +1,7 @@
-import { FileCode2, FolderPlus, Pencil, Trash2 } from 'lucide-react';
+import { FileCode2, FolderPlus, Trash2 } from 'lucide-react';
 
 import { NodeContextMenuItem, NodeContextMenuSeparator } from '../../features/nodes/components/nodeListContextMenuPresentation';
+import { NodeRenameContextMenuItem } from '../../features/nodes/components/NodeRenameContextMenuItem';
 import { requestNodeRename } from '../../features/nodes/components/NodeTreeRowRename';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuTrigger } from '../../shared/ui';
@@ -47,20 +48,6 @@ function CreateChildMenuItem(props: { nodeId?: string; onClose: () => void; onCr
   );
 }
 
-function RenameMenuItem(props: { nodeId: string; onClose: () => void }) {
-  return (
-    <NodeContextMenuItem
-      icon={Pencil}
-      onSelect={() => {
-        requestNodeRename(props.nodeId);
-        props.onClose();
-      }}
-    >
-      Rename
-    </NodeContextMenuItem>
-  );
-}
-
 export function WorkspaceVirtualSavedSearchContextMenu({
   left,
   isVirtualRoot = false,
@@ -94,7 +81,10 @@ export function WorkspaceVirtualSavedSearchContextMenu({
           ? <CreateChildMenuItem {...(!isVirtualRoot ? { nodeId } : {})} onClose={onClose} onCreate={onCreateChild} />
           : null}
         {isVirtualRoot || isSavedSearch ? <NodeContextMenuSeparator /> : null}
-        <RenameMenuItem nodeId={nodeId} onClose={onClose} />
+        <NodeRenameContextMenuItem onSelect={() => {
+          requestNodeRename(nodeId);
+          onClose();
+        }} />
         {isSavedSearch ? (
           <>
             {onWriteTopicYaml ? (

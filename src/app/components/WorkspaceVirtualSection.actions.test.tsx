@@ -1,10 +1,12 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { beforeEach, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
 
 import { VIRTUAL_ROOT_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
+import { APP_LANGUAGE_STORAGE_KEY } from '../../shared/localization/appLanguage';
 import { setSystemEntryDisplayNames } from '../../shared/localization/systemEntryDisplayNamesStore';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
+import { preloadTranslationCatalog } from '../../shared/localization/translations';
 import type { ElectronAPI } from '../../shared/platform/electronApi';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -61,6 +63,10 @@ function renderSavedSearchTree(args: {
   );
 }
 
+beforeAll(async () => {
+  await preloadTranslationCatalog('zh-Hans');
+});
+
 beforeEach(() => {
   window.localStorage.clear();
   setSystemEntryDisplayNames({ customDisplayNameById: {}, version: 1 });
@@ -72,6 +78,16 @@ beforeEach(() => {
     deleteNode: vi.fn(),
     updateNodeTitle: vi.fn(async () => true)
   });
+});
+
+it('uses the shared localized rename action for a built-in Virtual folder', async () => {
+  window.localStorage.setItem(APP_LANGUAGE_STORAGE_KEY, 'zh-Hans');
+  renderSavedSearchTree();
+
+  fireEvent.contextMenu(await screen.findByRole('treeitem', { name: '虚拟文件夹' }));
+
+  expect(await screen.findByRole('menuitem', { name: '重命名' })).toBeInTheDocument();
+  expect(screen.queryByRole('menuitem', { name: 'Rename' })).toBeNull();
 });
 
 it('renames the built-in Virtual folder through the ordinary row action', async () => {

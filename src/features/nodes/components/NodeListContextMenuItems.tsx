@@ -9,7 +9,6 @@ import {
   ListPlus,
   ListMinus,
   MoveRight,
-  Pencil,
   SlidersHorizontal,
   Trash2
 } from 'lucide-react';
@@ -26,6 +25,7 @@ import {
   NodeContextMenuSeparator,
   RelearnMenuIcon
 } from './nodeListContextMenuPresentation';
+import { NodeRenameContextMenuItem } from './NodeRenameContextMenuItem';
 
 import { useActionHelpCardsEnabled } from '@/shared/platform/actionHelpCards';
 
@@ -104,7 +104,7 @@ function renderEditItems(t: Translate, props: NoteMenuItemsProps, helpEnabled: b
     helpEnabled ? { help: resolveNodeListActionHelp(copy) } : {};
   return (
     <>
-      {props.showRenameAction && props.onRenameNode ? <NodeContextMenuItem icon={Pencil} onSelect={props.onRenameNode}>{t('desktop.nodeList.menu.rename')}</NodeContextMenuItem> : null}
+      {props.showRenameAction && props.onRenameNode ? <NodeRenameContextMenuItem onSelect={props.onRenameNode} /> : null}
       {!props.showRootCreateOnly && props.showMergeHighlightsIntoTopicAction && props.onMergeHighlightsIntoTopic ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.mergeHighlights)} icon={GitMerge} onSelect={props.onMergeHighlightsIntoTopic}>{t('desktop.nodeList.menu.mergeHighlights')}</NodeContextMenuItem> : null}
       {!props.showRootCreateOnly && props.showPasteIntoNodeAction && props.onPasteIntoNode ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.pasteClipboardTopic)} icon={Clipboard} onSelect={props.onPasteIntoNode}>{t('desktop.nodeList.menu.pasteAsTopic')}</NodeContextMenuItem> : null}
       {!props.showRootCreateOnly && props.showMoveToNodeAction && props.onMoveToNode ? <NodeContextMenuItem icon={MoveRight} onSelect={props.onMoveToNode}>{t('desktop.nodeList.menu.moveTo')}</NodeContextMenuItem> : null}

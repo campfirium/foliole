@@ -19,14 +19,14 @@ const ENTRIES = [
   ['special-virtual-removed', 'Removed', 'Hidden']
 ] as const;
 
-async function switchToEnglish(page: Page) {
-  await page.evaluate(async () => {
+async function switchLanguage(page: Page, language: 'en' | 'zh-Hans') {
+  await page.evaluate(async (language) => {
     const settings = (await window.electronAPI?.invoke('load_app_settings_state', {})) ?? {};
     await window.electronAPI?.invoke('save_app_settings_state', {
-      settings: { ...settings, 'foliole-app-language': 'en' }
+      settings: { ...settings, 'foliole-app-language': language }
     });
-    window.localStorage.setItem('foliole-app-language', 'en');
-  });
+    window.localStorage.setItem('foliole-app-language', language);
+  }, language);
   await page.reload();
   await expectWorkspaceShell(page);
 }
@@ -47,7 +47,7 @@ async function renameEntry(page: Page, nodeId: string, currentName: string, next
 test('renames all system entries, restores them after renderer restart, and clears one override', async ({
   desktopWindow
 }, testInfo) => {
-  await switchToEnglish(desktopWindow);
+  await switchLanguage(desktopWindow, 'en');
   const pathsBefore = await desktopWindow.evaluate(() =>
     window.electronAPI?.invoke('load_library_path_settings', {})
   );
@@ -71,13 +71,18 @@ test('renames all system entries, restores them after renderer restart, and clea
     await desktopWindow.evaluate(() => window.electronAPI?.invoke('load_library_path_settings', {}))
   ).toEqual(pathsBefore);
 
-  await mkdir(path.dirname(SCREENSHOT), { recursive: true });
-  await desktopWindow.screenshot({ path: SCREENSHOT });
-  await testInfo.attach('system-entry-display-names', { contentType: 'image/png', path: SCREENSHOT });
   await renameEntry(desktopWindow, 'special-home', 'Start here', '');
   await expectEntryNames(desktopWindow, [
     'Home',
     ...ENTRIES.slice(1).map(([, , customName]) => customName)
   ]);
   await expect(desktopWindow.getByRole('heading', { name: 'Home' })).toBeVisible();
+
+  await switchLanguage(desktopWindow, 'zh-Hans');
+  await desktopWindow.locator('[data-node-id="special-virtual-root"]').first().click({ button: 'right' });
+  await expect(desktopWindow.getByRole('menuitem', { name: '重命名' })).toBeVisible();
+  await expect(desktopWindow.getByRole('menuitem', { name: 'Rename' })).toHaveCount(0);
+  await mkdir(path.dirname(SCREENSHOT), { recursive: true });
+  await desktopWindow.screenshot({ path: SCREENSHOT });
+  await testInfo.attach('system-entry-display-names', { contentType: 'image/png', path: SCREENSHOT });
 });
