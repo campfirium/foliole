@@ -100,7 +100,7 @@ function facts(snapshot) {
       counts,
       protectedContentDigest: inspection.protectedContentDigest ?? null
     },
-    deviceProfile: inspection.deviceProfile ?? null,
+    deviceProfile: inspection.hostName ?? null,
     localGroupCount: snapshot.database?.counts?.sync_group_local_state ?? null
   };
 }

@@ -4,13 +4,13 @@ import { expect, it } from 'vitest';
 
 import { assertA5DeviceProfileAcceptance } from './macos-a5-device-profile-action.mjs';
 
-function snapshot(deviceProfile, localGroupCount = 0) {
+function snapshot(hostName, localGroupCount = 0) {
   return {
     attachments: { sha256: 'attachments' },
     database: {
       counts: { nodes: 3, review_log: 2, sync_group_local_state: localGroupCount },
       exists: true,
-      inspection: { deviceProfile, protectedContentDigest: 'content' },
+      inspection: { hostName, protectedContentDigest: 'content' },
       integrity: 'ok'
     }
   };
