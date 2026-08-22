@@ -60,8 +60,9 @@ final class FolioleCompanionPairSyncRecoveryScenario {
             ), "existing");
         }
         if ("companion-sync-repair".equals(entry)) {
-            FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "existing-pair-disconnect");
+            FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "pair-repair-action");
             clickVisible(instrumentation, webView, "companion-sync-repair", deadline);
+            FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "pair-repair-accepted");
             waitForUniqueVisible(instrumentation, webView, "companion-sync-discover", deadline);
         }
         FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "discovery-request");

@@ -190,6 +190,8 @@ export function classifyPairSyncRecoveryInstrumentationFailure(output) {
     'sync-settings': 'sync_settings_navigation_interrupted',
     'sync-entry': 'sync_entry_interrupted',
     'existing-pair-disconnect': 'existing_pair_disconnect_interrupted',
+    'pair-repair-action': 'pair_repair_action_interrupted',
+    'pair-repair-accepted': 'pair_repair_settlement_interrupted',
     'discovery-request': 'discovery_request_interrupted',
     'pair-target': 'pair_target_interrupted',
     'pair-request': 'pair_request_interrupted',

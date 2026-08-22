@@ -96,6 +96,9 @@ it('reduces instrumentation output to a fixed non-sensitive failure reason', () 
   expect(classifyPairSyncRecoveryInstrumentationFailure(
     'INSTRUMENTATION_STATUS: foliolePairSyncStage=test-started'
   )).toBe('activity_launch_interrupted');
+  expect(classifyPairSyncRecoveryInstrumentationFailure(
+    'INSTRUMENTATION_STATUS: foliolePairSyncStage=pair-repair-accepted'
+  )).toBe('pair_repair_settlement_interrupted');
   expect(classifyPairSyncRecoveryInstrumentationFailure([
     'INSTRUMENTATION_STATUS: foliolePairSyncStage=pair-completion',
     'INSTRUMENTATION_STATUS: foliolePairSyncEvidence={"completion":"transport_failed","credentials":"not_saved","initialSync":"not_started"}'
