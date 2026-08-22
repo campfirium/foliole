@@ -135,6 +135,9 @@ public class FolioleCompanionWebViewAutomationTest {
         boolean credentialsOnly = "credentials-signable".equals(
             InstrumentationRegistry.getArguments().getString("foliolePairSyncEvidenceGoal", "")
         );
+        long scenarioTimeoutMs = boundedPairSyncTimeout(
+            InstrumentationRegistry.getArguments().getString("foliolePairSyncTimeoutMs", "600000")
+        );
         Activity activity = startMainActivity(instrumentation);
         FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "activity-started");
         try {
@@ -145,7 +148,8 @@ public class FolioleCompanionWebViewAutomationTest {
             FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "webview-ready");
             JSONObject before = FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView);
             JSONObject receipt = FolioleCompanionPairSyncRecoveryScenario.run(
-                instrumentation, webView, forceRePair, credentialsOnly, expectedEndpointUrl, 600_000
+                instrumentation, webView, forceRePair, credentialsOnly,
+                expectedEndpointUrl, scenarioTimeoutMs
             );
             sendEvidence(instrumentation, before,
                 FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView), receipt);
@@ -192,6 +196,14 @@ public class FolioleCompanionWebViewAutomationTest {
     private static long boundedTimeout(String raw) {
         long value = Long.parseLong(raw);
         if (value < 1_000 || value > 30_000) throw new IllegalArgumentException("timeoutMs is outside 1000..30000");
+        return value;
+    }
+
+    private static long boundedPairSyncTimeout(String raw) {
+        long value = Long.parseLong(raw);
+        if (value < 30_000 || value > 600_000) {
+            throw new IllegalArgumentException("foliolePairSyncTimeoutMs is outside 30000..600000");
+        }
         return value;
     }
 

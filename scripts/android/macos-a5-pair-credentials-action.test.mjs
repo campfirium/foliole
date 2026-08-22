@@ -47,7 +47,8 @@ it('stops fresh A5 pairing after native credentials can sign the first request',
     desktopAuthorizationFingerprint: 'peer-1', recoveryEvidenceGoal: 'credentials-signable'
   }));
   expect(macosA5CredentialsOnlyModeArgs()).toEqual([
-    '-e', 'foliolePairSyncEvidenceGoal', 'credentials-signable'
+    '-e', 'foliolePairSyncEvidenceGoal', 'credentials-signable',
+    '-e', 'foliolePairSyncTimeoutMs', '75000'
   ]);
   expect(runPairSync.mock.calls[0][0].execute).not.toBe(args.execute);
 });
