@@ -137,4 +137,6 @@ it('does not arm the followup gate when startup falls back to the error surface'
   });
   expect(mocks.waitForRendererAppReady).not.toHaveBeenCalled();
   expect(mocks.startFollowupTasks).not.toHaveBeenCalled();
+  expect(startup.startCompanionSyncIfEnabled).not.toHaveBeenCalled();
+  expect(mainWindowArgs.activateMainWindow).not.toHaveBeenCalled();
 });

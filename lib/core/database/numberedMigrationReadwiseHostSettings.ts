@@ -121,8 +121,8 @@ function writeCanonicalSetting(sqlite: DatabaseMigrationTarget, input: {
   const objectId = `${input.scope}:${DESKTOP_SETTING_PLATFORM}:${DESKTOP_SETTING_FORM_FACTOR}:${input.hostName}:${input.key}`;
   sqlite.prepare(`INSERT INTO sync_object_state
     (object_type, object_id, state_seq, current_version_id, content_hash,
-      last_modified_by_host_name, updated_at, deleted_at, sync_dirty, base_content_hash)
-    VALUES ('setting', ?, ?, NULL, ?, ?, ?, NULL, 1, NULL)
+      last_modified_by_host_name, updated_at, deleted_at, sync_dirty)
+    VALUES ('setting', ?, ?, NULL, ?, ?, ?, NULL, 1)
     ON CONFLICT(object_type, object_id) DO UPDATE SET state_seq = excluded.state_seq,
       content_hash = excluded.content_hash, last_modified_by_host_name = excluded.last_modified_by_host_name,
       updated_at = excluded.updated_at, deleted_at = NULL, sync_dirty = 1`)

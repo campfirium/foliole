@@ -91,8 +91,27 @@ function seedLegacySource(hostName: string, suffix = '') {
   ]);
 }
 
+function installHistoricalV76SyncStateShape() {
+  const sqlite = openDatabaseConnection().sqlite;
+  sqlite.exec(`DROP TABLE sync_object_state;
+    CREATE TABLE sync_object_state (
+      object_type TEXT NOT NULL,
+      object_id TEXT NOT NULL,
+      state_seq INTEGER NOT NULL,
+      current_version_id TEXT,
+      content_hash TEXT NOT NULL,
+      last_modified_by_host_name TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      deleted_at TEXT,
+      sync_dirty INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (object_type, object_id),
+      UNIQUE (state_seq)
+    );`);
+}
+
 function prepareV76() {
   const connection = openDatabaseConnection();
+  installHistoricalV76SyncStateShape();
   const value = JSON.stringify(legacySettings());
   connection.driver.execute(`INSERT INTO settings (key, value, updated_at) VALUES
     ('host_name', ?, 'now'), ('import_manager_settings', ?, '2026-08-20T00:00:00.000Z')
@@ -105,6 +124,9 @@ function prepareV76() {
 it('moves the local Readwise projection into Host scope without rewriting Source or Topic Location', () => {
   const connection = prepareV76();
   seedLegacySource('Host A');
+  connection.driver.execute(`INSERT INTO sync_object_state (object_type, object_id, state_seq,
+    current_version_id, content_hash, last_modified_by_host_name, updated_at, deleted_at, sync_dirty)
+    VALUES ('node', 'existing-node', 1, NULL, 'existing-hash', 'Host A', 'now', NULL, 0)`);
   connection.driver.execute(`INSERT INTO nodes (id, parent_id, kind, title, content, created_at, updated_at)
     VALUES ('topic-a', NULL, 'topic', 'Topic', '', 'now', 'now')`);
   connection.driver.execute(`INSERT INTO import_sources (source_fingerprint, provider, source_kind,
@@ -132,6 +154,10 @@ it('moves the local Readwise projection into Host scope without rewriting Source
   expect(connection.driver.queryOne(`SELECT source_ref, source_location FROM import_sources
     WHERE source_fingerprint = 'fingerprint-a'`)).toEqual({
     source_location: 'Articles/topic.md', source_ref: 'readwise:readwise-articles'
+  });
+  expect(connection.driver.queryOne(`SELECT content_hash, sync_dirty FROM sync_object_state
+    WHERE object_type = 'node' AND object_id = 'existing-node'`)).toEqual({
+    content_hash: 'existing-hash', sync_dirty: 0
   });
   expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
 });
