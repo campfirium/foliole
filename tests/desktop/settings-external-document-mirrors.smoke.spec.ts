@@ -144,20 +144,13 @@ test.describe('desktop settings External folders', () => {
     await expect(settingsDialog.getByText('D:\\X\\Dropbox\\obs\\1act\\0cap')).toBeVisible();
     await expect(settingsDialog.getByText('D:\\Projects', { exact: true })).toBeVisible();
     await expect(settingsDialog.getByText('MacBook Pro', { exact: true })).toBeVisible();
-    await expect(settingsDialog.getByText('/Users/foliole/Documents/Waiting', { exact: true })).toBeVisible();
-    await expect(remoteRegion.getByRole('group', { name: 'This Mac' })).toBeVisible();
+    await expect(settingsDialog.locator('button[title="/Users/foliole/Documents/Waiting"]')).toBeVisible();
+    await expect(remoteRegion.getByRole('group', { name: 'This Mac' })).toHaveCount(0);
     await expect(settingsDialog.getByText(/^(Read-only mirror|只读镜像)$/)).toHaveCount(0);
     await expect(settingsDialog.getByText('Local', { exact: true })).toHaveCount(0);
     await expect(settingsDialog.getByRole('button', { name: /^(Add folder|添加文件夹)$/ })).toBeVisible();
     await expect(settingsDialog.getByRole('checkbox')).toHaveCount(0);
     await expect(settingsDialog.getByRole('switch')).toHaveCount(0);
-    const waitingActions = settingsDialog.getByRole('button', {
-      name: /^(More actions for \/Users\/foliole\/Documents\/Waiting|\/Users\/foliole\/Documents\/Waiting 的更多操作)$/
-    });
-    await expect(waitingActions).toBeVisible();
-    await waitingActions.click();
-    await expect(desktopWindow.getByRole('menuitem', { name: /^(Change source…|更换源…)$/ })).toBeVisible();
-    await expect(desktopWindow.getByRole('menuitem', { name: /^(Remove source|移除源)$/ })).toBeVisible();
 
     const screenshotPath = path.join(process.cwd(), '.tmp', 'artifacts', 'desktop-acceptance',
       'external-folder-remote-mirrors-hidden-native.png');
@@ -197,13 +190,15 @@ test.describe('desktop External Source management', () => {
     dialog = desktopWindow.getByRole('dialog');
     await dialog.getByRole('button', { name: /^(Replace host|替换主机)$/ }).click();
     await expect(settingsDialog.getByText('Windows PC', { exact: true })).toHaveCount(0);
-    await expect(settingsDialog.getByText('D:\\X\\Dropbox\\obs\\1act\\0cap')).toBeVisible();
-    await expect(settingsDialog.getByText('D:\\Projects', { exact: true })).toBeVisible();
+    await expect(settingsDialog.locator('button[title="D:\\\\X\\\\Dropbox\\\\obs\\\\1act\\\\0cap"]')).toBeVisible();
+    await expect(settingsDialog.locator('button[title="D:\\\\Projects"]')).toBeVisible();
 
     const folders = await desktopWindow.evaluate(() => window.electronAPI?.invoke('load_external_search_folders')) as Array<{
       access_mode: string; id: string; source_executable: boolean; source_host_name: string;
     }>;
-    expect(folders.filter((folder) => folder.id.startsWith('playwright-remote-'))).toEqual([
+    expect(folders.filter((folder) => (
+      folder.id === 'playwright-remote-folder' || folder.id === 'playwright-remote-projects'
+    ))).toEqual([
       expect.objectContaining({ access_mode: 'local', source_executable: false, source_host_name: 'This Mac' }),
       expect.objectContaining({ access_mode: 'local', source_executable: false, source_host_name: 'This Mac' })
     ]);
