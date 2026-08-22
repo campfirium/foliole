@@ -11,11 +11,12 @@ import {
 } from '../../shared/platform/import/readwiseHostAssignmentRuntimeRepository';
 import {
   AppButton,
-  settingsActionTableHeaderClassName,
-  settingsActionTableRowClassName
+  SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
+  SettingsControlSlot,
+  SettingsRow,
+  SettingsSection
 } from '../../shared/ui';
 
-const REMOTE_READWISE_COLUMNS = '[grid-template-columns:16.25rem_minmax(0,1fr)]';
 const PLATFORM_NAMES: Record<string, string> = { darwin: 'macOS', linux: 'Linux', win32: 'Windows' };
 
 export function useReadwiseHostAssignment() {
@@ -44,7 +45,6 @@ function activeHost(assignment: NativeReadwiseHostAssignment): NativeReadwiseWor
 export function ReadwiseHostAssignmentRow(props: {
   assignment: NativeReadwiseHostAssignment | null;
   onActivate: () => void;
-  readwiseRootPath: string;
 }) {
   const t = useTranslation();
   if (!props.assignment || props.assignment.is_active) return null;
@@ -54,33 +54,17 @@ export function ReadwiseHostAssignmentRow(props: {
     host.host_name === props.assignment.active_host_name && host.platform === null
   );
   return (
-    <section aria-label={t('desktop.readwise.host.title')} className="mb-6 min-w-0">
-      <div className={settingsActionTableHeaderClassName(REMOTE_READWISE_COLUMNS)}>
-        <span>{t('desktop.readwise.host.title')}</span>
-        <span>{t('desktop.readwise.host.path')}</span>
-      </div>
-      <div className={settingsActionTableRowClassName(REMOTE_READWISE_COLUMNS)}>
-        {!unavailable && host ? (
-          <div className="flex min-w-0 items-baseline gap-2">
-            <span className="truncate text-sm font-semibold">{host.host_name}</span>
-            {host.platform ? (
-              <span className="shrink-0 text-xs text-foreground/48">
-                {PLATFORM_NAMES[host.platform] ?? host.platform}
-              </span>
-            ) : null}
-          </div>
-        ) : (
-          <span className="text-sm text-foreground/55">{t('desktop.readwise.host.unavailable')}</span>
-        )}
-        <div className="grid min-h-10 min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
-          <span className="min-w-0 truncate font-mono text-xs text-foreground/68">
-            {props.readwiseRootPath.trim() || t('desktop.readwise.host.pathUnavailable')}
-          </span>
+    <SettingsSection ariaLabel={t('desktop.readwise.host.title')} title={t('desktop.readwise.host.title')}>
+      <SettingsRow
+        description={!unavailable && host?.platform ? PLATFORM_NAMES[host.platform] ?? host.platform : undefined}
+        title={!unavailable && host ? host.host_name : t('desktop.readwise.host.unavailable')}
+      >
+        <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
           <AppButton onClick={props.onActivate} size="sm">
             {t('desktop.readwise.host.switch')}
           </AppButton>
-        </div>
-      </div>
-    </section>
+        </SettingsControlSlot>
+      </SettingsRow>
+    </SettingsSection>
   );
 }

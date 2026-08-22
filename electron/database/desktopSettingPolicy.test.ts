@@ -20,6 +20,7 @@ describe('desktop setting policy', () => {
     ['discourse_publish_settings', 'host', true],
     ['wordpress_publish_settings', 'host', true],
     ['foliole_publish_settings', 'host', true],
+    ['readwise_import_settings', 'host', true],
     ['device_id', 'local_only', false],
     ['watch_import_cursor_state', 'local_only', false]
   ])('classifies %s as %s', (key, scope, canonical) => {

@@ -1,11 +1,23 @@
 import {
   applyReadwiseRootPath,
-  createDefaultImportManagerSettings,
   normalizeImportManagerSettings,
   type ImportManagerSettings
 } from '../../lib/core/import/importManagerSettings.js';
-import { hydrateImportManagerSources, upsertImportManagerSources } from '../database/desktopSources.js';
-import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
+import {
+  normalizeReadwiseHostSettings,
+  READWISE_HOST_SETTINGS_KEY,
+  withoutReadwiseImportManagerFields
+} from '../../lib/core/import/readwiseHostSettings.js';
+import { openDatabaseConnection } from '../database/connection.js';
+import {
+  hydrateWatchedImportManagerSources,
+  upsertWatchedImportManagerSources
+} from '../database/desktopSources.js';
+import {
+  hydrateCurrentHostReadwiseSources,
+  saveCurrentHostReadwiseSources
+} from '../database/readwiseSources.js';
+import { loadJsonSetting, writeJsonSetting } from '../database/settingsStore.js';
 import { upsertChangedWatchedFolderSource } from '../database/watchedFolderBindings.js';
 import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 import { assertNoUnsafePathOverlap, type SafetyPathCandidate } from '../libraryPathSafety.js';
@@ -45,18 +57,23 @@ function watchedSourceChanged(
 }
 
 export function loadImportManagerSettings(): ImportManagerSettings {
-  try {
-    return hydrateImportManagerSources(normalizeImportManagerSettings(loadJsonSetting(IMPORT_MANAGER_SETTINGS_KEY)));
-  } catch {
-    return createDefaultImportManagerSettings();
-  }
+  const globalSettings = hydrateWatchedImportManagerSources(
+    normalizeImportManagerSettings(loadJsonSetting(IMPORT_MANAGER_SETTINGS_KEY))
+  );
+  const hostSettings = normalizeReadwiseHostSettings(loadJsonSetting(READWISE_HOST_SETTINGS_KEY));
+  return {
+    ...globalSettings,
+    readwiseReaderConfig: hostSettings.readwiseReaderConfig,
+    readwiseRootPath: hostSettings.readwiseRootPath,
+    readwiseSources: hydrateCurrentHostReadwiseSources(globalSettings.readwiseSources)
+  };
 }
 
 export function saveImportManagerSettings(settings: unknown): ImportManagerSettings {
   const payload = toRecord(settings);
   const current = loadImportManagerSettings();
   const readwiseRootPath = typeof payload.readwiseRootPath === 'string' ? payload.readwiseRootPath : current.readwiseRootPath;
-  const normalized = normalizeImportManagerSettings({
+  let normalized = normalizeImportManagerSettings({
     ...current,
     ...payload,
     readwiseRootPath,
@@ -66,12 +83,24 @@ export function saveImportManagerSettings(settings: unknown): ImportManagerSetti
     updatedAt: new Date().toISOString()
   });
   assertSafeImportManagerPaths(normalized);
-  upsertImportManagerSources(normalized);
-  saveJsonSetting(IMPORT_MANAGER_SETTINGS_KEY, normalized, normalized.updatedAt);
-  normalized.sources.forEach((source) => {
-    if (watchedSourceChanged(current.sources.find((item) => item.id === source.id), source)) {
-      upsertChangedWatchedFolderSource(source, normalized.updatedAt);
-    }
+  openDatabaseConnection().driver.transaction((driver) => {
+    normalized = {
+      ...normalized,
+      readwiseSources: saveCurrentHostReadwiseSources(normalized.readwiseSources, normalized.updatedAt)
+    };
+    upsertWatchedImportManagerSources(normalized);
+    normalized.sources.forEach((source) => {
+      if (watchedSourceChanged(current.sources.find((item) => item.id === source.id), source)) {
+        upsertChangedWatchedFolderSource(source, normalized.updatedAt);
+      }
+    });
+    writeJsonSetting(
+      driver,
+      IMPORT_MANAGER_SETTINGS_KEY,
+      withoutReadwiseImportManagerFields(normalized),
+      normalized.updatedAt
+    );
+    writeJsonSetting(driver, READWISE_HOST_SETTINGS_KEY, normalizeReadwiseHostSettings(normalized), normalized.updatedAt);
   });
   return normalized;
 }

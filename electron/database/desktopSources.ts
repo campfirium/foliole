@@ -76,23 +76,16 @@ export function upsertDesktopSource(input: {
   return loadDesktopSourceByConfig(input.sourceType, input.configRef)!;
 }
 
-export function upsertImportManagerSources(input: {
-  readwiseSources: ImportManagerSourceDraft[]; sources: ImportManagerSourceDraft[]; updatedAt: string;
+export function upsertWatchedImportManagerSources(input: {
+  sources: ImportManagerSourceDraft[]; updatedAt: string;
 }) {
-  for (const [sourceType, sources] of [['watched', input.sources], ['readwise', input.readwiseSources]] as const) {
-    for (const source of sources) {
-      if (!source.id.trim() || !source.primaryPath.trim()) continue;
-      upsertDesktopSource({
-        configRef: source.id, rootPath: source.primaryPath, sourceType,
-        typeSettings: {
-          archivePath: source.archivePath,
-          highlightPath: source.highlightPath,
-          keepState: source.keepState,
-          kind: source.kind ?? null
-        },
-        updatedAt: input.updatedAt
-      });
-    }
+  for (const source of input.sources) {
+    if (!source.id.trim() || !source.primaryPath.trim()) continue;
+    upsertDesktopSource({
+      configRef: source.id, rootPath: source.primaryPath, sourceType: 'watched',
+      typeSettings: { archivePath: source.archivePath, highlightPath: source.highlightPath },
+      updatedAt: input.updatedAt
+    });
   }
 }
 
@@ -109,14 +102,21 @@ function hydrateSource(sourceType: 'readwise' | 'watched', source: ImportManager
   };
 }
 
-export function hydrateImportManagerSources<T extends {
-  readwiseSources: ImportManagerSourceDraft[]; sources: ImportManagerSourceDraft[];
-}>(settings: T): T {
+export function hydrateWatchedImportManagerSources<T extends { sources: ImportManagerSourceDraft[] }>(settings: T): T {
   return {
     ...settings,
-    readwiseSources: settings.readwiseSources.map((source) => hydrateSource('readwise', source)),
     sources: settings.sources.map((source) => hydrateSource('watched', source))
   };
+}
+
+export function loadCurrentHostDesktopSources(sourceType: DesktopSourceType) {
+  const host = currentHost();
+  return openDatabaseConnection().driver.queryAll<DesktopSourceRecord>(
+    `SELECT source_ref, source_type, config_ref, host_name, host_platform, root_path,
+       path_flavor, type_settings_json, updated_at FROM desktop_sources
+     WHERE source_type = ? AND host_name = ? ORDER BY updated_at, source_ref`,
+    [sourceType, host.name]
+  );
 }
 
 export function resolveDesktopSourceAddress(

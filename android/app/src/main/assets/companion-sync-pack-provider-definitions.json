@@ -103,7 +103,7 @@
     "min_supported_version": 3,
     "version": 3
   },
-  "schemaVersion": 76,
+  "schemaVersion": 77,
   "stateCopyIndex": 3,
   "tableNames": [
     "sync_groups",

@@ -42,7 +42,7 @@ function assignment(overrides: Partial<NativeReadwiseHostAssignment> = {}): Nati
   };
 }
 
-it('replaces local Readwise settings with the active remote host and restores them after switching', async () => {
+it('keeps local Readwise settings private while another Host is active and restores them after switching', async () => {
   load.mockResolvedValue(assignment());
   activate.mockResolvedValue(assignment({
     active_host_name: 'This Mac', is_active: true
@@ -60,7 +60,7 @@ it('replaces local Readwise settings with the active remote host and restores th
   await screen.findByText('Office PC');
   expect(screen.getByText('Windows')).toBeInTheDocument();
   expect(screen.getByText('Current active host')).toBeInTheDocument();
-  expect(screen.getByText('D:\\Readwise Reader')).toBeInTheDocument();
+  expect(screen.queryByText('D:\\Readwise Reader')).not.toBeInTheDocument();
   expect(screen.queryByText('This Mac')).not.toBeInTheDocument();
   expect(screen.queryByText('Readwise Reader Import')).not.toBeInTheDocument();
   const switchButton = screen.getByRole('button', { name: 'Switch to this host' });

@@ -24,16 +24,23 @@ export function loadJsonSetting(settingKey: string): unknown | null {
 
 export function saveJsonSetting(settingKey: string, payload: unknown, updatedAt = new Date().toISOString()): void {
   const connection = openDatabaseConnection();
-  const valueJson = JSON.stringify(payload);
   connection.driver.transaction((driver) => {
-    writeSettingRecord(driver, { key: settingKey, updatedAt, valueJson });
-    driver.execute(
-      `INSERT INTO settings (key, value, updated_at)
-       VALUES (?, ?, ?)
-       ON CONFLICT(key) DO UPDATE SET
-         value = excluded.value,
-         updated_at = excluded.updated_at`,
-      [settingKey, valueJson, updatedAt]
-    );
+    writeJsonSetting(driver, settingKey, payload, updatedAt);
   });
+}
+
+export function writeJsonSetting(
+  driver: ReturnType<typeof openDatabaseConnection>['driver'],
+  settingKey: string,
+  payload: unknown,
+  updatedAt = new Date().toISOString()
+) {
+  const valueJson = JSON.stringify(payload);
+  writeSettingRecord(driver, { key: settingKey, updatedAt, valueJson });
+  driver.execute(
+    `INSERT INTO settings (key, value, updated_at)
+     VALUES (?, ?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+    [settingKey, valueJson, updatedAt]
+  );
 }

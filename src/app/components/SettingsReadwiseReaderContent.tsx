@@ -222,7 +222,6 @@ export function SettingsReadwiseReaderContent(props: SettingsReadwiseReaderConte
       <ReadwiseHostAssignmentRow
         assignment={hostAssignment.assignment}
         onActivate={() => void hostAssignment.activate()}
-        readwiseRootPath={props.readwiseRootPath}
       />
     );
   }

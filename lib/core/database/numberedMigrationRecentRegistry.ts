@@ -17,6 +17,7 @@ import { migrateNodeProvenance } from './numberedMigrationNodeProvenance.js';
 import { createNodeSyncTombstoneTable } from './numberedMigrationNodeSyncTombstones.js';
 import { migrateOpaqueSyncRefs } from './numberedMigrationOpaqueSyncRefs.js';
 import { retirePrimaryDeviceState } from './numberedMigrationPrimaryDeviceRetirement.js';
+import { migrateReadwiseHostSettings } from './numberedMigrationReadwiseHostSettings.js';
 import type { NumberedSchemaMigration } from './numberedMigrations.js';
 import { migrateSettingSingleTruth } from './numberedMigrationSettingSingleTruth.js';
 import { migrateSourceHostOwnership } from './numberedMigrationSourceHostOwnership.js';
@@ -200,5 +201,9 @@ export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   {
     version: 76,
     migrate: migrateSourceHostOwnership
+  },
+  {
+    version: 77,
+    migrate: migrateReadwiseHostSettings
   }
 ];

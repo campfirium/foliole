@@ -91,6 +91,15 @@ it('runs Readwise only when every configured Source belongs to the current Host 
     configRef: 'readwise-a', rootPath, sourceType: 'readwise', typeSettings: { keepState: 'enabled' }, updatedAt: 'now'
   });
   expect(canCurrentHostRunReadwise()).toBe(true);
+  upsertDesktopSource({
+    configRef: 'readwise-remote',
+    hostName: 'Other Mac',
+    rootPath,
+    sourceType: 'readwise',
+    typeSettings: { keepState: 'enabled' },
+    updatedAt: 'later'
+  });
+  expect(canCurrentHostRunReadwise()).toBe(true);
   openDatabaseConnection().driver.execute(
     "UPDATE desktop_sources SET host_name = 'Other Mac' WHERE source_type = 'readwise'"
   );

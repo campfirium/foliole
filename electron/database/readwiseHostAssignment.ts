@@ -7,6 +7,7 @@ import type {
 } from '../../lib/platform/nativeReadwiseHostContract.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { loadCurrentHostDesktopSources } from './desktopSources.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
 import { loadJsonSetting, saveJsonSetting } from './settingsStore.js';
 
@@ -72,16 +73,10 @@ export function activateReadwiseOnThisHost() {
 }
 
 export function canCurrentHostRunReadwise() {
-  const currentHost = currentHostName();
   if (!loadReadwiseHostAssignment().is_active) return false;
-  const sources = openDatabaseConnection().driver.queryAll<{
-    host_name: string; root_path: string; type_settings_json: string;
-  }>("SELECT host_name, root_path, type_settings_json FROM desktop_sources WHERE source_type = 'readwise'")
-    .filter((source) => {
+  const sources = loadCurrentHostDesktopSources('readwise').filter((source) => {
       try { return (JSON.parse(source.type_settings_json) as Record<string, unknown>).keepState === 'enabled'; }
       catch { return false; }
     });
-  return sources.length > 0 && sources.every((source) =>
-    source.host_name === currentHost && source.root_path.trim() && fs.existsSync(source.root_path)
-  );
+  return sources.length > 0 && sources.every((source) => source.root_path.trim() && fs.existsSync(source.root_path));
 }
