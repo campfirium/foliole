@@ -85,7 +85,7 @@ export async function runMacosA5PairSync({
   approvalRequired, buildIdentity, credentialRepairRequired, desktopControl = macosDesktopControl,
   existingPairing, env, evidenceRoot, execute, hostName,
   libraryHome, paths, protectData, desktopAuthorizationFingerprint,
-  openTransport, closeTransport,
+  openDesktopSession = openMacosPairSyncDesktopSession, openTransport, closeTransport,
   instrumentationModeArgs, pairedAuthorizationFingerprint, pairRequestIdentity,
   protectedSyncGroup, recoveryEvidenceGoal,
   runPairSyncRecovery = runWindowsA5PairSyncRecovery, serial,
@@ -101,8 +101,9 @@ export async function runMacosA5PairSync({
     existingPairing,
     ...(approvalRequired !== undefined ? { approvalRequired } : {}),
     ...(closeTransport ? { closeTransport } : {}),
-    openDesktopSession: (options) => openMacosPairSyncDesktopSession({
-      ...options, libraryHome, runtimeRoot: paths.desktopRuntimeRoot
+    openDesktopSession: (options) => openDesktopSession({
+      ...options, libraryHome: libraryHome ?? paths.desktopDevLibrary,
+      runtimeRoot: paths.desktopRuntimeRoot
     }),
     ...(openTransport ? { openTransport } : {}),
     ...(instrumentationModeArgs ? { instrumentationModeArgs } : {}),
