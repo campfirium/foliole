@@ -36,7 +36,7 @@ import java.util.zip.ZipOutputStream;
 @RunWith(AndroidJUnit4.class)
 public class FolioleCompanionSyncPackTransferValidationTest {
     private static final String EXPECTED_PEER_ID = "android-fixture";
-    private static final String EXPECTED_SOURCE_PEER_ID = "desktop-fixture";
+    private static final String EXPECTED_SOURCE_PEER_ID = "authorization-desktop-fixture";
     private Context context;
     private File syncPackCache;
 
@@ -100,6 +100,23 @@ public class FolioleCompanionSyncPackTransferValidationTest {
 
         assertTrue(error.getMessage(), error.getMessage().contains("invalid_sync_pack_row_count:nodes"));
         assertEquals(0, cachedDatabaseCount());
+    }
+
+    @Test
+    public void rejectsLegacyAndUnknownFormatGenerationsBeforeDatabaseWrite() throws Exception {
+        for (int formatVersion : new int[] { 11, 13 }) {
+            Map<String, byte[]> entries = readEntries(readContractFixture());
+            JSONObject manifest = new JSONObject(new String(
+                entries.get("manifest.json"), java.nio.charset.StandardCharsets.UTF_8));
+            manifest.put("format_version", formatVersion);
+            byte[] invalid = zip(manifest, entries.get("incoming.db.deflate"));
+
+            IllegalArgumentException error = assertThrows(IllegalArgumentException.class, () ->
+                FolioleCompanionSyncPackTransfer.storeDownloadedPack(
+                    context, invalid, EXPECTED_PEER_ID, EXPECTED_SOURCE_PEER_ID));
+            assertTrue(error.getMessage(), error.getMessage().contains("unsupported_sync_pack_format_version"));
+            assertEquals(0, cachedDatabaseCount());
+        }
     }
 
     @Test

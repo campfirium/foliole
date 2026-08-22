@@ -4,13 +4,15 @@ import ZIPFoundation
 @testable import FolioleSyncPackValidator
 
 final class FolioleSyncPackValidatorTests: XCTestCase {
+    private let expectedSourcePeerId = "authorization-desktop-fixture"
+
     func testAcceptsDesktopProducedRFC1950PackAndValidatesSQLite() throws {
         let contract = try FolioleCompanionContractStore(bundle: .module).syncPackContract()
         let prepared = try FolioleCompanionSyncPackEnvelopeValidator.validate(
             archiveURL: fixtureURL(),
             contract: contract,
             expectedPeerId: "android-fixture",
-            expectedSourcePeerId: "desktop-fixture"
+            expectedSourcePeerId: expectedSourcePeerId
         )
         XCTAssertTrue(prepared.databaseBytes.starts(with: Data("SQLite format 3\0".utf8)))
 
@@ -31,7 +33,7 @@ final class FolioleSyncPackValidatorTests: XCTestCase {
             archiveURL: fixtureURL(),
             contract: contract,
             expectedPeerId: "ios-other-device",
-            expectedSourcePeerId: "desktop-fixture"
+            expectedSourcePeerId: expectedSourcePeerId
         )) { error in
             XCTAssertEqual(error.localizedDescription, "sync_pack_target_mismatch")
         }
@@ -73,13 +75,28 @@ final class FolioleSyncPackValidatorTests: XCTestCase {
         try assertEnvelopeError(archiveURL, code: "invalid_sync_pack_compressed_checksum")
     }
 
+    func testRejectsLegacyAndUnknownFormatGenerationsBeforeSQLiteWrite() throws {
+        for formatVersion in [11, 13] {
+            var entries = try fixtureEntries()
+            var manifest = try XCTUnwrap(JSONSerialization.jsonObject(
+                with: try XCTUnwrap(entries["manifest.json"])
+            ) as? [String: Any])
+            manifest["format_version"] = formatVersion
+            entries["manifest.json"] = try JSONSerialization.data(withJSONObject: manifest)
+            let archiveURL = try temporaryArchiveURL(entries: entries)
+            defer { try? FileManager.default.removeItem(at: archiveURL) }
+
+            try assertEnvelopeError(archiveURL, code: "unsupported_sync_pack_format_version")
+        }
+    }
+
     private func assertEnvelopeError(_ archiveURL: URL, code: String) throws {
         let contract = try FolioleCompanionContractStore(bundle: .module).syncPackContract()
         XCTAssertThrowsError(try FolioleCompanionSyncPackEnvelopeValidator.validate(
             archiveURL: archiveURL,
             contract: contract,
             expectedPeerId: "android-fixture",
-            expectedSourcePeerId: "desktop-fixture"
+            expectedSourcePeerId: expectedSourcePeerId
         )) { error in
             XCTAssertEqual(error.localizedDescription, code)
         }

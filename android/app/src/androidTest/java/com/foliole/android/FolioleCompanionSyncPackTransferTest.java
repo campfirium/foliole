@@ -13,7 +13,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 @RunWith(AndroidJUnit4.class)
 public class FolioleCompanionSyncPackTransferTest {
-    private static final String EXPECTED_SOURCE_PEER_ID = "desktop-fixture";
+    private static final String EXPECTED_SOURCE_PEER_ID = "authorization-desktop-fixture";
     @Test
     public void validatesCurrentAndSupportedLegacyEnvelope() throws Exception {
         byte[] sqlite = FolioleCompanionSyncPackEnvelopeTestSupport.sqliteBytes();
