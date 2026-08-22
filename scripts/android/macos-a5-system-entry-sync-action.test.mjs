@@ -24,6 +24,10 @@ it('cold-restarts A5 so foreground sync consumes the new desktop setting', async
 it('renames, restores, and reopens the desktop product session in one bounded journey', async () => {
   const source = await import('node:fs').then(({ readFileSync }) =>
     readFileSync('scripts/android/macos-a5-system-entry-sync-action.mjs', 'utf8'));
+  const instrumentation = await import('node:fs').then(({ readFileSync }) => readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSystemEntryDisplayNameTest.java',
+    'utf8'
+  ));
   expect(source).toContain("session.invoke('save_system_entry_display_names', { payload: renamed })");
   expect(source).toContain("session.invoke('save_system_entry_display_names', { payload: baseline })");
   expect(source).toContain('waitForA5Payload(context, renamed)');
@@ -31,6 +35,9 @@ it('renames, restores, and reopens the desktop product session in one bounded jo
   expect(source).toContain("inspectDisplay(context, 'renamed-display', { expectedText: ALIAS })");
   expect(source).toContain("inspectDisplay(context, 'restored-display', { forbiddenText: ALIAS })");
   expect(source.match(/openMacosPairSyncDesktopSession/gu)?.length).toBeGreaterThanOrEqual(3);
+  expect(instrumentation).toContain('FolioleCompanionPairSyncRecoveryScenario.run(');
+  expect(instrumentation.indexOf('FolioleCompanionPairSyncRecoveryScenario.run('))
+    .toBeLessThan(instrumentation.indexOf('openDirectorySurface('));
 });
 
 it('keeps the formal entry on the isolated controller library and protected backup path', async () => {

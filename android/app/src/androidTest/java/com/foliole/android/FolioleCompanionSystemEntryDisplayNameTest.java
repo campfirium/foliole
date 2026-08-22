@@ -31,6 +31,10 @@ public class FolioleCompanionSystemEntryDisplayNameTest {
         try {
             WebView webView = activity.findViewById(R.id.webview);
             assertNotNull(webView);
+            JSONObject sync = FolioleCompanionPairSyncRecoveryScenario.run(
+                instrumentation, webView, false, false, "", 120_000
+            );
+            assertEquals(sync.toString(), "existing", sync.optString("pairingPath"));
             FolioleCompanionCaptureNavigation.openDirectorySurface(
                 instrumentation, webView, 30_000
             );
@@ -39,7 +43,7 @@ public class FolioleCompanionSystemEntryDisplayNameTest {
             assertFalse(displayed.toString(), displayed.optString("text").isEmpty());
             if (!expected.isEmpty()) assertEquals(displayed.toString(), expected, displayed.optString("text"));
             if (!forbidden.isEmpty()) assertFalse(displayed.toString(), forbidden.equals(displayed.optString("text")));
-            sendEvidence(instrumentation, displayed, expected, forbidden);
+            sendEvidence(instrumentation, displayed, expected, forbidden, sync);
         } finally {
             activity.runOnUiThread(activity::finish);
         }
@@ -61,13 +65,15 @@ public class FolioleCompanionSystemEntryDisplayNameTest {
         Instrumentation instrumentation,
         JSONObject displayed,
         String expected,
-        String forbidden
+        String forbidden,
+        JSONObject sync
     ) throws Exception {
         JSONObject receipt = new JSONObject();
         receipt.put("displayed", displayed);
         receipt.put("expectedText", expected);
         receipt.put("forbiddenText", forbidden);
         receipt.put("hydratedAfterRestart", true);
+        receipt.put("sync", sync);
         Bundle evidence = new Bundle();
         evidence.putString("folioleActionReceipt", receipt.toString());
         instrumentation.sendStatus(2, evidence);
