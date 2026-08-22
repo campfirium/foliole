@@ -13,6 +13,7 @@ import { refreshReadwiseBookPlaceholderNode } from './readwiseBookPlaceholderRef
 import { loadReadwiseBooksInventoryForPaths } from './readwiseBooksInventoryLoad.js';
 import { findPersistedReadwiseBookByNodeId } from './readwiseBooksInventoryState.js';
 import type { EnabledReadwiseBooksSource } from './readwiseReaderBooksRun.js';
+import { applyWatchedPreparedImportIdentity } from './watchedPreparedImportIdentity.js';
 
 function isActiveReadwiseBooksSource(source: unknown): source is EnabledReadwiseBooksSource {
   const candidate = source as Partial<EnabledReadwiseBooksSource>;
@@ -101,7 +102,8 @@ async function reimportKeepImportTopicSource(nodeId: string, reimportedAt: strin
   try {
     const source = await buildKeepImportSourceDescriptor(config, item.source_path);
     const sourceSignature = await resolveKeepImportSourceSignature(config, source);
-    const prepared = await loadPreparedKeepImportRecord(config, source, reimportedAt);
+    const prepared = applyWatchedPreparedImportIdentity(config, source,
+      await loadPreparedKeepImportRecord(config, source, reimportedAt));
     const record = runPreparedImport(prepared, {
       forceUpdateExistingNodeId: details.sourceNodeId,
       resetImportedStructure: true

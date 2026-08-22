@@ -21,6 +21,7 @@ vi.mock('../import/managedInboxEvents.js', () => ({
   notifyManagedInboxUpdated: vi.fn()
 }));
 
+import { reimportCurrentTopicSource } from '../import/currentSourceReimport.js';
 import { runKeepImportRule } from '../import/keepImportService.js';
 import { confirmWatchedFolderReconnect, previewWatchedFolderReconnect } from '../import/watchedFolderReconnect.js';
 
@@ -160,6 +161,7 @@ it('preserves the original topic identity and surfaces its update after reconnec
   await fs.mkdir(nextPath, { recursive: true });
   await fs.writeFile(path.join(firstPath, 'note.md'), '# Original\nFirst body');
   await fs.writeFile(path.join(nextPath, 'note.md'), '# Original\nUpdated body');
+  await fs.writeFile(path.join(nextPath, 'new.md'), '# New\nNew body');
   await fs.utimes(path.join(firstPath, 'note.md'), new Date('2026-08-18T00:00:00Z'), new Date('2026-08-18T00:00:00Z'));
   await fs.utimes(path.join(nextPath, 'note.md'), new Date('2026-08-18T00:01:00Z'), new Date('2026-08-18T00:01:00Z'));
   const source = {
@@ -176,20 +178,34 @@ it('preserves the original topic identity and surfaces its update after reconnec
   }>(`SELECT source_fingerprint, latest_node_id FROM import_sources
       WHERE watched_binding_id = ? AND watched_relative_path = 'note.md'`, [binding.binding_id])!;
 
+  await fs.rm(firstPath, { recursive: true });
+  expect(resolveExecutableWatchedBinding(binding.binding_id, firstPath).executable).toBe(false);
+  expect(openDatabaseConnection().driver.queryOne(
+    'SELECT id, deleted_at FROM nodes WHERE id = ?', [first.latest_node_id]
+  )).toEqual({ deleted_at: null, id: first.latest_node_id });
   disconnectWatchedFolderBinding(binding.binding_id);
   await confirmWatchedFolderReconnect({ bindingId: binding.binding_id, folderPath: nextPath });
   const reconnectRun = await runKeepImportRule({
     directoryPath: nextPath, highlightPolicy: 'reference_only', ruleId: binding.binding_id, sourceType: 'generic'
   });
-  expect(reconnectRun).toEqual([expect.objectContaining({
-    action: 'skipped', previewStatus: 'updated', sourcePath: 'note.md'
-  })]);
+  expect(reconnectRun).toEqual(expect.arrayContaining([
+    expect.objectContaining({ action: 'skipped', previewStatus: 'updated', sourcePath: 'note.md' }),
+    expect.objectContaining({ action: 'import_attempted', previewStatus: 'new', sourcePath: 'new.md' })
+  ]));
+
+  await expect(reimportCurrentTopicSource(first.latest_node_id)).resolves.toMatchObject({
+    node_id: first.latest_node_id,
+    status: 'reimported'
+  });
 
   expect(openDatabaseConnection().driver.queryAll(
-    `SELECT source_fingerprint FROM import_sources
-     WHERE watched_binding_id = ? AND watched_relative_path = 'note.md'`, [binding.binding_id]
-  )).toEqual([{ source_fingerprint: first.source_fingerprint }]);
+    `SELECT latest_node_id, source_fingerprint, source_location FROM import_sources
+     WHERE watched_binding_id = ? ORDER BY source_location`, [binding.binding_id]
+  )).toEqual([
+    expect.objectContaining({ source_location: 'new.md' }),
+    { latest_node_id: first.latest_node_id, source_fingerprint: first.source_fingerprint, source_location: 'note.md' }
+  ]);
   expect(openDatabaseConnection().driver.queryOne(
     'SELECT id, content FROM nodes WHERE id = ?', [first.latest_node_id]
-  )).toEqual({ content: '# Original\nFirst body', id: first.latest_node_id });
+  )).toEqual({ content: '# Original\nUpdated body', id: first.latest_node_id });
 });
