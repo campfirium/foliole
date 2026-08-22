@@ -136,6 +136,19 @@ it('does not render a leading separator when create actions are hidden', () => {
   ]);
 });
 
+it('keeps Rename available for a protected system root', () => {
+  renderWithLocalization(
+    <NodeListContextMenu
+      {...noopProps()}
+      showRootCreateOnly
+      showRenameAction
+    />
+  );
+
+  expect(screen.getByRole('menuitem', { name: 'Rename' })).toBeInTheDocument();
+  expect(screen.queryByRole('menuitem', { name: 'Move to…' })).toBeNull();
+});
+
 it('shows Relearn help after a long hover', () => {
   vi.useFakeTimers();
   renderWithLocalization(<NodeListContextMenu {...noopProps()} />);

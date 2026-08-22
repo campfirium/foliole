@@ -4,7 +4,11 @@ import {
   parseSystemEntryDisplayNamesPayload,
   type SystemEntryDisplayNamesPayload
 } from '../../../../lib/platform/systemEntryDisplayNameContract';
-import { setSystemEntryDisplayNames } from '../../localization/systemEntryDisplayNamesStore';
+import {
+  getSystemEntryDisplayNamesSnapshot,
+  setSystemEntryDisplayNames
+} from '../../localization/systemEntryDisplayNamesStore';
+import { resolveSystemEntryId } from '../../localization/systemEntryNames';
 import { getRuntimeInvoke } from '../runtimeInvoke';
 
 const DEMO_STORAGE_KEY = 'foliole-demo-system-entry-display-names-v1';
@@ -38,4 +42,24 @@ export async function saveRuntimeSystemEntryDisplayNames(
   return setSystemEntryDisplayNames(
     await invoke(NATIVE_COMMANDS.saveSystemEntryDisplayNames, { payload })
   );
+}
+
+export async function renameRuntimeSystemEntry(
+  nodeId: string,
+  rawName: string,
+  options: { demo: boolean }
+) {
+  const id = resolveSystemEntryId(nodeId);
+  if (!id) return false;
+  const customDisplayNameById = {
+    ...getSystemEntryDisplayNamesSnapshot().payload.customDisplayNameById
+  };
+  const name = rawName.trim();
+  if (name) customDisplayNameById[id] = name;
+  else delete customDisplayNameById[id];
+  await saveRuntimeSystemEntryDisplayNames({
+    customDisplayNameById,
+    version: SYSTEM_ENTRY_DISPLAY_NAMES_PAYLOAD_VERSION
+  }, options);
+  return true;
 }

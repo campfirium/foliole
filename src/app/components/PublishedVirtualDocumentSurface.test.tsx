@@ -2,6 +2,7 @@ import { screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { setSystemEntryDisplayNames } from '../../shared/localization/systemEntryDisplayNamesStore';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { AppConfirmationProvider } from '../../shared/ui';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -23,7 +24,28 @@ const topicNode: Node = {
 
 beforeEach(() => {
   Object.values(publishMocks).forEach((mock) => mock.mockReset());
+  setSystemEntryDisplayNames({ customDisplayNameById: {}, version: 1 });
   useWorkspaceStore.setState({ isHydrated: true, workspaceHydrationError: null });
+});
+
+it('shows the shared system alias as the Published folder heading', async () => {
+  publishMocks.loadFoliolePublishedTopicsFromRuntime.mockResolvedValue({ status: 'ready', topics: [] });
+  setSystemEntryDisplayNames({ customDisplayNameById: { published: 'Public shelf' }, version: 1 });
+
+  renderWithLocalization(
+    <PublishedVirtualDocumentSurface
+      activeNodeId={null}
+      nodesById={{}}
+      onChangeSortDirection={vi.fn()}
+      onChangeSortKey={vi.fn()}
+      onSelectNode={vi.fn()}
+      sortDirection="desc"
+      sortKey="dateSaved"
+      trashedNodeIds={[]}
+    />
+  );
+
+  expect(await screen.findByRole('heading', { name: 'Public shelf' })).toBeVisible();
 });
 
 it('shows published Topics in the shared content list with the description in search', async () => {

@@ -1,3 +1,4 @@
+import { resolveSystemEntryId } from '../../../shared/localization/systemEntryNames';
 import { mergeRuntimeReadwiseTopicHighlights } from '../../../shared/platform/readwiseTopicMerge';
 import { requestFoliolePublishedDelete } from '../../../shared/platform/runtime/foliolePublishedManagement';
 import { showAppRuntimeNotice } from '../../../shared/ui/AppRuntimeNotice';
@@ -73,7 +74,10 @@ function buildMenuState(props: NodeListTreeMenuProps) {
     showPostponeTopicAction: isSingleNodeTarget && canPostponeTopic(primaryTarget),
     showSequentialReadingAction: isSingleNodeTarget && canToggleSequentialReading(primaryTarget, props.nodesById),
     showNodeImportActions,
-    showRenameAction: isSingleNodeTarget && !isProtectedRootNode(primaryTarget),
+    showRenameAction: isSingleNodeTarget && (
+      Boolean(primaryTargetId && resolveSystemEntryId(primaryTargetId))
+      || !isProtectedRootNode(primaryTarget)
+    ),
     showVirtualCreateOnly: props.isVirtualViewOpen || (isSingleNodeTarget && isVirtualRootNode(primaryTarget))
   };
 }

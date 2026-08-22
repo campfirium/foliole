@@ -3,7 +3,9 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import { VIRTUAL_ROOT_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
+import { setSystemEntryDisplayNames } from '../../shared/localization/systemEntryDisplayNamesStore';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
+import type { ElectronAPI } from '../../shared/platform/electronApi';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { WorkspaceVirtualSection } from './WorkspaceVirtualSection';
@@ -61,10 +63,29 @@ function renderSavedSearchTree(args: {
 
 beforeEach(() => {
   window.localStorage.clear();
+  setSystemEntryDisplayNames({ customDisplayNameById: {}, version: 1 });
+  window.electronAPI = {
+    invoke: vi.fn(async (_command: string, args?: { payload?: unknown }) => args?.payload)
+  } as unknown as ElectronAPI;
   useWorkspaceStore.setState({
     createVirtualNode: vi.fn(async () => 'virtual-new'),
     deleteNode: vi.fn(),
     updateNodeTitle: vi.fn(async () => true)
+  });
+});
+
+it('renames the built-in Virtual folder through the ordinary row action', async () => {
+  renderSavedSearchTree();
+
+  fireEvent.contextMenu(screen.getByRole('treeitem', { name: 'Virtual folders' }));
+  fireEvent.click(await screen.findByRole('menuitem', { name: 'Rename' }));
+  const input = await screen.findByRole('textbox', { name: 'Rename Virtual folders' });
+  fireEvent.change(input, { target: { value: 'Smart views' } });
+  fireEvent.keyDown(input, { key: 'Enter' });
+
+  expect(await screen.findByRole('treeitem', { name: 'Smart views' })).toBeInTheDocument();
+  expect(window.electronAPI?.invoke).toHaveBeenCalledWith('save_system_entry_display_names', {
+    payload: { customDisplayNameById: { 'virtual-root': 'Smart views' }, version: 1 }
   });
 });
 

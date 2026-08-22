@@ -44,7 +44,7 @@ export function toggleCollapsed(nodeId: string, setCollapsedIds: Dispatch<SetSta
 }
 
 function renderBuiltinVirtualRow(
-  props: Pick<WorkspaceVirtualRowsProps, 'activeVirtualNodeId' | 'isVirtualViewOpen' | 'onOpenVirtualView'> & {
+  props: Pick<WorkspaceVirtualRowsProps, 'activeVirtualNodeId' | 'isVirtualViewOpen' | 'onContextMenuVirtualNode' | 'onOpenVirtualView' | 'onRenameVirtualNode'> & {
     label: string;
     nodeId: string;
     onRowKeyDown: ReturnType<typeof createNodeListRowKeydownHandler>;
@@ -64,7 +64,9 @@ function renderBuiltinVirtualRow(
       rowSpacing={props.rowSpacing}
       showIcon={false}
       showLeafChevronPlaceholder={false}
+      onContextMenu={props.onContextMenuVirtualNode}
       onKeyDown={props.onRowKeyDown}
+      onRename={props.onRenameVirtualNode}
       onSelect={() => props.onOpenVirtualView?.(props.nodeId)}
       onToggleCollapse={() => undefined}
     />
@@ -118,7 +120,7 @@ function renderMainVirtualRow(args: Parameters<typeof renderVirtualRow>[0] & {
       showIcon={false}
       showLeafChevronPlaceholder={false}
       {...(args.isVirtualRoot ? { trailingLabelContent: <VirtualRootMarker /> } : {})}
-      {...(args.isSavedSearch ? { onRename: args.props.onRenameVirtualNode } : {})}
+      {...(args.isVirtualRoot || args.isSavedSearch ? { onRename: args.props.onRenameVirtualNode } : {})}
       {...(args.isVirtualRoot || args.isSavedSearch
         ? { onContextMenu: args.props.onContextMenuVirtualNode }
         : {})}

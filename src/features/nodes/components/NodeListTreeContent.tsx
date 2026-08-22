@@ -13,6 +13,7 @@ import type {
 import { NodeListTreeMenu } from './NodeListTreeMenu';
 import type { NodeListState, NodeSelectModifiers } from './NodeListTreeState';
 import { NodeReviewSchedulingDialog } from './NodeReviewSchedulingDialog';
+import { useNodeListRename } from './useNodeListRename';
 import { useNodeListSearchRows } from './useNodeListSearchRows';
 
 interface NodeListTreeContentProps {
@@ -75,6 +76,7 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
     noteRowsAll: props.state.noteRowsAll,
     trashedNodeIds: props.trashedNodeIds
   });
+  const renameNode = useNodeListRename(props.updateNodeTitle);
 
   return (
     <>
@@ -96,7 +98,7 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
         nodesById={props.nodesById}
         noteRowIds={props.state.noteRowIds}
         onOpenNotesView={props.onOpenNotesView}
-        onRenameNode={props.updateNodeTitle}
+        onRenameNode={renameNode}
         onSearchQueryChange={setSearchQuery}
         onSelect={props.onSelect}
         reviewSession={props.reviewSession}

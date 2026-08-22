@@ -98,7 +98,7 @@ function renderNodeListRow(
       onDragStart={props.drag.onDragStartNode}
       onDrop={props.drag.onDropOnNode}
       onKeyDown={onRowKeyDown}
-      {...(!rowModel.isHome && !rowModel.isInbox && !rowModel.isTrashRoot && !rowModel.isVirtualRoot ? { onRename: props.onRename } : {})}
+      onRename={props.onRename}
       onSelect={onSelect}
       onToggleCollapse={props.onToggleCollapse}
     />

@@ -21,7 +21,6 @@ const SETTINGS_SEARCH_ROW_DEFINITIONS: SearchRowDefinition[] = [
   row('about', 'about-community', 'settings.search.aboutCommunity.title', 'settings.search.aboutCommunity.description', 'settings.search.aboutCommunity.terms'),
   row('general', 'general-search-enhancement', 'settings.search.generalSearchEnhancement.title', 'settings.search.generalSearchEnhancement.description', 'settings.search.generalSearchEnhancement.terms'),
   row('general', 'general-language', 'settings.search.language.title', 'settings.search.language.description', 'settings.search.language.terms'),
-  row('general', 'general-system-entry-names', 'settings.general.systemEntryNames.section', 'settings.general.systemEntryNames.description'),
   row('general', 'general-open-at-login', 'settings.search.generalOpenAtLogin.title', 'settings.search.generalOpenAtLogin.description', 'settings.search.generalOpenAtLogin.terms'),
   row('general', 'general-action-help', 'settings.appearance.actionHelp.row', 'settings.appearance.actionHelp.description'),
   row('typography', 'typography-text-font', 'settings.appearance.textFont.title', 'settings.appearance.textFont.description'),

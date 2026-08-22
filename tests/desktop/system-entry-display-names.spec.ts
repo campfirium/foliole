@@ -4,7 +4,7 @@ import path from 'node:path';
 import type { Page } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
-import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
+import { expectWorkspaceShell } from './harness/settings';
 
 const SCREENSHOT = path.resolve(
   '.tmp/artifacts/desktop-acceptance/system-entry-display-names.png'
@@ -37,6 +37,13 @@ async function expectEntryNames(page: Page, names: readonly string[]) {
   }
 }
 
+async function renameEntry(page: Page, nodeId: string, currentName: string, nextName: string) {
+  await page.locator(`[data-node-id="${nodeId}"]`).first().dblclick();
+  const input = page.getByRole('textbox', { name: `Rename ${currentName}` });
+  await input.fill(nextName);
+  await input.press('Enter');
+}
+
 test('renames all system entries, restores them after renderer restart, and clears one override', async ({
   desktopWindow
 }, testInfo) => {
@@ -44,15 +51,9 @@ test('renames all system entries, restores them after renderer restart, and clea
   const pathsBefore = await desktopWindow.evaluate(() =>
     window.electronAPI?.invoke('load_library_path_settings', {})
   );
-  const general = await openSettingsCategory(desktopWindow, 'General');
-  for (const [, defaultName, customName] of ENTRIES) {
-    const input = general.getByRole('textbox', { name: `Custom name for ${defaultName}` });
-    await input.fill(`  ${customName}  `);
-    await input.blur();
-    await expect(input).toHaveValue(customName);
+  for (const [id, defaultName, customName] of ENTRIES) {
+    await renameEntry(desktopWindow, id, defaultName, `  ${customName}  `);
   }
-  await desktopWindow.keyboard.press('Escape');
-  await expect(general).toBeHidden();
   await expectEntryNames(
     desktopWindow,
     ENTRIES.map(([, , customName]) => customName)
@@ -64,20 +65,19 @@ test('renames all system entries, restores them after renderer restart, and clea
     desktopWindow,
     ENTRIES.map(([, , customName]) => customName)
   );
+  await desktopWindow.locator('[data-node-id="special-home"]').first().click();
+  await expect(desktopWindow.getByRole('heading', { name: 'Start here' })).toBeVisible();
   expect(
     await desktopWindow.evaluate(() => window.electronAPI?.invoke('load_library_path_settings', {}))
   ).toEqual(pathsBefore);
 
-  const reopened = await openSettingsCategory(desktopWindow, 'General');
   await mkdir(path.dirname(SCREENSHOT), { recursive: true });
-  await reopened.screenshot({ path: SCREENSHOT });
+  await desktopWindow.screenshot({ path: SCREENSHOT });
   await testInfo.attach('system-entry-display-names', { contentType: 'image/png', path: SCREENSHOT });
-  await reopened.getByRole('textbox', { name: 'Custom name for Home' }).fill('');
-  await reopened.getByRole('textbox', { name: 'Custom name for Home' }).blur();
-  await desktopWindow.keyboard.press('Escape');
-  await expect(reopened).toBeHidden();
+  await renameEntry(desktopWindow, 'special-home', 'Start here', '');
   await expectEntryNames(desktopWindow, [
     'Home',
     ...ENTRIES.slice(1).map(([, , customName]) => customName)
   ]);
+  await expect(desktopWindow.getByRole('heading', { name: 'Home' })).toBeVisible();
 });

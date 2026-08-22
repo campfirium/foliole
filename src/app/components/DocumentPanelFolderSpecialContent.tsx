@@ -2,6 +2,8 @@ import type { ComponentProps } from 'react';
 
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { getStoredAppLocale } from '../../shared/localization/appLanguage';
+import { resolveNodeDisplayTitle } from '../../shared/localization/systemEntryNames';
 
 import { DocumentPanelFolderContent } from './DocumentPanelFolderContent';
 import type { FolderListView } from './FolderListView';
@@ -25,7 +27,9 @@ export function renderFolderSpecialContent(args: {
       activeNodeId={args.activeNodeId}
       folderListSortDirection={args.folderListSortDirection}
       folderListSortKey={args.folderListSortKey}
-      folderTitle={args.activeNode?.title ?? 'Folder'}
+      folderTitle={args.activeNode
+        ? resolveNodeDisplayTitle(getStoredAppLocale(), args.activeNode.id, args.activeNode.title)
+        : 'Folder'}
       nodeOrder={args.nodeOrder}
       nodesById={args.nodesById}
       onChangeFolderListSortDirection={args.onChangeFolderListSortDirection}

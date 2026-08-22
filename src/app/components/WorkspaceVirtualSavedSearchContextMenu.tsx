@@ -8,6 +8,7 @@ import { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuTrigger } from 
 interface WorkspaceVirtualSavedSearchContextMenuProps {
   left: number;
   isVirtualRoot?: boolean;
+  isSystemEntry?: boolean;
   nodeId: string;
   onClose: () => void;
   onCreateChild: (nodeId?: string) => void;
@@ -46,9 +47,24 @@ function CreateChildMenuItem(props: { nodeId?: string; onClose: () => void; onCr
   );
 }
 
+function RenameMenuItem(props: { nodeId: string; onClose: () => void }) {
+  return (
+    <NodeContextMenuItem
+      icon={Pencil}
+      onSelect={() => {
+        requestNodeRename(props.nodeId);
+        props.onClose();
+      }}
+    >
+      Rename
+    </NodeContextMenuItem>
+  );
+}
+
 export function WorkspaceVirtualSavedSearchContextMenu({
   left,
   isVirtualRoot = false,
+  isSystemEntry = false,
   nodeId,
   onClose,
   onCreateChild,
@@ -56,6 +72,7 @@ export function WorkspaceVirtualSavedSearchContextMenu({
   onWriteTopicYaml,
   top
 }: WorkspaceVirtualSavedSearchContextMenuProps) {
+  const isSavedSearch = !isSystemEntry;
   return (
     <AppDropdownMenu onOpenChange={(open) => (open ? undefined : onClose())} open>
       <AppDropdownMenuTrigger asChild>
@@ -73,19 +90,13 @@ export function WorkspaceVirtualSavedSearchContextMenu({
         onContextMenu={(event) => event.preventDefault()}
         sideOffset={0}
       >
-        <CreateChildMenuItem {...(!isVirtualRoot ? { nodeId } : {})} onClose={onClose} onCreate={onCreateChild} />
-        {!isVirtualRoot ? <NodeContextMenuSeparator /> : null}
-        {!isVirtualRoot ? (
+        {isVirtualRoot || isSavedSearch
+          ? <CreateChildMenuItem {...(!isVirtualRoot ? { nodeId } : {})} onClose={onClose} onCreate={onCreateChild} />
+          : null}
+        {isVirtualRoot || isSavedSearch ? <NodeContextMenuSeparator /> : null}
+        <RenameMenuItem nodeId={nodeId} onClose={onClose} />
+        {isSavedSearch ? (
           <>
-            <NodeContextMenuItem
-              icon={Pencil}
-              onSelect={() => {
-                requestNodeRename(nodeId);
-                onClose();
-              }}
-            >
-              Rename
-            </NodeContextMenuItem>
             {onWriteTopicYaml ? (
               <WriteTopicYamlMenuItem nodeId={nodeId} onClose={onClose} onWrite={onWriteTopicYaml} />
             ) : null}

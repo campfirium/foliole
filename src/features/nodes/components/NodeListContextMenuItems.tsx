@@ -52,12 +52,14 @@ function TrashMenuItems({
 }
 
 function shouldShowEditGroup(props: NoteMenuItemsProps) {
-  return !props.showRootCreateOnly && Boolean(
+  return Boolean(
     (props.showRenameAction && props.onRenameNode) ||
+    (!props.showRootCreateOnly && (
     (props.showMergeHighlightsIntoTopicAction && props.onMergeHighlightsIntoTopic) ||
     (props.showPasteIntoNodeAction && props.onPasteIntoNode) ||
     (props.showAddToVirtualFolderAction && props.onAddToVirtualFolder) ||
     (props.showMoveToNodeAction && props.onMoveToNode)
+    ))
   );
 }
 
@@ -98,16 +100,15 @@ function renderCreateItems(t: Translate, props: NoteMenuItemsProps, helpEnabled:
 }
 
 function renderEditItems(t: Translate, props: NoteMenuItemsProps, helpEnabled: boolean) {
-  if (props.showRootCreateOnly) return null;
   const helpProps = (copy: (typeof NODE_LIST_CONTEXT_ACTION_HELP)[keyof typeof NODE_LIST_CONTEXT_ACTION_HELP]) =>
     helpEnabled ? { help: resolveNodeListActionHelp(copy) } : {};
   return (
     <>
       {props.showRenameAction && props.onRenameNode ? <NodeContextMenuItem icon={Pencil} onSelect={props.onRenameNode}>{t('desktop.nodeList.menu.rename')}</NodeContextMenuItem> : null}
-      {props.showMergeHighlightsIntoTopicAction && props.onMergeHighlightsIntoTopic ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.mergeHighlights)} icon={GitMerge} onSelect={props.onMergeHighlightsIntoTopic}>{t('desktop.nodeList.menu.mergeHighlights')}</NodeContextMenuItem> : null}
-      {props.showPasteIntoNodeAction && props.onPasteIntoNode ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.pasteClipboardTopic)} icon={Clipboard} onSelect={props.onPasteIntoNode}>{t('desktop.nodeList.menu.pasteAsTopic')}</NodeContextMenuItem> : null}
-      {props.showMoveToNodeAction && props.onMoveToNode ? <NodeContextMenuItem icon={MoveRight} onSelect={props.onMoveToNode}>{t('desktop.nodeList.menu.moveTo')}</NodeContextMenuItem> : null}
-      {props.showAddToVirtualFolderAction && props.onAddToVirtualFolder ? <NodeContextMenuItem icon={ListPlus} onSelect={props.onAddToVirtualFolder}>{t('desktop.nodeList.menu.addToVirtualFolder')}</NodeContextMenuItem> : null}
+      {!props.showRootCreateOnly && props.showMergeHighlightsIntoTopicAction && props.onMergeHighlightsIntoTopic ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.mergeHighlights)} icon={GitMerge} onSelect={props.onMergeHighlightsIntoTopic}>{t('desktop.nodeList.menu.mergeHighlights')}</NodeContextMenuItem> : null}
+      {!props.showRootCreateOnly && props.showPasteIntoNodeAction && props.onPasteIntoNode ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.pasteClipboardTopic)} icon={Clipboard} onSelect={props.onPasteIntoNode}>{t('desktop.nodeList.menu.pasteAsTopic')}</NodeContextMenuItem> : null}
+      {!props.showRootCreateOnly && props.showMoveToNodeAction && props.onMoveToNode ? <NodeContextMenuItem icon={MoveRight} onSelect={props.onMoveToNode}>{t('desktop.nodeList.menu.moveTo')}</NodeContextMenuItem> : null}
+      {!props.showRootCreateOnly && props.showAddToVirtualFolderAction && props.onAddToVirtualFolder ? <NodeContextMenuItem icon={ListPlus} onSelect={props.onAddToVirtualFolder}>{t('desktop.nodeList.menu.addToVirtualFolder')}</NodeContextMenuItem> : null}
     </>
   );
 }

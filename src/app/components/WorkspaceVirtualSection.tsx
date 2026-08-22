@@ -18,7 +18,10 @@ import {
 } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { useLocalization, type Translate } from '../../shared/localization/LocalizationProvider';
-import { resolveNodeDisplayTitle } from '../../shared/localization/systemEntryNames';
+import { resolveNodeDisplayTitle, resolveSystemEntryId } from '../../shared/localization/systemEntryNames';
+import { renameRuntimeSystemEntry } from '../../shared/platform/desktop/systemEntryDisplayNamesRuntimeRepository';
+import { useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
+import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { useCreateVirtualFolder } from './useCreateVirtualFolder';
@@ -82,6 +85,7 @@ function renderSavedSearchContextMenu(args: {
     <WorkspaceVirtualSavedSearchContextMenu
       left={args.contextMenu.left}
       isVirtualRoot={args.contextMenu.nodeId === VIRTUAL_ROOT_NODE_ID}
+      isSystemEntry={Boolean(resolveSystemEntryId(args.contextMenu.nodeId))}
       nodeId={args.contextMenu.nodeId}
       onClose={() => args.setContextMenu(null)}
       onCreateChild={args.onCreateChild}
@@ -96,7 +100,8 @@ function renderSavedSearchContextMenu(args: {
 
 function useVirtualFolderActions(
   t: Translate,
-  updateNodeTitle: (nodeId: string, title: string) => Promise<boolean>
+  updateNodeTitle: (nodeId: string, title: string) => Promise<boolean>,
+  demo: boolean
 ) {
   const [isWritingTopicYaml, setIsWritingTopicYaml] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -104,8 +109,13 @@ function useVirtualFolderActions(
     isWritingTopicYaml,
     onRename: (nodeId: string, title: string) => {
       setStatus(null);
-      void updateNodeTitle(nodeId, title).then((updated) => {
+      const rename = resolveSystemEntryId(nodeId)
+        ? renameRuntimeSystemEntry(nodeId, title, { demo })
+        : updateNodeTitle(nodeId, title);
+      void rename.then((updated) => {
         if (!updated) setStatus(t('desktop.workspace.virtualFolderRename.failed'));
+      }).catch(() => {
+        showAppRuntimeNotice(t('settings.general.systemEntryNames.saveFailed'));
       });
     },
     onWriteTopicYaml: (nodeId: string) => {
@@ -143,11 +153,12 @@ function useVirtualSectionTreeModel(
 
 export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
   const { locale, t } = useLocalization();
+  const { isDemo } = useDemoRuntimeState();
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
   const [contextMenu, setContextMenu] = useState<{ left: number; nodeId: string; top: number } | null>(null);
   const deleteNode = useWorkspaceStore((state) => state.deleteNode);
   const updateNodeTitle = useWorkspaceStore((state) => state.updateNodeTitle);
-  const actions = useVirtualFolderActions(t, updateNodeTitle);
+  const actions = useVirtualFolderActions(t, updateNodeTitle, isDemo);
   const createVirtualFolder = useCreateVirtualFolder({
     failedMessage: t('desktop.nodeList.createVirtualFolderFailed'),
     nodesById: props.nodesById,
