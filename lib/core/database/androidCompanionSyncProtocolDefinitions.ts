@@ -1,3 +1,4 @@
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../platform/syncProtocolContract.js';
 import { SYNC_PACK_ENVELOPE_CONTRACT } from '../sync/syncPackEnvelopeContract.js';
 
 import {
@@ -18,6 +19,7 @@ export const ANDROID_COMPANION_RESOURCE_STATUSES = {
 } as const;
 
 export const ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS = {
+  syncProtocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
   pushAck: {
     clientOpIdKeys: ['client_op_id', 'clientOpId'],
     confirmingStatuses: ['accepted', 'already_applied'],

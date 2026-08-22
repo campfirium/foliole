@@ -19,6 +19,10 @@ const PAIRING_STORE = path.join(
   'android',
   'FolioleCompanionPairingStore.java'
 );
+const PROTOCOL_STORE = path.join(
+  REPO_ROOT, 'android', 'app', 'src', 'main', 'java', 'com', 'foliole', 'android',
+  'FolioleCompanionPairingProtocolStore.java'
+);
 
 describe('FolioleCompanionPairingStore', () => {
   it('lets Android Keystore generate the AES-GCM encryption IV', async () => {
@@ -32,5 +36,12 @@ describe('FolioleCompanionPairingStore', () => {
     expect(savePairingCredentialsBody).toContain('byte[] iv = cipher.getIV();');
     expect(savePairingCredentialsBody).not.toContain('new GCMParameterSpec(128, iv)');
     expect(savePairingCredentialsBody).not.toContain('new SecureRandom()');
+  });
+
+  it('reads the accepted pairing version from the generated shared sync contract', async () => {
+    const source = await readFile(PROTOCOL_STORE, 'utf8');
+
+    expect(source).toContain('FolioleCompanionSyncProtocolDefinitions.currentProtocolVersion(context)');
+    expect(source).not.toMatch(/CURRENT_PROTOCOL_VERSION\s*=\s*\d+/);
   });
 });

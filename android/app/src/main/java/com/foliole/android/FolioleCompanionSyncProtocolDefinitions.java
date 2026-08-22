@@ -29,6 +29,10 @@ final class FolioleCompanionSyncProtocolDefinitions {
         return stringValue(context, "resourceStatuses", key);
     }
 
+    static int currentProtocolVersion(Context context) throws Exception {
+        return section(context, "syncProtocol").getInt("version");
+    }
+
     static Set<String> resourceStatusSet(Context context, String key) throws Exception {
         return stringSet(context, "resourceStatuses", key);
     }
