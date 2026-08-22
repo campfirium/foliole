@@ -184,11 +184,11 @@ final class FolioleCompanionWebViewSemanticAdapter {
     ) throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
         AtomicReference<String> result = new AtomicReference<>("");
-        instrumentation.runOnMainSync(() -> webView.evaluateJavascript(script, value -> {
+        boolean posted = webView.post(() -> webView.evaluateJavascript(script, value -> {
             result.set(value);
             latch.countDown();
         }));
-        if (!latch.await(EVALUATION_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+        if (!posted || !latch.await(EVALUATION_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
             throw new WebViewEvaluationTimeoutException();
         }
         return result.get();

@@ -31,6 +31,8 @@ it('observes request submission without global errors or click-return evidence',
   expect(source).not.toContain('__actionAccepted');
   expect(evidence).toContain('"accepted".equals(state.optString("requestState"))');
   expect(adapter).not.toContain("document.querySelector('.text-error')");
+  expect(adapter).toContain('webView.post(() -> webView.evaluateJavascript');
+  expect(adapter).not.toContain('runOnMainSync(() -> webView.evaluateJavascript');
   expect(recoveryEvidence).toContain('foliole-pair-sync-evidence-observer.js');
   expect(waiter).toContain('awaitAfterStructureApplied');
   expect(waiter).toContain('credentialsOnly && "saved_signable"');
