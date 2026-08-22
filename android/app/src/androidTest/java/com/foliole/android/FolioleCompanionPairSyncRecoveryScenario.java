@@ -10,8 +10,6 @@ import java.util.concurrent.TimeUnit;
 
 final class FolioleCompanionPairSyncRecoveryScenario {
     private static final String CONNECTED_TARGET = "companion-sync-now";
-    private static final String REVIEW_EXIT_TARGET = "companion-top-bar-left-action";
-    private static final String SETTINGS_TARGET = "companion-tab-settings";
 
     private FolioleCompanionPairSyncRecoveryScenario() {}
     static JSONObject run(
@@ -20,13 +18,7 @@ final class FolioleCompanionPairSyncRecoveryScenario {
     ) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
         FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "settings-tab");
-        String settingsEntry = waitForAnyVisible(
-            instrumentation, webView, deadline, SETTINGS_TARGET, REVIEW_EXIT_TARGET
-        );
-        if (REVIEW_EXIT_TARGET.equals(settingsEntry)) {
-            clickVisible(instrumentation, webView, REVIEW_EXIT_TARGET, deadline);
-        }
-        clickVisible(instrumentation, webView, SETTINGS_TARGET, deadline);
+        FolioleCompanionSettingsNavigation.open(instrumentation, webView);
         FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "sync-settings");
         clickVisible(instrumentation, webView, "companion-settings-sync", deadline);
         FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "sync-entry");

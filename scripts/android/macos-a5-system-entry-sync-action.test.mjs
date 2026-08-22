@@ -31,6 +31,10 @@ it('renames, restores, and reopens the desktop product session in one bounded jo
   const inspection = await import('node:fs').then(({ readFileSync }) => readFileSync(
     'scripts/android/macos-a5-system-entry-display-inspection.mjs', 'utf8'
   ));
+  const pairingScenario = await import('node:fs').then(({ readFileSync }) => readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionPairSyncRecoveryScenario.java',
+    'utf8'
+  ));
   expect(source).toContain("session.invoke('save_system_entry_display_names', { payload: renamed })");
   expect(source).toContain("session.invoke('save_system_entry_display_names', { payload: baseline })");
   expect(source).toContain('waitForA5Payload(context, renamed)');
@@ -49,6 +53,7 @@ it('renames, restores, and reopens the desktop product session in one bounded jo
   expect(inspection).toContain('if (expectedText) textExtras.push(');
   expect(inspection).toContain('if (forbiddenText) textExtras.push(');
   expect(inspection).toContain('INSTRUMENTATION_(?:RESULT: shortMsg|STATUS: stack|STATUS_CODE: -2)');
+  expect(pairingScenario).toContain('FolioleCompanionSettingsNavigation.open(instrumentation, webView)');
   expect(instrumentation.indexOf('FolioleCompanionPairSyncRecoveryScenario.run('))
     .toBeLessThan(instrumentation.indexOf('openDirectorySurface('));
 });
