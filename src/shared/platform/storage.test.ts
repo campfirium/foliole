@@ -30,6 +30,7 @@ it('derives localStorage whitelist from settings classification', () => {
   expect(getLocalStorageWhitelist()).toContain(APP_SETTINGS_STORAGE_KEYS.appDisplayScalePercent);
   expect(getLocalStorageWhitelist()).toContain(APP_SETTINGS_STORAGE_KEYS.searchEnhancementPromptDismissed);
   expect(getLocalStorageWhitelist()).toContain(APP_SETTINGS_STORAGE_KEYS.actionHelpCardsEnabled);
+  expect(getLocalStorageWhitelist()).toContain(APP_SETTINGS_STORAGE_KEYS.customCopyOverrides);
   expect(getLocalStorageWhitelist()).toContain(APP_SETTINGS_STORAGE_KEYS.folioleAideEnabled);
   expect(getLocalStorageWhitelist()).toContain(APP_SETTINGS_STORAGE_KEYS.macOsFontSmoothing);
   expect(getLocalStorageWhitelist()).not.toContain(APP_SETTINGS_STORAGE_KEYS.desktopDeviceSyncEnabled);

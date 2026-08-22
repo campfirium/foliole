@@ -82,6 +82,7 @@ export const APP_COMMAND_IDS = {
   createItem: FOLDER_TOPIC_ITEM_APP_COMMAND_IDS.createItem,
   createVirtualFolder: VIRTUAL_FOLDER_APP_COMMAND_ID,
   openSettings: 'workspace.openSettings',
+  openCustomCopy: 'workspace.openCustomCopy',
   openReadwiseReaderSettings: 'workspace.openReadwiseReaderSettings',
   toggleBaseColorMode: 'settings.toggleBaseColorMode',
   setPdfDarkAppearanceOriginal: 'settings.setPdfDarkAppearance.original',

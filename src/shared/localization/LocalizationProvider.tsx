@@ -9,6 +9,7 @@ import {
   type AppLanguagePreference,
   type AppLocale
 } from './appLanguage';
+import { getCustomCopyOverride, useCustomCopyOverridesSnapshot } from './customCopyOverrides';
 import { useSystemEntryDisplayNamesSnapshot } from './systemEntryDisplayNamesStore';
 import {
   hasTranslationCatalog,
@@ -36,6 +37,7 @@ interface LocalizationProviderProps {
 }
 
 export function LocalizationProvider({ children, initialLanguagePreference }: LocalizationProviderProps) {
+  const customCopySnapshot = useCustomCopyOverridesSnapshot();
   const systemEntryNames = useSystemEntryDisplayNamesSnapshot();
   const [languagePreference, setLanguagePreferenceState] = useState(
     () => initialLanguagePreference ?? getStoredAppLanguagePreference()
@@ -56,8 +58,11 @@ export function LocalizationProvider({ children, initialLanguagePreference }: Lo
     setLocaleState(resolveAppLocale(nextPreference));
   }, []);
   const t = useCallback(
-    (key: TranslationKey, params?: TranslationParams) => translate(locale, key, params),
-    [catalogVersion, locale]
+    (key: TranslationKey, params?: TranslationParams) => {
+      const custom = getCustomCopyOverride(locale, key);
+      return custom === undefined ? translate(locale, key, params) : interpolateCustomCopy(custom, params);
+    },
+    [catalogVersion, customCopySnapshot, locale]
   );
   const value = useMemo(
     () => ({ languagePreference, locale, setLanguagePreference, setLocale, t }),
@@ -79,6 +84,13 @@ export function LocalizationProvider({ children, initialLanguagePreference }: Lo
   }, [catalogReady, locale]);
 
   return <LocalizationContext.Provider value={value}>{children}</LocalizationContext.Provider>;
+}
+
+function interpolateCustomCopy(template: string, params?: TranslationParams) {
+  if (!params) return template;
+  return template.replace(/\{(\w+)\}/g, (match, key) =>
+    Object.prototype.hasOwnProperty.call(params, key) ? String(params[key]) : match
+  );
 }
 
 export function useLocalization() {

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { CustomCopyDialogHost } from '../features/settings/components/CustomCopyDialogHost';
 import { AppearanceSettingsProvider } from '../features/settings/context/AppearanceSettingsProvider';
 import { DisplayScaleProvider } from '../features/settings/context/DisplayScaleProvider';
 import { DocumentHeaderMenuSettingsProvider } from '../features/settings/context/DocumentHeaderMenuSettingsProvider';
@@ -26,7 +27,10 @@ export function AppProviders({ children, initialLanguagePreference }: AppProvide
             <ReviewSchedulerSettingsProvider>
               <WorkspaceRailSettingsProvider>
                 <DocumentHeaderMenuSettingsProvider>
-                  <AppConfirmationProvider>{children}</AppConfirmationProvider>
+                  <AppConfirmationProvider>
+                    {children}
+                    <CustomCopyDialogHost />
+                  </AppConfirmationProvider>
                 </DocumentHeaderMenuSettingsProvider>
               </WorkspaceRailSettingsProvider>
             </ReviewSchedulerSettingsProvider>

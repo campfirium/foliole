@@ -18,9 +18,11 @@ import {
   SettingsControlSlot,
   SettingsRow,
   SettingsSection,
+  settingsButtonClassName,
   settingsFieldClassName
 } from '../../../../shared/ui';
 import { settingsSwitchClassName, settingsSwitchKnobClassName } from '../../../../shared/ui';
+import { requestCustomCopyDialogOpen } from '../../model/customCopyDialogRequests';
 import { settingsSearchRowProps } from '../../model/settingsSearch';
 import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
 
@@ -127,8 +129,16 @@ function SearchEnhancementRow() {
 function InterfaceBehaviorSection() {
   const t = useTranslation();
   const enabled = useActionHelpCardsEnabled();
+  const customCopyRow = useLocalizedSettingsSearchRow('general-custom-copy');
   return (
     <SettingsSection ariaLabel={t('settings.appearance.interface.aria')} title={t('settings.appearance.interface.section')}>
+      <SettingsRow {...settingsSearchRowProps(customCopyRow)} description={customCopyRow.description} title={customCopyRow.title}>
+        <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+          <button className={settingsButtonClassName()} onClick={requestCustomCopyDialogOpen} type="button">
+            {t('settings.customCopy.manage')}
+          </button>
+        </SettingsControlSlot>
+      </SettingsRow>
       <SettingsRow data-settings-search-row-id="general-action-help" description={t('settings.appearance.actionHelp.description')} title={t('settings.appearance.actionHelp.row')}>
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
           <button aria-checked={enabled} aria-label={t('settings.appearance.actionHelp.row')} className={settingsSwitchClassName(enabled)} onClick={() => setActionHelpCardsEnabled(!enabled)} role="switch" type="button">

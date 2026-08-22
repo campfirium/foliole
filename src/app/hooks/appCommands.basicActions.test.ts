@@ -81,6 +81,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     openGitHubDiscussions: () => undefined,
     openYouTubePlaylist: () => undefined,
     openReadwiseReaderSettings: () => undefined,
+    openCustomCopy: () => undefined,
     openSettings: () => undefined,
     openTrash: () => undefined,
     restartApp: () => undefined,
@@ -177,6 +178,12 @@ it('runs search and command palette open commands through the shared command han
 
   expect(openWorkspaceSearch).toHaveBeenCalledTimes(1);
   expect(openCommandPalette).toHaveBeenCalledTimes(1);
+});
+
+it('opens custom copy through the shared command handler', () => {
+  const openCustomCopy = vi.fn();
+  expectCommandRuns(APP_COMMAND_IDS.openCustomCopy, { openCustomCopy });
+  expect(openCustomCopy).toHaveBeenCalledTimes(1);
 });
 
 it('runs open guided sample through the shared command handler', () => {

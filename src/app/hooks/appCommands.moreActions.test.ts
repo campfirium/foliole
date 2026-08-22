@@ -29,11 +29,20 @@ function createReviewCommandActions() {
   };
 }
 
+function createSettingsCommandActions() {
+  return {
+    closeSettings: () => undefined,
+    openCustomCopy: () => undefined,
+    openReadwiseReaderSettings: () => undefined,
+    openSettings: () => undefined
+  };
+}
+
 function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand>[1]> = {}) {
   return {
     undo: () => undefined,
     redo: () => undefined,
-    closeSettings: () => undefined,
+    ...createSettingsCommandActions(),
     createFolder: () => undefined,
     createItem: () => undefined,
     createSelectionCloze: () => undefined,
@@ -73,8 +82,6 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     openGitHubIssues: () => undefined,
     openGitHubDiscussions: () => undefined,
     openYouTubePlaylist: () => undefined,
-    openReadwiseReaderSettings: () => undefined,
-    openSettings: () => undefined,
     openTrash: () => undefined,
     restartApp: () => undefined,
     setPdfReadingMode: () => undefined,

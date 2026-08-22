@@ -58,6 +58,7 @@ interface RunAppCommandActions {
   openGitHubDiscussions: () => void | Promise<void>;
   openYouTubePlaylist: () => void | Promise<void>;
   openReadwiseReaderSettings: () => void;
+  openCustomCopy: () => void;
   openSettings: () => void;
   openTrash: () => void;
   restartApp: () => void;
@@ -153,6 +154,7 @@ function createWorkspaceCommandHandlers(actions: RunAppCommandActions): Record<s
     [APP_COMMAND_IDS.toggleBothSidebars]: actions.toggleBothSidebars,
     [APP_COMMAND_IDS.toggleDevTools]: actions.toggleDevTools,
     [APP_COMMAND_IDS.openSettings]: actions.openSettings,
+    [APP_COMMAND_IDS.openCustomCopy]: actions.openCustomCopy,
     [APP_COMMAND_IDS.openReadwiseReaderSettings]: actions.openReadwiseReaderSettings,
     [APP_COMMAND_IDS.setPdfDarkAppearanceOriginal]: () => actions.setPdfReadingMode('original'),
     [APP_COMMAND_IDS.setPdfDarkAppearanceInverted]: () => actions.setPdfReadingMode('inverted'),

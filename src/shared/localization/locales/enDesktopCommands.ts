@@ -65,6 +65,7 @@ export const EN_DESKTOP_COMMAND_TRANSLATIONS = {
   'desktop.command.setPriority': 'Set Priority...',
   'desktop.command.toggleEditorDisplayMode': 'Toggle Editor Display Mode',
   'desktop.command.openSettings': 'Open Settings',
+  'desktop.command.openCustomCopy': 'Open Custom Copy',
   'desktop.command.openReadwiseReaderSettings': 'Open Readwise Reader Settings',
   'desktop.command.toggleBaseColorMode': 'Toggle Light/Dark Mode',
   'desktop.command.cycleAppearanceMode': 'Cycle Appearance Mode',

@@ -7,6 +7,8 @@ const SETTINGS_FILES = [
   'src/features/settings/components/SettingsSearchBox.tsx',
   'src/features/settings/components/SettingsSidebar.tsx',
   'src/features/settings/components/SettingsPanelDialog.tsx',
+  'src/features/settings/components/CustomCopyDialogList.tsx',
+  'src/features/settings/components/CustomCopyDialogSurface.tsx',
   'src/features/settings/components/HotkeySettingsSection.tsx',
   'src/features/settings/components/sections/SettingsEditorSection.tsx',
   'src/features/settings/components/sections/SettingsImportSection.tsx',

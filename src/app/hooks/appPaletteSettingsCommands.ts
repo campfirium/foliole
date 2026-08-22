@@ -10,6 +10,12 @@ export interface AppPaletteSettingsCommandMeta {
 export const SETTINGS_PALETTE_COMMANDS: AppPaletteSettingsCommandMeta[] = [
   { id: APP_COMMAND_IDS.openSettings, title: 'Open Settings', section: 'Settings' },
   {
+    id: APP_COMMAND_IDS.openCustomCopy,
+    title: 'Open Custom Copy',
+    section: 'Settings',
+    keywords: ['settings', 'copy', 'text', 'translation', 'localization']
+  },
+  {
     id: APP_COMMAND_IDS.openReadwiseReaderSettings,
     title: 'Open Readwise Reader Settings',
     section: 'Settings',

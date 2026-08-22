@@ -67,6 +67,7 @@ export const ZH_HANS_DESKTOP_COMMAND_TRANSLATIONS: Partial<Record<TranslationKey
   'desktop.command.setPriority': '设置优先级...',
   'desktop.command.toggleEditorDisplayMode': '切换编辑器显示模式',
   'desktop.command.openSettings': '打开设置',
+  'desktop.command.openCustomCopy': '打开自定义文案',
   'desktop.command.openReadwiseReaderSettings': '打开 Readwise Reader 设置',
   'desktop.command.toggleBaseColorMode': '切换浅色/深色模式',
   'desktop.command.cycleAppearanceMode': '循环切换外观模式',

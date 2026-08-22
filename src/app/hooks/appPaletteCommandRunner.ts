@@ -10,6 +10,7 @@ import {
 } from './appPaletteEditorCommandActions';
 import { createPaletteHelpCommandActions, type PaletteHelpCommandRunnerArgs } from './appPaletteHelpCommandRunner';
 import { runResetImportDataCommand } from './appPaletteResetImportCommand';
+import { createPaletteSettingsActions } from './appPaletteSettingsCommandActions';
 import { enterReviewModeSession, type StartStudyModeOptions } from './reviewModeSessionActions';
 import { runReviewModeToggle } from './reviewModeToggle';
 
@@ -86,22 +87,6 @@ interface PaletteCommandRunnerArgs extends PaletteHelpCommandRunnerArgs, Palette
   startStudyMode: (options?: StartStudyModeOptions) => void;
   trashViewOpen: boolean;
   undoWorkspaceAction: () => boolean;
-}
-
-function createPaletteSettingsActions(args: PaletteCommandRunnerArgs) {
-  return {
-    closeSettings: () => {
-      args.setSettingsOpen(false);
-      args.clearSettingsRequest();
-    },
-    openReadwiseReaderSettings: args.openReadwiseReaderSettings,
-    openSettings: () => {
-      args.clearSettingsRequest();
-      args.setSettingsOpen(true);
-    },
-    setPdfReadingMode: args.onSetPdfReadingMode,
-    toggleBaseColorMode: args.onToggleBaseColorMode
-  };
 }
 
 function createPaletteReviewCommandActions(args: PaletteCommandRunnerArgs, toggleReviewMode: () => void) {

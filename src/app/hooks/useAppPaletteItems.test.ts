@@ -118,3 +118,16 @@ it('keeps import commands enabled for the unified shortcut and menu command path
     shortcuts: { primary: { altKey: true, ctrlKey: true, key: 'v' } }
   });
 });
+
+it('offers the custom copy manager as a localized settings command', () => {
+  const { result } = renderHook(
+    () => useAppPaletteItems(createPaletteArgs(null) as unknown as Parameters<typeof useAppPaletteItems>[0]),
+    { wrapper }
+  );
+
+  expect(result.current.find((item) => item.id === APP_COMMAND_IDS.openCustomCopy)).toMatchObject({
+    enabled: true,
+    section: 'Settings',
+    title: 'Open Custom Copy'
+  });
+});

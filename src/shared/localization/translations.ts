@@ -4,6 +4,8 @@ import { EN_TRANSLATIONS } from './locales/en';
 
 export type TranslationKey = keyof typeof import('./locales/en').EN_TRANSLATIONS;
 export type TranslationParams = Record<string, string | number>;
+const TRANSLATION_KEYS = Object.keys(EN_TRANSLATIONS) as TranslationKey[];
+const TRANSLATION_KEY_SET = new Set<string>(TRANSLATION_KEYS);
 const TRANSLATIONS: Partial<Record<AppLocale, TranslationCatalog>> = { en: EN_TRANSLATIONS };
 const translationCatalogPromises = new Map<AppLocale, Promise<boolean>>();
 const STARTUP_TRANSLATION_FALLBACKS: Partial<Record<AppLocale, TranslationCatalog>> = {
@@ -53,6 +55,14 @@ export function translate(locale: AppLocale, key: TranslationKey, params?: Trans
     STARTUP_TRANSLATION_FALLBACKS.en?.[key] ??
     key;
   return interpolate(template, params);
+}
+
+export function isTranslationKey(value: string): value is TranslationKey {
+  return TRANSLATION_KEY_SET.has(value);
+}
+
+export function listOfficialTranslations(locale: AppLocale) {
+  return TRANSLATION_KEYS.map((key) => ({ key, value: translate(locale, key) }));
 }
 
 export function resolveTranslationTemplate(catalog: TranslationCatalog | undefined, key: TranslationKey) {
