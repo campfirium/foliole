@@ -8,8 +8,6 @@ import { pathToFileURL } from 'node:url';
 
 import { executeBounded } from './windows-bounded-process.mjs';
 import { prepareWindowsAndroidDebugHost } from './windows-android-host-prepare.mjs';
-import { sanitizePairSyncRecoveryFailureEvidence } from '../sync-group/pair-sync-failure-evidence.mjs';
-import { sanitizePairSyncRecoveryProgressEvidence } from '../sync-group/pair-sync-feature-result.mjs';
 import { currentAcceptanceCandidate } from '../sync-group/multi-device-sync-candidate.mjs';
 import { normalizeWindowsDevAction } from './windows-dev-action-contract.mjs';
 import {
@@ -18,7 +16,7 @@ import {
 import { runWindowsDevDesktopBuild } from './windows-dev-desktop-build.mjs';
 import { runWindowsDevDeviceAction } from './windows-dev-device-action.mjs';
 import { windowsDevPaths } from './windows-dev-paths.mjs';
-import { allowsPairSyncNativeClient } from './windows-dev-residual-process.mjs';
+import { allowsSyncGroupNativeClient } from './windows-dev-residual-process.mjs';
 import { runWindowsDeviceProfileAcceptance } from './windows-device-profile-action.mjs';
 import {
   attachSyncGroupResult, isWindowsSyncGroupAction, preparesWindowsSyncGroupCandidate, printSyncGroupResult,
@@ -29,7 +27,7 @@ const BUILD_COMMAND = 'call .\\gradlew.bat --no-daemon assembleDebugAndroidTest'
 const CAPTURE_BUILD_COMMAND = 'call .\\gradlew.bat --no-daemon assembleDebug assembleDebugAndroidTest';
 const BUILD_TIMEOUT_MS = 20 * 60_000;
 const WINDOWS_DEV_ACTIONS = [
-  'appearance', 'build', 'capture-annotation', 'deploy', 'device-profile', 'live', 'pair-sync-recover', 'secondary',
+  'appearance', 'build', 'capture-annotation', 'deploy', 'device-profile', 'live', 'secondary',
   ...WINDOWS_SYNC_GROUP_ACTIONS, 'verify'
 ];
 
@@ -102,7 +100,7 @@ export async function runWindowsDevBuild({
     if (!WINDOWS_DEV_ACTIONS.includes(action)) throw failure('Unknown Windows DEV action', 64, 'request');
     context = evidenceContext(paths, now, id, fsApi);
     const requiredTools = [paths.systemNode,
-      ...(['build', 'capture-annotation', 'deploy', 'pair-sync-recover'].includes(action)
+      ...(['build', 'capture-annotation', 'deploy'].includes(action)
         || action === 'device-profile' || preparesWindowsSyncGroupCandidate(action)
         ? [paths.systemNpmCli] : []),
       ...(['build', 'device-profile'].includes(action) || isWindowsSyncGroupAction(action) ? [] : [paths.adbPath])];
@@ -110,7 +108,7 @@ export async function runWindowsDevBuild({
       if (!fsApi.existsSync(filePath)) throw failure(`Required tool is missing: ${filePath}`, 64, 'preflight');
     }
     const residualBefore = await snapshotProcesses(execute, paths);
-    if (residualBefore.length > 0 && !allowsPairSyncNativeClient(action, residualBefore, paths)) {
+    if (residualBefore.length > 0 && !allowsSyncGroupNativeClient(action, residualBefore, paths)) {
       throw failure('Repository-owned action process is already running', 73, 'residual');
     }
     const signing = verifyWindowsDevSigningIdentity(paths, fsApi);
@@ -121,32 +119,30 @@ export async function runWindowsDevBuild({
     }
     let output = '';
     let readiness = null;
-    let desktopPairingReadiness = null;
-    if (action === 'capture-annotation' || action === 'pair-sync-recover') {
+    if (action === 'capture-annotation') {
       const gate = await deviceAction({
         action, buildIdentity: context.runId, evidenceRoot: context.root, execute, paths,
         phase: 'readiness'
       });
-      readiness = gate.captureAnnotationReadiness ?? gate.pairSyncRecoveryReadiness;
-      desktopPairingReadiness = gate.desktopPairingReadiness ?? null;
+      readiness = gate.captureAnnotationReadiness;
       output += gate.output;
     }
-    if (['build', 'capture-annotation', 'deploy', 'pair-sync-recover'].includes(action)
+    if (['build', 'capture-annotation', 'deploy'].includes(action)
         || preparesWindowsSyncGroupCandidate(action)) {
       output += await prepareHost({
-        execute, fsApi, liveReload: !['capture-annotation', 'pair-sync-recover'].includes(action)
+        execute, fsApi, liveReload: action !== 'capture-annotation'
           && !isWindowsSyncGroupAction(action), paths
       });
     }
-    if (action === 'pair-sync-recover' || action === 'device-profile'
+    if (action === 'device-profile'
         || preparesWindowsSyncGroupCandidate(action)) {
       output += await runWindowsDevDesktopBuild(execute, paths, checked);
     }
     let actionResult = null;
-    if (['build', 'capture-annotation', 'pair-sync-recover'].includes(action)) {
+    if (['build', 'capture-annotation'].includes(action)) {
       const build = await runGradleBuild(
         execute, paths, platform,
-        action === 'capture-annotation' || action === 'pair-sync-recover' ? CAPTURE_BUILD_COMMAND : BUILD_COMMAND
+        action === 'capture-annotation' ? CAPTURE_BUILD_COMMAND : BUILD_COMMAND
       );
       directChildPid = build.directChildPid;
       output += build.output;
@@ -159,46 +155,39 @@ export async function runWindowsDevBuild({
       actionResult = await deviceAction({
         action, buildIdentity: context.runId, evidenceRoot: context.root, execute, paths,
         ...(candidate ? { candidate } : {}),
-        pairSyncRecoveryReadiness: action === 'pair-sync-recover' ? readiness : undefined,
         phase: 'execute'
       });
       output += actionResult.output;
     }
-    if (action !== 'pair-sync-recover') fsApi.writeFileSync(context.logPath, output, 'utf8');
+    fsApi.writeFileSync(context.logPath, output, 'utf8');
     const summary = { action, completedAt: now().toISOString(), directChildPid,
       exitCode: 0,
-      ...(action === 'pair-sync-recover' ? {} : { logPath: context.logPath, repoRoot: paths.repoRoot }),
+      logPath: context.logPath, repoRoot: paths.repoRoot,
       resultStatus: 'success', runId: context.runId, schemaVersion: 1, signingSha256: signing.sha256,
       startedAt, ...(readiness ? {
-        [action === 'pair-sync-recover' ? 'pairSyncRecoveryReadiness' : 'captureAnnotationReadiness']: readiness
+        captureAnnotationReadiness: readiness
       } : {}),
-      ...(desktopPairingReadiness ? { desktopPairingReadiness } : {}),
       ...(actionResult?.liveReload ? { liveReload: actionResult.liveReload } : {}) };
     if (actionResult?.captureAnnotation) summary.captureAnnotation = actionResult.captureAnnotation;
-    if (actionResult?.pairSyncRecovery) summary.pairSyncRecovery = actionResult.pairSyncRecovery;
     if (actionResult?.desktopDeviceProfile) summary.desktopDeviceProfile = actionResult.desktopDeviceProfile;
     attachSyncGroupResult(summary, actionResult);
     writeJson(fsApi, context.summaryPath, summary);
     return { exitCode: 0, summary, summaryPath: context.summaryPath };
   } catch (error) {
     const exitCode = error.exitCode || 125;
-    if (action !== 'pair-sync-recover' && context && error.result?.output && !fsApi.existsSync(context.logPath)) {
+    if (context && error.result?.output && !fsApi.existsSync(context.logPath)) {
       fsApi.writeFileSync(context.logPath, error.result.output, 'utf8');
     }
     const summary = { action, completedAt: now().toISOString(), directChildPid, exitCode,
       failureStage: error.stage || 'entry',
-      message: action === 'pair-sync-recover' ? 'Pair sync recovery stopped before completion' : error.message,
+      message: error.message,
       resultStatus: error.resultStatus || 'failure',
       runId: context?.runId ?? null, schemaVersion: 1, startedAt,
       ...(error.readiness ? {
-        [action === 'pair-sync-recover' ? 'pairSyncRecoveryReadiness' : 'captureAnnotationReadiness']: error.readiness
+        captureAnnotationReadiness: error.readiness
       } : {}),
       ...(error.liveReload ? { liveReload: error.liveReload } : {}) };
     if (error.failureReason) summary.failureReason = error.failureReason;
-    if (error.pairSyncRecoveryEvidence) summary.pairSyncRecoveryEvidence = sanitizePairSyncRecoveryProgressEvidence(error.pairSyncRecoveryEvidence);
-    if (error.pairSyncFailureEvidence) {
-      summary.pairSyncFailureEvidence = sanitizePairSyncRecoveryFailureEvidence(error.pairSyncFailureEvidence);
-    }
     if (context) writeJson(fsApi, context.summaryPath, summary);
     return { exitCode, summary, summaryPath: context?.summaryPath ?? null };
   }
@@ -216,9 +205,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
   }
   if (result.summary.captureAnnotation) {
     stream(`[windows-dev-action] capture-annotation identity=${result.summary.captureAnnotation.buildIdentity} manifest=${result.summary.captureAnnotation.manifestPath}`);
-  }
-  if (result.summary.pairSyncRecovery) {
-    stream(`[windows-dev-action] pair-sync-recover identity=${result.summary.pairSyncRecovery.buildIdentity} manifest=${result.summary.pairSyncRecovery.manifestPath}`);
   }
   printSyncGroupResult(stream, result.summary);
   stream(`[windows-dev-action] status: ${label} exit=${result.exitCode} evidence=${result.summaryPath ?? '-'}`);

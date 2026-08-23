@@ -148,9 +148,6 @@ it('reports only the fixed credential-rejection signal from sync history', () =>
   expect(pairSyncRecoveryReadiness(
     snapshot({ credentialsRejected: true, dirty: 1 }), true, '0123456789abcdef'
   )).toMatchObject({
-    latestSyncRunStatus: 'failed',
-    latestSyncWaitingConfirmationCount: 0,
-    latestSyncWaitingSendCount: 0,
     pairingCredentialRejectionReason: null, pairingCredentialsRejected: true
   });
   expect(pairSyncRecoveryReadiness(snapshot(), true, '0123456789abcdef'))

@@ -8,7 +8,7 @@ import { expect, it, vi } from 'vitest';
 import {
   parseWindowsDevCaptureAnnotationEvidence, parseWindowsDevControlArgs,
   parseWindowsDevFailureEvidence, parseWindowsDevLiveEvidence,
-  parseWindowsDevPairSyncRecoveryEvidence, runWindowsDevControl,
+  runWindowsDevControl,
   WINDOWS_DEV_DEFAULT_SSH, windowsDevPushSpec, windowsDevScpSpec, windowsDevSshSpec
 } from './windows-dev-control.mjs';
 
@@ -28,8 +28,8 @@ it('uses the fixed Windows DEV host and accepts only fixed actions', () => {
     .toMatchObject({ action: 'appearance' });
   expect(parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'capture-annotation'], {}))
     .toMatchObject({ action: 'capture-annotation' });
-  expect(parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'pair-sync-recover'], {}))
-    .toMatchObject({ action: 'pair-sync-recover' });
+  expect(() => parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'pair-sync-recover'], {}))
+    .toThrow('only accepts a registered fixed action');
   expect(parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'multi-device-sync-candidate'], {}))
     .toMatchObject({ action: 'multi-device-sync-candidate' });
   expect(parseWindowsDevControlArgs(['--host', WINDOWS_DEV_DEFAULT_SSH, 'multi-device-sync-a-rejoin'], {}))
@@ -89,12 +89,6 @@ it('uses an alphabetic wire action that an old wrapper can pull before normalizi
   expect(spec).not.toContain('capture-annotation');
 });
 
-it('uses an alphabetic wire action for pair sync recovery', () => {
-  const spec = windowsDevSshSpec(WINDOWS_DEV_DEFAULT_SSH, 'pair-sync-recover', {}, TEST_HOME);
-  expect(spec.at(-1)).toBe('pairsyncrecover');
-  expect(spec.at(-1)).toMatch(/^[a-z]+$/u);
-});
-
 it('copies only fixed live evidence with the ordinary SSH identity', () => {
   const remotePath = 'D:/C/foliole/.tmp/artifacts/windows-dev-action/dev-1/a5-live.png';
   const spec = windowsDevScpSpec(WINDOWS_DEV_DEFAULT_SSH, remotePath, '/repo/a5.png', {}, TEST_HOME);
@@ -120,16 +114,6 @@ it('accepts only the fixed capture annotation manifest root', () => {
   expect(parseWindowsDevFailureEvidence(
     `[windows-dev-action] status: FAILED exit=74 evidence=${remoteRoot}\\summary.json\n`
   )).toEqual({ buildIdentity: 'run-1', remoteRoot });
-});
-
-it('accepts only the fixed pair sync recovery manifest root', () => {
-  const remoteRoot = 'D:/C/foliole/.tmp/artifacts/windows-dev-action/run-pair';
-  expect(parseWindowsDevPairSyncRecoveryEvidence(
-    `[windows-dev-action] pair-sync-recover identity=run-pair manifest=${remoteRoot}/pair-sync-recovery-manifest.json\n`
-  )).toEqual({ buildIdentity: 'run-pair', remoteRoot });
-  expect(() => parseWindowsDevPairSyncRecoveryEvidence(
-    '[windows-dev-action] pair-sync-recover identity=run-pair manifest=C:/Users/dev/private.json\n'
-  )).toThrow('escaped its fixed evidence root');
 });
 
 it('copies live screenshot evidence after the fixed foreground action', async () => {

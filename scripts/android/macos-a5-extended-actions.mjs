@@ -115,34 +115,6 @@ export async function runMacosA5DesktopLeaveEntry(args) {
   }
 }
 
-export async function runMacosA5PairSyncEntry(args) {
-  args.assertFixed();
-  const { resolveMacosA5PairSyncReadiness } = await import('./macos-a5-product-bootstrap.mjs');
-  const readiness = resolveMacosA5PairSyncReadiness(args.paths);
-  const { consumeCredentialsSignableHandoff } = await import('./macos-a5-credential-handoff.mjs');
-  const handoff = consumeCredentialsSignableHandoff({
-    artifactsRoot: args.paths.artifactsRoot, readiness,
-    currentRevision: args.paths.acceptedRevision ?? undefined,
-    sourceRepoRoot: args.paths.sourceRepoRoot
-  });
-  args.build(); buildMacosA5Desktop(args.checked, args.paths);
-  const buildIdentity = args.buildIdentity();
-  args.markMutationBoundary?.();
-  const { runMacosA5PairSync } = await import('./macos-a5-pair-sync-action.mjs');
-  const result = await runMacosA5PairSync({
-    buildIdentity, credentialRepairRequired: readiness.credentialRepairRequired,
-    desktopAuthorizationFingerprint: handoff.peerAuthorizationFingerprint, env: args.env,
-    evidenceRoot: path.join(args.paths.artifactsRoot, 'a5-pair-sync', buildIdentity),
-    execute: args.execute, existingPairing: true, hostName: readiness.hostName,
-    pairedAuthorizationFingerprint: readiness.localMemberAuthorizationFingerprint,
-    paths: args.paths,
-    protectedSyncGroup: { groupId: handoff.groupId, timelineId: handoff.timelineId },
-    serial: args.serial
-  });
-  process.stdout.write(result.output);
-  console.log(`[macos-a5-dev] pair-sync evidence=${result.pairSyncRecovery.manifestPath}`);
-}
-
 export async function runMacosA5ExistingSyncEntry(args) {
   args.assertFixed();
   const { runMacosA5ExistingSyncPreflight } = await import('./macos-a5-pair-sync-preflight.mjs');

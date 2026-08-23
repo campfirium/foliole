@@ -25,12 +25,7 @@ final class FolioleCompanionPairSyncEvidence {
             webView,
             readObserverScript(instrumentation)
         );
-        if (!installed.optBoolean("ok") || !existingPairing) return installed;
-        String script = "(function(){var state=window.__foliolePairSyncObserver;" +
-            "if(!state)return JSON.stringify({ok:false});" +
-            "state.completion='existing_pairing';state.credentials='saved_not_signable';" +
-            "return JSON.stringify({ok:true});})()";
-        return FolioleCompanionWebViewSemanticAdapter.evaluateJson(instrumentation, webView, script);
+        return installed;
     }
 
     private static String readObserverScript(Instrumentation instrumentation) throws Exception {
@@ -47,34 +42,11 @@ final class FolioleCompanionPairSyncEvidence {
             "requestState:state?state.requestState:'unavailable'," +
             "completion:state?state.completion:'not_started'," +
             "credentials:state?state.credentials:'not_saved'," +
-            "initialSync:state?state.initialSync:'not_started'," +
-            "syncFailure:state?state.syncFailure:null,syncPackUrl:state?state.syncPackUrl:null," +
-            "syncPackApplied:!!(state&&state.syncPackApplied)," +
-            "syncPackDownloaded:!!(state&&state.syncPackDownloaded)," +
-            "autoSyncResult:state?state.autoSyncResult:null," +
-            "autoSyncRunId:state?state.autoSyncRunId:null," +
-            "manualSyncMode:state?state.manualSyncMode:null," +
-            "manualSyncResult:state?state.manualSyncResult:null," +
-            "manualSyncRunId:state?state.manualSyncRunId:null," +
+            "initialSync:'not_started',syncFailure:state?state.syncFailure:null," +
             "pairFound:!!document.querySelector('[data-testid=\"companion-sync-pair\"]')," +
             "discoverFound:!!document.querySelector('[data-testid=\"companion-sync-discover\"]')," +
             "connectedFound:!!document.querySelector('[data-testid=\"companion-sync-now\"]')});})()";
         return FolioleCompanionWebViewSemanticAdapter.evaluateJson(instrumentation, webView, script);
-    }
-
-    static void resetExistingSync(Instrumentation instrumentation, WebView webView) throws Exception {
-        String script = "(function(){var state=window.__foliolePairSyncObserver;" +
-            "if(!state)return JSON.stringify({ok:false});" +
-            "state.initialSync='not_started';state.syncFailure=null;" +
-            "state.syncPackApplied=false;state.syncPackDownloaded=false;" +
-            "state.manualSyncMode=null;state.manualSyncResult=null;state.manualSyncRunId=null;" +
-            "return JSON.stringify({ok:true});})()";
-        JSONObject reset = FolioleCompanionWebViewSemanticAdapter.evaluateJson(
-            instrumentation, webView, script
-        );
-        if (!reset.optBoolean("ok")) {
-            throw new IllegalStateException("Pair sync observer could not reset existing sync evidence.");
-        }
     }
 
     static void emit(Instrumentation instrumentation, JSONObject state) {

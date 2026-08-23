@@ -54,11 +54,6 @@ function pairingCredentialRejection(event) {
   return { rejected, reason };
 }
 
-function waitingCount(event, key) {
-  const value = event?.summary?.[key];
-  return Number.isSafeInteger(value) && value >= 0 ? value : 0;
-}
-
 function scalar(database, sql) {
   const statement = database.prepare(sql);
   if (typeof statement.pluck === 'function') return Number(statement.pluck().get() ?? 0);
@@ -114,8 +109,6 @@ export function inspectPairSyncRecoveryWorkspace(database) {
     dirtyObjectCounts: dirtyObjectCounts(database),
     dirtySettingStates: dirtySettingStates(database),
     nodeCount: count(database, 'nodes'),
-    latestSyncRunResult: typeof latestSyncRun?.result === 'string'
-      ? latestSyncRun.result : null,
     latestSyncRunDetail: boundedSyncRunDetail(latestSyncRun),
     latestSyncFailureKind: classifySyncFailure(latestSyncRun),
     latestSyncFailureDetail: boundedSyncFailureDetail(latestSyncRun),
@@ -123,12 +116,6 @@ export function inspectPairSyncRecoveryWorkspace(database) {
       ? latestSyncRun.endpoint_url === meta(database, 'workspace_sync_endpoint_url') : null,
     latestSyncFailureRoute: classifySyncFailureRoute(latestSyncRun),
     latestSyncFailureStage: classifySyncFailureStage(latestSyncRun),
-    latestSyncRunStatus: typeof latestSyncRun?.status === 'string'
-      ? latestSyncRun.status : null,
-    latestSyncWaitingConfirmationCount: waitingCount(
-      latestSyncRun, 'waiting_confirmation_count'
-    ),
-    latestSyncWaitingSendCount: waitingCount(latestSyncRun, 'waiting_send_count'),
     journeyFacts: journeyFacts(database),
     localMemberAuthorizationFingerprint:
       inspectLocalActiveMemberAuthorizationFingerprint(database),
@@ -197,17 +184,12 @@ export function pairSyncRecoveryReadiness(
     dirtySettingStates: inspection?.dirtySettingStates ?? [],
     missingPrerequisites,
     nodeCount: inspection?.nodeCount ?? null,
-    latestSyncRunResult: inspection?.latestSyncRunResult ?? null,
     latestSyncRunDetail: inspection?.latestSyncRunDetail ?? null,
     latestSyncFailureKind: inspection?.latestSyncFailureKind ?? null,
     latestSyncFailureDetail: inspection?.latestSyncFailureDetail ?? null,
     latestSyncFailureOnStoredEndpoint: inspection?.latestSyncFailureOnStoredEndpoint ?? null,
     latestSyncFailureRoute: inspection?.latestSyncFailureRoute ?? null,
     latestSyncFailureStage: inspection?.latestSyncFailureStage ?? null,
-    latestSyncRunStatus: inspection?.latestSyncRunStatus ?? null,
-    latestSyncWaitingConfirmationCount:
-      inspection?.latestSyncWaitingConfirmationCount ?? 0,
-    latestSyncWaitingSendCount: inspection?.latestSyncWaitingSendCount ?? 0,
     pairingCredentialsPresent,
     pairingCredentialRejectionReason: inspection?.pairingCredentialRejectionReason ?? null,
     pairingCredentialsRejected: inspection?.pairingCredentialsRejected === true,

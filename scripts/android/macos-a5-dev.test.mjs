@@ -74,36 +74,14 @@ describe('macOS fixed A5 development entry', () => {
     await expect(runMacosA5Action('shell', '/repo')).rejects.toThrow(/Usage:/);
   });
 
-  it('exposes one fixed pair-sync action without accepting device arguments', () => {
+  it('retires the mixed pair-sync entry while keeping the credential feature action', () => {
     const source = fs.readFileSync('scripts/android/macos-a5-dev.mjs', 'utf8');
     const registry = fs.readFileSync('scripts/android/macos-a5-action-registry.mjs', 'utf8');
-    const extended = fs.readFileSync('scripts/android/macos-a5-extended-actions.mjs', 'utf8');
     const preflight = fs.readFileSync('scripts/android/macos-a5-pair-sync-preflight.mjs', 'utf8');
-    expect(registry).toContain("'pair-sync'");
+    expect(registry).not.toContain("'pair-sync'");
     expect(registry).toContain("'pair-credentials'");
-    expect(extended).toContain('credentialRepairRequired: readiness.credentialRepairRequired');
-    expect(extended).toContain('consumeCredentialsSignableHandoff({');
-    expect(extended).toContain('artifactsRoot: args.paths.artifactsRoot');
-    expect(extended).toContain('sourceRepoRoot: args.paths.sourceRepoRoot');
-    expect(extended).toContain(
-      'desktopAuthorizationFingerprint: handoff.peerAuthorizationFingerprint'
-    );
-    expect(extended).toContain('resolveMacosA5PairSyncReadiness');
     expect(preflight).toContain('Fixed A5 no longer matches the authorized pair-switch state.');
     expect(source).not.toContain("process.argv[3]");
-  });
-
-  it('starts and verifies the fixed ADB server before pair-sync readiness fans out', () => {
-    const extended = fs.readFileSync('scripts/android/macos-a5-extended-actions.mjs', 'utf8');
-    const block = extended.slice(
-      extended.indexOf('export async function runMacosA5PairSyncEntry'),
-      extended.indexOf('export async function runMacosA5ExistingSyncEntry')
-    );
-
-    expect(block.indexOf('args.assertFixed();')).toBeGreaterThan(-1);
-    expect(block.indexOf('args.assertFixed();')).toBeLessThan(
-      block.indexOf('resolveMacosA5PairSyncReadiness(args.paths)')
-    );
   });
 
   it('exposes existing Sync Group sync without accepting an endpoint', () => {

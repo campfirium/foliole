@@ -58,15 +58,6 @@ export function parsePairSyncRecoveryReadiness(output) {
     hostName: typeof value.hostName === 'string' && value.hostName.trim()
       ? value.hostName.trim() : null,
     missingPrerequisites: [...value.missingPrerequisites],
-    latestSyncRunResult: typeof value.latestSyncRunResult === 'string'
-      ? value.latestSyncRunResult : null,
-    latestSyncRunStatus: typeof value.latestSyncRunStatus === 'string'
-      ? value.latestSyncRunStatus : null,
-    latestSyncWaitingConfirmationCount: Number.isSafeInteger(
-      value.latestSyncWaitingConfirmationCount
-    ) ? value.latestSyncWaitingConfirmationCount : 0,
-    latestSyncWaitingSendCount: Number.isSafeInteger(value.latestSyncWaitingSendCount)
-      ? value.latestSyncWaitingSendCount : 0,
     nodeCount: value.nodeCount,
     pairingCredentialsPresent: value.pairingCredentialsPresent === true,
     pairingCredentialRejectionReason: [
@@ -109,7 +100,7 @@ export function parsePairSyncRecoveryInstrumentation(output) {
   }
   const receipt = parseBundle(output, 'folioleActionReceipt');
   if (receipt.ok !== true || receipt.targetTestId !== 'companion-pair-sync-recovery'
-      || receipt.paired !== true || receipt.initialSyncRequested !== true
+      || receipt.paired !== true || receipt.initialSyncRequested !== false
       || !['existing', 'new'].includes(receipt.pairingPath)) {
     throw pairSyncRecoveryFailure('Pair sync recovery receipt is incomplete', 'pair-sync-instrumentation');
   }
@@ -118,7 +109,7 @@ export function parsePairSyncRecoveryInstrumentation(output) {
   catch { throw pairSyncRecoveryFailure('Pair sync recovery receipt is incomplete', 'pair-sync-instrumentation'); }
   return {
     ...android,
-    initialSyncRequested: true,
+    initialSyncRequested: false,
     ok: true,
     paired: true,
     pairingPath: receipt.pairingPath,
@@ -157,12 +148,6 @@ export function classifyPairSyncRecoveryInstrumentationFailure(output) {
     ['pair_completion_ui_reverted', /Pairing completion returned to Pair target/u],
     ['pair_completion_ui_reverted', /Pairing completion returned to discovery/u],
     ['pair_completion_ui_error', /Pairing completion failed:/u],
-    ['initial_sync_timeout', /Timed out waiting for initial workspace sync completion/u],
-    ['initial_sync_busy_timeout', /initial workspace sync settlement: target_disabled/u],
-    ['initial_sync_surface_missing', /initial workspace sync settlement: target_missing/u],
-    ['initial_sync_needs_attention', /Initial workspace sync settled with attention/u],
-    ['existing_sync_failed', /Existing workspace sync failed/u],
-    ['initial_sync_settlement_timeout', /Timed out waiting for initial workspace sync settlement/u],
     ['webview_evaluation_stalled', /Timed out while evaluating the WebView semantic action/u],
     ['pair_target_ambiguous', /Pairing target is not unique/u],
     ['pair_target_disappeared', /Pairing target disappeared/u],
@@ -178,7 +163,6 @@ export function classifyPairSyncRecoveryInstrumentationFailure(output) {
   if (android?.completion === 'transport_failed') return 'pair_completion_transport_failed';
   if (android?.completion === 'http_rejected') return 'pair_completion_http_rejected';
   if (android?.credentials === 'save_failed') return 'pair_credentials_save_failed';
-  if (android?.initialSync === 'failed') return 'initial_sync_failed';
   const stages = [...value.matchAll(/^INSTRUMENTATION_STATUS: foliolePairSyncStage=([a-z-]+)$/gmu)];
   const stage = stages.at(-1)?.[1];
   const interruptedStages = {
@@ -201,18 +185,11 @@ export function classifyPairSyncRecoveryInstrumentationFailure(output) {
     'pair-request-dispatched': 'pair_request_dispatch_interrupted',
     'pair-request-accepted': 'pair_request_ui_settlement_interrupted',
     'pair-request-awaiting': 'pair_request_awaiting_interrupted',
-    'initial-sync-request': 'initial_sync_request_interrupted',
     'pair-completion': 'pair_completion_wait_interrupted',
     'pair-completion-dispatched': 'pair_completion_dispatch_interrupted',
     'pair-completion-http-200': 'pair_credentials_save_interrupted',
     'credentials-saved': 'pair_credentials_signing_interrupted',
-    'credentials-signable': 'initial_sync_start_interrupted',
-    'initial-sync-started': 'initial_sync_interrupted',
-    'structure-pack-downloaded': 'structure_pack_apply_interrupted',
-    'structure-pack-applied': 'initial_sync_settlement_interrupted',
-    'initial-sync-completed': 'initial_sync_ui_settlement_interrupted',
-    'initial-sync-awaiting': 'pair_completion_wait_interrupted',
-    'initial-sync-pair-target-returned': 'pair_completion_ui_reverted'
+    'credentials-signable': 'credential_feature_complete_interrupted'
   };
   return interruptedStages[stage] ?? 'unknown_instrumentation_failure';
 }

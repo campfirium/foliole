@@ -70,8 +70,11 @@ export async function runA5PairSyncFeatureJourney({
   closeTransport = closePairSyncRecoveryTransport,
   approvalMembershipAction,
   approvalRequired,
-  recoveryEvidenceGoal = 'initial-sync-completed',
-  instrumentationModeArgs = pairSyncRecoveryModeArgs,
+  recoveryEvidenceGoal = 'credentials-signable',
+  instrumentationModeArgs = (rePairRequired) => [
+    ...pairSyncRecoveryModeArgs(rePairRequired),
+    '-e', 'foliolePairSyncEvidenceGoal', 'credentials-signable'
+  ],
   pairedAuthorizationFingerprint = null, pairRequestIdentity = hostName,
   waitForPairRequest, validateDesktop, paths,
   desktopAuthorizationFingerprint, serial

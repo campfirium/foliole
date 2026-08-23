@@ -7,14 +7,9 @@
   if (!proto || typeof proto.generateKey !== 'function') return JSON.stringify({ ok: false });
   var state = {
     keyState: 'not-started', requestState: 'not-started', completion: 'not_started',
-    credentials: 'not_saved', initialSync: 'not_started',
-    syncPackApplied: false, syncPackDownloaded: false,
-    autoSyncResult: null, autoSyncRunId: null,
-    manualSyncMode: null, manualSyncResult: null, manualSyncRunId: null,
-    syncFailure: null, syncPackUrl: null
+    credentials: 'not_saved', initialSync: 'not_started', syncFailure: null
   };
   window.__foliolePairSyncObserver = state;
-  observeManualSync(state);
   var originalGenerateKey = proto.generateKey;
   proto.generateKey = function () {
     var algorithm = arguments[0];
@@ -34,9 +29,6 @@
       try { return Promise.resolve(originalNativePromise.call(cap, pluginName, methodName, args)); }
       catch (error) { return Promise.reject(error); }
     };
-    if (pluginName === 'FolioleCompanionSyncPackTransfer') {
-      return observeSyncPack(state, methodName, call, args);
-    }
     if (pluginName !== 'FolioleCompanionSync') return call();
     if (methodName === 'desktopHttpRequest') return observeHttp(state, args, call);
     if (methodName === 'savePairingCredentials' && state.completion === 'http_200') {
@@ -79,89 +71,13 @@
         throw error;
       });
     }
-    if (isSyncPush(args) && pairingCanSync(state)) {
-      state.initialSync = 'started';
-      return call().then(function (value) {
-        if (!value || value.status < 200 || value.status >= 300) {
-          state.initialSync = 'failed'; state.syncFailure = syncPushFailure(value);
-        }
-        return value;
-      }, function (error) { state.initialSync = 'failed'; state.syncFailure = String(error); throw error; });
-    }
     return call();
-  }
-  function isSyncPush(args) {
-    if (!args || args.method !== 'POST' || typeof args.url !== 'string') return false;
-    try { return new URL(args.url).pathname === '/companion/sync-push'; }
-    catch { return false; }
-  }
-  function pairingCanSync(state) {
-    return state.credentials === 'saved_signable' || state.completion === 'existing_pairing';
-  }
-  function observeManualSync(state) {
-    if (!window.document || !window.MutationObserver) return;
-    var record = function () {
-      var target = window.document.querySelector('[data-testid="companion-sync-now"]');
-      if (!target) return;
-      var mode = target.getAttribute('data-sync-action-mode');
-      var runId = target.getAttribute('data-sync-run-id');
-      var terminalRunId = target.getAttribute('data-sync-terminal-run-id');
-      var terminalResult = target.getAttribute('data-sync-terminal-result');
-      var terminalStartedAt = target.getAttribute('data-sync-terminal-started-at');
-      var runtimeBootedAt = target.getAttribute('data-sync-runtime-booted-at');
-      if (!state.autoSyncRunId && terminalRunId && terminalResult
-        && isCurrentBootRun(terminalStartedAt, runtimeBootedAt)) {
-        state.autoSyncRunId = terminalRunId; state.autoSyncResult = terminalResult;
-      }
-      if ((mode === 'owned' || mode === 'joined') && runId) {
-        state.manualSyncMode = mode; state.manualSyncRunId = runId;
-      }
-      if (state.manualSyncRunId && terminalRunId === state.manualSyncRunId) {
-        state.manualSyncResult = terminalResult;
-      }
-    };
-    new window.MutationObserver(record).observe(window.document.documentElement, {
-      attributes: true,
-      attributeFilter: ['data-sync-action-mode', 'data-sync-run-id',
-        'data-sync-runtime-booted-at', 'data-sync-terminal-run-id',
-        'data-sync-terminal-result', 'data-sync-terminal-started-at'],
-      childList: true,
-      subtree: true
-    });
-    record();
-  }
-  function isCurrentBootRun(startedAt, bootedAt) {
-    var started = Date.parse(startedAt || '');
-    var booted = Date.parse(bootedAt || '');
-    return Number.isFinite(started) && Number.isFinite(booted) && started >= booted;
-  }
-  function syncPushFailure(value) {
-    var allowed = /^(expired_timestamp|invalid_signature|missing_headers|sync_group_member_not_authorized|sync_group_workgroup_key_missing|workgroup_aead_invalid)$/;
-    var detail = null;
-    try { detail = JSON.parse(value && value.body || '{}').error; } catch { /* bounded below */ }
-    return 'sync-push-http-' + (value && value.status) + (allowed.test(detail) ? '-' + detail : '');
   }
   function pairCompletionFailure(value) {
     var allowed = /^(invalid_pair_request|pair_request_not_found|pair_request_pending|pair_request_rejected|protocol_incompatible|pair_completion_rate_limited|sync_group_member_not_authorized|sync_group_workgroup_key_missing|sync_group_provider_pairing_invalid|sync_group_local_authorization_missing)$/;
     var detail = null;
     try { detail = JSON.parse(value && value.body || '{}').error; } catch { /* bounded below */ }
     return 'pair-completion-http-' + (value && value.status) + (allowed.test(detail) ? '-' + detail : '');
-  }
-  function observeSyncPack(state, methodName, call, args) {
-    if (!pairingCanSync(state)) return call();
-    if (methodName === 'downloadDesktopSyncPack') {
-      state.syncPackUrl = args && args.url || null;
-      if (state.initialSync === 'not_started') state.initialSync = 'started';
-      return call().then(function (value) {
-        state.syncPackDownloaded = true; return value;
-      }, function (error) { state.initialSync = 'failed'; state.syncFailure = String(error); throw error; });
-    }
-    if (methodName === 'deleteDownloadedSyncPack' && state.syncPackDownloaded) {
-      return call().then(function (value) {
-        state.syncPackApplied = true; return value;
-      }, function (error) { state.initialSync = 'failed'; throw error; });
-    }
-    return call();
   }
   return JSON.stringify({ ok: true });
 })()

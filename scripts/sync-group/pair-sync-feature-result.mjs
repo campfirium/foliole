@@ -6,21 +6,16 @@ import {
 } from './pair-sync-approval-evidence.mjs';
 
 export function validatePairSyncRecoveryResult({
-  android, approval, evidenceGoal = 'initial-sync-completed', pairingPath
+  android, approval, evidenceGoal = 'credentials-signable', pairingPath
 }) {
   const safeAndroid = validatePairSyncAndroidEvidence(android);
   const safeApproval = validatePairSyncApprovalEvidence(approval);
   const approvalComplete = safeApproval.pending_observed
     && safeApproval.approve_invoked && safeApproval.approve_succeeded;
-  const approvalSkipped = !safeApproval.pending_observed
-    && !safeApproval.approve_invoked && !safeApproval.approve_succeeded;
   const pathComplete = pairingPath === 'new'
-    ? approvalComplete && safeAndroid.completion === 'http_200'
-    : pairingPath === 'existing'
-      && approvalSkipped && safeAndroid.completion === 'existing_pairing';
+    && approvalComplete && safeAndroid.completion === 'http_200';
   const goalComplete = evidenceGoal === 'credentials-signable'
-    ? safeAndroid.initialSync !== 'failed'
-    : safeAndroid.initialSync === 'completed';
+    && safeAndroid.initialSync === 'not_started';
   if (!pathComplete || safeAndroid.credentials !== 'saved_signable' || !goalComplete) {
     throw new Error('Pair sync recovery evidence did not prove the ordered recovery result.');
   }
@@ -34,7 +29,7 @@ export function sanitizePairSyncRecoveryProgressEvidence({ android, approval } =
   return { android: safeAndroid, approval: validatePairSyncApprovalEvidence(approval) };
 }
 
-export function createPairSyncRecoveryEvidenceTracker(evidenceGoal = 'initial-sync-completed') {
+export function createPairSyncRecoveryEvidenceTracker(evidenceGoal = 'credentials-signable') {
   const approval = createPairSyncApprovalEvidence();
   return {
     async approve(session, pending, membershipAction) {

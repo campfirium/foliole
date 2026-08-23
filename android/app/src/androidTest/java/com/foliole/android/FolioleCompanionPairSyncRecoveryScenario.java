@@ -24,6 +24,9 @@ final class FolioleCompanionPairSyncRecoveryScenario {
         Instrumentation instrumentation, WebView webView,
         boolean forceRePair, boolean credentialsOnly, String expectedEndpointUrl, long timeoutMs
     ) throws Exception {
+        if (!credentialsOnly) {
+            throw new IllegalArgumentException("Pairing instrumentation only supports credential evidence.");
+        }
         long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
         FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "settings-tab");
         FolioleCompanionSettingsNavigation.open(instrumentation, webView);
@@ -56,22 +59,7 @@ final class FolioleCompanionPairSyncRecoveryScenario {
             );
             existingPairing = false;
         } else if (existingPairing) {
-            FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "existing-pair-push");
-            JSONObject automatic = FolioleCompanionExistingPairSyncEvidence.awaitAutomatic(
-                instrumentation, webView, deadline, CONNECTED_TARGET
-            );
-            FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "existing-pair-ack-pull");
-            FolioleCompanionPairSyncEvidence.resetExistingSync(instrumentation, webView);
-            FolioleCompanionSemanticActions.clickVisible(
-                instrumentation, webView, CONNECTED_TARGET, deadline
-            );
-            JSONObject owned = FolioleCompanionExistingPairSyncEvidence.await(
-                instrumentation, webView, deadline, CONNECTED_TARGET
-            );
-            requireManualSyncMode(owned, "owned");
-            owned.put("autoSyncResult", automatic.getString("autoSyncResult"));
-            owned.put("autoSyncRunId", automatic.getString("autoSyncRunId"));
-            return buildReceipt(owned, "existing");
+            throw new IllegalStateException("Existing pairing must use its owning product contract.");
         }
         if ("companion-sync-repair".equals(entry)) {
             FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "pair-repair-action");
@@ -95,7 +83,7 @@ final class FolioleCompanionPairSyncRecoveryScenario {
         FolioleCompanionPairRequestEvidence.awaitSubmission(instrumentation, webView, deadline);
         FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "pair-completion");
         JSONObject recoveryEvidence = FolioleCompanionPairSyncRecoveryEvidenceWaiter.await(
-            instrumentation, webView, deadline, credentialsOnly
+            instrumentation, webView, deadline
         );
         return buildReceipt(recoveryEvidence, "new");
     }
@@ -106,27 +94,10 @@ final class FolioleCompanionPairSyncRecoveryScenario {
         receipt.put("targetTestId", "companion-pair-sync-recovery");
         receipt.put("paired", true);
         receipt.put("pairingPath", pairingPath);
-        receipt.put("initialSyncRequested", true);
+        receipt.put("initialSyncRequested", false);
         receipt.put("completion", recoveryEvidence.getString("completion"));
         receipt.put("credentials", recoveryEvidence.getString("credentials"));
         receipt.put("initialSync", recoveryEvidence.getString("initialSync"));
-        if (recoveryEvidence.has("manualSyncMode")) {
-            receipt.put("autoSyncResult", recoveryEvidence.getString("autoSyncResult"));
-            receipt.put("autoSyncRunId", recoveryEvidence.getString("autoSyncRunId"));
-            receipt.put("manualSyncMode", recoveryEvidence.getString("manualSyncMode"));
-            receipt.put("manualSyncResult", recoveryEvidence.getString("manualSyncResult"));
-            receipt.put("manualSyncRunId", recoveryEvidence.getString("manualSyncRunId"));
-        }
         return receipt;
     }
-
-    private static void requireManualSyncMode(JSONObject evidence, String expected) {
-        String actual = evidence.optString("manualSyncMode");
-        if (!expected.equals(actual)) {
-            throw new IllegalStateException(
-                "Existing workspace sync expected " + expected + " but observed " + actual + "."
-            );
-        }
-    }
-
 }

@@ -25,7 +25,6 @@ import {
 } from './macos-a5-sync-group-rejoin-contract.mjs';
 
 const APP_ID = 'com.foliole.android';
-const UNIQUE_DISCOVERY_TARGET = () => [];
 const CREDENTIALS_ONLY_DISCOVERY_TARGET = () => [
   '-e', 'foliolePairSyncEvidenceGoal', 'credentials-signable'
 ];
@@ -210,8 +209,8 @@ export async function recoverMacosA5DepartedCheckpoint({
     desktopControl: async () => ({ code: 0, output: '' }),
     desktopAuthorizationFingerprint: T132_MAC_AUTHORIZATION,
     existingPairing: false, env, evidenceRoot, hostName: T132_A5_HOST,
-    execute, instrumentationModeArgs: UNIQUE_DISCOVERY_TARGET,
-    paths, serial,
+    execute, instrumentationModeArgs: CREDENTIALS_ONLY_DISCOVERY_TARGET,
+    paths, recoveryEvidenceGoal: 'credentials-signable', serial,
     validateDesktop: (...args) => validateT132DepartedMemberDesktop(
       ...args, departed.storedLocalMemberAuthorizationFingerprint
     ) });

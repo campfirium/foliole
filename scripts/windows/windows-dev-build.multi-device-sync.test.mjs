@@ -7,6 +7,7 @@ import path from 'node:path';
 import { expect, it, vi } from 'vitest';
 
 import { runWindowsDevBuild } from './windows-dev-build.mjs';
+import { allowsSyncGroupNativeClient } from './windows-dev-residual-process.mjs';
 
 function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-formal-c-'));
@@ -23,6 +24,16 @@ function fixture() {
   return { root, paths: { repoRoot, signingHome, signingKeystore, signingManifest,
     systemNode: path.join(root, 'node.exe') } };
 }
+
+it('allows only the trusted native client for provider-backed sync actions', () => {
+  const paths = { repoRoot: 'D:\\C\\foliole', systemNode: 'C:\\Program Files\\nodejs\\node.exe' };
+  const trusted = { CommandLine: 'cmd.exe /d /c ""C:\\Program Files\\nodejs\\node.exe" '
+      + '"D:\\C\\foliole\\scripts\\windows\\electron-dev-native.mjs""', Name: 'cmd.exe' };
+  expect(allowsSyncGroupNativeClient('multi-device-sync-c', [trusted], paths)).toBe(true);
+  expect(allowsSyncGroupNativeClient('multi-device-sync-candidate', [trusted], paths)).toBe(false);
+  expect(allowsSyncGroupNativeClient('multi-device-sync-c', [trusted, { Name: 'java.exe' }], paths))
+    .toBe(false);
+});
 
 it('consumes the prepared Windows candidate without rebuilding during formal C sync', async () => {
   const { paths, root } = fixture();

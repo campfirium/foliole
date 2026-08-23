@@ -19,16 +19,6 @@ export function parseWindowsDevCaptureAnnotationEvidence(output) {
   return { buildIdentity: match[1], remoteRoot };
 }
 
-export function parseWindowsDevPairSyncRecoveryEvidence(output) {
-  const match = /^\[windows-dev-action\] pair-sync-recover identity=([A-Za-z0-9.-]{1,96}) manifest=([^\r\n]+)$/mu.exec(output);
-  if (!match) throw new Error('Windows DEV pair-sync-recover action did not report fixed evidence');
-  const remoteRoot = `${WINDOWS_DEV_EVIDENCE_PREFIX}${match[1]}`;
-  if (match[2].replaceAll('\\', '/') !== `${remoteRoot}/pair-sync-recovery-manifest.json`) {
-    throw new Error('Windows DEV pair-sync-recover manifest escaped its fixed evidence root');
-  }
-  return { buildIdentity: match[1], remoteRoot };
-}
-
 export function parseWindowsDevStatusEvidence(output, expectedStatus) {
   const match = /^\[windows-dev-action\] status: (OK|FAILED) exit=\d+ evidence=([^\r\n]+)$/mu.exec(output);
   if (!match || match[1] !== expectedStatus) {

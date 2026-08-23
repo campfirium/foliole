@@ -43,7 +43,7 @@ it('marks only desktop-session actions for capsule Electron materialization', ()
 
 it.each([
   'capture-annotation', 'clear-app-data', 'database-performance', 'deploy',
-  'device-profile', 'leave-sync-group', 'pair-credentials', 'pair-sync',
+  'device-profile', 'leave-sync-group', 'pair-credentials',
   'system-entry-sync', 'sync-existing', 'sync-group-rejoin', 'sync-group-rejoin-recover',
   'sync-group-stopped-status'
 ])('requires the fixed A5 mutation lease for %s', (action) => {

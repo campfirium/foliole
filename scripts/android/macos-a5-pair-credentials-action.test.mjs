@@ -14,7 +14,6 @@ import {
 } from './macos-a5-pair-credentials-action.mjs';
 
 it('stops fresh A5 pairing after native credentials can sign the first request', async () => {
-  const produceHandoff = vi.fn();
   const runPairSync = vi.fn().mockResolvedValue({
     output: '', pairSyncRecovery: { manifestPath: '/tmp/credentials.json' }
   });
@@ -27,7 +26,6 @@ it('stops fresh A5 pairing after native credentials can sign the first request',
   };
   await runMacosA5PairCredentialsEntry(args, {
     buildDesktop: vi.fn(),
-    produceHandoff,
     readReceipt: () => ({
       credentials: 'saved_signable', initialSync: 'not_started', pairingPath: 'new'
     }),
@@ -54,7 +52,6 @@ it('stops fresh A5 pairing after native credentials can sign the first request',
   expect(args.execute).toHaveBeenCalledWith('/adb', [
     '-s', '87a33a4b', 'shell', 'am', 'force-stop', 'com.foliole.android'
   ], expect.objectContaining({ timeoutCode: 'credential_snapshot_stop_timeout' }));
-  expect(produceHandoff).toHaveBeenCalledOnce();
 });
 
 it('bounds only the credential instrumentation wait instead of inheriting full sync timeout', async () => {
@@ -105,7 +102,7 @@ it('routes exact joined-empty credentials through product Leave and a fresh boun
       timelineId: 'timeline-1' }),
     leaveJoinedEmpty, readReceipt: () => ({
       credentials: 'saved_signable', initialSync: 'not_started', pairingPath: 'new'
-    }), produceHandoff: vi.fn(), resolveReadiness, runPairSync
+    }), resolveReadiness, runPairSync
   });
 
   expect(leaveJoinedEmpty).toHaveBeenCalledWith(expect.objectContaining({

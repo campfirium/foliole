@@ -15,10 +15,10 @@ function isTrustedNativeClientWrapper(processEntry, paths) {
   return normalize(processEntry?.Name) === 'cmd.exe' && commandLine.endsWith(expectedSuffix);
 }
 
-export function allowsPairSyncNativeClient(action, residual, paths) {
+export function allowsSyncGroupNativeClient(action, residual, paths) {
   return ['multi-device-sync-a-leave', 'multi-device-sync-a-rejoin', 'multi-device-sync-c',
     'multi-device-sync-from-zero', 'multi-device-sync-participation',
-    'pair-sync-recover', 'sync-group-baseline-reset',
+    'sync-group-baseline-reset',
     'sync-group-recover', 'sync-group-task3', 'sync-group-task3-protect'].includes(action)
     && residual.length === 1
     && isTrustedNativeClientWrapper(residual[0], paths);

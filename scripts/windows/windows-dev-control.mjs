@@ -9,11 +9,8 @@ import { pathToFileURL } from 'node:url';
 
 import { CAPTURE_ANNOTATION_EVIDENCE_FILES } from './windows-a5-capture-annotation-contract.mjs';
 import {
-  copyWindowsDevPairSyncRecoveryEvidence, WINDOWS_DEV_PAIR_SYNC_RECOVERY_FILES
-} from './windows-dev-pair-sync-evidence.mjs';
-import {
   parseWindowsDevCaptureAnnotationEvidence, parseWindowsDevFailureEvidence,
-  parseWindowsDevLiveEvidence, parseWindowsDevPairSyncRecoveryEvidence
+  parseWindowsDevLiveEvidence
 } from './windows-dev-control-evidence.mjs';
 import { runWindowsSyncGroupControl } from './windows-sync-group-control-router.mjs';
 import {
@@ -28,7 +25,7 @@ import { copyWindowsDeviceProfileEvidence } from './windows-device-profile-contr
 
 export {
   parseWindowsDevCaptureAnnotationEvidence, parseWindowsDevFailureEvidence,
-  parseWindowsDevLiveEvidence, parseWindowsDevPairSyncRecoveryEvidence,
+  parseWindowsDevLiveEvidence,
   parseWindowsDevSuccessEvidence
 } from './windows-dev-control-evidence.mjs';
 export { windowsDevScpSpec, windowsDevSshSpec } from './windows-dev-remote-spec.mjs';
@@ -36,7 +33,7 @@ export { windowsDevScpSpec, windowsDevSshSpec } from './windows-dev-remote-spec.
 export const WINDOWS_DEV_SOURCE_REF = 'refs/heads/dev';
 export const WINDOWS_DEV_DEFAULT_SSH = 'zephu@192.168.0.11';
 export const WINDOWS_DEV_ACTIONS = [
-  'appearance', 'build', 'capture-annotation', 'deploy', 'desktop-preview', 'device-profile', 'internal-install', 'internal-open', 'live', 'pair-sync-recover', 'secondary',
+  'appearance', 'build', 'capture-annotation', 'deploy', 'desktop-preview', 'device-profile', 'internal-install', 'internal-open', 'live', 'secondary',
   'multi-device-sync-a-leave', 'multi-device-sync-a-rejoin', 'multi-device-sync-c',
   'multi-device-sync-candidate', 'multi-device-sync-from-zero', 'multi-device-sync-participation',
   ...Object.values(WINDOWS_SYNC_GROUP_PROVIDER_RELEASE_ACTIONS),
@@ -167,28 +164,6 @@ export async function runWindowsDevControl({
     if (remoteError) stdout.write(`[windows-dev-control] failure evidence=${localRoot}\n`);
     result.evidenceRoot = localRoot;
     result.manifestPath = path.join(localRoot, CAPTURE_ANNOTATION_FILES[0]);
-  }
-  if (action === 'pair-sync-recover') {
-    let evidence;
-    try {
-      evidence = remoteError
-        ? parseWindowsDevFailureEvidence(remoteOutput)
-        : parseWindowsDevPairSyncRecoveryEvidence(remoteOutput);
-    } catch (error) {
-      if (remoteError) throw remoteError;
-      throw error;
-    }
-    const copied = await copyWindowsDevPairSyncRecoveryEvidence({
-      copyFile: (name, localRoot) => executeScp(windowsDevScpSpec(
-        host, `${evidence.remoteRoot}/${name}`, path.join(localRoot, name), env
-      ), { env }),
-      fsApi, remoteError, remoteRoot: evidence.remoteRoot, repoRoot
-    });
-    const localRoot = copied.localRoot;
-    if (copied.warning) stdout.write(`[windows-dev-control] failure evidence copy incomplete: ${copied.warning}\n`);
-    if (remoteError) stdout.write(`[windows-dev-control] failure evidence=${localRoot}\n`);
-    result.evidenceRoot = localRoot;
-    result.manifestPath = path.join(localRoot, WINDOWS_DEV_PAIR_SYNC_RECOVERY_FILES[0]);
   }
   const deviceProfile = await copyWindowsDeviceProfileEvidence({ action, fsApi, remoteError,
     remoteOutput, repoRoot, copyFile: (remote, local) => executeScp(

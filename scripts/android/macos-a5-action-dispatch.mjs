@@ -3,7 +3,6 @@ import {
   recoverMacosA5SyncGroupRejoinEntry,
   runMacosA5ClearAppDataEntry,
   runMacosA5ExistingSyncEntry,
-  runMacosA5PairSyncEntry,
   runMacosA5SettledStoppedStatus,
   runMacosA5SyncGroupRejoinEntry
 } from './macos-a5-extended-actions.mjs';
@@ -45,7 +44,6 @@ export async function dispatchMacosA5Action({
     assertFixed: () => assertFixed(paths), build: () => build(paths), buildIdentity,
     checked, env, execute, markMutationBoundary, paths, protectData, serial
   };
-  if (action === 'pair-sync') await runMacosA5PairSyncEntry(productArgs);
   if (action === 'pair-credentials') {
     await (await import('./macos-a5-pair-credentials-action.mjs'))
       .runMacosA5PairCredentialsEntry(productArgs);

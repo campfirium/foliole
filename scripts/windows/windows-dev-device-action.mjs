@@ -7,9 +7,6 @@ import { runWindowsSyncGroupDeviceAction } from './windows-sync-group-device-act
 import {
   captureAnnotationFailure, parseCaptureAnnotationReadiness
 } from './windows-a5-capture-annotation-contract.mjs';
-import {
-  pairSyncRecoveryFailure, parsePairSyncRecoveryReadiness
-} from '../sync-group/pair-sync-feature-contract.mjs';
 
 export const WINDOWS_DEV_ADB_PORT = '5037';
 export const WINDOWS_DEV_A5_SERIAL = '87a33a4b';
@@ -21,19 +18,9 @@ async function runDefaultCaptureAnnotation(options) {
   return runWindowsA5CaptureAnnotation(options);
 }
 
-async function runDefaultPairSyncRecovery(options) {
-  const { runWindowsA5PairSyncRecovery } = await import('./windows-a5-pair-sync-recovery-action.mjs');
-  return runWindowsA5PairSyncRecovery(options);
-}
-
 async function runDefaultSyncGroupInteractive(options) {
   const { runWindowsSyncGroupInteractiveAction } = await import('./windows-sync-group-interactive-action.mjs');
   return runWindowsSyncGroupInteractiveAction(options);
-}
-
-async function inspectDefaultPairSyncDesktop(options) {
-  const { inspectWindowsPairSyncRecoveryDesktop } = await import('./windows-a5-pair-sync-recovery-action.mjs');
-  return inspectWindowsPairSyncRecoveryDesktop(options);
 }
 
 async function runCaptureAnnotationReadiness(execute, paths, env) {
@@ -54,39 +41,6 @@ async function runCaptureAnnotationReadiness(execute, paths, env) {
     ), { exitCode: 77, readiness, resultStatus: 'approval_required' });
   }
   throw captureAnnotationFailure('Capture annotation readiness result is inconsistent', 'capture-readiness', result);
-}
-
-async function runPairSyncRecoveryReadiness(execute, paths, env, inspectDesktop) {
-  const script = path.join(paths.repoRoot, 'scripts', 'android', 'android-pair-sync-recovery-readiness-runner.mjs');
-  const result = await execute(paths.systemNode, [script, '--adb', paths.adbPath,
-    '--serial', WINDOWS_DEV_A5_SERIAL, '--app-id', APP_ID], {
-    env: helperEnv(env), timeoutCode: 'pair_sync_readiness_timeout', timeoutMs: 2 * 60_000,
-    windowsHide: true
-  });
-  const readiness = parsePairSyncRecoveryReadiness(result.output);
-  if (result.code === 77 && readiness.resultStatus === 'approval_required') {
-    throw Object.assign(pairSyncRecoveryFailure(
-      'A5 pairing recovery requires user review before mutation', 'pair-sync-readiness', result, 77
-    ), { readiness, resultStatus: 'approval_required' });
-  }
-  if (result.code !== 0 || readiness.resultStatus !== 'ready') {
-    throw pairSyncRecoveryFailure('Pair sync readiness result is inconsistent', 'pair-sync-readiness', result);
-  }
-  try {
-    const desktop = await inspectDesktop({
-      desktopAuthorizationFingerprint: readiness.syncGroupRemotePeerFingerprint,
-      env, execute, hostName: readiness.hostName, paths,
-      existingPairing: readiness.pairingCredentialsPresent,
-    });
-    return {
-      desktopPairingReadiness: desktop.overview,
-      output: `${result.output}${desktop.output}`,
-      pairSyncRecoveryReadiness: readiness
-    };
-  } catch (error) {
-    if (error.exitCode === 77) Object.assign(error, { readiness, resultStatus: 'approval_required' });
-    throw error;
-  }
 }
 
 function failure(message, exitCode, stage, result) {
@@ -156,11 +110,9 @@ async function verify(execute, paths, env) {
 }
 
 export async function runWindowsDevDeviceAction({
-  action, buildIdentity, candidate, evidenceRoot, execute, pairSyncRecoveryReadiness, paths,
+  action, buildIdentity, candidate, evidenceRoot, execute, paths,
   phase = 'execute',
-  inspectPairSyncDesktop = inspectDefaultPairSyncDesktop,
   runCaptureAnnotation = runDefaultCaptureAnnotation, runLiveReload = runWindowsA5LiveReload,
-  runPairSyncRecovery = runDefaultPairSyncRecovery,
   runSyncGroupInteractive = runDefaultSyncGroupInteractive
 }) {
   const interactiveSyncGroup = await runSyncGroupInteractive({
@@ -192,30 +144,12 @@ export async function runWindowsDevDeviceAction({
     if (state.stdout.trim() !== 'device') throw failure('Fixed Android device is not ready', 69, 'device');
     if (action === 'capture-annotation' && phase === 'readiness') {
       actionResult = await runCaptureAnnotationReadiness(execute, paths, env);
-    } else if (action === 'pair-sync-recover' && phase === 'readiness') {
-      actionResult = await runPairSyncRecoveryReadiness(execute, paths, env, inspectPairSyncDesktop);
     } else if (action === 'capture-annotation') {
       actionResult = await runCaptureAnnotation({
         adbPort: WINDOWS_DEV_ADB_PORT, buildIdentity, env, evidenceRoot, execute, paths,
         protectData: (mode, manifest, backupRoot) => runDataProtection(
           execute, paths, mode, manifest, env, backupRoot
         ), serial: WINDOWS_DEV_A5_SERIAL
-      });
-    } else if (action === 'pair-sync-recover') {
-      actionResult = await runPairSyncRecovery({
-        adbPort: WINDOWS_DEV_ADB_PORT, buildIdentity,
-        desktopAuthorizationFingerprint:
-          pairSyncRecoveryReadiness?.syncGroupRemotePeerFingerprint,
-        env, evidenceRoot, execute,
-        existingPairing: pairSyncRecoveryReadiness?.pairingCredentialsPresent,
-        hostName: pairSyncRecoveryReadiness?.hostName,
-        pairedAuthorizationFingerprint:
-          pairSyncRecoveryReadiness?.localMemberAuthorizationFingerprint,
-        paths,
-        protectData: (mode, manifest, backupRoot) => runDataProtection(
-          execute, paths, mode, manifest, env, backupRoot
-        ),
-        serial: WINDOWS_DEV_A5_SERIAL
       });
     } else if (action === 'verify') {
       actionResult = { output: await verify(execute, paths, env) };

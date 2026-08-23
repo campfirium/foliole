@@ -9,7 +9,6 @@ const ACTION_OVERRIDES = Object.freeze({
   'sync-group-stopped-status': { formalSourceClass: 'ordinary-only' },
   'leave-sync-group': { requiresHiddenDesktopRuntime: true },
   'pair-credentials': { requiresHiddenDesktopRuntime: true },
-  'pair-sync': { requiresHiddenDesktopRuntime: true },
   'system-entry-sync': { requiresHiddenDesktopRuntime: true },
   'sync-existing': { requiresHiddenDesktopRuntime: true },
   'sync-group-rejoin': { requiresHiddenDesktopRuntime: true },
@@ -24,7 +23,6 @@ const FORMAL_EVIDENCE = Object.freeze({
   'hidden-desktop-status': { kind: 'run-json', root: 'a5-hidden-desktop-status' },
   'leave-sync-group': { kind: 'run-directory', root: 'a5-sync-group-maintenance' },
   'pair-credentials': { kind: 'run-directory', root: 'a5-pair-credentials' },
-  'pair-sync': { kind: 'run-directory', root: 'a5-pair-sync' },
   'system-entry-sync': { kind: 'run-directory', root: 'a5-system-entry-sync' },
   'sync-existing': { kind: 'run-directory', root: 'a5-existing-sync' },
   'sync-group-rejoin': { kind: 'run-directory', root: 'a5-sync-group-rejoin' },
@@ -35,7 +33,7 @@ const FORMAL_EVIDENCE = Object.freeze({
 const MACOS_A5_ACTIONS = new Set([
   ...Object.keys(ACTION_OVERRIDES),
   'capture-annotation', 'clear-app-data', 'database-performance', 'deploy',
-  'device-profile', 'leave-sync-group', 'pair-credentials', 'pair-sync', 'system-entry-sync', 'sync-existing',
+  'device-profile', 'leave-sync-group', 'pair-credentials', 'system-entry-sync', 'sync-existing',
   'sync-group-rejoin', 'sync-group-rejoin-recover', 'sync-group-stopped-status'
 ]);
 

@@ -14,7 +14,6 @@ import {
   stopA5ForCredentialSnapshot
 } from './macos-a5-pair-credentials-rejoin.mjs';
 import { runMacosA5PairSync } from './macos-a5-pair-sync-action.mjs';
-import { produceCredentialsSignableHandoff } from './macos-a5-credential-handoff.mjs';
 import { resolveMacosA5PairSyncReadiness } from './macos-a5-product-bootstrap.mjs';
 
 const CREDENTIAL_EVIDENCE_TIMEOUT_MS = 180_000;
@@ -79,7 +78,6 @@ export async function runMacosA5PairCredentialsEntry(args, dependencies = {}) {
     ?? collectCredentialProtectedReadiness;
   const leaveJoinedEmpty = dependencies.leaveJoinedEmpty ?? leaveJoinedEmptyCredentialSession;
   const readReceipt = dependencies.readReceipt ?? readCredentialReceipt;
-  const produceHandoff = dependencies.produceHandoff ?? produceCredentialsSignableHandoff;
   const inspectDesktopDeparture = dependencies.inspectDesktopDeparture
     ?? ((departed) => inspectDesktopDepartureBoundary(args.paths.desktopDevLibrary, departed));
   args.assertFixed();
@@ -116,9 +114,6 @@ export async function runMacosA5PairCredentialsEntry(args, dependencies = {}) {
   });
   assertFreshCredentialReceipt(readReceipt(evidenceRoot));
   await stopA5ForCredentialSnapshot(args);
-  produceHandoff({ artifactsRoot: args.paths.artifactsRoot, evidenceRoot,
-    currentRevision: args.paths.acceptedRevision ?? undefined,
-    readiness: resolveReadiness(args.paths), sourceRepoRoot: args.paths.sourceRepoRoot });
   process.stdout.write(result.output);
   console.log(`[macos-a5-dev] pair-credentials evidence=${result.pairSyncRecovery.manifestPath}`);
 }
