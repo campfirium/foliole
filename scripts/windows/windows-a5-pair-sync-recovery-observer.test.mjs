@@ -56,17 +56,79 @@ it('observes request submission without global errors or click-return evidence',
   expect(observer).not.toContain("new URL(args.url).pathname === '/companion/sync-group/activate'");
   const settlement = read('android/app/src/androidTest/java/com/foliole/android/FolioleCompanionExistingPairSyncEvidence.java');
   expect(settlement).toContain('companion-sync-inline-progress');
-  expect(settlement).toContain('state.optBoolean("syncUiStarted")');
+  expect(settlement).toContain('manualSyncRunId');
+  expect(settlement).toContain('manualSyncResult');
   expect(settlement).toContain('restoreSyncSurface');
   expect(recoveryEvidence).toContain('resetExistingSync');
-  expect(observer).toContain('syncUiStarted: false');
-  expect(observer).toContain("attributeFilter: ['disabled']");
+  expect(source).toContain('awaitAutomatic');
+  expect(source).toContain('requireManualSyncMode(owned, "owned")');
+  expect(observer).toContain("target.getAttribute('aria-busy') === 'true'");
+  expect(observer).toContain("'data-sync-run-id'");
+  expect(observer).toContain("terminalRunId === state.manualSyncRunId");
   expect(observer).not.toContain("methodName === 'recordWorkspaceSyncEvent'");
   expect(observer).toContain("algorithm.name === 'ECDH'");
   expect(observer).not.toContain('pair_request_id');
   expect(observer).not.toContain('__folioleVerifyPairSyncCredentials');
   expect(observer).not.toContain('args.workgroup_key');
   expect(observer).not.toMatch(/\bworkgroup_key\s*:/u);
+});
+
+it('attributes manual sync settlement to the exact observed run identity', () => {
+  const source = read(observerPath);
+  const attributes = new Map();
+  const button = { getAttribute: (name) => attributes.get(name) ?? null };
+  const document = { documentElement: {}, querySelector: (selector) => (
+    selector === '[data-testid="companion-sync-now"]' ? button : null
+  ) };
+  let recordMutation = () => undefined;
+  class MutationObserver {
+    constructor(callback) { recordMutation = callback; }
+    observe() {}
+  }
+  const window = { Capacitor: { nativePromise: async () => ({ ok: true }) }, document,
+    MutationObserver, crypto: { subtle: Object.create({ generateKey: async () => ({}) }) } };
+  expect(JSON.parse(vm.runInNewContext(source, { Promise, URL, window }))).toEqual({ ok: true });
+  attributes.set('data-sync-action-mode', 'joined');
+  attributes.set('data-sync-run-id', 'run-joined');
+  attributes.set('data-sync-terminal-run-id', 'run-unrelated');
+  attributes.set('data-sync-terminal-result', 'completed');
+  recordMutation();
+  expect(window.__foliolePairSyncObserver).toMatchObject({
+    manualSyncMode: 'joined', manualSyncResult: null, manualSyncRunId: 'run-joined'
+  });
+  attributes.set('data-sync-terminal-run-id', 'run-joined');
+  recordMutation();
+  expect(window.__foliolePairSyncObserver.manualSyncResult).toBe('completed');
+});
+
+it('attributes cold-start automatic settlement to a new terminal run', () => {
+  const source = read(observerPath);
+  const attributes = new Map([
+    ['aria-busy', 'true'],
+    ['data-sync-terminal-result', 'completed'],
+    ['data-sync-terminal-run-id', 'run-before-start']
+  ]);
+  const button = { getAttribute: (name) => attributes.get(name) ?? null };
+  const document = { documentElement: {}, querySelector: (selector) => (
+    selector === '[data-testid="companion-sync-now"]' ? button : null
+  ) };
+  let recordMutation = () => undefined;
+  class MutationObserver {
+    constructor(callback) { recordMutation = callback; }
+    observe() {}
+  }
+  const window = { Capacitor: { nativePromise: async () => ({ ok: true }) }, document,
+    MutationObserver, crypto: { subtle: Object.create({ generateKey: async () => ({}) }) } };
+  expect(JSON.parse(vm.runInNewContext(source, { Promise, URL, window }))).toEqual({ ok: true });
+  expect(window.__foliolePairSyncObserver).toMatchObject({
+    autoSyncRunId: null, autoSyncStarted: true, baselineTerminalRunId: 'run-before-start'
+  });
+  attributes.set('aria-busy', null);
+  attributes.set('data-sync-terminal-run-id', 'run-cold-start');
+  recordMutation();
+  expect(window.__foliolePairSyncObserver).toMatchObject({
+    autoSyncResult: 'completed', autoSyncRunId: 'run-cold-start'
+  });
 });
 
 it('only observes the product signing request after workgroup membership persistence', async () => {
@@ -85,25 +147,6 @@ it('only observes the product signing request after workgroup membership persist
     workgroup_key: 'product-owned-key'
   });
   expect(state.credentials).toBe('saved_signable');
-});
-
-it('retains a fast sync button disabled transition for later settlement polling', () => {
-  const source = read(observerPath);
-  const button = { disabled: false };
-  const document = { documentElement: {}, querySelector: () => button };
-  let recordMutation = () => undefined;
-  class MutationObserver {
-    constructor(callback) { recordMutation = callback; }
-    observe() {}
-  }
-  const window = { Capacitor: { nativePromise: async () => ({ ok: true }) }, document,
-    MutationObserver, crypto: { subtle: Object.create({ generateKey: async () => ({}) }) } };
-  expect(JSON.parse(vm.runInNewContext(source, { Promise, URL, window }))).toEqual({ ok: true });
-  button.disabled = true;
-  recordMutation();
-  button.disabled = false;
-  recordMutation();
-  expect(window.__foliolePairSyncObserver.syncUiStarted).toBe(true);
 });
 
 it('attributes request evidence only to the product pair-request operation', async () => {

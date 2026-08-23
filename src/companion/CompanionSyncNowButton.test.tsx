@@ -22,12 +22,27 @@ describe('CompanionSyncNowButton', () => {
   });
 
   it('does not restore a completed manual action into an idle button', () => {
-    renderWithLocalization(<CompanionSyncNowButton isSyncing={false} onSync={vi.fn()} />);
+    renderWithLocalization(
+      <CompanionSyncNowButton
+        isSyncing={false}
+        terminalRunId="run-completed"
+        terminalRunResult="completed"
+        onSync={vi.fn()}
+      />
+    );
 
     const button = screen.getByRole('button', { name: 'Sync Now' });
     expect(button).toBeEnabled();
     expect(button).not.toHaveAttribute('data-sync-action-mode');
     expect(button).not.toHaveAttribute('data-sync-run-id');
+    expect(button).toHaveAttribute('data-sync-terminal-run-id', 'run-completed');
+    expect(button).toHaveAttribute('data-sync-terminal-result', 'completed');
+  });
+
+  it('keeps duplicate UI actions disabled while automatic sync is visible', () => {
+    renderWithLocalization(<CompanionSyncNowButton isSyncing onSync={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Syncing' })).toBeDisabled();
   });
 
   it('identifies a manual action that owns a new run', () => {

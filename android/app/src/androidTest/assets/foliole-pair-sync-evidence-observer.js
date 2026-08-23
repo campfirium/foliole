@@ -9,10 +9,13 @@
     keyState: 'not-started', requestState: 'not-started', completion: 'not_started',
     credentials: 'not_saved', initialSync: 'not_started',
     syncPackApplied: false, syncPackDownloaded: false,
-    syncFailure: null, syncPackUrl: null, syncUiStarted: false
+    autoSyncResult: null, autoSyncRunId: null, autoSyncStarted: false,
+    baselineTerminalRunId: null, observerInitialized: false,
+    manualSyncMode: null, manualSyncResult: null, manualSyncRunId: null,
+    preExistingAttention: false, syncFailure: null, syncPackUrl: null
   };
   window.__foliolePairSyncObserver = state;
-  observeSyncButton(state);
+  observeManualSync(state);
   var originalGenerateKey = proto.generateKey;
   proto.generateKey = function () {
     var algorithm = arguments[0];
@@ -96,14 +99,39 @@
   function pairingCanSync(state) {
     return state.credentials === 'saved_signable' || state.completion === 'existing_pairing';
   }
-  function observeSyncButton(state) {
+  function observeManualSync(state) {
     if (!window.document || !window.MutationObserver) return;
     var record = function () {
       var target = window.document.querySelector('[data-testid="companion-sync-now"]');
-      if (target && target.disabled) state.syncUiStarted = true;
+      if (!target) return;
+      var mode = target.getAttribute('data-sync-action-mode');
+      var runId = target.getAttribute('data-sync-run-id');
+      var terminalRunId = target.getAttribute('data-sync-terminal-run-id');
+      var terminalResult = target.getAttribute('data-sync-terminal-result');
+      if (!state.observerInitialized) {
+        state.baselineTerminalRunId = terminalRunId;
+        state.preExistingAttention = !!window.document.querySelector(
+          '[data-testid="companion-sync-inline-attention"]'
+        );
+        state.observerInitialized = true;
+      }
+      if (!mode && target.getAttribute('aria-busy') === 'true') state.autoSyncStarted = true;
+      if (state.autoSyncStarted && terminalRunId && terminalRunId !== state.baselineTerminalRunId) {
+        state.autoSyncRunId = terminalRunId; state.autoSyncResult = terminalResult;
+      }
+      if ((mode === 'owned' || mode === 'joined') && runId) {
+        state.manualSyncMode = mode; state.manualSyncRunId = runId;
+      }
+      if (state.manualSyncRunId && terminalRunId === state.manualSyncRunId) {
+        state.manualSyncResult = terminalResult;
+      }
     };
     new window.MutationObserver(record).observe(window.document.documentElement, {
-      attributes: true, attributeFilter: ['disabled'], childList: true, subtree: true
+      attributes: true,
+      attributeFilter: ['aria-busy', 'data-sync-action-mode', 'data-sync-run-id',
+        'data-sync-terminal-run-id', 'data-sync-terminal-result'],
+      childList: true,
+      subtree: true
     });
     record();
   }

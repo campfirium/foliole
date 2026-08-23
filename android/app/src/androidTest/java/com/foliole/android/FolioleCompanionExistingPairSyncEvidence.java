@@ -9,23 +9,38 @@ import org.json.JSONObject;
 final class FolioleCompanionExistingPairSyncEvidence {
     private FolioleCompanionExistingPairSyncEvidence() {}
 
-    static JSONObject await(
+    static JSONObject awaitAutomatic(
         Instrumentation instrumentation,
         WebView webView,
         long deadline,
         String syncTarget
     ) throws Exception {
-        return await(instrumentation, webView, deadline, syncTarget, false);
+        while (System.nanoTime() < deadline) {
+            JSONObject state = FolioleCompanionPairSyncEvidence.read(instrumentation, webView);
+            FolioleCompanionPairSyncEvidence.emit(instrumentation, state);
+            String runId = state.optString("autoSyncRunId");
+            String result = state.optString("autoSyncResult");
+            if (!runId.isEmpty() && !result.isEmpty()
+                && isTargetEnabled(instrumentation, webView, syncTarget)) {
+                JSONObject evidence = completedRunEvidence(
+                    FolioleCompanionPairSyncEvidence.terminalEvidence(state), runId, result
+                );
+                evidence.put("autoSyncResult", result);
+                evidence.put("autoSyncRunId", runId);
+                evidence.put("preExistingAttention", state.optBoolean("preExistingAttention"));
+                return evidence;
+            }
+            Thread.sleep(150);
+        }
+        throw new IllegalStateException("Timed out waiting for cold-start automatic sync completion.");
     }
 
     static JSONObject await(
         Instrumentation instrumentation,
         WebView webView,
         long deadline,
-        String syncTarget,
-        boolean allowExistingAttention
+        String syncTarget
     ) throws Exception {
-        boolean syncStarted = false;
         while (System.nanoTime() < deadline) {
             JSONObject state = FolioleCompanionPairSyncEvidence.read(instrumentation, webView);
             JSONObject evidence = FolioleCompanionPairSyncEvidence.terminalEvidence(state);
@@ -35,20 +50,43 @@ final class FolioleCompanionExistingPairSyncEvidence {
                     "Existing workspace sync failed: " + boundedSyncFailure(state) + "."
                 );
             }
-            if (!allowExistingAttention
-                && isTargetVisible(instrumentation, webView, "companion-sync-inline-attention")) {
-                throw new IllegalStateException("Initial workspace sync settled with attention.");
-            }
             boolean targetEnabled = isTargetEnabled(instrumentation, webView, syncTarget);
-            if (state.optBoolean("syncUiStarted") || !targetEnabled) syncStarted = true;
-            if ("saved_signable".equals(evidence.optString("credentials"))
-                && syncStarted && targetEnabled) {
-                evidence.put("initialSync", "completed");
-                return evidence;
+            String runId = state.optString("manualSyncRunId");
+            String result = state.optString("manualSyncResult");
+            if (!runId.isEmpty() && !result.isEmpty() && targetEnabled) {
+                return exactRunEvidence(state, evidence, runId, result);
             }
             Thread.sleep(150);
         }
         throw new IllegalStateException("Timed out waiting for existing workspace sync completion.");
+    }
+
+    private static JSONObject exactRunEvidence(
+        JSONObject state,
+        JSONObject evidence,
+        String runId,
+        String result
+    ) throws Exception {
+        completedRunEvidence(evidence, runId, result);
+        evidence.put("manualSyncMode", state.optString("manualSyncMode"));
+        evidence.put("manualSyncResult", result);
+        evidence.put("manualSyncRunId", runId);
+        evidence.put("preExistingAttention", state.optBoolean("preExistingAttention"));
+        return evidence;
+    }
+
+    private static JSONObject completedRunEvidence(
+        JSONObject evidence,
+        String runId,
+        String result
+    ) throws Exception {
+        if (!"completed".equals(result)) {
+            throw new IllegalStateException(
+                "Existing workspace sync run " + runId + " settled as " + result + "."
+            );
+        }
+        evidence.put("initialSync", result);
+        return evidence;
     }
 
     static JSONObject awaitAfterStructureApplied(

@@ -16,14 +16,24 @@ final class FolioleCompanionPairSyncRecoveryScenario {
         Instrumentation instrumentation, WebView webView,
         boolean forceRePair, boolean credentialsOnly, String expectedEndpointUrl, long timeoutMs
     ) throws Exception {
-        return run(instrumentation, webView, forceRePair, credentialsOnly,
-            expectedEndpointUrl, timeoutMs, false);
+        return runExistingScenario(
+            instrumentation, webView, forceRePair, credentialsOnly, expectedEndpointUrl, timeoutMs
+        );
     }
 
     static JSONObject run(
         Instrumentation instrumentation, WebView webView,
         boolean forceRePair, boolean credentialsOnly, String expectedEndpointUrl, long timeoutMs,
-        boolean allowExistingAttention
+        boolean legacyAllowExistingAttention
+    ) throws Exception {
+        return runExistingScenario(
+            instrumentation, webView, forceRePair, credentialsOnly, expectedEndpointUrl, timeoutMs
+        );
+    }
+
+    private static JSONObject runExistingScenario(
+        Instrumentation instrumentation, WebView webView,
+        boolean forceRePair, boolean credentialsOnly, String expectedEndpointUrl, long timeoutMs
     ) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
         FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "settings-tab");
@@ -50,17 +60,21 @@ final class FolioleCompanionPairSyncRecoveryScenario {
             existingPairing = false;
         } else if (existingPairing) {
             FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "existing-pair-push");
-            FolioleCompanionPairSyncEvidence.resetExistingSync(instrumentation, webView);
-            clickVisible(instrumentation, webView, CONNECTED_TARGET, deadline);
-            FolioleCompanionExistingPairSyncEvidence.await(
-                instrumentation, webView, deadline, CONNECTED_TARGET, allowExistingAttention
+            JSONObject automatic = FolioleCompanionExistingPairSyncEvidence.awaitAutomatic(
+                instrumentation, webView, deadline, CONNECTED_TARGET
             );
             FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "existing-pair-ack-pull");
             FolioleCompanionPairSyncEvidence.resetExistingSync(instrumentation, webView);
             clickVisible(instrumentation, webView, CONNECTED_TARGET, deadline);
-            return buildReceipt(FolioleCompanionExistingPairSyncEvidence.await(
-                instrumentation, webView, deadline, CONNECTED_TARGET, allowExistingAttention
-            ), "existing");
+            JSONObject owned = FolioleCompanionExistingPairSyncEvidence.await(
+                instrumentation, webView, deadline, CONNECTED_TARGET
+            );
+            requireManualSyncMode(owned, "owned");
+            owned.put("autoSyncResult", automatic.getString("autoSyncResult"));
+            owned.put("autoSyncRunId", automatic.getString("autoSyncRunId"));
+            owned.put("preExistingAttention", automatic.optBoolean("preExistingAttention")
+                || owned.optBoolean("preExistingAttention"));
+            return buildReceipt(owned, "existing");
         }
         if ("companion-sync-repair".equals(entry)) {
             FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "pair-repair-action");
@@ -93,7 +107,24 @@ final class FolioleCompanionPairSyncRecoveryScenario {
         receipt.put("completion", recoveryEvidence.getString("completion"));
         receipt.put("credentials", recoveryEvidence.getString("credentials"));
         receipt.put("initialSync", recoveryEvidence.getString("initialSync"));
+        if (recoveryEvidence.has("manualSyncMode")) {
+            receipt.put("autoSyncResult", recoveryEvidence.getString("autoSyncResult"));
+            receipt.put("autoSyncRunId", recoveryEvidence.getString("autoSyncRunId"));
+            receipt.put("manualSyncMode", recoveryEvidence.getString("manualSyncMode"));
+            receipt.put("manualSyncResult", recoveryEvidence.getString("manualSyncResult"));
+            receipt.put("manualSyncRunId", recoveryEvidence.getString("manualSyncRunId"));
+            receipt.put("preExistingAttention", recoveryEvidence.optBoolean("preExistingAttention"));
+        }
         return receipt;
+    }
+
+    private static void requireManualSyncMode(JSONObject evidence, String expected) {
+        String actual = evidence.optString("manualSyncMode");
+        if (!expected.equals(actual)) {
+            throw new IllegalStateException(
+                "Existing workspace sync expected " + expected + " but observed " + actual + "."
+            );
+        }
     }
 
     static void clickVisible(

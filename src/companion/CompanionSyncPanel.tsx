@@ -4,6 +4,7 @@ import type { SyncGroupPayload } from '../../lib/platform/syncGroupContract';
 import { useTranslation, type Translate } from '../shared/localization/LocalizationProvider';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import { isCompanionPairingSyncUsable } from '../shared/platform/companionPairingState';
+import { isSyncRunFinishedEvent } from '../shared/platform/companionSyncActivityEvents';
 import { isNativeCompanionSyncParticipationRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
 import type { CompanionHandoffReminderSettings } from './companionHandoffReminderSettings';
@@ -97,10 +98,13 @@ function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'm
   onSync(): void;
 }) {
   const showSyncActionFirst = props.page === 'sync' && Boolean(props.syncGroup);
+  const terminalEvent = props.syncEvents.find(isSyncRunFinishedEvent) ?? null;
   const syncAction = props.page === 'sync' ? (
     <CompanionSyncNowButton
       isSyncing={props.status === 'syncing'}
       manualSyncAction={props.manualSyncAction ?? null}
+      terminalRunId={terminalEvent?.run_id ?? null}
+      terminalRunResult={terminalEvent?.result ?? null}
       onSync={props.onSync}
     />
   ) : null;
