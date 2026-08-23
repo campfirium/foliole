@@ -6,7 +6,9 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { assertConfinedEvidencePath } from './macos/journey-readiness-mac-adapter.mjs';
+import {
+  assertConfinedEvidencePath, assertReadinessControllerStable
+} from './macos/journey-readiness-mac-adapter.mjs';
 import {
   assertOwnedSimulatorRemoved,
   createSignedSimulatorBuildArgs
@@ -33,6 +35,12 @@ describe('local journey readiness adapters', () => {
     expect(args).toContain('PRODUCT_BUNDLE_IDENTIFIER=com.foliole.ios');
     expect(args).not.toContain('CODE_SIGNING_ALLOWED=NO');
     expect(args).toContain(path.join('/evidence', 'DerivedData'));
+  });
+
+  it('keeps controller stability scoped to the active qualification run', () => {
+    expect(assertReadinessControllerStable('same', 'same')).toBeUndefined();
+    expect(() => assertReadinessControllerStable('before', 'after'))
+      .toThrow('changed during qualification');
   });
 
   it('proves exact owned Simulator deletion from the post-cleanup inventory', () => {

@@ -77,29 +77,31 @@ export function collectLocalCandidate(repoRoot) {
   };
 }
 
-export function createLocalDefinition({ artifactDir, candidate, repoRoot }) {
-  const controller = digestParts(CONTROLLER_FILES.flatMap((file) => [file, readFileSync(path.join(repoRoot, file))]));
+export function collectReadinessControllerDigest(repoRoot) {
+  return digestParts(CONTROLLER_FILES.flatMap((file) => [file,
+    readFileSync(path.join(repoRoot, file))]));
+}
+
+export function assertReadinessControllerStable(expected, actual) {
+  if (expected !== actual) throw new Error('controller and dependencies changed during qualification');
+}
+
+export function createLocalDefinition({ candidate, repoRoot }) {
   return {
-    candidate,
-    controller: {
-      dependencies: controller,
-      entrypoint: 'scripts/macos/journey-readiness-local-qualification.mjs',
+    action: {
+      id: 'scripts/macos/journey-readiness-local-qualification.mjs',
       scenario: 'local-mac-signed-iphone-simulator',
-      topology: 'mac+owned-iphone-simulator'
     },
-    adapter: {
-      capabilities: ['mac-fixture', 'signed-simulator-install'],
-      excluded: ['windows', 'a5', 'android', 'physical-ios', 't121-live', 't132-live'],
-      host: 'darwin', topology: ['mac', 'iphone-simulator']
-    },
-    baseline: { cleanupOwner: 'journey-readiness', fixture: 'isolated-local-v1', quiescent: true, recoveryPoint: 'fixture-copy' },
-    criteria: { failure: 'any-unproven-fact-blocks', humanIntervention: 'none', success: 'all-seven-owners-pass' },
-    evidence: { archiveOwner: 'journey-readiness', root: artifactDir, writer: 'atomic-json-v1' },
-    cleanup: { owner: 'journey-readiness', strategy: 'recorded-udid-exact-delete' }
+    cleanup: { owner: 'journey-readiness', strategy: 'recorded-udid-exact-delete' },
+    checks: { controllerDigest: collectReadinessControllerDigest(repoRoot) },
+    mutation: { baseline: 'isolated-local-v1', recoveryPoint: 'fixture-copy' },
+    source: candidate,
+    target: { host: 'darwin', identity: 'owned-iphone-simulator',
+      topology: ['mac', 'iphone-simulator'] }
   };
 }
 
-export function createMacProviders({ artifactDir, candidate }) {
+export function createMacProviders({ artifactDir, candidate, controllerDigest, repoRoot }) {
   return {
     baseline: async () => {
       const source = path.join(artifactDir, 'fixture-source.json');
@@ -111,7 +113,10 @@ export function createMacProviders({ artifactDir, candidate }) {
       return { action: 'isolated fixture restored', status: 'passed' };
     },
     candidate: async () => ({ action: `candidate ${candidate.revision.slice(0, 12)} frozen`, status: 'passed' }),
-    controller: async () => ({ action: 'controller and dependencies frozen', status: 'passed' }),
+    controller: async () => {
+      assertReadinessControllerStable(controllerDigest, collectReadinessControllerDigest(repoRoot));
+      return { action: 'controller and dependencies stable for this run', status: 'passed' };
+    },
     criteria: async () => ({ action: 'success and failure criteria frozen', status: 'passed' }),
     evidence: async () => {
       const probe = path.join(artifactDir, 'evidence-write.probe');

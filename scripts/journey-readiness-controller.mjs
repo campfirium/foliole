@@ -1,6 +1,8 @@
 /* global AbortController */
 
-import { createReadinessBindings, createReadinessReceipt, READINESS_BINDING_NAMES } from './journey-readiness-contract.mjs';
+import {
+  createReadinessProvenance, createReadinessReceipt, READINESS_STAGE_NAMES
+} from './journey-readiness-contract.mjs';
 
 function errorMessage(error) {
   return error instanceof Error ? error.message : String(error);
@@ -47,10 +49,10 @@ function replaceEvidenceFailure(receipt, reason, completedAt) {
     ? blockedFact('evidence', reason)
     : fact);
   return createReadinessReceipt({
-    bindings: receipt.bindings,
     completedAt,
     facts,
     locator: null,
+    provenance: receipt.provenance,
     startedAt: receipt.startedAt
   });
 }
@@ -65,14 +67,15 @@ export async function runJourneyQualification({
   writeReceipt
 }) {
   const startedAt = now();
-  const bindings = createReadinessBindings(definition);
+  const provenance = createReadinessProvenance(definition);
   const facts = [];
-  for (const owner of READINESS_BINDING_NAMES) {
+  for (const owner of READINESS_STAGE_NAMES) {
     facts.push(await runProvider(owner, providers?.[owner], {
       ignoreAbort: owner === 'cleanup', signal, timeoutMs
     }));
   }
-  const receipt = createReadinessReceipt({ bindings, completedAt: now(), facts, locator, startedAt });
+  const receipt = createReadinessReceipt({ completedAt: now(), facts, locator,
+    provenance, startedAt });
   try {
     await writeReceipt(receipt);
     return receipt;

@@ -30,15 +30,27 @@ describe('journey readiness contract', () => {
   });
 
   it.each([
-    ['candidate', { revision: 'changed' }],
-    ['controller', { topology: 'changed' }],
-    ['criteria', { success: 'changed' }]
-  ])('rejects an old receipt when the %s binding changes', async (owner, change) => {
+    ['source', { revision: 'changed' }],
+    ['action', { scenario: 'changed' }],
+    ['target', { identity: 'changed' }],
+    ['mutation', { baseline: 'changed' }],
+    ['cleanup', { strategy: 'changed' }]
+  ])('rejects an old receipt when the %s provenance changes', async (owner, change) => {
     const definition = localFixtureDefinition();
     const receipt = await readyReceipt(definition);
     const changed = localFixtureDefinition({ [owner]: { ...definition[owner], ...change } });
 
-    expect(() => enforceJourneyReadiness(receipt, changed)).toThrow(`binding changed: ${owner}`);
+    expect(() => enforceJourneyReadiness(receipt, changed)).toThrow(`provenance changed: ${owner}`);
+  });
+
+  it('records journey criteria and evidence as facts instead of global provenance', async () => {
+    const receipt = await readyReceipt();
+
+    expect(receipt.provenance).not.toHaveProperty('criteria');
+    expect(receipt.provenance).not.toHaveProperty('evidence');
+    expect(receipt.facts.map((fact) => fact.owner)).toEqual(expect.arrayContaining([
+      'criteria', 'evidence'
+    ]));
   });
 
   it('does not accept review state or a ready word in place of a receipt', () => {

@@ -10,6 +10,7 @@ import { runJourneyQualification } from '../journey-readiness-controller.mjs';
 import { withArtifactBatch } from '../diagnostics/local-artifact-cache-production.mjs';
 import {
   assertConfinedEvidencePath,
+  assertReadinessControllerStable,
   collectLocalCandidate,
   createLocalDefinition,
   createMacProviders,
@@ -29,9 +30,10 @@ async function qualify() {
     mkdirSync(artifactDir, { recursive: true });
     assertConfinedEvidencePath(REPO_ROOT, artifactDir);
     const candidate = prepareLocalCandidate(REPO_ROOT);
-    const definition = createLocalDefinition({ artifactDir, candidate, repoRoot: REPO_ROOT });
+    const definition = createLocalDefinition({ candidate, repoRoot: REPO_ROOT });
     const providers = {
-      ...createMacProviders({ artifactDir, candidate }),
+      ...createMacProviders({ artifactDir, candidate,
+        controllerDigest: definition.checks.controllerDigest, repoRoot: REPO_ROOT }),
       ...createSimulatorProviders({ artifactDir, repoRoot: REPO_ROOT })
     };
     const receiptPath = path.join(artifactDir, 'receipt.json');
@@ -40,8 +42,11 @@ async function qualify() {
       writeReceipt: (value) => writeReceiptAtomically(receiptPath, value)
     });
     const currentDefinition = createLocalDefinition({
-      artifactDir, candidate: collectLocalCandidate(REPO_ROOT), repoRoot: REPO_ROOT
+      candidate: collectLocalCandidate(REPO_ROOT), repoRoot: REPO_ROOT
     });
+    assertReadinessControllerStable(
+      definition.checks.controllerDigest, currentDefinition.checks.controllerDigest
+    );
     enforceJourneyReadiness(JSON.parse(readFileSync(receiptPath, 'utf8')), currentDefinition);
     console.log(JSON.stringify({ fingerprint: receipt.fingerprint, locator: receiptPath, status: receipt.status }));
     return receipt;

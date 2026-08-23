@@ -71,6 +71,9 @@ export function openFormalA5Receipt(context, actionContract, {
       || actionContract.formalSourceClass !== context.formalSourceClass) {
     throw new Error('Formal receipt action contract does not match the run context.');
   }
+  if (!actionContract.formalEvidence || typeof actionContract.formalTarget !== 'string') {
+    throw new Error('Formal receipt action provenance is incomplete.');
+  }
   const frozen = context.formalSourceClass === 'frozen-build';
   if (frozen) {
     assertAcceptedSourceIdentity(context);
@@ -78,23 +81,23 @@ export function openFormalA5Receipt(context, actionContract, {
   }
   const receipt = {
     action: context.action,
-    actionEvidence: { locator: formalReceiptPath(context), runId: context.runId },
     apk: null,
-    controllerDigests: controllerDigests(context, fsApi),
     cleanup: { completedAt: null, resultStatus: 'pending' },
+    diagnostics: { controllerDigests: controllerDigests(context, fsApi), toolchain: null },
+    evidence: { locator: formalReceiptPath(context), runId: context.runId },
     failure: null,
     lockfileDigest: frozen ? sha256(gitFile(context, 'package-lock.json', executeGit)) : null,
     mutationBoundary: { crossed: false, crossedAt: null },
     resultStatus: 'pending',
     runId: context.runId,
-    schemaVersion: 1,
+    schemaVersion: 2,
     source: { acceptedRevision: context.acceptedRevision, acceptedTree: context.acceptedTree,
       formalSourceClass: context.formalSourceClass },
     stage: 'pending',
     startedAt: now(),
-    toolchain: null
+    target: actionContract.formalTarget
   };
-  const manager = { fsApi, now, path: formalReceiptPath(context), receipt };
+  const manager = { actionContract, fsApi, now, path: formalReceiptPath(context), receipt };
   atomicWriteJson(manager.path, receipt, fsApi);
   return manager;
 }
@@ -124,7 +127,7 @@ function hiddenElectronIdentity(paths, fsApi = fs) {
 }
 
 export function captureFormalA5Toolchain(manager, paths, run = spawnSync, fsApi = fs) {
-  return update(manager, { stage: 'toolchain-captured', toolchain: {
+  return update(manager, { diagnostics: { ...manager.receipt.diagnostics, toolchain: {
     adb: version(paths.adb, ['version'], {}, run),
     capacitor: version(paths.cap, ['--version'], { cwd: paths.buildRoot }, run),
     electron: hiddenElectronIdentity(paths, fsApi),
@@ -132,7 +135,7 @@ export function captureFormalA5Toolchain(manager, paths, run = spawnSync, fsApi 
     java: version(paths.java, ['-version'], {}, run),
     node: process.version,
     npm: version('npm', ['--version'], { cwd: paths.buildRoot }, run)
-  } });
+  } }, stage: 'toolchain-captured' });
 }
 
 export function markFormalA5MutationBoundary(manager) {
@@ -159,38 +162,24 @@ export function formalA5FailureStage(error, fallback) {
     ? error.stage : fallback;
 }
 
-export function formalA5ActionEvidenceLocator(context) {
-  if (context.action === 'clear-app-data') {
-    return path.join(context.artifactsRoot, 'a5-clear-app-data', `${context.runId}.json`);
+function formalA5EvidenceLocator(context, descriptor) {
+  if (descriptor.kind === 'receipt') return formalReceiptPath(context);
+  if (descriptor.kind === 'run-directory') {
+    return path.join(context.artifactsRoot, descriptor.root, context.runId);
   }
-  if (context.action === 'hidden-desktop-status') {
-    return path.join(context.artifactsRoot, 'a5-hidden-desktop-status', `${context.runId}.json`);
+  if (descriptor.kind === 'run-json') {
+    return path.join(context.artifactsRoot, descriptor.root, `${context.runId}.json`);
   }
-  const roots = {
-    'capture-annotation': 'a5-capture-annotation',
-    'clear-app-data': 'a5-clear-app-data',
-    'database-performance': 'companion-database-performance',
-    deploy: 'a5-deploy',
-    'device-profile': 'a5-device-profile',
-    'leave-sync-group': 'a5-sync-group-maintenance',
-    'pair-credentials': 'a5-pair-credentials',
-    'pair-sync': 'a5-pair-sync',
-    'system-entry-sync': 'a5-system-entry-sync',
-    'sync-existing': 'a5-existing-sync',
-    'sync-group-rejoin': 'a5-sync-group-rejoin',
-    'sync-group-rejoin-recover': 'a5-sync-group-rejoin-recovery'
-  };
-  const root = roots[context.action];
-  return root ? path.join(context.artifactsRoot, root, context.runId) : formalReceiptPath(context);
+  throw new Error('Formal action evidence contract is unsupported.');
 }
 
 export function prepareFormalA5ReceiptCompletion(manager, context, paths, fsApi = fs) {
   const frozen = context.formalSourceClass === 'frozen-build';
   if (frozen && !fsApi.existsSync(paths.apk)) throw new Error('Formal action APK evidence is missing.');
-  const locator = formalA5ActionEvidenceLocator(context);
+  const locator = formalA5EvidenceLocator(context, manager.actionContract.formalEvidence);
   if (!fsApi.existsSync(locator)) throw new Error('Formal action evidence locator is missing.');
   return update(manager, {
-    actionEvidence: { locator, runId: context.runId },
+    evidence: { locator, runId: context.runId },
     apk: frozen ? { digest: sha256(fsApi.readFileSync(paths.apk)),
       projectRelativePath: 'android/app/build/outputs/apk/debug/app-debug.apk' } : null,
     stage: 'action-complete'

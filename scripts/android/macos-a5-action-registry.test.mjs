@@ -8,16 +8,24 @@ import {
 
 it('keeps build and status outside the fixed A5 mutation lease', () => {
   expect(assertRegisteredMacosA5Action('build')).toMatchObject({
-    deviceLeaseMode: null, formalSourceClass: 'frozen-build', mutatesFixedA5: false
+    deviceLeaseMode: null, formalSourceClass: 'frozen-build', formalTarget: 'build-capsule',
+    mutatesFixedA5: false
   });
   expect(assertRegisteredMacosA5Action('status')).toMatchObject({
     deviceLeaseMode: 'readonly-lifecycle', formalSourceClass: 'source-free-readonly',
-    mutatesFixedA5: false
+    formalTarget: 'fixed-a5', mutatesFixedA5: false
   });
   expect(assertRegisteredMacosA5Action('hidden-desktop-status')).toMatchObject({
+    formalEvidence: { kind: 'run-json', root: 'a5-hidden-desktop-status' },
     deviceLeaseMode: null, formalSourceClass: 'frozen-build', mutatesFixedA5: false,
-    requiresHiddenDesktopRuntime: true
+    formalTarget: 'hidden-desktop-runtime', requiresHiddenDesktopRuntime: true
   });
+});
+
+it('keeps action evidence layout out of the generic formal receipt', () => {
+  expect(assertRegisteredMacosA5Action('system-entry-sync').formalEvidence)
+    .toEqual({ kind: 'run-directory', root: 'a5-system-entry-sync' });
+  expect(assertRegisteredMacosA5Action('build').formalEvidence).toEqual({ kind: 'receipt' });
 });
 
 it('fails formal preflight for an action without a frozen or source-free contract', () => {

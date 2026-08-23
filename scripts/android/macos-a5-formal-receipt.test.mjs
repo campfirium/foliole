@@ -8,6 +8,7 @@ import path from 'node:path';
 import { afterEach, expect, it } from 'vitest';
 
 import { createMacosA5ExecutionContext } from './macos-a5-execution-context.mjs';
+import { assertRegisteredMacosA5Action } from './macos-a5-action-registry.mjs';
 import {
   assertAcceptedSourceIdentity, captureFormalA5Toolchain, completeFormalA5Receipt,
   failFormalA5Receipt, formalA5AcceptedTipLine, formalA5FailureStage,
@@ -53,7 +54,7 @@ function fixture(action = 'build', runId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
 }
 
 function contract(action) {
-  return { action, formalSourceClass: 'frozen-build' };
+  return assertRegisteredMacosA5Action(action);
 }
 
 function toolResult() {
@@ -81,13 +82,14 @@ it('atomically completes a same-run provenance receipt before projecting accepte
     .toBe(`[macos-a5-dev] accepted-tip=${context.acceptedRevision}\n`);
 
   const receipt = JSON.parse(fs.readFileSync(manager.path, 'utf8'));
-  expect(receipt).toMatchObject({ action: 'build', resultStatus: 'complete',
+  expect(receipt).toMatchObject({ action: 'build', resultStatus: 'complete', schemaVersion: 2,
     runId: context.runId, stage: 'complete', source: {
       acceptedRevision: context.acceptedRevision, acceptedTree: context.acceptedTree
-    } });
+    }, target: 'build-capsule' });
   expect(receipt.lockfileDigest).toMatch(/^[0-9a-f]{64}$/u);
   expect(receipt.apk.digest).toMatch(/^[0-9a-f]{64}$/u);
-  expect(receipt.actionEvidence.runId).toBe(context.runId);
+  expect(receipt.evidence.runId).toBe(context.runId);
+  expect(receipt.diagnostics.controllerDigests).toBeTruthy();
   expect(fs.readdirSync(path.dirname(manager.path)).some((name) => name.includes('.tmp-')))
     .toBe(false);
   expect(() => failFormalA5Receipt(manager, new Error('late secret'))).toThrow('finalized');
@@ -105,7 +107,7 @@ it('records the capsule Electron identity for hidden desktop actions', () => {
   fs.mkdirSync(buildRoot); fs.writeFileSync(paths.electron, 'electron binary');
   fs.writeFileSync(paths.electronPackage, '{"version":"43.4.0"}\n');
   captureFormalA5Toolchain(manager, paths, toolResult);
-  expect(manager.receipt.toolchain.electron).toEqual({
+  expect(manager.receipt.diagnostics.toolchain.electron).toEqual({
     executableDigest: '4f57ce53f599ead3c3eca2d5154ac1429178f463b41ce351507f09a389e1f2d9',
     version: '43.4.0'
   });
@@ -173,20 +175,25 @@ it('uses the same full commit and tree identity contract as the Windows fixture'
     .toThrow('full commit and tree');
 });
 
+it('requires the registered target and evidence provenance', () => {
+  const context = fixture('build', 'acacacac-acac-acac-acac-acacacacacac').context;
+  expect(() => openFormalA5Receipt(context, {
+    action: 'build', formalSourceClass: 'frozen-build'
+  })).toThrow('action provenance is incomplete');
+});
+
 it('completes source-free readonly receipts without claiming an accepted tip', () => {
   const { root } = fixture();
   const context = createMacosA5ExecutionContext({ action: 'status',
     formalSourceClass: 'source-free-readonly', repoRoot: root,
     runId: 'dddddddd-dddd-dddd-dddd-dddddddddddd' });
-  const manager = openFormalA5Receipt(context, {
-    action: 'status', formalSourceClass: 'source-free-readonly'
-  });
+  const manager = openFormalA5Receipt(context, assertRegisteredMacosA5Action('status'));
   markFormalA5ActionRunning(manager);
   prepareFormalA5ReceiptCompletion(manager, context, { apk: '/missing' });
   recordFormalA5Cleanup(manager, 'complete');
   const completed = completeFormalA5Receipt(manager);
   expect(completed).toMatchObject({ resultStatus: 'complete', source: {
     acceptedRevision: null, acceptedTree: null, formalSourceClass: 'source-free-readonly'
-  } });
+  }, target: 'fixed-a5' });
   expect(formalA5AcceptedTipLine(completed)).toBeNull();
 });

@@ -1,7 +1,7 @@
 const ACTION_OVERRIDES = Object.freeze({
-  build: { deviceLeaseMode: null, mutatesFixedA5: false },
+  build: { deviceLeaseMode: null, formalTarget: 'build-capsule', mutatesFixedA5: false },
   'hidden-desktop-status': { deviceLeaseMode: null, mutatesFixedA5: false,
-    requiresHiddenDesktopRuntime: true },
+    formalTarget: 'hidden-desktop-runtime', requiresHiddenDesktopRuntime: true },
   status: { deviceLeaseMode: 'readonly-lifecycle', formalSourceClass: 'source-free-readonly',
     mutatesFixedA5: false },
   'sync-group-stopped-status': { formalSourceClass: 'ordinary-only' },
@@ -12,6 +12,23 @@ const ACTION_OVERRIDES = Object.freeze({
   'sync-existing': { requiresHiddenDesktopRuntime: true },
   'sync-group-rejoin': { requiresHiddenDesktopRuntime: true },
   'sync-group-rejoin-recover': { requiresHiddenDesktopRuntime: true }
+});
+const FORMAL_EVIDENCE = Object.freeze({
+  'capture-annotation': { kind: 'run-directory', root: 'a5-capture-annotation' },
+  'clear-app-data': { kind: 'run-json', root: 'a5-clear-app-data' },
+  'database-performance': { kind: 'run-directory', root: 'companion-database-performance' },
+  deploy: { kind: 'run-directory', root: 'a5-deploy' },
+  'device-profile': { kind: 'run-directory', root: 'a5-device-profile' },
+  'hidden-desktop-status': { kind: 'run-json', root: 'a5-hidden-desktop-status' },
+  'leave-sync-group': { kind: 'run-directory', root: 'a5-sync-group-maintenance' },
+  'pair-credentials': { kind: 'run-directory', root: 'a5-pair-credentials' },
+  'pair-sync': { kind: 'run-directory', root: 'a5-pair-sync' },
+  'system-entry-sync': { kind: 'run-directory', root: 'a5-system-entry-sync' },
+  'sync-existing': { kind: 'run-directory', root: 'a5-existing-sync' },
+  'sync-group-rejoin': { kind: 'run-directory', root: 'a5-sync-group-rejoin' },
+  'sync-group-rejoin-recover': {
+    kind: 'run-directory', root: 'a5-sync-group-rejoin-recovery'
+  }
 });
 const MACOS_A5_ACTIONS = new Set([
   ...Object.keys(ACTION_OVERRIDES),
@@ -25,6 +42,8 @@ export function assertRegisteredMacosA5Action(action) {
     throw new Error('Usage: node scripts/android/macos-a5-dev.mjs <registered-action>');
   }
   return Object.freeze({ action, deviceLeaseMode: 'mutation', formalSourceClass: 'frozen-build',
+    formalEvidence: FORMAL_EVIDENCE[action] ?? Object.freeze({ kind: 'receipt' }),
+    formalTarget: 'fixed-a5',
     mutatesFixedA5: true, requiresHiddenDesktopRuntime: false,
     ...ACTION_OVERRIDES[action] });
 }

@@ -7,13 +7,11 @@ export function createPassingProviders(overrides = {}) {
 
 export function localFixtureDefinition(overrides = {}) {
   return {
-    candidate: { artifact: 'fixture-build', entrypoint: 'fixture-entry', revision: 'fixture-revision', tree: 'fixture-tree' },
-    controller: { dependencies: 'fixture-dependencies', entrypoint: 'journey-readiness-cli', scenario: 'dry-run', topology: 'local' },
-    adapter: { capabilities: ['isolated-root'], host: 'mac', topology: ['mac', 'iphone-simulator'] },
-    baseline: { cleanupOwner: 'fixture', fixture: 'isolated', quiescent: true, recoveryPoint: 'fixture-copy' },
-    criteria: { failure: 'fail-closed', humanIntervention: 'none', success: 'all-facts-passed' },
-    evidence: { archiveOwner: 'fixture', root: '.tmp/artifacts/journey-readiness', writer: 'atomic-json' },
+    action: { id: 'fixture-readiness', scenario: 'dry-run' },
     cleanup: { complete: true, owner: 'fixture', strategy: 'exact-owned-resource' },
+    mutation: { baseline: 'isolated', recoveryPoint: 'fixture-copy' },
+    source: { artifact: 'fixture-build', revision: 'fixture-revision', tree: 'fixture-tree' },
+    target: { host: 'mac', identity: 'fixture-target', topology: ['mac', 'iphone-simulator'] },
     ...overrides
   };
 }
