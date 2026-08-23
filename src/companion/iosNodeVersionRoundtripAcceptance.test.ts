@@ -1,5 +1,13 @@
 import { expect, it, vi } from 'vitest';
 
+import {
+  IOS_SYNC_PACK_CAPTURED_AT,
+  IOS_SYNC_PACK_CAPTURE_VERSION_ID,
+  IOS_SYNC_PACK_MUTATION_AUTHOR,
+  IOS_SYNC_PACK_RESTORED_AT,
+  IOS_SYNC_PACK_RESTORE_VERSION_ID
+} from '../../lib/platform/iosSyncPackAcceptanceContract';
+
 const mocks = vi.hoisted(() => ({
   apply: vi.fn(), capture: vi.fn(), loadPeer: vi.fn(), loadWorkspace: vi.fn(),
   push: vi.fn(), restore: vi.fn(), sign: vi.fn()
@@ -27,9 +35,19 @@ it('mutates the workspace snapshot produced by the applied contract pack', async
   mocks.loadPeer.mockResolvedValue({ sourceHostName: 'Acceptance Desktop', sourcePeerId: 'acceptance-desktop' });
   mocks.sign.mockResolvedValue({ 'X-Signature': 'signed' });
 
-  await runIosNodeVersionRoundtripAcceptance('http://desktop.local', 'ios-device');
+  await runIosNodeVersionRoundtripAcceptance('http://desktop.local');
 
-  expect(mocks.capture).toHaveBeenCalledWith(expect.objectContaining({ snapshot }));
-  expect(mocks.restore).toHaveBeenCalledWith(expect.objectContaining({ snapshot }));
+  expect(mocks.capture).toHaveBeenCalledWith(expect.objectContaining({
+    deviceId: IOS_SYNC_PACK_MUTATION_AUTHOR,
+    now: IOS_SYNC_PACK_CAPTURED_AT,
+    snapshot,
+    versionId: IOS_SYNC_PACK_CAPTURE_VERSION_ID
+  }));
+  expect(mocks.restore).toHaveBeenCalledWith(expect.objectContaining({
+    deviceId: IOS_SYNC_PACK_MUTATION_AUTHOR,
+    now: IOS_SYNC_PACK_RESTORED_AT,
+    snapshot,
+    versionId: IOS_SYNC_PACK_RESTORE_VERSION_ID
+  }));
   expect(mocks.apply).toHaveBeenCalledWith(expect.objectContaining({ sourcePeerId: 'acceptance-desktop' }));
 });

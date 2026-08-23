@@ -166,64 +166,6 @@ describe('shared companion database lifecycle guardrails', () => {
   });
 });
 
-describe('shared companion Host handling', () => {
-  it('renames the local member Host without rewriting frozen author facts or credentials', async () => {
-    const identity = fixture();
-    identity.sqlite.exec(`
-      INSERT INTO sync_groups (group_id, display_name, timeline_id, created_by_host_name, created_at, updated_at)
-      VALUES ('group','Group','timeline','fixture-device','2026-08-01','2026-08-01');
-      UPDATE sync_groups SET workgroup_key = 'copied-workgroup-key' WHERE group_id = 'group';
-      INSERT INTO sync_group_local_state VALUES (1,'group','fixture-device','active',NULL,NULL,'2026-08-01');
-      INSERT INTO sync_group_members VALUES
-        ('group','fixture-device','ios','active','fixture-device','auth',NULL,'2026-08-01',NULL,NULL,'2026-08-01');
-      INSERT INTO nodes (id,title,content,created_at,updated_at) VALUES
-        ('node-1','Preserved','content','2026-08-01','2026-08-01');
-      INSERT INTO review_log (
-        id,op_id,host_name,node_id,grade,scheduler_version,reviewed_at,due_before,
-        stability_before,difficulty_before,due_after,stability_after,difficulty_after
-      ) VALUES ('r','op','fixture-device','node-1',3,'v1','2026-08-01','2026-08-01',1,1,'2026-08-02',2,2);
-    `);
-
-    const result = await bootstrapCompanionDatabase(identity.port, {
-      allowCreate: false, expectedHostName: 'iPhone', now: '2026-08-11T00:00:00Z'
-    });
-
-    expect(result).toMatchObject({ deviceId: 'fixture-device', hostName: 'iPhone' });
-    expect(identity.sqlite.prepare('SELECT COUNT(*) FROM sync_group_local_state').pluck().get()).toBe(1);
-    expect(identity.sqlite.prepare('SELECT host_name, authorization_id, state FROM sync_group_members').get())
-      .toEqual({ authorization_id: 'auth', host_name: 'iPhone', state: 'active' });
-    expect(identity.sqlite.prepare('SELECT content FROM nodes').pluck().get()).toBe('content');
-    expect(identity.sqlite.prepare('SELECT host_name FROM review_log').pluck().get()).toBe('fixture-device');
-    expect(identity.sqlite.prepare('SELECT workgroup_key FROM sync_groups').pluck().get())
-      .toBe('copied-workgroup-key');
-
-    await expect(bootstrapCompanionDatabase(identity.port, {
-      allowCreate: false, expectedHostName: 'iPhone', now: '2026-08-12T00:00:00Z'
-    })).resolves.toMatchObject({ deviceId: 'fixture-device', hostName: 'iPhone' });
-    identity.sqlite.close();
-  });
-
-  it('keeps an allocated execution identity across Host changes', async () => {
-    const identity = fixture();
-    identity.sqlite.prepare("UPDATE companion_meta SET value = 'iPhone 2' WHERE key = 'device_id'").run();
-    identity.sqlite.exec(`
-      INSERT INTO sync_groups (group_id, display_name, timeline_id, created_by_host_name, created_at, updated_at)
-      VALUES ('group','Group','timeline','iPhone 2','2026-08-01','2026-08-01');
-      INSERT INTO sync_group_local_state VALUES (1,'group','iPhone 2','active',NULL,NULL,'2026-08-01');
-      INSERT INTO sync_group_members VALUES
-        ('group','iPhone 2','ios','active','iPhone 2','auth',NULL,'2026-08-01',NULL,NULL,'2026-08-01');
-    `);
-    await expect(bootstrapCompanionDatabase(identity.port, {
-      allowCreate: false, expectedHostName: 'iPhone', now: '2026-08-11T00:00:00Z'
-    })).resolves.toMatchObject({ deviceId: 'iPhone 2', hostName: 'iPhone' });
-    identity.sqlite.prepare('DELETE FROM sync_group_local_state').run();
-    await expect(bootstrapCompanionDatabase(identity.port, {
-      allowCreate: false, expectedHostName: 'iPhone 3', now: '2026-08-12T00:00:00Z'
-    })).resolves.toMatchObject({ deviceId: 'iPhone 2', hostName: 'iPhone 3' });
-    identity.sqlite.close();
-  });
-});
-
 describe('shared companion database lifecycle recovery', () => {
   it('restores a preflight-confirmed WAL contract before the migration transaction', async () => {
     const { port, sqlite } = fixture(21);

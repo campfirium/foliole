@@ -63,10 +63,10 @@ export function verifySyncPackAcceptance(
     firstBridge.roundtrip?.push?.pushedObjectIds?.length === 2 && gatesClosed(firstBridge.roundtrip?.gates);
   const secondPassed = secondBridge.phase === 'reapplied' &&
     secondBridge.roundtrip?.push?.pushedObjectIds?.length === 0 && gatesClosed(secondBridge.roundtrip?.gates);
-  const snapshotPassed = firstSnapshot?.capture_versions === 1 && firstSnapshot?.restore_versions === 1 &&
+  const snapshotPassed = firstSnapshot?.capture_versions === 2 && firstSnapshot?.restore_versions === 2 &&
     firstSnapshot?.confirmed_node_delivery_count === 2 && firstSnapshot?.dirty_count === 0 &&
     firstSnapshot?.restore_deleted_at === null && firstSnapshot?.tombstone_count === 0 &&
-    firstSnapshot?.cursor > 1 && firstSnapshot?.cache_entries?.length === 0;
+    firstSnapshot?.cursor > 2 && firstSnapshot?.cache_entries?.length === 0;
   const rejectionKinds = rejections.map(({ bridge }) => bridge.rejection);
   const rejectionSnapshotsStable = rejections.every(({ before, after }) =>
     JSON.stringify(before) === JSON.stringify(firstSnapshot) && JSON.stringify(after) === JSON.stringify(firstSnapshot));

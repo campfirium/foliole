@@ -14,13 +14,13 @@ export function flushNodeSyncVersionWithDriver(
   driver: DatabaseDriver,
   nodeId: string,
   hostName: string,
-  now = new Date().toISOString()
+  now = new Date().toISOString(),
+  versionId = createOpaqueVersionRef(randomUUID())
 ): string | null {
   let createdVersionId: string | null = null;
   driver.transaction(() => {
     const row = loadNodeSyncVersionSourceFromDriver(driver, nodeId);
     if (!row || (row.sync_dirty !== 1 && row.current_version_id)) return;
-    const versionId = createOpaqueVersionRef(randomUUID());
     const contentHash = computeNodeSyncVersionHashFromDriver(driver, row, nodeId);
     driver.execute(
       `INSERT INTO node_sync_versions (

@@ -14,7 +14,7 @@ async function generateSyncPackCorpus() {
   const outputDirectory = path.join(ROOT, 'sync-pack-runtime');
   const fixture = await createIosSyncPackAcceptanceFixture({ outputDirectory, toPeerId: PEER_ID });
   try {
-    await fixture.buildSuccessorPack(['special-inbox', 'ios-acceptance-restore']);
+    await fixture.buildContractSuccessorPack();
   } finally {
     fixture.close();
     await fs.rm(path.join(outputDirectory, 'desktop.sqlite'), { force: true });

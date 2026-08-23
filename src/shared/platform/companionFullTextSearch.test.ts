@@ -101,6 +101,10 @@ beforeEach(() => {
 
 async function expectIosCompleteSearch() {
   capacitorMock.platform.mockReturnValue('ios');
+  iosReads.topics.mockResolvedValueOnce([{
+    content_status: 'missing', excerpt: 'topic body', id: 'topic-1', match_start: 4,
+    opening_text: 'topic opening', title: 'Topic One', updated_at: '2026-04-26T01:00:00.000Z'
+  }]);
   iosReads.index.mockResolvedValueOnce([
     { object_id: 'user_space:windows:desktop:*:app_settings', object_type: 'setting' }
   ]);

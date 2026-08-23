@@ -10,12 +10,18 @@ import { flushNodeSyncVersionWithDriver } from '../../electron/database/nodeSync
 import { buildDesktopSyncPackFromDriver } from '../../electron/database/syncPackBuilderFromDriver.ts';
 import { initializeDatabaseConnection } from '../../lib/core/database/migrations.ts';
 import { INBOX_NODE_ID } from '../../lib/core/database/specialNodeIds.ts';
+import { IOS_SYNC_PACK_CAPTURE_OBJECT_ID } from '../../lib/platform/iosSyncPackAcceptanceContract.ts';
 
 import { writeIllegalDagPack, writeLegacyFormatPack } from './ios-sync-pack-acceptance-mutations.ts';
+import { seedIosSyncPackContractRoundtrip } from './ios-sync-pack-contract-roundtrip-fixture.ts';
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
 const DESKTOP_DEVICE_ID = 'acceptance-desktop';
+const DESKTOP_SUCCESSOR_VERSION_ID = 'ver_00000000-0000-4000-8000-000000000148';
+const ILLEGAL_CHILD_VERSION_ID = 'ver_00000000-0000-4000-8000-000000000150';
+const ILLEGAL_ROOT_VERSION_ID = 'ver_00000000-0000-4000-8000-000000000149';
+const RESTORE_BASE_VERSION_ID = 'ver_00000000-0000-4000-8000-000000000145';
 const RESTORE_NODE_ID = 'ios-acceptance-restore';
 
 export async function createIosSyncPackAcceptanceFixture(args: {
@@ -42,18 +48,18 @@ export async function createIosSyncPackAcceptanceFixture(args: {
     ...paths,
     apply: (items: CompanionSyncPushPayload[], sourceDeviceId: string) =>
       applyCompanionStateSyncPushWithDbPort(port, items, sourceDeviceId),
+    buildContractSuccessorPack: async () => {
+      seedIosSyncPackContractRoundtrip(driver, RESTORE_NODE_ID);
+      return buildSuccessorFixtures(
+        driver, sqlite, paths, args.toPeerId, initialPackToStateSeq, IOS_SYNC_PACK_CAPTURE_OBJECT_ID
+      );
+    },
     buildSuccessorPack: async (appliedNodeIds: string[]) => {
       const captureNodeId = appliedNodeIds.find((nodeId) => nodeId !== RESTORE_NODE_ID);
       if (!captureNodeId || !appliedNodeIds.includes(RESTORE_NODE_ID)) {
         throw new Error('ios_node_version_roundtrip_push_incomplete');
       }
-      createDesktopSuccessor(driver, captureNodeId);
-      await buildPack(driver, paths.successorPath, args.toPeerId, initialPackToStateSeq, 'ios-acceptance-successor');
-      await buildIllegalDagRejectionPack(
-        driver, paths.illegalDagPath, args.toPeerId, initialPackToStateSeq
-      );
-      await buildCursorGapPack(driver, paths.cursorGapPath, args.toPeerId);
-      return { captureNodeId, desktop: readDesktopRoundtripSnapshot(sqlite, captureNodeId) };
+      return buildSuccessorFixtures(driver, sqlite, paths, args.toPeerId, initialPackToStateSeq, captureNodeId);
     },
     close: () => sqlite.close()
   };
@@ -71,7 +77,8 @@ async function buildIllegalDagRejectionPack(
     ['2026-07-21T00:05:00.000Z', '2026-07-21T00:05:00.000Z']
   );
   flushNodeSyncVersionWithDriver(
-    driver, 'ios-acceptance-illegal-dag', DESKTOP_DEVICE_ID, '2026-07-21T00:05:00.000Z'
+    driver, 'ios-acceptance-illegal-dag', DESKTOP_DEVICE_ID, '2026-07-21T00:05:00.000Z',
+    ILLEGAL_ROOT_VERSION_ID
   );
   driver.execute(
     `UPDATE nodes SET title = 'Illegal DAG child', sync_dirty = 1, updated_at = ?
@@ -79,7 +86,8 @@ async function buildIllegalDagRejectionPack(
     ['2026-07-21T00:06:00.000Z']
   );
   flushNodeSyncVersionWithDriver(
-    driver, 'ios-acceptance-illegal-dag', DESKTOP_DEVICE_ID, '2026-07-21T00:06:00.000Z'
+    driver, 'ios-acceptance-illegal-dag', DESKTOP_DEVICE_ID, '2026-07-21T00:06:00.000Z',
+    ILLEGAL_CHILD_VERSION_ID
   );
   await buildPack(driver, outputPath, toPeerId, fromStateSeq, 'ios-acceptance-illegal-dag');
   await writeIllegalDagPack(outputPath, outputPath, 'ios-acceptance-illegal-dag');
@@ -116,7 +124,9 @@ function seedRoundtripNodes(driver: ReturnType<typeof createBetterSqlite3Driver>
       '2026-07-21T00:00:20.000Z', '2026-07-21T00:00:20.000Z'
     ]
   );
-  flushNodeSyncVersionWithDriver(driver, RESTORE_NODE_ID, DESKTOP_DEVICE_ID, '2026-07-21T00:00:20.000Z');
+  flushNodeSyncVersionWithDriver(
+    driver, RESTORE_NODE_ID, DESKTOP_DEVICE_ID, '2026-07-21T00:00:20.000Z', RESTORE_BASE_VERSION_ID
+  );
 }
 
 function createDesktopSuccessor(driver: ReturnType<typeof createBetterSqlite3Driver>, nodeId: string) {
@@ -126,9 +136,24 @@ function createDesktopSuccessor(driver: ReturnType<typeof createBetterSqlite3Dri
     [nodeId]
   );
   const versionId = flushNodeSyncVersionWithDriver(
-    driver, nodeId, DESKTOP_DEVICE_ID, '2099-07-21T00:04:00.000Z'
+    driver, nodeId, DESKTOP_DEVICE_ID, '2099-07-21T00:04:00.000Z', DESKTOP_SUCCESSOR_VERSION_ID
   );
   if (!versionId) throw new Error('ios_node_version_roundtrip_successor_missing');
+}
+
+async function buildSuccessorFixtures(
+  driver: ReturnType<typeof createBetterSqlite3Driver>,
+  sqlite: import('better-sqlite3').Database,
+  paths: ReturnType<typeof fixturePaths>,
+  toPeerId: string,
+  initialPackToStateSeq: number,
+  captureNodeId: string
+) {
+  createDesktopSuccessor(driver, captureNodeId);
+  await buildPack(driver, paths.successorPath, toPeerId, initialPackToStateSeq, 'ios-acceptance-successor');
+  await buildIllegalDagRejectionPack(driver, paths.illegalDagPath, toPeerId, initialPackToStateSeq);
+  await buildCursorGapPack(driver, paths.cursorGapPath, toPeerId);
+  return { captureNodeId, desktop: readDesktopRoundtripSnapshot(sqlite, captureNodeId) };
 }
 
 async function buildCursorGapPack(

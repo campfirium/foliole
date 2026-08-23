@@ -40,8 +40,9 @@ interface SyncSettingPayload {
 interface NativeTopicSearchResult {
   content_status?: CompanionTopicSearchResult['bodyStatus'];
   excerpt: string;
+  id?: string;
   match_start: number;
-  node_id: string;
+  node_id?: string;
   opening_text: string | null;
   title: string;
   updated_at: string;
@@ -93,15 +94,21 @@ export async function loadCompanionFullTextSearchStrategy() {
 
 async function searchCompanionTopics(query: string, limit?: number) {
   const results = await searchIosTopics(query, limit) as NativeTopicSearchResult[];
-  return results.map((result) => ({
+  return results.map(toCompanionTopicSearchResult);
+}
+
+function toCompanionTopicSearchResult(result: NativeTopicSearchResult): CompanionTopicSearchResult {
+  const nodeId = result.node_id ?? result.id;
+  if (!nodeId) throw new Error('companion_topic_search_identity_missing');
+  return {
     bodyStatus: normalizeBodyStatus(result.content_status),
     excerpt: result.excerpt,
     matchStart: result.match_start,
-    nodeId: result.node_id,
+    nodeId,
     openingText: result.opening_text,
     title: result.title,
     updatedAt: result.updated_at
-  }));
+  };
 }
 
 function normalizeBodyStatus(status: NativeTopicSearchResult['content_status']): CompanionTopicSearchResult['bodyStatus'] {

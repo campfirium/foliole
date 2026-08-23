@@ -120,9 +120,9 @@ describe('iOS bootstrap acceptance contract', () => {
 
   it('accepts stable node, state, cursor, cleanup, and repeated apply evidence', () => {
     const snapshot = parseSyncPackSnapshot(JSON.stringify([{
-      capture_current: 'acceptance-desktop#1', capture_versions: 1, confirmed_node_delivery_count: 2,
-      cursor: '2', dirty_count: 0, push_ack_count: 0, restore_current: 'ios-device#restore',
-      restore_deleted_at: null, restore_versions: 1, tombstone_count: 0
+      capture_current: 'acceptance-desktop#1', capture_versions: 2, confirmed_node_delivery_count: 2,
+      cursor: '3', dirty_count: 0, push_ack_count: 0, restore_current: 'ios-device#restore',
+      restore_deleted_at: null, restore_versions: 2, tombstone_count: 0
     }]));
     const gates = Object.fromEntries([
       'existing-highlight-edit', 'quick-capture', 'selection-annotation', 'topic-content-edit', 'trash-restore'
@@ -143,11 +143,11 @@ describe('iOS bootstrap acceptance contract', () => {
     } };
 
     expect(verifySyncPackAcceptance(first, second, snapshot, snapshot, rejections, observations)).toMatchObject({
-      first_snapshot: { cache_entries: [], capture_versions: 1, cursor: 2, restore_versions: 1 },
-      second_snapshot: { cache_entries: [], capture_versions: 1, cursor: 2, restore_versions: 1 }
+      first_snapshot: { cache_entries: [], capture_versions: 2, cursor: 3, restore_versions: 2 },
+      second_snapshot: { cache_entries: [], capture_versions: 2, cursor: 3, restore_versions: 2 }
     });
     expect(() => verifySyncPackAcceptance(
-      first, second, snapshot, { ...snapshot, capture_versions: 2 }, rejections, observations
+      first, second, snapshot, { ...snapshot, capture_versions: 3 }, rejections, observations
     ))
       .toThrow('evidence is incomplete');
   });

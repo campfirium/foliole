@@ -20,8 +20,10 @@ export class CompanionCaptureTextError extends Error {
 
 interface PersistCompanionCapturedTextArgs {
   deviceId: string;
+  now?: string;
   snapshot: WorkspaceSnapshot | null;
   text: string;
+  versionId?: string;
 }
 
 interface CaptureTextDraft {
@@ -56,8 +58,8 @@ async function buildCaptureTextDraft(args: PersistCompanionCapturedTextArgs): Pr
   if (!args.snapshot || !inboxNode || args.snapshot.trashedNodeIds.includes(INBOX_NODE_ID)) {
     throw new CompanionCaptureTextError('inbox-unavailable');
   }
-  const node = createCaptureNode(content, new Date().toISOString());
-  const nodeVersion = await toCompanionNativeNodeVersion(node, args.deviceId);
+  const node = createCaptureNode(content, args.now ?? new Date().toISOString());
+  const nodeVersion = await toCompanionNativeNodeVersion(node, args.deviceId, args.versionId);
   const versionedNode = { ...node, currentVersionId: nodeVersion.version_id };
   return {
     node: versionedNode,
@@ -82,4 +84,3 @@ export async function persistCompanionCapturedText(args: PersistCompanionCapture
 export function getCompanionCaptureTextErrorCode(error: unknown): CompanionCaptureTextErrorCode | null {
   return error instanceof CompanionCaptureTextError ? error.code : null;
 }
-

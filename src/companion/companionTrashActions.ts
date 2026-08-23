@@ -20,7 +20,9 @@ import {
 interface RestoreCompanionTrashNodeArgs {
   deviceId: string;
   nodeId: string;
+  now?: string;
   snapshot: WorkspaceSnapshot | null;
+  versionId?: string;
 }
 
 function collectNodeSubtreeIds(nodeId: string, nodesById: Record<string, WorkspaceNodeSnapshot>) {
@@ -37,7 +39,12 @@ function collectNodeSubtreeIds(nodeId: string, nodesById: Record<string, Workspa
   return result;
 }
 
-async function buildRestoredNodeVersion(node: WorkspaceNodeSnapshot, deviceId: string, restoredAt: string) {
+async function buildRestoredNodeVersion(
+  node: WorkspaceNodeSnapshot,
+  deviceId: string,
+  restoredAt: string,
+  versionId?: string
+) {
   if (!node.currentVersionId) {
     throw new Error('Trash restore requires a synced base version.');
   }
@@ -48,7 +55,7 @@ async function buildRestoredNodeVersion(node: WorkspaceNodeSnapshot, deviceId: s
   };
   return {
     node: { ...restoredNode },
-    version: await toCompanionNativeNodeVersion(restoredNode, deviceId)
+    version: await toCompanionNativeNodeVersion(restoredNode, deviceId, versionId)
   };
 }
 
@@ -68,7 +75,7 @@ export async function restoreCompanionTrashNode(args: RestoreCompanionTrashNodeA
   if (!snapshot || !node || !isCanonicalTrashedNodeId(snapshot, args.nodeId)) {
     return null;
   }
-  const restoredAt = new Date().toISOString();
+  const restoredAt = args.now ?? new Date().toISOString();
   const subtreeIds = collectNodeSubtreeIds(args.nodeId, snapshot.nodesById)
     .filter((nodeId) => isCanonicalTrashedNodeId(snapshot, nodeId));
   const restoreResult = resolveRestoreNodeCandidates(
@@ -79,7 +86,9 @@ export async function restoreCompanionTrashNode(args: RestoreCompanionTrashNodeA
     .map((nodeId) => snapshot.nodesById[nodeId])
     .filter((node): node is NonNullable<typeof node> => Boolean(node));
   const restored = await Promise.all(
-    restorableNodes.map((node) => buildRestoredNodeVersion(node, args.deviceId, restoredAt))
+    restorableNodes.map((node) => buildRestoredNodeVersion(
+      node, args.deviceId, restoredAt, node.id === args.nodeId ? args.versionId : undefined
+    ))
   );
   await applyCompanionTrashRestoreNodeVersions(restored.map((entry) => entry.version));
   const restoredIds = new Set(restoreResult.restoredNodeIds);

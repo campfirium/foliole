@@ -56,13 +56,13 @@ async function applyPack(endpoint: string, phase: AcceptancePhase) {
   });
 }
 
-async function runPhase(endpoint: string, phase: AcceptancePhase, deviceId: string) {
+async function runPhase(endpoint: string, phase: AcceptancePhase) {
   if (phase === 'apply') {
     const initial = await applyPack(endpoint, phase);
     return {
       apply: initial,
       error: null,
-      roundtrip: await runIosNodeVersionRoundtripAcceptance(endpoint, deviceId)
+      roundtrip: await runIosNodeVersionRoundtripAcceptance(endpoint)
     };
   }
   if (phase === 'reapply') {
@@ -90,7 +90,7 @@ export async function runIosSyncPackAcceptance() {
       await pairForSyncPack(endpoint, bootstrap.host_name ?? 'Acceptance iPhone');
     }
     const phase = loadPhase();
-    const result = await runPhase(endpoint, phase, bootstrap.device_id);
+    const result = await runPhase(endpoint, phase);
     advancePhase(phase);
     postResult({
       ...result,

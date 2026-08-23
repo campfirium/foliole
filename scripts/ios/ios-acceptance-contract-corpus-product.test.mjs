@@ -5,6 +5,11 @@ import path from 'node:path';
 import { expect, it } from 'vitest';
 
 import { readPackRowsFromZip } from '../../electron/database/syncPackZipReaderTestSupport.ts';
+import {
+  IOS_SYNC_PACK_CAPTURE_OBJECT_ID,
+  IOS_SYNC_PACK_CAPTURE_VERSION_ID,
+  IOS_SYNC_PACK_RESTORE_VERSION_ID
+} from '../../lib/platform/iosSyncPackAcceptanceContract.ts';
 
 const ROOT = 'scripts/ios/fixtures/acceptance-contract-corpus';
 const PEER_ID = 'ios-acceptance-contract-peer';
@@ -49,6 +54,16 @@ it('binds fixed iOS formal inputs to independently readable product pack semanti
   });
   expect(legal.nodes).toEqual([expect.objectContaining({ id: 'ios-acceptance-restore' })]);
   expect(successor.manifest.from_state_seq).toBe(legal.manifest.to_state_seq);
+  expect(successor.nodes.map(({ id }) => id)).toEqual([
+    IOS_SYNC_PACK_CAPTURE_OBJECT_ID, 'ios-acceptance-restore'
+  ]);
+  expect(successor.nodeVersions).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      object_id: IOS_SYNC_PACK_CAPTURE_OBJECT_ID,
+      parent_version_id: IOS_SYNC_PACK_CAPTURE_VERSION_ID
+    }),
+    expect.objectContaining({ object_id: 'ios-acceptance-restore', version_id: IOS_SYNC_PACK_RESTORE_VERSION_ID })
+  ]));
   expect(wrongTarget.manifest.to_peer_id).toBe(`${PEER_ID}-wrong`);
   expect(cursorGap.manifest.from_state_seq).toBeGreaterThan(successor.manifest.to_state_seq);
   expect(illegalDag.manifest.from_state_seq).toBe(legal.manifest.to_state_seq);

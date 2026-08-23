@@ -6,6 +6,11 @@ import path from 'node:path';
 import { afterEach, expect, it } from 'vitest';
 
 import { readPackRowsFromZip } from '../../electron/database/syncPackZipReaderTestSupport.ts';
+import {
+  IOS_SYNC_PACK_CAPTURE_OBJECT_ID,
+  IOS_SYNC_PACK_CAPTURE_VERSION_ID,
+  IOS_SYNC_PACK_RESTORE_VERSION_ID
+} from '../../lib/platform/iosSyncPackAcceptanceContract.ts';
 
 import { createIosSyncPackAcceptanceFixture } from './ios-sync-pack-acceptance-fixture.ts';
 
@@ -23,7 +28,7 @@ it('generates isolated producer packs for the paired iOS identity and failure ca
   });
   const legal = readPackRowsFromZip(fixture.legalPath, tempRoot);
   const wrongTarget = readPackRowsFromZip(fixture.wrongTargetPath, tempRoot);
-  await fixture.buildSuccessorPack(['special-inbox', 'ios-acceptance-restore']);
+  await fixture.buildContractSuccessorPack();
   const successor = readPackRowsFromZip(fixture.successorPath, tempRoot);
   const cursorGap = readPackRowsFromZip(fixture.cursorGapPath, tempRoot);
   const illegalDag = readPackRowsFromZip(fixture.illegalDagPath, tempRoot);
@@ -45,6 +50,16 @@ it('generates isolated producer packs for the paired iOS identity and failure ca
   expect(JSON.parse(legal.nodeVersions[0].snapshot_json).parent_id).toBe('special-inbox');
   expect(wrongTarget.manifest).toMatchObject({ to_peer_id: 'ios-runtime-device-wrong' });
   expect(successor.manifest.from_state_seq).toBe(legal.manifest.to_state_seq);
+  expect(successor.nodes.map(({ id }) => id)).toEqual([
+    IOS_SYNC_PACK_CAPTURE_OBJECT_ID, 'ios-acceptance-restore'
+  ]);
+  expect(successor.nodeVersions).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      object_id: IOS_SYNC_PACK_CAPTURE_OBJECT_ID,
+      parent_version_id: IOS_SYNC_PACK_CAPTURE_VERSION_ID
+    }),
+    expect.objectContaining({ object_id: 'ios-acceptance-restore', version_id: IOS_SYNC_PACK_RESTORE_VERSION_ID })
+  ]));
   expect(cursorGap.nodes).toEqual([expect.objectContaining({ id: 'ios-acceptance-gap-node' })]);
   expect(cursorGap.manifest.to_peer_id).toBe('ios-runtime-device');
   expect(cursorGap.manifest.from_state_seq).toBeGreaterThan(successor.manifest.to_state_seq);

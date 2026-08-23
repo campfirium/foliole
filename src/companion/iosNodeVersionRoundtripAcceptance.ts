@@ -1,3 +1,10 @@
+import {
+  IOS_SYNC_PACK_CAPTURED_AT,
+  IOS_SYNC_PACK_CAPTURE_VERSION_ID,
+  IOS_SYNC_PACK_MUTATION_AUTHOR,
+  IOS_SYNC_PACK_RESTORED_AT,
+  IOS_SYNC_PACK_RESTORE_VERSION_ID
+} from '../../lib/platform/iosSyncPackAcceptanceContract';
 import { pushLocalDirtyObjects } from '../shared/platform/companionDesktopSyncPush';
 import { applyCompanionDesktopSyncPack } from '../shared/platform/companionSyncPackApply';
 import { createSignedRequestHeaders } from '../shared/platform/companionWorkspacePairing';
@@ -11,18 +18,22 @@ import { loadIosAcceptanceSyncPeer } from './iosAcceptancePairing';
 const RESTORE_NODE_ID = 'ios-acceptance-restore';
 const SUCCESSOR_PATH = '/acceptance/sync-pack/successor';
 
-export async function runIosNodeVersionRoundtripAcceptance(endpoint: string, deviceId: string) {
+export async function runIosNodeVersionRoundtripAcceptance(endpoint: string) {
   const initialSnapshot = (await loadCompanionWorkspaceSyncState()).workspace_snapshot;
   if (!initialSnapshot) throw new Error('ios_node_version_roundtrip_snapshot_missing');
   const capture = await persistCompanionCapturedText({
-    deviceId,
+    deviceId: IOS_SYNC_PACK_MUTATION_AUTHOR,
+    now: IOS_SYNC_PACK_CAPTURED_AT,
     snapshot: initialSnapshot,
-    text: 'iOS quick capture acceptance'
+    text: 'iOS quick capture acceptance',
+    versionId: IOS_SYNC_PACK_CAPTURE_VERSION_ID
   });
   const restored = await restoreCompanionTrashNode({
-    deviceId,
+    deviceId: IOS_SYNC_PACK_MUTATION_AUTHOR,
     nodeId: RESTORE_NODE_ID,
-    snapshot: capture.snapshot
+    now: IOS_SYNC_PACK_RESTORED_AT,
+    snapshot: capture.snapshot,
+    versionId: IOS_SYNC_PACK_RESTORE_VERSION_ID
   });
   if (!restored) throw new Error('ios_node_version_roundtrip_restore_missing');
   const push = await pushLocalDirtyObjects(endpoint);

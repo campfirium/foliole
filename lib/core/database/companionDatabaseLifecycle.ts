@@ -149,8 +149,8 @@ async function transferCompanionHostState(db: DbPort, previous: string, current:
       (key, scope, platform, form_factor, host_name, value_json, content_hash, updated_at, deleted_at)
       SELECT key, scope, platform, form_factor, ?, value_json, content_hash, updated_at, deleted_at
       FROM setting_records WHERE host_name = ? AND scope <> 'user_space'`, [current, previous]);
+    await rewriteCompanionHostObjectIds(db, previous, current);
   }
-  await rewriteCompanionHostObjectIds(db, previous, current);
   await rehashCompanionHostState(db, current);
   await db.run('DELETE FROM node_reading_host_state WHERE host_name <> ?', [current]);
   await db.run('DELETE FROM node_view_state WHERE host_name <> ?', [current]);
