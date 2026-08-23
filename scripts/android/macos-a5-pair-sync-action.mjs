@@ -3,8 +3,8 @@
 import fs from 'node:fs';
 import { setTimeout as delay } from 'node:timers/promises';
 
-import { runWindowsA5PairSyncRecovery } from '../windows/windows-a5-pair-sync-recovery-action.mjs';
-import { assertPairSyncRuntimeOwnership } from '../windows/windows-a5-pair-sync-recovery-transport.mjs';
+import { runA5PairSyncFeatureJourney } from '../sync-group/pair-sync-feature-journey.mjs';
+import { assertPairSyncRuntimeOwnership } from '../sync-group/pair-sync-transport.mjs';
 import {
   openMacosPairSyncDesktopSession, waitForMacosPairRequest
 } from './macos-pair-sync-desktop-session.mjs';
@@ -88,7 +88,7 @@ export async function runMacosA5PairSync({
   openDesktopSession = openMacosPairSyncDesktopSession, openTransport, closeTransport,
   instrumentationModeArgs, pairedAuthorizationFingerprint, pairRequestIdentity,
   protectedSyncGroup, recoveryEvidenceGoal,
-  runPairSyncRecovery = runWindowsA5PairSyncRecovery, serial,
+  runPairSyncRecovery = runA5PairSyncFeatureJourney, serial,
   validateDesktop
 }) {
   fs.mkdirSync(evidenceRoot, { recursive: true });

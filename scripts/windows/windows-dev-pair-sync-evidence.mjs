@@ -1,9 +1,9 @@
 import path from 'node:path';
 
-import { PAIR_SYNC_RECOVERY_EVIDENCE_FILES } from './windows-a5-pair-sync-recovery-contract.mjs';
+import { PAIR_SYNC_RECOVERY_EVIDENCE_FILES } from '../sync-group/pair-sync-feature-contract.mjs';
 import {
   pairSyncRecoveryFailureFiles
-} from './windows-a5-pair-sync-recovery-failure-evidence.mjs';
+} from '../sync-group/pair-sync-failure-evidence.mjs';
 
 export const WINDOWS_DEV_PAIR_SYNC_RECOVERY_FILES = [
   ...PAIR_SYNC_RECOVERY_EVIDENCE_FILES, 'summary.json'

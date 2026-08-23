@@ -1,6 +1,6 @@
 import { expect, it, vi } from 'vitest';
 
-import { postPairSyncRecoveryReadiness } from './windows-a5-pair-sync-recovery-readiness.mjs';
+import { postPairSyncRecoveryReadiness } from '../sync-group/pair-sync-android-readiness.mjs';
 
 function result(prefix, value, code = 0) {
   return { code, output: `${prefix}${JSON.stringify(value)}\n`, stdout: `${prefix}${JSON.stringify(value)}\n` };

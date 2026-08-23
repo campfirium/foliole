@@ -6,9 +6,9 @@ import {
   classifyPairSyncRecoveryActionFailure, classifyPairSyncRecoveryInstrumentationFailure,
   pairSyncRecoveryModeArgs, pairSyncRecoveryRequiresApproval,
   parsePairSyncRecoveryInstrumentation
-} from './windows-a5-pair-sync-recovery-contract.mjs';
+} from '../sync-group/pair-sync-feature-contract.mjs';
 import { sanitizePairSyncDataProtection } from './windows-a5-pair-sync-recovery-evidence.mjs';
-import { validatePairSyncRecoveryResult } from './windows-a5-pair-sync-recovery-result.mjs';
+import { validatePairSyncRecoveryResult } from '../sync-group/pair-sync-feature-result.mjs';
 
 it('accepts only the fixed product pairing receipt', () => {
   const output = `INSTRUMENTATION_STATUS: folioleActionReceipt=${JSON.stringify({

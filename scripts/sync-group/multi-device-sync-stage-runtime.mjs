@@ -1,15 +1,14 @@
 /* global AbortController, clearTimeout, setTimeout */
 
 function controllerFailure(stage, missingFact, lastSuccessfulAction, message) {
-  return Object.assign(new Error(message), { failureOwner: 'controller', host: stage.host,
-    lastSuccessfulAction, missingFact, status: 'failed' });
+  return Object.assign(new Error(message), { executionOwner: 'controller',
+    failureAxis: 'execution', host: stage.host, lastSuccessfulAction, missingFact,
+    status: 'failed' });
 }
 
-function productStall(stage, lastSuccessfulAction) {
-  return Object.assign(new Error(`Stage ${stage.name} made no semantic progress before its deadline.`), {
-    failureOwner: 'product', host: stage.host, lastSuccessfulAction,
-    missingFact: 'declared_semantic_progress', status: 'stalled'
-  });
+function progressDeadline(stage, lastSuccessfulAction) {
+  return controllerFailure(stage, 'stage_progress_deadline', lastSuccessfulAction,
+    `Stage ${stage.name} emitted no new observation before its deadline.`);
 }
 
 export async function runBoundedStageAction({ action, run, stage }) {
@@ -23,26 +22,15 @@ export async function runBoundedStageAction({ action, run, stage }) {
     clearTimeout(progressTimer);
     progressTimer = setTimeout(() => {
       if (terminal) return;
-      terminal = productStall(stage, progress.at(-1) || 'stage_started'); controller.abort();
+      terminal = progressDeadline(stage, progress.at(-1) || 'stage_started'); controller.abort();
     }, stage.progressDeadlineMs);
   };
   const reportProgress = (milestone) => {
     if (terminal) return;
-    const expected = stage.milestones[progress.length];
-    if (milestone !== expected) {
-      terminal = controllerFailure(stage, 'milestone_order_invalid', progress.at(-1) || 'stage_started',
-        `Stage ${stage.name} expected ${expected || 'no further milestone'}, received ${milestone}.`);
-      controller.abort(); return;
-    }
     progress.push(milestone); lastProgressAt = new Date().toISOString(); armProgress();
   };
   const reportActivity = (activity) => {
     if (terminal) return;
-    if (!(stage.activities ?? []).includes(activity)) {
-      terminal = controllerFailure(stage, 'activity_invalid', progress.at(-1) || 'stage_started',
-        `Stage ${stage.name} received undeclared activity ${activity}.`);
-      controller.abort(); return;
-    }
     activityCounts.set(activity, (activityCounts.get(activity) ?? 0) + 1);
     lastProgressAt = new Date().toISOString(); armProgress();
   };
@@ -59,10 +47,6 @@ export async function runBoundedStageAction({ action, run, stage }) {
       result.progress.forEach(reportProgress);
     }
     if (terminal) throw terminal;
-    if (progress.length !== stage.milestones.length) {
-      throw controllerFailure(stage, 'milestone_sequence_incomplete',
-        progress.at(-1) || 'stage_started', `Stage ${stage.name} completed without all milestones.`);
-    }
     const activities = [...activityCounts].map(([name, count]) => ({ count, name }));
     return { ...result, activities, lastProgressAt, progress };
   } catch (error) {

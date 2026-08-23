@@ -2,7 +2,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { assertPairSyncRuntimeOwnership } from '../windows/windows-a5-pair-sync-recovery-transport.mjs';
+import { assertPairSyncRuntimeOwnership } from '../sync-group/pair-sync-transport.mjs';
 import {
   departedHistoryReadinessEvidence
 } from './android-departed-history-inspection.mjs';
@@ -12,7 +12,7 @@ import {
   authorizationFingerprint
 } from './android-sync-group-authorization-inspection.mjs';
 import { assertDepartedCredentialBaseline } from './macos-a5-departed-credential-state.mjs';
-import { runMacosA5SyncGroupMaintenance } from './macos-a5-sync-group-maintenance-action.mjs';
+import { runMacosA5SyncGroupMaintenance } from '../sync-group/a5-sync-group-action.mjs';
 import { openMacosPairSyncDesktopSession } from './macos-pair-sync-desktop-session.mjs';
 
 const APP_ID = 'com.foliole.android';

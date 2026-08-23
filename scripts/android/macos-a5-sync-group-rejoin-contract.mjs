@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import { assertPairSyncRuntimeOwnership } from '../windows/windows-a5-pair-sync-recovery-transport.mjs';
+import { assertPairSyncRuntimeOwnership } from '../sync-group/pair-sync-transport.mjs';
 import { authorizationFingerprint } from './android-sync-group-authorization-inspection.mjs';
 import { hasCompleteDirtyStateEvidence } from './macos-a5-pending-sync-state.mjs';
 

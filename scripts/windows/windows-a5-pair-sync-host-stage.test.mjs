@@ -2,7 +2,7 @@
 
 import { expect, it, vi } from 'vitest';
 
-import { collectPairSyncHostStage } from './windows-a5-pair-sync-host-stage.mjs';
+import { collectPairSyncHostStage } from '../sync-group/pair-sync-android-host-stage.mjs';
 
 it('accepts only the current formal run stage from the test package', async () => {
   const execute = vi.fn(async () => ({

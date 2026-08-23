@@ -2,9 +2,9 @@ import path from 'node:path';
 
 import {
   parseLatestPairSyncAndroidEvidence, validatePairSyncAndroidEvidence
-} from './windows-a5-pair-sync-recovery-android-evidence.mjs';
+} from './pair-sync-android-evidence.mjs';
 
-export { createPairSyncRecoveryEvidenceTracker } from './windows-a5-pair-sync-recovery-result.mjs';
+export { createPairSyncRecoveryEvidenceTracker } from './pair-sync-feature-result.mjs';
 
 export const PAIR_SYNC_RECOVERY_EVIDENCE_FILES = [
   'pair-sync-recovery-manifest.json',

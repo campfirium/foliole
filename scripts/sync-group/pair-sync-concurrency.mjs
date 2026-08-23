@@ -2,8 +2,8 @@
 
 import {
   classifyPairSyncRecoveryActionFailure, pairSyncRecoveryFailure
-} from './windows-a5-pair-sync-recovery-contract.mjs';
-import { parseLatestPairSyncAndroidEvidence } from './windows-a5-pair-sync-recovery-android-evidence.mjs';
+} from './pair-sync-feature-contract.mjs';
+import { parseLatestPairSyncAndroidEvidence } from './pair-sync-android-evidence.mjs';
 
 export const PAIR_SYNC_RECOVERY_TIMEOUT_MS = 11 * 60_000;
 

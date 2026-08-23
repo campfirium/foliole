@@ -4,13 +4,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
-import { parsePairSyncRecoveryReadiness } from '../windows/windows-a5-pair-sync-recovery-contract.mjs';
+import { parsePairSyncRecoveryReadiness } from '../sync-group/pair-sync-feature-contract.mjs';
 import { collectAndroidDeviceSnapshot } from './android-device-snapshot.mjs';
 import { inspectPairSyncRecoveryWorkspace } from './android-pair-sync-recovery-readiness.mjs';
 import { authorizationFingerprint } from './android-sync-group-authorization-inspection.mjs';
 import { proveMacosA5ExistingSyncContinuation } from './macos-a5-existing-sync-acceptance.mjs';
 import { runMacosA5PairSync } from './macos-a5-pair-sync-action.mjs';
-import { runMacosA5SyncGroupMaintenance } from './macos-a5-sync-group-maintenance-action.mjs';
+import { runMacosA5SyncGroupMaintenance } from '../sync-group/a5-sync-group-action.mjs';
 import { assertFrozenSyncGroupCandidate, captureSyncGroupCandidate } from './macos-a5-sync-group-candidate.mjs';
 import {
   assertT132A5ProviderAvailability, observeT132A5Provider

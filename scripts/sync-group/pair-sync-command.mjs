@@ -1,6 +1,6 @@
 import {
   classifyPairSyncRecoveryActionFailure, pairSyncRecoveryFailure
-} from './windows-a5-pair-sync-recovery-contract.mjs';
+} from './pair-sync-feature-contract.mjs';
 
 export async function checkedPairSyncCommand(execute, command, args, commandOptions, stage) {
   let result;

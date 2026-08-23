@@ -34,14 +34,16 @@ const PROVIDER_ACTIONS = Object.freeze({
 
 function controllerFailure(message, missingFact) {
   return Object.assign(new Error(message), {
-    failureOwner: 'controller', host: 'windows-c', missingFact
+    executionOwner: 'controller', failureAxis: 'execution', host: 'windows-c', missingFact
   });
 }
 
 function providerFailure(result, spec) {
   if (result.error) {
     return Object.assign(result.error, {
-      failureOwner: result.error.failureOwner || 'controller', host: result.error.host || 'windows-c',
+      failureAxis: result.error.failureAxis || 'execution',
+      executionOwner: result.error.executionOwner || 'controller',
+      host: result.error.host || 'windows-c',
       missingFact: result.error.missingFact || `${spec.missingPrefix}_action_failed`
     });
   }

@@ -8,7 +8,7 @@ import {
   startMacosA5SyncGroupApprovalProvider,
   stopMacosA5SyncGroupApprovalProvider
 } from '../android/macos-a5-sync-group-approval.mjs';
-import { runMacosA5SyncGroupMaintenance } from '../android/macos-a5-sync-group-maintenance-action.mjs';
+import { runMacosA5SyncGroupMaintenance } from './a5-sync-group-action.mjs';
 import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desktop-session.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import { readABConvergenceMaterial } from './multi-device-sync-ab-convergence.mjs';

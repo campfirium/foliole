@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 
 import {
   parsePairSyncRecoveryInstrumentationResult
-} from './windows-a5-pair-sync-recovery-contract.mjs';
+} from '../sync-group/pair-sync-feature-contract.mjs';
 
 it('preserves bounded instrumentation output when receipt parsing fails', () => {
   const output = [

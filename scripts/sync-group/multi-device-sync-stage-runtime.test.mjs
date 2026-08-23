@@ -11,19 +11,18 @@ function stage(overrides = {}) {
     name: 'test-stage', progressDeadlineMs: 100, ...overrides };
 }
 
-it('accepts only declared semantic milestones in order', async () => {
+it('records raw observations without interpreting scenario milestone names', async () => {
   await expect(runBoundedStageAction({ action: async ({ reportProgress }) => {
-    reportProgress('completed'); return {};
-  }, run: {}, stage: stage() })).rejects.toMatchObject({
-    failureOwner: 'controller', missingFact: 'milestone_order_invalid'
-  });
+    reportProgress('adapter-ready'); return {};
+  }, run: {}, stage: stage() })).resolves.toMatchObject({ progress: ['adapter-ready'] });
 });
 
 it('classifies an expired controller hard deadline separately from product stall', async () => {
   await expect(runBoundedStageAction({ action: ({ signal }) => new Promise((resolve) => {
     signal.addEventListener('abort', resolve, { once: true });
   }), run: {}, stage: stage({ hardDeadlineMs: 30, progressDeadlineMs: 100 }) }))
-    .rejects.toMatchObject({ failureOwner: 'controller', missingFact: 'stage_hard_deadline' });
+    .rejects.toMatchObject({ failureAxis: 'execution', executionOwner: 'controller',
+      missingFact: 'stage_hard_deadline' });
 });
 
 it('preserves completed milestones when the stage progress envelope expires', async () => {
@@ -32,11 +31,12 @@ it('preserves completed milestones when the stage progress envelope expires', as
     return new Promise((resolve) => signal.addEventListener('abort', resolve, { once: true }));
   }, run: {}, stage: stage({ hardDeadlineMs: 100, progressDeadlineMs: 20 }) }))
     .rejects.toMatchObject({
-      failureOwner: 'product', missingFact: 'declared_semantic_progress', progress: ['started']
+      failureAxis: 'execution', executionOwner: 'controller',
+      missingFact: 'stage_progress_deadline', progress: ['started']
     });
 });
 
-it('extends the stage window only for declared semantic activity', async () => {
+it('extends the stage window for raw adapter activity', async () => {
   const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   await expect(runBoundedStageAction({ action: async ({ reportActivity, reportProgress }) => {
     reportProgress('started'); await wait(25); reportActivity('consumer-progress');
@@ -48,8 +48,8 @@ it('extends the stage window only for declared semantic activity', async () => {
     });
   await expect(runBoundedStageAction({ action: async ({ reportActivity }) => {
     reportActivity('stdout'); return {};
-  }, run: {}, stage: stage() })).rejects.toMatchObject({
-    failureOwner: 'controller', missingFact: 'activity_invalid'
+  }, run: {}, stage: stage() })).resolves.toMatchObject({
+    activities: [{ count: 1, name: 'stdout' }]
   });
 });
 

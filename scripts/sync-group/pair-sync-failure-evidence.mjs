@@ -1,14 +1,13 @@
 import path from 'node:path';
 
-import { captureWindowsA5Screenshot } from './windows-a5-screenshot.mjs';
 import {
   classifyPairSyncRecoveryInstrumentationFailure, parseLatestPairSyncRecoveryHostStage,
   parsePairSyncRecoveryReadiness
-} from './windows-a5-pair-sync-recovery-contract.mjs';
+} from './pair-sync-feature-contract.mjs';
 import {
   parseLatestPairSyncAndroidEvidence, validatePairSyncAndroidEvidence
-} from './windows-a5-pair-sync-recovery-android-evidence.mjs';
-import { validatePairSyncApprovalEvidence } from './windows-a5-pair-sync-recovery-approval-evidence.mjs';
+} from './pair-sync-android-evidence.mjs';
+import { validatePairSyncApprovalEvidence } from './pair-sync-approval-evidence.mjs';
 
 export const PAIR_SYNC_FAILURE_SCREENSHOT = 'pair-sync-recovery-failure.png';
 export const PAIR_SYNC_FAILURE_DESKTOP_OVERVIEW =
@@ -62,7 +61,7 @@ function failureReason(error, output, convergence, hostStage) {
 }
 
 export async function collectPairSyncRecoveryFailureEvidence({
-  adbPort, env, error, evidenceRoot, execute, fsApi, paths, serial, session
+  adbPort, captureScreenshot, env, error, evidenceRoot, execute, fsApi, paths, serial, session
 }) {
   const evidence = {};
   const output = error?.result?.output ?? '';
@@ -80,12 +79,12 @@ export async function collectPairSyncRecoveryFailureEvidence({
   });
   evidence.summary = PAIR_SYNC_FAILURE_SUMMARY;
   try {
-    await captureWindowsA5Screenshot({
+    if (captureScreenshot) await captureScreenshot({
       adbPort, env, evidenceRoot, execute, fileName: PAIR_SYNC_FAILURE_SCREENSHOT, fsApi,
       paths, remotePath: '/sdcard/Download/foliole-pair-sync-failure.png', serial,
       stage: 'pair-sync-failure-screenshot'
     });
-    evidence.screenshot = PAIR_SYNC_FAILURE_SCREENSHOT;
+    if (captureScreenshot) evidence.screenshot = PAIR_SYNC_FAILURE_SCREENSHOT;
   } catch { /* Preserve the pairing failure when screenshot capture is unavailable. */ }
   try {
     if (session) {

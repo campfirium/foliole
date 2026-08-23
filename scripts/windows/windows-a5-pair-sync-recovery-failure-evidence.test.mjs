@@ -9,7 +9,8 @@ import { expect, it, vi } from 'vitest';
 import {
   collectPairSyncRecoveryFailureEvidence, PAIR_SYNC_FAILURE_DESKTOP_OVERVIEW,
   PAIR_SYNC_FAILURE_SCREENSHOT, PAIR_SYNC_FAILURE_SUMMARY
-} from './windows-a5-pair-sync-recovery-failure-evidence.mjs';
+} from '../sync-group/pair-sync-failure-evidence.mjs';
+import { captureWindowsA5Screenshot } from './windows-a5-screenshot.mjs';
 
 it('captures the fixed A5 screen and current Windows pairing overview after recovery fails', async () => {
   const evidenceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pair-sync-failure-'));
@@ -29,7 +30,7 @@ it('captures the fixed A5 screen and current Windows pairing overview after reco
         'INSTRUMENTATION_STATUS: foliolePairSyncStage=credentials-signable',
         'INSTRUMENTATION_STATUS: foliolePairSyncEvidence={"completion":"http_200","credentials":"saved_signable","initialSync":"started"}'
       ].join('\n') }, stage: 'pair-sync-instrumentation'
-    }), execute, fsApi: fs,
+    }), captureScreenshot: captureWindowsA5Screenshot, execute, fsApi: fs,
     paths: { adbPath: 'adb.exe' }, serial: '87a33a4b', session
   });
   expect(evidence).toEqual({

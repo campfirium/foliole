@@ -38,7 +38,7 @@ it('preserves the fixed Windows native startup failure attribution', () => {
   expect(windowsJoinFailure({ code: 125, stderr:
     '[windows-dev-action] failure stage=entry message=native client interactive task did not start within 5 seconds\n'
   })).toMatchObject({
-    failureOwner: 'controller', host: 'windows-c',
+    failureAxis: 'execution', executionOwner: 'controller', host: 'windows-c',
     missingFact: 'windows_native_interactive_start_failed'
   });
 });

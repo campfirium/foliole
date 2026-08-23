@@ -2,7 +2,7 @@
 
 import { expect, it } from 'vitest';
 
-import { parsePairSyncRecoveryReadiness } from './windows-a5-pair-sync-recovery-contract.mjs';
+import { parsePairSyncRecoveryReadiness } from '../sync-group/pair-sync-feature-contract.mjs';
 
 it('keeps readiness evidence non-sensitive and fails closed', () => {
   const readiness = parsePairSyncRecoveryReadiness(

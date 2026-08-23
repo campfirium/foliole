@@ -4,7 +4,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 import { collectAndroidDeviceSnapshot } from './android-device-snapshot.mjs';
 import { inspectPairSyncRecoveryWorkspace } from './android-pair-sync-recovery-readiness.mjs';
-import { runMacosA5SyncGroupMaintenance } from './macos-a5-sync-group-maintenance-action.mjs';
+import { runMacosA5SyncGroupMaintenance } from '../sync-group/a5-sync-group-action.mjs';
 import { openMacosPairSyncDesktopSession } from './macos-pair-sync-desktop-session.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import {

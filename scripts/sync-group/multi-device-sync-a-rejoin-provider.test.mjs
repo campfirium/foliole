@@ -120,7 +120,8 @@ it('reports a Windows provider terminal before the consumer watchdog can mask it
     action: 'multi-device-sync-a-leave', execute, repoRoot: process.cwd()
   });
   await expect(provider.raceConsumer(new Promise(() => {}))).rejects.toMatchObject({
-    failureOwner: 'controller', host: 'windows-c', missingFact: 'windows_a_leave_action_failed',
+    failureAxis: 'execution', executionOwner: 'controller', host: 'windows-c',
+    missingFact: 'windows_a_leave_action_failed',
     message: expect.stringContaining('ssh: connect to host timed out')
   });
 });
@@ -155,7 +156,7 @@ it('rejects a provider that ends successfully before its consumer is complete', 
   const provider = startWindowsSyncGroupProvider({ action: 'multi-device-sync-a-leave',
     execute: vi.fn(() => Promise.resolve({ code: 0, output: '' })), repoRoot: process.cwd() });
   await expect(provider.raceConsumer(new Promise(() => {}))).rejects.toMatchObject({
-    failureOwner: 'controller', host: 'windows-c',
+    failureAxis: 'execution', executionOwner: 'controller', host: 'windows-c',
     missingFact: 'windows_a_leave_provider_ended_early'
   });
 });

@@ -4,13 +4,13 @@ import { expect, it } from 'vitest';
 
 import {
   parseLatestPairSyncAndroidEvidence, validatePairSyncAndroidEvidence
-} from './windows-a5-pair-sync-recovery-android-evidence.mjs';
+} from '../sync-group/pair-sync-android-evidence.mjs';
 import {
   createPairSyncApprovalEvidence, validatePairSyncApprovalEvidence
-} from './windows-a5-pair-sync-recovery-approval-evidence.mjs';
+} from '../sync-group/pair-sync-approval-evidence.mjs';
 import {
   createPairSyncRecoveryEvidenceTracker, validatePairSyncRecoveryResult
-} from './windows-a5-pair-sync-recovery-result.mjs';
+} from '../sync-group/pair-sync-feature-result.mjs';
 
 const completeAndroid = {
   completion: 'http_200', credentials: 'saved_signable', initialSync: 'completed'

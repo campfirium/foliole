@@ -2,7 +2,7 @@
 
 import { expect, it } from 'vitest';
 
-import { checkedPairSyncCommand } from './windows-a5-pair-sync-command.mjs';
+import { checkedPairSyncCommand } from '../sync-group/pair-sync-command.mjs';
 
 it('preserves timed-out instrumentation output for failure classification', async () => {
   const output = 'INSTRUMENTATION_STATUS: foliolePairSyncStage=pair-request-awaiting\n';

@@ -1,9 +1,9 @@
 import {
   parseLatestPairSyncAndroidEvidence, validatePairSyncAndroidEvidence
-} from './windows-a5-pair-sync-recovery-android-evidence.mjs';
+} from './pair-sync-android-evidence.mjs';
 import {
   createPairSyncApprovalEvidence, validatePairSyncApprovalEvidence
-} from './windows-a5-pair-sync-recovery-approval-evidence.mjs';
+} from './pair-sync-approval-evidence.mjs';
 
 export function validatePairSyncRecoveryResult({
   android, approval, evidenceGoal = 'initial-sync-completed', pairingPath

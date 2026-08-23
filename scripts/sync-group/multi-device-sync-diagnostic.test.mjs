@@ -45,12 +45,45 @@ it('preserves bounded failure detail and evidence without advancing later stages
   }, availableFacts: ['candidate_bound'], candidateProvider: async () => candidate,
   run: createRun({ candidate, mode: 'diagnostic', runId: 'run-5', scenario: 'a-b-group-sync' }),
   stageActions: { 'establish-a-b': async () => { throw Object.assign(new Error('receipt missing'), {
-    evidenceRef: '/evidence/action.log', failureOwner: 'environment', host: 'android-b',
+    evidenceRef: '/evidence/action.log', executionOwner: 'environment',
+    failureAxis: 'execution', host: 'android-b',
     lastSuccessfulAction: 'stage_started', missingFact: 'pair_sync_receipt'
   }); } }, targetStage: 'a-b-group-sync' });
   expect(result.receipts.at(-1)).toMatchObject({ evidenceRef: '/evidence/action.log',
     failureDetail: 'receipt missing', failureOwner: 'environment', host: 'android-b',
     lastSuccessfulAction: 'stage_started', missingFact: 'pair_sync_receipt', status: 'failed' });
+});
+
+it('routes only an explicit proof failure to the product owner', async () => {
+  const result = await runDiagnostic({ adapters: {
+    'macos-a': ready, 'android-b': ready
+  }, availableFacts: ['candidate_bound'], candidateProvider: async () => candidate,
+  readinessHosts: ['macos-a', 'android-b'],
+  run: createRun({ candidate, mode: 'diagnostic', runId: 'run-proof',
+    scenario: 'a-b-group-sync' }),
+  stageActions: { 'establish-a-b': async () => {
+    throw Object.assign(new Error('exact fact missing'), {
+      failureAxis: 'proof', host: 'android-b', missingFact: 'exact_run_fact'
+    });
+  } }, targetStage: 'a-b-group-sync' });
+  expect(result.receipts.at(-1)).toMatchObject({
+    failureOwner: 'product', host: 'android-b', missingFact: 'exact_run_fact'
+  });
+});
+
+it('keeps scenario observation drift out of the product failure route', async () => {
+  const result = await runDiagnostic({ adapters: {
+    'macos-a': ready, 'android-b': ready
+  }, availableFacts: ['candidate_bound'], candidateProvider: async () => candidate,
+  readinessHosts: ['macos-a', 'android-b'],
+  run: createRun({ candidate, mode: 'diagnostic', runId: 'run-observation-drift',
+    scenario: 'a-b-group-sync' }),
+  stageActions: { 'establish-a-b': async ({ reportProgress }) => {
+    reportProgress('adapter-ready'); return { evidenceRef: 'raw.json' };
+  } }, targetStage: 'a-b-group-sync' });
+  expect(result.receipts.at(-1)).toMatchObject({
+    failureOwner: 'controller', missingFact: 'milestone_order_invalid'
+  });
 });
 
 it('blocks an unbound selected stage instead of treating it as passed', async () => {

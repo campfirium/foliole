@@ -4,12 +4,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
-import { runMacosA5SyncGroupMaintenance } from './macos-a5-sync-group-maintenance-action.mjs';
+import { runMacosA5SyncGroupMaintenance } from '../sync-group/a5-sync-group-action.mjs';
 import {
   assertT132CredentialRecoveryBaseline, assertT132ProtectedBaseline
 } from './macos-a5-sync-group-rejoin-contract.mjs';
 import { inspectMacosA5SyncGroupFacts } from './macos-a5-pair-sync-preflight.mjs';
-import { PAIR_SYNC_PORT } from '../windows/windows-a5-pair-sync-recovery-transport.mjs';
+import { PAIR_SYNC_PORT } from '../sync-group/pair-sync-transport.mjs';
 
 const APP_ID = 'com.foliole.android';
 

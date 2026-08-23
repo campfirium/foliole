@@ -11,16 +11,16 @@ import {
 import {
   createPairSyncRecoveryWindow, PAIR_SYNC_RECOVERY_TIMEOUT_MS, resolvePairSyncConcurrentFailure,
   waitForPairRequestWhileInstrumentationRuns
-} from './windows-a5-pair-sync-recovery-concurrency.mjs';
-import { assertPairSyncRuntimeOwnership } from './windows-a5-pair-sync-recovery-transport.mjs';
+} from '../sync-group/pair-sync-concurrency.mjs';
+import { assertPairSyncRuntimeOwnership } from '../sync-group/pair-sync-transport.mjs';
 import { pairSyncAuthorizationFingerprint } from './windows-pair-sync-desktop-session.mjs';
 
 const paths = { repoRoot: 'C:\\repo', systemNode: 'C:\\Program Files\\nodejs\\node.exe' };
 const execute = vi.fn(async () => ({ code: 0, output: '', stdout: '' }));
 
 it('wires pending observation, approval invocation, and approval success in order', () => {
-  const source = fs.readFileSync('scripts/windows/windows-a5-pair-sync-recovery-result.mjs', 'utf8');
-  const action = fs.readFileSync('scripts/windows/windows-a5-pair-sync-recovery-action.mjs', 'utf8');
+  const source = fs.readFileSync('scripts/sync-group/pair-sync-feature-result.mjs', 'utf8');
+  const action = fs.readFileSync('scripts/sync-group/pair-sync-feature-journey.mjs', 'utf8');
   const observed = source.indexOf('approval.markPendingObserved()');
   const invoked = source.indexOf('approval.markApproveInvoked()');
   const approved = source.indexOf('approval.markApproveSucceeded()');

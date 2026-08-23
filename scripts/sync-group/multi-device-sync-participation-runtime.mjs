@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import { runMacosA5SyncGroupMaintenance } from '../android/macos-a5-sync-group-maintenance-action.mjs';
+import { runMacosA5SyncGroupMaintenance } from './a5-sync-group-action.mjs';
 
 export function runParticipantMaintenance(context, action, suffix = action) {
   return runMacosA5SyncGroupMaintenance({ action, buildIdentity: context.runId,

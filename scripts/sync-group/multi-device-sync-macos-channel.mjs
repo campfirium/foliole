@@ -1,10 +1,12 @@
 /* global process */
 
-import { validateDesktopPreflight } from '../windows/windows-pair-sync-desktop-readiness.mjs';
 import {
-  assertPairSyncRuntimeOwnership, closePairSyncRecoveryTransport,
-  openPairSyncRecoveryTransport, PAIR_SYNC_PORT
-} from '../windows/windows-a5-pair-sync-recovery-transport.mjs';
+  macosPairSyncAuthorizationFingerprint
+} from '../android/macos-pair-sync-desktop-session.mjs';
+import { validatePairSyncDesktopPreflight } from './pair-sync-desktop-preflight.mjs';
+import {
+  closePairSyncRecoveryTransport, openPairSyncRecoveryTransport, PAIR_SYNC_PORT
+} from './pair-sync-transport.mjs';
 
 export const MACOS_ACCEPTANCE_SYNC_PORT = '38642';
 
@@ -21,10 +23,10 @@ export function validateMacosAcceptanceDesktopPreflight(
   overview, session, hostName, desktopAuthorizationFingerprint = null,
   existingPairing = false
 ) {
-  assertPairSyncRuntimeOwnership(overview, session, MACOS_ACCEPTANCE_SYNC_PORT);
-  return validateDesktopPreflight(
-    overview, session, hostName, desktopAuthorizationFingerprint, existingPairing
-  );
+  return validatePairSyncDesktopPreflight({ desktopAuthorizationFingerprint,
+    existingPairing, expectedPort: MACOS_ACCEPTANCE_SYNC_PORT,
+    fingerprint: macosPairSyncAuthorizationFingerprint, hostName, overview,
+    requireRuntime: true, session });
 }
 
 export function openMacosAcceptanceTransport(runAdb) {

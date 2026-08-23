@@ -5,7 +5,7 @@ import path from 'node:path';
 
 import { afterEach, expect, it, vi } from 'vitest';
 
-import { runMacosA5SyncGroupMaintenance } from './macos-a5-sync-group-maintenance-action.mjs';
+import { runMacosA5SyncGroupMaintenance } from '../sync-group/a5-sync-group-action.mjs';
 
 const roots = [];
 afterEach(() => roots.splice(0).forEach((root) => fs.rmSync(root, { force: true, recursive: true })));
@@ -133,7 +133,7 @@ it('observes Leave through durable host state after the visible confirmation', (
   expect(test).toContain('put("bindingPresent", false)');
 });
 
-it('classifies an abnormal instrumentation exit as an Android product failure', async () => {
+it('returns an abnormal instrumentation exit as raw controller failure', async () => {
   const root = createTestRoot();
   roots.push(root);
   const execute = vi.fn(async (_command, args) => args.includes('instrument') ? {
@@ -145,7 +145,8 @@ it('classifies an abnormal instrumentation exit as an Android product failure', 
     action: 'leave-sync-group', buildIdentity: 'build-crashed', env: {}, evidenceRoot: root, execute,
     paths: { adb: '/fixed/adb', apk: '/fixed/app.apk', buildRoot: process.cwd() }, serial: '87a33a4b'
   })).rejects.toMatchObject({
-    failureOwner: 'product', host: 'android-b', missingFact: 'product_instrumentation_failed'
+    executionOwner: 'controller', failureAxis: 'execution', host: 'android-b',
+    missingFact: 'android_instrumentation_terminal'
   });
 });
 
@@ -161,8 +162,7 @@ it('preserves a lost Android window focus as an environment failure', async () =
     action: 'clear-app-data', buildIdentity: 'build-2', env: {}, evidenceRoot: root, execute,
     paths: { adb: '/fixed/adb', apk: '/fixed/app.apk', buildRoot: process.cwd() }, serial: '87a33a4b'
   })).rejects.toMatchObject({
-    failureOwner: 'environment', host: 'android-b',
-    lastSuccessfulAction: 'android_activity_started',
-    missingFact: 'android_app_window_focus_missing'
+    executionOwner: 'environment', failureAxis: 'execution', host: 'android-b',
+    missingFact: 'android_instrumentation_terminal'
   });
 });

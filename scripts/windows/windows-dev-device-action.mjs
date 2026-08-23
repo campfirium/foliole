@@ -9,7 +9,7 @@ import {
 } from './windows-a5-capture-annotation-contract.mjs';
 import {
   pairSyncRecoveryFailure, parsePairSyncRecoveryReadiness
-} from './windows-a5-pair-sync-recovery-contract.mjs';
+} from '../sync-group/pair-sync-feature-contract.mjs';
 
 export const WINDOWS_DEV_ADB_PORT = '5037';
 export const WINDOWS_DEV_A5_SERIAL = '87a33a4b';

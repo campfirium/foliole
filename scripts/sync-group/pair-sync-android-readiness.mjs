@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
-import { parsePairSyncRecoveryReadiness, pairSyncRecoveryFailure } from './windows-a5-pair-sync-recovery-contract.mjs';
+import { parsePairSyncRecoveryReadiness, pairSyncRecoveryFailure } from './pair-sync-feature-contract.mjs';
 
 function options(env) {
   return { env, timeoutCode: 'pair_sync_readiness_timeout', timeoutMs: 60_000, windowsHide: true };

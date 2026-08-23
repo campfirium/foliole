@@ -8,17 +8,20 @@ import { runBoundedStageAction } from './multi-device-sync-stage-runtime.mjs';
 function stageFailure(stage, startedAt, error) {
   const completedAt = new Date().toISOString();
   const stalled = error.status === 'stalled' || error.result?.code === 124;
+  const failureOwner = error.failureOwner ?? (error.failureAxis === 'proof' ? 'product'
+    : error.failureAxis === 'trust' ? 'candidate'
+      : error.executionOwner === 'environment' ? 'environment' : 'controller');
   return { completedAt, durationMs: Date.parse(completedAt) - Date.parse(startedAt),
     ...(error.evidenceRef ? { evidenceRef: error.evidenceRef } : {}),
     ...(error.message ? { failureDetail: String(error.message).replace(/[\r\n]+/gu, ' ').slice(0, 500) } : {}),
     ...(error.siblingOutcomes ? { siblingOutcomes: error.siblingOutcomes } : {}),
-    failureOwner: error.failureOwner || (stalled ? 'product' : 'controller'), host: error.host || stage.host,
+    failureOwner, host: error.host || stage.host,
     ...(error.activities?.length ? { activities: error.activities } : {}),
     inputFacts: stage.inputs, lastProgressAt: error.lastProgressAt || startedAt,
     lastSuccessfulAction: error.lastSuccessfulAction || 'stage_started',
     missingFact: error.missingFact || (stalled ? 'observable_progress' : 'stage_action_failed'),
     outputFacts: [], progress: error.progress || [], stage: stage.name, startedAt,
-    status: error.failureOwner === 'controller' && error.result?.terminationReason
+    status: failureOwner === 'controller' && error.result?.terminationReason
       ? 'failed' : stalled ? 'stalled' : error.status || 'failed' };
 }
 
@@ -30,6 +33,22 @@ function stagePassed(stage, startedAt, result) {
     inputFacts: stage.inputs, lastProgressAt: result.lastProgressAt || completedAt,
     outputFacts: stage.outputs, progress: result.progress || [], stage: stage.name,
     startedAt, status: 'passed' };
+}
+
+function assertScenarioObservations(stage, result) {
+  const progress = result.progress ?? [];
+  const mismatch = progress.findIndex((value, index) => value !== stage.milestones[index]);
+  const activityNames = new Set((stage.activities ?? []));
+  const unexpectedActivity = (result.activities ?? []).find(({ name }) => !activityNames.has(name));
+  if (mismatch >= 0 || progress.length !== stage.milestones.length || unexpectedActivity) {
+    throw Object.assign(new Error(`Stage ${stage.name} observations do not match its scenario.`), {
+      executionOwner: 'controller', failureAxis: 'execution', host: stage.host,
+      lastSuccessfulAction: progress.at(-1) || 'stage_started',
+      missingFact: unexpectedActivity ? 'activity_invalid' : mismatch >= 0
+        ? 'milestone_order_invalid' : 'milestone_sequence_incomplete'
+    });
+  }
+  return result;
 }
 
 export async function runStageSequence({ adapters, candidateProvider,
@@ -50,7 +69,8 @@ export async function runStageSequence({ adapters, candidateProvider,
     }
     const startedAt = new Date().toISOString();
     try {
-      const result = await runBoundedStageAction({ action, run: structuredClone(run), stage });
+      const result = assertScenarioObservations(stage,
+        await runBoundedStageAction({ action, run: structuredClone(run), stage }));
       const receipt = stagePassed(stage, startedAt, result);
       recordReceipt(run, receipt); onReceipt(receipt);
       if (stage.name === 'candidate-preparation') {

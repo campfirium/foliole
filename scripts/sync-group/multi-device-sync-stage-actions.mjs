@@ -43,11 +43,10 @@ export function windowsJoinFailure(result) {
   const failureLine = output.split(/\r?\n/u)
     .find((line) => line.includes('[windows-dev-action] failure'));
   const detail = /\bmessage=(.+)$/u.exec(failureLine || '')?.[1]?.trim();
-  const nativeStartFailed = /native client interactive task did not start/u.test(detail || '');
   return Object.assign(new Error(
     `Windows C join action failed${detail ? `: ${detail}` : '.'}`
-  ), { failureOwner: nativeStartFailed || result.terminationReason ? 'controller' : 'product',
-    host: 'windows-c', missingFact: nativeStartFailed
+  ), { executionOwner: 'controller', failureAxis: 'execution', host: 'windows-c',
+    missingFact: /native client interactive task did not start/u.test(detail || '')
       ? 'windows_native_interactive_start_failed'
       : result.terminationReason || 'windows_c_sync_receipt', result });
 }
@@ -78,7 +77,7 @@ async function admitC(repoRoot, runId, { reportProgress, signal, stage }) {
     const result = await execute(paths.adb, ['-s', A5_SERIAL, ...args], { env, timeoutMs: 10_000 });
     if (result.code === 0) return result;
     throw Object.assign(new Error(`${stage} failed`), {
-      failureOwner: 'controller', host: 'android-b',
+      executionOwner: 'controller', failureAxis: 'execution', host: 'android-b',
       lastSuccessfulAction: 'a_deterministic_fact_created',
       missingFact: 'a5_product_transport_unavailable'
     });
