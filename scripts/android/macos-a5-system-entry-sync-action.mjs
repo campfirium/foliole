@@ -28,26 +28,18 @@ function samePayload(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
-export function matchesSystemEntryPayload(actual, expected, allowMissingDefault = false) {
-  if (samePayload(actual, expected)) return true;
-  return allowMissingDefault && actual == null && expected?.version === 1
-    && Object.keys(expected.customDisplayNameById ?? {}).length === 0;
-}
-
-async function waitForA5Payload(context, expected, allowMissingDefault = false) {
+async function waitForA5Payload(context, expected, collectSnapshot = collectAndroidDeviceSnapshot) {
   const deadline = Date.now() + 5 * 60_000;
   let latest;
   while (Date.now() < deadline) {
-    latest = await collectAndroidDeviceSnapshot({
+    latest = await collectSnapshot({
       adb: context.paths.adb, appId: APP_ID, databaseInspector: inspectSystemEntryDisplayNames,
       includeAttachments: false, includeEvents: false, serial: context.serial,
       tables: ['setting_records', 'sync_object_state']
     });
     const inspection = latest.database?.inspection;
     if (latest.database?.integrity === 'ok'
-        && matchesSystemEntryPayload(
-          inspection?.systemEntryDisplayNames, expected, allowMissingDefault
-        )
+        && samePayload(inspection?.systemEntryDisplayNames, expected)
         && inspection?.pairingCredentialsRejected === false) return latest;
     await delay(2_000);
   }
@@ -97,7 +89,7 @@ export async function proveA5SystemEntryDisplayNameConvergence(context) {
     const baselineDisplay = await inspectDisplay(context, 'baseline-display', {
       forbiddenText: ALIAS
     });
-    const baselineSnapshot = await waitForA5Payload(context, baseline, true);
+    const baselineSnapshot = await waitForA5Payload(context, baseline);
     const renamed = { customDisplayNameById: {
       ...baseline.customDisplayNameById, inbox: ALIAS
     }, version: 1 };

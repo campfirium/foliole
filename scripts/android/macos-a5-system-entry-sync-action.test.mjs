@@ -3,19 +3,9 @@
 import { expect, it } from 'vitest';
 
 import {
-  matchesSystemEntryPayload,
   proveA5SystemEntryDisplayNameConvergence,
   restartA5
 } from './macos-a5-system-entry-sync-action.mjs';
-
-it('treats only the initial missing record as the empty product default', () => {
-  const empty = { customDisplayNameById: {}, version: 1 };
-  expect(matchesSystemEntryPayload(null, empty, true)).toBe(true);
-  expect(matchesSystemEntryPayload(null, empty)).toBe(false);
-  expect(matchesSystemEntryPayload(null, {
-    customDisplayNameById: { inbox: 'Synced Inbox' }, version: 1
-  }, true)).toBe(false);
-});
 
 it('cold-restarts A5 so foreground sync consumes the new desktop setting', async () => {
   const calls = [];
