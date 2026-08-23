@@ -14,17 +14,18 @@ final class FoliolePairingStoreTests: XCTestCase {
 
     func testPersistsMetadataSignsNativelyAndKeepsSecretOutOfDefaults() throws {
         let fixture = try makeFixture()
+        let protocolVersion = fixture.contract.protocolVersion
         let saved = try fixture.store.save(
             authorizationId: "authorization-ios",
             credentialSecret: "pair-secret",
             hostName: "iPhone",
             hostPlatform: "ios-capacitor",
-            negotiatedProtocolVersion: 1,
+            negotiatedProtocolVersion: protocolVersion,
             pairedAt: "2026-07-19T10:00:00.000Z",
             remotePeerId: "desktop-device",
             remotePeerName: "Foliole Desktop on Mac",
             remotePeerPlatform: "macOS",
-            remoteProtocol: ["version": 1, "min_supported_version": 1, "max_supported_version": 1, "capabilities": []]
+            remoteProtocol: compatibleProtocol(version: protocolVersion)
         )
 
         XCTAssertEqual(saved[fixture.contract.stateKeys["isPaired"]!] as? Bool, true)
@@ -49,17 +50,18 @@ final class FoliolePairingStoreTests: XCTestCase {
 
     func testClearRemovesSecretAndPermanentPairingMetadata() throws {
         let fixture = try makeFixture()
+        let protocolVersion = fixture.contract.protocolVersion
         _ = try fixture.store.save(
             authorizationId: "authorization-ios",
             credentialSecret: "pair-secret",
             hostName: "iPhone",
             hostPlatform: "ios-capacitor",
-            negotiatedProtocolVersion: 1,
+            negotiatedProtocolVersion: protocolVersion,
             pairedAt: "2026-07-19T10:00:00.000Z",
             remotePeerId: "desktop-device",
             remotePeerName: "Foliole Desktop on Mac",
             remotePeerPlatform: "macOS",
-            remoteProtocol: ["version": 1]
+            remoteProtocol: compatibleProtocol(version: protocolVersion)
         )
 
         let cleared = try fixture.store.clear()
@@ -72,17 +74,18 @@ final class FoliolePairingStoreTests: XCTestCase {
 
     func testRejectsIncompatibleProtocolBeforePersistingCredentials() throws {
         let fixture = try makeFixture()
+        let incompatibleVersion = fixture.contract.protocolVersion + 1
         XCTAssertThrowsError(try fixture.store.save(
             authorizationId: "authorization-ios",
             credentialSecret: "pair-secret",
             hostName: "iPhone",
             hostPlatform: "ios-capacitor",
-            negotiatedProtocolVersion: 2,
+            negotiatedProtocolVersion: incompatibleVersion,
             pairedAt: "2026-07-19T10:00:00.000Z",
             remotePeerId: nil,
             remotePeerName: nil,
             remotePeerPlatform: nil,
-            remoteProtocol: ["version": 2]
+            remoteProtocol: compatibleProtocol(version: incompatibleVersion)
         ))
         XCTAssertNil(try fixture.secrets.load())
     }
@@ -121,6 +124,15 @@ final class FoliolePairingStoreTests: XCTestCase {
             suite: suite,
             store: try FolioleCompanionPairingStore(contract: contract, defaults: defaults, secrets: secrets)
         )
+    }
+
+    private func compatibleProtocol(version: Int) -> [String: Any] {
+        [
+            "version": version,
+            "min_supported_version": version,
+            "max_supported_version": version,
+            "capabilities": []
+        ]
     }
 }
 
