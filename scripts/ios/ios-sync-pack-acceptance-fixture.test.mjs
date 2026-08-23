@@ -60,6 +60,10 @@ it('generates isolated producer packs for the paired iOS identity and failure ca
     }),
     expect.objectContaining({ object_id: 'ios-acceptance-restore', version_id: IOS_SYNC_PACK_RESTORE_VERSION_ID })
   ]));
+  const restoredVersion = successor.nodeVersions.find(({ version_id }) =>
+    version_id === IOS_SYNC_PACK_RESTORE_VERSION_ID);
+  expect(JSON.parse(restoredVersion.snapshot_json)).toMatchObject({ content: 'Restore body' });
+  expect(JSON.parse(restoredVersion.snapshot_json)).not.toHaveProperty('body_blob_hash');
   expect(cursorGap.nodes).toEqual([expect.objectContaining({ id: 'ios-acceptance-gap-node' })]);
   expect(cursorGap.manifest.to_peer_id).toBe('ios-runtime-device');
   expect(cursorGap.manifest.from_state_seq).toBeGreaterThan(successor.manifest.to_state_seq);

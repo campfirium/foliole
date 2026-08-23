@@ -70,6 +70,10 @@ it('binds fixed iOS formal inputs to independently readable product pack semanti
       version_id: IOS_SYNC_PACK_RESTORE_VERSION_ID
     })
   ]));
+  const restoredVersion = successor.nodeVersions.find(({ version_id }) =>
+    version_id === IOS_SYNC_PACK_RESTORE_VERSION_ID);
+  expect(JSON.parse(restoredVersion.snapshot_json)).toMatchObject({ content: 'Restore body' });
+  expect(JSON.parse(restoredVersion.snapshot_json)).not.toHaveProperty('body_blob_hash');
   expect(wrongTarget.manifest.to_peer_id).toBe(`${PEER_ID}-wrong`);
   expect(cursorGap.manifest.from_state_seq).toBeGreaterThan(successor.manifest.to_state_seq);
   expect(illegalDag.manifest.from_state_seq).toBe(legal.manifest.to_state_seq);
