@@ -3,6 +3,7 @@
 
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 import { afterEach, expect, it } from 'vitest';
@@ -24,9 +25,7 @@ function git(root, args) {
 }
 
 function fixture() {
-  const parent = path.join(process.cwd(), '.tmp/artifacts');
-  fs.mkdirSync(parent, { recursive: true });
-  const root = fs.mkdtempSync(path.join(parent, 'macos-a5-capsule-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'macos-a5-capsule-'));
   roots.push(root);
   git(root, ['init', '-b', 'dev']);
   git(root, ['config', 'user.email', 'capsule@example.invalid']);
@@ -76,9 +75,10 @@ function runner(events, failNpm = false, materializeElectron = true, failScript 
   };
 }
 
-afterEach(() => {
+afterEach(async () => {
   for (const root of roots.splice(0)) {
-    fs.rmSync(root, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
+    await fs.promises.rm(root, { force: true, maxRetries: 5, recursive: true,
+      retryDelay: 100 });
   }
 });
 
