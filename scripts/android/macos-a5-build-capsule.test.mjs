@@ -28,7 +28,7 @@ function fixture() {
   fs.mkdirSync(parent, { recursive: true });
   const root = fs.mkdtempSync(path.join(parent, 'macos-a5-capsule-'));
   roots.push(root);
-  git(root, ['init', '-b', 'dev']);
+  git(root, ['-c', 'core.hideDotFiles=false', 'init', '-b', 'dev']);
   git(root, ['config', 'user.email', 'capsule@example.invalid']);
   git(root, ['config', 'user.name', 'Capsule Test']);
   fs.writeFileSync(path.join(root, '.gitignore'), 'ignored.txt\n');
