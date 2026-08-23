@@ -36,6 +36,14 @@ describe('iOS sync-pack transfer contract', () => {
     expect(project).toContain('companion-bridge-contract-definitions.json in Resources');
   });
 
+  it('retains native download causes only in the isolated acceptance build', async () => {
+    const plugin = await appSource('FolioleCompanionSyncPackTransferPlugin.swift');
+
+    expect(plugin).toContain('#if FOLIOLE_IOS_BRIDGE_ACCEPTANCE && targetEnvironment(simulator)');
+    expect(plugin).toContain('item.userInfo[NSUnderlyingErrorKey] as? NSError');
+    expect(plugin).toContain('#else\n        return error.localizedDescription');
+  });
+
   it('validates pack SQLite, uses system zlib, and confines cache deletion', async () => {
     const database = await appSource('FolioleReadOnlySQLite.swift');
     const transfer = await appSource('FolioleCompanionSyncPackTransfer.swift');

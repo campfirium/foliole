@@ -46,7 +46,7 @@ public class FolioleCompanionSyncPackTransferPlugin: CAPPlugin, CAPBridgedPlugin
                     )
                     call.resolve([try contracts.transferResponseKey("packPath"): packURL.path])
                 } catch {
-                    call.reject("Failed to download companion desktop sync pack: \(error.localizedDescription)")
+                    call.reject("Failed to download companion desktop sync pack: \(downloadFailure(error))")
                 }
             }
         } catch {
@@ -80,5 +80,19 @@ public class FolioleCompanionSyncPackTransferPlugin: CAPPlugin, CAPBridgedPlugin
             }
             result[entry.key] = header
         }
+    }
+
+    private func downloadFailure(_ error: Error) -> String {
+#if FOLIOLE_IOS_BRIDGE_ACCEPTANCE && targetEnvironment(simulator)
+        var descriptions: [String] = []
+        var current: NSError? = error as NSError
+        while let item = current {
+            descriptions.append("\(item.domain):\(item.code):\(item.localizedDescription)")
+            current = item.userInfo[NSUnderlyingErrorKey] as? NSError
+        }
+        return descriptions.joined(separator: " <- ")
+#else
+        return error.localizedDescription
+#endif
     }
 }
