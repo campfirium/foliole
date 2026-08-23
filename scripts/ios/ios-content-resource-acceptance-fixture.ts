@@ -123,7 +123,7 @@ function seedContentBlob(
 ) {
   driver.execute(
     `INSERT INTO content_blobs (hash, storage_key, kind, mime_type, compression, original_size_bytes,
-       stored_size_bytes, original_sha256, stored_sha256, availability, source_device_id, created_at)
+       stored_size_bytes, original_sha256, stored_sha256, availability, source_host_name, created_at)
      VALUES (?, ?, 'text_body', 'text/markdown', 'none', ?, ?, ?, ?, 'local', 'acceptance-desktop', ?)`,
     [hash, `content/${label}-${hash}`, bytes.length, bytes.length, hash, hash, CREATED_AT]
   );
@@ -153,7 +153,7 @@ function seedAttachment(
   );
   driver.execute(
     `INSERT INTO attachment_blobs (attachment_id, content_hash, storage_key, size_bytes, mime_type,
-       availability, source_device_id, created_at) VALUES (?, ?, ?, ?, ?, 'local', 'acceptance-desktop', ?)`,
+       availability, source_host_name, created_at) VALUES (?, ?, ?, ?, ?, 'local', 'acceptance-desktop', ?)`,
     [attachment.id, attachment.hash, `attachments/${attachment.id}`, attachment.bytes.length, attachment.mimeType, CREATED_AT]
   );
   seedState(driver, 'attachment', attachment.id, stateSeq);
@@ -164,7 +164,7 @@ function seedState(
 ) {
   driver.execute(
     `INSERT INTO sync_object_state (object_type, object_id, state_seq, content_hash,
-       last_modified_by_device_id, updated_at, sync_dirty) VALUES (?, ?, ?, ?, 'acceptance-desktop', ?, 1)`,
+       last_modified_by_host_name, updated_at, sync_dirty) VALUES (?, ?, ?, ?, 'acceptance-desktop', ?, 1)`,
     [objectType, objectId, stateSeq, `acceptance-${objectType}-${stateSeq}`, CREATED_AT]
   );
 }

@@ -31,7 +31,7 @@ export async function createIosStateWritebackAcceptanceFixture(args: {
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('node', 'ios-state-node', 1, 'ios-state-node-hash',
        'acceptance-desktop', '2026-07-21T00:00:00.000Z', 1)`
   );

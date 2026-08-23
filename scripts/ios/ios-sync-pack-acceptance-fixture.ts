@@ -144,7 +144,7 @@ async function buildCursorGapPack(
   );
   driver.execute(
     `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('node', 'ios-acceptance-gap-node', ?, 'ios-acceptance-gap-hash',
        ?, '2026-07-21T00:02:00.000Z', 1)`,
     [toStateSeq, DESKTOP_DEVICE_ID]

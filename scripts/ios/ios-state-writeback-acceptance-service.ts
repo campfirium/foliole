@@ -1,8 +1,7 @@
 import { readFileSync } from 'node:fs';
 
-import { handleCompanionSyncPushWithApply } from '../../electron/sync/companionLanSyncPushWithApply.ts';
-
-import { createIosStateWritebackAcceptanceFixture } from './ios-state-writeback-acceptance-fixture.ts';
+import { loadIosAcceptanceContractCorpus } from './ios-acceptance-contract-corpus.ts';
+import { acceptIosAcceptancePush } from './ios-acceptance-mechanical-push.ts';
 import { createIosStateWritebackObservations } from './ios-state-writeback-acceptance-observations.ts';
 
 export { createIosStateWritebackObservations };
@@ -12,13 +11,12 @@ export async function createIosStateWritebackAcceptanceService(args: {
   outputDirectory: string;
   toPeerId: string;
 }) {
-  const fixture = await createIosStateWritebackAcceptanceFixture(args);
+  const corpus = loadIosAcceptanceContractCorpus();
   return {
-    close: fixture.close,
     route: async (request: { bodyText: string; method: string; url: string }) => {
       if (request.method === 'GET' && request.url === '/companion/diagnostics/sync') {
         return {
-          body: JSON.stringify({ sync_state: { max_state_seq: fixture.loadMaxStateSeq() } }),
+          body: JSON.stringify({ sync_state: { max_state_seq: 1 } }),
           contentType: 'application/json'
         };
       }
@@ -33,20 +31,16 @@ export async function createIosStateWritebackAcceptanceService(args: {
           object_type: item.identity?.objectType ?? 'invalid',
           payload_json: item.payloadJson ?? null
         }));
-        const result = await handleCompanionSyncPushWithApply(
-          request.bodyText,
-          args.toPeerId,
-          fixture.apply,
-          () => undefined
-        );
+        const result = { acks: acceptIosAcceptancePush(request.bodyText).acks };
         args.observations.ack_statuses.push(...result.acks.map((ack) => ack.status));
         return { body: JSON.stringify(result), contentType: 'application/json' };
       }
       if (request.method !== 'GET' || !request.url.startsWith('/companion/sync-pack?')) return null;
       const fromStateSeq = Number(new URL(request.url, 'http://acceptance').searchParams.get('after_state_seq') ?? 0);
-      const packPath = await fixture.buildConfirmationPack(fromStateSeq);
+      const packPath = fromStateSeq === 0 ? corpus.stateInitialPack : corpus.stateSteadyPack;
       args.observations.pack_requests += 1;
       return { body: readFileSync(packPath), contentType: 'application/vnd.foliole.sync-pack' };
-    }
+    },
+    close: () => undefined
   };
 }

@@ -1,0 +1,63 @@
+// @vitest-environment node
+import { createHash } from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+
+import { describe, expect, it } from 'vitest';
+
+const ROOT = 'scripts/ios/fixtures/acceptance-contract-corpus';
+
+describe('iOS formal acceptance contract corpus', () => {
+  it('keeps every served byte version-controlled and hash-identified', () => {
+    const identity = JSON.parse(fs.readFileSync(path.join(ROOT, 'corpus.json'), 'utf8'));
+    expect(identity).toMatchObject({ peer_id: 'ios-acceptance-contract-peer', version: 1 });
+    expect(Object.keys(identity.files).sort()).toEqual([
+      'content-resource-read/content-resource.syncpack',
+      'state-writeback-runtime/confirmation-0.syncpack',
+      'state-writeback-runtime/confirmation-1.syncpack',
+      'sync-pack-runtime/corrupt-envelope.syncpack',
+      'sync-pack-runtime/cursor-gap.syncpack',
+      'sync-pack-runtime/illegal-dag.syncpack',
+      'sync-pack-runtime/legacy-format.syncpack',
+      'sync-pack-runtime/legal.syncpack',
+      'sync-pack-runtime/successor.syncpack',
+      'sync-pack-runtime/wrong-target.syncpack'
+    ]);
+    for (const [relativePath, expectedHash] of Object.entries(identity.files)) {
+      const bytes = fs.readFileSync(path.join(ROOT, relativePath));
+      expect(createHash('sha256').update(bytes).digest('hex')).toBe(expectedHash);
+    }
+  });
+
+  it('keeps formal scenario imports outside runtime database and desktop pack production', () => {
+    const files = reachableImports('scripts/ios/ios-pairing-acceptance-service.ts');
+    const source = files.map((file) => fs.readFileSync(file, 'utf8')).join('\n');
+    expect(files).not.toContain('scripts/ios/ios-database-upgrade-acceptance-fixture.ts');
+    expect(source).not.toMatch(/better-sqlite3|syncPackBuilderFromDriver|companionLanSyncPushWithApply/);
+    expect(source).not.toMatch(/ios-(?:sync-pack|state-writeback|content-resource)-acceptance-fixture/);
+  });
+});
+
+function reachableImports(entry) {
+  const pending = [entry];
+  const visited = new Set();
+  while (pending.length > 0) {
+    const file = pending.pop();
+    if (!file || visited.has(file)) continue;
+    visited.add(file);
+    const source = fs.readFileSync(file, 'utf8');
+    for (const match of source.matchAll(/(?:from\s+|import\s*\()['"](\.{1,2}\/[^'"]+)['"]/g)) {
+      const resolved = resolveImport(file, match[1]);
+      if (resolved) pending.push(resolved);
+    }
+  }
+  return [...visited].sort();
+}
+
+function resolveImport(fromFile, specifier) {
+  const candidate = path.normalize(path.join(path.dirname(fromFile), specifier));
+  for (const file of [candidate, candidate.replace(/\.js$/, '.ts')]) {
+    if (fs.existsSync(file) && fs.statSync(file).isFile()) return file;
+  }
+  return null;
+}

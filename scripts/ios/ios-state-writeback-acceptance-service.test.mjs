@@ -16,7 +16,7 @@ afterEach(async () => {
   if (tempRoot) await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-it('routes push and confirmation pack through one isolated desktop fixture', async () => {
+it('routes push acknowledgements and immutable confirmation corpus mechanically', async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-ios-state-service-'));
   const observations = createIosStateWritebackObservations();
   const service = await createIosStateWritebackAcceptanceService({

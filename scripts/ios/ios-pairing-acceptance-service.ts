@@ -13,8 +13,12 @@ import {
   evaluateSyncProtocolCompatibility
 } from '../../lib/platform/syncProtocolContract.ts';
 
-import type { IosContentResourceAcceptanceFixture } from './ios-content-resource-acceptance-fixture.ts';
 import {
+  IOS_ACCEPTANCE_CONTRACT_PEER_ID,
+  loadIosAcceptanceContractCorpus
+} from './ios-acceptance-contract-corpus.ts';
+import {
+  type IosContentResourceAcceptanceFixture,
   routeIosContentResourceRequest
 } from './ios-content-resource-acceptance-service.ts';
 import { createIosPairingAcceptanceObservations } from './ios-pairing-acceptance-observations.ts';
@@ -26,6 +30,9 @@ import {
 const artifactDir = process.argv[2];
 if (!artifactDir) throw new Error('Acceptance artifact directory is required.');
 const scenario = process.argv[3] ?? 'pairing-signed-transport';
+const corpusScenario = [
+  'content-resource-read', 'foreground-sync-lifecycle', 'state-writeback-runtime', 'sync-pack-runtime'
+].includes(scenario);
 mkdirSync(artifactDir, { recursive: true });
 
 const observations = createIosPairingAcceptanceObservations();
@@ -86,20 +93,14 @@ async function handlePairRequestCreate(request: IncomingMessage, response: Serve
     return;
   }
   requestId = randomUUID();
-  authorizationId = requestId;
+  authorizationId = corpusScenario ? IOS_ACCEPTANCE_CONTRACT_PEER_ID : requestId;
   if (scenario === 'sync-pack-runtime') {
     const { createIosSyncPackAcceptanceRoutes } = await import('./ios-sync-pack-acceptance-routes.ts');
     syncPackService = await createIosSyncPackAcceptanceRoutes({
-      observations: observations.sync_pack,
-      outputDirectory: path.join(artifactDir, 'sync-packs'),
-      toPeerId: authorizationId
+      observations: observations.sync_pack
     });
   } else if (scenario === 'content-resource-read') {
-    const { createIosContentResourceAcceptanceFixture } = await import('./ios-content-resource-acceptance-fixture.ts');
-    contentResourceFixture = await createIosContentResourceAcceptanceFixture({
-      outputDirectory: path.join(artifactDir, 'content-resources'),
-      toPeerId: authorizationId
-    });
+    contentResourceFixture = loadIosAcceptanceContractCorpus().contentResource;
   } else if (scenario === 'state-writeback-runtime' || scenario === 'foreground-sync-lifecycle') {
     pairingSyncScenarioService = await createIosPairingSyncScenarioService({
       artifactDir,

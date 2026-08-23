@@ -87,7 +87,7 @@ describe('iOS bridge acceptance host contract', () => {
     expect(auth).toContain("from './companionRequestSignature.js'");
   });
 
-  it('keeps acceptance sync-pack fixtures independent from the Electron app runtime', () => {
+  it('keeps deterministic corpus production independent from the Electron app runtime', () => {
     const builder = fs.readFileSync('electron/database/syncPackBuilderFromDriver.ts', 'utf8');
     const stateApply = fs.readFileSync('electron/database/companionSyncPushWithDbPort.ts', 'utf8');
     const stateObjectApply = fs.readFileSync('electron/database/companionSyncPushStateObjectWithDbPort.ts', 'utf8');
@@ -112,11 +112,24 @@ describe('iOS bridge acceptance host contract', () => {
     }
     expect(syncPushHandler).not.toContain('workspaceSyncAppliedEvents');
     expect(syncPushHandler).not.toContain("from 'electron'");
-    expect(fixtures[1]).toContain("from '../../electron/database/companionSyncPushWithDbPort.ts'");
     for (const fixture of fixtures) {
       expect(fixture).toContain("from '../../electron/database/syncPackBuilderFromDriver.ts'");
       expect(fixture).not.toContain("from '../../electron/database/syncPackBuilder.ts'");
     }
+  });
+
+  it('serves the fixed corpus without runtime database, pack builder, or desktop apply imports', () => {
+    const serviceFiles = [
+      'scripts/ios/ios-pairing-acceptance-service.ts',
+      'scripts/ios/ios-pairing-sync-scenario-service.ts',
+      'scripts/ios/ios-state-writeback-acceptance-service.ts',
+      'scripts/ios/ios-sync-pack-acceptance-routes.ts',
+      'scripts/ios/ios-content-resource-acceptance-service.ts',
+      'scripts/ios/ios-acceptance-contract-corpus.ts',
+      'scripts/ios/ios-acceptance-mechanical-push.ts'
+    ].map((file) => fs.readFileSync(file, 'utf8')).join('\n');
+    expect(serviceFiles).not.toMatch(/better-sqlite3|syncPackBuilderFromDriver|companionLanSyncPushWithApply/);
+    expect(serviceFiles).not.toMatch(/ios-(?:sync-pack|state-writeback|content-resource)-acceptance-fixture/);
   });
 
   it('uses the canonical Inbox identity for node-version roundtrip acceptance', () => {

@@ -1,56 +1,49 @@
 import { readFileSync } from 'node:fs';
 import type { ServerResponse } from 'node:http';
+import path from 'node:path';
 
-import { handleCompanionSyncPushWithApply } from '../../electron/sync/companionLanSyncPushWithApply.ts';
-
-import { createIosSyncPackAcceptanceFixture } from './ios-sync-pack-acceptance-fixture.ts';
+import { loadIosAcceptanceContractCorpus } from './ios-acceptance-contract-corpus.ts';
+import { acceptIosAcceptancePush } from './ios-acceptance-mechanical-push.ts';
 import { createIosSyncPackAcceptanceObservations } from './ios-sync-pack-acceptance-observations.ts';
 
 export async function createIosSyncPackAcceptanceRoutes(args: {
   observations: ReturnType<typeof createIosSyncPackAcceptanceObservations>;
-  outputDirectory: string;
-  toPeerId: string;
+  outputDirectory?: string;
+  toPeerId?: string;
 }) {
-  const fixture = await createIosSyncPackAcceptanceFixture(args);
+  const fixtureDirectory = loadIosAcceptanceContractCorpus().syncPackDirectory;
   const staticRoutes: Record<string, string> = {
-    '/acceptance/sync-pack/corrupt-envelope': fixture.corruptEnvelopePath,
-    '/acceptance/sync-pack/cursor-gap': fixture.cursorGapPath,
-    '/acceptance/sync-pack/illegal-dag': fixture.illegalDagPath,
-    '/acceptance/sync-pack/legacy-format': fixture.legacyFormatPath,
-    '/acceptance/sync-pack/legal': fixture.legalPath,
-    '/acceptance/sync-pack/wrong-target': fixture.wrongTargetPath
+    '/acceptance/sync-pack/corrupt-envelope': path.join(fixtureDirectory, 'corrupt-envelope.syncpack'),
+    '/acceptance/sync-pack/cursor-gap': path.join(fixtureDirectory, 'cursor-gap.syncpack'),
+    '/acceptance/sync-pack/illegal-dag': path.join(fixtureDirectory, 'illegal-dag.syncpack'),
+    '/acceptance/sync-pack/legacy-format': path.join(fixtureDirectory, 'legacy-format.syncpack'),
+    '/acceptance/sync-pack/legal': path.join(fixtureDirectory, 'legal.syncpack'),
+    '/acceptance/sync-pack/wrong-target': path.join(fixtureDirectory, 'wrong-target.syncpack')
   };
   let successorReady = false;
   const route = async (request: { bodyText: string; method: string; url: string }) => {
     if (request.method === 'POST' && request.url === '/companion/sync-push') {
       args.observations.push_requests += 1;
-      const result = await handleCompanionSyncPushWithApply(
-        request.bodyText,
-        args.toPeerId,
-        fixture.apply,
-        () => undefined
-      );
+      const { acks, items } = acceptIosAcceptancePush(request.bodyText);
+      const result = { acks };
       args.observations.ack_statuses.push(...result.acks.map((ack) => ack.status));
       args.observations.pushed_node_ids.push(...result.acks.map((ack) => ack.identity.objectId));
       args.observations.pushed_version_ids.push(...result.acks.flatMap((ack) => ack.version_id ? [ack.version_id] : []));
-      if (!successorReady) {
-        const prepared = await fixture.buildSuccessorPack(args.observations.pushed_node_ids);
-        args.observations.capture_node_id = prepared.captureNodeId;
-        args.observations.desktop = prepared.desktop;
-        successorReady = true;
-      }
+      args.observations.capture_node_id = items.find((item) => item.identity.objectId !== 'ios-acceptance-restore')
+        ?.identity.objectId ?? null;
+      successorReady = true;
       return { body: Buffer.from(JSON.stringify(result)), contentType: 'application/json' };
     }
     if (request.method !== 'GET') return null;
     const filePath = request.url === '/acceptance/sync-pack/successor' && successorReady
-      ? fixture.successorPath
+      ? path.join(fixtureDirectory, 'successor.syncpack')
       : staticRoutes[request.url];
     return filePath
       ? { body: readFileSync(filePath), contentType: 'application/vnd.foliole.sync-pack' }
       : null;
   };
   return {
-    close: fixture.close,
+    close: () => undefined,
     handle: async (request: { bodyText: string; method: string; url: string }, response: ServerResponse) => {
       const routed = await route(request);
       if (!routed) return false;

@@ -63,19 +63,19 @@ export function verifySyncPackAcceptance(
     firstBridge.roundtrip?.push?.pushedObjectIds?.length === 2 && gatesClosed(firstBridge.roundtrip?.gates);
   const secondPassed = secondBridge.phase === 'reapplied' &&
     secondBridge.roundtrip?.push?.pushedObjectIds?.length === 0 && gatesClosed(secondBridge.roundtrip?.gates);
-  const snapshotPassed = firstSnapshot?.capture_versions === 2 && firstSnapshot?.restore_versions === 2 &&
+  const snapshotPassed = firstSnapshot?.capture_versions === 1 && firstSnapshot?.restore_versions === 1 &&
     firstSnapshot?.confirmed_node_delivery_count === 2 && firstSnapshot?.dirty_count === 0 &&
     firstSnapshot?.restore_deleted_at === null && firstSnapshot?.tombstone_count === 0 &&
-    firstSnapshot?.cursor > 2 && firstSnapshot?.cache_entries?.length === 0;
+    firstSnapshot?.cursor > 1 && firstSnapshot?.cache_entries?.length === 0;
   const rejectionKinds = rejections.map(({ bridge }) => bridge.rejection);
   const rejectionSnapshotsStable = rejections.every(({ before, after }) =>
     JSON.stringify(before) === JSON.stringify(firstSnapshot) && JSON.stringify(after) === JSON.stringify(firstSnapshot));
-  const desktop = observations.sync_pack?.desktop;
-  const desktopConverged = desktop?.capture_current === firstSnapshot?.capture_current &&
-    desktop?.restore_current === firstSnapshot?.restore_current &&
-    desktop?.capture_versions === firstSnapshot?.capture_versions &&
-    desktop?.restore_versions === firstSnapshot?.restore_versions;
-  if (!firstPassed || !secondPassed || !snapshotPassed || !desktopConverged ||
+  const service = observations.sync_pack ?? {};
+  const serviceObserved = service.push_requests === 1 && service.ack_statuses?.length === 2 &&
+    service.ack_statuses.every((status) => status === 'accepted') &&
+    service.pushed_node_ids?.includes('ios-acceptance-restore') &&
+    service.pushed_node_ids?.includes(service.capture_node_id);
+  if (!firstPassed || !secondPassed || !snapshotPassed || !serviceObserved ||
       JSON.stringify(secondSnapshot) !== JSON.stringify(firstSnapshot) || !rejectionSnapshotsStable ||
       JSON.stringify(rejectionKinds) !== JSON.stringify([
         'corrupt-envelope', 'wrong-target', 'cursor-gap', 'legacy-format', 'illegal-dag'

@@ -87,6 +87,7 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'src/shared/platform/companionSyncPackNodes.test.ts',
   'src/shared/platform/companionSyncPackApply.test.ts',
   'scripts/ios/ios-contract-assets.test.mjs',
+  'scripts/ios/ios-acceptance-contract-corpus.test.mjs',
   'scripts/ios/ios-attachment-resource-host-contract.test.mjs',
   'scripts/ios/ios-app-identity-host-contract.test.mjs',
   'scripts/ios/ios-app-icon-host-contract.test.mjs',
@@ -111,6 +112,7 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
 ];
 
 export const IOS_RUNTIME_SQLITE_CONTRACT_TESTS = [
+  'scripts/ios/ios-acceptance-contract-corpus-product.test.mjs',
   'scripts/ios/ios-database-upgrade-acceptance-fixture.test.mjs',
   'scripts/ios/ios-content-resource-acceptance-fixture.test.mjs',
   'scripts/ios/ios-content-resource-acceptance-service.test.mjs',

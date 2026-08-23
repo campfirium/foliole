@@ -14,6 +14,7 @@ afterEach(async () => {
 
 function stateItem(objectType, objectId, payloadJson, contentHash) {
   return {
+    authorHostName: 'ios-device',
     base: { baseContentHash: null, kind: 'content_hash' },
     clientOpId: `${objectType}:${objectId}:1`,
     contentHash,
@@ -30,7 +31,7 @@ function stateItem(objectType, objectId, payloadJson, contentHash) {
 
 function acceptanceItems() {
   const reviewLog = {
-    device_id: 'ios-device',
+    host_name: 'ios-device',
     due_after: '2026-07-23T00:00:00.000Z', due_before: '2026-07-21T00:00:00.000Z',
     grade: 3, id: 'ios-review-log', node_id: 'ios-state-node', op_id: 'ios-review-op',
     reviewed_at: '2026-07-21T00:01:00.000Z', scheduler_version: 'ts-fsrs@4',
@@ -48,6 +49,7 @@ function acceptanceItems() {
       scheduled_days: 2, stability: 4.2, state: 2
     }, 'review-hash'),
     {
+      authorHostName: 'ios-device',
       base: { kind: 'op_id', opId: reviewLog.op_id },
       clientOpId: `review_log:${reviewLog.op_id}`,
       identity: { objectId: reviewLog.op_id, objectType: 'review_log', scope: 'workspace' },

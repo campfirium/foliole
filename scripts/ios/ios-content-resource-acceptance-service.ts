@@ -1,6 +1,12 @@
 import { readFileSync } from 'node:fs';
 
-import type { IosContentResourceAcceptanceFixture } from './ios-content-resource-acceptance-fixture.ts';
+export interface IosContentResourceAcceptanceFixture {
+  attachments: Record<'corrupt' | 'failed' | 'missing' | 'valid', ResourceEntry & { id: string }>;
+  contentBlobs: Record<'corrupt' | 'external' | 'missing' | 'topic', ResourceEntry>;
+  packPath: string;
+}
+
+interface ResourceEntry { bytes: Buffer; hash: string; mimeType: string }
 
 export interface IosContentResourceObservations {
   attachment_batch_requests: Record<string, number>;

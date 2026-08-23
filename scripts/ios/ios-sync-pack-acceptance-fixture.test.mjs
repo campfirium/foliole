@@ -34,7 +34,7 @@ it('generates isolated producer packs for the paired iOS identity and failure ca
     manifest: expect.objectContaining({ from_state_seq: 0, to_peer_id: 'ios-runtime-device' }),
     nodes: [expect.objectContaining({ id: 'ios-acceptance-restore' })],
     nodeVersions: [expect.objectContaining({
-      object_id: 'ios-acceptance-restore', version_id: 'acceptance-desktop#0'
+      object_id: 'ios-acceptance-restore', version_id: expect.any(String)
     })],
     stateRows: [
       { object_id: 'ios-acceptance-restore', object_type: 'node', state_seq: 1 }

@@ -1,5 +1,3 @@
-import path from 'node:path';
-
 import { createIosForegroundSyncLifecycleService } from './ios-foreground-sync-lifecycle-service.ts';
 import { createIosStateWritebackAcceptanceService } from './ios-state-writeback-acceptance-service.ts';
 
@@ -14,7 +12,7 @@ export async function createIosPairingSyncScenarioService(args: {
 }) {
   const service = await createIosStateWritebackAcceptanceService({
     observations: args.observations.state_writeback,
-    outputDirectory: path.join(args.artifactDir, 'state-writeback-desktop'),
+    outputDirectory: args.artifactDir,
     toPeerId: args.toPeerId
   });
   return {
