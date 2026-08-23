@@ -1,10 +1,10 @@
 /* global console */
 
-import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { writeCompanionContractAssets } from '../capacitor/write-companion-contract-assets.mjs';
+import { writeFileIfChanged } from '../lib/write-file-if-changed.mjs';
 import { ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS } from '../../lib/core/database/androidCompanionBridgeContractDefinitions.ts';
 import { ANDROID_COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionSchemaStatements.ts';
 import {
@@ -83,18 +83,15 @@ const resourceQueryStringJavaOutputPath = path.join(
   repoRoot,
   'android/app/src/main/java/com/foliole/android/FolioleCompanionResourceQueryStringKeys.java'
 );
-await fs.mkdir(path.dirname(outputPath), { recursive: true });
-await fs.writeFile(
+await writeFileIfChanged(
   outputPath,
-  `${JSON.stringify({ statements: ANDROID_COMPANION_SCHEMA_STATEMENTS }, null, 2)}\n`,
-  'utf8'
+  `${JSON.stringify({ statements: ANDROID_COMPANION_SCHEMA_STATEMENTS }, null, 2)}\n`
 );
-await fs.writeFile(
+await writeFileIfChanged(
   syncPackProviderOutputPath,
-  `${JSON.stringify(ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS, null, 2)}\n`,
-  'utf8'
+  `${JSON.stringify(ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS, null, 2)}\n`
 );
-await fs.writeFile(
+await writeFileIfChanged(
   migrationOutputPath,
   `${JSON.stringify(
     {
@@ -110,8 +107,7 @@ await fs.writeFile(
     },
     null,
     2
-  )}\n`,
-  'utf8'
+  )}\n`
 );
 const mutationDefinitions = `${JSON.stringify(
     {
@@ -127,7 +123,7 @@ const mutationDefinitions = `${JSON.stringify(
     null,
     2
   )}\n`;
-await Promise.all(mutationOutputPaths.map((filePath) => fs.writeFile(filePath, mutationDefinitions, 'utf8')));
+await Promise.all(mutationOutputPaths.map((filePath) => writeFileIfChanged(filePath, mutationDefinitions)));
 const buildQueryDefinitions = (platform) =>
   `${JSON.stringify(
     {
@@ -157,7 +153,7 @@ const buildQueryDefinitions = (platform) =>
   )}\n`;
 await Promise.all(
   Object.entries(queryOutputPaths).map(([platform, queryOutputPath]) =>
-    fs.writeFile(queryOutputPath, buildQueryDefinitions(platform), 'utf8')
+    writeFileIfChanged(queryOutputPath, buildQueryDefinitions(platform))
   )
 );
 await writeCompanionContractAssets({
@@ -165,23 +161,21 @@ await writeCompanionContractAssets({
   repoRoot,
   syncDefinitions: ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS
 });
-await fs.writeFile(
+await writeFileIfChanged(
   queryShapeJavaOutputPath,
   buildAndroidQueryShapeJava(
     ANDROID_COMPANION_QUERY_ASSET_KEYS,
     ANDROID_COMPANION_QUERY_SHAPE_KEYS
-  ),
-  'utf8'
+  )
 );
-await fs.writeFile(
+await writeFileIfChanged(
   resourceQueryStringJavaOutputPath,
   buildAndroidResourceQueryStringJava({
     contentRead: ANDROID_COMPANION_CONTENT_READ_RULES,
     missingResourceRead: ANDROID_COMPANION_MISSING_RESOURCE_READ_RULES,
     resourceRead: ANDROID_COMPANION_RESOURCE_READ_RULES,
     workspaceRead: ANDROID_COMPANION_WORKSPACE_READ_RULES
-  }),
-  'utf8'
+  })
 );
 console.info('[android-schema] wrote companion schema artifact', outputPath);
 console.info('[android-schema] wrote companion sync pack provider artifact', syncPackProviderOutputPath);

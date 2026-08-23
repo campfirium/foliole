@@ -15,7 +15,7 @@ function fixture() {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-android-host-'));
   roots.push(repoRoot);
   return {
-    repoRoot, systemNode: path.join(repoRoot, 'node.exe'),
+    gitPath: path.join(repoRoot, 'git.exe'), repoRoot, systemNode: path.join(repoRoot, 'node.exe'),
     systemNpmCli: path.join(repoRoot, 'npm-cli.js')
   };
 }
@@ -33,13 +33,18 @@ it('builds companion Web, syncs Capacitor with DEV config, and verifies generate
         server: { cleartext: true, url: WINDOWS_A5_LIVE_RELOAD_URL }
       }));
     }
-    return { code: 0, lines: [], output: 'ok\n', stderr: '', stdout: 'ok\n' };
+    const output = command === paths.gitPath ? '' : 'ok\n';
+    return { code: 0, lines: [], output, stderr: '', stdout: output };
   });
   await expect(prepareWindowsAndroidDebugHost({ execute, paths })).resolves.toBe('ok\nok\n');
   expect(calls[0]).toMatchObject({
     args: [paths.systemNpmCli, 'run', 'android:web:build'], command: paths.systemNode
   });
   expect(calls[1].args.slice(-2)).toEqual(['sync', 'android']);
+  expect(calls[2]).toMatchObject({
+    args: ['-C', paths.repoRoot, 'status', '--porcelain', '--untracked-files=all'],
+    command: paths.gitPath
+  });
   expect(calls[1].options.env.FOLIOLE_ANDROID_DEV_LIVE_RELOAD).toBe('1');
   expect(calls.map(({ args }) => args.join(' ')).join('\n')).not.toMatch(/gradle|install/iu);
 });
@@ -57,7 +62,8 @@ it('prepares bundled capture assets without a DEV server contract', async () => 
         appId: 'com.foliole.android', webDir: 'dist/companion'
       }));
     }
-    return { code: 0, lines: [], output: 'ok\n', stderr: '', stdout: 'ok\n' };
+    const output = command === paths.gitPath ? '' : 'ok\n';
+    return { code: 0, lines: [], output, stderr: '', stdout: output };
   });
   await expect(prepareWindowsAndroidDebugHost({ execute, liveReload: false, paths }))
     .resolves.toBe('ok\nok\n');
@@ -86,4 +92,28 @@ it('fails closed when sync leaves stale Android assets', async () => {
   const execute = vi.fn(async () => ({ code: 0, lines: [], output: '', stderr: '', stdout: '' }));
   await expect(prepareWindowsAndroidDebugHost({ execute, paths }))
     .rejects.toMatchObject({ stage: 'android-cap-sync' });
+});
+
+it('reports every generated source path and fails after sync when the repository is dirty', async () => {
+  const paths = fixture();
+  const execute = vi.fn(async (command, args) => {
+    if (args.includes('sync')) {
+      const assets = path.join(paths.repoRoot, 'android', 'app', 'src', 'main', 'assets');
+      fs.mkdirSync(path.join(assets, 'public'), { recursive: true });
+      fs.writeFileSync(path.join(assets, 'public', 'index.html'), '<main>ready</main>');
+      fs.writeFileSync(path.join(assets, 'capacitor.config.json'), JSON.stringify({
+        server: { cleartext: true, url: WINDOWS_A5_LIVE_RELOAD_URL }
+      }));
+    }
+    const stdout = command === paths.gitPath
+      ? ' M android/app/capacitor.build.gradle\n?? android/generated.tmp\n' : '';
+    return { code: 0, lines: [], output: stdout, stderr: '', stdout };
+  });
+  const preparation = prepareWindowsAndroidDebugHost({ execute, paths });
+  await expect(preparation).rejects.toMatchObject({
+    stage: 'android-source-cleanliness'
+  });
+  await expect(preparation).rejects.toThrow(
+    'android/app/capacitor.build.gradle\n?? android/generated.tmp'
+  );
 });

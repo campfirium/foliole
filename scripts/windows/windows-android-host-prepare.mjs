@@ -54,5 +54,12 @@ export async function prepareWindowsAndroidDebugHost({
   }
   const config = JSON.parse(fsApi.readFileSync(configPath, 'utf8').replace(/^\uFEFF/u, ''));
   verifyGeneratedConfig(config, liveReload);
+  const sourceStatus = await checked(execute, paths.gitPath, [
+    '-C', paths.repoRoot, 'status', '--porcelain', '--untracked-files=all'
+  ], { ...options, timeoutCode: 'android_source_status_timeout' }, 'android-source-cleanliness');
+  const changedPaths = sourceStatus.stdout.trim();
+  if (changedPaths) {
+    throw failure(`Android host preparation changed source:\n${changedPaths}`, 'android-source-cleanliness');
+  }
   return `${web.output}${sync.output}`;
 }

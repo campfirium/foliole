@@ -1,5 +1,6 @@
-import fs from 'node:fs/promises';
 import path from 'node:path';
+
+import { writeFileIfChanged } from '../lib/write-file-if-changed.mjs';
 
 const CONTRACT_OUTPUTS = {
   bridge: [
@@ -23,7 +24,6 @@ async function writeOutputs(repoRoot, outputs, definitions) {
   const content = `${JSON.stringify(definitions, null, 2)}\n`;
   await Promise.all(outputs.map(async (relativePath) => {
     const outputPath = path.join(repoRoot, relativePath);
-    await fs.mkdir(path.dirname(outputPath), { recursive: true });
-    await fs.writeFile(outputPath, content, 'utf8');
+    await writeFileIfChanged(outputPath, content);
   }));
 }
