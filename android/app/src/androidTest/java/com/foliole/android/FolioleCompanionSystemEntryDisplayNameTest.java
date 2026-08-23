@@ -36,8 +36,9 @@ public class FolioleCompanionSystemEntryDisplayNameTest {
             WebView webView = activity.findViewById(R.id.webview);
             assertNotNull(webView);
             JSONObject sync = requestProductSync(instrumentation, webView);
-            FolioleCompanionCaptureNavigation.openDirectorySurface(
-                instrumentation, webView, 30_000
+            FolioleCompanionSemanticActions.clickVisible(
+                instrumentation, webView, "companion-tab-shortcut",
+                System.nanoTime() + TimeUnit.SECONDS.toNanos(30)
             );
             JSONObject displayed = awaitDisplayedInbox(
                 instrumentation, webView, expected, forbidden, 120_000

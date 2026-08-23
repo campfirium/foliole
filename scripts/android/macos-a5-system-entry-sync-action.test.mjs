@@ -47,6 +47,8 @@ it('renames, restores, and reopens the desktop product session in one bounded jo
   expect(instrumentation).toContain('requestProductSync(instrumentation, webView)');
   expect(instrumentation).toContain('FolioleCompanionSemanticActions.clickVisible(');
   expect(instrumentation).toContain('"companion-sync-now", deadline');
+  expect(instrumentation).toContain('"companion-tab-shortcut"');
+  expect(instrumentation).not.toContain('FolioleCompanionCaptureNavigation');
   expect(instrumentation).not.toContain('FolioleCompanionPairSyncRecoveryScenario');
   expect(instrumentation).toContain('awaitDisplayedInbox(');
   expect(instrumentation).toContain('arguments.getString("expectedTextBase64", "")');
@@ -56,7 +58,7 @@ it('renames, restores, and reopens the desktop product session in one bounded jo
   expect(inspection).toContain('if (forbiddenText) textExtras.push(');
   expect(inspection).toContain('INSTRUMENTATION_(?:RESULT: shortMsg|STATUS: stack|STATUS_CODE: -2)');
   expect(instrumentation.indexOf('requestProductSync(instrumentation, webView)'))
-    .toBeLessThan(instrumentation.indexOf('openDirectorySurface('));
+    .toBeLessThan(instrumentation.indexOf('"companion-tab-shortcut"'));
 });
 
 it('keeps the formal entry on the isolated controller library and protected backup path', async () => {
