@@ -156,7 +156,8 @@ async function verify(execute, paths, env) {
 }
 
 export async function runWindowsDevDeviceAction({
-  action, buildIdentity, evidenceRoot, execute, pairSyncRecoveryReadiness, paths, phase = 'execute',
+  action, buildIdentity, candidate, evidenceRoot, execute, pairSyncRecoveryReadiness, paths,
+  phase = 'execute',
   inspectPairSyncDesktop = inspectDefaultPairSyncDesktop,
   runCaptureAnnotation = runDefaultCaptureAnnotation, runLiveReload = runWindowsA5LiveReload,
   runPairSyncRecovery = runDefaultPairSyncRecovery,
@@ -167,7 +168,7 @@ export async function runWindowsDevDeviceAction({
   });
   if (interactiveSyncGroup) return interactiveSyncGroup;
   const syncGroupAction = await runWindowsSyncGroupDeviceAction({
-    action, buildIdentity, evidenceRoot, execute, paths
+    action, buildIdentity, candidate, evidenceRoot, execute, paths
   });
   if (syncGroupAction) return syncGroupAction;
   const env = actionEnv(paths);
