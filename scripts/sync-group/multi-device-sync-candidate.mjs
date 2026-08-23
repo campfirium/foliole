@@ -1,89 +1,10 @@
-import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import fs from 'node:fs';
-import path from 'node:path';
-
-import { digest } from './multi-device-sync-contract.mjs';
-import { scenarioCatalog, scenarioCatalogDigest } from './multi-device-sync-scenario-catalog.mjs';
-import { stageCatalog, stageCatalogDigest } from './multi-device-sync-stage-catalog.mjs';
 import {
   branchForCandidateSourceRef, DEFAULT_CANDIDATE_SOURCE_REF, normalizeCandidateSourceRef
 } from './multi-device-sync-source-ref.mjs';
 
-const CONTROLLER_FILES = [
-  'electron/sync/desktopSyncGroupCursorCommit.ts',
-  'electron/sync/desktopSyncGroupJoin.ts',
-  'scripts/android/android-device-snapshot.mjs',
-  'scripts/android/macos-a5-pair-sync-action.mjs',
-  'scripts/android/macos-a5-sync-group-maintenance-action.mjs',
-  'scripts/android/macos-pair-sync-desktop-session.mjs',
-  'scripts/desktop/sync-group-journey-fact-action.mjs',
-  'scripts/sync-group/multi-device-sync-action-executor.mjs',
-  'scripts/sync-group/multi-device-sync-ab-convergence.mjs',
-  'scripts/sync-group/multi-device-sync-a-leave.mjs',
-  'scripts/sync-group/multi-device-sync-a-leave-proof.mjs',
-  'scripts/sync-group/multi-device-sync-a-rejoin.mjs',
-  'scripts/sync-group/multi-device-sync-a-rejoin-provider.mjs',
-  'scripts/sync-group/multi-device-sync-candidate-preparation.mjs',
-  'scripts/sync-group/multi-device-sync-candidate.mjs',
-  'scripts/sync-group/multi-device-sync-cli.mjs',
-  'scripts/sync-group/multi-device-sync-contract.mjs',
-  'scripts/sync-group/multi-device-sync-diagnostic.mjs',
-  'scripts/sync-group/multi-device-sync-formal.mjs',
-  'scripts/sync-group/multi-device-sync-fact-preparation.mjs',
-  'scripts/sync-group/multi-device-sync-from-zero-evidence.mjs',
-  'scripts/sync-group/multi-device-sync-from-zero.mjs',
-  'scripts/sync-group/multi-device-sync-host-readiness.mjs',
-  'scripts/sync-group/multi-device-sync-macos-channel.mjs',
-  'scripts/sync-group/multi-device-sync-nonempty-admission-proof.mjs',
-  'scripts/sync-group/multi-device-sync-participation-evidence.mjs',
-  'scripts/sync-group/multi-device-sync-participation.mjs',
-  'scripts/sync-group/multi-device-sync-stage-actions.mjs',
-  'scripts/sync-group/multi-device-sync-stage-runtime.mjs',
-  'scripts/sync-group/multi-device-sync-source-ref.mjs',
-  'scripts/sync-group/multi-device-sync-scenario-catalog.mjs',
-  'scripts/sync-group/multi-device-sync-stage-catalog.mjs',
-  'scripts/sync-group/multi-device-sync-three-device-proof.mjs',
-  'scripts/sync-group/multi-device-sync-windows-provider.mjs',
-  'scripts/sync-group/multi-device-sync-workspace.mjs',
-  'scripts/sync-group/sync-progress-watchdog.mjs',
-  'scripts/sync-group/sync-from-zero-contract.mjs',
-  'scripts/sync-group/sync-from-zero-dataset-inspect.mjs',
-  'scripts/desktop/sync-from-zero-dataset-action.mjs',
-  'scripts/sync-group/pair-sync-feature-journey.mjs',
-  'scripts/sync-group/pair-sync-transport.mjs',
-  'scripts/windows/windows-multi-device-sync-a-rejoin-action.mjs',
-  'scripts/windows/windows-multi-device-sync-c-action.mjs',
-  'scripts/windows/windows-multi-device-sync-from-zero-action.mjs',
-  'scripts/windows/windows-multi-device-sync-participation-action.mjs',
-  'scripts/windows/windows-pair-sync-desktop-readiness.mjs',
-  'scripts/windows/windows-dev-candidate-control.mjs',
-  'scripts/windows/windows-dev-action.ps1',
-  'scripts/windows/windows-dev-candidate-runtime-control.mjs',
-  'scripts/windows/windows-dev-control.mjs',
-  'scripts/windows/windows-dev-remote-spec.mjs',
-  'scripts/windows/windows-sync-group-device-actions.mjs',
-  'scripts/windows/windows-sync-group-owned-client-seed.mjs',
-  'scripts/windows/windows-sync-group-participation-control.mjs',
-  'scripts/windows/windows-sync-group-recovery-action.mjs',
-  'scripts/windows/windows-sync-group-recovery-inspect.mjs',
-  'scripts/windows/windows-sync-group-runtime-progress.mjs',
-  'scripts/windows/windows-sync-group-interactive-action.mjs',
-  'scripts/windows/windows-sync-group-interactive-state.mjs',
-  'scripts/windows/windows-client-native-interactive-state.mjs',
-  'scripts/windows/windows-sync-group-interactive-worker.mjs',
-  'scripts/windows/windows-process-alive.mjs',
-  'scripts/windows/windows-sync-group-session-close.mjs'
-];
-
 function git(repoRoot, args) {
   return execFileSync('git', args, { cwd: repoRoot, encoding: 'utf8' }).trim();
-}
-
-function controllerDigest(repoRoot) {
-  const hash = createHash('sha256');
-  for (const name of CONTROLLER_FILES) hash.update(name).update(fs.readFileSync(path.join(repoRoot, name)));
-  return hash.digest('hex');
 }
 
 export function currentAcceptanceCandidate(repoRoot, mode = 'diagnostic',
@@ -96,19 +17,9 @@ export function currentAcceptanceCandidate(repoRoot, mode = 'diagnostic',
   }
   return {
     branch, clean: status === '',
-    committed: true, controllerDigest: controllerDigest(repoRoot),
-    criteriaDigest: digest({ deadlineMs: 45_000, hosts: ['macos-a', 'android-b', 'windows-c'],
-      progressStallMs: 60_000, statuses: ['passed', 'blocked', 'failed', 'stalled', 'invalidated'] }),
+    committed: true,
     mode, revision: git(repoRoot, ['rev-parse', 'HEAD']),
-    scenarioDigest: digest({ scenarios: scenarioCatalogDigest(), stages: stageCatalogDigest() }), sourceRef: normalizedSourceRef,
+    sourceRef: normalizedSourceRef,
     treeDigest: git(repoRoot, ['rev-parse', 'HEAD^{tree}'])
   };
-}
-
-export function acceptanceControllerFiles() {
-  return [...CONTROLLER_FILES];
-}
-
-export function acceptanceScenarioDefinition() {
-  return { scenarios: scenarioCatalog(), stages: stageCatalog() };
 }

@@ -19,9 +19,9 @@ export function digest(value) {
 
 export function assertCandidate(candidate, mode = 'diagnostic') {
   if (!RUN_MODES.includes(mode)) fail('mode is invalid');
-  if (!/^[0-9a-f]{40}$/u.test(candidate?.revision ?? '') || !candidate.treeDigest
-      || !candidate.controllerDigest || !candidate.scenarioDigest || !candidate.criteriaDigest) {
-    fail('candidate digests are incomplete');
+  if (!/^[0-9a-f]{40}$/u.test(candidate?.revision ?? '')
+      || !/^[0-9a-f]{40}$/u.test(candidate?.treeDigest ?? '')) {
+    fail('candidate source identity is incomplete');
   }
   let sourceBranch;
   try { sourceBranch = branchForCandidateSourceRef(candidate.sourceRef); }
@@ -72,7 +72,7 @@ export function recordReceipt(run, receipt) {
 
 export function finalizeRun(run, currentCandidate) {
   assertCandidate(currentCandidate, run.mode);
-  const boundary = ['revision', 'treeDigest', 'controllerDigest', 'scenarioDigest', 'criteriaDigest'];
+  const boundary = ['revision', 'treeDigest', 'sourceRef'];
   const changed = boundary.find((key) => run.candidate[key] !== currentCandidate[key]);
   if (changed) {
     run.status = 'invalidated';

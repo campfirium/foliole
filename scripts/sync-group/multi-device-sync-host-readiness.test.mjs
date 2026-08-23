@@ -33,6 +33,10 @@ it('uses explicit A5 serial and a registered Windows action', async () => {
   expect(calls.some(([, args]) => args.includes('wait-for-device'))).toBe(true);
   expect(calls.find(([command]) => command === 'ssh')[1].join(' '))
     .toContain('windows-multi-device-sync-readiness.mjs');
+  expect(calls.find(([command]) => command === 'ssh')[1].join(' '))
+    .toContain('D:/C/foliole/scripts/windows/windows-multi-device-sync-readiness.mjs');
+  expect(calls.find(([command]) => command === 'ssh')[1].join(' '))
+    .not.toContain('foliole-android-lab-preview');
   expect(calls.find(([command]) => command === 'ssh')[1]).toContain('C:/Progra~1/nodejs/node.exe');
   expect(launchCalls).toEqual([expect.objectContaining({ appId: 'com.foliole.android',
     serial: '87a33a4b', stabilitySeconds: 2, timeoutSeconds: 10 })]);
@@ -89,15 +93,15 @@ it('does not require a Windows candidate receipt for an A/B-only target', async 
   const receiptRoot = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId);
   fs.mkdirSync(receiptRoot, { recursive: true });
   fs.writeFileSync(path.join(receiptRoot, 'candidate-preparation.json'), JSON.stringify({
-    candidateBoundary: { branch: 'dev', controllerDigest: 'controller',
-      sourceRef: 'refs/heads/dev', treeDigest: 'tree' },
+    candidateBoundary: { branch: 'dev', revision: 'a'.repeat(40),
+      sourceRef: 'refs/heads/dev', treeDigest: 'b'.repeat(40) },
     preparedHosts: ['macos-a', 'android-b'], resultStatus: 'success', runId
   }));
   const execute = async (command) => command === 'ssh'
     ? '[multi-device-sync-readiness] status=ready\n' : '';
   const adapters = createMutationReadinessAdapters({ execute, repoRoot,
-    candidateProvider: async () => ({ branch: 'dev', controllerDigest: 'controller',
-      sourceRef: 'refs/heads/dev', treeDigest: 'tree' }),
+    candidateProvider: async () => ({ branch: 'dev', revision: 'a'.repeat(40),
+      sourceRef: 'refs/heads/dev', treeDigest: 'b'.repeat(40) }),
     requiredHosts: ['macos-a', 'android-b'], runId });
   await expect(adapters['windows-c']()).resolves.toMatchObject({
     facts: expect.arrayContaining(['windows-c_candidate_not_required'])
@@ -110,16 +114,17 @@ it('rejects a mismatched Windows candidate receipt before product mutation', asy
   const receiptRoot = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId);
   fs.mkdirSync(receiptRoot, { recursive: true });
   fs.writeFileSync(path.join(receiptRoot, 'candidate-preparation.json'), JSON.stringify({
-    candidateBoundary: { branch: 'dev', controllerDigest: 'controller',
-      sourceRef: 'refs/heads/dev', treeDigest: 'tree' }, preparedHosts: ['windows-c'],
-    resultStatus: 'success', runId, windowsReceipt: { controllerDigest: 'stale',
-      sourceRef: 'refs/heads/dev', treeDigest: 'tree' }
+    candidateBoundary: { branch: 'dev', revision: 'a'.repeat(40),
+      sourceRef: 'refs/heads/dev', treeDigest: 'b'.repeat(40) }, preparedHosts: ['windows-c'],
+    resultStatus: 'success', runId, windowsReceipt: { revision: 'c'.repeat(40),
+      sourceRef: 'refs/heads/dev', targetRef: 'refs/heads/dev', treeDigest: 'b'.repeat(40) }
   }));
   const execute = async (command) => command === 'ssh'
     ? '[multi-device-sync-readiness] status=ready\n' : '';
   const adapters = createMutationReadinessAdapters({ execute, repoRoot,
-    candidateProvider: async () => ({ branch: 'dev', controllerDigest: 'controller',
-      sourceRef: 'refs/heads/dev', treeDigest: 'tree' }), requiredHosts: ['windows-c'], runId });
+    candidateProvider: async () => ({ branch: 'dev', revision: 'a'.repeat(40),
+      sourceRef: 'refs/heads/dev', treeDigest: 'b'.repeat(40) }),
+    requiredHosts: ['windows-c'], runId });
   await expect(adapters['windows-c']()).rejects.toMatchObject({
     lastSuccessfulAction: 'windows-c_environment_ready',
     missingFact: 'windows-c_candidate_mismatch'

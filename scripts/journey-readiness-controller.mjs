@@ -45,8 +45,8 @@ async function runProvider(owner, provider, options) {
 }
 
 function replaceEvidenceFailure(receipt, reason, completedAt) {
-  const facts = receipt.facts.map((fact) => fact.owner === 'evidence'
-    ? blockedFact('evidence', reason)
+  const facts = receipt.facts.map((fact) => fact.owner === 'locator'
+    ? blockedFact('locator', reason)
     : fact);
   return createReadinessReceipt({
     completedAt,

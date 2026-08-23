@@ -38,12 +38,12 @@ function createRunner(repoRoot, commandLog) {
   };
 }
 
-export function createSimulatorProviders({ artifactDir, repoRoot }) {
+export function createSimulatorProviders({ artifactDir, cleanupSource = () => {}, repoRoot }) {
   const commandLog = [];
   const runner = createRunner(repoRoot, commandLog);
   let owned = null;
   return {
-    adapter: async () => {
+    target: async () => {
       if (!(process.env.FOLIOLE_RESOURCE_GATE_HELD ?? '').split(',').includes('exclusive')) {
         throw new Error('exclusive resource gate is not held');
       }
@@ -55,6 +55,10 @@ export function createSimulatorProviders({ artifactDir, repoRoot }) {
       });
       runner.run('xcrun', ['simctl', 'boot', owned.udid]);
       runner.run('xcrun', ['simctl', 'bootstatus', owned.udid, '-b']);
+      return { action: `owned Simulator ${owned.udid} booted`, status: 'passed' };
+    },
+    integrity: async () => {
+      if (!owned) throw new Error('owned Simulator identity was not established');
       runner.run('xcodebuild', createSignedSimulatorBuildArgs(repoRoot, artifactDir, owned.udid));
       const app = path.join(artifactDir, 'DerivedData/Build/Products/Debug-iphonesimulator/App.app');
       runner.run('codesign', ['--verify', '--deep', '--strict', app]);
@@ -64,20 +68,23 @@ export function createSimulatorProviders({ artifactDir, repoRoot }) {
       runner.run('xcrun', ['simctl', 'install', owned.udid, app]);
       const container = runner.capture('xcrun', ['simctl', 'get_app_container', owned.udid, BUNDLE_ID, 'app']).trim();
       writeFileSync(path.join(artifactDir, 'simulator-installed.json'), `${JSON.stringify({ container, identifier, udid: owned.udid }, null, 2)}\n`);
-      return { action: `signed app installed on owned Simulator ${owned.udid}`, status: 'passed' };
+      return { action: `signed app identity verified on owned Simulator ${owned.udid}`,
+        status: 'passed' };
     },
     cleanup: async () => {
-      if (!owned) throw new Error('owned Simulator identity was not established');
-      cleanupOwnedIosSimulator({
-        artifactDir, bundleId: BUNDLE_ID,
-        captureLog: (args) => runner.captureAllowFailure('xcrun', args),
-        runAllowFailure: (args) => runner.runAllowFailure('xcrun', args), udid: owned.udid
-      });
-      const after = JSON.parse(runner.capture('xcrun', ['simctl', 'list', 'devices', '--json']));
-      assertOwnedSimulatorRemoved(after, owned.udid);
-      writeFileSync(path.join(artifactDir, 'command-journal.json'), `${JSON.stringify(commandLog, null, 2)}\n`);
-      const recorded = JSON.parse(readFileSync(path.join(artifactDir, 'simulator-owned.json'), 'utf8'));
-      return { action: `owned Simulator ${recorded.udid} deleted exactly`, status: 'passed' };
+      try {
+        if (!owned) throw new Error('owned Simulator identity was not established');
+        cleanupOwnedIosSimulator({
+          artifactDir, bundleId: BUNDLE_ID,
+          captureLog: (args) => runner.captureAllowFailure('xcrun', args),
+          runAllowFailure: (args) => runner.runAllowFailure('xcrun', args), udid: owned.udid
+        });
+        const after = JSON.parse(runner.capture('xcrun', ['simctl', 'list', 'devices', '--json']));
+        assertOwnedSimulatorRemoved(after, owned.udid);
+        writeFileSync(path.join(artifactDir, 'command-journal.json'), `${JSON.stringify(commandLog, null, 2)}\n`);
+        const recorded = JSON.parse(readFileSync(path.join(artifactDir, 'simulator-owned.json'), 'utf8'));
+        return { action: `owned Simulator ${recorded.udid} deleted exactly`, status: 'passed' };
+      } finally { cleanupSource(); }
     }
   };
 }

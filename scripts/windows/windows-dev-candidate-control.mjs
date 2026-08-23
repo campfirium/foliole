@@ -46,7 +46,7 @@ function remoteCandidateEvidence(output) {
 
 function matchingBoundary(local, remote) {
   return remote?.branch === 'dev' && remote.clean === true && remote.committed === true
-    && remote.treeDigest === local.treeDigest && remote.controllerDigest === local.controllerDigest;
+    && remote.revision === local.revision && remote.treeDigest === local.treeDigest;
 }
 
 export async function copyWindowsCandidateReceipt({ copyFile, fsApi = fs, localCandidate,
@@ -60,8 +60,8 @@ export async function copyWindowsCandidateReceipt({ copyFile, fsApi = fs, localC
   if (remote.resultStatus !== 'success' || !matchingBoundary(localCandidate, remote.candidate)) {
     throw new Error('Windows candidate boundary does not match the local frozen candidate');
   }
-  const receipt = { controllerDigest: localCandidate.controllerDigest,
-    remoteBranch: remote.candidate.branch, resultStatus: 'success', schemaVersion: 1,
+  const receipt = { remoteBranch: remote.candidate.branch,
+    resultStatus: 'success', revision: localCandidate.revision, schemaVersion: 1,
     sourceRef: normalizeCandidateSourceRef(sourceRef), targetRef: WINDOWS_DEV_TARGET_REF,
     treeDigest: localCandidate.treeDigest };
   const receiptPath = path.join(root, 'candidate-controller-receipt.json');

@@ -136,6 +136,7 @@ it('archives the frozen SHA and restores dependencies only inside the capsule', 
   expect(events.map(({ command }) => command)).toEqual(['git', 'tar', 'npm']);
   expect(stages).toEqual(['archive', 'extract', 'dependencies']);
   expect(events.at(-1).cwd).toBe(capsule.buildRoot);
+  expect(capsule.sourceArchiveDigest).toMatch(/^[0-9a-f]{64}$/u);
   closeMacosA5BuildCapsule(capsule);
   expect(fs.existsSync(capsule.capsuleRoot)).toBe(false);
 });

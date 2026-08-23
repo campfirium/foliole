@@ -9,12 +9,10 @@ import { writeReceiptAtomically } from '../journey-readiness-cli.mjs';
 import { runJourneyQualification } from '../journey-readiness-controller.mjs';
 import { withArtifactBatch } from '../diagnostics/local-artifact-cache-production.mjs';
 import {
-  assertConfinedEvidencePath,
-  assertReadinessControllerStable,
-  collectLocalCandidate,
+  assertConfinedEvidencePath, assertLocalCandidateStillFrozen, cleanupLocalSourceCapsule,
   createLocalDefinition,
   createMacProviders,
-  prepareLocalCandidate
+  materializeLocalSourceCapsule, prepareLocalCandidate
 } from './journey-readiness-mac-adapter.mjs';
 import { createSimulatorProviders } from './journey-readiness-simulator-adapter.mjs';
 
@@ -29,25 +27,22 @@ async function qualify() {
     const artifactDir = path.join(REPO_ROOT, '.tmp/artifacts/journey-readiness', runId());
     mkdirSync(artifactDir, { recursive: true });
     assertConfinedEvidencePath(REPO_ROOT, artifactDir);
-    const candidate = prepareLocalCandidate(REPO_ROOT);
-    const definition = createLocalDefinition({ candidate, repoRoot: REPO_ROOT });
+    const frozen = prepareLocalCandidate(REPO_ROOT);
+    const capsule = materializeLocalSourceCapsule(REPO_ROOT, artifactDir, frozen);
+    const candidate = capsule.candidate;
+    const definition = createLocalDefinition({ candidate });
     const providers = {
-      ...createMacProviders({ artifactDir, candidate,
-        controllerDigest: definition.checks.controllerDigest, repoRoot: REPO_ROOT }),
-      ...createSimulatorProviders({ artifactDir, repoRoot: REPO_ROOT })
+      ...createMacProviders({ artifactDir, candidate, repoRoot: REPO_ROOT }),
+      ...createSimulatorProviders({ artifactDir, repoRoot: capsule.buildRoot,
+        cleanupSource: () => cleanupLocalSourceCapsule(capsule) })
     };
     const receiptPath = path.join(artifactDir, 'receipt.json');
     const receipt = await runJourneyQualification({
       definition, locator: receiptPath, providers, timeoutMs: 600_000,
       writeReceipt: (value) => writeReceiptAtomically(receiptPath, value)
     });
-    const currentDefinition = createLocalDefinition({
-      candidate: collectLocalCandidate(REPO_ROOT), repoRoot: REPO_ROOT
-    });
-    assertReadinessControllerStable(
-      definition.checks.controllerDigest, currentDefinition.checks.controllerDigest
-    );
-    enforceJourneyReadiness(JSON.parse(readFileSync(receiptPath, 'utf8')), currentDefinition);
+    assertLocalCandidateStillFrozen(candidate, REPO_ROOT);
+    enforceJourneyReadiness(JSON.parse(readFileSync(receiptPath, 'utf8')), definition);
     console.log(JSON.stringify({ fingerprint: receipt.fingerprint, locator: receiptPath, status: receipt.status }));
     return receipt;
   });

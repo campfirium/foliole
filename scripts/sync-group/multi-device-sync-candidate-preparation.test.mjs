@@ -9,8 +9,8 @@ import {
   assertCandidateStillFrozen, prepareCandidate, prepareCandidateStage
 } from './multi-device-sync-candidate-preparation.mjs';
 
-const candidate = { branch: 'codex/t121-8', controllerDigest: 'controller',
-  sourceRef: 'refs/heads/codex/t121-8', treeDigest: 'tree' };
+const candidate = { branch: 'codex/t121-8', revision: 'a'.repeat(40),
+  sourceRef: 'refs/heads/codex/t121-8', treeDigest: 'b'.repeat(40) };
 
 function fixture(runId) {
   const repoRoot = path.join(process.cwd(), '.tmp', 'artifacts', 'candidate-preparation-test');
@@ -66,7 +66,8 @@ it('prepares Windows only when the selected stage closure contains C', async () 
     calls.push([command, args]);
     return { stdout: args.includes('multi-device-sync-candidate')
       ? `[windows-dev-control] candidate-receipt=${JSON.stringify({
-        controllerDigest: 'controller', sourceRef: 'refs/heads/codex/t121-8', treeDigest: 'tree'
+        revision: 'a'.repeat(40), sourceRef: 'refs/heads/codex/t121-8',
+        targetRef: 'refs/heads/dev', treeDigest: 'b'.repeat(40)
       })}\n` : '' };
   };
   const result = await prepareCandidate({ ...input, candidate, execute,
@@ -77,7 +78,7 @@ it('prepares Windows only when the selected stage closure contains C', async () 
     .toHaveLength(1);
   expect(receipt.preparedHosts).toContain('windows-c');
   expect(receipt.windowsReceipt).toMatchObject({ sourceRef: 'refs/heads/codex/t121-8',
-    treeDigest: 'tree' });
+    revision: 'a'.repeat(40), treeDigest: 'b'.repeat(40) });
   expect(calls.find(([, args]) => args.includes('multi-device-sync-candidate'))[1])
     .toEqual(expect.arrayContaining(['--source-ref', 'refs/heads/codex/t121-8']));
   expect(progress).toEqual([

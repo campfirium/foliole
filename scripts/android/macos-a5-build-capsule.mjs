@@ -2,6 +2,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 
 import { checked } from './macos-a5-process.mjs';
 import { withMacosA5BuildRoot } from './macos-a5-execution-context.mjs';
@@ -80,12 +81,17 @@ export function openMacosA5BuildCapsule(context, {
   fsApi.mkdirSync(buildRoot);
   fsApi.writeFileSync(path.join(capsuleRoot, OWNER_FILE),
     `${JSON.stringify(capsuleOwner(context), null, 2)}\n`, { encoding: 'utf8', flag: 'wx' });
-  const capsule = withMacosA5BuildRoot(context, buildRoot, capsuleRoot);
+  let capsule = withMacosA5BuildRoot(context, buildRoot, capsuleRoot, null);
   let stage = 'archive';
   try {
     onStage(stage);
     run('git', ['archive', '--format=tar', `--output=${archivePath}`,
       context.acceptedRevision], { cwd: context.sourceRepoRoot });
+    const sourceArchiveDigest = createHash('sha256')
+      .update(fsApi.readFileSync(archivePath)).digest('hex');
+    capsule = withMacosA5BuildRoot(
+      context, buildRoot, capsuleRoot, sourceArchiveDigest
+    );
     stage = 'extract';
     onStage(stage);
     run('tar', ['-xf', archivePath, '-C', buildRoot], { cwd: capsuleRoot });

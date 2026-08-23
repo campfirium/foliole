@@ -1,23 +1,17 @@
 /* global process */
 
-import { execFileSync, spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import {
+  acceptedSourceReceipt, assertAcceptedSourceIdentity
+} from './macos-a5-formal-source.mjs';
+
+export { assertAcceptedSourceIdentity } from './macos-a5-formal-source.mjs';
+
 const RECEIPT_FILE = 'formal-run-receipt.json';
-const CONTROLLER_FILES = [
-  'scripts/android/macos-a5-dev.mjs',
-  'scripts/android/macos-a5-action-registry.mjs',
-  'scripts/android/macos-a5-build-capsule.mjs',
-  'scripts/android/macos-a5-extended-actions.mjs',
-  'scripts/android/macos-a5-formal-candidate.mjs',
-  'scripts/android/macos-a5-formal-receipt.mjs',
-  'scripts/android/macos-a5-hidden-desktop-status.mjs',
-  'scripts/android/macos-a5-runtime-paths.mjs',
-  'scripts/android/macos-pair-sync-desktop-session.mjs'
-];
-const FULL_SHA = /^[0-9a-f]{40}$/u;
 
 function sha256(value) {
   return createHash('sha256').update(value).digest('hex');
@@ -32,70 +26,48 @@ function atomicWriteJson(filePath, value, fsApi = fs) {
   fsApi.renameSync(temporaryPath, filePath);
 }
 
-function gitFile(context, file, execute = execFileSync) {
-  return execute('git', ['show', `${context.acceptedRevision}:${file}`], {
-    cwd: context.sourceRepoRoot
-  });
-}
-
-function verifyAcceptedTree(context, execute = execFileSync) {
-  const tree = execute('git', ['rev-parse', '--verify', `${context.acceptedRevision}^{tree}`], {
-    cwd: context.sourceRepoRoot, encoding: 'utf8'
-  }).trim();
-  if (tree !== context.acceptedTree) throw new Error('Accepted revision and tree do not match.');
-}
-
-function controllerDigests(context, fsApi = fs) {
-  return Object.fromEntries(CONTROLLER_FILES.map((file) => [
-    file, sha256(fsApi.readFileSync(path.join(context.sourceRepoRoot, file)))
-  ]));
-}
-
-export function assertAcceptedSourceIdentity(identity) {
-  const revision = identity.acceptedRevision ?? identity.revision;
-  const tree = identity.acceptedTree ?? identity.treeDigest;
-  if (!FULL_SHA.test(revision ?? '') || !FULL_SHA.test(tree ?? '')) {
-    throw new Error('Accepted source identity requires a full commit and tree SHA.');
-  }
-  return { revision, tree };
-}
-
 export function formalReceiptPath(context) {
   return path.join(context.artifactsRoot, 'macos-a5-formal', context.runId, RECEIPT_FILE);
 }
 
 export function openFormalA5Receipt(context, actionContract, {
-  executeGit = execFileSync, fsApi = fs, now = () => new Date().toISOString()
+  executeGit, fsApi = fs, now = () => new Date().toISOString()
 } = {}) {
   if (actionContract.action !== context.action
       || actionContract.formalSourceClass !== context.formalSourceClass) {
     throw new Error('Formal receipt action contract does not match the run context.');
   }
-  if (!actionContract.formalEvidence || typeof actionContract.formalTarget !== 'string') {
+  if (!actionContract.formalEvidence || typeof actionContract.formalTarget !== 'string'
+      || typeof actionContract.formalTargetIdentity !== 'string') {
     throw new Error('Formal receipt action provenance is incomplete.');
   }
-  const frozen = context.formalSourceClass === 'frozen-build';
-  if (frozen) {
-    assertAcceptedSourceIdentity(context);
-    verifyAcceptedTree(context, executeGit);
+  if (actionContract.formalTarget === 'fixed-a5'
+      && actionContract.formalTargetIdentity !== '87a33a4b') {
+    throw new Error('Formal receipt fixed A5 identity is invalid.');
   }
+  const accepted = acceptedSourceReceipt(context, executeGit);
   const receipt = {
     action: context.action,
     apk: null,
     cleanup: { completedAt: null, resultStatus: 'pending' },
-    diagnostics: { controllerDigests: controllerDigests(context, fsApi), toolchain: null },
-    evidence: { locator: formalReceiptPath(context), runId: context.runId },
+    dataProtection: { manifestDigest: null, required: actionContract.mutatesFixedA5,
+      resultStatus: actionContract.mutatesFixedA5 ? 'pending' : 'not-required' },
+    diagnostics: { toolchain: null },
+    evidence: { locator: formalReceiptPath(context), runId: context.runId, verifiedAt: null },
     failure: null,
-    lockfileDigest: frozen ? sha256(gitFile(context, 'package-lock.json', executeGit)) : null,
+    lockfileDigest: accepted.lockfileDigest,
     mutationBoundary: { crossed: false, crossedAt: null },
+    integrity: { database: null,
+      resultStatus: actionContract.mutatesFixedA5 ? 'pending' : 'not-required' },
+    lease: { acquiredAt: null, mode: actionContract.deviceLeaseMode,
+      releasedAt: null, runId: null },
     resultStatus: 'pending',
     runId: context.runId,
     schemaVersion: 2,
-    source: { acceptedRevision: context.acceptedRevision, acceptedTree: context.acceptedTree,
-      formalSourceClass: context.formalSourceClass },
+    source: accepted.source,
     stage: 'pending',
     startedAt: now(),
-    target: actionContract.formalTarget
+    target: { identity: actionContract.formalTargetIdentity, kind: actionContract.formalTarget }
   };
   const manager = { actionContract, fsApi, now, path: formalReceiptPath(context), receipt };
   atomicWriteJson(manager.path, receipt, fsApi);
@@ -113,7 +85,7 @@ function update(manager, patch) {
 
 function version(command, args, options, run) {
   const result = run(command, args, { ...options, encoding: 'utf8' });
-  if (result.status !== 0) throw new Error(`Toolchain capture failed for ${path.basename(command)}.`);
+  if (result.status !== 0) return null;
   const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`.trim();
   const lines = output.split(/\r?\n/u).filter(Boolean);
   return lines.find((line) => /\d/u.test(line)) ?? lines[0] ?? '';
@@ -153,6 +125,37 @@ export function markFormalA5Stage(manager, stage) {
   return update(manager, { stage });
 }
 
+export function recordFormalA5Lease(manager, lease) {
+  if (lease?.owner?.runId !== manager.receipt.runId
+      || lease.owner.mode !== manager.receipt.lease.mode) {
+    throw new Error('Formal A5 lease does not match the run.');
+  }
+  return update(manager, { lease: { ...manager.receipt.lease,
+    acquiredAt: lease.owner.acquiredAt, runId: lease.owner.runId } });
+}
+
+export function recordFormalA5LeaseReleased(manager, lease) {
+  if (lease?.owner?.runId !== manager.receipt.lease.runId) {
+    throw new Error('Formal A5 released lease does not match the run.');
+  }
+  return update(manager, { lease: { ...manager.receipt.lease,
+    releasedAt: manager.now() } });
+}
+
+export function recordFormalA5DataProtection(manager, manifestPath, fsApi = fs) {
+  const manifest = JSON.parse(fsApi.readFileSync(manifestPath, 'utf8'));
+  if (manifest.backup?.created !== true || manifest.backup?.validated !== true
+      || manifest.snapshot?.database?.integrity !== 'ok'
+      || manifest.snapshot?.serial !== manager.receipt.target.identity) {
+    throw new Error('Formal A5 data protection evidence is incomplete.');
+  }
+  return update(manager, {
+    dataProtection: { manifestDigest: sha256(fsApi.readFileSync(manifestPath)),
+      required: true, resultStatus: 'complete' },
+    integrity: { database: 'ok', resultStatus: 'complete' }
+  });
+}
+
 export function recordFormalA5Cleanup(manager, resultStatus) {
   return update(manager, { cleanup: { completedAt: manager.now(), resultStatus } });
 }
@@ -179,9 +182,11 @@ export function prepareFormalA5ReceiptCompletion(manager, context, paths, fsApi 
   const locator = formalA5EvidenceLocator(context, manager.actionContract.formalEvidence);
   if (!fsApi.existsSync(locator)) throw new Error('Formal action evidence locator is missing.');
   return update(manager, {
-    evidence: { locator, runId: context.runId },
+    evidence: { locator, runId: context.runId, verifiedAt: manager.now() },
     apk: frozen ? { digest: sha256(fsApi.readFileSync(paths.apk)),
       projectRelativePath: 'android/app/build/outputs/apk/debug/app-debug.apk' } : null,
+    source: { ...manager.receipt.source,
+      archiveDigest: frozen ? context.sourceArchiveDigest : null },
     stage: 'action-complete'
   });
 }
@@ -200,6 +205,23 @@ export function completeFormalA5Receipt(manager) {
   }
   if (manager.receipt.cleanup.resultStatus !== 'complete') {
     throw new Error('Formal receipt cannot complete before controller cleanup.');
+  }
+  const { receipt } = manager;
+  if (receipt.source.formalSourceClass === 'frozen-build'
+      && !/^[0-9a-f]{64}$/u.test(receipt.source.archiveDigest ?? '')) {
+    throw new Error('Formal receipt source archive identity is incomplete.');
+  }
+  if (!receipt.evidence.verifiedAt || receipt.evidence.runId !== receipt.runId) {
+    throw new Error('Formal receipt evidence locator is incomplete.');
+  }
+  if (receipt.lease.mode && (!receipt.lease.acquiredAt || !receipt.lease.releasedAt
+      || receipt.lease.runId !== receipt.runId)) {
+    throw new Error('Formal receipt lease lifecycle is incomplete.');
+  }
+  if (receipt.dataProtection.required && (receipt.dataProtection.resultStatus !== 'complete'
+      || receipt.integrity.resultStatus !== 'complete'
+      || receipt.mutationBoundary.crossed !== true)) {
+    throw new Error('Formal receipt mutation trust is incomplete.');
   }
   return update(manager, { completedAt: manager.now(), resultStatus: 'complete',
     stage: 'complete' });

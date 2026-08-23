@@ -57,8 +57,8 @@ export function createMacosA5ExecutionContext({
   });
 }
 
-export function withMacosA5BuildRoot(context, buildRoot, capsuleRoot) {
-  return Object.freeze({ ...context, buildRoot, capsuleRoot });
+export function withMacosA5BuildRoot(context, buildRoot, capsuleRoot, sourceArchiveDigest) {
+  return Object.freeze({ ...context, buildRoot, capsuleRoot, sourceArchiveDigest });
 }
 
 function runOwner(context) {

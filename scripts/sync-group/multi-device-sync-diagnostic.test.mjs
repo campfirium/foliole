@@ -3,9 +3,8 @@ import { expect, it, vi } from 'vitest';
 import { createRun } from './multi-device-sync-contract.mjs';
 import { runDiagnostic } from './multi-device-sync-diagnostic.mjs';
 
-const candidate = { branch: 'dev', clean: true, committed: true, controllerDigest: 'controller',
-  criteriaDigest: 'criteria', revision: 'a'.repeat(40), scenarioDigest: 'scenario',
-  sourceRef: 'refs/heads/dev', treeDigest: 'tree' };
+const candidate = { branch: 'dev', clean: true, committed: true,
+  revision: 'a'.repeat(40), sourceRef: 'refs/heads/dev', treeDigest: 'b'.repeat(40) };
 const ready = async () => ({ facts: ['ready'] });
 
 it('performs zero stage mutations when any readiness host is blocked', async () => {

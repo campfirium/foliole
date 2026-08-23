@@ -9,11 +9,12 @@ import {
 it('keeps build and status outside the fixed A5 mutation lease', () => {
   expect(assertRegisteredMacosA5Action('build')).toMatchObject({
     deviceLeaseMode: null, formalSourceClass: 'frozen-build', formalTarget: 'build-capsule',
+    formalTargetIdentity: 'accepted-source-archive',
     mutatesFixedA5: false
   });
   expect(assertRegisteredMacosA5Action('status')).toMatchObject({
     deviceLeaseMode: 'readonly-lifecycle', formalSourceClass: 'source-free-readonly',
-    formalTarget: 'fixed-a5', mutatesFixedA5: false
+    formalTarget: 'fixed-a5', formalTargetIdentity: '87a33a4b', mutatesFixedA5: false
   });
   expect(assertRegisteredMacosA5Action('hidden-desktop-status')).toMatchObject({
     formalEvidence: { kind: 'run-json', root: 'a5-hidden-desktop-status' },

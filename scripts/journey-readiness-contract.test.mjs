@@ -17,13 +17,13 @@ async function readyReceipt(definition = localFixtureDefinition()) {
 }
 
 describe('journey readiness contract', () => {
-  it('creates a ready receipt only after every independent owner passes', async () => {
+  it('creates a ready receipt only after every trust owner passes', async () => {
     const definition = localFixtureDefinition();
     const receipt = await readyReceipt(definition);
 
     expect(receipt.status).toBe('ready');
     expect(receipt.facts.map((fact) => fact.owner)).toEqual([
-      'candidate', 'controller', 'adapter', 'baseline', 'criteria', 'evidence', 'cleanup'
+      'source', 'action', 'target', 'mutation', 'integrity', 'cleanup', 'locator'
     ]);
     expect(receipt.locator).toContain('journey-readiness/test/receipt.json');
     expect(enforceJourneyReadiness(receipt, definition)).toBe(receipt);
@@ -34,7 +34,9 @@ describe('journey readiness contract', () => {
     ['action', { scenario: 'changed' }],
     ['target', { identity: 'changed' }],
     ['mutation', { baseline: 'changed' }],
-    ['cleanup', { strategy: 'changed' }]
+    ['integrity', { data: 'changed' }],
+    ['cleanup', { strategy: 'changed' }],
+    ['locator', { kind: 'changed' }]
   ])('rejects an old receipt when the %s provenance changes', async (owner, change) => {
     const definition = localFixtureDefinition();
     const receipt = await readyReceipt(definition);
@@ -43,14 +45,23 @@ describe('journey readiness contract', () => {
     expect(() => enforceJourneyReadiness(receipt, changed)).toThrow(`provenance changed: ${owner}`);
   });
 
-  it('records journey criteria and evidence as facts instead of global provenance', async () => {
+  it('does not let business criteria or controller digests define readiness', async () => {
     const receipt = await readyReceipt();
 
     expect(receipt.provenance).not.toHaveProperty('criteria');
-    expect(receipt.provenance).not.toHaveProperty('evidence');
-    expect(receipt.facts.map((fact) => fact.owner)).toEqual(expect.arrayContaining([
-      'criteria', 'evidence'
+    expect(receipt.provenance).not.toHaveProperty('controller');
+    expect(receipt.facts.map((fact) => fact.owner)).not.toEqual(expect.arrayContaining([
+      'criteria', 'controller'
     ]));
+  });
+
+  it('rejects historical v2 receipts that still use the mixed seven-provider contract', async () => {
+    const receipt = await readyReceipt();
+    receipt.facts = receipt.facts.map((fact, index) => ({ ...fact,
+      owner: ['candidate', 'controller', 'adapter', 'baseline', 'criteria', 'evidence', 'cleanup'][index] }));
+
+    expect(() => enforceJourneyReadiness(receipt, localFixtureDefinition()))
+      .toThrow('trust facts are unsupported');
   });
 
   it('does not accept review state or a ready word in place of a receipt', () => {

@@ -33,7 +33,7 @@ import {
   formalA5AcceptedTipLine, formalA5FailureStage, markFormalA5ActionRunning,
   markFormalA5MutationBoundary,
   markFormalA5Stage, openFormalA5Receipt,
-  prepareFormalA5ReceiptCompletion
+  prepareFormalA5ReceiptCompletion, recordFormalA5DataProtection, recordFormalA5Lease
 } from './macos-a5-formal-receipt.mjs';
 import { checked, captured, execute } from './macos-a5-process.mjs';
 import { cleanupMacosA5Run } from './macos-a5-run-cleanup.mjs';
@@ -172,6 +172,18 @@ export async function runMacosA5Action(action, repoRoot = process.cwd(), { forma
       spawnSync(command, args, { ...options, env: actionEnv }));
     if (actionContract.deviceLeaseMode) {
       lease = acquireMacosA5DeviceLease(context, actionContract.deviceLeaseMode);
+      if (receipt) recordFormalA5Lease(receipt, lease);
+    }
+    const runProtection = async (mode, manifest, backupRoot) => {
+      const result = await protectData(paths, actionEnv, mode, manifest, backupRoot);
+      if (receipt && mode === 'backup') recordFormalA5DataProtection(receipt, manifest);
+      return result;
+    };
+    if (receipt && actionContract.mutatesFixedA5) {
+      markFormalA5Stage(receipt, 'data-protection');
+      assertFixedA5(paths);
+      await runProtection('backup', path.join(path.dirname(receipt.path), 'device-baseline.json'),
+        path.join(context.deviceBackupRoot, context.runId));
     }
     if (receipt) (actionContract.mutatesFixedA5
       ? markFormalA5Stage(receipt, 'action-preflight') : markFormalA5ActionRunning(receipt));
@@ -182,9 +194,7 @@ export async function runMacosA5Action(action, repoRoot = process.cwd(), { forma
       captureAnnotation, captured, checked, deploy, env: actionEnv, execute,
       markMutationBoundary: () => receipt && markFormalA5MutationBoundary(receipt),
       pairingReadiness, paths,
-      protectData: (mode, manifest, backupRoot) => protectData(
-        paths, actionEnv, mode, manifest, backupRoot
-      ), readiness, serial: A5_SERIAL });
+      protectData: runProtection, readiness, serial: A5_SERIAL });
     if (receipt) {
       markFormalA5Stage(receipt, 'action-evidence');
       prepareFormalA5ReceiptCompletion(receipt, context, paths);

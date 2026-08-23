@@ -52,8 +52,9 @@ async function prepareWindows(candidate, execute, repoRoot, progress, signal) {
     value.startsWith('[windows-dev-control] candidate-receipt='));
   const receipt = line ? JSON.parse(line.slice(line.indexOf('=') + 1)) : null;
   if (!receipt || receipt.sourceRef !== candidate.sourceRef
+      || receipt.revision !== candidate.revision
       || receipt.treeDigest !== candidate.treeDigest
-      || receipt.controllerDigest !== candidate.controllerDigest) {
+      || receipt.targetRef !== 'refs/heads/dev') {
     throw Object.assign(new Error('Windows candidate did not report the frozen boundary.'), {
       failureOwner: 'candidate', host: 'windows-c', missingFact: 'windows_candidate_unbound'
     });
@@ -65,7 +66,7 @@ async function prepareWindows(candidate, execute, repoRoot, progress, signal) {
 export function assertCandidateStillFrozen(candidate, repoRoot,
   inspect = currentAcceptanceCandidate) {
   const current = inspect(repoRoot, candidate.mode, candidate.sourceRef);
-  const keys = ['branch', 'controllerDigest', 'revision', 'sourceRef', 'treeDigest'];
+  const keys = ['branch', 'revision', 'sourceRef', 'treeDigest'];
   if (!current.clean || keys.some((key) => current[key] !== candidate[key])) {
     throw Object.assign(new Error('Candidate build changed the frozen source boundary.'), {
       failureOwner: 'candidate', missingFact: 'candidate_source_boundary_changed'
@@ -91,7 +92,7 @@ export async function prepareCandidate({ candidate, execute = run, repoRoot,
     ...(hosts.has('android-b') ? {
       androidApkSha256: createHash('sha256').update(fs.readFileSync(apk)).digest('hex')
     } : {}),
-    candidateBoundary: { branch: candidate.branch, controllerDigest: candidate.controllerDigest,
+    candidateBoundary: { branch: candidate.branch, revision: candidate.revision,
       sourceRef: candidate.sourceRef, treeDigest: candidate.treeDigest },
     completedAt: new Date().toISOString(), preparedHosts: [...hosts],
     resultStatus: 'success', runId, ...(windowsReceipt ? { windowsReceipt } : {})

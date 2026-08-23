@@ -6,10 +6,12 @@ export const READINESS_PROVENANCE_NAMES = [
   'action',
   'target',
   'mutation',
-  'cleanup'
+  'integrity',
+  'cleanup',
+  'locator'
 ];
 export const READINESS_STAGE_NAMES = [
-  'candidate', 'controller', 'adapter', 'baseline', 'criteria', 'evidence', 'cleanup'
+  'source', 'action', 'target', 'mutation', 'integrity', 'cleanup', 'locator'
 ];
 
 function canonicalize(value) {
@@ -68,6 +70,14 @@ export function enforceJourneyReadiness(receipt, currentDefinition) {
     throw new Error('Journey readiness receipt schema is unsupported.');
   }
   if (receipt.status !== 'ready') throw new Error(`Journey readiness is ${receipt.status ?? 'missing'}.`);
+  if (typeof receipt.locator !== 'string' || receipt.locator === '') {
+    throw new Error('Journey readiness locator is missing.');
+  }
+  const owners = receipt.facts?.map((fact) => fact.owner);
+  if (JSON.stringify(owners) !== JSON.stringify(READINESS_STAGE_NAMES)
+      || receipt.facts.some((fact) => fact.status !== 'passed')) {
+    throw new Error('Journey readiness trust facts are unsupported.');
+  }
   const currentProvenance = createReadinessProvenance(currentDefinition);
   for (const name of READINESS_PROVENANCE_NAMES) {
     if (receipt.provenance?.[name]?.digest !== currentProvenance[name].digest) {

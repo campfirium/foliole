@@ -23,13 +23,13 @@ async function qualify(overrides = {}, options = {}) {
 
 describe('journey readiness fail-closed behavior', () => {
   it.each([
-    ['candidate', 'uncommitted candidate'],
-    ['controller', 'controller process exited'],
-    ['adapter', 'resource occupied'],
-    ['baseline', 'writes still active'],
-    ['criteria', 'failure criterion missing'],
-    ['evidence', 'archive unavailable'],
-    ['cleanup', 'owned resource cleanup incomplete']
+    ['source', 'uncommitted source'],
+    ['action', 'action entry missing'],
+    ['target', 'resource occupied'],
+    ['mutation', 'writes still active'],
+    ['integrity', 'archive unavailable'],
+    ['cleanup', 'owned resource cleanup incomplete'],
+    ['locator', 'receipt root unavailable']
   ])('blocks readiness when %s cannot prove its fact', async (owner, reason) => {
     const receipt = await qualify({ [owner]: blocked(reason) });
 
@@ -39,38 +39,38 @@ describe('journey readiness fail-closed behavior', () => {
   });
 
   it('invalidates instead of blocking when a frozen fact changes during qualification', async () => {
-    const receipt = await qualify({ candidate: blocked('candidate changed', 'invalidated') });
+    const receipt = await qualify({ source: blocked('source changed', 'invalidated') });
 
     expect(receipt.status).toBe('invalidated');
   });
 
   it('blocks unknown provider output, cancellation, timeout, and process failure', async () => {
-    const unknown = await qualify({ adapter: async () => ({ status: 'unknown' }) });
+    const unknown = await qualify({ target: async () => ({ status: 'unknown' }) });
     const controller = new AbortController();
     controller.abort();
     const cancelled = await runJourneyQualification({
       definition: localFixtureDefinition(), locator: 'receipt.json',
       providers: createPassingProviders(), signal: controller.signal, writeReceipt: vi.fn()
     });
-    const timedOut = await qualify({ adapter: () => new Promise(() => {}) }, { timeoutMs: 1 });
-    const exited = await qualify({ controller: async () => { throw new Error('process exited 9'); } });
+    const timedOut = await qualify({ target: () => new Promise(() => {}) }, { timeoutMs: 1 });
+    const exited = await qualify({ action: async () => { throw new Error('process exited 9'); } });
 
     for (const receipt of [unknown, cancelled, timedOut, exited]) expect(receipt.status).toBe('blocked');
   });
 
   it('blocks a missing, ambiguous, or offline host adapter', async () => {
     const missingProviders = createPassingProviders();
-    delete missingProviders.adapter;
+    delete missingProviders.target;
     const missing = await runJourneyQualification({
       definition: localFixtureDefinition(), locator: 'receipt.json',
       providers: missingProviders, writeReceipt: vi.fn()
     });
-    const ambiguous = await qualify({ adapter: [blocked('first'), blocked('second')] });
-    const offline = await qualify({ adapter: blocked('host offline') });
+    const ambiguous = await qualify({ target: [blocked('first'), blocked('second')] });
+    const offline = await qualify({ target: blocked('host offline') });
 
     for (const receipt of [missing, ambiguous, offline]) {
       expect(receipt.status).toBe('blocked');
-      expect(receipt.summary.failedOwners).toContain('adapter');
+      expect(receipt.summary.failedOwners).toContain('target');
     }
   });
 
@@ -80,7 +80,7 @@ describe('journey readiness fail-closed behavior', () => {
     });
 
     expect(receipt.status).toBe('blocked');
-    expect(receipt.summary.failedOwners).toContain('evidence');
+    expect(receipt.summary.failedOwners).toContain('locator');
     expect(receipt.locator).toBeNull();
   });
 });

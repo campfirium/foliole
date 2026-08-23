@@ -7,7 +7,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
-  assertConfinedEvidencePath, assertReadinessControllerStable
+  assertConfinedEvidencePath, assertLocalCandidateStillFrozen, createLocalDefinition
 } from './macos/journey-readiness-mac-adapter.mjs';
 import {
   assertOwnedSimulatorRemoved,
@@ -37,10 +37,20 @@ describe('local journey readiness adapters', () => {
     expect(args).toContain(path.join('/evidence', 'DerivedData'));
   });
 
-  it('keeps controller stability scoped to the active qualification run', () => {
-    expect(assertReadinessControllerStable('same', 'same')).toBeUndefined();
-    expect(() => assertReadinessControllerStable('before', 'after'))
-      .toThrow('changed during qualification');
+  it('keeps business criteria and controller digests outside host qualification provenance', () => {
+    const definition = createLocalDefinition({ candidate: {
+      archiveDigest: 'a'.repeat(64), artifactDigest: 'b'.repeat(64), branch: 'dev',
+      revision: 'c'.repeat(40), tree: 'd'.repeat(40)
+    } });
+    expect(definition).not.toHaveProperty('checks');
+    expect(definition.action).not.toHaveProperty('scenario');
+    expect(definition.source.archiveDigest).toHaveLength(64);
+  });
+
+  it('rejects a source revision change during qualification', () => {
+    expect(() => assertLocalCandidateStillFrozen({ branch: 'dev', revision: 'old', tree: 'tree' },
+      process.cwd(), () => ({ branch: 'dev', revision: 'new', tree: 'tree' })))
+      .toThrow('Local source changed during qualification');
   });
 
   it('proves exact owned Simulator deletion from the post-cleanup inventory', () => {

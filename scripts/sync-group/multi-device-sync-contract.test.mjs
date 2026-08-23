@@ -5,9 +5,9 @@ import {
 } from './multi-device-sync-contract.mjs';
 
 function candidate(overrides = {}) {
-  return { branch: 'dev', clean: true, committed: true, controllerDigest: 'controller',
-    criteriaDigest: 'criteria', revision: 'a'.repeat(40), scenarioDigest: 'scenario',
-    sourceRef: 'refs/heads/dev', treeDigest: 'tree', ...overrides };
+  return { branch: 'dev', clean: true, committed: true,
+    revision: 'a'.repeat(40), sourceRef: 'refs/heads/dev',
+    treeDigest: 'b'.repeat(40), ...overrides };
 }
 
 function receipt(overrides = {}) {
@@ -18,11 +18,11 @@ function receipt(overrides = {}) {
     status: 'passed', ...overrides };
 }
 
-it('pins candidate identity and invalidates a run when any frozen digest changes', () => {
+it('pins whole source identity without treating controller details as candidate provenance', () => {
   const run = createRun({ candidate: candidate(), mode: 'formal', runId: 'run-1', scenario: 'a-b' });
   recordReceipt(run, receipt());
-  expect(finalizeRun(run, candidate({ controllerDigest: 'changed' }))).toMatchObject({
-    invalidatedBy: 'controllerDigest', status: 'invalidated'
+  expect(finalizeRun(run, candidate({ treeDigest: 'c'.repeat(40) }))).toMatchObject({
+    invalidatedBy: 'treeDigest', status: 'invalidated'
   });
 });
 

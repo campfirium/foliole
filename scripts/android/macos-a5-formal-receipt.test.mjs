@@ -14,7 +14,8 @@ import {
   failFormalA5Receipt, formalA5AcceptedTipLine, formalA5FailureStage,
   markFormalA5ActionRunning,
   markFormalA5MutationBoundary, markFormalA5Stage,
-  openFormalA5Receipt, prepareFormalA5ReceiptCompletion, recordFormalA5Cleanup
+  openFormalA5Receipt, prepareFormalA5ReceiptCompletion, recordFormalA5Cleanup,
+  recordFormalA5DataProtection, recordFormalA5Lease, recordFormalA5LeaseReleased
 } from './macos-a5-formal-receipt.mjs';
 
 const roots = [];
@@ -28,19 +29,6 @@ function fixture(action = 'build', runId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
   fs.mkdirSync(parent, { recursive: true });
   const root = fs.mkdtempSync(path.join(parent, 'macos-a5-receipt-'));
   roots.push(root);
-  for (const file of [
-    'scripts/android/macos-a5-dev.mjs', 'scripts/android/macos-a5-action-registry.mjs',
-    'scripts/android/macos-a5-build-capsule.mjs',
-    'scripts/android/macos-a5-extended-actions.mjs',
-    'scripts/android/macos-a5-formal-candidate.mjs',
-    'scripts/android/macos-a5-formal-receipt.mjs',
-    'scripts/android/macos-a5-hidden-desktop-status.mjs',
-    'scripts/android/macos-a5-runtime-paths.mjs',
-    'scripts/android/macos-pair-sync-desktop-session.mjs'
-  ]) {
-    fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
-    fs.writeFileSync(path.join(root, file), `${file}\n`);
-  }
   fs.writeFileSync(path.join(root, 'package-lock.json'), '{"lockfileVersion":3}\n');
   git(root, ['init', '-b', 'dev']);
   git(root, ['config', 'user.email', 'receipt@example.invalid']);
@@ -48,8 +36,9 @@ function fixture(action = 'build', runId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
   git(root, ['add', '.']); git(root, ['commit', '-m', 'fixture']);
   const acceptedRevision = git(root, ['rev-parse', 'HEAD']);
   const acceptedTree = git(root, ['rev-parse', 'HEAD^{tree}']);
-  const context = createMacosA5ExecutionContext({ acceptedRevision, acceptedTree, action,
+  const base = createMacosA5ExecutionContext({ acceptedRevision, acceptedTree, action,
     formalSourceClass: 'frozen-build', repoRoot: root, runId });
+  const context = Object.freeze({ ...base, sourceArchiveDigest: 'f'.repeat(64) });
   return { context, root };
 }
 
@@ -76,6 +65,7 @@ it('atomically completes a same-run provenance receipt before projecting accepte
   captureFormalA5Toolchain(manager, paths, toolResult);
   markFormalA5ActionRunning(manager);
   prepareFormalA5ReceiptCompletion(manager, context, paths);
+  expect(() => completeFormalA5Receipt(manager)).toThrow('before controller cleanup');
   recordFormalA5Cleanup(manager, 'complete');
   const completed = completeFormalA5Receipt(manager);
   expect(formalA5AcceptedTipLine(completed))
@@ -85,11 +75,13 @@ it('atomically completes a same-run provenance receipt before projecting accepte
   expect(receipt).toMatchObject({ action: 'build', resultStatus: 'complete', schemaVersion: 2,
     runId: context.runId, stage: 'complete', source: {
       acceptedRevision: context.acceptedRevision, acceptedTree: context.acceptedTree
-    }, target: 'build-capsule' });
+    }, target: { identity: 'accepted-source-archive', kind: 'build-capsule' } });
   expect(receipt.lockfileDigest).toMatch(/^[0-9a-f]{64}$/u);
   expect(receipt.apk.digest).toMatch(/^[0-9a-f]{64}$/u);
   expect(receipt.evidence.runId).toBe(context.runId);
-  expect(receipt.diagnostics.controllerDigests).toBeTruthy();
+  expect(receipt.source.archiveDigest).toBe('f'.repeat(64));
+  expect(receipt.diagnostics).not.toHaveProperty('controllerDigests');
+  expect(receipt).not.toHaveProperty('syncSuccess');
   expect(fs.readdirSync(path.dirname(manager.path)).some((name) => name.includes('.tmp-')))
     .toBe(false);
   expect(() => failFormalA5Receipt(manager, new Error('late secret'))).toThrow('finalized');
@@ -175,11 +167,60 @@ it('uses the same full commit and tree identity contract as the Windows fixture'
     .toThrow('full commit and tree');
 });
 
+it('rejects a commit and tree mismatch before opening a receipt', () => {
+  const { context } = fixture('build', 'afafafaf-afaf-afaf-afaf-afafafafafaf');
+  expect(() => openFormalA5Receipt({ ...context, acceptedTree: 'd'.repeat(40) }, contract('build')))
+    .toThrow('revision and tree do not match');
+});
+
 it('requires the registered target and evidence provenance', () => {
   const context = fixture('build', 'acacacac-acac-acac-acac-acacacacacac').context;
   expect(() => openFormalA5Receipt(context, {
     action: 'build', formalSourceClass: 'frozen-build'
   })).toThrow('action provenance is incomplete');
+});
+
+it('refuses a wrong fixed device and a mutation without backup integrity', () => {
+  const context = fixture('deploy', 'adadadad-adad-adad-adad-adadadadadad').context;
+  expect(() => openFormalA5Receipt(context, {
+    ...contract('deploy'), formalTargetIdentity: 'another-device'
+  })).toThrow('fixed A5 identity is invalid');
+
+  const manager = openFormalA5Receipt(context, contract('deploy'));
+  const lease = { owner: { acquiredAt: 'lease-start', mode: 'mutation', runId: context.runId } };
+  recordFormalA5Lease(manager, lease);
+  markFormalA5MutationBoundary(manager);
+  const paths = { apk: path.join(context.sourceRepoRoot, 'app-debug.apk') };
+  fs.writeFileSync(paths.apk, 'apk');
+  expect(() => prepareFormalA5ReceiptCompletion(manager, context, paths))
+    .toThrow('evidence locator is missing');
+  fs.mkdirSync(path.join(context.artifactsRoot, 'a5-deploy', context.runId), { recursive: true });
+  prepareFormalA5ReceiptCompletion(manager, context, paths);
+  recordFormalA5LeaseReleased(manager, lease);
+  recordFormalA5Cleanup(manager, 'complete');
+  expect(() => completeFormalA5Receipt(manager)).toThrow('mutation trust is incomplete');
+});
+
+it('accepts trust facts without turning formal completion into sync success', () => {
+  const { context, root } = fixture('deploy', 'aeaeaeae-aeae-aeae-aeae-aeaeaeaeaeae');
+  const manager = openFormalA5Receipt(context, contract('deploy'));
+  const lease = { owner: { acquiredAt: 'lease-start', mode: 'mutation', runId: context.runId } };
+  recordFormalA5Lease(manager, lease);
+  const manifest = path.join(root, 'baseline.json');
+  fs.writeFileSync(manifest, JSON.stringify({ backup: { created: true, validated: true },
+    snapshot: { database: { integrity: 'ok' }, serial: '87a33a4b' } }));
+  recordFormalA5DataProtection(manager, manifest);
+  markFormalA5MutationBoundary(manager);
+  const buildRoot = path.join(root, 'capsule');
+  const paths = { apk: path.join(buildRoot, 'android/app-debug.apk') };
+  fs.mkdirSync(path.dirname(paths.apk), { recursive: true }); fs.writeFileSync(paths.apk, 'apk');
+  fs.mkdirSync(path.join(context.artifactsRoot, 'a5-deploy', context.runId), { recursive: true });
+  prepareFormalA5ReceiptCompletion(manager, context, paths);
+  recordFormalA5LeaseReleased(manager, lease); recordFormalA5Cleanup(manager, 'complete');
+  const receipt = completeFormalA5Receipt(manager);
+  expect(receipt).toMatchObject({ dataProtection: { resultStatus: 'complete' },
+    integrity: { database: 'ok' }, resultStatus: 'complete' });
+  expect(receipt).not.toHaveProperty('syncSuccess');
 });
 
 it('completes source-free readonly receipts without claiming an accepted tip', () => {
@@ -188,12 +229,16 @@ it('completes source-free readonly receipts without claiming an accepted tip', (
     formalSourceClass: 'source-free-readonly', repoRoot: root,
     runId: 'dddddddd-dddd-dddd-dddd-dddddddddddd' });
   const manager = openFormalA5Receipt(context, assertRegisteredMacosA5Action('status'));
+  const lease = { owner: { acquiredAt: 'lease-start', mode: 'readonly-lifecycle',
+    runId: context.runId } };
+  recordFormalA5Lease(manager, lease);
   markFormalA5ActionRunning(manager);
   prepareFormalA5ReceiptCompletion(manager, context, { apk: '/missing' });
+  recordFormalA5LeaseReleased(manager, lease);
   recordFormalA5Cleanup(manager, 'complete');
   const completed = completeFormalA5Receipt(manager);
   expect(completed).toMatchObject({ resultStatus: 'complete', source: {
     acceptedRevision: null, acceptedTree: null, formalSourceClass: 'source-free-readonly'
-  }, target: 'fixed-a5' });
+  }, target: { identity: '87a33a4b', kind: 'fixed-a5' } });
   expect(formalA5AcceptedTipLine(completed)).toBeNull();
 });

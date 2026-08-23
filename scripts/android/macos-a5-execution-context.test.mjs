@@ -7,7 +7,8 @@ import path from 'node:path';
 import { afterEach, expect, it } from 'vitest';
 
 import {
-  closeMacosA5Run, createMacosA5ExecutionContext, openMacosA5Run
+  closeMacosA5Run, createMacosA5ExecutionContext, openMacosA5Run,
+  withMacosA5BuildRoot
 } from './macos-a5-execution-context.mjs';
 
 const roots = [];
@@ -71,6 +72,16 @@ it('carries a frozen revision without changing stable state ownership', () => {
   expect(context).toMatchObject({ acceptedRevision: 'a'.repeat(40),
     acceptedTree: 'b'.repeat(40), buildRoot: fs.realpathSync(repoRoot),
     formalSourceClass: 'frozen-build' });
+});
+
+it('carries the exact archive identity with the materialized source root', () => {
+  const context = createMacosA5ExecutionContext({
+    acceptedRevision: 'a'.repeat(40), acceptedTree: 'b'.repeat(40), action: 'build',
+    formalSourceClass: 'frozen-build', repoRoot: temporaryRepo(),
+    runId: '99999999-9999-9999-9999-999999999999'
+  });
+  expect(withMacosA5BuildRoot(context, '/capsule/source', '/capsule', 'c'.repeat(64)))
+    .toMatchObject({ buildRoot: '/capsule/source', sourceArchiveDigest: 'c'.repeat(64) });
 });
 
 it('cleans only an exactly owned empty run root', () => {

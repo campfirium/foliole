@@ -8,6 +8,7 @@ import { promisify } from 'node:util';
 import { A5_SERIAL, macosA5Paths } from '../android/macos-a5-dev.mjs';
 import { verifyAndroidLaunch } from '../android/verify-android-launch.mjs';
 import { WINDOWS_DEV_DEFAULT_SSH } from '../windows/windows-dev-control.mjs';
+import { WINDOWS_DEV_REPO_ROOT_POSIX } from '../windows/windows-dev-paths.mjs';
 import { MACOS_ACCEPTANCE_SYNC_PORT } from './multi-device-sync-macos-channel.mjs';
 import { assertIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
@@ -16,7 +17,7 @@ import { assertIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 const exec = promisify(execFile);
 const APP = 'com.foliole.android';
 const WINDOWS_NODE = 'C:/Progra~1/nodejs/node.exe';
-const WINDOWS_READINESS = 'C:/dev/foliole-android-lab-preview/scripts/windows/windows-multi-device-sync-readiness.mjs';
+const WINDOWS_READINESS = `${WINDOWS_DEV_REPO_ROOT_POSIX}/scripts/windows/windows-multi-device-sync-readiness.mjs`;
 
 async function bounded(command, args, options = {}) {
   const result = await exec(command, args, { encoding: 'utf8', maxBuffer: 4 * 1024 * 1024,
@@ -125,13 +126,14 @@ export function createMutationReadinessAdapters(options) {
     const baseMismatch = receipt.runId !== options.runId || receipt.resultStatus !== 'success'
       || (!required.has(host) && receipt.preparedHosts?.includes(host))
       || receipt.candidateBoundary?.branch !== current.branch
+      || receipt.candidateBoundary?.revision !== current.revision
       || receipt.candidateBoundary?.sourceRef !== current.sourceRef
-      || receipt.candidateBoundary?.treeDigest !== current.treeDigest
-      || receipt.candidateBoundary?.controllerDigest !== current.controllerDigest;
+      || receipt.candidateBoundary?.treeDigest !== current.treeDigest;
     const hostMismatch = required.has(host) && (!receipt.preparedHosts?.includes(host)
       || (host === 'windows-c' && (receipt.windowsReceipt?.sourceRef !== current.sourceRef
+        || receipt.windowsReceipt?.revision !== current.revision
         || receipt.windowsReceipt?.treeDigest !== current.treeDigest
-        || receipt.windowsReceipt?.controllerDigest !== current.controllerDigest))
+        || receipt.windowsReceipt?.targetRef !== 'refs/heads/dev'))
       || (host === 'android-b' && (!fs.existsSync(apkPath)
         || createHash('sha256').update(fs.readFileSync(apkPath)).digest('hex')
           !== receipt.androidApkSha256)));

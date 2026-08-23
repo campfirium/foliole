@@ -1,25 +1,11 @@
 /* global process */
 
 import { createHash } from 'node:crypto';
-import { readdirSync, readFileSync, realpathSync, statSync, writeFileSync, unlinkSync } from 'node:fs';
+import {
+  mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync, unlinkSync
+} from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-
-const CONTROLLER_FILES = [
-  'scripts/journey-readiness-contract.mjs',
-  'scripts/journey-readiness-controller.mjs',
-  'scripts/journey-readiness-cli.mjs',
-  'scripts/diagnostics/local-artifact-cache-production.mjs',
-  'scripts/diagnostics/local-artifact-cache-retention.mjs',
-  'scripts/ios/ios-dedicated-simulator.mjs',
-  'scripts/ios/ios-dedicated-simulator-runtime.mjs',
-  'scripts/ios/ios-simulator-acceptance-runner.mjs',
-  'scripts/lib/resource-gate.mjs',
-  'scripts/macos/journey-readiness-local-qualification.mjs',
-  'scripts/macos/journey-readiness-mac-adapter.mjs',
-  'scripts/macos/journey-readiness-simulator-adapter.mjs',
-  'scripts/with-resource-gate.mjs'
-];
 
 function digestParts(parts) {
   const hash = createHash('sha256');
@@ -69,31 +55,55 @@ export function collectLocalCandidate(repoRoot) {
   const branch = capture(repoRoot, 'git', ['branch', '--show-current']);
   if (branch !== 'dev') throw new Error(`Journey readiness requires dev, found ${branch || 'detached HEAD'}.`);
   return {
-    artifact: digestParts(directoryParts(path.join(repoRoot, 'dist/companion'))),
     branch,
-    entrypoint: 'ios/App/App.xcodeproj#App',
     revision: capture(repoRoot, 'git', ['rev-parse', 'HEAD']),
     tree: capture(repoRoot, 'git', ['rev-parse', 'HEAD^{tree}'])
   };
 }
 
-export function collectReadinessControllerDigest(repoRoot) {
-  return digestParts(CONTROLLER_FILES.flatMap((file) => [file,
-    readFileSync(path.join(repoRoot, file))]));
+export function assertLocalCandidateStillFrozen(expected, repoRoot,
+  inspect = collectLocalCandidate) {
+  const current = inspect(repoRoot);
+  for (const key of ['branch', 'revision', 'tree']) {
+    if (current[key] !== expected[key]) throw new Error(`Local source changed during qualification: ${key}.`);
+  }
+  return current;
 }
 
-export function assertReadinessControllerStable(expected, actual) {
-  if (expected !== actual) throw new Error('controller and dependencies changed during qualification');
+export function materializeLocalSourceCapsule(repoRoot, artifactDir, candidate) {
+  const archivePath = path.join(artifactDir, 'source.tar');
+  const buildRoot = path.join(artifactDir, 'source');
+  mkdirSync(buildRoot);
+  try {
+    run(repoRoot, 'git', ['archive', '--format=tar', `--output=${archivePath}`, candidate.revision]);
+    const archiveDigest = digestParts([readFileSync(archivePath)]);
+    run(repoRoot, 'tar', ['-xf', archivePath, '-C', buildRoot]);
+    run(buildRoot, 'npm', ['ci']);
+    run(buildRoot, 'npm', ['run', 'android:web:build']);
+    run(buildRoot, 'npx', ['--no-install', 'cap', 'sync', 'ios']);
+    return { archivePath, buildRoot, candidate: { ...candidate, archiveDigest,
+      artifactDigest: digestParts(directoryParts(path.join(buildRoot, 'dist/companion'))),
+      entrypoint: 'ios/App/App.xcodeproj#App' } };
+  } catch (error) {
+    cleanupLocalSourceCapsule({ archivePath, buildRoot });
+    throw error;
+  }
 }
 
-export function createLocalDefinition({ candidate, repoRoot }) {
+export function cleanupLocalSourceCapsule(capsule) {
+  rmSync(capsule.buildRoot, { force: true, recursive: true });
+  rmSync(capsule.archivePath, { force: true });
+}
+
+export function createLocalDefinition({ candidate }) {
   return {
     action: {
-      id: 'scripts/macos/journey-readiness-local-qualification.mjs',
-      scenario: 'local-mac-signed-iphone-simulator',
+      id: 'scripts/macos/journey-readiness-local-qualification.mjs'
     },
-    cleanup: { owner: 'journey-readiness', strategy: 'recorded-udid-exact-delete' },
-    checks: { controllerDigest: collectReadinessControllerDigest(repoRoot) },
+    cleanup: { owner: 'journey-readiness',
+      strategy: 'recorded-udid-exact-delete-and-source-capsule-remove' },
+    integrity: { archive: 'sha256', app: 'codesign-and-bundle-identity' },
+    locator: { kind: 'receipt-json', root: '.tmp/artifacts/journey-readiness' },
     mutation: { baseline: 'isolated-local-v1', recoveryPoint: 'fixture-copy' },
     source: candidate,
     target: { host: 'darwin', identity: 'owned-iphone-simulator',
@@ -101,9 +111,17 @@ export function createLocalDefinition({ candidate, repoRoot }) {
   };
 }
 
-export function createMacProviders({ artifactDir, candidate, controllerDigest, repoRoot }) {
+export function createMacProviders({ artifactDir, candidate, repoRoot }) {
   return {
-    baseline: async () => {
+    action: async () => ({ action: 'host qualification action registered', status: 'passed' }),
+    locator: async () => {
+      const probe = path.join(artifactDir, 'evidence-write.probe');
+      writeFileSync(probe, 'journey-readiness\n');
+      if (statSync(probe).size === 0) throw new Error('evidence probe was empty');
+      unlinkSync(probe);
+      return { action: 'receipt locator persisted', status: 'passed' };
+    },
+    mutation: async () => {
       const source = path.join(artifactDir, 'fixture-source.json');
       const recovery = path.join(artifactDir, 'fixture-recovery.json');
       const value = `${JSON.stringify({ isolated: true, version: 1 })}\n`;
@@ -112,18 +130,13 @@ export function createMacProviders({ artifactDir, candidate, controllerDigest, r
       if (readFileSync(source, 'utf8') !== value) throw new Error('isolated fixture recovery failed');
       return { action: 'isolated fixture restored', status: 'passed' };
     },
-    candidate: async () => ({ action: `candidate ${candidate.revision.slice(0, 12)} frozen`, status: 'passed' }),
-    controller: async () => {
-      assertReadinessControllerStable(controllerDigest, collectReadinessControllerDigest(repoRoot));
-      return { action: 'controller and dependencies stable for this run', status: 'passed' };
-    },
-    criteria: async () => ({ action: 'success and failure criteria frozen', status: 'passed' }),
-    evidence: async () => {
-      const probe = path.join(artifactDir, 'evidence-write.probe');
-      writeFileSync(probe, 'journey-readiness\n');
-      if (statSync(probe).size === 0) throw new Error('evidence probe was empty');
-      unlinkSync(probe);
-      return { action: 'evidence root persisted', status: 'passed' };
+    source: async () => {
+      assertLocalCandidateStillFrozen(candidate, repoRoot);
+      if (!/^[a-f0-9]{64}$/u.test(candidate.archiveDigest)
+          || !/^[a-f0-9]{64}$/u.test(candidate.artifactDigest)) {
+        throw new Error('Local source archive identity is incomplete.');
+      }
+      return { action: `source ${candidate.revision.slice(0, 12)} frozen`, status: 'passed' };
     }
   };
 }

@@ -1,7 +1,9 @@
 const ACTION_OVERRIDES = Object.freeze({
-  build: { deviceLeaseMode: null, formalTarget: 'build-capsule', mutatesFixedA5: false },
+  build: { deviceLeaseMode: null, formalTarget: 'build-capsule',
+    formalTargetIdentity: 'accepted-source-archive', mutatesFixedA5: false },
   'hidden-desktop-status': { deviceLeaseMode: null, mutatesFixedA5: false,
-    formalTarget: 'hidden-desktop-runtime', requiresHiddenDesktopRuntime: true },
+    formalTarget: 'hidden-desktop-runtime', formalTargetIdentity: 'macos-hidden-native',
+    requiresHiddenDesktopRuntime: true },
   status: { deviceLeaseMode: 'readonly-lifecycle', formalSourceClass: 'source-free-readonly',
     mutatesFixedA5: false },
   'sync-group-stopped-status': { formalSourceClass: 'ordinary-only' },
@@ -44,6 +46,7 @@ export function assertRegisteredMacosA5Action(action) {
   return Object.freeze({ action, deviceLeaseMode: 'mutation', formalSourceClass: 'frozen-build',
     formalEvidence: FORMAL_EVIDENCE[action] ?? Object.freeze({ kind: 'receipt' }),
     formalTarget: 'fixed-a5',
+    formalTargetIdentity: '87a33a4b',
     mutatesFixedA5: true, requiresHiddenDesktopRuntime: false,
     ...ACTION_OVERRIDES[action] });
 }
