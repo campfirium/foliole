@@ -63,6 +63,8 @@ it('pairs, applies, downloads resources, and reads all three domains on the firs
 
   await runIosContentResourceAcceptance();
 
+  expect(mocks.loadBootstrap.mock.invocationCallOrder[0] ?? Infinity)
+    .toBeLessThan(mocks.loadPairing.mock.invocationCallOrder[0] ?? -Infinity);
   expect(mocks.apply).toHaveBeenCalledWith({
     headers: { 'X-Signature': 'signed' },
     sourcePeerId: 'desktop-1',

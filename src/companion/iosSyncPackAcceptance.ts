@@ -3,12 +3,11 @@ import { applyCompanionDesktopSyncPack } from '../shared/platform/companionSyncP
 import {
   clearCompanionPairingCredentials,
   createSignedRequestHeaders,
-  loadCompanionPairingState,
-  pairCompanionWithDesktop,
-  requestCompanionPairing
+  loadCompanionPairingState
 } from '../shared/platform/companionWorkspacePairing';
 import { saveCompanionWorkspaceSyncEndpoint } from '../shared/platform/companionWorkspaceSync';
 
+import { pairIosAcceptanceCompanion } from './iosAcceptancePairing';
 import { acceptanceEndpoint, postResult } from './iosBridgeAcceptance';
 import {
   rerunIosNodeVersionRoundtripAcceptance,
@@ -32,17 +31,7 @@ const REJECTION_ERRORS: Partial<Record<AcceptancePhase, string>> = {
 async function pairForSyncPack(endpoint: string, hostName: string) {
   await clearCompanionPairingCredentials();
   await saveCompanionWorkspaceSyncEndpoint('');
-  const pending = await requestCompanionPairing({
-    hostName,
-    hostPlatform: 'ios-capacitor',
-    endpointUrl: endpoint
-  });
-  await pairCompanionWithDesktop({
-    hostName,
-    hostPlatform: 'ios-capacitor',
-    endpointUrl: endpoint,
-    pairRequestId: pending.pair_request_id
-  });
+  await pairIosAcceptanceCompanion(endpoint, hostName);
   await saveCompanionWorkspaceSyncEndpoint(endpoint);
 }
 

@@ -3,14 +3,14 @@ import { DesktopSyncHttpError, fetchDesktopJson } from '../shared/platform/compa
 import {
   clearCompanionPairingCredentials,
   createSignedRequestHeaders,
-  loadCompanionPairingState,
-  pairCompanionWithDesktop,
-  requestCompanionPairing
+  loadCompanionPairingState
 } from '../shared/platform/companionWorkspacePairing';
 import {
   loadCompanionWorkspaceSyncState,
   saveCompanionWorkspaceSyncEndpoint
 } from '../shared/platform/companionWorkspaceSync';
+
+import { pairIosAcceptanceCompanion } from './iosAcceptancePairing';
 
 export type AcceptanceResult = {
   error: string | null;
@@ -75,17 +75,7 @@ async function runInitialPairing(hostName: string, databasePath: string | null) 
   await clearCompanionPairingCredentials();
   await saveCompanionWorkspaceSyncEndpoint('');
   if (!await expectSigningRejected()) throw new Error('Preflight pairing cleanup did not remove signing ability.');
-  const pending = await requestCompanionPairing({
-    hostName,
-    hostPlatform: 'ios-capacitor',
-    endpointUrl: endpoint!
-  });
-  const pairing = await pairCompanionWithDesktop({
-    hostName,
-    hostPlatform: 'ios-capacitor',
-    endpointUrl: endpoint!,
-    pairRequestId: pending.pair_request_id
-  });
+  const pairing = await pairIosAcceptanceCompanion(endpoint, hostName);
   const workspace = await saveCompanionWorkspaceSyncEndpoint(endpoint!);
   const signed = await fetchDesktopJson<{ ok: boolean }>(endpoint!, '/acceptance/signed');
   postResult({

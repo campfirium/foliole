@@ -13,6 +13,7 @@ describe('iOS bridge acceptance host contract', () => {
 
   it('uses an exclusive Web entry and existing pairing/workspace methods', () => {
     const entry = fs.readFileSync('src/companion/main.tsx', 'utf8');
+    const acceptancePairing = fs.readFileSync('src/companion/iosAcceptancePairing.ts', 'utf8');
     const scenario = fs.readFileSync('src/companion/iosBridgeAcceptance.ts', 'utf8');
     const contentResourceScenario = fs.readFileSync('src/companion/iosContentResourceAcceptance.ts', 'utf8');
     const databaseUpgradeScenario = fs.readFileSync('src/companion/iosDatabaseUpgradeAcceptance.ts', 'utf8');
@@ -25,8 +26,10 @@ describe('iOS bridge acceptance host contract', () => {
     expect(entry).toContain("iosAcceptanceScenario === 'state-writeback-runtime'");
     expect(entry).toMatch(/if \(isIosBridgeAcceptance\)[\s\S]*else[\s\S]*<CompanionApp/);
     expect(scenario).toContain('loadCompanionBootstrapState()');
-    expect(scenario).toContain('requestCompanionPairing({');
-    expect(scenario).toContain('pairCompanionWithDesktop({');
+    expect(scenario).toContain('pairIosAcceptanceCompanion(endpoint, hostName)');
+    expect(acceptancePairing).toContain('requestCompanionPairing({');
+    expect(acceptancePairing).toContain('pairCompanionWithDesktop({');
+    expect(acceptancePairing).toContain("remotePeerName: ACCEPTANCE_DESKTOP_NAME");
     expect(scenario).toContain("saveCompanionWorkspaceSyncEndpoint('')");
     expect(syncPackScenario).toContain('applyCompanionDesktopSyncPack({');
     expect(syncPackScenario).toContain(

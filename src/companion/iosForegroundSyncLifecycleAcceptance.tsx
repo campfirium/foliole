@@ -5,12 +5,11 @@ import ReactDOM from 'react-dom/client';
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 import { loadCompanionBootstrapState } from '../shared/platform/companionBootstrap';
 import {
-  loadCompanionPairingState,
-  pairCompanionWithDesktop,
-  requestCompanionPairing
+  loadCompanionPairingState
 } from '../shared/platform/companionWorkspacePairing';
 import { saveCompanionWorkspaceSyncEndpoint } from '../shared/platform/companionWorkspaceSync';
 
+import { pairIosAcceptanceCompanion } from './iosAcceptancePairing';
 import { acceptanceEndpoint, postResult } from './iosBridgeAcceptance';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
@@ -42,17 +41,7 @@ async function prepareAcceptancePairing(bootstrap: NativeCompanionBootstrapState
   const pairing = await loadCompanionPairingState();
   if (!pairing.is_paired) {
     const hostName = bootstrap.host_name ?? 'Acceptance iPhone';
-    const pending = await requestCompanionPairing({
-      hostName,
-      hostPlatform: 'ios-capacitor',
-      endpointUrl: endpoint
-    });
-    await pairCompanionWithDesktop({
-      hostName,
-      hostPlatform: 'ios-capacitor',
-      endpointUrl: endpoint,
-      pairRequestId: pending.pair_request_id
-    });
+    await pairIosAcceptanceCompanion(endpoint, hostName);
   }
   await saveCompanionWorkspaceSyncEndpoint(endpoint);
 }

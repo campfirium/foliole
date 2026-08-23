@@ -10,12 +10,11 @@ import { applyCompanionDesktopSyncPack } from '../shared/platform/companionSyncP
 import {
   clearCompanionPairingCredentials,
   createSignedRequestHeaders,
-  loadCompanionPairingState,
-  pairCompanionWithDesktop,
-  requestCompanionPairing
+  loadCompanionPairingState
 } from '../shared/platform/companionWorkspacePairing';
 import { loadCompanionWorkspaceSyncState, saveCompanionWorkspaceSyncEndpoint } from '../shared/platform/companionWorkspaceSync';
 
+import { pairIosAcceptanceCompanion } from './iosAcceptancePairing';
 import { acceptanceEndpoint, postResult } from './iosBridgeAcceptance';
 
 const PACK_PATH = '/acceptance/sync-pack/content-resource';
@@ -33,21 +32,10 @@ const TOKENS = {
   topic: 'topic-amber-token'
 } as const;
 
-async function pairForContent(endpoint: string) {
-  const bootstrap = await loadCompanionBootstrapState();
+async function pairForContent(endpoint: string, hostName: string) {
   await clearCompanionPairingCredentials();
   await saveCompanionWorkspaceSyncEndpoint('');
-  const pending = await requestCompanionPairing({
-    hostName: bootstrap.host_name ?? 'Acceptance iPhone',
-    hostPlatform: 'ios-capacitor',
-    endpointUrl: endpoint
-  });
-  await pairCompanionWithDesktop({
-    hostName: bootstrap.host_name ?? 'Acceptance iPhone',
-    hostPlatform: 'ios-capacitor',
-    endpointUrl: endpoint,
-    pairRequestId: pending.pair_request_id
-  });
+  await pairIosAcceptanceCompanion(endpoint, hostName);
   await saveCompanionWorkspaceSyncEndpoint(endpoint);
 }
 
@@ -100,10 +88,11 @@ export async function runIosContentResourceAcceptance() {
   try {
     const endpoint = acceptanceEndpoint();
     if (!endpoint) throw new Error('iOS content resource acceptance endpoint is unavailable.');
+    const bootstrap = await loadCompanionBootstrapState();
     const pairing = await loadCompanionPairingState();
     let resourceSync = null;
     if (!pairing.is_paired) {
-      await pairForContent(endpoint);
+      await pairForContent(endpoint, bootstrap.host_name ?? 'Acceptance iPhone');
       await applyStructure(endpoint);
       resourceSync = {
         content: await pullMissingContentBlobs(endpoint),

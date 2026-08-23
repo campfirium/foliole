@@ -9,12 +9,11 @@ import {
 } from '../shared/platform/companionSyncStateWriters';
 import {
   clearCompanionPairingCredentials,
-  loadCompanionPairingState,
-  pairCompanionWithDesktop,
-  requestCompanionPairing
+  loadCompanionPairingState
 } from '../shared/platform/companionWorkspacePairing';
 import { saveCompanionWorkspaceSyncEndpoint } from '../shared/platform/companionWorkspaceSync';
 
+import { pairIosAcceptanceCompanion } from './iosAcceptancePairing';
 import { acceptanceEndpoint, postResult } from './iosBridgeAcceptance';
 
 const NODE_ID = 'ios-state-node';
@@ -23,17 +22,7 @@ const REVIEWED_AT = '2026-07-21T00:01:00.000Z';
 async function pairForStateWriteback(endpoint: string, hostName: string) {
   await clearCompanionPairingCredentials();
   await saveCompanionWorkspaceSyncEndpoint('');
-  const pending = await requestCompanionPairing({
-    hostName,
-    hostPlatform: 'ios-capacitor',
-    endpointUrl: endpoint
-  });
-  await pairCompanionWithDesktop({
-    hostName,
-    hostPlatform: 'ios-capacitor',
-    endpointUrl: endpoint,
-    pairRequestId: pending.pair_request_id
-  });
+  await pairIosAcceptanceCompanion(endpoint, hostName);
   await saveCompanionWorkspaceSyncEndpoint(endpoint);
 }
 
