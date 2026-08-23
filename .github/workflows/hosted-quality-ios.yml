@@ -71,6 +71,7 @@ jobs:
       matrix:
         scenario:
           - pairing-signed-transport
+          - content-resource-read
           - state-writeback-runtime
           - sync-pack-runtime
           - foreground-sync-lifecycle

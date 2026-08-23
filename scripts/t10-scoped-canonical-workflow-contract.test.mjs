@@ -115,5 +115,9 @@ describe('T10 shared, Android, and iOS canonical topology', () => {
     expect(scopedCall.with.scope).toBe('${{ inputs.scope }}');
     expect(fullCall.with.scope).toBe('full');
     expect(ios.jobs.simulator.if).toBe("inputs.scope == 'full'");
+    expect(ios.jobs.simulator.strategy.matrix.scenario).toEqual([
+      'pairing-signed-transport', 'content-resource-read', 'state-writeback-runtime',
+      'sync-pack-runtime', 'foreground-sync-lifecycle'
+    ]);
   });
 });
