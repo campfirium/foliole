@@ -149,11 +149,13 @@ async function routeSyncPackRequest(
   bodyText: string
 ) {
   if (!syncPackService) return false;
-  return syncPackService.handle({
+  const handled = await syncPackService.handle({
     bodyText,
     method: request.method ?? 'GET',
     url: request.url ?? '/'
   }, response);
+  writeObservations();
+  return handled;
 }
 
 async function handleSignedRequest(request: IncomingMessage, response: ServerResponse) {
@@ -181,10 +183,7 @@ async function handleSignedRequest(request: IncomingMessage, response: ServerRes
         return;
       }
     }
-    if (await routeSyncPackRequest(request, response, bodyText)) {
-      writeObservations();
-      return;
-    }
+    if (await routeSyncPackRequest(request, response, bodyText)) return;
     if (contentResourceFixture) {
       const routed = routeIosContentResourceRequest({
         bodyText,

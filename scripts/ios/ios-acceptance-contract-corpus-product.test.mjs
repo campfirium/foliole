@@ -8,6 +8,7 @@ import { readPackRowsFromZip } from '../../electron/database/syncPackZipReaderTe
 import {
   IOS_SYNC_PACK_CAPTURE_OBJECT_ID,
   IOS_SYNC_PACK_CAPTURE_VERSION_ID,
+  IOS_SYNC_PACK_MUTATION_AUTHOR,
   IOS_SYNC_PACK_RESTORE_VERSION_ID
 } from '../../lib/platform/iosSyncPackAcceptanceContract.ts';
 
@@ -19,6 +20,7 @@ function read(relativePath) {
 }
 
 it('binds fixed iOS formal inputs to independently readable product pack semantics', () => {
+  expect(IOS_SYNC_PACK_MUTATION_AUTHOR).toBe(PEER_ID);
   fs.mkdirSync('.tmp/ios-contract-corpus-read', { recursive: true });
   const content = read('content-resource-read/content-resource.syncpack');
   const stateInitial = read('state-writeback-runtime/confirmation-0.syncpack');
@@ -62,7 +64,11 @@ it('binds fixed iOS formal inputs to independently readable product pack semanti
       object_id: IOS_SYNC_PACK_CAPTURE_OBJECT_ID,
       parent_version_id: IOS_SYNC_PACK_CAPTURE_VERSION_ID
     }),
-    expect.objectContaining({ object_id: 'ios-acceptance-restore', version_id: IOS_SYNC_PACK_RESTORE_VERSION_ID })
+    expect.objectContaining({
+      host_name: IOS_SYNC_PACK_MUTATION_AUTHOR,
+      object_id: 'ios-acceptance-restore',
+      version_id: IOS_SYNC_PACK_RESTORE_VERSION_ID
+    })
   ]));
   expect(wrongTarget.manifest.to_peer_id).toBe(`${PEER_ID}-wrong`);
   expect(cursorGap.manifest.from_state_seq).toBeGreaterThan(successor.manifest.to_state_seq);
