@@ -2,11 +2,12 @@ import { INBOX_NODE_ID } from '../../lib/core/database/specialNodeIds';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { pushLocalDirtyObjects } from '../shared/platform/companionDesktopSyncPush';
 import { applyCompanionDesktopSyncPack } from '../shared/platform/companionSyncPackApply';
-import { createSignedRequestHeaders, loadCompanionPairingState } from '../shared/platform/companionWorkspacePairing';
+import { createSignedRequestHeaders } from '../shared/platform/companionWorkspacePairing';
 import { supportsCompanionNodeMutationSurface } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
 import { persistCompanionCapturedText } from './companionCaptureTextActions';
 import { restoreCompanionTrashNode } from './companionTrashActions';
+import { loadIosAcceptanceSyncPeer } from './iosAcceptancePairing';
 
 const RESTORE_NODE_ID = 'ios-acceptance-restore';
 const SUCCESSOR_PATH = '/acceptance/sync-pack/successor';
@@ -46,11 +47,10 @@ export async function rerunIosNodeVersionRoundtripAcceptance(endpoint: string) {
 }
 
 async function applySuccessor(endpoint: string) {
-  const sourcePeerId = (await loadCompanionPairingState()).remote_peer_id;
-  if (!sourcePeerId) throw new Error('sync_pack_source_identity_unavailable');
+  const peer = await loadIosAcceptanceSyncPeer();
   return applyCompanionDesktopSyncPack({
     headers: await createSignedRequestHeaders({ endpointUrl: endpoint, method: 'GET', pathWithQuery: SUCCESSOR_PATH }),
-    sourcePeerId,
+    ...peer,
     url: `${endpoint}${SUCCESSOR_PATH}`
   });
 }

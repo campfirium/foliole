@@ -12,6 +12,7 @@ import {
 } from './ios-acceptance-infrastructure-error.mjs';
 import { restartBridgeResultTimeoutMs, runAcceptanceRestart } from './ios-acceptance-restart-runner.mjs';
 import { readAcceptanceScenarioSnapshot } from './ios-acceptance-snapshot.mjs';
+import { iosAcceptanceSimulatorName } from './ios-acceptance-simulator-identity.mjs';
 import { cleanupOwnedIosSimulator, createOwnedIosSimulator } from './ios-dedicated-simulator-runtime.mjs';
 import { startPairingAcceptanceService } from './ios-pairing-acceptance-runner.mjs';
 import { iosResourceCommand, iosXcodebuildResourceArgs, resolveIosResourceMode } from './ios-resource-profile.mjs';
@@ -62,7 +63,7 @@ export async function runIosBootstrapAcceptanceAttempt(repoRoot, scenario, artif
     owned = createOwnedIosSimulator({
       artifactDir, create: (args) => capture(options, 'xcrun', args),
       listAvailable: () => runJson(options, 'xcrun', ['simctl', 'list', 'devices', 'available', '--json']),
-      name: `Foliole ${scenario} ${process.pid} ${attemptNumber}`
+      name: iosAcceptanceSimulatorName(scenario, process.pid, attemptNumber)
     });
     service = startPairingAcceptanceService(repoRoot, artifactDir, scenario);
     const serviceInfo = await waitForService(artifactDir);

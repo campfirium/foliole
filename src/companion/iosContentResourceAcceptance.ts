@@ -14,7 +14,7 @@ import {
 } from '../shared/platform/companionWorkspacePairing';
 import { loadCompanionWorkspaceSyncState, saveCompanionWorkspaceSyncEndpoint } from '../shared/platform/companionWorkspaceSync';
 
-import { pairIosAcceptanceCompanion } from './iosAcceptancePairing';
+import { loadIosAcceptanceSyncPeer, pairIosAcceptanceCompanion } from './iosAcceptancePairing';
 import { acceptanceEndpoint, postResult } from './iosBridgeAcceptance';
 
 const PACK_PATH = '/acceptance/sync-pack/content-resource';
@@ -40,11 +40,10 @@ async function pairForContent(endpoint: string, hostName: string) {
 }
 
 async function applyStructure(endpoint: string) {
-  const sourcePeerId = (await loadCompanionPairingState()).remote_peer_id;
-  if (!sourcePeerId) throw new Error('sync_pack_source_identity_unavailable');
+  const peer = await loadIosAcceptanceSyncPeer();
   await applyCompanionDesktopSyncPack({
     headers: await createSignedRequestHeaders({ endpointUrl: endpoint, method: 'GET', pathWithQuery: PACK_PATH }),
-    sourcePeerId,
+    ...peer,
     url: `${endpoint}${PACK_PATH}`
   });
 }

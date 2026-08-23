@@ -7,7 +7,7 @@ import {
 } from '../shared/platform/companionWorkspacePairing';
 import { saveCompanionWorkspaceSyncEndpoint } from '../shared/platform/companionWorkspaceSync';
 
-import { pairIosAcceptanceCompanion } from './iosAcceptancePairing';
+import { loadIosAcceptanceSyncPeer, pairIosAcceptanceCompanion } from './iosAcceptancePairing';
 import { acceptanceEndpoint, postResult } from './iosBridgeAcceptance';
 import {
   rerunIosNodeVersionRoundtripAcceptance,
@@ -48,11 +48,10 @@ function advancePhase(phase: AcceptancePhase) {
 async function applyPack(endpoint: string, phase: AcceptancePhase) {
   const kind = phase === 'apply' || phase === 'reapply' ? 'legal' : phase;
   const path = `/acceptance/sync-pack/${kind}`;
-  const sourcePeerId = (await loadCompanionPairingState()).remote_peer_id;
-  if (!sourcePeerId) throw new Error('sync_pack_source_identity_unavailable');
+  const peer = await loadIosAcceptanceSyncPeer();
   return await applyCompanionDesktopSyncPack({
     headers: await createSignedRequestHeaders({ endpointUrl: endpoint, method: 'GET', pathWithQuery: path }),
-    sourcePeerId,
+    ...peer,
     url: `${endpoint}${path}`
   });
 }

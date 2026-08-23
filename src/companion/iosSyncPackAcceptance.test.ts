@@ -44,14 +44,16 @@ beforeEach(() => {
   mocks.apply.mockResolvedValue({ applied_blob_count: 0, applied_object_count: 1, to_state_seq: 2 });
   mocks.loadBootstrap.mockResolvedValue({ device_id: 'ios-1', host_name: 'Acceptance iPhone' });
   mocks.requestPairing.mockResolvedValue({ pair_request_id: 'pair-1' });
-  mocks.loadPairing.mockResolvedValue({ remote_peer_id: 'desktop-1' });
+  mocks.loadPairing.mockResolvedValue({ remote_peer_id: 'desktop-1', remote_peer_name: 'Acceptance Desktop' });
   mocks.runRoundtrip.mockResolvedValue({ push: { pushedObjectIds: ['node:capture', 'node:restore'] } });
   mocks.rerunRoundtrip.mockResolvedValue({ push: { pushedObjectIds: [] } });
   mocks.sign.mockResolvedValue({ 'X-Signature': 'signed' });
 });
 
 it('pairs and applies the identity-bound legal pack on the first launch', async () => {
-  mocks.loadPairing.mockResolvedValue({ is_paired: false, remote_peer_id: 'desktop-1' });
+  mocks.loadPairing.mockResolvedValue({
+    is_paired: false, remote_peer_id: 'desktop-1', remote_peer_name: 'Acceptance Desktop'
+  });
 
   await runIosSyncPackAcceptance();
 
@@ -61,6 +63,7 @@ it('pairs and applies the identity-bound legal pack on the first launch', async 
   }));
   expect(mocks.apply).toHaveBeenCalledWith({
     headers: { 'X-Signature': 'signed' },
+    sourceHostName: 'Acceptance Desktop',
     sourcePeerId: 'desktop-1',
     url: 'http://127.0.0.1:43123/acceptance/sync-pack/legal'
   });
@@ -68,7 +71,9 @@ it('pairs and applies the identity-bound legal pack on the first launch', async 
 });
 
 it('reapplies through the shared path without repairing an existing pairing', async () => {
-  mocks.loadPairing.mockResolvedValue({ device_id: 'ios-1', is_paired: true, remote_peer_id: 'desktop-1' });
+  mocks.loadPairing.mockResolvedValue({
+    device_id: 'ios-1', is_paired: true, remote_peer_id: 'desktop-1', remote_peer_name: 'Acceptance Desktop'
+  });
   localStorage.setItem('foliole-ios-sync-pack-acceptance-phase', 'reapply');
 
   await runIosSyncPackAcceptance();
@@ -89,7 +94,9 @@ it.each([
   ['legacy-format', 'unsupported_sync_pack_format_version'],
   ['illegal-dag', 'sync_pack_node_version_missing_parent']
 ])('accepts only the deterministic %s rejection', async (phase, error) => {
-  mocks.loadPairing.mockResolvedValue({ device_id: 'ios-1', is_paired: true, remote_peer_id: 'desktop-1' });
+  mocks.loadPairing.mockResolvedValue({
+    device_id: 'ios-1', is_paired: true, remote_peer_id: 'desktop-1', remote_peer_name: 'Acceptance Desktop'
+  });
   localStorage.setItem('foliole-ios-sync-pack-acceptance-phase', phase);
   mocks.apply.mockRejectedValue(new Error(error));
 
@@ -101,7 +108,9 @@ it.each([
 });
 
 it('fails when a rejection category does not match the active phase', async () => {
-  mocks.loadPairing.mockResolvedValue({ device_id: 'ios-1', is_paired: true, remote_peer_id: 'desktop-1' });
+  mocks.loadPairing.mockResolvedValue({
+    device_id: 'ios-1', is_paired: true, remote_peer_id: 'desktop-1', remote_peer_name: 'Acceptance Desktop'
+  });
   localStorage.setItem('foliole-ios-sync-pack-acceptance-phase', 'wrong-target');
   mocks.apply.mockRejectedValue(new Error('missing_sync_pack_entry'));
 
