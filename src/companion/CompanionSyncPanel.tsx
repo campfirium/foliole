@@ -144,6 +144,7 @@ function MainSyncContent(props: Pick<CompanionSyncPanelProps, 'bootstrapState' |
   if (isCompanionPairingSyncUsable(props.pairingState)) {
     return props.page === 'syncHandoff' ? null : (
       <ConnectedState
+        bootstrapState={props.bootstrapState}
         endpointUrl={props.endpointUrl}
         lastSyncedAt={props.lastSyncedAt}
         manualSyncAction={props.manualSyncAction ?? null}
