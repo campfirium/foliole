@@ -1,6 +1,5 @@
-/* global process */
-
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -18,7 +17,7 @@ import { runMacosA5ProductBootstrap } from './macos-a5-product-bootstrap.mjs';
 
 describe('macOS fixed A5 development entry', () => {
   it('runs Web, Capacitor, and Gradle generation only from the selected build root', () => {
-    const root = fs.mkdtempSync(path.join(process.cwd(), '.tmp/artifacts/a5-build-order-'));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'a5-build-order-'));
     const paths = { apk: path.join(root, 'android/app/build/outputs/apk/debug/app-debug.apk'),
       buildRoot: root, cap: path.join(root, 'node_modules/.bin/cap'),
       gradle: path.join(root, 'android/gradlew') };
