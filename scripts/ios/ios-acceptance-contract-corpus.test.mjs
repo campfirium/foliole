@@ -1,9 +1,13 @@
 // @vitest-environment node
+import { Buffer } from 'node:buffer';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
+
+import { createIosSyncPackAcceptanceRoutes } from './ios-sync-pack-acceptance-routes.ts';
+import { createIosSyncPackAcceptanceObservations } from './ios-sync-pack-acceptance-observations.ts';
 
 const ROOT = 'scripts/ios/fixtures/acceptance-contract-corpus';
 
@@ -43,12 +47,34 @@ describe('iOS formal acceptance contract corpus', () => {
     expect(source).not.toMatch(/ios-(?:sync-pack|state-writeback|content-resource)-acceptance-fixture/);
   });
 
+  it('serves a pathname-normalized legal pack with an explicit byte length', async () => {
+    const response = captureResponse();
+    const routes = await createIosSyncPackAcceptanceRoutes({
+      observations: createIosSyncPackAcceptanceObservations()
+    });
+
+    await expect(routes.handle({
+      bodyText: '', method: 'GET', url: '/acceptance/sync-pack/legal?request=contract'
+    }, response)).resolves.toBe(true);
+    expect(response.headers).toMatchObject({ 'Content-Length': String(response.body.length) });
+    expect(response.body.subarray(0, 4)).toEqual(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
+  });
+
   it('keeps the versioned old database isolated to its independent upgrade entry', () => {
     const files = reachableImports('scripts/ios/ios-database-upgrade-acceptance-runner.mjs');
     expect(files).toContain('scripts/ios/ios-database-upgrade-contract-fixture.mjs');
     expect(files).not.toContain('scripts/ios/ios-database-upgrade-acceptance-fixture.ts');
   });
 });
+
+function captureResponse() {
+  return {
+    body: Buffer.alloc(0),
+    headers: {},
+    end(body) { this.body = body; },
+    writeHead(_status, headers) { this.headers = headers; }
+  };
+}
 
 function reachableImports(entry) {
   const pending = [entry];

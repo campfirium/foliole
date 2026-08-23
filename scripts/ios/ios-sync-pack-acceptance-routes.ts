@@ -35,9 +35,10 @@ export async function createIosSyncPackAcceptanceRoutes(args: {
       return { body: Buffer.from(JSON.stringify(result)), contentType: 'application/json' };
     }
     if (request.method !== 'GET') return null;
-    const filePath = request.url === '/acceptance/sync-pack/successor' && successorReady
+    const pathname = new URL(request.url, 'http://acceptance').pathname;
+    const filePath = pathname === '/acceptance/sync-pack/successor' && successorReady
       ? path.join(fixtureDirectory, 'successor.syncpack')
-      : staticRoutes[request.url];
+      : staticRoutes[pathname];
     return filePath
       ? { body: readFileSync(filePath), contentType: 'application/vnd.foliole.sync-pack' }
       : null;
@@ -45,6 +46,7 @@ export async function createIosSyncPackAcceptanceRoutes(args: {
   return {
     close: () => undefined,
     handle: async (request: { bodyText: string; method: string; url: string }, response: ServerResponse) => {
+      args.observations.request_urls.push(request.url);
       const routed = await route(request);
       if (!routed) return false;
       response.writeHead(200, {
