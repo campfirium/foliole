@@ -2,15 +2,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { macosA5GradleEnv, macosA5Paths, A5_SERIAL } from '../android/macos-a5-dev.mjs';
-import { runMacosA5PairSync } from '../android/macos-a5-pair-sync-action.mjs';
 import { runMacosA5SyncGroupApproval } from '../android/macos-a5-sync-group-approval.mjs';
 import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desktop-session.mjs';
-import { resolveMacosA5PairSyncReadiness } from '../android/macos-a5-product-bootstrap.mjs';
-import { runMacosA5SyncGroupMaintenance } from '../android/macos-a5-sync-group-maintenance-action.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import {
   proveABConvergence, waitForAndroidJourneyFact
 } from './multi-device-sync-ab-convergence.mjs';
+import { establishFreshAB } from './multi-device-sync-fresh-join.mjs';
 import { proveALeave } from './multi-device-sync-a-leave.mjs';
 import { proveARejoin } from './multi-device-sync-a-rejoin.mjs';
 import { proveSyncFromZero } from './multi-device-sync-from-zero.mjs';
@@ -25,7 +23,7 @@ import { runAOfflineAdmissionPrelude } from './multi-device-sync-fact-preparatio
 import { startWindowsSyncGroupProvider } from './multi-device-sync-windows-provider.mjs';
 import {
   closeMacosAcceptanceTransport, macosAcceptanceEnv, macosAcceptanceSessionOptions,
-  openMacosAcceptanceTransport, validateMacosAcceptanceDesktopPreflight
+  openMacosAcceptanceTransport
 } from './multi-device-sync-macos-channel.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 
@@ -38,45 +36,6 @@ function actionExecute(evidenceRoot, signal, stage) {
     action: options.action || path.basename(command), hardDeadlineMs: options.timeoutMs,
     host: options.host || stage.host, ...options, signal, stage: stage.name
   });
-}
-
-async function establishAB(repoRoot, runId, { reportProgress, signal, stage }) {
-  const owned = createIsolatedMacosRoot({ repoRoot, runId });
-  const paths = macosA5Paths(repoRoot);
-  const env = macosAcceptanceEnv(macosA5GradleEnv());
-  const evidenceRoot = path.join(repoRoot, '.tmp', 'artifacts', 'multi-device-sync', 'runs', runId,
-    'a-b-group-sync');
-  fs.mkdirSync(evidenceRoot, { recursive: true });
-  const logPath = path.join(evidenceRoot, 'action.log');
-  const execute = actionExecute(evidenceRoot, signal, stage);
-  let lastSuccessfulAction = 'stage_started';
-  try {
-    await runMacosA5SyncGroupMaintenance({ action: 'clear-app-data', buildIdentity: runId,
-      env, evidenceRoot: path.join(evidenceRoot, 'clear-a5'), execute, paths, serial: A5_SERIAL });
-    lastSuccessfulAction = 'a5_cleared';
-    await runMacosA5SyncGroupMaintenance({ action: 'activate-participation', buildIdentity: runId,
-      env, evidenceRoot: path.join(evidenceRoot, 'activate-a5'), execute, paths, serial: A5_SERIAL });
-    lastSuccessfulAction = 'a5_participation_activated'; reportProgress('a5-cleared');
-    const readiness = resolveMacosA5PairSyncReadiness(paths);
-    lastSuccessfulAction = 'a5_pairing_readiness';
-    const result = await runMacosA5PairSync({ buildIdentity: runId,
-      credentialRepairRequired: readiness.credentialRepairRequired,
-      desktopControl: async () => ({ code: 0, output: '' }),
-      desktopAuthorizationFingerprint: readiness.syncGroupRemotePeerFingerprint,
-      env, evidenceRoot, execute, hostName: readiness.hostName,
-      existingPairing: readiness.existingPairing, libraryHome: path.join(owned.root, 'library'),
-      openTransport: openMacosAcceptanceTransport, closeTransport: closeMacosAcceptanceTransport,
-      pairedAuthorizationFingerprint: readiness.localMemberAuthorizationFingerprint,
-      paths, serial: A5_SERIAL,
-      userDataPath: path.join(owned.root, 'user-data'),
-      validateDesktop: validateMacosAcceptanceDesktopPreflight });
-    reportProgress('macos-group-created'); reportProgress('a5-paired'); reportProgress('a-b-synced');
-    return { evidenceRef: result.pairSyncRecovery.manifestPath };
-  } catch (error) {
-    Object.assign(error, { evidenceRef: logPath, host: error.host || 'android-b',
-      lastSuccessfulAction, missingFact: error.missingFact || error.stage || 'product_action_receipt' });
-    throw error;
-  }
 }
 
 export function windowsJoinFailure(result) {
@@ -173,7 +132,9 @@ export function createDiagnosticStageActions({ repoRoot, requiredHosts, runId })
     'sync-from-zero');
   return {
     'admit-c': (context) => admitC(repoRoot, runId, context),
-    'establish-a-b': (context) => establishAB(repoRoot, runId, context),
+    'establish-a-b': (context) => establishFreshAB({ repoRoot, runId, ...context,
+      execute: actionExecute(path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId,
+        'a-b-group-sync'), context.signal, context.stage) }),
     'prepare-candidate': (context) => prepareCandidateStage({
       ...context, repoRoot, requiredHosts, runId
     }),
@@ -201,12 +162,5 @@ export function createDiagnosticStageActions({ repoRoot, requiredHosts, runId })
 }
 
 export async function cleanupDiagnosticState({ repoRoot, runId }) {
-  const paths = macosA5Paths(repoRoot);
-  const evidenceRoot = path.join(repoRoot, '.tmp', 'artifacts',
-    'multi-device-sync', 'cleanup', runId);
-  fs.mkdirSync(evidenceRoot, { recursive: true });
-  await runMacosA5SyncGroupMaintenance({ action: 'clear-app-data', buildIdentity: runId,
-    env: macosA5GradleEnv(), evidenceRoot,
-    execute: actionExecute(evidenceRoot, undefined, { host: 'android-b', name: 'cleanup' }),
-    paths, serial: A5_SERIAL });
+  return { preservedHostState: true, repoRoot, runId };
 }

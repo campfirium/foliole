@@ -14,6 +14,9 @@ import {
   openMacosAcceptanceTransport
 } from './multi-device-sync-macos-channel.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
+import {
+  assertBidirectionalConvergence, factObservation
+} from './sync-scenario-predicate.mjs';
 
 const APP_ID = 'com.foliole.android';
 
@@ -31,19 +34,21 @@ export async function runABConvergenceJourney(actions) {
     await actions.openTransport();
     transportOpen = true;
     await actions.startAndroid();
-    await actions.waitForAndroidFact(desktopFact.factId);
+    const androidReceived = await actions.waitForAndroidFact(desktopFact.factId);
     actions.reportProgress?.('a-fact-synced-to-b');
     await actions.closeTransport();
     transportOpen = false;
     const androidFact = await actions.createAndroidFact();
-    await actions.waitForDesktopFact(session, androidFact.factText);
+    const desktopReceived = await actions.waitForDesktopFact(session, androidFact.factId);
     actions.reportProgress?.('b-fact-synced-to-a');
     await session.close();
     session = null;
     await actions.restartAndroid();
     actions.reportProgress?.('a-b-restarted');
     session = await actions.openSession();
-    const proof = await actions.inspectRestarted(session, desktopFact.factId, androidFact.factText);
+    const proof = await actions.inspectRestarted(session, desktopFact, androidFact, {
+      androidReceived, desktopReceived
+    });
     actions.reportProgress?.('a-b-bidirectional-converged');
     return { androidFact, desktopFact, proof };
   } finally {
@@ -85,8 +90,8 @@ export async function proveABConvergence({ execute, reportProgress, repoRoot, ru
     createDesktopFact: (session) => createDesktopSyncGroupJourneyFact({
       device: 'A', evidenceRoot: path.join(evidenceRoot, 'a-fact'), session
     }),
-    inspectRestarted: (session, desktopFactId, androidFactText) => inspectRestarted({
-      androidFactText, desktopFactId, paths, session
+    inspectRestarted: (session, desktopFact, androidFact, received) => inspectRestarted({
+      androidFact, desktopFact, paths, received, runId, session
     }),
     openSession: () => openMacosPairSyncDesktopSession(sessionOptions),
     openTransport: () => openMacosAcceptanceTransport(runTransport),
@@ -124,36 +129,42 @@ async function createAndroidFact({ env, evidenceRoot, execute, paths, runId }) {
   return { factId, factText };
 }
 
-async function waitForDesktopFact(session, factText) {
+async function waitForDesktopFact(session, factId) {
   const deadline = Date.now() + 60_000;
   while (Date.now() < deadline) {
     const snapshot = await session.invoke('load_workspace_list_snapshot', { includePdfOpenings: false });
-    if (Object.values(snapshot?.nodesById ?? {}).some((node) =>
-      `${node?.title ?? ''}\n${node?.content ?? ''}`.includes(factText))) return snapshot;
+    if (snapshot?.nodesById?.[factId]) return snapshot;
     await delay(1_000);
   }
   throw productFailure('macos-a', 'deterministic_b_fact_missing',
     'MacOS A did not receive the deterministic B fact.', 'stalled');
 }
 
-async function inspectRestarted({ androidFactText, desktopFactId, paths, session }) {
-  const overview = await session.enable();
+function desktopObservation(snapshot, mutations) {
+  return factObservation(Object.fromEntries(mutations
+    .filter(({ factId }) => snapshot?.nodesById?.[factId])
+    .map(({ factId, origin }) => [factId, origin])));
+}
+
+async function inspectRestarted({ androidFact, desktopFact, paths, received, runId, session }) {
+  await session.enable();
   const desktopSnapshot = await session.invoke('load_workspace_list_snapshot', { includePdfOpenings: false });
-  const android = await androidSnapshot(paths, desktopFactId, androidFactText);
-  const activeDesktopMembers = overview.sync_group?.members?.filter((item) => item.state === 'active').length;
-  const inspection = android.database?.inspection;
-  const desktopHasBoth = Boolean(desktopSnapshot?.nodesById?.[desktopFactId])
-    && JSON.stringify(desktopSnapshot).includes(androidFactText);
-  if (!overview.sync_group?.group_id || activeDesktopMembers !== 2 || !desktopHasBoth
-      || android.database?.integrity !== 'ok' || inspection?.activeSyncGroupMemberCount !== 2
-      || inspection.syncGroupId !== overview.sync_group.group_id
-      || inspection.syncGroupTimelineId !== overview.sync_group.timeline_id
-      || !inspection.desktopFactPresent || !inspection.androidFactPresent) {
-    throw productFailure('all', 'a_b_restart_convergence_missing',
-      'A and B did not preserve the restarted bidirectional convergence facts.');
+  const android = await androidSnapshot(paths, desktopFact.factId, androidFact.factText);
+  const mutations = [
+    { factId: desktopFact.factId, origin: 'A', runId },
+    { factId: androidFact.factId, origin: 'B', runId }
+  ];
+  try {
+    return assertBidirectionalConvergence({ mutations, observations: {
+      received: [desktopObservation(received.desktopReceived, mutations),
+        factObservation(received.androidReceived.database?.inspection?.journeyFacts)],
+      restarted: [desktopObservation(desktopSnapshot, mutations),
+        factObservation(android.database?.inspection?.journeyFacts)]
+    } });
+  } catch (error) {
+    throw Object.assign(error, { failureOwner: 'product', host: 'all',
+      missingFact: 'a_b_restart_convergence_missing' });
   }
-  return { activeMemberCount: 2, androidFactPresent: true, desktopFactPresent: true,
-    groupId: overview.sync_group.group_id, restarted: true, timelineId: overview.sync_group.timeline_id };
 }
 
 export function expectedJourneyFactPresent(journeyFacts, factId, expectedDevice = 'A') {

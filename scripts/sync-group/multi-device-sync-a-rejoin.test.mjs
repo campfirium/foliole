@@ -20,16 +20,15 @@ const android = { database: { counts: { attachments: 1, content_blobs: 4, nodes:
     missingAttachmentCount: 0, missingContentBlobCount: 0, syncGroupId: 'group-1',
     syncGroupTimelineId: 'timeline-1', userNodeCount: 4 }, integrity: 'ok' } };
 
-it('requires one restarted identity, timeline, member set, fact set, and resource inventory', () => {
-  expect(assertThreeDeviceProof({ android, ids, macos: facts, windows: facts }))
-    .toEqual({ attachmentCount: 1, contentBlobCount: 4, groupId: 'group-1',
-      nodeCount: 4, timelineId: 'timeline-1' });
+it('requires every restarted host to retain the exact run facts', () => {
+  expect(assertThreeDeviceProof({ android, ids, macos: facts, runId: 'run-1', windows: facts }))
+    .toMatchObject({ factIds: ['fact-a', 'fact-b', 'fact-c'], restarted: true, runId: 'run-1' });
 });
 
-it('rejects a same-count member set that does not converge by Host', () => {
-  const divergent = { ...facts, activeHosts: { desktop: ['Mac A', 'Other'], mobile: ['Android B'] } };
-  expect(() => assertThreeDeviceProof({ android, ids, macos: facts, windows: divergent }))
-    .toThrow('one complete three-member timeline');
+it('rejects a restarted host that only has an older fact set', () => {
+  const divergent = { ...facts, facts: { 'fact-a': true, 'fact-b': true } };
+  expect(() => assertThreeDeviceProof({ android, ids, macos: facts, runId: 'run-1',
+    windows: divergent })).toThrow('exact facts');
 });
 
 it('requires the exact pre-join C fact and hash attachment on every restarted host', () => {
@@ -44,26 +43,24 @@ it('requires the exact pre-join C fact and hash attachment on every restarted ho
         'fact-a-before-join': 'A', 'fact-b-before-join': 'B',
         'fact-c-before-join': 'C' } } } };
   expect(assertThreeDeviceProof({ android: androidWithMaterial, ids: requiredIds,
-    macos: desktop, requiredAttachmentId: 'hash-c', windows: desktop })).toMatchObject({
-    groupId: 'group-1'
-  });
+    macos: desktop, requiredAttachmentId: 'hash-c', runId: 'run-1', windows: desktop }))
+    .toMatchObject({ requiredAttachmentId: 'hash-c' });
   expect(() => assertThreeDeviceProof({ android: androidWithMaterial, ids: requiredIds,
     macos: { ...desktop, availableAttachmentIds: [] }, requiredAttachmentId: 'hash-c',
-    windows: desktop })).toThrow('one complete three-member timeline');
+    runId: 'run-1', windows: desktop })).toThrow('exact journey attachment');
 });
 
-it('waits for restarted resource bodies instead of failing on the transient metadata state', async () => {
+it('waits for the exact restarted fact instead of accepting a transient older set', async () => {
   let inspections = 0;
   const proof = await waitForThreeDeviceProof({ ids, intervalMs: 0, inspect: async () => {
     inspections += 1;
-    const currentAndroid = inspections === 1 ? {
-      ...android, database: { ...android.database,
-        inspection: { ...android.database.inspection, missingContentBlobCount: 4 } }
-    } : android;
+    const currentAndroid = inspections === 1 ? { ...android, database: { ...android.database,
+      inspection: { ...android.database.inspection,
+        journeyFacts: { 'fact-a': 'A', 'fact-b': 'B' } } } } : android;
     return { android: currentAndroid, macos: facts, windows: facts };
-  } });
+  }, runId: 'run-1' });
   expect(inspections).toBe(2);
-  expect(proof).toMatchObject({ contentBlobCount: 4, nodeCount: 4 });
+  expect(proof).toMatchObject({ restarted: true, runId: 'run-1' });
 });
 
 it('ends the stale provider lifecycle before every staged Android restart', async () => {

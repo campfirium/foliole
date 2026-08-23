@@ -1,3 +1,17 @@
+import { factObservation } from './sync-scenario-predicate.mjs';
+
+export function desktopFactObservation(facts, factId, origin) {
+  return factObservation(facts?.facts?.[factId] === true ? { [factId]: origin } : {});
+}
+
+export function assertParticipationState(overview, expected, groupId, fail) {
+  if (overview.sync_group?.group_id !== groupId
+      || overview.sync_enabled !== expected.enabled || overview.sync_paused !== expected.paused
+      || overview.participating !== (expected.enabled && !expected.paused)) {
+    throw fail(`macOS participation state is incomplete: ${JSON.stringify(overview)}`);
+  }
+}
+
 export function assertAndroidResumeData(before, after, factId, fail) {
   const beforeDatabase = before.database;
   const afterDatabase = after.database;

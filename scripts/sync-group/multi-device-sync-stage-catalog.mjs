@@ -15,7 +15,7 @@ const stages = [
     outputs: ['candidate_bound'], progressDeadlineMs: 20 * 60_000, siblings: [] },
   { action: 'establish-a-b', host: 'all', inputs: ['candidate_bound'], name: 'a-b-group-sync',
     hardDeadlineMs: 10 * 60_000, hosts: ['macos-a', 'android-b'],
-    milestones: ['a5-cleared', 'macos-group-created', 'a5-paired', 'a-b-synced'],
+    milestones: ['macos-group-created', 'a5-paired', 'a-b-synced'],
     outputs: ['a_b_group_active'], progressDeadlineMs: PRODUCT_PROGRESS_DEADLINE, siblings: [] },
   { action: 'prove-a-b-convergence', host: 'all', inputs: ['a_b_group_active'],
     hardDeadlineMs: 8 * 60_000, hosts: ['macos-a', 'android-b'], name: 'a-b-convergence',

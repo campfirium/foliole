@@ -8,8 +8,6 @@ import {
 
 const factIds = { B: 'fact-b', C: 'fact-c' };
 const facts = { 'fact-b': true, 'fact-c': true };
-const baseline = { attachmentCount: 1, contentBlobCount: 4, groupId: 'group-1',
-  nodeCount: 4, timelineId: 'timeline-1' };
 const android = { database: { counts: { attachments: 2, content_blobs: 6 }, integrity: 'ok',
   inspection: { activeMemberHosts: ['Android B', 'Windows C'], activeSyncGroupMemberCount: 2,
     departedMemberHosts: ['Mac A'], journeyFacts: { 'fact-b': 'B', 'fact-c': 'C' },
@@ -21,20 +19,15 @@ const restarted = { activeHosts: { desktop: ['Windows C'], mobile: ['Android B']
   localGroupId: 'group-1', localMemberState: 'active', localTimelineId: 'timeline-1',
   userNodeCount: 6 };
 
-it('requires B and C to retain one identity, timeline, fact set, and resource inventory', () => {
-  expect(assertSurvivorProof({ android, baseline, factIds, formerHostName: 'Mac A',
-    windows: { proof: { formerHostName: 'Mac A' }, restarted } })).toEqual({
-    activeMemberHosts: ['Android B', 'Windows C'], attachmentCount: 2, contentBlobCount: 6,
-    formerAccessState: 'credentials_revoked', groupId: 'group-1',
-    nodeCount: 6, timelineId: 'timeline-1'
-  });
+it('requires exact post-leave facts on survivors and refuses them on the departed host', () => {
+  expect(assertSurvivorProof({ android, departed: { facts: {} }, factIds, runId: 'run-1',
+    windows: { restarted } })).toHaveLength(2);
 });
 
-it('rejects a survivor resource inventory that only matches by membership count', () => {
-  expect(() => assertSurvivorProof({ android, baseline, factIds, formerHostName: 'Mac A',
-    windows: { proof: { formerHostName: 'Mac A' },
-      restarted: { ...restarted, contentBlobCount: 5 } } }))
-    .toThrow('complete bidirectional survivor convergence');
+it('rejects a departed host that accepts a post-leave fact', () => {
+  expect(() => assertSurvivorProof({ android, departed: { facts: { 'fact-b': true } },
+    factIds, runId: 'run-1', windows: { restarted } }))
+    .toThrow('departed participant');
 });
 
 it('releases C only after B has the new identities, bodies, and attachment inventory', () => {
@@ -49,7 +42,7 @@ it('releases C only after B has the new identities, bodies, and attachment inven
   });
   expect(() => assertAndroidConsumerComplete({ before, expected, snapshot: {
     ...android, database: { ...android.database, inspection: {
-      ...android.database.inspection, missingAttachmentCount: 1
+      ...android.database.inspection, journeyFacts: { 'fact-b': 'B' }
     } }
   } })).toThrow('has not consumed');
 });

@@ -6,11 +6,11 @@ import {
 } from '../android/android-pair-sync-recovery-readiness.mjs';
 import { A5_SERIAL } from '../android/macos-a5-dev.mjs';
 import {
-  assertSyncFromZeroCursorContinuity, assertSyncFromZeroDatasetFacts,
-  syncFromZeroDatasetDigest, SYNC_FROM_ZERO_DATASET
+  assertSyncFromZeroDatasetFacts, syncFromZeroDatasetDigest, SYNC_FROM_ZERO_DATASET
 } from './sync-from-zero-contract.mjs';
 import { inspectSyncFromZeroDatasetFacts } from './sync-from-zero-dataset-inspect.mjs';
 import { createSyncProgressWatchdog } from './sync-progress-watchdog.mjs';
+import { assertExactDatasetConvergence } from './sync-scenario-predicate.mjs';
 
 const APP_ID = 'com.foliole.android';
 
@@ -136,17 +136,6 @@ export async function inspectMacosSyncFromZeroDataset(session, datasetReceipt) {
   };
 }
 
-function suppliedCursorForPeer(facts, peerFingerprint) {
-  const supply = facts.peerCursors?.find(({ peerFingerprint: current, streamName }) =>
-    streamName === 'sync-pack-supply' && current === peerFingerprint);
-  const match = /^(\d+):(\d+)$/u.exec(supply?.cursorValue ?? '');
-  if (!match) return null;
-  const from = Number(match[1]);
-  const to = Number(match[2]);
-  return Number.isSafeInteger(from) && Number.isSafeInteger(to) && to >= from
-    ? { from, to } : null;
-}
-
 function requiredAndroidInspection(snapshot, label) {
   const inspection = snapshot?.database?.inspection;
   if (inspection) return inspection;
@@ -156,34 +145,22 @@ function requiredAndroidInspection(snapshot, label) {
 }
 
 export function assertSyncFromZeroFinalProof({ androidAfterC, androidFinal, datasetReceipt,
-  macos, windowsReceipt }) {
-  assertSyncFromZeroCursorContinuity(windowsReceipt);
+  macos, runId, windowsReceipt }) {
   assertSyncFromZeroDatasetFacts(windowsReceipt.finalFacts);
   const afterC = requiredAndroidInspection(androidAfterC, 'after-C');
   const android = requiredAndroidInspection(androidFinal, 'final');
   assertSyncFromZeroDatasetFacts(afterC);
   assertSyncFromZeroDatasetFacts(android);
   const expectedDigest = syncFromZeroDatasetDigest(datasetReceipt);
-  const groups = [macos.groupId, android.syncGroupId, windowsReceipt.candidate.groupId];
-  const timelines = [macos.timelineId, android.syncGroupTimelineId,
-    windowsReceipt.finalFacts.localTimelineId];
-  const supplied = suppliedCursorForPeer(afterC, windowsReceipt.finalFacts.deviceIdentity);
+  const proof = assertExactDatasetConvergence({ mutation: { datasetDigest: expectedDigest, runId },
+    observations: [macos, android, windowsReceipt.finalFacts] });
   if (macos.datasetNodeCount !== SYNC_FROM_ZERO_DATASET.nodeCount
       || macos.readyAttachmentCount !== SYNC_FROM_ZERO_DATASET.attachmentCount
       || [macos.datasetDigest, android.datasetDigest, windowsReceipt.finalFacts.datasetDigest]
         .some((value) => value !== expectedDigest)
-      || groups.some((value) => !value) || new Set(groups).size !== 1
-      || timelines.some((value) => !value) || new Set(timelines).size !== 1
-      || macos.activeMemberCount !== 3 || android.activeSyncGroupMemberCount !== 3
-      || windowsReceipt.finalFacts.activeMemberCount !== 3
-      || !supplied || supplied.to < windowsReceipt.finalFacts.receiveCursor
       || !androidFinal.attachments || androidFinal.attachments.size <= 0) {
-    throw new Error(`Three-host sync-from-zero evidence is incomplete: ${JSON.stringify({
-      providerSupply: supplied, windowsCursor: windowsReceipt.finalFacts.receiveCursor
-    })}`);
+    throw new Error('Three-host exact sync-from-zero dataset evidence is incomplete.');
   }
-  return { attachmentCount: SYNC_FROM_ZERO_DATASET.attachmentCount,
-    contentBlobCount: SYNC_FROM_ZERO_DATASET.nodeCount, cursor: windowsReceipt.finalFacts.receiveCursor,
-    datasetDigest: expectedDigest, groupId: groups[0], nodeCount: SYNC_FROM_ZERO_DATASET.nodeCount,
-    timelineId: timelines[0] };
+  return { ...proof, attachmentCount: SYNC_FROM_ZERO_DATASET.attachmentCount,
+    nodeCount: SYNC_FROM_ZERO_DATASET.nodeCount };
 }

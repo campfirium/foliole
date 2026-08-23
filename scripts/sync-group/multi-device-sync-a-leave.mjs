@@ -95,7 +95,7 @@ async function leaveAndRestartA(context) {
   try {
     await restartARejoinAndroidProvider({ env, execute, paths });
     reportProgress('survivor-provider-ready');
-    assertActiveThreeMemberInput(await session.load(), rejoin.proof);
+    assertActiveThreeMemberInput(await session.load(), rejoin.groupContext);
     const before = await macosFacts(execute, repoRoot, databasePath, Object.values(rejoin.factIds));
     const afterLeave = await session.leave();
     if (afterLeave.sync_group !== null || afterLeave.paired_authorizations.length !== 0) {
@@ -121,7 +121,7 @@ async function runWindowsContinuity(context, before) {
   const { env, evidenceRoot, execute, paths, rejoin, reportActivity,
     reportProgress, repoRoot, runId } = context;
   const expected = { formerHostName: before.localHostName,
-    groupId: rejoin.proof.groupId, timelineId: rejoin.proof.timelineId };
+    groupId: rejoin.groupContext.groupId, timelineId: rejoin.groupContext.timelineId };
   await waitUntil('Android B departure convergence', () => androidSnapshot(paths),
     (value) => matchesAndroidSurvivorState(value, expected),
     (value) => value.database?.inspection);
@@ -164,29 +164,27 @@ async function runWindowsContinuity(context, before) {
   }
 }
 
-function matchesFullProof(value, context, before, remote) {
+function matchesFullProof(value, context, departed, remote) {
   try {
-    assertSurvivorProof({ android: value, baseline: context.rejoin.proof,
-      factIds: remote.receipt.factIds, formerHostName: before.localHostName,
-      windows: remote.receipt });
+    assertSurvivorProof({ android: value, departed, factIds: remote.receipt.factIds,
+      runId: context.runId, windows: remote.receipt });
     return true;
   } catch { return false; }
 }
 
-async function verifyRestartedSurvivors(context, before, remote) {
+async function verifyRestartedSurvivors(context, departed, remote) {
   const { env, execute, paths, reportProgress } = context;
   await waitUntil('Android B survivor fact convergence', () => androidSnapshot(paths),
-    (value) => matchesFullProof(value, context, before, remote),
+    (value) => matchesFullProof(value, context, departed, remote),
     (value) => [value.database?.inspection, value.database?.counts]);
   reportProgress('survivor-facts-converged');
   await restartARejoinAndroidProvider({ env, execute, paths });
   const restarted = await waitUntil('Android B restarted survivor state',
-    () => androidSnapshot(paths), (value) => matchesFullProof(value, context, before, remote),
+    () => androidSnapshot(paths), (value) => matchesFullProof(value, context, departed, remote),
     (value) => [value.database?.inspection, value.database?.counts]);
   reportProgress('survivors-restarted');
-  const proof = assertSurvivorProof({ android: restarted, baseline: context.rejoin.proof,
-    factIds: remote.receipt.factIds, formerHostName: before.localHostName,
-    windows: remote.receipt });
+  const proof = assertSurvivorProof({ android: restarted, departed,
+    factIds: remote.receipt.factIds, runId: context.runId, windows: remote.receipt });
   reportProgress('former-a-revoked');
   return proof;
 }
@@ -207,10 +205,12 @@ export async function proveALeave(options) {
   fs.mkdirSync(context.evidenceRoot, { recursive: true });
   const before = await leaveAndRestartA(context);
   const remote = await runWindowsContinuity(context, before);
-  const proof = await verifyRestartedSurvivors(context, before, remote);
+  const departed = await macosFacts(context.execute, context.repoRoot, context.databasePath,
+    Object.values(remote.receipt.factIds));
+  const proof = await verifyRestartedSurvivors(context, departed, remote);
   const evidenceRef = path.join(context.evidenceRoot, 'a-leave-proof.json');
   const after = await macosFacts(context.execute, context.repoRoot, context.databasePath,
-    Object.values(context.rejoin.factIds));
+    [...Object.values(context.rejoin.factIds), ...Object.values(remote.receipt.factIds)]);
   fs.writeFileSync(evidenceRef, `${JSON.stringify({ completedAt: new Date().toISOString(),
     factIds: remote.receipt.factIds, macosA: { after, before }, proof, resultStatus: 'success',
     schemaVersion: 1, windowsEvidenceRef: remote.evidenceRef

@@ -1,6 +1,9 @@
 import { setTimeout as delay } from 'node:timers/promises';
 
 import { createSyncProgressWatchdog } from './sync-progress-watchdog.mjs';
+import {
+  assertExactFactConvergence, factObservation
+} from './sync-scenario-predicate.mjs';
 
 export function productFailure(host, missingFact, message) {
   return Object.assign(new Error(message), {
@@ -23,51 +26,53 @@ export async function waitUntil(
   throw productFailure('all', missingFact, `${label} did not converge.`);
 }
 
-function desktopMemberHosts(facts) {
-  return Object.values(facts.activeHosts ?? {}).flat().sort();
+function originForKey(key) {
+  const match = /([ABC])$/u.exec(key);
+  if (!match) throw new Error(`Unknown exact fact origin: ${key}`);
+  return match[1];
 }
 
-export function assertThreeDeviceProof({ android, macos, windows, ids, requiredAttachmentId }) {
+function desktopObservation(facts, mutations) {
+  return factObservation(Object.fromEntries(mutations
+    .filter(({ factId }) => facts?.facts?.[factId] === true || facts?.journeyFacts?.[factId])
+    .map(({ factId, origin }) => [factId, origin])));
+}
+
+export function assertThreeDeviceProof({ android, macos, windows, ids, requiredAttachmentId,
+  runId }) {
   const androidFacts = android.database?.inspection;
   const points = [macos, windows];
-  const groupIds = [macos.localGroupId, windows.localGroupId, androidFacts?.syncGroupId];
-  const timelines = [macos.localTimelineId, windows.localTimelineId, androidFacts?.syncGroupTimelineId];
-  const counts = points.map((value) => [value.userNodeCount, value.contentBlobCount,
-    value.attachmentCount]);
-  counts.push([androidFacts?.userNodeCount, android.database.counts.content_blobs,
-    android.database.counts.attachments]);
-  const androidHasFacts = Object.values(ids).every((id) => androidFacts?.journeyFacts?.[id]);
+  const mutations = Object.entries(ids).map(([key, factId]) => ({
+    factId, origin: originForKey(key), runId
+  }));
+  const observations = [desktopObservation(macos, mutations),
+    desktopObservation(windows, mutations), factObservation(androidFacts?.journeyFacts)];
   const desktopHasAttachment = !requiredAttachmentId || points.every((value) =>
     value.availableAttachmentIds?.includes(requiredAttachmentId));
   const androidHasAttachment = !requiredAttachmentId
     || androidFacts?.availableAttachmentIds?.includes(requiredAttachmentId);
-  const memberHosts = [desktopMemberHosts(macos), desktopMemberHosts(windows),
-    [...(androidFacts?.activeMemberHosts ?? [])].sort()];
-  if (!groupIds[0] || !timelines[0] || new Set(groupIds).size !== 1 || new Set(timelines).size !== 1
-      || points.some((value) => value.activeMemberCount !== 3 || value.localMemberState !== 'active'
-        || value.integrity !== 'ok'
-        || value.missingAttachmentCount !== 0 || value.missingContentBlobCount !== 0
-        || Object.values(ids).some((id) => value.facts?.[id] !== true
-          && !value.journeyFacts?.[id]))
-      || android.database?.integrity !== 'ok' || androidFacts?.activeSyncGroupMemberCount !== 3
-      || !androidHasFacts || !desktopHasAttachment || !androidHasAttachment
-      || memberHosts.some((value) => value.length !== 3)
-      || new Set(memberHosts.map((value) => JSON.stringify(value))).size !== 1
-      || androidFacts.missingAttachmentCount !== 0 || androidFacts.missingContentBlobCount !== 0
-      || new Set(counts.map((value) => JSON.stringify(value))).size !== 1 || counts[0][2] < 1) {
-    throw productFailure('all', 'three_device_restart_convergence_missing',
-      'A, B, and C did not preserve one complete three-member timeline.');
+  try {
+    assertExactFactConvergence({ mutations,
+      observations: { received: observations, restarted: observations } });
+  } catch (error) {
+    throw productFailure('all', 'three_device_restart_convergence_missing', error.message);
   }
-  return { attachmentCount: counts[0][2], contentBlobCount: counts[0][1],
-    groupId: groupIds[0], nodeCount: counts[0][0], timelineId: timelines[0] };
+  if (!desktopHasAttachment || !androidHasAttachment) {
+    throw productFailure('all', 'three_device_restart_convergence_missing',
+      'A, B, and C did not preserve the exact journey attachment.');
+  }
+  return { factIds: mutations.map(({ factId }) => factId), requiredAttachmentId, restarted: true,
+    runId };
 }
 
 export async function waitForThreeDeviceProof({ ids, inspect, intervalMs = 1_000,
-  requiredAttachmentId }) {
+  requiredAttachmentId, runId }) {
   const result = await waitUntil('A, B, and C restarted convergence', async () => {
     const evidence = await inspect();
     try {
-      return { evidence, proof: assertThreeDeviceProof({ ...evidence, ids, requiredAttachmentId }) };
+      return { evidence, proof: assertThreeDeviceProof({
+        ...evidence, ids, requiredAttachmentId, runId
+      }) };
     } catch (error) {
       if (error?.missingFact !== 'three_device_restart_convergence_missing') throw error;
       return { evidence, proof: null };

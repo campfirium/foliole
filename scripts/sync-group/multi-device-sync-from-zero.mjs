@@ -182,7 +182,7 @@ export async function proveSyncFromZero(options) {
       includeAttachments: true
     });
     const proof = assertSyncFromZeroFinalProof({ androidAfterC, androidFinal,
-      datasetReceipt, macos, windowsReceipt: windows.receipt });
+      datasetReceipt, macos, runId: context.runId, windowsReceipt: windows.receipt });
     context.reportProgress('provider-resources-preserved');
     context.reportProgress('peer-progress-converged');
     const evidenceRef = path.join(context.evidenceRoot, 'sync-from-zero-proof.json');

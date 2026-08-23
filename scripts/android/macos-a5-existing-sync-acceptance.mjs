@@ -7,6 +7,9 @@ import { inspectPairSyncRecoveryWorkspace } from './android-pair-sync-recovery-r
 import { runMacosA5SyncGroupMaintenance } from './macos-a5-sync-group-maintenance-action.mjs';
 import { openMacosPairSyncDesktopSession } from './macos-pair-sync-desktop-session.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
+import {
+  assertBidirectionalConvergence, factObservation
+} from '../sync-group/sync-scenario-predicate.mjs';
 
 const APP_ID = 'com.foliole.android';
 const COMPONENT = `${APP_ID}/.MainActivity`;
@@ -52,9 +55,16 @@ export async function runExistingSyncRestartJourney(actions) {
     actions.assertBaseline(before);
     const desktopFact = await actions.createDesktopFact(session);
     const androidFact = await actions.createAndroidFact();
-    await actions.waitForAndroidFact(desktopFact.factId);
-    await actions.waitForDesktopFact(session, androidFact.factText);
-    const proof = await actions.inspectFinal(session, before, desktopFact, androidFact);
+    const androidReceived = await actions.waitForAndroidFact(desktopFact.factId);
+    const desktopReceived = await actions.waitForDesktopFact(session, androidFact.factId);
+    await session.close();
+    session = null;
+    await actions.restartAndroid();
+    session = await actions.openDesktopSession();
+    await session.enable();
+    const proof = await actions.inspectFinal(session, before, desktopFact, androidFact, {
+      androidReceived, desktopReceived
+    });
     return { androidFact, desktopFact, proof };
   } finally {
     await session?.close().catch(() => undefined);
@@ -69,9 +79,8 @@ async function checkedDeviceAction(context, args) {
 }
 
 export async function collectStoppedAndroidSnapshot(
-  context, collectSnapshot = collectAndroidDeviceSnapshot, settle = delay
+  context, collectSnapshot = collectAndroidDeviceSnapshot
 ) {
-  await settle(90_000);
   await checkedDeviceAction(context, ['shell', 'am', 'force-stop', APP_ID]);
   try {
     return await collectSnapshot({
@@ -104,55 +113,47 @@ function assertBaseline(overview, readiness) {
   }
 }
 
-async function waitForDesktopFact(session, factText) {
+async function waitForDesktopFact(session, factId) {
   return waitUntil('Automatic Android-to-Mac sync', async () => session.invoke(
     'load_workspace_list_snapshot', { includePdfOpenings: false }
-  ), (snapshot) => Object.values(snapshot?.nodesById ?? {}).some((node) =>
-    `${node?.title ?? ''}\n${node?.content ?? ''}`.includes(factText)));
+  ), (snapshot) => Boolean(snapshot?.nodesById?.[factId]));
 }
 
-function validAndroidProof(snapshot, readiness, desktopFactId, androidFactId) {
+function validAndroidProof(snapshot, desktopFactId, androidFactId) {
   const value = snapshot.database?.inspection;
-  return snapshot.database?.integrity === 'ok'
-    && value?.syncGroupId === readiness.syncGroupId
-    && value?.syncGroupTimelineId === readiness.syncGroupTimelineId
-    && value?.activeSyncGroupMemberCount === readiness.activeSyncGroupMemberCount
-    && value?.localMemberAuthorizationFingerprint
-      === readiness.localMemberAuthorizationFingerprint
-    && (value?.nodeCount ?? 0) >= readiness.nodeCount
-    && (value?.pendingDeliveryCountsByPeerFingerprint?.[
-      readiness.syncGroupRemotePeerFingerprint
-    ] ?? 0) === 0
-    && value?.pairingCredentialsRejected === false
-    && value?.journeyFacts?.[desktopFactId] === 'A'
+  return value?.journeyFacts?.[desktopFactId] === 'A'
     && value?.journeyFacts?.[androidFactId] === 'B';
 }
 
-async function inspectFinal(session, before, desktopFact, androidFact, context) {
+function desktopObservation(snapshot, desktopFact, androidFact) {
+  return factObservation({
+    ...(snapshot?.nodesById?.[desktopFact.factId] ? { [desktopFact.factId]: 'A' } : {}),
+    ...(snapshot?.nodesById?.[androidFact.factId] ? { [androidFact.factId]: 'B' } : {})
+  });
+}
+
+async function inspectFinal(session, _before, desktopFact, androidFact, received, context) {
   const android = await waitUntil('Restarted automatic bidirectional sync',
     () => collectStoppedAndroidSnapshot(context),
-    (snapshot) => validAndroidProof(
-      snapshot, context.readiness, desktopFact.factId, androidFact.factId
-    ));
-  const overview = await session.load();
+    (snapshot) => validAndroidProof(snapshot, desktopFact.factId, androidFact.factId));
   const desktop = await session.invoke('load_workspace_list_snapshot', { includePdfOpenings: false });
-  if (overview.sync_group?.group_id !== context.readiness.syncGroupId
-      || overview.sync_group?.timeline_id !== context.readiness.syncGroupTimelineId
-      || JSON.stringify(activeMemberIds(overview)) !== JSON.stringify(activeMemberIds(before))
-      || !desktop?.nodesById?.[desktopFact.factId]
-      || !Object.values(desktop?.nodesById ?? {}).some((node) =>
-        `${node?.title ?? ''}\n${node?.content ?? ''}`.includes(androidFact.factText))) {
-    throw new Error('Mac restart did not preserve bidirectional Sync Group convergence.');
-  }
-  return { activeMemberIds: activeMemberIds(overview), android: android.database.inspection,
-    groupId: overview.sync_group.group_id, macRestarted: true, androidRestarted: true,
-    timelineId: overview.sync_group.timeline_id };
+  const mutations = [
+    { factId: desktopFact.factId, origin: 'A', runId: context.buildIdentity },
+    { factId: androidFact.factId, origin: 'B', runId: context.buildIdentity }
+  ];
+  const androidFacts = factObservation(android.database?.inspection?.journeyFacts);
+  const desktopFacts = desktopObservation(desktop, desktopFact, androidFact);
+  return assertBidirectionalConvergence({ mutations, observations: {
+    received: [desktopObservation(received.desktopReceived, desktopFact, androidFact),
+      factObservation(received.androidReceived.database?.inspection?.journeyFacts)],
+    restarted: [desktopFacts, androidFacts]
+  } });
 }
 
 export async function proveMacosA5ExistingSyncContinuation({
   buildIdentity, env, evidenceRoot, execute, paths, readiness, serial
 }) {
-  const context = { env, execute, paths, readiness, serial };
+  const context = { buildIdentity, env, execute, paths, readiness, serial };
   const sessionOptions = {
     env, libraryHome: paths.desktopDevLibrary, repoRoot: paths.buildRoot,
     runtimeRoot: paths.desktopRuntimeRoot
@@ -169,6 +170,10 @@ export async function proveMacosA5ExistingSyncContinuation({
     ),
     inspectFinal: (...args) => inspectFinal(...args, context),
     openDesktopSession: () => openMacosPairSyncDesktopSession(sessionOptions),
+    restartAndroid: async () => {
+      await checkedDeviceAction(context, ['shell', 'am', 'force-stop', APP_ID]);
+      await checkedDeviceAction(context, ['shell', 'am', 'start', '-W', '-n', COMPONENT]);
+    },
     waitForAndroidFact: (factId) => waitUntil('Automatic Mac-to-Android sync',
       () => collectStoppedAndroidSnapshot(context), (snapshot) => hasDesktopFact(snapshot, factId)),
     waitForDesktopFact

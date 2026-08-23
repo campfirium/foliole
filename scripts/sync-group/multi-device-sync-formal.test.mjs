@@ -18,7 +18,7 @@ function actions(failAt = null) {
     'admit-c': ['a-listener-ready', 'a-fact-created', 'b-provider-stopped',
       'b-transport-ready', 'b-fact-received', 'a-offline', 'c-join-started',
       'b-approval-completed', 'c-ordinary-sync-completed'],
-    'establish-a-b': ['a5-cleared', 'macos-group-created', 'a5-paired', 'a-b-synced'],
+    'establish-a-b': ['macos-group-created', 'a5-paired', 'a-b-synced'],
     'prepare-candidate': ['candidate-prepared']
   };
   return Object.fromEntries([
@@ -58,7 +58,7 @@ it('stops every later mutation at the first formal red light without retrying', 
   expect(stageActions['admit-c']).not.toHaveBeenCalled();
 });
 
-it('clears passed host state while retaining only formal run evidence', async () => {
+it('preserves passed host state while retaining only formal run evidence', async () => {
   const clearHosts = vi.fn(async () => {});
   const removeRun = vi.fn();
   const options = { repoRoot: '/repo', runId: 'run-1' };

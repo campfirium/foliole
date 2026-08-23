@@ -5,15 +5,20 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { collectAndroidDeviceSnapshot } from '../android/android-device-snapshot.mjs';
 import { inspectPairSyncRecoveryWorkspace } from '../android/android-pair-sync-recovery-readiness.mjs';
 import { macosA5GradleEnv, macosA5Paths, A5_SERIAL } from '../android/macos-a5-dev.mjs';
-import { runMacosA5SyncGroupMaintenance } from '../android/macos-a5-sync-group-maintenance-action.mjs';
 import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desktop-session.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import {
-  assertAndroidResumeData, assertDesktopDepartureData
+  assertDesktopDepartureData, assertParticipationState, desktopFactObservation
 } from './multi-device-sync-participation-evidence.mjs';
+import {
+  restartAndroidParticipant, runParticipantMaintenance
+} from './multi-device-sync-participation-runtime.mjs';
 import { macosAcceptanceEnv, macosAcceptanceSessionOptions } from './multi-device-sync-macos-channel.mjs';
 import { startWindowsSyncGroupProvider } from './multi-device-sync-windows-provider.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
+import {
+  assertPauseResumeContinuity, factObservation
+} from './sync-scenario-predicate.mjs';
 
 /* global process */
 
@@ -55,21 +60,6 @@ async function macosFacts(execute, repoRoot, databasePath, factIds = []) {
   return JSON.parse(result.stdout.trim());
 }
 
-function assertParticipation(overview, expected, groupId) {
-  if (overview.sync_group?.group_id !== groupId
-      || overview.sync_enabled !== expected.enabled || overview.sync_paused !== expected.paused
-      || overview.participating !== (expected.enabled && !expected.paused)) {
-    throw productFailure('macos-a', 'macos_participation_state_invalid',
-      `macOS participation state is incomplete: ${JSON.stringify(overview)}`);
-  }
-}
-
-function maintenance(context, action, suffix = action) {
-  return runMacosA5SyncGroupMaintenance({ action, buildIdentity: context.runId,
-    env: context.env, evidenceRoot: path.join(context.evidenceRoot, suffix),
-    execute: context.execute, paths: context.paths, serial: A5_SERIAL });
-}
-
 async function newestAndroidFact(context, origin, excluded) {
   const snapshot = await androidSnapshot(context.paths);
   const ids = Object.entries(snapshot.database?.inspection?.journeyFacts ?? {})
@@ -90,41 +80,58 @@ async function proveMacosParticipation(context) {
   const excluded = new Set(Object.keys(androidBefore.database?.inspection?.journeyFacts ?? {}));
   await session.invoke('pause_companion_sync');
   await session.close();
-  await maintenance(context, 'create-journey-fact', 'macos-offline-b-fact');
+  await runParticipantMaintenance(context, 'create-journey-fact', 'macos-offline-b-fact');
   const factId = await newestAndroidFact(context, 'B', excluded);
+  const paused = await context.inspectMac([factId]);
   session = await context.openSession();
-  assertParticipation(await session.load(), { enabled: true, paused: true }, groupId);
+  assertParticipationState(await session.load(), { enabled: true, paused: true }, groupId,
+    (message) => productFailure('macos-a', 'macos_participation_state_invalid', message));
   context.reportProgress('macos-pause-persisted');
   await session.invoke('resume_companion_sync');
-  await waitUntil('macOS resumed cursor', () => context.inspectMac([factId]),
+  const resumed = await waitUntil('macOS resumed cursor', () => context.inspectMac([factId]),
     (facts) => facts.facts?.[factId] === true, 'macos_resume_cursor_missing');
   context.reportProgress('macos-resumed-cursor');
+  await session.close();
+  session = await context.openSession();
+  const restarted = await context.inspectMac([factId]);
+  assertPauseResumeContinuity({ mutation: { factId, origin: 'B', runId: context.runId },
+    paused: desktopFactObservation(paused, factId, 'B'),
+    resumed: desktopFactObservation(resumed, factId, 'B'),
+    restarted: desktopFactObservation(restarted, factId, 'B') });
   await session.invoke('disable_companion_sync');
   await session.close();
   session = await context.openSession();
-  assertParticipation(await session.load(), { enabled: false, paused: false }, groupId);
+  assertParticipationState(await session.load(), { enabled: false, paused: false }, groupId,
+    (message) => productFailure('macos-a', 'macos_participation_state_invalid', message));
   context.reportProgress('macos-sync-off-persisted');
   await session.invoke('enable_companion_sync');
   return { factId, groupId, session };
 }
 
 async function proveAndroidParticipation(context, macosSession) {
-  await maintenance(context, 'control-participation', 'android-control');
+  await runParticipantMaintenance(context, 'control-participation', 'android-control');
   context.reportProgress('android-sync-off-persisted');
-  const before = await androidSnapshot(context.paths);
-  await maintenance(context, 'pause-participation', 'android-pause');
+  await runParticipantMaintenance(context, 'pause-participation', 'android-pause');
   context.reportProgress('android-pause-persisted');
   const fact = await createDesktopSyncGroupJourneyFact({ device: 'A',
     evidenceRoot: path.join(context.evidenceRoot, 'android-offline-a-fact'), session: macosSession });
-  await maintenance(context, 'resume-participation', 'android-resume');
+  const paused = await androidSnapshot(context.paths);
+  await runParticipantMaintenance(context, 'resume-participation', 'android-resume');
   const after = await waitUntil('Android resumed cursor', () => androidSnapshot(context.paths),
     (snapshot) => snapshot.database?.inspection?.journeyFacts?.[fact.factId] === 'A',
     'android_resume_cursor_missing');
   context.reportProgress('android-resumed-cursor');
-  assertAndroidResumeData(before, after, fact.factId,
-    (message) => productFailure('android-b', 'android_resume_data_missing', message));
+  await restartAndroidParticipant({ appId: APP_ID, context, serial: A5_SERIAL });
+  const restarted = await waitUntil('Android restarted continuity', () => androidSnapshot(context.paths),
+    (snapshot) => snapshot.database?.inspection?.journeyFacts?.[fact.factId] === 'A',
+    'android_restart_continuity_missing');
+  assertPauseResumeContinuity({ mutation: {
+    factId: fact.factId, origin: 'A', runId: context.runId
+  }, paused: factObservation(paused.database?.inspection?.journeyFacts),
+    resumed: factObservation(after.database?.inspection?.journeyFacts),
+    restarted: factObservation(restarted.database?.inspection?.journeyFacts) });
   const excluded = new Set(Object.keys(after.database?.inspection?.journeyFacts ?? {}));
-  await maintenance(context, 'create-journey-fact', 'android-post-resume-route-fact');
+  await runParticipantMaintenance(context, 'create-journey-fact', 'android-post-resume-route-fact');
   const routeFactId = await newestAndroidFact(context, 'B', excluded);
   await waitUntil('macOS consumes Android post-resume route fact',
     () => context.inspectMac([routeFactId]), (facts) => facts.facts?.[routeFactId] === true,
@@ -133,7 +140,7 @@ async function proveAndroidParticipation(context, macosSession) {
 }
 
 async function leaveAndroid(context, before) {
-  await maintenance(context, 'pause-and-leave', 'android-paused-leave');
+  await runParticipantMaintenance(context, 'pause-and-leave', 'android-paused-leave');
   context.reportProgress('android-left-while-paused');
   await context.execute(context.paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start', '-n',
     `${APP_ID}/.MainActivity`], { env: context.env, timeoutMs: 30_000 });
@@ -181,7 +188,7 @@ function createContext(options) {
     openSession: () => openMacosPairSyncDesktopSession(macosAcceptanceSessionOptions({ env,
       libraryHome: path.join(owned.root, 'library'), repoRoot,
       userDataPath: path.join(owned.root, 'user-data') })),
-    paths: macosA5Paths(repoRoot), reportProgress, repoRoot, runId };
+    paths: macosA5Paths(repoRoot), reportProgress, repoRoot, runId, serial: A5_SERIAL };
 }
 
 export async function proveParticipationControl(options) {

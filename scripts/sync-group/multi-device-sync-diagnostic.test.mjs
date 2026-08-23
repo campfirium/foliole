@@ -31,7 +31,7 @@ it('does not consult Windows readiness for an A/B-only stage closure', async () 
   readinessHosts: ['macos-a', 'android-b'],
   run: createRun({ candidate, mode: 'diagnostic', runId: 'run-ab', scenario: 'a-b-group-sync' }),
   stageActions: { 'establish-a-b': async ({ reportProgress }) => {
-    ['a5-cleared', 'macos-group-created', 'a5-paired', 'a-b-synced'].forEach(reportProgress);
+    ['macos-group-created', 'a5-paired', 'a-b-synced'].forEach(reportProgress);
     return { evidenceRef: 'a-b.json' };
   } },
   targetStage: 'a-b-group-sync' });
@@ -46,11 +46,11 @@ it('preserves bounded failure detail and evidence without advancing later stages
   run: createRun({ candidate, mode: 'diagnostic', runId: 'run-5', scenario: 'a-b-group-sync' }),
   stageActions: { 'establish-a-b': async () => { throw Object.assign(new Error('receipt missing'), {
     evidenceRef: '/evidence/action.log', failureOwner: 'environment', host: 'android-b',
-    lastSuccessfulAction: 'a5_cleared', missingFact: 'pair_sync_receipt'
+    lastSuccessfulAction: 'stage_started', missingFact: 'pair_sync_receipt'
   }); } }, targetStage: 'a-b-group-sync' });
   expect(result.receipts.at(-1)).toMatchObject({ evidenceRef: '/evidence/action.log',
     failureDetail: 'receipt missing', failureOwner: 'environment', host: 'android-b',
-    lastSuccessfulAction: 'a5_cleared', missingFact: 'pair_sync_receipt', status: 'failed' });
+    lastSuccessfulAction: 'stage_started', missingFact: 'pair_sync_receipt', status: 'failed' });
 });
 
 it('blocks an unbound selected stage instead of treating it as passed', async () => {

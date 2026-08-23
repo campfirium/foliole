@@ -63,7 +63,7 @@ it('uses the desktop body blob identity when list content is intentionally empty
   });
 });
 
-it('accepts later provider supply after Windows proves cursor-zero continuity', () => {
+it('accepts the exact dataset independently of provider cursor bookkeeping', () => {
   const windowsReceipt = { candidate: { groupId: 'group-1' },
     finalFacts: { ...facts, activeMemberCount: 3, deviceIdentity: 'windows-1',
       localTimelineId: 'timeline-1', receiveCursor: 80 },
@@ -76,14 +76,14 @@ it('accepts later provider supply after Windows proves cursor-zero continuity', 
     androidAfterC: { database: { inspection } },
     androidFinal: { attachments: { size: 1 }, database: { inspection } }, datasetReceipt,
     macos: { activeMemberCount: 3, datasetDigest, datasetNodeCount: 40, groupId: 'group-1',
-      readyAttachmentCount: 65, timelineId: 'timeline-1' }, windowsReceipt
+      readyAttachmentCount: 65, timelineId: 'timeline-1' }, runId: 'run-1', windowsReceipt
   });
-  expect(proof).toMatchObject({ attachmentCount: 65, cursor: 80, nodeCount: 40 });
+  expect(proof).toMatchObject({ attachmentCount: 65, datasetDigest, nodeCount: 40, runId: 'run-1' });
 });
 
-it('rejects provider supply that remains behind the proven Windows cursor', () => {
+it('rejects latest/cursor evidence when the exact dataset does not match', () => {
   const windowsReceipt = { candidate: { groupId: 'group-1' },
-    finalFacts: { ...facts, activeMemberCount: 3, deviceIdentity: 'windows-1',
+    finalFacts: { ...facts, datasetDigest: 'other-digest', activeMemberCount: 3, deviceIdentity: 'windows-1',
       localTimelineId: 'timeline-1', receiveCursor: 80 },
     firstCommittedFacts: { receiveCursor: 80 }, initialFacts: { receiveCursor: 0 },
     interruptedFacts: { receiveCursor: 80 }, restartedFacts: { receiveCursor: 80 } };
@@ -94,8 +94,8 @@ it('rejects provider supply that remains behind the proven Windows cursor', () =
     androidAfterC: { database: { inspection } },
     androidFinal: { attachments: { size: 1 }, database: { inspection } }, datasetReceipt,
     macos: { activeMemberCount: 3, datasetDigest, datasetNodeCount: 40, groupId: 'group-1',
-      readyAttachmentCount: 65, timelineId: 'timeline-1' }, windowsReceipt
-  })).toThrow(/providerSupply.*79.*windowsCursor.*80/u);
+      readyAttachmentCount: 65, timelineId: 'timeline-1' }, runId: 'run-1', windowsReceipt
+  })).toThrow('exact dataset');
 });
 
 it('retries a transient unreadable Android database before collecting attachment proof', async () => {

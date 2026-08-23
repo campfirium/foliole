@@ -112,13 +112,17 @@ describe('macOS fixed A5 development entry', () => {
     const extended = fs.readFileSync('scripts/android/macos-a5-extended-actions.mjs', 'utf8');
     expect(dispatcher).toContain("'sync-existing'");
     expect(extended).toContain('args.assertFixed();');
-    expect(extended).toContain('credentialRepairRequired: false');
-    expect(extended).toContain('existingPairing: true');
+    const block = extended.slice(
+      extended.indexOf('export async function runMacosA5ExistingSyncEntry'),
+      extended.indexOf('export async function runMacosA5SyncGroupRejoinEntry')
+    );
     expect(extended).toContain('readiness.syncGroupCredentialsPresent === true');
     expect(extended).toContain('readiness.syncGroupRemotePeerFingerprint');
     expect(extended).toContain("args.protectData('backup'");
     expect(extended).toContain('runMacosA5ExistingSyncPreflight');
     expect(extended).toContain('proveMacosA5ExistingSyncContinuation');
+    expect(block).not.toContain('runMacosA5PairSync');
+    expect(block).not.toContain('credentialRepairRequired');
     expect(source).not.toContain('process.argv[3]');
   });
 
@@ -157,7 +161,7 @@ describe('macOS fixed A5 development entry', () => {
     expect(extended).toContain("action: 'activate-participation'");
     expect(extended).toContain('installMain: false');
     expect(extended).toContain('readiness.nodeCount !== 0');
-    expect(generic).toContain("action: 'clear-app-data'");
+    expect(generic).not.toContain("action: 'clear-app-data'");
     expect(source).not.toContain('process.argv[3]');
   });
 

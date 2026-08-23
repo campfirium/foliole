@@ -154,11 +154,14 @@ export async function proveARejoin({ execute, reportActivity = () => {}, reportP
       android: await androidSnapshot(paths),
       macos: await macosFacts(execute, repoRoot, databasePath, Object.values(requiredIds)),
       windows: remote.receipt.restarted
-    }), requiredAttachmentId: preJoinMaterial.attachmentId });
+    }), requiredAttachmentId: preJoinMaterial.attachmentId, runId });
     reportProgress('three-members-restarted');
     const evidenceRef = path.join(evidenceRoot, 'a-rejoin-proof.json');
     fs.writeFileSync(evidenceRef, `${JSON.stringify({ completedAt: new Date().toISOString(),
-      abMaterial, factIds: ids, preJoinMaterial, proof, resultStatus: 'success', schemaVersion: 1
+      abMaterial, factIds: ids, groupContext: {
+        groupId: remote.receipt.restarted.localGroupId,
+        timelineId: remote.receipt.restarted.localTimelineId
+      }, preJoinMaterial, proof, resultStatus: 'success', schemaVersion: 1
     }, null, 2)}\n`, 'utf8');
     return { evidenceRef };
   } finally {

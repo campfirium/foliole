@@ -1,3 +1,7 @@
+import {
+  assertLeaveContinuity, factObservation
+} from './sync-scenario-predicate.mjs';
+
 function assertAndroidSurvivorState(snapshot, expected) {
   const facts = snapshot.database?.inspection;
   if (snapshot.database?.integrity !== 'ok' || facts?.activeSyncGroupMemberCount !== 2
@@ -34,51 +38,29 @@ export function projectAndroidConsumerProgress({ before, expected, snapshot }) {
     timeline: facts.syncGroupTimelineId === expected.timelineId };
 }
 
-export function assertAndroidConsumerComplete({ before, expected, snapshot }) {
-  const facts = assertAndroidSurvivorState(snapshot, expected);
+export function assertAndroidConsumerComplete({ before, snapshot }) {
+  const facts = snapshot.database?.inspection ?? {};
   const excluded = new Set(Object.keys(before.database?.inspection?.journeyFacts ?? {}));
   const ids = freshFactIds(facts.journeyFacts, excluded);
-  const beforeInventory = [before.database?.inspection?.userNodeCount,
-    before.database?.counts?.content_blobs, before.database?.counts?.attachments];
-  const inventory = [facts.userNodeCount, snapshot.database?.counts?.content_blobs,
-    snapshot.database?.counts?.attachments];
-  if (!ids.B || !ids.C || facts.missingAttachmentCount !== 0
-      || facts.missingContentBlobCount !== 0
-      || inventory.some((value, index) => !Number.isSafeInteger(value)
-        || !Number.isSafeInteger(beforeInventory[index])
-        || value < beforeInventory[index] + [2, 2, 1][index])) {
-    throw new Error('Android B has not consumed the complete survivor facts and resources.');
-  }
+  if (!ids.B || !ids.C) throw new Error('Android B has not consumed the exact survivor facts.');
   return ids;
 }
 
-export function assertSurvivorProof({ android, baseline, factIds, formerHostName, windows }) {
-  const androidFacts = assertAndroidSurvivorState(android, {
-    formerHostName, groupId: baseline.groupId, timelineId: baseline.timelineId
-  });
+export function assertSurvivorProof({ android, departed, factIds, runId, windows }) {
+  const androidFacts = android.database?.inspection ?? {};
   const windowsFacts = windows.restarted;
-  const windowsActive = Object.values(windowsFacts.activeHosts ?? {}).flat().sort();
-  const androidActive = [...androidFacts.activeMemberHosts].sort();
-  const inventories = [
-    [androidFacts.userNodeCount, android.database.counts.content_blobs,
-      android.database.counts.attachments],
-    [windowsFacts.userNodeCount, windowsFacts.contentBlobCount, windowsFacts.attachmentCount]
-  ];
-  if (windowsFacts.activeMemberCount !== 2 || windowsFacts.localMemberState !== 'active'
-      || windowsFacts.localGroupId !== baseline.groupId || windowsFacts.localTimelineId !== baseline.timelineId
-      || windows.proof?.formerHostName !== formerHostName
-      || JSON.stringify(windowsActive) !== JSON.stringify(androidActive)
-      || Object.values(factIds).some((id) => !androidFacts.journeyFacts?.[id]
-        || windowsFacts.facts?.[id] !== true)
-      || new Set(inventories.map((value) => JSON.stringify(value))).size !== 1
-      || inventories[0][0] < baseline.nodeCount + 2
-      || inventories[0][1] < baseline.contentBlobCount + 2
-      || inventories[0][2] < baseline.attachmentCount + 1) {
-    throw new Error('B and C did not preserve complete bidirectional survivor convergence.');
-  }
-  return { activeMemberHosts: androidActive, attachmentCount: inventories[0][2],
-    contentBlobCount: inventories[0][1], formerAccessState: 'credentials_revoked',
-    groupId: baseline.groupId, nodeCount: inventories[0][0], timelineId: baseline.timelineId };
+  const survivorObservations = [factObservation(androidFacts.journeyFacts),
+    factObservation(Object.fromEntries(Object.entries(windowsFacts.facts ?? {})
+      .filter(([, present]) => present).map(([id]) => [id,
+        id === factIds.B ? 'B' : id === factIds.C ? 'C' : null])))];
+  const departedObservation = factObservation(Object.fromEntries(
+    Object.entries(departed?.facts ?? {}).filter(([, present]) => present)
+      .map(([id]) => [id, id === factIds.B ? 'B' : id === factIds.C ? 'C' : null])
+  ));
+  return ['B', 'C'].map((origin) => assertLeaveContinuity({
+    departed: departedObservation,
+    mutation: { factId: factIds[origin], origin, runId }, survivors: survivorObservations
+  }));
 }
 
 export function matchesAndroidSurvivorState(snapshot, expected) {

@@ -158,18 +158,6 @@ export async function runMacosA5ExistingSyncEntry(args) {
   const evidenceRoot = path.join(args.paths.artifactsRoot, 'a5-existing-sync', buildIdentity);
   await args.protectData('backup', path.join(evidenceRoot, 'baseline.json'),
     path.join(args.paths.deviceBackupRoot, buildIdentity));
-  const { runMacosA5PairSync } = await import('./macos-a5-pair-sync-action.mjs');
-  const result = await runMacosA5PairSync({
-    buildIdentity, credentialRepairRequired: false,
-    desktopAuthorizationFingerprint: readiness.syncGroupRemotePeerFingerprint,
-    env: args.env,
-    evidenceRoot,
-    execute: args.execute, existingPairing: true, hostName: readiness.hostName,
-    pairedAuthorizationFingerprint: readiness.localMemberAuthorizationFingerprint,
-    paths: args.paths, serial: args.serial
-  });
-  process.stdout.write(result.output);
-  console.log(`[macos-a5-dev] existing-sync evidence=${result.pairSyncRecovery.manifestPath}`);
   const { proveMacosA5ExistingSyncContinuation } = await import(
     './macos-a5-existing-sync-acceptance.mjs'
   );
