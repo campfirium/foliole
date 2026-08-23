@@ -100,10 +100,6 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: node scripts/quality/hosted-npm-ci.mjs
-      - name: Install Electron runtime for Simulator desktop pairing
-        run: node node_modules/electron/install.js
-      - name: Rebuild Electron native ABI for Simulator desktop pairing
-        run: npm run electron:rebuild:native
       - name: Run iOS Simulator scenario
         run: node scripts/ios/ios-bootstrap-acceptance.mjs
       - name: Upload minimal iOS Simulator evidence and logs
@@ -122,4 +118,5 @@ jobs:
             .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/attempt-*/service-observations.json
             .tmp/logs/quality-gate
           if-no-files-found: ignore
+          include-hidden-files: true
           retention-days: 14

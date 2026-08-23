@@ -1,10 +1,8 @@
 /* global process */
 
-import { rmSync } from 'node:fs';
+import { cpSync, rmSync } from 'node:fs';
 import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
-
-import { resolveElectronBinary } from '../electron-sqlite-runner.mjs';
 
 const SERVICE_RELATIVE_PATH = 'scripts/ios/ios-pairing-acceptance-service.js';
 
@@ -25,17 +23,14 @@ export function createPairingAcceptanceServiceCompileArgs(repoRoot, artifactDir)
 }
 
 export function createPairingAcceptanceServiceLaunch(repoRoot, artifactDir, scenario = 'pairing-signed-transport') {
-  const needsElectronSqlite = [
-    'content-resource-read', 'foreground-sync-lifecycle', 'state-writeback-runtime', 'sync-pack-runtime'
-  ].includes(scenario);
   return {
     args: [
       path.join(artifactDir, 'service-dist', SERVICE_RELATIVE_PATH),
       artifactDir,
       scenario
     ],
-    command: needsElectronSqlite ? resolveElectronBinary(repoRoot) : process.execPath,
-    env: needsElectronSqlite ? { ...process.env, ELECTRON_RUN_AS_NODE: '1' } : process.env
+    command: process.execPath,
+    env: process.env
   };
 }
 
@@ -51,7 +46,7 @@ export function startPairingAcceptanceService(repoRoot, artifactDir, scenario) {
   });
 }
 
-function compilePairingAcceptanceService(repoRoot, artifactDir) {
+export function compilePairingAcceptanceService(repoRoot, artifactDir) {
   const outputDirectory = path.join(artifactDir, 'service-dist');
   rmSync(outputDirectory, { force: true, recursive: true });
   const result = spawnSync(process.execPath, createPairingAcceptanceServiceCompileArgs(repoRoot, artifactDir), {
@@ -59,6 +54,12 @@ function compilePairingAcceptanceService(repoRoot, artifactDir) {
     stdio: 'inherit'
   });
   if (result.status !== 0) throw new Error(`Failed to compile iOS pairing acceptance service (${result.status}).`);
+  copyAcceptanceContractCorpus(repoRoot, outputDirectory);
+}
+
+function copyAcceptanceContractCorpus(repoRoot, outputDirectory) {
+  const relativePath = path.join('scripts', 'ios', 'fixtures', 'acceptance-contract-corpus');
+  cpSync(path.join(repoRoot, relativePath), path.join(outputDirectory, relativePath), { recursive: true });
 }
 
 export function verifyPairingAcceptance(first, second, observations) {

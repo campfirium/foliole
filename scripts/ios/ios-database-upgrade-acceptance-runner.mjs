@@ -1,11 +1,11 @@
 /* global console, process */
 
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-import { resolveElectronBinary } from '../electron-sqlite-runner.mjs';
 import { iosResourceCommand, iosXcodebuildResourceArgs, resolveIosResourceMode } from './ios-resource-profile.mjs';
+import { resolveIosDatabaseUpgradeContractFixture } from './ios-database-upgrade-contract-fixture.mjs';
 import {
   readUpgradeSnapshot,
   verifyIosDatabaseUpgradeAcceptance
@@ -54,7 +54,7 @@ export async function runIosDatabaseUpgradeAcceptance(
     let databasePath = path.join(containerPath, DATABASE_RELATIVE_PATH);
     let resultPath = path.join(containerPath, RESULT_RELATIVE_PATH);
 
-    replaceWithV18Fixture(options, databasePath);
+    replaceWithVersionedFixture(options, databasePath);
     const first = await launchAndRead(options, simulator.udid, resultPath, true);
     const firstSnapshot = readUpgradeSnapshot((command, args) => capture(options.repoRoot, command, args), databasePath);
     terminate(options, simulator.udid);
@@ -63,7 +63,7 @@ export async function runIosDatabaseUpgradeAcceptance(
     const secondSnapshot = readUpgradeSnapshot((command, args) => capture(options.repoRoot, command, args), databasePath);
     terminate(options, simulator.udid);
 
-    replaceWithV18Fixture(options, databasePath);
+    replaceWithVersionedFixture(options, databasePath);
     prepareBuild(options, simulator.udid, true);
     installApp(options, simulator.udid, false);
     ({ databasePath, resultPath } = resolvePreservedContainer(options, simulator.udid));
@@ -147,20 +147,13 @@ function seedAcceptanceDeviceIdentity(options, udid) {
   ]);
 }
 
-function replaceWithV18Fixture(options, databasePath) {
+function replaceWithVersionedFixture(options, databasePath) {
   mkdirSync(path.dirname(databasePath), { recursive: true });
   rmSync(databasePath, { force: true });
   rmSync(`${databasePath}-shm`, { force: true });
   rmSync(`${databasePath}-wal`, { force: true });
-  const result = spawnSync(resolveElectronBinary(options.repoRoot), [
-    '--experimental-loader',
-    path.join(options.repoRoot, 'scripts/android/ts-js-extension-loader.mjs'),
-    '--experimental-strip-types',
-    path.join(options.repoRoot, 'scripts/ios/ios-database-upgrade-acceptance-fixture.ts'),
-    databasePath
-  ], { cwd: options.repoRoot, encoding: 'utf8', env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' } });
-  if (result.status !== 0) throw new Error(`${result.stdout ?? ''}${result.stderr ?? ''}` ||
-    'Failed to create iOS database upgrade fixture.');
+  const fixture = resolveIosDatabaseUpgradeContractFixture(options.repoRoot);
+  copyFileSync(fixture.databasePath, databasePath);
 }
 
 async function launchAndRead(options, udid, resultPath, expectPassed) {

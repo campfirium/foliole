@@ -66,7 +66,8 @@ describe('iOS bridge acceptance host contract', () => {
     );
     expect(databaseRunner).toContain('createOrdinaryBuildEnv(process.env)');
     expect(databaseRunner).toContain("'VITE_FOLIOLE_IOS_DATABASE_UPGRADE_FAULT'");
-    expect(databaseRunner).toContain("'scripts/android/ts-js-extension-loader.mjs'");
+    expect(databaseRunner).toContain('resolveIosDatabaseUpgradeContractFixture(options.repoRoot)');
+    expect(databaseRunner).not.toContain('ios-database-upgrade-acceptance-fixture.ts');
     expect(databaseRunner).toContain('resolvePreservedContainer(options, simulator.udid)');
     expect(databaseRunner).toContain('did not preserve the fixture');
   });

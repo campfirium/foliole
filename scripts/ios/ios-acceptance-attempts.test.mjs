@@ -155,19 +155,19 @@ describe('iOS acceptance attempt orchestration', () => {
 
   it('uploads only explicit small attempt evidence and excludes DerivedData', () => {
     const workflow = fs.readFileSync('.github/workflows/hosted-quality-ios.yml', 'utf8');
+    const simulator = workflow.slice(workflow.indexOf('  simulator:'));
     for (const name of [
       'summary.json', 'attempt-*/result.json', 'attempt-*/failure.json', 'attempt-*/evidence.json',
       'attempt-*/simulator.log', 'attempt-*/simulator-owned.json'
     ]) expect(workflow).toContain(name);
+    expect(simulator).toContain('include-hidden-files: true');
     expect(workflow).not.toMatch(/^\s+.*DerivedData.*$/mu);
   });
 
-  it('installs the Electron runtime before Simulator desktop pairing starts', () => {
+  it('keeps Simulator host observation independent from an Electron runtime', () => {
     const workflow = fs.readFileSync('.github/workflows/hosted-quality-ios.yml', 'utf8');
     const simulator = workflow.slice(workflow.indexOf('  simulator:'));
-    const install = simulator.indexOf('node node_modules/electron/install.js');
-    const rebuild = simulator.indexOf('npm run electron:rebuild:native');
-    expect(install).toBeGreaterThan(-1);
-    expect(install).toBeLessThan(rebuild);
+    expect(simulator).not.toContain('node node_modules/electron/install.js');
+    expect(simulator).not.toContain('npm run electron:rebuild:native');
   });
 });

@@ -63,7 +63,7 @@ describe('iOS bootstrap acceptance contract', () => {
     )).toThrow('Unexpected acceptance signature identifier');
   });
 
-  it('uses Electron SQLite only for acceptance scenarios with producer fixtures', () => {
+  it('uses the host-native Node service for every fixed-corpus scenario', () => {
     const pairing = createPairingAcceptanceServiceLaunch('/repo', '/artifacts');
     const contentResource = createPairingAcceptanceServiceLaunch('/repo', '/artifacts', 'content-resource-read');
     const stateWriteback = createPairingAcceptanceServiceLaunch('/repo', '/artifacts', 'state-writeback-runtime');
@@ -73,20 +73,20 @@ describe('iOS bootstrap acceptance contract', () => {
     expect(pairing.command).toBe(process.execPath);
     expect(pairing.args.at(-1)).toBe('pairing-signed-transport');
     expect(pairing.env).toBe(process.env);
-    expect(contentResource.command).toContain('Electron.app/Contents/MacOS/Electron');
+    expect(contentResource.command).toBe(process.execPath);
     expect(contentResource.args.at(-1)).toBe('content-resource-read');
-    expect(contentResource.env.ELECTRON_RUN_AS_NODE).toBe('1');
-    expect(stateWriteback.command).toContain('Electron.app/Contents/MacOS/Electron');
+    expect(contentResource.env).toBe(process.env);
+    expect(stateWriteback.command).toBe(process.execPath);
     expect(stateWriteback.args.at(-1)).toBe('state-writeback-runtime');
-    expect(stateWriteback.env.ELECTRON_RUN_AS_NODE).toBe('1');
-    expect(foregroundLifecycle.command).toContain('Electron.app/Contents/MacOS/Electron');
-    expect(foregroundLifecycle.env.ELECTRON_RUN_AS_NODE).toBe('1');
-    expect(syncPack.command).toContain('Electron.app/Contents/MacOS/Electron');
+    expect(stateWriteback.env).toBe(process.env);
+    expect(foregroundLifecycle.command).toBe(process.execPath);
+    expect(foregroundLifecycle.env).toBe(process.env);
+    expect(syncPack.command).toBe(process.execPath);
     expect(syncPack.args.at(-1)).toBe('sync-pack-runtime');
-    expect(syncPack.env.ELECTRON_RUN_AS_NODE).toBe('1');
+    expect(syncPack.env).toBe(process.env);
   });
 
-  it('compiles the acceptance service before loading Electron runtime modules', () => {
+  it('compiles the acceptance service before launching host-native Node', () => {
     const compileArgs = createPairingAcceptanceServiceCompileArgs('/repo', '/artifacts');
     const launch = createPairingAcceptanceServiceLaunch('/repo', '/artifacts', 'state-writeback-runtime');
 

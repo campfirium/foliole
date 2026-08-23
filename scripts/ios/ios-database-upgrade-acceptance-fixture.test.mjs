@@ -1,16 +1,25 @@
 // @vitest-environment node
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
+/* global process */
+import { createRequire } from 'node:module';
 
 import { expect, it } from 'vitest';
 
-import { createIosDatabaseUpgradeFixture } from './ios-database-upgrade-acceptance-fixture.ts';
+import { resolveIosDatabaseUpgradeContractFixture } from './ios-database-upgrade-contract-fixture.mjs';
+import {
+  assertLatestUpgradeFixtureProvenance,
+  readIosDatabaseUpgradeSnapshot
+} from './ios-database-upgrade-acceptance-fixture.ts';
 
-it('derives the previous-version upgrade fixture from the latest formal migration metadata', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-ios-upgrade-'));
+const require = createRequire(import.meta.url);
+const BetterSqlite3 = require('better-sqlite3');
+
+it('binds the versioned previous-version database to the current upgrade product contract', () => {
+  assertLatestUpgradeFixtureProvenance();
+  const { databasePath, identity } = resolveIosDatabaseUpgradeContractFixture(process.cwd());
+  expect(identity.file).toBe('v4-foliole-companionSQLite.db');
+  const sqlite = new BetterSqlite3(databasePath, { readonly: true });
   try {
-    const snapshot = createIosDatabaseUpgradeFixture(path.join(root, 'fixture.db'));
+    const snapshot = readIosDatabaseUpgradeSnapshot(sqlite);
     expect(snapshot).toEqual({
       attachment_count: 1,
       attachment_mime_type: 'image/png',
@@ -40,6 +49,6 @@ it('derives the previous-version upgrade fixture from the latest formal migratio
       view_source: 'user-scroll'
     });
   } finally {
-    fs.rmSync(root, { force: true, recursive: true });
+    sqlite.close();
   }
 });
