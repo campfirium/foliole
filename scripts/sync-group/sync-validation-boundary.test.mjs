@@ -26,6 +26,9 @@ it('keeps retired mixed actions and their exclusive evidence paths absent', () =
     'scripts/windows/windows-dev-control.mjs'
   ]);
   expect(registries).not.toMatch(/'pair-sync'|pair-sync-recover/u);
+
+  const activeHostRules = join(['android/AGENTS.md', 'electron/AGENTS.md']);
+  expect(activeHostRules).not.toMatch(/\|pair-sync(?:-recover)?[>|]/u);
 });
 
 it('keeps system entry and product ownership outside host adapters', () => {

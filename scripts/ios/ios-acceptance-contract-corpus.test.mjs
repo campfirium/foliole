@@ -10,6 +10,21 @@ import { createIosSyncPackAcceptanceRoutes } from './ios-sync-pack-acceptance-ro
 import { createIosSyncPackAcceptanceObservations } from './ios-sync-pack-acceptance-observations.ts';
 
 const ROOT = 'scripts/ios/fixtures/acceptance-contract-corpus';
+const RETIRED_BUILDERS = [
+  'scripts/ios/generate-ios-acceptance-contract-corpus.ts',
+  'scripts/ios/ios-content-resource-acceptance-fixture.ts',
+  'scripts/ios/ios-database-upgrade-acceptance-fixture.ts',
+  'scripts/ios/ios-state-writeback-acceptance-fixture.ts',
+  'scripts/ios/ios-state-writeback-contract-inputs.ts',
+  'scripts/ios/ios-sync-pack-acceptance-fixture.ts',
+  'scripts/ios/ios-sync-pack-acceptance-mutations.ts',
+  'scripts/ios/ios-sync-pack-contract-roundtrip-fixture.ts'
+];
+const SYNC_FORMAL_ROOTS = [
+  'scripts/ios/ios-bootstrap-acceptance-attempt.mjs',
+  'scripts/ios/ios-foreground-sync-lifecycle-runner.mjs',
+  'scripts/ios/ios-pairing-acceptance-service.ts'
+];
 
 describe('iOS formal acceptance contract corpus', () => {
   it('keeps every served byte version-controlled and hash-identified', () => {
@@ -33,15 +48,10 @@ describe('iOS formal acceptance contract corpus', () => {
     }
   });
 
-  it('keeps formal scenario imports outside runtime database and desktop pack production', () => {
-    const entries = [
-      'scripts/ios/ios-bootstrap-acceptance-attempt.mjs',
-      'scripts/ios/ios-foreground-sync-lifecycle-runner.mjs',
-      'scripts/ios/ios-pairing-acceptance-service.ts'
-    ];
-    const files = [...new Set(entries.flatMap(reachableImports))].sort();
+  it('keeps formal sync scenarios outside retired database and desktop pack production', () => {
+    for (const retired of RETIRED_BUILDERS) expect(fs.existsSync(retired), retired).toBe(false);
+    const files = [...new Set(SYNC_FORMAL_ROOTS.flatMap(reachableImports))].sort();
     const source = files.map((file) => fs.readFileSync(file, 'utf8')).join('\n');
-    expect(files).not.toContain('scripts/ios/ios-database-upgrade-acceptance-fixture.ts');
     expect(files).not.toContain('scripts/ios/ios-database-upgrade-contract-fixture.mjs');
     expect(source).not.toMatch(/better-sqlite3|syncPackBuilderFromDriver|companionLanSyncPushWithApply/);
     expect(source).not.toMatch(/ios-(?:sync-pack|state-writeback|content-resource)-acceptance-fixture/);
@@ -78,7 +88,11 @@ describe('iOS formal acceptance contract corpus', () => {
   it('keeps the versioned old database isolated to its independent upgrade entry', () => {
     const files = reachableImports('scripts/ios/ios-database-upgrade-acceptance-runner.mjs');
     expect(files).toContain('scripts/ios/ios-database-upgrade-contract-fixture.mjs');
-    expect(files).not.toContain('scripts/ios/ios-database-upgrade-acceptance-fixture.ts');
+    const importers = fs.readdirSync('scripts/ios')
+      .filter((name) => /\.(?:mjs|ts)$/u.test(name) && !name.includes('.test.'))
+      .filter((name) => fs.readFileSync(`scripts/ios/${name}`, 'utf8')
+        .includes('./ios-database-upgrade-contract-fixture.mjs'));
+    expect(importers).toEqual(['ios-database-upgrade-acceptance-runner.mjs']);
   });
 });
 

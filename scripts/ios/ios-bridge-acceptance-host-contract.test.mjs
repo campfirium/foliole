@@ -91,38 +91,14 @@ describe('iOS bridge acceptance host contract', () => {
     expect(auth).toContain("from './companionRequestSignature.js'");
   });
 
-  it('keeps deterministic corpus production independent from the Electron app runtime', () => {
-    const builder = fs.readFileSync('electron/database/syncPackBuilderFromDriver.ts', 'utf8');
-    const stateApply = fs.readFileSync('electron/database/companionSyncPushWithDbPort.ts', 'utf8');
-    const stateObjectApply = fs.readFileSync('electron/database/companionSyncPushStateObjectWithDbPort.ts', 'utf8');
-    const reviewLogApply = fs.readFileSync('electron/database/companionSyncPushReviewLogWithDbPort.ts', 'utf8');
-    const nodeStateRows = fs.readFileSync('electron/database/nodeSyncStateRows.ts', 'utf8');
-    const packRows = fs.readFileSync('electron/database/syncPackRows.ts', 'utf8');
-    const syncObjects = fs.readFileSync('electron/database/syncObjectsFromDriver.ts', 'utf8');
-    const syncPushHandler = fs.readFileSync('electron/sync/companionLanSyncPushWithApply.ts', 'utf8');
-    const fixtures = [
+  it('serves the fixed corpus without retired builders or desktop apply imports', () => {
+    for (const retired of [
+      'scripts/ios/generate-ios-acceptance-contract-corpus.ts',
       'scripts/ios/ios-content-resource-acceptance-fixture.ts',
+      'scripts/ios/ios-database-upgrade-acceptance-fixture.ts',
       'scripts/ios/ios-state-writeback-acceptance-fixture.ts',
       'scripts/ios/ios-sync-pack-acceptance-fixture.ts'
-    ].map((file) => fs.readFileSync(file, 'utf8'));
-    expect(builder).not.toContain("from './connection.js'");
-    expect(builder).not.toContain("from 'electron'");
-    expect(nodeStateRows).not.toContain("from './connection.js'");
-    expect(packRows).not.toContain("from './connection.js'");
-    expect(syncObjects).not.toContain("from './connection.js'");
-    for (const pureApply of [stateApply, stateObjectApply, reviewLogApply]) {
-      expect(pureApply).not.toContain("from './connection.js'");
-      expect(pureApply).not.toContain("from 'electron'");
-    }
-    expect(syncPushHandler).not.toContain('workspaceSyncAppliedEvents');
-    expect(syncPushHandler).not.toContain("from 'electron'");
-    for (const fixture of fixtures) {
-      expect(fixture).toContain("from '../../electron/database/syncPackBuilderFromDriver.ts'");
-      expect(fixture).not.toContain("from '../../electron/database/syncPackBuilder.ts'");
-    }
-  });
-
-  it('serves the fixed corpus without runtime database, pack builder, or desktop apply imports', () => {
+    ]) expect(fs.existsSync(retired), retired).toBe(false);
     const serviceFiles = [
       'scripts/ios/ios-pairing-acceptance-service.ts',
       'scripts/ios/ios-pairing-sync-scenario-service.ts',
@@ -136,12 +112,12 @@ describe('iOS bridge acceptance host contract', () => {
     expect(serviceFiles).not.toMatch(/ios-(?:sync-pack|state-writeback|content-resource)-acceptance-fixture/);
   });
 
-  it('uses the canonical Inbox identity for node-version roundtrip acceptance', () => {
+  it('keeps node-version roundtrip identity in the product contract', () => {
     const companion = fs.readFileSync('src/companion/iosNodeVersionRoundtripAcceptance.ts', 'utf8');
-    const fixture = fs.readFileSync('scripts/ios/ios-sync-pack-acceptance-fixture.ts', 'utf8');
+    const contract = fs.readFileSync('lib/platform/iosSyncPackAcceptanceContract.ts', 'utf8');
     expect(companion).toContain('loadCompanionWorkspaceSyncState');
-    expect(fixture).toContain("import { INBOX_NODE_ID } from '../../lib/core/database/specialNodeIds.ts';");
+    expect(contract).toContain('IOS_SYNC_PACK_CAPTURE_OBJECT_ID');
+    expect(contract).toContain('IOS_SYNC_PACK_RESTORE_VERSION_ID');
     expect(companion).not.toContain('function initialSnapshot');
-    expect(fixture).not.toContain("const INBOX_NODE_ID = 'inbox'");
   });
 });

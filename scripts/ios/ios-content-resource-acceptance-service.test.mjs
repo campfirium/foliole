@@ -1,25 +1,14 @@
 // @vitest-environment node
-import { promises as fs } from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
+import { expect, it } from 'vitest';
 
-import { afterEach, expect, it } from 'vitest';
-
-import { createIosContentResourceAcceptanceFixture } from './ios-content-resource-acceptance-fixture.ts';
+import { loadIosAcceptanceContractCorpus } from './ios-acceptance-contract-corpus.ts';
 import {
   createIosContentResourceObservations,
   routeIosContentResourceRequest
 } from './ios-content-resource-acceptance-service.ts';
 
-let tempRoot = '';
-
-afterEach(async () => {
-  await fs.rm(tempRoot, { force: true, recursive: true });
-});
-
-it('serves valid, corrupt, missing, and failed resources with exact retry observations', async () => {
-  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-ios-content-service-'));
-  const fixture = await createIosContentResourceAcceptanceFixture({ outputDirectory: tempRoot, toPeerId: 'ios-device' });
+it('serves fixed-corpus resources with exact retry observations', () => {
+  const fixture = loadIosAcceptanceContractCorpus().contentResource;
   const observations = createIosContentResourceObservations();
   const hashes = Object.values(fixture.contentBlobs).map((blob) => blob.hash);
   const content = route({ bodyText: JSON.stringify({ hashes }), fixture, observations, requestUrl: '/companion/content-blobs', method: 'POST' });

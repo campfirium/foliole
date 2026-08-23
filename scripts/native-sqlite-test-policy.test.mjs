@@ -64,12 +64,12 @@ describe('native sqlite test policy', () => {
     expect(controlledElectronSqliteTests).toContain('scripts/android/schema-inventory.test.mjs');
   });
 
-  it('keeps the iOS Sync Pack fixture on the Electron ABI test entry', () => {
-    expect(controlledElectronSqliteTests).toContain('scripts/ios/ios-sync-pack-acceptance-fixture.test.mjs');
-  });
-
-  it('keeps the iOS database upgrade fixture on the Electron ABI test entry', () => {
-    expect(controlledElectronSqliteTests).toContain('scripts/ios/ios-database-upgrade-acceptance-fixture.test.mjs');
+  it('keeps the fixed iOS corpus product contract on the Electron ABI test entry', () => {
+    expect(controlledElectronSqliteTests).toContain('scripts/ios/ios-acceptance-contract-corpus-product.test.mjs');
+    expect(controlledElectronSqliteTests.some((file) => file.includes('ios-sync-pack-acceptance-fixture')))
+      .toBe(false);
+    expect(controlledElectronSqliteTests.some((file) => file.includes('ios-database-upgrade-acceptance-fixture')))
+      .toBe(false);
   });
 
   it('keeps the Android Review audit on the Electron ABI test entry', () => {
