@@ -112,6 +112,7 @@ jobs:
             .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/attempt-*/result.json
             .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/attempt-*/failure.json
             .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/attempt-*/evidence.json
+            .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/attempt-*/attempt-evidence.json
             .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/attempt-*/simulator.log
             .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/attempt-*/simulator-owned.json
             .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/attempt-*/lifecycle-actions.json

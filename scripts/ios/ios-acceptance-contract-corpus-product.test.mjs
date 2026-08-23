@@ -32,8 +32,18 @@ it('binds fixed iOS formal inputs to independently readable product pack semanti
     from_peer_id: 'acceptance-desktop', from_state_seq: 0, to_peer_id: PEER_ID, to_state_seq: 1
   });
   expect(stateInitial.nodes).toEqual([expect.objectContaining({ id: 'ios-state-node' })]);
-  expect(stateSteady.manifest).toMatchObject({ from_state_seq: 1, to_peer_id: PEER_ID, to_state_seq: 1 });
-  expect(stateSteady.syncObjects).toEqual([]);
+  expect(stateSteady.manifest).toMatchObject({ from_state_seq: 1, to_peer_id: PEER_ID, to_state_seq: 6 });
+  expect(stateSteady.stateRows.map(({ object_id, object_type, state_seq }) => ({
+    object_id, object_type, state_seq
+  }))).toEqual([
+    { object_id: 'ios-state-node', object_type: 'node', state_seq: 1 },
+    { object_id: 'ios-state-node', object_type: 'node_reading', state_seq: 4 },
+    { object_id: 'ios-state-node', object_type: 'node_review', state_seq: 5 },
+    {
+      object_id: 'host:ios:phone:ios-acceptance-contract-peer:handoff_reminder_settings',
+      object_type: 'setting', state_seq: 6
+    }
+  ]);
   expect(legal.manifest).toMatchObject({
     from_peer_id: 'acceptance-desktop', from_state_seq: 0, to_peer_id: PEER_ID
   });
@@ -41,6 +51,7 @@ it('binds fixed iOS formal inputs to independently readable product pack semanti
   expect(successor.manifest.from_state_seq).toBe(legal.manifest.to_state_seq);
   expect(wrongTarget.manifest.to_peer_id).toBe(`${PEER_ID}-wrong`);
   expect(cursorGap.manifest.from_state_seq).toBeGreaterThan(successor.manifest.to_state_seq);
+  expect(illegalDag.manifest.from_state_seq).toBe(legal.manifest.to_state_seq);
   expect(illegalDag.nodeVersionParents).toContainEqual(expect.objectContaining({
     parent_version_id: 'missing#ancestor'
   }));

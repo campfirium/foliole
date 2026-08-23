@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import { createIosContentResourceAcceptanceFixture } from './ios-content-resource-acceptance-fixture.ts';
 import { createIosStateWritebackAcceptanceFixture } from './ios-state-writeback-acceptance-fixture.ts';
+import { createIosStateWritebackContractInputs } from './ios-state-writeback-contract-inputs.ts';
 import { createIosSyncPackAcceptanceFixture } from './ios-sync-pack-acceptance-fixture.ts';
 
 const PEER_ID = 'ios-acceptance-contract-peer';
@@ -25,6 +26,8 @@ async function generateStateWritebackCorpus() {
   const fixture = await createIosStateWritebackAcceptanceFixture({ outputDirectory, toPeerId: PEER_ID });
   try {
     await fixture.buildConfirmationPack(0);
+    await fixture.apply(createIosStateWritebackContractInputs());
+    fixture.alignContractStateSequences();
     await fixture.buildConfirmationPack(1);
   } finally {
     fixture.close();

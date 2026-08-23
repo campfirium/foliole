@@ -49,7 +49,9 @@ export async function createIosSyncPackAcceptanceFixture(args: {
       }
       createDesktopSuccessor(driver, captureNodeId);
       await buildPack(driver, paths.successorPath, args.toPeerId, initialPackToStateSeq, 'ios-acceptance-successor');
-      await buildIllegalDagRejectionPack(driver, paths.illegalDagPath, args.toPeerId);
+      await buildIllegalDagRejectionPack(
+        driver, paths.illegalDagPath, args.toPeerId, initialPackToStateSeq
+      );
       await buildCursorGapPack(driver, paths.cursorGapPath, args.toPeerId);
       return { captureNodeId, desktop: readDesktopRoundtripSnapshot(sqlite, captureNodeId) };
     },
@@ -60,9 +62,9 @@ export async function createIosSyncPackAcceptanceFixture(args: {
 async function buildIllegalDagRejectionPack(
   driver: ReturnType<typeof createBetterSqlite3Driver>,
   outputPath: string,
-  toPeerId: string
+  toPeerId: string,
+  fromStateSeq: number
 ) {
-  const fromStateSeq = currentMaxStateSeq(driver);
   driver.execute(
     `INSERT INTO nodes (id, kind, title, content, sync_dirty, created_at, updated_at)
      VALUES ('ios-acceptance-illegal-dag', 'topic', 'Illegal DAG', '', 1, ?, ?)`,

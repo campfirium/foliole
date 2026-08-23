@@ -54,6 +54,16 @@ export async function createIosStateWritebackAcceptanceFixture(args: {
     close: () => sqlite.close(),
     databasePath,
     driver,
+    alignContractStateSequences: () => {
+      driver.execute(
+        `UPDATE sync_object_state SET state_seq = state_seq + 100
+         WHERE object_type IN ('node_reading', 'node_review', 'setting')`
+      );
+      driver.execute(
+        `UPDATE sync_object_state SET state_seq = state_seq - 98
+         WHERE object_type IN ('node_reading', 'node_review', 'setting')`
+      );
+    },
     loadMaxStateSeq: () => Number(driver.queryOne<{ max_state_seq: number }>(
       'SELECT COALESCE(MAX(state_seq), 0) AS max_state_seq FROM sync_object_state'
     )?.max_state_seq ?? 0)
