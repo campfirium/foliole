@@ -12,6 +12,7 @@ struct FolioleCompanionSyncPackContract {
 }
 
 struct FolioleCompanionPairingContract {
+    let protocolVersion: Int
     let credentialRequestKeys: [String: String]
     let discoveryCandidateKeys: [String: String]
     let discoveryResponseKeys: [String: String]
@@ -90,6 +91,7 @@ final class FolioleCompanionContractStore {
 
     func pairingContract() throws -> FolioleCompanionPairingContract {
         FolioleCompanionPairingContract(
+            protocolVersion: try integer(path: ["syncProtocol", "version"], root: sync),
             credentialRequestKeys: try stringMap(path: ["pairingPlugin", "credentialRequestKeys"], root: bridge),
             discoveryCandidateKeys: try stringMap(path: ["hostApi", "network", "discoveryCandidateKeys"], root: bridge),
             discoveryResponseKeys: try stringMap(path: ["hostApi", "network", "discoveryResponseKeys"], root: bridge),

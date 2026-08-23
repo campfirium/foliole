@@ -5,6 +5,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 import { readServiceObservations, verifyAcceptanceScenario } from './ios-acceptance-scenario-result.mjs';
+import { resolveAcceptanceDatabasePath } from './ios-bootstrap-database-path.mjs';
 import {
   runIosInfrastructureCommand,
   waitForIosBridgeResult
@@ -17,9 +18,11 @@ import { iosResourceCommand, iosXcodebuildResourceArgs, resolveIosResourceMode }
 import {
   createSimulatorAcceptanceBuildArgs,
   parseBootstrapSnapshot,
+  readBridgeFailure,
   verifyAcceptanceAppSignature,
   verifyBridgeResult,
   waitForAcceptanceObservation,
+  waitForBootstrapSnapshotOrFailure,
   waitForBootstrapSnapshot,
   writeAcceptanceFailure
 } from './ios-simulator-acceptance-runner.mjs';
@@ -181,20 +184,13 @@ function readSnapshot(options, scenario, containerPath) {
   });
 }
 
-export function resolveAcceptanceDatabasePath(containerPath, result) {
-  const containerRoot = path.resolve(containerPath);
-  const databasePath = typeof result?.database_path === 'string' ? path.resolve(result.database_path) : '';
-  if (!databasePath.startsWith(`${containerRoot}${path.sep}`)) {
-    throw new Error('iOS acceptance did not publish a confined runtime database path.');
-  }
-  return databasePath;
-}
-
 async function runInitialAcceptanceLaunch(options, scenario, udid, containerPath, bridgeResultPath) {
   if (scenario !== 'pairing-signed-transport') {
     const databasePath = path.join(containerPath, DATABASE_RELATIVE_PATH);
-    const first = await waitForBootstrapSnapshot(
-      () => readBootstrapSnapshot(options, databasePath), () => launchApp(options, udid), BOOTSTRAP_TIMEOUT_MS
+    const first = await waitForBootstrapSnapshotOrFailure(
+      () => readBootstrapSnapshot(options, databasePath),
+      () => readBridgeFailure(bridgeResultPath),
+      () => launchApp(options, udid), BOOTSTRAP_TIMEOUT_MS
     );
     const firstBridge = verifyBridgeResult(await readBridgeResult(bridgeResultPath), scenario);
     return { databasePath, first, firstBridge };

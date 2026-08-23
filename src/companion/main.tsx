@@ -7,6 +7,7 @@ import { StartupErrorBoundary } from '../shared/ui/StartupErrorBoundary';
 
 import { CompanionApp } from './CompanionApp';
 import { installCompanionWebViewCompatibilityPolyfills } from './companionWebViewCompatibility';
+import type { AcceptanceResult } from './iosBridgeAcceptance';
 
 installCompanionWebViewCompatibilityPolyfills();
 installCompanionSyncInstrumentationProbe();
@@ -32,7 +33,14 @@ if (isIosBridgeAcceptance) {
     : iosAcceptanceScenario === 'sync-pack-runtime'
       ? import('./iosSyncPackAcceptance').then(({ runIosSyncPackAcceptance }) => runIosSyncPackAcceptance())
       : import('./iosBridgeAcceptance').then(({ runIosBridgeAcceptance }) => runIosBridgeAcceptance());
-  void module;
+  void module.catch((error) => {
+    window.webkit?.messageHandlers?.folioleBridgeAcceptance?.postMessage({
+      error: error instanceof Error ? error.message : String(error),
+      phase: 'failed',
+      scenario: (iosAcceptanceScenario ?? 'pairing-signed-transport') as AcceptanceResult['scenario'],
+      status: 'failed'
+    });
+  });
 } else {
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>

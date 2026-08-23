@@ -36,6 +36,16 @@ describe('iOS companion contract assets', () => {
     ios.queries.syncPayloadViewActiveNode.syncPayload.platform = 'android';
     expect(ios).toEqual(android);
   });
+
+  it('makes the iOS pairing store consume the generated protocol version', async () => {
+    const contractStore = await readFile(path.join(REPO_ROOT, 'ios/App/App/FolioleCompanionContractStore.swift'), 'utf8');
+    const pairingStore = await readFile(path.join(REPO_ROOT, 'ios/App/App/FolioleCompanionPairingStore.swift'), 'utf8');
+
+    expect(contractStore).toContain('protocolVersion: try integer(path: ["syncProtocol", "version"], root: sync)');
+    expect(pairingStore).toContain('negotiatedVersion == contract.protocolVersion');
+    expect(pairingStore).toContain('negotiatedProtocolVersion == contract.protocolVersion');
+    expect(pairingStore).not.toContain('currentProtocolVersion =');
+  });
 });
 
 async function readJson(filePath) {

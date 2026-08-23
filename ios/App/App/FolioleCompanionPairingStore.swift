@@ -2,7 +2,6 @@ import CryptoKit
 import Foundation
 
 final class FolioleCompanionPairingStore {
-    private static let currentProtocolVersion = 1
     private static let legacyPrimaryDeviceKey = "primary_device_id"
     private let contract: FolioleCompanionPairingContract
     private let defaults: UserDefaults
@@ -36,7 +35,7 @@ final class FolioleCompanionPairingStore {
         let hasCredentials = authorizationId != nil && secret != nil
         let negotiatedVersion = defaults.integer(forKey: preference("negotiatedProtocolVersion"))
         let remoteProtocol = loadRemoteProtocol()
-        let syncUsable = hasCredentials && negotiatedVersion == Self.currentProtocolVersion && remoteProtocol != nil
+        let syncUsable = hasCredentials && negotiatedVersion == contract.protocolVersion && remoteProtocol != nil
         return try state(
             authorizationId: authorizationId,
             hasCredentials: hasCredentials,
@@ -58,7 +57,7 @@ final class FolioleCompanionPairingStore {
         remotePeerPlatform: String?,
         remoteProtocol: [String: Any]
     ) throws -> [String: Any] {
-        guard negotiatedProtocolVersion == Self.currentProtocolVersion, JSONSerialization.isValidJSONObject(remoteProtocol) else {
+        guard negotiatedProtocolVersion == contract.protocolVersion, JSONSerialization.isValidJSONObject(remoteProtocol) else {
             throw Self.invalid("pairing protocol")
         }
         let required = [authorizationId, credentialSecret, hostName, hostPlatform, pairedAt]

@@ -1,6 +1,6 @@
 /* global setTimeout */
 
-import { writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 export function selectSimulator(devicePayload) {
@@ -72,6 +72,32 @@ export function waitForBootstrapSnapshot(readSnapshot, action, timeoutMs = 15000
     read: readSnapshot,
     timeoutMs
   });
+}
+
+export function readBridgeFailure(resultPath) {
+  if (!existsSync(resultPath)) return null;
+  const result = JSON.parse(readFileSync(resultPath, 'utf8'));
+  return result?.status === 'failed' ? result.error || 'The WebView bridge scenario failed.' : null;
+}
+
+export async function waitForBootstrapSnapshotOrFailure(
+  readSnapshot, readFailure, action, timeoutMs = 15000, intervalMs = 100
+) {
+  const observation = await waitForAcceptanceObservation({
+    accept: (value) => value.failure || (Boolean(value.snapshot?.deviceId) && value.snapshot.tableCount === 3),
+    action,
+    describe: (value) => value.failure ?? `device identity present=${Boolean(value.snapshot?.deviceId)}, required tables=${value.snapshot?.tableCount}`,
+    initialObservation: 'bootstrap database and bridge failure were not readable',
+    intervalMs,
+    label: 'iOS bootstrap readiness',
+    read: () => {
+      const failure = readFailure();
+      return { failure, snapshot: failure ? null : readSnapshot() };
+    },
+    timeoutMs
+  });
+  if (observation.failure) throw new Error(observation.failure);
+  return observation.snapshot;
 }
 
 export function writeAcceptanceFailure(artifactDir, error) {
