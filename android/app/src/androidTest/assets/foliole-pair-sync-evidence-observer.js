@@ -116,7 +116,8 @@
         state.observerInitialized = true;
       }
       if (!mode && target.getAttribute('aria-busy') === 'true') state.autoSyncStarted = true;
-      if (state.autoSyncStarted && terminalRunId && terminalRunId !== state.baselineTerminalRunId) {
+      if (state.autoSyncStarted && terminalRunId && terminalResult
+        && terminalRunId !== state.baselineTerminalRunId) {
         state.autoSyncRunId = terminalRunId; state.autoSyncResult = terminalResult;
       }
       if ((mode === 'owned' || mode === 'joined') && runId) {

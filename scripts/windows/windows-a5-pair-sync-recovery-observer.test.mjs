@@ -125,6 +125,10 @@ it('attributes cold-start automatic settlement to a new terminal run', () => {
   });
   attributes.set('aria-busy', null);
   attributes.set('data-sync-terminal-run-id', 'run-cold-start');
+  attributes.set('data-sync-terminal-result', null);
+  recordMutation();
+  expect(window.__foliolePairSyncObserver.autoSyncRunId).toBeNull();
+  attributes.set('data-sync-terminal-result', 'completed');
   recordMutation();
   expect(window.__foliolePairSyncObserver).toMatchObject({
     autoSyncResult: 'completed', autoSyncRunId: 'run-cold-start'

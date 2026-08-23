@@ -18,8 +18,8 @@ final class FolioleCompanionExistingPairSyncEvidence {
         while (System.nanoTime() < deadline) {
             JSONObject state = FolioleCompanionPairSyncEvidence.read(instrumentation, webView);
             FolioleCompanionPairSyncEvidence.emit(instrumentation, state);
-            String runId = state.optString("autoSyncRunId");
-            String result = state.optString("autoSyncResult");
+            String runId = stringValue(state, "autoSyncRunId");
+            String result = stringValue(state, "autoSyncResult");
             if (!runId.isEmpty() && !result.isEmpty()
                 && isTargetEnabled(instrumentation, webView, syncTarget)) {
                 JSONObject evidence = completedRunEvidence(
@@ -51,8 +51,8 @@ final class FolioleCompanionExistingPairSyncEvidence {
                 );
             }
             boolean targetEnabled = isTargetEnabled(instrumentation, webView, syncTarget);
-            String runId = state.optString("manualSyncRunId");
-            String result = state.optString("manualSyncResult");
+            String runId = stringValue(state, "manualSyncRunId");
+            String result = stringValue(state, "manualSyncResult");
             if (!runId.isEmpty() && !result.isEmpty() && targetEnabled) {
                 return exactRunEvidence(state, evidence, runId, result);
             }
@@ -87,6 +87,10 @@ final class FolioleCompanionExistingPairSyncEvidence {
         }
         evidence.put("initialSync", result);
         return evidence;
+    }
+
+    private static String stringValue(JSONObject state, String key) {
+        return state.isNull(key) ? "" : state.optString(key, "");
     }
 
     static JSONObject awaitAfterStructureApplied(
