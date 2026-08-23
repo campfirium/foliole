@@ -39,17 +39,18 @@ describe('macOS fixed A5 development entry', () => {
   });
 
   it('uses the repository APK and fixed CLI toolchain', () => {
-    const paths = macosA5Paths('/repo');
+    const repoRoot = path.resolve('macos-a5-source-fixture');
+    const paths = macosA5Paths(repoRoot);
 
-    expect(paths.apk).toBe(path.join('/repo', 'android/app/build/outputs/apk/debug/app-debug.apk'));
+    expect(paths.apk).toBe(path.join(repoRoot, 'android/app/build/outputs/apk/debug/app-debug.apk'));
     expect(paths.adb).toBe(path.join('/opt/homebrew/share/android-commandlinetools', 'platform-tools', 'adb'));
-    expect(paths.gradle).toBe(path.join('/repo', 'android/gradlew'));
+    expect(paths.gradle).toBe(path.join(repoRoot, 'android/gradlew'));
     expect(paths).toMatchObject({
-      buildRoot: '/repo', sourceRepoRoot: '/repo',
-      controllerStateRoot: path.join('/repo', '.lab/internal/macos-a5-controller'),
-      deviceBackupRoot: path.join('/repo', '.lab/internal/android-device-backups'),
+      buildRoot: repoRoot, sourceRepoRoot: repoRoot,
+      controllerStateRoot: path.join(repoRoot, '.lab/internal/macos-a5-controller'),
+      deviceBackupRoot: path.join(repoRoot, '.lab/internal/android-device-backups'),
       desktopDevLibrary: path.join(
-        '/repo', '.lab/internal/macos-a5-controller/desktop-library'
+        repoRoot, '.lab/internal/macos-a5-controller/desktop-library'
       )
     });
   });

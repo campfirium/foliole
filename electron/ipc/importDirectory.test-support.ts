@@ -36,7 +36,7 @@ export function createPersistedRecord(
 export async function createTempRoot(prefix: string, tempRoots: string[]) {
   const parentDir = path.join(process.cwd(), '.tmp', 'tests');
   await fs.mkdir(parentDir, { recursive: true });
-  const root = await fs.mkdtemp(path.join(parentDir, `${prefix}-`));
+  const root = await fs.realpath(await fs.mkdtemp(path.join(parentDir, `${prefix}-`)));
   tempRoots.push(root);
   return root;
 }

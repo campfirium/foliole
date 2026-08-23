@@ -121,7 +121,10 @@ export function applyStartupWindowPresentation(window: BrowserWindow) {
   return presentation;
 }
 
-export async function presentInitialRendererWindow(window: BrowserWindow, options: { show?: boolean } = {}) {
+export async function presentInitialRendererWindow(
+  window: BrowserWindow,
+  options: { platform?: NodeJS.Platform; show?: boolean } = {}
+) {
   if (options.show === false) {
     appendRuntimeEventLog('initial-renderer-window-deferred');
     return;
@@ -137,7 +140,8 @@ export async function presentInitialRendererWindow(window: BrowserWindow, option
       window.setFocusable(false);
       window.setIgnoreMouseEvents(true);
       window.showInactive();
-    } else if (process.platform === 'darwin' && process.env.FOLIOLE_MACOS_DAILY_DEBUG === '1') {
+    } else if ((options.platform ?? process.platform) === 'darwin'
+      && process.env.FOLIOLE_MACOS_DAILY_DEBUG === '1') {
       window.showInactive();
     } else {
       window.show();

@@ -15,6 +15,10 @@ import { beginFormalA5Candidate } from './macos-a5-formal-candidate.mjs';
 
 const roots = [];
 
+function canonicalText(filePath) {
+  return fs.readFileSync(filePath, 'utf8').replaceAll('\r\n', '\n');
+}
+
 function git(root, args) {
   return execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
 }
@@ -68,7 +72,9 @@ function runner(events, failNpm = false, materializeElectron = true, failScript 
 }
 
 afterEach(() => {
-  for (const root of roots.splice(0)) fs.rmSync(root, { force: true, recursive: true });
+  for (const root of roots.splice(0)) {
+    fs.rmSync(root, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
+  }
 });
 
 it('materializes the locked Electron runtime only for hidden desktop actions', () => {
@@ -128,7 +134,7 @@ it('archives the frozen SHA and restores dependencies only inside the capsule', 
     onStage: (stage) => stages.push(stage), run: runner(events)
   });
 
-  expect(fs.readFileSync(path.join(capsule.buildRoot, 'tracked.txt'), 'utf8')).toBe('committed\n');
+  expect(canonicalText(path.join(capsule.buildRoot, 'tracked.txt'))).toBe('committed\n');
   expect(fs.existsSync(path.join(capsule.buildRoot, 'untracked.txt'))).toBe(false);
   expect(fs.existsSync(path.join(capsule.buildRoot, 'ignored.txt'))).toBe(false);
   expect(fs.existsSync(path.join(capsule.buildRoot, 'node_modules'))).toBe(true);
@@ -149,7 +155,7 @@ it('keeps the first SHA after dev advances and cleans dependency failures', () =
   git(root, ['commit', '-m', 'advance dev']);
   const capsule = openMacosA5BuildCapsule(context(root, candidate,
     '77777777-7777-7777-7777-777777777777'), { run: runner([]) });
-  expect(fs.readFileSync(path.join(capsule.buildRoot, 'tracked.txt'), 'utf8')).toBe('committed\n');
+  expect(canonicalText(path.join(capsule.buildRoot, 'tracked.txt'))).toBe('committed\n');
   closeMacosA5BuildCapsule(capsule);
 
   const failedContext = context(root, beginFormalA5Candidate(root),

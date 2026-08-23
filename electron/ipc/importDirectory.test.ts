@@ -13,9 +13,8 @@ const { recordPreparedImportFailure, runPreparedImport } = vi.hoisted(() => ({
 const { resolveAppPaths } = vi.hoisted(() => ({
   resolveAppPaths: vi.fn()
 }));
-const { loadLibraryPathSettings, loadLibraryPathSettingsSync } = vi.hoisted(() => ({
-  loadLibraryPathSettings: vi.fn(),
-  loadLibraryPathSettingsSync: vi.fn()
+const { ensureLibraryPathLayout, loadLibraryPathSettings, loadLibraryPathSettingsSync } = vi.hoisted(() => ({
+  ensureLibraryPathLayout: vi.fn(), loadLibraryPathSettings: vi.fn(), loadLibraryPathSettingsSync: vi.fn()
 }));
 const { logDirectoryImportCompleted, logDirectoryImportFailed } = vi.hoisted(() => ({
   logDirectoryImportCompleted: vi.fn(),
@@ -44,8 +43,10 @@ vi.mock('../import/importRunLogger.js', () => ({
   logDirectoryImportCompleted,
   logDirectoryImportFailed
 }));
+vi.mock('../import/importManagerSettings.js', () => ({ loadImportManagerSettings: () => ({ titleStrategy: 'file_name' }) }));
+vi.mock('../import/importNodeMutationPatch.js', () => ({ withDirectoryImportNodeMutationPatch: <T>(result: T) => result }));
 vi.mock('./paths.js', () => ({ resolveAppPaths }));
-vi.mock('./libraryPaths.js', () => ({ loadLibraryPathSettings, loadLibraryPathSettingsSync }));
+vi.mock('./libraryPaths.js', () => ({ ensureLibraryPathLayout, loadLibraryPathSettings, loadLibraryPathSettingsSync }));
 vi.mock('../import/managedInboxEvents.js', () => ({ notifyManagedInboxUpdated }));
 vi.mock('../securityScopedBookmarks.js', () => ({
   persistSecurityScopedBookmark,

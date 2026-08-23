@@ -51,7 +51,8 @@ function toolResult() {
 }
 
 afterEach(() => {
-  for (const root of roots.splice(0)) fs.rmSync(root, { force: true, recursive: true });
+  for (const root of roots.splice(0))
+    fs.rmSync(root, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
 });
 
 it('atomically completes a same-run provenance receipt before projecting accepted tip', () => {

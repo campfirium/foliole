@@ -137,7 +137,6 @@ describe('window runtime startup visibility', () => {
     expect(window.show).not.toHaveBeenCalled();
     expect(mocks.appendBootEvent).toHaveBeenCalledWith('window_initial-renderer-window-deferred', {});
   });
-
 });
 
 describe('window runtime hidden native desktop presentation', () => {
@@ -166,9 +165,26 @@ describe('window runtime hidden native desktop presentation', () => {
       }
     }
   });
+
 });
 
 describe('macOS daily DEV startup presentation', () => {
+  it('uses regular presentation outside Darwin even when the daily flag is set', async () => {
+    const originalDailyFlag = process.env.FOLIOLE_MACOS_DAILY_DEBUG;
+    process.env.FOLIOLE_MACOS_DAILY_DEBUG = '1';
+    try {
+      const window = createWindowMock();
+      const { presentInitialRendererWindow } = await import('./windowRuntimeDiagnostics.js');
+
+      await presentInitialRendererWindow(window as never, { platform: 'win32' });
+
+      expect(window.show).toHaveBeenCalledTimes(1);
+      expect(window.showInactive).not.toHaveBeenCalled();
+    } finally {
+      if (originalDailyFlag === undefined) delete process.env.FOLIOLE_MACOS_DAILY_DEBUG;
+      else process.env.FOLIOLE_MACOS_DAILY_DEBUG = originalDailyFlag;
+    }
+  });
   it('shows the interactive preview without activating it', async () => {
     const originalDailyFlag = process.env.FOLIOLE_MACOS_DAILY_DEBUG;
     process.env.FOLIOLE_MACOS_DAILY_DEBUG = '1';
@@ -176,7 +192,7 @@ describe('macOS daily DEV startup presentation', () => {
       const window = createWindowMock();
       const { presentInitialRendererWindow } = await import('./windowRuntimeDiagnostics.js');
 
-      await presentInitialRendererWindow(window as never);
+      await presentInitialRendererWindow(window as never, { platform: 'darwin' });
 
       expect(window.showInactive).toHaveBeenCalledTimes(1);
       expect(window.show).not.toHaveBeenCalled();
