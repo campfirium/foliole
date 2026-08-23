@@ -22,7 +22,7 @@ export function seedIosSyncPackContractRoundtrip(
   flushNodeSyncVersionWithDriver(driver, IOS_SYNC_PACK_CAPTURE_OBJECT_ID, IOS_SYNC_PACK_MUTATION_AUTHOR,
     IOS_SYNC_PACK_CAPTURED_AT, IOS_SYNC_PACK_CAPTURE_VERSION_ID);
   alignAcceptanceActionSnapshot(driver, IOS_SYNC_PACK_CAPTURE_VERSION_ID);
-  driver.execute('UPDATE nodes SET deleted_at = NULL, sync_dirty = 1, updated_at = ? WHERE id = ?',
+  driver.execute("UPDATE nodes SET content = '', deleted_at = NULL, sync_dirty = 1, updated_at = ? WHERE id = ?",
     [IOS_SYNC_PACK_RESTORED_AT, restoreNodeId]);
   flushNodeSyncVersionWithDriver(driver, restoreNodeId, IOS_SYNC_PACK_MUTATION_AUTHOR,
     IOS_SYNC_PACK_RESTORED_AT, IOS_SYNC_PACK_RESTORE_VERSION_ID);
