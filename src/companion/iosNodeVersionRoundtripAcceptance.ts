@@ -1,9 +1,8 @@
-import { INBOX_NODE_ID } from '../../lib/core/database/specialNodeIds';
-import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { pushLocalDirtyObjects } from '../shared/platform/companionDesktopSyncPush';
 import { applyCompanionDesktopSyncPack } from '../shared/platform/companionSyncPackApply';
 import { createSignedRequestHeaders } from '../shared/platform/companionWorkspacePairing';
 import { supportsCompanionNodeMutationSurface } from '../shared/platform/companionWorkspaceRuntimeRepository';
+import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 
 import { persistCompanionCapturedText } from './companionCaptureTextActions';
 import { restoreCompanionTrashNode } from './companionTrashActions';
@@ -13,9 +12,11 @@ const RESTORE_NODE_ID = 'ios-acceptance-restore';
 const SUCCESSOR_PATH = '/acceptance/sync-pack/successor';
 
 export async function runIosNodeVersionRoundtripAcceptance(endpoint: string, deviceId: string) {
+  const initialSnapshot = (await loadCompanionWorkspaceSyncState()).workspace_snapshot;
+  if (!initialSnapshot) throw new Error('ios_node_version_roundtrip_snapshot_missing');
   const capture = await persistCompanionCapturedText({
     deviceId,
-    snapshot: initialSnapshot(),
+    snapshot: initialSnapshot,
     text: 'iOS quick capture acceptance'
   });
   const restored = await restoreCompanionTrashNode({
@@ -65,52 +66,4 @@ function readMutationGates() {
   ].map((surface) => [surface, supportsCompanionNodeMutationSurface(
     surface as Parameters<typeof supportsCompanionNodeMutationSurface>[0]
   )]));
-}
-
-function initialSnapshot(): WorkspaceSnapshot {
-  return {
-    activeNodeId: INBOX_NODE_ID,
-    nodeOrder: [INBOX_NODE_ID],
-    nodesById: {
-      [INBOX_NODE_ID]: node({
-        currentVersionId: null, id: INBOX_NODE_ID, kind: 'folder', title: 'Inbox'
-      }),
-      [RESTORE_NODE_ID]: node({
-        currentVersionId: 'acceptance-desktop#0',
-        deletedAt: '2026-07-21T00:00:20.000Z',
-        id: RESTORE_NODE_ID,
-        title: 'Trashed acceptance'
-      })
-    },
-    trashedNodeDeletedAtById: { [RESTORE_NODE_ID]: '2026-07-21T00:00:20.000Z' },
-    trashedNodeIds: [RESTORE_NODE_ID],
-    untitledSequenceByParent: {}
-  };
-}
-
-function node(args: {
-  currentVersionId: string | null;
-  deletedAt?: string;
-  id: string;
-  kind?: 'folder' | 'topic';
-  title: string;
-}) {
-  return {
-    anchorLink: null,
-    content: args.id === RESTORE_NODE_ID ? 'Restore body' : '',
-    createdAt: args.id === RESTORE_NODE_ID ? '2026-07-21T00:00:10.000Z' : '2026-07-21T00:00:00.000Z',
-    currentVersionId: args.currentVersionId,
-    ...(args.deletedAt ? { deletedAt: args.deletedAt } : {}),
-    hideTitleHeading: false,
-    id: args.id,
-    isTitleManual: false,
-    kind: args.kind ?? 'topic',
-    openingText: null,
-    parentNodeId: args.id === RESTORE_NODE_ID ? INBOX_NODE_ID : null,
-    reading: null,
-    reveal: null,
-    review: null,
-    title: args.title,
-    updatedAt: args.deletedAt ?? '2026-07-21T00:00:00.000Z'
-  };
 }

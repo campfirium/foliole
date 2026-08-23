@@ -10,6 +10,7 @@ import {
   runIosInfrastructureCommand,
   waitForIosBridgeResult
 } from './ios-acceptance-infrastructure-error.mjs';
+import { writeIosAcceptanceAttemptEvidence } from './ios-acceptance-attempt-evidence.mjs';
 import { restartBridgeResultTimeoutMs, runAcceptanceRestart } from './ios-acceptance-restart-runner.mjs';
 import { readAcceptanceScenarioSnapshot } from './ios-acceptance-snapshot.mjs';
 import { iosAcceptanceSimulatorName } from './ios-acceptance-simulator-identity.mjs';
@@ -91,11 +92,16 @@ export async function runIosBootstrapAcceptanceAttempt(repoRoot, scenario, artif
       terminate: () => run(options, 'xcrun', ['simctl', 'terminate', owned.udid, BUNDLE_ID])
     });
     const result = verifyBootstrapSnapshots(first, restart.second, owned.name);
+    const pairingObservations = readServiceObservations(artifactDir);
+    const secondScenarioSnapshot = readSnapshot(options, scenario, containerPath);
+    writeIosAcceptanceAttemptEvidence(artifactDir, { firstBridge, firstContentObservations,
+      firstScenarioSnapshot, pairingObservations, secondBridge: restart.secondBridge,
+      secondContentObservations: pairingObservations, secondScenarioSnapshot });
     const scenarioResult = verifyAcceptanceScenario({
       firstBridge, firstContentObservations, firstScenarioSnapshot,
-      pairingObservations: readServiceObservations(artifactDir), scenario,
-      secondBridge: restart.secondBridge, secondContentObservations: readServiceObservations(artifactDir),
-      secondScenarioSnapshot: readSnapshot(options, scenario, containerPath),
+      pairingObservations, scenario,
+      secondBridge: restart.secondBridge, secondContentObservations: pairingObservations,
+      secondScenarioSnapshot,
       syncPackRejections: restart.syncPackRejections
     });
     const report = { ...result, ...scenarioResult, signatureIdentifier, simulator: owned };

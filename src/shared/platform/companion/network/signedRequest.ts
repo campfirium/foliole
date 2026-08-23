@@ -2,7 +2,7 @@ import { normalizePairingState, readStoredWebPairingState } from '../../companio
 import { createCompanionUuid } from '../../companionUuid';
 import {
   FolioleCompanionSync,
-  isNativeAndroidCompanionRuntime,
+  isAvailableNativeAndroidCompanionRuntime,
   isNativeCompanionPairingRuntime
 } from '../../companionWorkspaceRuntimeRepository';
 import { ensureCompanionSyncGroupDataOwner } from '../sync/syncGroupProviderDataOwner';
@@ -88,7 +88,7 @@ export async function prepareNativeCompanionWorkgroupRequest(args: {
 export async function prepareNativeCompanionWorkgroupRequestIfPresent(args: {
   bodyText: string; endpointUrl: string; method: string; pathWithQuery: string;
 }) {
-  if (!isNativeAndroidCompanionRuntime()) return null;
+  if (!isAvailableNativeAndroidCompanionRuntime()) return null;
   const group = await loadCompanionSyncGroup();
   if (!group) return null;
   const nonce = createCompanionUuid();

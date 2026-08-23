@@ -139,9 +139,9 @@ describe('iOS bridge acceptance host contract', () => {
   it('uses the canonical Inbox identity for node-version roundtrip acceptance', () => {
     const companion = fs.readFileSync('src/companion/iosNodeVersionRoundtripAcceptance.ts', 'utf8');
     const fixture = fs.readFileSync('scripts/ios/ios-sync-pack-acceptance-fixture.ts', 'utf8');
-    expect(companion).toContain("import { INBOX_NODE_ID } from '../../lib/core/database/specialNodeIds';");
+    expect(companion).toContain('loadCompanionWorkspaceSyncState');
     expect(fixture).toContain("import { INBOX_NODE_ID } from '../../lib/core/database/specialNodeIds.ts';");
-    expect(companion).not.toContain("const INBOX_NODE_ID = 'inbox'");
+    expect(companion).not.toContain('function initialSnapshot');
     expect(fixture).not.toContain("const INBOX_NODE_ID = 'inbox'");
   });
 });

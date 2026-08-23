@@ -4,6 +4,7 @@ import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../../../lib/platform/sy
 
 const nativeMock = vi.hoisted(() => ({
   addListener: vi.fn().mockResolvedValue({ remove: vi.fn() }),
+  androidAvailable: true,
   loadPairingState: vi.fn(),
   resolveSyncGroupDataRequest: vi.fn(),
   signCompanionSyncRequest: vi.fn()
@@ -13,7 +14,7 @@ const groupMock = vi.hoisted(() => ({ load: vi.fn() }));
 vi.mock('../../companionUuid', () => ({ createCompanionUuid: () => 'nonce-1' }));
 vi.mock('../../companionWorkspaceRuntimeRepository', () => ({
   FolioleCompanionSync: nativeMock,
-  isNativeAndroidCompanionRuntime: () => true,
+  isAvailableNativeAndroidCompanionRuntime: () => nativeMock.androidAvailable,
   isNativeCompanionPairingRuntime: () => true
 }));
 vi.mock('../sync/syncGroupStore', () => ({
@@ -27,6 +28,7 @@ import {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  nativeMock.androidAvailable = true;
   nativeMock.loadPairingState.mockResolvedValue({
     device_id: 'mobile-b', device_kind: 'android-capacitor', is_paired: true,
     negotiated_protocol_version: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
@@ -39,6 +41,15 @@ beforeEach(() => {
       'X-Timestamp': '2026-08-09T00:00:00.000Z'
     }
   });
+});
+
+it('skips optional Android workgroup wrapping on iOS', async () => {
+  nativeMock.androidAvailable = false;
+
+  const { prepareNativeCompanionWorkgroupRequestIfPresent } = await import('./signedRequest');
+  await expect(prepareNativeCompanionWorkgroupRequestIfPresent({
+    bodyText: '{}', endpointUrl: 'http://desktop.local', method: 'POST', pathWithQuery: '/companion/sync-push'
+  })).resolves.toBeNull();
 });
 
 it('routes a Sync Group request to the exact native peer endpoint', async () => {
