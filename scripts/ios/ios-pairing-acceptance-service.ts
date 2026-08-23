@@ -14,6 +14,7 @@ import {
 } from '../../lib/platform/syncProtocolContract.ts';
 
 import {
+  IOS_ACCEPTANCE_DESKTOP_PEER_ID,
   IOS_ACCEPTANCE_CONTRACT_PEER_ID,
   loadIosAcceptanceContractCorpus
 } from './ios-acceptance-contract-corpus.ts';
@@ -138,7 +139,7 @@ async function handlePairCompletion(request: IncomingMessage, response: ServerRe
     host_name: 'Acceptance iPhone',
     host_platform: 'ios-capacitor',
     paired_at: new Date().toISOString(),
-    peer_id: 'acceptance-desktop-authorization'
+    peer_id: IOS_ACCEPTANCE_DESKTOP_PEER_ID
   });
 }
 

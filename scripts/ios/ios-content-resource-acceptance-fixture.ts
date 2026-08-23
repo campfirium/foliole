@@ -36,7 +36,7 @@ export async function createIosContentResourceAcceptanceFixture(args: {
     seedContentResourceRows(driver, fixture);
     await buildDesktopSyncPackFromDriver({
       createdAt: '2026-07-21T00:01:00.000Z',
-      fromDeviceId: 'acceptance-desktop',
+      fromPeerId: 'acceptance-desktop',
       fromStateSeq: 0,
       outputPath: fixture.packPath,
       packId: 'ios-content-resource-acceptance',

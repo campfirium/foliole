@@ -43,7 +43,7 @@ export async function createIosStateWritebackAcceptanceFixture(args: {
       const outputPath = path.join(args.outputDirectory, `confirmation-${fromStateSeq}.syncpack`);
       await buildDesktopSyncPackFromDriver({
         createdAt: '2026-07-21T00:02:00.000Z',
-        fromDeviceId: 'acceptance-desktop',
+        fromPeerId: 'acceptance-desktop',
         fromStateSeq,
         outputPath,
         packId: 'ios-state-writeback-confirmation',

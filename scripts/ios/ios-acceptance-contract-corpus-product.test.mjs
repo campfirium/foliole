@@ -24,13 +24,19 @@ it('binds fixed iOS formal inputs to independently readable product pack semanti
   const cursorGap = read('sync-pack-runtime/cursor-gap.syncpack');
   const illegalDag = read('sync-pack-runtime/illegal-dag.syncpack');
 
-  expect(content.manifest).toMatchObject({ to_peer_id: PEER_ID, to_state_seq: 10 });
+  expect(content.manifest).toMatchObject({
+    from_peer_id: 'acceptance-desktop', to_peer_id: PEER_ID, to_state_seq: 10
+  });
   expect(content.nodes).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'ios-content-topic' })]));
-  expect(stateInitial.manifest).toMatchObject({ from_state_seq: 0, to_peer_id: PEER_ID, to_state_seq: 1 });
+  expect(stateInitial.manifest).toMatchObject({
+    from_peer_id: 'acceptance-desktop', from_state_seq: 0, to_peer_id: PEER_ID, to_state_seq: 1
+  });
   expect(stateInitial.nodes).toEqual([expect.objectContaining({ id: 'ios-state-node' })]);
   expect(stateSteady.manifest).toMatchObject({ from_state_seq: 1, to_peer_id: PEER_ID, to_state_seq: 1 });
   expect(stateSteady.syncObjects).toEqual([]);
-  expect(legal.manifest).toMatchObject({ from_state_seq: 0, to_peer_id: PEER_ID });
+  expect(legal.manifest).toMatchObject({
+    from_peer_id: 'acceptance-desktop', from_state_seq: 0, to_peer_id: PEER_ID
+  });
   expect(legal.nodes).toEqual([expect.objectContaining({ id: 'ios-acceptance-restore' })]);
   expect(successor.manifest.from_state_seq).toBe(legal.manifest.to_state_seq);
   expect(wrongTarget.manifest.to_peer_id).toBe(`${PEER_ID}-wrong`);

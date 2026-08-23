@@ -163,7 +163,7 @@ async function buildPack(
 ) {
   await buildDesktopSyncPackFromDriver({
     createdAt: '2026-07-21T00:01:00.000Z',
-    fromDeviceId: DESKTOP_DEVICE_ID,
+    fromPeerId: DESKTOP_DEVICE_ID,
     fromStateSeq,
     outputPath,
     packId,

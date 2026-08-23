@@ -8,6 +8,7 @@ import {
   runIosInfrastructureCommand,
   waitForIosBridgeResult
 } from './ios-acceptance-infrastructure-error.mjs';
+import { iosAcceptanceSimulatorName } from './ios-acceptance-simulator-identity.mjs';
 import { cleanupOwnedIosSimulator, createOwnedIosSimulator } from './ios-dedicated-simulator-runtime.mjs';
 import { recordAction, setPhase } from './ios-foreground-sync-lifecycle-evidence.mjs';
 import { iosResourceCommand, iosXcodebuildResourceArgs, resolveIosResourceMode } from './ios-resource-profile.mjs';
@@ -50,7 +51,7 @@ export async function runIosForegroundSyncLifecycleAcceptance(
       listAvailable: () => JSON.parse(capture(options, 'xcrun', [
         'simctl', 'list', 'devices', 'available', '--json'
       ])),
-      name: `Foliole Foreground Sync ${process.pid} ${attemptNumber}`
+      name: iosAcceptanceSimulatorName(SCENARIO, process.pid, attemptNumber)
     });
     const { template, udid } = owned;
     service = startPairingAcceptanceService(repoRoot, artifactDir, SCENARIO);
