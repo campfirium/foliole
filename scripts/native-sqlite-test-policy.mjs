@@ -6,6 +6,7 @@ const controlledElectronSqliteTests = [
   'electron/database/backupRestore.internalSnapshots.test.ts',
   'electron/database/betterSqliteDbPort.conformance.test.ts',
   'electron/database/betterSqliteDbPort.ownership.test.ts',
+  'electron/database/companionDatabaseLifecycle.host.test.ts',
   'electron/database/companionDatabaseLifecycle.test.ts',
   'electron/database/companionHostStateCutover.test.ts',
   'electron/database/companionNodeVersionLossless.test.ts',

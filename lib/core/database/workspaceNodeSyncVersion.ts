@@ -51,10 +51,11 @@ async function sha256Hex(value: string) {
 export async function toWorkspaceNativeNodeVersion(
   node: WorkspaceNodeSnapshot,
   hostName: string,
-  versionId = createOpaqueVersionRef(crypto.randomUUID())
+  versionId?: string
 ): Promise<NativeSyncNodeRecord> {
   const snapshot = canonicalWorkspaceNodePayload(node);
   const contentHash = await sha256Hex(JSON.stringify(snapshot));
+  const resolvedVersionId = versionId ?? createOpaqueVersionRef(crypto.randomUUID());
   return {
     ancestor_version_ids: [],
     body_text: node.content,
@@ -67,6 +68,6 @@ export async function toWorkspaceNativeNodeVersion(
     snapshot,
     updated_at: node.updatedAt,
     version_created_at: node.updatedAt,
-    version_id: versionId
+    version_id: resolvedVersionId
   };
 }
