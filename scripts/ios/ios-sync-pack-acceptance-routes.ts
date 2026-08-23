@@ -26,6 +26,7 @@ export async function createIosSyncPackAcceptanceRoutes(args: {
       args.observations.push_requests += 1;
       const { acks, items } = acceptIosAcceptancePush(request.bodyText);
       const result = { acks };
+      args.observations.pushed_payload_json.push(...items.map((item) => item.payloadJson));
       args.observations.ack_statuses.push(...result.acks.map((ack) => ack.status));
       args.observations.pushed_node_ids.push(...result.acks.map((ack) => ack.identity.objectId));
       args.observations.pushed_version_ids.push(...result.acks.flatMap((ack) => ack.version_id ? [ack.version_id] : []));

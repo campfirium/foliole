@@ -60,6 +60,21 @@ describe('iOS formal acceptance contract corpus', () => {
     expect(response.body.subarray(0, 4)).toEqual(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
   });
 
+  it('retains raw pushed version payloads for action-local failure evidence', async () => {
+    const observations = createIosSyncPackAcceptanceObservations();
+    const routes = await createIosSyncPackAcceptanceRoutes({ observations });
+    const payloadJson = JSON.stringify({ version_id: 'ios-evidence-version' });
+    const bodyText = JSON.stringify({ items: [{
+      clientOpId: 'node:ios-evidence-version',
+      identity: { objectId: 'ios-evidence-node', objectType: 'node', scope: 'workspace' },
+      payloadJson
+    }] });
+
+    await expect(routes.handle({ bodyText, method: 'POST', url: '/companion/sync-push' }, captureResponse()))
+      .resolves.toBe(true);
+    expect(observations.pushed_payload_json).toEqual([payloadJson]);
+  });
+
   it('keeps the versioned old database isolated to its independent upgrade entry', () => {
     const files = reachableImports('scripts/ios/ios-database-upgrade-acceptance-runner.mjs');
     expect(files).toContain('scripts/ios/ios-database-upgrade-contract-fixture.mjs');
