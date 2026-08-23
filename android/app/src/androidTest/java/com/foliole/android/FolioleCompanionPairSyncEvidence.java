@@ -53,11 +53,9 @@ final class FolioleCompanionPairSyncEvidence {
             "syncPackDownloaded:!!(state&&state.syncPackDownloaded)," +
             "autoSyncResult:state?state.autoSyncResult:null," +
             "autoSyncRunId:state?state.autoSyncRunId:null," +
-            "autoSyncStarted:!!(state&&state.autoSyncStarted)," +
             "manualSyncMode:state?state.manualSyncMode:null," +
             "manualSyncResult:state?state.manualSyncResult:null," +
             "manualSyncRunId:state?state.manualSyncRunId:null," +
-            "preExistingAttention:!!(state&&state.preExistingAttention)," +
             "pairFound:!!document.querySelector('[data-testid=\"companion-sync-pair\"]')," +
             "discoverFound:!!document.querySelector('[data-testid=\"companion-sync-discover\"]')," +
             "connectedFound:!!document.querySelector('[data-testid=\"companion-sync-now\"]')});})()";
@@ -70,8 +68,6 @@ final class FolioleCompanionPairSyncEvidence {
             "state.initialSync='not_started';state.syncFailure=null;" +
             "state.syncPackApplied=false;state.syncPackDownloaded=false;" +
             "state.manualSyncMode=null;state.manualSyncResult=null;state.manualSyncRunId=null;" +
-            "state.preExistingAttention=state.preExistingAttention||!!document.querySelector(" +
-            "'[data-testid=\"companion-sync-inline-attention\"]');" +
             "return JSON.stringify({ok:true});})()";
         JSONObject reset = FolioleCompanionWebViewSemanticAdapter.evaluateJson(
             instrumentation, webView, script

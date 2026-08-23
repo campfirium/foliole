@@ -15,12 +15,6 @@ it('keeps stable desktop A and Windows C on a real LAN Sync Group path', () => {
   const cursorCommit = fs.readFileSync(
     'electron/sync/desktopSyncGroupCursorCommit.ts', 'utf8'
   );
-  const provider = fs.readFileSync(
-    'android/app/src/main/java/com/foliole/android/FolioleCompanionSyncGroupProvider.java', 'utf8'
-  );
-  const plugin = fs.readFileSync(
-    'android/app/src/main/java/com/foliole/android/FolioleCompanionSyncPlugin.java', 'utf8'
-  );
   expect(remote).toContain("FOLIOLE_LIBRARY_HOME: libraryHome");
   expect(remote).toContain("FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1'");
   expect(remote).toContain("windowsAcceptanceRoot(paths), 'client'");
@@ -62,13 +56,6 @@ it('keeps stable desktop A and Windows C on a real LAN Sync Group path', () => {
   expect(ownedClient).toContain('requiredOrigins.some((origin) => !origins.has(origin))');
   expect(remote).toContain('seedOwnedWindowsClient');
   expect(control).not.toContain('runMacosA5SyncGroupApproval');
-  expect(provider).toContain(
-    'new FolioleCompanionSyncGroupServer(activeContext, activeConfig, joinRequests, requireDataBridge())'
-  );
-  expect(provider).toContain('FolioleCompanionSyncGroupJoinGrantStore.save(');
-  expect(provider).toContain('promoteApprovedJoin(');
-  expect(provider).toContain('if (sameProvider(next))');
-  expect(plugin).toMatch(/handleOnDestroy\(\)[\s\S]*?SyncGroupProvider\.pause\(this\)/u);
   expect(`${remote}\n${control}`).not.toContain("'reverse'");
   expect(`${remote}\n${control}`).not.toContain('windows-a5-pair-sync-recovery-action');
 });

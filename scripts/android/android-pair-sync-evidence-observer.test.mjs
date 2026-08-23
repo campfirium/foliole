@@ -9,7 +9,7 @@ import { expect, it } from 'vitest';
 const read = (name) => fs.readFileSync(name, 'utf8');
 const observerPath = 'android/app/src/androidTest/assets/foliole-pair-sync-evidence-observer.js';
 
-it('observes request submission without global errors or click-return evidence', () => {
+it('keeps Android pair-sync evidence action-local and attributable', () => {
   const source = read('android/app/src/androidTest/java/com/foliole/android/FolioleCompanionPairSyncRecoveryScenario.java');
   const automation = read('android/app/src/androidTest/java/com/foliole/android/FolioleCompanionWebViewAutomationTest.java');
   const launcher = read('android/app/src/androidTest/java/com/foliole/android/FolioleCompanionActivityLauncher.java');
@@ -24,7 +24,8 @@ it('observes request submission without global errors or click-return evidence',
   );
   expect(targetSelection).toContain('"data-sync-endpoint",');
   expect(targetSelection).toContain('expectedEndpointUrl, deadline');
-  expect(source).toContain('clickVisible(instrumentation, webView, CONNECTED_TARGET, deadline)');
+  expect(source).toContain('FolioleCompanionSemanticActions.clickVisible(');
+  expect(source).toContain('instrumentation, webView, CONNECTED_TARGET, deadline');
   const rePairGuard = source.indexOf('if (existingPairing && forceRePair)');
   const disconnect = source.indexOf('"companion-sync-disconnect"');
   expect(disconnect).toBeGreaterThan(rePairGuard);
@@ -62,7 +63,7 @@ it('observes request submission without global errors or click-return evidence',
   expect(recoveryEvidence).toContain('resetExistingSync');
   expect(source).toContain('awaitAutomatic');
   expect(source).toContain('requireManualSyncMode(owned, "owned")');
-  expect(observer).toContain("target.getAttribute('aria-busy') === 'true'");
+  expect(observer).not.toContain("target.getAttribute('aria-busy') === 'true'");
   expect(observer).toContain("'data-sync-run-id'");
   expect(observer).toContain("terminalRunId === state.manualSyncRunId");
   expect(observer).not.toContain("methodName === 'recordWorkspaceSyncEvent'");
@@ -101,10 +102,9 @@ it('attributes manual sync settlement to the exact observed run identity', () =>
   expect(window.__foliolePairSyncObserver.manualSyncResult).toBe('completed');
 });
 
-it('attributes cold-start automatic settlement to a new terminal run', () => {
+it('attributes fast cold-start settlement directly to a current-boot terminal run', () => {
   const source = read(observerPath);
   const attributes = new Map([
-    ['aria-busy', 'true'],
     ['data-sync-runtime-booted-at', '2026-08-23T00:00:00.000Z'],
     ['data-sync-terminal-result', 'completed'],
     ['data-sync-terminal-run-id', 'run-before-start'],
@@ -122,10 +122,7 @@ it('attributes cold-start automatic settlement to a new terminal run', () => {
   const window = { Capacitor: { nativePromise: async () => ({ ok: true }) }, document,
     MutationObserver, crypto: { subtle: Object.create({ generateKey: async () => ({}) }) } };
   expect(JSON.parse(vm.runInNewContext(source, { Promise, URL, window }))).toEqual({ ok: true });
-  expect(window.__foliolePairSyncObserver).toMatchObject({
-    autoSyncRunId: null, autoSyncStarted: true
-  });
-  attributes.set('aria-busy', null);
+  expect(window.__foliolePairSyncObserver.autoSyncRunId).toBeNull();
   attributes.set('data-sync-terminal-run-id', 'run-cold-start');
   attributes.set('data-sync-terminal-started-at', '2026-08-23T00:00:01.000Z');
   attributes.set('data-sync-terminal-result', null);

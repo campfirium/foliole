@@ -27,7 +27,6 @@ final class FolioleCompanionExistingPairSyncEvidence {
                 );
                 evidence.put("autoSyncResult", result);
                 evidence.put("autoSyncRunId", runId);
-                evidence.put("preExistingAttention", state.optBoolean("preExistingAttention"));
                 return evidence;
             }
             Thread.sleep(150);
@@ -71,7 +70,6 @@ final class FolioleCompanionExistingPairSyncEvidence {
         evidence.put("manualSyncMode", state.optString("manualSyncMode"));
         evidence.put("manualSyncResult", result);
         evidence.put("manualSyncRunId", runId);
-        evidence.put("preExistingAttention", state.optBoolean("preExistingAttention"));
         return evidence;
     }
 
@@ -131,19 +129,19 @@ final class FolioleCompanionExistingPairSyncEvidence {
     private static void restoreSyncSurface(
         Instrumentation instrumentation, WebView webView, long deadline
     ) throws Exception {
-        String entry = FolioleCompanionPairSyncRecoveryScenario.waitForAnyVisible(
+        String entry = FolioleCompanionSemanticActions.waitForAnyVisible(
             instrumentation, webView, deadline,
             "companion-tab-settings", "companion-top-bar-left-action"
         );
         if ("companion-top-bar-left-action".equals(entry)) {
-            FolioleCompanionPairSyncRecoveryScenario.clickVisible(
+            FolioleCompanionSemanticActions.clickVisible(
                 instrumentation, webView, entry, deadline
             );
         }
-        FolioleCompanionPairSyncRecoveryScenario.clickVisible(
+        FolioleCompanionSemanticActions.clickVisible(
             instrumentation, webView, "companion-tab-settings", deadline
         );
-        FolioleCompanionPairSyncRecoveryScenario.clickVisible(
+        FolioleCompanionSemanticActions.clickVisible(
             instrumentation, webView, "companion-settings-sync", deadline
         );
     }

@@ -10,7 +10,7 @@ final class FolioleCompanionPairSyncTargetSelection {
         Instrumentation instrumentation, WebView webView, String expectedEndpointUrl, long deadline
     ) throws Exception {
         if (expectedEndpointUrl.isEmpty()) {
-            FolioleCompanionPairSyncRecoveryScenario.clickVisible(
+            FolioleCompanionSemanticActions.clickVisible(
                 instrumentation, webView, "companion-sync-pair", deadline
             );
             return;

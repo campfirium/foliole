@@ -3,7 +3,6 @@ package com.foliole.android;
 import android.app.Instrumentation;
 import android.webkit.WebView;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.concurrent.TimeUnit;
@@ -21,16 +20,6 @@ final class FolioleCompanionPairSyncRecoveryScenario {
         );
     }
 
-    static JSONObject run(
-        Instrumentation instrumentation, WebView webView,
-        boolean forceRePair, boolean credentialsOnly, String expectedEndpointUrl, long timeoutMs,
-        boolean legacyAllowExistingAttention
-    ) throws Exception {
-        return runExistingScenario(
-            instrumentation, webView, forceRePair, credentialsOnly, expectedEndpointUrl, timeoutMs
-        );
-    }
-
     private static JSONObject runExistingScenario(
         Instrumentation instrumentation, WebView webView,
         boolean forceRePair, boolean credentialsOnly, String expectedEndpointUrl, long timeoutMs
@@ -39,9 +28,11 @@ final class FolioleCompanionPairSyncRecoveryScenario {
         FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "settings-tab");
         FolioleCompanionSettingsNavigation.open(instrumentation, webView);
         FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "sync-settings");
-        clickVisible(instrumentation, webView, "companion-settings-sync", deadline);
+        FolioleCompanionSemanticActions.clickVisible(
+            instrumentation, webView, "companion-settings-sync", deadline
+        );
         FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "sync-entry");
-        String entry = waitForAnyVisible(
+        String entry = FolioleCompanionSemanticActions.waitForAnyVisible(
             instrumentation, webView, deadline,
             "companion-sync-now", "companion-sync-discover", "companion-sync-repair"
         );
@@ -54,9 +45,15 @@ final class FolioleCompanionPairSyncRecoveryScenario {
         }
         if (existingPairing && forceRePair) {
             FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "existing-pair-disconnect");
-            clickVisible(instrumentation, webView, "companion-sync-connection", deadline);
-            clickVisible(instrumentation, webView, "companion-sync-disconnect", deadline);
-            waitForUniqueVisible(instrumentation, webView, "companion-sync-discover", deadline);
+            FolioleCompanionSemanticActions.clickVisible(
+                instrumentation, webView, "companion-sync-connection", deadline
+            );
+            FolioleCompanionSemanticActions.clickVisible(
+                instrumentation, webView, "companion-sync-disconnect", deadline
+            );
+            FolioleCompanionSemanticActions.waitForUniqueVisible(
+                instrumentation, webView, "companion-sync-discover", deadline
+            );
             existingPairing = false;
         } else if (existingPairing) {
             FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "existing-pair-push");
@@ -65,25 +62,31 @@ final class FolioleCompanionPairSyncRecoveryScenario {
             );
             FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "existing-pair-ack-pull");
             FolioleCompanionPairSyncEvidence.resetExistingSync(instrumentation, webView);
-            clickVisible(instrumentation, webView, CONNECTED_TARGET, deadline);
+            FolioleCompanionSemanticActions.clickVisible(
+                instrumentation, webView, CONNECTED_TARGET, deadline
+            );
             JSONObject owned = FolioleCompanionExistingPairSyncEvidence.await(
                 instrumentation, webView, deadline, CONNECTED_TARGET
             );
             requireManualSyncMode(owned, "owned");
             owned.put("autoSyncResult", automatic.getString("autoSyncResult"));
             owned.put("autoSyncRunId", automatic.getString("autoSyncRunId"));
-            owned.put("preExistingAttention", automatic.optBoolean("preExistingAttention")
-                || owned.optBoolean("preExistingAttention"));
             return buildReceipt(owned, "existing");
         }
         if ("companion-sync-repair".equals(entry)) {
             FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "pair-repair-action");
-            clickVisible(instrumentation, webView, "companion-sync-repair", deadline);
+            FolioleCompanionSemanticActions.clickVisible(
+                instrumentation, webView, "companion-sync-repair", deadline
+            );
             FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "pair-repair-accepted");
-            waitForUniqueVisible(instrumentation, webView, "companion-sync-discover", deadline);
+            FolioleCompanionSemanticActions.waitForUniqueVisible(
+                instrumentation, webView, "companion-sync-discover", deadline
+            );
         }
         FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "discovery-request");
-        clickVisible(instrumentation, webView, "companion-sync-discover", deadline);
+        FolioleCompanionSemanticActions.clickVisible(
+            instrumentation, webView, "companion-sync-discover", deadline
+        );
         FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "pair-target");
         FolioleCompanionPairSyncHostEvidence.stage(instrumentation, "pair-request");
         FolioleCompanionPairSyncTargetSelection.click(
@@ -113,7 +116,6 @@ final class FolioleCompanionPairSyncRecoveryScenario {
             receipt.put("manualSyncMode", recoveryEvidence.getString("manualSyncMode"));
             receipt.put("manualSyncResult", recoveryEvidence.getString("manualSyncResult"));
             receipt.put("manualSyncRunId", recoveryEvidence.getString("manualSyncRunId"));
-            receipt.put("preExistingAttention", recoveryEvidence.optBoolean("preExistingAttention"));
         }
         return receipt;
     }
@@ -125,65 +127,6 @@ final class FolioleCompanionPairSyncRecoveryScenario {
                 "Existing workspace sync expected " + expected + " but observed " + actual + "."
             );
         }
-    }
-
-    static void clickVisible(
-        Instrumentation instrumentation,
-        WebView webView,
-        String testId,
-        long deadline
-    ) throws Exception {
-        waitForUniqueVisible(instrumentation, webView, testId, deadline);
-        JSONObject receipt = FolioleCompanionWebViewSemanticAdapter.perform(
-            instrumentation, webView, testId, "click", ""
-        );
-        if (!receipt.optBoolean("ok")) {
-            throw new IllegalStateException("Semantic action failed: " + receipt);
-        }
-    }
-
-    static void waitForUniqueVisible(
-        Instrumentation instrumentation,
-        WebView webView,
-        String testId,
-        long deadline
-    ) throws Exception {
-        while (System.nanoTime() < deadline) {
-            JSONArray elements = FolioleCompanionWebViewSemanticAdapter
-                .snapshot(instrumentation, webView).getJSONArray("elements");
-            int visible = 0;
-            for (int index = 0; index < elements.length(); index += 1) {
-                JSONObject element = elements.getJSONObject(index);
-                if (testId.equals(element.optString("testId")) && element.optBoolean("visible")) {
-                    visible += 1;
-                }
-            }
-            if (visible == 1) return;
-            if (visible > 1) throw new IllegalStateException("Pairing target is not unique: " + testId);
-            Thread.sleep(150);
-        }
-        throw new IllegalStateException("Timed out waiting for semantic target: " + testId);
-    }
-
-    static String waitForAnyVisible(
-        Instrumentation instrumentation,
-        WebView webView,
-        long deadline,
-        String... targets
-    ) throws Exception {
-        while (System.nanoTime() < deadline) {
-            JSONArray elements = FolioleCompanionWebViewSemanticAdapter
-                .snapshot(instrumentation, webView).getJSONArray("elements");
-            for (int index = 0; index < elements.length(); index += 1) {
-                JSONObject element = elements.getJSONObject(index);
-                if (element.optBoolean("visible")) {
-                    String testId = element.optString("testId");
-                    for (String target : targets) if (target.equals(testId)) return testId;
-                }
-            }
-            Thread.sleep(150);
-        }
-        throw new IllegalStateException("Timed out waiting for pairing or sync entry.");
     }
 
 }

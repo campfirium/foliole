@@ -9,10 +9,9 @@
     keyState: 'not-started', requestState: 'not-started', completion: 'not_started',
     credentials: 'not_saved', initialSync: 'not_started',
     syncPackApplied: false, syncPackDownloaded: false,
-    autoSyncResult: null, autoSyncRunId: null, autoSyncStarted: false,
-    observerInitialized: false,
+    autoSyncResult: null, autoSyncRunId: null,
     manualSyncMode: null, manualSyncResult: null, manualSyncRunId: null,
-    preExistingAttention: false, syncFailure: null, syncPackUrl: null
+    syncFailure: null, syncPackUrl: null
   };
   window.__foliolePairSyncObserver = state;
   observeManualSync(state);
@@ -110,16 +109,8 @@
       var terminalResult = target.getAttribute('data-sync-terminal-result');
       var terminalStartedAt = target.getAttribute('data-sync-terminal-started-at');
       var runtimeBootedAt = target.getAttribute('data-sync-runtime-booted-at');
-      if (!state.observerInitialized) {
-        state.preExistingAttention = !!window.document.querySelector(
-          '[data-testid="companion-sync-inline-attention"]'
-        );
-        state.observerInitialized = true;
-      }
-      if (!mode && target.getAttribute('aria-busy') === 'true') state.autoSyncStarted = true;
       if (!state.autoSyncRunId && terminalRunId && terminalResult
         && isCurrentBootRun(terminalStartedAt, runtimeBootedAt)) {
-        state.autoSyncStarted = true;
         state.autoSyncRunId = terminalRunId; state.autoSyncResult = terminalResult;
       }
       if ((mode === 'owned' || mode === 'joined') && runId) {
@@ -131,7 +122,7 @@
     };
     new window.MutationObserver(record).observe(window.document.documentElement, {
       attributes: true,
-      attributeFilter: ['aria-busy', 'data-sync-action-mode', 'data-sync-run-id',
+      attributeFilter: ['data-sync-action-mode', 'data-sync-run-id',
         'data-sync-runtime-booted-at', 'data-sync-terminal-run-id',
         'data-sync-terminal-result', 'data-sync-terminal-started-at'],
       childList: true,

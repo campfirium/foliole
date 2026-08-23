@@ -21,11 +21,11 @@ final class FolioleCompanionSyncGroupApprovalScenario {
         long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(3);
         openSyncSettings(instrumentation, webView);
         waitForProviderAdvertisement();
-        FolioleCompanionPairSyncRecoveryScenario.waitForUniqueVisible(
+        FolioleCompanionSemanticActions.waitForUniqueVisible(
             instrumentation, webView, "companion-sync-group-approve", deadline
         );
         String joiningDeviceId = pendingJoiningDeviceId();
-        FolioleCompanionPairSyncRecoveryScenario.clickVisible(
+        FolioleCompanionSemanticActions.clickVisible(
             instrumentation, webView, "companion-sync-group-approve", deadline
         );
         waitForPeerCredential(instrumentation.getTargetContext(), joiningDeviceId, deadline);
@@ -41,10 +41,10 @@ final class FolioleCompanionSyncGroupApprovalScenario {
             long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(3);
             openSyncSettings(instrumentation, webView);
             waitForProviderAdvertisement();
-            FolioleCompanionPairSyncRecoveryScenario.waitForUniqueVisible(
+            FolioleCompanionSemanticActions.waitForUniqueVisible(
                 instrumentation, webView, "companion-sync-group-approve", deadline
             );
-            FolioleCompanionPairSyncRecoveryScenario.clickVisible(
+            FolioleCompanionSemanticActions.clickVisible(
                 instrumentation, webView, "companion-sync-group-approve", deadline
             );
             Thread.sleep(1_000);
@@ -67,7 +67,7 @@ final class FolioleCompanionSyncGroupApprovalScenario {
     ) throws Exception {
         FolioleCompanionSettingsNavigation.open(instrumentation, webView);
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
-        FolioleCompanionPairSyncRecoveryScenario.clickVisible(
+        FolioleCompanionSemanticActions.clickVisible(
             instrumentation, webView, "companion-settings-sync", deadline
         );
     }

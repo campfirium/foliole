@@ -31,10 +31,6 @@ it('renames, restores, and reopens the desktop product session in one bounded jo
   const inspection = await import('node:fs').then(({ readFileSync }) => readFileSync(
     'scripts/android/macos-a5-system-entry-display-inspection.mjs', 'utf8'
   ));
-  const pairingScenario = await import('node:fs').then(({ readFileSync }) => readFileSync(
-    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionPairSyncRecoveryScenario.java',
-    'utf8'
-  ));
   expect(source).toContain("session.invoke('save_system_entry_display_names', { payload: renamed })");
   expect(source).toContain("inspectDisplay(context, 'baseline-display', {");
   expect(source).toContain('waitForA5Payload(context, baseline)');
@@ -49,7 +45,9 @@ it('renames, restores, and reopens the desktop product session in one bounded jo
   expect(source.indexOf("inspectDisplay(context, 'restored-display'"))
     .toBeLessThan(source.lastIndexOf('waitForA5Payload(context, baseline)'));
   expect(instrumentation).toContain('requestProductSync(instrumentation, webView)');
-  expect(instrumentation).toContain('"companion-sync-now", "click", ""');
+  expect(instrumentation).toContain('FolioleCompanionSemanticActions.clickVisible(');
+  expect(instrumentation).toContain('"companion-sync-now", deadline');
+  expect(instrumentation).not.toContain('FolioleCompanionPairSyncRecoveryScenario');
   expect(instrumentation).toContain('awaitDisplayedInbox(');
   expect(instrumentation).toContain('arguments.getString("expectedTextBase64", "")');
   expect(inspection).toContain("'-e', 'expectedTextBase64'");
@@ -57,8 +55,7 @@ it('renames, restores, and reopens the desktop product session in one bounded jo
   expect(inspection).toContain('if (expectedText) textExtras.push(');
   expect(inspection).toContain('if (forbiddenText) textExtras.push(');
   expect(inspection).toContain('INSTRUMENTATION_(?:RESULT: shortMsg|STATUS: stack|STATUS_CODE: -2)');
-  expect(pairingScenario).toContain('FolioleCompanionSettingsNavigation.open(instrumentation, webView)');
-  expect(instrumentation.indexOf('FolioleCompanionPairSyncRecoveryScenario.run('))
+  expect(instrumentation.indexOf('requestProductSync(instrumentation, webView)'))
     .toBeLessThan(instrumentation.indexOf('openDirectorySurface('));
 });
 
