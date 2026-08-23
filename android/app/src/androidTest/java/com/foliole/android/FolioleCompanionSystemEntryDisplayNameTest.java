@@ -19,6 +19,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.TimeUnit;
 
 @RunWith(AndroidJUnit4.class)
 public class FolioleCompanionSystemEntryDisplayNameTest {
@@ -34,14 +35,13 @@ public class FolioleCompanionSystemEntryDisplayNameTest {
         try {
             WebView webView = activity.findViewById(R.id.webview);
             assertNotNull(webView);
-            JSONObject sync = FolioleCompanionPairSyncRecoveryScenario.run(
-                instrumentation, webView, false, false, "", 120_000, true
-            );
-            assertEquals(sync.toString(), "existing", sync.optString("pairingPath"));
+            JSONObject sync = requestProductSync(instrumentation, webView);
             FolioleCompanionCaptureNavigation.openDirectorySurface(
                 instrumentation, webView, 30_000
             );
-            JSONObject displayed = readDisplayedInbox(instrumentation, webView);
+            JSONObject displayed = awaitDisplayedInbox(
+                instrumentation, webView, expected, forbidden, 120_000
+            );
             assertTrue(displayed.toString(), displayed.optBoolean("visible"));
             assertFalse(displayed.toString(), displayed.optString("text").isEmpty());
             if (!expected.isEmpty()) assertEquals(displayed.toString(), expected, displayed.optString("text"));
@@ -66,6 +66,48 @@ public class FolioleCompanionSystemEntryDisplayNameTest {
                 "language:document.documentElement.lang||'',text:node?(node.textContent||'').trim():''," +
                 "visible:!!(node&&rect&&rect.width&&rect.height)});})()"
         );
+    }
+
+    private static JSONObject requestProductSync(
+        Instrumentation instrumentation,
+        WebView webView
+    ) throws Exception {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
+        FolioleCompanionSettingsNavigation.open(instrumentation, webView);
+        FolioleCompanionPairSyncRecoveryScenario.clickVisible(
+            instrumentation, webView, "companion-settings-sync", deadline
+        );
+        FolioleCompanionPairSyncRecoveryScenario.waitForUniqueVisible(
+            instrumentation, webView, "companion-sync-now", deadline
+        );
+        JSONObject receipt = FolioleCompanionWebViewSemanticAdapter.perform(
+            instrumentation, webView, "companion-sync-now", "click", ""
+        );
+        if (!receipt.optBoolean("ok")) {
+            throw new IllegalStateException("System entry product sync action failed: " + receipt);
+        }
+        return receipt;
+    }
+
+    private static JSONObject awaitDisplayedInbox(
+        Instrumentation instrumentation,
+        WebView webView,
+        String expected,
+        String forbidden,
+        long timeoutMs
+    ) throws Exception {
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
+        JSONObject displayed = null;
+        while (System.nanoTime() < deadline) {
+            displayed = readDisplayedInbox(instrumentation, webView);
+            String text = displayed.optString("text");
+            boolean matches = !text.isEmpty()
+                && (expected.isEmpty() || expected.equals(text))
+                && (forbidden.isEmpty() || !forbidden.equals(text));
+            if (displayed.optBoolean("visible") && matches) return displayed;
+            Thread.sleep(150);
+        }
+        throw new IllegalStateException("Timed out waiting for system entry display: " + displayed);
     }
 
     private static void sendEvidence(

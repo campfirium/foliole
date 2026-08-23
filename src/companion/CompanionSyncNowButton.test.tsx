@@ -25,8 +25,13 @@ describe('CompanionSyncNowButton', () => {
     renderWithLocalization(
       <CompanionSyncNowButton
         isSyncing={false}
-        terminalRunId="run-completed"
-        terminalRunResult="completed"
+        runtimeBootedAt="2026-08-23T00:00:00.000Z"
+        syncEvents={[{
+          endpoint_url: 'http://desktop:38641', id: 'event-completed', kind: 'run_finished',
+          message: 'All stages completed.', occurred_at: '2026-08-23T00:00:02.000Z',
+          result: 'completed', run_id: 'run-completed', started_at: '2026-08-23T00:00:01.000Z',
+          status: 'completed'
+        }]}
         onSync={vi.fn()}
       />
     );
@@ -37,6 +42,8 @@ describe('CompanionSyncNowButton', () => {
     expect(button).not.toHaveAttribute('data-sync-run-id');
     expect(button).toHaveAttribute('data-sync-terminal-run-id', 'run-completed');
     expect(button).toHaveAttribute('data-sync-terminal-result', 'completed');
+    expect(button).toHaveAttribute('data-sync-terminal-started-at', '2026-08-23T00:00:01.000Z');
+    expect(button).toHaveAttribute('data-sync-runtime-booted-at', '2026-08-23T00:00:00.000Z');
   });
 
   it('keeps duplicate UI actions disabled while automatic sync is visible', () => {

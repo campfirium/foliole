@@ -105,8 +105,10 @@ it('attributes cold-start automatic settlement to a new terminal run', () => {
   const source = read(observerPath);
   const attributes = new Map([
     ['aria-busy', 'true'],
+    ['data-sync-runtime-booted-at', '2026-08-23T00:00:00.000Z'],
     ['data-sync-terminal-result', 'completed'],
-    ['data-sync-terminal-run-id', 'run-before-start']
+    ['data-sync-terminal-run-id', 'run-before-start'],
+    ['data-sync-terminal-started-at', '2026-08-22T23:59:59.000Z']
   ]);
   const button = { getAttribute: (name) => attributes.get(name) ?? null };
   const document = { documentElement: {}, querySelector: (selector) => (
@@ -121,10 +123,11 @@ it('attributes cold-start automatic settlement to a new terminal run', () => {
     MutationObserver, crypto: { subtle: Object.create({ generateKey: async () => ({}) }) } };
   expect(JSON.parse(vm.runInNewContext(source, { Promise, URL, window }))).toEqual({ ok: true });
   expect(window.__foliolePairSyncObserver).toMatchObject({
-    autoSyncRunId: null, autoSyncStarted: true, baselineTerminalRunId: 'run-before-start'
+    autoSyncRunId: null, autoSyncStarted: true
   });
   attributes.set('aria-busy', null);
   attributes.set('data-sync-terminal-run-id', 'run-cold-start');
+  attributes.set('data-sync-terminal-started-at', '2026-08-23T00:00:01.000Z');
   attributes.set('data-sync-terminal-result', null);
   recordMutation();
   expect(window.__foliolePairSyncObserver.autoSyncRunId).toBeNull();

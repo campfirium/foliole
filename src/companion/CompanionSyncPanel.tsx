@@ -4,7 +4,6 @@ import type { SyncGroupPayload } from '../../lib/platform/syncGroupContract';
 import { useTranslation, type Translate } from '../shared/localization/LocalizationProvider';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import { isCompanionPairingSyncUsable } from '../shared/platform/companionPairingState';
-import { isSyncRunFinishedEvent } from '../shared/platform/companionSyncActivityEvents';
 import { isNativeCompanionSyncParticipationRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
 import type { CompanionHandoffReminderSettings } from './companionHandoffReminderSettings';
@@ -93,18 +92,17 @@ function formatSyncPanelError(message: string, t: Translate) {
   return message;
 }
 
-function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'manualSyncAction' | 'onDisconnectPairing' | 'onOpenSettingsPage' | 'page' | 'pairingState' | 'status' | 'syncConflictCount' | 'syncEvents' | 'syncGroup' | 'syncProgress'> & {
+function ConnectedState(props: Pick<CompanionSyncPanelProps, 'bootstrapState' | 'lastSyncedAt' | 'manualSyncAction' | 'onDisconnectPairing' | 'onOpenSettingsPage' | 'page' | 'pairingState' | 'status' | 'syncConflictCount' | 'syncEvents' | 'syncGroup' | 'syncProgress'> & {
   endpointUrl: string;
   onSync(): void;
 }) {
   const showSyncActionFirst = props.page === 'sync' && Boolean(props.syncGroup);
-  const terminalEvent = props.syncEvents.find(isSyncRunFinishedEvent) ?? null;
   const syncAction = props.page === 'sync' ? (
     <CompanionSyncNowButton
       isSyncing={props.status === 'syncing'}
       manualSyncAction={props.manualSyncAction ?? null}
-      terminalRunId={terminalEvent?.run_id ?? null}
-      terminalRunResult={terminalEvent?.result ?? null}
+      runtimeBootedAt={props.bootstrapState.booted_at}
+      syncEvents={props.syncEvents}
       onSync={props.onSync}
     />
   ) : null;
@@ -133,7 +131,7 @@ function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'm
   );
 }
 
-function MainSyncContent(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'manualSyncAction' | 'onCancelPairing' | 'onDisconnectPairing' | 'onOpenSettingsPage' | 'page' | 'pairingRequest' | 'pairingState' | 'status' | 'syncConflictCount' | 'syncEvents' | 'syncGroup' | 'syncProgress'> & {
+function MainSyncContent(props: Pick<CompanionSyncPanelProps, 'bootstrapState' | 'lastSyncedAt' | 'manualSyncAction' | 'onCancelPairing' | 'onDisconnectPairing' | 'onOpenSettingsPage' | 'page' | 'pairingRequest' | 'pairingState' | 'status' | 'syncConflictCount' | 'syncEvents' | 'syncGroup' | 'syncProgress'> & {
   endpointUrl: string;
   isBusy: boolean;
   isDiscovering: boolean;

@@ -10,7 +10,7 @@
     credentials: 'not_saved', initialSync: 'not_started',
     syncPackApplied: false, syncPackDownloaded: false,
     autoSyncResult: null, autoSyncRunId: null, autoSyncStarted: false,
-    baselineTerminalRunId: null, observerInitialized: false,
+    observerInitialized: false,
     manualSyncMode: null, manualSyncResult: null, manualSyncRunId: null,
     preExistingAttention: false, syncFailure: null, syncPackUrl: null
   };
@@ -108,16 +108,18 @@
       var runId = target.getAttribute('data-sync-run-id');
       var terminalRunId = target.getAttribute('data-sync-terminal-run-id');
       var terminalResult = target.getAttribute('data-sync-terminal-result');
+      var terminalStartedAt = target.getAttribute('data-sync-terminal-started-at');
+      var runtimeBootedAt = target.getAttribute('data-sync-runtime-booted-at');
       if (!state.observerInitialized) {
-        state.baselineTerminalRunId = terminalRunId;
         state.preExistingAttention = !!window.document.querySelector(
           '[data-testid="companion-sync-inline-attention"]'
         );
         state.observerInitialized = true;
       }
       if (!mode && target.getAttribute('aria-busy') === 'true') state.autoSyncStarted = true;
-      if (state.autoSyncStarted && terminalRunId && terminalResult
-        && terminalRunId !== state.baselineTerminalRunId) {
+      if (!state.autoSyncRunId && terminalRunId && terminalResult
+        && isCurrentBootRun(terminalStartedAt, runtimeBootedAt)) {
+        state.autoSyncStarted = true;
         state.autoSyncRunId = terminalRunId; state.autoSyncResult = terminalResult;
       }
       if ((mode === 'owned' || mode === 'joined') && runId) {
@@ -130,11 +132,17 @@
     new window.MutationObserver(record).observe(window.document.documentElement, {
       attributes: true,
       attributeFilter: ['aria-busy', 'data-sync-action-mode', 'data-sync-run-id',
-        'data-sync-terminal-run-id', 'data-sync-terminal-result'],
+        'data-sync-runtime-booted-at', 'data-sync-terminal-run-id',
+        'data-sync-terminal-result', 'data-sync-terminal-started-at'],
       childList: true,
       subtree: true
     });
     record();
+  }
+  function isCurrentBootRun(startedAt, bootedAt) {
+    var started = Date.parse(startedAt || '');
+    var booted = Date.parse(bootedAt || '');
+    return Number.isFinite(started) && Number.isFinite(booted) && started >= booted;
   }
   function syncPushFailure(value) {
     var allowed = /^(expired_timestamp|invalid_signature|missing_headers|sync_group_member_not_authorized|sync_group_workgroup_key_missing|workgroup_aead_invalid)$/;
