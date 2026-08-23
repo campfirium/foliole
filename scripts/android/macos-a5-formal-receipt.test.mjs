@@ -21,7 +21,7 @@ import {
 const roots = [];
 
 function git(root, args) {
-  return execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
+  return execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' }).trim();
 }
 
 function fixture(action = 'build', runId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa') {
@@ -30,7 +30,7 @@ function fixture(action = 'build', runId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
   const root = fs.mkdtempSync(path.join(parent, 'macos-a5-receipt-'));
   roots.push(root);
   fs.writeFileSync(path.join(root, 'package-lock.json'), '{"lockfileVersion":3}\n');
-  git(root, ['-c', 'core.hideDotFiles=false', 'init', '-b', 'dev']);
+  git(root, ['init', '-b', 'dev']);
   git(root, ['config', 'user.email', 'receipt@example.invalid']);
   git(root, ['config', 'user.name', 'Receipt Test']);
   git(root, ['add', '.']); git(root, ['commit', '-m', 'fixture']);

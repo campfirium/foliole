@@ -20,7 +20,7 @@ function canonicalText(filePath) {
 }
 
 function git(root, args) {
-  return execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
+  return execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' }).trim();
 }
 
 function fixture() {
@@ -28,7 +28,7 @@ function fixture() {
   fs.mkdirSync(parent, { recursive: true });
   const root = fs.mkdtempSync(path.join(parent, 'macos-a5-capsule-'));
   roots.push(root);
-  git(root, ['-c', 'core.hideDotFiles=false', 'init', '-b', 'dev']);
+  git(root, ['init', '-b', 'dev']);
   git(root, ['config', 'user.email', 'capsule@example.invalid']);
   git(root, ['config', 'user.name', 'Capsule Test']);
   fs.writeFileSync(path.join(root, '.gitignore'), 'ignored.txt\n');
@@ -65,6 +65,11 @@ function runner(events, failNpm = false, materializeElectron = true, failScript 
       const electronRoot = path.join(options.cwd, 'node_modules/electron');
       fs.mkdirSync(path.join(electronRoot, 'dist/Electron.app/Contents/MacOS'), { recursive: true });
       fs.writeFileSync(path.join(electronRoot, 'dist/Electron.app/Contents/MacOS/Electron'), 'binary\n');
+      return;
+    }
+    if (command === 'git') {
+      const { cwd, ...gitOptions } = options;
+      execFileSync(command, ['-C', cwd, ...args], gitOptions);
       return;
     }
     execFileSync(command, args, options);
