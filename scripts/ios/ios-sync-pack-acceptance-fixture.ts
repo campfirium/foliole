@@ -150,8 +150,9 @@ async function buildSuccessorFixtures(
   captureNodeId: string
 ) {
   createDesktopSuccessor(driver, captureNodeId);
+  const successorToStateSeq = currentMaxStateSeq(driver);
   await buildPack(driver, paths.successorPath, toPeerId, initialPackToStateSeq, 'ios-acceptance-successor');
-  await buildIllegalDagRejectionPack(driver, paths.illegalDagPath, toPeerId, initialPackToStateSeq);
+  await buildIllegalDagRejectionPack(driver, paths.illegalDagPath, toPeerId, successorToStateSeq);
   await buildCursorGapPack(driver, paths.cursorGapPath, toPeerId);
   return { captureNodeId, desktop: readDesktopRoundtripSnapshot(sqlite, captureNodeId) };
 }

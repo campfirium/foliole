@@ -50,6 +50,7 @@ it('generates isolated producer packs for the paired iOS identity and failure ca
   expect(JSON.parse(legal.nodeVersions[0].snapshot_json).parent_id).toBe('special-inbox');
   expect(wrongTarget.manifest).toMatchObject({ to_peer_id: 'ios-runtime-device-wrong' });
   expect(successor.manifest.from_state_seq).toBe(legal.manifest.to_state_seq);
+  expect(illegalDag.manifest.from_state_seq).toBe(successor.manifest.to_state_seq);
   expect(successor.nodes.map(({ id }) => id)).toEqual([
     IOS_SYNC_PACK_CAPTURE_OBJECT_ID, 'ios-acceptance-restore'
   ]);

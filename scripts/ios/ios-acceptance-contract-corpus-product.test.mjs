@@ -56,6 +56,7 @@ it('binds fixed iOS formal inputs to independently readable product pack semanti
   });
   expect(legal.nodes).toEqual([expect.objectContaining({ id: 'ios-acceptance-restore' })]);
   expect(successor.manifest.from_state_seq).toBe(legal.manifest.to_state_seq);
+  expect(illegalDag.manifest.from_state_seq).toBe(successor.manifest.to_state_seq);
   expect(successor.nodes.map(({ id }) => id)).toEqual([
     IOS_SYNC_PACK_CAPTURE_OBJECT_ID, 'ios-acceptance-restore'
   ]);
@@ -80,7 +81,7 @@ it('binds fixed iOS formal inputs to independently readable product pack semanti
   expect(JSON.parse(restoredVersion.snapshot_json)).not.toHaveProperty('body_blob_hash');
   expect(wrongTarget.manifest.to_peer_id).toBe(`${PEER_ID}-wrong`);
   expect(cursorGap.manifest.from_state_seq).toBeGreaterThan(successor.manifest.to_state_seq);
-  expect(illegalDag.manifest.from_state_seq).toBe(legal.manifest.to_state_seq);
+  expect(illegalDag.manifest.to_state_seq).toBeGreaterThan(illegalDag.manifest.from_state_seq);
   expect(illegalDag.nodeVersionParents).toContainEqual(expect.objectContaining({
     parent_version_id: 'missing#ancestor'
   }));
