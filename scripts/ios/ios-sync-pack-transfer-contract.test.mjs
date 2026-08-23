@@ -38,10 +38,15 @@ describe('iOS sync-pack transfer contract', () => {
 
   it('retains native download causes only in the isolated acceptance build', async () => {
     const plugin = await appSource('FolioleCompanionSyncPackTransferPlugin.swift');
+    const routes = await readFile(path.join(ROOT, 'scripts/ios/ios-sync-pack-acceptance-routes.ts'), 'utf8');
+    const transfer = await appSource('FolioleCompanionSyncPackTransfer.swift');
 
     expect(plugin).toContain('#if FOLIOLE_IOS_BRIDGE_ACCEPTANCE && targetEnvironment(simulator)');
     expect(plugin).toContain('item.userInfo[NSUnderlyingErrorKey] as? NSError');
     expect(plugin).toContain('#else\n        return error.localizedDescription');
+    expect(routes).toContain("'Content-Length': String(routed.body.byteLength)");
+    expect(transfer).toContain('data?.suffix(22)');
+    expect(transfer).toContain('NSUnderlyingErrorKey: error');
   });
 
   it('validates pack SQLite, uses system zlib, and confines cache deletion', async () => {

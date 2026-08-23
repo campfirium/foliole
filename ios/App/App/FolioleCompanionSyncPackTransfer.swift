@@ -21,11 +21,15 @@ enum FolioleCompanionSyncPackTransfer {
         }
         let archiveURL = try moveDownloadToCache(temporaryURL)
         defer { try? FileManager.default.removeItem(at: archiveURL) }
-        return try validateAndStore(
-            archiveURL,
-            expectedPeerId: expectedPeerId,
-            expectedSourcePeerId: expectedSourcePeerId
-        )
+        do {
+            return try validateAndStore(
+                archiveURL,
+                expectedPeerId: expectedPeerId,
+                expectedSourcePeerId: expectedSourcePeerId
+            )
+        } catch {
+            throw acceptanceArchiveFailure(error, archiveURL: archiveURL)
+        }
     }
 
     static func deleteDownloadedSyncPack(path: String) throws -> Bool {
@@ -85,5 +89,22 @@ enum FolioleCompanionSyncPackTransfer {
 
     private static func error(_ message: String) -> NSError {
         NSError(domain: "FolioleCompanionSyncPackTransfer", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
+    }
+
+    private static func acceptanceArchiveFailure(_ error: Error, archiveURL: URL) -> Error {
+#if FOLIOLE_IOS_BRIDGE_ACCEPTANCE && targetEnvironment(simulator)
+        let data = try? Data(contentsOf: archiveURL)
+        let tail = data?.suffix(22).map { String(format: "%02x", $0) }.joined() ?? "unreadable"
+        return NSError(
+            domain: "FolioleCompanionSyncPackAcceptance",
+            code: 1,
+            userInfo: [
+                NSLocalizedDescriptionKey: "archive_bytes=\(data?.count ?? -1) archive_tail=\(tail)",
+                NSUnderlyingErrorKey: error
+            ]
+        )
+#else
+        return error
+#endif
     }
 }

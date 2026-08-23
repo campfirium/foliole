@@ -47,7 +47,10 @@ export async function createIosSyncPackAcceptanceRoutes(args: {
     handle: async (request: { bodyText: string; method: string; url: string }, response: ServerResponse) => {
       const routed = await route(request);
       if (!routed) return false;
-      response.writeHead(200, { 'Content-Type': routed.contentType });
+      response.writeHead(200, {
+        'Content-Length': String(routed.body.byteLength),
+        'Content-Type': routed.contentType
+      });
       response.end(routed.body);
       return true;
     }
