@@ -1,5 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../lib/platform/syncProtocolContract';
+
 const events: string[] = [];
 const groupMock = vi.hoisted(() => ({
   facts: vi.fn(), join: vi.fn(), load: vi.fn(), loadKey: vi.fn(), refresh: vi.fn()
@@ -46,11 +48,9 @@ vi.mock('./companion/sync/syncGroupStore', async (importOriginal) => ({
 import { pairCompanionWithDesktop, requestCompanionPairing } from './companionWorkspacePairing';
 
 const endpointUrl = 'http://10.0.0.25:38641';
-const protocol = {
-  capabilities: ['lan-sync-v1'], max_supported_version: 1, min_supported_version: 1, version: 1
-};
+const protocol = CURRENT_SYNC_PROTOCOL_DESCRIPTOR;
 const compatibility = {
-  missing_capabilities: [], negotiated_version: 1, reason: null, status: 'compatible'
+  missing_capabilities: [], negotiated_version: protocol.version, reason: null, status: 'compatible'
 };
 const encryptedSecret = {
   algorithm: 'ECDH-P256-HKDF-SHA256-AES-GCM', ciphertext: 'ciphertext', iv: 'iv',
@@ -114,7 +114,8 @@ beforeEach(() => {
   });
   nativeMock.loadPairingState.mockResolvedValue({
     authorization_id: 'authorization-a5', host_name: 'A5', host_platform: 'android-capacitor',
-    is_paired: true, paired_at: '2026-08-20T08:00:00.000Z'
+    is_paired: true, negotiated_protocol_version: compatibility.negotiated_version,
+    paired_at: '2026-08-20T08:00:00.000Z', remote_protocol: protocol, sync_usable: true
   });
 });
 

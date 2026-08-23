@@ -1,5 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../lib/platform/syncProtocolContract';
+
 const syncGroupMock = vi.hoisted(() => ({
   facts: vi.fn(), join: vi.fn(), load: vi.fn(), loadKey: vi.fn()
 }));
@@ -31,9 +33,8 @@ vi.mock('./companion/sync/syncGroupStore', async (importOriginal) => ({
 import { decryptCompanionPairingSecret } from './companionPairingEncryption';
 import { pairCompanionWithDesktop, requestCompanionPairing } from './companionWorkspaceSync';
 
-const protocol = { capabilities: ['lan-sync-v1'], max_supported_version: 1,
-  min_supported_version: 1, version: 1 };
-const compatibility = { missing_capabilities: [], negotiated_version: 1,
+const protocol = CURRENT_SYNC_PROTOCOL_DESCRIPTOR;
+const compatibility = { missing_capabilities: [], negotiated_version: protocol.version,
   reason: null, status: 'compatible' };
 const encryptedSecret = { algorithm: 'ECDH-P256-HKDF-SHA256-AES-GCM', ciphertext: 'ciphertext',
   iv: 'iv', salt: 'salt', server_public_key: 'server-public-key' };
@@ -111,7 +112,8 @@ it('stores an approved Sync Group key separately from pairing authorization', as
   });
   capacitorMock.plugin.loadPairingState.mockResolvedValue({
     authorization_id: 'authorization-a5', host_name: 'Pixel 9', host_platform: 'android-capacitor',
-    is_paired: true, paired_at: '2026-04-22T12:00:00.000Z'
+    is_paired: true, negotiated_protocol_version: compatibility.negotiated_version,
+    paired_at: '2026-04-22T12:00:00.000Z', remote_protocol: protocol, sync_usable: true
   });
   capacitorMock.plugin.signCompanionSyncRequest.mockResolvedValue({ headers: {
     'X-Authorization-Id': 'authorization-a5', 'X-Nonce': 'nonce',

@@ -5,6 +5,7 @@ import ts from 'typescript';
 
 import { canRecordNativeCommandArgs } from '../../../lib/platform/nativeCommandPrivacy';
 import { NATIVE_COMMANDS, isTypedNativeCommand } from '../../../lib/platform/nativeCommands';
+import { NATIVE_SOURCE_CONNECTION_COMMANDS } from '../../../lib/platform/nativeSourceConnectionCommands';
 
 const PLATFORM_DIR = join(process.cwd(), 'lib/platform');
 const CONTRACT_FILES = [
@@ -62,7 +63,7 @@ function collectContractCommandReferences() {
   return CONTRACT_FILES.reduce<Set<string>>((references, fileName) => {
     collectNativeCommandReferences(fileName).forEach((commandKey) => references.add(commandKey));
     return references;
-  }, new Set<string>());
+  }, new Set(Object.keys(NATIVE_SOURCE_CONNECTION_COMMANDS)));
 }
 
 describe('native command contracts', () => {
