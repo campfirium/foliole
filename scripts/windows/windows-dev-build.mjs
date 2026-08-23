@@ -10,6 +10,7 @@ import { executeBounded } from './windows-bounded-process.mjs';
 import { prepareWindowsAndroidDebugHost } from './windows-android-host-prepare.mjs';
 import { sanitizePairSyncRecoveryFailureEvidence } from '../sync-group/pair-sync-failure-evidence.mjs';
 import { sanitizePairSyncRecoveryProgressEvidence } from '../sync-group/pair-sync-feature-result.mjs';
+import { currentAcceptanceCandidate } from '../sync-group/multi-device-sync-candidate.mjs';
 import { normalizeWindowsDevAction } from './windows-dev-action-contract.mjs';
 import {
   formatWindowsDevFailure, verifyWindowsDevSigningIdentity, windowsDevFailure
@@ -88,7 +89,8 @@ export { formatWindowsDevFailure } from './windows-dev-build-support.mjs';
 
 export async function runWindowsDevBuild({
   action: requestedAction = 'build', deviceAction = runWindowsDevDeviceAction, execute = executeBounded,
-  fsApi = fs, id = randomUUID, now = () => new Date(), paths = windowsDevPaths(),
+  fsApi = fs, id = randomUUID, inspectCandidate = currentAcceptanceCandidate,
+  now = () => new Date(), paths = windowsDevPaths(),
   platform = process.platform, prepareHost = prepareWindowsAndroidDebugHost
 } = {}) {
   const action = normalizeWindowsDevAction(requestedAction);
@@ -112,6 +114,11 @@ export async function runWindowsDevBuild({
       throw failure('Repository-owned action process is already running', 73, 'residual');
     }
     const signing = verifyWindowsDevSigningIdentity(paths, fsApi);
+    const candidate = preparesWindowsSyncGroupCandidate(action)
+      ? inspectCandidate(paths.repoRoot, 'diagnostic') : null;
+    if (candidate && !candidate.clean) {
+      throw failure('Windows candidate requires clean source before host preparation', 64, 'candidate');
+    }
     let output = '';
     let readiness = null;
     let desktopPairingReadiness = null;
@@ -151,6 +158,7 @@ export async function runWindowsDevBuild({
     } else if (action !== 'build') {
       actionResult = await deviceAction({
         action, buildIdentity: context.runId, evidenceRoot: context.root, execute, paths,
+        ...(candidate ? { candidate } : {}),
         pairSyncRecoveryReadiness: action === 'pair-sync-recover' ? readiness : undefined,
         phase: 'execute'
       });

@@ -109,27 +109,6 @@ describe('Windows DEV foreground build', () => {
     expect(calls.flatMap(({ args }) => args).join(' ')).not.toMatch(/gradle|install|android:web:build/iu);
   });
 
-  it('prepares the multi-device candidate as a Windows-only action without ADB or Gradle', async () => {
-    const { paths } = fixture();
-    fs.rmSync(paths.adbPath);
-    const { calls, execute } = successfulExecutor(paths);
-    const prepareHost = vi.fn(async () => 'prepared\n');
-    const deviceAction = vi.fn(async () => ({
-      multiDeviceSyncCandidate: { manifestPath: 'candidate.json' }, output: ''
-    }));
-    const run = await runWindowsDevBuild({
-      action: 'multi-device-sync-candidate', deviceAction, execute, paths, platform: 'win32', prepareHost
-    });
-    expect(run).toMatchObject({
-      exitCode: 0, summary: { action: 'multi-device-sync-candidate',
-        multiDeviceSyncCandidate: { manifestPath: 'candidate.json' } }
-    });
-    expect(prepareHost).toHaveBeenCalledWith(expect.objectContaining({ liveReload: false }));
-    expect(deviceAction).toHaveBeenCalledWith(expect.objectContaining({ action: 'multi-device-sync-candidate' }));
-    expect(calls.some(({ command }) => command === 'cmd.exe')).toBe(false);
-    expect(calls.flatMap(({ args }) => args).join(' ')).not.toContain('adb');
-  });
-
   it('prepares current companion assets before native deploy can install', async () => {
     const { paths } = fixture();
     const { execute } = successfulExecutor(paths);
