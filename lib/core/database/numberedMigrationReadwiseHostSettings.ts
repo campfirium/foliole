@@ -130,6 +130,7 @@ function writeCanonicalSetting(sqlite: DatabaseMigrationTarget, input: {
 }
 
 export function migrateReadwiseHostSettings(sqlite: DatabaseMigrationTarget) {
+  if (!tableExists(sqlite, 'setting_records')) return;
   const projection = readProjection(sqlite, GLOBAL_KEY);
   const raw = parseRecord(projection?.value);
   const sources = readSources(sqlite);

@@ -162,6 +162,21 @@ it('moves the local Readwise projection into Host scope without rewriting Source
   expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
 });
 
+it('keeps legacy settings unchanged when the historical schema has no canonical setting table', () => {
+  const connection = prepareV76();
+  connection.sqlite.exec('DROP TABLE setting_records');
+  const before = connection.driver.queryOne<{ value: string }>(
+    "SELECT value FROM settings WHERE key = 'import_manager_settings'"
+  );
+
+  initializeDatabaseSchema(connection.sqlite);
+
+  expect(connection.driver.queryOne(
+    "SELECT value FROM settings WHERE key = 'import_manager_settings'"
+  )).toEqual(before);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+});
+
 it('rolls back the cutover when legacy Readwise Sources name more than one owner', () => {
   const connection = prepareV76();
   seedLegacySource('Host A');
@@ -172,6 +187,48 @@ it('rolls back the cutover when legacy Readwise Sources name more than one owner
   expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(76);
   expect(connection.driver.queryOne("SELECT value FROM settings WHERE key = 'readwise_import_settings'"))
     .toBeUndefined();
+  expect(JSON.parse(connection.driver.queryOne<{ value: string }>(
+    "SELECT value FROM settings WHERE key = 'import_manager_settings'"
+  )!.value)).toHaveProperty('readwiseRootPath', '/Library/Readwise');
+});
+
+it('rejects legacy Readwise settings when their Host owner is missing', () => {
+  const connection = prepareV76();
+  connection.driver.execute("DELETE FROM settings WHERE key = 'host_name'");
+
+  expect(() => initializeDatabaseSchema(connection.sqlite)).toThrow('readwise_host_settings_owner_missing');
+
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(76);
+  expect(JSON.parse(connection.driver.queryOne<{ value: string }>(
+    "SELECT value FROM settings WHERE key = 'import_manager_settings'"
+  )!.value)).toHaveProperty('readwiseRootPath', '/Library/Readwise');
+});
+
+it('rejects invalid legacy Readwise settings JSON without advancing the database', () => {
+  const connection = prepareV76();
+  connection.driver.execute(
+    "UPDATE settings SET value = '{' WHERE key = 'import_manager_settings'"
+  );
+
+  expect(() => initializeDatabaseSchema(connection.sqlite)).toThrow('readwise_host_settings_migration_invalid_json');
+
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(76);
+  expect(connection.driver.queryOne("SELECT value FROM settings WHERE key = 'import_manager_settings'"))
+    .toEqual({ value: '{' });
+});
+
+it('rolls back canonical settings and user_version when the upgrade transaction fails', () => {
+  const connection = prepareV76();
+  seedLegacySource('Host A');
+
+  expect(() => initializeDatabaseSchema(connection.sqlite, {
+    beforeVersionCommit: () => { throw new Error('injected migration failure'); }
+  })).toThrow('injected migration failure');
+
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(76);
+  expect(connection.driver.queryOne(
+    "SELECT key FROM setting_records WHERE key = 'readwise_import_settings'"
+  )).toBeUndefined();
   expect(JSON.parse(connection.driver.queryOne<{ value: string }>(
     "SELECT value FROM settings WHERE key = 'import_manager_settings'"
   )!.value)).toHaveProperty('readwiseRootPath', '/Library/Readwise');
