@@ -17,7 +17,9 @@ afterEach(() => {
 });
 
 function fixture() {
-  const root = fs.mkdtempSync(path.resolve('.tmp/artifacts/t146-host-lifecycle-'));
+  const artifactRoot = path.resolve('.tmp/artifacts');
+  fs.mkdirSync(artifactRoot, { recursive: true });
+  const root = fs.mkdtempSync(path.join(artifactRoot, 't146-host-lifecycle-'));
   roots.push(root);
   const sqlite = new Database(path.join(root, 'fixture.db'));
   sqlite.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
