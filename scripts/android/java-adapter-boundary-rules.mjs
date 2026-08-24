@@ -79,6 +79,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionSyncGroupPairCrypto.java',
       'FolioleCompanionSyncGroupPeerStore.java',
       'FolioleCompanionSyncGroupProvider.java',
+      'FolioleCompanionSyncGroupProviderConfig.java',
       'FolioleCompanionSyncGroupProviderState.java',
       'FolioleCompanionSyncGroupRequestAuth.java',
       'FolioleCompanionSyncScreenAwake.java',

@@ -205,7 +205,7 @@ it('refreshes the provider data bridge after Activity recreation', async () => {
   const bridge = await readJava('FolioleCompanionSyncGroupDataBridge.java');
   const provider = await readJava('FolioleCompanionSyncGroupProvider.java');
   const sameProvider = provider.slice(
-    provider.indexOf('if (sameProvider(next))'),
+    provider.indexOf('if (FolioleCompanionSyncGroupProviderConfig.sameProvider(activeConfig, next))'),
     provider.indexOf('if (activeConfig != null) stopActiveProvider()')
   );
   expect(bridge).toContain('private volatile Dispatcher dispatcher;');

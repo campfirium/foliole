@@ -19,6 +19,8 @@ final class FolioleCompanionSyncGroupProvider {
     private static Object activeOwner;
     private static FolioleCompanionSyncGroupDataBridge dataBridge;
     private static FolioleCompanionSyncGroupServer server;
+    private static volatile FolioleCompanionSyncGroupProviderState.Runtime publishedRuntime =
+        FolioleCompanionSyncGroupProviderState.stopped();
     private static final Map<String, FolioleCompanionSyncGroupJoinRequest> joinRequests =
         new ConcurrentHashMap<>();
 
@@ -48,7 +50,7 @@ final class FolioleCompanionSyncGroupProvider {
             .put("protocol", FolioleCompanionSyncPackProviderDefinitions.load(context).protocol())
             .put("sync_group", group);
         next.put("group_tag", FolioleCompanionSyncGroupCrypto.groupTag(credential.workgroupKey));
-        if (sameProvider(next)) {
+        if (FolioleCompanionSyncGroupProviderConfig.sameProvider(activeConfig, next)) {
             next.put("runtime_instance_id", activeConfig.getString("runtime_instance_id"));
             boolean factsChanged = !next.optString("facts_revision").equals(activeConfig.optString("facts_revision"));
             activeOwner = owner;
@@ -66,7 +68,7 @@ final class FolioleCompanionSyncGroupProvider {
         next.put("runtime_instance_id", UUID.randomUUID().toString());
         activeContext = context.getApplicationContext(); activeConfig = next; activeOwner = owner;
         dataBridge = bridge;
-        restoreApprovedJoins();
+        FolioleCompanionSyncGroupProviderConfig.restoreApprovedJoins(activeContext, activeConfig, joinRequests);
         if (participating) {
             FolioleCompanionSyncScreenAwake.attach(activity);
             startRuntime();
@@ -112,35 +114,23 @@ final class FolioleCompanionSyncGroupProvider {
         if (advertisement != null) advertisement.stop();
         if (server != null) server.stop();
         advertisement = null; server = null;
+        publishedRuntime = FolioleCompanionSyncGroupProviderState.stopped();
     }
 
     private static void startRuntime() throws Exception {
         server = new FolioleCompanionSyncGroupServer(activeContext, activeConfig, joinRequests, requireDataBridge());
         advertisement = FolioleCompanionNsdAdvertisement.start(activeContext, server.port(), activeConfig);
+        publishRuntime();
     }
 
     private static void restartAdvertisement() throws Exception {
         if (advertisement != null) advertisement.stopAndAwait();
         advertisement = FolioleCompanionNsdAdvertisement.start(activeContext, server.port(), activeConfig);
+        publishRuntime();
     }
 
-    private static void restoreApprovedJoins() throws Exception {
-        JSONObject group = activeConfig.getJSONObject("sync_group");
-        joinRequests.clear();
-        joinRequests.putAll(FolioleCompanionSyncGroupJoinGrantStore.load(
-            activeContext, group.getString("group_id"), group.getString("timeline_id")
-        ));
-    }
-
-    private static boolean sameProvider(JSONObject next) {
-        if (activeConfig == null) return false;
-        JSONObject currentGroup = activeConfig.optJSONObject("sync_group");
-        JSONObject nextGroup = next.optJSONObject("sync_group");
-        return activeConfig.optString("authorization_id").equals(next.optString("authorization_id"))
-            && activeConfig.optString("host_name").equals(next.optString("host_name"))
-            && currentGroup != null && nextGroup != null
-            && currentGroup.optString("group_id").equals(nextGroup.optString("group_id"))
-            && currentGroup.optString("timeline_id").equals(nextGroup.optString("timeline_id"));
+    private static void publishRuntime() {
+        publishedRuntime = FolioleCompanionSyncGroupProviderState.running(server, advertisement);
     }
 
     static synchronized JSObject approve(Context context, PluginCall call) throws Exception {
@@ -215,8 +205,8 @@ final class FolioleCompanionSyncGroupProvider {
         });
     }
 
-    static synchronized JSObject state() {
-        return FolioleCompanionSyncGroupProviderState.create(server, advertisement);
+    static JSObject state() {
+        return publishedRuntime.create();
     }
 
     static synchronized String runtimeInstanceId() {
