@@ -117,8 +117,11 @@ final class FolioleCompanionSyncGroupProvider {
 
     private static void startRuntime() throws Exception {
         server = new FolioleCompanionSyncGroupServer(activeContext, activeConfig, joinRequests, requireDataBridge());
+        android.util.Log.d("FolioleSyncProvider", "Provider server bound");
         advertisement = FolioleCompanionNsdAdvertisement.start(activeContext, server.port(), activeConfig);
+        android.util.Log.d("FolioleSyncProvider", "Provider advertisement requested");
         publishRuntime();
+        android.util.Log.d("FolioleSyncProvider", "Provider runtime published");
     }
 
     private static void restartAdvertisement() throws Exception {

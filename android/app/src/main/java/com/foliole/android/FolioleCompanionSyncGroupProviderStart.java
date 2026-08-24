@@ -18,14 +18,18 @@ final class FolioleCompanionSyncGroupProviderStart {
         FolioleCompanionSyncGroupDataBridge.Dispatcher dispatcher,
         Callable<Boolean> participation
     ) throws Exception {
+        android.util.Log.d("FolioleSyncProvider", "Start request entered");
         JSONObject group = call.getData().getJSONObject(key(context, "group"));
         FolioleCompanionSyncGroupDataBridge bridge = FolioleCompanionSyncGroupDataBridge.current();
         bridge.replaceDispatcher(dispatcher);
         FolioleCompanionCurrentGroupCredential credential =
             FolioleCompanionCurrentGroupCredential.load(group.getString("group_id"));
-        return FolioleCompanionSyncGroupProvider.startReady(
+        android.util.Log.d("FolioleSyncProvider", "Start credential ready");
+        JSObject result = FolioleCompanionSyncGroupProvider.startReady(
             context, activity, call, owner, dispatcher, participation, group, bridge, credential
         );
+        android.util.Log.d("FolioleSyncProvider", "Start request applied");
+        return result;
     }
 
     private static String key(Context context, String name) throws Exception {
