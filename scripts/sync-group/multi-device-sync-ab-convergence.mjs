@@ -80,7 +80,7 @@ export async function proveABConvergence({ execute, reportProgress, repoRoot, ru
   );
   const sessionOptions = macosAcceptanceSessionOptions({
     libraryHome: path.join(owned.root, 'library'), repoRoot,
-    userDataPath: path.join(owned.root, 'user-data')
+    runtimeRoot: paths.desktopRuntimeRoot
   });
   const startAndroid = () => startMacosA5SyncGroupApprovalProvider({ execute,
     onProviderStopped: async () => {}, onReady: async () => {}, paths, env });

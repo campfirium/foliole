@@ -89,7 +89,7 @@ export async function proveARejoin({ execute, reportActivity = () => {}, reportP
   const restartProvider = () => restartARejoinAndroidProvider({ env, execute, paths });
   const sessionOptions = macosAcceptanceSessionOptions({
     libraryHome: path.join(owned.root, 'library'), repoRoot,
-    userDataPath: path.join(owned.root, 'user-data')
+    runtimeRoot: paths.desktopRuntimeRoot
   });
   let session = await openMacosPairSyncDesktopSession(sessionOptions);
   try {

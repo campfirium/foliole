@@ -183,12 +183,13 @@ function createContext(options) {
   const evidenceRoot = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId,
     'participation-control');
   const env = macosAcceptanceEnv(macosA5GradleEnv());
+  const paths = macosA5Paths(repoRoot);
   return { databasePath, env, evidenceRoot, execute,
     inspectMac: (ids) => macosFacts(execute, repoRoot, databasePath, ids),
     openSession: () => openMacosPairSyncDesktopSession(macosAcceptanceSessionOptions({ env,
       libraryHome: path.join(owned.root, 'library'), repoRoot,
-      userDataPath: path.join(owned.root, 'user-data') })),
-    paths: macosA5Paths(repoRoot), reportProgress, repoRoot, runId, serial: A5_SERIAL };
+      runtimeRoot: paths.desktopRuntimeRoot })),
+    paths, reportProgress, repoRoot, runId, serial: A5_SERIAL };
 }
 
 export async function proveParticipationControl(options) {

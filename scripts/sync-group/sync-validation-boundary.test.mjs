@@ -81,3 +81,19 @@ it('keeps Windows tests from using Android implementation source as host proof',
     .map((name) => read(`scripts/windows/${name}`)).join('\n');
   expect(windowsTests).not.toMatch(/FolioleCompanion(?:Existing)?PairSync/iu);
 });
+
+it('keeps multi-device Mac consumers on the source-bound hidden credential session', () => {
+  const consumers = [
+    'multi-device-sync-a-leave.mjs',
+    'multi-device-sync-a-rejoin.mjs',
+    'multi-device-sync-ab-convergence.mjs',
+    'multi-device-sync-fresh-join.mjs',
+    'multi-device-sync-from-zero.mjs',
+    'multi-device-sync-participation.mjs',
+    'multi-device-sync-stage-actions.mjs'
+  ].map((name) => read(`scripts/sync-group/${name}`));
+  for (const source of consumers) {
+    expect(source).not.toContain('userDataPath');
+    expect(source).toContain('runtimeRoot');
+  }
+});

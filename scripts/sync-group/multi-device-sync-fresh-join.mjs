@@ -50,7 +50,7 @@ export async function establishFreshAB({ execute, reportProgress, repoRoot, runI
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const sessionOptions = macosAcceptanceSessionOptions({
     libraryHome: path.join(owned.root, 'library'), repoRoot,
-    userDataPath: path.join(owned.root, 'user-data')
+    runtimeRoot: paths.desktopRuntimeRoot
   });
   const mutationFact = await createInitialFact({ evidenceRoot, sessionOptions });
   const readiness = resolveMacosA5PairSyncReadiness(paths);
@@ -67,7 +67,7 @@ export async function establishFreshAB({ execute, reportProgress, repoRoot, runI
     libraryHome: path.join(owned.root, 'library'), openTransport: openMacosAcceptanceTransport,
     closeTransport: closeMacosAcceptanceTransport,
     pairedAuthorizationFingerprint: readiness.localMemberAuthorizationFingerprint,
-    paths, serial: A5_SERIAL, userDataPath: path.join(owned.root, 'user-data'),
+    paths, serial: A5_SERIAL,
     validateDesktop: validateMacosAcceptanceDesktopPreflight });
   reportProgress('macos-group-created'); reportProgress('a5-paired');
   const received = await waitForAndroidJourneyFact(paths, mutationFact.factId);

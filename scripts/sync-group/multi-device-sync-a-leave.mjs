@@ -83,15 +83,15 @@ async function createAndroidFact({ env, evidenceRoot, execute, paths, runId }) {
     env, evidenceRoot: path.join(evidenceRoot, 'b-fact'), execute, paths, serial: A5_SERIAL });
 }
 
-function openMacosSession({ env, owned, repoRoot }) {
+function openMacosSession({ env, owned, paths, repoRoot }) {
   return openMacosPairSyncDesktopSession(macosAcceptanceSessionOptions({ env,
     libraryHome: path.join(owned.root, 'library'), repoRoot,
-    userDataPath: path.join(owned.root, 'user-data') }));
+    runtimeRoot: paths.desktopRuntimeRoot }));
 }
 
 async function leaveAndRestartA(context) {
   const { databasePath, env, execute, owned, paths, rejoin, reportProgress, repoRoot } = context;
-  let session = await openMacosSession({ env, owned, repoRoot });
+  let session = await openMacosSession({ env, owned, paths, repoRoot });
   try {
     await restartARejoinAndroidProvider({ env, execute, paths });
     reportProgress('survivor-provider-ready');
@@ -103,7 +103,7 @@ async function leaveAndRestartA(context) {
     }
     reportProgress('a-left');
     await session.close();
-    session = await openMacosSession({ env, owned, repoRoot });
+    session = await openMacosSession({ env, owned, paths, repoRoot });
     const restartedOverview = await session.load();
     if (restartedOverview.sync_group !== null
         || restartedOverview.paired_authorizations.length !== 0) {

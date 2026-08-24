@@ -148,7 +148,7 @@ export async function proveSyncFromZero(options) {
   fs.mkdirSync(context.evidenceRoot, { recursive: true });
   let session = await openMacosPairSyncDesktopSession(macosAcceptanceSessionOptions({
     libraryHome: path.join(context.owned.root, 'library'), repoRoot: context.repoRoot,
-    userDataPath: path.join(context.owned.root, 'user-data')
+    runtimeRoot: context.paths.desktopRuntimeRoot
   }));
   try {
     const overview = await session.enable();
@@ -175,7 +175,7 @@ export async function proveSyncFromZero(options) {
     context.reportProgress('three-host-converged');
     session = await openMacosPairSyncDesktopSession(macosAcceptanceSessionOptions({
       libraryHome: path.join(context.owned.root, 'library'), repoRoot: context.repoRoot,
-      userDataPath: path.join(context.owned.root, 'user-data')
+      runtimeRoot: context.paths.desktopRuntimeRoot
     }));
     const macos = await inspectMacosSyncFromZeroDataset(session, datasetReceipt);
     const androidFinal = await waitForAndroidSyncFromZeroProofSnapshot(context.paths, {
