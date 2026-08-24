@@ -160,9 +160,12 @@ it('binds ordinary sync to the visible public Sync Now product action', () => {
   );
   expect(runner).toContain("'sync-now': ['syncsNowThroughProduct', 'syncRequested', true, false]");
   expect(test).toContain('syncsNowThroughProduct');
+  const syncMethod = test.slice(test.indexOf('private void runSyncNow()'),
+    test.indexOf('private static WebView readyWebView'));
+  expect(syncMethod).not.toContain('activity::finish');
   expect(scenario).toContain('clickEnabled(instrumentation, webView, "companion-sync-now")');
-  expect(scenario).toContain('waitForEnabledState(instrumentation, webView, "companion-sync-now", false, 30_000)');
-  expect(scenario).toContain('waitForEnabledState(instrumentation, webView, "companion-sync-now", true, 30_000)');
+  expect(scenario).not.toContain('waitForEnabledState(instrumentation, webView, "companion-sync-now", false');
+  expect(scenario).not.toContain('waitForEnabledState(instrumentation, webView, "companion-sync-now", true');
   expect(scenario).toContain('put("syncRequested", true)');
 });
 

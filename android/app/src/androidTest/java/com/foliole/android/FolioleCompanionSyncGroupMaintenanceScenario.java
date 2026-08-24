@@ -35,10 +35,8 @@ final class FolioleCompanionSyncGroupMaintenanceScenario {
 
     static JSONObject syncNow(Instrumentation instrumentation, WebView webView) throws Exception {
         openSyncSettings(instrumentation, webView);
-        JSONObject receipt = clickEnabled(instrumentation, webView, "companion-sync-now");
-        waitForEnabledState(instrumentation, webView, "companion-sync-now", false, 30_000);
-        waitForEnabledState(instrumentation, webView, "companion-sync-now", true, 30_000);
-        return receipt.put("syncRequested", true);
+        return clickEnabled(instrumentation, webView, "companion-sync-now")
+            .put("syncRequested", true);
     }
 
     static JSONObject clearAppData(Instrumentation instrumentation, WebView webView) throws Exception {

@@ -154,13 +154,9 @@ public class FolioleCompanionSyncGroupMaintenanceTest {
     private void runSyncNow() throws Exception {
         Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
         Activity activity = start(instrumentation);
-        try {
-            WebView webView = readyWebView(instrumentation, activity);
-            sendEvidence(instrumentation, webView,
-                FolioleCompanionSyncGroupMaintenanceScenario.syncNow(instrumentation, webView));
-        } finally {
-            instrumentation.runOnMainSync(activity::finish);
-        }
+        WebView webView = readyWebView(instrumentation, activity);
+        sendEvidence(instrumentation, webView,
+            FolioleCompanionSyncGroupMaintenanceScenario.syncNow(instrumentation, webView));
     }
 
     private static WebView readyWebView(Instrumentation instrumentation, Activity activity) throws Exception {
