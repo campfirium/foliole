@@ -11,6 +11,7 @@ const ACTION_OVERRIDES = Object.freeze({
   'pair-credentials': { requiresHiddenDesktopRuntime: true },
   'system-entry-sync': { requiresHiddenDesktopRuntime: true },
   'sync-existing': { requiresHiddenDesktopRuntime: true },
+  'sync-now': { requiresHiddenDesktopRuntime: true },
   'sync-group-rejoin': { requiresHiddenDesktopRuntime: true },
   'sync-group-rejoin-recover': { requiresHiddenDesktopRuntime: true }
 });
@@ -25,6 +26,7 @@ const FORMAL_EVIDENCE = Object.freeze({
   'pair-credentials': { kind: 'run-directory', root: 'a5-pair-credentials' },
   'system-entry-sync': { kind: 'run-directory', root: 'a5-system-entry-sync' },
   'sync-existing': { kind: 'run-directory', root: 'a5-existing-sync' },
+  'sync-now': { kind: 'run-directory', root: 'a5-sync-now' },
   'sync-group-rejoin': { kind: 'run-directory', root: 'a5-sync-group-rejoin' },
   'sync-group-rejoin-recover': {
     kind: 'run-directory', root: 'a5-sync-group-rejoin-recovery'
@@ -34,7 +36,7 @@ const MACOS_A5_ACTIONS = new Set([
   ...Object.keys(ACTION_OVERRIDES),
   'capture-annotation', 'clear-app-data', 'database-performance', 'deploy',
   'device-profile', 'leave-sync-group', 'pair-credentials', 'system-entry-sync', 'sync-existing',
-  'sync-group-rejoin', 'sync-group-rejoin-recover', 'sync-group-stopped-status'
+  'sync-group-rejoin', 'sync-group-rejoin-recover', 'sync-group-stopped-status', 'sync-now'
 ]);
 
 export function assertRegisteredMacosA5Action(action) {

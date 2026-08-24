@@ -6,44 +6,40 @@ import { renderWithLocalization } from '../shared/localization/testLocalization'
 import { CompanionSyncNowButton } from './CompanionSyncNowButton';
 
 describe('CompanionSyncNowButton', () => {
-  it('identifies a manual action joined to the active run', () => {
+  it('publishes the clicked action identity while it is starting', () => {
     renderWithLocalization(
       <CompanionSyncNowButton
-        isSyncing
-        manualSyncAction={{ mode: 'joined', runId: 'run-auto-1' }}
+        isSyncing={false}
+        manualSyncAction={{ runId: 'run-manual-1', started: true,
+          status: 'starting', terminalResult: null }}
         onSync={vi.fn()}
       />
     );
 
-    const button = screen.getByRole('button', { name: 'Joining current sync' });
+    const button = screen.getByRole('button', { name: 'Syncing' });
     expect(button).toBeDisabled();
-    expect(button).toHaveAttribute('data-sync-action-mode', 'joined');
-    expect(button).toHaveAttribute('data-sync-run-id', 'run-auto-1');
+    expect(button).toHaveAttribute('data-sync-action-run-id', 'run-manual-1');
+    expect(button).toHaveAttribute('data-sync-action-started', 'true');
+    expect(button).toHaveAttribute('data-sync-action-status', 'starting');
   });
 
-  it('does not restore a completed manual action into an idle button', () => {
+  it('keeps the action-local terminal visible without leaving the button busy', () => {
     renderWithLocalization(
       <CompanionSyncNowButton
         isSyncing={false}
-        runtimeBootedAt="2026-08-23T00:00:00.000Z"
-        syncEvents={[{
-          endpoint_url: 'http://desktop:38641', id: 'event-completed', kind: 'run_finished',
-          message: 'All stages completed.', occurred_at: '2026-08-23T00:00:02.000Z',
-          result: 'completed', run_id: 'run-completed', started_at: '2026-08-23T00:00:01.000Z',
-          status: 'completed'
-        }]}
+        manualSyncAction={{ runId: 'run-completed', started: true,
+          status: 'terminal', terminalResult: 'completed' }}
         onSync={vi.fn()}
       />
     );
 
     const button = screen.getByRole('button', { name: 'Sync Now' });
     expect(button).toBeEnabled();
-    expect(button).not.toHaveAttribute('data-sync-action-mode');
-    expect(button).not.toHaveAttribute('data-sync-run-id');
-    expect(button).toHaveAttribute('data-sync-terminal-run-id', 'run-completed');
-    expect(button).toHaveAttribute('data-sync-terminal-result', 'completed');
-    expect(button).toHaveAttribute('data-sync-terminal-started-at', '2026-08-23T00:00:01.000Z');
-    expect(button).toHaveAttribute('data-sync-runtime-booted-at', '2026-08-23T00:00:00.000Z');
+    expect(button).toHaveAttribute('data-sync-action-run-id', 'run-completed');
+    expect(button).toHaveAttribute('data-sync-action-started', 'true');
+    expect(button).toHaveAttribute('data-sync-action-status', 'terminal');
+    expect(button).toHaveAttribute('data-sync-action-terminal-run-id', 'run-completed');
+    expect(button).toHaveAttribute('data-sync-action-terminal-result', 'completed');
   });
 
   it('keeps duplicate UI actions disabled while automatic sync is visible', () => {
@@ -52,17 +48,18 @@ describe('CompanionSyncNowButton', () => {
     expect(screen.getByRole('button', { name: 'Syncing' })).toBeDisabled();
   });
 
-  it('identifies a manual action that owns a new run', () => {
+  it('keeps the same manual action identity while running', () => {
     renderWithLocalization(
       <CompanionSyncNowButton
         isSyncing
-        manualSyncAction={{ mode: 'owned', runId: 'run-manual-1' }}
+        manualSyncAction={{ runId: 'run-manual-1', started: true,
+          status: 'running', terminalResult: null }}
         onSync={vi.fn()}
       />
     );
 
     const button = screen.getByRole('button', { name: 'Syncing' });
-    expect(button).toHaveAttribute('data-sync-action-mode', 'owned');
-    expect(button).toHaveAttribute('data-sync-run-id', 'run-manual-1');
+    expect(button).toHaveAttribute('data-sync-action-run-id', 'run-manual-1');
+    expect(button).toHaveAttribute('data-sync-action-status', 'running');
   });
 });

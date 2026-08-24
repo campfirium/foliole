@@ -158,15 +158,23 @@ function resetSyncRunOwnerMocks() {
   );
 }
 
+function expectFailedManualLifecycle(setManualSyncAction: ReturnType<typeof vi.fn>) {
+  const lifecycle = setManualSyncAction.mock.calls.map(([action]) => action);
+  expect(lifecycle).toHaveLength(2);
+  expect(lifecycle[0]).toMatchObject({ status: 'starting', terminalResult: null });
+  expect(lifecycle[1]).toEqual({
+    runId: lifecycle[0].runId, started: true, status: 'terminal', terminalResult: 'failed'
+  });
+}
+
 describe('companion sync run owner', () => {
   beforeEach(resetSyncRunOwnerMocks);
 
-  it('lets manual sync wait for an active auto run without writing activity', async () => {
+  it('does not let an automatic run complete the clicked manual action', async () => {
     const { createWorkspaceSnapshotActions } = await import('./companionWorkspaceSyncActions');
     const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
     const { releaseSync, syncStarted } = await startBlockedSync();
     const setManualSyncAction = vi.fn();
-    const setStatus = vi.fn();
     const actions = createWorkspaceSnapshotActions({
       setError: vi.fn(),
       setReadableArticle: vi.fn(),
@@ -174,7 +182,7 @@ describe('companion sync run owner', () => {
       setSyncConflictCount: vi.fn(),
       setSyncProgress: vi.fn(),
       setManualSyncAction,
-      setStatus,
+      setStatus: vi.fn(),
       state: syncState()
     });
 
@@ -189,25 +197,24 @@ describe('companion sync run owner', () => {
     });
     await syncStarted;
     const manualSync = actions.pullFromDesktop('http://10.0.2.2:38641');
+    await expect(manualSync).rejects.toThrow('another sync already owns this target');
     releaseSync();
 
-    await Promise.all([autoSync, manualSync]);
+    await autoSync;
     expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledTimes(1);
     expect(countRunEvents()).toBe(2);
-    const runId = persistedEvents.find((event) => event.kind === 'run_finished')?.run_id;
-    expect(setManualSyncAction).toHaveBeenCalledWith({ mode: 'joined', runId });
-    expect(setManualSyncAction).toHaveBeenLastCalledWith(null);
-    expect(setStatus).toHaveBeenCalledWith('syncing');
-    expect(setStatus).toHaveBeenLastCalledWith('idle');
+    expectFailedManualLifecycle(setManualSyncAction);
   });
 
   it('runs immediate sync through the discovered active group member instead of the remembered target', async () => {
     const { createWorkspaceSnapshotActions } = await import('./companionWorkspaceSyncActions');
     workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoints.mockResolvedValueOnce([activeGroupTarget]);
     syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValueOnce(syncResult());
+    const setManualSyncAction = vi.fn();
     const actions = createWorkspaceSnapshotActions({
       setError: vi.fn(), setReadableArticle: vi.fn(), setState: vi.fn(),
       setSyncConflictCount: vi.fn(), setSyncProgress: vi.fn(), setStatus: vi.fn(),
+      setManualSyncAction,
       state: syncState()
     });
 
@@ -217,5 +224,10 @@ describe('companion sync run owner', () => {
     expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledWith(
       'http://192.168.1.20:38641', expect.any(Object)
     );
+    const lifecycle = setManualSyncAction.mock.calls.map(([action]) => action);
+    expect(lifecycle.map(({ status }) => status)).toEqual(['starting', 'running', 'terminal']);
+    expect(new Set(lifecycle.map(({ runId }) => runId)).size).toBe(1);
+    expect(lifecycle.at(-1)?.started).toBe(true);
+    expect(lifecycle.at(-1)?.terminalResult).toBe('completed');
   });
 });

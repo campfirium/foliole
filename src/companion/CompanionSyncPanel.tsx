@@ -101,8 +101,6 @@ function ConnectedState(props: Pick<CompanionSyncPanelProps, 'bootstrapState' | 
     <CompanionSyncNowButton
       isSyncing={props.status === 'syncing'}
       manualSyncAction={props.manualSyncAction ?? null}
-      runtimeBootedAt={props.bootstrapState.booted_at}
-      syncEvents={props.syncEvents}
       onSync={props.onSync}
     />
   ) : null;

@@ -15,7 +15,7 @@ const SPECS = Object.freeze({
   'pause-and-leave': ['pausesAndLeavesSyncGroupThroughProduct', 'departurePersisted', true, false],
   'pause-participation': ['pausesSyncParticipationThroughProduct', 'paused', false, false],
   'resume-participation': ['resumesSyncParticipationThroughProduct', 'resumed', false, true],
-  'sync-now': ['syncsNowThroughProduct', 'syncRequested', true, false, true]
+  'sync-now': ['syncsNowThroughProduct', 'terminalRunId', true, false]
 });
 
 function proofFailure(message, details = {}) {
@@ -50,7 +50,10 @@ export async function runMacosA5SyncGroupMaintenance({
     needsTransport, observeWhileTransportOpen, paths, releaseAfterObservation,
     restartApp, serial, testClass });
   const receipt = bundle(raw.stdout, 'folioleActionReceipt');
-  if (receipt[expected] !== true) throw proofFailure(`Product result did not prove ${expected}`, {
+  if (expected === 'terminalRunId'
+    ? receipt.actionStarted !== true || typeof receipt[expected] !== 'string'
+      || receipt[expected] !== receipt.actionRunId
+    : receipt[expected] !== true) throw proofFailure(`Product result did not prove ${expected}`, {
     evidenceRef: raw.evidencePath, missingFact: expected
   });
   const manifestPath = path.join(evidenceRoot, 'sync-group-maintenance-manifest.json');

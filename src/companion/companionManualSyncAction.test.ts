@@ -1,48 +1,31 @@
 import { describe, expect, it } from 'vitest';
 
-import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
-
 import {
-  assertCompanionManualSyncFinished,
-  findCompanionSyncRunFinishedEvent
+  finishCompanionManualSyncAction,
+  markCompanionManualSyncActionRunning,
+  startCompanionManualSyncAction
 } from './companionManualSyncAction';
 
-function state(events: NativeCompanionWorkspaceSyncState['sync_events']): NativeCompanionWorkspaceSyncState {
-  return {
-    endpoint_url: 'http://desktop:38641', last_synced_at: null, remembered_targets: [],
-    sync_events: events, sync_onboarding_status: 'completed', workspace_snapshot: null
-  };
-}
+describe('manual sync action lifecycle', () => {
+  it('keeps one action-local run identity from start through completion', () => {
+    const starting = startCompanionManualSyncAction('manual-run');
+    const running = markCompanionManualSyncActionRunning(starting);
+    const terminal = finishCompanionManualSyncAction(running, 'completed');
 
-function event(runId: string, result: 'completed' | 'failed') {
-  return {
-    endpoint_url: 'http://desktop:38641', id: `event-${runId}`, kind: 'run_finished' as const,
-    message: result === 'completed' ? 'All stages completed.' : 'Topic list sync failed.',
-    occurred_at: '2026-08-23T00:00:00.000Z', result, run_id: runId,
-    status: result === 'completed' ? 'completed' as const : 'failed' as const
-  };
-}
-
-describe('manual sync run attribution', () => {
-  it('selects the requested run instead of an unrelated latest completion', () => {
-    const value = state([event('latest', 'completed'), event('requested', 'failed')]);
-
-    expect(findCompanionSyncRunFinishedEvent(value, 'requested')?.result).toBe('failed');
-    expect(() => assertCompanionManualSyncFinished(value, 'requested'))
-      .toThrow('Topic list sync failed.');
+    expect([starting.runId, running.runId, terminal.runId])
+      .toEqual(['manual-run', 'manual-run', 'manual-run']);
+    expect([starting.status, running.status, terminal.status])
+      .toEqual(['starting', 'running', 'terminal']);
+    expect([starting.started, running.started, terminal.started]).toEqual([true, true, true]);
+    expect(terminal.terminalResult).toBe('completed');
   });
 
-  it('rejects a missing terminal event instead of accepting latest completed', () => {
-    const value = state([event('older', 'completed')]);
+  it('keeps failure terminal on the clicked action identity', () => {
+    const action = startCompanionManualSyncAction('clicked-run');
+    const terminal = finishCompanionManualSyncAction(action, 'failed');
 
-    expect(() => assertCompanionManualSyncFinished(value, 'requested'))
-      .toThrow('matching completion');
-  });
-
-  it('accepts the requested completion without removing an earlier attention event', () => {
-    const value = state([event('requested', 'completed'), event('attention', 'failed')]);
-
-    expect(assertCompanionManualSyncFinished(value, 'requested').result).toBe('completed');
-    expect(value.sync_events.find((entry) => entry.run_id === 'attention')?.result).toBe('failed');
+    expect(terminal).toEqual({
+      runId: 'clicked-run', started: true, status: 'terminal', terminalResult: 'failed'
+    });
   });
 });

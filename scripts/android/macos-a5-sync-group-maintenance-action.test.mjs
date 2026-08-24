@@ -85,7 +85,6 @@ it('accepts an already absent owned reverse listener before the single bind', as
   const root = createTestRoot();
   roots.push(root);
   let removeCount = 0;
-  let releaseInstrumentation;
   const execute = vi.fn();
   execute.mockImplementation(async (_command, args) => {
     if (args.join(' ') === '-s 87a33a4b reverse --remove tcp:38641') {
@@ -93,13 +92,10 @@ it('accepts an already absent owned reverse listener before the single bind', as
       if (removeCount === 1) return { code: 1,
         output: "adb: error: listener 'tcp:38641' not found\n", stdout: '' };
     }
-    if (args.includes('instrument')) return new Promise((resolve) => {
-      releaseInstrumentation = () => resolve({ code: 1, output: 'controlled instrumentation', stdout: [
-        'INSTRUMENTATION_STATUS: folioleActionReceipt={"syncRequested":true}',
-        'INSTRUMENTATION_STATUS: folioleAfterSemantic={}', 'INSTRUMENTATION_CODE: 0'
-      ].join('\n') });
-    });
-    if (releaseInstrumentation && args.includes('force-stop')) releaseInstrumentation();
+    if (args.includes('instrument')) return { code: 0, output: 'instrumentation', stdout: [
+      'INSTRUMENTATION_STATUS: folioleActionReceipt={"syncRequested":true,"actionStarted":true,"actionRunId":"run-1","terminalRunId":"run-1","terminalResult":"completed"}',
+      'INSTRUMENTATION_STATUS: folioleAfterSemantic={}', 'INSTRUMENTATION_CODE: -1'
+    ].join('\n') };
     return { code: 0, output: 'Success\n', stdout: 'Success\n' };
   });
   await expect(runMacosA5SyncGroupMaintenance({
@@ -161,16 +157,23 @@ it('binds ordinary sync to the visible public Sync Now product action', () => {
     'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupMaintenanceScenario.java',
     'utf8'
   );
-  expect(runner).toContain("'sync-now': ['syncsNowThroughProduct', 'syncRequested', true, false, true]");
+  const action = fs.readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncNowAction.java',
+    'utf8'
+  );
+  expect(runner).toContain("'sync-now': ['syncsNowThroughProduct', 'terminalRunId', true, false]");
   expect(test).toContain('syncsNowThroughProduct');
   const syncMethod = test.slice(test.indexOf('private void runSyncNow()'),
     test.indexOf('private static WebView readyWebView'));
-  expect(syncMethod).not.toContain('activity::finish');
-  expect(syncMethod).toContain('new CountDownLatch(1).await()');
-  expect(scenario).toContain('clickEnabled(instrumentation, webView, "companion-sync-now")');
-  expect(scenario).not.toContain('waitForEnabledState(instrumentation, webView, "companion-sync-now", false');
-  expect(scenario).not.toContain('waitForEnabledState(instrumentation, webView, "companion-sync-now", true');
-  expect(scenario).toContain('put("syncRequested", true)');
+  expect(syncMethod).toContain('activity::finish');
+  expect(syncMethod).not.toContain('CountDownLatch');
+  expect(scenario).toContain('FolioleCompanionSyncNowAction.perform');
+  expect(action).toContain('!runId.equals(previousRunId)');
+  expect(action).toContain('latest.optBoolean("started")');
+  expect(action).toContain('runId.equals(latest.optString("terminalRunId"))');
+  expect(action).toContain('put("actionStarted", true)');
+  expect(action).toContain('put("syncRequested", true)');
+  expect(action).toContain('put("terminalRunId", terminal.getString("terminalRunId"))');
 });
 
 it('observes Leave through durable host state after the visible confirmation', () => {

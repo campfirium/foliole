@@ -18,7 +18,9 @@ import {
 } from '../shared/platform/companionWorkspaceSync';
 
 import {
-  assertCompanionManualSyncFinished,
+  finishCompanionManualSyncAction,
+  markCompanionManualSyncActionRunning,
+  startCompanionManualSyncAction,
   type CompanionManualSyncAction
 } from './companionManualSyncAction';
 import { hydrateCompanionReviewSchedulerSettings } from './companionReviewSchedulerSettingsHydration';
@@ -69,7 +71,11 @@ async function saveResolvedSyncTarget(args: WorkspaceSnapshotActionArgs, target:
   return target.endpointUrl;
 }
 
-async function runManualSyncTarget(args: WorkspaceSnapshotActionArgs, target: CompanionWorkspaceSyncTarget) {
+async function runManualSyncTarget(
+  args: WorkspaceSnapshotActionArgs,
+  target: CompanionWorkspaceSyncTarget,
+  onStarted: () => void
+) {
   const endpointUrl = target.endpointUrl;
   const candidateRunId = createCompanionSyncRunId();
   const run = runCompanionSyncAsOwner(endpointUrl, candidateRunId, async () => {
@@ -100,40 +106,37 @@ async function runManualSyncTarget(args: WorkspaceSnapshotActionArgs, target: Co
       throw syncError;
     }
   });
-  args.setManualSyncAction?.({ mode: run.mode, runId: run.runId });
-  if (run.mode === 'owned') {
-    return run.completion;
-  }
-  args.setStatus('syncing');
-  await run.completion.catch(() => undefined);
-  try {
-    const state = await refreshConflictAwareState({
-      setReadableArticle: args.setReadableArticle,
-      setSyncConflictCount: args.setSyncConflictCount,
-      setState: args.setState
-    });
-    assertCompanionManualSyncFinished(state, run.runId);
-    return state;
-  } catch (error) {
-    args.setError(error instanceof Error ? error.message : String(error));
+  if (run.mode === 'joined') {
+    const error = new Error('Sync Now could not start because another sync already owns this target.');
+    args.setError(error.message);
     throw error;
-  } finally {
-    args.setStatus('idle');
   }
+  onStarted();
+  return run.completion;
 }
 
 function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
   return async function pullFromDesktop(endpointUrl: string) {
-    args.setManualSyncAction?.({ mode: 'resolving', runId: null });
+    let action = startCompanionManualSyncAction(createCompanionSyncRunId());
+    args.setManualSyncAction?.(action);
     try {
       const targets = await resolveReachableCompanionWorkspaceSyncEndpoints(endpointUrl);
       if (targets.length === 0) throw new Error('No reachable Sync Group member is available.');
       let state: NativeCompanionWorkspaceSyncState | undefined;
-      for (const target of targets) state = await runManualSyncTarget(args, target);
+      let started = false;
+      const markStarted = () => {
+        if (started) return;
+        started = true;
+        action = markCompanionManualSyncActionRunning(action);
+        args.setManualSyncAction?.(action);
+      };
+      for (const target of targets) state = await runManualSyncTarget(args, target, markStarted);
       if (!state) throw new Error('Manual sync did not run.');
+      args.setManualSyncAction?.(finishCompanionManualSyncAction(action, 'completed'));
       return state;
-    } finally {
-      args.setManualSyncAction?.(null);
+    } catch (error) {
+      args.setManualSyncAction?.(finishCompanionManualSyncAction(action, 'failed'));
+      throw error;
     }
   };
 }
