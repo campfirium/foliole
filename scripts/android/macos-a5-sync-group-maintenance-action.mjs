@@ -117,6 +117,14 @@ export async function runMacosA5InstrumentationMechanics({
       stdout: instrumentation.stdout, testClass
     }, null, 2)}\n`, 'utf8');
     return { evidencePath, observation, output: output.join(''), stdout: instrumentation.stdout };
+  } catch (error) {
+    const providerLog = await execute(paths.adb, [
+      '-s', serial, 'logcat', '-d', '-v', 'time', 'FolioleSyncProvider:V', '*:S'
+    ], { env, timeoutMs: 30_000 }).catch(() => null);
+    if (providerLog) fs.writeFileSync(
+      path.join(evidenceRoot, 'android-provider.log'), providerLog.output, 'utf8'
+    );
+    throw error;
   } finally {
     if (reverseCreated) output.push((await checked(execute, paths.adb,
       ['-s', serial, 'reverse', '--remove', `tcp:${PAIR_SYNC_PORT}`],

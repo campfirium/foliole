@@ -212,6 +212,8 @@ it('returns an abnormal instrumentation exit as raw controller failure', async (
     executionOwner: 'controller', failureAxis: 'execution', host: 'android-b',
     missingFact: 'android_instrumentation_terminal'
   });
+  expect(fs.readFileSync(path.join(root, 'android-provider.log'), 'utf8')).toBe('Success\n');
+  expect(execute.mock.calls.some(([, args]) => args.includes('FolioleSyncProvider:V'))).toBe(true);
 });
 
 it('preserves a lost Android window focus as an environment failure', async () => {

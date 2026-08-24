@@ -116,6 +116,15 @@ it('authorizes every Android provider data request with both the channel secret 
   expect(plugin).toContain('notifyListeners(name, event, true)');
 });
 
+it('records bounded provider data-owner stages without logging request payloads', async () => {
+  const bridge = await readJava('FolioleCompanionSyncGroupDataBridge.java');
+  expect(bridge).toContain('"Data request dispatch: " + operation');
+  expect(bridge).toContain('"Data request resolved: " + operation');
+  expect(bridge).toContain('"Data request rejected: " + operation');
+  expect(bridge).toContain('"Data request failed: " + operation');
+  expect(bridge).not.toContain('"Data request dispatch: " + payload');
+});
+
 it('revokes both directions of a departed peer credential before accepting departure', async () => {
   const server = await readJava('FolioleCompanionSyncGroupServer.java');
   const departure = server.slice(server.indexOf('private void departure('),
