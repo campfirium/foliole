@@ -19,11 +19,13 @@ it('serves the established content blob batch route instead of provisioning thro
   expect(batch).toContain('X-Blob-Hash: ');
 });
 
-it('listens on the same stable port persisted by bidirectional peer pairing', async () => {
+it('keeps the provider on a stable port independent from the outbound reverse transport', async () => {
   const server = await readJava('FolioleCompanionSyncGroupServer.java');
-  expect(server).toContain('private static final int SYNC_PORT = 38641;');
+  const transport = await readFile(path.join(root, 'scripts/sync-group/pair-sync-transport.mjs'), 'utf8');
+  expect(server).toContain('private static final int SYNC_PORT = 38642;');
   expect(server).toContain('new ServerSocket(SYNC_PORT)');
   expect(server).not.toContain('new ServerSocket(0)');
+  expect(transport).toContain("export const PAIR_SYNC_PORT = '38641';");
 });
 
 it('admits complete nonempty library facts while preserving Sync Group identity checks', async () => {
