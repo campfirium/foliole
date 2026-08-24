@@ -21,7 +21,7 @@ final class FolioleCompanionSyncGroupApprovalScenario {
         waitForFocus(activity, 30_000);
         WebView webView = activity.findViewById(R.id.webview);
         long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(3);
-        openSyncSettings(instrumentation, webView);
+        FolioleCompanionSyncGroupMaintenanceScenario.syncNow(instrumentation, webView);
         waitForProviderAdvertisement();
         onProviderReady.run();
         FolioleCompanionSemanticActions.waitForUniqueVisible(

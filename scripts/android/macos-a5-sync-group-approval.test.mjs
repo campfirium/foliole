@@ -89,6 +89,20 @@ it('reuses bounded Settings navigation that exits Review and nested Settings sur
   expect(navigation).not.toContain('clickVisible');
 });
 
+it('establishes provider readiness through public Sync Now in the instrumented runtime', () => {
+  const approval = fs.readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupApprovalScenario.java',
+    'utf8'
+  );
+  const syncNow = approval.indexOf('FolioleCompanionSyncGroupMaintenanceScenario.syncNow(');
+  const providerReady = approval.indexOf('waitForProviderAdvertisement();');
+  const peerRelease = approval.indexOf('onProviderReady.run();');
+  expect(syncNow).toBeGreaterThan(0);
+  expect(providerReady).toBeGreaterThan(syncNow);
+  expect(peerRelease).toBeGreaterThan(providerReady);
+  expect(approval).not.toContain('FolioleCompanionSyncGroupProvider.start(');
+});
+
 it('opens transport after provider stop and starts the peer only after the product surface is stable', async () => {
   const order = [];
   const execute = async (_command, args) => {
