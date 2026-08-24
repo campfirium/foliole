@@ -49,7 +49,10 @@ vi.mock('bonjour-service', () => ({
   }
 }));
 vi.mock('./companionMdnsNetworkInterfaces.js', () => ({
-  resolveCompanionMdnsDiscoveryInterfaces: () => [undefined, '192.168.1.10', '10.0.0.10']
+  resolveCompanionMdnsDiscoveryInterfaces: () => [undefined, '192.168.1.10', '10.0.0.10'],
+  resolveCompanionMdnsInterfaceOptions: (networkInterface?: string) => networkInterface
+    ? { bind: '0.0.0.0', interface: networkInterface }
+    : undefined
 }));
 vi.mock('./desktopCompanionSyncPreference.js', () => ({
   isDesktopCompanionSyncParticipating: () => true
@@ -88,7 +91,9 @@ it('continues the saved member sync when its provider advertises again', async (
   });
   await vi.waitFor(() => expect(runtime.continueSync).toHaveBeenCalledOnce());
   expect(runtime.constructorOptions).toEqual([
-    undefined, { interface: '192.168.1.10' }, { interface: '10.0.0.10' }
+    undefined,
+    { bind: '0.0.0.0', interface: '192.168.1.10' },
+    { bind: '0.0.0.0', interface: '10.0.0.10' }
   ]);
   expect(runtime.continueSync).toHaveBeenCalledWith(expect.objectContaining({
     endpoint_url: 'http://192.168.1.12:43121', local_authorization_id: 'desktop-a',

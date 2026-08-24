@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveCompanionMdnsDiscoveryInterfaces } from './companionMdnsNetworkInterfaces.js';
+import {
+  resolveCompanionMdnsDiscoveryInterfaces,
+  resolveCompanionMdnsInterfaceOptions
+} from './companionMdnsNetworkInterfaces.js';
 
 describe('companion mDNS discovery interfaces', () => {
   it('listens on the default route and every external IPv4 interface', () => {
@@ -16,5 +19,13 @@ describe('companion mDNS discovery interfaces', () => {
           mac: '00:00:00:00:00:02', netmask: '255.254.0.0' }
       ]
     })).toEqual([undefined, '192.168.0.11', '198.18.0.1']);
+  });
+
+  it('binds the shared mDNS port on every address while routing one multicast interface', () => {
+    expect(resolveCompanionMdnsInterfaceOptions()).toBeUndefined();
+    expect(resolveCompanionMdnsInterfaceOptions('192.168.0.11')).toEqual({
+      bind: '0.0.0.0',
+      interface: '192.168.0.11'
+    });
   });
 });

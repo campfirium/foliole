@@ -4,7 +4,10 @@ import { Bonjour } from 'bonjour-service';
 
 import { serializeSyncProtocolTxt } from '../../lib/platform/syncProtocolContract.js';
 
-import { resolveCompanionMdnsIpv4Addresses } from './companionMdnsNetworkInterfaces.js';
+import {
+  resolveCompanionMdnsInterfaceOptions,
+  resolveCompanionMdnsIpv4Addresses
+} from './companionMdnsNetworkInterfaces.js';
 import { loadSyncGroupRuntimeInstanceId } from './syncGroupRuntimeInstance.js';
 
 export { resolveCompanionMdnsIpv4Addresses } from './companionMdnsNetworkInterfaces.js';
@@ -12,7 +15,10 @@ export { resolveCompanionMdnsIpv4Addresses } from './companionMdnsNetworkInterfa
 const COMPANION_SYNC_MDNS_SERVICE_TYPE = 'foliole-sync';
 
 type PublishedBonjourService = ReturnType<InstanceType<typeof Bonjour>['publish']>;
-type BonjourOptions = NonNullable<ConstructorParameters<typeof Bonjour>[0]> & { interface: string };
+type BonjourOptions = NonNullable<ConstructorParameters<typeof Bonjour>[0]> & {
+  bind: string;
+  interface: string;
+};
 type ActiveAdvertisement = {
   input: CompanionMdnsAdvertisementInput;
   runtimes: Array<{
@@ -75,7 +81,7 @@ function publishCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisementInpu
   const ipv4Addresses = resolveCompanionMdnsIpv4Addresses();
   const interfaces = ipv4Addresses.length > 0 ? ipv4Addresses : [null];
   const runtimes = interfaces.map((networkInterface) => {
-    const options = networkInterface ? { interface: networkInterface } as BonjourOptions : undefined;
+    const options = resolveCompanionMdnsInterfaceOptions(networkInterface ?? undefined) as BonjourOptions | undefined;
     const bonjour = new Bonjour(options, reportWarning);
     const service = bonjour.publish({
       host: resolveCompanionMdnsHost(os.hostname(), runtimeInstanceId),

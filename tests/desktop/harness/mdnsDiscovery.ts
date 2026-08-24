@@ -1,8 +1,14 @@
 import { Bonjour } from 'bonjour-service';
 
-import { resolveCompanionMdnsDiscoveryInterfaces } from '../../../electron/sync/companionMdnsNetworkInterfaces.js';
+import {
+  resolveCompanionMdnsDiscoveryInterfaces,
+  resolveCompanionMdnsInterfaceOptions
+} from '../../../electron/sync/companionMdnsNetworkInterfaces.js';
 
-type BonjourOptions = NonNullable<ConstructorParameters<typeof Bonjour>[0]> & { interface: string };
+type BonjourOptions = NonNullable<ConstructorParameters<typeof Bonjour>[0]> & {
+  bind: string;
+  interface: string;
+};
 type DiscoveredService = Parameters<NonNullable<Parameters<InstanceType<typeof Bonjour>['find']>[1]>>[0];
 
 export async function discoverFolioleService(timeoutMs = 10_000) {
@@ -14,7 +20,7 @@ export async function discoverFolioleService(timeoutMs = 10_000) {
   });
   const interfaces = resolveCompanionMdnsDiscoveryInterfaces();
   const runtimes = interfaces.map((networkInterface) => {
-    const options = networkInterface ? { interface: networkInterface } as BonjourOptions : undefined;
+    const options = resolveCompanionMdnsInterfaceOptions(networkInterface) as BonjourOptions | undefined;
     const bonjour = new Bonjour(options);
     const browser = bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, resolveService);
     return { bonjour, browser };

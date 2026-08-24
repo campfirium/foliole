@@ -13,3 +13,11 @@ export function resolveCompanionMdnsDiscoveryInterfaces(
 ) {
   return [undefined, ...resolveCompanionMdnsIpv4Addresses(interfaces)];
 }
+
+export function resolveCompanionMdnsInterfaceOptions(networkInterface?: string) {
+  // Keep UDP 5353 open to multicast packets while selecting one membership and outbound route.
+  return networkInterface ? {
+    bind: '0.0.0.0',
+    interface: networkInterface
+  } : undefined;
+}

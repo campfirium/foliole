@@ -2,7 +2,10 @@ import { Bonjour } from 'bonjour-service';
 
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
-import { resolveCompanionMdnsDiscoveryInterfaces } from './companionMdnsNetworkInterfaces.js';
+import {
+  resolveCompanionMdnsDiscoveryInterfaces,
+  resolveCompanionMdnsInterfaceOptions
+} from './companionMdnsNetworkInterfaces.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import {
   completeDesktopSyncGroupJoin,
@@ -11,7 +14,10 @@ import {
 import { refreshDesktopSyncGroupPendingJoinEndpoint } from './desktopSyncGroupJoinState.js';
 import { evaluateDiscoveredSyncProtocol } from './desktopSyncProtocolGate.js';
 
-type BonjourOptions = NonNullable<ConstructorParameters<typeof Bonjour>[0]> & { interface: string };
+type BonjourOptions = NonNullable<ConstructorParameters<typeof Bonjour>[0]> & {
+  bind: string;
+  interface: string;
+};
 type AutoSyncRuntime = {
   bonjour: InstanceType<typeof Bonjour>;
   browser: ReturnType<InstanceType<typeof Bonjour>['find']>;
@@ -54,7 +60,7 @@ export function startDesktopSyncGroupAutoSync() {
   const consumeService = (service: DiscoveredService) => { void handleService(service); };
   const interfaces = resolveCompanionMdnsDiscoveryInterfaces();
   runtimes = interfaces.map((networkInterface) => {
-    const options = networkInterface ? { interface: networkInterface } as BonjourOptions : undefined;
+    const options = resolveCompanionMdnsInterfaceOptions(networkInterface) as BonjourOptions | undefined;
     const bonjour = new Bonjour(options);
     const browser = bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, consumeService);
     const runtime = { bonjour, browser };
