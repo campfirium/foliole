@@ -13,17 +13,10 @@ import {
   isNativeCompanionSyncGroupStoreRuntime
 } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
+import { publishCompanionSyncGroupProviderAvailability } from './companionSyncGroupProviderAvailability';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
-interface CompanionSyncGroupRuntimeValue {
-  group: SyncGroupPayload | null;
-  providerAvailable: boolean;
-}
-
-const CompanionSyncGroupContext = createContext<CompanionSyncGroupRuntimeValue>({
-  group: null,
-  providerAvailable: true
-});
+const CompanionSyncGroupContext = createContext<SyncGroupPayload | null>(null);
 
 export function CompanionSyncGroupRuntime(props: {
   bootstrapState: NativeCompanionBootstrapState;
@@ -33,7 +26,6 @@ export function CompanionSyncGroupRuntime(props: {
   const { bootstrapState, workspaceSync } = props;
   const [group, setGroup] = useState<SyncGroupPayload | null>(null);
   const [loaded, setLoaded] = useState(false);
-  const [providerAvailable, setProviderAvailable] = useState(false);
   const mutationRevision = useSyncExternalStore(
     subscribeCompanionSyncMutationRevision,
     getCompanionSyncMutationRevision,
@@ -55,24 +47,24 @@ export function CompanionSyncGroupRuntime(props: {
 
   useEffect(() => {
     if (!isNativeCompanionSyncGroupRuntime()) {
-      setProviderAvailable(true);
+      publishCompanionSyncGroupProviderAvailability(true);
       return;
     }
     if (!loaded) return;
     let cancelled = false;
     const factsRevision = `${mutationRevision}:${workspaceSync.state.last_synced_at ?? ''}`;
-    setProviderAvailable(false);
+    publishCompanionSyncGroupProviderAvailability(false);
     void reconcileCompanionSyncGroupProvider(
       bootstrapState, group, factsRevision
     ).then(() => {
-      if (!cancelled) setProviderAvailable(true);
+      if (!cancelled) publishCompanionSyncGroupProviderAvailability(true);
     }).catch(() => undefined);
     return () => { cancelled = true; };
   }, [bootstrapState, group, loaded, mutationRevision, workspaceSync.pairingState,
     workspaceSync.state.last_synced_at]);
 
   return (
-    <CompanionSyncGroupContext.Provider value={{ group, providerAvailable }}>
+    <CompanionSyncGroupContext.Provider value={group}>
       {props.children}
     </CompanionSyncGroupContext.Provider>
   );

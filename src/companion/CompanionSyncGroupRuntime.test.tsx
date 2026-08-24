@@ -17,7 +17,8 @@ vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
   isNativeCompanionSyncGroupStoreRuntime: () => true
 }));
 
-import { CompanionSyncGroupRuntime, useCompanionSyncGroupRuntime } from './CompanionSyncGroupRuntime';
+import { useCompanionSyncGroupProviderAvailability } from './companionSyncGroupProviderAvailability';
+import { CompanionSyncGroupRuntime } from './CompanionSyncGroupRuntime';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 afterEach(() => {
@@ -39,8 +40,8 @@ function workspaceSync() {
 const bootstrapState = workspaceSync().bootstrapState;
 
 function RuntimeState() {
-  const runtimeState = useCompanionSyncGroupRuntime();
-  return <output>{runtimeState.providerAvailable ? 'available' : 'starting'}</output>;
+  const providerAvailable = useCompanionSyncGroupProviderAvailability();
+  return <output>{providerAvailable ? 'available' : 'starting'}</output>;
 }
 
 it('maintains the member provider before any settings surface is mounted', async () => {

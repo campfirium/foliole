@@ -11,8 +11,10 @@ import {
   loadCompanionWorkspaceSyncState
 } from '../shared/platform/companionWorkspaceSync';
 
+import { isCompanionAutoSyncEligible } from './companionAutoSyncEligibility';
 import type { CompanionManualSyncAction } from './companionManualSyncAction';
 import { hydrateCompanionReviewSchedulerSettings } from './companionReviewSchedulerSettingsHydration';
+import { useCompanionSyncGroupProviderAvailability } from './companionSyncGroupProviderAvailability';
 import { mergeCompanionSyncProgressSession } from './companionSyncProgressSession';
 import { hydrateCompanionSystemEntryDisplayNames } from './companionSystemEntryDisplayNamesHydration';
 import { createWorkspaceSnapshotActions } from './companionWorkspaceSyncActions';
@@ -135,6 +137,15 @@ function useCompanionAutoSync(
   );
 }
 
+function useCompanionAutoSyncEnabled(
+  state: NativeCompanionWorkspaceSyncState, pairingUsable: boolean, participating: boolean
+) {
+  return isCompanionAutoSyncEligible({
+    hasCompletedSync: Boolean(state.last_synced_at), pairingUsable, participating,
+    providerAvailable: useCompanionSyncGroupProviderAvailability()
+  });
+}
+
 export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstrapState) {
   const viewState = useCompanionSyncViewState();
   const { error, isWorkspaceSyncStateReady, readableArticle, setError, setIsWorkspaceSyncStateReady,
@@ -162,11 +173,10 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
     saveEndpoint: snapshotActions.saveEndpoint
   }), [pairing.refreshPairingState, snapshotActions.saveEndpoint]);
   useWorkspaceSyncBootstrap(setIsWorkspaceSyncStateReady, setReadableArticle, setSyncConflictCount, setState, setStatus);
-  useCompanionAutoSync(
-    viewState,
-    setMergedSyncProgress,
-    isCompanionPairingSyncUsable(pairing.pairingState) && participationActions.participation.participating
-  );
+  useCompanionAutoSync(viewState, setMergedSyncProgress, useCompanionAutoSyncEnabled(
+    state, isCompanionPairingSyncUsable(pairing.pairingState),
+    participationActions.participation.participating
+  ));
 
   return {
     bootstrapState,

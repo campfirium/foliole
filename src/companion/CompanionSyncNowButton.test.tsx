@@ -4,8 +4,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderWithLocalization } from '../shared/localization/testLocalization';
 
 const runtime = vi.hoisted(() => ({ providerAvailable: true }));
-vi.mock('./CompanionSyncGroupRuntime', () => ({
-  useCompanionSyncGroupRuntime: () => ({ group: null, providerAvailable: runtime.providerAvailable })
+vi.mock('./companionSyncGroupProviderAvailability', () => ({
+  useCompanionSyncGroupProviderAvailability: () => runtime.providerAvailable
 }));
 
 import { CompanionSyncNowButton } from './CompanionSyncNowButton';
