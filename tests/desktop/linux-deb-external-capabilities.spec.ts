@@ -8,7 +8,7 @@ import {
   createTestPairingKeyPair,
   decryptTestPairingSecret
 } from '../../electron/sync/companionPairingProtocolTestSupport.js';
-import { createDesktopSyncGroupSignedHeaders } from '../../electron/sync/desktopSyncGroupHttp.js';
+import { createDesktopSyncGroupSignedHeaders } from '../../electron/sync/desktopSyncGroupSignedHeaders.js';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 import { closeDesktopApplication } from '../../scripts/desktop/playwright-desktop-close.mjs';
 import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
