@@ -18,6 +18,9 @@ vi.mock('bonjour-service', () => ({
   }
 }));
 
+vi.mock('./companionMdnsAdvertisement.js', () => ({
+  resolveCompanionMdnsIpv4Addresses: () => ['192.168.0.20', '10.0.0.20']
+}));
 vi.mock('./syncGroupRuntimeInstance.js', () => ({ loadSyncGroupRuntimeInstanceId: () => 'runtime-local' }));
 
 import { discoverDesktopSyncGroups } from './desktopSyncGroupDiscovery.js';
@@ -31,14 +34,14 @@ afterEach(() => {
 });
 
 describe('desktop Sync Group discovery', () => {
-  it('uses one system multicast listener and resolves an Android provider once', async () => {
+  it('uses every active IPv4 listener and resolves an Android provider once', async () => {
     vi.useFakeTimers();
     const fetchDiscovery = vi.fn(async () => new Response(JSON.stringify({
       group_display_name: 'Daily Group', group_id: 'group-1', group_tag: 'tag-1', peer_id: 'device-a',
       provider_device_kind: 'android-capacitor', provider_device_name: 'Android B', timeline_id: 'timeline-1'
     })));
     const discovery = discoverDesktopSyncGroups(fetchDiscovery as unknown as typeof fetch);
-    runtime.onServices[0]?.({
+    runtime.onServices[1]?.({
       addresses: ['192.168.0.10'],
       name: 'Desktop A',
       port: 41186,
@@ -59,7 +62,7 @@ describe('desktop Sync Group discovery', () => {
     await vi.advanceTimersByTimeAsync(1_800);
 
     expect(runtime.constructorArgs).toEqual([
-      []
+      [{ interface: '192.168.0.20' }], [{ interface: '10.0.0.20' }]
     ]);
     await expect(discovery).resolves.toEqual([{
       endpoint_url: 'http://192.168.0.107:41187',
@@ -71,8 +74,8 @@ describe('desktop Sync Group discovery', () => {
       provider_host_platform: 'desktop',
       timeline_id: 'timeline-1'
     }]);
-    expect(runtime.stop).toHaveBeenCalledTimes(1);
-    expect(runtime.destroy).toHaveBeenCalledTimes(1);
+    expect(runtime.stop).toHaveBeenCalledTimes(2);
+    expect(runtime.destroy).toHaveBeenCalledTimes(2);
   });
 });
 

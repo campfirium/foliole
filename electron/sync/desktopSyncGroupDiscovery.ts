@@ -2,10 +2,12 @@ import { Bonjour } from 'bonjour-service';
 
 import type { DesktopSyncGroupJoinCandidatePayload } from '../../lib/platform/nativeCompanionSyncContract.js';
 
+import { resolveCompanionMdnsIpv4Addresses } from './companionMdnsAdvertisement.js';
 import { loadSyncGroupRuntimeInstanceId } from './syncGroupRuntimeInstance.js';
 
 const DISCOVERY_MS = 1_800;
 const DISCOVERY_PROBE_MS = 2_000;
+type BonjourOptions = NonNullable<ConstructorParameters<typeof Bonjour>[0]> & { interface: string };
 type DiscoveredService = Parameters<NonNullable<Parameters<InstanceType<typeof Bonjour>['find']>[1]>>[0];
 
 export async function discoverDesktopSyncGroups(
@@ -22,11 +24,19 @@ export async function discoverDesktopSyncGroups(
     if (!host || !service.port || typeof txt.group_id !== 'string' || typeof txt.group_tag !== 'string') return;
     endpoints.set(`http://${host}:${service.port}`, { name: service.name, txt });
   };
-  const bonjour = new Bonjour();
-  const browser = bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, collect);
+  const addresses = resolveCompanionMdnsIpv4Addresses();
+  const interfaces = addresses.length > 0 ? addresses : [null];
+  const runtimes = interfaces.map((networkInterface) => {
+    const options = networkInterface ? { interface: networkInterface } as BonjourOptions : undefined;
+    const bonjour = new Bonjour(options);
+    const browser = bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, collect);
+    return { bonjour, browser };
+  });
   await new Promise((resolve) => setTimeout(resolve, DISCOVERY_MS));
-  browser.stop();
-  bonjour.destroy();
+  runtimes.forEach(({ bonjour, browser }) => {
+    browser.stop();
+    bonjour.destroy();
+  });
   const candidates = (await Promise.all([...endpoints].map(([endpointUrl, service]) =>
     probeCandidate(fetchDiscovery, endpointUrl, service, localRuntimeInstanceId)
   ))).filter((candidate): candidate is DesktopSyncGroupJoinCandidatePayload => candidate !== null);

@@ -61,16 +61,12 @@ export async function openWindowsSyncGroupSession(
   return { app, page, ...progress };
 }
 
-export async function discoverUniqueGroup(page, timeoutMs = 60_000, accept = () => true) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const overview = await invokeWindowsSyncGroupCommand(page, 'discover_sync_groups');
-    const candidates = overview.join_candidates.filter(accept);
-    if (candidates.length > 1) throw new Error('Multiple Sync Groups were discovered.');
-    if (candidates.length === 1) return candidates[0];
-    await delay(1_000);
-  }
-  throw new Error('Timed out discovering the A5 Sync Group.');
+export async function discoverUniqueGroup(page, accept = () => true) {
+  const overview = await invokeWindowsSyncGroupCommand(page, 'discover_sync_groups');
+  const candidates = overview.join_candidates.filter(accept);
+  if (candidates.length > 1) throw new Error('Multiple Sync Groups were discovered.');
+  if (candidates.length === 1) return candidates[0];
+  throw new Error('The A5 Sync Group was not discovered by the public product action.');
 }
 
 export async function waitForJoinedGroup(page, expectedGroupId, timeoutMs = 12 * 60_000) {
