@@ -192,6 +192,10 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         else serviceMonitor.stop();
     }
 
+    boolean isServiceMonitorReady() {
+        return serviceMonitor != null && serviceMonitor.isReady();
+    }
+
     private JSObject withParticipation(JSObject result) throws Exception {
         JSObject participation = FolioleCompanionSyncParticipationStore.state(getContext(), lifecycleActive);
         for (java.util.Iterator<String> keys = participation.keys(); keys.hasNext();) {

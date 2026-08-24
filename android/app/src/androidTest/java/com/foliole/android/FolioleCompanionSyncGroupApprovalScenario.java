@@ -22,7 +22,7 @@ final class FolioleCompanionSyncGroupApprovalScenario {
         WebView webView = activity.findViewById(R.id.webview);
         long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(3);
         FolioleCompanionSyncGroupMaintenanceScenario.syncNow(instrumentation, webView);
-        waitForInstrumentedProvider(instrumentation, webView);
+        waitForInstrumentedRuntime(instrumentation, activity, webView);
         onProviderReady.run();
         FolioleCompanionSemanticActions.waitForUniqueVisible(
             instrumentation, webView, "companion-sync-group-approve", deadline
@@ -90,8 +90,8 @@ final class FolioleCompanionSyncGroupApprovalScenario {
         throw new IllegalStateException("Provider advertisement unavailable: " + latest);
     }
 
-    private static void waitForInstrumentedProvider(
-        Instrumentation instrumentation, WebView webView
+    private static void waitForInstrumentedRuntime(
+        Instrumentation instrumentation, Activity activity, WebView webView
     ) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(60);
         boolean syncStarted = false;
@@ -103,13 +103,21 @@ final class FolioleCompanionSyncGroupApprovalScenario {
             syncStarted |= syncNowDisabled(semantic);
             latest = FolioleCompanionSyncGroupProvider.state();
             String state = latest.optString("advertisement_state");
-            if (syncStarted && "registered".equals(state)) return;
+            if (syncStarted && "registered".equals(state) && listenerReady(activity)) return;
             if ("failed".equals(state)) {
                 throw new IllegalStateException("Provider advertisement failed: " + latest);
             }
             Thread.sleep(100);
         }
-        throw new IllegalStateException("Instrumented provider unavailable: " + latest);
+        throw new IllegalStateException("Instrumented provider/listener unavailable: " + latest);
+    }
+
+    private static boolean listenerReady(Activity activity) {
+        if (!(activity instanceof MainActivity)) return false;
+        com.getcapacitor.PluginHandle handle = ((MainActivity) activity).getBridge()
+            .getPlugin("FolioleCompanionSync");
+        return handle != null && handle.getInstance() instanceof FolioleCompanionSyncPlugin
+            && ((FolioleCompanionSyncPlugin) handle.getInstance()).isServiceMonitorReady();
     }
 
     private static boolean syncNowDisabled(JSONObject semantic) throws Exception {

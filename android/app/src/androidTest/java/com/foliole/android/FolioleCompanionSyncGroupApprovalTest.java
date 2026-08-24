@@ -39,7 +39,7 @@ public class FolioleCompanionSyncGroupApprovalTest {
     private static void emitReady() {
         Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
         Bundle evidence = new Bundle();
-        evidence.putString("folioleSyncGroupApprovalReady", "provider-advertised");
+        evidence.putString("folioleSyncGroupApprovalReady", "provider-listener-ready");
         instrumentation.sendStatus(2, evidence);
     }
 }

@@ -62,8 +62,11 @@ it('accepts a signed approval receipt after controller-owned sibling completion'
 
 it('recognizes only the action-local provider readiness status', () => {
   expect(hasSyncGroupApprovalProviderReady(
-    'INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReady=provider-advertised\n'
+    'INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReady=provider-listener-ready\n'
   )).toBe(true);
+  expect(hasSyncGroupApprovalProviderReady(
+    'INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReady=provider-advertised\n'
+  )).toBe(false);
   expect(hasSyncGroupApprovalProviderReady(
     'INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReceipt={"ok":true}\n'
   )).toBe(false);
@@ -95,13 +98,18 @@ it('establishes provider readiness through public Sync Now in the instrumented r
     'utf8'
   );
   const syncNow = approval.indexOf('FolioleCompanionSyncGroupMaintenanceScenario.syncNow(');
-  const providerReady = approval.indexOf('waitForInstrumentedProvider(instrumentation, webView);');
+  const providerReady = approval.indexOf(
+    'waitForInstrumentedRuntime(instrumentation, activity, webView);'
+  );
   const peerRelease = approval.indexOf('onProviderReady.run();');
   expect(syncNow).toBeGreaterThan(0);
   expect(providerReady).toBeGreaterThan(syncNow);
   expect(peerRelease).toBeGreaterThan(providerReady);
   expect(approval).toContain('TimeUnit.SECONDS.toNanos(60)');
-  expect(approval).toContain('syncStarted && "registered".equals(state)');
+  expect(approval).toContain(
+    'syncStarted && "registered".equals(state) && listenerReady(activity)'
+  );
+  expect(approval).toContain('.isServiceMonitorReady()');
   expect(approval).not.toContain('FolioleCompanionSyncGroupProvider.start(');
 });
 
@@ -157,7 +165,7 @@ it('starts the peer from instrumented readiness and restores after instrumentati
   instrumentationExecute: async (_command, _args, options) => {
     events.push('instrumentation-started');
     options.onOutput({ output:
-      'INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReady=provider-advertised\n' });
+      'INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReady=provider-listener-ready\n' });
     return { code: 0,
       output: `INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReceipt=${JSON.stringify(receipt)}\nINSTRUMENTATION_CODE: -1` };
   }, mainMatches: async () => true, onProviderStopped: async () => events.push('transport-open'),

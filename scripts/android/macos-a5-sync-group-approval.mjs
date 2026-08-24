@@ -68,7 +68,7 @@ export function finalizeSyncGroupApprovalEvidence({
 }
 
 export function hasSyncGroupApprovalProviderReady(output) {
-  return String(output).includes(PROVIDER_READY_PREFIX);
+  return String(output).includes(`${PROVIDER_READY_PREFIX}provider-listener-ready`);
 }
 
 async function runApprovalInstrumentation({
