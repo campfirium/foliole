@@ -39,7 +39,7 @@ export async function runABConvergenceJourney(actions) {
     await actions.closeTransport();
     transportOpen = false;
     const androidFact = await actions.createAndroidFact();
-    const desktopReceived = await actions.waitForDesktopFact(session, androidFact.factId);
+    const desktopReceived = await actions.syncAndroidFact(session, androidFact.factId);
     actions.reportProgress?.('b-fact-synced-to-a');
     await session.close();
     session = null;
@@ -99,8 +99,9 @@ export async function proveABConvergence({ execute, reportProgress, repoRoot, ru
     restartAndroid: async () => { await stopAndroid(execute, paths, env); await startAndroid(); },
     startAndroid,
     stopAndroid: () => stopAndroid(execute, paths, env),
+    syncAndroidFact: (session, factId) => syncAndroidFact({ env, evidenceRoot, execute,
+      factId, paths, runId, session }),
     waitForAndroidFact: (factId) => waitForAndroidJourneyFact(paths, factId),
-    waitForDesktopFact
   });
   const evidenceRef = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/proofs', `${runId}-a-b.json`);
   fs.mkdirSync(path.dirname(evidenceRef), { recursive: true });
@@ -110,6 +111,14 @@ export async function proveABConvergence({ execute, reportProgress, repoRoot, ru
   }, null, 2)}\n`, 'utf8');
   return { evidenceRef, progress: ['a-fact-synced-to-b', 'b-fact-synced-to-a',
     'a-b-restarted', 'a-b-bidirectional-converged'] };
+}
+
+async function syncAndroidFact({ env, evidenceRoot, execute, factId, paths, runId, session }) {
+  const result = await runMacosA5SyncGroupMaintenance({ action: 'sync-now',
+    buildIdentity: runId, env, evidenceRoot: path.join(evidenceRoot, 'b-sync'), execute,
+    installMain: false, observeWhileTransportOpen: () => waitForDesktopFact(session, factId),
+    paths, serial: A5_SERIAL });
+  return result.observation;
 }
 
 async function createAndroidFact({ env, evidenceRoot, execute, paths, runId }) {

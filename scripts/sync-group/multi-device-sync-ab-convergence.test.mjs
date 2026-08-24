@@ -34,13 +34,13 @@ it('proves both directions and restarts before accepting A and B convergence', a
     restartAndroid: async () => { events.push('b-restarted'); },
     startAndroid: async () => { events.push('b-started'); },
     stopAndroid: async () => { events.push('b-stopped'); },
-    waitForAndroidFact: async () => { events.push('a-fact-on-b'); },
-    waitForDesktopFact: async () => { events.push('b-fact-on-a'); }
+    syncAndroidFact: async () => { events.push('b-sync-now'); events.push('b-fact-on-a'); },
+    waitForAndroidFact: async () => { events.push('a-fact-on-b'); }
   });
   expect(result.proof).toEqual({ restarted: true });
   expect(events).toEqual([
     'first-enabled', 'a-fact-created', 'b-stopped', 'transport-opened', 'b-started',
-    'a-fact-on-b', 'transport-closed', 'b-fact-created', 'b-fact-on-a', 'first-closed',
+    'a-fact-on-b', 'transport-closed', 'b-fact-created', 'b-sync-now', 'b-fact-on-a', 'first-closed',
     'b-restarted', 'restart-inspected', 'restarted-closed'
   ]);
 });
