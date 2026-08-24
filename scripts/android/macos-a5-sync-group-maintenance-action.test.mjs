@@ -96,7 +96,7 @@ it('accepts an already absent owned reverse listener before the single bind', as
     if (args.includes('instrument')) return new Promise((resolve) => {
       releaseInstrumentation = () => resolve({ code: 1, output: 'controlled instrumentation', stdout: [
         'INSTRUMENTATION_STATUS: folioleActionReceipt={"syncRequested":true}',
-        'INSTRUMENTATION_STATUS: folioleAfterSemantic={}', 'INSTRUMENTATION_CODE: 0'
+        'INSTRUMENTATION_CODE: 0'
       ].join('\n') });
     });
     if (releaseInstrumentation && args.includes('force-stop')) releaseInstrumentation();

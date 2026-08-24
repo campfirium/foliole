@@ -36,6 +36,11 @@ function bundle(output, key) {
   }); }
 }
 
+function optionalBundle(output, key) {
+  try { return bundle(output, key); }
+  catch { return {}; }
+}
+
 export async function runMacosA5SyncGroupMaintenance({
   action, buildIdentity, env, evidenceRoot, execute, installMain = true,
   mechanics = runMacosA5InstrumentationMechanics, observeWhileTransportOpen, paths, serial
@@ -55,7 +60,8 @@ export async function runMacosA5SyncGroupMaintenance({
   });
   const manifestPath = path.join(evidenceRoot, 'sync-group-maintenance-manifest.json');
   fs.writeFileSync(manifestPath, `${JSON.stringify({ action,
-    after: bundle(raw.stdout, 'folioleAfterSemantic'), buildIdentity,
+    after: action === 'sync-now'
+      ? optionalBundle(raw.stdout, 'folioleAfterSemantic') : bundle(raw.stdout, 'folioleAfterSemantic'), buildIdentity,
     completedAt: new Date().toISOString(), rawEvidence: raw.evidencePath,
     receipt, resultStatus: 'success', serial, testClass
   }, null, 2)}\n`, 'utf8');
