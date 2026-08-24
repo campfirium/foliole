@@ -76,6 +76,31 @@ it('maps the fixed device port to an explicit isolated macOS listener', async ()
     '-s 87a33a4b reverse tcp:38641 tcp:38642')).toBe(true);
 });
 
+it('accepts an already absent owned reverse listener before the single bind', async () => {
+  const root = createTestRoot();
+  roots.push(root);
+  let removeCount = 0;
+  const execute = vi.fn(async (_command, args) => {
+    if (args.join(' ') === '-s 87a33a4b reverse --remove tcp:38641') {
+      removeCount += 1;
+      if (removeCount === 1) return { code: 1,
+        output: "adb: error: listener 'tcp:38641' not found\n", stdout: '' };
+    }
+    if (args.includes('instrument')) return {
+      code: 0, output: 'instrumentation', stdout: [
+        'INSTRUMENTATION_STATUS: folioleActionReceipt={"syncRequested":true}',
+        'INSTRUMENTATION_STATUS: folioleAfterSemantic={}',
+        'INSTRUMENTATION_CODE: -1'
+      ].join('\n')
+    };
+    return { code: 0, output: 'Success\n', stdout: 'Success\n' };
+  });
+  await expect(runMacosA5SyncGroupMaintenance({
+    action: 'sync-now', buildIdentity: 'absent-listener', env: {}, evidenceRoot: root, execute,
+    paths: { adb: '/fixed/adb', apk: '/fixed/app.apk', buildRoot: process.cwd() }, serial: '87a33a4b'
+  })).resolves.toMatchObject({ manifestPath: expect.any(String) });
+});
+
 it('creates journey facts only through the visible Capture product entry', async () => {
   const source = fs.readFileSync(
     'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupMaintenanceScenario.java',

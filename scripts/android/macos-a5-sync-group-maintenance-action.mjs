@@ -23,6 +23,17 @@ async function checked(execute, command, args, options, stage) {
   return result;
 }
 
+async function removeOwnedTransport(execute, paths, serial, options) {
+  const args = ['-s', serial, 'reverse', '--remove', `tcp:${PAIR_SYNC_PORT}`];
+  const result = await execute(paths.adb, args, options);
+  if (result.code === 0 || String(result.output).includes(
+    `listener 'tcp:${PAIR_SYNC_PORT}' not found`
+  )) return result;
+  throw executionFailure('transport ownership cleanup failed', {
+    result, stage: 'transport ownership cleanup'
+  });
+}
+
 export async function runMacosA5InstrumentationMechanics({
   buildIdentity, env, evidenceRoot, execute, installMain = true, needsTransport = false,
   paths, restartApp = false, serial, testClass
@@ -45,9 +56,7 @@ export async function runMacosA5InstrumentationMechanics({
       ['-s', serial, 'install', '-r', '-t', testApk], options, 'test install')).output);
     testInstalled = true;
     if (needsTransport) {
-      output.push((await checked(execute, paths.adb,
-        ['-s', serial, 'reverse', '--remove', `tcp:${PAIR_SYNC_PORT}`],
-        options, 'transport ownership cleanup')).output);
+      output.push((await removeOwnedTransport(execute, paths, serial, options)).output);
       output.push((await checked(execute, paths.adb,
         ['-s', serial, 'reverse', `tcp:${PAIR_SYNC_PORT}`, `tcp:${hostPort}`],
         options, 'transport open')).output);
