@@ -48,8 +48,8 @@ vi.mock('bonjour-service', () => ({
     }
   }
 }));
-vi.mock('./companionMdnsAdvertisement.js', () => ({
-  resolveCompanionMdnsIpv4Addresses: () => ['192.168.1.10', '10.0.0.10']
+vi.mock('./companionMdnsNetworkInterfaces.js', () => ({
+  resolveCompanionMdnsDiscoveryInterfaces: () => [undefined, '192.168.1.10', '10.0.0.10']
 }));
 vi.mock('./desktopCompanionSyncPreference.js', () => ({
   isDesktopCompanionSyncParticipating: () => true

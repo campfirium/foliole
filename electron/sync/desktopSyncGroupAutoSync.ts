@@ -2,7 +2,7 @@ import { Bonjour } from 'bonjour-service';
 
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
-import { resolveCompanionMdnsIpv4Addresses } from './companionMdnsAdvertisement.js';
+import { resolveCompanionMdnsDiscoveryInterfaces } from './companionMdnsNetworkInterfaces.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import {
   completeDesktopSyncGroupJoin,
@@ -52,8 +52,7 @@ export function startDesktopSyncGroupAutoSync() {
     return syncAvailablePeer({ endpoint, groupId, peerAuthorizationId });
   };
   const consumeService = (service: DiscoveredService) => { void handleService(service); };
-  const addresses = resolveCompanionMdnsIpv4Addresses();
-  const interfaces = [null, ...addresses];
+  const interfaces = resolveCompanionMdnsDiscoveryInterfaces();
   runtimes = interfaces.map((networkInterface) => {
     const options = networkInterface ? { interface: networkInterface } as BonjourOptions : undefined;
     const bonjour = new Bonjour(options);

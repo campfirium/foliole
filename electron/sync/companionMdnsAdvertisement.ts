@@ -4,7 +4,10 @@ import { Bonjour } from 'bonjour-service';
 
 import { serializeSyncProtocolTxt } from '../../lib/platform/syncProtocolContract.js';
 
+import { resolveCompanionMdnsIpv4Addresses } from './companionMdnsNetworkInterfaces.js';
 import { loadSyncGroupRuntimeInstanceId } from './syncGroupRuntimeInstance.js';
+
+export { resolveCompanionMdnsIpv4Addresses } from './companionMdnsNetworkInterfaces.js';
 
 const COMPANION_SYNC_MDNS_SERVICE_TYPE = 'foliole-sync';
 
@@ -36,14 +39,6 @@ export interface CompanionMdnsAdvertisementInput {
 
 function runtimeSuffix(runtimeInstanceId: string) {
   return runtimeInstanceId.replace(/[^A-Za-z0-9]/gu, '').slice(0, 8) || 'runtime';
-}
-
-export function resolveCompanionMdnsIpv4Addresses(
-  interfaces = os.networkInterfaces()
-) {
-  return [...new Set(Object.values(interfaces).flatMap((entries) => entries ?? [])
-    .filter((entry) => entry.family === 'IPv4' && !entry.internal)
-    .map((entry) => entry.address))];
 }
 
 export function resolveCompanionMdnsHost(
