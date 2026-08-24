@@ -71,6 +71,31 @@ it('withholds public sync availability until provider lifecycle completes', asyn
   expect(document.querySelector('output')).toHaveTextContent('available');
 });
 
+it('keeps in-flight provider readiness across pairing view refreshes', async () => {
+  let resolveProvider: (value: null) => void = () => undefined;
+  const sync = workspaceSync();
+  runtime.load.mockResolvedValue({
+    group_id: 'group-1', local_host_name: 'Android B', local_member_state: 'active'
+  });
+  runtime.reconcile.mockReturnValueOnce(new Promise((resolve) => { resolveProvider = resolve; }));
+  const view = render(
+    <CompanionSyncGroupRuntime bootstrapState={bootstrapState} workspaceSync={sync}>
+      <RuntimeState />
+    </CompanionSyncGroupRuntime>
+  );
+  await act(async () => Promise.resolve());
+  view.rerender(
+    <CompanionSyncGroupRuntime bootstrapState={bootstrapState} workspaceSync={{
+      ...sync, pairingState: { ...sync.pairingState }
+    }}>
+      <RuntimeState />
+    </CompanionSyncGroupRuntime>
+  );
+  await act(async () => resolveProvider(null));
+  expect(runtime.reconcile).toHaveBeenCalledOnce();
+  expect(document.querySelector('output')).toHaveTextContent('available');
+});
+
 it('starts a copied group database without requiring separate host credentials', async () => {
   const group = { group_id: 'group-1', local_host_name: 'Android B', local_member_state: 'active' };
   const sync = workspaceSync();

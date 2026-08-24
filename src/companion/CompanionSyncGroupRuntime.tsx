@@ -60,8 +60,7 @@ export function CompanionSyncGroupRuntime(props: {
       if (!cancelled) publishCompanionSyncGroupProviderAvailability(true);
     }).catch(() => undefined);
     return () => { cancelled = true; };
-  }, [bootstrapState, group, loaded, mutationRevision, workspaceSync.pairingState,
-    workspaceSync.state.last_synced_at]);
+  }, [bootstrapState, group, loaded, mutationRevision, workspaceSync.state.last_synced_at]);
 
   return (
     <CompanionSyncGroupContext.Provider value={group}>
