@@ -2,6 +2,7 @@ export const EN_COMPANION_SYNC_PROVIDER_TRANSLATIONS = {
   'companion.sync.joinRequest.description': 'This Device wants to join your Sync Group.',
   'companion.sync.joinRequest.approve': 'Approve',
   'companion.sync.joinRequest.reject': 'Reject',
+  'companion.sync.joinRequest.error': 'This request could not be updated. Try again.',
   'companion.sync.group.current': 'Current Sync Group',
   'companion.sync.group.details': 'Details',
   'companion.sync.group.open': 'View Sync Group',
