@@ -5,8 +5,9 @@ import { Bonjour } from 'bonjour-service';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export function resolveLinuxMdnsObserverOptions(env = process.env) {
-  const networkInterface = env.FOLIOLE_LINUX_MDNS_PEER_ADDRESS;
+export function resolveLinuxMdnsObserverOptions(env = process.env, argv = process.argv.slice(2)) {
+  const networkInterface = argv.find((arg) => arg.startsWith('--interface='))?.slice(12)
+    || env.FOLIOLE_LINUX_MDNS_PEER_ADDRESS;
   if (!networkInterface) throw new Error('Linux mDNS peer address is not configured');
   return { interface: networkInterface };
 }

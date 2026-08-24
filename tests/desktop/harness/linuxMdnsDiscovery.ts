@@ -6,9 +6,12 @@ type DiscoveredService = { port: number; txt: Record<string, string> };
 export function discoverFolioleService() {
   const namespace = process.env.FOLIOLE_LINUX_MDNS_NAMESPACE;
   if (!namespace) throw new Error('Linux mDNS acceptance namespace is not configured');
+  const peerAddress = process.env.FOLIOLE_LINUX_MDNS_PEER_ADDRESS;
+  if (!peerAddress) throw new Error('Linux mDNS acceptance peer address is not configured');
   const observer = spawn('sudo', [
     'ip', 'netns', 'exec', namespace,
-    process.execPath, path.resolve('scripts/linux/discover-foliole-mdns.mjs')
+    process.execPath, path.resolve('scripts/linux/discover-foliole-mdns.mjs'),
+    `--interface=${peerAddress}`
   ], { cwd: process.cwd(), env: process.env, stdio: ['ignore', 'pipe', 'pipe'] });
   let stdout = '';
   let stderr = '';
