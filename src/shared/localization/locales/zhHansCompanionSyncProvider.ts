@@ -1,5 +1,6 @@
 export const ZH_HANS_COMPANION_SYNC_PROVIDER_TRANSLATIONS = {
   'companion.sync.joinRequest.description': '这台设备想加入你的同步组。',
+  'companion.sync.joinRequest.error': 'Foliole 无法更新这项请求，请重试。',
   'companion.sync.joinRequest.approve': '批准',
   'companion.sync.joinRequest.reject': '拒绝',
   'companion.sync.group.current': '当前同步组',

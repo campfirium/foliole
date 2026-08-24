@@ -1,26 +1,15 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { resolveSyncGroupDisplayHostName, type SyncGroupPayload } from '../../lib/platform/syncGroupContract';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { leaveCompanionSyncGroup } from '../shared/platform/companion/sync/syncGroupDeparture';
-import {
-  loadCompanionSyncGroupProviderState,
-  setCompanionSyncPaused
-} from '../shared/platform/companion/sync/syncGroupProvider';
+import { setCompanionSyncPaused } from '../shared/platform/companion/sync/syncGroupProvider';
 import type { CompanionSyncGroupProviderState } from '../shared/platform/companionWorkspaceSyncPluginTypes';
 
-function useSyncGroupProviderState() {
-  const [state, setState] = useState<CompanionSyncGroupProviderState | null>(null);
-  const refresh = useCallback(() => {
-    void loadCompanionSyncGroupProviderState().then(setState).catch(() => setState(null));
-  }, []);
-  useEffect(() => {
-    refresh();
-    const timer = window.setInterval(refresh, 2_000);
-    return () => window.clearInterval(timer);
-  }, [refresh]);
-  return { refresh, state };
-}
+import {
+  CompanionSyncGroupJoinApproval,
+  useSyncGroupProviderState
+} from './CompanionSyncGroupJoinApproval';
 
 function LeaveSyncGroup() {
   const t = useTranslation();
@@ -123,6 +112,7 @@ export function CompanionSyncGroupRows(props: { group: SyncGroupPayload }) {
         </h2>
         <LeaveSyncGroup />
       </div>
+      <CompanionSyncGroupJoinApproval provider={provider} />
       <SyncGroupDevices group={props.group} onTogglePause={togglePause} providerState={provider.state} />
     </section>
   );

@@ -161,6 +161,10 @@ final class FolioleCompanionHostBridgeContractDefinitions {
         return FolioleCompanionBridgeContractDefinitions.hostApiString(context, "syncGroupProvider", "serviceHintEvent");
     }
 
+    static String syncGroupProviderStateEvent(Context context) throws Exception {
+        return FolioleCompanionBridgeContractDefinitions.hostApiString(context, "syncGroupProvider", "stateChangedEvent");
+    }
+
     static String syncGroupProviderServiceHintKey(Context context, String key) throws Exception {
         return hostApiString(context, "syncGroupProvider", "serviceHintKeys", key);
     }

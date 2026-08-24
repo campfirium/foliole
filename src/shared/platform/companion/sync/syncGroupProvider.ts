@@ -72,6 +72,19 @@ export async function subscribeCompanionSyncGroupServiceHint(
   return () => { void handle.remove(); };
 }
 
+export async function subscribeCompanionSyncGroupProviderState(
+  listener: (state: import('../../companionWorkspaceSyncPluginTypes').CompanionSyncGroupProviderState) => void
+) {
+  if (!isNativeCompanionSyncGroupRuntime()) return () => undefined;
+  const eventSource = FolioleCompanionSync as typeof FolioleCompanionSync & {
+    addListener(
+      eventName: 'syncGroupProviderStateChanged', next: typeof listener
+    ): Promise<{ remove(): Promise<void> }>;
+  };
+  const handle = await eventSource.addListener('syncGroupProviderStateChanged', listener);
+  return () => { void handle.remove(); };
+}
+
 export function loadCompanionSyncGroupProviderState() {
   return FolioleCompanionSync.loadSyncGroupProviderState();
 }

@@ -18,7 +18,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     @Override public void load() {
         super.load();
         try {
-            FolioleCompanionSyncGroupDataBridge.install(getContext(), this::dispatchDataRequest);
+            FolioleCompanionSyncGroupDataBridge.install(getContext(), this, this::dispatchDataRequest);
             serviceMonitor = new FolioleCompanionNsdMonitor(getContext(), this::dispatchServiceHint);
             reconcileServiceMonitor();
         } catch (Exception error) {
@@ -41,7 +41,8 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     @PluginMethod public void startSyncGroupProvider(PluginCall call) {
         async(call, "Failed to start Sync Group provider.", () ->
             FolioleCompanionSyncGroupProvider.start(
-                getContext(), getActivity(), call, this, this::dispatchDataRequest, isParticipating()
+                getContext(), getActivity(), call, this, this::dispatchDataRequest,
+                this::dispatchProviderState, isParticipating()
             ));
     }
 
@@ -166,6 +167,16 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         }
     }
 
+    private void dispatchProviderState() {
+        try {
+            String name = FolioleCompanionHostBridgeContractDefinitions.syncGroupProviderStateEvent(getContext());
+            JSObject event = withParticipation(FolioleCompanionSyncGroupProvider.state());
+            getActivity().runOnUiThread(() -> notifyListeners(name, event));
+        } catch (Exception error) {
+            android.util.Log.w("FolioleSyncProvider", "State dispatch failed", error);
+        }
+    }
+
     private void setParticipation(PluginCall call, String name) {
         async(call, "Failed to update Sync participation.", () -> {
             String key = FolioleCompanionSyncParticipationContractDefinitions.requestKey(getContext(), name);
@@ -205,7 +216,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         lifecycleActive = false;
         if (serviceMonitor != null) serviceMonitor.stop();
         FolioleCompanionSyncGroupProvider.pause(this);
-        FolioleCompanionSyncGroupDataBridge.uninstall();
+        FolioleCompanionSyncGroupDataBridge.uninstall(this);
         super.handleOnDestroy();
         fileExecutor.shutdownNow();
     }

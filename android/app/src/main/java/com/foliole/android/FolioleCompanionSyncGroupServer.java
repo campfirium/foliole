@@ -121,6 +121,7 @@ final class FolioleCompanionSyncGroupServer {
         }
         FolioleCompanionSyncGroupJoinRequest pending = new FolioleCompanionSyncGroupJoinRequest(body, normalizeAddress(remoteAddress));
         requests.put(pending.pairRequestId, pending);
+        FolioleCompanionSyncGroupProvider.notifyStateChanged();
         FolioleCompanionHttpResponse.json(output, 202, pending.publicJson()
             .put("compatibility", FolioleCompanionWorkgroupHttp.compatible(protocol())).put("desktop_protocol", protocol()));
     }

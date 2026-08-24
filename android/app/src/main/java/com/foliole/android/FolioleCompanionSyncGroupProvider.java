@@ -23,16 +23,19 @@ final class FolioleCompanionSyncGroupProvider {
         FolioleCompanionSyncGroupProviderState.stopped();
     private static final Map<String, FolioleCompanionSyncGroupJoinRequest> joinRequests =
         new ConcurrentHashMap<>();
+    private static Runnable stateListener = () -> {};
 
     private FolioleCompanionSyncGroupProvider() {}
 
     static synchronized JSObject start(
         Context context, Activity activity, PluginCall call, Object owner,
         FolioleCompanionSyncGroupDataBridge.Dispatcher dispatcher,
+        Runnable nextStateListener,
         boolean participating
     ) throws Exception {
         JSONObject group = call.getData().getJSONObject(key(context, "group"));
         FolioleCompanionSyncGroupDataBridge bridge = FolioleCompanionSyncGroupDataBridge.current();
+        stateListener = nextStateListener;
         bridge.replaceDispatcher(dispatcher);
         dataBridge = bridge;
         FolioleCompanionCurrentGroupCredential credential =
@@ -208,6 +211,8 @@ final class FolioleCompanionSyncGroupProvider {
     static JSObject state() {
         return publishedRuntime.create();
     }
+
+    static void notifyStateChanged() { stateListener.run(); }
 
     static synchronized String runtimeInstanceId() {
         return activeConfig == null ? "" : activeConfig.optString("runtime_instance_id");

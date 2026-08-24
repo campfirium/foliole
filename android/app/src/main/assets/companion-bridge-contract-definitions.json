@@ -252,6 +252,7 @@
     "syncGroupProvider": {
       "dataRequestEvent": "syncGroupDataRequest",
       "serviceHintEvent": "syncGroupServiceHint",
+      "stateChangedEvent": "syncGroupProviderStateChanged",
       "serviceHintKeys": {
         "endpointUrl": "endpoint_url"
       },

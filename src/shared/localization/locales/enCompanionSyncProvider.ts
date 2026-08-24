@@ -1,5 +1,6 @@
 export const EN_COMPANION_SYNC_PROVIDER_TRANSLATIONS = {
   'companion.sync.joinRequest.description': 'This Device wants to join your Sync Group.',
+  'companion.sync.joinRequest.error': 'Foliole could not update this request. Try again.',
   'companion.sync.joinRequest.approve': 'Approve',
   'companion.sync.joinRequest.reject': 'Reject',
   'companion.sync.group.current': 'Current Sync Group',

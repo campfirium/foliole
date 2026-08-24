@@ -7,6 +7,10 @@ import { AppSpinner } from '../shared/ui';
 
 import { isReportableSyncEvent } from './companionSyncActivityCopy';
 import { CompanionSyncActivityPage } from './CompanionSyncActivityPage';
+import {
+  CompanionSyncGroupJoinApproval,
+  useSyncGroupProviderState
+} from './CompanionSyncGroupJoinApproval';
 import { CompanionSyncGroupOverview } from './CompanionSyncGroupOverview';
 import { CompanionSyncGroupRows } from './CompanionSyncGroupRows';
 import { formatClock, resolveLastSyncRow } from './companionSyncStatusRows';
@@ -154,7 +158,9 @@ function ConnectionPage(props: {
   );
 }
 
-function SyncOverview(props: SyncStatusDetailsProps) {
+function SyncOverview(props: SyncStatusDetailsProps & {
+  provider: ReturnType<typeof useSyncGroupProviderState>;
+}) {
   const t = useTranslation();
   const lastSync = resolveLastSyncRow({ ...props, t });
   return (
@@ -174,6 +180,7 @@ function SyncOverview(props: SyncStatusDetailsProps) {
           ) : null}
         </div>
       ) : null}
+      <CompanionSyncGroupJoinApproval provider={props.provider} />
       {props.syncGroup ? (
         <CompanionSyncGroupOverview
           group={props.syncGroup}
@@ -198,6 +205,7 @@ function SyncOverview(props: SyncStatusDetailsProps) {
 }
 
 export function CompanionSyncStatusDetails(props: SyncStatusDetailsProps) {
+  const provider = useSyncGroupProviderState(Boolean(props.syncGroup) && props.page !== 'syncGroup');
   if (props.page === 'syncGroup' && props.syncGroup) {
     return <CompanionSyncGroupRows group={props.syncGroup} />;
   }
@@ -215,5 +223,5 @@ export function CompanionSyncStatusDetails(props: SyncStatusDetailsProps) {
     );
   }
 
-  return <SyncOverview {...props} />;
+  return <SyncOverview {...props} provider={provider} />;
 }

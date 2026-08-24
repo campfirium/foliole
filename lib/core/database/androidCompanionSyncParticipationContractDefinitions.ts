@@ -1,6 +1,7 @@
 export const ANDROID_COMPANION_SYNC_GROUP_PROVIDER_CONTRACT_DEFINITIONS = {
   dataRequestEvent: 'syncGroupDataRequest',
   serviceHintEvent: 'syncGroupServiceHint',
+  stateChangedEvent: 'syncGroupProviderStateChanged',
   serviceHintKeys: {
     endpointUrl: 'endpoint_url'
   },

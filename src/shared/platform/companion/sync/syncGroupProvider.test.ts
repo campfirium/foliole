@@ -77,6 +77,13 @@ it('lands the native service hint event on the shared subscription', async () =>
   expect(runtime.listen).toHaveBeenCalledWith('syncGroupServiceHint', listener);
 });
 
+it('lands provider request changes on the public approval subscription', async () => {
+  const listener = vi.fn();
+  const { subscribeCompanionSyncGroupProviderState } = await import('./syncGroupProvider');
+  await subscribeCompanionSyncGroupProviderState(listener);
+  expect(runtime.listen).toHaveBeenCalledWith('syncGroupProviderStateChanged', listener);
+});
+
 it('stops the native provider when there is no local group membership', async () => {
   await reconcileCompanionSyncGroupProvider(bootstrap, null);
   expect(runtime.stop).toHaveBeenCalledOnce();
