@@ -41,9 +41,11 @@ it('owns a deterministic multicast LAN interface for packaged acceptance', () =>
   }, (...args) => calls.push(args))).toThrow('acceptance failed');
 
   expect(calls).toEqual([
-    ['sudo', ['ip', 'link', 'add', 'foliole-mdns0', 'type', 'dummy']],
-    ['sudo', ['ip', 'address', 'add', '192.0.2.1/24', 'dev', 'foliole-mdns0']],
+    ['sudo', ['ip', 'link', 'add', 'foliole-mdns0', 'type', 'veth', 'peer', 'name', 'foliole-mdns1']],
+    ['sudo', ['ip', 'address', 'add', '192.0.2.1/32', 'dev', 'foliole-mdns0']],
+    ['sudo', ['ip', 'address', 'add', '192.0.2.2/32', 'dev', 'foliole-mdns1']],
     ['sudo', ['ip', 'link', 'set', 'dev', 'foliole-mdns0', 'multicast', 'on', 'up']],
+    ['sudo', ['ip', 'link', 'set', 'dev', 'foliole-mdns1', 'multicast', 'on', 'up']],
     ['accept'],
     ['sudo', ['ip', 'link', 'delete', 'foliole-mdns0']]
   ]);

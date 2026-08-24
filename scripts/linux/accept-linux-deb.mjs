@@ -14,8 +14,10 @@ const USER_DATA_SENTINEL = path.join(EVIDENCE_DIRECTORY, 'preserved-user-data', 
 const CODEX_FIXTURE = path.join(EVIDENCE_DIRECTORY, 'external-codex-fixture.mjs');
 const CODEX_PATH_FIXTURE = path.join(EVIDENCE_DIRECTORY, 'codex');
 const INCOMPATIBLE_CODEX_FIXTURE = path.join(EVIDENCE_DIRECTORY, 'incompatible-codex');
-const MDNS_INTERFACE = 'foliole-mdns0';
-const MDNS_INTERFACE_CIDR = '192.0.2.1/24';
+const MDNS_INTERFACE_A = 'foliole-mdns0';
+const MDNS_INTERFACE_A_CIDR = '192.0.2.1/32';
+const MDNS_INTERFACE_B = 'foliole-mdns1';
+const MDNS_INTERFACE_B_CIDR = '192.0.2.2/32';
 const CODEX_FIXTURE_SOURCE = `#!${process.execPath}
 if (process.argv.includes('--version')) {
   console.log('codex-cli 0.0.0-linux-acceptance');
@@ -119,13 +121,16 @@ function startSecretServiceSession() {
 }
 
 export function withLinuxMdnsAcceptanceInterface(work, execute = run) {
-  execute('sudo', ['ip', 'link', 'add', MDNS_INTERFACE, 'type', 'dummy']);
+  execute('sudo', ['ip', 'link', 'add', MDNS_INTERFACE_A, 'type', 'veth',
+    'peer', 'name', MDNS_INTERFACE_B]);
   try {
-    execute('sudo', ['ip', 'address', 'add', MDNS_INTERFACE_CIDR, 'dev', MDNS_INTERFACE]);
-    execute('sudo', ['ip', 'link', 'set', 'dev', MDNS_INTERFACE, 'multicast', 'on', 'up']);
+    execute('sudo', ['ip', 'address', 'add', MDNS_INTERFACE_A_CIDR, 'dev', MDNS_INTERFACE_A]);
+    execute('sudo', ['ip', 'address', 'add', MDNS_INTERFACE_B_CIDR, 'dev', MDNS_INTERFACE_B]);
+    execute('sudo', ['ip', 'link', 'set', 'dev', MDNS_INTERFACE_A, 'multicast', 'on', 'up']);
+    execute('sudo', ['ip', 'link', 'set', 'dev', MDNS_INTERFACE_B, 'multicast', 'on', 'up']);
     return work();
   } finally {
-    execute('sudo', ['ip', 'link', 'delete', MDNS_INTERFACE]);
+    execute('sudo', ['ip', 'link', 'delete', MDNS_INTERFACE_A]);
   }
 }
 
