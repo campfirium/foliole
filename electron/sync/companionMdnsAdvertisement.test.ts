@@ -93,9 +93,7 @@ describe('companion mDNS advertisement', () => {
       timelineId: 'timeline-1'
     });
 
-    expect(bonjourMock.constructorOptions).toEqual([{
-      bind: '0.0.0.0', interface: '192.168.0.11'
-    }]);
+    expect(bonjourMock.constructorOptions).toEqual([{ interface: '192.168.0.11' }]);
 
     expect(bonjourMock.publish).toHaveBeenCalledWith({
       host: 'V-runtimed.local',
@@ -210,9 +208,7 @@ describe('companion mDNS lifecycle', () => {
       peerId: 'desktop-local', port: 38683, timelineId: 'timeline-1'
     });
 
-    expect(bonjourMock.constructorOptions).toEqual([{
-      bind: '0.0.0.0', interface: '192.168.0.11'
-    }]);
+    expect(bonjourMock.constructorOptions).toEqual([{ interface: '192.168.0.11' }]);
     expect(bonjourMock.publish).toHaveBeenCalledTimes(1);
   });
 
@@ -229,8 +225,7 @@ describe('companion mDNS lifecycle', () => {
     });
 
     expect(bonjourMock.constructorOptions).toEqual([
-      { bind: '0.0.0.0', interface: '192.168.0.11' },
-      { bind: '0.0.0.0', interface: '198.18.0.1' }
+      { interface: '192.168.0.11' }, { interface: '198.18.0.1' }
     ]);
     expect(bonjourMock.publish).toHaveBeenCalledTimes(2);
   });

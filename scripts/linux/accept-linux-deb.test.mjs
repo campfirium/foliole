@@ -2,7 +2,11 @@
 
 import { expect, it } from 'vitest';
 
-import { assertDebContents, assertLinuxAcceptanceHost } from './accept-linux-deb.mjs';
+import {
+  assertDebContents,
+  assertLinuxAcceptanceHost,
+  withLinuxMdnsAcceptanceInterface
+} from './accept-linux-deb.mjs';
 
 it('accepts only the installed Ubuntu release architecture', () => {
   expect(() => assertLinuxAcceptanceHost('linux', 'x64')).not.toThrow();
@@ -27,4 +31,20 @@ it('requires installed integration without Linux updater metadata', () => {
     .toThrow('foliole-global-capture.desktop');
   expect(() => assertDebContents(`${contents}\n./opt/Foliole/bin/codex`))
     .toThrow('./opt/Foliole/bin/codex');
+});
+
+it('owns a deterministic multicast LAN interface for packaged acceptance', () => {
+  const calls = [];
+  expect(() => withLinuxMdnsAcceptanceInterface(() => {
+    calls.push(['accept']);
+    throw new Error('acceptance failed');
+  }, (...args) => calls.push(args))).toThrow('acceptance failed');
+
+  expect(calls).toEqual([
+    ['sudo', ['ip', 'link', 'add', 'foliole-mdns0', 'type', 'dummy']],
+    ['sudo', ['ip', 'address', 'add', '192.0.2.1/24', 'dev', 'foliole-mdns0']],
+    ['sudo', ['ip', 'link', 'set', 'dev', 'foliole-mdns0', 'multicast', 'on', 'up']],
+    ['accept'],
+    ['sudo', ['ip', 'link', 'delete', 'foliole-mdns0']]
+  ]);
 });

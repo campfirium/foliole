@@ -14,6 +14,8 @@ const USER_DATA_SENTINEL = path.join(EVIDENCE_DIRECTORY, 'preserved-user-data', 
 const CODEX_FIXTURE = path.join(EVIDENCE_DIRECTORY, 'external-codex-fixture.mjs');
 const CODEX_PATH_FIXTURE = path.join(EVIDENCE_DIRECTORY, 'codex');
 const INCOMPATIBLE_CODEX_FIXTURE = path.join(EVIDENCE_DIRECTORY, 'incompatible-codex');
+const MDNS_INTERFACE = 'foliole-mdns0';
+const MDNS_INTERFACE_CIDR = '192.0.2.1/24';
 const CODEX_FIXTURE_SOURCE = `#!${process.execPath}
 if (process.argv.includes('--version')) {
   console.log('codex-cli 0.0.0-linux-acceptance');
@@ -116,6 +118,17 @@ function startSecretServiceSession() {
   }));
 }
 
+export function withLinuxMdnsAcceptanceInterface(work, execute = run) {
+  execute('sudo', ['ip', 'link', 'add', MDNS_INTERFACE, 'type', 'dummy']);
+  try {
+    execute('sudo', ['ip', 'address', 'add', MDNS_INTERFACE_CIDR, 'dev', MDNS_INTERFACE]);
+    execute('sudo', ['ip', 'link', 'set', 'dev', MDNS_INTERFACE, 'multicast', 'on', 'up']);
+    return work();
+  } finally {
+    execute('sudo', ['ip', 'link', 'delete', MDNS_INTERFACE]);
+  }
+}
+
 function runPackagedAcceptance(version) {
   const env = {
     ...process.env,
@@ -130,13 +143,13 @@ function runPackagedAcceptance(version) {
     FOLIOLE_LINUX_EXPECTED_VERSION: version,
     XDG_CURRENT_DESKTOP: 'GNOME'
   };
-  run(process.execPath, [
+  withLinuxMdnsAcceptanceInterface(() => run(process.execPath, [
     'scripts/with-resource-gate.mjs', 'preview', '--',
     'xvfb-run', '--auto-servernum', process.execPath, 'node_modules/playwright/cli.js',
     'test', '--config', 'playwright.desktop.config.ts',
     'tests/desktop/linux-deb-core.spec.ts', 'tests/desktop/linux-deb-external-capabilities.spec.ts',
     'tests/desktop/rc-golden-journey.spec.ts'
-  ], { env });
+  ], { env }));
 }
 
 async function assertRemovedPackageFiles() {
