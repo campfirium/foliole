@@ -92,7 +92,7 @@ it('reuses bounded Settings navigation that exits Review and nested Settings sur
   expect(navigation).not.toContain('clickVisible');
 });
 
-it('runs public Sync Now after approval in the ready instrumented runtime', () => {
+it('runs exact-fact Sync Now actions around C approval in one ready runtime', () => {
   const approval = fs.readFileSync(
     'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupApprovalScenario.java',
     'utf8'
@@ -104,13 +104,20 @@ it('runs public Sync Now after approval in the ready instrumented runtime', () =
     'FolioleCompanionSemanticActions.clickVisible(', peerRelease
   );
   const credential = approval.indexOf('waitForPeerCredential(');
-  const syncNow = approval.indexOf('FolioleCompanionSyncGroupMaintenanceScenario.syncNow(');
+  const preAdmissionSync = approval.indexOf(
+    'FolioleCompanionSyncGroupMaintenanceScenario.syncNow('
+  );
+  const postApprovalSync = approval.lastIndexOf(
+    'FolioleCompanionSyncGroupMaintenanceScenario.syncNow('
+  );
   expect(syncSettings).toBeGreaterThan(0);
-  expect(providerReady).toBeGreaterThan(syncSettings);
+  expect(preAdmissionSync).toBeGreaterThan(syncSettings);
+  expect(providerReady).toBeGreaterThan(preAdmissionSync);
   expect(peerRelease).toBeGreaterThan(providerReady);
   expect(approvalClick).toBeGreaterThan(peerRelease);
   expect(credential).toBeGreaterThan(approvalClick);
-  expect(syncNow).toBeGreaterThan(credential);
+  expect(postApprovalSync).toBeGreaterThan(credential);
+  expect(postApprovalSync).toBeGreaterThan(preAdmissionSync);
   expect(approval).toContain('TimeUnit.SECONDS.toNanos(60)');
   expect(approval).toContain('"registered".equals(state) && listenerReady(activity)');
   expect(approval).toContain('.isServiceMonitorReady()');

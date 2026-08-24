@@ -17,6 +17,15 @@ export async function runAOfflineAdmissionPrelude({
   let windowsStarted;
   const windowsStart = new Promise((resolve) => { windowsStarted = resolve; });
   try {
+    const listener = await session.enable();
+    if (listener.sync_enabled !== true || listener.server_status?.state !== 'running') {
+      throw Object.assign(new Error('MacOS A product sync listener did not become ready.'), {
+        failureOwner: 'controller', host: 'macos-a', missingFact: 'a_product_listener_unavailable'
+      });
+    }
+    reportProgress('a-listener-ready');
+    fact = await createFact(session);
+    reportProgress('a-fact-created');
     const approvalWork = runApproval({
       onProviderStopped: async () => {
         reportProgress('b-provider-stopped');
@@ -24,15 +33,6 @@ export async function runAOfflineAdmissionPrelude({
         transportOpen = true; reportProgress('b-transport-ready');
       },
       onReady: async () => {
-        const listener = await session.enable();
-        if (listener.sync_enabled !== true || listener.server_status?.state !== 'running') {
-          throw Object.assign(new Error('MacOS A product sync listener did not become ready.'), {
-            failureOwner: 'controller', host: 'macos-a', missingFact: 'a_product_listener_unavailable'
-          });
-        }
-        reportProgress('a-listener-ready');
-        fact = await createFact(session);
-        reportProgress('a-fact-created');
         await waitForFact(fact.factId);
         reportProgress('b-fact-received');
         await closeTransport();
