@@ -105,6 +105,16 @@ it('establishes provider readiness through public Sync Now in the instrumented r
   expect(approval).not.toContain('FolioleCompanionSyncGroupProvider.start(');
 });
 
+it('tracks the approved peer by the current join authorization identity', () => {
+  const approval = fs.readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupApprovalScenario.java',
+    'utf8'
+  );
+  expect(approval).toContain('pendingJoiningAuthorizationId()');
+  expect(approval).toContain('getString("pair_request_id")');
+  expect(approval).not.toContain('getString("device_id")');
+});
+
 it('opens transport after provider stop and starts the peer only after the product surface is stable', async () => {
   const order = [];
   const execute = async (_command, args) => {
