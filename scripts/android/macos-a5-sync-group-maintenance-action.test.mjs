@@ -33,11 +33,13 @@ it('uses the fixed product instrumentation method and records its receipt', asyn
   });
   const result = await runMacosA5SyncGroupMaintenance({
     action: 'leave-sync-group', buildIdentity: 'build-1', env: {}, evidenceRoot: root, execute,
+    observeWhileTransportOpen: vi.fn(async () => ({ exactFact: 'fact-a' })),
     paths: { adb: '/fixed/adb', apk: '/fixed/app.apk', buildRoot: process.cwd() }, serial: '87a33a4b'
   });
   expect(JSON.parse(fs.readFileSync(result.manifestPath, 'utf8'))).toMatchObject({
     action: 'leave-sync-group', receipt: { departurePersisted: true }, serial: '87a33a4b'
   });
+  expect(result.observation).toEqual({ exactFact: 'fact-a' });
   expect(execute.mock.calls.some(([, args]) => args.includes(
     'com.foliole.android.FolioleCompanionSyncGroupMaintenanceTest#leavesSyncGroupThroughProduct'
   ))).toBe(true);

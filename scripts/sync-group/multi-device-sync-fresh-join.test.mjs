@@ -18,7 +18,10 @@ it('pairs before requesting public Sync Now and proves the exact fact after rest
       database: { inspection: { journeyFacts: ['fact-a'] } }
     }),
     restart: step('restart'),
-    syncNow: step('sync-now', { receipt: { syncRequested: true } })
+    syncNow: vi.fn(async (_factId, observe) => {
+      order.push('sync-now');
+      return observe();
+    })
   });
   expect(order).toEqual([
     'create-fact', 'pair', 'sync-now', 'receive', 'restart', 'receive-after-restart'

@@ -47,22 +47,23 @@ export async function performFreshJoinSequence({
 }) {
   const mutationFact = await createFact();
   const pairResult = await pair();
-  await syncNow();
-  const received = await receive(mutationFact.factId);
+  const received = await syncNow(mutationFact.factId,
+    () => receive(mutationFact.factId));
   await restart();
   const restarted = await receiveAfterRestart(mutationFact.factId);
   return { mutationFact, pairResult, received, restarted };
 }
 
 async function runFreshJoinInitialSync({
-  buildIdentity, env, evidenceRoot, execute, paths, sessionOptions
+  buildIdentity, env, evidenceRoot, execute, observe, paths, sessionOptions
 }) {
   const session = await openMacosPairSyncDesktopSession(sessionOptions);
   try {
     await session.enable();
-    return runMacosA5SyncGroupMaintenance({ action: 'sync-now', buildIdentity, env,
+    const result = await runMacosA5SyncGroupMaintenance({ action: 'sync-now', buildIdentity, env,
       evidenceRoot: path.join(evidenceRoot, 'initial-sync'), execute, installMain: false,
-      paths, serial: A5_SERIAL });
+      observeWhileTransportOpen: observe, paths, serial: A5_SERIAL });
+    return result.observation;
   } finally { await session.close().catch(() => undefined); }
 }
 
@@ -102,8 +103,8 @@ export async function establishFreshAB({ execute, reportProgress, repoRoot, runI
     receive: (factId) => waitForAndroidJourneyFact(paths, factId),
     receiveAfterRestart: (factId) => waitForAndroidJourneyFact(paths, factId),
     restart: () => restartAndroid(execute, paths, env),
-    syncNow: () => runFreshJoinInitialSync({ buildIdentity: runId, env, evidenceRoot,
-      execute, paths, sessionOptions })
+    syncNow: (_factId, observe) => runFreshJoinInitialSync({ buildIdentity: runId, env,
+      evidenceRoot, execute, observe, paths, sessionOptions })
   });
   const { mutationFact, pairResult, received, restarted } = journey;
   const mutation = { factId: mutationFact.factId, origin: 'A', runId };

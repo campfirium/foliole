@@ -38,7 +38,7 @@ function bundle(output, key) {
 
 export async function runMacosA5SyncGroupMaintenance({
   action, buildIdentity, env, evidenceRoot, execute, installMain = true,
-  mechanics = runMacosA5InstrumentationMechanics, paths, serial
+  mechanics = runMacosA5InstrumentationMechanics, observeWhileTransportOpen, paths, serial
 }) {
   const spec = SPECS[action];
   if (!spec) throw proofFailure('Unsupported sync group action', {
@@ -47,7 +47,7 @@ export async function runMacosA5SyncGroupMaintenance({
   const [method, expected, needsTransport, restartApp] = spec;
   const testClass = `${APP_ID}.FolioleCompanionSyncGroupMaintenanceTest#${method}`;
   const raw = await mechanics({ buildIdentity, env, evidenceRoot, execute, installMain,
-    needsTransport, paths, restartApp, serial, testClass });
+    needsTransport, observeWhileTransportOpen, paths, restartApp, serial, testClass });
   const receipt = bundle(raw.stdout, 'folioleActionReceipt');
   if (receipt[expected] !== true) throw proofFailure(`Product result did not prove ${expected}`, {
     evidenceRef: raw.evidencePath, missingFact: expected
@@ -58,5 +58,5 @@ export async function runMacosA5SyncGroupMaintenance({
     completedAt: new Date().toISOString(), rawEvidence: raw.evidencePath,
     receipt, resultStatus: 'success', serial, testClass
   }, null, 2)}\n`, 'utf8');
-  return { manifestPath, output: raw.output };
+  return { manifestPath, observation: raw.observation, output: raw.output };
 }

@@ -36,7 +36,7 @@ async function removeOwnedTransport(execute, paths, serial, options) {
 
 export async function runMacosA5InstrumentationMechanics({
   buildIdentity, env, evidenceRoot, execute, installMain = true, needsTransport = false,
-  paths, restartApp = false, serial, testClass
+  observeWhileTransportOpen, paths, restartApp = false, serial, testClass
 }) {
   if (typeof testClass !== 'string' || !testClass.startsWith(`${APP_ID}.`)) {
     throw executionFailure('Android instrumentation target is invalid.', {
@@ -81,6 +81,7 @@ export async function runMacosA5InstrumentationMechanics({
         stage: 'instrumentation'
       });
     }
+    const observation = await observeWhileTransportOpen?.();
     if (restartApp) output.push((await checked(execute, paths.adb,
       ['-s', serial, 'shell', 'am', 'start', '-n', `${APP_ID}/.MainActivity`],
       options, 'activity restart')).output);
@@ -89,7 +90,7 @@ export async function runMacosA5InstrumentationMechanics({
       completedAt: new Date().toISOString(), resultStatus: 'success', serial,
       stdout: instrumentation.stdout, testClass
     }, null, 2)}\n`, 'utf8');
-    return { evidencePath, output: output.join(''), stdout: instrumentation.stdout };
+    return { evidencePath, observation, output: output.join(''), stdout: instrumentation.stdout };
   } finally {
     if (reverseCreated) output.push((await checked(execute, paths.adb,
       ['-s', serial, 'reverse', '--remove', `tcp:${PAIR_SYNC_PORT}`],
