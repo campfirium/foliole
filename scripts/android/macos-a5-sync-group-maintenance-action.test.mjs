@@ -50,6 +50,9 @@ it('uses the fixed product instrumentation method and records its receipt', asyn
     '-s 87a33a4b reverse tcp:38641 tcp:38641',
     '-s 87a33a4b reverse --remove tcp:38641'
   ]);
+  const commands = execute.mock.calls.map(([, args]) => args.join(' '));
+  expect(commands.indexOf('-s 87a33a4b shell am force-stop com.foliole.android'))
+    .toBeLessThan(commands.indexOf('-s 87a33a4b reverse tcp:38641 tcp:38641'));
   expect(execute.mock.calls.at(-1)?.[1]).toEqual([
     '-s', '87a33a4b', 'uninstall', 'com.foliole.android.test'
   ]);

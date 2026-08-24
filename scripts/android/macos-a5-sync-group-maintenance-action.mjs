@@ -56,6 +56,9 @@ export async function runMacosA5InstrumentationMechanics({
       ['-s', serial, 'install', '-r', '-t', testApk], options, 'test install')).output);
     testInstalled = true;
     if (needsTransport) {
+      output.push((await checked(execute, paths.adb,
+        ['-s', serial, 'shell', 'am', 'force-stop', APP_ID],
+        options, 'transport app stop')).output);
       output.push((await removeOwnedTransport(execute, paths, serial, options)).output);
       output.push((await checked(execute, paths.adb,
         ['-s', serial, 'reverse', `tcp:${PAIR_SYNC_PORT}`, `tcp:${hostPort}`],
