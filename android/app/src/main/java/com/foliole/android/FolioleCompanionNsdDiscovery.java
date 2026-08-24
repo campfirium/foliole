@@ -204,7 +204,6 @@ public final class FolioleCompanionNsdDiscovery {
 
         private JSObject readProtocolTxt(NsdServiceInfo serviceInfo) throws Exception {
             JSObject result = new JSObject();
-            copyTxtAttribute(serviceInfo, result, "capabilities");
             copyTxtAttribute(serviceInfo, result, "maxSupportedVersion");
             copyTxtAttribute(serviceInfo, result, "minSupportedVersion");
             copyTxtAttribute(serviceInfo, result, "version");

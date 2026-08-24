@@ -233,7 +233,6 @@
         "source": "source"
       },
       "protocolTxtKeys": {
-        "capabilities": "protocol_capabilities",
         "maxSupportedVersion": "protocol_max_version",
         "minSupportedVersion": "protocol_min_version",
         "version": "protocol_version"

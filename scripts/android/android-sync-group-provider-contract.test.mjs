@@ -103,7 +103,7 @@ it('versions every device-specific Android DNS-SD fact hint', async () => {
   const advertisement = await readJava('FolioleCompanionNsdAdvertisement.java');
   expect(advertisement).toContain('info.setServiceName(serviceInstanceName(config))');
   expect(advertisement).toContain('config.getString("runtime_instance_id")');
-  expect(advertisement).toContain('config.getJSONObject("sync_group").getString("display_name")');
+  expect(advertisement).not.toContain('"protocol_capabilities"');
   expect(advertisement).toContain('config.getString("facts_revision").hashCode()');
 });
 

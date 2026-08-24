@@ -88,7 +88,6 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
         source: 'source'
       },
       protocolTxtKeys: {
-        capabilities: 'protocol_capabilities',
         maxSupportedVersion: 'protocol_max_version',
         minSupportedVersion: 'protocol_min_version',
         version: 'protocol_version'
