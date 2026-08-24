@@ -21,8 +21,7 @@ final class FolioleCompanionSyncGroupApprovalScenario {
         waitForFocus(activity, 30_000);
         WebView webView = activity.findViewById(R.id.webview);
         long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(3);
-        FolioleCompanionSyncGroupMaintenanceScenario.syncNow(instrumentation, webView);
-        waitForInstrumentedRuntime(instrumentation, activity, webView);
+        waitForInstrumentedRuntime(activity);
         onProviderReady.run();
         FolioleCompanionSemanticActions.waitForUniqueVisible(
             instrumentation, webView, "companion-sync-group-approve", deadline
@@ -32,6 +31,7 @@ final class FolioleCompanionSyncGroupApprovalScenario {
             instrumentation, webView, "companion-sync-group-approve", deadline
         );
         waitForPeerCredential(instrumentation.getTargetContext(), joiningAuthorizationId, deadline);
+        FolioleCompanionSyncGroupMaintenanceScenario.syncNow(instrumentation, webView);
         return new JSONObject().put("ok", true).put("targetTestId", "sync-group-approval")
             .put("approved", true).put("foreground", true);
     }
@@ -90,20 +90,13 @@ final class FolioleCompanionSyncGroupApprovalScenario {
         throw new IllegalStateException("Provider advertisement unavailable: " + latest);
     }
 
-    private static void waitForInstrumentedRuntime(
-        Instrumentation instrumentation, Activity activity, WebView webView
-    ) throws Exception {
+    private static void waitForInstrumentedRuntime(Activity activity) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(60);
-        boolean syncStarted = false;
         JSONObject latest = new JSONObject();
         while (System.nanoTime() < deadline) {
-            JSONObject semantic = FolioleCompanionWebViewSemanticAdapter.snapshot(
-                instrumentation, webView
-            );
-            syncStarted |= syncNowDisabled(semantic);
             latest = FolioleCompanionSyncGroupProvider.state();
             String state = latest.optString("advertisement_state");
-            if (syncStarted && "registered".equals(state) && listenerReady(activity)) return;
+            if ("registered".equals(state) && listenerReady(activity)) return;
             if ("failed".equals(state)) {
                 throw new IllegalStateException("Provider advertisement failed: " + latest);
             }
@@ -118,16 +111,6 @@ final class FolioleCompanionSyncGroupApprovalScenario {
             .getPlugin("FolioleCompanionSync");
         return handle != null && handle.getInstance() instanceof FolioleCompanionSyncPlugin
             && ((FolioleCompanionSyncPlugin) handle.getInstance()).isServiceMonitorReady();
-    }
-
-    private static boolean syncNowDisabled(JSONObject semantic) throws Exception {
-        JSONArray elements = semantic.getJSONArray("elements");
-        for (int index = 0; index < elements.length(); index += 1) {
-            JSONObject item = elements.getJSONObject(index);
-            if ("companion-sync-now".equals(item.optString("testId"))
-                && item.optBoolean("visible") && item.optBoolean("disabled")) return true;
-        }
-        return false;
     }
 
     private static String pendingJoiningAuthorizationId() throws Exception {

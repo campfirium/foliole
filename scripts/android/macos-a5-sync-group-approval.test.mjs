@@ -92,23 +92,25 @@ it('reuses bounded Settings navigation that exits Review and nested Settings sur
   expect(navigation).not.toContain('clickVisible');
 });
 
-it('establishes provider readiness through public Sync Now in the instrumented runtime', () => {
+it('runs public Sync Now after approval in the ready instrumented runtime', () => {
   const approval = fs.readFileSync(
     'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupApprovalScenario.java',
     'utf8'
   );
-  const syncNow = approval.indexOf('FolioleCompanionSyncGroupMaintenanceScenario.syncNow(');
-  const providerReady = approval.indexOf(
-    'waitForInstrumentedRuntime(instrumentation, activity, webView);'
-  );
+  const providerReady = approval.indexOf('waitForInstrumentedRuntime(activity);');
   const peerRelease = approval.indexOf('onProviderReady.run();');
-  expect(syncNow).toBeGreaterThan(0);
-  expect(providerReady).toBeGreaterThan(syncNow);
-  expect(peerRelease).toBeGreaterThan(providerReady);
-  expect(approval).toContain('TimeUnit.SECONDS.toNanos(60)');
-  expect(approval).toContain(
-    'syncStarted && "registered".equals(state) && listenerReady(activity)'
+  const approvalClick = approval.indexOf(
+    'FolioleCompanionSemanticActions.clickVisible(', peerRelease
   );
+  const credential = approval.indexOf('waitForPeerCredential(');
+  const syncNow = approval.indexOf('FolioleCompanionSyncGroupMaintenanceScenario.syncNow(');
+  expect(providerReady).toBeGreaterThan(0);
+  expect(peerRelease).toBeGreaterThan(providerReady);
+  expect(approvalClick).toBeGreaterThan(peerRelease);
+  expect(credential).toBeGreaterThan(approvalClick);
+  expect(syncNow).toBeGreaterThan(credential);
+  expect(approval).toContain('TimeUnit.SECONDS.toNanos(60)');
+  expect(approval).toContain('"registered".equals(state) && listenerReady(activity)');
   expect(approval).toContain('.isServiceMonitorReady()');
   expect(approval).not.toContain('FolioleCompanionSyncGroupProvider.start(');
 });
