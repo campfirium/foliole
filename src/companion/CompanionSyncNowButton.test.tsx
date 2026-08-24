@@ -1,11 +1,25 @@
 import { screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../shared/localization/testLocalization';
 
+const runtime = vi.hoisted(() => ({ providerAvailable: true }));
+vi.mock('./CompanionSyncGroupRuntime', () => ({
+  useCompanionSyncGroupRuntime: () => ({ group: null, providerAvailable: runtime.providerAvailable })
+}));
+
 import { CompanionSyncNowButton } from './CompanionSyncNowButton';
 
+afterEach(() => { runtime.providerAvailable = true; });
+
 describe('CompanionSyncNowButton', () => {
+  it('waits for the foreground provider lifecycle before enabling public sync', () => {
+    runtime.providerAvailable = false;
+    renderWithLocalization(<CompanionSyncNowButton isSyncing={false} onSync={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Sync Now' })).toBeDisabled();
+  });
+
   it('identifies a manual action joined to the active run', () => {
     renderWithLocalization(
       <CompanionSyncNowButton

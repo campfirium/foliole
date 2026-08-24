@@ -15,7 +15,15 @@ import {
 
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
-const CompanionSyncGroupContext = createContext<SyncGroupPayload | null>(null);
+interface CompanionSyncGroupRuntimeValue {
+  group: SyncGroupPayload | null;
+  providerAvailable: boolean;
+}
+
+const CompanionSyncGroupContext = createContext<CompanionSyncGroupRuntimeValue>({
+  group: null,
+  providerAvailable: true
+});
 
 export function CompanionSyncGroupRuntime(props: {
   bootstrapState: NativeCompanionBootstrapState;
@@ -25,6 +33,7 @@ export function CompanionSyncGroupRuntime(props: {
   const { bootstrapState, workspaceSync } = props;
   const [group, setGroup] = useState<SyncGroupPayload | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [providerAvailable, setProviderAvailable] = useState(false);
   const mutationRevision = useSyncExternalStore(
     subscribeCompanionSyncMutationRevision,
     getCompanionSyncMutationRevision,
@@ -45,16 +54,25 @@ export function CompanionSyncGroupRuntime(props: {
     workspaceSync.state.last_synced_at]);
 
   useEffect(() => {
-    if (!isNativeCompanionSyncGroupRuntime() || !loaded) return;
+    if (!isNativeCompanionSyncGroupRuntime()) {
+      setProviderAvailable(true);
+      return;
+    }
+    if (!loaded) return;
+    let cancelled = false;
     const factsRevision = `${mutationRevision}:${workspaceSync.state.last_synced_at ?? ''}`;
+    setProviderAvailable(false);
     void reconcileCompanionSyncGroupProvider(
       bootstrapState, group, factsRevision
-    ).catch(() => undefined);
+    ).then(() => {
+      if (!cancelled) setProviderAvailable(true);
+    }).catch(() => undefined);
+    return () => { cancelled = true; };
   }, [bootstrapState, group, loaded, mutationRevision, workspaceSync.pairingState,
     workspaceSync.state.last_synced_at]);
 
   return (
-    <CompanionSyncGroupContext.Provider value={group}>
+    <CompanionSyncGroupContext.Provider value={{ group, providerAvailable }}>
       {props.children}
     </CompanionSyncGroupContext.Provider>
   );

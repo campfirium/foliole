@@ -59,7 +59,7 @@ export function CompanionSyncContent(props: {
 }) {
   const { workspaceSync } = props;
   const handoffReminders = useCompanionHandoffReminderRuntime();
-  const syncGroup = useCompanionSyncGroupRuntime();
+  const syncGroup = useCompanionSyncGroupRuntime().group;
 
   useEffect(() => {
     if (!workspaceSync.pendingPairRequest || workspaceSync.pairingStatus !== 'awaiting-approval') {
