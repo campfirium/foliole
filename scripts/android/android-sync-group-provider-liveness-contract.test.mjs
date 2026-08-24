@@ -37,3 +37,17 @@ it('publishes only complete running or stopped provider views', async () => {
   );
   expect(provider).toMatch(/restartAdvertisement[\s\S]*FolioleCompanionNsdAdvertisement\.start[\s\S]*publishRuntime\(\)/u);
 });
+
+it('does not hold the provider lifecycle monitor across a data-owner roundtrip', async () => {
+  const provider = await readJava('FolioleCompanionSyncGroupProvider.java');
+  const providerStart = await readJava('FolioleCompanionSyncGroupProviderStart.java');
+  const plugin = await readJava('FolioleCompanionSyncPlugin.java');
+  const ready = provider.slice(provider.indexOf('static synchronized JSObject startReady('),
+    provider.indexOf('static synchronized JSObject stop('));
+  expect(providerStart).not.toContain('synchronized');
+  expect(providerStart).toContain('FolioleCompanionCurrentGroupCredential.load(');
+  expect(ready).toContain('boolean participating = participation.call();');
+  expect(plugin).toContain('private volatile boolean lifecycleActive = true;');
+  expect(plugin).toContain('FolioleCompanionSyncGroupProviderStart.run(');
+  expect(plugin).toContain('this::dispatchDataRequest, this::isParticipating');
+});

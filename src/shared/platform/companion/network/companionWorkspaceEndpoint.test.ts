@@ -69,10 +69,10 @@ it('routes one foreground pass to every discovered active group member', async (
   mocks.loadGroup.mockResolvedValue({
     group_id: 'group-1', local_host_name: 'Android B', timeline_id: 'timeline-1',
     members: [
-      { authorization_id: 'authorization-desktop-a', host_name: 'Desktop A', state: 'active' },
-      { authorization_id: 'authorization-android-b', host_name: 'Android B', state: 'active' },
-      { authorization_id: 'authorization-desktop-c', host_name: 'Desktop C', state: 'active' },
-      { authorization_id: 'authorization-desktop-left', host_name: 'Desktop Left', state: 'left' }
+      { host_name: 'Desktop A', state: 'active' },
+      { host_name: 'Android B', state: 'active' },
+      { host_name: 'Desktop C', state: 'active' },
+      { host_name: 'Desktop Left', state: 'left' }
     ]
   });
   mocks.discover.mockResolvedValue([
@@ -81,7 +81,7 @@ it('routes one foreground pass to every discovered active group member', async (
       provider_device_id: 'desktop-c', timeline_id: 'timeline-1'
     }, endpointUrl: 'http://192.168.1.30:38641' },
     { compatibility: { status: 'compatible' }, discovery: {
-      desktop_host_name: 'Renamed Desktop A', group_id: 'group-1', peer_id: 'authorization-desktop-a',
+      desktop_host_name: 'Desktop A', group_id: 'group-1', peer_id: 'authorization-desktop-a',
       provider_device_id: 'desktop-a', timeline_id: 'timeline-1'
     }, endpointUrl: 'http://192.168.1.20:38641' },
     { compatibility: { status: 'compatible' }, discovery: {
@@ -98,10 +98,7 @@ it('routes one foreground pass to every discovered active group member', async (
 it('keeps routing reachable members when another active peer is unavailable', async () => {
   mocks.loadGroup.mockResolvedValue({
     group_id: 'group-1', local_host_name: 'Android B', timeline_id: 'timeline-1',
-    members: [
-      { authorization_id: 'authorization-desktop-a', host_name: 'Desktop A', state: 'active' },
-      { authorization_id: 'authorization-desktop-c', host_name: 'Desktop C', state: 'active' }
-    ]
+    members: [{ host_name: 'Desktop A', state: 'active' }, { host_name: 'Desktop C', state: 'active' }]
   });
   mocks.discover.mockResolvedValue([{
     compatibility: { status: 'compatible' },

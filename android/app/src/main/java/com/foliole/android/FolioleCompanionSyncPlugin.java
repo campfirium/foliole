@@ -12,7 +12,7 @@ import java.util.concurrent.Executors;
 @CapacitorPlugin(name = "FolioleCompanionSync")
 public class FolioleCompanionSyncPlugin extends Plugin {
     private final ExecutorService fileExecutor = Executors.newSingleThreadExecutor();
-    private boolean lifecycleActive = true;
+    private volatile boolean lifecycleActive = true;
     private FolioleCompanionNsdMonitor serviceMonitor;
 
     @Override public void load() {
@@ -40,8 +40,8 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
     @PluginMethod public void startSyncGroupProvider(PluginCall call) {
         async(call, "Failed to start Sync Group provider.", () ->
-            FolioleCompanionSyncGroupProvider.start(
-                getContext(), getActivity(), call, this, this::dispatchDataRequest, isParticipating()
+            FolioleCompanionSyncGroupProviderStart.run(
+                getContext(), getActivity(), call, this, this::dispatchDataRequest, this::isParticipating
             ));
     }
 

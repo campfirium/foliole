@@ -10,6 +10,7 @@ import org.json.JSONObject;
 
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 
 final class FolioleCompanionSyncGroupProvider {
@@ -26,17 +27,14 @@ final class FolioleCompanionSyncGroupProvider {
 
     private FolioleCompanionSyncGroupProvider() {}
 
-    static synchronized JSObject start(
+    static synchronized JSObject startReady(
         Context context, Activity activity, PluginCall call, Object owner,
-        FolioleCompanionSyncGroupDataBridge.Dispatcher dispatcher,
-        boolean participating
+        FolioleCompanionSyncGroupDataBridge.Dispatcher dispatcher, Callable<Boolean> participation,
+        JSONObject group, FolioleCompanionSyncGroupDataBridge bridge,
+        FolioleCompanionCurrentGroupCredential credential
     ) throws Exception {
-        JSONObject group = call.getData().getJSONObject(key(context, "group"));
-        FolioleCompanionSyncGroupDataBridge bridge = FolioleCompanionSyncGroupDataBridge.current();
-        bridge.replaceDispatcher(dispatcher);
+        boolean participating = participation.call();
         dataBridge = bridge;
-        FolioleCompanionCurrentGroupCredential credential =
-            FolioleCompanionCurrentGroupCredential.load(group.getString("group_id"));
         String authorizationId = value(context, call, "authorizationId");
         if (!credential.authorizationId.equals(authorizationId)) {
             throw new SecurityException("sync_group_local_authorization_mismatch");
