@@ -25,39 +25,38 @@ it('proves both directions and restarts before accepting A and B convergence', a
   const events = [];
   const sessions = [session(events, 'first'), session(events, 'restarted')];
   const result = await runABConvergenceJourney({
-    closeTransport: async () => { events.push('transport-closed'); },
     createAndroidFact: async () => { events.push('b-fact-created'); return { factText: 'B fact' }; },
     createDesktopFact: async () => { events.push('a-fact-created'); return { factId: 'A fact' }; },
     inspectAndroidReceived: async () => { events.push('b-received-inspected'); },
     inspectRestarted: async () => { events.push('restart-inspected'); return { restarted: true }; },
     openSession: async () => sessions.shift(),
-    openTransport: async () => { events.push('transport-opened'); },
     restartAndroid: async () => { events.push('b-restarted'); },
-    startAndroid: async () => { events.push('b-started'); },
-    stopAndroid: async () => { events.push('b-stopped'); },
+    syncDesktopFact: async () => { events.push('a-sync-now'); events.push('a-fact-on-b'); },
     syncAndroidFact: async () => { events.push('b-sync-now'); events.push('b-fact-on-a'); },
-    waitForAndroidFact: async () => { events.push('a-fact-on-b'); }
   });
   expect(result.proof).toEqual({ restarted: true });
   expect(events).toEqual([
-    'first-enabled', 'a-fact-created', 'b-stopped', 'transport-opened', 'b-started',
-    'a-fact-on-b', 'transport-closed', 'b-fact-created', 'b-sync-now', 'b-fact-on-a',
+    'first-enabled', 'a-fact-created', 'a-sync-now', 'a-fact-on-b',
+    'b-fact-created', 'b-sync-now', 'b-fact-on-a',
     'b-received-inspected', 'first-closed',
     'b-restarted', 'restart-inspected', 'restarted-closed'
   ]);
 });
 
-it('closes transport and desktop session when A to B convergence fails', async () => {
+it('routes both convergence directions through the public Sync Now action', () => {
+  const source = fs.readFileSync('scripts/sync-group/multi-device-sync-ab-convergence.mjs', 'utf8');
+  expect(source.match(/action: 'sync-now'/gu)).toHaveLength(2);
+  expect(source).not.toContain('openMacosAcceptanceTransport');
+});
+
+it('closes the desktop session when public A to B sync fails', async () => {
   const events = [];
   await expect(runABConvergenceJourney({
-    closeTransport: async () => { events.push('transport-closed'); },
     createDesktopFact: async () => ({ factId: 'A fact' }),
     openSession: async () => session(events, 'first'),
-    openTransport: async () => { events.push('transport-opened'); },
-    startAndroid: async () => {}, stopAndroid: async () => {},
-    waitForAndroidFact: async () => { throw new Error('missing'); }
+    syncDesktopFact: async () => { throw new Error('missing'); }
   })).rejects.toThrow('missing');
-  expect(events).toEqual(['first-enabled', 'transport-opened', 'transport-closed', 'first-closed']);
+  expect(events).toEqual(['first-enabled', 'first-closed']);
 });
 
 it('reads the exact A and B pre-join fact identities for the final union proof', async () => {

@@ -10,8 +10,7 @@ import { runMacosA5SyncGroupMaintenance } from './a5-sync-group-action.mjs';
 import { openMacosPairSyncDesktopSession } from '../android/macos-pair-sync-desktop-session.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import {
-  closeMacosAcceptanceTransport, macosAcceptanceEnv, macosAcceptanceSessionOptions,
-  openMacosAcceptanceTransport
+  macosAcceptanceEnv, macosAcceptanceSessionOptions
 } from './multi-device-sync-macos-channel.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 import {
@@ -22,7 +21,6 @@ const APP_ID = 'com.foliole.android';
 
 export async function runABConvergenceJourney(actions) {
   let session;
-  let transportOpen = false;
   try {
     session = await actions.openSession();
     const listener = await session.enable();
@@ -30,14 +28,8 @@ export async function runABConvergenceJourney(actions) {
       throw productFailure('macos-a', 'a_product_listener_unavailable', 'MacOS A sync listener is unavailable.');
     }
     const desktopFact = await actions.createDesktopFact(session);
-    await actions.stopAndroid();
-    await actions.openTransport();
-    transportOpen = true;
-    await actions.startAndroid();
-    await actions.waitForAndroidFact(desktopFact.factId);
+    await actions.syncDesktopFact(desktopFact.factId);
     actions.reportProgress?.('a-fact-synced-to-b');
-    await actions.closeTransport();
-    transportOpen = false;
     const androidFact = await actions.createAndroidFact();
     const desktopReceived = await actions.syncAndroidFact(session, androidFact.factId);
     const androidConverged = await actions.inspectAndroidReceived(desktopFact, androidFact);
@@ -53,7 +45,6 @@ export async function runABConvergenceJourney(actions) {
     actions.reportProgress?.('a-b-bidirectional-converged');
     return { androidFact, desktopFact, proof };
   } finally {
-    if (transportOpen) await actions.closeTransport().catch(() => undefined);
     await session?.close().catch(() => undefined);
   }
 }
@@ -76,9 +67,6 @@ export async function proveABConvergence({ execute, reportProgress, repoRoot, ru
   const evidenceRoot = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId,
     'a-b-convergence');
   fs.mkdirSync(evidenceRoot, { recursive: true });
-  const runTransport = async (args, stage) => checked(
-    execute, paths.adb, ['-s', A5_SERIAL, ...args], { env, timeoutMs: 30_000 }, stage
-  );
   const sessionOptions = macosAcceptanceSessionOptions({
     libraryHome: path.join(owned.root, 'library'), repoRoot,
     runtimeRoot: owned.root
@@ -86,7 +74,6 @@ export async function proveABConvergence({ execute, reportProgress, repoRoot, ru
   const startAndroid = () => startMacosA5SyncGroupApprovalProvider({ execute,
     onProviderStopped: async () => {}, onReady: async () => {}, paths, env });
   const result = await runABConvergenceJourney({
-    closeTransport: () => closeMacosAcceptanceTransport(runTransport),
     createAndroidFact: () => createAndroidFact({ env, evidenceRoot, execute, paths, runId }),
     createDesktopFact: (session) => createDesktopSyncGroupJourneyFact({
       device: 'A', evidenceRoot: path.join(evidenceRoot, 'a-fact'), session
@@ -98,14 +85,12 @@ export async function proveABConvergence({ execute, reportProgress, repoRoot, ru
       paths, desktopFact.factId, androidFact.factText
     ),
     openSession: () => openMacosPairSyncDesktopSession(sessionOptions),
-    openTransport: () => openMacosAcceptanceTransport(runTransport),
     reportProgress,
     restartAndroid: async () => { await stopAndroid(execute, paths, env); await startAndroid(); },
-    startAndroid,
-    stopAndroid: () => stopAndroid(execute, paths, env),
+    syncDesktopFact: (factId) => syncDesktopFact({ env, evidenceRoot, execute,
+      factId, paths, runId }),
     syncAndroidFact: (session, factId) => syncAndroidFact({ env, evidenceRoot, execute,
       factId, paths, runId, session }),
-    waitForAndroidFact: (factId) => waitForAndroidJourneyFact(paths, factId),
   });
   const evidenceRef = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/proofs', `${runId}-a-b.json`);
   fs.mkdirSync(path.dirname(evidenceRef), { recursive: true });
@@ -121,6 +106,14 @@ async function syncAndroidFact({ env, evidenceRoot, execute, factId, paths, runI
   const result = await runMacosA5SyncGroupMaintenance({ action: 'sync-now',
     buildIdentity: runId, env, evidenceRoot: path.join(evidenceRoot, 'b-sync'), execute,
     installMain: false, observeWhileTransportOpen: () => waitForDesktopFact(session, factId),
+    paths, serial: A5_SERIAL });
+  return result.observation;
+}
+
+async function syncDesktopFact({ env, evidenceRoot, execute, factId, paths, runId }) {
+  const result = await runMacosA5SyncGroupMaintenance({ action: 'sync-now',
+    buildIdentity: runId, env, evidenceRoot: path.join(evidenceRoot, 'a-sync'), execute,
+    installMain: false, observeWhileTransportOpen: () => waitForAndroidJourneyFact(paths, factId),
     paths, serial: A5_SERIAL });
   return result.observation;
 }
