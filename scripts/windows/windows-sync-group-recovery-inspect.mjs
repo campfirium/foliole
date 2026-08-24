@@ -48,16 +48,16 @@ function journeyFactUpdates(database) {
 }
 
 function peerProgress(database) {
-  const cursors = database.prepare(`SELECT peer_id, stream_name, cursor_value
-    FROM sync_peer_cursors ORDER BY stream_name, peer_id`).all();
+  const cursors = database.prepare(`SELECT authorization_id, stream_name, cursor_value
+    FROM sync_peer_cursors ORDER BY stream_name, authorization_id`).all();
   const deliveryRows = database.prepare(`SELECT status, COUNT(*) AS count
     FROM sync_delivery_receipts GROUP BY status ORDER BY status`).all();
   const receiveCursor = cursors.filter(({ stream_name }) => stream_name === 'state')
     .reduce((maximum, { cursor_value }) => Math.max(maximum, Number(cursor_value) || 0), 0);
   return {
     deliveryStatusCounts: Object.fromEntries(deliveryRows.map(({ count, status }) => [status, Number(count)])),
-    peerCursors: cursors.map(({ cursor_value, peer_id, stream_name }) => ({
-      cursorValue: cursor_value, peerFingerprint: identityFingerprint(peer_id), streamName: stream_name
+    peerCursors: cursors.map(({ authorization_id, cursor_value, stream_name }) => ({
+      cursorValue: cursor_value, peerFingerprint: identityFingerprint(authorization_id), streamName: stream_name
     })),
     receiveCursor
   };

@@ -40,5 +40,12 @@ it('reads the desktop receive cursor from the stable state stream', () => {
   const inspector = fs.readFileSync(
     'scripts/windows/windows-sync-group-recovery-inspect.mjs', 'utf8'
   );
+  const androidEvidence = fs.readFileSync(
+    'scripts/sync-group/multi-device-sync-from-zero-evidence.mjs', 'utf8'
+  );
   expect(inspector).toContain("stream_name === 'state'");
+  for (const source of [inspector, androidEvidence]) {
+    expect(source).toContain('SELECT authorization_id, stream_name, cursor_value');
+    expect(source).not.toContain('SELECT peer_id, stream_name, cursor_value');
+  }
 });

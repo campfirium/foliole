@@ -15,9 +15,9 @@ import { assertExactDatasetConvergence } from './sync-scenario-predicate.mjs';
 const APP_ID = 'com.foliole.android';
 
 function peerProgress(database) {
-  return database.prepare(`SELECT peer_id, stream_name, cursor_value FROM sync_peer_cursors
-    ORDER BY stream_name, peer_id`).all().map(({ cursor_value, peer_id, stream_name }) => ({
-    cursorValue: cursor_value, peerFingerprint: identityFingerprint(peer_id), streamName: stream_name
+  return database.prepare(`SELECT authorization_id, stream_name, cursor_value FROM sync_peer_cursors
+    ORDER BY stream_name, authorization_id`).all().map(({ authorization_id, cursor_value, stream_name }) => ({
+    cursorValue: cursor_value, peerFingerprint: identityFingerprint(authorization_id), streamName: stream_name
   }));
 }
 
