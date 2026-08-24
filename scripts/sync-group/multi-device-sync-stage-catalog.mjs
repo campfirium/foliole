@@ -24,7 +24,7 @@ const stages = [
     progressDeadlineMs: PRODUCT_PROGRESS_DEADLINE, siblings: [] },
   { action: 'admit-c', host: 'all', inputs: ['a_b_group_active'], name: 'b-admit-c',
     hardDeadlineMs: 20 * 60_000, hosts: ['macos-a', 'android-b', 'windows-c'],
-    milestones: ['a-listener-ready', 'b-provider-stopped', 'b-transport-ready', 'a-fact-created',
+    milestones: ['b-provider-stopped', 'b-transport-ready', 'a-listener-ready', 'a-fact-created',
       'b-fact-received', 'a-offline', 'c-join-started', 'b-approval-completed',
       'c-ordinary-sync-completed'], outputs: ['b_c_group_active'],
     progressDeadlineMs: WINDOWS_C_JOIN_DEADLINE + CONTROL_DEADLINE,

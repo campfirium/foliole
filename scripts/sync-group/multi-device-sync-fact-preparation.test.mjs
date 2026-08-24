@@ -30,13 +30,13 @@ it('creates on A after B readiness, proves receipt, takes A offline, then starts
     waitForFact: async (factId) => { events.push(`b-received-${factId}`); }
   });
   expect(events).toEqual([
-    'a-listener-ready', 'b-provider-stopped', 'b-transport-open', 'b-started', 'a-fact-created',
+    'b-provider-stopped', 'b-transport-open', 'b-started', 'a-listener-ready', 'a-fact-created',
     'b-received-fact-a',
     'b-transport-closed', 'a-offline', 'c-started', 'c-approved', 'b-received-c-fact'
   ]);
   expect(close).toHaveBeenCalledTimes(1);
   expect(milestones).toEqual([
-    'a-listener-ready', 'b-provider-stopped', 'b-transport-ready', 'a-fact-created',
+    'b-provider-stopped', 'b-transport-ready', 'a-listener-ready', 'a-fact-created',
     'b-fact-received', 'a-offline', 'c-join-started', 'b-approval-completed'
   ]);
   expect(result).toMatchObject({ approval: 'approval', windows: 'windows' });
@@ -76,18 +76,22 @@ it('does not open transport before the B provider lifecycle is stopped', async (
 
 it('stops before product mutation when the A listener is not ready', async () => {
   const close = vi.fn(async () => undefined);
+  const closeTransport = vi.fn(async () => undefined);
   const createFact = vi.fn();
   const openTransport = vi.fn();
   await expect(runAOfflineAdmissionPrelude({
-    closeTransport: vi.fn(), createFact,
+    closeTransport, createFact,
     openSession: async () => ({ close, enable: async () => ({
       server_status: { state: 'stopped' }, sync_enabled: true
     }) }),
-    openTransport, runApproval: vi.fn(), startWindows: vi.fn(), waitForFact: vi.fn()
+    openTransport, runApproval: async ({ onProviderStopped, onReady }) => {
+      await onProviderStopped(); await onReady();
+    }, startWindows: vi.fn(), waitForFact: vi.fn()
   })).rejects.toMatchObject({
     failureOwner: 'controller', host: 'macos-a', missingFact: 'a_product_listener_unavailable'
   });
   expect(createFact).not.toHaveBeenCalled();
-  expect(openTransport).not.toHaveBeenCalled();
+  expect(openTransport).toHaveBeenCalledOnce();
+  expect(closeTransport).toHaveBeenCalledOnce();
   expect(close).toHaveBeenCalledOnce();
 });
