@@ -4,8 +4,6 @@ import { isSyncRunFinishedEvent } from '../shared/platform/companionSyncActivity
 import { AppSpinner } from '../shared/ui';
 
 import type { CompanionManualSyncAction } from './companionManualSyncAction';
-import { useCompanionSyncGroupProviderAvailability } from './companionSyncGroupProviderAvailability';
-
 export function CompanionSyncNowButton(props: {
   isSyncing: boolean;
   manualSyncAction?: CompanionManualSyncAction | null;
@@ -14,7 +12,6 @@ export function CompanionSyncNowButton(props: {
   onSync(): void;
 }) {
   const t = useTranslation();
-  const providerAvailable = useCompanionSyncGroupProviderAvailability();
   const busy = props.isSyncing || Boolean(props.manualSyncAction);
   const terminalEvent = props.syncEvents?.find(isSyncRunFinishedEvent) ?? null;
   const label = props.manualSyncAction?.mode === 'joined'
@@ -30,7 +27,7 @@ export function CompanionSyncNowButton(props: {
       data-sync-terminal-result={terminalEvent?.result}
       data-sync-terminal-run-id={terminalEvent?.run_id}
       data-sync-terminal-started-at={terminalEvent?.started_at}
-      disabled={busy || !providerAvailable}
+      disabled={busy}
       data-testid="companion-sync-now"
       onClick={props.onSync}
       type="button"

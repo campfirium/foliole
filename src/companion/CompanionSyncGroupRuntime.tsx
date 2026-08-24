@@ -6,7 +6,6 @@ import {
   getCompanionSyncMutationRevision,
   subscribeCompanionSyncMutationRevision
 } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
-import { reconcileCompanionSyncGroupProvider } from '../shared/platform/companion/sync/syncGroupProvider';
 import { loadCompanionSyncGroup } from '../shared/platform/companion/sync/syncGroupStore';
 import {
   isNativeCompanionSyncGroupRuntime,
@@ -14,6 +13,7 @@ import {
 } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
 import { publishCompanionSyncGroupProviderAvailability } from './companionSyncGroupProviderAvailability';
+import { startCompanionSyncGroupProviderLifecycle } from './companionSyncGroupProviderLifecycle';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 const CompanionSyncGroupContext = createContext<SyncGroupPayload | null>(null);
@@ -54,7 +54,7 @@ export function CompanionSyncGroupRuntime(props: {
     let cancelled = false;
     const factsRevision = `${mutationRevision}:${workspaceSync.state.last_synced_at ?? ''}`;
     publishCompanionSyncGroupProviderAvailability(false);
-    void reconcileCompanionSyncGroupProvider(
+    void startCompanionSyncGroupProviderLifecycle(
       bootstrapState, group, factsRevision
     ).then(() => {
       if (!cancelled) publishCompanionSyncGroupProviderAvailability(true);

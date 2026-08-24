@@ -4,6 +4,7 @@ import type { SyncGroupPayload } from '../../lib/platform/syncGroupContract';
 import { definedProps } from '../shared/lib/definedProps';
 
 import { useCompanionHandoffReminderRuntime } from './CompanionHandoffReminderRuntime';
+import { ensureCompanionSyncGroupProviderForPublicAction } from './companionSyncGroupProviderLifecycle';
 import { useCompanionSyncGroupRuntime } from './CompanionSyncGroupRuntime';
 import { CompanionSyncPanel } from './CompanionSyncPanel';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
@@ -40,7 +41,12 @@ function buildSyncPanelProps(args: {
     onCompletePairing: workspaceSync.completePairing,
     onDisconnectPairing: workspaceSync.disconnectPairing,
     onOpenSettingsPage: args.onOpenSettingsPage ?? (() => undefined),
-    onPull: workspaceSync.pullFromDesktop,
+    onPull: async (endpointUrl: string) => {
+      await ensureCompanionSyncGroupProviderForPublicAction(
+        workspaceSync.bootstrapState, workspaceSync.state.last_synced_at
+      );
+      return workspaceSync.pullFromDesktop(endpointUrl);
+    },
     onRemoveRememberedTarget: workspaceSync.removeRememberedTarget,
     onRequestPairing: workspaceSync.requestPairing,
     onSaveEndpoint: workspaceSync.saveEndpoint,
