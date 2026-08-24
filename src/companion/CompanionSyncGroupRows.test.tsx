@@ -3,7 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../shared/localization/testLocalization';
 
-import { CompanionSyncGroupRows } from './CompanionSyncGroupRows';
+import { CompanionSyncGroupRows, useSyncGroupProviderState } from './CompanionSyncGroupRows';
 
 const providerMocks = vi.hoisted(() => ({ approve: vi.fn(), load: vi.fn(), reject: vi.fn(), setPaused: vi.fn() }));
 const group = {
@@ -23,6 +23,10 @@ vi.mock('../shared/platform/companion/sync/syncGroupProvider', () => ({
   setCompanionSyncPaused: providerMocks.setPaused
 }));
 
+function Subject() {
+  return <CompanionSyncGroupRows group={group} provider={useSyncGroupProviderState()} />;
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   const state = {
@@ -40,7 +44,7 @@ beforeEach(() => {
 });
 
 it('shows persistent membership and keeps Leave independent from participation controls', async () => {
-  renderWithLocalization(<CompanionSyncGroupRows group={group} />);
+  renderWithLocalization(<Subject />);
 
   expect(screen.getByText("Studio's Sync Group")).toBeInTheDocument();
   expect(screen.getByText('Pixel')).toBeInTheDocument();
@@ -57,7 +61,7 @@ it('shows persistent membership and keeps Leave independent from participation c
 
 it('keeps a join request actionable when approval fails', async () => {
   providerMocks.approve.mockRejectedValue(new Error('native approval failed'));
-  renderWithLocalization(<CompanionSyncGroupRows group={group} />);
+  renderWithLocalization(<Subject />);
 
   fireEvent.click(await screen.findByTestId('companion-sync-group-approve'));
 

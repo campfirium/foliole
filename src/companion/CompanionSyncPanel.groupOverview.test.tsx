@@ -1,11 +1,30 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { expect, it } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { SyncGroupMemberPayload } from '../../lib/platform/syncGroupContract';
 
 import { CompanionSyncGroupOverview } from './CompanionSyncGroupOverview';
 import { CompanionSyncPanel } from './CompanionSyncPanel';
 import { createConnectedProps } from './CompanionSyncPanel.connected.testSupport';
+
+const providerMocks = vi.hoisted(() => ({ approve: vi.fn(), load: vi.fn(), reject: vi.fn(), setPaused: vi.fn() }));
+
+vi.mock('../shared/platform/companion/sync/syncGroupProvider', () => ({
+  approveCompanionSyncGroupJoinRequest: providerMocks.approve,
+  loadCompanionSyncGroupProviderState: providerMocks.load,
+  rejectCompanionSyncGroupJoinRequest: providerMocks.reject,
+  setCompanionSyncPaused: providerMocks.setPaused
+}));
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  providerMocks.load.mockResolvedValue({
+    lifecycle_active: true, participating: true, pending_requests: [{
+      host_name: 'Joining Windows', host_platform: 'win32', pair_request_id: 'pair-c',
+      requested_at: '2026-08-24T00:00:00.000Z'
+    }], port: 38642, state: 'running', sync_enabled: true, sync_paused: false
+  });
+});
 
 function member(hostName: string, kind: string, name: string, state: 'active' | 'left'): SyncGroupMemberPayload {
   return {
@@ -22,7 +41,7 @@ function renderDevicePriority(members: SyncGroupMemberPayload[]) {
   }} isSyncing={false} onOpen={() => undefined} sourceHostName={null} />);
 }
 
-it('keeps transient pipeline details out of the Sync Group overview', () => {
+it('keeps join approval on the public Sync Group overview', async () => {
   const props = createConnectedProps();
   render(
     <CompanionSyncPanel
@@ -57,6 +76,8 @@ it('keeps transient pipeline details out of the Sync Group overview', () => {
   );
 
   expect(screen.getByText('Current Sync Group')).toBeInTheDocument();
+  expect(await screen.findByText('Joining Windows')).toBeInTheDocument();
+  expect(screen.getByTestId('companion-sync-group-approve')).toBeVisible();
   expect(screen.getByText("Maci's Sync Group")).toBeInTheDocument();
   expect(screen.getByTestId('companion-sync-group-device')).toHaveTextContent(/^MacimacOS/);
   expect(screen.queryByText('A5')).not.toBeInTheDocument();

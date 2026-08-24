@@ -11,12 +11,13 @@ import {
 } from '../shared/platform/companion/sync/syncGroupProvider';
 import type { CompanionSyncGroupProviderState } from '../shared/platform/companionWorkspaceSyncPluginTypes';
 
-function useSyncGroupProviderState() {
+export function useSyncGroupProviderState(enabled = true) {
   const [state, setState] = useState<CompanionSyncGroupProviderState | null>(null);
   const refresh = useCallback(() => {
     void loadCompanionSyncGroupProviderState().then(setState).catch(() => setState(null));
   }, []);
   useEffect(() => {
+    if (!enabled) return undefined;
     refresh();
     const timer = window.setInterval(refresh, 2_000);
     return () => window.clearInterval(timer);
@@ -73,6 +74,15 @@ function PendingSyncGroupJoinRequest(props: {
       </p> : null}
     </div>
   );
+}
+
+export function CompanionSyncGroupJoinApproval(props: {
+  provider: ReturnType<typeof useSyncGroupProviderState>;
+}) {
+  const request = props.provider.state?.pending_requests[0];
+  return request
+    ? <PendingSyncGroupJoinRequest onState={props.provider.setState} request={request} />
+    : null;
 }
 
 function LeaveSyncGroup() {
@@ -161,13 +171,14 @@ function SyncGroupDevices(props: {
   );
 }
 
-export function CompanionSyncGroupRows(props: { group: SyncGroupPayload }) {
+export function CompanionSyncGroupRows(props: {
+  group: SyncGroupPayload;
+  provider: ReturnType<typeof useSyncGroupProviderState>;
+}) {
   const t = useTranslation();
-  const provider = useSyncGroupProviderState();
-  const pendingRequest = provider.state?.pending_requests[0];
   function togglePause() {
-    if (!provider.state) return;
-    void setCompanionSyncPaused(!provider.state.sync_paused).then(provider.refresh);
+    if (!props.provider.state) return;
+    void setCompanionSyncPaused(!props.provider.state.sync_paused).then(props.provider.refresh);
   }
   return (
     <section className="border-y border-companion-divider text-foreground">
@@ -177,10 +188,8 @@ export function CompanionSyncGroupRows(props: { group: SyncGroupPayload }) {
         </h2>
         <LeaveSyncGroup />
       </div>
-      {pendingRequest ? (
-        <PendingSyncGroupJoinRequest onState={provider.setState} request={pendingRequest} />
-      ) : null}
-      <SyncGroupDevices group={props.group} onTogglePause={togglePause} providerState={provider.state} />
+      <CompanionSyncGroupJoinApproval provider={props.provider} />
+      <SyncGroupDevices group={props.group} onTogglePause={togglePause} providerState={props.provider.state} />
     </section>
   );
 }
