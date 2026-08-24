@@ -3,8 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {
-  PAIR_SYNC_RECOVERY_APP_ID, PAIR_SYNC_RECOVERY_EVIDENCE_FILES, PAIR_SYNC_RECOVERY_MAIN_COMPONENT,
-  PAIR_SYNC_RECOVERY_TEST_APP_ID, PAIR_SYNC_RECOVERY_TEST_CLASS,
+  PAIR_SYNC_RECOVERY_EVIDENCE_FILES, PAIR_SYNC_RECOVERY_TEST_APP_ID, PAIR_SYNC_RECOVERY_TEST_CLASS,
   PAIR_SYNC_RECOVERY_TEST_RUNNER, pairSyncRecoveryArtifactPaths,
   createPairSyncRecoveryEvidenceTracker, pairSyncRecoveryFailure,
   pairSyncRecoveryModeArgs, pairSyncRecoveryRequiresApproval, parsePairSyncRecoveryInstrumentationResult
@@ -129,14 +128,8 @@ export async function runA5PairSyncFeatureJourney({
     const instrumentation = await instrumentationPromise;
     output.push(instrumentation.output);
     receipt = recoveryEvidence.complete(parsePairSyncRecoveryInstrumentationResult(instrumentation));
-    await checked(execute, paths.adbPath,
-      ['-P', adbPort, '-s', serial, 'shell', 'am', 'force-stop', PAIR_SYNC_RECOVERY_APP_ID],
-      options(env, 'pair_sync_restart_timeout', 30_000), 'pair-sync-restart');
-    await checked(execute, paths.adbPath,
-      ['-P', adbPort, '-s', serial, 'shell', 'am', 'start', '-W', '-n', PAIR_SYNC_RECOVERY_MAIN_COMPONENT],
-      options(env, 'pair_sync_restart_timeout', 60_000), 'pair-sync-restart');
     const android = await postPairSyncRecoveryReadiness({
-      adbPort, env, paths, quiesceProvider: true, serial,
+      adbPort, env, maxAttempts: 1, paths, serial,
       run: (command, args, commandOptions, stage) => checked(
         execute, command, args, commandOptions, stage
       )

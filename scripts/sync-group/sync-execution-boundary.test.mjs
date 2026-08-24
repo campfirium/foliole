@@ -33,3 +33,13 @@ it('routes an injected host failure only after it reaches the scenario boundary'
   expect(boundary).toContain("error.failureAxis === 'proof' ? 'product'");
   expect(boundary).toContain("error.executionOwner === 'environment' ? 'environment' : 'controller'");
 });
+
+it('keeps pairing foreground state intact until public Sync Now owns the next runtime', () => {
+  const journey = read('scripts/sync-group/pair-sync-feature-journey.mjs');
+  const afterPair = journey.slice(journey.indexOf('receipt = recoveryEvidence.complete('),
+    journey.indexOf('const desktop = session.sanitize('));
+  expect(afterPair).not.toContain("'force-stop'");
+  expect(afterPair).not.toContain("'am', 'start'");
+  expect(afterPair).not.toContain('quiesceProvider: true');
+  expect(afterPair).toContain('maxAttempts: 1');
+});

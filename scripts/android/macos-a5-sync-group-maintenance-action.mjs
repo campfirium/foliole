@@ -51,9 +51,6 @@ export async function runMacosA5InstrumentationMechanics({
   const output = [];
   let reverseCreated = false; let testInstalled = false;
   try {
-    if (needsTransport) output.push((await checked(execute, paths.adb,
-      ['-s', serial, 'shell', 'am', 'force-stop', APP_ID],
-      options, 'transport app stop')).output);
     if (installMain) output.push((await checked(execute, paths.adb,
       ['-s', serial, 'install', '-r', paths.apk], options, 'main install')).output);
     output.push((await checked(execute, paths.adb,
