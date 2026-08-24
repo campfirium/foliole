@@ -119,7 +119,8 @@ export async function runMacosA5InstrumentationMechanics({
     return { evidencePath, observation, output: output.join(''), stdout: instrumentation.stdout };
   } catch (error) {
     const providerLog = await execute(paths.adb, [
-      '-s', serial, 'logcat', '-d', '-v', 'time', 'FolioleSyncProvider:V', '*:S'
+      '-s', serial, 'logcat', '-d', '-v', 'time',
+      'FolioleSyncProvider:V', 'FolioleSyncDiscovery:V', '*:S'
     ], { env, timeoutMs: 30_000 }).catch(() => null);
     if (providerLog) fs.writeFileSync(
       path.join(evidenceRoot, 'android-provider.log'), providerLog.output, 'utf8'

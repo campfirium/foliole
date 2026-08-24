@@ -2,6 +2,7 @@ package com.foliole.android;
 
 import android.content.Context;
 import android.os.Build;
+import android.util.Log;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -10,6 +11,8 @@ import com.getcapacitor.PluginCall;
 import org.json.JSONArray;
 
 final class FolioleCompanionNetworkPluginActions {
+    private static final String DISCOVERY_LOG_TAG = "FolioleSyncDiscovery";
+
     private FolioleCompanionNetworkPluginActions() {}
 
     static void desktopHttpRequest(Context context, PluginCall call) {
@@ -43,21 +46,30 @@ final class FolioleCompanionNetworkPluginActions {
     static void loadDiscoveryCandidates(Context context, PluginCall call) {
         new Thread(() -> {
             try {
+                Log.d(DISCOVERY_LOG_TAG, "Candidate request started");
                 JSArray candidates = new JSArray();
-                for (String endpointUrl : FolioleCompanionSyncGroupOutboundPeerStore.discoveryEndpointUrls(context)) {
+                java.util.List<String> endpoints =
+                    FolioleCompanionSyncGroupOutboundPeerStore.discoveryEndpointUrls(context);
+                Log.d(DISCOVERY_LOG_TAG, "Stored route candidates=" + endpoints.size());
+                for (String endpointUrl : endpoints) {
                     addDirectEndpointCandidate(context, candidates, endpointUrl);
                 }
                 if (isEmulator(context)) {
                     addDirectHostCandidate(context, candidates,
                         FolioleCompanionHostBridgeContractDefinitions.networkEmulatorHost(context));
                 }
-                for (JSObject candidate : FolioleCompanionNsdDiscovery.discoverCandidates(context)) {
+                java.util.List<JSObject> discovered = FolioleCompanionNsdDiscovery.discoverCandidates(context);
+                Log.d(DISCOVERY_LOG_TAG, "NSD candidates=" + discovered.size());
+                for (JSObject candidate : discovered) {
                     candidates.put(candidate);
                 }
                 JSObject result = new JSObject();
                 result.put(FolioleCompanionHostBridgeContractDefinitions.networkCandidatesResponseKey(context), candidates);
                 call.resolve(result);
+                Log.d(DISCOVERY_LOG_TAG, "Candidate request resolved total=" + candidates.length());
             } catch (Exception exception) {
+                Log.w(DISCOVERY_LOG_TAG,
+                    "Candidate request rejected: " + exception.getClass().getSimpleName());
                 call.reject(FolioleCompanionPluginErrors.withCause("Failed to load companion discovery candidates.", exception), exception);
             }
         }).start();
