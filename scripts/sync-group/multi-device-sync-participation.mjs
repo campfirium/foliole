@@ -188,7 +188,7 @@ function createContext(options) {
     inspectMac: (ids) => macosFacts(execute, repoRoot, databasePath, ids),
     openSession: () => openMacosPairSyncDesktopSession(macosAcceptanceSessionOptions({ env,
       libraryHome: path.join(owned.root, 'library'), repoRoot,
-      runtimeRoot: paths.desktopRuntimeRoot })),
+      runtimeRoot: owned.root })),
     paths, reportProgress, repoRoot, runId, serial: A5_SERIAL };
 }
 

@@ -95,5 +95,6 @@ it('keeps multi-device Mac consumers on the source-bound hidden credential sessi
   for (const source of consumers) {
     expect(source).not.toContain('userDataPath');
     expect(source).toContain('runtimeRoot');
+    expect(source).toContain('owned.root');
   }
 });

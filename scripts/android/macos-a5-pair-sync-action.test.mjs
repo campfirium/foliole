@@ -131,3 +131,21 @@ it('forwards only Host and authorization routing to the shared recovery action',
   await expect(result.waitForPairRequest({ load }, 'A5', recoveryWindow))
     .resolves.toMatchObject({ pair_request_id: 'pair-1' });
 });
+
+it('keeps an action-local hidden credential session when the controller owns one', async () => {
+  const runPairSyncRecovery = vi.fn(async (args) => args);
+  const openDesktopSession = vi.fn(async (options) => options);
+  const result = await runMacosA5PairSync({
+    buildIdentity: 'build-1', credentialRepairRequired: false, env: {},
+    evidenceRoot: '.tmp/evidence', execute: vi.fn(), existingPairing: false,
+    hostName: 'A5', openDesktopSession,
+    paths: { adb: '/adb', buildRoot: '/repo', desktopDevLibrary: '/controller-library',
+      desktopRuntimeRoot: '/daily-runtime' },
+    runPairSyncRecovery, runtimeRoot: '/owned-run', serial: 'fixed-a5'
+  });
+
+  await result.openDesktopSession({ env: {}, repoRoot: '/repo' });
+  expect(openDesktopSession).toHaveBeenCalledWith(expect.objectContaining({
+    libraryHome: '/controller-library', runtimeRoot: '/owned-run'
+  }));
+});

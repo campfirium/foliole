@@ -95,7 +95,7 @@ async function admitC(repoRoot, runId, { reportProgress, signal, stage }) {
       }),
       openSession: () => openMacosPairSyncDesktopSession(macosAcceptanceSessionOptions({
         libraryHome: path.join(owned.root, 'library'), repoRoot,
-        runtimeRoot: paths.desktopRuntimeRoot
+        runtimeRoot: owned.root
       })),
       openTransport: () => openMacosAcceptanceTransport(runTransport),
       runApproval: (lifecycle) => runMacosA5SyncGroupApproval({

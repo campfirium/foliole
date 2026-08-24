@@ -88,7 +88,7 @@ export async function runMacosA5PairSync({
   openDesktopSession = openMacosPairSyncDesktopSession, openTransport, closeTransport,
   instrumentationModeArgs, pairedAuthorizationFingerprint, pairRequestIdentity,
   protectedSyncGroup, recoveryEvidenceGoal,
-  runPairSyncRecovery = runA5PairSyncFeatureJourney, serial,
+  runPairSyncRecovery = runA5PairSyncFeatureJourney, runtimeRoot, serial,
   validateDesktop
 }) {
   fs.mkdirSync(evidenceRoot, { recursive: true });
@@ -103,7 +103,7 @@ export async function runMacosA5PairSync({
     ...(closeTransport ? { closeTransport } : {}),
     openDesktopSession: (options) => openDesktopSession({
       ...options, libraryHome: libraryHome ?? paths.desktopDevLibrary,
-      runtimeRoot: paths.desktopRuntimeRoot
+      runtimeRoot: runtimeRoot ?? paths.desktopRuntimeRoot
     }),
     ...(openTransport ? { openTransport } : {}),
     ...(instrumentationModeArgs ? { instrumentationModeArgs } : {}),
