@@ -26,7 +26,7 @@ it('declares ordered milestones and deadlines that cover legal sibling waits', (
   });
   const stage = resolveStage('b-admit-c');
   expect(stage).toMatchObject({
-    milestones: ['a-listener-ready', 'a-fact-created', 'b-provider-stopped', 'b-transport-ready',
+    milestones: ['a-listener-ready', 'b-provider-stopped', 'b-transport-ready', 'a-fact-created',
       'b-fact-received', 'a-offline', 'c-join-started', 'b-approval-completed',
       'c-ordinary-sync-completed'],
     siblings: expect.arrayContaining([

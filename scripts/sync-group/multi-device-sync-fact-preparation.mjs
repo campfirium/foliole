@@ -12,6 +12,7 @@ export async function runAOfflineAdmissionPrelude({
     if (closed) return;
     closed = true; await session.close();
   };
+  let fact;
   let windowsWork;
   let windowsStarted;
   const windowsStart = new Promise((resolve) => { windowsStarted = resolve; });
@@ -23,8 +24,6 @@ export async function runAOfflineAdmissionPrelude({
       });
     }
     reportProgress('a-listener-ready');
-    const fact = await createFact(session);
-    reportProgress('a-fact-created');
     const approvalWork = runApproval({
       onProviderStopped: async () => {
         reportProgress('b-provider-stopped');
@@ -32,6 +31,8 @@ export async function runAOfflineAdmissionPrelude({
         transportOpen = true; reportProgress('b-transport-ready');
       },
       onReady: async () => {
+        fact = await createFact(session);
+        reportProgress('a-fact-created');
         await waitForFact(fact.factId);
         reportProgress('b-fact-received');
         await closeTransport();

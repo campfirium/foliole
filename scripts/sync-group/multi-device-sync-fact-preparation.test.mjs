@@ -2,7 +2,7 @@ import { expect, it, vi } from 'vitest';
 
 import { runAOfflineAdmissionPrelude } from './multi-device-sync-fact-preparation.mjs';
 
-it('creates on A, proves B received the fact, takes A offline, then starts C', async () => {
+it('creates on A after B readiness, proves receipt, takes A offline, then starts C', async () => {
   const events = [];
   const milestones = [];
   let releaseApproval;
@@ -30,13 +30,13 @@ it('creates on A, proves B received the fact, takes A offline, then starts C', a
     waitForFact: async (factId) => { events.push(`b-received-${factId}`); }
   });
   expect(events).toEqual([
-    'a-listener-ready', 'a-fact-created', 'b-provider-stopped', 'b-transport-open', 'b-started',
+    'a-listener-ready', 'b-provider-stopped', 'b-transport-open', 'b-started', 'a-fact-created',
     'b-received-fact-a',
     'b-transport-closed', 'a-offline', 'c-started', 'c-approved', 'b-received-c-fact'
   ]);
   expect(close).toHaveBeenCalledTimes(1);
   expect(milestones).toEqual([
-    'a-listener-ready', 'a-fact-created', 'b-provider-stopped', 'b-transport-ready',
+    'a-listener-ready', 'b-provider-stopped', 'b-transport-ready', 'a-fact-created',
     'b-fact-received', 'a-offline', 'c-join-started', 'b-approval-completed'
   ]);
   expect(result).toMatchObject({ approval: 'approval', windows: 'windows' });

@@ -14,8 +14,8 @@ const adapters = { 'android-b': ready, 'macos-a': ready, 'windows-c': ready };
 
 function actions(failAt = null) {
   const milestones = {
-    'admit-c': ['a-listener-ready', 'a-fact-created', 'b-provider-stopped',
-      'b-transport-ready', 'b-fact-received', 'a-offline', 'c-join-started',
+    'admit-c': ['a-listener-ready', 'b-provider-stopped', 'b-transport-ready',
+      'a-fact-created', 'b-fact-received', 'a-offline', 'c-join-started',
       'b-approval-completed', 'c-ordinary-sync-completed'],
     'establish-a-b': ['macos-group-created', 'a5-paired', 'a-b-synced'],
     'prepare-candidate': ['candidate-prepared']
