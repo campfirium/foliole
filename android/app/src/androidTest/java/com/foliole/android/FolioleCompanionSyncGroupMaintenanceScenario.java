@@ -35,8 +35,10 @@ final class FolioleCompanionSyncGroupMaintenanceScenario {
 
     static JSONObject syncNow(Instrumentation instrumentation, WebView webView) throws Exception {
         openSyncSettings(instrumentation, webView);
-        return clickEnabled(instrumentation, webView, "companion-sync-now")
-            .put("syncRequested", true);
+        JSONObject receipt = clickEnabled(instrumentation, webView, "companion-sync-now");
+        waitForEnabledState(instrumentation, webView, "companion-sync-now", false, 30_000);
+        waitForEnabledState(instrumentation, webView, "companion-sync-now", true, 30_000);
+        return receipt.put("syncRequested", true);
     }
 
     static JSONObject clearAppData(Instrumentation instrumentation, WebView webView) throws Exception {
@@ -99,19 +101,28 @@ final class FolioleCompanionSyncGroupMaintenanceScenario {
     private static JSONObject clickEnabled(
         Instrumentation instrumentation, WebView webView, String testId
     ) throws Exception {
-        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
+        waitForEnabledState(instrumentation, webView, testId, true, 30_000);
+        return click(instrumentation, webView, testId);
+    }
+
+    private static void waitForEnabledState(
+        Instrumentation instrumentation, WebView webView, String testId,
+        boolean expectedEnabled, long timeoutMs
+    ) throws Exception {
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
         while (System.nanoTime() < deadline) {
             JSONObject snapshot = FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView);
             for (int index = 0; index < snapshot.getJSONArray("elements").length(); index += 1) {
                 JSONObject item = snapshot.getJSONArray("elements").getJSONObject(index);
                 if (testId.equals(item.optString("testId"))
-                    && item.optBoolean("visible") && !item.optBoolean("disabled")) {
-                    return click(instrumentation, webView, testId);
+                    && item.optBoolean("visible")
+                    && item.optBoolean("disabled") != expectedEnabled) {
+                    return;
                 }
             }
             Thread.sleep(100);
         }
-        throw new IllegalStateException("Timed out waiting for enabled product state: " + testId);
+        throw new IllegalStateException("Timed out waiting for product action state: " + testId);
     }
 
     private static void waitUntilMissing(

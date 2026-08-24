@@ -145,7 +145,7 @@ it('activates persisted Sync participation through visible product controls', as
     'utf8'
   );
   expect(scenario).toContain('clickEnabled(instrumentation, webView, "companion-sync-toggle")');
-  expect(scenario).toContain('!item.optBoolean("disabled")');
+  expect(scenario).toContain('item.optBoolean("disabled") != expectedEnabled');
 });
 
 it('binds ordinary sync to the visible public Sync Now product action', () => {
@@ -161,6 +161,8 @@ it('binds ordinary sync to the visible public Sync Now product action', () => {
   expect(runner).toContain("'sync-now': ['syncsNowThroughProduct', 'syncRequested', true, false]");
   expect(test).toContain('syncsNowThroughProduct');
   expect(scenario).toContain('clickEnabled(instrumentation, webView, "companion-sync-now")');
+  expect(scenario).toContain('waitForEnabledState(instrumentation, webView, "companion-sync-now", false, 30_000)');
+  expect(scenario).toContain('waitForEnabledState(instrumentation, webView, "companion-sync-now", true, 30_000)');
   expect(scenario).toContain('put("syncRequested", true)');
 });
 
