@@ -5,42 +5,62 @@ import type { DesktopSyncGroupJoinCandidatePayload } from '../../lib/platform/na
 import { resolveCompanionMdnsIpv4Addresses } from './companionMdnsAdvertisement.js';
 import { loadSyncGroupRuntimeInstanceId } from './syncGroupRuntimeInstance.js';
 
-const DISCOVERY_MS = 1_800;
+const DISCOVERY_DEADLINE_MS = 60_000;
 const DISCOVERY_PROBE_MS = 2_000;
 type BonjourOptions = NonNullable<ConstructorParameters<typeof Bonjour>[0]> & { interface: string };
+type DiscoveryRuntime = {
+  bonjour: InstanceType<typeof Bonjour>;
+  browser: ReturnType<InstanceType<typeof Bonjour>['find']>;
+};
 type DiscoveredService = Parameters<NonNullable<Parameters<InstanceType<typeof Bonjour>['find']>[1]>>[0];
 
 export async function discoverDesktopSyncGroups(
   fetchDiscovery: typeof fetch = fetch
 ) {
   const localRuntimeInstanceId = loadSyncGroupRuntimeInstanceId();
-  const endpoints = new Map<string, { name: string; txt: Record<string, unknown> }>();
+  const probedEndpoints = new Set<string>();
+  const runtimes: DiscoveryRuntime[] = [];
+  let deadline: ReturnType<typeof setTimeout> | undefined;
+  let settled = false;
+  let settle: (candidates: DesktopSyncGroupJoinCandidatePayload[]) => void = () => undefined;
+  const result = new Promise<DesktopSyncGroupJoinCandidatePayload[]>((resolve) => { settle = resolve; });
+  const finish = (candidates: DesktopSyncGroupJoinCandidatePayload[]) => {
+    if (settled) return;
+    settled = true;
+    if (deadline) clearTimeout(deadline);
+    runtimes.forEach(({ bonjour, browser }) => {
+      browser.stop();
+      bonjour.destroy();
+    });
+    settle(selectStableGroupProviders(candidates));
+  };
   const collect = (service: DiscoveredService) => {
-    const txt = service.txt as Record<string, unknown>;
-    if (txt.runtime_instance_id === localRuntimeInstanceId) return;
-    const sourceAddress = service.referer?.address ?? '';
-    const host = /^\d+\.\d+\.\d+\.\d+$/.test(sourceAddress) ? sourceAddress :
-      service.addresses?.find((value) => /^\d+\.\d+\.\d+\.\d+$/.test(value));
-    if (!host || !service.port || typeof txt.group_id !== 'string' || typeof txt.group_tag !== 'string') return;
-    endpoints.set(`http://${host}:${service.port}`, { name: service.name, txt });
+    const endpoint = endpointForService(service, localRuntimeInstanceId);
+    if (!endpoint || probedEndpoints.has(endpoint.endpointUrl)) return;
+    probedEndpoints.add(endpoint.endpointUrl);
+    void probeCandidate(fetchDiscovery, endpoint.endpointUrl, endpoint.service, localRuntimeInstanceId)
+      .then((candidate) => { if (candidate) finish([candidate]); });
   };
   const addresses = resolveCompanionMdnsIpv4Addresses();
   const interfaces = addresses.length > 0 ? addresses : [null];
-  const runtimes = interfaces.map((networkInterface) => {
+  interfaces.forEach((networkInterface) => {
     const options = networkInterface ? { interface: networkInterface } as BonjourOptions : undefined;
     const bonjour = new Bonjour(options);
     const browser = bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, collect);
-    return { bonjour, browser };
+    runtimes.push({ bonjour, browser });
   });
-  await new Promise((resolve) => setTimeout(resolve, DISCOVERY_MS));
-  runtimes.forEach(({ bonjour, browser }) => {
-    browser.stop();
-    bonjour.destroy();
-  });
-  const candidates = (await Promise.all([...endpoints].map(([endpointUrl, service]) =>
-    probeCandidate(fetchDiscovery, endpointUrl, service, localRuntimeInstanceId)
-  ))).filter((candidate): candidate is DesktopSyncGroupJoinCandidatePayload => candidate !== null);
-  return selectStableGroupProviders(candidates);
+  deadline = setTimeout(() => finish([]), DISCOVERY_DEADLINE_MS);
+  return result;
+}
+
+function endpointForService(service: DiscoveredService, localRuntimeInstanceId: string) {
+  const txt = service.txt as Record<string, unknown>;
+  if (txt.runtime_instance_id === localRuntimeInstanceId) return null;
+  const sourceAddress = service.referer?.address ?? '';
+  const host = /^\d+\.\d+\.\d+\.\d+$/.test(sourceAddress) ? sourceAddress :
+    service.addresses?.find((value) => /^\d+\.\d+\.\d+\.\d+$/.test(value));
+  if (!host || !service.port || typeof txt.group_id !== 'string' || typeof txt.group_tag !== 'string') return null;
+  return { endpointUrl: `http://${host}:${service.port}`, service: { name: service.name, txt } };
 }
 
 async function probeCandidate(

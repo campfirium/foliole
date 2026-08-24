@@ -59,7 +59,7 @@ describe('desktop Sync Group discovery', () => {
         timeline_id: 'timeline-1'
       }
     });
-    await vi.advanceTimersByTimeAsync(1_800);
+    await vi.advanceTimersByTimeAsync(1);
 
     expect(runtime.constructorArgs).toEqual([
       [{ interface: '192.168.0.20' }], [{ interface: '10.0.0.20' }]
@@ -74,6 +74,19 @@ describe('desktop Sync Group discovery', () => {
       provider_host_platform: 'desktop',
       timeline_id: 'timeline-1'
     }]);
+    expect(runtime.stop).toHaveBeenCalledTimes(2);
+    expect(runtime.destroy).toHaveBeenCalledTimes(2);
+  });
+
+  it('uses the product deadline only as the no-candidate failure bound', async () => {
+    vi.useFakeTimers();
+    const discovery = discoverDesktopSyncGroups(vi.fn() as unknown as typeof fetch);
+
+    await vi.advanceTimersByTimeAsync(59_999);
+    expect(runtime.stop).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+
+    await expect(discovery).resolves.toEqual([]);
     expect(runtime.stop).toHaveBeenCalledTimes(2);
     expect(runtime.destroy).toHaveBeenCalledTimes(2);
   });
@@ -102,7 +115,7 @@ describe('desktop Sync Group provider selection', () => {
       referer: { address: '192.168.0.13' }, txt: {
         group_id: 'group-1', group_tag: 'tag-1', peer_id: 'device-b', timeline_id: 'timeline-1'
       } });
-    await vi.advanceTimersByTimeAsync(1_800);
+    await vi.advanceTimersByTimeAsync(1);
 
     await expect(discovery).resolves.toEqual([expect.objectContaining({
       endpoint_url: 'http://192.168.0.12:38641',
