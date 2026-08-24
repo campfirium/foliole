@@ -1,6 +1,7 @@
 import {
   waitForWindowsSyncGroupProviderRelease
 } from './windows-sync-group-provider-release.mjs';
+import { assertOwnedClientAdmissionFacts } from './windows-sync-group-owned-client-seed.mjs';
 
 function assertFormalFacts(facts, localFact) {
   const localMaterialReady = facts.facts?.[localFact?.factId] === true
@@ -8,8 +9,6 @@ function assertFormalFacts(facts, localFact) {
     && facts.availableAttachmentIds?.includes(localFact?.attachmentId);
   const origins = new Set(Object.values(facts.journeyFacts ?? {}));
   if (facts.activeMemberCount !== 3 || facts.localMemberState !== 'active'
-      || facts.nodeCount === 0 || facts.contentBlobCount === 0
-      || facts.missingAttachmentCount !== 0 || facts.missingContentBlobCount !== 0
       || !origins.has('A') || !origins.has('B') || !localMaterialReady) {
     throw new Error(`Windows C formal sync is incomplete: ${JSON.stringify(facts)}`);
   }
@@ -20,7 +19,8 @@ export async function runWindowsMultiDeviceSyncC({
 }) {
   const recovery = runRecovery
     ?? (await import('./windows-sync-group-recovery-action.mjs')).runWindowsSyncGroupRecovery;
-  const result = await recovery({ ...options, requiredJourneyOrigins: ['A', 'B'],
+  const result = await recovery({ ...options, assertComplete: assertOwnedClientAdmissionFacts,
+    requiredJourneyOrigins: ['A', 'B'],
     resetOwnedState: true, seedOwnedState: true, onRestartedReady: async (localFact) => {
       options.reportProgress?.({ factId: localFact.factId, milestone: 'c-provider-ready' });
       await waitForConsumerRelease({

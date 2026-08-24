@@ -13,6 +13,15 @@ export function assertOwnedClientCompleteFacts(facts, requiredOrigins = []) {
   }
 }
 
+export function assertOwnedClientAdmissionFacts(facts, requiredOrigins = [], factIds = []) {
+  const origins = new Set(Object.values(facts.journeyFacts ?? {}));
+  if (facts.activeMemberCount !== 3 || facts.localMemberState !== 'active'
+      || requiredOrigins.some((origin) => !origins.has(origin))
+      || factIds.some((factId) => facts.facts?.[factId] !== true)) {
+    throw new Error(`Windows C did not complete admission sync: ${JSON.stringify(facts)}`);
+  }
+}
+
 export function assertOwnedClientUnboundFacts(facts) {
   if (facts.integrity !== 'ok' || facts.localGroupId !== null || facts.localTimelineId !== null
       || facts.localMemberState !== null || facts.activeMemberCount !== 0

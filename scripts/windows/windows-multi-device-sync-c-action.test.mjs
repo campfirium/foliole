@@ -21,7 +21,8 @@ it('resets only the owned C client and requires restart-stable ordinary sync fac
     reportProgress, runRecovery, waitForConsumerRelease }))
     .resolves.toEqual({ multiDeviceSyncC: { manifestPath: 'receipt.json' }, output: 'complete' });
   expect(runRecovery).toHaveBeenCalledWith(expect.objectContaining({
-    requiredJourneyOrigins: ['A', 'B'], resetOwnedState: true, seedOwnedState: true
+    assertComplete: expect.any(Function), requiredJourneyOrigins: ['A', 'B'],
+    resetOwnedState: true, seedOwnedState: true
   }));
   expect(reportProgress).toHaveBeenCalledWith({
     factId: localFact.factId, milestone: 'c-provider-ready'
@@ -29,6 +30,15 @@ it('resets only the owned C client and requires restart-stable ordinary sync fac
   expect(waitForConsumerRelease).toHaveBeenCalledWith({
     action: 'multi-device-sync-c', repoRoot: 'repo'
   });
+});
+
+it('defers remote attachment completeness to later three-host convergence', async () => {
+  const admissionFacts = { ...facts, missingAttachmentCount: 1 };
+  const runRecovery = vi.fn(async () => ({ output: '', receipt: {
+    firstFacts: admissionFacts, localFact, restartedFacts: admissionFacts
+  }, syncGroupRecovery: { receiptPath: 'receipt.json' } }));
+  await expect(runWindowsMultiDeviceSyncC({ runRecovery }))
+    .resolves.toMatchObject({ multiDeviceSyncC: { manifestPath: 'receipt.json' } });
 });
 
 it('rejects an ordinary sync result that does not contain all three members', async () => {
