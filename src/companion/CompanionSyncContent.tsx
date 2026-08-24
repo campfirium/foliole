@@ -66,16 +66,8 @@ export function CompanionSyncContent(props: {
       return;
     }
 
-    const pairingEndpoint = workspaceSync.pendingPairRequest.endpointUrl;
     const completeApprovedPairing = () => {
-      void workspaceSync.completePairing()
-        .then((pairingState) => {
-          if (pairingState?.sync_usable) {
-            return workspaceSync.pullFromDesktop(pairingEndpoint);
-          }
-          return null;
-        })
-        .catch(() => undefined);
+      void workspaceSync.completePairing().catch(() => undefined);
     };
     completeApprovedPairing();
     const timer = window.setInterval(completeApprovedPairing, PAIRING_APPROVAL_POLL_MS);
@@ -84,8 +76,7 @@ export function CompanionSyncContent(props: {
   }, [
     workspaceSync.completePairing,
     workspaceSync.pairingStatus,
-    workspaceSync.pendingPairRequest,
-    workspaceSync.pullFromDesktop
+    workspaceSync.pendingPairRequest
   ]);
 
   return (

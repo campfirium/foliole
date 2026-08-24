@@ -121,8 +121,10 @@ function useCompanionSyncViewState() {
 function useCompanionAutoSync(
   viewState: ReturnType<typeof useCompanionSyncViewState>,
   setSyncProgress: ReturnType<typeof useMergedCompanionSyncProgress>[1],
-  enabled: boolean
+  pairingReady: boolean,
+  participating: boolean
 ) {
+  const enabled = shouldEnableCompanionAutoSync({ pairingReady, participating, state: viewState.state });
   useForegroundAutoSync(
     viewState.setError,
     viewState.setReadableArticle,
@@ -133,6 +135,14 @@ function useCompanionAutoSync(
     viewState.state,
     tryForegroundAutoSync
   );
+}
+
+export function shouldEnableCompanionAutoSync(args: {
+  pairingReady: boolean;
+  participating: boolean;
+  state: NativeCompanionWorkspaceSyncState;
+}) {
+  return args.pairingReady && args.participating && args.state.last_synced_at !== null;
 }
 
 export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstrapState) {
@@ -165,7 +175,8 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
   useCompanionAutoSync(
     viewState,
     setMergedSyncProgress,
-    isCompanionPairingSyncUsable(pairing.pairingState) && participationActions.participation.participating
+    isCompanionPairingSyncUsable(pairing.pairingState),
+    participationActions.participation.participating
   );
 
   return {

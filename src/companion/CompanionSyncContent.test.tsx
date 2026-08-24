@@ -166,7 +166,7 @@ function testShowsSyncGroupStatusDetails() {
   expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
 }
 
-async function testCompletesApprovedPairing() {
+async function testCompletesApprovedPairingWithoutStartingSync() {
   vi.useFakeTimers();
   const workspaceSync = createWorkspaceSync();
   workspaceSync.completePairing = vi.fn(async () => ({
@@ -194,7 +194,7 @@ async function testCompletesApprovedPairing() {
   });
 
   expect(workspaceSync.completePairing).toHaveBeenCalled();
-  expect(workspaceSync.pullFromDesktop).toHaveBeenCalledWith('http://192.168.1.8:38641');
+  expect(workspaceSync.pullFromDesktop).not.toHaveBeenCalled();
 }
 
 async function testKeepsApprovalPollingBelowDesktopRateLimit() {
@@ -218,6 +218,6 @@ async function testKeepsApprovalPollingBelowDesktopRateLimit() {
 
 describe('CompanionSyncContent paired flow', () => {
   it('shows sync status with the paired-device connection entry', testShowsSyncGroupStatusDetails);
-  it('automatically completes pairing after desktop approval', testCompletesApprovedPairing);
+  it('completes approved pairing without starting initial sync', testCompletesApprovedPairingWithoutStartingSync);
   it('keeps approval polling below the desktop completion rate limit', testKeepsApprovalPollingBelowDesktopRateLimit);
 });
