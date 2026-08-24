@@ -109,9 +109,11 @@ it('authorizes every Android provider data request with both the channel secret 
   const auth = await readJava('FolioleCompanionSyncGroupRequestAuth.java');
   const database = await readJava('FolioleCompanionSyncGroupDatabase.java');
   const provider = await readJava('FolioleCompanionSyncGroupProvider.java');
+  const plugin = await readJava('FolioleCompanionSyncPlugin.java');
   expect(auth).toContain('FolioleCompanionCurrentGroupCredential.load(');
   expect(provider).toContain('FolioleCompanionSyncGroupDatabase.isAuthorizedMember(');
   expect(database).toContain('bridge.request("authorize_member"');
+  expect(plugin).toContain('notifyListeners(name, event, true)');
 });
 
 it('revokes both directions of a departed peer credential before accepting departure', async () => {

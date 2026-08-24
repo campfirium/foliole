@@ -154,7 +154,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
     private void dispatchDataRequest(JSObject event) throws Exception {
         String name = FolioleCompanionHostBridgeContractDefinitions.syncGroupProviderDataRequestEvent(getContext());
-        getActivity().runOnUiThread(() -> notifyListeners(name, event));
+        getActivity().runOnUiThread(() -> notifyListeners(name, event, true));
     }
 
     private void dispatchServiceHint(JSObject event) {
