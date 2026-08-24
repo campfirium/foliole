@@ -2,8 +2,6 @@ import crypto from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import { Bonjour } from 'bonjour-service';
-
 import {
   createTestPairingKeyPair,
   decryptTestPairingSecret
@@ -14,6 +12,7 @@ import { closeDesktopApplication } from '../../scripts/desktop/playwright-deskto
 import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
 
 import { expect, test, type DesktopSession } from './harness/fixtures';
+import { discoverFolioleService } from './harness/linuxMdnsDiscovery';
 
 const ACCOUNT_ID = '023e105f4ecef8ad9ca31a8372d0c353';
 const API_TOKEN = 'Sn3lZJTBX6kkg7OdcBUAxOO963GEIyGQqnFTOFYY';
@@ -21,21 +20,6 @@ const DEVICE_ID = 'linux-deb-acceptance-device';
 
 function jsonHeaders() {
   return { 'content-type': 'application/json' };
-}
-
-async function discoverFolioleService() {
-  const bonjour = new Bonjour();
-  try {
-    return await new Promise<{ port: number; txt: Record<string, string> }>((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('Foliole mDNS service was not discovered')), 10_000);
-      bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, (service) => {
-        clearTimeout(timeout);
-        resolve({ port: service.port, txt: service.txt as Record<string, string> });
-      });
-    });
-  } finally {
-    bonjour.destroy();
-  }
 }
 
 async function expectSignedWorkspaceVersion(

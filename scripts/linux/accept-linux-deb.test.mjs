@@ -41,12 +41,17 @@ it('owns a deterministic multicast LAN interface for packaged acceptance', () =>
   }, (...args) => calls.push(args))).toThrow('acceptance failed');
 
   expect(calls).toEqual([
+    ['sudo', ['ip', 'netns', 'add', 'foliole-mdns-peer']],
     ['sudo', ['ip', 'link', 'add', 'foliole-mdns0', 'type', 'veth', 'peer', 'name', 'foliole-mdns1']],
-    ['sudo', ['ip', 'address', 'add', '192.0.2.1/32', 'dev', 'foliole-mdns0']],
-    ['sudo', ['ip', 'address', 'add', '192.0.2.2/32', 'dev', 'foliole-mdns1']],
+    ['sudo', ['ip', 'link', 'set', 'foliole-mdns1', 'netns', 'foliole-mdns-peer']],
+    ['sudo', ['ip', 'address', 'add', '192.0.2.1/30', 'dev', 'foliole-mdns0']],
     ['sudo', ['ip', 'link', 'set', 'dev', 'foliole-mdns0', 'multicast', 'on', 'up']],
-    ['sudo', ['ip', 'link', 'set', 'dev', 'foliole-mdns1', 'multicast', 'on', 'up']],
+    ['sudo', ['ip', 'netns', 'exec', 'foliole-mdns-peer',
+      'ip', 'address', 'add', '192.0.2.2/30', 'dev', 'foliole-mdns1']],
+    ['sudo', ['ip', 'netns', 'exec', 'foliole-mdns-peer',
+      'ip', 'link', 'set', 'dev', 'foliole-mdns1', 'multicast', 'on', 'up']],
     ['accept'],
-    ['sudo', ['ip', 'link', 'delete', 'foliole-mdns0']]
+    ['sudo', ['ip', 'link', 'delete', 'foliole-mdns0']],
+    ['sudo', ['ip', 'netns', 'delete', 'foliole-mdns-peer']]
   ]);
 });
