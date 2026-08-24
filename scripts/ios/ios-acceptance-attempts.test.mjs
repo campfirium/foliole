@@ -156,10 +156,14 @@ describe('iOS acceptance attempt orchestration', () => {
   it('uploads only explicit small attempt evidence and excludes DerivedData', () => {
     const workflow = fs.readFileSync('.github/workflows/hosted-quality-ios.yml', 'utf8');
     const simulator = workflow.slice(workflow.indexOf('  simulator:'));
-    for (const name of [
-      'summary.json', 'attempt-*/result.json', 'attempt-*/failure.json', 'attempt-*/evidence.json',
-      'attempt-*/simulator.log', 'attempt-*/simulator-owned.json'
-    ]) expect(workflow).toContain(name);
+    for (const scenario of [
+      'pairing-signed-transport', 'content-resource-read', 'state-writeback-runtime',
+      'sync-pack-runtime', 'foreground-sync-lifecycle'
+    ]) {
+      expect(simulator).toContain(`name: ios-simulator-${scenario}-`);
+      expect(simulator).toContain(`.tmp/artifacts/ios-bridge-acceptance/${scenario}/summary.json`);
+      expect(simulator).toContain(`.tmp/artifacts/ios-bridge-acceptance/${scenario}/attempt-*/simulator-owned.json`);
+    }
     expect(simulator).toContain('include-hidden-files: true');
     expect(workflow).not.toMatch(/^\s+.*DerivedData.*$/mu);
   });

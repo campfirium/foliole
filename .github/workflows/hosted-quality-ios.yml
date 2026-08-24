@@ -63,25 +63,32 @@ jobs:
           retention-days: 14
 
   simulator:
-    name: iOS Simulator (${{ matrix.scenario }})
+    name: iOS Simulator (${{ matrix.bucket }})
     if: inputs.scope == 'full'
     strategy:
       fail-fast: false
-      max-parallel: 4
       matrix:
-        scenario:
-          - pairing-signed-transport
-          - content-resource-read
-          - state-writeback-runtime
-          - sync-pack-runtime
-          - foreground-sync-lifecycle
+        include:
+          - bucket: pairing-and-content
+            scenarios:
+              - pairing-signed-transport
+              - content-resource-read
+          - bucket: state-writeback-runtime
+            scenarios:
+              - state-writeback-runtime
+          - bucket: sync-pack-runtime
+            scenarios:
+              - sync-pack-runtime
+          - bucket: foreground-sync-lifecycle
+            scenarios:
+              - foreground-sync-lifecycle
     runs-on: macos-15
     timeout-minutes: 120
     concurrency:
-      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-ios-simulator-${{ matrix.scenario }}
+      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-ios-simulator-${{ matrix.bucket }}
       cancel-in-progress: false
     env:
-      FOLIOLE_IOS_ACCEPTANCE_SCENARIO: ${{ matrix.scenario }}
+      FOLIOLE_IOS_ACCEPTANCE_SCENARIOS: ${{ toJSON(matrix.scenarios) }}
       FOLIOLE_IOS_RESOURCE_MODE: full
       TARGET_SHA: ${{ inputs.target_sha }}
     steps:
@@ -100,23 +107,99 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: node scripts/quality/hosted-npm-ci.mjs
-      - name: Run iOS Simulator scenario
-        run: node scripts/ios/ios-bootstrap-acceptance.mjs
-      - name: Upload minimal iOS Simulator evidence and logs
-        if: ${{ always() }}
+      - name: Run iOS Simulator scenario bucket
+        run: node scripts/ios/ios-hosted-acceptance-bucket.mjs
+      - name: Upload pairing transport evidence and logs
+        if: ${{ always() && contains(matrix.scenarios, 'pairing-signed-transport') }}
         uses: actions/upload-artifact@v4
         with:
-          name: ios-simulator-${{ matrix.scenario }}-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          name: ios-simulator-pairing-signed-transport-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
           path: |
-            .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/summary.json
-            .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/attempt-*/result.json
-            .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/attempt-*/failure.json
-            .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/attempt-*/evidence.json
-            .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/attempt-*/attempt-evidence.json
-            .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/attempt-*/simulator.log
-            .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/attempt-*/simulator-owned.json
-            .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/attempt-*/lifecycle-actions.json
-            .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/attempt-*/service-observations.json
+            .tmp/artifacts/ios-bridge-acceptance/pairing-signed-transport/summary.json
+            .tmp/artifacts/ios-bridge-acceptance/pairing-signed-transport/attempt-*/result.json
+            .tmp/artifacts/ios-bridge-acceptance/pairing-signed-transport/attempt-*/failure.json
+            .tmp/artifacts/ios-bridge-acceptance/pairing-signed-transport/attempt-*/evidence.json
+            .tmp/artifacts/ios-bridge-acceptance/pairing-signed-transport/attempt-*/attempt-evidence.json
+            .tmp/artifacts/ios-bridge-acceptance/pairing-signed-transport/attempt-*/simulator.log
+            .tmp/artifacts/ios-bridge-acceptance/pairing-signed-transport/attempt-*/simulator-owned.json
+            .tmp/artifacts/ios-bridge-acceptance/pairing-signed-transport/attempt-*/lifecycle-actions.json
+            .tmp/artifacts/ios-bridge-acceptance/pairing-signed-transport/attempt-*/service-observations.json
+            .tmp/logs/quality-gate
+          if-no-files-found: ignore
+          include-hidden-files: true
+          retention-days: 14
+      - name: Upload content resource evidence and logs
+        if: ${{ always() && contains(matrix.scenarios, 'content-resource-read') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-content-resource-read-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          path: |
+            .tmp/artifacts/ios-bridge-acceptance/content-resource-read/summary.json
+            .tmp/artifacts/ios-bridge-acceptance/content-resource-read/attempt-*/result.json
+            .tmp/artifacts/ios-bridge-acceptance/content-resource-read/attempt-*/failure.json
+            .tmp/artifacts/ios-bridge-acceptance/content-resource-read/attempt-*/evidence.json
+            .tmp/artifacts/ios-bridge-acceptance/content-resource-read/attempt-*/attempt-evidence.json
+            .tmp/artifacts/ios-bridge-acceptance/content-resource-read/attempt-*/simulator.log
+            .tmp/artifacts/ios-bridge-acceptance/content-resource-read/attempt-*/simulator-owned.json
+            .tmp/artifacts/ios-bridge-acceptance/content-resource-read/attempt-*/lifecycle-actions.json
+            .tmp/artifacts/ios-bridge-acceptance/content-resource-read/attempt-*/service-observations.json
+            .tmp/logs/quality-gate
+          if-no-files-found: ignore
+          include-hidden-files: true
+          retention-days: 14
+      - name: Upload state writeback evidence and logs
+        if: ${{ always() && contains(matrix.scenarios, 'state-writeback-runtime') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-state-writeback-runtime-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          path: |
+            .tmp/artifacts/ios-bridge-acceptance/state-writeback-runtime/summary.json
+            .tmp/artifacts/ios-bridge-acceptance/state-writeback-runtime/attempt-*/result.json
+            .tmp/artifacts/ios-bridge-acceptance/state-writeback-runtime/attempt-*/failure.json
+            .tmp/artifacts/ios-bridge-acceptance/state-writeback-runtime/attempt-*/evidence.json
+            .tmp/artifacts/ios-bridge-acceptance/state-writeback-runtime/attempt-*/attempt-evidence.json
+            .tmp/artifacts/ios-bridge-acceptance/state-writeback-runtime/attempt-*/simulator.log
+            .tmp/artifacts/ios-bridge-acceptance/state-writeback-runtime/attempt-*/simulator-owned.json
+            .tmp/artifacts/ios-bridge-acceptance/state-writeback-runtime/attempt-*/lifecycle-actions.json
+            .tmp/artifacts/ios-bridge-acceptance/state-writeback-runtime/attempt-*/service-observations.json
+            .tmp/logs/quality-gate
+          if-no-files-found: ignore
+          include-hidden-files: true
+          retention-days: 14
+      - name: Upload sync pack evidence and logs
+        if: ${{ always() && contains(matrix.scenarios, 'sync-pack-runtime') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-sync-pack-runtime-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          path: |
+            .tmp/artifacts/ios-bridge-acceptance/sync-pack-runtime/summary.json
+            .tmp/artifacts/ios-bridge-acceptance/sync-pack-runtime/attempt-*/result.json
+            .tmp/artifacts/ios-bridge-acceptance/sync-pack-runtime/attempt-*/failure.json
+            .tmp/artifacts/ios-bridge-acceptance/sync-pack-runtime/attempt-*/evidence.json
+            .tmp/artifacts/ios-bridge-acceptance/sync-pack-runtime/attempt-*/attempt-evidence.json
+            .tmp/artifacts/ios-bridge-acceptance/sync-pack-runtime/attempt-*/simulator.log
+            .tmp/artifacts/ios-bridge-acceptance/sync-pack-runtime/attempt-*/simulator-owned.json
+            .tmp/artifacts/ios-bridge-acceptance/sync-pack-runtime/attempt-*/lifecycle-actions.json
+            .tmp/artifacts/ios-bridge-acceptance/sync-pack-runtime/attempt-*/service-observations.json
+            .tmp/logs/quality-gate
+          if-no-files-found: ignore
+          include-hidden-files: true
+          retention-days: 14
+      - name: Upload foreground lifecycle evidence and logs
+        if: ${{ always() && contains(matrix.scenarios, 'foreground-sync-lifecycle') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-foreground-sync-lifecycle-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          path: |
+            .tmp/artifacts/ios-bridge-acceptance/foreground-sync-lifecycle/summary.json
+            .tmp/artifacts/ios-bridge-acceptance/foreground-sync-lifecycle/attempt-*/result.json
+            .tmp/artifacts/ios-bridge-acceptance/foreground-sync-lifecycle/attempt-*/failure.json
+            .tmp/artifacts/ios-bridge-acceptance/foreground-sync-lifecycle/attempt-*/evidence.json
+            .tmp/artifacts/ios-bridge-acceptance/foreground-sync-lifecycle/attempt-*/attempt-evidence.json
+            .tmp/artifacts/ios-bridge-acceptance/foreground-sync-lifecycle/attempt-*/simulator.log
+            .tmp/artifacts/ios-bridge-acceptance/foreground-sync-lifecycle/attempt-*/simulator-owned.json
+            .tmp/artifacts/ios-bridge-acceptance/foreground-sync-lifecycle/attempt-*/lifecycle-actions.json
+            .tmp/artifacts/ios-bridge-acceptance/foreground-sync-lifecycle/attempt-*/service-observations.json
             .tmp/logs/quality-gate
           if-no-files-found: ignore
           include-hidden-files: true

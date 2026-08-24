@@ -158,7 +158,7 @@ describe('T6 hosted quality workflow contracts', () => {
         'build:vite-only', 'electron:compile', 'quality:release:windows:tail',
         'windows-ci-playwright-profile.mjs'
       ],
-      macOS: ['ios:sync:preflight', 'quality:ios:contract', 'ios-bootstrap-acceptance.mjs']
+      macOS: ['ios:sync:preflight', 'quality:ios:contract', 'ios-hosted-acceptance-bucket.mjs']
     };
     for (const [host, expected] of Object.entries(commands)) {
       for (const command of expected) expect(hostSources[host]).toContain(command);
