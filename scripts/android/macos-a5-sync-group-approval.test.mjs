@@ -4,6 +4,7 @@ import { expect, it } from 'vitest';
 
 import {
   finalizeSyncGroupApprovalEvidence,
+  hasSyncGroupApprovalProviderReady,
   installedMainMatches,
   parseSyncGroupApprovalReceipt,
   runMacosA5SyncGroupApproval,
@@ -59,6 +60,15 @@ it('accepts a signed approval receipt after controller-owned sibling completion'
   )).toEqual(receipt);
 });
 
+it('recognizes only the action-local provider readiness status', () => {
+  expect(hasSyncGroupApprovalProviderReady(
+    'INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReady=provider-advertised\n'
+  )).toBe(true);
+  expect(hasSyncGroupApprovalProviderReady(
+    'INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReceipt={"ok":true}\n'
+  )).toBe(false);
+});
+
 it('reuses bounded Settings navigation that exits Review and nested Settings surfaces', () => {
   const approval = fs.readFileSync(
     'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupApprovalScenario.java',
@@ -107,7 +117,7 @@ it('ends the previous provider lifecycle before a staged foreground restart', as
   }]);
 });
 
-it('restores the provider only after approval instrumentation is removed', async () => {
+it('starts the peer from instrumented readiness and restores after instrumentation removal', async () => {
   const events = [];
   const receipt = { approved: true, foreground: true, ok: true,
     targetTestId: 'sync-group-approval' };
@@ -117,15 +127,21 @@ it('restores the provider only after approval instrumentation is removed', async
     else if (args.includes('force-stop')) events.push('provider-stopped');
     return { code: 0, output: '' };
   };
-  await runMacosA5SyncGroupApproval({ assertFixed: () => {}, execute, instrumentationExecute: async () => ({
-    code: 0,
-    output: `INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReceipt=${JSON.stringify(receipt)}\nINSTRUMENTATION_CODE: -1`
-  }), mainMatches: async () => true, prepare: () => {}, repoRoot: process.cwd(),
+  await runMacosA5SyncGroupApproval({ assertFixed: () => {}, execute,
+  instrumentationExecute: async (_command, _args, options) => {
+    events.push('instrumentation-started');
+    options.onOutput({ output:
+      'INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReady=provider-advertised\n' });
+    return { code: 0,
+      output: `INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReceipt=${JSON.stringify(receipt)}\nINSTRUMENTATION_CODE: -1` };
+  }, mainMatches: async () => true, onProviderStopped: async () => events.push('transport-open'),
+  onReady: async () => events.push('peer-started'), prepare: () => {}, repoRoot: process.cwd(),
   startProvider: async ({ onProviderStopped }) => {
     await onProviderStopped(); events.push('provider-started');
   } });
   expect(events).toEqual([
-    'provider-stopped', 'provider-started', 'test-uninstalled', 'adb-stopped',
+    'provider-stopped', 'transport-open', 'instrumentation-started', 'peer-started',
+    'test-uninstalled', 'adb-stopped',
     'provider-stopped', 'provider-started'
   ]);
 });
