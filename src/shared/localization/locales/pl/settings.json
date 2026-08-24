@@ -196,5 +196,20 @@
   "settings.documentMenu.section.aria": "Sekcja ustawień menu edytora",
   "settings.documentMenu.separatorBefore": "Pokaż separator przed {label}",
   "settings.documentMenu.show": "Pokaż {label}",
-  "settings.documentMenu.title": "Menu edytora"
+  "settings.documentMenu.title": "Menu edytora",
+  "settings.customCopy.row": "Tekst niestandardowy",
+  "settings.customCopy.description": "Zmień wbudowany tekst w bieżącym języku interfejsu.",
+  "settings.customCopy.searchTerms": "tekst|treść|tłumaczenie|lokalizacja|zastąp",
+  "settings.customCopy.manage": "Zarządzaj...",
+  "settings.customCopy.dialog.title": "Tekst niestandardowy",
+  "settings.customCopy.dialog.description": "Wyszukuj i zmieniaj wbudowany tekst w bieżącym języku interfejsu. Zmiany dotyczą tylko Ciebie.",
+  "settings.customCopy.search.placeholder": "Wyszukaj tekst do zmiany",
+  "settings.customCopy.filter.replacedOnly": "Pokaż tylko zastąpione",
+  "settings.customCopy.column.original": "Tekst oryginalny",
+  "settings.customCopy.column.custom": "Tekst niestandardowy",
+  "settings.customCopy.edit.aria": "Dostosuj {key}",
+  "settings.customCopy.export": "Eksportuj",
+  "settings.customCopy.exported": "Wyeksportowano tekst niestandardowy.",
+  "settings.customCopy.empty.title": "Brak pasującego tekstu",
+  "settings.customCopy.empty.description": "Spróbuj wyszukać coś innego lub wyczyść filtr."
 }

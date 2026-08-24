@@ -45,6 +45,7 @@ describe('iOS foreground sync lifecycle acceptance', () => {
     expect(entry).toMatch(/if \(isIosBridgeAcceptance\)[\s\S]*else[\s\S]*<CompanionApp/);
     expect(shell).toContain('useCompanionWorkspaceSync(bootstrap)');
     expect(shell).toContain('pairIosAcceptanceCompanion(endpoint, hostName)');
+    expect(shell).toContain('workspaceSync.pullFromDesktop(endpoint)');
     expect(shell).toContain("App.addListener('pause'");
     expect(shell).not.toContain('createForegroundSyncRunner');
     expect(shell).not.toContain('tryForegroundAutoSync');

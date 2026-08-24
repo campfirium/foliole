@@ -104,5 +104,6 @@
   "desktop.command.dev.reimportSelectedTopic": "Dev : réimporter le sujet sélectionné",
   "desktop.command.dev.openPerformancePanel": "DEV Panneau de performances ouvert",
   "desktop.command.dev.enableReviewStatusMemory": "DEV Activer l'examen de la mémoire de la barre d'état",
-  "desktop.command.dev.disableReviewStatusMemory": "DEV Désactiver l'examen de la mémoire de la barre d'état"
+  "desktop.command.dev.disableReviewStatusMemory": "DEV Désactiver l'examen de la mémoire de la barre d'état",
+  "desktop.command.openCustomCopy": "Ouvrir les textes personnalisés"
 }

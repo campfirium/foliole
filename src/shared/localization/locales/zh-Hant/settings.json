@@ -196,5 +196,20 @@
   "settings.documentMenu.section.aria": "編輯器選單設定部分",
   "settings.documentMenu.separatorBefore": "在 {label} 之前顯示分隔符",
   "settings.documentMenu.show": "顯示{label}",
-  "settings.documentMenu.title": "編輯器選單"
+  "settings.documentMenu.title": "編輯器選單",
+  "settings.customCopy.row": "自訂文案",
+  "settings.customCopy.description": "修改目前介面語言中的內建文案。",
+  "settings.customCopy.searchTerms": "文案|文字|翻譯|本地化|替換",
+  "settings.customCopy.manage": "管理...",
+  "settings.customCopy.dialog.title": "自訂文案",
+  "settings.customCopy.dialog.description": "搜尋並修改目前介面語言中的內建文案。變更只會影響您。",
+  "settings.customCopy.search.placeholder": "搜尋要修改的文案",
+  "settings.customCopy.filter.replacedOnly": "只顯示已替換項目",
+  "settings.customCopy.column.original": "原始文案",
+  "settings.customCopy.column.custom": "自訂文案",
+  "settings.customCopy.edit.aria": "自訂 {key}",
+  "settings.customCopy.export": "匯出",
+  "settings.customCopy.exported": "已匯出自訂文案。",
+  "settings.customCopy.empty.title": "沒有相符的文案",
+  "settings.customCopy.empty.description": "請嘗試其他搜尋詞或清除篩選條件。"
 }

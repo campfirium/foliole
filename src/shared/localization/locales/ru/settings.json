@@ -196,5 +196,20 @@
   "settings.documentMenu.section.aria": "Раздел настроек меню редактора",
   "settings.documentMenu.separatorBefore": "Показать разделитель перед {label}",
   "settings.documentMenu.show": "Показать {label}",
-  "settings.documentMenu.title": "Меню редактора"
+  "settings.documentMenu.title": "Меню редактора",
+  "settings.customCopy.row": "Пользовательский текст",
+  "settings.customCopy.description": "Измените встроенный текст для текущего языка интерфейса.",
+  "settings.customCopy.searchTerms": "текст|надпись|перевод|локализация|заменить",
+  "settings.customCopy.manage": "Управление...",
+  "settings.customCopy.dialog.title": "Пользовательский текст",
+  "settings.customCopy.dialog.description": "Найдите и измените встроенный текст для текущего языка интерфейса. Изменения будут видны только вам.",
+  "settings.customCopy.search.placeholder": "Найти текст для изменения",
+  "settings.customCopy.filter.replacedOnly": "Показать только замененные",
+  "settings.customCopy.column.original": "Исходный текст",
+  "settings.customCopy.column.custom": "Пользовательский текст",
+  "settings.customCopy.edit.aria": "Настроить {key}",
+  "settings.customCopy.export": "Экспортировать",
+  "settings.customCopy.exported": "Пользовательский текст экспортирован.",
+  "settings.customCopy.empty.title": "Нет подходящего текста",
+  "settings.customCopy.empty.description": "Попробуйте другой запрос или очистите фильтр."
 }

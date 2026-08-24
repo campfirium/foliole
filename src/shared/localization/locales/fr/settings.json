@@ -196,5 +196,20 @@
   "settings.documentMenu.section.aria": "Section des paramètres du menu de l'éditeur",
   "settings.documentMenu.separatorBefore": "Afficher le séparateur avant {label}",
   "settings.documentMenu.show": "Afficher {label}",
-  "settings.documentMenu.title": "Menu éditeur"
+  "settings.documentMenu.title": "Menu éditeur",
+  "settings.customCopy.row": "Textes personnalisés",
+  "settings.customCopy.description": "Modifiez les textes intégrés dans la langue actuelle de l’interface.",
+  "settings.customCopy.searchTerms": "texte|libellé|traduction|localisation|remplacer",
+  "settings.customCopy.manage": "Gérer...",
+  "settings.customCopy.dialog.title": "Textes personnalisés",
+  "settings.customCopy.dialog.description": "Recherchez et modifiez les textes intégrés dans la langue actuelle de l’interface. Les modifications ne concernent que vous.",
+  "settings.customCopy.search.placeholder": "Rechercher le texte à modifier",
+  "settings.customCopy.filter.replacedOnly": "Afficher uniquement les textes remplacés",
+  "settings.customCopy.column.original": "Texte d’origine",
+  "settings.customCopy.column.custom": "Textes personnalisés",
+  "settings.customCopy.edit.aria": "Personnaliser {key}",
+  "settings.customCopy.export": "Exporter",
+  "settings.customCopy.exported": "Les textes personnalisés ont été exportés.",
+  "settings.customCopy.empty.title": "Aucun texte correspondant",
+  "settings.customCopy.empty.description": "Essayez une autre recherche ou effacez le filtre."
 }

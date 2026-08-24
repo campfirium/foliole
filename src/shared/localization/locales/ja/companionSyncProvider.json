@@ -15,5 +15,6 @@
   "companion.sync.participation.pause": "同期を一時停止",
   "companion.sync.participation.resume": "同期を再開",
   "companion.sync.participation.inactive": "接続または同期する前に、同期をオンにして再開してください。",
-  "companion.sync.provider.foregroundHint": "送信中は Foliole が画面をオンのままにします。Foliole に戻ると、最新の進捗から続行できます。"
+  "companion.sync.provider.foregroundHint": "送信中は Foliole が画面をオンのままにします。Foliole に戻ると、最新の進捗から続行できます。",
+  "companion.sync.joinRequest.error": "Foliole はこのリクエストを更新できませんでした。もう一度お試しください。"
 }

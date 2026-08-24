@@ -196,5 +196,20 @@
   "settings.documentMenu.section.aria": "Abschnitt mit den Menüeinstellungen des Editors",
   "settings.documentMenu.separatorBefore": "Trennzeichen vor {label} anzeigen",
   "settings.documentMenu.show": "{label} anzeigen",
-  "settings.documentMenu.title": "Editor-Menü"
+  "settings.documentMenu.title": "Editor-Menü",
+  "settings.customCopy.row": "Benutzerdefinierte Texte",
+  "settings.customCopy.description": "Integrierte Texte in der aktuellen Oberflächensprache ändern.",
+  "settings.customCopy.searchTerms": "Text|Beschriftung|Übersetzung|Lokalisierung|Ersetzen",
+  "settings.customCopy.manage": "Verwalten...",
+  "settings.customCopy.dialog.title": "Benutzerdefinierte Texte",
+  "settings.customCopy.dialog.description": "Suchen und ändern Sie integrierte Texte in der aktuellen Oberflächensprache. Änderungen gelten nur für Sie.",
+  "settings.customCopy.search.placeholder": "Zu ändernden Text suchen",
+  "settings.customCopy.filter.replacedOnly": "Nur ersetzte anzeigen",
+  "settings.customCopy.column.original": "Originaltext",
+  "settings.customCopy.column.custom": "Benutzerdefinierte Texte",
+  "settings.customCopy.edit.aria": "Anpassen: {key}",
+  "settings.customCopy.export": "Exportieren",
+  "settings.customCopy.exported": "Benutzerdefinierte Texte wurden exportiert.",
+  "settings.customCopy.empty.title": "Keine passenden Texte",
+  "settings.customCopy.empty.description": "Versuchen Sie eine andere Suche oder löschen Sie den Filter."
 }

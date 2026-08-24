@@ -15,5 +15,6 @@
   "companion.sync.participation.pause": "暫停同步",
   "companion.sync.participation.resume": "恢復同步",
   "companion.sync.participation.inactive": "連線或同步前，請先開啟並恢復同步。",
-  "companion.sync.provider.foregroundHint": "傳送資料時 Foliole 會保持螢幕開啟；返回 Foliole 後會從最新進度繼續。"
+  "companion.sync.provider.foregroundHint": "傳送資料時 Foliole 會保持螢幕開啟；返回 Foliole 後會從最新進度繼續。",
+  "companion.sync.joinRequest.error": "Foliole 無法更新這項要求，請再試一次。"
 }
