@@ -16,6 +16,7 @@ import org.json.JSONObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 @RunWith(AndroidJUnit4.class)
@@ -157,6 +158,7 @@ public class FolioleCompanionSyncGroupMaintenanceTest {
         WebView webView = readyWebView(instrumentation, activity);
         sendEvidence(instrumentation, webView,
             FolioleCompanionSyncGroupMaintenanceScenario.syncNow(instrumentation, webView));
+        new CountDownLatch(1).await();
     }
 
     private static WebView readyWebView(Instrumentation instrumentation, Activity activity) throws Exception {

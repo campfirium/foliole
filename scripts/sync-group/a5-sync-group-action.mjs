@@ -15,7 +15,7 @@ const SPECS = Object.freeze({
   'pause-and-leave': ['pausesAndLeavesSyncGroupThroughProduct', 'departurePersisted', true, false],
   'pause-participation': ['pausesSyncParticipationThroughProduct', 'paused', false, false],
   'resume-participation': ['resumesSyncParticipationThroughProduct', 'resumed', false, true],
-  'sync-now': ['syncsNowThroughProduct', 'syncRequested', true, false]
+  'sync-now': ['syncsNowThroughProduct', 'syncRequested', true, false, true]
 });
 
 function proofFailure(message, details = {}) {
@@ -44,10 +44,11 @@ export async function runMacosA5SyncGroupMaintenance({
   if (!spec) throw proofFailure('Unsupported sync group action', {
     missingFact: 'scenario_action_binding'
   });
-  const [method, expected, needsTransport, restartApp] = spec;
+  const [method, expected, needsTransport, restartApp, releaseAfterObservation = false] = spec;
   const testClass = `${APP_ID}.FolioleCompanionSyncGroupMaintenanceTest#${method}`;
   const raw = await mechanics({ buildIdentity, env, evidenceRoot, execute, installMain,
-    needsTransport, observeWhileTransportOpen, paths, restartApp, serial, testClass });
+    needsTransport, observeWhileTransportOpen, paths, releaseAfterObservation,
+    restartApp, serial, testClass });
   const receipt = bundle(raw.stdout, 'folioleActionReceipt');
   if (receipt[expected] !== true) throw proofFailure(`Product result did not prove ${expected}`, {
     evidenceRef: raw.evidencePath, missingFact: expected

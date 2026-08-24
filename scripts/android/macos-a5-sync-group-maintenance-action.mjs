@@ -36,7 +36,8 @@ async function removeOwnedTransport(execute, paths, serial, options) {
 
 export async function runMacosA5InstrumentationMechanics({
   buildIdentity, env, evidenceRoot, execute, installMain = true, needsTransport = false,
-  observeWhileTransportOpen, paths, restartApp = false, serial, testClass
+  observeWhileTransportOpen, paths, releaseAfterObservation = false,
+  restartApp = false, serial, testClass
 }) {
   if (typeof testClass !== 'string' || !testClass.startsWith(`${APP_ID}.`)) {
     throw executionFailure('Android instrumentation target is invalid.', {
@@ -65,9 +66,37 @@ export async function runMacosA5InstrumentationMechanics({
         options, 'transport open')).output);
       reverseCreated = true;
     }
-    const instrumentation = await checked(execute, paths.adb, [
+    const instrumentationTask = execute(paths.adb, [
       '-s', serial, 'shell', 'am', 'instrument', '-w', '-r', '-e', 'class', testClass, RUNNER
     ], options, 'instrumentation');
+    let observation;
+    let instrumentation;
+    if (releaseAfterObservation) {
+      if (typeof observeWhileTransportOpen !== 'function') {
+        throw executionFailure('Controlled instrumentation requires an exact-fact observer.', {
+          missingFact: 'sync_observation_binding', stage: 'instrumentation'
+        });
+      }
+      const first = await Promise.race([
+        instrumentationTask.then((result) => ({ result, type: 'instrumentation' })),
+        observeWhileTransportOpen().then((result) => ({ result, type: 'observation' }))
+      ]);
+      if (first.type !== 'observation') {
+        throw executionFailure('Sync instrumentation exited before exact-fact observation.', {
+          result: first.result, stage: 'instrumentation'
+        });
+      }
+      observation = first.result;
+      output.push((await checked(execute, paths.adb,
+        ['-s', serial, 'shell', 'am', 'force-stop', APP_ID],
+        options, 'instrumentation controlled stop')).output);
+      instrumentation = await instrumentationTask;
+    } else {
+      instrumentation = await instrumentationTask;
+      if (instrumentation.code !== 0) throw executionFailure('instrumentation failed', {
+        result: instrumentation, stage: 'instrumentation'
+      });
+    }
     output.push(instrumentation.output);
     if (String(instrumentation.stdout).includes('Foliole did not receive window focus')) {
       throw executionFailure('Foliole did not receive Android window focus.', {
@@ -75,13 +104,13 @@ export async function runMacosA5InstrumentationMechanics({
         result: instrumentation, stage: 'instrumentation'
       });
     }
-    if (!/^INSTRUMENTATION_CODE: -1$/mu.test(instrumentation.stdout)) {
+    if (!releaseAfterObservation && !/^INSTRUMENTATION_CODE: -1$/mu.test(instrumentation.stdout)) {
       throw executionFailure('Instrumentation did not finish normally.', {
         missingFact: 'android_instrumentation_terminal', result: instrumentation,
         stage: 'instrumentation'
       });
     }
-    const observation = await observeWhileTransportOpen?.();
+    observation ??= await observeWhileTransportOpen?.();
     if (restartApp) output.push((await checked(execute, paths.adb,
       ['-s', serial, 'shell', 'am', 'start', '-n', `${APP_ID}/.MainActivity`],
       options, 'activity restart')).output);
