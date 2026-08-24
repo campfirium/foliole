@@ -9,6 +9,10 @@ import java.util.Map;
 final class FolioleCompanionSyncGroupProviderConfig {
     private FolioleCompanionSyncGroupProviderConfig() {}
 
+    static void traceConfigured() {
+        android.util.Log.d("FolioleSyncProvider", "Provider config ready");
+    }
+
     static void restoreApprovedJoins(
         Context context,
         JSONObject config,
@@ -19,6 +23,7 @@ final class FolioleCompanionSyncGroupProviderConfig {
         requests.putAll(FolioleCompanionSyncGroupJoinGrantStore.load(
             context, group.getString("group_id"), group.getString("timeline_id")
         ));
+        android.util.Log.d("FolioleSyncProvider", "Provider grants restored");
     }
 
     static boolean sameProvider(JSONObject current, JSONObject next) {

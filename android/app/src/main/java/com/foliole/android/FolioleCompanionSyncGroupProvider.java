@@ -10,7 +10,6 @@ import org.json.JSONObject;
 
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 
 final class FolioleCompanionSyncGroupProvider {
@@ -29,11 +28,10 @@ final class FolioleCompanionSyncGroupProvider {
 
     static synchronized JSObject startReady(
         Context context, Activity activity, PluginCall call, Object owner,
-        FolioleCompanionSyncGroupDataBridge.Dispatcher dispatcher, Callable<Boolean> participation,
+        FolioleCompanionSyncGroupDataBridge.Dispatcher dispatcher, boolean participating,
         JSONObject group, FolioleCompanionSyncGroupDataBridge bridge,
         FolioleCompanionCurrentGroupCredential credential
     ) throws Exception {
-        boolean participating = participation.call();
         dataBridge = bridge;
         String authorizationId = value(context, call, "authorizationId");
         if (!credential.authorizationId.equals(authorizationId)) {
@@ -48,6 +46,7 @@ final class FolioleCompanionSyncGroupProvider {
             .put("protocol", FolioleCompanionSyncPackProviderDefinitions.load(context).protocol())
             .put("sync_group", group);
         next.put("group_tag", FolioleCompanionSyncGroupCrypto.groupTag(credential.workgroupKey));
+        FolioleCompanionSyncGroupProviderConfig.traceConfigured();
         if (FolioleCompanionSyncGroupProviderConfig.sameProvider(activeConfig, next)) {
             next.put("runtime_instance_id", activeConfig.getString("runtime_instance_id"));
             boolean factsChanged = !next.optString("facts_revision").equals(activeConfig.optString("facts_revision"));

@@ -25,8 +25,10 @@ final class FolioleCompanionSyncGroupProviderStart {
         FolioleCompanionCurrentGroupCredential credential =
             FolioleCompanionCurrentGroupCredential.load(group.getString("group_id"));
         android.util.Log.d("FolioleSyncProvider", "Start credential ready");
+        boolean participating = participation.call();
+        android.util.Log.d("FolioleSyncProvider", "Start participation ready");
         JSObject result = FolioleCompanionSyncGroupProvider.startReady(
-            context, activity, call, owner, dispatcher, participation, group, bridge, credential
+            context, activity, call, owner, dispatcher, participating, group, bridge, credential
         );
         android.util.Log.d("FolioleSyncProvider", "Start request applied");
         return result;

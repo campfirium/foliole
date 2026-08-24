@@ -46,7 +46,8 @@ it('does not hold the provider lifecycle monitor across a data-owner roundtrip',
     provider.indexOf('static synchronized JSObject stop('));
   expect(providerStart).not.toContain('synchronized');
   expect(providerStart).toContain('FolioleCompanionCurrentGroupCredential.load(');
-  expect(ready).toContain('boolean participating = participation.call();');
+  expect(providerStart).toContain('boolean participating = participation.call();');
+  expect(ready).not.toContain('participation.call()');
   expect(plugin).toContain('private volatile boolean lifecycleActive = true;');
   expect(plugin).toContain('FolioleCompanionSyncGroupProviderStart.run(');
   expect(plugin).toContain('this::dispatchDataRequest, this::isParticipating');
