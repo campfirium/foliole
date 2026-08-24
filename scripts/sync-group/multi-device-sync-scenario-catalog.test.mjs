@@ -5,6 +5,9 @@ import {
 } from './multi-device-sync-scenario-catalog.mjs';
 
 it('accepts only a complete ordered formal topology', () => {
+  expect(resolveScenario('fresh-a-b-group-sync').stages).toEqual([
+    'candidate-preparation', 'a-b-group-sync'
+  ]);
   expect(resolveScenario('a-offline-b-admits-c').stages).toEqual([
     'candidate-preparation', 'a-b-group-sync', 'b-admit-c'
   ]);

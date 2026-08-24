@@ -4,6 +4,9 @@ import { resolveStage } from './multi-device-sync-stage-catalog.mjs';
 /* global structuredClone */
 
 const scenarios = [{
+  name: 'fresh-a-b-group-sync',
+  stages: ['candidate-preparation', 'a-b-group-sync']
+}, {
   name: 'a-offline-b-admits-c',
   stages: ['candidate-preparation', 'a-b-group-sync', 'b-admit-c']
 }, {

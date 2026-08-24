@@ -11,7 +11,7 @@ import {
 
 it('assigns three proof axes to distinct owners and every entry to one cutover', () => {
   expect(assertProofResponsibility({ legacyEntries: scenarioCatalog().map(({ name }) => name) }))
-    .toEqual({ dataEntries: 6, legacyEntries: 6 });
+    .toEqual({ dataEntries: 6, legacyEntries: 7 });
   expect(new Set(Object.values(PROOF_OWNERS))).toHaveLength(3);
   expect(DATA_SCENARIO_PROOFS.map(({ cutoverOwner }) => cutoverOwner))
     .toEqual(['T146-16', 'T146-17', 'T146-18', 'T146-19', 'T146-20', 'T146-21']);

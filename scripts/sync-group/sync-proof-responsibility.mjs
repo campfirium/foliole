@@ -18,6 +18,7 @@ export const DATA_SCENARIO_PROOFS = Object.freeze([
 
 export const LEGACY_SCENARIO_CUTOVER = Object.freeze({
   'a-offline-b-admits-c': 'T146-17',
+  'fresh-a-b-group-sync': 'T149-1',
   'founder-leave-continuity': 'T146-18',
   'nonempty-library-convergence': 'T146-17',
   'participation-control-continuity': 'T146-20',
