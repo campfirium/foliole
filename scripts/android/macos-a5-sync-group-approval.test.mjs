@@ -4,7 +4,6 @@ import { expect, it } from 'vitest';
 
 import {
   finalizeSyncGroupApprovalEvidence,
-  hasSyncGroupApprovalProviderReady,
   installedMainMatches,
   parseSyncGroupApprovalReceipt,
   runMacosA5SyncGroupApproval,
@@ -60,18 +59,6 @@ it('accepts a signed approval receipt after controller-owned sibling completion'
   )).toEqual(receipt);
 });
 
-it('recognizes only the action-local provider readiness status', () => {
-  expect(hasSyncGroupApprovalProviderReady(
-    'INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReady=provider-listener-ready\n'
-  )).toBe(true);
-  expect(hasSyncGroupApprovalProviderReady(
-    'INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReady=provider-advertised\n'
-  )).toBe(false);
-  expect(hasSyncGroupApprovalProviderReady(
-    'INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReceipt={"ok":true}\n'
-  )).toBe(false);
-});
-
 it('reuses bounded Settings navigation that exits Review and nested Settings surfaces', () => {
   const approval = fs.readFileSync(
     'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupApprovalScenario.java',
@@ -90,61 +77,6 @@ it('reuses bounded Settings navigation that exits Review and nested Settings sur
   expect(navigation).toContain('FolioleCompanionWebViewSemanticAdapter.perform');
   expect(navigation).toContain('"target_missing".equals(code) || "target_hidden".equals(code)');
   expect(navigation).not.toContain('clickVisible');
-});
-
-it('runs exact-fact Sync Now actions around C approval in one ready runtime', () => {
-  const approval = fs.readFileSync(
-    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupApprovalScenario.java',
-    'utf8'
-  );
-  const maintenance = fs.readFileSync(
-    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupMaintenanceScenario.java',
-    'utf8'
-  );
-  const syncSettings = approval.indexOf('openSyncSettings(instrumentation, webView);');
-  const providerReady = approval.indexOf('waitForInstrumentedRuntime(activity);');
-  const peerRelease = approval.indexOf('onProviderReady.run();');
-  const approvalClick = approval.indexOf(
-    'FolioleCompanionSemanticActions.clickVisible(', peerRelease
-  );
-  const credential = approval.indexOf('waitForPeerCredential(');
-  const preAdmissionSync = approval.indexOf(
-    'FolioleCompanionSyncGroupMaintenanceScenario.syncNow('
-  );
-  const postApprovalSync = approval.lastIndexOf(
-    'FolioleCompanionSyncGroupMaintenanceScenario.syncNow('
-  );
-  expect(syncSettings).toBeGreaterThan(0);
-  expect(preAdmissionSync).toBeGreaterThan(syncSettings);
-  expect(providerReady).toBeGreaterThan(preAdmissionSync);
-  expect(peerRelease).toBeGreaterThan(providerReady);
-  expect(approvalClick).toBeGreaterThan(peerRelease);
-  expect(credential).toBeGreaterThan(approvalClick);
-  expect(postApprovalSync).toBeGreaterThan(credential);
-  expect(postApprovalSync).toBeGreaterThan(preAdmissionSync);
-  expect(maintenance).toContain('data-sync-terminal-run-id');
-  expect(maintenance).toContain('waitForSyncCompletion(');
-  expect(maintenance).toContain('receipt.optString("syncTerminalRunId")');
-  expect(maintenance).toContain('Timed out waiting for public Sync Now completion.');
-  expect(approval).toContain('TimeUnit.SECONDS.toNanos(60)');
-  expect(approval).toContain('"registered".equals(state) && listenerReady(activity)');
-  expect(approval).toContain('.isServiceMonitorReady()');
-  expect(approval).not.toContain('FolioleCompanionSyncGroupProvider.start(');
-  const plugin = fs.readFileSync(
-    'android/app/src/main/java/com/foliole/android/FolioleCompanionSyncPlugin.java', 'utf8'
-  );
-  expect(plugin).toContain('return hasListeners(name);');
-  expect(plugin).toContain('notifyListeners(name, event, true)');
-});
-
-it('tracks the approved peer by the current join authorization identity', () => {
-  const approval = fs.readFileSync(
-    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupApprovalScenario.java',
-    'utf8'
-  );
-  expect(approval).toContain('pendingJoiningAuthorizationId()');
-  expect(approval).toContain('getString("pair_request_id")');
-  expect(approval).not.toContain('getString("device_id")');
 });
 
 it('opens transport after provider stop and starts the peer only after the product surface is stable', async () => {
@@ -175,7 +107,7 @@ it('ends the previous provider lifecycle before a staged foreground restart', as
   }]);
 });
 
-it('starts the peer from instrumented readiness and restores after instrumentation removal', async () => {
+it('restores the provider only after approval instrumentation is removed', async () => {
   const events = [];
   const receipt = { approved: true, foreground: true, ok: true,
     targetTestId: 'sync-group-approval' };
@@ -185,21 +117,15 @@ it('starts the peer from instrumented readiness and restores after instrumentati
     else if (args.includes('force-stop')) events.push('provider-stopped');
     return { code: 0, output: '' };
   };
-  await runMacosA5SyncGroupApproval({ assertFixed: () => {}, execute,
-  instrumentationExecute: async (_command, _args, options) => {
-    events.push('instrumentation-started');
-    options.onOutput({ output:
-      'INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReady=provider-listener-ready\n' });
-    return { code: 0,
-      output: `INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReceipt=${JSON.stringify(receipt)}\nINSTRUMENTATION_CODE: -1` };
-  }, mainMatches: async () => true, onProviderStopped: async () => events.push('transport-open'),
-  onReady: async () => events.push('peer-started'), prepare: () => {}, repoRoot: process.cwd(),
+  await runMacosA5SyncGroupApproval({ assertFixed: () => {}, execute, instrumentationExecute: async () => ({
+    code: 0,
+    output: `INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReceipt=${JSON.stringify(receipt)}\nINSTRUMENTATION_CODE: -1`
+  }), mainMatches: async () => true, prepare: () => {}, repoRoot: process.cwd(),
   startProvider: async ({ onProviderStopped }) => {
     await onProviderStopped(); events.push('provider-started');
   } });
   expect(events).toEqual([
-    'provider-stopped', 'transport-open', 'instrumentation-started', 'peer-started',
-    'test-uninstalled', 'adb-stopped',
+    'provider-stopped', 'provider-started', 'test-uninstalled', 'adb-stopped',
     'provider-stopped', 'provider-started'
   ]);
 });

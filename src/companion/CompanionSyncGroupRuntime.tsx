@@ -6,14 +6,13 @@ import {
   getCompanionSyncMutationRevision,
   subscribeCompanionSyncMutationRevision
 } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
+import { reconcileCompanionSyncGroupProvider } from '../shared/platform/companion/sync/syncGroupProvider';
 import { loadCompanionSyncGroup } from '../shared/platform/companion/sync/syncGroupStore';
 import {
   isNativeCompanionSyncGroupRuntime,
   isNativeCompanionSyncGroupStoreRuntime
 } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
-import { publishCompanionSyncGroupProviderAvailability } from './companionSyncGroupProviderAvailability';
-import { startCompanionSyncGroupProviderLifecycle } from './companionSyncGroupProviderLifecycle';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 const CompanionSyncGroupContext = createContext<SyncGroupPayload | null>(null);
@@ -46,21 +45,13 @@ export function CompanionSyncGroupRuntime(props: {
     workspaceSync.state.last_synced_at]);
 
   useEffect(() => {
-    if (!isNativeCompanionSyncGroupRuntime()) {
-      publishCompanionSyncGroupProviderAvailability(true);
-      return;
-    }
-    if (!loaded) return;
-    let cancelled = false;
+    if (!isNativeCompanionSyncGroupRuntime() || !loaded) return;
     const factsRevision = `${mutationRevision}:${workspaceSync.state.last_synced_at ?? ''}`;
-    publishCompanionSyncGroupProviderAvailability(false);
-    void startCompanionSyncGroupProviderLifecycle(
+    void reconcileCompanionSyncGroupProvider(
       bootstrapState, group, factsRevision
-    ).then(() => {
-      if (!cancelled) publishCompanionSyncGroupProviderAvailability(true);
-    }).catch(() => undefined);
-    return () => { cancelled = true; };
-  }, [bootstrapState, group, loaded, mutationRevision, workspaceSync.state.last_synced_at]);
+    ).catch(() => undefined);
+  }, [bootstrapState, group, loaded, mutationRevision, workspaceSync.pairingState,
+    workspaceSync.state.last_synced_at]);
 
   return (
     <CompanionSyncGroupContext.Provider value={group}>

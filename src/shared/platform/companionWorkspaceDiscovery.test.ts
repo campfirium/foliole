@@ -209,21 +209,3 @@ describe('companionWorkspaceDiscovery compatibility', () => {
     expect(results.map((result) => result.discovery.peer_id)).toEqual(['desktop-a', 'desktop-c']);
   });
 });
-
-it('requires full capabilities from public discovery rather than the TXT hint', async () => {
-  capacitorMock.plugin.loadDiscoveryCandidates.mockResolvedValue({
-    candidates: [nsdCandidate('http://192.168.1.44:38641')]
-  });
-  capacitorMock.plugin.desktopHttpRequest.mockImplementation(async ({ url }: { url: string }) => {
-    if (!url.startsWith('http://192.168.1.44:38641')) throw new TypeError('Failed to fetch');
-    const body = JSON.parse(discoveryBody({ hostName: 'Old', peerId: 'desktop-old', platform: 'Windows' }));
-    body.protocol = { ...protocol, capabilities: protocol.capabilities.slice(1) };
-    return { body: JSON.stringify(body), status: 200 };
-  });
-
-  const result = await discoverCompanionDesktop('http://10.0.2.2:38641');
-
-  expect(result.compatibility).toMatchObject({
-    reason: 'required_capability_missing', status: 'incompatible'
-  });
-});

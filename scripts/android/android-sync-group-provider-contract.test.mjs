@@ -19,13 +19,11 @@ it('serves the established content blob batch route instead of provisioning thro
   expect(batch).toContain('X-Blob-Hash: ');
 });
 
-it('keeps the provider on a stable port independent from the outbound reverse transport', async () => {
+it('listens on the same stable port persisted by bidirectional peer pairing', async () => {
   const server = await readJava('FolioleCompanionSyncGroupServer.java');
-  const transport = await readFile(path.join(root, 'scripts/sync-group/pair-sync-transport.mjs'), 'utf8');
-  expect(server).toContain('private static final int SYNC_PORT = 38642;');
+  expect(server).toContain('private static final int SYNC_PORT = 38641;');
   expect(server).toContain('new ServerSocket(SYNC_PORT)');
   expect(server).not.toContain('new ServerSocket(0)');
-  expect(transport).toContain("export const PAIR_SYNC_PORT = '38641';");
 });
 
 it('admits complete nonempty library facts while preserving Sync Group identity checks', async () => {
@@ -59,7 +57,7 @@ it('keeps Android fact-change discovery foreground-bound and excludes its own re
   expect(plugin).toContain('serviceMonitor.start()');
   expect(plugin).toContain('serviceMonitor.stop()');
   expect(plugin).toContain('syncGroupProviderServiceHintEvent');
-  expect(plugin).toContain('notifyListeners(name, event, true)');
+  expect(plugin).toContain('notifyListeners(name, event)');
 });
 
 it('serializes Android NSD resolution so one active resolve cannot hide another group member', async () => {
@@ -103,7 +101,7 @@ it('versions every device-specific Android DNS-SD fact hint', async () => {
   const advertisement = await readJava('FolioleCompanionNsdAdvertisement.java');
   expect(advertisement).toContain('info.setServiceName(serviceInstanceName(config))');
   expect(advertisement).toContain('config.getString("runtime_instance_id")');
-  expect(advertisement).not.toContain('"protocol_capabilities"');
+  expect(advertisement).toContain('config.getJSONObject("sync_group").getString("display_name")');
   expect(advertisement).toContain('config.getString("facts_revision").hashCode()');
 });
 
@@ -111,20 +109,9 @@ it('authorizes every Android provider data request with both the channel secret 
   const auth = await readJava('FolioleCompanionSyncGroupRequestAuth.java');
   const database = await readJava('FolioleCompanionSyncGroupDatabase.java');
   const provider = await readJava('FolioleCompanionSyncGroupProvider.java');
-  const plugin = await readJava('FolioleCompanionSyncPlugin.java');
   expect(auth).toContain('FolioleCompanionCurrentGroupCredential.load(');
   expect(provider).toContain('FolioleCompanionSyncGroupDatabase.isAuthorizedMember(');
   expect(database).toContain('bridge.request("authorize_member"');
-  expect(plugin).toContain('notifyListeners(name, event, true)');
-});
-
-it('records bounded provider data-owner stages without logging request payloads', async () => {
-  const bridge = await readJava('FolioleCompanionSyncGroupDataBridge.java');
-  expect(bridge).toContain('"Data request dispatch: " + operation');
-  expect(bridge).toContain('"Data request resolved: " + operation');
-  expect(bridge).toContain('"Data request rejected: " + operation');
-  expect(bridge).toContain('"Data request failed: " + operation');
-  expect(bridge).not.toContain('"Data request dispatch: " + payload');
 });
 
 it('revokes both directions of a departed peer credential before accepting departure', async () => {

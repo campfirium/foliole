@@ -17,7 +17,6 @@ final class FolioleCompanionSyncScreenAwake {
 
     static synchronized void attach(Activity next) {
         activity = new WeakReference<>(next);
-        android.util.Log.d("FolioleSyncProvider", "Provider screen owner attached");
     }
 
     static synchronized void touch() {

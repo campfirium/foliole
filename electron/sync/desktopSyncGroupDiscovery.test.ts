@@ -18,9 +18,6 @@ vi.mock('bonjour-service', () => ({
   }
 }));
 
-vi.mock('./companionMdnsAdvertisement.js', () => ({
-  resolveCompanionMdnsIpv4Addresses: () => ['192.168.0.20', '10.0.0.20']
-}));
 vi.mock('./syncGroupRuntimeInstance.js', () => ({ loadSyncGroupRuntimeInstanceId: () => 'runtime-local' }));
 
 import { discoverDesktopSyncGroups } from './desktopSyncGroupDiscovery.js';
@@ -34,14 +31,14 @@ afterEach(() => {
 });
 
 describe('desktop Sync Group discovery', () => {
-  it('uses every active IPv4 listener and resolves an Android provider once', async () => {
+  it('uses one system multicast listener and resolves an Android provider once', async () => {
     vi.useFakeTimers();
     const fetchDiscovery = vi.fn(async () => new Response(JSON.stringify({
       group_display_name: 'Daily Group', group_id: 'group-1', group_tag: 'tag-1', peer_id: 'device-a',
       provider_device_kind: 'android-capacitor', provider_device_name: 'Android B', timeline_id: 'timeline-1'
     })));
     const discovery = discoverDesktopSyncGroups(fetchDiscovery as unknown as typeof fetch);
-    runtime.onServices[1]?.({
+    runtime.onServices[0]?.({
       addresses: ['192.168.0.10'],
       name: 'Desktop A',
       port: 41186,
@@ -59,10 +56,10 @@ describe('desktop Sync Group discovery', () => {
         timeline_id: 'timeline-1'
       }
     });
-    await vi.advanceTimersByTimeAsync(1);
+    await vi.advanceTimersByTimeAsync(1_800);
 
     expect(runtime.constructorArgs).toEqual([
-      [{ interface: '192.168.0.20' }], [{ interface: '10.0.0.20' }]
+      []
     ]);
     await expect(discovery).resolves.toEqual([{
       endpoint_url: 'http://192.168.0.107:41187',
@@ -74,21 +71,8 @@ describe('desktop Sync Group discovery', () => {
       provider_host_platform: 'desktop',
       timeline_id: 'timeline-1'
     }]);
-    expect(runtime.stop).toHaveBeenCalledTimes(2);
-    expect(runtime.destroy).toHaveBeenCalledTimes(2);
-  });
-
-  it('uses the product deadline only as the no-candidate failure bound', async () => {
-    vi.useFakeTimers();
-    const discovery = discoverDesktopSyncGroups(vi.fn() as unknown as typeof fetch);
-
-    await vi.advanceTimersByTimeAsync(59_999);
-    expect(runtime.stop).not.toHaveBeenCalled();
-    await vi.advanceTimersByTimeAsync(1);
-
-    await expect(discovery).resolves.toEqual([]);
-    expect(runtime.stop).toHaveBeenCalledTimes(2);
-    expect(runtime.destroy).toHaveBeenCalledTimes(2);
+    expect(runtime.stop).toHaveBeenCalledTimes(1);
+    expect(runtime.destroy).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -115,7 +99,7 @@ describe('desktop Sync Group provider selection', () => {
       referer: { address: '192.168.0.13' }, txt: {
         group_id: 'group-1', group_tag: 'tag-1', peer_id: 'device-b', timeline_id: 'timeline-1'
       } });
-    await vi.advanceTimersByTimeAsync(1);
+    await vi.advanceTimersByTimeAsync(1_800);
 
     await expect(discovery).resolves.toEqual([expect.objectContaining({
       endpoint_url: 'http://192.168.0.12:38641',

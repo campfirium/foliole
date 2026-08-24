@@ -20,14 +20,18 @@ it('binds the A-leave product stage to its real cross-host action', () => {
 
 it('cancels Android immediately when Windows join fails before approval', () => {
   const approvalController = { abort: vi.fn() };
-  cancelAdmissionSibling(approvalController, 'windows-c-join', 'rejected');
+  const approvalRelease = { release: vi.fn() };
+  cancelAdmissionSibling(approvalController, approvalRelease, 'windows-c-join', 'rejected');
   expect(approvalController.abort).toHaveBeenCalledOnce();
+  expect(approvalRelease.release).not.toHaveBeenCalled();
 });
 
-it('keeps the public Android runtime when Windows join succeeds', () => {
+it('keeps the signed approval receipt gate when Windows join succeeds', () => {
   const approvalController = { abort: vi.fn() };
-  cancelAdmissionSibling(approvalController, 'windows-c-join', 'fulfilled');
+  const approvalRelease = { release: vi.fn(() => Promise.resolve()) };
+  cancelAdmissionSibling(approvalController, approvalRelease, 'windows-c-join', 'fulfilled');
   expect(approvalController.abort).not.toHaveBeenCalled();
+  expect(approvalRelease.release).toHaveBeenCalledOnce();
 });
 
 it('preserves the fixed Windows native startup failure attribution', () => {

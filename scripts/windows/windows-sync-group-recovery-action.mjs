@@ -61,12 +61,16 @@ export async function openWindowsSyncGroupSession(
   return { app, page, ...progress };
 }
 
-export async function discoverUniqueGroup(page, accept = () => true) {
-  const overview = await invokeWindowsSyncGroupCommand(page, 'discover_sync_groups');
-  const candidates = overview.join_candidates.filter(accept);
-  if (candidates.length > 1) throw new Error('Multiple Sync Groups were discovered.');
-  if (candidates.length === 1) return candidates[0];
-  throw new Error('The A5 Sync Group was not discovered by the public product action.');
+export async function discoverUniqueGroup(page, timeoutMs = 60_000, accept = () => true) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const overview = await invokeWindowsSyncGroupCommand(page, 'discover_sync_groups');
+    const candidates = overview.join_candidates.filter(accept);
+    if (candidates.length > 1) throw new Error('Multiple Sync Groups were discovered.');
+    if (candidates.length === 1) return candidates[0];
+    await delay(1_000);
+  }
+  throw new Error('Timed out discovering the A5 Sync Group.');
 }
 
 export async function waitForJoinedGroup(page, expectedGroupId, timeoutMs = 12 * 60_000) {
@@ -81,8 +85,7 @@ export async function waitForJoinedGroup(page, expectedGroupId, timeoutMs = 12 *
 }
 
 async function waitForOrdinarySyncFacts(
-  execute, paths, evidenceRoot, factIds = [], requiredOrigins = [],
-  assertComplete = assertOwnedClientCompleteFacts, timeoutMs = 12 * 60_000
+  execute, paths, evidenceRoot, factIds = [], requiredOrigins = [], timeoutMs = 12 * 60_000
 ) {
   const deadline = Date.now() + timeoutMs;
   const nodeSurfaceDeadline = Date.now() + 90_000;
@@ -96,7 +99,7 @@ async function waitForOrdinarySyncFacts(
       lastFacts.contentBlobCount, lastFacts.attachmentCount,
       lastFacts.missingContentBlobCount, lastFacts.missingAttachmentCount]), lastFacts);
     try {
-      assertComplete(lastFacts, requiredOrigins, factIds);
+      assertOwnedClientCompleteFacts(lastFacts, requiredOrigins);
       return lastFacts;
     } catch {
       const runtimeLog = readWindowsSyncRuntimeLog(evidenceRoot);
@@ -159,8 +162,7 @@ export async function resetOwnedClient(paths, evidenceRoot, execute) {
 }
 
 export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, onRestartedReady = async () => {}, paths,
-  assertComplete = assertOwnedClientCompleteFacts, requiredJourneyOrigins = [],
-  resetOwnedState = false, seedOwnedState = false }) {
+  requiredJourneyOrigins = [], resetOwnedState = false, seedOwnedState = false }) {
   if (seedOwnedState && !resetOwnedState) throw new Error('Windows C seed requires an owned reset.');
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const suspended = await suspendWindowsNativeClient({
@@ -192,7 +194,7 @@ export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, onRes
       await invokeWindowsSyncGroupCommand(session.page, 'request_sync_group_join', { endpoint_url: candidate.endpoint_url });
       await waitForJoinedGroup(session.page, candidate.group_id);
       firstFacts = await waitForOrdinarySyncFacts(
-        execute, paths, evidenceRoot, factIds, requiredJourneyOrigins, assertComplete
+        execute, paths, evidenceRoot, factIds, requiredJourneyOrigins
       );
     } finally { await closeWindowsSyncGroupSession(session); }
     session = await openWindowsSyncGroupSession(paths, evidenceRoot);
@@ -206,7 +208,7 @@ export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, onRes
       await onRestartedReady(localFact);
     } finally { await closeWindowsSyncGroupSession(session); }
     const restartedFacts = await inspectWindowsSyncGroupDatabase(execute, paths, undefined, factIds);
-    assertComplete(restartedFacts, requiredJourneyOrigins, factIds);
+    assertOwnedClientCompleteFacts(restartedFacts, requiredJourneyOrigins);
     const receipt = { candidate: { groupId: candidate.group_id, providerKind: candidate.provider_device_kind },
       firstFacts, localFact, preJoinFacts: initialFacts, restartedFacts,
       resultStatus: 'success', schemaVersion: 1 };

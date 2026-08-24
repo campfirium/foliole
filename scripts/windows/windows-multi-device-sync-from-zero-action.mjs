@@ -40,7 +40,7 @@ function assertJoinedGroup(facts, expectedGroupId) {
 }
 
 function isAndroidProvider(candidate) {
-  return candidate.provider_host_platform === 'android-capacitor';
+  return candidate.provider_device_kind === 'android-capacitor';
 }
 
 async function waitForFacts(label, inspect, accept, onObserved = () => {}, timeoutMs = 12 * 60_000) {
@@ -136,7 +136,7 @@ export async function runWindowsMultiDeviceSyncFromZero({ evidenceRoot, execute,
   try {
     const inspect = () => inspectWindowsSyncGroupDatabase(execute, paths);
     receipt = await runWindowsSyncFromZeroJourney({
-      discover: (page) => discoverUniqueGroup(page, isAndroidProvider),
+      discover: (page) => discoverUniqueGroup(page, 60_000, isAndroidProvider),
       closeSession: closeWindowsSyncGroupSession,
       enable: (page) => enableWindowsSyncParticipation(page, invokeWindowsSyncGroupCommand),
       inspect,

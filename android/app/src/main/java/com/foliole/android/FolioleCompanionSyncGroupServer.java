@@ -13,7 +13,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 final class FolioleCompanionSyncGroupServer {
-    private static final int SYNC_PORT = 38642;
+    private static final int SYNC_PORT = 38641;
     final Map<String, FolioleCompanionSyncGroupJoinRequest> requests;
     private final Context context;
     private final JSONObject config;

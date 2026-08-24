@@ -22,16 +22,11 @@ final class FolioleCompanionNsdMonitor {
         new FolioleCompanionLatestServiceQueue<>();
     private long resolutionGeneration;
     private Runnable resolutionTimeout;
-    private boolean discoveryActive;
     private boolean resolving;
     private boolean started;
 
     private final NsdManager.DiscoveryListener listener = new NsdManager.DiscoveryListener() {
-        @Override public void onDiscoveryStarted(String type) {
-            synchronized (FolioleCompanionNsdMonitor.this) {
-                discoveryActive = started;
-            }
-        }
+        @Override public void onDiscoveryStarted(String type) {}
 
         @Override public void onServiceFound(NsdServiceInfo service) {
             if (!FolioleCompanionNsdDiscovery.sameServiceType(serviceType, service.getServiceType())) return;
@@ -39,24 +34,14 @@ final class FolioleCompanionNsdMonitor {
         }
 
         @Override public void onServiceLost(NsdServiceInfo service) {}
-        @Override public void onDiscoveryStopped(String type) {
-            synchronized (FolioleCompanionNsdMonitor.this) {
-                discoveryActive = false;
-            }
-        }
+        @Override public void onDiscoveryStopped(String type) {}
 
         @Override public void onStartDiscoveryFailed(String type, int errorCode) {
-            synchronized (FolioleCompanionNsdMonitor.this) {
-                discoveryActive = false;
-                started = false;
-            }
+            started = false;
         }
 
         @Override public void onStopDiscoveryFailed(String type, int errorCode) {
-            synchronized (FolioleCompanionNsdMonitor.this) {
-                discoveryActive = false;
-                started = false;
-            }
+            started = false;
         }
     };
 
@@ -127,7 +112,6 @@ final class FolioleCompanionNsdMonitor {
 
     synchronized void start() {
         if (started || manager == null) return;
-        discoveryActive = false;
         started = true;
         try {
             manager.discoverServices(serviceType, NsdManager.PROTOCOL_DNS_SD, listener);
@@ -138,7 +122,6 @@ final class FolioleCompanionNsdMonitor {
 
     synchronized void stop() {
         if (!started || manager == null) return;
-        discoveryActive = false;
         started = false;
         pendingResolutions.clear();
         resolutionGeneration += 1;
@@ -149,9 +132,5 @@ final class FolioleCompanionNsdMonitor {
             manager.stopServiceDiscovery(listener);
         } catch (IllegalArgumentException ignored) {
         }
-    }
-
-    synchronized boolean isReady() {
-        return started && discoveryActive;
     }
 }

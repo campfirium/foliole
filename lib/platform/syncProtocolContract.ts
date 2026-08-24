@@ -1,6 +1,7 @@
 import { SYSTEM_ENTRY_DISPLAY_NAMES_SYNC_CAPABILITY } from './systemEntryDisplayNameContract.js';
 
 export const SYNC_PROTOCOL_TXT_KEYS = {
+  capabilities: 'protocol_capabilities',
   maxSupportedVersion: 'protocol_max_version',
   minSupportedVersion: 'protocol_min_version',
   version: 'protocol_version'
@@ -32,8 +33,6 @@ export type SyncProtocolDescriptor = {
   min_supported_version: number;
   version: number;
 };
-
-export type SyncProtocolVersionHint = Omit<SyncProtocolDescriptor, 'capabilities'>;
 
 export type SyncProtocolCompatibilityReason =
   | 'protocol_metadata_missing'
@@ -72,25 +71,6 @@ function normalizeCapabilities(value: unknown) {
   return [...new Set(value.map((entry) => entry.trim()))].sort();
 }
 
-function parseVersionHint(value: unknown): SyncProtocolVersionHint | null {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
-  const raw = value as Record<string, unknown>;
-  if (!isPositiveInteger(raw.version) || !isPositiveInteger(raw.min_supported_version) ||
-      !isPositiveInteger(raw.max_supported_version) ||
-      raw.min_supported_version > raw.max_supported_version) return null;
-  return {
-    max_supported_version: raw.max_supported_version,
-    min_supported_version: raw.min_supported_version,
-    version: raw.version
-  };
-}
-
-function versionsCompatible(remote: SyncProtocolVersionHint, local: SyncProtocolVersionHint) {
-  return remote.version === local.version &&
-    local.version >= remote.min_supported_version && local.version <= remote.max_supported_version &&
-    remote.version >= local.min_supported_version && remote.version <= local.max_supported_version;
-}
-
 export function parseSyncProtocolDescriptor(value: unknown): SyncProtocolDescriptor | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const raw = value as Record<string, unknown>;
@@ -121,7 +101,13 @@ export function evaluateSyncProtocolCompatibility(
   const remote = parseSyncProtocolDescriptor(remoteValue);
   const local = parseSyncProtocolDescriptor(localValue);
   if (!remote || !local) return incompatible('protocol_metadata_invalid');
-  if (!versionsCompatible(remote, local)) return incompatible('protocol_version_unsupported');
+  const versionsMatch = remote.version === local.version;
+  const rangesAcceptCurrent =
+    local.version >= remote.min_supported_version &&
+    local.version <= remote.max_supported_version &&
+    remote.version >= local.min_supported_version &&
+    remote.version <= local.max_supported_version;
+  if (!versionsMatch || !rangesAcceptCurrent) return incompatible('protocol_version_unsupported');
   const localMissingCapabilities = requiredCapabilities.filter((capability) => !local.capabilities.includes(capability));
   if (localMissingCapabilities.length > 0) return incompatible('protocol_metadata_invalid');
   const missingCapabilities = requiredCapabilities.filter((capability) => !remote.capabilities.includes(capability));
@@ -138,41 +124,24 @@ export function serializeSyncProtocolTxt(descriptor: SyncProtocolDescriptor = CU
   const normalized = parseSyncProtocolDescriptor(descriptor);
   if (!normalized) throw new Error('Invalid sync protocol descriptor.');
   return {
+    [SYNC_PROTOCOL_TXT_KEYS.capabilities]: normalized.capabilities.join(','),
     [SYNC_PROTOCOL_TXT_KEYS.maxSupportedVersion]: String(normalized.max_supported_version),
     [SYNC_PROTOCOL_TXT_KEYS.minSupportedVersion]: String(normalized.min_supported_version),
     [SYNC_PROTOCOL_TXT_KEYS.version]: String(normalized.version)
   };
 }
 
-export function parseSyncProtocolTxt(value: unknown): SyncProtocolVersionHint | null {
+export function parseSyncProtocolTxt(value: unknown): SyncProtocolDescriptor | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const raw = value as Record<string, unknown>;
   const readText = (key: string) => typeof raw[key] === 'string' ? raw[key].trim() : '';
-  return parseVersionHint({
+  const capabilities = readText(SYNC_PROTOCOL_TXT_KEYS.capabilities).split(',').filter(Boolean);
+  return parseSyncProtocolDescriptor({
+    capabilities,
     max_supported_version: Number(readText(SYNC_PROTOCOL_TXT_KEYS.maxSupportedVersion)),
     min_supported_version: Number(readText(SYNC_PROTOCOL_TXT_KEYS.minSupportedVersion)),
     version: Number(readText(SYNC_PROTOCOL_TXT_KEYS.version))
   });
-}
-
-export function evaluateSyncProtocolVersionHint(
-  remoteValue: unknown,
-  localValue: SyncProtocolVersionHint = CURRENT_SYNC_PROTOCOL_DESCRIPTOR
-): SyncProtocolCompatibilityResult {
-  if (remoteValue === null || remoteValue === undefined) return incompatible('protocol_metadata_missing');
-  const remote = parseVersionHint(remoteValue);
-  const local = parseVersionHint(localValue);
-  if (!remote || !local) return incompatible('protocol_metadata_invalid');
-  if (!versionsCompatible(remote, local)) return incompatible('protocol_version_unsupported');
-  return { missing_capabilities: [], negotiated_version: local.version, reason: null, status: 'compatible' };
-}
-
-export function syncProtocolVersionHintMatchesDescriptor(hintValue: unknown, descriptorValue: unknown) {
-  const hint = parseVersionHint(hintValue);
-  const descriptor = parseSyncProtocolDescriptor(descriptorValue);
-  return Boolean(hint && descriptor && hint.version === descriptor.version &&
-    hint.min_supported_version === descriptor.min_supported_version &&
-    hint.max_supported_version === descriptor.max_supported_version);
 }
 
 export function syncProtocolDescriptorsMatch(leftValue: unknown, rightValue: unknown) {

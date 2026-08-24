@@ -12,7 +12,7 @@ import java.util.concurrent.Executors;
 @CapacitorPlugin(name = "FolioleCompanionSync")
 public class FolioleCompanionSyncPlugin extends Plugin {
     private final ExecutorService fileExecutor = Executors.newSingleThreadExecutor();
-    private volatile boolean lifecycleActive = true;
+    private boolean lifecycleActive = true;
     private FolioleCompanionNsdMonitor serviceMonitor;
 
     @Override public void load() {
@@ -40,8 +40,8 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
     @PluginMethod public void startSyncGroupProvider(PluginCall call) {
         async(call, "Failed to start Sync Group provider.", () ->
-            FolioleCompanionSyncGroupProviderStart.run(
-                getContext(), getActivity(), call, this, this::dispatchDataRequest, this::isParticipating
+            FolioleCompanionSyncGroupProvider.start(
+                getContext(), getActivity(), call, this, this::dispatchDataRequest, isParticipating()
             ));
     }
 
@@ -154,13 +154,13 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
     private void dispatchDataRequest(JSObject event) throws Exception {
         String name = FolioleCompanionHostBridgeContractDefinitions.syncGroupProviderDataRequestEvent(getContext());
-        getActivity().runOnUiThread(() -> notifyListeners(name, event, true));
+        getActivity().runOnUiThread(() -> notifyListeners(name, event));
     }
 
     private void dispatchServiceHint(JSObject event) {
         try {
             String name = FolioleCompanionHostBridgeContractDefinitions.syncGroupProviderServiceHintEvent(getContext());
-            getActivity().runOnUiThread(() -> notifyListeners(name, event, true));
+            getActivity().runOnUiThread(() -> notifyListeners(name, event));
         } catch (Exception error) {
             android.util.Log.w("FolioleSyncDiscovery", "Hint dispatch failed", error);
         }
@@ -190,17 +190,6 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         if (serviceMonitor == null) return;
         if (isParticipating()) serviceMonitor.start();
         else serviceMonitor.stop();
-    }
-
-    boolean isServiceMonitorReady() {
-        if (serviceMonitor == null || !serviceMonitor.isReady()) return false;
-        try {
-            String name = FolioleCompanionHostBridgeContractDefinitions
-                .syncGroupProviderServiceHintEvent(getContext());
-            return hasListeners(name);
-        } catch (Exception error) {
-            return false;
-        }
     }
 
     private JSObject withParticipation(JSObject result) throws Exception {

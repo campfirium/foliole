@@ -61,8 +61,7 @@ final class FolioleCompanionWebViewSemanticAdapter {
             "else{return JSON.stringify({ok:false,code:'action_unsupported'});}" +
             "return JSON.stringify({ok:true,action:" + JSONObject.quote(action) + ",targetTestId:" + quotedId + "," +
             "tag:node.tagName.toLowerCase(),role:node.getAttribute('role')||''," +
-            "ariaLabel:node.getAttribute('aria-label')||''," +
-            "syncTerminalRunId:node.getAttribute('data-sync-terminal-run-id')||''});})()";
+            "ariaLabel:node.getAttribute('aria-label')||''});})()";
         return evaluateJson(instrumentation, webView, script);
     }
 

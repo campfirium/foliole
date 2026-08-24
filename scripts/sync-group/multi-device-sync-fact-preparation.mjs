@@ -1,9 +1,8 @@
 import { settleSiblingActions } from './multi-device-sync-stage-runtime.mjs';
 
 export async function runAOfflineAdmissionPrelude({
-  cancelSiblings = () => {}, closeTransport, completeWindowsAdmission = async () => {},
-  createFact, openSession, openTransport, reportProgress = () => {}, runApproval,
-  startWindows, waitForFact
+  cancelSiblings = () => {}, closeTransport, createFact, openSession, openTransport,
+  reportProgress = () => {}, runApproval, startWindows, waitForFact
 }) {
   const session = await openSession();
   let closed = false;
@@ -12,7 +11,6 @@ export async function runAOfflineAdmissionPrelude({
     if (closed) return;
     closed = true; await session.close();
   };
-  let fact;
   let windowsWork;
   let windowsStarted;
   const windowsStart = new Promise((resolve) => { windowsStarted = resolve; });
@@ -24,7 +22,7 @@ export async function runAOfflineAdmissionPrelude({
       });
     }
     reportProgress('a-listener-ready');
-    fact = await createFact(session);
+    const fact = await createFact(session);
     reportProgress('a-fact-created');
     const approvalWork = runApproval({
       onProviderStopped: async () => {
@@ -50,16 +48,12 @@ export async function runAOfflineAdmissionPrelude({
         failureOwner: 'controller', host: 'android-b', missingFact: 'windows_c_join_not_started'
       });
     }
-    const admittedWindowsWork = Promise.resolve(windowsWork).then(async (windows) => {
-      await completeWindowsAdmission(windows);
-      return windows;
-    });
     const settled = await settleSiblingActions([
       { name: 'android-b-approval', work: approvalWork.then((approval) => {
         reportProgress('b-approval-completed'); return approval;
       }) },
-      { name: 'windows-c-join', work: admittedWindowsWork }
-    ], cancelSiblings);
+      { name: 'windows-c-join', work: windowsWork }
+    ], cancelSiblings, ['windows-c-join']);
     return { approval: settled['android-b-approval'], fact, windows: settled['windows-c-join'] };
   } finally {
     if (transportOpen) await closeTransport().catch(() => undefined);

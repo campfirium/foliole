@@ -1,7 +1,7 @@
 import {
   evaluateSyncProtocolCompatibility,
   parseSyncProtocolTxt,
-  syncProtocolVersionHintMatchesDescriptor,
+  syncProtocolDescriptorsMatch,
   type SyncProtocolCompatibilityResult
 } from '../../../lib/platform/syncProtocolContract';
 
@@ -87,7 +87,7 @@ function resolveCompatibility(candidate: DiscoveryCandidate, discovery: LoadComp
   const compatibility = evaluateSyncProtocolCompatibility(discovery.protocol);
   if (compatibility.status === 'incompatible' || candidate.source !== 'nsd') return compatibility;
   const advertised = parseSyncProtocolTxt(candidate.protocolTxt);
-  if (!advertised || !syncProtocolVersionHintMatchesDescriptor(advertised, discovery.protocol)) {
+  if (!advertised || !syncProtocolDescriptorsMatch(advertised, discovery.protocol)) {
     return {
       missing_capabilities: [],
       negotiated_version: null,

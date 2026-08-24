@@ -53,7 +53,8 @@ it('uses the fixed product instrumentation method and records its receipt', asyn
     '-s 87a33a4b reverse --remove tcp:38641'
   ]);
   const commands = execute.mock.calls.map(([, args]) => args.join(' '));
-  expect(commands).not.toContain('-s 87a33a4b shell am force-stop com.foliole.android');
+  expect(commands.indexOf('-s 87a33a4b shell am force-stop com.foliole.android'))
+    .toBeLessThan(commands.indexOf('-s 87a33a4b reverse tcp:38641 tcp:38641'));
   expect(execute.mock.calls.at(-1)?.[1]).toEqual([
     '-s', '87a33a4b', 'uninstall', 'com.foliole.android.test'
   ]);
@@ -95,7 +96,7 @@ it('accepts an already absent owned reverse listener before the single bind', as
     if (args.includes('instrument')) return new Promise((resolve) => {
       releaseInstrumentation = () => resolve({ code: 1, output: 'controlled instrumentation', stdout: [
         'INSTRUMENTATION_STATUS: folioleActionReceipt={"syncRequested":true}',
-        'INSTRUMENTATION_CODE: 0'
+        'INSTRUMENTATION_STATUS: folioleAfterSemantic={}', 'INSTRUMENTATION_CODE: 0'
       ].join('\n') });
     });
     if (releaseInstrumentation && args.includes('force-stop')) releaseInstrumentation();
@@ -106,11 +107,6 @@ it('accepts an already absent owned reverse listener before the single bind', as
     observeWhileTransportOpen: async () => ({ exactFact: 'fact-a' }),
     paths: { adb: '/fixed/adb', apk: '/fixed/app.apk', buildRoot: process.cwd() }, serial: '87a33a4b'
   })).resolves.toMatchObject({ manifestPath: expect.any(String) });
-  const commands = execute.mock.calls.map(([, args]) => args.join(' '));
-  const instrument = commands.findIndex((command) => command.includes(' instrument '));
-  const controlledStop = commands.indexOf('-s 87a33a4b shell am force-stop com.foliole.android');
-  expect(instrument).toBeGreaterThan(-1);
-  expect(controlledStop).toBeGreaterThan(instrument);
 });
 
 it('creates journey facts only through the visible Capture product entry', async () => {
@@ -212,8 +208,6 @@ it('returns an abnormal instrumentation exit as raw controller failure', async (
     executionOwner: 'controller', failureAxis: 'execution', host: 'android-b',
     missingFact: 'android_instrumentation_terminal'
   });
-  expect(fs.readFileSync(path.join(root, 'android-provider.log'), 'utf8')).toBe('Success\n');
-  expect(execute.mock.calls.some(([, args]) => args.includes('FolioleSyncProvider:V') && args.includes('FolioleSyncDiscovery:V'))).toBe(true);
 });
 
 it('preserves a lost Android window focus as an environment failure', async () => {

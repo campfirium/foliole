@@ -17,7 +17,6 @@ vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
   isNativeCompanionSyncGroupStoreRuntime: () => true
 }));
 
-import { useCompanionSyncGroupProviderAvailability } from './companionSyncGroupProviderAvailability';
 import { CompanionSyncGroupRuntime } from './CompanionSyncGroupRuntime';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
@@ -39,11 +38,6 @@ function workspaceSync() {
 
 const bootstrapState = workspaceSync().bootstrapState;
 
-function RuntimeState() {
-  const providerAvailable = useCompanionSyncGroupProviderAvailability();
-  return <output>{providerAvailable ? 'available' : 'starting'}</output>;
-}
-
 it('maintains the member provider before any settings surface is mounted', async () => {
   const group = { group_id: 'group-1', local_host_name: 'Android B', local_member_state: 'active' };
   runtime.load.mockResolvedValue(group);
@@ -54,46 +48,6 @@ it('maintains the member provider before any settings surface is mounted', async
   expect(runtime.reconcile).toHaveBeenCalledWith(
     expect.objectContaining({ device_id: 'android-b' }), group, '0:'
   );
-});
-
-it('withholds public sync availability until provider lifecycle completes', async () => {
-  let resolveProvider: (value: null) => void = () => undefined;
-  runtime.load.mockResolvedValue({
-    group_id: 'group-1', local_host_name: 'Android B', local_member_state: 'active'
-  });
-  runtime.reconcile.mockReturnValueOnce(new Promise((resolve) => { resolveProvider = resolve; }));
-  render(<CompanionSyncGroupRuntime bootstrapState={bootstrapState} workspaceSync={workspaceSync()}>
-    <RuntimeState />
-  </CompanionSyncGroupRuntime>);
-  await act(async () => Promise.resolve());
-  expect(document.querySelector('output')).toHaveTextContent('starting');
-  await act(async () => resolveProvider(null));
-  expect(document.querySelector('output')).toHaveTextContent('available');
-});
-
-it('keeps in-flight provider readiness across pairing view refreshes', async () => {
-  let resolveProvider: (value: null) => void = () => undefined;
-  const sync = workspaceSync();
-  runtime.load.mockResolvedValue({
-    group_id: 'group-1', local_host_name: 'Android B', local_member_state: 'active'
-  });
-  runtime.reconcile.mockReturnValueOnce(new Promise((resolve) => { resolveProvider = resolve; }));
-  const view = render(
-    <CompanionSyncGroupRuntime bootstrapState={bootstrapState} workspaceSync={sync}>
-      <RuntimeState />
-    </CompanionSyncGroupRuntime>
-  );
-  await act(async () => Promise.resolve());
-  view.rerender(
-    <CompanionSyncGroupRuntime bootstrapState={bootstrapState} workspaceSync={{
-      ...sync, pairingState: { ...sync.pairingState }
-    }}>
-      <RuntimeState />
-    </CompanionSyncGroupRuntime>
-  );
-  await act(async () => resolveProvider(null));
-  expect(runtime.reconcile).toHaveBeenCalledOnce();
-  expect(document.querySelector('output')).toHaveTextContent('available');
 });
 
 it('starts a copied group database without requiring separate host credentials', async () => {

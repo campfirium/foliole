@@ -6,8 +6,7 @@ import path from 'node:path';
 import { expect, it } from 'vitest';
 
 import {
-  assertOwnedClientAdmissionFacts, assertOwnedClientSeedFacts, assertOwnedClientUnboundFacts,
-  seedOwnedWindowsClient
+  assertOwnedClientSeedFacts, assertOwnedClientUnboundFacts, seedOwnedWindowsClient
 } from './windows-sync-group-owned-client-seed.mjs';
 
 /* global process */
@@ -70,15 +69,4 @@ it('accepts onboarding material in an unbound baseline but rejects stale journey
   expect(() => assertOwnedClientUnboundFacts({
     ...baselineFacts, journeyFacts: { 'multi-device-sync-c-old': 'C' }
   })).toThrow('did not start unbound');
-});
-
-it('admits C from action facts before the later cross-host resource proof', () => {
-  const factId = 'multi-device-sync-c-1';
-  const facts = { activeMemberCount: 3, facts: { [factId]: true }, localMemberState: 'active',
-    journeyFacts: { 'multi-device-sync-a-1': 'A', 'multi-device-sync-b-1': 'B' },
-    missingAttachmentCount: 1 };
-  expect(() => assertOwnedClientAdmissionFacts(facts, ['A', 'B'], [factId])).not.toThrow();
-  expect(() => assertOwnedClientAdmissionFacts({
-    ...facts, facts: { [factId]: false }
-  }, ['A', 'B'], [factId])).toThrow('did not complete admission sync');
 });

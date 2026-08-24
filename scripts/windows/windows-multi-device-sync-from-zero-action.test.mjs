@@ -14,14 +14,13 @@ function session(events, name) {
 
 it('selects the fixed Android provider without occupying unrelated desktop groups', async () => {
   const candidates = [
-    { group_id: 'user-group', provider_host_platform: 'darwin' },
-    { group_id: 'acceptance-group', provider_host_platform: 'android-capacitor' }
+    { group_id: 'user-group', provider_device_kind: 'darwin' },
+    { group_id: 'acceptance-group', provider_device_kind: 'android-capacitor' }
   ];
   const page = { evaluate: vi.fn(async () => ({ join_candidates: candidates })) };
-  await expect(discoverUniqueGroup(page,
-    (candidate) => candidate.provider_host_platform === 'android-capacitor'
+  await expect(discoverUniqueGroup(page, 10,
+    (candidate) => candidate.provider_device_kind === 'android-capacitor'
   )).resolves.toMatchObject({ group_id: 'acceptance-group' });
-  expect(page.evaluate).toHaveBeenCalledOnce();
 });
 
 it('interrupts only after a committed cursor and resumes without cursor regression', async () => {

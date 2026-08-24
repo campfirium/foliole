@@ -14,26 +14,21 @@ import java.util.concurrent.TimeUnit;
 final class FolioleCompanionSyncGroupApprovalScenario {
     private FolioleCompanionSyncGroupApprovalScenario() {}
 
-    static JSONObject approveForeground(
-        Instrumentation instrumentation, Runnable onProviderReady
-    ) throws Exception {
+    static JSONObject approveForeground(Instrumentation instrumentation) throws Exception {
         Activity activity = start(instrumentation);
         waitForFocus(activity, 30_000);
         WebView webView = activity.findViewById(R.id.webview);
         long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(3);
         openSyncSettings(instrumentation, webView);
-        FolioleCompanionSyncGroupMaintenanceScenario.syncNow(instrumentation, webView);
-        waitForInstrumentedRuntime(activity);
-        onProviderReady.run();
+        waitForProviderAdvertisement();
         FolioleCompanionSemanticActions.waitForUniqueVisible(
             instrumentation, webView, "companion-sync-group-approve", deadline
         );
-        String joiningAuthorizationId = pendingJoiningAuthorizationId();
+        String joiningDeviceId = pendingJoiningDeviceId();
         FolioleCompanionSemanticActions.clickVisible(
             instrumentation, webView, "companion-sync-group-approve", deadline
         );
-        waitForPeerCredential(instrumentation.getTargetContext(), joiningAuthorizationId, deadline);
-        FolioleCompanionSyncGroupMaintenanceScenario.syncNow(instrumentation, webView);
+        waitForPeerCredential(instrumentation.getTargetContext(), joiningDeviceId, deadline);
         return new JSONObject().put("ok", true).put("targetTestId", "sync-group-approval")
             .put("approved", true).put("foreground", true);
     }
@@ -92,33 +87,10 @@ final class FolioleCompanionSyncGroupApprovalScenario {
         throw new IllegalStateException("Provider advertisement unavailable: " + latest);
     }
 
-    private static void waitForInstrumentedRuntime(Activity activity) throws Exception {
-        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(60);
-        JSONObject latest = new JSONObject();
-        while (System.nanoTime() < deadline) {
-            latest = FolioleCompanionSyncGroupProvider.state();
-            String state = latest.optString("advertisement_state");
-            if ("registered".equals(state) && listenerReady(activity)) return;
-            if ("failed".equals(state)) {
-                throw new IllegalStateException("Provider advertisement failed: " + latest);
-            }
-            Thread.sleep(100);
-        }
-        throw new IllegalStateException("Instrumented provider/listener unavailable: " + latest);
-    }
-
-    private static boolean listenerReady(Activity activity) {
-        if (!(activity instanceof MainActivity)) return false;
-        com.getcapacitor.PluginHandle handle = ((MainActivity) activity).getBridge()
-            .getPlugin("FolioleCompanionSync");
-        return handle != null && handle.getInstance() instanceof FolioleCompanionSyncPlugin
-            && ((FolioleCompanionSyncPlugin) handle.getInstance()).isServiceMonitorReady();
-    }
-
-    private static String pendingJoiningAuthorizationId() throws Exception {
+    private static String pendingJoiningDeviceId() throws Exception {
         JSONArray requests = FolioleCompanionSyncGroupProvider.state().getJSONArray("pending_requests");
         if (requests.length() != 1) throw new IllegalStateException("Expected one joining Device.");
-        return requests.getJSONObject(0).getString("pair_request_id");
+        return requests.getJSONObject(0).getString("device_id");
     }
 
     private static void waitForPeerCredential(Context context, String deviceId, long deadline) throws Exception {

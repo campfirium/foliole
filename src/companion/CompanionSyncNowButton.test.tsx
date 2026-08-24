@@ -6,12 +6,6 @@ import { renderWithLocalization } from '../shared/localization/testLocalization'
 import { CompanionSyncNowButton } from './CompanionSyncNowButton';
 
 describe('CompanionSyncNowButton', () => {
-  it('keeps public sync available so the action can establish provider readiness', () => {
-    renderWithLocalization(<CompanionSyncNowButton isSyncing={false} onSync={vi.fn()} />);
-
-    expect(screen.getByRole('button', { name: 'Sync Now' })).toBeEnabled();
-  });
-
   it('identifies a manual action joined to the active run', () => {
     renderWithLocalization(
       <CompanionSyncNowButton

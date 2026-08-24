@@ -17,8 +17,7 @@ public class FolioleCompanionSyncGroupApprovalTest {
     @Test
     public void approvesJoinWhileProviderStaysForeground() throws Exception {
         emit(FolioleCompanionSyncGroupApprovalScenario.approveForeground(
-            InstrumentationRegistry.getInstrumentation(),
-            FolioleCompanionSyncGroupApprovalTest::emitReady
+            InstrumentationRegistry.getInstrumentation()
         ));
         new CountDownLatch(1).await();
     }
@@ -33,13 +32,6 @@ public class FolioleCompanionSyncGroupApprovalTest {
         Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
         Bundle evidence = new Bundle();
         evidence.putString("folioleSyncGroupApprovalReceipt", receipt.toString());
-        instrumentation.sendStatus(2, evidence);
-    }
-
-    private static void emitReady() {
-        Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
-        Bundle evidence = new Bundle();
-        evidence.putString("folioleSyncGroupApprovalReady", "provider-listener-ready");
         instrumentation.sendStatus(2, evidence);
     }
 }

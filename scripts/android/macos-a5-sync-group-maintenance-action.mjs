@@ -51,6 +51,9 @@ export async function runMacosA5InstrumentationMechanics({
   const output = [];
   let reverseCreated = false; let testInstalled = false;
   try {
+    if (needsTransport) output.push((await checked(execute, paths.adb,
+      ['-s', serial, 'shell', 'am', 'force-stop', APP_ID],
+      options, 'transport app stop')).output);
     if (installMain) output.push((await checked(execute, paths.adb,
       ['-s', serial, 'install', '-r', paths.apk], options, 'main install')).output);
     output.push((await checked(execute, paths.adb,
@@ -117,15 +120,6 @@ export async function runMacosA5InstrumentationMechanics({
       stdout: instrumentation.stdout, testClass
     }, null, 2)}\n`, 'utf8');
     return { evidencePath, observation, output: output.join(''), stdout: instrumentation.stdout };
-  } catch (error) {
-    const providerLog = await execute(paths.adb, [
-      '-s', serial, 'logcat', '-d', '-v', 'time',
-      'FolioleSyncProvider:V', 'FolioleSyncDiscovery:V', '*:S'
-    ], { env, timeoutMs: 30_000 }).catch(() => null);
-    if (providerLog) fs.writeFileSync(
-      path.join(evidenceRoot, 'android-provider.log'), providerLog.output, 'utf8'
-    );
-    throw error;
   } finally {
     if (reverseCreated) output.push((await checked(execute, paths.adb,
       ['-s', serial, 'reverse', '--remove', `tcp:${PAIR_SYNC_PORT}`],

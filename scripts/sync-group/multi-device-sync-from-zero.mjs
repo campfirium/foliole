@@ -99,11 +99,7 @@ async function admitWindowsFromZero(context) {
   const approvalController = new AbortController();
   const approvalSignal = AbortSignal.any([context.signal, approvalController.signal]);
   const approvalRelease = createApprovalReceiptRelease(() => approvalController.abort());
-  const instrumentationExecute = (command, args, options = {}) => context.createExecute(
-    approvalSignal, (event) => {
-      approvalRelease.capture(event); options.onOutput?.(event);
-    }
-  )(command, args, options);
+  const instrumentationExecute = context.createExecute(approvalSignal, approvalRelease.capture);
   let windowsWork;
   let windowsStarted;
   const started = new Promise((resolve) => { windowsStarted = resolve; });
@@ -113,8 +109,7 @@ async function admitWindowsFromZero(context) {
       onOutput: windowsProgressCapture(context.reportActivity), timeoutMs: 15 * 60_000
     });
   const approvalWork = runMacosA5SyncGroupApproval({ allowControlledCancellation: true,
-    cancelInstrumentation: () => approvalController.abort(), execute: context.execute,
-    instrumentationExecute, prepare: () => {}, repoRoot: context.repoRoot,
+    execute: context.execute, instrumentationExecute, prepare: () => {}, repoRoot: context.repoRoot,
     onProviderStopped: async () => {}, onReady: async () => {
       windowsWork = runWindows(); context.reportProgress('windows-join-started'); windowsStarted();
     } });

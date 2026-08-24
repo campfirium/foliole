@@ -13,9 +13,10 @@ import {
 } from '../../companionWorkspaceRuntimeRepository';
 import { loadCompanionSyncGroup } from '../sync/syncGroupStore';
 
-function activeRemoteMembers(group: SyncGroupPayload) {
+function activeRemoteHostNames(group: SyncGroupPayload) {
   return group.members
-    .filter((member) => member.state === 'active' && member.host_name !== group.local_host_name);
+    .filter((member) => member.state === 'active' && member.host_name !== group.local_host_name)
+    .map((member) => member.host_name);
 }
 
 export interface CompanionWorkspaceSyncTarget {
@@ -55,12 +56,12 @@ export async function resolveReachableCompanionWorkspaceSyncEndpoints(
     return [{ endpointUrl: await resolveReachableCompanionWorkspaceSyncEndpoint(normalizedEndpointUrl, options) }];
   }
   const discovered = await discoverCompanionDesktops(normalizedEndpointUrl, options).catch(() => []);
-  return activeRemoteMembers(group).flatMap((member) => {
+  return activeRemoteHostNames(group).flatMap((hostName) => {
     const match = discovered.find((candidate) => candidate.compatibility.status === 'compatible'
       && candidate.discovery.group_id === group.group_id
-      && candidate.discovery.peer_id === member.authorization_id);
+      && candidate.discovery.desktop_host_name === hostName);
     return match ? [{ authorizationId: match.discovery.peer_id, endpointUrl: match.endpointUrl,
-      groupId: group.group_id, hostName: member.host_name }] : [];
+      groupId: group.group_id, hostName }] : [];
   });
 }
 

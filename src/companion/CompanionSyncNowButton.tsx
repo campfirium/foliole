@@ -4,6 +4,7 @@ import { isSyncRunFinishedEvent } from '../shared/platform/companionSyncActivity
 import { AppSpinner } from '../shared/ui';
 
 import type { CompanionManualSyncAction } from './companionManualSyncAction';
+
 export function CompanionSyncNowButton(props: {
   isSyncing: boolean;
   manualSyncAction?: CompanionManualSyncAction | null;

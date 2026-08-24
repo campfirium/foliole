@@ -49,22 +49,15 @@ final class FolioleCompanionSyncGroupDataBridge {
         CompletableFuture<JSONObject> future = new CompletableFuture<>();
         pending.put(id, future);
         try {
-            android.util.Log.d(LOG_TAG, "Data request dispatch: " + operation);
             JSObject event = new JSObject();
             event.put(requestKey("requestId"), id);
             event.put(requestKey("operation"), operation);
             event.put(requestKey("payload"), payload);
             dispatcher.dispatch(event);
-            JSONObject result = future.get(60, TimeUnit.SECONDS);
-            android.util.Log.d(LOG_TAG, "Data request resolved: " + operation);
-            return result;
+            return future.get(60, TimeUnit.SECONDS);
         } catch (ExecutionException error) {
             Throwable cause = error.getCause();
-            android.util.Log.w(LOG_TAG, "Data request rejected: " + operation, cause);
             if (cause instanceof Exception) throw (Exception) cause;
-            throw error;
-        } catch (Exception error) {
-            android.util.Log.w(LOG_TAG, "Data request failed: " + operation, error);
             throw error;
         } finally {
             pending.remove(id);
@@ -79,7 +72,6 @@ final class FolioleCompanionSyncGroupDataBridge {
         if (!error.isEmpty()) future.completeExceptionally(new IllegalStateException(error));
         else future.complete(response.optJSONObject(responseKey("result")) == null
             ? new JSONObject() : response.getJSONObject(responseKey("result")));
-        android.util.Log.d(LOG_TAG, "Data response accepted");
     }
 
     void close() {

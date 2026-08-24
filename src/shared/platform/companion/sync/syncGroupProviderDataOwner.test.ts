@@ -51,7 +51,7 @@ it('runs provider live-database writes through the shared writer queue', async (
   });
   await vi.waitFor(() => expect(mocks.resolve).toHaveBeenCalled());
   expect(mocks.writer).toHaveBeenCalledOnce();
-  expect(mocks.run).toHaveBeenCalledWith(expect.stringContaining('(authorization_id, stream_name'), [
+  expect(mocks.run).toHaveBeenCalledWith(expect.stringContaining('sync_peer_cursors'), [
     'desktop-c', '4:9', expect.any(String)
   ]);
   expect(mocks.resolve).toHaveBeenCalledWith({ request_id: 'request-1', result: { recorded: true } });

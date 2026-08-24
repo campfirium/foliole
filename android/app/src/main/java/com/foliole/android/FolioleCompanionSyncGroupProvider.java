@@ -26,13 +26,17 @@ final class FolioleCompanionSyncGroupProvider {
 
     private FolioleCompanionSyncGroupProvider() {}
 
-    static synchronized JSObject startReady(
+    static synchronized JSObject start(
         Context context, Activity activity, PluginCall call, Object owner,
-        FolioleCompanionSyncGroupDataBridge.Dispatcher dispatcher, boolean participating,
-        JSONObject group, FolioleCompanionSyncGroupDataBridge bridge,
-        FolioleCompanionCurrentGroupCredential credential
+        FolioleCompanionSyncGroupDataBridge.Dispatcher dispatcher,
+        boolean participating
     ) throws Exception {
+        JSONObject group = call.getData().getJSONObject(key(context, "group"));
+        FolioleCompanionSyncGroupDataBridge bridge = FolioleCompanionSyncGroupDataBridge.current();
+        bridge.replaceDispatcher(dispatcher);
         dataBridge = bridge;
+        FolioleCompanionCurrentGroupCredential credential =
+            FolioleCompanionCurrentGroupCredential.load(group.getString("group_id"));
         String authorizationId = value(context, call, "authorizationId");
         if (!credential.authorizationId.equals(authorizationId)) {
             throw new SecurityException("sync_group_local_authorization_mismatch");
@@ -46,7 +50,6 @@ final class FolioleCompanionSyncGroupProvider {
             .put("protocol", FolioleCompanionSyncPackProviderDefinitions.load(context).protocol())
             .put("sync_group", group);
         next.put("group_tag", FolioleCompanionSyncGroupCrypto.groupTag(credential.workgroupKey));
-        FolioleCompanionSyncGroupProviderConfig.traceConfigured();
         if (FolioleCompanionSyncGroupProviderConfig.sameProvider(activeConfig, next)) {
             next.put("runtime_instance_id", activeConfig.getString("runtime_instance_id"));
             boolean factsChanged = !next.optString("facts_revision").equals(activeConfig.optString("facts_revision"));
@@ -116,11 +119,8 @@ final class FolioleCompanionSyncGroupProvider {
 
     private static void startRuntime() throws Exception {
         server = new FolioleCompanionSyncGroupServer(activeContext, activeConfig, joinRequests, requireDataBridge());
-        android.util.Log.d("FolioleSyncProvider", "Provider server bound");
         advertisement = FolioleCompanionNsdAdvertisement.start(activeContext, server.port(), activeConfig);
-        android.util.Log.d("FolioleSyncProvider", "Provider advertisement requested");
         publishRuntime();
-        android.util.Log.d("FolioleSyncProvider", "Provider runtime published");
     }
 
     private static void restartAdvertisement() throws Exception {

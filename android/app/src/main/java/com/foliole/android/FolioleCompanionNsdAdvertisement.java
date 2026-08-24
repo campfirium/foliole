@@ -43,6 +43,7 @@ final class FolioleCompanionNsdAdvertisement {
         put(info, "protocol_version", String.valueOf(protocol.getInt("version")));
         put(info, "protocol_min_version", String.valueOf(protocol.getInt("min_supported_version")));
         put(info, "protocol_max_version", String.valueOf(protocol.getInt("max_supported_version")));
+        put(info, "protocol_capabilities", join(protocol.getJSONArray("capabilities")));
         AtomicReference<FolioleCompanionNsdAdvertisement> active = new AtomicReference<>();
         NsdManager.RegistrationListener listener = new NsdManager.RegistrationListener() {
             public void onRegistrationFailed(NsdServiceInfo serviceInfo, int errorCode) {
@@ -102,4 +103,9 @@ final class FolioleCompanionNsdAdvertisement {
         return displayName.substring(0, Math.min(displayName.length(), displayLimit)) + "-" + suffix;
     }
 
+    private static String join(org.json.JSONArray values) throws Exception {
+        java.util.List<String> result = new java.util.ArrayList<>();
+        for (int index = 0; index < values.length(); index++) result.add(values.getString(index));
+        return String.join(",", result);
+    }
 }

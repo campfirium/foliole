@@ -172,10 +172,9 @@ public class FolioleCompanionSyncGroupMaintenanceTest {
         Instrumentation instrumentation, WebView webView, JSONObject receipt
     ) throws Exception {
         Bundle evidence = new Bundle();
-        evidence.putString("folioleActionReceipt", receipt.toString());
-        instrumentation.sendStatus(2, evidence);
         evidence.putString("folioleAfterSemantic",
             FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView).toString());
+        evidence.putString("folioleActionReceipt", receipt.toString());
         instrumentation.sendStatus(2, evidence);
     }
 
