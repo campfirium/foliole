@@ -34,12 +34,13 @@ export async function runABConvergenceJourney(actions) {
     await actions.openTransport();
     transportOpen = true;
     await actions.startAndroid();
-    const androidReceived = await actions.waitForAndroidFact(desktopFact.factId);
+    await actions.waitForAndroidFact(desktopFact.factId);
     actions.reportProgress?.('a-fact-synced-to-b');
     await actions.closeTransport();
     transportOpen = false;
     const androidFact = await actions.createAndroidFact();
     const desktopReceived = await actions.syncAndroidFact(session, androidFact.factId);
+    const androidConverged = await actions.inspectAndroidReceived(desktopFact, androidFact);
     actions.reportProgress?.('b-fact-synced-to-a');
     await session.close();
     session = null;
@@ -47,7 +48,7 @@ export async function runABConvergenceJourney(actions) {
     actions.reportProgress?.('a-b-restarted');
     session = await actions.openSession();
     const proof = await actions.inspectRestarted(session, desktopFact, androidFact, {
-      androidReceived, desktopReceived
+      androidReceived: androidConverged, desktopReceived
     });
     actions.reportProgress?.('a-b-bidirectional-converged');
     return { androidFact, desktopFact, proof };
@@ -93,6 +94,9 @@ export async function proveABConvergence({ execute, reportProgress, repoRoot, ru
     inspectRestarted: (session, desktopFact, androidFact, received) => inspectRestarted({
       androidFact, desktopFact, paths, received, runId, session
     }),
+    inspectAndroidReceived: (desktopFact, androidFact) => androidSnapshot(
+      paths, desktopFact.factId, androidFact.factText
+    ),
     openSession: () => openMacosPairSyncDesktopSession(sessionOptions),
     openTransport: () => openMacosAcceptanceTransport(runTransport),
     reportProgress,

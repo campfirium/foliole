@@ -28,6 +28,7 @@ it('proves both directions and restarts before accepting A and B convergence', a
     closeTransport: async () => { events.push('transport-closed'); },
     createAndroidFact: async () => { events.push('b-fact-created'); return { factText: 'B fact' }; },
     createDesktopFact: async () => { events.push('a-fact-created'); return { factId: 'A fact' }; },
+    inspectAndroidReceived: async () => { events.push('b-received-inspected'); },
     inspectRestarted: async () => { events.push('restart-inspected'); return { restarted: true }; },
     openSession: async () => sessions.shift(),
     openTransport: async () => { events.push('transport-opened'); },
@@ -40,7 +41,8 @@ it('proves both directions and restarts before accepting A and B convergence', a
   expect(result.proof).toEqual({ restarted: true });
   expect(events).toEqual([
     'first-enabled', 'a-fact-created', 'b-stopped', 'transport-opened', 'b-started',
-    'a-fact-on-b', 'transport-closed', 'b-fact-created', 'b-sync-now', 'b-fact-on-a', 'first-closed',
+    'a-fact-on-b', 'transport-closed', 'b-fact-created', 'b-sync-now', 'b-fact-on-a',
+    'b-received-inspected', 'first-closed',
     'b-restarted', 'restart-inspected', 'restarted-closed'
   ]);
 });
