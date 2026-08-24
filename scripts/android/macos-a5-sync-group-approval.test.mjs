@@ -95,11 +95,13 @@ it('establishes provider readiness through public Sync Now in the instrumented r
     'utf8'
   );
   const syncNow = approval.indexOf('FolioleCompanionSyncGroupMaintenanceScenario.syncNow(');
-  const providerReady = approval.indexOf('waitForProviderAdvertisement();');
+  const providerReady = approval.indexOf('waitForInstrumentedProvider(instrumentation, webView);');
   const peerRelease = approval.indexOf('onProviderReady.run();');
   expect(syncNow).toBeGreaterThan(0);
   expect(providerReady).toBeGreaterThan(syncNow);
   expect(peerRelease).toBeGreaterThan(providerReady);
+  expect(approval).toContain('TimeUnit.SECONDS.toNanos(60)');
+  expect(approval).toContain('syncStarted && "registered".equals(state)');
   expect(approval).not.toContain('FolioleCompanionSyncGroupProvider.start(');
 });
 

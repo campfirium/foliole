@@ -22,7 +22,7 @@ final class FolioleCompanionSyncGroupApprovalScenario {
         WebView webView = activity.findViewById(R.id.webview);
         long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(3);
         FolioleCompanionSyncGroupMaintenanceScenario.syncNow(instrumentation, webView);
-        waitForProviderAdvertisement();
+        waitForInstrumentedProvider(instrumentation, webView);
         onProviderReady.run();
         FolioleCompanionSemanticActions.waitForUniqueVisible(
             instrumentation, webView, "companion-sync-group-approve", deadline
@@ -88,6 +88,38 @@ final class FolioleCompanionSyncGroupApprovalScenario {
             Thread.sleep(100);
         }
         throw new IllegalStateException("Provider advertisement unavailable: " + latest);
+    }
+
+    private static void waitForInstrumentedProvider(
+        Instrumentation instrumentation, WebView webView
+    ) throws Exception {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(60);
+        boolean syncStarted = false;
+        JSONObject latest = new JSONObject();
+        while (System.nanoTime() < deadline) {
+            JSONObject semantic = FolioleCompanionWebViewSemanticAdapter.snapshot(
+                instrumentation, webView
+            );
+            syncStarted |= syncNowDisabled(semantic);
+            latest = FolioleCompanionSyncGroupProvider.state();
+            String state = latest.optString("advertisement_state");
+            if (syncStarted && "registered".equals(state)) return;
+            if ("failed".equals(state)) {
+                throw new IllegalStateException("Provider advertisement failed: " + latest);
+            }
+            Thread.sleep(100);
+        }
+        throw new IllegalStateException("Instrumented provider unavailable: " + latest);
+    }
+
+    private static boolean syncNowDisabled(JSONObject semantic) throws Exception {
+        JSONArray elements = semantic.getJSONArray("elements");
+        for (int index = 0; index < elements.length(); index += 1) {
+            JSONObject item = elements.getJSONObject(index);
+            if ("companion-sync-now".equals(item.optString("testId"))
+                && item.optBoolean("visible") && item.optBoolean("disabled")) return true;
+        }
+        return false;
     }
 
     private static String pendingJoiningDeviceId() throws Exception {
