@@ -17,6 +17,7 @@ const INCOMPATIBLE_CODEX_FIXTURE = path.join(EVIDENCE_DIRECTORY, 'incompatible-c
 const MDNS_INTERFACE_A = 'foliole-mdns0';
 const MDNS_INTERFACE_A_CIDR = '192.0.2.1/30';
 const MDNS_INTERFACE_B = 'foliole-mdns1';
+const MDNS_INTERFACE_B_ADDRESS = '192.0.2.2';
 const MDNS_INTERFACE_B_CIDR = '192.0.2.2/30';
 const MDNS_NAMESPACE = 'foliole-mdns-peer';
 const CODEX_FIXTURE_SOURCE = `#!${process.execPath}
@@ -156,6 +157,7 @@ function runPackagedAcceptance(version) {
     FOLIOLE_CODEX_PATH_FIXTURE_DIR: EVIDENCE_DIRECTORY,
     FOLIOLE_LINUX_EXPECTED_VERSION: version,
     FOLIOLE_LINUX_MDNS_NAMESPACE: MDNS_NAMESPACE,
+    FOLIOLE_LINUX_MDNS_PEER_ADDRESS: MDNS_INTERFACE_B_ADDRESS,
     XDG_CURRENT_DESKTOP: 'GNOME'
   };
   withLinuxMdnsAcceptanceInterface(() => run(process.execPath, [

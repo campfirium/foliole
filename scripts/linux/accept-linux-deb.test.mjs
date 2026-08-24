@@ -7,6 +7,7 @@ import {
   assertLinuxAcceptanceHost,
   withLinuxMdnsAcceptanceInterface
 } from './accept-linux-deb.mjs';
+import { resolveLinuxMdnsObserverOptions } from './discover-foliole-mdns.mjs';
 
 it('accepts only the installed Ubuntu release architecture', () => {
   expect(() => assertLinuxAcceptanceHost('linux', 'x64')).not.toThrow();
@@ -54,4 +55,10 @@ it('owns a deterministic multicast LAN interface for packaged acceptance', () =>
     ['sudo', ['ip', 'link', 'delete', 'foliole-mdns0']],
     ['sudo', ['ip', 'netns', 'delete', 'foliole-mdns-peer']]
   ]);
+});
+
+it('binds the isolated observer to its peer interface', () => {
+  expect(resolveLinuxMdnsObserverOptions({ FOLIOLE_LINUX_MDNS_PEER_ADDRESS: '192.0.2.2' }))
+    .toEqual({ interface: '192.0.2.2' });
+  expect(() => resolveLinuxMdnsObserverOptions({})).toThrow('peer address is not configured');
 });
