@@ -41,6 +41,12 @@ describe('vite config', () => {
     expect(viteConfig.build?.emptyOutDir).toBe(true);
   });
 
+  it('packages PDF.js resources for both PDF-capable renderers', () => {
+    expect(viteConfig.plugins?.some((plugin) => plugin && 'name' in plugin && plugin.name === 'pdfjs-resources')).toBe(true);
+    expect(companionViteConfig.plugins?.some((plugin) => plugin && 'name' in plugin && plugin.name === 'pdfjs-resources')).toBe(true);
+    expect(demoViteConfig.plugins?.some((plugin) => plugin && 'name' in plugin && plugin.name === 'pdfjs-resources')).toBe(false);
+  });
+
   it('does not reload the dev renderer when Electron rewrites its runtime startup html', () => {
     expect(viteConfig.server?.watch?.ignored).toContain('**/.tmp/electron-user-data*/runtime-renderer-index.html');
   });

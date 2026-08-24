@@ -10,6 +10,7 @@ import {
 } from '../../../shared/platform/attachmentResources';
 import { AppButton, AppEmptyState } from '../../../shared/ui';
 import type { PdfCropBox } from '../model/pdfAutoCrop';
+import { PDF_DOCUMENT_OPTIONS } from '../model/pdfDocumentOptions';
 import { configurePdfWorker } from '../model/pdfWorker';
 
 import { SimplePdfPageStack, SimplePdfToolbar, useElementWidth } from './SimplePdfDocumentLayout';
@@ -179,6 +180,7 @@ export function SimplePdfDocument(props: {
           onLoadSuccess={({ numPages }) => {
             setTotalPages(numPages);
           }}
+          options={PDF_DOCUMENT_OPTIONS}
         >
           <SimplePdfPageStack
             cropBoxes={cropBoxes}

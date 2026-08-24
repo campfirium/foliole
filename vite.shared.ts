@@ -7,6 +7,7 @@ import type { Plugin, UserConfig } from 'vite';
 import { defineConfig } from 'vitest/config';
 
 import { createStartupSkeletonAppearance, createStartupSkeletonLayoutFromSettings } from './electron/startupSkeletonLayout';
+import { pdfJsResourcesPlugin } from './scripts/vite/pdfJsResources';
 
 const WORKSPACE_CHANGE_TIMESTAMP_MODULE_ID = 'virtual:workspace-change-timestamp';
 const RESOLVED_WORKSPACE_CHANGE_TIMESTAMP_MODULE_ID = `\0${WORKSPACE_CHANGE_TIMESTAMP_MODULE_ID}`;
@@ -153,6 +154,7 @@ function defaultStartupSkeletonPlugin(): Plugin {
 
 interface SharedViteConfigOptions {
   build?: UserConfig['build'];
+  pdfJsResources?: boolean;
   warmupClientFiles?: string[];
 }
 
@@ -160,7 +162,13 @@ export function createSharedViteConfig(projectRoot: string, options: SharedViteC
   return defineConfig({
     base: './',
     ...(options.build ? { build: options.build } : {}),
-    plugins: [defaultStartupSkeletonPlugin(), react(), tailwindcss(), workspaceChangeTimestampPlugin(projectRoot)],
+    plugins: [
+      defaultStartupSkeletonPlugin(),
+      react(),
+      tailwindcss(),
+      workspaceChangeTimestampPlugin(projectRoot),
+      ...(options.pdfJsResources ? [pdfJsResourcesPlugin(projectRoot)] : [])
+    ],
     resolve: {
       alias: {
         '@': path.resolve(projectRoot, './src')

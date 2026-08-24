@@ -10,5 +10,6 @@ export default createSharedViteConfig(PROJECT_ROOT, {
     emptyOutDir: true,
     outDir: path.resolve(PROJECT_ROOT, 'dist/desktop')
   },
+  pdfJsResources: true,
   warmupClientFiles: DESKTOP_RENDERER_WARMUP_FILES
 });

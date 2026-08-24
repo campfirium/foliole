@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { Document } from 'react-pdf';
 
+import { PDF_DOCUMENT_OPTIONS } from '../../features/pdf/model/pdfDocumentOptions';
 import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
@@ -126,6 +127,7 @@ function renderPdfDocument(
         noData={<p className="text-sm text-foreground/70">{noDataLabel}</p>}
         onLoadError={(error) => props.onLoadError(error.message || 'Failed to load PDF document.')}
         onLoadSuccess={handleDocumentLoadSuccess}
+        options={PDF_DOCUMENT_OPTIONS}
       >
         <PdfDocumentPages
           fitWidthTargetWidth={props.fitWidthTargetWidth}

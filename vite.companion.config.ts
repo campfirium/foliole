@@ -36,7 +36,7 @@ function companionLegacyWebViewCssPlugin(): Plugin {
 }
 
 export default mergeConfig(
-  createSharedViteConfig(PROJECT_ROOT),
+  createSharedViteConfig(PROJECT_ROOT, { pdfJsResources: true }),
   defineConfig({
     root: path.resolve(PROJECT_ROOT, 'src/companion'),
     plugins: [companionLegacyWebViewCssPlugin()],
