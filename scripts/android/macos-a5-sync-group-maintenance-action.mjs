@@ -46,6 +46,9 @@ export async function runMacosA5InstrumentationMechanics({
     testInstalled = true;
     if (needsTransport) {
       output.push((await checked(execute, paths.adb,
+        ['-s', serial, 'reverse', '--remove', `tcp:${PAIR_SYNC_PORT}`],
+        options, 'transport ownership cleanup')).output);
+      output.push((await checked(execute, paths.adb,
         ['-s', serial, 'reverse', `tcp:${PAIR_SYNC_PORT}`, `tcp:${hostPort}`],
         options, 'transport open')).output);
       reverseCreated = true;

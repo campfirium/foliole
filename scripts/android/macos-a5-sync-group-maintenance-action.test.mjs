@@ -43,8 +43,13 @@ it('uses the fixed product instrumentation method and records its receipt', asyn
   ))).toBe(true);
   expect(execute.mock.calls.some(([, args]) => args.join(' ') ===
     '-s 87a33a4b reverse tcp:38641 tcp:38641')).toBe(true);
-  expect(execute.mock.calls.some(([, args]) => args.join(' ') ===
-    '-s 87a33a4b reverse --remove tcp:38641')).toBe(true);
+  const reverseCalls = execute.mock.calls.map(([, args]) => args.join(' '))
+    .filter((args) => args.includes(' reverse '));
+  expect(reverseCalls).toEqual([
+    '-s 87a33a4b reverse --remove tcp:38641',
+    '-s 87a33a4b reverse tcp:38641 tcp:38641',
+    '-s 87a33a4b reverse --remove tcp:38641'
+  ]);
   expect(execute.mock.calls.at(-1)?.[1]).toEqual([
     '-s', '87a33a4b', 'uninstall', 'com.foliole.android.test'
   ]);
