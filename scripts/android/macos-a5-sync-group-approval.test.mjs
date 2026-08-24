@@ -97,6 +97,10 @@ it('runs exact-fact Sync Now actions around C approval in one ready runtime', ()
     'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupApprovalScenario.java',
     'utf8'
   );
+  const maintenance = fs.readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupMaintenanceScenario.java',
+    'utf8'
+  );
   const syncSettings = approval.indexOf('openSyncSettings(instrumentation, webView);');
   const providerReady = approval.indexOf('waitForInstrumentedRuntime(activity);');
   const peerRelease = approval.indexOf('onProviderReady.run();');
@@ -118,6 +122,10 @@ it('runs exact-fact Sync Now actions around C approval in one ready runtime', ()
   expect(credential).toBeGreaterThan(approvalClick);
   expect(postApprovalSync).toBeGreaterThan(credential);
   expect(postApprovalSync).toBeGreaterThan(preAdmissionSync);
+  expect(maintenance).toContain('data-sync-terminal-run-id');
+  expect(maintenance).toContain('waitForSyncCompletion(');
+  expect(maintenance).toContain('receipt.optString("syncTerminalRunId")');
+  expect(maintenance).toContain('Timed out waiting for public Sync Now completion.');
   expect(approval).toContain('TimeUnit.SECONDS.toNanos(60)');
   expect(approval).toContain('"registered".equals(state) && listenerReady(activity)');
   expect(approval).toContain('.isServiceMonitorReady()');

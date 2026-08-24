@@ -35,8 +35,11 @@ final class FolioleCompanionSyncGroupMaintenanceScenario {
 
     static JSONObject syncNow(Instrumentation instrumentation, WebView webView) throws Exception {
         openSyncSettings(instrumentation, webView);
-        return clickEnabled(instrumentation, webView, "companion-sync-now")
-            .put("syncRequested", true);
+        JSONObject receipt = clickEnabled(instrumentation, webView, "companion-sync-now");
+        String completedRunId = waitForSyncCompletion(
+            instrumentation, webView, receipt.optString("syncTerminalRunId"), 60_000
+        );
+        return receipt.put("syncRequested", true).put("completedRunId", completedRunId);
     }
 
     static JSONObject clearAppData(Instrumentation instrumentation, WebView webView) throws Exception {
@@ -101,6 +104,31 @@ final class FolioleCompanionSyncGroupMaintenanceScenario {
     ) throws Exception {
         waitForEnabledState(instrumentation, webView, testId, true, 30_000);
         return click(instrumentation, webView, testId);
+    }
+
+    private static String waitForSyncCompletion(
+        Instrumentation instrumentation, WebView webView, String previousRunId, long timeoutMs
+    ) throws Exception {
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
+        while (System.nanoTime() < deadline) {
+            String completedRunId = syncAttribute(
+                instrumentation, webView, "data-sync-terminal-run-id"
+            );
+            if (!completedRunId.isEmpty() && !completedRunId.equals(previousRunId)) {
+                return completedRunId;
+            }
+            Thread.sleep(100);
+        }
+        throw new IllegalStateException("Timed out waiting for public Sync Now completion.");
+    }
+
+    private static String syncAttribute(
+        Instrumentation instrumentation, WebView webView, String attribute
+    ) throws Exception {
+        JSONObject state = FolioleCompanionWebViewSemanticAdapter.readAttribute(
+            instrumentation, webView, "companion-sync-now", attribute
+        );
+        return state.optBoolean("found") ? state.optString("value") : "";
     }
 
     private static void waitForEnabledState(
