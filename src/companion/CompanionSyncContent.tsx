@@ -43,7 +43,7 @@ function buildSyncPanelProps(args: {
     onOpenSettingsPage: args.onOpenSettingsPage ?? (() => undefined),
     onPull: async (endpointUrl: string) => {
       await ensureCompanionSyncGroupProviderForPublicAction(
-        workspaceSync.bootstrapState, workspaceSync.state.last_synced_at
+        workspaceSync.bootstrapState, args.syncGroup, workspaceSync.state.last_synced_at
       );
       return workspaceSync.pullFromDesktop(endpointUrl);
     },
