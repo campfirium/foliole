@@ -160,7 +160,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     private void dispatchServiceHint(JSObject event) {
         try {
             String name = FolioleCompanionHostBridgeContractDefinitions.syncGroupProviderServiceHintEvent(getContext());
-            getActivity().runOnUiThread(() -> notifyListeners(name, event));
+            getActivity().runOnUiThread(() -> notifyListeners(name, event, true));
         } catch (Exception error) {
             android.util.Log.w("FolioleSyncDiscovery", "Hint dispatch failed", error);
         }
@@ -193,7 +193,14 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     }
 
     boolean isServiceMonitorReady() {
-        return serviceMonitor != null && serviceMonitor.isReady();
+        if (serviceMonitor == null || !serviceMonitor.isReady()) return false;
+        try {
+            String name = FolioleCompanionHostBridgeContractDefinitions
+                .syncGroupProviderServiceHintEvent(getContext());
+            return hasListeners(name);
+        } catch (Exception error) {
+            return false;
+        }
     }
 
     private JSObject withParticipation(JSObject result) throws Exception {

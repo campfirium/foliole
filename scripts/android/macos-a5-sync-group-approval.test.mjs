@@ -113,6 +113,11 @@ it('runs public Sync Now after approval in the ready instrumented runtime', () =
   expect(approval).toContain('"registered".equals(state) && listenerReady(activity)');
   expect(approval).toContain('.isServiceMonitorReady()');
   expect(approval).not.toContain('FolioleCompanionSyncGroupProvider.start(');
+  const plugin = fs.readFileSync(
+    'android/app/src/main/java/com/foliole/android/FolioleCompanionSyncPlugin.java', 'utf8'
+  );
+  expect(plugin).toContain('return hasListeners(name);');
+  expect(plugin).toContain('notifyListeners(name, event, true)');
 });
 
 it('tracks the approved peer by the current join authorization identity', () => {
