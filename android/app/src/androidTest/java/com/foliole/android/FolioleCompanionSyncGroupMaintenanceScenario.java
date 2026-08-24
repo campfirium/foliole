@@ -33,6 +33,12 @@ final class FolioleCompanionSyncGroupMaintenanceScenario {
         return clickEnabled(instrumentation, webView, "companion-sync-pause-toggle");
     }
 
+    static JSONObject syncNow(Instrumentation instrumentation, WebView webView) throws Exception {
+        openSyncSettings(instrumentation, webView);
+        return clickEnabled(instrumentation, webView, "companion-sync-now")
+            .put("syncRequested", true);
+    }
+
     static JSONObject clearAppData(Instrumentation instrumentation, WebView webView) throws Exception {
         openSettings(instrumentation, webView);
         click(instrumentation, webView, "companion-settings-storage");

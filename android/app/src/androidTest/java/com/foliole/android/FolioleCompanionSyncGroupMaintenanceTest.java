@@ -28,6 +28,7 @@ public class FolioleCompanionSyncGroupMaintenanceTest {
     @Test public void pausesSyncParticipationThroughProduct() throws Exception { runSetPause(true); }
     @Test public void resumesSyncParticipationThroughProduct() throws Exception { runSetPause(false); }
     @Test public void pausesAndLeavesSyncGroupThroughProduct() throws Exception { runPauseAndLeave(); }
+    @Test public void syncsNowThroughProduct() throws Exception { runSyncNow(); }
     private void run(boolean leave) throws Exception {
         Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
         Activity activity = start(instrumentation);
@@ -145,6 +146,18 @@ public class FolioleCompanionSyncGroupMaintenanceTest {
             waitParticipation(instrumentation, true, paused);
             JSONObject receipt = new JSONObject().put(paused ? "paused" : "resumed", true);
             sendEvidence(instrumentation, webView, receipt);
+        } finally {
+            instrumentation.runOnMainSync(activity::finish);
+        }
+    }
+
+    private void runSyncNow() throws Exception {
+        Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
+        Activity activity = start(instrumentation);
+        try {
+            WebView webView = readyWebView(instrumentation, activity);
+            sendEvidence(instrumentation, webView,
+                FolioleCompanionSyncGroupMaintenanceScenario.syncNow(instrumentation, webView));
         } finally {
             instrumentation.runOnMainSync(activity::finish);
         }

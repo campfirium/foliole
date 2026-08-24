@@ -14,7 +14,8 @@ const SPECS = Object.freeze({
   'leave-sync-group': ['leavesSyncGroupThroughProduct', 'departurePersisted', true, false],
   'pause-and-leave': ['pausesAndLeavesSyncGroupThroughProduct', 'departurePersisted', true, false],
   'pause-participation': ['pausesSyncParticipationThroughProduct', 'paused', false, false],
-  'resume-participation': ['resumesSyncParticipationThroughProduct', 'resumed', false, true]
+  'resume-participation': ['resumesSyncParticipationThroughProduct', 'resumed', false, true],
+  'sync-now': ['syncsNowThroughProduct', 'syncRequested', true, false]
 });
 
 function proofFailure(message, details = {}) {

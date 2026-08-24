@@ -113,6 +113,22 @@ it('activates persisted Sync participation through visible product controls', as
   expect(scenario).toContain('!item.optBoolean("disabled")');
 });
 
+it('binds ordinary sync to the visible public Sync Now product action', () => {
+  const runner = fs.readFileSync('scripts/sync-group/a5-sync-group-action.mjs', 'utf8');
+  const test = fs.readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupMaintenanceTest.java',
+    'utf8'
+  );
+  const scenario = fs.readFileSync(
+    'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupMaintenanceScenario.java',
+    'utf8'
+  );
+  expect(runner).toContain("'sync-now': ['syncsNowThroughProduct', 'syncRequested', true, false]");
+  expect(test).toContain('syncsNowThroughProduct');
+  expect(scenario).toContain('clickEnabled(instrumentation, webView, "companion-sync-now")');
+  expect(scenario).toContain('put("syncRequested", true)');
+});
+
 it('observes Leave through durable host state after the visible confirmation', () => {
   const test = fs.readFileSync(
     'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupMaintenanceTest.java',
