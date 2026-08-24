@@ -97,6 +97,7 @@ it('runs public Sync Now after approval in the ready instrumented runtime', () =
     'android/app/src/androidTest/java/com/foliole/android/FolioleCompanionSyncGroupApprovalScenario.java',
     'utf8'
   );
+  const syncSettings = approval.indexOf('openSyncSettings(instrumentation, webView);');
   const providerReady = approval.indexOf('waitForInstrumentedRuntime(activity);');
   const peerRelease = approval.indexOf('onProviderReady.run();');
   const approvalClick = approval.indexOf(
@@ -104,7 +105,8 @@ it('runs public Sync Now after approval in the ready instrumented runtime', () =
   );
   const credential = approval.indexOf('waitForPeerCredential(');
   const syncNow = approval.indexOf('FolioleCompanionSyncGroupMaintenanceScenario.syncNow(');
-  expect(providerReady).toBeGreaterThan(0);
+  expect(syncSettings).toBeGreaterThan(0);
+  expect(providerReady).toBeGreaterThan(syncSettings);
   expect(peerRelease).toBeGreaterThan(providerReady);
   expect(approvalClick).toBeGreaterThan(peerRelease);
   expect(credential).toBeGreaterThan(approvalClick);
