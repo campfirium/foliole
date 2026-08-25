@@ -1,5 +1,3 @@
-import { CapacitorSQLite, SQLiteConnection, type SQLiteDBConnection } from '@capacitor-community/sqlite';
-
 import { digestUnifiedMigrationValue } from '../../lib/core/database/syncGroupUnifiedDigest';
 import {
   applyUnifiedMigration,
@@ -16,24 +14,19 @@ import {
   type UnifiedInstallationRegistryPort
 } from '../../lib/core/database/syncGroupUnifiedRegistryStore';
 import type { DbParams, DbPort, DbRow } from '../../lib/core/sync/dbPort';
-import { createCapacitorSqliteDbPort } from '../shared/platform/capacitorSqliteDbPort';
+import { openIosSyncGroupMigrationAcceptanceDatabases } from
+  '../shared/platform/companion/runtime/iosSyncGroupMigrationAcceptanceDatabaseAdapter';
 
 import type { IosMigrationSecureStore } from './iosSyncGroupMigrationSecureStore';
 
 export type IosMigrationFault = 'none' | 'registry' | 'database' | 'secure-store';
 
-interface AcceptanceDatabase {
-  connection: SQLiteDBConnection;
-  db: DbPort;
-  name: string;
-}
-
 export async function runIosMigrationAcceptanceLeg(
   secureStore: IosMigrationSecureStore,
   fault: IosMigrationFault
 ) {
-  const manager = new SQLiteConnection(CapacitorSQLite);
-  const databases = await openAcceptanceDatabases(manager, fault);
+  const databaseOwner = await openIosSyncGroupMigrationAcceptanceDatabases(fault);
+  const databases = databaseOwner.databases;
   try {
     const fixture = createUnifiedMigrationLegacyFixture(32);
     for (const [index, library] of fixture.libraries.entries()) {
@@ -82,7 +75,7 @@ export async function runIosMigrationAcceptanceLeg(
     };
   } finally {
     secureStore.faultOnVerify = false;
-    await closeAcceptanceDatabases(manager, databases);
+    await databaseOwner.close();
   }
 }
 
@@ -125,25 +118,6 @@ function injectFault(
     secondLibrary.db = faultingDbPort(secondLibrary.db, 'CREATE TABLE sync_group_migration_journal');
   }
   if (fault === 'secure-store') secureStore.faultOnVerify = true;
-}
-
-async function openAcceptanceDatabases(manager: SQLiteConnection, fault: IosMigrationFault) {
-  const names = ['library-a', 'library-b', 'registry'].map((name) => `foliole-t151-${fault}-${name}`);
-  const databases: AcceptanceDatabase[] = [];
-  for (const name of names) {
-    await CapacitorSQLite.deleteDatabase({ database: name, readonly: false }).catch(() => undefined);
-    const connection = await manager.createConnection(name, false, 'no-encryption', 1, false);
-    await connection.open();
-    databases.push({ connection, db: createCapacitorSqliteDbPort(connection, 'ios'), name });
-  }
-  return databases;
-}
-
-async function closeAcceptanceDatabases(manager: SQLiteConnection, databases: AcceptanceDatabase[]) {
-  for (const database of databases.reverse()) {
-    await manager.closeConnection(database.name, false).catch(() => undefined);
-    await CapacitorSQLite.deleteDatabase({ database: database.name, readonly: false }).catch(() => undefined);
-  }
 }
 
 function protectedState(input: UnifiedMigrationCoordinatorInput) {
