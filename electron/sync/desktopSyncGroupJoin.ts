@@ -7,7 +7,11 @@ import { joinDesktopSyncGroup, loadDesktopSyncGroup } from '../database/syncGrou
 
 import { resolveDesktopHostName } from './companionLanPayloads.js';
 import { refreshCompanionMdnsAdvertisement } from './companionMdnsAdvertisement.js';
-import { loadPairedSyncGroupPeers, savePairedSyncGroupPeer } from './companionPairingStore.js';
+import {
+  loadPairedSyncGroupPeers,
+  registerPairedCompanionAuthorizationWithSecret,
+  savePairedSyncGroupPeer
+} from './companionPairingStore.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import { reportDesktopSyncGroupCursorCommitted } from './desktopSyncGroupCursorCommit.js';
 import { createDesktopSyncGroupSignedHeaders, requestJson } from './desktopSyncGroupHttp.js';
@@ -87,6 +91,10 @@ async function completeDesktopSyncGroupJoinOnce() {
     pending.key.privateKey, payload.provider_encrypted_credential_secret
   );
   if (providerSecret !== secret) throw new Error('sync_group_workgroup_key_mismatch');
+  const negotiatedProtocolVersion = payload.compatibility.negotiated_version;
+  if (negotiatedProtocolVersion !== CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version) {
+    throw new Error('sync_protocol_incompatible');
+  }
   const localHostName = payload.host_name?.trim();
   if (!localHostName) throw new Error('sync_group_membership_invalid');
   const existingGroup = loadDesktopSyncGroup();
@@ -94,6 +102,12 @@ async function completeDesktopSyncGroupJoinOnce() {
     hostName: localHostName, group: payload.sync_group, workgroupKey: secret
   });
   else saveDesktopWorkgroupKey({ groupId: pending.candidate.group_id, groupKey: secret });
+  registerPairedCompanionAuthorizationWithSecret({
+    authorizationId: payload.provider_authorization_id, credentialSecret: providerSecret,
+    hostName: payload.provider_host_name, hostPlatform: payload.provider_host_platform,
+    negotiatedProtocolVersion,
+    remoteProtocol: payload.desktop_protocol
+  });
   const peer = savePairedSyncGroupPeer({
     endpoint_url: pending.candidate.endpoint_url, group_id: pending.candidate.group_id,
     local_authorization_id: payload.authorization_id,

@@ -37,14 +37,25 @@ function bundle(output, key) {
 }
 
 function validateProductResult(receipt, expected, evidenceRef) {
-  const failed = expected === 'terminalRunId'
-    ? receipt.actionStarted !== true || typeof receipt[expected] !== 'string'
-      || receipt[expected] !== receipt.actionRunId || receipt.terminalResult !== 'completed'
-    : receipt[expected] !== true;
-  if (failed) throw proofFailure(`Product result did not prove ${expected}`, {
-    evidenceRef, missingFact: expected, productError: receipt.errorText,
-    terminalResult: receipt.terminalResult
-  });
+  if (expected !== 'terminalRunId' && receipt[expected] !== true) {
+    throw proofFailure(`Product result did not prove ${expected}`, {
+      evidenceRef, missingFact: expected, productError: receipt.errorText
+    });
+  }
+  if (expected !== 'terminalRunId') return;
+  if (receipt.actionStarted !== true || typeof receipt.terminalRunId !== 'string'
+      || receipt.terminalRunId !== receipt.actionRunId) {
+    throw proofFailure('Product result did not prove the matching Sync Now run', {
+      evidenceRef, missingFact: 'terminalRunId', productError: receipt.errorText,
+      terminalResult: receipt.terminalResult
+    });
+  }
+  if (receipt.terminalResult !== 'completed') {
+    throw proofFailure(`Public Sync Now failed${receipt.errorText ? `: ${receipt.errorText}` : '.'}`, {
+      evidenceRef, missingFact: 'terminalResultCompleted', productError: receipt.errorText,
+      terminalResult: receipt.terminalResult
+    });
+  }
 }
 
 export async function runMacosA5SyncGroupMaintenance({

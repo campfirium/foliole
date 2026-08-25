@@ -40,8 +40,15 @@ it('rejects a public Sync Now action that reaches a failed terminal result', asy
     actionStarted: true, actionRunId: 'run-1', errorText: 'No member is reachable.',
     terminalResult: 'failed', terminalRunId: 'run-1'
   }))).rejects.toMatchObject({
-    failureAxis: 'proof', productError: 'No member is reachable.', terminalResult: 'failed'
+    failureAxis: 'proof', missingFact: 'terminalResultCompleted',
+    productError: 'No member is reachable.', terminalResult: 'failed'
   });
+});
+
+it('keeps a missing matching run distinct from an explicit product failure', async () => {
+  await expect(runMacosA5SyncGroupMaintenance(args({
+    actionStarted: true, actionRunId: 'run-1', errorText: '', terminalResult: null
+  }))).rejects.toMatchObject({ missingFact: 'terminalRunId', terminalResult: null });
 });
 
 it('accepts a public Sync Now action only when its matching run completes', async () => {
