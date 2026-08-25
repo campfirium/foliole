@@ -140,7 +140,9 @@ describe('T6 hosted quality workflow contracts', () => {
     expect(actualDesktopSourceEntries)
       .toEqual(expectedDesktopSourceEntries);
     expect(new Set(actualDesktopSourceEntries).size).toBe(8);
-    expect(desktopSourceMatrix).toHaveLength(2);
+    expect(desktopSourceMatrix).toHaveLength(3);
+    expect(desktopSourceMatrix.filter(({ host }) => host === 'Windows').map(({ shards }) => shards))
+      .toEqual([['one', 'two'], ['three', 'four']]);
     expect(sources.full).not.toContain('portable-quality');
     expect(sources.portableDomain).not.toContain('continue-on-error');
     expect(sources.portableDomain).not.toContain('paths:');
