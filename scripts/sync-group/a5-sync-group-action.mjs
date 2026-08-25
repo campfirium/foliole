@@ -36,6 +36,17 @@ function bundle(output, key) {
   }); }
 }
 
+function validateProductResult(receipt, expected, evidenceRef) {
+  const failed = expected === 'terminalRunId'
+    ? receipt.actionStarted !== true || typeof receipt[expected] !== 'string'
+      || receipt[expected] !== receipt.actionRunId || receipt.terminalResult !== 'completed'
+    : receipt[expected] !== true;
+  if (failed) throw proofFailure(`Product result did not prove ${expected}`, {
+    evidenceRef, missingFact: expected, productError: receipt.errorText,
+    terminalResult: receipt.terminalResult
+  });
+}
+
 export async function runMacosA5SyncGroupMaintenance({
   action, buildIdentity, env, evidenceRoot, execute, installMain = true,
   mechanics = runMacosA5InstrumentationMechanics, observeWhileTransportOpen, paths, serial
@@ -48,15 +59,12 @@ export async function runMacosA5SyncGroupMaintenance({
   const testClass = `${APP_ID}.FolioleCompanionSyncGroupMaintenanceTest#${method}`;
   const raw = await mechanics({ buildIdentity, env, evidenceRoot, execute, installMain,
     needsTransport, observeWhileTransportOpen, paths, releaseAfterObservation,
-    restartApp, serial, testClass });
+    restartApp, serial, testClass,
+    validateInstrumentation: ({ evidencePath, stdout }) => validateProductResult(
+      bundle(stdout, 'folioleActionReceipt'), expected, evidencePath
+    ) });
   const receipt = bundle(raw.stdout, 'folioleActionReceipt');
-  if (expected === 'terminalRunId'
-    ? receipt.actionStarted !== true || typeof receipt[expected] !== 'string'
-      || receipt[expected] !== receipt.actionRunId || receipt.terminalResult !== 'completed'
-    : receipt[expected] !== true) throw proofFailure(`Product result did not prove ${expected}`, {
-    evidenceRef: raw.evidencePath, missingFact: expected,
-    productError: receipt.errorText, terminalResult: receipt.terminalResult
-  });
+  validateProductResult(receipt, expected, raw.evidencePath);
   const manifestPath = path.join(evidenceRoot, 'sync-group-maintenance-manifest.json');
   fs.writeFileSync(manifestPath, `${JSON.stringify({ action,
     after: bundle(raw.stdout, 'folioleAfterSemantic'), buildIdentity,

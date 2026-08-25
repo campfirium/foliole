@@ -44,8 +44,8 @@ final class FolioleCompanionSyncNowAction {
             "status:node?(node.getAttribute('data-sync-action-status')||''):''," +
             "terminalRunId:node?(node.getAttribute('data-sync-action-terminal-run-id')||''):''," +
             "terminalResult:node?(node.getAttribute('data-sync-action-terminal-result')||''):''," +
-            "errorText:node&&node.closest('section')?" +
-            "((node.closest('section').querySelector('.text-error')||{}).textContent||''):''});})()";
+            "errorText:Array.from(document.querySelectorAll('.text-error'))" +
+            ".map(function(item){return item.textContent||'';}).filter(Boolean).join(' | ')});})()";
         return FolioleCompanionWebViewSemanticAdapter.evaluateJson(instrumentation, webView, script);
     }
 

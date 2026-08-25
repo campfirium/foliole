@@ -13,14 +13,16 @@ afterEach(() => {
 });
 
 function mechanics(receipt) {
-  return vi.fn(async ({ evidenceRoot }) => {
+  return vi.fn(async ({ evidenceRoot, validateInstrumentation }) => {
     fs.mkdirSync(evidenceRoot, { recursive: true });
     const evidencePath = path.join(evidenceRoot, 'raw.json');
     fs.writeFileSync(evidencePath, '{}\n');
-    return { evidencePath, output: '', stdout: [
+    const stdout = [
       `INSTRUMENTATION_STATUS: folioleActionReceipt=${JSON.stringify(receipt)}`,
       'INSTRUMENTATION_STATUS: folioleAfterSemantic={}'
-    ].join('\n') };
+    ].join('\n');
+    validateInstrumentation({ evidencePath, stdout });
+    return { evidencePath, output: '', stdout };
   });
 }
 

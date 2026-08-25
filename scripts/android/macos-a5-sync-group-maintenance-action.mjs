@@ -37,7 +37,7 @@ async function removeOwnedTransport(execute, paths, serial, options) {
 export async function runMacosA5InstrumentationMechanics({
   buildIdentity, env, evidenceRoot, execute, installMain = true, needsTransport = false,
   observeWhileTransportOpen, paths, releaseAfterObservation = false,
-  restartApp = false, serial, testClass
+  restartApp = false, serial, testClass, validateInstrumentation
 }) {
   if (typeof testClass !== 'string' || !testClass.startsWith(`${APP_ID}.`)) {
     throw executionFailure('Android instrumentation target is invalid.', {
@@ -110,15 +110,16 @@ export async function runMacosA5InstrumentationMechanics({
         stage: 'instrumentation'
       });
     }
-    observation ??= await observeWhileTransportOpen?.();
-    if (restartApp) output.push((await checked(execute, paths.adb,
-      ['-s', serial, 'shell', 'am', 'start', '-n', `${APP_ID}/.MainActivity`],
-      options, 'activity restart')).output);
     const evidencePath = path.join(evidenceRoot, 'android-instrumentation-evidence.json');
     fs.writeFileSync(evidencePath, `${JSON.stringify({ buildIdentity,
       completedAt: new Date().toISOString(), resultStatus: 'success', serial,
       stdout: instrumentation.stdout, testClass
     }, null, 2)}\n`, 'utf8');
+    validateInstrumentation?.({ evidencePath, stdout: instrumentation.stdout });
+    observation ??= await observeWhileTransportOpen?.();
+    if (restartApp) output.push((await checked(execute, paths.adb,
+      ['-s', serial, 'shell', 'am', 'start', '-n', `${APP_ID}/.MainActivity`],
+      options, 'activity restart')).output);
     return { evidencePath, observation, output: output.join(''), stdout: instrumentation.stdout };
   } finally {
     if (reverseCreated) output.push((await checked(execute, paths.adb,

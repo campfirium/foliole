@@ -135,6 +135,9 @@ function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
       args.setManualSyncAction?.(finishCompanionManualSyncAction(action, 'completed'));
       return state;
     } catch (error) {
+      args.setStatus('idle');
+      args.setSyncProgress(null);
+      args.setError(formatCompanionSyncFailureMessage(error));
       args.setManualSyncAction?.(finishCompanionManualSyncAction(action, 'failed'));
       throw error;
     }
