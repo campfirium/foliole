@@ -3,10 +3,12 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import {
+  createTestPairRequestPayload,
   createTestPairingKeyPair,
   decryptTestPairingSecret
 } from '../../electron/sync/companionPairingProtocolTestSupport.js';
 import { createDesktopSyncGroupSignedHeaders } from '../../electron/sync/desktopSyncGroupSignedHeaders.js';
+import type { CompanionWorkspacePairPayload } from '../../lib/platform/nativeCompanionSyncContract.js';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 import { closeDesktopApplication } from '../../scripts/desktop/playwright-desktop-close.mjs';
 import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
@@ -16,7 +18,7 @@ import { prepareFolioleServiceDiscovery } from './harness/linuxMdnsDiscovery';
 
 const ACCOUNT_ID = '023e105f4ecef8ad9ca31a8372d0c353';
 const API_TOKEN = 'Sn3lZJTBX6kkg7OdcBUAxOO963GEIyGQqnFTOFYY';
-const DEVICE_ID = 'linux-deb-acceptance-device';
+const HOST_NAME = 'Linux DEB acceptance';
 
 function jsonHeaders() {
   return { 'content-type': 'application/json' };
@@ -24,13 +26,13 @@ function jsonHeaders() {
 
 async function expectSignedWorkspaceVersion(
   endpoint: string,
-  paired: { deviceId: string; groupId: string; secret: string }
+  paired: { authorizationId: string; groupId: string; secret: string }
 ) {
   const pathWithQuery = '/companion/workspace-version';
   const response = await fetch(`${endpoint}${pathWithQuery}`, {
     headers: createDesktopSyncGroupSignedHeaders({
       groupId: paired.groupId,
-      localDeviceId: paired.deviceId,
+      localAuthorizationId: paired.authorizationId,
       method: 'GET',
       pathWithQuery,
       secret: paired.secret
@@ -46,20 +48,20 @@ async function pairCompanion(
 ) {
   const keyPair = await createTestPairingKeyPair();
   const created = await fetch(`${endpoint}/companion/pair-requests`, {
-    body: JSON.stringify({
-      device_id: DEVICE_ID,
-      device_kind: 'android',
-      device_name: 'Linux DEB acceptance',
-      group_id: group.groupId,
-      group_tag: group.groupTag,
-      library_facts: {
-        attachment_count: 0, content_blob_count: 0, node_count: 0,
-        review_log_count: 0, timeline_id: null
+    body: JSON.stringify(createTestPairRequestPayload({
+      group: {
+        groupId: group.groupId,
+        groupTag: group.groupTag,
+        libraryFacts: {
+          attachment_count: 0, content_blob_count: 0, node_count: 0,
+          review_log_count: 0, timeline_id: null
+        },
+        timelineId: group.timelineId
       },
-      pairing_public_key: keyPair.publicKey,
-      protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
-      timeline_id: group.timelineId
-    }),
+      hostName: HOST_NAME,
+      hostPlatform: 'android-capacitor',
+      pairingPublicKey: keyPair.publicKey
+    })),
     headers: jsonHeaders(),
     method: 'POST'
   });
@@ -74,14 +76,11 @@ async function pairCompanion(
     method: 'POST'
   });
   expect(finalized.status).toBe(200);
-  const payload = await finalized.json() as {
-    device_id: string;
-    encrypted_device_secret: Parameters<typeof decryptTestPairingSecret>[0]['encrypted'];
-  };
+  const payload = await finalized.json() as CompanionWorkspacePairPayload;
   const secret = await decryptTestPairingSecret({
-    encrypted: payload.encrypted_device_secret, privateKey: keyPair.privateKey
+    encrypted: payload.encrypted_credential_secret, privateKey: keyPair.privateKey
   });
-  return { deviceId: payload.device_id, groupId: group.groupId, secret };
+  return { authorizationId: payload.authorization_id, groupId: group.groupId, secret };
 }
 
 async function pairDiscoveredGroup(windowPage: DesktopSession['firstWindow'], endpoint: string) {

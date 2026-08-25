@@ -1,5 +1,8 @@
 import { webcrypto } from 'node:crypto';
 
+import type { SyncGroupLibraryFacts } from '../../lib/platform/syncGroupContract.js';
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
+
 import type { EncryptedCompanionPairingSecret } from './companionPairingEncryption.js';
 
 const PAIRING_SECRET_INFO = new TextEncoder().encode('Foliole companion pairing v1');
@@ -26,6 +29,31 @@ export async function createTestPairingKeyPair() {
   return {
     privateKey: keyPair.privateKey,
     publicKey: toBase64Url(await webcrypto.subtle.exportKey('raw', keyPair.publicKey))
+  };
+}
+
+export function createTestPairRequestPayload(args: {
+  group?: {
+    groupId: string;
+    groupTag: string;
+    libraryFacts: SyncGroupLibraryFacts;
+    timelineId: string;
+  };
+  hostName: string;
+  hostPlatform: string;
+  pairingPublicKey: string;
+}) {
+  return {
+    host_name: args.hostName,
+    host_platform: args.hostPlatform,
+    ...(args.group ? {
+      group_id: args.group.groupId,
+      group_tag: args.group.groupTag,
+      library_facts: args.group.libraryFacts,
+      timeline_id: args.group.timelineId
+    } : {}),
+    pairing_public_key: args.pairingPublicKey,
+    protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
   };
 }
 
