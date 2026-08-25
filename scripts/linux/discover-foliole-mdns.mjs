@@ -37,17 +37,23 @@ async function readNetworkEvidence(address) {
   return { address, devices, interfaceName, memberships, routes };
 }
 
-function waitForObserverStart(argv) {
+export function waitForObserverStart(
+  argv, input = process.stdin, reportReady = (message) => console.log(message)
+) {
   if (!argv.includes('--controlled')) return Promise.resolve();
-  console.log(JSON.stringify({ status: 'ready' }));
+  reportReady(JSON.stringify({ status: 'ready' }));
   return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error('Linux mDNS observer was not started')), DISCOVERY_TIMEOUT_MS);
-    process.stdin.setEncoding('utf8');
-    process.stdin.once('data', () => {
+    const timeout = setTimeout(() => {
+      input.pause();
+      reject(new Error('Linux mDNS observer was not started'));
+    }, DISCOVERY_TIMEOUT_MS);
+    input.setEncoding('utf8');
+    input.once('data', () => {
       clearTimeout(timeout);
+      input.pause();
       resolve();
     });
-    process.stdin.resume();
+    input.resume();
   });
 }
 

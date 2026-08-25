@@ -1,13 +1,18 @@
 // @vitest-environment node
 
-import { expect, it } from 'vitest';
+import { PassThrough } from 'node:stream';
+
+import { expect, it, vi } from 'vitest';
 
 import {
   assertDebContents,
   assertLinuxAcceptanceHost,
   withLinuxMdnsAcceptanceInterface
 } from './accept-linux-deb.mjs';
-import { resolveLinuxMdnsObserverOptions } from './discover-foliole-mdns.mjs';
+import {
+  resolveLinuxMdnsObserverOptions,
+  waitForObserverStart
+} from './discover-foliole-mdns.mjs';
 
 it('accepts only the installed Ubuntu release architecture', () => {
   expect(() => assertLinuxAcceptanceHost('linux', 'x64')).not.toThrow();
@@ -63,4 +68,29 @@ it('receives multicast on the shared port while routing the isolated peer interf
   expect(resolveLinuxMdnsObserverOptions({ FOLIOLE_LINUX_MDNS_PEER_ADDRESS: '192.0.2.3' }))
     .toEqual({ bind: '0.0.0.0', interface: '192.0.2.3' });
   expect(() => resolveLinuxMdnsObserverOptions({})).toThrow('peer address is not configured');
+});
+
+it('pauses controlled stdin after the observer start signal is consumed', async () => {
+  const input = new PassThrough();
+  const ready = vi.fn();
+  const started = waitForObserverStart(['--controlled'], input, ready);
+
+  input.write('discover\n');
+
+  await expect(started).resolves.toBeUndefined();
+  expect(ready).toHaveBeenCalledWith(JSON.stringify({ status: 'ready' }));
+  expect(input.isPaused()).toBe(true);
+});
+
+it('times out and pauses a controlled observer that is never started', async () => {
+  vi.useFakeTimers();
+  const input = new PassThrough();
+  const started = waitForObserverStart(['--controlled'], input, vi.fn());
+  const rejected = expect(started).rejects.toThrow('observer was not started');
+
+  await vi.advanceTimersByTimeAsync(10_000);
+
+  await rejected;
+  expect(input.isPaused()).toBe(true);
+  vi.useRealTimers();
 });
