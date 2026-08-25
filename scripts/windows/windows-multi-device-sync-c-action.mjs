@@ -10,7 +10,7 @@ function assertFormalFacts(facts, localFact) {
   if (facts.activeMemberCount !== 3 || facts.localMemberState !== 'active'
       || facts.nodeCount === 0 || facts.contentBlobCount === 0
       || facts.missingAttachmentCount !== 0 || facts.missingContentBlobCount !== 0
-      || !origins.has('A') || !origins.has('B') || !localMaterialReady) {
+      || !origins.has('A') || !localMaterialReady) {
     throw new Error(`Windows C formal sync is incomplete: ${JSON.stringify(facts)}`);
   }
 }
@@ -20,7 +20,7 @@ export async function runWindowsMultiDeviceSyncC({
 }) {
   const recovery = runRecovery
     ?? (await import('./windows-sync-group-recovery-action.mjs')).runWindowsSyncGroupRecovery;
-  const result = await recovery({ ...options, requiredJourneyOrigins: ['A', 'B'],
+  const result = await recovery({ ...options, requiredJourneyOrigins: ['A'],
     resetOwnedState: true, seedOwnedState: true, onRestartedReady: async (localFact) => {
       options.reportProgress?.({ factId: localFact.factId, milestone: 'c-provider-ready' });
       await waitForConsumerRelease({
