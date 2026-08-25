@@ -1,5 +1,3 @@
-import fs from 'node:fs';
-
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import type {
   NativeReadwiseHostAssignment,
@@ -78,5 +76,5 @@ export function canCurrentHostRunReadwise() {
       try { return (JSON.parse(source.type_settings_json) as Record<string, unknown>).keepState === 'enabled'; }
       catch { return false; }
     });
-  return sources.length > 0 && sources.every((source) => source.root_path.trim() && fs.existsSync(source.root_path));
+  return sources.length > 0;
 }

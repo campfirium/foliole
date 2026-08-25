@@ -84,11 +84,18 @@ it('keeps Readwise active until a Host is explicitly selected, then runs only on
   )).toEqual({ sync_dirty: 1 });
 });
 
-it('runs Readwise only when every configured Source belongs to the current Host and root is available', async () => {
+it('runs Readwise for the current Host when another enabled category directory is absent', async () => {
   const rootPath = path.join(tempRoot, 'Readwise');
   await fs.mkdir(rootPath, { recursive: true });
   upsertDesktopSource({
     configRef: 'readwise-a', rootPath, sourceType: 'readwise', typeSettings: { keepState: 'enabled' }, updatedAt: 'now'
+  });
+  upsertDesktopSource({
+    configRef: 'readwise-missing',
+    rootPath: path.join(tempRoot, 'Missing'),
+    sourceType: 'readwise',
+    typeSettings: { keepState: 'enabled' },
+    updatedAt: 'now'
   });
   expect(canCurrentHostRunReadwise()).toBe(true);
   upsertDesktopSource({
