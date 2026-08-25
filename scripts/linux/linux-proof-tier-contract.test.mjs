@@ -12,6 +12,7 @@ import {
 } from '../run-desktop-electron-test-bucket.mjs';
 import {
   collectScriptTestFiles,
+  isLinuxOnlyScriptTest,
   selectScriptTestBucketFiles
 } from '../script-test-bucket-selection.mjs';
 
@@ -31,9 +32,10 @@ it('puts repository and host contracts in T5 before the installed DEB journey', 
   expect(selectScriptTestBucketFiles('all', scriptFiles)).toContain(proofTest);
   const windows = ['core-one', 'core-two', 'gate-one', 'gate-two',
     'gate-integration', 'node', 'preview'].flatMap(
-    (bucket) => selectScriptTestBucketFiles(bucket, scriptFiles)
+    (bucket) => selectScriptTestBucketFiles(bucket, scriptFiles, 'win32')
   );
-  expect(windows.filter((file) => file === proofTest)).toHaveLength(1);
+  expect(isLinuxOnlyScriptTest(proofTest)).toBe(true);
+  expect(windows).not.toContain(proofTest);
   const electronFiles = collectElectronTestFiles();
   for (const owner of LINUX_DEB_PROOF_CONTRACT
     .filter(({ tier }) => tier === 'hosted-contract').map(({ owner }) => owner)) {

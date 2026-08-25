@@ -9,6 +9,7 @@ import {
   GATE_INTEGRATION_SCRIPT_NAMES,
   changedFilesNeedScriptTests,
   collectScriptTestFiles,
+  isLinuxOnlyScriptTest,
   isScriptTestRootPath,
   selectGateIntegrationScriptNames,
   selectScriptTestBucketFiles
@@ -40,6 +41,16 @@ describe('script test bucket root matching', () => {
     expect(coreFiles).toContain('scripts/lib/path-domains.test.mjs');
     expect(coreFiles).toContain('scripts/lib/script-domain-registry.test.mjs');
     expect(coreFiles).toContain('scripts/linux/accept-linux-deb.test.mjs');
+  });
+
+  it('keeps Linux-only repository proofs on Linux rather than Windows tooling', () => {
+    const files = [
+      'scripts/check-ui-copy-guard.test.mjs',
+      'scripts/linux/package-linux-deb.test.mjs'
+    ];
+    expect(isLinuxOnlyScriptTest(files[1])).toBe(true);
+    expect(selectScriptTestBucketFiles('core', files, 'linux')).toEqual(files);
+    expect(selectScriptTestBucketFiles('core', files, 'win32')).toEqual([files[0]]);
   });
 
   it('partitions hosted Windows tooling without missing or duplicating tests', () => {

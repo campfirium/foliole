@@ -22,6 +22,7 @@ import {
 import { SHARED_TEST_BUCKETS } from './run-shared-test-bucket.mjs';
 import {
   collectScriptTestFiles,
+  isLinuxOnlyScriptTest,
   selectScriptTestBucketFiles
 } from './script-test-bucket-selection.mjs';
 
@@ -135,16 +136,17 @@ describe('T5 canonical leaf ownership', () => {
     }
   });
 
-  it('keeps tooling files complete and unique in each host topology', () => {
+  it('keeps tooling files complete and unique on each required host projection', () => {
     const files = collectScriptTestFiles();
     const ubuntu = selectScriptTestBucketFiles('all', files);
     const windows = ['core-one', 'core-two', 'gate-one', 'gate-two',
       'gate-integration', 'node', 'preview'].flatMap(
-      (bucket) => selectScriptTestBucketFiles(bucket, files)
+      (bucket) => selectScriptTestBucketFiles(bucket, files, 'win32')
     ).sort();
     expect(ubuntu).toEqual(files);
-    expect(windows).toEqual(files);
+    expect(windows).toEqual(files.filter((file) => !isLinuxOnlyScriptTest(file)));
     expect(new Set(windows).size).toBe(windows.length);
+    expect(files.filter(isLinuxOnlyScriptTest).length).toBeGreaterThan(0);
   });
 
   it('has one reusable owner for static and Windows core with no aggregate fallback', () => {

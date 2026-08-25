@@ -80,6 +80,10 @@ export function isNodeOnlyScriptTest(filePath) {
   return path.basename(filePath) === 'test-files.test.mjs';
 }
 
+export function isLinuxOnlyScriptTest(filePath) {
+  return filePath.replaceAll('\\', '/').startsWith('scripts/linux/');
+}
+
 export function isScriptTestRootPath(filePath) {
   const normalized = filePath.replaceAll('\\', '/');
   for (const root of SCRIPT_TEST_ROOTS) {
@@ -127,7 +131,7 @@ export function collectScriptTestFiles() {
   return [...new Set(files)].sort();
 }
 
-export function selectScriptTestBucketFiles(bucket, files) {
+export function selectScriptTestBucketFiles(bucket, files, platform = process.platform) {
   if (bucket === 'all') {
     return files;
   }
@@ -136,7 +140,8 @@ export function selectScriptTestBucketFiles(bucket, files) {
   }
   if (bucket === 'gate-one' || bucket === 'gate-two') {
     const shardIndex = bucket === 'gate-one' ? 0 : 1;
-    return selectScriptTestBucketFiles('gate', files).filter((_file, index) => index % 2 === shardIndex);
+    return selectScriptTestBucketFiles('gate', files, platform)
+      .filter((_file, index) => index % 2 === shardIndex);
   }
   if (bucket === 'gate-integration') {
     return files.filter((file) => isQualityGateTest(file) && isQualityGateIntegrationTest(file));
@@ -151,11 +156,17 @@ export function selectScriptTestBucketFiles(bucket, files) {
     return files.filter(isNodeOnlyScriptTest);
   }
   if (bucket === 'core') {
-    return files.filter((file) => !isQualityGateTest(file) && !isPreviewDedupeTest(file) && !isNodeOnlyScriptTest(file));
+    return files.filter((file) => (
+      !isQualityGateTest(file) &&
+      !isPreviewDedupeTest(file) &&
+      !isNodeOnlyScriptTest(file) &&
+      (platform !== 'win32' || !isLinuxOnlyScriptTest(file))
+    ));
   }
   if (bucket === 'core-one' || bucket === 'core-two') {
     const shardIndex = bucket === 'core-one' ? 0 : 1;
-    return selectScriptTestBucketFiles('core', files).filter((_file, index) => index % 2 === shardIndex);
+    return selectScriptTestBucketFiles('core', files, platform)
+      .filter((_file, index) => index % 2 === shardIndex);
   }
   return null;
 }
