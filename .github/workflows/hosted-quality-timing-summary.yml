@@ -1,0 +1,70 @@
+name: Hosted Quality Timing Summary
+
+on:
+  workflow_call:
+    inputs:
+      baseline_key:
+        required: false
+        type: string
+        default: ''
+      ref_name:
+        required: true
+        type: string
+      topology:
+        required: true
+        type: string
+      workflow_name:
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  summary:
+    name: Capacity timing summary
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out timing analyzer
+        continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Collect current and recent successful run timing
+        continue-on-error: true
+        env:
+          FOLIOLE_TIMING_BASELINE_KEY: ${{ inputs.baseline_key }}
+          FOLIOLE_TIMING_TOPOLOGY: ${{ inputs.topology }}
+          FOLIOLE_TIMING_WORKFLOW_NAME: ${{ inputs.workflow_name }}
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REF_NAME: ${{ inputs.ref_name }}
+        run: node scripts/quality/hosted-quality-timing-collect.mjs
+      - name: Analyze capacity timing
+        continue-on-error: true
+        run: >-
+          node scripts/quality/hosted-quality-timing.mjs
+          .tmp/artifacts/hosted-quality-timing/input.json
+          .tmp/artifacts/hosted-quality-timing/report.json
+          .tmp/artifacts/hosted-quality-timing/report.md
+      - name: Publish timing summary without changing quality conclusion
+        if: ${{ always() }}
+        run: |
+          if [[ -f .tmp/artifacts/hosted-quality-timing/report.md ]]; then
+            cat .tmp/artifacts/hosted-quality-timing/report.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## Hosted quality capacity timing" >> "$GITHUB_STEP_SUMMARY"
+            echo "Timing summary unavailable; original quality conclusions are unchanged." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload timing evidence
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: hosted-quality-timing-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .tmp/artifacts/hosted-quality-timing
+          if-no-files-found: ignore
+          retention-days: 14

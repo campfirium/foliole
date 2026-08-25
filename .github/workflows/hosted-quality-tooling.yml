@@ -22,11 +22,11 @@ permissions:
 
 jobs:
   tooling-tests:
-    name: ${{ matrix.host }} ${{ matrix.segment }}
+    name: ${{ matrix.host }} ${{ matrix.bucket }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 20
     concurrency:
-      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-tooling-${{ matrix.host }}-${{ matrix.segment }}
+      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-tooling-${{ matrix.host }}-${{ matrix.bucket }}
       cancel-in-progress: false
     strategy:
       fail-fast: false
@@ -34,32 +34,25 @@ jobs:
         include:
           - host: Ubuntu
             runner: ubuntu-latest
-            segment: full
+            bucket: full
+            segments: [full]
           - host: Windows
             runner: windows-latest
-            segment: core-one
+            bucket: core
+            segments: [core-one, core-two]
           - host: Windows
             runner: windows-latest
-            segment: core-two
+            bucket: gate
+            segments: [gate-one, gate-two]
           - host: Windows
             runner: windows-latest
-            segment: gate-one
-          - host: Windows
-            runner: windows-latest
-            segment: gate-two
-          - host: Windows
-            runner: windows-latest
-            segment: integration-one
-          - host: Windows
-            runner: windows-latest
-            segment: integration-two
-          - host: Windows
-            runner: windows-latest
-            segment: node-preview
+            bucket: integration-preview
+            segments: [integration-one, integration-two, node-preview]
     env:
       CI: "true"
       FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: "1"
-      FOLIOLE_QUALITY_TOOLING_SEGMENT: ${{ matrix.segment }}
+      FOLIOLE_HOSTED_QUALITY_BUCKET_ITEMS: ${{ toJSON(matrix.segments) }}
+      FOLIOLE_HOSTED_QUALITY_BUCKET_KIND: tooling
       TARGET_SHA: ${{ inputs.target_sha }}
     steps:
       - name: Validate target SHA input
@@ -86,13 +79,13 @@ jobs:
         run: npm run electron:rebuild:native
       - name: Verify Electron sqlite runner
         run: node scripts/electron-sqlite-runner.mjs --preflight
-      - name: Run canonical quality tooling segment
-        run: npm run quality:release:tooling
+      - name: Run canonical quality tooling bucket
+        run: node scripts/quality/hosted-quality-bucket.mjs
       - name: Upload quality tooling logs
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: quality-tooling-${{ matrix.host }}-${{ matrix.segment }}-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          name: quality-tooling-${{ matrix.host }}-${{ matrix.bucket }}-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
           path: |
             .tmp/logs/quality-gate
             .tmp/vitest

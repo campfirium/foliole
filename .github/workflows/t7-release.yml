@@ -227,3 +227,13 @@ jobs:
           gh release view "$tag" --json assets --jq '[.assets[].name]' > release-assets/actual-assets.json
           node scripts/release-asset-contract.mjs verify --version="$TARGET_VERSION" --sha="$TARGET_SHA" \
             --actual=release-assets/actual-assets.json
+
+  timing_summary:
+    if: ${{ always() }}
+    needs: [release_context, t6_quality, release_candidate, macos_package, windows_package, linux_package, assemble_draft]
+    permissions: { actions: read, contents: read }
+    uses: ./.github/workflows/hosted-quality-timing-summary.yml
+    with:
+      ref_name: ${{ github.ref_name }}
+      topology: t7-release
+      workflow_name: T7 Release

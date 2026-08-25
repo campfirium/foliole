@@ -20,6 +20,7 @@ on:
         type: string
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -70,3 +71,14 @@ jobs:
       execution_lane: dev-remote
       target_sha: ${{ needs.t5-baseline.outputs.admitted_sha }}
       trigger_ref: ${{ github.ref }}
+
+  timing-summary:
+    if: ${{ always() }}
+    needs: [dev-ref, scoped-quality, t5-baseline, full-quality]
+    permissions: { actions: read, contents: read }
+    uses: ./.github/workflows/hosted-quality-timing-summary.yml
+    with:
+      baseline_key: ${{ inputs.scope }}
+      ref_name: ${{ github.ref_name }}
+      topology: remote-quality
+      workflow_name: Remote Quality

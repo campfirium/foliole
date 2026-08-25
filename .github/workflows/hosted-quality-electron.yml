@@ -22,11 +22,11 @@ permissions:
 
 jobs:
   electron-tests:
-    name: ${{ matrix.host }} ${{ matrix.shard }}
+    name: ${{ matrix.host }} ${{ matrix.bucket }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 20
     concurrency:
-      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-electron-${{ matrix.host }}-${{ matrix.shard }}
+      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-electron-${{ matrix.host }}-${{ matrix.bucket }}
       cancel-in-progress: false
     strategy:
       fail-fast: false
@@ -34,31 +34,25 @@ jobs:
         include:
           - host: Ubuntu
             runner: ubuntu-latest
-            shard: database
+            bucket: database-import
+            shards: [database, import]
           - host: Ubuntu
             runner: ubuntu-latest
-            shard: import
-          - host: Ubuntu
-            runner: ubuntu-latest
-            shard: ipc
-          - host: Ubuntu
-            runner: ubuntu-latest
-            shard: services
+            bucket: ipc-services
+            shards: [ipc, services]
           - host: Windows
             runner: windows-latest
-            shard: database
+            bucket: database-import
+            shards: [database, import]
           - host: Windows
             runner: windows-latest
-            shard: import
-          - host: Windows
-            runner: windows-latest
-            shard: ipc
-          - host: Windows
-            runner: windows-latest
-            shard: services
+            bucket: ipc-services
+            shards: [ipc, services]
     env:
       CI: "true"
       FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: "1"
+      FOLIOLE_HOSTED_QUALITY_BUCKET_ITEMS: ${{ toJSON(matrix.shards) }}
+      FOLIOLE_HOSTED_QUALITY_BUCKET_KIND: electron
       TARGET_SHA: ${{ inputs.target_sha }}
     steps:
       - name: Validate target SHA input
@@ -85,13 +79,13 @@ jobs:
         run: npm run electron:rebuild:native
       - name: Verify Electron sqlite runner
         run: node scripts/electron-sqlite-runner.mjs --preflight
-      - name: Run canonical Electron shard
-        run: npm run test:desktop:electron -- ${{ matrix.shard }}
+      - name: Run canonical Electron bucket
+        run: node scripts/quality/hosted-quality-bucket.mjs
       - name: Upload Electron test logs
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: electron-test-${{ matrix.host }}-${{ matrix.shard }}-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          name: electron-test-${{ matrix.host }}-${{ matrix.bucket }}-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
           path: |
             .tmp/logs/quality-gate
             .tmp/vitest

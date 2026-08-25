@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
 const read = (file) => fs.readFileSync(file, 'utf8');
+const hostedBucketRunner = read('scripts/quality/hosted-quality-bucket.mjs');
 const sources = {
   android: read('.github/workflows/hosted-quality-android.yml'),
   androidHost: read('.github/workflows/hosted-quality-android-host.yml'),
@@ -122,26 +123,32 @@ describe('T6 hosted quality workflow contracts', () => {
     const expectedElectronEntries = ['Ubuntu', 'Windows'].flatMap((host) => (
       ['database', 'import', 'ipc', 'services'].map((shard) => `${host}:${shard}`)
     ));
-    const actualElectronEntries = electronMatrix.map(({ host, shard }) => `${host}:${shard}`);
+    const actualElectronEntries = electronMatrix.flatMap(({ host, shards }) => (
+      shards.map((shard) => `${host}:${shard}`)
+    ));
     expect(actualElectronEntries).toEqual(expectedElectronEntries);
     expect(new Set(actualElectronEntries).size).toBe(actualElectronEntries.length);
     expect(workflows.electron.jobs['electron-tests'].strategy['fail-fast']).toBe(false);
-    expect(workflows.electron.jobs['electron-tests']['timeout-minutes']).toBe(20);
+    expect(electronMatrix).toHaveLength(4);
     const desktopSourceMatrix = workflows.desktopSource.jobs['desktop-source-tests'].strategy.matrix.include;
     const expectedDesktopSourceEntries = ['Ubuntu', 'Windows'].flatMap((host) => (
       ['one', 'two', 'three', 'four'].map((shard) => `${host}:${shard}`)
     ));
-    expect(desktopSourceMatrix.map(({ host, shard }) => `${host}:${shard}`))
+    const actualDesktopSourceEntries = desktopSourceMatrix.flatMap(({ host, shards }) => (
+      shards.map((shard) => `${host}:${shard}`)
+    ));
+    expect(actualDesktopSourceEntries)
       .toEqual(expectedDesktopSourceEntries);
-    expect(new Set(desktopSourceMatrix.map(({ host, shard }) => `${host}:${shard}`)).size).toBe(8);
+    expect(new Set(actualDesktopSourceEntries).size).toBe(8);
+    expect(desktopSourceMatrix).toHaveLength(2);
     expect(sources.full).not.toContain('portable-quality');
     expect(sources.portableDomain).not.toContain('continue-on-error');
     expect(sources.portableDomain).not.toContain('paths:');
     expect(sources.portableDomain).not.toContain('paths-ignore:');
     expect(sources.portableDomain).not.toContain('changed-files');
     const hostSources = {
-      Ubuntu: `${sources.static}\n${sources.scopedStatic}\n${sources.desktopStatic}\n${sources.dependencyHardening}\n${sources.portableDomain}\n${sources.desktopSource}\n${sources.electron}\n${sources.tooling}\n${sources.desktopBuild}\n${sources.androidWebBuild}\n${sources.androidHost}`,
-      Windows: `${sources.windowsCore}\n${sources.portableDomain}\n${sources.desktopSource}\n${sources.electron}\n${sources.tooling}\n${section(sources.full, 'windows-acceptance', 'android-host')}`,
+      Ubuntu: `${sources.static}\n${sources.scopedStatic}\n${sources.desktopStatic}\n${sources.dependencyHardening}\n${sources.portableDomain}\n${sources.desktopSource}\n${sources.electron}\n${sources.tooling}\n${hostedBucketRunner}\n${sources.desktopBuild}\n${sources.androidWebBuild}\n${sources.androidHost}`,
+      Windows: `${sources.windowsCore}\n${sources.portableDomain}\n${sources.desktopSource}\n${sources.electron}\n${sources.tooling}\n${hostedBucketRunner}\n${section(sources.full, 'windows-acceptance', 'android-host')}`,
       macOS: sources.ios
     };
     const commands = {
@@ -158,7 +165,7 @@ describe('T6 hosted quality workflow contracts', () => {
         'build:vite-only', 'electron:compile', 'quality:release:windows:tail',
         'windows-ci-playwright-profile.mjs'
       ],
-      macOS: ['ios:sync:preflight', 'quality:ios:contract', 'ios-bootstrap-acceptance.mjs']
+      macOS: ['ios:sync:preflight', 'quality:ios:contract', 'ios-hosted-acceptance-bucket.mjs']
     };
     for (const [host, expected] of Object.entries(commands)) {
       for (const command of expected) expect(hostSources[host]).toContain(command);

@@ -67,7 +67,9 @@ describe('quality command registry', () => {
     const runnerSources = new Map([
       ['runner:quality-gate-target', new URL('./quality-gate-target.sh', import.meta.url)],
       ['runner:quality-gate-repair', new URL('./quality-gate-repair.mjs', import.meta.url)],
+      ['runner:hosted-quality-bucket', new URL('./hosted-quality-bucket.mjs', import.meta.url)],
       ['runner:ios-runtime-contract', new URL('../ios/ios-runtime-contract-tests.mjs', import.meta.url)],
+      ['runner:ios-simulator-bucket', new URL('../ios/ios-hosted-acceptance-bucket.mjs', import.meta.url)],
       ['runner:ios-simulator', new URL('../ios/ios-bootstrap-acceptance.mjs', import.meta.url)],
       ['runner:ios-sqlite-capability', new URL('../sync/ios-capacitor-sqlite-capability-gate.mjs', import.meta.url)],
       ['runner:sql-surface-scan', new URL('../sync/sql-surface-scan.mjs', import.meta.url)],

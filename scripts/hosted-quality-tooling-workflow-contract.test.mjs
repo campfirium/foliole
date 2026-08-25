@@ -9,9 +9,11 @@ const source = fs.readFileSync('.github/workflows/hosted-quality-tooling.yml', '
 const workflow = parse(source);
 const targetSteps = fs.readFileSync('scripts/quality/quality-gate-target-steps.sh', 'utf8');
 
-it('runs one complete Ubuntu lane and seven lossless Windows tooling segments', () => {
+it('runs one complete Ubuntu lane and three lossless Windows buckets', () => {
   const matrix = workflow.jobs['tooling-tests'].strategy.matrix.include;
-  const actual = matrix.map(({ host, segment }) => `${host}:${segment}`);
+  const actual = matrix.flatMap(({ host, segments }) => (
+    segments.map((segment) => `${host}:${segment}`)
+  ));
 
   expect(actual).toEqual([
     'Ubuntu:full',
@@ -24,11 +26,11 @@ it('runs one complete Ubuntu lane and seven lossless Windows tooling segments', 
     'Windows:node-preview'
   ]);
   expect(new Set(actual).size).toBe(actual.length);
+  expect(matrix).toHaveLength(4);
   expect(workflow.jobs['tooling-tests'].strategy['fail-fast']).toBe(false);
   expect(workflow.jobs['tooling-tests']['timeout-minutes']).toBe(20);
-  expect(workflow.jobs['tooling-tests'].env.FOLIOLE_QUALITY_TOOLING_SEGMENT)
-    .toBe('${{ matrix.segment }}');
-  expect(source.match(/npm run quality:release:tooling/gu)).toHaveLength(1);
+  expect(workflow.jobs['tooling-tests'].env.FOLIOLE_HOSTED_QUALITY_BUCKET_KIND).toBe('tooling');
+  expect(source).toContain('node scripts/quality/hosted-quality-bucket.mjs');
   expect(source).not.toContain('--fileParallelism');
   for (const segment of actual.filter((entry) => entry.startsWith('Windows:'))
     .map((entry) => entry.split(':')[1])) {

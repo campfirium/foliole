@@ -11,6 +11,7 @@ export const SCRIPT_TEST_ROOTS = [
   'scripts/diagnostics',
   'scripts/git',
   'scripts/lib',
+  'scripts/linux',
   'scripts/preview',
   'scripts/quality',
   'scripts/sqlite',

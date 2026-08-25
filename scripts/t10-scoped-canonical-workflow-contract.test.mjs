@@ -115,9 +115,15 @@ describe('T10 shared, Android, and iOS canonical topology', () => {
     expect(scopedCall.with.scope).toBe('${{ inputs.scope }}');
     expect(fullCall.with.scope).toBe('full');
     expect(ios.jobs.simulator.if).toBe("inputs.scope == 'full'");
-    expect(ios.jobs.simulator.strategy.matrix.scenario).toEqual([
-      'pairing-signed-transport', 'content-resource-read', 'state-writeback-runtime',
-      'sync-pack-runtime', 'foreground-sync-lifecycle'
+    const buckets = ios.jobs.simulator.strategy.matrix.include;
+    expect(buckets).toEqual([
+      { bucket: 'pairing-and-content', scenarios: ['pairing-signed-transport', 'content-resource-read'] },
+      { bucket: 'state-writeback-runtime', scenarios: ['state-writeback-runtime'] },
+      { bucket: 'sync-pack-runtime', scenarios: ['sync-pack-runtime'] },
+      { bucket: 'foreground-sync-lifecycle', scenarios: ['foreground-sync-lifecycle'] }
     ]);
+    const scenarios = buckets.flatMap((bucket) => bucket.scenarios);
+    expect(new Set(scenarios).size).toBe(5);
+    expect(ios.jobs.simulator.strategy['max-parallel']).toBeUndefined();
   });
 });

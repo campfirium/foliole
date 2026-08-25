@@ -111,7 +111,9 @@ export const HOSTED_ONLY_PACKAGES = [
 export const HOSTED_RUNNERS = [
   ['runner:quality-gate-target', 'quality-gate.sh and all quality-gate-target.sh targets'],
   ['runner:quality-gate-repair', 'quality-gate-repair.mjs'],
+  ['runner:hosted-quality-bucket', 'sequential same-host quality owner bucket'],
   ['runner:ios-runtime-contract', 'ios-runtime-contract-tests.mjs'],
+  ['runner:ios-simulator-bucket', 'sequential hosted iOS Simulator scenario bucket'],
   ['runner:ios-simulator', 'ios-bootstrap-acceptance.mjs'],
   ['runner:ios-sqlite-capability', 'ios-capacitor-sqlite-capability-gate.mjs'],
   ['runner:sql-surface-scan', 'sql-surface-scan.mjs'],
