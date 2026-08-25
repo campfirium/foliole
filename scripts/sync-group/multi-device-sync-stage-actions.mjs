@@ -16,7 +16,8 @@ import {
 import { proveSyncFromZero } from './multi-device-sync-from-zero.mjs';
 import { proveParticipationControl } from './multi-device-sync-participation.mjs';
 import {
-  assertWindowsNonemptyAdmissionReceipt, writeNonemptyAdmissionMaterial
+  assertAdmittedMembersRestartedTogether, assertWindowsNonemptyAdmissionReceipt,
+  writeNonemptyAdmissionMaterial
 } from './multi-device-sync-nonempty-admission-proof.mjs';
 import { createActionExecutor } from './multi-device-sync-action-executor.mjs';
 import { createApprovalReceiptRelease } from './multi-device-sync-approval-release.mjs';
@@ -129,13 +130,14 @@ async function admitC(repoRoot, runId, { reportProgress, signal, stage }) {
       waitForFact: (factId) => waitForAndroidJourneyFact(paths, factId)
     });
     if (!windowsProvider || !windows?.factId) throw windowsJoinFailure({ code: 1 });
-    await windowsProvider.raceConsumer(syncAdmittedCToAndroid({
+    const android = await windowsProvider.raceConsumer(syncAdmittedCToAndroid({
       env, evidenceRoot, execute, factId: windows.factId, paths, runId
     }));
     await windowsProvider.release('consumer_complete');
     const admission = await windowsProvider.finish();
     windowsSettled = true;
     const material = assertWindowsNonemptyAdmissionReceipt(admission.receipt);
+    assertAdmittedMembersRestartedTogether(android.restarted, admission.receipt);
     const { evidenceRef } = writeNonemptyAdmissionMaterial(evidenceRoot, admission.receipt);
     reportProgress('c-ordinary-sync-completed');
     return { evidenceRef, lastProgressAt: new Date().toISOString(), approval, material };

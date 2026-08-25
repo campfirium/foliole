@@ -6,8 +6,8 @@ import path from 'node:path';
 import { expect, it } from 'vitest';
 
 import {
-  assertWindowsNonemptyAdmissionReceipt, readNonemptyAdmissionMaterial,
-  writeNonemptyAdmissionMaterial
+  assertAdmittedMembersRestartedTogether, assertWindowsNonemptyAdmissionReceipt,
+  readNonemptyAdmissionMaterial, writeNonemptyAdmissionMaterial
 } from './multi-device-sync-nonempty-admission-proof.mjs';
 
 /* global process */
@@ -17,7 +17,10 @@ const materialFacts = { attachmentIds: ['hash-c'], availableAttachmentIds: ['has
   facts: { 'multi-device-sync-c-1': true } };
 const receipt = { firstFacts: materialFacts, localFact: material,
   preJoinFacts: { ...materialFacts, localGroupId: null, localMemberState: null,
-    localTimelineId: null, userNodeCount: 7 }, restartedFacts: materialFacts };
+    localTimelineId: null, userNodeCount: 7 }, restartedFacts: {
+    ...materialFacts, activeMemberCount: 3, localGroupId: 'group-1',
+    localTimelineId: 'timeline-1'
+  } };
 
 it('persists the exact pre-join C fact and hash attachment for later three-host proof', async () => {
   const repoRoot = path.join(process.cwd(), '.tmp', `nonempty-admission-${Date.now()}`);
@@ -37,4 +40,17 @@ it('rejects a Windows receipt that loses the C attachment after restart', () => 
   expect(() => assertWindowsNonemptyAdmissionReceipt({
     ...receipt, restartedFacts: { ...materialFacts, availableAttachmentIds: [] }
   })).toThrow('did not preserve its pre-join material');
+});
+
+it('requires B and C to retain the same group, timeline, and C fact after restart', () => {
+  const android = { database: { inspection: {
+    activeSyncGroupMemberCount: 3, desktopFactPresent: true,
+    syncGroupId: 'group-1', syncGroupTimelineId: 'timeline-1'
+  } } };
+  expect(assertAdmittedMembersRestartedTogether(android, receipt)).toEqual({
+    groupId: 'group-1', timelineId: 'timeline-1'
+  });
+  expect(() => assertAdmittedMembersRestartedTogether({ database: { inspection: {
+    ...android.database.inspection, syncGroupTimelineId: 'timeline-other'
+  } } }, receipt)).toThrow('did not retain the same admitted group');
 });

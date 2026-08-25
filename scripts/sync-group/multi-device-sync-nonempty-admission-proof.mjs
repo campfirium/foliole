@@ -23,6 +23,20 @@ export function assertWindowsNonemptyAdmissionReceipt(receipt) {
   return material;
 }
 
+export function assertAdmittedMembersRestartedTogether(androidSnapshot, receipt) {
+  const android = androidSnapshot?.database?.inspection;
+  const windows = receipt?.restartedFacts;
+  if (android?.desktopFactPresent !== true || android.activeSyncGroupMemberCount !== 3
+      || windows?.activeMemberCount !== 3
+      || android.syncGroupId !== windows.localGroupId
+      || android.syncGroupTimelineId !== windows.localTimelineId) {
+    throw new Error('Android B and Windows C did not retain the same admitted group after restart.');
+  }
+  return {
+    groupId: android.syncGroupId, timelineId: android.syncGroupTimelineId
+  };
+}
+
 export function writeNonemptyAdmissionMaterial(evidenceRoot, receipt) {
   const material = assertWindowsNonemptyAdmissionReceipt(receipt);
   const evidenceRef = path.join(evidenceRoot, MATERIAL_FILE);
