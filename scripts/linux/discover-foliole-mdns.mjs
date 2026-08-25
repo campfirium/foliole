@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* global console, process, setTimeout, clearTimeout, setInterval, clearInterval */
+/* global Buffer, console, process, setTimeout, clearTimeout, setInterval, clearInterval */
 
 import { readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
@@ -34,10 +34,16 @@ async function readNetworkEvidence(address) {
     readFile('/proc/net/igmp', 'utf8'),
     readFile('/proc/net/route', 'utf8')
   ]);
-  return { address, devices, interfaceName, memberships, routes };
+  const values = devices.split('\n').find((line) => line.trimStart().startsWith(`${interfaceName}:`))
+    ?.split(':')[1].trim().split(/\s+/u).map(Number);
+  const counters = values ? {
+    received: { bytes: values[0], dropped: values[3], errors: values[2], packets: values[1] },
+    transmitted: { bytes: values[8], dropped: values[11], errors: values[10], packets: values[9] }
+  } : null;
+  return { address, counters, devices, interfaceName, memberships, routes };
 }
 
-export function waitForObserverStart(
+function waitForObserverStart(
   argv, input = process.stdin, reportReady = (message) => console.log(message)
 ) {
   if (!argv.includes('--controlled')) return Promise.resolve();
@@ -57,6 +63,40 @@ export function waitForObserverStart(
   });
 }
 
+function serializeMdnsData(data) {
+  if (Buffer.isBuffer(data)) return { base64: data.toString('base64') };
+  if (Array.isArray(data)) return data.map(serializeMdnsData);
+  if (data && typeof data === 'object') {
+    return Object.fromEntries(Object.entries(data).map(([key, value]) => [key, serializeMdnsData(value)]));
+  }
+  return data;
+}
+
+export function summarizeMdnsPacket(packet, rinfo) {
+  const records = (items = []) => items.map(({ data, name, ttl, type }) => ({
+    data: serializeMdnsData(data), name, ttl, type
+  }));
+  return {
+    additionals: records(packet.additionals), answers: records(packet.answers),
+    authorities: records(packet.authorities), flags: packet.flags, id: packet.id,
+    questions: (packet.questions ?? []).map(({ name, type }) => ({ name, type })),
+    source: { address: rinfo.address, family: rinfo.family, port: rinfo.port, size: rinfo.size },
+    type: packet.type
+  };
+}
+
+export function attachMdnsEvidence(mdns, evidence, now = () => new Date().toISOString()) {
+  const recordPacket = (collection) => (packet, rinfo) => collection.push({
+    at: now(), ...summarizeMdnsPacket(packet, rinfo)
+  });
+  mdns.on('packet', recordPacket(evidence.packets));
+  mdns.on('query', recordPacket(evidence.queries));
+  mdns.on('response', recordPacket(evidence.responses));
+  mdns.on('warning', (warning) => evidence.warnings.push({
+    at: now(), code: warning.code ?? null, message: warning.message, name: warning.name
+  }));
+}
+
 function waitForMdnsReady(mdns) {
   return new Promise((resolve, reject) => {
     mdns.once('ready', resolve);
@@ -64,21 +104,28 @@ function waitForMdnsReady(mdns) {
   });
 }
 
+function diffNetworkCounters(before, after) {
+  if (!before?.counters || !after?.counters) return null;
+  return {
+    received: {
+      bytes: after.counters.received.bytes - before.counters.received.bytes,
+      packets: after.counters.received.packets - before.counters.received.packets
+    },
+    transmitted: {
+      bytes: after.counters.transmitted.bytes - before.counters.transmitted.bytes,
+      packets: after.counters.transmitted.packets - before.counters.transmitted.packets
+    }
+  };
+}
+
 export async function discoverFolioleMdnsService(env = process.env, argv = process.argv.slice(2)) {
   const options = resolveLinuxMdnsObserverOptions(env, argv);
   const bonjour = new Bonjour(options);
   const evidence = {
     completedAt: null, discoveryStartedAt: null, queryAttempts: [],
-    readyAt: null, responses: [], status: 'starting'
+    packets: [], queries: [], readyAt: null, responses: [], status: 'starting', warnings: []
   };
-  bonjour.server.mdns.on('response', (packet, rinfo) => {
-    evidence.responses.push({
-      address: rinfo.address,
-      answerTypes: packet.answers.map((answer) => answer.type),
-      at: new Date().toISOString(),
-      port: rinfo.port
-    });
-  });
+  attachMdnsEvidence(bonjour.server.mdns, evidence);
   try {
     await waitForMdnsReady(bonjour.server.mdns);
     evidence.readyAt = new Date().toISOString();
@@ -94,7 +141,9 @@ export async function discoverFolioleMdnsService(env = process.env, argv = proce
         resolve(discovered);
       });
       const query = () => {
-        evidence.queryAttempts.push(new Date().toISOString());
+        evidence.queryAttempts.push({
+          at: new Date().toISOString(), name: '_foliole-sync._tcp.local', type: 'PTR'
+        });
         browser.update();
       };
       queryInterval = setInterval(query, QUERY_INTERVAL_MS);
@@ -112,6 +161,7 @@ export async function discoverFolioleMdnsService(env = process.env, argv = proce
   } finally {
     evidence.completedAt = new Date().toISOString();
     evidence.networkAfter = await readNetworkEvidence(options.interface).catch(() => null);
+    evidence.networkDelta = diffNetworkCounters(evidence.networkBefore, evidence.networkAfter);
     const evidencePath = resolveEvidencePath(argv);
     if (evidencePath) await writeFile(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
     bonjour.destroy();

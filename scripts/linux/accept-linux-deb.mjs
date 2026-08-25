@@ -158,6 +158,7 @@ function runPackagedAcceptance(version) {
     FOLIOLE_LINUX_EXPECTED_VERSION: version,
     FOLIOLE_LINUX_MDNS_NAMESPACE: MDNS_NAMESPACE,
     FOLIOLE_LINUX_MDNS_PEER_ADDRESS: MDNS_INTERFACE_B_ADDRESS,
+    FOLIOLE_LINUX_MDNS_ROOT_INTERFACE: MDNS_INTERFACE_A,
     XDG_CURRENT_DESKTOP: 'GNOME'
   };
   withLinuxMdnsAcceptanceInterface(() => run(process.execPath, [

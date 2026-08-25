@@ -1,8 +1,9 @@
 // @vitest-environment node
+/* global Buffer, process */
 
-import { PassThrough } from 'node:stream';
+import { EventEmitter } from 'node:events';
 
-import { expect, it, vi } from 'vitest';
+import { expect, it } from 'vitest';
 
 import {
   assertDebContents,
@@ -10,9 +11,11 @@ import {
   withLinuxMdnsAcceptanceInterface
 } from './accept-linux-deb.mjs';
 import {
+  attachMdnsEvidence,
   resolveLinuxMdnsObserverOptions,
-  waitForObserverStart
+  summarizeMdnsPacket
 } from './discover-foliole-mdns.mjs';
+import { startControlledMdnsObserver } from '../../tests/desktop/harness/linuxMdnsDiscovery.ts';
 
 it('accepts only the installed Ubuntu release architecture', () => {
   expect(() => assertLinuxAcceptanceHost('linux', 'x64')).not.toThrow();
@@ -70,27 +73,57 @@ it('receives multicast on the shared port while routing the isolated peer interf
   expect(() => resolveLinuxMdnsObserverOptions({})).toThrow('peer address is not configured');
 });
 
-it('pauses controlled stdin after the observer start signal is consumed', async () => {
-  const input = new PassThrough();
-  const ready = vi.fn();
-  const started = waitForObserverStart(['--controlled'], input, ready);
+it('preserves observable packet direction and record data in mDNS evidence', () => {
+  const summary = summarizeMdnsPacket({
+    additionals: [{ data: Buffer.from('v=1'), name: 'Foliole._foliole-sync._tcp.local', ttl: 120, type: 'TXT' }],
+    answers: [], authorities: [], flags: 0, id: 0,
+    questions: [{ name: '_foliole-sync._tcp.local', type: 'PTR' }], type: 'query'
+  }, { address: '192.0.2.1', family: 'IPv4', port: 5353, size: 64 });
 
-  input.write('discover\n');
-
-  await expect(started).resolves.toBeUndefined();
-  expect(ready).toHaveBeenCalledWith(JSON.stringify({ status: 'ready' }));
-  expect(input.isPaused()).toBe(true);
+  expect(summary).toMatchObject({
+    additionals: [{ data: { base64: 'dj0x' }, type: 'TXT' }],
+    questions: [{ name: '_foliole-sync._tcp.local', type: 'PTR' }],
+    source: { address: '192.0.2.1', port: 5353 }, type: 'query'
+  });
 });
 
-it('times out and pauses a controlled observer that is never started', async () => {
-  vi.useFakeTimers();
-  const input = new PassThrough();
-  const started = waitForObserverStart(['--controlled'], input, vi.fn());
-  const rejected = expect(started).rejects.toThrow('observer was not started');
+it('records every mDNS event exposed by the observer library', () => {
+  const mdns = new EventEmitter();
+  const evidence = { packets: [], queries: [], responses: [], warnings: [] };
+  const packet = { additionals: [], answers: [], authorities: [], questions: [], type: 'query' };
+  const source = { address: '192.0.2.1', family: 'IPv4', port: 5353, size: 42 };
+  attachMdnsEvidence(mdns, evidence, () => '2026-08-25T00:00:00.000Z');
 
-  await vi.advanceTimersByTimeAsync(10_000);
+  mdns.emit('packet', packet, source);
+  mdns.emit('query', packet, source);
+  mdns.emit('response', { ...packet, type: 'response' }, source);
+  mdns.emit('warning', Object.assign(new Error('decode failed'), { code: 'EBADPACKET' }));
 
-  await rejected;
-  expect(input.isPaused()).toBe(true);
-  vi.useRealTimers();
+  expect(evidence).toMatchObject({
+    packets: [{ type: 'query' }], queries: [{ type: 'query' }],
+    responses: [{ type: 'response' }],
+    warnings: [{ code: 'EBADPACKET', message: 'decode failed', name: 'Error' }]
+  });
 });
+
+it('closes the control pipe so a spawned observer exits on discovery failure', async () => {
+  const observerSource = `
+    process.stdout.write(JSON.stringify({ status: 'ready' }) + '\\n');
+    process.stdin.setEncoding('utf8');
+    process.stdin.once('data', () => process.stdin.pause());
+    process.stdin.once('end', () => {
+      setTimeout(() => {
+        console.error('Foliole mDNS service was not discovered');
+        process.exitCode = 1;
+      }, 25);
+    });
+    process.stdin.resume();
+  `;
+  const observer = startControlledMdnsObserver(process.execPath, ['--eval', observerSource]);
+
+  await observer.ready;
+  const startedAt = Date.now();
+
+  await expect(observer.discover()).rejects.toThrow('Foliole mDNS service was not discovered');
+  expect(Date.now() - startedAt).toBeLessThan(2_000);
+}, 3_000);
