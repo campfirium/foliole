@@ -183,7 +183,7 @@ test('installed Linux capabilities use external Codex, loopback control, LAN syn
     expect(overview.server_status).toMatchObject({ last_error: null, state: 'running' });
     const service = await discovery.discover();
     expect(service).toMatchObject({ port: overview.server_status.port });
-    expect(service.txt.protocol_version).toBe('1');
+    expect(service.txt.protocol_version).toBe(String(CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version));
     const endpoint = `http://127.0.0.1:${overview.server_status.port}`;
     const paired = await pairDiscoveredGroup(desktopWindow, endpoint);
     await expectSignedWorkspaceVersion(endpoint, paired);

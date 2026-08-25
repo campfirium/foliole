@@ -1,0 +1,156 @@
+name: Release Quality Bucket Recheck
+
+on:
+  workflow_call:
+    inputs:
+      stage: { required: true, type: string }
+      target_sha: { required: true, type: string }
+      trigger_ref: { required: true, type: string }
+
+permissions:
+  contents: read
+
+jobs:
+  t5-static:
+    if: inputs.stage == 't5-static'
+    uses: ./.github/workflows/hosted-quality-static.yml
+    with:
+      execution_lane: release-t7-recheck
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+  t5-desktop-static:
+    if: inputs.stage == 't5-desktop-static'
+    uses: ./.github/workflows/hosted-quality-desktop-static.yml
+    with:
+      execution_lane: release-t7-recheck
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+  t5-dependency-hardening:
+    if: inputs.stage == 't5-dependency-hardening'
+    uses: ./.github/workflows/hosted-quality-dependency-hardening.yml
+    with:
+      execution_lane: release-t7-recheck
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+  t5-windows-core:
+    if: inputs.stage == 't5-windows-core'
+    uses: ./.github/workflows/hosted-quality-windows-core.yml
+    with:
+      execution_lane: release-t7-recheck
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+  t5-shared:
+    if: inputs.stage == 't5-shared'
+    uses: ./.github/workflows/hosted-quality-portable-domain.yml
+    with:
+      domain: shared
+      execution_lane: release-t7-recheck
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+  t5-android-source:
+    if: inputs.stage == 't5-android-source'
+    uses: ./.github/workflows/hosted-quality-portable-domain.yml
+    with:
+      domain: android-source
+      execution_lane: release-t7-recheck
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+  t5-desktop-source:
+    if: inputs.stage == 't5-desktop-source'
+    uses: ./.github/workflows/hosted-quality-desktop-source.yml
+    with:
+      execution_lane: release-t7-recheck
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+  t5-electron:
+    if: inputs.stage == 't5-electron'
+    uses: ./.github/workflows/hosted-quality-electron.yml
+    with:
+      execution_lane: release-t7-recheck
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+  t5-tooling:
+    if: inputs.stage == 't5-tooling'
+    uses: ./.github/workflows/hosted-quality-tooling.yml
+    with:
+      execution_lane: release-t7-recheck
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+  t6-desktop-build:
+    if: inputs.stage == 't6-desktop-build'
+    uses: ./.github/workflows/hosted-quality-desktop-build.yml
+    with:
+      execution_lane: release-t7-recheck
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+  t6-android-web-build:
+    if: inputs.stage == 't6-android-web-build'
+    uses: ./.github/workflows/hosted-quality-android-web-build.yml
+    with:
+      execution_lane: release-t7-recheck
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+  t6-windows-acceptance:
+    if: inputs.stage == 't6-windows-acceptance'
+    uses: ./.github/workflows/hosted-quality-windows-acceptance.yml
+    with:
+      execution_lane: release-t7-recheck
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+  t6-android-host:
+    if: inputs.stage == 't6-android-host'
+    uses: ./.github/workflows/hosted-quality-android-host.yml
+    with:
+      execution_lane: release-t7-recheck
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+  t6-ios-contract:
+    if: inputs.stage == 't6-ios-contract'
+    uses: ./.github/workflows/hosted-quality-ios.yml
+    with:
+      execution_lane: release-t7-recheck
+      run_contract: true
+      run_simulator: false
+      scope: full
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+  t6-ios-pairing-content:
+    if: inputs.stage == 't6-ios-pairing-content'
+    uses: ./.github/workflows/hosted-quality-ios.yml
+    with:
+      execution_lane: release-t7-recheck
+      run_contract: false
+      scope: full
+      simulator_matrix: '[{"bucket":"pairing-and-content","scenarios":["pairing-signed-transport","content-resource-read"]}]'
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+  t6-ios-state-writeback:
+    if: inputs.stage == 't6-ios-state-writeback'
+    uses: ./.github/workflows/hosted-quality-ios.yml
+    with:
+      execution_lane: release-t7-recheck
+      run_contract: false
+      scope: full
+      simulator_matrix: '[{"bucket":"state-writeback-runtime","scenarios":["state-writeback-runtime"]}]'
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+  t6-ios-sync-pack:
+    if: inputs.stage == 't6-ios-sync-pack'
+    uses: ./.github/workflows/hosted-quality-ios.yml
+    with:
+      execution_lane: release-t7-recheck
+      run_contract: false
+      scope: full
+      simulator_matrix: '[{"bucket":"sync-pack-runtime","scenarios":["sync-pack-runtime"]}]'
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+  t6-ios-foreground:
+    if: inputs.stage == 't6-ios-foreground'
+    uses: ./.github/workflows/hosted-quality-ios.yml
+    with:
+      execution_lane: release-t7-recheck
+      run_contract: false
+      scope: full
+      simulator_matrix: '[{"bucket":"foreground-sync-lifecycle","scenarios":["foreground-sync-lifecycle"]}]'
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}

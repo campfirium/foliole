@@ -9,7 +9,31 @@ on:
         description: Exact failed release stage to recheck, or full after the narrow stage passes
         required: true
         type: choice
-        options: [t5, t6-tail, release-candidate, macos, windows, linux, assembly, full]
+        options:
+          - t5-static
+          - t5-desktop-static
+          - t5-dependency-hardening
+          - t5-windows-core
+          - t5-shared
+          - t5-android-source
+          - t5-desktop-source
+          - t5-electron
+          - t5-tooling
+          - t6-desktop-build
+          - t6-android-web-build
+          - t6-windows-acceptance
+          - t6-android-host
+          - t6-ios-contract
+          - t6-ios-pairing-content
+          - t6-ios-state-writeback
+          - t6-ios-sync-pack
+          - t6-ios-foreground
+          - release-candidate
+          - macos
+          - windows
+          - linux
+          - assembly
+          - full
       target_sha:
         description: Exact current origin/release HEAD after the repair
         required: true
@@ -77,25 +101,14 @@ jobs:
             --candidate="$(node -p "require('./package.json').version")" > /dev/null
           echo "trigger_ref=${GITHUB_REF}" >> "$GITHUB_OUTPUT"
 
-  t5_recheck:
-    name: T5 baseline recheck
-    if: inputs.stage == 't5'
+  quality_bucket_recheck:
+    name: Quality bucket recheck
+    if: startsWith(inputs.stage, 't5-') || startsWith(inputs.stage, 't6-')
     needs: release_context
     permissions: { contents: read }
-    uses: ./.github/workflows/t5-baseline-admission.yml
+    uses: ./.github/workflows/release-quality-recheck.yml
     with:
-      execution_lane: release-t7-recheck
-      target_sha: ${{ needs.release_context.outputs.target_sha }}
-      trigger_ref: ${{ needs.release_context.outputs.trigger_ref }}
-
-  t6_tail_recheck:
-    name: T6 heavy tail recheck
-    if: inputs.stage == 't6-tail'
-    needs: release_context
-    permissions: { contents: read }
-    uses: ./.github/workflows/hosted-quality-full.yml
-    with:
-      execution_lane: release-t7-recheck
+      stage: ${{ inputs.stage }}
       target_sha: ${{ needs.release_context.outputs.target_sha }}
       trigger_ref: ${{ needs.release_context.outputs.trigger_ref }}
 

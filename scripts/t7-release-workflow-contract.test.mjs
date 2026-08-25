@@ -6,15 +6,24 @@ import { parse } from 'yaml';
 
 const source = fs.readFileSync('.github/workflows/t7-release.yml', 'utf8');
 const assemblySource = fs.readFileSync('.github/workflows/release-assembly.yml', 'utf8');
+const qualityRecheckSource = fs.readFileSync('.github/workflows/release-quality-recheck.yml', 'utf8');
 const workflow = parse(source);
 const assembly = parse(assemblySource);
+const qualityRecheck = parse(qualityRecheckSource);
+const qualityStages = [
+  't5-static', 't5-desktop-static', 't5-dependency-hardening', 't5-windows-core',
+  't5-shared', 't5-android-source', 't5-desktop-source', 't5-electron', 't5-tooling',
+  't6-desktop-build', 't6-android-web-build', 't6-windows-acceptance', 't6-android-host',
+  't6-ios-contract', 't6-ios-pairing-content', 't6-ios-state-writeback',
+  't6-ios-sync-pack', 't6-ios-foreground'
+];
 
 describe('T7 release workflow contract', () => {
   it('owns exact release push and repaired-HEAD stage rechecks', () => {
     expect(workflow.name).toBe('T7 Release');
     const dispatch = workflow.on.workflow_dispatch.inputs;
     expect(dispatch.stage.options).toEqual([
-      't5', 't6-tail', 'release-candidate', 'macos', 'windows', 'linux', 'assembly', 'full'
+      ...qualityStages, 'release-candidate', 'macos', 'windows', 'linux', 'assembly', 'full'
     ]);
     expect(dispatch.target_sha).toMatchObject({ required: true, type: 'string' });
     expect(dispatch.target_version).toMatchObject({ required: true, type: 'string' });
@@ -39,12 +48,17 @@ describe('T7 release workflow contract', () => {
     expect(fs.existsSync('.github/workflows/publish-release.yml')).toBe(false);
   });
 
-  it('chains full T7 while exposing the narrow T5 and T6-tail rechecks', () => {
+  it('chains full T7 while routing every T5 and T6 bucket independently', () => {
     const jobs = workflow.jobs;
-    expect(jobs.t5_recheck.uses).toBe('./.github/workflows/t5-baseline-admission.yml');
-    expect(jobs.t5_recheck.if).toBe("inputs.stage == 't5'");
-    expect(jobs.t6_tail_recheck.uses).toBe('./.github/workflows/hosted-quality-full.yml');
-    expect(jobs.t6_tail_recheck.if).toBe("inputs.stage == 't6-tail'");
+    expect(jobs.quality_bucket_recheck.uses)
+      .toBe('./.github/workflows/release-quality-recheck.yml');
+    expect(jobs.quality_bucket_recheck.if)
+      .toBe("startsWith(inputs.stage, 't5-') || startsWith(inputs.stage, 't6-')");
+    expect(Object.keys(qualityRecheck.jobs)).toEqual(qualityStages);
+    for (const stage of qualityStages) {
+      expect(qualityRecheck.jobs[stage].if).toBe(`inputs.stage == '${stage}'`);
+      expect(qualityRecheck.jobs[stage].with.target_sha).toBe('${{ inputs.target_sha }}');
+    }
     expect(jobs.t6_quality.uses).toBe('./.github/workflows/t6-hosted-quality.yml');
     expect(jobs.t6_quality.with.execution_lane).toBe('release-t7');
     expect(jobs.release_candidate.needs).toEqual(['release_context', 't6_quality']);

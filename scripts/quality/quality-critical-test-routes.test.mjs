@@ -122,6 +122,7 @@ describe('quality critical test routes', () => {
     expect(resolveCriticalTestFiles([
       '.github/workflows/hosted-quality-core.yml',
       '.github/workflows/hosted-quality-tooling.yml',
+      '.github/workflows/hosted-quality-windows-acceptance.yml',
       '.github/workflows/t6-hosted-quality.yml',
       '.github/workflows/t7-hosted-quality.yml',
       'scripts/quality/t7-hosted-quality-admission.mjs'
@@ -134,6 +135,7 @@ describe('quality critical test routes', () => {
       '.github/workflows/release-assembly.yml',
       '.github/workflows/release-linux.yml',
       '.github/workflows/release-macos.yml',
+      '.github/workflows/release-quality-recheck.yml',
       '.github/workflows/release-windows.yml',
       '.github/workflows/t7-release.yml'
     ], existing)).toEqual(RELEASE_WORKFLOW_CONTRACTS);

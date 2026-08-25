@@ -15,6 +15,18 @@ on:
       trigger_ref:
         required: true
         type: string
+      run_contract:
+        required: false
+        default: true
+        type: boolean
+      run_simulator:
+        required: false
+        default: true
+        type: boolean
+      simulator_matrix:
+        required: false
+        default: '[{"bucket":"pairing-and-content","scenarios":["pairing-signed-transport","content-resource-read"]},{"bucket":"state-writeback-runtime","scenarios":["state-writeback-runtime"]},{"bucket":"sync-pack-runtime","scenarios":["sync-pack-runtime"]},{"bucket":"foreground-sync-lifecycle","scenarios":["foreground-sync-lifecycle"]}]'
+        type: string
 
 permissions:
   contents: read
@@ -22,6 +34,7 @@ permissions:
 jobs:
   contract:
     name: iOS contract quality
+    if: inputs.run_contract
     runs-on: macos-15
     timeout-minutes: 120
     concurrency:
@@ -64,24 +77,11 @@ jobs:
 
   simulator:
     name: iOS Simulator (${{ matrix.bucket }})
-    if: inputs.scope == 'full'
+    if: inputs.scope == 'full' && inputs.run_simulator
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - bucket: pairing-and-content
-            scenarios:
-              - pairing-signed-transport
-              - content-resource-read
-          - bucket: state-writeback-runtime
-            scenarios:
-              - state-writeback-runtime
-          - bucket: sync-pack-runtime
-            scenarios:
-              - sync-pack-runtime
-          - bucket: foreground-sync-lifecycle
-            scenarios:
-              - foreground-sync-lifecycle
+        include: ${{ fromJSON(inputs.simulator_matrix) }}
     runs-on: macos-15
     timeout-minutes: 120
     concurrency:
