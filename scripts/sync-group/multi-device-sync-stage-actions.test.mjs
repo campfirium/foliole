@@ -3,7 +3,7 @@
 import { expect, it, vi } from 'vitest';
 
 import {
-  cancelAdmissionSibling, createDiagnosticStageActions, windowsJoinFailure
+  cancelAdmissionSibling, createDiagnosticStageActions, syncAdmittedCToAndroid, windowsJoinFailure
 } from './multi-device-sync-stage-actions.mjs';
 
 /* global process */
@@ -20,14 +20,30 @@ it('binds the A-leave product stage to its real cross-host action', () => {
 
 it('cancels Android immediately when Windows join fails before approval', () => {
   const approvalController = { abort: vi.fn() };
-  cancelAdmissionSibling(approvalController, 'windows-c-join', 'rejected');
+  const approvalRelease = { release: vi.fn() };
+  cancelAdmissionSibling(approvalController, approvalRelease, 'windows-c-join', 'rejected');
   expect(approvalController.abort).toHaveBeenCalledOnce();
+  expect(approvalRelease.release).not.toHaveBeenCalled();
 });
 
-it('keeps the public Android runtime when Windows join succeeds', () => {
+it('releases approval after Windows becomes an available member', () => {
   const approvalController = { abort: vi.fn() };
-  cancelAdmissionSibling(approvalController, 'windows-c-join', 'fulfilled');
+  const approvalRelease = { release: vi.fn(() => Promise.resolve()) };
+  cancelAdmissionSibling(approvalController, approvalRelease, 'windows-c-join', 'fulfilled');
   expect(approvalController.abort).not.toHaveBeenCalled();
+  expect(approvalRelease.release).toHaveBeenCalledOnce();
+});
+
+it('uses public Android Sync Now to consume the admitted C fact', async () => {
+  const runSyncNow = vi.fn(async (options) => options.observeWhileTransportOpen());
+  const waitForFact = vi.fn(async () => 'observed-c');
+  await expect(syncAdmittedCToAndroid({ env: {}, evidenceRoot: '/evidence', execute: vi.fn(),
+    factId: 'fact-c', paths: {}, runId: 'run-1', runSyncNow, waitForFact
+  })).resolves.toBe('observed-c');
+  expect(runSyncNow).toHaveBeenCalledWith(expect.objectContaining({
+    action: 'sync-now', buildIdentity: 'run-1', installMain: false
+  }));
+  expect(waitForFact).toHaveBeenCalledWith({}, 'fact-c', 'C');
 });
 
 it('preserves the fixed Windows native startup failure attribution', () => {

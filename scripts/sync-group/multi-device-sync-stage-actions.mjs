@@ -18,6 +18,7 @@ import {
 } from './multi-device-sync-nonempty-admission-proof.mjs';
 import { createActionExecutor } from './multi-device-sync-action-executor.mjs';
 import { createApprovalReceiptRelease } from './multi-device-sync-approval-release.mjs';
+import { runMacosA5SyncGroupMaintenance } from './a5-sync-group-action.mjs';
 import { prepareCandidateStage } from './multi-device-sync-candidate-preparation.mjs';
 import { runAOfflineAdmissionPrelude } from './multi-device-sync-fact-preparation.mjs';
 import { startWindowsSyncGroupProvider } from './multi-device-sync-windows-provider.mjs';
@@ -51,9 +52,21 @@ export function windowsJoinFailure(result) {
       : result.terminationReason || 'windows_c_sync_receipt', result });
 }
 
-export function cancelAdmissionSibling(approvalController, name, status) {
+export function cancelAdmissionSibling(approvalController, approvalRelease, name, status) {
   if (name !== 'windows-c-join') return;
   if (status === 'rejected') approvalController.abort();
+  else if (status === 'fulfilled') void approvalRelease.release();
+}
+
+export async function syncAdmittedCToAndroid({
+  env, evidenceRoot, execute, factId, paths, runId,
+  runSyncNow = runMacosA5SyncGroupMaintenance,
+  waitForFact = waitForAndroidJourneyFact
+}) {
+  return runSyncNow({ action: 'sync-now', buildIdentity: runId, env,
+    evidenceRoot: path.join(evidenceRoot, 'c-sync'), execute, installMain: false,
+    observeWhileTransportOpen: () => waitForFact(paths, factId, 'C'),
+    paths, serial: A5_SERIAL });
 }
 
 async function admitC(repoRoot, runId, { reportProgress, signal, stage }) {
@@ -85,16 +98,13 @@ async function admitC(repoRoot, runId, { reportProgress, signal, stage }) {
   let windowsSettled = false;
   try {
     const { approval, windows } = await runAOfflineAdmissionPrelude({
-      cancelSiblings: (name, status) => cancelAdmissionSibling(approvalController, name, status),
+      cancelSiblings: (name, status) => cancelAdmissionSibling(
+        approvalController, approvalRelease, name, status
+      ),
       closeTransport: () => closeMacosAcceptanceTransport(runTransport),
       createFact: (session) => createDesktopSyncGroupJourneyFact({
         device: 'A', evidenceRoot: path.join(evidenceRoot, 'a-fact'), session
       }),
-      completeWindowsAdmission: async (windows) => {
-        if (!windowsProvider || !windows?.factId) throw windowsJoinFailure({ code: 1 });
-        await windowsProvider.raceConsumer(waitForAndroidJourneyFact(paths, windows.factId, 'C'));
-        await approvalRelease.release();
-      },
       openSession: () => openMacosPairSyncDesktopSession(macosAcceptanceSessionOptions({
         libraryHome: path.join(owned.root, 'library'), repoRoot,
         runtimeRoot: owned.root
@@ -113,6 +123,9 @@ async function admitC(repoRoot, runId, { reportProgress, signal, stage }) {
       waitForFact: (factId) => waitForAndroidJourneyFact(paths, factId)
     });
     if (!windowsProvider || !windows?.factId) throw windowsJoinFailure({ code: 1 });
+    await windowsProvider.raceConsumer(syncAdmittedCToAndroid({
+      env, evidenceRoot, execute, factId: windows.factId, paths, runId
+    }));
     await windowsProvider.release('consumer_complete');
     const admission = await windowsProvider.finish();
     windowsSettled = true;

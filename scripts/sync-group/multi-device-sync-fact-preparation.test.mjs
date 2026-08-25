@@ -5,14 +5,9 @@ import { runAOfflineAdmissionPrelude } from './multi-device-sync-fact-preparatio
 it('creates on A, proves B received the fact, takes A offline, then starts C', async () => {
   const events = [];
   const milestones = [];
-  let releaseApproval;
   const close = vi.fn(async () => { events.push('a-offline'); });
   const result = await runAOfflineAdmissionPrelude({
     closeTransport: async () => { events.push('b-transport-closed'); },
-    completeWindowsAdmission: async () => {
-      events.push('b-received-c-fact');
-      releaseApproval('approval');
-    },
     createFact: async () => { events.push('a-fact-created'); return { factId: 'fact-a' }; },
     openSession: async () => ({ close, enable: async () => {
       events.push('a-listener-ready');
@@ -21,10 +16,8 @@ it('creates on A, proves B received the fact, takes A offline, then starts C', a
     openTransport: async () => { events.push('b-transport-open'); },
     reportProgress: (milestone) => milestones.push(milestone),
     runApproval: async ({ onProviderStopped, onReady }) => {
-      const held = new Promise((resolve) => { releaseApproval = resolve; });
       events.push('b-provider-stopped'); await onProviderStopped();
-      events.push('b-started'); await onReady(); events.push('c-approved');
-      return held;
+      events.push('b-started'); await onReady(); events.push('c-approved'); return 'approval';
     },
     startWindows: async () => { events.push('c-started'); return 'windows'; },
     waitForFact: async (factId) => { events.push(`b-received-${factId}`); }
@@ -32,7 +25,7 @@ it('creates on A, proves B received the fact, takes A offline, then starts C', a
   expect(events).toEqual([
     'a-listener-ready', 'a-fact-created', 'b-provider-stopped', 'b-transport-open', 'b-started',
     'b-received-fact-a',
-    'b-transport-closed', 'a-offline', 'c-started', 'c-approved', 'b-received-c-fact'
+    'b-transport-closed', 'a-offline', 'c-started', 'c-approved'
   ]);
   expect(close).toHaveBeenCalledTimes(1);
   expect(milestones).toEqual([
