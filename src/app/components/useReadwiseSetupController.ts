@@ -53,6 +53,7 @@ function canPreviewReadwiseSetup(input: {
 function useReadwiseDraftController(props: SettingsReadwiseReaderContentProps) {
   const draft = useReadwiseSetupDraft({
     config: props.config,
+    onPathsChange: props.onSave,
     onPreview: (input) =>
       inspectReadwiseReaderSetup({
         articleDirectoryPath: input.articleDirectoryPath,

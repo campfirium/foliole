@@ -1,8 +1,15 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
-import { createDefaultImportManagerSettings } from '../../../lib/core/import/importManagerSettings';
+import {
+  applyReadwiseRootPath,
+  createDefaultImportManagerSettings
+} from '../../../lib/core/import/importManagerSettings';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
+
+const folderSelection = vi.hoisted(() => ({ selectRuntimeFolder: vi.fn() }));
+
+vi.mock('../../shared/platform/folderSelectionRuntimeRepository', () => folderSelection);
 
 import { SettingsImportManagementContent } from './SettingsImportManagementContent';
 import { SettingsReadwiseReaderContent } from './SettingsReadwiseReaderContent';
@@ -80,4 +87,44 @@ it('shows the restored Readwise Reader setup directly in settings', () => {
       .getByText('Highlighted content')
       .compareDocumentPosition(screen.getByText('Readwise root folder'))
   ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+});
+
+it('saves a new Readwise root and invalidates the previous enabled setup', async () => {
+  const settings = createDefaultImportManagerSettings();
+  settings.readwiseRootPath = '/Library/Readwise/old';
+  settings.readwiseSources = applyReadwiseRootPath(
+    settings.readwiseSources,
+    settings.readwiseRootPath
+  );
+  settings.readwiseReaderConfig = {
+    ...settings.readwiseReaderConfig,
+    enabled: true,
+    validatedAt: '2026-08-01T00:00:00.000Z'
+  };
+  folderSelection.selectRuntimeFolder.mockResolvedValue('/Library/Readwise/clip');
+  const onSave = vi.fn();
+
+  renderWithLocalization(
+    <SettingsReadwiseReaderContent
+      config={settings.readwiseReaderConfig}
+      onSave={onSave}
+      readwiseRootPath={settings.readwiseRootPath}
+      readwiseSources={settings.readwiseSources}
+    />
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Readwise root folder' }));
+
+  await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+  expect(onSave).toHaveBeenCalledWith(
+    expect.objectContaining({
+      config: expect.objectContaining({ enabled: false, validatedAt: '' }),
+      readwiseRootPath: '/Library/Readwise/clip',
+      readwiseSources: expect.arrayContaining([
+        expect.objectContaining({
+          highlightPath: '/Library/Readwise/clip/Articles',
+          primaryPath: '/Library/Readwise/clip/Full Document Contents/Articles'
+        })
+      ])
+    })
+  );
 });

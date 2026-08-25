@@ -7,6 +7,12 @@ import { selectRuntimeFolder } from '../../shared/platform/folderSelectionRuntim
 import type { DraftImportSource } from './importSourceWorkspaceModel';
 import { applyReadwiseRootPath, formatReadwiseSourceLabel, updateDraftImportSource } from './importSourceWorkspaceModel';
 
+interface ReadwisePathSettingsChange {
+  config: ReadwiseReaderConfig;
+  readwiseRootPath: string;
+  readwiseSources: DraftImportSource[];
+}
+
 function getReadwiseDetectionSources(sources: DraftImportSource[]): NativeReadwiseDetectionSource[] {
   return sources
     .filter((source): source is DraftImportSource & { kind: NonNullable<DraftImportSource['kind']> } =>
@@ -19,30 +25,8 @@ function getReadwiseDetectionSources(sources: DraftImportSource[]): NativeReadwi
     }));
 }
 
-async function chooseDraftFolder(
-  sourceId: string,
-  field: 'highlightPath' | 'primaryPath',
-  setDraftSources: Dispatch<SetStateAction<DraftImportSource[]>>
-): Promise<boolean> {
-  const selectedPath = await selectRuntimeFolder();
-  if (!selectedPath) {
-    return false;
-  }
-  setDraftSources((current) => current.map((source) => (source.id === sourceId ? updateDraftImportSource(source, field, selectedPath) : source)));
-  return true;
-}
-
-async function chooseDraftRootFolder(
-  setDraftRootPath: Dispatch<SetStateAction<string>>,
-  setDraftSources: Dispatch<SetStateAction<DraftImportSource[]>>
-): Promise<boolean> {
-  const selectedPath = await selectRuntimeFolder();
-  if (!selectedPath) {
-    return false;
-  }
-  setDraftRootPath(selectedPath);
-  setDraftSources((current) => applyReadwiseRootPath(current, selectedPath));
-  return true;
+function invalidateReadwisePathConfig(config: ReadwiseReaderConfig) {
+  return { ...config, enabled: false, validatedAt: '' };
 }
 
 async function runDraftPreview(input: {
@@ -93,7 +77,9 @@ function areReadwiseDraftsEqual(input: {
 
 function createReadwiseDraftActions(input: {
   draftConfig: ReadwiseReaderConfig;
+  draftRootPath: string;
   draftSources: DraftImportSource[];
+  onPathsChange: ((change: ReadwisePathSettingsChange) => void) | undefined;
   onPreview: (input: {
     articleDirectoryPath: string;
     config: ReadwiseReaderConfig;
@@ -108,16 +94,27 @@ function createReadwiseDraftActions(input: {
 }) {
   return {
     async chooseFolder(sourceId: string, field: 'highlightPath' | 'primaryPath') {
-      const changed = await chooseDraftFolder(sourceId, field, input.setDraftSources);
-      if (changed) {
-        input.setPreviewResult(null);
-      }
+      const selectedPath = await selectRuntimeFolder();
+      if (!selectedPath) return;
+      const config = invalidateReadwisePathConfig(input.draftConfig);
+      const readwiseSources = input.draftSources.map((source) =>
+        source.id === sourceId ? updateDraftImportSource(source, field, selectedPath) : source
+      );
+      input.setDraftConfig(config);
+      input.setDraftSources(readwiseSources);
+      input.setPreviewResult(null);
+      input.onPathsChange?.({ config, readwiseRootPath: input.draftRootPath, readwiseSources });
     },
     async chooseRootFolder() {
-      const changed = await chooseDraftRootFolder(input.setDraftRootPath, input.setDraftSources);
-      if (changed) {
-        input.setPreviewResult(null);
-      }
+      const readwiseRootPath = await selectRuntimeFolder();
+      if (!readwiseRootPath) return;
+      const config = invalidateReadwisePathConfig(input.draftConfig);
+      const readwiseSources = applyReadwiseRootPath(input.draftSources, readwiseRootPath);
+      input.setDraftConfig(config);
+      input.setDraftRootPath(readwiseRootPath);
+      input.setDraftSources(readwiseSources);
+      input.setPreviewResult(null);
+      input.onPathsChange?.({ config, readwiseRootPath, readwiseSources });
     },
     updateConfig(field: keyof ReadwiseReaderConfig, value: string) {
       if (field === 'validatedAt') return;
@@ -138,6 +135,7 @@ function createReadwiseDraftActions(input: {
 
 export function useReadwiseSetupDraft(props: {
   config: ReadwiseReaderConfig;
+  onPathsChange?: (change: ReadwisePathSettingsChange) => void;
   onPreview: (input: {
     articleDirectoryPath: string;
     config: ReadwiseReaderConfig;
@@ -181,7 +179,9 @@ export function useReadwiseSetupDraft(props: {
     previewResult,
     ...createReadwiseDraftActions({
       draftConfig,
+      draftRootPath,
       draftSources,
+      onPathsChange: props.onPathsChange,
       onPreview: props.onPreview,
       setDraftConfig,
       setDraftRootPath,
