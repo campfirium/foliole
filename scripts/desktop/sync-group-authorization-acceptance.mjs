@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 /* global console, process */
 
-import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-import { resolveElectronBinary } from '../electron-sqlite-runner.mjs';
+import { prepareMacosHiddenElectronRuntime } from './macos-hidden-electron-runtime.mjs';
 
 const root = path.resolve('.tmp/artifacts/sync-group-authorization/desktop');
-const entry = path.join(root, 'sync-group-authorization-main.cjs');
+const compiledRoot = path.join(root, 'compiled');
+const entry = path.join(compiledRoot, 'electron/sync/syncGroupAuthorizationAcceptanceMain.js');
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, { cwd: process.cwd(), encoding: 'utf8', timeout: 600_000, ...options });
@@ -30,13 +31,26 @@ function frozenRevision() {
 function main() {
   const revision = frozenRevision();
   mkdirSync(root, { recursive: true });
-  run(path.resolve('node_modules/.bin/esbuild'), [
-    'electron/sync/syncGroupAuthorizationAcceptanceMain.ts', '--bundle', '--platform=node',
-    '--format=cjs', '--external:electron', `--outfile=${entry}`
+  rmSync(compiledRoot, { force: true, recursive: true });
+  run(process.execPath, [path.resolve('node_modules/typescript/lib/tsc.js'),
+    'electron/sync/syncGroupAuthorizationAcceptanceMain.ts', '--outDir', compiledRoot,
+    '--rootDir', '.', '--module', 'NodeNext', '--moduleResolution', 'NodeNext',
+    '--target', 'ES2022', '--esModuleInterop', '--skipLibCheck'
   ]);
-  const env = { ...process.env, FOLIOLE_SYNC_GROUP_AUTHORIZATION_ARTIFACT_ROOT: root,
+  const runtime = prepareMacosHiddenElectronRuntime({ appRoot: process.cwd() });
+  const env = { ...process.env,
+    FOLIOLE_HIDDEN_CREDENTIAL_APP_NAME: `Foliole Hidden Native ${runtime.runtimeFingerprint.slice(0, 20)}`,
+    FOLIOLE_HIDDEN_CREDENTIAL_MAIN_PATH: entry,
+    FOLIOLE_SYNC_GROUP_AUTHORIZATION_ARTIFACT_ROOT: root,
     FOLIOLE_SYNC_GROUP_AUTHORIZATION_REVISION: revision };
-  run(resolveElectronBinary(), [entry], { env });
+  delete env.ELECTRON_RUN_AS_NODE;
+  try {
+    run(runtime.executablePath, [path.resolve(
+      'scripts/desktop/macos-hidden-electron-credential-bootstrap.mjs'
+    )], { env });
+  } finally {
+    runtime.cleanup();
+  }
   const receiptPath = path.join(root, 'safe-storage-receipt.json');
   if (!existsSync(receiptPath)) throw new Error('safeStorage receipt was not produced');
   const receipt = JSON.parse(readFileSync(receiptPath, 'utf8'));

@@ -50,7 +50,7 @@ void app.whenReady().then(() => {
     }, null, 2)}\n`);
     process.exitCode = 1;
   } finally {
-    app.quit();
+    app.exit(typeof process.exitCode === 'number' ? process.exitCode : 0);
   }
 });
 
