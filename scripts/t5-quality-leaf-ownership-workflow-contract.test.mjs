@@ -28,7 +28,10 @@ import {
 const read = (file) => fs.readFileSync(file, 'utf8');
 const parseWorkflow = (name) => parse(read(`.github/workflows/${name}`));
 const portable = parseWorkflow('hosted-quality-portable-domain.yml');
+const desktopSource = parseWorkflow('hosted-quality-desktop-source.yml');
+const electron = parseWorkflow('hosted-quality-electron.yml');
 const t5 = parseWorkflow('t5-baseline-admission.yml');
+const tooling = parseWorkflow('hosted-quality-tooling.yml');
 const TEST_PATTERN = /\.test\.(?:mjs|mts|ts|tsx)$/u;
 
 function collectTests(root) {
@@ -69,6 +72,15 @@ function maximumWorkflowDepth(file, ancestors = []) {
 }
 
 describe('T5 canonical leaf ownership', () => {
+  it('requests no more than eighteen runner-backed first-wave leaves', () => {
+    const fixedLeaves = 4;
+    const portableLeaves = portable.jobs['portable-domain-tests'].strategy.matrix.include.length * 2;
+    const bucketLeaves = [desktopSource, electron, tooling].reduce((total, workflow) => (
+      total + Object.values(workflow.jobs)[0].strategy.matrix.include.length
+    ), 0);
+    expect(fixedLeaves + portableLeaves + bucketLeaves).toBe(18);
+  });
+
   it('keeps every original host by portable domain without cross-domain execution', () => {
     const rows = portable.jobs['portable-domain-tests'].strategy.matrix.include;
     expect(rows).toEqual([
