@@ -37,6 +37,7 @@ export function FolderButton({
         'h-10 w-full min-w-0 justify-between rounded-md border border-settings-control-border bg-settings-control px-3 text-left text-sm text-foreground/75 disabled:border-settings-control-border disabled:bg-settings-switch-off disabled:text-foreground/40',
         className
       )}
+      contentClassName="w-full justify-between"
       disabled={disabled}
       onClick={onClick}
       variant="ghost"

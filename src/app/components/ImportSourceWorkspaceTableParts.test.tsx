@@ -17,6 +17,7 @@ it('shows a stable full-path tooltip for folder buttons', async () => {
 
   const button = screen.getByRole('button', { name: 'Choose Articles content folder' });
   expect(button).not.toHaveAttribute('title');
+  expect(button.firstElementChild).toHaveClass('w-full', 'justify-between');
 
   fireEvent.pointerMove(button, { pointerType: 'mouse' });
 

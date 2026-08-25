@@ -15,6 +15,10 @@ const SCREENSHOT_PATH = path.join(
   process.cwd(),
   '.tmp/artifacts/desktop-acceptance/readwise-folder-tooltip.png'
 );
+const LAYOUT_SCREENSHOT_PATH = path.join(
+  process.cwd(),
+  '.tmp/artifacts/desktop-acceptance/readwise-folder-layout.png'
+);
 
 test('shows full paths consistently for Readwise folder buttons', async ({ desktopWindow }, testInfo) => {
   const settings = createDefaultImportManagerSettings();
@@ -45,4 +49,8 @@ test('shows full paths consistently for Readwise folder buttons', async ({ deskt
   await mkdir(path.dirname(SCREENSHOT_PATH), { recursive: true });
   const screenshot = await tooltipSurface.screenshot({ path: SCREENSHOT_PATH });
   await testInfo.attach('readwise-folder-tooltip', { body: screenshot, contentType: 'image/png' });
+  await desktopWindow.mouse.move(0, 0);
+  await expect(tooltip).not.toBeVisible();
+  const layoutScreenshot = await dialog.screenshot({ path: LAYOUT_SCREENSHOT_PATH });
+  await testInfo.attach('readwise-folder-layout', { body: layoutScreenshot, contentType: 'image/png' });
 });
