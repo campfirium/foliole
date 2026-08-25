@@ -51,10 +51,9 @@ export function windowsJoinFailure(result) {
       : result.terminationReason || 'windows_c_sync_receipt', result });
 }
 
-export function cancelAdmissionSibling(approvalController, approvalRelease, name, status) {
+export function cancelAdmissionSibling(approvalController, name, status) {
   if (name !== 'windows-c-join') return;
   if (status === 'rejected') approvalController.abort();
-  else if (status === 'fulfilled') void approvalRelease.release();
 }
 
 async function admitC(repoRoot, runId, { reportProgress, signal, stage }) {
@@ -86,13 +85,16 @@ async function admitC(repoRoot, runId, { reportProgress, signal, stage }) {
   let windowsSettled = false;
   try {
     const { approval, windows } = await runAOfflineAdmissionPrelude({
-      cancelSiblings: (name, status) => cancelAdmissionSibling(
-        approvalController, approvalRelease, name, status
-      ),
+      cancelSiblings: (name, status) => cancelAdmissionSibling(approvalController, name, status),
       closeTransport: () => closeMacosAcceptanceTransport(runTransport),
       createFact: (session) => createDesktopSyncGroupJourneyFact({
         device: 'A', evidenceRoot: path.join(evidenceRoot, 'a-fact'), session
       }),
+      completeWindowsAdmission: async (windows) => {
+        if (!windowsProvider || !windows?.factId) throw windowsJoinFailure({ code: 1 });
+        await windowsProvider.raceConsumer(waitForAndroidJourneyFact(paths, windows.factId, 'C'));
+        await approvalRelease.release();
+      },
       openSession: () => openMacosPairSyncDesktopSession(macosAcceptanceSessionOptions({
         libraryHome: path.join(owned.root, 'library'), repoRoot,
         runtimeRoot: owned.root
@@ -111,7 +113,6 @@ async function admitC(repoRoot, runId, { reportProgress, signal, stage }) {
       waitForFact: (factId) => waitForAndroidJourneyFact(paths, factId)
     });
     if (!windowsProvider || !windows?.factId) throw windowsJoinFailure({ code: 1 });
-    await windowsProvider.raceConsumer(waitForAndroidJourneyFact(paths, windows.factId, 'C'));
     await windowsProvider.release('consumer_complete');
     const admission = await windowsProvider.finish();
     windowsSettled = true;
