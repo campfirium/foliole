@@ -2,7 +2,12 @@ import { expect, it } from 'vitest';
 
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 
-import { createTestPairRequestPayload } from './companionPairingProtocolTestSupport.js';
+import { encryptCompanionPairingSecret } from './companionPairingEncryption.js';
+import {
+  createTestPairRequestPayload,
+  createTestPairingKeyPair,
+  decryptTestPairingSecrets
+} from './companionPairingProtocolTestSupport.js';
 
 it('builds the current companion pair request contract without legacy device fields', () => {
   const payload = createTestPairRequestPayload({
@@ -27,4 +32,23 @@ it('builds the current companion pair request contract without legacy device fie
   expect(payload).not.toHaveProperty('device_id');
   expect(payload).not.toHaveProperty('device_kind');
   expect(payload).not.toHaveProperty('device_name');
+});
+
+it('keeps authorization credentials distinct from Sync Group provider secrets', async () => {
+  const keyPair = await createTestPairingKeyPair();
+  const encryptedCredentialSecret = await encryptCompanionPairingSecret({
+    clientPublicKey: keyPair.publicKey, credentialSecret: 'authorization-secret'
+  });
+  const providerEncryptedCredentialSecret = await encryptCompanionPairingSecret({
+    clientPublicKey: keyPair.publicKey, credentialSecret: 'workgroup-secret'
+  });
+
+  await expect(decryptTestPairingSecrets({
+    encryptedCredentialSecret,
+    privateKey: keyPair.privateKey,
+    providerEncryptedCredentialSecret
+  })).resolves.toEqual({
+    credentialSecret: 'authorization-secret',
+    providerSecret: 'workgroup-secret'
+  });
 });

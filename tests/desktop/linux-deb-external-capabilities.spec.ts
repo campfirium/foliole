@@ -5,7 +5,7 @@ import path from 'node:path';
 import {
   createTestPairRequestPayload,
   createTestPairingKeyPair,
-  decryptTestPairingSecret
+  decryptTestPairingSecrets
 } from '../../electron/sync/companionPairingProtocolTestSupport.js';
 import { createDesktopSyncGroupSignedHeaders } from '../../electron/sync/desktopSyncGroupSignedHeaders.js';
 import type { CompanionWorkspacePairPayload } from '../../lib/platform/nativeCompanionSyncContract.js';
@@ -77,10 +77,21 @@ async function pairCompanion(
   });
   expect(finalized.status).toBe(200);
   const payload = await finalized.json() as CompanionWorkspacePairPayload;
-  const secret = await decryptTestPairingSecret({
-    encrypted: payload.encrypted_credential_secret, privateKey: keyPair.privateKey
+  const providerEncryptedSecret = payload.provider_encrypted_credential_secret;
+  expect(providerEncryptedSecret).toBeDefined();
+  if (!providerEncryptedSecret) throw new Error('Sync Group provider pairing secret is missing.');
+  const secrets = await decryptTestPairingSecrets({
+    encryptedCredentialSecret: payload.encrypted_credential_secret,
+    privateKey: keyPair.privateKey,
+    providerEncryptedCredentialSecret: providerEncryptedSecret
   });
-  return { authorizationId: payload.authorization_id, groupId: group.groupId, secret };
+  expect(secrets.providerSecret).not.toBeNull();
+  if (!secrets.providerSecret) throw new Error('Sync Group provider pairing secret is missing.');
+  return {
+    authorizationId: payload.authorization_id,
+    groupId: group.groupId,
+    secret: secrets.providerSecret
+  };
 }
 
 async function pairDiscoveredGroup(windowPage: DesktopSession['firstWindow'], endpoint: string) {

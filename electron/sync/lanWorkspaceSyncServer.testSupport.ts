@@ -6,7 +6,7 @@ import { expect } from 'vitest';
 
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 
-import { createTestPairingKeyPair, decryptTestPairingSecret } from './companionPairingProtocolTestSupport.js';
+import { createTestPairingKeyPair, decryptTestPairingSecrets } from './companionPairingProtocolTestSupport.js';
 
 interface TestRequestArgs {
   body?: unknown;
@@ -101,18 +101,7 @@ export function signWorkspaceSyncRequest(args: {
   };
 }
 
-type EncryptedPairingSecret = Parameters<typeof decryptTestPairingSecret>[0]['encrypted'];
-
-async function decryptPairingSecrets(
-  payload: { encrypted_credential_secret: EncryptedPairingSecret; provider_encrypted_credential_secret?: EncryptedPairingSecret },
-  privateKey: Parameters<typeof decryptTestPairingSecret>[0]['privateKey']
-) {
-  const credential = await decryptTestPairingSecret({ encrypted: payload.encrypted_credential_secret, privateKey });
-  const device = payload.provider_encrypted_credential_secret
-    ? await decryptTestPairingSecret({ encrypted: payload.provider_encrypted_credential_secret, privateKey })
-    : credential;
-  return { credential, device };
-}
+type EncryptedPairingSecret = Parameters<typeof decryptTestPairingSecrets>[0]['encryptedCredentialSecret'];
 
 export async function pairTestDevice(server: http.Server, workgroup?: {
   groupId: string;
@@ -158,12 +147,18 @@ export async function pairTestDevice(server: http.Server, workgroup?: {
     encrypted_credential_secret: EncryptedPairingSecret;
     provider_encrypted_credential_secret?: EncryptedPairingSecret;
   }>();
-  const secrets = await decryptPairingSecrets(payload, clientKeyPair.privateKey);
+  const secrets = await decryptTestPairingSecrets({
+    encryptedCredentialSecret: payload.encrypted_credential_secret,
+    privateKey: clientKeyPair.privateKey,
+    ...(payload.provider_encrypted_credential_secret
+      ? { providerEncryptedCredentialSecret: payload.provider_encrypted_credential_secret }
+      : {})
+  });
   return {
     authorization_id: payload.authorization_id,
-    credential_secret: secrets.credential,
+    credential_secret: secrets.credentialSecret,
     device_id: payload.device_id,
-    device_secret: secrets.device,
+    device_secret: secrets.providerSecret ?? secrets.credentialSecret,
     ...(workgroup ? { group_id: workgroup.groupId, group_tag: workgroup.groupTag } : {})
   } satisfies TestPairedDevice;
 }

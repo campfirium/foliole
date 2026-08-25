@@ -93,3 +93,21 @@ export async function decryptTestPairingSecret(args: {
   );
   return new TextDecoder().decode(plaintext);
 }
+
+export async function decryptTestPairingSecrets(args: {
+  encryptedCredentialSecret: EncryptedCompanionPairingSecret;
+  privateKey: NodeCryptoKey;
+  providerEncryptedCredentialSecret?: EncryptedCompanionPairingSecret;
+}) {
+  const credentialSecret = await decryptTestPairingSecret({
+    encrypted: args.encryptedCredentialSecret,
+    privateKey: args.privateKey
+  });
+  const providerSecret = args.providerEncryptedCredentialSecret
+    ? await decryptTestPairingSecret({
+      encrypted: args.providerEncryptedCredentialSecret,
+      privateKey: args.privateKey
+    })
+    : null;
+  return { credentialSecret, providerSecret };
+}
