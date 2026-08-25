@@ -10,7 +10,9 @@ import {
 } from './multi-device-sync-ab-convergence.mjs';
 import { establishFreshAB } from './multi-device-sync-fresh-join.mjs';
 import { proveALeave } from './multi-device-sync-a-leave.mjs';
-import { proveARejoin } from './multi-device-sync-a-rejoin.mjs';
+import {
+  proveARejoin, restartARejoinAndroidProvider
+} from './multi-device-sync-a-rejoin.mjs';
 import { proveSyncFromZero } from './multi-device-sync-from-zero.mjs';
 import { proveParticipationControl } from './multi-device-sync-participation.mjs';
 import {
@@ -60,13 +62,17 @@ export function cancelAdmissionSibling(approvalController, approvalRelease, name
 
 export async function syncAdmittedCToAndroid({
   env, evidenceRoot, execute, factId, paths, runId,
+  restartAndroid = restartARejoinAndroidProvider,
   runSyncNow = runMacosA5SyncGroupMaintenance,
   waitForFact = waitForAndroidJourneyFact
 }) {
-  return runSyncNow({ action: 'sync-now', buildIdentity: runId, env,
+  const sync = await runSyncNow({ action: 'sync-now', buildIdentity: runId, env,
     evidenceRoot: path.join(evidenceRoot, 'c-sync'), execute, installMain: false,
     observeWhileTransportOpen: () => waitForFact(paths, factId, 'C'),
     paths, serial: A5_SERIAL });
+  await restartAndroid({ env, execute, paths });
+  const restarted = await waitForFact(paths, factId, 'C');
+  return { restarted, sync };
 }
 
 async function admitC(repoRoot, runId, { reportProgress, signal, stage }) {

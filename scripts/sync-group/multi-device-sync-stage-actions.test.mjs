@@ -35,15 +35,27 @@ it('releases approval after Windows becomes an available member', () => {
 });
 
 it('uses public Android Sync Now to consume the admitted C fact', async () => {
-  const runSyncNow = vi.fn(async (options) => options.observeWhileTransportOpen());
-  const waitForFact = vi.fn(async () => 'observed-c');
+  const events = [];
+  const runSyncNow = vi.fn(async (options) => {
+    events.push('sync-now');
+    return options.observeWhileTransportOpen();
+  });
+  const restartAndroid = vi.fn(async () => events.push('restart'));
+  const waitForFact = vi.fn(async () => {
+    events.push('fact');
+    return 'observed-c';
+  });
   await expect(syncAdmittedCToAndroid({ env: {}, evidenceRoot: '/evidence', execute: vi.fn(),
-    factId: 'fact-c', paths: {}, runId: 'run-1', runSyncNow, waitForFact
-  })).resolves.toBe('observed-c');
+    factId: 'fact-c', paths: {}, restartAndroid, runId: 'run-1', runSyncNow, waitForFact
+  })).resolves.toEqual({ restarted: 'observed-c', sync: 'observed-c' });
   expect(runSyncNow).toHaveBeenCalledWith(expect.objectContaining({
     action: 'sync-now', buildIdentity: 'run-1', installMain: false
   }));
-  expect(waitForFact).toHaveBeenCalledWith({}, 'fact-c', 'C');
+  expect(restartAndroid).toHaveBeenCalledWith({ env: {}, execute: expect.any(Function), paths: {} });
+  expect(waitForFact).toHaveBeenCalledTimes(2);
+  expect(waitForFact).toHaveBeenNthCalledWith(1, {}, 'fact-c', 'C');
+  expect(waitForFact).toHaveBeenNthCalledWith(2, {}, 'fact-c', 'C');
+  expect(events).toEqual(['sync-now', 'fact', 'restart', 'fact']);
 });
 
 it('preserves the fixed Windows native startup failure attribution', () => {
