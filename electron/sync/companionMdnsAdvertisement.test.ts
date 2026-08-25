@@ -99,7 +99,6 @@ describe('companion mDNS advertisement', () => {
       host: 'V-runtimed.local',
       name: expect.stringMatching(/^V-runtimed-[0-9a-z]+$/u),
       port: 38683,
-      probe: false,
       protocol: 'tcp',
       txt: {
         app_version: '0.1.0-test',

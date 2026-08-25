@@ -86,7 +86,6 @@ function publishCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisementInpu
       host: resolveCompanionMdnsHost(os.hostname(), runtimeInstanceId),
       name: resolveCompanionMdnsServiceName(input.groupDisplayName, runtimeInstanceId, factsRevision),
       port: input.port,
-      probe: false,
       protocol: 'tcp',
       txt: {
         app_version: input.appVersion,

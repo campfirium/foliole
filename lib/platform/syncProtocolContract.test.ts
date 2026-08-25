@@ -3,10 +3,11 @@ import { describe, expect, it } from 'vitest';
 import {
   CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
   evaluateSyncProtocolCompatibility,
+  evaluateSyncProtocolVersionHint,
   parseSyncProtocolDescriptor,
   parseSyncProtocolTxt,
   serializeSyncProtocolTxt,
-  syncProtocolDescriptorsMatch,
+  syncProtocolVersionHintMatchesDescriptor,
   type SyncProtocolDescriptor
 } from './syncProtocolContract.js';
 
@@ -50,10 +51,14 @@ describe('syncProtocolContract', () => {
     });
   });
 
-  it('normalizes and round-trips the compact mDNS TXT projection', () => {
+  it('keeps mDNS TXT as a bounded version hint and leaves capabilities to discovery', () => {
     const txt = serializeSyncProtocolTxt();
-    expect(parseSyncProtocolTxt(txt)).toEqual(CURRENT_SYNC_PROTOCOL_DESCRIPTOR);
-    expect(syncProtocolDescriptorsMatch(parseSyncProtocolTxt(txt), CURRENT_SYNC_PROTOCOL_DESCRIPTOR)).toBe(true);
+    const hint = parseSyncProtocolTxt(txt);
+    expect(txt).not.toHaveProperty('protocol_capabilities');
+    expect(Object.entries(txt).every(([key, value]) => Buffer.byteLength(`${key}=${value}`) <= 255)).toBe(true);
+    expect(hint).toEqual({ max_supported_version: 3, min_supported_version: 3, version: 3 });
+    expect(evaluateSyncProtocolVersionHint(hint)).toMatchObject({ status: 'compatible' });
+    expect(syncProtocolVersionHintMatchesDescriptor(hint, CURRENT_SYNC_PROTOCOL_DESCRIPTOR)).toBe(true);
   });
 
   it('rejects malformed descriptors rather than repairing them', () => {
