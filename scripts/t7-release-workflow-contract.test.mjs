@@ -5,12 +5,19 @@ import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
 const source = fs.readFileSync('.github/workflows/t7-release.yml', 'utf8');
+const assemblySource = fs.readFileSync('.github/workflows/release-assembly.yml', 'utf8');
 const workflow = parse(source);
+const assembly = parse(assemblySource);
 
 describe('T7 release workflow contract', () => {
-  it('is the only exact release push entry and ignores post-public metadata', () => {
+  it('owns exact release push and repaired-HEAD stage rechecks', () => {
     expect(workflow.name).toBe('T7 Release');
-    expect(workflow.on.workflow_dispatch).toBeUndefined();
+    const dispatch = workflow.on.workflow_dispatch.inputs;
+    expect(dispatch.stage.options).toEqual([
+      't5', 't6-tail', 'release-candidate', 'macos', 'windows', 'linux', 'assembly', 'full'
+    ]);
+    expect(dispatch.target_sha).toMatchObject({ required: true, type: 'string' });
+    expect(dispatch.target_version).toMatchObject({ required: true, type: 'string' });
     expect(workflow.on.push.branches).toEqual(['release']);
     expect(workflow.on.push['paths-ignore']).toEqual([
       'releases/github/**', 'releases/notes/**', 'releases/update-manifest.json'
@@ -20,29 +27,36 @@ describe('T7 release workflow contract', () => {
       'cancel-in-progress': true
     });
     expect(source).toContain('FOLIOLE_RELEASE_REF_NAME: ${{ github.ref_name }}');
-    expect(source).toContain('FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}');
+    expect(source).toContain('test "$GITHUB_REF" = "refs/heads/release"');
+    expect(source).toContain('test "$REQUESTED_SHA" = "$GITHUB_SHA"');
+    expect(source).toContain('test "$remote_sha" = "$REQUESTED_SHA"');
+    expect(source).toContain('test "$REQUESTED_VERSION" = "$(node -p');
     expect(source).toContain('node scripts/release-target-contract.mjs >> "$GITHUB_OUTPUT"');
-    expect(source).toContain('FOLIOLE_RELEASE_EXPECTED_INTENT_DIGEST');
-    expect(source.match(/FOLIOLE_RELEASE_REQUIRE_PUBLICATION_MODE/gu)).toHaveLength(2);
+    expect(assemblySource).toContain('FOLIOLE_RELEASE_EXPECTED_INTENT_DIGEST');
+    expect(`${source}\n${assemblySource}`.match(/FOLIOLE_RELEASE_REQUIRE_PUBLICATION_MODE/gu))
+      .toHaveLength(2);
     expect(source).toContain('node scripts/desktop-update-release-policy.mjs');
     expect(fs.existsSync('.github/workflows/publish-release.yml')).toBe(false);
   });
 
-  it('chains one reusable T5 to T6 to RC and three parallel packages', () => {
+  it('chains full T7 while exposing the narrow T5 and T6-tail rechecks', () => {
     const jobs = workflow.jobs;
+    expect(jobs.t5_recheck.uses).toBe('./.github/workflows/t5-baseline-admission.yml');
+    expect(jobs.t5_recheck.if).toBe("inputs.stage == 't5'");
+    expect(jobs.t6_tail_recheck.uses).toBe('./.github/workflows/hosted-quality-full.yml');
+    expect(jobs.t6_tail_recheck.if).toBe("inputs.stage == 't6-tail'");
     expect(jobs.t6_quality.uses).toBe('./.github/workflows/t6-hosted-quality.yml');
     expect(jobs.t6_quality.with.execution_lane).toBe('release-t7');
     expect(jobs.release_candidate.needs).toEqual(['release_context', 't6_quality']);
-    expect(jobs.release_candidate.with.target_sha).toBe('${{ needs.t6_quality.outputs.accepted_sha }}');
+    expect(jobs.release_candidate.with.target_sha).toContain('needs.t6_quality.outputs.accepted_sha');
+    expect(jobs.release_candidate.with.target_sha).toContain('needs.release_context.outputs.target_sha');
     expect(jobs.macos_package.needs).toEqual(['release_context', 'release_candidate']);
     expect(jobs.windows_package.needs).toEqual(['release_context', 'release_candidate']);
     expect(jobs.linux_package.needs).toEqual(['release_context', 'release_candidate']);
-    expect(jobs.macos_package.with.target_sha)
-      .toBe('${{ needs.release_candidate.outputs.accepted_sha }}');
-    expect(jobs.windows_package.with.target_sha)
-      .toBe('${{ needs.release_candidate.outputs.accepted_sha }}');
-    expect(jobs.linux_package.with.target_sha)
-      .toBe('${{ needs.release_candidate.outputs.accepted_sha }}');
+    for (const job of [jobs.macos_package, jobs.windows_package, jobs.linux_package]) {
+      expect(job.with.target_sha).toContain('needs.release_candidate.outputs.accepted_sha');
+      expect(job.with.target_sha).toContain('needs.release_context.outputs.target_sha');
+    }
     expect(jobs.linux_package.with.attest_artifact).toBe(true);
     expect(jobs.macos_package.with.updater_baseline_version)
       .toBe('${{ needs.release_context.outputs.macos_updater_baseline_version }}');
@@ -56,6 +70,32 @@ describe('T7 release workflow contract', () => {
       .toBe('${{ steps.identity.outputs.release_make_latest }}');
     expect(jobs.assemble_draft.needs)
       .toEqual(['release_context', 'macos_package', 'windows_package', 'linux_package']);
+    expect(jobs.assemble_draft.uses).toBe('./.github/workflows/release-assembly.yml');
+    expect(jobs.assemble_draft.with.target_sha)
+      .toBe('${{ needs.release_context.outputs.target_sha }}');
+  });
+
+  it('routes each package stage alone and rebuilds every producer for assembly', () => {
+    const stageJobs = { linux: workflow.jobs.linux_package, macos: workflow.jobs.macos_package,
+      windows: workflow.jobs.windows_package };
+    for (const [stage, job] of Object.entries(stageJobs)) {
+      expect(job.if).toContain(`inputs.stage == '${stage}'`);
+      expect(job.if).toContain("inputs.stage == 'assembly'");
+    }
+    expect(workflow.jobs.assemble_draft.if).toContain("inputs.stage == 'assembly'");
+    expect(workflow.jobs.assemble_draft.if).toContain("needs.linux_package.result == 'success'");
+    expect(workflow.jobs.assemble_draft.if).toContain("needs.macos_package.result == 'success'");
+    expect(workflow.jobs.assemble_draft.if).toContain("needs.windows_package.result == 'success'");
+  });
+
+  it('keeps draft assembly reusable-only and identity-bound to same-run producers', () => {
+    expect(assembly.on.workflow_dispatch).toBeUndefined();
+    expect(Object.keys(assembly.on.workflow_call.inputs)).toEqual([
+      'linux_artifact_name', 'linux_sha', 'macos_artifact_name', 'macos_sha',
+      'release_intent_digest', 'target_sha', 'target_version',
+      'windows_artifact_name', 'windows_sha'
+    ]);
+    expect(assembly.jobs.assemble.env.TARGET_SHA).toBe('${{ inputs.target_sha }}');
   });
 
   it('passes only the declared platform secret sets and grants write only to assembly', () => {
@@ -70,33 +110,34 @@ describe('T7 release workflow contract', () => {
       'artifact-metadata': 'write', attestations: 'write', contents: 'read', 'id-token': 'write'
     });
     expect(workflow.jobs.assemble_draft.permissions).toEqual({ actions: 'read', contents: 'write' });
+    expect(assembly.permissions).toEqual({ actions: 'read', contents: 'write' });
     expect(source.match(/contents: write/gu)).toHaveLength(1);
   });
 
   it('hard-gates all active producers and stages only the frozen scope', () => {
-    expect(source.match(/uses: actions\/download-artifact@v5/gu)).toHaveLength(3);
-    expect(source).not.toContain('run-id:');
-    expect(source).not.toContain('repository:');
-    expect(source).toContain('test "$MACOS_SHA" = "$TARGET_SHA"');
-    expect(source).toContain('test "$WINDOWS_SHA" = "$TARGET_SHA"');
-    expect(source).toContain('test "$LINUX_SHA" = "$TARGET_SHA"');
-    expect(source).toContain('node scripts/release-assembly-assets.mjs');
-    expect(source).toContain('--output-root=release-assets/upload');
-    expect(source).toContain('node scripts/release-asset-contract.mjs list');
-    expect(source).toContain('node scripts/release-asset-contract.mjs verify');
+    expect(assemblySource.match(/uses: actions\/download-artifact@v5/gu)).toHaveLength(3);
+    expect(assemblySource).not.toContain('run-id:');
+    expect(assemblySource).not.toContain('repository:');
+    expect(assemblySource).toContain('test "$MACOS_SHA" = "$TARGET_SHA"');
+    expect(assemblySource).toContain('test "$WINDOWS_SHA" = "$TARGET_SHA"');
+    expect(assemblySource).toContain('test "$LINUX_SHA" = "$TARGET_SHA"');
+    expect(assemblySource).toContain('node scripts/release-assembly-assets.mjs');
+    expect(assemblySource).toContain('--output-root=release-assets/upload');
+    expect(assemblySource).toContain('node scripts/release-asset-contract.mjs list');
+    expect(assemblySource).toContain('node scripts/release-asset-contract.mjs verify');
   });
 
   it('guards stale runs and reconciles only an unpublished draft', () => {
-    expect(source).toContain('git ls-remote origin refs/heads/release');
-    expect(source).toContain('test "$remote_sha" = "$TARGET_SHA"');
-    expect(source).toContain('Another unpublished release draft must be retired first');
-    expect(source).toContain('test "$draft_state" = "true"');
-    expect(source).toContain('gh release create "$tag" --draft');
-    expect(source).toContain('gh release edit "$tag" --target "$TARGET_SHA"');
-    expect(source).toContain('gh release delete-asset "$tag" "$asset" --yes');
-    expect(source).toContain('gh release upload "$tag" --clobber');
-    expect(source).toContain("--jq '[.assets[].name]'");
-    expect(source).not.toContain('gh release delete "$tag"');
-    expect(source).not.toContain('releases/github/${tag}.md');
+    expect(assemblySource).toContain('git ls-remote origin refs/heads/release');
+    expect(assemblySource).toContain('test "$remote_sha" = "$TARGET_SHA"');
+    expect(assemblySource).toContain('Another unpublished release draft must be retired first');
+    expect(assemblySource).toContain('test "$draft_state" = "true"');
+    expect(assemblySource).toContain('gh release create "$tag" --draft');
+    expect(assemblySource).toContain('gh release edit "$tag" --target "$TARGET_SHA"');
+    expect(assemblySource).toContain('gh release delete-asset "$tag" "$asset" --yes');
+    expect(assemblySource).toContain('gh release upload "$tag" --clobber');
+    expect(assemblySource).toContain("--jq '[.assets[].name]'");
+    expect(assemblySource).not.toContain('gh release delete "$tag"');
+    expect(assemblySource).not.toContain('releases/github/${tag}.md');
   });
 });

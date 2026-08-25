@@ -163,7 +163,7 @@ export const CRITICAL_TEST_ROUTES = [
   },
   {
     triggers: [
-      /^\.github\/workflows\/(?:publish-release|release-(?:candidate-quality|macos|windows)|t7-release)\.yml$/u
+      /^\.github\/workflows\/(?:publish-release|release-(?:assembly|candidate-quality|linux|macos|windows)|t7-release)\.yml$/u
     ],
     tests: RELEASE_WORKFLOW_CONTRACT_TESTS
   },

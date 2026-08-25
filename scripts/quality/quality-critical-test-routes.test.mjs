@@ -131,6 +131,8 @@ describe('quality critical test routes', () => {
   it('routes every release orchestration surface to the release workflow contracts', () => {
     expect(resolveCriticalTestFiles([
       '.github/workflows/release-candidate-quality.yml',
+      '.github/workflows/release-assembly.yml',
+      '.github/workflows/release-linux.yml',
       '.github/workflows/release-macos.yml',
       '.github/workflows/release-windows.yml',
       '.github/workflows/t7-release.yml'

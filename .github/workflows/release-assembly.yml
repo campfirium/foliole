@@ -1,0 +1,108 @@
+name: Release Draft Assembly
+
+on:
+  workflow_call:
+    inputs:
+      linux_artifact_name: { required: true, type: string }
+      linux_sha: { required: true, type: string }
+      macos_artifact_name: { required: true, type: string }
+      macos_sha: { required: true, type: string }
+      release_intent_digest: { required: true, type: string }
+      target_sha: { required: true, type: string }
+      target_version: { required: true, type: string }
+      windows_artifact_name: { required: true, type: string }
+      windows_sha: { required: true, type: string }
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  assemble:
+    name: Assemble release draft
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      LINUX_SHA: ${{ inputs.linux_sha }}
+      MACOS_SHA: ${{ inputs.macos_sha }}
+      RELEASE_INTENT_DIGEST: ${{ inputs.release_intent_digest }}
+      TARGET_SHA: ${{ inputs.target_sha }}
+      TARGET_VERSION: ${{ inputs.target_version }}
+      WINDOWS_SHA: ${{ inputs.windows_sha }}
+    steps:
+      - name: Check out release candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Confirm frozen release intent
+        env:
+          FOLIOLE_RELEASE_EXPECTED_INTENT_DIGEST: ${{ env.RELEASE_INTENT_DIGEST }}
+          FOLIOLE_RELEASE_REF_NAME: release
+          FOLIOLE_RELEASE_REQUIRE_PUBLICATION_MODE: "true"
+          FOLIOLE_RELEASE_RUN_SHA: ${{ env.TARGET_SHA }}
+        run: node scripts/release-target-contract.mjs > /dev/null
+      - name: Download same-run macOS artifacts
+        uses: actions/download-artifact@v5
+        with: { name: "${{ inputs.macos_artifact_name }}", path: release-assets/macos }
+      - name: Download same-run Windows artifacts
+        uses: actions/download-artifact@v5
+        with: { name: "${{ inputs.windows_artifact_name }}", path: release-assets/windows }
+      - name: Download same-run Linux artifacts
+        uses: actions/download-artifact@v5
+        with: { name: "${{ inputs.linux_artifact_name }}", path: release-assets/linux }
+      - name: Verify every hard gate and stage selected assets
+        run: |
+          set -euo pipefail
+          test "$MACOS_SHA" = "$TARGET_SHA"
+          test "$WINDOWS_SHA" = "$TARGET_SHA"
+          test "$LINUX_SHA" = "$TARGET_SHA"
+          node scripts/release-assembly-assets.mjs --version="$TARGET_VERSION" --sha="$TARGET_SHA" \
+            --input-root=release-assets --output-root=release-assets/upload
+      - name: Reconcile the single unpublished draft
+        run: |
+          set -euo pipefail
+          tag="v${TARGET_VERSION}"
+          remote_sha="$(git ls-remote origin refs/heads/release | cut -f1)"
+          test "$remote_sha" = "$TARGET_SHA"
+          other_drafts="$(gh release list --limit 100 --json isDraft,tagName --jq ".[] | select(.isDraft and .tagName != \"${tag}\") | .tagName")"
+          if [[ -n "$other_drafts" ]]; then
+            echo "Another unpublished release draft must be retired first: $other_drafts" >&2
+            exit 1
+          fi
+          if draft_state="$(gh release view "$tag" --json isDraft --jq .isDraft 2>/dev/null)"; then
+            test "$draft_state" = "true"
+            gh release edit "$tag" --target "$TARGET_SHA"
+          else
+            gh release create "$tag" --draft --title "$TARGET_VERSION" --target "$TARGET_SHA" \
+              --notes "Release notes are being prepared outside the product candidate."
+          fi
+          test "$(gh release view "$tag" --json isDraft --jq .isDraft)" = "true"
+          existing_assets="$(gh release view "$tag" --json assets --jq '.assets[].name')"
+          mapfile -t managed_assets < <(node scripts/release-asset-contract.mjs managed \
+            --version="$TARGET_VERSION" --sha="$TARGET_SHA")
+          legacy_assets=(
+            "Foliole-${TARGET_VERSION}-mac-arm64.dmg"
+            "Foliole-${TARGET_VERSION}-mac-arm64.dmg.blockmap"
+            "Foliole-${TARGET_VERSION}-mac-arm64.zip"
+            "Foliole-${TARGET_VERSION}-mac-arm64.zip.blockmap"
+            "Foliole-Setup-${TARGET_VERSION}-win-x64.exe"
+            "Foliole-Setup-${TARGET_VERSION}-win-x64.exe.blockmap"
+          )
+          for asset in "${managed_assets[@]}" "${legacy_assets[@]}"; do
+            if grep -Fxq "$asset" <<< "$existing_assets"; then
+              gh release delete-asset "$tag" "$asset" --yes
+            fi
+          done
+          mapfile -t selected_assets < <(node scripts/release-asset-contract.mjs list \
+            --version="$TARGET_VERSION" --sha="$TARGET_SHA")
+          upload_paths=()
+          for asset in "${selected_assets[@]}"; do
+            upload_paths+=("release-assets/upload/${asset}")
+          done
+          gh release upload "$tag" --clobber "${upload_paths[@]}"
+          gh release view "$tag" --json assets --jq '[.assets[].name]' > release-assets/actual-assets.json
+          node scripts/release-asset-contract.mjs verify --version="$TARGET_VERSION" --sha="$TARGET_SHA" \
+            --actual=release-assets/actual-assets.json

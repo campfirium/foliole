@@ -45,7 +45,7 @@ describe('release doctor', () => {
     expect(formatReleaseDoctorReport(result)).toContain(`version=${version} phase=pre`);
   });
 
-  it('rejects a T7 workflow with a manual identity or versioned branch', async () => {
+  it('rejects an unguarded T7 dispatch or versioned branch', async () => {
     const { rootDir } = await createFixture({
       releaseWorkflow: ['workflow_dispatch:', 'branches:', '  - release/0.9.0', 'target_sha:', 'target_version:'].join('\n')
     });

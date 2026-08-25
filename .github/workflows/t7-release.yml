@@ -1,8 +1,23 @@
 name: T7 Release
 
-run-name: T7 Release @ ${{ github.sha }}
+run-name: T7 Release (${{ inputs.stage || 'full' }}) @ ${{ github.sha }}
 
 on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: Exact failed release stage to recheck, or full after the narrow stage passes
+        required: true
+        type: choice
+        options: [t5, t6-tail, release-candidate, macos, windows, linux, assembly, full]
+      target_sha:
+        description: Exact current origin/release HEAD after the repair
+        required: true
+        type: string
+      target_version:
+        description: Exact package version at the repaired release HEAD
+        required: true
+        type: string
   push:
     branches:
       - release
@@ -36,7 +51,7 @@ jobs:
       - name: Check out release tip
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - name: Require the exact release branch and versioned content
@@ -44,15 +59,49 @@ jobs:
         env:
           FOLIOLE_RELEASE_REF_NAME: ${{ github.ref_name }}
           FOLIOLE_RELEASE_REQUIRE_PUBLICATION_MODE: "true"
-          FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}
+          FOLIOLE_RELEASE_RUN_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.target_sha || github.sha }}
+          REQUESTED_SHA: ${{ inputs.target_sha }}
+          REQUESTED_VERSION: ${{ inputs.target_version }}
         run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]]; then
+            test "$GITHUB_REF" = "refs/heads/release"
+            test "$REQUESTED_SHA" = "$GITHUB_SHA"
+            remote_sha="$(git ls-remote origin refs/heads/release | cut -f1)"
+            test -n "$remote_sha"
+            test "$remote_sha" = "$REQUESTED_SHA"
+            test "$REQUESTED_VERSION" = "$(node -p "require('./package.json').version")"
+          fi
           node scripts/release-target-contract.mjs >> "$GITHUB_OUTPUT"
           node scripts/desktop-update-release-policy.mjs \
             --candidate="$(node -p "require('./package.json').version")" > /dev/null
-          echo "trigger_ref=${{ github.ref }}" >> "$GITHUB_OUTPUT"
+          echo "trigger_ref=${GITHUB_REF}" >> "$GITHUB_OUTPUT"
+
+  t5_recheck:
+    name: T5 baseline recheck
+    if: inputs.stage == 't5'
+    needs: release_context
+    permissions: { contents: read }
+    uses: ./.github/workflows/t5-baseline-admission.yml
+    with:
+      execution_lane: release-t7-recheck
+      target_sha: ${{ needs.release_context.outputs.target_sha }}
+      trigger_ref: ${{ needs.release_context.outputs.trigger_ref }}
+
+  t6_tail_recheck:
+    name: T6 heavy tail recheck
+    if: inputs.stage == 't6-tail'
+    needs: release_context
+    permissions: { contents: read }
+    uses: ./.github/workflows/hosted-quality-full.yml
+    with:
+      execution_lane: release-t7-recheck
+      target_sha: ${{ needs.release_context.outputs.target_sha }}
+      trigger_ref: ${{ needs.release_context.outputs.trigger_ref }}
 
   t6_quality:
     name: T6 hosted quality
+    if: github.event_name == 'push' || inputs.stage == 'full'
     needs: release_context
     permissions:
       actions: read
@@ -65,18 +114,20 @@ jobs:
 
   release_candidate:
     name: Release candidate quality
+    if: ${{ always() && needs.release_context.result == 'success' && (((github.event_name == 'push' || inputs.stage == 'full') && needs.t6_quality.result == 'success') || inputs.stage == 'release-candidate') }}
     needs: [release_context, t6_quality]
     permissions:
       contents: read
     uses: ./.github/workflows/release-candidate-quality.yml
     with:
       execution_lane: release-t7
-      target_sha: ${{ needs.t6_quality.outputs.accepted_sha }}
+      target_sha: ${{ inputs.stage == 'release-candidate' && needs.release_context.outputs.target_sha || needs.t6_quality.outputs.accepted_sha }}
       target_version: ${{ needs.release_context.outputs.target_version }}
       trigger_ref: ${{ needs.release_context.outputs.trigger_ref }}
 
   macos_package:
     name: macOS package
+    if: ${{ always() && needs.release_context.result == 'success' && (((github.event_name == 'push' || inputs.stage == 'full') && needs.release_candidate.result == 'success') || inputs.stage == 'macos' || inputs.stage == 'assembly') }}
     needs: [release_context, release_candidate]
     permissions:
       artifact-metadata: write
@@ -86,7 +137,7 @@ jobs:
     uses: ./.github/workflows/release-macos.yml
     with:
       execution_lane: release-t7
-      target_sha: ${{ needs.release_candidate.outputs.accepted_sha }}
+      target_sha: ${{ (inputs.stage == 'macos' || inputs.stage == 'assembly') && needs.release_context.outputs.target_sha || needs.release_candidate.outputs.accepted_sha }}
       target_version: ${{ needs.release_context.outputs.target_version }}
       updater_baseline_version: ${{ needs.release_context.outputs.macos_updater_baseline_version }}
       trigger_ref: ${{ needs.release_context.outputs.trigger_ref }}
@@ -101,6 +152,7 @@ jobs:
 
   windows_package:
     name: Windows package
+    if: ${{ always() && needs.release_context.result == 'success' && (((github.event_name == 'push' || inputs.stage == 'full') && needs.release_candidate.result == 'success') || inputs.stage == 'windows' || inputs.stage == 'assembly') }}
     needs: [release_context, release_candidate]
     permissions:
       artifact-metadata: write
@@ -110,7 +162,7 @@ jobs:
     uses: ./.github/workflows/release-windows.yml
     with:
       execution_lane: release-t7
-      target_sha: ${{ needs.release_candidate.outputs.accepted_sha }}
+      target_sha: ${{ (inputs.stage == 'windows' || inputs.stage == 'assembly') && needs.release_context.outputs.target_sha || needs.release_candidate.outputs.accepted_sha }}
       target_version: ${{ needs.release_context.outputs.target_version }}
       updater_baseline_version: ${{ needs.release_context.outputs.windows_updater_baseline_version }}
       trigger_ref: ${{ needs.release_context.outputs.trigger_ref }}
@@ -121,115 +173,38 @@ jobs:
 
   linux_package:
     name: Linux Experimental package
+    if: ${{ always() && needs.release_context.result == 'success' && (((github.event_name == 'push' || inputs.stage == 'full') && needs.release_candidate.result == 'success') || inputs.stage == 'linux' || inputs.stage == 'assembly') }}
     needs: [release_context, release_candidate]
     permissions: { artifact-metadata: write, attestations: write, contents: read, id-token: write }
     uses: ./.github/workflows/release-linux.yml
     with:
       execution_lane: release-t7
-      target_sha: ${{ needs.release_candidate.outputs.accepted_sha }}
+      target_sha: ${{ (inputs.stage == 'linux' || inputs.stage == 'assembly') && needs.release_context.outputs.target_sha || needs.release_candidate.outputs.accepted_sha }}
       target_version: ${{ needs.release_context.outputs.target_version }}
       trigger_ref: ${{ needs.release_context.outputs.trigger_ref }}
       attest_artifact: true
 
   assemble_draft:
     name: Assemble release draft
+    if: ${{ always() && needs.release_context.result == 'success' && (github.event_name == 'push' || inputs.stage == 'full' || inputs.stage == 'assembly') && needs.macos_package.result == 'success' && needs.windows_package.result == 'success' && needs.linux_package.result == 'success' }}
     needs: [release_context, macos_package, windows_package, linux_package]
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
     permissions:
       actions: read
       contents: write
-    env:
-      GH_TOKEN: ${{ github.token }}
-      LINUX_SHA: ${{ needs.linux_package.outputs.packaged_sha }}
-      MACOS_SHA: ${{ needs.macos_package.outputs.packaged_sha }}
-      RELEASE_INTENT_DIGEST: ${{ needs.release_context.outputs.release_intent_digest }}
-      TARGET_SHA: ${{ needs.release_context.outputs.target_sha }}
-      TARGET_VERSION: ${{ needs.release_context.outputs.target_version }}
-      WINDOWS_SHA: ${{ needs.windows_package.outputs.packaged_sha }}
-    steps:
-      - name: Check out release candidate
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.release_context.outputs.target_sha }}
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Confirm frozen release intent
-        env:
-          FOLIOLE_RELEASE_EXPECTED_INTENT_DIGEST: ${{ env.RELEASE_INTENT_DIGEST }}
-          FOLIOLE_RELEASE_REF_NAME: release
-          FOLIOLE_RELEASE_REQUIRE_PUBLICATION_MODE: "true"
-          FOLIOLE_RELEASE_RUN_SHA: ${{ env.TARGET_SHA }}
-        run: node scripts/release-target-contract.mjs > /dev/null
-      - name: Download same-run macOS artifacts
-        uses: actions/download-artifact@v5
-        with:
-          name: ${{ needs.macos_package.outputs.artifact_name }}
-          path: release-assets/macos
-      - name: Download same-run Windows artifacts
-        uses: actions/download-artifact@v5
-        with:
-          name: ${{ needs.windows_package.outputs.artifact_name }}
-          path: release-assets/windows
-      - name: Download same-run Linux artifacts
-        uses: actions/download-artifact@v5
-        with: { name: "${{ needs.linux_package.outputs.artifact_name }}", path: release-assets/linux }
-      - name: Verify every hard gate and stage selected assets
-        run: |
-          set -euo pipefail
-          test "$MACOS_SHA" = "$TARGET_SHA"
-          test "$WINDOWS_SHA" = "$TARGET_SHA"
-          test "$LINUX_SHA" = "$TARGET_SHA"
-          node scripts/release-assembly-assets.mjs --version="$TARGET_VERSION" --sha="$TARGET_SHA" \
-            --input-root=release-assets --output-root=release-assets/upload
-      - name: Reconcile the single unpublished draft
-        run: |
-          set -euo pipefail
-          tag="v${TARGET_VERSION}"
-          remote_sha="$(git ls-remote origin refs/heads/release | cut -f1)"
-          test "$remote_sha" = "$TARGET_SHA"
-          other_drafts="$(gh release list --limit 100 --json isDraft,tagName --jq ".[] | select(.isDraft and .tagName != \"${tag}\") | .tagName")"
-          if [[ -n "$other_drafts" ]]; then
-            echo "Another unpublished release draft must be retired first: $other_drafts" >&2
-            exit 1
-          fi
-          if draft_state="$(gh release view "$tag" --json isDraft --jq .isDraft 2>/dev/null)"; then
-            test "$draft_state" = "true"
-            gh release edit "$tag" --target "$TARGET_SHA"
-          else
-            gh release create "$tag" --draft --title "$TARGET_VERSION" --target "$TARGET_SHA" \
-              --notes "Release notes are being prepared outside the product candidate."
-          fi
-          test "$(gh release view "$tag" --json isDraft --jq .isDraft)" = "true"
-          existing_assets="$(gh release view "$tag" --json assets --jq '.assets[].name')"
-          mapfile -t managed_assets < <(node scripts/release-asset-contract.mjs managed \
-            --version="$TARGET_VERSION" --sha="$TARGET_SHA")
-          legacy_assets=(
-            "Foliole-${TARGET_VERSION}-mac-arm64.dmg"
-            "Foliole-${TARGET_VERSION}-mac-arm64.dmg.blockmap"
-            "Foliole-${TARGET_VERSION}-mac-arm64.zip"
-            "Foliole-${TARGET_VERSION}-mac-arm64.zip.blockmap"
-            "Foliole-Setup-${TARGET_VERSION}-win-x64.exe"
-            "Foliole-Setup-${TARGET_VERSION}-win-x64.exe.blockmap"
-          )
-          for asset in "${managed_assets[@]}" "${legacy_assets[@]}"; do
-            if grep -Fxq "$asset" <<< "$existing_assets"; then
-              gh release delete-asset "$tag" "$asset" --yes
-            fi
-          done
-          mapfile -t selected_assets < <(node scripts/release-asset-contract.mjs list \
-            --version="$TARGET_VERSION" --sha="$TARGET_SHA")
-          upload_paths=()
-          for asset in "${selected_assets[@]}"; do
-            upload_paths+=("release-assets/upload/${asset}")
-          done
-          gh release upload "$tag" --clobber "${upload_paths[@]}"
-          gh release view "$tag" --json assets --jq '[.assets[].name]' > release-assets/actual-assets.json
-          node scripts/release-asset-contract.mjs verify --version="$TARGET_VERSION" --sha="$TARGET_SHA" \
-            --actual=release-assets/actual-assets.json
+    uses: ./.github/workflows/release-assembly.yml
+    with:
+      linux_artifact_name: ${{ needs.linux_package.outputs.artifact_name }}
+      linux_sha: ${{ needs.linux_package.outputs.packaged_sha }}
+      macos_artifact_name: ${{ needs.macos_package.outputs.artifact_name }}
+      macos_sha: ${{ needs.macos_package.outputs.packaged_sha }}
+      release_intent_digest: ${{ needs.release_context.outputs.release_intent_digest }}
+      target_sha: ${{ needs.release_context.outputs.target_sha }}
+      target_version: ${{ needs.release_context.outputs.target_version }}
+      windows_artifact_name: ${{ needs.windows_package.outputs.artifact_name }}
+      windows_sha: ${{ needs.windows_package.outputs.packaged_sha }}
 
   timing_summary:
-    if: ${{ always() }}
+    if: ${{ always() && (github.event_name == 'push' || inputs.stage == 'full') }}
     needs: [release_context, t6_quality, release_candidate, macos_package, windows_package, linux_package, assemble_draft]
     permissions: { actions: read, contents: read }
     uses: ./.github/workflows/hosted-quality-timing-summary.yml
