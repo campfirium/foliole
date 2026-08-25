@@ -2,8 +2,11 @@
 /* global console, process */
 
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
+
+import { ensureElectronBinary } from './electron-runtime-binary.mjs';
+import { assertElectronAbi } from './electron-sqlite-runner.mjs';
+import { runSharedBucketVitest } from './shared-test-bucket-runtime.mjs';
 
 export const SHARED_TEST_BUCKETS = [
   { label: 'lib', report: '.tmp/vitest/shared-lib.json', targets: ['--exclude=src/**', '--exclude=electron/**', '--exclude=scripts/**'] },
@@ -137,58 +140,6 @@ export function writeBucketFailureReport(bucket, message) {
   writeFileSync(bucket.report, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
 }
 
-function terminateChildTree(child) {
-  if (!child.pid) {
-    child.kill('SIGTERM');
-    return;
-  }
-  if (process.platform === 'win32') {
-    spawnSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore', timeout: 1000 });
-    return;
-  }
-  child.kill('SIGTERM');
-  globalThis.setTimeout(() => child.kill('SIGKILL'), 1000).unref();
-}
-
-function runVitestWithBudget(reportPath, targets, timeoutMs) {
-  const args = [
-    'scripts/run-vitest-with-summary.mjs',
-    reportPath,
-    '--',
-    '--silent=passed-only',
-    '--pool=threads',
-    '--maxWorkers=2',
-    '--no-file-parallelism',
-    ...targets
-  ];
-  const child = spawn(process.execPath, args, { env: process.env, stdio: ['ignore', 'pipe', 'pipe'] });
-  return new Promise((resolve) => {
-    let settled = false;
-    const finish = (code, timedOut = false) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      if (timer) {
-        globalThis.clearTimeout(timer);
-      }
-      child.stdout?.destroy();
-      child.stderr?.destroy();
-      resolve({ code, timedOut });
-    };
-    child.stdout?.on('data', (chunk) => process.stdout.write(chunk));
-    child.stderr?.on('data', (chunk) => process.stderr.write(chunk));
-    const timer = Number.isFinite(timeoutMs)
-      ? globalThis.setTimeout(() => {
-        terminateChildTree(child);
-        finish(1, true);
-      }, timeoutMs)
-      : null;
-    timer?.unref();
-    child.on('close', (code) => finish(code ?? 1));
-  });
-}
-
 async function main() {
   const [reportPath] = process.argv.slice(2);
   if (!reportPath) {
@@ -197,6 +148,9 @@ async function main() {
   }
 
   let exitCode = 0;
+  const repoRoot = process.cwd();
+  const electronPath = ensureElectronBinary(repoRoot);
+  assertElectronAbi(electronPath, repoRoot);
   const totalTimeoutMs = resolveTotalTimeoutMs();
   const deadline = totalTimeoutMs === null ? Number.POSITIVE_INFINITY : Date.now() + totalTimeoutMs;
   removeOldReports(reportPath);
@@ -210,7 +164,13 @@ async function main() {
       continue;
     }
     console.log(`[shared-test-bucket] running ${bucket.label}`);
-    const { code, timedOut } = await runVitestWithBudget(bucket.report, bucket.targets, remainingMs);
+    const { code, timedOut } = await runSharedBucketVitest(
+      bucket.report,
+      bucket.targets,
+      remainingMs,
+      electronPath,
+      repoRoot
+    );
     if (code !== 0) {
       exitCode = code;
       if (!readReport(bucket.report)) {

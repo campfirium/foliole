@@ -36,7 +36,7 @@ describe('script test bucket root matching', () => {
   });
 
   it('collects scripts/lib contract tests in the formal core bucket', () => {
-    const coreFiles = selectScriptTestBucketFiles('core', collectScriptTestFiles());
+    const coreFiles = selectScriptTestBucketFiles('core', collectScriptTestFiles(), 'linux');
 
     expect(coreFiles).toContain('scripts/lib/path-domains.test.mjs');
     expect(coreFiles).toContain('scripts/lib/script-domain-registry.test.mjs');
