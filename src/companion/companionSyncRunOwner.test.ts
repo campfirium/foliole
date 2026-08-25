@@ -158,19 +158,10 @@ function resetSyncRunOwnerMocks() {
   );
 }
 
-function expectFailedManualLifecycle(setManualSyncAction: ReturnType<typeof vi.fn>) {
-  const lifecycle = setManualSyncAction.mock.calls.map(([action]) => action);
-  expect(lifecycle).toHaveLength(2);
-  expect(lifecycle[0]).toMatchObject({ status: 'starting', terminalResult: null });
-  expect(lifecycle[1]).toEqual({
-    runId: lifecycle[0].runId, started: true, status: 'terminal', terminalResult: 'failed'
-  });
-}
-
 describe('companion sync run owner', () => {
   beforeEach(resetSyncRunOwnerMocks);
 
-  it('does not let an automatic run complete the clicked manual action', async () => {
+  it('queues a distinct clicked manual run behind an active automatic run', async () => {
     const { createWorkspaceSnapshotActions } = await import('./companionWorkspaceSyncActions');
     const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
     const { releaseSync, syncStarted } = await startBlockedSync();
@@ -197,14 +188,23 @@ describe('companion sync run owner', () => {
     });
     await syncStarted;
     const manualSync = actions.pullFromDesktop('http://10.0.2.2:38641');
-    await expect(manualSync).rejects.toThrow('another sync already owns this target');
+    expect(setManualSyncAction.mock.calls.map(([action]) => action.status)).toEqual(['starting']);
+    syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(syncResult());
     releaseSync();
 
     await autoSync;
-    expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledTimes(1);
-    expect(countRunEvents()).toBe(2);
-    expectFailedManualLifecycle(setManualSyncAction);
+    await expect(manualSync).resolves.toMatchObject({ sync_events: expect.any(Array) });
+    expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledTimes(2);
+    expect(countRunEvents()).toBe(4);
+    const lifecycle = setManualSyncAction.mock.calls.map(([action]) => action);
+    expect(lifecycle.map(({ status }) => status)).toEqual(['starting', 'running', 'terminal']);
+    expect(new Set(lifecycle.map(({ runId }) => runId)).size).toBe(1);
+    expect(lifecycle.at(-1)?.terminalResult).toBe('completed');
   });
+});
+
+describe('companion manual sync target selection', () => {
+  beforeEach(resetSyncRunOwnerMocks);
 
   it('runs immediate sync through the discovered active group member instead of the remembered target', async () => {
     const { createWorkspaceSnapshotActions } = await import('./companionWorkspaceSyncActions');

@@ -25,7 +25,7 @@ import {
 } from './companionManualSyncAction';
 import { hydrateCompanionReviewSchedulerSettings } from './companionReviewSchedulerSettingsHydration';
 import { formatCompanionSyncFailureMessage } from './companionSyncFailureMessage';
-import { runCompanionSyncAsOwner } from './companionSyncRunOwner';
+import { queueCompanionSyncAsOwner } from './companionSyncRunOwner';
 import { hydrateCompanionSystemEntryDisplayNames } from './companionSystemEntryDisplayNamesHydration';
 import {
   recordCompanionManualSyncFailure,
@@ -78,7 +78,8 @@ async function runManualSyncTarget(
 ) {
   const endpointUrl = target.endpointUrl;
   const candidateRunId = createCompanionSyncRunId();
-  const run = runCompanionSyncAsOwner(endpointUrl, candidateRunId, async () => {
+  const run = queueCompanionSyncAsOwner(endpointUrl, candidateRunId, async () => {
+    onStarted();
     args.setStatus('syncing');
     args.setSyncProgress(STARTING_STRUCTURE_PROGRESS);
     args.setError(null);
@@ -106,12 +107,6 @@ async function runManualSyncTarget(
       throw syncError;
     }
   });
-  if (run.mode === 'joined') {
-    const error = new Error('Sync Now could not start because another sync already owns this target.');
-    args.setError(error.message);
-    throw error;
-  }
-  onStarted();
   return run.completion;
 }
 
