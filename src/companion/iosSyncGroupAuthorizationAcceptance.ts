@@ -6,7 +6,6 @@ import {
   revokePreparedSyncGroupMemberRoute,
   signPreparedSyncGroupMemberRequest
 } from '../shared/platform/companion/sync/companionSyncGroupAuthorizationPrepare';
-import { loadCompanionPairingState } from '../shared/platform/companionWorkspacePairing';
 import { FolioleCompanionSync } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
 import { postResult } from './iosBridgeAcceptance';
@@ -59,7 +58,7 @@ async function runMigrationLeg() {
   const migrated = await migratePreparedLegacyPairingRoute(ROUTE);
   const signed = await signPreparedSyncGroupMemberRequest(REQUEST);
   postResult({
-    error: null, legacy_pairing_preserved: (await loadCompanionPairingState()).is_paired,
+    error: null, legacy_pairing_preserved: (await FolioleCompanionSync.loadPairingState()).is_paired,
     phase: 'route-saved', route: migrated.route, scenario: 'sync-group-authorization',
     signature: signed.headers['X-Signature'], status: 'passed'
   });
@@ -72,7 +71,7 @@ async function runRestartLeg() {
   try { await signPreparedSyncGroupMemberRequest(REQUEST); } catch { signingRejected = true; }
   const after = await loadPreparedSyncGroupMemberRoute(ROUTE.route_id);
   postResult({
-    error: null, legacy_pairing_preserved: (await loadCompanionPairingState()).is_paired,
+    error: null, legacy_pairing_preserved: (await FolioleCompanionSync.loadPairingState()).is_paired,
     phase: 'route-restarted', revoked: revoked.revoked, route_removed: after.route === null,
     scenario: 'sync-group-authorization', signature: signed.headers['X-Signature'],
     signing_rejected_after_revoke: signingRejected, status: 'passed'
