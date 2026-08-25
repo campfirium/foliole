@@ -55,9 +55,13 @@ export async function createFixture(overrides = {}) {
     overrides.releaseWorkflow ?? [
       'branches:',
       '  - release',
+      'workflow_dispatch:',
       'FOLIOLE_RELEASE_REF_NAME: ${{ github.ref_name }}',
-      'FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}',
-      'FOLIOLE_RELEASE_EXPECTED_INTENT_DIGEST: expected',
+      'test "$GITHUB_REF" = "refs/heads/release"',
+      'test "$REQUESTED_SHA" = "$GITHUB_SHA"',
+      'test "$remote_sha" = "$REQUESTED_SHA"',
+      'test "$REQUESTED_VERSION" = "$(node -p',
+      'release_intent_digest: ${{ needs.release_context.outputs.release_intent_digest }}',
       'FOLIOLE_RELEASE_REQUIRE_PUBLICATION_MODE: true',
       'node scripts/release-target-contract.mjs'
     ].join('\n')

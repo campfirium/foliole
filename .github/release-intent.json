@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.8",
+  "version": "0.7.9",
   "publicationMode": "scoped",
   "selectedPlatforms": ["macos", "windows", "linux"],
   "scopeBasis": {
-    "macos": "Foliole 0.7.8 changes shared desktop Sync Group, device-owned sources, import behavior, and the Electron runtime, so the supported macOS package is required.",
-    "windows": "Foliole 0.7.8 changes shared desktop Sync Group and device-owned sources, including Windows mirror, preview, and acceptance behavior, so the supported Windows package is required.",
-    "linux": "Foliole 0.7.8 changes shared desktop synchronization, persistence, import behavior, and the Electron runtime, and repairs Linux packaging provisioning, so Linux Experimental is required."
+    "macos": "Foliole 0.7.9 changes shared desktop Sync Group membership, authorization, Source ownership, import behavior, system entries, and the Electron runtime, so the supported macOS package is required.",
+    "windows": "Foliole 0.7.9 changes shared desktop Sync Group membership, authorization, Source ownership, system entries, and Windows host acceptance behavior, so the supported Windows package is required.",
+    "linux": "Foliole 0.7.9 changes shared desktop Sync Group membership, authorization, Source ownership, persistence, import behavior, system entries, and the Electron runtime, so Linux Experimental is required."
   }
 }

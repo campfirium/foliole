@@ -94,18 +94,21 @@ function checkReleaseWorkflow(workflowSource, version) {
   const exactBranch = workflowSource.includes('- release') &&
     workflowSource.includes('FOLIOLE_RELEASE_REF_NAME: ${{ github.ref_name }}');
   const branchVersion = workflowSource.includes('node scripts/release-target-contract.mjs');
-  const internalIdentity = workflowSource.includes('FOLIOLE_RELEASE_RUN_SHA: ${{ github.sha }}');
-  const frozenIntent = workflowSource.includes('FOLIOLE_RELEASE_EXPECTED_INTENT_DIGEST');
+  const internalIdentity = workflowSource.includes('test "$REQUESTED_SHA" = "$GITHUB_SHA"') &&
+    workflowSource.includes('test "$remote_sha" = "$REQUESTED_SHA"');
+  const frozenIntent = workflowSource.includes('release_intent_digest: ${{ needs.release_context.outputs.release_intent_digest }}');
   const publicationPolicy = workflowSource.includes('FOLIOLE_RELEASE_REQUIRE_PUBLICATION_MODE');
-  const noManualEntry = !workflowSource.includes('workflow_dispatch:');
-  const status = exactBranch && branchVersion && internalIdentity && frozenIntent && publicationPolicy && noManualEntry
+  const guardedRecheck = workflowSource.includes('workflow_dispatch:') &&
+    workflowSource.includes('test "$GITHUB_REF" = "refs/heads/release"') &&
+    workflowSource.includes('test "$REQUESTED_VERSION" = "$(node -p');
+  const status = exactBranch && branchVersion && internalIdentity && frozenIntent && publicationPolicy && guardedRecheck
     ? 'PASS' : 'FAIL';
   return createCheck(
     status,
     'T7 release identity',
     status === 'PASS'
-      ? `exact release freezes version ${version}, platform intent, and event commit identity.`
-      : 'T7 must freeze branch version, platform intent, and event commit identity without manual identity input.'
+      ? `exact release freezes version ${version}, platform intent, and repaired-HEAD stage identity.`
+      : 'T7 must bind every full or narrow run to the exact current release HEAD, version, and intent.'
   );
 }
 

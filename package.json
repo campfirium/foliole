@@ -1,6 +1,6 @@
 {
   "name": "foliole",
-  "version": "0.7.8",
+  "version": "0.7.9",
   "description": "Desktop knowledge workspace for local reading and review.",
   "author": "Foliole",
   "license": "Apache-2.0",
@@ -53,7 +53,7 @@
     "test:shared": "node scripts/quality/quality-command-contracts.mjs allow test:shared && node scripts/check-lib-test-collection.mjs && node scripts/electron-sqlite-runner.mjs scripts/run-shared-test-bucket.mjs .tmp/vitest/shared.json",
     "test:release:android": "node scripts/quality/quality-command-contracts.mjs allow test:release:android && node scripts/electron-sqlite-runner.mjs scripts/run-vitest-with-summary.mjs .tmp/vitest/release-android.json -- --silent=passed-only --pool=threads --maxWorkers=2 --no-file-parallelism --testTimeout=15000 src/companion scripts/android",
     "test:release:android-shared": "node scripts/quality/quality-command-contracts.mjs allow test:release:android-shared && node scripts/electron-sqlite-runner.mjs scripts/run-vitest-with-summary.mjs .tmp/vitest/release-android-shared.json -- --silent=passed-only --pool=threads --maxWorkers=2 --no-file-parallelism --testTimeout=15000 src/shared/platform src/shared/ui src/shared/lib src/shared/commands",
-    "test:release:shared": "node scripts/quality/quality-command-contracts.mjs allow test:release:shared && node scripts/check-lib-test-collection.mjs && node scripts/electron-sqlite-runner.mjs scripts/run-shared-test-bucket.mjs .tmp/vitest/release-shared.json",
+    "test:release:shared": "node scripts/quality/quality-command-contracts.mjs allow test:release:shared && node scripts/check-lib-test-collection.mjs && node scripts/run-shared-test-bucket.mjs .tmp/vitest/release-shared.json",
     "test:quality": "node scripts/quality/quality-command-contracts.mjs allow test:quality && node scripts/electron-sqlite-runner.mjs scripts/run-script-test-bucket.mjs all .tmp/vitest/quality.json",
     "test:quality:core": "node scripts/quality/quality-command-contracts.mjs allow test:quality:core && node scripts/electron-sqlite-runner.mjs scripts/run-script-test-bucket.mjs core .tmp/vitest/quality-core.json",
     "test:quality:gate": "node scripts/quality/quality-command-contracts.mjs allow test:quality:gate && node scripts/electron-sqlite-runner.mjs scripts/run-script-test-bucket.mjs gate .tmp/vitest/quality-gate.json",

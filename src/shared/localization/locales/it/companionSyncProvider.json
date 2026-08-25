@@ -15,5 +15,6 @@
   "companion.sync.participation.pause": "Metti in pausa la sincronizzazione",
   "companion.sync.participation.resume": "Riprendi la sincronizzazione",
   "companion.sync.participation.inactive": "Attiva e riprendi la sincronizzazione prima di connetterti o sincronizzare.",
-  "companion.sync.provider.foregroundHint": "Foliole mantiene lo schermo attivo durante l’invio. Torna a Foliole per continuare dai progressi più recenti."
+  "companion.sync.provider.foregroundHint": "Foliole mantiene lo schermo attivo durante l’invio. Torna a Foliole per continuare dai progressi più recenti.",
+  "companion.sync.joinRequest.error": "Foliole non ha potuto aggiornare questa richiesta. Riprova."
 }

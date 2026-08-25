@@ -104,5 +104,6 @@
   "desktop.command.dev.reimportSelectedTopic": "開発: 選択したトピックを再インポートします",
   "desktop.command.dev.openPerformancePanel": "DEV パフォーマンス パネルを開く",
   "desktop.command.dev.enableReviewStatusMemory": "DEV レビュー ステータス バーのメモリを有効にする",
-  "desktop.command.dev.disableReviewStatusMemory": "DEV レビュー ステータス バーのメモリを無効にする"
+  "desktop.command.dev.disableReviewStatusMemory": "DEV レビュー ステータス バーのメモリを無効にする",
+  "desktop.command.openCustomCopy": "カスタム文言を開く"
 }

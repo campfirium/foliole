@@ -17,22 +17,28 @@ it('keeps the reusable Linux job on an installed Ubuntu 24.04 DEB contract', asy
   expect(workflow).not.toContain('gh release');
 });
 
-it('exposes only a guarded dev candidate manual entry', async () => {
+it('accepts a dev candidate or only the exact current release head manually', async () => {
   const source = await readFile('.github/workflows/release-linux.yml', 'utf8');
   const workflow = parse(source);
   const dispatchInputs = workflow.on.workflow_dispatch.inputs;
 
   expect(Object.keys(dispatchInputs)).toEqual(['target_sha', 'target_version']);
   expect(dispatchInputs.target_sha).toEqual({
-    description: 'Exact dev candidate commit to package and accept',
+    description: 'Dev candidate commit or exact current release HEAD to package and accept',
     required: true,
     type: 'string'
   });
   expect(workflow.permissions).toEqual({
     'artifact-metadata': 'write', attestations: 'write', contents: 'read', 'id-token': 'write'
   });
-  expect(source).toContain("test \"$GITHUB_REF\" = 'refs/heads/dev'");
+  expect(source).toContain("ref: ${{ inputs.execution_lane == '' && github.ref || inputs.target_sha }}");
+  expect(source).toContain('case "$GITHUB_REF" in');
+  expect(source).toContain('refs/heads/dev)');
   expect(source).toContain('git merge-base --is-ancestor "$TARGET_SHA" HEAD');
+  expect(source).toContain('refs/heads/release)');
+  expect(source).toContain('git ls-remote origin refs/heads/release');
+  expect(source).toContain('test "$remote_sha" = "$TARGET_SHA"');
+  expect(source).toContain('Manual Linux acceptance requires dev or release');
   expect(source).toContain("if: inputs.execution_lane != '' && inputs.attest_artifact");
   expect(source).not.toContain('contents: write');
 });

@@ -38,8 +38,12 @@ jobs:
             shards: [one, two, three, four]
           - host: Windows
             runner: windows-latest
-            bucket: all
-            shards: [one, two, three, four]
+            bucket: first
+            shards: [one, two]
+          - host: Windows
+            runner: windows-latest
+            bucket: second
+            shards: [three, four]
     env:
       CI: "true"
       FOLIOLE_HOSTED_QUALITY_BUCKET_ITEMS: ${{ toJSON(matrix.shards) }}

@@ -12,6 +12,7 @@ import {
   SHARED_TEST_BUCKETS,
   writeBucketFailureReport
 } from './run-shared-test-bucket.mjs';
+import { buildSharedBucketInvocation } from './shared-test-bucket-runtime.mjs';
 
 function report(overrides = {}) {
   return {
@@ -61,6 +62,31 @@ describe('run-shared-test-bucket', () => {
 
     expect(new Set(labels).size).toBe(labels.length);
     expect(new Set(reports).size).toBe(reports.length);
+  });
+
+  it('uses short-lived Electron-as-Node children under the Node bucket owner', async () => {
+    const packageJson = JSON.parse(await readFile('package.json', 'utf8'));
+    expect(packageJson.scripts['test:release:shared']).toContain(
+      'node scripts/run-shared-test-bucket.mjs'
+    );
+    expect(packageJson.scripts['test:release:shared']).not.toContain(
+      'electron-sqlite-runner.mjs scripts/run-shared-test-bucket.mjs'
+    );
+    expect(buildSharedBucketInvocation(
+      'report.json', ['src/shared'], '/electron', '/repo', { CI: 'true' }
+    )).toEqual({
+      args: [
+        'scripts/run-vitest-with-summary.mjs', 'report.json', '--',
+        '--silent=passed-only', '--pool=threads', '--maxWorkers=2',
+        '--no-file-parallelism', 'src/shared'
+      ],
+      electronPath: '/electron',
+      options: {
+        cwd: '/repo',
+        env: { CI: 'true', ELECTRON_RUN_AS_NODE: '1' },
+        stdio: ['ignore', 'pipe', 'pipe']
+      }
+    });
   });
 
   it('leaves the shared bucket total timeout disabled unless explicitly configured', () => {

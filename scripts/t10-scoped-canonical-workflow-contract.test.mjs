@@ -114,8 +114,9 @@ describe('T10 shared, Android, and iOS canonical topology', () => {
       .toEqual({ ...fullCall.with, scope: undefined });
     expect(scopedCall.with.scope).toBe('${{ inputs.scope }}');
     expect(fullCall.with.scope).toBe('full');
-    expect(ios.jobs.simulator.if).toBe("inputs.scope == 'full'");
-    const buckets = ios.jobs.simulator.strategy.matrix.include;
+    expect(ios.jobs.simulator.if).toBe("inputs.scope == 'full' && inputs.run_simulator");
+    expect(ios.jobs.simulator.strategy.matrix.include).toBe('${{ fromJSON(inputs.simulator_matrix) }}');
+    const buckets = JSON.parse(ios.on.workflow_call.inputs.simulator_matrix.default);
     expect(buckets).toEqual([
       { bucket: 'pairing-and-content', scenarios: ['pairing-signed-transport', 'content-resource-read'] },
       { bucket: 'state-writeback-runtime', scenarios: ['state-writeback-runtime'] },

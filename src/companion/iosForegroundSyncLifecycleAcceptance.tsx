@@ -14,27 +14,46 @@ import { acceptanceEndpoint, postResult } from './iosBridgeAcceptance';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 function ForegroundSyncLifecycleShell({ bootstrap }: { bootstrap: NativeCompanionBootstrapState }) {
-  const reported = useRef(false);
+  const initialSyncStarted = useRef(false);
   const workspaceSync = useCompanionWorkspaceSync(bootstrap);
 
   useEffect(() => {
-    if (reported.current || !workspaceSync.isWorkspaceSyncStateReady || !workspaceSync.state.endpoint_url ||
+    if (initialSyncStarted.current || !workspaceSync.isWorkspaceSyncStateReady || !workspaceSync.state.endpoint_url ||
       workspaceSync.pairingState.sync_usable !== true) return;
-    reported.current = true;
-    postResult({
-      error: null,
-      pairing_is_paired: workspaceSync.pairingState.is_paired,
-      pairing_sync_usable: workspaceSync.pairingState.sync_usable,
-      phase: 'ready',
-      scenario: 'foreground-sync-lifecycle',
-      sync_error: workspaceSync.error,
-      sync_status: workspaceSync.status,
-      status: 'passed'
+    initialSyncStarted.current = true;
+    const endpoint = workspaceSync.state.endpoint_url;
+    if (workspaceSync.state.last_synced_at !== null) {
+      postReady(workspaceSync);
+      return;
+    }
+    void workspaceSync.pullFromDesktop(endpoint).then(() => {
+      postReady(workspaceSync);
+    }).catch((error) => {
+      postResult({
+        error: error instanceof Error ? error.message : String(error),
+        phase: 'failed',
+        scenario: 'foreground-sync-lifecycle',
+        status: 'failed'
+      });
     });
   }, [workspaceSync.error, workspaceSync.isWorkspaceSyncStateReady, workspaceSync.pairingState,
-    workspaceSync.state.endpoint_url, workspaceSync.status]);
+    workspaceSync.pullFromDesktop, workspaceSync.state.endpoint_url, workspaceSync.state.last_synced_at,
+    workspaceSync.status]);
 
   return null;
+}
+
+function postReady(workspaceSync: ReturnType<typeof useCompanionWorkspaceSync>) {
+  postResult({
+    error: null,
+    pairing_is_paired: workspaceSync.pairingState.is_paired,
+    pairing_sync_usable: workspaceSync.pairingState.sync_usable,
+    phase: 'ready',
+    scenario: 'foreground-sync-lifecycle',
+    sync_error: workspaceSync.error,
+    sync_status: workspaceSync.status,
+    status: 'passed'
+  });
 }
 
 async function prepareAcceptancePairing(bootstrap: NativeCompanionBootstrapState, endpoint: string) {

@@ -101,7 +101,7 @@ function runElectronNode(electronPath, args, repoRoot, stdio = 'inherit') {
   return spawnSync(electronPath, args, buildElectronNodeSpawnOptions(repoRoot, stdio, args));
 }
 
-function assertElectronAbi(electronPath, repoRoot) {
+export function assertElectronAbi(electronPath, repoRoot) {
   const tempRoot = path.join(repoRoot, '.tmp');
   mkdirSync(tempRoot, { recursive: true });
   const tempDir = mkdtempSync(path.join(tempRoot, 'electron-sqlite-runner-'));

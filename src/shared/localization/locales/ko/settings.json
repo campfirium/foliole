@@ -196,5 +196,20 @@
   "settings.documentMenu.section.aria": "편집기 메뉴 설정 섹션",
   "settings.documentMenu.separatorBefore": "{label} 앞에 구분 기호 표시",
   "settings.documentMenu.show": "{label} 표시",
-  "settings.documentMenu.title": "에디터 메뉴"
+  "settings.documentMenu.title": "에디터 메뉴",
+  "settings.customCopy.row": "사용자 지정 문구",
+  "settings.customCopy.description": "현재 인터페이스 언어의 기본 문구를 변경합니다.",
+  "settings.customCopy.searchTerms": "문구|텍스트|번역|현지화|교체",
+  "settings.customCopy.manage": "관리...",
+  "settings.customCopy.dialog.title": "사용자 지정 문구",
+  "settings.customCopy.dialog.description": "현재 인터페이스 언어의 기본 문구를 검색하고 변경합니다. 변경 사항은 본인에게만 적용됩니다.",
+  "settings.customCopy.search.placeholder": "변경할 문구 검색",
+  "settings.customCopy.filter.replacedOnly": "교체된 항목만 표시",
+  "settings.customCopy.column.original": "원래 문구",
+  "settings.customCopy.column.custom": "사용자 지정 문구",
+  "settings.customCopy.edit.aria": "{key} 사용자 지정",
+  "settings.customCopy.export": "내보내기",
+  "settings.customCopy.exported": "사용자 지정 문구를 내보냈습니다.",
+  "settings.customCopy.empty.title": "일치하는 문구 없음",
+  "settings.customCopy.empty.description": "다른 검색어를 사용하거나 필터를 해제하세요."
 }

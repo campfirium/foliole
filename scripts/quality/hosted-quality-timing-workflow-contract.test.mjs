@@ -15,7 +15,8 @@ it('wires one non-gating terminal timing summary into Remote Quality and T7', ()
 
   expect(remoteCall.if).toBe('${{ always() }}');
   expect(remoteCall.needs).toEqual(['dev-ref', 'scoped-quality', 't5-baseline', 'full-quality']);
-  expect(releaseCall.if).toBe('${{ always() }}');
+  expect(releaseCall.if)
+    .toBe("${{ always() && (github.event_name == 'push' || inputs.stage == 'full') }}");
   expect(releaseCall.needs).toContain('assemble_draft');
   expect(remoteCall.uses).toBe('./.github/workflows/hosted-quality-timing-summary.yml');
   expect(releaseCall.uses).toBe(remoteCall.uses);

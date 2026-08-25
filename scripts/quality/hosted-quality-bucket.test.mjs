@@ -2,7 +2,11 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { parseHostedQualityBucket, runHostedQualityBucket } from './hosted-quality-bucket.mjs';
+import {
+  parseHostedQualityBucket,
+  resolveHostedQualityItemCommand,
+  runHostedQualityBucket
+} from './hosted-quality-bucket.mjs';
 
 describe('hosted quality bucket', () => {
   it('accepts reviewed items in declared order for every owner', () => {
@@ -27,5 +31,20 @@ describe('hosted quality bucket', () => {
     expect(() => runHostedQualityBucket('desktop-source', '["one","two","three"]', runItem))
       .toThrow('two failed');
     expect(runItem.mock.calls.map(([, item]) => item)).toEqual(['one', 'two']);
+  });
+
+  it('launches npm command shims through cmd.exe on Windows', () => {
+    const desktop = parseHostedQualityBucket('desktop-source', '["one"]').definition;
+    expect(resolveHostedQualityItemCommand(desktop, 'one', 'win32')).toEqual({
+      args: ['/d', '/s', '/c', 'npm', 'run', 'test:release:desktop-src', '--', 'one'],
+      bin: 'cmd.exe',
+      env: {}
+    });
+    const tooling = parseHostedQualityBucket('tooling', '["core-one"]').definition;
+    expect(resolveHostedQualityItemCommand(tooling, 'core-one', 'linux')).toEqual({
+      args: ['run', 'quality:release:tooling'],
+      bin: 'npm',
+      env: { FOLIOLE_QUALITY_TOOLING_SEGMENT: 'core-one' }
+    });
   });
 });

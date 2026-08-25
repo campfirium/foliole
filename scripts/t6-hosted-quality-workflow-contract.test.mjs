@@ -26,17 +26,12 @@ const sources = {
   t5: read('.github/workflows/t5-baseline-admission.yml'),
   t6: read('.github/workflows/t6-hosted-quality.yml'),
   tooling: read('.github/workflows/hosted-quality-tooling.yml'),
+  windowsAcceptance: read('.github/workflows/hosted-quality-windows-acceptance.yml'),
   windowsCore: read('.github/workflows/hosted-quality-windows-core.yml')
 };
 const workflows = Object.fromEntries(
   Object.entries(sources).map(([name, source]) => [name, parse(source)])
 );
-
-function section(source, jobName, nextJobName) {
-  const start = source.indexOf(`  ${jobName}:`);
-  const end = nextJobName ? source.indexOf(`  ${nextJobName}:`) : source.length;
-  return source.slice(start, end);
-}
 
 describe('T6 hosted quality workflow contracts', () => {
   it('is reusable-only and exposes the exact admitted SHA', () => {
@@ -140,7 +135,9 @@ describe('T6 hosted quality workflow contracts', () => {
     expect(actualDesktopSourceEntries)
       .toEqual(expectedDesktopSourceEntries);
     expect(new Set(actualDesktopSourceEntries).size).toBe(8);
-    expect(desktopSourceMatrix).toHaveLength(2);
+    expect(desktopSourceMatrix).toHaveLength(3);
+    expect(desktopSourceMatrix.filter(({ host }) => host === 'Windows').map(({ shards }) => shards))
+      .toEqual([['one', 'two'], ['three', 'four']]);
     expect(sources.full).not.toContain('portable-quality');
     expect(sources.portableDomain).not.toContain('continue-on-error');
     expect(sources.portableDomain).not.toContain('paths:');
@@ -148,7 +145,7 @@ describe('T6 hosted quality workflow contracts', () => {
     expect(sources.portableDomain).not.toContain('changed-files');
     const hostSources = {
       Ubuntu: `${sources.static}\n${sources.scopedStatic}\n${sources.desktopStatic}\n${sources.dependencyHardening}\n${sources.portableDomain}\n${sources.desktopSource}\n${sources.electron}\n${sources.tooling}\n${hostedBucketRunner}\n${sources.desktopBuild}\n${sources.androidWebBuild}\n${sources.androidHost}`,
-      Windows: `${sources.windowsCore}\n${sources.portableDomain}\n${sources.desktopSource}\n${sources.electron}\n${sources.tooling}\n${hostedBucketRunner}\n${section(sources.full, 'windows-acceptance', 'android-host')}`,
+      Windows: `${sources.windowsCore}\n${sources.portableDomain}\n${sources.desktopSource}\n${sources.electron}\n${sources.tooling}\n${hostedBucketRunner}\n${sources.windowsAcceptance}`,
       macOS: sources.ios
     };
     const commands = {
@@ -187,19 +184,21 @@ describe('T6 hosted quality workflow contracts', () => {
     }
     for (const name of ['android', 'androidHost', 'androidWebBuild', 'core', 'dependencyHardening', 'desktopBuild',
       'desktopSource', 'desktopStatic', 'electron', 'full', 'ios', 'portableDomain',
-      'scopedStatic', 'shared', 'static', 'tooling', 'windowsCore']) {
+      'scopedStatic', 'shared', 'static', 'tooling', 'windowsAcceptance', 'windowsCore']) {
       expect(workflows[name].on.workflow_call.inputs.execution_lane)
         .toEqual({ required: true, type: 'string' });
       expect(workflows[name].on.workflow_call.inputs.trigger_ref)
         .toEqual({ required: true, type: 'string' });
     }
-    const concurrencySources = `${sources.androidHost}\n${sources.androidWebBuild}\n${sources.core}\n${sources.desktopBuild}\n${sources.desktopStatic}\n${sources.dependencyHardening}\n${sources.full}\n${sources.ios}\n${sources.scopedStatic}\n${sources.tooling}`;
+    const concurrencySources = `${sources.androidHost}\n${sources.androidWebBuild}\n${sources.core}\n${sources.desktopBuild}\n${sources.desktopStatic}\n${sources.dependencyHardening}\n${sources.full}\n${sources.ios}\n${sources.scopedStatic}\n${sources.tooling}\n${sources.windowsAcceptance}`;
     expect(concurrencySources).toContain('${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}');
     expect(concurrencySources).not.toContain('group: hosted-quality-');
     expect(workflows.t6.concurrency.group)
       .toBe('t6-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-orchestrator');
-    expect(sources.full.match(/ref: \$\{\{ env\.TARGET_SHA \}\}/gu)).toHaveLength(1);
-    expect(sources.full.match(/persist-credentials: false/gu)).toHaveLength(1);
+    expect(workflows.full.jobs['windows-acceptance'].uses)
+      .toBe('./.github/workflows/hosted-quality-windows-acceptance.yml');
+    expect(sources.windowsAcceptance.match(/ref: ["']?\$\{\{ env\.TARGET_SHA \}\}["']?/gu)).toHaveLength(1);
+    expect(sources.windowsAcceptance.match(/persist-credentials: false/gu)).toHaveLength(1);
     for (const name of ['androidWebBuild', 'dependencyHardening', 'desktopBuild', 'desktopStatic']) {
       expect(sources[name].match(/ref: \$\{\{ env\.TARGET_SHA \}\}/gu)).toHaveLength(1);
       expect(sources[name].match(/persist-credentials: false/gu)).toHaveLength(1);
@@ -220,7 +219,7 @@ describe('T6 hosted quality workflow contracts', () => {
     for (const rejected of [
       'windows:package', 'installed-app-smoke', 'actions/attest', 'gh release',
       'CSC_', 'id-token: write', 'setTimeout', 'poll'
-    ]) expect(`${sources.t6}\n${sources.full}\n${sources.androidWebBuild}\n${sources.desktopBuild}\n${sources.desktopStatic}\n${sources.dependencyHardening}\n${sources.portableDomain}\n${sources.desktopSource}\n${sources.electron}\n${sources.tooling}`).not.toContain(rejected);
+    ]) expect(`${sources.t6}\n${sources.full}\n${sources.windowsAcceptance}\n${sources.androidWebBuild}\n${sources.desktopBuild}\n${sources.desktopStatic}\n${sources.dependencyHardening}\n${sources.portableDomain}\n${sources.desktopSource}\n${sources.electron}\n${sources.tooling}`).not.toContain(rejected);
     expect(fs.existsSync('.github/workflows/t5-nightly-remote-quality.yml')).toBe(false);
     expect(fs.existsSync('scripts/quality/t5-remote-quality-admission.mjs')).toBe(false);
   });

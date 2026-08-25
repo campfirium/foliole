@@ -15,5 +15,6 @@
   "companion.sync.participation.pause": "Приостановить синхронизацию",
   "companion.sync.participation.resume": "Возобновить синхронизацию",
   "companion.sync.participation.inactive": "Включите и возобновите синхронизацию перед подключением или синхронизацией.",
-  "companion.sync.provider.foregroundHint": "Foliole не выключает экран во время отправки. Вернитесь в Foliole, чтобы продолжить с последнего достигнутого этапа."
+  "companion.sync.provider.foregroundHint": "Foliole не выключает экран во время отправки. Вернитесь в Foliole, чтобы продолжить с последнего достигнутого этапа.",
+  "companion.sync.joinRequest.error": "Foliole не удалось обновить этот запрос. Повторите попытку."
 }

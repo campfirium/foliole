@@ -196,5 +196,20 @@
   "settings.documentMenu.section.aria": "エディターのメニュー設定セクション",
   "settings.documentMenu.separatorBefore": "{label} の前に区切り文字を表示",
   "settings.documentMenu.show": "{label} を表示",
-  "settings.documentMenu.title": "エディター メニュー"
+  "settings.documentMenu.title": "エディター メニュー",
+  "settings.customCopy.row": "カスタム文言",
+  "settings.customCopy.description": "現在のインターフェース言語の組み込み文言を変更します。",
+  "settings.customCopy.searchTerms": "文言|テキスト|翻訳|ローカライズ|置き換え",
+  "settings.customCopy.manage": "管理...",
+  "settings.customCopy.dialog.title": "カスタム文言",
+  "settings.customCopy.dialog.description": "現在のインターフェース言語の組み込み文言を検索して変更します。変更は自分だけに反映されます。",
+  "settings.customCopy.search.placeholder": "変更する文言を検索",
+  "settings.customCopy.filter.replacedOnly": "置き換え済みのみ表示",
+  "settings.customCopy.column.original": "元の文言",
+  "settings.customCopy.column.custom": "カスタム文言",
+  "settings.customCopy.edit.aria": "{key} をカスタマイズ",
+  "settings.customCopy.export": "エクスポート",
+  "settings.customCopy.exported": "カスタム文言をエクスポートしました。",
+  "settings.customCopy.empty.title": "一致する文言はありません",
+  "settings.customCopy.empty.description": "別の語句で検索するか、フィルターを解除してください。"
 }

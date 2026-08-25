@@ -9,6 +9,7 @@ import {
   GATE_INTEGRATION_SCRIPT_NAMES,
   changedFilesNeedScriptTests,
   collectScriptTestFiles,
+  isLinuxOnlyScriptTest,
   isScriptTestRootPath,
   selectGateIntegrationScriptNames,
   selectScriptTestBucketFiles
@@ -26,6 +27,7 @@ describe('script test bucket root matching', () => {
     expect(changedFilesNeedScriptTests(['scripts/run-script-test-bucket.mjs'])).toBe(true);
     expect(changedFilesNeedScriptTests(['scripts/demo/export-demo-pack.mjs'])).toBe(true);
     expect(changedFilesNeedScriptTests(['scripts/quality/quality-gate-target.sh'])).toBe(true);
+    expect(changedFilesNeedScriptTests(['scripts/linux/accept-linux-deb.mjs'])).toBe(true);
     expect(changedFilesNeedScriptTests(['scripts/script-test-bucket-selection.mjs'])).toBe(true);
     expect(changedFilesNeedScriptTests(['scripts/windows/windows-preview-native.mjs'])).toBe(false);
     expect(changedFilesNeedScriptTests(['src/app/App.tsx'])).toBe(false);
@@ -34,10 +36,21 @@ describe('script test bucket root matching', () => {
   });
 
   it('collects scripts/lib contract tests in the formal core bucket', () => {
-    const coreFiles = selectScriptTestBucketFiles('core', collectScriptTestFiles());
+    const coreFiles = selectScriptTestBucketFiles('core', collectScriptTestFiles(), 'linux');
 
     expect(coreFiles).toContain('scripts/lib/path-domains.test.mjs');
     expect(coreFiles).toContain('scripts/lib/script-domain-registry.test.mjs');
+    expect(coreFiles).toContain('scripts/linux/accept-linux-deb.test.mjs');
+  });
+
+  it('keeps Linux-only repository proofs on Linux rather than Windows tooling', () => {
+    const files = [
+      'scripts/check-ui-copy-guard.test.mjs',
+      'scripts/linux/package-linux-deb.test.mjs'
+    ];
+    expect(isLinuxOnlyScriptTest(files[1])).toBe(true);
+    expect(selectScriptTestBucketFiles('core', files, 'linux')).toEqual(files);
+    expect(selectScriptTestBucketFiles('core', files, 'win32')).toEqual([files[0]]);
   });
 
   it('partitions hosted Windows tooling without missing or duplicating tests', () => {

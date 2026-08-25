@@ -2,51 +2,37 @@ import crypto from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import { Bonjour } from 'bonjour-service';
-
 import {
+  createTestPairRequestPayload,
   createTestPairingKeyPair,
-  decryptTestPairingSecret
+  decryptTestPairingSecrets
 } from '../../electron/sync/companionPairingProtocolTestSupport.js';
-import { createDesktopSyncGroupSignedHeaders } from '../../electron/sync/desktopSyncGroupHttp.js';
+import { createDesktopSyncGroupSignedHeaders } from '../../electron/sync/desktopSyncGroupSignedHeaders.js';
+import type { CompanionWorkspacePairPayload } from '../../lib/platform/nativeCompanionSyncContract.js';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 import { closeDesktopApplication } from '../../scripts/desktop/playwright-desktop-close.mjs';
 import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
 
 import { expect, test, type DesktopSession } from './harness/fixtures';
+import { prepareFolioleServiceDiscovery } from './harness/linuxMdnsDiscovery';
 
 const ACCOUNT_ID = '023e105f4ecef8ad9ca31a8372d0c353';
 const API_TOKEN = 'Sn3lZJTBX6kkg7OdcBUAxOO963GEIyGQqnFTOFYY';
-const DEVICE_ID = 'linux-deb-acceptance-device';
+const HOST_NAME = 'Linux DEB acceptance';
 
 function jsonHeaders() {
   return { 'content-type': 'application/json' };
 }
 
-async function discoverFolioleService() {
-  const bonjour = new Bonjour();
-  try {
-    return await new Promise<{ port: number; txt: Record<string, string> }>((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('Foliole mDNS service was not discovered')), 10_000);
-      bonjour.find({ protocol: 'tcp', type: 'foliole-sync' }, (service) => {
-        clearTimeout(timeout);
-        resolve({ port: service.port, txt: service.txt as Record<string, string> });
-      });
-    });
-  } finally {
-    bonjour.destroy();
-  }
-}
-
 async function expectSignedWorkspaceVersion(
   endpoint: string,
-  paired: { deviceId: string; groupId: string; secret: string }
+  paired: { authorizationId: string; groupId: string; secret: string }
 ) {
   const pathWithQuery = '/companion/workspace-version';
   const response = await fetch(`${endpoint}${pathWithQuery}`, {
     headers: createDesktopSyncGroupSignedHeaders({
       groupId: paired.groupId,
-      localDeviceId: paired.deviceId,
+      localAuthorizationId: paired.authorizationId,
       method: 'GET',
       pathWithQuery,
       secret: paired.secret
@@ -62,20 +48,20 @@ async function pairCompanion(
 ) {
   const keyPair = await createTestPairingKeyPair();
   const created = await fetch(`${endpoint}/companion/pair-requests`, {
-    body: JSON.stringify({
-      device_id: DEVICE_ID,
-      device_kind: 'android',
-      device_name: 'Linux DEB acceptance',
-      group_id: group.groupId,
-      group_tag: group.groupTag,
-      library_facts: {
-        attachment_count: 0, content_blob_count: 0, node_count: 0,
-        review_log_count: 0, timeline_id: null
+    body: JSON.stringify(createTestPairRequestPayload({
+      group: {
+        groupId: group.groupId,
+        groupTag: group.groupTag,
+        libraryFacts: {
+          attachment_count: 0, content_blob_count: 0, node_count: 0,
+          review_log_count: 0, timeline_id: null
+        },
+        timelineId: group.timelineId
       },
-      pairing_public_key: keyPair.publicKey,
-      protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
-      timeline_id: group.timelineId
-    }),
+      hostName: HOST_NAME,
+      hostPlatform: 'android-capacitor',
+      pairingPublicKey: keyPair.publicKey
+    })),
     headers: jsonHeaders(),
     method: 'POST'
   });
@@ -90,14 +76,22 @@ async function pairCompanion(
     method: 'POST'
   });
   expect(finalized.status).toBe(200);
-  const payload = await finalized.json() as {
-    device_id: string;
-    encrypted_device_secret: Parameters<typeof decryptTestPairingSecret>[0]['encrypted'];
-  };
-  const secret = await decryptTestPairingSecret({
-    encrypted: payload.encrypted_device_secret, privateKey: keyPair.privateKey
+  const payload = await finalized.json() as CompanionWorkspacePairPayload;
+  const providerEncryptedSecret = payload.provider_encrypted_credential_secret;
+  expect(providerEncryptedSecret).toBeDefined();
+  if (!providerEncryptedSecret) throw new Error('Sync Group provider pairing secret is missing.');
+  const secrets = await decryptTestPairingSecrets({
+    encryptedCredentialSecret: payload.encrypted_credential_secret,
+    privateKey: keyPair.privateKey,
+    providerEncryptedCredentialSecret: providerEncryptedSecret
   });
-  return { deviceId: payload.device_id, groupId: group.groupId, secret };
+  expect(secrets.providerSecret).not.toBeNull();
+  if (!secrets.providerSecret) throw new Error('Sync Group provider pairing secret is missing.');
+  return {
+    authorizationId: payload.authorization_id,
+    groupId: group.groupId,
+    secret: secrets.providerSecret
+  };
 }
 
 async function pairDiscoveredGroup(windowPage: DesktopSession['firstWindow'], endpoint: string) {
@@ -189,16 +183,17 @@ test('installed Linux capabilities use external Codex, loopback control, LAN syn
     expect(authorized.status).toBe(200);
     expect(await authorized.text()).not.toContain(descriptor.token);
 
-    const discovery = discoverFolioleService();
+    const discovery = prepareFolioleServiceDiscovery();
+    await discovery.ready;
     const overview = await desktopWindow.evaluate(() => window.electronAPI?.invoke('create_sync_group')) as {
       server_status: { advertised_urls: string[]; last_error: string | null; port: number; state: string };
       sync_group: { local_member_state: string };
     };
     expect(overview.sync_group).toMatchObject({ local_member_state: 'active' });
     expect(overview.server_status).toMatchObject({ last_error: null, state: 'running' });
-    const service = await discovery;
+    const service = await discovery.discover();
     expect(service).toMatchObject({ port: overview.server_status.port });
-    expect(service.txt.protocol_version).toBe('1');
+    expect(service.txt.protocol_version).toBe(String(CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version));
     const endpoint = `http://127.0.0.1:${overview.server_status.port}`;
     const paired = await pairDiscoveredGroup(desktopWindow, endpoint);
     await expectSignedWorkspaceVersion(endpoint, paired);

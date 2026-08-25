@@ -1,4 +1,15 @@
 {
+  "0.7.9": {
+    "notes": [
+      "Foliole now includes Custom Copy for personalizing interface text or submitting localization corrections.",
+      "New",
+      "Interface text can now be customized in the current language.",
+      "System folders can now be renamed.",
+      "Fixed",
+      "Unanchored Topics and Items can now be moved by dragging.",
+      "PDF pages containing JPEG 2000 images no longer appear blank."
+    ]
+  },
   "0.7.8": {
     "notes": [
       "Improved",

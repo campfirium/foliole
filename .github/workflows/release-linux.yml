@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       target_sha:
-        description: Exact dev candidate commit to package and accept
+        description: Dev candidate commit or exact current release HEAD to package and accept
         required: true
         type: string
       target_version:
@@ -66,7 +66,7 @@ jobs:
       - name: Check out target snapshot
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.execution_lane == '' && 'dev' || inputs.target_sha }}
+          ref: ${{ inputs.execution_lane == '' && github.ref || inputs.target_sha }}
           fetch-depth: 0
           persist-credentials: false
       - name: Set up Node
@@ -83,9 +83,21 @@ jobs:
           [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
           if [[ -z "$EXECUTION_LANE" ]]; then
             test "$GITHUB_EVENT_NAME" = 'workflow_dispatch'
-            test "$GITHUB_REF" = 'refs/heads/dev'
-            git merge-base --is-ancestor "$TARGET_SHA" HEAD
-            git checkout --detach "$TARGET_SHA"
+            case "$GITHUB_REF" in
+              refs/heads/dev)
+                git merge-base --is-ancestor "$TARGET_SHA" HEAD
+                git checkout --detach "$TARGET_SHA"
+                ;;
+              refs/heads/release)
+                remote_sha="$(git ls-remote origin refs/heads/release | cut -f1)"
+                test -n "$remote_sha"
+                test "$remote_sha" = "$TARGET_SHA"
+                ;;
+              *)
+                echo "Manual Linux acceptance requires dev or release" >&2
+                exit 1
+                ;;
+            esac
           fi
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
           test "$(uname -m)" = "x86_64"

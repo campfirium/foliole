@@ -6,14 +6,11 @@ import { parse } from 'yaml';
 
 const core = fs.readFileSync('.github/workflows/hosted-quality-core.yml', 'utf8');
 const full = fs.readFileSync('.github/workflows/hosted-quality-full.yml', 'utf8');
+const acceptanceJob = fs.readFileSync('.github/workflows/hosted-quality-windows-acceptance.yml', 'utf8');
 const t5 = fs.readFileSync('.github/workflows/t5-baseline-admission.yml', 'utf8');
 const t5WindowsCore = fs.readFileSync('.github/workflows/hosted-quality-windows-core.yml', 'utf8');
 const coreWorkflow = parse(core);
 const t5Workflow = parse(t5);
-const acceptanceJob = full.slice(
-  full.indexOf('  windows-acceptance:'),
-  full.indexOf('  android-host:')
-);
 
 describe('hosted Windows x64 workflow contract', () => {
   it('keeps T4 desktop diagnosis independent from T5 and T6', () => {
@@ -29,6 +26,7 @@ describe('hosted Windows x64 workflow contract', () => {
 
   it('runs Windows core in T5 and native acceptance in T6', () => {
     expect(t5).toContain('uses: ./.github/workflows/hosted-quality-windows-core.yml');
+    expect(full).toContain('uses: ./.github/workflows/hosted-quality-windows-acceptance.yml');
     expect(t5WindowsCore).toContain('runs-on: windows-latest');
     expect(t5WindowsCore).toContain('run: npm run quality:release:windows:core');
     expect(acceptanceJob).toContain('runs-on: windows-latest');
@@ -45,7 +43,7 @@ describe('hosted Windows x64 workflow contract', () => {
   it('binds canonical core and acceptance work to the target SHA', () => {
     expect(t5WindowsCore).toContain('ref: ${{ env.TARGET_SHA }}');
     expect(t5WindowsCore).toContain('Checked out SHA does not match TARGET_SHA');
-    expect(acceptanceJob).toContain('ref: ${{ env.TARGET_SHA }}');
+    expect(acceptanceJob).toContain('ref: "${{ env.TARGET_SHA }}"');
     expect(acceptanceJob).toContain('Checked out SHA does not match TARGET_SHA');
     expect(acceptanceJob).toContain('GITHUB_SHA: ${{ env.TARGET_SHA }}');
     expect(acceptanceJob).toContain('node scripts/windows/windows-ci-evidence.mjs verify');
