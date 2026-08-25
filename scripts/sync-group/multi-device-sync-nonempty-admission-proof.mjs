@@ -27,6 +27,7 @@ export function assertAdmittedMembersRestartedTogether(androidSnapshot, receipt)
   const android = androidSnapshot?.database?.inspection;
   const windows = receipt?.restartedFacts;
   if (android?.desktopFactPresent !== true || android.activeSyncGroupMemberCount !== 3
+      || android.missingContentBlobCount !== 0 || android.missingAttachmentCount !== 0
       || windows?.activeMemberCount !== 3
       || android.syncGroupId !== windows.localGroupId
       || android.syncGroupTimelineId !== windows.localTimelineId) {

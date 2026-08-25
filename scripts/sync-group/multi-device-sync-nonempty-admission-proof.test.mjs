@@ -44,7 +44,8 @@ it('rejects a Windows receipt that loses the C attachment after restart', () => 
 
 it('requires B and C to retain the same group, timeline, and C fact after restart', () => {
   const android = { database: { inspection: {
-    activeSyncGroupMemberCount: 3, desktopFactPresent: true,
+    activeSyncGroupMemberCount: 3, desktopFactPresent: true, missingAttachmentCount: 0,
+    missingContentBlobCount: 0,
     syncGroupId: 'group-1', syncGroupTimelineId: 'timeline-1'
   } } };
   expect(assertAdmittedMembersRestartedTogether(android, receipt)).toEqual({
@@ -52,5 +53,8 @@ it('requires B and C to retain the same group, timeline, and C fact after restar
   });
   expect(() => assertAdmittedMembersRestartedTogether({ database: { inspection: {
     ...android.database.inspection, syncGroupTimelineId: 'timeline-other'
+  } } }, receipt)).toThrow('did not retain the same admitted group');
+  expect(() => assertAdmittedMembersRestartedTogether({ database: { inspection: {
+    ...android.database.inspection, missingContentBlobCount: 1
   } } }, receipt)).toThrow('did not retain the same admitted group');
 });

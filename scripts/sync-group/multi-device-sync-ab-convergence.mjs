@@ -53,11 +53,17 @@ export async function waitForAndroidJourneyFact(paths, factId, expectedDevice = 
   const deadline = Date.now() + 60_000;
   while (Date.now() < deadline) {
     const snapshot = await androidSnapshot(paths, factId, null, expectedDevice);
-    if (snapshot.database?.inspection?.desktopFactPresent) return snapshot;
+    if (androidJourneyFactComplete(snapshot)) return snapshot;
     await wait(1_000);
   }
   throw productFailure('android-b', `deterministic_${expectedDevice.toLowerCase()}_fact_missing`,
     `Android B did not receive the deterministic ${expectedDevice} fact.`, 'stalled');
+}
+
+export function androidJourneyFactComplete(snapshot) {
+  const facts = snapshot.database?.inspection;
+  return facts?.desktopFactPresent === true && facts.missingContentBlobCount === 0
+    && facts.missingAttachmentCount === 0;
 }
 
 export async function proveABConvergence({ execute, reportProgress, repoRoot, runId }) {

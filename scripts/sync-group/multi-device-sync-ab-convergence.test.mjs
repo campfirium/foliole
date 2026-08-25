@@ -7,7 +7,8 @@ import path from 'node:path';
 import { expect, it } from 'vitest';
 
 import {
-  expectedJourneyFactPresent, readABConvergenceMaterial, runABConvergenceJourney
+  androidJourneyFactComplete, expectedJourneyFactPresent, readABConvergenceMaterial,
+  runABConvergenceJourney
 } from './multi-device-sync-ab-convergence.mjs';
 
 /* global process */
@@ -80,4 +81,17 @@ it('observes a journey fact only when its exact device origin matches', () => {
   expect(expectedJourneyFactPresent(facts, 'fact-a', 'A')).toBe(true);
   expect(expectedJourneyFactPresent(facts, 'fact-c', 'C')).toBe(true);
   expect(expectedJourneyFactPresent(facts, 'fact-c', 'A')).toBe(false);
+});
+
+it('does not take the provider offline before the exact fact resources are complete', () => {
+  const inspection = {
+    desktopFactPresent: true, missingAttachmentCount: 0, missingContentBlobCount: 0
+  };
+  expect(androidJourneyFactComplete({ database: { inspection } })).toBe(true);
+  expect(androidJourneyFactComplete({ database: { inspection: {
+    ...inspection, missingContentBlobCount: 1
+  } } })).toBe(false);
+  expect(androidJourneyFactComplete({ database: { inspection: {
+    ...inspection, missingAttachmentCount: 1
+  } } })).toBe(false);
 });
