@@ -18,6 +18,17 @@ function immediateDirectoryTargets(directory, excludedNames = []) {
     .sort();
 }
 
+function directoryBuckets(directory, labelPrefix, reportPrefix) {
+  return immediateDirectoryTargets(directory).map((target) => {
+    const name = path.posix.basename(target);
+    return {
+      label: `${labelPrefix}-${name}`,
+      report: `.tmp/vitest/${reportPrefix}-${name}.json`,
+      targets: [target]
+    };
+  });
+}
+
 const platformRootTests = immediateTestTargets('src/shared/platform');
 const platformCompanionTests = platformRootTests.filter(
   (target) => path.posix.basename(target).startsWith('companion')
@@ -37,10 +48,15 @@ export const SHARED_TEST_BUCKETS = [
     ]
   },
   {
-    label: 'shared-platform-companion',
-    report: '.tmp/vitest/shared-src-platform-companion.json',
-    targets: [...platformCompanionTests, 'src/shared/platform/companion']
+    label: 'shared-platform-companion-root',
+    report: '.tmp/vitest/shared-src-platform-companion-root.json',
+    targets: platformCompanionTests
   },
+  ...directoryBuckets(
+    'src/shared/platform/companion',
+    'shared-platform-companion',
+    'shared-src-platform-companion'
+  ),
   {
     label: 'shared-platform-core',
     report: '.tmp/vitest/shared-src-platform-core.json',
