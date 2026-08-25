@@ -52,9 +52,10 @@ export async function runMacosA5SyncGroupMaintenance({
   const receipt = bundle(raw.stdout, 'folioleActionReceipt');
   if (expected === 'terminalRunId'
     ? receipt.actionStarted !== true || typeof receipt[expected] !== 'string'
-      || receipt[expected] !== receipt.actionRunId
+      || receipt[expected] !== receipt.actionRunId || receipt.terminalResult !== 'completed'
     : receipt[expected] !== true) throw proofFailure(`Product result did not prove ${expected}`, {
-    evidenceRef: raw.evidencePath, missingFact: expected
+    evidenceRef: raw.evidencePath, missingFact: expected,
+    productError: receipt.errorText, terminalResult: receipt.terminalResult
   });
   const manifestPath = path.join(evidenceRoot, 'sync-group-maintenance-manifest.json');
   fs.writeFileSync(manifestPath, `${JSON.stringify({ action,

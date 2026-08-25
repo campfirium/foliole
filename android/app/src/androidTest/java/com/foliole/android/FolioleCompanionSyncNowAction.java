@@ -29,7 +29,8 @@ final class FolioleCompanionSyncNowAction {
             .put("actionStarted", true)
             .put("actionRunId", started.getString("runId"))
             .put("terminalRunId", terminal.getString("terminalRunId"))
-            .put("terminalResult", terminal.getString("terminalResult"));
+            .put("terminalResult", terminal.getString("terminalResult"))
+            .put("errorText", terminal.optString("errorText"));
     }
 
     private static JSONObject readState(
@@ -42,7 +43,9 @@ final class FolioleCompanionSyncNowAction {
             "started:node?node.getAttribute('data-sync-action-started')==='true':false," +
             "status:node?(node.getAttribute('data-sync-action-status')||''):''," +
             "terminalRunId:node?(node.getAttribute('data-sync-action-terminal-run-id')||''):''," +
-            "terminalResult:node?(node.getAttribute('data-sync-action-terminal-result')||''):''});})()";
+            "terminalResult:node?(node.getAttribute('data-sync-action-terminal-result')||''):''," +
+            "errorText:node&&node.closest('section')?" +
+            "((node.closest('section').querySelector('.text-error')||{}).textContent||''):''});})()";
         return FolioleCompanionWebViewSemanticAdapter.evaluateJson(instrumentation, webView, script);
     }
 

@@ -174,6 +174,7 @@ it('binds ordinary sync to the visible public Sync Now product action', () => {
   expect(action).toContain('put("actionStarted", true)');
   expect(action).toContain('put("syncRequested", true)');
   expect(action).toContain('put("terminalRunId", terminal.getString("terminalRunId"))');
+  expect(action).toContain('put("errorText", terminal.optString("errorText"))');
 });
 
 it('observes Leave through durable host state after the visible confirmation', () => {
