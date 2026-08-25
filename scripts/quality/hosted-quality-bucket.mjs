@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { assertQualityCommandAllowed } from './quality-command-contracts.mjs';
+import { normalizeSpawnCommand } from '../lib/spawn-command.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const DEFINITIONS = {
@@ -53,13 +54,21 @@ export function runHostedQualityBucket(kind, value, runItem = runQualityItem) {
   for (const item of items) runItem(definition, item);
 }
 
-function runQualityItem(definition, item) {
-  const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+export function resolveHostedQualityItemCommand(definition, item, platform = process.platform) {
   const args = ['run', definition.command];
-  const env = { ...process.env };
+  const env = {};
   if (definition.envKey) env[definition.envKey] = item;
   else args.push('--', item);
-  const result = spawnSync(npm, args, { cwd: REPO_ROOT, env, stdio: 'inherit' });
+  return { ...normalizeSpawnCommand(['npm', ...args], platform), env };
+}
+
+function runQualityItem(definition, item) {
+  const command = resolveHostedQualityItemCommand(definition, item);
+  const result = spawnSync(command.bin, command.args, {
+    cwd: REPO_ROOT,
+    env: { ...process.env, ...command.env },
+    stdio: 'inherit'
+  });
   if (result.error) throw result.error;
   if (result.status !== 0) {
     throw new Error(`Hosted quality item failed: ${item} (exit ${result.status ?? 'signal'})`);
