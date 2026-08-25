@@ -58,7 +58,7 @@ export async function runIosMigrationAcceptanceLeg(
     const before = await protectedState(input);
     const beforeDigest = await digestUnifiedMigrationValue(before);
     injectFault(input, registry, secureStore, fault);
-    if (fault !== 'none') return runFaultLeg(input, registry, secureStore, beforeDigest, fault);
+    if (fault !== 'none') return await runFaultLeg(input, registry, secureStore, beforeDigest, fault);
     const applied = await applyUnifiedMigration(input);
     const appliedVersions = await versions(input);
     const registryApplied = await registry.read();
