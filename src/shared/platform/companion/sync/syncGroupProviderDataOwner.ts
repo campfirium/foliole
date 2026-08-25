@@ -190,7 +190,7 @@ function recordSupplyCursor(payload: Record<string, unknown>) {
   return writer(async (db) => {
     await db.run(
       `INSERT OR REPLACE INTO sync_peer_cursors
-       (peer_id, stream_name, cursor_value, updated_at) VALUES (?, 'sync-pack-supply', ?, ?)`,
+       (authorization_id, stream_name, cursor_value, updated_at) VALUES (?, 'sync-pack-supply', ?, ?)`,
       [text(payload.peer_id), `${number(payload.from_cursor)}:${number(payload.to_cursor)}`, new Date().toISOString()]
     );
     return { recorded: true };
