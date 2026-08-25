@@ -9,7 +9,7 @@ export function resolveLinuxMdnsObserverOptions(env = process.env, argv = proces
   const networkInterface = argv.find((arg) => arg.startsWith('--interface='))?.slice(12)
     || env.FOLIOLE_LINUX_MDNS_PEER_ADDRESS;
   if (!networkInterface) throw new Error('Linux mDNS peer address is not configured');
-  return { interface: networkInterface };
+  return { bind: '0.0.0.0', interface: networkInterface };
 }
 
 export async function discoverFolioleMdnsService(env = process.env) {

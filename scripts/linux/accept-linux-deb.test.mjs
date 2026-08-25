@@ -57,10 +57,10 @@ it('owns a deterministic multicast LAN interface for packaged acceptance', () =>
   ]);
 });
 
-it('binds the isolated observer to its peer interface', () => {
+it('receives multicast on the shared port while routing the isolated peer interface', () => {
   expect(resolveLinuxMdnsObserverOptions({}, ['--interface=192.0.2.2']))
-    .toEqual({ interface: '192.0.2.2' });
+    .toEqual({ bind: '0.0.0.0', interface: '192.0.2.2' });
   expect(resolveLinuxMdnsObserverOptions({ FOLIOLE_LINUX_MDNS_PEER_ADDRESS: '192.0.2.3' }))
-    .toEqual({ interface: '192.0.2.3' });
+    .toEqual({ bind: '0.0.0.0', interface: '192.0.2.3' });
   expect(() => resolveLinuxMdnsObserverOptions({})).toThrow('peer address is not configured');
 });

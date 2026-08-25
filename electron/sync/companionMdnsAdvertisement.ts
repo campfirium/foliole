@@ -4,12 +4,21 @@ import { Bonjour } from 'bonjour-service';
 
 import { serializeSyncProtocolTxt } from '../../lib/platform/syncProtocolContract.js';
 
+import {
+  resolveCompanionMdnsInterfaceOptions,
+  resolveCompanionMdnsIpv4Addresses
+} from './companionMdnsNetworkInterfaces.js';
 import { loadSyncGroupRuntimeInstanceId } from './syncGroupRuntimeInstance.js';
+
+export { resolveCompanionMdnsIpv4Addresses } from './companionMdnsNetworkInterfaces.js';
 
 const COMPANION_SYNC_MDNS_SERVICE_TYPE = 'foliole-sync';
 
 type PublishedBonjourService = ReturnType<InstanceType<typeof Bonjour>['publish']>;
-type BonjourOptions = NonNullable<ConstructorParameters<typeof Bonjour>[0]> & { interface: string };
+type BonjourOptions = NonNullable<ConstructorParameters<typeof Bonjour>[0]> & {
+  bind: string;
+  interface: string;
+};
 type ActiveAdvertisement = {
   input: CompanionMdnsAdvertisementInput;
   runtimes: Array<{
@@ -36,14 +45,6 @@ export interface CompanionMdnsAdvertisementInput {
 
 function runtimeSuffix(runtimeInstanceId: string) {
   return runtimeInstanceId.replace(/[^A-Za-z0-9]/gu, '').slice(0, 8) || 'runtime';
-}
-
-export function resolveCompanionMdnsIpv4Addresses(
-  interfaces = os.networkInterfaces()
-) {
-  return [...new Set(Object.values(interfaces).flatMap((entries) => entries ?? [])
-    .filter((entry) => entry.family === 'IPv4' && !entry.internal)
-    .map((entry) => entry.address))];
 }
 
 export function resolveCompanionMdnsHost(
@@ -80,7 +81,8 @@ function publishCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisementInpu
   const ipv4Addresses = resolveCompanionMdnsIpv4Addresses();
   const interfaces = ipv4Addresses.length > 0 ? ipv4Addresses : [null];
   const runtimes = interfaces.map((networkInterface) => {
-    const options = networkInterface ? { interface: networkInterface } as BonjourOptions : undefined;
+    const options = resolveCompanionMdnsInterfaceOptions(networkInterface ?? undefined) as
+      BonjourOptions | undefined;
     const bonjour = new Bonjour(options, reportWarning);
     const service = bonjour.publish({
       host: resolveCompanionMdnsHost(os.hostname(), runtimeInstanceId),
